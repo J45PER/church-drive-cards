@@ -112,5 +112,5 @@ npm install
 npm run build     # outputs church-drive-cards.js at repo root (esbuild, IIFE)
 ```
 
-Note: `.github/workflows/build-check.yml` from the original zip did **not** make it
-into the GitHub upload (the web uploader skips dot-folders), so there's no CI yet.
+`.github/workflows/build-check.yml` was lost in the original web upload and was
+restored on 2026-09-24. It fails a PR if the committed bundle is stale.

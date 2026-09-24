@@ -35,7 +35,13 @@ entity: alarm_control_panel.church_drive_alarm
 ```
 
 ### `light-control-card`
-Mode-aware light control — single light, light group, or a whole room (auto-discovers that area's lights via the entity/device registry). Has a real visual editor (Add Card → search "Light Control"). Rows are a combined toggle + brightness drag control, tinted (never literally painted) with the light's live colour so white/bright lights stay readable. Scene chips auto-detect by area. Tapping a light opens Home Assistant's native more-info dialog for full colour/effects control.
+Mode-aware light control. Has a real visual editor (Add Card → search "Light Control"). Rows are a combined toggle + brightness drag control, tinted (never literally painted) with the light's live colour so white/bright lights stay readable. Scene chips auto-detect by area. Tapping a light opens Home Assistant's native more-info dialog for full colour/effects control.
+
+- `mode: light`: one row for a single light.
+- `mode: group`: the group's row, with its member lights indented underneath.
+- `mode: room`: the area name as a title, then that area's Hue room/zone groups as top rows, with the individual lights indented underneath. Lights are found through the entity **or** device area, as Hue assigns areas to devices. Hidden entities and settings/diagnostic entities (e.g. an air purifier's display backlight) are skipped.
+
+Tap a row to toggle, drag across it to set brightness, and tap the tune icon for the native more-info dialog. Icons follow whatever is set in Home Assistant, including custom icon packs such as `phu:` Hue icons.
 
 ```yaml
 type: custom:light-control-card
@@ -43,12 +49,23 @@ mode: room
 area: living_room
 ```
 
+```yaml
+type: custom:light-control-card
+mode: group
+entity: light.living_room
+name: Living Room (group)
+```
+
 ## Development
 
 ```bash
 npm install
-npm run build      # outputs dist/church-drive-cards.js
+npm run build      # outputs church-drive-cards.js at the repo root
 ```
+
+Always commit the rebuilt `church-drive-cards.js` with any `src/` change. The **Build check** GitHub Action fails a PR if the committed bundle doesn't match a fresh build.
+
+New or changed cards are tested on the **Design Presets** dashboard in Home Assistant before being used anywhere else.
 
 ## Installing in Home Assistant
 
@@ -59,4 +76,4 @@ url: /hacsfiles/church-drive-cards/church-drive-cards.js
 type: module
 ```
 
-Or manually: build, then register `dist/church-drive-cards.js` as a Lovelace resource (Settings → Dashboards → Resources).
+Or manually: build, copy `church-drive-cards.js` to `/config/www/`, then register `/local/church-drive-cards.js` (type: module) as a Lovelace resource (Settings → Dashboards → Resources).

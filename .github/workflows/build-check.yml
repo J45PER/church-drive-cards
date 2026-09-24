@@ -1,0 +1,28 @@
+name: Build check
+
+# Fails if the committed church-drive-cards.js doesn't match a fresh build of
+# src/, i.e. someone edited src/ and forgot to run `npm run build` (or edited
+# the bundle by hand). It never commits anything itself.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Committed bundle matches fresh build
+        run: |
+          if ! git diff --exit-code -- church-drive-cards.js; then
+            echo "::error file=church-drive-cards.js::Bundle is out of date. Run 'npm run build' and commit church-drive-cards.js."
+            exit 1
+          fi
