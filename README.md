@@ -67,6 +67,13 @@ Always commit the rebuilt `church-drive-cards.js` with any `src/` change. The **
 
 New or changed cards are tested on the **Design Presets** dashboard in Home Assistant before being used anywhere else.
 
+### Releasing
+
+1. Bump `version` in `package.json` (and run `npm install --package-lock-only`), then merge it to `main`.
+2. Tag the merge commit and push the tag: `git tag v0.3.0 && git push origin v0.3.0`.
+3. The **Release** GitHub Action checks that the tag matches `package.json` and that the bundle is up to date, then publishes a GitHub release with `church-drive-cards.js` attached.
+4. HACS lists the release as an update in Home Assistant (Settings → Updates).
+
 ## Installing in Home Assistant
 
 Via HACS: add this repository as a custom repository (category: Dashboard), install "Church Drive Cards", then add the resource if HACS doesn't do it automatically:
