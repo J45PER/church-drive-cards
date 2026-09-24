@@ -917,10 +917,59 @@
         ${s.playing ? '<ha-icon class="lcc-playing" icon="mdi:play" title="Playing" style="position:absolute; top:6px; right:6px; --mdc-icon-size:14px; color:#fff; background:var(--primary-color); border-radius:50%; padding:3px;"></ha-icon>' : ""}
         <div class="lcc-scene-name" style="position:absolute; left:8px; right:8px; bottom:7px; text-align:center; color:#fff; font-size:0.8rem; font-weight:600; line-height:1.15; text-shadow:0 1px 2px rgba(0,0,0,0.6); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;"></div>`;
         tile.querySelector(".lcc-scene-name").textContent = s.name;
-        tile.addEventListener("click", () => this._activateScene(s.entity, s.isDynamic, s.playing));
+        this._bindSceneTile(tile, s);
         wrap.appendChild(tile);
       });
       return wrap;
+    }
+    // Tap: activate (or stop a playing animation). Press and hold (~0.5s):
+    // turn off all of this card's lights. Moving the finger (a scroll) cancels
+    // the hold, and the browser's long-press menu is suppressed.
+    _bindSceneTile(tile, scene) {
+      let timer = null;
+      let held = false;
+      let moved = false;
+      let start = null;
+      const cancel = () => {
+        clearTimeout(timer);
+        timer = null;
+        tile.style.opacity = "";
+      };
+      tile.style.webkitTouchCallout = "none";
+      tile.style.userSelect = "none";
+      tile.addEventListener("contextmenu", (ev) => ev.preventDefault());
+      tile.addEventListener("pointerdown", (ev) => {
+        held = false;
+        moved = false;
+        start = { x: ev.clientX, y: ev.clientY };
+        timer = setTimeout(() => {
+          held = true;
+          timer = null;
+          tile.style.opacity = "0.6";
+          if (navigator.vibrate) navigator.vibrate(30);
+          this._turnOffCardLights();
+        }, 500);
+      });
+      tile.addEventListener("pointermove", (ev) => {
+        if (start && Math.hypot(ev.clientX - start.x, ev.clientY - start.y) > 10) {
+          moved = true;
+          cancel();
+        }
+      });
+      ["pointerup", "pointercancel", "pointerleave"].forEach((type) => tile.addEventListener(type, cancel));
+      tile.addEventListener("click", (ev) => {
+        if (held || moved) {
+          ev.preventDefault();
+          held = false;
+          moved = false;
+          return;
+        }
+        this._activateScene(scene.entity, scene.isDynamic, scene.playing);
+      });
+    }
+    _turnOffCardLights() {
+      const ids = this._cardLightIds || [];
+      if (ids.length) this._hass.callService("light", "turn_off", {}, { entity_id: ids });
     }
     // Resolve the scenes to show (configured list or auto-detected), capped at
     // max_scenes, with display name/icon/picture and selected/playing status.
@@ -1000,6 +1049,7 @@
         if (mode === "group") memberIds = lccMembersOf(hass, cfg.entity);
       }
       const relevantEntityIds = [...headIds, ...memberIds];
+      this._cardLightIds = relevantEntityIds;
       const scenes = this._resolveScenes(hass, mode, headIds, memberIds);
       const watchIds = [
         ...relevantEntityIds,
