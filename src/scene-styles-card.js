@@ -98,8 +98,8 @@ export class SceneStylesCard extends HTMLElement {
         <style>
           .ssc-grid { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px; margin-top:12px; }
           .ssc-tile { position:relative; container-type:inline-size; aspect-ratio:1 / 1; border-radius:14px; overflow:hidden; }
-          .ssc-name { position:absolute; left:6px; right:6px; bottom:6px; text-align:center; color:#fff; font-weight:600; line-height:1.15; font-size:clamp(9px, 12.5cqw, 13px); text-shadow:0 1px 2px rgba(0,0,0,0.6); }
-          @container (max-width: 64px) { .ssc-name { display:none; } }
+          .ssc-name { position:absolute; left:6px; right:6px; bottom:6px; text-align:center; color:#fff; font-weight:600; line-height:1.15; font-size:clamp(9px, 12.5cqw, 13px); text-shadow:0 1px 2px rgba(0,0,0,0.6); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+          @container (max-width: 99px) { .ssc-name { display:none; } .ssc-tile > ha-icon:first-of-type { top:50% !important; } }
         </style>
         <div style="font-size:1.5rem; font-weight:500; color:var(--primary-text-color);"></div>
         <div class="ssc-sub" style="margin-top:4px; color:var(--secondary-text-color); font-size:0.9rem;"></div>

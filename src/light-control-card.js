@@ -257,6 +257,19 @@ export const LightControlCardEditor = createFormEditor({
       { name: 'name', selector: { text: {} } },
       { name: 'max_scenes', selector: { number: { mode: 'box', min: 0, max: 24 } } },
       {
+        name: 'scene_names',
+        selector: {
+          select: {
+            mode: 'dropdown',
+            options: [
+              { value: 'auto', label: 'Auto (hide on small tiles)' },
+              { value: 'always', label: 'Always show' },
+              { value: 'never', label: 'Never show (icons only)' },
+            ],
+          },
+        },
+      },
+      {
         name: 'scenes',
         selector: {
           object: {
@@ -286,6 +299,7 @@ export const LightControlCardEditor = createFormEditor({
     entity: 'Light, zone or group',
     name: 'Title (optional)',
     max_scenes: 'Max scenes',
+    scene_names: 'Scene names',
     scenes: 'Scenes (leave empty to pick them automatically)',
     demo: 'Use pretend lights instead of real ones',
     demo_room: 'Pretend room',
@@ -513,7 +527,9 @@ export class LightControlCard extends HTMLElement {
   _buildScenes(scenes) {
     if (!scenes.length) return null;
     const anyActive = scenes.some((s) => s.active);
+    const names = ['always', 'never'].includes(this.config.scene_names) ? this.config.scene_names : 'auto';
     const wrap = document.createElement('div');
+    wrap.className = `lcc-names-${names}`;
     wrap.style.cssText =
       'display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px; margin-top:12px; padding:4px 4px 8px;';
     scenes.forEach((s) => {
@@ -530,7 +546,7 @@ export class LightControlCard extends HTMLElement {
         <ha-icon class="lcc-scene-icon" icon="${s.icon}" style="position:absolute; left:50%; top:44%; transform:translate(-50%, -50%); --mdc-icon-size:40cqw; color:#fff; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.55));"></ha-icon>
         ${s.paused ? '<ha-icon class="lcc-paused" icon="mdi:pause" title="Paused" style="position:absolute; top:6px; right:6px; --mdc-icon-size:20px; color:#fff; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.7));"></ha-icon>' : ''}
         ${s.playing ? '<ha-icon class="lcc-playing" icon="mdi:play" title="Playing" style="position:absolute; top:6px; right:6px; --mdc-icon-size:20px; color:#fff; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.7));"></ha-icon>' : ''}
-        <div class="lcc-scene-name" style="position:absolute; left:8px; right:8px; bottom:7px; text-align:center; color:#fff; font-weight:600; line-height:1.15; text-shadow:0 1px 2px rgba(0,0,0,0.6); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;"></div>`;
+        <div class="lcc-scene-name" style="position:absolute; left:8px; right:8px; bottom:7px; text-align:center; color:#fff; font-weight:600; line-height:1.15; text-shadow:0 1px 2px rgba(0,0,0,0.6); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>`;
       tile.querySelector('.lcc-scene-name').textContent = s.name;
       this._bindSceneTile(tile, s);
       wrap.appendChild(tile);
@@ -676,7 +692,14 @@ export class LightControlCard extends HTMLElement {
                (cqw = % of tile width), and names hide when tiles get too small. */
             .lcc-scene-name { font-size: clamp(9px, 12.5cqw, 13px); }
             .lcc-scene .lcc-playing, .lcc-scene .lcc-paused { --mdc-icon-size: clamp(12px, 20cqw, 20px) !important; }
-            @container (max-width: 64px) { .lcc-scene-name { display: none !important; } .lcc-scene-icon { top: 50% !important; } }
+            /* Scene names: one line (… if too long) so they never run into
+               the icon. Auto hides them on tiles under 100px; never always does. */
+            @container (max-width: 99px) {
+              .lcc-names-auto .lcc-scene-name { display: none; }
+              .lcc-names-auto .lcc-scene-icon { top: 50% !important; }
+            }
+            .lcc-names-never .lcc-scene-name { display: none; }
+            .lcc-names-never .lcc-scene-icon { top: 50% !important; }
           </style>
           <div class="lcc-title" style="display:none; padding:0 0 10px 0; font-size:1.5rem; font-weight:500; color: var(--primary-text-color);"></div>
           <div class="lcc-main"></div>
