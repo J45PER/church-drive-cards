@@ -11,7 +11,7 @@
         this._render();
       }
       _render() {
-        if (!this._hass) return;
+        if (!this._hass || !this._config) return;
         if (!this._form) {
           this._form = document.createElement("ha-form");
           this._form.addEventListener("value-changed", (ev) => {
@@ -34,7 +34,7 @@
 
   // src/gauge-zone-card.js
   var GaugeZoneCardEditor = createFormEditor({
-    schema: () => [
+    schema: (config) => [
       { name: "title", selector: { text: {} } },
       {
         type: "expandable",
@@ -71,11 +71,14 @@
                 mode: "dropdown",
                 options: [
                   { value: "battery", label: "Battery (steps with the value)" },
-                  { value: "gauge", label: "Gauge (fixed icon)" }
+                  { value: "gauge", label: "Gauge" },
+                  { value: "entity", label: "Each entity's own icon" },
+                  { value: "custom", label: "Custom icon (pick below)" }
                 ]
               }
             }
-          }
+          },
+          ...config.icon_mode === "custom" ? [{ name: "icon", selector: { icon: {} } }] : []
         ]
       },
       {
@@ -117,6 +120,7 @@
       unit: "Unit",
       max: "Full bar value",
       icon_mode: "Icons",
+      icon: "Icon for every row",
       entities: "Rows"
     },
     helpers: {
@@ -212,10 +216,18 @@
           secondaryText = e.word ? `${e.word} ${dateStr}` : "";
         }
         let icon;
+        let useStateIcon = false;
         if (e.icon) {
           icon = e.icon;
         } else if (iconMode === "battery") {
           icon = this._batteryIcon(e.available ? e.val : 0);
+        } else if (iconMode === "custom" && cfg.icon) {
+          icon = cfg.icon;
+        } else if (iconMode === "entity" && e.st) {
+          const entry = hass.entities && hass.entities[e.entity];
+          icon = entry && entry.icon || e.st.attributes.icon;
+          useStateIcon = !icon && !!customElements.get("ha-state-icon");
+          icon = icon || "mdi:gauge";
         } else {
           icon = "mdi:gauge";
         }
@@ -241,6 +253,14 @@
         </div>
         <div style="font-weight:600; color:#ffffff; margin-left:8px; flex-shrink:0;">${e.available ? Math.round(e.val) + unit : "n/a"}</div>
       `;
+        if (useStateIcon) {
+          const placeholder = row.querySelector("ha-icon");
+          const stateIcon = document.createElement("ha-state-icon");
+          stateIcon.hass = hass;
+          stateIcon.stateObj = e.st;
+          stateIcon.style.cssText = placeholder.style.cssText;
+          placeholder.replaceWith(stateIcon);
+        }
         this._rows.appendChild(row);
       });
     }
@@ -265,7 +285,7 @@
         const batteries = Object.values(hass && hass.states || {}).filter((st) => st.attributes.device_class === "battery" && st.attributes.unit_of_measurement === "%" && !isNaN(parseFloat(st.state))).sort((a, b) => parseFloat(a.state) - parseFloat(b.state)).slice(0, 3).map((st) => ({ entity: st.entity_id, name: st.attributes.friendly_name || st.entity_id }));
         return { title: "Batteries", entities: batteries };
       }
-      return { title: "Gauge", direction: "high", entities: [{ name: "Example", value: 42, icon: "mdi:gauge" }] };
+      return { title: "Gauge", direction: "high", entities: [{ name: "Example", value: 42 }] };
     }
   };
   function registerGaugeZoneCard() {
