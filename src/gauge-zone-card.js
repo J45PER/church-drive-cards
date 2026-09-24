@@ -72,6 +72,7 @@ export const GaugeZoneCardEditor = createFormEditor({
             secondary: { label: 'Secondary text (instead of wording)', selector: { text: {} } },
             icon: { label: 'Icon override', selector: { icon: {} } },
             value: { label: 'Fixed value (instead of an entity)', selector: { number: { mode: 'box' } } },
+            date: { label: 'Replaced/charged date (fixed-value rows only)', selector: { date: {} } },
             unit: { label: 'Unit override', selector: { text: {} } },
             max: { label: 'Max override', selector: { number: { mode: 'box', min: 0 } } },
           },
@@ -96,6 +97,12 @@ export const GaugeZoneCardEditor = createFormEditor({
     max: 'Default 100',
   },
 });
+
+// 2026-01-01 -> "01 Jan 2026"; anything that isn't a date is shown as-is.
+function lczFormatDate(raw) {
+  const d = /^\d{4}-\d{2}-\d{2}/.test(raw) ? new Date(raw) : null;
+  return d && !isNaN(d) ? d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : raw;
+}
 
 export class GaugeZoneCard extends HTMLElement {
   setConfig(config) {
@@ -173,7 +180,10 @@ export class GaugeZoneCard extends HTMLElement {
 
       let dateStr = null;
       if (e.demo) {
-        dateStr = e.demo_date || 'unknown';
+        // `date` (from the editor's date picker, YYYY-MM-DD) or the older
+        // free-text `demo_date` YAML field.
+        const raw = e.date || e.demo_date;
+        dateStr = raw ? lczFormatDate(raw) : 'unknown';
       } else {
         const replaced = e.st && e.st.attributes ? e.st.attributes.battery_last_replaced : null;
         if (replaced) {
@@ -242,8 +252,19 @@ export class GaugeZoneCard extends HTMLElement {
     return document.createElement('gauge-zone-card-editor');
   }
 
-  static getStubConfig() {
-    return { title: 'Zone', entities: [] };
+  // What a new card starts with in the card picker (and its preview).
+  // battery-zone-card: up to three real battery sensors, lowest first.
+  // gauge-zone-card: a single fixed example row to edit.
+  static getStubConfig(hass) {
+    if (this === GaugeZoneCard) {
+      const batteries = Object.values((hass && hass.states) || {})
+        .filter((st) => st.attributes.device_class === 'battery' && st.attributes.unit_of_measurement === '%' && !isNaN(parseFloat(st.state)))
+        .sort((a, b) => parseFloat(a.state) - parseFloat(b.state))
+        .slice(0, 3)
+        .map((st) => ({ entity: st.entity_id, name: st.attributes.friendly_name || st.entity_id }));
+      return { title: 'Batteries', entities: batteries };
+    }
+    return { title: 'Gauge', direction: 'high', entities: [{ name: 'Example', value: 42, icon: 'mdi:gauge' }] };
   }
 }
 
@@ -258,6 +279,18 @@ export function registerGaugeZoneCard() {
     customElements.define('gauge-zone-card', class extends GaugeZoneCard {});
   }
   window.customCards = window.customCards || [];
-  window.customCards.push({ type: 'battery-zone-card', name: 'Battery Zone Card', description: 'Zone battery status with gradient rows' });
-  window.customCards.push({ type: 'gauge-zone-card', name: 'Gauge Zone Card', description: 'Generic % / value gauge rows with gradient fill — storage, signal, humidity, CPU, anything measurable' });
+  window.customCards.push({
+    type: 'battery-zone-card',
+    name: 'Battery Zone Card',
+    description: 'Zone battery status with gradient rows',
+    preview: true,
+    documentationURL: 'https://github.com/J45PER/church-drive-cards#readme',
+  });
+  window.customCards.push({
+    type: 'gauge-zone-card',
+    name: 'Gauge Zone Card',
+    description: 'Generic % / value gauge rows with gradient fill — storage, signal, humidity, CPU, anything measurable',
+    preview: true,
+    documentationURL: 'https://github.com/J45PER/church-drive-cards#readme',
+  });
 }

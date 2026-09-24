@@ -101,6 +101,7 @@
               secondary: { label: "Secondary text (instead of wording)", selector: { text: {} } },
               icon: { label: "Icon override", selector: { icon: {} } },
               value: { label: "Fixed value (instead of an entity)", selector: { number: { mode: "box" } } },
+              date: { label: "Replaced/charged date (fixed-value rows only)", selector: { date: {} } },
               unit: { label: "Unit override", selector: { text: {} } },
               max: { label: "Max override", selector: { number: { mode: "box", min: 0 } } }
             }
@@ -125,7 +126,11 @@
       max: "Default 100"
     }
   });
-  var GaugeZoneCard = class extends HTMLElement {
+  function lczFormatDate(raw) {
+    const d = /^\d{4}-\d{2}-\d{2}/.test(raw) ? new Date(raw) : null;
+    return d && !isNaN(d) ? d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : raw;
+  }
+  var GaugeZoneCard = class _GaugeZoneCard extends HTMLElement {
     setConfig(config) {
       if (!config.entities) throw new Error("entities required");
       this.config = config;
@@ -191,7 +196,8 @@
         }
         let dateStr = null;
         if (e.demo) {
-          dateStr = e.demo_date || "unknown";
+          const raw = e.date || e.demo_date;
+          dateStr = raw ? lczFormatDate(raw) : "unknown";
         } else {
           const replaced = e.st && e.st.attributes ? e.st.attributes.battery_last_replaced : null;
           if (replaced) {
@@ -251,8 +257,15 @@
     static getConfigElement() {
       return document.createElement("gauge-zone-card-editor");
     }
-    static getStubConfig() {
-      return { title: "Zone", entities: [] };
+    // What a new card starts with in the card picker (and its preview).
+    // battery-zone-card: up to three real battery sensors, lowest first.
+    // gauge-zone-card: a single fixed example row to edit.
+    static getStubConfig(hass) {
+      if (this === _GaugeZoneCard) {
+        const batteries = Object.values(hass && hass.states || {}).filter((st) => st.attributes.device_class === "battery" && st.attributes.unit_of_measurement === "%" && !isNaN(parseFloat(st.state))).sort((a, b) => parseFloat(a.state) - parseFloat(b.state)).slice(0, 3).map((st) => ({ entity: st.entity_id, name: st.attributes.friendly_name || st.entity_id }));
+        return { title: "Batteries", entities: batteries };
+      }
+      return { title: "Gauge", direction: "high", entities: [{ name: "Example", value: 42, icon: "mdi:gauge" }] };
     }
   };
   function registerGaugeZoneCard() {
@@ -267,8 +280,20 @@
       });
     }
     window.customCards = window.customCards || [];
-    window.customCards.push({ type: "battery-zone-card", name: "Battery Zone Card", description: "Zone battery status with gradient rows" });
-    window.customCards.push({ type: "gauge-zone-card", name: "Gauge Zone Card", description: "Generic % / value gauge rows with gradient fill \u2014 storage, signal, humidity, CPU, anything measurable" });
+    window.customCards.push({
+      type: "battery-zone-card",
+      name: "Battery Zone Card",
+      description: "Zone battery status with gradient rows",
+      preview: true,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
+    });
+    window.customCards.push({
+      type: "gauge-zone-card",
+      name: "Gauge Zone Card",
+      description: "Generic % / value gauge rows with gradient fill \u2014 storage, signal, humidity, CPU, anything measurable",
+      preview: true,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
+    });
   }
 
   // src/alarm-panel-card.js
@@ -295,6 +320,7 @@
           { name: "demo_target_state", selector: { select: { mode: "dropdown", options: APC_STATE_OPTIONS.slice(1, 4) } } },
           { name: "demo_countdown", selector: { number: { mode: "box", min: 0, unit_of_measurement: "s" } } },
           { name: "demo_by", selector: { text: {} } },
+          { name: "demo_time", selector: { datetime: {} } },
           { name: "demo_supported_features", selector: { number: { mode: "box", min: 0 } } }
         ]
       }
@@ -306,6 +332,7 @@
       demo_target_state: "Mode being armed to (during a delay)",
       demo_countdown: "Countdown",
       demo_by: "Armed/disarmed by",
+      demo_time: "Armed/disarmed at",
       demo_supported_features: "Supported features"
     },
     helpers: {
@@ -327,15 +354,16 @@
       this._hass = hass;
       let st;
       if (this.config.demo) {
+        const demoTime = this.config.demo_time ? String(this.config.demo_time).replace(" ", "T") : (/* @__PURE__ */ new Date()).toISOString();
         st = {
           state: this.config.demo_state || "armed_away",
           attributes: {
             supported_features: this.config.demo_supported_features !== void 0 ? this.config.demo_supported_features : 3,
             targetState: this.config.demo_target_state || "armed_away",
             lastArmedBy: this.config.demo_by || "Demo User",
-            lastArmedTime: this.config.demo_time || (/* @__PURE__ */ new Date()).toISOString(),
+            lastArmedTime: demoTime,
             lastDisarmedBy: this.config.demo_by || "Demo User",
-            lastDisarmedTime: this.config.demo_time || (/* @__PURE__ */ new Date()).toISOString(),
+            lastDisarmedTime: demoTime,
             entrySecondsLeft: this.config.demo_countdown || 0,
             exitSecondsLeft: this.config.demo_countdown || 0
           }
@@ -500,7 +528,13 @@
       customElements.define("alarm-panel-card", AlarmPanelCard);
     }
     window.customCards = window.customCards || [];
-    window.customCards.push({ type: "alarm-panel-card", name: "Alarm Panel Card", description: "Alarm status, entry/exit countdown, and arm/disarm controls" });
+    window.customCards.push({
+      type: "alarm-panel-card",
+      name: "Alarm Panel Card",
+      description: "Alarm status, entry/exit countdown, and arm/disarm controls",
+      preview: true,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
+    });
   }
 
   // src/light-control-card.js
@@ -835,7 +869,9 @@
     window.customCards.push({
       type: "light-control-card",
       name: "Light Control Card",
-      description: "Light/group/room control with icon, toggle, brightness, scenes, and full more-info pop-up (visual editor supported)"
+      description: "Light/group/room control with icon, toggle, brightness, scenes, and full more-info pop-up (visual editor supported)",
+      preview: true,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
     });
   }
 
