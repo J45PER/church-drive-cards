@@ -1,0 +1,14 @@
+{
+  "name": "church-drive-cards",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Custom Lovelace cards for Church Drive Home Assistant: Battery/Gauge Zone, Alarm Panel, and Light Control.",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/index.js --bundle --format=iife --outfile=church-drive-cards.js",
+    "watch": "esbuild src/index.js --bundle --format=iife --outfile=church-drive-cards.js --watch"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
+  }
+}
