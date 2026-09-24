@@ -1,6 +1,6 @@
 # Church Drive Cards: Handoff
 
-*Last updated 2026-09-24. Current release: **v0.5.0**.*
+*Last updated 2026-09-24. Current release: **v0.6.0**.*
 
 ## Where this stands
 
@@ -172,6 +172,14 @@ Shared modules:
   `hue.activate_scene` with cycling palettes). Nothing reaches HA. The tune icon is
   hidden. **Every light card on Design Presets (main and Beta tabs) must use demo
   mode**, because the user doesn't want those pages touching real devices.
+
+- **Row state:** each row shows Off / NN% / On / Unavailable on the right (live
+  while dragging). Off rows are dimmed; lit rows are tinted 40% with warm/cool
+  mapped whites. Icon overrides work per Show-list entry and via the card `icon`
+  for the head row.
+- **Icon packs:** `lccRetryIcons` re-applies `prefix:` icons whose pack registered
+  after the card drew. Without it `<ha-icon>` stays blank for good, because rows are
+  cached rather than redrawn every update.
 
 ### Scene styles card (central scene looks)
 - `scene-styles-card` sits on the Design Presets **Scene styles** tab
