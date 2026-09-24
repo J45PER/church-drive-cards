@@ -16,7 +16,8 @@ export function createFormEditor({ schema, labels = {}, helpers = {} }) {
     }
 
     _render() {
-      if (!this._hass) return;
+      // HA may hand over hass before the config (or vice versa); wait for both.
+      if (!this._hass || !this._config) return;
       if (!this._form) {
         this._form = document.createElement('ha-form');
         this._form.addEventListener('value-changed', (ev) => {
