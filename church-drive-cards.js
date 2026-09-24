@@ -798,16 +798,31 @@
       }
     }
     // Animated (dynamic) Hue scenes are started with hue.activate_scene so
-    // they actually play. Tapping one that's already playing re-applies it
-    // with dynamic: false, which stops the animation and holds its colours.
-    // Everything else is a plain scene.turn_on.
-    _activateScene(entityId, isDynamic, playing) {
+    // they actually play; everything else is a plain scene.turn_on.
+    _activateScene(entityId, isDynamic) {
       const hue = this._hass.services && this._hass.services.hue;
       if (isDynamic && hue && hue.activate_scene) {
-        this._hass.callService("hue", "activate_scene", { dynamic: !playing }, { entity_id: entityId });
+        this._hass.callService("hue", "activate_scene", { dynamic: true }, { entity_id: entityId });
       } else {
         this._hass.callService("scene", "turn_on", {}, { entity_id: entityId });
       }
+    }
+    // Pause a playing animated scene. Re-applying the scene with dynamic: false
+    // doesn't work: Hue restarts the animation for scenes set to animate
+    // automatically. Any explicit colour command does stop it, so send each lit
+    // bulb of the scene's group the colour and brightness it's showing now.
+    _freezeScene(scene) {
+      const hass = this._hass;
+      const ids = scene.group ? lccMembersOf(hass, scene.group) : this._cardLightIds || [];
+      ids.map((id) => hass.states[id]).filter((st) => st && st.state === "on" && !lccIsGroupLike(st)).forEach((st) => {
+        const a = st.attributes;
+        const data = {};
+        if (a.color_mode === "color_temp" && a.color_temp_kelvin) data.color_temp_kelvin = a.color_temp_kelvin;
+        else if (a.xy_color) data.xy_color = a.xy_color;
+        else if (a.color_temp_kelvin) data.color_temp_kelvin = a.color_temp_kelvin;
+        if (a.brightness) data.brightness = a.brightness;
+        hass.callService("light", "turn_on", data, { entity_id: st.entity_id });
+      });
     }
     // A single full-width row that IS the control: background is a low-opacity
     // TINT of the light's colour blended into the card background (never a
@@ -967,7 +982,8 @@
           moved = false;
           return;
         }
-        this._activateScene(scene.entity, scene.isDynamic, scene.playing);
+        if (scene.playing) this._freezeScene(scene);
+        else this._activateScene(scene.entity, scene.isDynamic);
       });
     }
     _turnOffCardLights() {
@@ -1011,7 +1027,9 @@
         const lightsOn = groupSt ? groupSt.state === "on" : [...headIds, ...memberIds].some((id) => hass.states[id] && hass.states[id].state === "on");
         latest.active = lightsOn;
         if (lightsOn && latest.isDynamic && groupSt) {
-          latest.playing = groupSt.attributes.dynamics === true || lccMembersOf(hass, latest.group).some((id) => hass.states[id].attributes.dynamics === "dynamic_palette");
+          latest.playing = lccMembersOf(hass, latest.group).some(
+            (id) => hass.states[id].state === "on" && hass.states[id].attributes.dynamics === "dynamic_palette"
+          );
           latest.paused = !latest.playing;
         }
       }
