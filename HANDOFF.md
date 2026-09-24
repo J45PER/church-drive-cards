@@ -1,6 +1,6 @@
 # Church Drive Cards: Handoff
 
-*Last updated 2026-09-24. Current release: **v0.3.0**.*
+*Last updated 2026-09-24. Current release: **v0.4.0**.*
 
 ## Where this stands
 
@@ -168,6 +168,17 @@ Shared modules:
   `hue.activate_scene` with cycling palettes). Nothing reaches HA. The tune icon is
   hidden. **Every light card on Design Presets (main and Beta tabs) must use demo
   mode**, because the user doesn't want those pages touching real devices.
+
+### Scene styles card (central scene looks)
+- `scene-styles-card` sits on the Design Presets **Scene styles** tab
+  (`/design-presets/scene-styles`) and is the single store for scene tile looks.
+- Its `styles` list is keyed by scene **name**, so one entry styles that scene in
+  every room. Each entry takes an icon, `colour_1..3` (`[r,g,b]`) or an `image`.
+- Light cards on any dashboard fetch the `design-presets` config (`lovelace/config`)
+  once per page and use it. On the same page, edits apply live via a window event.
+  The beta build prefers a `scene-styles-card-beta` if one exists.
+- Precedence: a card's own per-scene override > the central style > built-in
+  palettes (`src/scene-style.js`, covering every Hue scene name in the home).
 
 ### All cards
 - **Sizing:**
