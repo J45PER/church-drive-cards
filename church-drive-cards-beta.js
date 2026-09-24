@@ -25,7 +25,7 @@
         }
         this._form.hass = this._hass;
         this._form.data = this._config;
-        this._form.schema = schema(this._config);
+        this._form.schema = schema(this._config, this._hass);
         this._form.computeLabel = (s) => labels[s.name] || s.title || s.name;
         this._form.computeHelper = (s) => helpers[s.name];
       }
@@ -714,7 +714,7 @@
           attributes: { friendly_name: l.name, supported_color_modes: l.modes, dynamics: "none", brightness: null }
         };
       });
-      this.room.groups.forEach((g) => {
+      this.room.groups.forEach((g, gi) => {
         const id = `light.${g.id}`;
         const dev = `dev_${g.id}`;
         this.devices[dev] = { id: dev, area_id: g.area ? area : null };
@@ -726,6 +726,7 @@
             friendly_name: g.name,
             entity_id: g.members.map((m) => `light.${m}`),
             is_hue_group: true,
+            hue_type: gi === 0 ? "room" : "zone",
             hue_scenes: g.scenes.map(([name]) => name),
             supported_color_modes: COLOUR
           }
@@ -981,9 +982,65 @@
     });
     return out;
   }
+  function lccNormalizeList(list) {
+    return (list || []).map((s) => typeof s === "string" ? { entity: s } : s).filter((s) => s && s.entity);
+  }
+  function lccCandidates(hass, mode, area, entity) {
+    if (!hass || !hass.states) return [];
+    if (mode === "group") return entity ? lccMembersOf(hass, entity) : [];
+    if (mode !== "room" || !area) return [];
+    const areaLights = Object.values(hass.entities || {}).filter(
+      (e) => e.entity_id.startsWith("light.") && !e.hidden && e.entity_category == null && hass.states[e.entity_id] && lccAreaOf(hass, e) === area
+    ).map((e) => e.entity_id);
+    const bulbs = areaLights.filter((id) => !lccIsGroupLike(hass.states[id]));
+    const bulbSet = new Set(bulbs);
+    const groups = areaLights.filter((id) => lccIsGroupLike(hass.states[id]));
+    Object.values(hass.states).forEach((st) => {
+      const members = st.entity_id.startsWith("light.") && lccIsGroupLike(st) ? st.attributes.entity_id : null;
+      if (members && members.length && members.every((m) => bulbSet.has(m)) && !groups.includes(st.entity_id)) {
+        groups.push(st.entity_id);
+      }
+    });
+    return [...groups, ...bulbs];
+  }
+  var lccDemoCache = {};
+  function lccDemoFor(room) {
+    const key = room || "living_room";
+    if (!lccDemoCache[key]) lccDemoCache[key] = new DemoHome(key, () => {
+    });
+    return lccDemoCache[key];
+  }
   var LightControlCardEditor = createFormEditor({
-    schema: (config) => {
+    schema: (config, hass) => {
       const mode = config.mode || "light";
+      let showField = [];
+      if (mode === "room" || mode === "group") {
+        const demo = config.demo ? lccDemoFor(config.demo_room) : null;
+        const h = demo ? demo.hass() : hass;
+        const ids = demo ? lccCandidates(h, mode, demo.area, demo.roomGroup) : lccCandidates(h, mode, config.area, config.entity);
+        const options = ids.map((id) => {
+          const st = h.states[id];
+          const kind = lccIsGroupLike(st) ? st.attributes.hue_type === "room" ? "room" : "zone" : "light";
+          return { value: id, label: `${st && st.attributes.friendly_name || id} (${kind})` };
+        });
+        showField = [
+          {
+            name: "entities",
+            title: mode === "room" ? "Show these lights and zones, in this order (empty = all)" : "Show these lights, in this order (empty = all)",
+            selector: {
+              object: {
+                multiple: true,
+                label_field: "entity",
+                description_field: "name",
+                fields: {
+                  entity: { label: mode === "room" ? "Light or zone" : "Light", required: true, selector: { select: { mode: "dropdown", options } } },
+                  name: { label: "Name override", selector: { text: {} } }
+                }
+              }
+            }
+          }
+        ];
+      }
       const demoFields = [
         {
           type: "expandable",
@@ -1015,7 +1072,7 @@
               mode: "dropdown",
               options: [
                 { value: "light", label: "Single Light" },
-                { value: "group", label: "Light Group" },
+                { value: "group", label: "Zone or light group" },
                 { value: "room", label: "Room" }
               ]
             }
@@ -1025,6 +1082,7 @@
         ...config.demo ? [] : [
           mode === "room" ? { name: "area", selector: { area: {} } } : { name: "entity", selector: { entity: { domain: "light" } } }
         ],
+        ...showField,
         { name: "name", selector: { text: {} } },
         { name: "max_scenes", selector: { number: { mode: "box", min: 0, max: 24 } } },
         {
@@ -1046,11 +1104,15 @@
         ...demoFields
       ];
     },
-    normalize: (config) => config.scenes ? { ...config, scenes: lccNormalizeScenes(config.scenes) } : config,
+    normalize: (config) => ({
+      ...config,
+      ...config.scenes ? { scenes: lccNormalizeScenes(config.scenes) } : {},
+      ...config.entities ? { entities: lccNormalizeList(config.entities) } : {}
+    }),
     labels: {
       mode: "Card type",
       area: "Room",
-      entity: "Light entity",
+      entity: "Light, zone or group",
       name: "Title (optional)",
       max_scenes: "Max scenes",
       scenes: "Scenes (leave empty to pick them automatically)",
@@ -1383,17 +1445,41 @@
       }
       let headIds = [];
       let memberIds = [];
+      let rows = [];
+      const names = {};
+      const chosen = lccNormalizeList(cfg.entities).filter((s) => hass.states[s.entity]);
+      chosen.forEach((s) => {
+        if (s.name) names[s.entity] = s.name;
+      });
       if (mode === "room") {
-        const areaLights = Object.values(hass.entities || {}).filter(
-          (e) => e.entity_id.startsWith("light.") && !e.hidden && e.entity_category == null && hass.states[e.entity_id] && lccAreaOf(hass, e) === cfg.area
-        ).map((e) => e.entity_id);
-        headIds = areaLights.filter((id) => lccIsGroupLike(hass.states[id]));
-        memberIds = areaLights.filter((id) => !lccIsGroupLike(hass.states[id]));
+        if (chosen.length) {
+          const ids = chosen.map((s) => s.entity);
+          headIds = ids.filter((id) => lccIsGroupLike(hass.states[id]));
+          memberIds = ids.filter((id) => !lccIsGroupLike(hass.states[id]));
+          rows = ids.map((id) => ({ id, member: !lccIsGroupLike(hass.states[id]) && headIds.length > 0 }));
+        } else {
+          const all = lccCandidates(hass, "room", cfg.area).filter((id) => {
+            if (!lccIsGroupLike(hass.states[id])) return true;
+            return lccAreaOf(hass, hass.entities && hass.entities[id]) === cfg.area;
+          });
+          headIds = all.filter((id) => lccIsGroupLike(hass.states[id]));
+          memberIds = all.filter((id) => !lccIsGroupLike(hass.states[id]));
+          rows = [
+            ...headIds.map((id) => ({ id, member: false })),
+            ...memberIds.map((id) => ({ id, member: headIds.length > 0 }))
+          ];
+        }
       } else {
         headIds = [cfg.entity];
-        if (mode === "group") memberIds = lccMembersOf(hass, cfg.entity);
+        if (mode === "group") {
+          const members = lccMembersOf(hass, cfg.entity);
+          const picked = chosen.map((s) => s.entity).filter((id) => members.includes(id));
+          memberIds = picked.length ? picked : members;
+        }
+        if (cfg.name) names[cfg.entity] = cfg.name;
+        rows = [{ id: cfg.entity, member: false }, ...memberIds.map((id) => ({ id, member: true }))];
       }
-      const relevantEntityIds = [...headIds, ...memberIds];
+      const relevantEntityIds = rows.map((r) => r.id);
       this._cardLightIds = relevantEntityIds;
       const scenes = this._resolveScenes(hass, mode, headIds, memberIds);
       const watchIds = [
@@ -1419,23 +1505,19 @@
         const area = hass.areas && hass.areas[cfg.area];
         this._titleEl.textContent = cfg.name || (area ? area.name : cfg.area);
         this._titleEl.style.display = "block";
-        if (relevantEntityIds.length === 0) {
+        if (rows.length === 0) {
           this._main.textContent = "No lights found in this area.";
           this._main.style.cssText = "color:var(--secondary-text-color); padding:8px 4px;";
         }
-        headIds.forEach((id) => this._main.appendChild(this._buildRow(id, { withMoreInfo: true })));
-        const member = headIds.length > 0;
-        memberIds.forEach((id) => this._members.appendChild(this._buildRow(id, { withMoreInfo: true, member })));
       } else {
         this._titleEl.style.display = "none";
-        const row = this._buildRow(cfg.entity, { withMoreInfo: true });
-        if (cfg.name) {
-          const nameEl = row.querySelector(".lcc-name");
-          if (nameEl) nameEl.textContent = cfg.name;
-        }
-        this._main.appendChild(row);
-        memberIds.forEach((id) => this._members.appendChild(this._buildRow(id, { withMoreInfo: true, member: true })));
       }
+      rows.forEach(({ id, member }) => {
+        const row = this._buildRow(id, { withMoreInfo: true, member });
+        const nameEl = row.querySelector(".lcc-name");
+        if (names[id] && nameEl) nameEl.textContent = names[id];
+        this._main.appendChild(row);
+      });
       this._scenesEl.innerHTML = "";
       const scenesGrid = this._buildScenes(scenes);
       if (scenesGrid) this._scenesEl.appendChild(scenesGrid);

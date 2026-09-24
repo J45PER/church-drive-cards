@@ -43,6 +43,18 @@ Mode-aware light control. Has a real visual editor (Add Card → search "Light C
 - `mode: group`: the group's row, with its member lights indented underneath.
 - `mode: room`: the area name as a title, then that area's Hue room/zone groups as top rows, with the individual lights indented underneath. Lights are found through the entity **or** device area, as Hue assigns areas to devices. Hidden entities and settings/diagnostic entities (e.g. an air purifier's display backlight) are skipped.
 
+**Choosing what's shown:** in `room` and `group` (zone) modes, the editor's **Show** list picks which rows appear and in what order, each with an optional name override. A room offers its lights, its Hue room group, and any Hue zones made up only of its lights, even zones with no area. A zone offers its member lights. Leave the list empty to show everything.
+
+```yaml
+type: custom:light-control-card
+mode: room
+area: living_room
+entities:
+  - light.living_room_ambience
+  - entity: light.tv_table_lamp
+    name: Reading lamp
+```
+
 Tap a row to toggle, drag across it to set brightness, and tap the tune icon for the native more-info dialog.
 
 **Demo mode** (`demo: true`, in the editor's *Demo mode* section) swaps Home Assistant for a built-in pretend home, so the card can be tried without touching real lights. `demo_room` picks `living_room` (a room plus a zone of animated scenes, including a white-only lamp and an on/off-only lamp) or `bedroom` (two groups plus a hidden settings light the card should skip). Every tap, drag, scene, pause and hold works on the pretend lights, and nothing is sent to Home Assistant. The Design Presets dashboard uses only demo cards.

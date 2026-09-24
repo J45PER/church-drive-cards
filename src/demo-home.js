@@ -112,7 +112,7 @@ export class DemoHome {
       };
     });
 
-    this.room.groups.forEach((g) => {
+    this.room.groups.forEach((g, gi) => {
       const id = `light.${g.id}`;
       const dev = `dev_${g.id}`;
       this.devices[dev] = { id: dev, area_id: g.area ? area : null };
@@ -124,6 +124,7 @@ export class DemoHome {
           friendly_name: g.name,
           entity_id: g.members.map((m) => `light.${m}`),
           is_hue_group: true,
+          hue_type: gi === 0 ? 'room' : 'zone',
           hue_scenes: g.scenes.map(([name]) => name),
           supported_color_modes: COLOUR,
         },
