@@ -28,8 +28,13 @@ function lccLightColor(st) {
   return '#ffc107';
 }
 
-function lccLightIcon(st, isGroupLike) {
+// Icon priority: the entity registry icon set in HA's UI (e.g. custom Hue
+// icons like phu:ceiling-infuse — these are NOT copied into state
+// attributes), then a state-attribute icon, then a bulb/group default.
+function lccLightIcon(hass, st, isGroupLike) {
   const on = st && st.state === 'on';
+  const entry = st && hass.entities && hass.entities[st.entity_id];
+  if (entry && entry.icon) return entry.icon;
   if (st && st.attributes && st.attributes.icon) return st.attributes.icon;
   if (isGroupLike) return on ? 'mdi:lightbulb-group' : 'mdi:lightbulb-group-outline';
   return on ? 'mdi:lightbulb' : 'mdi:lightbulb-outline';
@@ -180,7 +185,7 @@ export class LightControlCard extends HTMLElement {
     const dimmable =
       st && st.attributes.supported_color_modes && st.attributes.supported_color_modes.some((m) => m !== 'onoff');
     const color = lccLightColor(st);
-    const icon = lccLightIcon(st, isGroupLike);
+    const icon = lccLightIcon(this._hass, st, isGroupLike);
     const brightnessPct = st && st.attributes.brightness ? Math.round((st.attributes.brightness / 255) * 100) : 0;
     const fillPct = on ? (dimmable ? Math.max(brightnessPct, 4) : 100) : 0;
 
@@ -207,9 +212,14 @@ export class LightControlCard extends HTMLElement {
         ev.stopPropagation();
         lccMoreInfo(this, entityId);
       });
-      moreBtn.addEventListener('pointerdown', (ev) => ev.stopPropagation());
+      // Swallow the whole press on the tune icon so the row never sees it —
+      // stopping only pointerdown still let the row's pointerup toggle.
+      ['pointerdown', 'pointerup', 'pointercancel'].forEach((type) =>
+        moreBtn.addEventListener(type, (ev) => ev.stopPropagation())
+      );
     }
 
+    let pressed = false;
     let dragging = false;
     let moved = false;
     let startX = 0;
@@ -224,6 +234,7 @@ export class LightControlCard extends HTMLElement {
     // state change in the house triggers a hass update, which would replace
     // this element mid-gesture), so _interacting pauses re-rendering.
     const endInteraction = () => {
+      pressed = false;
       dragging = false;
       moved = false;
       this._interacting = false;
@@ -234,6 +245,7 @@ export class LightControlCard extends HTMLElement {
       }
     };
     row.addEventListener('pointerdown', (ev) => {
+      pressed = true;
       if (!dimmable) return;
       dragging = true;
       moved = false;
@@ -247,6 +259,8 @@ export class LightControlCard extends HTMLElement {
       if (moved) setFillVisual(pctFromEvent(ev));
     });
     row.addEventListener('pointerup', (ev) => {
+      // Only act on a press that started on this row.
+      if (!pressed) return;
       if (dimmable && dragging && moved) {
         this._setBrightnessPct(entityId, pctFromEvent(ev));
       } else {
@@ -309,7 +323,7 @@ export class LightControlCard extends HTMLElement {
           (e) =>
             e.entity_id.startsWith('light.') &&
             !e.hidden &&
-            !e.entity_category &&
+            e.entity_category == null &&
             hass.states[e.entity_id] &&
             lccAreaOf(hass, e) === cfg.area
         )

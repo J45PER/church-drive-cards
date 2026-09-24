@@ -351,8 +351,10 @@
     if (a.color_temp_kelvin) return lccKelvinColor(a.color_temp_kelvin);
     return "#ffc107";
   }
-  function lccLightIcon(st, isGroupLike) {
+  function lccLightIcon(hass, st, isGroupLike) {
     const on = st && st.state === "on";
+    const entry = st && hass.entities && hass.entities[st.entity_id];
+    if (entry && entry.icon) return entry.icon;
     if (st && st.attributes && st.attributes.icon) return st.attributes.icon;
     if (isGroupLike) return on ? "mdi:lightbulb-group" : "mdi:lightbulb-group-outline";
     return on ? "mdi:lightbulb" : "mdi:lightbulb-outline";
@@ -479,7 +481,7 @@
       const on = st && st.state === "on";
       const dimmable = st && st.attributes.supported_color_modes && st.attributes.supported_color_modes.some((m) => m !== "onoff");
       const color = lccLightColor(st);
-      const icon = lccLightIcon(st, isGroupLike);
+      const icon = lccLightIcon(this._hass, st, isGroupLike);
       const brightnessPct = st && st.attributes.brightness ? Math.round(st.attributes.brightness / 255 * 100) : 0;
       const fillPct = on ? dimmable ? Math.max(brightnessPct, 4) : 100 : 0;
       const tint = `color-mix(in srgb, ${color} 30%, var(--card-background-color, #1c1c1c))`;
@@ -500,8 +502,11 @@
           ev.stopPropagation();
           lccMoreInfo(this, entityId);
         });
-        moreBtn.addEventListener("pointerdown", (ev) => ev.stopPropagation());
+        ["pointerdown", "pointerup", "pointercancel"].forEach(
+          (type) => moreBtn.addEventListener(type, (ev) => ev.stopPropagation())
+        );
       }
+      let pressed = false;
       let dragging = false;
       let moved = false;
       let startX = 0;
@@ -513,6 +518,7 @@
         return Math.min(100, Math.max(0, (ev.clientX - rect.left) / rect.width * 100));
       };
       const endInteraction = () => {
+        pressed = false;
         dragging = false;
         moved = false;
         this._interacting = false;
@@ -523,6 +529,7 @@
         }
       };
       row.addEventListener("pointerdown", (ev) => {
+        pressed = true;
         if (!dimmable) return;
         dragging = true;
         moved = false;
@@ -536,6 +543,7 @@
         if (moved) setFillVisual(pctFromEvent(ev));
       });
       row.addEventListener("pointerup", (ev) => {
+        if (!pressed) return;
         if (dimmable && dragging && moved) {
           this._setBrightnessPct(entityId, pctFromEvent(ev));
         } else {
@@ -585,7 +593,7 @@
       let memberIds = [];
       if (mode === "room") {
         const areaLights = Object.values(hass.entities || {}).filter(
-          (e) => e.entity_id.startsWith("light.") && !e.hidden && !e.entity_category && hass.states[e.entity_id] && lccAreaOf(hass, e) === cfg.area
+          (e) => e.entity_id.startsWith("light.") && !e.hidden && e.entity_category == null && hass.states[e.entity_id] && lccAreaOf(hass, e) === cfg.area
         ).map((e) => e.entity_id);
         headIds = areaLights.filter((id) => lccIsGroupLike(hass.states[id]));
         memberIds = areaLights.filter((id) => !lccIsGroupLike(hass.states[id]));
