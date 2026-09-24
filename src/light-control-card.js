@@ -3,7 +3,7 @@
 // chips, and Home Assistant's own more-info pop-up for the full picker.
 
 import { createFormEditor } from './form-editor.js';
-import { sceneBackground, sceneIcon } from './scene-style.js';
+import { sceneBackground, sceneIcon, scenePalette } from './scene-style.js';
 
 const LCC_DEFAULT_MAX_SCENES = 6;
 
@@ -332,20 +332,22 @@ export class LightControlCard extends HTMLElement {
   }
 
   // Square scene tiles: picture (or palette gradient) background, icon, name.
-  // The selected scene is outlined; an animated scene that's running shows a
-  // pulsing play badge.
+  // The selected scene glows in its own colour and the others are dimmed; an
+  // animated scene shows a pulsing play badge while running, pause when not.
   _buildScenes(scenes) {
     if (!scenes.length) return null;
+    const anyActive = scenes.some((s) => s.active);
     const wrap = document.createElement('div');
     wrap.style.cssText =
-      'display:grid; grid-template-columns:repeat(auto-fill, minmax(84px, 1fr)); gap:8px; margin-top:12px;';
+      'display:grid; grid-template-columns:repeat(auto-fill, minmax(84px, 1fr)); gap:8px; margin-top:12px; padding:4px 4px 8px;';
     scenes.forEach((s) => {
       const tile = document.createElement('button');
-      tile.className = 'lcc-scene';
+      tile.className = s.active || !anyActive ? 'lcc-scene' : 'lcc-scene lcc-dim';
+      const glow = `color-mix(in srgb, ${scenePalette(s.name)[0]} 85%, transparent)`;
       tile.title = s.playing ? `${s.name} (playing, tap to stop)` : s.paused ? `${s.name} (paused, tap to play)` : s.name;
       const bg = s.image ? `center / cover no-repeat url("${s.image}")` : sceneBackground(s.name);
       tile.style.cssText = `position:relative; container-type:inline-size; aspect-ratio:1 / 1; border:none; border-radius:14px; padding:0; overflow:hidden; cursor:pointer; background:${bg};${
-        s.active ? ' outline:3px solid var(--primary-color); outline-offset:2px;' : ''
+        s.active ? ` box-shadow:0 0 16px 3px ${glow}; transform:scale(1.04); z-index:1;` : ''
       }`;
       tile.innerHTML = `
         <div style="position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0) 65%);"></div>
@@ -482,7 +484,9 @@ export class LightControlCard extends HTMLElement {
           <style>
             @keyframes lcc-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
             .lcc-playing { animation: lcc-pulse 1.6s ease-in-out infinite; }
-            .lcc-scene:active { transform: scale(0.97); }
+            .lcc-scene { transition: opacity 0.2s, filter 0.2s, transform 0.2s, box-shadow 0.2s; }
+            .lcc-scene.lcc-dim { opacity: 0.4; filter: saturate(0.4); }
+            .lcc-scene.lcc-dim:hover { opacity: 0.8; filter: none; }
           </style>
           <div class="lcc-title" style="display:none; padding:0 0 10px 0; font-size:1.5rem; font-weight:500; color: var(--primary-text-color);"></div>
           <div class="lcc-main"></div>
