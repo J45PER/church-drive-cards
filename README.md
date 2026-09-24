@@ -45,7 +45,7 @@ Mode-aware light control. Has a real visual editor (Add Card → search "Light C
 
 Tap a row to toggle, drag across it to set brightness, and tap the tune icon for the native more-info dialog.
 
-**Scenes** show as square tiles under the lights, up to `max_scenes` (default 6; `0` hides them), in the same order as the Hue app. They're picked automatically from the card's Hue room and any Hue zone made only of its lights, or you can list your own in the editor with an optional name, icon and uploaded picture per scene. Without a picture, a tile gets a gradient in that scene's colours. The most recently activated scene is outlined while its lights are on. Animated (dynamic) Hue scenes start animating when tapped, and show a pulsing ▶ while they're playing. Icons follow whatever is set in Home Assistant, including custom icon packs such as `phu:` Hue icons.
+**Scenes** show as square tiles under the lights, up to `max_scenes` (default 6; `0` hides them), in the same order as the Hue app. They're picked automatically from the card's Hue room and any Hue zone made only of its lights, or you can list your own in the editor with an optional name, icon and uploaded picture per scene. Without a picture, a tile gets a gradient in that scene's colours. The most recently activated scene is outlined while its lights are on. Animated (dynamic) Hue scenes start animating when tapped and show a pulsing ▶ while they're playing; tap a playing scene again to stop the animation and hold its colours. Icons follow whatever is set in Home Assistant, including custom icon packs such as `phu:` Hue icons.
 
 ```yaml
 type: custom:light-control-card
