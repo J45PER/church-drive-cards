@@ -43,16 +43,19 @@ Mode-aware light control. Has a real visual editor (Add Card → search "Light C
 - `mode: group`: the group's row, with its member lights indented underneath.
 - `mode: room`: the area name as a title, then that area's Hue room/zone groups as top rows, with the individual lights indented underneath. Lights are found through the entity **or** device area, as Hue assigns areas to devices. Hidden entities and settings/diagnostic entities (e.g. an air purifier's display backlight) are skipped.
 
-**Choosing what's shown:** in `room` and `group` (zone) modes, the editor's **Show** list picks which rows appear and in what order, each with an optional name override. A room offers its lights, its Hue room group, and any Hue zones made up only of its lights, even zones with no area. A zone offers its member lights. Leave the list empty to show everything.
+**Choosing what's shown:** in `room` and `group` (zone) modes, the editor's **Show** list picks which rows appear and in what order, each with an optional name override. A room offers its lights, its Hue room group, and any Hue zones made up only of its lights, even zones with no area. A zone offers its member lights. Leave the list empty to show everything. Each entry can also set a **Level**: `0` top, `1` child or `2` grandchild, indented 16px per level. Without one, a Hue room sits at the top, zones become its children, and lights sit one level under the deepest group.
 
 ```yaml
 type: custom:light-control-card
 mode: room
 area: living_room
 entities:
-  - light.living_room_ambience
+  - light.living_room
+  - entity: light.living_room_ambience
+    level: 1
   - entity: light.tv_table_lamp
     name: Reading lamp
+    level: 2
 ```
 
 Tap a row to toggle, drag across it to set brightness, and tap the tune icon for the native more-info dialog.
