@@ -1,6 +1,6 @@
 # Church Drive Cards: Handoff
 
-*Last updated 2026-09-24. Current release: **v0.4.0**.*
+*Last updated 2026-09-24. Current release: **v0.4.1**.*
 
 ## Where this stands
 
@@ -161,8 +161,9 @@ Shared modules:
   - Zone choices: its member lights.
   - The editor offers only valid choices, labelled room/zone/light from `hue_type`.
   - An empty list, or one where nothing exists, shows everything.
-- **Scene tile layout:** always four per row. Names scale (9–13px via `cqw`) and are
-  hidden under 64px tiles, and the badge scales too.
+- **Scene tile layout:** always four per row. Names are one line (ellipsis), scale
+  9–13px via `cqw`, and hide on tiles under 100px. `scene_names` (`auto` | `always` |
+  `never`) overrides that. The badge scales too.
 - **Demo mode** (`demo: true`, `demo_room: living_room | bedroom`): `src/demo-home.js`
   simulates a Hue home in the browser (registries, `light.*`, `scene.turn_on`,
   `hue.activate_scene` with cycling palettes). Nothing reaches HA. The tune icon is
