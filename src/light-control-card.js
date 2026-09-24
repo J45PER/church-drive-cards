@@ -6,6 +6,7 @@ import { createFormEditor } from './form-editor.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { sceneBackground, sceneIcon, scenePalette, loadSceneStyles, onSceneStylesChanged } from './scene-style.js';
 import { DemoHome } from './demo-home.js';
+import { iconHtml, hydrateIcons } from './icons.js';
 
 const LCC_DEFAULT_MAX_SCENES = 8;
 
@@ -29,35 +30,15 @@ function lccKelvinColor(k) {
   return '#8fc3ff';
 }
 
-// Custom icon packs (e.g. phu: from Custom Brand Icons) load as separate
-// resources. If a card draws before its pack has registered, <ha-icon> shows
-// nothing and never retries, so poll briefly and re-apply those icons.
-function lccIconPackLoaded(icon) {
-  const prefix = String(icon || '').split(':')[0];
-  if (!prefix || prefix === 'mdi' || prefix === 'hass' || !String(icon).includes(':')) return true;
-  return !!((window.customIcons && window.customIcons[prefix]) || (window.customIconsets && window.customIconsets[prefix]));
-}
-
-function lccRetryIcons(root) {
-  let waiting = [...root.querySelectorAll('ha-icon[icon]')].filter((el) => !lccIconPackLoaded(el.getAttribute('icon')));
-  if (!waiting.length) return;
-  let tries = 0;
-  const timer = setInterval(() => {
-    tries += 1;
-    waiting = waiting.filter((el) => {
-      const icon = el.getAttribute('icon');
-      if (!lccIconPackLoaded(icon)) return true;
-      el.setAttribute('icon', '');
-      el.setAttribute('icon', icon);
-      return false;
-    });
-    if (!waiting.length || tries > 80) clearInterval(timer);
-  }, 250);
-}
 
 function lccLightColor(st) {
   if (!st || st.state !== 'on') return '#ffc107';
   const a = st.attributes || {};
+  // White light (colour-temperature mode, or a colour so pale it reads as
+  // white): use a clear warm/cool colour for its temperature, not near-white.
+  const paleColour = a.hs_color && a.hs_color[1] < 15;
+  if ((a.color_mode === 'color_temp' || paleColour) && a.color_temp_kelvin) return lccKelvinColor(a.color_temp_kelvin);
+  if (paleColour) return '#ffd08a';
   if (a.hs_color) return lccHsToRgb(a.hs_color[0], a.hs_color[1]);
   if (a.rgb_color) return `rgb(${a.rgb_color[0]},${a.rgb_color[1]},${a.rgb_color[2]})`;
   if (a.color_temp_kelvin) return lccKelvinColor(a.color_temp_kelvin);
@@ -514,7 +495,7 @@ export class LightControlCard extends HTMLElement {
     const indent = level > 0 ? `margin-left:${16 * level}px;` : '';
     row.style.cssText = `position:relative; display:flex; align-items:center; gap:12px; padding:${pad}; ${indent} border-radius:12px; margin-top:6px; overflow:hidden; cursor:pointer; user-select:none; touch-action:pan-y; background: linear-gradient(to right, ${tint} 0%, ${tint} ${fillPct}%, ${track} ${fillPct}%, ${track} 100%);`;
     row.innerHTML = `
-      <ha-icon icon="${icon}" style="color:${on ? color : 'var(--secondary-text-color)'}; opacity:${on ? 1 : 0.6}; --mdc-icon-size:24px; flex-shrink:0; pointer-events:none;"></ha-icon>
+      ${iconHtml(icon, { size: '24px', cls: 'lcc-row-icon', style: `color:${on ? color : 'var(--secondary-text-color)'}; opacity:${on ? 1 : 0.6}; flex-shrink:0; pointer-events:none;` })}
       <div class="lcc-name" style="flex:1; min-width:0; font-weight:${on ? 600 : 400}; color:${on ? 'var(--primary-text-color)' : 'var(--secondary-text-color)'}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; pointer-events:none;">${name}</div>
       <div class="lcc-state" style="flex-shrink:0; font-size:0.85rem; font-variant-numeric:tabular-nums; color:${on ? 'var(--primary-text-color)' : 'var(--secondary-text-color)'}; opacity:${on ? 0.9 : 0.7}; pointer-events:none;">${stateText}</div>
       ${withMoreInfo && !this.config.demo ? `<ha-icon class="lcc-more" icon="mdi:tune-variant" style="color:var(--secondary-text-color); --mdc-icon-size:20px; cursor:pointer; flex-shrink:0;"></ha-icon>` : ''}
@@ -614,7 +595,7 @@ export class LightControlCard extends HTMLElement {
       }`;
       tile.innerHTML = `
         <div style="position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0) 65%);"></div>
-        <ha-icon class="lcc-scene-icon" icon="${s.icon}" style="position:absolute; left:50%; top:44%; transform:translate(-50%, -50%); --mdc-icon-size:40cqw; color:#fff; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.55));"></ha-icon>
+        ${iconHtml(s.icon, { size: '40cqw', cls: 'lcc-scene-icon', style: 'position:absolute; left:50%; top:44%; transform:translate(-50%, -50%); color:#fff; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.55));' })}
         ${s.paused ? '<ha-icon class="lcc-paused" icon="mdi:pause" title="Paused" style="position:absolute; top:6px; right:6px; --mdc-icon-size:20px; color:#fff; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.7));"></ha-icon>' : ''}
         ${s.playing ? '<ha-icon class="lcc-playing" icon="mdi:play" title="Playing" style="position:absolute; top:6px; right:6px; --mdc-icon-size:20px; color:#fff; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.7));"></ha-icon>' : ''}
         <div class="lcc-scene-name" style="position:absolute; left:8px; right:8px; bottom:7px; text-align:center; color:#fff; font-weight:600; line-height:1.15; text-shadow:0 1px 2px rgba(0,0,0,0.6); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>`;
@@ -891,7 +872,7 @@ export class LightControlCard extends HTMLElement {
     this._scenesEl.innerHTML = '';
     const scenesGrid = this._buildScenes(scenes);
     if (scenesGrid) this._scenesEl.appendChild(scenesGrid);
-    lccRetryIcons(this);
+    hydrateIcons(this);
 
     // ~1 masonry unit (50px) per row, plus card padding and room title; scene
     // tiles are ~2 units per row of about four.

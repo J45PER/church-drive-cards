@@ -942,6 +942,80 @@
     }
   };
 
+  // src/icons.js
+  var cache = /* @__PURE__ */ new Map();
+  var pending = /* @__PURE__ */ new Map();
+  function packFor(icon) {
+    const [prefix, name] = String(icon || "").split(":");
+    if (!name || prefix === "mdi" || prefix === "hass") return null;
+    const set = window.customIcons && window.customIcons[prefix];
+    if (set && typeof set.getIcon === "function") return { get: () => set.getIcon(name) };
+    const legacy = window.customIconsets && window.customIconsets[prefix];
+    if (typeof legacy === "function") return { get: () => legacy(name) };
+    return { waiting: true };
+  }
+  function isCustom(icon) {
+    const [prefix, name] = String(icon || "").split(":");
+    return !!name && prefix !== "mdi" && prefix !== "hass";
+  }
+  function svg(def, size) {
+    const d = (def.path || "").replace(/"/g, "&quot;");
+    return `<svg viewBox="${def.viewBox || "0 0 24 24"}" width="${size}" height="${size}" style="display:block; fill:currentColor;"><path d="${d}"></path></svg>`;
+  }
+  function escapeAttr(text) {
+    return String(text).replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+  }
+  function iconHtml(icon, { size = "24px", style = "", cls = "" } = {}) {
+    if (!isCustom(icon)) {
+      return `<ha-icon class="${cls}" icon="${escapeAttr(icon)}" style="--mdc-icon-size:${size}; ${style}"></ha-icon>`;
+    }
+    const def = cache.get(icon);
+    const inner = def ? svg(def, "100%") : "";
+    return `<span class="${cls} cdc-icon" data-icon="${escapeAttr(icon)}" style="display:inline-flex; width:${size}; height:${size}; ${style}">${inner}</span>`;
+  }
+  function resolve(icon) {
+    if (cache.has(icon)) return Promise.resolve(cache.get(icon));
+    if (pending.has(icon)) return pending.get(icon);
+    const promise = new Promise((done) => {
+      let tries = 0;
+      const attempt = () => {
+        const pack = packFor(icon);
+        if (pack && pack.get) {
+          Promise.resolve(pack.get()).then((def) => {
+            const ok = def && def.path ? def : null;
+            cache.set(icon, ok);
+            done(ok);
+          }).catch(() => {
+            cache.set(icon, null);
+            done(null);
+          });
+          return;
+        }
+        tries += 1;
+        if (tries > 80) {
+          pending.delete(icon);
+          done(null);
+          return;
+        }
+        setTimeout(attempt, 250);
+      };
+      attempt();
+    });
+    pending.set(icon, promise);
+    return promise;
+  }
+  function hydrateIcons(root) {
+    root.querySelectorAll("span.cdc-icon[data-icon]").forEach((el) => {
+      if (el.firstChild) return;
+      const icon = el.getAttribute("data-icon");
+      resolve(icon).then((def) => {
+        if (!el.isConnected && !el.parentNode) return;
+        if (def) el.innerHTML = svg(def, "100%");
+        else if (!el.firstChild) el.innerHTML = `<ha-icon icon="mdi:help-circle-outline" style="--mdc-icon-size:100%; width:100%; height:100%;"></ha-icon>`;
+      });
+    });
+  }
+
   // src/light-control-card.js
   var LCC_DEFAULT_MAX_SCENES = 8;
   function lccHsToRgb(h, s) {
@@ -976,30 +1050,12 @@
     if (k <= 4800) return "#ffd08a";
     return "#8fc3ff";
   }
-  function lccIconPackLoaded(icon) {
-    const prefix = String(icon || "").split(":")[0];
-    if (!prefix || prefix === "mdi" || prefix === "hass" || !String(icon).includes(":")) return true;
-    return !!(window.customIcons && window.customIcons[prefix] || window.customIconsets && window.customIconsets[prefix]);
-  }
-  function lccRetryIcons(root) {
-    let waiting = [...root.querySelectorAll("ha-icon[icon]")].filter((el) => !lccIconPackLoaded(el.getAttribute("icon")));
-    if (!waiting.length) return;
-    let tries = 0;
-    const timer = setInterval(() => {
-      tries += 1;
-      waiting = waiting.filter((el) => {
-        const icon = el.getAttribute("icon");
-        if (!lccIconPackLoaded(icon)) return true;
-        el.setAttribute("icon", "");
-        el.setAttribute("icon", icon);
-        return false;
-      });
-      if (!waiting.length || tries > 80) clearInterval(timer);
-    }, 250);
-  }
   function lccLightColor(st) {
     if (!st || st.state !== "on") return "#ffc107";
     const a = st.attributes || {};
+    const paleColour = a.hs_color && a.hs_color[1] < 15;
+    if ((a.color_mode === "color_temp" || paleColour) && a.color_temp_kelvin) return lccKelvinColor(a.color_temp_kelvin);
+    if (paleColour) return "#ffd08a";
     if (a.hs_color) return lccHsToRgb(a.hs_color[0], a.hs_color[1]);
     if (a.rgb_color) return `rgb(${a.rgb_color[0]},${a.rgb_color[1]},${a.rgb_color[2]})`;
     if (a.color_temp_kelvin) return lccKelvinColor(a.color_temp_kelvin);
@@ -1376,7 +1432,7 @@
       const indent = level > 0 ? `margin-left:${16 * level}px;` : "";
       row.style.cssText = `position:relative; display:flex; align-items:center; gap:12px; padding:${pad}; ${indent} border-radius:12px; margin-top:6px; overflow:hidden; cursor:pointer; user-select:none; touch-action:pan-y; background: linear-gradient(to right, ${tint} 0%, ${tint} ${fillPct}%, ${track} ${fillPct}%, ${track} 100%);`;
       row.innerHTML = `
-      <ha-icon icon="${icon}" style="color:${on ? color : "var(--secondary-text-color)"}; opacity:${on ? 1 : 0.6}; --mdc-icon-size:24px; flex-shrink:0; pointer-events:none;"></ha-icon>
+      ${iconHtml(icon, { size: "24px", cls: "lcc-row-icon", style: `color:${on ? color : "var(--secondary-text-color)"}; opacity:${on ? 1 : 0.6}; flex-shrink:0; pointer-events:none;` })}
       <div class="lcc-name" style="flex:1; min-width:0; font-weight:${on ? 600 : 400}; color:${on ? "var(--primary-text-color)" : "var(--secondary-text-color)"}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; pointer-events:none;">${name}</div>
       <div class="lcc-state" style="flex-shrink:0; font-size:0.85rem; font-variant-numeric:tabular-nums; color:${on ? "var(--primary-text-color)" : "var(--secondary-text-color)"}; opacity:${on ? 0.9 : 0.7}; pointer-events:none;">${stateText}</div>
       ${withMoreInfo && !this.config.demo ? `<ha-icon class="lcc-more" icon="mdi:tune-variant" style="color:var(--secondary-text-color); --mdc-icon-size:20px; cursor:pointer; flex-shrink:0;"></ha-icon>` : ""}
@@ -1462,7 +1518,7 @@
         tile.style.cssText = `position:relative; container-type:inline-size; aspect-ratio:1 / 1; border:none; border-radius:14px; padding:0; overflow:hidden; cursor:pointer; background:${bg};${s.active ? ` box-shadow:0 0 16px 3px ${glow}; transform:scale(1.04); z-index:1;` : ""}`;
         tile.innerHTML = `
         <div style="position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0) 65%);"></div>
-        <ha-icon class="lcc-scene-icon" icon="${s.icon}" style="position:absolute; left:50%; top:44%; transform:translate(-50%, -50%); --mdc-icon-size:40cqw; color:#fff; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.55));"></ha-icon>
+        ${iconHtml(s.icon, { size: "40cqw", cls: "lcc-scene-icon", style: "position:absolute; left:50%; top:44%; transform:translate(-50%, -50%); color:#fff; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.55));" })}
         ${s.paused ? '<ha-icon class="lcc-paused" icon="mdi:pause" title="Paused" style="position:absolute; top:6px; right:6px; --mdc-icon-size:20px; color:#fff; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.7));"></ha-icon>' : ""}
         ${s.playing ? '<ha-icon class="lcc-playing" icon="mdi:play" title="Playing" style="position:absolute; top:6px; right:6px; --mdc-icon-size:20px; color:#fff; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.7));"></ha-icon>' : ""}
         <div class="lcc-scene-name" style="position:absolute; left:8px; right:8px; bottom:7px; text-align:center; color:#fff; font-weight:600; line-height:1.15; text-shadow:0 1px 2px rgba(0,0,0,0.6); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>`;
@@ -1696,7 +1752,7 @@
       this._scenesEl.innerHTML = "";
       const scenesGrid = this._buildScenes(scenes);
       if (scenesGrid) this._scenesEl.appendChild(scenesGrid);
-      lccRetryIcons(this);
+      hydrateIcons(this);
       this._size = 1 + (mode === "room" ? 1 : 0) + Math.max(relevantEntityIds.length, 1) + Math.ceil(scenes.length / 4) * 2;
     }
     getCardSize() {
@@ -1808,7 +1864,7 @@
           .ssc-grid { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px; margin-top:12px; }
           .ssc-tile { position:relative; container-type:inline-size; aspect-ratio:1 / 1; border-radius:14px; overflow:hidden; }
           .ssc-name { position:absolute; left:6px; right:6px; bottom:6px; text-align:center; color:#fff; font-weight:600; line-height:1.15; font-size:clamp(9px, 12.5cqw, 13px); text-shadow:0 1px 2px rgba(0,0,0,0.6); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-          @container (max-width: 99px) { .ssc-name { display:none; } .ssc-tile > ha-icon:first-of-type { top:50% !important; } }
+          @container (max-width: 99px) { .ssc-name { display:none; } .ssc-icon { top:50% !important; } }
         </style>
         <div style="font-size:1.5rem; font-weight:500; color:var(--primary-text-color);"></div>
         <div class="ssc-sub" style="margin-top:4px; color:var(--secondary-text-color); font-size:0.9rem;"></div>
@@ -1824,11 +1880,12 @@
         tile.style.background = sceneBackground(n.name);
         tile.innerHTML = `
         <div style="position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0) 65%);"></div>
-        <ha-icon icon="${sceneIcon(n.name, n.dynamic)}" style="position:absolute; left:50%; top:44%; transform:translate(-50%, -50%); --mdc-icon-size:40cqw; color:#fff; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.55));"></ha-icon>
+        ${iconHtml(sceneIcon(n.name, n.dynamic), { size: "40cqw", cls: "ssc-icon", style: "position:absolute; left:50%; top:44%; transform:translate(-50%, -50%); color:#fff; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.55));" })}
         ${styled.has(n.key) ? '<ha-icon icon="mdi:pencil" title="Custom style" style="position:absolute; top:6px; right:6px; --mdc-icon-size:clamp(12px, 18cqw, 18px); color:#fff; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.7));"></ha-icon>' : ""}
         <div class="ssc-name"></div>`;
         tile.querySelector(".ssc-name").textContent = n.name;
         grid.appendChild(tile);
+        hydrateIcons(tile);
       });
       this._rows = Math.ceil(names.length / 4);
     }
