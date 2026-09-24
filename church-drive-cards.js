@@ -874,7 +874,7 @@
   };
 
   // src/light-control-card.js
-  var LCC_DEFAULT_MAX_SCENES = 6;
+  var LCC_DEFAULT_MAX_SCENES = 8;
   function lccHsToRgb(h, s) {
     const c = s / 100;
     const x = c * (1 - Math.abs(h / 60 % 2 - 1));
@@ -1120,7 +1120,7 @@
       demo_room: "Pretend room"
     },
     helpers: {
-      max_scenes: "Default 6. Set 0 to hide scenes.",
+      max_scenes: "Default 8 (two rows). Set 0 to hide scenes.",
       demo: "Nothing is sent to Home Assistant; taps only change the pretend lights on this card."
     }
   });
