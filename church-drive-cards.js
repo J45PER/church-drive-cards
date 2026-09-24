@@ -1,9 +1,9 @@
 (() => {
   // src/form-editor.js
-  function createFormEditor({ schema, labels = {}, helpers = {} }) {
+  function createFormEditor({ schema, labels = {}, helpers = {}, normalize = (c) => c }) {
     return class extends HTMLElement {
       setConfig(config) {
-        this._config = config || {};
+        this._config = normalize(config || {});
         this._render();
       }
       set hass(hass) {
@@ -557,7 +557,63 @@
     });
   }
 
+  // src/scene-style.js
+  var PALETTES = {
+    bright: ["#fff6e0", "#ffd98a"],
+    dimmed: ["#8a6630", "#3b2a14"],
+    nightlight: ["#ff8a2a", "#3a1a05"],
+    relax: ["#ffb35c", "#e0702a"],
+    rest: ["#ff9f4a", "#8f4416"],
+    read: ["#fff1d6", "#ffc978"],
+    concentrate: ["#f2f6ff", "#a9c7ff"],
+    energise: ["#d9ecff", "#5d9eff"],
+    "natural light": ["#ffe0a0", "#9fd0ff"],
+    soho: ["#ff4f8b", "#ffb347", "#7b2ff7"],
+    "lake placid": ["#0f5e9c", "#35baf6", "#9fe2bf"],
+    "toil and trouble": ["#6a0dad", "#2e8b57", "#ff7f00"],
+    "bright & blue": ["#e8f4ff", "#3d7dff"],
+    arise: ["#ff7b39", "#ffd27f"],
+    spellbound: ["#3a0ca3", "#f72585", "#4cc9f0"],
+    storybook: ["#ffadad", "#ffd6a5", "#9bf6ff"],
+    unwind: ["#ff9966", "#ff5e62"],
+    "pumpkin patch": ["#ff7518", "#8b4513", "#ffb347"],
+    shine: ["#fffbd6", "#ffd23f"],
+    phantom: ["#2d0a4e", "#6c2bd9", "#0f0f2e"],
+    "city blue": ["#0b1d51", "#2f6fd6", "#89c2ff"]
+  };
+  var ICONS = [
+    [/night/, "mdi:weather-night"],
+    [/read/, "mdi:book-open-variant"],
+    [/concentrat/, "mdi:head-lightbulb-outline"],
+    [/energi/, "mdi:lightning-bolt"],
+    [/relax|unwind/, "mdi:sofa-outline"],
+    [/rest/, "mdi:bed-outline"],
+    [/dim/, "mdi:brightness-5"],
+    [/bright|shine|arise/, "mdi:white-balance-sunny"],
+    [/natural/, "mdi:weather-sunset"]
+  ];
+  function baseName(name) {
+    return String(name || "").toLowerCase().replace(/\s+\d+$/, "").trim();
+  }
+  function scenePalette(name) {
+    const key = baseName(name);
+    if (PALETTES[key]) return PALETTES[key];
+    let h = 0;
+    for (const ch of key) h = (h * 31 + ch.charCodeAt(0)) % 360;
+    return [`hsl(${h} 70% 55%)`, `hsl(${(h + 50) % 360} 70% 35%)`];
+  }
+  function sceneBackground(name) {
+    const colours = scenePalette(name);
+    return `linear-gradient(135deg, ${colours.join(", ")})`;
+  }
+  function sceneIcon(name, isDynamic) {
+    const key = baseName(name);
+    for (const [re, icon] of ICONS) if (re.test(key)) return icon;
+    return isDynamic ? "mdi:animation-play-outline" : "mdi:palette-outline";
+  }
+
   // src/light-control-card.js
+  var LCC_DEFAULT_MAX_SCENES = 6;
   function lccHsToRgb(h, s) {
     const c = s / 100;
     const x = c * (1 - Math.abs(h / 60 % 2 - 1));
@@ -624,14 +680,46 @@
     if (!lccIsGroupLike(st)) return [];
     return st.attributes.entity_id.filter((id) => id.startsWith("light.") && hass.states[id]);
   }
-  function lccSceneChips(hass, entityIds) {
-    const areas = new Set(
-      entityIds.map((id) => hass.entities && hass.entities[id] && lccAreaOf(hass, hass.entities[id])).filter(Boolean)
+  function lccNormalizeScenes(scenes) {
+    return (scenes || []).map((s) => typeof s === "string" ? { entity: s } : s).filter((s) => s && s.entity);
+  }
+  function lccSceneGroup(hass, sceneId) {
+    const entry = hass.entities && hass.entities[sceneId];
+    if (!entry || !entry.device_id) return null;
+    const group = Object.values(hass.entities).find(
+      (e) => e.device_id === entry.device_id && e.entity_id.startsWith("light.") && lccIsGroupLike(hass.states[e.entity_id])
     );
-    if (areas.size === 0) return [];
-    return Object.values(hass.entities || {}).filter(
-      (e) => e.entity_id.startsWith("scene.") && areas.has(lccAreaOf(hass, e))
-    );
+    return group ? group.entity_id : null;
+  }
+  function lccAutoScenes(hass, groupIds, lightIds) {
+    const lights = new Set(lightIds);
+    const groups = [...groupIds];
+    if (lights.size) {
+      Object.values(hass.states).forEach((st) => {
+        const members = lccIsGroupLike(st) && st.entity_id.startsWith("light.") ? st.attributes.entity_id : null;
+        if (members && members.length && members.every((m) => lights.has(m)) && !groups.includes(st.entity_id)) {
+          groups.push(st.entity_id);
+        }
+      });
+    }
+    const seen = /* @__PURE__ */ new Set();
+    const out = [];
+    groups.forEach((groupId) => {
+      const device = hass.entities && hass.entities[groupId] && hass.entities[groupId].device_id;
+      if (!device) return;
+      const order = hass.states[groupId] && hass.states[groupId].attributes.hue_scenes || [];
+      const rank = (id) => {
+        const i = order.indexOf(hass.states[id].attributes.name);
+        return i === -1 ? order.length : i;
+      };
+      Object.values(hass.entities).filter((e) => e.entity_id.startsWith("scene.") && e.device_id === device && !e.hidden && hass.states[e.entity_id]).map((e) => e.entity_id).sort((a, b) => rank(a) - rank(b) || a.localeCompare(b)).forEach((id) => {
+        const key = String(hass.states[id].attributes.name || id).toLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        out.push({ entity: id });
+      });
+    });
+    return out;
   }
   var LightControlCardEditor = createFormEditor({
     schema: (config) => {
@@ -652,15 +740,36 @@
         },
         mode === "room" ? { name: "area", selector: { area: {} } } : { name: "entity", selector: { entity: { domain: "light" } } },
         { name: "name", selector: { text: {} } },
-        { name: "scenes", selector: { entity: { domain: "scene", multiple: true } } }
+        { name: "max_scenes", selector: { number: { mode: "box", min: 0, max: 24 } } },
+        {
+          name: "scenes",
+          selector: {
+            object: {
+              multiple: true,
+              label_field: "name",
+              description_field: "entity",
+              fields: {
+                entity: { label: "Scene", required: true, selector: { entity: { domain: "scene" } } },
+                name: { label: "Name override", selector: { text: {} } },
+                icon: { label: "Icon override", selector: { icon: {} } },
+                image: { label: "Picture (replaces the colour background)", selector: { image: {} } }
+              }
+            }
+          }
+        }
       ];
     },
+    normalize: (config) => config.scenes ? { ...config, scenes: lccNormalizeScenes(config.scenes) } : config,
     labels: {
       mode: "Card type",
       area: "Room",
       entity: "Light entity",
       name: "Title (optional)",
-      scenes: "Scenes (optional \u2014 auto-detected by area if left blank)"
+      max_scenes: "Max scenes",
+      scenes: "Scenes (leave empty to pick them automatically)"
+    },
+    helpers: {
+      max_scenes: "Default 6. Set 0 to hide scenes."
     }
   });
   var LightControlCard = class extends HTMLElement {
@@ -688,8 +797,15 @@
         this._hass.callService("light", "turn_on", { brightness: Math.round(pct / 100 * 255) }, { entity_id: entityId });
       }
     }
-    _activateScene(entityId) {
-      this._hass.callService("scene", "turn_on", {}, { entity_id: entityId });
+    // Animated (dynamic) Hue scenes are started with hue.activate_scene so
+    // they actually play; everything else is a plain scene.turn_on.
+    _activateScene(entityId, isDynamic) {
+      const hue = this._hass.services && this._hass.services.hue;
+      if (isDynamic && hue && hue.activate_scene) {
+        this._hass.callService("hue", "activate_scene", { dynamic: true }, { entity_id: entityId });
+      } else {
+        this._hass.callService("scene", "turn_on", {}, { entity_id: entityId });
+      }
     }
     // A single full-width row that IS the control: background is a low-opacity
     // TINT of the light's colour blended into the card background (never a
@@ -780,19 +896,71 @@
       });
       return row;
     }
-    _buildScenes(sceneEntities) {
-      if (!sceneEntities.length) return null;
+    // Square scene tiles: picture (or palette gradient) background, icon, name.
+    // The selected scene is outlined; an animated scene that's running shows a
+    // pulsing play badge.
+    _buildScenes(scenes) {
+      if (!scenes.length) return null;
       const wrap = document.createElement("div");
-      wrap.style.cssText = "display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;";
-      sceneEntities.forEach((s) => {
-        const chip = document.createElement("button");
-        const name = this._hass.states[s.entity_id] && this._hass.states[s.entity_id].attributes.friendly_name || s.name || s.entity_id;
-        chip.textContent = name.replace(/^living\s?room\s*/i, "");
-        chip.style.cssText = "padding:8px 14px; border-radius:20px; border:none; background:rgba(255,255,255,0.08); color:var(--primary-text-color); font-size:0.85rem; cursor:pointer;";
-        chip.addEventListener("click", () => this._activateScene(s.entity_id));
-        wrap.appendChild(chip);
+      wrap.style.cssText = "display:grid; grid-template-columns:repeat(auto-fill, minmax(84px, 1fr)); gap:8px; margin-top:12px;";
+      scenes.forEach((s) => {
+        const tile = document.createElement("button");
+        tile.className = "lcc-scene";
+        tile.title = s.name;
+        const bg = s.image ? `center / cover no-repeat url("${s.image}")` : sceneBackground(s.name);
+        tile.style.cssText = `position:relative; aspect-ratio:1 / 1; border:none; border-radius:14px; padding:0; overflow:hidden; cursor:pointer; background:${bg};${s.active ? " outline:3px solid var(--primary-color); outline-offset:2px;" : ""}`;
+        tile.innerHTML = `
+        <div style="position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0) 65%);"></div>
+        <ha-icon icon="${s.icon}" style="position:absolute; top:8px; left:8px; --mdc-icon-size:20px; color:#fff; background:rgba(0,0,0,0.28); border-radius:50%; padding:4px;"></ha-icon>
+        ${s.playing ? '<ha-icon class="lcc-playing" icon="mdi:play" title="Playing" style="position:absolute; top:8px; right:8px; --mdc-icon-size:18px; color:#fff; background:var(--primary-color); border-radius:50%; padding:4px;"></ha-icon>' : ""}
+        <div class="lcc-scene-name" style="position:absolute; left:8px; right:8px; bottom:7px; text-align:left; color:#fff; font-size:0.8rem; font-weight:600; line-height:1.15; text-shadow:0 1px 2px rgba(0,0,0,0.6); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;"></div>`;
+        tile.querySelector(".lcc-scene-name").textContent = s.name;
+        tile.addEventListener("click", () => this._activateScene(s.entity, s.isDynamic));
+        wrap.appendChild(tile);
       });
       return wrap;
+    }
+    // Resolve the scenes to show (configured list or auto-detected), capped at
+    // max_scenes, with display name/icon/picture and selected/playing status.
+    _resolveScenes(hass, mode, headIds, memberIds) {
+      const cfg = this.config;
+      const max = cfg.max_scenes != null ? cfg.max_scenes : LCC_DEFAULT_MAX_SCENES;
+      if (max <= 0) return [];
+      let items = lccNormalizeScenes(cfg.scenes);
+      if (!items.length) {
+        let groups = headIds.filter((id) => lccIsGroupLike(hass.states[id]));
+        let lights = [...headIds, ...memberIds].filter((id) => !lccIsGroupLike(hass.states[id]));
+        if (mode === "light" && !groups.length) {
+          const area = lccAreaOf(hass, hass.entities && hass.entities[cfg.entity]);
+          const areaLights = Object.values(hass.entities || {}).filter((e) => e.entity_id.startsWith("light.") && hass.states[e.entity_id] && area && lccAreaOf(hass, e) === area).map((e) => e.entity_id);
+          groups = areaLights.filter((id) => lccIsGroupLike(hass.states[id]));
+          lights = areaLights.filter((id) => !lccIsGroupLike(hass.states[id]));
+        }
+        items = lccAutoScenes(hass, groups, lights);
+      }
+      const scenes = items.filter((s) => hass.states[s.entity]).slice(0, max).map((s) => {
+        const st = hass.states[s.entity];
+        const isDynamic = st.attributes.is_dynamic === true;
+        const name = s.name || st.attributes.name || st.attributes.friendly_name || s.entity;
+        return {
+          ...s,
+          name,
+          isDynamic,
+          icon: s.icon || sceneIcon(name, isDynamic),
+          group: lccSceneGroup(hass, s.entity),
+          activated: Date.parse(st.state) || 0
+        };
+      });
+      const latest = scenes.reduce((a, b) => b.activated > (a ? a.activated : 0) ? b : a, null);
+      if (latest) {
+        const groupSt = latest.group && hass.states[latest.group];
+        const lightsOn = groupSt ? groupSt.state === "on" : [...headIds, ...memberIds].some((id) => hass.states[id] && hass.states[id].state === "on");
+        latest.active = lightsOn;
+        if (lightsOn && latest.isDynamic && groupSt) {
+          latest.playing = groupSt.attributes.dynamics === true || lccMembersOf(hass, latest.group).some((id) => hass.states[id].attributes.dynamics === "dynamic_palette");
+        }
+      }
+      return scenes;
     }
     set hass(hass) {
       this._hass = hass;
@@ -801,6 +969,11 @@
       if (!this._built) {
         this.innerHTML = `
         <ha-card style="border:none; box-shadow: 0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; background: var(--card-background-color); padding:16px 16px 14px 16px;">
+          <style>
+            @keyframes lcc-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+            .lcc-playing { animation: lcc-pulse 1.6s ease-in-out infinite; }
+            .lcc-scene:active { transform: scale(0.97); }
+          </style>
           <div class="lcc-title" style="display:none; padding:0 0 10px 0; font-size:1.5rem; font-weight:500; color: var(--primary-text-color);"></div>
           <div class="lcc-main"></div>
           <div class="lcc-members"></div>
@@ -825,15 +998,22 @@
         if (mode === "group") memberIds = lccMembersOf(hass, cfg.entity);
       }
       const relevantEntityIds = [...headIds, ...memberIds];
-      const snapshot = relevantEntityIds.map((id) => hass.states[id]);
-      if (this._lastIds && this._lastIds.join() === relevantEntityIds.join() && this._lastSnapshot.every((st, i) => st === snapshot[i])) {
+      const scenes = this._resolveScenes(hass, mode, headIds, memberIds);
+      const watchIds = [
+        ...relevantEntityIds,
+        ...scenes.map((s) => s.entity),
+        ...scenes.map((s) => s.group).filter(Boolean),
+        ...scenes.filter((s) => s.group).flatMap((s) => lccMembersOf(hass, s.group))
+      ];
+      const snapshot = watchIds.map((id) => hass.states[id]);
+      if (this._lastIds && this._lastIds.join() === watchIds.join() && this._lastSnapshot.every((st, i) => st === snapshot[i])) {
         return;
       }
       if (this._interacting) {
         this._pendingHass = hass;
         return;
       }
-      this._lastIds = relevantEntityIds;
+      this._lastIds = watchIds;
       this._lastSnapshot = snapshot;
       this._main.innerHTML = "";
       this._main.style.cssText = "";
@@ -860,15 +1040,9 @@
         memberIds.forEach((id) => this._members.appendChild(this._buildRow(id, { withMoreInfo: true, member: true })));
       }
       this._scenesEl.innerHTML = "";
-      let sceneEntities;
-      if (cfg.scenes && cfg.scenes.length) {
-        sceneEntities = cfg.scenes.map((id) => ({ entity_id: id }));
-      } else {
-        sceneEntities = lccSceneChips(hass, relevantEntityIds);
-      }
-      const scenesRow = this._buildScenes(sceneEntities);
-      if (scenesRow) this._scenesEl.appendChild(scenesRow);
-      this._size = 1 + (mode === "room" ? 1 : 0) + Math.max(relevantEntityIds.length, 1) + (scenesRow ? 1 : 0);
+      const scenesGrid = this._buildScenes(scenes);
+      if (scenesGrid) this._scenesEl.appendChild(scenesGrid);
+      this._size = 1 + (mode === "room" ? 1 : 0) + Math.max(relevantEntityIds.length, 1) + Math.ceil(scenes.length / 4) * 2;
     }
     getCardSize() {
       return this._size || 3;
