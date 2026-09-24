@@ -46,41 +46,30 @@ examples and HACS install instructions):
   (light/group/room) control with a real visual editor (`ha-form`-based). **Has
   known unresolved bugs** — see below.
 
-## Known bugs / unfinished work on `light-control-card`
+## `light-control-card` status (updated 2026-09-24)
 
-These fixes are written into `src/light-control-card.js` in this zip, but were
-**never verified live** against the real Home Assistant instance before this
-handoff — the room-mode "no lights" bug in particular has survived 2-3 previous
-fix attempts, so treat the current code as a hypothesis, not a confirmed fix:
+Checked against the real Church Drive HA registry. Fixed and **pushed live** to
+resource `e4b8b41e6c4e48aab5c0894734db8c87`; still needs a look on a real device:
 
-1. **White/bright lights made rows unreadable** — was literally painting the row
-   background with the light's live colour (solid white behind white text for a
-   bright/white light). Fix applied: blend the colour into the card background at
-   30% via `color-mix(in srgb, ${color} 30%, var(--card-background-color))`
-   instead of a literal fill. **Needs visual confirmation** across a range of
-   colour temperatures/brightnesses, not just white.
+1. **White/bright lights unreadable.** Rows now blend the light colour into the card
+   background at 30% (`color-mix`), and text uses theme colours. Checked in headless
+   Chromium with 6500K white, 2700K warm and saturated red/blue; all readable.
+2. **Room title at top.** `.lcc-title` at `1.5rem/500`, shown in room mode only.
+3. **"Room mode shows zero lights".** Not a room-mode bug. The registry lookup was
+   fine: Living Room resolves 4 bulbs through their *device* area, plus the
+   `light.living_room` Hue room group. The lone "Living Room (group)" card with nothing
+   under it was the `mode: group` demo card, which never listed members. Now:
+   - `group` mode lists the group's `entity_id` members as indented rows under it.
+   - `room` mode shows the area's Hue room/zone groups as the top row(s) and the
+     individual bulbs indented underneath. It skips hidden entities and entities with an
+     `entity_category` (e.g. `light.hayleys_bedroom_air_purifier_display_backlight`).
+     Hue zones that have no area (`light.living_room_ambience`, etc.) aren't shown.
+4. **Drag-to-dim getting interrupted.** The card rebuilt every row on each `hass` update,
+   i.e. any state change anywhere in the house, which could replace a row
+   mid-drag. It now only rebuilds when one of its own lights changes, and never mid-drag.
 
-2. **Room title not at the top of the card** — should match the Battery Status
-   card's title convention (top of card, `font-size:1.5rem; font-weight:500`).
-   Styling was added (`.lcc-title` block, shown only in room mode) but **not
-   re-verified live**.
-
-3. **Room mode shows zero individual lights** (the persistent, still-unresolved
-   bug). Root cause theory: Hue (and possibly other integrations) often set
-   `area_id` on the *device*, not the entity, so a naive
-   `hass.entities[x].area_id === areaId` filter comes back empty. Current code
-   (`lccAreaOf()` in `src/light-control-card.js`) checks entity area first, then
-   falls back to `hass.devices[entry.device_id].area_id`. Two earlier attempts
-   also excluded "group-like" entities (where `attributes.entity_id` is an
-   array) from the member list, on the theory they'd duplicate the room itself —
-   but the user reported that *still* produced zero individual lights (only a
-   lone "Living Room (group)" card, no rows underneath). The **current version
-   removed that exclusion entirely** — reasoning that if the *only* entity with a
-   resolvable area in a room is the group/zone entity itself (plausible for Hue),
-   excluding it legitimately empties the list. **This needs to be tested against
-   the real HA instance first** — add the card in `mode: room` for a real area
-   (e.g. `area: living_room`) and confirm individual light rows actually render
-   below any group entity.
+Rollback: the previous live build is effectively this repo's first commit of
+`src/light-control-card.js`, plus a filter that dropped group entities from room mode.
 
 ## Other outstanding asks from the user (not yet started)
 
@@ -109,8 +98,7 @@ replaced with builds from here yet:
 - `alarm-panel-card` — dashboard resource id `46b33cd080e845558979afa89837a13d`
   (matches this repo's version, believed current)
 - `light-control-card` — dashboard resource id `e4b8b41e6c4e48aab5c0894734db8c87`
-  (**does NOT yet have the bug fixes in this repo** — still has the white-fill
-  contrast bug, title issue, and room-lookup bug live)
+  (updated 2026-09-24 to a standalone build of this repo's `src/light-control-card.js`)
 
 Once the fixes above are verified, either keep pushing built bundles to that
 resource id directly, or switch to installing via HACS custom repository pointing
@@ -124,5 +112,5 @@ npm install
 npm run build     # outputs church-drive-cards.js at repo root (esbuild, IIFE)
 ```
 
-The `.github/workflows/build-check.yml` CI job just verifies the committed bundle
-matches a fresh build — it does not auto-commit.
+`.github/workflows/build-check.yml` was lost in the original web upload and was
+restored on 2026-09-24. It fails a PR if the committed bundle is stale.

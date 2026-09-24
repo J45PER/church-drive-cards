@@ -28,8 +28,13 @@ function lccLightColor(st) {
   return '#ffc107';
 }
 
-function lccLightIcon(st, isGroupLike) {
+// Icon priority: the entity registry icon set in HA's UI (e.g. custom Hue
+// icons like phu:ceiling-infuse — these are NOT copied into state
+// attributes), then a state-attribute icon, then a bulb/group default.
+function lccLightIcon(hass, st, isGroupLike) {
   const on = st && st.state === 'on';
+  const entry = st && hass.entities && hass.entities[st.entity_id];
+  if (entry && entry.icon) return entry.icon;
   if (st && st.attributes && st.attributes.icon) return st.attributes.icon;
   if (isGroupLike) return on ? 'mdi:lightbulb-group' : 'mdi:lightbulb-group-outline';
   return on ? 'mdi:lightbulb' : 'mdi:lightbulb-outline';
@@ -54,6 +59,13 @@ function lccAreaOf(hass, entry) {
 
 function lccIsGroupLike(st) {
   return !!(st && st.attributes && Array.isArray(st.attributes.entity_id));
+}
+
+// Member light IDs of a group-like entity (Hue room/zone, light group).
+function lccMembersOf(hass, entityId) {
+  const st = hass.states[entityId];
+  if (!lccIsGroupLike(st)) return [];
+  return st.attributes.entity_id.filter((id) => id.startsWith('light.') && hass.states[id]);
 }
 
 function lccSceneChips(hass, entityIds) {
@@ -132,6 +144,7 @@ export class LightControlCard extends HTMLElement {
     if (!config.entity && !config.area) throw new Error('entity or area required');
     this.config = config;
     this._built = false;
+    this._lastIds = null;
   }
 
   static getConfigElement() {
@@ -164,7 +177,7 @@ export class LightControlCard extends HTMLElement {
   // the row to solid white and make the text unreadable), sized to the
   // brightness. Tap toggles; drag horizontally sets brightness on dimmable
   // lights.
-  _buildRow(entityId, { withMoreInfo }) {
+  _buildRow(entityId, { withMoreInfo, member = false }) {
     const st = this._hass.states[entityId];
     const name = (st && st.attributes.friendly_name) || entityId;
     const isGroupLike = lccIsGroupLike(st);
@@ -172,7 +185,7 @@ export class LightControlCard extends HTMLElement {
     const dimmable =
       st && st.attributes.supported_color_modes && st.attributes.supported_color_modes.some((m) => m !== 'onoff');
     const color = lccLightColor(st);
-    const icon = lccLightIcon(st, isGroupLike);
+    const icon = lccLightIcon(this._hass, st, isGroupLike);
     const brightnessPct = st && st.attributes.brightness ? Math.round((st.attributes.brightness / 255) * 100) : 0;
     const fillPct = on ? (dimmable ? Math.max(brightnessPct, 4) : 100) : 0;
 
@@ -184,7 +197,9 @@ export class LightControlCard extends HTMLElement {
 
     const row = document.createElement('div');
     row.className = 'lcc-row';
-    row.style.cssText = `position:relative; display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:12px; margin-top:6px; overflow:hidden; cursor:pointer; user-select:none; touch-action:pan-y; background: linear-gradient(to right, ${tint} 0%, ${tint} ${fillPct}%, ${track} ${fillPct}%, ${track} 100%);`;
+    const pad = member ? '9px 14px 9px 14px' : '12px 14px';
+    const indent = member ? 'margin-left:16px;' : '';
+    row.style.cssText = `position:relative; display:flex; align-items:center; gap:12px; padding:${pad}; ${indent} border-radius:12px; margin-top:6px; overflow:hidden; cursor:pointer; user-select:none; touch-action:pan-y; background: linear-gradient(to right, ${tint} 0%, ${tint} ${fillPct}%, ${track} ${fillPct}%, ${track} 100%);`;
     row.innerHTML = `
       <ha-icon icon="${icon}" style="color:${on ? color : 'var(--secondary-text-color)'}; --mdc-icon-size:24px; flex-shrink:0; pointer-events:none;"></ha-icon>
       <div class="lcc-name" style="flex:1; min-width:0; font-weight:500; color:var(--primary-text-color); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; pointer-events:none;">${name}</div>
@@ -197,9 +212,14 @@ export class LightControlCard extends HTMLElement {
         ev.stopPropagation();
         lccMoreInfo(this, entityId);
       });
-      moreBtn.addEventListener('pointerdown', (ev) => ev.stopPropagation());
+      // Swallow the whole press on the tune icon so the row never sees it —
+      // stopping only pointerdown still let the row's pointerup toggle.
+      ['pointerdown', 'pointerup', 'pointercancel'].forEach((type) =>
+        moreBtn.addEventListener(type, (ev) => ev.stopPropagation())
+      );
     }
 
+    let pressed = false;
     let dragging = false;
     let moved = false;
     let startX = 0;
@@ -210,11 +230,27 @@ export class LightControlCard extends HTMLElement {
       const rect = row.getBoundingClientRect();
       return Math.min(100, Math.max(0, ((ev.clientX - rect.left) / rect.width) * 100));
     };
+    // While a drag is in progress the card must not rebuild its rows (any
+    // state change in the house triggers a hass update, which would replace
+    // this element mid-gesture), so _interacting pauses re-rendering.
+    const endInteraction = () => {
+      pressed = false;
+      dragging = false;
+      moved = false;
+      this._interacting = false;
+      if (this._pendingHass) {
+        const h = this._pendingHass;
+        this._pendingHass = null;
+        this.hass = h;
+      }
+    };
     row.addEventListener('pointerdown', (ev) => {
+      pressed = true;
       if (!dimmable) return;
       dragging = true;
       moved = false;
       startX = ev.clientX;
+      this._interacting = true;
       row.setPointerCapture(ev.pointerId);
     });
     row.addEventListener('pointermove', (ev) => {
@@ -223,18 +259,18 @@ export class LightControlCard extends HTMLElement {
       if (moved) setFillVisual(pctFromEvent(ev));
     });
     row.addEventListener('pointerup', (ev) => {
+      // Only act on a press that started on this row.
+      if (!pressed) return;
       if (dimmable && dragging && moved) {
         this._setBrightnessPct(entityId, pctFromEvent(ev));
       } else {
         this._toggle(entityId);
       }
-      dragging = false;
-      moved = false;
+      endInteraction();
     });
     row.addEventListener('pointercancel', () => {
-      dragging = false;
-      moved = false;
       setFillVisual(fillPct);
+      endInteraction();
     });
 
     return row;
@@ -276,41 +312,73 @@ export class LightControlCard extends HTMLElement {
       this._built = true;
     }
 
-    let relevantEntityIds = [];
+    // Work out which lights to show: `headIds` are full-size rows (the light,
+    // the group, or a room's Hue room/zone groups), `memberIds` are the
+    // indented individual lights underneath.
+    let headIds = [];
+    let memberIds = [];
+    if (mode === 'room') {
+      const areaLights = Object.values(hass.entities || {})
+        .filter(
+          (e) =>
+            e.entity_id.startsWith('light.') &&
+            !e.hidden &&
+            e.entity_category == null &&
+            hass.states[e.entity_id] &&
+            lccAreaOf(hass, e) === cfg.area
+        )
+        .map((e) => e.entity_id);
+      headIds = areaLights.filter((id) => lccIsGroupLike(hass.states[id]));
+      memberIds = areaLights.filter((id) => !lccIsGroupLike(hass.states[id]));
+    } else {
+      headIds = [cfg.entity];
+      if (mode === 'group') memberIds = lccMembersOf(hass, cfg.entity);
+    }
+    const relevantEntityIds = [...headIds, ...memberIds];
+
+    // Skip the rebuild when none of this card's lights changed (hass is
+    // re-set on every state change anywhere in the house), and never rebuild
+    // mid-drag — replay the latest hass once the gesture ends instead.
+    const snapshot = relevantEntityIds.map((id) => hass.states[id]);
+    if (
+      this._lastIds &&
+      this._lastIds.join() === relevantEntityIds.join() &&
+      this._lastSnapshot.every((st, i) => st === snapshot[i])
+    ) {
+      return;
+    }
+    if (this._interacting) {
+      this._pendingHass = hass;
+      return;
+    }
+    this._lastIds = relevantEntityIds;
+    this._lastSnapshot = snapshot;
+
+    this._main.innerHTML = '';
+    this._main.style.cssText = '';
+    this._members.innerHTML = '';
 
     if (mode === 'room') {
-      const areaId = cfg.area;
-      const area = hass.areas && hass.areas[areaId];
-      this._titleEl.textContent = cfg.name || (area ? area.name : areaId);
+      const area = hass.areas && hass.areas[cfg.area];
+      this._titleEl.textContent = cfg.name || (area ? area.name : cfg.area);
       this._titleEl.style.display = 'block';
-
-      const memberIds = Object.values(hass.entities || {})
-        .filter((e) => e.entity_id.startsWith('light.') && lccAreaOf(hass, e) === areaId)
-        .map((e) => e.entity_id);
-      relevantEntityIds = memberIds;
-
-      this._main.innerHTML = '';
-      this._members.innerHTML = '';
-      if (memberIds.length === 0) {
+      if (relevantEntityIds.length === 0) {
         this._main.textContent = 'No lights found in this area.';
         this._main.style.cssText = 'color:var(--secondary-text-color); padding:8px 4px;';
-      } else {
-        memberIds.forEach((id) => {
-          this._members.appendChild(this._buildRow(id, { withMoreInfo: true }));
-        });
       }
+      headIds.forEach((id) => this._main.appendChild(this._buildRow(id, { withMoreInfo: true })));
+      // Only indent members when there's a room group above them.
+      const member = headIds.length > 0;
+      memberIds.forEach((id) => this._members.appendChild(this._buildRow(id, { withMoreInfo: true, member })));
     } else {
       this._titleEl.style.display = 'none';
-      const entityId = cfg.entity;
-      relevantEntityIds = [entityId];
-      this._members.innerHTML = '';
-      this._main.innerHTML = '';
-      const row = this._buildRow(entityId, { withMoreInfo: true });
+      const row = this._buildRow(cfg.entity, { withMoreInfo: true });
       if (cfg.name) {
         const nameEl = row.querySelector('.lcc-name');
         if (nameEl) nameEl.textContent = cfg.name;
       }
       this._main.appendChild(row);
+      memberIds.forEach((id) => this._members.appendChild(this._buildRow(id, { withMoreInfo: true, member: true })));
     }
 
     this._scenesEl.innerHTML = '';
