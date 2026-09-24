@@ -342,7 +342,7 @@ export class LightControlCard extends HTMLElement {
     scenes.forEach((s) => {
       const tile = document.createElement('button');
       tile.className = 'lcc-scene';
-      tile.title = s.playing ? `${s.name} (playing, tap to stop)` : s.name;
+      tile.title = s.playing ? `${s.name} (playing, tap to stop)` : s.paused ? `${s.name} (paused, tap to play)` : s.name;
       const bg = s.image ? `center / cover no-repeat url("${s.image}")` : sceneBackground(s.name);
       tile.style.cssText = `position:relative; container-type:inline-size; aspect-ratio:1 / 1; border:none; border-radius:14px; padding:0; overflow:hidden; cursor:pointer; background:${bg};${
         s.active ? ' outline:3px solid var(--primary-color); outline-offset:2px;' : ''
@@ -350,6 +350,7 @@ export class LightControlCard extends HTMLElement {
       tile.innerHTML = `
         <div style="position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0) 65%);"></div>
         <ha-icon icon="${s.icon}" style="position:absolute; left:50%; top:44%; transform:translate(-50%, -50%); --mdc-icon-size:40cqw; color:#fff; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.55));"></ha-icon>
+        ${s.paused ? '<ha-icon class="lcc-paused" icon="mdi:pause" title="Paused" style="position:absolute; top:6px; right:6px; --mdc-icon-size:14px; color:#fff; background:var(--primary-color); border-radius:50%; padding:3px;"></ha-icon>' : ''}
         ${s.playing ? '<ha-icon class="lcc-playing" icon="mdi:play" title="Playing" style="position:absolute; top:6px; right:6px; --mdc-icon-size:14px; color:#fff; background:var(--primary-color); border-radius:50%; padding:3px;"></ha-icon>' : ''}
         <div class="lcc-scene-name" style="position:absolute; left:8px; right:8px; bottom:7px; text-align:center; color:#fff; font-size:0.8rem; font-weight:600; line-height:1.15; text-shadow:0 1px 2px rgba(0,0,0,0.6); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;"></div>`;
       tile.querySelector('.lcc-scene-name').textContent = s.name;
@@ -463,6 +464,8 @@ export class LightControlCard extends HTMLElement {
         latest.playing =
           groupSt.attributes.dynamics === true ||
           lccMembersOf(hass, latest.group).some((id) => hass.states[id].attributes.dynamics === 'dynamic_palette');
+        // Selected animated scene that isn't animating (e.g. stopped by a tap).
+        latest.paused = !latest.playing;
       }
     }
     return scenes;
