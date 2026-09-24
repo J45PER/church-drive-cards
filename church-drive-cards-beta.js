@@ -33,7 +33,7 @@
   }
 
   // src/suffix.js
-  var SUFFIX = typeof __CARD_SUFFIX__ !== "undefined" ? __CARD_SUFFIX__ : "";
+  var SUFFIX = true ? "-beta" : "";
   var LABEL = SUFFIX ? " (beta)" : "";
 
   // src/gauge-zone-card.js

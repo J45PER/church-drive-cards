@@ -64,12 +64,22 @@ name: Living Room (group)
 
 ```bash
 npm install
-npm run build      # outputs church-drive-cards.js at the repo root
+npm run build      # outputs church-drive-cards.js and church-drive-cards-beta.js at the repo root
 ```
 
-Always commit the rebuilt `church-drive-cards.js` with any `src/` change. The **Build check** GitHub Action fails a PR if the committed bundle doesn't match a fresh build.
+Always commit both rebuilt bundles with any `src/` change. The **Build check** GitHub Action fails a PR if either committed bundle doesn't match a fresh build.
 
 New or changed cards are tested on the **Design Presets** dashboard in Home Assistant before being used anywhere else.
+
+### Beta testing
+
+`church-drive-cards-beta.js` is the same code with every card renamed to `…-beta` (e.g. `custom:light-control-card-beta`, shown as "(beta)" in the card picker). It can load alongside the released cards without clashing.
+
+- Home Assistant loads it as a separate dashboard resource from jsDelivr, pinned to one commit:
+  `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`
+- The **Design Presets** dashboard has a **Beta** tab with `-beta` copies of the example cards. Nothing else uses beta cards.
+
+To test a change before release: push the branch, point the beta resource's URL at the new commit, hard-refresh, and try it on the Beta tab. When it works, bump the version and merge as below.
 
 ### Releasing
 

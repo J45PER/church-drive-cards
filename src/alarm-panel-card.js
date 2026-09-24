@@ -2,6 +2,7 @@
 // arm/disarm buttons, whole-card colour wash on hover only.
 
 import { createFormEditor } from './form-editor.js';
+import { SUFFIX, LABEL } from './suffix.js';
 
 const APC_STATE_OPTIONS = [
   { value: 'disarmed', label: 'Disarmed' },
@@ -246,7 +247,7 @@ export class AlarmPanelCard extends HTMLElement {
   }
 
   static getConfigElement() {
-    return document.createElement('alarm-panel-card-editor');
+    return document.createElement(`alarm-panel-card-editor${SUFFIX}`);
   }
 
   // Pre-fill the card picker with the first real alarm entity.
@@ -257,16 +258,16 @@ export class AlarmPanelCard extends HTMLElement {
 }
 
 export function registerAlarmPanelCard() {
-  if (!customElements.get('alarm-panel-card-editor')) {
-    customElements.define('alarm-panel-card-editor', AlarmPanelCardEditor);
+  if (!customElements.get(`alarm-panel-card-editor${SUFFIX}`)) {
+    customElements.define(`alarm-panel-card-editor${SUFFIX}`, AlarmPanelCardEditor);
   }
-  if (!customElements.get('alarm-panel-card')) {
-    customElements.define('alarm-panel-card', AlarmPanelCard);
+  if (!customElements.get(`alarm-panel-card${SUFFIX}`)) {
+    customElements.define(`alarm-panel-card${SUFFIX}`, AlarmPanelCard);
   }
   window.customCards = window.customCards || [];
   window.customCards.push({
-    type: 'alarm-panel-card',
-    name: 'Alarm Panel Card',
+    type: `alarm-panel-card${SUFFIX}`,
+    name: `Alarm Panel Card${LABEL}`,
     description: 'Alarm status, entry/exit countdown, and arm/disarm controls',
     preview: true,
     documentationURL: 'https://github.com/J45PER/church-drive-cards#readme',

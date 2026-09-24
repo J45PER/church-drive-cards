@@ -22,7 +22,7 @@ jobs:
       - run: npm run build
       - name: Committed bundle matches fresh build
         run: |
-          if ! git diff --exit-code -- church-drive-cards.js; then
-            echo "::error file=church-drive-cards.js::Bundle is out of date. Run 'npm run build' and commit church-drive-cards.js."
+          if ! git diff --exit-code -- church-drive-cards.js church-drive-cards-beta.js; then
+            echo "::error file=church-drive-cards.js::Bundles are out of date. Run 'npm run build' and commit church-drive-cards.js and church-drive-cards-beta.js."
             exit 1
           fi
