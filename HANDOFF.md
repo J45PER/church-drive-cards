@@ -73,13 +73,14 @@ Rollback: the previous live build is effectively this repo's first commit of
 
 ## Other outstanding asks from the user (not yet started)
 
-- **Card size / auto-size configuration** — no option currently exists on any of
-  the three cards. Likely needs a `grid_options` field surfaced in each editor
-  plus a proper `getCardSize()` implementation.
-- **Visual editors for `battery-zone-card` / `gauge-zone-card` and
-  `alarm-panel-card`** — currently YAML-only. Only `light-control-card` has a
-  real `ha-form`-based editor (`LightControlCardEditor` in
-  `src/light-control-card.js`) to use as the pattern to replicate.
+- ~~Card size / auto-size~~ **Done 2026-09-24.** All three cards report a real
+  `getCardSize()` for masonry views. `getGridOptions()` defaults them to full width
+  (min half) in sections views, where the card editor's own **Layout** tab resizes
+  them. The live dashboards (Battery Status, Alarm, Design Presets) are masonry.
+- ~~Visual editors~~ **Done 2026-09-24.** The battery/gauge and alarm cards have
+  `ha-form` editors built on the shared `src/form-editor.js` (the light card uses it
+  too). The gauge "Rows" list uses HA's `object` selector with `fields`, and the alarm
+  demo options sit in an expandable section.
 - **Non-Hue lighting support** — user is planning to add non-Hue bulbs in future.
   The card's scene/toggle logic is already brand-agnostic; only the
   dynamic-effects pop-up currently leans on Hue's native `effect_list`/`effect`

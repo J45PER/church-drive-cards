@@ -1,6 +1,50 @@
 // Alarm Panel Card — status header, live entry/exit countdown, icon-only
 // arm/disarm buttons, whole-card colour wash on hover only.
 
+import { createFormEditor } from './form-editor.js';
+
+const APC_STATE_OPTIONS = [
+  { value: 'disarmed', label: 'Disarmed' },
+  { value: 'armed_home', label: 'Armed Home' },
+  { value: 'armed_away', label: 'Armed Away' },
+  { value: 'armed_night', label: 'Armed Night' },
+  { value: 'arming', label: 'Arming (exit delay)' },
+  { value: 'pending', label: 'Entry delay' },
+  { value: 'triggered', label: 'Triggered' },
+];
+
+export const AlarmPanelCardEditor = createFormEditor({
+  schema: () => [
+    { name: 'entity', selector: { entity: { domain: 'alarm_control_panel' } } },
+    {
+      type: 'expandable',
+      name: '',
+      title: 'Demo mode (fake data, buttons do nothing)',
+      flatten: true,
+      schema: [
+        { name: 'demo', selector: { boolean: {} } },
+        { name: 'demo_state', selector: { select: { mode: 'dropdown', options: APC_STATE_OPTIONS } } },
+        { name: 'demo_target_state', selector: { select: { mode: 'dropdown', options: APC_STATE_OPTIONS.slice(1, 4) } } },
+        { name: 'demo_countdown', selector: { number: { mode: 'box', min: 0, unit_of_measurement: 's' } } },
+        { name: 'demo_by', selector: { text: {} } },
+        { name: 'demo_supported_features', selector: { number: { mode: 'box', min: 0 } } },
+      ],
+    },
+  ],
+  labels: {
+    entity: 'Alarm entity',
+    demo: 'Use demo data instead of the entity',
+    demo_state: 'Demo state',
+    demo_target_state: 'Mode being armed to (during a delay)',
+    demo_countdown: 'Countdown',
+    demo_by: 'Armed/disarmed by',
+    demo_supported_features: 'Supported features',
+  },
+  helpers: {
+    demo_supported_features: 'Bitmask: 1 = Arm Home, 2 = Arm Away, 4 = Arm Night (default 3)',
+  },
+});
+
 export class AlarmPanelCard extends HTMLElement {
   setConfig(config) {
     if (!config.entity && !config.demo) throw new Error('entity required (or set demo: true)');
@@ -149,6 +193,7 @@ export class AlarmPanelCard extends HTMLElement {
 
   _syncCountdown(secsLeft, state, label, color) {
     const active = (state === 'pending' || state === 'arming') && secsLeft > 0;
+    this._countdownShown = active;
     if (!active) {
       this._countdown.style.display = 'none';
       this._countdownLabel.style.display = 'none';
@@ -183,16 +228,31 @@ export class AlarmPanelCard extends HTMLElement {
     this._countdown.textContent = `${m}:${s.toString().padStart(2, '0')}`;
   }
 
+  // Header + buttons ~3 units; the countdown adds ~2 while it's showing.
   getCardSize() {
-    return 4;
+    return this._countdownShown ? 5 : 3;
   }
 
-  static getStubConfig() {
-    return { entity: 'alarm_control_panel.alarm' };
+  // Sections-view defaults; the editor's Layout tab can override them.
+  getGridOptions() {
+    return { columns: 12, min_columns: 6, rows: 'auto' };
+  }
+
+  static getConfigElement() {
+    return document.createElement('alarm-panel-card-editor');
+  }
+
+  // Pre-fill the card picker with the first real alarm entity.
+  static getStubConfig(hass) {
+    const first = hass && Object.keys(hass.states).find((id) => id.startsWith('alarm_control_panel.'));
+    return first ? { entity: first } : { demo: true };
   }
 }
 
 export function registerAlarmPanelCard() {
+  if (!customElements.get('alarm-panel-card-editor')) {
+    customElements.define('alarm-panel-card-editor', AlarmPanelCardEditor);
+  }
   if (!customElements.get('alarm-panel-card')) {
     customElements.define('alarm-panel-card', AlarmPanelCard);
   }
