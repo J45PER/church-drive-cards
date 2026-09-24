@@ -87,24 +87,24 @@ Rollback: the previous live build is effectively this repo's first commit of
   attributes via `hass-more-info`. Explicitly deferred by the user until real
   non-Hue hardware exists — don't build speculatively.
 
-## Live Home Assistant state (separate from this repo, not yet synced)
+## Live Home Assistant state
 
-The **live** dashboard resources in Home Assistant (Church Drive Home Assistant
-instance) still run older, hand-pushed JS blobs registered via
-`ha_config_set_dashboard_resource` — they predate this repo and have **not** been
-replaced with builds from here yet:
+Since 2026-09-24, the cards are **installed through HACS** as a custom repository
+(`J45PER/church-drive-cards`, category Dashboard, HACS id `1385560733`). HACS
+registered the resource `/hacsfiles/church-drive-cards/church-drive-cards.js`. The
+three hand-pushed inline resources (`828809e8…`, `46b33cd0…`, `e4b8b41e…`) have been
+deleted.
 
-- `battery-zone-card`/`gauge-zone-card` — dashboard resource id
-  `828809e8e65544588bdf477cdcb325b8` (matches this repo's version, believed current)
-- `alarm-panel-card` — dashboard resource id `46b33cd080e845558979afa89837a13d`
-  (matches this repo's version, believed current)
-- `light-control-card` — dashboard resource id `e4b8b41e6c4e48aab5c0894734db8c87`
-  (updated 2026-09-24 to a standalone build of this repo's `src/light-control-card.js`)
+Release flow: bump `version` in `package.json` and merge to `main`. The **Release**
+workflow publishes `vX.Y.Z` and HACS shows it under Settings → Updates. HACS only
+re-checks custom repos about every 48h, so run "Update information" on the repo in
+HACS (or `ha_manage_hacs action=update_information`) to see a release straight away.
 
-Once the fixes above are verified, either keep pushing built bundles to that
-resource id directly, or switch to installing via HACS custom repository pointing
-at `github.com/J45PER/church-drive-cards` (cleaner going forward — this is what
-the whole repo/plugin effort was for).
+Testing convention: try changes on the **Design Presets** dashboard first. Card
+resources are global, so a release reaches every dashboard at once; test before
+bumping the version.
+
+Rollback: install an older release from HACS (Redownload → pick version).
 
 ## Dev loop
 
