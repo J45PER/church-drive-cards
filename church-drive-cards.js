@@ -1,5 +1,130 @@
 (() => {
+  // src/form-editor.js
+  function createFormEditor({ schema, labels = {}, helpers = {} }) {
+    return class extends HTMLElement {
+      setConfig(config) {
+        this._config = config || {};
+        this._render();
+      }
+      set hass(hass) {
+        this._hass = hass;
+        this._render();
+      }
+      _render() {
+        if (!this._hass) return;
+        if (!this._form) {
+          this._form = document.createElement("ha-form");
+          this._form.addEventListener("value-changed", (ev) => {
+            this._config = ev.detail.value;
+            this.dispatchEvent(
+              new CustomEvent("config-changed", { detail: { config: this._config }, bubbles: true, composed: true })
+            );
+            this._render();
+          });
+          this.appendChild(this._form);
+        }
+        this._form.hass = this._hass;
+        this._form.data = this._config;
+        this._form.schema = schema(this._config);
+        this._form.computeLabel = (s) => labels[s.name] || s.title || s.name;
+        this._form.computeHelper = (s) => helpers[s.name];
+      }
+    };
+  }
+
   // src/gauge-zone-card.js
+  var GaugeZoneCardEditor = createFormEditor({
+    schema: () => [
+      { name: "title", selector: { text: {} } },
+      {
+        type: "expandable",
+        name: "",
+        title: "Colours, units and icons",
+        flatten: true,
+        schema: [
+          {
+            name: "direction",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "low", label: "Low value is bad (battery, signal)" },
+                  { value: "high", label: "High value is bad (storage, CPU)" }
+                ]
+              }
+            }
+          },
+          {
+            type: "grid",
+            name: "",
+            schema: [
+              { name: "alert_at", selector: { number: { mode: "box" } } },
+              { name: "warn_at", selector: { number: { mode: "box" } } },
+              { name: "unit", selector: { text: {} } },
+              { name: "max", selector: { number: { mode: "box", min: 0 } } }
+            ]
+          },
+          {
+            name: "icon_mode",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "battery", label: "Battery (steps with the value)" },
+                  { value: "gauge", label: "Gauge (fixed icon)" }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      {
+        name: "entities",
+        selector: {
+          object: {
+            multiple: true,
+            label_field: "name",
+            description_field: "entity",
+            fields: {
+              entity: { label: "Entity", selector: { entity: {} } },
+              name: { label: "Name", required: true, selector: { text: {} } },
+              word: {
+                label: "Battery wording (shows the Battery Notes date)",
+                selector: {
+                  select: {
+                    mode: "dropdown",
+                    custom_value: true,
+                    options: ["replaced", "charged", "swapped"]
+                  }
+                }
+              },
+              secondary: { label: "Secondary text (instead of wording)", selector: { text: {} } },
+              icon: { label: "Icon override", selector: { icon: {} } },
+              value: { label: "Fixed value (instead of an entity)", selector: { number: { mode: "box" } } },
+              unit: { label: "Unit override", selector: { text: {} } },
+              max: { label: "Max override", selector: { number: { mode: "box", min: 0 } } }
+            }
+          }
+        }
+      }
+    ],
+    labels: {
+      title: "Title",
+      direction: "Which end is bad",
+      alert_at: "Red at",
+      warn_at: "Orange at",
+      unit: "Unit",
+      max: "Full bar value",
+      icon_mode: "Icons",
+      entities: "Rows"
+    },
+    helpers: {
+      alert_at: "Defaults: 20 (low is bad) / 90 (high is bad)",
+      warn_at: "Defaults: 50 (low is bad) / 75 (high is bad)",
+      unit: "Default %",
+      max: "Default 100"
+    }
+  });
   var GaugeZoneCard = class extends HTMLElement {
     setConfig(config) {
       if (!config.entities) throw new Error("entities required");
@@ -105,7 +230,7 @@
         row.innerHTML = `
         <ha-icon icon="${icon}" style="color:${iconColor}; margin-right:14px; flex-shrink:0; --mdc-icon-size:26px;"></ha-icon>
         <div style="flex:1; min-width:0;">
-          <div style="font-weight:500; color:#ffffff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${e.name}</div>
+          <div style="font-weight:500; color:#ffffff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${e.name || e.st && e.st.attributes.friendly_name || e.entity || ""}</div>
           ${secondaryText ? `<div style="font-size:0.85rem; color:rgba(255,255,255,0.65);">${secondaryText}</div>` : ""}
         </div>
         <div style="font-weight:600; color:#ffffff; margin-left:8px; flex-shrink:0;">${e.available ? Math.round(e.val) + unit : "n/a"}</div>
@@ -113,14 +238,27 @@
         this._rows.appendChild(row);
       });
     }
+    // Rows with a secondary line are ~60px, so count them as 1.2 units.
     getCardSize() {
-      return (this.config.entities ? this.config.entities.length : 1) + 1;
+      const rows = this.config.entities || [];
+      const tall = rows.filter((e) => e.secondary || e.word).length;
+      return 1 + Math.ceil(rows.length + tall * 0.2);
+    }
+    // Sections-view defaults; the editor's Layout tab can override them.
+    getGridOptions() {
+      return { columns: 12, min_columns: 6, rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement("gauge-zone-card-editor");
     }
     static getStubConfig() {
       return { title: "Zone", entities: [] };
     }
   };
   function registerGaugeZoneCard() {
+    if (!customElements.get("gauge-zone-card-editor")) {
+      customElements.define("gauge-zone-card-editor", GaugeZoneCardEditor);
+    }
     if (!customElements.get("battery-zone-card")) {
       customElements.define("battery-zone-card", GaugeZoneCard);
     }
@@ -134,6 +272,46 @@
   }
 
   // src/alarm-panel-card.js
+  var APC_STATE_OPTIONS = [
+    { value: "disarmed", label: "Disarmed" },
+    { value: "armed_home", label: "Armed Home" },
+    { value: "armed_away", label: "Armed Away" },
+    { value: "armed_night", label: "Armed Night" },
+    { value: "arming", label: "Arming (exit delay)" },
+    { value: "pending", label: "Entry delay" },
+    { value: "triggered", label: "Triggered" }
+  ];
+  var AlarmPanelCardEditor = createFormEditor({
+    schema: () => [
+      { name: "entity", selector: { entity: { domain: "alarm_control_panel" } } },
+      {
+        type: "expandable",
+        name: "",
+        title: "Demo mode (fake data, buttons do nothing)",
+        flatten: true,
+        schema: [
+          { name: "demo", selector: { boolean: {} } },
+          { name: "demo_state", selector: { select: { mode: "dropdown", options: APC_STATE_OPTIONS } } },
+          { name: "demo_target_state", selector: { select: { mode: "dropdown", options: APC_STATE_OPTIONS.slice(1, 4) } } },
+          { name: "demo_countdown", selector: { number: { mode: "box", min: 0, unit_of_measurement: "s" } } },
+          { name: "demo_by", selector: { text: {} } },
+          { name: "demo_supported_features", selector: { number: { mode: "box", min: 0 } } }
+        ]
+      }
+    ],
+    labels: {
+      entity: "Alarm entity",
+      demo: "Use demo data instead of the entity",
+      demo_state: "Demo state",
+      demo_target_state: "Mode being armed to (during a delay)",
+      demo_countdown: "Countdown",
+      demo_by: "Armed/disarmed by",
+      demo_supported_features: "Supported features"
+    },
+    helpers: {
+      demo_supported_features: "Bitmask: 1 = Arm Home, 2 = Arm Away, 4 = Arm Night (default 3)"
+    }
+  });
   var AlarmPanelCard = class extends HTMLElement {
     setConfig(config) {
       if (!config.entity && !config.demo) throw new Error("entity required (or set demo: true)");
@@ -264,6 +442,7 @@
     }
     _syncCountdown(secsLeft, state, label, color) {
       const active = (state === "pending" || state === "arming") && secsLeft > 0;
+      this._countdownShown = active;
       if (!active) {
         this._countdown.style.display = "none";
         this._countdownLabel.style.display = "none";
@@ -296,14 +475,27 @@
       const s = this._remaining % 60;
       this._countdown.textContent = `${m}:${s.toString().padStart(2, "0")}`;
     }
+    // Header + buttons ~3 units; the countdown adds ~2 while it's showing.
     getCardSize() {
-      return 4;
+      return this._countdownShown ? 5 : 3;
     }
-    static getStubConfig() {
-      return { entity: "alarm_control_panel.alarm" };
+    // Sections-view defaults; the editor's Layout tab can override them.
+    getGridOptions() {
+      return { columns: 12, min_columns: 6, rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement("alarm-panel-card-editor");
+    }
+    // Pre-fill the card picker with the first real alarm entity.
+    static getStubConfig(hass) {
+      const first = hass && Object.keys(hass.states).find((id) => id.startsWith("alarm_control_panel."));
+      return first ? { entity: first } : { demo: true };
     }
   };
   function registerAlarmPanelCard() {
+    if (!customElements.get("alarm-panel-card-editor")) {
+      customElements.define("alarm-panel-card-editor", AlarmPanelCardEditor);
+    }
     if (!customElements.get("alarm-panel-card")) {
       customElements.define("alarm-panel-card", AlarmPanelCard);
     }
@@ -387,28 +579,10 @@
       (e) => e.entity_id.startsWith("scene.") && areas.has(lccAreaOf(hass, e))
     );
   }
-  var LightControlCardEditor = class extends HTMLElement {
-    setConfig(config) {
-      this._config = config || {};
-      this._render();
-    }
-    set hass(hass) {
-      this._hass = hass;
-      this._render();
-    }
-    _render() {
-      if (!this._hass) return;
-      if (!this._form) {
-        this._form = document.createElement("ha-form");
-        this._form.addEventListener("value-changed", (ev) => {
-          this._config = ev.detail.value;
-          this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: this._config }, bubbles: true, composed: true }));
-          this._render();
-        });
-        this.appendChild(this._form);
-      }
-      const mode = this._config.mode || "light";
-      const schema = [
+  var LightControlCardEditor = createFormEditor({
+    schema: (config) => {
+      const mode = config.mode || "light";
+      return [
         {
           name: "mode",
           selector: {
@@ -421,27 +595,20 @@
               ]
             }
           }
-        }
+        },
+        mode === "room" ? { name: "area", selector: { area: {} } } : { name: "entity", selector: { entity: { domain: "light" } } },
+        { name: "name", selector: { text: {} } },
+        { name: "scenes", selector: { entity: { domain: "scene", multiple: true } } }
       ];
-      if (mode === "room") {
-        schema.push({ name: "area", selector: { area: {} } });
-      } else {
-        schema.push({ name: "entity", selector: { entity: { domain: "light" } } });
-      }
-      schema.push({ name: "name", selector: { text: {} } });
-      schema.push({ name: "scenes", selector: { entity: { domain: "scene", multiple: true } } });
-      this._form.hass = this._hass;
-      this._form.data = this._config;
-      this._form.schema = schema;
-      this._form.computeLabel = (s) => ({
-        mode: "Card type",
-        area: "Room",
-        entity: "Light entity",
-        name: "Title (optional)",
-        scenes: "Scenes (optional \u2014 auto-detected by area if left blank)"
-      })[s.name] || s.name;
+    },
+    labels: {
+      mode: "Card type",
+      area: "Room",
+      entity: "Light entity",
+      name: "Title (optional)",
+      scenes: "Scenes (optional \u2014 auto-detected by area if left blank)"
     }
-  };
+  });
   var LightControlCard = class extends HTMLElement {
     setConfig(config) {
       if (!config.entity && !config.area) throw new Error("entity or area required");
@@ -452,8 +619,10 @@
     static getConfigElement() {
       return document.createElement("light-control-card-editor");
     }
-    static getStubConfig() {
-      return { mode: "light", entity: "" };
+    // Pre-fill the card picker with a real light so the preview isn't an error.
+    static getStubConfig(hass) {
+      const first = hass && Object.keys(hass.states).find((id) => id.startsWith("light."));
+      return { mode: "light", entity: first || "" };
     }
     _toggle(entityId) {
       this._hass.callService("light", "toggle", {}, { entity_id: entityId });
@@ -645,9 +814,14 @@
       }
       const scenesRow = this._buildScenes(sceneEntities);
       if (scenesRow) this._scenesEl.appendChild(scenesRow);
+      this._size = 1 + (mode === "room" ? 1 : 0) + Math.max(relevantEntityIds.length, 1) + (scenesRow ? 1 : 0);
     }
     getCardSize() {
-      return 3;
+      return this._size || 3;
+    }
+    // Sections-view defaults; the editor's Layout tab can override them.
+    getGridOptions() {
+      return { columns: 12, min_columns: 6, rows: "auto" };
     }
   };
   function registerLightControlCard() {

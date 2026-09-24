@@ -2,6 +2,101 @@
 // battery-zone-card is this same class registered a second time with
 // battery-friendly defaults (auto battery icon stepping, low-is-bad colouring).
 
+import { createFormEditor } from './form-editor.js';
+
+export const GaugeZoneCardEditor = createFormEditor({
+  schema: () => [
+    { name: 'title', selector: { text: {} } },
+    {
+      type: 'expandable',
+      name: '',
+      title: 'Colours, units and icons',
+      flatten: true,
+      schema: [
+        {
+          name: 'direction',
+          selector: {
+            select: {
+              mode: 'dropdown',
+              options: [
+                { value: 'low', label: 'Low value is bad (battery, signal)' },
+                { value: 'high', label: 'High value is bad (storage, CPU)' },
+              ],
+            },
+          },
+        },
+        {
+          type: 'grid',
+          name: '',
+          schema: [
+            { name: 'alert_at', selector: { number: { mode: 'box' } } },
+            { name: 'warn_at', selector: { number: { mode: 'box' } } },
+            { name: 'unit', selector: { text: {} } },
+            { name: 'max', selector: { number: { mode: 'box', min: 0 } } },
+          ],
+        },
+        {
+          name: 'icon_mode',
+          selector: {
+            select: {
+              mode: 'dropdown',
+              options: [
+                { value: 'battery', label: 'Battery (steps with the value)' },
+                { value: 'gauge', label: 'Gauge (fixed icon)' },
+              ],
+            },
+          },
+        },
+      ],
+    },
+    {
+      name: 'entities',
+      selector: {
+        object: {
+          multiple: true,
+          label_field: 'name',
+          description_field: 'entity',
+          fields: {
+            entity: { label: 'Entity', selector: { entity: {} } },
+            name: { label: 'Name', required: true, selector: { text: {} } },
+            word: {
+              label: 'Battery wording (shows the Battery Notes date)',
+              selector: {
+                select: {
+                  mode: 'dropdown',
+                  custom_value: true,
+                  options: ['replaced', 'charged', 'swapped'],
+                },
+              },
+            },
+            secondary: { label: 'Secondary text (instead of wording)', selector: { text: {} } },
+            icon: { label: 'Icon override', selector: { icon: {} } },
+            value: { label: 'Fixed value (instead of an entity)', selector: { number: { mode: 'box' } } },
+            unit: { label: 'Unit override', selector: { text: {} } },
+            max: { label: 'Max override', selector: { number: { mode: 'box', min: 0 } } },
+          },
+        },
+      },
+    },
+  ],
+  labels: {
+    title: 'Title',
+    direction: 'Which end is bad',
+    alert_at: 'Red at',
+    warn_at: 'Orange at',
+    unit: 'Unit',
+    max: 'Full bar value',
+    icon_mode: 'Icons',
+    entities: 'Rows',
+  },
+  helpers: {
+    alert_at: 'Defaults: 20 (low is bad) / 90 (high is bad)',
+    warn_at: 'Defaults: 50 (low is bad) / 75 (high is bad)',
+    unit: 'Default %',
+    max: 'Default 100',
+  },
+});
+
 export class GaugeZoneCard extends HTMLElement {
   setConfig(config) {
     if (!config.entities) throw new Error('entities required');
@@ -122,7 +217,7 @@ export class GaugeZoneCard extends HTMLElement {
       row.innerHTML = `
         <ha-icon icon="${icon}" style="color:${iconColor}; margin-right:14px; flex-shrink:0; --mdc-icon-size:26px;"></ha-icon>
         <div style="flex:1; min-width:0;">
-          <div style="font-weight:500; color:#ffffff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${e.name}</div>
+          <div style="font-weight:500; color:#ffffff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${e.name || (e.st && e.st.attributes.friendly_name) || e.entity || ''}</div>
           ${secondaryText ? `<div style="font-size:0.85rem; color:rgba(255,255,255,0.65);">${secondaryText}</div>` : ''}
         </div>
         <div style="font-weight:600; color:#ffffff; margin-left:8px; flex-shrink:0;">${e.available ? Math.round(e.val) + unit : 'n/a'}</div>
@@ -131,8 +226,20 @@ export class GaugeZoneCard extends HTMLElement {
     });
   }
 
+  // Rows with a secondary line are ~60px, so count them as 1.2 units.
   getCardSize() {
-    return (this.config.entities ? this.config.entities.length : 1) + 1;
+    const rows = this.config.entities || [];
+    const tall = rows.filter((e) => e.secondary || e.word).length;
+    return 1 + Math.ceil(rows.length + tall * 0.2);
+  }
+
+  // Sections-view defaults; the editor's Layout tab can override them.
+  getGridOptions() {
+    return { columns: 12, min_columns: 6, rows: 'auto' };
+  }
+
+  static getConfigElement() {
+    return document.createElement('gauge-zone-card-editor');
   }
 
   static getStubConfig() {
@@ -141,6 +248,9 @@ export class GaugeZoneCard extends HTMLElement {
 }
 
 export function registerGaugeZoneCard() {
+  if (!customElements.get('gauge-zone-card-editor')) {
+    customElements.define('gauge-zone-card-editor', GaugeZoneCardEditor);
+  }
   if (!customElements.get('battery-zone-card')) {
     customElements.define('battery-zone-card', GaugeZoneCard);
   }

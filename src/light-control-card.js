@@ -2,6 +2,8 @@
 // visual editor, colour-tinted rows (never a literal white fill), scene
 // chips, and Home Assistant's own more-info pop-up for the full picker.
 
+import { createFormEditor } from './form-editor.js';
+
 function lccHsToRgb(h, s) {
   const c = (s / 100);
   const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
@@ -80,30 +82,10 @@ function lccSceneChips(hass, entityIds) {
   );
 }
 
-export class LightControlCardEditor extends HTMLElement {
-  setConfig(config) {
-    this._config = config || {};
-    this._render();
-  }
-
-  set hass(hass) {
-    this._hass = hass;
-    this._render();
-  }
-
-  _render() {
-    if (!this._hass) return;
-    if (!this._form) {
-      this._form = document.createElement('ha-form');
-      this._form.addEventListener('value-changed', (ev) => {
-        this._config = ev.detail.value;
-        this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
-        this._render();
-      });
-      this.appendChild(this._form);
-    }
-    const mode = this._config.mode || 'light';
-    const schema = [
+export const LightControlCardEditor = createFormEditor({
+  schema: (config) => {
+    const mode = config.mode || 'light';
+    return [
       {
         name: 'mode',
         selector: {
@@ -117,27 +99,21 @@ export class LightControlCardEditor extends HTMLElement {
           },
         },
       },
+      mode === 'room'
+        ? { name: 'area', selector: { area: {} } }
+        : { name: 'entity', selector: { entity: { domain: 'light' } } },
+      { name: 'name', selector: { text: {} } },
+      { name: 'scenes', selector: { entity: { domain: 'scene', multiple: true } } },
     ];
-    if (mode === 'room') {
-      schema.push({ name: 'area', selector: { area: {} } });
-    } else {
-      schema.push({ name: 'entity', selector: { entity: { domain: 'light' } } });
-    }
-    schema.push({ name: 'name', selector: { text: {} } });
-    schema.push({ name: 'scenes', selector: { entity: { domain: 'scene', multiple: true } } });
-    this._form.hass = this._hass;
-    this._form.data = this._config;
-    this._form.schema = schema;
-    this._form.computeLabel = (s) =>
-      ({
-        mode: 'Card type',
-        area: 'Room',
-        entity: 'Light entity',
-        name: 'Title (optional)',
-        scenes: 'Scenes (optional — auto-detected by area if left blank)',
-      }[s.name] || s.name);
-  }
-}
+  },
+  labels: {
+    mode: 'Card type',
+    area: 'Room',
+    entity: 'Light entity',
+    name: 'Title (optional)',
+    scenes: 'Scenes (optional — auto-detected by area if left blank)',
+  },
+});
 
 export class LightControlCard extends HTMLElement {
   setConfig(config) {
@@ -151,8 +127,10 @@ export class LightControlCard extends HTMLElement {
     return document.createElement('light-control-card-editor');
   }
 
-  static getStubConfig() {
-    return { mode: 'light', entity: '' };
+  // Pre-fill the card picker with a real light so the preview isn't an error.
+  static getStubConfig(hass) {
+    const first = hass && Object.keys(hass.states).find((id) => id.startsWith('light.'));
+    return { mode: 'light', entity: first || '' };
   }
 
   _toggle(entityId) {
@@ -390,10 +368,18 @@ export class LightControlCard extends HTMLElement {
     }
     const scenesRow = this._buildScenes(sceneEntities);
     if (scenesRow) this._scenesEl.appendChild(scenesRow);
+
+    // ~1 masonry unit (50px) per row, plus card padding, room title and scene chips.
+    this._size = 1 + (mode === 'room' ? 1 : 0) + Math.max(relevantEntityIds.length, 1) + (scenesRow ? 1 : 0);
   }
 
   getCardSize() {
-    return 3;
+    return this._size || 3;
+  }
+
+  // Sections-view defaults; the editor's Layout tab can override them.
+  getGridOptions() {
+    return { columns: 12, min_columns: 6, rows: 'auto' };
   }
 }
 
