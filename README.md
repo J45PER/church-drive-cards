@@ -74,6 +74,11 @@ entity: light.living_room
 name: Living Room (group)
 ```
 
+### `scene-styles-card`
+The central place to style scene tiles. It sits on the Design Presets dashboard's **Scene styles** tab and previews every scene name in the house with its current look. In its visual editor, each entry picks a scene **name** and sets an icon, up to three background colours, or a picture. That style then applies to that scene in every room, on every Light Control card, on every dashboard. A light card's own per-scene overrides still win, and unstyled scenes use built-in colours matched to the Hue scene names.
+
+Light cards read the styles from the `design-presets` dashboard once per page load, so reload other dashboards to pick up changes.
+
 ## Development
 
 ```bash

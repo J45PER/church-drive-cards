@@ -4,7 +4,7 @@
 
 import { createFormEditor } from './form-editor.js';
 import { SUFFIX, LABEL } from './suffix.js';
-import { sceneBackground, sceneIcon, scenePalette } from './scene-style.js';
+import { sceneBackground, sceneIcon, scenePalette, loadSceneStyles, onSceneStylesChanged } from './scene-style.js';
 import { DemoHome } from './demo-home.js';
 
 const LCC_DEFAULT_MAX_SCENES = 8;
@@ -306,8 +306,21 @@ export class LightControlCard extends HTMLElement {
     this._demo = null;
   }
 
+  // Central scene styles (Design Presets "Scene styles" tab) can change after
+  // this card has drawn; redraw when they do.
+  connectedCallback() {
+    if (!this._unsubStyles) {
+      this._unsubStyles = onSceneStylesChanged(() => {
+        this._lastIds = null;
+        if (this._lastInput) this.hass = this._lastInput;
+      });
+    }
+  }
+
   disconnectedCallback() {
     if (this._demo) this._demo.stop();
+    if (this._unsubStyles) this._unsubStyles();
+    this._unsubStyles = null;
   }
 
   // Demo mode: a pretend home (demo-home.js) stands in for Home Assistant, so
@@ -508,7 +521,7 @@ export class LightControlCard extends HTMLElement {
       tile.className = s.active || !anyActive ? 'lcc-scene' : 'lcc-scene lcc-dim';
       const glow = `color-mix(in srgb, ${scenePalette(s.name)[0]} 85%, transparent)`;
       tile.title = s.playing ? `${s.name} (playing, tap to stop)` : s.paused ? `${s.name} (paused, tap to play)` : s.name;
-      const bg = s.image ? `center / cover no-repeat url("${s.image}")` : sceneBackground(s.name);
+      const bg = sceneBackground(s.name, s.image);
       tile.style.cssText = `position:relative; container-type:inline-size; aspect-ratio:1 / 1; border:none; border-radius:14px; padding:0; overflow:hidden; cursor:pointer; background:${bg};${
         s.active ? ` box-shadow:0 0 16px 3px ${glow}; transform:scale(1.04); z-index:1;` : ''
       }`;
@@ -640,6 +653,8 @@ export class LightControlCard extends HTMLElement {
   }
 
   set hass(hass) {
+    this._lastInput = hass;
+    loadSceneStyles(hass);
     this._render(this.config.demo ? this._demoHass(hass) : hass);
   }
 
