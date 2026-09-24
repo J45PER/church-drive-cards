@@ -214,11 +214,13 @@ export class LightControlCard extends HTMLElement {
   }
 
   // Animated (dynamic) Hue scenes are started with hue.activate_scene so
-  // they actually play; everything else is a plain scene.turn_on.
-  _activateScene(entityId, isDynamic) {
+  // they actually play. Tapping one that's already playing re-applies it
+  // with dynamic: false, which stops the animation and holds its colours.
+  // Everything else is a plain scene.turn_on.
+  _activateScene(entityId, isDynamic, playing) {
     const hue = this._hass.services && this._hass.services.hue;
     if (isDynamic && hue && hue.activate_scene) {
-      this._hass.callService('hue', 'activate_scene', { dynamic: true }, { entity_id: entityId });
+      this._hass.callService('hue', 'activate_scene', { dynamic: !playing }, { entity_id: entityId });
     } else {
       this._hass.callService('scene', 'turn_on', {}, { entity_id: entityId });
     }
@@ -340,18 +342,18 @@ export class LightControlCard extends HTMLElement {
     scenes.forEach((s) => {
       const tile = document.createElement('button');
       tile.className = 'lcc-scene';
-      tile.title = s.name;
+      tile.title = s.playing ? `${s.name} (playing, tap to stop)` : s.name;
       const bg = s.image ? `center / cover no-repeat url("${s.image}")` : sceneBackground(s.name);
-      tile.style.cssText = `position:relative; aspect-ratio:1 / 1; border:none; border-radius:14px; padding:0; overflow:hidden; cursor:pointer; background:${bg};${
+      tile.style.cssText = `position:relative; container-type:inline-size; aspect-ratio:1 / 1; border:none; border-radius:14px; padding:0; overflow:hidden; cursor:pointer; background:${bg};${
         s.active ? ' outline:3px solid var(--primary-color); outline-offset:2px;' : ''
       }`;
       tile.innerHTML = `
         <div style="position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0) 65%);"></div>
-        <ha-icon icon="${s.icon}" style="position:absolute; top:8px; left:8px; --mdc-icon-size:20px; color:#fff; background:rgba(0,0,0,0.28); border-radius:50%; padding:4px;"></ha-icon>
-        ${s.playing ? '<ha-icon class="lcc-playing" icon="mdi:play" title="Playing" style="position:absolute; top:8px; right:8px; --mdc-icon-size:18px; color:#fff; background:var(--primary-color); border-radius:50%; padding:4px;"></ha-icon>' : ''}
-        <div class="lcc-scene-name" style="position:absolute; left:8px; right:8px; bottom:7px; text-align:left; color:#fff; font-size:0.8rem; font-weight:600; line-height:1.15; text-shadow:0 1px 2px rgba(0,0,0,0.6); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;"></div>`;
+        <ha-icon icon="${s.icon}" style="position:absolute; left:50%; top:44%; transform:translate(-50%, -50%); --mdc-icon-size:40cqw; color:#fff; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.55));"></ha-icon>
+        ${s.playing ? '<ha-icon class="lcc-playing" icon="mdi:play" title="Playing" style="position:absolute; top:6px; right:6px; --mdc-icon-size:14px; color:#fff; background:var(--primary-color); border-radius:50%; padding:3px;"></ha-icon>' : ''}
+        <div class="lcc-scene-name" style="position:absolute; left:8px; right:8px; bottom:7px; text-align:center; color:#fff; font-size:0.8rem; font-weight:600; line-height:1.15; text-shadow:0 1px 2px rgba(0,0,0,0.6); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;"></div>`;
       tile.querySelector('.lcc-scene-name').textContent = s.name;
-      tile.addEventListener('click', () => this._activateScene(s.entity, s.isDynamic));
+      tile.addEventListener('click', () => this._activateScene(s.entity, s.isDynamic, s.playing));
       wrap.appendChild(tile);
     });
     return wrap;
