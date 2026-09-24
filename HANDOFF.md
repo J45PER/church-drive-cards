@@ -1,6 +1,6 @@
 # Church Drive Cards: Handoff
 
-*Last updated 2026-09-24. Current release: **v0.4.1**.*
+*Last updated 2026-09-24. Current release: **v0.5.0**.*
 
 ## Where this stands
 
@@ -161,6 +161,9 @@ Shared modules:
   - Zone choices: its member lights.
   - The editor offers only valid choices, labelled room/zone/light from `hue_type`.
   - An empty list, or one where nothing exists, shows everything.
+  - Each entry can set `level` (0 top, 1 child, 2 grandchild; 16px indent each).
+    Defaults: Hue room 0, zones 1 when a room is shown, lights one level under the
+    deepest group.
 - **Scene tile layout:** always four per row. Names are one line (ellipsis), scale
   9–13px via `cqw`, and hide on tiles under 100px. `scene_names` (`auto` | `always` |
   `never`) overrides that. The badge scales too.
