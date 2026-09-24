@@ -50,7 +50,8 @@ type: custom:light-control-card
 mode: room
 area: living_room
 entities:
-  - light.living_room_ambience
+  - light.living_room
+  - entity: light.living_room_ambience
     level: 1
   - entity: light.tv_table_lamp
     name: Reading lamp
