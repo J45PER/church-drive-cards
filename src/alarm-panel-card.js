@@ -27,6 +27,7 @@ export const AlarmPanelCardEditor = createFormEditor({
         { name: 'demo_target_state', selector: { select: { mode: 'dropdown', options: APC_STATE_OPTIONS.slice(1, 4) } } },
         { name: 'demo_countdown', selector: { number: { mode: 'box', min: 0, unit_of_measurement: 's' } } },
         { name: 'demo_by', selector: { text: {} } },
+        { name: 'demo_time', selector: { datetime: {} } },
         { name: 'demo_supported_features', selector: { number: { mode: 'box', min: 0 } } },
       ],
     },
@@ -38,6 +39,7 @@ export const AlarmPanelCardEditor = createFormEditor({
     demo_target_state: 'Mode being armed to (during a delay)',
     demo_countdown: 'Countdown',
     demo_by: 'Armed/disarmed by',
+    demo_time: 'Armed/disarmed at',
     demo_supported_features: 'Supported features',
   },
   helpers: {
@@ -62,15 +64,20 @@ export class AlarmPanelCard extends HTMLElement {
     this._hass = hass;
     let st;
     if (this.config.demo) {
+      // The editor's datetime picker gives "YYYY-MM-DD HH:MM:SS"; Safari/iOS
+      // can't parse the space form, so normalise it to ISO.
+      const demoTime = this.config.demo_time
+        ? String(this.config.demo_time).replace(' ', 'T')
+        : new Date().toISOString();
       st = {
         state: this.config.demo_state || 'armed_away',
         attributes: {
           supported_features: this.config.demo_supported_features !== undefined ? this.config.demo_supported_features : 3,
           targetState: this.config.demo_target_state || 'armed_away',
           lastArmedBy: this.config.demo_by || 'Demo User',
-          lastArmedTime: this.config.demo_time || new Date().toISOString(),
+          lastArmedTime: demoTime,
           lastDisarmedBy: this.config.demo_by || 'Demo User',
-          lastDisarmedTime: this.config.demo_time || new Date().toISOString(),
+          lastDisarmedTime: demoTime,
           entrySecondsLeft: this.config.demo_countdown || 0,
           exitSecondsLeft: this.config.demo_countdown || 0,
         },
@@ -257,5 +264,11 @@ export function registerAlarmPanelCard() {
     customElements.define('alarm-panel-card', AlarmPanelCard);
   }
   window.customCards = window.customCards || [];
-  window.customCards.push({ type: 'alarm-panel-card', name: 'Alarm Panel Card', description: 'Alarm status, entry/exit countdown, and arm/disarm controls' });
+  window.customCards.push({
+    type: 'alarm-panel-card',
+    name: 'Alarm Panel Card',
+    description: 'Alarm status, entry/exit countdown, and arm/disarm controls',
+    preview: true,
+    documentationURL: 'https://github.com/J45PER/church-drive-cards#readme',
+  });
 }

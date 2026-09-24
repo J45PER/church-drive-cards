@@ -4,6 +4,8 @@ Custom Lovelace cards for the Church Drive Home Assistant dashboards. One bundle
 
 ## Cards
 
+Every card is set up like a built-in one: **Add Card** → search for it, pick it from the preview, and configure it in the visual editor. No YAML is needed. The YAML examples below are for reference or copy-paste only.
+
 ### `battery-zone-card` / `gauge-zone-card`
 A zone/room card listing measurable values (battery %, storage used, signal strength, anything with a value and a max) as gradient-filled rows, sorted worst-first, colour-coded red/orange/green. `battery-zone-card` is `gauge-zone-card` with battery-friendly defaults (auto battery-icon stepping, low-value-is-bad colouring, Battery Notes `battery_last_replaced` integration).
 

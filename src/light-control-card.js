@@ -395,5 +395,7 @@ export function registerLightControlCard() {
     type: 'light-control-card',
     name: 'Light Control Card',
     description: 'Light/group/room control with icon, toggle, brightness, scenes, and full more-info pop-up (visual editor supported)',
+    preview: true,
+    documentationURL: 'https://github.com/J45PER/church-drive-cards#readme',
   });
 }
