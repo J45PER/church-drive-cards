@@ -58,7 +58,7 @@ entities:
     level: 2
 ```
 
-Tap a row to toggle, drag across it to set brightness, and tap the tune icon for the native more-info dialog.
+Each row says its state on the right (**Off**, a brightness like **45%**, or **On** for on/off-only lamps). Off rows are dimmed, and lit rows are tinted with the light's colour (white lights get a clearly warm or cool tint). Tap a row to toggle, drag across it to set brightness, and tap the tune icon for the native more-info dialog. Rows can have an **icon override**: per Show-list entry, or the card's *Icon override* for single-light and zone cards.
 
 **Demo mode** (`demo: true`, in the editor's *Demo mode* section) swaps Home Assistant for a built-in pretend home, so the card can be tried without touching real lights. `demo_room` picks `living_room` (a room plus a zone of animated scenes, including a white-only lamp and an on/off-only lamp) or `bedroom` (two groups plus a hidden settings light the card should skip). Every tap, drag, scene, pause and hold works on the pretend lights, and nothing is sent to Home Assistant. The Design Presets dashboard uses only demo cards.
 

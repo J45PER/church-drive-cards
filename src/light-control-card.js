@@ -20,10 +20,39 @@ function lccHsToRgb(h, s) {
   return `rgb(${Math.round((r + m) * 255)},${Math.round((g + m) * 255)},${Math.round((b + m) * 255)})`;
 }
 
+// White lights get a clearly warm or cool colour (pale near-whites blend into
+// a dull grey on the dark card and look "off").
 function lccKelvinColor(k) {
-  if (k <= 3000) return '#ffb37d';
-  if (k <= 4500) return '#ffe9c7';
-  return '#cfe8ff';
+  if (k <= 2600) return '#ff9a3c';
+  if (k <= 3400) return '#ffb45c';
+  if (k <= 4800) return '#ffd08a';
+  return '#8fc3ff';
+}
+
+// Custom icon packs (e.g. phu: from Custom Brand Icons) load as separate
+// resources. If a card draws before its pack has registered, <ha-icon> shows
+// nothing and never retries, so poll briefly and re-apply those icons.
+function lccIconPackLoaded(icon) {
+  const prefix = String(icon || '').split(':')[0];
+  if (!prefix || prefix === 'mdi' || prefix === 'hass' || !String(icon).includes(':')) return true;
+  return !!((window.customIcons && window.customIcons[prefix]) || (window.customIconsets && window.customIconsets[prefix]));
+}
+
+function lccRetryIcons(root) {
+  let waiting = [...root.querySelectorAll('ha-icon[icon]')].filter((el) => !lccIconPackLoaded(el.getAttribute('icon')));
+  if (!waiting.length) return;
+  let tries = 0;
+  const timer = setInterval(() => {
+    tries += 1;
+    waiting = waiting.filter((el) => {
+      const icon = el.getAttribute('icon');
+      if (!lccIconPackLoaded(icon)) return true;
+      el.setAttribute('icon', '');
+      el.setAttribute('icon', icon);
+      return false;
+    });
+    if (!waiting.length || tries > 80) clearInterval(timer);
+  }, 250);
 }
 
 function lccLightColor(st) {
@@ -222,6 +251,7 @@ export const LightControlCardEditor = createFormEditor({
               fields: {
                 entity: { label: mode === 'room' ? 'Light or zone' : 'Light', required: true, selector: { select: { mode: 'dropdown', options } } },
                 name: { label: 'Name override', selector: { text: {} } },
+                icon: { label: 'Icon override', selector: { icon: {} } },
                 level: {
                   label: 'Level (indentation)',
                   selector: {
@@ -288,6 +318,7 @@ export const LightControlCardEditor = createFormEditor({
           ]),
       ...showField,
       { name: 'name', selector: { text: {} } },
+      ...(mode === 'room' ? [] : [{ name: 'icon', selector: { icon: {} } }]),
       { name: 'max_scenes', selector: { number: { mode: 'box', min: 0, max: 24 } } },
       {
         name: 'scene_names',
@@ -331,6 +362,7 @@ export const LightControlCardEditor = createFormEditor({
     area: 'Room',
     entity: 'Light, zone or group',
     name: 'Title (optional)',
+    icon: 'Icon override (optional)',
     max_scenes: 'Max scenes',
     scene_names: 'Scene names',
     scenes: 'Scenes (leave empty to pick them automatically)',
@@ -455,7 +487,7 @@ export class LightControlCard extends HTMLElement {
   // the row to solid white and make the text unreadable), sized to the
   // brightness. Tap toggles; drag horizontally sets brightness on dimmable
   // lights.
-  _buildRow(entityId, { withMoreInfo, level = 0 }) {
+  _buildRow(entityId, { withMoreInfo, level = 0, icon: iconOverride }) {
     const st = this._hass.states[entityId];
     const name = (st && st.attributes.friendly_name) || entityId;
     const isGroupLike = lccIsGroupLike(st);
@@ -463,14 +495,16 @@ export class LightControlCard extends HTMLElement {
     const dimmable =
       st && st.attributes.supported_color_modes && st.attributes.supported_color_modes.some((m) => m !== 'onoff');
     const color = lccLightColor(st);
-    const icon = lccLightIcon(this._hass, st, isGroupLike);
+    const icon = iconOverride || lccLightIcon(this._hass, st, isGroupLike);
+    // State shown in words on the right, so on/off is never a guess.
+    const stateText = !st || st.state === 'unavailable' ? 'Unavailable' : !on ? 'Off' : dimmable && st.attributes.brightness ? `${Math.round((st.attributes.brightness / 255) * 100)}%` : 'On';
     const brightnessPct = st && st.attributes.brightness ? Math.round((st.attributes.brightness / 255) * 100) : 0;
     const fillPct = on ? (dimmable ? Math.max(brightnessPct, 4) : 100) : 0;
 
     // Tint the fill: blend the light's colour into the card's own background at
     // ~30% strength rather than a literal fill, so white/bright lights never
     // wash the row to solid white. color-mix keeps this working for any hue.
-    const tint = `color-mix(in srgb, ${color} 30%, var(--card-background-color, #1c1c1c))`;
+    const tint = `color-mix(in srgb, ${color} 40%, var(--card-background-color, #1c1c1c))`;
     const track = 'rgba(255,255,255,0.06)';
 
     const row = document.createElement('div');
@@ -480,8 +514,9 @@ export class LightControlCard extends HTMLElement {
     const indent = level > 0 ? `margin-left:${16 * level}px;` : '';
     row.style.cssText = `position:relative; display:flex; align-items:center; gap:12px; padding:${pad}; ${indent} border-radius:12px; margin-top:6px; overflow:hidden; cursor:pointer; user-select:none; touch-action:pan-y; background: linear-gradient(to right, ${tint} 0%, ${tint} ${fillPct}%, ${track} ${fillPct}%, ${track} 100%);`;
     row.innerHTML = `
-      <ha-icon icon="${icon}" style="color:${on ? color : 'var(--secondary-text-color)'}; --mdc-icon-size:24px; flex-shrink:0; pointer-events:none;"></ha-icon>
-      <div class="lcc-name" style="flex:1; min-width:0; font-weight:500; color:var(--primary-text-color); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; pointer-events:none;">${name}</div>
+      <ha-icon icon="${icon}" style="color:${on ? color : 'var(--secondary-text-color)'}; opacity:${on ? 1 : 0.6}; --mdc-icon-size:24px; flex-shrink:0; pointer-events:none;"></ha-icon>
+      <div class="lcc-name" style="flex:1; min-width:0; font-weight:${on ? 600 : 400}; color:${on ? 'var(--primary-text-color)' : 'var(--secondary-text-color)'}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; pointer-events:none;">${name}</div>
+      <div class="lcc-state" style="flex-shrink:0; font-size:0.85rem; font-variant-numeric:tabular-nums; color:${on ? 'var(--primary-text-color)' : 'var(--secondary-text-color)'}; opacity:${on ? 0.9 : 0.7}; pointer-events:none;">${stateText}</div>
       ${withMoreInfo && !this.config.demo ? `<ha-icon class="lcc-more" icon="mdi:tune-variant" style="color:var(--secondary-text-color); --mdc-icon-size:20px; cursor:pointer; flex-shrink:0;"></ha-icon>` : ''}
     `;
 
@@ -504,6 +539,8 @@ export class LightControlCard extends HTMLElement {
     let startX = 0;
     const setFillVisual = (pct) => {
       row.style.background = `linear-gradient(to right, ${tint} 0%, ${tint} ${pct}%, ${track} ${pct}%, ${track} 100%)`;
+      // While dragging, show the brightness being set.
+      if (dragging && moved) row.querySelector('.lcc-state').textContent = pct <= 2 ? 'Off' : `${Math.round(pct)}%`;
     };
     const pctFromEvent = (ev) => {
       const rect = row.getBoundingClientRect();
@@ -758,10 +795,12 @@ export class LightControlCard extends HTMLElement {
     let rows = [];
     const names = {};
     const levels = {};
+    const icons = {};
     const chosen = lccNormalizeList(cfg.entities).filter((s) => hass.states[s.entity]);
     chosen.forEach((s) => {
       if (s.name) names[s.entity] = s.name;
       if (s.level !== undefined) levels[s.entity] = s.level;
+      if (s.icon) icons[s.entity] = s.icon;
     });
     if (mode === 'room') {
       if (chosen.length) {
@@ -791,6 +830,7 @@ export class LightControlCard extends HTMLElement {
         memberIds = picked.length ? picked : members;
       }
       if (cfg.name) names[cfg.entity] = cfg.name;
+      if (cfg.icon) icons[cfg.entity] = cfg.icon;
       const level = (id, fallback) => {
         const n = parseInt(levels[id], 10);
         return Number.isNaN(n) ? fallback : Math.max(0, Math.min(2, n));
@@ -842,7 +882,7 @@ export class LightControlCard extends HTMLElement {
     }
     // Rows in display order; bulbs are indented under any group row.
     rows.forEach(({ id, level }) => {
-      const row = this._buildRow(id, { withMoreInfo: true, level });
+      const row = this._buildRow(id, { withMoreInfo: true, level, icon: icons[id] });
       const nameEl = row.querySelector('.lcc-name');
       if (names[id] && nameEl) nameEl.textContent = names[id];
       this._main.appendChild(row);
@@ -851,6 +891,7 @@ export class LightControlCard extends HTMLElement {
     this._scenesEl.innerHTML = '';
     const scenesGrid = this._buildScenes(scenes);
     if (scenesGrid) this._scenesEl.appendChild(scenesGrid);
+    lccRetryIcons(this);
 
     // ~1 masonry unit (50px) per row, plus card padding and room title; scene
     // tiles are ~2 units per row of about four.
