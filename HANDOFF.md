@@ -1,6 +1,6 @@
 # Church Drive Cards: Handoff
 
-*Last updated 2026-09-24. Current release: **v0.2.9**.*
+*Last updated 2026-09-24. Current release: **v0.3.0**.*
 
 ## Where this stands
 
@@ -74,7 +74,7 @@ Shared modules:
     from `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
     It's currently pinned to the `main` merge `3f12218`.
   - Design Presets has a **Beta** tab (`/design-presets/beta`) with `-beta` copies of
-    all the example cards. Nothing else uses beta cards.
+    all the example cards (light cards in demo mode). Nothing else uses beta cards.
   - To test a branch: push it, repoint that resource's URL at the branch commit, and
     have the user hard-refresh the Beta tab. Then bump, merge and release.
   - jsDelivr is blocked from the Claude cloud container, but the user's browsers load
@@ -123,7 +123,7 @@ Shared modules:
 - **Re-rendering:** rows only rebuild when one of the card's own lights, scenes or
   scene groups changes, never mid-drag.
 - **Scene tiles:**
-  - Square tiles, up to `max_scenes` (default 6; `0` hides them), in Hue app order
+  - Square tiles, up to `max_scenes` (default 8, two full rows; `0` hides them), in Hue app order
     (the group's `hue_scenes`).
   - Auto-detected from the scene's Hue group **device**. This includes Hue zones
     made up only of the card's lights (e.g. *Living Room Ambience*, whose device has
@@ -153,6 +153,21 @@ Shared modules:
     long-press menu is suppressed.
   - **Editor:** *Max scenes*, plus a scene list of objects (scene, name, icon,
     picture). Older plain lists of IDs are upgraded on load.
+
+- **Show list** (`entities`, room and zone/group modes): picks and orders the
+  rows, each as an ID or `{entity, name}`.
+  - Room choices: the area's groups, Hue zones made only of its bulbs (even with
+    no area), and its bulbs.
+  - Zone choices: its member lights.
+  - The editor offers only valid choices, labelled room/zone/light from `hue_type`.
+  - An empty list, or one where nothing exists, shows everything.
+- **Scene tile layout:** always four per row. Names scale (9–13px via `cqw`) and are
+  hidden under 64px tiles, and the badge scales too.
+- **Demo mode** (`demo: true`, `demo_room: living_room | bedroom`): `src/demo-home.js`
+  simulates a Hue home in the browser (registries, `light.*`, `scene.turn_on`,
+  `hue.activate_scene` with cycling palettes). Nothing reaches HA. The tune icon is
+  hidden. **Every light card on Design Presets (main and Beta tabs) must use demo
+  mode**, because the user doesn't want those pages touching real devices.
 
 ### All cards
 - **Sizing:**

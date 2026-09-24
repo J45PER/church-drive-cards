@@ -43,9 +43,23 @@ Mode-aware light control. Has a real visual editor (Add Card → search "Light C
 - `mode: group`: the group's row, with its member lights indented underneath.
 - `mode: room`: the area name as a title, then that area's Hue room/zone groups as top rows, with the individual lights indented underneath. Lights are found through the entity **or** device area, as Hue assigns areas to devices. Hidden entities and settings/diagnostic entities (e.g. an air purifier's display backlight) are skipped.
 
+**Choosing what's shown:** in `room` and `group` (zone) modes, the editor's **Show** list picks which rows appear and in what order, each with an optional name override. A room offers its lights, its Hue room group, and any Hue zones made up only of its lights, even zones with no area. A zone offers its member lights. Leave the list empty to show everything.
+
+```yaml
+type: custom:light-control-card
+mode: room
+area: living_room
+entities:
+  - light.living_room_ambience
+  - entity: light.tv_table_lamp
+    name: Reading lamp
+```
+
 Tap a row to toggle, drag across it to set brightness, and tap the tune icon for the native more-info dialog.
 
-**Scenes** show as square tiles under the lights, up to `max_scenes` (default 6; `0` hides them), in the same order as the Hue app. They're picked automatically from the card's Hue room and any Hue zone made only of its lights, or you can list your own in the editor with an optional name, icon and uploaded picture per scene. Without a picture, a tile gets a gradient in that scene's colours. The most recently activated scene glows in its own colour while its lights are on, and the other tiles are dimmed. Animated (dynamic) Hue scenes start animating when tapped and show a pulsing ▶ while they're playing; tap a playing scene again to stop the animation and hold its colours (it then shows ⏸, and another tap plays it again). **Press and hold** any scene tile to turn off all of the card's lights. Icons follow whatever is set in Home Assistant, including custom icon packs such as `phu:` Hue icons.
+**Demo mode** (`demo: true`, in the editor's *Demo mode* section) swaps Home Assistant for a built-in pretend home, so the card can be tried without touching real lights. `demo_room` picks `living_room` (a room plus a zone of animated scenes, including a white-only lamp and an on/off-only lamp) or `bedroom` (two groups plus a hidden settings light the card should skip). Every tap, drag, scene, pause and hold works on the pretend lights, and nothing is sent to Home Assistant. The Design Presets dashboard uses only demo cards.
+
+**Scenes** show as square tiles under the lights, always four per row (names shrink with the tiles and are hidden on very narrow cards, leaving just the icon), up to `max_scenes` (default 8, two full rows; `0` hides them), in the same order as the Hue app. They're picked automatically from the card's Hue room and any Hue zone made only of its lights, or you can list your own in the editor with an optional name, icon and uploaded picture per scene. Without a picture, a tile gets a gradient in that scene's colours. The most recently activated scene glows in its own colour while its lights are on, and the other tiles are dimmed. Animated (dynamic) Hue scenes start animating when tapped and show a pulsing ▶ while they're playing; tap a playing scene again to stop the animation and hold its colours (it then shows ⏸, and another tap plays it again). **Press and hold** any scene tile to turn off all of the card's lights. Icons follow whatever is set in Home Assistant, including custom icon packs such as `phu:` Hue icons.
 
 ```yaml
 type: custom:light-control-card

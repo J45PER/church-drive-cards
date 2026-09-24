@@ -5,8 +5,9 @@
 import { createFormEditor } from './form-editor.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { sceneBackground, sceneIcon, scenePalette } from './scene-style.js';
+import { DemoHome } from './demo-home.js';
 
-const LCC_DEFAULT_MAX_SCENES = 6;
+const LCC_DEFAULT_MAX_SCENES = 8;
 
 function lccHsToRgb(h, s) {
   const c = (s / 100);
@@ -130,9 +131,106 @@ function lccAutoScenes(hass, groupIds, lightIds) {
   return out;
 }
 
+// `entities` config items may be plain IDs or { entity, name? } objects.
+function lccNormalizeList(list) {
+  return (list || []).map((s) => (typeof s === 'string' ? { entity: s } : s)).filter((s) => s && s.entity);
+}
+
+// Everything a room/zone card could show, for the editor's "Show" list:
+// room mode offers the area's groups, any Hue zone made only of the area's
+// bulbs (zones often have no area), then the bulbs; zone/group mode offers
+// the group's members.
+function lccCandidates(hass, mode, area, entity) {
+  if (!hass || !hass.states) return [];
+  if (mode === 'group') return entity ? lccMembersOf(hass, entity) : [];
+  if (mode !== 'room' || !area) return [];
+  const areaLights = Object.values(hass.entities || {})
+    .filter(
+      (e) =>
+        e.entity_id.startsWith('light.') &&
+        !e.hidden &&
+        e.entity_category == null &&
+        hass.states[e.entity_id] &&
+        lccAreaOf(hass, e) === area
+    )
+    .map((e) => e.entity_id);
+  const bulbs = areaLights.filter((id) => !lccIsGroupLike(hass.states[id]));
+  const bulbSet = new Set(bulbs);
+  const groups = areaLights.filter((id) => lccIsGroupLike(hass.states[id]));
+  Object.values(hass.states).forEach((st) => {
+    const members = st.entity_id.startsWith('light.') && lccIsGroupLike(st) ? st.attributes.entity_id : null;
+    if (members && members.length && members.every((m) => bulbSet.has(m)) && !groups.includes(st.entity_id)) {
+      groups.push(st.entity_id);
+    }
+  });
+  return [...groups, ...bulbs];
+}
+
+// The editor can't see the pretend home, so build one to list its lights.
+const lccDemoCache = {};
+function lccDemoFor(room) {
+  const key = room || 'living_room';
+  if (!lccDemoCache[key]) lccDemoCache[key] = new DemoHome(key, () => {});
+  return lccDemoCache[key];
+}
+
 export const LightControlCardEditor = createFormEditor({
-  schema: (config) => {
+  schema: (config, hass) => {
     const mode = config.mode || 'light';
+    // Choices for the "Show" list, from the real home or the pretend one.
+    let showField = [];
+    if (mode === 'room' || mode === 'group') {
+      const demo = config.demo ? lccDemoFor(config.demo_room) : null;
+      const h = demo ? demo.hass() : hass;
+      const ids = demo
+        ? lccCandidates(h, mode, demo.area, demo.roomGroup)
+        : lccCandidates(h, mode, config.area, config.entity);
+      const options = ids.map((id) => {
+        const st = h.states[id];
+        const kind = lccIsGroupLike(st) ? (st.attributes.hue_type === 'room' ? 'room' : 'zone') : 'light';
+        return { value: id, label: `${(st && st.attributes.friendly_name) || id} (${kind})` };
+      });
+      showField = [
+        {
+          name: 'entities',
+          title: mode === 'room' ? 'Show these lights and zones, in this order (empty = all)' : 'Show these lights, in this order (empty = all)',
+          selector: {
+            object: {
+              multiple: true,
+              label_field: 'entity',
+              description_field: 'name',
+              fields: {
+                entity: { label: mode === 'room' ? 'Light or zone' : 'Light', required: true, selector: { select: { mode: 'dropdown', options } } },
+                name: { label: 'Name override', selector: { text: {} } },
+              },
+            },
+          },
+        },
+      ];
+    }
+    const demoFields = [
+      {
+        type: 'expandable',
+        name: '',
+        title: 'Demo mode (pretend lights, for Design Presets)',
+        flatten: true,
+        schema: [
+          { name: 'demo', selector: { boolean: {} } },
+          {
+            name: 'demo_room',
+            selector: {
+              select: {
+                mode: 'dropdown',
+                options: [
+                  { value: 'living_room', label: 'Living Room (room + animated-scene zone)' },
+                  { value: 'bedroom', label: 'Bedroom (two groups + a hidden settings light)' },
+                ],
+              },
+            },
+          },
+        ],
+      },
+    ];
     return [
       {
         name: 'mode',
@@ -141,15 +239,21 @@ export const LightControlCardEditor = createFormEditor({
             mode: 'dropdown',
             options: [
               { value: 'light', label: 'Single Light' },
-              { value: 'group', label: 'Light Group' },
+              { value: 'group', label: 'Zone or light group' },
               { value: 'room', label: 'Room' },
             ],
           },
         },
       },
-      mode === 'room'
-        ? { name: 'area', selector: { area: {} } }
-        : { name: 'entity', selector: { entity: { domain: 'light' } } },
+      // In demo mode the pretend home supplies the room/light, so hide these.
+      ...(config.demo
+        ? []
+        : [
+            mode === 'room'
+              ? { name: 'area', selector: { area: {} } }
+              : { name: 'entity', selector: { entity: { domain: 'light' } } },
+          ]),
+      ...showField,
       { name: 'name', selector: { text: {} } },
       { name: 'max_scenes', selector: { number: { mode: 'box', min: 0, max: 24 } } },
       {
@@ -168,28 +272,67 @@ export const LightControlCardEditor = createFormEditor({
           },
         },
       },
+      ...demoFields,
     ];
   },
-  normalize: (config) => (config.scenes ? { ...config, scenes: lccNormalizeScenes(config.scenes) } : config),
+  normalize: (config) => ({
+    ...config,
+    ...(config.scenes ? { scenes: lccNormalizeScenes(config.scenes) } : {}),
+    ...(config.entities ? { entities: lccNormalizeList(config.entities) } : {}),
+  }),
   labels: {
     mode: 'Card type',
     area: 'Room',
-    entity: 'Light entity',
+    entity: 'Light, zone or group',
     name: 'Title (optional)',
     max_scenes: 'Max scenes',
     scenes: 'Scenes (leave empty to pick them automatically)',
+    demo: 'Use pretend lights instead of real ones',
+    demo_room: 'Pretend room',
   },
   helpers: {
-    max_scenes: 'Default 6. Set 0 to hide scenes.',
+    max_scenes: 'Default 8 (two rows). Set 0 to hide scenes.',
+    demo: 'Nothing is sent to Home Assistant; taps only change the pretend lights on this card.',
   },
 });
 
 export class LightControlCard extends HTMLElement {
   setConfig(config) {
-    if (!config.entity && !config.area) throw new Error('entity or area required');
+    if (!config.entity && !config.area && !config.demo) throw new Error('entity or area required');
     this.config = config;
     this._built = false;
     this._lastIds = null;
+    if (this._demo) this._demo.stop();
+    this._demo = null;
+  }
+
+  disconnectedCallback() {
+    if (this._demo) this._demo.stop();
+  }
+
+  // Demo mode: a pretend home (demo-home.js) stands in for Home Assistant, so
+  // taps only change the pretend lights and nothing reaches real devices.
+  // Its room/group/first light replace any configured area or entity.
+  _demoHass(realHass) {
+    if (!this._demo) {
+      this._demo = new DemoHome(this.config.demo_room, () => this._render(this._demo.hass(this._realHass)));
+    }
+    this._realHass = realHass || this._realHass;
+    return this._demo.hass(this._realHass);
+  }
+
+  _effectiveConfig() {
+    const cfg = this.config;
+    if (!cfg.demo || !this._demo) return cfg;
+    const mode = cfg.mode || 'room';
+    return {
+      ...cfg,
+      mode,
+      area: this._demo.area,
+      entity: mode === 'group' ? this._demo.roomGroup : this._demo.firstLight,
+      // Configured scenes are real entities; the pretend home has its own.
+      scenes: undefined,
+    };
   }
 
   static getConfigElement() {
@@ -278,10 +421,10 @@ export class LightControlCard extends HTMLElement {
     row.innerHTML = `
       <ha-icon icon="${icon}" style="color:${on ? color : 'var(--secondary-text-color)'}; --mdc-icon-size:24px; flex-shrink:0; pointer-events:none;"></ha-icon>
       <div class="lcc-name" style="flex:1; min-width:0; font-weight:500; color:var(--primary-text-color); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; pointer-events:none;">${name}</div>
-      ${withMoreInfo ? `<ha-icon class="lcc-more" icon="mdi:tune-variant" style="color:var(--secondary-text-color); --mdc-icon-size:20px; cursor:pointer; flex-shrink:0;"></ha-icon>` : ''}
+      ${withMoreInfo && !this.config.demo ? `<ha-icon class="lcc-more" icon="mdi:tune-variant" style="color:var(--secondary-text-color); --mdc-icon-size:20px; cursor:pointer; flex-shrink:0;"></ha-icon>` : ''}
     `;
 
-    if (withMoreInfo) {
+    if (withMoreInfo && !this.config.demo) {
       const moreBtn = row.querySelector('.lcc-more');
       moreBtn.addEventListener('click', (ev) => {
         ev.stopPropagation();
@@ -316,7 +459,7 @@ export class LightControlCard extends HTMLElement {
       if (this._pendingHass) {
         const h = this._pendingHass;
         this._pendingHass = null;
-        this.hass = h;
+        this._render(h);
       }
     };
     row.addEventListener('pointerdown', (ev) => {
@@ -359,7 +502,7 @@ export class LightControlCard extends HTMLElement {
     const anyActive = scenes.some((s) => s.active);
     const wrap = document.createElement('div');
     wrap.style.cssText =
-      'display:grid; grid-template-columns:repeat(auto-fill, minmax(84px, 1fr)); gap:8px; margin-top:12px; padding:4px 4px 8px;';
+      'display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px; margin-top:12px; padding:4px 4px 8px;';
     scenes.forEach((s) => {
       const tile = document.createElement('button');
       tile.className = s.active || !anyActive ? 'lcc-scene' : 'lcc-scene lcc-dim';
@@ -371,10 +514,10 @@ export class LightControlCard extends HTMLElement {
       }`;
       tile.innerHTML = `
         <div style="position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0) 65%);"></div>
-        <ha-icon icon="${s.icon}" style="position:absolute; left:50%; top:44%; transform:translate(-50%, -50%); --mdc-icon-size:40cqw; color:#fff; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.55));"></ha-icon>
+        <ha-icon class="lcc-scene-icon" icon="${s.icon}" style="position:absolute; left:50%; top:44%; transform:translate(-50%, -50%); --mdc-icon-size:40cqw; color:#fff; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.55));"></ha-icon>
         ${s.paused ? '<ha-icon class="lcc-paused" icon="mdi:pause" title="Paused" style="position:absolute; top:6px; right:6px; --mdc-icon-size:20px; color:#fff; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.7));"></ha-icon>' : ''}
         ${s.playing ? '<ha-icon class="lcc-playing" icon="mdi:play" title="Playing" style="position:absolute; top:6px; right:6px; --mdc-icon-size:20px; color:#fff; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.7));"></ha-icon>' : ''}
-        <div class="lcc-scene-name" style="position:absolute; left:8px; right:8px; bottom:7px; text-align:center; color:#fff; font-size:0.8rem; font-weight:600; line-height:1.15; text-shadow:0 1px 2px rgba(0,0,0,0.6); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;"></div>`;
+        <div class="lcc-scene-name" style="position:absolute; left:8px; right:8px; bottom:7px; text-align:center; color:#fff; font-weight:600; line-height:1.15; text-shadow:0 1px 2px rgba(0,0,0,0.6); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;"></div>`;
       tile.querySelector('.lcc-scene-name').textContent = s.name;
       this._bindSceneTile(tile, s);
       wrap.appendChild(tile);
@@ -438,7 +581,7 @@ export class LightControlCard extends HTMLElement {
   // Resolve the scenes to show (configured list or auto-detected), capped at
   // max_scenes, with display name/icon/picture and selected/playing status.
   _resolveScenes(hass, mode, headIds, memberIds) {
-    const cfg = this.config;
+    const cfg = this._effectiveConfig();
     const max = cfg.max_scenes != null ? cfg.max_scenes : LCC_DEFAULT_MAX_SCENES;
     if (max <= 0) return [];
     let items = lccNormalizeScenes(cfg.scenes);
@@ -497,8 +640,12 @@ export class LightControlCard extends HTMLElement {
   }
 
   set hass(hass) {
+    this._render(this.config.demo ? this._demoHass(hass) : hass);
+  }
+
+  _render(hass) {
     this._hass = hass;
-    const cfg = this.config;
+    const cfg = this._effectiveConfig();
     const mode = cfg.mode || (cfg.area ? 'room' : 'light');
 
     if (!this._built) {
@@ -510,6 +657,11 @@ export class LightControlCard extends HTMLElement {
             .lcc-scene { transition: opacity 0.2s, filter 0.2s, transform 0.2s, box-shadow 0.2s; }
             .lcc-scene.lcc-dim { opacity: 0.4; filter: saturate(0.4); }
             .lcc-scene.lcc-dim:hover { opacity: 0.8; filter: none; }
+            /* Always four tiles per row: text and badges scale with the tile
+               (cqw = % of tile width), and names hide when tiles get too small. */
+            .lcc-scene-name { font-size: clamp(9px, 12.5cqw, 13px); }
+            .lcc-scene .lcc-playing, .lcc-scene .lcc-paused { --mdc-icon-size: clamp(12px, 20cqw, 20px) !important; }
+            @container (max-width: 64px) { .lcc-scene-name { display: none !important; } .lcc-scene-icon { top: 50% !important; } }
           </style>
           <div class="lcc-title" style="display:none; padding:0 0 10px 0; font-size:1.5rem; font-weight:500; color: var(--primary-text-color);"></div>
           <div class="lcc-main"></div>
@@ -526,26 +678,48 @@ export class LightControlCard extends HTMLElement {
     // Work out which lights to show: `headIds` are full-size rows (the light,
     // the group, or a room's Hue room/zone groups), `memberIds` are the
     // indented individual lights underneath.
+    // `rows` is the display order; `names` holds per-row name overrides.
+    // A configured `entities` list picks and orders what's shown (only IDs
+    // that exist; if none do, fall back to showing everything).
     let headIds = [];
     let memberIds = [];
+    let rows = [];
+    const names = {};
+    const chosen = lccNormalizeList(cfg.entities).filter((s) => hass.states[s.entity]);
+    chosen.forEach((s) => {
+      if (s.name) names[s.entity] = s.name;
+    });
     if (mode === 'room') {
-      const areaLights = Object.values(hass.entities || {})
-        .filter(
-          (e) =>
-            e.entity_id.startsWith('light.') &&
-            !e.hidden &&
-            e.entity_category == null &&
-            hass.states[e.entity_id] &&
-            lccAreaOf(hass, e) === cfg.area
-        )
-        .map((e) => e.entity_id);
-      headIds = areaLights.filter((id) => lccIsGroupLike(hass.states[id]));
-      memberIds = areaLights.filter((id) => !lccIsGroupLike(hass.states[id]));
+      if (chosen.length) {
+        const ids = chosen.map((s) => s.entity);
+        headIds = ids.filter((id) => lccIsGroupLike(hass.states[id]));
+        memberIds = ids.filter((id) => !lccIsGroupLike(hass.states[id]));
+        rows = ids.map((id) => ({ id, member: !lccIsGroupLike(hass.states[id]) && headIds.length > 0 }));
+      } else {
+        const all = lccCandidates(hass, 'room', cfg.area).filter((id) => {
+          // Auto mode keeps the original behaviour: only groups that have
+          // this area themselves, not zones found by their members.
+          if (!lccIsGroupLike(hass.states[id])) return true;
+          return lccAreaOf(hass, hass.entities && hass.entities[id]) === cfg.area;
+        });
+        headIds = all.filter((id) => lccIsGroupLike(hass.states[id]));
+        memberIds = all.filter((id) => !lccIsGroupLike(hass.states[id]));
+        rows = [
+          ...headIds.map((id) => ({ id, member: false })),
+          ...memberIds.map((id) => ({ id, member: headIds.length > 0 })),
+        ];
+      }
     } else {
       headIds = [cfg.entity];
-      if (mode === 'group') memberIds = lccMembersOf(hass, cfg.entity);
+      if (mode === 'group') {
+        const members = lccMembersOf(hass, cfg.entity);
+        const picked = chosen.map((s) => s.entity).filter((id) => members.includes(id));
+        memberIds = picked.length ? picked : members;
+      }
+      if (cfg.name) names[cfg.entity] = cfg.name;
+      rows = [{ id: cfg.entity, member: false }, ...memberIds.map((id) => ({ id, member: true }))];
     }
-    const relevantEntityIds = [...headIds, ...memberIds];
+    const relevantEntityIds = rows.map((r) => r.id);
     this._cardLightIds = relevantEntityIds;
     const scenes = this._resolveScenes(hass, mode, headIds, memberIds);
     const watchIds = [
@@ -581,24 +755,20 @@ export class LightControlCard extends HTMLElement {
       const area = hass.areas && hass.areas[cfg.area];
       this._titleEl.textContent = cfg.name || (area ? area.name : cfg.area);
       this._titleEl.style.display = 'block';
-      if (relevantEntityIds.length === 0) {
+      if (rows.length === 0) {
         this._main.textContent = 'No lights found in this area.';
         this._main.style.cssText = 'color:var(--secondary-text-color); padding:8px 4px;';
       }
-      headIds.forEach((id) => this._main.appendChild(this._buildRow(id, { withMoreInfo: true })));
-      // Only indent members when there's a room group above them.
-      const member = headIds.length > 0;
-      memberIds.forEach((id) => this._members.appendChild(this._buildRow(id, { withMoreInfo: true, member })));
     } else {
       this._titleEl.style.display = 'none';
-      const row = this._buildRow(cfg.entity, { withMoreInfo: true });
-      if (cfg.name) {
-        const nameEl = row.querySelector('.lcc-name');
-        if (nameEl) nameEl.textContent = cfg.name;
-      }
-      this._main.appendChild(row);
-      memberIds.forEach((id) => this._members.appendChild(this._buildRow(id, { withMoreInfo: true, member: true })));
     }
+    // Rows in display order; bulbs are indented under any group row.
+    rows.forEach(({ id, member }) => {
+      const row = this._buildRow(id, { withMoreInfo: true, member });
+      const nameEl = row.querySelector('.lcc-name');
+      if (names[id] && nameEl) nameEl.textContent = names[id];
+      this._main.appendChild(row);
+    });
 
     this._scenesEl.innerHTML = '';
     const scenesGrid = this._buildScenes(scenes);

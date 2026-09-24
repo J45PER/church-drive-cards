@@ -25,7 +25,7 @@
         }
         this._form.hass = this._hass;
         this._form.data = this._config;
-        this._form.schema = schema(this._config);
+        this._form.schema = schema(this._config, this._hass);
         this._form.computeLabel = (s) => labels[s.name] || s.title || s.name;
         this._form.computeHelper = (s) => helpers[s.name];
       }
@@ -616,8 +616,265 @@
     return isDynamic ? "mdi:animation-play-outline" : "mdi:palette-outline";
   }
 
+  // src/demo-home.js
+  var COLOUR = ["color_temp", "xy"];
+  var WHITE = {
+    nightlight: [2e3, 26],
+    rest: [2200, 89],
+    relax: [2700, 143],
+    read: [4300, 255],
+    concentrate: [5500, 255],
+    energise: [6300, 255],
+    bright: [4e3, 255]
+  };
+  var DEMO_ROOMS = {
+    living_room: {
+      area: "demo_living_room",
+      areaName: "Living Room",
+      lights: [
+        { id: "demo_ceiling", name: "Ceiling Light", modes: COLOUR },
+        { id: "demo_tv_lightstrip", name: "TV Lightstrip", modes: COLOUR },
+        { id: "demo_table_lamp", name: "Table Lamp", modes: ["color_temp"] },
+        { id: "demo_shelf_lamp", name: "Shelf Lamp", modes: ["onoff"] }
+      ],
+      groups: [
+        {
+          id: "demo_living_room",
+          name: "Living Room",
+          area: true,
+          members: ["demo_ceiling", "demo_tv_lightstrip", "demo_table_lamp", "demo_shelf_lamp"],
+          scenes: [["Nightlight"], ["Rest"], ["Bright"]]
+        },
+        {
+          // A Hue zone with no area, like the real "Living Room Ambience".
+          id: "demo_living_room_ambience",
+          name: "Living Room Ambience",
+          area: false,
+          members: ["demo_ceiling", "demo_tv_lightstrip"],
+          scenes: [["Concentrate"], ["Soho", true], ["Lake Placid", true], ["Relax"], ["Toil and trouble", true], ["Read"]]
+        }
+      ]
+    },
+    bedroom: {
+      area: "demo_bedroom",
+      areaName: "Bedroom",
+      lights: [
+        { id: "demo_bedside_left", name: "Bedside Left", modes: COLOUR },
+        { id: "demo_bedside_right", name: "Bedside Right", modes: COLOUR },
+        { id: "demo_big_light", name: "The Big Light", modes: ["color_temp"] },
+        { id: "demo_bedroom_lightstrip", name: "Bedroom Lightstrip", modes: COLOUR },
+        // A settings entity the card must skip, like a purifier's display light.
+        { id: "demo_purifier_backlight", name: "Purifier Display Backlight", modes: ["brightness"], category: "config" }
+      ],
+      groups: [
+        {
+          id: "demo_bedroom",
+          name: "Bedroom",
+          area: true,
+          members: ["demo_bedside_left", "demo_bedside_right", "demo_big_light", "demo_bedroom_lightstrip"],
+          scenes: [["Nightlight"], ["Read"], ["Relax"]]
+        },
+        {
+          id: "demo_bedroom_ambiance",
+          name: "Bedroom Ambiance",
+          area: true,
+          members: ["demo_bedside_left", "demo_bedside_right", "demo_bedroom_lightstrip"],
+          scenes: [["Arise", true], ["Spellbound", true], ["Storybook", true], ["Unwind", true]]
+        }
+      ]
+    }
+  };
+  function hexToRgb(hex) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(hex);
+    if (!m) return [255, 180, 110];
+    const n = parseInt(m[1], 16);
+    return [n >> 16 & 255, n >> 8 & 255, n & 255];
+  }
+  function slug(text) {
+    return text.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+  }
+  var DemoHome = class {
+    // `onChange` is called after every simulated change so the card re-renders.
+    constructor(roomKey, onChange) {
+      this.room = DEMO_ROOMS[roomKey] || DEMO_ROOMS.living_room;
+      this.onChange = onChange;
+      this.timer = null;
+      this.tick = 0;
+      this.states = {};
+      this.entities = {};
+      this.devices = {};
+      const area = this.room.area;
+      this.room.lights.forEach((l, i) => {
+        const id = `light.${l.id}`;
+        this.devices[`dev_${l.id}`] = { id: `dev_${l.id}`, area_id: area };
+        this.entities[id] = { entity_id: id, device_id: `dev_${l.id}`, area_id: null, entity_category: l.category || null };
+        this.states[id] = {
+          entity_id: id,
+          state: i < 3 && !l.category ? "on" : "off",
+          attributes: { friendly_name: l.name, supported_color_modes: l.modes, dynamics: "none", brightness: null }
+        };
+      });
+      this.room.groups.forEach((g, gi) => {
+        const id = `light.${g.id}`;
+        const dev = `dev_${g.id}`;
+        this.devices[dev] = { id: dev, area_id: g.area ? area : null };
+        this.entities[id] = { entity_id: id, device_id: dev, area_id: null };
+        this.states[id] = {
+          entity_id: id,
+          state: "off",
+          attributes: {
+            friendly_name: g.name,
+            entity_id: g.members.map((m) => `light.${m}`),
+            is_hue_group: true,
+            hue_type: gi === 0 ? "room" : "zone",
+            hue_scenes: g.scenes.map(([name]) => name),
+            supported_color_modes: COLOUR
+          }
+        };
+        g.scenes.forEach(([name, dynamic]) => {
+          const sid = `scene.${g.id}_${slug(name)}`;
+          this.entities[sid] = { entity_id: sid, device_id: dev, area_id: null };
+          this.states[sid] = {
+            entity_id: sid,
+            state: "unknown",
+            attributes: { friendly_name: `${g.name} ${name}`, name, is_dynamic: !!dynamic, group_name: g.name }
+          };
+        });
+      });
+      const firstRoom = this.room.groups[0];
+      this._applyScene(`scene.${firstRoom.id}_${slug(firstRoom.scenes[1][0])}`, false, true);
+    }
+    // The "default" entities the card uses in demo mode.
+    get area() {
+      return this.room.area;
+    }
+    get roomGroup() {
+      return `light.${this.room.groups[0].id}`;
+    }
+    get firstLight() {
+      return `light.${this.room.lights[0].id}`;
+    }
+    hass(realHass) {
+      return {
+        ...realHass || {},
+        states: { ...this.states },
+        entities: this.entities,
+        devices: this.devices,
+        areas: { [this.room.area]: { area_id: this.room.area, name: this.room.areaName } },
+        services: { light: { turn_on: {}, turn_off: {}, toggle: {} }, scene: { turn_on: {} }, hue: { activate_scene: {} } },
+        callService: (domain, service, data, target) => this.callService(domain, service, data || {}, target || {})
+      };
+    }
+    stop() {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+    // ---- simulated services -------------------------------------------------
+    callService(domain, service, data, target) {
+      const ids = [].concat(target.entity_id || data.entity_id || []);
+      if (domain === "light") {
+        ids.forEach((id) => this._lightService(service, id, data));
+      } else if (domain === "scene" && service === "turn_on") {
+        ids.forEach((id) => this._applyScene(id, false));
+      } else if (domain === "hue" && service === "activate_scene") {
+        ids.forEach((id) => this._applyScene(id, data.dynamic !== false));
+      }
+      this._refreshGroups();
+      this.onChange();
+      return Promise.resolve();
+    }
+    _set(id, state, attrs) {
+      const old = this.states[id];
+      this.states[id] = { ...old, state: state || old.state, attributes: { ...old.attributes, ...attrs } };
+    }
+    _members(id) {
+      const st = this.states[id];
+      return st && Array.isArray(st.attributes.entity_id) ? st.attributes.entity_id : [id];
+    }
+    _lightService(service, id, data) {
+      this._members(id).forEach((bulb) => {
+        const st = this.states[bulb];
+        if (!st) return;
+        const on = service === "toggle" ? st.state !== "on" : service === "turn_on";
+        if (!on) {
+          this._set(bulb, "off", { brightness: null, dynamics: "none" });
+          return;
+        }
+        const modes = st.attributes.supported_color_modes;
+        const attrs = { dynamics: "none", brightness: modes.includes("onoff") ? null : data.brightness || st.attributes.brightness || 200 };
+        if (data.color_temp_kelvin) Object.assign(attrs, { color_mode: "color_temp", color_temp_kelvin: data.color_temp_kelvin, rgb_color: null, hs_color: null });
+        this._set(bulb, "on", attrs);
+      });
+      if (!Object.values(this.states).some((s) => s.attributes.dynamics === "dynamic_palette")) this.stop();
+    }
+    _applyScene(sceneId, dynamic, quiet) {
+      const scene = this.states[sceneId];
+      if (!scene) return;
+      const group = Object.keys(this.entities).find(
+        (id) => id.startsWith("light.") && this.entities[id].device_id === this.entities[sceneId].device_id
+      );
+      const name = scene.attributes.name;
+      const white = WHITE[name.toLowerCase()];
+      const palette = scenePalette(name).map(hexToRgb);
+      this._members(group).forEach((bulb, i) => {
+        const modes = this.states[bulb].attributes.supported_color_modes;
+        const attrs = { dynamics: dynamic && scene.attributes.is_dynamic ? "dynamic_palette" : "none" };
+        if (modes.includes("onoff")) attrs.brightness = null;
+        else attrs.brightness = white ? white[1] : 180;
+        if (white || !modes.includes("xy")) {
+          Object.assign(attrs, { color_mode: "color_temp", color_temp_kelvin: white ? white[0] : 2700, rgb_color: null, hs_color: null });
+        } else {
+          const rgb = palette[i % palette.length];
+          Object.assign(attrs, { color_mode: "xy", rgb_color: rgb, xy_color: [0.4, 0.4], hs_color: null, color_temp_kelvin: null });
+        }
+        this._set(bulb, "on", attrs);
+      });
+      this._set(sceneId, (/* @__PURE__ */ new Date()).toISOString(), {});
+      if (!quiet) this._refreshGroups();
+      else this._refreshGroups();
+      if (dynamic && scene.attributes.is_dynamic) this._animate(group, palette);
+    }
+    // Cycle the palette round the group's colour bulbs every couple of seconds.
+    _animate(group, palette) {
+      this.stop();
+      this.timer = setInterval(() => {
+        this.tick += 1;
+        let still = false;
+        this._members(group).forEach((bulb, i) => {
+          const st = this.states[bulb];
+          if (st.state !== "on" || st.attributes.dynamics !== "dynamic_palette") return;
+          still = true;
+          if (st.attributes.supported_color_modes.includes("xy")) {
+            this._set(bulb, null, { rgb_color: palette[(i + this.tick) % palette.length] });
+          }
+        });
+        if (!still) {
+          this.stop();
+          return;
+        }
+        this._refreshGroups();
+        this.onChange();
+      }, 2e3);
+    }
+    // Groups are on if any member is on, at their lit members' average brightness.
+    _refreshGroups() {
+      this.room.groups.forEach((g) => {
+        const id = `light.${g.id}`;
+        const lit = this._members(id).map((m) => this.states[m]).filter((s) => s.state === "on");
+        const dimmable = lit.filter((s) => s.attributes.brightness);
+        const first = lit.find((s) => s.attributes.rgb_color) || lit[0];
+        this._set(id, lit.length ? "on" : "off", {
+          brightness: dimmable.length ? Math.round(dimmable.reduce((a, s) => a + s.attributes.brightness, 0) / dimmable.length) : null,
+          rgb_color: first ? first.attributes.rgb_color : null,
+          color_temp_kelvin: first ? first.attributes.color_temp_kelvin : null,
+          dynamics: lit.some((s) => s.attributes.dynamics === "dynamic_palette")
+        });
+      });
+    }
+  };
+
   // src/light-control-card.js
-  var LCC_DEFAULT_MAX_SCENES = 6;
+  var LCC_DEFAULT_MAX_SCENES = 8;
   function lccHsToRgb(h, s) {
     const c = s / 100;
     const x = c * (1 - Math.abs(h / 60 % 2 - 1));
@@ -725,9 +982,88 @@
     });
     return out;
   }
+  function lccNormalizeList(list) {
+    return (list || []).map((s) => typeof s === "string" ? { entity: s } : s).filter((s) => s && s.entity);
+  }
+  function lccCandidates(hass, mode, area, entity) {
+    if (!hass || !hass.states) return [];
+    if (mode === "group") return entity ? lccMembersOf(hass, entity) : [];
+    if (mode !== "room" || !area) return [];
+    const areaLights = Object.values(hass.entities || {}).filter(
+      (e) => e.entity_id.startsWith("light.") && !e.hidden && e.entity_category == null && hass.states[e.entity_id] && lccAreaOf(hass, e) === area
+    ).map((e) => e.entity_id);
+    const bulbs = areaLights.filter((id) => !lccIsGroupLike(hass.states[id]));
+    const bulbSet = new Set(bulbs);
+    const groups = areaLights.filter((id) => lccIsGroupLike(hass.states[id]));
+    Object.values(hass.states).forEach((st) => {
+      const members = st.entity_id.startsWith("light.") && lccIsGroupLike(st) ? st.attributes.entity_id : null;
+      if (members && members.length && members.every((m) => bulbSet.has(m)) && !groups.includes(st.entity_id)) {
+        groups.push(st.entity_id);
+      }
+    });
+    return [...groups, ...bulbs];
+  }
+  var lccDemoCache = {};
+  function lccDemoFor(room) {
+    const key = room || "living_room";
+    if (!lccDemoCache[key]) lccDemoCache[key] = new DemoHome(key, () => {
+    });
+    return lccDemoCache[key];
+  }
   var LightControlCardEditor = createFormEditor({
-    schema: (config) => {
+    schema: (config, hass) => {
       const mode = config.mode || "light";
+      let showField = [];
+      if (mode === "room" || mode === "group") {
+        const demo = config.demo ? lccDemoFor(config.demo_room) : null;
+        const h = demo ? demo.hass() : hass;
+        const ids = demo ? lccCandidates(h, mode, demo.area, demo.roomGroup) : lccCandidates(h, mode, config.area, config.entity);
+        const options = ids.map((id) => {
+          const st = h.states[id];
+          const kind = lccIsGroupLike(st) ? st.attributes.hue_type === "room" ? "room" : "zone" : "light";
+          return { value: id, label: `${st && st.attributes.friendly_name || id} (${kind})` };
+        });
+        showField = [
+          {
+            name: "entities",
+            title: mode === "room" ? "Show these lights and zones, in this order (empty = all)" : "Show these lights, in this order (empty = all)",
+            selector: {
+              object: {
+                multiple: true,
+                label_field: "entity",
+                description_field: "name",
+                fields: {
+                  entity: { label: mode === "room" ? "Light or zone" : "Light", required: true, selector: { select: { mode: "dropdown", options } } },
+                  name: { label: "Name override", selector: { text: {} } }
+                }
+              }
+            }
+          }
+        ];
+      }
+      const demoFields = [
+        {
+          type: "expandable",
+          name: "",
+          title: "Demo mode (pretend lights, for Design Presets)",
+          flatten: true,
+          schema: [
+            { name: "demo", selector: { boolean: {} } },
+            {
+              name: "demo_room",
+              selector: {
+                select: {
+                  mode: "dropdown",
+                  options: [
+                    { value: "living_room", label: "Living Room (room + animated-scene zone)" },
+                    { value: "bedroom", label: "Bedroom (two groups + a hidden settings light)" }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ];
       return [
         {
           name: "mode",
@@ -736,13 +1072,17 @@
               mode: "dropdown",
               options: [
                 { value: "light", label: "Single Light" },
-                { value: "group", label: "Light Group" },
+                { value: "group", label: "Zone or light group" },
                 { value: "room", label: "Room" }
               ]
             }
           }
         },
-        mode === "room" ? { name: "area", selector: { area: {} } } : { name: "entity", selector: { entity: { domain: "light" } } },
+        // In demo mode the pretend home supplies the room/light, so hide these.
+        ...config.demo ? [] : [
+          mode === "room" ? { name: "area", selector: { area: {} } } : { name: "entity", selector: { entity: { domain: "light" } } }
+        ],
+        ...showField,
         { name: "name", selector: { text: {} } },
         { name: "max_scenes", selector: { number: { mode: "box", min: 0, max: 24 } } },
         {
@@ -760,28 +1100,64 @@
               }
             }
           }
-        }
+        },
+        ...demoFields
       ];
     },
-    normalize: (config) => config.scenes ? { ...config, scenes: lccNormalizeScenes(config.scenes) } : config,
+    normalize: (config) => ({
+      ...config,
+      ...config.scenes ? { scenes: lccNormalizeScenes(config.scenes) } : {},
+      ...config.entities ? { entities: lccNormalizeList(config.entities) } : {}
+    }),
     labels: {
       mode: "Card type",
       area: "Room",
-      entity: "Light entity",
+      entity: "Light, zone or group",
       name: "Title (optional)",
       max_scenes: "Max scenes",
-      scenes: "Scenes (leave empty to pick them automatically)"
+      scenes: "Scenes (leave empty to pick them automatically)",
+      demo: "Use pretend lights instead of real ones",
+      demo_room: "Pretend room"
     },
     helpers: {
-      max_scenes: "Default 6. Set 0 to hide scenes."
+      max_scenes: "Default 8 (two rows). Set 0 to hide scenes.",
+      demo: "Nothing is sent to Home Assistant; taps only change the pretend lights on this card."
     }
   });
   var LightControlCard = class extends HTMLElement {
     setConfig(config) {
-      if (!config.entity && !config.area) throw new Error("entity or area required");
+      if (!config.entity && !config.area && !config.demo) throw new Error("entity or area required");
       this.config = config;
       this._built = false;
       this._lastIds = null;
+      if (this._demo) this._demo.stop();
+      this._demo = null;
+    }
+    disconnectedCallback() {
+      if (this._demo) this._demo.stop();
+    }
+    // Demo mode: a pretend home (demo-home.js) stands in for Home Assistant, so
+    // taps only change the pretend lights and nothing reaches real devices.
+    // Its room/group/first light replace any configured area or entity.
+    _demoHass(realHass) {
+      if (!this._demo) {
+        this._demo = new DemoHome(this.config.demo_room, () => this._render(this._demo.hass(this._realHass)));
+      }
+      this._realHass = realHass || this._realHass;
+      return this._demo.hass(this._realHass);
+    }
+    _effectiveConfig() {
+      const cfg = this.config;
+      if (!cfg.demo || !this._demo) return cfg;
+      const mode = cfg.mode || "room";
+      return {
+        ...cfg,
+        mode,
+        area: this._demo.area,
+        entity: mode === "group" ? this._demo.roomGroup : this._demo.firstLight,
+        // Configured scenes are real entities; the pretend home has its own.
+        scenes: void 0
+      };
     }
     static getConfigElement() {
       return document.createElement(`light-control-card-editor${SUFFIX}`);
@@ -854,9 +1230,9 @@
       row.innerHTML = `
       <ha-icon icon="${icon}" style="color:${on ? color : "var(--secondary-text-color)"}; --mdc-icon-size:24px; flex-shrink:0; pointer-events:none;"></ha-icon>
       <div class="lcc-name" style="flex:1; min-width:0; font-weight:500; color:var(--primary-text-color); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; pointer-events:none;">${name}</div>
-      ${withMoreInfo ? `<ha-icon class="lcc-more" icon="mdi:tune-variant" style="color:var(--secondary-text-color); --mdc-icon-size:20px; cursor:pointer; flex-shrink:0;"></ha-icon>` : ""}
+      ${withMoreInfo && !this.config.demo ? `<ha-icon class="lcc-more" icon="mdi:tune-variant" style="color:var(--secondary-text-color); --mdc-icon-size:20px; cursor:pointer; flex-shrink:0;"></ha-icon>` : ""}
     `;
-      if (withMoreInfo) {
+      if (withMoreInfo && !this.config.demo) {
         const moreBtn = row.querySelector(".lcc-more");
         moreBtn.addEventListener("click", (ev) => {
           ev.stopPropagation();
@@ -885,7 +1261,7 @@
         if (this._pendingHass) {
           const h = this._pendingHass;
           this._pendingHass = null;
-          this.hass = h;
+          this._render(h);
         }
       };
       row.addEventListener("pointerdown", (ev) => {
@@ -924,7 +1300,7 @@
       if (!scenes.length) return null;
       const anyActive = scenes.some((s) => s.active);
       const wrap = document.createElement("div");
-      wrap.style.cssText = "display:grid; grid-template-columns:repeat(auto-fill, minmax(84px, 1fr)); gap:8px; margin-top:12px; padding:4px 4px 8px;";
+      wrap.style.cssText = "display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px; margin-top:12px; padding:4px 4px 8px;";
       scenes.forEach((s) => {
         const tile = document.createElement("button");
         tile.className = s.active || !anyActive ? "lcc-scene" : "lcc-scene lcc-dim";
@@ -934,10 +1310,10 @@
         tile.style.cssText = `position:relative; container-type:inline-size; aspect-ratio:1 / 1; border:none; border-radius:14px; padding:0; overflow:hidden; cursor:pointer; background:${bg};${s.active ? ` box-shadow:0 0 16px 3px ${glow}; transform:scale(1.04); z-index:1;` : ""}`;
         tile.innerHTML = `
         <div style="position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0) 65%);"></div>
-        <ha-icon icon="${s.icon}" style="position:absolute; left:50%; top:44%; transform:translate(-50%, -50%); --mdc-icon-size:40cqw; color:#fff; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.55));"></ha-icon>
+        <ha-icon class="lcc-scene-icon" icon="${s.icon}" style="position:absolute; left:50%; top:44%; transform:translate(-50%, -50%); --mdc-icon-size:40cqw; color:#fff; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.55));"></ha-icon>
         ${s.paused ? '<ha-icon class="lcc-paused" icon="mdi:pause" title="Paused" style="position:absolute; top:6px; right:6px; --mdc-icon-size:20px; color:#fff; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.7));"></ha-icon>' : ""}
         ${s.playing ? '<ha-icon class="lcc-playing" icon="mdi:play" title="Playing" style="position:absolute; top:6px; right:6px; --mdc-icon-size:20px; color:#fff; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.7));"></ha-icon>' : ""}
-        <div class="lcc-scene-name" style="position:absolute; left:8px; right:8px; bottom:7px; text-align:center; color:#fff; font-size:0.8rem; font-weight:600; line-height:1.15; text-shadow:0 1px 2px rgba(0,0,0,0.6); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;"></div>`;
+        <div class="lcc-scene-name" style="position:absolute; left:8px; right:8px; bottom:7px; text-align:center; color:#fff; font-weight:600; line-height:1.15; text-shadow:0 1px 2px rgba(0,0,0,0.6); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;"></div>`;
         tile.querySelector(".lcc-scene-name").textContent = s.name;
         this._bindSceneTile(tile, s);
         wrap.appendChild(tile);
@@ -997,7 +1373,7 @@
     // Resolve the scenes to show (configured list or auto-detected), capped at
     // max_scenes, with display name/icon/picture and selected/playing status.
     _resolveScenes(hass, mode, headIds, memberIds) {
-      const cfg = this.config;
+      const cfg = this._effectiveConfig();
       const max = cfg.max_scenes != null ? cfg.max_scenes : LCC_DEFAULT_MAX_SCENES;
       if (max <= 0) return [];
       let items = lccNormalizeScenes(cfg.scenes);
@@ -1040,8 +1416,11 @@
       return scenes;
     }
     set hass(hass) {
+      this._render(this.config.demo ? this._demoHass(hass) : hass);
+    }
+    _render(hass) {
       this._hass = hass;
-      const cfg = this.config;
+      const cfg = this._effectiveConfig();
       const mode = cfg.mode || (cfg.area ? "room" : "light");
       if (!this._built) {
         this.innerHTML = `
@@ -1052,6 +1431,11 @@
             .lcc-scene { transition: opacity 0.2s, filter 0.2s, transform 0.2s, box-shadow 0.2s; }
             .lcc-scene.lcc-dim { opacity: 0.4; filter: saturate(0.4); }
             .lcc-scene.lcc-dim:hover { opacity: 0.8; filter: none; }
+            /* Always four tiles per row: text and badges scale with the tile
+               (cqw = % of tile width), and names hide when tiles get too small. */
+            .lcc-scene-name { font-size: clamp(9px, 12.5cqw, 13px); }
+            .lcc-scene .lcc-playing, .lcc-scene .lcc-paused { --mdc-icon-size: clamp(12px, 20cqw, 20px) !important; }
+            @container (max-width: 64px) { .lcc-scene-name { display: none !important; } .lcc-scene-icon { top: 50% !important; } }
           </style>
           <div class="lcc-title" style="display:none; padding:0 0 10px 0; font-size:1.5rem; font-weight:500; color: var(--primary-text-color);"></div>
           <div class="lcc-main"></div>
@@ -1066,17 +1450,41 @@
       }
       let headIds = [];
       let memberIds = [];
+      let rows = [];
+      const names = {};
+      const chosen = lccNormalizeList(cfg.entities).filter((s) => hass.states[s.entity]);
+      chosen.forEach((s) => {
+        if (s.name) names[s.entity] = s.name;
+      });
       if (mode === "room") {
-        const areaLights = Object.values(hass.entities || {}).filter(
-          (e) => e.entity_id.startsWith("light.") && !e.hidden && e.entity_category == null && hass.states[e.entity_id] && lccAreaOf(hass, e) === cfg.area
-        ).map((e) => e.entity_id);
-        headIds = areaLights.filter((id) => lccIsGroupLike(hass.states[id]));
-        memberIds = areaLights.filter((id) => !lccIsGroupLike(hass.states[id]));
+        if (chosen.length) {
+          const ids = chosen.map((s) => s.entity);
+          headIds = ids.filter((id) => lccIsGroupLike(hass.states[id]));
+          memberIds = ids.filter((id) => !lccIsGroupLike(hass.states[id]));
+          rows = ids.map((id) => ({ id, member: !lccIsGroupLike(hass.states[id]) && headIds.length > 0 }));
+        } else {
+          const all = lccCandidates(hass, "room", cfg.area).filter((id) => {
+            if (!lccIsGroupLike(hass.states[id])) return true;
+            return lccAreaOf(hass, hass.entities && hass.entities[id]) === cfg.area;
+          });
+          headIds = all.filter((id) => lccIsGroupLike(hass.states[id]));
+          memberIds = all.filter((id) => !lccIsGroupLike(hass.states[id]));
+          rows = [
+            ...headIds.map((id) => ({ id, member: false })),
+            ...memberIds.map((id) => ({ id, member: headIds.length > 0 }))
+          ];
+        }
       } else {
         headIds = [cfg.entity];
-        if (mode === "group") memberIds = lccMembersOf(hass, cfg.entity);
+        if (mode === "group") {
+          const members = lccMembersOf(hass, cfg.entity);
+          const picked = chosen.map((s) => s.entity).filter((id) => members.includes(id));
+          memberIds = picked.length ? picked : members;
+        }
+        if (cfg.name) names[cfg.entity] = cfg.name;
+        rows = [{ id: cfg.entity, member: false }, ...memberIds.map((id) => ({ id, member: true }))];
       }
-      const relevantEntityIds = [...headIds, ...memberIds];
+      const relevantEntityIds = rows.map((r) => r.id);
       this._cardLightIds = relevantEntityIds;
       const scenes = this._resolveScenes(hass, mode, headIds, memberIds);
       const watchIds = [
@@ -1102,23 +1510,19 @@
         const area = hass.areas && hass.areas[cfg.area];
         this._titleEl.textContent = cfg.name || (area ? area.name : cfg.area);
         this._titleEl.style.display = "block";
-        if (relevantEntityIds.length === 0) {
+        if (rows.length === 0) {
           this._main.textContent = "No lights found in this area.";
           this._main.style.cssText = "color:var(--secondary-text-color); padding:8px 4px;";
         }
-        headIds.forEach((id) => this._main.appendChild(this._buildRow(id, { withMoreInfo: true })));
-        const member = headIds.length > 0;
-        memberIds.forEach((id) => this._members.appendChild(this._buildRow(id, { withMoreInfo: true, member })));
       } else {
         this._titleEl.style.display = "none";
-        const row = this._buildRow(cfg.entity, { withMoreInfo: true });
-        if (cfg.name) {
-          const nameEl = row.querySelector(".lcc-name");
-          if (nameEl) nameEl.textContent = cfg.name;
-        }
-        this._main.appendChild(row);
-        memberIds.forEach((id) => this._members.appendChild(this._buildRow(id, { withMoreInfo: true, member: true })));
       }
+      rows.forEach(({ id, member }) => {
+        const row = this._buildRow(id, { withMoreInfo: true, member });
+        const nameEl = row.querySelector(".lcc-name");
+        if (names[id] && nameEl) nameEl.textContent = names[id];
+        this._main.appendChild(row);
+      });
       this._scenesEl.innerHTML = "";
       const scenesGrid = this._buildScenes(scenes);
       if (scenesGrid) this._scenesEl.appendChild(scenesGrid);

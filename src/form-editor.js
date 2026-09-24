@@ -1,6 +1,6 @@
 // Shared visual editor: wraps Home Assistant's own <ha-form> so each card
-// only has to describe its fields. `schema(config)` returns an ha-form schema
-// (it can vary with the current config, e.g. light mode vs room mode),
+// only has to describe its fields. `schema(config, hass)` returns an ha-form
+// schema (it can vary with the current config and home, e.g. light vs room),
 // `labels`/`helpers` map field names to label and helper text, and
 // `normalize(config)` can upgrade older config shapes before they're shown.
 
@@ -32,7 +32,7 @@ export function createFormEditor({ schema, labels = {}, helpers = {}, normalize 
       }
       this._form.hass = this._hass;
       this._form.data = this._config;
-      this._form.schema = schema(this._config);
+      this._form.schema = schema(this._config, this._hass);
       this._form.computeLabel = (s) => labels[s.name] || s.title || s.name;
       this._form.computeHelper = (s) => helpers[s.name];
     }
