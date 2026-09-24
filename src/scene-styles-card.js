@@ -7,6 +7,7 @@
 import { createFormEditor } from './form-editor.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { builtInSceneNames, sceneBackground, sceneIcon, sceneKey, setSceneStyles } from './scene-style.js';
+import { iconHtml, hydrateIcons } from './icons.js';
 
 function titleCase(key) {
   return key.replace(/\b\w/g, (c) => c.toUpperCase());
@@ -99,7 +100,7 @@ export class SceneStylesCard extends HTMLElement {
           .ssc-grid { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px; margin-top:12px; }
           .ssc-tile { position:relative; container-type:inline-size; aspect-ratio:1 / 1; border-radius:14px; overflow:hidden; }
           .ssc-name { position:absolute; left:6px; right:6px; bottom:6px; text-align:center; color:#fff; font-weight:600; line-height:1.15; font-size:clamp(9px, 12.5cqw, 13px); text-shadow:0 1px 2px rgba(0,0,0,0.6); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-          @container (max-width: 99px) { .ssc-name { display:none; } .ssc-tile > ha-icon:first-of-type { top:50% !important; } }
+          @container (max-width: 99px) { .ssc-name { display:none; } .ssc-icon { top:50% !important; } }
         </style>
         <div style="font-size:1.5rem; font-weight:500; color:var(--primary-text-color);"></div>
         <div class="ssc-sub" style="margin-top:4px; color:var(--secondary-text-color); font-size:0.9rem;"></div>
@@ -115,11 +116,12 @@ export class SceneStylesCard extends HTMLElement {
       tile.style.background = sceneBackground(n.name);
       tile.innerHTML = `
         <div style="position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0) 65%);"></div>
-        <ha-icon icon="${sceneIcon(n.name, n.dynamic)}" style="position:absolute; left:50%; top:44%; transform:translate(-50%, -50%); --mdc-icon-size:40cqw; color:#fff; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.55));"></ha-icon>
+        ${iconHtml(sceneIcon(n.name, n.dynamic), { size: '40cqw', cls: 'ssc-icon', style: 'position:absolute; left:50%; top:44%; transform:translate(-50%, -50%); color:#fff; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.55));' })}
         ${styled.has(n.key) ? '<ha-icon icon="mdi:pencil" title="Custom style" style="position:absolute; top:6px; right:6px; --mdc-icon-size:clamp(12px, 18cqw, 18px); color:#fff; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.7));"></ha-icon>' : ''}
         <div class="ssc-name"></div>`;
       tile.querySelector('.ssc-name').textContent = n.name;
       grid.appendChild(tile);
+      hydrateIcons(tile);
     });
     this._rows = Math.ceil(names.length / 4);
   }

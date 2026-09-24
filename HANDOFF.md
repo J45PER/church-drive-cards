@@ -1,6 +1,6 @@
 # Church Drive Cards: Handoff
 
-*Last updated 2026-09-24. Current release: **v0.6.0**.*
+*Last updated 2026-09-24. Current release: **v0.6.1**.*
 
 ## Where this stands
 
@@ -177,9 +177,13 @@ Shared modules:
   while dragging). Off rows are dimmed; lit rows are tinted 40% with warm/cool
   mapped whites. Icon overrides work per Show-list entry and via the card `icon`
   for the head row.
-- **Icon packs:** `lccRetryIcons` re-applies `prefix:` icons whose pack registered
-  after the card drew. Without it `<ha-icon>` stays blank for good, because rows are
-  cached rather than redrawn every update.
+- **Icon packs:** `src/icons.js` draws pack icons (`phu:` etc.) itself, as inline SVG
+  from `window.customIcons[prefix].getIcon()`, cached, and waits up to 20s for a pack
+  that registers late. `<ha-icon>` was unreliable here: it resolves once, and stayed
+  blank if the pack wasn't ready. `mdi:` icons still use `<ha-icon>`. An icon missing
+  from its pack falls back to `mdi:help-circle-outline`.
+- **White lights:** colour-temperature mode (or a very pale colour) uses the kelvin
+  warm/cool colour, not the near-white RGB.
 
 ### Scene styles card (central scene looks)
 - `scene-styles-card` sits on the Design Presets **Scene styles** tab
