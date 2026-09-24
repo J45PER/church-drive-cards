@@ -371,6 +371,11 @@
   function lccIsGroupLike(st) {
     return !!(st && st.attributes && Array.isArray(st.attributes.entity_id));
   }
+  function lccMembersOf(hass, entityId) {
+    const st = hass.states[entityId];
+    if (!lccIsGroupLike(st)) return [];
+    return st.attributes.entity_id.filter((id) => id.startsWith("light.") && hass.states[id]);
+  }
   function lccSceneChips(hass, entityIds) {
     const areas = new Set(
       entityIds.map((id) => hass.entities && hass.entities[id] && lccAreaOf(hass, hass.entities[id])).filter(Boolean)
@@ -440,6 +445,7 @@
       if (!config.entity && !config.area) throw new Error("entity or area required");
       this.config = config;
       this._built = false;
+      this._lastIds = null;
     }
     static getConfigElement() {
       return document.createElement("light-control-card-editor");
@@ -466,7 +472,7 @@
     // the row to solid white and make the text unreadable), sized to the
     // brightness. Tap toggles; drag horizontally sets brightness on dimmable
     // lights.
-    _buildRow(entityId, { withMoreInfo }) {
+    _buildRow(entityId, { withMoreInfo, member = false }) {
       const st = this._hass.states[entityId];
       const name = st && st.attributes.friendly_name || entityId;
       const isGroupLike = lccIsGroupLike(st);
@@ -480,7 +486,9 @@
       const track = "rgba(255,255,255,0.06)";
       const row = document.createElement("div");
       row.className = "lcc-row";
-      row.style.cssText = `position:relative; display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:12px; margin-top:6px; overflow:hidden; cursor:pointer; user-select:none; touch-action:pan-y; background: linear-gradient(to right, ${tint} 0%, ${tint} ${fillPct}%, ${track} ${fillPct}%, ${track} 100%);`;
+      const pad = member ? "9px 14px 9px 14px" : "12px 14px";
+      const indent = member ? "margin-left:16px;" : "";
+      row.style.cssText = `position:relative; display:flex; align-items:center; gap:12px; padding:${pad}; ${indent} border-radius:12px; margin-top:6px; overflow:hidden; cursor:pointer; user-select:none; touch-action:pan-y; background: linear-gradient(to right, ${tint} 0%, ${tint} ${fillPct}%, ${track} ${fillPct}%, ${track} 100%);`;
       row.innerHTML = `
       <ha-icon icon="${icon}" style="color:${on ? color : "var(--secondary-text-color)"}; --mdc-icon-size:24px; flex-shrink:0; pointer-events:none;"></ha-icon>
       <div class="lcc-name" style="flex:1; min-width:0; font-weight:500; color:var(--primary-text-color); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; pointer-events:none;">${name}</div>
@@ -504,11 +512,22 @@
         const rect = row.getBoundingClientRect();
         return Math.min(100, Math.max(0, (ev.clientX - rect.left) / rect.width * 100));
       };
+      const endInteraction = () => {
+        dragging = false;
+        moved = false;
+        this._interacting = false;
+        if (this._pendingHass) {
+          const h = this._pendingHass;
+          this._pendingHass = null;
+          this.hass = h;
+        }
+      };
       row.addEventListener("pointerdown", (ev) => {
         if (!dimmable) return;
         dragging = true;
         moved = false;
         startX = ev.clientX;
+        this._interacting = true;
         row.setPointerCapture(ev.pointerId);
       });
       row.addEventListener("pointermove", (ev) => {
@@ -522,13 +541,11 @@
         } else {
           this._toggle(entityId);
         }
-        dragging = false;
-        moved = false;
+        endInteraction();
       });
       row.addEventListener("pointercancel", () => {
-        dragging = false;
-        moved = false;
         setFillVisual(fillPct);
+        endInteraction();
       });
       return row;
     }
@@ -564,36 +581,52 @@
         this._scenesEl = this.querySelector(".lcc-scenes");
         this._built = true;
       }
-      let relevantEntityIds = [];
+      let headIds = [];
+      let memberIds = [];
       if (mode === "room") {
-        const areaId = cfg.area;
-        const area = hass.areas && hass.areas[areaId];
-        this._titleEl.textContent = cfg.name || (area ? area.name : areaId);
+        const areaLights = Object.values(hass.entities || {}).filter(
+          (e) => e.entity_id.startsWith("light.") && !e.hidden && !e.entity_category && hass.states[e.entity_id] && lccAreaOf(hass, e) === cfg.area
+        ).map((e) => e.entity_id);
+        headIds = areaLights.filter((id) => lccIsGroupLike(hass.states[id]));
+        memberIds = areaLights.filter((id) => !lccIsGroupLike(hass.states[id]));
+      } else {
+        headIds = [cfg.entity];
+        if (mode === "group") memberIds = lccMembersOf(hass, cfg.entity);
+      }
+      const relevantEntityIds = [...headIds, ...memberIds];
+      const snapshot = relevantEntityIds.map((id) => hass.states[id]);
+      if (this._lastIds && this._lastIds.join() === relevantEntityIds.join() && this._lastSnapshot.every((st, i) => st === snapshot[i])) {
+        return;
+      }
+      if (this._interacting) {
+        this._pendingHass = hass;
+        return;
+      }
+      this._lastIds = relevantEntityIds;
+      this._lastSnapshot = snapshot;
+      this._main.innerHTML = "";
+      this._main.style.cssText = "";
+      this._members.innerHTML = "";
+      if (mode === "room") {
+        const area = hass.areas && hass.areas[cfg.area];
+        this._titleEl.textContent = cfg.name || (area ? area.name : cfg.area);
         this._titleEl.style.display = "block";
-        const memberIds = Object.values(hass.entities || {}).filter((e) => e.entity_id.startsWith("light.") && lccAreaOf(hass, e) === areaId).map((e) => e.entity_id);
-        relevantEntityIds = memberIds;
-        this._main.innerHTML = "";
-        this._members.innerHTML = "";
-        if (memberIds.length === 0) {
+        if (relevantEntityIds.length === 0) {
           this._main.textContent = "No lights found in this area.";
           this._main.style.cssText = "color:var(--secondary-text-color); padding:8px 4px;";
-        } else {
-          memberIds.forEach((id) => {
-            this._members.appendChild(this._buildRow(id, { withMoreInfo: true }));
-          });
         }
+        headIds.forEach((id) => this._main.appendChild(this._buildRow(id, { withMoreInfo: true })));
+        const member = headIds.length > 0;
+        memberIds.forEach((id) => this._members.appendChild(this._buildRow(id, { withMoreInfo: true, member })));
       } else {
         this._titleEl.style.display = "none";
-        const entityId = cfg.entity;
-        relevantEntityIds = [entityId];
-        this._members.innerHTML = "";
-        this._main.innerHTML = "";
-        const row = this._buildRow(entityId, { withMoreInfo: true });
+        const row = this._buildRow(cfg.entity, { withMoreInfo: true });
         if (cfg.name) {
           const nameEl = row.querySelector(".lcc-name");
           if (nameEl) nameEl.textContent = cfg.name;
         }
         this._main.appendChild(row);
+        memberIds.forEach((id) => this._members.appendChild(this._buildRow(id, { withMoreInfo: true, member: true })));
       }
       this._scenesEl.innerHTML = "";
       let sceneEntities;
