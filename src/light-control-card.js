@@ -166,6 +166,26 @@ function lccCandidates(hass, mode, area, entity) {
   return [...groups, ...bulbs];
 }
 
+// Default indentation for a set of rows: a Hue room at the top, other groups
+// (zones) one level under it when a room is shown, and lights one level
+// under the deepest group. A Show-list entry's own `level` (0-2) wins.
+function lccLevels(hass, ids, explicit) {
+  const isRoom = (id) => lccIsGroupLike(hass.states[id]) && hass.states[id].attributes.hue_type === 'room';
+  const groups = ids.filter((id) => lccIsGroupLike(hass.states[id]));
+  const hasRoom = groups.some(isRoom);
+  const groupLevel = (id) => (isRoom(id) || !hasRoom ? 0 : 1);
+  const lightLevel = groups.length ? Math.max(...groups.map(groupLevel)) + 1 : 0;
+  const out = {};
+  ids.forEach((id) => {
+    const set = explicit[id];
+    const level = set !== undefined && set !== null && set !== '' ? parseInt(set, 10) : NaN;
+    out[id] = Number.isNaN(level)
+      ? lccIsGroupLike(hass.states[id]) ? groupLevel(id) : lightLevel
+      : Math.max(0, Math.min(2, level));
+  });
+  return out;
+}
+
 // The editor can't see the pretend home, so build one to list its lights.
 const lccDemoCache = {};
 function lccDemoFor(room) {
@@ -202,6 +222,19 @@ export const LightControlCardEditor = createFormEditor({
               fields: {
                 entity: { label: mode === 'room' ? 'Light or zone' : 'Light', required: true, selector: { select: { mode: 'dropdown', options } } },
                 name: { label: 'Name override', selector: { text: {} } },
+                level: {
+                  label: 'Level (indentation)',
+                  selector: {
+                    select: {
+                      mode: 'dropdown',
+                      options: [
+                        { value: '0', label: 'Top' },
+                        { value: '1', label: 'Child (indented once)' },
+                        { value: '2', label: 'Grandchild (indented twice)' },
+                      ],
+                    },
+                  },
+                },
               },
             },
           },
@@ -422,7 +455,7 @@ export class LightControlCard extends HTMLElement {
   // the row to solid white and make the text unreadable), sized to the
   // brightness. Tap toggles; drag horizontally sets brightness on dimmable
   // lights.
-  _buildRow(entityId, { withMoreInfo, member = false }) {
+  _buildRow(entityId, { withMoreInfo, level = 0 }) {
     const st = this._hass.states[entityId];
     const name = (st && st.attributes.friendly_name) || entityId;
     const isGroupLike = lccIsGroupLike(st);
@@ -442,8 +475,9 @@ export class LightControlCard extends HTMLElement {
 
     const row = document.createElement('div');
     row.className = 'lcc-row';
-    const pad = member ? '9px 14px 9px 14px' : '12px 14px';
-    const indent = member ? 'margin-left:16px;' : '';
+    // Indentation levels: 0 top, 1 child, 2 grandchild (16px each).
+    const pad = level > 0 ? '9px 14px' : '12px 14px';
+    const indent = level > 0 ? `margin-left:${16 * level}px;` : '';
     row.style.cssText = `position:relative; display:flex; align-items:center; gap:12px; padding:${pad}; ${indent} border-radius:12px; margin-top:6px; overflow:hidden; cursor:pointer; user-select:none; touch-action:pan-y; background: linear-gradient(to right, ${tint} 0%, ${tint} ${fillPct}%, ${track} ${fillPct}%, ${track} 100%);`;
     row.innerHTML = `
       <ha-icon icon="${icon}" style="color:${on ? color : 'var(--secondary-text-color)'}; --mdc-icon-size:24px; flex-shrink:0; pointer-events:none;"></ha-icon>
@@ -723,16 +757,19 @@ export class LightControlCard extends HTMLElement {
     let memberIds = [];
     let rows = [];
     const names = {};
+    const levels = {};
     const chosen = lccNormalizeList(cfg.entities).filter((s) => hass.states[s.entity]);
     chosen.forEach((s) => {
       if (s.name) names[s.entity] = s.name;
+      if (s.level !== undefined) levels[s.entity] = s.level;
     });
     if (mode === 'room') {
       if (chosen.length) {
         const ids = chosen.map((s) => s.entity);
         headIds = ids.filter((id) => lccIsGroupLike(hass.states[id]));
         memberIds = ids.filter((id) => !lccIsGroupLike(hass.states[id]));
-        rows = ids.map((id) => ({ id, member: !lccIsGroupLike(hass.states[id]) && headIds.length > 0 }));
+        const lv = lccLevels(hass, ids, levels);
+        rows = ids.map((id) => ({ id, level: lv[id] }));
       } else {
         const all = lccCandidates(hass, 'room', cfg.area).filter((id) => {
           // Auto mode keeps the original behaviour: only groups that have
@@ -742,10 +779,9 @@ export class LightControlCard extends HTMLElement {
         });
         headIds = all.filter((id) => lccIsGroupLike(hass.states[id]));
         memberIds = all.filter((id) => !lccIsGroupLike(hass.states[id]));
-        rows = [
-          ...headIds.map((id) => ({ id, member: false })),
-          ...memberIds.map((id) => ({ id, member: headIds.length > 0 })),
-        ];
+        const ordered = [...headIds, ...memberIds];
+        const lv = lccLevels(hass, ordered, {});
+        rows = ordered.map((id) => ({ id, level: lv[id] }));
       }
     } else {
       headIds = [cfg.entity];
@@ -755,7 +791,11 @@ export class LightControlCard extends HTMLElement {
         memberIds = picked.length ? picked : members;
       }
       if (cfg.name) names[cfg.entity] = cfg.name;
-      rows = [{ id: cfg.entity, member: false }, ...memberIds.map((id) => ({ id, member: true }))];
+      const level = (id, fallback) => {
+        const n = parseInt(levels[id], 10);
+        return Number.isNaN(n) ? fallback : Math.max(0, Math.min(2, n));
+      };
+      rows = [{ id: cfg.entity, level: 0 }, ...memberIds.map((id) => ({ id, level: level(id, 1) }))];
     }
     const relevantEntityIds = rows.map((r) => r.id);
     this._cardLightIds = relevantEntityIds;
@@ -801,8 +841,8 @@ export class LightControlCard extends HTMLElement {
       this._titleEl.style.display = 'none';
     }
     // Rows in display order; bulbs are indented under any group row.
-    rows.forEach(({ id, member }) => {
-      const row = this._buildRow(id, { withMoreInfo: true, member });
+    rows.forEach(({ id, level }) => {
+      const row = this._buildRow(id, { withMoreInfo: true, level });
       const nameEl = row.querySelector('.lcc-name');
       if (names[id] && nameEl) nameEl.textContent = names[id];
       this._main.appendChild(row);
