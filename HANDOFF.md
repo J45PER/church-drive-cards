@@ -106,6 +106,11 @@ bumping the version.
 
 Rollback: install an older release from HACS (Redownload → pick version).
 
+Beta channel: HA also loads `church-drive-cards-beta.js` (cards renamed `…-beta`)
+from jsDelivr, pinned to a commit, as its own dashboard resource. Repoint that
+resource's URL at a branch commit to try a change on the Design Presets **Beta**
+tab before merging. See the README's "Beta testing" section.
+
 ## Dev loop
 
 ```bash

@@ -3,6 +3,7 @@
 // battery-friendly defaults (auto battery icon stepping, low-is-bad colouring).
 
 import { createFormEditor } from './form-editor.js';
+import { SUFFIX, LABEL } from './suffix.js';
 
 export const GaugeZoneCardEditor = createFormEditor({
   schema: (config) => [
@@ -125,7 +126,7 @@ export class GaugeZoneCard extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
     const cfg = this.config;
-    const iconMode = cfg.icon_mode || (this.tagName.toLowerCase() === 'battery-zone-card' ? 'battery' : 'gauge');
+    const iconMode = cfg.icon_mode || (this.tagName.toLowerCase() === `battery-zone-card${SUFFIX}` ? 'battery' : 'gauge');
     const direction = cfg.direction || 'low'; // 'low' = low value is bad (battery); 'high' = high value is bad (storage/cpu)
     const alertAt = cfg.alert_at !== undefined ? cfg.alert_at : (direction === 'low' ? 20 : 90);
     const warnAt = cfg.warn_at !== undefined ? cfg.warn_at : (direction === 'low' ? 50 : 75);
@@ -273,7 +274,7 @@ export class GaugeZoneCard extends HTMLElement {
   }
 
   static getConfigElement() {
-    return document.createElement('gauge-zone-card-editor');
+    return document.createElement(`gauge-zone-card-editor${SUFFIX}`);
   }
 
   // What a new card starts with in the card picker (and its preview).
@@ -293,26 +294,26 @@ export class GaugeZoneCard extends HTMLElement {
 }
 
 export function registerGaugeZoneCard() {
-  if (!customElements.get('gauge-zone-card-editor')) {
-    customElements.define('gauge-zone-card-editor', GaugeZoneCardEditor);
+  if (!customElements.get(`gauge-zone-card-editor${SUFFIX}`)) {
+    customElements.define(`gauge-zone-card-editor${SUFFIX}`, GaugeZoneCardEditor);
   }
-  if (!customElements.get('battery-zone-card')) {
-    customElements.define('battery-zone-card', GaugeZoneCard);
+  if (!customElements.get(`battery-zone-card${SUFFIX}`)) {
+    customElements.define(`battery-zone-card${SUFFIX}`, GaugeZoneCard);
   }
-  if (!customElements.get('gauge-zone-card')) {
-    customElements.define('gauge-zone-card', class extends GaugeZoneCard {});
+  if (!customElements.get(`gauge-zone-card${SUFFIX}`)) {
+    customElements.define(`gauge-zone-card${SUFFIX}`, class extends GaugeZoneCard {});
   }
   window.customCards = window.customCards || [];
   window.customCards.push({
-    type: 'battery-zone-card',
-    name: 'Battery Zone Card',
+    type: `battery-zone-card${SUFFIX}`,
+    name: `Battery Zone Card${LABEL}`,
     description: 'Zone battery status with gradient rows',
     preview: true,
     documentationURL: 'https://github.com/J45PER/church-drive-cards#readme',
   });
   window.customCards.push({
-    type: 'gauge-zone-card',
-    name: 'Gauge Zone Card',
+    type: `gauge-zone-card${SUFFIX}`,
+    name: `Gauge Zone Card${LABEL}`,
     description: 'Generic % / value gauge rows with gradient fill — storage, signal, humidity, CPU, anything measurable',
     preview: true,
     documentationURL: 'https://github.com/J45PER/church-drive-cards#readme',

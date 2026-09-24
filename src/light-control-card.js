@@ -3,6 +3,7 @@
 // chips, and Home Assistant's own more-info pop-up for the full picker.
 
 import { createFormEditor } from './form-editor.js';
+import { SUFFIX, LABEL } from './suffix.js';
 import { sceneBackground, sceneIcon, scenePalette } from './scene-style.js';
 
 const LCC_DEFAULT_MAX_SCENES = 6;
@@ -192,7 +193,7 @@ export class LightControlCard extends HTMLElement {
   }
 
   static getConfigElement() {
-    return document.createElement('light-control-card-editor');
+    return document.createElement(`light-control-card-editor${SUFFIX}`);
   }
 
   // Pre-fill the card picker with a real light so the preview isn't an error.
@@ -620,16 +621,16 @@ export class LightControlCard extends HTMLElement {
 }
 
 export function registerLightControlCard() {
-  if (!customElements.get('light-control-card-editor')) {
-    customElements.define('light-control-card-editor', LightControlCardEditor);
+  if (!customElements.get(`light-control-card-editor${SUFFIX}`)) {
+    customElements.define(`light-control-card-editor${SUFFIX}`, LightControlCardEditor);
   }
-  if (!customElements.get('light-control-card')) {
-    customElements.define('light-control-card', LightControlCard);
+  if (!customElements.get(`light-control-card${SUFFIX}`)) {
+    customElements.define(`light-control-card${SUFFIX}`, LightControlCard);
   }
   window.customCards = window.customCards || [];
   window.customCards.push({
-    type: 'light-control-card',
-    name: 'Light Control Card',
+    type: `light-control-card${SUFFIX}`,
+    name: `Light Control Card${LABEL}`,
     description: 'Light/group/room control with icon, toggle, brightness, scenes, and full more-info pop-up (visual editor supported)',
     preview: true,
     documentationURL: 'https://github.com/J45PER/church-drive-cards#readme',
