@@ -564,6 +564,7 @@
   // src/scene-style.js
   var PALETTES = {
     bright: ["#fff6e0", "#ffd98a"],
+    "cool bright": ["#f4f9ff", "#bcd8ff"],
     dimmed: ["#8a6630", "#3b2a14"],
     nightlight: ["#ff8a2a", "#3a1a05"],
     relax: ["#ffb35c", "#e0702a"],
@@ -583,7 +584,15 @@
     "pumpkin patch": ["#ff7518", "#8b4513", "#ffb347"],
     shine: ["#fffbd6", "#ffd23f"],
     phantom: ["#2d0a4e", "#6c2bd9", "#0f0f2e"],
-    "city blue": ["#0b1d51", "#2f6fd6", "#89c2ff"]
+    "city blue": ["#0b1d51", "#2f6fd6", "#89c2ff"],
+    aqua: ["#00c9d6", "#0077b6", "#90e0ef"],
+    "dreamy dusk": ["#6a4c93", "#f28482", "#ffb4a2"],
+    "emerald isle": ["#1b7f6b", "#52b788", "#b7e4c7"],
+    magneto: ["#3a0ca3", "#4361ee", "#f72585"],
+    meriete: ["#ff9e7a", "#c86b98", "#5f4b8b"],
+    motown: ["#7b2cbf", "#ff6d00", "#ffd60a"],
+    "ruby glow": ["#9b111e", "#e0115f", "#ff6f61"],
+    "witching hour": ["#240046", "#5a189a", "#ff7900"]
   };
   var ICONS = [
     [/night/, "mdi:weather-night"],
@@ -596,22 +605,82 @@
     [/bright|shine|arise/, "mdi:white-balance-sunny"],
     [/natural/, "mdi:weather-sunset"]
   ];
-  function baseName(name) {
+  function sceneKey(name) {
     return String(name || "").toLowerCase().replace(/\s+\d+$/, "").trim();
   }
+  function builtInSceneNames() {
+    return Object.keys(PALETTES);
+  }
+  function toHex(c) {
+    if (Array.isArray(c)) return "#" + c.map((v) => Math.max(0, Math.min(255, v | 0)).toString(16).padStart(2, "0")).join("");
+    return c;
+  }
+  function hslHex(h, s, l) {
+    const a = s * Math.min(l, 1 - l);
+    const f = (n) => {
+      const k = (n + h / 30) % 12;
+      return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))));
+    };
+    return toHex([f(0), f(8), f(4)]);
+  }
+  var central = {};
+  var STYLES_EVENT = "church-drive-scene-styles";
+  function setSceneStyles(list) {
+    const next = {};
+    (list || []).forEach((s) => {
+      if (s && s.scene) next[sceneKey(s.scene)] = s;
+    });
+    if (JSON.stringify(next) === JSON.stringify(central)) return;
+    central = next;
+    window.dispatchEvent(new CustomEvent(STYLES_EVENT));
+  }
+  function centralSceneStyle(name) {
+    return central[sceneKey(name)] || null;
+  }
+  function onSceneStylesChanged(callback) {
+    window.addEventListener(STYLES_EVENT, callback);
+    return () => window.removeEventListener(STYLES_EVENT, callback);
+  }
+  var STYLES_DASHBOARD = "design-presets";
+  var loading = null;
+  function findStyleCards(node, found) {
+    if (Array.isArray(node)) node.forEach((n) => findStyleCards(n, found));
+    else if (node && typeof node === "object") {
+      if (typeof node.type === "string" && /^custom:scene-styles-card(-beta)?$/.test(node.type)) found.push(node);
+      Object.values(node).forEach((v) => findStyleCards(v, found));
+    }
+    return found;
+  }
+  function loadSceneStyles(hass) {
+    if (loading || !hass || !hass.callWS) return loading;
+    loading = hass.callWS({ type: "lovelace/config", url_path: STYLES_DASHBOARD }).then((config) => {
+      const cards = findStyleCards(config, []);
+      const mine = cards.find((c) => c.type === `custom:scene-styles-card${SUFFIX}`) || cards[0];
+      if (mine) setSceneStyles(mine.styles);
+    }).catch(() => {
+    });
+    return loading;
+  }
   function scenePalette(name) {
-    const key = baseName(name);
+    const style = centralSceneStyle(name);
+    const custom = style ? [style.colour_1, style.colour_2, style.colour_3].filter(Boolean).map(toHex) : [];
+    if (custom.length) return custom.length === 1 ? [custom[0], custom[0]] : custom;
+    const key = sceneKey(name);
     if (PALETTES[key]) return PALETTES[key];
     let h = 0;
     for (const ch of key) h = (h * 31 + ch.charCodeAt(0)) % 360;
-    return [`hsl(${h} 70% 55%)`, `hsl(${(h + 50) % 360} 70% 35%)`];
+    return [hslHex(h, 0.7, 0.55), hslHex((h + 50) % 360, 0.7, 0.35)];
   }
-  function sceneBackground(name) {
-    const colours = scenePalette(name);
-    return `linear-gradient(135deg, ${colours.join(", ")})`;
+  function sceneBackground(name, image) {
+    const style = centralSceneStyle(name);
+    const picture = image || style && style.image;
+    if (picture) return `center / cover no-repeat url("${picture}")`;
+    return `linear-gradient(135deg, ${scenePalette(name).join(", ")})`;
   }
   function sceneIcon(name, isDynamic) {
-    const key = baseName(name);
+    const style = centralSceneStyle(name);
+    if (style && style.icon) return style.icon;
+    const key = sceneKey(name);
     for (const [re, icon] of ICONS) if (re.test(key)) return icon;
     return isDynamic ? "mdi:animation-play-outline" : "mdi:palette-outline";
   }
@@ -1133,8 +1202,20 @@
       if (this._demo) this._demo.stop();
       this._demo = null;
     }
+    // Central scene styles (Design Presets "Scene styles" tab) can change after
+    // this card has drawn; redraw when they do.
+    connectedCallback() {
+      if (!this._unsubStyles) {
+        this._unsubStyles = onSceneStylesChanged(() => {
+          this._lastIds = null;
+          if (this._lastInput) this.hass = this._lastInput;
+        });
+      }
+    }
     disconnectedCallback() {
       if (this._demo) this._demo.stop();
+      if (this._unsubStyles) this._unsubStyles();
+      this._unsubStyles = null;
     }
     // Demo mode: a pretend home (demo-home.js) stands in for Home Assistant, so
     // taps only change the pretend lights and nothing reaches real devices.
@@ -1306,7 +1387,7 @@
         tile.className = s.active || !anyActive ? "lcc-scene" : "lcc-scene lcc-dim";
         const glow = `color-mix(in srgb, ${scenePalette(s.name)[0]} 85%, transparent)`;
         tile.title = s.playing ? `${s.name} (playing, tap to stop)` : s.paused ? `${s.name} (paused, tap to play)` : s.name;
-        const bg = s.image ? `center / cover no-repeat url("${s.image}")` : sceneBackground(s.name);
+        const bg = sceneBackground(s.name, s.image);
         tile.style.cssText = `position:relative; container-type:inline-size; aspect-ratio:1 / 1; border:none; border-radius:14px; padding:0; overflow:hidden; cursor:pointer; background:${bg};${s.active ? ` box-shadow:0 0 16px 3px ${glow}; transform:scale(1.04); z-index:1;` : ""}`;
         tile.innerHTML = `
         <div style="position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0) 65%);"></div>
@@ -1416,6 +1497,8 @@
       return scenes;
     }
     set hass(hass) {
+      this._lastInput = hass;
+      loadSceneStyles(hass);
       this._render(this.config.demo ? this._demoHass(hass) : hass);
     }
     _render(hass) {
@@ -1553,9 +1636,148 @@
     });
   }
 
+  // src/scene-styles-card.js
+  function titleCase(key) {
+    return key.replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+  function sceneNames(hass, styles) {
+    const names = /* @__PURE__ */ new Map();
+    Object.values(hass && hass.states || {}).forEach((st) => {
+      if (st.entity_id.startsWith("scene.") && st.attributes.name) {
+        const key = sceneKey(st.attributes.name);
+        if (!names.has(key)) names.set(key, { name: st.attributes.name.replace(/\s+\d+$/, ""), dynamic: st.attributes.is_dynamic === true, inHome: true });
+      }
+    });
+    builtInSceneNames().forEach((key) => {
+      if (!names.has(key)) names.set(key, { name: titleCase(key), dynamic: false, inHome: false });
+    });
+    (styles || []).forEach((s) => {
+      const key = s && s.scene && sceneKey(s.scene);
+      if (key && !names.has(key)) names.set(key, { name: s.scene, dynamic: false, inHome: false });
+    });
+    return [...names.entries()].map(([key, v]) => ({ key, ...v })).sort((a, b) => a.name.localeCompare(b.name));
+  }
+  var SceneStylesCardEditor = createFormEditor({
+    schema: (config, hass) => [
+      { name: "title", selector: { text: {} } },
+      { name: "only_home", selector: { boolean: {} } },
+      {
+        name: "styles",
+        selector: {
+          object: {
+            multiple: true,
+            label_field: "scene",
+            description_field: "icon",
+            fields: {
+              scene: {
+                label: "Scene name (applies in every room)",
+                required: true,
+                selector: {
+                  select: {
+                    mode: "dropdown",
+                    custom_value: true,
+                    options: sceneNames(hass, config.styles).map((n) => n.name)
+                  }
+                }
+              },
+              icon: { label: "Icon", selector: { icon: {} } },
+              colour_1: { label: "Background colour 1", selector: { color_rgb: {} } },
+              colour_2: { label: "Background colour 2 (optional)", selector: { color_rgb: {} } },
+              colour_3: { label: "Background colour 3 (optional)", selector: { color_rgb: {} } },
+              image: { label: "Picture (replaces the colours)", selector: { image: {} } }
+            }
+          }
+        }
+      }
+    ],
+    labels: {
+      title: "Title",
+      only_home: "Only preview scenes that exist in this home",
+      styles: "Custom scene styles"
+    },
+    helpers: {
+      styles: "Each entry restyles that scene name on every light card, on every dashboard. Leave a field empty to keep the default."
+    }
+  });
+  var SceneStylesCard = class extends HTMLElement {
+    setConfig(config) {
+      this.config = config || {};
+      setSceneStyles(this.config.styles);
+      if (this._hass) this._draw();
+    }
+    set hass(hass) {
+      const first = !this._hass;
+      this._hass = hass;
+      if (first) this._draw();
+    }
+    _draw() {
+      const cfg = this.config;
+      const styled = new Set((cfg.styles || []).map((s) => s && s.scene && sceneKey(s.scene)).filter(Boolean));
+      const names = sceneNames(this._hass, cfg.styles).filter((n) => !cfg.only_home || n.inHome || styled.has(n.key));
+      this.innerHTML = `
+      <ha-card style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; background:var(--card-background-color); padding:16px;">
+        <style>
+          .ssc-grid { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px; margin-top:12px; }
+          .ssc-tile { position:relative; container-type:inline-size; aspect-ratio:1 / 1; border-radius:14px; overflow:hidden; }
+          .ssc-name { position:absolute; left:6px; right:6px; bottom:6px; text-align:center; color:#fff; font-weight:600; line-height:1.15; font-size:clamp(9px, 12.5cqw, 13px); text-shadow:0 1px 2px rgba(0,0,0,0.6); }
+          @container (max-width: 64px) { .ssc-name { display:none; } }
+        </style>
+        <div style="font-size:1.5rem; font-weight:500; color:var(--primary-text-color);"></div>
+        <div class="ssc-sub" style="margin-top:4px; color:var(--secondary-text-color); font-size:0.9rem;"></div>
+        <div class="ssc-grid"></div>
+      </ha-card>`;
+      this.querySelector("div").textContent = cfg.title || "Scene styles";
+      this.querySelector(".ssc-sub").textContent = `${names.length} scenes \xB7 ${styled.size} custom \xB7 edit this card to change them`;
+      const grid = this.querySelector(".ssc-grid");
+      names.forEach((n) => {
+        const tile = document.createElement("div");
+        tile.className = "ssc-tile";
+        tile.title = styled.has(n.key) ? `${n.name} (custom style)` : n.name;
+        tile.style.background = sceneBackground(n.name);
+        tile.innerHTML = `
+        <div style="position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0) 65%);"></div>
+        <ha-icon icon="${sceneIcon(n.name, n.dynamic)}" style="position:absolute; left:50%; top:44%; transform:translate(-50%, -50%); --mdc-icon-size:40cqw; color:#fff; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.55));"></ha-icon>
+        ${styled.has(n.key) ? '<ha-icon icon="mdi:pencil" title="Custom style" style="position:absolute; top:6px; right:6px; --mdc-icon-size:clamp(12px, 18cqw, 18px); color:#fff; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.7));"></ha-icon>' : ""}
+        <div class="ssc-name"></div>`;
+        tile.querySelector(".ssc-name").textContent = n.name;
+        grid.appendChild(tile);
+      });
+      this._rows = Math.ceil(names.length / 4);
+    }
+    getCardSize() {
+      return 2 + (this._rows || 4) * 2;
+    }
+    getGridOptions() {
+      return { columns: 12, min_columns: 6, rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement(`scene-styles-card-editor${SUFFIX}`);
+    }
+    static getStubConfig() {
+      return { title: "Scene styles", only_home: true, styles: [] };
+    }
+  };
+  function registerSceneStylesCard() {
+    if (!customElements.get(`scene-styles-card-editor${SUFFIX}`)) {
+      customElements.define(`scene-styles-card-editor${SUFFIX}`, SceneStylesCardEditor);
+    }
+    if (!customElements.get(`scene-styles-card${SUFFIX}`)) {
+      customElements.define(`scene-styles-card${SUFFIX}`, SceneStylesCard);
+    }
+    window.customCards = window.customCards || [];
+    window.customCards.push({
+      type: `scene-styles-card${SUFFIX}`,
+      name: `Scene Styles Card${LABEL}`,
+      description: 'Central scene tile icons, colours and pictures for every Light Control card (put it on the Design Presets "Scene styles" tab)',
+      preview: true,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
+    });
+  }
+
   // src/index.js
   registerGaugeZoneCard();
   registerAlarmPanelCard();
   registerLightControlCard();
+  registerSceneStylesCard();
   console.info(`%c CHURCH-DRIVE-CARDS${SUFFIX ? " BETA" : ""} %c loaded `, "color: white; background: #2196f3; font-weight: 700;", "color: #2196f3; background: transparent;");
 })();
