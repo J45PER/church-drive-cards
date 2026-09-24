@@ -1,0 +1,37 @@
+name: Release
+
+# Push a tag like v0.2.0 (matching package.json "version") to publish a GitHub
+# release with the built church-drive-cards.js attached. HACS offers each
+# release as an update in Home Assistant.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Committed bundle matches fresh build
+        run: git diff --exit-code -- church-drive-cards.js
+      - name: Tag matches package.json version
+        run: |
+          expected="v$(node -p "require('./package.json').version")"
+          if [ "$GITHUB_REF_NAME" != "$expected" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME doesn't match package.json version ($expected)."
+            exit 1
+          fi
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" church-drive-cards.js --title "$GITHUB_REF_NAME" --generate-notes
