@@ -5,6 +5,7 @@
 import { createFormEditor } from './form-editor.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { sceneBackground, sceneIcon, scenePalette } from './scene-style.js';
+import { DemoHome } from './demo-home.js';
 
 const LCC_DEFAULT_MAX_SCENES = 6;
 
@@ -133,6 +134,29 @@ function lccAutoScenes(hass, groupIds, lightIds) {
 export const LightControlCardEditor = createFormEditor({
   schema: (config) => {
     const mode = config.mode || 'light';
+    const demoFields = [
+      {
+        type: 'expandable',
+        name: '',
+        title: 'Demo mode (pretend lights, for Design Presets)',
+        flatten: true,
+        schema: [
+          { name: 'demo', selector: { boolean: {} } },
+          {
+            name: 'demo_room',
+            selector: {
+              select: {
+                mode: 'dropdown',
+                options: [
+                  { value: 'living_room', label: 'Living Room (room + animated-scene zone)' },
+                  { value: 'bedroom', label: 'Bedroom (two groups + a hidden settings light)' },
+                ],
+              },
+            },
+          },
+        ],
+      },
+    ];
     return [
       {
         name: 'mode',
@@ -147,9 +171,14 @@ export const LightControlCardEditor = createFormEditor({
           },
         },
       },
-      mode === 'room'
-        ? { name: 'area', selector: { area: {} } }
-        : { name: 'entity', selector: { entity: { domain: 'light' } } },
+      // In demo mode the pretend home supplies the room/light, so hide these.
+      ...(config.demo
+        ? []
+        : [
+            mode === 'room'
+              ? { name: 'area', selector: { area: {} } }
+              : { name: 'entity', selector: { entity: { domain: 'light' } } },
+          ]),
       { name: 'name', selector: { text: {} } },
       { name: 'max_scenes', selector: { number: { mode: 'box', min: 0, max: 24 } } },
       {
@@ -168,6 +197,7 @@ export const LightControlCardEditor = createFormEditor({
           },
         },
       },
+      ...demoFields,
     ];
   },
   normalize: (config) => (config.scenes ? { ...config, scenes: lccNormalizeScenes(config.scenes) } : config),
@@ -178,18 +208,52 @@ export const LightControlCardEditor = createFormEditor({
     name: 'Title (optional)',
     max_scenes: 'Max scenes',
     scenes: 'Scenes (leave empty to pick them automatically)',
+    demo: 'Use pretend lights instead of real ones',
+    demo_room: 'Pretend room',
   },
   helpers: {
     max_scenes: 'Default 6. Set 0 to hide scenes.',
+    demo: 'Nothing is sent to Home Assistant; taps only change the pretend lights on this card.',
   },
 });
 
 export class LightControlCard extends HTMLElement {
   setConfig(config) {
-    if (!config.entity && !config.area) throw new Error('entity or area required');
+    if (!config.entity && !config.area && !config.demo) throw new Error('entity or area required');
     this.config = config;
     this._built = false;
     this._lastIds = null;
+    if (this._demo) this._demo.stop();
+    this._demo = null;
+  }
+
+  disconnectedCallback() {
+    if (this._demo) this._demo.stop();
+  }
+
+  // Demo mode: a pretend home (demo-home.js) stands in for Home Assistant, so
+  // taps only change the pretend lights and nothing reaches real devices.
+  // Its room/group/first light replace any configured area or entity.
+  _demoHass(realHass) {
+    if (!this._demo) {
+      this._demo = new DemoHome(this.config.demo_room, () => this._render(this._demo.hass(this._realHass)));
+    }
+    this._realHass = realHass || this._realHass;
+    return this._demo.hass(this._realHass);
+  }
+
+  _effectiveConfig() {
+    const cfg = this.config;
+    if (!cfg.demo || !this._demo) return cfg;
+    const mode = cfg.mode || 'room';
+    return {
+      ...cfg,
+      mode,
+      area: this._demo.area,
+      entity: mode === 'group' ? this._demo.roomGroup : this._demo.firstLight,
+      // Configured scenes are real entities; the pretend home has its own.
+      scenes: undefined,
+    };
   }
 
   static getConfigElement() {
@@ -278,10 +342,10 @@ export class LightControlCard extends HTMLElement {
     row.innerHTML = `
       <ha-icon icon="${icon}" style="color:${on ? color : 'var(--secondary-text-color)'}; --mdc-icon-size:24px; flex-shrink:0; pointer-events:none;"></ha-icon>
       <div class="lcc-name" style="flex:1; min-width:0; font-weight:500; color:var(--primary-text-color); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; pointer-events:none;">${name}</div>
-      ${withMoreInfo ? `<ha-icon class="lcc-more" icon="mdi:tune-variant" style="color:var(--secondary-text-color); --mdc-icon-size:20px; cursor:pointer; flex-shrink:0;"></ha-icon>` : ''}
+      ${withMoreInfo && !this.config.demo ? `<ha-icon class="lcc-more" icon="mdi:tune-variant" style="color:var(--secondary-text-color); --mdc-icon-size:20px; cursor:pointer; flex-shrink:0;"></ha-icon>` : ''}
     `;
 
-    if (withMoreInfo) {
+    if (withMoreInfo && !this.config.demo) {
       const moreBtn = row.querySelector('.lcc-more');
       moreBtn.addEventListener('click', (ev) => {
         ev.stopPropagation();
@@ -316,7 +380,7 @@ export class LightControlCard extends HTMLElement {
       if (this._pendingHass) {
         const h = this._pendingHass;
         this._pendingHass = null;
-        this.hass = h;
+        this._render(h);
       }
     };
     row.addEventListener('pointerdown', (ev) => {
@@ -438,7 +502,7 @@ export class LightControlCard extends HTMLElement {
   // Resolve the scenes to show (configured list or auto-detected), capped at
   // max_scenes, with display name/icon/picture and selected/playing status.
   _resolveScenes(hass, mode, headIds, memberIds) {
-    const cfg = this.config;
+    const cfg = this._effectiveConfig();
     const max = cfg.max_scenes != null ? cfg.max_scenes : LCC_DEFAULT_MAX_SCENES;
     if (max <= 0) return [];
     let items = lccNormalizeScenes(cfg.scenes);
@@ -497,8 +561,12 @@ export class LightControlCard extends HTMLElement {
   }
 
   set hass(hass) {
+    this._render(this.config.demo ? this._demoHass(hass) : hass);
+  }
+
+  _render(hass) {
     this._hass = hass;
-    const cfg = this.config;
+    const cfg = this._effectiveConfig();
     const mode = cfg.mode || (cfg.area ? 'room' : 'light');
 
     if (!this._built) {
