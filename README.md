@@ -43,7 +43,9 @@ Mode-aware light control. Has a real visual editor (Add Card → search "Light C
 - `mode: group`: the group's row, with its member lights indented underneath.
 - `mode: room`: the area name as a title, then that area's Hue room/zone groups as top rows, with the individual lights indented underneath. Lights are found through the entity **or** device area, as Hue assigns areas to devices. Hidden entities and settings/diagnostic entities (e.g. an air purifier's display backlight) are skipped.
 
-Tap a row to toggle, drag across it to set brightness, and tap the tune icon for the native more-info dialog. Icons follow whatever is set in Home Assistant, including custom icon packs such as `phu:` Hue icons.
+Tap a row to toggle, drag across it to set brightness, and tap the tune icon for the native more-info dialog.
+
+**Scenes** show as square tiles under the lights, up to `max_scenes` (default 6; `0` hides them), in the same order as the Hue app. They're picked automatically from the card's Hue room and any Hue zone made only of its lights, or you can list your own in the editor with an optional name, icon and uploaded picture per scene. Without a picture, a tile gets a gradient in that scene's colours. The most recently activated scene is outlined while its lights are on. Animated (dynamic) Hue scenes start animating when tapped, and show a pulsing ▶ while they're playing. Icons follow whatever is set in Home Assistant, including custom icon packs such as `phu:` Hue icons.
 
 ```yaml
 type: custom:light-control-card
