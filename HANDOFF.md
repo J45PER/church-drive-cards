@@ -1,323 +1,362 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-24. Current release: **v0.10.3**.*
+*Last updated 2026-09-25. Current release: **v0.10.3**.*
 
 ## Where this stands
 
-The **Church Drive** Home Assistant integration (`custom_components/church_drive`),
-installed through **HACS** from this public repo
-(`github.com/J45PER/church-drive-cards`). Since v0.7.0 its only job is to deliver the
-custom Lovelace cards: it serves the bundle
-(`custom_components/church_drive/frontend/church-drive-cards.js`) and adds it to
-every frontend page with `add_extra_js_url`. There is no Lovelace resource for the
-released cards. Since v0.8.0 it also syncs **universal scenes** to the Hue bridge (step 2 of the
-plan below).
+This repo (`github.com/J45PER/church-drive-cards`, public) is the **Church Drive**
+Home Assistant integration (`custom_components/church_drive`). It's installed through
+HACS as an integration. It does two jobs:
 
-### Universal scenes
+1. **Delivers the custom Lovelace cards.** It serves the bundle and loads it on
+   every dashboard. There's no separate card install.
+2. **Universal scenes.** It keeps one library of scenes (Bright, Relax, Soho… plus
+   the user's own). Any light card can use them in any room or zone without Hue
+   scene setup. There's also a scene select per room/zone and a scene builder.
 
-- `library.py` defines each scene once (name, mirek or xy, brightness).
-- `hue.py` reuses HA's Hue connection (`hue` config entry `runtime_data.api`, an
-  aiohue v2 bridge), so there's no link button. For each room/zone chosen in the
-  options (`scene_groups`, bridge group ids) and each library scene:
-  - a scene tagged `metadata.appdata = "cd:<key>"` is ours: brought in line;
-  - an untagged same-name scene (made by the Hue app) is left alone and used;
-  - otherwise a new tagged scene is created.
-- It runs at startup, on options change (entry reload) and via the
-  `church_drive.sync_scenes` action (returns a per-room summary). Diagnostics
-  dump the chosen rooms' scenes with their light settings.
-- Since v0.9.0 the cards use the library directly: the integration serves it
-  over the websocket (`church_drive/library`: key, name, brightness,
-  `color_temp_kelvin` or `xy_color`) and `src/universal-scenes.js` loads it once
-  per page. A card scene `entity: universal:<key>` (or YAML `scene: Bright`) is
-  applied with one `light.turn_on` on the card's Hue room group (else its
-  zones/groups, else its lights) and shows as selected while every lit light
-  matches it (brightness within 4/255, kelvin within 3%, xy within 0.02; lights
-  that can't show the colour only need to be on). The editor's Scenes list puts
-  universal scenes first, once per place (the room and each of its zones,
-  e.g. "Bright · Kitchen Spotlights" = `universal:bright@light.kitchen_spotlights`,
-  which sets only that zone and is matched against only its lights; the tile
-  reads "Bright · Spotlights"), then the Hue scenes, each labelled with its
-  room/zone; Hue scenes named like a universal one are hidden. There's also a
-  `church_drive.apply_scene` action (lights + scene name).
-- Since v0.10.0:
-  - **Colour scenes** (`library.COLOUR`: Soho, Magneto, Ruby glow, Emerald isle and
-    Dreamy dusk read from the Kitchen bridge scenes, the rest from the old hex
-    palettes) and **custom scenes** (HA storage `church_drive.scenes`, from the
-    Scene Builder card via websocket `church_drive/scene/save|delete|preview`,
-    admin-only save).
-  - `apply.py`: white = `light.turn_on`; colour on a Hue room/zone = rewrite that
-    group's one working scene ("Church Drive", appdata `cd:live`, its HA entity
-    hidden) with actions (colours dealt round the lights, gradient points on
-    gradient lights) + palette + speed, then recall `dynamic_palette` or
-    `active`. Anything else, or a bridge error, deals colours with
-    `light.turn_on` per light.
-  - `select.py`: `select.<room/zone> scene` per Hue grouped light; state = last
-    applied scene while the lights still match (animating counts), else a
-    matching white scene; attributes `target`, `scene_key`. Cards use it to show
-    the selected universal tile.
-  - Card: universal colour tiles use the scene's colours when there's no
-    built-in palette; animated ones show playing/paused and pause like Hue
-    scenes. The pretend home animates colour scenes (`DemoHome.playPalette`).
-- Why not sync every room to the bridge: it already has ~123 scenes and the full
-  library everywhere would add ~100, past the bridge's ~200 limit. Bridge
-  scenes stay for animated/colour scenes (step 4).
-- Plan: step 2 = Kitchen test (done in v0.8.0, Rest created, the Hue app's
-  Bright/Relax/Nightlight linked). Step 3 (v0.9.x) = library applied by the
-  cards in every room and zone. Step 4 (v0.10.0) = colour/animated scenes,
-  gradients, scene selects and the scene builder.  Everything below is merged to
-`main`, released and running live. The user has checked each change on a real
-device.
+Everything is merged to `main`, released and running live. The user tests on real
+devices before each release.
+
+**Not yet tested on real lights** (the user was out when these shipped). Do this
+first, together with the user:
+1. Add Soho (or Magneto) to the Kitchen card and tap it. It should animate, a tap
+   should pause and resume it, and `select.kitchen_scene` should say "Soho".
+2. Add "Soho · Kitchen Ambience". Only the ambience lights should change.
+3. Tap Bright or Relax. The tile should select and the select should follow.
+4. Scene builder: make a scene, **Try it in** a room, **Save**, then check it
+   appears in a light card's scene list.
+5. Gradient strips, if the house has any, should show several colours.
+
+If a colour scene sets fixed colours but doesn't animate, the bridge probably
+rejected the palette body in `apply.py`. The integration falls back to per-light
+colours and logs a warning ("Couldn't play … on the Hue bridge"). Read it with
+`ha_get_logs(source="system", search="church")`.
 
 | Card | Source | What it is |
 |---|---|---|
-| `battery-zone-card` / `gauge-zone-card` | `src/gauge-zone-card.js` | Zone card of gradient-filled value rows, worst-first, red/orange/green thresholds |
+| `battery-zone-card` / `gauge-zone-card` | `src/gauge-zone-card.js` | Zone card of gradient-filled value rows, worst-first, red/orange/green |
 | `alarm-panel-card` | `src/alarm-panel-card.js` | Alarm status, live entry/exit countdown, icon-only arm/disarm buttons |
-| `light-control-card` | `src/light-control-card.js` | Single light / group / room control with scene tiles |
+| `light-control-card` | `src/light-control-card.js` | Light / zone / room control with scene tiles |
+| `scene-styles-card` | `src/scene-styles-card.js` | Central scene tile looks (icon, colours, picture) |
+| `scene-builder-card` | `src/scene-builder-card.js` | Make custom universal scenes |
 
-Shared modules:
-- `src/form-editor.js`: the `ha-form` visual-editor base used by every card.
-- `src/scene-style.js`: scene tile gradients and icons.
-- `src/suffix.js`: holds the `-beta` name suffix for the beta build.
+Shared frontend modules:
+- `src/form-editor.js`: the `ha-form` visual-editor base.
+- `src/scene-style.js`: tile gradients and icons, plus central styles.
+- `src/universal-scenes.js`: loads the scene library and handles matching and
+  playing checks.
+- `src/icons.js`: icon-pack icons drawn as inline SVG.
+- `src/demo-home.js`: the pretend Hue home.
+- `src/suffix.js`: the `-beta` suffix.
 
-`README.md` has the user-facing docs and YAML examples.
+Integration modules (`custom_components/church_drive/`):
+- `__init__.py`: setup, card delivery, services and websocket commands.
+- `library.py`: built-in and custom scenes, plus colour conversion.
+- `apply.py`: applies a scene to lights, rooms or zones.
+- `select.py`: scene select entities.
+- `hue.py`: bridge access and the optional white-scene sync.
+- `config_flow.py`: the options screen (rooms for the sync).
+- `diagnostics.py`.
+
+`README.md` has the user-facing docs.
 
 ## How the user works (conventions)
 
-- **Test on Design Presets first.** The `design-presets` dashboard is the test bench.
-  New or changed cards go on its **Beta** tab (see below) before anything is released.
-- **Everything is set up from the UI.** Every card and option must be configurable
-  in the visual editor, with nothing YAML-only. New options need an editor field.
-- **Not wanted:**
-  - Don't put light room cards on the real dashboards (Mobile, Hayley, Living Room
-    Panel).
-  - Don't strip room names from scene labels in general. The light card shows the
-    Hue scene `name` attribute, which is fine.
-- **Non-Hue lights** are deferred until the user actually owns one. Don't build for
-  them speculatively.
-- The user prefers to be shown visual options side by side (rendered mock-ups) when a
-  style choice is open, rather than having one picked for them.
+- **Beta first.** New or changed card behaviour goes on the Design Presets **Beta**
+  tab. The user checks it, says "release it", and then it ships.
+- **Everything from the UI.** Every option needs a visual-editor field. Nothing is
+  YAML-only.
+- **Design Presets uses pretend lights only.** On the main and Beta tabs, light cards
+  are in demo mode, battery/gauge cards use fixed values, and the alarm uses
+  `demo: true`. The Scene builder tab is the exception: its "Try it in" uses real
+  lights by design.
+- **Mock-ups for style choices.** When a look is open, send rendered examples side by
+  side (an Artifact page works well) and let the user pick before building.
+- **No manual steps for the user.** Claude does HACS, restarts, dashboard edits and
+  config entries through the HA MCP tools.
+- **Non-Hue lights** are deferred until the user owns one.
+- Don't strip room names from scene labels in general.
+- Light room cards now replace the old tiles on the real dashboards; the user asked
+  for this. An earlier "keep them off the real dashboards" rule no longer applies.
 
-## Release and deployment pipeline
+## Release and deployment
 
-- **HACS:**
-  - Installed as a custom repository, category **Integration** (HACS id
-    `1385560733`). Before v0.7.0 it was category Dashboard with the resource
-    `/hacsfiles/church-drive-cards/church-drive-cards.js`; that resource was removed
-    in the switchover.
-  - The integration has one config entry (no options). `__init__.py` registers the
-    static path `/church_drive` → `frontend/` (no cache headers) once per HA run and
-    adds `/church_drive/church-drive-cards.js?v=<version>` as an extra module URL.
-    The version query makes browsers fetch the new bundle after an update.
-  - Since v0.10.1 it also keeps a Lovelace **resource** with the same URL
-    (created/updated at setup, removed when the integration is removed). A page
-    opened while HA is still starting gets the stored resource list even before
-    the extra module URL is added; without it every card showed "Configuration
-    error" until a refresh. Same URL, so the browser loads the bundle once.
-  - Switchover notes (2026-09-25): HACS keeps a custom repo's category even after
-    `ha_manage_hacs action=remove` (that only deletes the download). To change
-    category, also drop the registration with
-    `ha_call_service(ws_command="hacs/repositories/remove", data={"repository": "1385560733"})`,
-    then `add_repository` again. The config entry was added with
-    `ha_set_integration(domain="church_drive")` (entry `01M3C9Z12M0W755GDTM455NFVB`).
-  - Rollback: remove the config entry and the HACS download, then point a module
-    resource at the bundle on jsDelivr
-    (`…/church-drive-cards@<commit>/custom_components/church_drive/frontend/church-drive-cards.js`).
-  - An integration update needs an HA restart to take effect (HACS raises a repair
-    for it). Do a `ha_restart` after downloading.
-- **Build:**
-  - `npm run build` (`build.mjs`, esbuild) writes
-    `custom_components/church_drive/frontend/church-drive-cards.js` and
-    `church-drive-cards-beta.js`, and copies the `package.json` version into
-    `manifest.json`. Commit all of it.
-  - **Build check** (`.github/workflows/build-check.yml`) fails a PR if either
-    committed bundle is stale.
-- **Release** (`.github/workflows/release.yml`):
-  - Runs on every push to `main`.
-  - If `package.json`'s version has no GitHub release yet, it checks the bundles and
-    runs `gh release create vX.Y.Z`, which creates the tag (the bundle is attached
-    for reference; HACS installs the integration folder from the tag).
-  - To release: bump `version` (plus `npm install --package-lock-only` and
-    `npm run build`) in the PR, then merge.
-  - It's version-driven rather than tag-driven because the Claude cloud session can
-    push branches but not tags.
-- **After a release:**
-  - HACS only re-checks custom repos about every 48h, so run
-    `ha_manage_hacs action=update_information`, then `action=download` with
-    `version=vX.Y.Z`, then `ha_restart`.
-  - Once, GitHub returned HTTP 500 to HA for a fresh release asset. It downloaded fine
-    a couple of minutes later; wait and retry.
-- **Rollback:** reinstall an older release from HACS (Redownload → pick a version).
+- **Build:** `npm run build` (`build.mjs`, esbuild) writes
+  `custom_components/church_drive/frontend/church-drive-cards.js` and
+  `church-drive-cards-beta.js`, and copies the `package.json` version into
+  `manifest.json`. Commit all of it. **Build check** CI fails a PR if any of that is
+  stale.
+- **Release:**
+  1. Bump `version` in `package.json` and `package-lock.json`, run the build, and
+     set "Current release" here.
+  2. Open a PR and merge once CI is green. The Release workflow creates `vX.Y.Z`,
+     because the session can push branches but not tags.
+- **Install:**
+  1. `ha_manage_hacs(update_information, 1385560733)`, then
+     `download version=vX.Y.Z`.
+  2. Point the beta resource at the merge commit.
+  3. `ha_restart(confirm=True)`. The call returns a Cloudflare 502 because HA goes
+     down mid-request, which is expected. Wait about 3 minutes.
+  4. Verify: the `ad4dc52d…` resource shows `?v=X.Y.Z`, and system logs for
+     "church" are empty.
+- **How the cards load:**
+  - The integration registers the static path `/church_drive` → `frontend/` (no
+    cache headers).
+  - It adds `/church_drive/church-drive-cards.js?v=<version>` as an extra module
+    URL.
+  - Since v0.10.1 it also keeps a Lovelace **resource** with that same URL (id
+    `ad4dc52d0b0241f5b082a1c084c3072a`). It's updated at setup and removed with the
+    integration.
+  - Without the resource, a page opened while HA was starting showed "Configuration
+    error" on every card. The URLs are identical, so the browser loads the bundle
+    once.
+  - Don't add any other resource for the released cards.
+- **HACS:** custom repo, category Integration (id `1385560733`).
+  - Changing category needs `ha_call_service(ws_command="hacs/repositories/remove",
+    data={"repository": "1385560733"})` before `add_repository`, because a plain
+    remove keeps the category.
+  - The config entry is `01M3C9Z12M0W755GDTM455NFVB` (options: `scene_groups`).
 - **Beta channel:**
-  - `church-drive-cards-beta.js` is the same code with every card and editor
-    registered as `<name>-beta`, shown as "(beta)" in the card picker. It loads
-    alongside the release without clashing.
-  - HA loads it as a separate module resource (id `436186c683fe4c7d81c865b67bb0e109`)
-    from `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's currently pinned to `f3d476d` (v0.6.1 content; the cards code is unchanged in v0.7.0).
-  - Design Presets has a **Beta** tab (`/design-presets/beta`) with `-beta` copies of
-    all the example cards (light cards in demo mode). Nothing else uses beta cards.
-  - To test a branch: push it, repoint that resource's URL at the branch commit, and
-    have the user hard-refresh the Beta tab. Then bump, merge and release.
-  - jsDelivr is blocked from the Claude cloud container, but the user's browsers load
-    it fine.
+  - `church-drive-cards-beta.js` registers every card as `<name>-beta`.
+  - HA loads it from resource `436186c683fe4c7d81c865b67bb0e109`:
+    `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
+    It's pinned to the latest main merge (`fb5679e`).
+  - To test a branch: push it, repoint the resource, and ask for a hard refresh.
+  - jsDelivr is blocked from the cloud container, but works for the user.
+- **Rollback:** download an older release in HACS and restart.
+- **Dashboard edits:** use `ha_config_set_dashboard` with `python_transform` plus
+  `config_hash`.
+  - It needs `BestPracticeKey`. The key rotates hourly; re-read
+    `ha_get_skill_guide(skill='home-assistant-best-practices', file='SKILL.md')`
+    to get it.
+  - The sandbox forbids comprehensions that reference locals, so use loops.
+  - HA auto-backs up each dashboard edit.
+
+## Universal scenes
+
+### Library (`library.py`)
+- **White:** Bright, Cool bright, Dimmed, Read, Concentrate, Energise, Relax, Rest,
+  Nightlight.
+  - Values were read from the Kitchen's Hue scenes. Examples: Bright 370 mirek (2703K)
+    100%, Dimmed 370/30%, Read 346, Concentrate 233, Energise 156, Cool bright 250,
+    Relax 447/56.25%, Nightlight xy (0.561, 0.4042) at minimum.
+  - Rest (447/34%) is an estimate, because the Kitchen had no Hue Rest.
+- **Colour:** 18 animated palettes.
+  - Soho, Magneto, Ruby glow, Emerald isle and Dreamy dusk use real xy values read
+    from the bridge.
+  - Lake Placid, Toil and trouble, Spellbound, Storybook, Arise, Unwind, Pumpkin
+    patch, Phantom, City Blue, Aqua, Motown, Witching hour and Meriete are
+    approximated from hex.
+- **Custom:** from the Scene Builder, stored in HA storage `church_drive.scenes`.
+  - Fields: white takes kelvin + brightness; colour takes up to 9 hex colours,
+    brightness, animated (`dynamic`) and `speed`. Both can take an `icon`.
+- **Websocket:**
+  - `church_drive/library` returns `{scenes: [...frontend form], custom: [...stored]}`.
+  - `church_drive/scene/save` and `church_drive/scene/delete` are admin-only.
+  - `church_drive/scene/preview` plays an unsaved scene on a target.
+
+### Applying (`apply.py`, `church_drive.apply_scene`)
+- **White:** one `light.turn_on` on the target (kelvin/xy + brightness), so nothing
+  is stored on the bridge.
+- **Colour on a Hue room/zone:**
+  1. The target's HA entity maps to a grouped_light, whose owner is the room/zone.
+  2. That group's single working scene ("Church Drive", appdata `cd:live`, created
+     on first use, its HA entity hidden) is rewritten:
+     - actions: colours dealt round the lights, with 2–5 gradient points on
+       gradient lights;
+     - a palette (colours + dimming);
+     - the speed.
+  3. The scene is recalled with `dynamic_palette` (animated) or `active` (still).
+  - This adds at most one bridge scene per room/zone. It shows in the Hue app too.
+- **Anything else** (a single light, a non-Hue group, or a bridge error): colours
+  are dealt round the member lights with `light.turn_on`.
+- **Why not one bridge scene per room per scene:** the bridge already had ~123
+  scenes, and the full library everywhere would pass its ~200 limit.
+
+### Scene selects (`select.py`)
+- There's one `select.<room/zone>_scene` per Hue grouped light: 23 entities, e.g.
+  `select.kitchen_scene`.
+- **State:** the last scene applied there while its lights still match (an
+  animating light counts). Otherwise it's any white scene the lights match, or
+  unknown when the lights are off or set by hand.
+- **Attributes:** `target` (group entity) and `scene_key`.
+- **Behaviour:** choosing an option applies it. Options are every library name, and
+  they update when custom scenes change.
+
+### Optional bridge sync (`hue.py`, options screen)
+- Settings → Devices & services → Church Drive → Configure → pick rooms/zones.
+  Currently set to Kitchen only.
+- **What it does:** creates white library scenes on the bridge (tagged `cd:<key>`).
+  Same-name Hue app scenes are left untouched. Kitchen "Rest" was created this way
+  (`scene.kitchen_kitchen_rest`).
+- **When it runs:** at startup, on options change and via
+  `church_drive.sync_scenes`. Its response is a per-room summary.
+- **Diagnostics** dump the chosen rooms' scenes and light settings. That's how the
+  library values were read.
+
+### Card side
+- **Config:** a scene item `entity: universal:<key>` applies to the card's room.
+  `universal:<key>@<light entity>` targets one zone/group/light. YAML `scene: Bright`
+  also works.
+  - Target when there's no `@`: the card's Hue room group, else its zones/groups,
+    else its lights.
+- **Scene list in the editor:** universal scenes come first, once per place, e.g.
+  "Bright · Kitchen", "Bright · Kitchen Spotlights".
+  - Then the Hue scenes of the card's room/zones, always labelled with their group.
+  - Hue scenes named like a universal one are hidden. Scenes from elsewhere already
+    on the card stay, marked "(other room)".
+- **Tile names:** a zone-targeted tile reads "Bright · Spotlights" (room name
+  stripped).
+- **Tap:** a real home calls `church_drive.apply_scene`. The pretend home sets
+  lights locally; colour scenes animate via `DemoHome.playPalette`.
+- **Selected:** a universal tile is selected when its target's scene select says so,
+  or failing that when the lights match:
+  - brightness within 4/255;
+  - kelvin within 3%;
+  - xy within 0.03 of a palette colour;
+  - lights that can't show the colour only need to be on.
+- **Animated scenes:** they show playing ▶ or paused ⏸. Tapping a playing one
+  freezes each lit bulb at its current colour.
 
 ## Card features (current)
-
-### Battery / gauge zone card
-- **Visual editor:**
-  - Title.
-  - A collapsible *Colours, units and icons* section: which end is bad, red/orange
-    thresholds, unit, full-bar value, icon mode.
-  - An editable **Rows** list (HA `object` selector with `fields`): entity, name,
-    battery wording, secondary text, icon override, fixed value, date (date picker),
-    and unit/max overrides.
-- **Icon modes:** `battery` (steps with value), `gauge`, `entity` (registry icon →
-  state icon → device-class default via `<ha-state-icon>`), and `custom` (one icon
-  picker for every row). A row's own icon always wins.
-- **Starting config:** a new battery card starts with the three lowest real `%`
-  battery sensors; a new gauge card starts with one example row.
-- **Older YAML:** `demo_pct`/`demo_date` are still read. The Design Presets example
-  was migrated to `value`/`date`.
-
-### Alarm panel card
-- **Visual editor:** alarm entity picker, plus a collapsible demo section (state,
-  target state, countdown, by, time via a datetime picker normalised for Safari,
-  supported features).
-- **Starting config:** a new card starts with the first real alarm entity.
 
 ### Light control card
 - **Modes:**
   - `light`: one row.
-  - `group`: the group row with its member lights indented underneath.
-  - `room`: the area title, the area's Hue room/zone groups as top rows, and bulbs
-    indented underneath. Area comes from the entity **or** device (Hue sets it on the
-    device). Hidden entities and `entity_category` entities are skipped (e.g.
-    `light.hayleys_bedroom_air_purifier_display_backlight`).
+  - `group` ("Zone or light group"): the group plus its lights.
+  - `room`: the area's Hue room/zone groups plus the bulbs.
+  - Area comes from the entity or its device. Hidden and `entity_category` entities
+    are skipped.
+- **Show list** (`entities`): picks and orders the rows. Each row can set a name,
+  an icon and a `level` (0/1/2, 16px indent each). Defaults: room at 0, zones at 1
+  when a room is shown, lights one level under the deepest group.
 - **Rows:**
-  - A tap toggles; a horizontal drag sets brightness.
-  - The tune icon opens HA's more-info dialog without toggling. The row only acts on
-    presses that started on it.
-  - The row background is the light colour blended at 30% (`color-mix`), so
-    white/bright lights stay readable.
-  - Icons come from the entity registry first (custom `phu:*` Hue icons, from the
-    installed custom-brand-icons).
-- **Re-rendering:** rows only rebuild when one of the card's own lights, scenes or
-  scene groups changes, never mid-drag.
+  - A tap toggles, and a horizontal drag sets brightness.
+  - The tune icon opens more-info without toggling.
+  - The right-hand state reads Off / NN% / On / Unavailable.
+  - Off rows are dimmed. Lit rows are tinted 40% in the light's colour; white
+    lights use a warm/cool kelvin colour.
+  - Rows are 48px (top level) or 42px (children).
 - **Scene tiles:**
-  - Square tiles, up to `max_scenes` (default 8, two full rows; `0` hides them), in Hue app order
-    (the group's `hue_scenes`).
-  - Auto-detected from the scene's Hue group **device**. This includes Hue zones
-    made up only of the card's lights (e.g. *Living Room Ambience*, whose device has
-    no area). Duplicate names keep the first.
-  - Each tile shows a centred icon at about 40% of the tile width, with no circle, and
-    the scene name. The background is an uploaded picture (`image` selector) or a
-    gradient in the scene's palette; Hue doesn't give HA scene artwork, so
-    `scene-style.js` approximates the standard Hue scenes by name.
-  - **Selected:** the most recently activated scene (latest state timestamp) while
-    its group is on. It glows in its own colour with a slight lift, and the other
-    tiles dim.
-  - **Playing / paused:**
-    - Playing: the scene has `is_dynamic` and any **lit** bulb in its group reports
-      `dynamics: dynamic_palette`. Hue leaves `dynamics` set on bulbs after they're
-      off, so off bulbs are ignored. Shows a pulsing plain white ▶.
-    - Paused: an animated scene that's selected but not animating. Shows a plain
-      white ⏸.
-  - **Tap:**
-    - Static scene: `scene.turn_on`.
-    - Animated scene: `hue.activate_scene` with `dynamic: true`.
-    - Playing scene: **pause** by sending each lit bulb of the group `light.turn_on`
-      with its current `xy_color`/`color_temp_kelvin` and brightness. Re-activating
-      with `dynamic: false` does **not** work, because Hue restarts auto-dynamic
-      scenes.
-  - **Press and hold (~0.5s):** turns off all of the card's lights (vibrates where
-    supported; iPhones can't). A drag is neither a tap nor a hold, and the browser's
-    long-press menu is suppressed.
-  - **Editor:** *Max scenes*, plus a scene list of objects (scene, name, icon,
-    picture). Older plain lists of IDs are upgraded on load.
+  - They're the same height as a top row (48px), with 12px corners. The icon and
+    name sit side by side.
+  - **Rows:** at most 4 tiles per row, in as few rows as possible, shared out evenly
+    with any fuller row last. Each row fills the width: 5 = 2 + 3, 6 = 3 + 3,
+    7 = 3 + 4, 9 = 3 + 3 + 3.
+  - **Names:** hidden on tiles under 100px wide (`scene_names: auto`). `always` and
+    `never` override that.
+  - `max_scenes` defaults to 8, and 0 hides tiles.
+  - **Auto scenes** (none chosen): the Hue scenes of the card's groups plus zones
+    made only of its lights, in Hue app order, deduplicated by name.
+  - **Backgrounds:** an uploaded picture, else the central style, else a built-in
+    palette, else the scene's own colours (custom scenes), else a colour from a
+    name hash.
+  - **Selected:** the tile glows in its own colour and the other tiles dim. For Hue
+    scenes, the selected one is the most recently activated scene while its group
+    is on.
+  - **Playing** (pulsing ▶): any lit bulb reports `dynamics: dynamic_palette`.
+  - **Paused** (⏸): the selected animated scene isn't animating. Tapping a playing
+    tile pauses it by sending each lit bulb its current colour. Hue's
+    `dynamic:false` doesn't work for auto-dynamic scenes.
+  - **Tapping a Hue scene:** a static one uses `scene.turn_on`; an animated one uses
+    `hue.activate_scene` with `dynamic: true`.
+  - **Press and hold (~0.5s)** turns off all of the card's lights. A drag cancels
+    it.
+- **Demo mode** (`demo: true`, `demo_room: living_room | bedroom`): a pretend Hue
+  home. Configured scenes apply only when they're universal or exist in the pretend
+  home.
+- **Icons:**
+  - `src/icons.js` draws `phu:` and other pack icons as inline SVG, cached, and
+    waits up to 20s for a late pack. A missing icon becomes
+    `mdi:help-circle-outline`.
+  - `mdi:` icons use `<ha-icon>`.
 
-- **Show list** (`entities`, room and zone/group modes): picks and orders the
-  rows, each as an ID or `{entity, name}`.
-  - Room choices: the area's groups, Hue zones made only of its bulbs (even with
-    no area), and its bulbs.
-  - Zone choices: its member lights.
-  - The editor offers only valid choices, labelled room/zone/light from `hue_type`.
-  - An empty list, or one where nothing exists, shows everything.
-  - Each entry can set `level` (0 top, 1 child, 2 grandchild; 16px indent each).
-    Defaults: Hue room 0, zones 1 when a room is shown, lights one level under the
-    deepest group.
-- **Scene tile layout:** always four per row. Names are one line (ellipsis), scale
-  9–13px via `cqw`, and hide on tiles under 100px. `scene_names` (`auto` | `always` |
-  `never`) overrides that. The badge scales too.
-- **Demo mode** (`demo: true`, `demo_room: living_room | bedroom`): `src/demo-home.js`
-  simulates a Hue home in the browser (registries, `light.*`, `scene.turn_on`,
-  `hue.activate_scene` with cycling palettes). Nothing reaches HA. The tune icon is
-  hidden. **Every light card on Design Presets (main and Beta tabs) must use demo
-  mode**, because the user doesn't want those pages touching real devices.
+### Scene styles card
+- It's on Design Presets → **Scene styles**, and is keyed by scene name.
+- Each style sets an icon, `colour_1..3` or an `image`.
+- Light cards everywhere load it once per page from the `design-presets` config.
+- Precedence: a card's own override > the central style > built-in.
 
-- **Row state:** each row shows Off / NN% / On / Unavailable on the right (live
-  while dragging). Off rows are dimmed; lit rows are tinted 40% with warm/cool
-  mapped whites. Icon overrides work per Show-list entry and via the card `icon`
-  for the head row.
-- **Icon packs:** `src/icons.js` draws pack icons (`phu:` etc.) itself, as inline SVG
-  from `window.customIcons[prefix].getIcon()`, cached, and waits up to 20s for a pack
-  that registers late. `<ha-icon>` was unreliable here: it resolves once, and stayed
-  blank if the pack wasn't ready. `mdi:` icons still use `<ha-icon>`. An icon missing
-  from its pack falls back to `mdi:help-circle-outline`.
-- **White lights:** colour-temperature mode (or a very pale colour) uses the kelvin
-  warm/cool colour, not the near-white RGB.
+### Scene builder card
+- It's on Design Presets → **Scene builder**. It lists custom scenes (edit, delete)
+  and has a New scene form:
+  - name;
+  - White (kelvin) or Colours (up to 9 pickers; right-click removes one);
+  - brightness;
+  - animated + speed;
+  - icon.
+- **Try it in** plays the scene on a chosen real room/zone.
+- **Save** reloads the library for every card on the page.
 
-### Scene styles card (central scene looks)
-- `scene-styles-card` sits on the Design Presets **Scene styles** tab
-  (`/design-presets/scene-styles`) and is the single store for scene tile looks.
-- Its `styles` list is keyed by scene **name**, so one entry styles that scene in
-  every room. Each entry takes an icon, `colour_1..3` (`[r,g,b]`) or an `image`.
-- Light cards on any dashboard fetch the `design-presets` config (`lovelace/config`)
-  once per page and use it. On the same page, edits apply live via a window event.
-  The beta build prefers a `scene-styles-card-beta` if one exists.
-- Precedence: a card's own per-scene override > the central style > built-in
-  palettes (`src/scene-style.js`, covering every Hue scene name in the home).
+### Battery / gauge zone card and alarm panel card
+- The battery/gauge card has a full visual editor: rows list, colours/units/icons
+  section, and icon modes `battery | gauge | entity | custom`.
+- The alarm card has an entity picker and a demo section.
+- Starting configs pick real entities.
 
 ### All cards
-- **Sizing:**
-  - `getCardSize()` reflects the real height, for masonry.
-  - `getGridOptions()` is full width (min half) for sections views, where HA's own
-    Layout tab resizes.
-  - The live dashboards are masonry.
-- **Card picker:** a live preview (`preview: true`), a README link, and starting
-  configs with real entities.
+- `getCardSize()` gives the real height. `getGridOptions()` is full width, with a
+  minimum of half.
+- The card picker shows a preview and a README link.
 
-## Live Home Assistant notes
+## Live Home Assistant
 
-- **Dashboards using the cards:** Battery Status (`battery-status`), Alarm
-  (`alarm-panel`), and Design Presets (`design-presets`, main + Beta tabs). All three
-  use the masonry layout.
-- **Design Presets:** has notes for each card describing what to check. The light
-  examples use real Living Room lights, plus room cards for Hayleys Bedroom and
-  Hayley's Landing (two groups each).
-- **Living Room Hue setup:**
-  - `light.living_room` is the room group (scenes in order Nightlight, Rest, Bright).
-  - `light.living_room_ambience` is a zone (TV lightstrip + ceiling) holding the
-    animated scenes (Soho, Lake Placid, Toil and trouble…).
-  - `light.living_room_table_lights` is a zone with no scenes.
+- **HA** is 2026.9.x. The Hue bridge is `ecb5fa993162` (config entry
+  `01K9M3B829ZTWAA7DHVYPA79K4`), with 12 rooms and 11 zones.
+- **Dashboards using the cards:**
+  - **Mobile** (`dashboard-mobile`):
+    - Quick Actions has the alarm card and Kitchen / Living Room / Middle Floor
+      light cards.
+    - The **Lighting** tab has room cards for Kitchen, Living Room and Entrance
+      (Ground Floor); Garden (Patio Lightstrip + Garden Spotlight); Middle Floor
+      Hallway, Second Bedroom and Spare Bedroom; and Landing (Main + Ambient
+      Spotlights), Office, Hayley's Bedroom and En-Suite.
+    - The tiles' names and `phu:` icons were kept as row overrides.
+  - **Hayley** (`dashboard-hayley`): full-width light cards for Hayley's Bedroom,
+    Kitchen Spotlights, Living Room Ambience and Middle Floor. They replaced two
+    side-by-side tile pairs.
+  - **Living Room Panel** (`living-room-panel`): a Living Room card (Ceiling Light,
+    Shelf Table Lamp, TV lightstrip, TV Table Lamp) and a Kitchen card on its
+    Kitchen tab (Ambience + Spotlights).
+  - **Battery Status**, **Alarm**, and **Design Presets** (tabs: main, Beta, Scene
+    styles, Scene builder).
+- `light.outside` still sits in the Garden sensor list on Mobile's Security tab. It
+  was left there on purpose.
+- **Kitchen:**
+  - Room `light.kitchen` (8 lights).
+  - Zones `light.kitchen_spotlights` and `light.kitchen_ambience` (2 lights).
+  - The Mobile Kitchen card uses Hue scenes Energise, Bright, Cool bright and Ruby
+    glow.
+- **Living Room:** room `light.living_room`, zones `light.living_room_ambience` and
+  `light.living_room_table_lights`.
 
 ## Open items
 
-- The user may still find some editor options too complex once they've used them
-  properly. Ask which ones. Options: hide until needed, move into an "Advanced"
-  section, plainer labels.
-- The per-scene **picture upload** (`image` selector inside the scene list) hasn't
-  been tried on the real dashboard yet. If it misbehaves, fall back to a URL text
-  field.
-- Non-Hue lighting: deferred (see conventions).
+- The real-light tests at the top of this file.
+- The active-scene select doesn't list Hue-only scenes (e.g. Hue's Ruby glow in a
+  room). It only lists library scenes.
+- `scene.kitchen_kitchen_rest` has a doubled name. It's harmless and could be
+  renamed.
+- The user may find some editor options too complex. Ask which, then consider an
+  "Advanced" section.
+- Per-scene picture upload (`image` selector) is still untested on a real
+  dashboard.
+- Non-Hue lighting is deferred.
+- A later repo rename (e.g. to "church-drive") may happen. HACS would then need
+  re-adding.
 
 ## Dev loop
 
 ```bash
 npm install
-npm run build     # both bundles at repo root
-npm run watch     # rebuild both on change
+npm run build     # release bundle into custom_components/…/frontend + beta bundle at root
+npm run watch
+ruff check custom_components --select E,F,W,B --line-length 140   # Python lint
 ```
 
-Headless checks: Chromium with Playwright is available in the cloud container. Card
-behaviour has been tested by loading the built bundle into a page with stub `ha-icon`,
-`ha-card` and `ha-form` elements and a mock `hass` built from the real registry.
+**Headless checks:** Chromium and Playwright are available. Load
+`church-drive-cards-beta.js` into a page with a mock `hass` (states, entities,
+`callWS` returning a library, `callService` logging) and a light card in demo mode.
+Tap tiles and read back titles and classes. HA itself can't run in the container
+(Python 3.11), so check the Python by review, `py_compile`, ruff and small unit
+tests of `library.py`.
