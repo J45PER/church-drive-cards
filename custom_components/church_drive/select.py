@@ -1,11 +1,15 @@
 """Scene select entities: one per Hue room/zone ("Kitchen scene").
 
-The state is the universal scene the room is showing: the last one applied
-there while its lights still match it, else any white scene they match; none
-when the lights are off or set by hand. For a few seconds after a scene is
-applied it's shown regardless, while the lights change over (a Hue colour
-scene can briefly report them off). The last scene is restored after a
-restart. Choosing an option applies it.
+The state is the universal scene the room is showing:
+- a colour scene stays current from when it's applied until the lights are
+  all off, a light is set to plain white, or a Hue scene is recalled there.
+  Its colours can't be checked: while animating (or paused mid-animation)
+  the lights sit between palette colours, and Hue reports them unevenly;
+- a white scene is current while the lights match it;
+- otherwise any white scene the lights match, else none.
+For a few seconds after a scene is applied it's shown regardless, while the
+lights change over. The last scene is restored after a restart. Choosing an
+option applies it.
 """
 
 from __future__ import annotations
@@ -22,6 +26,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_call_later, async_track_state_change_event
 from homeassistant.helpers.restore_state import RestoreEntity
+from homeassistant.util import dt as dt_util
 
 from .apply import async_apply, members
 from .const import DOMAIN, SIGNAL_ACTIVE, SIGNAL_LIBRARY
@@ -81,6 +86,25 @@ def matches(hass: HomeAssistant, spec: dict, lights: list[str], playing_ok: bool
     return True
 
 
+def colour_still_on(hass: HomeAssistant, lights: list[str], group_name: str, since: float) -> bool:
+    """Whether a colour scene applied at `since` (epoch seconds) still holds."""
+    lit = [s for s in (hass.states.get(i) for i in lights) if s and s.state == "on"]
+    if not lit:
+        return False
+    for st in lit:
+        modes = set(st.attributes.get("supported_color_modes") or [])
+        if modes & COLOUR_MODES and st.attributes.get("color_mode") == "color_temp":
+            return False  # someone set it to plain white
+    for scene in hass.states.async_all("scene"):
+        name = str(scene.attributes.get("name", ""))
+        if scene.attributes.get("group_name") != group_name or name.startswith("Church Drive"):
+            continue
+        recalled = dt_util.parse_datetime(scene.state)
+        if recalled and recalled.timestamp() > since + 2:
+            return False  # a Hue scene was recalled here since
+    return True
+
+
 class SceneSelect(SelectEntity, RestoreEntity):
     """The universal scene a Hue room/zone is showing."""
 
@@ -92,6 +116,7 @@ class SceneSelect(SelectEntity, RestoreEntity):
         self._target = target
         self._attr_unique_id = f"church_drive_scene_{grouped_id}"
         self._attr_name = f"{group_name} scene"
+        self._group_name = group_name
         self._key: str | None = None
         self._unsub_lights = None
         self._recheck = None
@@ -105,6 +130,9 @@ class SceneSelect(SelectEntity, RestoreEntity):
         active = self.hass.data[DOMAIN].setdefault("active", {})
         if found and self._target not in active:
             active[self._target] = found[0]
+            self.hass.data[DOMAIN].setdefault("applied_wall", {})[self._target] = (
+                last_state.last_changed.timestamp()
+            )
         self.async_on_remove(async_dispatcher_connect(self.hass, SIGNAL_ACTIVE, self._applied))
         self.async_on_remove(async_dispatcher_connect(self.hass, SIGNAL_LIBRARY, self._refresh))
         self._track()
@@ -143,7 +171,15 @@ class SceneSelect(SelectEntity, RestoreEntity):
         last = data.get("active", {}).get(self._target)
         settling = time.monotonic() - data.get("applied_at", {}).get(self._target, -1e9) < SETTLE_SECONDS
         key = None
-        if last in scenes and (settling or matches(self.hass, scenes[last], lights, playing_ok=True)):
+        since = data.get("applied_wall", {}).get(self._target, 0)
+        if last in scenes and (
+            settling
+            or (
+                colour_still_on(self.hass, lights, self._group_name, since)
+                if scenes[last]["kind"] == "colour"
+                else matches(self.hass, scenes[last], lights, playing_ok=False)
+            )
+        ):
             key = last
         else:
             key = next(

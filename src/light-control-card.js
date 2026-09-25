@@ -733,7 +733,7 @@ export class LightControlCard extends HTMLElement {
       while (rows[rowIndex].children.length >= Number(rows[rowIndex].dataset.size)) rowIndex += 1;
       const tile = document.createElement('button');
       tile.className = s.active || !anyActive ? 'lcc-scene' : 'lcc-scene lcc-dim';
-      const glow = `color-mix(in srgb, ${scenePalette(s.name)[0]} 85%, transparent)`;
+      const glow = `color-mix(in srgb, ${scenePalette(s.name, s.colours)[0]} 85%, transparent)`;
       tile.title = s.playing ? `${s.name} (playing, tap to stop)` : s.paused ? `${s.name} (paused, tap to play)` : s.name;
       const bg = sceneBackground(s.name, s.image, s.colours);
       tile.style.cssText = `position:relative; container-type:inline-size; flex:1 1 0; min-width:0; height:48px; border:none; border-radius:12px; padding:0; overflow:hidden; cursor:pointer; background:${bg};${

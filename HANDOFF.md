@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-25. Current release: **v0.10.4**.*
+*Last updated 2026-09-25. Current release: **v0.10.5**.*
 
 ## Where this stands
 
@@ -141,12 +141,19 @@ Integration modules (`custom_components/church_drive/`):
     100%, Dimmed 370/30%, Read 346, Concentrate 233, Energise 156, Cool bright 250,
     Relax 447/56.25%, Nightlight xy (0.561, 0.4042) at minimum.
   - Rest (447/34%) is an estimate, because the Kitchen had no Hue Rest.
-- **Colour:** 18 animated palettes.
-  - Soho, Magneto, Ruby glow, Emerald isle and Dreamy dusk use real xy values read
-    from the bridge.
-  - Lake Placid, Toil and trouble, Spellbound, Storybook, Arise, Unwind, Pumpkin
-    patch, Phantom, City Blue, Aqua, Motown, Witching hour and Meriete are
-    approximated from hex.
+- **Colour:** 19 animated palettes read from this home's bridge (Hue diagnostics
+  `full_state` → scene `palette.color`, each colour `(x, y, brightness %)`, plus
+  Hue's own `speed` 0.60–0.73). The scenes are Soho, Magneto, Ruby glow, Emerald
+  isle, Dreamy dusk, Lake Placid, Toil and trouble, Spellbound, Storybook, Arise,
+  Shine, Unwind, Pumpkin patch, Phantom, City Blue, Motown, Witching hour and
+  Meriete. Aqua is still approximated because it wasn't on the bridge.
+  - Before v0.10.5 most palettes were rough hex guesses (3 very different
+    colours). They jumped between colours and felt too fast even at Hue's
+    speeds. Hue's palettes are 4–5 close colours, which drift gently.
+  - Per-colour brightness is used for each light's action and the palette.
+    Gradient points use `interpolated_palette`.
+  - Tiles for universal colour scenes use these real colours, taking priority
+    over the old `scene-style.js` approximations.
 - **Custom:** from the Scene Builder, stored in HA storage `church_drive.scenes`.
   - Fields: white takes kelvin + brightness; colour takes up to 9 hex colours,
     brightness, animated (`dynamic`) and `speed`. Both can take an `icon`.
@@ -182,9 +189,15 @@ Integration modules (`custom_components/church_drive/`):
 ### Scene selects (`select.py`)
 - There's one `select.<room/zone>_scene` per Hue grouped light: 23 entities, e.g.
   `select.kitchen_scene`.
-- **State:** the last scene applied there while its lights still match (an
-  animating light counts). Otherwise it's any white scene the lights match, or
-  unknown when the lights are off or set by hand.
+- **State:**
+  - **Colour scene:** sticky from when it's applied until the lights are all
+    off, a colour-capable light goes into `color_temp` mode, or a Hue scene of
+    that group (not "Church Drive…") is recalled after it (`colour_still_on`).
+    Colours can't be checked, because lights mid-animation or paused sit between
+    palette colours. In v0.10.4 a stray report knocked the select to unknown
+    ~45s after tapping, so a page refresh showed the tile unselected.
+  - **White scene:** current while the lights match it.
+  - **Otherwise:** a matching white scene, else unknown.
   - For 15s after an apply, the new scene is shown regardless, then rechecked.
     Before v0.10.4 the select dropped to unknown when the lights briefly reported
     off during a colour recall, so tiles didn't glow or show play/pause.
