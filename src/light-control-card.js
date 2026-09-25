@@ -17,6 +17,8 @@ import {
   universalTarget,
   universalScenes,
   universalTurnOnData,
+  universalDealColours,
+  universalScenePlaying,
 } from './universal-scenes.js';
 
 const LCC_DEFAULT_MAX_SCENES = 8;
@@ -558,9 +560,26 @@ export class LightControlCard extends HTMLElement {
   // doesn't work: Hue restarts the animation for scenes set to animate
   // automatically. Any explicit colour command does stop it, so send each lit
   // bulb of the scene's group the colour and brightness it's showing now.
+  // Real home: the integration applies it (colour scenes go through the Hue
+  // bridge so they can animate). Pretend home: set the lights directly.
+  _applyUniversal(scene) {
+    const lib = scene.universal;
+    if (!this.config.demo) {
+      this._hass.callService('church_drive', 'apply_scene', { entity_id: scene.targets, scene: lib.key });
+    } else if (lib.kind === 'colour' && this._demo) {
+      this._demo.playPalette(scene.targetLights, lib.colors, lib.brightness, !!lib.dynamic);
+    } else if (lib.kind === 'colour') {
+      universalDealColours(lib, scene.targetLights).forEach(({ entity_id, ...data }) =>
+        this._hass.callService('light', 'turn_on', data, { entity_id })
+      );
+    } else {
+      this._hass.callService('light', 'turn_on', universalTurnOnData(lib), { entity_id: scene.targets });
+    }
+  }
+
   _freezeScene(scene) {
     const hass = this._hass;
-    const ids = scene.group ? lccMembersOf(hass, scene.group) : this._cardLightIds || [];
+    const ids = scene.group ? lccMembersOf(hass, scene.group) : scene.targetLights || this._cardLightIds || [];
     ids
       .map((id) => hass.states[id])
       .filter((st) => st && st.state === 'on' && !lccIsGroupLike(st))
@@ -702,7 +721,7 @@ export class LightControlCard extends HTMLElement {
       tile.className = s.active || !anyActive ? 'lcc-scene' : 'lcc-scene lcc-dim';
       const glow = `color-mix(in srgb, ${scenePalette(s.name)[0]} 85%, transparent)`;
       tile.title = s.playing ? `${s.name} (playing, tap to stop)` : s.paused ? `${s.name} (paused, tap to play)` : s.name;
-      const bg = sceneBackground(s.name, s.image);
+      const bg = sceneBackground(s.name, s.image, s.colours);
       tile.style.cssText = `position:relative; container-type:inline-size; aspect-ratio:1 / 1; border:none; border-radius:14px; padding:0; overflow:hidden; cursor:pointer; background:${bg};${
         s.active ? ` box-shadow:0 0 16px 3px ${glow}; transform:scale(1.04); z-index:1;` : ''
       }`;
@@ -762,9 +781,8 @@ export class LightControlCard extends HTMLElement {
         moved = false;
         return;
       }
-      if (scene.universal) {
-        this._hass.callService('light', 'turn_on', universalTurnOnData(scene.universal), { entity_id: scene.targets });
-      } else if (scene.playing) this._freezeScene(scene);
+      if (scene.playing) this._freezeScene(scene);
+      else if (scene.universal) this._applyUniversal(scene);
       else this._activateScene(scene.entity, scene.isDynamic);
     });
   }
@@ -823,7 +841,18 @@ export class LightControlCard extends HTMLElement {
           const tLights = own
             ? [...new Set(own.flatMap((id) => (lccIsGroupLike(hass.states[id]) ? lccMembersOf(hass, id) : [id])))]
             : targetLights;
-          return { ...s, name, isDynamic: false, icon: s.icon || sceneIcon(lib.name, false), universal: lib, targets: tTargets, targetLights: tLights, activated: 0 };
+          const isDynamic = lib.kind === 'colour' && !!lib.dynamic;
+          return {
+            ...s,
+            name,
+            isDynamic,
+            icon: s.icon || lib.icon || sceneIcon(lib.name, isDynamic),
+            colours: lib.hex,
+            universal: lib,
+            targets: tTargets,
+            targetLights: tLights,
+            activated: 0,
+          };
         }
         const st = hass.states[s.entity];
         const isDynamic = st.attributes.is_dynamic === true;
@@ -838,10 +867,29 @@ export class LightControlCard extends HTMLElement {
         };
       });
 
-    // A universal scene is selected while the lights match it.
-    const matching = scenes.find((sc) => sc.universal && universalSceneActive(hass, sc.universal, sc.targetLights));
+    // A universal scene is selected while its room/zone shows it: the
+    // integration's scene select says so for a Hue room/zone, otherwise the
+    // lights have to match it. Animated ones show playing or paused.
+    const selectFor = (target) =>
+      Object.values(hass.states).find((st) => st.entity_id.startsWith('select.') && st.attributes.target === target);
+    // Watch those selects so the card redraws when they change.
+    this._sceneSelects = scenes
+      .filter((sc) => sc.universal && sc.targets.length === 1)
+      .map((sc) => selectFor(sc.targets[0]))
+      .filter(Boolean)
+      .map((st) => st.entity_id);
+    const matching = scenes.find((sc) => {
+      if (!sc.universal) return false;
+      const sel = sc.targets.length === 1 ? selectFor(sc.targets[0]) : null;
+      if (sel) return sel.attributes.scene_key === sc.universal.key;
+      return universalSceneActive(hass, sc.universal, sc.targetLights);
+    });
     if (matching) {
       matching.active = true;
+      if (matching.isDynamic) {
+        matching.playing = universalScenePlaying(hass, matching.targetLights);
+        matching.paused = !matching.playing;
+      }
       return scenes;
     }
 
@@ -974,6 +1022,7 @@ export class LightControlCard extends HTMLElement {
       ...relevantEntityIds,
       ...scenes.filter((s) => !s.universal).map((s) => s.entity),
       ...scenes.flatMap((s) => s.targetLights || []),
+      ...(this._sceneSelects || []),
       ...scenes.map((s) => s.group).filter(Boolean),
       ...scenes.filter((s) => s.group).flatMap((s) => lccMembersOf(hass, s.group)),
     ];

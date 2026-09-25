@@ -1,0 +1,144 @@
+"""Scene select entities: one per Hue room/zone ("Kitchen scene").
+
+The state is the universal scene the room is showing: the last one applied
+there while its lights still match it, else any white scene they match; none
+when the lights are off or set by hand. Choosing an option applies it.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from homeassistant.components.select import SelectEntity
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import ATTR_ENTITY_ID
+from homeassistant.core import Event, HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.event import async_track_state_change_event
+
+from .apply import async_apply, members
+from .const import DOMAIN, SIGNAL_ACTIVE, SIGNAL_LIBRARY
+from .hue import async_get_bridge_api
+from .library import Library
+
+COLOUR_MODES = {"xy", "hs", "rgb", "rgbw", "rgbww"}
+
+
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
+    """One select per Hue room/zone light entity."""
+    api = async_get_bridge_api(hass)
+    if api is None:
+        return
+    registry = er.async_get(hass)
+    entities = []
+    for grouped in api.groups.grouped_light:
+        owner = grouped.owner.rid
+        group = api.groups.room.get(owner) or api.groups.zone.get(owner)
+        entity_id = registry.async_get_entity_id("light", "hue", grouped.id)
+        if group is None or entity_id is None:
+            continue
+        entities.append(SceneSelect(hass.data[DOMAIN]["library"], grouped.id, entity_id, group.metadata.name))
+    async_add_entities(entities)
+
+
+def matches(hass: HomeAssistant, spec: dict, lights: list[str], playing_ok: bool) -> bool:
+    """Whether the lit lights are showing a scene."""
+    lit = [s for s in (hass.states.get(i) for i in lights) if s and s.state == "on"]
+    if not lit:
+        return False
+    target = max(1, round(spec["brightness"] * 255 / 100))
+    for st in lit:
+        a = st.attributes
+        modes = set(a.get("supported_color_modes") or [])
+        if playing_ok and a.get("dynamics") == "dynamic_palette":
+            continue
+        if a.get("brightness") is not None and abs(a["brightness"] - target) > 4:
+            return False
+        if spec["kind"] == "colour" or "xy" in spec:
+            xy = a.get("xy_color")
+            colors = spec["colors"] if spec["kind"] == "colour" else [spec["xy"]]
+            if modes & COLOUR_MODES and not (
+                xy and any(abs(xy[0] - c[0]) < 0.03 and abs(xy[1] - c[1]) < 0.03 for c in colors)
+            ):
+                return False
+        elif "color_temp" in modes:
+            kelvin = round(1_000_000 / spec["mirek"])
+            if a.get("color_mode") != "color_temp" or a.get("color_temp_kelvin") is None:
+                return False
+            if abs(a["color_temp_kelvin"] - kelvin) > kelvin * 0.03:
+                return False
+    return True
+
+
+class SceneSelect(SelectEntity):
+    """The universal scene a Hue room/zone is showing."""
+
+    _attr_should_poll = False
+    _attr_icon = "mdi:palette"
+
+    def __init__(self, library: Library, grouped_id: str, target: str, group_name: str) -> None:
+        self._library = library
+        self._target = target
+        self._attr_unique_id = f"church_drive_scene_{grouped_id}"
+        self._attr_name = f"{group_name} scene"
+        self._key: str | None = None
+        self._unsub_lights = None
+        self._attr_options = [spec["name"] for spec in library.all().values()]
+        self._attr_current_option = None
+
+    async def async_added_to_hass(self) -> None:
+        self.async_on_remove(async_dispatcher_connect(self.hass, SIGNAL_ACTIVE, self._refresh))
+        self.async_on_remove(async_dispatcher_connect(self.hass, SIGNAL_LIBRARY, self._refresh))
+        self._track()
+        self.async_on_remove(lambda: self._unsub_lights and self._unsub_lights())
+        self._refresh()
+
+    @callback
+    def _track(self) -> None:
+        if self._unsub_lights:
+            self._unsub_lights()
+        self._unsub_lights = async_track_state_change_event(
+            self.hass, [self._target, *members(self.hass, self._target)], self._on_lights
+        )
+
+    @callback
+    def _on_lights(self, event: Event) -> None:
+        if event.data.get(ATTR_ENTITY_ID) == self._target:
+            self._track()  # members may have changed
+        self._refresh()
+
+    @callback
+    def _refresh(self) -> None:
+        scenes = self._library.all()
+        self._attr_options = [spec["name"] for spec in scenes.values()]
+        lights = members(self.hass, self._target)
+        last = self.hass.data[DOMAIN].get("active", {}).get(self._target)
+        key = None
+        if last in scenes and matches(self.hass, scenes[last], lights, playing_ok=True):
+            key = last
+        else:
+            key = next(
+                (
+                    k
+                    for k, spec in scenes.items()
+                    if spec["kind"] == "white" and matches(self.hass, spec, lights, False)
+                ),
+                None,
+            )
+        self._key = key
+        self._attr_current_option = scenes[key]["name"] if key else None
+        if self.hass and self.entity_id:
+            self.async_write_ha_state()
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return {"target": self._target, "scene_key": self._key}
+
+    async def async_select_option(self, option: str) -> None:
+        found = self._library.find(option)
+        if found:
+            await async_apply(self.hass, [self._target], found[0], found[1])

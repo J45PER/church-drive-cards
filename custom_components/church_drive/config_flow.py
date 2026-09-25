@@ -24,9 +24,7 @@ class ChurchDriveConfigFlow(ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Create the single entry straight away."""
         await self.async_set_unique_id(DOMAIN)
         self._abort_if_unique_id_configured()
@@ -42,9 +40,7 @@ class ChurchDriveConfigFlow(ConfigFlow, domain=DOMAIN):
 class ChurchDriveOptionsFlow(OptionsFlow):
     """Choose the rooms and zones the universal scenes sync to."""
 
-    async def async_step_init(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         api = async_get_bridge_api(self.hass)
         if api is None:
             return self.async_abort(reason="hue_not_ready")

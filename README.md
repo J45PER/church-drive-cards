@@ -1,6 +1,12 @@
 # Church Drive
 
-A Home Assistant integration for the Church Drive house. Today it delivers the house's custom Lovelace cards: it serves the cards bundle and loads it on every dashboard, so there's no Lovelace resource to manage. It also keeps a library of **universal scenes**: Bright, Cool bright, Dimmed, Read, Concentrate, Energise, Relax, Rest and Nightlight, using the Hue app's own values. A Light Control card can use any of them in any room. Pick them in the card's Scenes list, where they come first, once for the room and once for each of its zones (e.g. "Bright · Kitchen Spotlights" sets only the spotlights). Tapping one sets the card's room (or zone, or lights) in a single `light.turn_on`, so no Hue scene is needed and nothing is stored on the bridge. The tile shows as selected while the lights match it. Automations can use the `church_drive.apply_scene` action. Optionally, the integration can also create the library as real Hue scenes in chosen rooms (Settings → Devices & services → Church Drive → Configure). For each chosen room, a scene the room doesn't have is created on the bridge (tagged as a Church Drive scene), and a Hue scene with the same name that's already there is left untouched. That sync runs at startup, when the options change, and on the `church_drive.sync_scenes` action. The bridge holds about 200 scenes in total, so the card route is the one to use for every room.
+A Home Assistant integration for the Church Drive house. Today it delivers the house's custom Lovelace cards: it serves the cards bundle and loads it on every dashboard, so there's no Lovelace resource to manage. It also keeps a library of **universal scenes** that any Light Control card can use in any room or zone:
+
+- **White scenes** (Bright, Cool bright, Dimmed, Read, Concentrate, Energise, Relax, Rest, Nightlight, using the Hue app's own values). They're set with one `light.turn_on`, so nothing is stored on the Hue bridge.
+- **Colour scenes**: Hue's animated ones (Soho, Magneto, Ruby glow, Emerald isle, Lake Placid and others). They're played through one hidden working scene per Hue room or zone called "Church Drive", so they can animate like Hue's dynamic scenes, and gradient strips show several colours. Tap a playing scene to pause it, and tap again to play.
+- **Your own scenes**, from the **Scene Builder card**: white (colour temperature + brightness) or up to nine colours, optionally animated at a chosen speed, with an optional icon. "Try in" plays an unsaved scene on a real room.
+
+Pick them in a light card's Scenes list, once for the room and once for each of its zones (e.g. "Bright · Kitchen Spotlights" sets only the spotlights). Each Hue room and zone also gets a **scene select** entity (e.g. `select.kitchen_scene`). It shows the universal scene the room is on, choosing an option applies it, and it's handy for automations. The `church_drive.apply_scene` action does the same for any lights. Optionally the white scenes can also be created as real Hue scenes in chosen rooms (Settings → Devices & services → Church Drive → Configure). That's useful for Hue switches and the Hue app. It runs at startup, on options change and on the `church_drive.sync_scenes` action.
 
 The cards share one bundle and one look: no border, drop shadow, rounded top/bottom corners only, hover tints on interactive elements.
 
@@ -78,6 +84,9 @@ mode: group
 entity: light.living_room
 name: Living Room (group)
 ```
+
+### `scene-builder-card`
+Make your own universal scenes: a name, white or colours, brightness, animated or still with a speed, and an icon. Try them on a room before saving. Saved scenes appear in every light card's scene list. It lives on the Design Presets dashboard's **Scene builder** tab. Saving needs an admin user.
 
 ### `scene-styles-card`
 The central place to style scene tiles. It sits on the Design Presets dashboard's **Scene styles** tab and previews every scene name in the house with its current look. In its visual editor, each entry picks a scene **name** and sets an icon, up to three background colours, or a picture. That style then applies to that scene in every room, on every Light Control card, on every dashboard. A light card's own per-scene overrides still win, and unstyled scenes use built-in colours matched to the Hue scene names.

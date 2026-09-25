@@ -138,12 +138,15 @@ export function loadSceneStyles(hass) {
 
 // Hex colours for the scene: central colours, built-in palette, or a stable
 // pair derived from the name.
-export function scenePalette(name) {
+// `fallback` (e.g. a custom scene's own colours) is used for names without
+// a built-in palette.
+export function scenePalette(name, fallback) {
   const style = centralSceneStyle(name);
   const custom = style ? [style.colour_1, style.colour_2, style.colour_3].filter(Boolean).map(toHex) : [];
   if (custom.length) return custom.length === 1 ? [custom[0], custom[0]] : custom;
   const key = sceneKey(name);
   if (PALETTES[key]) return PALETTES[key];
+  if (fallback && fallback.length) return fallback.length === 1 ? [fallback[0], fallback[0]] : fallback;
   let h = 0;
   for (const ch of key) h = (h * 31 + ch.charCodeAt(0)) % 360;
   return [hslHex(h, 0.7, 0.55), hslHex((h + 50) % 360, 0.7, 0.35)];
@@ -151,11 +154,11 @@ export function scenePalette(name) {
 
 // CSS background: an explicit picture (card override or central), else the
 // palette gradient.
-export function sceneBackground(name, image) {
+export function sceneBackground(name, image, fallback) {
   const style = centralSceneStyle(name);
   const picture = image || (style && style.image);
   if (picture) return `center / cover no-repeat url("${picture}")`;
-  return `linear-gradient(135deg, ${scenePalette(name).join(', ')})`;
+  return `linear-gradient(135deg, ${scenePalette(name, fallback).join(', ')})`;
 }
 
 export function sceneIcon(name, isDynamic) {

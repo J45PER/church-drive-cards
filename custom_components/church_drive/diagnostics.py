@@ -11,9 +11,7 @@ from .const import CONF_SCENE_GROUPS
 from .hue import async_describe
 
 
-async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry
-) -> dict[str, Any]:
+async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, Any]:
     """Return the synced groups' scenes and their light settings."""
     return {
         "options": dict(entry.options),
