@@ -1709,7 +1709,8 @@
       });
       return row;
     }
-    // Square scene tiles: picture (or palette gradient) background, icon, name.
+    // Scene tiles, the same height as a light row: picture (or palette
+    // gradient) background with the icon and name side by side.
     // The selected scene glows in its own colour and the others are dimmed; an
     // animated scene shows a pulsing play badge while running, pause when not.
     _buildScenes(scenes) {
@@ -1718,20 +1719,23 @@
       const names = ["always", "never"].includes(this.config.scene_names) ? this.config.scene_names : "auto";
       const wrap = document.createElement("div");
       wrap.className = `lcc-names-${names}`;
-      wrap.style.cssText = "display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px; margin-top:12px; padding:4px 4px 8px;";
+      wrap.style.cssText = "display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:6px; margin-top:10px; padding:2px 0 4px;";
       scenes.forEach((s) => {
         const tile = document.createElement("button");
         tile.className = s.active || !anyActive ? "lcc-scene" : "lcc-scene lcc-dim";
         const glow = `color-mix(in srgb, ${scenePalette(s.name)[0]} 85%, transparent)`;
         tile.title = s.playing ? `${s.name} (playing, tap to stop)` : s.paused ? `${s.name} (paused, tap to play)` : s.name;
         const bg = sceneBackground(s.name, s.image, s.colours);
-        tile.style.cssText = `position:relative; container-type:inline-size; aspect-ratio:1 / 1; border:none; border-radius:14px; padding:0; overflow:hidden; cursor:pointer; background:${bg};${s.active ? ` box-shadow:0 0 16px 3px ${glow}; transform:scale(1.04); z-index:1;` : ""}`;
+        tile.style.cssText = `position:relative; container-type:inline-size; height:48px; border:none; border-radius:12px; padding:0; overflow:hidden; cursor:pointer; background:${bg};${s.active ? ` box-shadow:0 0 12px 2px ${glow}; transform:scale(1.03); z-index:1;` : ""}`;
+        const badge = (cls, icon, title) => `<ha-icon class="${cls}" icon="${icon}" title="${title}" style="position:absolute; top:50%; right:5px; transform:translateY(-50%); --mdc-icon-size:16px; color:#fff; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.7));"></ha-icon>`;
         tile.innerHTML = `
-        <div style="position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0) 65%);"></div>
-        ${iconHtml(s.icon, { size: "40cqw", cls: "lcc-scene-icon", style: "position:absolute; left:50%; top:44%; transform:translate(-50%, -50%); color:#fff; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.55));" })}
-        ${s.paused ? '<ha-icon class="lcc-paused" icon="mdi:pause" title="Paused" style="position:absolute; top:6px; right:6px; --mdc-icon-size:20px; color:#fff; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.7));"></ha-icon>' : ""}
-        ${s.playing ? '<ha-icon class="lcc-playing" icon="mdi:play" title="Playing" style="position:absolute; top:6px; right:6px; --mdc-icon-size:20px; color:#fff; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.7));"></ha-icon>' : ""}
-        <div class="lcc-scene-name" style="position:absolute; left:8px; right:8px; bottom:7px; text-align:center; color:#fff; font-weight:600; line-height:1.15; text-shadow:0 1px 2px rgba(0,0,0,0.6); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>`;
+        <div style="position:absolute; inset:0; background:rgba(0,0,0,0.18);"></div>
+        <div class="lcc-scene-body" style="position:relative; display:flex; align-items:center; justify-content:center; gap:6px; height:100%; padding:0 8px; color:#fff;">
+          ${iconHtml(s.icon, { size: "22px", cls: "lcc-scene-icon", style: "flex-shrink:0; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.55));" })}
+          <span class="lcc-scene-name" style="min-width:0; font-weight:600; line-height:1.15; text-shadow:0 1px 2px rgba(0,0,0,0.6); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></span>
+        </div>
+        ${s.paused ? badge("lcc-paused", "mdi:pause", "Paused") : ""}
+        ${s.playing ? badge("lcc-playing", "mdi:play", "Playing") : ""}`;
         tile.querySelector(".lcc-scene-name").textContent = s.name;
         this._bindSceneTile(tile, s);
         wrap.appendChild(tile);
@@ -1900,18 +1904,14 @@
             .lcc-scene { transition: opacity 0.2s, filter 0.2s, transform 0.2s, box-shadow 0.2s; }
             .lcc-scene.lcc-dim { opacity: 0.4; filter: saturate(0.4); }
             .lcc-scene.lcc-dim:hover { opacity: 0.8; filter: none; }
-            /* Always four tiles per row: text and badges scale with the tile
-               (cqw = % of tile width), and names hide when tiles get too small. */
-            .lcc-scene-name { font-size: clamp(9px, 12.5cqw, 13px); }
-            .lcc-scene .lcc-playing, .lcc-scene .lcc-paused { --mdc-icon-size: clamp(12px, 20cqw, 20px) !important; }
-            /* Scene names: one line (\u2026 if too long) so they never run into
-               the icon. Auto hides them on tiles under 100px; never always does. */
+            /* Always four tiles per row, each as tall as a light row. Names
+               sit beside the icon on one line (\u2026 if too long); auto hides
+               them on tiles under 100px wide, never always does. */
+            .lcc-scene-name { font-size: 13px; }
             @container (max-width: 99px) {
               .lcc-names-auto .lcc-scene-name { display: none; }
-              .lcc-names-auto .lcc-scene-icon { top: 50% !important; }
             }
             .lcc-names-never .lcc-scene-name { display: none; }
-            .lcc-names-never .lcc-scene-icon { top: 50% !important; }
           </style>
           <div class="lcc-title" style="display:none; padding:0 0 10px 0; font-size:1.5rem; font-weight:500; color: var(--primary-text-color);"></div>
           <div class="lcc-main"></div>
@@ -2014,7 +2014,7 @@
       const scenesGrid = this._buildScenes(scenes);
       if (scenesGrid) this._scenesEl.appendChild(scenesGrid);
       hydrateIcons(this);
-      this._size = 1 + (mode === "room" ? 1 : 0) + Math.max(relevantEntityIds.length, 1) + Math.ceil(scenes.length / 4) * 2;
+      this._size = 1 + (mode === "room" ? 1 : 0) + Math.max(relevantEntityIds.length, 1) + Math.ceil(scenes.length / 4);
     }
     getCardSize() {
       return this._size || 3;
