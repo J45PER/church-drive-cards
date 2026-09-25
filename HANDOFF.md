@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-25. Current release: **v0.10.5**.*
+*Last updated 2026-09-25. Current release: **v0.10.6**.*
 
 ## Where this stands
 
@@ -30,8 +30,7 @@ devices before each release.
 - White scenes (Bright, Relax, Nightlight) select and match.
 - Scene builder: the user made a custom colour scene, tried it and saved it.
 
-**On Beta, not yet released** (test on the Design Presets Beta tab, then real
-lights):
+**New in v0.10.6, still to check on real lights:**
 1. **No two lights share a colour.** The user saw a custom two-colour scene put
    the same colour on several lights at once (colours were dealt round, so light
    1 and 3 matched). Now `spread()` in `apply.py` (and `spreadColours()` in
