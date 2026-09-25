@@ -11,8 +11,10 @@ import {
   UNIVERSAL_PREFIX,
   loadUniversalScenes,
   onUniversalScenesChanged,
+  universalRef,
   universalScene,
   universalSceneActive,
+  universalTarget,
   universalScenes,
   universalTurnOnData,
 } from './universal-scenes.js';
@@ -191,34 +193,45 @@ function lccSceneChoices(hass, config) {
   if (!hass || !hass.states) return [];
   loadUniversalScenes(hass);
   const { groups, lights } = lccCardLights(hass, config);
-  const ids = lccSceneGroups(hass, groups, lights).flatMap((g) => lccGroupScenes(hass, g));
+  // The room first, then its zones.
+  const isRoom = (id) => hass.states[id].attributes.hue_type === 'room';
+  const sceneGroups = lccSceneGroups(hass, groups, lights).sort(
+    (a, b) => (isRoom(b) ? 1 : 0) - (isRoom(a) ? 1 : 0) || lccGroupName(hass, a).localeCompare(lccGroupName(hass, b))
+  );
+  const ids = sceneGroups.flatMap((g) => lccGroupScenes(hass, g));
   const nameOf = (id) => hass.states[id].attributes.name || hass.states[id].attributes.friendly_name || id;
-  const counts = {};
-  ids.forEach((id) => {
-    const key = nameOf(id).toLowerCase();
-    counts[key] = (counts[key] || 0) + 1;
+  // Universal scenes first, one per scene per place: the room and each of
+  // its zones. A card with no Hue group gets them for its lights as a whole.
+  const options = [];
+  universalScenes().forEach((u) => {
+    if (!sceneGroups.length) options.push({ value: universalRef(u.key), label: u.name });
+    sceneGroups.forEach((g) => options.push({ value: universalRef(u.key, g), label: `${u.name} · ${lccGroupName(hass, g)}` }));
   });
-  // Universal scenes first (they work in any room); a Hue scene of the same
-  // name is left out as it would do the same thing.
-  const universal = universalScenes();
-  const universalNames = new Set(universal.map((u) => u.name.toLowerCase()));
-  const options = universal.map((u) => ({ value: `${UNIVERSAL_PREFIX}${u.key}`, label: u.name }));
-  ids
-    .filter((id) => !universalNames.has(nameOf(id).toLowerCase()))
-    .forEach((id) => {
-      const name = nameOf(id);
-      const group = hass.states[id].attributes.group_name;
-      options.push({ value: id, label: counts[name.toLowerCase()] > 1 && group ? `${name} · ${group}` : name });
-    });
+  // Then the Hue scenes, each labelled with the room or zone it belongs to;
+  // one named like a universal scene is left out (it would do the same).
+  const universalNames = new Set(universalScenes().map((u) => u.name.toLowerCase()));
+  ids.filter((id) => !universalNames.has(nameOf(id).toLowerCase())).forEach((id) => {
+    const group = hass.states[id].attributes.group_name;
+    options.push({ value: id, label: group ? `${nameOf(id)} · ${group}` : nameOf(id) });
+  });
   // Keep scenes already on the card visible even if they're from elsewhere.
   lccNormalizeScenes(config.scenes).forEach((s) => {
-    if (lccIsUniversal(s.entity) || options.some((o) => o.value === s.entity)) return;
-    if (!ids.includes(s.entity)) {
-      const st = hass.states[s.entity];
-      options.push({ value: s.entity, label: `${st ? nameOf(s.entity) : s.entity} (other room)` });
+    if (options.some((o) => o.value === s.entity)) return;
+    if (lccIsUniversal(s.entity)) {
+      const u = universalScene(s.entity);
+      const target = universalTarget(s.entity);
+      if (u) options.push({ value: s.entity, label: target ? `${u.name} · ${lccGroupName(hass, target)}` : u.name });
+      return;
     }
+    const st = hass.states[s.entity];
+    options.push({ value: s.entity, label: `${st ? nameOf(s.entity) : s.entity} (other room)` });
   });
   return options;
+}
+
+function lccGroupName(hass, id) {
+  const st = hass.states[id];
+  return (st && st.attributes.friendly_name) || id;
 }
 
 // `entities` config items may be plain IDs or { entity, name? } objects.
@@ -794,8 +807,23 @@ export class LightControlCard extends HTMLElement {
       .map((s) => {
         if (lccIsUniversal(s.entity)) {
           const lib = universalScene(s.entity);
-          const name = s.name || lib.name;
-          return { ...s, name, isDynamic: false, icon: s.icon || sceneIcon(name, false), universal: lib, targets, targetLights, activated: 0 };
+          // Aimed at one zone/group: just its lights, and the tile says where
+          // (the zone name without the room's, e.g. "Bright · Spotlights").
+          const target = universalTarget(s.entity);
+          const own = target && hass.states[target] ? [target] : null;
+          let name = s.name || lib.name;
+          if (!s.name && own && hass.states[target].attributes.hue_type !== 'room') {
+            const area = hass.areas && cfg.area && hass.areas[cfg.area];
+            const room = rooms[0] ? lccGroupName(hass, rooms[0]) : (area && area.name) || '';
+            const zone = lccGroupName(hass, target);
+            const short = room && zone.toLowerCase().startsWith(`${room.toLowerCase()} `) ? zone.slice(room.length + 1) : zone;
+            name = `${lib.name} · ${short}`;
+          }
+          const tTargets = own || targets;
+          const tLights = own
+            ? [...new Set(own.flatMap((id) => (lccIsGroupLike(hass.states[id]) ? lccMembersOf(hass, id) : [id])))]
+            : targetLights;
+          return { ...s, name, isDynamic: false, icon: s.icon || sceneIcon(lib.name, false), universal: lib, targets: tTargets, targetLights: tLights, activated: 0 };
         }
         const st = hass.states[s.entity];
         const isDynamic = st.attributes.is_dynamic === true;
@@ -811,7 +839,7 @@ export class LightControlCard extends HTMLElement {
       });
 
     // A universal scene is selected while the lights match it.
-    const matching = scenes.find((sc) => sc.universal && universalSceneActive(hass, sc.universal, targetLights));
+    const matching = scenes.find((sc) => sc.universal && universalSceneActive(hass, sc.universal, sc.targetLights));
     if (matching) {
       matching.active = true;
       return scenes;
