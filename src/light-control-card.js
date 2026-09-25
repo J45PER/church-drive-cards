@@ -706,7 +706,9 @@ export class LightControlCard extends HTMLElement {
   }
 
   // Scene tiles, the same height as a light row: picture (or palette
-  // gradient) background with the icon and name side by side.
+  // gradient) background with the icon and name side by side. At most four
+  // per row in as few rows as possible, shared out evenly with any fuller
+  // row last (6 = 3 + 3, 5 = 2 + 3, 7 = 3 + 4); each row fills the width.
   // The selected scene glows in its own colour and the others are dimmed; an
   // animated scene shows a pulsing play badge while running, pause when not.
   _buildScenes(scenes) {
@@ -715,15 +717,26 @@ export class LightControlCard extends HTMLElement {
     const names = ['always', 'never'].includes(this.config.scene_names) ? this.config.scene_names : 'auto';
     const wrap = document.createElement('div');
     wrap.className = `lcc-names-${names}`;
-    wrap.style.cssText =
-      'display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:6px; margin-top:10px; padding:2px 0 4px;';
+    wrap.style.cssText = 'display:flex; flex-direction:column; gap:6px; margin-top:10px; padding:2px 0 4px;';
+    const rowCount = Math.ceil(scenes.length / 4);
+    const base = Math.floor(scenes.length / rowCount);
+    const extra = scenes.length % rowCount;
+    const rows = Array.from({ length: rowCount }, (_, i) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex; gap:6px;';
+      row.dataset.size = base + (i >= rowCount - extra ? 1 : 0);
+      wrap.appendChild(row);
+      return row;
+    });
+    let rowIndex = 0;
     scenes.forEach((s) => {
+      while (rows[rowIndex].children.length >= Number(rows[rowIndex].dataset.size)) rowIndex += 1;
       const tile = document.createElement('button');
       tile.className = s.active || !anyActive ? 'lcc-scene' : 'lcc-scene lcc-dim';
       const glow = `color-mix(in srgb, ${scenePalette(s.name)[0]} 85%, transparent)`;
       tile.title = s.playing ? `${s.name} (playing, tap to stop)` : s.paused ? `${s.name} (paused, tap to play)` : s.name;
       const bg = sceneBackground(s.name, s.image, s.colours);
-      tile.style.cssText = `position:relative; container-type:inline-size; height:48px; border:none; border-radius:12px; padding:0; overflow:hidden; cursor:pointer; background:${bg};${
+      tile.style.cssText = `position:relative; container-type:inline-size; flex:1 1 0; min-width:0; height:48px; border:none; border-radius:12px; padding:0; overflow:hidden; cursor:pointer; background:${bg};${
         s.active ? ` box-shadow:0 0 12px 2px ${glow}; transform:scale(1.03); z-index:1;` : ''
       }`;
       const badge = (cls, icon, title) =>
@@ -738,7 +751,7 @@ export class LightControlCard extends HTMLElement {
         ${s.playing ? badge('lcc-playing', 'mdi:play', 'Playing') : ''}`;
       tile.querySelector('.lcc-scene-name').textContent = s.name;
       this._bindSceneTile(tile, s);
-      wrap.appendChild(tile);
+      rows[rowIndex].appendChild(tile);
     });
     return wrap;
   }
@@ -942,7 +955,7 @@ export class LightControlCard extends HTMLElement {
             .lcc-scene { transition: opacity 0.2s, filter 0.2s, transform 0.2s, box-shadow 0.2s; }
             .lcc-scene.lcc-dim { opacity: 0.4; filter: saturate(0.4); }
             .lcc-scene.lcc-dim:hover { opacity: 0.8; filter: none; }
-            /* Always four tiles per row, each as tall as a light row. Names
+            /* Up to four tiles per row, each as tall as a light row. Names
                sit beside the icon on one line (… if too long); auto hides
                them on tiles under 100px wide, never always does. */
             .lcc-scene-name { font-size: 13px; }
