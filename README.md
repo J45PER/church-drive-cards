@@ -1,6 +1,8 @@
-# Church Drive Cards
+# Church Drive
 
-Custom Lovelace cards for the Church Drive Home Assistant dashboards. One bundle, three cards, all styled to match: no border, drop shadow, rounded top/bottom corners only, hover tints on interactive elements.
+A Home Assistant integration for the Church Drive house. Today it delivers the house's custom Lovelace cards: it serves the cards bundle and loads it on every dashboard, so there's no Lovelace resource to manage. Universal scenes synced to the Hue bridge are planned next.
+
+The cards share one bundle and one look: no border, drop shadow, rounded top/bottom corners only, hover tints on interactive elements.
 
 ## Cards
 
@@ -86,10 +88,10 @@ Light cards read the styles from the `design-presets` dashboard once per page lo
 
 ```bash
 npm install
-npm run build      # outputs church-drive-cards.js and church-drive-cards-beta.js at the repo root
+npm run build      # writes custom_components/church_drive/frontend/church-drive-cards.js and church-drive-cards-beta.js
 ```
 
-Always commit both rebuilt bundles with any `src/` change. The **Build check** GitHub Action fails a PR if either committed bundle doesn't match a fresh build.
+Always commit both rebuilt bundles with any `src/` change. The build also copies the `package.json` version into `custom_components/church_drive/manifest.json`. The **Build check** GitHub Action fails a PR if any of that doesn't match a fresh build.
 
 New or changed cards are tested on the **Design Presets** dashboard in Home Assistant before being used anywhere else.
 
@@ -105,17 +107,14 @@ To test a change before release: push the branch, point the beta resource's URL 
 
 ### Releasing
 
-1. Bump `version` in `package.json` (and run `npm install --package-lock-only`) in the PR.
-2. Merge to `main`. The **Release** GitHub Action sees an unreleased version, checks that the bundle is up to date, and publishes release `vX.Y.Z` with `church-drive-cards.js` attached. Merges that don't change the version don't produce a release.
+1. Bump `version` in `package.json`, run `npm install --package-lock-only` and `npm run build` in the PR.
+2. Merge to `main`. The **Release** GitHub Action sees an unreleased version, checks that the bundle is up to date, and publishes release `vX.Y.Z` (with the cards bundle attached for reference). Merges that don't change the version don't produce a release.
 3. HACS lists the release as an update in Home Assistant (Settings → Updates).
 
 ## Installing in Home Assistant
 
-Via HACS: add this repository as a custom repository (category: Dashboard), install "Church Drive Cards", then add the resource if HACS doesn't do it automatically:
+Via HACS: add this repository as a custom repository (category: **Integration**), download "Church Drive", restart Home Assistant, then add it under Settings → Devices & services → Add integration → Church Drive. There's nothing to fill in.
 
-```yaml
-url: /hacsfiles/church-drive-cards/church-drive-cards.js
-type: module
-```
+The integration serves the cards at `/church_drive/church-drive-cards.js` and adds them to every page itself. Don't also add a Lovelace resource for them, or they would load twice.
 
-Or manually: build, copy `church-drive-cards.js` to `/config/www/`, then register `/local/church-drive-cards.js` (type: module) as a Lovelace resource (Settings → Dashboards → Resources).
+Or manually: copy `custom_components/church_drive` into `/config/custom_components/`, restart, and add the integration the same way.

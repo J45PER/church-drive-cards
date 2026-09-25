@@ -1,12 +1,16 @@
-# Church Drive Cards: Handoff
+# Church Drive: Handoff
 
-*Last updated 2026-09-24. Current release: **v0.6.1**.*
+*Last updated 2026-09-24. Current release: **v0.7.0**.*
 
 ## Where this stands
 
-Custom Lovelace cards for the Church Drive Home Assistant, in one bundle
-(`church-drive-cards.js`) that Home Assistant installs through **HACS** from this
-public repo (`github.com/J45PER/church-drive-cards`). Everything below is merged to
+The **Church Drive** Home Assistant integration (`custom_components/church_drive`),
+installed through **HACS** from this public repo
+(`github.com/J45PER/church-drive-cards`). Since v0.7.0 its only job is to deliver the
+custom Lovelace cards: it serves the bundle
+(`custom_components/church_drive/frontend/church-drive-cards.js`) and adds it to
+every frontend page with `add_extra_js_url`. There is no Lovelace resource for the
+released cards. Universal scenes (synced to the Hue bridge) will be built on top. Everything below is merged to
 `main`, released and running live. The user has checked each change on a real
 device.
 
@@ -42,27 +46,36 @@ Shared modules:
 ## Release and deployment pipeline
 
 - **HACS:**
-  - Installed as a custom repository (category Dashboard, HACS id `1385560733`).
-  - HACS owns the resource `/hacsfiles/church-drive-cards/church-drive-cards.js`.
-  - The original hand-pushed inline resources have been deleted.
+  - Installed as a custom repository, category **Integration** (HACS id
+    `1385560733`). Before v0.7.0 it was category Dashboard with the resource
+    `/hacsfiles/church-drive-cards/church-drive-cards.js`; that resource was removed
+    in the switchover.
+  - The integration has one config entry (no options). `__init__.py` registers the
+    static path `/church_drive` → `frontend/` (no cache headers) once per HA run and
+    adds `/church_drive/church-drive-cards.js?v=<version>` as an extra module URL.
+    The version query makes browsers fetch the new bundle after an update.
+  - An integration update needs an HA restart to take effect (HACS raises a repair
+    for it). Do a `ha_restart` after downloading.
 - **Build:**
-  - `npm run build` (`build.mjs`, esbuild) writes both `church-drive-cards.js` and
-    `church-drive-cards-beta.js`. Commit both.
+  - `npm run build` (`build.mjs`, esbuild) writes
+    `custom_components/church_drive/frontend/church-drive-cards.js` and
+    `church-drive-cards-beta.js`, and copies the `package.json` version into
+    `manifest.json`. Commit all of it.
   - **Build check** (`.github/workflows/build-check.yml`) fails a PR if either
     committed bundle is stale.
 - **Release** (`.github/workflows/release.yml`):
   - Runs on every push to `main`.
   - If `package.json`'s version has no GitHub release yet, it checks the bundles and
-    runs `gh release create vX.Y.Z`, which creates the tag, with
-    `church-drive-cards.js` attached.
-  - To release: bump `version` (plus `npm install --package-lock-only`) in the PR,
-    then merge.
+    runs `gh release create vX.Y.Z`, which creates the tag (the bundle is attached
+    for reference; HACS installs the integration folder from the tag).
+  - To release: bump `version` (plus `npm install --package-lock-only` and
+    `npm run build`) in the PR, then merge.
   - It's version-driven rather than tag-driven because the Claude cloud session can
     push branches but not tags.
 - **After a release:**
   - HACS only re-checks custom repos about every 48h, so run
     `ha_manage_hacs action=update_information`, then `action=download` with
-    `version=vX.Y.Z`.
+    `version=vX.Y.Z`, then `ha_restart`.
   - Once, GitHub returned HTTP 500 to HA for a fresh release asset. It downloaded fine
     a couple of minutes later; wait and retry.
 - **Rollback:** reinstall an older release from HACS (Redownload → pick a version).
@@ -72,7 +85,7 @@ Shared modules:
     alongside the release without clashing.
   - HA loads it as a separate module resource (id `436186c683fe4c7d81c865b67bb0e109`)
     from `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's currently pinned to the `main` merge `3f12218`.
+    It's currently pinned to `f3d476d` (v0.6.1 content; the cards code is unchanged in v0.7.0).
   - Design Presets has a **Beta** tab (`/design-presets/beta`) with `-beta` copies of
     all the example cards (light cards in demo mode). Nothing else uses beta cards.
   - To test a branch: push it, repoint that resource's URL at the branch commit, and

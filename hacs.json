@@ -1,6 +1,5 @@
 {
-  "name": "Church Drive Cards",
-  "content_in_root": true,
-  "filename": "church-drive-cards.js",
+  "name": "Church Drive",
+  "homeassistant": "2024.7.0",
   "render_readme": true
 }

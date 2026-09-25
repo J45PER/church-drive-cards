@@ -1,0 +1,7 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "Church Drive is already set up."
+    }
+  }
+}
