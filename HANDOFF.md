@@ -54,6 +54,15 @@ Shared modules:
     static path `/church_drive` → `frontend/` (no cache headers) once per HA run and
     adds `/church_drive/church-drive-cards.js?v=<version>` as an extra module URL.
     The version query makes browsers fetch the new bundle after an update.
+  - Switchover notes (2026-09-25): HACS keeps a custom repo's category even after
+    `ha_manage_hacs action=remove` (that only deletes the download). To change
+    category, also drop the registration with
+    `ha_call_service(ws_command="hacs/repositories/remove", data={"repository": "1385560733"})`,
+    then `add_repository` again. The config entry was added with
+    `ha_set_integration(domain="church_drive")` (entry `01M3C9Z12M0W755GDTM455NFVB`).
+  - Rollback: remove the config entry and the HACS download, then point a module
+    resource at the bundle on jsDelivr
+    (`…/church-drive-cards@<commit>/custom_components/church_drive/frontend/church-drive-cards.js`).
   - An integration update needs an HA restart to take effect (HACS raises a repair
     for it). Do a `ha_restart` after downloading.
 - **Build:**
