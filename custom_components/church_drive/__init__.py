@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +21,7 @@ import voluptuous as vol
 from homeassistant.components import websocket_api
 from homeassistant.components.frontend import add_extra_js_url, remove_extra_js_url
 from homeassistant.components.http import StaticPathConfig
+from homeassistant.components.lovelace.const import LOVELACE_DATA
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ENTITY_ID, EVENT_HOMEASSISTANT_STARTED, Platform
 from homeassistant.core import (
@@ -52,6 +54,7 @@ from .const import (
 from .hue import async_sync
 from .library import Library, normalise
 
+_LOGGER = logging.getLogger(__name__)
 FRONTEND_DIR = Path(__file__).parent / "frontend"
 PLATFORMS = [Platform.SELECT]
 
@@ -138,6 +141,46 @@ async def ws_scene_preview(
     connection.send_result(msg["id"], {})
 
 
+async def _async_ensure_resource(hass: HomeAssistant, url: str) -> None:
+    """Keep a dashboard resource for the cards, at the current version.
+
+    Pages always get the stored resource list, so the cards load even when a
+    page is opened while HA is still starting, before this integration has
+    added its extra module URL. Both use the same URL, so the browser loads
+    the bundle once.
+    """
+    try:
+        resources = hass.data[LOVELACE_DATA].resources
+        if getattr(resources, "async_create_item", None) is None:
+            return  # resources are managed in YAML
+        await resources.async_get_info()  # loads the stored list
+        base = f"{URL_BASE}/{CARDS_FILE}"
+        ours = [item for item in resources.async_items() if str(item.get("url", "")).startswith(base)]
+        if not ours:
+            await resources.async_create_item({"res_type": "module", "url": url})
+            return
+        if ours[0]["url"] != url:
+            await resources.async_update_item(ours[0]["id"], {"res_type": "module", "url": url})
+        for extra in ours[1:]:
+            await resources.async_delete_item(extra["id"])
+    except Exception as err:  # noqa: BLE001 - the extra module URL still loads the cards
+        _LOGGER.warning("Couldn't register the cards as a dashboard resource: %s", err)
+
+
+async def _async_remove_resource(hass: HomeAssistant) -> None:
+    try:
+        resources = hass.data[LOVELACE_DATA].resources
+        if getattr(resources, "async_delete_item", None) is None:
+            return
+        await resources.async_get_info()
+        base = f"{URL_BASE}/{CARDS_FILE}"
+        for item in list(resources.async_items()):
+            if str(item.get("url", "")).startswith(base):
+                await resources.async_delete_item(item["id"])
+    except Exception as err:  # noqa: BLE001
+        _LOGGER.warning("Couldn't remove the cards' dashboard resource: %s", err)
+
+
 def _version() -> str:
     return json.loads((Path(__file__).parent / "manifest.json").read_text())["version"]
 
@@ -157,6 +200,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         for command in (ws_library, ws_scene_save, ws_scene_delete, ws_scene_preview):
             websocket_api.async_register_command(hass, command)
     add_extra_js_url(hass, data["cards_url"])
+    await _async_ensure_resource(hass, data["cards_url"])
 
     library = Library(hass)
     await library.async_load()
@@ -201,3 +245,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if url:
         remove_extra_js_url(hass, url)
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Integration removed: drop the cards' dashboard resource too."""
+    await _async_remove_resource(hass)

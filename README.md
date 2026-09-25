@@ -124,6 +124,6 @@ To test a change before release: push the branch, point the beta resource's URL 
 
 Via HACS: add this repository as a custom repository (category: **Integration**), download "Church Drive", restart Home Assistant, then add it under Settings → Devices & services → Add integration → Church Drive. There's nothing to fill in.
 
-The integration serves the cards at `/church_drive/church-drive-cards.js` and adds them to every page itself. Don't also add a Lovelace resource for them, or they would load twice.
+The integration serves the cards at `/church_drive/church-drive-cards.js`, adds them to every page itself and keeps a matching dashboard resource so they load even while HA is starting. Don't add another resource for them.
 
 Or manually: copy `custom_components/church_drive` into `/config/custom_components/`, restart, and add the integration the same way.
