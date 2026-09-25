@@ -1047,8 +1047,16 @@
   function universalScenes() {
     return library;
   }
+  function universalRef(key, target) {
+    return `${UNIVERSAL_PREFIX}${key}${target ? `@${target}` : ""}`;
+  }
+  function universalTarget(ref) {
+    const at = String(ref || "").indexOf("@");
+    return at === -1 ? null : ref.slice(at + 1);
+  }
   function universalScene(ref) {
-    const key = String(ref || "").startsWith(UNIVERSAL_PREFIX) ? ref.slice(UNIVERSAL_PREFIX.length) : ref;
+    let key = String(ref || "").startsWith(UNIVERSAL_PREFIX) ? ref.slice(UNIVERSAL_PREFIX.length) : String(ref || "");
+    if (key.includes("@")) key = key.slice(0, key.indexOf("@"));
     const wanted = String(key || "").toLowerCase();
     return library.find((s) => s.key === wanted || s.name.toLowerCase() === wanted) || null;
   }
@@ -1218,29 +1226,38 @@
     if (!hass || !hass.states) return [];
     loadUniversalScenes(hass);
     const { groups, lights } = lccCardLights(hass, config);
-    const ids = lccSceneGroups(hass, groups, lights).flatMap((g) => lccGroupScenes(hass, g));
+    const isRoom = (id) => hass.states[id].attributes.hue_type === "room";
+    const sceneGroups = lccSceneGroups(hass, groups, lights).sort(
+      (a, b) => (isRoom(b) ? 1 : 0) - (isRoom(a) ? 1 : 0) || lccGroupName(hass, a).localeCompare(lccGroupName(hass, b))
+    );
+    const ids = sceneGroups.flatMap((g) => lccGroupScenes(hass, g));
     const nameOf = (id) => hass.states[id].attributes.name || hass.states[id].attributes.friendly_name || id;
-    const counts = {};
-    ids.forEach((id) => {
-      const key = nameOf(id).toLowerCase();
-      counts[key] = (counts[key] || 0) + 1;
+    const options = [];
+    universalScenes().forEach((u) => {
+      if (!sceneGroups.length) options.push({ value: universalRef(u.key), label: u.name });
+      sceneGroups.forEach((g) => options.push({ value: universalRef(u.key, g), label: `${u.name} \xB7 ${lccGroupName(hass, g)}` }));
     });
-    const universal = universalScenes();
-    const universalNames = new Set(universal.map((u) => u.name.toLowerCase()));
-    const options = universal.map((u) => ({ value: `${UNIVERSAL_PREFIX}${u.key}`, label: u.name }));
+    const universalNames = new Set(universalScenes().map((u) => u.name.toLowerCase()));
     ids.filter((id) => !universalNames.has(nameOf(id).toLowerCase())).forEach((id) => {
-      const name = nameOf(id);
       const group = hass.states[id].attributes.group_name;
-      options.push({ value: id, label: counts[name.toLowerCase()] > 1 && group ? `${name} \xB7 ${group}` : name });
+      options.push({ value: id, label: group ? `${nameOf(id)} \xB7 ${group}` : nameOf(id) });
     });
     lccNormalizeScenes(config.scenes).forEach((s) => {
-      if (lccIsUniversal(s.entity) || options.some((o) => o.value === s.entity)) return;
-      if (!ids.includes(s.entity)) {
-        const st = hass.states[s.entity];
-        options.push({ value: s.entity, label: `${st ? nameOf(s.entity) : s.entity} (other room)` });
+      if (options.some((o) => o.value === s.entity)) return;
+      if (lccIsUniversal(s.entity)) {
+        const u = universalScene(s.entity);
+        const target = universalTarget(s.entity);
+        if (u) options.push({ value: s.entity, label: target ? `${u.name} \xB7 ${lccGroupName(hass, target)}` : u.name });
+        return;
       }
+      const st = hass.states[s.entity];
+      options.push({ value: s.entity, label: `${st ? nameOf(s.entity) : s.entity} (other room)` });
     });
     return options;
+  }
+  function lccGroupName(hass, id) {
+    const st = hass.states[id];
+    return st && st.attributes.friendly_name || id;
   }
   function lccNormalizeList(list) {
     return (list || []).map((s) => typeof s === "string" ? { entity: s } : s).filter((s) => s && s.entity);
@@ -1735,8 +1752,19 @@
       const scenes = items.filter((s) => lccIsUniversal(s.entity) ? universalScene(s.entity) : hass.states[s.entity]).slice(0, max).map((s) => {
         if (lccIsUniversal(s.entity)) {
           const lib = universalScene(s.entity);
-          const name2 = s.name || lib.name;
-          return { ...s, name: name2, isDynamic: false, icon: s.icon || sceneIcon(name2, false), universal: lib, targets, targetLights, activated: 0 };
+          const target = universalTarget(s.entity);
+          const own = target && hass.states[target] ? [target] : null;
+          let name2 = s.name || lib.name;
+          if (!s.name && own && hass.states[target].attributes.hue_type !== "room") {
+            const area = hass.areas && cfg.area && hass.areas[cfg.area];
+            const room = rooms[0] ? lccGroupName(hass, rooms[0]) : area && area.name || "";
+            const zone = lccGroupName(hass, target);
+            const short = room && zone.toLowerCase().startsWith(`${room.toLowerCase()} `) ? zone.slice(room.length + 1) : zone;
+            name2 = `${lib.name} \xB7 ${short}`;
+          }
+          const tTargets = own || targets;
+          const tLights = own ? [...new Set(own.flatMap((id) => lccIsGroupLike(hass.states[id]) ? lccMembersOf(hass, id) : [id]))] : targetLights;
+          return { ...s, name: name2, isDynamic: false, icon: s.icon || sceneIcon(lib.name, false), universal: lib, targets: tTargets, targetLights: tLights, activated: 0 };
         }
         const st = hass.states[s.entity];
         const isDynamic = st.attributes.is_dynamic === true;
@@ -1750,7 +1778,7 @@
           activated: Date.parse(st.state) || 0
         };
       });
-      const matching = scenes.find((sc) => sc.universal && universalSceneActive(hass, sc.universal, targetLights));
+      const matching = scenes.find((sc) => sc.universal && universalSceneActive(hass, sc.universal, sc.targetLights));
       if (matching) {
         matching.active = true;
         return scenes;

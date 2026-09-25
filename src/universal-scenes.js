@@ -28,8 +28,20 @@ export function universalScenes() {
   return library;
 }
 
+// A card's reference to a universal scene: `universal:<key>` for the card's
+// room, or `universal:<key>@<light entity>` for one zone/group/light in it.
+export function universalRef(key, target) {
+  return `${UNIVERSAL_PREFIX}${key}${target ? `@${target}` : ''}`;
+}
+
+export function universalTarget(ref) {
+  const at = String(ref || '').indexOf('@');
+  return at === -1 ? null : ref.slice(at + 1);
+}
+
 export function universalScene(ref) {
-  const key = String(ref || '').startsWith(UNIVERSAL_PREFIX) ? ref.slice(UNIVERSAL_PREFIX.length) : ref;
+  let key = String(ref || '').startsWith(UNIVERSAL_PREFIX) ? ref.slice(UNIVERSAL_PREFIX.length) : String(ref || '');
+  if (key.includes('@')) key = key.slice(0, key.indexOf('@'));
   const wanted = String(key || '').toLowerCase();
   return library.find((s) => s.key === wanted || s.name.toLowerCase() === wanted) || null;
 }

@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-24. Current release: **v0.9.0**.*
+*Last updated 2026-09-24. Current release: **v0.9.1**.*
 
 ## Where this stands
 
@@ -33,7 +33,11 @@ plan below).
   zones/groups, else its lights) and shows as selected while every lit light
   matches it (brightness within 4/255, kelvin within 3%, xy within 0.02; lights
   that can't show the colour only need to be on). The editor's Scenes list puts
-  universal scenes first and hides same-name Hue scenes. There's also a
+  universal scenes first, once per place (the room and each of its zones,
+  e.g. "Bright · Kitchen Spotlights" = `universal:bright@light.kitchen_spotlights`,
+  which sets only that zone and is matched against only its lights; the tile
+  reads "Bright · Spotlights"), then the Hue scenes, each labelled with its
+  room/zone; Hue scenes named like a universal one are hidden. There's also a
   `church_drive.apply_scene` action (lights + scene name).
 - Why not sync every room to the bridge: it already has ~123 scenes and the full
   library everywhere would add ~100, past the bridge's ~200 limit. Bridge
