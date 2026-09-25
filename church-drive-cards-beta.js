@@ -1099,7 +1099,7 @@
     );
     return group ? group.entity_id : null;
   }
-  function lccAutoScenes(hass, groupIds, lightIds) {
+  function lccSceneGroups(hass, groupIds, lightIds) {
     const lights = new Set(lightIds);
     const groups = [...groupIds];
     if (lights.size) {
@@ -1110,17 +1110,23 @@
         }
       });
     }
+    return groups;
+  }
+  function lccGroupScenes(hass, groupId) {
+    const device = hass.entities && hass.entities[groupId] && hass.entities[groupId].device_id;
+    if (!device) return [];
+    const order = hass.states[groupId] && hass.states[groupId].attributes.hue_scenes || [];
+    const rank = (id) => {
+      const i = order.indexOf(hass.states[id].attributes.name);
+      return i === -1 ? order.length : i;
+    };
+    return Object.values(hass.entities).filter((e) => e.entity_id.startsWith("scene.") && e.device_id === device && !e.hidden && hass.states[e.entity_id]).map((e) => e.entity_id).sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+  }
+  function lccAutoScenes(hass, groupIds, lightIds) {
     const seen = /* @__PURE__ */ new Set();
     const out = [];
-    groups.forEach((groupId) => {
-      const device = hass.entities && hass.entities[groupId] && hass.entities[groupId].device_id;
-      if (!device) return;
-      const order = hass.states[groupId] && hass.states[groupId].attributes.hue_scenes || [];
-      const rank = (id) => {
-        const i = order.indexOf(hass.states[id].attributes.name);
-        return i === -1 ? order.length : i;
-      };
-      Object.values(hass.entities).filter((e) => e.entity_id.startsWith("scene.") && e.device_id === device && !e.hidden && hass.states[e.entity_id]).map((e) => e.entity_id).sort((a, b) => rank(a) - rank(b) || a.localeCompare(b)).forEach((id) => {
+    lccSceneGroups(hass, groupIds, lightIds).forEach((groupId) => {
+      lccGroupScenes(hass, groupId).forEach((id) => {
         const key = String(hass.states[id].attributes.name || id).toLowerCase();
         if (seen.has(key)) return;
         seen.add(key);
@@ -1128,6 +1134,42 @@
       });
     });
     return out;
+  }
+  function lccCardLights(hass, config) {
+    const mode = config.mode || "light";
+    let area = config.area;
+    if (mode === "group") {
+      return { groups: config.entity ? [config.entity] : [], lights: config.entity ? lccMembersOf(hass, config.entity) : [] };
+    }
+    if (mode === "light") area = lccAreaOf(hass, hass.entities && hass.entities[config.entity]);
+    const ids = lccCandidates(hass, "room", area);
+    return {
+      groups: ids.filter((id) => lccIsGroupLike(hass.states[id])),
+      lights: ids.filter((id) => !lccIsGroupLike(hass.states[id]))
+    };
+  }
+  function lccSceneChoices(hass, config) {
+    if (!hass || !hass.states) return [];
+    const { groups, lights } = lccCardLights(hass, config);
+    const ids = lccSceneGroups(hass, groups, lights).flatMap((g) => lccGroupScenes(hass, g));
+    const nameOf = (id) => hass.states[id].attributes.name || hass.states[id].attributes.friendly_name || id;
+    const counts = {};
+    ids.forEach((id) => {
+      const key = nameOf(id).toLowerCase();
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    const options = ids.map((id) => {
+      const name = nameOf(id);
+      const group = hass.states[id].attributes.group_name;
+      return { value: id, label: counts[name.toLowerCase()] > 1 && group ? `${name} \xB7 ${group}` : name };
+    });
+    lccNormalizeScenes(config.scenes).forEach((s) => {
+      if (!ids.includes(s.entity)) {
+        const st = hass.states[s.entity];
+        options.push({ value: s.entity, label: `${st ? nameOf(s.entity) : s.entity} (other room)` });
+      }
+    });
+    return options;
   }
   function lccNormalizeList(list) {
     return (list || []).map((s) => typeof s === "string" ? { entity: s } : s).filter((s) => s && s.entity);
@@ -1174,6 +1216,13 @@
   var LightControlCardEditor = createFormEditor({
     schema: (config, hass) => {
       const mode = config.mode || "light";
+      const sceneDemo = config.demo ? lccDemoFor(config.demo_room) : null;
+      const sceneOptions = sceneDemo ? lccSceneChoices(sceneDemo.hass(), {
+        ...config,
+        mode: config.mode || "room",
+        area: sceneDemo.area,
+        entity: config.mode === "group" ? sceneDemo.roomGroup : sceneDemo.firstLight
+      }) : lccSceneChoices(hass, config);
       let showField = [];
       if (mode === "room" || mode === "group") {
         const demo = config.demo ? lccDemoFor(config.demo_room) : null;
@@ -1282,7 +1331,7 @@
               label_field: "name",
               description_field: "entity",
               fields: {
-                entity: { label: "Scene", required: true, selector: { entity: { domain: "scene" } } },
+                entity: { label: "Scene", required: true, selector: { select: { mode: "dropdown", options: sceneOptions } } },
                 name: { label: "Name override", selector: { text: {} } },
                 icon: { label: "Icon override", selector: { icon: {} } },
                 image: { label: "Picture (replaces the colour background)", selector: { image: {} } }
@@ -1358,8 +1407,9 @@
         mode,
         area: this._demo.area,
         entity: mode === "group" ? this._demo.roomGroup : this._demo.firstLight,
-        // Configured scenes are real entities; the pretend home has its own.
-        scenes: void 0
+        // Only configured scenes from the pretend home apply (real ones don't
+        // exist there); with none, the pretend home's scenes are used.
+        scenes: lccNormalizeScenes(cfg.scenes).filter((sc) => this._demo.states[sc.entity])
       };
     }
     static getConfigElement() {

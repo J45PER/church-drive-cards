@@ -102,11 +102,10 @@ function lccSceneGroup(hass, sceneId) {
   return group ? group.entity_id : null;
 }
 
-// Auto-detected scenes: those of the groups shown on the card plus any Hue
-// zone made up only of this card's lights (e.g. "Living Room Ambience", whose
-// device has no area). Each group's scenes follow the Hue app order
-// (`hue_scenes`); duplicate names keep the first (room before zone).
-function lccAutoScenes(hass, groupIds, lightIds) {
+// The Hue groups whose scenes belong on a card: the given groups plus any
+// Hue zone made up only of this card's lights (e.g. "Living Room Ambience",
+// whose device has no area).
+function lccSceneGroups(hass, groupIds, lightIds) {
   const lights = new Set(lightIds);
   const groups = [...groupIds];
   if (lights.size) {
@@ -117,28 +116,83 @@ function lccAutoScenes(hass, groupIds, lightIds) {
       }
     });
   }
+  return groups;
+}
+
+// A Hue group's scenes (they share the group light's device), in the Hue app
+// order (`hue_scenes`).
+function lccGroupScenes(hass, groupId) {
+  const device = hass.entities && hass.entities[groupId] && hass.entities[groupId].device_id;
+  if (!device) return [];
+  const order = (hass.states[groupId] && hass.states[groupId].attributes.hue_scenes) || [];
+  const rank = (id) => {
+    const i = order.indexOf(hass.states[id].attributes.name);
+    return i === -1 ? order.length : i;
+  };
+  return Object.values(hass.entities)
+    .filter((e) => e.entity_id.startsWith('scene.') && e.device_id === device && !e.hidden && hass.states[e.entity_id])
+    .map((e) => e.entity_id)
+    .sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+}
+
+// Auto-detected scenes: those of the card's scene groups; duplicate names
+// keep the first (room before zone).
+function lccAutoScenes(hass, groupIds, lightIds) {
   const seen = new Set();
   const out = [];
-  groups.forEach((groupId) => {
-    const device = hass.entities && hass.entities[groupId] && hass.entities[groupId].device_id;
-    if (!device) return;
-    const order = (hass.states[groupId] && hass.states[groupId].attributes.hue_scenes) || [];
-    const rank = (id) => {
-      const i = order.indexOf(hass.states[id].attributes.name);
-      return i === -1 ? order.length : i;
-    };
-    Object.values(hass.entities)
-      .filter((e) => e.entity_id.startsWith('scene.') && e.device_id === device && !e.hidden && hass.states[e.entity_id])
-      .map((e) => e.entity_id)
-      .sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))
-      .forEach((id) => {
-        const key = String(hass.states[id].attributes.name || id).toLowerCase();
-        if (seen.has(key)) return;
-        seen.add(key);
-        out.push({ entity: id });
-      });
+  lccSceneGroups(hass, groupIds, lightIds).forEach((groupId) => {
+    lccGroupScenes(hass, groupId).forEach((id) => {
+      const key = String(hass.states[id].attributes.name || id).toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push({ entity: id });
+    });
   });
   return out;
+}
+
+// The card's groups and lights, worked out from its config the way the card
+// does (a single bulb uses its room's).
+function lccCardLights(hass, config) {
+  const mode = config.mode || 'light';
+  let area = config.area;
+  if (mode === 'group') {
+    return { groups: config.entity ? [config.entity] : [], lights: config.entity ? lccMembersOf(hass, config.entity) : [] };
+  }
+  if (mode === 'light') area = lccAreaOf(hass, hass.entities && hass.entities[config.entity]);
+  const ids = lccCandidates(hass, 'room', area);
+  return {
+    groups: ids.filter((id) => lccIsGroupLike(hass.states[id])),
+    lights: ids.filter((id) => !lccIsGroupLike(hass.states[id])),
+  };
+}
+
+// Scene choices for the editor: only this card's room/zone scenes, labelled
+// by scene name. A name that exists in more than one of its groups (e.g. the
+// room and a zone both have "Bright") gets the group name added.
+function lccSceneChoices(hass, config) {
+  if (!hass || !hass.states) return [];
+  const { groups, lights } = lccCardLights(hass, config);
+  const ids = lccSceneGroups(hass, groups, lights).flatMap((g) => lccGroupScenes(hass, g));
+  const nameOf = (id) => hass.states[id].attributes.name || hass.states[id].attributes.friendly_name || id;
+  const counts = {};
+  ids.forEach((id) => {
+    const key = nameOf(id).toLowerCase();
+    counts[key] = (counts[key] || 0) + 1;
+  });
+  const options = ids.map((id) => {
+    const name = nameOf(id);
+    const group = hass.states[id].attributes.group_name;
+    return { value: id, label: counts[name.toLowerCase()] > 1 && group ? `${name} · ${group}` : name };
+  });
+  // Keep scenes already on the card visible even if they're from elsewhere.
+  lccNormalizeScenes(config.scenes).forEach((s) => {
+    if (!ids.includes(s.entity)) {
+      const st = hass.states[s.entity];
+      options.push({ value: s.entity, label: `${st ? nameOf(s.entity) : s.entity} (other room)` });
+    }
+  });
+  return options;
 }
 
 // `entities` config items may be plain IDs or { entity, name? } objects.
@@ -207,6 +261,16 @@ function lccDemoFor(room) {
 export const LightControlCardEditor = createFormEditor({
   schema: (config, hass) => {
     const mode = config.mode || 'light';
+    // In demo mode the scene choices come from the pretend home.
+    const sceneDemo = config.demo ? lccDemoFor(config.demo_room) : null;
+    const sceneOptions = sceneDemo
+      ? lccSceneChoices(sceneDemo.hass(), {
+          ...config,
+          mode: config.mode || 'room',
+          area: sceneDemo.area,
+          entity: config.mode === 'group' ? sceneDemo.roomGroup : sceneDemo.firstLight,
+        })
+      : lccSceneChoices(hass, config);
     // Choices for the "Show" list, from the real home or the pretend one.
     let showField = [];
     if (mode === 'room' || mode === 'group') {
@@ -322,7 +386,7 @@ export const LightControlCardEditor = createFormEditor({
             label_field: 'name',
             description_field: 'entity',
             fields: {
-              entity: { label: 'Scene', required: true, selector: { entity: { domain: 'scene' } } },
+              entity: { label: 'Scene', required: true, selector: { select: { mode: 'dropdown', options: sceneOptions } } },
               name: { label: 'Name override', selector: { text: {} } },
               icon: { label: 'Icon override', selector: { icon: {} } },
               image: { label: 'Picture (replaces the colour background)', selector: { image: {} } },
@@ -403,8 +467,9 @@ export class LightControlCard extends HTMLElement {
       mode,
       area: this._demo.area,
       entity: mode === 'group' ? this._demo.roomGroup : this._demo.firstLight,
-      // Configured scenes are real entities; the pretend home has its own.
-      scenes: undefined,
+      // Only configured scenes from the pretend home apply (real ones don't
+      // exist there); with none, the pretend home's scenes are used.
+      scenes: lccNormalizeScenes(cfg.scenes).filter((sc) => this._demo.states[sc.entity]),
     };
   }
 
