@@ -80,9 +80,11 @@ async def async_apply(
                 await _async_deal_colours(hass, members(hass, entity_id), spec, context)
     active = hass.data[DOMAIN].setdefault("active", {})
     applied = hass.data[DOMAIN].setdefault("applied_at", {})
+    applied_wall = hass.data[DOMAIN].setdefault("applied_wall", {})
     for entity_id in entity_ids:
         active[entity_id] = key
         applied[entity_id] = time.monotonic()
+        applied_wall[entity_id] = time.time()
     async_dispatcher_send(hass, SIGNAL_ACTIVE)
 
 
@@ -90,8 +92,9 @@ async def _async_deal_colours(
     hass: HomeAssistant, lights: list[str], spec: dict, context: Context | None
 ) -> None:
     colors = spec["colors"]
-    brightness = max(1, round(spec["brightness"] * 255 / 100))
+    levels = _levels(spec)
     for i, light in enumerate(sorted(lights)):
+        brightness = max(1, round(levels[i % len(colors)] * 255 / 100))
         await hass.services.async_call(
             "light",
             "turn_on",
@@ -105,27 +108,36 @@ def _xy(c: tuple[float, float]) -> dict:
     return {"xy": {"x": c[0], "y": c[1]}}
 
 
+def _levels(spec: dict) -> list[float]:
+    """Each palette colour's brightness (0-100)."""
+    return spec.get("levels") or [spec["brightness"]] * len(spec["colors"])
+
+
 def _live_scene_body(lights: list, spec: dict) -> dict:
     colors = spec["colors"]
-    brightness = spec["brightness"]
+    levels = _levels(spec)
     actions = []
     for i, light in enumerate(sorted(lights, key=lambda item: item.id)):
         action: dict[str, Any] = {"on": {"on": True}}
         if light.dimming is not None:
-            action["dimming"] = {"brightness": brightness}
+            action["dimming"] = {"brightness": levels[i % len(colors)]}
         if light.color is not None:
             action["color"] = _xy(colors[i % len(colors)])
             gradient = getattr(light, "gradient", None)
             if gradient is not None and gradient.points_capable >= 2:
                 count = min(gradient.points_capable, 5, max(2, len(colors)))
                 action["gradient"] = {
-                    "points": [{"color": _xy(colors[(i + n) % len(colors)])} for n in range(count)]
+                    "points": [{"color": _xy(colors[(i + n) % len(colors)])} for n in range(count)],
+                    "mode": "interpolated_palette",
                 }
         actions.append({"target": {"rid": light.id, "rtype": "light"}, "action": action})
     return {
         "actions": actions,
         "palette": {
-            "color": [{"color": _xy(c), "dimming": {"brightness": brightness}} for c in colors[:9]],
+            "color": [
+                {"color": _xy(c), "dimming": {"brightness": level}}
+                for c, level in list(zip(colors, levels, strict=False))[:9]
+            ],
             "dimming": [],
             "color_temperature": [],
             "effects": [],

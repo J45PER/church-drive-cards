@@ -30,74 +30,37 @@ WHITE: dict[str, dict] = {
     "nightlight": {"name": "Nightlight", "xy": (0.5610, 0.4042), "mirek": 500, "brightness": 0.4},
 }
 
-# Hue's animated colour scenes. The first five are read from the bridge; the
-# rest approximate the Hue app's palettes.
+# Hue's animated colour scenes: each palette colour is (x, y, brightness %)
+# and the speed is Hue's own, all read from this home's bridge. Aqua wasn't
+# on the bridge, so it's approximated.
 COLOUR: dict[str, dict] = {
-    "soho": {
-        "name": "Soho",
-        "brightness": 70.0,
-        "colors": [(0.5865, 0.2575), (0.5115, 0.3625), (0.2215, 0.0822), (0.1916, 0.3954), (0.5019, 0.2751)],
-    },
-    "magneto": {
-        "name": "Magneto",
-        "brightness": 88.0,
-        "colors": [(0.171, 0.3389), (0.1575, 0.2128), (0.516, 0.4401), (0.4215, 0.4895), (0.1593, 0.1341)],
-    },
-    "ruby_glow": {
-        "name": "Ruby glow",
-        "brightness": 50.0,
-        "colors": [(0.3826, 0.3117), (0.4189, 0.3031), (0.4918, 0.2838), (0.4557, 0.2951), (0.5321, 0.2758)],
-    },
-    "emerald_isle": {
-        "name": "Emerald isle",
-        "brightness": 75.0,
-        "colors": [(0.4648, 0.4254), (0.255, 0.4176), (0.3133, 0.4141), (0.2709, 0.3235), (0.3924, 0.4132)],
-    },
-    "dreamy_dusk": {
-        "name": "Dreamy dusk",
-        "brightness": 60.0,
-        "colors": [(0.5493, 0.3702), (0.4996, 0.293), (0.5201, 0.392), (0.4416, 0.2813), (0.5579, 0.3308)],
-    },
-    "lake_placid": {"name": "Lake Placid", "brightness": 70.0, "hex": ["#0f5e9c", "#35baf6", "#9fe2bf"]},
+    "soho": {"name": "Soho", "speed": 0.627, "palette": [(0.5865, 0.2575, 62), (0.5115, 0.3625, 62), (0.5019, 0.2751, 62), (0.2215, 0.0822, 100), (0.1916, 0.3954, 62)]},
+    "magneto": {"name": "Magneto", "speed": 0.611, "palette": [(0.1593, 0.1341, 88), (0.1574, 0.2113, 100), (0.171, 0.3389, 88), (0.4215, 0.4895, 88), (0.516, 0.4401, 88)]},
+    "ruby_glow": {"name": "Ruby glow", "speed": 0.627, "palette": [(0.3826, 0.3117, 40), (0.4189, 0.3031, 40), (0.4557, 0.2951, 40), (0.4918, 0.2838, 100), (0.5321, 0.2758, 40)]},
+    "emerald_isle": {"name": "Emerald isle", "speed": 0.603, "palette": [(0.2709, 0.3235, 75), (0.255, 0.4176, 75), (0.3133, 0.4141, 100), (0.3924, 0.4132, 75), (0.4648, 0.4254, 75)]},
+    "dreamy_dusk": {"name": "Dreamy dusk", "speed": 0.603, "palette": [(0.5201, 0.392, 100), (0.5493, 0.3702, 50), (0.5579, 0.3308, 50), (0.5009, 0.2926, 100), (0.4416, 0.2813, 50)]},
+    "lake_placid": {"name": "Lake Placid", "speed": 0.627, "palette": [(0.5135, 0.348, 30), (0.4656, 0.3479, 30), (0.4216, 0.3347, 30), (0.2436, 0.2523, 100), (0.194, 0.1927, 30)]},
     "toil_and_trouble": {
         "name": "Toil and trouble",
-        "brightness": 70.0,
-        "hex": ["#6a0dad", "#2e8b57", "#ff7f00"],
+        "speed": 0.73,
+        "palette": [(0.6899, 0.3075, 44.75), (0.6236, 0.3551, 44.75), (0.568, 0.389, 44.75), (0.2447, 0.1235, 44.75), (0.1972, 0.0689, 44.75)],
     },
-    "spellbound": {"name": "Spellbound", "brightness": 70.0, "hex": ["#3a0ca3", "#f72585", "#4cc9f0"]},
-    "storybook": {"name": "Storybook", "brightness": 70.0, "hex": ["#ffadad", "#ffd6a5", "#9bf6ff"]},
-    "arise": {"name": "Arise", "brightness": 80.0, "hex": ["#ff7b39", "#ffd27f"]},
-    "unwind": {"name": "Unwind", "brightness": 60.0, "hex": ["#ff9966", "#ff5e62"]},
-    "pumpkin_patch": {"name": "Pumpkin patch", "brightness": 70.0, "hex": ["#ff7518", "#8b4513", "#ffb347"]},
-    "phantom": {"name": "Phantom", "brightness": 60.0, "hex": ["#2d0a4e", "#6c2bd9", "#0f0f2e"]},
-    "city_blue": {"name": "City Blue", "brightness": 70.0, "hex": ["#0b1d51", "#2f6fd6", "#89c2ff"]},
-    "aqua": {"name": "Aqua", "brightness": 75.0, "hex": ["#00c9d6", "#0077b6", "#90e0ef"]},
-    "motown": {"name": "Motown", "brightness": 75.0, "hex": ["#7b2cbf", "#ff6d00", "#ffd60a"]},
-    "witching_hour": {"name": "Witching hour", "brightness": 60.0, "hex": ["#240046", "#5a189a", "#ff7900"]},
-    "meriete": {"name": "Meriete", "brightness": 70.0, "hex": ["#ff9e7a", "#c86b98", "#5f4b8b"]},
-}
-
-# The Hue app's own speed and brightness (%) for its animated scenes, read
-# from the bridge (scene entity attributes). Aqua wasn't on the bridge.
-HUE_TIMING: dict[str, tuple[float, float]] = {
-    "soho": (0.627, 62.0),
-    "magneto": (0.611, 88.0),
-    "ruby_glow": (0.627, 40.0),
-    "emerald_isle": (0.603, 75.0),
-    "dreamy_dusk": (0.603, 50.0),
-    "lake_placid": (0.627, 30.0),
-    "toil_and_trouble": (0.730, 45.0),
-    "spellbound": (0.730, 50.0),
-    "storybook": (0.627, 69.0),
-    "arise": (0.627, 100.0),
-    "unwind": (0.627, 45.0),
-    "pumpkin_patch": (0.627, 45.0),
-    "phantom": (0.730, 40.0),
-    "city_blue": (0.603, 50.0),
-    "aqua": (0.627, 75.0),
-    "motown": (0.690, 53.0),
-    "witching_hour": (0.730, 45.0),
-    "meriete": (0.603, 80.0),
+    "spellbound": {"name": "Spellbound", "speed": 0.73, "palette": [(0.1993, 0.0703, 49.75), (0.2084, 0.1209, 49.75), (0.222, 0.5446, 49.75), (0.306, 0.568, 49.75), (0.5447, 0.4186, 49.75)]},
+    "storybook": {"name": "Storybook", "speed": 0.627, "palette": [(0.4369, 0.4086, 69.58), (0.4601, 0.415, 69.58), (0.4833, 0.4186, 69.58), (0.5108, 0.4191, 69.58), (0.5396, 0.4118, 69.58)]},
+    "arise": {"name": "Arise", "speed": 0.627, "palette": [(0.3472, 0.348, 100), (0.3671, 0.3629, 100), (0.385, 0.3743, 100), (0.4043, 0.3858, 100), (0.4271, 0.4052, 100)]},
+    "shine": {"name": "Shine", "speed": 0.627, "palette": [(0.4364, 0.4087, 100), (0.4728, 0.4174, 100), (0.495, 0.4194, 100), (0.5208, 0.4183, 100)]},
+    "unwind": {"name": "Unwind", "speed": 0.627, "palette": [(0.5796, 0.3787, 44.75), (0.5594, 0.4008, 44.75), (0.5369, 0.4148, 44.75), (0.5114, 0.4192, 44.75), (0.4849, 0.4189, 44.75)]},
+    "pumpkin_patch": {
+        "name": "Pumpkin patch",
+        "speed": 0.627,
+        "palette": [(0.2256, 0.3166, 44.83), (0.2694, 0.3467, 44.83), (0.4602, 0.4061, 44.83), (0.4734, 0.3664, 44.83), (0.5374, 0.3713, 44.83)],
+    },
+    "phantom": {"name": "Phantom", "speed": 0.73, "palette": [(0.1568, 0.1681, 40), (0.1597, 0.2673, 40), (0.2258, 0.3244, 40), (0.4281, 0.3412, 40), (0.5217, 0.3592, 40)]},
+    "city_blue": {"name": "City Blue", "speed": 0.603, "palette": [(0.2861, 0.1162, 100), (0.1585, 0.2163, 100), (0.1655, 0.1766, 100), (0.1566, 0.1085, 100), (0.1633, 0.0583, 100)]},
+    "motown": {"name": "Motown", "speed": 0.69, "palette": [(0.1532, 0.0476, 53), (0.1544, 0.0711, 100), (0.1561, 0.1586, 53), (0.1572, 0.202, 53), (0.1598, 0.3036, 53)]},
+    "witching_hour": {"name": "Witching hour", "speed": 0.73, "palette": [(0.6615, 0.3268, 45), (0.5893, 0.3531, 45), (0.5259, 0.348, 45), (0.1689, 0.1281, 45), (0.1532, 0.0476, 45)]},
+    "meriete": {"name": "Meriete", "speed": 0.603, "palette": [(0.1685, 0.055, 80), (0.1547, 0.1072, 80), (0.2092, 0.1108, 80), (0.2943, 0.1842, 80), (0.4636, 0.4138, 80)]},
+    "aqua": {"name": "Aqua", "speed": 0.627, "hex": ["#00c9d6", "#0077b6", "#90e0ef"], "brightness": 75.0},
 }
 
 STORE_KEY = "church_drive.scenes"
@@ -158,15 +121,20 @@ class Library:
         for key, spec in WHITE.items():
             out[key] = {**spec, "kind": "white"}
         for key, spec in COLOUR.items():
-            colors = spec.get("colors") or [hex_to_xy(h) for h in spec["hex"]]
-            speed, brightness = HUE_TIMING.get(key, (0.627, spec["brightness"]))
+            if "palette" in spec:
+                colors = [(x, y) for x, y, _ in spec["palette"]]
+                levels = [b for _, _, b in spec["palette"]]
+            else:
+                colors = [hex_to_xy(h) for h in spec["hex"]]
+                levels = [spec["brightness"]] * len(colors)
             out[key] = {
                 "name": spec["name"],
                 "kind": "colour",
-                "brightness": brightness,
+                "brightness": round(sum(levels) / len(levels), 2),
                 "colors": colors,
+                "levels": levels,
                 "dynamic": True,
-                "speed": speed,
+                "speed": spec["speed"],
             }
         for scene in self.custom:
             out[scene["key"]] = normalise(scene)

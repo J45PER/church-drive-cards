@@ -665,9 +665,9 @@
     const style = centralSceneStyle(name);
     const custom = style ? [style.colour_1, style.colour_2, style.colour_3].filter(Boolean).map(toHex) : [];
     if (custom.length) return custom.length === 1 ? [custom[0], custom[0]] : custom;
+    if (fallback && fallback.length) return fallback.length === 1 ? [fallback[0], fallback[0]] : fallback;
     const key = sceneKey(name);
     if (PALETTES[key]) return PALETTES[key];
-    if (fallback && fallback.length) return fallback.length === 1 ? [fallback[0], fallback[0]] : fallback;
     let h = 0;
     for (const ch of key) h = (h * 31 + ch.charCodeAt(0)) % 360;
     return [hslHex(h, 0.7, 0.55), hslHex((h + 50) % 360, 0.7, 0.35)];
@@ -1737,7 +1737,7 @@
         while (rows[rowIndex].children.length >= Number(rows[rowIndex].dataset.size)) rowIndex += 1;
         const tile = document.createElement("button");
         tile.className = s.active || !anyActive ? "lcc-scene" : "lcc-scene lcc-dim";
-        const glow = `color-mix(in srgb, ${scenePalette(s.name)[0]} 85%, transparent)`;
+        const glow = `color-mix(in srgb, ${scenePalette(s.name, s.colours)[0]} 85%, transparent)`;
         tile.title = s.playing ? `${s.name} (playing, tap to stop)` : s.paused ? `${s.name} (paused, tap to play)` : s.name;
         const bg = sceneBackground(s.name, s.image, s.colours);
         tile.style.cssText = `position:relative; container-type:inline-size; flex:1 1 0; min-width:0; height:48px; border:none; border-radius:12px; padding:0; overflow:hidden; cursor:pointer; background:${bg};${s.active ? ` box-shadow:0 0 12px 2px ${glow}; transform:scale(1.03); z-index:1;` : ""}`;
