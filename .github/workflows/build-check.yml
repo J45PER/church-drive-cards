@@ -1,8 +1,8 @@
 name: Build check
 
-# Fails if the committed church-drive-cards.js doesn't match a fresh build of
-# src/, i.e. someone edited src/ and forgot to run `npm run build` (or edited
-# the bundle by hand). It never commits anything itself.
+# Fails if the committed bundles (or the manifest version) don't match a fresh
+# build of src/, i.e. someone edited src/ or package.json and forgot to run
+# `npm run build` (or edited a bundle by hand). It never commits anything.
 
 on:
   push:
@@ -22,7 +22,7 @@ jobs:
       - run: npm run build
       - name: Committed bundle matches fresh build
         run: |
-          if ! git diff --exit-code -- church-drive-cards.js church-drive-cards-beta.js; then
-            echo "::error file=church-drive-cards.js::Bundles are out of date. Run 'npm run build' and commit church-drive-cards.js and church-drive-cards-beta.js."
+          if ! git diff --exit-code -- custom_components church-drive-cards-beta.js; then
+            echo "::error::Build output is out of date. Run 'npm run build' and commit the changes."
             exit 1
           fi
