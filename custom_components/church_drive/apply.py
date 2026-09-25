@@ -2,21 +2,24 @@
 
 White scenes: one light.turn_on on the targets.
 
-Colour scenes on a Hue room/zone: the group's one working scene on the bridge
-(named "Church Drive", tagged appdata "cd:live", hidden in HA) is rewritten
-with the palette - colours dealt round the lights, several points on gradient
-lights - and recalled animated (dynamic_palette) or still. So colour scenes
-never add more than one bridge scene per room/zone. Anything else (a single
+Colour scenes on a Hue room/zone: the group has two working scenes on the
+bridge ("Church Drive" and "Church Drive 2", tagged appdata "cd:live" and
+"cd:live2", hidden in HA). The one not playing is rewritten with the palette -
+colours dealt round the lights, several points on gradient lights - and
+recalled animated (dynamic_palette) or still. Rewriting the scene that's
+playing made the lights drop out for a few seconds, hence the pair. So colour
+scenes never add more than two bridge scenes per room/zone. Anything else (a single
 light, a non-Hue group, or if the bridge refuses) gets the colours dealt
 round its lights with light.turn_on.
 
-The last scene applied to each target is remembered so the scene select
-entities can show it (see select.py).
+The last scene applied to each target, and when, is remembered so the scene
+select entities can show it (see select.py).
 """
 
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any
 
 from homeassistant.const import ATTR_ENTITY_ID
@@ -31,8 +34,8 @@ from .library import turn_on_data
 
 _LOGGER = logging.getLogger(__name__)
 
-LIVE_TAG = "cd:live"
-LIVE_NAME = "Church Drive"
+# (appdata tag, scene name) of each group's two working scenes.
+LIVE_SCENES = (("cd:live", "Church Drive"), ("cd:live2", "Church Drive 2"))
 
 
 def hue_group_for(hass: HomeAssistant, entity_id: str) -> tuple[Any, Any, str] | None:
@@ -76,8 +79,10 @@ async def async_apply(
             if not await _async_play_on_bridge(hass, entity_id, spec):
                 await _async_deal_colours(hass, members(hass, entity_id), spec, context)
     active = hass.data[DOMAIN].setdefault("active", {})
+    applied = hass.data[DOMAIN].setdefault("applied_at", {})
     for entity_id in entity_ids:
         active[entity_id] = key
+        applied[entity_id] = time.monotonic()
     async_dispatcher_send(hass, SIGNAL_ACTIVE)
 
 
@@ -129,6 +134,11 @@ def _live_scene_body(lights: list, spec: dict) -> dict:
     }
 
 
+def _playing(scene: Any) -> bool:
+    status = getattr(scene, "status", None) if scene is not None else None
+    return bool(status and getattr(status.active, "value", "inactive") != "inactive")
+
+
 async def _async_play_on_bridge(hass: HomeAssistant, entity_id: str, spec: dict) -> bool:
     found = hue_group_for(hass, entity_id)
     if found is None:
@@ -139,7 +149,12 @@ async def _async_play_on_bridge(hass: HomeAssistant, entity_id: str, spec: dict)
         return False
     body = _live_scene_body(lights, spec)
     try:
-        live = next((s for s in controller.get_scenes(group_id) if s.metadata.appdata == LIVE_TAG), None)
+        scenes = controller.get_scenes(group_id)
+        slots = [next((sc for sc in scenes if sc.metadata.appdata == tag), None) for tag, _ in LIVE_SCENES]
+        # Write to whichever working scene isn't the one playing.
+        index = 1 if _playing(slots[0]) else 0
+        live = slots[index]
+        tag, name = LIVE_SCENES[index]
         if live is None:
             group = controller[group_id]
             created = await api.request(
@@ -147,7 +162,7 @@ async def _async_play_on_bridge(hass: HomeAssistant, entity_id: str, spec: dict)
                 "clip/v2/resource/scene",
                 json={
                     "type": "scene",
-                    "metadata": {"name": LIVE_NAME, "appdata": LIVE_TAG},
+                    "metadata": {"name": name, "appdata": tag},
                     "group": {"rid": group_id, "rtype": group.type.value},
                     **body,
                 },

@@ -1128,7 +1128,7 @@
       if (colours && modes.some((m) => COLOUR_MODES.includes(m))) {
         if (scene.kind === "colour" && a.dynamics === "dynamic_palette") return true;
         const xy = a.xy_color;
-        return !!xy && colours.some((c) => Math.abs(xy[0] - c[0]) < 0.03 && Math.abs(xy[1] - c[1]) < 0.03);
+        return !!xy && colours.some((c) => Math.abs(xy[0] - c[0]) < 0.06 && Math.abs(xy[1] - c[1]) < 0.06);
       }
       return true;
     });
@@ -2195,7 +2195,7 @@
   }
 
   // src/scene-builder-card.js
-  var BLANK = { name: "", kind: "colour", kelvin: 2700, brightness: 80, colors: ["#ff7b39", "#7b2cbf"], dynamic: true, speed: 0.5, icon: "" };
+  var BLANK = { name: "", kind: "colour", kelvin: 2700, brightness: 80, colors: ["#ff7b39", "#7b2cbf"], dynamic: true, speed: 0.63, icon: "" };
   function kelvinHex(k) {
     const t = k / 100;
     const r = t <= 66 ? 255 : 329.7 * (t - 60) ** -0.1332;

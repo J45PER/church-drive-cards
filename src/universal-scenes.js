@@ -97,7 +97,7 @@ export function universalSceneActive(hass, scene, lightIds) {
     if (colours && modes.some((m) => COLOUR_MODES.includes(m))) {
       if (scene.kind === 'colour' && a.dynamics === 'dynamic_palette') return true;
       const xy = a.xy_color;
-      return !!xy && colours.some((c) => Math.abs(xy[0] - c[0]) < 0.03 && Math.abs(xy[1] - c[1]) < 0.03);
+      return !!xy && colours.some((c) => Math.abs(xy[0] - c[0]) < 0.06 && Math.abs(xy[1] - c[1]) < 0.06);
     }
     return true;
   });

@@ -12,7 +12,7 @@ import { SUFFIX, LABEL } from './suffix.js';
 import { loadUniversalScenes } from './universal-scenes.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 
-const BLANK = { name: '', kind: 'colour', kelvin: 2700, brightness: 80, colors: ['#ff7b39', '#7b2cbf'], dynamic: true, speed: 0.5, icon: '' };
+const BLANK = { name: '', kind: 'colour', kelvin: 2700, brightness: 80, colors: ['#ff7b39', '#7b2cbf'], dynamic: true, speed: 0.63, icon: '' };
 
 function kelvinHex(k) {
   // Rough colour temperature to sRGB, for the preview swatch.
