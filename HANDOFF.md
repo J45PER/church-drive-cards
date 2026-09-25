@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-24. Current release: **v0.10.0**.*
+*Last updated 2026-09-24. Current release: **v0.10.1**.*
 
 ## Where this stands
 
@@ -108,6 +108,11 @@ Shared modules:
     static path `/church_drive` → `frontend/` (no cache headers) once per HA run and
     adds `/church_drive/church-drive-cards.js?v=<version>` as an extra module URL.
     The version query makes browsers fetch the new bundle after an update.
+  - Since v0.10.1 it also keeps a Lovelace **resource** with the same URL
+    (created/updated at setup, removed when the integration is removed). A page
+    opened while HA is still starting gets the stored resource list even before
+    the extra module URL is added; without it every card showed "Configuration
+    error" until a refresh. Same URL, so the browser loads the bundle once.
   - Switchover notes (2026-09-25): HACS keeps a custom repo's category even after
     `ha_manage_hacs action=remove` (that only deletes the download). To change
     category, also drop the registration with
