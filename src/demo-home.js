@@ -5,6 +5,7 @@
 // sent to Home Assistant.
 
 import { scenePalette } from './scene-style.js';
+import { spreadColours } from './universal-scenes.js';
 
 const COLOUR = ['color_temp', 'xy'];
 
@@ -266,12 +267,14 @@ export class DemoHome {
   playPalette(lightIds, colors, brightness, dynamic) {
     this.stop();
     const lights = lightIds.filter((id) => this.states[id]).sort();
+    // A colour per light (blended if the palette is short), cycled round them.
+    const palette = spreadColours(colors, Math.max(lights.length, colors.length));
     const paint = (shift) =>
       lights.forEach((id, i) => {
         const st = this.states[id];
         if (dynamic && shift && (st.state !== 'on' || st.attributes.dynamics !== 'dynamic_palette')) return;
         const modes = st.attributes.supported_color_modes;
-        const xy = colors[(i + shift) % colors.length];
+        const xy = palette[(i + shift) % palette.length];
         const attrs = { dynamics: dynamic ? 'dynamic_palette' : 'none', brightness: modes.includes('onoff') ? null : brightness };
         if (modes.includes('xy')) Object.assign(attrs, { color_mode: 'xy', xy_color: xy, rgb_color: xyToRgb(xy), hs_color: null, color_temp_kelvin: null });
         this._set(id, 'on', attrs);

@@ -5,11 +5,11 @@ White scenes: one light.turn_on on the targets.
 Colour scenes on a Hue room/zone: the group has two working scenes on the
 bridge ("Church Drive" and "Church Drive 2", tagged appdata "cd:live" and
 "cd:live2", hidden in HA). The one not playing is rewritten with the palette -
-colours dealt round the lights, several points on gradient lights - and
-recalled animated (dynamic_palette) or still. Rewriting the scene that's
+colours spread round the lights (blended so no two match), several points on
+gradient lights - and recalled animated (dynamic_palette) or still. Rewriting the scene that's
 playing made the lights drop out for a few seconds, hence the pair. So colour
 scenes never add more than two bridge scenes per room/zone. Anything else (a single
-light, a non-Hue group, or if the bridge refuses) gets the colours dealt
+light, a non-Hue group, or if the bridge refuses) gets the colours spread
 round its lights with light.turn_on.
 
 The last scene applied to each target, and when, is remembered so the scene
@@ -91,14 +91,13 @@ async def async_apply(
 async def _async_deal_colours(
     hass: HomeAssistant, lights: list[str], spec: dict, context: Context | None
 ) -> None:
-    colors = spec["colors"]
-    levels = _levels(spec)
-    for i, light in enumerate(sorted(lights)):
-        brightness = max(1, round(levels[i % len(colors)] * 255 / 100))
+    lights = sorted(lights)
+    for light, (xy, level) in zip(lights, spread(spec["colors"], _levels(spec), len(lights)), strict=True):
+        brightness = max(1, round(level * 255 / 100))
         await hass.services.async_call(
             "light",
             "turn_on",
-            {ATTR_ENTITY_ID: light, "xy_color": list(colors[i % len(colors)]), "brightness": brightness},
+            {ATTR_ENTITY_ID: light, "xy_color": list(xy), "brightness": brightness},
             blocking=True,
             context=context,
         )
@@ -113,31 +112,53 @@ def _levels(spec: dict) -> list[float]:
     return spec.get("levels") or [spec["brightness"]] * len(spec["colors"])
 
 
+def spread(colors: list, levels: list[float], count: int) -> list[tuple[tuple[float, float], float]]:
+    """`count` (colour, brightness) pairs evenly along the palette, blending
+    between neighbouring colours, so no two lights share a colour when there
+    are more lights than colours."""
+    if count <= len(colors):
+        step = len(colors) / max(count, 1)
+        return [(tuple(colors[int(i * step)]), levels[int(i * step)]) for i in range(count)]
+    out = []
+    for i in range(count):
+        pos = i * (len(colors) - 1) / (count - 1) if count > 1 else 0
+        a = min(int(pos), len(colors) - 1)
+        b = min(a + 1, len(colors) - 1)
+        t = pos - a
+        xy = (colors[a][0] + (colors[b][0] - colors[a][0]) * t, colors[a][1] + (colors[b][1] - colors[a][1]) * t)
+        out.append(((round(xy[0], 4), round(xy[1], 4)), round(levels[a] + (levels[b] - levels[a]) * t, 2)))
+    return out
+
+
 def _live_scene_body(lights: list, spec: dict) -> dict:
     colors = spec["colors"]
     levels = _levels(spec)
+    lights = sorted(lights, key=lambda item: item.id)
+    # Each light starts on its own colour; the animation palette gets at least
+    # five colours (blends of a short one), like Hue's own, so the bridge has
+    # enough to keep neighbouring lights apart.
+    starts = spread(colors, levels, len(lights))
+    palette = spread(colors, levels, max(5, len(colors)))[:9]
     actions = []
-    for i, light in enumerate(sorted(lights, key=lambda item: item.id)):
+    for i, light in enumerate(lights):
+        xy, level = starts[i]
         action: dict[str, Any] = {"on": {"on": True}}
         if light.dimming is not None:
-            action["dimming"] = {"brightness": levels[i % len(colors)]}
+            action["dimming"] = {"brightness": level}
         if light.color is not None:
-            action["color"] = _xy(colors[i % len(colors)])
+            action["color"] = _xy(xy)
             gradient = getattr(light, "gradient", None)
             if gradient is not None and gradient.points_capable >= 2:
-                count = min(gradient.points_capable, 5, max(2, len(colors)))
+                count = min(gradient.points_capable, 5)
                 action["gradient"] = {
-                    "points": [{"color": _xy(colors[(i + n) % len(colors)])} for n in range(count)],
+                    "points": [{"color": _xy(palette[(i + n) % len(palette)][0])} for n in range(count)],
                     "mode": "interpolated_palette",
                 }
         actions.append({"target": {"rid": light.id, "rtype": "light"}, "action": action})
     return {
         "actions": actions,
         "palette": {
-            "color": [
-                {"color": _xy(c), "dimming": {"brightness": level}}
-                for c, level in list(zip(colors, levels, strict=False))[:9]
-            ],
+            "color": [{"color": _xy(c), "dimming": {"brightness": level}} for c, level in palette],
             "dimming": [],
             "color_temperature": [],
             "effects": [],
