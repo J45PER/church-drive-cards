@@ -661,21 +661,22 @@
     });
     return loading;
   }
-  function scenePalette(name) {
+  function scenePalette(name, fallback) {
     const style = centralSceneStyle(name);
     const custom = style ? [style.colour_1, style.colour_2, style.colour_3].filter(Boolean).map(toHex) : [];
     if (custom.length) return custom.length === 1 ? [custom[0], custom[0]] : custom;
     const key = sceneKey(name);
     if (PALETTES[key]) return PALETTES[key];
+    if (fallback && fallback.length) return fallback.length === 1 ? [fallback[0], fallback[0]] : fallback;
     let h = 0;
     for (const ch of key) h = (h * 31 + ch.charCodeAt(0)) % 360;
     return [hslHex(h, 0.7, 0.55), hslHex((h + 50) % 360, 0.7, 0.35)];
   }
-  function sceneBackground(name, image) {
+  function sceneBackground(name, image, fallback) {
     const style = centralSceneStyle(name);
     const picture = image || style && style.image;
     if (picture) return `center / cover no-repeat url("${picture}")`;
-    return `linear-gradient(135deg, ${scenePalette(name).join(", ")})`;
+    return `linear-gradient(135deg, ${scenePalette(name, fallback).join(", ")})`;
   }
   function sceneIcon(name, isDynamic) {
     const style = centralSceneStyle(name);
@@ -917,6 +918,35 @@
       else this._refreshGroups();
       if (dynamic && scene.attributes.is_dynamic) this._animate(group, palette);
     }
+    // A universal colour scene: colours dealt round the lights; animated ones
+    // drift round them every couple of seconds, like a Hue dynamic scene.
+    playPalette(lightIds, colors, brightness, dynamic) {
+      this.stop();
+      const lights = lightIds.filter((id) => this.states[id]).sort();
+      const paint = (shift) => lights.forEach((id, i) => {
+        const st = this.states[id];
+        if (dynamic && shift && (st.state !== "on" || st.attributes.dynamics !== "dynamic_palette")) return;
+        const modes = st.attributes.supported_color_modes;
+        const xy = colors[(i + shift) % colors.length];
+        const attrs = { dynamics: dynamic ? "dynamic_palette" : "none", brightness: modes.includes("onoff") ? null : brightness };
+        if (modes.includes("xy")) Object.assign(attrs, { color_mode: "xy", xy_color: xy, rgb_color: xyToRgb(xy), hs_color: null, color_temp_kelvin: null });
+        this._set(id, "on", attrs);
+      });
+      paint(0);
+      this._refreshGroups();
+      this.onChange();
+      if (!dynamic) return;
+      this.timer = setInterval(() => {
+        this.tick += 1;
+        if (!lights.some((id) => this.states[id].state === "on" && this.states[id].attributes.dynamics === "dynamic_palette")) {
+          this.stop();
+          return;
+        }
+        paint(this.tick);
+        this._refreshGroups();
+        this.onChange();
+      }, 2e3);
+    }
     // Cycle the palette round the group's colour bulbs every couple of seconds.
     _animate(group, palette) {
       this.stop();
@@ -1035,7 +1065,8 @@
   var UNIVERSAL_PREFIX = "universal:";
   var library = [];
   var loading2 = null;
-  function loadUniversalScenes(hass) {
+  function loadUniversalScenes(hass, force = false) {
+    if (force) loading2 = null;
     if (loading2 || !hass || !hass.callWS) return loading2;
     loading2 = hass.callWS({ type: "church_drive/library" }).then((res) => {
       library = res && res.scenes || [];
@@ -1065,8 +1096,21 @@
     return () => window.removeEventListener(EVENT, callback);
   }
   function universalTurnOnData(scene) {
-    const { key, name, ...data } = scene;
+    const data = { brightness: scene.brightness };
+    if (scene.color_temp_kelvin) data.color_temp_kelvin = scene.color_temp_kelvin;
+    if (scene.xy_color) data.xy_color = scene.xy_color;
     return data;
+  }
+  var COLOUR_MODES = ["xy", "hs", "rgb", "rgbw", "rgbww"];
+  function universalDealColours(scene, lightIds) {
+    return [...lightIds].sort().map((id, i) => ({
+      entity_id: id,
+      xy_color: scene.colors[i % scene.colors.length],
+      brightness: scene.brightness
+    }));
+  }
+  function universalScenePlaying(hass, lightIds) {
+    return lightIds.some((id) => hass.states[id] && hass.states[id].state === "on" && hass.states[id].attributes.dynamics === "dynamic_palette");
   }
   function universalSceneActive(hass, scene, lightIds) {
     const lit = lightIds.map((id) => hass.states[id]).filter((st) => st && st.state === "on");
@@ -1074,14 +1118,17 @@
     return lit.every((st) => {
       const a = st.attributes;
       const modes = a.supported_color_modes || [];
-      if (a.brightness != null && Math.abs(a.brightness - scene.brightness) > 4) return false;
+      const animating = scene.kind === "colour" && a.dynamics === "dynamic_palette";
+      if (!animating && a.brightness != null && Math.abs(a.brightness - scene.brightness) > 4) return false;
       if (scene.color_temp_kelvin && modes.includes("color_temp")) {
         if (a.color_mode !== "color_temp" || a.color_temp_kelvin == null) return false;
         return Math.abs(a.color_temp_kelvin - scene.color_temp_kelvin) <= scene.color_temp_kelvin * 0.03;
       }
-      if (scene.xy_color && modes.some((m) => ["xy", "hs", "rgb", "rgbw", "rgbww"].includes(m))) {
+      const colours = scene.kind === "colour" ? scene.colors : scene.xy_color ? [scene.xy_color] : null;
+      if (colours && modes.some((m) => COLOUR_MODES.includes(m))) {
+        if (scene.kind === "colour" && a.dynamics === "dynamic_palette") return true;
         const xy = a.xy_color;
-        return !!xy && Math.abs(xy[0] - scene.xy_color[0]) < 0.02 && Math.abs(xy[1] - scene.xy_color[1]) < 0.02;
+        return !!xy && colours.some((c) => Math.abs(xy[0] - c[0]) < 0.03 && Math.abs(xy[1] - c[1]) < 0.03);
       }
       return true;
     });
@@ -1541,9 +1588,25 @@
     // doesn't work: Hue restarts the animation for scenes set to animate
     // automatically. Any explicit colour command does stop it, so send each lit
     // bulb of the scene's group the colour and brightness it's showing now.
+    // Real home: the integration applies it (colour scenes go through the Hue
+    // bridge so they can animate). Pretend home: set the lights directly.
+    _applyUniversal(scene) {
+      const lib = scene.universal;
+      if (!this.config.demo) {
+        this._hass.callService("church_drive", "apply_scene", { entity_id: scene.targets, scene: lib.key });
+      } else if (lib.kind === "colour" && this._demo) {
+        this._demo.playPalette(scene.targetLights, lib.colors, lib.brightness, !!lib.dynamic);
+      } else if (lib.kind === "colour") {
+        universalDealColours(lib, scene.targetLights).forEach(
+          ({ entity_id, ...data }) => this._hass.callService("light", "turn_on", data, { entity_id })
+        );
+      } else {
+        this._hass.callService("light", "turn_on", universalTurnOnData(lib), { entity_id: scene.targets });
+      }
+    }
     _freezeScene(scene) {
       const hass = this._hass;
-      const ids = scene.group ? lccMembersOf(hass, scene.group) : this._cardLightIds || [];
+      const ids = scene.group ? lccMembersOf(hass, scene.group) : scene.targetLights || this._cardLightIds || [];
       ids.map((id) => hass.states[id]).filter((st) => st && st.state === "on" && !lccIsGroupLike(st)).forEach((st) => {
         const a = st.attributes;
         const data = {};
@@ -1661,7 +1724,7 @@
         tile.className = s.active || !anyActive ? "lcc-scene" : "lcc-scene lcc-dim";
         const glow = `color-mix(in srgb, ${scenePalette(s.name)[0]} 85%, transparent)`;
         tile.title = s.playing ? `${s.name} (playing, tap to stop)` : s.paused ? `${s.name} (paused, tap to play)` : s.name;
-        const bg = sceneBackground(s.name, s.image);
+        const bg = sceneBackground(s.name, s.image, s.colours);
         tile.style.cssText = `position:relative; container-type:inline-size; aspect-ratio:1 / 1; border:none; border-radius:14px; padding:0; overflow:hidden; cursor:pointer; background:${bg};${s.active ? ` box-shadow:0 0 16px 3px ${glow}; transform:scale(1.04); z-index:1;` : ""}`;
         tile.innerHTML = `
         <div style="position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0) 65%);"></div>
@@ -1717,9 +1780,8 @@
           moved = false;
           return;
         }
-        if (scene.universal) {
-          this._hass.callService("light", "turn_on", universalTurnOnData(scene.universal), { entity_id: scene.targets });
-        } else if (scene.playing) this._freezeScene(scene);
+        if (scene.playing) this._freezeScene(scene);
+        else if (scene.universal) this._applyUniversal(scene);
         else this._activateScene(scene.entity, scene.isDynamic);
       });
     }
@@ -1764,7 +1826,18 @@
           }
           const tTargets = own || targets;
           const tLights = own ? [...new Set(own.flatMap((id) => lccIsGroupLike(hass.states[id]) ? lccMembersOf(hass, id) : [id]))] : targetLights;
-          return { ...s, name: name2, isDynamic: false, icon: s.icon || sceneIcon(lib.name, false), universal: lib, targets: tTargets, targetLights: tLights, activated: 0 };
+          const isDynamic2 = lib.kind === "colour" && !!lib.dynamic;
+          return {
+            ...s,
+            name: name2,
+            isDynamic: isDynamic2,
+            icon: s.icon || lib.icon || sceneIcon(lib.name, isDynamic2),
+            colours: lib.hex,
+            universal: lib,
+            targets: tTargets,
+            targetLights: tLights,
+            activated: 0
+          };
         }
         const st = hass.states[s.entity];
         const isDynamic = st.attributes.is_dynamic === true;
@@ -1778,9 +1851,20 @@
           activated: Date.parse(st.state) || 0
         };
       });
-      const matching = scenes.find((sc) => sc.universal && universalSceneActive(hass, sc.universal, sc.targetLights));
+      const selectFor = (target) => Object.values(hass.states).find((st) => st.entity_id.startsWith("select.") && st.attributes.target === target);
+      this._sceneSelects = scenes.filter((sc) => sc.universal && sc.targets.length === 1).map((sc) => selectFor(sc.targets[0])).filter(Boolean).map((st) => st.entity_id);
+      const matching = scenes.find((sc) => {
+        if (!sc.universal) return false;
+        const sel = sc.targets.length === 1 ? selectFor(sc.targets[0]) : null;
+        if (sel) return sel.attributes.scene_key === sc.universal.key;
+        return universalSceneActive(hass, sc.universal, sc.targetLights);
+      });
       if (matching) {
         matching.active = true;
+        if (matching.isDynamic) {
+          matching.playing = universalScenePlaying(hass, matching.targetLights);
+          matching.paused = !matching.playing;
+        }
         return scenes;
       }
       const latest = scenes.filter((sc) => !sc.universal).reduce((a, b) => b.activated > (a ? a.activated : 0) ? b : a, null);
@@ -1892,6 +1976,7 @@
         ...relevantEntityIds,
         ...scenes.filter((s) => !s.universal).map((s) => s.entity),
         ...scenes.flatMap((s) => s.targetLights || []),
+        ...this._sceneSelects || [],
         ...scenes.map((s) => s.group).filter(Boolean),
         ...scenes.filter((s) => s.group).flatMap((s) => lccMembersOf(hass, s.group))
       ];
@@ -2095,10 +2180,317 @@
     });
   }
 
+  // src/scene-builder-card.js
+  var BLANK = { name: "", kind: "colour", kelvin: 2700, brightness: 80, colors: ["#ff7b39", "#7b2cbf"], dynamic: true, speed: 0.5, icon: "" };
+  function kelvinHex(k) {
+    const t = k / 100;
+    const r = t <= 66 ? 255 : 329.7 * (t - 60) ** -0.1332;
+    const g = t <= 66 ? 99.47 * Math.log(t) - 161.12 : 288.12 * (t - 60) ** -0.0755;
+    const b = t >= 66 ? 255 : t <= 19 ? 0 : 138.52 * Math.log(t - 10) - 305.04;
+    return "#" + [r, g, b].map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, "0")).join("");
+  }
+  function swatch(scene) {
+    const colours = scene.kind === "colour" ? scene.colors : [kelvinHex(scene.kelvin), kelvinHex(scene.kelvin)];
+    const list = colours.length === 1 ? [colours[0], colours[0]] : colours;
+    return `linear-gradient(135deg, ${list.join(", ")})`;
+  }
+  var SceneBuilderCardEditor = createFormEditor({
+    schema: () => [{ name: "title", selector: { text: {} } }],
+    labels: { title: "Title" }
+  });
+  var SceneBuilderCard = class extends HTMLElement {
+    setConfig(config) {
+      this.config = config || {};
+      this._draft = this._draft || null;
+      if (this._hass) this._draw();
+    }
+    set hass(hass) {
+      const first = !this._hass;
+      this._hass = hass;
+      if (first) this._load();
+    }
+    async _load() {
+      try {
+        const res = await this._hass.callWS({ type: "church_drive/library" });
+        this._custom = res.custom || [];
+        this._error = null;
+      } catch (err) {
+        this._custom = [];
+        this._error = "The Church Drive integration isn't available.";
+      }
+      this._draw();
+    }
+    _rooms() {
+      return Object.values(this._hass.states).filter((st) => st.entity_id.startsWith("light.") && st.attributes.hue_type).map((st) => ({ id: st.entity_id, name: st.attributes.friendly_name || st.entity_id, kind: st.attributes.hue_type })).sort((a, b) => a.kind === b.kind ? a.name.localeCompare(b.name) : a.kind === "room" ? -1 : 1);
+    }
+    _payload() {
+      const d = this._draft;
+      const scene = { name: d.name.trim(), kind: d.kind, brightness: Number(d.brightness) };
+      if (d.key) scene.key = d.key;
+      if (d.icon) scene.icon = d.icon.trim();
+      if (d.kind === "colour") Object.assign(scene, { colors: d.colors, dynamic: !!d.dynamic, speed: Number(d.speed) });
+      else scene.kelvin = Number(d.kelvin);
+      return scene;
+    }
+    async _call(message, done) {
+      this._busy = true;
+      this._status = "";
+      this._draw();
+      try {
+        await this._hass.callWS(message);
+        this._status = done;
+      } catch (err) {
+        this._status = `Couldn't do that: ${err && err.message || err}`;
+      }
+      this._busy = false;
+    }
+    async _save() {
+      const scene = this._payload();
+      if (!scene.name) {
+        this._status = "Give the scene a name.";
+        this._draw();
+        return;
+      }
+      await this._call({ type: "church_drive/scene/save", scene }, `Saved "${scene.name}". It's now in every light card's scene list.`);
+      if (!this._status.startsWith("Couldn't")) this._draft = null;
+      loadUniversalScenes(this._hass, true);
+      await this._load();
+    }
+    async _delete(scene) {
+      if (!window.confirm(`Delete "${scene.name}"? Light cards using it will stop showing it.`)) return;
+      await this._call({ type: "church_drive/scene/delete", key: scene.key }, `Deleted "${scene.name}".`);
+      loadUniversalScenes(this._hass, true);
+      await this._load();
+    }
+    async _try() {
+      const target = this.querySelector(".sbc-room").value;
+      if (!target) return;
+      const scene = { ...this._payload(), name: this._payload().name || "Preview" };
+      delete scene.key;
+      await this._call({ type: "church_drive/scene/preview", entity_id: [target], scene }, "Playing on the lights now.");
+      this._draw();
+    }
+    _draw() {
+      if (!this._hass) return;
+      const cfg = this.config || {};
+      const d = this._draft;
+      this.innerHTML = `
+      <ha-card style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; background:var(--card-background-color); padding:16px; color:var(--primary-text-color);">
+        <style>
+          .sbc-row { display:flex; align-items:center; gap:12px; padding:8px; border-radius:12px; background:rgba(127,127,127,0.08); margin-top:8px; }
+          .sbc-sw { width:44px; height:44px; border-radius:10px; flex:none; display:flex; align-items:center; justify-content:center; color:#fff; }
+          .sbc-name { flex:1; min-width:0; font-weight:500; }
+          .sbc-sub { color:var(--secondary-text-color); font-size:0.85rem; }
+          .sbc-btn { border:none; border-radius:10px; padding:8px 12px; background:rgba(127,127,127,0.18); color:var(--primary-text-color); font:inherit; cursor:pointer; }
+          .sbc-btn:hover { background:rgba(127,127,127,0.28); }
+          .sbc-primary { background:var(--primary-color); color:var(--text-primary-color, #fff); }
+          .sbc-form label { display:block; margin-top:12px; font-size:0.9rem; color:var(--secondary-text-color); }
+          .sbc-form input[type=text], .sbc-form select { width:100%; box-sizing:border-box; padding:8px; border-radius:8px; border:1px solid var(--divider-color); background:var(--card-background-color); color:var(--primary-text-color); font:inherit; }
+          .sbc-form input[type=range] { width:100%; }
+          .sbc-colours { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+          .sbc-colours input[type=color] { width:44px; height:44px; border:none; border-radius:10px; padding:0; background:none; cursor:pointer; }
+          .sbc-seg { display:flex; gap:6px; margin-top:6px; }
+          .sbc-seg .sbc-btn[aria-pressed=true] { background:var(--primary-color); color:var(--text-primary-color, #fff); }
+          .sbc-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
+          .sbc-status { margin-top:10px; font-size:0.9rem; color:var(--secondary-text-color); }
+        </style>
+        <div style="font-size:1.5rem; font-weight:500;"></div>
+        <div class="sbc-sub" style="margin-top:4px;">Your own scenes, usable in any room or zone. Built-in ones (Bright, Soho\u2026) are always there.</div>
+        <div class="sbc-list"></div>
+        <div class="sbc-body"></div>
+        <div class="sbc-status"></div>
+      </ha-card>`;
+      this.querySelector("div").textContent = cfg.title || "Scene builder";
+      this.querySelector(".sbc-status").textContent = this._error || this._status || "";
+      const list = this.querySelector(".sbc-list");
+      (this._custom || []).forEach((scene) => {
+        const row = document.createElement("div");
+        row.className = "sbc-row";
+        row.innerHTML = `<div class="sbc-sw">${scene.icon ? iconHtml(scene.icon, { size: "24px" }) : ""}</div>
+        <div class="sbc-name"><div></div><div class="sbc-sub"></div></div>
+        <button class="sbc-btn" data-act="edit">Edit</button><button class="sbc-btn" data-act="delete">Delete</button>`;
+        row.querySelector(".sbc-sw").style.background = swatch(scene);
+        row.querySelector(".sbc-name div").textContent = scene.name;
+        row.querySelector(".sbc-name .sbc-sub").textContent = scene.kind === "colour" ? `${scene.colors.length} colours${scene.dynamic ? ", animated" : ""} \xB7 ${scene.brightness}%` : `${scene.kelvin}K \xB7 ${scene.brightness}%`;
+        row.querySelector("[data-act=edit]").addEventListener("click", () => {
+          this._draft = { ...BLANK, ...scene, colors: [...scene.colors || BLANK.colors] };
+          this._status = "";
+          this._draw();
+        });
+        row.querySelector("[data-act=delete]").addEventListener("click", () => this._delete(scene));
+        list.appendChild(row);
+      });
+      hydrateIcons(list);
+      const body = this.querySelector(".sbc-body");
+      if (!d) {
+        body.innerHTML = `<div class="sbc-actions"><button class="sbc-btn sbc-primary" data-act="new">New scene</button></div>`;
+        body.querySelector("[data-act=new]").addEventListener("click", () => {
+          this._draft = { ...BLANK, colors: [...BLANK.colors] };
+          this._status = "";
+          this._draw();
+        });
+        return;
+      }
+      body.innerHTML = `<div class="sbc-form">
+      <div class="sbc-row" style="margin-top:16px;"><div class="sbc-sw sbc-preview"></div><div class="sbc-name sbc-title"></div></div>
+      <label>Name<input type="text" class="sbc-f-name" maxlength="32" placeholder="e.g. Film night"></label>
+      <label>Type<div class="sbc-seg"><button class="sbc-btn" data-kind="white">White</button><button class="sbc-btn" data-kind="colour">Colours</button></div></label>
+      <div class="sbc-white"><label>Colour temperature: <span class="sbc-k"></span>K<input type="range" class="sbc-f-kelvin" min="2000" max="6500" step="50"></label></div>
+      <div class="sbc-colour"><label>Colours (dealt round the lights; gradient strips show several)</label><div class="sbc-colours"></div>
+        <label><input type="checkbox" class="sbc-f-dynamic"> Animated (colours drift between the lights, like Hue's dynamic scenes)</label>
+        <label class="sbc-speed">Speed<input type="range" class="sbc-f-speed" min="0" max="1" step="0.05"></label></div>
+      <label>Brightness: <span class="sbc-b"></span>%<input type="range" class="sbc-f-brightness" min="1" max="100"></label>
+      <label>Icon (optional, e.g. mdi:movie-open)<input type="text" class="sbc-f-icon" placeholder="mdi:\u2026"></label>
+      <label>Try it in<select class="sbc-room"><option value="">Choose a room or zone\u2026</option></select></label>
+      <div class="sbc-actions"><button class="sbc-btn" data-act="try">Try</button><button class="sbc-btn sbc-primary" data-act="save">Save</button><button class="sbc-btn" data-act="cancel">Cancel</button></div>
+    </div>`;
+      const $ = (sel) => body.querySelector(sel);
+      const refresh = () => {
+        $(".sbc-preview").style.background = swatch(d);
+        $(".sbc-title").textContent = d.name || "New scene";
+        $(".sbc-k").textContent = d.kelvin;
+        $(".sbc-b").textContent = d.brightness;
+        body.querySelectorAll("[data-kind]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.kind === d.kind)));
+        $(".sbc-white").style.display = d.kind === "white" ? "" : "none";
+        $(".sbc-colour").style.display = d.kind === "colour" ? "" : "none";
+        $(".sbc-speed").style.display = d.dynamic ? "" : "none";
+      };
+      const drawColours = () => {
+        const box = $(".sbc-colours");
+        box.innerHTML = "";
+        d.colors.forEach((c, i) => {
+          const input = document.createElement("input");
+          input.type = "color";
+          input.value = c;
+          input.title = "Change colour (right-click or long-press to remove)";
+          input.addEventListener("input", () => {
+            d.colors[i] = input.value;
+            refresh();
+          });
+          input.addEventListener("contextmenu", (ev) => {
+            ev.preventDefault();
+            if (d.colors.length > 1) {
+              d.colors.splice(i, 1);
+              drawColours();
+              refresh();
+            }
+          });
+          box.appendChild(input);
+        });
+        if (d.colors.length < 9) {
+          const add = document.createElement("button");
+          add.className = "sbc-btn";
+          add.textContent = "+ Colour";
+          add.addEventListener("click", () => {
+            d.colors.push(d.colors[d.colors.length - 1] || "#ffffff");
+            drawColours();
+            refresh();
+          });
+          box.appendChild(add);
+        }
+        if (d.colors.length > 1) {
+          const remove = document.createElement("button");
+          remove.className = "sbc-btn";
+          remove.textContent = "\u2212 Colour";
+          remove.addEventListener("click", () => {
+            d.colors.pop();
+            drawColours();
+            refresh();
+          });
+          box.appendChild(remove);
+        }
+      };
+      $(".sbc-f-name").value = d.name;
+      $(".sbc-f-name").addEventListener("input", (ev) => {
+        d.name = ev.target.value;
+        refresh();
+      });
+      body.querySelectorAll("[data-kind]").forEach(
+        (b) => b.addEventListener("click", () => {
+          d.kind = b.dataset.kind;
+          refresh();
+        })
+      );
+      $(".sbc-f-kelvin").value = d.kelvin;
+      $(".sbc-f-kelvin").addEventListener("input", (ev) => {
+        d.kelvin = Number(ev.target.value);
+        refresh();
+      });
+      $(".sbc-f-brightness").value = d.brightness;
+      $(".sbc-f-brightness").addEventListener("input", (ev) => {
+        d.brightness = Number(ev.target.value);
+        refresh();
+      });
+      $(".sbc-f-dynamic").checked = !!d.dynamic;
+      $(".sbc-f-dynamic").addEventListener("change", (ev) => {
+        d.dynamic = ev.target.checked;
+        refresh();
+      });
+      $(".sbc-f-speed").value = d.speed;
+      $(".sbc-f-speed").addEventListener("input", (ev) => {
+        d.speed = Number(ev.target.value);
+      });
+      $(".sbc-f-icon").value = d.icon || "";
+      $(".sbc-f-icon").addEventListener("input", (ev) => {
+        d.icon = ev.target.value;
+      });
+      const rooms = $(".sbc-room");
+      this._rooms().forEach((r) => {
+        const opt = document.createElement("option");
+        opt.value = r.id;
+        opt.textContent = `${r.name} (${r.kind})`;
+        rooms.appendChild(opt);
+      });
+      if (this._tryTarget) rooms.value = this._tryTarget;
+      rooms.addEventListener("change", () => {
+        this._tryTarget = rooms.value;
+      });
+      $("[data-act=try]").addEventListener("click", () => this._try());
+      $("[data-act=save]").addEventListener("click", () => this._save());
+      $("[data-act=cancel]").addEventListener("click", () => {
+        this._draft = null;
+        this._status = "";
+        this._draw();
+      });
+      body.querySelectorAll("button").forEach((b) => b.disabled = !!this._busy);
+      drawColours();
+      refresh();
+    }
+    getCardSize() {
+      return 6;
+    }
+    getGridOptions() {
+      return { columns: 12, min_columns: 6, rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement(`scene-builder-card-editor${SUFFIX}`);
+    }
+    static getStubConfig() {
+      return { title: "Scene builder" };
+    }
+  };
+  function registerSceneBuilderCard() {
+    if (!customElements.get(`scene-builder-card-editor${SUFFIX}`)) {
+      customElements.define(`scene-builder-card-editor${SUFFIX}`, SceneBuilderCardEditor);
+    }
+    if (!customElements.get(`scene-builder-card${SUFFIX}`)) {
+      customElements.define(`scene-builder-card${SUFFIX}`, SceneBuilderCard);
+    }
+    window.customCards = window.customCards || [];
+    window.customCards.push({
+      type: `scene-builder-card${SUFFIX}`,
+      name: `Scene Builder Card${LABEL}`,
+      description: "Make your own universal scenes (white or colours, optionally animated) for every Light Control card",
+      preview: false,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
+    });
+  }
+
   // src/index.js
   registerGaugeZoneCard();
   registerAlarmPanelCard();
   registerLightControlCard();
   registerSceneStylesCard();
+  registerSceneBuilderCard();
   console.info(`%c CHURCH-DRIVE-CARDS${SUFFIX ? " BETA" : ""} %c loaded `, "color: white; background: #2196f3; font-weight: 700;", "color: #2196f3; background: transparent;");
 })();

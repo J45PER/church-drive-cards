@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-24. Current release: **v0.9.1**.*
+*Last updated 2026-09-24. Current release: **v0.10.0**.*
 
 ## Where this stands
 
@@ -39,13 +39,32 @@ plan below).
   reads "Bright · Spotlights"), then the Hue scenes, each labelled with its
   room/zone; Hue scenes named like a universal one are hidden. There's also a
   `church_drive.apply_scene` action (lights + scene name).
+- Since v0.10.0:
+  - **Colour scenes** (`library.COLOUR`: Soho, Magneto, Ruby glow, Emerald isle and
+    Dreamy dusk read from the Kitchen bridge scenes, the rest from the old hex
+    palettes) and **custom scenes** (HA storage `church_drive.scenes`, from the
+    Scene Builder card via websocket `church_drive/scene/save|delete|preview`,
+    admin-only save).
+  - `apply.py`: white = `light.turn_on`; colour on a Hue room/zone = rewrite that
+    group's one working scene ("Church Drive", appdata `cd:live`, its HA entity
+    hidden) with actions (colours dealt round the lights, gradient points on
+    gradient lights) + palette + speed, then recall `dynamic_palette` or
+    `active`. Anything else, or a bridge error, deals colours with
+    `light.turn_on` per light.
+  - `select.py`: `select.<room/zone> scene` per Hue grouped light; state = last
+    applied scene while the lights still match (animating counts), else a
+    matching white scene; attributes `target`, `scene_key`. Cards use it to show
+    the selected universal tile.
+  - Card: universal colour tiles use the scene's colours when there's no
+    built-in palette; animated ones show playing/paused and pause like Hue
+    scenes. The pretend home animates colour scenes (`DemoHome.playPalette`).
 - Why not sync every room to the bridge: it already has ~123 scenes and the full
   library everywhere would add ~100, past the bridge's ~200 limit. Bridge
   scenes stay for animated/colour scenes (step 4).
 - Plan: step 2 = Kitchen test (done in v0.8.0, Rest created, the Hue app's
-  Bright/Relax/Nightlight linked). Step 3 (v0.9.0) = library applied by the
-  cards in every room (active-scene entity still to do). Step 4 = gradients,
-  dynamic palettes and a scene builder. Everything below is merged to
+  Bright/Relax/Nightlight linked). Step 3 (v0.9.x) = library applied by the
+  cards in every room and zone. Step 4 (v0.10.0) = colour/animated scenes,
+  gradients, scene selects and the scene builder.  Everything below is merged to
 `main`, released and running live. The user has checked each change on a real
 device.
 

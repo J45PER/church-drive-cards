@@ -10,7 +10,8 @@ export const UNIVERSAL_PREFIX = 'universal:';
 let library = [];
 let loading = null;
 
-export function loadUniversalScenes(hass) {
+export function loadUniversalScenes(hass, force = false) {
+  if (force) loading = null;
   if (loading || !hass || !hass.callWS) return loading;
   loading = hass
     .callWS({ type: 'church_drive/library' })
@@ -51,10 +52,29 @@ export function onUniversalScenesChanged(callback) {
   return () => window.removeEventListener(EVENT, callback);
 }
 
-// light.turn_on data for a scene (everything but the key and name).
+// light.turn_on data for a white scene.
 export function universalTurnOnData(scene) {
-  const { key, name, ...data } = scene;
+  const data = { brightness: scene.brightness };
+  if (scene.color_temp_kelvin) data.color_temp_kelvin = scene.color_temp_kelvin;
+  if (scene.xy_color) data.xy_color = scene.xy_color;
   return data;
+}
+
+const COLOUR_MODES = ['xy', 'hs', 'rgb', 'rgbw', 'rgbww'];
+
+// A colour scene's colours dealt round lights (for the pretend home and as a
+// fallback): [{ entity_id, xy_color, brightness }].
+export function universalDealColours(scene, lightIds) {
+  return [...lightIds].sort().map((id, i) => ({
+    entity_id: id,
+    xy_color: scene.colors[i % scene.colors.length],
+    brightness: scene.brightness,
+  }));
+}
+
+// Any of the lights animating (Hue reports dynamics on lit bulbs).
+export function universalScenePlaying(hass, lightIds) {
+  return lightIds.some((id) => hass.states[id] && hass.states[id].state === 'on' && hass.states[id].attributes.dynamics === 'dynamic_palette');
 }
 
 // Whether lights are showing a scene: every lit light at its brightness and
@@ -65,16 +85,19 @@ export function universalSceneActive(hass, scene, lightIds) {
   return lit.every((st) => {
     const a = st.attributes;
     const modes = a.supported_color_modes || [];
-    if (a.brightness != null && Math.abs(a.brightness - scene.brightness) > 4) return false;
+    const animating = scene.kind === 'colour' && a.dynamics === 'dynamic_palette';
+    if (!animating && a.brightness != null && Math.abs(a.brightness - scene.brightness) > 4) return false;
     // A light that can't show the scene's colour (e.g. an on/off plug or a
     // white-only bulb in a colour scene) only has to be on.
     if (scene.color_temp_kelvin && modes.includes('color_temp')) {
       if (a.color_mode !== 'color_temp' || a.color_temp_kelvin == null) return false;
       return Math.abs(a.color_temp_kelvin - scene.color_temp_kelvin) <= scene.color_temp_kelvin * 0.03;
     }
-    if (scene.xy_color && modes.some((m) => ['xy', 'hs', 'rgb', 'rgbw', 'rgbww'].includes(m))) {
+    const colours = scene.kind === 'colour' ? scene.colors : scene.xy_color ? [scene.xy_color] : null;
+    if (colours && modes.some((m) => COLOUR_MODES.includes(m))) {
+      if (scene.kind === 'colour' && a.dynamics === 'dynamic_palette') return true;
       const xy = a.xy_color;
-      return !!xy && Math.abs(xy[0] - scene.xy_color[0]) < 0.02 && Math.abs(xy[1] - scene.xy_color[1]) < 0.02;
+      return !!xy && colours.some((c) => Math.abs(xy[0] - c[0]) < 0.03 && Math.abs(xy[1] - c[1]) < 0.03);
     }
     return true;
   });

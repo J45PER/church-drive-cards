@@ -261,6 +261,37 @@ export class DemoHome {
     if (dynamic && scene.attributes.is_dynamic) this._animate(group, palette);
   }
 
+  // A universal colour scene: colours dealt round the lights; animated ones
+  // drift round them every couple of seconds, like a Hue dynamic scene.
+  playPalette(lightIds, colors, brightness, dynamic) {
+    this.stop();
+    const lights = lightIds.filter((id) => this.states[id]).sort();
+    const paint = (shift) =>
+      lights.forEach((id, i) => {
+        const st = this.states[id];
+        if (dynamic && shift && (st.state !== 'on' || st.attributes.dynamics !== 'dynamic_palette')) return;
+        const modes = st.attributes.supported_color_modes;
+        const xy = colors[(i + shift) % colors.length];
+        const attrs = { dynamics: dynamic ? 'dynamic_palette' : 'none', brightness: modes.includes('onoff') ? null : brightness };
+        if (modes.includes('xy')) Object.assign(attrs, { color_mode: 'xy', xy_color: xy, rgb_color: xyToRgb(xy), hs_color: null, color_temp_kelvin: null });
+        this._set(id, 'on', attrs);
+      });
+    paint(0);
+    this._refreshGroups();
+    this.onChange();
+    if (!dynamic) return;
+    this.timer = setInterval(() => {
+      this.tick += 1;
+      if (!lights.some((id) => this.states[id].state === 'on' && this.states[id].attributes.dynamics === 'dynamic_palette')) {
+        this.stop();
+        return;
+      }
+      paint(this.tick);
+      this._refreshGroups();
+      this.onChange();
+    }, 2000);
+  }
+
   // Cycle the palette round the group's colour bulbs every couple of seconds.
   _animate(group, palette) {
     this.stop();

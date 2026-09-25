@@ -5,7 +5,8 @@ so its key), so there's no link-button pairing. Hue scenes created here are
 tagged with metadata.appdata "cd:<key>". HA's Hue integration picks them up
 as scene entities like any other Hue scene.
 
-Per chosen room/zone and library scene:
+Per chosen room/zone and white library scene (colour scenes use one working
+scene per group instead, see apply.py):
 - a scene tagged as ours: its lights are brought in line with the library;
 - an untagged scene with the same name (e.g. one the Hue app made): left
   untouched and used as-is;
@@ -20,7 +21,7 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 
-from .library import LIBRARY
+from .library import WHITE
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -134,13 +135,11 @@ async def async_sync(hass: HomeAssistant, group_ids: list[str]) -> dict[str, Any
         lights = controller.get_lights(group_id)
         scenes = controller.get_scenes(group_id)
         result: dict[str, str] = {}
-        for key, spec in LIBRARY.items():
+        for key, spec in WHITE.items():
             tag = f"{APPDATA_PREFIX}{key}"
             wanted = _actions(lights, spec)
             ours = next((s for s in scenes if s.metadata.appdata == tag), None)
-            same_name = next(
-                (s for s in scenes if s.metadata.name.lower() == spec["name"].lower()), None
-            )
+            same_name = next((s for s in scenes if s.metadata.name.lower() == spec["name"].lower()), None)
             try:
                 if ours is not None:
                     if _same(_existing_actions(ours), wanted):
