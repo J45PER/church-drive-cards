@@ -17,15 +17,31 @@ HACS as an integration. It does two jobs:
 Everything is merged to `main`, released and running live. The user tests on real
 devices before each release.
 
-**Not yet tested on real lights** (the user was out when these shipped). Do this
-first, together with the user:
-1. Add Soho (or Magneto) to the Kitchen card and tap it. It should animate, a tap
-   should pause and resume it, and `select.kitchen_scene` should say "Soho".
-2. Add "Soho · Kitchen Ambience". Only the ambience lights should change.
-3. Tap Bright or Relax. The tile should select and the select should follow.
-4. Scene builder: make a scene, **Try it in** a room, **Save**, then check it
-   appears in a light card's scene list.
-5. Gradient strips, if the house has any, should show several colours.
+**Tested on real lights with the user (v0.10.5, Kitchen and Hayley's Bedroom):**
+- Colour scenes animate; tapping pauses and resumes them (⏸/▶).
+- The selected tile glows (others dim) and stays selected after a page refresh;
+  the room's `select.<room>_scene` follows.
+- Speeds now feel like Hue's (after switching to the bridge's real palettes).
+- Gradient strips show several colours on animated scenes.
+- Zone-only scenes (e.g. "… · Bedroom Ambience") change only the zone's lights;
+  the room's other lights stay off.
+- No drop-out between colour scenes: the logbook showed the ~3s off-blips on
+  v0.10.3 and none after v0.10.4's two working scenes.
+- White scenes (Bright, Relax, Nightlight) select and match.
+- Scene builder: the user made a custom colour scene, tried it and saved it.
+
+**On Beta, not yet released** (test on the Design Presets Beta tab, then real
+lights):
+1. **No two lights share a colour.** The user saw a custom two-colour scene put
+   the same colour on several lights at once (colours were dealt round, so light
+   1 and 3 matched). Now `spread()` in `apply.py` (and `spreadColours()` in
+   `src/universal-scenes.js`) gives each light its own colour, blending between
+   neighbouring palette colours when there are more lights than colours. The
+   bridge palette is padded to at least five colours the same way, like Hue's
+   own palettes, so the animation has room to keep lights apart.
+2. **Default scenes.** A card with no scenes chosen now shows Bright, Dimmed,
+   Relax and Nightlight (universal, applied to the card's room), the same on
+   every card. The old auto-pick of the room's Hue scenes is gone.
 
 If a colour scene sets fixed colours but doesn't animate, the bridge probably
 rejected the palette body in `apply.py`. The integration falls back to per-light
@@ -171,9 +187,10 @@ Integration modules (`custom_components/church_drive/`):
      2" `cd:live2`, created on first use, their HA entities hidden). The one that
      isn't playing (`status.active`) is rewritten, since rewriting the playing
      one made the lights drop out for ~3s (seen in Hayley's Bedroom, v0.10.3):
-     - actions: colours dealt round the lights, with 2–5 gradient points on
-       gradient lights;
-     - a palette (colours + dimming);
+     - actions: a colour per light, spread along the palette and blended when
+       there are more lights than colours, so no two match; up to 5 gradient
+       points on gradient lights;
+     - a palette (colours + dimming), padded to at least 5 blended colours;
      - the speed.
   3. The scene is recalled with `dynamic_palette` (animated) or `active` (still).
   - This adds at most two bridge scenes per room/zone. They show in the Hue app
@@ -182,7 +199,7 @@ Integration modules (`custom_components/church_drive/`):
     from the bridge's scene entities: 0.60–0.73). The first version used 0.5,
     which the user noticed was slower than Hue. Custom scenes default to 0.63.
 - **Anything else** (a single light, a non-Hue group, or a bridge error): colours
-  are dealt round the member lights with `light.turn_on`.
+  are spread round the member lights (same blending) with `light.turn_on`.
 - **Why not one bridge scene per room per scene:** the bridge already had ~123
   scenes, and the full library everywhere would pass its ~200 limit.
 
@@ -271,8 +288,9 @@ Integration modules (`custom_components/church_drive/`):
   - **Names:** hidden on tiles under 100px wide (`scene_names: auto`). `always` and
     `never` override that.
   - `max_scenes` defaults to 8, and 0 hides tiles.
-  - **Auto scenes** (none chosen): the Hue scenes of the card's groups plus zones
-    made only of its lights, in Hue app order, deduplicated by name.
+  - **Default scenes** (none chosen): universal Bright, Dimmed, Relax and
+    Nightlight on the card's room, the same on every card
+    (`LCC_DEFAULT_SCENES`).
   - **Backgrounds:** an uploaded picture, else the central style, else a built-in
     palette, else the scene's own colours (custom scenes), else a colour from a
     name hash.

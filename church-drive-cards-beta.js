@@ -686,6 +686,95 @@
     return isDynamic ? "mdi:animation-play-outline" : "mdi:palette-outline";
   }
 
+  // src/universal-scenes.js
+  var EVENT = "church-drive-universal-scenes";
+  var UNIVERSAL_PREFIX = "universal:";
+  var library = [];
+  var loading2 = null;
+  function loadUniversalScenes(hass, force = false) {
+    if (force) loading2 = null;
+    if (loading2 || !hass || !hass.callWS) return loading2;
+    loading2 = hass.callWS({ type: "church_drive/library" }).then((res) => {
+      library = res && res.scenes || [];
+      window.dispatchEvent(new CustomEvent(EVENT));
+    }).catch(() => {
+    });
+    return loading2;
+  }
+  function universalScenes() {
+    return library;
+  }
+  function universalRef(key, target) {
+    return `${UNIVERSAL_PREFIX}${key}${target ? `@${target}` : ""}`;
+  }
+  function universalTarget(ref) {
+    const at = String(ref || "").indexOf("@");
+    return at === -1 ? null : ref.slice(at + 1);
+  }
+  function universalScene(ref) {
+    let key = String(ref || "").startsWith(UNIVERSAL_PREFIX) ? ref.slice(UNIVERSAL_PREFIX.length) : String(ref || "");
+    if (key.includes("@")) key = key.slice(0, key.indexOf("@"));
+    const wanted = String(key || "").toLowerCase();
+    return library.find((s) => s.key === wanted || s.name.toLowerCase() === wanted) || null;
+  }
+  function onUniversalScenesChanged(callback) {
+    window.addEventListener(EVENT, callback);
+    return () => window.removeEventListener(EVENT, callback);
+  }
+  function universalTurnOnData(scene) {
+    const data = { brightness: scene.brightness };
+    if (scene.color_temp_kelvin) data.color_temp_kelvin = scene.color_temp_kelvin;
+    if (scene.xy_color) data.xy_color = scene.xy_color;
+    return data;
+  }
+  var COLOUR_MODES = ["xy", "hs", "rgb", "rgbw", "rgbww"];
+  function spreadColours(colors, count) {
+    if (count <= colors.length) {
+      const step = colors.length / Math.max(count, 1);
+      return Array.from({ length: count }, (_, i) => colors[Math.floor(i * step)]);
+    }
+    return Array.from({ length: count }, (_, i) => {
+      const pos = count > 1 ? i * (colors.length - 1) / (count - 1) : 0;
+      const a = Math.min(Math.floor(pos), colors.length - 1);
+      const b = Math.min(a + 1, colors.length - 1);
+      const t = pos - a;
+      return [0, 1].map((k) => Math.round((colors[a][k] + (colors[b][k] - colors[a][k]) * t) * 1e4) / 1e4);
+    });
+  }
+  function universalDealColours(scene, lightIds) {
+    const ids = [...lightIds].sort();
+    const colours = spreadColours(scene.colors, ids.length);
+    return ids.map((id, i) => ({
+      entity_id: id,
+      xy_color: colours[i],
+      brightness: scene.brightness
+    }));
+  }
+  function universalScenePlaying(hass, lightIds) {
+    return lightIds.some((id) => hass.states[id] && hass.states[id].state === "on" && hass.states[id].attributes.dynamics === "dynamic_palette");
+  }
+  function universalSceneActive(hass, scene, lightIds) {
+    const lit = lightIds.map((id) => hass.states[id]).filter((st) => st && st.state === "on");
+    if (!lit.length) return false;
+    return lit.every((st) => {
+      const a = st.attributes;
+      const modes = a.supported_color_modes || [];
+      const animating = scene.kind === "colour" && a.dynamics === "dynamic_palette";
+      if (!animating && a.brightness != null && Math.abs(a.brightness - scene.brightness) > 4) return false;
+      if (scene.color_temp_kelvin && modes.includes("color_temp")) {
+        if (a.color_mode !== "color_temp" || a.color_temp_kelvin == null) return false;
+        return Math.abs(a.color_temp_kelvin - scene.color_temp_kelvin) <= scene.color_temp_kelvin * 0.03;
+      }
+      const colours = scene.kind === "colour" ? scene.colors : scene.xy_color ? [scene.xy_color] : null;
+      if (colours && modes.some((m) => COLOUR_MODES.includes(m))) {
+        if (scene.kind === "colour" && a.dynamics === "dynamic_palette") return true;
+        const xy = a.xy_color;
+        return !!xy && colours.some((c) => Math.abs(xy[0] - c[0]) < 0.06 && Math.abs(xy[1] - c[1]) < 0.06);
+      }
+      return true;
+    });
+  }
+
   // src/demo-home.js
   var COLOUR = ["color_temp", "xy"];
   var WHITE = {
@@ -923,11 +1012,12 @@
     playPalette(lightIds, colors, brightness, dynamic) {
       this.stop();
       const lights = lightIds.filter((id) => this.states[id]).sort();
+      const palette = spreadColours(colors, Math.max(lights.length, colors.length));
       const paint = (shift) => lights.forEach((id, i) => {
         const st = this.states[id];
         if (dynamic && shift && (st.state !== "on" || st.attributes.dynamics !== "dynamic_palette")) return;
         const modes = st.attributes.supported_color_modes;
-        const xy = colors[(i + shift) % colors.length];
+        const xy = palette[(i + shift) % palette.length];
         const attrs = { dynamics: dynamic ? "dynamic_palette" : "none", brightness: modes.includes("onoff") ? null : brightness };
         if (modes.includes("xy")) Object.assign(attrs, { color_mode: "xy", xy_color: xy, rgb_color: xyToRgb(xy), hs_color: null, color_temp_kelvin: null });
         this._set(id, "on", attrs);
@@ -1060,80 +1150,6 @@
     });
   }
 
-  // src/universal-scenes.js
-  var EVENT = "church-drive-universal-scenes";
-  var UNIVERSAL_PREFIX = "universal:";
-  var library = [];
-  var loading2 = null;
-  function loadUniversalScenes(hass, force = false) {
-    if (force) loading2 = null;
-    if (loading2 || !hass || !hass.callWS) return loading2;
-    loading2 = hass.callWS({ type: "church_drive/library" }).then((res) => {
-      library = res && res.scenes || [];
-      window.dispatchEvent(new CustomEvent(EVENT));
-    }).catch(() => {
-    });
-    return loading2;
-  }
-  function universalScenes() {
-    return library;
-  }
-  function universalRef(key, target) {
-    return `${UNIVERSAL_PREFIX}${key}${target ? `@${target}` : ""}`;
-  }
-  function universalTarget(ref) {
-    const at = String(ref || "").indexOf("@");
-    return at === -1 ? null : ref.slice(at + 1);
-  }
-  function universalScene(ref) {
-    let key = String(ref || "").startsWith(UNIVERSAL_PREFIX) ? ref.slice(UNIVERSAL_PREFIX.length) : String(ref || "");
-    if (key.includes("@")) key = key.slice(0, key.indexOf("@"));
-    const wanted = String(key || "").toLowerCase();
-    return library.find((s) => s.key === wanted || s.name.toLowerCase() === wanted) || null;
-  }
-  function onUniversalScenesChanged(callback) {
-    window.addEventListener(EVENT, callback);
-    return () => window.removeEventListener(EVENT, callback);
-  }
-  function universalTurnOnData(scene) {
-    const data = { brightness: scene.brightness };
-    if (scene.color_temp_kelvin) data.color_temp_kelvin = scene.color_temp_kelvin;
-    if (scene.xy_color) data.xy_color = scene.xy_color;
-    return data;
-  }
-  var COLOUR_MODES = ["xy", "hs", "rgb", "rgbw", "rgbww"];
-  function universalDealColours(scene, lightIds) {
-    return [...lightIds].sort().map((id, i) => ({
-      entity_id: id,
-      xy_color: scene.colors[i % scene.colors.length],
-      brightness: scene.brightness
-    }));
-  }
-  function universalScenePlaying(hass, lightIds) {
-    return lightIds.some((id) => hass.states[id] && hass.states[id].state === "on" && hass.states[id].attributes.dynamics === "dynamic_palette");
-  }
-  function universalSceneActive(hass, scene, lightIds) {
-    const lit = lightIds.map((id) => hass.states[id]).filter((st) => st && st.state === "on");
-    if (!lit.length) return false;
-    return lit.every((st) => {
-      const a = st.attributes;
-      const modes = a.supported_color_modes || [];
-      const animating = scene.kind === "colour" && a.dynamics === "dynamic_palette";
-      if (!animating && a.brightness != null && Math.abs(a.brightness - scene.brightness) > 4) return false;
-      if (scene.color_temp_kelvin && modes.includes("color_temp")) {
-        if (a.color_mode !== "color_temp" || a.color_temp_kelvin == null) return false;
-        return Math.abs(a.color_temp_kelvin - scene.color_temp_kelvin) <= scene.color_temp_kelvin * 0.03;
-      }
-      const colours = scene.kind === "colour" ? scene.colors : scene.xy_color ? [scene.xy_color] : null;
-      if (colours && modes.some((m) => COLOUR_MODES.includes(m))) {
-        if (scene.kind === "colour" && a.dynamics === "dynamic_palette") return true;
-        const xy = a.xy_color;
-        return !!xy && colours.some((c) => Math.abs(xy[0] - c[0]) < 0.06 && Math.abs(xy[1] - c[1]) < 0.06);
-      }
-      return true;
-    });
-  }
-
   // src/light-control-card.js
   var LCC_DEFAULT_MAX_SCENES = 8;
   function lccHsToRgb(h, s) {
@@ -1243,19 +1259,7 @@
     };
     return Object.values(hass.entities).filter((e) => e.entity_id.startsWith("scene.") && e.device_id === device && !e.hidden && hass.states[e.entity_id]).map((e) => e.entity_id).sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
   }
-  function lccAutoScenes(hass, groupIds, lightIds) {
-    const seen = /* @__PURE__ */ new Set();
-    const out = [];
-    lccSceneGroups(hass, groupIds, lightIds).forEach((groupId) => {
-      lccGroupScenes(hass, groupId).forEach((id) => {
-        const key = String(hass.states[id].attributes.name || id).toLowerCase();
-        if (seen.has(key)) return;
-        seen.add(key);
-        out.push({ entity: id });
-      });
-    });
-    return out;
-  }
+  var LCC_DEFAULT_SCENES = ["bright", "dimmed", "relax", "nightlight"];
   function lccCardLights(hass, config) {
     const mode = config.mode || "light";
     let area = config.area;
@@ -1491,7 +1495,7 @@
       icon: "Icon override (optional)",
       max_scenes: "Max scenes",
       scene_names: "Scene names",
-      scenes: "Scenes (leave empty to pick them automatically)",
+      scenes: "Scenes (leave empty for Bright, Dimmed, Relax and Nightlight)",
       demo: "Use pretend lights instead of real ones",
       demo_room: "Pretend room"
     },
@@ -1807,24 +1811,14 @@
       const ids = this._cardLightIds || [];
       if (ids.length) this._hass.callService("light", "turn_off", {}, { entity_id: ids });
     }
-    // Resolve the scenes to show (configured list or auto-detected), capped at
+    // Resolve the scenes to show (configured list or the defaults), capped at
     // max_scenes, with display name/icon/picture and selected/playing status.
     _resolveScenes(hass, mode, headIds, memberIds) {
       const cfg = this._effectiveConfig();
       const max = cfg.max_scenes != null ? cfg.max_scenes : LCC_DEFAULT_MAX_SCENES;
       if (max <= 0) return [];
       let items = lccNormalizeScenes(cfg.scenes);
-      if (!items.length) {
-        let groups = headIds.filter((id) => lccIsGroupLike(hass.states[id]));
-        let lights = [...headIds, ...memberIds].filter((id) => !lccIsGroupLike(hass.states[id]));
-        if (mode === "light" && !groups.length) {
-          const area = lccAreaOf(hass, hass.entities && hass.entities[cfg.entity]);
-          const areaLights = Object.values(hass.entities || {}).filter((e) => e.entity_id.startsWith("light.") && hass.states[e.entity_id] && area && lccAreaOf(hass, e) === area).map((e) => e.entity_id);
-          groups = areaLights.filter((id) => lccIsGroupLike(hass.states[id]));
-          lights = areaLights.filter((id) => !lccIsGroupLike(hass.states[id]));
-        }
-        items = lccAutoScenes(hass, groups, lights);
-      }
+      if (!items.length) items = LCC_DEFAULT_SCENES.map((key) => ({ entity: universalRef(key) }));
       const headGroups = headIds.filter((id) => lccIsGroupLike(hass.states[id]));
       const rooms = headGroups.filter((id) => hass.states[id].attributes.hue_type === "room");
       const targets = rooms.length ? rooms : headGroups.length ? headGroups : [...headIds, ...memberIds];
@@ -2350,7 +2344,7 @@
       <label>Name<input type="text" class="sbc-f-name" maxlength="32" placeholder="e.g. Film night"></label>
       <label>Type<div class="sbc-seg"><button class="sbc-btn" data-kind="white">White</button><button class="sbc-btn" data-kind="colour">Colours</button></div></label>
       <div class="sbc-white"><label>Colour temperature: <span class="sbc-k"></span>K<input type="range" class="sbc-f-kelvin" min="2000" max="6500" step="50"></label></div>
-      <div class="sbc-colour"><label>Colours (dealt round the lights; gradient strips show several)</label><div class="sbc-colours"></div>
+      <div class="sbc-colour"><label>Colours (spread round the lights, blended so no two match; gradient strips show several)</label><div class="sbc-colours"></div>
         <label><input type="checkbox" class="sbc-f-dynamic"> Animated (colours drift between the lights, like Hue's dynamic scenes)</label>
         <label class="sbc-speed">Speed<input type="range" class="sbc-f-speed" min="0" max="1" step="0.05"></label></div>
       <label>Brightness: <span class="sbc-b"></span>%<input type="range" class="sbc-f-brightness" min="1" max="100"></label>

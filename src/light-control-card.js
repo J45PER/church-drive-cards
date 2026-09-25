@@ -156,21 +156,8 @@ function lccGroupScenes(hass, groupId) {
     .sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
 }
 
-// Auto-detected scenes: those of the card's scene groups; duplicate names
-// keep the first (room before zone).
-function lccAutoScenes(hass, groupIds, lightIds) {
-  const seen = new Set();
-  const out = [];
-  lccSceneGroups(hass, groupIds, lightIds).forEach((groupId) => {
-    lccGroupScenes(hass, groupId).forEach((id) => {
-      const key = String(hass.states[id].attributes.name || id).toLowerCase();
-      if (seen.has(key)) return;
-      seen.add(key);
-      out.push({ entity: id });
-    });
-  });
-  return out;
-}
+// Scenes every card shows until its own are picked.
+const LCC_DEFAULT_SCENES = ['bright', 'dimmed', 'relax', 'nightlight'];
 
 // The card's groups and lights, worked out from its config the way the card
 // does (a single bulb uses its room's).
@@ -452,7 +439,7 @@ export const LightControlCardEditor = createFormEditor({
     icon: 'Icon override (optional)',
     max_scenes: 'Max scenes',
     scene_names: 'Scene names',
-    scenes: 'Scenes (leave empty to pick them automatically)',
+    scenes: 'Scenes (leave empty for Bright, Dimmed, Relax and Nightlight)',
     demo: 'Use pretend lights instead of real ones',
     demo_room: 'Pretend room',
   },
@@ -810,27 +797,14 @@ export class LightControlCard extends HTMLElement {
     if (ids.length) this._hass.callService('light', 'turn_off', {}, { entity_id: ids });
   }
 
-  // Resolve the scenes to show (configured list or auto-detected), capped at
+  // Resolve the scenes to show (configured list or the defaults), capped at
   // max_scenes, with display name/icon/picture and selected/playing status.
   _resolveScenes(hass, mode, headIds, memberIds) {
     const cfg = this._effectiveConfig();
     const max = cfg.max_scenes != null ? cfg.max_scenes : LCC_DEFAULT_MAX_SCENES;
     if (max <= 0) return [];
     let items = lccNormalizeScenes(cfg.scenes);
-    if (!items.length) {
-      let groups = headIds.filter((id) => lccIsGroupLike(hass.states[id]));
-      let lights = [...headIds, ...memberIds].filter((id) => !lccIsGroupLike(hass.states[id]));
-      if (mode === 'light' && !groups.length) {
-        // A single bulb has no scenes of its own: use its room's.
-        const area = lccAreaOf(hass, hass.entities && hass.entities[cfg.entity]);
-        const areaLights = Object.values(hass.entities || {})
-          .filter((e) => e.entity_id.startsWith('light.') && hass.states[e.entity_id] && area && lccAreaOf(hass, e) === area)
-          .map((e) => e.entity_id);
-        groups = areaLights.filter((id) => lccIsGroupLike(hass.states[id]));
-        lights = areaLights.filter((id) => !lccIsGroupLike(hass.states[id]));
-      }
-      items = lccAutoScenes(hass, groups, lights);
-    }
+    if (!items.length) items = LCC_DEFAULT_SCENES.map((key) => ({ entity: universalRef(key) }));
     // Universal scenes apply to the card's room (or its zones/groups, or its
     // lights when it shows no group) with one light.turn_on.
     const headGroups = headIds.filter((id) => lccIsGroupLike(hass.states[id]));

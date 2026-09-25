@@ -1,5 +1,5 @@
 // Scene builder: make your own universal scenes. A scene is white (colour
-// temperature + brightness) or colours (up to nine, dealt round the lights;
+// temperature + brightness) or colours (up to nine, spread round the lights;
 // gradient strips show several), optionally animated like Hue's dynamic
 // scenes. Saved scenes join the library, so every light card can use them in
 // any room or zone. "Try in" plays the unsaved scene on a real room.
@@ -185,7 +185,7 @@ export class SceneBuilderCard extends HTMLElement {
       <label>Name<input type="text" class="sbc-f-name" maxlength="32" placeholder="e.g. Film night"></label>
       <label>Type<div class="sbc-seg"><button class="sbc-btn" data-kind="white">White</button><button class="sbc-btn" data-kind="colour">Colours</button></div></label>
       <div class="sbc-white"><label>Colour temperature: <span class="sbc-k"></span>K<input type="range" class="sbc-f-kelvin" min="2000" max="6500" step="50"></label></div>
-      <div class="sbc-colour"><label>Colours (dealt round the lights; gradient strips show several)</label><div class="sbc-colours"></div>
+      <div class="sbc-colour"><label>Colours (spread round the lights, blended so no two match; gradient strips show several)</label><div class="sbc-colours"></div>
         <label><input type="checkbox" class="sbc-f-dynamic"> Animated (colours drift between the lights, like Hue's dynamic scenes)</label>
         <label class="sbc-speed">Speed<input type="range" class="sbc-f-speed" min="0" max="1" step="0.05"></label></div>
       <label>Brightness: <span class="sbc-b"></span>%<input type="range" class="sbc-f-brightness" min="1" max="100"></label>

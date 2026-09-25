@@ -64,10 +64,28 @@ const COLOUR_MODES = ['xy', 'hs', 'rgb', 'rgbw', 'rgbww'];
 
 // A colour scene's colours dealt round lights (for the pretend home and as a
 // fallback): [{ entity_id, xy_color, brightness }].
+// `count` colours evenly along a palette, blending neighbouring colours when
+// there are more lights than colours, so no two lights match (as apply.py).
+export function spreadColours(colors, count) {
+  if (count <= colors.length) {
+    const step = colors.length / Math.max(count, 1);
+    return Array.from({ length: count }, (_, i) => colors[Math.floor(i * step)]);
+  }
+  return Array.from({ length: count }, (_, i) => {
+    const pos = count > 1 ? (i * (colors.length - 1)) / (count - 1) : 0;
+    const a = Math.min(Math.floor(pos), colors.length - 1);
+    const b = Math.min(a + 1, colors.length - 1);
+    const t = pos - a;
+    return [0, 1].map((k) => Math.round((colors[a][k] + (colors[b][k] - colors[a][k]) * t) * 10000) / 10000);
+  });
+}
+
 export function universalDealColours(scene, lightIds) {
-  return [...lightIds].sort().map((id, i) => ({
+  const ids = [...lightIds].sort();
+  const colours = spreadColours(scene.colors, ids.length);
+  return ids.map((id, i) => ({
     entity_id: id,
-    xy_color: scene.colors[i % scene.colors.length],
+    xy_color: colours[i],
     brightness: scene.brightness,
   }));
 }
