@@ -7,6 +7,15 @@ import { SUFFIX, LABEL } from './suffix.js';
 import { sceneBackground, sceneIcon, scenePalette, loadSceneStyles, onSceneStylesChanged } from './scene-style.js';
 import { DemoHome } from './demo-home.js';
 import { iconHtml, hydrateIcons } from './icons.js';
+import {
+  UNIVERSAL_PREFIX,
+  loadUniversalScenes,
+  onUniversalScenesChanged,
+  universalScene,
+  universalSceneActive,
+  universalScenes,
+  universalTurnOnData,
+} from './universal-scenes.js';
 
 const LCC_DEFAULT_MAX_SCENES = 8;
 
@@ -86,9 +95,17 @@ function lccMembersOf(hass, entityId) {
 }
 
 // `scenes` config items may be plain entity IDs (older YAML) or objects
-// { entity, name?, icon?, image? } from the editor.
+// { entity, name?, icon?, image? } from the editor. A universal scene is
+// `entity: universal:<key>` (or `scene: <name>` in YAML).
 function lccNormalizeScenes(scenes) {
-  return (scenes || []).map((s) => (typeof s === 'string' ? { entity: s } : s)).filter((s) => s && s.entity);
+  return (scenes || [])
+    .map((s) => (typeof s === 'string' ? { entity: s } : s))
+    .map((s) => (s && !s.entity && s.scene ? { ...s, entity: `${UNIVERSAL_PREFIX}${String(s.scene).toLowerCase()}` } : s))
+    .filter((s) => s && s.entity);
+}
+
+function lccIsUniversal(ref) {
+  return String(ref || '').startsWith(UNIVERSAL_PREFIX);
 }
 
 // The Hue room/zone group light a scene belongs to: Hue puts a group's scenes
@@ -172,6 +189,7 @@ function lccCardLights(hass, config) {
 // room and a zone both have "Bright") gets the group name added.
 function lccSceneChoices(hass, config) {
   if (!hass || !hass.states) return [];
+  loadUniversalScenes(hass);
   const { groups, lights } = lccCardLights(hass, config);
   const ids = lccSceneGroups(hass, groups, lights).flatMap((g) => lccGroupScenes(hass, g));
   const nameOf = (id) => hass.states[id].attributes.name || hass.states[id].attributes.friendly_name || id;
@@ -180,13 +198,21 @@ function lccSceneChoices(hass, config) {
     const key = nameOf(id).toLowerCase();
     counts[key] = (counts[key] || 0) + 1;
   });
-  const options = ids.map((id) => {
-    const name = nameOf(id);
-    const group = hass.states[id].attributes.group_name;
-    return { value: id, label: counts[name.toLowerCase()] > 1 && group ? `${name} · ${group}` : name };
-  });
+  // Universal scenes first (they work in any room); a Hue scene of the same
+  // name is left out as it would do the same thing.
+  const universal = universalScenes();
+  const universalNames = new Set(universal.map((u) => u.name.toLowerCase()));
+  const options = universal.map((u) => ({ value: `${UNIVERSAL_PREFIX}${u.key}`, label: u.name }));
+  ids
+    .filter((id) => !universalNames.has(nameOf(id).toLowerCase()))
+    .forEach((id) => {
+      const name = nameOf(id);
+      const group = hass.states[id].attributes.group_name;
+      options.push({ value: id, label: counts[name.toLowerCase()] > 1 && group ? `${name} · ${group}` : name });
+    });
   // Keep scenes already on the card visible even if they're from elsewhere.
   lccNormalizeScenes(config.scenes).forEach((s) => {
+    if (lccIsUniversal(s.entity) || options.some((o) => o.value === s.entity)) return;
     if (!ids.includes(s.entity)) {
       const st = hass.states[s.entity];
       options.push({ value: s.entity, label: `${st ? nameOf(s.entity) : s.entity} (other room)` });
@@ -261,6 +287,7 @@ function lccDemoFor(room) {
 export const LightControlCardEditor = createFormEditor({
   schema: (config, hass) => {
     const mode = config.mode || 'light';
+    loadUniversalScenes(hass);
     // In demo mode the scene choices come from the pretend home.
     const sceneDemo = config.demo ? lccDemoFor(config.demo_room) : null;
     const sceneOptions = sceneDemo
@@ -433,6 +460,12 @@ export class LightControlCard extends HTMLElement {
   // Central scene styles (Design Presets "Scene styles" tab) can change after
   // this card has drawn; redraw when they do.
   connectedCallback() {
+    if (!this._unsubUniversal) {
+      this._unsubUniversal = onUniversalScenesChanged(() => {
+        this._lastIds = null;
+        if (this._lastInput) this.hass = this._lastInput;
+      });
+    }
     if (!this._unsubStyles) {
       this._unsubStyles = onSceneStylesChanged(() => {
         this._lastIds = null;
@@ -445,6 +478,8 @@ export class LightControlCard extends HTMLElement {
     if (this._demo) this._demo.stop();
     if (this._unsubStyles) this._unsubStyles();
     this._unsubStyles = null;
+    if (this._unsubUniversal) this._unsubUniversal();
+    this._unsubUniversal = null;
   }
 
   // Demo mode: a pretend home (demo-home.js) stands in for Home Assistant, so
@@ -467,9 +502,9 @@ export class LightControlCard extends HTMLElement {
       mode,
       area: this._demo.area,
       entity: mode === 'group' ? this._demo.roomGroup : this._demo.firstLight,
-      // Only configured scenes from the pretend home apply (real ones don't
-      // exist there); with none, the pretend home's scenes are used.
-      scenes: lccNormalizeScenes(cfg.scenes).filter((sc) => this._demo.states[sc.entity]),
+      // Only universal scenes and scenes from the pretend home apply (real
+      // ones don't exist there); with none, the pretend home's are used.
+      scenes: lccNormalizeScenes(cfg.scenes).filter((sc) => lccIsUniversal(sc.entity) || this._demo.states[sc.entity]),
     };
   }
 
@@ -714,7 +749,9 @@ export class LightControlCard extends HTMLElement {
         moved = false;
         return;
       }
-      if (scene.playing) this._freezeScene(scene);
+      if (scene.universal) {
+        this._hass.callService('light', 'turn_on', universalTurnOnData(scene.universal), { entity_id: scene.targets });
+      } else if (scene.playing) this._freezeScene(scene);
       else this._activateScene(scene.entity, scene.isDynamic);
     });
   }
@@ -745,10 +782,21 @@ export class LightControlCard extends HTMLElement {
       }
       items = lccAutoScenes(hass, groups, lights);
     }
+    // Universal scenes apply to the card's room (or its zones/groups, or its
+    // lights when it shows no group) with one light.turn_on.
+    const headGroups = headIds.filter((id) => lccIsGroupLike(hass.states[id]));
+    const rooms = headGroups.filter((id) => hass.states[id].attributes.hue_type === 'room');
+    const targets = rooms.length ? rooms : headGroups.length ? headGroups : [...headIds, ...memberIds];
+    const targetLights = [...new Set(targets.flatMap((id) => (lccIsGroupLike(hass.states[id]) ? lccMembersOf(hass, id) : [id])))];
     const scenes = items
-      .filter((s) => hass.states[s.entity])
+      .filter((s) => (lccIsUniversal(s.entity) ? universalScene(s.entity) : hass.states[s.entity]))
       .slice(0, max)
       .map((s) => {
+        if (lccIsUniversal(s.entity)) {
+          const lib = universalScene(s.entity);
+          const name = s.name || lib.name;
+          return { ...s, name, isDynamic: false, icon: s.icon || sceneIcon(name, false), universal: lib, targets, targetLights, activated: 0 };
+        }
         const st = hass.states[s.entity];
         const isDynamic = st.attributes.is_dynamic === true;
         const name = s.name || st.attributes.name || st.attributes.friendly_name || s.entity;
@@ -762,10 +810,17 @@ export class LightControlCard extends HTMLElement {
         };
       });
 
+    // A universal scene is selected while the lights match it.
+    const matching = scenes.find((sc) => sc.universal && universalSceneActive(hass, sc.universal, targetLights));
+    if (matching) {
+      matching.active = true;
+      return scenes;
+    }
+
     // Selected = the most recently activated of these scenes, while its
     // group's lights are still on. Playing = that scene is animated and Hue
     // reports any of the group's lit bulbs as running a dynamic palette.
-    const latest = scenes.reduce((a, b) => (b.activated > (a ? a.activated : 0) ? b : a), null);
+    const latest = scenes.filter((sc) => !sc.universal).reduce((a, b) => (b.activated > (a ? a.activated : 0) ? b : a), null);
     if (latest) {
       const groupSt = latest.group && hass.states[latest.group];
       const lightsOn = groupSt
@@ -788,6 +843,7 @@ export class LightControlCard extends HTMLElement {
   set hass(hass) {
     this._lastInput = hass;
     loadSceneStyles(hass);
+    loadUniversalScenes(hass);
     this._render(this.config.demo ? this._demoHass(hass) : hass);
   }
 
@@ -888,7 +944,8 @@ export class LightControlCard extends HTMLElement {
     const scenes = this._resolveScenes(hass, mode, headIds, memberIds);
     const watchIds = [
       ...relevantEntityIds,
-      ...scenes.map((s) => s.entity),
+      ...scenes.filter((s) => !s.universal).map((s) => s.entity),
+      ...scenes.flatMap((s) => s.targetLights || []),
       ...scenes.map((s) => s.group).filter(Boolean),
       ...scenes.filter((s) => s.group).flatMap((s) => lccMembersOf(hass, s.group)),
     ];

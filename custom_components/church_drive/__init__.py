@@ -2,8 +2,10 @@
 
 - Cards: serves the bundled church-drive-cards.js and adds it to every
   frontend page, so no Lovelace resource is needed.
-- Universal scenes: syncs the scene library (library.py) to the Hue rooms and
-  zones chosen in the options, through HA's own Hue connection (hue.py).
+- Universal scenes: a scene library (library.py) the cards read over the
+  websocket and apply to any room, zone or light; also a church_drive.apply_scene
+  action, and an optional sync of the library to chosen Hue rooms as bridge
+  scenes (hue.py).
 """
 
 from __future__ import annotations
@@ -11,14 +13,43 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from typing import Any
+
+import voluptuous as vol
+
+from homeassistant.components import websocket_api
 from homeassistant.components.frontend import add_extra_js_url, remove_extra_js_url
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
-from homeassistant.core import CoreState, Event, HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
+from homeassistant.const import ATTR_ENTITY_ID, EVENT_HOMEASSISTANT_STARTED
+from homeassistant.core import CoreState, Event, HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse, callback
+from homeassistant.exceptions import ServiceValidationError
+from homeassistant.helpers import config_validation as cv
 
-from .const import CARDS_FILE, CONF_SCENE_GROUPS, DOMAIN, SERVICE_SYNC_SCENES, URL_BASE
+from . import library
+from .const import (
+    CARDS_FILE,
+    CONF_SCENE_GROUPS,
+    DOMAIN,
+    SERVICE_APPLY_SCENE,
+    SERVICE_SYNC_SCENES,
+    URL_BASE,
+    WS_LIBRARY,
+)
 from .hue import async_sync
+
+APPLY_SCENE_SCHEMA = vol.Schema(
+    {vol.Required(ATTR_ENTITY_ID): cv.entity_ids, vol.Required("scene"): cv.string}
+)
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_LIBRARY})
+@callback
+def ws_library(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Send the universal scene library to the cards."""
+    connection.send_result(msg["id"], {"scenes": library.as_list()})
 
 FRONTEND_DIR = Path(__file__).parent / "frontend"
 
@@ -39,7 +70,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             [StaticPathConfig(URL_BASE, str(FRONTEND_DIR), cache_headers=False)]
         )
         data["cards_url"] = f"{URL_BASE}/{CARDS_FILE}?v={version}"
+        websocket_api.async_register_command(hass, ws_library)
     add_extra_js_url(hass, data["cards_url"])
+
+    async def apply_scene(call: ServiceCall) -> None:
+        found = library.find(call.data["scene"])
+        if found is None:
+            raise ServiceValidationError(f"Unknown scene: {call.data['scene']}")
+        await hass.services.async_call(
+            "light",
+            "turn_on",
+            {ATTR_ENTITY_ID: call.data[ATTR_ENTITY_ID], **library.turn_on_data(found[1])},
+            blocking=True,
+            context=call.context,
+        )
+
+    hass.services.async_register(DOMAIN, SERVICE_APPLY_SCENE, apply_scene, schema=APPLY_SCENE_SCHEMA)
 
     async def sync_scenes(call: ServiceCall | None = None) -> ServiceResponse:
         return await async_sync(hass, entry.options.get(CONF_SCENE_GROUPS, []))
@@ -69,6 +115,7 @@ async def _options_updated(hass: HomeAssistant, entry: ConfigEntry) -> None:
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Stop loading the cards on new pages."""
     hass.services.async_remove(DOMAIN, SERVICE_SYNC_SCENES)
+    hass.services.async_remove(DOMAIN, SERVICE_APPLY_SCENE)
     url = hass.data.get(DOMAIN, {}).get("cards_url")
     if url:
         remove_extra_js_url(hass, url)

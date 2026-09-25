@@ -759,6 +759,17 @@
     const n = parseInt(m[1], 16);
     return [n >> 16 & 255, n >> 8 & 255, n & 255];
   }
+  function xyToRgb([x, y]) {
+    const z = 1 - x - y;
+    const X = x / y;
+    const Z = z / y;
+    let r = X * 1.656492 - 0.354851 - Z * 0.255038;
+    let g = -X * 0.707196 + 1.655397 + Z * 0.036152;
+    let b = X * 0.051713 - 0.121364 + Z * 1.01153;
+    const m = Math.max(r, g, b, 1e-6);
+    [r, g, b] = [r, g, b].map((v) => Math.max(0, v / m));
+    return [r, g, b].map((v) => Math.round(255 * (v <= 31308e-7 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055)));
+  }
   function slug(text) {
     return text.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
   }
@@ -872,6 +883,9 @@
         const modes = st.attributes.supported_color_modes;
         const attrs = { dynamics: "none", brightness: modes.includes("onoff") ? null : data.brightness || st.attributes.brightness || 200 };
         if (data.color_temp_kelvin) Object.assign(attrs, { color_mode: "color_temp", color_temp_kelvin: data.color_temp_kelvin, rgb_color: null, hs_color: null });
+        if (data.xy_color && modes.includes("xy")) {
+          Object.assign(attrs, { color_mode: "xy", xy_color: data.xy_color, rgb_color: xyToRgb(data.xy_color), hs_color: null, color_temp_kelvin: null });
+        }
         this._set(bulb, "on", attrs);
       });
       if (!Object.values(this.states).some((s) => s.attributes.dynamics === "dynamic_palette")) this.stop();
@@ -1016,6 +1030,55 @@
     });
   }
 
+  // src/universal-scenes.js
+  var EVENT = "church-drive-universal-scenes";
+  var UNIVERSAL_PREFIX = "universal:";
+  var library = [];
+  var loading2 = null;
+  function loadUniversalScenes(hass) {
+    if (loading2 || !hass || !hass.callWS) return loading2;
+    loading2 = hass.callWS({ type: "church_drive/library" }).then((res) => {
+      library = res && res.scenes || [];
+      window.dispatchEvent(new CustomEvent(EVENT));
+    }).catch(() => {
+    });
+    return loading2;
+  }
+  function universalScenes() {
+    return library;
+  }
+  function universalScene(ref) {
+    const key = String(ref || "").startsWith(UNIVERSAL_PREFIX) ? ref.slice(UNIVERSAL_PREFIX.length) : ref;
+    const wanted = String(key || "").toLowerCase();
+    return library.find((s) => s.key === wanted || s.name.toLowerCase() === wanted) || null;
+  }
+  function onUniversalScenesChanged(callback) {
+    window.addEventListener(EVENT, callback);
+    return () => window.removeEventListener(EVENT, callback);
+  }
+  function universalTurnOnData(scene) {
+    const { key, name, ...data } = scene;
+    return data;
+  }
+  function universalSceneActive(hass, scene, lightIds) {
+    const lit = lightIds.map((id) => hass.states[id]).filter((st) => st && st.state === "on");
+    if (!lit.length) return false;
+    return lit.every((st) => {
+      const a = st.attributes;
+      const modes = a.supported_color_modes || [];
+      if (a.brightness != null && Math.abs(a.brightness - scene.brightness) > 4) return false;
+      if (scene.color_temp_kelvin && modes.includes("color_temp")) {
+        if (a.color_mode !== "color_temp" || a.color_temp_kelvin == null) return false;
+        return Math.abs(a.color_temp_kelvin - scene.color_temp_kelvin) <= scene.color_temp_kelvin * 0.03;
+      }
+      if (scene.xy_color && modes.some((m) => ["xy", "hs", "rgb", "rgbw", "rgbww"].includes(m))) {
+        const xy = a.xy_color;
+        return !!xy && Math.abs(xy[0] - scene.xy_color[0]) < 0.02 && Math.abs(xy[1] - scene.xy_color[1]) < 0.02;
+      }
+      return true;
+    });
+  }
+
   // src/light-control-card.js
   var LCC_DEFAULT_MAX_SCENES = 8;
   function lccHsToRgb(h, s) {
@@ -1089,7 +1152,10 @@
     return st.attributes.entity_id.filter((id) => id.startsWith("light.") && hass.states[id]);
   }
   function lccNormalizeScenes(scenes) {
-    return (scenes || []).map((s) => typeof s === "string" ? { entity: s } : s).filter((s) => s && s.entity);
+    return (scenes || []).map((s) => typeof s === "string" ? { entity: s } : s).map((s) => s && !s.entity && s.scene ? { ...s, entity: `${UNIVERSAL_PREFIX}${String(s.scene).toLowerCase()}` } : s).filter((s) => s && s.entity);
+  }
+  function lccIsUniversal(ref) {
+    return String(ref || "").startsWith(UNIVERSAL_PREFIX);
   }
   function lccSceneGroup(hass, sceneId) {
     const entry = hass.entities && hass.entities[sceneId];
@@ -1150,6 +1216,7 @@
   }
   function lccSceneChoices(hass, config) {
     if (!hass || !hass.states) return [];
+    loadUniversalScenes(hass);
     const { groups, lights } = lccCardLights(hass, config);
     const ids = lccSceneGroups(hass, groups, lights).flatMap((g) => lccGroupScenes(hass, g));
     const nameOf = (id) => hass.states[id].attributes.name || hass.states[id].attributes.friendly_name || id;
@@ -1158,12 +1225,16 @@
       const key = nameOf(id).toLowerCase();
       counts[key] = (counts[key] || 0) + 1;
     });
-    const options = ids.map((id) => {
+    const universal = universalScenes();
+    const universalNames = new Set(universal.map((u) => u.name.toLowerCase()));
+    const options = universal.map((u) => ({ value: `${UNIVERSAL_PREFIX}${u.key}`, label: u.name }));
+    ids.filter((id) => !universalNames.has(nameOf(id).toLowerCase())).forEach((id) => {
       const name = nameOf(id);
       const group = hass.states[id].attributes.group_name;
-      return { value: id, label: counts[name.toLowerCase()] > 1 && group ? `${name} \xB7 ${group}` : name };
+      options.push({ value: id, label: counts[name.toLowerCase()] > 1 && group ? `${name} \xB7 ${group}` : name });
     });
     lccNormalizeScenes(config.scenes).forEach((s) => {
+      if (lccIsUniversal(s.entity) || options.some((o) => o.value === s.entity)) return;
       if (!ids.includes(s.entity)) {
         const st = hass.states[s.entity];
         options.push({ value: s.entity, label: `${st ? nameOf(s.entity) : s.entity} (other room)` });
@@ -1216,6 +1287,7 @@
   var LightControlCardEditor = createFormEditor({
     schema: (config, hass) => {
       const mode = config.mode || "light";
+      loadUniversalScenes(hass);
       const sceneDemo = config.demo ? lccDemoFor(config.demo_room) : null;
       const sceneOptions = sceneDemo ? lccSceneChoices(sceneDemo.hass(), {
         ...config,
@@ -1376,6 +1448,12 @@
     // Central scene styles (Design Presets "Scene styles" tab) can change after
     // this card has drawn; redraw when they do.
     connectedCallback() {
+      if (!this._unsubUniversal) {
+        this._unsubUniversal = onUniversalScenesChanged(() => {
+          this._lastIds = null;
+          if (this._lastInput) this.hass = this._lastInput;
+        });
+      }
       if (!this._unsubStyles) {
         this._unsubStyles = onSceneStylesChanged(() => {
           this._lastIds = null;
@@ -1387,6 +1465,8 @@
       if (this._demo) this._demo.stop();
       if (this._unsubStyles) this._unsubStyles();
       this._unsubStyles = null;
+      if (this._unsubUniversal) this._unsubUniversal();
+      this._unsubUniversal = null;
     }
     // Demo mode: a pretend home (demo-home.js) stands in for Home Assistant, so
     // taps only change the pretend lights and nothing reaches real devices.
@@ -1407,9 +1487,9 @@
         mode,
         area: this._demo.area,
         entity: mode === "group" ? this._demo.roomGroup : this._demo.firstLight,
-        // Only configured scenes from the pretend home apply (real ones don't
-        // exist there); with none, the pretend home's scenes are used.
-        scenes: lccNormalizeScenes(cfg.scenes).filter((sc) => this._demo.states[sc.entity])
+        // Only universal scenes and scenes from the pretend home apply (real
+        // ones don't exist there); with none, the pretend home's are used.
+        scenes: lccNormalizeScenes(cfg.scenes).filter((sc) => lccIsUniversal(sc.entity) || this._demo.states[sc.entity])
       };
     }
     static getConfigElement() {
@@ -1620,7 +1700,9 @@
           moved = false;
           return;
         }
-        if (scene.playing) this._freezeScene(scene);
+        if (scene.universal) {
+          this._hass.callService("light", "turn_on", universalTurnOnData(scene.universal), { entity_id: scene.targets });
+        } else if (scene.playing) this._freezeScene(scene);
         else this._activateScene(scene.entity, scene.isDynamic);
       });
     }
@@ -1646,7 +1728,16 @@
         }
         items = lccAutoScenes(hass, groups, lights);
       }
-      const scenes = items.filter((s) => hass.states[s.entity]).slice(0, max).map((s) => {
+      const headGroups = headIds.filter((id) => lccIsGroupLike(hass.states[id]));
+      const rooms = headGroups.filter((id) => hass.states[id].attributes.hue_type === "room");
+      const targets = rooms.length ? rooms : headGroups.length ? headGroups : [...headIds, ...memberIds];
+      const targetLights = [...new Set(targets.flatMap((id) => lccIsGroupLike(hass.states[id]) ? lccMembersOf(hass, id) : [id]))];
+      const scenes = items.filter((s) => lccIsUniversal(s.entity) ? universalScene(s.entity) : hass.states[s.entity]).slice(0, max).map((s) => {
+        if (lccIsUniversal(s.entity)) {
+          const lib = universalScene(s.entity);
+          const name2 = s.name || lib.name;
+          return { ...s, name: name2, isDynamic: false, icon: s.icon || sceneIcon(name2, false), universal: lib, targets, targetLights, activated: 0 };
+        }
         const st = hass.states[s.entity];
         const isDynamic = st.attributes.is_dynamic === true;
         const name = s.name || st.attributes.name || st.attributes.friendly_name || s.entity;
@@ -1659,7 +1750,12 @@
           activated: Date.parse(st.state) || 0
         };
       });
-      const latest = scenes.reduce((a, b) => b.activated > (a ? a.activated : 0) ? b : a, null);
+      const matching = scenes.find((sc) => sc.universal && universalSceneActive(hass, sc.universal, targetLights));
+      if (matching) {
+        matching.active = true;
+        return scenes;
+      }
+      const latest = scenes.filter((sc) => !sc.universal).reduce((a, b) => b.activated > (a ? a.activated : 0) ? b : a, null);
       if (latest) {
         const groupSt = latest.group && hass.states[latest.group];
         const lightsOn = groupSt ? groupSt.state === "on" : [...headIds, ...memberIds].some((id) => hass.states[id] && hass.states[id].state === "on");
@@ -1676,6 +1772,7 @@
     set hass(hass) {
       this._lastInput = hass;
       loadSceneStyles(hass);
+      loadUniversalScenes(hass);
       this._render(this.config.demo ? this._demoHass(hass) : hass);
     }
     _render(hass) {
@@ -1765,7 +1862,8 @@
       const scenes = this._resolveScenes(hass, mode, headIds, memberIds);
       const watchIds = [
         ...relevantEntityIds,
-        ...scenes.map((s) => s.entity),
+        ...scenes.filter((s) => !s.universal).map((s) => s.entity),
+        ...scenes.flatMap((s) => s.targetLights || []),
         ...scenes.map((s) => s.group).filter(Boolean),
         ...scenes.filter((s) => s.group).flatMap((s) => lccMembersOf(hass, s.group))
       ];
