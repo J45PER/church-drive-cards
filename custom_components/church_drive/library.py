@@ -77,6 +77,29 @@ COLOUR: dict[str, dict] = {
     "meriete": {"name": "Meriete", "brightness": 70.0, "hex": ["#ff9e7a", "#c86b98", "#5f4b8b"]},
 }
 
+# The Hue app's own speed and brightness (%) for its animated scenes, read
+# from the bridge (scene entity attributes). Aqua wasn't on the bridge.
+HUE_TIMING: dict[str, tuple[float, float]] = {
+    "soho": (0.627, 62.0),
+    "magneto": (0.611, 88.0),
+    "ruby_glow": (0.627, 40.0),
+    "emerald_isle": (0.603, 75.0),
+    "dreamy_dusk": (0.603, 50.0),
+    "lake_placid": (0.627, 30.0),
+    "toil_and_trouble": (0.730, 45.0),
+    "spellbound": (0.730, 50.0),
+    "storybook": (0.627, 69.0),
+    "arise": (0.627, 100.0),
+    "unwind": (0.627, 45.0),
+    "pumpkin_patch": (0.627, 45.0),
+    "phantom": (0.730, 40.0),
+    "city_blue": (0.603, 50.0),
+    "aqua": (0.627, 75.0),
+    "motown": (0.690, 53.0),
+    "witching_hour": (0.730, 45.0),
+    "meriete": (0.603, 80.0),
+}
+
 STORE_KEY = "church_drive.scenes"
 
 
@@ -136,13 +159,14 @@ class Library:
             out[key] = {**spec, "kind": "white"}
         for key, spec in COLOUR.items():
             colors = spec.get("colors") or [hex_to_xy(h) for h in spec["hex"]]
+            speed, brightness = HUE_TIMING.get(key, (0.627, spec["brightness"]))
             out[key] = {
                 "name": spec["name"],
                 "kind": "colour",
-                "brightness": spec["brightness"],
+                "brightness": brightness,
                 "colors": colors,
                 "dynamic": True,
-                "speed": 0.5,
+                "speed": speed,
             }
         for scene in self.custom:
             out[scene["key"]] = normalise(scene)
@@ -194,7 +218,7 @@ def normalise(scene: dict) -> dict:
     if spec["kind"] == "colour":
         spec["colors"] = [hex_to_xy(h) for h in scene.get("colors", [])] or [(0.3127, 0.329)]
         spec["dynamic"] = bool(scene.get("dynamic", False))
-        spec["speed"] = float(scene.get("speed", 0.5))
+        spec["speed"] = float(scene.get("speed", 0.63))
     else:
         spec["mirek"] = round(1_000_000 / int(scene.get("kelvin", 2700)))
     return spec

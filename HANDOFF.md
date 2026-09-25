@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-25. Current release: **v0.10.3**.*
+*Last updated 2026-09-25. Current release: **v0.10.4**.*
 
 ## Where this stands
 
@@ -160,14 +160,20 @@ Integration modules (`custom_components/church_drive/`):
   is stored on the bridge.
 - **Colour on a Hue room/zone:**
   1. The target's HA entity maps to a grouped_light, whose owner is the room/zone.
-  2. That group's single working scene ("Church Drive", appdata `cd:live`, created
-     on first use, its HA entity hidden) is rewritten:
+  2. The group has two working scenes ("Church Drive" `cd:live` and "Church Drive
+     2" `cd:live2`, created on first use, their HA entities hidden). The one that
+     isn't playing (`status.active`) is rewritten, since rewriting the playing
+     one made the lights drop out for ~3s (seen in Hayley's Bedroom, v0.10.3):
      - actions: colours dealt round the lights, with 2–5 gradient points on
        gradient lights;
      - a palette (colours + dimming);
      - the speed.
   3. The scene is recalled with `dynamic_palette` (animated) or `active` (still).
-  - This adds at most one bridge scene per room/zone. It shows in the Hue app too.
+  - This adds at most two bridge scenes per room/zone. They show in the Hue app
+    too.
+  - Colour scenes use Hue's own speed and brightness per scene (`HUE_TIMING`, read
+    from the bridge's scene entities: 0.60–0.73). The first version used 0.5,
+    which the user noticed was slower than Hue. Custom scenes default to 0.63.
 - **Anything else** (a single light, a non-Hue group, or a bridge error): colours
   are dealt round the member lights with `light.turn_on`.
 - **Why not one bridge scene per room per scene:** the bridge already had ~123
@@ -179,6 +185,12 @@ Integration modules (`custom_components/church_drive/`):
 - **State:** the last scene applied there while its lights still match (an
   animating light counts). Otherwise it's any white scene the lights match, or
   unknown when the lights are off or set by hand.
+  - For 15s after an apply, the new scene is shown regardless, then rechecked.
+    Before v0.10.4 the select dropped to unknown when the lights briefly reported
+    off during a colour recall, so tiles didn't glow or show play/pause.
+  - It's a RestoreEntity: the last scene survives restarts.
+  - Colour matching allows xy ±0.06, because Hue clamps colours to each bulb's
+    gamut.
 - **Attributes:** `target` (group entity) and `scene_key`.
 - **Behaviour:** choosing an option applies it. Options are every library name, and
   they update when custom scenes change.
@@ -213,7 +225,7 @@ Integration modules (`custom_components/church_drive/`):
   or failing that when the lights match:
   - brightness within 4/255;
   - kelvin within 3%;
-  - xy within 0.03 of a palette colour;
+  - xy within 0.06 of a palette colour;
   - lights that can't show the colour only need to be on.
 - **Animated scenes:** they show playing ▶ or paused ⏸. Tapping a playing one
   freezes each lit bulb at its current colour.

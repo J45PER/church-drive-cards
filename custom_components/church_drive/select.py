@@ -2,11 +2,15 @@
 
 The state is the universal scene the room is showing: the last one applied
 there while its lights still match it, else any white scene they match; none
-when the lights are off or set by hand. Choosing an option applies it.
+when the lights are off or set by hand. For a few seconds after a scene is
+applied it's shown regardless, while the lights change over (a Hue colour
+scene can briefly report them off). The last scene is restored after a
+restart. Choosing an option applies it.
 """
 
 from __future__ import annotations
 
+import time
 from typing import Any
 
 from homeassistant.components.select import SelectEntity
@@ -16,7 +20,8 @@ from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.event import async_call_later, async_track_state_change_event
+from homeassistant.helpers.restore_state import RestoreEntity
 
 from .apply import async_apply, members
 from .const import DOMAIN, SIGNAL_ACTIVE, SIGNAL_LIBRARY
@@ -24,6 +29,7 @@ from .hue import async_get_bridge_api
 from .library import Library
 
 COLOUR_MODES = {"xy", "hs", "rgb", "rgbw", "rgbww"}
+SETTLE_SECONDS = 15
 
 
 async def async_setup_entry(
@@ -61,8 +67,9 @@ def matches(hass: HomeAssistant, spec: dict, lights: list[str], playing_ok: bool
         if spec["kind"] == "colour" or "xy" in spec:
             xy = a.get("xy_color")
             colors = spec["colors"] if spec["kind"] == "colour" else [spec["xy"]]
+            # 0.06: Hue clamps colours to what each bulb can show.
             if modes & COLOUR_MODES and not (
-                xy and any(abs(xy[0] - c[0]) < 0.03 and abs(xy[1] - c[1]) < 0.03 for c in colors)
+                xy and any(abs(xy[0] - c[0]) < 0.06 and abs(xy[1] - c[1]) < 0.06 for c in colors)
             ):
                 return False
         elif "color_temp" in modes:
@@ -74,7 +81,7 @@ def matches(hass: HomeAssistant, spec: dict, lights: list[str], playing_ok: bool
     return True
 
 
-class SceneSelect(SelectEntity):
+class SceneSelect(SelectEntity, RestoreEntity):
     """The universal scene a Hue room/zone is showing."""
 
     _attr_should_poll = False
@@ -87,14 +94,22 @@ class SceneSelect(SelectEntity):
         self._attr_name = f"{group_name} scene"
         self._key: str | None = None
         self._unsub_lights = None
+        self._recheck = None
         self._attr_options = [spec["name"] for spec in library.all().values()]
         self._attr_current_option = None
 
     async def async_added_to_hass(self) -> None:
-        self.async_on_remove(async_dispatcher_connect(self.hass, SIGNAL_ACTIVE, self._refresh))
+        # After a restart, pick up the scene the room was last set to.
+        last_state = await self.async_get_last_state()
+        found = self._library.find(last_state.state) if last_state else None
+        active = self.hass.data[DOMAIN].setdefault("active", {})
+        if found and self._target not in active:
+            active[self._target] = found[0]
+        self.async_on_remove(async_dispatcher_connect(self.hass, SIGNAL_ACTIVE, self._applied))
         self.async_on_remove(async_dispatcher_connect(self.hass, SIGNAL_LIBRARY, self._refresh))
         self._track()
         self.async_on_remove(lambda: self._unsub_lights and self._unsub_lights())
+        self.async_on_remove(lambda: self._recheck and self._recheck())
         self._refresh()
 
     @callback
@@ -112,13 +127,23 @@ class SceneSelect(SelectEntity):
         self._refresh()
 
     @callback
+    def _applied(self) -> None:
+        """A scene was applied somewhere: show it now and look again once settled."""
+        self._refresh()
+        if self._recheck:
+            self._recheck()
+        self._recheck = async_call_later(self.hass, SETTLE_SECONDS + 1, lambda _now: self._refresh())
+
+    @callback
     def _refresh(self) -> None:
         scenes = self._library.all()
         self._attr_options = [spec["name"] for spec in scenes.values()]
         lights = members(self.hass, self._target)
-        last = self.hass.data[DOMAIN].get("active", {}).get(self._target)
+        data = self.hass.data[DOMAIN]
+        last = data.get("active", {}).get(self._target)
+        settling = time.monotonic() - data.get("applied_at", {}).get(self._target, -1e9) < SETTLE_SECONDS
         key = None
-        if last in scenes and matches(self.hass, scenes[last], lights, playing_ok=True):
+        if last in scenes and (settling or matches(self.hass, scenes[last], lights, playing_ok=True)):
             key = last
         else:
             key = next(

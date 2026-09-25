@@ -72,7 +72,7 @@ CUSTOM_SCENE = vol.Schema(
         vol.Optional("brightness", default=100): vol.All(vol.Coerce(float), vol.Range(min=1, max=100)),
         vol.Optional("colors", default=[]): vol.All([HEX], vol.Length(max=9)),
         vol.Optional("dynamic", default=False): cv.boolean,
-        vol.Optional("speed", default=0.5): vol.All(vol.Coerce(float), vol.Range(min=0, max=1)),
+        vol.Optional("speed", default=0.63): vol.All(vol.Coerce(float), vol.Range(min=0, max=1)),
         vol.Optional("icon"): cv.string,
     }
 )
