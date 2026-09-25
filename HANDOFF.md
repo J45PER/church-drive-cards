@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-24. Current release: **v0.8.1**.*
+*Last updated 2026-09-24. Current release: **v0.9.0**.*
 
 ## Where this stands
 
@@ -25,9 +25,22 @@ plan below).
 - It runs at startup, on options change (entry reload) and via the
   `church_drive.sync_scenes` action (returns a per-room summary). Diagnostics
   dump the chosen rooms' scenes with their light settings.
+- Since v0.9.0 the cards use the library directly: the integration serves it
+  over the websocket (`church_drive/library`: key, name, brightness,
+  `color_temp_kelvin` or `xy_color`) and `src/universal-scenes.js` loads it once
+  per page. A card scene `entity: universal:<key>` (or YAML `scene: Bright`) is
+  applied with one `light.turn_on` on the card's Hue room group (else its
+  zones/groups, else its lights) and shows as selected while every lit light
+  matches it (brightness within 4/255, kelvin within 3%, xy within 0.02; lights
+  that can't show the colour only need to be on). The editor's Scenes list puts
+  universal scenes first and hides same-name Hue scenes. There's also a
+  `church_drive.apply_scene` action (lights + scene name).
+- Why not sync every room to the bridge: it already has ~123 scenes and the full
+  library everywhere would add ~100, past the bridge's ~200 limit. Bridge
+  scenes stay for animated/colour scenes (step 4).
 - Plan: step 2 = Kitchen test (done in v0.8.0, Rest created, the Hue app's
-  Bright/Relax/Nightlight linked). Step 3 = full library to all rooms/zones, an
-  active-scene entity, cards pick scenes from the library. Step 4 = gradients,
+  Bright/Relax/Nightlight linked). Step 3 (v0.9.0) = library applied by the
+  cards in every room (active-scene entity still to do). Step 4 = gradients,
   dynamic palettes and a scene builder. Everything below is merged to
 `main`, released and running live. The user has checked each change on a real
 device.

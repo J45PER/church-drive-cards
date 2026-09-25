@@ -22,6 +22,20 @@
     "sync_scenes": {
       "name": "Sync universal scenes",
       "description": "Create or update the universal scenes on the Hue bridge for the chosen rooms and zones."
+    },
+    "apply_scene": {
+      "name": "Apply universal scene",
+      "description": "Set lights, rooms or zones to a universal scene (e.g. Bright), without a Hue scene.",
+      "fields": {
+        "entity_id": {
+          "name": "Lights",
+          "description": "Lights, rooms or zones to set."
+        },
+        "scene": {
+          "name": "Scene",
+          "description": "Scene name, e.g. Bright or Relax."
+        }
+      }
     }
   }
 }

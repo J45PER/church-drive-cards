@@ -11,3 +11,5 @@ URL_BASE = "/church_drive"
 CONF_SCENE_GROUPS = "scene_groups"
 
 SERVICE_SYNC_SCENES = "sync_scenes"
+SERVICE_APPLY_SCENE = "apply_scene"
+WS_LIBRARY = "church_drive/library"

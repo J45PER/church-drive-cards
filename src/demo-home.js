@@ -85,6 +85,19 @@ function hexToRgb(hex) {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
+// Rough xy -> rgb, enough to tint the pretend lights.
+function xyToRgb([x, y]) {
+  const z = 1 - x - y;
+  const X = x / y;
+  const Z = z / y;
+  let r = X * 1.656492 - 0.354851 - Z * 0.255038;
+  let g = -X * 0.707196 + 1.655397 + Z * 0.036152;
+  let b = X * 0.051713 - 0.121364 + Z * 1.01153;
+  const m = Math.max(r, g, b, 1e-6);
+  [r, g, b] = [r, g, b].map((v) => Math.max(0, v / m));
+  return [r, g, b].map((v) => Math.round(255 * (v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055)));
+}
+
 function slug(text) {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
 }
@@ -212,6 +225,9 @@ export class DemoHome {
       const attrs = { dynamics: 'none', brightness: modes.includes('onoff') ? null : data.brightness || st.attributes.brightness || 200 };
       // An explicit colour or colour temperature stops an animation, as on Hue.
       if (data.color_temp_kelvin) Object.assign(attrs, { color_mode: 'color_temp', color_temp_kelvin: data.color_temp_kelvin, rgb_color: null, hs_color: null });
+      if (data.xy_color && modes.includes('xy')) {
+        Object.assign(attrs, { color_mode: 'xy', xy_color: data.xy_color, rgb_color: xyToRgb(data.xy_color), hs_color: null, color_temp_kelvin: null });
+      }
       this._set(bulb, 'on', attrs);
     });
     if (!Object.values(this.states).some((s) => s.attributes.dynamics === 'dynamic_palette')) this.stop();

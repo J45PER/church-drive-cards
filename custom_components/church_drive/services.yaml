@@ -1,1 +1,25 @@
 sync_scenes:
+apply_scene:
+  fields:
+    entity_id:
+      required: true
+      selector:
+        entity:
+          domain: light
+          multiple: true
+    scene:
+      required: true
+      example: Bright
+      selector:
+        select:
+          custom_value: true
+          options:
+            - Bright
+            - Cool bright
+            - Dimmed
+            - Read
+            - Concentrate
+            - Energise
+            - Relax
+            - Rest
+            - Nightlight
