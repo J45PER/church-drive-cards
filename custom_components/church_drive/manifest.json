@@ -1,14 +1,22 @@
 {
   "domain": "church_drive",
   "name": "Church Drive",
-  "codeowners": ["@J45PER"],
+  "after_dependencies": [
+    "hue"
+  ],
+  "codeowners": [
+    "@J45PER"
+  ],
   "config_flow": true,
-  "dependencies": ["frontend", "http"],
+  "dependencies": [
+    "frontend",
+    "http"
+  ],
   "documentation": "https://github.com/J45PER/church-drive-cards#readme",
   "integration_type": "service",
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/J45PER/church-drive-cards/issues",
   "requirements": [],
   "single_config_entry": true,
-  "version": "0.7.0"
+  "version": "0.8.0"
 }

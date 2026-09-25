@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-24. Current release: **v0.7.0**.*
+*Last updated 2026-09-24. Current release: **v0.8.0**.*
 
 ## Where this stands
 
@@ -10,7 +10,25 @@ installed through **HACS** from this public repo
 custom Lovelace cards: it serves the bundle
 (`custom_components/church_drive/frontend/church-drive-cards.js`) and adds it to
 every frontend page with `add_extra_js_url`. There is no Lovelace resource for the
-released cards. Universal scenes (synced to the Hue bridge) will be built on top. Everything below is merged to
+released cards. Since v0.8.0 it also syncs **universal scenes** to the Hue bridge (step 2 of the
+plan below).
+
+### Universal scenes
+
+- `library.py` defines each scene once (name, mirek or xy, brightness).
+- `hue.py` reuses HA's Hue connection (`hue` config entry `runtime_data.api`, an
+  aiohue v2 bridge), so there's no link button. For each room/zone chosen in the
+  options (`scene_groups`, bridge group ids) and each library scene:
+  - a scene tagged `metadata.appdata = "cd:<key>"` is ours: brought in line;
+  - an untagged same-name scene (made by the Hue app) is left alone and used;
+  - otherwise a new tagged scene is created.
+- It runs at startup, on options change (entry reload) and via the
+  `church_drive.sync_scenes` action (returns a per-room summary). Diagnostics
+  dump the chosen rooms' scenes with their light settings.
+- Plan: step 2 = Kitchen test (done in v0.8.0, Rest created, the Hue app's
+  Bright/Relax/Nightlight linked). Step 3 = full library to all rooms/zones, an
+  active-scene entity, cards pick scenes from the library. Step 4 = gradients,
+  dynamic palettes and a scene builder. Everything below is merged to
 `main`, released and running live. The user has checked each change on a real
 device.
 

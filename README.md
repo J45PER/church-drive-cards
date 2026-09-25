@@ -1,6 +1,6 @@
 # Church Drive
 
-A Home Assistant integration for the Church Drive house. Today it delivers the house's custom Lovelace cards: it serves the cards bundle and loads it on every dashboard, so there's no Lovelace resource to manage. Universal scenes synced to the Hue bridge are planned next.
+A Home Assistant integration for the Church Drive house. Today it delivers the house's custom Lovelace cards: it serves the cards bundle and loads it on every dashboard, so there's no Lovelace resource to manage. It also keeps a library of **universal scenes** (Bright, Relax, Rest, Nightlight so far) and syncs them to the Hue rooms and zones chosen in its options (Settings → Devices & services → Church Drive → Configure). It uses Home Assistant's existing Hue connection, so there's no bridge pairing. For each chosen room, a scene the room doesn't have is created on the bridge (tagged as a Church Drive scene), and a Hue scene with the same name that's already there is left untouched and used as-is. The sync runs at startup, when the options change, and on the `church_drive.sync_scenes` action.
 
 The cards share one bundle and one look: no border, drop shadow, rounded top/bottom corners only, hover tints on interactive elements.
 
