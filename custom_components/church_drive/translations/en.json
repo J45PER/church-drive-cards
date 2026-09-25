@@ -3,5 +3,25 @@
     "abort": {
       "already_configured": "Church Drive is already set up."
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Universal scenes",
+        "description": "Choose the Hue rooms and zones that get the universal scenes. Scenes are created on the Hue bridge; a room's existing Hue scene with the same name is left as it is and used instead.",
+        "data": {
+          "scene_groups": "Rooms and zones"
+        }
+      }
+    },
+    "abort": {
+      "hue_not_ready": "The Hue integration isn't connected to the bridge yet. Try again in a moment."
+    }
+  },
+  "services": {
+    "sync_scenes": {
+      "name": "Sync universal scenes",
+      "description": "Create or update the universal scenes on the Hue bridge for the chosen rooms and zones."
+    }
   }
 }
