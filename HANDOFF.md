@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-24. Current release: **v0.8.0**.*
+*Last updated 2026-09-24. Current release: **v0.8.1**.*
 
 ## Where this stands
 
