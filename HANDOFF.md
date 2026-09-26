@@ -47,17 +47,20 @@ short live summary on the right.
 - New card `section-title-card` (`src/section-title-card.js`): `title`, `icon`,
   `color` (HA colour name or CSS colour), `summary` (a template, rendered live
   over the `render_template` subscription like HA's markdown card).
-- Panels use HA's own section `background: {color, opacity: 10}`.
-- Mobile → Quick Actions is converted, on the **beta** card type
-  (`custom:section-title-card-beta`) until it's released; then swap the type.
-  Sections: Security (green), Lights (amber), Cleaning (blue), Climate
-  (deep-orange; split out of the Security section), with
-  `dense_section_placement: true`.
-- Sections view lines sections up in grid rows, so a short section under a tall
-  one left a big gap. Lights has `row_span: 2`, so Security (row 1) and Climate
-  (row 2, placed there by dense placement) stack in column 1 beside it.
-  Cleaning doesn't span: a spanned section's panel stretches to the full
-  height, which would leave a tall empty blue panel.
+- HA's section backgrounds didn't work out: sections view lines sections up
+  in grid rows, so Climate (split out under Security) started below the tall
+  Lights section; a `row_span: 2` on Lights only split its height between the
+  two rows, and the gap stayed. So the panel is now a card:
+  **`section-panel-card`** (`src/section-panel-card.js`): the Section Title
+  plus its `cards`, on a rounded panel (24px corners, 12px padding) tinted 10%
+  in the colour. Children are made with `loadCardHelpers().createCardElement`.
+  Its editor is the title fields plus HA's own vertical-stack editor for the
+  cards. Several panels can share one section with the normal 8px gap.
+- Mobile → Quick Actions is now three plain sections: [Security panel,
+  Climate panel], [Lights panel], [Cleaning panel], using the **beta** card type
+  (`custom:section-panel-card-beta`) until it's released; then swap the type.
+- HA colour names are drawn as `var(--<name>-color, <hex>)` with a hex
+  fallback table (`STC_FALLBACK`).
 - Next: the other Mobile tabs once the user is happy with Quick Actions.
 
 **New in v0.11.0 (2026-09-26): alarm card redesign.** The user asked for a
@@ -151,6 +154,7 @@ colours and logs a warning ("Couldn't play … on the Hue bridge"). Read it with
 | `scene-styles-card` | `src/scene-styles-card.js` | Central scene tile looks (icon, colours, picture) |
 | `scene-builder-card` | `src/scene-builder-card.js` | Make custom universal scenes |
 | `section-title-card` | `src/section-title-card.js` | Large section title, coloured icon, live template summary |
+| `section-panel-card` | `src/section-panel-card.js` | Section title plus cards on a colour-tinted panel |
 
 Shared frontend modules:
 - `src/form-editor.js`: the `ha-form` visual-editor base.
