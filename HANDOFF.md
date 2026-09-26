@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-25. Current release: **v0.10.6**.*
+*Last updated 2026-09-26. Current release: **v0.10.7**.*
 
 ## Where this stands
 
@@ -41,6 +41,27 @@ devices before each release.
 2. **Default scenes.** A card with no scenes chosen now shows Bright, Dimmed,
    Relax and Nightlight (universal, applied to the card's room), the same on
    every card. The old auto-pick of the room's Hue scenes is gone.
+
+**New in v0.10.7 (checked by the user on Beta):**
+- The editor's Scenes list starts filled with Bright, Dimmed, Relax and
+  Nightlight for the card's room (`lccFillDefaultScenes`), so they can be
+  reordered or removed. Until they're changed they follow the card if its room
+  changes. An emptied list shows no scenes; a card with no `scenes` key at all
+  still shows the four.
+- List items are labelled "Bright · Kitchen" instead of
+  `universal:bright@light.kitchen`, with any name override underneath. HA's
+  object list shows a field's raw value (select option labels aren't looked
+  up), so `label` is a form-only field: an invisible `constant` selector in the
+  item's fields, added by the shared editor's `display` hook and removed by
+  `store` before saving.
+- A red **Reset** button on the Scenes list's Add row (Reset left, Add right)
+  puts the four defaults back for the card's room. ha-form has no buttons, so
+  the shared editor takes `buttons` (`{ label, apply, field, variant }`) and
+  reaches into the list's shadow DOM (`ha-selector[name=scenes]` →
+  `ha-selector-object` → `.items-container`), adding the button and a flex
+  style. If HA's markup changes and that isn't found within 2s, the button goes
+  under the form instead. The reset sets `scenes: 'reset'`, which
+  `lccFillDefaultScenes` swaps for the defaults before saving.
 
 If a colour scene sets fixed colours but doesn't animate, the bridge probably
 rejected the palette body in `apply.py`. The integration falls back to per-light
@@ -287,9 +308,10 @@ Integration modules (`custom_components/church_drive/`):
   - **Names:** hidden on tiles under 100px wide (`scene_names: auto`). `always` and
     `never` override that.
   - `max_scenes` defaults to 8, and 0 hides tiles.
-  - **Default scenes** (none chosen): universal Bright, Dimmed, Relax and
+  - **Default scenes** (no `scenes` key): universal Bright, Dimmed, Relax and
     Nightlight on the card's room, the same on every card
-    (`LCC_DEFAULT_SCENES`).
+    (`LCC_DEFAULT_SCENES`). The editor fills them into the list; an empty list
+    shows no scenes.
   - **Backgrounds:** an uploaded picture, else the central style, else a built-in
     palette, else the scene's own colours (custom scenes), else a colour from a
     name hash.
