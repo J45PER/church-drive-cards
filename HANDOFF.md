@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-25. Current release: **v0.10.6**.*
+*Last updated 2026-09-26. Current release: **v0.10.7**.*
 
 ## Where this stands
 
@@ -42,7 +42,7 @@ devices before each release.
    Relax and Nightlight (universal, applied to the card's room), the same on
    every card. The old auto-pick of the room's Hue scenes is gone.
 
-**On Beta, not yet released:**
+**New in v0.10.7 (checked by the user on Beta):**
 - The editor's Scenes list starts filled with Bright, Dimmed, Relax and
   Nightlight for the card's room (`lccFillDefaultScenes`), so they can be
   reordered or removed. Until they're changed they follow the card if its room
