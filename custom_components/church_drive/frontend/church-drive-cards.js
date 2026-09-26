@@ -3225,9 +3225,9 @@
           .cc-btn::after, .cc-q::after, .cc-dd::after { content:''; position:absolute; inset:0; background:#fff; opacity:0; transition:opacity .15s; pointer-events:none; border-radius:inherit; }
           .cc-btn:not(:disabled):hover::after, .cc-q:hover::after, .cc-dd:hover::after { opacity:.08; }
           .cc-btn:focus-visible, .cc-q:focus-visible, .cc-dd:focus-visible, .cc-opt:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
-          .cc-q { position:relative; container-type:inline-size; flex:1 1 0; min-width:0; height:48px; border:none; border-radius:12px; padding:0; overflow:hidden; cursor:pointer; color:#fff;
+          .cc-q { position:relative; container-type:inline-size; flex:1 1 0; min-width:0; height:48px; border:none; border-radius:12px; padding:0; overflow:hidden; cursor:pointer; color:var(--primary-text-color); background:rgba(127,127,127,0.14);
             transition:opacity .2s, filter .2s, transform .2s, box-shadow .2s; }
-          .cc-q.cc-dim { opacity:.45; filter:saturate(.5); }
+          .cc-q.cc-on { color:#fff; }
           .cc-q-name { font-size:13px; }
           @container (max-width: 89px) { .cc-names-auto .cc-q-name { display:none; } }
           .cc-names-never .cc-q-name { display:none; }
@@ -3644,18 +3644,18 @@
       const active = list.findIndex((q) => this._matches(q, v));
       list.forEach((q, i) => {
         const look = q.preset_mode && !noPreset(q.preset_mode) && CC_PRESETS[q.preset_mode] || q.hvac_mode && CC_MODES[q.hvac_mode] || CC_MODES.heat;
-        const colors = q.color ? [stcColor(q.color), `color-mix(in srgb, ${stcColor(q.color)} 65%, #000)`] : look.colors || CC_MODES.heat.colors;
+        const color = q.color ? stcColor(q.color) : look.color || CC_MODES.heat.color;
         const icon = q.icon || look.icon;
+        const on = i === active;
         const tile = document.createElement("button");
-        tile.className = `cc-q${active !== -1 && i !== active ? " cc-dim" : ""}`;
+        tile.className = `cc-q${on ? " cc-on" : ""}`;
         tile.title = q.name;
         tile.setAttribute("aria-label", q.name);
-        tile.style.background = `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`;
-        if (i === active) tile.style.boxShadow = `0 0 12px 2px color-mix(in srgb, ${colors[0]} 80%, transparent)`;
-        tile.innerHTML = `<div style="position:absolute; inset:0; background:rgba(0,0,0,0.18);"></div>
-        <div style="position:relative; display:flex; align-items:center; justify-content:center; gap:6px; height:100%; padding:0 6px;">
-          ${iconHtml(icon, { size: "22px", style: "flex-shrink:0; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.55));" })}
-          <span class="cc-q-name" style="min-width:0; font-weight:600; text-shadow:0 1px 2px rgba(0,0,0,0.6); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></span>
+        tile.setAttribute("aria-pressed", String(on));
+        if (on) tile.style.background = color;
+        tile.innerHTML = `<div style="position:relative; display:flex; align-items:center; justify-content:center; gap:6px; height:100%; padding:0 6px;">
+          ${iconHtml(icon, { size: "22px", style: "flex-shrink:0;" })}
+          <span class="cc-q-name" style="min-width:0; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></span>
         </div>`;
         tile.querySelector(".cc-q-name").textContent = q.name;
         tile.addEventListener("click", () => this._applyQuick(q));
