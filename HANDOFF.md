@@ -32,6 +32,8 @@ devices before each release.
 - Fuller scene row first (v0.10.10) and the scene-count warning (v0.10.11, on
   Beta).
 - Alarm card redesign (v0.11.0) on Beta in demo mode.
+- Section panels (v0.12.0) on the real Mobile dashboard: Quick Actions checked
+  closely (gaps), the other tabs looked at before release.
 
 **Still to check on real lights:** a colour scene (e.g. a two-colour custom one)
 in a room with several lights should give each light its own shade, blended
@@ -39,42 +41,39 @@ between the colours (v0.10.6). Nobody has looked yet. And the new alarm card
 (v0.11.0) during a real exit or entry delay: the ring should empty, the timer
 count down on the title's row, and the card fade towards amber/orange.
 
-**New in v0.12.0: dashboard section style ("D")** (mock-ups:
-claude.ai/artifact/3CCBXYAz5YgKPRxYG7kFrQ). The user wanted bigger section
-titles and a background behind each section. Picked D: each section on a faint
-panel of its own colour, a 1.6rem title with the icon in that colour, and a
-short live summary on the right.
-- New card `section-title-card` (`src/section-title-card.js`): `title`, `icon`,
+**New in v0.12.0 (2026-09-26): dashboard section style "D".** The user wanted
+bigger section titles and a background behind each section so its cards read
+as one group. Mock-ups: claude.ai/artifact/3CCBXYAz5YgKPRxYG7kFrQ (A panel,
+B one block, C heading band, D tinted panels + summary). Picked D: each group
+on a faint panel of its own colour, a 1.6rem title with the icon in that
+colour, and a short live summary on the right.
+- **`section-title-card`** (`src/section-title-card.js`): `title`, `icon`,
   `color` (HA colour name or CSS colour), `summary` (a template, rendered live
-  over the `render_template` subscription like HA's markdown card).
-- HA's section backgrounds didn't work out: sections view lines sections up
-  in grid rows, so Climate (split out under Security) started below the tall
-  Lights section; a `row_span: 2` on Lights only split its height between the
-  two rows, and the gap stayed. So the panel is now a card:
-  **`section-panel-card`** (`src/section-panel-card.js`): the Section Title
-  plus its `cards`, on a rounded panel (24px corners, 12px padding) tinted 10%
-  in the colour, with the same 12px between its cards as round its edge. Children are made with `loadCardHelpers().createCardElement`.
-  Its editor is the title fields plus HA's own vertical-stack editor for the
-  cards. Several panels can share one section with the normal 8px gap.
-- Mobile → Quick Actions is now three plain sections: [Security panel,
-  Climate panel], [Lights panel], [Cleaning panel], using the **beta** card type
-  (`custom:section-panel-card-beta`) until it's released; then swap the type.
-- HA colour names are drawn as `var(--<name>-color, <hex>)` with a hex
-  fallback table (`STC_FALLBACK`).
-- The user confirmed Quick Actions looks good (panel gaps: 32px between stacked panels, 12px inside). Next: the other Mobile tabs, then release and swap the `-beta` types.
-- **All Mobile tabs converted** and switched to the released `custom:section-panel-card`
-  in v0.12.0, one HA section per column holding panels (the user later split
-  Lighting into four sections, one panel each):
-  - Lighting (2 columns): [Ground Floor, Garden] [Middle Floor, Top Floor];
-    amber, Garden green; summaries "N rooms on" / "All off" from each floor's
-    Hue room lights.
-  - Security: [Alarm (green), Doors & Motion (indigo, "Doors closed" / "N
-    open")] [Outdoor Cameras, Indoor Cameras (blue-grey)] [Fire Alarm (red,
-    safe mode state)]. The empty heading-only section was dropped.
-  - Climate: [Heating (deep-orange), Temperature (orange), Humidity (blue)]
-    [Cooling (light-blue), Air Purifier (green, PM2.5)] [Blinds (brown; blank
-    while the blind reports unknown)].
-  - Cleaning: one Cleaning panel (blue, state and battery).
+  over the `render_template` subscription like HA's markdown card; plain text
+  is shown as is). HA colour names are drawn as `var(--<name>-color, <hex>)`
+  with a hex fallback table (`STC_FALLBACK`).
+- **`section-panel-card`** (`src/section-panel-card.js`): a Section Title plus
+  its `cards` on a rounded panel (24px corners, 12px padding, 12px between
+  cards, tinted 10% in the colour). Children are made with
+  `loadCardHelpers().createCardElement`. A panel right under another panel in
+  the same section gets the view's column gap (32px) above it; it finds the
+  previous card by walking up to its `hui-card` and checking the previous
+  sibling's `config.type`. The editor is the title fields plus HA's own
+  vertical-stack editor for the cards.
+- **Why a card and not HA's section background:** the first try used native
+  section `background: {color, opacity}` with the title card. Sections view
+  lines sections up in grid rows, so Climate (under Security) started below
+  the tall Lights section; `row_span: 2` on Lights just split its height
+  across both rows and the gap stayed. A panel is a card, so several stack in
+  one section with no gap problem. (Section `row_span` and
+  `dense_section_placement` exist, for reference.)
+- **Spacing the user asked for:** the vertical gap between stacked panels
+  matches the column gap; the gap between cards inside a panel matches the
+  panel's inner edge. Cards that were wrapped in a `vertical-stack` inside a
+  panel were unwrapped so they get the 12px gap too.
+- **The whole Mobile dashboard is converted** (see "Live Home Assistant"). The
+  user checked Quick Actions on Beta, then the other tabs, then asked for the
+  release; the dashboard was switched from `-beta` to the released type.
 
 **New in v0.11.0 (2026-09-26): alarm card redesign.** The user asked for a
 bigger card that doesn't change size when the timer shows, a layout matching
@@ -483,14 +482,25 @@ Integration modules (`custom_components/church_drive/`):
 - **HA** is 2026.9.x. The Hue bridge is `ecb5fa993162` (config entry
   `01K9M3B829ZTWAA7DHVYPA79K4`), with 12 rooms and 11 zones.
 - **Dashboards using the cards:**
-  - **Mobile** (`dashboard-mobile`):
-    - Quick Actions has the alarm card and Kitchen / Living Room / Middle Floor
-      light cards.
-    - The **Lighting** tab has room cards for Kitchen, Living Room and Entrance
-      (Ground Floor); Garden (Patio Lightstrip + Garden Spotlight); Middle Floor
-      Hallway, Second Bedroom and Spare Bedroom; and Landing (Main + Ambient
-      Spotlights), Office, Hayley's Bedroom and En-Suite.
-    - The tiles' names and `phu:` icons were kept as row overrides.
+  - **Mobile** (`dashboard-mobile`), all tabs on section panels (v0.12.0), one
+    HA section per column (theme Mushroom Shadow):
+    - **Quick Actions:** [Security (green, alarm state) + Climate (deep-orange,
+      downstairs °C · action)] [Lights (amber, "N rooms on" over Kitchen /
+      Living Room / Middle Floor)] [Cleaning (blue, state · battery)]. Header
+      "Hello {{ user }}".
+    - **Lighting** (max 4 columns; the user split it into four sections): Ground
+      Floor (Kitchen, Living Room, Entrance), Middle Floor (Hallway, Second
+      Bedroom, Spare Bedroom), Top Floor (Landing, Office, Hayley's Bedroom,
+      En-Suite), all amber with "N rooms on"; Garden (green, On/Off; Patio
+      Lightstrip + Garden Spotlight). Row names and `phu:` icons are overrides.
+    - **Security:** [Alarm (green) + Doors & Motion (indigo, "Doors closed" /
+      "N doors open"; the door, motion, battery and tamper lists)] [Outdoor
+      Cameras + Indoor Cameras (blue-grey)] [Fire Alarm (red, safe mode)].
+    - **Climate:** [Heating + Temperature (orange, downstairs °C) + Humidity
+      (blue, downstairs %)] [Cooling (light-blue, fan) + Air Purifier (green,
+      on/off · PM2.5, filters and graphs)] [Blinds (brown; blank while the blind
+      reports unknown)].
+    - **Cleaning:** one Cleaning panel (blue, state · battery).
   - **Hayley** (`dashboard-hayley`): full-width light cards for Hayley's Bedroom,
     Kitchen Spotlights, Living Room Ambience and Middle Floor.
   - **Living Room Panel** (`living-room-panel`): a Living Room card (Ceiling Light,
