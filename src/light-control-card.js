@@ -738,7 +738,8 @@ export class LightControlCard extends HTMLElement {
   // Scene tiles, the same height as a light row: picture (or palette
   // gradient) background with the icon and name side by side. At most four
   // per row in as few rows as possible, shared out evenly with any fuller
-  // row last (6 = 3 + 3, 5 = 2 + 3, 7 = 3 + 4); each row fills the width.
+  // row first (6 = 3 + 3, 5 = 3 + 2, 7 = 4 + 3), so the last row's tiles are wider;
+  // each row fills the width.
   // The selected scene glows in its own colour and the others are dimmed; an
   // animated scene shows a pulsing play badge while running, pause when not.
   _buildScenes(scenes) {
@@ -754,7 +755,7 @@ export class LightControlCard extends HTMLElement {
     const rows = Array.from({ length: rowCount }, (_, i) => {
       const row = document.createElement('div');
       row.style.cssText = 'display:flex; gap:6px;';
-      row.dataset.size = base + (i >= rowCount - extra ? 1 : 0);
+      row.dataset.size = base + (i < extra ? 1 : 0);
       wrap.appendChild(row);
       return row;
     });
