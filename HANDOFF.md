@@ -48,9 +48,14 @@ devices before each release.
   reordered or removed. Until they're changed they follow the card if its room
   changes. An emptied list shows no scenes; a card with no `scenes` key at all
   still shows the four.
-- List items are labelled "Bright · Kitchen" (or the name override) instead of
-  `universal:bright@light.kitchen`. The label is a form-only field: the shared
-  editor's `display`/`store` hooks add it and strip it before saving.
+- List items are labelled "Bright · Kitchen" instead of
+  `universal:bright@light.kitchen`, with any name override underneath. HA's
+  object list shows a field's raw value (select option labels aren't looked
+  up), so `label` is a form-only field: an invisible `constant` selector in the
+  item's fields, added by the shared editor's `display` hook and removed by
+  `store` before saving.
+- A **Reset scenes** switch puts the four defaults back for the card's room and
+  turns itself off (handled in `lccFillDefaultScenes`).
 
 If a colour scene sets fixed colours but doesn't animate, the bridge probably
 rejected the palette body in `apply.py`. The integration falls back to per-light

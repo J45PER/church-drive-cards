@@ -1374,6 +1374,10 @@
       return option ? { entity: option.value } : null;
     }).filter(Boolean);
     if (!defaults.length) return config;
+    if (config.reset_scenes) {
+      const { reset_scenes: _reset, ...rest } = config;
+      return { ...rest, scenes: defaults };
+    }
     if (config.scenes == null) return { ...config, scenes: defaults };
     const current = lccNormalizeScenes(config.scenes);
     const untouched = current.length === LCC_DEFAULT_SCENES.length && current.every((sc, i) => Object.keys(sc).length === 1 && String(sc.entity).split("@")[0] === universalRef(LCC_DEFAULT_SCENES[i]));
@@ -1383,13 +1387,13 @@
   function lccLabelScenes(config, hass) {
     if (!config.scenes) return config;
     const options = lccEditorSceneOptions(config, hass);
-    const labelOf = (s) => s.name || (options.find((o) => o.value === s.entity) || {}).label || s.entity;
+    const labelOf = (s) => (options.find((o) => o.value === s.entity) || {}).label || s.entity;
     return { ...config, scenes: lccNormalizeScenes(config.scenes).map((s) => ({ ...s, label: labelOf(s) })) };
   }
   var LightControlCardEditor = createFormEditor({
     fill: lccFillDefaultScenes,
     display: lccLabelScenes,
-    store: (config) => config.scenes ? { ...config, scenes: config.scenes.map(({ label, ...s }) => s) } : config,
+    store: (config) => config.scenes ? { ...config, scenes: config.scenes.map(({ label: _label, ...s }) => s) } : config,
     schema: (config, hass) => {
       const mode = config.mode || "light";
       loadUniversalScenes(hass);
@@ -1500,15 +1504,18 @@
             object: {
               multiple: true,
               label_field: "label",
+              description_field: "name",
               fields: {
                 entity: { label: "Scene", required: true, selector: { select: { mode: "dropdown", options: sceneOptions } } },
                 name: { label: "Name override", selector: { text: {} } },
                 icon: { label: "Icon override", selector: { icon: {} } },
-                image: { label: "Picture (replaces the colour background)", selector: { image: {} } }
+                image: { label: "Picture (replaces the colour background)", selector: { image: {} } },
+                label: { selector: { constant: { value: "", label: "" } } }
               }
             }
           }
         },
+        { name: "reset_scenes", selector: { boolean: {} } },
         ...demoFields
       ];
     },
@@ -1526,11 +1533,13 @@
       max_scenes: "Max scenes",
       scene_names: "Scene names",
       scenes: "Scenes",
+      reset_scenes: "Reset scenes",
       demo: "Use pretend lights instead of real ones",
       demo_room: "Pretend room"
     },
     helpers: {
       max_scenes: "Default 8 (two rows). Set 0 to hide scenes.",
+      reset_scenes: "Put back Bright, Dimmed, Relax and Nightlight for this room.",
       demo: "Nothing is sent to Home Assistant; taps only change the pretend lights on this card."
     }
   });

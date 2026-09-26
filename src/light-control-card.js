@@ -311,6 +311,11 @@ function lccFillDefaultScenes(config, hass) {
     return option ? { entity: option.value } : null;
   }).filter(Boolean);
   if (!defaults.length) return config;
+  // The "Reset scenes" switch puts the defaults back and turns itself off.
+  if (config.reset_scenes) {
+    const { reset_scenes: _reset, ...rest } = config;
+    return { ...rest, scenes: defaults };
+  }
   if (config.scenes == null) return { ...config, scenes: defaults };
   const current = lccNormalizeScenes(config.scenes);
   const untouched =
@@ -320,12 +325,13 @@ function lccFillDefaultScenes(config, hass) {
   return untouched && elsewhere ? { ...config, scenes: defaults } : config;
 }
 
-// Each listed scene is labelled by its name and place ("Bright · Kitchen"),
-// or its name override, instead of its reference.
+// Each listed scene is labelled by its name and place ("Bright · Kitchen")
+// instead of its reference. HA's list shows a field's raw value, so the label
+// is a form-only field (an invisible constant), added here and dropped on save.
 function lccLabelScenes(config, hass) {
   if (!config.scenes) return config;
   const options = lccEditorSceneOptions(config, hass);
-  const labelOf = (s) => s.name || (options.find((o) => o.value === s.entity) || {}).label || s.entity;
+  const labelOf = (s) => (options.find((o) => o.value === s.entity) || {}).label || s.entity;
   return { ...config, scenes: lccNormalizeScenes(config.scenes).map((s) => ({ ...s, label: labelOf(s) })) };
 }
 
@@ -333,7 +339,7 @@ export const LightControlCardEditor = createFormEditor({
   fill: lccFillDefaultScenes,
   display: lccLabelScenes,
   store: (config) =>
-    config.scenes ? { ...config, scenes: config.scenes.map(({ label, ...s }) => s) } : config,
+    config.scenes ? { ...config, scenes: config.scenes.map(({ label: _label, ...s }) => s) } : config,
   schema: (config, hass) => {
     const mode = config.mode || 'light';
     loadUniversalScenes(hass);
@@ -451,15 +457,18 @@ export const LightControlCardEditor = createFormEditor({
           object: {
             multiple: true,
             label_field: 'label',
+            description_field: 'name',
             fields: {
               entity: { label: 'Scene', required: true, selector: { select: { mode: 'dropdown', options: sceneOptions } } },
               name: { label: 'Name override', selector: { text: {} } },
               icon: { label: 'Icon override', selector: { icon: {} } },
               image: { label: 'Picture (replaces the colour background)', selector: { image: {} } },
+              label: { selector: { constant: { value: '', label: '' } } },
             },
           },
         },
       },
+      { name: 'reset_scenes', selector: { boolean: {} } },
       ...demoFields,
     ];
   },
@@ -477,11 +486,13 @@ export const LightControlCardEditor = createFormEditor({
     max_scenes: 'Max scenes',
     scene_names: 'Scene names',
     scenes: 'Scenes',
+    reset_scenes: 'Reset scenes',
     demo: 'Use pretend lights instead of real ones',
     demo_room: 'Pretend room',
   },
   helpers: {
     max_scenes: 'Default 8 (two rows). Set 0 to hide scenes.',
+    reset_scenes: 'Put back Bright, Dimmed, Relax and Nightlight for this room.',
     demo: 'Nothing is sent to Home Assistant; taps only change the pretend lights on this card.',
   },
 });
