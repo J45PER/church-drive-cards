@@ -320,8 +320,8 @@ Integration modules (`custom_components/church_drive/`):
   - They're the same height as a top row (48px), with 12px corners. The icon and
     name sit side by side.
   - **Rows:** at most 4 tiles per row, in as few rows as possible, shared out evenly
-    with any fuller row last. Each row fills the width: 5 = 2 + 3, 6 = 3 + 3,
-    7 = 3 + 4, 9 = 3 + 3 + 3.
+    with any fuller row first, so the last row's tiles stretch wider. Each row
+    fills the width: 5 = 3 + 2, 6 = 3 + 3, 7 = 4 + 3, 9 = 3 + 3 + 3.
   - **Names:** hidden on tiles under 100px wide (`scene_names: auto`). `always` and
     `never` override that.
   - `max_scenes` defaults to 8, and 0 hides tiles.
