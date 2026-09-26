@@ -34,11 +34,11 @@ devices before each release.
 - Alarm card redesign (v0.11.0): on Beta, then in a real delay ("okay").
 - Each light gets its own shade in a colour scene (v0.10.6, "looked like it
   does").
+- Security panels follow the alarm colour (v0.12.1), seen live.
 - Section panels (v0.12.0) on the real Mobile dashboard: Quick Actions checked
   closely (gaps), the other tabs looked at before release.
 
-**Still to check on real lights:** the Security panels changing colour when the
-alarm is armed or disarmed (v0.12.1; worked on a test page, not yet seen live).
+**Still to check on real lights:** nothing outstanding.
 
 **New in v0.12.1: panel colour from a template.** Section Title
 and Section Panel cards take `color_template` (a template giving a colour name
