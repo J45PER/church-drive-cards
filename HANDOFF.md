@@ -61,7 +61,7 @@ short live summary on the right.
   (`custom:section-panel-card-beta`) until it's released; then swap the type.
 - HA colour names are drawn as `var(--<name>-color, <hex>)` with a hex
   fallback table (`STC_FALLBACK`).
-- Next: the other Mobile tabs once the user is happy with Quick Actions.
+- The user confirmed Quick Actions looks good (panel gaps: 32px between stacked panels, 12px inside). Next: the other Mobile tabs, then release and swap the `-beta` types.
 
 **New in v0.11.0 (2026-09-26): alarm card redesign.** The user asked for a
 bigger card that doesn't change size when the timer shows, a layout matching
