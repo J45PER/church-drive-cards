@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-26. Current release: **v0.10.10**.*
+*Last updated 2026-09-26. Current release: **v0.10.11**.*
 
 ## Where this stands
 
@@ -34,7 +34,7 @@ devices before each release.
 in a room with several lights should give each light its own shade, blended
 between the colours (v0.10.6). Nobody has looked yet.
 
-**On Beta, confirmed by the user, not yet released:** the light card editor shows a yellow warning
+**New in v0.10.11:** the light card editor shows a yellow warning
 above the Scenes list when it has more scenes than *Max scenes* shows ("Only the
 first 8 of these 10 scenes show on the card…"). It uses a new `alerts` option in
 `src/form-editor.js` (`{ field, text(config) }`), placed in the list's shadow DOM
