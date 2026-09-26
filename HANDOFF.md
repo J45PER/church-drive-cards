@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-26. Current release: **v0.11.0**.*
+*Last updated 2026-09-26. Current release: **v0.12.0**.*
 
 ## Where this stands
 
@@ -39,7 +39,7 @@ between the colours (v0.10.6). Nobody has looked yet. And the new alarm card
 (v0.11.0) during a real exit or entry delay: the ring should empty, the timer
 count down on the title's row, and the card fade towards amber/orange.
 
-**In progress: dashboard section style ("D")** (mock-ups:
+**New in v0.12.0: dashboard section style ("D")** (mock-ups:
 claude.ai/artifact/3CCBXYAz5YgKPRxYG7kFrQ). The user wanted bigger section
 titles and a background behind each section. Picked D: each section on a faint
 panel of its own colour, a 1.6rem title with the icon in that colour, and a

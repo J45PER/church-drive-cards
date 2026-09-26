@@ -93,6 +93,26 @@ The central place to style scene tiles. It sits on the Design Presets dashboard'
 
 Light cards read the styles from the `design-presets` dashboard once per page load, so reload other dashboards to pick up changes.
 
+### `section-panel-card`
+
+A group of cards on a faint panel in the section's colour, headed by a large title with a coloured icon and an optional live summary on the right (any Home Assistant template, e.g. `1 room on`). Several panels can share one dashboard section, so they stack without gaps. The editor has the title, icon, colour and summary, then Home Assistant's own card list for the cards inside.
+
+```yaml
+type: custom:section-panel-card
+title: Lights
+icon: mdi:lightbulb-group
+color: amber
+summary: "{{ states('light.kitchen') | title }}"
+cards:
+  - type: custom:light-control-card
+    mode: room
+    area: kitchen
+```
+
+### `section-title-card`
+
+Just the panel's heading (title, coloured icon, live summary), for use on its own.
+
 ## Development
 
 ```bash
