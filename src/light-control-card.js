@@ -913,8 +913,10 @@ export class LightControlCard extends HTMLElement {
       .map((sc) => selectFor(sc.targets[0]))
       .filter(Boolean)
       .map((st) => st.entity_id);
+    // Only while some of its lights are on.
+    const anyOn = (ids) => ids.some((id) => hass.states[id] && hass.states[id].state === 'on');
     const matching = scenes.find((sc) => {
-      if (!sc.universal) return false;
+      if (!sc.universal || !anyOn(sc.targetLights)) return false;
       const sel = sc.targets.length === 1 ? selectFor(sc.targets[0]) : null;
       if (sel) return sel.attributes.scene_key === sc.universal.key;
       return universalSceneActive(hass, sc.universal, sc.targetLights);

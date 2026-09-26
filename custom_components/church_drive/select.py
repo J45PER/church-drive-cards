@@ -19,8 +19,8 @@ from typing import Any
 
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import Event, HomeAssistant, callback
+from homeassistant.const import ATTR_ENTITY_ID, EVENT_HOMEASSISTANT_STARTED
+from homeassistant.core import CoreState, Event, HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -139,6 +139,19 @@ class SceneSelect(SelectEntity, RestoreEntity):
         self.async_on_remove(lambda: self._unsub_lights and self._unsub_lights())
         self.async_on_remove(lambda: self._recheck and self._recheck())
         self._refresh()
+        if self.hass.state is not CoreState.running:
+            # At startup the Hue lights may not be loaded yet, so the restored
+            # scene can't be checked against them: look again once HA is up.
+            unsub: list = []
+
+            @callback
+            def started(_event: Event) -> None:
+                unsub.clear()
+                self._track()
+                self._refresh()
+
+            unsub.append(self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, started))
+            self.async_on_remove(lambda: unsub and unsub.pop()())
 
     @callback
     def _track(self) -> None:
