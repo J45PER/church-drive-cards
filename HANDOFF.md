@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-26. Current release: **v0.13.0**.*
+*Last updated 2026-09-26. Current release: **v0.13.1**.*
 
 ## Where this stands
 
@@ -42,6 +42,15 @@ devices before each release.
 Nests. It's on Mobile → Quick Actions and Climate → Heating (see below): check
 −/+ (one `set_temperature` after tapping stops), Eco/Heat/Off, the 24h graph
 filling from real history, and the dropdowns opening inside the panels.
+
+**New in v0.13.1: climate quick settings like the alarm buttons.** Grey
+(white icon and text) until selected; the selected one is solid in its mode or
+preset colour (Heat #ff7a2f, Cool #3aa0ff, Eco #4caf50, Off #8b919c). No more
+gradient tiles or dimming. Also (dashboard only, no release needed): the Mobile
+climate panels follow the mode via `color_template`: Quick Actions "Climate"
+from `climate.downstairs` (grey off / green Eco / blue cooling / orange
+otherwise); Climate "Heating" from both Nests (grey all off / orange any
+heating / green all on-ones Eco / blue cooling / orange otherwise).
 
 **New in v0.13.0: Climate Card** (`src/climate-card.js`, `custom:climate-card`).
 Design F6 from the mock-ups (claude.ai/artifact/451vWxApsbondg1ThVLXx2 and the
