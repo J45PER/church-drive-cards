@@ -204,6 +204,8 @@ Integration modules (`custom_components/church_drive/`):
   config entries through the HA MCP tools.
 - **Non-Hue lights** are deferred until the user owns one.
 - Don't strip room names from scene labels in general.
+- New dashboard groups go in a **Section Panel** (coloured panel, big title,
+  live summary), several per HA section, matching the Mobile dashboard.
 - Light room cards now replace the old tiles on the real dashboards; the user asked
   for this. An earlier "keep them off the real dashboards" rule no longer applies.
 
@@ -471,6 +473,15 @@ Integration modules (`custom_components/church_drive/`):
   (Home + Away; attributes `entrySecondsLeft`, `exitSecondsLeft`, `targetState`,
   `lastArmedBy/Time`, `lastDisarmedBy/Time`).
 - Starting configs pick real entities.
+
+### Section panel and section title cards
+- Use a **Section Panel** for each group on a dashboard page (see v0.12.0 at
+  the top): title, icon, colour, optional template summary, and its cards.
+  Stack several in one HA section per column instead of using HA section
+  backgrounds or heading cards.
+- Colours in use: security green, lights amber (garden green), climate
+  deep-orange/orange/blue, cooling light-blue, doors indigo, cameras blue-grey,
+  fire red, blinds brown, cleaning blue.
 
 ### All cards
 - `getCardSize()` gives the real height. `getGridOptions()` is full width, with a
