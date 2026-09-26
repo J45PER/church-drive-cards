@@ -430,6 +430,18 @@
       demo_supported_features: "Bitmask: 1 = Arm Home, 2 = Arm Away, 4 = Arm Night (default 3)"
     }
   });
+  var APC_STATES = {
+    disarmed: { label: "Disarmed", icon: "mdi:shield-off-outline", color: "var(--success-color, #43a047)" },
+    armed_home: { label: "Armed Home", icon: "mdi:shield-home", color: "#2196f3" },
+    armed_away: { label: "Armed Away", icon: "mdi:shield-lock", color: "var(--error-color, #db4437)" },
+    armed_night: { label: "Armed Night", icon: "mdi:shield-moon", color: "#7e57c2" },
+    arming: { label: "Arming", icon: "mdi:shield-sync", color: "#ff9800" },
+    pending: { label: "Entry Delay", icon: "mdi:shield-sync", color: "#ff5722" },
+    triggered: { label: "Triggered!", icon: "mdi:shield-alert", color: "var(--error-color, #db4437)" }
+  };
+  var APC_MODE_NAMES = { armed_home: "Home", armed_away: "Away", armed_night: "Night" };
+  var APC_RING_R = 32;
+  var APC_RING_LEN = 2 * Math.PI * APC_RING_R;
   var AlarmPanelCard = class extends HTMLElement {
     setConfig(config) {
       if (!config.entity && !config.demo) throw new Error("entity required (or set demo: true)");
@@ -437,166 +449,187 @@
       this._built = false;
       this._countdownTimer = null;
       this._remaining = 0;
+      this._total = 0;
     }
     disconnectedCallback() {
       if (this._countdownTimer) clearInterval(this._countdownTimer);
+      this._countdownTimer = null;
+    }
+    _state(hass) {
+      if (!this.config.demo) return hass.states[this.config.entity];
+      const demoTime = this.config.demo_time ? String(this.config.demo_time).replace(" ", "T") : (/* @__PURE__ */ new Date()).toISOString();
+      return {
+        state: this.config.demo_state || "armed_away",
+        attributes: {
+          supported_features: this.config.demo_supported_features !== void 0 ? this.config.demo_supported_features : 3,
+          targetState: this.config.demo_target_state || "armed_away",
+          lastArmedBy: this.config.demo_by || "Demo User",
+          lastArmedTime: demoTime,
+          lastDisarmedBy: this.config.demo_by || "Demo User",
+          lastDisarmedTime: demoTime,
+          entrySecondsLeft: this.config.demo_countdown || 0,
+          exitSecondsLeft: this.config.demo_countdown || 0
+        }
+      };
+    }
+    _build() {
+      this.innerHTML = `
+      <ha-card class="apc-card" style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; padding:16px; background:var(--card-background-color); transition:background-color .8s ease;">
+        <style>
+          .apc-btn { position:relative; overflow:hidden; flex:1 1 0; min-width:0; height:56px; border:none; border-radius:12px; cursor:pointer;
+            display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:0 4px;
+            background:rgba(127,127,127,0.14); color:var(--primary-text-color); font:inherit; font-size:11px; font-weight:600; }
+          .apc-btn.apc-on { color:#fff; }
+          .apc-btn span { position:relative; z-index:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+          .apc-btn ha-icon { position:relative; z-index:1; --mdc-icon-size:22px; }
+          .apc-btn::after { content:''; position:absolute; inset:0; background:var(--btn-tint, #fff); opacity:0; transition:opacity .15s ease; pointer-events:none; }
+          .apc-btn:hover::after { opacity:0.18; }
+          .apc-btn:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
+        </style>
+        <div class="apc-title" style="font-size:1.5rem; font-weight:500; line-height:1.2; padding:0 0 10px 0;"></div>
+        <div style="display:flex; align-items:center; gap:14px;">
+          <div style="position:relative; width:72px; height:72px; flex:none;">
+            <svg viewBox="0 0 72 72" style="width:72px; height:72px; transform:rotate(-90deg);" aria-hidden="true">
+              <circle cx="36" cy="36" r="${APC_RING_R}" fill="none" stroke="rgba(127,127,127,0.25)" stroke-width="5"></circle>
+              <circle class="apc-ring" cx="36" cy="36" r="${APC_RING_R}" fill="none" stroke-width="5" stroke-linecap="round"
+                stroke-dasharray="${APC_RING_LEN}" stroke-dashoffset="0" style="transition:stroke-dashoffset 1s linear;"></circle>
+            </svg>
+            <ha-icon class="apc-icon" style="position:absolute; inset:0; margin:auto; width:32px; height:32px; --mdc-icon-size:32px;"></ha-icon>
+          </div>
+          <div style="flex:1; min-width:0;">
+            <div class="apc-line1" style="font-size:0.95rem; color:var(--primary-text-color);"></div>
+            <div class="apc-line2" style="font-size:0.85rem; color:var(--secondary-text-color);"></div>
+          </div>
+          <div class="apc-countdown" style="flex:none; font-size:2rem; font-weight:700; font-variant-numeric:tabular-nums; visibility:hidden;">0:00</div>
+        </div>
+        <div class="apc-buttons" style="display:flex; gap:8px; margin-top:12px;"></div>
+      </ha-card>`;
+      const q = (sel) => this.querySelector(sel);
+      this._card = q(".apc-card");
+      this._title = q(".apc-title");
+      this._ring = q(".apc-ring");
+      this._icon = q(".apc-icon");
+      this._line1 = q(".apc-line1");
+      this._line2 = q(".apc-line2");
+      this._countdown = q(".apc-countdown");
+      this._buttons = q(".apc-buttons");
+      this._built = true;
     }
     set hass(hass) {
       this._hass = hass;
-      let st;
-      if (this.config.demo) {
-        const demoTime = this.config.demo_time ? String(this.config.demo_time).replace(" ", "T") : (/* @__PURE__ */ new Date()).toISOString();
-        st = {
-          state: this.config.demo_state || "armed_away",
-          attributes: {
-            supported_features: this.config.demo_supported_features !== void 0 ? this.config.demo_supported_features : 3,
-            targetState: this.config.demo_target_state || "armed_away",
-            lastArmedBy: this.config.demo_by || "Demo User",
-            lastArmedTime: demoTime,
-            lastDisarmedBy: this.config.demo_by || "Demo User",
-            lastDisarmedTime: demoTime,
-            entrySecondsLeft: this.config.demo_countdown || 0,
-            exitSecondsLeft: this.config.demo_countdown || 0
-          }
-        };
-      } else {
-        st = hass.states[this.config.entity];
-      }
+      const st = this._state(hass);
       if (!st) return;
-      if (!this._built) {
-        this.innerHTML = `
-        <ha-card style="position:relative; border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; padding:20px 20px 18px 20px;">
-          <style>
-            ha-card::before {
-              content:''; position:absolute; inset:0; background: var(--card-tint, transparent);
-              opacity:0; transition: opacity .2s ease; pointer-events:none;
-            }
-            ha-card:hover::before { opacity:0.16; }
-            .apc-btn { position:relative; overflow:hidden; }
-            .apc-btn::after {
-              content:''; position:absolute; inset:0; background: var(--btn-tint, #fff);
-              opacity:0; transition: opacity .15s ease; pointer-events:none; border-radius:inherit;
-            }
-            .apc-btn:hover::after { opacity:0.18; }
-          </style>
-          <div class="apc-header" style="position:relative; display:flex; align-items:center; gap:16px;">
-            <ha-icon class="apc-icon" style="--mdc-icon-size:48px; flex-shrink:0;"></ha-icon>
-            <div style="flex:1; min-width:0;">
-              <div class="apc-title" style="font-size:1.5rem; font-weight:600;"></div>
-              <div class="apc-sub" style="font-size:0.9rem; color:var(--secondary-text-color);"></div>
-            </div>
-          </div>
-          <div class="apc-countdown" style="position:relative; display:none; text-align:center; font-size:2.75rem; font-weight:700; margin:14px 0 4px 0;"></div>
-          <div class="apc-countdown-label" style="position:relative; display:none; text-align:center; font-size:0.85rem; color:var(--secondary-text-color); margin-bottom:8px;"></div>
-          <div class="apc-buttons" style="position:relative; display:flex; gap:10px; margin-top:14px;"></div>
-        </ha-card>`;
-        this._card = this.querySelector("ha-card");
-        this._icon = this.querySelector(".apc-icon");
-        this._title = this.querySelector(".apc-title");
-        this._sub = this.querySelector(".apc-sub");
-        this._countdown = this.querySelector(".apc-countdown");
-        this._countdownLabel = this.querySelector(".apc-countdown-label");
-        this._buttons = this.querySelector(".apc-buttons");
-        this._built = true;
-      }
-      const stateInfo = {
-        disarmed: { label: "Disarmed", icon: "mdi:shield-off-outline", color: "var(--success-color, #43a047)" },
-        armed_home: { label: "Armed Home", icon: "mdi:shield-home", color: "#2196f3" },
-        armed_away: { label: "Armed Away", icon: "mdi:shield-lock", color: "var(--error-color, #db4437)" },
-        armed_night: { label: "Armed Night", icon: "mdi:shield-moon", color: "#7e57c2" },
-        arming: { label: "Arming", icon: "mdi:shield-sync", color: "#ff9800" },
-        pending: { label: "Entry Delay", icon: "mdi:shield-sync", color: "#ff5722" },
-        triggered: { label: "Triggered!", icon: "mdi:shield-alert", color: "var(--error-color, #db4437)" }
-      };
-      const info = stateInfo[st.state] || { label: st.state, icon: "mdi:shield-question", color: "#9e9e9e" };
-      this._card.style.setProperty("--card-tint", info.color);
+      if (!this._built) this._build();
+      const info = APC_STATES[st.state] || { label: st.state, icon: "mdi:shield-outline", color: "#9e9e9e" };
+      const inDelay = st.state === "arming" || st.state === "pending";
+      const target = APC_MODE_NAMES[st.attributes.targetState];
+      this._color = info.color;
+      this._stateName = st.state;
+      const label = st.state === "arming" && target ? `Arming ${target}` : info.label;
+      this._title.textContent = label + (this.config.demo ? " (demo)" : "");
+      this._title.style.color = info.color;
       this._icon.setAttribute("icon", info.icon);
       this._icon.style.color = info.color;
-      this._title.textContent = info.label + (this.config.demo ? " (demo)" : "");
-      this._title.style.color = info.color;
-      let sub = "";
+      this._ring.style.stroke = info.color;
+      this._countdown.style.color = info.color;
       const fmt = (iso) => new Date(iso).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
-      if (st.state === "disarmed" && st.attributes.lastDisarmedBy && st.attributes.lastDisarmedTime) {
-        sub = `Disarmed by ${st.attributes.lastDisarmedBy}, ${fmt(st.attributes.lastDisarmedTime)}`;
-      } else if (st.attributes.lastArmedBy && st.attributes.lastArmedTime) {
-        sub = `Armed by ${st.attributes.lastArmedBy}, ${fmt(st.attributes.lastArmedTime)}`;
-      }
-      this._sub.textContent = sub;
-      const entrySecs = st.attributes.entrySecondsLeft || 0;
-      const exitSecs = st.attributes.exitSecondsLeft || 0;
-      const secsLeft = st.state === "pending" ? entrySecs : st.state === "arming" ? exitSecs : 0;
-      const label = st.state === "pending" ? "until alarm triggers" : st.state === "arming" ? "until armed" : "";
-      this._syncCountdown(secsLeft, st.state, label, info.color);
-      const activeKey = st.state === "arming" || st.state === "pending" ? st.attributes.targetState : st.state;
-      const activeColor = info.color;
-      this._buttons.innerHTML = "";
-      const feats = st.attributes.supported_features || 0;
+      const a = st.attributes;
+      let line1 = "";
+      let line2 = "";
+      if (st.state === "arming") [line1, line2] = ["Leave now", "until armed"];
+      else if (st.state === "pending") [line1, line2] = ["Disarm now", "until the alarm sounds"];
+      else if (st.state === "triggered") [line1, line2] = ["Alarm sounding", "Disarm to stop it"];
+      else if (st.state === "disarmed" && a.lastDisarmedBy && a.lastDisarmedTime) [line1, line2] = [`Disarmed by ${a.lastDisarmedBy}`, fmt(a.lastDisarmedTime)];
+      else if (a.lastArmedBy && a.lastArmedTime) [line1, line2] = [`Armed by ${a.lastArmedBy}`, fmt(a.lastArmedTime)];
+      this._line1.textContent = line1;
+      this._line2.textContent = line2;
+      const secsLeft = st.state === "pending" ? a.entrySecondsLeft || 0 : st.state === "arming" ? a.exitSecondsLeft || 0 : 0;
+      this._syncCountdown(inDelay ? secsLeft : 0, st.state);
+      const activeKey = inDelay || st.state === "triggered" ? a.targetState : st.state;
+      this._renderButtons(a.supported_features || 0, activeKey, info.color);
+    }
+    _renderButtons(feats, activeKey, activeColor) {
       const actions = [
-        { key: "disarmed", icon: "mdi:shield-off-outline", title: "Disarm", service: "alarm_disarm", show: true, color: stateInfo.disarmed.color },
-        { key: "armed_home", icon: "mdi:shield-home", title: "Arm Home", service: "alarm_arm_home", show: (feats & 1) !== 0, color: stateInfo.armed_home.color },
-        { key: "armed_away", icon: "mdi:shield-lock", title: "Arm Away", service: "alarm_arm_away", show: (feats & 2) !== 0, color: stateInfo.armed_away.color },
-        { key: "armed_night", icon: "mdi:shield-moon", title: "Arm Night", service: "alarm_arm_night", show: (feats & 4) !== 0, color: stateInfo.armed_night.color }
-      ];
-      actions.filter((a) => a.show).forEach((a) => {
-        const active = activeKey === a.key;
+        { key: "disarmed", icon: "mdi:shield-off-outline", title: "Disarm", service: "alarm_disarm", show: true },
+        { key: "armed_home", icon: "mdi:shield-home", title: "Home", service: "alarm_arm_home", show: (feats & 1) !== 0 },
+        { key: "armed_away", icon: "mdi:shield-lock", title: "Away", service: "alarm_arm_away", show: (feats & 2) !== 0 },
+        { key: "armed_night", icon: "mdi:shield-moon", title: "Night", service: "alarm_arm_night", show: (feats & 4) !== 0 }
+      ].filter((b) => b.show);
+      const sig = JSON.stringify([actions.map((b) => b.key), activeKey, activeColor, !!this.config.demo]);
+      if (sig === this._buttonsSig) return;
+      this._buttonsSig = sig;
+      this._buttons.innerHTML = "";
+      actions.forEach((b) => {
+        const active = activeKey === b.key;
         const btn = document.createElement("button");
-        btn.className = "apc-btn";
-        btn.title = a.title;
-        btn.setAttribute("aria-label", a.title);
-        btn.style.cssText = `--btn-tint:${a.color}; flex:1; display:flex; align-items:center; justify-content:center; padding:12px 8px; border-radius:10px; border:none; cursor:pointer; background:${active ? activeColor : "rgba(255,255,255,0.08)"};`;
-        const ic = document.createElement("ha-icon");
-        ic.setAttribute("icon", a.icon);
-        ic.style.cssText = `color:${active ? "#fff" : "var(--primary-text-color)"}; --mdc-icon-size:24px; position:relative; z-index:1;`;
-        btn.appendChild(ic);
-        if (!this.config.demo) {
-          btn.addEventListener("click", () => {
-            this._hass.callService("alarm_control_panel", a.service, {}, { entity_id: this.config.entity });
-          });
-        } else {
+        btn.className = `apc-btn${active ? " apc-on" : ""}`;
+        btn.title = b.key === "disarmed" ? "Disarm" : `Arm ${b.title}`;
+        btn.setAttribute("aria-label", btn.title);
+        btn.style.setProperty("--btn-tint", (APC_STATES[b.key] || {}).color || "#fff");
+        if (active) btn.style.background = activeColor;
+        btn.innerHTML = `<ha-icon icon="${b.icon}"></ha-icon><span>${b.title}</span>`;
+        if (this.config.demo) {
           btn.style.opacity = "0.6";
           btn.style.cursor = "default";
+        } else {
+          btn.addEventListener(
+            "click",
+            () => this._hass.callService("alarm_control_panel", b.service, {}, { entity_id: this.config.entity })
+          );
         }
         this._buttons.appendChild(btn);
       });
     }
-    _syncCountdown(secsLeft, state, label, color) {
-      const active = (state === "pending" || state === "arming") && secsLeft > 0;
-      this._countdownShown = active;
+    _syncCountdown(secsLeft, state) {
+      const active = secsLeft > 0;
       if (!active) {
-        this._countdown.style.display = "none";
-        this._countdownLabel.style.display = "none";
-        if (this._countdownTimer) {
+        if (this._countdownTimer) clearInterval(this._countdownTimer);
+        this._countdownTimer = null;
+        this._remaining = 0;
+        this._total = 0;
+        this._reported = null;
+        this._delayState = null;
+        this._paint();
+        return;
+      }
+      if (state !== this._delayState) {
+        this._total = 0;
+        this._reported = null;
+      }
+      this._delayState = state;
+      this._total = Math.max(this._total, secsLeft);
+      if (secsLeft !== this._reported) {
+        this._reported = secsLeft;
+        this._remaining = secsLeft;
+      }
+      this._paint();
+      if (this._countdownTimer) return;
+      this._countdownTimer = setInterval(() => {
+        this._remaining = this.config.demo && this._remaining <= 1 ? this._total : Math.max(0, this._remaining - 1);
+        this._paint();
+        if (this._remaining <= 0) {
           clearInterval(this._countdownTimer);
           this._countdownTimer = null;
         }
-        return;
-      }
-      this._countdown.style.display = "block";
-      this._countdown.style.color = color;
-      this._countdownLabel.style.display = "block";
-      this._countdownLabel.textContent = label;
-      this._remaining = secsLeft;
-      this._renderCountdown();
-      if (this._countdownTimer) clearInterval(this._countdownTimer);
-      if (!this.config.demo) {
-        this._countdownTimer = setInterval(() => {
-          this._remaining = Math.max(0, this._remaining - 1);
-          this._renderCountdown();
-          if (this._remaining <= 0) {
-            clearInterval(this._countdownTimer);
-            this._countdownTimer = null;
-          }
-        }, 1e3);
-      }
+      }, 1e3);
     }
-    _renderCountdown() {
+    // Timer, ring and background for the time left.
+    _paint() {
+      const counting = this._remaining > 0 && this._total > 0;
+      const frac = counting ? this._remaining / this._total : 1;
       const m = Math.floor(this._remaining / 60);
       const s = this._remaining % 60;
-      this._countdown.textContent = `${m}:${s.toString().padStart(2, "0")}`;
+      this._countdown.textContent = `${m}:${String(s).padStart(2, "0")}`;
+      this._countdown.style.visibility = counting ? "visible" : "hidden";
+      this._ring.style.strokeDashoffset = String(APC_RING_LEN * (1 - frac));
+      let tint = 0;
+      if (this._stateName === "triggered") tint = 32;
+      else if (counting) tint = Math.round(6 + 26 * (1 - frac));
+      this._card.style.backgroundColor = tint ? `color-mix(in srgb, ${this._color} ${tint}%, var(--card-background-color))` : "var(--card-background-color)";
     }
-    // Header + buttons ~3 units; the countdown adds ~2 while it's showing.
+    // Same size in every state: title, ring row and buttons.
     getCardSize() {
-      return this._countdownShown ? 5 : 3;
+      return 4;
     }
     // Sections-view defaults; the editor's Layout tab can override them.
     getGridOptions() {
