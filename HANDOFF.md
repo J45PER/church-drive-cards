@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-26. Current release: **v0.12.1**.*
+*Last updated 2026-09-26. Current release: **v0.13.0**.*
 
 ## Where this stands
 
@@ -39,6 +39,33 @@ devices before each release.
   closely (gaps), the other tabs looked at before release.
 
 **Still to check on real lights:** nothing outstanding.
+
+**New in v0.13.0: Climate Card** (`src/climate-card.js`, `custom:climate-card`).
+Design F6 from the mock-ups (claude.ai/artifact/451vWxApsbondg1ThVLXx2 and the
+feature mock-ups claude.ai/artifact/5mcJrR2c5hNz9UqicKjZDX). Built for the Nests
+(`climate.downstairs`, `climate.upstairs`: heat/off, presets none/eco) and ready
+for air con (fan/swing dropdowns appear when the entity has `fan_modes` /
+`swing_modes`) and per-room valves.
+- Layout: coloured title + status word; 84px display-only gauge (min→max,
+  target tick and number, white room dot), humidity/outside beside it, room
+  temperature big on the right; window-open chip; history; −/+ as two 48px
+  tiles; full-width dropdowns (mode, preset, fan, swing); one row of up to 5
+  quick settings; extra reading chips.
+- Row toggles (`show_*`): on by default controls, mode, preset, fan, swing,
+  quick; off by default `show_temperature_history`, `show_humidity_history`.
+- History: `history/history_during_period` over 24h, reading the climate
+  entity's `current_temperature` / `current_humidity` / `temperature`
+  attributes (or `humidity_entity`), refreshed every 10 minutes. Both on →
+  one graph, humidity `#b388ff`.
+- Quick settings: `quick_settings` list (name, hvac_mode, preset_mode,
+  temperature, icon, color); saved on first edit, Reset button, warning above 5.
+  A plain mode/temperature tile clears the preset to `none`.
+- Dropdown menus open in the card's flow (not floating) so panels can't clip
+  them.
+- **Deferred:** boost timer (needs a timer end from HA) and "next change"
+  (needs a schedule).
+- Not yet on real dashboards; the user may want it on Mobile → Climate /
+  Quick Actions next.
 
 **New in v0.12.1: panel colour from a template.** Section Title
 and Section Panel cards take `color_template` (a template giving a colour name

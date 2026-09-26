@@ -93,6 +93,27 @@ The central place to style scene tiles. It sits on the Design Presets dashboard'
 
 Light cards read the styles from the `design-presets` dashboard once per page load, so reload other dashboards to pick up changes.
 
+### `climate-card`
+
+One thermostat, radiator valve or air conditioner, laid out like the alarm card. The title is in the status colour (heating orange, cooling blue, Eco green, off grey) with a one-word status beside it. A gauge from the device's min to max shows the target (a tick, with the number in the middle) and the room temperature (a white dot); it's for reading, not dragging. Humidity and the outside temperature sit beside it, and the room temperature is big on the right. The card tints towards its colour while heating or cooling.
+
+Every row below can be switched on or off in the editor (*Rows to show*):
+- **Temperature history** and **Humidity history** (24 hours; off by default). With both on they share one graph: temperature in the status colour with the target dashed, humidity in purple, each on its own scale.
+- **− and +**: two wide buttons; taps are gathered and sent once you stop.
+- **Mode**, **Preset**, **Fan speed** and **Swing** dropdowns, full width. Fan speed and swing only appear on devices that have them.
+- **Quick settings**: one row of up to 5 tiles, each setting a mode, a preset and/or a temperature. The one that matches glows. The defaults are favourite temperatures (cooling ones on air con) plus Eco; **Reset** in the editor puts them back.
+
+*Other sensors* (optional): an outdoor temperature (a weather entity or sensor), a window or door sensor (shows a "window open" warning), a humidity sensor for devices without one, and extra readings shown as small chips. `demo: true` uses a pretend thermostat.
+
+```yaml
+type: custom:climate-card
+entity: climate.downstairs
+outdoor_entity: weather.forecast_home
+window_entity: binary_sensor.lounge_window
+show_temperature_history: true
+show_humidity_history: true
+```
+
 ### `section-panel-card`
 
 A group of cards on a faint panel in the section's colour, headed by a large title with a coloured icon and an optional live summary on the right (any Home Assistant template, e.g. `1 room on`). Several panels can share one dashboard section, so they stack without gaps. `color_template` (optional) takes a template that gives a colour, so a panel can follow a state, e.g. the alarm. The editor has the title, icon, colour and summary, then Home Assistant's own card list for the cards inside.
