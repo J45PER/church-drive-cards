@@ -31,15 +31,13 @@ devices before each release.
 - Tiles clear when the lights go off (v0.10.9, Hayley's Bedroom).
 - Fuller scene row first (v0.10.10) and the scene-count warning (v0.10.11, on
   Beta).
-- Alarm card redesign (v0.11.0) on Beta in demo mode.
+- Alarm card redesign (v0.11.0): on Beta, then in a real delay ("okay").
 - Section panels (v0.12.0) on the real Mobile dashboard: Quick Actions checked
   closely (gaps), the other tabs looked at before release.
 
 **Still to check on real lights:** a colour scene (e.g. a two-colour custom one)
 in a room with several lights should give each light its own shade, blended
-between the colours (v0.10.6). Nobody has looked yet. And the new alarm card
-(v0.11.0) during a real exit or entry delay: the ring should empty, the timer
-count down on the title's row, and the card fade towards amber/orange.
+between the colours (v0.10.6). Nobody has looked yet.
 
 **New in v0.12.0 (2026-09-26): dashboard section style "D".** The user wanted
 bigger section titles and a background behind each section so its cards read
@@ -546,7 +544,7 @@ Integration modules (`custom_components/church_drive/`):
 
 ## Open items
 
-- The colour-spread and real alarm-delay checks at the top of this file.
+- The colour-spread check at the top of this file.
 - "My Boy Hugo" is unavailable; the user may want to power-cycle or re-pair it.
 - The active-scene select doesn't list Hue-only scenes (e.g. Hue's Ruby glow in a
   room). It only lists library scenes.
