@@ -53,6 +53,11 @@ short live summary on the right.
   Sections: Security (green), Lights (amber), Cleaning (blue), Climate
   (deep-orange; split out of the Security section), with
   `dense_section_placement: true`.
+- Sections view lines sections up in grid rows, so a short section under a tall
+  one left a big gap. Lights has `row_span: 2`, so Security (row 1) and Climate
+  (row 2, placed there by dense placement) stack in column 1 beside it.
+  Cleaning doesn't span: a spanned section's panel stretches to the full
+  height, which would leave a tall empty blue panel.
 - Next: the other Mobile tabs once the user is happy with Quick Actions.
 
 **New in v0.11.0 (2026-09-26): alarm card redesign.** The user asked for a
