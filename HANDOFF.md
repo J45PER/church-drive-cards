@@ -555,6 +555,14 @@ Integration modules (`custom_components/church_drive/`):
 
 ## Open items
 
+- **Future (not now): our own Android app.** The user wants home-screen widgets
+  showing the panels, and later the same app for Android-based satellite
+  devices (wall tablets, voice satellites). Lovelace cards can't become Android
+  widgets (the HA app's widgets are native: template, entity, button, camera,
+  media, to-do), so this is a separate native app, e.g. Jetpack Glance widgets
+  talking to HA over its websocket API. The panel summaries and colour
+  templates, and the `church_drive/*` websocket commands and
+  `church_drive.apply_scene`, can be reused as its data source.
 - **Likely next:** the other dashboards (Hayley, Living Room Panel, Alarm,
   Battery Status) still use HA heading cards and plain sections; convert them
   to Section Panels like Mobile when the user wants (the user said the Mobile
