@@ -29,18 +29,14 @@ devices before each release.
 - Scene builder: making, trying and saving a custom colour scene.
 - Editor (v0.10.7): default scenes in the list, friendly labels, Reset button.
 - Tiles clear when the lights go off (v0.10.9, Hayley's Bedroom).
+- Fuller scene row first (v0.10.10) and the scene-count warning (v0.10.11, on
+  Beta).
 
 **Still to check on real lights:** a colour scene (e.g. a two-colour custom one)
 in a room with several lights should give each light its own shade, blended
 between the colours (v0.10.6). Nobody has looked yet.
 
-**New in v0.10.11:** the light card editor shows a yellow warning
-above the Scenes list when it has more scenes than *Max scenes* shows ("Only the
-first 8 of these 10 scenes show on the card…"). It uses a new `alerts` option in
-`src/form-editor.js` (`{ field, text(config) }`), placed in the list's shadow DOM
-like the Reset button.
-
-**What changed on 2026-09-25/26 (v0.10.6 → v0.10.10):**
+**What changed on 2026-09-25/26 (v0.10.6 → v0.10.11):**
 - **v0.10.6: every light gets its own colour.** A custom two-colour scene put the
   same colour on several lights, because colours were dealt round in turn.
   `spread()` in `apply.py` (and `spreadColours()` in `src/universal-scenes.js`
@@ -83,6 +79,13 @@ like the Reset button.
     and selects re-check once HA has fully started (`EVENT_HOMEASSISTANT_STARTED`).
 - **v0.10.10: scene rows.** When tiles can't be shared equally, the fuller row
   comes first so the last row's tiles stretch: 5 = 3 + 2, 7 = 4 + 3.
+- **v0.10.11: scene-count warning.** The editor shows a yellow warning above the
+  Scenes list when it has more scenes than *Max scenes* shows ("Only the first 8
+  of these 10 scenes show on the card. Raise Max scenes to show them all."; a
+  separate message for 0). It uses a new `alerts` option in `src/form-editor.js`
+  (`{ field, text(config) }`): an `ha-alert` placed across the top of the list's
+  items container, the same way as the Reset button, hidden with
+  `style.display` (ha-alert's own `display` overrides the `hidden` attribute).
 - **Real dashboards** were switched to the default scenes, and the old
   `max_scenes: 4` caps were removed (they hid added scenes). See "Live Home
   Assistant" below.
@@ -180,7 +183,7 @@ Integration modules (`custom_components/church_drive/`):
   - `church-drive-cards-beta.js` registers every card as `<name>-beta`.
   - HA loads it from resource `436186c683fe4c7d81c865b67bb0e109`:
     `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's pinned to `936253c` (the v0.10.10 change; the same card code as the release).
+    It's pinned to `9011fa4` (the v0.10.11 change; the same card code as the release).
   - To test a branch: push it, repoint the resource, and ask for a hard refresh.
   - jsDelivr is blocked from the cloud container, but works for the user.
 - **Rollback:** download an older release in HACS and restart.
@@ -293,7 +296,8 @@ Integration modules (`custom_components/church_drive/`):
     else its lights.
 - **Scene list in the editor:** starts with the four defaults for the card's room;
   items read "Bright · Kitchen"; a red Reset on the Add row puts the defaults
-  back. The Add dropdown lists universal scenes first, once per place, e.g.
+  back; a yellow warning shows when there are more scenes than Max scenes. The
+  Add dropdown lists universal scenes first, once per place, e.g.
   "Bright · Kitchen", "Bright · Kitchen Spotlights".
   - Then the Hue scenes of the card's room/zones, always labelled with their group.
   - Hue scenes named like a universal one are hidden. Scenes from elsewhere already
@@ -340,8 +344,8 @@ Integration modules (`custom_components/church_drive/`):
   - **Names:** hidden on tiles under 100px wide (`scene_names: auto`). `always` and
     `never` override that.
   - `max_scenes` defaults to 8, and 0 hides tiles. Scenes past the limit are
-    silently left out (that's why added scenes didn't show on the Quick Actions
-    cards, which were capped at 4).
+    left off the card (that's why added scenes didn't show on the Quick Actions
+    cards, which were capped at 4); since v0.10.11 the editor warns about it.
   - **Default scenes** (no `scenes` key): universal Bright, Dimmed, Relax and
     Nightlight on the card's room, the same on every card
     (`LCC_DEFAULT_SCENES`). The editor fills them into the list; an empty list
