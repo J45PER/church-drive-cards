@@ -38,10 +38,16 @@ devices before each release.
 - Section panels (v0.12.0) on the real Mobile dashboard: Quick Actions checked
   closely (gaps), the other tabs looked at before release.
 
-**Still to check on real devices:** the Climate Card (v0.13.0) on the real
-Nests. It's on Mobile → Quick Actions and Climate → Heating (see below): check
-−/+ (one `set_temperature` after tapping stops), Eco/Heat/Off, the 24h graph
-filling from real history, and the dropdowns opening inside the panels.
+- Climate Card first look on Mobile Quick Actions (v0.13.0, phone screenshot):
+  gauge, humidity, outside temperature, real humidity history and quick
+  settings all render with the Nest off. The user then asked for the
+  alarm-style quick settings and mode-coloured panels (both done, v0.13.1).
+
+**Still to check on real devices:** the Climate Card with the Nests on:
+−/+ (one `set_temperature` after tapping stops), the v0.13.1 quick settings
+(grey, the selected one solid), Eco/Heat/Off, the temperature line of the 24h
+graph, the dropdowns opening inside the Heating panels, and the Climate and
+Heating panels changing colour with the mode.
 
 **New in v0.13.1: climate quick settings like the alarm buttons.** Grey
 (white icon and text) until selected; the selected one is solid in its mode or
@@ -309,7 +315,7 @@ Integration modules (`custom_components/church_drive/`):
   - `church-drive-cards-beta.js` registers every card as `<name>-beta`.
   - HA loads it from resource `436186c683fe4c7d81c865b67bb0e109`:
     `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's pinned to `752ccaf` (the v0.12.1 colour templates; the same card code as the release).
+    It's pinned to `ec4fb37` (the v0.13.1 climate quick settings; the same card code as the release).
   - To test a branch: push it, repoint the resource, and ask for a hard refresh.
   - jsDelivr is blocked from the cloud container, but works for the user.
 - **Rollback:** download an older release in HACS and restart.
@@ -556,7 +562,8 @@ Integration modules (`custom_components/church_drive/`):
 - **Dashboards using the cards:**
   - **Mobile** (`dashboard-mobile`), all tabs on section panels (v0.12.0), one
     HA section per column (theme Mushroom Shadow):
-    - **Quick Actions:** [Security (alarm colour, alarm state) + Climate (deep-orange,
+    - **Quick Actions:** [Security (alarm colour, alarm state) + Climate (colour from
+      `climate.downstairs`: grey off / green Eco / blue cooling / orange;
       downstairs °C · action; a Climate Card since v0.13.0)] [Lights (amber, "N rooms on" over Kitchen /
       Living Room / Middle Floor)] [Cleaning (blue, state · battery)]. Header
       "Hello {{ user }}".
@@ -568,7 +575,7 @@ Integration modules (`custom_components/church_drive/`):
     - **Security:** [Alarm (alarm colour) + Doors & Motion (indigo, "Doors closed" /
       "N doors open"; the door, motion, battery and tamper lists)] [Outdoor
       Cameras + Indoor Cameras (blue-grey)] [Fire Alarm (red, safe mode)].
-    - **Climate:** [Heating (two Climate Cards, Downstairs + Upstairs) + Temperature (orange, downstairs °C) + Humidity
+    - **Climate:** [Heating (colour from both Nests; two Climate Cards, Downstairs + Upstairs) + Temperature (orange, downstairs °C) + Humidity
       (blue, downstairs %)] [Cooling (light-blue, fan) + Air Purifier (green,
       on/off · PM2.5, filters and graphs)] [Blinds (brown; blank while the blind
       reports unknown)].
