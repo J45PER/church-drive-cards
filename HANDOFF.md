@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-26. Current release: **v0.10.8**.*
+*Last updated 2026-09-26. Current release: **v0.10.9**.*
 
 ## Where this stands
 
@@ -41,6 +41,13 @@ devices before each release.
 2. **Default scenes.** A card with no scenes chosen now shows Bright, Dimmed,
    Relax and Nightlight (universal, applied to the card's room), the same on
    every card. The old auto-pick of the room's Hue scenes is gone.
+
+**New in v0.10.9:** the real cause of the stuck selection. Hue groups report
+their members (`entity_id` attribute) as a **set**, and `members()` in
+`apply.py` only accepted a list, so every Hue room/zone was treated as one
+light: the group itself. The Hue room stayed "on" at 4291K (the unavailable
+Hugo lamp), which matched Concentrate. It now accepts any collection. This also
+affected the per-light colour fallback and which lights the selects watch.
 
 **New in v0.10.8:**
 - A scene tile is only shown selected while some of its lights are on. After
