@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-26. Current release: **v0.12.0**.*
+*Last updated 2026-09-26. Current release: **v0.12.1**.*
 
 ## Where this stands
 
@@ -39,15 +39,13 @@ devices before each release.
 
 **Still to check on real lights:** nothing outstanding.
 
-**On Beta, not yet released: panel colour from a template.** Section Title
+**New in v0.12.1: panel colour from a template.** Section Title
 and Section Panel cards take `color_template` (a template giving a colour name
 or code; overrides `color`, live via `render_template`). The title recolours its
 icon and fires `stc-color`; the panel catches it and recolours its background
 (0.6s fade). Used on Mobile → Quick Actions "Security" and Security → "Alarm"
-(both switched to `custom:section-panel-card-beta` for now) with the alarm
-card's colours: disarmed green, home blue, away red, night #7e57c2, arming
-orange, entry delay deep-orange, triggered red. After release, swap them back to
-the released type.
+with the alarm card's colours: disarmed green, home blue, away red, night
+#7e57c2, arming orange, entry delay deep-orange, triggered red.
 
 **New in v0.12.0 (2026-09-26): dashboard section style "D".** The user wanted
 bigger section titles and a background behind each section so its cards read
