@@ -34,7 +34,7 @@ devices before each release.
 in a room with several lights should give each light its own shade, blended
 between the colours (v0.10.6). Nobody has looked yet.
 
-**On Beta, not yet released:** the light card editor shows a yellow warning
+**On Beta, confirmed by the user, not yet released:** the light card editor shows a yellow warning
 above the Scenes list when it has more scenes than *Max scenes* shows ("Only the
 first 8 of these 10 scenes show on the card…"). It uses a new `alerts` option in
 `src/form-editor.js` (`{ field, text(config) }`), placed in the list's shadow DOM
