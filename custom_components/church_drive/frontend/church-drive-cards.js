@@ -1396,7 +1396,7 @@
   }
   var LightControlCardEditor = createFormEditor({
     fill: lccFillDefaultScenes,
-    buttons: [{ label: "Reset scenes to Bright, Dimmed, Relax and Nightlight", apply: (config) => ({ ...config, scenes: "reset" }) }],
+    buttons: [{ label: "Reset scenes", apply: (config) => ({ ...config, scenes: "reset" }) }],
     display: lccLabelScenes,
     store: (config) => config.scenes ? { ...config, scenes: config.scenes.map(({ label: _label, ...s }) => s) } : config,
     schema: (config, hass) => {
