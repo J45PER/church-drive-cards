@@ -2872,7 +2872,7 @@
       const c = this.config;
       const color = stcColor(c.color);
       this.innerHTML = `
-      <div class="spc-panel" style="position:relative; border-radius:24px; padding:12px; display:flex; flex-direction:column; gap:8px; isolation:isolate;">
+      <div class="spc-panel" style="position:relative; border-radius:24px; padding:12px; display:flex; flex-direction:column; gap:12px; isolation:isolate;">
         <div style="position:absolute; inset:0; border-radius:inherit; background:${color}; opacity:0.1; z-index:-1; pointer-events:none;"></div>
       </div>`;
       const panel = this.querySelector(".spc-panel");

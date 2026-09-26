@@ -53,7 +53,7 @@ short live summary on the right.
   two rows, and the gap stayed. So the panel is now a card:
   **`section-panel-card`** (`src/section-panel-card.js`): the Section Title
   plus its `cards`, on a rounded panel (24px corners, 12px padding) tinted 10%
-  in the colour. Children are made with `loadCardHelpers().createCardElement`.
+  in the colour, with the same 12px between its cards as round its edge. Children are made with `loadCardHelpers().createCardElement`.
   Its editor is the title fields plus HA's own vertical-stack editor for the
   cards. Several panels can share one section with the normal 8px gap.
 - Mobile → Quick Actions is now three plain sections: [Security panel,
