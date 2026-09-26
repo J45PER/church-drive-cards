@@ -37,7 +37,8 @@ devices before each release.
 - Section panels (v0.12.0) on the real Mobile dashboard: Quick Actions checked
   closely (gaps), the other tabs looked at before release.
 
-**Still to check on real lights:** nothing outstanding.
+**Still to check on real lights:** the Security panels changing colour when the
+alarm is armed or disarmed (v0.12.1; worked on a test page, not yet seen live).
 
 **New in v0.12.1: panel colour from a template.** Section Title
 and Section Panel cards take `color_template` (a template giving a colour name
@@ -256,7 +257,7 @@ Integration modules (`custom_components/church_drive/`):
   - `church-drive-cards-beta.js` registers every card as `<name>-beta`.
   - HA loads it from resource `436186c683fe4c7d81c865b67bb0e109`:
     `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's pinned to `454e060` (the v0.12.0 section panels; the same card code as the release).
+    It's pinned to `752ccaf` (the v0.12.1 colour templates; the same card code as the release).
   - To test a branch: push it, repoint the resource, and ask for a hard refresh.
   - jsDelivr is blocked from the cloud container, but works for the user.
 - **Rollback:** download an older release in HACS and restart.
@@ -485,7 +486,9 @@ Integration modules (`custom_components/church_drive/`):
   the top): title, icon, colour, optional template summary, and its cards.
   Stack several in one HA section per column instead of using HA section
   backgrounds or heading cards.
-- Colours in use: security green, lights amber (garden green), climate
+- A panel can follow a state with `color_template` (v0.12.1), e.g. the two
+  Security panels follow the alarm.
+- Colours in use: security green (live: alarm colours), lights amber (garden green), climate
   deep-orange/orange/blue, cooling light-blue, doors indigo, cameras blue-grey,
   fire red, blinds brown, cleaning blue.
 
@@ -501,7 +504,7 @@ Integration modules (`custom_components/church_drive/`):
 - **Dashboards using the cards:**
   - **Mobile** (`dashboard-mobile`), all tabs on section panels (v0.12.0), one
     HA section per column (theme Mushroom Shadow):
-    - **Quick Actions:** [Security (green, alarm state) + Climate (deep-orange,
+    - **Quick Actions:** [Security (alarm colour, alarm state) + Climate (deep-orange,
       downstairs °C · action)] [Lights (amber, "N rooms on" over Kitchen /
       Living Room / Middle Floor)] [Cleaning (blue, state · battery)]. Header
       "Hello {{ user }}".
@@ -510,7 +513,7 @@ Integration modules (`custom_components/church_drive/`):
       Bedroom, Spare Bedroom), Top Floor (Landing, Office, Hayley's Bedroom,
       En-Suite), all amber with "N rooms on"; Garden (green, On/Off; Patio
       Lightstrip + Garden Spotlight). Row names and `phu:` icons are overrides.
-    - **Security:** [Alarm (green) + Doors & Motion (indigo, "Doors closed" /
+    - **Security:** [Alarm (alarm colour) + Doors & Motion (indigo, "Doors closed" /
       "N doors open"; the door, motion, battery and tamper lists)] [Outdoor
       Cameras + Indoor Cameras (blue-grey)] [Fire Alarm (red, safe mode)].
     - **Climate:** [Heating + Temperature (orange, downstairs °C) + Humidity
