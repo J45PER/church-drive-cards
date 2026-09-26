@@ -19,14 +19,14 @@
     if (!list.shadowRoot.querySelector("style.cd-row")) {
       const style = document.createElement("style");
       style.className = "cd-row";
-      style.textContent = ".items-container{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;row-gap:8px}.items-container>ha-sortable{flex-basis:100%}.items-container>.cd-button{order:1}.items-container>ha-button:not(.cd-button){order:2}";
+      style.textContent = ".items-container{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;row-gap:8px}.items-container>ha-sortable{flex-basis:100%}.items-container>.cd-button{order:1}.items-container>ha-button:not(.cd-button){order:2}.items-container>.cd-alert{order:-1;flex-basis:100%}";
       list.shadowRoot.appendChild(style);
     }
     button.style.marginTop = "";
     container.appendChild(button);
     return true;
   }
-  function createFormEditor({ schema, labels = {}, helpers = {}, normalize = same, fill = same, display = same, store = same, buttons = [] }) {
+  function createFormEditor({ schema, labels = {}, helpers = {}, normalize = same, fill = same, display = same, store = same, buttons = [], alerts = [] }) {
     return class extends HTMLElement {
       setConfig(config) {
         this._config = normalize(config || {});
@@ -51,6 +51,12 @@
             button.addEventListener("click", () => this._changed(fill(apply(this._config), this._hass)));
             return { button, field };
           });
+          this._alerts = alerts.map(({ field, text }) => {
+            const alert = document.createElement("ha-alert");
+            alert.className = "cd-alert";
+            alert.setAttribute("alert-type", "warning");
+            return { button: alert, field, text };
+          });
         }
         const filled = fill(this._config, this._hass);
         if (filled !== this._config) {
@@ -62,13 +68,18 @@
         this._form.schema = schema(this._config, this._hass);
         this._form.computeLabel = (s) => labels[s.name] || s.title || s.name;
         this._form.computeHelper = (s) => helpers[s.name];
+        (this._alerts || []).forEach((a) => {
+          const message = a.text(this._config) || "";
+          a.button.textContent = message;
+          a.button.style.display = message ? "" : "none";
+        });
         this._placeButtons();
       }
       // HA renders the form's insides asynchronously: try for a couple of
       // seconds to reach the list's Add row, else put the button under the form.
       _placeButtons(tries = 0) {
         clearTimeout(this._placeTimer);
-        const waiting = (this._buttons || []).filter(({ button, field }) => !(field && placeInList(this._form, field, button)));
+        const waiting = [...this._buttons || [], ...this._alerts || []].filter(({ button, field }) => !(field && placeInList(this._form, field, button)));
         if (!waiting.length) return;
         if (tries < 20) {
           this._placeTimer = setTimeout(() => this._placeButtons(tries + 1), 100);
@@ -1441,6 +1452,18 @@
   var LightControlCardEditor = createFormEditor({
     fill: lccFillDefaultScenes,
     buttons: [{ label: "Reset", field: "scenes", variant: "danger", apply: (config) => ({ ...config, scenes: "reset" }) }],
+    // Scenes past Max scenes are left off the card: say so above the list.
+    alerts: [
+      {
+        field: "scenes",
+        text: (config) => {
+          const count = Array.isArray(config.scenes) ? config.scenes.length : 0;
+          const max = config.max_scenes != null && config.max_scenes !== "" ? Number(config.max_scenes) : LCC_DEFAULT_MAX_SCENES;
+          if (count <= max) return "";
+          return max <= 0 ? "Max scenes is 0, so no scenes show on the card." : `Only the first ${max} of these ${count} scenes show on the card. Raise Max scenes to show them all.`;
+        }
+      }
+    ],
     display: lccLabelScenes,
     store: (config) => config.scenes ? { ...config, scenes: config.scenes.map(({ label: _label, ...s }) => s) } : config,
     schema: (config, hass) => {
