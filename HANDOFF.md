@@ -17,68 +17,69 @@ HACS as an integration. It does two jobs:
 Everything is merged to `main`, released and running live. The user tests on real
 devices before each release.
 
-**Tested on real lights with the user (v0.10.5, Kitchen and Hayley's Bedroom):**
+**Confirmed on real lights with the user:**
 - Colour scenes animate; tapping pauses and resumes them (⏸/▶).
 - The selected tile glows (others dim) and stays selected after a page refresh;
   the room's `select.<room>_scene` follows.
-- Speeds now feel like Hue's (after switching to the bridge's real palettes).
+- Speeds feel like Hue's (after switching to the bridge's real palettes, v0.10.5).
 - Gradient strips show several colours on animated scenes.
-- Zone-only scenes (e.g. "… · Bedroom Ambience") change only the zone's lights;
-  the room's other lights stay off.
-- No drop-out between colour scenes: the logbook showed the ~3s off-blips on
-  v0.10.3 and none after v0.10.4's two working scenes.
+- Zone-only scenes (e.g. "… · Bedroom Ambience") change only the zone's lights.
+- No drop-out between colour scenes (two alternating working scenes, v0.10.4).
 - White scenes (Bright, Relax, Nightlight) select and match.
-- Scene builder: the user made a custom colour scene, tried it and saved it.
+- Scene builder: making, trying and saving a custom colour scene.
+- Editor (v0.10.7): default scenes in the list, friendly labels, Reset button.
+- Tiles clear when the lights go off (v0.10.9, Hayley's Bedroom).
 
-**New in v0.10.6, still to check on real lights:**
-1. **No two lights share a colour.** The user saw a custom two-colour scene put
-   the same colour on several lights at once (colours were dealt round, so light
-   1 and 3 matched). Now `spread()` in `apply.py` (and `spreadColours()` in
-   `src/universal-scenes.js`) gives each light its own colour, blending between
-   neighbouring palette colours when there are more lights than colours. The
-   bridge palette is padded to at least five colours the same way, like Hue's
-   own palettes, so the animation has room to keep lights apart.
-2. **Default scenes.** A card with no scenes chosen now shows Bright, Dimmed,
-   Relax and Nightlight (universal, applied to the card's room), the same on
-   every card. The old auto-pick of the room's Hue scenes is gone.
+**Still to check on real lights:** a colour scene (e.g. a two-colour custom one)
+in a room with several lights should give each light its own shade, blended
+between the colours (v0.10.6). Nobody has looked yet.
 
-**New in v0.10.9:** the real cause of the stuck selection. Hue groups report
-their members (`entity_id` attribute) as a **set**, and `members()` in
-`apply.py` only accepted a list, so every Hue room/zone was treated as one
-light: the group itself. The Hue room stayed "on" at 4291K (the unavailable
-Hugo lamp), which matched Concentrate. It now accepts any collection. This also
-affected the per-light colour fallback and which lights the selects watch.
-
-**New in v0.10.8:**
-- A scene tile is only shown selected while some of its lights are on. After
-  the v0.10.7 restart, `select.hayleys_bedroom_scene` came back as
-  "Concentrate" with every bedroom light off (the Hue room still reports on
-  because the unavailable "My Boy Hugo" lamp is on as far as the bridge knows),
-  so the tile stayed lit with the others dimmed.
-- Scene selects now check again once HA has fully started
-  (`EVENT_HOMEASSISTANT_STARTED`), as the restored scene is checked before the
-  Hue lights have loaded.
-
-**New in v0.10.7 (checked by the user on Beta):**
-- The editor's Scenes list starts filled with Bright, Dimmed, Relax and
-  Nightlight for the card's room (`lccFillDefaultScenes`), so they can be
-  reordered or removed. Until they're changed they follow the card if its room
-  changes. An emptied list shows no scenes; a card with no `scenes` key at all
-  still shows the four.
-- List items are labelled "Bright · Kitchen" instead of
-  `universal:bright@light.kitchen`, with any name override underneath. HA's
-  object list shows a field's raw value (select option labels aren't looked
-  up), so `label` is a form-only field: an invisible `constant` selector in the
-  item's fields, added by the shared editor's `display` hook and removed by
-  `store` before saving.
-- A red **Reset** button on the Scenes list's Add row (Reset left, Add right)
-  puts the four defaults back for the card's room. ha-form has no buttons, so
-  the shared editor takes `buttons` (`{ label, apply, field, variant }`) and
-  reaches into the list's shadow DOM (`ha-selector[name=scenes]` →
-  `ha-selector-object` → `.items-container`), adding the button and a flex
-  style. If HA's markup changes and that isn't found within 2s, the button goes
-  under the form instead. The reset sets `scenes: 'reset'`, which
-  `lccFillDefaultScenes` swaps for the defaults before saving.
+**What changed on 2026-09-25/26 (v0.10.6 → v0.10.10):**
+- **v0.10.6: every light gets its own colour.** A custom two-colour scene put the
+  same colour on several lights, because colours were dealt round in turn.
+  `spread()` in `apply.py` (and `spreadColours()` in `src/universal-scenes.js`
+  for the pretend home and the fallback) now spreads the palette along the
+  lights, blending neighbouring colours when there are more lights than colours
+  (red, blue on 6 lights = red, 4 purples, blue). The bridge palette is padded
+  to at least five blended colours, like Hue's own, so the animation keeps
+  neighbouring lights apart.
+- **v0.10.6: default scenes.** Every light card starts with Bright, Dimmed, Relax
+  and Nightlight for its room (`LCC_DEFAULT_SCENES`). The old auto-pick of the
+  room's Hue scenes is gone.
+- **v0.10.7: editor.**
+  - The Scenes list starts filled with the four defaults for the card's room
+    (`lccFillDefaultScenes`). Until they're changed, they follow the card to a
+    new room. An emptied list shows no scenes; a card with no `scenes` key
+    still shows the four.
+  - List items read "Bright · Kitchen" instead of `universal:bright@light.kitchen`,
+    with any name override underneath. HA's object list shows a field's raw
+    value (it doesn't look up select option labels), so `label` is a form-only
+    field: an invisible `constant` selector in the item's fields, added by the
+    shared editor's `display` hook and removed by `store` before saving.
+  - A red **Reset** button sits on the Scenes list's Add row (Reset left, Add
+    right, same filled style, `variant="danger"`). ha-form has no buttons, so
+    `src/form-editor.js` takes `buttons` (`{ label, apply, field, variant }`) and
+    reaches into the list's shadow DOM (`ha-selector[name=scenes]` →
+    `ha-selector-object` → `.items-container`), adding the button and a flex
+    style. If HA's markup changes and that isn't found within 2s, the button
+    goes under the form instead. Reset sets `scenes: 'reset'`, which
+    `lccFillDefaultScenes` swaps for the defaults before saving.
+- **v0.10.8 / v0.10.9: tiles stuck selected with the lights off.** Hayley's
+  Bedroom showed Concentrate selected with every light off.
+  - Real cause (v0.10.9): Hue groups give their members (`entity_id`) as a
+    **set**, and `members()` in `apply.py` only accepted a list, so every Hue
+    room/zone was checked as one light, the group itself. The bedroom group
+    still reports "on" at 4291K because the unavailable "My Boy Hugo" lamp is on
+    as far as the bridge knows, which matched Concentrate. `members()` now takes
+    any collection. This also fixed which lights the selects watch and the
+    per-light colour fallback.
+  - Also (v0.10.8): a tile only shows selected while some of its lights are on,
+    and selects re-check once HA has fully started (`EVENT_HOMEASSISTANT_STARTED`).
+- **v0.10.10: scene rows.** When tiles can't be shared equally, the fuller row
+  comes first so the last row's tiles stretch: 5 = 3 + 2, 7 = 4 + 3.
+- **Real dashboards** were switched to the default scenes, and the old
+  `max_scenes: 4` caps were removed (they hid added scenes). See "Live Home
+  Assistant" below.
 
 If a colour scene sets fixed colours but doesn't animate, the bridge probably
 rejected the palette body in `apply.py`. The integration falls back to per-light
@@ -173,7 +174,7 @@ Integration modules (`custom_components/church_drive/`):
   - `church-drive-cards-beta.js` registers every card as `<name>-beta`.
   - HA loads it from resource `436186c683fe4c7d81c865b67bb0e109`:
     `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's pinned to the latest main merge (`fb5679e`).
+    It's pinned to `936253c` (the v0.10.10 change; the same card code as the release).
   - To test a branch: push it, repoint the resource, and ask for a hard refresh.
   - jsDelivr is blocked from the cloud container, but works for the user.
 - **Rollback:** download an older release in HACS and restart.
@@ -255,7 +256,12 @@ Integration modules (`custom_components/church_drive/`):
   - For 15s after an apply, the new scene is shown regardless, then rechecked.
     Before v0.10.4 the select dropped to unknown when the lights briefly reported
     off during a colour recall, so tiles didn't glow or show play/pause.
-  - It's a RestoreEntity: the last scene survives restarts.
+  - It's a RestoreEntity: the last scene survives restarts. It's checked again
+    once HA has fully started, because at restore time the Hue lights may not
+    have loaded.
+  - It judges a room/zone by its **member bulbs** (`members()`), never the Hue
+    group's own on/off, which can be wrong (Hayley's Bedroom reads "on" with every
+    bulb off because of the unavailable Hugo lamp). Hue gives members as a set.
   - Colour matching allows xy ±0.06, because Hue clamps colours to each bulb's
     gamut.
 - **Attributes:** `target` (group entity) and `scene_key`.
@@ -279,7 +285,9 @@ Integration modules (`custom_components/church_drive/`):
   also works.
   - Target when there's no `@`: the card's Hue room group, else its zones/groups,
     else its lights.
-- **Scene list in the editor:** universal scenes come first, once per place, e.g.
+- **Scene list in the editor:** starts with the four defaults for the card's room;
+  items read "Bright · Kitchen"; a red Reset on the Add row puts the defaults
+  back. The Add dropdown lists universal scenes first, once per place, e.g.
   "Bright · Kitchen", "Bright · Kitchen Spotlights".
   - Then the Hue scenes of the card's room/zones, always labelled with their group.
   - Hue scenes named like a universal one are hidden. Scenes from elsewhere already
@@ -288,8 +296,9 @@ Integration modules (`custom_components/church_drive/`):
   stripped).
 - **Tap:** a real home calls `church_drive.apply_scene`. The pretend home sets
   lights locally; colour scenes animate via `DemoHome.playPalette`.
-- **Selected:** a universal tile is selected when its target's scene select says so,
-  or failing that when the lights match:
+- **Selected:** only while some of its lights are on. A universal tile is
+  selected when its target's scene select says so, or failing that when the
+  lights match:
   - brightness within 4/255;
   - kelvin within 3%;
   - xy within 0.06 of a palette colour;
@@ -324,7 +333,9 @@ Integration modules (`custom_components/church_drive/`):
     fills the width: 5 = 3 + 2, 6 = 3 + 3, 7 = 4 + 3, 9 = 3 + 3 + 3.
   - **Names:** hidden on tiles under 100px wide (`scene_names: auto`). `always` and
     `never` override that.
-  - `max_scenes` defaults to 8, and 0 hides tiles.
+  - `max_scenes` defaults to 8, and 0 hides tiles. Scenes past the limit are
+    silently left out (that's why added scenes didn't show on the Quick Actions
+    cards, which were capped at 4).
   - **Default scenes** (no `scenes` key): universal Bright, Dimmed, Relax and
     Nightlight on the card's room, the same on every card
     (`LCC_DEFAULT_SCENES`). The editor fills them into the list; an empty list
@@ -394,26 +405,40 @@ Integration modules (`custom_components/church_drive/`):
       Spotlights), Office, Hayley's Bedroom and En-Suite.
     - The tiles' names and `phu:` icons were kept as row overrides.
   - **Hayley** (`dashboard-hayley`): full-width light cards for Hayley's Bedroom,
-    Kitchen Spotlights, Living Room Ambience and Middle Floor. They replaced two
-    side-by-side tile pairs.
+    Kitchen Spotlights, Living Room Ambience and Middle Floor.
   - **Living Room Panel** (`living-room-panel`): a Living Room card (Ceiling Light,
     Shelf Table Lamp, TV lightstrip, TV Table Lamp) and a Kitchen card on its
     Kitchen tab (Ambience + Spotlights).
   - **Battery Status**, **Alarm**, and **Design Presets** (tabs: main, Beta, Scene
     styles, Scene builder).
+- **Scenes on the real cards (2026-09-26):** every light card has the four
+  defaults aimed at its Hue room (`universal:<key>@light.<room>`; Bedroom is
+  `light.second_bedroom`, Garden `light.garden`), except:
+  - Mobile Quick Actions **Kitchen**: the defaults plus Cool bright, Energise,
+    Soho · Ambience and Emerald isle (the user added these).
+  - Mobile Lighting **Hayley's Landing**: the custom scene Cyber Fidelity on the
+    landing ambience zone.
+  - Mobile Lighting **Hayley's Bedroom**: the user's 8 test scenes (Bright, Cool
+    bright, Dimmed · Main, Nightlight, City Blue, and Dreamy dusk / Soho /
+    Spellbound on the ambiance zone).
+  - No real card sets `max_scenes` below 8 any more.
 - `light.outside` still sits in the Garden sensor list on Mobile's Security tab. It
   was left there on purpose.
-- **Kitchen:**
-  - Room `light.kitchen` (8 lights).
-  - Zones `light.kitchen_spotlights` and `light.kitchen_ambience` (2 lights).
-  - The Mobile Kitchen card uses Hue scenes Energise, Bright, Cool bright and Ruby
-    glow.
+- **Kitchen:** room `light.kitchen` (8 lights); zones `light.kitchen_spotlights`
+  and `light.kitchen_ambience` (2 lights).
+- **Hayley's Bedroom:** room `light.hayleys_bedroom`, zone
+  `light.hayley_s_bedroom_ambiance`, also a `light.hayley_s_bedroom_main` group.
+  "My Boy Hugo" (`light.my_boy_hugo`) is unavailable, and the bridge still counts
+  it as on, so the Hue room reports "on" with every bulb off.
 - **Living Room:** room `light.living_room`, zones `light.living_room_ambience` and
   `light.living_room_table_lights`.
 
 ## Open items
 
-- The real-light tests at the top of this file.
+- The colour-spread check at the top of this file.
+- "My Boy Hugo" is unavailable; the user may want to power-cycle or re-pair it.
+- Offered, not built: an editor warning when a card lists more scenes than
+  `max_scenes` shows.
 - The active-scene select doesn't list Hue-only scenes (e.g. Hue's Ruby glow in a
   room). It only lists library scenes.
 - `scene.kitchen_kitchen_rest` has a doubled name. It's harmless and could be
@@ -432,7 +457,7 @@ Integration modules (`custom_components/church_drive/`):
 npm install
 npm run build     # release bundle into custom_components/…/frontend + beta bundle at root
 npm run watch
-ruff check custom_components --select E,F,W,B --line-length 140   # Python lint
+ruff check custom_components --select E,F,W,B --line-length 140   # Python lint (only the long palette lines in library.py fail, by design)
 ```
 
 **Headless checks:** Chromium and Playwright are available. Load
