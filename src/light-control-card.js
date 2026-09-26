@@ -311,11 +311,8 @@ function lccFillDefaultScenes(config, hass) {
     return option ? { entity: option.value } : null;
   }).filter(Boolean);
   if (!defaults.length) return config;
-  // The "Reset scenes" switch puts the defaults back and turns itself off.
-  if (config.reset_scenes) {
-    const { reset_scenes: _reset, ...rest } = config;
-    return { ...rest, scenes: defaults };
-  }
+  // The "Reset scenes" button puts the defaults back.
+  if (config.scenes === 'reset') return { ...config, scenes: defaults };
   if (config.scenes == null) return { ...config, scenes: defaults };
   const current = lccNormalizeScenes(config.scenes);
   const untouched =
@@ -337,6 +334,7 @@ function lccLabelScenes(config, hass) {
 
 export const LightControlCardEditor = createFormEditor({
   fill: lccFillDefaultScenes,
+  buttons: [{ label: 'Reset scenes to Bright, Dimmed, Relax and Nightlight', apply: (config) => ({ ...config, scenes: 'reset' }) }],
   display: lccLabelScenes,
   store: (config) =>
     config.scenes ? { ...config, scenes: config.scenes.map(({ label: _label, ...s }) => s) } : config,
@@ -468,7 +466,6 @@ export const LightControlCardEditor = createFormEditor({
           },
         },
       },
-      { name: 'reset_scenes', selector: { boolean: {} } },
       ...demoFields,
     ];
   },
@@ -486,13 +483,11 @@ export const LightControlCardEditor = createFormEditor({
     max_scenes: 'Max scenes',
     scene_names: 'Scene names',
     scenes: 'Scenes',
-    reset_scenes: 'Reset scenes',
     demo: 'Use pretend lights instead of real ones',
     demo_room: 'Pretend room',
   },
   helpers: {
     max_scenes: 'Default 8 (two rows). Set 0 to hide scenes.',
-    reset_scenes: 'Put back Bright, Dimmed, Relax and Nightlight for this room.',
     demo: 'Nothing is sent to Home Assistant; taps only change the pretend lights on this card.',
   },
 });

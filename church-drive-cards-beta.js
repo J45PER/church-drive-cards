@@ -1,7 +1,7 @@
 (() => {
   // src/form-editor.js
   var same = (c) => c;
-  function createFormEditor({ schema, labels = {}, helpers = {}, normalize = same, fill = same, display = same, store = same }) {
+  function createFormEditor({ schema, labels = {}, helpers = {}, normalize = same, fill = same, display = same, store = same, buttons = [] }) {
     return class extends HTMLElement {
       setConfig(config) {
         this._config = normalize(config || {});
@@ -17,6 +17,13 @@
           this._form = document.createElement("ha-form");
           this._form.addEventListener("value-changed", (ev) => this._changed(store(ev.detail.value)));
           this.appendChild(this._form);
+          buttons.forEach(({ label, apply }) => {
+            const button = document.createElement("ha-button");
+            button.textContent = label;
+            button.style.marginTop = "16px";
+            button.addEventListener("click", () => this._changed(fill(apply(this._config), this._hass)));
+            this.appendChild(button);
+          });
         }
         const filled = fill(this._config, this._hass);
         if (filled !== this._config) {
@@ -1374,10 +1381,7 @@
       return option ? { entity: option.value } : null;
     }).filter(Boolean);
     if (!defaults.length) return config;
-    if (config.reset_scenes) {
-      const { reset_scenes: _reset, ...rest } = config;
-      return { ...rest, scenes: defaults };
-    }
+    if (config.scenes === "reset") return { ...config, scenes: defaults };
     if (config.scenes == null) return { ...config, scenes: defaults };
     const current = lccNormalizeScenes(config.scenes);
     const untouched = current.length === LCC_DEFAULT_SCENES.length && current.every((sc, i) => Object.keys(sc).length === 1 && String(sc.entity).split("@")[0] === universalRef(LCC_DEFAULT_SCENES[i]));
@@ -1392,6 +1396,7 @@
   }
   var LightControlCardEditor = createFormEditor({
     fill: lccFillDefaultScenes,
+    buttons: [{ label: "Reset scenes to Bright, Dimmed, Relax and Nightlight", apply: (config) => ({ ...config, scenes: "reset" }) }],
     display: lccLabelScenes,
     store: (config) => config.scenes ? { ...config, scenes: config.scenes.map(({ label: _label, ...s }) => s) } : config,
     schema: (config, hass) => {
@@ -1515,7 +1520,6 @@
             }
           }
         },
-        { name: "reset_scenes", selector: { boolean: {} } },
         ...demoFields
       ];
     },
@@ -1533,13 +1537,11 @@
       max_scenes: "Max scenes",
       scene_names: "Scene names",
       scenes: "Scenes",
-      reset_scenes: "Reset scenes",
       demo: "Use pretend lights instead of real ones",
       demo_room: "Pretend room"
     },
     helpers: {
       max_scenes: "Default 8 (two rows). Set 0 to hide scenes.",
-      reset_scenes: "Put back Bright, Dimmed, Relax and Nightlight for this room.",
       demo: "Nothing is sent to Home Assistant; taps only change the pretend lights on this card."
     }
   });

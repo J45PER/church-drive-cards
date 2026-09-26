@@ -54,8 +54,11 @@ devices before each release.
   up), so `label` is a form-only field: an invisible `constant` selector in the
   item's fields, added by the shared editor's `display` hook and removed by
   `store` before saving.
-- A **Reset scenes** switch puts the four defaults back for the card's room and
-  turns itself off (handled in `lccFillDefaultScenes`).
+- A **Reset scenes** button under the form puts the four defaults back for the
+  card's room. ha-form has no button, so the shared editor takes `buttons`
+  (`{ label, apply }`) and adds `ha-button`s after the form; the reset sets
+  `scenes: 'reset'`, which `lccFillDefaultScenes` swaps for the defaults before
+  saving.
 
 If a colour scene sets fixed colours but doesn't animate, the bridge probably
 rejected the palette body in `apply.py`. The integration falls back to per-light

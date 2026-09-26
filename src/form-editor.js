@@ -5,11 +5,13 @@
 // `normalize(config)` can upgrade older config shapes before they're shown.
 // Optional: `fill(config, hass)` adds defaults once the home is known (saved
 // straight into the config), `display(config, hass)` adds form-only fields
-// (e.g. list labels) and `store(value)` takes them back out.
+// (e.g. list labels) and `store(value)` takes them back out. `buttons`
+// ([{ label, apply(config) }]) go under the form; their result goes through
+// `fill` before it's saved.
 
 const same = (c) => c;
 
-export function createFormEditor({ schema, labels = {}, helpers = {}, normalize = same, fill = same, display = same, store = same }) {
+export function createFormEditor({ schema, labels = {}, helpers = {}, normalize = same, fill = same, display = same, store = same, buttons = [] }) {
   return class extends HTMLElement {
     setConfig(config) {
       this._config = normalize(config || {});
@@ -28,6 +30,13 @@ export function createFormEditor({ schema, labels = {}, helpers = {}, normalize 
         this._form = document.createElement('ha-form');
         this._form.addEventListener('value-changed', (ev) => this._changed(store(ev.detail.value)));
         this.appendChild(this._form);
+        buttons.forEach(({ label, apply }) => {
+          const button = document.createElement('ha-button');
+          button.textContent = label;
+          button.style.marginTop = '16px';
+          button.addEventListener('click', () => this._changed(fill(apply(this._config), this._hass)));
+          this.appendChild(button);
+        });
       }
       const filled = fill(this._config, this._hass);
       if (filled !== this._config) {
