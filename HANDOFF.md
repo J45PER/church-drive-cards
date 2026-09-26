@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-26. Current release: **v0.11.0**.*
+*Last updated 2026-09-26. Current release: **v0.12.0**.*
 
 ## Where this stands
 
@@ -38,6 +38,42 @@ in a room with several lights should give each light its own shade, blended
 between the colours (v0.10.6). Nobody has looked yet. And the new alarm card
 (v0.11.0) during a real exit or entry delay: the ring should empty, the timer
 count down on the title's row, and the card fade towards amber/orange.
+
+**New in v0.12.0: dashboard section style ("D")** (mock-ups:
+claude.ai/artifact/3CCBXYAz5YgKPRxYG7kFrQ). The user wanted bigger section
+titles and a background behind each section. Picked D: each section on a faint
+panel of its own colour, a 1.6rem title with the icon in that colour, and a
+short live summary on the right.
+- New card `section-title-card` (`src/section-title-card.js`): `title`, `icon`,
+  `color` (HA colour name or CSS colour), `summary` (a template, rendered live
+  over the `render_template` subscription like HA's markdown card).
+- HA's section backgrounds didn't work out: sections view lines sections up
+  in grid rows, so Climate (split out under Security) started below the tall
+  Lights section; a `row_span: 2` on Lights only split its height between the
+  two rows, and the gap stayed. So the panel is now a card:
+  **`section-panel-card`** (`src/section-panel-card.js`): the Section Title
+  plus its `cards`, on a rounded panel (24px corners, 12px padding) tinted 10%
+  in the colour, with the same 12px between its cards as round its edge. Children are made with `loadCardHelpers().createCardElement`.
+  Its editor is the title fields plus HA's own vertical-stack editor for the
+  cards. Several panels can share one section with the normal 8px gap.
+- Mobile → Quick Actions is now three plain sections: [Security panel,
+  Climate panel], [Lights panel], [Cleaning panel], using the **beta** card type
+  (`custom:section-panel-card-beta`) until it's released; then swap the type.
+- HA colour names are drawn as `var(--<name>-color, <hex>)` with a hex
+  fallback table (`STC_FALLBACK`).
+- The user confirmed Quick Actions looks good (panel gaps: 32px between stacked panels, 12px inside). Next: the other Mobile tabs, then release and swap the `-beta` types.
+- **All Mobile tabs converted** (beta type), one HA section per column holding
+  panels:
+  - Lighting (2 columns): [Ground Floor, Garden] [Middle Floor, Top Floor];
+    amber, Garden green; summaries "N rooms on" / "All off" from each floor's
+    Hue room lights.
+  - Security: [Alarm (green), Doors & Motion (indigo, "Doors closed" / "N
+    open")] [Outdoor Cameras, Indoor Cameras (blue-grey)] [Fire Alarm (red,
+    safe mode state)]. The empty heading-only section was dropped.
+  - Climate: [Heating (deep-orange), Temperature (orange), Humidity (blue)]
+    [Cooling (light-blue), Air Purifier (green, PM2.5)] [Blinds (brown; blank
+    while the blind reports unknown)].
+  - Cleaning: one Cleaning panel (blue, state and battery).
 
 **New in v0.11.0 (2026-09-26): alarm card redesign.** The user asked for a
 bigger card that doesn't change size when the timer shows, a layout matching
@@ -129,6 +165,8 @@ colours and logs a warning ("Couldn't play … on the Hue bridge"). Read it with
 | `light-control-card` | `src/light-control-card.js` | Light / zone / room control with scene tiles |
 | `scene-styles-card` | `src/scene-styles-card.js` | Central scene tile looks (icon, colours, picture) |
 | `scene-builder-card` | `src/scene-builder-card.js` | Make custom universal scenes |
+| `section-title-card` | `src/section-title-card.js` | Large section title, coloured icon, live template summary |
+| `section-panel-card` | `src/section-panel-card.js` | Section title plus cards on a colour-tinted panel |
 
 Shared frontend modules:
 - `src/form-editor.js`: the `ha-form` visual-editor base.

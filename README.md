@@ -37,7 +37,7 @@ entities:
 ```
 
 ### `alarm-panel-card`
-Status header, live entry/exit-delay countdown, icon-only arm/disarm buttons (only the modes the entity actually supports), whole-card colour wash on hover.
+The status as the card title in its colour; a ring round the shield that empties during an entry or exit delay, with what to do and the timer on the same line; then Disarm / Home / Away / Night buttons (only the modes the entity supports). The card is the same size in every state, and fades towards the state colour as a delay runs out.
 
 ```yaml
 type: custom:alarm-panel-card
@@ -92,6 +92,26 @@ Make your own universal scenes: a name, white or colours, brightness, animated o
 The central place to style scene tiles. It sits on the Design Presets dashboard's **Scene styles** tab and previews every scene name in the house with its current look. In its visual editor, each entry picks a scene **name** and sets an icon, up to three background colours, or a picture. That style then applies to that scene in every room, on every Light Control card, on every dashboard. A light card's own per-scene overrides still win, and unstyled scenes use built-in colours matched to the Hue scene names.
 
 Light cards read the styles from the `design-presets` dashboard once per page load, so reload other dashboards to pick up changes.
+
+### `section-panel-card`
+
+A group of cards on a faint panel in the section's colour, headed by a large title with a coloured icon and an optional live summary on the right (any Home Assistant template, e.g. `1 room on`). Several panels can share one dashboard section, so they stack without gaps. The editor has the title, icon, colour and summary, then Home Assistant's own card list for the cards inside.
+
+```yaml
+type: custom:section-panel-card
+title: Lights
+icon: mdi:lightbulb-group
+color: amber
+summary: "{{ states('light.kitchen') | title }}"
+cards:
+  - type: custom:light-control-card
+    mode: room
+    area: kitchen
+```
+
+### `section-title-card`
+
+Just the panel's heading (title, coloured icon, live summary), for use on its own.
 
 ## Development
 

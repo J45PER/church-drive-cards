@@ -2636,11 +2636,331 @@
     });
   }
 
+  // src/section-title-card.js
+  var STC_FALLBACK = {
+    red: "#f44336",
+    pink: "#e91e63",
+    purple: "#926bc7",
+    "deep-purple": "#6e41ab",
+    indigo: "#3f51b5",
+    blue: "#2196f3",
+    "light-blue": "#03a9f4",
+    cyan: "#00bcd4",
+    teal: "#009688",
+    green: "#4caf50",
+    "light-green": "#8bc34a",
+    lime: "#cddc39",
+    yellow: "#ffeb3b",
+    amber: "#ffc107",
+    orange: "#ff9800",
+    "deep-orange": "#ff5722",
+    brown: "#795548",
+    grey: "#9e9e9e",
+    "blue-grey": "#607d8b"
+  };
+  function stcColor(color) {
+    if (!color) return "var(--primary-text-color)";
+    if (/^(#|rgb|hsl|var\()/.test(color)) return color;
+    return `var(--${color}-color, ${STC_FALLBACK[color] || color})`;
+  }
+  var SectionTitleCardEditor = createFormEditor({
+    schema: () => [
+      { name: "title", selector: { text: {} } },
+      { name: "icon", selector: { icon: {} } },
+      { name: "color", selector: { ui_color: {} } },
+      { name: "summary", selector: { template: {} } }
+    ],
+    labels: {
+      title: "Title",
+      icon: "Icon (optional)",
+      color: "Colour (for the icon; use the same for the section background)",
+      summary: "Summary on the right (optional template)"
+    },
+    helpers: {
+      summary: `A Home Assistant template, e.g. {{ states('vacuum.gregg') | title }}`
+    }
+  });
+  var SectionTitleCard = class extends HTMLElement {
+    setConfig(config) {
+      if (!config.title) throw new Error("title required");
+      const changed = !this.config || this.config.summary !== config.summary;
+      this.config = config;
+      this._build();
+      if (changed) this._subscribe();
+    }
+    set hass(hass) {
+      const first = !this._hass;
+      this._hass = hass;
+      if (first) this._subscribe();
+    }
+    connectedCallback() {
+      if (this._hass && !this._unsub) this._subscribe();
+    }
+    disconnectedCallback() {
+      this._unsubscribe();
+    }
+    _build() {
+      const c = this.config;
+      const color = stcColor(c.color);
+      this.innerHTML = `
+      <div style="display:flex; align-items:center; gap:10px; padding:2px 4px 2px 4px; min-height:40px;">
+        ${c.icon ? iconHtml(c.icon, { size: "26px", style: `color:${color}; flex:none;` }) : ""}
+        <div class="stc-title" style="flex:1; min-width:0; font-size:1.6rem; font-weight:500; line-height:1.2; color:var(--primary-text-color); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
+        <div class="stc-summary" style="flex:none; max-width:55%; font-size:0.9rem; color:var(--secondary-text-color); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:right;"></div>
+      </div>`;
+      this.querySelector(".stc-title").textContent = c.title;
+      this._summaryEl = this.querySelector(".stc-summary");
+      if (this._summary) this._summaryEl.textContent = this._summary;
+      hydrateIcons(this);
+    }
+    _unsubscribe() {
+      if (this._unsub) {
+        this._unsub.then((unsub) => unsub()).catch(() => {
+        });
+        this._unsub = null;
+      }
+    }
+    // Render the summary template live, as HA's own markdown card does.
+    _subscribe() {
+      this._unsubscribe();
+      this._summary = "";
+      if (this._summaryEl) this._summaryEl.textContent = "";
+      const template = this.config && this.config.summary;
+      if (!template || !this._hass || !this._hass.connection) return;
+      if (!/[{%]/.test(template)) {
+        this._summary = template;
+        if (this._summaryEl) this._summaryEl.textContent = template;
+        return;
+      }
+      this._unsub = this._hass.connection.subscribeMessage(
+        (msg) => {
+          if (msg.result === void 0) return;
+          this._summary = String(msg.result).trim();
+          if (this._summaryEl) this._summaryEl.textContent = this._summary;
+        },
+        { type: "render_template", template, strict: false, report_errors: false }
+      ).catch(() => null);
+    }
+    getCardSize() {
+      return 1;
+    }
+    getGridOptions() {
+      return { columns: "full", rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement(`section-title-card-editor${SUFFIX}`);
+    }
+    static getStubConfig() {
+      return { title: "Lights", icon: "mdi:lightbulb", color: "amber" };
+    }
+  };
+  function registerSectionTitleCard() {
+    if (!customElements.get(`section-title-card-editor${SUFFIX}`)) {
+      customElements.define(`section-title-card-editor${SUFFIX}`, SectionTitleCardEditor);
+    }
+    if (!customElements.get(`section-title-card${SUFFIX}`)) {
+      customElements.define(`section-title-card${SUFFIX}`, SectionTitleCard);
+    }
+    window.customCards = window.customCards || [];
+    window.customCards.push({
+      type: `section-title-card${SUFFIX}`,
+      name: `Section Title Card${LABEL}`,
+      description: "A large section title with a coloured icon and a live summary",
+      preview: true,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
+    });
+  }
+
+  // src/section-panel-card.js
+  var helpersPromise;
+  function cardHelpers() {
+    if (!helpersPromise) helpersPromise = window.loadCardHelpers ? window.loadCardHelpers() : Promise.reject(new Error("no card helpers"));
+    return helpersPromise;
+  }
+  var PanelFields = createFormEditor({
+    schema: () => [
+      { name: "title", selector: { text: {} } },
+      { name: "icon", selector: { icon: {} } },
+      { name: "color", selector: { ui_color: {} } },
+      { name: "summary", selector: { template: {} } }
+    ],
+    labels: {
+      title: "Title",
+      icon: "Icon (optional)",
+      color: "Colour (icon and panel)",
+      summary: "Summary on the right (optional template)"
+    },
+    helpers: {
+      summary: `A Home Assistant template, e.g. {{ states('vacuum.gregg') | title }}`
+    }
+  });
+  var SectionPanelCardEditor = class extends HTMLElement {
+    setConfig(config) {
+      this._config = config;
+      this._render();
+    }
+    set hass(hass) {
+      this._hass = hass;
+      this._render();
+    }
+    set lovelace(lovelace) {
+      this._lovelace = lovelace;
+      if (this._stack) this._stack.lovelace = lovelace;
+    }
+    _emit(config) {
+      this._config = config;
+      this.dispatchEvent(new CustomEvent("config-changed", { detail: { config }, bubbles: true, composed: true }));
+    }
+    async _render() {
+      if (!this._config || !this._hass) return;
+      if (!this._fields) {
+        this._fields = document.createElement(`section-panel-fields${SUFFIX}`);
+        this._fields.addEventListener("config-changed", (ev) => {
+          ev.stopPropagation();
+          const { cards: cards2, ...fields2 } = ev.detail.config;
+          this._emit({ ...this._config, ...fields2, cards: this._config.cards || [] });
+        });
+        const label = document.createElement("div");
+        label.textContent = "Cards in this panel";
+        label.style.cssText = "margin:20px 0 8px; font-weight:500;";
+        this.append(this._fields, label);
+      }
+      const { cards, ...fields } = this._config;
+      this._fields.hass = this._hass;
+      this._fields.setConfig(fields);
+      if (!this._stack && !this._stackLoading) {
+        this._stackLoading = true;
+        try {
+          const helpers = await cardHelpers();
+          helpers.createCardElement({ type: "vertical-stack", cards: [] });
+          await customElements.whenDefined("hui-vertical-stack-card");
+          this._stack = await customElements.get("hui-vertical-stack-card").getConfigElement();
+          this._stack.addEventListener("config-changed", (ev) => {
+            ev.stopPropagation();
+            this._emit({ ...this._config, cards: ev.detail.config.cards || [] });
+          });
+          this.appendChild(this._stack);
+        } catch (err) {
+          const note = document.createElement("p");
+          note.textContent = "The card list editor could not load; use the code editor to change the cards.";
+          this.appendChild(note);
+        }
+        this._stackLoading = false;
+      }
+      if (this._stack) {
+        this._stack.hass = this._hass;
+        if (this._lovelace) this._stack.lovelace = this._lovelace;
+        this._stack.setConfig({ type: "vertical-stack", cards: this._config.cards || [] });
+      }
+    }
+  };
+  var SectionPanelCard = class extends HTMLElement {
+    setConfig(config) {
+      if (!config.title) throw new Error("title required");
+      this.config = config;
+      this._built = false;
+      this._build();
+    }
+    set hass(hass) {
+      this._hass = hass;
+      if (this._title) this._title.hass = hass;
+      (this._cards || []).forEach((card) => {
+        card.hass = hass;
+      });
+    }
+    _build() {
+      const c = this.config;
+      const color = stcColor(c.color);
+      this.innerHTML = `
+      <div class="spc-panel" style="position:relative; border-radius:24px; padding:12px; display:flex; flex-direction:column; gap:12px; isolation:isolate;">
+        <div style="position:absolute; inset:0; border-radius:inherit; background:${color}; opacity:0.1; z-index:-1; pointer-events:none;"></div>
+      </div>`;
+      const panel = this.querySelector(".spc-panel");
+      this._title = document.createElement(`section-title-card${SUFFIX}`);
+      this._title.setConfig({ title: c.title, icon: c.icon, color: c.color, summary: c.summary });
+      if (this._hass) this._title.hass = this._hass;
+      panel.appendChild(this._title);
+      const token = this._token = {};
+      this._cards = [];
+      cardHelpers().then((helpers) => {
+        if (token !== this._token) return;
+        (c.cards || []).forEach((conf) => {
+          const el = helpers.createCardElement(conf);
+          if (this._hass) el.hass = this._hass;
+          el.addEventListener("ll-rebuild", (ev) => {
+            ev.stopPropagation();
+            const fresh = helpers.createCardElement(conf);
+            if (this._hass) fresh.hass = this._hass;
+            el.replaceWith(fresh);
+            this._cards[this._cards.indexOf(el)] = fresh;
+          });
+          this._cards.push(el);
+          panel.appendChild(el);
+        });
+      }).catch(() => {
+      });
+    }
+    connectedCallback() {
+      requestAnimationFrame(() => this._spaceFromAbove());
+    }
+    // A panel right under another panel in the same section gets the same gap
+    // as between section columns (32px; the section's own gap between cards is
+    // 8px), so stacked panels read as separate groups.
+    _spaceFromAbove() {
+      const up = (el) => el.parentNode || el.getRootNode && el.getRootNode().host || null;
+      let wrap = this;
+      for (let i = 0; i < 6 && wrap && wrap.localName !== "hui-card"; i += 1) wrap = up(wrap);
+      let prev = null;
+      for (let i = 0; i < 3 && wrap && !prev; i += 1) {
+        prev = wrap.previousElementSibling;
+        wrap = up(wrap);
+      }
+      const prevCard = prev && (prev.localName === "hui-card" ? prev : prev.querySelector && prev.querySelector("hui-card"));
+      const type = prevCard && prevCard.config && String(prevCard.config.type || "");
+      const stacked = !!type && type.includes("section-panel-card");
+      this.style.display = "block";
+      this.style.marginTop = stacked ? "calc(var(--ha-view-sections-column-gap, 32px) - 8px)" : "";
+    }
+    getCardSize() {
+      return 1 + (this._cards || []).reduce((n, card) => n + (card.getCardSize ? Number(card.getCardSize()) || 1 : 1), 0);
+    }
+    getGridOptions() {
+      return { columns: "full", rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement(`section-panel-card-editor${SUFFIX}`);
+    }
+    static getStubConfig() {
+      return { title: "Lights", icon: "mdi:lightbulb", color: "amber", cards: [] };
+    }
+  };
+  function registerSectionPanelCard() {
+    if (!customElements.get(`section-panel-fields${SUFFIX}`)) {
+      customElements.define(`section-panel-fields${SUFFIX}`, PanelFields);
+    }
+    if (!customElements.get(`section-panel-card-editor${SUFFIX}`)) {
+      customElements.define(`section-panel-card-editor${SUFFIX}`, SectionPanelCardEditor);
+    }
+    if (!customElements.get(`section-panel-card${SUFFIX}`)) {
+      customElements.define(`section-panel-card${SUFFIX}`, SectionPanelCard);
+    }
+    window.customCards = window.customCards || [];
+    window.customCards.push({
+      type: `section-panel-card${SUFFIX}`,
+      name: `Section Panel Card${LABEL}`,
+      description: "A group of cards on a coloured panel with a large title, icon and live summary",
+      preview: false,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
+    });
+  }
+
   // src/index.js
   registerGaugeZoneCard();
   registerAlarmPanelCard();
   registerLightControlCard();
   registerSceneStylesCard();
   registerSceneBuilderCard();
+  registerSectionTitleCard();
+  registerSectionPanelCard();
   console.info(`%c CHURCH-DRIVE-CARDS${SUFFIX ? " BETA" : ""} %c loaded `, "color: white; background: #2196f3; font-weight: 700;", "color: #2196f3; background: transparent;");
 })();
