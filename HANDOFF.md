@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-26. Current release: **v0.10.11**.*
+*Last updated 2026-09-26. Current release: **v0.11.0**.*
 
 ## Where this stands
 
@@ -36,7 +36,7 @@ devices before each release.
 in a room with several lights should give each light its own shade, blended
 between the colours (v0.10.6). Nobody has looked yet.
 
-**On Beta, not yet released: alarm card redesign** (mock-ups:
+**New in v0.11.0: alarm card redesign** (mock-ups:
 claude.ai/artifact/UkEti2a7AQnNuqihWt8Mek, the user picked "C2" plus R4's tint).
 - The card no longer grows when a delay starts; it's the same height in every
   state (`getCardSize` 4).
