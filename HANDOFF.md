@@ -38,7 +38,10 @@ devices before each release.
 - Section panels (v0.12.0) on the real Mobile dashboard: Quick Actions checked
   closely (gaps), the other tabs looked at before release.
 
-**Still to check on real lights:** nothing outstanding.
+**Still to check on real devices:** the Climate Card (v0.13.0) on the real
+Nests. It's on Mobile → Quick Actions and Climate → Heating (see below): check
+−/+ (one `set_temperature` after tapping stops), Eco/Heat/Off, the 24h graph
+filling from real history, and the dropdowns opening inside the panels.
 
 **New in v0.13.0: Climate Card** (`src/climate-card.js`, `custom:climate-card`).
 Design F6 from the mock-ups (claude.ai/artifact/451vWxApsbondg1ThVLXx2 and the
@@ -64,8 +67,21 @@ for air con (fan/swing dropdowns appear when the entity has `fan_modes` /
   them.
 - **Deferred:** boost timer (needs a timer end from HA) and "next change"
   (needs a schedule).
-- Not yet on real dashboards; the user may want it on Mobile → Climate /
-  Quick Actions next.
+- On Design Presets: the main tab has a Climate Card entry (description,
+  demo card with both histories + real outside temperature, YAML) before the
+  Light Control Card; the Beta tab has three demo climate cards (defaults,
+  everything on, off).
+- On real dashboards (2026-09-26), replacing the old HA tiles:
+  - Mobile → Quick Actions "Climate" panel: one card for `climate.downstairs`
+    (replaced the thermostat tile and the humidity trend tile) with humidity
+    history, outside temperature, −/+ and quick settings; mode and preset
+    dropdowns off, so its quick settings default to Off / Heat / Eco.
+  - Mobile → Climate "Heating" panel: `climate.downstairs` and
+    `climate.upstairs` (replaced both thermostat tiles), all default rows plus
+    temperature + humidity history (one graph), outside temperature, and the
+    `sensor.<room>_humidity` sensors as `humidity_entity`.
+  - The Temperature and Humidity panels (statistics graphs for all the room
+    sensors) were left as they were.
 
 **New in v0.12.1: panel colour from a template.** Section Title
 and Section Panel cards take `color_template` (a template giving a colour name
@@ -532,7 +548,7 @@ Integration modules (`custom_components/church_drive/`):
   - **Mobile** (`dashboard-mobile`), all tabs on section panels (v0.12.0), one
     HA section per column (theme Mushroom Shadow):
     - **Quick Actions:** [Security (alarm colour, alarm state) + Climate (deep-orange,
-      downstairs °C · action)] [Lights (amber, "N rooms on" over Kitchen /
+      downstairs °C · action; a Climate Card since v0.13.0)] [Lights (amber, "N rooms on" over Kitchen /
       Living Room / Middle Floor)] [Cleaning (blue, state · battery)]. Header
       "Hello {{ user }}".
     - **Lighting** (max 4 columns; the user split it into four sections): Ground
@@ -543,7 +559,7 @@ Integration modules (`custom_components/church_drive/`):
     - **Security:** [Alarm (alarm colour) + Doors & Motion (indigo, "Doors closed" /
       "N doors open"; the door, motion, battery and tamper lists)] [Outdoor
       Cameras + Indoor Cameras (blue-grey)] [Fire Alarm (red, safe mode)].
-    - **Climate:** [Heating + Temperature (orange, downstairs °C) + Humidity
+    - **Climate:** [Heating (two Climate Cards, Downstairs + Upstairs) + Temperature (orange, downstairs °C) + Humidity
       (blue, downstairs %)] [Cooling (light-blue, fan) + Air Purifier (green,
       on/off · PM2.5, filters and graphs)] [Blinds (brown; blank while the blind
       reports unknown)].
@@ -555,6 +571,9 @@ Integration modules (`custom_components/church_drive/`):
     Kitchen tab (Ambience + Spotlights).
   - **Battery Status**, **Alarm**, and **Design Presets** (tabs: main, Beta, Scene
     styles, Scene builder).
+  - **Climate cards:** Mobile → Quick Actions (Downstairs) and Climate →
+    Heating (Downstairs, Upstairs), Design Presets main (demo), three demo
+    cards on Beta.
   - **Alarm cards:** Mobile → Quick Actions and Security tabs, the Alarm
     dashboard (`alarm-panel`), Design Presets main (demo), and two demo cards on
     the Beta tab (Entry delay 22s, Disarmed).
@@ -590,6 +609,10 @@ Integration modules (`custom_components/church_drive/`):
   talking to HA over its websocket API. The panel summaries and colour
   templates, and the `church_drive/*` websocket commands and
   `church_drive.apply_scene`, can be reused as its data source.
+- **Climate card, deferred:** a boost timer (needs HA to expose when boost
+  ends) and a "next change" line (needs a heating schedule in HA). Also later:
+  Bosch-style air con and per-room smart valves; the card already handles
+  fan/swing modes and a separate humidity sensor.
 - **Likely next:** the other dashboards (Hayley, Living Room Panel, Alarm,
   Battery Status) still use HA heading cards and plain sections; convert them
   to Section Panels like Mobile when the user wants (the user said the Mobile
