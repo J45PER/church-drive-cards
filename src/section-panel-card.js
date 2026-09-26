@@ -5,7 +5,12 @@
 
 import { createFormEditor } from './form-editor.js';
 import { SUFFIX, LABEL } from './suffix.js';
-import { stcColor } from './section-title-card.js';
+import {
+  stcColor,
+  STC_COLOR_TEMPLATE_FIELD,
+  STC_COLOR_TEMPLATE_LABEL,
+  STC_COLOR_TEMPLATE_HELPER,
+} from './section-title-card.js';
 
 let helpersPromise;
 function cardHelpers() {
@@ -18,15 +23,18 @@ const PanelFields = createFormEditor({
     { name: 'title', selector: { text: {} } },
     { name: 'icon', selector: { icon: {} } },
     { name: 'color', selector: { ui_color: {} } },
+    STC_COLOR_TEMPLATE_FIELD,
     { name: 'summary', selector: { template: {} } },
   ],
   labels: {
     title: 'Title',
     icon: 'Icon (optional)',
     color: 'Colour (icon and panel)',
+    color_template: STC_COLOR_TEMPLATE_LABEL,
     summary: 'Summary on the right (optional template)',
   },
   helpers: {
+    color_template: STC_COLOR_TEMPLATE_HELPER,
     summary: `A Home Assistant template, e.g. {{ states('vacuum.gregg') | title }}`,
   },
 });
@@ -118,11 +126,17 @@ export class SectionPanelCard extends HTMLElement {
     const color = stcColor(c.color);
     this.innerHTML = `
       <div class="spc-panel" style="position:relative; border-radius:24px; padding:12px; display:flex; flex-direction:column; gap:12px; isolation:isolate;">
-        <div style="position:absolute; inset:0; border-radius:inherit; background:${color}; opacity:0.1; z-index:-1; pointer-events:none;"></div>
+        <div class="spc-bg" style="position:absolute; inset:0; border-radius:inherit; background:${color}; opacity:0.1; z-index:-1; pointer-events:none; transition:background-color .6s ease;"></div>
       </div>`;
     const panel = this.querySelector('.spc-panel');
+    // A colour template on the title recolours the panel as it changes.
+    const bg = this.querySelector('.spc-bg');
+    panel.addEventListener('stc-color', (ev) => {
+      ev.stopPropagation();
+      bg.style.background = ev.detail;
+    });
     this._title = document.createElement(`section-title-card${SUFFIX}`);
-    this._title.setConfig({ title: c.title, icon: c.icon, color: c.color, summary: c.summary });
+    this._title.setConfig({ title: c.title, icon: c.icon, color: c.color, color_template: c.color_template, summary: c.summary });
     if (this._hass) this._title.hass = this._hass;
     panel.appendChild(this._title);
     const token = (this._token = {});

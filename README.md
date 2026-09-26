@@ -95,7 +95,7 @@ Light cards read the styles from the `design-presets` dashboard once per page lo
 
 ### `section-panel-card`
 
-A group of cards on a faint panel in the section's colour, headed by a large title with a coloured icon and an optional live summary on the right (any Home Assistant template, e.g. `1 room on`). Several panels can share one dashboard section, so they stack without gaps. The editor has the title, icon, colour and summary, then Home Assistant's own card list for the cards inside.
+A group of cards on a faint panel in the section's colour, headed by a large title with a coloured icon and an optional live summary on the right (any Home Assistant template, e.g. `1 room on`). Several panels can share one dashboard section, so they stack without gaps. `color_template` (optional) takes a template that gives a colour, so a panel can follow a state, e.g. the alarm. The editor has the title, icon, colour and summary, then Home Assistant's own card list for the cards inside.
 
 ```yaml
 type: custom:section-panel-card

@@ -2663,27 +2663,46 @@
     if (/^(#|rgb|hsl|var\()/.test(color)) return color;
     return `var(--${color}-color, ${STC_FALLBACK[color] || color})`;
   }
+  function stcRender(hass, template, done) {
+    if (!template || !hass || !hass.connection) return null;
+    if (!/[{%]/.test(template)) {
+      done(template);
+      return null;
+    }
+    return hass.connection.subscribeMessage(
+      (msg) => {
+        if (msg.result !== void 0) done(String(msg.result).trim());
+      },
+      { type: "render_template", template, strict: false, report_errors: false }
+    ).catch(() => null);
+  }
+  var STC_COLOR_TEMPLATE_FIELD = { name: "color_template", selector: { template: {} } };
+  var STC_COLOR_TEMPLATE_LABEL = "Colour from a template (optional; overrides the colour)";
+  var STC_COLOR_TEMPLATE_HELPER = "Gives a colour name or code, e.g. {{ 'red' if is_state('alarm_control_panel.house', 'armed_away') else 'green' }}";
   var SectionTitleCardEditor = createFormEditor({
     schema: () => [
       { name: "title", selector: { text: {} } },
       { name: "icon", selector: { icon: {} } },
       { name: "color", selector: { ui_color: {} } },
+      STC_COLOR_TEMPLATE_FIELD,
       { name: "summary", selector: { template: {} } }
     ],
     labels: {
       title: "Title",
       icon: "Icon (optional)",
-      color: "Colour (for the icon; use the same for the section background)",
+      color: "Colour (for the icon)",
+      color_template: STC_COLOR_TEMPLATE_LABEL,
       summary: "Summary on the right (optional template)"
     },
     helpers: {
+      color_template: STC_COLOR_TEMPLATE_HELPER,
       summary: `A Home Assistant template, e.g. {{ states('vacuum.gregg') | title }}`
     }
   });
   var SectionTitleCard = class extends HTMLElement {
     setConfig(config) {
       if (!config.title) throw new Error("title required");
-      const changed = !this.config || this.config.summary !== config.summary;
+      const changed = !this.config || this.config.summary !== config.summary || this.config.color_template !== config.color_template;
       this.config = config;
       this._build();
       if (changed) this._subscribe();
@@ -2701,45 +2720,43 @@
     }
     _build() {
       const c = this.config;
-      const color = stcColor(c.color);
+      const color = stcColor(this._liveColor || c.color);
       this.innerHTML = `
       <div style="display:flex; align-items:center; gap:10px; padding:2px 4px 2px 4px; min-height:40px;">
-        ${c.icon ? iconHtml(c.icon, { size: "26px", style: `color:${color}; flex:none;` }) : ""}
+        ${c.icon ? iconHtml(c.icon, { size: "26px", style: `color:${color}; flex:none; transition:color .6s ease;`, cls: "stc-icon" }) : ""}
         <div class="stc-title" style="flex:1; min-width:0; font-size:1.6rem; font-weight:500; line-height:1.2; color:var(--primary-text-color); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
         <div class="stc-summary" style="flex:none; max-width:55%; font-size:0.9rem; color:var(--secondary-text-color); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:right;"></div>
       </div>`;
       this.querySelector(".stc-title").textContent = c.title;
       this._summaryEl = this.querySelector(".stc-summary");
+      this._iconEl = this.querySelector(".stc-icon");
       if (this._summary) this._summaryEl.textContent = this._summary;
       hydrateIcons(this);
     }
     _unsubscribe() {
-      if (this._unsub) {
-        this._unsub.then((unsub) => unsub()).catch(() => {
-        });
-        this._unsub = null;
-      }
+      [this._unsub, this._unsubColor].forEach((p) => p && p.then((unsub) => unsub && unsub()).catch(() => {
+      }));
+      this._unsub = null;
+      this._unsubColor = null;
     }
-    // Render the summary template live, as HA's own markdown card does.
+    // The summary, and the colour when it comes from a template. A new colour is
+    // also announced (stc-color) for a Section Panel to tint its background.
     _subscribe() {
       this._unsubscribe();
       this._summary = "";
       if (this._summaryEl) this._summaryEl.textContent = "";
-      const template = this.config && this.config.summary;
-      if (!template || !this._hass || !this._hass.connection) return;
-      if (!/[{%]/.test(template)) {
-        this._summary = template;
-        if (this._summaryEl) this._summaryEl.textContent = template;
-        return;
-      }
-      this._unsub = this._hass.connection.subscribeMessage(
-        (msg) => {
-          if (msg.result === void 0) return;
-          this._summary = String(msg.result).trim();
-          if (this._summaryEl) this._summaryEl.textContent = this._summary;
-        },
-        { type: "render_template", template, strict: false, report_errors: false }
-      ).catch(() => null);
+      if (!this.config || !this._hass) return;
+      this._unsub = stcRender(this._hass, this.config.summary, (text) => {
+        this._summary = text;
+        if (this._summaryEl) this._summaryEl.textContent = text;
+      });
+      this._liveColor = null;
+      this._unsubColor = stcRender(this._hass, this.config.color_template, (color) => {
+        this._liveColor = color || null;
+        const css = stcColor(this._liveColor || this.config.color);
+        if (this._iconEl) this._iconEl.style.color = css;
+        this.dispatchEvent(new CustomEvent("stc-color", { detail: css, bubbles: true }));
+      });
     }
     getCardSize() {
       return 1;
@@ -2782,15 +2799,18 @@
       { name: "title", selector: { text: {} } },
       { name: "icon", selector: { icon: {} } },
       { name: "color", selector: { ui_color: {} } },
+      STC_COLOR_TEMPLATE_FIELD,
       { name: "summary", selector: { template: {} } }
     ],
     labels: {
       title: "Title",
       icon: "Icon (optional)",
       color: "Colour (icon and panel)",
+      color_template: STC_COLOR_TEMPLATE_LABEL,
       summary: "Summary on the right (optional template)"
     },
     helpers: {
+      color_template: STC_COLOR_TEMPLATE_HELPER,
       summary: `A Home Assistant template, e.g. {{ states('vacuum.gregg') | title }}`
     }
   });
@@ -2873,11 +2893,16 @@
       const color = stcColor(c.color);
       this.innerHTML = `
       <div class="spc-panel" style="position:relative; border-radius:24px; padding:12px; display:flex; flex-direction:column; gap:12px; isolation:isolate;">
-        <div style="position:absolute; inset:0; border-radius:inherit; background:${color}; opacity:0.1; z-index:-1; pointer-events:none;"></div>
+        <div class="spc-bg" style="position:absolute; inset:0; border-radius:inherit; background:${color}; opacity:0.1; z-index:-1; pointer-events:none; transition:background-color .6s ease;"></div>
       </div>`;
       const panel = this.querySelector(".spc-panel");
+      const bg = this.querySelector(".spc-bg");
+      panel.addEventListener("stc-color", (ev) => {
+        ev.stopPropagation();
+        bg.style.background = ev.detail;
+      });
       this._title = document.createElement(`section-title-card${SUFFIX}`);
-      this._title.setConfig({ title: c.title, icon: c.icon, color: c.color, summary: c.summary });
+      this._title.setConfig({ title: c.title, icon: c.icon, color: c.color, color_template: c.color_template, summary: c.summary });
       if (this._hass) this._title.hass = this._hass;
       panel.appendChild(this._title);
       const token = this._token = {};
