@@ -59,7 +59,8 @@ def members(hass: HomeAssistant, entity_id: str) -> list[str]:
     """A group's member lights, or the light itself."""
     st = hass.states.get(entity_id)
     ids = st.attributes.get(ATTR_ENTITY_ID) if st else None
-    return [i for i in ids if i.startswith("light.")] if isinstance(ids, list) else [entity_id]
+    # Hue groups give a set, light groups a list.
+    return sorted(i for i in ids if i.startswith("light.")) if isinstance(ids, (list, tuple, set, frozenset)) else [entity_id]
 
 
 async def async_apply(
