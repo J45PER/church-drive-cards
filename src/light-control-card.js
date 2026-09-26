@@ -335,6 +335,20 @@ function lccLabelScenes(config, hass) {
 export const LightControlCardEditor = createFormEditor({
   fill: lccFillDefaultScenes,
   buttons: [{ label: 'Reset', field: 'scenes', variant: 'danger', apply: (config) => ({ ...config, scenes: 'reset' }) }],
+  // Scenes past Max scenes are left off the card: say so above the list.
+  alerts: [
+    {
+      field: 'scenes',
+      text: (config) => {
+        const count = Array.isArray(config.scenes) ? config.scenes.length : 0;
+        const max = config.max_scenes != null && config.max_scenes !== '' ? Number(config.max_scenes) : LCC_DEFAULT_MAX_SCENES;
+        if (count <= max) return '';
+        return max <= 0
+          ? 'Max scenes is 0, so no scenes show on the card.'
+          : `Only the first ${max} of these ${count} scenes show on the card. Raise Max scenes to show them all.`;
+      },
+    },
+  ],
   display: lccLabelScenes,
   store: (config) =>
     config.scenes ? { ...config, scenes: config.scenes.map(({ label: _label, ...s }) => s) } : config,

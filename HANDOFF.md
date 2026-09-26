@@ -34,6 +34,12 @@ devices before each release.
 in a room with several lights should give each light its own shade, blended
 between the colours (v0.10.6). Nobody has looked yet.
 
+**On Beta, not yet released:** the light card editor shows a yellow warning
+above the Scenes list when it has more scenes than *Max scenes* shows ("Only the
+first 8 of these 10 scenes show on the card…"). It uses a new `alerts` option in
+`src/form-editor.js` (`{ field, text(config) }`), placed in the list's shadow DOM
+like the Reset button.
+
 **What changed on 2026-09-25/26 (v0.10.6 → v0.10.10):**
 - **v0.10.6: every light gets its own colour.** A custom two-colour scene put the
   same colour on several lights, because colours were dealt round in turn.
@@ -437,8 +443,6 @@ Integration modules (`custom_components/church_drive/`):
 
 - The colour-spread check at the top of this file.
 - "My Boy Hugo" is unavailable; the user may want to power-cycle or re-pair it.
-- Offered, not built: an editor warning when a card lists more scenes than
-  `max_scenes` shows.
 - The active-scene select doesn't list Hue-only scenes (e.g. Hue's Ruby glow in a
   room). It only lists library scenes.
 - `scene.kitchen_kitchen_rest` has a doubled name. It's harmless and could be

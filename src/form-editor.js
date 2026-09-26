@@ -8,7 +8,8 @@
 // (e.g. list labels) and `store(value)` takes them back out. `buttons`
 // ([{ label, apply(config), field?, variant? }]) sit on the Add row of the list
 // field `field` (left of Add), or under the form; their result goes through
-// `fill` before it's saved.
+// `fill` before it's saved. `alerts` ([{ field, text(config) }]) show a
+// warning at the top of a list field while `text` returns something.
 
 const same = (c) => c;
 
@@ -23,7 +24,8 @@ function findSelector(root, name, depth = 0) {
   return null;
 }
 
-// Put a button on a list field's Add row: it goes left, Add goes right.
+// Put an element in a list field's items container: a button on the Add row
+// (it goes left, Add goes right), an alert across the top.
 function placeInList(form, field, button) {
   const selector = findSelector(form.shadowRoot, field);
   const list = selector && selector.shadowRoot && selector.shadowRoot.querySelector('ha-selector-object');
@@ -35,7 +37,8 @@ function placeInList(form, field, button) {
     style.className = 'cd-row';
     style.textContent =
       '.items-container{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;row-gap:8px}' +
-      '.items-container>ha-sortable{flex-basis:100%}.items-container>.cd-button{order:1}.items-container>ha-button:not(.cd-button){order:2}';
+      '.items-container>ha-sortable{flex-basis:100%}.items-container>.cd-button{order:1}.items-container>ha-button:not(.cd-button){order:2}' +
+      '.items-container>.cd-alert{order:-1;flex-basis:100%}';
     list.shadowRoot.appendChild(style);
   }
   button.style.marginTop = '';
@@ -43,7 +46,7 @@ function placeInList(form, field, button) {
   return true;
 }
 
-export function createFormEditor({ schema, labels = {}, helpers = {}, normalize = same, fill = same, display = same, store = same, buttons = [] }) {
+export function createFormEditor({ schema, labels = {}, helpers = {}, normalize = same, fill = same, display = same, store = same, buttons = [], alerts = [] }) {
   return class extends HTMLElement {
     setConfig(config) {
       this._config = normalize(config || {});
@@ -71,6 +74,12 @@ export function createFormEditor({ schema, labels = {}, helpers = {}, normalize 
           button.addEventListener('click', () => this._changed(fill(apply(this._config), this._hass)));
           return { button, field };
         });
+        this._alerts = alerts.map(({ field, text }) => {
+          const alert = document.createElement('ha-alert');
+          alert.className = 'cd-alert';
+          alert.setAttribute('alert-type', 'warning');
+          return { button: alert, field, text };
+        });
       }
       const filled = fill(this._config, this._hass);
       if (filled !== this._config) {
@@ -82,6 +91,11 @@ export function createFormEditor({ schema, labels = {}, helpers = {}, normalize 
       this._form.schema = schema(this._config, this._hass);
       this._form.computeLabel = (s) => labels[s.name] || s.title || s.name;
       this._form.computeHelper = (s) => helpers[s.name];
+      (this._alerts || []).forEach((a) => {
+        const message = a.text(this._config) || '';
+        a.button.textContent = message;
+        a.button.style.display = message ? '' : 'none';
+      });
       this._placeButtons();
     }
 
@@ -89,7 +103,7 @@ export function createFormEditor({ schema, labels = {}, helpers = {}, normalize 
     // seconds to reach the list's Add row, else put the button under the form.
     _placeButtons(tries = 0) {
       clearTimeout(this._placeTimer);
-      const waiting = (this._buttons || []).filter(({ button, field }) => !(field && placeInList(this._form, field, button)));
+      const waiting = [...(this._buttons || []), ...(this._alerts || [])].filter(({ button, field }) => !(field && placeInList(this._form, field, button)));
       if (!waiting.length) return;
       if (tries < 20) {
         this._placeTimer = setTimeout(() => this._placeButtons(tries + 1), 100);
