@@ -334,7 +334,7 @@ function lccLabelScenes(config, hass) {
 
 export const LightControlCardEditor = createFormEditor({
   fill: lccFillDefaultScenes,
-  buttons: [{ label: 'Reset scenes', apply: (config) => ({ ...config, scenes: 'reset' }) }],
+  buttons: [{ label: 'Reset', field: 'scenes', variant: 'danger', apply: (config) => ({ ...config, scenes: 'reset' }) }],
   display: lccLabelScenes,
   store: (config) =>
     config.scenes ? { ...config, scenes: config.scenes.map(({ label: _label, ...s }) => s) } : config,

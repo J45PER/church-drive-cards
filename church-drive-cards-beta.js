@@ -1,6 +1,31 @@
 (() => {
   // src/form-editor.js
   var same = (c) => c;
+  function findSelector(root, name, depth = 0) {
+    if (!root || depth > 6) return null;
+    for (const el of root.querySelectorAll("*")) {
+      if (el.localName === "ha-selector" && el.name === name) return el;
+      const found = el.shadowRoot && findSelector(el.shadowRoot, name, depth + 1);
+      if (found) return found;
+    }
+    return null;
+  }
+  function placeInList(form, field, button) {
+    const selector = findSelector(form.shadowRoot, field);
+    const list = selector && selector.shadowRoot && selector.shadowRoot.querySelector("ha-selector-object");
+    const container = list && list.shadowRoot && list.shadowRoot.querySelector(".items-container");
+    if (!container) return false;
+    if (button.parentNode === container) return true;
+    if (!list.shadowRoot.querySelector("style.cd-row")) {
+      const style = document.createElement("style");
+      style.className = "cd-row";
+      style.textContent = ".items-container{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;row-gap:8px}.items-container>ha-sortable{flex-basis:100%}.items-container>.cd-button{order:1}.items-container>ha-button:not(.cd-button){order:2}";
+      list.shadowRoot.appendChild(style);
+    }
+    button.style.marginTop = "";
+    container.appendChild(button);
+    return true;
+  }
   function createFormEditor({ schema, labels = {}, helpers = {}, normalize = same, fill = same, display = same, store = same, buttons = [] }) {
     return class extends HTMLElement {
       setConfig(config) {
@@ -17,12 +42,14 @@
           this._form = document.createElement("ha-form");
           this._form.addEventListener("value-changed", (ev) => this._changed(store(ev.detail.value)));
           this.appendChild(this._form);
-          buttons.forEach(({ label, apply }) => {
+          this._buttons = buttons.map(({ label, apply, field, variant }) => {
             const button = document.createElement("ha-button");
+            button.className = "cd-button";
             button.textContent = label;
-            button.style.marginTop = "16px";
+            button.setAttribute("appearance", "filled");
+            if (variant) button.setAttribute("variant", variant);
             button.addEventListener("click", () => this._changed(fill(apply(this._config), this._hass)));
-            this.appendChild(button);
+            return { button, field };
           });
         }
         const filled = fill(this._config, this._hass);
@@ -35,6 +62,23 @@
         this._form.schema = schema(this._config, this._hass);
         this._form.computeLabel = (s) => labels[s.name] || s.title || s.name;
         this._form.computeHelper = (s) => helpers[s.name];
+        this._placeButtons();
+      }
+      // HA renders the form's insides asynchronously: try for a couple of
+      // seconds to reach the list's Add row, else put the button under the form.
+      _placeButtons(tries = 0) {
+        clearTimeout(this._placeTimer);
+        const waiting = (this._buttons || []).filter(({ button, field }) => !(field && placeInList(this._form, field, button)));
+        if (!waiting.length) return;
+        if (tries < 20) {
+          this._placeTimer = setTimeout(() => this._placeButtons(tries + 1), 100);
+          return;
+        }
+        waiting.forEach(({ button }) => {
+          if (button.parentNode === this) return;
+          button.style.marginTop = "16px";
+          this.appendChild(button);
+        });
       }
       _changed(config) {
         this._config = config;
@@ -1396,7 +1440,7 @@
   }
   var LightControlCardEditor = createFormEditor({
     fill: lccFillDefaultScenes,
-    buttons: [{ label: "Reset scenes", apply: (config) => ({ ...config, scenes: "reset" }) }],
+    buttons: [{ label: "Reset", field: "scenes", variant: "danger", apply: (config) => ({ ...config, scenes: "reset" }) }],
     display: lccLabelScenes,
     store: (config) => config.scenes ? { ...config, scenes: config.scenes.map(({ label: _label, ...s }) => s) } : config,
     schema: (config, hass) => {
