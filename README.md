@@ -37,7 +37,7 @@ entities:
 ```
 
 ### `alarm-panel-card`
-Status header, live entry/exit-delay countdown, icon-only arm/disarm buttons (only the modes the entity actually supports), whole-card colour wash on hover.
+The status as the card title in its colour; a ring round the shield that empties during an entry or exit delay, with what to do and the timer on the same line; then Disarm / Home / Away / Night buttons (only the modes the entity supports). The card is the same size in every state, and fades towards the state colour as a delay runs out.
 
 ```yaml
 type: custom:alarm-panel-card
