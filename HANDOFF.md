@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-26. Current release: **v0.10.7**.*
+*Last updated 2026-09-26. Current release: **v0.10.8**.*
 
 ## Where this stands
 
@@ -41,6 +41,16 @@ devices before each release.
 2. **Default scenes.** A card with no scenes chosen now shows Bright, Dimmed,
    Relax and Nightlight (universal, applied to the card's room), the same on
    every card. The old auto-pick of the room's Hue scenes is gone.
+
+**New in v0.10.8:**
+- A scene tile is only shown selected while some of its lights are on. After
+  the v0.10.7 restart, `select.hayleys_bedroom_scene` came back as
+  "Concentrate" with every bedroom light off (the Hue room still reports on
+  because the unavailable "My Boy Hugo" lamp is on as far as the bridge knows),
+  so the tile stayed lit with the others dimmed.
+- Scene selects now check again once HA has fully started
+  (`EVENT_HOMEASSISTANT_STARTED`), as the restored scene is checked before the
+  Hue lights have loaded.
 
 **New in v0.10.7 (checked by the user on Beta):**
 - The editor's Scenes list starts filled with Bright, Dimmed, Relax and
