@@ -2900,6 +2900,27 @@
       }).catch(() => {
       });
     }
+    connectedCallback() {
+      requestAnimationFrame(() => this._spaceFromAbove());
+    }
+    // A panel right under another panel in the same section gets the same gap
+    // as between section columns (32px; the section's own gap between cards is
+    // 8px), so stacked panels read as separate groups.
+    _spaceFromAbove() {
+      const up = (el) => el.parentNode || el.getRootNode && el.getRootNode().host || null;
+      let wrap = this;
+      for (let i = 0; i < 6 && wrap && wrap.localName !== "hui-card"; i += 1) wrap = up(wrap);
+      let prev = null;
+      for (let i = 0; i < 3 && wrap && !prev; i += 1) {
+        prev = wrap.previousElementSibling;
+        wrap = up(wrap);
+      }
+      const prevCard = prev && (prev.localName === "hui-card" ? prev : prev.querySelector && prev.querySelector("hui-card"));
+      const type = prevCard && prevCard.config && String(prevCard.config.type || "");
+      const stacked = !!type && type.includes("section-panel-card");
+      this.style.display = "block";
+      this.style.marginTop = stacked ? "calc(var(--ha-view-sections-column-gap, 32px) - 8px)" : "";
+    }
     getCardSize() {
       return 1 + (this._cards || []).reduce((n, card) => n + (card.getCardSize ? Number(card.getCardSize()) || 1 : 1), 0);
     }
