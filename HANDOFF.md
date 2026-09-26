@@ -62,6 +62,18 @@ short live summary on the right.
 - HA colour names are drawn as `var(--<name>-color, <hex>)` with a hex
   fallback table (`STC_FALLBACK`).
 - The user confirmed Quick Actions looks good (panel gaps: 32px between stacked panels, 12px inside). Next: the other Mobile tabs, then release and swap the `-beta` types.
+- **All Mobile tabs converted** (beta type), one HA section per column holding
+  panels:
+  - Lighting (2 columns): [Ground Floor, Garden] [Middle Floor, Top Floor];
+    amber, Garden green; summaries "N rooms on" / "All off" from each floor's
+    Hue room lights.
+  - Security: [Alarm (green), Doors & Motion (indigo, "Doors closed" / "N
+    open")] [Outdoor Cameras, Indoor Cameras (blue-grey)] [Fire Alarm (red,
+    safe mode state)]. The empty heading-only section was dropped.
+  - Climate: [Heating (deep-orange), Temperature (orange), Humidity (blue)]
+    [Cooling (light-blue), Air Purifier (green, PM2.5)] [Blinds (brown; blank
+    while the blind reports unknown)].
+  - Cleaning: one Cleaning panel (blue, state and battery).
 
 **New in v0.11.0 (2026-09-26): alarm card redesign.** The user asked for a
 bigger card that doesn't change size when the timer shows, a layout matching
