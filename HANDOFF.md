@@ -31,13 +31,21 @@ devices before each release.
 - Tiles clear when the lights go off (v0.10.9, Hayley's Bedroom).
 - Fuller scene row first (v0.10.10) and the scene-count warning (v0.10.11, on
   Beta).
+- Alarm card redesign (v0.11.0) on Beta in demo mode.
 
 **Still to check on real lights:** a colour scene (e.g. a two-colour custom one)
 in a room with several lights should give each light its own shade, blended
-between the colours (v0.10.6). Nobody has looked yet.
+between the colours (v0.10.6). Nobody has looked yet. And the new alarm card
+(v0.11.0) during a real exit or entry delay: the ring should empty, the timer
+count down on the title's row, and the card fade towards amber/orange.
 
-**New in v0.11.0: alarm card redesign** (mock-ups:
-claude.ai/artifact/UkEti2a7AQnNuqihWt8Mek, the user picked "C2" plus R4's tint).
+**New in v0.11.0 (2026-09-26): alarm card redesign.** The user asked for a
+bigger card that doesn't change size when the timer shows, a layout matching
+the other cards, and the timer in line with the status. Mock-ups went through
+three rounds (claude.ai/artifact/UkEti2a7AQnNuqihWt8Mek): four layouts, then
+"C" (countdown ring) with the status moved up as the title, then refinements.
+The user picked "C2" as it was, plus R4's background tint (only during a delay
+or when triggered).
 - The card no longer grows when a delay starts; it's the same height in every
   state (`getCardSize` 4).
 - The status is the card title (1.5rem, 500, like the light and battery card
@@ -117,7 +125,7 @@ colours and logs a warning ("Couldn't play … on the Hue bridge"). Read it with
 | Card | Source | What it is |
 |---|---|---|
 | `battery-zone-card` / `gauge-zone-card` | `src/gauge-zone-card.js` | Zone card of gradient-filled value rows, worst-first, red/orange/green |
-| `alarm-panel-card` | `src/alarm-panel-card.js` | Alarm status, live entry/exit countdown, icon-only arm/disarm buttons |
+| `alarm-panel-card` | `src/alarm-panel-card.js` | Status as the title, countdown ring and timer, labelled arm/disarm buttons; fixed size |
 | `light-control-card` | `src/light-control-card.js` | Light / zone / room control with scene tiles |
 | `scene-styles-card` | `src/scene-styles-card.js` | Central scene tile looks (icon, colours, picture) |
 | `scene-builder-card` | `src/scene-builder-card.js` | Make custom universal scenes |
@@ -202,7 +210,7 @@ Integration modules (`custom_components/church_drive/`):
   - `church-drive-cards-beta.js` registers every card as `<name>-beta`.
   - HA loads it from resource `436186c683fe4c7d81c865b67bb0e109`:
     `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's pinned to `9011fa4` (the v0.10.11 change; the same card code as the release).
+    It's pinned to `ae74ca1` (the v0.11.0 alarm card; the same card code as the release).
   - To test a branch: push it, repoint the resource, and ask for a hard refresh.
   - jsDelivr is blocked from the cloud container, but works for the user.
 - **Rollback:** download an older release in HACS and restart.
@@ -412,7 +420,18 @@ Integration modules (`custom_components/church_drive/`):
 ### Battery / gauge zone card and alarm panel card
 - The battery/gauge card has a full visual editor: rows list, colours/units/icons
   section, and icon modes `battery | gauge | entity | custom`.
-- The alarm card has an entity picker and a demo section.
+- The alarm card has an entity picker and a demo section (state, mode being
+  armed to, countdown, by, time, supported features).
+- **Alarm card layout (v0.11.0):** 16px padding; the status title (1.5rem,
+  state colour); a row with the 72px ring (shield icon inside; empties as a
+  delay runs), two lines of what's happening, and the timer (2rem, hidden but
+  still taking space when there's no delay); then the mode buttons (56px, icon
+  over label, only the modes in `supported_features`). Colours: Disarmed green,
+  Home blue, Away red, Night purple, exit delay amber, entry delay deep orange,
+  triggered red. Background tint 6% → 32% of the state colour as a delay runs
+  out, 32% when triggered. The real alarm is `alarm_control_panel.church_drive_alarm`
+  (Home + Away; attributes `entrySecondsLeft`, `exitSecondsLeft`, `targetState`,
+  `lastArmedBy/Time`, `lastDisarmedBy/Time`).
 - Starting configs pick real entities.
 
 ### All cards
@@ -440,6 +459,9 @@ Integration modules (`custom_components/church_drive/`):
     Kitchen tab (Ambience + Spotlights).
   - **Battery Status**, **Alarm**, and **Design Presets** (tabs: main, Beta, Scene
     styles, Scene builder).
+  - **Alarm cards:** Mobile → Quick Actions and Security tabs, the Alarm
+    dashboard (`alarm-panel`), Design Presets main (demo), and two demo cards on
+    the Beta tab (Entry delay 22s, Disarmed).
 - **Scenes on the real cards (2026-09-26):** every light card has the four
   defaults aimed at its Hue room (`universal:<key>@light.<room>`; Bedroom is
   `light.second_bedroom`, Garden `light.garden`), except:
@@ -464,7 +486,7 @@ Integration modules (`custom_components/church_drive/`):
 
 ## Open items
 
-- The colour-spread check at the top of this file.
+- The colour-spread and real alarm-delay checks at the top of this file.
 - "My Boy Hugo" is unavailable; the user may want to power-cycle or re-pair it.
 - The active-scene select doesn't list Hue-only scenes (e.g. Hue's Ruby glow in a
   room). It only lists library scenes.
