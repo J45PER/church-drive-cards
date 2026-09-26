@@ -36,6 +36,25 @@ devices before each release.
 in a room with several lights should give each light its own shade, blended
 between the colours (v0.10.6). Nobody has looked yet.
 
+**On Beta, not yet released: alarm card redesign** (mock-ups:
+claude.ai/artifact/UkEti2a7AQnNuqihWt8Mek, the user picked "C2" plus R4's tint).
+- The card no longer grows when a delay starts; it's the same height in every
+  state (`getCardSize` 4).
+- The status is the card title (1.5rem, 500, like the light and battery card
+  titles) in its state colour; "Arming Away" names the mode being armed to.
+- Under it: a 72px ring round the shield that empties during a delay, what's
+  happening ("Leave now / until armed", "Disarm now / until the alarm sounds",
+  or who armed/disarmed it and when), and the timer on the same line.
+- Buttons are 56px, icon over a label (Disarm / Home / Away / Night), 12px
+  corners; the mode being armed to lights up during a delay.
+- The card background fades from normal towards the state colour as a delay
+  runs out (6% → 32%), and is 32% when triggered. The old hover-only wash is gone.
+- The alarm only reports seconds left, so the delay's full length is the most
+  seen since it started. The local countdown only resyncs when the reported
+  figure changes (hass is re-set on every change in the house). Demo mode loops
+  the countdown so the ring and tint can be seen on Beta.
+- The Beta tab has two demo alarm cards: Entry delay (22s) and Disarmed.
+
 **What changed on 2026-09-25/26 (v0.10.6 → v0.10.11):**
 - **v0.10.6: every light gets its own colour.** A custom two-colour scene put the
   same colour on several lights, because colours were dealt round in turn.
