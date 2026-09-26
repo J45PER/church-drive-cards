@@ -62,8 +62,9 @@ short live summary on the right.
 - HA colour names are drawn as `var(--<name>-color, <hex>)` with a hex
   fallback table (`STC_FALLBACK`).
 - The user confirmed Quick Actions looks good (panel gaps: 32px between stacked panels, 12px inside). Next: the other Mobile tabs, then release and swap the `-beta` types.
-- **All Mobile tabs converted** (beta type), one HA section per column holding
-  panels:
+- **All Mobile tabs converted** and switched to the released `custom:section-panel-card`
+  in v0.12.0, one HA section per column holding panels (the user later split
+  Lighting into four sections, one panel each):
   - Lighting (2 columns): [Ground Floor, Garden] [Middle Floor, Top Floor];
     amber, Garden green; summaries "N rooms on" / "All off" from each floor's
     Hue room lights.
@@ -248,7 +249,7 @@ Integration modules (`custom_components/church_drive/`):
   - `church-drive-cards-beta.js` registers every card as `<name>-beta`.
   - HA loads it from resource `436186c683fe4c7d81c865b67bb0e109`:
     `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's pinned to `ae74ca1` (the v0.11.0 alarm card; the same card code as the release).
+    It's pinned to `454e060` (the v0.12.0 section panels; the same card code as the release).
   - To test a branch: push it, repoint the resource, and ask for a hard refresh.
   - jsDelivr is blocked from the cloud container, but works for the user.
 - **Rollback:** download an older release in HACS and restart.
