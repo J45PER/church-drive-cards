@@ -39,6 +39,22 @@ between the colours (v0.10.6). Nobody has looked yet. And the new alarm card
 (v0.11.0) during a real exit or entry delay: the ring should empty, the timer
 count down on the title's row, and the card fade towards amber/orange.
 
+**In progress: dashboard section style ("D")** (mock-ups:
+claude.ai/artifact/3CCBXYAz5YgKPRxYG7kFrQ). The user wanted bigger section
+titles and a background behind each section. Picked D: each section on a faint
+panel of its own colour, a 1.6rem title with the icon in that colour, and a
+short live summary on the right.
+- New card `section-title-card` (`src/section-title-card.js`): `title`, `icon`,
+  `color` (HA colour name or CSS colour), `summary` (a template, rendered live
+  over the `render_template` subscription like HA's markdown card).
+- Panels use HA's own section `background: {color, opacity: 10}`.
+- Mobile → Quick Actions is converted, on the **beta** card type
+  (`custom:section-title-card-beta`) until it's released; then swap the type.
+  Sections: Security (green), Lights (amber), Cleaning (blue), Climate
+  (deep-orange; split out of the Security section), with
+  `dense_section_placement: true`.
+- Next: the other Mobile tabs once the user is happy with Quick Actions.
+
 **New in v0.11.0 (2026-09-26): alarm card redesign.** The user asked for a
 bigger card that doesn't change size when the timer shows, a layout matching
 the other cards, and the timer in line with the status. Mock-ups went through
@@ -129,6 +145,7 @@ colours and logs a warning ("Couldn't play … on the Hue bridge"). Read it with
 | `light-control-card` | `src/light-control-card.js` | Light / zone / room control with scene tiles |
 | `scene-styles-card` | `src/scene-styles-card.js` | Central scene tile looks (icon, colours, picture) |
 | `scene-builder-card` | `src/scene-builder-card.js` | Make custom universal scenes |
+| `section-title-card` | `src/section-title-card.js` | Large section title, coloured icon, live template summary |
 
 Shared frontend modules:
 - `src/form-editor.js`: the `ha-form` visual-editor base.
