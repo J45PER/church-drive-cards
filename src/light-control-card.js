@@ -286,20 +286,58 @@ function lccDemoFor(room) {
   return lccDemoCache[key];
 }
 
+// The editor's scene choices, from the real home or the pretend one.
+function lccEditorSceneOptions(config, hass) {
+  // In demo mode the scene choices come from the pretend home.
+  const sceneDemo = config.demo ? lccDemoFor(config.demo_room) : null;
+  return sceneDemo
+    ? lccSceneChoices(sceneDemo.hass(), {
+        ...config,
+        mode: config.mode || 'room',
+        area: sceneDemo.area,
+        entity: config.mode === 'group' ? sceneDemo.roomGroup : sceneDemo.firstLight,
+      })
+    : lccSceneChoices(hass, config);
+}
+
+// A new card's scene list starts with the four defaults, aimed at its room
+// (the first place in the choices), so they show in the editor. If the card
+// is moved to another room before they're changed, they follow it.
+function lccFillDefaultScenes(config, hass) {
+  if (!universalScenes().length) return config;
+  const options = lccEditorSceneOptions({ ...config, scenes: undefined }, hass);
+  const defaults = LCC_DEFAULT_SCENES.map((key) => {
+    const option = options.find((o) => o.value === universalRef(key) || o.value.startsWith(`${universalRef(key)}@`));
+    return option ? { entity: option.value } : null;
+  }).filter(Boolean);
+  if (!defaults.length) return config;
+  if (config.scenes == null) return { ...config, scenes: defaults };
+  const current = lccNormalizeScenes(config.scenes);
+  const untouched =
+    current.length === LCC_DEFAULT_SCENES.length &&
+    current.every((sc, i) => Object.keys(sc).length === 1 && String(sc.entity).split('@')[0] === universalRef(LCC_DEFAULT_SCENES[i]));
+  const elsewhere = current.some((sc) => !options.some((o) => o.value === sc.entity));
+  return untouched && elsewhere ? { ...config, scenes: defaults } : config;
+}
+
+// Each listed scene is labelled by its name and place ("Bright · Kitchen"),
+// or its name override, instead of its reference.
+function lccLabelScenes(config, hass) {
+  if (!config.scenes) return config;
+  const options = lccEditorSceneOptions(config, hass);
+  const labelOf = (s) => s.name || (options.find((o) => o.value === s.entity) || {}).label || s.entity;
+  return { ...config, scenes: lccNormalizeScenes(config.scenes).map((s) => ({ ...s, label: labelOf(s) })) };
+}
+
 export const LightControlCardEditor = createFormEditor({
+  fill: lccFillDefaultScenes,
+  display: lccLabelScenes,
+  store: (config) =>
+    config.scenes ? { ...config, scenes: config.scenes.map(({ label, ...s }) => s) } : config,
   schema: (config, hass) => {
     const mode = config.mode || 'light';
     loadUniversalScenes(hass);
-    // In demo mode the scene choices come from the pretend home.
-    const sceneDemo = config.demo ? lccDemoFor(config.demo_room) : null;
-    const sceneOptions = sceneDemo
-      ? lccSceneChoices(sceneDemo.hass(), {
-          ...config,
-          mode: config.mode || 'room',
-          area: sceneDemo.area,
-          entity: config.mode === 'group' ? sceneDemo.roomGroup : sceneDemo.firstLight,
-        })
-      : lccSceneChoices(hass, config);
+    const sceneOptions = lccEditorSceneOptions(config, hass);
     // Choices for the "Show" list, from the real home or the pretend one.
     let showField = [];
     if (mode === 'room' || mode === 'group') {
@@ -412,8 +450,7 @@ export const LightControlCardEditor = createFormEditor({
         selector: {
           object: {
             multiple: true,
-            label_field: 'name',
-            description_field: 'entity',
+            label_field: 'label',
             fields: {
               entity: { label: 'Scene', required: true, selector: { select: { mode: 'dropdown', options: sceneOptions } } },
               name: { label: 'Name override', selector: { text: {} } },
@@ -439,7 +476,7 @@ export const LightControlCardEditor = createFormEditor({
     icon: 'Icon override (optional)',
     max_scenes: 'Max scenes',
     scene_names: 'Scene names',
-    scenes: 'Scenes (leave empty for Bright, Dimmed, Relax and Nightlight)',
+    scenes: 'Scenes',
     demo: 'Use pretend lights instead of real ones',
     demo_room: 'Pretend room',
   },
@@ -505,8 +542,8 @@ export class LightControlCard extends HTMLElement {
       area: this._demo.area,
       entity: mode === 'group' ? this._demo.roomGroup : this._demo.firstLight,
       // Only universal scenes and scenes from the pretend home apply (real
-      // ones don't exist there); with none, the pretend home's are used.
-      scenes: lccNormalizeScenes(cfg.scenes).filter((sc) => lccIsUniversal(sc.entity) || this._demo.states[sc.entity]),
+      // ones don't exist there); with none left, the defaults are used.
+      scenes: cfg.scenes == null ? undefined : lccNormalizeScenes(cfg.scenes).filter((sc) => lccIsUniversal(sc.entity) || this._demo.states[sc.entity]),
     };
   }
 
@@ -803,8 +840,8 @@ export class LightControlCard extends HTMLElement {
     const cfg = this._effectiveConfig();
     const max = cfg.max_scenes != null ? cfg.max_scenes : LCC_DEFAULT_MAX_SCENES;
     if (max <= 0) return [];
-    let items = lccNormalizeScenes(cfg.scenes);
-    if (!items.length) items = LCC_DEFAULT_SCENES.map((key) => ({ entity: universalRef(key) }));
+    // No scenes set at all: the defaults. An emptied list shows none.
+    const items = cfg.scenes == null ? LCC_DEFAULT_SCENES.map((key) => ({ entity: universalRef(key) })) : lccNormalizeScenes(cfg.scenes);
     // Universal scenes apply to the card's room (or its zones/groups, or its
     // lights when it shows no group) with one light.turn_on.
     const headGroups = headIds.filter((id) => lccIsGroupLike(hass.states[id]));

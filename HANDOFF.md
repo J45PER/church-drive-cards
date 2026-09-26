@@ -42,6 +42,16 @@ devices before each release.
    Relax and Nightlight (universal, applied to the card's room), the same on
    every card. The old auto-pick of the room's Hue scenes is gone.
 
+**On Beta, not yet released:**
+- The editor's Scenes list starts filled with Bright, Dimmed, Relax and
+  Nightlight for the card's room (`lccFillDefaultScenes`), so they can be
+  reordered or removed. Until they're changed they follow the card if its room
+  changes. An emptied list shows no scenes; a card with no `scenes` key at all
+  still shows the four.
+- List items are labelled "Bright · Kitchen" (or the name override) instead of
+  `universal:bright@light.kitchen`. The label is a form-only field: the shared
+  editor's `display`/`store` hooks add it and strip it before saving.
+
 If a colour scene sets fixed colours but doesn't animate, the bridge probably
 rejected the palette body in `apply.py`. The integration falls back to per-light
 colours and logs a warning ("Couldn't play … on the Hue bridge"). Read it with
@@ -287,9 +297,10 @@ Integration modules (`custom_components/church_drive/`):
   - **Names:** hidden on tiles under 100px wide (`scene_names: auto`). `always` and
     `never` override that.
   - `max_scenes` defaults to 8, and 0 hides tiles.
-  - **Default scenes** (none chosen): universal Bright, Dimmed, Relax and
+  - **Default scenes** (no `scenes` key): universal Bright, Dimmed, Relax and
     Nightlight on the card's room, the same on every card
-    (`LCC_DEFAULT_SCENES`).
+    (`LCC_DEFAULT_SCENES`). The editor fills them into the list; an empty list
+    shows no scenes.
   - **Backgrounds:** an uploaded picture, else the central style, else a built-in
     palette, else the scene's own colours (custom scenes), else a colour from a
     name hash.

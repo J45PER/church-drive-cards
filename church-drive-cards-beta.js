@@ -1,6 +1,7 @@
 (() => {
   // src/form-editor.js
-  function createFormEditor({ schema, labels = {}, helpers = {}, normalize = (c) => c }) {
+  var same = (c) => c;
+  function createFormEditor({ schema, labels = {}, helpers = {}, normalize = same, fill = same, display = same, store = same }) {
     return class extends HTMLElement {
       setConfig(config) {
         this._config = normalize(config || {});
@@ -14,20 +15,24 @@
         if (!this._hass || !this._config) return;
         if (!this._form) {
           this._form = document.createElement("ha-form");
-          this._form.addEventListener("value-changed", (ev) => {
-            this._config = ev.detail.value;
-            this.dispatchEvent(
-              new CustomEvent("config-changed", { detail: { config: this._config }, bubbles: true, composed: true })
-            );
-            this._render();
-          });
+          this._form.addEventListener("value-changed", (ev) => this._changed(store(ev.detail.value)));
           this.appendChild(this._form);
         }
+        const filled = fill(this._config, this._hass);
+        if (filled !== this._config) {
+          this._changed(filled);
+          return;
+        }
         this._form.hass = this._hass;
-        this._form.data = this._config;
+        this._form.data = display(this._config, this._hass);
         this._form.schema = schema(this._config, this._hass);
         this._form.computeLabel = (s) => labels[s.name] || s.title || s.name;
         this._form.computeHelper = (s) => helpers[s.name];
+      }
+      _changed(config) {
+        this._config = config;
+        this.dispatchEvent(new CustomEvent("config-changed", { detail: { config }, bubbles: true, composed: true }));
+        this._render();
       }
     };
   }
@@ -1352,17 +1357,43 @@
     });
     return lccDemoCache[key];
   }
+  function lccEditorSceneOptions(config, hass) {
+    const sceneDemo = config.demo ? lccDemoFor(config.demo_room) : null;
+    return sceneDemo ? lccSceneChoices(sceneDemo.hass(), {
+      ...config,
+      mode: config.mode || "room",
+      area: sceneDemo.area,
+      entity: config.mode === "group" ? sceneDemo.roomGroup : sceneDemo.firstLight
+    }) : lccSceneChoices(hass, config);
+  }
+  function lccFillDefaultScenes(config, hass) {
+    if (!universalScenes().length) return config;
+    const options = lccEditorSceneOptions({ ...config, scenes: void 0 }, hass);
+    const defaults = LCC_DEFAULT_SCENES.map((key) => {
+      const option = options.find((o) => o.value === universalRef(key) || o.value.startsWith(`${universalRef(key)}@`));
+      return option ? { entity: option.value } : null;
+    }).filter(Boolean);
+    if (!defaults.length) return config;
+    if (config.scenes == null) return { ...config, scenes: defaults };
+    const current = lccNormalizeScenes(config.scenes);
+    const untouched = current.length === LCC_DEFAULT_SCENES.length && current.every((sc, i) => Object.keys(sc).length === 1 && String(sc.entity).split("@")[0] === universalRef(LCC_DEFAULT_SCENES[i]));
+    const elsewhere = current.some((sc) => !options.some((o) => o.value === sc.entity));
+    return untouched && elsewhere ? { ...config, scenes: defaults } : config;
+  }
+  function lccLabelScenes(config, hass) {
+    if (!config.scenes) return config;
+    const options = lccEditorSceneOptions(config, hass);
+    const labelOf = (s) => s.name || (options.find((o) => o.value === s.entity) || {}).label || s.entity;
+    return { ...config, scenes: lccNormalizeScenes(config.scenes).map((s) => ({ ...s, label: labelOf(s) })) };
+  }
   var LightControlCardEditor = createFormEditor({
+    fill: lccFillDefaultScenes,
+    display: lccLabelScenes,
+    store: (config) => config.scenes ? { ...config, scenes: config.scenes.map(({ label, ...s }) => s) } : config,
     schema: (config, hass) => {
       const mode = config.mode || "light";
       loadUniversalScenes(hass);
-      const sceneDemo = config.demo ? lccDemoFor(config.demo_room) : null;
-      const sceneOptions = sceneDemo ? lccSceneChoices(sceneDemo.hass(), {
-        ...config,
-        mode: config.mode || "room",
-        area: sceneDemo.area,
-        entity: config.mode === "group" ? sceneDemo.roomGroup : sceneDemo.firstLight
-      }) : lccSceneChoices(hass, config);
+      const sceneOptions = lccEditorSceneOptions(config, hass);
       let showField = [];
       if (mode === "room" || mode === "group") {
         const demo = config.demo ? lccDemoFor(config.demo_room) : null;
@@ -1468,8 +1499,7 @@
           selector: {
             object: {
               multiple: true,
-              label_field: "name",
-              description_field: "entity",
+              label_field: "label",
               fields: {
                 entity: { label: "Scene", required: true, selector: { select: { mode: "dropdown", options: sceneOptions } } },
                 name: { label: "Name override", selector: { text: {} } },
@@ -1495,7 +1525,7 @@
       icon: "Icon override (optional)",
       max_scenes: "Max scenes",
       scene_names: "Scene names",
-      scenes: "Scenes (leave empty for Bright, Dimmed, Relax and Nightlight)",
+      scenes: "Scenes",
       demo: "Use pretend lights instead of real ones",
       demo_room: "Pretend room"
     },
@@ -1556,8 +1586,8 @@
         area: this._demo.area,
         entity: mode === "group" ? this._demo.roomGroup : this._demo.firstLight,
         // Only universal scenes and scenes from the pretend home apply (real
-        // ones don't exist there); with none, the pretend home's are used.
-        scenes: lccNormalizeScenes(cfg.scenes).filter((sc) => lccIsUniversal(sc.entity) || this._demo.states[sc.entity])
+        // ones don't exist there); with none left, the defaults are used.
+        scenes: cfg.scenes == null ? void 0 : lccNormalizeScenes(cfg.scenes).filter((sc) => lccIsUniversal(sc.entity) || this._demo.states[sc.entity])
       };
     }
     static getConfigElement() {
@@ -1817,8 +1847,7 @@
       const cfg = this._effectiveConfig();
       const max = cfg.max_scenes != null ? cfg.max_scenes : LCC_DEFAULT_MAX_SCENES;
       if (max <= 0) return [];
-      let items = lccNormalizeScenes(cfg.scenes);
-      if (!items.length) items = LCC_DEFAULT_SCENES.map((key) => ({ entity: universalRef(key) }));
+      const items = cfg.scenes == null ? LCC_DEFAULT_SCENES.map((key) => ({ entity: universalRef(key) })) : lccNormalizeScenes(cfg.scenes);
       const headGroups = headIds.filter((id) => lccIsGroupLike(hass.states[id]));
       const rooms = headGroups.filter((id) => hass.states[id].attributes.hue_type === "room");
       const targets = rooms.length ? rooms : headGroups.length ? headGroups : [...headIds, ...memberIds];

@@ -3,8 +3,13 @@
 // schema (it can vary with the current config and home, e.g. light vs room),
 // `labels`/`helpers` map field names to label and helper text, and
 // `normalize(config)` can upgrade older config shapes before they're shown.
+// Optional: `fill(config, hass)` adds defaults once the home is known (saved
+// straight into the config), `display(config, hass)` adds form-only fields
+// (e.g. list labels) and `store(value)` takes them back out.
 
-export function createFormEditor({ schema, labels = {}, helpers = {}, normalize = (c) => c }) {
+const same = (c) => c;
+
+export function createFormEditor({ schema, labels = {}, helpers = {}, normalize = same, fill = same, display = same, store = same }) {
   return class extends HTMLElement {
     setConfig(config) {
       this._config = normalize(config || {});
@@ -21,20 +26,25 @@ export function createFormEditor({ schema, labels = {}, helpers = {}, normalize 
       if (!this._hass || !this._config) return;
       if (!this._form) {
         this._form = document.createElement('ha-form');
-        this._form.addEventListener('value-changed', (ev) => {
-          this._config = ev.detail.value;
-          this.dispatchEvent(
-            new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true })
-          );
-          this._render();
-        });
+        this._form.addEventListener('value-changed', (ev) => this._changed(store(ev.detail.value)));
         this.appendChild(this._form);
       }
+      const filled = fill(this._config, this._hass);
+      if (filled !== this._config) {
+        this._changed(filled);
+        return;
+      }
       this._form.hass = this._hass;
-      this._form.data = this._config;
+      this._form.data = display(this._config, this._hass);
       this._form.schema = schema(this._config, this._hass);
       this._form.computeLabel = (s) => labels[s.name] || s.title || s.name;
       this._form.computeHelper = (s) => helpers[s.name];
+    }
+
+    _changed(config) {
+      this._config = config;
+      this.dispatchEvent(new CustomEvent('config-changed', { detail: { config }, bubbles: true, composed: true }));
+      this._render();
     }
   };
 }
