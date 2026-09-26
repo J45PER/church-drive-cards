@@ -544,6 +544,10 @@ Integration modules (`custom_components/church_drive/`):
 
 ## Open items
 
+- **Likely next:** the other dashboards (Hayley, Living Room Panel, Alarm,
+  Battery Status) still use HA heading cards and plain sections; convert them
+  to Section Panels like Mobile when the user wants (the user said the Mobile
+  approach "will probably work for other pages too").
 - "My Boy Hugo" is unavailable; the user may want to power-cycle or re-pair it.
 - The active-scene select doesn't list Hue-only scenes (e.g. Hue's Ruby glow in a
   room). It only lists library scenes.
