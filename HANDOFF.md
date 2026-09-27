@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-27. Current release: **v0.17.0**.*
+*Last updated 2026-09-27. Current release: **v0.17.1**.*
 
 ## Where this stands
 
@@ -62,6 +62,16 @@ reported by the user, fix untested on the real fan).
   and the Heating panel changing colour.
 - Hold to test on the carbon monoxide card (sounds the real alarm; only when
   the user is happy to).
+
+**v0.17.1: visual tidy-ups.**
+- **Fan card:** the dial is 84px, like the purifier, CO and thermostat dials. It no
+  longer tints its background when on. Tints are kept for warnings only: purifier
+  poor air, CO alarm, zone door open/tamper.
+- **Alarm card:** the countdown ring's full length is the seconds left plus the time
+  since `last_changed` (ignored if the clocks are 10+ minutes apart). A card rebuilt
+  mid-delay used to refill the ring for the last ~15 s. The alarm's own attribute
+  counts 60 → 1 smoothly. The alarm ring is still 72px; the user was asked
+  whether to match it to 84px.
 
 **New in v0.17.0: Security Zone Card** (`security-zone-card`), live on Mobile →
 Security (released type) and demoed on Beta. The user chose it through several rounds of
