@@ -159,14 +159,14 @@ The **climate card** graph also shows the comfortable range and 40–60% humidit
 
 ### `device-health-card`
 
-Lists every device Church Drive watches, with whether it's responding, when it was last heard from and how often it usually reports. Stale devices show why, their last real reading and the fixes tried, with **Fix now** and **Reconnect** buttons.
+Lists every device Church Drive watches, with whether it's responding, when it was last heard from and how often it usually reports. Stale devices show why, their last real reading and the fixes tried, with a **Fix now** button (fixes also run automatically).
 
 **Device health** (in the integration): choose devices in Settings → Devices & services → Church Drive → Configure → Device health. Church Drive remembers each device's last real reading and spots when its state has gone stale:
 - **old readings**: a counter such as `runtime` went backwards (e.g. the Philips fan after a restart);
 - **stopped updating**: a device with a counter says it's on but hasn't updated for 3× its usual gap;
 - **unavailable** for more than 5 minutes.
 
-It then fixes it automatically: a refresh, then re-sending the last real state (fans and thermostats), then reconnecting its integration (at most every 6 hours). `sensor.church_drive_device_health` counts devices needing attention; the fan, air purifier, carbon monoxide, blind and climate cards show a "Not responding" banner on their own; `church_drive.health_fix` runs a fix on demand.
+It then fixes it automatically: a refresh, then re-sending the last real state (fans and thermostats). If a fan still doesn't respond, it nudges it (a few seconds in its quietest other mode, then back) after 1.5, 10 and 30 minutes. It never reloads an integration on its own, because reloading the Philips integration gets it stuck. `sensor.church_drive_device_health` counts devices needing attention; the fan, air purifier, carbon monoxide, blind and climate cards show a "Not responding" banner on their own; `church_drive.health_fix` runs a fix on demand.
 
 ### `security-zone-card`
 

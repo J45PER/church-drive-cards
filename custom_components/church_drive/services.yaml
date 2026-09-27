@@ -37,4 +37,5 @@ health_fix:
           options:
             - refresh
             - resync
+            - nudge
             - reconnect

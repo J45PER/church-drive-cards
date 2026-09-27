@@ -28,6 +28,7 @@ three more minutes, reconnect (reload its integration, at most once every
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 import statistics
@@ -54,7 +55,12 @@ SKIP_ATTRS = {"friendly_name", "icon", "entity_picture", "supported_features", "
 MIN_SILENT = 600  # seconds
 UNAVAILABLE_AFTER = 300
 RESYNC_AFTER = 0  # re-sync as soon as a device looks stale
-RECONNECT_AFTER = 240
+# If re-sending the same setting doesn't wake it (the device already "has"
+# it, so nothing changes), nudge it: a brief real change, then back. Tried
+# at these ages (seconds since it went stale). Integrations are never
+# reloaded automatically: the Philips one gets stuck unloading.
+NUDGE_AT = (90, 600, 1800)
+NUDGE_HOLD = 5
 RECONNECT_EVERY = 6 * 3600
 REAL_MAX_AGE = 24 * 3600  # don't re-sync to a reading older than this
 
@@ -267,9 +273,12 @@ class DeviceHealth:
         if live["step"] < 1 and age >= RESYNC_AFTER:
             live["step"] = 1
             self.hass.async_create_task(self.async_resync(entity_id))
-        elif live["step"] < 2 and age >= RESYNC_AFTER + RECONNECT_AFTER:
-            live["step"] = 2
-            self.hass.async_create_task(self.async_reconnect(entity_id))
+            return
+        for n, at in enumerate(NUDGE_AT, start=2):
+            if live["step"] < n and age >= at:
+                live["step"] = n
+                self.hass.async_create_task(self.async_nudge(entity_id))
+                return
 
     def _note(self, entity_id: str, what: str) -> None:
         self.live[entity_id]["fixes"] = (self.live[entity_id]["fixes"] + [f"{dt_util.now().strftime('%H:%M')} {what}"])[-5:]
@@ -321,6 +330,36 @@ class DeviceHealth:
         self._note(entity_id, f"Re-synced to its {when} reading")
         return True
 
+    async def async_nudge(self, entity_id: str) -> bool:
+        """A brief real change, then the last real reading again.
+
+        Re-sending a setting the integration thinks the device already has
+        can do nothing; a real change makes it talk to the device again.
+        """
+        real = self.saved.get(entity_id, {}).get("real")
+        state = self.hass.states.get(entity_id)
+        domain = entity_id.split(".")[0]
+        if not real or not state or domain != "fan" or real["state"] == "off":
+            self._note(entity_id, "Nudge not possible for this device")
+            return False
+        target = real.get("attrs", {}).get("preset_mode")
+        presets = [p for p in state.attributes.get("preset_modes") or [] if p != target]
+        if target and presets:
+            # The quietest other mode, so a nudge at night isn't noticed.
+            alt = next((p for p in presets if p == "sleep"), presets[0])
+            call = ("set_preset_mode", {"preset_mode": alt})
+        else:
+            pct = real.get("attrs", {}).get("percentage") or 50
+            call = ("set_percentage", {"percentage": 25 if pct > 25 else 50})
+        try:
+            await self.hass.services.async_call("fan", call[0], {"entity_id": entity_id, **call[1]}, blocking=True)
+        except Exception as err:  # noqa: BLE001
+            self._note(entity_id, f"Nudge failed: {err}")
+            return False
+        self._note(entity_id, "Nudged it to wake the connection")
+        await asyncio.sleep(NUDGE_HOLD)
+        return await self.async_resync(entity_id)
+
     def _entry_id(self, entity_id: str) -> str | None:
         entry = er.async_get(self.hass).async_get(entity_id)
         return entry.config_entry_id if entry else None
@@ -356,6 +395,8 @@ class DeviceHealth:
         elif action == "reconnect":
             self._reconnected.pop(self._entry_id(entity_id), None)
             await self.async_reconnect(entity_id)
+        elif action == "nudge":
+            await self.async_nudge(entity_id)
         else:
             await self._refresh(entity_id)
             await self.async_resync(entity_id)

@@ -3443,7 +3443,7 @@
       <small></small></div>
     <button type="button">Fix now</button>`;
     box.querySelector("small").textContent = [d.reason, d.last_real ? `Last real: ${kitRealText(d.last_real)}` : "", last ? `Fixing: ${last.replace(/^\d\d:\d\d /, "")}` : ""].filter(Boolean).join(" \xB7 ");
-    box.querySelector("button").addEventListener("click", () => hass.callService("church_drive", "health_fix", { entity_id: entityId, action: "resync" }));
+    box.querySelector("button").addEventListener("click", () => hass.callService("church_drive", "health_fix", { entity_id: entityId, action: entityId.startsWith("fan.") ? "nudge" : "resync" }));
     return d;
   }
 
@@ -5608,7 +5608,6 @@
           ${ok ? "" : `<div class="dh-fixes ck-sub" style="font-size:0.74rem; padding-left:32px;"></div>
           <div style="display:flex; gap:6px; padding-left:32px;">
             <button class="dh-fix" type="button" style="border:none; border-radius:10px; padding:7px 10px; font:inherit; font-size:0.8rem; font-weight:600; background:#ffa726; color:#2a1700; cursor:pointer;">Fix now</button>
-            <button class="dh-reconnect" type="button" style="border:none; border-radius:10px; padding:7px 10px; font:inherit; font-size:0.8rem; font-weight:600; background:rgba(127,127,127,0.18); color:var(--primary-text-color); cursor:pointer;">Reconnect</button>
           </div>`}
         </div>`;
       }).join("");
@@ -5621,9 +5620,7 @@
         if (fixes) fixes.textContent = (d.fixes || []).length ? `Tried: ${d.fixes.join(" \xB7 ")}` : "Fixing automatically\u2026";
         const call = (action) => !c.demo && this._hass.callService("church_drive", "health_fix", { entity_id: id, action });
         const fix = el.querySelector(".dh-fix");
-        if (fix) fix.addEventListener("click", () => call("resync"));
-        const rec = el.querySelector(".dh-reconnect");
-        if (rec) rec.addEventListener("click", () => call("reconnect"));
+        if (fix) fix.addEventListener("click", () => call(id.startsWith("fan.") ? "nudge" : "resync"));
       });
       hydrateIcons(this);
     }

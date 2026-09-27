@@ -518,6 +518,6 @@ export function kitHealthBanner(root, hass, entityId, demo) {
       <small></small></div>
     <button type="button">Fix now</button>`;
   box.querySelector('small').textContent = [d.reason, d.last_real ? `Last real: ${kitRealText(d.last_real)}` : '', last ? `Fixing: ${last.replace(/^\d\d:\d\d /, '')}` : ''].filter(Boolean).join(' · ');
-  box.querySelector('button').addEventListener('click', () => hass.callService('church_drive', 'health_fix', { entity_id: entityId, action: 'resync' }));
+  box.querySelector('button').addEventListener('click', () => hass.callService('church_drive', 'health_fix', { entity_id: entityId, action: entityId.startsWith('fan.') ? 'nudge' : 'resync' }));
   return d;
 }

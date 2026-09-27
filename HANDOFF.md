@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-27. Current release: **v0.17.1**.*
+*Last updated 2026-09-27. Current release: **v0.17.2**.*
 
 ## Where this stands
 
@@ -62,6 +62,26 @@ reported by the user, fix untested on the real fan).
   and the Heating panel changing colour.
 - Hold to test on the carbon monoxide card (sounds the real alarm; only when
   the user is happy to).
+
+**v0.17.2: Device Health never reloads integrations; it nudges instead.**
+On the v0.17.1 restart (00:24, 2026-09-28) the fan came back stale, showing Speed 1
+with the runtime frozen at "4 days, 12:11:19". The logs say "Failed to connect to
+host 192.168.4.48" at startup: the Philips integration misses the fan while HA
+boots. Re-sending Speed 1 did nothing because HA already showed Speed 1. At +4 min
+the automatic reconnect reloaded the Philips entry, which got stuck in
+`failed_unload` (aiocoap `InvalidStateError` in `client.shutdown()`). The fan went
+unavailable. The user doesn't want to press buttons. The fix:
+- The automatic reconnect is gone. A **nudge** replaces it at 90 s, 10 min and
+  30 min: the fan goes to its quietest other preset (`sleep`, or the first other
+  one) for 5 s, then gets its last real reading re-sent. A real change makes the
+  integration talk to the fan again.
+- `health_fix` gains `action: nudge`. The card and banner **Fix now** nudges fans.
+  The Reconnect button is removed (the manual `reconnect` action still exists
+  but is never automatic).
+- Recovery: the entry `01M0ZVDY6MWDBAJDE75VS2DFQF` was disabled, HA restarted,
+  and the entry re-enabled.
+- The fan was fine for months before. The stale state only shows on HA restarts,
+  and 2026-09-27 had many restarts for releases.
 
 **v0.17.1: visual tidy-ups.**
 - **Fan card:** the dial is 84px, like the purifier, CO and thermostat dials. It no
