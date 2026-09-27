@@ -43,7 +43,8 @@ devices before each release.
   settings all render with the Nest off. The user then asked for the
   alarm-style quick settings and mode-coloured panels (both done, v0.13.1).
 
-**Still to check on real devices:** the Climate Card with the Nests on:
+**Still to check on real devices:** the new Climate tab cards (v0.14.0) on
+the phone, then the Climate Card with the Nests on:
 −/+ (one `set_temperature` after tapping stops), the v0.13.1 quick settings
 (grey, the selected one solid), Eco/Heat/Off, the temperature line of the 24h
 graph, the dropdowns opening inside the Heating panels, and the Climate and
@@ -600,10 +601,15 @@ Integration modules (`custom_components/church_drive/`):
     - **Security:** [Alarm (alarm colour) + Doors & Motion (indigo, "Doors closed" /
       "N doors open"; the door, motion, battery and tamper lists)] [Outdoor
       Cameras + Indoor Cameras (blue-grey)] [Fire Alarm (red, safe mode)].
-    - **Climate:** [Heating (colour from both Nests; two Climate Cards, Downstairs + Upstairs) + Temperature (orange, downstairs °C) + Humidity
-      (blue, downstairs %)] [Cooling (light-blue, fan) + Air Purifier (green,
-      on/off · PM2.5, filters and graphs)] [Blinds (brown; blank while the blind
-      reports unknown)].
+    - **Climate** (rebuilt with the v0.14.0 cards, 2026-09-27): [Heating (the
+      user's own climate cards: quick settings Off/Heat/Eco, dropdowns off;
+      colour from both Nests) + Climate (colour = average comfort colour of all
+      six temperature sensors; "Avg ° · Outside °"; Ground Floor, Middle Floor
+      and Hayley's Floor zone cards)] [Cooling (Bedroom Fan card; cyan when on,
+      grey off) + Air Quality (leaf; Air Purifier card + Carbon Monoxide card;
+      colour from PM2.5 bands, red if the CO alarm is on)] [Windows & Doors
+      (Blind card for `cover.roller_blind`)]. The old Temperature/Humidity
+      lists and graphs and the fan/purifier/blind tiles are gone.
     - **Cleaning:** one Cleaning panel (blue, state · battery).
   - **Hayley** (`dashboard-hayley`): full-width light cards for Hayley's Bedroom,
     Kitchen Spotlights, Living Room Ambience and Middle Floor.
