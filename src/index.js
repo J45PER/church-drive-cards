@@ -6,6 +6,11 @@ import { registerSceneBuilderCard } from './scene-builder-card.js';
 import { registerSectionTitleCard } from './section-title-card.js';
 import { registerSectionPanelCard } from './section-panel-card.js';
 import { registerClimateCard } from './climate-card.js';
+import { registerClimateZoneCard } from './climate-zone-card.js';
+import { registerFanCard } from './fan-card.js';
+import { registerAirPurifierCard } from './air-purifier-card.js';
+import { registerCoAlarmCard } from './co-alarm-card.js';
+import { registerCoverCard } from './cover-card.js';
 import { SUFFIX } from './suffix.js';
 
 registerGaugeZoneCard();
@@ -16,5 +21,10 @@ registerSceneBuilderCard();
 registerSectionTitleCard();
 registerSectionPanelCard();
 registerClimateCard();
+registerClimateZoneCard();
+registerFanCard();
+registerAirPurifierCard();
+registerCoAlarmCard();
+registerCoverCard();
 
 console.info(`%c CHURCH-DRIVE-CARDS${SUFFIX ? ' BETA' : ''} %c loaded `, 'color: white; background: #2196f3; font-weight: 700;', 'color: #2196f3; background: transparent;');

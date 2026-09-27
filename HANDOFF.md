@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-26. Current release: **v0.13.1**.*
+*Last updated 2026-09-26. Current release: **v0.14.0**.*
 
 ## Where this stands
 
@@ -48,6 +48,31 @@ devices before each release.
 (grey, the selected one solid), Eco/Heat/Off, the temperature line of the 24h
 graph, the dropdowns opening inside the Heating panels, and the Climate and
 Heating panels changing colour with the mode.
+
+**New in v0.14.0: five new cards for the Climate tab** (planned on the mock-up
+page claude.ai/artifact/TV12cWZZUqRqLnymQ9rFGB). The user chose a "by job" page
+with five groups: Heating, Cooling, Climate (temperature and humidity zone by
+zone, one card per floor), Air Quality (leaf icon: purifier, X-Sense CO alarm)
+and Windows & Doors (blind now; curtains and door/window sensors later).
+- Shared `src/card-kit.js`: title + status word, 84px arc gauge, alarm-style
+  tiles (`kitTiles`, grey until selected), hold-to-press tiles (1.5s),
+  `KitHistory` (24h history via `history/history_during_period`, refreshed
+  every 10 min) and `kitGraph` (one or two series, each on its own scale).
+- `climate-zone-card`: `title`, `rooms` [{name, temperature, humidity, icon,
+  note}], `show_graphs`, `show_humidity_graph`, `hours`, comfort thresholds
+  (`cold_below` 18, `cool_below` 20, `warm_from` 22.5, `hot_from` 24.5). One
+  graph per room (the user didn't want rooms stacked on one graph).
+- `fan-card`: speeds from `speed_N` presets or percentage steps; two rows as in
+  the mock-up (the user's choice); `temperature_entity` optional.
+- `air-purifier-card`: PM2.5 bands 12/35/55; Philips allergen index 1-3 low,
+  4-6 moderate, 7-9 high; `show_gauge`/`show_allergen`/`show_graph`/
+  `show_modes`/`show_filters` (the user wanted every extra toggleable); sensors
+  found from the fan's object-id prefix.
+- `co-alarm-card`: entities found from the reading sensor's prefix
+  (`alarm_status`, `device_status`, `battery`, `report_time`, `device_test`,
+  `mute`); red with a warning when the alarm is on or ≥50 ppm.
+- `cover-card` ("Blind Card"): Open/Stop/Close by supported features; RF blind
+  (`assumed_state`, state unknown) shows the last command (this session only).
 
 **New in v0.13.1: climate quick settings like the alarm buttons.** Grey
 (white icon and text) until selected; the selected one is solid in its mode or
