@@ -64,6 +64,38 @@ reported by the user, fix untested on the real fan).
 - Hold to test on the carbon monoxide card (sounds the real alarm; only when
   the user is happy to).
 
+**On Beta (not released): Security Zone Card** (`security-zone-card`, commit
+`7d31b80`; beta resource repointed). The user chose it through several rounds of
+mock-ups: A/B/C → C variants → compact C → "a card per zone" with "each battery
+on its own row". Defaults: hourly bars, 12 hours.
+- One card per zone: the title is the zone name plus a state word (Motion just
+  now / Closed / Quiet / Open N min / Tamper). There's a 24-slot activity strip:
+  motion indigo `#7986cb`, door amber, doorbell pink, tamper red, and a light-on
+  band in faint yellow. Bars or ticks; 6/12/24 h. Press and hold (0.3 s) or hover
+  to scrub, with the readout in the title line. Then a last-events line, each
+  battery on its own row (name, level bar, %, amber below 25%) and an optional
+  light tile.
+- Colours: indigo `#5c6bc0`; amber (tint 10) while the door is open; red (tint 18)
+  plus a warning line on a tamper, or on a door open while `alarm_entity` is armed.
+- History comes from `kitStateHistory` (new in card-kit; `KitHistory` takes a
+  loader). It reloads every 10 min, and state changes seen in between are
+  appended live. Event entities count each distinct timestamp state as an event.
+- Mobile → Security → Doors & Motion now holds five `security-zone-card-beta`:
+  Front Garden (Hue `binary_sensor.front_door_sensor_motion` + Ring
+  `event.front_door_motion`, doorbell `event.front_door_ding`, `light.front_light`,
+  Doorbell 58% / Hue sensor), Entrance (`binary_sensor.front_door`, Ring
+  `binary_sensor.motion_detector_39299`, tampers, Door contact / Ring sensor),
+  Driveway (`event.driveway_motion`, Camera), Back Door, and Back Garden (Hue
+  garden motion, `light.outside` Floodlight, Camera / Hue sensor). The panel's
+  colour and summary templates follow the worst zone. The old five entities lists
+  are gone (dashboard auto-backup has them).
+- Design Presets → Beta has a demo Doors & Motion panel (motion / quiet / open /
+  tamper-with-ticks).
+- On "release it": bump the version, switch Mobile's five cards from `-beta` to
+  `custom:security-zone-card`, and do the usual release.
+- The front Hue sensor is very chatty (~350 motions a day, passing traffic).
+  Bars handle it.
+
 **v0.16.1: Device Health checks instantly.** After the first restart with
 v0.16.0 the fan still showed off: the saved real reading was there (runtime
 5d 7:46) but nothing flagged the stale one (4d 12:11). Now the counter check runs
