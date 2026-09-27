@@ -11,6 +11,7 @@ import { registerFanCard } from './fan-card.js';
 import { registerAirPurifierCard } from './air-purifier-card.js';
 import { registerCoAlarmCard } from './co-alarm-card.js';
 import { registerCoverCard } from './cover-card.js';
+import { registerDeviceHealthCard } from './device-health-card.js';
 import { SUFFIX } from './suffix.js';
 
 registerGaugeZoneCard();
@@ -26,5 +27,6 @@ registerFanCard();
 registerAirPurifierCard();
 registerCoAlarmCard();
 registerCoverCard();
+registerDeviceHealthCard();
 
 console.info(`%c CHURCH-DRIVE-CARDS${SUFFIX ? ' BETA' : ''} %c loaded `, 'color: white; background: #2196f3; font-weight: 700;', 'color: #2196f3; background: transparent;');

@@ -8,7 +8,7 @@
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
-import { KIT_COLOR, kitShell, kitHead, kitTiles, kitMoreInfo } from './card-kit.js';
+import { KIT_COLOR, kitShell, kitHead, kitTiles, kitMoreInfo, kitHealthBanner } from './card-kit.js';
 
 const COVER_ICONS = {
   curtain: ['mdi:curtains', 'mdi:curtains-closed'],
@@ -124,6 +124,7 @@ export class CoverCard extends HTMLElement {
     const closed = st.state === 'closed' || (!known && this._last === 'close');
     const color = st.state === 'unavailable' ? KIT_COLOR.off : KIT_COLOR.blind;
     kitHead(this, c.name || a.friendly_name || c.entity, word + (this._demo ? ' · demo' : ''), color);
+    kitHealthBanner(this, this._hass, c.entity, !!(this._demo || c.demo));
 
     const icons = COVER_ICONS[a.device_class] || COVER_ICONS.blind;
     this.querySelector('.cv-icon').style.cursor = !this._demo && ((a.supported_features || 0) & 4) ? 'pointer' : 'default';

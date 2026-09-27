@@ -7,10 +7,24 @@
   "options": {
     "step": {
       "init": {
+        "title": "Church Drive",
+        "menu_options": {
+          "scenes": "Universal scenes (Hue rooms and zones)",
+          "health": "Device health (devices to watch)"
+        }
+      },
+      "scenes": {
         "title": "Universal scenes",
         "description": "Choose the Hue rooms and zones that get the universal scenes. Scenes are created on the Hue bridge; a room's existing Hue scene with the same name is left as it is and used instead.",
         "data": {
           "scene_groups": "Rooms and zones"
+        }
+      },
+      "health": {
+        "title": "Device health",
+        "description": "Choose the devices to watch. Church Drive spots ones whose state has gone stale (old readings after a restart, stopped updating, unavailable for over 5 minutes) and fixes them automatically: it refreshes them, re-sends their last real state (fans and thermostats), then reconnects their integration (at most every 6 hours).",
+        "data": {
+          "health_entities": "Devices to watch"
         }
       }
     },
@@ -34,6 +48,20 @@
         "scene": {
           "name": "Scene",
           "description": "Scene name, e.g. Bright or Relax."
+        }
+      }
+    },
+    "health_fix": {
+      "name": "Fix a device",
+      "description": "Refresh, re-sync (send its last real state) or reconnect a watched device.",
+      "fields": {
+        "entity_id": {
+          "name": "Device",
+          "description": "The watched entity."
+        },
+        "action": {
+          "name": "Fix",
+          "description": "refresh, resync or reconnect."
         }
       }
     }

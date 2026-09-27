@@ -2999,6 +2999,10 @@
   var kitEsc = (text) => String(text == null ? "" : text).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   var kitCap = (text) => String(text || "").replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
   var kitNum = (st) => st && st.state !== "" && !isNaN(Number(st.state)) ? Number(st.state) : null;
+  var KIT_HEALTH_CSS = `.ck-stale .ck-row, .ck-stale .ck-dim { opacity:.55; }
+.ck-health { display:none; align-items:center; gap:10px; padding:9px 11px; border-radius:12px; background:color-mix(in srgb, #ffa726 18%, transparent); color:#ffd08a; font-size:0.85rem; }
+.ck-health small { display:block; color:var(--secondary-text-color); font-size:0.74rem; }
+.ck-health button { flex:none; border:none; border-radius:10px; padding:7px 10px; font:inherit; font-size:0.8rem; font-weight:600; background:#ffa726; color:#2a1700; cursor:pointer; }`;
   function kitShell(body, extraCss = "") {
     return `
     <ha-card class="ck-card" style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; padding:16px; background:var(--card-background-color); transition:background-color .6s ease; display:flex; flex-direction:column; gap:12px;">
@@ -3023,12 +3027,14 @@
         .ck-bar { height:8px; border-radius:99px; background:rgba(127,127,127,.2); overflow:hidden; }
         .ck-bar > i { display:block; height:100%; border-radius:inherit; transition:width .4s; }
         .ck-tap { cursor:pointer; }
+        ${KIT_HEALTH_CSS}
         ${extraCss}
       </style>
       <div style="display:flex; align-items:baseline; gap:8px;">
         <div class="ck-title" style="flex:1; min-width:0; font-size:1.5rem; font-weight:500; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:color .6s;"></div>
         <div class="ck-word" style="flex:none; font-size:0.85rem; color:var(--secondary-text-color);"></div>
       </div>
+      <div class="ck-health" role="status"></div>
       ${body}
     </ha-card>`;
   }
@@ -3379,6 +3385,47 @@
       return { ...st, state: w.state, attributes: { ...a, ...attrs } };
     }
   };
+  var HEALTH_SENSOR = "sensor.church_drive_device_health";
+  function kitHealthOf(hass, entityId) {
+    const s = hass && entityId && hass.states[HEALTH_SENSOR];
+    const d = s && s.attributes.devices && s.attributes.devices[entityId];
+    return d && d.status !== "ok" ? d : null;
+  }
+  var kitClock = (iso) => iso ? new Date(iso).toLocaleTimeString(void 0, { hour: "2-digit", minute: "2-digit" }) : "";
+  function kitRealText(real) {
+    if (!real) return "";
+    let what = kitCap(real.state);
+    if (real.preset_mode) {
+      const m = /^speed[ _-]?(\d+)$/i.exec(real.preset_mode);
+      what = m ? `Speed ${m[1]}` : kitCap(real.preset_mode);
+    } else if (real.temperature != null && real.state !== "off") {
+      what = `${kitCap(real.state)} ${real.temperature}\xB0`;
+    }
+    return `${what} at ${kitClock(real.at)}`;
+  }
+  function kitHealthBanner(root, hass, entityId, demo) {
+    const box = root.querySelector(".ck-health");
+    const card = root.querySelector(".ck-card") || root.querySelector("ha-card");
+    if (!box) return null;
+    const d = demo ? null : kitHealthOf(hass, entityId);
+    card.classList.toggle("ck-stale", !!d);
+    const sig = d ? JSON.stringify([d.reason, d.since, d.last_real, d.fixes]) : "";
+    if (box._sig === sig) return d;
+    box._sig = sig;
+    box.style.display = d ? "flex" : "none";
+    if (!d) {
+      box.innerHTML = "";
+      return null;
+    }
+    const last = (d.fixes || []).slice(-1)[0];
+    box.innerHTML = `${iconHtml("mdi:lan-disconnect", { size: "22px", style: "flex:none;" })}
+    <div style="flex:1; min-width:0; line-height:1.35;">Not responding since ${kitClock(d.since)}
+      <small></small></div>
+    <button type="button">Fix now</button>`;
+    box.querySelector("small").textContent = [d.reason, d.last_real ? `Last real: ${kitRealText(d.last_real)}` : "", last ? `Fixing: ${last.replace(/^\d\d:\d\d /, "")}` : ""].filter(Boolean).join(" \xB7 ");
+    box.querySelector("button").addEventListener("click", () => hass.callService("church_drive", "health_fix", { entity_id: entityId, action: "resync" }));
+    return d;
+  }
 
   // src/climate-zone-card.js
   var CZ_TYPES = {
@@ -4034,6 +4081,7 @@
           .cc-opt { border:none; background:none; color:var(--primary-text-color); font:inherit; font-size:0.95rem; text-align:left; padding:10px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:10px; }
           .cc-opt:hover { background:rgba(127,127,127,0.14); }
           .cc-opt.cc-on { background:rgba(127,127,127,0.22); font-weight:600; }
+          ${KIT_HEALTH_CSS}
           .cc-chip { display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px; background:rgba(127,127,127,0.16); font-size:0.8rem; }
         </style>
         <div style="display:flex; align-items:baseline; gap:8px;">
@@ -4054,14 +4102,15 @@
             <div style="font-size:0.85rem; color:var(--secondary-text-color);">room</div>
           </div>
         </div>
+        <div class="ck-health" role="status"></div>
         <div class="cc-window"></div>
         <div class="cc-history"></div>
-        <div class="cc-controls" style="display:flex; gap:6px;">
+        <div class="cc-controls ck-dim" style="display:flex; gap:6px;">
           <button class="cc-btn cc-down" aria-label="Lower the temperature">\u2212</button>
           <button class="cc-btn cc-up" aria-label="Raise the temperature">+</button>
         </div>
         <div class="cc-dropdowns" style="display:flex; flex-direction:column; gap:6px;"></div>
-        <div class="cc-quick" style="display:flex; gap:6px;"></div>
+        <div class="cc-quick ck-dim" style="display:flex; gap:6px;"></div>
         <div class="cc-chips" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
       </ha-card>`;
       const q = (sel) => this.querySelector(sel);
@@ -4124,6 +4173,7 @@
       e.title.textContent = cfg.name || a.friendly_name || cfg.entity;
       e.title.style.color = s.color;
       e.word.textContent = s.word + (this._demo ? " \xB7 demo" : "");
+      kitHealthBanner(this, this._hass, cfg.entity, !!this._demo);
       const off = v.mode === "off" || v.mode === "unavailable";
       const hasTarget = !off && v.target != null;
       e.target.textContent = off ? "Off" : hasTarget ? deg(v.target) : cap((CC_MODES[v.mode] || {}).name || v.mode);
@@ -4455,7 +4505,7 @@
       if (sig === this._quickSig) return;
       this._quickSig = sig;
       const box = this._els.quick;
-      box.className = `cc-quick cc-names-${names}`;
+      box.className = `cc-quick ck-dim cc-names-${names}`;
       box.style.display = list.length ? "flex" : "none";
       box.innerHTML = "";
       const active = list.findIndex((q) => this._matches(q, v));
@@ -4727,6 +4777,7 @@
       const color = !on ? KIT_COLOR.off : preset === "sleep" ? KIT_COLOR.sleep : KIT_COLOR.fan;
       const word = st.state === "unavailable" ? "Unavailable" : !on ? "Off" : preset ? kitCap(preset) : current ? `Speed ${current.n}` : "On";
       kitHead(this, c.name || a.friendly_name || c.entity, word + (this._demo ? " \xB7 demo" : ""), color, on ? 10 : 0);
+      kitHealthBanner(this, this._hass, c.entity, !!(this._demo || c.demo));
       const top = this.querySelector(".fc-top");
       top.style.display = c.show_gauge === false ? "none" : "flex";
       const level = !on ? 0 : current ? current.n / (speeds.length || 1) : (a.percentage || 100) / 100;
@@ -4998,6 +5049,7 @@
       const mode = on ? a.preset_mode ? kitCap(a.preset_mode) : "On" : st.state === "unavailable" ? "Unavailable" : "Off";
       const color = on ? q.color : KIT_COLOR.off;
       kitHead(this, c.name || a.friendly_name || c.entity, [mode, q.word ? `${q.word} air` : ""].filter(Boolean).join(" \xB7 ") + (this._demo ? " \xB7 demo" : ""), color, on && pm > 35 ? 12 : 0);
+      kitHealthBanner(this, this._hass, c.entity, !!(this._demo || c.demo));
       const top = this.querySelector(".ap-top");
       top.style.display = row2(c, "show_gauge") ? "flex" : "none";
       this.querySelector(".ap-gauge").innerHTML = kitGauge(pm == null ? 0 : pm / (apBand(c, "poor_max") * 1.3), q.color, pm == null ? "\u2013" : String(Math.round(pm)), "PM2.5 \xB5g/m\xB3");
@@ -5214,6 +5266,7 @@
       const color = d.unavailable ? KIT_COLOR.off : high ? KIT_COLOR.bad : d.ppm >= 10 ? KIT_COLOR.fair : KIT_COLOR.good;
       const word = d.unavailable ? "Unavailable" : d.alarm ? "CO detected" : d.status ? kitCap(d.status) : "Normal";
       kitHead(this, c.name || "Carbon Monoxide", word + (this._demo ? " \xB7 demo" : ""), color, high ? 30 : 0);
+      kitHealthBanner(this, this._hass, c.entity, !!(this._demo || c.demo));
       const warn = this.querySelector(".co-warn");
       warn.style.display = high ? "flex" : "none";
       if (high) warn.innerHTML = `${iconHtml("mdi:alert", { size: "24px" })}<span>Carbon monoxide found. Get everyone outside and open doors and windows.</span>`;
@@ -5367,6 +5420,7 @@
       const closed = st.state === "closed" || !known && this._last === "close";
       const color = st.state === "unavailable" ? KIT_COLOR.off : KIT_COLOR.blind;
       kitHead(this, c.name || a.friendly_name || c.entity, word + (this._demo ? " \xB7 demo" : ""), color);
+      kitHealthBanner(this, this._hass, c.entity, !!(this._demo || c.demo));
       const icons = COVER_ICONS[a.device_class] || COVER_ICONS.blind;
       this.querySelector(".cv-icon").style.cursor = !this._demo && (a.supported_features || 0) & 4 ? "pointer" : "default";
       this.querySelector(".cv-icon").innerHTML = iconHtml(c.icon || icons[closed ? 1 : 0], { size: "44px", style: `color:${color};` });
@@ -5438,6 +5492,147 @@
     });
   }
 
+  // src/device-health-card.js
+  var DH_ICONS = {
+    fan: "mdi:fan",
+    climate: "mdi:thermostat",
+    cover: "mdi:blinds-horizontal",
+    light: "mdi:lightbulb",
+    sensor: "mdi:gauge",
+    binary_sensor: "mdi:checkbox-blank-circle-outline",
+    alarm_control_panel: "mdi:shield-home"
+  };
+  function dhDemo() {
+    const t = (mins) => new Date(Date.now() - mins * 6e4).toISOString();
+    return {
+      "fan.demo_fan": { name: "Bedroom Fan", status: "stale", reason: "Came back with old readings after a restart", since: t(34), last_heard: t(34), usual_gap: 194, last_real: { state: "on", preset_mode: "speed_1", at: t(53) }, fixes: ["19:32 Refreshed", "19:33 Re-synced to its 19:11 reading"] },
+      "fan.demo_purifier": { name: "Air Purifier", status: "ok", last_heard: t(1), usual_gap: 194 },
+      "climate.demo_downstairs": { name: "Downstairs", status: "ok", last_heard: t(4), usual_gap: 900 },
+      "sensor.demo_co": { name: "Carbon Monoxide Alarm CO Reading", status: "ok", last_heard: t(180) }
+    };
+  }
+  var ago = (iso) => {
+    if (!iso) return "not heard yet";
+    const m = Math.round((Date.now() - Date.parse(iso)) / 6e4);
+    if (m < 1) return "just now";
+    if (m < 60) return `${m} min ago`;
+    const h = Math.round(m / 60);
+    return h < 48 ? `${h} h ago` : `${Math.round(h / 24)} days ago`;
+  };
+  var every = (s) => !s ? "" : s < 90 ? `every ${Math.round(s)} s` : s < 5400 ? `every ${Math.round(s / 60)} min` : `every ${Math.round(s / 3600)} h`;
+  var DeviceHealthCardEditor = createFormEditor({
+    schema: () => [
+      { name: "title", selector: { text: {} } },
+      { name: "show_ok", selector: { boolean: {} }, default: true },
+      { name: "demo", selector: { boolean: {} } }
+    ],
+    labels: {
+      title: "Title (optional)",
+      show_ok: "List devices that are fine too",
+      demo: "Show pretend devices (for Design Presets)"
+    },
+    helpers: {
+      title: "Choose the devices to watch in Settings \u2192 Devices & services \u2192 Church Drive \u2192 Configure \u2192 Device health."
+    }
+  });
+  var DeviceHealthCard = class extends HTMLElement {
+    setConfig(config) {
+      this.config = config || {};
+      this._built = false;
+    }
+    set hass(hass) {
+      this._hass = hass;
+      this._render();
+    }
+    _render() {
+      if (!this._hass) return;
+      const c = this.config;
+      if (!this._built) {
+        this.innerHTML = kitShell(`<div class="dh-list" style="display:flex; flex-direction:column;"></div>`);
+        this._list = this.querySelector(".dh-list");
+        this._built = true;
+      }
+      const sensor = this._hass.states[HEALTH_SENSOR];
+      const devices = c.demo ? dhDemo() : sensor && sensor.attributes.devices || {};
+      const ids = Object.keys(devices);
+      const bad = ids.filter((id) => devices[id].status !== "ok");
+      const colour = !c.demo && !sensor ? KIT_COLOR.off : bad.length ? KIT_COLOR.fair : KIT_COLOR.good;
+      const word = !c.demo && !sensor ? "Not set up" : bad.length ? `${bad.length} need${bad.length === 1 ? "s" : ""} attention` : ids.length ? "All responding" : "Nothing watched";
+      kitHead(this, c.title || "Device Health", word + (c.demo ? " \xB7 demo" : ""), colour);
+      const minute = Math.floor(Date.now() / 6e4);
+      const sig = JSON.stringify([devices, minute, c.show_ok]);
+      if (sig === this._sig) return;
+      this._sig = sig;
+      if (!c.demo && !sensor) {
+        this._list.innerHTML = `<div class="ck-sub" style="line-height:1.5;">Device health isn't running. Update Church Drive, then choose devices to watch in Settings \u2192 Devices &amp; services \u2192 Church Drive \u2192 Configure \u2192 Device health.</div>`;
+        return;
+      }
+      if (!ids.length) {
+        this._list.innerHTML = `<div class="ck-sub" style="line-height:1.5;">No devices watched yet. Choose them in Settings \u2192 Devices &amp; services \u2192 Church Drive \u2192 Configure \u2192 Device health.</div>`;
+        return;
+      }
+      const order = [...bad, ...ids.filter((id) => devices[id].status === "ok")].filter((id) => c.show_ok !== false || devices[id].status !== "ok");
+      this._list.innerHTML = order.map((id, i) => {
+        const d = devices[id];
+        const ok = d.status === "ok";
+        const col = ok ? KIT_COLOR.good : KIT_COLOR.fair;
+        return `<div class="dh-row" data-id="${id}" style="display:flex; flex-direction:column; gap:6px; padding:9px 0;${i ? " border-top:1px solid var(--divider-color, rgba(127,127,127,0.22));" : ""}">
+          <div style="display:flex; align-items:center; gap:10px;">
+            ${iconHtml(DH_ICONS[id.split(".")[0]] || "mdi:devices", { size: "22px", style: `color:${col}; flex:none;` })}
+            <div style="flex:1; min-width:0;">
+              <div class="dh-name" style="font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
+              <div class="dh-sub ck-sub" style="font-size:0.74rem; line-height:1.35;"></div>
+            </div>
+            <span class="ck-chip" style="color:${col}; background:color-mix(in srgb, ${col} 20%, transparent);">${ok ? "OK" : "Stale"}</span>
+          </div>
+          ${ok ? "" : `<div class="dh-fixes ck-sub" style="font-size:0.74rem; padding-left:32px;"></div>
+          <div style="display:flex; gap:6px; padding-left:32px;">
+            <button class="dh-fix" type="button" style="border:none; border-radius:10px; padding:7px 10px; font:inherit; font-size:0.8rem; font-weight:600; background:#ffa726; color:#2a1700; cursor:pointer;">Fix now</button>
+            <button class="dh-reconnect" type="button" style="border:none; border-radius:10px; padding:7px 10px; font:inherit; font-size:0.8rem; font-weight:600; background:rgba(127,127,127,0.18); color:var(--primary-text-color); cursor:pointer;">Reconnect</button>
+          </div>`}
+        </div>`;
+      }).join("");
+      this._list.querySelectorAll(".dh-row").forEach((el) => {
+        const id = el.dataset.id;
+        const d = devices[id];
+        el.querySelector(".dh-name").textContent = d.name || id;
+        el.querySelector(".dh-sub").textContent = d.status === "ok" ? [`Heard ${ago(d.last_heard)}`, d.usual_gap ? `usually ${every(d.usual_gap)}` : ""].filter(Boolean).join(" \xB7 ") : [d.reason, d.last_real ? `last real: ${kitRealText(d.last_real)}` : "", `heard ${ago(d.last_heard)}`].filter(Boolean).join(" \xB7 ");
+        const fixes = el.querySelector(".dh-fixes");
+        if (fixes) fixes.textContent = (d.fixes || []).length ? `Tried: ${d.fixes.join(" \xB7 ")}` : "Fixing automatically\u2026";
+        const call = (action) => !c.demo && this._hass.callService("church_drive", "health_fix", { entity_id: id, action });
+        const fix = el.querySelector(".dh-fix");
+        if (fix) fix.addEventListener("click", () => call("resync"));
+        const rec = el.querySelector(".dh-reconnect");
+        if (rec) rec.addEventListener("click", () => call("reconnect"));
+      });
+      hydrateIcons(this);
+    }
+    getCardSize() {
+      return 4;
+    }
+    getGridOptions() {
+      return { columns: 12, min_columns: 6, rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement(`device-health-card-editor${SUFFIX}`);
+    }
+    static getStubConfig() {
+      return {};
+    }
+  };
+  function registerDeviceHealthCard() {
+    if (!customElements.get(`device-health-card-editor${SUFFIX}`)) customElements.define(`device-health-card-editor${SUFFIX}`, DeviceHealthCardEditor);
+    if (!customElements.get(`device-health-card${SUFFIX}`)) customElements.define(`device-health-card${SUFFIX}`, DeviceHealthCard);
+    window.customCards = window.customCards || [];
+    window.customCards.push({
+      type: `device-health-card${SUFFIX}`,
+      name: `Device Health Card${LABEL}`,
+      description: "Watched devices: responding or stale, last heard, and fixes",
+      preview: true,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
+    });
+  }
+
   // src/index.js
   registerGaugeZoneCard();
   registerAlarmPanelCard();
@@ -5452,5 +5647,6 @@
   registerAirPurifierCard();
   registerCoAlarmCard();
   registerCoverCard();
+  registerDeviceHealthCard();
   console.info(`%c CHURCH-DRIVE-CARDS${SUFFIX ? " BETA" : ""} %c loaded `, "color: white; background: #2196f3; font-weight: 700;", "color: #2196f3; background: transparent;");
 })();

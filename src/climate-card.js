@@ -18,7 +18,7 @@ import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { stcColor } from './section-title-card.js';
 import { SUFFIX, LABEL } from './suffix.js';
-import { kitScrub, kitSmooth, kitPath } from './card-kit.js';
+import { kitScrub, kitSmooth, kitPath, kitHealthBanner, KIT_HEALTH_CSS } from './card-kit.js';
 import { CZ_TYPES } from './climate-zone-card.js';
 
 const CC_MAX_QUICK = 5;
@@ -317,6 +317,7 @@ export class ClimateCard extends HTMLElement {
           .cc-opt { border:none; background:none; color:var(--primary-text-color); font:inherit; font-size:0.95rem; text-align:left; padding:10px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:10px; }
           .cc-opt:hover { background:rgba(127,127,127,0.14); }
           .cc-opt.cc-on { background:rgba(127,127,127,0.22); font-weight:600; }
+          ${KIT_HEALTH_CSS}
           .cc-chip { display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px; background:rgba(127,127,127,0.16); font-size:0.8rem; }
         </style>
         <div style="display:flex; align-items:baseline; gap:8px;">
@@ -337,14 +338,15 @@ export class ClimateCard extends HTMLElement {
             <div style="font-size:0.85rem; color:var(--secondary-text-color);">room</div>
           </div>
         </div>
+        <div class="ck-health" role="status"></div>
         <div class="cc-window"></div>
         <div class="cc-history"></div>
-        <div class="cc-controls" style="display:flex; gap:6px;">
+        <div class="cc-controls ck-dim" style="display:flex; gap:6px;">
           <button class="cc-btn cc-down" aria-label="Lower the temperature">−</button>
           <button class="cc-btn cc-up" aria-label="Raise the temperature">+</button>
         </div>
         <div class="cc-dropdowns" style="display:flex; flex-direction:column; gap:6px;"></div>
-        <div class="cc-quick" style="display:flex; gap:6px;"></div>
+        <div class="cc-quick ck-dim" style="display:flex; gap:6px;"></div>
         <div class="cc-chips" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
       </ha-card>`;
     const q = (sel) => this.querySelector(sel);
@@ -399,6 +401,7 @@ export class ClimateCard extends HTMLElement {
     e.title.textContent = cfg.name || a.friendly_name || cfg.entity;
     e.title.style.color = s.color;
     e.word.textContent = s.word + (this._demo ? ' · demo' : '');
+    kitHealthBanner(this, this._hass, cfg.entity, !!this._demo);
     const off = v.mode === 'off' || v.mode === 'unavailable';
     const hasTarget = !off && v.target != null;
     e.target.textContent = off ? 'Off' : hasTarget ? deg(v.target) : cap((CC_MODES[v.mode] || {}).name || v.mode);
@@ -742,7 +745,7 @@ export class ClimateCard extends HTMLElement {
     if (sig === this._quickSig) return;
     this._quickSig = sig;
     const box = this._els.quick;
-    box.className = `cc-quick cc-names-${names}`;
+    box.className = `cc-quick ck-dim cc-names-${names}`;
     box.style.display = list.length ? 'flex' : 'none';
     box.innerHTML = '';
     const active = list.findIndex((q) => this._matches(q, v));
