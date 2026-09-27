@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-26. Current release: **v0.15.1**.*
+*Last updated 2026-09-26. Current release: **v0.16.0**.*
 
 ## Where this stands
 
@@ -58,6 +58,35 @@ reported by the user, fix untested on the real fan).
   and the Heating panel changing colour.
 - Hold to test on the carbon monoxide card (sounds the real alarm; only when
   the user is happy to).
+
+**New in v0.16.0: Device Health** (plan: claude.ai/artifact/39ndvAG5WwTBwtSfKt2s3N).
+Why: after restarts the Philips fan (philips_airpurifier_coap v0.37, entry
+`01M0ZVDY6MWDBAJDE75VS2DFQF`) reconnects with an old "off" (runtime frozen at
+"4 days, 12:11:19") and goes silent while really running. `update_entity`
+doesn't help; any real command does. A manual `reload_config_entry` got stuck
+(failed_unload → unavailable) and needed disable/enable + a restart.
+- `custom_components/church_drive/health.py` (DeviceHealth): options
+  `health_entities` (Configure → menu → Device health; the options flow is
+  now a menu: scenes / health). Stores each entity's last real reading
+  (Store `church_drive.health`), learns its usual gap. Checks: counter
+  (`runtime`/`uptime`) went backwards (a reset is accepted after it counts
+  up twice), stopped updating (counter devices only, 3x usual gap, ≥10 min),
+  unavailable >5 min (`unknown` ignored: RF blind), startup check +2 min.
+  Fixes, all automatic (the user's choice): refresh; +1 min re-sync last real
+  state (fan/climate, reading <24 h old); +4 min reconnect the entry (only if
+  loaded, max every 6 h). Health start is wrapped so a failure can't stop
+  the cards loading.
+- `sensor.church_drive_device_health` (state = count needing attention;
+  `devices` attribute per entity: status, reason, since, last_heard,
+  usual_gap, last_real, fixes). `church_drive.health_fix` (entity_id, action
+  refresh/resync/reconnect).
+- Cards: `kitHealthBanner` (card-kit) shows "Not responding since…" with the
+  reason, last real reading and Fix now on the fan, purifier, CO, blind and
+  climate cards (controls dim). New `device-health-card` (Fix now /
+  Reconnect per stale device).
+- Watched: the Climate-tab devices (fan, purifier, both Nests, CO reading,
+  blind). Device Health card on the new admin-only **Manager** dashboard.
+- Future: phone notification to Jamie only when something stays wrong.
 
 **New in v0.15.1: flatter floor cards, fewer pop-ups, Nest limits** (mock-up
 claude.ai/artifact/8QJHfHymWDSdL1BsH7cu2Z).
