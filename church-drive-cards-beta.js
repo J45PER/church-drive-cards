@@ -544,7 +544,7 @@
       this._line1.textContent = line1;
       this._line2.textContent = line2;
       const secsLeft = st.state === "pending" ? a.entrySecondsLeft || 0 : st.state === "arming" ? a.exitSecondsLeft || 0 : 0;
-      this._syncCountdown(inDelay ? secsLeft : 0, st.state);
+      this._syncCountdown(inDelay ? secsLeft : 0, st.state, st.last_changed);
       const activeKey = inDelay || st.state === "triggered" ? a.targetState : st.state;
       this._renderButtons(a.supported_features || 0, activeKey, info.color);
     }
@@ -580,7 +580,7 @@
         this._buttons.appendChild(btn);
       });
     }
-    _syncCountdown(secsLeft, state) {
+    _syncCountdown(secsLeft, state, since) {
       const active = secsLeft > 0;
       if (!active) {
         if (this._countdownTimer) clearInterval(this._countdownTimer);
@@ -597,7 +597,10 @@
         this._reported = null;
       }
       this._delayState = state;
-      this._total = Math.max(this._total, secsLeft);
+      const began = since ? Date.parse(since) : NaN;
+      const elapsed = isNaN(began) ? 0 : Math.max(0, (Date.now() - began) / 1e3);
+      const fromStart = elapsed < 600 ? Math.round(secsLeft + elapsed) : 0;
+      this._total = Math.max(this._total, secsLeft, fromStart);
       if (secsLeft !== this._reported) {
         this._reported = secsLeft;
         this._remaining = secsLeft;
@@ -4798,7 +4801,7 @@
       const top = this.querySelector(".fc-top");
       top.style.display = c.show_gauge === false ? "none" : "flex";
       const level = !on ? 0 : current ? current.n / (speeds.length || 1) : (a.percentage || 100) / 100;
-      this.querySelector(".fc-gauge").innerHTML = kitGauge(level, color, !on ? "Off" : current ? String(current.n) : preset ? kitCap(preset) : "On", !on ? "" : current ? "speed" : "", 72);
+      this.querySelector(".fc-gauge").innerHTML = kitGauge(level, color, !on ? "Off" : current ? String(current.n) : preset ? kitCap(preset) : "On", !on ? "" : current ? "speed" : "");
       const temp = c.temperature_entity && this._hass.states[c.temperature_entity];
       const tv = kitNum(temp);
       const lines = [];

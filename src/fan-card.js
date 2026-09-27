@@ -144,7 +144,7 @@ export class FanCard extends HTMLElement {
     const top = this.querySelector('.fc-top');
     top.style.display = c.show_gauge === false ? 'none' : 'flex';
     const level = !on ? 0 : current ? current.n / (speeds.length || 1) : (a.percentage || 100) / 100;
-    this.querySelector('.fc-gauge').innerHTML = kitGauge(level, color, !on ? 'Off' : current ? String(current.n) : preset ? kitCap(preset) : 'On', !on ? '' : current ? 'speed' : '', 72);
+    this.querySelector('.fc-gauge').innerHTML = kitGauge(level, color, !on ? 'Off' : current ? String(current.n) : preset ? kitCap(preset) : 'On', !on ? '' : current ? 'speed' : '');
     const temp = c.temperature_entity && this._hass.states[c.temperature_entity];
     const tv = kitNum(temp);
     const lines = [];

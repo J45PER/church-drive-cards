@@ -184,7 +184,7 @@ export class AlarmPanelCard extends HTMLElement {
     this._line2.textContent = line2;
 
     const secsLeft = st.state === 'pending' ? a.entrySecondsLeft || 0 : st.state === 'arming' ? a.exitSecondsLeft || 0 : 0;
-    this._syncCountdown(inDelay ? secsLeft : 0, st.state);
+    this._syncCountdown(inDelay ? secsLeft : 0, st.state, st.last_changed);
 
     // During a delay, light the button of the mode being armed to (targetState).
     const activeKey = inDelay || st.state === 'triggered' ? a.targetState : st.state;
@@ -223,7 +223,7 @@ export class AlarmPanelCard extends HTMLElement {
     });
   }
 
-  _syncCountdown(secsLeft, state) {
+  _syncCountdown(secsLeft, state, since) {
     const active = secsLeft > 0;
     if (!active) {
       if (this._countdownTimer) clearInterval(this._countdownTimer);
@@ -236,13 +236,19 @@ export class AlarmPanelCard extends HTMLElement {
       return;
     }
     // The alarm only reports the seconds left, so the delay's full length is
-    // the most seen since it started (a page opened mid-delay starts full).
+    // the seconds left plus the time since the delay began (the state's
+    // last_changed). That holds even if the card is rebuilt mid-delay, which
+    // used to refill the ring and restart it for the last few seconds.
     if (state !== this._delayState) {
       this._total = 0;
       this._reported = null;
     }
     this._delayState = state;
-    this._total = Math.max(this._total, secsLeft);
+    const began = since ? Date.parse(since) : NaN;
+    // Ignore it if the phone and Home Assistant clocks disagree wildly.
+    const elapsed = isNaN(began) ? 0 : Math.max(0, (Date.now() - began) / 1000);
+    const fromStart = elapsed < 600 ? Math.round(secsLeft + elapsed) : 0;
+    this._total = Math.max(this._total, secsLeft, fromStart);
     // hass is re-set on every change in the house: only take the alarm's
     // figure when it changes, otherwise keep counting down locally.
     if (secsLeft !== this._reported) {
