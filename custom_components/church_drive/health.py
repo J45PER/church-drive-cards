@@ -40,7 +40,7 @@ from homeassistant.const import EVENT_HOMEASSISTANT_STARTED, STATE_UNAVAILABLE, 
 from homeassistant.core import CoreState, Event, HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_call_later, async_track_state_change_event, async_track_time_interval
+from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
@@ -53,11 +53,10 @@ OFF_STATES = {"off", "idle", "closed", "standby"}
 SKIP_ATTRS = {"friendly_name", "icon", "entity_picture", "supported_features", "restored"}
 MIN_SILENT = 600  # seconds
 UNAVAILABLE_AFTER = 300
-RESYNC_AFTER = 60
+RESYNC_AFTER = 0  # re-sync as soon as a device looks stale
 RECONNECT_AFTER = 240
 RECONNECT_EVERY = 6 * 3600
 REAL_MAX_AGE = 24 * 3600  # don't re-sync to a reading older than this
-STARTUP_CHECK = 120
 
 _DURATION = re.compile(r"^(?:(\d+) days?, )?(\d+):(\d{2}):(\d{2})")
 
@@ -98,6 +97,7 @@ class DeviceHealth:
         self.live: dict[str, dict] = {}  # per entity: last heard, gaps, status
         self._reconnected: dict[str, float] = {}
         self._unsubs: list = []
+        self._unsub_started = None
 
     # ---- lifecycle
     async def async_start(self) -> None:
@@ -107,19 +107,23 @@ class DeviceHealth:
             self.live[entity_id] = {"heard": None, "gaps": [], "status": "ok", "reason": "", "since": None, "fixes": [], "step": 0}
         self._unsubs.append(async_track_state_change_event(self.hass, self.entity_ids, self._changed))
         self._unsubs.append(async_track_time_interval(self.hass, self._tick, timedelta(minutes=1)))
-
-        @callback
-        def started(_event: Event | None = None) -> None:
-            self._unsubs.append(async_call_later(self.hass, STARTUP_CHECK, self._startup_check))
-
-        if self.hass.state is CoreState.running:
-            started()
-        else:
-            self._unsubs.append(self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, started))
+        # Devices whose state is already in place get checked now; the rest
+        # as soon as they report (see _changed), so there's no wait.
+        self._startup_check()
+        if self.hass.state is not CoreState.running:
+            self._unsub_started = self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, self._on_started)
         self._started_at = now
 
     @callback
+    def _on_started(self, _event: Event) -> None:
+        self._unsub_started = None
+        self._startup_check()
+
+    @callback
     def async_stop(self) -> None:
+        if self._unsub_started:
+            self._unsub_started()
+            self._unsub_started = None
         for unsub in self._unsubs:
             unsub()
         self._unsubs.clear()
@@ -193,13 +197,18 @@ class DeviceHealth:
         self._publish()
 
     # ---- checks
+    def _went_backwards(self, entity_id: str, state) -> bool:
+        """Is the device showing a counter below its last real one?"""
+        if state is None or state.state == STATE_UNAVAILABLE:
+            return False
+        counter = self._counter(state.attributes)
+        prev = self.saved.get(entity_id, {}).get("counter")
+        return bool(counter) and prev is not None and counter[1] < prev - 60
+
     @callback
     def _startup_check(self, _now=None) -> None:
         for entity_id in self.entity_ids:
-            state = self.hass.states.get(entity_id)
-            saved = self.saved.get(entity_id, {})
-            counter = self._counter(state.attributes) if state else None
-            if counter and saved.get("counter") is not None and counter[1] < saved["counter"] - 60:
+            if self._went_backwards(entity_id, self.hass.states.get(entity_id)):
                 self._set_stale(entity_id, "Came back with old readings after a restart")
         self._tick()
 
@@ -219,6 +228,8 @@ class DeviceHealth:
                 live.pop("unavailable_since", None)
                 if live["status"] != "ok" and live["reason"] == "Unavailable":
                     self._set_ok(entity_id)
+                if live["status"] == "ok" and self._went_backwards(entity_id, state):
+                    self._set_stale(entity_id, "Came back with old readings")
             gap = usual_gap(live["gaps"])
             limit = max(3 * gap, MIN_SILENT) if gap else None
             heard = live["heard"] or dt_util.as_timestamp(state.last_updated)
@@ -237,6 +248,8 @@ class DeviceHealth:
             live.update(status="stale", reason=reason, since=time.time(), step=0, fixes=[])
             _LOGGER.warning("%s looks stale: %s", entity_id, reason)
             self.hass.async_create_task(self._refresh(entity_id))
+            self._advance_fix(entity_id, time.time())
+            self._publish()
         else:
             live["reason"] = reason
 
