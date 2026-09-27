@@ -63,6 +63,21 @@ reported by the user, fix untested on the real fan).
 - Hold to test on the carbon monoxide card (sounds the real alarm; only when
   the user is happy to).
 
+**Unreleased on the branch (next release; needs one restart to take effect):**
+- Nudges only use quiet presets (`QUIET_PRESETS`: sleep, speed_1, low, silent,
+  medium, speed_2), never auto/turbo/natural. On the v0.17.2 restart the purifier
+  was nudged to `auto` (its first preset).
+- The card version (`?v=`) is re-read on every Church Drive setup. From then on,
+  **card-only releases should reload the Church Drive config entry
+  (`01M3C9Z12M0W755GDTM455NFVB`) instead of restarting HA.** Full restarts are
+  when the Philips devices fail to connect ("Failed to connect to host
+  192.168.4.48") and come back stale. Python changes still need a restart.
+- After the v0.17.2 restart (00:35, 2026-09-28) the fan was fine. The purifier's
+  live feed died at startup, with runtime frozen at 0:11:42, and two nudges didn't
+  revive it. Its mode shows correctly (Sleep), but PM2.5 is frozen until the
+  Philips integration reconnects. Don't reload it: that gets stuck. The next
+  restart should bring it back; check it then.
+
 **v0.17.2: Device Health never reloads integrations; it nudges instead.**
 On the v0.17.1 restart (00:24, 2026-09-28) the fan came back stale, showing Speed 1
 with the runtime frozen at "4 days, 12:11:19". The logs say "Failed to connect to

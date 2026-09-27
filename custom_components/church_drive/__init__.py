@@ -204,15 +204,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     data = hass.data.setdefault(DOMAIN, {})
     if "cards_url" not in data:
         # Static paths and websocket commands can't be unregistered, so do
-        # them once per run. The version in the URL makes browsers fetch the
-        # new bundle after an update instead of a cached copy.
-        version = await hass.async_add_executor_job(_version)
+        # them once per run.
         await hass.http.async_register_static_paths(
             [StaticPathConfig(URL_BASE, str(FRONTEND_DIR), cache_headers=False)]
         )
-        data["cards_url"] = f"{URL_BASE}/{CARDS_FILE}?v={version}"
         for command in (ws_library, ws_scene_save, ws_scene_delete, ws_scene_preview):
             websocket_api.async_register_command(hass, command)
+    # The version in the URL makes browsers fetch the new bundle after an
+    # update. It's read on every setup, so reloading Church Drive after a
+    # card-only update is enough: no Home Assistant restart (restarts are
+    # when the Philips devices can come back stale).
+    version = await hass.async_add_executor_job(_version)
+    data["cards_url"] = f"{URL_BASE}/{CARDS_FILE}?v={version}"
     add_extra_js_url(hass, data["cards_url"])
     await _async_ensure_resource(hass, data["cards_url"])
 
