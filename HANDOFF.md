@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-26. Current release: **v0.14.1**.*
+*Last updated 2026-09-26. Current release: **v0.14.2**.*
 
 ## Where this stands
 
@@ -49,6 +49,12 @@ the phone, then the Climate Card with the Nests on:
 (grey, the selected one solid), Eco/Heat/Off, the temperature line of the 24h
 graph, the dropdowns opening inside the Heating panels, and the Climate and
 Heating panels changing colour with the mode.
+
+**New in v0.14.2: no flicker on the fan and purifier cards.** The Philips fan
+reports "on" before its speed, so tapping speed 1 briefly showed "On".
+`KitPending` (card-kit) shows the tapped state straight away and holds it until
+the device matches (numbers within 2) or 8 seconds pass. The Cooling panel's
+summary template can still show "Fan on" for a moment.
 
 **New in v0.14.0: five new cards for the Climate tab** (planned on the mock-up
 page claude.ai/artifact/TV12cWZZUqRqLnymQ9rFGB). The user chose a "by job" page
