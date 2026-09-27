@@ -101,12 +101,16 @@ export class CoverCard extends HTMLElement {
     if (!this._built) {
       this.innerHTML = kitShell(`
         <div style="display:flex; align-items:center; gap:14px;">
-          <div class="cv-icon ck-tap" style="flex:none;"></div>
+          <div class="cv-icon" style="flex:none;"></div>
           <div class="ck-info cv-info"></div>
         </div>
         <div class="cv-pos"></div>
         <div class="ck-row cv-buttons"></div>`);
-      this.querySelector('.cv-icon').addEventListener('click', () => !this._demo && kitMoreInfo(this, c.entity));
+      // A pop-up only when it adds a control: the position slider.
+      this.querySelector('.cv-icon').addEventListener('click', () => {
+        const st = this._state();
+        if (!this._demo && st && ((st.attributes.supported_features || 0) & 4)) kitMoreInfo(this, c.entity);
+      });
       this._built = true;
     }
     const a = st.attributes;
@@ -122,6 +126,7 @@ export class CoverCard extends HTMLElement {
     kitHead(this, c.name || a.friendly_name || c.entity, word + (this._demo ? ' · demo' : ''), color);
 
     const icons = COVER_ICONS[a.device_class] || COVER_ICONS.blind;
+    this.querySelector('.cv-icon').style.cursor = !this._demo && ((a.supported_features || 0) & 4) ? 'pointer' : 'default';
     this.querySelector('.cv-icon').innerHTML = iconHtml(c.icon || icons[closed ? 1 : 0], { size: '44px', style: `color:${color};` });
     const lines = [];
     if (c.subtitle) lines.push(`<span class="cv-sub"></span>`);

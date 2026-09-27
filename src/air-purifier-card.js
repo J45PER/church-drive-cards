@@ -9,7 +9,7 @@
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
-import { KIT_COLOR, kitShell, kitHead, kitGauge, kitTiles, kitGraph, kitRange, kitCap, kitNum, kitMoreInfo, kitDemoSeries, KitHistory, KitPending, kitScrub } from './card-kit.js';
+import { KIT_COLOR, kitShell, kitHead, kitGauge, kitTiles, kitGraph, kitRange, kitCap, kitNum, kitDemoSeries, KitHistory, KitPending, kitScrub } from './card-kit.js';
 
 // PM2.5 (µg/m³) bands. Philips purifiers follow the Chinese air-quality
 // standard (good up to 35, then 75, 115); each band can be changed per card.
@@ -186,14 +186,13 @@ export class AirPurifierCard extends HTMLElement {
     if (!this._built) {
       this.innerHTML = kitShell(`
         <div class="ap-top" style="display:flex; align-items:center; gap:14px;">
-          <div class="ap-gauge ck-tap"></div>
+          <div class="ap-gauge"></div>
           <div class="ck-info ap-info"></div>
           <div class="ap-quality" style="flex:none; text-align:right;"></div>
         </div>
         <div class="ap-graph"></div>
         <div class="ck-row ap-modes"></div>
         <div class="ap-filters" style="display:flex; flex-direction:column; gap:10px;"></div>`);
-      this.querySelector('.ap-gauge').addEventListener('click', () => !this._demo && kitMoreInfo(this, c.pm25_entity || c.entity));
       this._built = true;
     }
     if (this._hist && row(c, 'show_graph') && this._hist.due()) this._hist.load(this._hass);
@@ -269,7 +268,7 @@ export class AirPurifierCard extends HTMLElement {
         const fc = v < 10 ? KIT_COLOR.bad : v < 25 ? KIT_COLOR.fair : KIT_COLOR.good;
         const soon = v < 25 ? (/pre/i.test(f.name) ? 'Clean soon' : 'Replace soon') : '';
         const left = !isNaN(f.hours) && f.hours >= 0 ? (f.hours >= 48 ? `${Math.round(f.hours / 24)} days` : `${Math.round(f.hours)} hours`) : '';
-        return `<div class="ck-tap ap-filter" data-i="${i}" style="display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 10px; font-size:0.85rem;">
+        return `<div class="ap-filter" data-i="${i}" style="display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 10px; font-size:0.85rem;">
           <span style="display:flex; align-items:center; gap:6px; min-width:0;"><span class="ap-fname" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></span>${soon ? `<span class="ck-chip" style="color:${fc}; background:color-mix(in srgb, ${fc} 18%, transparent);">${soon}</span>` : ''}</span>
           <span class="ck-sub" style="font-variant-numeric:tabular-nums;">${f.value == null ? '–' : `${Math.round(v)}%`}${left ? ` · ${left}` : ''}</span>
           <div class="ck-bar" style="grid-column:1/-1;"><i style="width:${Math.max(0, Math.min(100, v))}%; background:${fc};"></i></div>
@@ -279,7 +278,6 @@ export class AirPurifierCard extends HTMLElement {
     fBox.querySelectorAll('.ap-filter').forEach((el) => {
       const f = filters[Number(el.dataset.i)];
       el.querySelector('.ap-fname').textContent = f.name;
-      el.addEventListener('click', () => !this._demo && kitMoreInfo(this, f.entity));
     });
     hydrateIcons(this);
   }

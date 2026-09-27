@@ -8,7 +8,7 @@
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
-import { KIT_COLOR, kitShell, kitHead, kitGauge, kitTiles, kitCap, kitNum, kitMoreInfo } from './card-kit.js';
+import { KIT_COLOR, kitShell, kitHead, kitGauge, kitTiles, kitCap, kitNum } from './card-kit.js';
 
 // Where each related entity is found, from the device's name prefix.
 const CO_PARTS = {
@@ -124,11 +124,10 @@ export class CoAlarmCard extends HTMLElement {
       this.innerHTML = kitShell(`
         <div class="co-warn" style="display:none; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; background:${KIT_COLOR.bad}; color:#fff; font-weight:600;"></div>
         <div style="display:flex; align-items:center; gap:14px;">
-          <div class="co-gauge ck-tap"></div>
+          <div class="co-gauge"></div>
           <div class="ck-info co-info"></div>
         </div>
         <div class="ck-row co-buttons"></div>`);
-      this.querySelector('.co-gauge').addEventListener('click', () => !this._demo && kitMoreInfo(this, c.entity));
       this._built = true;
     }
     const d = this._data();

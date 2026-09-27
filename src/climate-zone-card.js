@@ -9,7 +9,7 @@
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
-import { KIT_COLOR, kitShell, kitHead, kitRange, kitNum, kitMoreInfo, kitDemoSeries, KitHistory, kitScrub, kitSmooth, kitPath } from './card-kit.js';
+import { KIT_COLOR, kitShell, kitHead, kitRange, kitNum, kitDemoSeries, KitHistory, kitScrub, kitSmooth, kitPath } from './card-kit.js';
 
 // Comfortable ranges (°C) by room type, from UK guidance (at least 18° in
 // living spaces; bedrooms cooler for sleep).
@@ -317,7 +317,7 @@ export class ClimateZoneCard extends HTMLElement {
     if (!this._hass || !this.config) return;
     const c = this.config;
     if (!this._built) {
-      this.innerHTML = kitShell(`<div class="cz-rooms" style="display:flex; flex-direction:column; gap:6px;"></div>`);
+      this.innerHTML = kitShell(`<div class="cz-rooms" style="display:flex; flex-direction:column; gap:10px;"></div>`);
       this._box = this.querySelector('.cz-rooms');
       this._built = true;
     }
@@ -348,7 +348,7 @@ export class ClimateZoneCard extends HTMLElement {
         const humColour = czHumColour(r.h, hLow, hHigh, hDry);
         const graph = showGraphs ? this._graph(r, i, hours, limits, showHum, c.smooth_graphs !== false) : '';
         const hRange = showGraphs && showHum && r.hPts ? kitRange(r.hPts, r.h, 0, '%') : '';
-        return `<div class="ck-tap cz-room" data-i="${i}" tabindex="0" role="button" style="display:flex; flex-direction:column; gap:5px; padding:8px; border-radius:12px; background:rgba(127,127,127,0.07);">
+        return `<div class="cz-room" data-i="${i}" style="display:flex; flex-direction:column; gap:5px;${i ? ' border-top:1px solid var(--divider-color, rgba(127,127,127,0.22)); padding-top:10px;' : ''}">
           ${freezing ? `<div style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:10px; background:${FREEZING}; color:#0b2233; font-size:0.85rem; font-weight:600;">${iconHtml('mdi:snowflake', { size: '20px' })}Freezing: pipes at risk</div>` : ''}
           <div style="display:flex; align-items:center; gap:10px;">
             ${iconHtml(freezing ? 'mdi:snowflake' : r.icon, { size: '22px', style: `color:${colour}; flex:none;` })}
@@ -375,9 +375,6 @@ export class ClimateZoneCard extends HTMLElement {
       el.querySelector('.cz-note').textContent = [r.note || r.typeName, czWord(r.t, r.low, r.high)].filter(Boolean).join(' · ');
       const svg = el.querySelector('svg');
       if (svg && this._scrub[Number(el.dataset.i)]) kitScrub(svg, this._scrub[Number(el.dataset.i)]);
-      const open = () => !c.demo && kitMoreInfo(this, r.entity);
-      el.addEventListener('click', open);
-      el.addEventListener('keydown', (ev) => (ev.key === 'Enter' || ev.key === ' ') && open());
     });
     hydrateIcons(this);
   }
