@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-26. Current release: **v0.14.0**.*
+*Last updated 2026-09-26. Current release: **v0.14.1**.*
 
 ## Where this stands
 
@@ -65,7 +65,8 @@ and Windows & Doors (blind now; curtains and door/window sensors later).
   graph per room (the user didn't want rooms stacked on one graph).
 - `fan-card`: speeds from `speed_N` presets or percentage steps; two rows as in
   the mock-up (the user's choice); `temperature_entity` optional.
-- `air-purifier-card`: PM2.5 bands 12/35/55; Philips allergen index 1-3 low,
+- `air-purifier-card`: PM2.5 bands 35/75/115 since v0.14.1 (were 12/35/55,
+  which showed Fair at 18 while the Philips app said Good), editable per card; Philips allergen index 1-3 low,
   4-6 moderate, 7-9 high; `show_gauge`/`show_allergen`/`show_graph`/
   `show_modes`/`show_filters` (the user wanted every extra toggleable); sensors
   found from the fan's object-id prefix.
@@ -607,7 +608,8 @@ Integration modules (`custom_components/church_drive/`):
       six temperature sensors; "Avg ° · Outside °"; Ground Floor, Middle Floor
       and Hayley's Floor zone cards)] [Cooling (Bedroom Fan card; cyan when on,
       grey off) + Air Quality (leaf; Air Purifier card + Carbon Monoxide card;
-      colour from PM2.5 bands, red if the CO alarm is on)] [Windows & Doors
+      colour and summary from PM2.5 with the Philips app's bands 35/75/115, red
+      if the CO alarm is on)] [Windows & Doors
       (Blind card for `cover.roller_blind`)]. The old Temperature/Humidity
       lists and graphs and the fan/purifier/blind tiles are gone.
     - **Cleaning:** one Cleaning panel (blue, state · battery).
