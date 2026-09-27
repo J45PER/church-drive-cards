@@ -81,6 +81,16 @@ function czWord(t, low, high) {
 // How far outside its range a room is (0 when comfortable).
 const czOff = (t, low, high) => (t == null ? 0 : t < low ? low - t : t > high ? t - high : 0);
 
+// Humidity stays purple: the usual purple when comfortable, paler the drier it
+// gets, deeper the more humid (mould risk).
+function czHumColour(h, low, high, dry) {
+  if (h == null) return KIT_COLOR.humidity;
+  const mix = (a, b, f) => { const A = hex(a), B = hex(b); f = Math.max(0, Math.min(1, f)); return `rgb(${A.map((v, k) => Math.round(v + (B[k] - v) * f)).join(',')})`; };
+  if (h < low) return mix(KIT_COLOR.humidity, '#ede4ff', (low - h) / Math.max(1, low - dry));
+  if (h > high) return mix(KIT_COLOR.humidity, '#6a1bff', (h - high) / 10);
+  return KIT_COLOR.humidity;
+}
+
 const avg = (list) => (list.length ? list.reduce((a, b) => a + b, 0) / list.length : null);
 
 // Pretend floors for the Design Presets page.
@@ -187,15 +197,15 @@ export const ClimateZoneCardEditor = createFormEditor({
     show_humidity_graph: 'Humidity line on the graphs',
     hours: 'Graph length',
     humidity_low: 'Comfortable humidity from',
-    humidity_high: 'Comfortable humidity to (above turns amber: mould risk)',
-    humidity_dry: 'Too dry below (turns amber)',
+    humidity_high: 'Comfortable humidity to (above gets deeper purple: mould risk)',
+    humidity_dry: 'Too dry below (palest purple)',
     demo: 'Use pretend rooms instead of real sensors',
     demo_floor: 'Pretend floor',
   },
   helpers: {
     rooms: 'Colours follow each room’s comfortable range: teal to lime inside it, blue below, orange to red above, and ice-white with a warning at 0° and below.',
     hours: 'Default 24.',
-    humidity_low: 'Defaults: 40–60% comfortable, amber below 30% or above 60%.',
+    humidity_low: 'Defaults: 40–60% comfortable. Humidity stays purple: paler as it gets drier, deeper above 60%.',
   },
 });
 
@@ -325,6 +335,7 @@ export class ClimateZoneCard extends HTMLElement {
         const colour = czColour(r.t, r.low, r.high);
         const freezing = r.t != null && r.t <= 0;
         const humWarn = r.h != null && (r.h > hHigh || r.h < hDry);
+        const humColour = czHumColour(r.h, hLow, hHigh, hDry);
         const graph = showGraphs ? this._graph(r, i, hours, limits, showHum) : '';
         const hRange = showGraphs && showHum && r.hPts ? kitRange(r.hPts, r.h, 0, '%') : '';
         return `<div class="ck-tap cz-room" data-i="${i}" tabindex="0" role="button" style="display:flex; flex-direction:column; gap:5px; padding:8px; border-radius:12px; background:rgba(127,127,127,0.07);">
@@ -335,7 +346,7 @@ export class ClimateZoneCard extends HTMLElement {
               <div class="cz-name" style="font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
               <div class="cz-note ck-sub" style="font-size:0.72rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
             </div>
-            ${r.h != null ? `<span style="font-size:0.85rem; color:${humWarn ? KIT_COLOR.fair : KIT_COLOR.humidity}; font-variant-numeric:tabular-nums;" title="${humWarn ? (r.h > hHigh ? 'Humid: mould risk' : 'Too dry') : 'Humidity'}">${Math.round(r.h * 10) / 10}%</span>` : ''}
+            ${r.h != null ? `<span style="font-size:0.85rem; color:${humColour}; font-weight:${humWarn ? 700 : 400}; font-variant-numeric:tabular-nums;" title="${humWarn ? (r.h > hHigh ? 'Humid: mould risk' : 'Too dry') : 'Humidity'}">${Math.round(r.h * 10) / 10}%</span>` : ''}
             <b style="min-width:54px; text-align:right; font-size:1.15rem; font-variant-numeric:tabular-nums; color:${colour};">${r.t != null ? `${r.t.toFixed(1)}°` : '–'}</b>
           </div>
           ${graph}
