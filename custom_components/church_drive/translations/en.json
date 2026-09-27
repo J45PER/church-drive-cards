@@ -22,7 +22,7 @@
       },
       "health": {
         "title": "Device health",
-        "description": "Choose the devices to watch. Church Drive spots ones whose state has gone stale (old readings after a restart, stopped updating, unavailable for over 5 minutes) and fixes them automatically: it refreshes them, re-sends their last real state (fans and thermostats), then reconnects their integration (at most every 6 hours).",
+        "description": "Choose the devices to watch. Church Drive spots ones whose state has gone stale (old readings after a restart, stopped updating, unavailable for over 5 minutes) and fixes them automatically: it refreshes them and re-sends their last real state (fans and thermostats). If a fan still doesn't respond, it nudges it (a few seconds in another mode, then back) after 1.5, 10 and 30 minutes. It never reloads an integration on its own.",
         "data": {
           "health_entities": "Devices to watch"
         }
@@ -53,7 +53,7 @@
     },
     "health_fix": {
       "name": "Fix a device",
-      "description": "Refresh, re-sync (send its last real state) or reconnect a watched device.",
+      "description": "Refresh, re-sync (send its last real state), nudge (a brief real change, then back) or reconnect (reload its integration) a watched device.",
       "fields": {
         "entity_id": {
           "name": "Device",
@@ -61,7 +61,7 @@
         },
         "action": {
           "name": "Fix",
-          "description": "refresh, resync or reconnect."
+          "description": "refresh, resync, nudge or reconnect."
         }
       }
     }

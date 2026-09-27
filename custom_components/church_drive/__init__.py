@@ -68,7 +68,7 @@ PLATFORMS = [Platform.SELECT, Platform.SENSOR]
 HEALTH_FIX_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
-        vol.Optional("action", default="resync"): vol.In(["refresh", "resync", "reconnect"]),
+        vol.Optional("action", default="resync"): vol.In(["refresh", "resync", "nudge", "reconnect"]),
     }
 )
 

@@ -1,7 +1,7 @@
 // Device Health Card: every device Church Drive watches (see the
 // integration's health.py), with whether it's responding, when it was last
 // heard from and how often it usually reports. Stale devices show why, their
-// last real reading, the fixes tried so far, and Fix now / Reconnect buttons.
+// last real reading, the fixes tried so far, and a Fix now button (fixes are automatic anyway).
 // The title turns amber while anything needs attention.
 
 import { createFormEditor } from './form-editor.js';
@@ -112,7 +112,6 @@ export class DeviceHealthCard extends HTMLElement {
           ${ok ? '' : `<div class="dh-fixes ck-sub" style="font-size:0.74rem; padding-left:32px;"></div>
           <div style="display:flex; gap:6px; padding-left:32px;">
             <button class="dh-fix" type="button" style="border:none; border-radius:10px; padding:7px 10px; font:inherit; font-size:0.8rem; font-weight:600; background:#ffa726; color:#2a1700; cursor:pointer;">Fix now</button>
-            <button class="dh-reconnect" type="button" style="border:none; border-radius:10px; padding:7px 10px; font:inherit; font-size:0.8rem; font-weight:600; background:rgba(127,127,127,0.18); color:var(--primary-text-color); cursor:pointer;">Reconnect</button>
           </div>`}
         </div>`;
       })
@@ -129,9 +128,7 @@ export class DeviceHealthCard extends HTMLElement {
       if (fixes) fixes.textContent = (d.fixes || []).length ? `Tried: ${d.fixes.join(' · ')}` : 'Fixing automatically…';
       const call = (action) => !c.demo && this._hass.callService('church_drive', 'health_fix', { entity_id: id, action });
       const fix = el.querySelector('.dh-fix');
-      if (fix) fix.addEventListener('click', () => call('resync'));
-      const rec = el.querySelector('.dh-reconnect');
-      if (rec) rec.addEventListener('click', () => call('reconnect'));
+      if (fix) fix.addEventListener('click', () => call(id.startsWith('fan.') ? 'nudge' : 'resync'));
     });
     hydrateIcons(this);
   }
