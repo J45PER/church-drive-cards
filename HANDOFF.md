@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-26. Current release: **v0.14.2**.*
+*Last updated 2026-09-26. Current release: **v0.15.0**.*
 
 ## Where this stands
 
@@ -49,6 +49,24 @@ the phone, then the Climate Card with the Nests on:
 (grey, the selected one solid), Eco/Heat/Off, the temperature line of the 24h
 graph, the dropdowns opening inside the Heating panels, and the Climate and
 Heating panels changing colour with the mode.
+
+**New in v0.15.0: temperature scale, limits, graph readout and smoothing**
+(mock-up claude.ai/artifact/2G7Wj2We66Jq6r3jVK6CfN; the user chose a smooth
+scale, a freezing colour, S3 = limits on the graph, and humidity limits).
+- `climate-zone-card`: rooms take `type` (living/bedroom/office/hall/bathroom/
+  kitchen, `CZ_TYPES`; guessed from name/icon) and optional `low`/`high`.
+  `czColour()` interpolates stops around low/high; ≤0° is ice-white #e3f2fd with
+  a "Freezing: pipes at risk" banner. Title = colour of the room furthest
+  outside its range. Humidity: `humidity_low` 40, `humidity_high` 60,
+  `humidity_dry` 30 per card; stays purple (paler dry, deeper humid; the user
+  asked for purple shades, not amber). Graph: shaded comfortable band, line
+  coloured by the scale (vertical SVG gradient), dotted humidity limits.
+  The old `cold_below`/`cool_below`/`warm_from`/`hot_from` are gone.
+- `card-kit`: `kitScrub` (press and hold 300ms on touch, hover with a mouse;
+  line + dots + label with the time and raw readings; blocks scrolling while
+  held; a hold doesn't count as a tap). `kitSmooth` (15-min time-weighted
+  slots, then a 7-tap moving average) and `kitPath` (Catmull-Rom curve).
+  `smooth_graphs` switch (default on) on the zone, purifier and climate cards.
 
 **New in v0.14.2: no flicker on the fan and purifier cards.** The Philips fan
 reports "on" before its speed, so tapping speed 1 briefly showed "On".

@@ -116,13 +116,16 @@ show_humidity_history: true
 
 ### `climate-zone-card`
 
-One floor or zone. Each room or sensor gets a block with its temperature in a comfort colour (cold blue, cool cyan, comfortable green, warm orange, hot red), humidity in purple, and its own 24-hour graph: temperature filled, humidity as a purple line on its own scale. The title takes the zone's average comfort colour. The comfort thresholds, graph length and humidity line are set in the editor.
+One floor or zone, with a block per room or sensor. Each room has a **type** that sets its comfortable range (living room 19–22°, bedroom 16–20°, office 19–22°, hall/landing 16–21°, bathroom 20–24°, kitchen 17–21°; guessed from the name if not set, and overridable per room). The temperature is coloured on a smooth scale around that range: teal to green to lime inside it, cyan to deep blue below, amber to deep red above, and ice-white with a "Freezing: pipes at risk" warning at 0° and below. Humidity stays purple, paler when dry and deeper above 60%.
+
+Each room's 24-hour graph shades its comfortable range, colours the temperature line by the same scale and draws humidity with dotted 40–60% limits (changeable per card). The card title takes the colour of the room furthest outside its range.
 
 ```yaml
 type: custom:climate-zone-card
 title: Ground Floor
 rooms:
   - name: Living Room
+    type: living
     temperature: sensor.downstairs_temperature
     humidity: sensor.downstairs_humidity
     icon: mdi:sofa
@@ -147,6 +150,8 @@ A carbon monoxide alarm (e.g. X-Sense): the CO reading on a gauge, status, batte
 A blind, curtain or other cover: Open / Stop / Close tiles and a position bar when the cover reports one. A cover that only assumes its state (e.g. an RF blind) shows the last command instead.
 
 All five have `demo: true` for the Design Presets page.
+
+**Graphs** (climate, climate zone and air purifier cards): press and hold, or hover with a mouse, to read a point in time (a line, dots and a label with the time and the real readings; drag to move). Jumpy sensors are smoothed (15-minute averages, then a gentle moving average, drawn as a curve); each editor has a *Smooth the graphs* switch.
 
 ### `section-panel-card`
 

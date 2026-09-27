@@ -174,25 +174,204 @@ export function kitDemoSeries(values, hours = 24) {
   return values.map((v, i) => [now - (hours * 3600e3 * (values.length - 1 - i)) / (values.length - 1), v]);
 }
 
+// Smoothing for jumpy sensors (0.5° steps, whole percents): the readings are
+// averaged over 15-minute slots (each reading counts for as long as it held),
+// then softened with a moving average over about 1¾ hours. The line is then drawn as a curve.
+export function kitSmooth(pts, from, now, slots = 96) {
+  const sorted = (pts || []).filter((p) => p[1] != null && !isNaN(p[1])).sort((a, b) => a[0] - b[0]);
+  if (sorted.length < 3) return sorted;
+  const step = (now - from) / slots;
+  let j = 0, v = null;
+  while (j < sorted.length && sorted[j][0] <= from) v = sorted[j++][1];
+  const avg = [];
+  for (let k = 0; k < slots; k++) {
+    const a = from + k * step, b = a + step;
+    let sum = 0, dur = 0, t = a;
+    while (j < sorted.length && sorted[j][0] < b) {
+      const tp = sorted[j][0];
+      if (v != null) { sum += v * (tp - t); dur += tp - t; }
+      t = tp;
+      v = sorted[j++][1];
+    }
+    if (v != null) { sum += v * (b - t); dur += b - t; }
+    if (dur > 0) avg.push([a + step / 2, sum / dur]);
+  }
+  const w = [1, 2, 3, 4, 3, 2, 1];
+  const out = avg.map((p, i) => {
+    let s = 0, n = 0;
+    w.forEach((wt, k) => {
+      const q = avg[i + k - 3];
+      if (q) { s += q[1] * wt; n += wt; }
+    });
+    return [p[0], s / n];
+  });
+  if (out.length) out.push([now, out[out.length - 1][1]]);
+  return out;
+}
+
+// SVG path through [x, y] points: a smooth curve when `curve`, else straight.
+export function kitPath(xy, curve = true) {
+  const f = (p) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`;
+  if (!curve || xy.length < 3) return xy.map((p, i) => `${i ? 'L' : 'M'}${f(p)}`).join(' ');
+  let d = `M${f(xy[0])}`;
+  for (let i = 0; i < xy.length - 1; i++) {
+    const p0 = xy[i - 1] || xy[i], p1 = xy[i], p2 = xy[i + 1], p3 = xy[i + 2] || p2;
+    const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+    const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+    d += ` C${f(c1)} ${f(c2)} ${f(p2)}`;
+  }
+  return d;
+}
+
 // An SVG graph of one or two series over the last `hours`, each on its own
 // scale: [{ pts, color, fill, pad }]. The first is drawn filled if `fill`.
-export function kitGraph(series, { hours = 24, height = 48, label = '' } = {}) {
+export function kitGraph(series, { hours = 24, height = 48, label = '', meta = null, smooth = true } = {}) {
   const W = 300, H = height, now = Date.now(), from = now - hours * 3600e3;
   const x = (t) => ((Math.max(from, t) - from) / (now - from)) * W;
   let under = '', over = '';
+  const scrub = [];
   series.forEach((s) => {
-    const pts = (s.pts || []).filter((p) => p[1] != null && !isNaN(p[1]));
-    if (s.current != null && !isNaN(s.current)) pts.push([now, Number(s.current)]);
+    const raw = (s.pts || []).filter((p) => p[1] != null && !isNaN(p[1]));
+    if (s.current != null && !isNaN(s.current)) raw.push([now, Number(s.current)]);
+    const pts = smooth ? kitSmooth(raw, from, now) : raw;
     if (pts.length < 2) return;
     const vals = pts.map((p) => p[1]);
     const lo = Math.min(...vals) - (s.pad || 0.3), hi = Math.max(...vals) + (s.pad || 0.3);
     const y = (v) => H - 3 - ((v - lo) / (hi - lo || 1)) * (H - 6);
-    const d = pts.map((p, i) => `${i ? 'L' : 'M'}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join(' ');
+    const d = kitPath(pts.map((p) => [x(p[0]), y(p[1])]), smooth);
     if (s.fill) under += `<path d="${d} L${W},${H} L0,${H} Z" fill="${s.color}" fill-opacity="0.16"></path>`;
     over += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.width || 2}" vector-effect="non-scaling-stroke"></path>`;
+    scrub.push({ pts, raw, lo, hi, color: s.color, format: s.format, linear: smooth });
   });
   if (!under && !over) return '';
+  if (meta) Object.assign(meta, { from, now, height: H, series: scrub });
   return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block; width:100%; height:${H}px;" role="img" aria-label="${kitEsc(label)}">${under}${over}</svg>`;
+}
+
+// Press and hold a graph (or hover with a mouse) to read a point in time, as
+// on Home Assistant's own history graphs: a line, a dot on each series and a
+// label with the time and values. Drag to move; let go to hide.
+// `spec` = { from, now, height, series: [{ pts, lo, hi, color, format(v) }] },
+// the same scales the graph was drawn with.
+export function kitScrub(svg, spec) {
+  if (!svg || !spec || !spec.series || !spec.series.length || svg.parentNode._ckScrub) return;
+  const H = spec.height;
+  const wrap = document.createElement('div');
+  wrap._ckScrub = true;
+  wrap.style.cssText = 'position:relative; touch-action:pan-y; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;';
+  svg.parentNode.insertBefore(wrap, svg);
+  wrap.appendChild(svg);
+  const line = document.createElement('div');
+  line.style.cssText = `position:absolute; top:0; height:${H}px; width:1px; background:var(--primary-text-color); opacity:.6; pointer-events:none; display:none;`;
+  const tip = document.createElement('div');
+  tip.style.cssText = 'position:absolute; bottom:calc(100% + 6px); z-index:3; padding:6px 9px; border-radius:10px; background:var(--card-background-color); box-shadow:0 3px 10px rgba(0,0,0,.45); font-size:0.78rem; line-height:1.4; white-space:nowrap; pointer-events:none; display:none; font-variant-numeric:tabular-nums;';
+  const dots = spec.series.map((s) => {
+    const d = document.createElement('div');
+    d.style.cssText = `position:absolute; width:9px; height:9px; margin:-4.5px 0 0 -4.5px; border-radius:50%; background:${s.color}; box-shadow:0 0 0 2px var(--card-background-color); pointer-events:none; display:none;`;
+    return d;
+  });
+  wrap.append(line, ...dots, tip);
+  const lerp = (pts, t) => {
+    if (!pts.length) return null;
+    if (t <= pts[0][0]) return pts[0][1];
+    for (let k = 1; k < pts.length; k++) {
+      if (t <= pts[k][0]) {
+        const [a, va] = pts[k - 1], [b, vb] = pts[k];
+        return va + ((vb - va) * (t - a)) / (b - a || 1);
+      }
+    }
+    return pts[pts.length - 1][1];
+  };
+  const valueAt = (pts, t) => {
+    let v = null;
+    for (const p of pts) {
+      if (p[0] <= t) v = p[1];
+      else break;
+    }
+    return v == null && pts.length ? pts[0][1] : v;
+  };
+  const when = (t) => {
+    const d = new Date(t), today = new Date();
+    const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    return d.toDateString() === today.toDateString() ? time : `${d.toLocaleDateString(undefined, { weekday: 'short' })} ${time}`;
+  };
+  const show = (clientX) => {
+    const rect = wrap.getBoundingClientRect();
+    const f = Math.max(0, Math.min(1, (clientX - rect.left) / (rect.width || 1)));
+    const t = spec.from + f * (spec.now - spec.from);
+    const left = f * rect.width;
+    line.style.left = `${left}px`;
+    line.style.display = 'block';
+    const rows = [];
+    spec.series.forEach((s, i) => {
+      const v = s.raw ? valueAt(s.raw, t) : valueAt(s.pts, t);
+      const yv = s.linear ? lerp(s.pts, t) : v;
+      const dot = dots[i];
+      if (v == null || yv == null) {
+        dot.style.display = 'none';
+        return;
+      }
+      const colour = s.colourOf ? s.colourOf(v) : s.color;
+      dot.style.background = colour;
+      dot.style.left = `${left}px`;
+      dot.style.top = `${H - 3 - ((yv - s.lo) / (s.hi - s.lo || 1)) * (H - 6)}px`;
+      dot.style.display = 'block';
+      rows.push(`<div style="color:${colour};">● ${kitEsc(s.format ? s.format(v) : Number(v).toFixed(1))}</div>`);
+    });
+    tip.innerHTML = `<div style="color:var(--secondary-text-color);">${when(t)}</div>${rows.join('')}`;
+    tip.style.display = 'block';
+    const w = tip.offsetWidth;
+    tip.style.left = `${Math.max(0, Math.min(rect.width - w, left - w / 2))}px`;
+  };
+  const hide = () => {
+    [line, tip, ...dots].forEach((el) => (el.style.display = 'none'));
+  };
+  let active = false, used = false, timer = null, sx = 0, sy = 0;
+  wrap.addEventListener('pointerenter', (ev) => ev.pointerType === 'mouse' && show(ev.clientX));
+  wrap.addEventListener('pointermove', (ev) => {
+    if (ev.pointerType === 'mouse') return show(ev.clientX);
+    if (active) return show(ev.clientX);
+    if (timer && (Math.abs(ev.clientX - sx) > 10 || Math.abs(ev.clientY - sy) > 10)) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  });
+  wrap.addEventListener('pointerleave', (ev) => ev.pointerType === 'mouse' && hide());
+  wrap.addEventListener('pointerdown', (ev) => {
+    if (ev.pointerType === 'mouse') return;
+    sx = ev.clientX;
+    sy = ev.clientY;
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = null;
+      active = true;
+      used = true;
+      show(sx);
+    }, 300);
+  });
+  const end = () => {
+    clearTimeout(timer);
+    timer = null;
+    if (active) {
+      active = false;
+      hide();
+    }
+  };
+  ['pointerup', 'pointercancel'].forEach((e) => wrap.addEventListener(e, end));
+  wrap.addEventListener('touchmove', (ev) => {
+    if (active && ev.cancelable) ev.preventDefault();
+    if (active && ev.touches[0]) show(ev.touches[0].clientX);
+  }, { passive: false });
+  wrap.addEventListener('touchend', end);
+  wrap.addEventListener('contextmenu', (ev) => (active || used) && ev.preventDefault());
+  // A hold isn't a tap: don't let it open the card's pop-up.
+  wrap.addEventListener('click', (ev) => {
+    if (used) {
+      used = false;
+      ev.stopPropagation();
+      ev.preventDefault();
+    }
+  }, true);
 }
 
 // Range text for a series, e.g. "18.5–21.4°".

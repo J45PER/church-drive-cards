@@ -9,7 +9,7 @@
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
-import { KIT_COLOR, kitShell, kitHead, kitGauge, kitTiles, kitGraph, kitRange, kitCap, kitNum, kitMoreInfo, kitDemoSeries, KitHistory, KitPending } from './card-kit.js';
+import { KIT_COLOR, kitShell, kitHead, kitGauge, kitTiles, kitGraph, kitRange, kitCap, kitNum, kitMoreInfo, kitDemoSeries, KitHistory, KitPending, kitScrub } from './card-kit.js';
 
 // PM2.5 (µg/m³) bands. Philips purifiers follow the Chinese air-quality
 // standard (good up to 35, then 75, 115); each band can be changed per card.
@@ -96,7 +96,7 @@ export const AirPurifierCardEditor = createFormEditor({
       name: '',
       title: 'Rows to show',
       flatten: true,
-      schema: Object.keys(AP_ROWS).map((name) => ({ name, selector: { boolean: {} }, default: AP_ROWS[name] })),
+      schema: [...Object.keys(AP_ROWS).map((name) => ({ name, selector: { boolean: {} }, default: AP_ROWS[name] })), { name: 'smooth_graphs', selector: { boolean: {} }, default: true }],
     },
     ...(config.demo
       ? []
@@ -148,6 +148,7 @@ export const AirPurifierCardEditor = createFormEditor({
     show_graph: 'PM2.5 graph (24 hours)',
     show_modes: 'Mode buttons',
     show_filters: 'Filter life',
+    smooth_graphs: 'Smooth the graph (averages jumpy readings)',
     pm25_entity: 'PM2.5 sensor',
     allergen_entity: 'Allergen index sensor (optional)',
     filters: 'Filters',
@@ -222,11 +223,17 @@ export class AirPurifierCard extends HTMLElement {
     const gBox = this.querySelector('.ap-graph');
     if (row(c, 'show_graph') && (this._demo || c.pm25_entity)) {
       const pts = this._demo ? this._demo.pmPts : this._hist && this._hist.data ? this._hist.data[c.pm25_entity] : null;
-      const svg = kitGraph([{ pts, current: pm, color: q.color, fill: true, pad: 2 }], { height: 48, label: 'PM2.5, last 24 hours' });
+      const meta = {};
+      const svg = kitGraph([{ pts, current: pm, color: q.color, fill: true, pad: 2, format: (v) => `PM2.5 ${Math.round(v)} µg/m³` }], { height: 48, label: 'PM2.5, last 24 hours', meta, smooth: c.smooth_graphs !== false });
       gBox.style.display = 'block';
-      gBox.innerHTML = svg
+      const gsig = JSON.stringify([pm, q.color, this._hist && this._hist.at, !!svg, c.smooth_graphs]);
+      if (gsig !== this._gsig) {
+        this._gsig = gsig;
+        gBox.innerHTML = svg
         ? `${svg}<div style="display:flex; justify-content:space-between; font-size:0.78rem; color:var(--secondary-text-color); margin-top:2px;"><span style="color:${q.color};">● PM2.5 ${kitRange(pts, pm, 0, '')}</span><span>last 24 h</span></div>`
         : `<div class="ck-sub">${this._hist && this._hist.data ? 'No PM2.5 history yet' : 'Loading history…'}</div>`;
+        kitScrub(gBox.querySelector('svg'), meta);
+      }
     } else gBox.style.display = 'none';
 
     // Modes.
