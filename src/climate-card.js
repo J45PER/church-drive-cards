@@ -19,6 +19,7 @@ import { iconHtml, hydrateIcons } from './icons.js';
 import { stcColor } from './section-title-card.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { kitScrub, kitSmooth, kitPath } from './card-kit.js';
+import { CZ_TYPES } from './climate-zone-card.js';
 
 const CC_MAX_QUICK = 5;
 const CC_RING = 84;
@@ -160,6 +161,12 @@ export const ClimateCardEditor = createFormEditor({
           toggle('show_temperature_history'),
           toggle('show_humidity_history'),
           { name: 'smooth_graphs', selector: { boolean: {} }, default: true },
+          { name: 'show_limits', selector: { boolean: {} }, default: true },
+          { name: 'room_type', selector: { select: { mode: 'dropdown', options: Object.entries(CZ_TYPES).map(([value, t]) => ({ value, label: `${t.name} (${t.low}–${t.high}°)` })) } } },
+          { name: 'comfort_low', selector: { number: { min: 0, max: 35, step: 0.5, mode: 'box', unit_of_measurement: '°' } } },
+          { name: 'comfort_high', selector: { number: { min: 0, max: 40, step: 0.5, mode: 'box', unit_of_measurement: '°' } } },
+          { name: 'humidity_low', selector: { number: { min: 0, max: 100, mode: 'box', unit_of_measurement: '%' } } },
+          { name: 'humidity_high', selector: { number: { min: 0, max: 100, mode: 'box', unit_of_measurement: '%' } } },
           toggle('show_controls'),
           toggle('show_mode'),
           toggle('show_preset'),
@@ -231,6 +238,12 @@ export const ClimateCardEditor = createFormEditor({
     show_temperature_history: 'Temperature history (24 hours)',
     show_humidity_history: 'Humidity history (24 hours)',
     smooth_graphs: 'Smooth the history graph (averages jumpy readings)',
+    show_limits: 'Comfortable range and humidity limits on the graph',
+    room_type: 'Room type (sets the comfortable range)',
+    comfort_low: 'Comfortable from (optional, overrides the type)',
+    comfort_high: 'Comfortable to (optional, overrides the type)',
+    humidity_low: 'Comfortable humidity from (default 40%)',
+    humidity_high: 'Comfortable humidity to (default 60%)',
     show_controls: '− and + buttons',
     show_mode: 'Mode dropdown',
     show_preset: 'Preset dropdown',
@@ -516,7 +529,7 @@ export class ClimateCard extends HTMLElement {
     box.style.display = 'block';
     if (!this._demo && Date.now() - this._historyAt > 10 * 60e3) this._loadHistory();
     const h = this._history;
-    const sig = JSON.stringify([showT, showH, this._historyAt, this._color, !!h, cfg.smooth_graphs]);
+    const sig = JSON.stringify([showT, showH, this._historyAt, this._color, !!h, cfg.smooth_graphs, cfg.show_limits, cfg.room_type, cfg.comfort_low, cfg.comfort_high, cfg.humidity_low, cfg.humidity_high]);
     if (sig === this._historySig) return;
     this._historySig = sig;
     if (!h) {
@@ -545,21 +558,40 @@ export class ClimateCard extends HTMLElement {
     let svg = '';
     const legend = [];
     const scrub = [];
+    // Comfortable range (from the room type) and humidity limits, as on the
+    // Climate Zone card.
+    const limits = cfg.show_limits !== false;
+    const type = CZ_TYPES[cfg.room_type] || CZ_TYPES.living;
+    const num = (k, d) => (cfg[k] != null && cfg[k] !== '' ? Number(cfg[k]) : d);
+    const cLow = num('comfort_low', type.low), cHigh = Math.max(num('comfort_high', type.high), cLow + 0.5);
+    const hLow = num('humidity_low', 40), hHigh = num('humidity_high', 60);
+    let limitsSvg = '';
     if (hums.length > 1) {
       const vals = hums.map((p) => p[1]);
-      const lo = Math.min(...vals) - 3, hi = Math.max(...vals) + 3;
+      const lo = Math.min(...vals, ...(limits ? [hLow - 5] : [])) - 3, hi = Math.max(...vals, ...(limits ? [hHigh + 5] : [])) + 3;
       const p = pathOf(hums, lo, hi);
+      if (limits) {
+        [hLow, hHigh].forEach((val) => {
+          limitsSvg += `<line x1="0" x2="${W}" y1="${p.y(val).toFixed(1)}" y2="${p.y(val).toFixed(1)}" stroke="${CC_HUMIDITY}" stroke-opacity="0.6" stroke-dasharray="1.5 3" vector-effect="non-scaling-stroke"></line>`;
+        });
+      }
       scrub.push({ pts: hums, raw: hRaw, linear: smooth, lo, hi, color: CC_HUMIDITY, format: (val) => `${Math.round(val)}% humidity` });
       if (!temps.length) svg += `<path d="${p.d} L${W},${H} L0,${H} Z" fill="${CC_HUMIDITY}" fill-opacity="0.16"></path>`;
       svg += `<path d="${p.d}" fill="none" stroke="${CC_HUMIDITY}" stroke-width="2" vector-effect="non-scaling-stroke"></path>`;
-      legend.push(`<span style="color:${CC_HUMIDITY}">● Humidity ${Math.round(Math.min(...vals))}–${Math.round(Math.max(...vals))}%</span>`);
+      legend.push(limits ? `<span style="color:${CC_HUMIDITY}">┄ ${hLow}–${hHigh}%</span>` : `<span style="color:${CC_HUMIDITY}">● Humidity ${Math.round(Math.min(...vals))}–${Math.round(Math.max(...vals))}%</span>`);
     }
     if (temps.length > 1) {
       const vals = temps.map((p) => p[1]);
       const targets = (h.target || []).map((p) => p[1]).filter((t) => t != null);
       if (v.target != null) targets.push(Number(v.target));
-      const lo = Math.min(...vals, ...targets) - 0.5, hi = Math.max(...vals, ...targets) + 0.5;
+      const band = limits ? [cLow - 1, cHigh + 1] : [];
+      const lo = Math.min(...vals, ...targets, ...band) - 0.5, hi = Math.max(...vals, ...targets, ...band) + 0.5;
       const p = pathOf(temps, lo, hi);
+      if (limits) {
+        limitsSvg = `<rect x="0" y="${p.y(cHigh).toFixed(1)}" width="${W}" height="${(p.y(cLow) - p.y(cHigh)).toFixed(1)}" fill="#66bb6a" fill-opacity="0.12"></rect>` +
+          [cLow, cHigh].map((val) => `<line x1="0" x2="${W}" y1="${p.y(val).toFixed(1)}" y2="${p.y(val).toFixed(1)}" stroke="#66bb6a" stroke-opacity="0.55" stroke-dasharray="4 3" vector-effect="non-scaling-stroke"></line>`).join('') +
+          limitsSvg;
+      }
       scrub.unshift({ pts: temps, raw: tRaw, linear: smooth, lo, hi, color: this._color, format: (val) => `${val.toFixed(1)}° room` });
       const tPts = (h.target || []).filter((q) => q[1] != null);
       if (tPts.length) scrub.splice(1, 0, { pts: tPts, lo, hi, color: this._color, format: (val) => `${Number(val).toFixed(1)}° target` });
@@ -570,14 +602,14 @@ export class ClimateCard extends HTMLElement {
       }
       svg = `<path d="${p.d} L${W},${H} L0,${H} Z" fill="${this._color}" fill-opacity="0.16"></path>` + svg +
         `<path d="${p.d}" fill="none" stroke="${this._color}" stroke-width="2" vector-effect="non-scaling-stroke"></path>${tgt}`;
-      legend.unshift(`<span style="color:${this._color}">● Temperature ${Math.min(...vals).toFixed(1)}–${Math.max(...vals).toFixed(1)}°</span>`);
+      legend.unshift(limits ? `<span style="color:#66bb6a">▭ ${type.name} ${cLow}–${cHigh}°</span>` : `<span style="color:${this._color}">● Temperature ${Math.min(...vals).toFixed(1)}–${Math.max(...vals).toFixed(1)}°</span>`);
     }
     if (!legend.length) {
       box.innerHTML = `<div style="height:74px; display:flex; align-items:center; justify-content:center; font-size:0.8rem; color:var(--secondary-text-color);">No history yet</div>`;
       return;
     }
     if (legend.length === 1) legend.push('<span>last 24 h</span>');
-    box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block; width:100%; height:${H}px;" role="img" aria-label="The last 24 hours">${svg}</svg>
+    box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block; width:100%; height:${H}px;" role="img" aria-label="The last 24 hours">${limitsSvg}${svg}</svg>
       <div style="display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-top:2px; font-size:0.8rem; color:var(--secondary-text-color);">${legend.join('')}</div>`;
     kitScrub(box.querySelector('svg'), { from, now, height: H, series: scrub });
   }

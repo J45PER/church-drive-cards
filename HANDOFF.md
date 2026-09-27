@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-26. Current release: **v0.15.0**.*
+*Last updated 2026-09-26. Current release: **v0.15.1**.*
 
 ## Where this stands
 
@@ -49,6 +49,21 @@ the phone, then the Climate Card with the Nests on:
 (grey, the selected one solid), Eco/Heat/Off, the temperature line of the 24h
 graph, the dropdowns opening inside the Heating panels, and the Climate and
 Heating panels changing colour with the mode.
+
+**New in v0.15.1: flatter floor cards, fewer pop-ups, Nest limits** (mock-up
+claude.ai/artifact/8QJHfHymWDSdL1BsH7cu2Z).
+- Climate Zone card: rooms sit straight on the card (no shaded box each),
+  separated by a thin divider. Rooms no longer open a pop-up, so press-and-hold
+  on the graph isn't interrupted.
+- Pop-up rule (the user's): only where HA's pop-up adds controls the card
+  doesn't have. Kept: thermostat gauge, fan gauge, blind icon only if the cover
+  supports set_position (feature 4; Hayley's RF blind doesn't). Removed: floor
+  rooms, purifier PM2.5 gauge and filter bars, carbon monoxide gauge.
+- Climate card graph: shaded comfortable band (dashed edges) and dotted
+  humidity limits, like the zone card. New options `show_limits` (default on),
+  `room_type` (CZ_TYPES, default living), `comfort_low`/`comfort_high`,
+  `humidity_low`/`humidity_high` (40/60). Legend shows "▭ Living room 19–22°"
+  and "┄ 40–60%". Mobile Heating: Downstairs `living`, Upstairs `office`.
 
 **New in v0.15.0: temperature scale, limits, graph readout and smoothing**
 (mock-up claude.ai/artifact/2G7Wj2We66Jq6r3jVK6CfN; the user chose a smooth
