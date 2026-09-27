@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-27. Current release: **v0.16.1**.*
+*Last updated 2026-09-27. Current release: **v0.17.0**.*
 
 ## Where this stands
 
@@ -63,6 +63,38 @@ reported by the user, fix untested on the real fan).
   and the Heating panel changing colour.
 - Hold to test on the carbon monoxide card (sounds the real alarm; only when
   the user is happy to).
+
+**New in v0.17.0: Security Zone Card** (`security-zone-card`), live on Mobile →
+Security (released type) and demoed on Beta. The user chose it through several rounds of
+mock-ups: A/B/C → C variants → compact C → "a card per zone" with "each battery
+on its own row". Defaults: hourly bars, 12 hours.
+- One card per zone: the title is the zone name plus a state word (Motion just
+  now / Closed / Quiet / Open N min / Tamper). There's a 24-slot activity strip:
+  motion indigo `#7986cb`, door amber, doorbell pink, tamper red, and a light-on
+  band in faint yellow. Bars or ticks; 6/12/24 h. Press and hold (0.3 s) or hover
+  to scrub, with the readout in the title line. Then a last-events line, each
+  battery on its own row (name, level bar, %, amber below 25%) and an optional
+  light tile.
+- Colours: indigo `#5c6bc0`; amber (tint 10) while the door is open; red (tint 18)
+  plus a warning line on a tamper, or on a door open while `alarm_entity` is armed.
+- History comes from `kitStateHistory` (new in card-kit; `KitHistory` takes a
+  loader). It reloads every 10 min, and state changes seen in between are
+  appended live. Event entities count each distinct timestamp state as an event.
+- Mobile → Security → Doors & Motion holds five `security-zone-card`:
+  Front Garden (Hue `binary_sensor.front_door_sensor_motion` + Ring
+  `event.front_door_motion`, doorbell `event.front_door_ding`, `light.front_light`,
+  Doorbell 58% / Hue sensor), Entrance (`binary_sensor.front_door`, Ring
+  `binary_sensor.motion_detector_39299`, tampers, Door contact / Ring sensor),
+  Driveway (`event.driveway_motion`, Camera), Back Door, and Back Garden (Hue
+  garden motion, `light.outside` Floodlight, Camera / Hue sensor). The panel's
+  colour and summary templates follow the worst zone. The old five entities lists
+  are gone (dashboard auto-backup has them).
+- Design Presets → Beta has a demo Doors & Motion panel (motion / quiet / open /
+  tamper-with-ticks).
+- Still to check on the phone: hold-to-scrub on the strips (no page scroll), the
+  light tiles, and whether the Front Garden bars read well.
+- The front Hue sensor is very chatty (~350 motions a day, passing traffic).
+  Bars handle it.
 
 **v0.16.1: Device Health checks instantly.** After the first restart with
 v0.16.0 the fan still showed off: the saved real reading was there (runtime
@@ -695,8 +727,9 @@ Integration modules (`custom_components/church_drive/`):
       Bedroom, Spare Bedroom), Top Floor (Landing, Office, Hayley's Bedroom,
       En-Suite), all amber with "N rooms on"; Garden (green, On/Off; Patio
       Lightstrip + Garden Spotlight). Row names and `phu:` icons are overrides.
-    - **Security:** [Alarm (alarm colour) + Doors & Motion (indigo, "Doors closed" /
-      "N doors open"; the door, motion, battery and tamper lists)] [Outdoor
+    - **Security:** [Alarm (alarm colour) + Doors & Motion (indigo / amber door
+      open / red tamper; "Doors closed", "Back Door open", "Tamper"; five Security
+      Zone Cards (v0.17.0): Front Garden, Entrance, Driveway, Back Door, Back Garden)] [Outdoor
       Cameras + Indoor Cameras (blue-grey)] [Fire Alarm (red, safe mode)].
     - **Climate** (rebuilt with the v0.14.0 cards, 2026-09-27): [Heating (the
       user's own climate cards: quick settings Off/Heat/Eco, dropdowns off;
@@ -737,8 +770,7 @@ Integration modules (`custom_components/church_drive/`):
     bright, Dimmed · Main, Nightlight, City Blue, and Dreamy dusk / Soho /
     Spellbound on the ambiance zone).
   - No real card sets `max_scenes` below 8 any more.
-- `light.outside` still sits in the Garden sensor list on Mobile's Security tab. It
-  was left there on purpose.
+- `light.outside` is the Back Garden zone card's Floodlight tile on Mobile's Security tab.
 - **Kitchen:** room `light.kitchen` (8 lights); zones `light.kitchen_spotlights`
   and `light.kitchen_ambience` (2 lights).
 - **Hayley's Bedroom:** room `light.hayleys_bedroom`, zone
