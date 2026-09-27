@@ -65,7 +65,8 @@ and Windows & Doors (blind now; curtains and door/window sensors later).
   graph per room (the user didn't want rooms stacked on one graph).
 - `fan-card`: speeds from `speed_N` presets or percentage steps; two rows as in
   the mock-up (the user's choice); `temperature_entity` optional.
-- `air-purifier-card`: PM2.5 bands 12/35/55; Philips allergen index 1-3 low,
+- `air-purifier-card`: PM2.5 bands 35/75/115 since v0.14.1 (were 12/35/55,
+  which showed Fair at 18 while the Philips app said Good), editable per card; Philips allergen index 1-3 low,
   4-6 moderate, 7-9 high; `show_gauge`/`show_allergen`/`show_graph`/
   `show_modes`/`show_filters` (the user wanted every extra toggleable); sensors
   found from the fan's object-id prefix.

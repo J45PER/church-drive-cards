@@ -11,12 +11,15 @@ import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { KIT_COLOR, kitShell, kitHead, kitGauge, kitTiles, kitGraph, kitRange, kitCap, kitNum, kitMoreInfo, kitDemoSeries, KitHistory } from './card-kit.js';
 
-// PM2.5 (µg/m³) bands, as the Philips app uses them.
-function apQuality(pm) {
+// PM2.5 (µg/m³) bands. Philips purifiers follow the Chinese air-quality
+// standard (good up to 35, then 75, 115); each band can be changed per card.
+const AP_BANDS = { good_max: 35, fair_max: 75, poor_max: 115 };
+const apBand = (c, k) => (c && c[k] != null && c[k] !== '' ? Number(c[k]) : AP_BANDS[k]);
+function apQuality(pm, c) {
   if (pm == null) return { color: KIT_COLOR.off, word: '' };
-  if (pm <= 12) return { color: KIT_COLOR.good, word: 'Good' };
-  if (pm <= 35) return { color: KIT_COLOR.fair, word: 'Fair' };
-  if (pm <= 55) return { color: KIT_COLOR.poor, word: 'Poor' };
+  if (pm <= apBand(c, 'good_max')) return { color: KIT_COLOR.good, word: 'Good' };
+  if (pm <= apBand(c, 'fair_max')) return { color: KIT_COLOR.fair, word: 'Fair' };
+  if (pm <= apBand(c, 'poor_max')) return { color: KIT_COLOR.poor, word: 'Poor' };
   return { color: KIT_COLOR.bad, word: 'Very poor' };
 }
 // Philips indoor allergen index, 1 to 12.
@@ -125,6 +128,13 @@ export const AirPurifierCardEditor = createFormEditor({
     {
       type: 'expandable',
       name: '',
+      title: 'Air quality bands (PM2.5 µg/m³)',
+      flatten: true,
+      schema: Object.keys(AP_BANDS).map((name) => ({ name, selector: { number: { min: 1, max: 500, mode: 'box', unit_of_measurement: 'µg/m³' } } })),
+    },
+    {
+      type: 'expandable',
+      name: '',
       title: 'Demo mode (a pretend purifier, for Design Presets)',
       flatten: true,
       schema: [{ name: 'demo', selector: { boolean: {} } }],
@@ -141,9 +151,13 @@ export const AirPurifierCardEditor = createFormEditor({
     pm25_entity: 'PM2.5 sensor',
     allergen_entity: 'Allergen index sensor (optional)',
     filters: 'Filters',
+    good_max: 'Good up to',
+    fair_max: 'Fair up to',
+    poor_max: 'Poor up to (above is very poor)',
     demo: 'Use a pretend purifier instead of a real one',
   },
   helpers: {
+    good_max: 'Defaults 35 / 75 / 115, the Chinese standard Philips purifiers use, so the card matches the Philips app.',
     filters: 'Shown as bars; amber under 25% ("Clean soon" for a pre-filter, "Replace soon" otherwise), red under 10%.',
   },
 });
@@ -185,7 +199,7 @@ export class AirPurifierCard extends HTMLElement {
     const on = st.state === 'on';
     const pm = this._demo ? this._demo.pm25 : kitNum(c.pm25_entity && this._hass.states[c.pm25_entity]);
     const allergen = this._demo ? this._demo.allergen : kitNum(c.allergen_entity && this._hass.states[c.allergen_entity]);
-    const q = apQuality(pm);
+    const q = apQuality(pm, c);
     const mode = on ? (a.preset_mode ? kitCap(a.preset_mode) : 'On') : st.state === 'unavailable' ? 'Unavailable' : 'Off';
     const color = on ? q.color : KIT_COLOR.off;
     kitHead(this, c.name || a.friendly_name || c.entity, [mode, q.word ? `${q.word} air` : ''].filter(Boolean).join(' · ') + (this._demo ? ' · demo' : ''), color, on && pm > 35 ? 12 : 0);
@@ -193,7 +207,7 @@ export class AirPurifierCard extends HTMLElement {
     // Gauge, info and quality word.
     const top = this.querySelector('.ap-top');
     top.style.display = row(c, 'show_gauge') ? 'flex' : 'none';
-    this.querySelector('.ap-gauge').innerHTML = kitGauge(pm == null ? 0 : pm / 75, q.color, pm == null ? '–' : String(Math.round(pm)), 'PM2.5 µg/m³');
+    this.querySelector('.ap-gauge').innerHTML = kitGauge(pm == null ? 0 : pm / (apBand(c, 'poor_max') * 1.3), q.color, pm == null ? '–' : String(Math.round(pm)), 'PM2.5 µg/m³');
     const al = row(c, 'show_allergen') ? apAllergen(allergen) : null;
     this.querySelector('.ap-info').innerHTML = [
       al ? `<span>${iconHtml('mdi:flower', { size: '18px', style: `color:${al.color};` })}Allergens ${allergen} · ${al.word}</span>` : '',
