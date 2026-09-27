@@ -4796,7 +4796,7 @@
       const preset = on && a.preset_mode && speedOf(a.preset_mode) == null ? a.preset_mode : null;
       const color = !on ? KIT_COLOR.off : preset === "sleep" ? KIT_COLOR.sleep : KIT_COLOR.fan;
       const word = st.state === "unavailable" ? "Unavailable" : !on ? "Off" : preset ? kitCap(preset) : current ? `Speed ${current.n}` : "On";
-      kitHead(this, c.name || a.friendly_name || c.entity, word + (this._demo ? " \xB7 demo" : ""), color, on ? 10 : 0);
+      kitHead(this, c.name || a.friendly_name || c.entity, word + (this._demo ? " \xB7 demo" : ""), color);
       kitHealthBanner(this, this._hass, c.entity, !!(this._demo || c.demo));
       const top = this.querySelector(".fc-top");
       top.style.display = c.show_gauge === false ? "none" : "flex";
