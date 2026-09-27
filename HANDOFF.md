@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-27. Current release: **v0.17.0**.*
+*Last updated 2026-09-27. Current release: **v0.17.1**.*
 
 ## Where this stands
 
@@ -49,11 +49,10 @@ on the phone; the purifier's air quality now matches the Philips app (v0.14.1,
 reported by the user, fix untested on the real fan).
 
 **Still to check on real devices:**
-- Device Health (v0.16.0) in real life: watching since 2026-09-27 20:45. The
-  fan was already stuck before it started, so it has no real reading yet; it
-  learns one when the fan next reports live, and should catch the next
-  restart's stale "off" and re-sync it on its own. Check the Manager
-  dashboard and the fan card banner after the next restart.
+- Device Health **confirmed** on the v0.17.0 restart (2026-09-27 21:46): the fan
+  and the purifier both came back with old readings. Both were flagged at once
+  and re-synced automatically ("Re-synced to its 21:10 reading"). The fan is on
+  Speed 1 again with no lag.
 - v0.15.x on the phone: the colour scale and room types, press-and-hold on
   the graphs with a finger (hold ~0.3s, drag; page shouldn't scroll), the
   smoothed lines, the flatter floor cards, and the Nest graphs' comfortable
@@ -63,6 +62,16 @@ reported by the user, fix untested on the real fan).
   and the Heating panel changing colour.
 - Hold to test on the carbon monoxide card (sounds the real alarm; only when
   the user is happy to).
+
+**v0.17.1: visual tidy-ups.**
+- **Fan card:** the dial is 84px, like the purifier, CO and thermostat dials. It no
+  longer tints its background when on. Tints are kept for warnings only: purifier
+  poor air, CO alarm, zone door open/tamper.
+- **Alarm card:** the countdown ring's full length is the seconds left plus the time
+  since `last_changed` (ignored if the clocks are 10+ minutes apart). A card rebuilt
+  mid-delay used to refill the ring for the last ~15 s. The alarm's own attribute
+  counts 60 → 1 smoothly. The alarm ring is still 72px; the user was asked
+  whether to match it to 84px.
 
 **New in v0.17.0: Security Zone Card** (`security-zone-card`), live on Mobile →
 Security (released type) and demoed on Beta. The user chose it through several rounds of
@@ -470,7 +479,7 @@ Integration modules (`custom_components/church_drive/`):
   - `church-drive-cards-beta.js` registers every card as `<name>-beta`.
   - HA loads it from resource `436186c683fe4c7d81c865b67bb0e109`:
     `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's pinned to `f21a73f` (v0.16.0's card code: device health banners and card).
+    It's pinned to `9c687ab` (the v0.17.0 merge: Security Zone Card).
   - To test a branch: push it, repoint the resource, and ask for a hard refresh.
   - jsDelivr is blocked from the cloud container, but works for the user.
 - **Rollback:** download an older release in HACS and restart.
