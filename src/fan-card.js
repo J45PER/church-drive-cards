@@ -10,7 +10,7 @@
 import { createFormEditor } from './form-editor.js';
 import { hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
-import { KIT_COLOR, kitShell, kitHead, kitGauge, kitTiles, kitCap, kitNum, kitMoreInfo, KitPending } from './card-kit.js';
+import { KIT_COLOR, kitShell, kitHead, kitGauge, kitTiles, kitCap, kitNum, kitMoreInfo, KitPending, kitHealthBanner } from './card-kit.js';
 
 const FAN_PRESET_ICONS = {
   natural: 'mdi:weather-windy',
@@ -138,6 +138,7 @@ export class FanCard extends HTMLElement {
     const color = !on ? KIT_COLOR.off : preset === 'sleep' ? KIT_COLOR.sleep : KIT_COLOR.fan;
     const word = st.state === 'unavailable' ? 'Unavailable' : !on ? 'Off' : preset ? kitCap(preset) : current ? `Speed ${current.n}` : 'On';
     kitHead(this, c.name || a.friendly_name || c.entity, word + (this._demo ? ' · demo' : ''), color, on ? 10 : 0);
+    kitHealthBanner(this, this._hass, c.entity, !!(this._demo || c.demo));
 
     // Gauge and info.
     const top = this.querySelector('.fc-top');

@@ -157,6 +157,17 @@ The **climate card** graph also shows the comfortable range and 40–60% humidit
 
 **Graphs** (climate, climate zone and air purifier cards): press and hold, or hover with a mouse, to read a point in time (a line, dots and a label with the time and the real readings; drag to move). Jumpy sensors are smoothed (15-minute averages, then a gentle moving average, drawn as a curve); each editor has a *Smooth the graphs* switch.
 
+### `device-health-card`
+
+Lists every device Church Drive watches, with whether it's responding, when it was last heard from and how often it usually reports. Stale devices show why, their last real reading and the fixes tried, with **Fix now** and **Reconnect** buttons.
+
+**Device health** (in the integration): choose devices in Settings → Devices & services → Church Drive → Configure → Device health. Church Drive remembers each device's last real reading and spots when its state has gone stale:
+- **old readings**: a counter such as `runtime` went backwards (e.g. the Philips fan after a restart);
+- **stopped updating**: a device with a counter says it's on but hasn't updated for 3× its usual gap;
+- **unavailable** for more than 5 minutes.
+
+It then fixes it automatically: a refresh, then re-sending the last real state (fans and thermostats), then reconnecting its integration (at most every 6 hours). `sensor.church_drive_device_health` counts devices needing attention; the fan, air purifier, carbon monoxide, blind and climate cards show a "Not responding" banner on their own; `church_drive.health_fix` runs a fix on demand.
+
 ### `section-panel-card`
 
 A group of cards on a faint panel in the section's colour, headed by a large title with a coloured icon and an optional live summary on the right (any Home Assistant template, e.g. `1 room on`). Several panels can share one dashboard section, so they stack without gaps. `color_template` (optional) takes a template that gives a colour, so a panel can follow a state, e.g. the alarm. The editor has the title, icon, colour and summary, then Home Assistant's own card list for the cards inside.

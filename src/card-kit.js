@@ -28,6 +28,11 @@ export const kitEsc = (text) =>
 export const kitCap = (text) => String(text || '').replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
 export const kitNum = (st) => (st && st.state !== '' && !isNaN(Number(st.state)) ? Number(st.state) : null);
 
+export const KIT_HEALTH_CSS = `.ck-stale .ck-row, .ck-stale .ck-dim { opacity:.55; }
+.ck-health { display:none; align-items:center; gap:10px; padding:9px 11px; border-radius:12px; background:color-mix(in srgb, #ffa726 18%, transparent); color:#ffd08a; font-size:0.85rem; }
+.ck-health small { display:block; color:var(--secondary-text-color); font-size:0.74rem; }
+.ck-health button { flex:none; border:none; border-radius:10px; padding:7px 10px; font:inherit; font-size:0.8rem; font-weight:600; background:#ffa726; color:#2a1700; cursor:pointer; }`;
+
 // The card shell: ha-card, shared styles, the title row, then `body`.
 export function kitShell(body, extraCss = '') {
   return `
@@ -53,12 +58,14 @@ export function kitShell(body, extraCss = '') {
         .ck-bar { height:8px; border-radius:99px; background:rgba(127,127,127,.2); overflow:hidden; }
         .ck-bar > i { display:block; height:100%; border-radius:inherit; transition:width .4s; }
         .ck-tap { cursor:pointer; }
+        ${KIT_HEALTH_CSS}
         ${extraCss}
       </style>
       <div style="display:flex; align-items:baseline; gap:8px;">
         <div class="ck-title" style="flex:1; min-width:0; font-size:1.5rem; font-weight:500; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:color .6s;"></div>
         <div class="ck-word" style="flex:none; font-size:0.85rem; color:var(--secondary-text-color);"></div>
       </div>
+      <div class="ck-health" role="status"></div>
       ${body}
     </ha-card>`;
 }
@@ -444,4 +451,53 @@ export class KitPending {
     }
     return { ...st, state: w.state, attributes: { ...a, ...attrs } };
   }
+}
+
+// ---- Device health (see the integration's health.py): a banner on a card
+// whose device looks stale, from sensor.church_drive_device_health.
+export const HEALTH_SENSOR = 'sensor.church_drive_device_health';
+
+export function kitHealthOf(hass, entityId) {
+  const s = hass && entityId && hass.states[HEALTH_SENSOR];
+  const d = s && s.attributes.devices && s.attributes.devices[entityId];
+  return d && d.status !== 'ok' ? d : null;
+}
+
+const kitClock = (iso) => (iso ? new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '');
+
+// "Speed 1 at 19:11", "Heat 21° at 07:30", "Off at 22:05".
+export function kitRealText(real) {
+  if (!real) return '';
+  let what = kitCap(real.state);
+  if (real.preset_mode) {
+    const m = /^speed[ _-]?(\d+)$/i.exec(real.preset_mode);
+    what = m ? `Speed ${m[1]}` : kitCap(real.preset_mode);
+  } else if (real.temperature != null && real.state !== 'off') {
+    what = `${kitCap(real.state)} ${real.temperature}°`;
+  }
+  return `${what} at ${kitClock(real.at)}`;
+}
+
+export function kitHealthBanner(root, hass, entityId, demo) {
+  const box = root.querySelector('.ck-health');
+  const card = root.querySelector('.ck-card') || root.querySelector('ha-card');
+  if (!box) return null;
+  const d = demo ? null : kitHealthOf(hass, entityId);
+  card.classList.toggle('ck-stale', !!d);
+  const sig = d ? JSON.stringify([d.reason, d.since, d.last_real, d.fixes]) : '';
+  if (box._sig === sig) return d;
+  box._sig = sig;
+  box.style.display = d ? 'flex' : 'none';
+  if (!d) {
+    box.innerHTML = '';
+    return null;
+  }
+  const last = (d.fixes || []).slice(-1)[0];
+  box.innerHTML = `${iconHtml('mdi:lan-disconnect', { size: '22px', style: 'flex:none;' })}
+    <div style="flex:1; min-width:0; line-height:1.35;">Not responding since ${kitClock(d.since)}
+      <small></small></div>
+    <button type="button">Fix now</button>`;
+  box.querySelector('small').textContent = [d.reason, d.last_real ? `Last real: ${kitRealText(d.last_real)}` : '', last ? `Fixing: ${last.replace(/^\d\d:\d\d /, '')}` : ''].filter(Boolean).join(' · ');
+  box.querySelector('button').addEventListener('click', () => hass.callService('church_drive', 'health_fix', { entity_id: entityId, action: 'resync' }));
+  return d;
 }

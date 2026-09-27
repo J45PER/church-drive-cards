@@ -8,7 +8,7 @@
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
-import { KIT_COLOR, kitShell, kitHead, kitGauge, kitTiles, kitCap, kitNum } from './card-kit.js';
+import { KIT_COLOR, kitShell, kitHead, kitGauge, kitTiles, kitCap, kitNum, kitHealthBanner } from './card-kit.js';
 
 // Where each related entity is found, from the device's name prefix.
 const CO_PARTS = {
@@ -135,6 +135,7 @@ export class CoAlarmCard extends HTMLElement {
     const color = d.unavailable ? KIT_COLOR.off : high ? KIT_COLOR.bad : d.ppm >= 10 ? KIT_COLOR.fair : KIT_COLOR.good;
     const word = d.unavailable ? 'Unavailable' : d.alarm ? 'CO detected' : d.status ? kitCap(d.status) : 'Normal';
     kitHead(this, c.name || 'Carbon Monoxide', word + (this._demo ? ' · demo' : ''), color, high ? 30 : 0);
+    kitHealthBanner(this, this._hass, c.entity, !!(this._demo || c.demo));
 
     const warn = this.querySelector('.co-warn');
     warn.style.display = high ? 'flex' : 'none';

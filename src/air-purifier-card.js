@@ -9,7 +9,7 @@
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
-import { KIT_COLOR, kitShell, kitHead, kitGauge, kitTiles, kitGraph, kitRange, kitCap, kitNum, kitDemoSeries, KitHistory, KitPending, kitScrub } from './card-kit.js';
+import { KIT_COLOR, kitShell, kitHead, kitGauge, kitTiles, kitGraph, kitRange, kitCap, kitNum, kitDemoSeries, KitHistory, KitPending, kitScrub, kitHealthBanner } from './card-kit.js';
 
 // PM2.5 (µg/m³) bands. Philips purifiers follow the Chinese air-quality
 // standard (good up to 35, then 75, 115); each band can be changed per card.
@@ -204,6 +204,7 @@ export class AirPurifierCard extends HTMLElement {
     const mode = on ? (a.preset_mode ? kitCap(a.preset_mode) : 'On') : st.state === 'unavailable' ? 'Unavailable' : 'Off';
     const color = on ? q.color : KIT_COLOR.off;
     kitHead(this, c.name || a.friendly_name || c.entity, [mode, q.word ? `${q.word} air` : ''].filter(Boolean).join(' · ') + (this._demo ? ' · demo' : ''), color, on && pm > 35 ? 12 : 0);
+    kitHealthBanner(this, this._hass, c.entity, !!(this._demo || c.demo));
 
     // Gauge, info and quality word.
     const top = this.querySelector('.ap-top');

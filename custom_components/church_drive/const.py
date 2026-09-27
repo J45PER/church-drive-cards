@@ -20,3 +20,8 @@ WS_SCENE_PREVIEW = "church_drive/scene/preview"
 # Dispatcher signals: a scene was applied; the library changed.
 SIGNAL_ACTIVE = "church_drive_active"
 SIGNAL_LIBRARY = "church_drive_library"
+
+# Device health: watched entities (options), the fix action, the update signal.
+CONF_HEALTH_ENTITIES = "health_entities"
+SERVICE_HEALTH_FIX = "health_fix"
+SIGNAL_HEALTH = "church_drive_health"

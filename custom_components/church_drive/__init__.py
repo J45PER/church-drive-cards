@@ -7,6 +7,10 @@
   the websocket and apply to any room, zone or light (apply.py); a scene
   select entity per Hue room/zone (select.py); church_drive.apply_scene; and
   an optional sync of the white scenes to chosen Hue rooms (hue.py).
+- Device health (health.py): watches chosen devices, spots ones whose state
+  has gone stale (e.g. old readings after a restart), fixes them
+  automatically, and reports on sensor.church_drive_device_health for the
+  cards; church_drive.health_fix runs a fix on demand.
 """
 
 from __future__ import annotations
@@ -40,9 +44,11 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 from .apply import async_apply
 from .const import (
     CARDS_FILE,
+    CONF_HEALTH_ENTITIES,
     CONF_SCENE_GROUPS,
     DOMAIN,
     SERVICE_APPLY_SCENE,
+    SERVICE_HEALTH_FIX,
     SERVICE_SYNC_SCENES,
     SIGNAL_LIBRARY,
     URL_BASE,
@@ -51,12 +57,20 @@ from .const import (
     WS_SCENE_PREVIEW,
     WS_SCENE_SAVE,
 )
+from .health import DeviceHealth
 from .hue import async_sync
 from .library import Library, normalise
 
 _LOGGER = logging.getLogger(__name__)
 FRONTEND_DIR = Path(__file__).parent / "frontend"
-PLATFORMS = [Platform.SELECT]
+PLATFORMS = [Platform.SELECT, Platform.SENSOR]
+
+HEALTH_FIX_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
+        vol.Optional("action", default="resync"): vol.In(["refresh", "resync", "reconnect"]),
+    }
+)
 
 APPLY_SCENE_SCHEMA = vol.Schema(
     {vol.Required(ATTR_ENTITY_ID): cv.entity_ids, vol.Required("scene"): cv.string}
@@ -206,6 +220,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await library.async_load()
     data["library"] = library
 
+    # Device health must never stop the cards and scenes from loading.
+    health = DeviceHealth(hass, entry.options.get(CONF_HEALTH_ENTITIES, []))
+    try:
+        await health.async_start()
+        entry.async_on_unload(health.async_stop)
+        data["health"] = health
+    except Exception:  # noqa: BLE001
+        _LOGGER.exception("Device health couldn't start; the cards and scenes still work")
+        data["health"] = None
+
+    async def health_fix(call: ServiceCall) -> None:
+        if data.get("health") is None:
+            raise ServiceValidationError("Device health isn't running")
+        for entity_id in call.data[ATTR_ENTITY_ID]:
+            await data["health"].async_fix(entity_id, call.data["action"])
+
+    hass.services.async_register(DOMAIN, SERVICE_HEALTH_FIX, health_fix, schema=HEALTH_FIX_SCHEMA)
+
     async def sync_scenes(call: ServiceCall | None = None) -> ServiceResponse:
         return await async_sync(hass, entry.options.get(CONF_SCENE_GROUPS, []))
 
@@ -241,6 +273,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Stop loading the cards on new pages and remove the scene entities."""
     hass.services.async_remove(DOMAIN, SERVICE_SYNC_SCENES)
     hass.services.async_remove(DOMAIN, SERVICE_APPLY_SCENE)
+    hass.services.async_remove(DOMAIN, SERVICE_HEALTH_FIX)
     url = hass.data.get(DOMAIN, {}).get("cards_url")
     if url:
         remove_extra_js_url(hass, url)
