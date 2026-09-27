@@ -114,6 +114,40 @@ show_temperature_history: true
 show_humidity_history: true
 ```
 
+### `climate-zone-card`
+
+One floor or zone. Each room or sensor gets a block with its temperature in a comfort colour (cold blue, cool cyan, comfortable green, warm orange, hot red), humidity in purple, and its own 24-hour graph: temperature filled, humidity as a purple line on its own scale. The title takes the zone's average comfort colour. The comfort thresholds, graph length and humidity line are set in the editor.
+
+```yaml
+type: custom:climate-zone-card
+title: Ground Floor
+rooms:
+  - name: Living Room
+    temperature: sensor.downstairs_temperature
+    humidity: sensor.downstairs_humidity
+    icon: mdi:sofa
+  - name: Entrance
+    temperature: sensor.entrance_sensor_temperature
+```
+
+### `fan-card`
+
+A fan with a speed gauge, then two rows of tiles: Off and the speeds (1, 2, 3…), then the other presets (Natural, Sleep…) and Oscillate. Tiles are grey until selected, like the alarm card. Speeds come from presets named `speed_1`… (Philips) or from the fan's percentage steps. Each row can be switched off.
+
+### `air-purifier-card`
+
+An air purifier: a PM2.5 gauge in air-quality colours (good ≤12, fair ≤35, poor ≤55, very poor), the allergen index, a 24-hour PM2.5 graph, mode tiles and filter life bars ("Clean soon" / "Replace soon" under 25%). Every extra can be switched off. Picking the purifier finds its PM2.5, allergen and filter sensors from the same entity name prefix.
+
+### `co-alarm-card`
+
+A carbon monoxide alarm (e.g. X-Sense): the CO reading on a gauge, status, battery and last report, with **Hold to test** (a 1.5-second press, as it sounds the real alarm) and Mute. The card turns red with a warning when CO is found. Picking the CO reading sensor fills in the alarm's other entities.
+
+### `cover-card` (Blind Card)
+
+A blind, curtain or other cover: Open / Stop / Close tiles and a position bar when the cover reports one. A cover that only assumes its state (e.g. an RF blind) shows the last command instead.
+
+All five have `demo: true` for the Design Presets page.
+
 ### `section-panel-card`
 
 A group of cards on a faint panel in the section's colour, headed by a large title with a coloured icon and an optional live summary on the right (any Home Assistant template, e.g. `1 room on`). Several panels can share one dashboard section, so they stack without gaps. `color_template` (optional) takes a template that gives a colour, so a panel can follow a state, e.g. the alarm. The editor has the title, icon, colour and summary, then Home Assistant's own card list for the cards inside.
