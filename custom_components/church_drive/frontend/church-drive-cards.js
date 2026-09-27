@@ -314,9 +314,9 @@
         }
         const radius = `${isFirst ? "16px 16px" : "0 0"} ${isLast ? "16px 16px" : "0 0"}`;
         const maskCss = mask ? `-webkit-mask-image:${mask}; mask-image:${mask};` : "";
-        const row2 = document.createElement("div");
-        row2.style.cssText = `display:flex; align-items:center; box-sizing:border-box; width:100%; padding:10px 16px; margin:${isFirst ? "0" : "4px"} 0 0 0; border:none; border-radius:${radius}; ${maskCss} background: linear-gradient(to right, ${color} 0%, transparent ${widthPct}%);`;
-        row2.innerHTML = `
+        const row3 = document.createElement("div");
+        row3.style.cssText = `display:flex; align-items:center; box-sizing:border-box; width:100%; padding:10px 16px; margin:${isFirst ? "0" : "4px"} 0 0 0; border:none; border-radius:${radius}; ${maskCss} background: linear-gradient(to right, ${color} 0%, transparent ${widthPct}%);`;
+        row3.innerHTML = `
         <ha-icon icon="${icon}" style="color:${iconColor}; margin-right:14px; flex-shrink:0; --mdc-icon-size:26px;"></ha-icon>
         <div style="flex:1; min-width:0;">
           <div style="font-weight:500; color:#ffffff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${e.name || e.st && e.st.attributes.friendly_name || e.entity || ""}</div>
@@ -325,14 +325,14 @@
         <div style="font-weight:600; color:#ffffff; margin-left:8px; flex-shrink:0;">${e.available ? Math.round(e.val) + unit : "n/a"}</div>
       `;
         if (useStateIcon) {
-          const placeholder = row2.querySelector("ha-icon");
+          const placeholder = row3.querySelector("ha-icon");
           const stateIcon = document.createElement("ha-state-icon");
           stateIcon.hass = hass;
           stateIcon.stateObj = e.st;
           stateIcon.style.cssText = placeholder.style.cssText;
           placeholder.replaceWith(stateIcon);
         }
-        this._rows.appendChild(row2);
+        this._rows.appendChild(row3);
       });
     }
     // Rows with a secondary line are ~60px, so count them as 1.2 units.
@@ -1781,19 +1781,19 @@
       const fillPct = on ? dimmable ? Math.max(brightnessPct, 4) : 100 : 0;
       const tint = `color-mix(in srgb, ${color} 40%, var(--card-background-color, #1c1c1c))`;
       const track = "rgba(255,255,255,0.06)";
-      const row2 = document.createElement("div");
-      row2.className = "lcc-row";
+      const row3 = document.createElement("div");
+      row3.className = "lcc-row";
       const pad = level > 0 ? "9px 14px" : "12px 14px";
       const indent = level > 0 ? `margin-left:${16 * level}px;` : "";
-      row2.style.cssText = `position:relative; display:flex; align-items:center; gap:12px; padding:${pad}; ${indent} border-radius:12px; margin-top:6px; overflow:hidden; cursor:pointer; user-select:none; touch-action:pan-y; background: linear-gradient(to right, ${tint} 0%, ${tint} ${fillPct}%, ${track} ${fillPct}%, ${track} 100%);`;
-      row2.innerHTML = `
+      row3.style.cssText = `position:relative; display:flex; align-items:center; gap:12px; padding:${pad}; ${indent} border-radius:12px; margin-top:6px; overflow:hidden; cursor:pointer; user-select:none; touch-action:pan-y; background: linear-gradient(to right, ${tint} 0%, ${tint} ${fillPct}%, ${track} ${fillPct}%, ${track} 100%);`;
+      row3.innerHTML = `
       ${iconHtml(icon, { size: "24px", cls: "lcc-row-icon", style: `color:${on ? color : "var(--secondary-text-color)"}; opacity:${on ? 1 : 0.6}; flex-shrink:0; pointer-events:none;` })}
       <div class="lcc-name" style="flex:1; min-width:0; font-weight:${on ? 600 : 400}; color:${on ? "var(--primary-text-color)" : "var(--secondary-text-color)"}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; pointer-events:none;">${name}</div>
       <div class="lcc-state" style="flex-shrink:0; font-size:0.85rem; font-variant-numeric:tabular-nums; color:${on ? "var(--primary-text-color)" : "var(--secondary-text-color)"}; opacity:${on ? 0.9 : 0.7}; pointer-events:none;">${stateText}</div>
       ${withMoreInfo && !this.config.demo ? `<ha-icon class="lcc-more" icon="mdi:tune-variant" style="color:var(--secondary-text-color); --mdc-icon-size:20px; cursor:pointer; flex-shrink:0;"></ha-icon>` : ""}
     `;
       if (withMoreInfo && !this.config.demo) {
-        const moreBtn = row2.querySelector(".lcc-more");
+        const moreBtn = row3.querySelector(".lcc-more");
         moreBtn.addEventListener("click", (ev) => {
           ev.stopPropagation();
           lccMoreInfo(this, entityId);
@@ -1807,11 +1807,11 @@
       let moved = false;
       let startX = 0;
       const setFillVisual = (pct) => {
-        row2.style.background = `linear-gradient(to right, ${tint} 0%, ${tint} ${pct}%, ${track} ${pct}%, ${track} 100%)`;
-        if (dragging && moved) row2.querySelector(".lcc-state").textContent = pct <= 2 ? "Off" : `${Math.round(pct)}%`;
+        row3.style.background = `linear-gradient(to right, ${tint} 0%, ${tint} ${pct}%, ${track} ${pct}%, ${track} 100%)`;
+        if (dragging && moved) row3.querySelector(".lcc-state").textContent = pct <= 2 ? "Off" : `${Math.round(pct)}%`;
       };
       const pctFromEvent = (ev) => {
-        const rect = row2.getBoundingClientRect();
+        const rect = row3.getBoundingClientRect();
         return Math.min(100, Math.max(0, (ev.clientX - rect.left) / rect.width * 100));
       };
       const endInteraction = () => {
@@ -1825,21 +1825,21 @@
           this._render(h);
         }
       };
-      row2.addEventListener("pointerdown", (ev) => {
+      row3.addEventListener("pointerdown", (ev) => {
         pressed = true;
         if (!dimmable) return;
         dragging = true;
         moved = false;
         startX = ev.clientX;
         this._interacting = true;
-        row2.setPointerCapture(ev.pointerId);
+        row3.setPointerCapture(ev.pointerId);
       });
-      row2.addEventListener("pointermove", (ev) => {
+      row3.addEventListener("pointermove", (ev) => {
         if (!dragging) return;
         if (Math.abs(ev.clientX - startX) > 4) moved = true;
         if (moved) setFillVisual(pctFromEvent(ev));
       });
-      row2.addEventListener("pointerup", (ev) => {
+      row3.addEventListener("pointerup", (ev) => {
         if (!pressed) return;
         if (dimmable && dragging && moved) {
           this._setBrightnessPct(entityId, pctFromEvent(ev));
@@ -1848,11 +1848,11 @@
         }
         endInteraction();
       });
-      row2.addEventListener("pointercancel", () => {
+      row3.addEventListener("pointercancel", () => {
         setFillVisual(fillPct);
         endInteraction();
       });
-      return row2;
+      return row3;
     }
     // Scene tiles, the same height as a light row: picture (or palette
     // gradient) background with the icon and name side by side. At most four
@@ -1872,11 +1872,11 @@
       const base = Math.floor(scenes.length / rowCount);
       const extra = scenes.length % rowCount;
       const rows = Array.from({ length: rowCount }, (_, i) => {
-        const row2 = document.createElement("div");
-        row2.style.cssText = "display:flex; gap:6px;";
-        row2.dataset.size = base + (i < extra ? 1 : 0);
-        wrap.appendChild(row2);
-        return row2;
+        const row3 = document.createElement("div");
+        row3.style.cssText = "display:flex; gap:6px;";
+        row3.dataset.size = base + (i < extra ? 1 : 0);
+        wrap.appendChild(row3);
+        return row3;
       });
       let rowIndex = 0;
       scenes.forEach((s) => {
@@ -2155,10 +2155,10 @@
         this._titleEl.style.display = "none";
       }
       rows.forEach(({ id, level }) => {
-        const row2 = this._buildRow(id, { withMoreInfo: true, level, icon: icons[id] });
-        const nameEl = row2.querySelector(".lcc-name");
+        const row3 = this._buildRow(id, { withMoreInfo: true, level, icon: icons[id] });
+        const nameEl = row3.querySelector(".lcc-name");
         if (names[id] && nameEl) nameEl.textContent = names[id];
-        this._main.appendChild(row2);
+        this._main.appendChild(row3);
       });
       this._scenesEl.innerHTML = "";
       const scenesGrid = this._buildScenes(scenes);
@@ -2454,21 +2454,21 @@
       this.querySelector(".sbc-status").textContent = this._error || this._status || "";
       const list = this.querySelector(".sbc-list");
       (this._custom || []).forEach((scene) => {
-        const row2 = document.createElement("div");
-        row2.className = "sbc-row";
-        row2.innerHTML = `<div class="sbc-sw">${scene.icon ? iconHtml(scene.icon, { size: "24px" }) : ""}</div>
+        const row3 = document.createElement("div");
+        row3.className = "sbc-row";
+        row3.innerHTML = `<div class="sbc-sw">${scene.icon ? iconHtml(scene.icon, { size: "24px" }) : ""}</div>
         <div class="sbc-name"><div></div><div class="sbc-sub"></div></div>
         <button class="sbc-btn" data-act="edit">Edit</button><button class="sbc-btn" data-act="delete">Delete</button>`;
-        row2.querySelector(".sbc-sw").style.background = swatch(scene);
-        row2.querySelector(".sbc-name div").textContent = scene.name;
-        row2.querySelector(".sbc-name .sbc-sub").textContent = scene.kind === "colour" ? `${scene.colors.length} colours${scene.dynamic ? ", animated" : ""} \xB7 ${scene.brightness}%` : `${scene.kelvin}K \xB7 ${scene.brightness}%`;
-        row2.querySelector("[data-act=edit]").addEventListener("click", () => {
+        row3.querySelector(".sbc-sw").style.background = swatch(scene);
+        row3.querySelector(".sbc-name div").textContent = scene.name;
+        row3.querySelector(".sbc-name .sbc-sub").textContent = scene.kind === "colour" ? `${scene.colors.length} colours${scene.dynamic ? ", animated" : ""} \xB7 ${scene.brightness}%` : `${scene.kelvin}K \xB7 ${scene.brightness}%`;
+        row3.querySelector("[data-act=edit]").addEventListener("click", () => {
           this._draft = { ...BLANK, ...scene, colors: [...scene.colors || BLANK.colors] };
           this._status = "";
           this._draw();
         });
-        row2.querySelector("[data-act=delete]").addEventListener("click", () => this._delete(scene));
-        list.appendChild(row2);
+        row3.querySelector("[data-act=delete]").addEventListener("click", () => this._delete(scene));
+        list.appendChild(row3);
       });
       hydrateIcons(list);
       const body = this.querySelector(".sbc-body");
@@ -3791,6 +3791,1226 @@
     });
   }
 
+  // src/card-kit.js
+  var KIT_COLOR = {
+    off: "#8b919c",
+    good: "#4caf50",
+    fair: "#ffa726",
+    poor: "#ff7043",
+    bad: "#e53935",
+    fan: "#26c6da",
+    sleep: "#7e6fd6",
+    humidity: "#b388ff",
+    blind: "#a1887f",
+    cold: "#42a5f5",
+    cool: "#26c6da",
+    comfy: "#66bb6a",
+    warm: "#ffa726",
+    hot: "#ef5350"
+  };
+  var kitEsc = (text) => String(text == null ? "" : text).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  var kitCap = (text) => String(text || "").replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+  var kitNum = (st) => st && st.state !== "" && !isNaN(Number(st.state)) ? Number(st.state) : null;
+  function kitShell(body, extraCss = "") {
+    return `
+    <ha-card class="ck-card" style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; padding:16px; background:var(--card-background-color); transition:background-color .6s ease; display:flex; flex-direction:column; gap:12px;">
+      <style>
+        .ck-row { display:flex; gap:6px; }
+        .ck-q { position:relative; overflow:hidden; container-type:inline-size; flex:1 1 0; min-width:0; height:48px; border:none; border-radius:12px; padding:0 6px; cursor:pointer;
+          background:rgba(127,127,127,0.14); color:var(--primary-text-color); font:inherit; font-size:13px; font-weight:600;
+          display:flex; align-items:center; justify-content:center; gap:6px; transition:background-color .2s, color .2s; }
+        .ck-q.ck-col { flex-direction:column; gap:2px; height:56px; font-size:11px; }
+        .ck-q.ck-on { color:#fff; }
+        .ck-q:disabled { opacity:.4; cursor:default; }
+        .ck-q span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+        @container (max-width: 56px) { .ck-q:not(.ck-col) span.ck-hide { display:none; } }
+        .ck-q::after { content:''; position:absolute; inset:0; background:#fff; opacity:0; transition:opacity .15s; pointer-events:none; }
+        .ck-q:not(:disabled):hover::after { opacity:.08; }
+        .ck-q:focus-visible, .ck-tap:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
+        .ck-hold { position:absolute; left:0; top:0; bottom:0; width:0; background:rgba(255,255,255,.22); pointer-events:none; }
+        .ck-sub { font-size:0.8rem; color:var(--secondary-text-color); }
+        .ck-info { flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; font-size:0.85rem; color:var(--secondary-text-color); }
+        .ck-info > span { display:flex; align-items:center; gap:5px; }
+        .ck-chip { display:inline-flex; align-items:center; gap:4px; padding:1px 8px; border-radius:999px; font-size:0.72rem; font-weight:600; }
+        .ck-bar { height:8px; border-radius:99px; background:rgba(127,127,127,.2); overflow:hidden; }
+        .ck-bar > i { display:block; height:100%; border-radius:inherit; transition:width .4s; }
+        .ck-tap { cursor:pointer; }
+        ${extraCss}
+      </style>
+      <div style="display:flex; align-items:baseline; gap:8px;">
+        <div class="ck-title" style="flex:1; min-width:0; font-size:1.5rem; font-weight:500; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:color .6s;"></div>
+        <div class="ck-word" style="flex:none; font-size:0.85rem; color:var(--secondary-text-color);"></div>
+      </div>
+      ${body}
+    </ha-card>`;
+  }
+  function kitHead(root, title, word, color, tint = 0) {
+    const t = root.querySelector(".ck-title");
+    const w = root.querySelector(".ck-word");
+    const card = root.querySelector(".ck-card");
+    t.textContent = title;
+    t.style.color = color;
+    w.textContent = word;
+    card.style.backgroundColor = tint ? `color-mix(in srgb, ${color} ${tint}%, var(--card-background-color))` : "var(--card-background-color)";
+  }
+  function kitGauge(p, color, label, sub, size = 84) {
+    const r = size / 2 - 7, cx = size / 2, len = 1.5 * Math.PI * r;
+    const fill = Math.max(0, Math.min(1, p || 0));
+    const arc = (extra) => `<circle cx="${cx}" cy="${cx}" r="${r}" fill="none" stroke-width="6" stroke-linecap="round" transform="rotate(135 ${cx} ${cx})" ${extra}></circle>`;
+    return `<div style="position:relative; width:${size}px; height:${size}px; flex:none;">
+      <svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" aria-hidden="true" style="display:block;">
+        ${arc(`stroke="rgba(127,127,127,0.28)" stroke-dasharray="${len} 9999"`)}
+        ${fill > 0 ? arc(`stroke="${color}" stroke-dasharray="${Math.max(0.01, len * fill)} 9999"`) : ""}
+      </svg>
+      <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
+        <b style="font-size:1.1rem; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.1;">${kitEsc(label)}</b>
+        <span style="font-size:0.66rem; color:var(--secondary-text-color); line-height:1.2;">${kitEsc(sub)}</span>
+      </div>
+    </div>`;
+  }
+  function kitTiles(box, list, onTap, { column = false, hideNames = false } = {}) {
+    const sig = JSON.stringify(list.map((t) => [t.key, t.name, t.icon, t.color, !!t.on, !!t.disabled, !!t.hold]));
+    if (box._ckSig === sig) return;
+    box._ckSig = sig;
+    box.innerHTML = "";
+    box.style.display = list.length ? "flex" : "none";
+    list.forEach((t) => {
+      const b = document.createElement("button");
+      b.className = `ck-q${column ? " ck-col" : ""}${t.on ? " ck-on" : ""}`;
+      b.disabled = !!t.disabled;
+      b.title = t.name;
+      b.setAttribute("aria-label", b.title);
+      b.setAttribute("aria-pressed", String(!!t.on));
+      if (t.on) b.style.background = t.color;
+      b.innerHTML = `${t.hold ? '<i class="ck-hold"></i>' : ""}${iconHtml(t.icon, { size: "20px", style: "flex-shrink:0; position:relative;" })}<span class="${hideNames ? "ck-hide" : ""}" style="position:relative;"></span>`;
+      b.querySelector("span").textContent = t.name;
+      if (t.hold) kitHold(b, () => onTap(t));
+      else b.addEventListener("click", () => onTap(t));
+      box.appendChild(b);
+    });
+  }
+  function kitHold(button, done) {
+    const bar = button.querySelector(".ck-hold");
+    let timer = null;
+    const stop = () => {
+      clearTimeout(timer);
+      timer = null;
+      bar.style.transition = "width .2s";
+      bar.style.width = "0";
+    };
+    const start = (ev) => {
+      if (ev.button > 0) return;
+      stop();
+      bar.style.transition = "width 1.5s linear";
+      requestAnimationFrame(() => bar.style.width = "100%");
+      timer = setTimeout(() => {
+        stop();
+        done();
+      }, 1500);
+    };
+    button.addEventListener("pointerdown", start);
+    ["pointerup", "pointerleave", "pointercancel"].forEach((e) => button.addEventListener(e, stop));
+    button.addEventListener("keydown", (ev) => {
+      if ((ev.key === "Enter" || ev.key === " ") && !timer) start(ev);
+    });
+    button.addEventListener("keyup", stop);
+  }
+  function kitMoreInfo(el, entityId) {
+    if (!entityId) return;
+    el.dispatchEvent(new CustomEvent("hass-more-info", { detail: { entityId }, bubbles: true, composed: true }));
+  }
+  async function kitHistory(hass, ids, hours = 24) {
+    const out = {};
+    if (!hass || !hass.callWS || !ids.length) return out;
+    const res = await hass.callWS({
+      type: "history/history_during_period",
+      start_time: new Date(Date.now() - hours * 36e5).toISOString(),
+      entity_ids: ids,
+      minimal_response: true,
+      no_attributes: true,
+      significant_changes_only: false
+    });
+    ids.forEach((id) => {
+      out[id] = (res[id] || []).map((p) => [(p.lu || p.lc || 0) * 1e3, Number(p.s)]).filter((p) => p[0] && !isNaN(p[1]) && p[1] !== null);
+    });
+    return out;
+  }
+  function kitDemoSeries(values, hours = 24) {
+    const now = Date.now();
+    return values.map((v, i) => [now - hours * 36e5 * (values.length - 1 - i) / (values.length - 1), v]);
+  }
+  function kitGraph(series, { hours = 24, height = 48, label = "" } = {}) {
+    const W = 300, H = height, now = Date.now(), from = now - hours * 36e5;
+    const x = (t) => (Math.max(from, t) - from) / (now - from) * W;
+    let under = "", over = "";
+    series.forEach((s) => {
+      const pts = (s.pts || []).filter((p) => p[1] != null && !isNaN(p[1]));
+      if (s.current != null && !isNaN(s.current)) pts.push([now, Number(s.current)]);
+      if (pts.length < 2) return;
+      const vals = pts.map((p) => p[1]);
+      const lo = Math.min(...vals) - (s.pad || 0.3), hi = Math.max(...vals) + (s.pad || 0.3);
+      const y = (v) => H - 3 - (v - lo) / (hi - lo || 1) * (H - 6);
+      const d = pts.map((p, i) => `${i ? "L" : "M"}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join(" ");
+      if (s.fill) under += `<path d="${d} L${W},${H} L0,${H} Z" fill="${s.color}" fill-opacity="0.16"></path>`;
+      over += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.width || 2}" vector-effect="non-scaling-stroke"></path>`;
+    });
+    if (!under && !over) return "";
+    return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block; width:100%; height:${H}px;" role="img" aria-label="${kitEsc(label)}">${under}${over}</svg>`;
+  }
+  function kitRange(pts, current, digits, unit) {
+    const vals = (pts || []).map((p) => p[1]).filter((v) => v != null && !isNaN(v));
+    if (current != null && !isNaN(current)) vals.push(Number(current));
+    if (!vals.length) return "";
+    const f = (v) => Number(v).toFixed(digits);
+    return `${f(Math.min(...vals))}\u2013${f(Math.max(...vals))}${unit}`;
+  }
+  var KitHistory = class {
+    constructor(owner, ids, hours) {
+      this.owner = owner;
+      this.ids = ids;
+      this.hours = hours;
+      this.data = null;
+      this.at = 0;
+      this.loading = false;
+    }
+    due() {
+      return !this.loading && Date.now() - this.at > 10 * 6e4;
+    }
+    async load(hass) {
+      if (!this.due()) return;
+      this.loading = true;
+      try {
+        this.data = await kitHistory(hass, this.ids.filter(Boolean), this.hours);
+      } catch (err) {
+        this.data = this.data || {};
+      }
+      this.at = Date.now();
+      this.loading = false;
+      this.owner._render();
+    }
+  };
+
+  // src/climate-zone-card.js
+  var CZ_BANDS = { cold: 18, cool: 20, warm: 22.5, hot: 24.5 };
+  function czComfort(t, c) {
+    const b = { cold: c.cold_below ?? CZ_BANDS.cold, cool: c.cool_below ?? CZ_BANDS.cool, warm: c.warm_from ?? CZ_BANDS.warm, hot: c.hot_from ?? CZ_BANDS.hot };
+    if (t == null) return { color: KIT_COLOR.off, word: "" };
+    if (t < b.cold) return { color: KIT_COLOR.cold, word: "Cold" };
+    if (t < b.cool) return { color: KIT_COLOR.cool, word: "Cool" };
+    if (t < b.warm) return { color: KIT_COLOR.comfy, word: "Comfortable" };
+    if (t < b.hot) return { color: KIT_COLOR.warm, word: "Warm" };
+    return { color: KIT_COLOR.hot, word: "Hot" };
+  }
+  var avg = (list) => list.length ? list.reduce((a, b) => a + b, 0) / list.length : null;
+  var CZ_DEMO = {
+    ground: {
+      title: "Ground Floor",
+      rooms: [
+        { name: "Living Room", icon: "mdi:sofa", t: 21.8, h: 61, ts: [19.1, 18.9, 18.8, 18.9, 19.6, 20.4, 20.9, 20.6, 21, 21.4, 21.6, 21.8], hs: [59, 60, 60, 61, 60, 58, 56, 57, 58, 60, 62, 61] },
+        { name: "Entrance", icon: "mdi:coat-rack", t: 20.9, ts: [18.4, 18.2, 18.1, 18.3, 18.9, 19.6, 20.1, 20.3, 20.5, 20.7, 20.8, 20.9] }
+      ]
+    },
+    top: {
+      title: "Hayley's Floor",
+      rooms: [
+        { name: "Hayley's Bedroom", icon: "mdi:bed-king", t: 23, h: 48.5, ts: [20.9, 20.7, 20.6, 20.9, 21.4, 22, 22.4, 22.6, 22.8, 22.9, 23, 23], hs: [51, 52, 52, 51, 50, 48, 47, 47.5, 48, 49, 48.5, 48.5] },
+        { name: "Hayley's Office", icon: "mdi:chair-rolling", t: 22.2, h: 58, ts: [19.8, 19.6, 19.5, 19.7, 20.2, 20.8, 21.3, 21.5, 21.8, 22, 22.1, 22.2], hs: [59, 60, 60, 59, 58, 56, 55, 56, 57, 58, 58, 58] },
+        { name: "Hayley's Landing", icon: "mdi:stairs", t: 17.6, ts: [16.4, 16.2, 16.1, 16.3, 16.8, 17.2, 17.5, 17.6, 17.4, 17.5, 17.6, 17.6] }
+      ]
+    }
+  };
+  var ClimateZoneCardEditor = createFormEditor({
+    schema: (config) => [
+      { name: "title", selector: { text: {} } },
+      ...config.demo ? [] : [
+        {
+          name: "rooms",
+          selector: {
+            object: {
+              multiple: true,
+              label_field: "name",
+              fields: {
+                name: { label: "Name", required: true, selector: { text: {} } },
+                temperature: { label: "Temperature sensor", selector: { entity: { domain: "sensor", device_class: "temperature" } } },
+                humidity: { label: "Humidity sensor (optional)", selector: { entity: { domain: "sensor", device_class: "humidity" } } },
+                icon: { label: "Icon (optional)", selector: { icon: {} } },
+                note: { label: "Small text under the name (optional)", selector: { text: {} } }
+              }
+            }
+          }
+        }
+      ],
+      {
+        type: "expandable",
+        name: "",
+        title: "Rows and graphs",
+        flatten: true,
+        schema: [
+          { name: "show_graphs", selector: { boolean: {} }, default: true },
+          { name: "show_humidity_graph", selector: { boolean: {} }, default: true },
+          { name: "hours", selector: { number: { min: 1, max: 168, mode: "box", unit_of_measurement: "hours" } } }
+        ]
+      },
+      {
+        type: "expandable",
+        name: "",
+        title: "Comfort colours (\xB0C)",
+        flatten: true,
+        schema: [
+          { name: "cold_below", selector: { number: { min: 5, max: 30, step: 0.5, mode: "box" } } },
+          { name: "cool_below", selector: { number: { min: 5, max: 30, step: 0.5, mode: "box" } } },
+          { name: "warm_from", selector: { number: { min: 5, max: 35, step: 0.5, mode: "box" } } },
+          { name: "hot_from", selector: { number: { min: 5, max: 40, step: 0.5, mode: "box" } } }
+        ]
+      },
+      {
+        type: "expandable",
+        name: "",
+        title: "Demo mode (pretend rooms, for Design Presets)",
+        flatten: true,
+        schema: [
+          { name: "demo", selector: { boolean: {} } },
+          { name: "demo_floor", selector: { select: { mode: "dropdown", options: [{ value: "ground", label: "Ground floor" }, { value: "top", label: "Top floor (one cold landing)" }] } } }
+        ]
+      }
+    ],
+    labels: {
+      title: "Title (e.g. the floor)",
+      rooms: "Rooms and sensors",
+      show_graphs: "A graph for each room",
+      show_humidity_graph: "Humidity line on the graphs",
+      hours: "Graph length",
+      cold_below: "Cold below (blue)",
+      cool_below: "Cool below (cyan)",
+      warm_from: "Warm from (orange)",
+      hot_from: "Hot from (red)",
+      demo: "Use pretend rooms instead of real sensors",
+      demo_floor: "Pretend floor"
+    },
+    helpers: {
+      hours: "Default 24.",
+      cold_below: "Defaults: cold below 18, cool below 20, warm from 22.5, hot from 24.5. Between cool and warm is comfortable (green)."
+    }
+  });
+  var ClimateZoneCard = class extends HTMLElement {
+    setConfig(config) {
+      if (!config.demo && !Array.isArray(config.rooms)) throw new Error("rooms required (or set demo: true)");
+      this.config = config;
+      this._built = false;
+      const hours = Number(config.hours) || 24;
+      const ids = (config.rooms || []).flatMap((r) => [r.temperature, r.humidity]).filter(Boolean);
+      this._hist = config.demo ? null : new KitHistory(this, ids, hours);
+      this._sig = null;
+    }
+    set hass(hass) {
+      this._hass = hass;
+      this._render();
+    }
+    _rooms() {
+      const c = this.config;
+      if (c.demo) {
+        const d = CZ_DEMO[c.demo_floor] || CZ_DEMO.ground;
+        return d.rooms.map((r) => ({ ...r, tPts: kitDemoSeries(r.ts), hPts: r.hs ? kitDemoSeries(r.hs) : null, note: "Demo sensor" }));
+      }
+      const s = (id) => id && this._hass && this._hass.states[id];
+      const data = this._hist && this._hist.data || {};
+      return (c.rooms || []).map((r) => {
+        const ts = s(r.temperature), hs = s(r.humidity);
+        return {
+          name: r.name || ts && ts.attributes.friendly_name || r.temperature,
+          icon: r.icon || ts && ts.attributes.icon || "mdi:thermometer",
+          note: r.note || "",
+          t: kitNum(ts),
+          h: kitNum(hs),
+          tPts: data[r.temperature] || null,
+          hPts: r.humidity ? data[r.humidity] || null : null,
+          entity: r.temperature,
+          hasHumidity: !!r.humidity
+        };
+      });
+    }
+    _render() {
+      if (!this._hass || !this.config) return;
+      const c = this.config;
+      if (!this._built) {
+        this.innerHTML = kitShell(`<div class="cz-rooms" style="display:flex; flex-direction:column; gap:6px;"></div>`);
+        this._box = this.querySelector(".cz-rooms");
+        this._built = true;
+      }
+      if (this._hist && this._hist.due()) this._hist.load(this._hass);
+      const rooms = this._rooms();
+      const showGraphs = c.show_graphs !== false;
+      const showHum = c.show_humidity_graph !== false;
+      const temps = rooms.map((r) => r.t).filter((v) => v != null);
+      const hums = rooms.map((r) => r.h).filter((v) => v != null);
+      const t = avg(temps), h = avg(hums);
+      const zone = czComfort(t, c);
+      const title = c.title || (c.demo ? (CZ_DEMO[c.demo_floor] || CZ_DEMO.ground).title : "Climate");
+      kitHead(this, title, [t != null ? `${t.toFixed(1)}\xB0` : "", h != null ? `${Math.round(h)}%` : ""].filter(Boolean).join(" \xB7 ") + (c.demo ? " \xB7 demo" : ""), zone.color);
+      const sig = JSON.stringify([rooms.map((r) => [r.name, r.icon, r.note, r.t, r.h]), showGraphs, showHum, this._hist && this._hist.at, c]);
+      if (sig === this._sig) return;
+      this._sig = sig;
+      const hours = Number(c.hours) || 24;
+      this._box.innerHTML = rooms.map((r, i) => {
+        const cz = czComfort(r.t, c);
+        const graph = showGraphs ? kitGraph(
+          [
+            { pts: r.tPts, current: r.t, color: cz.color, fill: true },
+            ...showHum && r.hPts ? [{ pts: r.hPts, current: r.h, color: KIT_COLOR.humidity, pad: 3, width: 1.8 }] : []
+          ],
+          { hours, height: 44, label: `${r.name}: last ${hours} hours` }
+        ) : "";
+        const tRange = showGraphs ? kitRange(r.tPts, r.t, 1, "\xB0") : "";
+        const hRange = showGraphs && showHum && r.hPts ? kitRange(r.hPts, r.h, 0, "%") : "";
+        return `<div class="ck-tap cz-room" data-i="${i}" tabindex="0" role="button" style="display:flex; flex-direction:column; gap:4px; padding:8px; border-radius:12px; background:rgba(127,127,127,0.07);">
+          <div style="display:flex; align-items:center; gap:10px;">
+            ${iconHtml(r.icon, { size: "22px", style: `color:${cz.color}; flex:none;` })}
+            <div style="flex:1; min-width:0;">
+              <div class="cz-name" style="font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
+              <div class="cz-note ck-sub" style="font-size:0.72rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
+            </div>
+            ${r.h != null ? `<span style="font-size:0.85rem; color:${KIT_COLOR.humidity}; font-variant-numeric:tabular-nums;">${Math.round(r.h * 10) / 10}%</span>` : ""}
+            <b style="min-width:54px; text-align:right; font-size:1.15rem; font-variant-numeric:tabular-nums; color:${cz.color};">${r.t != null ? `${r.t.toFixed(1)}\xB0` : "\u2013"}</b>
+          </div>
+          ${graph}
+          ${graph ? `<div style="display:flex; justify-content:space-between; gap:8px; font-size:0.72rem; color:var(--secondary-text-color);"><span style="color:${cz.color};">${tRange}</span><span style="color:${hRange ? KIT_COLOR.humidity : "inherit"};">${hRange || (r.hasHumidity || r.hPts ? "" : "temperature only")}</span></div>` : ""}
+          ${showGraphs && !graph && !c.demo ? `<div class="ck-sub" style="font-size:0.72rem;">${this._hist && this._hist.data ? "No history yet" : "Loading history\u2026"}</div>` : ""}
+        </div>`;
+      }).join("");
+      this._box.querySelectorAll(".cz-room").forEach((el) => {
+        const r = rooms[Number(el.dataset.i)];
+        el.querySelector(".cz-name").textContent = r.name;
+        el.querySelector(".cz-note").textContent = r.note || czComfort(r.t, c).word;
+        const open = () => !c.demo && kitMoreInfo(this, r.entity);
+        el.addEventListener("click", open);
+        el.addEventListener("keydown", (ev) => (ev.key === "Enter" || ev.key === " ") && open());
+      });
+      hydrateIcons(this);
+    }
+    getCardSize() {
+      const n = this.config.demo ? 2 : (this.config.rooms || []).length;
+      return 1 + n * (this.config.show_graphs === false ? 1 : 2);
+    }
+    getGridOptions() {
+      return { columns: 12, min_columns: 6, rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement(`climate-zone-card-editor${SUFFIX}`);
+    }
+    static getStubConfig() {
+      return { demo: true, title: "Ground Floor" };
+    }
+  };
+  function registerClimateZoneCard() {
+    if (!customElements.get(`climate-zone-card-editor${SUFFIX}`)) customElements.define(`climate-zone-card-editor${SUFFIX}`, ClimateZoneCardEditor);
+    if (!customElements.get(`climate-zone-card${SUFFIX}`)) customElements.define(`climate-zone-card${SUFFIX}`, ClimateZoneCard);
+    window.customCards = window.customCards || [];
+    window.customCards.push({
+      type: `climate-zone-card${SUFFIX}`,
+      name: `Climate Zone Card${LABEL}`,
+      description: "A floor or zone: temperature and humidity per room, each with its own 24-hour graph",
+      preview: true,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
+    });
+  }
+
+  // src/fan-card.js
+  var FAN_PRESET_ICONS = {
+    natural: "mdi:weather-windy",
+    nature: "mdi:weather-windy",
+    breeze: "mdi:weather-windy",
+    sleep: "mdi:power-sleep",
+    auto: "mdi:fan-auto",
+    smart: "mdi:fan-auto",
+    turbo: "mdi:rocket-launch",
+    boost: "mdi:rocket-launch",
+    eco: "mdi:leaf"
+  };
+  var speedOf = (preset) => {
+    const m = /^speed[ _-]?(\d+)$/i.exec(String(preset || ""));
+    return m ? Number(m[1]) : null;
+  };
+  function fanDemo(config) {
+    const on = config.demo_state === "on";
+    return {
+      entity_id: "fan.demo",
+      state: on ? "on" : "off",
+      attributes: {
+        friendly_name: "Bedroom Fan",
+        preset_modes: ["speed_1", "speed_2", "speed_3", "natural", "sleep"],
+        preset_mode: on ? "speed_2" : null,
+        percentage: on ? 67 : null,
+        percentage_step: 33.333333333333336,
+        oscillating: on,
+        supported_features: 59,
+        model_id: "CX3550/01"
+      }
+    };
+  }
+  function fanSpeeds(a) {
+    const presets = (a.preset_modes || []).filter((p) => speedOf(p) != null).sort((x, y) => speedOf(x) - speedOf(y));
+    if (presets.length) return presets.map((p) => ({ n: speedOf(p), preset: p }));
+    const step = Number(a.percentage_step) || 0;
+    const count = step ? Math.round(100 / step) : 0;
+    if (count < 2 || count > 6) return [];
+    return Array.from({ length: count }, (_, i) => ({ n: i + 1, percentage: Math.round(step * (i + 1)) }));
+  }
+  var FanCardEditor = createFormEditor({
+    schema: (config) => [
+      ...config.demo ? [] : [{ name: "entity", selector: { entity: { domain: "fan" } } }],
+      { name: "name", selector: { text: {} } },
+      { name: "temperature_entity", selector: { entity: { domain: "sensor", device_class: "temperature" } } },
+      {
+        type: "expandable",
+        name: "",
+        title: "Rows to show",
+        flatten: true,
+        schema: [
+          { name: "show_gauge", selector: { boolean: {} }, default: true },
+          { name: "show_speeds", selector: { boolean: {} }, default: true },
+          { name: "show_presets", selector: { boolean: {} }, default: true },
+          { name: "show_oscillate", selector: { boolean: {} }, default: true }
+        ]
+      },
+      {
+        type: "expandable",
+        name: "",
+        title: "Demo mode (a pretend fan, for Design Presets)",
+        flatten: true,
+        schema: [
+          { name: "demo", selector: { boolean: {} } },
+          { name: "demo_state", selector: { select: { mode: "dropdown", options: [{ value: "off", label: "Off" }, { value: "on", label: "On (speed 2)" }] } } }
+        ]
+      }
+    ],
+    labels: {
+      entity: "Fan",
+      name: "Title (optional)",
+      temperature_entity: "Room temperature (optional, shown under the gauge)",
+      show_gauge: "Speed gauge",
+      show_speeds: "Off and speed buttons",
+      show_presets: "Preset buttons (Natural, Sleep\u2026)",
+      show_oscillate: "Oscillate button (if the fan can)",
+      demo: "Use a pretend fan instead of a real one",
+      demo_state: "Pretend fan starts"
+    }
+  });
+  var FanCard = class extends HTMLElement {
+    setConfig(config) {
+      if (!config.entity && !config.demo) throw new Error("entity required (or set demo: true)");
+      this.config = config;
+      this._built = false;
+      this._demo = config.demo ? fanDemo(config) : null;
+    }
+    set hass(hass) {
+      this._hass = hass;
+      this._render();
+    }
+    _state() {
+      return this._demo || this._hass && this._hass.states[this.config.entity];
+    }
+    _render() {
+      const st = this._state();
+      if (!st || !this._hass) return;
+      const c = this.config;
+      if (!this._built) {
+        this.innerHTML = kitShell(`
+        <div class="fc-top" style="display:flex; align-items:center; gap:14px;">
+          <div class="fc-gauge ck-tap"></div>
+          <div class="ck-info fc-info"></div>
+        </div>
+        <div class="ck-row fc-speeds"></div>
+        <div class="ck-row fc-presets"></div>`);
+        this.querySelector(".fc-gauge").addEventListener("click", () => !this._demo && kitMoreInfo(this, c.entity));
+        this._built = true;
+      }
+      const a = st.attributes;
+      const on = st.state === "on";
+      const speeds = fanSpeeds(a);
+      const current = on ? speeds.find((s) => s.preset ? s.preset === a.preset_mode : Math.abs((a.percentage || 0) - s.percentage) < 5) : null;
+      const preset = on && a.preset_mode && speedOf(a.preset_mode) == null ? a.preset_mode : null;
+      const color = !on ? KIT_COLOR.off : preset === "sleep" ? KIT_COLOR.sleep : KIT_COLOR.fan;
+      const word = st.state === "unavailable" ? "Unavailable" : !on ? "Off" : preset ? kitCap(preset) : current ? `Speed ${current.n}` : "On";
+      kitHead(this, c.name || a.friendly_name || c.entity, word + (this._demo ? " \xB7 demo" : ""), color, on ? 10 : 0);
+      const top = this.querySelector(".fc-top");
+      top.style.display = c.show_gauge === false ? "none" : "flex";
+      const level = !on ? 0 : current ? current.n / (speeds.length || 1) : (a.percentage || 100) / 100;
+      this.querySelector(".fc-gauge").innerHTML = kitGauge(level, color, !on ? "Off" : current ? String(current.n) : preset ? kitCap(preset) : "On", !on ? "" : current ? "speed" : "", 72);
+      const temp = c.temperature_entity && this._hass.states[c.temperature_entity];
+      const tv = kitNum(temp);
+      const lines = [];
+      if (a.model_id) lines.push(`<span>${a.model_id}</span>`);
+      if (a.oscillating != null) lines.push(`<span>Oscillate ${a.oscillating ? "on" : "off"}</span>`);
+      if (tv != null) lines.push(`<span>${tv.toFixed(1)}\xB0 in the room</span>`);
+      this.querySelector(".fc-info").innerHTML = lines.join("");
+      const speedTiles = c.show_speeds === false ? [] : [
+        { key: "off", name: "Off", icon: "mdi:power", color: KIT_COLOR.off, on: !on },
+        ...speeds.map((s, i) => ({
+          key: `s${s.n}`,
+          name: String(s.n),
+          icon: ["mdi:speedometer-slow", "mdi:speedometer-medium", "mdi:speedometer"][Math.min(2, Math.round(i / Math.max(1, speeds.length - 1) * 2))],
+          color: KIT_COLOR.fan,
+          on: current === s,
+          speed: s
+        }))
+      ];
+      kitTiles(this.querySelector(".fc-speeds"), speedTiles, (t) => t.key === "off" ? this._call("turn_off", {}) : this._setSpeed(t.speed));
+      const others = (a.preset_modes || []).filter((p) => speedOf(p) == null);
+      const canOscillate = a.oscillating != null || ((a.supported_features || 0) & 2) === 2;
+      const presetTiles = [
+        ...c.show_presets === false ? [] : others.map((p) => ({ key: p, name: kitCap(p), icon: FAN_PRESET_ICONS[String(p).toLowerCase()] || "mdi:fan", color: p === "sleep" ? KIT_COLOR.sleep : KIT_COLOR.fan, on: preset === p })),
+        ...c.show_oscillate === false || !canOscillate ? [] : [{ key: "__osc", name: "Oscillate", icon: "mdi:arrow-oscillating", color: KIT_COLOR.fan, on: on && !!a.oscillating }]
+      ];
+      kitTiles(this.querySelector(".fc-presets"), presetTiles, (t) => {
+        if (t.key === "__osc") this._call("oscillate", { oscillating: !this._state().attributes.oscillating });
+        else this._call("set_preset_mode", { preset_mode: t.key });
+      });
+      hydrateIcons(this);
+    }
+    _setSpeed(s) {
+      if (s.preset) this._call("set_preset_mode", { preset_mode: s.preset });
+      else this._call("set_percentage", { percentage: s.percentage });
+    }
+    _call(service, data) {
+      if (this._demo) {
+        const d = this._demo, a = d.attributes;
+        if (service === "turn_off") {
+          d.state = "off";
+          a.preset_mode = null;
+        } else if (service === "oscillate") {
+          a.oscillating = data.oscillating;
+        } else {
+          d.state = "on";
+          if (data.preset_mode) a.preset_mode = data.preset_mode;
+        }
+        this._render();
+        return;
+      }
+      this._hass.callService("fan", service, { entity_id: this.config.entity, ...data });
+    }
+    getCardSize() {
+      return 4;
+    }
+    getGridOptions() {
+      return { columns: 12, min_columns: 6, rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement(`fan-card-editor${SUFFIX}`);
+    }
+    static getStubConfig(hass) {
+      const first = hass && Object.keys(hass.states).find((id) => id.startsWith("fan."));
+      return first ? { entity: first } : { demo: true };
+    }
+  };
+  function registerFanCard() {
+    if (!customElements.get(`fan-card-editor${SUFFIX}`)) customElements.define(`fan-card-editor${SUFFIX}`, FanCardEditor);
+    if (!customElements.get(`fan-card${SUFFIX}`)) customElements.define(`fan-card${SUFFIX}`, FanCard);
+    window.customCards = window.customCards || [];
+    window.customCards.push({
+      type: `fan-card${SUFFIX}`,
+      name: `Fan Card${LABEL}`,
+      description: "A fan: speed gauge, Off and speed buttons, presets and oscillate",
+      preview: true,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
+    });
+  }
+
+  // src/air-purifier-card.js
+  function apQuality(pm) {
+    if (pm == null) return { color: KIT_COLOR.off, word: "" };
+    if (pm <= 12) return { color: KIT_COLOR.good, word: "Good" };
+    if (pm <= 35) return { color: KIT_COLOR.fair, word: "Fair" };
+    if (pm <= 55) return { color: KIT_COLOR.poor, word: "Poor" };
+    return { color: KIT_COLOR.bad, word: "Very poor" };
+  }
+  function apAllergen(v) {
+    if (v == null) return null;
+    if (v <= 3) return { color: KIT_COLOR.good, word: "Low" };
+    if (v <= 6) return { color: KIT_COLOR.fair, word: "Moderate" };
+    if (v <= 9) return { color: KIT_COLOR.poor, word: "High" };
+    return { color: KIT_COLOR.bad, word: "Very high" };
+  }
+  var AP_MODE_ICONS = {
+    auto: "mdi:autorenew",
+    "auto (general)": "mdi:autorenew",
+    allergen: "mdi:flower",
+    medium: "mdi:fan",
+    turbo: "mdi:rocket-launch",
+    sleep: "mdi:power-sleep",
+    night: "mdi:power-sleep",
+    low: "mdi:fan-speed-1",
+    high: "mdi:fan-speed-3"
+  };
+  var AP_ROWS = { show_gauge: true, show_allergen: true, show_graph: true, show_modes: true, show_filters: true };
+  var row2 = (c, k) => c[k] != null ? !!c[k] : AP_ROWS[k];
+  function apDemo() {
+    return {
+      fan: {
+        entity_id: "fan.demo_purifier",
+        state: "on",
+        attributes: { friendly_name: "Air Purifier", preset_modes: ["auto", "turbo", "medium", "sleep"], preset_mode: "auto", model_id: "AC0951/13" }
+      },
+      pm25: 30,
+      allergen: 3,
+      filters: [
+        { name: "NanoProtect filter", value: 90, hours: 8594 },
+        { name: "Pre-filter", value: 18, hours: 130 }
+      ],
+      pmPts: kitDemoSeries([8, 7, 9, 12, 18, 24, 31, 28, 22, 26, 33, 30])
+    };
+  }
+  function apSiblings(hass, fanId) {
+    const base = String(fanId || "").split(".")[1];
+    if (!hass || !base) return {};
+    const ids = Object.keys(hass.states).filter((id) => id.startsWith(`sensor.${base}_`));
+    const find = (re) => ids.find((id) => re.test(id));
+    return {
+      pm25_entity: find(/pm2_?5/),
+      allergen_entity: find(/allergen/),
+      filters: ids.filter((id) => /filter/.test(id) && !isNaN(Number(hass.states[id].state))).map((entity) => ({ entity }))
+    };
+  }
+  var filterName = (hass, f) => {
+    if (f.name) return f.name;
+    const st = hass && hass.states[f.entity];
+    const name = st && st.attributes.friendly_name || f.entity;
+    return name.replace(/^.*?(pre-?filter|nanoprotect filter|hepa filter|carbon filter|filter)/i, "$1").replace(/^./, (c) => c.toUpperCase());
+  };
+  var AirPurifierCardEditor = createFormEditor({
+    fill: (config, hass) => {
+      if (config.demo || !config.entity || config.pm25_entity !== void 0 || !hass) return config;
+      const found = apSiblings(hass, config.entity);
+      return { ...config, pm25_entity: found.pm25_entity || "", allergen_entity: found.allergen_entity || "", filters: found.filters || [] };
+    },
+    schema: (config) => [
+      ...config.demo ? [] : [{ name: "entity", selector: { entity: { domain: "fan" } } }],
+      { name: "name", selector: { text: {} } },
+      {
+        type: "expandable",
+        name: "",
+        title: "Rows to show",
+        flatten: true,
+        schema: Object.keys(AP_ROWS).map((name) => ({ name, selector: { boolean: {} }, default: AP_ROWS[name] }))
+      },
+      ...config.demo ? [] : [
+        {
+          type: "expandable",
+          name: "",
+          title: "Sensors (found automatically)",
+          flatten: true,
+          schema: [
+            { name: "pm25_entity", selector: { entity: { domain: "sensor" } } },
+            { name: "allergen_entity", selector: { entity: { domain: "sensor" } } },
+            {
+              name: "filters",
+              selector: {
+                object: {
+                  multiple: true,
+                  label_field: "name",
+                  fields: {
+                    entity: { label: "Filter life sensor (%)", required: true, selector: { entity: { domain: "sensor" } } },
+                    name: { label: "Name (optional)", selector: { text: {} } }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ],
+      {
+        type: "expandable",
+        name: "",
+        title: "Demo mode (a pretend purifier, for Design Presets)",
+        flatten: true,
+        schema: [{ name: "demo", selector: { boolean: {} } }]
+      }
+    ],
+    labels: {
+      entity: "Air purifier (fan)",
+      name: "Title (optional)",
+      show_gauge: "PM2.5 gauge and air quality",
+      show_allergen: "Allergen index",
+      show_graph: "PM2.5 graph (24 hours)",
+      show_modes: "Mode buttons",
+      show_filters: "Filter life",
+      pm25_entity: "PM2.5 sensor",
+      allergen_entity: "Allergen index sensor (optional)",
+      filters: "Filters",
+      demo: "Use a pretend purifier instead of a real one"
+    },
+    helpers: {
+      filters: 'Shown as bars; amber under 25% ("Clean soon" for a pre-filter, "Replace soon" otherwise), red under 10%.'
+    }
+  });
+  var AirPurifierCard = class extends HTMLElement {
+    setConfig(config) {
+      if (!config.entity && !config.demo) throw new Error("entity required (or set demo: true)");
+      this.config = config;
+      this._built = false;
+      this._demo = config.demo ? apDemo() : null;
+      this._hist = config.demo || !config.pm25_entity ? null : new KitHistory(this, [config.pm25_entity], 24);
+    }
+    set hass(hass) {
+      this._hass = hass;
+      this._render();
+    }
+    _render() {
+      if (!this._hass) return;
+      const c = this.config;
+      const st = this._demo ? this._demo.fan : this._hass.states[c.entity];
+      if (!st) return;
+      if (!this._built) {
+        this.innerHTML = kitShell(`
+        <div class="ap-top" style="display:flex; align-items:center; gap:14px;">
+          <div class="ap-gauge ck-tap"></div>
+          <div class="ck-info ap-info"></div>
+          <div class="ap-quality" style="flex:none; text-align:right;"></div>
+        </div>
+        <div class="ap-graph"></div>
+        <div class="ck-row ap-modes"></div>
+        <div class="ap-filters" style="display:flex; flex-direction:column; gap:10px;"></div>`);
+        this.querySelector(".ap-gauge").addEventListener("click", () => !this._demo && kitMoreInfo(this, c.pm25_entity || c.entity));
+        this._built = true;
+      }
+      if (this._hist && row2(c, "show_graph") && this._hist.due()) this._hist.load(this._hass);
+      const a = st.attributes;
+      const on = st.state === "on";
+      const pm = this._demo ? this._demo.pm25 : kitNum(c.pm25_entity && this._hass.states[c.pm25_entity]);
+      const allergen = this._demo ? this._demo.allergen : kitNum(c.allergen_entity && this._hass.states[c.allergen_entity]);
+      const q = apQuality(pm);
+      const mode = on ? a.preset_mode ? kitCap(a.preset_mode) : "On" : st.state === "unavailable" ? "Unavailable" : "Off";
+      const color = on ? q.color : KIT_COLOR.off;
+      kitHead(this, c.name || a.friendly_name || c.entity, [mode, q.word ? `${q.word} air` : ""].filter(Boolean).join(" \xB7 ") + (this._demo ? " \xB7 demo" : ""), color, on && pm > 35 ? 12 : 0);
+      const top = this.querySelector(".ap-top");
+      top.style.display = row2(c, "show_gauge") ? "flex" : "none";
+      this.querySelector(".ap-gauge").innerHTML = kitGauge(pm == null ? 0 : pm / 75, q.color, pm == null ? "\u2013" : String(Math.round(pm)), "PM2.5 \xB5g/m\xB3");
+      const al = row2(c, "show_allergen") ? apAllergen(allergen) : null;
+      this.querySelector(".ap-info").innerHTML = [
+        al ? `<span>${iconHtml("mdi:flower", { size: "18px", style: `color:${al.color};` })}Allergens ${allergen} \xB7 ${al.word}</span>` : "",
+        a.model_id ? `<span>${iconHtml("mdi:air-purifier", { size: "18px" })}${a.model_id}</span>` : ""
+      ].join("");
+      this.querySelector(".ap-quality").innerHTML = q.word ? `<div style="font-size:1.35rem; font-weight:700; color:${q.color};">${q.word}</div><div class="ck-sub">air quality</div>` : "";
+      const gBox = this.querySelector(".ap-graph");
+      if (row2(c, "show_graph") && (this._demo || c.pm25_entity)) {
+        const pts = this._demo ? this._demo.pmPts : this._hist && this._hist.data ? this._hist.data[c.pm25_entity] : null;
+        const svg2 = kitGraph([{ pts, current: pm, color: q.color, fill: true, pad: 2 }], { height: 48, label: "PM2.5, last 24 hours" });
+        gBox.style.display = "block";
+        gBox.innerHTML = svg2 ? `${svg2}<div style="display:flex; justify-content:space-between; font-size:0.78rem; color:var(--secondary-text-color); margin-top:2px;"><span style="color:${q.color};">\u25CF PM2.5 ${kitRange(pts, pm, 0, "")}</span><span>last 24 h</span></div>` : `<div class="ck-sub">${this._hist && this._hist.data ? "No PM2.5 history yet" : "Loading history\u2026"}</div>`;
+      } else gBox.style.display = "none";
+      const presets = a.preset_modes || [];
+      const modes = row2(c, "show_modes") ? [
+        { key: "__off", name: "Off", icon: "mdi:power", color: KIT_COLOR.off, on: !on },
+        ...presets.map((p) => ({
+          key: p,
+          name: kitCap(p),
+          icon: AP_MODE_ICONS[String(p).toLowerCase()] || "mdi:fan",
+          color: /sleep|night/i.test(p) ? KIT_COLOR.sleep : KIT_COLOR.good,
+          on: on && a.preset_mode === p
+        }))
+      ] : [];
+      kitTiles(this.querySelector(".ap-modes"), modes, (t) => this._mode(t.key), { column: true });
+      const fBox = this.querySelector(".ap-filters");
+      const filters = !row2(c, "show_filters") ? [] : this._demo ? this._demo.filters : (c.filters || []).map((f) => {
+        const fs = this._hass.states[f.entity];
+        return { name: filterName(this._hass, f), value: kitNum(fs), hours: fs ? Number(fs.attributes.time_remaining) : NaN, entity: f.entity };
+      });
+      fBox.style.display = filters.length ? "flex" : "none";
+      fBox.innerHTML = filters.map((f, i) => {
+        const v = f.value == null ? 0 : f.value;
+        const fc = v < 10 ? KIT_COLOR.bad : v < 25 ? KIT_COLOR.fair : KIT_COLOR.good;
+        const soon = v < 25 ? /pre/i.test(f.name) ? "Clean soon" : "Replace soon" : "";
+        const left = !isNaN(f.hours) && f.hours >= 0 ? f.hours >= 48 ? `${Math.round(f.hours / 24)} days` : `${Math.round(f.hours)} hours` : "";
+        return `<div class="ck-tap ap-filter" data-i="${i}" style="display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 10px; font-size:0.85rem;">
+          <span style="display:flex; align-items:center; gap:6px; min-width:0;"><span class="ap-fname" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></span>${soon ? `<span class="ck-chip" style="color:${fc}; background:color-mix(in srgb, ${fc} 18%, transparent);">${soon}</span>` : ""}</span>
+          <span class="ck-sub" style="font-variant-numeric:tabular-nums;">${f.value == null ? "\u2013" : `${Math.round(v)}%`}${left ? ` \xB7 ${left}` : ""}</span>
+          <div class="ck-bar" style="grid-column:1/-1;"><i style="width:${Math.max(0, Math.min(100, v))}%; background:${fc};"></i></div>
+        </div>`;
+      }).join("");
+      fBox.querySelectorAll(".ap-filter").forEach((el) => {
+        const f = filters[Number(el.dataset.i)];
+        el.querySelector(".ap-fname").textContent = f.name;
+        el.addEventListener("click", () => !this._demo && kitMoreInfo(this, f.entity));
+      });
+      hydrateIcons(this);
+    }
+    _mode(key) {
+      if (this._demo) {
+        const f = this._demo.fan;
+        if (key === "__off") f.state = "off";
+        else {
+          f.state = "on";
+          f.attributes.preset_mode = key;
+        }
+        this._render();
+        return;
+      }
+      if (key === "__off") this._hass.callService("fan", "turn_off", { entity_id: this.config.entity });
+      else this._hass.callService("fan", "set_preset_mode", { entity_id: this.config.entity, preset_mode: key });
+    }
+    getCardSize() {
+      const c = this.config;
+      return 2 + (row2(c, "show_gauge") ? 2 : 0) + (row2(c, "show_graph") ? 1 : 0) + (row2(c, "show_modes") ? 1 : 0) + (row2(c, "show_filters") ? 1 : 0);
+    }
+    getGridOptions() {
+      return { columns: 12, min_columns: 6, rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement(`air-purifier-card-editor${SUFFIX}`);
+    }
+    static getStubConfig() {
+      return { demo: true };
+    }
+  };
+  function registerAirPurifierCard() {
+    if (!customElements.get(`air-purifier-card-editor${SUFFIX}`)) customElements.define(`air-purifier-card-editor${SUFFIX}`, AirPurifierCardEditor);
+    if (!customElements.get(`air-purifier-card${SUFFIX}`)) customElements.define(`air-purifier-card${SUFFIX}`, AirPurifierCard);
+    window.customCards = window.customCards || [];
+    window.customCards.push({
+      type: `air-purifier-card${SUFFIX}`,
+      name: `Air Purifier Card${LABEL}`,
+      description: "An air purifier: PM2.5 gauge, allergen index, 24-hour graph, modes and filter life",
+      preview: true,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
+    });
+  }
+
+  // src/co-alarm-card.js
+  var CO_PARTS = {
+    alarm_entity: (p) => [`binary_sensor.${p}alarm_status`, `binary_sensor.${p}carbon_monoxide`, `binary_sensor.${p}co`],
+    status_entity: (p) => [`sensor.${p}device_status`, `sensor.${p}status`],
+    battery_entity: (p) => [`sensor.${p}battery`, `sensor.${p}battery_level`],
+    report_entity: (p) => [`sensor.${p}report_time`, `sensor.${p}last_report`],
+    test_entity: (p) => [`button.${p}device_test`, `button.${p}test`, `button.${p}self_test`],
+    mute_entity: (p) => [`button.${p}mute`, `button.${p}silence`]
+  };
+  function coFill(hass, readingId) {
+    const obj = String(readingId || "").split(".")[1] || "";
+    const prefix = obj.replace(/(co_reading|co_level|co|carbon_monoxide)$/, "");
+    const out = {};
+    Object.entries(CO_PARTS).forEach(([key, list]) => {
+      out[key] = list(prefix).find((id) => hass.states[id]) || "";
+    });
+    return out;
+  }
+  function coDemo(config) {
+    const alarm = config.demo_state === "alarm";
+    return { ppm: alarm ? 86 : 0, alarm, status: alarm ? "alarm" : "normal", battery: 100, report: new Date(Date.now() - 3 * 36e5).toISOString() };
+  }
+  var CoAlarmCardEditor = createFormEditor({
+    fill: (config, hass) => {
+      if (config.demo || !config.entity || config.alarm_entity !== void 0 || !hass) return config;
+      return { ...config, ...coFill(hass, config.entity) };
+    },
+    schema: (config) => [
+      ...config.demo ? [] : [{ name: "entity", selector: { entity: { domain: "sensor" } } }],
+      { name: "name", selector: { text: {} } },
+      { name: "show_buttons", selector: { boolean: {} }, default: true },
+      ...config.demo ? [] : [
+        {
+          type: "expandable",
+          name: "",
+          title: "Other alarm entities (found automatically)",
+          flatten: true,
+          schema: [
+            { name: "alarm_entity", selector: { entity: { domain: "binary_sensor" } } },
+            { name: "status_entity", selector: { entity: { domain: "sensor" } } },
+            { name: "battery_entity", selector: { entity: { domain: "sensor" } } },
+            { name: "report_entity", selector: { entity: { domain: "sensor" } } },
+            { name: "test_entity", selector: { entity: { domain: "button" } } },
+            { name: "mute_entity", selector: { entity: { domain: "button" } } }
+          ]
+        }
+      ],
+      {
+        type: "expandable",
+        name: "",
+        title: "Demo mode (a pretend alarm, for Design Presets)",
+        flatten: true,
+        schema: [
+          { name: "demo", selector: { boolean: {} } },
+          { name: "demo_state", selector: { select: { mode: "dropdown", options: [{ value: "normal", label: "Normal" }, { value: "alarm", label: "CO detected" }] } } }
+        ]
+      }
+    ],
+    labels: {
+      entity: "CO reading sensor (ppm)",
+      name: "Title (optional)",
+      show_buttons: "Test and Mute buttons",
+      alarm_entity: "Alarm (on when CO is found)",
+      status_entity: "Device status (optional)",
+      battery_entity: "Battery (optional)",
+      report_entity: "Last report time (optional)",
+      test_entity: "Test button (optional)",
+      mute_entity: "Mute button (optional)",
+      demo: "Use a pretend alarm instead of a real one",
+      demo_state: "Pretend alarm shows"
+    },
+    helpers: { entity: "Picking it fills in the rest of the alarm below." }
+  });
+  var CoAlarmCard = class extends HTMLElement {
+    setConfig(config) {
+      if (!config.entity && !config.demo) throw new Error("entity required (or set demo: true)");
+      this.config = config;
+      this._built = false;
+      this._demo = config.demo ? coDemo(config) : null;
+    }
+    set hass(hass) {
+      this._hass = hass;
+      this._render();
+    }
+    _data() {
+      if (this._demo) return this._demo;
+      const c = this.config, s = (id) => id && this._hass.states[id];
+      const alarm = s(c.alarm_entity);
+      const report = s(c.report_entity);
+      return {
+        ppm: kitNum(s(c.entity)),
+        alarm: !!alarm && alarm.state === "on",
+        status: s(c.status_entity) ? s(c.status_entity).state : null,
+        battery: kitNum(s(c.battery_entity)),
+        report: report && report.state,
+        unavailable: !s(c.entity) || s(c.entity).state === "unavailable"
+      };
+    }
+    _render() {
+      if (!this._hass) return;
+      const c = this.config;
+      if (!this._built) {
+        this.innerHTML = kitShell(`
+        <div class="co-warn" style="display:none; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; background:${KIT_COLOR.bad}; color:#fff; font-weight:600;"></div>
+        <div style="display:flex; align-items:center; gap:14px;">
+          <div class="co-gauge ck-tap"></div>
+          <div class="ck-info co-info"></div>
+        </div>
+        <div class="ck-row co-buttons"></div>`);
+        this.querySelector(".co-gauge").addEventListener("click", () => !this._demo && kitMoreInfo(this, c.entity));
+        this._built = true;
+      }
+      const d = this._data();
+      const high = d.alarm || d.ppm != null && d.ppm >= 50;
+      const color = d.unavailable ? KIT_COLOR.off : high ? KIT_COLOR.bad : d.ppm >= 10 ? KIT_COLOR.fair : KIT_COLOR.good;
+      const word = d.unavailable ? "Unavailable" : d.alarm ? "CO detected" : d.status ? kitCap(d.status) : "Normal";
+      kitHead(this, c.name || "Carbon Monoxide", word + (this._demo ? " \xB7 demo" : ""), color, high ? 30 : 0);
+      const warn = this.querySelector(".co-warn");
+      warn.style.display = high ? "flex" : "none";
+      if (high) warn.innerHTML = `${iconHtml("mdi:alert", { size: "24px" })}<span>Carbon monoxide found. Get everyone outside and open doors and windows.</span>`;
+      this.querySelector(".co-gauge").innerHTML = kitGauge(d.ppm == null ? 0 : Math.max(0.02, d.ppm / 100), color, d.ppm == null ? "\u2013" : String(Math.round(d.ppm)), "ppm CO");
+      const when = d.report && !isNaN(Date.parse(d.report)) ? new Date(d.report) : null;
+      const whenText = when ? when.toLocaleString(void 0, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+      this.querySelector(".co-info").innerHTML = [
+        `<span>${iconHtml(high ? "mdi:alert-circle" : "mdi:shield-check", { size: "18px", style: `color:${color};` })}${high ? "CO detected" : "No CO detected"}</span>`,
+        d.battery != null ? `<span>${iconHtml(d.battery < 20 ? "mdi:battery-alert" : "mdi:battery", { size: "18px", style: `color:${d.battery < 20 ? KIT_COLOR.bad : KIT_COLOR.good};` })}Battery ${Math.round(d.battery)}%</span>` : "",
+        whenText ? `<span>${iconHtml("mdi:clock-outline", { size: "18px" })}Reported ${whenText}</span>` : ""
+      ].join("");
+      const buttons = c.show_buttons === false ? [] : [
+        ...this._demo || c.test_entity ? [{ key: "test", name: "Hold to test", icon: "mdi:bell-ring", color: KIT_COLOR.good, hold: true }] : [],
+        ...this._demo || c.mute_entity ? [{ key: "mute", name: "Mute", icon: "mdi:volume-off", color: KIT_COLOR.off }] : []
+      ];
+      kitTiles(this.querySelector(".co-buttons"), buttons, (t) => this._press(t.key));
+      hydrateIcons(this);
+    }
+    _press(key) {
+      if (this._demo) return;
+      const id = key === "test" ? this.config.test_entity : this.config.mute_entity;
+      if (id) this._hass.callService("button", "press", { entity_id: id });
+    }
+    getCardSize() {
+      return 4;
+    }
+    getGridOptions() {
+      return { columns: 12, min_columns: 6, rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement(`co-alarm-card-editor${SUFFIX}`);
+    }
+    static getStubConfig() {
+      return { demo: true };
+    }
+  };
+  function registerCoAlarmCard() {
+    if (!customElements.get(`co-alarm-card-editor${SUFFIX}`)) customElements.define(`co-alarm-card-editor${SUFFIX}`, CoAlarmCardEditor);
+    if (!customElements.get(`co-alarm-card${SUFFIX}`)) customElements.define(`co-alarm-card${SUFFIX}`, CoAlarmCard);
+    window.customCards = window.customCards || [];
+    window.customCards.push({
+      type: `co-alarm-card${SUFFIX}`,
+      name: `Carbon Monoxide Card${LABEL}`,
+      description: "A CO alarm: reading, status, battery, and hold-to-test",
+      preview: true,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
+    });
+  }
+
+  // src/cover-card.js
+  var COVER_ICONS = {
+    curtain: ["mdi:curtains", "mdi:curtains-closed"],
+    shutter: ["mdi:window-shutter-open", "mdi:window-shutter"],
+    garage: ["mdi:garage-open", "mdi:garage"],
+    door: ["mdi:door-open", "mdi:door-closed"],
+    window: ["mdi:window-open", "mdi:window-closed"],
+    awning: ["mdi:awning-outline", "mdi:awning-outline"],
+    blind: ["mdi:blinds-horizontal", "mdi:blinds-horizontal-closed"]
+  };
+  function coverDemo(config) {
+    const kind = config.demo_state || "unknown";
+    return {
+      entity_id: "cover.demo",
+      state: kind === "unknown" ? "unknown" : kind,
+      attributes: {
+        friendly_name: "Blind",
+        device_class: "blind",
+        supported_features: kind === "unknown" ? 11 : 15,
+        assumed_state: kind === "unknown",
+        ...kind === "open" ? { current_position: 60 } : kind === "closed" ? { current_position: 0 } : {}
+      }
+    };
+  }
+  var CoverCardEditor = createFormEditor({
+    schema: (config) => [
+      ...config.demo ? [] : [{ name: "entity", selector: { entity: { domain: "cover" } } }],
+      { name: "name", selector: { text: {} } },
+      { name: "subtitle", selector: { text: {} } },
+      { name: "icon", selector: { icon: {} } },
+      { name: "show_position", selector: { boolean: {} }, default: true },
+      {
+        type: "expandable",
+        name: "",
+        title: "Demo mode (a pretend blind, for Design Presets)",
+        flatten: true,
+        schema: [
+          { name: "demo", selector: { boolean: {} } },
+          {
+            name: "demo_state",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "unknown", label: "Position unknown (like an RF blind)" },
+                  { value: "open", label: "Open 60%" },
+                  { value: "closed", label: "Closed" }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    ],
+    labels: {
+      entity: "Blind, curtain or other cover",
+      name: "Title (optional)",
+      subtitle: "Small text beside the icon (optional, e.g. the room)",
+      icon: "Icon (optional)",
+      show_position: "Position bar (if the cover reports one)",
+      demo: "Use a pretend blind instead of a real one",
+      demo_state: "Pretend blind starts"
+    }
+  });
+  var CoverCard = class extends HTMLElement {
+    setConfig(config) {
+      if (!config.entity && !config.demo) throw new Error("entity required (or set demo: true)");
+      this.config = config;
+      this._built = false;
+      this._demo = config.demo ? coverDemo(config) : null;
+      this._last = null;
+    }
+    set hass(hass) {
+      this._hass = hass;
+      this._render();
+    }
+    _state() {
+      return this._demo || this._hass && this._hass.states[this.config.entity];
+    }
+    _render() {
+      const st = this._state();
+      if (!st || !this._hass) return;
+      const c = this.config;
+      if (!this._built) {
+        this.innerHTML = kitShell(`
+        <div style="display:flex; align-items:center; gap:14px;">
+          <div class="cv-icon ck-tap" style="flex:none;"></div>
+          <div class="ck-info cv-info"></div>
+        </div>
+        <div class="cv-pos"></div>
+        <div class="ck-row cv-buttons"></div>`);
+        this.querySelector(".cv-icon").addEventListener("click", () => !this._demo && kitMoreInfo(this, c.entity));
+        this._built = true;
+      }
+      const a = st.attributes;
+      const pos = a.current_position;
+      const known = ["open", "closed", "opening", "closing"].includes(st.state);
+      const word = st.state === "unavailable" ? "Unavailable" : !known ? "Position unknown" : st.state === "open" && pos != null && pos < 100 ? `Open ${pos}%` : st.state.charAt(0).toUpperCase() + st.state.slice(1);
+      const closed = st.state === "closed" || !known && this._last === "close";
+      const color = st.state === "unavailable" ? KIT_COLOR.off : KIT_COLOR.blind;
+      kitHead(this, c.name || a.friendly_name || c.entity, word + (this._demo ? " \xB7 demo" : ""), color);
+      const icons = COVER_ICONS[a.device_class] || COVER_ICONS.blind;
+      this.querySelector(".cv-icon").innerHTML = iconHtml(c.icon || icons[closed ? 1 : 0], { size: "44px", style: `color:${color};` });
+      const lines = [];
+      if (c.subtitle) lines.push(`<span class="cv-sub"></span>`);
+      if (!known && this._last) lines.push(`<span>Last command: ${this._last.charAt(0).toUpperCase() + this._last.slice(1)}</span>`);
+      else if (!known && a.assumed_state) lines.push("<span>This blind doesn\u2019t report where it is</span>");
+      this.querySelector(".cv-info").innerHTML = lines.join("");
+      const sub = this.querySelector(".cv-sub");
+      if (sub) sub.textContent = c.subtitle;
+      const posBox = this.querySelector(".cv-pos");
+      const showPos = c.show_position !== false && pos != null;
+      posBox.style.display = showPos ? "block" : "none";
+      if (showPos) posBox.innerHTML = `<div class="ck-bar"><i style="width:${pos}%; background:${color};"></i></div><div class="ck-sub" style="display:flex; justify-content:space-between; margin-top:3px;"><span>Closed</span><span>${pos}% open</span></div>`;
+      const f = a.supported_features || 0;
+      const active = !known ? this._last : st.state === "open" || st.state === "opening" ? "open" : "close";
+      const tiles = [
+        ...f & 1 ? [{ key: "open", name: "Open", icon: "mdi:arrow-up", color, on: active === "open" }] : [],
+        ...f & 8 ? [{ key: "stop", name: "Stop", icon: "mdi:stop", color, on: !known && this._last === "stop" }] : [],
+        ...f & 2 ? [{ key: "close", name: "Close", icon: "mdi:arrow-down", color, on: active === "close" }] : []
+      ];
+      kitTiles(this.querySelector(".cv-buttons"), tiles, (t) => this._press(t.key));
+      hydrateIcons(this);
+    }
+    _press(key) {
+      this._last = key;
+      if (this._demo) {
+        const d = this._demo;
+        if (!d.attributes.assumed_state) {
+          if (key === "open") {
+            d.state = "open";
+            d.attributes.current_position = 100;
+          }
+          if (key === "close") {
+            d.state = "closed";
+            d.attributes.current_position = 0;
+          }
+        }
+        this._render();
+        return;
+      }
+      this._hass.callService("cover", `${key}_cover`, { entity_id: this.config.entity });
+      this._render();
+    }
+    getCardSize() {
+      return 3;
+    }
+    getGridOptions() {
+      return { columns: 12, min_columns: 6, rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement(`cover-card-editor${SUFFIX}`);
+    }
+    static getStubConfig(hass) {
+      const first = hass && Object.keys(hass.states).find((id) => id.startsWith("cover."));
+      return first ? { entity: first } : { demo: true };
+    }
+  };
+  function registerCoverCard() {
+    if (!customElements.get(`cover-card-editor${SUFFIX}`)) customElements.define(`cover-card-editor${SUFFIX}`, CoverCardEditor);
+    if (!customElements.get(`cover-card${SUFFIX}`)) customElements.define(`cover-card${SUFFIX}`, CoverCard);
+    window.customCards = window.customCards || [];
+    window.customCards.push({
+      type: `cover-card${SUFFIX}`,
+      name: `Blind Card${LABEL}`,
+      description: "A blind, curtain or other cover: Open, Stop and Close, with position when known",
+      preview: true,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
+    });
+  }
+
   // src/index.js
   registerGaugeZoneCard();
   registerAlarmPanelCard();
@@ -3800,5 +5020,10 @@
   registerSectionTitleCard();
   registerSectionPanelCard();
   registerClimateCard();
+  registerClimateZoneCard();
+  registerFanCard();
+  registerAirPurifierCard();
+  registerCoAlarmCard();
+  registerCoverCard();
   console.info(`%c CHURCH-DRIVE-CARDS${SUFFIX ? " BETA" : ""} %c loaded `, "color: white; background: #2196f3; font-weight: 700;", "color: #2196f3; background: transparent;");
 })();
