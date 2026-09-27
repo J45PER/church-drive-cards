@@ -2979,6 +2979,407 @@
     });
   }
 
+  // src/card-kit.js
+  var KIT_COLOR = {
+    off: "#8b919c",
+    good: "#4caf50",
+    fair: "#ffa726",
+    poor: "#ff7043",
+    bad: "#e53935",
+    fan: "#26c6da",
+    sleep: "#7e6fd6",
+    humidity: "#b388ff",
+    blind: "#a1887f",
+    cold: "#42a5f5",
+    cool: "#26c6da",
+    comfy: "#66bb6a",
+    warm: "#ffa726",
+    hot: "#ef5350"
+  };
+  var kitEsc = (text) => String(text == null ? "" : text).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  var kitCap = (text) => String(text || "").replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+  var kitNum = (st) => st && st.state !== "" && !isNaN(Number(st.state)) ? Number(st.state) : null;
+  function kitShell(body, extraCss = "") {
+    return `
+    <ha-card class="ck-card" style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; padding:16px; background:var(--card-background-color); transition:background-color .6s ease; display:flex; flex-direction:column; gap:12px;">
+      <style>
+        .ck-row { display:flex; gap:6px; }
+        .ck-q { position:relative; overflow:hidden; container-type:inline-size; flex:1 1 0; min-width:0; height:48px; border:none; border-radius:12px; padding:0 6px; cursor:pointer;
+          background:rgba(127,127,127,0.14); color:var(--primary-text-color); font:inherit; font-size:13px; font-weight:600;
+          display:flex; align-items:center; justify-content:center; gap:6px; transition:background-color .2s, color .2s; }
+        .ck-q.ck-col { flex-direction:column; gap:2px; height:56px; font-size:11px; }
+        .ck-q.ck-on { color:#fff; }
+        .ck-q:disabled { opacity:.4; cursor:default; }
+        .ck-q span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+        @container (max-width: 56px) { .ck-q:not(.ck-col) span.ck-hide { display:none; } }
+        .ck-q::after { content:''; position:absolute; inset:0; background:#fff; opacity:0; transition:opacity .15s; pointer-events:none; }
+        .ck-q:not(:disabled):hover::after { opacity:.08; }
+        .ck-q:focus-visible, .ck-tap:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
+        .ck-hold { position:absolute; left:0; top:0; bottom:0; width:0; background:rgba(255,255,255,.22); pointer-events:none; }
+        .ck-sub { font-size:0.8rem; color:var(--secondary-text-color); }
+        .ck-info { flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; font-size:0.85rem; color:var(--secondary-text-color); }
+        .ck-info > span { display:flex; align-items:center; gap:5px; }
+        .ck-chip { display:inline-flex; align-items:center; gap:4px; padding:1px 8px; border-radius:999px; font-size:0.72rem; font-weight:600; }
+        .ck-bar { height:8px; border-radius:99px; background:rgba(127,127,127,.2); overflow:hidden; }
+        .ck-bar > i { display:block; height:100%; border-radius:inherit; transition:width .4s; }
+        .ck-tap { cursor:pointer; }
+        ${extraCss}
+      </style>
+      <div style="display:flex; align-items:baseline; gap:8px;">
+        <div class="ck-title" style="flex:1; min-width:0; font-size:1.5rem; font-weight:500; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:color .6s;"></div>
+        <div class="ck-word" style="flex:none; font-size:0.85rem; color:var(--secondary-text-color);"></div>
+      </div>
+      ${body}
+    </ha-card>`;
+  }
+  function kitHead(root, title, word, color, tint = 0) {
+    const t = root.querySelector(".ck-title");
+    const w = root.querySelector(".ck-word");
+    const card = root.querySelector(".ck-card");
+    t.textContent = title;
+    t.style.color = color;
+    w.textContent = word;
+    card.style.backgroundColor = tint ? `color-mix(in srgb, ${color} ${tint}%, var(--card-background-color))` : "var(--card-background-color)";
+  }
+  function kitGauge(p, color, label, sub, size = 84) {
+    const r = size / 2 - 7, cx = size / 2, len = 1.5 * Math.PI * r;
+    const fill = Math.max(0, Math.min(1, p || 0));
+    const arc = (extra) => `<circle cx="${cx}" cy="${cx}" r="${r}" fill="none" stroke-width="6" stroke-linecap="round" transform="rotate(135 ${cx} ${cx})" ${extra}></circle>`;
+    return `<div style="position:relative; width:${size}px; height:${size}px; flex:none;">
+      <svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" aria-hidden="true" style="display:block;">
+        ${arc(`stroke="rgba(127,127,127,0.28)" stroke-dasharray="${len} 9999"`)}
+        ${fill > 0 ? arc(`stroke="${color}" stroke-dasharray="${Math.max(0.01, len * fill)} 9999"`) : ""}
+      </svg>
+      <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
+        <b style="font-size:1.1rem; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.1;">${kitEsc(label)}</b>
+        <span style="font-size:0.66rem; color:var(--secondary-text-color); line-height:1.2;">${kitEsc(sub)}</span>
+      </div>
+    </div>`;
+  }
+  function kitTiles(box, list, onTap, { column = false, hideNames = false } = {}) {
+    const sig = JSON.stringify(list.map((t) => [t.key, t.name, t.icon, t.color, !!t.on, !!t.disabled, !!t.hold]));
+    if (box._ckSig === sig) return;
+    box._ckSig = sig;
+    box.innerHTML = "";
+    box.style.display = list.length ? "flex" : "none";
+    list.forEach((t) => {
+      const b = document.createElement("button");
+      b.className = `ck-q${column ? " ck-col" : ""}${t.on ? " ck-on" : ""}`;
+      b.disabled = !!t.disabled;
+      b.title = t.name;
+      b.setAttribute("aria-label", b.title);
+      b.setAttribute("aria-pressed", String(!!t.on));
+      if (t.on) b.style.background = t.color;
+      b.innerHTML = `${t.hold ? '<i class="ck-hold"></i>' : ""}${iconHtml(t.icon, { size: "20px", style: "flex-shrink:0; position:relative;" })}<span class="${hideNames ? "ck-hide" : ""}" style="position:relative;"></span>`;
+      b.querySelector("span").textContent = t.name;
+      if (t.hold) kitHold(b, () => onTap(t));
+      else b.addEventListener("click", () => onTap(t));
+      box.appendChild(b);
+    });
+  }
+  function kitHold(button, done) {
+    const bar = button.querySelector(".ck-hold");
+    let timer = null;
+    const stop = () => {
+      clearTimeout(timer);
+      timer = null;
+      bar.style.transition = "width .2s";
+      bar.style.width = "0";
+    };
+    const start = (ev) => {
+      if (ev.button > 0) return;
+      stop();
+      bar.style.transition = "width 1.5s linear";
+      requestAnimationFrame(() => bar.style.width = "100%");
+      timer = setTimeout(() => {
+        stop();
+        done();
+      }, 1500);
+    };
+    button.addEventListener("pointerdown", start);
+    ["pointerup", "pointerleave", "pointercancel"].forEach((e) => button.addEventListener(e, stop));
+    button.addEventListener("keydown", (ev) => {
+      if ((ev.key === "Enter" || ev.key === " ") && !timer) start(ev);
+    });
+    button.addEventListener("keyup", stop);
+  }
+  function kitMoreInfo(el, entityId) {
+    if (!entityId) return;
+    el.dispatchEvent(new CustomEvent("hass-more-info", { detail: { entityId }, bubbles: true, composed: true }));
+  }
+  async function kitHistory(hass, ids, hours = 24) {
+    const out = {};
+    if (!hass || !hass.callWS || !ids.length) return out;
+    const res = await hass.callWS({
+      type: "history/history_during_period",
+      start_time: new Date(Date.now() - hours * 36e5).toISOString(),
+      entity_ids: ids,
+      minimal_response: true,
+      no_attributes: true,
+      significant_changes_only: false
+    });
+    ids.forEach((id) => {
+      out[id] = (res[id] || []).map((p) => [(p.lu || p.lc || 0) * 1e3, Number(p.s)]).filter((p) => p[0] && !isNaN(p[1]) && p[1] !== null);
+    });
+    return out;
+  }
+  function kitDemoSeries(values, hours = 24) {
+    const now = Date.now();
+    return values.map((v, i) => [now - hours * 36e5 * (values.length - 1 - i) / (values.length - 1), v]);
+  }
+  function kitSmooth(pts, from, now, slots = 96) {
+    const sorted = (pts || []).filter((p) => p[1] != null && !isNaN(p[1])).sort((a, b) => a[0] - b[0]);
+    if (sorted.length < 3) return sorted;
+    const step = (now - from) / slots;
+    let j = 0, v = null;
+    while (j < sorted.length && sorted[j][0] <= from) v = sorted[j++][1];
+    const avg2 = [];
+    for (let k = 0; k < slots; k++) {
+      const a = from + k * step, b = a + step;
+      let sum = 0, dur = 0, t = a;
+      while (j < sorted.length && sorted[j][0] < b) {
+        const tp = sorted[j][0];
+        if (v != null) {
+          sum += v * (tp - t);
+          dur += tp - t;
+        }
+        t = tp;
+        v = sorted[j++][1];
+      }
+      if (v != null) {
+        sum += v * (b - t);
+        dur += b - t;
+      }
+      if (dur > 0) avg2.push([a + step / 2, sum / dur]);
+    }
+    const w = [1, 2, 3, 4, 3, 2, 1];
+    const out = avg2.map((p, i) => {
+      let s = 0, n = 0;
+      w.forEach((wt, k) => {
+        const q = avg2[i + k - 3];
+        if (q) {
+          s += q[1] * wt;
+          n += wt;
+        }
+      });
+      return [p[0], s / n];
+    });
+    if (out.length) out.push([now, out[out.length - 1][1]]);
+    return out;
+  }
+  function kitPath(xy, curve = true) {
+    const f = (p) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`;
+    if (!curve || xy.length < 3) return xy.map((p, i) => `${i ? "L" : "M"}${f(p)}`).join(" ");
+    let d = `M${f(xy[0])}`;
+    for (let i = 0; i < xy.length - 1; i++) {
+      const p0 = xy[i - 1] || xy[i], p1 = xy[i], p2 = xy[i + 1], p3 = xy[i + 2] || p2;
+      const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+      const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+      d += ` C${f(c1)} ${f(c2)} ${f(p2)}`;
+    }
+    return d;
+  }
+  function kitGraph(series, { hours = 24, height = 48, label = "", meta = null, smooth = true } = {}) {
+    const W = 300, H = height, now = Date.now(), from = now - hours * 36e5;
+    const x = (t) => (Math.max(from, t) - from) / (now - from) * W;
+    let under = "", over = "";
+    const scrub = [];
+    series.forEach((s) => {
+      const raw = (s.pts || []).filter((p) => p[1] != null && !isNaN(p[1]));
+      if (s.current != null && !isNaN(s.current)) raw.push([now, Number(s.current)]);
+      const pts = smooth ? kitSmooth(raw, from, now) : raw;
+      if (pts.length < 2) return;
+      const vals = pts.map((p) => p[1]);
+      const lo = Math.min(...vals) - (s.pad || 0.3), hi = Math.max(...vals) + (s.pad || 0.3);
+      const y = (v) => H - 3 - (v - lo) / (hi - lo || 1) * (H - 6);
+      const d = kitPath(pts.map((p) => [x(p[0]), y(p[1])]), smooth);
+      if (s.fill) under += `<path d="${d} L${W},${H} L0,${H} Z" fill="${s.color}" fill-opacity="0.16"></path>`;
+      over += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.width || 2}" vector-effect="non-scaling-stroke"></path>`;
+      scrub.push({ pts, raw, lo, hi, color: s.color, format: s.format, linear: smooth });
+    });
+    if (!under && !over) return "";
+    if (meta) Object.assign(meta, { from, now, height: H, series: scrub });
+    return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block; width:100%; height:${H}px;" role="img" aria-label="${kitEsc(label)}">${under}${over}</svg>`;
+  }
+  function kitScrub(svg2, spec) {
+    if (!svg2 || !spec || !spec.series || !spec.series.length || svg2.parentNode._ckScrub) return;
+    const H = spec.height;
+    const wrap = document.createElement("div");
+    wrap._ckScrub = true;
+    wrap.style.cssText = "position:relative; touch-action:pan-y; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;";
+    svg2.parentNode.insertBefore(wrap, svg2);
+    wrap.appendChild(svg2);
+    const line = document.createElement("div");
+    line.style.cssText = `position:absolute; top:0; height:${H}px; width:1px; background:var(--primary-text-color); opacity:.6; pointer-events:none; display:none;`;
+    const tip = document.createElement("div");
+    tip.style.cssText = "position:absolute; bottom:calc(100% + 6px); z-index:3; padding:6px 9px; border-radius:10px; background:var(--card-background-color); box-shadow:0 3px 10px rgba(0,0,0,.45); font-size:0.78rem; line-height:1.4; white-space:nowrap; pointer-events:none; display:none; font-variant-numeric:tabular-nums;";
+    const dots = spec.series.map((s) => {
+      const d = document.createElement("div");
+      d.style.cssText = `position:absolute; width:9px; height:9px; margin:-4.5px 0 0 -4.5px; border-radius:50%; background:${s.color}; box-shadow:0 0 0 2px var(--card-background-color); pointer-events:none; display:none;`;
+      return d;
+    });
+    wrap.append(line, ...dots, tip);
+    const lerp = (pts, t) => {
+      if (!pts.length) return null;
+      if (t <= pts[0][0]) return pts[0][1];
+      for (let k = 1; k < pts.length; k++) {
+        if (t <= pts[k][0]) {
+          const [a, va] = pts[k - 1], [b, vb] = pts[k];
+          return va + (vb - va) * (t - a) / (b - a || 1);
+        }
+      }
+      return pts[pts.length - 1][1];
+    };
+    const valueAt = (pts, t) => {
+      let v = null;
+      for (const p of pts) {
+        if (p[0] <= t) v = p[1];
+        else break;
+      }
+      return v == null && pts.length ? pts[0][1] : v;
+    };
+    const when = (t) => {
+      const d = new Date(t), today = /* @__PURE__ */ new Date();
+      const time = d.toLocaleTimeString(void 0, { hour: "2-digit", minute: "2-digit" });
+      return d.toDateString() === today.toDateString() ? time : `${d.toLocaleDateString(void 0, { weekday: "short" })} ${time}`;
+    };
+    const show = (clientX) => {
+      const rect = wrap.getBoundingClientRect();
+      const f = Math.max(0, Math.min(1, (clientX - rect.left) / (rect.width || 1)));
+      const t = spec.from + f * (spec.now - spec.from);
+      const left = f * rect.width;
+      line.style.left = `${left}px`;
+      line.style.display = "block";
+      const rows = [];
+      spec.series.forEach((s, i) => {
+        const v = s.raw ? valueAt(s.raw, t) : valueAt(s.pts, t);
+        const yv = s.linear ? lerp(s.pts, t) : v;
+        const dot = dots[i];
+        if (v == null || yv == null) {
+          dot.style.display = "none";
+          return;
+        }
+        const colour = s.colourOf ? s.colourOf(v) : s.color;
+        dot.style.background = colour;
+        dot.style.left = `${left}px`;
+        dot.style.top = `${H - 3 - (yv - s.lo) / (s.hi - s.lo || 1) * (H - 6)}px`;
+        dot.style.display = "block";
+        rows.push(`<div style="color:${colour};">\u25CF ${kitEsc(s.format ? s.format(v) : Number(v).toFixed(1))}</div>`);
+      });
+      tip.innerHTML = `<div style="color:var(--secondary-text-color);">${when(t)}</div>${rows.join("")}`;
+      tip.style.display = "block";
+      const w = tip.offsetWidth;
+      tip.style.left = `${Math.max(0, Math.min(rect.width - w, left - w / 2))}px`;
+    };
+    const hide = () => {
+      [line, tip, ...dots].forEach((el) => el.style.display = "none");
+    };
+    let active = false, used = false, timer = null, sx = 0, sy = 0;
+    wrap.addEventListener("pointerenter", (ev) => ev.pointerType === "mouse" && show(ev.clientX));
+    wrap.addEventListener("pointermove", (ev) => {
+      if (ev.pointerType === "mouse") return show(ev.clientX);
+      if (active) return show(ev.clientX);
+      if (timer && (Math.abs(ev.clientX - sx) > 10 || Math.abs(ev.clientY - sy) > 10)) {
+        clearTimeout(timer);
+        timer = null;
+      }
+    });
+    wrap.addEventListener("pointerleave", (ev) => ev.pointerType === "mouse" && hide());
+    wrap.addEventListener("pointerdown", (ev) => {
+      if (ev.pointerType === "mouse") return;
+      sx = ev.clientX;
+      sy = ev.clientY;
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        timer = null;
+        active = true;
+        used = true;
+        show(sx);
+      }, 300);
+    });
+    const end = () => {
+      clearTimeout(timer);
+      timer = null;
+      if (active) {
+        active = false;
+        hide();
+      }
+    };
+    ["pointerup", "pointercancel"].forEach((e) => wrap.addEventListener(e, end));
+    wrap.addEventListener("touchmove", (ev) => {
+      if (active && ev.cancelable) ev.preventDefault();
+      if (active && ev.touches[0]) show(ev.touches[0].clientX);
+    }, { passive: false });
+    wrap.addEventListener("touchend", end);
+    wrap.addEventListener("contextmenu", (ev) => (active || used) && ev.preventDefault());
+    wrap.addEventListener("click", (ev) => {
+      if (used) {
+        used = false;
+        ev.stopPropagation();
+        ev.preventDefault();
+      }
+    }, true);
+  }
+  function kitRange(pts, current, digits, unit) {
+    const vals = (pts || []).map((p) => p[1]).filter((v) => v != null && !isNaN(v));
+    if (current != null && !isNaN(current)) vals.push(Number(current));
+    if (!vals.length) return "";
+    const f = (v) => Number(v).toFixed(digits);
+    return `${f(Math.min(...vals))}\u2013${f(Math.max(...vals))}${unit}`;
+  }
+  var KitHistory = class {
+    constructor(owner, ids, hours) {
+      this.owner = owner;
+      this.ids = ids;
+      this.hours = hours;
+      this.data = null;
+      this.at = 0;
+      this.loading = false;
+    }
+    due() {
+      return !this.loading && Date.now() - this.at > 10 * 6e4;
+    }
+    async load(hass) {
+      if (!this.due()) return;
+      this.loading = true;
+      try {
+        this.data = await kitHistory(hass, this.ids.filter(Boolean), this.hours);
+      } catch (err) {
+        this.data = this.data || {};
+      }
+      this.at = Date.now();
+      this.loading = false;
+      this.owner._render();
+    }
+  };
+  var KitPending = class {
+    constructor(owner) {
+      this.owner = owner;
+      this.want = null;
+    }
+    set(want) {
+      this.want = want;
+      clearTimeout(this.timer);
+      this.timer = setTimeout(() => {
+        this.want = null;
+        this.owner._render();
+      }, 8e3);
+    }
+    apply(st) {
+      const w = this.want;
+      if (!w || !st) return st;
+      const a = st.attributes || {};
+      const same2 = (x, y) => typeof x === "number" && typeof y === "number" ? Math.abs(x - y) <= 2 : x === y;
+      const attrs = w.attrs || {};
+      if (st.state === w.state && Object.keys(attrs).every((k) => same2(a[k], attrs[k]))) {
+        this.want = null;
+        clearTimeout(this.timer);
+        return st;
+      }
+      return { ...st, state: w.state, attributes: { ...a, ...attrs } };
+    }
+  };
+
   // src/climate-card.js
   var CC_MAX_QUICK = 5;
   var CC_RING = 84;
@@ -3103,6 +3504,7 @@
           schema: [
             toggle("show_temperature_history"),
             toggle("show_humidity_history"),
+            { name: "smooth_graphs", selector: { boolean: {} }, default: true },
             toggle("show_controls"),
             toggle("show_mode"),
             toggle("show_preset"),
@@ -3173,6 +3575,7 @@
       name: "Title (optional)",
       show_temperature_history: "Temperature history (24 hours)",
       show_humidity_history: "Humidity history (24 hours)",
+      smooth_graphs: "Smooth the history graph (averages jumpy readings)",
       show_controls: "\u2212 and + buttons",
       show_mode: "Mode dropdown",
       show_preset: "Preset dropdown",
@@ -3450,7 +3853,7 @@
       box.style.display = "block";
       if (!this._demo && Date.now() - this._historyAt > 10 * 6e4) this._loadHistory();
       const h = this._history;
-      const sig = JSON.stringify([showT, showH, this._historyAt, this._color, !!h]);
+      const sig = JSON.stringify([showT, showH, this._historyAt, this._color, !!h, cfg.smooth_graphs]);
       if (sig === this._historySig) return;
       this._historySig = sig;
       if (!h) {
@@ -3464,20 +3867,25 @@
         if (current != null) out.push([now, Number(current)]);
         return out;
       };
-      const temps = showT ? extend(h.temperature, a.current_temperature) : [];
-      const hums = showH ? extend(h.humidity, this._humidity(a)) : [];
+      const smooth = cfg.smooth_graphs !== false;
+      const tRaw = showT ? extend(h.temperature, a.current_temperature) : [];
+      const hRaw = showH ? extend(h.humidity, this._humidity(a)) : [];
+      const temps = smooth ? kitSmooth(tRaw, from, now) : tRaw;
+      const hums = smooth ? kitSmooth(hRaw, from, now) : hRaw;
       const W = 300, H = 56;
       const x = (t) => (Math.max(from, t) - from) / (now - from) * W;
       const pathOf = (pts, lo, hi) => {
         const y = (val) => H - 3 - (val - lo) / (hi - lo || 1) * (H - 6);
-        return { y, d: pts.map((p, i) => `${i ? "L" : "M"}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join(" ") };
+        return { y, d: kitPath(pts.map((p) => [x(p[0]), y(p[1])]), smooth) };
       };
       let svg2 = "";
       const legend = [];
+      const scrub = [];
       if (hums.length > 1) {
         const vals = hums.map((p2) => p2[1]);
         const lo = Math.min(...vals) - 3, hi = Math.max(...vals) + 3;
         const p = pathOf(hums, lo, hi);
+        scrub.push({ pts: hums, raw: hRaw, linear: smooth, lo, hi, color: CC_HUMIDITY, format: (val) => `${Math.round(val)}% humidity` });
         if (!temps.length) svg2 += `<path d="${p.d} L${W},${H} L0,${H} Z" fill="${CC_HUMIDITY}" fill-opacity="0.16"></path>`;
         svg2 += `<path d="${p.d}" fill="none" stroke="${CC_HUMIDITY}" stroke-width="2" vector-effect="non-scaling-stroke"></path>`;
         legend.push(`<span style="color:${CC_HUMIDITY}">\u25CF Humidity ${Math.round(Math.min(...vals))}\u2013${Math.round(Math.max(...vals))}%</span>`);
@@ -3488,6 +3896,9 @@
         if (v.target != null) targets.push(Number(v.target));
         const lo = Math.min(...vals, ...targets) - 0.5, hi = Math.max(...vals, ...targets) + 0.5;
         const p = pathOf(temps, lo, hi);
+        scrub.unshift({ pts: temps, raw: tRaw, linear: smooth, lo, hi, color: this._color, format: (val) => `${val.toFixed(1)}\xB0 room` });
+        const tPts = (h.target || []).filter((q) => q[1] != null);
+        if (tPts.length) scrub.splice(1, 0, { pts: tPts, lo, hi, color: this._color, format: (val) => `${Number(val).toFixed(1)}\xB0 target` });
         let tgt = "";
         if (v.target != null) {
           const ty = p.y(Number(v.target)).toFixed(1);
@@ -3503,6 +3914,7 @@
       if (legend.length === 1) legend.push("<span>last 24 h</span>");
       box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block; width:100%; height:${H}px;" role="img" aria-label="The last 24 hours">${svg2}</svg>
       <div style="display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-top:2px; font-size:0.8rem; color:var(--secondary-text-color);">${legend.join("")}</div>`;
+      kitScrub(box.querySelector("svg"), { from, now, height: H, series: scrub });
     }
     // ---- Full-width dropdowns: mode, preset, fan speed, swing.
     _dropdownDefs(st, v) {
@@ -3791,232 +4203,6 @@
     });
   }
 
-  // src/card-kit.js
-  var KIT_COLOR = {
-    off: "#8b919c",
-    good: "#4caf50",
-    fair: "#ffa726",
-    poor: "#ff7043",
-    bad: "#e53935",
-    fan: "#26c6da",
-    sleep: "#7e6fd6",
-    humidity: "#b388ff",
-    blind: "#a1887f",
-    cold: "#42a5f5",
-    cool: "#26c6da",
-    comfy: "#66bb6a",
-    warm: "#ffa726",
-    hot: "#ef5350"
-  };
-  var kitEsc = (text) => String(text == null ? "" : text).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-  var kitCap = (text) => String(text || "").replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
-  var kitNum = (st) => st && st.state !== "" && !isNaN(Number(st.state)) ? Number(st.state) : null;
-  function kitShell(body, extraCss = "") {
-    return `
-    <ha-card class="ck-card" style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; padding:16px; background:var(--card-background-color); transition:background-color .6s ease; display:flex; flex-direction:column; gap:12px;">
-      <style>
-        .ck-row { display:flex; gap:6px; }
-        .ck-q { position:relative; overflow:hidden; container-type:inline-size; flex:1 1 0; min-width:0; height:48px; border:none; border-radius:12px; padding:0 6px; cursor:pointer;
-          background:rgba(127,127,127,0.14); color:var(--primary-text-color); font:inherit; font-size:13px; font-weight:600;
-          display:flex; align-items:center; justify-content:center; gap:6px; transition:background-color .2s, color .2s; }
-        .ck-q.ck-col { flex-direction:column; gap:2px; height:56px; font-size:11px; }
-        .ck-q.ck-on { color:#fff; }
-        .ck-q:disabled { opacity:.4; cursor:default; }
-        .ck-q span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
-        @container (max-width: 56px) { .ck-q:not(.ck-col) span.ck-hide { display:none; } }
-        .ck-q::after { content:''; position:absolute; inset:0; background:#fff; opacity:0; transition:opacity .15s; pointer-events:none; }
-        .ck-q:not(:disabled):hover::after { opacity:.08; }
-        .ck-q:focus-visible, .ck-tap:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
-        .ck-hold { position:absolute; left:0; top:0; bottom:0; width:0; background:rgba(255,255,255,.22); pointer-events:none; }
-        .ck-sub { font-size:0.8rem; color:var(--secondary-text-color); }
-        .ck-info { flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; font-size:0.85rem; color:var(--secondary-text-color); }
-        .ck-info > span { display:flex; align-items:center; gap:5px; }
-        .ck-chip { display:inline-flex; align-items:center; gap:4px; padding:1px 8px; border-radius:999px; font-size:0.72rem; font-weight:600; }
-        .ck-bar { height:8px; border-radius:99px; background:rgba(127,127,127,.2); overflow:hidden; }
-        .ck-bar > i { display:block; height:100%; border-radius:inherit; transition:width .4s; }
-        .ck-tap { cursor:pointer; }
-        ${extraCss}
-      </style>
-      <div style="display:flex; align-items:baseline; gap:8px;">
-        <div class="ck-title" style="flex:1; min-width:0; font-size:1.5rem; font-weight:500; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:color .6s;"></div>
-        <div class="ck-word" style="flex:none; font-size:0.85rem; color:var(--secondary-text-color);"></div>
-      </div>
-      ${body}
-    </ha-card>`;
-  }
-  function kitHead(root, title, word, color, tint = 0) {
-    const t = root.querySelector(".ck-title");
-    const w = root.querySelector(".ck-word");
-    const card = root.querySelector(".ck-card");
-    t.textContent = title;
-    t.style.color = color;
-    w.textContent = word;
-    card.style.backgroundColor = tint ? `color-mix(in srgb, ${color} ${tint}%, var(--card-background-color))` : "var(--card-background-color)";
-  }
-  function kitGauge(p, color, label, sub, size = 84) {
-    const r = size / 2 - 7, cx = size / 2, len = 1.5 * Math.PI * r;
-    const fill = Math.max(0, Math.min(1, p || 0));
-    const arc = (extra) => `<circle cx="${cx}" cy="${cx}" r="${r}" fill="none" stroke-width="6" stroke-linecap="round" transform="rotate(135 ${cx} ${cx})" ${extra}></circle>`;
-    return `<div style="position:relative; width:${size}px; height:${size}px; flex:none;">
-      <svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" aria-hidden="true" style="display:block;">
-        ${arc(`stroke="rgba(127,127,127,0.28)" stroke-dasharray="${len} 9999"`)}
-        ${fill > 0 ? arc(`stroke="${color}" stroke-dasharray="${Math.max(0.01, len * fill)} 9999"`) : ""}
-      </svg>
-      <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
-        <b style="font-size:1.1rem; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.1;">${kitEsc(label)}</b>
-        <span style="font-size:0.66rem; color:var(--secondary-text-color); line-height:1.2;">${kitEsc(sub)}</span>
-      </div>
-    </div>`;
-  }
-  function kitTiles(box, list, onTap, { column = false, hideNames = false } = {}) {
-    const sig = JSON.stringify(list.map((t) => [t.key, t.name, t.icon, t.color, !!t.on, !!t.disabled, !!t.hold]));
-    if (box._ckSig === sig) return;
-    box._ckSig = sig;
-    box.innerHTML = "";
-    box.style.display = list.length ? "flex" : "none";
-    list.forEach((t) => {
-      const b = document.createElement("button");
-      b.className = `ck-q${column ? " ck-col" : ""}${t.on ? " ck-on" : ""}`;
-      b.disabled = !!t.disabled;
-      b.title = t.name;
-      b.setAttribute("aria-label", b.title);
-      b.setAttribute("aria-pressed", String(!!t.on));
-      if (t.on) b.style.background = t.color;
-      b.innerHTML = `${t.hold ? '<i class="ck-hold"></i>' : ""}${iconHtml(t.icon, { size: "20px", style: "flex-shrink:0; position:relative;" })}<span class="${hideNames ? "ck-hide" : ""}" style="position:relative;"></span>`;
-      b.querySelector("span").textContent = t.name;
-      if (t.hold) kitHold(b, () => onTap(t));
-      else b.addEventListener("click", () => onTap(t));
-      box.appendChild(b);
-    });
-  }
-  function kitHold(button, done) {
-    const bar = button.querySelector(".ck-hold");
-    let timer = null;
-    const stop = () => {
-      clearTimeout(timer);
-      timer = null;
-      bar.style.transition = "width .2s";
-      bar.style.width = "0";
-    };
-    const start = (ev) => {
-      if (ev.button > 0) return;
-      stop();
-      bar.style.transition = "width 1.5s linear";
-      requestAnimationFrame(() => bar.style.width = "100%");
-      timer = setTimeout(() => {
-        stop();
-        done();
-      }, 1500);
-    };
-    button.addEventListener("pointerdown", start);
-    ["pointerup", "pointerleave", "pointercancel"].forEach((e) => button.addEventListener(e, stop));
-    button.addEventListener("keydown", (ev) => {
-      if ((ev.key === "Enter" || ev.key === " ") && !timer) start(ev);
-    });
-    button.addEventListener("keyup", stop);
-  }
-  function kitMoreInfo(el, entityId) {
-    if (!entityId) return;
-    el.dispatchEvent(new CustomEvent("hass-more-info", { detail: { entityId }, bubbles: true, composed: true }));
-  }
-  async function kitHistory(hass, ids, hours = 24) {
-    const out = {};
-    if (!hass || !hass.callWS || !ids.length) return out;
-    const res = await hass.callWS({
-      type: "history/history_during_period",
-      start_time: new Date(Date.now() - hours * 36e5).toISOString(),
-      entity_ids: ids,
-      minimal_response: true,
-      no_attributes: true,
-      significant_changes_only: false
-    });
-    ids.forEach((id) => {
-      out[id] = (res[id] || []).map((p) => [(p.lu || p.lc || 0) * 1e3, Number(p.s)]).filter((p) => p[0] && !isNaN(p[1]) && p[1] !== null);
-    });
-    return out;
-  }
-  function kitDemoSeries(values, hours = 24) {
-    const now = Date.now();
-    return values.map((v, i) => [now - hours * 36e5 * (values.length - 1 - i) / (values.length - 1), v]);
-  }
-  function kitGraph(series, { hours = 24, height = 48, label = "" } = {}) {
-    const W = 300, H = height, now = Date.now(), from = now - hours * 36e5;
-    const x = (t) => (Math.max(from, t) - from) / (now - from) * W;
-    let under = "", over = "";
-    series.forEach((s) => {
-      const pts = (s.pts || []).filter((p) => p[1] != null && !isNaN(p[1]));
-      if (s.current != null && !isNaN(s.current)) pts.push([now, Number(s.current)]);
-      if (pts.length < 2) return;
-      const vals = pts.map((p) => p[1]);
-      const lo = Math.min(...vals) - (s.pad || 0.3), hi = Math.max(...vals) + (s.pad || 0.3);
-      const y = (v) => H - 3 - (v - lo) / (hi - lo || 1) * (H - 6);
-      const d = pts.map((p, i) => `${i ? "L" : "M"}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join(" ");
-      if (s.fill) under += `<path d="${d} L${W},${H} L0,${H} Z" fill="${s.color}" fill-opacity="0.16"></path>`;
-      over += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.width || 2}" vector-effect="non-scaling-stroke"></path>`;
-    });
-    if (!under && !over) return "";
-    return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block; width:100%; height:${H}px;" role="img" aria-label="${kitEsc(label)}">${under}${over}</svg>`;
-  }
-  function kitRange(pts, current, digits, unit) {
-    const vals = (pts || []).map((p) => p[1]).filter((v) => v != null && !isNaN(v));
-    if (current != null && !isNaN(current)) vals.push(Number(current));
-    if (!vals.length) return "";
-    const f = (v) => Number(v).toFixed(digits);
-    return `${f(Math.min(...vals))}\u2013${f(Math.max(...vals))}${unit}`;
-  }
-  var KitHistory = class {
-    constructor(owner, ids, hours) {
-      this.owner = owner;
-      this.ids = ids;
-      this.hours = hours;
-      this.data = null;
-      this.at = 0;
-      this.loading = false;
-    }
-    due() {
-      return !this.loading && Date.now() - this.at > 10 * 6e4;
-    }
-    async load(hass) {
-      if (!this.due()) return;
-      this.loading = true;
-      try {
-        this.data = await kitHistory(hass, this.ids.filter(Boolean), this.hours);
-      } catch (err) {
-        this.data = this.data || {};
-      }
-      this.at = Date.now();
-      this.loading = false;
-      this.owner._render();
-    }
-  };
-  var KitPending = class {
-    constructor(owner) {
-      this.owner = owner;
-      this.want = null;
-    }
-    set(want) {
-      this.want = want;
-      clearTimeout(this.timer);
-      this.timer = setTimeout(() => {
-        this.want = null;
-        this.owner._render();
-      }, 8e3);
-    }
-    apply(st) {
-      const w = this.want;
-      if (!w || !st) return st;
-      const a = st.attributes || {};
-      const same2 = (x, y) => typeof x === "number" && typeof y === "number" ? Math.abs(x - y) <= 2 : x === y;
-      const attrs = w.attrs || {};
-      if (st.state === w.state && Object.keys(attrs).every((k) => same2(a[k], attrs[k]))) {
-        this.want = null;
-        clearTimeout(this.timer);
-        return st;
-      }
-      return { ...st, state: w.state, attributes: { ...a, ...attrs } };
-    }
-  };
-
   // src/climate-zone-card.js
   var CZ_TYPES = {
     living: { name: "Living room", low: 19, high: 22 },
@@ -4155,6 +4341,7 @@
           { name: "show_graphs", selector: { boolean: {} }, default: true },
           { name: "show_limits", selector: { boolean: {} }, default: true },
           { name: "show_humidity_graph", selector: { boolean: {} }, default: true },
+          { name: "smooth_graphs", selector: { boolean: {} }, default: true },
           { name: "hours", selector: { number: { min: 1, max: 168, mode: "box", unit_of_measurement: "hours" } } }
         ]
       },
@@ -4194,6 +4381,7 @@
       show_graphs: "A graph for each room",
       show_limits: "Comfortable range and humidity limits on the graphs",
       show_humidity_graph: "Humidity line on the graphs",
+      smooth_graphs: "Smooth the graphs (averages jumpy sensor readings)",
       hours: "Graph length",
       humidity_low: "Comfortable humidity from",
       humidity_high: "Comfortable humidity to (above gets deeper purple: mould risk)",
@@ -4251,11 +4439,13 @@
     }
     // The room's graph: comfortable band, temperature coloured by the scale,
     // humidity with dotted limits. Each series on its own scale.
-    _graph(r, i, hours, limits, showHum) {
+    _graph(r, i, hours, limits, showHum, smooth) {
       const W = 300, H = 56, now = Date.now(), from = now - hours * 36e5;
       const x = (t) => (Math.max(from, t) - from) / (now - from) * W;
-      const tp = (r.tPts || []).filter((p) => !isNaN(p[1]));
-      if (r.t != null) tp.push([now, r.t]);
+      const scrub = [];
+      const tRaw = (r.tPts || []).filter((p) => !isNaN(p[1]));
+      if (r.t != null) tRaw.push([now, r.t]);
+      const tp = smooth ? kitSmooth(tRaw, from, now) : tRaw;
       if (tp.length < 2) return "";
       const tv = tp.map((p) => p[1]);
       let lo = Math.min(...tv), hi = Math.max(...tv);
@@ -4277,8 +4467,9 @@
         });
       }
       if (showHum && r.hPts) {
-        const hp = r.hPts.filter((p) => !isNaN(p[1]));
-        if (r.h != null) hp.push([now, r.h]);
+        const hRaw = r.hPts.filter((p) => !isNaN(p[1]));
+        if (r.h != null) hRaw.push([now, r.h]);
+        const hp = smooth ? kitSmooth(hRaw, from, now) : hRaw;
         if (hp.length >= 2) {
           const hv = hp.map((p) => p[1]);
           const hLow = this._hum("humidity_low"), hHigh = this._hum("humidity_high");
@@ -4289,10 +4480,14 @@
               svg2 += `<line x1="0" x2="${W}" y1="${yh(v).toFixed(1)}" y2="${yh(v).toFixed(1)}" stroke="${KIT_COLOR.humidity}" stroke-opacity="0.6" stroke-dasharray="1.5 3" vector-effect="non-scaling-stroke"></line>`;
             });
           }
-          svg2 += `<path d="${hp.map((p, k) => `${k ? "L" : "M"}${x(p[0]).toFixed(1)},${yh(p[1]).toFixed(1)}`).join(" ")}" fill="none" stroke="${KIT_COLOR.humidity}" stroke-width="1.6" vector-effect="non-scaling-stroke"></path>`;
+          const humOf = (v) => czHumColour(v, this._hum("humidity_low"), this._hum("humidity_high"), this._hum("humidity_dry"));
+          scrub.push({ pts: hp, raw: hRaw, linear: smooth, lo: hl, hi: hh, color: humOf(r.h), colourOf: humOf, format: (v) => `${Math.round(v)}%` });
+          svg2 += `<path d="${kitPath(hp.map((p) => [x(p[0]), yh(p[1])]), smooth)}" fill="none" stroke="${KIT_COLOR.humidity}" stroke-width="1.6" vector-effect="non-scaling-stroke"></path>`;
         }
       }
-      const d = tp.map((p, k) => `${k ? "L" : "M"}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join(" ");
+      scrub.unshift({ pts: tp, raw: tRaw, linear: smooth, lo, hi, color: czColour(r.t, r.low, r.high), colourOf: (v) => czColour(v, r.low, r.high), format: (v) => `${v.toFixed(1)}\xB0` });
+      this._scrub[i] = { from, now, height: H, series: scrub };
+      const d = kitPath(tp.map((p) => [x(p[0]), y(p[1])]), smooth);
       svg2 += `<path d="${d} L${W},${H} L0,${H} Z" fill="url(#${id})" fill-opacity="0.14"></path>`;
       svg2 += `<path d="${d}" fill="none" stroke="url(#${id})" stroke-width="2.2" vector-effect="non-scaling-stroke"></path>`;
       return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block; width:100%; height:${H}px;" role="img" aria-label="${r.name}: last ${hours} hours">${svg2}</svg>`;
@@ -4321,13 +4516,14 @@
       if (sig === this._sig) return;
       this._sig = sig;
       const hours = Number(c.hours) || 24;
+      this._scrub = [];
       const hLow = this._hum("humidity_low"), hHigh = this._hum("humidity_high"), hDry = this._hum("humidity_dry");
       this._box.innerHTML = rooms.map((r, i) => {
         const colour = czColour(r.t, r.low, r.high);
         const freezing = r.t != null && r.t <= 0;
         const humWarn = r.h != null && (r.h > hHigh || r.h < hDry);
         const humColour = czHumColour(r.h, hLow, hHigh, hDry);
-        const graph = showGraphs ? this._graph(r, i, hours, limits, showHum) : "";
+        const graph = showGraphs ? this._graph(r, i, hours, limits, showHum, c.smooth_graphs !== false) : "";
         const hRange = showGraphs && showHum && r.hPts ? kitRange(r.hPts, r.h, 0, "%") : "";
         return `<div class="ck-tap cz-room" data-i="${i}" tabindex="0" role="button" style="display:flex; flex-direction:column; gap:5px; padding:8px; border-radius:12px; background:rgba(127,127,127,0.07);">
           ${freezing ? `<div style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:10px; background:${FREEZING}; color:#0b2233; font-size:0.85rem; font-weight:600;">${iconHtml("mdi:snowflake", { size: "20px" })}Freezing: pipes at risk</div>` : ""}
@@ -4353,6 +4549,8 @@
         const r = rooms[Number(el.dataset.i)];
         el.querySelector(".cz-name").textContent = r.name;
         el.querySelector(".cz-note").textContent = [r.note || r.typeName, czWord(r.t, r.low, r.high)].filter(Boolean).join(" \xB7 ");
+        const svg2 = el.querySelector("svg");
+        if (svg2 && this._scrub[Number(el.dataset.i)]) kitScrub(svg2, this._scrub[Number(el.dataset.i)]);
         const open = () => !c.demo && kitMoreInfo(this, r.entity);
         el.addEventListener("click", open);
         el.addEventListener("keydown", (ev) => (ev.key === "Enter" || ev.key === " ") && open());
@@ -4673,7 +4871,7 @@
         name: "",
         title: "Rows to show",
         flatten: true,
-        schema: Object.keys(AP_ROWS).map((name) => ({ name, selector: { boolean: {} }, default: AP_ROWS[name] }))
+        schema: [...Object.keys(AP_ROWS).map((name) => ({ name, selector: { boolean: {} }, default: AP_ROWS[name] })), { name: "smooth_graphs", selector: { boolean: {} }, default: true }]
       },
       ...config.demo ? [] : [
         {
@@ -4723,6 +4921,7 @@
       show_graph: "PM2.5 graph (24 hours)",
       show_modes: "Mode buttons",
       show_filters: "Filter life",
+      smooth_graphs: "Smooth the graph (averages jumpy readings)",
       pm25_entity: "PM2.5 sensor",
       allergen_entity: "Allergen index sensor (optional)",
       filters: "Filters",
@@ -4788,9 +4987,15 @@
       const gBox = this.querySelector(".ap-graph");
       if (row2(c, "show_graph") && (this._demo || c.pm25_entity)) {
         const pts = this._demo ? this._demo.pmPts : this._hist && this._hist.data ? this._hist.data[c.pm25_entity] : null;
-        const svg2 = kitGraph([{ pts, current: pm, color: q.color, fill: true, pad: 2 }], { height: 48, label: "PM2.5, last 24 hours" });
+        const meta = {};
+        const svg2 = kitGraph([{ pts, current: pm, color: q.color, fill: true, pad: 2, format: (v) => `PM2.5 ${Math.round(v)} \xB5g/m\xB3` }], { height: 48, label: "PM2.5, last 24 hours", meta, smooth: c.smooth_graphs !== false });
         gBox.style.display = "block";
-        gBox.innerHTML = svg2 ? `${svg2}<div style="display:flex; justify-content:space-between; font-size:0.78rem; color:var(--secondary-text-color); margin-top:2px;"><span style="color:${q.color};">\u25CF PM2.5 ${kitRange(pts, pm, 0, "")}</span><span>last 24 h</span></div>` : `<div class="ck-sub">${this._hist && this._hist.data ? "No PM2.5 history yet" : "Loading history\u2026"}</div>`;
+        const gsig = JSON.stringify([pm, q.color, this._hist && this._hist.at, !!svg2, c.smooth_graphs]);
+        if (gsig !== this._gsig) {
+          this._gsig = gsig;
+          gBox.innerHTML = svg2 ? `${svg2}<div style="display:flex; justify-content:space-between; font-size:0.78rem; color:var(--secondary-text-color); margin-top:2px;"><span style="color:${q.color};">\u25CF PM2.5 ${kitRange(pts, pm, 0, "")}</span><span>last 24 h</span></div>` : `<div class="ck-sub">${this._hist && this._hist.data ? "No PM2.5 history yet" : "Loading history\u2026"}</div>`;
+          kitScrub(gBox.querySelector("svg"), meta);
+        }
       } else gBox.style.display = "none";
       const presets = a.preset_modes || [];
       const modes = row2(c, "show_modes") ? [

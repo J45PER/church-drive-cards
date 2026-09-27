@@ -9,7 +9,7 @@
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
-import { KIT_COLOR, kitShell, kitHead, kitRange, kitNum, kitMoreInfo, kitDemoSeries, KitHistory } from './card-kit.js';
+import { KIT_COLOR, kitShell, kitHead, kitRange, kitNum, kitMoreInfo, kitDemoSeries, KitHistory, kitScrub, kitSmooth, kitPath } from './card-kit.js';
 
 // Comfortable ranges (°C) by room type, from UK guidance (at least 18° in
 // living spaces; bedrooms cooler for sleep).
@@ -156,6 +156,7 @@ export const ClimateZoneCardEditor = createFormEditor({
         { name: 'show_graphs', selector: { boolean: {} }, default: true },
         { name: 'show_limits', selector: { boolean: {} }, default: true },
         { name: 'show_humidity_graph', selector: { boolean: {} }, default: true },
+        { name: 'smooth_graphs', selector: { boolean: {} }, default: true },
         { name: 'hours', selector: { number: { min: 1, max: 168, mode: 'box', unit_of_measurement: 'hours' } } },
       ],
     },
@@ -195,6 +196,7 @@ export const ClimateZoneCardEditor = createFormEditor({
     show_graphs: 'A graph for each room',
     show_limits: 'Comfortable range and humidity limits on the graphs',
     show_humidity_graph: 'Humidity line on the graphs',
+    smooth_graphs: 'Smooth the graphs (averages jumpy sensor readings)',
     hours: 'Graph length',
     humidity_low: 'Comfortable humidity from',
     humidity_high: 'Comfortable humidity to (above gets deeper purple: mould risk)',
@@ -257,11 +259,13 @@ export class ClimateZoneCard extends HTMLElement {
 
   // The room's graph: comfortable band, temperature coloured by the scale,
   // humidity with dotted limits. Each series on its own scale.
-  _graph(r, i, hours, limits, showHum) {
+  _graph(r, i, hours, limits, showHum, smooth) {
     const W = 300, H = 56, now = Date.now(), from = now - hours * 3600e3;
     const x = (t) => ((Math.max(from, t) - from) / (now - from)) * W;
-    const tp = (r.tPts || []).filter((p) => !isNaN(p[1]));
-    if (r.t != null) tp.push([now, r.t]);
+    const scrub = [];
+    const tRaw = (r.tPts || []).filter((p) => !isNaN(p[1]));
+    if (r.t != null) tRaw.push([now, r.t]);
+    const tp = smooth ? kitSmooth(tRaw, from, now) : tRaw;
     if (tp.length < 2) return '';
     const tv = tp.map((p) => p[1]);
     let lo = Math.min(...tv), hi = Math.max(...tv);
@@ -283,8 +287,9 @@ export class ClimateZoneCard extends HTMLElement {
       });
     }
     if (showHum && r.hPts) {
-      const hp = r.hPts.filter((p) => !isNaN(p[1]));
-      if (r.h != null) hp.push([now, r.h]);
+      const hRaw = r.hPts.filter((p) => !isNaN(p[1]));
+      if (r.h != null) hRaw.push([now, r.h]);
+      const hp = smooth ? kitSmooth(hRaw, from, now) : hRaw;
       if (hp.length >= 2) {
         const hv = hp.map((p) => p[1]);
         const hLow = this._hum('humidity_low'), hHigh = this._hum('humidity_high');
@@ -295,10 +300,14 @@ export class ClimateZoneCard extends HTMLElement {
             svg += `<line x1="0" x2="${W}" y1="${yh(v).toFixed(1)}" y2="${yh(v).toFixed(1)}" stroke="${KIT_COLOR.humidity}" stroke-opacity="0.6" stroke-dasharray="1.5 3" vector-effect="non-scaling-stroke"></line>`;
           });
         }
-        svg += `<path d="${hp.map((p, k) => `${k ? 'L' : 'M'}${x(p[0]).toFixed(1)},${yh(p[1]).toFixed(1)}`).join(' ')}" fill="none" stroke="${KIT_COLOR.humidity}" stroke-width="1.6" vector-effect="non-scaling-stroke"></path>`;
+        const humOf = (v) => czHumColour(v, this._hum('humidity_low'), this._hum('humidity_high'), this._hum('humidity_dry'));
+        scrub.push({ pts: hp, raw: hRaw, linear: smooth, lo: hl, hi: hh, color: humOf(r.h), colourOf: humOf, format: (v) => `${Math.round(v)}%` });
+        svg += `<path d="${kitPath(hp.map((p) => [x(p[0]), yh(p[1])]), smooth)}" fill="none" stroke="${KIT_COLOR.humidity}" stroke-width="1.6" vector-effect="non-scaling-stroke"></path>`;
       }
     }
-    const d = tp.map((p, k) => `${k ? 'L' : 'M'}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join(' ');
+    scrub.unshift({ pts: tp, raw: tRaw, linear: smooth, lo, hi, color: czColour(r.t, r.low, r.high), colourOf: (v) => czColour(v, r.low, r.high), format: (v) => `${v.toFixed(1)}°` });
+    this._scrub[i] = { from, now, height: H, series: scrub };
+    const d = kitPath(tp.map((p) => [x(p[0]), y(p[1])]), smooth);
     svg += `<path d="${d} L${W},${H} L0,${H} Z" fill="url(#${id})" fill-opacity="0.14"></path>`;
     svg += `<path d="${d}" fill="none" stroke="url(#${id})" stroke-width="2.2" vector-effect="non-scaling-stroke"></path>`;
     return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block; width:100%; height:${H}px;" role="img" aria-label="${r.name}: last ${hours} hours">${svg}</svg>`;
@@ -329,6 +338,7 @@ export class ClimateZoneCard extends HTMLElement {
     if (sig === this._sig) return;
     this._sig = sig;
     const hours = Number(c.hours) || 24;
+    this._scrub = [];
     const hLow = this._hum('humidity_low'), hHigh = this._hum('humidity_high'), hDry = this._hum('humidity_dry');
     this._box.innerHTML = rooms
       .map((r, i) => {
@@ -336,7 +346,7 @@ export class ClimateZoneCard extends HTMLElement {
         const freezing = r.t != null && r.t <= 0;
         const humWarn = r.h != null && (r.h > hHigh || r.h < hDry);
         const humColour = czHumColour(r.h, hLow, hHigh, hDry);
-        const graph = showGraphs ? this._graph(r, i, hours, limits, showHum) : '';
+        const graph = showGraphs ? this._graph(r, i, hours, limits, showHum, c.smooth_graphs !== false) : '';
         const hRange = showGraphs && showHum && r.hPts ? kitRange(r.hPts, r.h, 0, '%') : '';
         return `<div class="ck-tap cz-room" data-i="${i}" tabindex="0" role="button" style="display:flex; flex-direction:column; gap:5px; padding:8px; border-radius:12px; background:rgba(127,127,127,0.07);">
           ${freezing ? `<div style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:10px; background:${FREEZING}; color:#0b2233; font-size:0.85rem; font-weight:600;">${iconHtml('mdi:snowflake', { size: '20px' })}Freezing: pipes at risk</div>` : ''}
@@ -363,6 +373,8 @@ export class ClimateZoneCard extends HTMLElement {
       const r = rooms[Number(el.dataset.i)];
       el.querySelector('.cz-name').textContent = r.name;
       el.querySelector('.cz-note').textContent = [r.note || r.typeName, czWord(r.t, r.low, r.high)].filter(Boolean).join(' · ');
+      const svg = el.querySelector('svg');
+      if (svg && this._scrub[Number(el.dataset.i)]) kitScrub(svg, this._scrub[Number(el.dataset.i)]);
       const open = () => !c.demo && kitMoreInfo(this, r.entity);
       el.addEventListener('click', open);
       el.addEventListener('keydown', (ev) => (ev.key === 'Enter' || ev.key === ' ') && open());

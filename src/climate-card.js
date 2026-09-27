@@ -18,6 +18,7 @@ import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { stcColor } from './section-title-card.js';
 import { SUFFIX, LABEL } from './suffix.js';
+import { kitScrub, kitSmooth, kitPath } from './card-kit.js';
 
 const CC_MAX_QUICK = 5;
 const CC_RING = 84;
@@ -158,6 +159,7 @@ export const ClimateCardEditor = createFormEditor({
         schema: [
           toggle('show_temperature_history'),
           toggle('show_humidity_history'),
+          { name: 'smooth_graphs', selector: { boolean: {} }, default: true },
           toggle('show_controls'),
           toggle('show_mode'),
           toggle('show_preset'),
@@ -228,6 +230,7 @@ export const ClimateCardEditor = createFormEditor({
     name: 'Title (optional)',
     show_temperature_history: 'Temperature history (24 hours)',
     show_humidity_history: 'Humidity history (24 hours)',
+    smooth_graphs: 'Smooth the history graph (averages jumpy readings)',
     show_controls: '− and + buttons',
     show_mode: 'Mode dropdown',
     show_preset: 'Preset dropdown',
@@ -513,7 +516,7 @@ export class ClimateCard extends HTMLElement {
     box.style.display = 'block';
     if (!this._demo && Date.now() - this._historyAt > 10 * 60e3) this._loadHistory();
     const h = this._history;
-    const sig = JSON.stringify([showT, showH, this._historyAt, this._color, !!h]);
+    const sig = JSON.stringify([showT, showH, this._historyAt, this._color, !!h, cfg.smooth_graphs]);
     if (sig === this._historySig) return;
     this._historySig = sig;
     if (!h) {
@@ -528,20 +531,25 @@ export class ClimateCard extends HTMLElement {
       if (current != null) out.push([now, Number(current)]);
       return out;
     };
-    const temps = showT ? extend(h.temperature, a.current_temperature) : [];
-    const hums = showH ? extend(h.humidity, this._humidity(a)) : [];
+    const smooth = cfg.smooth_graphs !== false;
+    const tRaw = showT ? extend(h.temperature, a.current_temperature) : [];
+    const hRaw = showH ? extend(h.humidity, this._humidity(a)) : [];
+    const temps = smooth ? kitSmooth(tRaw, from, now) : tRaw;
+    const hums = smooth ? kitSmooth(hRaw, from, now) : hRaw;
     const W = 300, H = 56;
     const x = (t) => (Math.max(from, t) - from) / (now - from) * W;
     const pathOf = (pts, lo, hi) => {
       const y = (val) => H - 3 - ((val - lo) / (hi - lo || 1)) * (H - 6);
-      return { y, d: pts.map((p, i) => `${i ? 'L' : 'M'}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join(' ') };
+      return { y, d: kitPath(pts.map((p) => [x(p[0]), y(p[1])]), smooth) };
     };
     let svg = '';
     const legend = [];
+    const scrub = [];
     if (hums.length > 1) {
       const vals = hums.map((p) => p[1]);
       const lo = Math.min(...vals) - 3, hi = Math.max(...vals) + 3;
       const p = pathOf(hums, lo, hi);
+      scrub.push({ pts: hums, raw: hRaw, linear: smooth, lo, hi, color: CC_HUMIDITY, format: (val) => `${Math.round(val)}% humidity` });
       if (!temps.length) svg += `<path d="${p.d} L${W},${H} L0,${H} Z" fill="${CC_HUMIDITY}" fill-opacity="0.16"></path>`;
       svg += `<path d="${p.d}" fill="none" stroke="${CC_HUMIDITY}" stroke-width="2" vector-effect="non-scaling-stroke"></path>`;
       legend.push(`<span style="color:${CC_HUMIDITY}">● Humidity ${Math.round(Math.min(...vals))}–${Math.round(Math.max(...vals))}%</span>`);
@@ -552,6 +560,9 @@ export class ClimateCard extends HTMLElement {
       if (v.target != null) targets.push(Number(v.target));
       const lo = Math.min(...vals, ...targets) - 0.5, hi = Math.max(...vals, ...targets) + 0.5;
       const p = pathOf(temps, lo, hi);
+      scrub.unshift({ pts: temps, raw: tRaw, linear: smooth, lo, hi, color: this._color, format: (val) => `${val.toFixed(1)}° room` });
+      const tPts = (h.target || []).filter((q) => q[1] != null);
+      if (tPts.length) scrub.splice(1, 0, { pts: tPts, lo, hi, color: this._color, format: (val) => `${Number(val).toFixed(1)}° target` });
       let tgt = '';
       if (v.target != null) {
         const ty = p.y(Number(v.target)).toFixed(1);
@@ -568,6 +579,7 @@ export class ClimateCard extends HTMLElement {
     if (legend.length === 1) legend.push('<span>last 24 h</span>');
     box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block; width:100%; height:${H}px;" role="img" aria-label="The last 24 hours">${svg}</svg>
       <div style="display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-top:2px; font-size:0.8rem; color:var(--secondary-text-color);">${legend.join('')}</div>`;
+    kitScrub(box.querySelector('svg'), { from, now, height: H, series: scrub });
   }
 
   // ---- Full-width dropdowns: mode, preset, fan speed, swing.
