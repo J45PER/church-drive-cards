@@ -43,12 +43,21 @@ devices before each release.
   settings all render with the Nest off. The user then asked for the
   alarm-style quick settings and mode-coloured panels (both done, v0.13.1).
 
-**Still to check on real devices:** the new Climate tab cards (v0.14.0) on
-the phone, then the Climate Card with the Nests on:
-−/+ (one `set_temperature` after tapping stops), the v0.13.1 quick settings
-(grey, the selected one solid), Eco/Heat/Off, the temperature line of the 24h
-graph, the dropdowns opening inside the Heating panels, and the Climate and
-Heating panels changing colour with the mode.
+**Confirmed on real devices (Climate tab, 2026-09-27):** the new cards render
+on the phone; the purifier's air quality now matches the Philips app (v0.14.1,
+"Good" at 18 µg/m³); the fan no longer flickers "On" before its speed (v0.14.2,
+reported by the user, fix untested on the real fan).
+
+**Still to check on real devices:**
+- v0.15.x on the phone: the colour scale and room types, press-and-hold on
+  the graphs with a finger (hold ~0.3s, drag; page shouldn't scroll), the
+  smoothed lines, the flatter floor cards, and the Nest graphs' comfortable
+  band and humidity lines.
+- The Climate Card with the Nests actually heating (too warm to test so far):
+  −/+ (one `set_temperature` after tapping stops), Off/Heat/Eco quick settings,
+  and the Heating panel changing colour.
+- Hold to test on the carbon monoxide card (sounds the real alarm; only when
+  the user is happy to).
 
 **New in v0.15.1: flatter floor cards, fewer pop-ups, Nest limits** (mock-up
 claude.ai/artifact/8QJHfHymWDSdL1BsH7cu2Z).
@@ -384,7 +393,7 @@ Integration modules (`custom_components/church_drive/`):
   - `church-drive-cards-beta.js` registers every card as `<name>-beta`.
   - HA loads it from resource `436186c683fe4c7d81c865b67bb0e109`:
     `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's pinned to `ec4fb37` (the v0.13.1 climate quick settings; the same card code as the release).
+    It's pinned to `3f536c2` (v0.15.0's card code: scale, readout, smoothing). v0.15.1 is newer than Beta.
   - To test a branch: push it, repoint the resource, and ask for a hard refresh.
   - jsDelivr is blocked from the cloud container, but works for the user.
 - **Rollback:** download an older release in HACS and restart.
