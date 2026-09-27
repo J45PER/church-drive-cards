@@ -49,6 +49,11 @@ on the phone; the purifier's air quality now matches the Philips app (v0.14.1,
 reported by the user, fix untested on the real fan).
 
 **Still to check on real devices:**
+- Device Health (v0.16.0) in real life: watching since 2026-09-27 20:45. The
+  fan was already stuck before it started, so it has no real reading yet; it
+  learns one when the fan next reports live, and should catch the next
+  restart's stale "off" and re-sync it on its own. Check the Manager
+  dashboard and the fan card banner after the next restart.
 - v0.15.x on the phone: the colour scale and room types, press-and-hold on
   the graphs with a finger (hold ~0.3s, drag; page shouldn't scroll), the
   smoothed lines, the flatter floor cards, and the Nest graphs' comfortable
@@ -422,7 +427,7 @@ Integration modules (`custom_components/church_drive/`):
   - `church-drive-cards-beta.js` registers every card as `<name>-beta`.
   - HA loads it from resource `436186c683fe4c7d81c865b67bb0e109`:
     `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's pinned to `3f536c2` (v0.15.0's card code: scale, readout, smoothing). v0.15.1 is newer than Beta.
+    It's pinned to `f21a73f` (v0.16.0's card code: device health banners and card).
   - To test a branch: push it, repoint the resource, and ask for a hard refresh.
   - jsDelivr is blocked from the cloud container, but works for the user.
 - **Rollback:** download an older release in HACS and restart.
@@ -698,6 +703,10 @@ Integration modules (`custom_components/church_drive/`):
   - **Living Room Panel** (`living-room-panel`): a Living Room card (Ceiling Light,
     Shelf Table Lamp, TV lightstrip, TV Table Lamp) and a Kitchen card on its
     Kitchen tab (Ambience + Spotlights).
+  - **Manager** (`dashboard-manager`, admin-only, v0.16.0): System view with
+    a Device Health section panel (green / amber from
+    `sensor.church_drive_device_health`) holding the Device Health card.
+    Meant for the user only (require_admin can't limit it to one account).
   - **Battery Status**, **Alarm**, and **Design Presets** (tabs: main, Beta, Scene
     styles, Scene builder).
   - **Climate cards:** Mobile → Quick Actions (Downstairs) and Climate →
