@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-26. Current release: **v0.14.0**.*
+*Last updated 2026-09-26. Current release: **v0.14.1**.*
 
 ## Where this stands
 
@@ -608,7 +608,8 @@ Integration modules (`custom_components/church_drive/`):
       six temperature sensors; "Avg ° · Outside °"; Ground Floor, Middle Floor
       and Hayley's Floor zone cards)] [Cooling (Bedroom Fan card; cyan when on,
       grey off) + Air Quality (leaf; Air Purifier card + Carbon Monoxide card;
-      colour from PM2.5 bands, red if the CO alarm is on)] [Windows & Doors
+      colour and summary from PM2.5 with the Philips app's bands 35/75/115, red
+      if the CO alarm is on)] [Windows & Doors
       (Blind card for `cover.roller_blind`)]. The old Temperature/Humidity
       lists and graphs and the fan/purifier/blind tiles are gone.
     - **Cleaning:** one Cleaning panel (blue, state · battery).
