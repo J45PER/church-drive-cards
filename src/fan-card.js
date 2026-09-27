@@ -10,7 +10,7 @@
 import { createFormEditor } from './form-editor.js';
 import { hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
-import { KIT_COLOR, kitShell, kitHead, kitGauge, kitTiles, kitCap, kitNum, kitMoreInfo } from './card-kit.js';
+import { KIT_COLOR, kitShell, kitHead, kitGauge, kitTiles, kitCap, kitNum, kitMoreInfo, KitPending } from './card-kit.js';
 
 const FAN_PRESET_ICONS = {
   natural: 'mdi:weather-windy',
@@ -103,6 +103,7 @@ export class FanCard extends HTMLElement {
     this.config = config;
     this._built = false;
     this._demo = config.demo ? fanDemo(config) : null;
+    this._pending = new KitPending(this);
   }
 
   set hass(hass) {
@@ -111,7 +112,7 @@ export class FanCard extends HTMLElement {
   }
 
   _state() {
-    return this._demo || (this._hass && this._hass.states[this.config.entity]);
+    return this._pending.apply(this._demo || (this._hass && this._hass.states[this.config.entity]));
   }
 
   _render() {
@@ -185,6 +186,14 @@ export class FanCard extends HTMLElement {
   }
 
   _call(service, data) {
+    const st = this._state();
+    if (!this._demo && st) {
+      if (service === 'turn_off') this._pending.set({ state: 'off' });
+      else if (service === 'oscillate') this._pending.set({ state: st.state, attrs: { oscillating: data.oscillating } });
+      else if (service === 'set_percentage') this._pending.set({ state: 'on', attrs: { percentage: data.percentage } });
+      else this._pending.set({ state: 'on', attrs: { preset_mode: data.preset_mode } });
+      this._render();
+    }
     if (this._demo) {
       const d = this._demo, a = d.attributes;
       if (service === 'turn_off') {

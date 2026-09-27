@@ -232,3 +232,37 @@ export class KitHistory {
     this.owner._render();
   }
 }
+
+// What the user just asked for, shown straight away and held until the device
+// reports it (or 8 seconds pass). Some devices report in steps, e.g. the
+// Philips fan says "on" before its speed, which would flicker otherwise.
+// `want` = { state, attrs }; numbers match within 2 (percentages round).
+export class KitPending {
+  constructor(owner) {
+    this.owner = owner;
+    this.want = null;
+  }
+
+  set(want) {
+    this.want = want;
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => {
+      this.want = null;
+      this.owner._render();
+    }, 8000);
+  }
+
+  apply(st) {
+    const w = this.want;
+    if (!w || !st) return st;
+    const a = st.attributes || {};
+    const same = (x, y) => (typeof x === 'number' && typeof y === 'number' ? Math.abs(x - y) <= 2 : x === y);
+    const attrs = w.attrs || {};
+    if (st.state === w.state && Object.keys(attrs).every((k) => same(a[k], attrs[k]))) {
+      this.want = null;
+      clearTimeout(this.timer);
+      return st;
+    }
+    return { ...st, state: w.state, attributes: { ...a, ...attrs } };
+  }
+}

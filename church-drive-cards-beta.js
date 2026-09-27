@@ -3989,6 +3989,33 @@
       this.owner._render();
     }
   };
+  var KitPending = class {
+    constructor(owner) {
+      this.owner = owner;
+      this.want = null;
+    }
+    set(want) {
+      this.want = want;
+      clearTimeout(this.timer);
+      this.timer = setTimeout(() => {
+        this.want = null;
+        this.owner._render();
+      }, 8e3);
+    }
+    apply(st) {
+      const w = this.want;
+      if (!w || !st) return st;
+      const a = st.attributes || {};
+      const same2 = (x, y) => typeof x === "number" && typeof y === "number" ? Math.abs(x - y) <= 2 : x === y;
+      const attrs = w.attrs || {};
+      if (st.state === w.state && Object.keys(attrs).every((k) => same2(a[k], attrs[k]))) {
+        this.want = null;
+        clearTimeout(this.timer);
+        return st;
+      }
+      return { ...st, state: w.state, attributes: { ...a, ...attrs } };
+    }
+  };
 
   // src/climate-zone-card.js
   var CZ_BANDS = { cold: 18, cool: 20, warm: 22.5, hot: 24.5 };
@@ -4301,13 +4328,14 @@
       this.config = config;
       this._built = false;
       this._demo = config.demo ? fanDemo(config) : null;
+      this._pending = new KitPending(this);
     }
     set hass(hass) {
       this._hass = hass;
       this._render();
     }
     _state() {
-      return this._demo || this._hass && this._hass.states[this.config.entity];
+      return this._pending.apply(this._demo || this._hass && this._hass.states[this.config.entity]);
     }
     _render() {
       const st = this._state();
@@ -4372,6 +4400,14 @@
       else this._call("set_percentage", { percentage: s.percentage });
     }
     _call(service, data) {
+      const st = this._state();
+      if (!this._demo && st) {
+        if (service === "turn_off") this._pending.set({ state: "off" });
+        else if (service === "oscillate") this._pending.set({ state: st.state, attrs: { oscillating: data.oscillating } });
+        else if (service === "set_percentage") this._pending.set({ state: "on", attrs: { percentage: data.percentage } });
+        else this._pending.set({ state: "on", attrs: { preset_mode: data.preset_mode } });
+        this._render();
+      }
       if (this._demo) {
         const d = this._demo, a = d.attributes;
         if (service === "turn_off") {
@@ -4561,6 +4597,7 @@
       this.config = config;
       this._built = false;
       this._demo = config.demo ? apDemo() : null;
+      this._pending = new KitPending(this);
       this._hist = config.demo || !config.pm25_entity ? null : new KitHistory(this, [config.pm25_entity], 24);
     }
     set hass(hass) {
@@ -4570,7 +4607,7 @@
     _render() {
       if (!this._hass) return;
       const c = this.config;
-      const st = this._demo ? this._demo.fan : this._hass.states[c.entity];
+      const st = this._pending.apply(this._demo ? this._demo.fan : this._hass.states[c.entity]);
       if (!st) return;
       if (!this._built) {
         this.innerHTML = kitShell(`
@@ -4657,6 +4694,8 @@
         this._render();
         return;
       }
+      this._pending.set(key === "__off" ? { state: "off" } : { state: "on", attrs: { preset_mode: key } });
+      this._render();
       if (key === "__off") this._hass.callService("fan", "turn_off", { entity_id: this.config.entity });
       else this._hass.callService("fan", "set_preset_mode", { entity_id: this.config.entity, preset_mode: key });
     }
