@@ -67,6 +67,9 @@ scale, a freezing colour, S3 = limits on the graph, and humidity limits).
   held; a hold doesn't count as a tap). `kitSmooth` (15-min time-weighted
   slots, then a 7-tap moving average) and `kitPath` (Catmull-Rom curve).
   `smooth_graphs` switch (default on) on the zone, purifier and climate cards.
+- Mobile Climate zone cards have explicit room types (Living Room living,
+  Entrance/Landing/Hayley's Landing hall, Hayley's Bedroom bedroom, Hayley's
+  Office office).
 
 **New in v0.14.2: no flicker on the fan and purifier cards.** The Philips fan
 reports "on" before its speed, so tapping speed 1 briefly showed "On".
@@ -628,8 +631,8 @@ Integration modules (`custom_components/church_drive/`):
       Cameras + Indoor Cameras (blue-grey)] [Fire Alarm (red, safe mode)].
     - **Climate** (rebuilt with the v0.14.0 cards, 2026-09-27): [Heating (the
       user's own climate cards: quick settings Off/Heat/Eco, dropdowns off;
-      colour from both Nests) + Climate (colour = average comfort colour of all
-      six temperature sensors; "Avg ° · Outside °"; Ground Floor, Middle Floor
+      colour from both Nests) + Climate (colour = the room furthest outside its
+      room-type range (v0.15.0; ice-white if any room is at 0° or below); "Avg ° · Outside °"; Ground Floor, Middle Floor
       and Hayley's Floor zone cards)] [Cooling (Bedroom Fan card; cyan when on,
       grey off) + Air Quality (leaf; Air Purifier card + Carbon Monoxide card;
       colour and summary from PM2.5 with the Philips app's bands 35/75/115, red
