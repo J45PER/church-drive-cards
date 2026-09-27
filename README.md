@@ -168,6 +168,17 @@ Lists every device Church Drive watches, with whether it's responding, when it w
 
 It then fixes it automatically: a refresh, then re-sending the last real state (fans and thermostats), then reconnecting its integration (at most every 6 hours). `sensor.church_drive_device_health` counts devices needing attention; the fan, air purifier, carbon monoxide, blind and climate cards show a "Not responding" banner on their own; `church_drive.health_fix` runs a fix on demand.
 
+### `security-zone-card`
+
+One outside or entry zone (Front Garden, Entrance, Driveway…), one card each. It has:
+- **Title:** the zone name with its state: "Motion just now", "Closed", "Quiet", "Open 4 min".
+- **Activity strip:** the last 6, 12 (default) or 24 hours, as bars (busy periods, the default) or ticks. Motion is indigo, door open amber, doorbell pink and tamper red, with a faint yellow band while the zone's light was on. Press and hold (or hover) and drag to read a moment in the title line.
+- **Last events:** e.g. "Closed since 20:25 · motion 20:25 · rang yesterday 17:34".
+- **Batteries:** each on its own row with its name (e.g. Doorbell, Hue sensor) and a level bar. Below 25% turns amber.
+- **Light tile:** optional, for the zone's light.
+
+Colours: indigo normally, amber while the door is open, red with a warning line when a tamper sensor trips or a door opens while the alarm (optional) is set. Motion can come from motion sensors (on/off) and camera motion events. `demo: true` with `demo_state` (quiet / motion / open / tamper) for Design Presets.
+
 ### `section-panel-card`
 
 A group of cards on a faint panel in the section's colour, headed by a large title with a coloured icon and an optional live summary on the right (any Home Assistant template, e.g. `1 room on`). Several panels can share one dashboard section, so they stack without gaps. `color_template` (optional) takes a template that gives a colour, so a panel can follow a state, e.g. the alarm. The editor has the title, icon, colour and summary, then Home Assistant's own card list for the cards inside.

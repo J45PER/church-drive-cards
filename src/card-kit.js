@@ -175,6 +175,25 @@ export async function kitHistory(hass, ids, hours = 24) {
   return out;
 }
 
+// Raw state history (strings, e.g. on/off or an event's timestamp):
+// { id: [[ms, state], ...] }, oldest first.
+export async function kitStateHistory(hass, ids, hours = 24) {
+  const out = {};
+  if (!hass || !hass.callWS || !ids.length) return out;
+  const res = await hass.callWS({
+    type: 'history/history_during_period',
+    start_time: new Date(Date.now() - hours * 3600e3).toISOString(),
+    entity_ids: ids,
+    minimal_response: true,
+    no_attributes: true,
+    significant_changes_only: false,
+  });
+  ids.forEach((id) => {
+    out[id] = (res[id] || []).map((p) => [(p.lc || p.lu || 0) * 1000, p.s]).filter((p) => p[0]);
+  });
+  return out;
+}
+
 // Demo history: `values` spread evenly over the last `hours`.
 export function kitDemoSeries(values, hours = 24) {
   const now = Date.now();
@@ -392,10 +411,11 @@ export function kitRange(pts, current, digits, unit) {
 
 // A card that reads history keeps it fresh every 10 minutes.
 export class KitHistory {
-  constructor(owner, ids, hours) {
+  constructor(owner, ids, hours, loader = kitHistory) {
     this.owner = owner;
     this.ids = ids;
     this.hours = hours;
+    this.loader = loader;
     this.data = null;
     this.at = 0;
     this.loading = false;
@@ -409,7 +429,7 @@ export class KitHistory {
     if (!this.due()) return;
     this.loading = true;
     try {
-      this.data = await kitHistory(hass, this.ids.filter(Boolean), this.hours);
+      this.data = await this.loader(hass, this.ids.filter(Boolean), this.hours);
     } catch (err) {
       this.data = this.data || {};
     }
