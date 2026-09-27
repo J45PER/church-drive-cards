@@ -173,7 +173,12 @@ class SceneSelect(SelectEntity, RestoreEntity):
         self._refresh()
         if self._recheck:
             self._recheck()
-        self._recheck = async_call_later(self.hass, SETTLE_SECONDS + 1, lambda _now: self._refresh())
+        self._recheck = async_call_later(self.hass, SETTLE_SECONDS + 1, self._settled)
+
+    @callback
+    def _settled(self, _now) -> None:
+        self._recheck = None
+        self._refresh()
 
     @callback
     def _refresh(self) -> None:

@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-26. Current release: **v0.16.0**.*
+*Last updated 2026-09-27. Current release: **v0.16.1**.*
 
 ## Where this stands
 
@@ -63,6 +63,17 @@ reported by the user, fix untested on the real fan).
   and the Heating panel changing colour.
 - Hold to test on the carbon monoxide card (sounds the real alarm; only when
   the user is happy to).
+
+**v0.16.1: Device Health checks instantly.** After the first restart with
+v0.16.0 the fan still showed off: the saved real reading was there (runtime
+5d 7:46) but nothing flagged the stale one (4d 12:11). Now the counter check runs
+the moment health starts (for states already in place), again on
+`homeassistant_started`, on every state event and every minute's tick. It
+no longer waits for the +2 min startup check. A stale device is re-synced
+straight away (RESYNC_AFTER 0; reconnect still +4 min). Also fixed:
+the fired `listen_once` unsub being called on unload ("Unable to remove
+unknown job listener"), and select.py's settle re-check lambda running
+`async_write_ha_state` off the event loop (now a `@callback` method).
 
 **New in v0.16.0: Device Health** (plan: claude.ai/artifact/39ndvAG5WwTBwtSfKt2s3N).
 Why: after restarts the Philips fan (philips_airpurifier_coap v0.37, entry
