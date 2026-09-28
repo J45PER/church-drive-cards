@@ -3,6 +3,7 @@
 
 import { createFormEditor } from './form-editor.js';
 import { SUFFIX, LABEL } from './suffix.js';
+import { kitCompact, kitCompactable } from './card-kit.js';
 
 const APC_STATE_OPTIONS = [
   { value: 'disarmed', label: 'Disarmed' },
@@ -154,6 +155,7 @@ export class AlarmPanelCard extends HTMLElement {
     this._hass = hass;
     const st = this._state(hass);
     if (!st) return;
+    if (this._compact) return kitCompact(this, this._compactSpec(st));
     if (!this._built) this._build();
 
     const info = APC_STATES[st.state] || { label: st.state, icon: 'mdi:shield-outline', color: '#9e9e9e' };
@@ -189,6 +191,35 @@ export class AlarmPanelCard extends HTMLElement {
     // During a delay, light the button of the mode being armed to (targetState).
     const activeKey = inDelay || st.state === 'triggered' ? a.targetState : st.state;
     this._renderButtons(a.supported_features || 0, activeKey, info.color);
+  }
+
+  // One row: the state (with the seconds left in a delay) and the arm/disarm
+  // buttons as icons.
+  _compactSpec(st) {
+    const a = st.attributes;
+    const info = APC_STATES[st.state] || { label: st.state, icon: 'mdi:shield-outline', color: '#9e9e9e' };
+    const target = APC_MODE_NAMES[a.targetState];
+    const inDelay = st.state === 'arming' || st.state === 'pending';
+    const secs = st.state === 'pending' ? a.entrySecondsLeft || 0 : st.state === 'arming' ? a.exitSecondsLeft || 0 : 0;
+    const feats = a.supported_features || 0;
+    const activeKey = inDelay || st.state === 'triggered' ? a.targetState : st.state;
+    const actions = [
+      { key: 'disarmed', icon: 'mdi:shield-off-outline', title: 'Disarm', service: 'alarm_disarm', show: true },
+      { key: 'armed_home', icon: 'mdi:shield-home', title: 'Arm Home', service: 'alarm_arm_home', show: (feats & 1) !== 0 },
+      { key: 'armed_away', icon: 'mdi:shield-lock', title: 'Arm Away', service: 'alarm_arm_away', show: (feats & 2) !== 0 },
+      { key: 'armed_night', icon: 'mdi:shield-moon', title: 'Arm Night', service: 'alarm_arm_night', show: (feats & 4) !== 0 },
+    ].filter((b) => b.show);
+    return {
+      name: (st.state === 'arming' && target ? `Arming ${target}` : info.label) + (this.config.demo ? ' (demo)' : ''),
+      color: info.color,
+      value: inDelay && secs ? `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}` : '',
+      valueColor: info.color,
+      status: st.state === 'arming' ? 'Leave now' : st.state === 'pending' ? 'Disarm now' : st.state === 'triggered' ? 'Alarm sounding' : '',
+      buttons: actions.map((b) => ({ key: b.key, icon: b.icon, title: b.title, on: activeKey === b.key, color: info.color, service: b.service })),
+      onButton: (b) => {
+        if (!this.config.demo) this._hass.callService('alarm_control_panel', b.service, {}, { entity_id: this.config.entity });
+      },
+    };
   }
 
   _renderButtons(feats, activeKey, activeColor) {
@@ -306,6 +337,15 @@ export class AlarmPanelCard extends HTMLElement {
     return first ? { entity: first } : { demo: true };
   }
 }
+
+kitCompactable(AlarmPanelCard, (card) => {
+  card._built = false;
+  card._buttonsSig = null;
+  if (card._countdownTimer) clearInterval(card._countdownTimer);
+  card._countdownTimer = null;
+  card._delayState = null;
+  card._reported = null;
+});
 
 export function registerAlarmPanelCard() {
   if (!customElements.get(`alarm-panel-card-editor${SUFFIX}`)) {

@@ -9,7 +9,7 @@
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
-import { KIT_COLOR, kitShell, kitHead, kitRange, kitNum, kitDemoSeries, KitHistory, kitScrub, kitSmooth, kitPath } from './card-kit.js';
+import { KIT_COLOR, kitShell, kitHead, kitRange, kitNum, kitDemoSeries, KitHistory, kitScrub, kitSmooth, kitPath, kitCompact, kitCompactable } from './card-kit.js';
 
 // Comfortable ranges (°C) by room type, from UK guidance (at least 18° in
 // living spaces; bedrooms cooler for sleep).
@@ -316,12 +316,12 @@ export class ClimateZoneCard extends HTMLElement {
   _render() {
     if (!this._hass || !this.config) return;
     const c = this.config;
-    if (!this._built) {
+    if (!this._built && !this._compact) {
       this.innerHTML = kitShell(`<div class="cz-rooms" style="display:flex; flex-direction:column; gap:10px;"></div>`);
       this._box = this.querySelector('.cz-rooms');
       this._built = true;
     }
-    if (this._hist && this._hist.due()) this._hist.load(this._hass);
+    if (this._hist && this._hist.due() && !this._compact) this._hist.load(this._hass);
     const rooms = this._rooms();
     const showGraphs = c.show_graphs !== false;
     const showHum = c.show_humidity_graph !== false;
@@ -333,6 +333,16 @@ export class ClimateZoneCard extends HTMLElement {
     const worst = rooms.filter((r) => r.t != null).sort((a, b) => czOff(b.t, b.low, b.high) - czOff(a.t, a.low, a.high))[0];
     const titleColour = !worst ? KIT_COLOR.off : worst.t <= 0 ? FREEZING : czOff(worst.t, worst.low, worst.high) ? czColour(worst.t, worst.low, worst.high) : KIT_COLOR.comfy;
     const title = c.title || (c.demo ? (CZ_DEMO[c.demo_floor] || CZ_DEMO.ground).title : 'Climate');
+    // Compact: the floor name and a chip per room, coloured on the scale.
+    if (this._compact) {
+      return kitCompact(this, {
+        name: title,
+        color: titleColour,
+        value: t != null ? `${t.toFixed(1)}°` : '',
+        status: h != null ? `${Math.round(h)}%` : '',
+        chips: rooms.map((r) => ({ label: `${r.name} ${r.t != null ? `${r.t.toFixed(1)}°` : '–'}`, color: r.t != null && r.t <= 0 ? FREEZING : czColour(r.t, r.low, r.high) })),
+      });
+    }
     kitHead(this, title, [t != null ? `${t.toFixed(1)}°` : '', h != null ? `${Math.round(h)}%` : ''].filter(Boolean).join(' · ') + (c.demo ? ' · demo' : ''), titleColour);
     const sig = JSON.stringify([rooms.map((r) => [r.name, r.icon, r.note, r.t, r.h, r.low, r.high]), showGraphs, showHum, limits, this._hist && this._hist.at, c]);
     if (sig === this._sig) return;
@@ -396,6 +406,11 @@ export class ClimateZoneCard extends HTMLElement {
     return { demo: true, title: 'Ground Floor' };
   }
 }
+
+kitCompactable(ClimateZoneCard, (card) => {
+  card._built = false;
+  card._sig = null;
+});
 
 export function registerClimateZoneCard() {
   if (!customElements.get(`climate-zone-card-editor${SUFFIX}`)) customElements.define(`climate-zone-card-editor${SUFFIX}`, ClimateZoneCardEditor);

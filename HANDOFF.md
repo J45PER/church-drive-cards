@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-28. Current release: **v0.18.0**.*
+*Last updated 2026-09-28. Current release: **v0.19.0**.*
 
 ## Where this stands
 
@@ -75,6 +75,67 @@ reported by the user, fix untested on the real fan).
 - Hold to test on the carbon monoxide card (sounds the real alarm; only when
   the user is happy to).
 
+**New in v0.19.0: open or compact section panels.** Mock-ups:
+claude.ai/artifact/6R69sMFfG7u7jrM15YmYbL. The user chose Compact on phones, Open on
+tablets and auto-open on alerts, and wanted collapsed panels to keep key
+details and actions ("especially on Climate"). Peek was dropped.
+- `kitCompact(root, spec)` and `kitCompactable(Cls, rebuild)` in card-kit. A card
+  with `supportsCompact` gets a `compact` property from its panel and renders one
+  row: name (tap → `cd-expand`, which opens the panel), value, status, mini
+  buttons or chips. The rows:
+  - climate: temperature, word · target, quick settings as icons;
+  - climate-zone: room chips on czColour;
+  - fan: Off/1/2/3;
+  - purifier: PM2.5, Off/Auto/Sleep (plus the current mode);
+  - CO: ppm, status;
+  - cover: Up/Stop/Down;
+  - security-zone: word, low batteries, light;
+  - alarm: state, delay seconds, arm buttons;
+  - light-control: the first top-level row's light, brightness, "N on", power;
+  - device-health: names of stale devices.
+  Other cards are hidden in compact.
+- Section panel: `phone_start` (default compact) and `tablet_start` (default
+  open). Phone means `innerWidth < 600`. The choice is stored in `localStorage`
+  under `cd-panel:<user id>:<path>:<title>:<phone|tablet>` (per device and per HA user). `open_when` is a template that
+  forces open while truthy. `collapsible: false` removes the ⌄. Always open in
+  edit mode/preview. Section title: `collapsible` shows the ⌄ (`stc-toggle`
+  event); with a `link`, the row navigates and only the ⌄ toggles.
+- Mobile: every Church Drive card ran as its `-beta` type while testing and was
+  switched back to the released types on release. `open_when` is
+  set on Doors & Motion (door/tamper), Alarm and Security (pending/triggered), Air
+  Quality (CO or PM2.5 > 75) and Fire Alarm (`binary_sensor.entrance_smoke_alarm_alarm_status`;
+  the base station's safe mode reads "Disarmed" normally).
+
+**Also in v0.19.0: panel layout on wider screens.**
+- The panel's cards are in `.spc-cards`, a grid of `repeat(auto-fill, minmax(min(100%,
+  card_width), 1fr))` (default 300, `0` = one per row).
+- `match_height` (default on, off under 600px): the sections in a row are
+  those in the same shadow root (`hui-section` elements) with the same top; each
+  sits in its own wrapper in real HA, so siblings don't work. Items are
+  top-level `hui-card`s, lined up by index: the kth panels share the tallest
+  natural height, and the last panel in each section absorbs the rest so the
+  sections end level. Natural height is the grid bottom + 12px padding − the
+  panel top, which avoids feedback loops. Every panel computes the whole row and
+  applies its own share. It re-runs on a body ResizeObserver and every 3s.
+  First version only stretched the last panel and didn't find the neighbours
+  (user screenshot 2026-09-28).
+  Compact panels never stretch and aren't used as a height to match. A section
+  ending in a compact panel isn't levelled (a collapsed Indoor Cameras had been
+  stretched into an empty box). `_apply` fires `cd-panels-changed` on window so
+  the whole row re-lines up at once.
+- Inside a panel, cards on the same grid row share a height (`align-items:
+  stretch`, `.spc-cards > * { display:flex }` and `> ha-card { flex:1 }`). The zone
+  card's light tile is pushed to the bottom (`margin-top:auto`).
+- kitShell header: the title row wraps. On cards under 260px (container query)
+  the title is 1.25rem and the status word drops to its own line, so the title
+  isn't cut ("Front G…" in the user's screenshot).
+- Mobile → Security, rearranged for the user (`max_columns: 3`):
+  - [Alarm + Fire Alarm (card_width 0)] span 1;
+  - [Outdoor + Indoor Cameras (card_width 220: 3 then 2 across)] span 2, bottoms
+    level with Fire Alarm;
+  - [Doors & Motion (card_width 200: 5 zones across) + nav bar] span 3, full width.
+  - Phone order: Alarm, Fire Alarm, cameras, Doors & Motion.
+
 **New in v0.18.0: Nav Bar Card** (`nav-bar-card`), live on every Mobile page. The user chose style B, the
 floating capsule, from mock-ups (claude.ai/artifact/9bJeSLs2W7VjJaTV2ShZXF), over
 splitting Mobile into separate dashboards.
@@ -100,7 +161,7 @@ splitting Mobile into separate dashboards.
   check the real element name in `hui-root`.
 - Not done yet: jump-to chips on long pages.
 
-**Also in v0.18.0 (the last release that needs a full restart for card changes):**
+**Also in v0.18.0 (the last release that needed a full restart for card changes):**
 - Nudges only use quiet presets (`QUIET_PRESETS`: sleep, speed_1, low, silent,
   medium, speed_2), never auto/turbo/natural. On the v0.17.2 restart the purifier
   was nudged to `auto` (its first preset).

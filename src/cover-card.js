@@ -8,7 +8,7 @@
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
-import { KIT_COLOR, kitShell, kitHead, kitTiles, kitMoreInfo, kitHealthBanner } from './card-kit.js';
+import { KIT_COLOR, kitShell, kitHead, kitTiles, kitMoreInfo, kitHealthBanner, kitCompact, kitCompactable } from './card-kit.js';
 
 const COVER_ICONS = {
   curtain: ['mdi:curtains', 'mdi:curtains-closed'],
@@ -98,6 +98,24 @@ export class CoverCard extends HTMLElement {
     const st = this._state();
     if (!st || !this._hass) return;
     const c = this.config;
+    if (this._compact) {
+      const a = st.attributes, f = a.supported_features || 0, pos = a.current_position;
+      const known = ['open', 'closed', 'opening', 'closing'].includes(st.state);
+      const color = st.state === 'unavailable' ? KIT_COLOR.off : KIT_COLOR.blind;
+      const active = !known ? this._last : st.state === 'open' || st.state === 'opening' ? 'open' : 'close';
+      const word = st.state === 'unavailable' ? 'Unavailable' : known ? (st.state === 'open' && pos != null && pos < 100 ? `Open ${pos}%` : st.state.charAt(0).toUpperCase() + st.state.slice(1)) : this._last ? `Last: ${this._last.charAt(0).toUpperCase() + this._last.slice(1)}` : 'Position unknown';
+      return kitCompact(this, {
+        name: c.name || a.friendly_name || c.entity,
+        color,
+        status: word,
+        buttons: [
+          ...(f & 1 ? [{ key: 'open', icon: 'mdi:arrow-up', title: 'Open', on: active === 'open', color }] : []),
+          ...(f & 8 ? [{ key: 'stop', icon: 'mdi:stop', title: 'Stop', on: !known && this._last === 'stop', color }] : []),
+          ...(f & 2 ? [{ key: 'close', icon: 'mdi:arrow-down', title: 'Close', on: active === 'close', color }] : []),
+        ],
+        onButton: (b) => this._press(b.key),
+      });
+    }
     if (!this._built) {
       this.innerHTML = kitShell(`
         <div style="display:flex; align-items:center; gap:14px;">
@@ -185,6 +203,8 @@ export class CoverCard extends HTMLElement {
     return first ? { entity: first } : { demo: true };
   }
 }
+
+kitCompactable(CoverCard);
 
 export function registerCoverCard() {
   if (!customElements.get(`cover-card-editor${SUFFIX}`)) customElements.define(`cover-card-editor${SUFFIX}`, CoverCardEditor);

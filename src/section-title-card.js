@@ -101,21 +101,45 @@ export class SectionTitleCard extends HTMLElement {
         <div class="stc-title" style="flex:1; min-width:0; font-size:1.6rem; font-weight:500; line-height:1.2; color:var(--primary-text-color); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
         <div class="stc-summary" style="flex:none; max-width:55%; font-size:0.9rem; color:var(--secondary-text-color); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:right;"></div>
         ${c.link ? iconHtml('mdi:chevron-right', { size: '22px', style: 'flex:none; margin-left:-4px; color:var(--secondary-text-color);' }) : ''}
+        ${c.collapsible ? `<button class="stc-tog" type="button" aria-label="Show less" aria-expanded="true" style="flex:none; width:34px; height:34px; margin:-6px -6px -6px -2px; border:none; border-radius:50%; background:transparent; color:var(--secondary-text-color); cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0;">${iconHtml('mdi:chevron-down', { size: '24px', style: 'transition:transform .2s ease;', cls: 'stc-chev' })}</button>` : ''}
       </div>`;
     const row = this.firstElementChild;
+    // The ⌄ asks the Section Panel to switch between open and compact.
+    const toggle = () => this.dispatchEvent(new CustomEvent('stc-toggle', { bubbles: true }));
+    this._tog = this.querySelector('.stc-tog');
+    if (this._tog) {
+      this._tog.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        toggle();
+      });
+      this.setOpen(this._open !== false);
+    }
     if (c.link) {
       row.style.cursor = 'pointer';
       row.setAttribute('role', 'link');
       row.tabIndex = 0;
       const go = () => kitNavigate(c.link);
       row.addEventListener('click', go);
-      row.addEventListener('keydown', (ev) => (ev.key === 'Enter' || ev.key === ' ') && go());
+      row.addEventListener('keydown', (ev) => ev.target === row && (ev.key === 'Enter' || ev.key === ' ') && go());
+    } else if (c.collapsible) {
+      row.style.cursor = 'pointer';
+      row.addEventListener('click', toggle);
     }
     this.querySelector('.stc-title').textContent = c.title;
     this._summaryEl = this.querySelector('.stc-summary');
     this._iconEl = this.querySelector('.stc-icon');
     if (this._summary) this._summaryEl.textContent = this._summary;
     hydrateIcons(this);
+  }
+
+  // Point the ⌄ down (open) or right (compact).
+  setOpen(open) {
+    this._open = open;
+    if (!this._tog) return;
+    this._tog.setAttribute('aria-expanded', String(open));
+    this._tog.setAttribute('aria-label', open ? 'Show less' : 'Show more');
+    const chev = this._tog.querySelector('.stc-chev');
+    if (chev) chev.style.transform = open ? '' : 'rotate(-90deg)';
   }
 
   _unsubscribe() {

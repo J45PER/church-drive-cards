@@ -10,7 +10,7 @@
 import { createFormEditor } from './form-editor.js';
 import { hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
-import { KIT_COLOR, kitShell, kitHead, kitGauge, kitTiles, kitCap, kitNum, kitMoreInfo, KitPending, kitHealthBanner } from './card-kit.js';
+import { KIT_COLOR, kitShell, kitHead, kitGauge, kitTiles, kitCap, kitNum, kitMoreInfo, KitPending, kitHealthBanner, kitCompact, kitCompactable } from './card-kit.js';
 
 const FAN_PRESET_ICONS = {
   natural: 'mdi:weather-windy',
@@ -119,6 +119,7 @@ export class FanCard extends HTMLElement {
     const st = this._state();
     if (!st || !this._hass) return;
     const c = this.config;
+    if (this._compact) return kitCompact(this, this._compactSpec(st));
     if (!this._built) {
       this.innerHTML = kitShell(`
         <div class="fc-top" style="display:flex; align-items:center; gap:14px;">
@@ -181,6 +182,24 @@ export class FanCard extends HTMLElement {
     hydrateIcons(this);
   }
 
+  // One row: name, room temperature, and Off / speed buttons.
+  _compactSpec(st) {
+    const c = this.config, a = st.attributes, on = st.state === 'on';
+    const speeds = fanSpeeds(a);
+    const current = on ? speeds.find((s) => (s.preset ? s.preset === a.preset_mode : Math.abs((a.percentage || 0) - s.percentage) < 5)) : null;
+    const preset = on && a.preset_mode && speedOf(a.preset_mode) == null ? a.preset_mode : null;
+    const color = !on ? KIT_COLOR.off : preset === 'sleep' ? KIT_COLOR.sleep : KIT_COLOR.fan;
+    const tv = kitNum(c.temperature_entity && this._hass.states[c.temperature_entity]);
+    const word = st.state === 'unavailable' ? 'Unavailable' : !on ? 'Off' : preset ? kitCap(preset) : current ? `Speed ${current.n}` : 'On';
+    return {
+      name: c.name || a.friendly_name || c.entity,
+      color,
+      status: [preset ? word : '', tv != null ? `${tv.toFixed(1)}°` : ''].filter(Boolean).join(' · ') || word,
+      buttons: [{ key: 'off', icon: 'mdi:power', title: 'Off', on: !on, color: KIT_COLOR.off }, ...speeds.map((s) => ({ key: `s${s.n}`, label: String(s.n), title: `Speed ${s.n}`, on: current === s, color: KIT_COLOR.fan, speed: s }))],
+      onButton: (b) => (b.key === 'off' ? this._call('turn_off', {}) : this._setSpeed(b.speed)),
+    };
+  }
+
   _setSpeed(s) {
     if (s.preset) this._call('set_preset_mode', { preset_mode: s.preset });
     else this._call('set_percentage', { percentage: s.percentage });
@@ -229,6 +248,8 @@ export class FanCard extends HTMLElement {
     return first ? { entity: first } : { demo: true };
   }
 }
+
+kitCompactable(FanCard);
 
 export function registerFanCard() {
   if (!customElements.get(`fan-card-editor${SUFFIX}`)) customElements.define(`fan-card-editor${SUFFIX}`, FanCardEditor);
