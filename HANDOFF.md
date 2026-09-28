@@ -14,7 +14,19 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-Everything is merged to `main`, released and running live. The user tests on real
+**In beta (not released): Auto Layout Card** (`src/auto-layout-card.js`). The user
+wanted tablet layout to adapt by itself as panels are added, not hand-arranged per
+page. Each Mobile page is now one full-width section holding a
+`custom:auto-layout-card-beta` (all its panels, in the old phone order) plus the nav
+bar; Doors & Motion has `full_width: true`. It balances panels into columns
+(order-preserving split minimising the tallest column), stretches each column's last
+open panel so bottoms are level, and only moves cards when the split changes (so
+cameras don't reload). Panels inside get `_managed = true`, which turns off their own
+section-to-section matching and stacked-panel spacing. Panels stay
+`section-panel-card-beta` on Mobile. On release: switch `auto-layout-card-beta` and
+the panels back to released types, reload-only (card-only change).
+
+Everything else is merged to `main`, released and running live. The user tests on real
 devices before each release.
 
 **Confirmed on real lights with the user:**

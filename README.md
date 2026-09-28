@@ -203,6 +203,22 @@ cards:
 
 **Layout on wider screens** (section panels): a panel's cards sit side by side whenever each can be at least `card_width` wide (default 300px; `0` keeps one per row), so cameras fill a tablet and stack on a phone. When sections sit side by side, their panels line up row by row: the first panels share a height, then the second, and so on, and the last panel in each section fills to a common bottom (`match_height: false` turns this off; never on phones).
 
+### `auto-layout-card`
+
+Holds a page's panels in one list and arranges them itself, so adding a panel needs no rearranging. It uses as many columns as fit (`column_width`, default 340px; `max_columns`, default 3), splits the panels into columns of about equal height while keeping their order (down the first column, then the next), and stretches each column's last open panel so the columns end level. A panel with `full_width: true` spans every column, with the panels before and after it balanced above and below. Phones (under 600px) get one column in list order. It rebalances when a panel opens or goes compact, and when a tablet turns. Put it alone in a section that spans the whole page.
+
+```yaml
+type: custom:auto-layout-card
+cards:
+  - type: custom:section-panel-card
+    title: Heating
+    cards: [...]
+  - type: custom:section-panel-card
+    title: Doors & Motion
+    full_width: true
+    cards: [...]
+```
+
 ### `section-title-card`
 
 Both the panel and the title take an optional `link` (a page): tapping the title row, which shows a ›, opens it. Quick Actions uses this to jump to each full page.
