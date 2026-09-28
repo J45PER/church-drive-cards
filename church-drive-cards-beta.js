@@ -6763,6 +6763,7 @@
               path: { label: "Page", required: true, selector: { navigation: {} } },
               color: { label: "Colour", selector: { ui_color: {} } },
               color_template: { label: "Colour from a template (optional)", selector: { template: {} } },
+              icon_template: { label: "Icon from a template (optional, e.g. mdi:shield-off when disarmed)", selector: { template: {} } },
               alert_template: { label: "Needs attention when (optional template)", selector: { template: {} } }
             }
           }
@@ -6845,6 +6846,10 @@
           live.color = c;
           this._render();
         }));
+        this._subs.push(stcRender(this._hass, p.icon_template, (c) => {
+          live.icon = String(c || "").trim();
+          this._render();
+        }));
         this._subs.push(stcRender(this._hass, p.alert_template, (a) => {
           live.alert = nbAlert(a);
           this._render();
@@ -6906,13 +6911,14 @@
         const live = this._live[i] || {};
         const colour = stcColor(live.color || p.color || "primary");
         const alert = demo ? !!p.alert_template : !!live.alert;
-        return { i, p, colour, alert, on: i === active };
+        const icon = /^[a-z]+:[\w-]+$/.test(live.icon || "") ? live.icon : p.icon || "mdi:circle";
+        return { i, p, icon, colour, alert, on: i === active };
       });
-      const sig = JSON.stringify(items.map((t) => [t.p.name, t.p.icon, t.colour, t.alert, t.on]));
+      const sig = JSON.stringify(items.map((t) => [t.p.name, t.icon, t.colour, t.alert, t.on]));
       if (sig === this._sig) return;
       this._sig = sig;
-      this._nav.innerHTML = items.map(({ i, p, colour, alert, on }) => `<button class="nb-it${on ? " nb-on" : ""}" type="button" data-i="${i}" title="${kitEsc(p.name)}" aria-label="${kitEsc(p.name)}${alert ? ", needs attention" : ""}"${on ? ' aria-current="page"' : ""} style="${on ? `background:${colour};` : ""}">
-          ${iconHtml(p.icon || "mdi:circle", { size: "22px", style: `flex:none; color:${on ? "#fff" : colour};` })}
+      this._nav.innerHTML = items.map(({ i, p, icon, colour, alert, on }) => `<button class="nb-it${on ? " nb-on" : ""}" type="button" data-i="${i}" title="${kitEsc(p.name)}" aria-label="${kitEsc(p.name)}${alert ? ", needs attention" : ""}"${on ? ' aria-current="page"' : ""} style="${on ? `background:${colour};` : ""}">
+          ${iconHtml(icon, { size: "22px", style: `flex:none; color:${on ? "#fff" : colour};` })}
           ${on ? `<span class="nb-name">${kitEsc(p.name)}</span>` : ""}
           ${alert ? '<i class="nb-dot"></i>' : ""}
         </button>`).join("");

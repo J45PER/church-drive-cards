@@ -181,7 +181,7 @@ Colours: indigo normally, amber while the door is open, red with a warning line 
 
 ### `nav-bar-card`
 
-A floating capsule pinned to the bottom of the screen, with every page of a dashboard one tap away. Each page has a name, an icon, a page path and a colour. The colour can come live from a template, for example the alarm colour. The current page shows as a filled capsule with its name. A small dot marks a page whose "needs attention" template gives something other than 0, off or empty. Put the same card on every page; it takes no room in the layout. Tapping the current page scrolls back to the top. While the bar is on screen it hides the dashboard's own tabs at the top (`hide_tabs: false` keeps them); the menu, search and edit buttons stay, and the tabs come back in edit mode. `demo: true` shows it in place for Design Presets.
+A floating capsule pinned to the bottom of the screen, with every page of a dashboard one tap away. Each page has a name, an icon, a page path and a colour. The colour and the icon can come live from templates (`color_template`, `icon_template`), for example following the alarm: a shield that's off when disarmed and locked when armed away. The current page shows as a filled capsule with its name. A small dot marks a page whose "needs attention" template gives something other than 0, off or empty. Put the same card on every page; it takes no room in the layout. Tapping the current page scrolls back to the top. While the bar is on screen it hides the dashboard's own tabs at the top (`hide_tabs: false` keeps them); the menu, search and edit buttons stay, and the tabs come back in edit mode. `demo: true` shows it in place for Design Presets.
 
 ### `section-panel-card`
 
