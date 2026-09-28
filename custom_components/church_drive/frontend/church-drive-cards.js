@@ -6965,33 +6965,54 @@
       max_columns: 'Default 3. Mark a panel "Full width across an Auto Layout" to have it span the page.'
     }
   });
-  function balance(heights, k, gap) {
+  function balance(heights, k, gap, keep) {
     const n = heights.length;
     k = Math.max(1, Math.min(k, n));
-    const pre = [0];
-    heights.forEach((h, i) => pre.push(pre[i] + h));
-    const run = (i, j2) => pre[j2] - pre[i] + gap * (j2 - i - 1);
-    const best = Array.from({ length: k + 1 }, () => Array(n + 1).fill(Infinity));
-    const cut = Array.from({ length: k + 1 }, () => Array(n + 1).fill(0));
-    best[0][0] = 0;
-    for (let c = 1; c <= k; c += 1) {
-      for (let j2 = c; j2 <= n; j2 += 1) {
-        for (let i = c - 1; i < j2; i += 1) {
-          const v = Math.max(best[c - 1][i], run(i, j2));
-          if (v <= best[c][j2] + 0.5) {
-            best[c][j2] = Math.min(v, best[c][j2]);
-            cut[c][j2] = i;
+    const cost = (cols2) => Math.max(...cols2.map((c) => c.reduce((s, i) => s + heights[i], 0) + gap * Math.max(0, c.length - 1)));
+    let best = null;
+    let bestCost = Infinity;
+    if (n <= 11) {
+      const lab = new Array(n).fill(0);
+      const sums = new Array(k).fill(0);
+      const counts = new Array(k).fill(0);
+      const walk = (i, used) => {
+        if (i === n) {
+          if (used !== k) return;
+          const c = Math.max(...sums.map((s, j) => s + gap * Math.max(0, counts[j] - 1)));
+          if (c < bestCost - 4) {
+            bestCost = c;
+            best = lab.slice();
           }
+          return;
         }
-      }
+        if (n - i < k - used) return;
+        for (let j = 0; j <= Math.min(used, k - 1); j += 1) {
+          sums[j] += heights[i];
+          counts[j] += 1;
+          lab[i] = j;
+          const partial = sums[j] + gap * (counts[j] - 1);
+          if (partial < bestCost - 4) walk(i + 1, Math.max(used, j + 1));
+          sums[j] -= heights[i];
+          counts[j] -= 1;
+        }
+      };
+      walk(0, 0);
     }
-    const starts = [];
-    let j = n;
-    for (let c = k; c > 0; c -= 1) {
-      starts.unshift(cut[c][j]);
-      j = cut[c][j];
+    let cols;
+    if (best) {
+      cols = Array.from({ length: k }, () => []);
+      best.forEach((j, i) => cols[j].push(i));
+    } else {
+      cols = Array.from({ length: k }, () => []);
+      const sums = new Array(k).fill(0);
+      heights.forEach((h, i) => {
+        const j = sums.indexOf(Math.min(...sums));
+        cols[j].push(i);
+        sums[j] += h + gap;
+      });
     }
-    return starts;
+    if (keep && keep.length === k && keep.flat().length === n && cost(keep) <= cost(cols) + 24) return keep;
+    return cols;
   }
   var AutoLayoutCardEditor = class extends HTMLElement {
     setConfig(config) {
@@ -7144,22 +7165,28 @@
       const placed = this._items.every((it) => it.el.isConnected);
       bands.forEach((b) => {
         if (b.full || cols === 1 || !placed) {
-          b.starts = [0];
+          b.split = [b.items.map((it, i) => i)];
           return;
         }
-        b.starts = balance(b.items.map((it) => this._height(it.el)), cols, gap);
+        const key = b.items.map((it) => this._items.indexOf(it)).join(",");
+        const prev = this._prevSplits && this._prevSplits[key];
+        b.split = balance(b.items.map((it) => this._height(it.el)), cols, gap, prev);
       });
-      const plan = `${cols}|${bands.map((b) => `${b.full ? "F" : ""}${b.items.length}:${b.starts.join(",")}`).join("/")}`;
+      this._prevSplits = {};
+      bands.forEach((b) => {
+        this._prevSplits[b.items.map((it) => this._items.indexOf(it)).join(",")] = b.split;
+      });
+      const plan = `${cols}|${bands.map((b) => `${b.full ? "F" : ""}${b.split.map((c) => c.join(".")).join(",")}`).join("/")}`;
       if (force || plan !== this._plan) {
         this._plan = plan;
         this._root.innerHTML = "";
         bands.forEach((b) => {
           const row3 = document.createElement("div");
           row3.style.cssText = `display:flex; gap:${GAP}; align-items:stretch;`;
-          b.cols = b.starts.map((s, i) => {
+          b.cols = b.split.map((idx) => {
             const col = document.createElement("div");
             col.style.cssText = `flex:1 1 0; min-width:0; display:flex; flex-direction:column; gap:${GAP};`;
-            b.items.slice(s, b.starts[i + 1] == null ? b.items.length : b.starts[i + 1]).forEach((it) => col.appendChild(it.el));
+            idx.forEach((i) => col.appendChild(b.items[i].el));
             row3.appendChild(col);
             return col;
           });
@@ -7173,7 +7200,9 @@
       }
       this._stretch(cols, gap);
     }
-    // Each column's last open panel grows so the columns in a band end level.
+    // Each column's last open panel grows so the columns in a band end level,
+    // but only by a modest amount: a column that can't be evened out stays
+    // short rather than ending in a big empty panel.
     _stretch(cols, gap) {
       const set = (el, px) => {
         const p = el._panelEl;
@@ -7194,7 +7223,9 @@
           for (let k = r.length - 1; k >= 0 && !grow; k -= 1) if (this._open(r[k].el)) grow = r[k];
           r.forEach((it) => {
             const extra = end - totals[i];
-            set(it.el, it === grow && extra > 1 ? this._height(it.el) + extra : 0);
+            const h = this._height(it.el);
+            const ok = extra > 1 && extra <= Math.max(160, h * 0.5);
+            set(it.el, it === grow && ok ? h + extra : 0);
           });
         });
       });

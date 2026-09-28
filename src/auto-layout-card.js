@@ -1,7 +1,7 @@
 // Auto Layout Card: holds a page's panels in one list and arranges them
-// itself. It uses as many columns as fit, splits the panels into columns of
-// about equal height (keeping their order: down the first column, then the
-// next), and stretches each column's last open panel so the columns end
+// itself. It uses as many columns as fit, shares the panels between columns
+// so they're as even as possible (each column keeps list order), and
+// stretches each column's last open panel a little so the columns end
 // level. A panel marked "full width" sits across the page, with the panels
 // before and after it balanced above and below. Adding a panel, opening or
 // compacting one, or turning the tablet just rebalances the page.
@@ -33,36 +33,63 @@ const LayoutFields = createFormEditor({
   },
 });
 
-// Split heights (in order) into k runs, making the tallest run as short as
-// possible. Returns the index where each run starts.
-export function balance(heights, k, gap) {
+// Share items between k columns so the tallest column is as short as
+// possible. Each column keeps list order; column 1 starts with the first
+// item. Tries every sharing for small pages (ties go to the one closest to
+// list order), and falls back to "next item into the shortest column".
+// Returns an array of columns, each a list of item indexes.
+export function balance(heights, k, gap, keep) {
   const n = heights.length;
   k = Math.max(1, Math.min(k, n));
-  const pre = [0];
-  heights.forEach((h, i) => pre.push(pre[i] + h));
-  const run = (i, j) => pre[j] - pre[i] + gap * (j - i - 1);
-  const best = Array.from({ length: k + 1 }, () => Array(n + 1).fill(Infinity));
-  const cut = Array.from({ length: k + 1 }, () => Array(n + 1).fill(0));
-  best[0][0] = 0;
-  for (let c = 1; c <= k; c += 1) {
-    for (let j = c; j <= n; j += 1) {
-      for (let i = c - 1; i < j; i += 1) {
-        const v = Math.max(best[c - 1][i], run(i, j));
-        // Ties go to the later cut, so earlier columns hold more.
-        if (v <= best[c][j] + 0.5) {
-          best[c][j] = Math.min(v, best[c][j]);
-          cut[c][j] = i;
+  const cost = (cols) => Math.max(...cols.map((c) => c.reduce((s, i) => s + heights[i], 0) + gap * Math.max(0, c.length - 1)));
+  let best = null;
+  let bestCost = Infinity;
+  if (n <= 11) {
+    // Restricted-growth labelling: each item joins a used column or opens
+    // the next one, so each sharing is tried once.
+    const lab = new Array(n).fill(0);
+    const sums = new Array(k).fill(0);
+    const counts = new Array(k).fill(0);
+    const walk = (i, used) => {
+      if (i === n) {
+        if (used !== k) return;
+        const c = Math.max(...sums.map((s, j) => s + gap * Math.max(0, counts[j] - 1)));
+        if (c < bestCost - 4) {
+          bestCost = c;
+          best = lab.slice();
         }
+        return;
       }
-    }
+      if (n - i < k - used) return;
+      for (let j = 0; j <= Math.min(used, k - 1); j += 1) {
+        sums[j] += heights[i];
+        counts[j] += 1;
+        lab[i] = j;
+        const partial = sums[j] + gap * (counts[j] - 1);
+        if (partial < bestCost - 4) walk(i + 1, Math.max(used, j + 1));
+        sums[j] -= heights[i];
+        counts[j] -= 1;
+      }
+    };
+    walk(0, 0);
   }
-  const starts = [];
-  let j = n;
-  for (let c = k; c > 0; c -= 1) {
-    starts.unshift(cut[c][j]);
-    j = cut[c][j];
+  let cols;
+  if (best) {
+    cols = Array.from({ length: k }, () => []);
+    best.forEach((j, i) => cols[j].push(i));
+  } else {
+    cols = Array.from({ length: k }, () => []);
+    const sums = new Array(k).fill(0);
+    heights.forEach((h, i) => {
+      const j = sums.indexOf(Math.min(...sums));
+      cols[j].push(i);
+      sums[j] += h + gap;
+    });
   }
-  return starts;
+  // Keep the current arrangement unless the new one is clearly better, so
+  // small height changes don't shuffle the page.
+  if (keep && keep.length === k && keep.flat().length === n && cost(keep) <= cost(cols) + 24) return keep;
+  return cols;
 }
 
 export class AutoLayoutCardEditor extends HTMLElement {
@@ -233,22 +260,28 @@ export class AutoLayoutCard extends HTMLElement {
     const placed = this._items.every((it) => it.el.isConnected);
     bands.forEach((b) => {
       if (b.full || cols === 1 || !placed) {
-        b.starts = [0];
+        b.split = [b.items.map((it, i) => i)];
         return;
       }
-      b.starts = balance(b.items.map((it) => this._height(it.el)), cols, gap);
+      const key = b.items.map((it) => this._items.indexOf(it)).join(',');
+      const prev = this._prevSplits && this._prevSplits[key];
+      b.split = balance(b.items.map((it) => this._height(it.el)), cols, gap, prev);
     });
-    const plan = `${cols}|${bands.map((b) => `${b.full ? 'F' : ''}${b.items.length}:${b.starts.join(',')}`).join('/')}`;
+    this._prevSplits = {};
+    bands.forEach((b) => {
+      this._prevSplits[b.items.map((it) => this._items.indexOf(it)).join(',')] = b.split;
+    });
+    const plan = `${cols}|${bands.map((b) => `${b.full ? 'F' : ''}${b.split.map((c) => c.join('.')).join(',')}`).join('/')}`;
     if (force || plan !== this._plan) {
       this._plan = plan;
       this._root.innerHTML = '';
       bands.forEach((b) => {
         const row = document.createElement('div');
         row.style.cssText = `display:flex; gap:${GAP}; align-items:stretch;`;
-        b.cols = b.starts.map((s, i) => {
+        b.cols = b.split.map((idx) => {
           const col = document.createElement('div');
           col.style.cssText = `flex:1 1 0; min-width:0; display:flex; flex-direction:column; gap:${GAP};`;
-          b.items.slice(s, b.starts[i + 1] == null ? b.items.length : b.starts[i + 1]).forEach((it) => col.appendChild(it.el));
+          idx.forEach((i) => col.appendChild(b.items[i].el));
           row.appendChild(col);
           return col;
         });
@@ -263,7 +296,9 @@ export class AutoLayoutCard extends HTMLElement {
     this._stretch(cols, gap);
   }
 
-  // Each column's last open panel grows so the columns in a band end level.
+  // Each column's last open panel grows so the columns in a band end level,
+  // but only by a modest amount: a column that can't be evened out stays
+  // short rather than ending in a big empty panel.
   _stretch(cols, gap) {
     const set = (el, px) => {
       const p = el._panelEl;
@@ -284,7 +319,9 @@ export class AutoLayoutCard extends HTMLElement {
         for (let k = r.length - 1; k >= 0 && !grow; k -= 1) if (this._open(r[k].el)) grow = r[k];
         r.forEach((it) => {
           const extra = end - totals[i];
-          set(it.el, it === grow && extra > 1 ? this._height(it.el) + extra : 0);
+          const h = this._height(it.el);
+          const ok = extra > 1 && extra <= Math.max(160, h * 0.5);
+          set(it.el, it === grow && ok ? h + extra : 0);
         });
       });
     });

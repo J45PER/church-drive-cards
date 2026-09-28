@@ -18,9 +18,11 @@ HACS as an integration. It does two jobs:
 wanted tablet layout to adapt by itself as panels are added, not hand-arranged per
 page. Each Mobile page is now one full-width section holding a
 `custom:auto-layout-card-beta` (all its panels, in the old phone order) plus the nav
-bar; Doors & Motion has `full_width: true`. It balances panels into columns
-(order-preserving split minimising the tallest column), stretches each column's last
-open panel so bottoms are level, and only moves cards when the split changes (so
+bar; Doors & Motion has `full_width: true`. It shares panels between columns to make the
+tallest column as short as possible (tries every sharing up to 11 panels, each column
+keeps list order; keeps the current sharing unless a new one is 24px+ better),
+stretches each column's last open panel so bottoms are level but only by up to
+max(160px, half its height) (the user disliked big empty panels), and only moves cards when the split changes (so
 cameras don't reload). Panels inside get `_managed = true`, which turns off their own
 section-to-section matching and stacked-panel spacing. Panels stay
 `section-panel-card-beta` on Mobile. On release: switch `auto-layout-card-beta` and
