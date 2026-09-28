@@ -80,8 +80,14 @@ splitting Mobile into separate dashboards.
 - Section panel/title `link` option: the Quick Actions panels (Security, Climate,
   Lights, Cleaning) switched to `section-panel-card-beta` with links. **On
   release, switch them and the nav bars back to the released types.**
-- Not done yet: hiding HA's own tab bar (it needs a reach into HA's shadow DOM;
-  wait until the user has seen the bar), and jump-to chips on long pages.
+- `hide_tabs` (default on): while a pinned bar is on screen, it puts
+  `style.cd-nav-hide-tabs` into `hui-root`'s shadow root. It's found by a shadow-DOM
+  search from `home-assistant`, and hides `.toolbar ha-tab-group / sl-tab-group /
+  paper-tabs / ha-tabs`. A module-level holder count, with a 400ms delayed removal,
+  avoids a flash between pages. It's inline (so not hidden) in edit mode. It was
+  only tested against a mock of HA's header: if the tabs still show on the phone,
+  check the real element name in `hui-root`.
+- Not done yet: jump-to chips on long pages.
 
 **Unreleased on the branch (next release; needs one restart to take effect):**
 - Nudges only use quiet presets (`QUIET_PRESETS`: sleep, speed_1, low, silent,

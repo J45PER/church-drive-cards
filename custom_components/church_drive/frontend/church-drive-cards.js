@@ -6127,6 +6127,52 @@
   }
 
   // src/nav-bar-card.js
+  var NB_HIDE_CSS = `.toolbar ha-tab-group, .toolbar sl-tab-group, .toolbar paper-tabs, .toolbar ha-tabs, .toolbar .tabs, ha-tab-group.tabs { display: none !important; }`;
+  var nbHolders = 0;
+  var nbHideTimer = null;
+  function nbFind(root, name, depth = 0) {
+    if (!root || depth > 8) return null;
+    const hit = root.querySelector(name);
+    if (hit) return hit;
+    for (const el of root.querySelectorAll("*")) {
+      if (el.shadowRoot) {
+        const found = nbFind(el.shadowRoot, name, depth + 1);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+  function nbHuiRoot() {
+    const ha = document.querySelector("home-assistant");
+    return ha && ha.shadowRoot ? nbFind(ha.shadowRoot, "hui-root") : null;
+  }
+  function nbHideTabs(hide) {
+    clearTimeout(nbHideTimer);
+    const apply = () => {
+      const root = nbHuiRoot();
+      const sr = root && root.shadowRoot;
+      if (!sr) return false;
+      const style = sr.querySelector("style.cd-nav-hide-tabs");
+      if (nbHolders > 0 && !style) {
+        const el = document.createElement("style");
+        el.className = "cd-nav-hide-tabs";
+        el.textContent = NB_HIDE_CSS;
+        sr.appendChild(el);
+      } else if (nbHolders <= 0 && style) style.remove();
+      return true;
+    };
+    if (hide) {
+      nbHolders += 1;
+      let tries = 0;
+      const attempt = () => {
+        if (!apply() && tries++ < 10) nbHideTimer = setTimeout(attempt, 200);
+      };
+      attempt();
+    } else {
+      nbHolders = Math.max(0, nbHolders - 1);
+      nbHideTimer = setTimeout(apply, 400);
+    }
+  }
   var NB_DEMO = [
     { name: "Home", icon: "mdi:home", path: "#home", color: "blue" },
     { name: "Lights", icon: "mdi:lightbulb", path: "#lights", color: "amber" },
@@ -6157,10 +6203,12 @@
           }
         }
       },
+      { name: "hide_tabs", selector: { boolean: {} }, default: true },
       { name: "demo", selector: { boolean: {} } }
     ],
     labels: {
       pages: "Pages",
+      hide_tabs: "Hide the dashboard's own tabs at the top",
       demo: "Show pretend pages (for Design Presets; shown in place, not pinned)"
     },
     helpers: {
@@ -6194,8 +6242,20 @@
       window.addEventListener("popstate", this._onLocation);
       if (this._hass && !this._subs) this._resubscribe();
       this._render();
+      this._holdTabs();
+    }
+    // Hide the header tabs while a pinned bar is on screen.
+    _holdTabs() {
+      const want = !!this.config && !this._inline && this.config.hide_tabs !== false && this.isConnected;
+      if (want === !!this._holding) return;
+      this._holding = want;
+      nbHideTabs(want);
     }
     disconnectedCallback() {
+      if (this._holding) {
+        this._holding = false;
+        nbHideTabs(false);
+      }
       if (this._host) this._host.remove();
       this._host = null;
       this._built = false;
@@ -6238,6 +6298,7 @@
     }
     _render() {
       if (!this.config || !this.isConnected) return;
+      this._holdTabs();
       const demo = !!this.config.demo;
       const inline = this._inline;
       if (this._built && this._builtInline !== inline) {
