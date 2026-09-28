@@ -49,6 +49,10 @@ on the phone; the purifier's air quality now matches the Philips app (v0.14.1,
 reported by the user, fix untested on the real fan).
 
 **Confirmed 2026-09-28:**
+- v0.19.0 was the first **reload-only release**: HACS download, then
+  `reload_config_entry` for `01M3C9Z12M0W755GDTM455NFVB`. The resource went to
+  `?v=0.19.0` with no HA restart, the Philips devices were untouched, and health
+  stayed at 0.
 - Device Health, v0.18.0 restart (09:33): the fan (off, re-synced to its 06:55
   reading) and the purifier (Auto) were both flagged and re-synced within a
   minute. No nudge was needed and health went to 0. The purifier that stayed
@@ -623,7 +627,7 @@ Integration modules (`custom_components/church_drive/`):
   - `church-drive-cards-beta.js` registers every card as `<name>-beta`.
   - HA loads it from resource `436186c683fe4c7d81c865b67bb0e109`:
     `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's pinned to `9b9614d` (the v0.18.0 merge: Nav Bar Card).
+    It's pinned to `111e29d` (the v0.19.0 merge: open/compact panels, wide-screen layout).
   - To test a branch: push it, repoint the resource, and ask for a hard refresh.
   - jsDelivr is blocked from the cloud container, but works for the user.
 - **Rollback:** download an older release in HACS and restart.
