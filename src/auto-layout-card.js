@@ -217,7 +217,7 @@ export class AutoLayoutCard extends HTMLElement {
     // Panels inside leave lining up and spacing to this card.
     el._managed = true;
     if (this._hass) el.hass = this._hass;
-    const it = { conf, el, full: !!conf.full_width, controls: hasControls(conf) };
+    const it = { conf, el, controls: hasControls(conf) };
     el.addEventListener('ll-rebuild', (ev) => {
       ev.stopPropagation();
       const fresh = helpers.createCardElement(conf);
@@ -245,6 +245,19 @@ export class AutoLayoutCard extends HTMLElement {
     return Number.isFinite(v) ? v : 32;
   }
 
+  // Full width: set on the panel, or automatic for a panel of 3+ small cards
+  // (zones, cameras, tiles) that won't fit side by side in one column.
+  _full(it, colWidth) {
+    const f = it.conf.full_width;
+    if (f === true || f === 'yes') return true;
+    if (f === false || f === 'no') return false;
+    const cards = it.conf.cards || [];
+    const w = it.el._cardWidth ? it.el._cardWidth() : 300;
+    if (cards.length < 3 || !w || w > 240) return false;
+    const across = Math.max(1, Math.floor((colWidth - 24 + 12) / (w + 12)));
+    return cards.length > across;
+  }
+
   _open(el) {
     return PANEL.test(el.localName) && !(el._mode && el._mode() === 'compact') && !(el.config && el.config.match_height === false);
   }
@@ -266,19 +279,16 @@ export class AutoLayoutCard extends HTMLElement {
     if (!this.isConnected || !this._items.length) return;
     const cols = this._columns();
     const gap = this._gap();
+    // Balanced columns first, then full-width panels across the page below
+    // them (in list order), so a full-width panel never strands one panel on
+    // its own row.
+    const colWidth = ((this.getBoundingClientRect().width || window.innerWidth) - gap * (cols - 1)) / cols;
+    const wide = cols > 1 ? this._items.filter((it) => this._full(it, colWidth)) : [];
+    const rest = this._items.filter((it) => !wide.includes(it));
     const bands = [];
-    let cur = [];
-    const flush = () => {
-      if (cur.length) bands.push({ items: cur });
-      cur = [];
-    };
-    this._items.forEach((it) => {
-      if (it.full && cols > 1) {
-        flush();
-        bands.push({ items: [it], full: true });
-      } else cur.push(it);
-    });
-    flush();
+    if (rest.length) bands.push({ items: rest });
+    const first = this.config.controls_first !== false;
+    [...wide.filter((it) => !first || it.controls), ...wide.filter((it) => first && !it.controls)].forEach((it) => bands.push({ items: [it], full: true }));
     // Panels with controls first within each band (stable, so list order
     // holds otherwise).
     if (this.config.controls_first !== false) {

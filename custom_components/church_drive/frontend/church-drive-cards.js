@@ -3451,6 +3451,7 @@
     if (!helpersPromise) helpersPromise = window.loadCardHelpers ? window.loadCardHelpers() : Promise.reject(new Error("no card helpers"));
     return helpersPromise;
   }
+  var AUTO_WIDTH = { "security-zone-card": 200, "picture-entity": 220, "picture-glance": 220, picture: 220, "camera-card": 220, tile: 200 };
   var PanelFields = createFormEditor({
     schema: () => [
       { name: "title", selector: { text: {} } },
@@ -3479,7 +3480,7 @@
         schema: [
           { name: "card_width", selector: { number: { min: 0, max: 800, step: 10, mode: "box", unit_of_measurement: "px" } } },
           { name: "match_height", selector: { boolean: {} }, default: true },
-          { name: "full_width", selector: { boolean: {} }, default: false },
+          { name: "full_width", selector: { select: { mode: "dropdown", options: [{ value: "auto", label: "Automatic" }, { value: "yes", label: "Always full width" }, { value: "no", label: "Never" }] } } },
           { name: "priority", selector: { select: { mode: "dropdown", options: [{ value: "auto", label: "Work it out from the cards" }, { value: "controls", label: "Controls (goes higher)" }, { value: "info", label: "Information only" }] } } }
         ]
       }
@@ -3492,7 +3493,7 @@
       tablet_start: "On tablets and computers, starts",
       open_when: "Opens by itself when (optional template)",
       collapsible: "Show the \u2304 to switch between open and compact",
-      card_width: "Cards side by side when each can be at least (0 = always one per row)",
+      card_width: "Cards side by side when each can be at least (empty = automatic, 0 = always one per row)",
       match_height: "Line up this panel's bottom with the panels beside it",
       full_width: "Full width across an Auto Layout",
       priority: "In an Auto Layout, counts as",
@@ -3503,10 +3504,10 @@
     helpers: {
       phone_start: "Each phone or tablet remembers what you last chose with the \u2304; this is where it starts. Phones are screens under 600px wide.",
       open_when: "E.g. {{ is_state('binary_sensor.back_door', 'on') }}. The panel opens while it's true, then goes back to how you left it.",
-      card_width: "Default 300px. Cards fill the panel width: e.g. cameras 2 or 3 across on a tablet, one per row on a phone.",
+      card_width: "Automatic: zones 200px, cameras 220px, everything else 300px. Cards fill the panel width: e.g. cameras 2 or 3 across on a tablet, one per row on a phone.",
       match_height: "When sections sit side by side, the last panel in a shorter section grows so its bottom lines up with its neighbours'.",
       priority: "Auto Layout puts panels with buttons and sliders above ones that only show information. Auto: lights, alarm, thermostats, fan, purifier, blinds and tiles with controls count as controls.",
-      full_width: "Only inside an Auto Layout Card: this panel spans every column, with the panels before and after it balanced above and below.",
+      full_width: "Only inside an Auto Layout Card: the panel spans every column, with the panels before and after it balanced above and below. Automatic: a panel of 3 or more small cards (zones, cameras, tiles) goes full width when they would not fit side by side in one column.",
       color_template: STC_COLOR_TEMPLATE_HELPER,
       summary: `A Home Assistant template, e.g. {{ states('vacuum.gregg') | title }}`
     }
@@ -3645,11 +3646,20 @@
       this._layoutGrid(compact);
       window.dispatchEvent(new CustomEvent("cd-panels-changed"));
     }
+    // How wide each card should be at least: card_width, or worked out from
+    // the cards (small ones like zones and cameras sit side by side).
+    _cardWidth() {
+      const set = this.config.card_width;
+      if (set != null && set !== "" && set !== "auto") return Number(set) || 0;
+      const types = (this.config.cards || []).map((c) => String(c && c.type || "").replace(/^custom:/, "").replace(/-beta$/, ""));
+      if (!types.length) return 300;
+      return Math.max(...types.map((t) => AUTO_WIDTH[t] || 300));
+    }
     // Cards side by side when each can be at least card_width wide.
     _layoutGrid(compact) {
       const g = this._grid;
       if (!g) return;
-      const w = this.config.card_width == null || this.config.card_width === "" ? 300 : Number(this.config.card_width);
+      const w = this._cardWidth();
       g.style.display = "grid";
       g.style.gap = compact ? "8px" : "12px";
       g.style.alignItems = w > 0 ? "stretch" : "start";
@@ -7139,7 +7149,7 @@
       const el = helpers.createCardElement(conf);
       el._managed = true;
       if (this._hass) el.hass = this._hass;
-      const it = { conf, el, full: !!conf.full_width, controls: hasControls(conf) };
+      const it = { conf, el, controls: hasControls(conf) };
       el.addEventListener("ll-rebuild", (ev) => {
         ev.stopPropagation();
         const fresh = helpers.createCardElement(conf);
@@ -7164,6 +7174,18 @@
       const v = parseFloat(getComputedStyle(this).getPropertyValue("--ha-view-sections-column-gap"));
       return Number.isFinite(v) ? v : 32;
     }
+    // Full width: set on the panel, or automatic for a panel of 3+ small cards
+    // (zones, cameras, tiles) that won't fit side by side in one column.
+    _full(it, colWidth) {
+      const f = it.conf.full_width;
+      if (f === true || f === "yes") return true;
+      if (f === false || f === "no") return false;
+      const cards = it.conf.cards || [];
+      const w = it.el._cardWidth ? it.el._cardWidth() : 300;
+      if (cards.length < 3 || !w || w > 240) return false;
+      const across = Math.max(1, Math.floor((colWidth - 24 + 12) / (w + 12)));
+      return cards.length > across;
+    }
     _open(el) {
       return PANEL.test(el.localName) && !(el._mode && el._mode() === "compact") && !(el.config && el.config.match_height === false);
     }
@@ -7182,19 +7204,13 @@
       if (!this.isConnected || !this._items.length) return;
       const cols = this._columns();
       const gap = this._gap();
+      const colWidth = ((this.getBoundingClientRect().width || window.innerWidth) - gap * (cols - 1)) / cols;
+      const wide = cols > 1 ? this._items.filter((it) => this._full(it, colWidth)) : [];
+      const rest = this._items.filter((it) => !wide.includes(it));
       const bands = [];
-      let cur = [];
-      const flush = () => {
-        if (cur.length) bands.push({ items: cur });
-        cur = [];
-      };
-      this._items.forEach((it) => {
-        if (it.full && cols > 1) {
-          flush();
-          bands.push({ items: [it], full: true });
-        } else cur.push(it);
-      });
-      flush();
+      if (rest.length) bands.push({ items: rest });
+      const first = this.config.controls_first !== false;
+      [...wide.filter((it) => !first || it.controls), ...wide.filter((it) => first && !it.controls)].forEach((it) => bands.push({ items: [it], full: true }));
       if (this.config.controls_first !== false) {
         bands.forEach((b) => {
           b.items = [...b.items.filter((it) => it.controls), ...b.items.filter((it) => !it.controls)];
