@@ -37,6 +37,12 @@ section-to-section matching and stacked-panel spacing. Panels stay
 `section-panel-card-beta` on Mobile. On release: switch `auto-layout-card-beta` and
 the panels back to released types, reload-only (card-only change).
 
+**Also in beta: nav bar `icon_template`** (a page's icon from a template). Mobile's nav
+bars are `custom:nav-bar-card-beta` for testing; the Security page's icon follows the
+alarm (disarmed shield-off-outline, home shield-home, away shield-lock, night
+shield-moon, arming shield-sync, pending shield-alert, triggered alarm-light). On
+release switch them back to `custom:nav-bar-card`.
+
 Everything else is merged to `main`, released and running live. The user tests on real
 devices before each release.
 
