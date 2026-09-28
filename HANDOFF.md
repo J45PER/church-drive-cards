@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-27. Current release: **v0.18.0**.*
+*Last updated 2026-09-28. Current release: **v0.18.0**.*
 
 ## Where this stands
 
@@ -48,11 +48,23 @@ on the phone; the purifier's air quality now matches the Philips app (v0.14.1,
 "Good" at 18 µg/m³); the fan no longer flickers "On" before its speed (v0.14.2,
 reported by the user, fix untested on the real fan).
 
+**Confirmed 2026-09-28:**
+- Device Health, v0.18.0 restart (09:33): the fan (off, re-synced to its 06:55
+  reading) and the purifier (Auto) were both flagged and re-synced within a
+  minute. No nudge was needed and health went to 0. The purifier that stayed
+  frozen after the v0.17.2 restart had recovered by morning.
+- The user saw the nav bar on Beta/Mobile ("Looks good") before release.
+
 **Still to check on real devices:**
-- Device Health **confirmed** on the v0.17.0 restart (2026-09-27 21:46): the fan
-  and the purifier both came back with old readings. Both were flagged at once
-  and re-synced automatically ("Re-synced to its 21:10 reading"). The fan is on
-  Speed 1 again with no lag.
+- **Nav bar on the phone (v0.18.0):** HA's own tabs are hidden (the selector was
+  only tested on a mock; if they show, check `hui-root`'s real tab element); taps
+  go to the page; the dots and Security's alarm colour are live; the Home panel
+  titles (›) open their pages; the bar doesn't cover the last card.
+- **Security Zone Cards (v0.17.0):** hold-to-scrub on the strips with a finger
+  (no page scroll), the Front light / Floodlight tiles, whether the Front Garden
+  bars read well.
+- **Alarm countdown (v0.17.1):** in a real exit or entry delay, the ring should
+  empty smoothly to the end, without refilling for the last ~15 s.
 - v0.15.x on the phone: the colour scale and room types, press-and-hold on
   the graphs with a finger (hold ~0.3s, drag; page shouldn't scroll), the
   smoothed lines, the flatter floor cards, and the Nest graphs' comfortable
@@ -99,9 +111,8 @@ splitting Mobile into separate dashboards.
   192.168.4.48") and come back stale. Python changes still need a restart.
 - After the v0.17.2 restart (00:35, 2026-09-28) the fan was fine. The purifier's
   live feed died at startup, with runtime frozen at 0:11:42, and two nudges didn't
-  revive it. Its mode shows correctly (Sleep), but PM2.5 is frozen until the
-  Philips integration reconnects. Don't reload it: that gets stuck. The next
-  restart should bring it back; check it then.
+  revive it. It recovered by itself by morning. Don't reload the Philips
+  integration: that gets stuck.
 
 **v0.17.2: Device Health never reloads integrations; it nudges instead.**
 On the v0.17.1 restart (00:24, 2026-09-28) the fan came back stale, showing Speed 1
@@ -514,10 +525,22 @@ Integration modules (`custom_components/church_drive/`):
   1. `ha_manage_hacs(update_information, 1385560733)`, then
      `download version=vX.Y.Z`.
   2. Point the beta resource at the merge commit.
-  3. `ha_restart(confirm=True)`. The call returns a Cloudflare 502 because HA goes
-     down mid-request, which is expected. Wait about 3 minutes.
+  3. **Card-only release** (nothing under `custom_components/` changed except the
+     built bundle and the manifest version): reload Church Drive instead of
+     restarting, with `ha_call_service('homeassistant', 'reload_config_entry',
+     data={'entry_id': '01M3C9Z12M0W755GDTM455NFVB'})`. Setup re-reads the
+     version, so `?v=` updates (since v0.18.0). **Python changes** need
+     `ha_restart(confirm=True)`. That call returns a Cloudflare 502 because HA goes
+     down mid-request, which is expected; wait about 3 minutes. Every full restart
+     risks the Philips fan and purifier coming back stale (Device Health re-syncs
+     them), so batch Python changes and avoid restarts at night.
+     - Waiting: foreground `sleep` is blocked and `timeout N true` returns at once.
+       Use `timeout 180 tail -f /dev/null` (Bash timeout above 180000 ms).
   4. Verify: the `ad4dc52d…` resource shows `?v=X.Y.Z`, and system logs for
-     "church" are empty.
+     "church" are empty (apart from Device Health's "looks stale" warnings after
+     a restart). Check `sensor.church_drive_device_health` goes back to 0.
+  5. Switch any `-beta` card types on real dashboards (tested there before the
+     release) back to the released types.
 - **How the cards load:**
   - The integration registers the static path `/church_drive` → `frontend/` (no
     cache headers).
@@ -539,7 +562,7 @@ Integration modules (`custom_components/church_drive/`):
   - `church-drive-cards-beta.js` registers every card as `<name>-beta`.
   - HA loads it from resource `436186c683fe4c7d81c865b67bb0e109`:
     `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's pinned to `9c687ab` (the v0.17.0 merge: Security Zone Card).
+    It's pinned to `9b9614d` (the v0.18.0 merge: Nav Bar Card).
   - To test a branch: push it, repoint the resource, and ask for a hard refresh.
   - jsDelivr is blocked from the cloud container, but works for the user.
 - **Rollback:** download an older release in HACS and restart.
@@ -786,7 +809,11 @@ Integration modules (`custom_components/church_drive/`):
 - **Dashboards using the cards:**
   - **Mobile** (`dashboard-mobile`), all tabs on section panels (v0.12.0), one
     HA section per column (theme Mushroom Shadow):
-    - **Quick Actions:** [Security (alarm colour, alarm state) + Climate (colour from
+    - **Every page** ends with a `nav-bar-card` (v0.18.0): Home · Lights ·
+      Security · Climate · Cleaning, floating at the bottom, HA's tabs hidden.
+      The Quick Actions view's path is `home` (`/dashboard-mobile/home`).
+    - **Quick Actions:** its Security, Climate, Lights and Cleaning panel titles
+      link to their pages (›). [Security (alarm colour, alarm state) + Climate (colour from
       `climate.downstairs`: grey off / green Eco / blue cooling / orange;
       downstairs °C · action; a Climate Card since v0.13.0)] [Lights (amber, "N rooms on" over Kitchen /
       Living Room / Middle Floor)] [Cleaning (blue, state · battery)]. Header
@@ -850,6 +877,11 @@ Integration modules (`custom_components/church_drive/`):
   `light.living_room_table_lights`.
 
 ## Open items
+
+- **Offered, not yet asked for:** jump-to chips at the top of long pages (e.g.
+  Climate: Heating · Climate · Cooling · Air Quality · Windows; in the nav mock-up);
+  matching the alarm card's 72px ring to the 84px dials; a phone notification
+  to Jamie when a device stays stale.
 
 - **Future (not now): our own Android app.** The user wants home-screen widgets
   showing the panels, and later the same app for Android-based satellite
