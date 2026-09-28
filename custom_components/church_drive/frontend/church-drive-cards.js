@@ -3563,7 +3563,10 @@
       (this._cards || []).forEach((card) => {
         card.hass = hass;
       });
-      if (first) this._watchOpenWhen();
+      if (first) {
+        this._watchOpenWhen();
+        this._apply();
+      }
     }
     // ---- Open or compact.
     // Phones (under 600px) and bigger screens each start as the config says,

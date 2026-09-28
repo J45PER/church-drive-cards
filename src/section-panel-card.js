@@ -143,7 +143,10 @@ export class SectionPanelCard extends HTMLElement {
     (this._cards || []).forEach((card) => {
       card.hass = hass;
     });
-    if (first) this._watchOpenWhen();
+    if (first) {
+      this._watchOpenWhen();
+      this._apply(); // now that we know who's signed in
+    }
   }
 
   // ---- Open or compact.
