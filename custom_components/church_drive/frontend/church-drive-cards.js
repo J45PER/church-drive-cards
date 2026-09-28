@@ -3646,51 +3646,70 @@
       g.style.gridTemplateColumns = w > 0 ? `repeat(auto-fill, minmax(min(100%, ${w}px), 1fr))` : "1fr";
     }
     // ---- Matching heights with the sections beside this one.
-    // Only the last panel in its section grows: its background stretches so the
-    // section ends level with the tallest section in the same row.
+    // Sections that sit side by side (same top) are lined up item by item:
+    // the 1st panels share a height, then the 2nd, and so on; the last panel
+    // in each section takes up whatever is left so every section ends level.
+    // Each panel works out the whole row the same way and applies its share.
     _queueMatch() {
-      if (this.config.match_height === false) return;
       cancelAnimationFrame(this._matchFrame);
       this._matchFrame = requestAnimationFrame(() => this._match());
     }
     _match() {
       const panel = this._panelEl;
       if (!panel || !this.isConnected) return;
-      const up = (el) => el.parentNode || el.getRootNode && el.getRootNode().host || null;
-      const find = (el, name) => {
-        for (let i = 0; el && i < 12; i += 1, el = up(el)) if (el.localName === name) return el;
-        return null;
+      const clear = () => {
+        if (panel.style.minHeight) panel.style.minHeight = "";
       };
-      const section = find(this, "hui-section");
-      panel.style.minHeight = "";
-      if (!section || window.innerWidth < 600) return;
-      const cardsIn = (root, depth = 0) => {
-        if (!root || depth > 5) return [];
-        const out = [];
-        (root.querySelectorAll ? root.querySelectorAll("hui-card, section-panel-card, section-panel-card-beta") : []).forEach((el) => out.push(el));
-        (root.querySelectorAll ? root.querySelectorAll("*") : []).forEach((el) => el.shadowRoot && out.push(...cardsIn(el.shadowRoot, depth + 1)));
+      if (this.config.match_height === false || window.innerWidth < 600) return clear();
+      const up = (el) => el.parentNode || el.getRootNode && el.getRootNode().host || null;
+      let section = this;
+      for (let i = 0; section && i < 14 && section.localName !== "hui-section"; i += 1) section = up(section);
+      if (!section) return clear();
+      const PANEL = "section-panel-card, section-panel-card-beta";
+      const deep = (root, sel, depth = 0, out = []) => {
+        if (!root || depth > 5 || !root.querySelectorAll) return out;
+        root.querySelectorAll(sel).forEach((el) => out.push(el));
+        root.querySelectorAll("*").forEach((el) => el.shadowRoot && deep(el.shadowRoot, sel, depth + 1, out));
         return out;
       };
-      const mine = cardsIn(section).filter((el) => el.localName !== "hui-card");
-      if (mine.length && mine[mine.length - 1] !== this) return;
-      const natural = (el) => el._naturalBottom ? el._naturalBottom() : el.getBoundingClientRect().bottom;
-      const bottomOf = (sec) => {
-        const all = cardsIn(sec);
-        const panels = all.filter((el) => el.localName !== "hui-card");
-        const plain = all.filter((el) => el.localName === "hui-card" && !el.querySelector("section-panel-card, section-panel-card-beta") && !(el.shadowRoot && el.shadowRoot.querySelector("section-panel-card, section-panel-card-beta")));
-        return Math.max(0, ...panels.map(natural), ...plain.map((el) => el.getBoundingClientRect().bottom));
-      };
-      const me = section.getBoundingClientRect();
-      const others = [...section.parentNode ? section.parentNode.children : []].map((el) => (el.localName === "hui-section" ? el : el.querySelector && el.querySelector("hui-section")) || null).filter((el) => el && el !== section).filter((el) => Math.abs(el.getBoundingClientRect().top - me.top) < 4);
-      if (!others.length) return;
-      const target = Math.max(...others.map(bottomOf));
-      const mineBottom = this._naturalBottom();
-      const extra = Math.round(target - mineBottom);
-      if (extra > 1 && extra < 1500) panel.style.minHeight = `${Math.round(mineBottom - panel.getBoundingClientRect().top) + extra}px`;
+      const top = (el) => el.getBoundingClientRect().top;
+      const myTop = top(section);
+      const row3 = [...section.getRootNode().querySelectorAll("hui-section")].filter((el) => Math.abs(top(el) - myTop) < 4);
+      if (row3.length < 2) return clear();
+      const itemsOf = (sec) => deep(sec, "hui-card").map((el) => {
+        const p = el.matches && el.matches(PANEL) ? el : el.querySelector(PANEL) || el.shadowRoot && el.shadowRoot.querySelector(PANEL) || null;
+        const r = el.getBoundingClientRect();
+        return { el, panel: p, top: r.top, bottom: r.bottom, h: p && p._naturalHeight ? p._naturalHeight() : r.height };
+      }).filter((it) => it.bottom > it.top);
+      const secs = row3.map((sec) => ({ sec, items: itemsOf(sec) })).filter((x) => x.items.length);
+      if (secs.length < 2) return clear();
+      const m = Math.min(...secs.map((x) => x.items.length));
+      const shared = [];
+      for (let k = 0; k < m - 1; k += 1) shared[k] = Math.max(...secs.map((x) => x.items[k].h));
+      secs.forEach((x) => {
+        x.heights = x.items.map((it, k) => k < m - 1 && it.panel ? Math.max(it.h, shared[k]) : it.h);
+        const gaps = x.items.slice(1).reduce((sum, it, k) => sum + Math.max(0, it.top - x.items[k].bottom), 0);
+        x.end = x.items[0].top + x.heights.reduce((a, b) => a + b, 0) + gaps;
+      });
+      const end = Math.max(...secs.map((x) => x.end));
+      let target = null;
+      secs.forEach((x) => {
+        const lastStretch = x.items.map((it) => !!it.panel).lastIndexOf(true);
+        if (lastStretch >= 0) x.heights[lastStretch] += end - x.end;
+        x.items.forEach((it, k) => {
+          if (it.panel === this) target = x.heights[k];
+        });
+      });
+      const natural = this._naturalHeight();
+      if (target == null || target - natural < 1 || target - natural > 1500) return clear();
+      const px = `${Math.round(target)}px`;
+      if (panel.style.minHeight !== px) panel.style.minHeight = px;
     }
-    _naturalBottom() {
+    // The panel's height without any stretch: its cards plus its padding.
+    _naturalHeight() {
+      const panel = this._panelEl;
       const g = this._grid && this._grid.getBoundingClientRect();
-      return g ? g.bottom + 12 : this.getBoundingClientRect().bottom;
+      return g && panel ? g.bottom + 12 - panel.getBoundingClientRect().top : this.getBoundingClientRect().height;
     }
     _watchOpenWhen() {
       if (this._unsubOpen) this._unsubOpen.then((u) => u && u()).catch(() => {

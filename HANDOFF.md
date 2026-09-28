@@ -109,11 +109,16 @@ details and actions ("especially on Climate"). Peek was dropped.
 **On Beta (unreleased): panel layout on wider screens.**
 - The panel's cards are in `.spc-cards`, a grid of `repeat(auto-fill, minmax(min(100%,
   card_width), 1fr))` (default 300, `0` = one per row).
-- `match_height` (default on, off under 600px): the last panel in a `hui-section`
-  grows (`min-height`, border-box) to the tallest *natural* bottom (grid bottom +
-  12px padding) of sections starting at the same top. Natural bottoms avoid a
-  feedback loop between two stretching panels. It re-runs on a body
-  ResizeObserver and every 3s.
+- `match_height` (default on, off under 600px): the sections in a row are
+  those in the same shadow root (`hui-section` elements) with the same top; each
+  sits in its own wrapper in real HA, so siblings don't work. Items are
+  top-level `hui-card`s, lined up by index: the kth panels share the tallest
+  natural height, and the last panel in each section absorbs the rest so the
+  sections end level. Natural height is the grid bottom + 12px padding − the
+  panel top, which avoids feedback loops. Every panel computes the whole row and
+  applies its own share. It re-runs on a body ResizeObserver and every 3s.
+  First version only stretched the last panel and didn't find the neighbours
+  (user screenshot 2026-09-28).
 - Mobile → Security, rearranged for the user (`max_columns: 3`):
   - [Alarm + Fire Alarm (card_width 0)] span 1;
   - [Outdoor + Indoor Cameras (card_width 220: 3 then 2 across)] span 2, bottoms
