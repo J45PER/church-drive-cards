@@ -3466,6 +3466,16 @@
           { name: "open_when", selector: { template: {} } },
           { name: "collapsible", selector: { boolean: {} }, default: true }
         ]
+      },
+      {
+        type: "expandable",
+        name: "",
+        title: "Layout on wider screens",
+        flatten: true,
+        schema: [
+          { name: "card_width", selector: { number: { min: 0, max: 800, step: 10, mode: "box", unit_of_measurement: "px" } } },
+          { name: "match_height", selector: { boolean: {} }, default: true }
+        ]
       }
     ],
     labels: {
@@ -3476,6 +3486,8 @@
       tablet_start: "On tablets and computers, starts",
       open_when: "Opens by itself when (optional template)",
       collapsible: "Show the \u2304 to switch between open and compact",
+      card_width: "Cards side by side when each can be at least (0 = always one per row)",
+      match_height: "Line up this panel's bottom with the panels beside it",
       color: "Colour (icon and panel)",
       color_template: STC_COLOR_TEMPLATE_LABEL,
       summary: "Summary on the right (optional template)"
@@ -3483,6 +3495,8 @@
     helpers: {
       phone_start: "Each phone or tablet remembers what you last chose with the \u2304; this is where it starts. Phones are screens under 600px wide.",
       open_when: "E.g. {{ is_state('binary_sensor.back_door', 'on') }}. The panel opens while it's true, then goes back to how you left it.",
+      card_width: "Default 300px. Cards fill the panel width: e.g. cameras 2 or 3 across on a tablet, one per row on a phone.",
+      match_height: "When sections sit side by side, the last panel in a shorter section grows so its bottom lines up with its neighbours'.",
       color_template: STC_COLOR_TEMPLATE_HELPER,
       summary: `A Home Assistant template, e.g. {{ states('vacuum.gregg') | title }}`
     }
@@ -3618,6 +3632,65 @@
         }
       });
       if (this._panelEl) this._panelEl.style.gap = compact ? "8px" : "12px";
+      this._layoutGrid(compact);
+      this._queueMatch();
+    }
+    // Cards side by side when each can be at least card_width wide.
+    _layoutGrid(compact) {
+      const g = this._grid;
+      if (!g) return;
+      const w = this.config.card_width == null || this.config.card_width === "" ? 300 : Number(this.config.card_width);
+      g.style.display = "grid";
+      g.style.gap = compact ? "8px" : "12px";
+      g.style.alignItems = "start";
+      g.style.gridTemplateColumns = w > 0 ? `repeat(auto-fill, minmax(min(100%, ${w}px), 1fr))` : "1fr";
+    }
+    // ---- Matching heights with the sections beside this one.
+    // Only the last panel in its section grows: its background stretches so the
+    // section ends level with the tallest section in the same row.
+    _queueMatch() {
+      if (this.config.match_height === false) return;
+      cancelAnimationFrame(this._matchFrame);
+      this._matchFrame = requestAnimationFrame(() => this._match());
+    }
+    _match() {
+      const panel = this._panelEl;
+      if (!panel || !this.isConnected) return;
+      const up = (el) => el.parentNode || el.getRootNode && el.getRootNode().host || null;
+      const find = (el, name) => {
+        for (let i = 0; el && i < 12; i += 1, el = up(el)) if (el.localName === name) return el;
+        return null;
+      };
+      const section = find(this, "hui-section");
+      panel.style.minHeight = "";
+      if (!section || window.innerWidth < 600) return;
+      const cardsIn = (root, depth = 0) => {
+        if (!root || depth > 5) return [];
+        const out = [];
+        (root.querySelectorAll ? root.querySelectorAll("hui-card, section-panel-card, section-panel-card-beta") : []).forEach((el) => out.push(el));
+        (root.querySelectorAll ? root.querySelectorAll("*") : []).forEach((el) => el.shadowRoot && out.push(...cardsIn(el.shadowRoot, depth + 1)));
+        return out;
+      };
+      const mine = cardsIn(section).filter((el) => el.localName !== "hui-card");
+      if (mine.length && mine[mine.length - 1] !== this) return;
+      const natural = (el) => el._naturalBottom ? el._naturalBottom() : el.getBoundingClientRect().bottom;
+      const bottomOf = (sec) => {
+        const all = cardsIn(sec);
+        const panels = all.filter((el) => el.localName !== "hui-card");
+        const plain = all.filter((el) => el.localName === "hui-card" && !el.querySelector("section-panel-card, section-panel-card-beta") && !(el.shadowRoot && el.shadowRoot.querySelector("section-panel-card, section-panel-card-beta")));
+        return Math.max(0, ...panels.map(natural), ...plain.map((el) => el.getBoundingClientRect().bottom));
+      };
+      const me = section.getBoundingClientRect();
+      const others = [...section.parentNode ? section.parentNode.children : []].map((el) => (el.localName === "hui-section" ? el : el.querySelector && el.querySelector("hui-section")) || null).filter((el) => el && el !== section).filter((el) => Math.abs(el.getBoundingClientRect().top - me.top) < 4);
+      if (!others.length) return;
+      const target = Math.max(...others.map(bottomOf));
+      const mineBottom = this._naturalBottom();
+      const extra = Math.round(target - mineBottom);
+      if (extra > 1 && extra < 1500) panel.style.minHeight = `${Math.round(mineBottom - panel.getBoundingClientRect().top) + extra}px`;
+    }
+    _naturalBottom() {
+      const g = this._grid && this._grid.getBoundingClientRect();
+      return g ? g.bottom + 12 : this.getBoundingClientRect().bottom;
     }
     _watchOpenWhen() {
       if (this._unsubOpen) this._unsubOpen.then((u) => u && u()).catch(() => {
@@ -3637,7 +3710,7 @@
       const c = this.config;
       const color = stcColor(c.color);
       this.innerHTML = `
-      <div class="spc-panel" style="position:relative; border-radius:24px; padding:12px; display:flex; flex-direction:column; gap:12px; isolation:isolate;">
+      <div class="spc-panel" style="position:relative; box-sizing:border-box; border-radius:24px; padding:12px; display:flex; flex-direction:column; gap:12px; isolation:isolate;">
         <div class="spc-bg" style="position:absolute; inset:0; border-radius:inherit; background:${color}; opacity:0.1; z-index:-1; pointer-events:none; transition:background-color .6s ease;"></div>
       </div>`;
       const panel = this.querySelector(".spc-panel");
@@ -3658,9 +3731,13 @@
         bg.style.background = ev.detail;
       });
       this._title = document.createElement(`section-title-card${SUFFIX}`);
+      this._grid = document.createElement("div");
+      this._grid.className = "spc-cards";
       this._title.setConfig({ title: c.title, icon: c.icon, color: c.color, color_template: c.color_template, summary: c.summary, link: c.link, collapsible: this._collapsible });
       if (this._hass) this._title.hass = this._hass;
       panel.appendChild(this._title);
+      panel.appendChild(this._grid);
+      this._layoutGrid(false);
       const token = this._token = {};
       this._cards = [];
       cardHelpers().then((helpers) => {
@@ -3677,7 +3754,7 @@
             this._apply();
           });
           this._cards.push(el);
-          panel.appendChild(el);
+          this._grid.appendChild(el);
         });
         this._apply();
       }).catch(() => {
@@ -3694,11 +3771,19 @@
       };
       this._lastDevice = this._device();
       window.addEventListener("resize", this._onResize);
+      if (window.ResizeObserver && !this._ro) {
+        this._ro = new ResizeObserver(() => this._queueMatch());
+        this._ro.observe(document.body);
+        this._matchTimer = setInterval(() => this._queueMatch(), 3e3);
+      }
       if (this._hass) this._watchOpenWhen();
       this._apply();
     }
     disconnectedCallback() {
       window.removeEventListener("resize", this._onResize);
+      if (this._ro) this._ro.disconnect();
+      this._ro = null;
+      clearInterval(this._matchTimer);
       if (this._unsubOpen) this._unsubOpen.then((u) => u && u()).catch(() => {
       });
       this._unsubOpen = null;

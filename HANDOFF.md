@@ -106,6 +106,21 @@ details and actions ("especially on Climate"). Peek was dropped.
   Quality (CO or PM2.5 > 75) and Fire Alarm (`binary_sensor.entrance_smoke_alarm_alarm_status`;
   the base station's safe mode reads "Disarmed" normally).
 
+**On Beta (unreleased): panel layout on wider screens.**
+- The panel's cards are in `.spc-cards`, a grid of `repeat(auto-fill, minmax(min(100%,
+  card_width), 1fr))` (default 300, `0` = one per row).
+- `match_height` (default on, off under 600px): the last panel in a `hui-section`
+  grows (`min-height`, border-box) to the tallest *natural* bottom (grid bottom +
+  12px padding) of sections starting at the same top. Natural bottoms avoid a
+  feedback loop between two stretching panels. It re-runs on a body
+  ResizeObserver and every 3s.
+- Mobile → Security, rearranged for the user (`max_columns: 3`):
+  - [Alarm + Fire Alarm (card_width 0)] span 1;
+  - [Outdoor + Indoor Cameras (card_width 220: 3 then 2 across)] span 2, bottoms
+    level with Fire Alarm;
+  - [Doors & Motion (card_width 200: 5 zones across) + nav bar] span 3, full width.
+  - Phone order: Alarm, Fire Alarm, cameras, Doors & Motion.
+
 **New in v0.18.0: Nav Bar Card** (`nav-bar-card`), live on every Mobile page. The user chose style B, the
 floating capsule, from mock-ups (claude.ai/artifact/9bJeSLs2W7VjJaTV2ShZXF), over
 splitting Mobile into separate dashboards.
