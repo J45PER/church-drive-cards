@@ -75,6 +75,37 @@ reported by the user, fix untested on the real fan).
 - Hold to test on the carbon monoxide card (sounds the real alarm; only when
   the user is happy to).
 
+**On Beta (unreleased): open or compact section panels.** Mock-ups:
+claude.ai/artifact/6R69sMFfG7u7jrM15YmYbL. The user chose Compact on phones, Open on
+tablets and auto-open on alerts, and wanted collapsed panels to keep key
+details and actions ("especially on Climate"). Peek was dropped.
+- `kitCompact(root, spec)` and `kitCompactable(Cls, rebuild)` in card-kit. A card
+  with `supportsCompact` gets a `compact` property from its panel and renders one
+  row: name (tap → `cd-expand`, which opens the panel), value, status, mini
+  buttons or chips. The rows:
+  - climate: temperature, word · target, quick settings as icons;
+  - climate-zone: room chips on czColour;
+  - fan: Off/1/2/3;
+  - purifier: PM2.5, Off/Auto/Sleep (plus the current mode);
+  - CO: ppm, status;
+  - cover: Up/Stop/Down;
+  - security-zone: word, low batteries, light;
+  - alarm: state, delay seconds, arm buttons;
+  - light-control: the first top-level row's light, brightness, "N on", power;
+  - device-health: names of stale devices.
+  Other cards are hidden in compact.
+- Section panel: `phone_start` (default compact) and `tablet_start` (default
+  open). Phone means `innerWidth < 600`. The choice is stored in `localStorage`
+  under `cd-panel:<path>:<title>:<phone|tablet>`. `open_when` is a template that
+  forces open while truthy. `collapsible: false` removes the ⌄. Always open in
+  edit mode/preview. Section title: `collapsible` shows the ⌄ (`stc-toggle`
+  event); with a `link`, the row navigates and only the ⌄ toggles.
+- Mobile: **every Church Drive card was switched to its `-beta` type** so the
+  compact rows work. On release, strip `-beta` from all of them. `open_when` is
+  set on Doors & Motion (door/tamper), Alarm and Security (pending/triggered), Air
+  Quality (CO or PM2.5 > 75) and Fire Alarm (`binary_sensor.entrance_smoke_alarm_alarm_status`;
+  the base station's safe mode reads "Disarmed" normally).
+
 **New in v0.18.0: Nav Bar Card** (`nav-bar-card`), live on every Mobile page. The user chose style B, the
 floating capsule, from mock-ups (claude.ai/artifact/9bJeSLs2W7VjJaTV2ShZXF), over
 splitting Mobile into separate dashboards.
