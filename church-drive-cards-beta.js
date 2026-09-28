@@ -3633,7 +3633,7 @@
       });
       if (this._panelEl) this._panelEl.style.gap = compact ? "8px" : "12px";
       this._layoutGrid(compact);
-      this._queueMatch();
+      window.dispatchEvent(new CustomEvent("cd-panels-changed"));
     }
     // Cards side by side when each can be at least card_width wide.
     _layoutGrid(compact) {
@@ -3660,7 +3660,7 @@
       const clear = () => {
         if (panel.style.minHeight) panel.style.minHeight = "";
       };
-      if (this.config.match_height === false || window.innerWidth < 600) return clear();
+      if (this.config.match_height === false || window.innerWidth < 600 || this._mode() === "compact") return clear();
       const up = (el) => el.parentNode || el.getRootNode && el.getRootNode().host || null;
       let section = this;
       for (let i = 0; section && i < 14 && section.localName !== "hui-section"; i += 1) section = up(section);
@@ -3679,23 +3679,24 @@
       const itemsOf = (sec) => deep(sec, "hui-card").map((el) => {
         const p = el.matches && el.matches(PANEL) ? el : el.querySelector(PANEL) || el.shadowRoot && el.shadowRoot.querySelector(PANEL) || null;
         const r = el.getBoundingClientRect();
-        return { el, panel: p, top: r.top, bottom: r.bottom, h: p && p._naturalHeight ? p._naturalHeight() : r.height };
+        const stretch = !!(p && p._naturalHeight && !(p._mode && p._mode() === "compact") && p.config && p.config.match_height !== false);
+        return { el, panel: p, stretch, top: r.top, bottom: r.bottom, h: p && p._naturalHeight ? p._naturalHeight() : r.height };
       }).filter((it) => it.bottom > it.top);
       const secs = row3.map((sec) => ({ sec, items: itemsOf(sec) })).filter((x) => x.items.length);
       if (secs.length < 2) return clear();
       const m = Math.min(...secs.map((x) => x.items.length));
       const shared = [];
-      for (let k = 0; k < m - 1; k += 1) shared[k] = Math.max(...secs.map((x) => x.items[k].h));
+      for (let k = 0; k < m - 1; k += 1) shared[k] = Math.max(0, ...secs.map((x) => x.items[k]).filter((it) => it.stretch).map((it) => it.h));
       secs.forEach((x) => {
-        x.heights = x.items.map((it, k) => k < m - 1 && it.panel ? Math.max(it.h, shared[k]) : it.h);
+        x.heights = x.items.map((it, k) => k < m - 1 && it.stretch ? Math.max(it.h, shared[k]) : it.h);
         const gaps = x.items.slice(1).reduce((sum, it, k) => sum + Math.max(0, it.top - x.items[k].bottom), 0);
         x.end = x.items[0].top + x.heights.reduce((a, b) => a + b, 0) + gaps;
       });
       const end = Math.max(...secs.map((x) => x.end));
       let target = null;
       secs.forEach((x) => {
-        const lastStretch = x.items.map((it) => !!it.panel).lastIndexOf(true);
-        if (lastStretch >= 0) x.heights[lastStretch] += end - x.end;
+        const last = x.items.length - 1;
+        if (x.items[last].stretch) x.heights[last] += end - x.end;
         x.items.forEach((it, k) => {
           if (it.panel === this) target = x.heights[k];
         });
@@ -3790,6 +3791,8 @@
       };
       this._lastDevice = this._device();
       window.addEventListener("resize", this._onResize);
+      this._onPanels = () => this._queueMatch();
+      window.addEventListener("cd-panels-changed", this._onPanels);
       if (window.ResizeObserver && !this._ro) {
         this._ro = new ResizeObserver(() => this._queueMatch());
         this._ro.observe(document.body);
@@ -3800,6 +3803,7 @@
     }
     disconnectedCallback() {
       window.removeEventListener("resize", this._onResize);
+      window.removeEventListener("cd-panels-changed", this._onPanels);
       if (this._ro) this._ro.disconnect();
       this._ro = null;
       clearInterval(this._matchTimer);

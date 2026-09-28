@@ -119,6 +119,10 @@ details and actions ("especially on Climate"). Peek was dropped.
   applies its own share. It re-runs on a body ResizeObserver and every 3s.
   First version only stretched the last panel and didn't find the neighbours
   (user screenshot 2026-09-28).
+  Compact panels never stretch and aren't used as a height to match. A section
+  ending in a compact panel isn't levelled (a collapsed Indoor Cameras had been
+  stretched into an empty box). `_apply` fires `cd-panels-changed` on window so
+  the whole row re-lines up at once.
 - Mobile → Security, rearranged for the user (`max_columns: 3`):
   - [Alarm + Fire Alarm (card_width 0)] span 1;
   - [Outdoor + Indoor Cameras (card_width 220: 3 then 2 across)] span 2, bottoms
