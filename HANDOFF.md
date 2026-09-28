@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-28. Current release: **v0.18.0**.*
+*Last updated 2026-09-28. Current release: **v0.19.0**.*
 
 ## Where this stands
 
@@ -75,7 +75,7 @@ reported by the user, fix untested on the real fan).
 - Hold to test on the carbon monoxide card (sounds the real alarm; only when
   the user is happy to).
 
-**On Beta (unreleased): open or compact section panels.** Mock-ups:
+**New in v0.19.0: open or compact section panels.** Mock-ups:
 claude.ai/artifact/6R69sMFfG7u7jrM15YmYbL. The user chose Compact on phones, Open on
 tablets and auto-open on alerts, and wanted collapsed panels to keep key
 details and actions ("especially on Climate"). Peek was dropped.
@@ -100,13 +100,13 @@ details and actions ("especially on Climate"). Peek was dropped.
   forces open while truthy. `collapsible: false` removes the ⌄. Always open in
   edit mode/preview. Section title: `collapsible` shows the ⌄ (`stc-toggle`
   event); with a `link`, the row navigates and only the ⌄ toggles.
-- Mobile: **every Church Drive card was switched to its `-beta` type** so the
-  compact rows work. On release, strip `-beta` from all of them. `open_when` is
+- Mobile: every Church Drive card ran as its `-beta` type while testing and was
+  switched back to the released types on release. `open_when` is
   set on Doors & Motion (door/tamper), Alarm and Security (pending/triggered), Air
   Quality (CO or PM2.5 > 75) and Fire Alarm (`binary_sensor.entrance_smoke_alarm_alarm_status`;
   the base station's safe mode reads "Disarmed" normally).
 
-**On Beta (unreleased): panel layout on wider screens.**
+**Also in v0.19.0: panel layout on wider screens.**
 - The panel's cards are in `.spc-cards`, a grid of `repeat(auto-fill, minmax(min(100%,
   card_width), 1fr))` (default 300, `0` = one per row).
 - `match_height` (default on, off under 600px): the sections in a row are
@@ -161,7 +161,7 @@ splitting Mobile into separate dashboards.
   check the real element name in `hui-root`.
 - Not done yet: jump-to chips on long pages.
 
-**Also in v0.18.0 (the last release that needs a full restart for card changes):**
+**Also in v0.18.0 (the last release that needed a full restart for card changes):**
 - Nudges only use quiet presets (`QUIET_PRESETS`: sleep, speed_1, low, silent,
   medium, speed_2), never auto/turbo/natural. On the v0.17.2 restart the purifier
   was nudged to `auto` (its first preset).
