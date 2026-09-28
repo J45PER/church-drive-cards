@@ -23,7 +23,11 @@ tallest column as short as possible (tries every sharing up to 11 panels, each c
 keeps list order; keeps the current sharing unless a new one is 24px+ better),
 stretches each column's last open panel so bottoms are level but only by up to
 max(160px, half its height) (the user disliked big empty panels), and only moves cards when the split changes (so
-cameras don't reload). Panels inside get `_managed = true`, which turns off their own
+cameras don't reload). Controls first (`controls_first`, default on): within each band, panels whose
+cards have buttons/sliders (`hasControls`: alarm, light-control, climate, fan,
+purifier, cover, scene cards, tiles with features, nested stacks checked) go above
+info-only panels (cameras, climate-zone, security-zone, entities), on phones too;
+a panel's `priority: controls|info` overrides. Panels inside get `_managed = true`, which turns off their own
 section-to-section matching and stacked-panel spacing. Panels stay
 `section-panel-card-beta` on Mobile. On release: switch `auto-layout-card-beta` and
 the panels back to released types, reload-only (card-only change).

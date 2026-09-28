@@ -3479,7 +3479,8 @@
         schema: [
           { name: "card_width", selector: { number: { min: 0, max: 800, step: 10, mode: "box", unit_of_measurement: "px" } } },
           { name: "match_height", selector: { boolean: {} }, default: true },
-          { name: "full_width", selector: { boolean: {} }, default: false }
+          { name: "full_width", selector: { boolean: {} }, default: false },
+          { name: "priority", selector: { select: { mode: "dropdown", options: [{ value: "auto", label: "Work it out from the cards" }, { value: "controls", label: "Controls (goes higher)" }, { value: "info", label: "Information only" }] } } }
         ]
       }
     ],
@@ -3494,6 +3495,7 @@
       card_width: "Cards side by side when each can be at least (0 = always one per row)",
       match_height: "Line up this panel's bottom with the panels beside it",
       full_width: "Full width across an Auto Layout",
+      priority: "In an Auto Layout, counts as",
       color: "Colour (icon and panel)",
       color_template: STC_COLOR_TEMPLATE_LABEL,
       summary: "Summary on the right (optional template)"
@@ -3503,6 +3505,7 @@
       open_when: "E.g. {{ is_state('binary_sensor.back_door', 'on') }}. The panel opens while it's true, then goes back to how you left it.",
       card_width: "Default 300px. Cards fill the panel width: e.g. cameras 2 or 3 across on a tablet, one per row on a phone.",
       match_height: "When sections sit side by side, the last panel in a shorter section grows so its bottom lines up with its neighbours'.",
+      priority: "Auto Layout puts panels with buttons and sliders above ones that only show information. Auto: lights, alarm, thermostats, fan, purifier, blinds and tiles with controls count as controls.",
       full_width: "Only inside an Auto Layout Card: this panel spans every column, with the panels before and after it balanced above and below.",
       color_template: STC_COLOR_TEMPLATE_HELPER,
       summary: `A Home Assistant template, e.g. {{ states('vacuum.gregg') | title }}`
@@ -6950,19 +6953,49 @@
     return helpersPromise2;
   }
   var PANEL = /section-panel-card/;
+  var CONTROL_TYPES = [
+    "alarm-panel-card",
+    "light-control-card",
+    "climate-card",
+    "fan-card",
+    "air-purifier-card",
+    "cover-card",
+    "scene-styles-card",
+    "scene-builder-card",
+    "thermostat",
+    "humidifier",
+    "light",
+    "button",
+    "media-control",
+    "alarm-panel",
+    "area"
+  ];
+  function hasControls(conf) {
+    if (!conf || typeof conf !== "object") return false;
+    if (conf.priority === "controls") return true;
+    if (conf.priority === "info") return false;
+    const type = String(conf.type || "").replace(/^custom:/, "").replace(/-beta$/, "");
+    if (CONTROL_TYPES.includes(type)) return true;
+    if (type === "tile" && Array.isArray(conf.features) && conf.features.length) return true;
+    const kids = [].concat(conf.cards || [], conf.card ? [conf.card] : []);
+    return kids.some((k) => hasControls(k));
+  }
   var GAP = "var(--ha-view-sections-column-gap, 32px)";
   var LayoutFields = createFormEditor({
     schema: () => [
       { name: "column_width", selector: { number: { min: 200, max: 800, step: 10, mode: "box", unit_of_measurement: "px" } } },
-      { name: "max_columns", selector: { number: { min: 1, max: 6, step: 1, mode: "box" } } }
+      { name: "max_columns", selector: { number: { min: 1, max: 6, step: 1, mode: "box" } } },
+      { name: "controls_first", selector: { boolean: {} }, default: true }
     ],
     labels: {
       column_width: "Columns at least this wide",
-      max_columns: "At most this many columns"
+      max_columns: "At most this many columns",
+      controls_first: "Panels with buttons and sliders go above ones that only show information"
     },
     helpers: {
       column_width: "Default 340px. Phones (under 600px) always get one column in list order.",
-      max_columns: 'Default 3. Mark a panel "Full width across an Auto Layout" to have it span the page.'
+      max_columns: 'Default 3. Mark a panel "Full width across an Auto Layout" to have it span the page.',
+      controls_first: 'Keeps list order otherwise, on phones too. Each panel can override what it counts as ("Counts as" in the panel).'
     }
   });
   function balance(heights, k, gap, keep) {
@@ -7106,7 +7139,7 @@
       const el = helpers.createCardElement(conf);
       el._managed = true;
       if (this._hass) el.hass = this._hass;
-      const it = { conf, el, full: !!conf.full_width };
+      const it = { conf, el, full: !!conf.full_width, controls: hasControls(conf) };
       el.addEventListener("ll-rebuild", (ev) => {
         ev.stopPropagation();
         const fresh = helpers.createCardElement(conf);
@@ -7162,6 +7195,11 @@
         } else cur.push(it);
       });
       flush();
+      if (this.config.controls_first !== false) {
+        bands.forEach((b) => {
+          b.items = [...b.items.filter((it) => it.controls), ...b.items.filter((it) => !it.controls)];
+        });
+      }
       const placed = this._items.every((it) => it.el.isConnected);
       bands.forEach((b) => {
         if (b.full || cols === 1 || !placed) {

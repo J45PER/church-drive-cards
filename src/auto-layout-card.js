@@ -16,20 +16,43 @@ function cardHelpers() {
 }
 
 const PANEL = /section-panel-card/;
+
+// Cards whose main job is buttons or sliders; everything else (cameras, room
+// temperatures, zone status, entity lists) counts as information.
+const CONTROL_TYPES = [
+  'alarm-panel-card', 'light-control-card', 'climate-card', 'fan-card', 'air-purifier-card', 'cover-card',
+  'scene-styles-card', 'scene-builder-card', 'thermostat', 'humidifier', 'light', 'button', 'media-control', 'alarm-panel', 'area',
+];
+
+// Whether a card config (or anything inside it) has controls. A panel can
+// say so itself with `priority: controls` or `priority: info`.
+export function hasControls(conf) {
+  if (!conf || typeof conf !== 'object') return false;
+  if (conf.priority === 'controls') return true;
+  if (conf.priority === 'info') return false;
+  const type = String(conf.type || '').replace(/^custom:/, '').replace(/-beta$/, '');
+  if (CONTROL_TYPES.includes(type)) return true;
+  if (type === 'tile' && Array.isArray(conf.features) && conf.features.length) return true;
+  const kids = [].concat(conf.cards || [], conf.card ? [conf.card] : []);
+  return kids.some((k) => hasControls(k));
+}
 const GAP = 'var(--ha-view-sections-column-gap, 32px)';
 
 const LayoutFields = createFormEditor({
   schema: () => [
     { name: 'column_width', selector: { number: { min: 200, max: 800, step: 10, mode: 'box', unit_of_measurement: 'px' } } },
     { name: 'max_columns', selector: { number: { min: 1, max: 6, step: 1, mode: 'box' } } },
+    { name: 'controls_first', selector: { boolean: {} }, default: true },
   ],
   labels: {
     column_width: 'Columns at least this wide',
     max_columns: 'At most this many columns',
+    controls_first: 'Panels with buttons and sliders go above ones that only show information',
   },
   helpers: {
     column_width: 'Default 340px. Phones (under 600px) always get one column in list order.',
     max_columns: 'Default 3. Mark a panel "Full width across an Auto Layout" to have it span the page.',
+    controls_first: 'Keeps list order otherwise, on phones too. Each panel can override what it counts as ("Counts as" in the panel).',
   },
 });
 
@@ -194,7 +217,7 @@ export class AutoLayoutCard extends HTMLElement {
     // Panels inside leave lining up and spacing to this card.
     el._managed = true;
     if (this._hass) el.hass = this._hass;
-    const it = { conf, el, full: !!conf.full_width };
+    const it = { conf, el, full: !!conf.full_width, controls: hasControls(conf) };
     el.addEventListener('ll-rebuild', (ev) => {
       ev.stopPropagation();
       const fresh = helpers.createCardElement(conf);
@@ -256,6 +279,13 @@ export class AutoLayoutCard extends HTMLElement {
       } else cur.push(it);
     });
     flush();
+    // Panels with controls first within each band (stable, so list order
+    // holds otherwise).
+    if (this.config.controls_first !== false) {
+      bands.forEach((b) => {
+        b.items = [...b.items.filter((it) => it.controls), ...b.items.filter((it) => !it.controls)];
+      });
+    }
     // Unplaced cards have no height yet: place them in order first.
     const placed = this._items.every((it) => it.el.isConnected);
     bands.forEach((b) => {
