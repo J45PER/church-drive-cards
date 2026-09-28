@@ -9,7 +9,7 @@
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
-import { KIT_COLOR, kitShell, kitHead, kitGauge, kitTiles, kitGraph, kitRange, kitCap, kitNum, kitDemoSeries, KitHistory, KitPending, kitScrub, kitHealthBanner } from './card-kit.js';
+import { KIT_COLOR, kitShell, kitHead, kitGauge, kitTiles, kitGraph, kitRange, kitCap, kitNum, kitDemoSeries, KitHistory, KitPending, kitScrub, kitHealthBanner, kitCompact, kitCompactable } from './card-kit.js';
 
 // PM2.5 (µg/m³) bands. Philips purifiers follow the Chinese air-quality
 // standard (good up to 35, then 75, 115); each band can be changed per card.
@@ -183,6 +183,7 @@ export class AirPurifierCard extends HTMLElement {
     const c = this.config;
     const st = this._pending.apply(this._demo ? this._demo.fan : this._hass.states[c.entity]);
     if (!st) return;
+    if (this._compact) return kitCompact(this, this._compactSpec(st));
     if (!this._built) {
       this.innerHTML = kitShell(`
         <div class="ap-top" style="display:flex; align-items:center; gap:14px;">
@@ -283,6 +284,30 @@ export class AirPurifierCard extends HTMLElement {
     hydrateIcons(this);
   }
 
+  // One row: name, PM2.5 and quality, and Off / Auto / Sleep (plus the
+  // current mode if it's another one).
+  _compactSpec(st) {
+    const c = this.config, a = st.attributes, on = st.state === 'on';
+    const pm = this._demo ? this._demo.pm25 : kitNum(c.pm25_entity && this._hass.states[c.pm25_entity]);
+    const q = apQuality(pm, c);
+    const presets = a.preset_modes || [];
+    const pick = presets.filter((p) => /^(auto|sleep|night)$/i.test(p));
+    if (on && a.preset_mode && !pick.includes(a.preset_mode)) pick.push(a.preset_mode);
+    const mode = on ? (a.preset_mode ? kitCap(a.preset_mode) : 'On') : st.state === 'unavailable' ? 'Unavailable' : 'Off';
+    return {
+      name: c.name || a.friendly_name || c.entity,
+      color: on ? q.color : KIT_COLOR.off,
+      value: pm == null ? '' : String(Math.round(pm)),
+      valueColor: q.color,
+      status: pm == null ? mode : `PM2.5 · ${q.word || mode}`,
+      buttons: [
+        { key: '__off', icon: 'mdi:power', title: 'Off', on: !on, color: KIT_COLOR.off },
+        ...pick.map((p) => ({ key: p, icon: AP_MODE_ICONS[String(p).toLowerCase()] || 'mdi:fan', title: kitCap(p), on: on && a.preset_mode === p, color: /sleep|night/i.test(p) ? KIT_COLOR.sleep : KIT_COLOR.good })),
+      ],
+      onButton: (b) => this._mode(b.key),
+    };
+  }
+
   _mode(key) {
     if (this._demo) {
       const f = this._demo.fan;
@@ -317,6 +342,8 @@ export class AirPurifierCard extends HTMLElement {
     return { demo: true };
   }
 }
+
+kitCompactable(AirPurifierCard);
 
 export function registerAirPurifierCard() {
   if (!customElements.get(`air-purifier-card-editor${SUFFIX}`)) customElements.define(`air-purifier-card-editor${SUFFIX}`, AirPurifierCardEditor);

@@ -199,6 +199,8 @@ cards:
     area: kitchen
 ```
 
+**Open or compact** (section panels): the ⌄ on a panel's title switches it between open and **compact**. In compact, every Church Drive card inside shrinks to one row with its key reading and main buttons: a thermostat's temperature with its quick settings, the fan's Off/1/2/3, the purifier's PM2.5 with Off/Auto/Sleep, a blind's Up/Stop/Down, the alarm's state with its arm buttons, a light room's brightness with on/off, a floor's rooms as coloured chips, and a zone's state with its light. Other cards wait until the panel opens. Tapping a compact card's name opens the panel. Phones (under 600px wide) start as `phone_start` (default `compact`), and bigger screens as `tablet_start` (default `open`). Each device then remembers what you last chose. `open_when` is a template: while it's true the panel opens by itself (e.g. a door open or CO found), then it goes back to how you left it. `collapsible: false` removes the ⌄.
+
 ### `section-title-card`
 
 Both the panel and the title take an optional `link` (a page): tapping the title row, which shows a ›, opens it. Quick Actions uses this to jump to each full page.

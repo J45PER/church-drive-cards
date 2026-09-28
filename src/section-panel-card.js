@@ -7,6 +7,7 @@ import { createFormEditor } from './form-editor.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import {
   stcColor,
+  stcRender,
   STC_COLOR_TEMPLATE_FIELD,
   STC_COLOR_TEMPLATE_LABEL,
   STC_COLOR_TEMPLATE_HELPER,
@@ -26,16 +27,34 @@ const PanelFields = createFormEditor({
     STC_COLOR_TEMPLATE_FIELD,
     { name: 'summary', selector: { template: {} } },
     { name: 'link', selector: { navigation: {} } },
+    {
+      type: 'expandable',
+      name: '',
+      title: 'Open or compact',
+      flatten: true,
+      schema: [
+        { name: 'phone_start', selector: { select: { mode: 'dropdown', options: [{ value: 'compact', label: 'Compact (one row per card)' }, { value: 'open', label: 'Open' }] } } },
+        { name: 'tablet_start', selector: { select: { mode: 'dropdown', options: [{ value: 'open', label: 'Open' }, { value: 'compact', label: 'Compact (one row per card)' }] } } },
+        { name: 'open_when', selector: { template: {} } },
+        { name: 'collapsible', selector: { boolean: {} }, default: true },
+      ],
+    },
   ],
   labels: {
     title: 'Title',
     icon: 'Icon (optional)',
     link: 'Tapping the title opens (optional page)',
+    phone_start: 'On phones, starts',
+    tablet_start: 'On tablets and computers, starts',
+    open_when: 'Opens by itself when (optional template)',
+    collapsible: 'Show the ⌄ to switch between open and compact',
     color: 'Colour (icon and panel)',
     color_template: STC_COLOR_TEMPLATE_LABEL,
     summary: 'Summary on the right (optional template)',
   },
   helpers: {
+    phone_start: 'Each phone or tablet remembers what you last chose with the ⌄; this is where it starts. Phones are screens under 600px wide.',
+    open_when: "E.g. {{ is_state('binary_sensor.back_door', 'on') }}. The panel opens while it's true, then goes back to how you left it.",
     color_template: STC_COLOR_TEMPLATE_HELPER,
     summary: `A Home Assistant template, e.g. {{ states('vacuum.gregg') | title }}`,
   },
@@ -112,14 +131,93 @@ export class SectionPanelCard extends HTMLElement {
     if (!config.title) throw new Error('title required');
     this.config = config;
     this._built = false;
+    this._fallback = null;
     this._build();
+    if (this._hass) this._watchOpenWhen();
   }
 
   set hass(hass) {
+    const first = !this._hass;
     this._hass = hass;
     if (this._title) this._title.hass = hass;
     (this._cards || []).forEach((card) => {
       card.hass = hass;
+    });
+    if (first) this._watchOpenWhen();
+  }
+
+  // ---- Open or compact.
+  // Phones (under 600px) and bigger screens each start as the config says,
+  // then remember the last choice on that device. An "open when" template
+  // opens the panel while it's true.
+  get _collapsible() {
+    return this.config.collapsible !== false;
+  }
+
+  _device() {
+    return window.innerWidth < 600 ? 'phone' : 'tablet';
+  }
+
+  _key() {
+    return `cd-panel:${location.pathname}:${this.config.title}:${this._device()}`;
+  }
+
+  _chosen() {
+    try {
+      const v = localStorage.getItem(this._key());
+      if (v === 'open' || v === 'compact') return v;
+    } catch (err) {
+      /* storage blocked: use the default */
+    }
+    const start = this._device() === 'phone' ? this.config.phone_start || 'compact' : this.config.tablet_start || 'open';
+    return start === 'compact' ? 'compact' : 'open';
+  }
+
+  _choose(mode) {
+    try {
+      localStorage.setItem(this._key(), mode);
+    } catch (err) {
+      /* storage blocked: still switch for now */
+      this._fallback = mode;
+    }
+    this._apply();
+  }
+
+  _mode() {
+    if (!this._collapsible || this._alert || this._editing()) return 'open';
+    return this._fallback || this._chosen();
+  }
+
+  _editing() {
+    return !!(this.editMode || this.preview);
+  }
+
+  _apply() {
+    const compact = this._mode() === 'compact';
+    if (this._title && this._title.setOpen) this._title.setOpen(!compact);
+    (this._cards || []).forEach((card) => {
+      if (card.supportsCompact) {
+        card.style.display = '';
+        card.compact = compact;
+      } else {
+        // Cards without a one-row version wait until the panel opens.
+        card.style.display = compact ? 'none' : '';
+      }
+    });
+    if (this._panelEl) this._panelEl.style.gap = compact ? '8px' : '12px';
+  }
+
+  _watchOpenWhen() {
+    if (this._unsubOpen) this._unsubOpen.then((u) => u && u()).catch(() => {});
+    this._unsubOpen = null;
+    this._alert = false;
+    if (!this.config.open_when || !this._hass || !this.isConnected) return;
+    this._unsubOpen = stcRender(this._hass, this.config.open_when, (text) => {
+      const t = String(text || '').trim().toLowerCase();
+      const alert = !!t && !['0', 'false', 'off', 'no', 'none', 'unknown', 'unavailable'].includes(t);
+      if (alert === this._alert) return;
+      this._alert = alert;
+      this._apply();
     });
   }
 
@@ -131,6 +229,18 @@ export class SectionPanelCard extends HTMLElement {
         <div class="spc-bg" style="position:absolute; inset:0; border-radius:inherit; background:${color}; opacity:0.1; z-index:-1; pointer-events:none; transition:background-color .6s ease;"></div>
       </div>`;
     const panel = this.querySelector('.spc-panel');
+    this._panelEl = panel;
+    panel.addEventListener('stc-toggle', (ev) => {
+      ev.stopPropagation();
+      this._fallback = null;
+      this._choose(this._mode() === 'compact' ? 'open' : 'compact');
+    });
+    // Tapping a compact card's name opens the panel.
+    panel.addEventListener('cd-expand', (ev) => {
+      ev.stopPropagation();
+      this._fallback = null;
+      this._choose('open');
+    });
     // A colour template on the title recolours the panel as it changes.
     const bg = this.querySelector('.spc-bg');
     panel.addEventListener('stc-color', (ev) => {
@@ -138,7 +248,7 @@ export class SectionPanelCard extends HTMLElement {
       bg.style.background = ev.detail;
     });
     this._title = document.createElement(`section-title-card${SUFFIX}`);
-    this._title.setConfig({ title: c.title, icon: c.icon, color: c.color, color_template: c.color_template, summary: c.summary, link: c.link });
+    this._title.setConfig({ title: c.title, icon: c.icon, color: c.color, color_template: c.color_template, summary: c.summary, link: c.link, collapsible: this._collapsible });
     if (this._hass) this._title.hass = this._hass;
     panel.appendChild(this._title);
     const token = (this._token = {});
@@ -157,10 +267,12 @@ export class SectionPanelCard extends HTMLElement {
             if (this._hass) fresh.hass = this._hass;
             el.replaceWith(fresh);
             this._cards[this._cards.indexOf(el)] = fresh;
+            this._apply();
           });
           this._cards.push(el);
           panel.appendChild(el);
         });
+        this._apply();
       })
       .catch(() => {});
   }
@@ -168,6 +280,23 @@ export class SectionPanelCard extends HTMLElement {
   connectedCallback() {
     // Wait for HA to finish placing the card before looking at its neighbours.
     requestAnimationFrame(() => this._spaceFromAbove());
+    this._onResize = () => {
+      const d = this._device();
+      if (d !== this._lastDevice) {
+        this._lastDevice = d;
+        this._apply();
+      }
+    };
+    this._lastDevice = this._device();
+    window.addEventListener('resize', this._onResize);
+    if (this._hass) this._watchOpenWhen();
+    this._apply();
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener('resize', this._onResize);
+    if (this._unsubOpen) this._unsubOpen.then((u) => u && u()).catch(() => {});
+    this._unsubOpen = null;
   }
 
   // A panel right under another panel in the same section gets the same gap

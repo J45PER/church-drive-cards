@@ -7,7 +7,7 @@
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
-import { KIT_COLOR, kitShell, kitHead, kitRealText, HEALTH_SENSOR } from './card-kit.js';
+import { KIT_COLOR, kitShell, kitHead, kitRealText, HEALTH_SENSOR, kitCompact, kitCompactable } from './card-kit.js';
 
 const DH_ICONS = {
   fan: 'mdi:fan',
@@ -69,6 +69,16 @@ export class DeviceHealthCard extends HTMLElement {
   _render() {
     if (!this._hass) return;
     const c = this.config;
+    if (this._compact) {
+      const sensor = this._hass.states[HEALTH_SENSOR];
+      const devices = c.demo ? dhDemo() : (sensor && sensor.attributes.devices) || {};
+      const bad = Object.keys(devices).filter((id) => devices[id].status !== 'ok');
+      return kitCompact(this, {
+        name: c.title || 'Device Health',
+        color: bad.length ? KIT_COLOR.fair : KIT_COLOR.good,
+        status: bad.length ? bad.map((id) => devices[id].name || id).join(', ') : 'All responding',
+      });
+    }
     if (!this._built) {
       this.innerHTML = kitShell(`<div class="dh-list" style="display:flex; flex-direction:column;"></div>`);
       this._list = this.querySelector('.dh-list');
@@ -149,6 +159,11 @@ export class DeviceHealthCard extends HTMLElement {
     return {};
   }
 }
+
+kitCompactable(DeviceHealthCard, (card) => {
+  card._built = false;
+  card._sig = null;
+});
 
 export function registerDeviceHealthCard() {
   if (!customElements.get(`device-health-card-editor${SUFFIX}`)) customElements.define(`device-health-card-editor${SUFFIX}`, DeviceHealthCardEditor);

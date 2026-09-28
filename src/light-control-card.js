@@ -4,6 +4,7 @@
 
 import { createFormEditor } from './form-editor.js';
 import { SUFFIX, LABEL } from './suffix.js';
+import { KIT_COLOR, kitCompact, kitCompactable } from './card-kit.js';
 import { sceneBackground, sceneIcon, scenePalette, loadSceneStyles, onSceneStylesChanged } from './scene-style.js';
 import { DemoHome } from './demo-home.js';
 import { iconHtml, hydrateIcons } from './icons.js';
@@ -980,6 +981,27 @@ export class LightControlCard extends HTMLElement {
     const cfg = this._effectiveConfig();
     const mode = cfg.mode || (cfg.area ? 'room' : 'light');
 
+    // Compact: the room/light's name, its brightness and an on/off button.
+    if (this._compact) {
+      // The card's main light: its first top-level row, else its entity.
+      const rowsCfg = Array.isArray(cfg.entities) ? cfg.entities.map((e) => (typeof e === 'string' ? { entity: e } : e)) : [];
+      const headRow = rowsCfg.find((e) => e && e.entity && !Number(e.level || 0));
+      const head = (headRow && headRow.entity) || cfg.entity;
+      const st = head && hass.states[head];
+      const area = cfg.area && hass.areas && hass.areas[cfg.area];
+      const on = !!st && st.state === 'on';
+      const pct = on && st.attributes.brightness != null ? Math.round((st.attributes.brightness / 255) * 100) : null;
+      const members = st && Array.isArray(st.attributes.entity_id) ? st.attributes.entity_id.filter((id) => hass.states[id] && hass.states[id].state === 'on').length : 0;
+      return kitCompact(this, {
+        name: cfg.name || (headRow && headRow.name) || (area && area.name) || (st && st.attributes.friendly_name) || head || 'Lights',
+        color: !st || st.state === 'unavailable' ? KIT_COLOR.off : on ? KIT_COLOR.warm : KIT_COLOR.off,
+        value: pct != null ? `${pct}%` : '',
+        status: !st ? '' : st.state === 'unavailable' ? 'Unavailable' : on ? (members ? `${members} on` : 'On') : 'Off',
+        buttons: st ? [{ key: 'power', icon: 'mdi:power', title: on ? 'Turn off' : 'Turn on', on, color: KIT_COLOR.warm }] : [],
+        onButton: () => this._toggle(head),
+      });
+    }
+
     if (!this._built) {
       this.innerHTML = `
         <ha-card style="border:none; box-shadow: 0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; background: var(--card-background-color); padding:16px 16px 14px 16px;">
@@ -1136,6 +1158,11 @@ export class LightControlCard extends HTMLElement {
     return { columns: 12, min_columns: 6, rows: 'auto' };
   }
 }
+
+kitCompactable(LightControlCard, (card) => {
+  card._built = false;
+  card._lastIds = null;
+});
 
 export function registerLightControlCard() {
   if (!customElements.get(`light-control-card-editor${SUFFIX}`)) {

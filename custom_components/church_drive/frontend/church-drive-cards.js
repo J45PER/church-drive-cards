@@ -387,6 +387,637 @@
     });
   }
 
+  // src/icons.js
+  var cache = /* @__PURE__ */ new Map();
+  var pending = /* @__PURE__ */ new Map();
+  function packFor(icon) {
+    const [prefix, name] = String(icon || "").split(":");
+    if (!name || prefix === "mdi" || prefix === "hass") return null;
+    const set = window.customIcons && window.customIcons[prefix];
+    if (set && typeof set.getIcon === "function") return { get: () => set.getIcon(name) };
+    const legacy = window.customIconsets && window.customIconsets[prefix];
+    if (typeof legacy === "function") return { get: () => legacy(name) };
+    return { waiting: true };
+  }
+  function isCustom(icon) {
+    const [prefix, name] = String(icon || "").split(":");
+    return !!name && prefix !== "mdi" && prefix !== "hass";
+  }
+  function svg(def, size) {
+    const d = (def.path || "").replace(/"/g, "&quot;");
+    return `<svg viewBox="${def.viewBox || "0 0 24 24"}" width="${size}" height="${size}" style="display:block; fill:currentColor;"><path d="${d}"></path></svg>`;
+  }
+  function escapeAttr(text) {
+    return String(text).replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+  }
+  function iconHtml(icon, { size = "24px", style = "", cls = "" } = {}) {
+    if (!isCustom(icon)) {
+      return `<ha-icon class="${cls}" icon="${escapeAttr(icon)}" style="--mdc-icon-size:${size}; ${style}"></ha-icon>`;
+    }
+    const def = cache.get(icon);
+    const inner = def ? svg(def, "100%") : "";
+    return `<span class="${cls} cdc-icon" data-icon="${escapeAttr(icon)}" style="display:inline-flex; width:${size}; height:${size}; ${style}">${inner}</span>`;
+  }
+  function resolve(icon) {
+    if (cache.has(icon)) return Promise.resolve(cache.get(icon));
+    if (pending.has(icon)) return pending.get(icon);
+    const promise = new Promise((done) => {
+      let tries = 0;
+      const attempt = () => {
+        const pack = packFor(icon);
+        if (pack && pack.get) {
+          Promise.resolve(pack.get()).then((def) => {
+            const ok = def && def.path ? def : null;
+            cache.set(icon, ok);
+            done(ok);
+          }).catch(() => {
+            cache.set(icon, null);
+            done(null);
+          });
+          return;
+        }
+        tries += 1;
+        if (tries > 80) {
+          pending.delete(icon);
+          done(null);
+          return;
+        }
+        setTimeout(attempt, 250);
+      };
+      attempt();
+    });
+    pending.set(icon, promise);
+    return promise;
+  }
+  function hydrateIcons(root) {
+    root.querySelectorAll("span.cdc-icon[data-icon]").forEach((el) => {
+      if (el.firstChild) return;
+      const icon = el.getAttribute("data-icon");
+      resolve(icon).then((def) => {
+        if (!el.isConnected && !el.parentNode) return;
+        if (def) el.innerHTML = svg(def, "100%");
+        else if (!el.firstChild) el.innerHTML = `<ha-icon icon="mdi:help-circle-outline" style="--mdc-icon-size:100%; width:100%; height:100%;"></ha-icon>`;
+      });
+    });
+  }
+
+  // src/card-kit.js
+  var KIT_COLOR = {
+    off: "#8b919c",
+    good: "#4caf50",
+    fair: "#ffa726",
+    poor: "#ff7043",
+    bad: "#e53935",
+    fan: "#26c6da",
+    sleep: "#7e6fd6",
+    humidity: "#b388ff",
+    blind: "#a1887f",
+    cold: "#42a5f5",
+    cool: "#26c6da",
+    comfy: "#66bb6a",
+    warm: "#ffa726",
+    hot: "#ef5350"
+  };
+  var kitEsc = (text) => String(text == null ? "" : text).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  var kitCap = (text) => String(text || "").replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+  var kitNum = (st) => st && st.state !== "" && !isNaN(Number(st.state)) ? Number(st.state) : null;
+  var KIT_HEALTH_CSS = `.ck-stale .ck-row, .ck-stale .ck-dim { opacity:.55; }
+.ck-health { display:none; align-items:center; gap:10px; padding:9px 11px; border-radius:12px; background:color-mix(in srgb, #ffa726 18%, transparent); color:#ffd08a; font-size:0.85rem; }
+.ck-health small { display:block; color:var(--secondary-text-color); font-size:0.74rem; }
+.ck-health button { flex:none; border:none; border-radius:10px; padding:7px 10px; font:inherit; font-size:0.8rem; font-weight:600; background:#ffa726; color:#2a1700; cursor:pointer; }`;
+  function kitShell(body, extraCss = "") {
+    return `
+    <ha-card class="ck-card" style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; padding:16px; background:var(--card-background-color); transition:background-color .6s ease; display:flex; flex-direction:column; gap:12px;">
+      <style>
+        .ck-row { display:flex; gap:6px; }
+        .ck-q { position:relative; overflow:hidden; container-type:inline-size; flex:1 1 0; min-width:0; height:48px; border:none; border-radius:12px; padding:0 6px; cursor:pointer;
+          background:rgba(127,127,127,0.14); color:var(--primary-text-color); font:inherit; font-size:13px; font-weight:600;
+          display:flex; align-items:center; justify-content:center; gap:6px; transition:background-color .2s, color .2s; }
+        .ck-q.ck-col { flex-direction:column; gap:2px; height:56px; font-size:11px; }
+        .ck-q.ck-on { color:#fff; }
+        .ck-q:disabled { opacity:.4; cursor:default; }
+        .ck-q span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+        @container (max-width: 56px) { .ck-q:not(.ck-col) span.ck-hide { display:none; } }
+        .ck-q::after { content:''; position:absolute; inset:0; background:#fff; opacity:0; transition:opacity .15s; pointer-events:none; }
+        .ck-q:not(:disabled):hover::after { opacity:.08; }
+        .ck-q:focus-visible, .ck-tap:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
+        .ck-hold { position:absolute; left:0; top:0; bottom:0; width:0; background:rgba(255,255,255,.22); pointer-events:none; }
+        .ck-sub { font-size:0.8rem; color:var(--secondary-text-color); }
+        .ck-info { flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; font-size:0.85rem; color:var(--secondary-text-color); }
+        .ck-info > span { display:flex; align-items:center; gap:5px; }
+        .ck-chip { display:inline-flex; align-items:center; gap:4px; padding:1px 8px; border-radius:999px; font-size:0.72rem; font-weight:600; }
+        .ck-bar { height:8px; border-radius:99px; background:rgba(127,127,127,.2); overflow:hidden; }
+        .ck-bar > i { display:block; height:100%; border-radius:inherit; transition:width .4s; }
+        .ck-tap { cursor:pointer; }
+        ${KIT_HEALTH_CSS}
+        ${extraCss}
+      </style>
+      <div style="display:flex; align-items:baseline; gap:8px;">
+        <div class="ck-title" style="flex:1; min-width:0; font-size:1.5rem; font-weight:500; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:color .6s;"></div>
+        <div class="ck-word" style="flex:none; font-size:0.85rem; color:var(--secondary-text-color);"></div>
+      </div>
+      <div class="ck-health" role="status"></div>
+      ${body}
+    </ha-card>`;
+  }
+  function kitHead(root, title, word, color, tint = 0) {
+    const t = root.querySelector(".ck-title");
+    const w = root.querySelector(".ck-word");
+    const card = root.querySelector(".ck-card");
+    t.textContent = title;
+    t.style.color = color;
+    w.textContent = word;
+    card.style.backgroundColor = tint ? `color-mix(in srgb, ${color} ${tint}%, var(--card-background-color))` : "var(--card-background-color)";
+  }
+  function kitGauge(p, color, label, sub, size = 84) {
+    const r = size / 2 - 7, cx = size / 2, len = 1.5 * Math.PI * r;
+    const fill = Math.max(0, Math.min(1, p || 0));
+    const arc = (extra) => `<circle cx="${cx}" cy="${cx}" r="${r}" fill="none" stroke-width="6" stroke-linecap="round" transform="rotate(135 ${cx} ${cx})" ${extra}></circle>`;
+    return `<div style="position:relative; width:${size}px; height:${size}px; flex:none;">
+      <svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" aria-hidden="true" style="display:block;">
+        ${arc(`stroke="rgba(127,127,127,0.28)" stroke-dasharray="${len} 9999"`)}
+        ${fill > 0 ? arc(`stroke="${color}" stroke-dasharray="${Math.max(0.01, len * fill)} 9999"`) : ""}
+      </svg>
+      <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
+        <b style="font-size:1.1rem; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.1;">${kitEsc(label)}</b>
+        <span style="font-size:0.66rem; color:var(--secondary-text-color); line-height:1.2;">${kitEsc(sub)}</span>
+      </div>
+    </div>`;
+  }
+  function kitTiles(box, list, onTap, { column = false, hideNames = false } = {}) {
+    const sig = JSON.stringify(list.map((t) => [t.key, t.name, t.icon, t.color, !!t.on, !!t.disabled, !!t.hold]));
+    if (box._ckSig === sig) return;
+    box._ckSig = sig;
+    box.innerHTML = "";
+    box.style.display = list.length ? "flex" : "none";
+    list.forEach((t) => {
+      const b = document.createElement("button");
+      b.className = `ck-q${column ? " ck-col" : ""}${t.on ? " ck-on" : ""}`;
+      b.disabled = !!t.disabled;
+      b.title = t.name;
+      b.setAttribute("aria-label", b.title);
+      b.setAttribute("aria-pressed", String(!!t.on));
+      if (t.on) b.style.background = t.color;
+      b.innerHTML = `${t.hold ? '<i class="ck-hold"></i>' : ""}${iconHtml(t.icon, { size: "20px", style: "flex-shrink:0; position:relative;" })}<span class="${hideNames ? "ck-hide" : ""}" style="position:relative;"></span>`;
+      b.querySelector("span").textContent = t.name;
+      if (t.hold) kitHold(b, () => onTap(t));
+      else b.addEventListener("click", () => onTap(t));
+      box.appendChild(b);
+    });
+  }
+  function kitHold(button, done) {
+    const bar = button.querySelector(".ck-hold");
+    let timer = null;
+    const stop = () => {
+      clearTimeout(timer);
+      timer = null;
+      bar.style.transition = "width .2s";
+      bar.style.width = "0";
+    };
+    const start = (ev) => {
+      if (ev.button > 0) return;
+      stop();
+      bar.style.transition = "width 1.5s linear";
+      requestAnimationFrame(() => bar.style.width = "100%");
+      timer = setTimeout(() => {
+        stop();
+        done();
+      }, 1500);
+    };
+    button.addEventListener("pointerdown", start);
+    ["pointerup", "pointerleave", "pointercancel"].forEach((e) => button.addEventListener(e, stop));
+    button.addEventListener("keydown", (ev) => {
+      if ((ev.key === "Enter" || ev.key === " ") && !timer) start(ev);
+    });
+    button.addEventListener("keyup", stop);
+  }
+  function kitNavigate(path, replace = false) {
+    if (!path) return;
+    if (/^https?:/.test(path)) {
+      window.open(path, "_blank", "noopener");
+      return;
+    }
+    history[replace ? "replaceState" : "pushState"](null, "", path);
+    window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace } }));
+  }
+  function kitMoreInfo(el, entityId) {
+    if (!entityId) return;
+    el.dispatchEvent(new CustomEvent("hass-more-info", { detail: { entityId }, bubbles: true, composed: true }));
+  }
+  async function kitHistory(hass, ids, hours = 24) {
+    const out = {};
+    if (!hass || !hass.callWS || !ids.length) return out;
+    const res = await hass.callWS({
+      type: "history/history_during_period",
+      start_time: new Date(Date.now() - hours * 36e5).toISOString(),
+      entity_ids: ids,
+      minimal_response: true,
+      no_attributes: true,
+      significant_changes_only: false
+    });
+    ids.forEach((id) => {
+      out[id] = (res[id] || []).map((p) => [(p.lu || p.lc || 0) * 1e3, Number(p.s)]).filter((p) => p[0] && !isNaN(p[1]) && p[1] !== null);
+    });
+    return out;
+  }
+  async function kitStateHistory(hass, ids, hours = 24) {
+    const out = {};
+    if (!hass || !hass.callWS || !ids.length) return out;
+    const res = await hass.callWS({
+      type: "history/history_during_period",
+      start_time: new Date(Date.now() - hours * 36e5).toISOString(),
+      entity_ids: ids,
+      minimal_response: true,
+      no_attributes: true,
+      significant_changes_only: false
+    });
+    ids.forEach((id) => {
+      out[id] = (res[id] || []).map((p) => [(p.lc || p.lu || 0) * 1e3, p.s]).filter((p) => p[0]);
+    });
+    return out;
+  }
+  function kitDemoSeries(values, hours = 24) {
+    const now = Date.now();
+    return values.map((v, i) => [now - hours * 36e5 * (values.length - 1 - i) / (values.length - 1), v]);
+  }
+  function kitSmooth(pts, from, now, slots = 96) {
+    const sorted = (pts || []).filter((p) => p[1] != null && !isNaN(p[1])).sort((a, b) => a[0] - b[0]);
+    if (sorted.length < 3) return sorted;
+    const step = (now - from) / slots;
+    let j = 0, v = null;
+    while (j < sorted.length && sorted[j][0] <= from) v = sorted[j++][1];
+    const avg2 = [];
+    for (let k = 0; k < slots; k++) {
+      const a = from + k * step, b = a + step;
+      let sum = 0, dur = 0, t = a;
+      while (j < sorted.length && sorted[j][0] < b) {
+        const tp = sorted[j][0];
+        if (v != null) {
+          sum += v * (tp - t);
+          dur += tp - t;
+        }
+        t = tp;
+        v = sorted[j++][1];
+      }
+      if (v != null) {
+        sum += v * (b - t);
+        dur += b - t;
+      }
+      if (dur > 0) avg2.push([a + step / 2, sum / dur]);
+    }
+    const w = [1, 2, 3, 4, 3, 2, 1];
+    const out = avg2.map((p, i) => {
+      let s = 0, n = 0;
+      w.forEach((wt, k) => {
+        const q = avg2[i + k - 3];
+        if (q) {
+          s += q[1] * wt;
+          n += wt;
+        }
+      });
+      return [p[0], s / n];
+    });
+    if (out.length) out.push([now, out[out.length - 1][1]]);
+    return out;
+  }
+  function kitPath(xy, curve = true) {
+    const f = (p) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`;
+    if (!curve || xy.length < 3) return xy.map((p, i) => `${i ? "L" : "M"}${f(p)}`).join(" ");
+    let d = `M${f(xy[0])}`;
+    for (let i = 0; i < xy.length - 1; i++) {
+      const p0 = xy[i - 1] || xy[i], p1 = xy[i], p2 = xy[i + 1], p3 = xy[i + 2] || p2;
+      const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+      const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+      d += ` C${f(c1)} ${f(c2)} ${f(p2)}`;
+    }
+    return d;
+  }
+  function kitGraph(series, { hours = 24, height = 48, label = "", meta = null, smooth = true } = {}) {
+    const W = 300, H = height, now = Date.now(), from = now - hours * 36e5;
+    const x = (t) => (Math.max(from, t) - from) / (now - from) * W;
+    let under = "", over = "";
+    const scrub = [];
+    series.forEach((s) => {
+      const raw = (s.pts || []).filter((p) => p[1] != null && !isNaN(p[1]));
+      if (s.current != null && !isNaN(s.current)) raw.push([now, Number(s.current)]);
+      const pts = smooth ? kitSmooth(raw, from, now) : raw;
+      if (pts.length < 2) return;
+      const vals = pts.map((p) => p[1]);
+      const lo = Math.min(...vals) - (s.pad || 0.3), hi = Math.max(...vals) + (s.pad || 0.3);
+      const y = (v) => H - 3 - (v - lo) / (hi - lo || 1) * (H - 6);
+      const d = kitPath(pts.map((p) => [x(p[0]), y(p[1])]), smooth);
+      if (s.fill) under += `<path d="${d} L${W},${H} L0,${H} Z" fill="${s.color}" fill-opacity="0.16"></path>`;
+      over += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.width || 2}" vector-effect="non-scaling-stroke"></path>`;
+      scrub.push({ pts, raw, lo, hi, color: s.color, format: s.format, linear: smooth });
+    });
+    if (!under && !over) return "";
+    if (meta) Object.assign(meta, { from, now, height: H, series: scrub });
+    return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block; width:100%; height:${H}px;" role="img" aria-label="${kitEsc(label)}">${under}${over}</svg>`;
+  }
+  function kitScrub(svg2, spec) {
+    if (!svg2 || !spec || !spec.series || !spec.series.length || svg2.parentNode._ckScrub) return;
+    const H = spec.height;
+    const wrap = document.createElement("div");
+    wrap._ckScrub = true;
+    wrap.style.cssText = "position:relative; touch-action:pan-y; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;";
+    svg2.parentNode.insertBefore(wrap, svg2);
+    wrap.appendChild(svg2);
+    const line = document.createElement("div");
+    line.style.cssText = `position:absolute; top:0; height:${H}px; width:1px; background:var(--primary-text-color); opacity:.6; pointer-events:none; display:none;`;
+    const tip = document.createElement("div");
+    tip.style.cssText = "position:absolute; bottom:calc(100% + 6px); z-index:3; padding:6px 9px; border-radius:10px; background:var(--card-background-color); box-shadow:0 3px 10px rgba(0,0,0,.45); font-size:0.78rem; line-height:1.4; white-space:nowrap; pointer-events:none; display:none; font-variant-numeric:tabular-nums;";
+    const dots = spec.series.map((s) => {
+      const d = document.createElement("div");
+      d.style.cssText = `position:absolute; width:9px; height:9px; margin:-4.5px 0 0 -4.5px; border-radius:50%; background:${s.color}; box-shadow:0 0 0 2px var(--card-background-color); pointer-events:none; display:none;`;
+      return d;
+    });
+    wrap.append(line, ...dots, tip);
+    const lerp = (pts, t) => {
+      if (!pts.length) return null;
+      if (t <= pts[0][0]) return pts[0][1];
+      for (let k = 1; k < pts.length; k++) {
+        if (t <= pts[k][0]) {
+          const [a, va] = pts[k - 1], [b, vb] = pts[k];
+          return va + (vb - va) * (t - a) / (b - a || 1);
+        }
+      }
+      return pts[pts.length - 1][1];
+    };
+    const valueAt = (pts, t) => {
+      let v = null;
+      for (const p of pts) {
+        if (p[0] <= t) v = p[1];
+        else break;
+      }
+      return v == null && pts.length ? pts[0][1] : v;
+    };
+    const when2 = (t) => {
+      const d = new Date(t), today = /* @__PURE__ */ new Date();
+      const time = d.toLocaleTimeString(void 0, { hour: "2-digit", minute: "2-digit" });
+      return d.toDateString() === today.toDateString() ? time : `${d.toLocaleDateString(void 0, { weekday: "short" })} ${time}`;
+    };
+    const show = (clientX) => {
+      const rect = wrap.getBoundingClientRect();
+      const f = Math.max(0, Math.min(1, (clientX - rect.left) / (rect.width || 1)));
+      const t = spec.from + f * (spec.now - spec.from);
+      const left = f * rect.width;
+      line.style.left = `${left}px`;
+      line.style.display = "block";
+      const rows = [];
+      spec.series.forEach((s, i) => {
+        const v = s.raw ? valueAt(s.raw, t) : valueAt(s.pts, t);
+        const yv = s.linear ? lerp(s.pts, t) : v;
+        const dot = dots[i];
+        if (v == null || yv == null) {
+          dot.style.display = "none";
+          return;
+        }
+        const colour = s.colourOf ? s.colourOf(v) : s.color;
+        dot.style.background = colour;
+        dot.style.left = `${left}px`;
+        dot.style.top = `${H - 3 - (yv - s.lo) / (s.hi - s.lo || 1) * (H - 6)}px`;
+        dot.style.display = "block";
+        rows.push(`<div style="color:${colour};">\u25CF ${kitEsc(s.format ? s.format(v) : Number(v).toFixed(1))}</div>`);
+      });
+      tip.innerHTML = `<div style="color:var(--secondary-text-color);">${when2(t)}</div>${rows.join("")}`;
+      tip.style.display = "block";
+      const w = tip.offsetWidth;
+      tip.style.left = `${Math.max(0, Math.min(rect.width - w, left - w / 2))}px`;
+    };
+    const hide = () => {
+      [line, tip, ...dots].forEach((el) => el.style.display = "none");
+    };
+    let active = false, used = false, timer = null, sx = 0, sy = 0;
+    wrap.addEventListener("pointerenter", (ev) => ev.pointerType === "mouse" && show(ev.clientX));
+    wrap.addEventListener("pointermove", (ev) => {
+      if (ev.pointerType === "mouse") return show(ev.clientX);
+      if (active) return show(ev.clientX);
+      if (timer && (Math.abs(ev.clientX - sx) > 10 || Math.abs(ev.clientY - sy) > 10)) {
+        clearTimeout(timer);
+        timer = null;
+      }
+    });
+    wrap.addEventListener("pointerleave", (ev) => ev.pointerType === "mouse" && hide());
+    wrap.addEventListener("pointerdown", (ev) => {
+      if (ev.pointerType === "mouse") return;
+      sx = ev.clientX;
+      sy = ev.clientY;
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        timer = null;
+        active = true;
+        used = true;
+        show(sx);
+      }, 300);
+    });
+    const end = () => {
+      clearTimeout(timer);
+      timer = null;
+      if (active) {
+        active = false;
+        hide();
+      }
+    };
+    ["pointerup", "pointercancel"].forEach((e) => wrap.addEventListener(e, end));
+    wrap.addEventListener("touchmove", (ev) => {
+      if (active && ev.cancelable) ev.preventDefault();
+      if (active && ev.touches[0]) show(ev.touches[0].clientX);
+    }, { passive: false });
+    wrap.addEventListener("touchend", end);
+    wrap.addEventListener("contextmenu", (ev) => (active || used) && ev.preventDefault());
+    wrap.addEventListener("click", (ev) => {
+      if (used) {
+        used = false;
+        ev.stopPropagation();
+        ev.preventDefault();
+      }
+    }, true);
+  }
+  function kitRange(pts, current, digits, unit) {
+    const vals = (pts || []).map((p) => p[1]).filter((v) => v != null && !isNaN(v));
+    if (current != null && !isNaN(current)) vals.push(Number(current));
+    if (!vals.length) return "";
+    const f = (v) => Number(v).toFixed(digits);
+    return `${f(Math.min(...vals))}\u2013${f(Math.max(...vals))}${unit}`;
+  }
+  var KitHistory = class {
+    constructor(owner, ids, hours, loader = kitHistory) {
+      this.owner = owner;
+      this.ids = ids;
+      this.hours = hours;
+      this.loader = loader;
+      this.data = null;
+      this.at = 0;
+      this.loading = false;
+    }
+    due() {
+      return !this.loading && Date.now() - this.at > 10 * 6e4;
+    }
+    async load(hass) {
+      if (!this.due()) return;
+      this.loading = true;
+      try {
+        this.data = await this.loader(hass, this.ids.filter(Boolean), this.hours);
+      } catch (err) {
+        this.data = this.data || {};
+      }
+      this.at = Date.now();
+      this.loading = false;
+      this.owner._render();
+    }
+  };
+  var KitPending = class {
+    constructor(owner) {
+      this.owner = owner;
+      this.want = null;
+    }
+    set(want) {
+      this.want = want;
+      clearTimeout(this.timer);
+      this.timer = setTimeout(() => {
+        this.want = null;
+        this.owner._render();
+      }, 8e3);
+    }
+    apply(st) {
+      const w = this.want;
+      if (!w || !st) return st;
+      const a = st.attributes || {};
+      const same2 = (x, y) => typeof x === "number" && typeof y === "number" ? Math.abs(x - y) <= 2 : x === y;
+      const attrs = w.attrs || {};
+      if (st.state === w.state && Object.keys(attrs).every((k) => same2(a[k], attrs[k]))) {
+        this.want = null;
+        clearTimeout(this.timer);
+        return st;
+      }
+      return { ...st, state: w.state, attributes: { ...a, ...attrs } };
+    }
+  };
+  var HEALTH_SENSOR = "sensor.church_drive_device_health";
+  function kitHealthOf(hass, entityId) {
+    const s = hass && entityId && hass.states[HEALTH_SENSOR];
+    const d = s && s.attributes.devices && s.attributes.devices[entityId];
+    return d && d.status !== "ok" ? d : null;
+  }
+  var kitClock = (iso) => iso ? new Date(iso).toLocaleTimeString(void 0, { hour: "2-digit", minute: "2-digit" }) : "";
+  function kitRealText(real) {
+    if (!real) return "";
+    let what = kitCap(real.state);
+    if (real.preset_mode) {
+      const m = /^speed[ _-]?(\d+)$/i.exec(real.preset_mode);
+      what = m ? `Speed ${m[1]}` : kitCap(real.preset_mode);
+    } else if (real.temperature != null && real.state !== "off") {
+      what = `${kitCap(real.state)} ${real.temperature}\xB0`;
+    }
+    return `${what} at ${kitClock(real.at)}`;
+  }
+  function kitHealthBanner(root, hass, entityId, demo) {
+    const box = root.querySelector(".ck-health");
+    const card = root.querySelector(".ck-card") || root.querySelector("ha-card");
+    if (!box) return null;
+    const d = demo ? null : kitHealthOf(hass, entityId);
+    card.classList.toggle("ck-stale", !!d);
+    const sig = d ? JSON.stringify([d.reason, d.since, d.last_real, d.fixes]) : "";
+    if (box._sig === sig) return d;
+    box._sig = sig;
+    box.style.display = d ? "flex" : "none";
+    if (!d) {
+      box.innerHTML = "";
+      return null;
+    }
+    const last = (d.fixes || []).slice(-1)[0];
+    box.innerHTML = `${iconHtml("mdi:lan-disconnect", { size: "22px", style: "flex:none;" })}
+    <div style="flex:1; min-width:0; line-height:1.35;">Not responding since ${kitClock(d.since)}
+      <small></small></div>
+    <button type="button">Fix now</button>`;
+    box.querySelector("small").textContent = [d.reason, d.last_real ? `Last real: ${kitRealText(d.last_real)}` : "", last ? `Fixing: ${last.replace(/^\d\d:\d\d /, "")}` : ""].filter(Boolean).join(" \xB7 ");
+    box.querySelector("button").addEventListener("click", () => hass.callService("church_drive", "health_fix", { entity_id: entityId, action: entityId.startsWith("fan.") ? "nudge" : "resync" }));
+    return d;
+  }
+  var KIT_CPT_CSS = `
+  .ck-cpt { display:flex; flex-direction:column; gap:6px; border:none; box-shadow:0 3px 10px rgba(0,0,0,.45); border-radius:14px; padding:8px 10px; background:var(--card-background-color); }
+  .ck-cpt-row { display:flex; align-items:center; gap:8px; min-height:32px; }
+  .ck-cpt-name { font-weight:600; font-size:0.92rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; min-width:0; flex:0 1 auto; }
+  .ck-cpt-val { font-weight:700; font-size:1.05rem; font-variant-numeric:tabular-nums; white-space:nowrap; flex:none; }
+  .ck-cpt-st { flex:1 1 0; min-width:0; color:var(--secondary-text-color); font-size:0.76rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ck-cpt-btns { display:flex; gap:4px; flex:none; }
+  .ck-cpt-b { position:relative; min-width:32px; height:30px; padding:0 6px; border:none; border-radius:9px; background:rgba(127,127,127,.16); color:var(--primary-text-color); font:inherit; font-size:0.78rem; font-weight:700; display:flex; align-items:center; justify-content:center; gap:3px; cursor:pointer; }
+  .ck-cpt-b.ck-on { color:#fff; }
+  .ck-cpt-b:focus-visible, .ck-cpt-name:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
+  .ck-cpt-chips { display:flex; flex-wrap:wrap; gap:5px; }
+  .ck-cpt-chip { display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:999px; background:rgba(127,127,127,.14); font-size:0.78rem; font-weight:600; font-variant-numeric:tabular-nums; }
+  .ck-cpt-chip i { width:8px; height:8px; border-radius:50%; flex:none; }`;
+  function kitCompact(root, spec) {
+    const sig = JSON.stringify(spec, (k, v) => typeof v === "function" ? void 0 : v);
+    if (root._cptSig === sig && root.querySelector(".ck-cpt")) return;
+    root._cptSig = sig;
+    root.innerHTML = `<style>${KIT_CPT_CSS}</style><ha-card class="ck-cpt"><div class="ck-cpt-row">
+      <span class="ck-cpt-name" role="button" tabindex="0"></span>
+      ${spec.value != null && spec.value !== "" ? '<b class="ck-cpt-val"></b>' : ""}
+      <span class="ck-cpt-st"></span>
+      <div class="ck-cpt-btns"></div>
+    </div>${(spec.chips || []).length ? '<div class="ck-cpt-chips"></div>' : ""}</ha-card>`;
+    const name = root.querySelector(".ck-cpt-name");
+    name.textContent = spec.name || "";
+    name.style.color = spec.color || "var(--primary-text-color)";
+    const open = () => root.dispatchEvent(new CustomEvent("cd-expand", { bubbles: true, composed: true }));
+    name.addEventListener("click", open);
+    name.addEventListener("keydown", (ev) => (ev.key === "Enter" || ev.key === " ") && open());
+    const val = root.querySelector(".ck-cpt-val");
+    if (val) {
+      val.textContent = spec.value;
+      val.style.color = spec.valueColor || "var(--primary-text-color)";
+    }
+    root.querySelector(".ck-cpt-st").textContent = spec.status || "";
+    const box = root.querySelector(".ck-cpt-btns");
+    (spec.buttons || []).forEach((b) => {
+      const el = document.createElement("button");
+      el.type = "button";
+      el.className = `ck-cpt-b${b.on ? " ck-on" : ""}`;
+      el.title = b.title || b.label || b.key;
+      el.setAttribute("aria-label", el.title);
+      el.setAttribute("aria-pressed", String(!!b.on));
+      if (b.on) el.style.background = b.color || "var(--primary-color)";
+      el.innerHTML = b.icon ? iconHtml(b.icon, { size: "17px", style: "flex:none;" }) : "";
+      if (b.label) el.append(document.createTextNode(b.label));
+      el.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        if (spec.onButton) spec.onButton(b);
+      });
+      box.appendChild(el);
+    });
+    const chips = root.querySelector(".ck-cpt-chips");
+    (spec.chips || []).forEach((c) => {
+      const el = document.createElement("span");
+      el.className = "ck-cpt-chip";
+      el.innerHTML = `<i style="background:${c.color || "var(--secondary-text-color)"};"></i><span></span>`;
+      el.querySelector("span").textContent = c.label;
+      chips.appendChild(el);
+    });
+    hydrateIcons(root);
+  }
+  function kitCompactable(Cls, rebuild = (card) => {
+    card._built = false;
+  }) {
+    Object.defineProperty(Cls.prototype, "compact", {
+      configurable: true,
+      get() {
+        return !!this._compact;
+      },
+      set(v) {
+        v = !!v;
+        if (v === !!this._compact) return;
+        this._compact = v;
+        this._cptSig = null;
+        rebuild(this);
+        if (!v) this.innerHTML = "";
+        const hass = this._lastInput || this._hass;
+        if (hass) this.hass = hass;
+      }
+    });
+    Cls.prototype.supportsCompact = true;
+  }
+
   // src/alarm-panel-card.js
   var APC_STATE_OPTIONS = [
     { value: "disarmed", label: "Disarmed" },
@@ -519,6 +1150,7 @@
       this._hass = hass;
       const st = this._state(hass);
       if (!st) return;
+      if (this._compact) return kitCompact(this, this._compactSpec(st));
       if (!this._built) this._build();
       const info = APC_STATES[st.state] || { label: st.state, icon: "mdi:shield-outline", color: "#9e9e9e" };
       const inDelay = st.state === "arming" || st.state === "pending";
@@ -547,6 +1179,34 @@
       this._syncCountdown(inDelay ? secsLeft : 0, st.state, st.last_changed);
       const activeKey = inDelay || st.state === "triggered" ? a.targetState : st.state;
       this._renderButtons(a.supported_features || 0, activeKey, info.color);
+    }
+    // One row: the state (with the seconds left in a delay) and the arm/disarm
+    // buttons as icons.
+    _compactSpec(st) {
+      const a = st.attributes;
+      const info = APC_STATES[st.state] || { label: st.state, icon: "mdi:shield-outline", color: "#9e9e9e" };
+      const target = APC_MODE_NAMES[a.targetState];
+      const inDelay = st.state === "arming" || st.state === "pending";
+      const secs = st.state === "pending" ? a.entrySecondsLeft || 0 : st.state === "arming" ? a.exitSecondsLeft || 0 : 0;
+      const feats = a.supported_features || 0;
+      const activeKey = inDelay || st.state === "triggered" ? a.targetState : st.state;
+      const actions = [
+        { key: "disarmed", icon: "mdi:shield-off-outline", title: "Disarm", service: "alarm_disarm", show: true },
+        { key: "armed_home", icon: "mdi:shield-home", title: "Arm Home", service: "alarm_arm_home", show: (feats & 1) !== 0 },
+        { key: "armed_away", icon: "mdi:shield-lock", title: "Arm Away", service: "alarm_arm_away", show: (feats & 2) !== 0 },
+        { key: "armed_night", icon: "mdi:shield-moon", title: "Arm Night", service: "alarm_arm_night", show: (feats & 4) !== 0 }
+      ].filter((b) => b.show);
+      return {
+        name: (st.state === "arming" && target ? `Arming ${target}` : info.label) + (this.config.demo ? " (demo)" : ""),
+        color: info.color,
+        value: inDelay && secs ? `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}` : "",
+        valueColor: info.color,
+        status: st.state === "arming" ? "Leave now" : st.state === "pending" ? "Disarm now" : st.state === "triggered" ? "Alarm sounding" : "",
+        buttons: actions.map((b) => ({ key: b.key, icon: b.icon, title: b.title, on: activeKey === b.key, color: info.color, service: b.service })),
+        onButton: (b) => {
+          if (!this.config.demo) this._hass.callService("alarm_control_panel", b.service, {}, { entity_id: this.config.entity });
+        }
+      };
     }
     _renderButtons(feats, activeKey, activeColor) {
       const actions = [
@@ -647,6 +1307,14 @@
       return first ? { entity: first } : { demo: true };
     }
   };
+  kitCompactable(AlarmPanelCard, (card) => {
+    card._built = false;
+    card._buttonsSig = null;
+    if (card._countdownTimer) clearInterval(card._countdownTimer);
+    card._countdownTimer = null;
+    card._delayState = null;
+    card._reported = null;
+  });
   function registerAlarmPanelCard() {
     if (!customElements.get(`alarm-panel-card-editor${SUFFIX}`)) {
       customElements.define(`alarm-panel-card-editor${SUFFIX}`, AlarmPanelCardEditor);
@@ -1178,80 +1846,6 @@
       });
     }
   };
-
-  // src/icons.js
-  var cache = /* @__PURE__ */ new Map();
-  var pending = /* @__PURE__ */ new Map();
-  function packFor(icon) {
-    const [prefix, name] = String(icon || "").split(":");
-    if (!name || prefix === "mdi" || prefix === "hass") return null;
-    const set = window.customIcons && window.customIcons[prefix];
-    if (set && typeof set.getIcon === "function") return { get: () => set.getIcon(name) };
-    const legacy = window.customIconsets && window.customIconsets[prefix];
-    if (typeof legacy === "function") return { get: () => legacy(name) };
-    return { waiting: true };
-  }
-  function isCustom(icon) {
-    const [prefix, name] = String(icon || "").split(":");
-    return !!name && prefix !== "mdi" && prefix !== "hass";
-  }
-  function svg(def, size) {
-    const d = (def.path || "").replace(/"/g, "&quot;");
-    return `<svg viewBox="${def.viewBox || "0 0 24 24"}" width="${size}" height="${size}" style="display:block; fill:currentColor;"><path d="${d}"></path></svg>`;
-  }
-  function escapeAttr(text) {
-    return String(text).replace(/&/g, "&amp;").replace(/"/g, "&quot;");
-  }
-  function iconHtml(icon, { size = "24px", style = "", cls = "" } = {}) {
-    if (!isCustom(icon)) {
-      return `<ha-icon class="${cls}" icon="${escapeAttr(icon)}" style="--mdc-icon-size:${size}; ${style}"></ha-icon>`;
-    }
-    const def = cache.get(icon);
-    const inner = def ? svg(def, "100%") : "";
-    return `<span class="${cls} cdc-icon" data-icon="${escapeAttr(icon)}" style="display:inline-flex; width:${size}; height:${size}; ${style}">${inner}</span>`;
-  }
-  function resolve(icon) {
-    if (cache.has(icon)) return Promise.resolve(cache.get(icon));
-    if (pending.has(icon)) return pending.get(icon);
-    const promise = new Promise((done) => {
-      let tries = 0;
-      const attempt = () => {
-        const pack = packFor(icon);
-        if (pack && pack.get) {
-          Promise.resolve(pack.get()).then((def) => {
-            const ok = def && def.path ? def : null;
-            cache.set(icon, ok);
-            done(ok);
-          }).catch(() => {
-            cache.set(icon, null);
-            done(null);
-          });
-          return;
-        }
-        tries += 1;
-        if (tries > 80) {
-          pending.delete(icon);
-          done(null);
-          return;
-        }
-        setTimeout(attempt, 250);
-      };
-      attempt();
-    });
-    pending.set(icon, promise);
-    return promise;
-  }
-  function hydrateIcons(root) {
-    root.querySelectorAll("span.cdc-icon[data-icon]").forEach((el) => {
-      if (el.firstChild) return;
-      const icon = el.getAttribute("data-icon");
-      resolve(icon).then((def) => {
-        if (!el.isConnected && !el.parentNode) return;
-        if (def) el.innerHTML = svg(def, "100%");
-        else if (!el.firstChild) el.innerHTML = `<ha-icon icon="mdi:help-circle-outline" style="--mdc-icon-size:100%; width:100%; height:100%;"></ha-icon>`;
-      });
-    });
-  }
 
   // src/light-control-card.js
   var LCC_DEFAULT_MAX_SCENES = 8;
@@ -2048,6 +2642,24 @@
       this._hass = hass;
       const cfg = this._effectiveConfig();
       const mode = cfg.mode || (cfg.area ? "room" : "light");
+      if (this._compact) {
+        const rowsCfg = Array.isArray(cfg.entities) ? cfg.entities.map((e) => typeof e === "string" ? { entity: e } : e) : [];
+        const headRow = rowsCfg.find((e) => e && e.entity && !Number(e.level || 0));
+        const head = headRow && headRow.entity || cfg.entity;
+        const st = head && hass.states[head];
+        const area = cfg.area && hass.areas && hass.areas[cfg.area];
+        const on = !!st && st.state === "on";
+        const pct = on && st.attributes.brightness != null ? Math.round(st.attributes.brightness / 255 * 100) : null;
+        const members = st && Array.isArray(st.attributes.entity_id) ? st.attributes.entity_id.filter((id) => hass.states[id] && hass.states[id].state === "on").length : 0;
+        return kitCompact(this, {
+          name: cfg.name || headRow && headRow.name || area && area.name || st && st.attributes.friendly_name || head || "Lights",
+          color: !st || st.state === "unavailable" ? KIT_COLOR.off : on ? KIT_COLOR.warm : KIT_COLOR.off,
+          value: pct != null ? `${pct}%` : "",
+          status: !st ? "" : st.state === "unavailable" ? "Unavailable" : on ? members ? `${members} on` : "On" : "Off",
+          buttons: st ? [{ key: "power", icon: "mdi:power", title: on ? "Turn off" : "Turn on", on, color: KIT_COLOR.warm }] : [],
+          onButton: () => this._toggle(head)
+        });
+      }
       if (!this._built) {
         this.innerHTML = `
         <ha-card style="border:none; box-shadow: 0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; background: var(--card-background-color); padding:16px 16px 14px 16px;">
@@ -2177,6 +2789,10 @@
       return { columns: 12, min_columns: 6, rows: "auto" };
     }
   };
+  kitCompactable(LightControlCard, (card) => {
+    card._built = false;
+    card._lastIds = null;
+  });
   function registerLightControlCard() {
     if (!customElements.get(`light-control-card-editor${SUFFIX}`)) {
       customElements.define(`light-control-card-editor${SUFFIX}`, LightControlCardEditor);
@@ -2639,480 +3255,6 @@
     });
   }
 
-  // src/card-kit.js
-  var KIT_COLOR = {
-    off: "#8b919c",
-    good: "#4caf50",
-    fair: "#ffa726",
-    poor: "#ff7043",
-    bad: "#e53935",
-    fan: "#26c6da",
-    sleep: "#7e6fd6",
-    humidity: "#b388ff",
-    blind: "#a1887f",
-    cold: "#42a5f5",
-    cool: "#26c6da",
-    comfy: "#66bb6a",
-    warm: "#ffa726",
-    hot: "#ef5350"
-  };
-  var kitEsc = (text) => String(text == null ? "" : text).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-  var kitCap = (text) => String(text || "").replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
-  var kitNum = (st) => st && st.state !== "" && !isNaN(Number(st.state)) ? Number(st.state) : null;
-  var KIT_HEALTH_CSS = `.ck-stale .ck-row, .ck-stale .ck-dim { opacity:.55; }
-.ck-health { display:none; align-items:center; gap:10px; padding:9px 11px; border-radius:12px; background:color-mix(in srgb, #ffa726 18%, transparent); color:#ffd08a; font-size:0.85rem; }
-.ck-health small { display:block; color:var(--secondary-text-color); font-size:0.74rem; }
-.ck-health button { flex:none; border:none; border-radius:10px; padding:7px 10px; font:inherit; font-size:0.8rem; font-weight:600; background:#ffa726; color:#2a1700; cursor:pointer; }`;
-  function kitShell(body, extraCss = "") {
-    return `
-    <ha-card class="ck-card" style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; padding:16px; background:var(--card-background-color); transition:background-color .6s ease; display:flex; flex-direction:column; gap:12px;">
-      <style>
-        .ck-row { display:flex; gap:6px; }
-        .ck-q { position:relative; overflow:hidden; container-type:inline-size; flex:1 1 0; min-width:0; height:48px; border:none; border-radius:12px; padding:0 6px; cursor:pointer;
-          background:rgba(127,127,127,0.14); color:var(--primary-text-color); font:inherit; font-size:13px; font-weight:600;
-          display:flex; align-items:center; justify-content:center; gap:6px; transition:background-color .2s, color .2s; }
-        .ck-q.ck-col { flex-direction:column; gap:2px; height:56px; font-size:11px; }
-        .ck-q.ck-on { color:#fff; }
-        .ck-q:disabled { opacity:.4; cursor:default; }
-        .ck-q span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
-        @container (max-width: 56px) { .ck-q:not(.ck-col) span.ck-hide { display:none; } }
-        .ck-q::after { content:''; position:absolute; inset:0; background:#fff; opacity:0; transition:opacity .15s; pointer-events:none; }
-        .ck-q:not(:disabled):hover::after { opacity:.08; }
-        .ck-q:focus-visible, .ck-tap:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
-        .ck-hold { position:absolute; left:0; top:0; bottom:0; width:0; background:rgba(255,255,255,.22); pointer-events:none; }
-        .ck-sub { font-size:0.8rem; color:var(--secondary-text-color); }
-        .ck-info { flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; font-size:0.85rem; color:var(--secondary-text-color); }
-        .ck-info > span { display:flex; align-items:center; gap:5px; }
-        .ck-chip { display:inline-flex; align-items:center; gap:4px; padding:1px 8px; border-radius:999px; font-size:0.72rem; font-weight:600; }
-        .ck-bar { height:8px; border-radius:99px; background:rgba(127,127,127,.2); overflow:hidden; }
-        .ck-bar > i { display:block; height:100%; border-radius:inherit; transition:width .4s; }
-        .ck-tap { cursor:pointer; }
-        ${KIT_HEALTH_CSS}
-        ${extraCss}
-      </style>
-      <div style="display:flex; align-items:baseline; gap:8px;">
-        <div class="ck-title" style="flex:1; min-width:0; font-size:1.5rem; font-weight:500; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:color .6s;"></div>
-        <div class="ck-word" style="flex:none; font-size:0.85rem; color:var(--secondary-text-color);"></div>
-      </div>
-      <div class="ck-health" role="status"></div>
-      ${body}
-    </ha-card>`;
-  }
-  function kitHead(root, title, word, color, tint = 0) {
-    const t = root.querySelector(".ck-title");
-    const w = root.querySelector(".ck-word");
-    const card = root.querySelector(".ck-card");
-    t.textContent = title;
-    t.style.color = color;
-    w.textContent = word;
-    card.style.backgroundColor = tint ? `color-mix(in srgb, ${color} ${tint}%, var(--card-background-color))` : "var(--card-background-color)";
-  }
-  function kitGauge(p, color, label, sub, size = 84) {
-    const r = size / 2 - 7, cx = size / 2, len = 1.5 * Math.PI * r;
-    const fill = Math.max(0, Math.min(1, p || 0));
-    const arc = (extra) => `<circle cx="${cx}" cy="${cx}" r="${r}" fill="none" stroke-width="6" stroke-linecap="round" transform="rotate(135 ${cx} ${cx})" ${extra}></circle>`;
-    return `<div style="position:relative; width:${size}px; height:${size}px; flex:none;">
-      <svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" aria-hidden="true" style="display:block;">
-        ${arc(`stroke="rgba(127,127,127,0.28)" stroke-dasharray="${len} 9999"`)}
-        ${fill > 0 ? arc(`stroke="${color}" stroke-dasharray="${Math.max(0.01, len * fill)} 9999"`) : ""}
-      </svg>
-      <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
-        <b style="font-size:1.1rem; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.1;">${kitEsc(label)}</b>
-        <span style="font-size:0.66rem; color:var(--secondary-text-color); line-height:1.2;">${kitEsc(sub)}</span>
-      </div>
-    </div>`;
-  }
-  function kitTiles(box, list, onTap, { column = false, hideNames = false } = {}) {
-    const sig = JSON.stringify(list.map((t) => [t.key, t.name, t.icon, t.color, !!t.on, !!t.disabled, !!t.hold]));
-    if (box._ckSig === sig) return;
-    box._ckSig = sig;
-    box.innerHTML = "";
-    box.style.display = list.length ? "flex" : "none";
-    list.forEach((t) => {
-      const b = document.createElement("button");
-      b.className = `ck-q${column ? " ck-col" : ""}${t.on ? " ck-on" : ""}`;
-      b.disabled = !!t.disabled;
-      b.title = t.name;
-      b.setAttribute("aria-label", b.title);
-      b.setAttribute("aria-pressed", String(!!t.on));
-      if (t.on) b.style.background = t.color;
-      b.innerHTML = `${t.hold ? '<i class="ck-hold"></i>' : ""}${iconHtml(t.icon, { size: "20px", style: "flex-shrink:0; position:relative;" })}<span class="${hideNames ? "ck-hide" : ""}" style="position:relative;"></span>`;
-      b.querySelector("span").textContent = t.name;
-      if (t.hold) kitHold(b, () => onTap(t));
-      else b.addEventListener("click", () => onTap(t));
-      box.appendChild(b);
-    });
-  }
-  function kitHold(button, done) {
-    const bar = button.querySelector(".ck-hold");
-    let timer = null;
-    const stop = () => {
-      clearTimeout(timer);
-      timer = null;
-      bar.style.transition = "width .2s";
-      bar.style.width = "0";
-    };
-    const start = (ev) => {
-      if (ev.button > 0) return;
-      stop();
-      bar.style.transition = "width 1.5s linear";
-      requestAnimationFrame(() => bar.style.width = "100%");
-      timer = setTimeout(() => {
-        stop();
-        done();
-      }, 1500);
-    };
-    button.addEventListener("pointerdown", start);
-    ["pointerup", "pointerleave", "pointercancel"].forEach((e) => button.addEventListener(e, stop));
-    button.addEventListener("keydown", (ev) => {
-      if ((ev.key === "Enter" || ev.key === " ") && !timer) start(ev);
-    });
-    button.addEventListener("keyup", stop);
-  }
-  function kitNavigate(path, replace = false) {
-    if (!path) return;
-    if (/^https?:/.test(path)) {
-      window.open(path, "_blank", "noopener");
-      return;
-    }
-    history[replace ? "replaceState" : "pushState"](null, "", path);
-    window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace } }));
-  }
-  function kitMoreInfo(el, entityId) {
-    if (!entityId) return;
-    el.dispatchEvent(new CustomEvent("hass-more-info", { detail: { entityId }, bubbles: true, composed: true }));
-  }
-  async function kitHistory(hass, ids, hours = 24) {
-    const out = {};
-    if (!hass || !hass.callWS || !ids.length) return out;
-    const res = await hass.callWS({
-      type: "history/history_during_period",
-      start_time: new Date(Date.now() - hours * 36e5).toISOString(),
-      entity_ids: ids,
-      minimal_response: true,
-      no_attributes: true,
-      significant_changes_only: false
-    });
-    ids.forEach((id) => {
-      out[id] = (res[id] || []).map((p) => [(p.lu || p.lc || 0) * 1e3, Number(p.s)]).filter((p) => p[0] && !isNaN(p[1]) && p[1] !== null);
-    });
-    return out;
-  }
-  async function kitStateHistory(hass, ids, hours = 24) {
-    const out = {};
-    if (!hass || !hass.callWS || !ids.length) return out;
-    const res = await hass.callWS({
-      type: "history/history_during_period",
-      start_time: new Date(Date.now() - hours * 36e5).toISOString(),
-      entity_ids: ids,
-      minimal_response: true,
-      no_attributes: true,
-      significant_changes_only: false
-    });
-    ids.forEach((id) => {
-      out[id] = (res[id] || []).map((p) => [(p.lc || p.lu || 0) * 1e3, p.s]).filter((p) => p[0]);
-    });
-    return out;
-  }
-  function kitDemoSeries(values, hours = 24) {
-    const now = Date.now();
-    return values.map((v, i) => [now - hours * 36e5 * (values.length - 1 - i) / (values.length - 1), v]);
-  }
-  function kitSmooth(pts, from, now, slots = 96) {
-    const sorted = (pts || []).filter((p) => p[1] != null && !isNaN(p[1])).sort((a, b) => a[0] - b[0]);
-    if (sorted.length < 3) return sorted;
-    const step = (now - from) / slots;
-    let j = 0, v = null;
-    while (j < sorted.length && sorted[j][0] <= from) v = sorted[j++][1];
-    const avg2 = [];
-    for (let k = 0; k < slots; k++) {
-      const a = from + k * step, b = a + step;
-      let sum = 0, dur = 0, t = a;
-      while (j < sorted.length && sorted[j][0] < b) {
-        const tp = sorted[j][0];
-        if (v != null) {
-          sum += v * (tp - t);
-          dur += tp - t;
-        }
-        t = tp;
-        v = sorted[j++][1];
-      }
-      if (v != null) {
-        sum += v * (b - t);
-        dur += b - t;
-      }
-      if (dur > 0) avg2.push([a + step / 2, sum / dur]);
-    }
-    const w = [1, 2, 3, 4, 3, 2, 1];
-    const out = avg2.map((p, i) => {
-      let s = 0, n = 0;
-      w.forEach((wt, k) => {
-        const q = avg2[i + k - 3];
-        if (q) {
-          s += q[1] * wt;
-          n += wt;
-        }
-      });
-      return [p[0], s / n];
-    });
-    if (out.length) out.push([now, out[out.length - 1][1]]);
-    return out;
-  }
-  function kitPath(xy, curve = true) {
-    const f = (p) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`;
-    if (!curve || xy.length < 3) return xy.map((p, i) => `${i ? "L" : "M"}${f(p)}`).join(" ");
-    let d = `M${f(xy[0])}`;
-    for (let i = 0; i < xy.length - 1; i++) {
-      const p0 = xy[i - 1] || xy[i], p1 = xy[i], p2 = xy[i + 1], p3 = xy[i + 2] || p2;
-      const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
-      const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
-      d += ` C${f(c1)} ${f(c2)} ${f(p2)}`;
-    }
-    return d;
-  }
-  function kitGraph(series, { hours = 24, height = 48, label = "", meta = null, smooth = true } = {}) {
-    const W = 300, H = height, now = Date.now(), from = now - hours * 36e5;
-    const x = (t) => (Math.max(from, t) - from) / (now - from) * W;
-    let under = "", over = "";
-    const scrub = [];
-    series.forEach((s) => {
-      const raw = (s.pts || []).filter((p) => p[1] != null && !isNaN(p[1]));
-      if (s.current != null && !isNaN(s.current)) raw.push([now, Number(s.current)]);
-      const pts = smooth ? kitSmooth(raw, from, now) : raw;
-      if (pts.length < 2) return;
-      const vals = pts.map((p) => p[1]);
-      const lo = Math.min(...vals) - (s.pad || 0.3), hi = Math.max(...vals) + (s.pad || 0.3);
-      const y = (v) => H - 3 - (v - lo) / (hi - lo || 1) * (H - 6);
-      const d = kitPath(pts.map((p) => [x(p[0]), y(p[1])]), smooth);
-      if (s.fill) under += `<path d="${d} L${W},${H} L0,${H} Z" fill="${s.color}" fill-opacity="0.16"></path>`;
-      over += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.width || 2}" vector-effect="non-scaling-stroke"></path>`;
-      scrub.push({ pts, raw, lo, hi, color: s.color, format: s.format, linear: smooth });
-    });
-    if (!under && !over) return "";
-    if (meta) Object.assign(meta, { from, now, height: H, series: scrub });
-    return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block; width:100%; height:${H}px;" role="img" aria-label="${kitEsc(label)}">${under}${over}</svg>`;
-  }
-  function kitScrub(svg2, spec) {
-    if (!svg2 || !spec || !spec.series || !spec.series.length || svg2.parentNode._ckScrub) return;
-    const H = spec.height;
-    const wrap = document.createElement("div");
-    wrap._ckScrub = true;
-    wrap.style.cssText = "position:relative; touch-action:pan-y; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;";
-    svg2.parentNode.insertBefore(wrap, svg2);
-    wrap.appendChild(svg2);
-    const line = document.createElement("div");
-    line.style.cssText = `position:absolute; top:0; height:${H}px; width:1px; background:var(--primary-text-color); opacity:.6; pointer-events:none; display:none;`;
-    const tip = document.createElement("div");
-    tip.style.cssText = "position:absolute; bottom:calc(100% + 6px); z-index:3; padding:6px 9px; border-radius:10px; background:var(--card-background-color); box-shadow:0 3px 10px rgba(0,0,0,.45); font-size:0.78rem; line-height:1.4; white-space:nowrap; pointer-events:none; display:none; font-variant-numeric:tabular-nums;";
-    const dots = spec.series.map((s) => {
-      const d = document.createElement("div");
-      d.style.cssText = `position:absolute; width:9px; height:9px; margin:-4.5px 0 0 -4.5px; border-radius:50%; background:${s.color}; box-shadow:0 0 0 2px var(--card-background-color); pointer-events:none; display:none;`;
-      return d;
-    });
-    wrap.append(line, ...dots, tip);
-    const lerp = (pts, t) => {
-      if (!pts.length) return null;
-      if (t <= pts[0][0]) return pts[0][1];
-      for (let k = 1; k < pts.length; k++) {
-        if (t <= pts[k][0]) {
-          const [a, va] = pts[k - 1], [b, vb] = pts[k];
-          return va + (vb - va) * (t - a) / (b - a || 1);
-        }
-      }
-      return pts[pts.length - 1][1];
-    };
-    const valueAt = (pts, t) => {
-      let v = null;
-      for (const p of pts) {
-        if (p[0] <= t) v = p[1];
-        else break;
-      }
-      return v == null && pts.length ? pts[0][1] : v;
-    };
-    const when2 = (t) => {
-      const d = new Date(t), today = /* @__PURE__ */ new Date();
-      const time = d.toLocaleTimeString(void 0, { hour: "2-digit", minute: "2-digit" });
-      return d.toDateString() === today.toDateString() ? time : `${d.toLocaleDateString(void 0, { weekday: "short" })} ${time}`;
-    };
-    const show = (clientX) => {
-      const rect = wrap.getBoundingClientRect();
-      const f = Math.max(0, Math.min(1, (clientX - rect.left) / (rect.width || 1)));
-      const t = spec.from + f * (spec.now - spec.from);
-      const left = f * rect.width;
-      line.style.left = `${left}px`;
-      line.style.display = "block";
-      const rows = [];
-      spec.series.forEach((s, i) => {
-        const v = s.raw ? valueAt(s.raw, t) : valueAt(s.pts, t);
-        const yv = s.linear ? lerp(s.pts, t) : v;
-        const dot = dots[i];
-        if (v == null || yv == null) {
-          dot.style.display = "none";
-          return;
-        }
-        const colour = s.colourOf ? s.colourOf(v) : s.color;
-        dot.style.background = colour;
-        dot.style.left = `${left}px`;
-        dot.style.top = `${H - 3 - (yv - s.lo) / (s.hi - s.lo || 1) * (H - 6)}px`;
-        dot.style.display = "block";
-        rows.push(`<div style="color:${colour};">\u25CF ${kitEsc(s.format ? s.format(v) : Number(v).toFixed(1))}</div>`);
-      });
-      tip.innerHTML = `<div style="color:var(--secondary-text-color);">${when2(t)}</div>${rows.join("")}`;
-      tip.style.display = "block";
-      const w = tip.offsetWidth;
-      tip.style.left = `${Math.max(0, Math.min(rect.width - w, left - w / 2))}px`;
-    };
-    const hide = () => {
-      [line, tip, ...dots].forEach((el) => el.style.display = "none");
-    };
-    let active = false, used = false, timer = null, sx = 0, sy = 0;
-    wrap.addEventListener("pointerenter", (ev) => ev.pointerType === "mouse" && show(ev.clientX));
-    wrap.addEventListener("pointermove", (ev) => {
-      if (ev.pointerType === "mouse") return show(ev.clientX);
-      if (active) return show(ev.clientX);
-      if (timer && (Math.abs(ev.clientX - sx) > 10 || Math.abs(ev.clientY - sy) > 10)) {
-        clearTimeout(timer);
-        timer = null;
-      }
-    });
-    wrap.addEventListener("pointerleave", (ev) => ev.pointerType === "mouse" && hide());
-    wrap.addEventListener("pointerdown", (ev) => {
-      if (ev.pointerType === "mouse") return;
-      sx = ev.clientX;
-      sy = ev.clientY;
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        timer = null;
-        active = true;
-        used = true;
-        show(sx);
-      }, 300);
-    });
-    const end = () => {
-      clearTimeout(timer);
-      timer = null;
-      if (active) {
-        active = false;
-        hide();
-      }
-    };
-    ["pointerup", "pointercancel"].forEach((e) => wrap.addEventListener(e, end));
-    wrap.addEventListener("touchmove", (ev) => {
-      if (active && ev.cancelable) ev.preventDefault();
-      if (active && ev.touches[0]) show(ev.touches[0].clientX);
-    }, { passive: false });
-    wrap.addEventListener("touchend", end);
-    wrap.addEventListener("contextmenu", (ev) => (active || used) && ev.preventDefault());
-    wrap.addEventListener("click", (ev) => {
-      if (used) {
-        used = false;
-        ev.stopPropagation();
-        ev.preventDefault();
-      }
-    }, true);
-  }
-  function kitRange(pts, current, digits, unit) {
-    const vals = (pts || []).map((p) => p[1]).filter((v) => v != null && !isNaN(v));
-    if (current != null && !isNaN(current)) vals.push(Number(current));
-    if (!vals.length) return "";
-    const f = (v) => Number(v).toFixed(digits);
-    return `${f(Math.min(...vals))}\u2013${f(Math.max(...vals))}${unit}`;
-  }
-  var KitHistory = class {
-    constructor(owner, ids, hours, loader = kitHistory) {
-      this.owner = owner;
-      this.ids = ids;
-      this.hours = hours;
-      this.loader = loader;
-      this.data = null;
-      this.at = 0;
-      this.loading = false;
-    }
-    due() {
-      return !this.loading && Date.now() - this.at > 10 * 6e4;
-    }
-    async load(hass) {
-      if (!this.due()) return;
-      this.loading = true;
-      try {
-        this.data = await this.loader(hass, this.ids.filter(Boolean), this.hours);
-      } catch (err) {
-        this.data = this.data || {};
-      }
-      this.at = Date.now();
-      this.loading = false;
-      this.owner._render();
-    }
-  };
-  var KitPending = class {
-    constructor(owner) {
-      this.owner = owner;
-      this.want = null;
-    }
-    set(want) {
-      this.want = want;
-      clearTimeout(this.timer);
-      this.timer = setTimeout(() => {
-        this.want = null;
-        this.owner._render();
-      }, 8e3);
-    }
-    apply(st) {
-      const w = this.want;
-      if (!w || !st) return st;
-      const a = st.attributes || {};
-      const same2 = (x, y) => typeof x === "number" && typeof y === "number" ? Math.abs(x - y) <= 2 : x === y;
-      const attrs = w.attrs || {};
-      if (st.state === w.state && Object.keys(attrs).every((k) => same2(a[k], attrs[k]))) {
-        this.want = null;
-        clearTimeout(this.timer);
-        return st;
-      }
-      return { ...st, state: w.state, attributes: { ...a, ...attrs } };
-    }
-  };
-  var HEALTH_SENSOR = "sensor.church_drive_device_health";
-  function kitHealthOf(hass, entityId) {
-    const s = hass && entityId && hass.states[HEALTH_SENSOR];
-    const d = s && s.attributes.devices && s.attributes.devices[entityId];
-    return d && d.status !== "ok" ? d : null;
-  }
-  var kitClock = (iso) => iso ? new Date(iso).toLocaleTimeString(void 0, { hour: "2-digit", minute: "2-digit" }) : "";
-  function kitRealText(real) {
-    if (!real) return "";
-    let what = kitCap(real.state);
-    if (real.preset_mode) {
-      const m = /^speed[ _-]?(\d+)$/i.exec(real.preset_mode);
-      what = m ? `Speed ${m[1]}` : kitCap(real.preset_mode);
-    } else if (real.temperature != null && real.state !== "off") {
-      what = `${kitCap(real.state)} ${real.temperature}\xB0`;
-    }
-    return `${what} at ${kitClock(real.at)}`;
-  }
-  function kitHealthBanner(root, hass, entityId, demo) {
-    const box = root.querySelector(".ck-health");
-    const card = root.querySelector(".ck-card") || root.querySelector("ha-card");
-    if (!box) return null;
-    const d = demo ? null : kitHealthOf(hass, entityId);
-    card.classList.toggle("ck-stale", !!d);
-    const sig = d ? JSON.stringify([d.reason, d.since, d.last_real, d.fixes]) : "";
-    if (box._sig === sig) return d;
-    box._sig = sig;
-    box.style.display = d ? "flex" : "none";
-    if (!d) {
-      box.innerHTML = "";
-      return null;
-    }
-    const last = (d.fixes || []).slice(-1)[0];
-    box.innerHTML = `${iconHtml("mdi:lan-disconnect", { size: "22px", style: "flex:none;" })}
-    <div style="flex:1; min-width:0; line-height:1.35;">Not responding since ${kitClock(d.since)}
-      <small></small></div>
-    <button type="button">Fix now</button>`;
-    box.querySelector("small").textContent = [d.reason, d.last_real ? `Last real: ${kitRealText(d.last_real)}` : "", last ? `Fixing: ${last.replace(/^\d\d:\d\d /, "")}` : ""].filter(Boolean).join(" \xB7 ");
-    box.querySelector("button").addEventListener("click", () => hass.callService("church_drive", "health_fix", { entity_id: entityId, action: entityId.startsWith("fan.") ? "nudge" : "resync" }));
-    return d;
-  }
-
   // src/section-title-card.js
   var STC_FALLBACK = {
     red: "#f44336",
@@ -3206,21 +3348,43 @@
         <div class="stc-title" style="flex:1; min-width:0; font-size:1.6rem; font-weight:500; line-height:1.2; color:var(--primary-text-color); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
         <div class="stc-summary" style="flex:none; max-width:55%; font-size:0.9rem; color:var(--secondary-text-color); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:right;"></div>
         ${c.link ? iconHtml("mdi:chevron-right", { size: "22px", style: "flex:none; margin-left:-4px; color:var(--secondary-text-color);" }) : ""}
+        ${c.collapsible ? `<button class="stc-tog" type="button" aria-label="Show less" aria-expanded="true" style="flex:none; width:34px; height:34px; margin:-6px -6px -6px -2px; border:none; border-radius:50%; background:transparent; color:var(--secondary-text-color); cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0;">${iconHtml("mdi:chevron-down", { size: "24px", style: "transition:transform .2s ease;", cls: "stc-chev" })}</button>` : ""}
       </div>`;
       const row3 = this.firstElementChild;
+      const toggle = () => this.dispatchEvent(new CustomEvent("stc-toggle", { bubbles: true }));
+      this._tog = this.querySelector(".stc-tog");
+      if (this._tog) {
+        this._tog.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          toggle();
+        });
+        this.setOpen(this._open !== false);
+      }
       if (c.link) {
         row3.style.cursor = "pointer";
         row3.setAttribute("role", "link");
         row3.tabIndex = 0;
         const go = () => kitNavigate(c.link);
         row3.addEventListener("click", go);
-        row3.addEventListener("keydown", (ev) => (ev.key === "Enter" || ev.key === " ") && go());
+        row3.addEventListener("keydown", (ev) => ev.target === row3 && (ev.key === "Enter" || ev.key === " ") && go());
+      } else if (c.collapsible) {
+        row3.style.cursor = "pointer";
+        row3.addEventListener("click", toggle);
       }
       this.querySelector(".stc-title").textContent = c.title;
       this._summaryEl = this.querySelector(".stc-summary");
       this._iconEl = this.querySelector(".stc-icon");
       if (this._summary) this._summaryEl.textContent = this._summary;
       hydrateIcons(this);
+    }
+    // Point the ⌄ down (open) or right (compact).
+    setOpen(open) {
+      this._open = open;
+      if (!this._tog) return;
+      this._tog.setAttribute("aria-expanded", String(open));
+      this._tog.setAttribute("aria-label", open ? "Show less" : "Show more");
+      const chev = this._tog.querySelector(".stc-chev");
+      if (chev) chev.style.transform = open ? "" : "rotate(-90deg)";
     }
     _unsubscribe() {
       [this._unsub, this._unsubColor].forEach((p) => p && p.then((unsub) => unsub && unsub()).catch(() => {
@@ -3290,17 +3454,35 @@
       { name: "color", selector: { ui_color: {} } },
       STC_COLOR_TEMPLATE_FIELD,
       { name: "summary", selector: { template: {} } },
-      { name: "link", selector: { navigation: {} } }
+      { name: "link", selector: { navigation: {} } },
+      {
+        type: "expandable",
+        name: "",
+        title: "Open or compact",
+        flatten: true,
+        schema: [
+          { name: "phone_start", selector: { select: { mode: "dropdown", options: [{ value: "compact", label: "Compact (one row per card)" }, { value: "open", label: "Open" }] } } },
+          { name: "tablet_start", selector: { select: { mode: "dropdown", options: [{ value: "open", label: "Open" }, { value: "compact", label: "Compact (one row per card)" }] } } },
+          { name: "open_when", selector: { template: {} } },
+          { name: "collapsible", selector: { boolean: {} }, default: true }
+        ]
+      }
     ],
     labels: {
       title: "Title",
       icon: "Icon (optional)",
       link: "Tapping the title opens (optional page)",
+      phone_start: "On phones, starts",
+      tablet_start: "On tablets and computers, starts",
+      open_when: "Opens by itself when (optional template)",
+      collapsible: "Show the \u2304 to switch between open and compact",
       color: "Colour (icon and panel)",
       color_template: STC_COLOR_TEMPLATE_LABEL,
       summary: "Summary on the right (optional template)"
     },
     helpers: {
+      phone_start: "Each phone or tablet remembers what you last chose with the \u2304; this is where it starts. Phones are screens under 600px wide.",
+      open_when: "E.g. {{ is_state('binary_sensor.back_door', 'on') }}. The panel opens while it's true, then goes back to how you left it.",
       color_template: STC_COLOR_TEMPLATE_HELPER,
       summary: `A Home Assistant template, e.g. {{ states('vacuum.gregg') | title }}`
     }
@@ -3370,13 +3552,81 @@
       if (!config.title) throw new Error("title required");
       this.config = config;
       this._built = false;
+      this._fallback = null;
       this._build();
+      if (this._hass) this._watchOpenWhen();
     }
     set hass(hass) {
+      const first = !this._hass;
       this._hass = hass;
       if (this._title) this._title.hass = hass;
       (this._cards || []).forEach((card) => {
         card.hass = hass;
+      });
+      if (first) this._watchOpenWhen();
+    }
+    // ---- Open or compact.
+    // Phones (under 600px) and bigger screens each start as the config says,
+    // then remember the last choice on that device. An "open when" template
+    // opens the panel while it's true.
+    get _collapsible() {
+      return this.config.collapsible !== false;
+    }
+    _device() {
+      return window.innerWidth < 600 ? "phone" : "tablet";
+    }
+    _key() {
+      return `cd-panel:${location.pathname}:${this.config.title}:${this._device()}`;
+    }
+    _chosen() {
+      try {
+        const v = localStorage.getItem(this._key());
+        if (v === "open" || v === "compact") return v;
+      } catch (err) {
+      }
+      const start = this._device() === "phone" ? this.config.phone_start || "compact" : this.config.tablet_start || "open";
+      return start === "compact" ? "compact" : "open";
+    }
+    _choose(mode) {
+      try {
+        localStorage.setItem(this._key(), mode);
+      } catch (err) {
+        this._fallback = mode;
+      }
+      this._apply();
+    }
+    _mode() {
+      if (!this._collapsible || this._alert || this._editing()) return "open";
+      return this._fallback || this._chosen();
+    }
+    _editing() {
+      return !!(this.editMode || this.preview);
+    }
+    _apply() {
+      const compact = this._mode() === "compact";
+      if (this._title && this._title.setOpen) this._title.setOpen(!compact);
+      (this._cards || []).forEach((card) => {
+        if (card.supportsCompact) {
+          card.style.display = "";
+          card.compact = compact;
+        } else {
+          card.style.display = compact ? "none" : "";
+        }
+      });
+      if (this._panelEl) this._panelEl.style.gap = compact ? "8px" : "12px";
+    }
+    _watchOpenWhen() {
+      if (this._unsubOpen) this._unsubOpen.then((u) => u && u()).catch(() => {
+      });
+      this._unsubOpen = null;
+      this._alert = false;
+      if (!this.config.open_when || !this._hass || !this.isConnected) return;
+      this._unsubOpen = stcRender(this._hass, this.config.open_when, (text) => {
+        const t = String(text || "").trim().toLowerCase();
+        const alert = !!t && !["0", "false", "off", "no", "none", "unknown", "unavailable"].includes(t);
+        if (alert === this._alert) return;
+        this._alert = alert;
+        this._apply();
       });
     }
     _build() {
@@ -3387,13 +3637,24 @@
         <div class="spc-bg" style="position:absolute; inset:0; border-radius:inherit; background:${color}; opacity:0.1; z-index:-1; pointer-events:none; transition:background-color .6s ease;"></div>
       </div>`;
       const panel = this.querySelector(".spc-panel");
+      this._panelEl = panel;
+      panel.addEventListener("stc-toggle", (ev) => {
+        ev.stopPropagation();
+        this._fallback = null;
+        this._choose(this._mode() === "compact" ? "open" : "compact");
+      });
+      panel.addEventListener("cd-expand", (ev) => {
+        ev.stopPropagation();
+        this._fallback = null;
+        this._choose("open");
+      });
       const bg = this.querySelector(".spc-bg");
       panel.addEventListener("stc-color", (ev) => {
         ev.stopPropagation();
         bg.style.background = ev.detail;
       });
       this._title = document.createElement(`section-title-card${SUFFIX}`);
-      this._title.setConfig({ title: c.title, icon: c.icon, color: c.color, color_template: c.color_template, summary: c.summary, link: c.link });
+      this._title.setConfig({ title: c.title, icon: c.icon, color: c.color, color_template: c.color_template, summary: c.summary, link: c.link, collapsible: this._collapsible });
       if (this._hass) this._title.hass = this._hass;
       panel.appendChild(this._title);
       const token = this._token = {};
@@ -3409,15 +3670,34 @@
             if (this._hass) fresh.hass = this._hass;
             el.replaceWith(fresh);
             this._cards[this._cards.indexOf(el)] = fresh;
+            this._apply();
           });
           this._cards.push(el);
           panel.appendChild(el);
         });
+        this._apply();
       }).catch(() => {
       });
     }
     connectedCallback() {
       requestAnimationFrame(() => this._spaceFromAbove());
+      this._onResize = () => {
+        const d = this._device();
+        if (d !== this._lastDevice) {
+          this._lastDevice = d;
+          this._apply();
+        }
+      };
+      this._lastDevice = this._device();
+      window.addEventListener("resize", this._onResize);
+      if (this._hass) this._watchOpenWhen();
+      this._apply();
+    }
+    disconnectedCallback() {
+      window.removeEventListener("resize", this._onResize);
+      if (this._unsubOpen) this._unsubOpen.then((u) => u && u()).catch(() => {
+      });
+      this._unsubOpen = null;
     }
     // A panel right under another panel in the same section gets the same gap
     // as between section columns (32px; the section's own gap between cards is
@@ -3762,12 +4042,12 @@
     _render() {
       if (!this._hass || !this.config) return;
       const c = this.config;
-      if (!this._built) {
+      if (!this._built && !this._compact) {
         this.innerHTML = kitShell(`<div class="cz-rooms" style="display:flex; flex-direction:column; gap:10px;"></div>`);
         this._box = this.querySelector(".cz-rooms");
         this._built = true;
       }
-      if (this._hist && this._hist.due()) this._hist.load(this._hass);
+      if (this._hist && this._hist.due() && !this._compact) this._hist.load(this._hass);
       const rooms = this._rooms();
       const showGraphs = c.show_graphs !== false;
       const showHum = c.show_humidity_graph !== false;
@@ -3778,6 +4058,15 @@
       const worst = rooms.filter((r) => r.t != null).sort((a, b) => czOff(b.t, b.low, b.high) - czOff(a.t, a.low, a.high))[0];
       const titleColour = !worst ? KIT_COLOR.off : worst.t <= 0 ? FREEZING : czOff(worst.t, worst.low, worst.high) ? czColour(worst.t, worst.low, worst.high) : KIT_COLOR.comfy;
       const title = c.title || (c.demo ? (CZ_DEMO[c.demo_floor] || CZ_DEMO.ground).title : "Climate");
+      if (this._compact) {
+        return kitCompact(this, {
+          name: title,
+          color: titleColour,
+          value: t != null ? `${t.toFixed(1)}\xB0` : "",
+          status: h != null ? `${Math.round(h)}%` : "",
+          chips: rooms.map((r) => ({ label: `${r.name} ${r.t != null ? `${r.t.toFixed(1)}\xB0` : "\u2013"}`, color: r.t != null && r.t <= 0 ? FREEZING : czColour(r.t, r.low, r.high) }))
+        });
+      }
       kitHead(this, title, [t != null ? `${t.toFixed(1)}\xB0` : "", h != null ? `${Math.round(h)}%` : ""].filter(Boolean).join(" \xB7 ") + (c.demo ? " \xB7 demo" : ""), titleColour);
       const sig = JSON.stringify([rooms.map((r) => [r.name, r.icon, r.note, r.t, r.h, r.low, r.high]), showGraphs, showHum, limits, this._hist && this._hist.at, c]);
       if (sig === this._sig) return;
@@ -3835,6 +4124,10 @@
       return { demo: true, title: "Ground Floor" };
     }
   };
+  kitCompactable(ClimateZoneCard, (card) => {
+    card._built = false;
+    card._sig = null;
+  });
   function registerClimateZoneCard() {
     if (!customElements.get(`climate-zone-card-editor${SUFFIX}`)) customElements.define(`climate-zone-card-editor${SUFFIX}`, ClimateZoneCardEditor);
     if (!customElements.get(`climate-zone-card${SUFFIX}`)) customElements.define(`climate-zone-card${SUFFIX}`, ClimateZoneCard);
@@ -4199,12 +4492,31 @@
       if (v.action === "fan") return { word: presetWord || "Fan", color: CC_COLOR.fan, tint: 8 };
       return { word: presetWord || "Idle", color: (CC_MODES[v.mode] || {}).color || "#a594de", tint: 0 };
     }
+    // One row: name, room temperature, what it's doing, and the quick settings
+    // (icons only).
+    _compactSpec(st) {
+      const cfg = this.config, v = this._view(st), s = this._status(v), a = v.a;
+      const off = v.mode === "off" || v.mode === "unavailable";
+      const active = this._quickList(st).findIndex((q) => this._matches(q, v));
+      return {
+        name: cfg.name || a.friendly_name || cfg.entity,
+        color: s.color,
+        value: a.current_temperature != null ? deg(a.current_temperature) : "\u2013",
+        status: off || v.target == null ? s.word : `${s.word} \xB7 ${deg(v.target)}`,
+        buttons: this._quickList(st).map((q, i) => {
+          const look = q.preset_mode && !noPreset(q.preset_mode) && CC_PRESETS[q.preset_mode] || q.hvac_mode && CC_MODES[q.hvac_mode] || CC_MODES.heat;
+          return { key: `q${i}`, icon: q.icon || look.icon, title: q.name, on: i === active, color: q.color ? stcColor(q.color) : look.color || CC_MODES.heat.color, q };
+        }),
+        onButton: (b) => this._applyQuick(b.q)
+      };
+    }
     _entityState(id) {
       return id && this._hass && this._hass.states[id];
     }
     _render() {
       const st = this._state();
       if (!st) return;
+      if (this._compact) return kitCompact(this, this._compactSpec(st));
       if (!this._built) this._build();
       const e = this._els;
       const cfg = this.config;
@@ -4684,6 +4996,7 @@
       return first ? { entity: first } : { demo: true };
     }
   };
+  kitCompactable(ClimateCard);
   function registerClimateCard() {
     if (!customElements.get(`climate-card-editor${SUFFIX}`)) {
       customElements.define(`climate-card-editor${SUFFIX}`, ClimateCardEditor);
@@ -4801,6 +5114,7 @@
       const st = this._state();
       if (!st || !this._hass) return;
       const c = this.config;
+      if (this._compact) return kitCompact(this, this._compactSpec(st));
       if (!this._built) {
         this.innerHTML = kitShell(`
         <div class="fc-top" style="display:flex; align-items:center; gap:14px;">
@@ -4856,6 +5170,23 @@
       });
       hydrateIcons(this);
     }
+    // One row: name, room temperature, and Off / speed buttons.
+    _compactSpec(st) {
+      const c = this.config, a = st.attributes, on = st.state === "on";
+      const speeds = fanSpeeds(a);
+      const current = on ? speeds.find((s) => s.preset ? s.preset === a.preset_mode : Math.abs((a.percentage || 0) - s.percentage) < 5) : null;
+      const preset = on && a.preset_mode && speedOf(a.preset_mode) == null ? a.preset_mode : null;
+      const color = !on ? KIT_COLOR.off : preset === "sleep" ? KIT_COLOR.sleep : KIT_COLOR.fan;
+      const tv = kitNum(c.temperature_entity && this._hass.states[c.temperature_entity]);
+      const word = st.state === "unavailable" ? "Unavailable" : !on ? "Off" : preset ? kitCap(preset) : current ? `Speed ${current.n}` : "On";
+      return {
+        name: c.name || a.friendly_name || c.entity,
+        color,
+        status: [preset ? word : "", tv != null ? `${tv.toFixed(1)}\xB0` : ""].filter(Boolean).join(" \xB7 ") || word,
+        buttons: [{ key: "off", icon: "mdi:power", title: "Off", on: !on, color: KIT_COLOR.off }, ...speeds.map((s) => ({ key: `s${s.n}`, label: String(s.n), title: `Speed ${s.n}`, on: current === s, color: KIT_COLOR.fan, speed: s }))],
+        onButton: (b) => b.key === "off" ? this._call("turn_off", {}) : this._setSpeed(b.speed)
+      };
+    }
     _setSpeed(s) {
       if (s.preset) this._call("set_preset_mode", { preset_mode: s.preset });
       else this._call("set_percentage", { percentage: s.percentage });
@@ -4899,6 +5230,7 @@
       return first ? { entity: first } : { demo: true };
     }
   };
+  kitCompactable(FanCard);
   function registerFanCard() {
     if (!customElements.get(`fan-card-editor${SUFFIX}`)) customElements.define(`fan-card-editor${SUFFIX}`, FanCardEditor);
     if (!customElements.get(`fan-card${SUFFIX}`)) customElements.define(`fan-card${SUFFIX}`, FanCard);
@@ -5071,6 +5403,7 @@
       const c = this.config;
       const st = this._pending.apply(this._demo ? this._demo.fan : this._hass.states[c.entity]);
       if (!st) return;
+      if (this._compact) return kitCompact(this, this._compactSpec(st));
       if (!this._built) {
         this.innerHTML = kitShell(`
         <div class="ap-top" style="display:flex; align-items:center; gap:14px;">
@@ -5150,6 +5483,29 @@
       });
       hydrateIcons(this);
     }
+    // One row: name, PM2.5 and quality, and Off / Auto / Sleep (plus the
+    // current mode if it's another one).
+    _compactSpec(st) {
+      const c = this.config, a = st.attributes, on = st.state === "on";
+      const pm = this._demo ? this._demo.pm25 : kitNum(c.pm25_entity && this._hass.states[c.pm25_entity]);
+      const q = apQuality(pm, c);
+      const presets = a.preset_modes || [];
+      const pick = presets.filter((p) => /^(auto|sleep|night)$/i.test(p));
+      if (on && a.preset_mode && !pick.includes(a.preset_mode)) pick.push(a.preset_mode);
+      const mode = on ? a.preset_mode ? kitCap(a.preset_mode) : "On" : st.state === "unavailable" ? "Unavailable" : "Off";
+      return {
+        name: c.name || a.friendly_name || c.entity,
+        color: on ? q.color : KIT_COLOR.off,
+        value: pm == null ? "" : String(Math.round(pm)),
+        valueColor: q.color,
+        status: pm == null ? mode : `PM2.5 \xB7 ${q.word || mode}`,
+        buttons: [
+          { key: "__off", icon: "mdi:power", title: "Off", on: !on, color: KIT_COLOR.off },
+          ...pick.map((p) => ({ key: p, icon: AP_MODE_ICONS[String(p).toLowerCase()] || "mdi:fan", title: kitCap(p), on: on && a.preset_mode === p, color: /sleep|night/i.test(p) ? KIT_COLOR.sleep : KIT_COLOR.good }))
+        ],
+        onButton: (b) => this._mode(b.key)
+      };
+    }
     _mode(key) {
       if (this._demo) {
         const f = this._demo.fan;
@@ -5180,6 +5536,7 @@
       return { demo: true };
     }
   };
+  kitCompactable(AirPurifierCard);
   function registerAirPurifierCard() {
     if (!customElements.get(`air-purifier-card-editor${SUFFIX}`)) customElements.define(`air-purifier-card-editor${SUFFIX}`, AirPurifierCardEditor);
     if (!customElements.get(`air-purifier-card${SUFFIX}`)) customElements.define(`air-purifier-card${SUFFIX}`, AirPurifierCard);
@@ -5294,6 +5651,18 @@
     _render() {
       if (!this._hass) return;
       const c = this.config;
+      if (this._compact) {
+        const d2 = this._data();
+        const high2 = d2.alarm || d2.ppm != null && d2.ppm >= 50;
+        const color2 = d2.unavailable ? KIT_COLOR.off : high2 ? KIT_COLOR.bad : d2.ppm >= 10 ? KIT_COLOR.fair : KIT_COLOR.good;
+        return kitCompact(this, {
+          name: c.name || "Carbon Monoxide",
+          color: color2,
+          value: d2.ppm == null ? "\u2013" : String(Math.round(d2.ppm)),
+          valueColor: color2,
+          status: `ppm \xB7 ${d2.unavailable ? "Unavailable" : d2.alarm ? "CO detected" : d2.status ? kitCap(d2.status) : "Normal"}${d2.battery != null && d2.battery < 20 ? ` \xB7 battery ${Math.round(d2.battery)}%` : ""}`
+        });
+      }
       if (!this._built) {
         this.innerHTML = kitShell(`
         <div class="co-warn" style="display:none; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; background:${KIT_COLOR.bad}; color:#fff; font-weight:600;"></div>
@@ -5346,6 +5715,7 @@
       return { demo: true };
     }
   };
+  kitCompactable(CoAlarmCard);
   function registerCoAlarmCard() {
     if (!customElements.get(`co-alarm-card-editor${SUFFIX}`)) customElements.define(`co-alarm-card-editor${SUFFIX}`, CoAlarmCardEditor);
     if (!customElements.get(`co-alarm-card${SUFFIX}`)) customElements.define(`co-alarm-card${SUFFIX}`, CoAlarmCard);
@@ -5442,6 +5812,24 @@
       const st = this._state();
       if (!st || !this._hass) return;
       const c = this.config;
+      if (this._compact) {
+        const a2 = st.attributes, f2 = a2.supported_features || 0, pos2 = a2.current_position;
+        const known2 = ["open", "closed", "opening", "closing"].includes(st.state);
+        const color2 = st.state === "unavailable" ? KIT_COLOR.off : KIT_COLOR.blind;
+        const active2 = !known2 ? this._last : st.state === "open" || st.state === "opening" ? "open" : "close";
+        const word2 = st.state === "unavailable" ? "Unavailable" : known2 ? st.state === "open" && pos2 != null && pos2 < 100 ? `Open ${pos2}%` : st.state.charAt(0).toUpperCase() + st.state.slice(1) : this._last ? `Last: ${this._last.charAt(0).toUpperCase() + this._last.slice(1)}` : "Position unknown";
+        return kitCompact(this, {
+          name: c.name || a2.friendly_name || c.entity,
+          color: color2,
+          status: word2,
+          buttons: [
+            ...f2 & 1 ? [{ key: "open", icon: "mdi:arrow-up", title: "Open", on: active2 === "open", color: color2 }] : [],
+            ...f2 & 8 ? [{ key: "stop", icon: "mdi:stop", title: "Stop", on: !known2 && this._last === "stop", color: color2 }] : [],
+            ...f2 & 2 ? [{ key: "close", icon: "mdi:arrow-down", title: "Close", on: active2 === "close", color: color2 }] : []
+          ],
+          onButton: (b) => this._press(b.key)
+        });
+      }
       if (!this._built) {
         this.innerHTML = kitShell(`
         <div style="display:flex; align-items:center; gap:14px;">
@@ -5522,6 +5910,7 @@
       return first ? { entity: first } : { demo: true };
     }
   };
+  kitCompactable(CoverCard);
   function registerCoverCard() {
     if (!customElements.get(`cover-card-editor${SUFFIX}`)) customElements.define(`cover-card-editor${SUFFIX}`, CoverCardEditor);
     if (!customElements.get(`cover-card${SUFFIX}`)) customElements.define(`cover-card${SUFFIX}`, CoverCard);
@@ -5590,6 +5979,16 @@
     _render() {
       if (!this._hass) return;
       const c = this.config;
+      if (this._compact) {
+        const sensor2 = this._hass.states[HEALTH_SENSOR];
+        const devices2 = c.demo ? dhDemo() : sensor2 && sensor2.attributes.devices || {};
+        const bad2 = Object.keys(devices2).filter((id) => devices2[id].status !== "ok");
+        return kitCompact(this, {
+          name: c.title || "Device Health",
+          color: bad2.length ? KIT_COLOR.fair : KIT_COLOR.good,
+          status: bad2.length ? bad2.map((id) => devices2[id].name || id).join(", ") : "All responding"
+        });
+      }
       if (!this._built) {
         this.innerHTML = kitShell(`<div class="dh-list" style="display:flex; flex-direction:column;"></div>`);
         this._list = this.querySelector(".dh-list");
@@ -5660,6 +6059,10 @@
       return {};
     }
   };
+  kitCompactable(DeviceHealthCard, (card) => {
+    card._built = false;
+    card._sig = null;
+  });
   function registerDeviceHealthCard() {
     if (!customElements.get(`device-health-card-editor${SUFFIX}`)) customElements.define(`device-health-card-editor${SUFFIX}`, DeviceHealthCardEditor);
     if (!customElements.get(`device-health-card${SUFFIX}`)) customElements.define(`device-health-card${SUFFIX}`, DeviceHealthCard);
@@ -5921,6 +6324,7 @@
     _render() {
       if (!this._hass) return;
       const c = this.config;
+      if (this._compact) return kitCompact(this, this._compactSpec());
       if (!this._built) {
         this.innerHTML = kitShell(
           `
@@ -5987,6 +6391,20 @@
       const tiles = d.light ? [{ key: "light", name: `${d.light.name} ${d.light.on ? "on" : "off"}`, icon: d.light.on ? "mdi:lightbulb-on" : "mdi:lightbulb-outline", color: KIT_COLOR.warm, on: d.light.on }] : [];
       kitTiles(this.querySelector(".sz-light"), tiles, () => this._toggleLight());
       hydrateIcons(this);
+    }
+    // One row: zone name and state, a low battery if any, and the light.
+    _compactSpec() {
+      if (!this._demo) this._watch();
+      const d = this._data();
+      const colour = { tamper: KIT_COLOR.bad, open: KIT_COLOR.fair, off: KIT_COLOR.off }[d.level] || SZ_COLOR.zone;
+      const low = d.bats.filter(([, , v]) => v != null && v < LOW).map(([, name, v]) => `${name} ${Math.round(v)}%`);
+      return {
+        name: this.config.name || "Zone",
+        color: colour,
+        status: [d.word, ...low].join(" \xB7 "),
+        buttons: d.light ? [{ key: "light", icon: d.light.on ? "mdi:lightbulb-on" : "mdi:lightbulb-outline", title: `${d.light.name} ${d.light.on ? "on" : "off"}`, on: d.light.on, color: KIT_COLOR.warm }] : [],
+        onButton: () => this._toggleLight()
+      };
     }
     _drawStrip(tracks) {
       const now = Date.now(), span = this._hours * 36e5, from = now - span;
@@ -6113,6 +6531,10 @@
       return { demo: true, name: "Front Garden", hours: "12", strip: "bars" };
     }
   };
+  kitCompactable(SecurityZoneCard, (card) => {
+    card._built = false;
+    card._stripSig = null;
+  });
   function registerSecurityZoneCard() {
     if (!customElements.get(`security-zone-card-editor${SUFFIX}`)) customElements.define(`security-zone-card-editor${SUFFIX}`, SecurityZoneCardEditor);
     if (!customElements.get(`security-zone-card${SUFFIX}`)) customElements.define(`security-zone-card${SUFFIX}`, SecurityZoneCard);

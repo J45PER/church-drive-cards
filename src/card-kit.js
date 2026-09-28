@@ -4,7 +4,7 @@
 // grey 48px tiles where the selected one fills with its colour, and small
 // 24-hour graphs read from Home Assistant's history.
 
-import { iconHtml } from './icons.js';
+import { iconHtml, hydrateIcons } from './icons.js';
 
 export const KIT_COLOR = {
   off: '#8b919c',
@@ -531,4 +531,97 @@ export function kitHealthBanner(root, hass, entityId, demo) {
   box.querySelector('small').textContent = [d.reason, d.last_real ? `Last real: ${kitRealText(d.last_real)}` : '', last ? `Fixing: ${last.replace(/^\d\d:\d\d /, '')}` : ''].filter(Boolean).join(' · ');
   box.querySelector('button').addEventListener('click', () => hass.callService('church_drive', 'health_fix', { entity_id: entityId, action: entityId.startsWith('fan.') ? 'nudge' : 'resync' }));
   return d;
+}
+
+// ---- Compact mode (a Section Panel collapsed on a phone).
+// A card that supports it shows one row instead of its full self: its name
+// in its colour, the key reading, a short status and its main buttons (or a
+// row of chips). Tapping the name asks the panel to open.
+// spec = { name, color, value, valueColor, status, buttons: [{ key, icon,
+//   label, on, color }], chips: [{ label, color }], onButton(b) }
+const KIT_CPT_CSS = `
+  .ck-cpt { display:flex; flex-direction:column; gap:6px; border:none; box-shadow:0 3px 10px rgba(0,0,0,.45); border-radius:14px; padding:8px 10px; background:var(--card-background-color); }
+  .ck-cpt-row { display:flex; align-items:center; gap:8px; min-height:32px; }
+  .ck-cpt-name { font-weight:600; font-size:0.92rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; min-width:0; flex:0 1 auto; }
+  .ck-cpt-val { font-weight:700; font-size:1.05rem; font-variant-numeric:tabular-nums; white-space:nowrap; flex:none; }
+  .ck-cpt-st { flex:1 1 0; min-width:0; color:var(--secondary-text-color); font-size:0.76rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ck-cpt-btns { display:flex; gap:4px; flex:none; }
+  .ck-cpt-b { position:relative; min-width:32px; height:30px; padding:0 6px; border:none; border-radius:9px; background:rgba(127,127,127,.16); color:var(--primary-text-color); font:inherit; font-size:0.78rem; font-weight:700; display:flex; align-items:center; justify-content:center; gap:3px; cursor:pointer; }
+  .ck-cpt-b.ck-on { color:#fff; }
+  .ck-cpt-b:focus-visible, .ck-cpt-name:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
+  .ck-cpt-chips { display:flex; flex-wrap:wrap; gap:5px; }
+  .ck-cpt-chip { display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:999px; background:rgba(127,127,127,.14); font-size:0.78rem; font-weight:600; font-variant-numeric:tabular-nums; }
+  .ck-cpt-chip i { width:8px; height:8px; border-radius:50%; flex:none; }`;
+
+export function kitCompact(root, spec) {
+  const sig = JSON.stringify(spec, (k, v) => (typeof v === 'function' ? undefined : v));
+  if (root._cptSig === sig && root.querySelector('.ck-cpt')) return;
+  root._cptSig = sig;
+  root.innerHTML = `<style>${KIT_CPT_CSS}</style><ha-card class="ck-cpt"><div class="ck-cpt-row">
+      <span class="ck-cpt-name" role="button" tabindex="0"></span>
+      ${spec.value != null && spec.value !== '' ? '<b class="ck-cpt-val"></b>' : ''}
+      <span class="ck-cpt-st"></span>
+      <div class="ck-cpt-btns"></div>
+    </div>${(spec.chips || []).length ? '<div class="ck-cpt-chips"></div>' : ''}</ha-card>`;
+  const name = root.querySelector('.ck-cpt-name');
+  name.textContent = spec.name || '';
+  name.style.color = spec.color || 'var(--primary-text-color)';
+  const open = () => root.dispatchEvent(new CustomEvent('cd-expand', { bubbles: true, composed: true }));
+  name.addEventListener('click', open);
+  name.addEventListener('keydown', (ev) => (ev.key === 'Enter' || ev.key === ' ') && open());
+  const val = root.querySelector('.ck-cpt-val');
+  if (val) {
+    val.textContent = spec.value;
+    val.style.color = spec.valueColor || 'var(--primary-text-color)';
+  }
+  root.querySelector('.ck-cpt-st').textContent = spec.status || '';
+  const box = root.querySelector('.ck-cpt-btns');
+  (spec.buttons || []).forEach((b) => {
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = `ck-cpt-b${b.on ? ' ck-on' : ''}`;
+    el.title = b.title || b.label || b.key;
+    el.setAttribute('aria-label', el.title);
+    el.setAttribute('aria-pressed', String(!!b.on));
+    if (b.on) el.style.background = b.color || 'var(--primary-color)';
+    el.innerHTML = b.icon ? iconHtml(b.icon, { size: '17px', style: 'flex:none;' }) : '';
+    if (b.label) el.append(document.createTextNode(b.label));
+    el.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      if (spec.onButton) spec.onButton(b);
+    });
+    box.appendChild(el);
+  });
+  const chips = root.querySelector('.ck-cpt-chips');
+  (spec.chips || []).forEach((c) => {
+    const el = document.createElement('span');
+    el.className = 'ck-cpt-chip';
+    el.innerHTML = `<i style="background:${c.color || 'var(--secondary-text-color)'};"></i><span></span>`;
+    el.querySelector('span').textContent = c.label;
+    chips.appendChild(el);
+  });
+  hydrateIcons(root);
+}
+
+// Adds `compact` (set by a Section Panel) to a card class. The card's render
+// shows kitCompact(this, this._compactSpec()) while it's on; switching
+// rebuilds the card. `rebuild` resets whatever the card uses to build.
+export function kitCompactable(Cls, rebuild = (card) => { card._built = false; }) {
+  Object.defineProperty(Cls.prototype, 'compact', {
+    configurable: true,
+    get() {
+      return !!this._compact;
+    },
+    set(v) {
+      v = !!v;
+      if (v === !!this._compact) return;
+      this._compact = v;
+      this._cptSig = null;
+      rebuild(this);
+      if (!v) this.innerHTML = '';
+      const hass = this._lastInput || this._hass;
+      if (hass) this.hass = hass;
+    },
+  });
+  Cls.prototype.supportsCompact = true;
 }

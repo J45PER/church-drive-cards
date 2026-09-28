@@ -8,7 +8,7 @@
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
-import { KIT_COLOR, kitShell, kitHead, kitGauge, kitTiles, kitCap, kitNum, kitHealthBanner } from './card-kit.js';
+import { KIT_COLOR, kitShell, kitHead, kitGauge, kitTiles, kitCap, kitNum, kitHealthBanner, kitCompact, kitCompactable } from './card-kit.js';
 
 // Where each related entity is found, from the device's name prefix.
 const CO_PARTS = {
@@ -120,6 +120,18 @@ export class CoAlarmCard extends HTMLElement {
   _render() {
     if (!this._hass) return;
     const c = this.config;
+    if (this._compact) {
+      const d = this._data();
+      const high = d.alarm || (d.ppm != null && d.ppm >= 50);
+      const color = d.unavailable ? KIT_COLOR.off : high ? KIT_COLOR.bad : d.ppm >= 10 ? KIT_COLOR.fair : KIT_COLOR.good;
+      return kitCompact(this, {
+        name: c.name || 'Carbon Monoxide',
+        color,
+        value: d.ppm == null ? '–' : String(Math.round(d.ppm)),
+        valueColor: color,
+        status: `ppm · ${d.unavailable ? 'Unavailable' : d.alarm ? 'CO detected' : d.status ? kitCap(d.status) : 'Normal'}${d.battery != null && d.battery < 20 ? ` · battery ${Math.round(d.battery)}%` : ''}`,
+      });
+    }
     if (!this._built) {
       this.innerHTML = kitShell(`
         <div class="co-warn" style="display:none; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; background:${KIT_COLOR.bad}; color:#fff; font-weight:600;"></div>
@@ -180,6 +192,8 @@ export class CoAlarmCard extends HTMLElement {
     return { demo: true };
   }
 }
+
+kitCompactable(CoAlarmCard);
 
 export function registerCoAlarmCard() {
   if (!customElements.get(`co-alarm-card-editor${SUFFIX}`)) customElements.define(`co-alarm-card-editor${SUFFIX}`, CoAlarmCardEditor);

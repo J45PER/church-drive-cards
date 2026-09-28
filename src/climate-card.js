@@ -18,7 +18,7 @@ import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { stcColor } from './section-title-card.js';
 import { SUFFIX, LABEL } from './suffix.js';
-import { kitScrub, kitSmooth, kitPath, kitHealthBanner, KIT_HEALTH_CSS } from './card-kit.js';
+import { kitScrub, kitSmooth, kitPath, kitHealthBanner, KIT_HEALTH_CSS, kitCompact, kitCompactable } from './card-kit.js';
 import { CZ_TYPES } from './climate-zone-card.js';
 
 const CC_MAX_QUICK = 5;
@@ -383,6 +383,25 @@ export class ClimateCard extends HTMLElement {
     return { word: presetWord || 'Idle', color: (CC_MODES[v.mode] || {}).color || '#a594de', tint: 0 };
   }
 
+  // One row: name, room temperature, what it's doing, and the quick settings
+  // (icons only).
+  _compactSpec(st) {
+    const cfg = this.config, v = this._view(st), s = this._status(v), a = v.a;
+    const off = v.mode === 'off' || v.mode === 'unavailable';
+    const active = this._quickList(st).findIndex((q) => this._matches(q, v));
+    return {
+      name: cfg.name || a.friendly_name || cfg.entity,
+      color: s.color,
+      value: a.current_temperature != null ? deg(a.current_temperature) : '–',
+      status: off || v.target == null ? s.word : `${s.word} · ${deg(v.target)}`,
+      buttons: this._quickList(st).map((q, i) => {
+        const look = (q.preset_mode && !noPreset(q.preset_mode) && CC_PRESETS[q.preset_mode]) || (q.hvac_mode && CC_MODES[q.hvac_mode]) || CC_MODES.heat;
+        return { key: `q${i}`, icon: q.icon || look.icon, title: q.name, on: i === active, color: q.color ? stcColor(q.color) : look.color || CC_MODES.heat.color, q };
+      }),
+      onButton: (b) => this._applyQuick(b.q),
+    };
+  }
+
   _entityState(id) {
     return id && this._hass && this._hass.states[id];
   }
@@ -390,6 +409,7 @@ export class ClimateCard extends HTMLElement {
   _render() {
     const st = this._state();
     if (!st) return;
+    if (this._compact) return kitCompact(this, this._compactSpec(st));
     if (!this._built) this._build();
     const e = this._els;
     const cfg = this.config;
@@ -893,6 +913,8 @@ export class ClimateCard extends HTMLElement {
     return first ? { entity: first } : { demo: true };
   }
 }
+
+kitCompactable(ClimateCard);
 
 export function registerClimateCard() {
   if (!customElements.get(`climate-card-editor${SUFFIX}`)) {

@@ -9,7 +9,7 @@
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
-import { KIT_COLOR, kitShell, kitHead, kitTiles, kitNum, kitEsc, KitHistory, kitStateHistory } from './card-kit.js';
+import { KIT_COLOR, kitShell, kitHead, kitTiles, kitNum, kitEsc, KitHistory, kitStateHistory, kitCompact, kitCompactable } from './card-kit.js';
 
 export const SZ_COLOR = {
   zone: '#5c6bc0',
@@ -278,6 +278,7 @@ export class SecurityZoneCard extends HTMLElement {
   _render() {
     if (!this._hass) return;
     const c = this.config;
+    if (this._compact) return kitCompact(this, this._compactSpec());
     if (!this._built) {
       this.innerHTML = kitShell(
         `
@@ -352,6 +353,21 @@ export class SecurityZoneCard extends HTMLElement {
     const tiles = d.light ? [{ key: 'light', name: `${d.light.name} ${d.light.on ? 'on' : 'off'}`, icon: d.light.on ? 'mdi:lightbulb-on' : 'mdi:lightbulb-outline', color: KIT_COLOR.warm, on: d.light.on }] : [];
     kitTiles(this.querySelector('.sz-light'), tiles, () => this._toggleLight());
     hydrateIcons(this);
+  }
+
+  // One row: zone name and state, a low battery if any, and the light.
+  _compactSpec() {
+    if (!this._demo) this._watch();
+    const d = this._data();
+    const colour = { tamper: KIT_COLOR.bad, open: KIT_COLOR.fair, off: KIT_COLOR.off }[d.level] || SZ_COLOR.zone;
+    const low = d.bats.filter(([, , v]) => v != null && v < LOW).map(([, name, v]) => `${name} ${Math.round(v)}%`);
+    return {
+      name: this.config.name || 'Zone',
+      color: colour,
+      status: [d.word, ...low].join(' · '),
+      buttons: d.light ? [{ key: 'light', icon: d.light.on ? 'mdi:lightbulb-on' : 'mdi:lightbulb-outline', title: `${d.light.name} ${d.light.on ? 'on' : 'off'}`, on: d.light.on, color: KIT_COLOR.warm }] : [],
+      onButton: () => this._toggleLight(),
+    };
   }
 
   _drawStrip(tracks) {
@@ -487,6 +503,11 @@ export class SecurityZoneCard extends HTMLElement {
     return { demo: true, name: 'Front Garden', hours: '12', strip: 'bars' };
   }
 }
+
+kitCompactable(SecurityZoneCard, (card) => {
+  card._built = false;
+  card._stripSig = null;
+});
 
 export function registerSecurityZoneCard() {
   if (!customElements.get(`security-zone-card-editor${SUFFIX}`)) customElements.define(`security-zone-card-editor${SUFFIX}`, SecurityZoneCardEditor);
