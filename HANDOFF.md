@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-27. Current release: **v0.17.2**.*
+*Last updated 2026-09-27. Current release: **v0.18.0**.*
 
 ## Where this stands
 
@@ -63,7 +63,7 @@ reported by the user, fix untested on the real fan).
 - Hold to test on the carbon monoxide card (sounds the real alarm; only when
   the user is happy to).
 
-**On Beta (unreleased): Nav Bar Card** (`nav-bar-card`). The user chose style B, the
+**New in v0.18.0: Nav Bar Card** (`nav-bar-card`), live on every Mobile page. The user chose style B, the
 floating capsule, from mock-ups (claude.ai/artifact/9bJeSLs2W7VjJaTV2ShZXF), over
 splitting Mobile into separate dashboards.
 - It's pinned to the bottom. It renders into `document.body` (class
@@ -73,13 +73,12 @@ splitting Mobile into separate dashboards.
   dot when not 0/off/false/empty). The active page is the longest path matching
   `location.pathname`. Navigation uses `kitNavigate` (pushState plus
   `location-changed`).
-- On Mobile, `nav-bar-card-beta` is the last card of every view. The Quick Actions
+- On Mobile, `nav-bar-card` is the last card of every view. The Quick Actions
   view got the path `home`. Security takes its colour from the alarm template and
   gets a dot for doors open or tamper. Climate gets a dot for Device Health > 0 or
   the CO alarm. Cleaning gets a dot for `vacuum.gregg` error.
 - Section panel/title `link` option: the Quick Actions panels (Security, Climate,
-  Lights, Cleaning) switched to `section-panel-card-beta` with links. **On
-  release, switch them and the nav bars back to the released types.**
+  Lights, Cleaning) link to their pages.
 - `hide_tabs` (default on): while a pinned bar is on screen, it puts
   `style.cd-nav-hide-tabs` into `hui-root`'s shadow root. It's found by a shadow-DOM
   search from `home-assistant`, and hides `.toolbar ha-tab-group / sl-tab-group /
@@ -89,7 +88,7 @@ splitting Mobile into separate dashboards.
   check the real element name in `hui-root`.
 - Not done yet: jump-to chips on long pages.
 
-**Unreleased on the branch (next release; needs one restart to take effect):**
+**Also in v0.18.0 (the last release that needs a full restart for card changes):**
 - Nudges only use quiet presets (`QUIET_PRESETS`: sleep, speed_1, low, silent,
   medium, speed_2), never auto/turbo/natural. On the v0.17.2 restart the purifier
   was nudged to `auto` (its first preset).
