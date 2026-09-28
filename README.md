@@ -179,6 +179,10 @@ One outside or entry zone (Front Garden, Entrance, Driveway…), one card each. 
 
 Colours: indigo normally, amber while the door is open, red with a warning line when a tamper sensor trips or a door opens while the alarm (optional) is set. Motion can come from motion sensors (on/off) and camera motion events. `demo: true` with `demo_state` (quiet / motion / open / tamper) for Design Presets.
 
+### `nav-bar-card`
+
+A floating capsule pinned to the bottom of the screen, with every page of a dashboard one tap away. Each page has a name, an icon, a page path and a colour. The colour can come live from a template, for example the alarm colour. The current page shows as a filled capsule with its name. A small dot marks a page whose "needs attention" template gives something other than 0, off or empty. Put the same card on every page; it takes no room in the layout. Tapping the current page scrolls back to the top. While the bar is on screen it hides the dashboard's own tabs at the top (`hide_tabs: false` keeps them); the menu, search and edit buttons stay, and the tabs come back in edit mode. `demo: true` shows it in place for Design Presets.
+
 ### `section-panel-card`
 
 A group of cards on a faint panel in the section's colour, headed by a large title with a coloured icon and an optional live summary on the right (any Home Assistant template, e.g. `1 room on`). Several panels can share one dashboard section, so they stack without gaps. `color_template` (optional) takes a template that gives a colour, so a panel can follow a state, e.g. the alarm. The editor has the title, icon, colour and summary, then Home Assistant's own card list for the cards inside.
@@ -196,6 +200,9 @@ cards:
 ```
 
 ### `section-title-card`
+
+Both the panel and the title take an optional `link` (a page): tapping the title row, which shows a ›, opens it. Quick Actions uses this to jump to each full page.
+
 
 Just the panel's heading (title, coloured icon, live summary), for use on its own.
 

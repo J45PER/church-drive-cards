@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-27. Current release: **v0.17.2**.*
+*Last updated 2026-09-27. Current release: **v0.18.0**.*
 
 ## Where this stands
 
@@ -62,6 +62,46 @@ reported by the user, fix untested on the real fan).
   and the Heating panel changing colour.
 - Hold to test on the carbon monoxide card (sounds the real alarm; only when
   the user is happy to).
+
+**New in v0.18.0: Nav Bar Card** (`nav-bar-card`), live on every Mobile page. The user chose style B, the
+floating capsule, from mock-ups (claude.ai/artifact/9bJeSLs2W7VjJaTV2ShZXF), over
+splitting Mobile into separate dashboards.
+- It's pinned to the bottom. It renders into `document.body` (class
+  `church-drive-nav-bar`) so the sections layout can't clip `position:fixed`. It
+  shows inline in demo/editor/preview. It leaves a 70px spacer where the card sits.
+- Pages: `name`, `icon`, `path`, `color`, `color_template`, `alert_template` (a
+  dot when not 0/off/false/empty). The active page is the longest path matching
+  `location.pathname`. Navigation uses `kitNavigate` (pushState plus
+  `location-changed`).
+- On Mobile, `nav-bar-card` is the last card of every view. The Quick Actions
+  view got the path `home`. Security takes its colour from the alarm template and
+  gets a dot for doors open or tamper. Climate gets a dot for Device Health > 0 or
+  the CO alarm. Cleaning gets a dot for `vacuum.gregg` error.
+- Section panel/title `link` option: the Quick Actions panels (Security, Climate,
+  Lights, Cleaning) link to their pages.
+- `hide_tabs` (default on): while a pinned bar is on screen, it puts
+  `style.cd-nav-hide-tabs` into `hui-root`'s shadow root. It's found by a shadow-DOM
+  search from `home-assistant`, and hides `.toolbar ha-tab-group / sl-tab-group /
+  paper-tabs / ha-tabs`. A module-level holder count, with a 400ms delayed removal,
+  avoids a flash between pages. It's inline (so not hidden) in edit mode. It was
+  only tested against a mock of HA's header: if the tabs still show on the phone,
+  check the real element name in `hui-root`.
+- Not done yet: jump-to chips on long pages.
+
+**Also in v0.18.0 (the last release that needs a full restart for card changes):**
+- Nudges only use quiet presets (`QUIET_PRESETS`: sleep, speed_1, low, silent,
+  medium, speed_2), never auto/turbo/natural. On the v0.17.2 restart the purifier
+  was nudged to `auto` (its first preset).
+- The card version (`?v=`) is re-read on every Church Drive setup. From then on,
+  **card-only releases should reload the Church Drive config entry
+  (`01M3C9Z12M0W755GDTM455NFVB`) instead of restarting HA.** Full restarts are
+  when the Philips devices fail to connect ("Failed to connect to host
+  192.168.4.48") and come back stale. Python changes still need a restart.
+- After the v0.17.2 restart (00:35, 2026-09-28) the fan was fine. The purifier's
+  live feed died at startup, with runtime frozen at 0:11:42, and two nudges didn't
+  revive it. Its mode shows correctly (Sleep), but PM2.5 is frozen until the
+  Philips integration reconnects. Don't reload it: that gets stuck. The next
+  restart should bring it back; check it then.
 
 **v0.17.2: Device Health never reloads integrations; it nudges instead.**
 On the v0.17.1 restart (00:24, 2026-09-28) the fan came back stale, showing Speed 1

@@ -5,6 +5,7 @@
 
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
+import { kitNavigate } from './card-kit.js';
 import { SUFFIX, LABEL } from './suffix.js';
 
 // A colour as HA's colour picker gives it ("green", "deep-orange") or any CSS
@@ -51,10 +52,12 @@ export const SectionTitleCardEditor = createFormEditor({
     { name: 'color', selector: { ui_color: {} } },
     STC_COLOR_TEMPLATE_FIELD,
     { name: 'summary', selector: { template: {} } },
+    { name: 'link', selector: { navigation: {} } },
   ],
   labels: {
     title: 'Title',
     icon: 'Icon (optional)',
+    link: 'Tapping the title opens (optional page)',
     color: 'Colour (for the icon)',
     color_template: STC_COLOR_TEMPLATE_LABEL,
     summary: 'Summary on the right (optional template)',
@@ -97,7 +100,17 @@ export class SectionTitleCard extends HTMLElement {
         ${c.icon ? iconHtml(c.icon, { size: '26px', style: `color:${color}; flex:none; transition:color .6s ease;`, cls: 'stc-icon' }) : ''}
         <div class="stc-title" style="flex:1; min-width:0; font-size:1.6rem; font-weight:500; line-height:1.2; color:var(--primary-text-color); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
         <div class="stc-summary" style="flex:none; max-width:55%; font-size:0.9rem; color:var(--secondary-text-color); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:right;"></div>
+        ${c.link ? iconHtml('mdi:chevron-right', { size: '22px', style: 'flex:none; margin-left:-4px; color:var(--secondary-text-color);' }) : ''}
       </div>`;
+    const row = this.firstElementChild;
+    if (c.link) {
+      row.style.cursor = 'pointer';
+      row.setAttribute('role', 'link');
+      row.tabIndex = 0;
+      const go = () => kitNavigate(c.link);
+      row.addEventListener('click', go);
+      row.addEventListener('keydown', (ev) => (ev.key === 'Enter' || ev.key === ' ') && go());
+    }
     this.querySelector('.stc-title').textContent = c.title;
     this._summaryEl = this.querySelector('.stc-summary');
     this._iconEl = this.querySelector('.stc-icon');

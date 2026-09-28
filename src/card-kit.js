@@ -150,6 +150,17 @@ function kitHold(button, done) {
   button.addEventListener('keyup', stop);
 }
 
+// Go to another dashboard page the way Home Assistant's own links do.
+export function kitNavigate(path, replace = false) {
+  if (!path) return;
+  if (/^https?:/.test(path)) {
+    window.open(path, '_blank', 'noopener');
+    return;
+  }
+  history[replace ? 'replaceState' : 'pushState'](null, '', path);
+  window.dispatchEvent(new CustomEvent('location-changed', { detail: { replace } }));
+}
+
 export function kitMoreInfo(el, entityId) {
   if (!entityId) return;
   el.dispatchEvent(new CustomEvent('hass-more-info', { detail: { entityId }, bubbles: true, composed: true }));

@@ -61,6 +61,8 @@ RESYNC_AFTER = 0  # re-sync as soon as a device looks stale
 # reloaded automatically: the Philips one gets stuck unloading.
 NUDGE_AT = (90, 600, 1800)
 NUDGE_HOLD = 5
+# Nudge modes, quietest first. Never auto/turbo/natural (they can ramp up).
+QUIET_PRESETS = ("sleep", "speed_1", "low", "silent", "medium", "speed_2")
 RECONNECT_EVERY = 6 * 3600
 REAL_MAX_AGE = 24 * 3600  # don't re-sync to a reading older than this
 
@@ -344,10 +346,10 @@ class DeviceHealth:
             return False
         target = real.get("attrs", {}).get("preset_mode")
         presets = [p for p in state.attributes.get("preset_modes") or [] if p != target]
-        if target and presets:
+        quiet = [p for p in QUIET_PRESETS if p in presets]
+        if target and quiet:
             # The quietest other mode, so a nudge at night isn't noticed.
-            alt = next((p for p in presets if p == "sleep"), presets[0])
-            call = ("set_preset_mode", {"preset_mode": alt})
+            call = ("set_preset_mode", {"preset_mode": quiet[0]})
         else:
             pct = real.get("attrs", {}).get("percentage") or 50
             call = ("set_percentage", {"percentage": 25 if pct > 25 else 50})

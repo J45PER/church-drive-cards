@@ -25,10 +25,12 @@ const PanelFields = createFormEditor({
     { name: 'color', selector: { ui_color: {} } },
     STC_COLOR_TEMPLATE_FIELD,
     { name: 'summary', selector: { template: {} } },
+    { name: 'link', selector: { navigation: {} } },
   ],
   labels: {
     title: 'Title',
     icon: 'Icon (optional)',
+    link: 'Tapping the title opens (optional page)',
     color: 'Colour (icon and panel)',
     color_template: STC_COLOR_TEMPLATE_LABEL,
     summary: 'Summary on the right (optional template)',
@@ -136,7 +138,7 @@ export class SectionPanelCard extends HTMLElement {
       bg.style.background = ev.detail;
     });
     this._title = document.createElement(`section-title-card${SUFFIX}`);
-    this._title.setConfig({ title: c.title, icon: c.icon, color: c.color, color_template: c.color_template, summary: c.summary });
+    this._title.setConfig({ title: c.title, icon: c.icon, color: c.color, color_template: c.color_template, summary: c.summary, link: c.link });
     if (this._hass) this._title.hass = this._hass;
     panel.appendChild(this._title);
     const token = (this._token = {});
