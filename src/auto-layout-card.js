@@ -38,6 +38,34 @@ export function hasControls(conf) {
 }
 const GAP = 'var(--ha-view-sections-column-gap, 32px)';
 
+// Each page's last arrangement, so coming back to a page (or the app waking
+// up) shows it straight away instead of in list order and then rearranging.
+const PLAN_KEY = 'cd-layout-plans';
+let plans = null;
+function planStore() {
+  if (plans) return plans;
+  plans = {};
+  try {
+    plans = JSON.parse(localStorage.getItem(PLAN_KEY) || '{}') || {};
+  } catch (err) {
+    /* storage blocked or bad data */
+  }
+  return plans;
+}
+function planRemember(key, splits) {
+  const store = planStore();
+  const v = JSON.stringify(splits);
+  if (JSON.stringify(store[key]) === v) return;
+  store[key] = splits;
+  const keys = Object.keys(store);
+  if (keys.length > 60) delete store[keys[0]];
+  try {
+    localStorage.setItem(PLAN_KEY, JSON.stringify(store));
+  } catch (err) {
+    /* storage full or blocked */
+  }
+}
+
 const LayoutFields = createFormEditor({
   schema: () => [
     { name: 'column_width', selector: { number: { min: 200, max: 800, step: 10, mode: 'box', unit_of_measurement: 'px' } } },
@@ -296,11 +324,20 @@ export class AutoLayoutCard extends HTMLElement {
         b.items = [...b.items.filter((it) => it.controls), ...b.items.filter((it) => !it.controls)];
       });
     }
-    // Unplaced cards have no height yet: place them in order first.
+    // Unplaced cards have no height yet: use this page's last arrangement,
+    // or list order, until they can be measured.
     const placed = this._items.every((it) => it.el.isConnected);
-    bands.forEach((b) => {
-      if (b.full || cols === 1 || !placed) {
+    const planKey = `${location.pathname}|${cols}|${bands.map((b) => b.items.map((it) => it.conf.title || it.conf.type).join(',')).join('/')}`;
+    const saved = planStore()[planKey];
+    bands.forEach((b, n) => {
+      if (b.full || cols === 1) {
         b.split = [b.items.map((it, i) => i)];
+        return;
+      }
+      if (!placed) {
+        const s = saved && saved[n];
+        const ok = Array.isArray(s) && s.flat().length === b.items.length && s.length <= cols;
+        b.split = ok ? s : [b.items.map((it, i) => i)];
         return;
       }
       const key = b.items.map((it) => this._items.indexOf(it)).join(',');
@@ -311,6 +348,7 @@ export class AutoLayoutCard extends HTMLElement {
     bands.forEach((b) => {
       this._prevSplits[b.items.map((it) => this._items.indexOf(it)).join(',')] = b.split;
     });
+    if (placed) planRemember(planKey, bands.map((b) => b.split));
     const plan = `${cols}|${bands.map((b) => `${b.full ? 'F' : ''}${b.split.map((c) => c.join('.')).join(',')}`).join('/')}`;
     if (force || plan !== this._plan) {
       this._plan = plan;

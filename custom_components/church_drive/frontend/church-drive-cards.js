@@ -3286,18 +3286,61 @@
     if (/^(#|rgb|hsl|var\()/.test(color)) return color;
     return `var(--${color}-color, ${STC_FALLBACK[color] || color})`;
   }
+  var TPL_KEY = "cd-tpl-cache";
+  var tplCache = null;
+  var tplSave = 0;
+  function tplStore() {
+    if (tplCache) return tplCache;
+    tplCache = /* @__PURE__ */ new Map();
+    try {
+      const saved = JSON.parse(localStorage.getItem(TPL_KEY) || "[]");
+      if (Array.isArray(saved)) saved.forEach(([k, v]) => tplCache.set(k, v));
+    } catch (err) {
+    }
+    return tplCache;
+  }
+  function tplRemember(template, value) {
+    const store = tplStore();
+    if (store.get(template) === value) return;
+    store.delete(template);
+    store.set(template, value);
+    while (store.size > 300) store.delete(store.keys().next().value);
+    clearTimeout(tplSave);
+    tplSave = setTimeout(() => {
+      try {
+        localStorage.setItem(TPL_KEY, JSON.stringify([...store]));
+      } catch (err) {
+      }
+    }, 1e3);
+  }
   function stcRender(hass, template, done) {
     if (!template || !hass || !hass.connection) return null;
     if (!/[{%]/.test(template)) {
       done(template);
       return null;
     }
+    const store = tplStore();
+    if (store.has(template)) done(store.get(template));
     return hass.connection.subscribeMessage(
       (msg) => {
-        if (msg.result !== void 0) done(String(msg.result).trim());
+        if (msg.result === void 0) return;
+        const text = String(msg.result).trim();
+        tplRemember(template, text);
+        done(text);
       },
       { type: "render_template", template, strict: false, report_errors: false }
     ).catch(() => null);
+  }
+  function stcSetInstantly(el, prop, value, instant) {
+    if (!instant) {
+      el.style[prop] = value;
+      return;
+    }
+    const t = el.style.transition;
+    el.style.transition = "none";
+    el.style[prop] = value;
+    void el.offsetWidth;
+    el.style.transition = t;
   }
   var STC_COLOR_TEMPLATE_FIELD = { name: "color_template", selector: { template: {} } };
   var STC_COLOR_TEMPLATE_LABEL = "Colour from a template (optional; overrides the colour)";
@@ -3411,7 +3454,8 @@
       this._unsubColor = stcRender(this._hass, this.config.color_template, (color) => {
         this._liveColor = color || null;
         const css = stcColor(this._liveColor || this.config.color);
-        if (this._iconEl) this._iconEl.style.color = css;
+        if (this._iconEl) stcSetInstantly(this._iconEl, "color", css, !this._colorShown);
+        this._colorShown = true;
         this.dispatchEvent(new CustomEvent("stc-color", { detail: css, bubbles: true }));
       });
     }
@@ -3446,6 +3490,26 @@
   }
 
   // src/section-panel-card.js
+  var knownUser;
+  function lastUser() {
+    if (knownUser === void 0) {
+      try {
+        knownUser = localStorage.getItem("cd-user") || null;
+      } catch (err) {
+        knownUser = null;
+      }
+    }
+    return knownUser;
+  }
+  function rememberUser(hass) {
+    const id = hass && hass.user && hass.user.id;
+    if (!id || id === knownUser) return;
+    knownUser = id;
+    try {
+      localStorage.setItem("cd-user", id);
+    } catch (err) {
+    }
+  }
   var helpersPromise;
   function cardHelpers() {
     if (!helpersPromise) helpersPromise = window.loadCardHelpers ? window.loadCardHelpers() : Promise.reject(new Error("no card helpers"));
@@ -3589,6 +3653,7 @@
         card.hass = hass;
       });
       if (first) {
+        rememberUser(hass);
         this._watchOpenWhen();
         this._apply();
       }
@@ -3604,7 +3669,7 @@
       return window.innerWidth < 600 ? "phone" : "tablet";
     }
     _key() {
-      const user = this._hass && this._hass.user && this._hass.user.id || "anyone";
+      const user = this._hass && this._hass.user && this._hass.user.id || lastUser() || "anyone";
       return `cd-panel:${user}:${location.pathname}:${this.config.title}:${this._device()}`;
     }
     _chosen() {
@@ -3778,7 +3843,8 @@
       const bg = this.querySelector(".spc-bg");
       panel.addEventListener("stc-color", (ev) => {
         ev.stopPropagation();
-        bg.style.background = ev.detail;
+        stcSetInstantly(bg, "background", ev.detail, !this._bgShown);
+        this._bgShown = true;
       });
       this._title = document.createElement(`section-title-card${SUFFIX}`);
       this._grid = document.createElement("div");
@@ -6997,6 +7063,29 @@
     return kids.some((k) => hasControls(k));
   }
   var GAP = "var(--ha-view-sections-column-gap, 32px)";
+  var PLAN_KEY = "cd-layout-plans";
+  var plans = null;
+  function planStore() {
+    if (plans) return plans;
+    plans = {};
+    try {
+      plans = JSON.parse(localStorage.getItem(PLAN_KEY) || "{}") || {};
+    } catch (err) {
+    }
+    return plans;
+  }
+  function planRemember(key, splits) {
+    const store = planStore();
+    const v = JSON.stringify(splits);
+    if (JSON.stringify(store[key]) === v) return;
+    store[key] = splits;
+    const keys = Object.keys(store);
+    if (keys.length > 60) delete store[keys[0]];
+    try {
+      localStorage.setItem(PLAN_KEY, JSON.stringify(store));
+    } catch (err) {
+    }
+  }
   var LayoutFields = createFormEditor({
     schema: () => [
       { name: "column_width", selector: { number: { min: 200, max: 800, step: 10, mode: "box", unit_of_measurement: "px" } } },
@@ -7223,9 +7312,17 @@
         });
       }
       const placed = this._items.every((it) => it.el.isConnected);
-      bands.forEach((b) => {
-        if (b.full || cols === 1 || !placed) {
+      const planKey = `${location.pathname}|${cols}|${bands.map((b) => b.items.map((it) => it.conf.title || it.conf.type).join(",")).join("/")}`;
+      const saved = planStore()[planKey];
+      bands.forEach((b, n) => {
+        if (b.full || cols === 1) {
           b.split = [b.items.map((it, i) => i)];
+          return;
+        }
+        if (!placed) {
+          const s = saved && saved[n];
+          const ok = Array.isArray(s) && s.flat().length === b.items.length && s.length <= cols;
+          b.split = ok ? s : [b.items.map((it, i) => i)];
           return;
         }
         const key = b.items.map((it) => this._items.indexOf(it)).join(",");
@@ -7236,6 +7333,7 @@
       bands.forEach((b) => {
         this._prevSplits[b.items.map((it) => this._items.indexOf(it)).join(",")] = b.split;
       });
+      if (placed) planRemember(planKey, bands.map((b) => b.split));
       const plan = `${cols}|${bands.map((b) => `${b.full ? "F" : ""}${b.split.map((c) => c.join(".")).join(",")}`).join("/")}`;
       if (force || plan !== this._plan) {
         this._plan = plan;

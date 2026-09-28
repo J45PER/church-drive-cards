@@ -8,10 +8,34 @@ import { SUFFIX, LABEL } from './suffix.js';
 import {
   stcColor,
   stcRender,
+  stcSetInstantly,
   STC_COLOR_TEMPLATE_FIELD,
   STC_COLOR_TEMPLATE_LABEL,
   STC_COLOR_TEMPLATE_HELPER,
 } from './section-title-card.js';
+
+// Who was last signed in on this device.
+let knownUser;
+function lastUser() {
+  if (knownUser === undefined) {
+    try {
+      knownUser = localStorage.getItem('cd-user') || null;
+    } catch (err) {
+      knownUser = null;
+    }
+  }
+  return knownUser;
+}
+function rememberUser(hass) {
+  const id = hass && hass.user && hass.user.id;
+  if (!id || id === knownUser) return;
+  knownUser = id;
+  try {
+    localStorage.setItem('cd-user', id);
+  } catch (err) {
+    /* storage blocked */
+  }
+}
 
 let helpersPromise;
 function cardHelpers() {
@@ -167,6 +191,7 @@ export class SectionPanelCard extends HTMLElement {
       card.hass = hass;
     });
     if (first) {
+      rememberUser(hass);
       this._watchOpenWhen();
       this._apply(); // now that we know who's signed in
     }
@@ -186,7 +211,9 @@ export class SectionPanelCard extends HTMLElement {
 
   _key() {
     // Per signed-in person too, so people sharing a tablet each keep their own.
-    const user = (this._hass && this._hass.user && this._hass.user.id) || 'anyone';
+    // Until Home Assistant says who's signed in, use whoever was last, so a
+    // panel doesn't flick open and shut while the page loads.
+    const user = (this._hass && this._hass.user && this._hass.user.id) || lastUser() || 'anyone';
     return `cd-panel:${user}:${location.pathname}:${this.config.title}:${this._device()}`;
   }
 
@@ -387,7 +414,8 @@ export class SectionPanelCard extends HTMLElement {
     const bg = this.querySelector('.spc-bg');
     panel.addEventListener('stc-color', (ev) => {
       ev.stopPropagation();
-      bg.style.background = ev.detail;
+      stcSetInstantly(bg, 'background', ev.detail, !this._bgShown);
+      this._bgShown = true;
     });
     this._title = document.createElement(`section-title-card${SUFFIX}`);
     this._grid = document.createElement('div');

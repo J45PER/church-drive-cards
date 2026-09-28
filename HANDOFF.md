@@ -43,6 +43,14 @@ alarm (disarmed shield-off-outline, home shield-home, away shield-lock, night
 shield-moon, arming shield-sync, pending shield-alert, triggered alarm-light). On
 release switch them back to `custom:nav-bar-card`.
 
+**Also in beta: no flicker on rebuild.** `stcRender` remembers each template's last
+result (memory + localStorage `cd-tpl-cache`, 300 max) and calls back with it straight
+away, so nav bar icons/colours and panel colours/summaries don't flash their fixed
+values; the first colour is set without its fade (`stcSetInstantly`). Panels remember
+the last signed-in user (`cd-user`) for their open/compact key before `hass` arrives.
+Auto Layout remembers each page's last arrangement (`cd-layout-plans`, keyed by path,
+columns and panel titles) and uses it before panels can be measured.
+
 Everything else is merged to `main`, released and running live. The user tests on real
 devices before each release.
 
