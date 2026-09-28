@@ -159,7 +159,9 @@ export class SectionPanelCard extends HTMLElement {
   }
 
   _key() {
-    return `cd-panel:${location.pathname}:${this.config.title}:${this._device()}`;
+    // Per signed-in person too, so people sharing a tablet each keep their own.
+    const user = (this._hass && this._hass.user && this._hass.user.id) || 'anyone';
+    return `cd-panel:${user}:${location.pathname}:${this.config.title}:${this._device()}`;
   }
 
   _chosen() {

@@ -3576,7 +3576,8 @@
       return window.innerWidth < 600 ? "phone" : "tablet";
     }
     _key() {
-      return `cd-panel:${location.pathname}:${this.config.title}:${this._device()}`;
+      const user = this._hass && this._hass.user && this._hass.user.id || "anyone";
+      return `cd-panel:${user}:${location.pathname}:${this.config.title}:${this._device()}`;
     }
     _chosen() {
       try {

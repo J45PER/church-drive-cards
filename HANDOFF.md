@@ -96,7 +96,7 @@ details and actions ("especially on Climate"). Peek was dropped.
   Other cards are hidden in compact.
 - Section panel: `phone_start` (default compact) and `tablet_start` (default
   open). Phone means `innerWidth < 600`. The choice is stored in `localStorage`
-  under `cd-panel:<path>:<title>:<phone|tablet>`. `open_when` is a template that
+  under `cd-panel:<user id>:<path>:<title>:<phone|tablet>` (per device and per HA user). `open_when` is a template that
   forces open while truthy. `collapsible: false` removes the ⌄. Always open in
   edit mode/preview. Section title: `collapsible` shows the ⌄ (`stc-toggle`
   event); with a `link`, the row navigates and only the ⌄ toggles.
