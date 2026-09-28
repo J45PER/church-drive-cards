@@ -47,6 +47,7 @@ const PanelFields = createFormEditor({
       schema: [
         { name: 'card_width', selector: { number: { min: 0, max: 800, step: 10, mode: 'box', unit_of_measurement: 'px' } } },
         { name: 'match_height', selector: { boolean: {} }, default: true },
+        { name: 'full_width', selector: { boolean: {} }, default: false },
       ],
     },
   ],
@@ -60,6 +61,7 @@ const PanelFields = createFormEditor({
     collapsible: 'Show the ⌄ to switch between open and compact',
     card_width: 'Cards side by side when each can be at least (0 = always one per row)',
     match_height: "Line up this panel's bottom with the panels beside it",
+    full_width: 'Full width across an Auto Layout',
     color: 'Colour (icon and panel)',
     color_template: STC_COLOR_TEMPLATE_LABEL,
     summary: 'Summary on the right (optional template)',
@@ -69,6 +71,7 @@ const PanelFields = createFormEditor({
     open_when: "E.g. {{ is_state('binary_sensor.back_door', 'on') }}. The panel opens while it's true, then goes back to how you left it.",
     card_width: 'Default 300px. Cards fill the panel width: e.g. cameras 2 or 3 across on a tablet, one per row on a phone.',
     match_height: "When sections sit side by side, the last panel in a shorter section grows so its bottom lines up with its neighbours'.",
+    full_width: 'Only inside an Auto Layout Card: this panel spans every column, with the panels before and after it balanced above and below.',
     color_template: STC_COLOR_TEMPLATE_HELPER,
     summary: `A Home Assistant template, e.g. {{ states('vacuum.gregg') | title }}`,
   },
@@ -259,7 +262,8 @@ export class SectionPanelCard extends HTMLElement {
 
   _match() {
     const panel = this._panelEl;
-    if (!panel || !this.isConnected) return;
+    // Inside an Auto Layout Card, that card lines panels up.
+    if (!panel || !this.isConnected || this._managed) return;
     const clear = () => {
       if (panel.style.minHeight) panel.style.minHeight = '';
     };
@@ -441,6 +445,7 @@ export class SectionPanelCard extends HTMLElement {
   // as between section columns (32px; the section's own gap between cards is
   // 8px), so stacked panels read as separate groups.
   _spaceFromAbove() {
+    if (this._managed) return;
     const up = (el) => el.parentNode || (el.getRootNode && el.getRootNode().host) || null;
     let wrap = this;
     for (let i = 0; i < 6 && wrap && wrap.localName !== 'hui-card'; i += 1) wrap = up(wrap);

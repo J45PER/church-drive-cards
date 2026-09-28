@@ -3478,7 +3478,8 @@
         flatten: true,
         schema: [
           { name: "card_width", selector: { number: { min: 0, max: 800, step: 10, mode: "box", unit_of_measurement: "px" } } },
-          { name: "match_height", selector: { boolean: {} }, default: true }
+          { name: "match_height", selector: { boolean: {} }, default: true },
+          { name: "full_width", selector: { boolean: {} }, default: false }
         ]
       }
     ],
@@ -3492,6 +3493,7 @@
       collapsible: "Show the \u2304 to switch between open and compact",
       card_width: "Cards side by side when each can be at least (0 = always one per row)",
       match_height: "Line up this panel's bottom with the panels beside it",
+      full_width: "Full width across an Auto Layout",
       color: "Colour (icon and panel)",
       color_template: STC_COLOR_TEMPLATE_LABEL,
       summary: "Summary on the right (optional template)"
@@ -3501,6 +3503,7 @@
       open_when: "E.g. {{ is_state('binary_sensor.back_door', 'on') }}. The panel opens while it's true, then goes back to how you left it.",
       card_width: "Default 300px. Cards fill the panel width: e.g. cameras 2 or 3 across on a tablet, one per row on a phone.",
       match_height: "When sections sit side by side, the last panel in a shorter section grows so its bottom lines up with its neighbours'.",
+      full_width: "Only inside an Auto Layout Card: this panel spans every column, with the panels before and after it balanced above and below.",
       color_template: STC_COLOR_TEMPLATE_HELPER,
       summary: `A Home Assistant template, e.g. {{ states('vacuum.gregg') | title }}`
     }
@@ -3666,7 +3669,7 @@
     }
     _match() {
       const panel = this._panelEl;
-      if (!panel || !this.isConnected) return;
+      if (!panel || !this.isConnected || this._managed) return;
       const clear = () => {
         if (panel.style.minHeight) panel.style.minHeight = "";
       };
@@ -3675,7 +3678,7 @@
       let section = this;
       for (let i = 0; section && i < 14 && section.localName !== "hui-section"; i += 1) section = up(section);
       if (!section) return clear();
-      const PANEL = "section-panel-card, section-panel-card-beta";
+      const PANEL2 = "section-panel-card, section-panel-card-beta";
       const deep = (root, sel, depth = 0, out = []) => {
         if (!root || depth > 5 || !root.querySelectorAll) return out;
         root.querySelectorAll(sel).forEach((el) => out.push(el));
@@ -3689,7 +3692,7 @@
       const NAV = "nav-bar-card, nav-bar-card-beta";
       const isNav = (el) => !!(el.querySelector(NAV) || el.shadowRoot && el.shadowRoot.querySelector(NAV));
       const itemsOf = (sec) => deep(sec, "hui-card").map((el) => {
-        const p = el.matches && el.matches(PANEL) ? el : el.querySelector(PANEL) || el.shadowRoot && el.shadowRoot.querySelector(PANEL) || null;
+        const p = el.matches && el.matches(PANEL2) ? el : el.querySelector(PANEL2) || el.shadowRoot && el.shadowRoot.querySelector(PANEL2) || null;
         const r = el.getBoundingClientRect();
         const stretch = !!(p && p._naturalHeight && !(p._mode && p._mode() === "compact") && p.config && p.config.match_height !== false);
         return { el, panel: p, stretch, top: r.top, bottom: r.bottom, h: p && p._naturalHeight ? p._naturalHeight() : r.height };
@@ -3829,6 +3832,7 @@
     // as between section columns (32px; the section's own gap between cards is
     // 8px), so stacked panels read as separate groups.
     _spaceFromAbove() {
+      if (this._managed) return;
       const up = (el) => el.parentNode || el.getRootNode && el.getRootNode().host || null;
       let wrap = this;
       for (let i = 0; i < 6 && wrap && wrap.localName !== "hui-card"; i += 1) wrap = up(wrap);
@@ -6939,6 +6943,307 @@
     });
   }
 
+  // src/auto-layout-card.js
+  var helpersPromise2;
+  function cardHelpers2() {
+    if (!helpersPromise2) helpersPromise2 = window.loadCardHelpers ? window.loadCardHelpers() : Promise.reject(new Error("no card helpers"));
+    return helpersPromise2;
+  }
+  var PANEL = /section-panel-card/;
+  var GAP = "var(--ha-view-sections-column-gap, 32px)";
+  var LayoutFields = createFormEditor({
+    schema: () => [
+      { name: "column_width", selector: { number: { min: 200, max: 800, step: 10, mode: "box", unit_of_measurement: "px" } } },
+      { name: "max_columns", selector: { number: { min: 1, max: 6, step: 1, mode: "box" } } }
+    ],
+    labels: {
+      column_width: "Columns at least this wide",
+      max_columns: "At most this many columns"
+    },
+    helpers: {
+      column_width: "Default 340px. Phones (under 600px) always get one column in list order.",
+      max_columns: 'Default 3. Mark a panel "Full width across an Auto Layout" to have it span the page.'
+    }
+  });
+  function balance(heights, k, gap) {
+    const n = heights.length;
+    k = Math.max(1, Math.min(k, n));
+    const pre = [0];
+    heights.forEach((h, i) => pre.push(pre[i] + h));
+    const run = (i, j2) => pre[j2] - pre[i] + gap * (j2 - i - 1);
+    const best = Array.from({ length: k + 1 }, () => Array(n + 1).fill(Infinity));
+    const cut = Array.from({ length: k + 1 }, () => Array(n + 1).fill(0));
+    best[0][0] = 0;
+    for (let c = 1; c <= k; c += 1) {
+      for (let j2 = c; j2 <= n; j2 += 1) {
+        for (let i = c - 1; i < j2; i += 1) {
+          const v = Math.max(best[c - 1][i], run(i, j2));
+          if (v <= best[c][j2] + 0.5) {
+            best[c][j2] = Math.min(v, best[c][j2]);
+            cut[c][j2] = i;
+          }
+        }
+      }
+    }
+    const starts = [];
+    let j = n;
+    for (let c = k; c > 0; c -= 1) {
+      starts.unshift(cut[c][j]);
+      j = cut[c][j];
+    }
+    return starts;
+  }
+  var AutoLayoutCardEditor = class extends HTMLElement {
+    setConfig(config) {
+      this._config = config;
+      this._render();
+    }
+    set hass(hass) {
+      this._hass = hass;
+      this._render();
+    }
+    set lovelace(lovelace) {
+      this._lovelace = lovelace;
+      if (this._stack) this._stack.lovelace = lovelace;
+    }
+    _emit(config) {
+      this._config = config;
+      this.dispatchEvent(new CustomEvent("config-changed", { detail: { config }, bubbles: true, composed: true }));
+    }
+    async _render() {
+      if (!this._config || !this._hass) return;
+      if (!this._fields) {
+        this._fields = document.createElement(`auto-layout-fields${SUFFIX}`);
+        this._fields.addEventListener("config-changed", (ev) => {
+          ev.stopPropagation();
+          const { cards: cards2, ...fields2 } = ev.detail.config;
+          this._emit({ ...this._config, ...fields2, cards: this._config.cards || [] });
+        });
+        const label = document.createElement("div");
+        label.textContent = "Panels, in order (phones show them top to bottom in this order)";
+        label.style.cssText = "margin:20px 0 8px; font-weight:500;";
+        this.append(this._fields, label);
+      }
+      const { cards, ...fields } = this._config;
+      this._fields.hass = this._hass;
+      this._fields.setConfig(fields);
+      if (!this._stack && !this._stackLoading) {
+        this._stackLoading = true;
+        try {
+          const helpers = await cardHelpers2();
+          helpers.createCardElement({ type: "vertical-stack", cards: [] });
+          await customElements.whenDefined("hui-vertical-stack-card");
+          this._stack = await customElements.get("hui-vertical-stack-card").getConfigElement();
+          this._stack.addEventListener("config-changed", (ev) => {
+            ev.stopPropagation();
+            this._emit({ ...this._config, cards: ev.detail.config.cards || [] });
+          });
+          this.appendChild(this._stack);
+        } catch (err) {
+          const note = document.createElement("p");
+          note.textContent = "The card list editor could not load; use the code editor to change the panels.";
+          this.appendChild(note);
+        }
+        this._stackLoading = false;
+      }
+      if (this._stack) {
+        this._stack.hass = this._hass;
+        if (this._lovelace) this._stack.lovelace = this._lovelace;
+        this._stack.setConfig({ type: "vertical-stack", cards: this._config.cards || [] });
+      }
+    }
+  };
+  var AutoLayoutCard = class extends HTMLElement {
+    setConfig(config) {
+      if (!Array.isArray(config.cards)) throw new Error("cards required");
+      this.config = config;
+      this._build();
+    }
+    set hass(hass) {
+      this._hass = hass;
+      (this._items || []).forEach((it) => {
+        it.el.hass = hass;
+      });
+    }
+    _build() {
+      this.style.display = "block";
+      this.innerHTML = "";
+      this._root = document.createElement("div");
+      this._root.style.cssText = `display:flex; flex-direction:column; gap:${GAP};`;
+      this.appendChild(this._root);
+      this._items = [];
+      this._plan = "";
+      const token = this._token = {};
+      cardHelpers2().then((helpers) => {
+        if (token !== this._token) return;
+        this._items = this.config.cards.map((conf) => this._make(helpers, conf));
+        this._layout(true);
+      }).catch(() => {
+      });
+    }
+    _make(helpers, conf) {
+      const el = helpers.createCardElement(conf);
+      el._managed = true;
+      if (this._hass) el.hass = this._hass;
+      const it = { conf, el, full: !!conf.full_width };
+      el.addEventListener("ll-rebuild", (ev) => {
+        ev.stopPropagation();
+        const fresh = helpers.createCardElement(conf);
+        fresh._managed = true;
+        if (this._hass) fresh.hass = this._hass;
+        el.replaceWith(fresh);
+        it.el = fresh;
+        this._queue();
+      });
+      return it;
+    }
+    _columns() {
+      if (window.innerWidth < 600) return 1;
+      const c = this.config;
+      const min = Number(c.column_width) || 340;
+      const max = Number(c.max_columns) || 3;
+      const gap = this._gap();
+      const w = this.getBoundingClientRect().width || window.innerWidth;
+      return Math.max(1, Math.min(max, Math.floor((w + gap) / (min + gap))));
+    }
+    _gap() {
+      const v = parseFloat(getComputedStyle(this).getPropertyValue("--ha-view-sections-column-gap"));
+      return Number.isFinite(v) ? v : 32;
+    }
+    _open(el) {
+      return PANEL.test(el.localName) && !(el._mode && el._mode() === "compact") && !(el.config && el.config.match_height === false);
+    }
+    // Height of an item without any stretch.
+    _height(el) {
+      if (el._naturalHeight) return el._naturalHeight();
+      return el.getBoundingClientRect().height;
+    }
+    _queue() {
+      cancelAnimationFrame(this._frame);
+      this._frame = requestAnimationFrame(() => this._layout(false));
+    }
+    // Work out bands (split at full-width items) and columns; only move cards
+    // when the arrangement actually changes, so cameras etc. aren't reloaded.
+    _layout(force) {
+      if (!this.isConnected || !this._items.length) return;
+      const cols = this._columns();
+      const gap = this._gap();
+      const bands = [];
+      let cur = [];
+      const flush = () => {
+        if (cur.length) bands.push({ items: cur });
+        cur = [];
+      };
+      this._items.forEach((it) => {
+        if (it.full && cols > 1) {
+          flush();
+          bands.push({ items: [it], full: true });
+        } else cur.push(it);
+      });
+      flush();
+      const placed = this._items.every((it) => it.el.isConnected);
+      bands.forEach((b) => {
+        if (b.full || cols === 1 || !placed) {
+          b.starts = [0];
+          return;
+        }
+        b.starts = balance(b.items.map((it) => this._height(it.el)), cols, gap);
+      });
+      const plan = `${cols}|${bands.map((b) => `${b.full ? "F" : ""}${b.items.length}:${b.starts.join(",")}`).join("/")}`;
+      if (force || plan !== this._plan) {
+        this._plan = plan;
+        this._root.innerHTML = "";
+        bands.forEach((b) => {
+          const row3 = document.createElement("div");
+          row3.style.cssText = `display:flex; gap:${GAP}; align-items:stretch;`;
+          b.cols = b.starts.map((s, i) => {
+            const col = document.createElement("div");
+            col.style.cssText = `flex:1 1 0; min-width:0; display:flex; flex-direction:column; gap:${GAP};`;
+            b.items.slice(s, b.starts[i + 1] == null ? b.items.length : b.starts[i + 1]).forEach((it) => col.appendChild(it.el));
+            row3.appendChild(col);
+            return col;
+          });
+          this._root.appendChild(row3);
+        });
+        this._bands = bands;
+        if (!placed) {
+          this._queue();
+          return;
+        }
+      }
+      this._stretch(cols, gap);
+    }
+    // Each column's last open panel grows so the columns in a band end level.
+    _stretch(cols, gap) {
+      const set = (el, px) => {
+        const p = el._panelEl;
+        if (!p) return;
+        const v = px ? `${Math.round(px)}px` : "";
+        if (p.style.minHeight !== v) p.style.minHeight = v;
+      };
+      (this._bands || []).forEach((b) => {
+        const runs = b.cols.map((col) => [...col.children].map((el) => this._items.find((it) => it.el === el)).filter(Boolean));
+        if (cols === 1 || runs.length < 2) {
+          runs.flat().forEach((it) => set(it.el, 0));
+          return;
+        }
+        const totals = runs.map((r) => r.reduce((s, it) => s + this._height(it.el), 0) + gap * Math.max(0, r.length - 1));
+        const end = Math.max(...totals);
+        runs.forEach((r, i) => {
+          let grow = null;
+          for (let k = r.length - 1; k >= 0 && !grow; k -= 1) if (this._open(r[k].el)) grow = r[k];
+          r.forEach((it) => {
+            const extra = end - totals[i];
+            set(it.el, it === grow && extra > 1 ? this._height(it.el) + extra : 0);
+          });
+        });
+      });
+    }
+    connectedCallback() {
+      this._onChange = () => this._queue();
+      window.addEventListener("resize", this._onChange);
+      window.addEventListener("cd-panels-changed", this._onChange);
+      if (window.ResizeObserver && !this._ro) {
+        this._ro = new ResizeObserver(() => this._queue());
+        this._ro.observe(this);
+        this._timer = setInterval(() => this._queue(), 3e3);
+      }
+      this._queue();
+    }
+    disconnectedCallback() {
+      window.removeEventListener("resize", this._onChange);
+      window.removeEventListener("cd-panels-changed", this._onChange);
+      if (this._ro) this._ro.disconnect();
+      this._ro = null;
+      clearInterval(this._timer);
+    }
+    getCardSize() {
+      return (this._items || []).reduce((n, it) => n + (it.el.getCardSize ? Number(it.el.getCardSize()) || 1 : 1), 0);
+    }
+    getGridOptions() {
+      return { columns: "full", rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement(`auto-layout-card-editor${SUFFIX}`);
+    }
+    static getStubConfig() {
+      return { cards: [] };
+    }
+  };
+  function registerAutoLayoutCard() {
+    if (!customElements.get(`auto-layout-fields${SUFFIX}`)) customElements.define(`auto-layout-fields${SUFFIX}`, LayoutFields);
+    if (!customElements.get(`auto-layout-card-editor${SUFFIX}`)) customElements.define(`auto-layout-card-editor${SUFFIX}`, AutoLayoutCardEditor);
+    if (!customElements.get(`auto-layout-card${SUFFIX}`)) customElements.define(`auto-layout-card${SUFFIX}`, AutoLayoutCard);
+    window.customCards = window.customCards || [];
+    window.customCards.push({
+      type: `auto-layout-card${SUFFIX}`,
+      name: `Auto Layout Card${LABEL}`,
+      description: "Arranges a page's panels into balanced columns by itself, with level bottoms",
+      preview: false,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
+    });
+  }
+
   // src/index.js
   registerGaugeZoneCard();
   registerAlarmPanelCard();
@@ -6956,5 +7261,6 @@
   registerDeviceHealthCard();
   registerSecurityZoneCard();
   registerNavBarCard();
+  registerAutoLayoutCard();
   console.info(`%c CHURCH-DRIVE-CARDS${SUFFIX ? " BETA" : ""} %c loaded `, "color: white; background: #2196f3; font-weight: 700;", "color: #2196f3; background: transparent;");
 })();
