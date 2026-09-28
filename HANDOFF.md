@@ -63,6 +63,26 @@ reported by the user, fix untested on the real fan).
 - Hold to test on the carbon monoxide card (sounds the real alarm; only when
   the user is happy to).
 
+**On Beta (unreleased): Nav Bar Card** (`nav-bar-card`). The user chose style B, the
+floating capsule, from mock-ups (claude.ai/artifact/9bJeSLs2W7VjJaTV2ShZXF), over
+splitting Mobile into separate dashboards.
+- It's pinned to the bottom. It renders into `document.body` (class
+  `church-drive-nav-bar`) so the sections layout can't clip `position:fixed`. It
+  shows inline in demo/editor/preview. It leaves a 70px spacer where the card sits.
+- Pages: `name`, `icon`, `path`, `color`, `color_template`, `alert_template` (a
+  dot when not 0/off/false/empty). The active page is the longest path matching
+  `location.pathname`. Navigation uses `kitNavigate` (pushState plus
+  `location-changed`).
+- On Mobile, `nav-bar-card-beta` is the last card of every view. The Quick Actions
+  view got the path `home`. Security takes its colour from the alarm template and
+  gets a dot for doors open or tamper. Climate gets a dot for Device Health > 0 or
+  the CO alarm. Cleaning gets a dot for `vacuum.gregg` error.
+- Section panel/title `link` option: the Quick Actions panels (Security, Climate,
+  Lights, Cleaning) switched to `section-panel-card-beta` with links. **On
+  release, switch them and the nav bars back to the released types.**
+- Not done yet: hiding HA's own tab bar (it needs a reach into HA's shadow DOM;
+  wait until the user has seen the bar), and jump-to chips on long pages.
+
 **Unreleased on the branch (next release; needs one restart to take effect):**
 - Nudges only use quiet presets (`QUIET_PRESETS`: sleep, speed_1, low, silent,
   medium, speed_2), never auto/turbo/natural. On the v0.17.2 restart the purifier
