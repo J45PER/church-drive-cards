@@ -27,7 +27,12 @@ cameras don't reload). Controls first (`controls_first`, default on): within eac
 cards have buttons/sliders (`hasControls`: alarm, light-control, climate, fan,
 purifier, cover, scene cards, tiles with features, nested stacks checked) go above
 info-only panels (cameras, climate-zone, security-zone, entities), on phones too;
-a panel's `priority: controls|info` overrides. Panels inside get `_managed = true`, which turns off their own
+a panel's `priority: controls|info` overrides. Automatic widths: a panel with no `card_width` picks one from its cards (`AUTO_WIDTH`:
+security-zone 200, picture/camera 220, tile 200, else 300; max over cards).
+`full_width` is auto/yes/no (true/false still work): auto = 3+ cards of width ≤240 that
+don't fit side by side in one column. Full-width panels sit below the balanced columns
+(controls first). Mobile panels have no `card_width`/`full_width` now (all automatic).
+Panels inside get `_managed = true`, which turns off their own
 section-to-section matching and stacked-panel spacing. Panels stay
 `section-panel-card-beta` on Mobile. On release: switch `auto-layout-card-beta` and
 the panels back to released types, reload-only (card-only change).
