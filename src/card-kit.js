@@ -38,6 +38,10 @@ export function kitShell(body, extraCss = '') {
   return `
     <ha-card class="ck-card" style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; padding:16px; background:var(--card-background-color); transition:background-color .6s ease; display:flex; flex-direction:column; gap:12px;">
       <style>
+        /* Narrow cards (e.g. five side by side): a smaller title, and the
+           status word drops to its own line instead of cutting the title. */
+        .ck-card { container-type:inline-size; }
+        @container (max-width: 260px) { .ck-title { font-size:1.25rem !important; } .ck-word { text-align:left !important; } }
         .ck-row { display:flex; gap:6px; }
         .ck-q { position:relative; overflow:hidden; container-type:inline-size; flex:1 1 0; min-width:0; height:48px; border:none; border-radius:12px; padding:0 6px; cursor:pointer;
           background:rgba(127,127,127,0.14); color:var(--primary-text-color); font:inherit; font-size:13px; font-weight:600;
@@ -61,9 +65,9 @@ export function kitShell(body, extraCss = '') {
         ${KIT_HEALTH_CSS}
         ${extraCss}
       </style>
-      <div style="display:flex; align-items:baseline; gap:8px;">
-        <div class="ck-title" style="flex:1; min-width:0; font-size:1.5rem; font-weight:500; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:color .6s;"></div>
-        <div class="ck-word" style="flex:none; font-size:0.85rem; color:var(--secondary-text-color);"></div>
+      <div class="ck-headrow" style="display:flex; flex-wrap:wrap; align-items:baseline; column-gap:8px; row-gap:2px;">
+        <div class="ck-title" style="flex:0 1 auto; max-width:100%; min-width:0; font-size:1.5rem; font-weight:500; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:color .6s;"></div>
+        <div class="ck-word" style="flex:1 0 auto; max-width:100%; font-size:0.85rem; color:var(--secondary-text-color); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:right;"></div>
       </div>
       <div class="ck-health" role="status"></div>
       ${body}

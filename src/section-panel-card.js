@@ -236,7 +236,14 @@ export class SectionPanelCard extends HTMLElement {
     const w = this.config.card_width == null || this.config.card_width === '' ? 300 : Number(this.config.card_width);
     g.style.display = 'grid';
     g.style.gap = compact ? '8px' : '12px';
-    g.style.alignItems = 'start';
+    // Cards on the same row share a height; each card's background fills it.
+    g.style.alignItems = w > 0 ? 'stretch' : 'start';
+    if (!this.querySelector('style.spc-fill')) {
+      const st = document.createElement('style');
+      st.className = 'spc-fill';
+      st.textContent = '.spc-cards > * { display:flex; flex-direction:column; min-width:0; } .spc-cards > * > ha-card { flex:1 1 auto; }';
+      this.prepend(st);
+    }
     g.style.gridTemplateColumns = w > 0 ? `repeat(auto-fill, minmax(min(100%, ${w}px), 1fr))` : '1fr';
   }
 

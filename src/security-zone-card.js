@@ -292,7 +292,7 @@ export class SecurityZoneCard extends HTMLElement {
         </div>
         <div class="sz-last ck-sub" style="font-size:0.76rem;"></div>
         <div class="sz-bats" style="display:flex; flex-direction:column; gap:3px;"></div>
-        <div class="ck-row sz-light"></div>`,
+        <div class="ck-row sz-light" style="margin-top:auto;"></div>`,
         `.sz-strip { position:relative; flex:1; min-width:0; height:20px; border-radius:6px; background:rgba(127,127,127,.12); overflow:hidden; touch-action:pan-y; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
         .sz-strip i { position:absolute; top:3px; bottom:3px; min-width:2px; border-radius:2px; }
         .sz-strip b { position:absolute; bottom:2px; border-radius:2px 2px 0 0; }

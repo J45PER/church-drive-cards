@@ -489,6 +489,10 @@
     return `
     <ha-card class="ck-card" style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; padding:16px; background:var(--card-background-color); transition:background-color .6s ease; display:flex; flex-direction:column; gap:12px;">
       <style>
+        /* Narrow cards (e.g. five side by side): a smaller title, and the
+           status word drops to its own line instead of cutting the title. */
+        .ck-card { container-type:inline-size; }
+        @container (max-width: 260px) { .ck-title { font-size:1.25rem !important; } .ck-word { text-align:left !important; } }
         .ck-row { display:flex; gap:6px; }
         .ck-q { position:relative; overflow:hidden; container-type:inline-size; flex:1 1 0; min-width:0; height:48px; border:none; border-radius:12px; padding:0 6px; cursor:pointer;
           background:rgba(127,127,127,0.14); color:var(--primary-text-color); font:inherit; font-size:13px; font-weight:600;
@@ -512,9 +516,9 @@
         ${KIT_HEALTH_CSS}
         ${extraCss}
       </style>
-      <div style="display:flex; align-items:baseline; gap:8px;">
-        <div class="ck-title" style="flex:1; min-width:0; font-size:1.5rem; font-weight:500; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:color .6s;"></div>
-        <div class="ck-word" style="flex:none; font-size:0.85rem; color:var(--secondary-text-color);"></div>
+      <div class="ck-headrow" style="display:flex; flex-wrap:wrap; align-items:baseline; column-gap:8px; row-gap:2px;">
+        <div class="ck-title" style="flex:0 1 auto; max-width:100%; min-width:0; font-size:1.5rem; font-weight:500; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:color .6s;"></div>
+        <div class="ck-word" style="flex:1 0 auto; max-width:100%; font-size:0.85rem; color:var(--secondary-text-color); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:right;"></div>
       </div>
       <div class="ck-health" role="status"></div>
       ${body}
@@ -3642,7 +3646,13 @@
       const w = this.config.card_width == null || this.config.card_width === "" ? 300 : Number(this.config.card_width);
       g.style.display = "grid";
       g.style.gap = compact ? "8px" : "12px";
-      g.style.alignItems = "start";
+      g.style.alignItems = w > 0 ? "stretch" : "start";
+      if (!this.querySelector("style.spc-fill")) {
+        const st = document.createElement("style");
+        st.className = "spc-fill";
+        st.textContent = ".spc-cards > * { display:flex; flex-direction:column; min-width:0; } .spc-cards > * > ha-card { flex:1 1 auto; }";
+        this.prepend(st);
+      }
       g.style.gridTemplateColumns = w > 0 ? `repeat(auto-fill, minmax(min(100%, ${w}px), 1fr))` : "1fr";
     }
     // ---- Matching heights with the sections beside this one.
@@ -6450,7 +6460,7 @@
         </div>
         <div class="sz-last ck-sub" style="font-size:0.76rem;"></div>
         <div class="sz-bats" style="display:flex; flex-direction:column; gap:3px;"></div>
-        <div class="ck-row sz-light"></div>`,
+        <div class="ck-row sz-light" style="margin-top:auto;"></div>`,
           `.sz-strip { position:relative; flex:1; min-width:0; height:20px; border-radius:6px; background:rgba(127,127,127,.12); overflow:hidden; touch-action:pan-y; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
         .sz-strip i { position:absolute; top:3px; bottom:3px; min-width:2px; border-radius:2px; }
         .sz-strip b { position:absolute; bottom:2px; border-radius:2px 2px 0 0; }
