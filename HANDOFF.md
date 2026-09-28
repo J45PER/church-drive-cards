@@ -127,6 +127,11 @@ details and actions ("especially on Climate"). Peek was dropped.
   ending in a compact panel isn't levelled (a collapsed Indoor Cameras had been
   stretched into an empty box). `_apply` fires `cd-panels-changed` on window so
   the whole row re-lines up at once.
+  The nav bar's `hui-card` is skipped (it's only a spacer). The kth panels are
+  lined up only among columns where k isn't the last item, and each column's
+  last panel fills to the common bottom. Before this, Climate's single-panel
+  column (Windows & Doors) was paired with Heating's first panel and never
+  levelled, because the nav bar was the last item.
 - Inside a panel, cards on the same grid row share a height (`align-items:
   stretch`, `.spc-cards > * { display:flex }` and `> ha-card { flex:1 }`). The zone
   card's light tile is pushed to the bottom (`margin-top:auto`).

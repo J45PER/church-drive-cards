@@ -281,20 +281,27 @@ export class SectionPanelCard extends HTMLElement {
     const myTop = top(section);
     const row = [...section.getRootNode().querySelectorAll('hui-section')].filter((el) => Math.abs(top(el) - myTop) < 4);
     if (row.length < 2) return clear();
+    // The nav bar only leaves a spacer at the end of the page: skip it.
+    const NAV = 'nav-bar-card, nav-bar-card-beta';
+    const isNav = (el) => !!(el.querySelector(NAV) || (el.shadowRoot && el.shadowRoot.querySelector(NAV)));
     const itemsOf = (sec) =>
       deep(sec, 'hui-card').map((el) => {
         const p = el.matches && el.matches(PANEL) ? el : el.querySelector(PANEL) || (el.shadowRoot && el.shadowRoot.querySelector(PANEL)) || null;
         const r = el.getBoundingClientRect();
         const stretch = !!(p && p._naturalHeight && !(p._mode && p._mode() === 'compact') && p.config && p.config.match_height !== false);
         return { el, panel: p, stretch, top: r.top, bottom: r.bottom, h: p && p._naturalHeight ? p._naturalHeight() : r.height };
-      }).filter((it) => it.bottom > it.top);
+      }).filter((it) => it.bottom > it.top && !isNav(it.el));
     const secs = row.map((sec) => ({ sec, items: itemsOf(sec) })).filter((x) => x.items.length);
     if (secs.length < 2) return clear();
-    const m = Math.min(...secs.map((x) => x.items.length));
+    // Line up the kth panels of the columns that have more below them; each
+    // column's last panel instead fills down to the common bottom.
     const shared = [];
-    for (let k = 0; k < m - 1; k += 1) shared[k] = Math.max(0, ...secs.map((x) => x.items[k]).filter((it) => it.stretch).map((it) => it.h));
+    const most = Math.max(...secs.map((x) => x.items.length));
+    for (let k = 0; k < most - 1; k += 1) {
+      shared[k] = Math.max(0, ...secs.filter((x) => k < x.items.length - 1 && x.items[k].stretch).map((x) => x.items[k].h));
+    }
     secs.forEach((x) => {
-      x.heights = x.items.map((it, k) => (k < m - 1 && it.stretch ? Math.max(it.h, shared[k]) : it.h));
+      x.heights = x.items.map((it, k) => (k < x.items.length - 1 && it.stretch ? Math.max(it.h, shared[k]) : it.h));
       const gaps = x.items.slice(1).reduce((sum, it, k) => sum + Math.max(0, it.top - x.items[k].bottom), 0);
       x.end = x.items[0].top + x.heights.reduce((a, b) => a + b, 0) + gaps;
     });
