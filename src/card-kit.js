@@ -165,6 +165,53 @@ export function kitNavigate(path, replace = false) {
   window.dispatchEvent(new CustomEvent('location-changed', { detail: { replace } }));
 }
 
+// The element that scrolls the page (HA may scroll the window or a view).
+export function kitScrollParent(el) {
+  let n = el;
+  for (let i = 0; n && i < 40; i += 1) {
+    n = n.parentNode || (n.host !== undefined ? n.host : null);
+    if (n && n.nodeType === 1) {
+      const oy = getComputedStyle(n).overflowY;
+      if ((oy === 'auto' || oy === 'scroll') && n.scrollHeight > n.clientHeight + 1) return n;
+    }
+  }
+  return document.scrollingElement || document.documentElement;
+}
+
+// How far a scroller is scrolled down.
+export function kitScrollTop(sc) {
+  return sc === document.scrollingElement || sc === document.documentElement ? window.scrollY : sc.scrollTop;
+}
+
+// Smooth scroll that keeps tracking its target, so panels opening or closing
+// on the way don't throw it off. `remaining()` is how far there is still to
+// go (px, + is down). A touch or wheel hands control back.
+let kitGlideFrame = 0;
+export function kitGlide(sc, remaining) {
+  cancelAnimationFrame(kitGlideFrame);
+  const stop = () => {
+    cancelAnimationFrame(kitGlideFrame);
+    window.removeEventListener('touchstart', stop, true);
+    window.removeEventListener('wheel', stop, true);
+  };
+  window.addEventListener('touchstart', stop, { capture: true, passive: true, once: true });
+  window.addEventListener('wheel', stop, { capture: true, passive: true, once: true });
+  const t0 = performance.now();
+  const step = () => {
+    const rem = remaining();
+    const late = performance.now() - t0 > 1400;
+    if (Math.abs(rem) < 1 || late) {
+      if (late && Math.abs(rem) >= 1) sc.scrollBy(0, rem);
+      stop();
+      return;
+    }
+    const move = rem * 0.16;
+    sc.scrollBy(0, Math.abs(move) < 1 ? Math.sign(rem) : move);
+    kitGlideFrame = requestAnimationFrame(step);
+  };
+  kitGlideFrame = requestAnimationFrame(step);
+}
+
 export function kitMoreInfo(el, entityId) {
   if (!entityId) return;
   el.dispatchEvent(new CustomEvent('hass-more-info', { detail: { entityId }, bubbles: true, composed: true }));

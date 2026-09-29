@@ -604,6 +604,45 @@
     history[replace ? "replaceState" : "pushState"](null, "", path);
     window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace } }));
   }
+  function kitScrollParent(el) {
+    let n = el;
+    for (let i = 0; n && i < 40; i += 1) {
+      n = n.parentNode || (n.host !== void 0 ? n.host : null);
+      if (n && n.nodeType === 1) {
+        const oy = getComputedStyle(n).overflowY;
+        if ((oy === "auto" || oy === "scroll") && n.scrollHeight > n.clientHeight + 1) return n;
+      }
+    }
+    return document.scrollingElement || document.documentElement;
+  }
+  function kitScrollTop(sc) {
+    return sc === document.scrollingElement || sc === document.documentElement ? window.scrollY : sc.scrollTop;
+  }
+  var kitGlideFrame = 0;
+  function kitGlide(sc, remaining) {
+    cancelAnimationFrame(kitGlideFrame);
+    const stop = () => {
+      cancelAnimationFrame(kitGlideFrame);
+      window.removeEventListener("touchstart", stop, true);
+      window.removeEventListener("wheel", stop, true);
+    };
+    window.addEventListener("touchstart", stop, { capture: true, passive: true, once: true });
+    window.addEventListener("wheel", stop, { capture: true, passive: true, once: true });
+    const t0 = performance.now();
+    const step = () => {
+      const rem = remaining();
+      const late = performance.now() - t0 > 1400;
+      if (Math.abs(rem) < 1 || late) {
+        if (late && Math.abs(rem) >= 1) sc.scrollBy(0, rem);
+        stop();
+        return;
+      }
+      const move = rem * 0.16;
+      sc.scrollBy(0, Math.abs(move) < 1 ? Math.sign(rem) : move);
+      kitGlideFrame = requestAnimationFrame(step);
+    };
+    kitGlideFrame = requestAnimationFrame(step);
+  }
   function kitMoreInfo(el, entityId) {
     if (!entityId) return;
     el.dispatchEvent(new CustomEvent("hass-more-info", { detail: { entityId }, bubbles: true, composed: true }));
@@ -6921,11 +6960,13 @@
         }
       },
       { name: "hide_tabs", selector: { boolean: {} }, default: true },
+      { name: "back_to_top", selector: { boolean: {} }, default: true },
       { name: "demo", selector: { boolean: {} } }
     ],
     labels: {
       pages: "Pages",
       hide_tabs: "Hide the dashboard's own tabs at the top",
+      back_to_top: "Back-to-top button beside the bar (an arrow once you scroll down, a dash at the top)",
       demo: "Show pretend pages (for Design Presets; shown in place, not pinned)"
     },
     helpers: {
@@ -6957,6 +6998,12 @@
       this._onLocation = () => this._render();
       window.addEventListener("location-changed", this._onLocation);
       window.addEventListener("popstate", this._onLocation);
+      this._sc = null;
+      this._onScroll = () => {
+        cancelAnimationFrame(this._scrollFrame);
+        this._scrollFrame = requestAnimationFrame(() => this._syncTop());
+      };
+      window.addEventListener("scroll", this._onScroll, { capture: true, passive: true });
       if (this._hass && !this._subs) this._resubscribe();
       this._render();
       this._holdTabs();
@@ -6979,6 +7026,7 @@
       this._sig = null;
       window.removeEventListener("location-changed", this._onLocation);
       window.removeEventListener("popstate", this._onLocation);
+      window.removeEventListener("scroll", this._onScroll, { capture: true });
       this._unsubscribe();
     }
     _unsubscribe() {
@@ -7032,7 +7080,7 @@
         this._builtInline = inline;
         const html = `
         <style>
-          .nb { pointer-events:auto; width:100%; max-width:440px; height:58px; border-radius:29px; display:flex; align-items:center; justify-content:space-between; gap:4px; padding:0 7px; box-sizing:border-box;
+          .nb { pointer-events:auto; flex:1 1 auto; min-width:0; max-width:440px; height:58px; border-radius:29px; display:flex; align-items:center; justify-content:space-between; gap:4px; padding:0 7px; box-sizing:border-box;
             background:color-mix(in srgb, var(--card-background-color, #1f2128) 92%, #fff 4%); box-shadow:0 8px 24px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.06);
             -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); }
           .nb-it { position:relative; flex:none; height:44px; min-width:44px; border:none; border-radius:22px; padding:0; background:transparent; cursor:pointer; font:inherit;
@@ -7042,8 +7090,21 @@
           .nb-it:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
           .nb-dot { position:absolute; left:28px; top:6px; width:8px; height:8px; border-radius:50%; background:#ff9800; box-shadow:0 0 0 2px var(--card-background-color, #1f2128); }
           .nb-it.nb-on .nb-dot { left:auto; right:6px; }
+          .nb-top { pointer-events:auto; position:relative; flex:none; width:58px; height:58px; padding:0; border:none; border-radius:50%; cursor:pointer;
+            background:color-mix(in srgb, var(--card-background-color, #1f2128) 92%, #fff 4%); box-shadow:0 8px 24px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.06);
+            -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); -webkit-tap-highlight-color:transparent; }
+          .nb-top:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
+          .nb-top i { position:absolute; left:50%; top:50%; width:12px; height:2.5px; margin:-1.25px 0 0 -6px; border-radius:2px; background:var(--primary-text-color);
+            opacity:.55; transition:transform .38s cubic-bezier(.2,.8,.2,1), opacity .38s; }
+          .nb-top i.nb-a { transform:translateX(-5px); }
+          .nb-top i.nb-b { transform:translateX(5px); }
+          .nb-top i.nb-c { width:2.5px; height:14px; margin:-7px 0 0 -1.25px; transform:scaleY(0); }
+          .nb-top.nb-up i { opacity:1; }
+          .nb-top.nb-up i.nb-a { transform:translate(-4.2px, -2.8px) rotate(-45deg); }
+          .nb-top.nb-up i.nb-b { transform:translate(4.2px, -2.8px) rotate(45deg); }
+          .nb-top.nb-up i.nb-c { transform:scaleY(1); }
         </style>
-        <div class="nb-wrap" style="${inline ? "position:relative; display:flex; justify-content:center; padding:4px 0;" : "position:fixed; z-index:5; left:0; right:0; bottom:calc(14px + env(safe-area-inset-bottom, 0px)); display:flex; justify-content:center; pointer-events:none; padding:0 14px;"}"><nav class="nb" aria-label="Pages"></nav></div>`;
+        <div class="nb-wrap" style="${inline ? "position:relative; display:flex; justify-content:center; padding:4px 0;" : "position:fixed; z-index:5; left:0; right:0; bottom:calc(14px + env(safe-area-inset-bottom, 0px)); display:flex; justify-content:center; pointer-events:none; padding:0 14px;"} gap:10px;"><nav class="nb" aria-label="Pages"></nav>${this.config.back_to_top === false ? "" : '<button class="nb-top" type="button" aria-label="Back to top" title="Back to top"><i class="nb-a"></i><i class="nb-b"></i><i class="nb-c"></i></button>'}</div>`;
         if (inline) {
           this.innerHTML = html;
           this._nav = this.querySelector(".nb");
@@ -7055,7 +7116,11 @@
           document.body.appendChild(this._host);
           this._nav = this._host.querySelector(".nb");
         }
+        this._top = (this._host || this).querySelector(".nb-top");
+        if (this._top) this._top.addEventListener("click", () => this._toTop());
         this._built = true;
+        this._up = void 0;
+        this._syncTop();
       }
       const active = this._active();
       const items = this._pages.map((p, i) => {
@@ -7082,10 +7147,30 @@
             return;
           }
           if (i !== this._active()) kitNavigate(this._pages[i].path);
-          else window.scrollTo({ top: 0, behavior: "smooth" });
+          else this._toTop();
         })
       );
       hydrateIcons(this._host || this);
+    }
+    // ---- Back to top: an arrow once the page is scrolled, a dash at the top.
+    _scroller() {
+      if (!this._sc || !this._sc.isConnected) this._sc = kitScrollParent(this);
+      return this._sc;
+    }
+    _syncTop() {
+      if (!this._top) return;
+      const up = !this.config.demo && kitScrollTop(this._scroller()) > 40;
+      if (up !== this._up) {
+        this._up = up;
+        this._top.classList.toggle("nb-up", up);
+        this._top.setAttribute("aria-disabled", String(!up));
+      }
+    }
+    _toTop() {
+      window.dispatchEvent(new CustomEvent("cd-to-top"));
+      if (this.config.demo) return;
+      const sc = this._scroller();
+      kitGlide(sc, () => -kitScrollTop(sc));
     }
     getCardSize() {
       return this.config && this.config.demo ? 1 : 0;
@@ -7192,17 +7277,6 @@
     }
   });
   var boxHeight = (el) => el ? Math.round(el.getBoundingClientRect().height) : 0;
-  function scrollParent(el) {
-    let n = el;
-    for (let i = 0; n && i < 40; i += 1) {
-      n = n.parentNode || (n.host !== void 0 ? n.host : null);
-      if (n && n.nodeType === 1) {
-        const oy = getComputedStyle(n).overflowY;
-        if ((oy === "auto" || oy === "scroll") && n.scrollHeight > n.clientHeight + 1) return n;
-      }
-    }
-    return document.scrollingElement || document.documentElement;
-  }
   function headerBottom() {
     const root = nbHuiRoot();
     const sr = root && root.shadowRoot;
@@ -7339,10 +7413,6 @@
       this._chips.className = "al-chips";
       this._chips.style.cssText = "display:none; gap:6px; overflow-x:auto; padding:6px; border-radius:999px; scrollbar-width:none; box-sizing:border-box; z-index:4;background:color-mix(in srgb, var(--card-background-color, #1f2128) 88%, transparent); box-shadow:0 6px 18px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.06);-webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); transition:opacity .2s;";
       this._chips.addEventListener("click", (ev) => {
-        if (ev.target.closest && ev.target.closest("[data-top]")) {
-          this._toTop();
-          return;
-        }
         const chip = ev.target.closest && ev.target.closest("[data-i]");
         const it = chip && this._items[Number(chip.dataset.i)];
         if (!it) return;
@@ -7581,14 +7651,7 @@
       const need = Math.max(0, Math.ceil(window.innerHeight - top - below));
       this._tail.style.height = `${need}px`;
       this._jump = { el, top, arrived: false, since: performance.now() };
-      this._glide(() => el.getBoundingClientRect().top - top);
-    }
-    // Back to the top of the page.
-    _toTop() {
-      this._closeJumped(null);
-      const sc = scrollParent(this);
-      const pos = () => sc === document.scrollingElement || sc === document.documentElement ? window.scrollY : sc.scrollTop;
-      this._glide(() => -pos());
+      kitGlide(kitScrollParent(this), () => el.getBoundingClientRect().top - top);
     }
     // Close the panel the last chip jump opened, if it's still only open for
     // that jump. Returns it.
@@ -7599,34 +7662,6 @@
       el._fallback = null;
       el._slide(() => el._apply());
       return el;
-    }
-    // Smooth scroll that keeps tracking its target, so panels opening or
-    // closing on the way don't throw it off. `remaining()` is how far there is
-    // still to go (px, + is down). A touch or wheel hands control back.
-    _glide(remaining) {
-      const sc = scrollParent(this);
-      cancelAnimationFrame(this._glideFrame);
-      const stop = () => {
-        cancelAnimationFrame(this._glideFrame);
-        window.removeEventListener("touchstart", stop, true);
-        window.removeEventListener("wheel", stop, true);
-      };
-      window.addEventListener("touchstart", stop, { capture: true, passive: true, once: true });
-      window.addEventListener("wheel", stop, { capture: true, passive: true, once: true });
-      const t0 = performance.now();
-      const step = () => {
-        const rem = remaining();
-        const late = performance.now() - t0 > 1400;
-        if (Math.abs(rem) < 1 || late) {
-          if (late && Math.abs(rem) >= 1) sc.scrollBy(0, rem);
-          stop();
-          return;
-        }
-        const move = rem * 0.16;
-        sc.scrollBy(0, Math.abs(move) < 1 ? Math.sign(rem) : move);
-        this._glideFrame = requestAnimationFrame(step);
-      };
-      this._glideFrame = requestAnimationFrame(step);
     }
     // Drop the extra room once the jump has landed and you scroll back up
     // away from that panel (or if the jump never lands).
@@ -7662,13 +7697,10 @@
         const colour = bg && bg.style.background || stcColor(it.conf.color || "primary");
         return { i, title: it.conf.title, icon: it.conf.icon, colour, on: i === this._current };
       });
-      const first = order[0] && order[0].r;
-      const scrolled = !!first && first.top < this._chipsBottom() - 4;
-      const sig = JSON.stringify([scrolled, chips]);
+      const sig = JSON.stringify(chips);
       if (sig === this._chipsSig) return;
       this._chipsSig = sig;
-      const up = scrolled ? `<button type="button" data-top aria-label="Back to top" title="Back to top" style="flex:none; display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; padding:0; border:none; border-radius:50%; cursor:pointer; color:var(--primary-text-color); background:color-mix(in srgb, var(--primary-text-color) 12%, transparent);">${iconHtml("mdi:arrow-up", { size: "18px" })}</button>` : "";
-      box.innerHTML = up + chips.map(
+      box.innerHTML = chips.map(
         (c) => `<button type="button" data-i="${c.i}" style="flex:none; display:inline-flex; align-items:center; gap:5px; padding:6px 11px; border:none; border-radius:999px; cursor:pointer; font:inherit; font-size:0.78rem; font-weight:600; color:${c.on ? "#fff" : "var(--primary-text-color)"}; background:${c.on ? c.colour : `color-mix(in srgb, ${c.colour} 18%, var(--card-background-color, #22252e))`};">${c.icon ? iconHtml(c.icon, { size: "16px", style: `color:${c.on ? "#fff" : c.colour};` }) : ""}${String(c.title).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch])}</button>`
       ).join("");
       hydrateIcons(box);
@@ -7699,6 +7731,8 @@
         }
       };
       window.addEventListener("cd-anim", this._onAnim);
+      this._onTop = () => this._closeJumped(null);
+      window.addEventListener("cd-to-top", this._onTop);
       this._onScrollBound = () => {
         cancelAnimationFrame(this._scrollFrame);
         this._scrollFrame = requestAnimationFrame(() => this._onScroll());
@@ -7722,6 +7756,7 @@
       window.removeEventListener("scroll", this._onScrollBound, { capture: true });
       window.removeEventListener("resize", this._onResize);
       window.removeEventListener("cd-anim", this._onAnim);
+      window.removeEventListener("cd-to-top", this._onTop);
       if (this._chips && this._chips.parentNode === document.body) this._chips.remove();
       window.removeEventListener("cd-panels-changed", this._onChange);
       if (this._ro) this._ro.disconnect();

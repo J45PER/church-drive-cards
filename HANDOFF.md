@@ -39,8 +39,14 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
   - Scrolling uses `_glide`, which tracks the target each frame (16% of the remaining
     distance) so panels resizing on the way don't throw it off. A touch or wheel stops
     it. `scrollParent` finds HA's scroller.
-  - A ↑ back-to-top button leads the capsule once the first panel has scrolled under
-    the chips.
+  - **Back to top** is a 58px circle to the right of the nav bar (`back_to_top`,
+    default on).
+    - Three `<i>` strokes animate: a dash at the top, an ↑ once scrolled past 40px
+      (`.nb-up`).
+    - Tapping it (or the current page's icon) fires `cd-to-top`, which closes the
+      panel a chip jump opened, and glides to the top.
+    - `kitScrollParent`, `kitScrollTop` and `kitGlide` moved to card-kit. The user
+      asked for it by the nav bar rather than in the chips.
   - Fixed: a panel opened by a jump needed two presses to close (the toggle read its
     state after clearing `_fallback`).
 - Managed panels (inside Auto Layout) no longer install their own ResizeObserver,

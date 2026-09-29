@@ -8,7 +8,7 @@
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
-import { kitNavigate, kitEsc } from './card-kit.js';
+import { kitNavigate, kitEsc, kitScrollParent, kitScrollTop, kitGlide } from './card-kit.js';
 import { stcColor, stcRender, STC_COLOR_TEMPLATE_HELPER } from './section-title-card.js';
 
 // Hiding the dashboard's own tabs: a style put into Home Assistant's
@@ -101,11 +101,13 @@ export const NavBarCardEditor = createFormEditor({
       },
     },
     { name: 'hide_tabs', selector: { boolean: {} }, default: true },
+    { name: 'back_to_top', selector: { boolean: {} }, default: true },
     { name: 'demo', selector: { boolean: {} } },
   ],
   labels: {
     pages: 'Pages',
     hide_tabs: "Hide the dashboard's own tabs at the top",
+    back_to_top: 'Back-to-top button beside the bar (an arrow once you scroll down, a dash at the top)',
     demo: 'Show pretend pages (for Design Presets; shown in place, not pinned)',
   },
   helpers: {
@@ -141,6 +143,12 @@ export class NavBarCard extends HTMLElement {
     this._onLocation = () => this._render();
     window.addEventListener('location-changed', this._onLocation);
     window.addEventListener('popstate', this._onLocation);
+    this._sc = null;
+    this._onScroll = () => {
+      cancelAnimationFrame(this._scrollFrame);
+      this._scrollFrame = requestAnimationFrame(() => this._syncTop());
+    };
+    window.addEventListener('scroll', this._onScroll, { capture: true, passive: true });
     if (this._hass && !this._subs) this._resubscribe();
     this._render();
     this._holdTabs();
@@ -165,6 +173,7 @@ export class NavBarCard extends HTMLElement {
     this._sig = null;
     window.removeEventListener('location-changed', this._onLocation);
     window.removeEventListener('popstate', this._onLocation);
+    window.removeEventListener('scroll', this._onScroll, { capture: true });
     this._unsubscribe();
   }
 
@@ -213,7 +222,7 @@ export class NavBarCard extends HTMLElement {
       this._builtInline = inline;
       const html = `
         <style>
-          .nb { pointer-events:auto; width:100%; max-width:440px; height:58px; border-radius:29px; display:flex; align-items:center; justify-content:space-between; gap:4px; padding:0 7px; box-sizing:border-box;
+          .nb { pointer-events:auto; flex:1 1 auto; min-width:0; max-width:440px; height:58px; border-radius:29px; display:flex; align-items:center; justify-content:space-between; gap:4px; padding:0 7px; box-sizing:border-box;
             background:color-mix(in srgb, var(--card-background-color, #1f2128) 92%, #fff 4%); box-shadow:0 8px 24px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.06);
             -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); }
           .nb-it { position:relative; flex:none; height:44px; min-width:44px; border:none; border-radius:22px; padding:0; background:transparent; cursor:pointer; font:inherit;
@@ -223,8 +232,23 @@ export class NavBarCard extends HTMLElement {
           .nb-it:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
           .nb-dot { position:absolute; left:28px; top:6px; width:8px; height:8px; border-radius:50%; background:#ff9800; box-shadow:0 0 0 2px var(--card-background-color, #1f2128); }
           .nb-it.nb-on .nb-dot { left:auto; right:6px; }
+          .nb-top { pointer-events:auto; position:relative; flex:none; width:58px; height:58px; padding:0; border:none; border-radius:50%; cursor:pointer;
+            background:color-mix(in srgb, var(--card-background-color, #1f2128) 92%, #fff 4%); box-shadow:0 8px 24px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.06);
+            -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); -webkit-tap-highlight-color:transparent; }
+          .nb-top:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
+          .nb-top i { position:absolute; left:50%; top:50%; width:12px; height:2.5px; margin:-1.25px 0 0 -6px; border-radius:2px; background:var(--primary-text-color);
+            opacity:.55; transition:transform .38s cubic-bezier(.2,.8,.2,1), opacity .38s; }
+          .nb-top i.nb-a { transform:translateX(-5px); }
+          .nb-top i.nb-b { transform:translateX(5px); }
+          .nb-top i.nb-c { width:2.5px; height:14px; margin:-7px 0 0 -1.25px; transform:scaleY(0); }
+          .nb-top.nb-up i { opacity:1; }
+          .nb-top.nb-up i.nb-a { transform:translate(-4.2px, -2.8px) rotate(-45deg); }
+          .nb-top.nb-up i.nb-b { transform:translate(4.2px, -2.8px) rotate(45deg); }
+          .nb-top.nb-up i.nb-c { transform:scaleY(1); }
         </style>
-        <div class="nb-wrap" style="${inline ? 'position:relative; display:flex; justify-content:center; padding:4px 0;' : 'position:fixed; z-index:5; left:0; right:0; bottom:calc(14px + env(safe-area-inset-bottom, 0px)); display:flex; justify-content:center; pointer-events:none; padding:0 14px;'}"><nav class="nb" aria-label="Pages"></nav></div>`;
+        <div class="nb-wrap" style="${inline ? 'position:relative; display:flex; justify-content:center; padding:4px 0;' : 'position:fixed; z-index:5; left:0; right:0; bottom:calc(14px + env(safe-area-inset-bottom, 0px)); display:flex; justify-content:center; pointer-events:none; padding:0 14px;'} gap:10px;"><nav class="nb" aria-label="Pages"></nav>${
+          this.config.back_to_top === false ? '' : '<button class="nb-top" type="button" aria-label="Back to top" title="Back to top"><i class="nb-a"></i><i class="nb-b"></i><i class="nb-c"></i></button>'
+        }</div>`;
       if (inline) {
         this.innerHTML = html;
         this._nav = this.querySelector('.nb');
@@ -237,7 +261,11 @@ export class NavBarCard extends HTMLElement {
         document.body.appendChild(this._host);
         this._nav = this._host.querySelector('.nb');
       }
+      this._top = (this._host || this).querySelector('.nb-top');
+      if (this._top) this._top.addEventListener('click', () => this._toTop());
       this._built = true;
+      this._up = undefined;
+      this._syncTop();
     }
     const active = this._active();
     const items = this._pages.map((p, i) => {
@@ -266,10 +294,33 @@ export class NavBarCard extends HTMLElement {
           return;
         }
         if (i !== this._active()) kitNavigate(this._pages[i].path);
-        else window.scrollTo({ top: 0, behavior: 'smooth' });
+        else this._toTop();
       }),
     );
     hydrateIcons(this._host || this);
+  }
+
+  // ---- Back to top: an arrow once the page is scrolled, a dash at the top.
+  _scroller() {
+    if (!this._sc || !this._sc.isConnected) this._sc = kitScrollParent(this);
+    return this._sc;
+  }
+
+  _syncTop() {
+    if (!this._top) return;
+    const up = !this.config.demo && kitScrollTop(this._scroller()) > 40;
+    if (up !== this._up) {
+      this._up = up;
+      this._top.classList.toggle('nb-up', up);
+      this._top.setAttribute('aria-disabled', String(!up));
+    }
+  }
+
+  _toTop() {
+    window.dispatchEvent(new CustomEvent('cd-to-top'));
+    if (this.config.demo) return;
+    const sc = this._scroller();
+    kitGlide(sc, () => -kitScrollTop(sc));
   }
 
   getCardSize() {
