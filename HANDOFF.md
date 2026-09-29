@@ -49,8 +49,9 @@ the last signed-in user (`cd-user`) for their open/compact key before `hass` arr
 Auto Layout remembers each page's last arrangement (`cd-layout-plans`, keyed by path,
 columns and panel titles) and uses it before panels can be measured.
 
-Mobile's Lighting page also gained a **Front** panel (green, `light.front_light`,
-Front Garden area) in v0.20.0.
+Mobile's Lighting page also gained a **Front Garden** panel (green, `light.front_light`,
+area `front`, Bright/Dimmed/Relax/Nightlight). v0.20.0 was released reload-only and
+Mobile is back on released card types.
 
 Everything is merged to `main`, released and running live. The user tests on real
 devices before each release.
@@ -670,7 +671,7 @@ Integration modules (`custom_components/church_drive/`):
   - `church-drive-cards-beta.js` registers every card as `<name>-beta`.
   - HA loads it from resource `436186c683fe4c7d81c865b67bb0e109`:
     `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's pinned to `111e29d` (the v0.19.0 merge: open/compact panels, wide-screen layout).
+    It's pinned to `24ef8a1` (the v0.20.0 merge: Auto Layout, nav bar icon templates, no flicker).
   - To test a branch: push it, repoint the resource, and ask for a hard refresh.
   - jsDelivr is blocked from the cloud container, but works for the user.
 - **Rollback:** download an older release in HACS and restart.
