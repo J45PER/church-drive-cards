@@ -990,10 +990,9 @@ Integration modules (`custom_components/church_drive/`):
 
 ## Open items
 
-- **Offered, not yet asked for:** jump-to chips at the top of long pages (e.g.
-  Climate: Heating · Climate · Cooling · Air Quality · Windows; in the nav mock-up);
-  matching the alarm card's 72px ring to the 84px dials; a phone notification
-  to Jamie when a device stays stale.
+- **In beta (asked for 2026-09-29):** jump-to chips in Auto Layout (`jump_chips`,
+  auto = phones with 4+ panels; style from the nav mock-up); the alarm ring is 84px
+  like the other dials; the light card's scene tiles take colours from the scene.
 
 - **Future (not now): our own Android app.** The user wants home-screen widgets
   showing the panels, and later the same app for Android-based satellite

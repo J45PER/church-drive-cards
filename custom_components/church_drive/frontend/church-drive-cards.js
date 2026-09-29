@@ -1075,7 +1075,7 @@
     triggered: { label: "Triggered!", icon: "mdi:shield-alert", color: "var(--error-color, #db4437)" }
   };
   var APC_MODE_NAMES = { armed_home: "Home", armed_away: "Away", armed_night: "Night" };
-  var APC_RING_R = 32;
+  var APC_RING_R = 38;
   var APC_RING_LEN = 2 * Math.PI * APC_RING_R;
   var AlarmPanelCard = class extends HTMLElement {
     setConfig(config) {
@@ -1123,13 +1123,13 @@
         </style>
         <div class="apc-title" style="font-size:1.5rem; font-weight:500; line-height:1.2; padding:0 0 10px 0;"></div>
         <div style="display:flex; align-items:center; gap:14px;">
-          <div style="position:relative; width:72px; height:72px; flex:none;">
-            <svg viewBox="0 0 72 72" style="width:72px; height:72px; transform:rotate(-90deg);" aria-hidden="true">
-              <circle cx="36" cy="36" r="${APC_RING_R}" fill="none" stroke="rgba(127,127,127,0.25)" stroke-width="5"></circle>
-              <circle class="apc-ring" cx="36" cy="36" r="${APC_RING_R}" fill="none" stroke-width="5" stroke-linecap="round"
+          <div style="position:relative; width:84px; height:84px; flex:none;">
+            <svg viewBox="0 0 84 84" style="width:84px; height:84px; transform:rotate(-90deg);" aria-hidden="true">
+              <circle cx="42" cy="42" r="${APC_RING_R}" fill="none" stroke="rgba(127,127,127,0.25)" stroke-width="6"></circle>
+              <circle class="apc-ring" cx="42" cy="42" r="${APC_RING_R}" fill="none" stroke-width="6" stroke-linecap="round"
                 stroke-dasharray="${APC_RING_LEN}" stroke-dashoffset="0" style="transition:stroke-dashoffset 1s linear;"></circle>
             </svg>
-            <ha-icon class="apc-icon" style="position:absolute; inset:0; margin:auto; width:32px; height:32px; --mdc-icon-size:32px;"></ha-icon>
+            <ha-icon class="apc-icon" style="position:absolute; inset:0; margin:auto; width:38px; height:38px; --mdc-icon-size:38px;"></ha-icon>
           </div>
           <div style="flex:1; min-width:0;">
             <div class="apc-line1" style="font-size:0.95rem; color:var(--primary-text-color);"></div>
@@ -7092,17 +7092,20 @@
     schema: () => [
       { name: "column_width", selector: { number: { min: 200, max: 800, step: 10, mode: "box", unit_of_measurement: "px" } } },
       { name: "max_columns", selector: { number: { min: 1, max: 6, step: 1, mode: "box" } } },
-      { name: "controls_first", selector: { boolean: {} }, default: true }
+      { name: "controls_first", selector: { boolean: {} }, default: true },
+      { name: "jump_chips", selector: { select: { mode: "dropdown", options: [{ value: "auto", label: "Automatic (phones, 4+ panels)" }, { value: "always", label: "Always" }, { value: "never", label: "Never" }] } } }
     ],
     labels: {
       column_width: "Columns at least this wide",
       max_columns: "At most this many columns",
-      controls_first: "Panels with buttons and sliders go above ones that only show information"
+      controls_first: "Panels with buttons and sliders go above ones that only show information",
+      jump_chips: "Jump-to chips at the top"
     },
     helpers: {
       column_width: "Default 340px. Phones (under 600px) always get one column in list order.",
       max_columns: 'Default 3. Mark a panel "Full width across an Auto Layout" to have it span the page.',
-      controls_first: 'Keeps list order otherwise, on phones too. Each panel can override what it counts as ("Counts as" in the panel).'
+      controls_first: 'Keeps list order otherwise, on phones too. Each panel can override what it counts as ("Counts as" in the panel).',
+      jump_chips: "One chip per panel, in its colour; tapping one scrolls to that panel, and the chip for the panel you're looking at is filled in."
     }
   });
   function balance(heights, k, gap, keep) {
@@ -7229,9 +7232,22 @@
     _build() {
       this.style.display = "block";
       this.innerHTML = "";
+      this._chips = document.createElement("div");
+      this._chips.className = "al-chips";
+      this._chips.style.cssText = "display:none; gap:6px; overflow-x:auto; padding:2px 2px 4px; margin-bottom:12px; scrollbar-width:none;";
+      this._chips.addEventListener("click", (ev) => {
+        const chip = ev.target.closest && ev.target.closest("[data-i]");
+        const it = chip && this._items[Number(chip.dataset.i)];
+        if (!it) return;
+        it.el.style.scrollMarginTop = "calc(var(--header-height, 56px) + 12px)";
+        it.el.scrollIntoView({ behavior: "smooth", block: "start" });
+        this._current = Number(chip.dataset.i);
+        this._chipsSig = null;
+        this._renderChips();
+      });
       this._root = document.createElement("div");
       this._root.style.cssText = `display:flex; flex-direction:column; gap:${GAP};`;
-      this.appendChild(this._root);
+      this.append(this._chips, this._root);
       this._items = [];
       this._plan = "";
       const token = this._token = {};
@@ -7359,6 +7375,8 @@
         }
       }
       this._stretch(cols, gap);
+      this._cols = cols;
+      this._renderChips();
     }
     // Each column's last open panel grows so the columns in a band end level,
     // but only by a modest amount: a column that can't be evened out stays
@@ -7390,7 +7408,63 @@
         });
       });
     }
+    // ---- Jump-to chips: one per panel, in page order, in the panel's colour.
+    _chipsWanted() {
+      const mode = this.config.jump_chips || "auto";
+      if (mode === "never") return false;
+      const panels = (this._items || []).filter((it) => it.conf.title);
+      if (mode === "always") return panels.length > 1;
+      return this._cols === 1 && panels.length >= 4;
+    }
+    // Panels in the order they appear on the page (top to bottom, left to right).
+    _pageOrder() {
+      return (this._items || []).map((it, i) => ({ it, i, r: it.el.getBoundingClientRect() })).filter((x) => x.it.conf.title && x.r.height > 0).sort((a, b) => a.r.top - b.r.top || a.r.left - b.r.left);
+    }
+    _renderChips() {
+      const box = this._chips;
+      if (!box) return;
+      if (!this._chipsWanted()) {
+        box.style.display = "none";
+        return;
+      }
+      box.style.display = "flex";
+      const order = this._pageOrder();
+      if (this._current == null && order.length) this._current = order[0].i;
+      const chips = order.map(({ it, i }) => {
+        const bg = it.el.querySelector && it.el.querySelector(".spc-bg");
+        const colour = bg && bg.style.background || stcColor(it.conf.color || "primary");
+        return { i, title: it.conf.title, icon: it.conf.icon, colour, on: i === this._current };
+      });
+      const sig = JSON.stringify(chips);
+      if (sig === this._chipsSig) return;
+      this._chipsSig = sig;
+      box.innerHTML = chips.map(
+        (c) => `<button type="button" data-i="${c.i}" style="flex:none; display:inline-flex; align-items:center; gap:5px; padding:6px 11px; border:none; border-radius:999px; cursor:pointer; font:inherit; font-size:0.78rem; font-weight:600; color:${c.on ? "#fff" : "var(--primary-text-color)"}; background:${c.on ? c.colour : `color-mix(in srgb, ${c.colour} 18%, var(--card-background-color, #22252e))`};">${c.icon ? iconHtml(c.icon, { size: "16px", style: `color:${c.on ? "#fff" : c.colour};` }) : ""}${String(c.title).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch])}</button>`
+      ).join("");
+      hydrateIcons(box);
+      const on = box.querySelector(`[data-i="${this._current}"]`);
+      if (on && on.scrollIntoView) box.scrollLeft = Math.max(0, on.offsetLeft - 24);
+    }
+    // The chip for the panel at the top of the screen is filled in.
+    _onScroll() {
+      if (!this._chipsWanted()) return;
+      const line = 120;
+      let current = null;
+      this._pageOrder().forEach(({ i, r }) => {
+        if (r.top <= line) current = i;
+      });
+      if (current == null) current = (this._pageOrder()[0] || {}).i;
+      if (current !== this._current) {
+        this._current = current;
+        this._renderChips();
+      }
+    }
     connectedCallback() {
+      this._onScrollBound = () => {
+        cancelAnimationFrame(this._scrollFrame);
+        this._scrollFrame = requestAnimationFrame(() => this._onScroll());
+      };
+      window.addEventListener("scroll", this._onScrollBound, { capture: true, passive: true });
       this._onChange = () => this._queue();
       window.addEventListener("resize", this._onChange);
       window.addEventListener("cd-panels-changed", this._onChange);
@@ -7402,6 +7476,7 @@
       this._queue();
     }
     disconnectedCallback() {
+      window.removeEventListener("scroll", this._onScrollBound, { capture: true });
       window.removeEventListener("resize", this._onChange);
       window.removeEventListener("cd-panels-changed", this._onChange);
       if (this._ro) this._ro.disconnect();

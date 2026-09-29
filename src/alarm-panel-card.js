@@ -62,7 +62,7 @@ const APC_STATES = {
   triggered: { label: 'Triggered!', icon: 'mdi:shield-alert', color: 'var(--error-color, #db4437)' },
 };
 const APC_MODE_NAMES = { armed_home: 'Home', armed_away: 'Away', armed_night: 'Night' };
-const APC_RING_R = 32;
+const APC_RING_R = 38; // an 84px ring, the same size as the other cards' dials
 const APC_RING_LEN = 2 * Math.PI * APC_RING_R;
 
 // Layout (the same in every state, so the card never changes size):
@@ -123,13 +123,13 @@ export class AlarmPanelCard extends HTMLElement {
         </style>
         <div class="apc-title" style="font-size:1.5rem; font-weight:500; line-height:1.2; padding:0 0 10px 0;"></div>
         <div style="display:flex; align-items:center; gap:14px;">
-          <div style="position:relative; width:72px; height:72px; flex:none;">
-            <svg viewBox="0 0 72 72" style="width:72px; height:72px; transform:rotate(-90deg);" aria-hidden="true">
-              <circle cx="36" cy="36" r="${APC_RING_R}" fill="none" stroke="rgba(127,127,127,0.25)" stroke-width="5"></circle>
-              <circle class="apc-ring" cx="36" cy="36" r="${APC_RING_R}" fill="none" stroke-width="5" stroke-linecap="round"
+          <div style="position:relative; width:84px; height:84px; flex:none;">
+            <svg viewBox="0 0 84 84" style="width:84px; height:84px; transform:rotate(-90deg);" aria-hidden="true">
+              <circle cx="42" cy="42" r="${APC_RING_R}" fill="none" stroke="rgba(127,127,127,0.25)" stroke-width="6"></circle>
+              <circle class="apc-ring" cx="42" cy="42" r="${APC_RING_R}" fill="none" stroke-width="6" stroke-linecap="round"
                 stroke-dasharray="${APC_RING_LEN}" stroke-dashoffset="0" style="transition:stroke-dashoffset 1s linear;"></circle>
             </svg>
-            <ha-icon class="apc-icon" style="position:absolute; inset:0; margin:auto; width:32px; height:32px; --mdc-icon-size:32px;"></ha-icon>
+            <ha-icon class="apc-icon" style="position:absolute; inset:0; margin:auto; width:38px; height:38px; --mdc-icon-size:38px;"></ha-icon>
           </div>
           <div style="flex:1; min-width:0;">
             <div class="apc-line1" style="font-size:0.95rem; color:var(--primary-text-color);"></div>
