@@ -997,6 +997,8 @@ Integration modules (`custom_components/church_drive/`):
   - A panel's `link` is now a "Go to …" footer button (`link_label`, pinned to the
     panel's bottom, hidden while compact) instead of making the title row navigate.
   - Jump-to chips are sticky under the header.
+  - **Mobile runs every Church Drive card as `-beta` for testing this.** On release,
+    strip `-beta` from all Mobile card types.
 - **Also in beta (asked for 2026-09-29):** jump-to chips in Auto Layout (`jump_chips`,
   auto = phones with 4+ panels; style from the nav mock-up); the alarm ring is 84px
   like the other dials; the light card's scene tiles take colours from the scene.
