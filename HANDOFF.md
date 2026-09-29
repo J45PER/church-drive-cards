@@ -1006,10 +1006,27 @@ Integration modules (`custom_components/church_drive/`):
   ends) and a "next change" line (needs a heating schedule in HA). Also later:
   Bosch-style air con and per-room smart valves; the card already handles
   fan/swing modes and a separate humidity sensor.
-- **Likely next:** the other dashboards (Hayley, Living Room Panel, Alarm,
-  Battery Status) still use HA heading cards and plain sections; convert them
-  to Section Panels like Mobile when the user wants (the user said the Mobile
-  approach "will probably work for other pages too").
+- **Done 2026-09-29 (dashboards, released card types):** Hayley, Living Room Panel,
+  Alarm and Battery Status now use one Auto Layout card per page with Section Panels,
+  like Mobile.
+  - Living Room Panel:
+    - Living Room page: Lights, Cleaning, Back Door (security-zone card) and Weather.
+    - Kitchen page: Lights and Heat Alarm.
+    - No nav bar; it keeps its tabs.
+  - Hayley: Security (alarm-panel card), Lights (4 rooms), Bedroom (fan-card and
+    cover-card replaced the tiles) and Cleaning.
+  - Alarm: Alarm and Activity (logbook), `phone_start: open`.
+  - Battery Status:
+    - Panels per floor (Ground, Middle, Hayley's) holding the battery-zone cards.
+    - Summary: "N low · Lowest X%".
+    - Colour: green, amber under 40%, red under 20%.
+    - `phone_start: open`, because battery-zone has no compact row.
+- **Automation `automation.church_drive_tell_jamie_when_a_device_stays_stale`**
+  (2026-09-29):
+  - When `sensor.church_drive_device_health` > 0 for 15 minutes, it notifies Jamie's
+    iPhone (`notify.mobile_app_xitol_j45per_iphone`, tag `church-drive-health`,
+    opens Mobile Climate).
+  - It clears the notification when the count drops back to 0.
 - "My Boy Hugo" is unavailable; the user may want to power-cycle or re-pair it.
 - The active-scene select doesn't list Hue-only scenes (e.g. Hue's Ruby glow in a
   room). It only lists library scenes.
