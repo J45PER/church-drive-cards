@@ -2484,9 +2484,10 @@
         while (rows[rowIndex].children.length >= Number(rows[rowIndex].dataset.size)) rowIndex += 1;
         const tile = document.createElement("button");
         tile.className = s.active || !anyActive ? "lcc-scene" : "lcc-scene lcc-dim";
-        const glow = `color-mix(in srgb, ${scenePalette(s.name, s.colours)[0]} 85%, transparent)`;
+        const look = s.styleName || s.name;
+        const glow = `color-mix(in srgb, ${scenePalette(look, s.colours)[0]} 85%, transparent)`;
         tile.title = s.playing ? `${s.name} (playing, tap to stop)` : s.paused ? `${s.name} (paused, tap to play)` : s.name;
-        const bg = sceneBackground(s.name, s.image, s.colours);
+        const bg = sceneBackground(look, s.image, s.colours);
         tile.style.cssText = `position:relative; container-type:inline-size; flex:1 1 0; min-width:0; height:48px; border:none; border-radius:12px; padding:0; overflow:hidden; cursor:pointer; background:${bg};${s.active ? ` box-shadow:0 0 12px 2px ${glow}; transform:scale(1.03); z-index:1;` : ""}`;
         const badge = (cls, icon, title) => `<ha-icon class="${cls}" icon="${icon}" title="${title}" style="position:absolute; top:50%; right:5px; transform:translateY(-50%); --mdc-icon-size:16px; color:#fff; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.7));"></ha-icon>`;
         tile.innerHTML = `
@@ -2584,6 +2585,7 @@
           return {
             ...s,
             name: name2,
+            styleName: s.name || lib.name,
             isDynamic: isDynamic2,
             icon: s.icon || lib.icon || sceneIcon(lib.name, isDynamic2),
             colours: lib.hex,

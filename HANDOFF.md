@@ -50,7 +50,10 @@ Auto Layout remembers each page's last arrangement (`cd-layout-plans`, keyed by 
 columns and panel titles) and uses it before panels can be measured.
 
 Mobile's Lighting page also gained a **Front Garden** panel (green, `light.front_light`,
-area `front`, Bright/Dimmed/Relax/Nightlight). v0.20.0 was released reload-only and
+area `front`, Bright/Dimmed/Relax/Nightlight as plain `universal:<key>` refs; an
+`@light.front_light` target renamed the tiles "Bright · Front Light", which missed the
+palette and got hashed colours. **In beta:** tiles now take colours from the scene's own
+name (`styleName`), whatever the label). v0.20.0 was released reload-only and
 Mobile is back on released card types.
 
 Everything is merged to `main`, released and running live. The user tests on real
