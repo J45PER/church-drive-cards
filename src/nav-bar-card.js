@@ -236,12 +236,11 @@ export class NavBarCard extends HTMLElement {
             background:color-mix(in srgb, var(--card-background-color, #1f2128) 92%, #fff 4%); box-shadow:0 8px 24px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.06);
             -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); -webkit-tap-highlight-color:transparent; }
           .nb-top:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
-          .nb-top i { position:absolute; left:50%; top:50%; width:12px; height:2.5px; margin:-1.25px 0 0 -6px; border-radius:2px; background:var(--secondary-text-color);
-            transition:transform .38s cubic-bezier(.2,.8,.2,1), background-color .38s; }
+          .nb-top i { position:absolute; left:50%; top:50%; width:12px; height:2.5px; margin:-1.25px 0 0 -6px; border-radius:2px; background:#fff;
+            transition:transform .38s cubic-bezier(.2,.8,.2,1); }
           .nb-top i.nb-a { transform:translateX(-5px); }
           .nb-top i.nb-b { transform:translateX(5px); }
           .nb-top i.nb-c { width:2.5px; height:14px; margin:-7px 0 0 -1.25px; transform:scaleY(0); }
-          .nb-top.nb-up i { background:var(--primary-text-color); }
           .nb-top.nb-up i.nb-a { transform:translate(-4.2px, -2.8px) rotate(-45deg); }
           .nb-top.nb-up i.nb-b { transform:translate(4.2px, -2.8px) rotate(45deg); }
           .nb-top.nb-up i.nb-c { transform:scaleY(1); }

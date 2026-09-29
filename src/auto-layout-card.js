@@ -72,18 +72,21 @@ function planRemember(key, splits) {
 
 const LayoutFields = createFormEditor({
   schema: () => [
+    { name: 'title', selector: { text: {} } },
     { name: 'column_width', selector: { number: { min: 200, max: 800, step: 10, mode: 'box', unit_of_measurement: 'px' } } },
     { name: 'max_columns', selector: { number: { min: 1, max: 6, step: 1, mode: 'box' } } },
     { name: 'controls_first', selector: { boolean: {} }, default: true },
     { name: 'jump_chips', selector: { select: { mode: 'dropdown', options: [{ value: 'auto', label: 'Automatic (phones, 4+ panels)' }, { value: 'always', label: 'Always' }, { value: 'never', label: 'Never' }] } } },
   ],
   labels: {
+    title: 'Page title (optional)',
     column_width: 'Columns at least this wide',
     max_columns: 'At most this many columns',
     controls_first: 'Panels with buttons and sliders go above ones that only show information',
     jump_chips: 'Jump-to chips at the top',
   },
   helpers: {
+    title: "Shown large at the top of the page, above the chips. Any panel that has opened by itself (its 'opens by itself when' is true) shows under it as an alert; tapping one goes to that panel.",
     column_width: 'Default 340px. Phones (under 600px) always get one column in list order.',
     max_columns: 'Default 3. Mark a panel "Full width across an Auto Layout" to have it span the page.',
     controls_first: 'Keeps list order otherwise, on phones too. Each panel can override what it counts as ("Counts as" in the panel).',
@@ -270,7 +273,16 @@ export class AutoLayoutCard extends HTMLElement {
     // the last panels can come up under the chips.
     this._tail = document.createElement('div');
     this._tail.style.cssText = 'height:0;';
-    this.append(this._spacer, this._root, this._tail);
+    // The page header: title, then alerts from panels that opened by themselves.
+    this._head = document.createElement('div');
+    this._head.className = 'al-head';
+    this._head.style.cssText = 'display:none; flex-direction:column; align-items:center; gap:10px; padding:4px 4px 16px;';
+    this._head.addEventListener('click', (ev) => {
+      const pill = ev.target.closest && ev.target.closest('[data-alert]');
+      const it = pill && this._items[Number(pill.dataset.alert)];
+      if (it) this._jumpTo(it);
+    });
+    this.append(this._head, this._spacer, this._root, this._tail);
     this._items = [];
     this._plan = '';
     const token = (this._token = {});
@@ -425,6 +437,7 @@ export class AutoLayoutCard extends HTMLElement {
     if (cols !== this._cols) this._settleUntil = performance.now() + 2500;
     this._stretch(cols, gap);
     this._cols = cols;
+    this._renderHead();
     this._renderChips();
   }
 
@@ -457,6 +470,44 @@ export class AutoLayoutCard extends HTMLElement {
         });
       });
     });
+  }
+
+  // ---- Page header: the title and any alerts.
+  _renderHead() {
+    const head = this._head;
+    if (!head) return;
+    const esc = (t) => String(t).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
+    const alerts = (this._items || [])
+      .map((it, i) => ({ it, i }))
+      .filter(({ it }) => it.el._alert && it.conf.title)
+      .map(({ it, i }) => {
+        const bg = it.el.querySelector && it.el.querySelector('.spc-bg');
+        const colour = (bg && bg.style.background) || stcColor(it.conf.color || 'primary');
+        const summary = it.el._title && it.el._title._summary;
+        return { i, colour, icon: it.conf.icon, text: summary ? `${it.conf.title} · ${summary}` : it.conf.title };
+      });
+    const title = this.config.title || '';
+    const sig = JSON.stringify([title, alerts]);
+    if (sig === this._headSig) return;
+    this._headSig = sig;
+    if (!title && !alerts.length) {
+      head.style.display = 'none';
+      head.innerHTML = '';
+      return;
+    }
+    head.style.display = 'flex';
+    head.innerHTML = `${title ? `<div style="font-size:2rem; font-weight:700; line-height:1.2; text-align:center; color:var(--primary-text-color);">${esc(title)}</div>` : ''}${
+      alerts.length
+        ? `<div style="display:flex; flex-wrap:wrap; justify-content:center; gap:6px;">${alerts
+            .map(
+              (a) => `<button type="button" data-alert="${a.i}" style="display:inline-flex; align-items:center; gap:6px; max-width:100%; padding:7px 12px; border:none; border-radius:999px; cursor:pointer; font:inherit; font-size:0.82rem; font-weight:600; color:var(--primary-text-color); background:color-mix(in srgb, ${a.colour} 26%, var(--card-background-color, #22252e)); box-shadow:inset 0 0 0 1px color-mix(in srgb, ${a.colour} 55%, transparent);">${
+                a.icon ? iconHtml(a.icon, { size: '18px', style: `color:${a.colour}; flex:none;` }) : ''
+              }<span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(a.text)}</span></button>`
+            )
+            .join('')}</div>`
+        : ''
+    }`;
+    hydrateIcons(head);
   }
 
   // ---- Jump-to chips: one per panel, in page order, in the panel's colour.

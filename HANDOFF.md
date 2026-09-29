@@ -53,6 +53,16 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       asked for it by the nav bar rather than in the chips.
   - Fixed: a panel opened by a jump needed two presses to close (the toggle read its
     state after clearing `_fallback`).
+- **Page header** (Auto Layout `title`, 2026-09-29):
+  - The title is centred, 2rem bold, like the Home view's "Hello {{ user }}" markdown
+    header.
+  - Under it are alert pills for panels whose `open_when` is true (`el._alert`), with
+    icon, live colour and "Title · summary". Tapping a pill `_jumpTo`s the panel.
+  - It redraws on each layout pass (`cd-panels-changed`, plus the 3s tick for summary
+    text).
+  - Mobile's Lighting, Security, Climate and Cleaning pages have titles. Home keeps
+    its Hello header, and its alerts still show.
+- The back-to-top strokes are solid white in both states.
 - Managed panels (inside Auto Layout) no longer install their own ResizeObserver,
   3s timer or `cd-panels-changed` listener.
 - Mobile runs every Church Drive card as `-beta` for testing this; strip `-beta` on
