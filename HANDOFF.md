@@ -71,11 +71,13 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
 - **Chips capsule, 2026-09-29:**
   - Chips sit in a scrolling `.al-strip` and grow to fill it (`flex:1 0 auto`), then
     scroll when there are many.
-  - The current chip is filled while its panel is open, and outlined in its colour
-    while compact.
-  - An open/close-all ring sits at the right (`[data-all]`, same +/− look,
-    `ALL_TOGGLE_CSS`): − closes every open panel, + opens them all. It's saved like
-    each panel's own toggle (`_toggleAll`).
+  - The current chip is filled only while its panel is open; when compact it isn't
+    marked at all (the user disliked an outline).
+  - A separate round open/close-all button (`.al-all`, 42px, the same capsule style as
+    the nav bar's back-to-top, white +/− that folds) sits beside the capsule. `.al-cap`
+    holds `.al-strip`, and the outer `.al-chips` row is transparent. − closes every
+    open panel, + opens them all; it's saved like each panel's own toggle
+    (`_toggleAll`).
 - **Page-change flicker:** while a page first lays out (`_settleUntil`), stretch
   changes are applied with no min-height transition, so panels no longer visibly grow
   into place when you arrive. `PANEL_TRANSITION` is exported from the panel.

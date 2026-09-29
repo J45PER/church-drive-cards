@@ -7279,11 +7279,16 @@
     }
   });
   var ALL_TOGGLE_CSS = `
-  .al-chips .stc-tog { position:relative; flex:none; width:28px; height:28px; padding:0; border-radius:50%;
-    border:2px solid color-mix(in srgb, var(--stc-c) 45%, transparent); background:transparent; cursor:pointer; -webkit-tap-highlight-color:transparent; }
-  .al-chips .stc-tog::before, .al-chips .stc-tog::after { content:''; position:absolute; left:50%; top:50%; width:11px; height:2px; border-radius:2px;
-    background:var(--primary-text-color); transform:translate(-50%, -50%); transition:transform .32s cubic-bezier(.2,.8,.2,1); }
-  .al-chips .stc-tog.stc-shut::after { transform:translate(-50%, -50%) rotate(90deg); }
+  .al-chips .al-cap, .al-chips .al-all {
+    background:color-mix(in srgb, var(--card-background-color, #1f2128) 88%, transparent);
+    box-shadow:0 6px 18px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.06);
+    -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); }
+  .al-chips .al-cap { flex:1 1 auto; min-width:0; padding:6px; border-radius:999px; box-sizing:border-box; }
+  .al-chips .al-strip { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; }
+  .al-chips .al-all { position:relative; flex:none; width:42px; height:42px; padding:0; border:none; border-radius:50%; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+  .al-chips .al-all::before, .al-chips .al-all::after { content:''; position:absolute; left:50%; top:50%; width:13px; height:2.5px; border-radius:2px;
+    background:#fff; transform:translate(-50%, -50%); transition:transform .32s cubic-bezier(.2,.8,.2,1); }
+  .al-chips .al-all.al-shut::after { transform:translate(-50%, -50%) rotate(90deg); }
 `;
   var boxHeight = (el) => el ? Math.round(el.getBoundingClientRect().height) : 0;
   function headerBottom() {
@@ -7422,7 +7427,7 @@
       if (this._chips) this._chips.remove();
       this._chips = document.createElement("div");
       this._chips.className = "al-chips";
-      this._chips.style.cssText = "display:none; align-items:center; gap:6px; padding:6px; border-radius:999px; box-sizing:border-box; z-index:4;background:color-mix(in srgb, var(--card-background-color, #1f2128) 88%, transparent); box-shadow:0 6px 18px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.06);-webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); transition:opacity .2s;";
+      this._chips.style.cssText = "display:none; align-items:center; gap:8px; box-sizing:border-box; z-index:4; transition:opacity .2s;";
       this._chips.addEventListener("click", (ev) => {
         if (ev.target.closest && ev.target.closest("[data-all]")) {
           this._toggleAll();
@@ -7783,10 +7788,11 @@
       const esc2 = (t) => String(t).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
       const chip = (c) => {
         const filled = c.on && c.open;
+        c.on = filled;
         return `<button type="button" data-i="${c.i}" style="flex:1 0 auto; display:inline-flex; align-items:center; justify-content:center; gap:5px; padding:6px 11px; border:none; border-radius:999px; cursor:pointer; font:inherit; font-size:0.78rem; font-weight:600; transition:background-color .2s, box-shadow .2s;
-        color:${filled ? "#fff" : "var(--primary-text-color)"}; background:${filled ? c.colour : `color-mix(in srgb, ${c.colour} 18%, var(--card-background-color, #22252e))`};${c.on && !c.open ? ` box-shadow:inset 0 0 0 2px ${c.colour};` : ""}">${c.icon ? iconHtml(c.icon, { size: "16px", style: `color:${filled ? "#fff" : c.colour};` }) : ""}${esc2(c.title)}</button>`;
+        color:${filled ? "#fff" : "var(--primary-text-color)"}; background:${filled ? c.colour : `color-mix(in srgb, ${c.colour} 18%, var(--card-background-color, #22252e))`};">${c.icon ? iconHtml(c.icon, { size: "16px", style: `color:${filled ? "#fff" : c.colour};` }) : ""}${esc2(c.title)}</button>`;
       };
-      box.innerHTML = `<div class="al-strip" style="flex:1 1 auto; min-width:0; display:flex; gap:6px; overflow-x:auto; scrollbar-width:none;">${chips.map(chip).join("")}</div>${panels.length > 1 ? `<button type="button" data-all class="stc-tog${anyOpen ? "" : " stc-shut"}" aria-label="${anyOpen ? "Close all" : "Open all"}" title="${anyOpen ? "Close all" : "Open all"}" style="--stc-c:var(--primary-text-color); margin:0 2px 0 0;"></button>` : ""}`;
+      box.innerHTML = `<div class="al-cap"><div class="al-strip">${chips.map(chip).join("")}</div></div>${panels.length > 1 ? `<button type="button" data-all class="al-all${anyOpen ? "" : " al-shut"}" aria-label="${anyOpen ? "Close all" : "Open all"}" title="${anyOpen ? "Close all" : "Open all"}"></button>` : ""}`;
       if (!box.querySelector("style.al-tog")) {
         const st = document.createElement("style");
         st.className = "al-tog";
