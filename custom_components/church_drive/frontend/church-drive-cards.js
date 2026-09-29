@@ -7278,17 +7278,13 @@
       jump_chips: "One chip per panel, in its colour; tapping one scrolls to that panel, and the chip for the panel you're looking at is filled in."
     }
   });
-  var ALL_TOGGLE_CSS = `
-  .al-chips .al-cap, .al-chips .al-all {
+  var CHIPS_CSS = `
+  .al-chips .al-cap {
+    flex:1 1 auto; min-width:0; padding:6px; border-radius:999px; box-sizing:border-box;
     background:color-mix(in srgb, var(--card-background-color, #1f2128) 88%, transparent);
     box-shadow:0 6px 18px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.06);
     -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); }
-  .al-chips .al-cap { flex:1 1 auto; min-width:0; padding:6px; border-radius:999px; box-sizing:border-box; }
   .al-chips .al-strip { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; }
-  .al-chips .al-all { position:relative; flex:none; width:42px; height:42px; padding:0; border:none; border-radius:50%; cursor:pointer; -webkit-tap-highlight-color:transparent; }
-  .al-chips .al-all::before, .al-chips .al-all::after { content:''; position:absolute; left:50%; top:50%; width:13px; height:2.5px; border-radius:2px;
-    background:#fff; transform:translate(-50%, -50%); transition:transform .32s cubic-bezier(.2,.8,.2,1); }
-  .al-chips .al-all.al-shut::after { transform:translate(-50%, -50%) rotate(90deg); }
 `;
   var boxHeight = (el) => el ? Math.round(el.getBoundingClientRect().height) : 0;
   function headerBottom() {
@@ -7429,10 +7425,6 @@
       this._chips.className = "al-chips";
       this._chips.style.cssText = "display:none; align-items:center; gap:8px; box-sizing:border-box; z-index:4; transition:opacity .2s;";
       this._chips.addEventListener("click", (ev) => {
-        if (ev.target.closest && ev.target.closest("[data-all]")) {
-          this._toggleAll();
-          return;
-        }
         const chip = ev.target.closest && ev.target.closest("[data-i]");
         const it = chip && this._items[Number(chip.dataset.i)];
         if (!it) return;
@@ -7780,9 +7772,7 @@
         const colour = bg && bg.style.background || stcColor(it.conf.color || "primary");
         return { i, title: it.conf.title, icon: it.conf.icon, colour, on: i === this._current, open: isOpen(it.el) };
       });
-      const panels = order.filter(({ it }) => this._closable(it.el));
-      const anyOpen = panels.some(({ it }) => isOpen(it.el));
-      const sig = JSON.stringify([anyOpen, chips]);
+      const sig = JSON.stringify(chips);
       if (sig === this._chipsSig) return;
       this._chipsSig = sig;
       const esc2 = (t) => String(t).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
@@ -7792,38 +7782,17 @@
         return `<button type="button" data-i="${c.i}" style="flex:1 0 auto; display:inline-flex; align-items:center; justify-content:center; gap:5px; padding:6px 11px; border:none; border-radius:999px; cursor:pointer; font:inherit; font-size:0.78rem; font-weight:600; transition:background-color .2s, box-shadow .2s;
         color:${filled ? "#fff" : "var(--primary-text-color)"}; background:${filled ? c.colour : `color-mix(in srgb, ${c.colour} 18%, var(--card-background-color, #22252e))`};">${c.icon ? iconHtml(c.icon, { size: "16px", style: `color:${filled ? "#fff" : c.colour};` }) : ""}${esc2(c.title)}</button>`;
       };
-      box.innerHTML = `<div class="al-cap"><div class="al-strip">${chips.map(chip).join("")}</div></div>${panels.length > 1 ? `<button type="button" data-all class="al-all${anyOpen ? "" : " al-shut"}" aria-label="${anyOpen ? "Close all" : "Open all"}" title="${anyOpen ? "Close all" : "Open all"}"></button>` : ""}`;
-      if (!box.querySelector("style.al-tog")) {
+      box.innerHTML = `<div class="al-cap"><div class="al-strip">${chips.map(chip).join("")}</div></div>`;
+      if (!box.querySelector("style.al-css")) {
         const st = document.createElement("style");
-        st.className = "al-tog";
-        st.textContent = ALL_TOGGLE_CSS;
+        st.className = "al-css";
+        st.textContent = CHIPS_CSS;
         box.prepend(st);
       }
       hydrateIcons(box);
       const strip = box.querySelector(".al-strip");
       const on = box.querySelector(`[data-i="${this._current}"]`);
       if (on && strip) strip.scrollLeft = Math.max(0, on.offsetLeft - strip.offsetLeft - 24);
-    }
-    // Panels the open/close-all button acts on: not ones held open by an
-    // alert, or that can't be closed.
-    _closable(el) {
-      return !!(el._choose && el._mode && !el._alert && el._collapsible !== false);
-    }
-    // Open every panel, or close them all if any are open (saved like the
-    // panels' own +/−). A panel a chip opened counts as open.
-    _toggleAll() {
-      const panels = (this._items || []).map((it) => it.el).filter((el) => this._closable(el));
-      const open = new Map(panels.map((el) => [el, el._mode() !== "compact"]));
-      const anyOpen = [...open.values()].some(Boolean);
-      this._jumpOpened = null;
-      panels.forEach((el) => {
-        const wasOpen = open.get(el);
-        el._fallback = null;
-        const want = anyOpen ? "compact" : "open";
-        if (wasOpen === anyOpen || el._mode() !== want) el._choose(want);
-      });
-      this._chipsSig = null;
-      this._renderChips();
     }
     // The chip for the panel at the top of the screen is filled in.
     _onScroll() {

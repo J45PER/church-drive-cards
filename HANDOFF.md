@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-29. Current release: **v0.22.0**.*
+*Last updated 2026-09-29. Current release: **v0.22.1**.*
 
 ## Where this stands
 
@@ -73,20 +73,14 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
     scroll when there are many.
   - The current chip is filled only while its panel is open; when compact it isn't
     marked at all (the user disliked an outline).
-  - A separate round open/close-all button (`.al-all`, 42px, the same capsule style as
-    the nav bar's back-to-top, white +/− that folds) sits beside the capsule. `.al-cap`
-    holds `.al-strip`, and the outer `.al-chips` row is transparent. − closes every
-    open panel, + opens them all; it's saved like each panel's own toggle
-    (`_toggleAll`).
+  - The open/close-all button (v0.22.0) was removed in v0.22.1 on the user's request (back-to-top
+    already closes the panel a chip opened). The capsule (`.al-cap` holding
+    `.al-strip`, `CHIPS_CSS`) now runs the full width.
 - **Page-change flicker:** while a page first lays out (`_settleUntil`), stretch
   changes are applied with no min-height transition, so panels no longer visibly grow
   into place when you arrive. `PANEL_TRANSITION` is exported from the panel.
 - Managed panels (inside Auto Layout) no longer install their own ResizeObserver,
   3s timer or `cd-panels-changed` listener.
-- Open/close-all acts only on panels that can close (`_closable`: not held open by an
-  alert, not `collapsible: false`). It reads each panel's state before clearing a
-  chip's temporary open; before this fix, a panel a chip had opened ignored "close
-  all".
 - Released reload-only; Mobile is back on released card types.
 
 **New in v0.21.0 (2026-09-29): panel controls.** Chosen from the `panel-ux` mock-up
@@ -785,7 +779,7 @@ Integration modules (`custom_components/church_drive/`):
   - `church-drive-cards-beta.js` registers every card as `<name>-beta`.
   - HA loads it from resource `436186c683fe4c7d81c865b67bb0e109`:
     `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's pinned to `a63a58f` (the v0.21.0 merge: panel +/- toggle, Go to footer, sticky chips).
+    It's pinned to `dd72d3b` (the v0.22.0 merge: smoother panels, floating chips, page headers).
   - To test a branch: push it, repoint the resource, and ask for a hard refresh.
   - jsDelivr is blocked from the cloud container, but works for the user.
 - **Rollback:** download an older release in HACS and restart.
