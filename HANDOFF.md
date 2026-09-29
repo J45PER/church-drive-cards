@@ -674,7 +674,7 @@ Integration modules (`custom_components/church_drive/`):
   - `church-drive-cards-beta.js` registers every card as `<name>-beta`.
   - HA loads it from resource `436186c683fe4c7d81c865b67bb0e109`:
     `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's pinned to `24ef8a1` (the v0.20.0 merge: Auto Layout, nav bar icon templates, no flicker).
+    It's pinned to `a63a58f` (the v0.21.0 merge: panel +/- toggle, Go to footer, sticky chips).
   - To test a branch: push it, repoint the resource, and ask for a hard refresh.
   - jsDelivr is blocked from the cloud container, but works for the user.
 - **Rollback:** download an older release in HACS and restart.
@@ -997,7 +997,9 @@ Integration modules (`custom_components/church_drive/`):
   - A panel's `link` is now a "Go to …" footer button (`link_label`, pinned to the
     panel's bottom, hidden while compact) instead of making the title row navigate.
   - Jump-to chips are sticky under the header.
-  - Mobile is back on released card types after v0.21.0.
+  - Mobile is back on released card types after v0.21.0. v0.21.0 was installed with a
+    full restart (the user asked for one); the Philips fan and purifier came back
+    on their own and health read 0 stale devices.
 - **Also released in v0.21.0 (asked for 2026-09-29):** jump-to chips in Auto Layout (`jump_chips`,
   auto = phones with 4+ panels; style from the nav mock-up); the alarm ring is 84px
   like the other dials; the light card's scene tiles take colours from the scene.
