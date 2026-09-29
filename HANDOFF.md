@@ -81,7 +81,7 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
   into place when you arrive. `PANEL_TRANSITION` is exported from the panel.
 - Managed panels (inside Auto Layout) no longer install their own ResizeObserver,
   3s timer or `cd-panels-changed` listener.
-- Released reload-only; Mobile is back on released card types.
+- v0.22.0 and v0.22.1 were released reload-only; Mobile is back on released card types.
 
 **New in v0.21.0 (2026-09-29): panel controls.** Chosen from the `panel-ux` mock-up
 (the user picked C's +/− with B's footer):
@@ -779,7 +779,7 @@ Integration modules (`custom_components/church_drive/`):
   - `church-drive-cards-beta.js` registers every card as `<name>-beta`.
   - HA loads it from resource `436186c683fe4c7d81c865b67bb0e109`:
     `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's pinned to `dd72d3b` (the v0.22.0 merge: smoother panels, floating chips, page headers).
+    It's pinned to `85a8007` (the v0.22.1 merge: chips without the open/close-all button).
   - To test a branch: push it, repoint the resource, and ask for a hard refresh.
   - jsDelivr is blocked from the cloud container, but works for the user.
 - **Rollback:** download an older release in HACS and restart.
