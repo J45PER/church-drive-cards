@@ -7094,12 +7094,12 @@
             background:color-mix(in srgb, var(--card-background-color, #1f2128) 92%, #fff 4%); box-shadow:0 8px 24px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.06);
             -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); -webkit-tap-highlight-color:transparent; }
           .nb-top:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
-          .nb-top i { position:absolute; left:50%; top:50%; width:12px; height:2.5px; margin:-1.25px 0 0 -6px; border-radius:2px; background:var(--primary-text-color);
-            opacity:.55; transition:transform .38s cubic-bezier(.2,.8,.2,1), opacity .38s; }
+          .nb-top i { position:absolute; left:50%; top:50%; width:12px; height:2.5px; margin:-1.25px 0 0 -6px; border-radius:2px; background:var(--secondary-text-color);
+            transition:transform .38s cubic-bezier(.2,.8,.2,1), background-color .38s; }
           .nb-top i.nb-a { transform:translateX(-5px); }
           .nb-top i.nb-b { transform:translateX(5px); }
           .nb-top i.nb-c { width:2.5px; height:14px; margin:-7px 0 0 -1.25px; transform:scaleY(0); }
-          .nb-top.nb-up i { opacity:1; }
+          .nb-top.nb-up i { background:var(--primary-text-color); }
           .nb-top.nb-up i.nb-a { transform:translate(-4.2px, -2.8px) rotate(-45deg); }
           .nb-top.nb-up i.nb-b { transform:translate(4.2px, -2.8px) rotate(45deg); }
           .nb-top.nb-up i.nb-c { transform:scaleY(1); }
@@ -7609,29 +7609,43 @@
     _chipsFloat() {
       return !(this.editMode || this.preview) && this.isConnected;
     }
-    // Where the floating capsule goes: under HA's header, as wide as the page.
+    // Where the capsule goes. At the top of the page it sits in its own row
+    // (inside the spacer, scrolling with the page, so it never covers what's
+    // above it, like the welcome message); once that row reaches the header it
+    // pins under the header (on document.body, since HA's card wrappers stop
+    // position:sticky working).
     _placeChips() {
       const box = this._chips;
       const float = this._chipsFloat();
-      if (float && box.parentNode !== document.body) document.body.appendChild(box);
-      if (!float && box.parentNode !== this) this.insertBefore(box, this._root);
+      const spacer = this._spacer;
       if (!float) {
+        if (box.parentNode !== this) this.insertBefore(box, this._root);
         Object.assign(box.style, { position: "relative", top: "", left: "", width: "", marginBottom: "12px" });
-        this._spacer.style.display = "none";
+        spacer.style.display = "none";
         return;
       }
+      if (box.parentNode !== spacer && box.parentNode !== document.body) spacer.appendChild(box);
+      const h = boxHeight(box) || 44;
+      spacer.style.cssText = `display:block; position:relative; height:${h + 12}px;`;
       const r = this.getBoundingClientRect();
-      const hidden = !r.width;
-      Object.assign(box.style, {
-        position: "fixed",
-        top: `${headerBottom() + 8}px`,
-        left: `${Math.round(r.left)}px`,
-        width: `${Math.round(r.width)}px`,
-        marginBottom: "",
-        opacity: hidden ? "0" : "1",
-        pointerEvents: hidden ? "none" : "auto"
-      });
-      this._spacer.style.cssText = `display:block; height:${boxHeight(box) + 12}px;`;
+      const pinAt = headerBottom() + 8;
+      const rowTop = spacer.getBoundingClientRect().top;
+      const pinned = rowTop < pinAt;
+      if (pinned) {
+        if (box.parentNode !== document.body) document.body.appendChild(box);
+        Object.assign(box.style, {
+          position: "fixed",
+          top: `${pinAt}px`,
+          left: `${Math.round(r.left)}px`,
+          width: `${Math.round(r.width)}px`,
+          marginBottom: "",
+          opacity: r.width ? "1" : "0",
+          pointerEvents: r.width ? "auto" : "none"
+        });
+      } else {
+        if (box.parentNode !== spacer) spacer.appendChild(box);
+        Object.assign(box.style, { position: "absolute", top: "0", left: "0", width: "100%", marginBottom: "", opacity: "1", pointerEvents: "auto" });
+      }
     }
     // Scroll a panel up to just under the chips, opening it if it's compact
     // (for this visit only; the saved open/compact choice doesn't change).
@@ -7644,7 +7658,7 @@
         el._slide(() => el._apply());
         this._jumpOpened = el;
       }
-      const top = this._chipsBottom() + 10;
+      const top = this._pinnedChipsBottom() + 10;
       const r = el.getBoundingClientRect();
       let below = this._root.getBoundingClientRect().bottom - r.top;
       if (prev && prev.getBoundingClientRect().top > r.top) below -= prev.getBoundingClientRect().height;
@@ -7675,6 +7689,10 @@
         this._tail.style.height = "0px";
         this._jump = null;
       }
+    }
+    _pinnedChipsBottom() {
+      const box = this._chips;
+      return box && box.style.display !== "none" && this._chipsFloat() ? headerBottom() + 8 + boxHeight(box) : this._chipsBottom();
     }
     _chipsBottom() {
       const box = this._chips;

@@ -16,10 +16,13 @@ HACS as an integration. It does two jobs:
 
 **In beta (2026-09-29): smoother panels and floating chips** (the user found the
 chips didn't pin, and panels jumped to a slightly larger height before expanding):
-- Chips float: the capsule lives on `document.body` (`position:fixed`, like the nav
-  bar), at `headerBottom()` (measured from hui-root's `.header`) + 8px, aligned to the
-  card, with an inline spacer. HA's card wrappers stopped `position:sticky` working.
-  The chips are inline in edit mode or preview.
+- Chips pin like `position:sticky` (HA's card wrappers stop real sticky working):
+  - At the top of the page the capsule sits in its own row, inside the spacer
+    (`position:absolute`), so it never covers the view header's "Hello Jamie".
+  - Once that row reaches `headerBottom()` + 8px (measured from hui-root's `.header`),
+    it moves to `document.body` as `position:fixed`, aligned to the card.
+  - Chip jumps aim for the pinned position (`_pinnedChipsBottom`).
+  - The chips are inline in edit mode or preview.
 - `_slide` holds the panel at its old height (`height`, `overflow:hidden`) for two
   frames while the cards redraw, then measures `height:auto` and transitions to it
   (340ms), fading the cards in. The old version measured too early, so it animated to
@@ -42,7 +45,8 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
   - **Back to top** is a 58px circle to the right of the nav bar (`back_to_top`,
     default on).
     - Three `<i>` strokes animate: a dash at the top, an ↑ once scrolled past 40px
-      (`.nb-up`).
+      (`.nb-up`). The strokes are opaque, with the secondary text colour for the
+      dash; a translucent dash showed its overlap.
     - Tapping it (or the current page's icon) fires `cd-to-top`, which closes the
       panel a chip jump opened, and glides to the top.
     - `kitScrollParent`, `kitScrollTop` and `kitGlide` moved to card-kit. The user

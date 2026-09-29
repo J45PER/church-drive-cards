@@ -480,29 +480,43 @@ export class AutoLayoutCard extends HTMLElement {
     return !(this.editMode || this.preview) && this.isConnected;
   }
 
-  // Where the floating capsule goes: under HA's header, as wide as the page.
+  // Where the capsule goes. At the top of the page it sits in its own row
+  // (inside the spacer, scrolling with the page, so it never covers what's
+  // above it, like the welcome message); once that row reaches the header it
+  // pins under the header (on document.body, since HA's card wrappers stop
+  // position:sticky working).
   _placeChips() {
     const box = this._chips;
     const float = this._chipsFloat();
-    if (float && box.parentNode !== document.body) document.body.appendChild(box);
-    if (!float && box.parentNode !== this) this.insertBefore(box, this._root);
+    const spacer = this._spacer;
     if (!float) {
+      if (box.parentNode !== this) this.insertBefore(box, this._root);
       Object.assign(box.style, { position: 'relative', top: '', left: '', width: '', marginBottom: '12px' });
-      this._spacer.style.display = 'none';
+      spacer.style.display = 'none';
       return;
     }
+    if (box.parentNode !== spacer && box.parentNode !== document.body) spacer.appendChild(box);
+    const h = boxHeight(box) || 44;
+    spacer.style.cssText = `display:block; position:relative; height:${h + 12}px;`;
     const r = this.getBoundingClientRect();
-    const hidden = !r.width;
-    Object.assign(box.style, {
-      position: 'fixed',
-      top: `${headerBottom() + 8}px`,
-      left: `${Math.round(r.left)}px`,
-      width: `${Math.round(r.width)}px`,
-      marginBottom: '',
-      opacity: hidden ? '0' : '1',
-      pointerEvents: hidden ? 'none' : 'auto',
-    });
-    this._spacer.style.cssText = `display:block; height:${boxHeight(box) + 12}px;`;
+    const pinAt = headerBottom() + 8;
+    const rowTop = spacer.getBoundingClientRect().top;
+    const pinned = rowTop < pinAt;
+    if (pinned) {
+      if (box.parentNode !== document.body) document.body.appendChild(box);
+      Object.assign(box.style, {
+        position: 'fixed',
+        top: `${pinAt}px`,
+        left: `${Math.round(r.left)}px`,
+        width: `${Math.round(r.width)}px`,
+        marginBottom: '',
+        opacity: r.width ? '1' : '0',
+        pointerEvents: r.width ? 'auto' : 'none',
+      });
+    } else {
+      if (box.parentNode !== spacer) spacer.appendChild(box);
+      Object.assign(box.style, { position: 'absolute', top: '0', left: '0', width: '100%', marginBottom: '', opacity: '1', pointerEvents: 'auto' });
+    }
   }
 
   // Scroll a panel up to just under the chips, opening it if it's compact
@@ -516,7 +530,8 @@ export class AutoLayoutCard extends HTMLElement {
       el._slide(() => el._apply());
       this._jumpOpened = el;
     }
-    const top = this._chipsBottom() + 10;
+    // Aim for just under the chips where they'll be once pinned.
+    const top = this._pinnedChipsBottom() + 10;
     const r = el.getBoundingClientRect();
     let below = this._root.getBoundingClientRect().bottom - r.top;
     // A panel closing further down makes the page shorter: allow for it.
@@ -550,6 +565,11 @@ export class AutoLayoutCard extends HTMLElement {
       this._tail.style.height = '0px';
       this._jump = null;
     }
+  }
+
+  _pinnedChipsBottom() {
+    const box = this._chips;
+    return box && box.style.display !== 'none' && this._chipsFloat() ? headerBottom() + 8 + boxHeight(box) : this._chipsBottom();
   }
 
   _chipsBottom() {
