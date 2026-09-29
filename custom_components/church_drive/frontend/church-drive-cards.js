@@ -7261,10 +7261,10 @@
       { name: "column_width", selector: { number: { min: 200, max: 800, step: 10, mode: "box", unit_of_measurement: "px" } } },
       { name: "max_columns", selector: { number: { min: 1, max: 6, step: 1, mode: "box" } } },
       { name: "controls_first", selector: { boolean: {} }, default: true },
-      { name: "jump_chips", selector: { select: { mode: "dropdown", options: [{ value: "auto", label: "Automatic (phones, 4+ panels)" }, { value: "always", label: "Always" }, { value: "never", label: "Never" }] } } }
+      { name: "jump_chips", selector: { select: { mode: "dropdown", options: [{ value: "auto", label: "Automatic (phones)" }, { value: "always", label: "Always" }, { value: "never", label: "Never" }] } } }
     ],
     labels: {
-      title: "Page title (optional)",
+      title: "Page title (optional; {user} is the signed-in person's first name)",
       column_width: "Columns at least this wide",
       max_columns: "At most this many columns",
       controls_first: "Panels with buttons and sliders go above ones that only show information",
@@ -7341,7 +7341,9 @@
       this._render();
     }
     set hass(hass) {
+      const first = !this._hass;
       this._hass = hass;
+      if (first) this._renderHead();
       this._render();
     }
     set lovelace(lovelace) {
@@ -7431,7 +7433,7 @@
       this._tail.style.cssText = "height:0;";
       this._head = document.createElement("div");
       this._head.className = "al-head";
-      this._head.style.cssText = "display:none; flex-direction:column; align-items:center; gap:10px; padding:4px 4px 16px;";
+      this._head.style.cssText = "display:none; flex-direction:column; align-items:stretch; gap:8px; padding:4px 0 12px; box-sizing:border-box;";
       this._head.addEventListener("click", (ev) => {
         const pill = ev.target.closest && ev.target.closest("[data-alert]");
         const it = pill && this._items[Number(pill.dataset.alert)];
@@ -7616,19 +7618,21 @@
         const summary = it.el._title && it.el._title._summary;
         return { i, colour, icon: it.conf.icon, text: summary ? `${it.conf.title} \xB7 ${summary}` : it.conf.title };
       });
-      const title = this.config.title || "";
+      const user = this._hass && this._hass.user && this._hass.user.name ? String(this._hass.user.name).split(" ")[0] : "";
+      const title = String(this.config.title || "").replace(/\{user\}/g, user).trim();
       const sig = JSON.stringify([title, alerts]);
       if (sig === this._headSig) return;
       this._headSig = sig;
-      if (!title && !alerts.length) {
+      if (!this.config.title) {
         head.style.display = "none";
         head.innerHTML = "";
         return;
       }
       head.style.display = "flex";
-      head.innerHTML = `${title ? `<div style="font-size:2rem; font-weight:700; line-height:1.2; text-align:center; color:var(--primary-text-color);">${esc2(title)}</div>` : ""}${alerts.length ? `<div style="display:flex; flex-wrap:wrap; justify-content:center; gap:6px;">${alerts.map(
-        (a) => `<button type="button" data-alert="${a.i}" style="display:inline-flex; align-items:center; gap:6px; max-width:100%; padding:7px 12px; border:none; border-radius:999px; cursor:pointer; font:inherit; font-size:0.82rem; font-weight:600; color:var(--primary-text-color); background:color-mix(in srgb, ${a.colour} 26%, var(--card-background-color, #22252e)); box-shadow:inset 0 0 0 1px color-mix(in srgb, ${a.colour} 55%, transparent);">${a.icon ? iconHtml(a.icon, { size: "18px", style: `color:${a.colour}; flex:none;` }) : ""}<span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc2(a.text)}</span></button>`
-      ).join("")}</div>` : ""}`;
+      head.innerHTML = `<div style="height:40px; font-size:2rem; font-weight:700; line-height:40px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--primary-text-color);">${esc2(title)}</div>
+      <div style="height:34px; display:flex; flex-wrap:nowrap; justify-content:safe center; align-items:center; gap:6px; overflow-x:auto; scrollbar-width:none;">${alerts.map(
+        (a) => `<button type="button" data-alert="${a.i}" style="flex:none; display:inline-flex; align-items:center; gap:6px; max-width:90%; height:32px; padding:0 12px; border:none; border-radius:999px; cursor:pointer; font:inherit; font-size:0.82rem; font-weight:600; color:var(--primary-text-color); background:color-mix(in srgb, ${a.colour} 26%, var(--card-background-color, #22252e)); box-shadow:inset 0 0 0 1px color-mix(in srgb, ${a.colour} 55%, transparent);">${a.icon ? iconHtml(a.icon, { size: "18px", style: `color:${a.colour}; flex:none;` }) : ""}<span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc2(a.text)}</span></button>`
+      ).join("")}</div>`;
       hydrateIcons(head);
     }
     // ---- Jump-to chips: one per panel, in page order, in the panel's colour.
@@ -7637,7 +7641,7 @@
       if (mode === "never") return false;
       const panels = (this._items || []).filter((it) => it.conf.title);
       if (mode === "always") return panels.length > 1;
-      return this._cols === 1 && panels.length >= 4;
+      return this._cols === 1 && panels.length >= 1;
     }
     // Panels in the order they appear on the page (top to bottom, left to right).
     _pageOrder() {

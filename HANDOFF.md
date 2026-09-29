@@ -60,8 +60,13 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
     icon, live colour and "Title · summary". Tapping a pill `_jumpTo`s the panel.
   - It redraws on each layout pass (`cd-panels-changed`, plus the 3s tick for summary
     text).
-  - Mobile's Lighting, Security, Climate and Cleaning pages have titles. Home keeps
-    its Hello header, and its alerts still show.
+  - **Consistency pass:** the header has a fixed height on every page (40px title line,
+    34px alerts line that's blank when empty and scrolls sideways rather than
+    wrapping; 98px in all). `{user}` in the title is the signed-in person's first
+    name. Home dropped HA's view header (markdown "Hello {{ user }}") for Auto Layout
+    `title: Hello {user}`, so every Mobile page uses the same header. Chips `auto` now
+    shows on every phone page (1+ titled panels), not only 4+, so the row is always
+    there.
 - The back-to-top strokes are solid white in both states.
 - Managed panels (inside Auto Layout) no longer install their own ResizeObserver,
   3s timer or `cd-panels-changed` listener.
