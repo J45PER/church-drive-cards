@@ -28,6 +28,12 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
   out once at the end. Panels have `transition: min-height`, so re-levelling eases.
 - Auto Layout keeps each panel's column once the page has settled (4s after connect;
   2.5s after the column count changes); open/close only re-levels.
+- Chip taps (`_jumpTo`):
+  - Open a compact panel for that visit only (`_fallback = 'open'`, not saved).
+  - Add a tail spacer so the last panels can reach just under the chips.
+  - `_trimTail` clears the spacer once the jump has landed and the user scrolls back up
+    40px or more, or after 3s if the jump never lands.
+  - The user asked for both (2026-09-29).
 - Managed panels (inside Auto Layout) no longer install their own ResizeObserver,
   3s timer or `cd-panels-changed` listener.
 - Mobile runs every Church Drive card as `-beta` for testing this; strip `-beta` on

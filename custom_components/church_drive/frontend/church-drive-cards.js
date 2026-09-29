@@ -7330,8 +7330,7 @@
         const chip = ev.target.closest && ev.target.closest("[data-i]");
         const it = chip && this._items[Number(chip.dataset.i)];
         if (!it) return;
-        it.el.style.scrollMarginTop = `${this._chipsBottom() + 10}px`;
-        it.el.scrollIntoView({ behavior: "smooth", block: "start" });
+        this._jumpTo(it);
         this._current = Number(chip.dataset.i);
         this._chipsSig = null;
         this._renderChips();
@@ -7340,7 +7339,9 @@
       this._spacer.style.cssText = "display:none;";
       this._root = document.createElement("div");
       this._root.style.cssText = `display:flex; flex-direction:column; gap:${GAP};`;
-      this.append(this._spacer, this._root);
+      this._tail = document.createElement("div");
+      this._tail.style.cssText = "height:0;";
+      this.append(this._spacer, this._root, this._tail);
       this._items = [];
       this._plan = "";
       const token = this._token = {};
@@ -7546,6 +7547,36 @@
       });
       this._spacer.style.cssText = `display:block; height:${boxHeight(box) + 12}px;`;
     }
+    // Scroll a panel up to just under the chips, opening it if it's compact
+    // (for this visit only; the saved open/compact choice doesn't change).
+    _jumpTo(it) {
+      const el = it.el;
+      if (el._mode && el._mode() === "compact" && el._slide && el._apply) {
+        el._fallback = "open";
+        el._slide(() => el._apply());
+      }
+      const top = this._chipsBottom() + 10;
+      const r = el.getBoundingClientRect();
+      const below = this._root.getBoundingClientRect().bottom - r.top;
+      const need = Math.max(0, Math.ceil(window.innerHeight - top - below));
+      this._tail.style.height = `${need}px`;
+      this._jump = { el, top, arrived: false, since: performance.now() };
+      el.style.scrollMarginTop = `${top}px`;
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    // Drop the extra room once the jump has landed and you scroll back up
+    // away from that panel (or if the jump never lands).
+    _trimTail() {
+      const j = this._jump;
+      if (!j) return;
+      const at = j.el.getBoundingClientRect().top;
+      if (Math.abs(at - j.top) < 8) j.arrived = true;
+      const leftIt = j.arrived && at > j.top + 40;
+      if (leftIt || !j.arrived && performance.now() - j.since > 3e3) {
+        this._tail.style.height = "0px";
+        this._jump = null;
+      }
+    }
     _chipsBottom() {
       const box = this._chips;
       return box && box.style.display !== "none" ? box.getBoundingClientRect().bottom : headerBottom();
@@ -7579,6 +7610,7 @@
     }
     // The chip for the panel at the top of the screen is filled in.
     _onScroll() {
+      this._trimTail();
       if (!this._chipsWanted()) return;
       const line = this._chipsBottom() + 24;
       let current = null;
