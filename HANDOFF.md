@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-29. Current release: **v0.22.0**.*
+*Last updated 2026-09-29. Current release: **v0.22.1**.*
 
 ## Where this stands
 
@@ -73,7 +73,7 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
     scroll when there are many.
   - The current chip is filled only while its panel is open; when compact it isn't
     marked at all (the user disliked an outline).
-  - The open/close-all button (v0.22.0) was removed on the user's request (back-to-top
+  - The open/close-all button (v0.22.0) was removed in v0.22.1 on the user's request (back-to-top
     already closes the panel a chip opened). The capsule (`.al-cap` holding
     `.al-strip`, `CHIPS_CSS`) now runs the full width.
 - **Page-change flicker:** while a page first lays out (`_settleUntil`), stretch
