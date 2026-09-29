@@ -454,8 +454,10 @@ export class SectionPanelCard extends HTMLElement {
     this._panelEl = panel;
     panel.addEventListener('stc-toggle', (ev) => {
       ev.stopPropagation();
+      // Flip what's showing now (which may be a temporary open from a chip).
+      const next = this._mode() === 'compact' ? 'open' : 'compact';
       this._fallback = null;
-      this._choose(this._mode() === 'compact' ? 'open' : 'compact');
+      this._choose(next);
     });
     // Tapping a compact card's name opens the panel.
     panel.addEventListener('cd-expand', (ev) => {

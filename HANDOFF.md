@@ -34,6 +34,15 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
   - `_trimTail` clears the spacer once the jump has landed and the user scrolls back up
     40px or more, or after 3s if the jump never lands.
   - The user asked for both (2026-09-29).
+  - The next jump (or ↑) closes the panel the last jump opened, if it's still only
+    open for that jump (`_closeJumped`).
+  - Scrolling uses `_glide`, which tracks the target each frame (16% of the remaining
+    distance) so panels resizing on the way don't throw it off. A touch or wheel stops
+    it. `scrollParent` finds HA's scroller.
+  - A ↑ back-to-top button leads the capsule once the first panel has scrolled under
+    the chips.
+  - Fixed: a panel opened by a jump needed two presses to close (the toggle read its
+    state after clearing `_fallback`).
 - Managed panels (inside Auto Layout) no longer install their own ResizeObserver,
   3s timer or `cd-panels-changed` listener.
 - Mobile runs every Church Drive card as `-beta` for testing this; strip `-beta` on

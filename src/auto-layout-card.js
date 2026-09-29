@@ -92,6 +92,19 @@ const LayoutFields = createFormEditor({
 
 const boxHeight = (el) => (el ? Math.round(el.getBoundingClientRect().height) : 0);
 
+// The element that scrolls the page (HA may scroll the window or a view).
+function scrollParent(el) {
+  let n = el;
+  for (let i = 0; n && i < 40; i += 1) {
+    n = n.parentNode || (n.host !== undefined ? n.host : null);
+    if (n && n.nodeType === 1) {
+      const oy = getComputedStyle(n).overflowY;
+      if ((oy === 'auto' || oy === 'scroll') && n.scrollHeight > n.clientHeight + 1) return n;
+    }
+  }
+  return document.scrollingElement || document.documentElement;
+}
+
 // Bottom of Home Assistant's top bar, so floating chips sit just under it.
 function headerBottom() {
   const root = nbHuiRoot();
@@ -253,6 +266,10 @@ export class AutoLayoutCard extends HTMLElement {
       'background:color-mix(in srgb, var(--card-background-color, #1f2128) 88%, transparent); box-shadow:0 6px 18px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.06);' +
       '-webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); transition:opacity .2s;';
     this._chips.addEventListener('click', (ev) => {
+      if (ev.target.closest && ev.target.closest('[data-top]')) {
+        this._toTop();
+        return;
+      }
       const chip = ev.target.closest && ev.target.closest('[data-i]');
       const it = chip && this._items[Number(chip.dataset.i)];
       if (!it) return;
@@ -506,20 +523,72 @@ export class AutoLayoutCard extends HTMLElement {
 
   // Scroll a panel up to just under the chips, opening it if it's compact
   // (for this visit only; the saved open/compact choice doesn't change).
+  // The panel a previous jump opened closes again, unless it's been touched.
   _jumpTo(it) {
     const el = it.el;
+    const prev = this._closeJumped(el);
     if (el._mode && el._mode() === 'compact' && el._slide && el._apply) {
       el._fallback = 'open';
       el._slide(() => el._apply());
+      this._jumpOpened = el;
     }
     const top = this._chipsBottom() + 10;
     const r = el.getBoundingClientRect();
-    const below = this._root.getBoundingClientRect().bottom - r.top;
+    let below = this._root.getBoundingClientRect().bottom - r.top;
+    // A panel closing further down makes the page shorter: allow for it.
+    if (prev && prev.getBoundingClientRect().top > r.top) below -= prev.getBoundingClientRect().height;
     const need = Math.max(0, Math.ceil(window.innerHeight - top - below));
     this._tail.style.height = `${need}px`;
     this._jump = { el, top, arrived: false, since: performance.now() };
-    el.style.scrollMarginTop = `${top}px`;
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    this._glide(() => el.getBoundingClientRect().top - top);
+  }
+
+  // Back to the top of the page.
+  _toTop() {
+    this._closeJumped(null);
+    const sc = scrollParent(this);
+    const pos = () => (sc === document.scrollingElement || sc === document.documentElement ? window.scrollY : sc.scrollTop);
+    this._glide(() => -pos());
+  }
+
+  // Close the panel the last chip jump opened, if it's still only open for
+  // that jump. Returns it.
+  _closeJumped(keep) {
+    const el = this._jumpOpened;
+    this._jumpOpened = null;
+    if (!el || el === keep || el._fallback !== 'open' || !el._slide) return null;
+    el._fallback = null;
+    el._slide(() => el._apply());
+    return el;
+  }
+
+  // Smooth scroll that keeps tracking its target, so panels opening or
+  // closing on the way don't throw it off. `remaining()` is how far there is
+  // still to go (px, + is down). A touch or wheel hands control back.
+  _glide(remaining) {
+    const sc = scrollParent(this);
+    cancelAnimationFrame(this._glideFrame);
+    const stop = () => {
+      cancelAnimationFrame(this._glideFrame);
+      window.removeEventListener('touchstart', stop, true);
+      window.removeEventListener('wheel', stop, true);
+    };
+    window.addEventListener('touchstart', stop, { capture: true, passive: true, once: true });
+    window.addEventListener('wheel', stop, { capture: true, passive: true, once: true });
+    const t0 = performance.now();
+    const step = () => {
+      const rem = remaining();
+      const late = performance.now() - t0 > 1400;
+      if (Math.abs(rem) < 1 || late) {
+        if (late && Math.abs(rem) >= 1) sc.scrollBy(0, rem);
+        stop();
+        return;
+      }
+      const move = rem * 0.16;
+      sc.scrollBy(0, Math.abs(move) < 1 ? Math.sign(rem) : move);
+      this._glideFrame = requestAnimationFrame(step);
+    };
+    this._glideFrame = requestAnimationFrame(step);
   }
 
   // Drop the extra room once the jump has landed and you scroll back up
@@ -558,10 +627,15 @@ export class AutoLayoutCard extends HTMLElement {
       const colour = (bg && bg.style.background) || stcColor(it.conf.color || 'primary');
       return { i, title: it.conf.title, icon: it.conf.icon, colour, on: i === this._current };
     });
-    const sig = JSON.stringify(chips);
+    const first = order[0] && order[0].r;
+    const scrolled = !!first && first.top < this._chipsBottom() - 4;
+    const sig = JSON.stringify([scrolled, chips]);
     if (sig === this._chipsSig) return;
     this._chipsSig = sig;
-    box.innerHTML = chips
+    const up = scrolled
+      ? `<button type="button" data-top aria-label="Back to top" title="Back to top" style="flex:none; display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; padding:0; border:none; border-radius:50%; cursor:pointer; color:var(--primary-text-color); background:color-mix(in srgb, var(--primary-text-color) 12%, transparent);">${iconHtml('mdi:arrow-up', { size: '18px' })}</button>`
+      : '';
+    box.innerHTML = up + chips
       .map(
         (c) => `<button type="button" data-i="${c.i}" style="flex:none; display:inline-flex; align-items:center; gap:5px; padding:6px 11px; border:none; border-radius:999px; cursor:pointer; font:inherit; font-size:0.78rem; font-weight:600; color:${c.on ? '#fff' : 'var(--primary-text-color)'}; background:${c.on ? c.colour : `color-mix(in srgb, ${c.colour} 18%, var(--card-background-color, #22252e))`};">${
           c.icon ? iconHtml(c.icon, { size: '16px', style: `color:${c.on ? '#fff' : c.colour};` }) : ''
@@ -583,10 +657,10 @@ export class AutoLayoutCard extends HTMLElement {
       if (r.top <= line) current = i;
     });
     if (current == null) current = (this._pageOrder()[0] || {}).i;
-    if (current !== this._current) {
-      this._current = current;
-      this._renderChips();
-    }
+    this._current = current;
+    // Cheap when nothing changed: the chips only redraw when their look does
+    // (current chip, back-to-top shown or not).
+    this._renderChips();
   }
 
   connectedCallback() {
