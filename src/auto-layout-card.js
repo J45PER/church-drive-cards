@@ -12,6 +12,7 @@ import { iconHtml, hydrateIcons } from './icons.js';
 import { stcColor } from './section-title-card.js';
 import { nbHuiRoot } from './nav-bar-card.js';
 import { kitScrollParent, kitGlide } from './card-kit.js';
+import { PANEL_TRANSITION } from './section-panel-card.js';
 
 let helpersPromise;
 function cardHelpers() {
@@ -93,6 +94,16 @@ const LayoutFields = createFormEditor({
     jump_chips: "One chip per panel, in its colour; tapping one scrolls to that panel, and the chip for the panel you're looking at is filled in.",
   },
 });
+
+// The open/close-all ring at the end of the chips (same look as a panel's +/−;
+// the capsule lives outside the panels, so it carries its own copy).
+const ALL_TOGGLE_CSS = `
+  .al-chips .stc-tog { position:relative; flex:none; width:28px; height:28px; padding:0; border-radius:50%;
+    border:2px solid color-mix(in srgb, var(--stc-c) 45%, transparent); background:transparent; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+  .al-chips .stc-tog::before, .al-chips .stc-tog::after { content:''; position:absolute; left:50%; top:50%; width:11px; height:2px; border-radius:2px;
+    background:var(--primary-text-color); transform:translate(-50%, -50%); transition:transform .32s cubic-bezier(.2,.8,.2,1); }
+  .al-chips .stc-tog.stc-shut::after { transform:translate(-50%, -50%) rotate(90deg); }
+`;
 
 const boxHeight = (el) => (el ? Math.round(el.getBoundingClientRect().height) : 0);
 
@@ -255,10 +266,14 @@ export class AutoLayoutCard extends HTMLElement {
     this._chips = document.createElement('div');
     this._chips.className = 'al-chips';
     this._chips.style.cssText =
-      'display:none; gap:6px; overflow-x:auto; padding:6px; border-radius:999px; scrollbar-width:none; box-sizing:border-box; z-index:4;' +
+      'display:none; align-items:center; gap:6px; padding:6px; border-radius:999px; box-sizing:border-box; z-index:4;' +
       'background:color-mix(in srgb, var(--card-background-color, #1f2128) 88%, transparent); box-shadow:0 6px 18px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.06);' +
       '-webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); transition:opacity .2s;';
     this._chips.addEventListener('click', (ev) => {
+      if (ev.target.closest && ev.target.closest('[data-all]')) {
+        this._toggleAll();
+        return;
+      }
       const chip = ev.target.closest && ev.target.closest('[data-i]');
       const it = chip && this._items[Number(chip.dataset.i)];
       if (!it) return;
@@ -453,7 +468,14 @@ export class AutoLayoutCard extends HTMLElement {
       const p = el._panelEl;
       if (!p) return;
       const v = px ? `${Math.round(px)}px` : '';
-      if (p.style.minHeight !== v) p.style.minHeight = v;
+      if (p.style.minHeight === v) return;
+      const settling = performance.now() < this._settleUntil;
+      if (settling && !el._sliding) p.style.transition = 'none';
+      p.style.minHeight = v;
+      if (settling && !el._sliding) {
+        void p.offsetHeight;
+        p.style.transition = PANEL_TRANSITION;
+      }
     };
     (this._bands || []).forEach((b) => {
       const runs = b.cols.map((col) => [...col.children].map((el) => this._items.find((it) => it.el === el)).filter(Boolean));
@@ -642,24 +664,56 @@ export class AutoLayoutCard extends HTMLElement {
     this._placeChips();
     const order = this._pageOrder();
     if (this._current == null && order.length) this._current = order[0].i;
+    const isOpen = (el) => !(el._mode && el._mode() === 'compact');
     const chips = order.map(({ it, i }) => {
       const bg = it.el.querySelector && it.el.querySelector('.spc-bg');
       const colour = (bg && bg.style.background) || stcColor(it.conf.color || 'primary');
-      return { i, title: it.conf.title, icon: it.conf.icon, colour, on: i === this._current };
+      return { i, title: it.conf.title, icon: it.conf.icon, colour, on: i === this._current, open: isOpen(it.el) };
     });
-    const sig = JSON.stringify(chips);
+    const panels = order.filter(({ it }) => it.el._choose);
+    const anyOpen = panels.some(({ it }) => isOpen(it.el));
+    const sig = JSON.stringify([anyOpen, chips]);
     if (sig === this._chipsSig) return;
     this._chipsSig = sig;
-    box.innerHTML = chips
-      .map(
-        (c) => `<button type="button" data-i="${c.i}" style="flex:none; display:inline-flex; align-items:center; gap:5px; padding:6px 11px; border:none; border-radius:999px; cursor:pointer; font:inherit; font-size:0.78rem; font-weight:600; color:${c.on ? '#fff' : 'var(--primary-text-color)'}; background:${c.on ? c.colour : `color-mix(in srgb, ${c.colour} 18%, var(--card-background-color, #22252e))`};">${
-          c.icon ? iconHtml(c.icon, { size: '16px', style: `color:${c.on ? '#fff' : c.colour};` }) : ''
-        }${String(c.title).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch])}</button>`
-      )
-      .join('');
+    const esc = (t) => String(t).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
+    // The current chip is filled while its panel is open, outlined while it's
+    // compact. Chips grow to fill the capsule, then scroll when there are many.
+    const chip = (c) => {
+      const filled = c.on && c.open;
+      return `<button type="button" data-i="${c.i}" style="flex:1 0 auto; display:inline-flex; align-items:center; justify-content:center; gap:5px; padding:6px 11px; border:none; border-radius:999px; cursor:pointer; font:inherit; font-size:0.78rem; font-weight:600; transition:background-color .2s, box-shadow .2s;
+        color:${filled ? '#fff' : 'var(--primary-text-color)'}; background:${filled ? c.colour : `color-mix(in srgb, ${c.colour} 18%, var(--card-background-color, #22252e))`};${c.on && !c.open ? ` box-shadow:inset 0 0 0 2px ${c.colour};` : ''}">${
+        c.icon ? iconHtml(c.icon, { size: '16px', style: `color:${filled ? '#fff' : c.colour};` }) : ''
+      }${esc(c.title)}</button>`;
+    };
+    box.innerHTML = `<div class="al-strip" style="flex:1 1 auto; min-width:0; display:flex; gap:6px; overflow-x:auto; scrollbar-width:none;">${chips.map(chip).join('')}</div>${
+      panels.length > 1
+        ? `<button type="button" data-all class="stc-tog${anyOpen ? '' : ' stc-shut'}" aria-label="${anyOpen ? 'Close all' : 'Open all'}" title="${anyOpen ? 'Close all' : 'Open all'}" style="--stc-c:var(--primary-text-color); margin:0 2px 0 0;"></button>`
+        : ''
+    }`;
+    if (!box.querySelector('style.al-tog')) {
+      const st = document.createElement('style');
+      st.className = 'al-tog';
+      st.textContent = ALL_TOGGLE_CSS;
+      box.prepend(st);
+    }
     hydrateIcons(box);
+    const strip = box.querySelector('.al-strip');
     const on = box.querySelector(`[data-i="${this._current}"]`);
-    if (on && on.scrollIntoView) box.scrollLeft = Math.max(0, on.offsetLeft - 24);
+    if (on && strip) strip.scrollLeft = Math.max(0, on.offsetLeft - strip.offsetLeft - 24);
+  }
+
+  // Open every panel, or close them all if any are open (saved like the
+  // panels' own +/−).
+  _toggleAll() {
+    const panels = (this._items || []).map((it) => it.el).filter((el) => el._choose && el._mode);
+    const anyOpen = panels.some((el) => el._mode() !== 'compact');
+    this._jumpOpened = null;
+    panels.forEach((el) => {
+      el._fallback = null;
+      if ((el._mode() !== 'compact') === anyOpen) el._choose(anyOpen ? 'compact' : 'open');
+    });
+    this._chipsSig = null;
+    this._renderChips();
   }
 
   // The chip for the panel at the top of the screen is filled in.

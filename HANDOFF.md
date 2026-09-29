@@ -68,6 +68,17 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
     shows on every phone page (1+ titled panels), not only 4+, so the row is always
     there.
 - The back-to-top strokes are solid white in both states.
+- **Chips capsule, 2026-09-29:**
+  - Chips sit in a scrolling `.al-strip` and grow to fill it (`flex:1 0 auto`), then
+    scroll when there are many.
+  - The current chip is filled while its panel is open, and outlined in its colour
+    while compact.
+  - An open/close-all ring sits at the right (`[data-all]`, same +/− look,
+    `ALL_TOGGLE_CSS`): − closes every open panel, + opens them all. It's saved like
+    each panel's own toggle (`_toggleAll`).
+- **Page-change flicker:** while a page first lays out (`_settleUntil`), stretch
+  changes are applied with no min-height transition, so panels no longer visibly grow
+  into place when you arrive. `PANEL_TRANSITION` is exported from the panel.
 - Managed panels (inside Auto Layout) no longer install their own ResizeObserver,
   3s timer or `cd-panels-changed` listener.
 - Mobile runs every Church Drive card as `-beta` for testing this; strip `-beta` on

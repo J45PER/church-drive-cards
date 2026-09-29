@@ -40,7 +40,7 @@ function rememberUser(hass) {
 }
 
 // Stretch (min-height) changes from the layout ease in instead of jumping.
-const PANEL_TRANSITION = 'min-height 320ms cubic-bezier(.2,.8,.2,1)';
+export const PANEL_TRANSITION = 'min-height 320ms cubic-bezier(.2,.8,.2,1)';
 
 let helpersPromise;
 function cardHelpers() {
