@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-29. Current release: **v0.21.0**.*
+*Last updated 2026-09-29. Current release: **v0.22.0**.*
 
 ## Where this stands
 
@@ -14,7 +14,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**In beta (2026-09-29): smoother panels and floating chips** (the user found the
+**New in v0.22.0 (2026-09-29): smoother panels, floating chips, page headers** (the user found the
 chips didn't pin, and panels jumped to a slightly larger height before expanding):
 - Chips pin like `position:sticky` (HA's card wrappers stop real sticky working):
   - At the top of the page the capsule sits in its own row, inside the spacer
@@ -83,8 +83,11 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
   into place when you arrive. `PANEL_TRANSITION` is exported from the panel.
 - Managed panels (inside Auto Layout) no longer install their own ResizeObserver,
   3s timer or `cd-panels-changed` listener.
-- Mobile runs every Church Drive card as `-beta` for testing this; strip `-beta` on
-  release.
+- Open/close-all acts only on panels that can close (`_closable`: not held open by an
+  alert, not `collapsible: false`). It reads each panel's state before clearing a
+  chip's temporary open; before this fix, a panel a chip had opened ignored "close
+  all".
+- Released reload-only; Mobile is back on released card types.
 
 **New in v0.21.0 (2026-09-29): panel controls.** Chosen from the `panel-ux` mock-up
 (the user picked C's +/− with B's footer):

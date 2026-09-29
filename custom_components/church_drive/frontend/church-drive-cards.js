@@ -7780,7 +7780,7 @@
         const colour = bg && bg.style.background || stcColor(it.conf.color || "primary");
         return { i, title: it.conf.title, icon: it.conf.icon, colour, on: i === this._current, open: isOpen(it.el) };
       });
-      const panels = order.filter(({ it }) => it.el._choose);
+      const panels = order.filter(({ it }) => this._closable(it.el));
       const anyOpen = panels.some(({ it }) => isOpen(it.el));
       const sig = JSON.stringify([anyOpen, chips]);
       if (sig === this._chipsSig) return;
@@ -7804,15 +7804,23 @@
       const on = box.querySelector(`[data-i="${this._current}"]`);
       if (on && strip) strip.scrollLeft = Math.max(0, on.offsetLeft - strip.offsetLeft - 24);
     }
+    // Panels the open/close-all button acts on: not ones held open by an
+    // alert, or that can't be closed.
+    _closable(el) {
+      return !!(el._choose && el._mode && !el._alert && el._collapsible !== false);
+    }
     // Open every panel, or close them all if any are open (saved like the
-    // panels' own +/−).
+    // panels' own +/−). A panel a chip opened counts as open.
     _toggleAll() {
-      const panels = (this._items || []).map((it) => it.el).filter((el) => el._choose && el._mode);
-      const anyOpen = panels.some((el) => el._mode() !== "compact");
+      const panels = (this._items || []).map((it) => it.el).filter((el) => this._closable(el));
+      const open = new Map(panels.map((el) => [el, el._mode() !== "compact"]));
+      const anyOpen = [...open.values()].some(Boolean);
       this._jumpOpened = null;
       panels.forEach((el) => {
+        const wasOpen = open.get(el);
         el._fallback = null;
-        if (el._mode() !== "compact" === anyOpen) el._choose(anyOpen ? "compact" : "open");
+        const want = anyOpen ? "compact" : "open";
+        if (wasOpen === anyOpen || el._mode() !== want) el._choose(want);
       });
       this._chipsSig = null;
       this._renderChips();
