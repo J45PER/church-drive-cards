@@ -10,6 +10,7 @@ import { createFormEditor } from './form-editor.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { stcColor } from './section-title-card.js';
+import { nbHuiRoot } from './nav-bar-card.js';
 
 let helpersPromise;
 function cardHelpers() {
@@ -90,6 +91,15 @@ const LayoutFields = createFormEditor({
 });
 
 const boxHeight = (el) => (el ? Math.round(el.getBoundingClientRect().height) : 0);
+
+// Bottom of Home Assistant's top bar, so floating chips sit just under it.
+function headerBottom() {
+  const root = nbHuiRoot();
+  const sr = root && root.shadowRoot;
+  const bar = sr && (sr.querySelector('.header') || sr.querySelector('app-header') || sr.querySelector('app-toolbar'));
+  const r = bar && bar.getBoundingClientRect();
+  return r && r.height ? Math.max(0, r.bottom) : 56;
+}
 
 // Share items between k columns so the tallest column is as short as
 // possible. Each column keeps list order; column 1 starts with the first
@@ -232,24 +242,31 @@ export class AutoLayoutCard extends HTMLElement {
   _build() {
     this.style.display = 'block';
     this.innerHTML = '';
+    // Jump-to chips float under the header (a capsule on document.body, like
+    // the nav bar, since HA's card wrappers stop position:sticky working);
+    // the spacer keeps room for them at the top of the page.
+    if (this._chips) this._chips.remove();
     this._chips = document.createElement('div');
     this._chips.className = 'al-chips';
-    // Pinned under the header while the page scrolls.
     this._chips.style.cssText =
-      'display:none; gap:6px; overflow-x:auto; padding:8px 2px; margin:-8px 0 4px; scrollbar-width:none; position:sticky; top:var(--header-height, 56px); z-index:3; background:var(--primary-background-color, #111318);';
+      'display:none; gap:6px; overflow-x:auto; padding:6px; border-radius:999px; scrollbar-width:none; box-sizing:border-box; z-index:4;' +
+      'background:color-mix(in srgb, var(--card-background-color, #1f2128) 88%, transparent); box-shadow:0 6px 18px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.06);' +
+      '-webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); transition:opacity .2s;';
     this._chips.addEventListener('click', (ev) => {
       const chip = ev.target.closest && ev.target.closest('[data-i]');
       const it = chip && this._items[Number(chip.dataset.i)];
       if (!it) return;
-      it.el.style.scrollMarginTop = `calc(var(--header-height, 56px) + ${boxHeight(this._chips)}px + 8px)`;
+      it.el.style.scrollMarginTop = `${this._chipsBottom() + 10}px`;
       it.el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       this._current = Number(chip.dataset.i);
       this._chipsSig = null;
       this._renderChips();
     });
+    this._spacer = document.createElement('div');
+    this._spacer.style.cssText = 'display:none;';
     this._root = document.createElement('div');
     this._root.style.cssText = `display:flex; flex-direction:column; gap:${GAP};`;
-    this.append(this._chips, this._root);
+    this.append(this._spacer, this._root);
     this._items = [];
     this._plan = '';
     const token = (this._token = {});
@@ -319,6 +336,11 @@ export class AutoLayoutCard extends HTMLElement {
   }
 
   _queue() {
+    // Wait while a panel slides open or shut; lay out once when it's done.
+    if (this._animating > 0) {
+      this._pending = true;
+      return;
+    }
     cancelAnimationFrame(this._frame);
     this._frame = requestAnimationFrame(() => this._layout(false));
   }
@@ -364,7 +386,10 @@ export class AutoLayoutCard extends HTMLElement {
       }
       const key = b.items.map((it) => this._items.indexOf(it)).join(',');
       const prev = this._prevSplits && this._prevSplits[key];
-      b.split = balance(b.items.map((it) => this._height(it.el)), cols, gap, prev);
+      // Once the page has settled, panels keep their columns: opening or
+      // closing one only re-levels the bottoms, it never moves panels about.
+      const settled = performance.now() > this._settleUntil && cols === this._cols;
+      b.split = settled && prev && prev.length === Math.min(cols, b.items.length) ? prev : balance(b.items.map((it) => this._height(it.el)), cols, gap, prev);
     });
     this._prevSplits = {};
     bands.forEach((b) => {
@@ -393,6 +418,7 @@ export class AutoLayoutCard extends HTMLElement {
         return;
       }
     }
+    if (cols !== this._cols) this._settleUntil = performance.now() + 2500;
     this._stretch(cols, gap);
     this._cols = cols;
     this._renderChips();
@@ -446,14 +472,50 @@ export class AutoLayoutCard extends HTMLElement {
       .sort((a, b) => a.r.top - b.r.top || a.r.left - b.r.left);
   }
 
+  _chipsFloat() {
+    return !(this.editMode || this.preview) && this.isConnected;
+  }
+
+  // Where the floating capsule goes: under HA's header, as wide as the page.
+  _placeChips() {
+    const box = this._chips;
+    const float = this._chipsFloat();
+    if (float && box.parentNode !== document.body) document.body.appendChild(box);
+    if (!float && box.parentNode !== this) this.insertBefore(box, this._root);
+    if (!float) {
+      Object.assign(box.style, { position: 'relative', top: '', left: '', width: '', marginBottom: '12px' });
+      this._spacer.style.display = 'none';
+      return;
+    }
+    const r = this.getBoundingClientRect();
+    const hidden = !r.width;
+    Object.assign(box.style, {
+      position: 'fixed',
+      top: `${headerBottom() + 8}px`,
+      left: `${Math.round(r.left)}px`,
+      width: `${Math.round(r.width)}px`,
+      marginBottom: '',
+      opacity: hidden ? '0' : '1',
+      pointerEvents: hidden ? 'none' : 'auto',
+    });
+    this._spacer.style.cssText = `display:block; height:${boxHeight(box) + 12}px;`;
+  }
+
+  _chipsBottom() {
+    const box = this._chips;
+    return box && box.style.display !== 'none' ? box.getBoundingClientRect().bottom : headerBottom();
+  }
+
   _renderChips() {
     const box = this._chips;
     if (!box) return;
     if (!this._chipsWanted()) {
       box.style.display = 'none';
+      if (this._spacer) this._spacer.style.display = 'none';
       return;
     }
     box.style.display = 'flex';
+    this._placeChips();
     const order = this._pageOrder();
     if (this._current == null && order.length) this._current = order[0].i;
     const chips = order.map(({ it, i }) => {
@@ -479,7 +541,7 @@ export class AutoLayoutCard extends HTMLElement {
   // The chip for the panel at the top of the screen is filled in.
   _onScroll() {
     if (!this._chipsWanted()) return;
-    const line = (parseFloat(getComputedStyle(this).getPropertyValue('--header-height')) || 56) + boxHeight(this._chips) + 24;
+    const line = this._chipsBottom() + 24;
     let current = null;
     this._pageOrder().forEach(({ i, r }) => {
       if (r.top <= line) current = i;
@@ -492,13 +554,27 @@ export class AutoLayoutCard extends HTMLElement {
   }
 
   connectedCallback() {
+    this._settleUntil = performance.now() + 4000;
+    this._animating = 0;
+    this._onAnim = (ev) => {
+      this._animating = Math.max(0, this._animating + (Number(ev.detail) || 0));
+      if (!this._animating && this._pending) {
+        this._pending = false;
+        this._queue();
+      }
+    };
+    window.addEventListener('cd-anim', this._onAnim);
     this._onScrollBound = () => {
       cancelAnimationFrame(this._scrollFrame);
       this._scrollFrame = requestAnimationFrame(() => this._onScroll());
     };
     window.addEventListener('scroll', this._onScrollBound, { capture: true, passive: true });
     this._onChange = () => this._queue();
-    window.addEventListener('resize', this._onChange);
+    this._onResize = () => {
+      this._queue();
+      if (this._chips && this._chips.style.display !== 'none') this._placeChips();
+    };
+    window.addEventListener('resize', this._onResize);
     window.addEventListener('cd-panels-changed', this._onChange);
     if (window.ResizeObserver && !this._ro) {
       this._ro = new ResizeObserver(() => this._queue());
@@ -510,7 +586,9 @@ export class AutoLayoutCard extends HTMLElement {
 
   disconnectedCallback() {
     window.removeEventListener('scroll', this._onScrollBound, { capture: true });
-    window.removeEventListener('resize', this._onChange);
+    window.removeEventListener('resize', this._onResize);
+    window.removeEventListener('cd-anim', this._onAnim);
+    if (this._chips && this._chips.parentNode === document.body) this._chips.remove();
     window.removeEventListener('cd-panels-changed', this._onChange);
     if (this._ro) this._ro.disconnect();
     this._ro = null;

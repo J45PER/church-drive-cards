@@ -32,7 +32,7 @@ function nbFind(root, name, depth = 0) {
   return null;
 }
 
-function nbHuiRoot() {
+export function nbHuiRoot() {
   const ha = document.querySelector('home-assistant');
   return ha && ha.shadowRoot ? nbFind(ha.shadowRoot, 'hui-root') : null;
 }

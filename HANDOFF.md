@@ -14,6 +14,25 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
+**In beta (2026-09-29): smoother panels and floating chips** (the user found the
+chips didn't pin, and panels jumped to a slightly larger height before expanding):
+- Chips float: the capsule lives on `document.body` (`position:fixed`, like the nav
+  bar), at `headerBottom()` (measured from hui-root's `.header`) + 8px, aligned to the
+  card, with an inline spacer. HA's card wrappers stopped `position:sticky` working.
+  The chips are inline in edit mode or preview.
+- `_slide` holds the panel at its old height (`height`, `overflow:hidden`) for two
+  frames while the cards redraw, then measures `height:auto` and transitions to it
+  (340ms), fading the cards in. The old version measured too early, so it animated to
+  a slightly-too-small height and then jumped.
+- While a panel slides it fires `cd-anim` +1/−1; Auto Layout pauses `_queue` and lays
+  out once at the end. Panels have `transition: min-height`, so re-levelling eases.
+- Auto Layout keeps each panel's column once the page has settled (4s after connect;
+  2.5s after the column count changes); open/close only re-levels.
+- Managed panels (inside Auto Layout) no longer install their own ResizeObserver,
+  3s timer or `cd-panels-changed` listener.
+- Mobile runs every Church Drive card as `-beta` for testing this; strip `-beta` on
+  release.
+
 **New in v0.21.0 (2026-09-29): panel controls.** Chosen from the `panel-ux` mock-up
 (the user picked C's +/− with B's footer):
 - The open/compact toggle is a ring in the panel's colour (`--stc-c`, follows

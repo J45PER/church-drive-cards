@@ -39,6 +39,9 @@ function rememberUser(hass) {
   }
 }
 
+// Stretch (min-height) changes from the layout ease in instead of jumping.
+const PANEL_TRANSITION = 'min-height 320ms cubic-bezier(.2,.8,.2,1)';
+
 let helpersPromise;
 function cardHelpers() {
   if (!helpersPromise) helpersPromise = window.loadCardHelpers ? window.loadCardHelpers() : Promise.reject(new Error('no card helpers'));
@@ -242,32 +245,48 @@ export class SectionPanelCard extends HTMLElement {
     this._slide(() => this._apply());
   }
 
-  // Slide between the old and new height instead of jumping.
+  // Slide between the old and new height instead of jumping. The panel is
+  // held at its old height while the cards redraw (they settle a frame or
+  // two later), then eases to the height they really need, with the cards
+  // fading in. Layout work elsewhere waits (cd-anim) so nothing else moves
+  // mid-slide.
   _slide(change) {
     const panel = this._panelEl;
     const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!panel || !panel.animate || reduced || !this.isConnected) return change();
+    if (!panel || reduced || !this.isConnected) return change();
+    this._endSlide();
     const before = panel.getBoundingClientRect().height;
+    const token = (this._slideToken = {});
+    window.dispatchEvent(new CustomEvent('cd-anim', { detail: 1 }));
+    this._sliding = true;
+    Object.assign(panel.style, { transition: 'none', height: `${before}px`, minHeight: '0px', overflow: 'hidden' });
     change();
-    const after = panel.getBoundingClientRect().height;
-    if (Math.abs(after - before) < 2) return undefined;
-    if (this._anim) this._anim.cancel();
-    panel.style.overflow = 'hidden';
-    this._anim = panel.animate(
-      [
-        { height: `${before}px`, minHeight: '0px' },
-        { height: `${after}px`, minHeight: '0px' },
-      ],
-      { duration: 320, easing: 'cubic-bezier(.2,.8,.2,1)' }
-    );
-    const done = () => {
-      panel.style.overflow = '';
-      this._anim = null;
-      window.dispatchEvent(new CustomEvent('cd-panels-changed'));
-    };
-    this._anim.onfinish = done;
-    this._anim.oncancel = done;
+    if (this._grid && this._grid.animate) this._grid.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 260, easing: 'ease-out' });
+    const frame = (fn) => requestAnimationFrame(() => requestAnimationFrame(fn));
+    frame(() => {
+      if (token !== this._slideToken) return;
+      panel.style.height = 'auto';
+      const after = panel.getBoundingClientRect().height;
+      panel.style.height = `${before}px`;
+      void panel.offsetHeight;
+      panel.style.transition = 'height 340ms cubic-bezier(.2,.8,.2,1)';
+      panel.style.height = `${after}px`;
+      const finish = () => token === this._slideToken && this._endSlide();
+      panel.addEventListener('transitionend', finish, { once: true });
+      this._slideTimer = setTimeout(finish, 450);
+    });
     return undefined;
+  }
+
+  _endSlide() {
+    clearTimeout(this._slideTimer);
+    if (!this._sliding) return;
+    this._sliding = false;
+    this._slideToken = null;
+    const panel = this._panelEl;
+    Object.assign(panel.style, { transition: PANEL_TRANSITION, height: '', overflow: '' });
+    window.dispatchEvent(new CustomEvent('cd-anim', { detail: -1 }));
+    window.dispatchEvent(new CustomEvent('cd-panels-changed'));
   }
 
   _mode() {
@@ -428,7 +447,7 @@ export class SectionPanelCard extends HTMLElement {
     const c = this.config;
     const color = stcColor(c.color);
     this.innerHTML = `
-      <div class="spc-panel" style="position:relative; box-sizing:border-box; border-radius:24px; padding:12px; display:flex; flex-direction:column; gap:12px; isolation:isolate;">
+      <div class="spc-panel" style="position:relative; box-sizing:border-box; border-radius:24px; padding:12px; display:flex; flex-direction:column; gap:12px; isolation:isolate; transition:${PANEL_TRANSITION};">
         <div class="spc-bg" style="position:absolute; inset:0; border-radius:inherit; background:${color}; opacity:0.1; z-index:-1; pointer-events:none; transition:background-color .6s ease;"></div>
       </div>`;
     const panel = this.querySelector('.spc-panel');
@@ -521,9 +540,10 @@ export class SectionPanelCard extends HTMLElement {
     this._lastDevice = this._device();
     window.addEventListener('resize', this._onResize);
     this._onPanels = () => this._queueMatch();
-    window.addEventListener('cd-panels-changed', this._onPanels);
-    // Heights change as cards load, open, go compact or update.
-    if (window.ResizeObserver && !this._ro) {
+    if (!this._managed) window.addEventListener('cd-panels-changed', this._onPanels);
+    // Heights change as cards load, open, go compact or update. Inside an
+    // Auto Layout Card that card does the lining up, so skip the watchers.
+    if (window.ResizeObserver && !this._ro && !this._managed) {
       this._ro = new ResizeObserver(() => this._queueMatch());
       this._ro.observe(document.body);
       this._matchTimer = setInterval(() => this._queueMatch(), 3000);
@@ -533,6 +553,7 @@ export class SectionPanelCard extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this._endSlide();
     window.removeEventListener('resize', this._onResize);
     window.removeEventListener('cd-panels-changed', this._onPanels);
     if (this._ro) this._ro.disconnect();
