@@ -22,7 +22,41 @@ export function stcColor(color) {
   return `var(--${color}-color, ${STC_FALLBACK[color] || color})`;
 }
 
-// Render a template live, as HA's markdown card does; `done` gets the text.
+// Last result of each template, kept in memory and on the device, so a card
+// that's rebuilt (changing page, the app waking up) starts from what it last
+// showed instead of flickering through its fixed colour or icon first.
+const TPL_KEY = 'cd-tpl-cache';
+let tplCache = null;
+let tplSave = 0;
+function tplStore() {
+  if (tplCache) return tplCache;
+  tplCache = new Map();
+  try {
+    const saved = JSON.parse(localStorage.getItem(TPL_KEY) || '[]');
+    if (Array.isArray(saved)) saved.forEach(([k, v]) => tplCache.set(k, v));
+  } catch (err) {
+    /* storage blocked or bad data: start empty */
+  }
+  return tplCache;
+}
+function tplRemember(template, value) {
+  const store = tplStore();
+  if (store.get(template) === value) return;
+  store.delete(template);
+  store.set(template, value);
+  while (store.size > 300) store.delete(store.keys().next().value);
+  clearTimeout(tplSave);
+  tplSave = setTimeout(() => {
+    try {
+      localStorage.setItem(TPL_KEY, JSON.stringify([...store]));
+    } catch (err) {
+      /* storage full or blocked: memory still works */
+    }
+  }, 1000);
+}
+
+// Render a template live, as HA's markdown card does; `done` gets the text,
+// straight away with the last known result if there is one.
 // Returns the unsubscribe promise, or null for plain text (sent straight away).
 export function stcRender(hass, template, done) {
   if (!template || !hass || !hass.connection) return null;
@@ -30,14 +64,33 @@ export function stcRender(hass, template, done) {
     done(template);
     return null;
   }
+  const store = tplStore();
+  if (store.has(template)) done(store.get(template));
   return hass.connection
     .subscribeMessage(
       (msg) => {
-        if (msg.result !== undefined) done(String(msg.result).trim());
+        if (msg.result === undefined) return;
+        const text = String(msg.result).trim();
+        tplRemember(template, text);
+        done(text);
       },
       { type: 'render_template', template, strict: false, report_errors: false }
     )
     .catch(() => null);
+}
+
+// Set a style, skipping its transition when `instant` (a card's first colour
+// shouldn't fade in from the default).
+export function stcSetInstantly(el, prop, value, instant) {
+  if (!instant) {
+    el.style[prop] = value;
+    return;
+  }
+  const t = el.style.transition;
+  el.style.transition = 'none';
+  el.style[prop] = value;
+  void el.offsetWidth;
+  el.style.transition = t;
 }
 
 export const STC_COLOR_TEMPLATE_FIELD = { name: 'color_template', selector: { template: {} } };
@@ -163,7 +216,8 @@ export class SectionTitleCard extends HTMLElement {
     this._unsubColor = stcRender(this._hass, this.config.color_template, (color) => {
       this._liveColor = color || null;
       const css = stcColor(this._liveColor || this.config.color);
-      if (this._iconEl) this._iconEl.style.color = css;
+      if (this._iconEl) stcSetInstantly(this._iconEl, 'color', css, !this._colorShown);
+      this._colorShown = true;
       this.dispatchEvent(new CustomEvent('stc-color', { detail: css, bubbles: true }));
     });
   }

@@ -181,7 +181,7 @@ Colours: indigo normally, amber while the door is open, red with a warning line 
 
 ### `nav-bar-card`
 
-A floating capsule pinned to the bottom of the screen, with every page of a dashboard one tap away. Each page has a name, an icon, a page path and a colour. The colour can come live from a template, for example the alarm colour. The current page shows as a filled capsule with its name. A small dot marks a page whose "needs attention" template gives something other than 0, off or empty. Put the same card on every page; it takes no room in the layout. Tapping the current page scrolls back to the top. While the bar is on screen it hides the dashboard's own tabs at the top (`hide_tabs: false` keeps them); the menu, search and edit buttons stay, and the tabs come back in edit mode. `demo: true` shows it in place for Design Presets.
+A floating capsule pinned to the bottom of the screen, with every page of a dashboard one tap away. Each page has a name, an icon, a page path and a colour. The colour and the icon can come live from templates (`color_template`, `icon_template`), for example following the alarm: a shield that's off when disarmed and locked when armed away. The current page shows as a filled capsule with its name. A small dot marks a page whose "needs attention" template gives something other than 0, off or empty. Put the same card on every page; it takes no room in the layout. Tapping the current page scrolls back to the top. While the bar is on screen it hides the dashboard's own tabs at the top (`hide_tabs: false` keeps them); the menu, search and edit buttons stay, and the tabs come back in edit mode. `demo: true` shows it in place for Design Presets.
 
 ### `section-panel-card`
 
@@ -202,6 +202,22 @@ cards:
 **Open or compact** (section panels): the ⌄ on a panel's title switches it between open and **compact**. In compact, every Church Drive card inside shrinks to one row with its key reading and main buttons: a thermostat's temperature with its quick settings, the fan's Off/1/2/3, the purifier's PM2.5 with Off/Auto/Sleep, a blind's Up/Stop/Down, the alarm's state with its arm buttons, a light room's brightness with on/off, a floor's rooms as coloured chips, and a zone's state with its light. Other cards wait until the panel opens. Tapping a compact card's name opens the panel. Phones (under 600px wide) start as `phone_start` (default `compact`), and bigger screens as `tablet_start` (default `open`). Each device then remembers what each signed-in person last chose. `open_when` is a template: while it's true the panel opens by itself (e.g. a door open or CO found), then it goes back to how you left it. `collapsible: false` removes the ⌄.
 
 **Layout on wider screens** (section panels): a panel's cards sit side by side whenever each can be at least `card_width` wide (default 300px; `0` keeps one per row), so cameras fill a tablet and stack on a phone. When sections sit side by side, their panels line up row by row: the first panels share a height, then the second, and so on, and the last panel in each section fills to a common bottom (`match_height: false` turns this off; never on phones).
+
+### `auto-layout-card`
+
+Holds a page's panels in one list and arranges them itself, so adding a panel needs no rearranging. It uses as many columns as fit (`column_width`, default 340px; `max_columns`, default 3), splits the panels into columns of about equal height while keeping their order (down the first column, then the next), and stretches each column's last open panel so the columns end level. Full-width panels sit across the page below the columns: a panel goes full width by itself when it holds 3 or more small cards (zones, cameras, tiles) that won't fit side by side in one column, or set `full_width: yes` / `no` on the panel. A panel with no `card_width` picks one from its cards (zones 200px, cameras 220px, others 300px). Panels with buttons and sliders (lights, alarm, thermostats, fan, purifier, blinds, tiles with controls) go above ones that only show information, like cameras and room temperatures (`controls_first: false` turns this off; a panel's `priority: controls` or `priority: info` overrides). Phones (under 600px) get one column in that order. It rebalances when a panel opens or goes compact, and when a tablet turns. Put it alone in a section that spans the whole page.
+
+```yaml
+type: custom:auto-layout-card
+cards:
+  - type: custom:section-panel-card
+    title: Heating
+    cards: [...]
+  - type: custom:section-panel-card
+    title: Doors & Motion
+    full_width: true
+    cards: [...]
+```
 
 ### `section-title-card`
 

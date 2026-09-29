@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-28. Current release: **v0.19.0**.*
+*Last updated 2026-09-29. Current release: **v0.20.0**.*
 
 ## Where this stands
 
@@ -13,6 +13,44 @@ HACS as an integration. It does two jobs:
 2. **Universal scenes.** It keeps one library of scenes (Bright, Relax, Soho… plus
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
+
+**New in v0.20.0: Auto Layout Card** (`src/auto-layout-card.js`). The user
+wanted tablet layout to adapt by itself as panels are added, not hand-arranged per
+page. Each Mobile page is now one full-width section holding a
+`custom:auto-layout-card-beta` (all its panels, in the old phone order) plus the nav
+bar; Doors & Motion has `full_width: true`. It shares panels between columns to make the
+tallest column as short as possible (tries every sharing up to 11 panels, each column
+keeps list order; keeps the current sharing unless a new one is 24px+ better),
+stretches each column's last open panel so bottoms are level but only by up to
+max(160px, half its height) (the user disliked big empty panels), and only moves cards when the split changes (so
+cameras don't reload). Controls first (`controls_first`, default on): within each band, panels whose
+cards have buttons/sliders (`hasControls`: alarm, light-control, climate, fan,
+purifier, cover, scene cards, tiles with features, nested stacks checked) go above
+info-only panels (cameras, climate-zone, security-zone, entities), on phones too;
+a panel's `priority: controls|info` overrides. Automatic widths: a panel with no `card_width` picks one from its cards (`AUTO_WIDTH`:
+security-zone 200, picture/camera 220, tile 200, else 300; max over cards).
+`full_width` is auto/yes/no (true/false still work): auto = 3+ cards of width ≤240 that
+don't fit side by side in one column. Full-width panels sit below the balanced columns
+(controls first). Mobile panels have no `card_width`/`full_width` now (all automatic).
+Panels inside get `_managed = true`, which turns off their own
+section-to-section matching and stacked-panel spacing. Mobile uses the
+released types (`custom:auto-layout-card`, `custom:section-panel-card`).
+
+**Also in v0.20.0: nav bar `icon_template`** (a page's icon from a template). On
+Mobile the Security page's icon follows the alarm (disarmed shield-off-outline, home
+shield-home, away shield-lock, night shield-moon, arming shield-sync, pending
+shield-alert, triggered alarm-light).
+
+**Also in v0.20.0: no flicker on rebuild.** `stcRender` remembers each template's last
+result (memory + localStorage `cd-tpl-cache`, 300 max) and calls back with it straight
+away, so nav bar icons/colours and panel colours/summaries don't flash their fixed
+values; the first colour is set without its fade (`stcSetInstantly`). Panels remember
+the last signed-in user (`cd-user`) for their open/compact key before `hass` arrives.
+Auto Layout remembers each page's last arrangement (`cd-layout-plans`, keyed by path,
+columns and panel titles) and uses it before panels can be measured.
+
+Mobile's Lighting page also gained a **Front** panel (green, `light.front_light`,
+Front Garden area) in v0.20.0.
 
 Everything is merged to `main`, released and running live. The user tests on real
 devices before each release.
@@ -127,6 +165,11 @@ details and actions ("especially on Climate"). Peek was dropped.
   ending in a compact panel isn't levelled (a collapsed Indoor Cameras had been
   stretched into an empty box). `_apply` fires `cd-panels-changed` on window so
   the whole row re-lines up at once.
+  The nav bar's `hui-card` is skipped (it's only a spacer). The kth panels are
+  lined up only among columns where k isn't the last item, and each column's
+  last panel fills to the common bottom. Before this, Climate's single-panel
+  column (Windows & Doors) was paired with Heating's first panel and never
+  levelled, because the nav bar was the last item.
 - Inside a panel, cards on the same grid row share a height (`align-items:
   stretch`, `.spc-cards > * { display:flex }` and `> ha-card { flex:1 }`). The zone
   card's light tile is pushed to the bottom (`margin-top:auto`).

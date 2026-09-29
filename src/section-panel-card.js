@@ -8,16 +8,43 @@ import { SUFFIX, LABEL } from './suffix.js';
 import {
   stcColor,
   stcRender,
+  stcSetInstantly,
   STC_COLOR_TEMPLATE_FIELD,
   STC_COLOR_TEMPLATE_LABEL,
   STC_COLOR_TEMPLATE_HELPER,
 } from './section-title-card.js';
+
+// Who was last signed in on this device.
+let knownUser;
+function lastUser() {
+  if (knownUser === undefined) {
+    try {
+      knownUser = localStorage.getItem('cd-user') || null;
+    } catch (err) {
+      knownUser = null;
+    }
+  }
+  return knownUser;
+}
+function rememberUser(hass) {
+  const id = hass && hass.user && hass.user.id;
+  if (!id || id === knownUser) return;
+  knownUser = id;
+  try {
+    localStorage.setItem('cd-user', id);
+  } catch (err) {
+    /* storage blocked */
+  }
+}
 
 let helpersPromise;
 function cardHelpers() {
   if (!helpersPromise) helpersPromise = window.loadCardHelpers ? window.loadCardHelpers() : Promise.reject(new Error('no card helpers'));
   return helpersPromise;
 }
+
+// Automatic card widths for cards that read well small.
+const AUTO_WIDTH = { 'security-zone-card': 200, 'picture-entity': 220, 'picture-glance': 220, picture: 220, 'camera-card': 220, tile: 200 };
 
 const PanelFields = createFormEditor({
   schema: () => [
@@ -47,6 +74,8 @@ const PanelFields = createFormEditor({
       schema: [
         { name: 'card_width', selector: { number: { min: 0, max: 800, step: 10, mode: 'box', unit_of_measurement: 'px' } } },
         { name: 'match_height', selector: { boolean: {} }, default: true },
+        { name: 'full_width', selector: { select: { mode: 'dropdown', options: [{ value: 'auto', label: 'Automatic' }, { value: 'yes', label: 'Always full width' }, { value: 'no', label: 'Never' }] } } },
+        { name: 'priority', selector: { select: { mode: 'dropdown', options: [{ value: 'auto', label: 'Work it out from the cards' }, { value: 'controls', label: 'Controls (goes higher)' }, { value: 'info', label: 'Information only' }] } } },
       ],
     },
   ],
@@ -58,8 +87,10 @@ const PanelFields = createFormEditor({
     tablet_start: 'On tablets and computers, starts',
     open_when: 'Opens by itself when (optional template)',
     collapsible: 'Show the ⌄ to switch between open and compact',
-    card_width: 'Cards side by side when each can be at least (0 = always one per row)',
+    card_width: 'Cards side by side when each can be at least (empty = automatic, 0 = always one per row)',
     match_height: "Line up this panel's bottom with the panels beside it",
+    full_width: 'Full width across an Auto Layout',
+    priority: 'In an Auto Layout, counts as',
     color: 'Colour (icon and panel)',
     color_template: STC_COLOR_TEMPLATE_LABEL,
     summary: 'Summary on the right (optional template)',
@@ -67,8 +98,10 @@ const PanelFields = createFormEditor({
   helpers: {
     phone_start: 'Each phone or tablet remembers what you last chose with the ⌄; this is where it starts. Phones are screens under 600px wide.',
     open_when: "E.g. {{ is_state('binary_sensor.back_door', 'on') }}. The panel opens while it's true, then goes back to how you left it.",
-    card_width: 'Default 300px. Cards fill the panel width: e.g. cameras 2 or 3 across on a tablet, one per row on a phone.',
+    card_width: 'Automatic: zones 200px, cameras 220px, everything else 300px. Cards fill the panel width: e.g. cameras 2 or 3 across on a tablet, one per row on a phone.',
     match_height: "When sections sit side by side, the last panel in a shorter section grows so its bottom lines up with its neighbours'.",
+    priority: 'Auto Layout puts panels with buttons and sliders above ones that only show information. Auto: lights, alarm, thermostats, fan, purifier, blinds and tiles with controls count as controls.',
+    full_width: 'Only inside an Auto Layout Card: the panel spans every column, with the panels before and after it balanced above and below. Automatic: a panel of 3 or more small cards (zones, cameras, tiles) goes full width when they would not fit side by side in one column.',
     color_template: STC_COLOR_TEMPLATE_HELPER,
     summary: `A Home Assistant template, e.g. {{ states('vacuum.gregg') | title }}`,
   },
@@ -158,6 +191,7 @@ export class SectionPanelCard extends HTMLElement {
       card.hass = hass;
     });
     if (first) {
+      rememberUser(hass);
       this._watchOpenWhen();
       this._apply(); // now that we know who's signed in
     }
@@ -177,7 +211,9 @@ export class SectionPanelCard extends HTMLElement {
 
   _key() {
     // Per signed-in person too, so people sharing a tablet each keep their own.
-    const user = (this._hass && this._hass.user && this._hass.user.id) || 'anyone';
+    // Until Home Assistant says who's signed in, use whoever was last, so a
+    // panel doesn't flick open and shut while the page loads.
+    const user = (this._hass && this._hass.user && this._hass.user.id) || lastUser() || 'anyone';
     return `cd-panel:${user}:${location.pathname}:${this.config.title}:${this._device()}`;
   }
 
@@ -229,11 +265,21 @@ export class SectionPanelCard extends HTMLElement {
     window.dispatchEvent(new CustomEvent('cd-panels-changed'));
   }
 
+  // How wide each card should be at least: card_width, or worked out from
+  // the cards (small ones like zones and cameras sit side by side).
+  _cardWidth() {
+    const set = this.config.card_width;
+    if (set != null && set !== '' && set !== 'auto') return Number(set) || 0;
+    const types = (this.config.cards || []).map((c) => String((c && c.type) || '').replace(/^custom:/, '').replace(/-beta$/, ''));
+    if (!types.length) return 300;
+    return Math.max(...types.map((t) => AUTO_WIDTH[t] || 300));
+  }
+
   // Cards side by side when each can be at least card_width wide.
   _layoutGrid(compact) {
     const g = this._grid;
     if (!g) return;
-    const w = this.config.card_width == null || this.config.card_width === '' ? 300 : Number(this.config.card_width);
+    const w = this._cardWidth();
     g.style.display = 'grid';
     g.style.gap = compact ? '8px' : '12px';
     // Cards on the same row share a height; each card's background fills it.
@@ -259,7 +305,8 @@ export class SectionPanelCard extends HTMLElement {
 
   _match() {
     const panel = this._panelEl;
-    if (!panel || !this.isConnected) return;
+    // Inside an Auto Layout Card, that card lines panels up.
+    if (!panel || !this.isConnected || this._managed) return;
     const clear = () => {
       if (panel.style.minHeight) panel.style.minHeight = '';
     };
@@ -281,20 +328,27 @@ export class SectionPanelCard extends HTMLElement {
     const myTop = top(section);
     const row = [...section.getRootNode().querySelectorAll('hui-section')].filter((el) => Math.abs(top(el) - myTop) < 4);
     if (row.length < 2) return clear();
+    // The nav bar only leaves a spacer at the end of the page: skip it.
+    const NAV = 'nav-bar-card, nav-bar-card-beta';
+    const isNav = (el) => !!(el.querySelector(NAV) || (el.shadowRoot && el.shadowRoot.querySelector(NAV)));
     const itemsOf = (sec) =>
       deep(sec, 'hui-card').map((el) => {
         const p = el.matches && el.matches(PANEL) ? el : el.querySelector(PANEL) || (el.shadowRoot && el.shadowRoot.querySelector(PANEL)) || null;
         const r = el.getBoundingClientRect();
         const stretch = !!(p && p._naturalHeight && !(p._mode && p._mode() === 'compact') && p.config && p.config.match_height !== false);
         return { el, panel: p, stretch, top: r.top, bottom: r.bottom, h: p && p._naturalHeight ? p._naturalHeight() : r.height };
-      }).filter((it) => it.bottom > it.top);
+      }).filter((it) => it.bottom > it.top && !isNav(it.el));
     const secs = row.map((sec) => ({ sec, items: itemsOf(sec) })).filter((x) => x.items.length);
     if (secs.length < 2) return clear();
-    const m = Math.min(...secs.map((x) => x.items.length));
+    // Line up the kth panels of the columns that have more below them; each
+    // column's last panel instead fills down to the common bottom.
     const shared = [];
-    for (let k = 0; k < m - 1; k += 1) shared[k] = Math.max(0, ...secs.map((x) => x.items[k]).filter((it) => it.stretch).map((it) => it.h));
+    const most = Math.max(...secs.map((x) => x.items.length));
+    for (let k = 0; k < most - 1; k += 1) {
+      shared[k] = Math.max(0, ...secs.filter((x) => k < x.items.length - 1 && x.items[k].stretch).map((x) => x.items[k].h));
+    }
     secs.forEach((x) => {
-      x.heights = x.items.map((it, k) => (k < m - 1 && it.stretch ? Math.max(it.h, shared[k]) : it.h));
+      x.heights = x.items.map((it, k) => (k < x.items.length - 1 && it.stretch ? Math.max(it.h, shared[k]) : it.h));
       const gaps = x.items.slice(1).reduce((sum, it, k) => sum + Math.max(0, it.top - x.items[k].bottom), 0);
       x.end = x.items[0].top + x.heights.reduce((a, b) => a + b, 0) + gaps;
     });
@@ -360,7 +414,8 @@ export class SectionPanelCard extends HTMLElement {
     const bg = this.querySelector('.spc-bg');
     panel.addEventListener('stc-color', (ev) => {
       ev.stopPropagation();
-      bg.style.background = ev.detail;
+      stcSetInstantly(bg, 'background', ev.detail, !this._bgShown);
+      this._bgShown = true;
     });
     this._title = document.createElement(`section-title-card${SUFFIX}`);
     this._grid = document.createElement('div');
@@ -434,6 +489,7 @@ export class SectionPanelCard extends HTMLElement {
   // as between section columns (32px; the section's own gap between cards is
   // 8px), so stacked panels read as separate groups.
   _spaceFromAbove() {
+    if (this._managed) return;
     const up = (el) => el.parentNode || (el.getRootNode && el.getRootNode().host) || null;
     let wrap = this;
     for (let i = 0; i < 6 && wrap && wrap.localName !== 'hui-card'; i += 1) wrap = up(wrap);

@@ -1,7 +1,7 @@
 // Nav Bar Card: a floating capsule pinned to the bottom of the screen that
-// takes you to any page of a dashboard in one tap. Each page's icon is in
-// its colour (fixed, or live from a template, e.g. the alarm colour); the
-// current page is a filled capsule with its name, and a small dot marks a
+// takes you to any page of a dashboard in one tap. Each page has an icon in
+// its colour (both fixed, or live from templates, e.g. following the alarm);
+// the current page is a filled capsule with its name, and a small dot marks a
 // page with something that needs you (from a template). Put the same card on
 // every page of the dashboard; it takes no room in the layout.
 
@@ -94,6 +94,7 @@ export const NavBarCardEditor = createFormEditor({
             path: { label: 'Page', required: true, selector: { navigation: {} } },
             color: { label: 'Colour', selector: { ui_color: {} } },
             color_template: { label: 'Colour from a template (optional)', selector: { template: {} } },
+            icon_template: { label: 'Icon from a template (optional, e.g. mdi:shield-off when disarmed)', selector: { template: {} } },
             alert_template: { label: 'Needs attention when (optional template)', selector: { template: {} } },
           },
         },
@@ -180,6 +181,7 @@ export class NavBarCard extends HTMLElement {
     this._pages.forEach((p, i) => {
       const live = (this._live[i] = this._live[i] || {});
       this._subs.push(stcRender(this._hass, p.color_template, (c) => { live.color = c; this._render(); }));
+      this._subs.push(stcRender(this._hass, p.icon_template, (c) => { live.icon = String(c || '').trim(); this._render(); }));
       this._subs.push(stcRender(this._hass, p.alert_template, (a) => { live.alert = nbAlert(a); this._render(); }));
     });
   }
@@ -242,14 +244,15 @@ export class NavBarCard extends HTMLElement {
       const live = this._live[i] || {};
       const colour = stcColor(live.color || p.color || 'primary');
       const alert = demo ? !!p.alert_template : !!live.alert;
-      return { i, p, colour, alert, on: i === active };
+      const icon = /^[a-z]+:[\w-]+$/.test(live.icon || '') ? live.icon : p.icon || 'mdi:circle';
+      return { i, p, icon, colour, alert, on: i === active };
     });
-    const sig = JSON.stringify(items.map((t) => [t.p.name, t.p.icon, t.colour, t.alert, t.on]));
+    const sig = JSON.stringify(items.map((t) => [t.p.name, t.icon, t.colour, t.alert, t.on]));
     if (sig === this._sig) return;
     this._sig = sig;
     this._nav.innerHTML = items
-      .map(({ i, p, colour, alert, on }) => `<button class="nb-it${on ? ' nb-on' : ''}" type="button" data-i="${i}" title="${kitEsc(p.name)}" aria-label="${kitEsc(p.name)}${alert ? ', needs attention' : ''}"${on ? ' aria-current="page"' : ''} style="${on ? `background:${colour};` : ''}">
-          ${iconHtml(p.icon || 'mdi:circle', { size: '22px', style: `flex:none; color:${on ? '#fff' : colour};` })}
+      .map(({ i, p, icon, colour, alert, on }) => `<button class="nb-it${on ? ' nb-on' : ''}" type="button" data-i="${i}" title="${kitEsc(p.name)}" aria-label="${kitEsc(p.name)}${alert ? ', needs attention' : ''}"${on ? ' aria-current="page"' : ''} style="${on ? `background:${colour};` : ''}">
+          ${iconHtml(icon, { size: '22px', style: `flex:none; color:${on ? '#fff' : colour};` })}
           ${on ? `<span class="nb-name">${kitEsc(p.name)}</span>` : ''}
           ${alert ? '<i class="nb-dot"></i>' : ''}
         </button>`)

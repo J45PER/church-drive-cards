@@ -3286,18 +3286,61 @@
     if (/^(#|rgb|hsl|var\()/.test(color)) return color;
     return `var(--${color}-color, ${STC_FALLBACK[color] || color})`;
   }
+  var TPL_KEY = "cd-tpl-cache";
+  var tplCache = null;
+  var tplSave = 0;
+  function tplStore() {
+    if (tplCache) return tplCache;
+    tplCache = /* @__PURE__ */ new Map();
+    try {
+      const saved = JSON.parse(localStorage.getItem(TPL_KEY) || "[]");
+      if (Array.isArray(saved)) saved.forEach(([k, v]) => tplCache.set(k, v));
+    } catch (err) {
+    }
+    return tplCache;
+  }
+  function tplRemember(template, value) {
+    const store = tplStore();
+    if (store.get(template) === value) return;
+    store.delete(template);
+    store.set(template, value);
+    while (store.size > 300) store.delete(store.keys().next().value);
+    clearTimeout(tplSave);
+    tplSave = setTimeout(() => {
+      try {
+        localStorage.setItem(TPL_KEY, JSON.stringify([...store]));
+      } catch (err) {
+      }
+    }, 1e3);
+  }
   function stcRender(hass, template, done) {
     if (!template || !hass || !hass.connection) return null;
     if (!/[{%]/.test(template)) {
       done(template);
       return null;
     }
+    const store = tplStore();
+    if (store.has(template)) done(store.get(template));
     return hass.connection.subscribeMessage(
       (msg) => {
-        if (msg.result !== void 0) done(String(msg.result).trim());
+        if (msg.result === void 0) return;
+        const text = String(msg.result).trim();
+        tplRemember(template, text);
+        done(text);
       },
       { type: "render_template", template, strict: false, report_errors: false }
     ).catch(() => null);
+  }
+  function stcSetInstantly(el, prop, value, instant) {
+    if (!instant) {
+      el.style[prop] = value;
+      return;
+    }
+    const t = el.style.transition;
+    el.style.transition = "none";
+    el.style[prop] = value;
+    void el.offsetWidth;
+    el.style.transition = t;
   }
   var STC_COLOR_TEMPLATE_FIELD = { name: "color_template", selector: { template: {} } };
   var STC_COLOR_TEMPLATE_LABEL = "Colour from a template (optional; overrides the colour)";
@@ -3411,7 +3454,8 @@
       this._unsubColor = stcRender(this._hass, this.config.color_template, (color) => {
         this._liveColor = color || null;
         const css = stcColor(this._liveColor || this.config.color);
-        if (this._iconEl) this._iconEl.style.color = css;
+        if (this._iconEl) stcSetInstantly(this._iconEl, "color", css, !this._colorShown);
+        this._colorShown = true;
         this.dispatchEvent(new CustomEvent("stc-color", { detail: css, bubbles: true }));
       });
     }
@@ -3446,11 +3490,32 @@
   }
 
   // src/section-panel-card.js
+  var knownUser;
+  function lastUser() {
+    if (knownUser === void 0) {
+      try {
+        knownUser = localStorage.getItem("cd-user") || null;
+      } catch (err) {
+        knownUser = null;
+      }
+    }
+    return knownUser;
+  }
+  function rememberUser(hass) {
+    const id = hass && hass.user && hass.user.id;
+    if (!id || id === knownUser) return;
+    knownUser = id;
+    try {
+      localStorage.setItem("cd-user", id);
+    } catch (err) {
+    }
+  }
   var helpersPromise;
   function cardHelpers() {
     if (!helpersPromise) helpersPromise = window.loadCardHelpers ? window.loadCardHelpers() : Promise.reject(new Error("no card helpers"));
     return helpersPromise;
   }
+  var AUTO_WIDTH = { "security-zone-card": 200, "picture-entity": 220, "picture-glance": 220, picture: 220, "camera-card": 220, tile: 200 };
   var PanelFields = createFormEditor({
     schema: () => [
       { name: "title", selector: { text: {} } },
@@ -3478,7 +3543,9 @@
         flatten: true,
         schema: [
           { name: "card_width", selector: { number: { min: 0, max: 800, step: 10, mode: "box", unit_of_measurement: "px" } } },
-          { name: "match_height", selector: { boolean: {} }, default: true }
+          { name: "match_height", selector: { boolean: {} }, default: true },
+          { name: "full_width", selector: { select: { mode: "dropdown", options: [{ value: "auto", label: "Automatic" }, { value: "yes", label: "Always full width" }, { value: "no", label: "Never" }] } } },
+          { name: "priority", selector: { select: { mode: "dropdown", options: [{ value: "auto", label: "Work it out from the cards" }, { value: "controls", label: "Controls (goes higher)" }, { value: "info", label: "Information only" }] } } }
         ]
       }
     ],
@@ -3490,8 +3557,10 @@
       tablet_start: "On tablets and computers, starts",
       open_when: "Opens by itself when (optional template)",
       collapsible: "Show the \u2304 to switch between open and compact",
-      card_width: "Cards side by side when each can be at least (0 = always one per row)",
+      card_width: "Cards side by side when each can be at least (empty = automatic, 0 = always one per row)",
       match_height: "Line up this panel's bottom with the panels beside it",
+      full_width: "Full width across an Auto Layout",
+      priority: "In an Auto Layout, counts as",
       color: "Colour (icon and panel)",
       color_template: STC_COLOR_TEMPLATE_LABEL,
       summary: "Summary on the right (optional template)"
@@ -3499,8 +3568,10 @@
     helpers: {
       phone_start: "Each phone or tablet remembers what you last chose with the \u2304; this is where it starts. Phones are screens under 600px wide.",
       open_when: "E.g. {{ is_state('binary_sensor.back_door', 'on') }}. The panel opens while it's true, then goes back to how you left it.",
-      card_width: "Default 300px. Cards fill the panel width: e.g. cameras 2 or 3 across on a tablet, one per row on a phone.",
+      card_width: "Automatic: zones 200px, cameras 220px, everything else 300px. Cards fill the panel width: e.g. cameras 2 or 3 across on a tablet, one per row on a phone.",
       match_height: "When sections sit side by side, the last panel in a shorter section grows so its bottom lines up with its neighbours'.",
+      priority: "Auto Layout puts panels with buttons and sliders above ones that only show information. Auto: lights, alarm, thermostats, fan, purifier, blinds and tiles with controls count as controls.",
+      full_width: "Only inside an Auto Layout Card: the panel spans every column, with the panels before and after it balanced above and below. Automatic: a panel of 3 or more small cards (zones, cameras, tiles) goes full width when they would not fit side by side in one column.",
       color_template: STC_COLOR_TEMPLATE_HELPER,
       summary: `A Home Assistant template, e.g. {{ states('vacuum.gregg') | title }}`
     }
@@ -3582,6 +3653,7 @@
         card.hass = hass;
       });
       if (first) {
+        rememberUser(hass);
         this._watchOpenWhen();
         this._apply();
       }
@@ -3597,7 +3669,7 @@
       return window.innerWidth < 600 ? "phone" : "tablet";
     }
     _key() {
-      const user = this._hass && this._hass.user && this._hass.user.id || "anyone";
+      const user = this._hass && this._hass.user && this._hass.user.id || lastUser() || "anyone";
       return `cd-panel:${user}:${location.pathname}:${this.config.title}:${this._device()}`;
     }
     _chosen() {
@@ -3639,11 +3711,20 @@
       this._layoutGrid(compact);
       window.dispatchEvent(new CustomEvent("cd-panels-changed"));
     }
+    // How wide each card should be at least: card_width, or worked out from
+    // the cards (small ones like zones and cameras sit side by side).
+    _cardWidth() {
+      const set = this.config.card_width;
+      if (set != null && set !== "" && set !== "auto") return Number(set) || 0;
+      const types = (this.config.cards || []).map((c) => String(c && c.type || "").replace(/^custom:/, "").replace(/-beta$/, ""));
+      if (!types.length) return 300;
+      return Math.max(...types.map((t) => AUTO_WIDTH[t] || 300));
+    }
     // Cards side by side when each can be at least card_width wide.
     _layoutGrid(compact) {
       const g = this._grid;
       if (!g) return;
-      const w = this.config.card_width == null || this.config.card_width === "" ? 300 : Number(this.config.card_width);
+      const w = this._cardWidth();
       g.style.display = "grid";
       g.style.gap = compact ? "8px" : "12px";
       g.style.alignItems = w > 0 ? "stretch" : "start";
@@ -3666,7 +3747,7 @@
     }
     _match() {
       const panel = this._panelEl;
-      if (!panel || !this.isConnected) return;
+      if (!panel || !this.isConnected || this._managed) return;
       const clear = () => {
         if (panel.style.minHeight) panel.style.minHeight = "";
       };
@@ -3675,7 +3756,7 @@
       let section = this;
       for (let i = 0; section && i < 14 && section.localName !== "hui-section"; i += 1) section = up(section);
       if (!section) return clear();
-      const PANEL = "section-panel-card, section-panel-card-beta";
+      const PANEL2 = "section-panel-card, section-panel-card-beta";
       const deep = (root, sel, depth = 0, out = []) => {
         if (!root || depth > 5 || !root.querySelectorAll) return out;
         root.querySelectorAll(sel).forEach((el) => out.push(el));
@@ -3686,19 +3767,23 @@
       const myTop = top(section);
       const row3 = [...section.getRootNode().querySelectorAll("hui-section")].filter((el) => Math.abs(top(el) - myTop) < 4);
       if (row3.length < 2) return clear();
+      const NAV = "nav-bar-card, nav-bar-card-beta";
+      const isNav = (el) => !!(el.querySelector(NAV) || el.shadowRoot && el.shadowRoot.querySelector(NAV));
       const itemsOf = (sec) => deep(sec, "hui-card").map((el) => {
-        const p = el.matches && el.matches(PANEL) ? el : el.querySelector(PANEL) || el.shadowRoot && el.shadowRoot.querySelector(PANEL) || null;
+        const p = el.matches && el.matches(PANEL2) ? el : el.querySelector(PANEL2) || el.shadowRoot && el.shadowRoot.querySelector(PANEL2) || null;
         const r = el.getBoundingClientRect();
         const stretch = !!(p && p._naturalHeight && !(p._mode && p._mode() === "compact") && p.config && p.config.match_height !== false);
         return { el, panel: p, stretch, top: r.top, bottom: r.bottom, h: p && p._naturalHeight ? p._naturalHeight() : r.height };
-      }).filter((it) => it.bottom > it.top);
+      }).filter((it) => it.bottom > it.top && !isNav(it.el));
       const secs = row3.map((sec) => ({ sec, items: itemsOf(sec) })).filter((x) => x.items.length);
       if (secs.length < 2) return clear();
-      const m = Math.min(...secs.map((x) => x.items.length));
       const shared = [];
-      for (let k = 0; k < m - 1; k += 1) shared[k] = Math.max(0, ...secs.map((x) => x.items[k]).filter((it) => it.stretch).map((it) => it.h));
+      const most = Math.max(...secs.map((x) => x.items.length));
+      for (let k = 0; k < most - 1; k += 1) {
+        shared[k] = Math.max(0, ...secs.filter((x) => k < x.items.length - 1 && x.items[k].stretch).map((x) => x.items[k].h));
+      }
       secs.forEach((x) => {
-        x.heights = x.items.map((it, k) => k < m - 1 && it.stretch ? Math.max(it.h, shared[k]) : it.h);
+        x.heights = x.items.map((it, k) => k < x.items.length - 1 && it.stretch ? Math.max(it.h, shared[k]) : it.h);
         const gaps = x.items.slice(1).reduce((sum, it, k) => sum + Math.max(0, it.top - x.items[k].bottom), 0);
         x.end = x.items[0].top + x.heights.reduce((a, b) => a + b, 0) + gaps;
       });
@@ -3758,7 +3843,8 @@
       const bg = this.querySelector(".spc-bg");
       panel.addEventListener("stc-color", (ev) => {
         ev.stopPropagation();
-        bg.style.background = ev.detail;
+        stcSetInstantly(bg, "background", ev.detail, !this._bgShown);
+        this._bgShown = true;
       });
       this._title = document.createElement(`section-title-card${SUFFIX}`);
       this._grid = document.createElement("div");
@@ -3825,6 +3911,7 @@
     // as between section columns (32px; the section's own gap between cards is
     // 8px), so stacked panels read as separate groups.
     _spaceFromAbove() {
+      if (this._managed) return;
       const up = (el) => el.parentNode || el.getRootNode && el.getRootNode().host || null;
       let wrap = this;
       for (let i = 0; i < 6 && wrap && wrap.localName !== "hui-card"; i += 1) wrap = up(wrap);
@@ -6742,6 +6829,7 @@
               path: { label: "Page", required: true, selector: { navigation: {} } },
               color: { label: "Colour", selector: { ui_color: {} } },
               color_template: { label: "Colour from a template (optional)", selector: { template: {} } },
+              icon_template: { label: "Icon from a template (optional, e.g. mdi:shield-off when disarmed)", selector: { template: {} } },
               alert_template: { label: "Needs attention when (optional template)", selector: { template: {} } }
             }
           }
@@ -6824,6 +6912,10 @@
           live.color = c;
           this._render();
         }));
+        this._subs.push(stcRender(this._hass, p.icon_template, (c) => {
+          live.icon = String(c || "").trim();
+          this._render();
+        }));
         this._subs.push(stcRender(this._hass, p.alert_template, (a) => {
           live.alert = nbAlert(a);
           this._render();
@@ -6885,13 +6977,14 @@
         const live = this._live[i] || {};
         const colour = stcColor(live.color || p.color || "primary");
         const alert = demo ? !!p.alert_template : !!live.alert;
-        return { i, p, colour, alert, on: i === active };
+        const icon = /^[a-z]+:[\w-]+$/.test(live.icon || "") ? live.icon : p.icon || "mdi:circle";
+        return { i, p, icon, colour, alert, on: i === active };
       });
-      const sig = JSON.stringify(items.map((t) => [t.p.name, t.p.icon, t.colour, t.alert, t.on]));
+      const sig = JSON.stringify(items.map((t) => [t.p.name, t.icon, t.colour, t.alert, t.on]));
       if (sig === this._sig) return;
       this._sig = sig;
-      this._nav.innerHTML = items.map(({ i, p, colour, alert, on }) => `<button class="nb-it${on ? " nb-on" : ""}" type="button" data-i="${i}" title="${kitEsc(p.name)}" aria-label="${kitEsc(p.name)}${alert ? ", needs attention" : ""}"${on ? ' aria-current="page"' : ""} style="${on ? `background:${colour};` : ""}">
-          ${iconHtml(p.icon || "mdi:circle", { size: "22px", style: `flex:none; color:${on ? "#fff" : colour};` })}
+      this._nav.innerHTML = items.map(({ i, p, icon, colour, alert, on }) => `<button class="nb-it${on ? " nb-on" : ""}" type="button" data-i="${i}" title="${kitEsc(p.name)}" aria-label="${kitEsc(p.name)}${alert ? ", needs attention" : ""}"${on ? ' aria-current="page"' : ""} style="${on ? `background:${colour};` : ""}">
+          ${iconHtml(icon, { size: "22px", style: `flex:none; color:${on ? "#fff" : colour};` })}
           ${on ? `<span class="nb-name">${kitEsc(p.name)}</span>` : ""}
           ${alert ? '<i class="nb-dot"></i>' : ""}
         </button>`).join("");
@@ -6935,6 +7028,411 @@
     });
   }
 
+  // src/auto-layout-card.js
+  var helpersPromise2;
+  function cardHelpers2() {
+    if (!helpersPromise2) helpersPromise2 = window.loadCardHelpers ? window.loadCardHelpers() : Promise.reject(new Error("no card helpers"));
+    return helpersPromise2;
+  }
+  var PANEL = /section-panel-card/;
+  var CONTROL_TYPES = [
+    "alarm-panel-card",
+    "light-control-card",
+    "climate-card",
+    "fan-card",
+    "air-purifier-card",
+    "cover-card",
+    "scene-styles-card",
+    "scene-builder-card",
+    "thermostat",
+    "humidifier",
+    "light",
+    "button",
+    "media-control",
+    "alarm-panel",
+    "area"
+  ];
+  function hasControls(conf) {
+    if (!conf || typeof conf !== "object") return false;
+    if (conf.priority === "controls") return true;
+    if (conf.priority === "info") return false;
+    const type = String(conf.type || "").replace(/^custom:/, "").replace(/-beta$/, "");
+    if (CONTROL_TYPES.includes(type)) return true;
+    if (type === "tile" && Array.isArray(conf.features) && conf.features.length) return true;
+    const kids = [].concat(conf.cards || [], conf.card ? [conf.card] : []);
+    return kids.some((k) => hasControls(k));
+  }
+  var GAP = "var(--ha-view-sections-column-gap, 32px)";
+  var PLAN_KEY = "cd-layout-plans";
+  var plans = null;
+  function planStore() {
+    if (plans) return plans;
+    plans = {};
+    try {
+      plans = JSON.parse(localStorage.getItem(PLAN_KEY) || "{}") || {};
+    } catch (err) {
+    }
+    return plans;
+  }
+  function planRemember(key, splits) {
+    const store = planStore();
+    const v = JSON.stringify(splits);
+    if (JSON.stringify(store[key]) === v) return;
+    store[key] = splits;
+    const keys = Object.keys(store);
+    if (keys.length > 60) delete store[keys[0]];
+    try {
+      localStorage.setItem(PLAN_KEY, JSON.stringify(store));
+    } catch (err) {
+    }
+  }
+  var LayoutFields = createFormEditor({
+    schema: () => [
+      { name: "column_width", selector: { number: { min: 200, max: 800, step: 10, mode: "box", unit_of_measurement: "px" } } },
+      { name: "max_columns", selector: { number: { min: 1, max: 6, step: 1, mode: "box" } } },
+      { name: "controls_first", selector: { boolean: {} }, default: true }
+    ],
+    labels: {
+      column_width: "Columns at least this wide",
+      max_columns: "At most this many columns",
+      controls_first: "Panels with buttons and sliders go above ones that only show information"
+    },
+    helpers: {
+      column_width: "Default 340px. Phones (under 600px) always get one column in list order.",
+      max_columns: 'Default 3. Mark a panel "Full width across an Auto Layout" to have it span the page.',
+      controls_first: 'Keeps list order otherwise, on phones too. Each panel can override what it counts as ("Counts as" in the panel).'
+    }
+  });
+  function balance(heights, k, gap, keep) {
+    const n = heights.length;
+    k = Math.max(1, Math.min(k, n));
+    const cost = (cols2) => Math.max(...cols2.map((c) => c.reduce((s, i) => s + heights[i], 0) + gap * Math.max(0, c.length - 1)));
+    let best = null;
+    let bestCost = Infinity;
+    if (n <= 11) {
+      const lab = new Array(n).fill(0);
+      const sums = new Array(k).fill(0);
+      const counts = new Array(k).fill(0);
+      const walk = (i, used) => {
+        if (i === n) {
+          if (used !== k) return;
+          const c = Math.max(...sums.map((s, j) => s + gap * Math.max(0, counts[j] - 1)));
+          if (c < bestCost - 4) {
+            bestCost = c;
+            best = lab.slice();
+          }
+          return;
+        }
+        if (n - i < k - used) return;
+        for (let j = 0; j <= Math.min(used, k - 1); j += 1) {
+          sums[j] += heights[i];
+          counts[j] += 1;
+          lab[i] = j;
+          const partial = sums[j] + gap * (counts[j] - 1);
+          if (partial < bestCost - 4) walk(i + 1, Math.max(used, j + 1));
+          sums[j] -= heights[i];
+          counts[j] -= 1;
+        }
+      };
+      walk(0, 0);
+    }
+    let cols;
+    if (best) {
+      cols = Array.from({ length: k }, () => []);
+      best.forEach((j, i) => cols[j].push(i));
+    } else {
+      cols = Array.from({ length: k }, () => []);
+      const sums = new Array(k).fill(0);
+      heights.forEach((h, i) => {
+        const j = sums.indexOf(Math.min(...sums));
+        cols[j].push(i);
+        sums[j] += h + gap;
+      });
+    }
+    if (keep && keep.length === k && keep.flat().length === n && cost(keep) <= cost(cols) + 24) return keep;
+    return cols;
+  }
+  var AutoLayoutCardEditor = class extends HTMLElement {
+    setConfig(config) {
+      this._config = config;
+      this._render();
+    }
+    set hass(hass) {
+      this._hass = hass;
+      this._render();
+    }
+    set lovelace(lovelace) {
+      this._lovelace = lovelace;
+      if (this._stack) this._stack.lovelace = lovelace;
+    }
+    _emit(config) {
+      this._config = config;
+      this.dispatchEvent(new CustomEvent("config-changed", { detail: { config }, bubbles: true, composed: true }));
+    }
+    async _render() {
+      if (!this._config || !this._hass) return;
+      if (!this._fields) {
+        this._fields = document.createElement(`auto-layout-fields${SUFFIX}`);
+        this._fields.addEventListener("config-changed", (ev) => {
+          ev.stopPropagation();
+          const { cards: cards2, ...fields2 } = ev.detail.config;
+          this._emit({ ...this._config, ...fields2, cards: this._config.cards || [] });
+        });
+        const label = document.createElement("div");
+        label.textContent = "Panels, in order (phones show them top to bottom in this order)";
+        label.style.cssText = "margin:20px 0 8px; font-weight:500;";
+        this.append(this._fields, label);
+      }
+      const { cards, ...fields } = this._config;
+      this._fields.hass = this._hass;
+      this._fields.setConfig(fields);
+      if (!this._stack && !this._stackLoading) {
+        this._stackLoading = true;
+        try {
+          const helpers = await cardHelpers2();
+          helpers.createCardElement({ type: "vertical-stack", cards: [] });
+          await customElements.whenDefined("hui-vertical-stack-card");
+          this._stack = await customElements.get("hui-vertical-stack-card").getConfigElement();
+          this._stack.addEventListener("config-changed", (ev) => {
+            ev.stopPropagation();
+            this._emit({ ...this._config, cards: ev.detail.config.cards || [] });
+          });
+          this.appendChild(this._stack);
+        } catch (err) {
+          const note = document.createElement("p");
+          note.textContent = "The card list editor could not load; use the code editor to change the panels.";
+          this.appendChild(note);
+        }
+        this._stackLoading = false;
+      }
+      if (this._stack) {
+        this._stack.hass = this._hass;
+        if (this._lovelace) this._stack.lovelace = this._lovelace;
+        this._stack.setConfig({ type: "vertical-stack", cards: this._config.cards || [] });
+      }
+    }
+  };
+  var AutoLayoutCard = class extends HTMLElement {
+    setConfig(config) {
+      if (!Array.isArray(config.cards)) throw new Error("cards required");
+      this.config = config;
+      this._build();
+    }
+    set hass(hass) {
+      this._hass = hass;
+      (this._items || []).forEach((it) => {
+        it.el.hass = hass;
+      });
+    }
+    _build() {
+      this.style.display = "block";
+      this.innerHTML = "";
+      this._root = document.createElement("div");
+      this._root.style.cssText = `display:flex; flex-direction:column; gap:${GAP};`;
+      this.appendChild(this._root);
+      this._items = [];
+      this._plan = "";
+      const token = this._token = {};
+      cardHelpers2().then((helpers) => {
+        if (token !== this._token) return;
+        this._items = this.config.cards.map((conf) => this._make(helpers, conf));
+        this._layout(true);
+      }).catch(() => {
+      });
+    }
+    _make(helpers, conf) {
+      const el = helpers.createCardElement(conf);
+      el._managed = true;
+      if (this._hass) el.hass = this._hass;
+      const it = { conf, el, controls: hasControls(conf) };
+      el.addEventListener("ll-rebuild", (ev) => {
+        ev.stopPropagation();
+        const fresh = helpers.createCardElement(conf);
+        fresh._managed = true;
+        if (this._hass) fresh.hass = this._hass;
+        el.replaceWith(fresh);
+        it.el = fresh;
+        this._queue();
+      });
+      return it;
+    }
+    _columns() {
+      if (window.innerWidth < 600) return 1;
+      const c = this.config;
+      const min = Number(c.column_width) || 340;
+      const max = Number(c.max_columns) || 3;
+      const gap = this._gap();
+      const w = this.getBoundingClientRect().width || window.innerWidth;
+      return Math.max(1, Math.min(max, Math.floor((w + gap) / (min + gap))));
+    }
+    _gap() {
+      const v = parseFloat(getComputedStyle(this).getPropertyValue("--ha-view-sections-column-gap"));
+      return Number.isFinite(v) ? v : 32;
+    }
+    // Full width: set on the panel, or automatic for a panel of 3+ small cards
+    // (zones, cameras, tiles) that won't fit side by side in one column.
+    _full(it, colWidth) {
+      const f = it.conf.full_width;
+      if (f === true || f === "yes") return true;
+      if (f === false || f === "no") return false;
+      const cards = it.conf.cards || [];
+      const w = it.el._cardWidth ? it.el._cardWidth() : 300;
+      if (cards.length < 3 || !w || w > 240) return false;
+      const across = Math.max(1, Math.floor((colWidth - 24 + 12) / (w + 12)));
+      return cards.length > across;
+    }
+    _open(el) {
+      return PANEL.test(el.localName) && !(el._mode && el._mode() === "compact") && !(el.config && el.config.match_height === false);
+    }
+    // Height of an item without any stretch.
+    _height(el) {
+      if (el._naturalHeight) return el._naturalHeight();
+      return el.getBoundingClientRect().height;
+    }
+    _queue() {
+      cancelAnimationFrame(this._frame);
+      this._frame = requestAnimationFrame(() => this._layout(false));
+    }
+    // Work out bands (split at full-width items) and columns; only move cards
+    // when the arrangement actually changes, so cameras etc. aren't reloaded.
+    _layout(force) {
+      if (!this.isConnected || !this._items.length) return;
+      const cols = this._columns();
+      const gap = this._gap();
+      const colWidth = ((this.getBoundingClientRect().width || window.innerWidth) - gap * (cols - 1)) / cols;
+      const wide = cols > 1 ? this._items.filter((it) => this._full(it, colWidth)) : [];
+      const rest = this._items.filter((it) => !wide.includes(it));
+      const bands = [];
+      if (rest.length) bands.push({ items: rest });
+      const first = this.config.controls_first !== false;
+      [...wide.filter((it) => !first || it.controls), ...wide.filter((it) => first && !it.controls)].forEach((it) => bands.push({ items: [it], full: true }));
+      if (this.config.controls_first !== false) {
+        bands.forEach((b) => {
+          b.items = [...b.items.filter((it) => it.controls), ...b.items.filter((it) => !it.controls)];
+        });
+      }
+      const placed = this._items.every((it) => it.el.isConnected);
+      const planKey = `${location.pathname}|${cols}|${bands.map((b) => b.items.map((it) => it.conf.title || it.conf.type).join(",")).join("/")}`;
+      const saved = planStore()[planKey];
+      bands.forEach((b, n) => {
+        if (b.full || cols === 1) {
+          b.split = [b.items.map((it, i) => i)];
+          return;
+        }
+        if (!placed) {
+          const s = saved && saved[n];
+          const ok = Array.isArray(s) && s.flat().length === b.items.length && s.length <= cols;
+          b.split = ok ? s : [b.items.map((it, i) => i)];
+          return;
+        }
+        const key = b.items.map((it) => this._items.indexOf(it)).join(",");
+        const prev = this._prevSplits && this._prevSplits[key];
+        b.split = balance(b.items.map((it) => this._height(it.el)), cols, gap, prev);
+      });
+      this._prevSplits = {};
+      bands.forEach((b) => {
+        this._prevSplits[b.items.map((it) => this._items.indexOf(it)).join(",")] = b.split;
+      });
+      if (placed) planRemember(planKey, bands.map((b) => b.split));
+      const plan = `${cols}|${bands.map((b) => `${b.full ? "F" : ""}${b.split.map((c) => c.join(".")).join(",")}`).join("/")}`;
+      if (force || plan !== this._plan) {
+        this._plan = plan;
+        this._root.innerHTML = "";
+        bands.forEach((b) => {
+          const row3 = document.createElement("div");
+          row3.style.cssText = `display:flex; gap:${GAP}; align-items:stretch;`;
+          b.cols = b.split.map((idx) => {
+            const col = document.createElement("div");
+            col.style.cssText = `flex:1 1 0; min-width:0; display:flex; flex-direction:column; gap:${GAP};`;
+            idx.forEach((i) => col.appendChild(b.items[i].el));
+            row3.appendChild(col);
+            return col;
+          });
+          this._root.appendChild(row3);
+        });
+        this._bands = bands;
+        if (!placed) {
+          this._queue();
+          return;
+        }
+      }
+      this._stretch(cols, gap);
+    }
+    // Each column's last open panel grows so the columns in a band end level,
+    // but only by a modest amount: a column that can't be evened out stays
+    // short rather than ending in a big empty panel.
+    _stretch(cols, gap) {
+      const set = (el, px) => {
+        const p = el._panelEl;
+        if (!p) return;
+        const v = px ? `${Math.round(px)}px` : "";
+        if (p.style.minHeight !== v) p.style.minHeight = v;
+      };
+      (this._bands || []).forEach((b) => {
+        const runs = b.cols.map((col) => [...col.children].map((el) => this._items.find((it) => it.el === el)).filter(Boolean));
+        if (cols === 1 || runs.length < 2) {
+          runs.flat().forEach((it) => set(it.el, 0));
+          return;
+        }
+        const totals = runs.map((r) => r.reduce((s, it) => s + this._height(it.el), 0) + gap * Math.max(0, r.length - 1));
+        const end = Math.max(...totals);
+        runs.forEach((r, i) => {
+          let grow = null;
+          for (let k = r.length - 1; k >= 0 && !grow; k -= 1) if (this._open(r[k].el)) grow = r[k];
+          r.forEach((it) => {
+            const extra = end - totals[i];
+            const h = this._height(it.el);
+            const ok = extra > 1 && extra <= Math.max(160, h * 0.5);
+            set(it.el, it === grow && ok ? h + extra : 0);
+          });
+        });
+      });
+    }
+    connectedCallback() {
+      this._onChange = () => this._queue();
+      window.addEventListener("resize", this._onChange);
+      window.addEventListener("cd-panels-changed", this._onChange);
+      if (window.ResizeObserver && !this._ro) {
+        this._ro = new ResizeObserver(() => this._queue());
+        this._ro.observe(this);
+        this._timer = setInterval(() => this._queue(), 3e3);
+      }
+      this._queue();
+    }
+    disconnectedCallback() {
+      window.removeEventListener("resize", this._onChange);
+      window.removeEventListener("cd-panels-changed", this._onChange);
+      if (this._ro) this._ro.disconnect();
+      this._ro = null;
+      clearInterval(this._timer);
+    }
+    getCardSize() {
+      return (this._items || []).reduce((n, it) => n + (it.el.getCardSize ? Number(it.el.getCardSize()) || 1 : 1), 0);
+    }
+    getGridOptions() {
+      return { columns: "full", rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement(`auto-layout-card-editor${SUFFIX}`);
+    }
+    static getStubConfig() {
+      return { cards: [] };
+    }
+  };
+  function registerAutoLayoutCard() {
+    if (!customElements.get(`auto-layout-fields${SUFFIX}`)) customElements.define(`auto-layout-fields${SUFFIX}`, LayoutFields);
+    if (!customElements.get(`auto-layout-card-editor${SUFFIX}`)) customElements.define(`auto-layout-card-editor${SUFFIX}`, AutoLayoutCardEditor);
+    if (!customElements.get(`auto-layout-card${SUFFIX}`)) customElements.define(`auto-layout-card${SUFFIX}`, AutoLayoutCard);
+    window.customCards = window.customCards || [];
+    window.customCards.push({
+      type: `auto-layout-card${SUFFIX}`,
+      name: `Auto Layout Card${LABEL}`,
+      description: "Arranges a page's panels into balanced columns by itself, with level bottoms",
+      preview: false,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
+    });
+  }
+
   // src/index.js
   registerGaugeZoneCard();
   registerAlarmPanelCard();
@@ -6952,5 +7450,6 @@
   registerDeviceHealthCard();
   registerSecurityZoneCard();
   registerNavBarCard();
+  registerAutoLayoutCard();
   console.info(`%c CHURCH-DRIVE-CARDS${SUFFIX ? " BETA" : ""} %c loaded `, "color: white; background: #2196f3; font-weight: 700;", "color: #2196f3; background: transparent;");
 })();
