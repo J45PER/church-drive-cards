@@ -10,6 +10,9 @@ import { createFormEditor } from './form-editor.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { stcColor } from './section-title-card.js';
+import { nbHuiRoot } from './nav-bar-card.js';
+import { kitScrollParent, kitGlide } from './card-kit.js';
+import { PANEL_TRANSITION } from './section-panel-card.js';
 
 let helpersPromise;
 function cardHelpers() {
@@ -70,18 +73,21 @@ function planRemember(key, splits) {
 
 const LayoutFields = createFormEditor({
   schema: () => [
+    { name: 'title', selector: { text: {} } },
     { name: 'column_width', selector: { number: { min: 200, max: 800, step: 10, mode: 'box', unit_of_measurement: 'px' } } },
     { name: 'max_columns', selector: { number: { min: 1, max: 6, step: 1, mode: 'box' } } },
     { name: 'controls_first', selector: { boolean: {} }, default: true },
-    { name: 'jump_chips', selector: { select: { mode: 'dropdown', options: [{ value: 'auto', label: 'Automatic (phones, 4+ panels)' }, { value: 'always', label: 'Always' }, { value: 'never', label: 'Never' }] } } },
+    { name: 'jump_chips', selector: { select: { mode: 'dropdown', options: [{ value: 'auto', label: 'Automatic (phones)' }, { value: 'always', label: 'Always' }, { value: 'never', label: 'Never' }] } } },
   ],
   labels: {
+    title: 'Page title (optional; {user} is the signed-in person\'s first name)',
     column_width: 'Columns at least this wide',
     max_columns: 'At most this many columns',
     controls_first: 'Panels with buttons and sliders go above ones that only show information',
     jump_chips: 'Jump-to chips at the top',
   },
   helpers: {
+    title: "Shown large at the top of the page, above the chips. Any panel that has opened by itself (its 'opens by itself when' is true) shows under it as an alert; tapping one goes to that panel.",
     column_width: 'Default 340px. Phones (under 600px) always get one column in list order.',
     max_columns: 'Default 3. Mark a panel "Full width across an Auto Layout" to have it span the page.',
     controls_first: 'Keeps list order otherwise, on phones too. Each panel can override what it counts as ("Counts as" in the panel).',
@@ -89,7 +95,31 @@ const LayoutFields = createFormEditor({
   },
 });
 
+// The chips capsule and the round open/close-all button beside it (a +/−
+// that folds like the panels' own toggle).
+const ALL_TOGGLE_CSS = `
+  .al-chips .al-cap, .al-chips .al-all {
+    background:color-mix(in srgb, var(--card-background-color, #1f2128) 88%, transparent);
+    box-shadow:0 6px 18px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.06);
+    -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); }
+  .al-chips .al-cap { flex:1 1 auto; min-width:0; padding:6px; border-radius:999px; box-sizing:border-box; }
+  .al-chips .al-strip { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; }
+  .al-chips .al-all { position:relative; flex:none; width:42px; height:42px; padding:0; border:none; border-radius:50%; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+  .al-chips .al-all::before, .al-chips .al-all::after { content:''; position:absolute; left:50%; top:50%; width:13px; height:2.5px; border-radius:2px;
+    background:#fff; transform:translate(-50%, -50%); transition:transform .32s cubic-bezier(.2,.8,.2,1); }
+  .al-chips .al-all.al-shut::after { transform:translate(-50%, -50%) rotate(90deg); }
+`;
+
 const boxHeight = (el) => (el ? Math.round(el.getBoundingClientRect().height) : 0);
+
+// Bottom of Home Assistant's top bar, so floating chips sit just under it.
+function headerBottom() {
+  const root = nbHuiRoot();
+  const sr = root && root.shadowRoot;
+  const bar = sr && (sr.querySelector('.header') || sr.querySelector('app-header') || sr.querySelector('app-toolbar'));
+  const r = bar && bar.getBoundingClientRect();
+  return r && r.height ? Math.max(0, r.bottom) : 56;
+}
 
 // Share items between k columns so the tallest column is as short as
 // possible. Each column keeps list order; column 1 starts with the first
@@ -157,7 +187,9 @@ export class AutoLayoutCardEditor extends HTMLElement {
   }
 
   set hass(hass) {
+    const first = !this._hass;
     this._hass = hass;
+    if (first) this._renderHead();
     this._render();
   }
 
@@ -232,24 +264,47 @@ export class AutoLayoutCard extends HTMLElement {
   _build() {
     this.style.display = 'block';
     this.innerHTML = '';
+    // Jump-to chips float under the header (a capsule on document.body, like
+    // the nav bar, since HA's card wrappers stop position:sticky working);
+    // the spacer keeps room for them at the top of the page.
+    if (this._chips) this._chips.remove();
     this._chips = document.createElement('div');
     this._chips.className = 'al-chips';
-    // Pinned under the header while the page scrolls.
     this._chips.style.cssText =
-      'display:none; gap:6px; overflow-x:auto; padding:8px 2px; margin:-8px 0 4px; scrollbar-width:none; position:sticky; top:var(--header-height, 56px); z-index:3; background:var(--primary-background-color, #111318);';
+      'display:none; align-items:center; gap:8px; box-sizing:border-box; z-index:4; transition:opacity .2s;';
     this._chips.addEventListener('click', (ev) => {
+      if (ev.target.closest && ev.target.closest('[data-all]')) {
+        this._toggleAll();
+        return;
+      }
       const chip = ev.target.closest && ev.target.closest('[data-i]');
       const it = chip && this._items[Number(chip.dataset.i)];
       if (!it) return;
-      it.el.style.scrollMarginTop = `calc(var(--header-height, 56px) + ${boxHeight(this._chips)}px + 8px)`;
-      it.el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      this._jumpTo(it);
       this._current = Number(chip.dataset.i);
       this._chipsSig = null;
       this._renderChips();
     });
+    this._spacer = document.createElement('div');
+    this._spacer.style.cssText = 'display:none;';
     this._root = document.createElement('div');
     this._root.style.cssText = `display:flex; flex-direction:column; gap:${GAP};`;
-    this.append(this._chips, this._root);
+    // Room at the end of the page, only while a chip jump needs it, so even
+    // the last panels can come up under the chips.
+    this._tail = document.createElement('div');
+    this._tail.style.cssText = 'height:0;';
+    // The page header: title, then alerts from panels that opened by themselves.
+    this._head = document.createElement('div');
+    this._head.className = 'al-head';
+    // Fixed height on every page: a title line and an alerts line that's
+    // always there (blank when nothing needs you), so pages line up.
+    this._head.style.cssText = 'display:none; flex-direction:column; align-items:stretch; gap:8px; padding:4px 0 12px; box-sizing:border-box;';
+    this._head.addEventListener('click', (ev) => {
+      const pill = ev.target.closest && ev.target.closest('[data-alert]');
+      const it = pill && this._items[Number(pill.dataset.alert)];
+      if (it) this._jumpTo(it);
+    });
+    this.append(this._head, this._spacer, this._root, this._tail);
     this._items = [];
     this._plan = '';
     const token = (this._token = {});
@@ -319,6 +374,11 @@ export class AutoLayoutCard extends HTMLElement {
   }
 
   _queue() {
+    // Wait while a panel slides open or shut; lay out once when it's done.
+    if (this._animating > 0) {
+      this._pending = true;
+      return;
+    }
     cancelAnimationFrame(this._frame);
     this._frame = requestAnimationFrame(() => this._layout(false));
   }
@@ -364,7 +424,10 @@ export class AutoLayoutCard extends HTMLElement {
       }
       const key = b.items.map((it) => this._items.indexOf(it)).join(',');
       const prev = this._prevSplits && this._prevSplits[key];
-      b.split = balance(b.items.map((it) => this._height(it.el)), cols, gap, prev);
+      // Once the page has settled, panels keep their columns: opening or
+      // closing one only re-levels the bottoms, it never moves panels about.
+      const settled = performance.now() > this._settleUntil && cols === this._cols;
+      b.split = settled && prev && prev.length === Math.min(cols, b.items.length) ? prev : balance(b.items.map((it) => this._height(it.el)), cols, gap, prev);
     });
     this._prevSplits = {};
     bands.forEach((b) => {
@@ -393,8 +456,10 @@ export class AutoLayoutCard extends HTMLElement {
         return;
       }
     }
+    if (cols !== this._cols) this._settleUntil = performance.now() + 2500;
     this._stretch(cols, gap);
     this._cols = cols;
+    this._renderHead();
     this._renderChips();
   }
 
@@ -406,7 +471,14 @@ export class AutoLayoutCard extends HTMLElement {
       const p = el._panelEl;
       if (!p) return;
       const v = px ? `${Math.round(px)}px` : '';
-      if (p.style.minHeight !== v) p.style.minHeight = v;
+      if (p.style.minHeight === v) return;
+      const settling = performance.now() < this._settleUntil;
+      if (settling && !el._sliding) p.style.transition = 'none';
+      p.style.minHeight = v;
+      if (settling && !el._sliding) {
+        void p.offsetHeight;
+        p.style.transition = PANEL_TRANSITION;
+      }
     };
     (this._bands || []).forEach((b) => {
       const runs = b.cols.map((col) => [...col.children].map((el) => this._items.find((it) => it.el === el)).filter(Boolean));
@@ -429,13 +501,49 @@ export class AutoLayoutCard extends HTMLElement {
     });
   }
 
+  // ---- Page header: the title and any alerts.
+  _renderHead() {
+    const head = this._head;
+    if (!head) return;
+    const esc = (t) => String(t).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
+    const alerts = (this._items || [])
+      .map((it, i) => ({ it, i }))
+      .filter(({ it }) => it.el._alert && it.conf.title)
+      .map(({ it, i }) => {
+        const bg = it.el.querySelector && it.el.querySelector('.spc-bg');
+        const colour = (bg && bg.style.background) || stcColor(it.conf.color || 'primary');
+        const summary = it.el._title && it.el._title._summary;
+        return { i, colour, icon: it.conf.icon, text: summary ? `${it.conf.title} · ${summary}` : it.conf.title };
+      });
+    const user = this._hass && this._hass.user && this._hass.user.name ? String(this._hass.user.name).split(' ')[0] : '';
+    const title = String(this.config.title || '').replace(/\{user\}/g, user).trim();
+    const sig = JSON.stringify([title, alerts]);
+    if (sig === this._headSig) return;
+    this._headSig = sig;
+    if (!this.config.title) {
+      head.style.display = 'none';
+      head.innerHTML = '';
+      return;
+    }
+    head.style.display = 'flex';
+    head.innerHTML = `<div style="height:40px; font-size:2rem; font-weight:700; line-height:40px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--primary-text-color);">${esc(title)}</div>
+      <div style="height:34px; display:flex; flex-wrap:nowrap; justify-content:safe center; align-items:center; gap:6px; overflow-x:auto; scrollbar-width:none;">${alerts
+        .map(
+          (a) => `<button type="button" data-alert="${a.i}" style="flex:none; display:inline-flex; align-items:center; gap:6px; max-width:90%; height:32px; padding:0 12px; border:none; border-radius:999px; cursor:pointer; font:inherit; font-size:0.82rem; font-weight:600; color:var(--primary-text-color); background:color-mix(in srgb, ${a.colour} 26%, var(--card-background-color, #22252e)); box-shadow:inset 0 0 0 1px color-mix(in srgb, ${a.colour} 55%, transparent);">${
+            a.icon ? iconHtml(a.icon, { size: '18px', style: `color:${a.colour}; flex:none;` }) : ''
+          }<span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(a.text)}</span></button>`
+        )
+        .join('')}</div>`;
+    hydrateIcons(head);
+  }
+
   // ---- Jump-to chips: one per panel, in page order, in the panel's colour.
   _chipsWanted() {
     const mode = this.config.jump_chips || 'auto';
     if (mode === 'never') return false;
     const panels = (this._items || []).filter((it) => it.conf.title);
     if (mode === 'always') return panels.length > 1;
-    return this._cols === 1 && panels.length >= 4;
+    return this._cols === 1 && panels.length >= 1;
   }
 
   // Panels in the order they appear on the page (top to bottom, left to right).
@@ -446,59 +554,223 @@ export class AutoLayoutCard extends HTMLElement {
       .sort((a, b) => a.r.top - b.r.top || a.r.left - b.r.left);
   }
 
+  _chipsFloat() {
+    return !(this.editMode || this.preview) && this.isConnected;
+  }
+
+  // Where the capsule goes. At the top of the page it sits in its own row
+  // (inside the spacer, scrolling with the page, so it never covers what's
+  // above it, like the welcome message); once that row reaches the header it
+  // pins under the header (on document.body, since HA's card wrappers stop
+  // position:sticky working).
+  _placeChips() {
+    const box = this._chips;
+    const float = this._chipsFloat();
+    const spacer = this._spacer;
+    if (!float) {
+      if (box.parentNode !== this) this.insertBefore(box, this._root);
+      Object.assign(box.style, { position: 'relative', top: '', left: '', width: '', marginBottom: '12px' });
+      spacer.style.display = 'none';
+      return;
+    }
+    if (box.parentNode !== spacer && box.parentNode !== document.body) spacer.appendChild(box);
+    const h = boxHeight(box) || 44;
+    spacer.style.cssText = `display:block; position:relative; height:${h + 12}px;`;
+    const r = this.getBoundingClientRect();
+    const pinAt = headerBottom() + 8;
+    const rowTop = spacer.getBoundingClientRect().top;
+    const pinned = rowTop < pinAt;
+    if (pinned) {
+      if (box.parentNode !== document.body) document.body.appendChild(box);
+      Object.assign(box.style, {
+        position: 'fixed',
+        top: `${pinAt}px`,
+        left: `${Math.round(r.left)}px`,
+        width: `${Math.round(r.width)}px`,
+        marginBottom: '',
+        opacity: r.width ? '1' : '0',
+        pointerEvents: r.width ? 'auto' : 'none',
+      });
+    } else {
+      if (box.parentNode !== spacer) spacer.appendChild(box);
+      Object.assign(box.style, { position: 'absolute', top: '0', left: '0', width: '100%', marginBottom: '', opacity: '1', pointerEvents: 'auto' });
+    }
+  }
+
+  // Scroll a panel up to just under the chips, opening it if it's compact
+  // (for this visit only; the saved open/compact choice doesn't change).
+  // The panel a previous jump opened closes again, unless it's been touched.
+  _jumpTo(it) {
+    const el = it.el;
+    const prev = this._closeJumped(el);
+    if (el._mode && el._mode() === 'compact' && el._slide && el._apply) {
+      el._fallback = 'open';
+      el._slide(() => el._apply());
+      this._jumpOpened = el;
+    }
+    // Aim for just under the chips where they'll be once pinned.
+    const top = this._pinnedChipsBottom() + 10;
+    const r = el.getBoundingClientRect();
+    let below = this._root.getBoundingClientRect().bottom - r.top;
+    // A panel closing further down makes the page shorter: allow for it.
+    if (prev && prev.getBoundingClientRect().top > r.top) below -= prev.getBoundingClientRect().height;
+    const need = Math.max(0, Math.ceil(window.innerHeight - top - below));
+    this._tail.style.height = `${need}px`;
+    this._jump = { el, top, arrived: false, since: performance.now() };
+    kitGlide(kitScrollParent(this), () => el.getBoundingClientRect().top - top);
+  }
+
+  // Close the panel the last chip jump opened, if it's still only open for
+  // that jump. Returns it.
+  _closeJumped(keep) {
+    const el = this._jumpOpened;
+    this._jumpOpened = null;
+    if (!el || el === keep || el._fallback !== 'open' || !el._slide) return null;
+    el._fallback = null;
+    el._slide(() => el._apply());
+    return el;
+  }
+
+  // Drop the extra room once the jump has landed and you scroll back up
+  // away from that panel (or if the jump never lands).
+  _trimTail() {
+    const j = this._jump;
+    if (!j) return;
+    const at = j.el.getBoundingClientRect().top;
+    if (Math.abs(at - j.top) < 8) j.arrived = true;
+    const leftIt = j.arrived && at > j.top + 40;
+    if (leftIt || (!j.arrived && performance.now() - j.since > 3000)) {
+      this._tail.style.height = '0px';
+      this._jump = null;
+    }
+  }
+
+  _pinnedChipsBottom() {
+    const box = this._chips;
+    return box && box.style.display !== 'none' && this._chipsFloat() ? headerBottom() + 8 + boxHeight(box) : this._chipsBottom();
+  }
+
+  _chipsBottom() {
+    const box = this._chips;
+    return box && box.style.display !== 'none' ? box.getBoundingClientRect().bottom : headerBottom();
+  }
+
   _renderChips() {
     const box = this._chips;
     if (!box) return;
     if (!this._chipsWanted()) {
       box.style.display = 'none';
+      if (this._spacer) this._spacer.style.display = 'none';
       return;
     }
     box.style.display = 'flex';
+    this._placeChips();
     const order = this._pageOrder();
     if (this._current == null && order.length) this._current = order[0].i;
+    const isOpen = (el) => !(el._mode && el._mode() === 'compact');
     const chips = order.map(({ it, i }) => {
       const bg = it.el.querySelector && it.el.querySelector('.spc-bg');
       const colour = (bg && bg.style.background) || stcColor(it.conf.color || 'primary');
-      return { i, title: it.conf.title, icon: it.conf.icon, colour, on: i === this._current };
+      return { i, title: it.conf.title, icon: it.conf.icon, colour, on: i === this._current, open: isOpen(it.el) };
     });
-    const sig = JSON.stringify(chips);
+    const panels = order.filter(({ it }) => this._closable(it.el));
+    const anyOpen = panels.some(({ it }) => isOpen(it.el));
+    const sig = JSON.stringify([anyOpen, chips]);
     if (sig === this._chipsSig) return;
     this._chipsSig = sig;
-    box.innerHTML = chips
-      .map(
-        (c) => `<button type="button" data-i="${c.i}" style="flex:none; display:inline-flex; align-items:center; gap:5px; padding:6px 11px; border:none; border-radius:999px; cursor:pointer; font:inherit; font-size:0.78rem; font-weight:600; color:${c.on ? '#fff' : 'var(--primary-text-color)'}; background:${c.on ? c.colour : `color-mix(in srgb, ${c.colour} 18%, var(--card-background-color, #22252e))`};">${
-          c.icon ? iconHtml(c.icon, { size: '16px', style: `color:${c.on ? '#fff' : c.colour};` }) : ''
-        }${String(c.title).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch])}</button>`
-      )
-      .join('');
+    const esc = (t) => String(t).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
+    // The current chip is filled while its panel is open, outlined while it's
+    // compact. Chips grow to fill the capsule, then scroll when there are many.
+    const chip = (c) => {
+      const filled = c.on && c.open;
+      c.on = filled;
+      return `<button type="button" data-i="${c.i}" style="flex:1 0 auto; display:inline-flex; align-items:center; justify-content:center; gap:5px; padding:6px 11px; border:none; border-radius:999px; cursor:pointer; font:inherit; font-size:0.78rem; font-weight:600; transition:background-color .2s, box-shadow .2s;
+        color:${filled ? '#fff' : 'var(--primary-text-color)'}; background:${filled ? c.colour : `color-mix(in srgb, ${c.colour} 18%, var(--card-background-color, #22252e))`};">${
+        c.icon ? iconHtml(c.icon, { size: '16px', style: `color:${filled ? '#fff' : c.colour};` }) : ''
+      }${esc(c.title)}</button>`;
+    };
+    // The capsule of chips, and beside it a separate round open/close-all
+    // button (same look as the nav bar's back-to-top).
+    box.innerHTML = `<div class="al-cap"><div class="al-strip">${chips.map(chip).join('')}</div></div>${
+      panels.length > 1
+        ? `<button type="button" data-all class="al-all${anyOpen ? '' : ' al-shut'}" aria-label="${anyOpen ? 'Close all' : 'Open all'}" title="${anyOpen ? 'Close all' : 'Open all'}"></button>`
+        : ''
+    }`;
+    if (!box.querySelector('style.al-tog')) {
+      const st = document.createElement('style');
+      st.className = 'al-tog';
+      st.textContent = ALL_TOGGLE_CSS;
+      box.prepend(st);
+    }
     hydrateIcons(box);
+    const strip = box.querySelector('.al-strip');
     const on = box.querySelector(`[data-i="${this._current}"]`);
-    if (on && on.scrollIntoView) box.scrollLeft = Math.max(0, on.offsetLeft - 24);
+    if (on && strip) strip.scrollLeft = Math.max(0, on.offsetLeft - strip.offsetLeft - 24);
+  }
+
+  // Panels the open/close-all button acts on: not ones held open by an
+  // alert, or that can't be closed.
+  _closable(el) {
+    return !!(el._choose && el._mode && !el._alert && el._collapsible !== false);
+  }
+
+  // Open every panel, or close them all if any are open (saved like the
+  // panels' own +/−). A panel a chip opened counts as open.
+  _toggleAll() {
+    const panels = (this._items || []).map((it) => it.el).filter((el) => this._closable(el));
+    const open = new Map(panels.map((el) => [el, el._mode() !== 'compact']));
+    const anyOpen = [...open.values()].some(Boolean);
+    this._jumpOpened = null;
+    panels.forEach((el) => {
+      const wasOpen = open.get(el);
+      el._fallback = null;
+      const want = anyOpen ? 'compact' : 'open';
+      if (wasOpen === anyOpen || el._mode() !== want) el._choose(want);
+    });
+    this._chipsSig = null;
+    this._renderChips();
   }
 
   // The chip for the panel at the top of the screen is filled in.
   _onScroll() {
+    this._trimTail();
     if (!this._chipsWanted()) return;
-    const line = (parseFloat(getComputedStyle(this).getPropertyValue('--header-height')) || 56) + boxHeight(this._chips) + 24;
+    const line = this._chipsBottom() + 24;
     let current = null;
     this._pageOrder().forEach(({ i, r }) => {
       if (r.top <= line) current = i;
     });
     if (current == null) current = (this._pageOrder()[0] || {}).i;
-    if (current !== this._current) {
-      this._current = current;
-      this._renderChips();
-    }
+    this._current = current;
+    // Cheap when nothing changed: the chips only redraw when their look does.
+    this._renderChips();
   }
 
   connectedCallback() {
+    this._settleUntil = performance.now() + 4000;
+    this._animating = 0;
+    this._onAnim = (ev) => {
+      this._animating = Math.max(0, this._animating + (Number(ev.detail) || 0));
+      if (!this._animating && this._pending) {
+        this._pending = false;
+        this._queue();
+      }
+    };
+    window.addEventListener('cd-anim', this._onAnim);
+    // The nav bar's back-to-top also closes the panel a chip jump opened.
+    this._onTop = () => this._closeJumped(null);
+    window.addEventListener('cd-to-top', this._onTop);
     this._onScrollBound = () => {
       cancelAnimationFrame(this._scrollFrame);
       this._scrollFrame = requestAnimationFrame(() => this._onScroll());
     };
     window.addEventListener('scroll', this._onScrollBound, { capture: true, passive: true });
     this._onChange = () => this._queue();
-    window.addEventListener('resize', this._onChange);
+    this._onResize = () => {
+      this._queue();
+      if (this._chips && this._chips.style.display !== 'none') this._placeChips();
+    };
+    window.addEventListener('resize', this._onResize);
     window.addEventListener('cd-panels-changed', this._onChange);
     if (window.ResizeObserver && !this._ro) {
       this._ro = new ResizeObserver(() => this._queue());
@@ -510,7 +782,10 @@ export class AutoLayoutCard extends HTMLElement {
 
   disconnectedCallback() {
     window.removeEventListener('scroll', this._onScrollBound, { capture: true });
-    window.removeEventListener('resize', this._onChange);
+    window.removeEventListener('resize', this._onResize);
+    window.removeEventListener('cd-anim', this._onAnim);
+    window.removeEventListener('cd-to-top', this._onTop);
+    if (this._chips && this._chips.parentNode === document.body) this._chips.remove();
     window.removeEventListener('cd-panels-changed', this._onChange);
     if (this._ro) this._ro.disconnect();
     this._ro = null;

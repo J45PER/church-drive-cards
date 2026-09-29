@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-29. Current release: **v0.21.0**.*
+*Last updated 2026-09-29. Current release: **v0.22.0**.*
 
 ## Where this stands
 
@@ -14,11 +14,123 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
+**New in v0.22.0 (2026-09-29): smoother panels, floating chips, page headers** (the user found the
+chips didn't pin, and panels jumped to a slightly larger height before expanding):
+- Chips pin like `position:sticky` (HA's card wrappers stop real sticky working):
+  - At the top of the page the capsule sits in its own row, inside the spacer
+    (`position:absolute`), so it never covers the view header's "Hello Jamie".
+  - Once that row reaches `headerBottom()` + 8px (measured from hui-root's `.header`),
+    it moves to `document.body` as `position:fixed`, aligned to the card.
+  - Chip jumps aim for the pinned position (`_pinnedChipsBottom`).
+  - The chips are inline in edit mode or preview.
+- `_slide` holds the panel at its old height (`height`, `overflow:hidden`) for two
+  frames while the cards redraw, then measures `height:auto` and transitions to it
+  (340ms), fading the cards in. The old version measured too early, so it animated to
+  a slightly-too-small height and then jumped.
+- While a panel slides it fires `cd-anim` +1/−1; Auto Layout pauses `_queue` and lays
+  out once at the end. Panels have `transition: min-height`, so re-levelling eases.
+- Auto Layout keeps each panel's column once the page has settled (4s after connect;
+  2.5s after the column count changes); open/close only re-levels.
+- Chip taps (`_jumpTo`):
+  - Open a compact panel for that visit only (`_fallback = 'open'`, not saved).
+  - Add a tail spacer so the last panels can reach just under the chips.
+  - `_trimTail` clears the spacer once the jump has landed and the user scrolls back up
+    40px or more, or after 3s if the jump never lands.
+  - The user asked for both (2026-09-29).
+  - The next jump (or ↑) closes the panel the last jump opened, if it's still only
+    open for that jump (`_closeJumped`).
+  - Scrolling uses `_glide`, which tracks the target each frame (16% of the remaining
+    distance) so panels resizing on the way don't throw it off. A touch or wheel stops
+    it. `scrollParent` finds HA's scroller.
+  - **Back to top** is a 58px circle to the right of the nav bar (`back_to_top`,
+    default on).
+    - Three `<i>` strokes animate: a dash at the top, an ↑ once scrolled past 40px
+      (`.nb-up`). The strokes are opaque, with the secondary text colour for the
+      dash; a translucent dash showed its overlap.
+    - Tapping it (or the current page's icon) fires `cd-to-top`, which closes the
+      panel a chip jump opened, and glides to the top.
+    - `kitScrollParent`, `kitScrollTop` and `kitGlide` moved to card-kit. The user
+      asked for it by the nav bar rather than in the chips.
+  - Fixed: a panel opened by a jump needed two presses to close (the toggle read its
+    state after clearing `_fallback`).
+- **Page header** (Auto Layout `title`, 2026-09-29):
+  - The title is centred, 2rem bold, like the Home view's "Hello {{ user }}" markdown
+    header.
+  - Under it are alert pills for panels whose `open_when` is true (`el._alert`), with
+    icon, live colour and "Title · summary". Tapping a pill `_jumpTo`s the panel.
+  - It redraws on each layout pass (`cd-panels-changed`, plus the 3s tick for summary
+    text).
+  - **Consistency pass:** the header has a fixed height on every page (40px title line,
+    34px alerts line that's blank when empty and scrolls sideways rather than
+    wrapping; 98px in all). `{user}` in the title is the signed-in person's first
+    name. Home dropped HA's view header (markdown "Hello {{ user }}") for Auto Layout
+    `title: Hello {user}`, so every Mobile page uses the same header. Chips `auto` now
+    shows on every phone page (1+ titled panels), not only 4+, so the row is always
+    there.
+- The back-to-top strokes are solid white in both states.
+- **Chips capsule, 2026-09-29:**
+  - Chips sit in a scrolling `.al-strip` and grow to fill it (`flex:1 0 auto`), then
+    scroll when there are many.
+  - The current chip is filled only while its panel is open; when compact it isn't
+    marked at all (the user disliked an outline).
+  - A separate round open/close-all button (`.al-all`, 42px, the same capsule style as
+    the nav bar's back-to-top, white +/− that folds) sits beside the capsule. `.al-cap`
+    holds `.al-strip`, and the outer `.al-chips` row is transparent. − closes every
+    open panel, + opens them all; it's saved like each panel's own toggle
+    (`_toggleAll`).
+- **Page-change flicker:** while a page first lays out (`_settleUntil`), stretch
+  changes are applied with no min-height transition, so panels no longer visibly grow
+  into place when you arrive. `PANEL_TRANSITION` is exported from the panel.
+- Managed panels (inside Auto Layout) no longer install their own ResizeObserver,
+  3s timer or `cd-panels-changed` listener.
+- Open/close-all acts only on panels that can close (`_closable`: not held open by an
+  alert, not `collapsible: false`). It reads each panel's state before clearing a
+  chip's temporary open; before this fix, a panel a chip had opened ignored "close
+  all".
+- Released reload-only; Mobile is back on released card types.
+
+**New in v0.21.0 (2026-09-29): panel controls.** Chosen from the `panel-ux` mock-up
+(the user picked C's +/− with B's footer):
+- The open/compact toggle is a ring in the panel's colour (`--stc-c`, follows
+  `color_template`) with a − that turns into a + (`.stc-shut`, CSS in
+  `STC_TOGGLE_CSS`).
+- The whole title row opens and closes the panel, even when the panel has a `link`.
+- Panels slide between heights (`_slide` in the panel: Web Animations on height, 320ms,
+  skipped for `prefers-reduced-motion`; runs on user choices only, not alerts).
+- A panel's `link` is a full-width **"Go to …"** footer button (`link_label`,
+  `margin-top:auto` so it sits at the bottom of stretched panels, hidden while
+  compact). `_naturalHeight` measures to the footer when it shows. A standalone
+  Section Title, or a panel with `collapsible: false`, still navigates from the row.
+- **Jump-to chips** in Auto Layout (`jump_chips: auto | always | never`; auto =
+  one column and 4+ titled panels). They're sticky under the header
+  (`top: var(--header-height)`), in page order, coloured from each panel's live
+  background. Tapping one scrolls to its panel (`scrollMarginTop` = header + chips),
+  and the chip for the panel at the top is filled in (window scroll listener,
+  capture).
+- The alarm card's countdown ring is 84px (r 38, stroke 6), like the other dials.
+- The light card's scene tiles take colours from the scene (`styleName`), not their
+  label. A scene aimed at one light is labelled "Bright · Front Light", which used
+  to miss the palette and get hashed colours.
+- Released with a full restart (the user asked for one). The Philips fan and
+  purifier came back by themselves, and health read 0 stale devices.
+
+**Also 2026-09-29 (Home Assistant config, not the repo):**
+- **Other dashboards converted** to one Auto Layout card per page with Section
+  Panels, like Mobile: Hayley, Living Room Panel, Alarm and Battery Status (see
+  Live Home Assistant).
+- **Stale-device alert:** `automation.church_drive_tell_jamie_when_a_device_stays_stale`.
+  - When `sensor.church_drive_device_health` > 0 for 15 minutes (after the auto-fix
+    nudges at 90s and 10 min), it notifies Jamie's iPhone
+    (`notify.mobile_app_xitol_j45per_iphone`; tag `church-drive-health`; opens Mobile
+    Climate). The message names the stale devices.
+  - When the count drops below 1, it sends `clear_notification`. This also fires after
+    a restart, which is harmless.
+  - The user may want the Pixel (`mobile_app_xitol_j45per_p10pxl`) as well.
+
 **New in v0.20.0: Auto Layout Card** (`src/auto-layout-card.js`). The user
 wanted tablet layout to adapt by itself as panels are added, not hand-arranged per
-page. Each Mobile page is now one full-width section holding a
-`custom:auto-layout-card-beta` (all its panels, in the old phone order) plus the nav
-bar; Doors & Motion has `full_width: true`. It shares panels between columns to make the
+page. Each Mobile page is one full-width section holding a
+`custom:auto-layout-card` (all its panels, in the old phone order) plus the nav bar. It shares panels between columns to make the
 tallest column as short as possible (tries every sharing up to 11 panels, each column
 keeps list order; keeps the current sharing unless a new one is 24px+ better),
 stretches each column's last open panel so bottoms are level but only by up to
@@ -52,11 +164,10 @@ columns and panel titles) and uses it before panels can be measured.
 Mobile's Lighting page also gained a **Front Garden** panel (green, `light.front_light`,
 area `front`, Bright/Dimmed/Relax/Nightlight as plain `universal:<key>` refs; an
 `@light.front_light` target renamed the tiles "Bright · Front Light", which missed the
-palette and got hashed colours. **In beta:** tiles now take colours from the scene's own
-name (`styleName`), whatever the label). v0.20.0 was released reload-only and
-Mobile is back on released card types.
+palette and got hashed colours; fixed in v0.21.0). v0.20.0 was released reload-only.
 
-Everything is merged to `main`, released and running live. The user tests on real
+Everything is merged to `main`, released and running live, and every dashboard uses
+released card types; `-beta` types are only on Design Presets' Beta tab. The user tests on real
 devices before each release.
 
 **Confirmed on real lights with the user:**
@@ -905,6 +1016,12 @@ Integration modules (`custom_components/church_drive/`):
   backgrounds or heading cards.
 - A panel can follow a state with `color_template` (v0.12.1), e.g. the two
   Security panels follow the alarm.
+- Open/compact: the +/− ring or the title row toggles; panels slide (v0.21.0). Phones
+  start compact, tablets open; each device remembers per signed-in user; `open_when`
+  opens a panel while a template is true.
+- `link` gives a "Go to …" footer button (v0.21.0).
+- Inside an **Auto Layout Card** (v0.20.0) a panel's `full_width` (auto/yes/no) and
+  `priority` (auto/controls/info) apply, and its own height matching is off.
 - Colours in use: security green (live: alarm colours), lights amber (garden green), climate
   deep-orange/orange/blue, cooling light-blue, doors indigo, cameras blue-grey,
   fire red, blinds brown, cleaning blue.
@@ -919,13 +1036,17 @@ Integration modules (`custom_components/church_drive/`):
 - **HA** is 2026.9.x. The Hue bridge is `ecb5fa993162` (config entry
   `01K9M3B829ZTWAA7DHVYPA79K4`), with 12 rooms and 11 zones.
 - **Dashboards using the cards:**
-  - **Mobile** (`dashboard-mobile`), all tabs on section panels (v0.12.0), one
-    HA section per column (theme Mushroom Shadow):
+  - **Mobile** (`dashboard-mobile`): each tab is one full-width section holding an
+    Auto Layout Card (v0.20.0) with its section panels in phone order, then the nav
+    bar (theme Mushroom Shadow). Bracketed groups below are the old per-column
+    sections; Auto Layout now arranges them. There are no hand-set `card_width` or
+    `full_width` values; Doors & Motion (and Outdoor Cameras on narrower screens) go
+    full width automatically.
     - **Every page** ends with a `nav-bar-card` (v0.18.0): Home · Lights ·
       Security · Climate · Cleaning, floating at the bottom, HA's tabs hidden.
       The Quick Actions view's path is `home` (`/dashboard-mobile/home`).
-    - **Quick Actions:** its Security, Climate, Lights and Cleaning panel titles
-      link to their pages (›). [Security (alarm colour, alarm state) + Climate (colour from
+    - **Quick Actions:** its Security, Climate, Lights and Cleaning panels have
+      "Go to …" footer buttons to their pages (v0.21.0). [Security (alarm colour, alarm state) + Climate (colour from
       `climate.downstairs`: grey off / green Eco / blue cooling / orange;
       downstairs °C · action; a Climate Card since v0.13.0)] [Lights (amber, "N rooms on" over Kitchen /
       Living Room / Middle Floor)] [Cleaning (blue, state · battery)]. Header
@@ -934,7 +1055,8 @@ Integration modules (`custom_components/church_drive/`):
       Floor (Kitchen, Living Room, Entrance), Middle Floor (Hallway, Second
       Bedroom, Spare Bedroom), Top Floor (Landing, Office, Hayley's Bedroom,
       En-Suite), all amber with "N rooms on"; Garden (green, On/Off; Patio
-      Lightstrip + Garden Spotlight). Row names and `phu:` icons are overrides.
+      Lightstrip + Garden Spotlight); Front Garden (green, On/Off; `light.front_light`,
+      area `front`, v0.20.0). Row names and `phu:` icons are overrides.
     - **Security:** [Alarm (alarm colour) + Doors & Motion (indigo / amber door
       open / red tamper; "Doors closed", "Back Door open", "Tamper"; five Security
       Zone Cards (v0.17.0): Front Garden, Entrance, Driveway, Back Door, Back Garden)] [Outdoor
@@ -950,17 +1072,33 @@ Integration modules (`custom_components/church_drive/`):
       (Blind card for `cover.roller_blind`)]. The old Temperature/Humidity
       lists and graphs and the fan/purifier/blind tiles are gone.
     - **Cleaning:** one Cleaning panel (blue, state · battery).
-  - **Hayley** (`dashboard-hayley`): full-width light cards for Hayley's Bedroom,
-    Kitchen Spotlights, Living Room Ambience and Middle Floor.
-  - **Living Room Panel** (`living-room-panel`): a Living Room card (Ceiling Light,
-    Shelf Table Lamp, TV lightstrip, TV Table Lamp) and a Kitchen card on its
-    Kitchen tab (Ambience + Spotlights).
+  - **Hayley** (`dashboard-hayley`, view path `home`), Auto Layout (2026-09-29):
+    - Security: alarm-panel card, alarm colours.
+    - Lights: Hayley's Bedroom, Kitchen Spotlights, Living Room Ambience and Middle
+      Floor light cards; "N rooms on".
+    - Bedroom: fan-card and cover-card for the fan and `cover.roller_blind`; cyan
+      when the fan is on.
+    - Cleaning: vacuum tiles and the Gregg message card.
+  - **Living Room Panel** (`living-room-panel`, wall tablet, max 2 columns, keeps its
+    tabs, no nav bar), Auto Layout (2026-09-29):
+    - Living Room tab (path `living-room`): Lights (Ceiling Light, Shelf Table Lamp,
+      TV lightstrip, TV Table Lamp); Cleaning; Back Door (security-zone card; opens
+      and turns amber or red when the door is open or tampered); Weather (hourly
+      forecast).
+    - Kitchen tab: Lights (Ambience + Spotlights); Heat Alarm (tiles; opens on
+      alarm).
   - **Manager** (`dashboard-manager`, admin-only, v0.16.0): System view with
     a Device Health section panel (green / amber from
     `sensor.church_drive_device_health`) holding the Device Health card.
     Meant for the user only (require_admin can't limit it to one account).
-  - **Battery Status**, **Alarm**, and **Design Presets** (tabs: main, Beta, Scene
-    styles, Scene builder).
+  - **Battery Status** (`battery-status`), Auto Layout (2026-09-29):
+    - Ground Floor, Middle Floor and Hayley's Floor panels holding the per-room
+      battery-zone cards.
+    - Summary "N low · Lowest X%". Colour green, amber under 40%, red under 20%.
+    - `phone_start: open`.
+  - **Alarm** (`alarm-panel`, hidden from the sidebar), Auto Layout (2026-09-29): Alarm
+    (alarm-panel card, not collapsible) and Activity (logbook; "N minutes ago").
+  - **Design Presets** (tabs: main, Beta, Scene styles, Scene builder).
   - **Climate cards:** Mobile → Quick Actions (Downstairs) and Climate →
     Heating (Downstairs, Upstairs), Design Presets main (demo), three demo
     cards on Beta.
@@ -990,20 +1128,6 @@ Integration modules (`custom_components/church_drive/`):
 
 ## Open items
 
-- **Released in v0.21.0 (chosen 2026-09-29 from `panel-ux` mock-up: C's +/− with B's footer):**
-  - The toggle is a ring in the panel's colour (`--stc-c`) with a − that turns into a +.
-  - The whole title row toggles, and the panel slides between heights (`_slide`, 320ms,
-    skipped for reduced motion).
-  - A panel's `link` is now a "Go to …" footer button (`link_label`, pinned to the
-    panel's bottom, hidden while compact) instead of making the title row navigate.
-  - Jump-to chips are sticky under the header.
-  - Mobile is back on released card types after v0.21.0. v0.21.0 was installed with a
-    full restart (the user asked for one); the Philips fan and purifier came back
-    on their own and health read 0 stale devices.
-- **Also released in v0.21.0 (asked for 2026-09-29):** jump-to chips in Auto Layout (`jump_chips`,
-  auto = phones with 4+ panels; style from the nav mock-up); the alarm ring is 84px
-  like the other dials; the light card's scene tiles take colours from the scene.
-
 - **Future (not now): our own Android app.** The user wants home-screen widgets
   showing the panels, and later the same app for Android-based satellite
   devices (wall tablets, voice satellites). Lovelace cards can't become Android
@@ -1016,27 +1140,9 @@ Integration modules (`custom_components/church_drive/`):
   ends) and a "next change" line (needs a heating schedule in HA). Also later:
   Bosch-style air con and per-room smart valves; the card already handles
   fan/swing modes and a separate humidity sensor.
-- **Done 2026-09-29 (dashboards, released card types):** Hayley, Living Room Panel,
-  Alarm and Battery Status now use one Auto Layout card per page with Section Panels,
-  like Mobile.
-  - Living Room Panel:
-    - Living Room page: Lights, Cleaning, Back Door (security-zone card) and Weather.
-    - Kitchen page: Lights and Heat Alarm.
-    - No nav bar; it keeps its tabs.
-  - Hayley: Security (alarm-panel card), Lights (4 rooms), Bedroom (fan-card and
-    cover-card replaced the tiles) and Cleaning.
-  - Alarm: Alarm and Activity (logbook), `phone_start: open`.
-  - Battery Status:
-    - Panels per floor (Ground, Middle, Hayley's) holding the battery-zone cards.
-    - Summary: "N low · Lowest X%".
-    - Colour: green, amber under 40%, red under 20%.
-    - `phone_start: open`, because battery-zone has no compact row.
-- **Automation `automation.church_drive_tell_jamie_when_a_device_stays_stale`**
-  (2026-09-29):
-  - When `sensor.church_drive_device_health` > 0 for 15 minutes, it notifies Jamie's
-    iPhone (`notify.mobile_app_xitol_j45per_iphone`, tag `church-drive-health`,
-    opens Mobile Climate).
-  - It clears the notification when the count drops back to 0.
+- **Offered, not yet asked for:** a small ↗ in a closed panel's row to reach its page
+  (the Go to footer only shows while the panel is open); sending the stale-device
+  alert to the Pixel too.
 - "My Boy Hugo" is unavailable; the user may want to power-cycle or re-pair it.
 - The active-scene select doesn't list Hue-only scenes (e.g. Hue's Ruby glow in a
   room). It only lists library scenes.
