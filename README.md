@@ -205,7 +205,7 @@ cards:
 
 ### `auto-layout-card`
 
-Holds a page's panels in one list and arranges them itself, so adding a panel needs no rearranging. It uses as many columns as fit (`column_width`, default 340px; `max_columns`, default 3), splits the panels into columns of about equal height while keeping their order (down the first column, then the next), and stretches each column's last open panel so the columns end level. Full-width panels sit across the page below the columns: a panel goes full width by itself when it holds 3 or more small cards (zones, cameras, tiles) that won't fit side by side in one column, or set `full_width: yes` / `no` on the panel. A panel with no `card_width` picks one from its cards (zones 200px, cameras 220px, others 300px). Panels with buttons and sliders (lights, alarm, thermostats, fan, purifier, blinds, tiles with controls) go above ones that only show information, like cameras and room temperatures (`controls_first: false` turns this off; a panel's `priority: controls` or `priority: info` overrides). Phones (under 600px) get one column in that order. It rebalances when a panel opens or goes compact, and when a tablet turns. Put it alone in a section that spans the whole page.
+Holds a page's panels in one list and arranges them itself, so adding a panel needs no rearranging. It uses as many columns as fit (`column_width`, default 340px; `max_columns`, default 3), splits the panels into columns of about equal height while keeping their order (down the first column, then the next), and stretches each column's last open panel so the columns end level. Full-width panels sit across the page below the columns: a panel goes full width by itself when it holds 3 or more small cards (zones, cameras, tiles) that won't fit side by side in one column, or set `full_width: yes` / `no` on the panel. A panel with no `card_width` picks one from its cards (zones 200px, cameras 220px, others 300px). Panels with buttons and sliders (lights, alarm, thermostats, fan, purifier, blinds, tiles with controls) go above ones that only show information, like cameras and room temperatures (`controls_first: false` turns this off; a panel's `priority: controls` or `priority: info` overrides). Phones (under 600px) get one column in that order. Long pages on phones (4+ panels) get a row of **jump-to chips** at the top, one per panel in its colour: tapping one scrolls to that panel, and the chip for the panel you're looking at is filled in (`jump_chips: auto | always | never`). It rebalances when a panel opens or goes compact, and when a tablet turns. Put it alone in a section that spans the whole page.
 
 ```yaml
 type: custom:auto-layout-card
@@ -221,7 +221,9 @@ cards:
 
 ### `section-title-card`
 
-Both the panel and the title take an optional `link` (a page): tapping the title row, which shows a ›, opens it. Quick Actions uses this to jump to each full page.
+Both the panel and the title take an optional `link` (a page). On a panel, it becomes a full-width **Go to …** button at the bottom while the panel is open (`link_label` changes the name), so tapping the title only opens and closes the panel. On a title on its own (or a panel with `collapsible: false`), tapping the title row, which shows a ›, opens the page. Quick Actions uses this to jump to each full page.
+
+The open/compact toggle is a ring in the panel's colour with a minus that turns into a plus as the panel closes; the whole title row toggles too, and the panel slides between its heights.
 
 
 Just the panel's heading (title, coloured icon, live summary), for use on its own.

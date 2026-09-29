@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-29. Current release: **v0.20.0**.*
+*Last updated 2026-09-29. Current release: **v0.21.0**.*
 
 ## Where this stands
 
@@ -49,8 +49,12 @@ the last signed-in user (`cd-user`) for their open/compact key before `hass` arr
 Auto Layout remembers each page's last arrangement (`cd-layout-plans`, keyed by path,
 columns and panel titles) and uses it before panels can be measured.
 
-Mobile's Lighting page also gained a **Front** panel (green, `light.front_light`,
-Front Garden area) in v0.20.0.
+Mobile's Lighting page also gained a **Front Garden** panel (green, `light.front_light`,
+area `front`, Bright/Dimmed/Relax/Nightlight as plain `universal:<key>` refs; an
+`@light.front_light` target renamed the tiles "Bright · Front Light", which missed the
+palette and got hashed colours. **In beta:** tiles now take colours from the scene's own
+name (`styleName`), whatever the label). v0.20.0 was released reload-only and
+Mobile is back on released card types.
 
 Everything is merged to `main`, released and running live. The user tests on real
 devices before each release.
@@ -670,7 +674,7 @@ Integration modules (`custom_components/church_drive/`):
   - `church-drive-cards-beta.js` registers every card as `<name>-beta`.
   - HA loads it from resource `436186c683fe4c7d81c865b67bb0e109`:
     `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's pinned to `111e29d` (the v0.19.0 merge: open/compact panels, wide-screen layout).
+    It's pinned to `24ef8a1` (the v0.20.0 merge: Auto Layout, nav bar icon templates, no flicker).
   - To test a branch: push it, repoint the resource, and ask for a hard refresh.
   - jsDelivr is blocked from the cloud container, but works for the user.
 - **Rollback:** download an older release in HACS and restart.
@@ -986,10 +990,17 @@ Integration modules (`custom_components/church_drive/`):
 
 ## Open items
 
-- **Offered, not yet asked for:** jump-to chips at the top of long pages (e.g.
-  Climate: Heating · Climate · Cooling · Air Quality · Windows; in the nav mock-up);
-  matching the alarm card's 72px ring to the 84px dials; a phone notification
-  to Jamie when a device stays stale.
+- **Released in v0.21.0 (chosen 2026-09-29 from `panel-ux` mock-up: C's +/− with B's footer):**
+  - The toggle is a ring in the panel's colour (`--stc-c`) with a − that turns into a +.
+  - The whole title row toggles, and the panel slides between heights (`_slide`, 320ms,
+    skipped for reduced motion).
+  - A panel's `link` is now a "Go to …" footer button (`link_label`, pinned to the
+    panel's bottom, hidden while compact) instead of making the title row navigate.
+  - Jump-to chips are sticky under the header.
+  - Mobile is back on released card types after v0.21.0.
+- **Also released in v0.21.0 (asked for 2026-09-29):** jump-to chips in Auto Layout (`jump_chips`,
+  auto = phones with 4+ panels; style from the nav mock-up); the alarm ring is 84px
+  like the other dials; the light card's scene tiles take colours from the scene.
 
 - **Future (not now): our own Android app.** The user wants home-screen widgets
   showing the panels, and later the same app for Android-based satellite
@@ -1003,10 +1014,27 @@ Integration modules (`custom_components/church_drive/`):
   ends) and a "next change" line (needs a heating schedule in HA). Also later:
   Bosch-style air con and per-room smart valves; the card already handles
   fan/swing modes and a separate humidity sensor.
-- **Likely next:** the other dashboards (Hayley, Living Room Panel, Alarm,
-  Battery Status) still use HA heading cards and plain sections; convert them
-  to Section Panels like Mobile when the user wants (the user said the Mobile
-  approach "will probably work for other pages too").
+- **Done 2026-09-29 (dashboards, released card types):** Hayley, Living Room Panel,
+  Alarm and Battery Status now use one Auto Layout card per page with Section Panels,
+  like Mobile.
+  - Living Room Panel:
+    - Living Room page: Lights, Cleaning, Back Door (security-zone card) and Weather.
+    - Kitchen page: Lights and Heat Alarm.
+    - No nav bar; it keeps its tabs.
+  - Hayley: Security (alarm-panel card), Lights (4 rooms), Bedroom (fan-card and
+    cover-card replaced the tiles) and Cleaning.
+  - Alarm: Alarm and Activity (logbook), `phone_start: open`.
+  - Battery Status:
+    - Panels per floor (Ground, Middle, Hayley's) holding the battery-zone cards.
+    - Summary: "N low · Lowest X%".
+    - Colour: green, amber under 40%, red under 20%.
+    - `phone_start: open`, because battery-zone has no compact row.
+- **Automation `automation.church_drive_tell_jamie_when_a_device_stays_stale`**
+  (2026-09-29):
+  - When `sensor.church_drive_device_health` > 0 for 15 minutes, it notifies Jamie's
+    iPhone (`notify.mobile_app_xitol_j45per_iphone`, tag `church-drive-health`,
+    opens Mobile Climate).
+  - It clears the notification when the count drops back to 0.
 - "My Boy Hugo" is unavailable; the user may want to power-cycle or re-pair it.
 - The active-scene select doesn't list Hue-only scenes (e.g. Hue's Ruby glow in a
   room). It only lists library scenes.
