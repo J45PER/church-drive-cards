@@ -3344,6 +3344,15 @@
     void el.offsetWidth;
     el.style.transition = t;
   }
+  var STC_TOGGLE_CSS = `
+  .stc-tog { position:relative; flex:none; width:30px; height:30px; margin:-4px -2px -4px 0; padding:0; border-radius:50%;
+    border:2px solid color-mix(in srgb, var(--stc-c) 65%, transparent); background:transparent; cursor:pointer;
+    transition:background-color .2s, border-color .6s; -webkit-tap-highlight-color:transparent; }
+  .stc-tog:hover { background:color-mix(in srgb, var(--stc-c) 18%, transparent); }
+  .stc-tog::before, .stc-tog::after { content:''; position:absolute; left:50%; top:50%; width:12px; height:2px; border-radius:2px;
+    background:var(--primary-text-color); transform:translate(-50%, -50%); transition:transform .32s cubic-bezier(.2,.8,.2,1); }
+  .stc-tog.stc-shut::after { transform:translate(-50%, -50%) rotate(90deg); }
+`;
   var STC_COLOR_TEMPLATE_FIELD = { name: "color_template", selector: { template: {} } };
   var STC_COLOR_TEMPLATE_LABEL = "Colour from a template (optional; overrides the colour)";
   var STC_COLOR_TEMPLATE_HELPER = "Gives a colour name or code, e.g. {{ 'red' if is_state('alarm_control_panel.house', 'armed_away') else 'green' }}";
@@ -3396,10 +3405,15 @@
         ${c.icon ? iconHtml(c.icon, { size: "26px", style: `color:${color}; flex:none; transition:color .6s ease;`, cls: "stc-icon" }) : ""}
         <div class="stc-title" style="flex:1; min-width:0; font-size:1.6rem; font-weight:500; line-height:1.2; color:var(--primary-text-color); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
         <div class="stc-summary" style="flex:none; max-width:55%; font-size:0.9rem; color:var(--secondary-text-color); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:right;"></div>
-        ${c.link ? iconHtml("mdi:chevron-right", { size: "22px", style: "flex:none; margin-left:-4px; color:var(--secondary-text-color);" }) : ""}
-        ${c.collapsible ? `<button class="stc-tog" type="button" aria-label="Show less" aria-expanded="true" style="flex:none; width:34px; height:34px; margin:-6px -6px -6px -2px; border:none; border-radius:50%; background:transparent; color:var(--secondary-text-color); cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0;">${iconHtml("mdi:chevron-down", { size: "24px", style: "transition:transform .2s ease;", cls: "stc-chev" })}</button>` : ""}
+        ${c.link && !c.collapsible ? iconHtml("mdi:chevron-right", { size: "22px", style: "flex:none; margin-left:-4px; color:var(--secondary-text-color);" }) : ""}
+        ${c.collapsible ? `<button class="stc-tog" type="button" aria-label="Show less" aria-expanded="true" style="--stc-c:${color};"></button>` : ""}
       </div>`;
-      const row3 = this.firstElementChild;
+      if (c.collapsible) {
+        const st = document.createElement("style");
+        st.textContent = STC_TOGGLE_CSS;
+        this.prepend(st);
+      }
+      const row3 = this.querySelector("div");
       const toggle = () => this.dispatchEvent(new CustomEvent("stc-toggle", { bubbles: true }));
       this._tog = this.querySelector(".stc-tog");
       if (this._tog) {
@@ -3409,7 +3423,7 @@
         });
         this.setOpen(this._open !== false);
       }
-      if (c.link) {
+      if (c.link && !c.collapsible) {
         row3.style.cursor = "pointer";
         row3.setAttribute("role", "link");
         row3.tabIndex = 0;
@@ -3426,14 +3440,13 @@
       if (this._summary) this._summaryEl.textContent = this._summary;
       hydrateIcons(this);
     }
-    // Point the ⌄ down (open) or right (compact).
+    // − while open, + while compact (the upright bar turns in).
     setOpen(open) {
       this._open = open;
       if (!this._tog) return;
       this._tog.setAttribute("aria-expanded", String(open));
       this._tog.setAttribute("aria-label", open ? "Show less" : "Show more");
-      const chev = this._tog.querySelector(".stc-chev");
-      if (chev) chev.style.transform = open ? "" : "rotate(-90deg)";
+      this._tog.classList.toggle("stc-shut", !open);
     }
     _unsubscribe() {
       [this._unsub, this._unsubColor].forEach((p) => p && p.then((unsub) => unsub && unsub()).catch(() => {
@@ -3457,6 +3470,7 @@
         this._liveColor = color || null;
         const css = stcColor(this._liveColor || this.config.color);
         if (this._iconEl) stcSetInstantly(this._iconEl, "color", css, !this._colorShown);
+        if (this._tog) this._tog.style.setProperty("--stc-c", css);
         this._colorShown = true;
         this.dispatchEvent(new CustomEvent("stc-color", { detail: css, bubbles: true }));
       });
@@ -3526,6 +3540,7 @@
       STC_COLOR_TEMPLATE_FIELD,
       { name: "summary", selector: { template: {} } },
       { name: "link", selector: { navigation: {} } },
+      { name: "link_label", selector: { text: {} } },
       {
         type: "expandable",
         name: "",
@@ -3554,7 +3569,8 @@
     labels: {
       title: "Title",
       icon: "Icon (optional)",
-      link: "Tapping the title opens (optional page)",
+      link: "Go-to page (optional)",
+      link_label: 'Go-to button says "Go to \u2026" (optional; default the title)',
       phone_start: "On phones, starts",
       tablet_start: "On tablets and computers, starts",
       open_when: "Opens by itself when (optional template)",
@@ -3689,7 +3705,34 @@
       } catch (err) {
         this._fallback = mode;
       }
-      this._apply();
+      this._slide(() => this._apply());
+    }
+    // Slide between the old and new height instead of jumping.
+    _slide(change) {
+      const panel = this._panelEl;
+      const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (!panel || !panel.animate || reduced || !this.isConnected) return change();
+      const before = panel.getBoundingClientRect().height;
+      change();
+      const after = panel.getBoundingClientRect().height;
+      if (Math.abs(after - before) < 2) return void 0;
+      if (this._anim) this._anim.cancel();
+      panel.style.overflow = "hidden";
+      this._anim = panel.animate(
+        [
+          { height: `${before}px`, minHeight: "0px" },
+          { height: `${after}px`, minHeight: "0px" }
+        ],
+        { duration: 320, easing: "cubic-bezier(.2,.8,.2,1)" }
+      );
+      const done = () => {
+        panel.style.overflow = "";
+        this._anim = null;
+        window.dispatchEvent(new CustomEvent("cd-panels-changed"));
+      };
+      this._anim.onfinish = done;
+      this._anim.oncancel = done;
+      return void 0;
     }
     _mode() {
       if (!this._collapsible || this._alert || this._editing()) return "open";
@@ -3710,6 +3753,7 @@
         }
       });
       if (this._panelEl) this._panelEl.style.gap = compact ? "8px" : "12px";
+      if (this._goEl) this._goEl.style.display = compact ? "none" : "flex";
       this._layoutGrid(compact);
       window.dispatchEvent(new CustomEvent("cd-panels-changed"));
     }
@@ -3806,7 +3850,8 @@
     // The panel's height without any stretch: its cards plus its padding.
     _naturalHeight() {
       const panel = this._panelEl;
-      const g = this._grid && this._grid.getBoundingClientRect();
+      const last = this._goEl && this._goEl.style.display !== "none" ? this._goEl : this._grid;
+      const g = last && last.getBoundingClientRect();
       return g && panel ? g.bottom + 12 - panel.getBoundingClientRect().top : this.getBoundingClientRect().height;
     }
     _watchOpenWhen() {
@@ -3846,6 +3891,7 @@
       panel.addEventListener("stc-color", (ev) => {
         ev.stopPropagation();
         stcSetInstantly(bg, "background", ev.detail, !this._bgShown);
+        panel.style.setProperty("--spc-c", ev.detail);
         this._bgShown = true;
       });
       this._title = document.createElement(`section-title-card${SUFFIX}`);
@@ -3855,6 +3901,25 @@
       if (this._hass) this._title.hass = this._hass;
       panel.appendChild(this._title);
       panel.appendChild(this._grid);
+      panel.style.setProperty("--spc-c", color);
+      this._goEl = null;
+      if (c.link) {
+        const go = document.createElement("button");
+        go.type = "button";
+        go.className = "spc-go";
+        go.style.cssText = "display:flex; align-items:center; justify-content:center; gap:6px; width:100%; min-height:40px; margin-top:auto; padding:0 12px; border:none; border-radius:14px; cursor:pointer; font:inherit; font-size:0.88rem; font-weight:600; color:var(--primary-text-color); background:color-mix(in srgb, var(--spc-c) 20%, var(--card-background-color, #1f2128)); -webkit-tap-highlight-color:transparent;";
+        const label = document.createElement("span");
+        label.textContent = `Go to ${c.link_label || c.title}`;
+        go.appendChild(label);
+        go.insertAdjacentHTML("beforeend", iconHtml("mdi:arrow-right", { size: "18px", style: "color:var(--spc-c); flex:none;" }));
+        go.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          kitNavigate(c.link);
+        });
+        hydrateIcons(go);
+        panel.appendChild(go);
+        this._goEl = go;
+      }
       this._layoutGrid(false);
       const token = this._token = {};
       this._cards = [];
@@ -7108,6 +7173,7 @@
       jump_chips: "One chip per panel, in its colour; tapping one scrolls to that panel, and the chip for the panel you're looking at is filled in."
     }
   });
+  var boxHeight = (el) => el ? Math.round(el.getBoundingClientRect().height) : 0;
   function balance(heights, k, gap, keep) {
     const n = heights.length;
     k = Math.max(1, Math.min(k, n));
@@ -7234,12 +7300,12 @@
       this.innerHTML = "";
       this._chips = document.createElement("div");
       this._chips.className = "al-chips";
-      this._chips.style.cssText = "display:none; gap:6px; overflow-x:auto; padding:2px 2px 4px; margin-bottom:12px; scrollbar-width:none;";
+      this._chips.style.cssText = "display:none; gap:6px; overflow-x:auto; padding:8px 2px; margin:-8px 0 4px; scrollbar-width:none; position:sticky; top:var(--header-height, 56px); z-index:3; background:var(--primary-background-color, #111318);";
       this._chips.addEventListener("click", (ev) => {
         const chip = ev.target.closest && ev.target.closest("[data-i]");
         const it = chip && this._items[Number(chip.dataset.i)];
         if (!it) return;
-        it.el.style.scrollMarginTop = "calc(var(--header-height, 56px) + 12px)";
+        it.el.style.scrollMarginTop = `calc(var(--header-height, 56px) + ${boxHeight(this._chips)}px + 8px)`;
         it.el.scrollIntoView({ behavior: "smooth", block: "start" });
         this._current = Number(chip.dataset.i);
         this._chipsSig = null;
@@ -7448,7 +7514,7 @@
     // The chip for the panel at the top of the screen is filled in.
     _onScroll() {
       if (!this._chipsWanted()) return;
-      const line = 120;
+      const line = (parseFloat(getComputedStyle(this).getPropertyValue("--header-height")) || 56) + boxHeight(this._chips) + 24;
       let current = null;
       this._pageOrder().forEach(({ i, r }) => {
         if (r.top <= line) current = i;

@@ -221,7 +221,9 @@ cards:
 
 ### `section-title-card`
 
-Both the panel and the title take an optional `link` (a page): tapping the title row, which shows a ›, opens it. Quick Actions uses this to jump to each full page.
+Both the panel and the title take an optional `link` (a page). On a panel, it becomes a full-width **Go to …** button at the bottom while the panel is open (`link_label` changes the name), so tapping the title only opens and closes the panel. On a title on its own (or a panel with `collapsible: false`), tapping the title row, which shows a ›, opens the page. Quick Actions uses this to jump to each full page.
+
+The open/compact toggle is a ring in the panel's colour with a minus that turns into a plus as the panel closes; the whole title row toggles too, and the panel slides between its heights.
 
 
 Just the panel's heading (title, coloured icon, live summary), for use on its own.

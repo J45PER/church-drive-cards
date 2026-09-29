@@ -93,6 +93,18 @@ export function stcSetInstantly(el, prop, value, instant) {
   el.style.transition = t;
 }
 
+// The open/compact toggle: a ring in the panel's colour with a minus that
+// turns into a plus as the panel closes.
+const STC_TOGGLE_CSS = `
+  .stc-tog { position:relative; flex:none; width:30px; height:30px; margin:-4px -2px -4px 0; padding:0; border-radius:50%;
+    border:2px solid color-mix(in srgb, var(--stc-c) 65%, transparent); background:transparent; cursor:pointer;
+    transition:background-color .2s, border-color .6s; -webkit-tap-highlight-color:transparent; }
+  .stc-tog:hover { background:color-mix(in srgb, var(--stc-c) 18%, transparent); }
+  .stc-tog::before, .stc-tog::after { content:''; position:absolute; left:50%; top:50%; width:12px; height:2px; border-radius:2px;
+    background:var(--primary-text-color); transform:translate(-50%, -50%); transition:transform .32s cubic-bezier(.2,.8,.2,1); }
+  .stc-tog.stc-shut::after { transform:translate(-50%, -50%) rotate(90deg); }
+`;
+
 export const STC_COLOR_TEMPLATE_FIELD = { name: 'color_template', selector: { template: {} } };
 export const STC_COLOR_TEMPLATE_LABEL = 'Colour from a template (optional; overrides the colour)';
 export const STC_COLOR_TEMPLATE_HELPER =
@@ -153,11 +165,16 @@ export class SectionTitleCard extends HTMLElement {
         ${c.icon ? iconHtml(c.icon, { size: '26px', style: `color:${color}; flex:none; transition:color .6s ease;`, cls: 'stc-icon' }) : ''}
         <div class="stc-title" style="flex:1; min-width:0; font-size:1.6rem; font-weight:500; line-height:1.2; color:var(--primary-text-color); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
         <div class="stc-summary" style="flex:none; max-width:55%; font-size:0.9rem; color:var(--secondary-text-color); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:right;"></div>
-        ${c.link ? iconHtml('mdi:chevron-right', { size: '22px', style: 'flex:none; margin-left:-4px; color:var(--secondary-text-color);' }) : ''}
-        ${c.collapsible ? `<button class="stc-tog" type="button" aria-label="Show less" aria-expanded="true" style="flex:none; width:34px; height:34px; margin:-6px -6px -6px -2px; border:none; border-radius:50%; background:transparent; color:var(--secondary-text-color); cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0;">${iconHtml('mdi:chevron-down', { size: '24px', style: 'transition:transform .2s ease;', cls: 'stc-chev' })}</button>` : ''}
+        ${c.link && !c.collapsible ? iconHtml('mdi:chevron-right', { size: '22px', style: 'flex:none; margin-left:-4px; color:var(--secondary-text-color);' }) : ''}
+        ${c.collapsible ? `<button class="stc-tog" type="button" aria-label="Show less" aria-expanded="true" style="--stc-c:${color};"></button>` : ''}
       </div>`;
-    const row = this.firstElementChild;
-    // The ⌄ asks the Section Panel to switch between open and compact.
+    if (c.collapsible) {
+      const st = document.createElement('style');
+      st.textContent = STC_TOGGLE_CSS;
+      this.prepend(st);
+    }
+    const row = this.querySelector('div');
+    // The +/− asks the Section Panel to switch between open and compact.
     const toggle = () => this.dispatchEvent(new CustomEvent('stc-toggle', { bubbles: true }));
     this._tog = this.querySelector('.stc-tog');
     if (this._tog) {
@@ -167,7 +184,7 @@ export class SectionTitleCard extends HTMLElement {
       });
       this.setOpen(this._open !== false);
     }
-    if (c.link) {
+    if (c.link && !c.collapsible) {
       row.style.cursor = 'pointer';
       row.setAttribute('role', 'link');
       row.tabIndex = 0;
@@ -185,14 +202,13 @@ export class SectionTitleCard extends HTMLElement {
     hydrateIcons(this);
   }
 
-  // Point the ⌄ down (open) or right (compact).
+  // − while open, + while compact (the upright bar turns in).
   setOpen(open) {
     this._open = open;
     if (!this._tog) return;
     this._tog.setAttribute('aria-expanded', String(open));
     this._tog.setAttribute('aria-label', open ? 'Show less' : 'Show more');
-    const chev = this._tog.querySelector('.stc-chev');
-    if (chev) chev.style.transform = open ? '' : 'rotate(-90deg)';
+    this._tog.classList.toggle('stc-shut', !open);
   }
 
   _unsubscribe() {
@@ -217,6 +233,7 @@ export class SectionTitleCard extends HTMLElement {
       this._liveColor = color || null;
       const css = stcColor(this._liveColor || this.config.color);
       if (this._iconEl) stcSetInstantly(this._iconEl, 'color', css, !this._colorShown);
+      if (this._tog) this._tog.style.setProperty('--stc-c', css);
       this._colorShown = true;
       this.dispatchEvent(new CustomEvent('stc-color', { detail: css, bubbles: true }));
     });

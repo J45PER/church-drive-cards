@@ -89,6 +89,8 @@ const LayoutFields = createFormEditor({
   },
 });
 
+const boxHeight = (el) => (el ? Math.round(el.getBoundingClientRect().height) : 0);
+
 // Share items between k columns so the tallest column is as short as
 // possible. Each column keeps list order; column 1 starts with the first
 // item. Tries every sharing for small pages (ties go to the one closest to
@@ -232,12 +234,14 @@ export class AutoLayoutCard extends HTMLElement {
     this.innerHTML = '';
     this._chips = document.createElement('div');
     this._chips.className = 'al-chips';
-    this._chips.style.cssText = 'display:none; gap:6px; overflow-x:auto; padding:2px 2px 4px; margin-bottom:12px; scrollbar-width:none;';
+    // Pinned under the header while the page scrolls.
+    this._chips.style.cssText =
+      'display:none; gap:6px; overflow-x:auto; padding:8px 2px; margin:-8px 0 4px; scrollbar-width:none; position:sticky; top:var(--header-height, 56px); z-index:3; background:var(--primary-background-color, #111318);';
     this._chips.addEventListener('click', (ev) => {
       const chip = ev.target.closest && ev.target.closest('[data-i]');
       const it = chip && this._items[Number(chip.dataset.i)];
       if (!it) return;
-      it.el.style.scrollMarginTop = 'calc(var(--header-height, 56px) + 12px)';
+      it.el.style.scrollMarginTop = `calc(var(--header-height, 56px) + ${boxHeight(this._chips)}px + 8px)`;
       it.el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       this._current = Number(chip.dataset.i);
       this._chipsSig = null;
@@ -475,7 +479,7 @@ export class AutoLayoutCard extends HTMLElement {
   // The chip for the panel at the top of the screen is filled in.
   _onScroll() {
     if (!this._chipsWanted()) return;
-    const line = 120;
+    const line = (parseFloat(getComputedStyle(this).getPropertyValue('--header-height')) || 56) + boxHeight(this._chips) + 24;
     let current = null;
     this._pageOrder().forEach(({ i, r }) => {
       if (r.top <= line) current = i;

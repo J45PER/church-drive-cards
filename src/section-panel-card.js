@@ -5,6 +5,8 @@
 
 import { createFormEditor } from './form-editor.js';
 import { SUFFIX, LABEL } from './suffix.js';
+import { kitNavigate } from './card-kit.js';
+import { iconHtml, hydrateIcons } from './icons.js';
 import {
   stcColor,
   stcRender,
@@ -54,6 +56,7 @@ const PanelFields = createFormEditor({
     STC_COLOR_TEMPLATE_FIELD,
     { name: 'summary', selector: { template: {} } },
     { name: 'link', selector: { navigation: {} } },
+    { name: 'link_label', selector: { text: {} } },
     {
       type: 'expandable',
       name: '',
@@ -82,7 +85,8 @@ const PanelFields = createFormEditor({
   labels: {
     title: 'Title',
     icon: 'Icon (optional)',
-    link: 'Tapping the title opens (optional page)',
+    link: 'Go-to page (optional)',
+    link_label: 'Go-to button says "Go to …" (optional; default the title)',
     phone_start: 'On phones, starts',
     tablet_start: 'On tablets and computers, starts',
     open_when: 'Opens by itself when (optional template)',
@@ -235,7 +239,35 @@ export class SectionPanelCard extends HTMLElement {
       /* storage blocked: still switch for now */
       this._fallback = mode;
     }
-    this._apply();
+    this._slide(() => this._apply());
+  }
+
+  // Slide between the old and new height instead of jumping.
+  _slide(change) {
+    const panel = this._panelEl;
+    const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!panel || !panel.animate || reduced || !this.isConnected) return change();
+    const before = panel.getBoundingClientRect().height;
+    change();
+    const after = panel.getBoundingClientRect().height;
+    if (Math.abs(after - before) < 2) return undefined;
+    if (this._anim) this._anim.cancel();
+    panel.style.overflow = 'hidden';
+    this._anim = panel.animate(
+      [
+        { height: `${before}px`, minHeight: '0px' },
+        { height: `${after}px`, minHeight: '0px' },
+      ],
+      { duration: 320, easing: 'cubic-bezier(.2,.8,.2,1)' }
+    );
+    const done = () => {
+      panel.style.overflow = '';
+      this._anim = null;
+      window.dispatchEvent(new CustomEvent('cd-panels-changed'));
+    };
+    this._anim.onfinish = done;
+    this._anim.oncancel = done;
+    return undefined;
   }
 
   _mode() {
@@ -260,6 +292,7 @@ export class SectionPanelCard extends HTMLElement {
       }
     });
     if (this._panelEl) this._panelEl.style.gap = compact ? '8px' : '12px';
+    if (this._goEl) this._goEl.style.display = compact ? 'none' : 'flex';
     this._layoutGrid(compact);
     // Let the panels beside this one line up again too.
     window.dispatchEvent(new CustomEvent('cd-panels-changed'));
@@ -372,7 +405,8 @@ export class SectionPanelCard extends HTMLElement {
   // The panel's height without any stretch: its cards plus its padding.
   _naturalHeight() {
     const panel = this._panelEl;
-    const g = this._grid && this._grid.getBoundingClientRect();
+    const last = this._goEl && this._goEl.style.display !== 'none' ? this._goEl : this._grid;
+    const g = last && last.getBoundingClientRect();
     return g && panel ? g.bottom + 12 - panel.getBoundingClientRect().top : this.getBoundingClientRect().height;
   }
 
@@ -415,6 +449,7 @@ export class SectionPanelCard extends HTMLElement {
     panel.addEventListener('stc-color', (ev) => {
       ev.stopPropagation();
       stcSetInstantly(bg, 'background', ev.detail, !this._bgShown);
+      panel.style.setProperty('--spc-c', ev.detail);
       this._bgShown = true;
     });
     this._title = document.createElement(`section-title-card${SUFFIX}`);
@@ -424,6 +459,28 @@ export class SectionPanelCard extends HTMLElement {
     if (this._hass) this._title.hass = this._hass;
     panel.appendChild(this._title);
     panel.appendChild(this._grid);
+    panel.style.setProperty('--spc-c', color);
+    // The panel's page: a "Go to …" button at the bottom while it's open, so
+    // tapping the title only opens and closes the panel.
+    this._goEl = null;
+    if (c.link) {
+      const go = document.createElement('button');
+      go.type = 'button';
+      go.className = 'spc-go';
+      go.style.cssText =
+        'display:flex; align-items:center; justify-content:center; gap:6px; width:100%; min-height:40px; margin-top:auto; padding:0 12px; border:none; border-radius:14px; cursor:pointer; font:inherit; font-size:0.88rem; font-weight:600; color:var(--primary-text-color); background:color-mix(in srgb, var(--spc-c) 20%, var(--card-background-color, #1f2128)); -webkit-tap-highlight-color:transparent;';
+      const label = document.createElement('span');
+      label.textContent = `Go to ${c.link_label || c.title}`;
+      go.appendChild(label);
+      go.insertAdjacentHTML('beforeend', iconHtml('mdi:arrow-right', { size: '18px', style: 'color:var(--spc-c); flex:none;' }));
+      go.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        kitNavigate(c.link);
+      });
+      hydrateIcons(go);
+      panel.appendChild(go);
+      this._goEl = go;
+    }
     this._layoutGrid(false);
     const token = (this._token = {});
     this._cards = [];
