@@ -325,9 +325,11 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
     - Octoplus.
     Every Mobile nav bar has an Energy page (`admin_only`) and `icons_only: true`.
   - Home has a **Car charger** panel for everyone (after Climate).
-  - **Zappi:** the HACS integration CJNE/ha-myenergi (id 401145616) is downloaded but
-    not loaded. It needs an HA restart, then a config flow with the hub serial and API
-    key, which the user will send.
+  - **Zappi:** the HACS integration CJNE/ha-myenergi (id 401145616) is downloaded. HA
+    restarted at about 21:28 on 2026-09-30, which should have loaded it. It still needs a
+    config flow with the hub serial and API key, which the user will send.
+  - Went live 2026-09-30: the Mobile dashboard (including Energy and the Home charger
+    panel) is on the release types.
   - Energy mock-up: https://claude.ai/artifact/XRtwhvTDAuvS1YYtQgM8hz
 - The back-to-top strokes are solid white in both states.
 - **Chips capsule, 2026-09-29:**
@@ -1048,7 +1050,7 @@ Integration modules (`custom_components/church_drive/`):
 - **Dashboard edits:** use `ha_config_set_dashboard` with `python_transform` plus
   `config_hash`.
   - It needs `BestPracticeKey`. The key rotates hourly; re-read
-    `ha_get_skill_guide(skill='home-assistant-best-practices', file='SKILL.md')`
+    `ha_get_skill_guide(file='SKILL.md')` (the `skill` argument is no longer accepted)
     to get it.
   - The sandbox forbids comprehensions that reference locals, so use loops.
   - HA auto-backs up each dashboard edit.
