@@ -140,6 +140,13 @@ export class HouseTasksCard extends HTMLElement {
       .map((t) => ({ t, h: houseTask(t) }))
       .filter(({ h }) => all || houseTaskFor(h, first));
     if (c.title) kitHead(this, c.title, missing ? 'Not set up' : tasks.length ? `${tasks.length} to sort` : 'All sorted', tasks.length ? colour : KIT_COLOR.good);
+    // Tell the panel around it whether there's anything to show (once the
+    // list has loaded), so an Auto Layout can move an empty panel last.
+    const empty = missing || (!!(c.demo || this._items) && !tasks.length);
+    if ((c.demo || this._items || missing) && empty !== this._reportedEmpty) {
+      this._reportedEmpty = empty;
+      this.dispatchEvent(new CustomEvent('cd-card-empty', { detail: { empty }, bubbles: true, composed: true }));
+    }
     const sig = JSON.stringify([tasks, missing, all, first, colour]);
     if (sig === this._sig) return;
     this._sig = sig;

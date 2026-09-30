@@ -81,6 +81,7 @@ const LayoutFields = createFormEditor({
     { name: 'column_width', selector: { number: { min: 200, max: 800, step: 10, mode: 'box', unit_of_measurement: 'px' } } },
     { name: 'max_columns', selector: { number: { min: 1, max: 6, step: 1, mode: 'box' } } },
     { name: 'controls_first', selector: { boolean: {} }, default: true },
+    { name: 'empty_last', selector: { boolean: {} }, default: false },
     { name: 'jump_chips', selector: { select: { mode: 'dropdown', options: [{ value: 'auto', label: 'Automatic (phones)' }, { value: 'always', label: 'Always' }, { value: 'never', label: 'Never' }] } } },
   ],
   labels: {
@@ -91,6 +92,7 @@ const LayoutFields = createFormEditor({
     column_width: 'Columns at least this wide',
     max_columns: 'At most this many columns',
     controls_first: 'Panels with buttons and sliders go above ones that only show information',
+    empty_last: 'Empty panels go last',
     jump_chips: 'Jump-to chips at the top',
   },
   helpers: {
@@ -99,6 +101,7 @@ const LayoutFields = createFormEditor({
     widget_width: 'Default 520px, centred under the title. Phones use the full width.',
     column_width: 'Default 340px. Phones (under 600px) always get one column in list order.',
     max_columns: 'Default 3. Mark a panel "Full width across an Auto Layout" to have it span the page.',
+    empty_last: 'A panel counts as empty when its "Counts as empty when" is true, or a card inside says so (House Tasks with nothing to do). Otherwise list order holds.',
     controls_first: 'Keeps list order otherwise, on phones too. Each panel can override what it counts as ("Counts as" in the panel).',
     jump_chips: "One chip per panel, in its colour; tapping one scrolls to that panel, and the chip for the panel you're looking at is filled in.",
   },
@@ -403,8 +406,11 @@ export class AutoLayoutCard extends HTMLElement {
     // them (in list order), so a full-width panel never strands one panel on
     // its own row.
     const colWidth = ((this.getBoundingClientRect().width || window.innerWidth) - gap * (cols - 1)) / cols;
-    const wide = cols > 1 ? this._items.filter((it) => this._full(it, colWidth)) : [];
-    const rest = this._items.filter((it) => !wide.includes(it));
+    // With empty_last, panels with nothing to show (their "counts as empty
+    // when", or a card inside saying so) go below the rest, keeping order.
+    const order = this.config.empty_last ? [...this._items.filter((it) => !it.el._empty), ...this._items.filter((it) => it.el._empty)] : this._items;
+    const wide = cols > 1 ? order.filter((it) => this._full(it, colWidth)) : [];
+    const rest = order.filter((it) => !wide.includes(it));
     const bands = [];
     if (rest.length) bands.push({ items: rest });
     const first = this.config.controls_first !== false;
@@ -444,7 +450,7 @@ export class AutoLayoutCard extends HTMLElement {
       this._prevSplits[b.items.map((it) => this._items.indexOf(it)).join(',')] = b.split;
     });
     if (placed) planRemember(planKey, bands.map((b) => b.split));
-    const plan = `${cols}|${bands.map((b) => `${b.full ? 'F' : ''}${b.split.map((c) => c.join('.')).join(',')}`).join('/')}`;
+    const plan = `${cols}|${bands.map((b) => `${b.full ? 'F' : ''}${b.items.map((it) => this._items.indexOf(it)).join('-')}:${b.split.map((c) => c.join('.')).join(',')}`).join('/')}`;
     if (force || plan !== this._plan) {
       this._plan = plan;
       this._root.innerHTML = '';
@@ -560,10 +566,10 @@ export class AutoLayoutCard extends HTMLElement {
     };
     const side =
       todo && this.config.priorities_page
-        ? `<button type="button" data-todo style="flex:none; width:58px; padding:0 4px; border:none; border-radius:12px; cursor:pointer; font:inherit; font-size:0.72rem; font-weight:700; line-height:1.2; color:var(--primary-text-color); background:color-mix(in srgb, #7e57c2 22%, transparent); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;">${iconHtml(
+        ? `<button type="button" data-todo style="flex:none; width:58px; padding:0 4px; border:none; border-radius:12px; cursor:pointer; font:inherit; font-size:0.72rem; font-weight:700; line-height:1.2; color:#b39ddb; background:color-mix(in srgb, #7e57c2 22%, transparent); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;" aria-label="${extra > 0 ? `${extra} more to do` : 'Open to-do'}">${iconHtml(
             'mdi:format-list-checks',
-            { size: '18px', style: 'color:#b39ddb;' }
-          )}${extra > 0 ? `+${extra}` : 'To-do'}<span style="font-size:0.9rem; line-height:1;">›</span></button>`
+            { size: '22px', style: 'color:#b39ddb;' }
+          )}<span style="white-space:nowrap;">${extra > 0 ? `+${extra} more` : 'To-do'}</span></button>`
         : '';
     head.innerHTML = `<div style="height:40px; font-size:2rem; font-weight:700; line-height:40px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--primary-text-color);">${esc(title)}</div>
       <div class="al-widget" style="height:96px; width:100%; max-width:${Number(this.config.widget_width) || 520}px; margin:0 auto; box-sizing:border-box; display:flex; gap:6px; padding:6px; border-radius:18px; background:color-mix(in srgb, var(--card-background-color, #1f2128) 70%, transparent);">

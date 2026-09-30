@@ -3598,6 +3598,7 @@
           { name: "phone_start", selector: { select: { mode: "dropdown", options: [{ value: "compact", label: "Compact (one row per card)" }, { value: "open", label: "Open" }] } } },
           { name: "tablet_start", selector: { select: { mode: "dropdown", options: [{ value: "open", label: "Open" }, { value: "compact", label: "Compact (one row per card)" }] } } },
           { name: "open_when", selector: { template: {} } },
+          { name: "empty_when", selector: { template: {} } },
           { name: "collapsible", selector: { boolean: {} }, default: true }
         ]
       },
@@ -3623,6 +3624,7 @@
       phone_start: "On phones, starts",
       tablet_start: "On tablets and computers, starts",
       open_when: "Opens by itself when (optional template)",
+      empty_when: "Counts as empty when (optional template)",
       collapsible: "Show the \u2304 to switch between open and compact",
       card_width: "Cards side by side when each can be at least (empty = automatic, 0 = always one per row)",
       match_height: "Line up this panel's bottom with the panels beside it",
@@ -3636,6 +3638,7 @@
     helpers: {
       phone_start: "Each phone or tablet remembers what you last chose with the \u2304; this is where it starts. Phones are screens under 600px wide.",
       open_when: "E.g. {{ is_state('binary_sensor.back_door', 'on') }}. The panel opens while it's true, then goes back to how you left it.",
+      empty_when: "E.g. {{ states('todo.priorities_jamie') | int(0) == 0 }}. In an Auto Layout set to put empty panels last, it moves below the others while it's true. Some cards (House Tasks) report this themselves.",
       card_width: "Automatic: zones 200px, cameras 220px, everything else 300px. Cards fill the panel width: e.g. cameras 2 or 3 across on a tablet, one per row on a phone.",
       frosted_cards: "The cards inside are see-through with a heavy blur of what's behind them (acrylic). Turn off for solid cards.",
       match_height: "When sections sit side by side, the last panel in a shorter section grows so its bottom lines up with its neighbours'.",
@@ -3712,7 +3715,10 @@
       this._built = false;
       this._fallback = null;
       this._build();
-      if (this._hass) this._watchOpenWhen();
+      if (this._hass) {
+        this._watchOpenWhen();
+        this._watchEmptyWhen();
+      }
     }
     set hass(hass) {
       const first = !this._hass;
@@ -3724,6 +3730,7 @@
       if (first) {
         rememberUser(hass);
         this._watchOpenWhen();
+        this._watchEmptyWhen();
         this._apply();
       }
     }
@@ -3920,6 +3927,24 @@
       const g = last && last.getBoundingClientRect();
       return g && panel ? g.bottom + 12 - panel.getBoundingClientRect().top : this.getBoundingClientRect().height;
     }
+    // Whether the panel has nothing to show (its `empty_when` template, or a
+    // card inside saying so with a `cd-card-empty` event). An Auto Layout with
+    // `empty_last` moves empty panels below the rest.
+    _watchEmptyWhen() {
+      if (this._unsubEmpty) this._unsubEmpty.then((u) => u && u()).catch(() => {
+      });
+      this._unsubEmpty = null;
+      if (!this.config.empty_when || !this._hass || !this.isConnected) return;
+      this._unsubEmpty = stcRender(this._hass, this.config.empty_when, (text) => {
+        const t = String(text || "").trim().toLowerCase();
+        this._setEmpty(!!t && !["0", "false", "off", "no", "none", "unknown", "unavailable"].includes(t));
+      });
+    }
+    _setEmpty(empty) {
+      if (empty === this._empty) return;
+      this._empty = empty;
+      window.dispatchEvent(new CustomEvent("cd-panels-changed"));
+    }
     _watchOpenWhen() {
       if (this._unsubOpen) this._unsubOpen.then((u) => u && u()).catch(() => {
       });
@@ -3937,7 +3962,7 @@
     _build() {
       const c = this.config;
       const color = stcColor(c.color);
-      const frost = c.frosted_cards !== false ? `--cd-card-bg:color-mix(in srgb, var(--card-background-color, #1f2128) 74%, transparent); --cd-card-filter:${KIT_ACRYLIC_FILTER}; --ha-card-background:var(--cd-card-bg); --ha-card-backdrop-filter:var(--cd-card-filter);` : "";
+      const frost = c.frosted_cards !== false ? `--cd-card-bg:color-mix(in srgb, var(--card-background-color, #1f2128) 62%, transparent); --cd-card-filter:blur(30px) saturate(125%); --ha-card-background:var(--cd-card-bg); --ha-card-backdrop-filter:var(--cd-card-filter);` : "";
       this.innerHTML = `
       <div class="spc-panel" style="position:relative; box-sizing:border-box; border-radius:24px; padding:12px; display:flex; flex-direction:column; gap:12px; isolation:isolate; transition:${PANEL_TRANSITION}; ${frost}">
         <div class="spc-bg" style="position:absolute; inset:0; border-radius:inherit; background:${color}; opacity:0.1; z-index:-1; pointer-events:none; transition:background-color .6s ease;"></div>
@@ -4023,13 +4048,24 @@
       this._lastDevice = this._device();
       window.addEventListener("resize", this._onResize);
       this._onPanels = () => this._queueMatch();
+      if (!this._onCardEmpty) {
+        this._onCardEmpty = (ev) => {
+          if (!this.config.empty_when && ev.detail) this._setEmpty(!!ev.detail.empty);
+        };
+        this.addEventListener("cd-card-empty", this._onCardEmpty);
+      }
+      const told = [...this.querySelectorAll("*")].find((e) => e._reportedEmpty !== void 0);
+      if (told && !this.config.empty_when) this._setEmpty(!!told._reportedEmpty);
       if (!this._managed) window.addEventListener("cd-panels-changed", this._onPanels);
       if (window.ResizeObserver && !this._ro && !this._managed) {
         this._ro = new ResizeObserver(() => this._queueMatch());
         this._ro.observe(document.body);
         this._matchTimer = setInterval(() => this._queueMatch(), 3e3);
       }
-      if (this._hass) this._watchOpenWhen();
+      if (this._hass) {
+        this._watchOpenWhen();
+        this._watchEmptyWhen();
+      }
       this._apply();
     }
     disconnectedCallback() {
@@ -4042,6 +4078,9 @@
       if (this._unsubOpen) this._unsubOpen.then((u) => u && u()).catch(() => {
       });
       this._unsubOpen = null;
+      if (this._unsubEmpty) this._unsubEmpty.then((u) => u && u()).catch(() => {
+      });
+      this._unsubEmpty = null;
     }
     // A panel right under another panel in the same section gets the same gap
     // as between section columns (32px; the section's own gap between cards is
@@ -7320,6 +7359,11 @@
       const missing = !c.demo && !this._hass.states[this._entity()];
       const tasks = (c.demo ? htDemo() : this._items || []).filter((t) => t.status === "needs_action").map((t) => ({ t, h: houseTask(t) })).filter(({ h }) => all || houseTaskFor(h, first));
       if (c.title) kitHead(this, c.title, missing ? "Not set up" : tasks.length ? `${tasks.length} to sort` : "All sorted", tasks.length ? colour : KIT_COLOR.good);
+      const empty = missing || !!(c.demo || this._items) && !tasks.length;
+      if ((c.demo || this._items || missing) && empty !== this._reportedEmpty) {
+        this._reportedEmpty = empty;
+        this.dispatchEvent(new CustomEvent("cd-card-empty", { detail: { empty }, bubbles: true, composed: true }));
+      }
       const sig = JSON.stringify([tasks, missing, all, first, colour]);
       if (sig === this._sig) return;
       this._sig = sig;
@@ -7444,6 +7488,7 @@
       { name: "column_width", selector: { number: { min: 200, max: 800, step: 10, mode: "box", unit_of_measurement: "px" } } },
       { name: "max_columns", selector: { number: { min: 1, max: 6, step: 1, mode: "box" } } },
       { name: "controls_first", selector: { boolean: {} }, default: true },
+      { name: "empty_last", selector: { boolean: {} }, default: false },
       { name: "jump_chips", selector: { select: { mode: "dropdown", options: [{ value: "auto", label: "Automatic (phones)" }, { value: "always", label: "Always" }, { value: "never", label: "Never" }] } } }
     ],
     labels: {
@@ -7454,6 +7499,7 @@
       column_width: "Columns at least this wide",
       max_columns: "At most this many columns",
       controls_first: "Panels with buttons and sliders go above ones that only show information",
+      empty_last: "Empty panels go last",
       jump_chips: "Jump-to chips at the top"
     },
     helpers: {
@@ -7462,6 +7508,7 @@
       widget_width: "Default 520px, centred under the title. Phones use the full width.",
       column_width: "Default 340px. Phones (under 600px) always get one column in list order.",
       max_columns: 'Default 3. Mark a panel "Full width across an Auto Layout" to have it span the page.',
+      empty_last: 'A panel counts as empty when its "Counts as empty when" is true, or a card inside says so (House Tasks with nothing to do). Otherwise list order holds.',
       controls_first: 'Keeps list order otherwise, on phones too. Each panel can override what it counts as ("Counts as" in the panel).',
       jump_chips: "One chip per panel, in its colour; tapping one scrolls to that panel, and the chip for the panel you're looking at is filled in."
     }
@@ -7720,8 +7767,9 @@
       const cols = this._columns();
       const gap = this._gap();
       const colWidth = ((this.getBoundingClientRect().width || window.innerWidth) - gap * (cols - 1)) / cols;
-      const wide = cols > 1 ? this._items.filter((it) => this._full(it, colWidth)) : [];
-      const rest = this._items.filter((it) => !wide.includes(it));
+      const order = this.config.empty_last ? [...this._items.filter((it) => !it.el._empty), ...this._items.filter((it) => it.el._empty)] : this._items;
+      const wide = cols > 1 ? order.filter((it) => this._full(it, colWidth)) : [];
+      const rest = order.filter((it) => !wide.includes(it));
       const bands = [];
       if (rest.length) bands.push({ items: rest });
       const first = this.config.controls_first !== false;
@@ -7755,7 +7803,7 @@
         this._prevSplits[b.items.map((it) => this._items.indexOf(it)).join(",")] = b.split;
       });
       if (placed) planRemember(planKey, bands.map((b) => b.split));
-      const plan = `${cols}|${bands.map((b) => `${b.full ? "F" : ""}${b.split.map((c) => c.join(".")).join(",")}`).join("/")}`;
+      const plan = `${cols}|${bands.map((b) => `${b.full ? "F" : ""}${b.items.map((it) => this._items.indexOf(it)).join("-")}:${b.split.map((c) => c.join(".")).join(",")}`).join("/")}`;
       if (force || plan !== this._plan) {
         this._plan = plan;
         this._root.innerHTML = "";
@@ -7856,10 +7904,10 @@
         const tick = r.kind === "todo" && !r.auto ? `<button type="button" data-done="${esc2(r.uid)}" data-list="${esc2(r.list)}" aria-label="Done" title="Done" style="flex:none; width:22px; height:22px; padding:0; border:2px solid color-mix(in srgb, ${c} 70%, transparent); border-radius:50%; background:transparent; color:var(--primary-text-color); cursor:pointer; display:flex; align-items:center; justify-content:center;">${iconHtml("mdi:check", { size: "14px" })}</button>` : "";
         return `<div ${r.kind === "alert" ? `data-alert="${r.i}" role="button"` : ""} style="height:26px; display:flex; align-items:center; gap:8px; padding:0 4px 0 8px; border-radius:13px; cursor:${r.kind === "alert" ? "pointer" : "default"}; background:color-mix(in srgb, ${c} 16%, transparent);">${icon ? iconHtml(icon, { size: "16px", style: `color:${c}; flex:none;` }) : ""}<span style="flex:1; min-width:0; font-size:0.8rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc2(r.text)}</span>${tick}</div>`;
       };
-      const side = todo && this.config.priorities_page ? `<button type="button" data-todo style="flex:none; width:58px; padding:0 4px; border:none; border-radius:12px; cursor:pointer; font:inherit; font-size:0.72rem; font-weight:700; line-height:1.2; color:var(--primary-text-color); background:color-mix(in srgb, #7e57c2 22%, transparent); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;">${iconHtml(
+      const side = todo && this.config.priorities_page ? `<button type="button" data-todo style="flex:none; width:58px; padding:0 4px; border:none; border-radius:12px; cursor:pointer; font:inherit; font-size:0.72rem; font-weight:700; line-height:1.2; color:#b39ddb; background:color-mix(in srgb, #7e57c2 22%, transparent); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;" aria-label="${extra > 0 ? `${extra} more to do` : "Open to-do"}">${iconHtml(
         "mdi:format-list-checks",
-        { size: "18px", style: "color:#b39ddb;" }
-      )}${extra > 0 ? `+${extra}` : "To-do"}<span style="font-size:0.9rem; line-height:1;">\u203A</span></button>` : "";
+        { size: "22px", style: "color:#b39ddb;" }
+      )}<span style="white-space:nowrap;">${extra > 0 ? `+${extra} more` : "To-do"}</span></button>` : "";
       head.innerHTML = `<div style="height:40px; font-size:2rem; font-weight:700; line-height:40px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--primary-text-color);">${esc2(title)}</div>
       <div class="al-widget" style="height:96px; width:100%; max-width:${Number(this.config.widget_width) || 520}px; margin:0 auto; box-sizing:border-box; display:flex; gap:6px; padding:6px; border-radius:18px; background:color-mix(in srgb, var(--card-background-color, #1f2128) 70%, transparent);">
         <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:3px;">${[0, 1, 2].map((n) => row3(shown[n])).join("")}</div>${side}

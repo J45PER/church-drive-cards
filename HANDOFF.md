@@ -250,6 +250,24 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       layout.
     - Tested: at the very bottom the last panel sits at the same place its chip
       takes it (112px vs 112px).
+  - Follow-up from the user's feedback:
+    - Cards in panels use the lighter "B" recipe (62% tint, `blur(30px)
+      saturate(125%)`). The panel's coloured background is unchanged. Chips, nav
+      and back-to-top stay "C".
+    - **Empty panels last:** Auto Layout has `empty_last` and panels have
+      `empty_when` (a template).
+      - A card can report emptiness with a bubbling `cd-card-empty` event
+        {empty}; `house-tasks-card` does this. The panel also picks up a report
+        made before it was on the page (`_reportedEmpty`).
+      - The layout plan now includes item order, so a reorder rebuilds it even on
+        one column.
+      - To-do views (Mobile and Tasks): order From the house → My to-do → Shared,
+        `empty_last: true`, `controls_first: false`; the lists' panels have
+        `empty_when: states(todo…) == 0`.
+      - Tested: with no house tasks the order became My to-do > Shared > From the
+        house, and it went back when a task appeared.
+    - Header widget To-do button: no "›"; the text matches the icon's lilac
+      (#b39ddb), reading "+N more" or "To-do"; 22px icon; aria-label.
   - Mobile is on `-beta` cards again for testing; strip them on release. Mock-up:
     https://claude.ai/artifact/Y9kej1q5Hxpggozpc8CkmV
 - The back-to-top strokes are solid white in both states.
