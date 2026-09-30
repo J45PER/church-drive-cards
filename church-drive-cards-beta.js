@@ -248,6 +248,19 @@
       ${body}
     </ha-card>`;
   }
+  function kitBlend(v, anchors) {
+    if (v == null || isNaN(v) || !anchors.length) return KIT_COLOR.off;
+    if (v <= anchors[0][0]) return anchors[0][1];
+    const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+    for (let i = 0; i < anchors.length - 1; i++) {
+      const [a, ca] = anchors[i], [b, cb] = anchors[i + 1];
+      if (v <= b) {
+        const f = (v - a) / (b - a || 1), A = rgb(ca), B = rgb(cb);
+        return `rgb(${A.map((c, k) => Math.round(c + (B[k] - c) * f)).join(",")})`;
+      }
+    }
+    return anchors[anchors.length - 1][1];
+  }
   function kitHead(root, title, word, color, tint = 0) {
     const t = root.querySelector(".ck-title");
     const w = root.querySelector(".ck-word");
@@ -473,8 +486,16 @@
       const lo = Math.min(...vals) - (s.pad || 0.3), hi = Math.max(...vals) + (s.pad || 0.3);
       const y = (v) => H - 3 - (v - lo) / (hi - lo || 1) * (H - 6);
       const d = kitPath(pts.map((p) => [x(p[0]), y(p[1])]), smooth);
-      if (s.fill) under += `<path d="${d} L${W},${H} L0,${H} Z" fill="${s.color}" fill-opacity="0.16"></path>`;
-      over += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.width || 2}" vector-effect="non-scaling-stroke"></path>`;
+      let paint = s.color;
+      if (s.colorAt) {
+        const id = `kg${Math.random().toString(36).slice(2, 8)}`;
+        let stops = "";
+        for (let k = 0; k <= 20; k++) stops += `<stop offset="${k * 5}%" stop-color="${s.colorAt(hi - (hi - lo) * k / 20)}"></stop>`;
+        under += `<defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="${H}" gradientUnits="userSpaceOnUse">${stops}</linearGradient></defs>`;
+        paint = `url(#${id})`;
+      }
+      if (s.fill) under += `<path d="${d} L${W},${H} L0,${H} Z" fill="${paint}" fill-opacity="0.16"></path>`;
+      over += `<path d="${d}" fill="none" stroke="${paint}" stroke-width="${s.width || 2}" vector-effect="non-scaling-stroke"></path>`;
       scrub.push({ pts, raw, lo, hi, color: s.color, format: s.format, linear: smooth });
     });
     if (!under && !over) return "";
@@ -5638,6 +5659,15 @@
     if (pm <= apBand(c, "poor_max")) return { color: KIT_COLOR.poor, word: "Poor" };
     return { color: KIT_COLOR.bad, word: "Very poor" };
   }
+  function apScale(c) {
+    const g = apBand(c, "good_max"), f = apBand(c, "fair_max"), p = apBand(c, "poor_max");
+    return [
+      [g * 0.6, KIT_COLOR.good],
+      [(g + f) / 2, KIT_COLOR.fair],
+      [(f + p) / 2, KIT_COLOR.poor],
+      [p + (p - f) / 2, KIT_COLOR.bad]
+    ];
+  }
   function apAllergen(v) {
     if (v == null) return null;
     if (v <= 3) return { color: KIT_COLOR.good, word: "Low" };
@@ -5823,7 +5853,7 @@
       if (row2(c, "show_graph") && (this._demo || c.pm25_entity)) {
         const pts = this._demo ? this._demo.pmPts : this._hist && this._hist.data ? this._hist.data[c.pm25_entity] : null;
         const meta = {};
-        const svg2 = kitGraph([{ pts, current: pm, color: q.color, fill: true, pad: 2, format: (v) => `PM2.5 ${Math.round(v)} \xB5g/m\xB3` }], { height: 48, label: "PM2.5, last 24 hours", meta, smooth: c.smooth_graphs !== false });
+        const svg2 = kitGraph([{ pts, current: pm, color: q.color, colorAt: (v) => kitBlend(v, apScale(c)), fill: true, pad: 2, format: (v) => `PM2.5 ${Math.round(v)} \xB5g/m\xB3` }], { height: 48, label: "PM2.5, last 24 hours", meta, smooth: c.smooth_graphs !== false });
         gBox.style.display = "block";
         const gsig = JSON.stringify([pm, q.color, this._hist && this._hist.at, !!svg2, c.smooth_graphs]);
         if (gsig !== this._gsig) {

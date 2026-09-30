@@ -88,6 +88,21 @@ export function kitShell(body, extraCss = '') {
     </ha-card>`;
 }
 
+// A colour on a scale of [value, '#rrggbb'] anchors, blended between them.
+export function kitBlend(v, anchors) {
+  if (v == null || isNaN(v) || !anchors.length) return KIT_COLOR.off;
+  if (v <= anchors[0][0]) return anchors[0][1];
+  const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  for (let i = 0; i < anchors.length - 1; i++) {
+    const [a, ca] = anchors[i], [b, cb] = anchors[i + 1];
+    if (v <= b) {
+      const f = (v - a) / (b - a || 1), A = rgb(ca), B = rgb(cb);
+      return `rgb(${A.map((c, k) => Math.round(c + (B[k] - c) * f)).join(',')})`;
+    }
+  }
+  return anchors[anchors.length - 1][1];
+}
+
 // Title, status word and card tint (percent of the colour mixed in).
 export function kitHead(root, title, word, color, tint = 0) {
   const t = root.querySelector('.ck-title');
@@ -341,8 +356,19 @@ export function kitGraph(series, { hours = 24, height = 48, label = '', meta = n
     const lo = Math.min(...vals) - (s.pad || 0.3), hi = Math.max(...vals) + (s.pad || 0.3);
     const y = (v) => H - 3 - ((v - lo) / (hi - lo || 1)) * (H - 6);
     const d = kitPath(pts.map((p) => [x(p[0]), y(p[1])]), smooth);
-    if (s.fill) under += `<path d="${d} L${W},${H} L0,${H} Z" fill="${s.color}" fill-opacity="0.16"></path>`;
-    over += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.width || 2}" vector-effect="non-scaling-stroke"></path>`;
+    // `colorAt(v)` colours the line by its value (a blended vertical
+    // gradient over this graph's own scale, like the climate room graphs);
+    // otherwise it's all `color`.
+    let paint = s.color;
+    if (s.colorAt) {
+      const id = `kg${Math.random().toString(36).slice(2, 8)}`;
+      let stops = '';
+      for (let k = 0; k <= 20; k++) stops += `<stop offset="${k * 5}%" stop-color="${s.colorAt(hi - ((hi - lo) * k) / 20)}"></stop>`;
+      under += `<defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="${H}" gradientUnits="userSpaceOnUse">${stops}</linearGradient></defs>`;
+      paint = `url(#${id})`;
+    }
+    if (s.fill) under += `<path d="${d} L${W},${H} L0,${H} Z" fill="${paint}" fill-opacity="0.16"></path>`;
+    over += `<path d="${d}" fill="none" stroke="${paint}" stroke-width="${s.width || 2}" vector-effect="non-scaling-stroke"></path>`;
     scrub.push({ pts, raw, lo, hi, color: s.color, format: s.format, linear: smooth });
   });
   if (!under && !over) return '';

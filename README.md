@@ -139,7 +139,7 @@ A fan with a speed gauge, then two rows of tiles: Off and the speeds (1, 2, 3…
 
 ### `air-purifier-card`
 
-An air purifier: a PM2.5 gauge in air-quality colours (good ≤35, fair ≤75, poor ≤115, very poor above: the Chinese standard Philips purifiers use, changeable per card), the allergen index, a 24-hour PM2.5 graph, mode tiles and filter life bars ("Clean soon" / "Replace soon" under 25%). Every extra can be switched off. Picking the purifier finds its PM2.5, allergen and filter sensors from the same entity name prefix.
+An air purifier: a PM2.5 gauge in air-quality colours (good ≤35, fair ≤75, poor ≤115, very poor above: the Chinese standard Philips purifiers use, changeable per card), the allergen index, a 24-hour PM2.5 graph, mode tiles and filter life bars ("Clean soon" / "Replace soon" under 25%). Every extra can be switched off. Picking the purifier finds its PM2.5, allergen and filter sensors from the same entity name prefix. The 24-hour PM2.5 graph is coloured by level, blending from green through amber and orange to red as the air gets worse, using the card's air-quality bands.
 
 ### `co-alarm-card`
 

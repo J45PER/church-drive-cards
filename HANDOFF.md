@@ -273,6 +273,14 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       `KIT_CARD_BG` plus `backdrop-filter: var(--cd-card-filter, none)`, like
       `kitShell`. A card outside a panel still falls back to the normal solid
       colour.
+    - Air purifier PM2.5 graph coloured by level (user picked "A" from
+      https://claude.ai/artifact/XNN42H7nhgtjN3svHSnnJX, with smooth blends):
+      - `kitGraph` series take `colorAt(v)`: a 21-stop vertical gradient over the
+        graph's own scale, as in the climate room graphs.
+      - `kitBlend(v, anchors)` interpolates the colours. `apScale` anchors each
+        band's colour mid-band: green at 60% of good_max, amber mid-Fair, orange
+        mid-Poor, red above; the bands follow the card's own settings.
+      - The scale still fits the readings (the user didn't ask to change it).
     - Header widget To-do button: no "›"; the text matches the icon's lilac
       (#b39ddb), reading "+N more" or "To-do"; 22px icon; aria-label.
   - Mobile is on `-beta` cards again for testing; strip them on release. Mock-up:
