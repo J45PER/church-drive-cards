@@ -14,7 +14,8 @@ import { nbHuiRoot } from './nav-bar-card.js';
 import { kitScrollParent, kitScrollTop, kitGlide, kitNavigate, kitAcrylicCss } from './card-kit.js';
 import { PANEL_TRANSITION } from './section-panel-card.js';
 import { HOUSE_TASKS_LIST, HOUSE_TASKS_COLOR, houseTask, houseTaskFor } from './house-tasks-card.js';
-import { choreIcon } from './cleaning-schedule-card.js';
+import { choreIcon } from './task-list-card.js';
+import { parseTask } from './repeat.js';
 
 let helpersPromise;
 function cardHelpers() {
@@ -663,7 +664,7 @@ export class AutoLayoutCard extends HTMLElement {
         r.kind === 'todo' && !r.auto
           ? `<button type="button" data-done="${esc(r.uid)}" data-list="${esc(r.list)}" aria-label="Done" title="Done" style="flex:none; width:22px; height:22px; padding:0; border:2px solid color-mix(in srgb, ${c} 70%, transparent); border-radius:50%; background:transparent; color:var(--primary-text-color); cursor:pointer; display:flex; align-items:center; justify-content:center;">${iconHtml('mdi:check', { size: '14px' })}</button>`
           : '';
-      const tap = r.kind === 'alert' ? `data-alert="${r.i}" role="button"` : r.kind === 'line' && r.link ? `data-line="${esc(r.link)}" role="button"` : '';
+      const tap = r.kind === 'alert' ? `data-alert="${r.i}" role="button"` : (r.kind === 'line' || r.kind === 'todo') && r.link ? `data-line="${esc(r.link)}" role="button"` : '';
       // A line's text can use <b>…</b> for its key figure; nothing else is kept.
       const text = r.html ? esc(r.text).replace(/&lt;(\/?)b&gt;/g, '<$1b>') : esc(r.text);
       return `<div ${tap} style="height:26px; display:flex; align-items:center; gap:8px; padding:0 ${tick ? 4 : 10}px 0 8px; border-radius:13px; cursor:${tap ? 'pointer' : 'default'}; background:color-mix(in srgb, ${c} 16%, transparent);">${
@@ -859,6 +860,9 @@ export class AutoLayoutCard extends HTMLElement {
       .forEach((list) =>
         (this._todoItems[list] || []).forEach((t) => {
           if (t.status !== 'needs_action') return;
+          // Repeating tasks are always on the list: only show one due in the next two days.
+          const rep = parseTask(t.description).repeat;
+          if (rep && rep.type !== 'once' && t.due && new Date(String(t.due).includes('T') ? t.due : `${t.due}T12:00:00`) > new Date(Date.now() + 2 * 86400000)) return;
           const auto = list === HOUSE_TASKS_LIST || /^Automatic/.test(t.description || '');
           const task = auto ? houseTask(t) : null;
           if (list === HOUSE_TASKS_LIST && !houseTaskFor(task, first)) return;
@@ -943,7 +947,7 @@ export class AutoLayoutCard extends HTMLElement {
       .sort((a, b) => rank(a.t) - rank(b.t) || a.n - b.n)
       .map(({ t }) => {
         const w = when(t.due);
-        return { uid: t.uid, list, text: w.text ? `${t.summary} · ${w.text}` : t.summary, overdue: w.over, strong: w.over || w.today, colour, icon: choreIcon(t.summary) };
+        return { uid: t.uid, list, text: w.text ? `${t.summary} · ${w.text}` : t.summary, overdue: w.over, strong: w.over || w.today, colour, icon: choreIcon(t.summary), link: this.config.priorities_page || '' };
       });
     return { items, colour, icon: this.config.list_icon || 'mdi:broom' };
   }
