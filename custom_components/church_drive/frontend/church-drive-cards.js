@@ -7701,7 +7701,10 @@
         return;
       }
       cancelAnimationFrame(this._frame);
-      this._frame = requestAnimationFrame(() => this._layout(false));
+      this._frame = requestAnimationFrame(() => {
+        this._layout(false);
+        this._trimTail();
+      });
     }
     // Work out bands (split at full-width items) and columns; only move cards
     // when the arrangement actually changes, so cameras etc. aren't reloaded.
@@ -7998,7 +8001,7 @@
       const r = el.getBoundingClientRect();
       let below = this._root.getBoundingClientRect().bottom - r.top;
       if (prev && prev.getBoundingClientRect().top > r.top) below -= prev.getBoundingClientRect().height;
-      const need = Math.max(0, Math.ceil(window.innerHeight - top - below));
+      const need = Math.max(0, Math.ceil(window.innerHeight - top - below), this._restTail());
       this._tail.style.height = `${need}px`;
       this._jump = { el, top, arrived: false, since: performance.now() };
       kitGlide(kitScrollParent(this), () => el.getBoundingClientRect().top - top);
@@ -8013,18 +8016,40 @@
       el._slide(() => el._apply());
       return el;
     }
-    // Drop the extra room once the jump has landed and you scroll back up
-    // away from that panel (or if the jump never lands).
+    // Room at the end of the page so the last panel can always be scrolled
+    // up to just under the chips, where a chip jump puts it (phones, with the
+    // chips showing). It follows the last panel's height as panels open/close.
+    _restTail() {
+      if (!this._tail || !this._chipsWanted() || !this._chipsFloat()) return 0;
+      const order = this._pageOrder();
+      const last = order[order.length - 1];
+      if (!last) return 0;
+      const sc = kitScrollParent(this);
+      const doc = sc === document.scrollingElement || sc === document.documentElement;
+      const scTop = doc ? 0 : sc.getBoundingClientRect().top;
+      const view = doc ? window.innerHeight : sc.clientHeight;
+      const tail = parseFloat(this._tail.style.height) || 0;
+      const after = sc.scrollHeight - tail - (last.r.top - scTop + kitScrollTop(sc));
+      return Math.max(0, Math.ceil(view - (this._pinnedChipsBottom() + 10 - scTop) - after));
+    }
+    // A chip jump may need more room than that (to bring a panel that isn't
+    // last to the top); drop back to the resting room once the jump has
+    // landed and you scroll back up away from that panel (or if it never lands).
     _trimTail() {
+      if (!this._tail) return;
+      const rest = this._restTail();
       const j = this._jump;
-      if (!j) return;
-      const at = j.el.getBoundingClientRect().top;
-      if (Math.abs(at - j.top) < 8) j.arrived = true;
-      const leftIt = j.arrived && at > j.top + 40;
-      if (leftIt || !j.arrived && performance.now() - j.since > 3e3) {
-        this._tail.style.height = "0px";
+      if (j) {
+        const at = j.el.getBoundingClientRect().top;
+        if (Math.abs(at - j.top) < 8) j.arrived = true;
+        const leftIt = j.arrived && at > j.top + 40;
+        if (!leftIt && (j.arrived || performance.now() - j.since <= 3e3)) {
+          if ((parseFloat(this._tail.style.height) || 0) < rest) this._tail.style.height = `${rest}px`;
+          return;
+        }
         this._jump = null;
       }
+      this._tail.style.height = `${rest}px`;
     }
     _pinnedChipsBottom() {
       const box = this._chips;
