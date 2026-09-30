@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-30. Current release: **v0.24.2**.*
+*Last updated 2026-09-30. Current release: **v0.25.0**.*
 
 ## Where this stands
 
@@ -230,6 +230,11 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **v0.25.0 (released 2026-10-01, reload-only): page header lines, forecast, to-do summary; Task List card with repeating tasks; #panel jumps.**
+  - See "Page header lines and the cleaning schedule" and "Repeating tasks" below.
+  - On release the Mobile dashboard went back to release types. The Tasks dashboard's
+    To-do view moved to `task-list-card` too (My to-do, Shared, Cleaning), matching
+    the Mobile To-do page.
 - **v0.24.2 (released 2026-09-30, reload-only): Auto Layout visual editor fixed.**
   - The editor threw on its first `hass` (see the conventions section), so every
     Auto Layout card was YAML-only. Released with the HA-side fixes for visual editing
@@ -998,12 +1003,103 @@ Integration modules (`custom_components/church_drive/`):
     shows them. Put them in a first "variables" step with an alias instead (both
     to-do automations do this).
   - Card editors: every card has one, and every option it reads is in its schema.
+  - **Checklist for every change (the user asked again, 2026-10-01):**
+    - Every new card option goes in its editor schema. Run the editor smoke test
+      (`editors.mjs`, below) before pushing.
+    - Every new automation or script: no templated action names, no top-level
+      `variables`, and no step that forces YAML. Settings people change live in
+      helpers, cards or plain to-do text, never only in YAML.
+    - 2026-10-01 check: the page-header fields, `task-list-card` and
+      `automation.church_drive_cleaning_schedule` ("repeating tasks") all follow this.
   - **Auto Layout editor bug (fixed on beta 2026-09-30):** since f87fb14 its
     `set hass` called the card's `_renderHead()` / `_watchTodo()`, which don't exist on
     the editor. It threw, so HA fell back to YAML for every Auto Layout card. Those
     lines now live in the card's own `set hass`.
   - Smoke test: `scratchpad/editors.html` + `editors.mjs` builds every registered
     editor with a stub config and fake hass, and reports any that throw.
+- **Page header lines and the cleaning schedule (user's request, 2026-10-01, on beta at `4eaca60`):**
+  - Mock-ups: https://claude.ai/artifact/D9cz58EsbDS4VLx2e6tCsE (round 2 is the agreed
+    one). These are snapshots only: nothing in a header makes tasks or sends
+    notifications (the user was explicit).
+  - Auto Layout `header_content`: `none` / `priorities` / `todo_summary` / `lines` /
+    `forecast` / `list`. `normalize` maps the old `priorities: true`, and `store`
+    keeps `priorities` in step (the editor's field handler takes the form's values
+    whole, so removed keys stay removed).
+    - `lines`: each line's `text` and `alert_when` are templates rendered by
+      `stcRender`. `<b>` is the only markup kept. `panel` taps jump to a panel with
+      that title, or navigate.
+    - `forecast`: `weather/subscribe_forecast`. The user chose hourly and wants daily
+      as an editor option (`forecast_type`). Page alerts replace the forecast while
+      there are any.
+    - `list` and `todo_summary` are worked out in the card, because templates can't
+      see to-do items or the signed-in user.
+  - The Mobile pages use them (views 1 to 6 are on `-beta` for testing; Home isn't):
+    - Lights: lights on (Hue groups excluded), not reachable, and "maybe left on".
+      "Maybe left on" checks, in order: everyone's phone out; an area with a
+      motion/occupancy/presence sensor quiet for 30 min; outdoor lights in daylight;
+      anything on over 4 h. The sensor check picks up new presence sensors by itself
+      (the user will add some; the BSB002 bridge has no MotionAware). Diane's phone
+      doesn't share location, so "everyone's out" ignores her (unknown state).
+    - Security (no alarm line, per the user): doors, last ring/movement from Ring's
+      `event.*_ding/_motion`, who's home.
+    - Climate: hourly forecast from `weather.forecast_home`.
+    - Cleaning: `list` of `todo.cleaning`, plus a "Cleaning schedule" panel with the
+      new card.
+    - To-do (all three per-person sections): `todo_summary`.
+    - Energy: rate now / next cheap window (from the rates events), live W, today's
+      cost.
+    - The line templates were tested live with `ha_eval_template` before going in.
+  - **Repeating tasks (the user's follow-up, 2026-10-01, beta at `22eebc0`):**
+    - The cleaning schedule belongs on the **To-do page**. The Cleaning page header
+      (`list` of `todo.cleaning`) opens `/dashboard-mobile/todo#cleaning` from its
+      rows and its to-do button (`priorities_page`, `list_icon:
+      mdi:format-list-checks`, label "To-do").
+    - **`#panel` addresses:** an Auto Layout page opened with `#<panel title>` (slug or
+      exact title) jumps to that panel once laid out, like its chip. It then drops the
+      `#…` with `replaceState`. It's checked on layout, connect and
+      `location-changed` (HA keeps views alive), and a hidden per-person copy of the
+      page skips it (zero height).
+    - Repeats apply to every list: Cleaning, each person's own and Shared.
+    - `task-list-card` (it replaced the beta-only `cleaning-schedule-card`) is a full
+      to-do card: tick, add, edit, show and clear done. Repeat choices: Never (optional
+      due date and time), Daily (every N days), Weekly (1 to 4 weeks, days with a time
+      each), Monthly (day N or the last day, every N months), Yearly, and After it's
+      done (N days, weeks or months). It also has a start date, who it reminds, and
+      notes.
+    - The To-do page (all three per-person sections) uses it for My to-do (with
+      `remind_default` set to the person), Shared, and a new Cleaning panel. The
+      Tasks dashboard (`dashboard-tasks`) still has HA's `todo-list` cards: move it
+      over on release.
+    - **Rules live in `src/repeat.js`** (unit tests in `test/`, `npm test`, UK time).
+      Words: `<repeat> · <for …|no reminders> · <notes>`. A description that doesn't
+      start with a repeat is plain notes. "Once · for X" means no repeat, just a
+      reminder at the due time. The phase comes from the current due time
+      (fortnightly keeps its fortnight), so the start date isn't stored.
+    - The automation's Jinja (`occ` macro) is a port of `nextOccurrence`. 18 cases
+      matched exactly (scratchpad `rep/cases.mjs`, `rep/plan.jinja`). **Change both
+      together.**
+    - A repeating task is always open, so the Home widget only shows one due within
+      2 days.
+    - `automation.church_drive_to_do_reminders` "added" branch now needs
+      `trigger.to_state.context.user_id`. That way a task the automation brings back
+      isn't announced as a "New to-do".
+  - **The schedule's HA side:**
+    - Local To-do "Cleaning" (`todo.cleaning`, entry `01M3T9B7S3G28WA6JG3PECQ2TH`).
+    - `automation.church_drive_cleaning_schedule` (alias now "Church Drive: repeating
+      tasks"; the entity ID kept its first name) covers `todo.cleaning` and the
+      `todo.priorities_*` lists except automatic. The "Which lists" step lists them.
+      `input_datetime.cleaning_next_reminder` is now named "Tasks: next reminder".
+      - It reschedules ticked-off or undated jobs to their next time, reminds the
+        named people at due time via `script.church_drive_notify_person`, and sets
+        `input_datetime.cleaning_next_reminder` (its own wake-up).
+      - Triggers: that helper, the list's state, `call_service` for
+        **`todo.update_item` only**, start, and hourly. Reading the list
+        (`get_items`) is itself a `call_service` event: an early version triggered
+        on any todo call and looped until it was turned off.
+      - It waits 2 s after an edit, because the event arrives before the list is
+        saved.
+      - Tested end to end: the 00:20 reminder reached Jamie's phones, and ticking
+        off brought the job back at next week's time.
 - **No repeat notifications after a restart (user's request, 2026-09-30).** A
   restart makes sensors briefly `unavailable`. Anything that reacts to "became low" or
   "task added" must not treat coming back from unavailable as news. Fixes so far:
@@ -1089,7 +1185,7 @@ Integration modules (`custom_components/church_drive/`):
   - `church-drive-cards-beta.js` registers every card as `<name>-beta`.
   - HA loads it from resource `436186c683fe4c7d81c865b67bb0e109`:
     `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's pinned to the v0.24.2 merge (see below).
+    It's pinned to the v0.25.0 merge (see below).
   - To test a branch: push it, repoint the resource, and ask for a hard refresh.
   - jsDelivr is blocked from the cloud container, but works for the user.
 - **Rollback:** download an older release in HACS and restart.

@@ -1555,8 +1555,8 @@
     return `${UNIVERSAL_PREFIX}${key}${target ? `@${target}` : ""}`;
   }
   function universalTarget(ref) {
-    const at = String(ref || "").indexOf("@");
-    return at === -1 ? null : ref.slice(at + 1);
+    const at2 = String(ref || "").indexOf("@");
+    return at2 === -1 ? null : ref.slice(at2 + 1);
   }
   function universalScene(ref) {
     let key = String(ref || "").startsWith(UNIVERSAL_PREFIX) ? ref.slice(UNIVERSAL_PREFIX.length) : String(ref || "");
@@ -2456,9 +2456,9 @@
       const track = "rgba(255,255,255,0.06)";
       const row3 = document.createElement("div");
       row3.className = "lcc-row";
-      const pad = level > 0 ? "9px 14px" : "12px 14px";
+      const pad3 = level > 0 ? "9px 14px" : "12px 14px";
       const indent = level > 0 ? `margin-left:${16 * level}px;` : "";
-      row3.style.cssText = `position:relative; display:flex; align-items:center; gap:12px; padding:${pad}; ${indent} border-radius:12px; margin-top:6px; overflow:hidden; cursor:pointer; user-select:none; touch-action:pan-y; background: linear-gradient(to right, ${tint} 0%, ${tint} ${fillPct}%, ${track} ${fillPct}%, ${track} 100%);`;
+      row3.style.cssText = `position:relative; display:flex; align-items:center; gap:12px; padding:${pad3}; ${indent} border-radius:12px; margin-top:6px; overflow:hidden; cursor:pointer; user-select:none; touch-action:pan-y; background: linear-gradient(to right, ${tint} 0%, ${tint} ${fillPct}%, ${track} ${fillPct}%, ${track} 100%);`;
       row3.innerHTML = `
       ${iconHtml(icon, { size: "24px", cls: "lcc-row-icon", style: `color:${on ? color : "var(--secondary-text-color)"}; opacity:${on ? 1 : 0.6}; flex-shrink:0; pointer-events:none;` })}
       <div class="lcc-name" style="flex:1; min-width:0; font-weight:${on ? 600 : 400}; color:${on ? "var(--primary-text-color)" : "var(--secondary-text-color)"}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; pointer-events:none;">${name}</div>
@@ -4613,11 +4613,11 @@
     const now = Date.now();
     const temps = [19.1, 18.9, 18.8, 18.7, 18.9, 19.6, 20.4, 20.9, 20.6, 20.1, 19.9, 20.2, 20.6, 20.9, 21.1, 20.8, 20.3, 19.8, 19.5, 19.7, 20, 20.2];
     const hums = [59, 60, 60, 61, 61, 60, 58, 56, 55, 56, 57, 58, 59, 62, 66, 63, 60, 59, 58, 57, 57, 57];
-    const at = (i) => now - CC_HISTORY_HOURS * 36e5 * (temps.length - 1 - i) / (temps.length - 1);
+    const at2 = (i) => now - CC_HISTORY_HOURS * 36e5 * (temps.length - 1 - i) / (temps.length - 1);
     return {
-      temperature: temps.map((v, i) => [at(i), v]),
-      humidity: hums.map((v, i) => [at(i), v]),
-      target: temps.map((_, i) => [at(i), 21.5])
+      temperature: temps.map((v, i) => [at2(i), v]),
+      humidity: hums.map((v, i) => [at2(i), v]),
+      target: temps.map((_, i) => [at2(i), 21.5])
     };
   }
   function ccDefaultQuick(st, config = {}) {
@@ -6102,11 +6102,11 @@
       if (high) warn.innerHTML = `${iconHtml("mdi:alert", { size: "24px" })}<span>Carbon monoxide found. Get everyone outside and open doors and windows.</span>`;
       this.querySelector(".co-gauge").innerHTML = kitGauge(d.ppm == null ? 0 : Math.max(0.02, d.ppm / 100), color, d.ppm == null ? "\u2013" : String(Math.round(d.ppm)), "ppm CO");
       const when2 = d.report && !isNaN(Date.parse(d.report)) ? new Date(d.report) : null;
-      const whenText = when2 ? when2.toLocaleString(void 0, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+      const whenText2 = when2 ? when2.toLocaleString(void 0, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
       this.querySelector(".co-info").innerHTML = [
         `<span>${iconHtml(high ? "mdi:alert-circle" : "mdi:shield-check", { size: "18px", style: `color:${color};` })}${high ? "CO detected" : "No CO detected"}</span>`,
         d.battery != null ? `<span>${iconHtml(d.battery < 20 ? "mdi:battery-alert" : "mdi:battery", { size: "18px", style: `color:${d.battery < 20 ? KIT_COLOR.bad : KIT_COLOR.good};` })}Battery ${Math.round(d.battery)}%</span>` : "",
-        whenText ? `<span>${iconHtml("mdi:clock-outline", { size: "18px" })}Reported ${whenText}</span>` : ""
+        whenText2 ? `<span>${iconHtml("mdi:clock-outline", { size: "18px" })}Reported ${whenText2}</span>` : ""
       ].join("");
       const buttons = c.show_buttons === false ? [] : [
         ...this._demo || c.test_entity ? [{ key: "test", name: "Hold to test", icon: "mdi:bell-ring", color: KIT_COLOR.good, hold: true }] : [],
@@ -7462,6 +7462,653 @@
     });
   }
 
+  // src/repeat.js
+  var DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  var pad = (n) => String(n).padStart(2, "0");
+  var T = "(\\d{1,2}):(\\d{2})";
+  var hhmm = (h, m) => `${pad(h)}:${m}`;
+  var ordinal = (n) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th"}`;
+  function parseSlots(text) {
+    const out = [];
+    for (const part of text.split(",").map((x) => x.trim())) {
+      const m = part.match(new RegExp(`^(mon|tue|wed|thu|fri|sat|sun)[a-z]* ${T}$`, "i"));
+      if (!m) return null;
+      out.push([DAYS.findIndex((d) => d.toLowerCase() === m[1].toLowerCase()), hhmm(m[2], m[3])]);
+    }
+    return out.length ? out : null;
+  }
+  function parseRepeat(text) {
+    const s = String(text || "").trim();
+    let m;
+    if (/^once$/i.test(s)) return { type: "once" };
+    if (m = s.match(new RegExp(`^every day ${T}$`, "i"))) return { type: "days", n: 1, time: hhmm(m[1], m[2]) };
+    if (m = s.match(new RegExp(`^every (\\d+) days ${T}$`, "i"))) return { type: "days", n: Math.max(1, Number(m[1])), time: hhmm(m[2], m[3]) };
+    if (m = s.match(/^every (\d+) weeks: (.+)$/i)) {
+      const slots2 = parseSlots(m[2]);
+      return slots2 ? { type: "weekly", n: Math.max(1, Number(m[1])), slots: slots2 } : null;
+    }
+    const slots = parseSlots(s);
+    if (slots) return { type: "weekly", n: 1, slots };
+    if (m = s.match(new RegExp(`^(?:monthly|every (\\d+) months) on the (?:(\\d{1,2})(?:st|nd|rd|th)|(last) day) ${T}$`, "i")))
+      return { type: "monthly", n: Math.max(1, Number(m[1] || 1)), day: m[3] ? "last" : Math.min(31, Math.max(1, Number(m[2]))), time: hhmm(m[4], m[5]) };
+    if (m = s.match(new RegExp(`^yearly on (\\d{1,2}) (jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]* ${T}$`, "i")))
+      return { type: "yearly", month: MONTHS.findIndex((x) => x.toLowerCase() === m[2].toLowerCase()), day: Number(m[1]), time: hhmm(m[3], m[4]) };
+    if (m = s.match(new RegExp(`^every (?:(\\d+) )?(day|week|month)s? after done ${T}$`, "i")))
+      return { type: "after", n: Math.max(1, Number(m[1] || 1)), unit: m[2].toLowerCase(), time: hhmm(m[3], m[4]) };
+    return null;
+  }
+  function formatRepeat(r) {
+    switch (r && r.type) {
+      case "once":
+        return "Once";
+      case "days":
+        return r.n > 1 ? `Every ${r.n} days ${r.time}` : `Every day ${r.time}`;
+      case "weekly": {
+        const slots = [...r.slots].sort((a, b) => a[0] - b[0] || a[1].localeCompare(b[1])).map(([d, t]) => `${DAYS[d]} ${t}`).join(", ");
+        return r.n > 1 ? `Every ${r.n} weeks: ${slots}` : slots;
+      }
+      case "monthly": {
+        const on = r.day === "last" ? "the last day" : `the ${ordinal(r.day)}`;
+        return r.n > 1 ? `Every ${r.n} months on ${on} ${r.time}` : `Monthly on ${on} ${r.time}`;
+      }
+      case "yearly":
+        return `Yearly on ${r.day} ${MONTHS[r.month]} ${r.time}`;
+      case "after":
+        return r.n > 1 ? `Every ${r.n} ${r.unit}s after done ${r.time}` : `Every ${r.unit} after done ${r.time}`;
+      default:
+        return "";
+    }
+  }
+  function parseTask(description) {
+    const parts = String(description || "").split(" \xB7 ");
+    const repeat = parseRepeat(parts[0]);
+    if (!repeat) return { repeat: null, who: "none", notes: String(description || "") };
+    let who = "none";
+    let rest = parts.slice(1);
+    const w = (rest[0] || "").trim();
+    if (/^for everyone$/i.test(w)) who = "everyone";
+    else if (/^for /i.test(w)) who = w.slice(4).split(",").map((x) => x.trim()).filter(Boolean);
+    if (/^(for |no reminders$)/i.test(w)) rest = rest.slice(1);
+    return { repeat, who, notes: rest.join(" \xB7 ") };
+  }
+  function formatTask(repeat, who, notes) {
+    const n = String(notes || "").trim();
+    if (!repeat) return n;
+    const whom = who === "everyone" ? "for everyone" : Array.isArray(who) && who.length ? `for ${who.join(", ")}` : "no reminders";
+    return [formatRepeat(repeat), whom, n].filter(Boolean).join(" \xB7 ");
+  }
+  var dayOf = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  var at = (date, time) => {
+    const [h, m] = time.split(":").map(Number);
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate(), h, m);
+  };
+  var addDays = (date, n) => new Date(date.getFullYear(), date.getMonth(), date.getDate() + n);
+  var lastDay = (y, m) => new Date(y, m + 1, 0).getDate();
+  var daysBetween = (a, b) => Math.round((dayOf(b) - dayOf(a)) / 864e5);
+  function nextOccurrence(r, anchor, after) {
+    if (!r || r.type === "once") return null;
+    const a = dayOf(anchor);
+    if (r.type === "after") {
+      const base = r.unit === "month" ? new Date(a.getFullYear(), a.getMonth() + r.n, Math.min(a.getDate(), lastDay(a.getFullYear(), a.getMonth() + r.n))) : addDays(a, r.n * (r.unit === "week" ? 7 : 1));
+      return at(base, r.time);
+    }
+    if (r.type === "days") {
+      let k = Math.max(0, Math.floor(daysBetween(a, after) / r.n) - 1);
+      for (let i = 0; i < 5; i += 1, k += 1) {
+        const o = at(addDays(a, k * r.n), r.time);
+        if (o > after) return o;
+      }
+      return null;
+    }
+    if (r.type === "weekly") {
+      const monday = addDays(a, -((a.getDay() + 6) % 7));
+      const slots = [...r.slots].sort((x, y) => x[0] - y[0] || x[1].localeCompare(y[1]));
+      let k = Math.max(0, Math.floor(daysBetween(monday, after) / (7 * r.n)) - 1);
+      for (let i = 0; i < 5; i += 1, k += 1) {
+        const week = addDays(monday, k * 7 * r.n);
+        for (const [d, t] of slots) {
+          const o = at(addDays(week, d), t);
+          if (o > after && o >= a) return o;
+        }
+      }
+      return null;
+    }
+    if (r.type === "monthly") {
+      const months = (after.getFullYear() - a.getFullYear()) * 12 + after.getMonth() - a.getMonth();
+      let k = Math.max(0, Math.floor(months / r.n) - 1);
+      for (let i = 0; i < 5; i += 1, k += 1) {
+        const y = a.getFullYear() + Math.floor((a.getMonth() + k * r.n) / 12);
+        const m = (a.getMonth() + k * r.n) % 12;
+        const d = r.day === "last" ? lastDay(y, m) : Math.min(r.day, lastDay(y, m));
+        const o = at(new Date(y, m, d), r.time);
+        if (o > after && o >= a) return o;
+      }
+      return null;
+    }
+    if (r.type === "yearly") {
+      for (let y = Math.max(a.getFullYear(), after.getFullYear() - 1); y <= after.getFullYear() + 2; y += 1) {
+        const o = at(new Date(y, r.month, Math.min(r.day, lastDay(y, r.month))), r.time);
+        if (o > after && o >= a) return o;
+      }
+      return null;
+    }
+    return null;
+  }
+  function firstDue(r, start, now = /* @__PURE__ */ new Date()) {
+    if (!r || r.type === "once") return null;
+    const s = dayOf(start);
+    if (r.type === "after") {
+      const o = at(s, r.time);
+      return o > now ? o : nextOccurrence(r, now, now);
+    }
+    return nextOccurrence(r, s, new Date(Math.max(now.getTime(), s.getTime() - 1)));
+  }
+  function describeRepeat(r) {
+    if (!r) return "";
+    switch (r.type) {
+      case "once":
+        return "Once";
+      case "days":
+        return r.n > 1 ? `Every ${r.n} days, ${r.time}` : `Daily, ${r.time}`;
+      case "weekly": {
+        const byTime = {};
+        r.slots.forEach(([d, t]) => (byTime[t] = byTime[t] || []).push(d));
+        const parts = Object.keys(byTime).sort().map((t) => {
+          const ds = byTime[t].sort((x, y) => x - y);
+          return `${ds.length === 7 ? "every day" : ds.map((d) => DAYS[d]).join(", ")} ${t}`;
+        });
+        return `${r.n === 2 ? "Fortnightly" : r.n > 2 ? `Every ${r.n} weeks` : "Weekly"}: ${parts.join(" \xB7 ")}`;
+      }
+      case "monthly":
+        return `${r.n > 1 ? `Every ${r.n} months` : "Monthly"} on the ${r.day === "last" ? "last day" : ordinal(r.day)}, ${r.time}`;
+      case "yearly":
+        return `Yearly on ${r.day} ${MONTHS[r.month]}, ${r.time}`;
+      case "after":
+        return `${r.n > 1 ? `${r.n} ${r.unit}s` : `A ${r.unit}`} after it's done`;
+      default:
+        return "";
+    }
+  }
+
+  // src/task-list-card.js
+  var pad2 = (n) => String(n).padStart(2, "0");
+  var DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  function choreIcon(name) {
+    const n = String(name || "").toLowerCase();
+    if (/hoover|vacuum/.test(n)) return "mdi:vacuum-outline";
+    if (/bath|shower|en-?suite/.test(n)) return "mdi:shower";
+    if (/toilet|loo/.test(n)) return "mdi:toilet";
+    if (/sheet|bed/.test(n)) return "mdi:bed-outline";
+    if (/mop|floor/.test(n)) return "mdi:spray-bottle";
+    if (/dust|polish/.test(n)) return "mdi:feather";
+    if (/kitchen|oven|hob|fridge/.test(n)) return "mdi:countertop-outline";
+    if (/window|glass|mirror/.test(n)) return "mdi:window-closed-variant";
+    if (/bin|rubbish|recycl/.test(n)) return "mdi:trash-can-outline";
+    if (/wash|laundry|towel/.test(n)) return "mdi:washing-machine";
+    if (/garden|lawn|mow|weed/.test(n)) return "mdi:flower-outline";
+    return "mdi:broom";
+  }
+  var dueDate = (due) => due ? new Date(String(due).includes("T") ? due : `${due}T23:59:59`) : null;
+  var dateInput = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  var timeInput = (d) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  var localStamp = (d) => `${dateInput(d)} ${timeInput(d)}:00`;
+  function whenText(due) {
+    if (!due) return "";
+    const d = dueDate(due);
+    const now = /* @__PURE__ */ new Date();
+    const day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+    const days = Math.round((day(d) - day(now)) / 864e5);
+    const time = String(due).includes("T") ? ` ${timeInput(d)}` : "";
+    if (d < now) return days < 0 ? `${-days} day${days === -1 ? "" : "s"} overdue` : "due now";
+    if (days === 0) return `today${time}`;
+    if (days === 1) return `tomorrow${time}`;
+    if (days < 7) return `${DAY_NAMES[(d.getDay() + 6) % 7]}${time}`;
+    return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  }
+  function tlDemo() {
+    const now = Date.now();
+    const iso = (ms) => new Date(ms).toISOString();
+    return [
+      { uid: "d1", summary: "Hoover upstairs", status: "needs_action", due: iso(now + 3 * 36e5), description: "Mon 09:00, Thu 18:30 \xB7 for Hayley" },
+      { uid: "d2", summary: "Clean bathrooms", status: "needs_action", due: iso(now - 26 * 36e5), description: "Every 2 weeks: Fri 18:00 \xB7 for everyone" },
+      { uid: "d3", summary: "Change bed sheets", status: "needs_action", due: iso(now + 4 * 864e5), description: "Every 30 days after done 10:00 \xB7 no reminders" },
+      { uid: "d4", summary: "Book boiler service", status: "needs_action", due: iso(now + 20 * 864e5).slice(0, 10), description: "Yearly on 20 Oct 09:00 \xB7 for Jamie" },
+      { uid: "d5", summary: "Buy lightbulbs", status: "needs_action", description: "The warm white E27 ones" },
+      { uid: "d6", summary: "Return the parcel", status: "completed" }
+    ];
+  }
+  var REPEATS = [
+    ["none", "Never"],
+    ["days", "Daily"],
+    ["weekly", "Weekly"],
+    ["monthly", "Monthly"],
+    ["yearly", "Yearly"],
+    ["after", "After it's done"]
+  ];
+  var TL_CSS = `
+  .tl-add[hidden], .tl-form[hidden], .tl-done-list[hidden] { display:none; }
+  .tl-row { display:flex; align-items:center; gap:10px; padding:8px 2px; border-radius:12px; }
+  .tl-row + .tl-row { border-top:1px solid var(--divider-color, rgba(127,127,127,0.22)); }
+  .tl-body { flex:1; min-width:0; cursor:pointer; border-radius:8px; }
+  .tl-body:hover { background:rgba(127,127,127,0.07); }
+  .tl-name { font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tl-when { flex:none; font-size:0.78rem; font-weight:600; white-space:nowrap; }
+  .tl-tick { flex:none; width:24px; height:24px; padding:0; border-radius:50%; border:2px solid; background:transparent; color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .tl-row :focus-visible, .tl-form :focus-visible, .tl-foot :focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
+  .tl-foot { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+  .tl-add { border:none; border-radius:12px; padding:9px 14px; font:inherit; font-size:0.85rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; }
+  .tl-link { border:none; background:none; padding:4px 2px; font:inherit; font-size:0.8rem; color:var(--secondary-text-color); text-decoration:underline; cursor:pointer; }
+  .tl-form { display:flex; flex-direction:column; gap:12px; padding:12px; border-radius:14px; background:rgba(127,127,127,0.1); }
+  .tl-l { display:flex; flex-direction:column; gap:6px; font-size:0.8rem; color:var(--secondary-text-color); }
+  .tl-inline { display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:0.85rem; color:var(--primary-text-color); }
+  .tl-form input, .tl-form select { box-sizing:border-box; padding:8px 10px; border-radius:10px; border:1px solid var(--divider-color, rgba(127,127,127,0.3)); background:var(--card-background-color); color:var(--primary-text-color); font:inherit; font-size:0.92rem; color-scheme:dark light; min-width:0; }
+  .tl-form input[type=number] { width:4.2em; }
+  .tl-form input.tl-wide { width:100%; }
+  .tl-chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .tl-chip { border:none; border-radius:999px; padding:7px 12px; font:inherit; font-size:0.82rem; font-weight:600; cursor:pointer; background:rgba(127,127,127,0.18); color:var(--primary-text-color); }
+  .tl-chip[aria-pressed="true"] { color:#fff; }
+  .tl-times { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:6px 10px; }
+  .tl-time { display:flex; align-items:center; gap:8px; font-size:0.85rem; color:var(--primary-text-color); }
+  .tl-time span { width:2.6em; flex:none; font-weight:600; }
+  .tl-time input { flex:1; }
+  .tl-buttons { display:flex; flex-wrap:wrap; gap:8px; }
+  .tl-buttons button { border:none; border-radius:10px; padding:9px 14px; font:inherit; font-size:0.85rem; font-weight:600; cursor:pointer; }
+  .tl-msg { font-size:0.8rem; color:#ffa726; min-height:1em; }
+`;
+  var TaskListCardEditor = createFormEditor({
+    schema: () => [
+      { name: "title", selector: { text: {} } },
+      { name: "entity", selector: { entity: { domain: "todo" } } },
+      { name: "color", selector: { ui_color: {} } },
+      { name: "remind_default", selector: { text: {} } },
+      { name: "icons", selector: { boolean: {} } },
+      { name: "show_done", selector: { boolean: {} } },
+      { name: "demo", selector: { boolean: {} } }
+    ],
+    labels: {
+      title: "Title (optional)",
+      entity: "To-do list",
+      color: "Colour",
+      remind_default: 'New tasks remind (a first name, "everyone", or empty for no one)',
+      icons: "Show an icon for each task from its name (hoover, bathroom, \u2026)",
+      show_done: "Show ticked-off tasks under the list",
+      demo: "Show pretend tasks (for Design Presets; saving is switched off)"
+    },
+    helpers: {
+      entity: `Any to-do list. A task's repeat and who it reminds are kept in its description, and "Church Drive: repeating tasks" sends the reminders and brings repeating tasks back.`,
+      color: "Default purple (#7e57c2)."
+    }
+  });
+  var TaskListCard = class extends HTMLElement {
+    setConfig(config) {
+      if (!config || !config.entity && !config.demo) throw new Error("entity required");
+      this.config = config;
+      this._built = false;
+      this._sig = null;
+      this._edit = null;
+      if (this._unsub) this._unwatch();
+      if (this._hass) this._watch();
+    }
+    set hass(hass) {
+      this._hass = hass;
+      this._watch();
+      this._render();
+    }
+    connectedCallback() {
+      if (this._hass) this._watch();
+    }
+    disconnectedCallback() {
+      this._unwatch();
+    }
+    _colour() {
+      return this.config.color || "#7e57c2";
+    }
+    _watch() {
+      if (this.config.demo || this._unsub || !this.isConnected || !this._hass || !this._hass.states[this.config.entity]) return;
+      this._unsub = this._hass.connection.subscribeMessage(
+        (msg) => {
+          this._items = msg && msg.items || [];
+          this._render();
+        },
+        { type: "todo/item/subscribe", entity_id: this.config.entity }
+      ).catch(() => null);
+    }
+    _unwatch() {
+      if (this._unsub) this._unsub.then((u) => u && u()).catch(() => {
+      });
+      this._unsub = null;
+      this._items = null;
+    }
+    _all() {
+      return this.config.demo ? this._demo || (this._demo = tlDemo()) : this._items || [];
+    }
+    // First names of everyone with a person entity, for "who gets reminded".
+    _people() {
+      const s = this._hass && this._hass.states || {};
+      return Object.keys(s).filter((id) => id.startsWith("person.")).map((id) => String(s[id].attributes.friendly_name || id.slice(7)).split(" ")[0]).sort();
+    }
+    async _call(service, data) {
+      if (this.config.demo) {
+        const items = this._all();
+        if (service === "add_item") items.push({ uid: `d${Date.now()}`, summary: data.item, status: "needs_action", description: data.description, due: data.due_datetime ? data.due_datetime.replace(" ", "T") : data.due_date });
+        if (service === "update_item") {
+          const t = items.find((x) => x.uid === data.item);
+          if (t) {
+            if (data.rename) t.summary = data.rename;
+            if ("description" in data) t.description = data.description;
+            if (data.status) t.status = data.status;
+            if (data.due_datetime) t.due = data.due_datetime.replace(" ", "T");
+            if (data.due_date) t.due = data.due_date;
+          }
+        }
+        if (service === "remove_item") this._demo = items.filter((x) => ![].concat(data.item).includes(x.uid));
+        this._sig = null;
+        this._render();
+        return;
+      }
+      await this._hass.callService("todo", service, data, { entity_id: this.config.entity });
+    }
+    _render() {
+      if (!this._hass) return;
+      const c = this.config;
+      const colour = this._colour();
+      if (!this._built) {
+        this.innerHTML = kitShell(
+          `<div class="tl-list" style="display:flex; flex-direction:column;"></div>
+        <div class="tl-form" hidden></div>
+        <div class="tl-foot"><button type="button" class="tl-add"></button><button type="button" class="tl-link tl-done-toggle" hidden></button></div>
+        <div class="tl-done-list" hidden style="display:flex; flex-direction:column;"></div>`,
+          TL_CSS
+        );
+        this._list = this.querySelector(".tl-list");
+        this._form = this.querySelector(".tl-form");
+        this._addBtn = this.querySelector(".tl-add");
+        this._doneBtn = this.querySelector(".tl-done-toggle");
+        this._doneList = this.querySelector(".tl-done-list");
+        this.querySelector(".ck-headrow").style.display = c.title ? "" : "none";
+        this._addBtn.addEventListener("click", () => this._open(null));
+        this._doneBtn.addEventListener("click", () => {
+          this._showDone = !this._showDone;
+          this._sig = null;
+          this._render();
+        });
+        const onClick = (ev) => {
+          const tick = ev.target.closest("[data-tick]");
+          if (tick) return this._tick(tick.dataset.tick, tick.dataset.to);
+          if (ev.target.closest("[data-clear]")) return this._clearDone();
+          const row4 = ev.target.closest("[data-uid]");
+          if (row4) this._open(row4.dataset.uid);
+        };
+        this._list.addEventListener("click", onClick);
+        this._doneList.addEventListener("click", onClick);
+        this._list.addEventListener("keydown", (ev) => {
+          const row4 = ev.target.closest("[data-uid]");
+          if (row4 && (ev.key === "Enter" || ev.key === " ")) {
+            ev.preventDefault();
+            this._open(row4.dataset.uid);
+          }
+        });
+        this._built = true;
+      }
+      const missing = !c.demo && !this._hass.states[c.entity];
+      const all = missing ? [] : this._all();
+      const rank = (t) => t.due ? dueDate(t.due).getTime() : Infinity;
+      const open = all.filter((t) => t.status === "needs_action").map((t, n) => ({ t, n, p: parseTask(t.description) })).sort((a, b) => rank(a.t) - rank(b.t) || a.n - b.n);
+      const done = all.filter((t) => t.status === "completed" && !(parseTask(t.description).repeat || {}).type);
+      const late = open.filter(({ t }) => t.due && whenText(t.due).includes("overdue")).length;
+      if (c.title) kitHead(this, c.title, missing ? "Not set up" : late ? `${late} overdue` : open.length ? `${open.length} to do` : "All done", late ? "#e53935" : colour);
+      this._addBtn.style.background = `color-mix(in srgb, ${colour} 22%, transparent)`;
+      this._addBtn.style.color = `color-mix(in srgb, ${colour} 45%, white)`;
+      this._addBtn.innerHTML = `${iconHtml("mdi:plus", { size: "18px" })}Add a task`;
+      this._addBtn.hidden = missing || !!this._edit;
+      const showDone = c.show_done !== false && done.length > 0 && !this._edit;
+      this._doneBtn.hidden = !showDone;
+      this._doneBtn.textContent = `${this._showDone ? "Hide" : "Show"} done (${done.length})`;
+      const sig = JSON.stringify([all.map((t) => [t.uid, t.summary, t.description, t.due, t.status]), missing, colour, !!this._edit, this._showDone, c.icons]);
+      if (sig === this._sig) return;
+      this._sig = sig;
+      const row3 = ({ t, p }, isDone) => {
+        const when2 = isDone ? "" : whenText(t.due);
+        const over = when2.includes("overdue");
+        const who = p.repeat ? p.who === "everyone" ? "reminds everyone" : Array.isArray(p.who) ? `reminds ${p.who.join(", ")}` : "" : "";
+        const sub = [p.repeat && p.repeat.type !== "once" ? describeRepeat(p.repeat) : "", who, p.notes].filter(Boolean).join(" \xB7 ");
+        const ring = isDone ? "#4caf50" : over ? "#e53935" : colour;
+        return `<div class="tl-row">
+        <button type="button" class="tl-tick" data-tick="${kitEsc(t.uid)}" data-to="${isDone ? "needs_action" : "completed"}" aria-label="${isDone ? "Not done" : "Done"}: ${kitEsc(t.summary)}" style="border-color:${ring}; ${isDone ? `background:${ring};` : ""}">${isDone ? iconHtml("mdi:check", { size: "15px" }) : ""}</button>
+        ${c.icons ? iconHtml(choreIcon(t.summary), { size: "20px", style: `color:${over ? "#e53935" : colour}; flex:none;` }) : ""}
+        <div class="tl-body" data-uid="${kitEsc(t.uid)}" role="button" tabindex="0" aria-label="Change ${kitEsc(t.summary)}">
+          <div class="tl-name" style="${isDone ? "text-decoration:line-through; color:var(--secondary-text-color);" : ""}">${kitEsc(t.summary)}</div>
+          ${sub ? `<div class="ck-sub" style="font-size:0.74rem; line-height:1.35;">${kitEsc(sub)}</div>` : ""}
+        </div>
+        ${when2 ? `<span class="tl-when" style="color:${over ? "#e53935" : "var(--secondary-text-color)"};">${kitEsc(when2)}</span>` : ""}
+      </div>`;
+      };
+      if (missing) this._list.innerHTML = `<div class="ck-sub" style="line-height:1.5;">There's no ${kitEsc(c.entity)} list.</div>`;
+      else if (!open.length) this._list.innerHTML = `<div class="ck-sub" style="line-height:1.5; padding:4px 0;">Nothing to do. Add a task, and choose if it repeats and who it reminds.</div>`;
+      else this._list.innerHTML = open.map((x) => row3(x, false)).join("");
+      this._doneList.hidden = !(showDone && this._showDone);
+      this._doneList.innerHTML = showDone && this._showDone ? done.map((t) => row3({ t, p: parseTask(t.description) }, true)).join("") + `<button type="button" class="tl-link" data-clear style="align-self:flex-start;">Clear done tasks</button>` : "";
+      hydrateIcons(this);
+    }
+    async _tick(uid, to) {
+      try {
+        await this._call("update_item", { item: uid, status: to });
+      } catch (err) {
+      }
+    }
+    async _clearDone() {
+      const done = this._all().filter((t) => t.status === "completed" && !(parseTask(t.description).repeat || {}).type);
+      if (done.length) await this._call("remove_item", { item: done.map((t) => t.uid) }).catch(() => {
+      });
+    }
+    // The add/change form. uid null = a new task.
+    _open(uid) {
+      const t = uid ? this._all().find((x) => x.uid === uid) : null;
+      const p = t ? parseTask(t.description) : { repeat: null, who: "none", notes: "" };
+      const r = p.repeat || {};
+      const due = t && t.due ? dueDate(t.due) : null;
+      const now = /* @__PURE__ */ new Date();
+      const def = String(this.config.remind_default || "").trim();
+      this._edit = {
+        uid,
+        name: t ? t.summary : "",
+        notes: p.notes,
+        kind: !r.type || r.type === "once" ? "none" : r.type,
+        n: r.n || 1,
+        time: r.time || (due && String(t.due).includes("T") ? timeInput(due) : "09:00"),
+        times: r.type === "weekly" ? Object.fromEntries(r.slots.map(([d, tt]) => [d, tt])) : {},
+        dom: r.type === "monthly" ? r.day : due ? due.getDate() : now.getDate(),
+        ymd: r.type === "yearly" ? `${now.getFullYear()}-${pad2(r.month + 1)}-${pad2(r.day)}` : dateInput(due || now),
+        unit: r.unit || "day",
+        date: due ? dateInput(due) : "",
+        start: dateInput(due || now),
+        who: t ? p.who === "everyone" ? "everyone" : Array.isArray(p.who) ? [...p.who] : "none" : !def ? "none" : def.toLowerCase() === "everyone" ? "everyone" : [def],
+        was: t ? t.description || "" : "",
+        due: t ? t.due : null
+      };
+      this._drawForm();
+      this._sig = null;
+      this._render();
+      const name = this._form.querySelector(".tl-f-name");
+      if (name && !uid) name.focus();
+    }
+    _close() {
+      this._edit = null;
+      this._form.hidden = true;
+      this._form.innerHTML = "";
+      this._sig = null;
+      this._render();
+    }
+    _drawForm() {
+      const e = this._edit;
+      const colour = this._colour();
+      const on = `background:${colour};`;
+      const chip = (attr, value, label, pressed) => `<button type="button" class="tl-chip" ${attr}="${kitEsc(value)}" aria-pressed="${pressed}" style="${pressed ? on : ""}">${label}</button>`;
+      const people = this._people();
+      const whoIs = (x) => x === "everyone" ? e.who === "everyone" : x === "none" ? e.who === "none" : Array.isArray(e.who) && e.who.includes(x);
+      const every2 = (unit, max) => `<label class="tl-inline">Every <input type="number" class="tl-f-n" min="1" max="${max}" value="${e.n}"> ${unit}${e.n === 1 ? "" : "s"}</label>`;
+      const at2 = `<label class="tl-inline">at <input type="time" class="tl-f-time" value="${e.time}"></label>`;
+      const start = `<label class="tl-inline">starting <input type="date" class="tl-f-start" value="${e.start}"></label>`;
+      const chosen = Object.keys(e.times).map(Number).sort((a, b) => a - b);
+      let how = "";
+      if (e.kind === "none")
+        how = `<div class="tl-inline">Due <input type="date" class="tl-f-date" value="${e.date}"><input type="time" class="tl-f-time" value="${e.date ? e.time : ""}" aria-label="Time (optional)"></div>`;
+      else if (e.kind === "days") how = `<div class="tl-inline">${every2("day", 365)} ${at2} ${start}</div>`;
+      else if (e.kind === "weekly")
+        how = `<div class="tl-inline"><select class="tl-f-n" aria-label="How often">${[1, 2, 3, 4].map((n) => `<option value="${n}" ${e.n === n ? "selected" : ""}>${n === 1 ? "Every week" : n === 2 ? "Every 2 weeks (fortnightly)" : `Every ${n} weeks`}</option>`).join("")}</select> ${start}</div>
+        <div class="tl-chips" role="group" aria-label="Days">${DAYS.map((d, i) => chip("data-day", i, d, i in e.times)).join("")}</div>
+        ${chosen.length ? `<div class="tl-l"><span style="display:flex; flex-wrap:wrap; gap:4px 12px;">Times${chosen.length > 1 ? `<button type="button" class="tl-link tl-same">Use ${DAYS[chosen[0]]}'s time for all</button>` : ""}</span>
+              <div class="tl-times">${chosen.map((d) => `<label class="tl-time"><span>${DAYS[d]}</span><input type="time" data-time="${d}" value="${e.times[d]}"></label>`).join("")}</div></div>` : ""}`;
+      else if (e.kind === "monthly")
+        how = `<div class="tl-inline">${every2("month", 24)} on the <select class="tl-f-dom" aria-label="Day of the month">${[...Array(31)].map((_, i) => `<option value="${i + 1}" ${e.dom === i + 1 ? "selected" : ""}>${i + 1}</option>`).join("")}<option value="last" ${e.dom === "last" ? "selected" : ""}>last day</option></select> ${at2} ${start}</div>`;
+      else if (e.kind === "yearly") how = `<div class="tl-inline">On <input type="date" class="tl-f-ymd" value="${e.ymd}" aria-label="Date (the year is ignored)"> ${at2}</div>`;
+      else if (e.kind === "after")
+        how = `<div class="tl-inline">Every <input type="number" class="tl-f-n" min="1" max="365" value="${e.n}"> <select class="tl-f-unit" aria-label="Days, weeks or months">${["day", "week", "month"].map((u) => `<option value="${u}" ${e.unit === u ? "selected" : ""}>${u}${e.n === 1 ? "" : "s"}</option>`).join("")}</select> after it's done, ${at2}</div>`;
+      this._form.hidden = false;
+      this._form.innerHTML = `
+      <label class="tl-l">Task<input type="text" class="tl-f-name tl-wide" maxlength="80" placeholder="e.g. Hoover upstairs" value="${kitEsc(e.name)}"></label>
+      <div class="tl-l">Repeats<div class="tl-chips" role="group" aria-label="Repeats">${REPEATS.map(([k, label]) => chip("data-kind", k, label, e.kind === k)).join("")}</div></div>
+      ${how}
+      <div class="tl-l">${e.kind === "none" && !e.date && e.who !== "none" ? "Reminds (at the due time, so choose one above)" : "Reminds"}<div class="tl-chips" role="group" aria-label="Who gets reminded">${["everyone", ...people, "none"].map((x) => chip("data-who", x, x === "everyone" ? "Everyone" : x === "none" ? "No one" : kitEsc(x), whoIs(x))).join("")}</div></div>
+      <label class="tl-l">Notes<input type="text" class="tl-f-notes tl-wide" maxlength="200" placeholder="Optional" value="${kitEsc(e.notes)}"></label>
+      <div class="tl-msg" role="status"></div>
+      <div class="tl-buttons">
+        <button type="button" class="tl-save" style="${on} color:#fff;">${e.uid ? "Save" : "Add task"}</button>
+        <button type="button" class="tl-cancel" style="background:rgba(127,127,127,0.18); color:var(--primary-text-color);">Cancel</button>
+        ${e.uid ? `<button type="button" class="tl-delete" style="margin-left:auto; background:color-mix(in srgb, #e53935 20%, transparent); color:#ef9a9a;">Delete</button>` : ""}
+      </div>`;
+      const f = this._form;
+      const bind = (sel, ev, fn) => f.querySelectorAll(sel).forEach((el) => el.addEventListener(ev, () => fn(el)));
+      bind(".tl-f-name", "input", (el) => e.name = el.value);
+      bind(".tl-f-notes", "input", (el) => e.notes = el.value);
+      bind(".tl-f-n", "change", (el) => {
+        e.n = Math.max(1, Number(el.value) || 1);
+        this._drawForm();
+      });
+      bind(".tl-f-time", "change", (el) => e.time = el.value || "09:00");
+      bind(".tl-f-start", "change", (el) => e.start = el.value || dateInput(/* @__PURE__ */ new Date()));
+      bind(".tl-f-date", "change", (el) => e.date = el.value);
+      bind(".tl-f-dom", "change", (el) => e.dom = el.value === "last" ? "last" : Number(el.value));
+      bind(".tl-f-ymd", "change", (el) => e.ymd = el.value || e.ymd);
+      bind(".tl-f-unit", "change", (el) => e.unit = el.value);
+      bind("[data-kind]", "click", (el) => {
+        e.kind = el.dataset.kind;
+        if (e.kind === "weekly" && !Object.keys(e.times).length) e.times[((/* @__PURE__ */ new Date()).getDay() + 6) % 7] = e.time;
+        if (e.kind === "weekly") e.n = Math.min(4, e.n);
+        this._drawForm();
+      });
+      bind("[data-day]", "click", (el) => {
+        const d = Number(el.dataset.day);
+        if (d in e.times) delete e.times[d];
+        else e.times[d] = Object.values(e.times)[0] || e.time;
+        this._drawForm();
+      });
+      bind("[data-time]", "change", (el) => e.times[Number(el.dataset.time)] = el.value || "09:00");
+      bind(".tl-same", "click", () => {
+        const t = e.times[chosen[0]];
+        Object.keys(e.times).forEach((d) => e.times[d] = t);
+        this._drawForm();
+      });
+      bind("[data-who]", "click", (el) => {
+        const x = el.dataset.who;
+        if (x === "everyone" || x === "none") e.who = x;
+        else {
+          const list = Array.isArray(e.who) ? e.who : [];
+          e.who = list.includes(x) ? list.filter((y) => y !== x) : [...list, x];
+          if (!e.who.length) e.who = "none";
+        }
+        this._drawForm();
+      });
+      bind(".tl-cancel", "click", () => this._close());
+      bind(".tl-save", "click", () => this._save());
+      bind(".tl-delete", "click", (el) => {
+        if (el.dataset.sure) this._delete();
+        else {
+          el.dataset.sure = "1";
+          el.textContent = "Tap again to delete";
+        }
+      });
+    }
+    _say(text) {
+      const m = this._form.querySelector(".tl-msg");
+      if (m) m.textContent = text;
+    }
+    // The repeat the form describes, or null for "Never".
+    _repeat() {
+      const e = this._edit;
+      if (e.kind === "days") return { type: "days", n: e.n, time: e.time };
+      if (e.kind === "weekly") return { type: "weekly", n: Math.min(4, e.n), slots: Object.keys(e.times).map((d) => [Number(d), e.times[d]]) };
+      if (e.kind === "monthly") return { type: "monthly", n: e.n, day: e.dom, time: e.time };
+      if (e.kind === "yearly") {
+        const [, m, d] = e.ymd.split("-").map(Number);
+        return { type: "yearly", month: m - 1, day: d, time: e.time };
+      }
+      if (e.kind === "after") return { type: "after", n: e.n, unit: e.unit, time: e.time };
+      return null;
+    }
+    async _save() {
+      const e = this._edit;
+      const name = String(e.name || "").trim();
+      if (!name) return this._say("Give the task a name.");
+      if (e.kind === "weekly" && !Object.keys(e.times).length) return this._say("Choose at least one day.");
+      const reminds = e.who !== "none" && (e.kind !== "none" || !!e.date);
+      const repeat = this._repeat() || (reminds ? { type: "once" } : null);
+      const description = formatTask(repeat, e.who, e.notes);
+      const data = { description };
+      if (repeat && repeat.type !== "once") {
+        const same2 = e.due && parseTask(e.was).repeat && formatRepeat(parseTask(e.was).repeat) === formatRepeat(repeat);
+        if (!same2) {
+          const [y, m, d] = e.start.split("-").map(Number);
+          data.due_datetime = localStamp(firstDue(repeat, new Date(y, m - 1, d)));
+        }
+      } else if (e.date) {
+        if (reminds || this._form.querySelector(".tl-f-time")?.value) data.due_datetime = `${e.date} ${e.time || "09:00"}:00`;
+        else data.due_date = e.date;
+      }
+      try {
+        if (e.uid) await this._call("update_item", { item: e.uid, rename: name, status: "needs_action", ...data });
+        else await this._call("add_item", { item: name, ...data });
+        this._close();
+      } catch (err) {
+        this._say(`Couldn't save: ${err && err.message || err}`);
+      }
+    }
+    async _delete() {
+      try {
+        await this._call("remove_item", { item: this._edit.uid });
+        this._close();
+      } catch (err) {
+        this._say(`Couldn't delete: ${err && err.message || err}`);
+      }
+    }
+    getCardSize() {
+      return 4;
+    }
+    getGridOptions() {
+      return { columns: 12, min_columns: 6, rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement(`task-list-card-editor${SUFFIX}`);
+    }
+    static getStubConfig(hass) {
+      const s = hass && hass.states || {};
+      return { entity: Object.keys(s).find((id) => id.startsWith("todo.")) || "todo.cleaning" };
+    }
+  };
+  function registerTaskListCard() {
+    if (!customElements.get(`task-list-card-editor${SUFFIX}`)) customElements.define(`task-list-card-editor${SUFFIX}`, TaskListCardEditor);
+    if (!customElements.get(`task-list-card${SUFFIX}`)) customElements.define(`task-list-card${SUFFIX}`, TaskListCard);
+    window.customCards = window.customCards || [];
+    window.customCards.push({
+      type: `task-list-card${SUFFIX}`,
+      name: `Task List Card${LABEL}`,
+      description: "A to-do list where tasks can repeat (weekly, fortnightly, monthly, yearly, after done) and remind people",
+      preview: true,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
+    });
+  }
+
   // src/auto-layout-card.js
   var helpersPromise2;
   function cardHelpers2() {
@@ -7520,22 +8167,78 @@
     } catch (err) {
     }
   }
+  var HEADER_CONTENT = [
+    { value: "none", label: "Nothing (panel alerts only)" },
+    { value: "priorities", label: "The signed-in person's to-dos" },
+    { value: "todo_summary", label: "The signed-in person's to-do summary (due today, overdue, from the house)" },
+    { value: "lines", label: "Live lines about this page" },
+    { value: "forecast", label: "Weather forecast" },
+    { value: "list", label: "One to-do list (e.g. the cleaning schedule)" }
+  ];
   var LayoutFields = createFormEditor({
-    schema: () => [
-      { name: "title", selector: { text: {} } },
-      { name: "priorities", selector: { boolean: {} }, default: false },
-      { name: "priorities_page", selector: { navigation: {} } },
-      { name: "widget_width", selector: { number: { min: 280, max: 1200, step: 10, mode: "box", unit_of_measurement: "px" } } },
-      { name: "column_width", selector: { number: { min: 200, max: 800, step: 10, mode: "box", unit_of_measurement: "px" } } },
-      { name: "max_columns", selector: { number: { min: 1, max: 6, step: 1, mode: "box" } } },
-      { name: "controls_first", selector: { boolean: {} }, default: true },
-      { name: "empty_last", selector: { boolean: {} }, default: false },
-      { name: "jump_chips", selector: { select: { mode: "dropdown", options: [{ value: "auto", label: "Automatic (phones)" }, { value: "always", label: "Always" }, { value: "never", label: "Never" }] } } }
-    ],
+    // Older configs said `priorities: true`; they show as "The signed-in person's to-dos".
+    normalize: (c) => c.header_content || !c.priorities ? c : { ...c, header_content: "priorities" },
+    store: (c) => {
+      const out = { ...c };
+      delete out.priorities;
+      if (out.header_content === "priorities") out.priorities = true;
+      return out;
+    },
+    schema: (c) => {
+      const mode = c && c.header_content || "none";
+      return [
+        { name: "title", selector: { text: {} } },
+        { name: "header_content", selector: { select: { mode: "dropdown", options: HEADER_CONTENT } } },
+        ...mode === "lines" ? [
+          {
+            name: "header_lines",
+            selector: {
+              object: {
+                multiple: true,
+                label_field: "text",
+                fields: {
+                  text: { label: "Text (template; <b>\u2026</b> makes part bold; empty hides the line)", required: true, selector: { template: {} } },
+                  icon: { label: "Icon", selector: { icon: {} } },
+                  color: { label: "Colour", selector: { ui_color: {} } },
+                  alert_when: { label: "Needs attention when (optional template)", selector: { template: {} } },
+                  alert_color: { label: "Colour when it needs attention (default amber)", selector: { ui_color: {} } },
+                  alert_icon: { label: "Icon when it needs attention (optional)", selector: { icon: {} } },
+                  panel: { label: "Tapping it opens (a panel title on this page, or a page path)", selector: { text: {} } }
+                }
+              }
+            }
+          }
+        ] : [],
+        ...mode === "forecast" ? [
+          { name: "forecast_entity", selector: { entity: { domain: "weather" } } },
+          { name: "forecast_type", selector: { select: { mode: "dropdown", options: [{ value: "hourly", label: "Next hours" }, { value: "daily", label: "Next days" }] } } },
+          { name: "forecast_panel", selector: { text: {} } }
+        ] : [],
+        ...mode === "list" ? [
+          { name: "header_list", selector: { entity: { domain: "todo" } } },
+          { name: "list_color", selector: { ui_color: {} } },
+          { name: "list_icon", selector: { icon: {} } }
+        ] : [],
+        ...mode === "priorities" || mode === "list" || mode === "todo_summary" ? [{ name: "priorities_page", selector: { navigation: {} } }] : [],
+        { name: "widget_width", selector: { number: { min: 280, max: 1200, step: 10, mode: "box", unit_of_measurement: "px" } } },
+        { name: "column_width", selector: { number: { min: 200, max: 800, step: 10, mode: "box", unit_of_measurement: "px" } } },
+        { name: "max_columns", selector: { number: { min: 1, max: 6, step: 1, mode: "box" } } },
+        { name: "controls_first", selector: { boolean: {} }, default: true },
+        { name: "empty_last", selector: { boolean: {} }, default: false },
+        { name: "jump_chips", selector: { select: { mode: "dropdown", options: [{ value: "auto", label: "Automatic (phones)" }, { value: "always", label: "Always" }, { value: "never", label: "Never" }] } } }
+      ];
+    },
     labels: {
       title: "Page title (optional; {user} is the signed-in person's first name)",
-      priorities: "Show the signed-in person's top to-do in the header",
-      priorities_page: 'Their to-do page (for "+N more")',
+      header_content: "Under the title",
+      header_lines: "Lines",
+      forecast_entity: "Weather",
+      forecast_type: "Show",
+      forecast_panel: "Tapping it opens (a panel title or page path, optional)",
+      header_list: "To-do list",
+      list_color: "Colour",
+      list_icon: 'Icon for the "+N more" button',
+      priorities_page: 'Page for the "+N more" button (add #panel-title to jump to a panel, e.g. /dashboard-mobile/todo#cleaning)',
       widget_width: "Header widget at most this wide",
       column_width: "Columns at least this wide",
       max_columns: "At most this many columns",
@@ -7545,7 +8248,10 @@
     },
     helpers: {
       title: "Shown large at the top of the page, above the chips. Any panel that has opened by itself (its 'opens by itself when' is true) shows under it as an alert; tapping one goes to that panel.",
-      priorities: `Reads the to-do list named "Priorities <first name>" (e.g. todo.priorities_jamie), plus the shared "Priorities Everyone" list if there is one, each item with a \u2713 (a shared item ticked off clears for everyone); overdue and due-soonest come first. Also shows this person's and everyone's jobs from "Priorities Automatic" (low batteries, filters and so on) with no \u2713: they go by themselves once the device reports they're done.`,
+      header_content: 'Three rows under the title, the same size on every page. A panel that opens by itself (its "opens by itself when" is true) always takes the top row as an alert.',
+      header_lines: "Up to three lines. Each line's text is a template, so it stays live, e.g. {{ states.light | selectattr('state', 'eq', 'on') | list | count }} lights on. They're snapshots only: nothing here makes tasks or sends notifications.",
+      forecast_type: "Next hours: every other hour for the next 12 or so. Next days: the week ahead with highs and lows.",
+      header_list: "Open items, soonest due first, each with a \u2713. Overdue ones turn red.",
       widget_width: "Default 520px, centred under the title. Phones use the full width.",
       column_width: "Default 340px. Phones (under 600px) always get one column in list order.",
       max_columns: 'Default 3. Mark a panel "Full width across an Auto Layout" to have it span the page.',
@@ -7554,6 +8260,24 @@
       jump_chips: "One chip per panel, in its colour; tapping one scrolls to that panel, and the chip for the panel you're looking at is filled in."
     }
   });
+  var WEATHER_ICON = {
+    "clear-night": "mdi:weather-night",
+    cloudy: "mdi:weather-cloudy",
+    exceptional: "mdi:alert-circle-outline",
+    fog: "mdi:weather-fog",
+    hail: "mdi:weather-hail",
+    lightning: "mdi:weather-lightning",
+    "lightning-rainy": "mdi:weather-lightning-rainy",
+    partlycloudy: "mdi:weather-partly-cloudy",
+    "partlycloudy-night": "mdi:weather-night-partly-cloudy",
+    pouring: "mdi:weather-pouring",
+    rainy: "mdi:weather-rainy",
+    snowy: "mdi:weather-snowy",
+    "snowy-rainy": "mdi:weather-snowy-rainy",
+    sunny: "mdi:weather-sunny",
+    windy: "mdi:weather-windy",
+    "windy-variant": "mdi:weather-windy-variant"
+  };
   var CHIPS_CSS = `
   .al-chips .al-cap { flex:1 1 auto; min-width:0; padding:6px; border-radius:999px; box-sizing:border-box; }
   ${kitAcrylicCss(".al-chips .al-cap")}
@@ -7640,7 +8364,7 @@
         this._fields.addEventListener("config-changed", (ev) => {
           ev.stopPropagation();
           const { cards: cards2, ...fields2 } = ev.detail.config;
-          this._emit({ ...this._config, ...fields2, cards: this._config.cards || [] });
+          this._emit({ ...fields2, cards: this._config.cards || [] });
         });
         const label = document.createElement("div");
         label.textContent = "Panels, in order (phones show them top to bottom in this order)";
@@ -7689,7 +8413,7 @@
         it.el.hass = hass;
       });
       if (first) this._renderHead();
-      if (this.isConnected && this.config && this.config.priorities) this._watchTodo();
+      if (this.isConnected && this.config) this._watchHead();
     }
     _build() {
       this.style.display = "block";
@@ -7724,6 +8448,15 @@
         }
         if (ev.target.closest && ev.target.closest("[data-todo]")) {
           if (this.config.priorities_page) kitNavigate(this.config.priorities_page);
+          return;
+        }
+        const line = ev.target.closest && ev.target.closest("[data-line]");
+        if (line) {
+          const want = String(line.dataset.line).toLowerCase();
+          if (!want) return;
+          const target = (this._items || []).find((x) => String(x.conf.title || "").toLowerCase() === want);
+          if (target) this._jumpTo(target);
+          else kitNavigate(line.dataset.line);
           return;
         }
         const pill = ev.target.closest && ev.target.closest("[data-alert]");
@@ -7871,6 +8604,20 @@
       this._cols = cols;
       this._renderHead();
       this._renderChips();
+      this._jumpFromAddress();
+    }
+    // A page address ending in #<panel title> (e.g. /dashboard-mobile/todo#cleaning)
+    // jumps to that panel once the page is laid out, like its chip would. The
+    // #… is then taken off the address so going back or reloading doesn't jump again.
+    _jumpFromAddress() {
+      const want = decodeURIComponent(String(window.location.hash || "").slice(1)).toLowerCase();
+      if (!want || !this.isConnected || !this._items || !this._items.length) return;
+      const slug2 = (t) => String(t || "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      const it = this._items.find((x) => x.conf.title && (slug2(x.conf.title) === slug2(want) || String(x.conf.title).toLowerCase() === want));
+      if (!it || !this.getBoundingClientRect().height) return;
+      history.replaceState(history.state, "", window.location.pathname + window.location.search);
+      clearTimeout(this._hashTimer);
+      this._hashTimer = setTimeout(() => this._jumpTo(it), 350);
     }
     // Each column's last open panel grows so the columns in a band end level,
     // but only by a modest amount: a column that can't be evened out stays
@@ -7922,8 +8669,11 @@
       });
       const user = this._hass && this._hass.user && this._hass.user.name ? String(this._hass.user.name).split(" ")[0] : "";
       const title = String(this.config.title || "").replace(/\{user\}/g, user).trim();
-      const todo = this._todoView();
-      const sig = JSON.stringify([title, alerts, todo, this.config.widget_width]);
+      const mode = this._headMode();
+      const todo = mode === "priorities" || mode === "list" ? this._todoView() : null;
+      const lines = mode === "lines" ? this._linesView() : mode === "todo_summary" ? this._summaryView() : null;
+      const forecast = mode === "forecast" && !alerts.length ? this._forecastHtml(esc2) : "";
+      const sig = JSON.stringify([title, alerts, todo, lines, forecast, this.config.widget_width]);
       if (sig === this._headSig) return;
       this._headSig = sig;
       if (!this.config.title) {
@@ -7934,32 +8684,147 @@
       head.style.display = "flex";
       const rows = [
         ...alerts.map((a) => ({ kind: "alert", ...a })),
-        ...todo ? todo.items.map((t) => ({ kind: "todo", ...t })) : []
+        ...todo ? todo.items.map((t) => ({ kind: "todo", ...t })) : [],
+        ...(lines || []).filter((l) => l.text)
       ];
       const shown = rows.slice(0, 3);
       const extra = rows.length - shown.length;
       const row3 = (r) => {
         if (!r) return '<div style="height:26px;"></div>';
-        const c = r.kind === "todo" ? r.overdue ? "#e53935" : r.auto ? HOUSE_TASKS_COLOR : "#7e57c2" : r.colour;
+        const c = r.kind === "todo" ? r.overdue ? "#e53935" : r.auto ? HOUSE_TASKS_COLOR : r.colour || "#7e57c2" : r.colour;
         const icon = r.icon;
         const tick = r.kind === "todo" && !r.auto ? `<button type="button" data-done="${esc2(r.uid)}" data-list="${esc2(r.list)}" aria-label="Done" title="Done" style="flex:none; width:22px; height:22px; padding:0; border:2px solid color-mix(in srgb, ${c} 70%, transparent); border-radius:50%; background:transparent; color:var(--primary-text-color); cursor:pointer; display:flex; align-items:center; justify-content:center;">${iconHtml("mdi:check", { size: "14px" })}</button>` : "";
-        return `<div ${r.kind === "alert" ? `data-alert="${r.i}" role="button"` : ""} style="height:26px; display:flex; align-items:center; gap:8px; padding:0 4px 0 8px; border-radius:13px; cursor:${r.kind === "alert" ? "pointer" : "default"}; background:color-mix(in srgb, ${c} 16%, transparent);">${icon ? iconHtml(icon, { size: "16px", style: `color:${c}; flex:none;` }) : ""}<span style="flex:1; min-width:0; font-size:0.8rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc2(r.text)}</span>${tick}</div>`;
+        const tap = r.kind === "alert" ? `data-alert="${r.i}" role="button"` : (r.kind === "line" || r.kind === "todo") && r.link ? `data-line="${esc2(r.link)}" role="button"` : "";
+        const text = r.html ? esc2(r.text).replace(/&lt;(\/?)b&gt;/g, "<$1b>") : esc2(r.text);
+        return `<div ${tap} style="height:26px; display:flex; align-items:center; gap:8px; padding:0 ${tick ? 4 : 10}px 0 8px; border-radius:13px; cursor:${tap ? "pointer" : "default"}; background:color-mix(in srgb, ${c} 16%, transparent);">${icon ? iconHtml(icon, { size: "16px", style: `color:${c}; flex:none;` }) : ""}<span style="flex:1; min-width:0; font-size:0.8rem; font-weight:${r.kind === "line" ? 500 : 600}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${text}</span>${tick}</div>`;
       };
-      const side = todo && this.config.priorities_page ? `<button type="button" data-todo style="flex:none; width:58px; padding:0 4px; border:none; border-radius:12px; cursor:pointer; font:inherit; font-size:0.72rem; font-weight:700; line-height:1.2; color:#b39ddb; background:color-mix(in srgb, #7e57c2 22%, transparent); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;" aria-label="${extra > 0 ? `${extra} more to do` : "Open to-do"}">${iconHtml(
-        "mdi:format-list-checks",
-        { size: "22px", style: "color:#b39ddb;" }
+      const sideC = todo && todo.colour ? todo.colour : "#7e57c2";
+      const sideText = `color-mix(in srgb, ${sideC} 45%, white)`;
+      const side = todo && this.config.priorities_page ? `<button type="button" data-todo style="flex:none; width:58px; padding:0 4px; border:none; border-radius:12px; cursor:pointer; font:inherit; font-size:0.72rem; font-weight:700; line-height:1.2; color:${sideText}; background:color-mix(in srgb, ${sideC} 22%, transparent); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;" aria-label="${extra > 0 ? `${extra} more to do` : "Open the list"}">${iconHtml(
+        todo && todo.icon || "mdi:format-list-checks",
+        { size: "22px", style: `color:${sideText};` }
       )}<span style="white-space:nowrap;">${extra > 0 ? `+${extra} more` : "To-do"}</span></button>` : "";
       head.innerHTML = `<div style="height:40px; font-size:2rem; font-weight:700; line-height:40px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--primary-text-color);">${esc2(title)}</div>
       <div class="al-widget" style="height:96px; width:100%; max-width:${Number(this.config.widget_width) || 520}px; margin:0 auto; box-sizing:border-box; display:flex; gap:6px; padding:6px; border-radius:18px; background:color-mix(in srgb, var(--card-background-color, #1f2128) 70%, transparent);">
-        <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:3px;">${[0, 1, 2].map((n) => row3(shown[n])).join("")}</div>${side}
+        ${forecast || `<div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:3px;">${[0, 1, 2].map((n) => row3(shown[n])).join("")}</div>`}${side}
       </div>`;
       hydrateIcons(head);
     }
     // ---- Priorities: the signed-in person's to-do list ("Priorities Jamie"),
     // plus the shared one ("Priorities Everyone") when it exists. A shared item
     // is a single copy, so ticking it off clears it for everyone.
+    // What the header widget shows under any page alerts: the signed-in
+    // person's to-dos ("priorities"), live lines, a forecast, or one to-do list.
+    _headMode() {
+      const m = this.config.header_content;
+      if (m) return m;
+      return this.config.priorities ? "priorities" : "none";
+    }
+    _watchHead() {
+      this._watchTodo();
+      this._watchLines();
+      this._watchForecast();
+    }
+    _unwatchHead() {
+      this._unwatchTodo();
+      this._unwatchLines();
+      this._unwatchForecast();
+    }
+    // ---- Lines: each line's text (and "needs attention when") is a template.
+    _watchLines() {
+      const lines = this._headMode() === "lines" && this._hass && this.isConnected ? this.config.header_lines || [] : [];
+      const key = JSON.stringify(lines);
+      if (key === this._linesKey) return;
+      this._unwatchLines();
+      this._linesKey = key;
+      this._lineVals = lines.map(() => ({ text: "", alert: false }));
+      lines.forEach((l, i) => {
+        const set = (k, v) => {
+          this._lineVals[i][k] = v;
+          this._renderHead();
+        };
+        const a = stcRender(this._hass, String(l.text || ""), (t) => set("text", t));
+        const b = l.alert_when ? stcRender(this._hass, String(l.alert_when), (t) => set("alert", !["", "0", "false", "off", "none", "unknown", "unavailable"].includes(String(t).trim().toLowerCase()))) : null;
+        this._lineSubs.push(a, b);
+      });
+    }
+    _unwatchLines() {
+      (this._lineSubs || []).forEach((u) => u && u.then((f) => f && f()).catch(() => {
+      }));
+      this._lineSubs = [];
+      this._linesKey = void 0;
+      this._lineVals = [];
+    }
+    _linesView() {
+      const lines = this.config.header_lines || [];
+      return lines.map((l, i) => {
+        const v = (this._lineVals || [])[i] || {};
+        const alert = !!v.alert;
+        return {
+          kind: "line",
+          text: v.text || "",
+          html: true,
+          icon: alert && l.alert_icon || l.icon,
+          colour: stcColor(alert && (l.alert_color || "#ffa726") || l.color || "primary"),
+          link: l.panel || ""
+        };
+      });
+    }
+    // ---- Forecast: Home Assistant's forecast subscription for a weather entity.
+    _watchForecast() {
+      const on = this._headMode() === "forecast" && this._hass && this.isConnected && this.config.forecast_entity;
+      const type = this.config.forecast_type === "daily" ? "daily" : "hourly";
+      const key = on ? `${this.config.forecast_entity}|${type}` : "";
+      if (key === this._fcKey) return;
+      this._unwatchForecast();
+      this._fcKey = key;
+      if (!on) return;
+      this._fcSub = this._hass.connection.subscribeMessage(
+        (msg) => {
+          this._forecast = msg && msg.forecast || [];
+          this._renderHead();
+        },
+        { type: "weather/subscribe_forecast", entity_id: this.config.forecast_entity, forecast_type: type }
+      ).catch(() => null);
+    }
+    _unwatchForecast() {
+      if (this._fcSub) this._fcSub.then((f) => f && f()).catch(() => {
+      });
+      this._fcSub = null;
+      this._fcKey = void 0;
+      this._forecast = null;
+    }
+    _forecastHtml(esc2) {
+      const type = this.config.forecast_type === "daily" ? "daily" : "hourly";
+      const st = this._hass && this._hass.states[this.config.forecast_entity];
+      const deg2 = (t) => t == null || t === "" ? "\u2013" : `${Math.round(Number(t))}\xB0`;
+      const all = this._forecast || [];
+      const now = Date.now();
+      const list = type === "hourly" ? all.filter((f) => new Date(f.datetime).getTime() > now - 36e5).filter((f, i) => i % 2 === 0).slice(0, 7) : all.slice(0, 6);
+      if (!list.length) return `<div style="flex:1; display:flex; align-items:center; justify-content:center; font-size:0.8rem; color:var(--secondary-text-color);">${st ? "Loading the forecast\u2026" : `No weather entity ${esc2(this.config.forecast_entity || "")}`}</div>`;
+      const colourOf = (c) => /rain|pour|hail|snow|sleet/.test(c) ? "#64b5f6" : /sunny|clear-day/.test(c) ? "#ffca28" : /lightning/.test(c) ? "#ffa726" : "#b0bec5";
+      const today = (/* @__PURE__ */ new Date()).toDateString();
+      const cols = list.map((f, i) => {
+        const d = new Date(f.datetime);
+        const label = type === "hourly" ? i === 0 ? "Now" : String(d.getHours()).padStart(2, "0") : d.toDateString() === today ? "Today" : d.toLocaleDateString([], { weekday: "short" });
+        const cond = String(f.condition || "");
+        const night = type === "hourly" && (d.getHours() >= 20 || d.getHours() < 6);
+        const icon = WEATHER_ICON[cond === "sunny" && night ? "clear-night" : cond === "partlycloudy" && night ? "partlycloudy-night" : cond] || "mdi:weather-cloudy";
+        const rain = Number(f.precipitation) > 0.05 ? `${Number(f.precipitation) < 1 ? Number(f.precipitation).toFixed(1) : Math.round(Number(f.precipitation))} mm` : f.precipitation_probability > 20 ? `${f.precipitation_probability}%` : "";
+        const lo = type === "daily" && f.templow != null ? `<span style="font-weight:600; color:var(--secondary-text-color);"> ${deg2(f.templow)}</span>` : "";
+        return `<div style="flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;">
+        <span style="font-size:0.68rem; color:var(--secondary-text-color); white-space:nowrap;">${esc2(label)}</span>
+        ${iconHtml(icon, { size: "22px", style: `color:${colourOf(cond)};` })}
+        <span style="font-size:0.78rem; font-weight:700; white-space:nowrap;">${deg2(f.temperature)}${lo}</span>
+        <span style="font-size:0.66rem; color:#64b5f6; height:1em; white-space:nowrap;">${rain}</span>
+      </div>`;
+      });
+      return `<div data-line="${esc2(this.config.forecast_panel || "")}" role="button" style="flex:1; min-width:0; display:flex; gap:2px; cursor:${this.config.forecast_panel ? "pointer" : "default"};">${cols.join("")}</div>`;
+    }
     _todoEntities() {
-      if (!this.config.priorities || !this._hass || !this._hass.user) return [];
+      const mode = this._headMode();
+      if (mode === "list") return this._hass && this.config.header_list && this._hass.states[this.config.header_list] ? [this.config.header_list] : [];
+      if (mode !== "priorities" && mode !== "todo_summary" || !this._hass || !this._hass.user) return [];
       const first = String(this._hass.user.name || "").split(" ")[0].toLowerCase().replace(/[^a-z0-9]+/g, "_");
       return [`todo.priorities_${first}`, "todo.priorities_everyone", HOUSE_TASKS_LIST].filter((id) => this._hass.states[id]);
     }
@@ -7995,6 +8860,7 @@
     // by the device itself, so they get no ✓ and an icon by kind.
     _todoView() {
       if (!this._todoKey) return null;
+      if (this._headMode() === "list") return this._listView();
       const shared = "todo.priorities_everyone";
       const order = (id) => id === HOUSE_TASKS_LIST ? 2 : id === shared ? 1 : 0;
       const first = String(this._hass && this._hass.user && this._hass.user.name || "").split(" ")[0];
@@ -8002,6 +8868,8 @@
       Object.keys(this._todoItems || {}).sort((x, y) => order(x) - order(y)).forEach(
         (list) => (this._todoItems[list] || []).forEach((t) => {
           if (t.status !== "needs_action") return;
+          const rep = parseTask(t.description).repeat;
+          if (rep && rep.type !== "once" && t.due && new Date(String(t.due).includes("T") ? t.due : `${t.due}T12:00:00`) > new Date(Date.now() + 2 * 864e5)) return;
           const auto = list === HOUSE_TASKS_LIST || /^Automatic/.test(t.description || "");
           const task = auto ? houseTask(t) : null;
           if (list === HOUSE_TASKS_LIST && !houseTaskFor(task, first)) return;
@@ -8019,6 +8887,60 @@
         icon: task ? task.icon : list === shared ? "mdi:account-group" : "mdi:flag"
       }));
       return { items };
+    }
+    // Three lines from the signed-in person's lists (their own and the shared
+    // one) and the house's jobs for them: due today, overdue, from the house.
+    _summaryView() {
+      if (!this._todoKey) return [];
+      const items = this._todoItems || {};
+      const first = String(this._hass && this._hass.user && this._hass.user.name || "").split(" ")[0];
+      const today = /* @__PURE__ */ new Date();
+      const key = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const t = key(today);
+      const mine = Object.keys(items).filter((id) => id !== HOUSE_TASKS_LIST).flatMap((id) => (items[id] || []).filter((x) => x.status === "needs_action" && !/^Automatic/.test(x.description || "")));
+      const dueDay = (x) => x.due ? key(new Date(String(x.due).includes("T") ? x.due : `${x.due}T12:00:00`)) : null;
+      const due = mine.filter((x) => dueDay(x) === t);
+      const late = mine.filter((x) => dueDay(x) && dueDay(x) < t).sort((a, b) => String(a.due).localeCompare(String(b.due)));
+      const house = (items[HOUSE_TASKS_LIST] || []).filter((x) => x.status === "needs_action" && houseTaskFor(houseTask(x), first));
+      const names = (list) => list.map((x) => x.summary).join(", ");
+      const esc2 = (v) => String(v).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
+      const days = late.length ? Math.round((new Date(t) - new Date(dueDay(late[0]))) / 864e5) : 0;
+      const link = this.config.priorities_page || "";
+      return [
+        due.length ? { kind: "line", html: true, text: `<b>${due.length} due today</b> \xB7 ${esc2(names(due))}`, icon: "mdi:calendar-today", colour: "#7e57c2", link } : { kind: "line", html: true, text: "Nothing due today", icon: "mdi:calendar-check", colour: "#7e57c2", link },
+        late.length ? { kind: "line", html: true, text: `<b>${late.length} overdue</b> \xB7 ${esc2(late[0].summary)} (${days} day${days === 1 ? "" : "s"})${late.length > 1 ? ` +${late.length - 1}` : ""}`, icon: "mdi:alert-circle-outline", colour: "#e53935", link } : { kind: "line", html: true, text: "Nothing overdue", icon: "mdi:check-circle-outline", colour: "#4caf50", link },
+        house.length ? { kind: "line", html: true, text: `<b>${house.length} from the house</b> \xB7 ${esc2(names(house))}`, icon: "mdi:home-alert-outline", colour: HOUSE_TASKS_COLOR, link } : { kind: "line", html: true, text: "Nothing from the house", icon: "mdi:home-heart", colour: "#4caf50", link }
+      ];
+    }
+    // One to-do list (e.g. the cleaning schedule): open items, soonest due
+    // first, each with when it's due.
+    _listView() {
+      const list = this.config.header_list;
+      const colour = this.config.list_color || "#2196f3";
+      const now = /* @__PURE__ */ new Date();
+      const day = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+      const when2 = (due) => {
+        if (!due) return { text: "", over: false };
+        const dateOnly = !String(due).includes("T");
+        const d = dateOnly ? /* @__PURE__ */ new Date(`${due}T23:59:59`) : new Date(due);
+        const days = Math.round((day(d) - day(now)) / 864e5);
+        const time = dateOnly ? "" : ` ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+        if (d < now) {
+          const late = Math.round((day(now) - day(d)) / 864e5);
+          return { text: late >= 1 ? `${late} day${late === 1 ? "" : "s"} overdue` : "due now", over: late >= 1 };
+        }
+        if (days === 0) return { text: `today${time}`, over: false, today: true };
+        if (days === 1) return { text: `tomorrow${time}`, over: false };
+        if (days < 7) return { text: d.toLocaleDateString([], { weekday: "long" }), over: false };
+        return { text: `${d.getDate()} ${d.toLocaleDateString([], { month: "short" })}`, over: false };
+      };
+      const open = ((this._todoItems || {})[list] || []).filter((t) => t.status === "needs_action");
+      const rank = (t) => t.due ? new Date(String(t.due).includes("T") ? t.due : `${t.due}T23:59:59`).getTime() : Infinity;
+      const items = open.map((t, n) => ({ t, n })).sort((a, b) => rank(a.t) - rank(b.t) || a.n - b.n).map(({ t }) => {
+        const w = when2(t.due);
+        return { uid: t.uid, list, text: w.text ? `${t.summary} \xB7 ${w.text}` : t.summary, overdue: w.over, strong: w.over || w.today, colour, icon: choreIcon(t.summary), link: this.config.priorities_page || "" };
+      });
+      return { items, colour, icon: this.config.list_icon || "mdi:format-list-checks" };
     }
     _completeTop(tick) {
       const uid = tick.dataset.done;
@@ -8136,9 +9058,9 @@
       const rest = this._restTail();
       const j = this._jump;
       if (j) {
-        const at = j.el.getBoundingClientRect().top;
-        if (Math.abs(at - j.top) < 8) j.arrived = true;
-        const leftIt = j.arrived && at > j.top + 40;
+        const at2 = j.el.getBoundingClientRect().top;
+        if (Math.abs(at2 - j.top) < 8) j.arrived = true;
+        const leftIt = j.arrived && at2 > j.top + 40;
         if (!leftIt && (j.arrived || performance.now() - j.since <= 3e3)) {
           if ((parseFloat(this._tail.style.height) || 0) < rest) this._tail.style.height = `${rest}px`;
           return;
@@ -8221,7 +9143,7 @@
       window.addEventListener("cd-anim", this._onAnim);
       this._onTop = () => this._closeJumped(null);
       window.addEventListener("cd-to-top", this._onTop);
-      if (this._hass && this.config.priorities) this._watchTodo();
+      if (this._hass) this._watchHead();
       this._onScrollBound = () => {
         cancelAnimationFrame(this._scrollFrame);
         this._scrollFrame = requestAnimationFrame(() => this._onScroll());
@@ -8234,6 +9156,9 @@
       };
       window.addEventListener("resize", this._onResize);
       window.addEventListener("cd-panels-changed", this._onChange);
+      this._onLocation = () => setTimeout(() => this._jumpFromAddress(), 300);
+      window.addEventListener("location-changed", this._onLocation);
+      setTimeout(() => this._jumpFromAddress(), 500);
       if (window.ResizeObserver && !this._ro) {
         this._ro = new ResizeObserver(() => this._queue());
         this._ro.observe(this);
@@ -8247,8 +9172,10 @@
       window.removeEventListener("cd-anim", this._onAnim);
       window.removeEventListener("cd-to-top", this._onTop);
       if (this._chips && this._chips.parentNode === document.body) this._chips.remove();
-      this._unwatchTodo();
+      this._unwatchHead();
       window.removeEventListener("cd-panels-changed", this._onChange);
+      window.removeEventListener("location-changed", this._onLocation);
+      clearTimeout(this._hashTimer);
       if (this._ro) this._ro.disconnect();
       this._ro = null;
       clearInterval(this._timer);
@@ -8288,7 +9215,7 @@
   var PEAK = KIT_COLOR.poor;
   var pence = (gbp) => gbp == null ? "\u2013" : `${(gbp * 100).toFixed(gbp * 100 < 10 ? 2 : 1).replace(/\.?0+$/, "")}p`;
   var pounds = (gbp) => gbp == null ? "\u2013" : `\xA3${Number(gbp).toFixed(2)}`;
-  var hhmm = (d) => d.toLocaleTimeString(void 0, { hour: "2-digit", minute: "2-digit" });
+  var hhmm2 = (d) => d.toLocaleTimeString(void 0, { hour: "2-digit", minute: "2-digit" });
   var span = (ms) => {
     const m = Math.max(0, Math.round(ms / 6e4));
     return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60 ? `${m % 60} m` : ""}`.trim();
@@ -8426,7 +9353,7 @@
       const today = rates.all.filter((r) => r.start >= d0 && r.start < d1);
       const strip = today.map((r) => `<i style="width:${(r.end - r.start) / 864e5 * 100}%; background:${rates.cheap(r.v) ? CHEAP : `color-mix(in srgb, ${PEAK} 55%, transparent)`};"></i>`).join("");
       const nowPct = (Date.now() - d0) / 864e5 * 100;
-      const win = !w ? "" : w.now ? `<b style="color:${CHEAP};">Cheap now</b> at ${pence(w.v)} until ${hhmm(w.until)}` : `<b style="color:${CHEAP};">${pence(w.v)}</b> from ${hhmm(w.from)} to ${hhmm(w.until)}, in ${span(w.from - Date.now())}`;
+      const win = !w ? "" : w.now ? `<b style="color:${CHEAP};">Cheap now</b> at ${pence(w.v)} until ${hhmm2(w.until)}` : `<b style="color:${CHEAP};">${pence(w.v)}</b> from ${hhmm2(w.from)} to ${hhmm2(w.until)}, in ${span(w.from - Date.now())}`;
       const product = /GO/.test(tariff) ? "Octopus Go" : /AGILE/.test(tariff) ? "Agile Octopus" : /INTELLI/.test(tariff) ? "Intelligent Octopus" : "";
       return {
         head: [this.config.name || "Octopus Electricity", rate == null ? "No rate" : `${pence(rate)} \xB7 ${cheapNow ? "Cheap" : "Peak"}`, OCTO_PINK],
@@ -8457,7 +9384,7 @@
       const gasKwh = kitNum(this._s(m.gas, "previous_accumulative_consumption_kwh"));
       const gTotal = gasCost ? Number(gasCost.attributes.total != null ? gasCost.attributes.total : gasCost.state) : null;
       const max = Math.max(...charges.map((x) => Number(x.consumption || 0)), 0.01);
-      const bars = charges.map((x) => `<i title="${kitEsc(hhmm(new Date(x.start)))} \xB7 ${Number(x.consumption).toFixed(2)} kWh \xB7 ${pence(Number(x.rate))}" style="height:${Number(x.consumption || 0) / max * 100}%; background:${isCheap(Number(x.rate)) ? CHEAP : PEAK};"></i>`).join("");
+      const bars = charges.map((x) => `<i title="${kitEsc(hhmm2(new Date(x.start)))} \xB7 ${Number(x.consumption).toFixed(2)} kWh \xB7 ${pence(Number(x.rate))}" style="height:${Number(x.consumption || 0) / max * 100}%; background:${isCheap(Number(x.rate)) ? CHEAP : PEAK};"></i>`).join("");
       const saving = hi - lo > 1e-3 ? `Each kWh moved to the cheap rate saves ${pence(hi - lo)}.` : "";
       const dayName = day.toLocaleDateString(void 0, { weekday: "short", day: "numeric", month: "short" });
       return {
@@ -8738,5 +9665,6 @@
   registerAutoLayoutCard();
   registerHouseTasksCard();
   registerEnergyCards();
+  registerTaskListCard();
   console.info(`%c CHURCH-DRIVE-CARDS${SUFFIX ? " BETA" : ""} %c loaded `, "color: white; background: #2196f3; font-weight: 700;", "color: #2196f3; background: transparent;");
 })();

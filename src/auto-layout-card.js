@@ -9,11 +9,13 @@
 import { createFormEditor } from './form-editor.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { iconHtml, hydrateIcons } from './icons.js';
-import { stcColor } from './section-title-card.js';
+import { stcColor, stcRender } from './section-title-card.js';
 import { nbHuiRoot } from './nav-bar-card.js';
 import { kitScrollParent, kitScrollTop, kitGlide, kitNavigate, kitAcrylicCss } from './card-kit.js';
 import { PANEL_TRANSITION } from './section-panel-card.js';
 import { HOUSE_TASKS_LIST, HOUSE_TASKS_COLOR, houseTask, houseTaskFor } from './house-tasks-card.js';
+import { choreIcon } from './task-list-card.js';
+import { parseTask } from './repeat.js';
 
 let helpersPromise;
 function cardHelpers() {
@@ -72,22 +74,85 @@ function planRemember(key, splits) {
   }
 }
 
+const HEADER_CONTENT = [
+  { value: 'none', label: 'Nothing (panel alerts only)' },
+  { value: 'priorities', label: "The signed-in person's to-dos" },
+  { value: 'todo_summary', label: "The signed-in person's to-do summary (due today, overdue, from the house)" },
+  { value: 'lines', label: 'Live lines about this page' },
+  { value: 'forecast', label: 'Weather forecast' },
+  { value: 'list', label: 'One to-do list (e.g. the cleaning schedule)' },
+];
+
 const LayoutFields = createFormEditor({
-  schema: () => [
+  // Older configs said `priorities: true`; they show as "The signed-in person's to-dos".
+  normalize: (c) => (c.header_content || !c.priorities ? c : { ...c, header_content: 'priorities' }),
+  store: (c) => {
+    const out = { ...c };
+    delete out.priorities;
+    if (out.header_content === 'priorities') out.priorities = true;
+    return out;
+  },
+  schema: (c) => {
+    const mode = (c && c.header_content) || 'none';
+    return [
     { name: 'title', selector: { text: {} } },
-    { name: 'priorities', selector: { boolean: {} }, default: false },
-    { name: 'priorities_page', selector: { navigation: {} } },
+    { name: 'header_content', selector: { select: { mode: 'dropdown', options: HEADER_CONTENT } } },
+    ...(mode === 'lines'
+      ? [
+          {
+            name: 'header_lines',
+            selector: {
+              object: {
+                multiple: true,
+                label_field: 'text',
+                fields: {
+                  text: { label: 'Text (template; <b>…</b> makes part bold; empty hides the line)', required: true, selector: { template: {} } },
+                  icon: { label: 'Icon', selector: { icon: {} } },
+                  color: { label: 'Colour', selector: { ui_color: {} } },
+                  alert_when: { label: 'Needs attention when (optional template)', selector: { template: {} } },
+                  alert_color: { label: 'Colour when it needs attention (default amber)', selector: { ui_color: {} } },
+                  alert_icon: { label: 'Icon when it needs attention (optional)', selector: { icon: {} } },
+                  panel: { label: 'Tapping it opens (a panel title on this page, or a page path)', selector: { text: {} } },
+                },
+              },
+            },
+          },
+        ]
+      : []),
+    ...(mode === 'forecast'
+      ? [
+          { name: 'forecast_entity', selector: { entity: { domain: 'weather' } } },
+          { name: 'forecast_type', selector: { select: { mode: 'dropdown', options: [{ value: 'hourly', label: 'Next hours' }, { value: 'daily', label: 'Next days' }] } } },
+          { name: 'forecast_panel', selector: { text: {} } },
+        ]
+      : []),
+    ...(mode === 'list'
+      ? [
+          { name: 'header_list', selector: { entity: { domain: 'todo' } } },
+          { name: 'list_color', selector: { ui_color: {} } },
+          { name: 'list_icon', selector: { icon: {} } },
+        ]
+      : []),
+    ...(mode === 'priorities' || mode === 'list' || mode === 'todo_summary' ? [{ name: 'priorities_page', selector: { navigation: {} } }] : []),
     { name: 'widget_width', selector: { number: { min: 280, max: 1200, step: 10, mode: 'box', unit_of_measurement: 'px' } } },
     { name: 'column_width', selector: { number: { min: 200, max: 800, step: 10, mode: 'box', unit_of_measurement: 'px' } } },
     { name: 'max_columns', selector: { number: { min: 1, max: 6, step: 1, mode: 'box' } } },
     { name: 'controls_first', selector: { boolean: {} }, default: true },
     { name: 'empty_last', selector: { boolean: {} }, default: false },
     { name: 'jump_chips', selector: { select: { mode: 'dropdown', options: [{ value: 'auto', label: 'Automatic (phones)' }, { value: 'always', label: 'Always' }, { value: 'never', label: 'Never' }] } } },
-  ],
+    ];
+  },
   labels: {
     title: 'Page title (optional; {user} is the signed-in person\'s first name)',
-    priorities: "Show the signed-in person's top to-do in the header",
-    priorities_page: 'Their to-do page (for "+N more")',
+    header_content: 'Under the title',
+    header_lines: 'Lines',
+    forecast_entity: 'Weather',
+    forecast_type: 'Show',
+    forecast_panel: 'Tapping it opens (a panel title or page path, optional)',
+    header_list: 'To-do list',
+    list_color: 'Colour',
+    list_icon: 'Icon for the "+N more" button',
+    priorities_page: 'Page for the "+N more" button (add #panel-title to jump to a panel, e.g. /dashboard-mobile/todo#cleaning)',
     widget_width: 'Header widget at most this wide',
     column_width: 'Columns at least this wide',
     max_columns: 'At most this many columns',
@@ -97,7 +162,10 @@ const LayoutFields = createFormEditor({
   },
   helpers: {
     title: "Shown large at the top of the page, above the chips. Any panel that has opened by itself (its 'opens by itself when' is true) shows under it as an alert; tapping one goes to that panel.",
-    priorities: 'Reads the to-do list named "Priorities <first name>" (e.g. todo.priorities_jamie), plus the shared "Priorities Everyone" list if there is one, each item with a ✓ (a shared item ticked off clears for everyone); overdue and due-soonest come first. Also shows this person\'s and everyone\'s jobs from "Priorities Automatic" (low batteries, filters and so on) with no ✓: they go by themselves once the device reports they\'re done.',
+    header_content: 'Three rows under the title, the same size on every page. A panel that opens by itself (its "opens by itself when" is true) always takes the top row as an alert.',
+    header_lines: "Up to three lines. Each line's text is a template, so it stays live, e.g. {{ states.light | selectattr('state', 'eq', 'on') | list | count }} lights on. They're snapshots only: nothing here makes tasks or sends notifications.",
+    forecast_type: 'Next hours: every other hour for the next 12 or so. Next days: the week ahead with highs and lows.',
+    header_list: 'Open items, soonest due first, each with a ✓. Overdue ones turn red.',
     widget_width: 'Default 520px, centred under the title. Phones use the full width.',
     column_width: 'Default 340px. Phones (under 600px) always get one column in list order.',
     max_columns: 'Default 3. Mark a panel "Full width across an Auto Layout" to have it span the page.',
@@ -106,6 +174,26 @@ const LayoutFields = createFormEditor({
     jump_chips: "One chip per panel, in its colour; tapping one scrolls to that panel, and the chip for the panel you're looking at is filled in.",
   },
 });
+
+// Home Assistant's forecast conditions as icons.
+const WEATHER_ICON = {
+  'clear-night': 'mdi:weather-night',
+  cloudy: 'mdi:weather-cloudy',
+  exceptional: 'mdi:alert-circle-outline',
+  fog: 'mdi:weather-fog',
+  hail: 'mdi:weather-hail',
+  lightning: 'mdi:weather-lightning',
+  'lightning-rainy': 'mdi:weather-lightning-rainy',
+  partlycloudy: 'mdi:weather-partly-cloudy',
+  'partlycloudy-night': 'mdi:weather-night-partly-cloudy',
+  pouring: 'mdi:weather-pouring',
+  rainy: 'mdi:weather-rainy',
+  snowy: 'mdi:weather-snowy',
+  'snowy-rainy': 'mdi:weather-snowy-rainy',
+  sunny: 'mdi:weather-sunny',
+  windy: 'mdi:weather-windy',
+  'windy-variant': 'mdi:weather-windy-variant',
+};
 
 // The chips capsule.
 const CHIPS_CSS = `
@@ -211,8 +299,10 @@ export class AutoLayoutCardEditor extends HTMLElement {
       this._fields = document.createElement(`auto-layout-fields${SUFFIX}`);
       this._fields.addEventListener('config-changed', (ev) => {
         ev.stopPropagation();
+        // The form holds every setting except the panels, so take its values
+        // whole (a removed setting stays removed).
         const { cards, ...fields } = ev.detail.config;
-        this._emit({ ...this._config, ...fields, cards: this._config.cards || [] });
+        this._emit({ ...fields, cards: this._config.cards || [] });
       });
       const label = document.createElement('div');
       label.textContent = 'Panels, in order (phones show them top to bottom in this order)';
@@ -264,7 +354,7 @@ export class AutoLayoutCard extends HTMLElement {
     });
     // The title can use {user}, so draw the header once there's a user.
     if (first) this._renderHead();
-    if (this.isConnected && this.config && this.config.priorities) this._watchTodo();
+    if (this.isConnected && this.config) this._watchHead();
   }
 
   _build() {
@@ -309,6 +399,15 @@ export class AutoLayoutCard extends HTMLElement {
       }
       if (ev.target.closest && ev.target.closest('[data-todo]')) {
         if (this.config.priorities_page) kitNavigate(this.config.priorities_page);
+        return;
+      }
+      const line = ev.target.closest && ev.target.closest('[data-line]');
+      if (line) {
+        const want = String(line.dataset.line).toLowerCase();
+        if (!want) return;
+        const target = (this._items || []).find((x) => String(x.conf.title || '').toLowerCase() === want);
+        if (target) this._jumpTo(target);
+        else kitNavigate(line.dataset.line);
         return;
       }
       const pill = ev.target.closest && ev.target.closest('[data-alert]');
@@ -478,6 +577,22 @@ export class AutoLayoutCard extends HTMLElement {
     this._cols = cols;
     this._renderHead();
     this._renderChips();
+    this._jumpFromAddress();
+  }
+
+  // A page address ending in #<panel title> (e.g. /dashboard-mobile/todo#cleaning)
+  // jumps to that panel once the page is laid out, like its chip would. The
+  // #… is then taken off the address so going back or reloading doesn't jump again.
+  _jumpFromAddress() {
+    const want = decodeURIComponent(String(window.location.hash || '').slice(1)).toLowerCase();
+    if (!want || !this.isConnected || !this._items || !this._items.length) return;
+    const slug = (t) => String(t || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const it = this._items.find((x) => x.conf.title && (slug(x.conf.title) === slug(want) || String(x.conf.title).toLowerCase() === want));
+    // A hidden copy of the page (another person's section) leaves it for the one on show.
+    if (!it || !this.getBoundingClientRect().height) return;
+    history.replaceState(history.state, '', window.location.pathname + window.location.search);
+    clearTimeout(this._hashTimer);
+    this._hashTimer = setTimeout(() => this._jumpTo(it), 350);
   }
 
   // Each column's last open panel grows so the columns in a band end level,
@@ -534,8 +649,11 @@ export class AutoLayoutCard extends HTMLElement {
       });
     const user = this._hass && this._hass.user && this._hass.user.name ? String(this._hass.user.name).split(' ')[0] : '';
     const title = String(this.config.title || '').replace(/\{user\}/g, user).trim();
-    const todo = this._todoView();
-    const sig = JSON.stringify([title, alerts, todo, this.config.widget_width]);
+    const mode = this._headMode();
+    const todo = mode === 'priorities' || mode === 'list' ? this._todoView() : null;
+    const lines = mode === 'lines' ? this._linesView() : mode === 'todo_summary' ? this._summaryView() : null;
+    const forecast = mode === 'forecast' && !alerts.length ? this._forecastHtml(esc) : '';
+    const sig = JSON.stringify([title, alerts, todo, lines, forecast, this.config.widget_width]);
     if (sig === this._headSig) return;
     this._headSig = sig;
     if (!this.config.title) {
@@ -550,31 +668,37 @@ export class AutoLayoutCard extends HTMLElement {
     const rows = [
       ...alerts.map((a) => ({ kind: 'alert', ...a })),
       ...(todo ? todo.items.map((t) => ({ kind: 'todo', ...t })) : []),
+      ...(lines || []).filter((l) => l.text),
     ];
     const shown = rows.slice(0, 3);
     const extra = rows.length - shown.length;
     const row = (r) => {
       if (!r) return '<div style="height:26px;"></div>';
-      const c = r.kind === 'todo' ? (r.overdue ? '#e53935' : r.auto ? HOUSE_TASKS_COLOR : '#7e57c2') : r.colour;
+      const c = r.kind === 'todo' ? (r.overdue ? '#e53935' : r.auto ? HOUSE_TASKS_COLOR : r.colour || '#7e57c2') : r.colour;
       const icon = r.icon;
       const tick =
         r.kind === 'todo' && !r.auto
           ? `<button type="button" data-done="${esc(r.uid)}" data-list="${esc(r.list)}" aria-label="Done" title="Done" style="flex:none; width:22px; height:22px; padding:0; border:2px solid color-mix(in srgb, ${c} 70%, transparent); border-radius:50%; background:transparent; color:var(--primary-text-color); cursor:pointer; display:flex; align-items:center; justify-content:center;">${iconHtml('mdi:check', { size: '14px' })}</button>`
           : '';
-      return `<div ${r.kind === 'alert' ? `data-alert="${r.i}" role="button"` : ''} style="height:26px; display:flex; align-items:center; gap:8px; padding:0 4px 0 8px; border-radius:13px; cursor:${r.kind === 'alert' ? 'pointer' : 'default'}; background:color-mix(in srgb, ${c} 16%, transparent);">${
+      const tap = r.kind === 'alert' ? `data-alert="${r.i}" role="button"` : (r.kind === 'line' || r.kind === 'todo') && r.link ? `data-line="${esc(r.link)}" role="button"` : '';
+      // A line's text can use <b>…</b> for its key figure; nothing else is kept.
+      const text = r.html ? esc(r.text).replace(/&lt;(\/?)b&gt;/g, '<$1b>') : esc(r.text);
+      return `<div ${tap} style="height:26px; display:flex; align-items:center; gap:8px; padding:0 ${tick ? 4 : 10}px 0 8px; border-radius:13px; cursor:${tap ? 'pointer' : 'default'}; background:color-mix(in srgb, ${c} 16%, transparent);">${
         icon ? iconHtml(icon, { size: '16px', style: `color:${c}; flex:none;` }) : ''
-      }<span style="flex:1; min-width:0; font-size:0.8rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(r.text)}</span>${tick}</div>`;
+      }<span style="flex:1; min-width:0; font-size:0.8rem; font-weight:${r.kind === 'line' ? 500 : 600}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${text}</span>${tick}</div>`;
     };
+    const sideC = todo && todo.colour ? todo.colour : '#7e57c2';
+    const sideText = `color-mix(in srgb, ${sideC} 45%, white)`;
     const side =
       todo && this.config.priorities_page
-        ? `<button type="button" data-todo style="flex:none; width:58px; padding:0 4px; border:none; border-radius:12px; cursor:pointer; font:inherit; font-size:0.72rem; font-weight:700; line-height:1.2; color:#b39ddb; background:color-mix(in srgb, #7e57c2 22%, transparent); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;" aria-label="${extra > 0 ? `${extra} more to do` : 'Open to-do'}">${iconHtml(
-            'mdi:format-list-checks',
-            { size: '22px', style: 'color:#b39ddb;' }
+        ? `<button type="button" data-todo style="flex:none; width:58px; padding:0 4px; border:none; border-radius:12px; cursor:pointer; font:inherit; font-size:0.72rem; font-weight:700; line-height:1.2; color:${sideText}; background:color-mix(in srgb, ${sideC} 22%, transparent); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;" aria-label="${extra > 0 ? `${extra} more to do` : 'Open the list'}">${iconHtml(
+            (todo && todo.icon) || 'mdi:format-list-checks',
+            { size: '22px', style: `color:${sideText};` }
           )}<span style="white-space:nowrap;">${extra > 0 ? `+${extra} more` : 'To-do'}</span></button>`
         : '';
     head.innerHTML = `<div style="height:40px; font-size:2rem; font-weight:700; line-height:40px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--primary-text-color);">${esc(title)}</div>
       <div class="al-widget" style="height:96px; width:100%; max-width:${Number(this.config.widget_width) || 520}px; margin:0 auto; box-sizing:border-box; display:flex; gap:6px; padding:6px; border-radius:18px; background:color-mix(in srgb, var(--card-background-color, #1f2128) 70%, transparent);">
-        <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:3px;">${[0, 1, 2].map((n) => row(shown[n])).join('')}</div>${side}
+        ${forecast || `<div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:3px;">${[0, 1, 2].map((n) => row(shown[n])).join('')}</div>`}${side}
       </div>`;
     hydrateIcons(head);
   }
@@ -582,8 +706,127 @@ export class AutoLayoutCard extends HTMLElement {
   // ---- Priorities: the signed-in person's to-do list ("Priorities Jamie"),
   // plus the shared one ("Priorities Everyone") when it exists. A shared item
   // is a single copy, so ticking it off clears it for everyone.
+  // What the header widget shows under any page alerts: the signed-in
+  // person's to-dos ("priorities"), live lines, a forecast, or one to-do list.
+  _headMode() {
+    const m = this.config.header_content;
+    if (m) return m;
+    return this.config.priorities ? 'priorities' : 'none';
+  }
+
+  _watchHead() {
+    this._watchTodo();
+    this._watchLines();
+    this._watchForecast();
+  }
+
+  _unwatchHead() {
+    this._unwatchTodo();
+    this._unwatchLines();
+    this._unwatchForecast();
+  }
+
+  // ---- Lines: each line's text (and "needs attention when") is a template.
+  _watchLines() {
+    const lines = this._headMode() === 'lines' && this._hass && this.isConnected ? this.config.header_lines || [] : [];
+    const key = JSON.stringify(lines);
+    if (key === this._linesKey) return;
+    this._unwatchLines();
+    this._linesKey = key;
+    this._lineVals = lines.map(() => ({ text: '', alert: false }));
+    lines.forEach((l, i) => {
+      const set = (k, v) => {
+        this._lineVals[i][k] = v;
+        this._renderHead();
+      };
+      const a = stcRender(this._hass, String(l.text || ''), (t) => set('text', t));
+      const b = l.alert_when ? stcRender(this._hass, String(l.alert_when), (t) => set('alert', !['', '0', 'false', 'off', 'none', 'unknown', 'unavailable'].includes(String(t).trim().toLowerCase()))) : null;
+      this._lineSubs.push(a, b);
+    });
+  }
+
+  _unwatchLines() {
+    (this._lineSubs || []).forEach((u) => u && u.then((f) => f && f()).catch(() => {}));
+    this._lineSubs = [];
+    this._linesKey = undefined;
+    this._lineVals = [];
+  }
+
+  _linesView() {
+    const lines = this.config.header_lines || [];
+    return lines.map((l, i) => {
+      const v = (this._lineVals || [])[i] || {};
+      const alert = !!v.alert;
+      return {
+        kind: 'line',
+        text: v.text || '',
+        html: true,
+        icon: (alert && l.alert_icon) || l.icon,
+        colour: stcColor((alert && (l.alert_color || '#ffa726')) || l.color || 'primary'),
+        link: l.panel || '',
+      };
+    });
+  }
+
+  // ---- Forecast: Home Assistant's forecast subscription for a weather entity.
+  _watchForecast() {
+    const on = this._headMode() === 'forecast' && this._hass && this.isConnected && this.config.forecast_entity;
+    const type = this.config.forecast_type === 'daily' ? 'daily' : 'hourly';
+    const key = on ? `${this.config.forecast_entity}|${type}` : '';
+    if (key === this._fcKey) return;
+    this._unwatchForecast();
+    this._fcKey = key;
+    if (!on) return;
+    this._fcSub = this._hass.connection
+      .subscribeMessage(
+        (msg) => {
+          this._forecast = (msg && msg.forecast) || [];
+          this._renderHead();
+        },
+        { type: 'weather/subscribe_forecast', entity_id: this.config.forecast_entity, forecast_type: type }
+      )
+      .catch(() => null);
+  }
+
+  _unwatchForecast() {
+    if (this._fcSub) this._fcSub.then((f) => f && f()).catch(() => {});
+    this._fcSub = null;
+    this._fcKey = undefined;
+    this._forecast = null;
+  }
+
+  _forecastHtml(esc) {
+    const type = this.config.forecast_type === 'daily' ? 'daily' : 'hourly';
+    const st = this._hass && this._hass.states[this.config.forecast_entity];
+    const deg = (t) => (t == null || t === '' ? '–' : `${Math.round(Number(t))}°`);
+    const all = this._forecast || [];
+    const now = Date.now();
+    const list = type === 'hourly' ? all.filter((f) => new Date(f.datetime).getTime() > now - 3600000).filter((f, i) => i % 2 === 0).slice(0, 7) : all.slice(0, 6);
+    if (!list.length) return `<div style="flex:1; display:flex; align-items:center; justify-content:center; font-size:0.8rem; color:var(--secondary-text-color);">${st ? 'Loading the forecast…' : `No weather entity ${esc(this.config.forecast_entity || '')}`}</div>`;
+    const colourOf = (c) => (/rain|pour|hail|snow|sleet/.test(c) ? '#64b5f6' : /sunny|clear-day/.test(c) ? '#ffca28' : /lightning/.test(c) ? '#ffa726' : '#b0bec5');
+    const today = new Date().toDateString();
+    const cols = list.map((f, i) => {
+      const d = new Date(f.datetime);
+      const label = type === 'hourly' ? (i === 0 ? 'Now' : String(d.getHours()).padStart(2, '0')) : d.toDateString() === today ? 'Today' : d.toLocaleDateString([], { weekday: 'short' });
+      const cond = String(f.condition || '');
+      const night = type === 'hourly' && (d.getHours() >= 20 || d.getHours() < 6);
+      const icon = WEATHER_ICON[cond === 'sunny' && night ? 'clear-night' : cond === 'partlycloudy' && night ? 'partlycloudy-night' : cond] || 'mdi:weather-cloudy';
+      const rain = Number(f.precipitation) > 0.05 ? `${Number(f.precipitation) < 1 ? Number(f.precipitation).toFixed(1) : Math.round(Number(f.precipitation))} mm` : f.precipitation_probability > 20 ? `${f.precipitation_probability}%` : '';
+      const lo = type === 'daily' && f.templow != null ? `<span style="font-weight:600; color:var(--secondary-text-color);"> ${deg(f.templow)}</span>` : '';
+      return `<div style="flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;">
+        <span style="font-size:0.68rem; color:var(--secondary-text-color); white-space:nowrap;">${esc(label)}</span>
+        ${iconHtml(icon, { size: '22px', style: `color:${colourOf(cond)};` })}
+        <span style="font-size:0.78rem; font-weight:700; white-space:nowrap;">${deg(f.temperature)}${lo}</span>
+        <span style="font-size:0.66rem; color:#64b5f6; height:1em; white-space:nowrap;">${rain}</span>
+      </div>`;
+    });
+    return `<div data-line="${esc(this.config.forecast_panel || '')}" role="button" style="flex:1; min-width:0; display:flex; gap:2px; cursor:${this.config.forecast_panel ? 'pointer' : 'default'};">${cols.join('')}</div>`;
+  }
+
   _todoEntities() {
-    if (!this.config.priorities || !this._hass || !this._hass.user) return [];
+    const mode = this._headMode();
+    if (mode === 'list') return this._hass && this.config.header_list && this._hass.states[this.config.header_list] ? [this.config.header_list] : [];
+    if ((mode !== 'priorities' && mode !== 'todo_summary') || !this._hass || !this._hass.user) return [];
     const first = String(this._hass.user.name || '').split(' ')[0].toLowerCase().replace(/[^a-z0-9]+/g, '_');
     return [`todo.priorities_${first}`, 'todo.priorities_everyone', HOUSE_TASKS_LIST].filter((id) => this._hass.states[id]);
   }
@@ -623,6 +866,7 @@ export class AutoLayoutCard extends HTMLElement {
   // by the device itself, so they get no ✓ and an icon by kind.
   _todoView() {
     if (!this._todoKey) return null;
+    if (this._headMode() === 'list') return this._listView();
     const shared = 'todo.priorities_everyone';
     const order = (id) => (id === HOUSE_TASKS_LIST ? 2 : id === shared ? 1 : 0);
     const first = String((this._hass && this._hass.user && this._hass.user.name) || '').split(' ')[0];
@@ -632,6 +876,9 @@ export class AutoLayoutCard extends HTMLElement {
       .forEach((list) =>
         (this._todoItems[list] || []).forEach((t) => {
           if (t.status !== 'needs_action') return;
+          // Repeating tasks are always on the list: only show one due in the next two days.
+          const rep = parseTask(t.description).repeat;
+          if (rep && rep.type !== 'once' && t.due && new Date(String(t.due).includes('T') ? t.due : `${t.due}T12:00:00`) > new Date(Date.now() + 2 * 86400000)) return;
           const auto = list === HOUSE_TASKS_LIST || /^Automatic/.test(t.description || '');
           const task = auto ? houseTask(t) : null;
           if (list === HOUSE_TASKS_LIST && !houseTaskFor(task, first)) return;
@@ -652,6 +899,73 @@ export class AutoLayoutCard extends HTMLElement {
         icon: task ? task.icon : list === shared ? 'mdi:account-group' : 'mdi:flag',
       }));
     return { items };
+  }
+
+  // Three lines from the signed-in person's lists (their own and the shared
+  // one) and the house's jobs for them: due today, overdue, from the house.
+  _summaryView() {
+    if (!this._todoKey) return [];
+    const items = this._todoItems || {};
+    const first = String((this._hass && this._hass.user && this._hass.user.name) || '').split(' ')[0];
+    const today = new Date();
+    const key = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const t = key(today);
+    const mine = Object.keys(items)
+      .filter((id) => id !== HOUSE_TASKS_LIST)
+      .flatMap((id) => (items[id] || []).filter((x) => x.status === 'needs_action' && !/^Automatic/.test(x.description || '')));
+    const dueDay = (x) => (x.due ? key(new Date(String(x.due).includes('T') ? x.due : `${x.due}T12:00:00`)) : null);
+    const due = mine.filter((x) => dueDay(x) === t);
+    const late = mine.filter((x) => dueDay(x) && dueDay(x) < t).sort((a, b) => String(a.due).localeCompare(String(b.due)));
+    const house = (items[HOUSE_TASKS_LIST] || []).filter((x) => x.status === 'needs_action' && houseTaskFor(houseTask(x), first));
+    const names = (list) => list.map((x) => x.summary).join(', ');
+    const esc = (v) => String(v).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
+    const days = late.length ? Math.round((new Date(t) - new Date(dueDay(late[0]))) / 86400000) : 0;
+    const link = this.config.priorities_page || '';
+    return [
+      due.length
+        ? { kind: 'line', html: true, text: `<b>${due.length} due today</b> · ${esc(names(due))}`, icon: 'mdi:calendar-today', colour: '#7e57c2', link }
+        : { kind: 'line', html: true, text: 'Nothing due today', icon: 'mdi:calendar-check', colour: '#7e57c2', link },
+      late.length
+        ? { kind: 'line', html: true, text: `<b>${late.length} overdue</b> · ${esc(late[0].summary)} (${days} day${days === 1 ? '' : 's'})${late.length > 1 ? ` +${late.length - 1}` : ''}`, icon: 'mdi:alert-circle-outline', colour: '#e53935', link }
+        : { kind: 'line', html: true, text: 'Nothing overdue', icon: 'mdi:check-circle-outline', colour: '#4caf50', link },
+      house.length
+        ? { kind: 'line', html: true, text: `<b>${house.length} from the house</b> · ${esc(names(house))}`, icon: 'mdi:home-alert-outline', colour: HOUSE_TASKS_COLOR, link }
+        : { kind: 'line', html: true, text: 'Nothing from the house', icon: 'mdi:home-heart', colour: '#4caf50', link },
+    ];
+  }
+
+  // One to-do list (e.g. the cleaning schedule): open items, soonest due
+  // first, each with when it's due.
+  _listView() {
+    const list = this.config.header_list;
+    const colour = this.config.list_color || '#2196f3';
+    const now = new Date();
+    const day = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const when = (due) => {
+      if (!due) return { text: '', over: false };
+      const dateOnly = !String(due).includes('T');
+      const d = dateOnly ? new Date(`${due}T23:59:59`) : new Date(due);
+      const days = Math.round((day(d) - day(now)) / 86400000);
+      const time = dateOnly ? '' : ` ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      if (d < now) {
+        const late = Math.round((day(now) - day(d)) / 86400000);
+        return { text: late >= 1 ? `${late} day${late === 1 ? '' : 's'} overdue` : 'due now', over: late >= 1 };
+      }
+      if (days === 0) return { text: `today${time}`, over: false, today: true };
+      if (days === 1) return { text: `tomorrow${time}`, over: false };
+      if (days < 7) return { text: d.toLocaleDateString([], { weekday: 'long' }), over: false };
+      return { text: `${d.getDate()} ${d.toLocaleDateString([], { month: 'short' })}`, over: false };
+    };
+    const open = ((this._todoItems || {})[list] || []).filter((t) => t.status === 'needs_action');
+    const rank = (t) => (t.due ? new Date(String(t.due).includes('T') ? t.due : `${t.due}T23:59:59`).getTime() : Infinity);
+    const items = open
+      .map((t, n) => ({ t, n }))
+      .sort((a, b) => rank(a.t) - rank(b.t) || a.n - b.n)
+      .map(({ t }) => {
+        const w = when(t.due);
+        return { uid: t.uid, list, text: w.text ? `${t.summary} · ${w.text}` : t.summary, overdue: w.over, strong: w.over || w.today, colour, icon: choreIcon(t.summary), link: this.config.priorities_page || '' };
+      });
+    return { items, colour, icon: this.config.list_icon || 'mdi:format-list-checks' };
   }
 
   _completeTop(tick) {
@@ -880,7 +1194,7 @@ export class AutoLayoutCard extends HTMLElement {
     // The nav bar's back-to-top also closes the panel a chip jump opened.
     this._onTop = () => this._closeJumped(null);
     window.addEventListener('cd-to-top', this._onTop);
-    if (this._hass && this.config.priorities) this._watchTodo();
+    if (this._hass) this._watchHead();
     this._onScrollBound = () => {
       cancelAnimationFrame(this._scrollFrame);
       this._scrollFrame = requestAnimationFrame(() => this._onScroll());
@@ -893,6 +1207,9 @@ export class AutoLayoutCard extends HTMLElement {
     };
     window.addEventListener('resize', this._onResize);
     window.addEventListener('cd-panels-changed', this._onChange);
+    this._onLocation = () => setTimeout(() => this._jumpFromAddress(), 300);
+    window.addEventListener('location-changed', this._onLocation);
+    setTimeout(() => this._jumpFromAddress(), 500);
     if (window.ResizeObserver && !this._ro) {
       this._ro = new ResizeObserver(() => this._queue());
       this._ro.observe(this);
@@ -907,8 +1224,10 @@ export class AutoLayoutCard extends HTMLElement {
     window.removeEventListener('cd-anim', this._onAnim);
     window.removeEventListener('cd-to-top', this._onTop);
     if (this._chips && this._chips.parentNode === document.body) this._chips.remove();
-    this._unwatchTodo();
+    this._unwatchHead();
     window.removeEventListener('cd-panels-changed', this._onChange);
+    window.removeEventListener('location-changed', this._onLocation);
+    clearTimeout(this._hashTimer);
     if (this._ro) this._ro.disconnect();
     this._ro = null;
     clearInterval(this._timer);
