@@ -8,7 +8,7 @@
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
-import { kitNavigate, kitEsc, kitScrollParent, kitScrollTop, kitGlide } from './card-kit.js';
+import { kitNavigate, kitEsc, kitScrollParent, kitScrollTop, kitGlide, kitAcrylicCss } from './card-kit.js';
 import { stcColor, stcRender, STC_COLOR_TEMPLATE_HELPER } from './section-title-card.js';
 
 // Hiding the dashboard's own tabs: a style put into Home Assistant's
@@ -225,9 +225,7 @@ export class NavBarCard extends HTMLElement {
       this._builtInline = inline;
       const html = `
         <style>
-          .nb { pointer-events:auto; flex:1 1 auto; min-width:0; max-width:440px; height:58px; border-radius:29px; display:flex; align-items:center; justify-content:space-between; gap:4px; padding:0 7px; box-sizing:border-box;
-            background:color-mix(in srgb, var(--card-background-color, #1f2128) 92%, #fff 4%); box-shadow:0 8px 24px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.06);
-            -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); }
+          .nb { pointer-events:auto; flex:1 1 auto; min-width:0; max-width:440px; height:58px; border-radius:29px; display:flex; align-items:center; justify-content:space-between; gap:4px; padding:0 7px; box-sizing:border-box; }
           .nb-it { position:relative; flex:none; height:44px; min-width:44px; border:none; border-radius:22px; padding:0; background:transparent; cursor:pointer; font:inherit;
             display:flex; align-items:center; justify-content:center; gap:6px; color:var(--secondary-text-color); transition:background-color .25s, padding .25s; -webkit-tap-highlight-color:transparent; }
           .nb-it.nb-on { padding:0 14px 0 12px; color:#fff; font-weight:600; font-size:0.85rem; }
@@ -241,9 +239,9 @@ export class NavBarCard extends HTMLElement {
           .nb-it:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
           .nb-dot { position:absolute; left:28px; top:6px; width:8px; height:8px; border-radius:50%; background:#ff9800; box-shadow:0 0 0 2px var(--card-background-color, #1f2128); }
           .nb-it.nb-on .nb-dot { left:auto; right:6px; }
-          .nb-top { pointer-events:auto; position:relative; flex:none; width:58px; height:58px; padding:0; border:none; border-radius:50%; cursor:pointer;
-            background:color-mix(in srgb, var(--card-background-color, #1f2128) 92%, #fff 4%); box-shadow:0 8px 24px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.06);
-            -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); -webkit-tap-highlight-color:transparent; }
+          .nb-top { pointer-events:auto; position:relative; flex:none; width:58px; height:58px; padding:0; border:none; border-radius:50%; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+          ${kitAcrylicCss('.nb')}
+          ${kitAcrylicCss('.nb-top')}
           .nb-top:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
           .nb-top i { position:absolute; left:50%; top:50%; width:12px; height:2.5px; margin:-1.25px 0 0 -6px; border-radius:2px; background:#fff;
             transition:transform .38s cubic-bezier(.2,.8,.2,1); }

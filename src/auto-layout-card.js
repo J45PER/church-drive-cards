@@ -11,7 +11,7 @@ import { SUFFIX, LABEL } from './suffix.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { stcColor } from './section-title-card.js';
 import { nbHuiRoot } from './nav-bar-card.js';
-import { kitScrollParent, kitScrollTop, kitGlide, kitNavigate } from './card-kit.js';
+import { kitScrollParent, kitScrollTop, kitGlide, kitNavigate, kitAcrylicCss } from './card-kit.js';
 import { PANEL_TRANSITION } from './section-panel-card.js';
 import { HOUSE_TASKS_LIST, HOUSE_TASKS_COLOR, houseTask, houseTaskFor } from './house-tasks-card.js';
 
@@ -106,11 +106,8 @@ const LayoutFields = createFormEditor({
 
 // The chips capsule.
 const CHIPS_CSS = `
-  .al-chips .al-cap {
-    flex:1 1 auto; min-width:0; padding:6px; border-radius:999px; box-sizing:border-box;
-    background:color-mix(in srgb, var(--card-background-color, #1f2128) 88%, transparent);
-    box-shadow:0 6px 18px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.06);
-    -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); }
+  .al-chips .al-cap { flex:1 1 auto; min-width:0; padding:6px; border-radius:999px; box-sizing:border-box; }
+  ${kitAcrylicCss('.al-chips .al-cap')}
   .al-chips .al-strip { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; }
 `;
 

@@ -462,6 +462,14 @@
   }
 
   // src/card-kit.js
+  var KIT_GRAIN = `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")`;
+  var KIT_ACRYLIC_FILTER = "blur(42px) saturate(115%)";
+  var kitAcrylicCss = (sel) => `
+  ${sel} { position:relative; isolation:isolate; border:none;
+    background:linear-gradient(rgba(255,255,255,.04), rgba(255,255,255,0)), color-mix(in srgb, var(--card-background-color, #1f2128) 76%, transparent);
+    -webkit-backdrop-filter:${KIT_ACRYLIC_FILTER}; backdrop-filter:${KIT_ACRYLIC_FILTER}; box-shadow:0 10px 30px rgba(0,0,0,.45); }
+  ${sel}::after { content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none; z-index:-1; background-image:${KIT_GRAIN}; opacity:.08; }`;
+  var KIT_CARD_BG = "var(--cd-card-bg, var(--card-background-color))";
   var KIT_COLOR = {
     off: "#8b919c",
     good: "#4caf50",
@@ -487,7 +495,7 @@
 .ck-health button { flex:none; border:none; border-radius:10px; padding:7px 10px; font:inherit; font-size:0.8rem; font-weight:600; background:#ffa726; color:#2a1700; cursor:pointer; }`;
   function kitShell(body, extraCss = "") {
     return `
-    <ha-card class="ck-card" style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; padding:16px; background:var(--card-background-color); transition:background-color .6s ease; display:flex; flex-direction:column; gap:12px;">
+    <ha-card class="ck-card" style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; padding:16px; background:${KIT_CARD_BG}; -webkit-backdrop-filter:var(--cd-card-filter, none); backdrop-filter:var(--cd-card-filter, none); transition:background-color .6s ease; display:flex; flex-direction:column; gap:12px;">
       <style>
         /* Narrow cards (e.g. five side by side): a smaller title, and the
            status word drops to its own line instead of cutting the title. */
@@ -531,7 +539,7 @@
     t.textContent = title;
     t.style.color = color;
     w.textContent = word;
-    card.style.backgroundColor = tint ? `color-mix(in srgb, ${color} ${tint}%, var(--card-background-color))` : "var(--card-background-color)";
+    card.style.backgroundColor = tint ? `color-mix(in srgb, ${color} ${tint}%, ${KIT_CARD_BG})` : KIT_CARD_BG;
   }
   function kitGauge(p, color, label, sub, size = 84) {
     const r = size / 2 - 7, cx = size / 2, len = 1.5 * Math.PI * r;
@@ -978,7 +986,7 @@
     return d;
   }
   var KIT_CPT_CSS = `
-  .ck-cpt { display:flex; flex-direction:column; gap:6px; border:none; box-shadow:0 3px 10px rgba(0,0,0,.45); border-radius:14px; padding:8px 10px; background:var(--card-background-color); }
+  .ck-cpt { display:flex; flex-direction:column; gap:6px; border:none; box-shadow:0 3px 10px rgba(0,0,0,.45); border-radius:14px; padding:8px 10px; background:${KIT_CARD_BG}; -webkit-backdrop-filter:var(--cd-card-filter, none); backdrop-filter:var(--cd-card-filter, none); }
   .ck-cpt-row { display:flex; align-items:center; gap:8px; min-height:32px; }
   .ck-cpt-name { font-weight:600; font-size:0.92rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; min-width:0; flex:0 1 auto; }
   .ck-cpt-val { font-weight:700; font-size:1.05rem; font-variant-numeric:tabular-nums; white-space:nowrap; flex:none; }
@@ -3601,6 +3609,7 @@
         schema: [
           { name: "card_width", selector: { number: { min: 0, max: 800, step: 10, mode: "box", unit_of_measurement: "px" } } },
           { name: "match_height", selector: { boolean: {} }, default: true },
+          { name: "frosted_cards", selector: { boolean: {} }, default: true },
           { name: "full_width", selector: { select: { mode: "dropdown", options: [{ value: "auto", label: "Automatic" }, { value: "yes", label: "Always full width" }, { value: "no", label: "Never" }] } } },
           { name: "priority", selector: { select: { mode: "dropdown", options: [{ value: "auto", label: "Work it out from the cards" }, { value: "controls", label: "Controls (goes higher)" }, { value: "info", label: "Information only" }] } } }
         ]
@@ -3617,6 +3626,7 @@
       collapsible: "Show the \u2304 to switch between open and compact",
       card_width: "Cards side by side when each can be at least (empty = automatic, 0 = always one per row)",
       match_height: "Line up this panel's bottom with the panels beside it",
+      frosted_cards: "Frosted cards",
       full_width: "Full width across an Auto Layout",
       priority: "In an Auto Layout, counts as",
       color: "Colour (icon and panel)",
@@ -3627,6 +3637,7 @@
       phone_start: "Each phone or tablet remembers what you last chose with the \u2304; this is where it starts. Phones are screens under 600px wide.",
       open_when: "E.g. {{ is_state('binary_sensor.back_door', 'on') }}. The panel opens while it's true, then goes back to how you left it.",
       card_width: "Automatic: zones 200px, cameras 220px, everything else 300px. Cards fill the panel width: e.g. cameras 2 or 3 across on a tablet, one per row on a phone.",
+      frosted_cards: "The cards inside are see-through with a heavy blur of what's behind them (acrylic). Turn off for solid cards.",
       match_height: "When sections sit side by side, the last panel in a shorter section grows so its bottom lines up with its neighbours'.",
       priority: "Auto Layout puts panels with buttons and sliders above ones that only show information. Auto: lights, alarm, thermostats, fan, purifier, blinds and tiles with controls count as controls.",
       full_width: "Only inside an Auto Layout Card: the panel spans every column, with the panels before and after it balanced above and below. Automatic: a panel of 3 or more small cards (zones, cameras, tiles) goes full width when they would not fit side by side in one column.",
@@ -3926,8 +3937,9 @@
     _build() {
       const c = this.config;
       const color = stcColor(c.color);
+      const frost = c.frosted_cards !== false ? `--cd-card-bg:color-mix(in srgb, var(--card-background-color, #1f2128) 74%, transparent); --cd-card-filter:${KIT_ACRYLIC_FILTER}; --ha-card-background:var(--cd-card-bg); --ha-card-backdrop-filter:var(--cd-card-filter);` : "";
       this.innerHTML = `
-      <div class="spc-panel" style="position:relative; box-sizing:border-box; border-radius:24px; padding:12px; display:flex; flex-direction:column; gap:12px; isolation:isolate; transition:${PANEL_TRANSITION};">
+      <div class="spc-panel" style="position:relative; box-sizing:border-box; border-radius:24px; padding:12px; display:flex; flex-direction:column; gap:12px; isolation:isolate; transition:${PANEL_TRANSITION}; ${frost}">
         <div class="spc-bg" style="position:absolute; inset:0; border-radius:inherit; background:${color}; opacity:0.1; z-index:-1; pointer-events:none; transition:background-color .6s ease;"></div>
       </div>`;
       const panel = this.querySelector(".spc-panel");
@@ -7083,9 +7095,7 @@
         this._builtInline = inline;
         const html = `
         <style>
-          .nb { pointer-events:auto; flex:1 1 auto; min-width:0; max-width:440px; height:58px; border-radius:29px; display:flex; align-items:center; justify-content:space-between; gap:4px; padding:0 7px; box-sizing:border-box;
-            background:color-mix(in srgb, var(--card-background-color, #1f2128) 92%, #fff 4%); box-shadow:0 8px 24px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.06);
-            -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); }
+          .nb { pointer-events:auto; flex:1 1 auto; min-width:0; max-width:440px; height:58px; border-radius:29px; display:flex; align-items:center; justify-content:space-between; gap:4px; padding:0 7px; box-sizing:border-box; }
           .nb-it { position:relative; flex:none; height:44px; min-width:44px; border:none; border-radius:22px; padding:0; background:transparent; cursor:pointer; font:inherit;
             display:flex; align-items:center; justify-content:center; gap:6px; color:var(--secondary-text-color); transition:background-color .25s, padding .25s; -webkit-tap-highlight-color:transparent; }
           .nb-it.nb-on { padding:0 14px 0 12px; color:#fff; font-weight:600; font-size:0.85rem; }
@@ -7099,9 +7109,9 @@
           .nb-it:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
           .nb-dot { position:absolute; left:28px; top:6px; width:8px; height:8px; border-radius:50%; background:#ff9800; box-shadow:0 0 0 2px var(--card-background-color, #1f2128); }
           .nb-it.nb-on .nb-dot { left:auto; right:6px; }
-          .nb-top { pointer-events:auto; position:relative; flex:none; width:58px; height:58px; padding:0; border:none; border-radius:50%; cursor:pointer;
-            background:color-mix(in srgb, var(--card-background-color, #1f2128) 92%, #fff 4%); box-shadow:0 8px 24px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.06);
-            -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); -webkit-tap-highlight-color:transparent; }
+          .nb-top { pointer-events:auto; position:relative; flex:none; width:58px; height:58px; padding:0; border:none; border-radius:50%; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+          ${kitAcrylicCss(".nb")}
+          ${kitAcrylicCss(".nb-top")}
           .nb-top:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
           .nb-top i { position:absolute; left:50%; top:50%; width:12px; height:2.5px; margin:-1.25px 0 0 -6px; border-radius:2px; background:#fff;
             transition:transform .38s cubic-bezier(.2,.8,.2,1); }
@@ -7457,11 +7467,8 @@
     }
   });
   var CHIPS_CSS = `
-  .al-chips .al-cap {
-    flex:1 1 auto; min-width:0; padding:6px; border-radius:999px; box-sizing:border-box;
-    background:color-mix(in srgb, var(--card-background-color, #1f2128) 88%, transparent);
-    box-shadow:0 6px 18px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.06);
-    -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); }
+  .al-chips .al-cap { flex:1 1 auto; min-width:0; padding:6px; border-radius:999px; box-sizing:border-box; }
+  ${kitAcrylicCss(".al-chips .al-cap")}
   .al-chips .al-strip { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; }
 `;
   var boxHeight = (el) => el ? Math.round(el.getBoundingClientRect().height) : 0;

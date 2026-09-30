@@ -6,6 +6,20 @@
 
 import { iconHtml, hydrateIcons } from './icons.js';
 
+// Acrylic ("Deep frost"): a mostly solid dark tint over a heavy blur of
+// whatever's behind, a faint highlight at the top and fine grain, with no
+// outline. Used by the floating chips, nav bar and back-to-top circle.
+export const KIT_GRAIN = `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")`;
+export const KIT_ACRYLIC_FILTER = 'blur(42px) saturate(115%)';
+export const kitAcrylicCss = (sel) => `
+  ${sel} { position:relative; isolation:isolate; border:none;
+    background:linear-gradient(rgba(255,255,255,.04), rgba(255,255,255,0)), color-mix(in srgb, var(--card-background-color, #1f2128) 76%, transparent);
+    -webkit-backdrop-filter:${KIT_ACRYLIC_FILTER}; backdrop-filter:${KIT_ACRYLIC_FILTER}; box-shadow:0 10px 30px rgba(0,0,0,.45); }
+  ${sel}::after { content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none; z-index:-1; background-image:${KIT_GRAIN}; opacity:.08; }`;
+// Cards inside a section panel are frosted the same way: the panel sets
+// --cd-card-bg / --cd-card-filter (and HA's own --ha-card-* for its cards).
+export const KIT_CARD_BG = 'var(--cd-card-bg, var(--card-background-color))';
+
 export const KIT_COLOR = {
   off: '#8b919c',
   good: '#4caf50',
@@ -36,7 +50,7 @@ export const KIT_HEALTH_CSS = `.ck-stale .ck-row, .ck-stale .ck-dim { opacity:.5
 // The card shell: ha-card, shared styles, the title row, then `body`.
 export function kitShell(body, extraCss = '') {
   return `
-    <ha-card class="ck-card" style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; padding:16px; background:var(--card-background-color); transition:background-color .6s ease; display:flex; flex-direction:column; gap:12px;">
+    <ha-card class="ck-card" style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; padding:16px; background:${KIT_CARD_BG}; -webkit-backdrop-filter:var(--cd-card-filter, none); backdrop-filter:var(--cd-card-filter, none); transition:background-color .6s ease; display:flex; flex-direction:column; gap:12px;">
       <style>
         /* Narrow cards (e.g. five side by side): a smaller title, and the
            status word drops to its own line instead of cutting the title. */
@@ -82,7 +96,7 @@ export function kitHead(root, title, word, color, tint = 0) {
   t.textContent = title;
   t.style.color = color;
   w.textContent = word;
-  card.style.backgroundColor = tint ? `color-mix(in srgb, ${color} ${tint}%, var(--card-background-color))` : 'var(--card-background-color)';
+  card.style.backgroundColor = tint ? `color-mix(in srgb, ${color} ${tint}%, ${KIT_CARD_BG})` : KIT_CARD_BG;
 }
 
 // A 270° arc filled to `p` (0..1) with a label in the middle.
@@ -591,7 +605,7 @@ export function kitHealthBanner(root, hass, entityId, demo) {
 // spec = { name, color, value, valueColor, status, buttons: [{ key, icon,
 //   label, on, color }], chips: [{ label, color }], onButton(b) }
 const KIT_CPT_CSS = `
-  .ck-cpt { display:flex; flex-direction:column; gap:6px; border:none; box-shadow:0 3px 10px rgba(0,0,0,.45); border-radius:14px; padding:8px 10px; background:var(--card-background-color); }
+  .ck-cpt { display:flex; flex-direction:column; gap:6px; border:none; box-shadow:0 3px 10px rgba(0,0,0,.45); border-radius:14px; padding:8px 10px; background:${KIT_CARD_BG}; -webkit-backdrop-filter:var(--cd-card-filter, none); backdrop-filter:var(--cd-card-filter, none); }
   .ck-cpt-row { display:flex; align-items:center; gap:8px; min-height:32px; }
   .ck-cpt-name { font-weight:600; font-size:0.92rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; min-width:0; flex:0 1 auto; }
   .ck-cpt-val { font-weight:700; font-size:1.05rem; font-variant-numeric:tabular-nums; white-space:nowrap; flex:none; }
