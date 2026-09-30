@@ -171,8 +171,11 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
         left as they are.
     - **Notifications (2026-09-30, user's request):**
       `automation.church_drive_to_do_reminders` (queued, max 20) sends two kinds, each
-      person on their own devices. Devices are set in the `people` variable: Jamie's
-      iPhone and Pixel (not the iPad or the watch), Hayley's Pixel 9, Diane's phone.
+      person on their own devices. It sends through `script.church_drive_notify_person`
+      ("Church Drive: notify a person"; fields person / title / message / tag / link),
+      which has one plain notify step per phone: Jamie's iPhone and Pixel (not the iPad
+      or the watch), Hayley's Pixel 9, Diane's phone. The first step, "People", holds
+      each person's list and switches.
       - **Summary** (trigger id `summary`): at `input_datetime.to_do_reminder_time`
         ("To-do: summary time", 10:00) on `input_select.to_do_summary_day`
         (Saturday; "Every day" is also an option).
@@ -983,7 +986,14 @@ Integration modules (`custom_components/church_drive/`):
 - **Beta first.** New or changed card behaviour goes on the Design Presets **Beta**
   tab. The user checks it, says "release it", and then it ships.
 - **Everything from the UI.** Every option needs a visual-editor field. Nothing is
-  YAML-only.
+  YAML-only. That covers HA config too (audited 2026-09-30):
+  - No templated action names (`action: notify.{{ … }}`). HA's editor can't show
+    them and drops that step to YAML. Templates are fine in `data` and `target`. To
+    reach different phones, call `script.church_drive_notify_person`.
+  - No top-level automation `variables:`. The visual editor keeps them but never
+    shows them. Put them in a first "variables" step with an alias instead (both
+    to-do automations do this).
+  - Card editors: every card has one, and every option it reads is in its schema.
 - **Design Presets uses pretend lights only.** On the main and Beta tabs, light cards
   are in demo mode, battery/gauge cards use fixed values, and the alarm uses
   `demo: true`. The Scene builder tab is the exception: its "Try it in" uses real
