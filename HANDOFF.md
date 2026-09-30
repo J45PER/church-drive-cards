@@ -67,6 +67,15 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
     `title: Hello {user}`, so every Mobile page uses the same header. Chips `auto` now
     shows on every phone page (1+ titled panels), not only 4+, so the row is always
     there.
+- **In beta: header widget and priorities (2026-09-30).**
+  - The header's alerts line became a fixed three-row widget (26px rows, 96px box;
+    header 160px on every page): page alerts first, then the person's to-dos.
+  - With `priorities: true`, Auto Layout subscribes (`todo/item/subscribe`) to
+    `todo.priorities_<first name>` and lists open items, overdue and soonest-due first
+    (overdue in red, others purple), each with a ✓ (`todo.update_item`, completed).
+  - `priorities_page` adds a side button "To-do ›" (or "+N ›").
+  - The user chose A-style, fixed-size ("like a widget"), with "view more" going to a
+    per-person to-do page.
 - The back-to-top strokes are solid white in both states.
 - **Chips capsule, 2026-09-29:**
   - Chips sit in a scrolling `.al-strip` and grow to fill it (`flex:1 0 auto`), then

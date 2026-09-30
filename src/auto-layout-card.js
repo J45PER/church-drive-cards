@@ -11,7 +11,7 @@ import { SUFFIX, LABEL } from './suffix.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { stcColor } from './section-title-card.js';
 import { nbHuiRoot } from './nav-bar-card.js';
-import { kitScrollParent, kitGlide } from './card-kit.js';
+import { kitScrollParent, kitGlide, kitNavigate } from './card-kit.js';
 import { PANEL_TRANSITION } from './section-panel-card.js';
 
 let helpersPromise;
@@ -74,6 +74,8 @@ function planRemember(key, splits) {
 const LayoutFields = createFormEditor({
   schema: () => [
     { name: 'title', selector: { text: {} } },
+    { name: 'priorities', selector: { boolean: {} }, default: false },
+    { name: 'priorities_page', selector: { navigation: {} } },
     { name: 'column_width', selector: { number: { min: 200, max: 800, step: 10, mode: 'box', unit_of_measurement: 'px' } } },
     { name: 'max_columns', selector: { number: { min: 1, max: 6, step: 1, mode: 'box' } } },
     { name: 'controls_first', selector: { boolean: {} }, default: true },
@@ -81,6 +83,8 @@ const LayoutFields = createFormEditor({
   ],
   labels: {
     title: 'Page title (optional; {user} is the signed-in person\'s first name)',
+    priorities: "Show the signed-in person's top to-do in the header",
+    priorities_page: 'Their to-do page (for "+N more")',
     column_width: 'Columns at least this wide',
     max_columns: 'At most this many columns',
     controls_first: 'Panels with buttons and sliders go above ones that only show information',
@@ -88,6 +92,7 @@ const LayoutFields = createFormEditor({
   },
   helpers: {
     title: "Shown large at the top of the page, above the chips. Any panel that has opened by itself (its 'opens by itself when' is true) shows under it as an alert; tapping one goes to that panel.",
+    priorities: 'Reads the to-do list named "Priorities <first name>" (e.g. todo.priorities_jamie). The top item shows in the alerts line with a ✓; overdue and due-soonest come first.',
     column_width: 'Default 340px. Phones (under 600px) always get one column in list order.',
     max_columns: 'Default 3. Mark a panel "Full width across an Auto Layout" to have it span the page.',
     controls_first: 'Keeps list order otherwise, on phones too. Each panel can override what it counts as ("Counts as" in the panel).',
@@ -185,6 +190,7 @@ export class AutoLayoutCardEditor extends HTMLElement {
     const first = !this._hass;
     this._hass = hass;
     if (first) this._renderHead();
+    if (this.config && this.config.priorities) this._watchTodo();
     this._render();
   }
 
@@ -291,6 +297,15 @@ export class AutoLayoutCard extends HTMLElement {
     // always there (blank when nothing needs you), so pages line up.
     this._head.style.cssText = 'display:none; flex-direction:column; align-items:stretch; gap:8px; padding:4px 0 12px; box-sizing:border-box;';
     this._head.addEventListener('click', (ev) => {
+      const tick = ev.target.closest && ev.target.closest('[data-done]');
+      if (tick) {
+        this._completeTop(tick);
+        return;
+      }
+      if (ev.target.closest && ev.target.closest('[data-todo]')) {
+        if (this.config.priorities_page) kitNavigate(this.config.priorities_page);
+        return;
+      }
       const pill = ev.target.closest && ev.target.closest('[data-alert]');
       const it = pill && this._items[Number(pill.dataset.alert)];
       if (it) this._jumpTo(it);
@@ -508,7 +523,8 @@ export class AutoLayoutCard extends HTMLElement {
       });
     const user = this._hass && this._hass.user && this._hass.user.name ? String(this._hass.user.name).split(' ')[0] : '';
     const title = String(this.config.title || '').replace(/\{user\}/g, user).trim();
-    const sig = JSON.stringify([title, alerts]);
+    const todo = this._todoView();
+    const sig = JSON.stringify([title, alerts, todo]);
     if (sig === this._headSig) return;
     this._headSig = sig;
     if (!this.config.title) {
@@ -517,15 +533,87 @@ export class AutoLayoutCard extends HTMLElement {
       return;
     }
     head.style.display = 'flex';
+    // Three fixed rows, like a widget: page alerts first, then (with
+    // priorities on) the person's to-do items. Rows beyond what's there stay
+    // blank, so the header is the same size on every page.
+    const rows = [
+      ...alerts.map((a) => ({ kind: 'alert', ...a })),
+      ...(todo ? todo.items.map((t) => ({ kind: 'todo', ...t })) : []),
+    ];
+    const shown = rows.slice(0, 3);
+    const extra = rows.length - shown.length;
+    const row = (r) => {
+      if (!r) return '<div style="height:26px;"></div>';
+      const c = r.kind === 'todo' ? (r.overdue ? '#e53935' : '#7e57c2') : r.colour;
+      const icon = r.kind === 'todo' ? 'mdi:flag' : r.icon;
+      const tick =
+        r.kind === 'todo'
+          ? `<button type="button" data-done="${esc(r.uid)}" aria-label="Done" title="Done" style="flex:none; width:22px; height:22px; padding:0; border:2px solid color-mix(in srgb, ${c} 70%, transparent); border-radius:50%; background:transparent; color:var(--primary-text-color); cursor:pointer; display:flex; align-items:center; justify-content:center;">${iconHtml('mdi:check', { size: '14px' })}</button>`
+          : '';
+      return `<div ${r.kind === 'alert' ? `data-alert="${r.i}" role="button"` : ''} style="height:26px; display:flex; align-items:center; gap:8px; padding:0 4px 0 8px; border-radius:13px; cursor:${r.kind === 'alert' ? 'pointer' : 'default'}; background:color-mix(in srgb, ${c} 16%, transparent);">${
+        icon ? iconHtml(icon, { size: '16px', style: `color:${c}; flex:none;` }) : ''
+      }<span style="flex:1; min-width:0; font-size:0.8rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(r.text)}</span>${tick}</div>`;
+    };
+    const side =
+      todo && this.config.priorities_page
+        ? `<button type="button" data-todo style="flex:none; width:58px; padding:0 4px; border:none; border-radius:12px; cursor:pointer; font:inherit; font-size:0.72rem; font-weight:700; line-height:1.2; color:var(--primary-text-color); background:color-mix(in srgb, #7e57c2 22%, transparent); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;">${iconHtml(
+            'mdi:format-list-checks',
+            { size: '18px', style: 'color:#b39ddb;' }
+          )}${extra > 0 ? `+${extra}` : 'To-do'}<span style="font-size:0.9rem; line-height:1;">›</span></button>`
+        : '';
     head.innerHTML = `<div style="height:40px; font-size:2rem; font-weight:700; line-height:40px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--primary-text-color);">${esc(title)}</div>
-      <div style="height:34px; display:flex; flex-wrap:nowrap; justify-content:safe center; align-items:center; gap:6px; overflow-x:auto; scrollbar-width:none;">${alerts
-        .map(
-          (a) => `<button type="button" data-alert="${a.i}" style="flex:none; display:inline-flex; align-items:center; gap:6px; max-width:90%; height:32px; padding:0 12px; border:none; border-radius:999px; cursor:pointer; font:inherit; font-size:0.82rem; font-weight:600; color:var(--primary-text-color); background:color-mix(in srgb, ${a.colour} 26%, var(--card-background-color, #22252e)); box-shadow:inset 0 0 0 1px color-mix(in srgb, ${a.colour} 55%, transparent);">${
-            a.icon ? iconHtml(a.icon, { size: '18px', style: `color:${a.colour}; flex:none;` }) : ''
-          }<span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(a.text)}</span></button>`
-        )
-        .join('')}</div>`;
+      <div class="al-widget" style="height:96px; box-sizing:border-box; display:flex; gap:6px; padding:6px; border-radius:18px; background:color-mix(in srgb, var(--card-background-color, #1f2128) 70%, transparent);">
+        <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:3px;">${[0, 1, 2].map((n) => row(shown[n])).join('')}</div>${side}
+      </div>`;
     hydrateIcons(head);
+  }
+
+  // ---- Priorities: the signed-in person's to-do list ("Priorities Jamie").
+  _todoEntity() {
+    if (!this.config.priorities || !this._hass || !this._hass.user) return null;
+    const first = String(this._hass.user.name || '').split(' ')[0].toLowerCase().replace(/[^a-z0-9]+/g, '_');
+    const id = `todo.priorities_${first}`;
+    return this._hass.states[id] ? id : null;
+  }
+
+  _watchTodo() {
+    const id = this._todoEntity();
+    if (id === this._todoId) return;
+    if (this._todoUnsub) this._todoUnsub.then((u) => u && u()).catch(() => {});
+    this._todoUnsub = null;
+    this._todoId = id;
+    this._todoItems = [];
+    if (!id || !this.isConnected) return;
+    this._todoUnsub = this._hass.connection
+      .subscribeMessage(
+        (msg) => {
+          this._todoItems = (msg && msg.items) || [];
+          this._renderHead();
+        },
+        { type: 'todo/item/subscribe', entity_id: id }
+      )
+      .catch(() => null);
+  }
+
+  // Open items, overdue and due-soonest first, then in list order.
+  _todoView() {
+    if (!this._todoId) return null;
+    const open = (this._todoItems || []).filter((t) => t.status === 'needs_action');
+    const rank = (t) => (t.due ? new Date(t.due).getTime() : Infinity);
+    const today = new Date().toISOString().slice(0, 10);
+    const items = open
+      .map((t, n) => ({ t, n }))
+      .sort((a, b) => rank(a.t) - rank(b.t) || a.n - b.n)
+      .map(({ t }) => ({ uid: t.uid, text: t.summary, overdue: !!t.due && String(t.due).slice(0, 10) < today }));
+    return { items };
+  }
+
+  _completeTop(tick) {
+    const uid = tick.dataset.done;
+    if (!uid || !this._todoId) return;
+    tick.style.background = '#4caf50';
+    tick.style.borderColor = '#4caf50';
+    this._hass.callService('todo', 'update_item', { item: uid, status: 'completed' }, { entity_id: this._todoId }).catch(() => {});
   }
 
   // ---- Jump-to chips: one per panel, in page order, in the panel's colour.
@@ -720,6 +808,7 @@ export class AutoLayoutCard extends HTMLElement {
     // The nav bar's back-to-top also closes the panel a chip jump opened.
     this._onTop = () => this._closeJumped(null);
     window.addEventListener('cd-to-top', this._onTop);
+    if (this._hass && this.config.priorities) this._watchTodo();
     this._onScrollBound = () => {
       cancelAnimationFrame(this._scrollFrame);
       this._scrollFrame = requestAnimationFrame(() => this._onScroll());
@@ -746,6 +835,9 @@ export class AutoLayoutCard extends HTMLElement {
     window.removeEventListener('cd-anim', this._onAnim);
     window.removeEventListener('cd-to-top', this._onTop);
     if (this._chips && this._chips.parentNode === document.body) this._chips.remove();
+    if (this._todoUnsub) this._todoUnsub.then((u) => u && u()).catch(() => {});
+    this._todoUnsub = null;
+    this._todoId = undefined;
     window.removeEventListener('cd-panels-changed', this._onChange);
     if (this._ro) this._ro.disconnect();
     this._ro = null;
