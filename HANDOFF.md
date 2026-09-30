@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-30. Current release: **v0.23.0**.*
+*Last updated 2026-09-30. Current release: **v0.24.0**.*
 
 ## Where this stands
 
@@ -227,7 +227,7 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
-- **In beta: acrylic and scroll room (2026-09-30).**
+- **v0.24.0 (released 2026-09-30, reload-only): acrylic, frosted cards, scroll room, To-do ordering, purifier graph, Energy.**
   - The user chose option C, "Deep frost", from the acrylic mock-up.
     - `kitAcrylicCss(sel)` in card-kit gives: a 76% card-colour tint with a 4% top
       highlight, `blur(42px) saturate(115%)` behind it, 8% SVG grain (`KIT_GRAIN`) in
@@ -286,8 +286,49 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
         "PM2.5 93 µg/m³ · Poor".
     - Header widget To-do button: no "›"; the text matches the icon's lilac
       (#b39ddb), reading "+N more" or "To-do"; 22px icon; aria-label.
-  - Mobile is on `-beta` cards again for testing; strip them on release. Mock-up:
+  - On release `-beta` was stripped from Mobile again. Acrylic mock-up:
     https://claude.ai/artifact/Y9kej1q5Hxpggozpc8CkmV
+- **Energy (v0.24.0, user's request):**
+  - Octopus Energy (BottlecapDave integration, entry `01M3SXJ58FATC6QSNR4EH3X8PG`,
+    account A-26769B84) is on **Octopus Go**: 4.99p from 00:30 to 05:30, 26.57p
+    otherwise. Gas is fixed at 5.24p.
+  - **Home Mini:** it was online but `home_mini_settings.supports_live_consumption` was
+    false. It was switched on with the integration's reconfigure flow, which needs
+    `home_pro_settings: {}` and `price_cap_settings: {}` sent back. That added
+    `current_demand` (W), `current_accumulative_consumption`/`cost` (and peak /
+    off_peak), plus gas current_* sensors. The first reading was 225 W.
+  - **New cards (`src/energy-cards.js`):**
+    - `octopus-card` with `show`: `electricity` / `last_day` / `gas` / `octoplus`. It
+      finds meters from the entity registry (platform `octopus_energy`).
+      - Cheap means the day's minimum rate from the `event.*_day_rates` `rates`
+        attribute.
+      - `last_day` uses the `charges` attribute of `previous_accumulative_cost`
+        (rate + consumption per half-hour).
+    - `ev-charger-card` for a myenergi Zappi: it finds `select.*zappi*` with an Eco+
+      option, and the power / session / status / plug sensors. It can be overridden
+      per entity.
+      - Until myenergi is set up it says "Not connected yet".
+      - Mode buttons use `select.select_option`.
+    - Both support compact rows.
+  - **Icons can be pictures:** an https URL, `/local/...`, or `brand:<domain>` for
+    brands.home-assistant.io. They're used by panel titles (Octopus Electricity uses
+    `brand:octopus_energy`). A failed picture hides itself.
+  - **Nav bar:**
+    - `icons_only` (Mobile uses it): 42px icons, the current page as a filled circle.
+    - Per-page `admin_only` hides a page from non-admins (`hass.user.is_admin`).
+  - **Mobile `energy` view** (only Jamie and Hayley, the admins; the view has `visible`
+    and the section a user condition). Panels:
+    - Octopus Electricity (#f050f8, brand logo);
+    - Car charger (#00b8d4);
+    - Last full day;
+    - Gas;
+    - Octoplus.
+    Every Mobile nav bar has an Energy page (`admin_only`) and `icons_only: true`.
+  - Home has a **Car charger** panel for everyone (after Climate).
+  - **Zappi:** the HACS integration CJNE/ha-myenergi (id 401145616) is downloaded but
+    not loaded. It needs an HA restart, then a config flow with the hub serial and API
+    key, which the user will send.
+  - Energy mock-up: https://claude.ai/artifact/XRtwhvTDAuvS1YYtQgM8hz
 - The back-to-top strokes are solid white in both states.
 - **Chips capsule, 2026-09-29:**
   - Chips sit in a scrolling `.al-strip` and grow to fill it (`flex:1 0 auto`), then
@@ -1000,7 +1041,7 @@ Integration modules (`custom_components/church_drive/`):
   - `church-drive-cards-beta.js` registers every card as `<name>-beta`.
   - HA loads it from resource `436186c683fe4c7d81c865b67bb0e109`:
     `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's pinned to `3533a28` (the v0.23.0 merge).
+    It's pinned to the v0.24.0 merge (see below).
   - To test a branch: push it, repoint the resource, and ask for a hard refresh.
   - jsDelivr is blocked from the cloud container, but works for the user.
 - **Rollback:** download an older release in HACS and restart.

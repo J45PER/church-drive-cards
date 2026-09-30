@@ -42,7 +42,7 @@ export function iconHtml(icon, { size = '24px', style = '', cls = '' } = {}) {
   // Home Assistant's official brand images (e.g. brand:octopus_energy).
   const pic = /^brand:/.test(icon || '') ? `https://brands.home-assistant.io/_/${encodeURIComponent(icon.slice(6))}/icon.png` : /^(https?:)?\/\//.test(icon || '') || /^\/[^/]/.test(icon || '') ? icon : null;
   if (pic) {
-    return `<img class="${cls}" src="${escapeAttr(pic)}" alt="" style="width:${size}; height:${size}; object-fit:contain; border-radius:6px; ${style}">`;
+    return `<img class="${cls}" src="${escapeAttr(pic)}" alt="" onerror="this.style.visibility='hidden'" style="width:${size}; height:${size}; object-fit:contain; border-radius:6px; ${style}">`;
   }
   if (!isCustom(icon)) {
     return `<ha-icon class="${cls}" icon="${escapeAttr(icon)}" style="--mdc-icon-size:${size}; ${style}"></ha-icon>`;

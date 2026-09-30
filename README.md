@@ -168,6 +168,18 @@ Lists every device Church Drive watches, with whether it's responding, when it w
 
 It then fixes it automatically: a refresh, then re-sending the last real state (fans and thermostats). If a fan still doesn't respond, it nudges it (a few seconds in its quietest other mode, then back) after 1.5, 10 and 30 minutes. It never reloads an integration on its own, because reloading the Philips integration gets it stuck. `sensor.church_drive_device_health` counts devices needing attention; the fan, air purifier, carbon monoxide, blind and climate cards show a "Not responding" banner on their own; `church_drive.health_fix` runs a fix on demand.
 
+### `octopus-card`
+
+Octopus Energy at a glance, from the Octopus Energy integration. It finds your meters by itself. `show` picks one of four views:
+- `electricity`: the rate this half-hour, marked Cheap or Peak, and live use from a Home Mini. It also shows today's running cost and a 24-hour strip of today's rates with the cheap window and how long until it starts.
+- `last_day`: the latest complete day Octopus has sent. That's the cost of electricity and gas, half-hour use coloured by rate, and how much ran at the cheap rate.
+- `gas`: the rate, standing charge and today so far.
+- `octoplus`: points, weekend happy hours and saving sessions.
+
+### `ev-charger-card`
+
+A myenergi Zappi car charger: whether it's charging, the power, this charge's energy (and roughly what it's costing at the Octopus rate), and Stop / Eco / Eco+ / Fast buttons. It finds the Zappi by itself once the myenergi integration is set up, and until then says it isn't connected yet.
+
 ### `house-tasks-card`
 
 The jobs the house has spotted, such as a low battery, a filter due, a device not responding or a vacuum message. It reads them from the automatic to-do list (`entity`, default `todo.priorities_automatic`). There's nothing to tick: each job goes by itself once the device reports it's done.
@@ -187,7 +199,7 @@ Colours: indigo normally, amber while the door is open, red with a warning line 
 
 ### `nav-bar-card`
 
-A floating capsule pinned to the bottom of the screen, with every page of a dashboard one tap away. Each page has a name, an icon, a page path and a colour. The colour and the icon can come live from templates (`color_template`, `icon_template`), for example following the alarm: a shield that's off when disarmed and locked when armed away. The current page shows as a filled capsule with its name. When there are too many pages for the width (six on most phones), the bar tightens up and the current page shows as its coloured capsule without the name. A small dot marks a page whose "needs attention" template gives something other than 0, off or empty. Put the same card on every page; it takes no room in the layout. Tapping the current page scrolls back to the top, and so does the round button to the right of the bar, whose three strokes fold from a dash (at the top of the page) into an ↑ once you scroll down (`back_to_top: false` hides it). While the bar is on screen it hides the dashboard's own tabs at the top (`hide_tabs: false` keeps them); the menu, search and edit buttons stay, and the tabs come back in edit mode. `demo: true` shows it in place for Design Presets.
+A floating capsule pinned to the bottom of the screen, with every page of a dashboard one tap away. Each page has a name, an icon, a page path and a colour. The colour and the icon can come live from templates (`color_template`, `icon_template`), for example following the alarm: a shield that's off when disarmed and locked when armed away. The current page shows as a filled capsule with its name, or just a filled circle with `icons_only: true`. A page marked "Only admins see this page" (`admin_only`) is hidden from everyone else. When there are too many pages for the width (six on most phones), the bar tightens up and the current page shows as its coloured capsule without the name. A small dot marks a page whose "needs attention" template gives something other than 0, off or empty. Put the same card on every page; it takes no room in the layout. Tapping the current page scrolls back to the top, and so does the round button to the right of the bar, whose three strokes fold from a dash (at the top of the page) into an ↑ once you scroll down (`back_to_top: false` hides it). While the bar is on screen it hides the dashboard's own tabs at the top (`hide_tabs: false` keeps them); the menu, search and edit buttons stay, and the tabs come back in edit mode. `demo: true` shows it in place for Design Presets.
 
 ### `section-panel-card`
 
