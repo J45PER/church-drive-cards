@@ -314,7 +314,7 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
     brands.home-assistant.io. A failed picture hides itself.
   - **Octopus icon and colours (user's choice, 2026-09-30):** flat `phu:octopusenergy`
     from Custom Brand Icons (not the logo picture, for flat-icon consistency).
-    Electricity and Octoplus are pink `#f050f8`, Gas is Octopus violet `#7b61ff`
+    Electricity is pink `#f050f8` (Octoplus keeps pink with a gift icon), Gas is Octopus violet `#7b61ff`
     (`OCTO_VIOLET`, option A of https://claude.ai/artifact/35p65QgdMS29MW5tQh2PWJ).
     The pack also has `phu:myenergi`, which the user hasn't asked for.
   - **Nav bar:**
@@ -326,7 +326,7 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
     - Car charger (#00b8d4);
     - Last full day;
     - Gas (#7b61ff, `phu:octopusenergy`);
-    - Octoplus (#f050f8, `phu:octopusenergy`).
+    - Octoplus (#f050f8, `mdi:gift-outline`).
     Every Mobile nav bar has an Energy page (`admin_only`) and `icons_only: true`.
   - Home has a **Car charger** panel for everyone (after Climate).
   - **Zappi:** the HACS integration CJNE/ha-myenergi (id 401145616) is downloaded. HA
@@ -1049,7 +1049,8 @@ Integration modules (`custom_components/church_drive/`):
   - `church-drive-cards-beta.js` registers every card as `<name>-beta`.
   - HA loads it from resource `436186c683fe4c7d81c865b67bb0e109`:
     `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's pinned to the v0.24.0 merge (see below).
+    It's pinned to `9288105` (Octopus violet gas), and the Mobile Energy view uses the
+    `-beta` types to test it. Strip `-beta` there when it's released.
   - To test a branch: push it, repoint the resource, and ask for a hard refresh.
   - jsDelivr is blocked from the cloud container, but works for the user.
 - **Rollback:** download an older release in HACS and restart.
