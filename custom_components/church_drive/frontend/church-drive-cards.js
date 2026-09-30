@@ -7004,6 +7004,8 @@
         this._scrollFrame = requestAnimationFrame(() => this._syncTop());
       };
       window.addEventListener("scroll", this._onScroll, { capture: true, passive: true });
+      this._onResize = () => this._fit();
+      window.addEventListener("resize", this._onResize);
       if (this._hass && !this._subs) this._resubscribe();
       this._render();
       this._holdTabs();
@@ -7027,6 +7029,7 @@
       window.removeEventListener("location-changed", this._onLocation);
       window.removeEventListener("popstate", this._onLocation);
       window.removeEventListener("scroll", this._onScroll, { capture: true });
+      window.removeEventListener("resize", this._onResize);
       this._unsubscribe();
     }
     _unsubscribe() {
@@ -7087,6 +7090,12 @@
             display:flex; align-items:center; justify-content:center; gap:6px; color:var(--secondary-text-color); transition:background-color .25s, padding .25s; -webkit-tap-highlight-color:transparent; }
           .nb-it.nb-on { padding:0 14px 0 12px; color:#fff; font-weight:600; font-size:0.85rem; }
           .nb-it span.nb-name { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:110px; }
+          /* Too many pages for the width (e.g. six on a phone): tighter spacing,
+             and the current page is its coloured pill without the label. */
+          .nb.nb-tight { gap:2px; padding:0 5px; }
+          .nb.nb-tight .nb-it { min-width:40px; }
+          .nb.nb-tight .nb-it.nb-on { padding:0 12px; }
+          .nb.nb-tight .nb-it span.nb-name { display:none; }
           .nb-it:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
           .nb-dot { position:absolute; left:28px; top:6px; width:8px; height:8px; border-radius:50%; background:#ff9800; box-shadow:0 0 0 2px var(--card-background-color, #1f2128); }
           .nb-it.nb-on .nb-dot { left:auto; right:6px; }
@@ -7150,6 +7159,14 @@
         })
       );
       hydrateIcons(this._host || this);
+      this._fit();
+    }
+    // Tight mode when the pages don't fit side by side at full size.
+    _fit() {
+      const nav = this._nav;
+      if (!nav) return;
+      nav.classList.remove("nb-tight");
+      if (nav.scrollWidth > nav.clientWidth + 1) nav.classList.add("nb-tight");
     }
     // ---- Back to top: an arrow once the page is scrolled, a dash at the top.
     _scroller() {
@@ -7192,6 +7209,159 @@
       type: `nav-bar-card${SUFFIX}`,
       name: `Nav Bar Card${LABEL}`,
       description: "A floating bar at the bottom of the screen: every page one tap away, in its live colour, with a dot when a page needs you",
+      preview: true,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
+    });
+  }
+
+  // src/house-tasks-card.js
+  var HOUSE_TASKS_LIST = "todo.priorities_automatic";
+  var HOUSE_TASKS_COLOR = "#ab47bc";
+  function houseTask(item) {
+    const parts = String(item && item.description || "").split(" \xB7 ");
+    const last = parts[parts.length - 1] || "";
+    const who = /^for /.test(last) ? last.slice(4).trim() : "Everyone";
+    const rest = parts.slice(1, /^for /.test(last) ? -1 : void 0);
+    const kind = rest[0] || "";
+    const icon = /batter/i.test(kind) ? "mdi:battery-alert-variant-outline" : /filter/i.test(kind) ? "mdi:air-filter" : /vacuum/i.test(kind) ? "mdi:robot-vacuum" : /respond|device/i.test(kind) ? "mdi:heart-pulse" : "mdi:home-alert-outline";
+    return { kind, detail: rest.slice(1).join(" \xB7 "), who, icon };
+  }
+  function houseTaskFor(task, first) {
+    const names = String(task.who || "").toLowerCase().split(",").map((x) => x.trim());
+    return names.includes("everyone") || !!first && names.includes(String(first).toLowerCase());
+  }
+  function htDemo() {
+    return [
+      { uid: "d1", summary: "Replace battery: Ring Front Doorbell", status: "needs_action", description: "Automatic \xB7 Low batteries \xB7 17% \xB7 for Everyone" },
+      { uid: "d2", summary: "Clean the air purifier pre-filter", status: "needs_action", description: "Automatic \xB7 Filters due \xB7 8% left \xB7 for Jamie" }
+    ];
+  }
+  var HouseTasksCardEditor = createFormEditor({
+    schema: () => [
+      { name: "title", selector: { text: {} } },
+      { name: "entity", selector: { entity: { domain: "todo" } } },
+      { name: "show", selector: { select: { mode: "dropdown", options: [{ value: "mine", label: "The signed-in person\u2019s and everyone\u2019s" }, { value: "all", label: "Everyone\u2019s, with names" }] } } },
+      { name: "color", selector: { text: {} } },
+      { name: "demo", selector: { boolean: {} } }
+    ],
+    labels: {
+      title: "Title (optional)",
+      color: "Colour",
+      entity: "Automatic to-do list",
+      show: "Show",
+      demo: "Show pretend tasks (for Design Presets)"
+    },
+    helpers: {
+      color: `Default ${HOUSE_TASKS_COLOR} (purple). Any CSS colour.`,
+      entity: `Defaults to ${HOUSE_TASKS_LIST}. Who gets each kind of task is set in Manager \u2192 Automatic to-dos.`
+    }
+  });
+  var HouseTasksCard = class extends HTMLElement {
+    setConfig(config) {
+      this.config = config || {};
+      this._built = false;
+      this._sig = null;
+      if (this._unsub) this._unwatch();
+      if (this._hass) this._watch();
+    }
+    set hass(hass) {
+      this._hass = hass;
+      this._watch();
+      this._render();
+    }
+    connectedCallback() {
+      if (this._hass) this._watch();
+    }
+    disconnectedCallback() {
+      this._unwatch();
+    }
+    _entity() {
+      return this.config.entity || HOUSE_TASKS_LIST;
+    }
+    _watch() {
+      if (this.config.demo || this._unsub || !this.isConnected || !this._hass || !this._hass.states[this._entity()]) return;
+      const id = this._entity();
+      this._unsub = this._hass.connection.subscribeMessage(
+        (msg) => {
+          this._items = msg && msg.items || [];
+          this._render();
+        },
+        { type: "todo/item/subscribe", entity_id: id }
+      ).catch(() => null);
+    }
+    _unwatch() {
+      if (this._unsub) this._unsub.then((u) => u && u()).catch(() => {
+      });
+      this._unsub = null;
+      this._items = null;
+    }
+    _render() {
+      if (!this._hass) return;
+      const c = this.config;
+      if (!this._built) {
+        this.innerHTML = kitShell(`<div class="ht-list" style="display:flex; flex-direction:column;"></div>`);
+        this._list = this.querySelector(".ht-list");
+        this.querySelector(".ck-headrow").style.display = c.title ? "" : "none";
+        this._built = true;
+      }
+      const first = this._hass.user && this._hass.user.name ? String(this._hass.user.name).split(" ")[0] : "";
+      const all = c.show === "all";
+      const colour = c.color || HOUSE_TASKS_COLOR;
+      const missing = !c.demo && !this._hass.states[this._entity()];
+      const tasks = (c.demo ? htDemo() : this._items || []).filter((t) => t.status === "needs_action").map((t) => ({ t, h: houseTask(t) })).filter(({ h }) => all || houseTaskFor(h, first));
+      if (c.title) kitHead(this, c.title, missing ? "Not set up" : tasks.length ? `${tasks.length} to sort` : "All sorted", tasks.length ? colour : KIT_COLOR.good);
+      const sig = JSON.stringify([tasks, missing, all, first, colour]);
+      if (sig === this._sig) return;
+      this._sig = sig;
+      if (missing) {
+        this._list.innerHTML = `<div class="ck-sub" style="line-height:1.5;">There's no ${this._entity()} list yet. Add a Local To-do list named "Priorities Automatic".</div>`;
+        return;
+      }
+      if (!tasks.length) {
+        this._list.innerHTML = `<div style="display:flex; align-items:center; gap:10px; padding:4px 0;">${iconHtml("mdi:check-circle-outline", { size: "22px", style: `color:${KIT_COLOR.good}; flex:none;` })}<span class="ck-sub">Nothing needs doing. Jobs like a low battery or a filter due show here, and go by themselves once they're done.</span></div>`;
+        hydrateIcons(this);
+        return;
+      }
+      this._list.innerHTML = tasks.map(({ h }, i) => {
+        const tag = all || h.who.toLowerCase() !== first.toLowerCase() ? `<span class="ck-chip ht-who" style="color:var(--secondary-text-color); background:rgba(127,127,127,0.16);"></span>` : "";
+        return `<div class="ht-row" style="display:flex; align-items:center; gap:10px; padding:9px 0;${i ? " border-top:1px solid var(--divider-color, rgba(127,127,127,0.22));" : ""}">
+            ${iconHtml(h.icon, { size: "22px", style: `color:${colour}; flex:none;` })}
+            <div style="flex:1; min-width:0;">
+              <div class="ht-name" style="font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
+              <div class="ht-sub ck-sub" style="font-size:0.74rem; line-height:1.35;"></div>
+            </div>${tag}
+          </div>`;
+      }).join("") + `<div class="ck-sub" style="font-size:0.72rem; padding-top:6px;">These go by themselves once the device reports they're done.</div>`;
+      this._list.querySelectorAll(".ht-row").forEach((el, i) => {
+        const { t, h } = tasks[i];
+        el.querySelector(".ht-name").textContent = t.summary;
+        el.querySelector(".ht-sub").textContent = [h.kind, h.detail].filter(Boolean).join(" \xB7 ");
+        const who = el.querySelector(".ht-who");
+        if (who) who.textContent = all ? h.who : h.who.split(", ").map((n) => first && n.toLowerCase() === first.toLowerCase() ? "You" : n).join(", ");
+      });
+      hydrateIcons(this);
+    }
+    getCardSize() {
+      return 3;
+    }
+    getGridOptions() {
+      return { columns: 12, min_columns: 6, rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement(`house-tasks-card-editor${SUFFIX}`);
+    }
+    static getStubConfig() {
+      return { title: "From the house" };
+    }
+  };
+  function registerHouseTasksCard() {
+    if (!customElements.get(`house-tasks-card-editor${SUFFIX}`)) customElements.define(`house-tasks-card-editor${SUFFIX}`, HouseTasksCardEditor);
+    if (!customElements.get(`house-tasks-card${SUFFIX}`)) customElements.define(`house-tasks-card${SUFFIX}`, HouseTasksCard);
+    window.customCards = window.customCards || [];
+    window.customCards.push({
+      type: `house-tasks-card${SUFFIX}`,
+      name: `House Tasks Card${LABEL}`,
+      description: "Jobs the house has spotted (batteries, filters, devices), which clear themselves once done",
       preview: true,
       documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
     });
@@ -7258,6 +7428,9 @@
   var LayoutFields = createFormEditor({
     schema: () => [
       { name: "title", selector: { text: {} } },
+      { name: "priorities", selector: { boolean: {} }, default: false },
+      { name: "priorities_page", selector: { navigation: {} } },
+      { name: "widget_width", selector: { number: { min: 280, max: 1200, step: 10, mode: "box", unit_of_measurement: "px" } } },
       { name: "column_width", selector: { number: { min: 200, max: 800, step: 10, mode: "box", unit_of_measurement: "px" } } },
       { name: "max_columns", selector: { number: { min: 1, max: 6, step: 1, mode: "box" } } },
       { name: "controls_first", selector: { boolean: {} }, default: true },
@@ -7265,6 +7438,9 @@
     ],
     labels: {
       title: "Page title (optional; {user} is the signed-in person's first name)",
+      priorities: "Show the signed-in person's top to-do in the header",
+      priorities_page: 'Their to-do page (for "+N more")',
+      widget_width: "Header widget at most this wide",
       column_width: "Columns at least this wide",
       max_columns: "At most this many columns",
       controls_first: "Panels with buttons and sliders go above ones that only show information",
@@ -7272,6 +7448,8 @@
     },
     helpers: {
       title: "Shown large at the top of the page, above the chips. Any panel that has opened by itself (its 'opens by itself when' is true) shows under it as an alert; tapping one goes to that panel.",
+      priorities: `Reads the to-do list named "Priorities <first name>" (e.g. todo.priorities_jamie), plus the shared "Priorities Everyone" list if there is one, each item with a \u2713 (a shared item ticked off clears for everyone); overdue and due-soonest come first. Also shows this person's and everyone's jobs from "Priorities Automatic" (low batteries, filters and so on) with no \u2713: they go by themselves once the device reports they're done.`,
+      widget_width: "Default 520px, centred under the title. Phones use the full width.",
       column_width: "Default 340px. Phones (under 600px) always get one column in list order.",
       max_columns: 'Default 3. Mark a panel "Full width across an Auto Layout" to have it span the page.',
       controls_first: 'Keeps list order otherwise, on phones too. Each panel can override what it counts as ("Counts as" in the panel).',
@@ -7352,6 +7530,7 @@
       const first = !this._hass;
       this._hass = hass;
       if (first) this._renderHead();
+      if (this.config && this.config.priorities) this._watchTodo();
       this._render();
     }
     set lovelace(lovelace) {
@@ -7443,6 +7622,15 @@
       this._head.className = "al-head";
       this._head.style.cssText = "display:none; flex-direction:column; align-items:stretch; gap:8px; padding:4px 0 12px; box-sizing:border-box;";
       this._head.addEventListener("click", (ev) => {
+        const tick = ev.target.closest && ev.target.closest("[data-done]");
+        if (tick) {
+          this._completeTop(tick);
+          return;
+        }
+        if (ev.target.closest && ev.target.closest("[data-todo]")) {
+          if (this.config.priorities_page) kitNavigate(this.config.priorities_page);
+          return;
+        }
         const pill = ev.target.closest && ev.target.closest("[data-alert]");
         const it = pill && this._items[Number(pill.dataset.alert)];
         if (it) this._jumpTo(it);
@@ -7635,7 +7823,8 @@
       });
       const user = this._hass && this._hass.user && this._hass.user.name ? String(this._hass.user.name).split(" ")[0] : "";
       const title = String(this.config.title || "").replace(/\{user\}/g, user).trim();
-      const sig = JSON.stringify([title, alerts]);
+      const todo = this._todoView();
+      const sig = JSON.stringify([title, alerts, todo, this.config.widget_width]);
       if (sig === this._headSig) return;
       this._headSig = sig;
       if (!this.config.title) {
@@ -7644,11 +7833,102 @@
         return;
       }
       head.style.display = "flex";
+      const rows = [
+        ...alerts.map((a) => ({ kind: "alert", ...a })),
+        ...todo ? todo.items.map((t) => ({ kind: "todo", ...t })) : []
+      ];
+      const shown = rows.slice(0, 3);
+      const extra = rows.length - shown.length;
+      const row3 = (r) => {
+        if (!r) return '<div style="height:26px;"></div>';
+        const c = r.kind === "todo" ? r.overdue ? "#e53935" : r.auto ? HOUSE_TASKS_COLOR : "#7e57c2" : r.colour;
+        const icon = r.icon;
+        const tick = r.kind === "todo" && !r.auto ? `<button type="button" data-done="${esc2(r.uid)}" data-list="${esc2(r.list)}" aria-label="Done" title="Done" style="flex:none; width:22px; height:22px; padding:0; border:2px solid color-mix(in srgb, ${c} 70%, transparent); border-radius:50%; background:transparent; color:var(--primary-text-color); cursor:pointer; display:flex; align-items:center; justify-content:center;">${iconHtml("mdi:check", { size: "14px" })}</button>` : "";
+        return `<div ${r.kind === "alert" ? `data-alert="${r.i}" role="button"` : ""} style="height:26px; display:flex; align-items:center; gap:8px; padding:0 4px 0 8px; border-radius:13px; cursor:${r.kind === "alert" ? "pointer" : "default"}; background:color-mix(in srgb, ${c} 16%, transparent);">${icon ? iconHtml(icon, { size: "16px", style: `color:${c}; flex:none;` }) : ""}<span style="flex:1; min-width:0; font-size:0.8rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc2(r.text)}</span>${tick}</div>`;
+      };
+      const side = todo && this.config.priorities_page ? `<button type="button" data-todo style="flex:none; width:58px; padding:0 4px; border:none; border-radius:12px; cursor:pointer; font:inherit; font-size:0.72rem; font-weight:700; line-height:1.2; color:var(--primary-text-color); background:color-mix(in srgb, #7e57c2 22%, transparent); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;">${iconHtml(
+        "mdi:format-list-checks",
+        { size: "18px", style: "color:#b39ddb;" }
+      )}${extra > 0 ? `+${extra}` : "To-do"}<span style="font-size:0.9rem; line-height:1;">\u203A</span></button>` : "";
       head.innerHTML = `<div style="height:40px; font-size:2rem; font-weight:700; line-height:40px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--primary-text-color);">${esc2(title)}</div>
-      <div style="height:34px; display:flex; flex-wrap:nowrap; justify-content:safe center; align-items:center; gap:6px; overflow-x:auto; scrollbar-width:none;">${alerts.map(
-        (a) => `<button type="button" data-alert="${a.i}" style="flex:none; display:inline-flex; align-items:center; gap:6px; max-width:90%; height:32px; padding:0 12px; border:none; border-radius:999px; cursor:pointer; font:inherit; font-size:0.82rem; font-weight:600; color:var(--primary-text-color); background:color-mix(in srgb, ${a.colour} 26%, var(--card-background-color, #22252e)); box-shadow:inset 0 0 0 1px color-mix(in srgb, ${a.colour} 55%, transparent);">${a.icon ? iconHtml(a.icon, { size: "18px", style: `color:${a.colour}; flex:none;` }) : ""}<span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc2(a.text)}</span></button>`
-      ).join("")}</div>`;
+      <div class="al-widget" style="height:96px; width:100%; max-width:${Number(this.config.widget_width) || 520}px; margin:0 auto; box-sizing:border-box; display:flex; gap:6px; padding:6px; border-radius:18px; background:color-mix(in srgb, var(--card-background-color, #1f2128) 70%, transparent);">
+        <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:3px;">${[0, 1, 2].map((n) => row3(shown[n])).join("")}</div>${side}
+      </div>`;
       hydrateIcons(head);
+    }
+    // ---- Priorities: the signed-in person's to-do list ("Priorities Jamie"),
+    // plus the shared one ("Priorities Everyone") when it exists. A shared item
+    // is a single copy, so ticking it off clears it for everyone.
+    _todoEntities() {
+      if (!this.config.priorities || !this._hass || !this._hass.user) return [];
+      const first = String(this._hass.user.name || "").split(" ")[0].toLowerCase().replace(/[^a-z0-9]+/g, "_");
+      return [`todo.priorities_${first}`, "todo.priorities_everyone", HOUSE_TASKS_LIST].filter((id) => this._hass.states[id]);
+    }
+    _watchTodo() {
+      const ids = this._todoEntities();
+      const key = ids.join(",");
+      if (key === this._todoKey) return;
+      this._unwatchTodo();
+      this._todoKey = key;
+      this._todoId = ids[0] || null;
+      if (!ids.length || !this.isConnected) return;
+      this._todoUnsubs = ids.map(
+        (id) => this._hass.connection.subscribeMessage(
+          (msg) => {
+            this._todoItems[id] = msg && msg.items || [];
+            this._renderHead();
+          },
+          { type: "todo/item/subscribe", entity_id: id }
+        ).catch(() => null)
+      );
+    }
+    _unwatchTodo() {
+      (this._todoUnsubs || []).forEach((u) => u.then((f) => f && f()).catch(() => {
+      }));
+      this._todoUnsubs = [];
+      this._todoItems = {};
+      this._todoKey = void 0;
+      this._todoId = null;
+    }
+    // Open items, overdue and due-soonest first, then in list order (personal,
+    // shared, then the house's). The house's automatic tasks (from
+    // "Priorities Automatic", the ones for this person or everyone) are cleared
+    // by the device itself, so they get no ✓ and an icon by kind.
+    _todoView() {
+      if (!this._todoKey) return null;
+      const shared = "todo.priorities_everyone";
+      const order = (id) => id === HOUSE_TASKS_LIST ? 2 : id === shared ? 1 : 0;
+      const first = String(this._hass && this._hass.user && this._hass.user.name || "").split(" ")[0];
+      const open = [];
+      Object.keys(this._todoItems || {}).sort((x, y) => order(x) - order(y)).forEach(
+        (list) => (this._todoItems[list] || []).forEach((t) => {
+          if (t.status !== "needs_action") return;
+          const auto = list === HOUSE_TASKS_LIST || /^Automatic/.test(t.description || "");
+          const task = auto ? houseTask(t) : null;
+          if (list === HOUSE_TASKS_LIST && !houseTaskFor(task, first)) return;
+          open.push({ t, list, task });
+        })
+      );
+      const rank = (t) => t.due ? new Date(t.due).getTime() : Infinity;
+      const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+      const items = open.map((o, n) => ({ ...o, n })).sort((a, b) => rank(a.t) - rank(b.t) || a.n - b.n).map(({ t, list, task }) => ({
+        uid: t.uid,
+        list,
+        text: t.summary,
+        overdue: !!t.due && String(t.due).slice(0, 10) < today,
+        auto: !!task,
+        icon: task ? task.icon : list === shared ? "mdi:account-group" : "mdi:flag"
+      }));
+      return { items };
+    }
+    _completeTop(tick) {
+      const uid = tick.dataset.done;
+      const list = tick.dataset.list;
+      if (!uid || !list) return;
+      tick.style.background = "#4caf50";
+      tick.style.borderColor = "#4caf50";
+      this._hass.callService("todo", "update_item", { item: uid, status: "completed" }, { entity_id: list }).catch(() => {
+      });
     }
     // ---- Jump-to chips: one per panel, in page order, in the panel's colour.
     _chipsWanted() {
@@ -7820,6 +8100,7 @@
       window.addEventListener("cd-anim", this._onAnim);
       this._onTop = () => this._closeJumped(null);
       window.addEventListener("cd-to-top", this._onTop);
+      if (this._hass && this.config.priorities) this._watchTodo();
       this._onScrollBound = () => {
         cancelAnimationFrame(this._scrollFrame);
         this._scrollFrame = requestAnimationFrame(() => this._onScroll());
@@ -7845,6 +8126,7 @@
       window.removeEventListener("cd-anim", this._onAnim);
       window.removeEventListener("cd-to-top", this._onTop);
       if (this._chips && this._chips.parentNode === document.body) this._chips.remove();
+      this._unwatchTodo();
       window.removeEventListener("cd-panels-changed", this._onChange);
       if (this._ro) this._ro.disconnect();
       this._ro = null;
@@ -7895,5 +8177,6 @@
   registerSecurityZoneCard();
   registerNavBarCard();
   registerAutoLayoutCard();
+  registerHouseTasksCard();
   console.info(`%c CHURCH-DRIVE-CARDS${SUFFIX ? " BETA" : ""} %c loaded `, "color: white; background: #2196f3; font-weight: 700;", "color: #2196f3; background: transparent;");
 })();

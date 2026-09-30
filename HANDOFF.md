@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-29. Current release: **v0.22.1**.*
+*Last updated 2026-09-30. Current release: **v0.23.0**.*
 
 ## Where this stands
 
@@ -67,6 +67,89 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
     `title: Hello {user}`, so every Mobile page uses the same header. Chips `auto` now
     shows on every phone page (1+ titled panels), not only 4+, so the row is always
     there.
+- **v0.23.0 (released 2026-09-30, reload-only): header widget, priorities, House Tasks card, nav bar tight mode.**
+  - The header's alerts line became a fixed three-row widget (26px rows, 96px box;
+    header 160px on every page): page alerts first, then the person's to-dos.
+  - With `priorities: true`, Auto Layout subscribes (`todo/item/subscribe`) to
+    `todo.priorities_<first name>` and lists open items, overdue and soonest-due first
+    (overdue in red, others purple), each with a ✓ (`todo.update_item`, completed).
+  - `priorities_page` adds a side button "To-do ›" (or "+N ›").
+  - The user chose A-style, fixed-size ("like a widget"), with "view more" going to a
+    per-person to-do page.
+  - **HA side (2026-09-30):**
+    - Local To-do lists `todo.priorities_jamie`, `todo.priorities_hayley` and
+      `todo.priorities_diane`.
+    - Mobile gets a `todo` view with one section per person (`visibility: user`),
+      holding an Auto Layout "To-do" page with a "My to-do" panel and HA's
+      `todo-list` card, plus the nav bar.
+    - Home's Auto Layout has `priorities: true` and
+      `priorities_page: /dashboard-mobile/todo`.
+    - `automation.church_drive_automatic_to_do_tasks` syncs automatic tasks every
+      15 minutes, on start, when the selects or vacuum message change, and when
+      device health holds for 15 minutes. Tasks:
+      - devices not responding;
+      - Battery Status batteries under 20%;
+      - purifier filters under 10%, and Gregg's filter under 24h;
+      - unread Gregg messages.
+    - **Automatic tasks live on their own list, `todo.priorities_automatic`**
+      ("Priorities Automatic", local_todo entry 01M3RR7QJ3FWB8TKKGKQVPWT5J), never on
+      the lists people tick. The user asked for no tick box at all on tasks the
+      device confirms. The description is "Automatic · <kind> · <detail> · for
+      <names>", where <names> is "Everyone" (all three) or one or more first names
+      (e.g. "Automatic · Filters due · 8% left · for Jamie, Hayley"). One copy per
+      task however many people it's for.
+      - The automation removes a task once the device reports it's sorted (e.g. the
+        doorbell going from 17% to 95% after a battery change).
+      - It keeps the detail and assignee up to date in place (`refresh`,
+        `todo.update_item` description).
+      - It reopens a task ticked off elsewhere (e.g. HA's own To-do panel) while it's
+        still needed.
+      - It clears any automatic items left on the personal or shared lists.
+    - **Showing them:**
+      - The widget reads `todo.priorities_automatic` and shows the person's tasks and
+        everyone's, with no ✓, in purple (#ab47bc, `HOUSE_TASKS_COLOR`), with an icon by kind (battery, filter,
+        heart-pulse for devices, vacuum).
+      - The new **`house-tasks-card`** is a read-only list of the same tasks. Its
+        `show` option is `mine` (default: tasks naming this person, shown as "You, Hayley"
+        when shared, plus everyone's) or `all` (every task, with names). Each person's To-do page has it in a purple (#ab47bc,
+        the user's choice) "From the house" panel; Manager has it with `show: all`.
+    - **Shared tasks** (added 2026-09-30, user's request): `todo.priorities_everyone`
+      ("Priorities Everyone") is for tasks people add for everyone. The widget merges
+      it after the person's own list (`mdi:account-group`), and ticking one clears it
+      for everyone. Each To-do page has a teal "Shared" panel for it.
+    - **Who gets each kind** (multiple people allowed, user's request): 12 switches,
+      `input_boolean.to_do_<kind>_<person>`. The kinds are `devices_not_responding`,
+      `low_batteries`, `filters_due` and `vacuum_messages`; the people are `jamie`,
+      `hayley` and `diane`. Each kind started with Jamie only.
+      - The automation's `assign` variable turns them into "Jamie, Hayley",
+        "Everyone" (all on) or "" (none, no tasks).
+      - They replaced the single-choice `input_select.to_do_*` dropdowns, which were
+        deleted.
+      - The automation is queued with `max: 10` and `max_exceeded: silent`. With
+        max 2, flipping several switches at once dropped the final run and left a
+        stale assignee.
+      - Tested: Jamie+Hayley, all three (Everyone) and none (removed) on the
+        pre-filter task.
+    - Manager's "Automatic to-dos" panel has a "Who gets each kind of task" grid: a
+      heading per kind and three purple person tiles (tap to toggle). Below it are
+      the lists and `house-tasks-card` with `show: all`.
+    - **Navigation:** every Mobile nav bar has a sixth page, To-do
+      (`/dashboard-mobile/todo`, #7e57c2). The nav bar gained a tight mode
+      (`.nb-tight`, set by `_fit()` when the items overflow, and on resize): 2px
+      gaps, 40px items, and the current page shown as its coloured pill without a
+      label. It kicks in below about 430px wide.
+    - **Tasks dashboard** (`dashboard-tasks`, in the sidebar, mdi:clipboard-check-outline;
+      user's request):
+      - a **To-do** view that mirrors Mobile's To-do view, per person (the same three
+        panels, 3 columns on wide screens);
+      - a **Shopping** view with `todo.shopping_list`;
+      - its own nav bar: To-do / Shopping (no Home button; the user didn't want a link back to Mobile).
+      - It's a copy of Mobile's config, not a live link, so change both together. More
+        lists (e.g. other shopping lists) go on the Shopping view as extra panels.
+    - The header widget is capped at `widget_width` (default 520px) and centred, so it
+      isn't page-wide on tablets and PCs.
+    - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
+      so they all use the released card types.
 - The back-to-top strokes are solid white in both states.
 - **Chips capsule, 2026-09-29:**
   - Chips sit in a scrolling `.al-strip` and grow to fill it (`flex:1 0 auto`), then
@@ -81,7 +164,7 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
   into place when you arrive. `PANEL_TRANSITION` is exported from the panel.
 - Managed panels (inside Auto Layout) no longer install their own ResizeObserver,
   3s timer or `cd-panels-changed` listener.
-- Released reload-only; Mobile is back on released card types.
+- v0.22.0 and v0.22.1 were released reload-only; Mobile is back on released card types.
 
 **New in v0.21.0 (2026-09-29): panel controls.** Chosen from the `panel-ux` mock-up
 (the user picked C's +/− with B's footer):
@@ -779,7 +862,7 @@ Integration modules (`custom_components/church_drive/`):
   - `church-drive-cards-beta.js` registers every card as `<name>-beta`.
   - HA loads it from resource `436186c683fe4c7d81c865b67bb0e109`:
     `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's pinned to `dd72d3b` (the v0.22.0 merge: smoother panels, floating chips, page headers).
+    It's pinned to `85a8007` (the v0.22.1 merge: chips without the open/close-all button).
   - To test a branch: push it, repoint the resource, and ask for a hard refresh.
   - jsDelivr is blocked from the cloud container, but works for the user.
 - **Rollback:** download an older release in HACS and restart.
