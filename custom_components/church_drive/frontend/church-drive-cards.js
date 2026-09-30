@@ -103,290 +103,6 @@
   var SUFFIX = typeof __CARD_SUFFIX__ !== "undefined" ? __CARD_SUFFIX__ : "";
   var LABEL = SUFFIX ? " (beta)" : "";
 
-  // src/gauge-zone-card.js
-  var GaugeZoneCardEditor = createFormEditor({
-    schema: (config) => [
-      { name: "title", selector: { text: {} } },
-      {
-        type: "expandable",
-        name: "",
-        title: "Colours, units and icons",
-        flatten: true,
-        schema: [
-          {
-            name: "direction",
-            selector: {
-              select: {
-                mode: "dropdown",
-                options: [
-                  { value: "low", label: "Low value is bad (battery, signal)" },
-                  { value: "high", label: "High value is bad (storage, CPU)" }
-                ]
-              }
-            }
-          },
-          {
-            type: "grid",
-            name: "",
-            schema: [
-              { name: "alert_at", selector: { number: { mode: "box" } } },
-              { name: "warn_at", selector: { number: { mode: "box" } } },
-              { name: "unit", selector: { text: {} } },
-              { name: "max", selector: { number: { mode: "box", min: 0 } } }
-            ]
-          },
-          {
-            name: "icon_mode",
-            selector: {
-              select: {
-                mode: "dropdown",
-                options: [
-                  { value: "battery", label: "Battery (steps with the value)" },
-                  { value: "gauge", label: "Gauge" },
-                  { value: "entity", label: "Each entity's own icon" },
-                  { value: "custom", label: "Custom icon (pick below)" }
-                ]
-              }
-            }
-          },
-          ...config.icon_mode === "custom" ? [{ name: "icon", selector: { icon: {} } }] : []
-        ]
-      },
-      {
-        name: "entities",
-        selector: {
-          object: {
-            multiple: true,
-            label_field: "name",
-            description_field: "entity",
-            fields: {
-              entity: { label: "Entity", selector: { entity: {} } },
-              name: { label: "Name", required: true, selector: { text: {} } },
-              word: {
-                label: "Battery wording (shows the Battery Notes date)",
-                selector: {
-                  select: {
-                    mode: "dropdown",
-                    custom_value: true,
-                    options: ["replaced", "charged", "swapped"]
-                  }
-                }
-              },
-              secondary: { label: "Secondary text (instead of wording)", selector: { text: {} } },
-              icon: { label: "Icon override", selector: { icon: {} } },
-              value: { label: "Fixed value (instead of an entity)", selector: { number: { mode: "box" } } },
-              date: { label: "Replaced/charged date (fixed-value rows only)", selector: { date: {} } },
-              unit: { label: "Unit override", selector: { text: {} } },
-              max: { label: "Max override", selector: { number: { mode: "box", min: 0 } } }
-            }
-          }
-        }
-      }
-    ],
-    labels: {
-      title: "Title",
-      direction: "Which end is bad",
-      alert_at: "Red at",
-      warn_at: "Orange at",
-      unit: "Unit",
-      max: "Full bar value",
-      icon_mode: "Icons",
-      icon: "Icon for every row",
-      entities: "Rows"
-    },
-    helpers: {
-      alert_at: "Defaults: 20 (low is bad) / 90 (high is bad)",
-      warn_at: "Defaults: 50 (low is bad) / 75 (high is bad)",
-      unit: "Default %",
-      max: "Default 100"
-    }
-  });
-  function lczFormatDate(raw) {
-    const d = /^\d{4}-\d{2}-\d{2}/.test(raw) ? new Date(raw) : null;
-    return d && !isNaN(d) ? d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : raw;
-  }
-  var GaugeZoneCard = class _GaugeZoneCard extends HTMLElement {
-    setConfig(config) {
-      if (!config.entities) throw new Error("entities required");
-      this.config = config;
-      this._built = false;
-    }
-    _batteryIcon(pct) {
-      if (pct <= 5) return "mdi:battery-alert";
-      if (pct >= 95) return "mdi:battery";
-      const r = Math.round(pct / 10) * 10;
-      return `mdi:battery-${r}`;
-    }
-    set hass(hass) {
-      this._hass = hass;
-      const cfg = this.config;
-      const iconMode = cfg.icon_mode || (this.tagName.toLowerCase() === `battery-zone-card${SUFFIX}` ? "battery" : "gauge");
-      const direction = cfg.direction || "low";
-      const alertAt = cfg.alert_at !== void 0 ? cfg.alert_at : direction === "low" ? 20 : 90;
-      const warnAt = cfg.warn_at !== void 0 ? cfg.warn_at : direction === "low" ? 50 : 75;
-      const cardUnit = cfg.unit !== void 0 ? cfg.unit : "%";
-      const cardMax = cfg.max || 100;
-      if (!this._built) {
-        this.innerHTML = `
-        <ha-card style="border:none; box-shadow: 0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; background: var(--card-background-color);">
-          <div class="bzc-title" style="padding:16px 16px 8px 16px; font-size:1.5rem; font-weight:500; color: var(--primary-text-color);">${cfg.title || ""}</div>
-          <div class="bzc-rows" style="padding:0; margin:0;"></div>
-        </ha-card>`;
-        this._rows = this.querySelector(".bzc-rows");
-        this._built = true;
-      }
-      this._rows.innerHTML = "";
-      const entries = cfg.entities.map((e) => {
-        const literal = e.value !== void 0 ? e.value : e.demo_pct;
-        if (literal !== void 0) {
-          const available2 = literal >= 0;
-          return { ...e, val: available2 ? literal : -1, available: available2, demo: true };
-        }
-        const st = hass.states[e.entity];
-        const raw = st ? parseFloat(st.state) : NaN;
-        const available = st && !["unknown", "unavailable"].includes(st.state) && !isNaN(raw);
-        return { ...e, st, val: available ? raw : -1, available };
-      });
-      entries.sort((a, b) => direction === "low" ? a.val - b.val : b.val - a.val);
-      entries.forEach((e, i) => {
-        const val = e.available ? e.val : 0;
-        const max = e.max || cardMax;
-        const widthPct = Math.min(Math.max(val / max * 100, 0), 100);
-        const unit = e.unit !== void 0 ? e.unit : cardUnit;
-        let colorState;
-        if (direction === "low") {
-          colorState = val <= alertAt ? "red" : val <= warnAt ? "orange" : "green";
-        } else {
-          colorState = val >= alertAt ? "red" : val >= warnAt ? "orange" : "green";
-        }
-        const color = { red: "var(--error-color, #db4437)", orange: "var(--warning-color, #ff9800)", green: "var(--success-color, #43a047)" }[colorState];
-        const unavailableColor = "#9e9e9e";
-        let iconColor;
-        if (!e.available) {
-          iconColor = unavailableColor;
-        } else if (colorState === "red" && (direction === "low" ? val <= 0 : val >= max)) {
-          iconColor = color;
-        } else {
-          iconColor = "#ffffff";
-        }
-        let dateStr = null;
-        if (e.demo) {
-          const raw = e.date || e.demo_date;
-          dateStr = raw ? lczFormatDate(raw) : "unknown";
-        } else {
-          const replaced = e.st && e.st.attributes ? e.st.attributes.battery_last_replaced : null;
-          if (replaced) {
-            const d = new Date(replaced);
-            dateStr = d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-          } else if (e.word) {
-            dateStr = "unknown";
-          }
-        }
-        let secondaryText = e.secondary;
-        if (secondaryText === void 0) {
-          secondaryText = e.word ? `${e.word} ${dateStr}` : "";
-        }
-        let icon;
-        let useStateIcon = false;
-        if (e.icon) {
-          icon = e.icon;
-        } else if (iconMode === "battery") {
-          icon = this._batteryIcon(e.available ? e.val : 0);
-        } else if (iconMode === "custom" && cfg.icon) {
-          icon = cfg.icon;
-        } else if (iconMode === "entity" && e.st) {
-          const entry = hass.entities && hass.entities[e.entity];
-          icon = entry && entry.icon || e.st.attributes.icon;
-          useStateIcon = !icon && !!customElements.get("ha-state-icon");
-          icon = icon || "mdi:gauge";
-        } else {
-          icon = "mdi:gauge";
-        }
-        const isFirst = i === 0;
-        const isLast = i === entries.length - 1;
-        let mask = null;
-        if (!isFirst && !isLast) {
-          mask = "linear-gradient(to bottom, transparent 0%, black 2%, black 98%, transparent 100%)";
-        } else if (!isFirst && isLast) {
-          mask = "linear-gradient(to bottom, transparent 0%, black 2%, black 100%)";
-        } else if (isFirst && !isLast) {
-          mask = "linear-gradient(to bottom, black 0%, black 98%, transparent 100%)";
-        }
-        const radius = `${isFirst ? "16px 16px" : "0 0"} ${isLast ? "16px 16px" : "0 0"}`;
-        const maskCss = mask ? `-webkit-mask-image:${mask}; mask-image:${mask};` : "";
-        const row3 = document.createElement("div");
-        row3.style.cssText = `display:flex; align-items:center; box-sizing:border-box; width:100%; padding:10px 16px; margin:${isFirst ? "0" : "4px"} 0 0 0; border:none; border-radius:${radius}; ${maskCss} background: linear-gradient(to right, ${color} 0%, transparent ${widthPct}%);`;
-        row3.innerHTML = `
-        <ha-icon icon="${icon}" style="color:${iconColor}; margin-right:14px; flex-shrink:0; --mdc-icon-size:26px;"></ha-icon>
-        <div style="flex:1; min-width:0;">
-          <div style="font-weight:500; color:#ffffff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${e.name || e.st && e.st.attributes.friendly_name || e.entity || ""}</div>
-          ${secondaryText ? `<div style="font-size:0.85rem; color:rgba(255,255,255,0.65);">${secondaryText}</div>` : ""}
-        </div>
-        <div style="font-weight:600; color:#ffffff; margin-left:8px; flex-shrink:0;">${e.available ? Math.round(e.val) + unit : "n/a"}</div>
-      `;
-        if (useStateIcon) {
-          const placeholder = row3.querySelector("ha-icon");
-          const stateIcon = document.createElement("ha-state-icon");
-          stateIcon.hass = hass;
-          stateIcon.stateObj = e.st;
-          stateIcon.style.cssText = placeholder.style.cssText;
-          placeholder.replaceWith(stateIcon);
-        }
-        this._rows.appendChild(row3);
-      });
-    }
-    // Rows with a secondary line are ~60px, so count them as 1.2 units.
-    getCardSize() {
-      const rows = this.config.entities || [];
-      const tall = rows.filter((e) => e.secondary || e.word).length;
-      return 1 + Math.ceil(rows.length + tall * 0.2);
-    }
-    // Sections-view defaults; the editor's Layout tab can override them.
-    getGridOptions() {
-      return { columns: 12, min_columns: 6, rows: "auto" };
-    }
-    static getConfigElement() {
-      return document.createElement(`gauge-zone-card-editor${SUFFIX}`);
-    }
-    // What a new card starts with in the card picker (and its preview).
-    // battery-zone-card: up to three real battery sensors, lowest first.
-    // gauge-zone-card: a single fixed example row to edit.
-    static getStubConfig(hass) {
-      if (this === _GaugeZoneCard) {
-        const batteries = Object.values(hass && hass.states || {}).filter((st) => st.attributes.device_class === "battery" && st.attributes.unit_of_measurement === "%" && !isNaN(parseFloat(st.state))).sort((a, b) => parseFloat(a.state) - parseFloat(b.state)).slice(0, 3).map((st) => ({ entity: st.entity_id, name: st.attributes.friendly_name || st.entity_id }));
-        return { title: "Batteries", entities: batteries };
-      }
-      return { title: "Gauge", direction: "high", entities: [{ name: "Example", value: 42 }] };
-    }
-  };
-  function registerGaugeZoneCard() {
-    if (!customElements.get(`gauge-zone-card-editor${SUFFIX}`)) {
-      customElements.define(`gauge-zone-card-editor${SUFFIX}`, GaugeZoneCardEditor);
-    }
-    if (!customElements.get(`battery-zone-card${SUFFIX}`)) {
-      customElements.define(`battery-zone-card${SUFFIX}`, GaugeZoneCard);
-    }
-    if (!customElements.get(`gauge-zone-card${SUFFIX}`)) {
-      customElements.define(`gauge-zone-card${SUFFIX}`, class extends GaugeZoneCard {
-      });
-    }
-    window.customCards = window.customCards || [];
-    window.customCards.push({
-      type: `battery-zone-card${SUFFIX}`,
-      name: `Battery Zone Card${LABEL}`,
-      description: "Zone battery status with gradient rows",
-      preview: true,
-      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
-    });
-    window.customCards.push({
-      type: `gauge-zone-card${SUFFIX}`,
-      name: `Gauge Zone Card${LABEL}`,
-      description: "Generic % / value gauge rows with gradient fill \u2014 storage, signal, humidity, CPU, anything measurable",
-      preview: true,
-      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
-    });
-  }
-
   // src/icons.js
   var cache = /* @__PURE__ */ new Map();
   var pending = /* @__PURE__ */ new Map();
@@ -411,6 +127,10 @@
     return String(text).replace(/&/g, "&amp;").replace(/"/g, "&quot;");
   }
   function iconHtml(icon, { size = "24px", style = "", cls = "" } = {}) {
+    const pic = /^brand:/.test(icon || "") ? `https://brands.home-assistant.io/_/${encodeURIComponent(icon.slice(6))}/icon.png` : /^(https?:)?\/\//.test(icon || "") || /^\/[^/]/.test(icon || "") ? icon : null;
+    if (pic) {
+      return `<img class="${cls}" src="${escapeAttr(pic)}" alt="" onerror="this.style.visibility='hidden'" style="width:${size}; height:${size}; object-fit:contain; border-radius:6px; ${style}">`;
+    }
     if (!isCustom(icon)) {
       return `<ha-icon class="${cls}" icon="${escapeAttr(icon)}" style="--mdc-icon-size:${size}; ${style}"></ha-icon>`;
     }
@@ -462,6 +182,14 @@
   }
 
   // src/card-kit.js
+  var KIT_GRAIN = `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")`;
+  var KIT_ACRYLIC_FILTER = "blur(42px) saturate(115%)";
+  var kitAcrylicCss = (sel) => `
+  ${sel} { position:relative; isolation:isolate; border:none;
+    background:linear-gradient(rgba(255,255,255,.04), rgba(255,255,255,0)), color-mix(in srgb, var(--card-background-color, #1f2128) 76%, transparent);
+    -webkit-backdrop-filter:${KIT_ACRYLIC_FILTER}; backdrop-filter:${KIT_ACRYLIC_FILTER}; box-shadow:0 10px 30px rgba(0,0,0,.45); }
+  ${sel}::after { content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none; z-index:-1; background-image:${KIT_GRAIN}; opacity:.08; }`;
+  var KIT_CARD_BG = "var(--cd-card-bg, var(--card-background-color))";
   var KIT_COLOR = {
     off: "#8b919c",
     good: "#4caf50",
@@ -487,7 +215,7 @@
 .ck-health button { flex:none; border:none; border-radius:10px; padding:7px 10px; font:inherit; font-size:0.8rem; font-weight:600; background:#ffa726; color:#2a1700; cursor:pointer; }`;
   function kitShell(body, extraCss = "") {
     return `
-    <ha-card class="ck-card" style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; padding:16px; background:var(--card-background-color); transition:background-color .6s ease; display:flex; flex-direction:column; gap:12px;">
+    <ha-card class="ck-card" style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; padding:16px; background:${KIT_CARD_BG}; -webkit-backdrop-filter:var(--cd-card-filter, none); backdrop-filter:var(--cd-card-filter, none); transition:background-color .6s ease; display:flex; flex-direction:column; gap:12px;">
       <style>
         /* Narrow cards (e.g. five side by side): a smaller title, and the
            status word drops to its own line instead of cutting the title. */
@@ -524,6 +252,19 @@
       ${body}
     </ha-card>`;
   }
+  function kitBlend(v, anchors) {
+    if (v == null || isNaN(v) || !anchors.length) return KIT_COLOR.off;
+    if (v <= anchors[0][0]) return anchors[0][1];
+    const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+    for (let i = 0; i < anchors.length - 1; i++) {
+      const [a, ca] = anchors[i], [b, cb] = anchors[i + 1];
+      if (v <= b) {
+        const f = (v - a) / (b - a || 1), A = rgb(ca), B = rgb(cb);
+        return `rgb(${A.map((c, k) => Math.round(c + (B[k] - c) * f)).join(",")})`;
+      }
+    }
+    return anchors[anchors.length - 1][1];
+  }
   function kitHead(root, title, word, color, tint = 0) {
     const t = root.querySelector(".ck-title");
     const w = root.querySelector(".ck-word");
@@ -531,7 +272,7 @@
     t.textContent = title;
     t.style.color = color;
     w.textContent = word;
-    card.style.backgroundColor = tint ? `color-mix(in srgb, ${color} ${tint}%, var(--card-background-color))` : "var(--card-background-color)";
+    card.style.backgroundColor = tint ? `color-mix(in srgb, ${color} ${tint}%, ${KIT_CARD_BG})` : KIT_CARD_BG;
   }
   function kitGauge(p, color, label, sub, size = 84) {
     const r = size / 2 - 7, cx = size / 2, len = 1.5 * Math.PI * r;
@@ -749,9 +490,17 @@
       const lo = Math.min(...vals) - (s.pad || 0.3), hi = Math.max(...vals) + (s.pad || 0.3);
       const y = (v) => H - 3 - (v - lo) / (hi - lo || 1) * (H - 6);
       const d = kitPath(pts.map((p) => [x(p[0]), y(p[1])]), smooth);
-      if (s.fill) under += `<path d="${d} L${W},${H} L0,${H} Z" fill="${s.color}" fill-opacity="0.16"></path>`;
-      over += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.width || 2}" vector-effect="non-scaling-stroke"></path>`;
-      scrub.push({ pts, raw, lo, hi, color: s.color, format: s.format, linear: smooth });
+      let paint = s.color;
+      if (s.colorAt) {
+        const id = `kg${Math.random().toString(36).slice(2, 8)}`;
+        let stops = "";
+        for (let k = 0; k <= 20; k++) stops += `<stop offset="${k * 5}%" stop-color="${s.colorAt(hi - (hi - lo) * k / 20)}"></stop>`;
+        under += `<defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="${H}" gradientUnits="userSpaceOnUse">${stops}</linearGradient></defs>`;
+        paint = `url(#${id})`;
+      }
+      if (s.fill) under += `<path d="${d} L${W},${H} L0,${H} Z" fill="${paint}" fill-opacity="0.16"></path>`;
+      over += `<path d="${d}" fill="none" stroke="${paint}" stroke-width="${s.width || 2}" vector-effect="non-scaling-stroke"></path>`;
+      scrub.push({ pts, raw, lo, hi, color: s.color, colourOf: s.colorAt, format: s.format, linear: smooth });
     });
     if (!under && !over) return "";
     if (meta) Object.assign(meta, { from, now, height: H, series: scrub });
@@ -978,7 +727,7 @@
     return d;
   }
   var KIT_CPT_CSS = `
-  .ck-cpt { display:flex; flex-direction:column; gap:6px; border:none; box-shadow:0 3px 10px rgba(0,0,0,.45); border-radius:14px; padding:8px 10px; background:var(--card-background-color); }
+  .ck-cpt { display:flex; flex-direction:column; gap:6px; border:none; box-shadow:0 3px 10px rgba(0,0,0,.45); border-radius:14px; padding:8px 10px; background:${KIT_CARD_BG}; -webkit-backdrop-filter:var(--cd-card-filter, none); backdrop-filter:var(--cd-card-filter, none); }
   .ck-cpt-row { display:flex; align-items:center; gap:8px; min-height:32px; }
   .ck-cpt-name { font-weight:600; font-size:0.92rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; min-width:0; flex:0 1 auto; }
   .ck-cpt-val { font-weight:700; font-size:1.05rem; font-variant-numeric:tabular-nums; white-space:nowrap; flex:none; }
@@ -1059,6 +808,290 @@
       }
     });
     Cls.prototype.supportsCompact = true;
+  }
+
+  // src/gauge-zone-card.js
+  var GaugeZoneCardEditor = createFormEditor({
+    schema: (config) => [
+      { name: "title", selector: { text: {} } },
+      {
+        type: "expandable",
+        name: "",
+        title: "Colours, units and icons",
+        flatten: true,
+        schema: [
+          {
+            name: "direction",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "low", label: "Low value is bad (battery, signal)" },
+                  { value: "high", label: "High value is bad (storage, CPU)" }
+                ]
+              }
+            }
+          },
+          {
+            type: "grid",
+            name: "",
+            schema: [
+              { name: "alert_at", selector: { number: { mode: "box" } } },
+              { name: "warn_at", selector: { number: { mode: "box" } } },
+              { name: "unit", selector: { text: {} } },
+              { name: "max", selector: { number: { mode: "box", min: 0 } } }
+            ]
+          },
+          {
+            name: "icon_mode",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "battery", label: "Battery (steps with the value)" },
+                  { value: "gauge", label: "Gauge" },
+                  { value: "entity", label: "Each entity's own icon" },
+                  { value: "custom", label: "Custom icon (pick below)" }
+                ]
+              }
+            }
+          },
+          ...config.icon_mode === "custom" ? [{ name: "icon", selector: { icon: {} } }] : []
+        ]
+      },
+      {
+        name: "entities",
+        selector: {
+          object: {
+            multiple: true,
+            label_field: "name",
+            description_field: "entity",
+            fields: {
+              entity: { label: "Entity", selector: { entity: {} } },
+              name: { label: "Name", required: true, selector: { text: {} } },
+              word: {
+                label: "Battery wording (shows the Battery Notes date)",
+                selector: {
+                  select: {
+                    mode: "dropdown",
+                    custom_value: true,
+                    options: ["replaced", "charged", "swapped"]
+                  }
+                }
+              },
+              secondary: { label: "Secondary text (instead of wording)", selector: { text: {} } },
+              icon: { label: "Icon override", selector: { icon: {} } },
+              value: { label: "Fixed value (instead of an entity)", selector: { number: { mode: "box" } } },
+              date: { label: "Replaced/charged date (fixed-value rows only)", selector: { date: {} } },
+              unit: { label: "Unit override", selector: { text: {} } },
+              max: { label: "Max override", selector: { number: { mode: "box", min: 0 } } }
+            }
+          }
+        }
+      }
+    ],
+    labels: {
+      title: "Title",
+      direction: "Which end is bad",
+      alert_at: "Red at",
+      warn_at: "Orange at",
+      unit: "Unit",
+      max: "Full bar value",
+      icon_mode: "Icons",
+      icon: "Icon for every row",
+      entities: "Rows"
+    },
+    helpers: {
+      alert_at: "Defaults: 20 (low is bad) / 90 (high is bad)",
+      warn_at: "Defaults: 50 (low is bad) / 75 (high is bad)",
+      unit: "Default %",
+      max: "Default 100"
+    }
+  });
+  function lczFormatDate(raw) {
+    const d = /^\d{4}-\d{2}-\d{2}/.test(raw) ? new Date(raw) : null;
+    return d && !isNaN(d) ? d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : raw;
+  }
+  var GaugeZoneCard = class _GaugeZoneCard extends HTMLElement {
+    setConfig(config) {
+      if (!config.entities) throw new Error("entities required");
+      this.config = config;
+      this._built = false;
+    }
+    _batteryIcon(pct) {
+      if (pct <= 5) return "mdi:battery-alert";
+      if (pct >= 95) return "mdi:battery";
+      const r = Math.round(pct / 10) * 10;
+      return `mdi:battery-${r}`;
+    }
+    set hass(hass) {
+      this._hass = hass;
+      const cfg = this.config;
+      const iconMode = cfg.icon_mode || (this.tagName.toLowerCase() === `battery-zone-card${SUFFIX}` ? "battery" : "gauge");
+      const direction = cfg.direction || "low";
+      const alertAt = cfg.alert_at !== void 0 ? cfg.alert_at : direction === "low" ? 20 : 90;
+      const warnAt = cfg.warn_at !== void 0 ? cfg.warn_at : direction === "low" ? 50 : 75;
+      const cardUnit = cfg.unit !== void 0 ? cfg.unit : "%";
+      const cardMax = cfg.max || 100;
+      if (!this._built) {
+        this.innerHTML = `
+        <ha-card style="border:none; box-shadow: 0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; background:${KIT_CARD_BG}; -webkit-backdrop-filter:var(--cd-card-filter, none); backdrop-filter:var(--cd-card-filter, none);">
+          <div class="bzc-title" style="padding:16px 16px 8px 16px; font-size:1.5rem; font-weight:500; color: var(--primary-text-color);">${cfg.title || ""}</div>
+          <div class="bzc-rows" style="padding:0; margin:0;"></div>
+        </ha-card>`;
+        this._rows = this.querySelector(".bzc-rows");
+        this._built = true;
+      }
+      this._rows.innerHTML = "";
+      const entries = cfg.entities.map((e) => {
+        const literal = e.value !== void 0 ? e.value : e.demo_pct;
+        if (literal !== void 0) {
+          const available2 = literal >= 0;
+          return { ...e, val: available2 ? literal : -1, available: available2, demo: true };
+        }
+        const st = hass.states[e.entity];
+        const raw = st ? parseFloat(st.state) : NaN;
+        const available = st && !["unknown", "unavailable"].includes(st.state) && !isNaN(raw);
+        return { ...e, st, val: available ? raw : -1, available };
+      });
+      entries.sort((a, b) => direction === "low" ? a.val - b.val : b.val - a.val);
+      entries.forEach((e, i) => {
+        const val = e.available ? e.val : 0;
+        const max = e.max || cardMax;
+        const widthPct = Math.min(Math.max(val / max * 100, 0), 100);
+        const unit = e.unit !== void 0 ? e.unit : cardUnit;
+        let colorState;
+        if (direction === "low") {
+          colorState = val <= alertAt ? "red" : val <= warnAt ? "orange" : "green";
+        } else {
+          colorState = val >= alertAt ? "red" : val >= warnAt ? "orange" : "green";
+        }
+        const color = { red: "var(--error-color, #db4437)", orange: "var(--warning-color, #ff9800)", green: "var(--success-color, #43a047)" }[colorState];
+        const unavailableColor = "#9e9e9e";
+        let iconColor;
+        if (!e.available) {
+          iconColor = unavailableColor;
+        } else if (colorState === "red" && (direction === "low" ? val <= 0 : val >= max)) {
+          iconColor = color;
+        } else {
+          iconColor = "#ffffff";
+        }
+        let dateStr = null;
+        if (e.demo) {
+          const raw = e.date || e.demo_date;
+          dateStr = raw ? lczFormatDate(raw) : "unknown";
+        } else {
+          const replaced = e.st && e.st.attributes ? e.st.attributes.battery_last_replaced : null;
+          if (replaced) {
+            const d = new Date(replaced);
+            dateStr = d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+          } else if (e.word) {
+            dateStr = "unknown";
+          }
+        }
+        let secondaryText = e.secondary;
+        if (secondaryText === void 0) {
+          secondaryText = e.word ? `${e.word} ${dateStr}` : "";
+        }
+        let icon;
+        let useStateIcon = false;
+        if (e.icon) {
+          icon = e.icon;
+        } else if (iconMode === "battery") {
+          icon = this._batteryIcon(e.available ? e.val : 0);
+        } else if (iconMode === "custom" && cfg.icon) {
+          icon = cfg.icon;
+        } else if (iconMode === "entity" && e.st) {
+          const entry = hass.entities && hass.entities[e.entity];
+          icon = entry && entry.icon || e.st.attributes.icon;
+          useStateIcon = !icon && !!customElements.get("ha-state-icon");
+          icon = icon || "mdi:gauge";
+        } else {
+          icon = "mdi:gauge";
+        }
+        const isFirst = i === 0;
+        const isLast = i === entries.length - 1;
+        let mask = null;
+        if (!isFirst && !isLast) {
+          mask = "linear-gradient(to bottom, transparent 0%, black 2%, black 98%, transparent 100%)";
+        } else if (!isFirst && isLast) {
+          mask = "linear-gradient(to bottom, transparent 0%, black 2%, black 100%)";
+        } else if (isFirst && !isLast) {
+          mask = "linear-gradient(to bottom, black 0%, black 98%, transparent 100%)";
+        }
+        const radius = `${isFirst ? "16px 16px" : "0 0"} ${isLast ? "16px 16px" : "0 0"}`;
+        const maskCss = mask ? `-webkit-mask-image:${mask}; mask-image:${mask};` : "";
+        const row3 = document.createElement("div");
+        row3.style.cssText = `display:flex; align-items:center; box-sizing:border-box; width:100%; padding:10px 16px; margin:${isFirst ? "0" : "4px"} 0 0 0; border:none; border-radius:${radius}; ${maskCss} background: linear-gradient(to right, ${color} 0%, transparent ${widthPct}%);`;
+        row3.innerHTML = `
+        <ha-icon icon="${icon}" style="color:${iconColor}; margin-right:14px; flex-shrink:0; --mdc-icon-size:26px;"></ha-icon>
+        <div style="flex:1; min-width:0;">
+          <div style="font-weight:500; color:#ffffff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${e.name || e.st && e.st.attributes.friendly_name || e.entity || ""}</div>
+          ${secondaryText ? `<div style="font-size:0.85rem; color:rgba(255,255,255,0.65);">${secondaryText}</div>` : ""}
+        </div>
+        <div style="font-weight:600; color:#ffffff; margin-left:8px; flex-shrink:0;">${e.available ? Math.round(e.val) + unit : "n/a"}</div>
+      `;
+        if (useStateIcon) {
+          const placeholder = row3.querySelector("ha-icon");
+          const stateIcon = document.createElement("ha-state-icon");
+          stateIcon.hass = hass;
+          stateIcon.stateObj = e.st;
+          stateIcon.style.cssText = placeholder.style.cssText;
+          placeholder.replaceWith(stateIcon);
+        }
+        this._rows.appendChild(row3);
+      });
+    }
+    // Rows with a secondary line are ~60px, so count them as 1.2 units.
+    getCardSize() {
+      const rows = this.config.entities || [];
+      const tall = rows.filter((e) => e.secondary || e.word).length;
+      return 1 + Math.ceil(rows.length + tall * 0.2);
+    }
+    // Sections-view defaults; the editor's Layout tab can override them.
+    getGridOptions() {
+      return { columns: 12, min_columns: 6, rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement(`gauge-zone-card-editor${SUFFIX}`);
+    }
+    // What a new card starts with in the card picker (and its preview).
+    // battery-zone-card: up to three real battery sensors, lowest first.
+    // gauge-zone-card: a single fixed example row to edit.
+    static getStubConfig(hass) {
+      if (this === _GaugeZoneCard) {
+        const batteries = Object.values(hass && hass.states || {}).filter((st) => st.attributes.device_class === "battery" && st.attributes.unit_of_measurement === "%" && !isNaN(parseFloat(st.state))).sort((a, b) => parseFloat(a.state) - parseFloat(b.state)).slice(0, 3).map((st) => ({ entity: st.entity_id, name: st.attributes.friendly_name || st.entity_id }));
+        return { title: "Batteries", entities: batteries };
+      }
+      return { title: "Gauge", direction: "high", entities: [{ name: "Example", value: 42 }] };
+    }
+  };
+  function registerGaugeZoneCard() {
+    if (!customElements.get(`gauge-zone-card-editor${SUFFIX}`)) {
+      customElements.define(`gauge-zone-card-editor${SUFFIX}`, GaugeZoneCardEditor);
+    }
+    if (!customElements.get(`battery-zone-card${SUFFIX}`)) {
+      customElements.define(`battery-zone-card${SUFFIX}`, GaugeZoneCard);
+    }
+    if (!customElements.get(`gauge-zone-card${SUFFIX}`)) {
+      customElements.define(`gauge-zone-card${SUFFIX}`, class extends GaugeZoneCard {
+      });
+    }
+    window.customCards = window.customCards || [];
+    window.customCards.push({
+      type: `battery-zone-card${SUFFIX}`,
+      name: `Battery Zone Card${LABEL}`,
+      description: "Zone battery status with gradient rows",
+      preview: true,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
+    });
+    window.customCards.push({
+      type: `gauge-zone-card${SUFFIX}`,
+      name: `Gauge Zone Card${LABEL}`,
+      description: "Generic % / value gauge rows with gradient fill \u2014 storage, signal, humidity, CPU, anything measurable",
+      preview: true,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
+    });
   }
 
   // src/alarm-panel-card.js
@@ -1148,7 +1181,7 @@
     }
     _build() {
       this.innerHTML = `
-      <ha-card class="apc-card" style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; padding:16px; background:var(--card-background-color); transition:background-color .8s ease;">
+      <ha-card class="apc-card" style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; padding:16px; background:${KIT_CARD_BG}; -webkit-backdrop-filter:var(--cd-card-filter, none); backdrop-filter:var(--cd-card-filter, none); transition:background-color .8s ease;">
         <style>
           .apc-btn { position:relative; overflow:hidden; flex:1 1 0; min-width:0; height:56px; border:none; border-radius:12px; cursor:pointer;
             display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:0 4px;
@@ -1331,7 +1364,7 @@
       let tint = 0;
       if (this._stateName === "triggered") tint = 32;
       else if (counting) tint = Math.round(6 + 26 * (1 - frac));
-      this._card.style.backgroundColor = tint ? `color-mix(in srgb, ${this._color} ${tint}%, var(--card-background-color))` : "var(--card-background-color)";
+      this._card.style.backgroundColor = tint ? `color-mix(in srgb, ${this._color} ${tint}%, ${KIT_CARD_BG})` : KIT_CARD_BG;
     }
     // Same size in every state: title, ring row and buttons.
     getCardSize() {
@@ -2707,7 +2740,7 @@
       }
       if (!this._built) {
         this.innerHTML = `
-        <ha-card style="border:none; box-shadow: 0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; background: var(--card-background-color); padding:16px 16px 14px 16px;">
+        <ha-card style="border:none; box-shadow: 0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; background:${KIT_CARD_BG}; -webkit-backdrop-filter:var(--cd-card-filter, none); backdrop-filter:var(--cd-card-filter, none); padding:16px 16px 14px 16px;">
           <style>
             @keyframes lcc-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
             .lcc-playing { animation: lcc-pulse 1.6s ease-in-out infinite; }
@@ -2934,7 +2967,7 @@
       const styled = new Set((cfg.styles || []).map((s) => s && s.scene && sceneKey(s.scene)).filter(Boolean));
       const names = sceneNames(this._hass, cfg.styles).filter((n) => !cfg.only_home || n.inHome || styled.has(n.key));
       this.innerHTML = `
-      <ha-card style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; background:var(--card-background-color); padding:16px;">
+      <ha-card style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; background:${KIT_CARD_BG}; -webkit-backdrop-filter:var(--cd-card-filter, none); backdrop-filter:var(--cd-card-filter, none); padding:16px;">
         <style>
           .ssc-grid { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px; margin-top:12px; }
           .ssc-tile { position:relative; container-type:inline-size; aspect-ratio:1 / 1; border-radius:14px; overflow:hidden; }
@@ -3089,7 +3122,7 @@
       const cfg = this.config || {};
       const d = this._draft;
       this.innerHTML = `
-      <ha-card style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; background:var(--card-background-color); padding:16px; color:var(--primary-text-color);">
+      <ha-card style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; background:${KIT_CARD_BG}; -webkit-backdrop-filter:var(--cd-card-filter, none); backdrop-filter:var(--cd-card-filter, none); padding:16px; color:var(--primary-text-color);">
         <style>
           .sbc-row { display:flex; align-items:center; gap:12px; padding:8px; border-radius:12px; background:rgba(127,127,127,0.08); margin-top:8px; }
           .sbc-sw { width:44px; height:44px; border-radius:10px; flex:none; display:flex; align-items:center; justify-content:center; color:#fff; }
@@ -3590,6 +3623,7 @@
           { name: "phone_start", selector: { select: { mode: "dropdown", options: [{ value: "compact", label: "Compact (one row per card)" }, { value: "open", label: "Open" }] } } },
           { name: "tablet_start", selector: { select: { mode: "dropdown", options: [{ value: "open", label: "Open" }, { value: "compact", label: "Compact (one row per card)" }] } } },
           { name: "open_when", selector: { template: {} } },
+          { name: "empty_when", selector: { template: {} } },
           { name: "collapsible", selector: { boolean: {} }, default: true }
         ]
       },
@@ -3601,6 +3635,7 @@
         schema: [
           { name: "card_width", selector: { number: { min: 0, max: 800, step: 10, mode: "box", unit_of_measurement: "px" } } },
           { name: "match_height", selector: { boolean: {} }, default: true },
+          { name: "frosted_cards", selector: { boolean: {} }, default: true },
           { name: "full_width", selector: { select: { mode: "dropdown", options: [{ value: "auto", label: "Automatic" }, { value: "yes", label: "Always full width" }, { value: "no", label: "Never" }] } } },
           { name: "priority", selector: { select: { mode: "dropdown", options: [{ value: "auto", label: "Work it out from the cards" }, { value: "controls", label: "Controls (goes higher)" }, { value: "info", label: "Information only" }] } } }
         ]
@@ -3614,9 +3649,11 @@
       phone_start: "On phones, starts",
       tablet_start: "On tablets and computers, starts",
       open_when: "Opens by itself when (optional template)",
+      empty_when: "Counts as empty when (optional template)",
       collapsible: "Show the \u2304 to switch between open and compact",
       card_width: "Cards side by side when each can be at least (empty = automatic, 0 = always one per row)",
       match_height: "Line up this panel's bottom with the panels beside it",
+      frosted_cards: "Frosted cards",
       full_width: "Full width across an Auto Layout",
       priority: "In an Auto Layout, counts as",
       color: "Colour (icon and panel)",
@@ -3626,7 +3663,9 @@
     helpers: {
       phone_start: "Each phone or tablet remembers what you last chose with the \u2304; this is where it starts. Phones are screens under 600px wide.",
       open_when: "E.g. {{ is_state('binary_sensor.back_door', 'on') }}. The panel opens while it's true, then goes back to how you left it.",
+      empty_when: "E.g. {{ states('todo.priorities_jamie') | int(0) == 0 }}. In an Auto Layout set to put empty panels last, it moves below the others while it's true. Some cards (House Tasks) report this themselves.",
       card_width: "Automatic: zones 200px, cameras 220px, everything else 300px. Cards fill the panel width: e.g. cameras 2 or 3 across on a tablet, one per row on a phone.",
+      frosted_cards: "The cards inside are see-through with a heavy blur of what's behind them (acrylic). Turn off for solid cards.",
       match_height: "When sections sit side by side, the last panel in a shorter section grows so its bottom lines up with its neighbours'.",
       priority: "Auto Layout puts panels with buttons and sliders above ones that only show information. Auto: lights, alarm, thermostats, fan, purifier, blinds and tiles with controls count as controls.",
       full_width: "Only inside an Auto Layout Card: the panel spans every column, with the panels before and after it balanced above and below. Automatic: a panel of 3 or more small cards (zones, cameras, tiles) goes full width when they would not fit side by side in one column.",
@@ -3701,7 +3740,10 @@
       this._built = false;
       this._fallback = null;
       this._build();
-      if (this._hass) this._watchOpenWhen();
+      if (this._hass) {
+        this._watchOpenWhen();
+        this._watchEmptyWhen();
+      }
     }
     set hass(hass) {
       const first = !this._hass;
@@ -3713,6 +3755,7 @@
       if (first) {
         rememberUser(hass);
         this._watchOpenWhen();
+        this._watchEmptyWhen();
         this._apply();
       }
     }
@@ -3909,6 +3952,24 @@
       const g = last && last.getBoundingClientRect();
       return g && panel ? g.bottom + 12 - panel.getBoundingClientRect().top : this.getBoundingClientRect().height;
     }
+    // Whether the panel has nothing to show (its `empty_when` template, or a
+    // card inside saying so with a `cd-card-empty` event). An Auto Layout with
+    // `empty_last` moves empty panels below the rest.
+    _watchEmptyWhen() {
+      if (this._unsubEmpty) this._unsubEmpty.then((u) => u && u()).catch(() => {
+      });
+      this._unsubEmpty = null;
+      if (!this.config.empty_when || !this._hass || !this.isConnected) return;
+      this._unsubEmpty = stcRender(this._hass, this.config.empty_when, (text) => {
+        const t = String(text || "").trim().toLowerCase();
+        this._setEmpty(!!t && !["0", "false", "off", "no", "none", "unknown", "unavailable"].includes(t));
+      });
+    }
+    _setEmpty(empty) {
+      if (empty === this._empty) return;
+      this._empty = empty;
+      window.dispatchEvent(new CustomEvent("cd-panels-changed"));
+    }
     _watchOpenWhen() {
       if (this._unsubOpen) this._unsubOpen.then((u) => u && u()).catch(() => {
       });
@@ -3926,8 +3987,9 @@
     _build() {
       const c = this.config;
       const color = stcColor(c.color);
+      const frost = c.frosted_cards !== false ? `--cd-card-bg:color-mix(in srgb, var(--card-background-color, #1f2128) 62%, transparent); --cd-card-filter:blur(30px) saturate(125%); --ha-card-background:var(--cd-card-bg); --ha-card-backdrop-filter:var(--cd-card-filter);` : "";
       this.innerHTML = `
-      <div class="spc-panel" style="position:relative; box-sizing:border-box; border-radius:24px; padding:12px; display:flex; flex-direction:column; gap:12px; isolation:isolate; transition:${PANEL_TRANSITION};">
+      <div class="spc-panel" style="position:relative; box-sizing:border-box; border-radius:24px; padding:12px; display:flex; flex-direction:column; gap:12px; isolation:isolate; transition:${PANEL_TRANSITION}; ${frost}">
         <div class="spc-bg" style="position:absolute; inset:0; border-radius:inherit; background:${color}; opacity:0.1; z-index:-1; pointer-events:none; transition:background-color .6s ease;"></div>
       </div>`;
       const panel = this.querySelector(".spc-panel");
@@ -4011,13 +4073,24 @@
       this._lastDevice = this._device();
       window.addEventListener("resize", this._onResize);
       this._onPanels = () => this._queueMatch();
+      if (!this._onCardEmpty) {
+        this._onCardEmpty = (ev) => {
+          if (!this.config.empty_when && ev.detail) this._setEmpty(!!ev.detail.empty);
+        };
+        this.addEventListener("cd-card-empty", this._onCardEmpty);
+      }
+      const told = [...this.querySelectorAll("*")].find((e) => e._reportedEmpty !== void 0);
+      if (told && !this.config.empty_when) this._setEmpty(!!told._reportedEmpty);
       if (!this._managed) window.addEventListener("cd-panels-changed", this._onPanels);
       if (window.ResizeObserver && !this._ro && !this._managed) {
         this._ro = new ResizeObserver(() => this._queueMatch());
         this._ro.observe(document.body);
         this._matchTimer = setInterval(() => this._queueMatch(), 3e3);
       }
-      if (this._hass) this._watchOpenWhen();
+      if (this._hass) {
+        this._watchOpenWhen();
+        this._watchEmptyWhen();
+      }
       this._apply();
     }
     disconnectedCallback() {
@@ -4030,6 +4103,9 @@
       if (this._unsubOpen) this._unsubOpen.then((u) => u && u()).catch(() => {
       });
       this._unsubOpen = null;
+      if (this._unsubEmpty) this._unsubEmpty.then((u) => u && u()).catch(() => {
+      });
+      this._unsubEmpty = null;
     }
     // A panel right under another panel in the same section gets the same gap
     // as between section columns (32px; the section's own gap between cards is
@@ -4726,7 +4802,7 @@
     }
     _build() {
       this.innerHTML = `
-      <ha-card class="cc-card" style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; padding:16px; background:var(--card-background-color); transition:background-color .6s ease; display:flex; flex-direction:column; gap:12px;">
+      <ha-card class="cc-card" style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; padding:16px; background:${KIT_CARD_BG}; -webkit-backdrop-filter:var(--cd-card-filter, none); backdrop-filter:var(--cd-card-filter, none); transition:background-color .6s ease; display:flex; flex-direction:column; gap:12px;">
         <style>
           .cc-btn { position:relative; overflow:hidden; flex:1 1 0; min-width:0; height:48px; border:none; border-radius:12px; cursor:pointer;
             background:rgba(127,127,127,0.16); color:var(--primary-text-color); font:inherit; font-size:26px; line-height:1; }
@@ -4857,7 +4933,7 @@
       const s = this._status(v);
       const a = v.a;
       this._color = s.color;
-      e.card.style.backgroundColor = s.tint ? `color-mix(in srgb, ${s.color} ${s.tint}%, var(--card-background-color))` : "var(--card-background-color)";
+      e.card.style.backgroundColor = s.tint ? `color-mix(in srgb, ${s.color} ${s.tint}%, ${KIT_CARD_BG})` : KIT_CARD_BG;
       e.title.textContent = cfg.name || a.friendly_name || cfg.entity;
       e.title.style.color = s.color;
       e.word.textContent = s.word + (this._demo ? " \xB7 demo" : "");
@@ -5587,6 +5663,15 @@
     if (pm <= apBand(c, "poor_max")) return { color: KIT_COLOR.poor, word: "Poor" };
     return { color: KIT_COLOR.bad, word: "Very poor" };
   }
+  function apScale(c) {
+    const g = apBand(c, "good_max"), f = apBand(c, "fair_max"), p = apBand(c, "poor_max");
+    return [
+      [g * 0.6, KIT_COLOR.good],
+      [(g + f) / 2, KIT_COLOR.fair],
+      [(f + p) / 2, KIT_COLOR.poor],
+      [p + (p - f) / 2, KIT_COLOR.bad]
+    ];
+  }
   function apAllergen(v) {
     if (v == null) return null;
     if (v <= 3) return { color: KIT_COLOR.good, word: "Low" };
@@ -5772,7 +5857,7 @@
       if (row2(c, "show_graph") && (this._demo || c.pm25_entity)) {
         const pts = this._demo ? this._demo.pmPts : this._hist && this._hist.data ? this._hist.data[c.pm25_entity] : null;
         const meta = {};
-        const svg2 = kitGraph([{ pts, current: pm, color: q.color, fill: true, pad: 2, format: (v) => `PM2.5 ${Math.round(v)} \xB5g/m\xB3` }], { height: 48, label: "PM2.5, last 24 hours", meta, smooth: c.smooth_graphs !== false });
+        const svg2 = kitGraph([{ pts, current: pm, color: q.color, colorAt: (v) => kitBlend(v, apScale(c)), fill: true, pad: 2, format: (v) => `PM2.5 ${Math.round(v)} \xB5g/m\xB3 \xB7 ${apQuality(v, c).word}` }], { height: 48, label: "PM2.5, last 24 hours", meta, smooth: c.smooth_graphs !== false });
         gBox.style.display = "block";
         const gsig = JSON.stringify([pm, q.color, this._hist && this._hist.at, !!svg2, c.smooth_graphs]);
         if (gsig !== this._gsig) {
@@ -6740,9 +6825,9 @@
       };
     }
     _drawStrip(tracks) {
-      const now = Date.now(), span = this._hours * 36e5, from = now - span;
+      const now = Date.now(), span2 = this._hours * 36e5, from = now - span2;
       const style = this.config.strip === "ticks" ? "ticks" : "bars";
-      const x = (t) => (t - from) / span * 100;
+      const x = (t) => (t - from) / span2 * 100;
       const minute = Math.floor(now / 6e4);
       const sig = JSON.stringify([style, this._hours, minute, tracks.map(([k, s]) => [k, s.length, s.length ? s[s.length - 1] : 0])]);
       if (this._stripSig === sig) return;
@@ -6757,7 +6842,7 @@
           html += `<i style="left:${l}%; width:${Math.max(0, x(b) - l)}%; background:${SZ_COLOR[kind]};"></i>`;
         }));
       } else {
-        const slots = 24, slot = span / slots;
+        const slots = 24, slot = span2 / slots;
         const counts = Array.from({ length: slots }, () => ({}));
         tracks.filter(([k]) => k !== "light").forEach(([kind, spans]) => spans.forEach(([a]) => {
           if (a < from) return;
@@ -6775,11 +6860,11 @@
       this._stripEl.innerHTML = `${html}<span class="sz-cursor"></span>`;
       const chip = this.querySelector(".sz-chip");
       this.querySelector(".sz-axis").style.setProperty("--sz-chip-w", `${(chip.offsetWidth || 0) + 8}px`);
-      this.querySelector(".sz-axis").innerHTML = [0, 0.25, 0.5, 0.75].map((f) => `<span>${clock(from + f * span)}</span>`).join("") + "<span>now</span>";
+      this.querySelector(".sz-axis").innerHTML = [0, 0.25, 0.5, 0.75].map((f) => `<span>${clock(from + f * span2)}</span>`).join("") + "<span>now</span>";
     }
     // What happened at a point on the strip, shown in the title line.
     _at(frac) {
-      const span = this._hours * 36e5, now = Date.now(), t = now - span + frac * span, tol = span / 90;
+      const span2 = this._hours * 36e5, now = Date.now(), t = now - span2 + frac * span2, tol = span2 / 90;
       const found = /* @__PURE__ */ new Set();
       (this._tracks || []).forEach(([kind, spans]) => spans.forEach(([a, b]) => {
         if (t >= a - tol && t <= b + tol) found.add(SZ_WORD[kind]);
@@ -6954,17 +7039,20 @@
               color: { label: "Colour", selector: { ui_color: {} } },
               color_template: { label: "Colour from a template (optional)", selector: { template: {} } },
               icon_template: { label: "Icon from a template (optional, e.g. mdi:shield-off when disarmed)", selector: { template: {} } },
-              alert_template: { label: "Needs attention when (optional template)", selector: { template: {} } }
+              alert_template: { label: "Needs attention when (optional template)", selector: { template: {} } },
+              admin_only: { label: "Only admins see this page", selector: { boolean: {} } }
             }
           }
         }
       },
+      { name: "icons_only", selector: { boolean: {} }, default: false },
       { name: "hide_tabs", selector: { boolean: {} }, default: true },
       { name: "back_to_top", selector: { boolean: {} }, default: true },
       { name: "demo", selector: { boolean: {} } }
     ],
     labels: {
       pages: "Pages",
+      icons_only: "Icons only (no page names; the current page is its filled circle)",
       hide_tabs: "Hide the dashboard's own tabs at the top",
       back_to_top: "Back-to-top button beside the bar (an arrow once you scroll down, a dash at the top)",
       demo: "Show pretend pages (for Design Presets; shown in place, not pinned)"
@@ -7083,9 +7171,7 @@
         this._builtInline = inline;
         const html = `
         <style>
-          .nb { pointer-events:auto; flex:1 1 auto; min-width:0; max-width:440px; height:58px; border-radius:29px; display:flex; align-items:center; justify-content:space-between; gap:4px; padding:0 7px; box-sizing:border-box;
-            background:color-mix(in srgb, var(--card-background-color, #1f2128) 92%, #fff 4%); box-shadow:0 8px 24px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.06);
-            -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); }
+          .nb { pointer-events:auto; flex:1 1 auto; min-width:0; max-width:440px; height:58px; border-radius:29px; display:flex; align-items:center; justify-content:space-between; gap:4px; padding:0 7px; box-sizing:border-box; }
           .nb-it { position:relative; flex:none; height:44px; min-width:44px; border:none; border-radius:22px; padding:0; background:transparent; cursor:pointer; font:inherit;
             display:flex; align-items:center; justify-content:center; gap:6px; color:var(--secondary-text-color); transition:background-color .25s, padding .25s; -webkit-tap-highlight-color:transparent; }
           .nb-it.nb-on { padding:0 14px 0 12px; color:#fff; font-weight:600; font-size:0.85rem; }
@@ -7096,12 +7182,15 @@
           .nb.nb-tight .nb-it { min-width:40px; }
           .nb.nb-tight .nb-it.nb-on { padding:0 12px; }
           .nb.nb-tight .nb-it span.nb-name { display:none; }
+          .nb.nb-icons { gap:2px; padding:0 6px; }
+          .nb.nb-icons .nb-it, .nb.nb-icons .nb-it.nb-on { min-width:42px; width:42px; padding:0; }
+          .nb.nb-icons .nb-it.nb-on .nb-dot { left:28px; right:auto; }
           .nb-it:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
           .nb-dot { position:absolute; left:28px; top:6px; width:8px; height:8px; border-radius:50%; background:#ff9800; box-shadow:0 0 0 2px var(--card-background-color, #1f2128); }
           .nb-it.nb-on .nb-dot { left:auto; right:6px; }
-          .nb-top { pointer-events:auto; position:relative; flex:none; width:58px; height:58px; padding:0; border:none; border-radius:50%; cursor:pointer;
-            background:color-mix(in srgb, var(--card-background-color, #1f2128) 92%, #fff 4%); box-shadow:0 8px 24px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.06);
-            -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); -webkit-tap-highlight-color:transparent; }
+          .nb-top { pointer-events:auto; position:relative; flex:none; width:58px; height:58px; padding:0; border:none; border-radius:50%; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+          ${kitAcrylicCss(".nb")}
+          ${kitAcrylicCss(".nb-top")}
           .nb-top:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
           .nb-top i { position:absolute; left:50%; top:50%; width:12px; height:2.5px; margin:-1.25px 0 0 -6px; border-radius:2px; background:#fff;
             transition:transform .38s cubic-bezier(.2,.8,.2,1); }
@@ -7137,7 +7226,7 @@
         const alert = demo ? !!p.alert_template : !!live.alert;
         const icon = /^[a-z]+:[\w-]+$/.test(live.icon || "") ? live.icon : p.icon || "mdi:circle";
         return { i, p, icon, colour, alert, on: i === active };
-      });
+      }).filter((t) => !t.p.admin_only || demo || !!(this._hass && this._hass.user && this._hass.user.is_admin));
       const sig = JSON.stringify(items.map((t) => [t.p.name, t.icon, t.colour, t.alert, t.on]));
       if (sig === this._sig) return;
       this._sig = sig;
@@ -7165,8 +7254,9 @@
     _fit() {
       const nav = this._nav;
       if (!nav) return;
+      nav.classList.toggle("nb-icons", !!this.config.icons_only);
       nav.classList.remove("nb-tight");
-      if (nav.scrollWidth > nav.clientWidth + 1) nav.classList.add("nb-tight");
+      if (this.config.icons_only || nav.scrollWidth > nav.clientWidth + 1) nav.classList.add("nb-tight");
     }
     // ---- Back to top: an arrow once the page is scrolled, a dash at the top.
     _scroller() {
@@ -7223,7 +7313,7 @@
     const who = /^for /.test(last) ? last.slice(4).trim() : "Everyone";
     const rest = parts.slice(1, /^for /.test(last) ? -1 : void 0);
     const kind = rest[0] || "";
-    const icon = /batter/i.test(kind) ? "mdi:battery-alert-variant-outline" : /filter/i.test(kind) ? "mdi:air-filter" : /vacuum/i.test(kind) ? "mdi:robot-vacuum" : /respond|device/i.test(kind) ? "mdi:heart-pulse" : "mdi:home-alert-outline";
+    const icon = /batter/i.test(kind) ? "mdi:battery-alert-variant-outline" : /filter/i.test(kind) ? "mdi:air-filter" : /vacuum/i.test(kind) ? "mdi:robot-vacuum" : /respond|device/i.test(kind) ? "mdi:heart-pulse" : /safety|smoke|alarm/i.test(kind) ? "mdi:smoke-detector-alert" : /update/i.test(kind) ? "mdi:update" : "mdi:home-alert-outline";
     return { kind, detail: rest.slice(1).join(" \xB7 "), who, icon };
   }
   function houseTaskFor(task, first) {
@@ -7310,6 +7400,11 @@
       const missing = !c.demo && !this._hass.states[this._entity()];
       const tasks = (c.demo ? htDemo() : this._items || []).filter((t) => t.status === "needs_action").map((t) => ({ t, h: houseTask(t) })).filter(({ h }) => all || houseTaskFor(h, first));
       if (c.title) kitHead(this, c.title, missing ? "Not set up" : tasks.length ? `${tasks.length} to sort` : "All sorted", tasks.length ? colour : KIT_COLOR.good);
+      const empty = missing || !!(c.demo || this._items) && !tasks.length;
+      if ((c.demo || this._items || missing) && empty !== this._reportedEmpty) {
+        this._reportedEmpty = empty;
+        this.dispatchEvent(new CustomEvent("cd-card-empty", { detail: { empty }, bubbles: true, composed: true }));
+      }
       const sig = JSON.stringify([tasks, missing, all, first, colour]);
       if (sig === this._sig) return;
       this._sig = sig;
@@ -7434,6 +7529,7 @@
       { name: "column_width", selector: { number: { min: 200, max: 800, step: 10, mode: "box", unit_of_measurement: "px" } } },
       { name: "max_columns", selector: { number: { min: 1, max: 6, step: 1, mode: "box" } } },
       { name: "controls_first", selector: { boolean: {} }, default: true },
+      { name: "empty_last", selector: { boolean: {} }, default: false },
       { name: "jump_chips", selector: { select: { mode: "dropdown", options: [{ value: "auto", label: "Automatic (phones)" }, { value: "always", label: "Always" }, { value: "never", label: "Never" }] } } }
     ],
     labels: {
@@ -7444,6 +7540,7 @@
       column_width: "Columns at least this wide",
       max_columns: "At most this many columns",
       controls_first: "Panels with buttons and sliders go above ones that only show information",
+      empty_last: "Empty panels go last",
       jump_chips: "Jump-to chips at the top"
     },
     helpers: {
@@ -7452,16 +7549,14 @@
       widget_width: "Default 520px, centred under the title. Phones use the full width.",
       column_width: "Default 340px. Phones (under 600px) always get one column in list order.",
       max_columns: 'Default 3. Mark a panel "Full width across an Auto Layout" to have it span the page.',
+      empty_last: 'A panel counts as empty when its "Counts as empty when" is true, or a card inside says so (House Tasks with nothing to do). Otherwise list order holds.',
       controls_first: 'Keeps list order otherwise, on phones too. Each panel can override what it counts as ("Counts as" in the panel).',
       jump_chips: "One chip per panel, in its colour; tapping one scrolls to that panel, and the chip for the panel you're looking at is filled in."
     }
   });
   var CHIPS_CSS = `
-  .al-chips .al-cap {
-    flex:1 1 auto; min-width:0; padding:6px; border-radius:999px; box-sizing:border-box;
-    background:color-mix(in srgb, var(--card-background-color, #1f2128) 88%, transparent);
-    box-shadow:0 6px 18px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.06);
-    -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); }
+  .al-chips .al-cap { flex:1 1 auto; min-width:0; padding:6px; border-radius:999px; box-sizing:border-box; }
+  ${kitAcrylicCss(".al-chips .al-cap")}
   .al-chips .al-strip { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; }
 `;
   var boxHeight = (el) => el ? Math.round(el.getBoundingClientRect().height) : 0;
@@ -7701,7 +7796,10 @@
         return;
       }
       cancelAnimationFrame(this._frame);
-      this._frame = requestAnimationFrame(() => this._layout(false));
+      this._frame = requestAnimationFrame(() => {
+        this._layout(false);
+        this._trimTail();
+      });
     }
     // Work out bands (split at full-width items) and columns; only move cards
     // when the arrangement actually changes, so cameras etc. aren't reloaded.
@@ -7710,8 +7808,9 @@
       const cols = this._columns();
       const gap = this._gap();
       const colWidth = ((this.getBoundingClientRect().width || window.innerWidth) - gap * (cols - 1)) / cols;
-      const wide = cols > 1 ? this._items.filter((it) => this._full(it, colWidth)) : [];
-      const rest = this._items.filter((it) => !wide.includes(it));
+      const order = this.config.empty_last ? [...this._items.filter((it) => !it.el._empty), ...this._items.filter((it) => it.el._empty)] : this._items;
+      const wide = cols > 1 ? order.filter((it) => this._full(it, colWidth)) : [];
+      const rest = order.filter((it) => !wide.includes(it));
       const bands = [];
       if (rest.length) bands.push({ items: rest });
       const first = this.config.controls_first !== false;
@@ -7745,7 +7844,7 @@
         this._prevSplits[b.items.map((it) => this._items.indexOf(it)).join(",")] = b.split;
       });
       if (placed) planRemember(planKey, bands.map((b) => b.split));
-      const plan = `${cols}|${bands.map((b) => `${b.full ? "F" : ""}${b.split.map((c) => c.join(".")).join(",")}`).join("/")}`;
+      const plan = `${cols}|${bands.map((b) => `${b.full ? "F" : ""}${b.items.map((it) => this._items.indexOf(it)).join("-")}:${b.split.map((c) => c.join(".")).join(",")}`).join("/")}`;
       if (force || plan !== this._plan) {
         this._plan = plan;
         this._root.innerHTML = "";
@@ -7846,10 +7945,10 @@
         const tick = r.kind === "todo" && !r.auto ? `<button type="button" data-done="${esc2(r.uid)}" data-list="${esc2(r.list)}" aria-label="Done" title="Done" style="flex:none; width:22px; height:22px; padding:0; border:2px solid color-mix(in srgb, ${c} 70%, transparent); border-radius:50%; background:transparent; color:var(--primary-text-color); cursor:pointer; display:flex; align-items:center; justify-content:center;">${iconHtml("mdi:check", { size: "14px" })}</button>` : "";
         return `<div ${r.kind === "alert" ? `data-alert="${r.i}" role="button"` : ""} style="height:26px; display:flex; align-items:center; gap:8px; padding:0 4px 0 8px; border-radius:13px; cursor:${r.kind === "alert" ? "pointer" : "default"}; background:color-mix(in srgb, ${c} 16%, transparent);">${icon ? iconHtml(icon, { size: "16px", style: `color:${c}; flex:none;` }) : ""}<span style="flex:1; min-width:0; font-size:0.8rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc2(r.text)}</span>${tick}</div>`;
       };
-      const side = todo && this.config.priorities_page ? `<button type="button" data-todo style="flex:none; width:58px; padding:0 4px; border:none; border-radius:12px; cursor:pointer; font:inherit; font-size:0.72rem; font-weight:700; line-height:1.2; color:var(--primary-text-color); background:color-mix(in srgb, #7e57c2 22%, transparent); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;">${iconHtml(
+      const side = todo && this.config.priorities_page ? `<button type="button" data-todo style="flex:none; width:58px; padding:0 4px; border:none; border-radius:12px; cursor:pointer; font:inherit; font-size:0.72rem; font-weight:700; line-height:1.2; color:#b39ddb; background:color-mix(in srgb, #7e57c2 22%, transparent); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;" aria-label="${extra > 0 ? `${extra} more to do` : "Open to-do"}">${iconHtml(
         "mdi:format-list-checks",
-        { size: "18px", style: "color:#b39ddb;" }
-      )}${extra > 0 ? `+${extra}` : "To-do"}<span style="font-size:0.9rem; line-height:1;">\u203A</span></button>` : "";
+        { size: "22px", style: "color:#b39ddb;" }
+      )}<span style="white-space:nowrap;">${extra > 0 ? `+${extra} more` : "To-do"}</span></button>` : "";
       head.innerHTML = `<div style="height:40px; font-size:2rem; font-weight:700; line-height:40px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--primary-text-color);">${esc2(title)}</div>
       <div class="al-widget" style="height:96px; width:100%; max-width:${Number(this.config.widget_width) || 520}px; margin:0 auto; box-sizing:border-box; display:flex; gap:6px; padding:6px; border-radius:18px; background:color-mix(in srgb, var(--card-background-color, #1f2128) 70%, transparent);">
         <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:3px;">${[0, 1, 2].map((n) => row3(shown[n])).join("")}</div>${side}
@@ -7998,7 +8097,7 @@
       const r = el.getBoundingClientRect();
       let below = this._root.getBoundingClientRect().bottom - r.top;
       if (prev && prev.getBoundingClientRect().top > r.top) below -= prev.getBoundingClientRect().height;
-      const need = Math.max(0, Math.ceil(window.innerHeight - top - below));
+      const need = Math.max(0, Math.ceil(window.innerHeight - top - below), this._restTail());
       this._tail.style.height = `${need}px`;
       this._jump = { el, top, arrived: false, since: performance.now() };
       kitGlide(kitScrollParent(this), () => el.getBoundingClientRect().top - top);
@@ -8013,18 +8112,40 @@
       el._slide(() => el._apply());
       return el;
     }
-    // Drop the extra room once the jump has landed and you scroll back up
-    // away from that panel (or if the jump never lands).
+    // Room at the end of the page so the last panel can always be scrolled
+    // up to just under the chips, where a chip jump puts it (phones, with the
+    // chips showing). It follows the last panel's height as panels open/close.
+    _restTail() {
+      if (!this._tail || !this._chipsWanted() || !this._chipsFloat()) return 0;
+      const order = this._pageOrder();
+      const last = order[order.length - 1];
+      if (!last) return 0;
+      const sc = kitScrollParent(this);
+      const doc = sc === document.scrollingElement || sc === document.documentElement;
+      const scTop = doc ? 0 : sc.getBoundingClientRect().top;
+      const view = doc ? window.innerHeight : sc.clientHeight;
+      const tail = parseFloat(this._tail.style.height) || 0;
+      const after = sc.scrollHeight - tail - (last.r.top - scTop + kitScrollTop(sc));
+      return Math.max(0, Math.ceil(view - (this._pinnedChipsBottom() + 10 - scTop) - after));
+    }
+    // A chip jump may need more room than that (to bring a panel that isn't
+    // last to the top); drop back to the resting room once the jump has
+    // landed and you scroll back up away from that panel (or if it never lands).
     _trimTail() {
+      if (!this._tail) return;
+      const rest = this._restTail();
       const j = this._jump;
-      if (!j) return;
-      const at = j.el.getBoundingClientRect().top;
-      if (Math.abs(at - j.top) < 8) j.arrived = true;
-      const leftIt = j.arrived && at > j.top + 40;
-      if (leftIt || !j.arrived && performance.now() - j.since > 3e3) {
-        this._tail.style.height = "0px";
+      if (j) {
+        const at = j.el.getBoundingClientRect().top;
+        if (Math.abs(at - j.top) < 8) j.arrived = true;
+        const leftIt = j.arrived && at > j.top + 40;
+        if (!leftIt && (j.arrived || performance.now() - j.since <= 3e3)) {
+          if ((parseFloat(this._tail.style.height) || 0) < rest) this._tail.style.height = `${rest}px`;
+          return;
+        }
         this._jump = null;
       }
+      this._tail.style.height = `${rest}px`;
     }
     _pinnedChipsBottom() {
       const box = this._chips;
@@ -8159,6 +8280,443 @@
     });
   }
 
+  // src/energy-cards.js
+  var OCTO_PINK = "#f050f8";
+  var EV_TEAL = "#00b8d4";
+  var CHEAP = KIT_COLOR.good;
+  var PEAK = KIT_COLOR.poor;
+  var pence = (gbp) => gbp == null ? "\u2013" : `${(gbp * 100).toFixed(gbp * 100 < 10 ? 2 : 1).replace(/\.?0+$/, "")}p`;
+  var pounds = (gbp) => gbp == null ? "\u2013" : `\xA3${Number(gbp).toFixed(2)}`;
+  var hhmm = (d) => d.toLocaleTimeString(void 0, { hour: "2-digit", minute: "2-digit" });
+  var span = (ms) => {
+    const m = Math.max(0, Math.round(ms / 6e4));
+    return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60 ? `${m % 60} m` : ""}`.trim();
+  };
+  function platformEntities(hass, platform, idHint) {
+    const reg = hass.entities || {};
+    const ids = Object.keys(hass.states).filter((id) => reg[id] ? reg[id].platform === platform : id.includes(idHint));
+    return ids;
+  }
+  function octoFind(hass) {
+    const ids = platformEntities(hass, "octopus_energy", "octopus_energy_");
+    const find = (re, tail) => {
+      const id = ids.find((x) => re.test(x));
+      return id ? id.split(".")[1].slice(0, -tail.length) : null;
+    };
+    return {
+      elec: find(/^sensor\.octopus_energy_electricity_.*_current_rate$/, "current_rate"),
+      gas: find(/^sensor\.octopus_energy_gas_.*_current_rate$/, "current_rate"),
+      account: find(/^sensor\.octopus_energy_a_.*_octoplus_points$/, "octoplus_points")
+    };
+  }
+  var OCTO_VIEWS = [
+    { value: "electricity", label: "Electricity now" },
+    { value: "last_day", label: "Last full day (electricity and gas)" },
+    { value: "gas", label: "Gas" },
+    { value: "octoplus", label: "Octoplus" }
+  ];
+  var OctopusCardEditor = createFormEditor({
+    schema: () => [
+      { name: "show", selector: { select: { mode: "dropdown", options: OCTO_VIEWS } } },
+      { name: "name", selector: { text: {} } }
+    ],
+    labels: { show: "Show", name: "Title (optional)" },
+    helpers: { show: "Finds your Octopus meters by itself (the Octopus Energy integration). Live use needs a Home Mini." }
+  });
+  var OctopusCard = class extends HTMLElement {
+    setConfig(config) {
+      this.config = { show: "electricity", ...config };
+      this._built = false;
+      this._sig = null;
+    }
+    set hass(hass) {
+      this._hass = hass;
+      this._render();
+    }
+    connectedCallback() {
+      this._tick = setInterval(() => {
+        this._sig = null;
+        this._render();
+      }, 6e4);
+    }
+    disconnectedCallback() {
+      clearInterval(this._tick);
+    }
+    _s(obj, key, domain = "sensor") {
+      return obj ? this._hass.states[`${domain}.${obj}${key}`] : null;
+    }
+    // Today's and tomorrow's half-hour rates, and which count as cheap.
+    _rates(m) {
+      const get = (k) => this._s(m.elec, k, "event") && this._s(m.elec, k, "event").attributes.rates || [];
+      const all = [...get("current_day_rates"), ...get("next_day_rates")].map((r) => ({ start: new Date(r.start), end: new Date(r.end), v: Number(r.value_inc_vat) })).filter((r) => !isNaN(r.start) && !isNaN(r.v)).sort((a, b) => a.start - b.start);
+      const min = all.length ? Math.min(...all.map((r) => r.v)) : null;
+      const max = all.length ? Math.max(...all.map((r) => r.v)) : null;
+      const cheap = (v) => min != null && max != null && max - min > 1e-3 && v <= min + 1e-3;
+      return { all, cheap, min };
+    }
+    // "Cheap now until 05:30" or the next cheap window and how long until it.
+    _window(rates) {
+      const now = Date.now();
+      const i = rates.all.findIndex((r) => r.start <= now && r.end > now);
+      if (i < 0) return null;
+      const runEnd = (k2) => {
+        let j = k2;
+        while (j + 1 < rates.all.length && rates.cheap(rates.all[j + 1].v) && +rates.all[j + 1].start === +rates.all[j].end) j += 1;
+        return rates.all[j].end;
+      };
+      if (rates.cheap(rates.all[i].v)) return { now: true, until: runEnd(i), v: rates.all[i].v };
+      const k = rates.all.findIndex((r, n) => n > i && rates.cheap(r.v));
+      if (k < 0) return null;
+      return { now: false, from: rates.all[k].start, until: runEnd(k), v: rates.all[k].v };
+    }
+    _render() {
+      if (!this._hass) return;
+      const c = this.config;
+      const m = octoFind(this._hass);
+      const view = c.show;
+      if (this._compact) return kitCompact(this, this._compactSpec(m));
+      if (!this._built) {
+        this.innerHTML = kitShell(`<div class="oc-body" style="display:flex; flex-direction:column; gap:10px;"></div>`, `
+        .oc-big { display:flex; align-items:baseline; gap:10px; }
+        .oc-big b { font-size:2.2rem; font-weight:300; font-variant-numeric:tabular-nums; line-height:1.1; }
+        .oc-two { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+        .oc-stat { border-radius:12px; background:rgba(127,127,127,.12); padding:10px 12px; display:flex; flex-direction:column; gap:2px; min-width:0; }
+        .oc-stat b { font-size:1.15rem; font-weight:600; font-variant-numeric:tabular-nums; }
+        .oc-stat span { font-size:.72rem; color:var(--secondary-text-color); }
+        .oc-strip { position:relative; height:20px; border-radius:8px; overflow:hidden; display:flex; }
+        .oc-strip i { display:block; height:100%; }
+        .oc-now { position:absolute; top:-2px; bottom:-2px; width:2px; background:var(--primary-text-color); box-shadow:0 0 0 2px rgba(0,0,0,.35); }
+        .oc-ticks { display:flex; justify-content:space-between; font-size:.68rem; color:var(--secondary-text-color); font-variant-numeric:tabular-nums; }
+        .oc-bars { display:flex; align-items:flex-end; gap:1px; height:52px; }
+        .oc-bars i { flex:1; border-radius:2px 2px 0 0; min-height:2px; }
+        .oc-meter { height:8px; border-radius:99px; background:rgba(127,127,127,.2); overflow:hidden; display:flex; }
+        .oc-meter i { display:block; height:100%; }
+        .oc-pill { margin-left:auto; font-size:.72rem; font-weight:700; padding:2px 9px; border-radius:999px; }`);
+        this._body = this.querySelector(".oc-body");
+        this._built = true;
+      }
+      const minute = Math.floor(Date.now() / 6e4);
+      const html = view === "last_day" ? this._lastDay(m) : view === "gas" ? this._gas(m) : view === "octoplus" ? this._octoplus(m) : this._elec(m);
+      const sig = JSON.stringify([html.head, html.body, minute]);
+      if (sig === this._sig) return;
+      this._sig = sig;
+      kitHead(this, html.head[0], html.head[1], html.head[2]);
+      this._body.innerHTML = html.body;
+      hydrateIcons(this);
+    }
+    _missing(what) {
+      return { head: [this.config.name || "Octopus", "Not set up", KIT_COLOR.off], body: `<div class="ck-sub" style="line-height:1.5;">No Octopus ${what} found. Add the Octopus Energy integration (from HACS) and this card finds your meters by itself.</div>` };
+    }
+    _elec(m) {
+      if (!m.elec) return this._missing("electricity meter");
+      const rate = kitNum(this._s(m.elec, "current_rate"));
+      const rates = this._rates(m);
+      const cheapNow = rate != null && rates.cheap(rate);
+      const col = cheapNow ? CHEAP : PEAK;
+      const demand = kitNum(this._s(m.elec, "current_demand"));
+      const todayCost = kitNum(this._s(m.elec, "current_accumulative_cost"));
+      const todayKwh = kitNum(this._s(m.elec, "current_accumulative_consumption"));
+      const standing = kitNum(this._s(m.elec, "current_standing_charge"));
+      const tariff = (this._s(m.elec, "current_rate") || { attributes: {} }).attributes.tariff || "";
+      const w = this._window(rates);
+      const d0 = /* @__PURE__ */ new Date();
+      d0.setHours(0, 0, 0, 0);
+      const d1 = +d0 + 864e5;
+      const today = rates.all.filter((r) => r.start >= d0 && r.start < d1);
+      const strip = today.map((r) => `<i style="width:${(r.end - r.start) / 864e5 * 100}%; background:${rates.cheap(r.v) ? CHEAP : `color-mix(in srgb, ${PEAK} 55%, transparent)`};"></i>`).join("");
+      const nowPct = (Date.now() - d0) / 864e5 * 100;
+      const win = !w ? "" : w.now ? `<b style="color:${CHEAP};">Cheap now</b> at ${pence(w.v)} until ${hhmm(w.until)}` : `<b style="color:${CHEAP};">${pence(w.v)}</b> from ${hhmm(w.from)} to ${hhmm(w.until)}, in ${span(w.from - Date.now())}`;
+      const product = /GO/.test(tariff) ? "Octopus Go" : /AGILE/.test(tariff) ? "Agile Octopus" : /INTELLI/.test(tariff) ? "Intelligent Octopus" : "";
+      return {
+        head: [this.config.name || "Octopus Electricity", rate == null ? "No rate" : `${pence(rate)} \xB7 ${cheapNow ? "Cheap" : "Peak"}`, OCTO_PINK],
+        body: `
+        <div class="oc-big"><b style="color:${col};">${pence(rate)}</b><span class="ck-sub">per kWh now</span><span class="oc-pill" style="background:color-mix(in srgb, ${col} 22%, transparent); color:${col};">${cheapNow ? "Cheap" : "Peak"}</span></div>
+        ${demand != null || todayCost != null ? `<div class="oc-two">
+          <div class="oc-stat"><b>${demand == null ? "\u2013" : `${Math.round(demand)} W`}</b><span>Using now</span></div>
+          <div class="oc-stat"><b>${pounds(todayCost)}</b><span>Today so far${todayKwh != null ? ` \xB7 ${todayKwh.toFixed(1)} kWh` : ""}</span></div></div>` : ""}
+        ${today.length ? `<div class="oc-strip">${strip}<div class="oc-now" style="left:${nowPct.toFixed(2)}%;"></div></div>
+        <div class="oc-ticks"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>` : ""}
+        <div class="ck-sub">${[win, product, standing != null ? `standing charge ${pence(standing)} a day` : ""].filter(Boolean).join(" \xB7 ")}</div>`
+      };
+    }
+    _lastDay(m) {
+      if (!m.elec) return this._missing("electricity meter");
+      const cost = this._s(m.elec, "previous_accumulative_cost");
+      const charges = cost && cost.attributes.charges || [];
+      if (!charges.length) return { head: [this.config.name || "Last full day", "Waiting for Octopus", KIT_COLOR.off], body: `<div class="ck-sub">Octopus hasn't sent a full day of readings yet.</div>` };
+      const day = new Date(charges[0].start);
+      const rates = charges.map((x) => Number(x.rate));
+      const lo = Math.min(...rates), hi = Math.max(...rates);
+      const isCheap = (r) => hi - lo > 1e-3 && r <= lo + 1e-3;
+      const kwh = charges.reduce((s, x) => s + Number(x.consumption || 0), 0);
+      const cheapKwh = charges.filter((x) => isCheap(Number(x.rate))).reduce((s, x) => s + Number(x.consumption || 0), 0);
+      const share = kwh ? Math.round(cheapKwh / kwh * 100) : 0;
+      const eTotal = Number(cost.attributes.total != null ? cost.attributes.total : cost.state);
+      const gasCost = this._s(m.gas, "previous_accumulative_cost");
+      const gasKwh = kitNum(this._s(m.gas, "previous_accumulative_consumption_kwh"));
+      const gTotal = gasCost ? Number(gasCost.attributes.total != null ? gasCost.attributes.total : gasCost.state) : null;
+      const max = Math.max(...charges.map((x) => Number(x.consumption || 0)), 0.01);
+      const bars = charges.map((x) => `<i title="${kitEsc(hhmm(new Date(x.start)))} \xB7 ${Number(x.consumption).toFixed(2)} kWh \xB7 ${pence(Number(x.rate))}" style="height:${Number(x.consumption || 0) / max * 100}%; background:${isCheap(Number(x.rate)) ? CHEAP : PEAK};"></i>`).join("");
+      const saving = hi - lo > 1e-3 ? `Each kWh moved to the cheap rate saves ${pence(hi - lo)}.` : "";
+      const dayName = day.toLocaleDateString(void 0, { weekday: "short", day: "numeric", month: "short" });
+      return {
+        head: [this.config.name || "Last full day", `${dayName} \xB7 ${pounds(eTotal + (gTotal || 0))}`, KIT_COLOR.comfy],
+        body: `
+        <div class="oc-two">
+          <div class="oc-stat"><b>${pounds(eTotal)}</b><span>Electricity \xB7 ${kwh.toFixed(1)} kWh</span></div>
+          <div class="oc-stat"><b>${pounds(gTotal)}</b><span>Gas${gasKwh != null ? ` \xB7 ${gasKwh.toFixed(1)} kWh` : ""}</span></div>
+        </div>
+        <div class="oc-bars">${bars}</div>
+        <div class="oc-ticks"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
+        ${hi - lo > 1e-3 ? `<div class="oc-meter"><i style="width:${share}%; background:${CHEAP};"></i><i style="width:${100 - share}%; background:${PEAK};"></i></div>
+        <div class="ck-sub"><b style="color:${CHEAP};">${share}%</b> of electricity was used at the cheap rate. ${saving}</div>` : ""}
+        <div class="ck-sub">Octopus sends readings a day or two late. Costs include standing charges.</div>`
+      };
+    }
+    _gas(m) {
+      if (!m.gas) return this._missing("gas meter");
+      const rate = kitNum(this._s(m.gas, "current_rate"));
+      const standing = kitNum(this._s(m.gas, "current_standing_charge"));
+      const kwh = kitNum(this._s(m.gas, "current_accumulative_consumption_kwh"));
+      const cost = kitNum(this._s(m.gas, "current_accumulative_cost"));
+      return {
+        head: [this.config.name || "Gas", rate == null ? "No rate" : `${pence(rate)} per kWh`, KIT_COLOR.poor],
+        body: `
+        <div class="oc-big"><b>${pence(rate)}</b><span class="ck-sub">per kWh</span></div>
+        ${kwh != null || cost != null ? `<div class="oc-two"><div class="oc-stat"><b>${pounds(cost)}</b><span>Today so far${kwh != null ? ` \xB7 ${kwh.toFixed(1)} kWh` : ""}</span></div><div class="oc-stat"><b>${pence(standing)}</b><span>Standing charge a day</span></div></div>` : `<div class="ck-sub">Standing charge ${pence(standing)} a day</div>`}`
+      };
+    }
+    _octoplus(m) {
+      if (!m.account) return this._missing("account");
+      const pts = kitNum(this._s(m.account, "octoplus_points"));
+      const happy = kitNum(this._s(m.account, "octoplus_weekend_happy_hours"));
+      const cal = this._hass.states[`calendar.${m.account}octoplus_power_down`];
+      const up = this._hass.states[`calendar.${m.account}octoplus_power_up`];
+      const ev = (x) => x && x.attributes.start_time ? `${x.attributes.message || "Session"} \xB7 ${new Date(x.attributes.start_time).toLocaleString(void 0, { weekday: "short", hour: "2-digit", minute: "2-digit" })}` : "";
+      const sessions = [ev(cal), ev(up)].filter(Boolean);
+      return {
+        head: [this.config.name || "Octoplus", pts == null ? "" : `${pts} points`, OCTO_PINK],
+        body: `
+        <div class="oc-two"><div class="oc-stat"><b>${pts == null ? "\u2013" : pts}</b><span>Points</span></div><div class="oc-stat"><b>${happy == null ? "\u2013" : happy}</b><span>Weekend happy hours</span></div></div>
+        <div class="ck-sub">${sessions.length ? `Saving sessions: ${kitEsc(sessions.join(", "))}` : "No saving sessions booked."}</div>`
+      };
+    }
+    _compactSpec(m) {
+      const c = this.config;
+      if (c.show === "gas") {
+        const rate2 = kitNum(this._s(m.gas, "current_rate"));
+        const cost = kitNum(this._s(m.gas, "current_accumulative_cost"));
+        return { name: c.name || "Gas", color: KIT_COLOR.poor, value: pence(rate2), status: cost != null ? `today ${pounds(cost)}` : "per kWh" };
+      }
+      if (c.show === "octoplus") {
+        const pts = kitNum(this._s(m.account, "octoplus_points"));
+        return { name: c.name || "Octoplus", color: OCTO_PINK, value: pts == null ? "\u2013" : String(pts), status: "points" };
+      }
+      if (c.show === "last_day") {
+        const cost = this._s(m.elec, "previous_accumulative_cost");
+        const gas = this._s(m.gas, "previous_accumulative_cost");
+        const total = (cost ? Number(cost.attributes.total != null ? cost.attributes.total : cost.state) : 0) + (gas ? Number(gas.attributes.total != null ? gas.attributes.total : gas.state) : 0);
+        return { name: c.name || "Last full day", color: KIT_COLOR.comfy, value: pounds(total), status: "electricity and gas" };
+      }
+      const rate = kitNum(this._s(m.elec, "current_rate"));
+      const rates = this._rates(m);
+      const cheapNow = rate != null && rates.cheap(rate);
+      const demand = kitNum(this._s(m.elec, "current_demand"));
+      return {
+        name: c.name || "Octopus Electricity",
+        color: OCTO_PINK,
+        value: pence(rate),
+        valueColor: cheapNow ? CHEAP : PEAK,
+        status: [cheapNow ? "Cheap" : "Peak", demand != null ? `${Math.round(demand)} W now` : ""].filter(Boolean).join(" \xB7 ")
+      };
+    }
+    getCardSize() {
+      return 4;
+    }
+    getGridOptions() {
+      return { columns: 12, min_columns: 6, rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement(`octopus-card-editor${SUFFIX}`);
+    }
+    static getStubConfig() {
+      return { show: "electricity" };
+    }
+  };
+  kitCompactable(OctopusCard, (card) => {
+    card._built = false;
+    card._sig = null;
+  });
+  var EV_MODES = [
+    { key: "Stopped", name: "Stop", icon: "mdi:stop-circle-outline", color: KIT_COLOR.off },
+    { key: "Eco", name: "Eco", icon: "mdi:leaf", color: KIT_COLOR.good },
+    { key: "Eco+", name: "Eco+", icon: "mdi:solar-power", color: KIT_COLOR.comfy },
+    { key: "Fast", name: "Fast", icon: "mdi:lightning-bolt", color: KIT_COLOR.poor }
+  ];
+  function evFind(hass, c = {}) {
+    const ids = platformEntities(hass, "myenergi", "zappi").filter((id) => /zappi/.test(id));
+    const st = (id) => hass.states[id];
+    const pick = (dom, re) => ids.find((id) => id.startsWith(`${dom}.`) && re.test(id)) || "";
+    return {
+      mode: c.mode_entity || ids.find((id) => id.startsWith("select.") && (st(id).attributes.options || []).includes("Eco+")) || pick("select", /charge_mode/),
+      power: c.power_entity || pick("sensor", /internal_load|charging_power|power_ct_internal/) || ids.find((id) => id.startsWith("sensor.") && st(id).attributes.device_class === "power") || "",
+      session: c.session_entity || pick("sensor", /charge_added_session|session/),
+      today: c.today_entity || pick("sensor", /energy_used_today|charge_added_today/),
+      status: c.status_entity || pick("sensor", /_status$/),
+      plug: c.plug_entity || pick("sensor", /plug_status|plug/)
+    };
+  }
+  var EvChargerCardEditor = createFormEditor({
+    schema: () => [
+      { name: "name", selector: { text: {} } },
+      { name: "show_buttons", selector: { boolean: {} }, default: true },
+      {
+        type: "expandable",
+        name: "",
+        title: "Charger entities (found automatically)",
+        flatten: true,
+        schema: [
+          { name: "mode_entity", selector: { entity: { domain: "select" } } },
+          { name: "power_entity", selector: { entity: { domain: "sensor" } } },
+          { name: "session_entity", selector: { entity: { domain: "sensor" } } },
+          { name: "status_entity", selector: { entity: { domain: "sensor" } } },
+          { name: "plug_entity", selector: { entity: { domain: "sensor" } } }
+        ]
+      },
+      { name: "demo", selector: { boolean: {} } }
+    ],
+    labels: {
+      name: "Title (optional)",
+      show_buttons: "Mode buttons (Stop, Eco, Eco+, Fast)",
+      mode_entity: "Charge mode",
+      power_entity: "Charging power",
+      session_entity: "Energy added this charge",
+      status_entity: "Status",
+      plug_entity: "Plug status",
+      demo: "Show a pretend charger (for Design Presets)"
+    },
+    helpers: { name: "Finds a myenergi Zappi by itself once the myenergi integration is set up." }
+  });
+  var EvChargerCard = class extends HTMLElement {
+    setConfig(config) {
+      this.config = config || {};
+      this._built = false;
+      this._sig = null;
+    }
+    set hass(hass) {
+      this._hass = hass;
+      this._render();
+    }
+    _data() {
+      const c = this.config;
+      if (c.demo) return { found: true, mode: "Eco+", options: ["Fast", "Eco", "Eco+", "Stopped"], power: 7100, session: 18.4, status: "Charging", plug: "Connected" };
+      const e = evFind(this._hass, c);
+      const s = (id) => id && this._hass.states[id];
+      if (!s(e.mode) && !s(e.power) && !s(e.status)) return { found: false };
+      let power = kitNum(s(e.power));
+      if (power != null && s(e.power).attributes.unit_of_measurement === "kW") power *= 1e3;
+      return {
+        found: true,
+        e,
+        mode: s(e.mode) ? s(e.mode).state : null,
+        options: s(e.mode) ? s(e.mode).attributes.options || [] : [],
+        power,
+        session: kitNum(s(e.session)),
+        status: s(e.status) ? s(e.status).state : null,
+        plug: s(e.plug) ? s(e.plug).state : null,
+        unavailable: [e.mode, e.power, e.status].filter(Boolean).every((id) => !s(id) || s(id).state === "unavailable")
+      };
+    }
+    // The Octopus rate right now (for "charging at 5.0p").
+    _rate() {
+      const m = octoFind(this._hass);
+      const r = m.elec && this._hass.states[`sensor.${m.elec}current_rate`];
+      return kitNum(r);
+    }
+    _render() {
+      if (!this._hass) return;
+      const c = this.config;
+      const d = this._data();
+      const charging = d.found && d.power != null && d.power > 100;
+      const col = !d.found || d.unavailable ? KIT_COLOR.off : charging ? EV_TEAL : KIT_COLOR.off;
+      const word = !d.found ? "Not connected yet" : d.unavailable ? "Unavailable" : charging ? `Charging \xB7 ${d.mode || ""}`.replace(/ · $/, "") : kitCap(d.status || d.plug || d.mode || "Idle");
+      if (this._compact) {
+        return kitCompact(this, {
+          name: c.name || "Car charger",
+          color: col,
+          value: charging ? `${(d.power / 1e3).toFixed(1)} kW` : "",
+          valueColor: EV_TEAL,
+          status: d.found ? word : "Not connected yet",
+          buttons: d.found && c.show_buttons !== false && d.mode != null ? EV_MODES.filter((b) => !d.options.length || d.options.includes(b.key)).map((b) => ({ ...b, label: b.name, on: d.mode === b.key })) : [],
+          onButton: (b) => this._setMode(b.key)
+        });
+      }
+      if (!this._built) {
+        this.innerHTML = kitShell(`<div class="ev-body" style="display:flex; flex-direction:column; gap:10px;"></div><div class="ck-row ev-modes"></div>`, `
+        .ev-big { display:flex; align-items:baseline; gap:10px; }
+        .ev-big b { font-size:2.2rem; font-weight:300; font-variant-numeric:tabular-nums; line-height:1.1; }
+        .ev-two { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+        .ev-stat { border-radius:12px; background:rgba(127,127,127,.12); padding:10px 12px; display:flex; flex-direction:column; gap:2px; min-width:0; }
+        .ev-stat b { font-size:1.15rem; font-weight:600; font-variant-numeric:tabular-nums; }
+        .ev-stat span { font-size:.72rem; color:var(--secondary-text-color); }`);
+        this._body = this.querySelector(".ev-body");
+        this._built = true;
+      }
+      kitHead(this, c.name || "Car charger", word + (c.demo ? " \xB7 demo" : ""), col === KIT_COLOR.off ? EV_TEAL : col);
+      const rate = this._rate();
+      const sig = JSON.stringify([d, rate]);
+      if (sig !== this._sig) {
+        this._sig = sig;
+        if (!d.found) {
+          this._body.innerHTML = `<div style="display:flex; gap:10px; align-items:center;">${iconHtml("mdi:ev-station", { size: "28px", style: `color:${EV_TEAL}; flex:none;` })}<div class="ck-sub" style="line-height:1.5;">Not connected yet. Once the myenergi integration is set up (hub serial and API key), this card finds the Zappi by itself.</div></div>`;
+        } else {
+          const cheap = rate != null && rate < 0.1;
+          this._body.innerHTML = `
+          <div class="ev-big"><b style="color:${charging ? EV_TEAL : "var(--secondary-text-color)"};">${charging ? `${(d.power / 1e3).toFixed(1)} kW` : "Not charging"}</b>${charging ? '<span class="ck-sub">charging now</span>' : ""}${rate != null ? `<span style="margin-left:auto; font-size:.72rem; font-weight:700; padding:2px 9px; border-radius:999px; background:color-mix(in srgb, ${cheap ? CHEAP : PEAK} 22%, transparent); color:${cheap ? CHEAP : PEAK};">${pence(rate)} rate</span>` : ""}</div>
+          <div class="ev-two">
+            <div class="ev-stat"><b>${d.session == null ? "\u2013" : `${d.session.toFixed(1)} kWh`}</b><span>This charge${d.session != null && rate != null && charging ? ` \xB7 about ${pounds(d.session * rate)}` : ""}</span></div>
+            <div class="ev-stat"><b>${kitEsc(kitCap(d.plug || d.status || "\u2013"))}</b><span>${d.plug ? "Plug" : "Status"}</span></div>
+          </div>`;
+        }
+      }
+      const modes = d.found && c.show_buttons !== false && d.mode != null ? EV_MODES.filter((b) => !d.options.length || d.options.includes(b.key)).map((b) => ({ ...b, on: d.mode === b.key })) : [];
+      kitTiles(this.querySelector(".ev-modes"), modes, (t) => this._setMode(t.key));
+      hydrateIcons(this);
+    }
+    _setMode(mode) {
+      if (this.config.demo) return;
+      const e = evFind(this._hass, this.config);
+      if (e.mode) this._hass.callService("select", "select_option", { entity_id: e.mode, option: mode });
+    }
+    getCardSize() {
+      return 4;
+    }
+    getGridOptions() {
+      return { columns: 12, min_columns: 6, rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement(`ev-charger-card-editor${SUFFIX}`);
+    }
+    static getStubConfig() {
+      return {};
+    }
+  };
+  kitCompactable(EvChargerCard, (card) => {
+    card._built = false;
+    card._sig = null;
+  });
+  function registerEnergyCards() {
+    [
+      ["octopus-card", OctopusCard, OctopusCardEditor, "Octopus Energy Card", "Octopus rates, live use, last full day, gas and Octoplus"],
+      ["ev-charger-card", EvChargerCard, EvChargerCardEditor, "EV Charger Card", "A myenergi Zappi: charging, this charge and mode buttons"]
+    ].forEach(([name, Cls, Ed, label, description]) => {
+      if (!customElements.get(`${name}-editor${SUFFIX}`)) customElements.define(`${name}-editor${SUFFIX}`, Ed);
+      if (!customElements.get(`${name}${SUFFIX}`)) customElements.define(`${name}${SUFFIX}`, Cls);
+      window.customCards = window.customCards || [];
+      window.customCards.push({ type: `${name}${SUFFIX}`, name: `${label}${LABEL}`, description, preview: true, documentationURL: "https://github.com/J45PER/church-drive-cards#readme" });
+    });
+  }
+
   // src/index.js
   registerGaugeZoneCard();
   registerAlarmPanelCard();
@@ -8178,5 +8736,6 @@
   registerNavBarCard();
   registerAutoLayoutCard();
   registerHouseTasksCard();
+  registerEnergyCards();
   console.info(`%c CHURCH-DRIVE-CARDS${SUFFIX ? " BETA" : ""} %c loaded `, "color: white; background: #2196f3; font-weight: 700;", "color: #2196f3; background: transparent;");
 })();

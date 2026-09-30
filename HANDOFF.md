@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-30. Current release: **v0.23.0**.*
+*Last updated 2026-09-30. Current release: **v0.24.0**.*
 
 ## Where this stands
 
@@ -130,6 +130,83 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
         stale assignee.
       - Tested: Jamie+Hayley, all three (Everyone) and none (removed) on the
         pre-filter task.
+    - **More sources (2026-09-30, after v0.23.0; user: "the filter is just an
+      example"):** `wanted` now covers:
+      - Batteries: every Battery Notes sensor (`*_battery_plus[_N]`) below
+        `input_number.to_do_battery_low_below` (30%), or whose `*_battery_plus_low`
+        flag is on.
+        - Phones and tablets are skipped (any device with a `mobile_app` entity).
+        - Rechargeables ("Li-ion"/"Rechargeable" in `battery_type_and_quantity`)
+          become "Charge <name>". Others become "Replace battery: <name>" with the
+          type in the detail.
+        - Names come from the `batteries` map first, then the device name.
+        - Duplicates (Ring registers some devices twice) are merged by device name
+          plus rechargeable.
+      - Devices not responding: the health sensor, plus any light / switch / fan /
+        climate / cover / camera / vacuum / lock / alarm unavailable longer than
+        `input_number.to_do_offline_for` (60 min). Media players are left out, since
+        TVs go unavailable when off.
+        - The whole device must be quiet: nothing else on it reporting, ignoring
+          buttons/selects/times/numbers/text/events/updates, which sit at
+          "unknown". Before this, Gregg got a false "not responding" because only
+          `switch.gregg_off_peak_charging` was unavailable while the vacuum was
+          docked and fine (fixed 2026-09-30).
+        - "My Boy Hugo" (a Hue Go, a portable lamp) is genuinely unreachable. The
+          user can label it "Ignore in to-dos" if it's usually unplugged.
+      - Filters and parts: the purifier filters (<10%), plus all six Gregg
+        consumables due within `input_number.to_do_parts_due_within` (24h): filter,
+        main and side brush, sensors, dock tray, mop cloth.
+      - Safety alarms: smoke/CO `*life_end` / `*end_of_life` sensors on. New kind,
+        `input_boolean.to_do_safety_alarms_*`.
+      - Updates: `update.*` on. New kind, `input_boolean.to_do_updates_*`.
+      - Anything labelled `ignore_in_to_dos` ("Ignore in to-dos"), on the device or
+        the entity, is skipped.
+      - First run: "Charge Ring Alarm Keypad" (25%), "Replace battery: Hue Living
+        Room Light Dial" (29%, CR2032), and the pre-filter. Gregg's sensors (34h)
+        and dock tray (30h) come next.
+      - Manager's grid has the two new kinds plus a "When to make a task" block with
+        the three thresholds.
+      - HA restarted on its own at 11:03 on 2026-09-30, not by us. The switches
+        restored with values someone had set in Manager in the meantime; they were
+        left as they are.
+    - **Notifications (2026-09-30, user's request):**
+      `automation.church_drive_to_do_reminders` (queued, max 20) sends two kinds, each
+      person on their own devices. Devices are set in the `people` variable: Jamie's
+      iPhone and Pixel (not the iPad or the watch), Hayley's Pixel 9, Diane's phone.
+      - **Summary** (trigger id `summary`): at `input_datetime.to_do_reminder_time`
+        ("To-do: summary time", 10:00) on `input_select.to_do_summary_day`
+        (Saturday; "Every day" is also an option).
+        - One notification per person, "To-do summary (N)": their own list, the
+          shared list (marked "(shared)"), and the automatic tasks that name them or
+          Everyone, with details. At most 8 lines, then "…and N more".
+        - Nothing is sent to someone with nothing to do.
+        - Per person: `input_boolean.to_do_reminders_<person>` ("To-do summary ·
+          <name>").
+      - **New-task alerts**, per person: `input_boolean.to_do_new_task_alerts_<person>`.
+        - Automatic tasks (trigger id `auto`): the sync automation fires
+          `church_drive_todo_added` {list, item, kind, who} for each task it adds.
+          The alert "New to-do: <kind>" goes to the people named in `who`, so it's
+          exact.
+        - People's lists (trigger id `added`): when the open count of
+          `todo.priorities_<person>` or `_everyone` goes up by N, the last N open
+          items are taken as new. Local To-do appends new items at the end; an
+          unticked old item could be misread, which is rare.
+        - Own list: the alert goes to that person. Shared list: to everyone.
+        - Never sent to the person who added it (matched by the change's
+          `context.user_id` to a `person`). Changes made by an automation or the
+          API have no user, so they notify.
+      - Tapping any of them opens `/dashboard-mobile/todo`. The summary uses tag
+        `church-drive-todo-summary`; each alert has its own tag.
+      - Manager: a "Notifications" block with the day and time, plus two rows of
+        person tiles (summary / as soon as something new is added).
+      - Tested on Jamie only: the summary (while it was still daily at 18:00), an
+        automatic alert via a test event, and an added item on Jamie's list (added,
+        then removed).
+      - Why the old battery alert never fired:
+        `automation.battery_notes_low_battery_alert` only triggers when a Battery
+        Notes `_low` flag turns on, at Battery Notes' 10% threshold. Nothing has
+        been that low, and it only notifies the Pixel. It's left in place. The
+        weekly Friday 18:00 battery report does run.
     - Manager's "Automatic to-dos" panel has a "Who gets each kind of task" grid: a
       heading per kind and three purple person tiles (tap to toggle). Below it are
       the lists and `house-tasks-card` with `show: all`.
@@ -150,6 +227,108 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **v0.24.0 (released 2026-09-30, reload-only): acrylic, frosted cards, scroll room, To-do ordering, purifier graph, Energy.**
+  - The user chose option C, "Deep frost", from the acrylic mock-up.
+    - `kitAcrylicCss(sel)` in card-kit gives: a 76% card-colour tint with a 4% top
+      highlight, `blur(42px) saturate(115%)` behind it, 8% SVG grain (`KIT_GRAIN`) in
+      `::after`, and no outline.
+    - Used by the chips capsule (`.al-cap`), the nav bar (`.nb`) and back-to-top
+      (`.nb-top`). Their old `inset 0 0 0 1px` outline is gone.
+  - Frosted cards: section panels set `--cd-card-bg` (74% tint) and
+    `--cd-card-filter`, plus HA's `--ha-card-background` /
+    `--ha-card-backdrop-filter`, so both Church Drive cards (`kitShell`, compact
+    rows, `kitHead` tint) and HA's own cards go see-through and blurred.
+    - Panel option `frosted_cards` (default on).
+    - The page background stays flat dark (the user's choice for now). A soft colour
+      background was offered in the mock-up.
+  - The last panel can always scroll up under the chips.
+    - `_restTail()` keeps room at the end of the page so the last panel (in page
+      order) can scroll to just under the pinned chips, where a chip jump puts it.
+    - It's measured against the real end of the scroller, so the nav bar's spacer
+      counts, and applies on phones with chips.
+    - `_trimTail()` falls back to it after a jump; `_queue()` re-checks it after each
+      layout.
+    - Tested: at the very bottom the last panel sits at the same place its chip
+      takes it (112px vs 112px).
+  - Follow-up from the user's feedback:
+    - Cards in panels use the lighter "B" recipe (62% tint, `blur(30px)
+      saturate(125%)`). The panel's coloured background is unchanged. Chips, nav
+      and back-to-top stay "C".
+    - **Empty panels last:** Auto Layout has `empty_last` and panels have
+      `empty_when` (a template).
+      - A card can report emptiness with a bubbling `cd-card-empty` event
+        {empty}; `house-tasks-card` does this. The panel also picks up a report
+        made before it was on the page (`_reportedEmpty`).
+      - The layout plan now includes item order, so a reorder rebuilds it even on
+        one column.
+      - To-do views (Mobile and Tasks): order From the house → My to-do → Shared,
+        `empty_last: true`, `controls_first: false`; the lists' panels have
+        `empty_when: states(todo…) == 0`.
+      - Tested: with no house tasks the order became My to-do > Shared > From the
+        house, and it went back when a task appeared.
+    - Consistency pass: the alarm, climate, light control, gauge/battery zone,
+      scene builder and scene styles cards drew their own solid
+      `var(--card-background-color)` surface, so they (and the alarm/climate
+      status tints) weren't frosted when a panel was open. They now use
+      `KIT_CARD_BG` plus `backdrop-filter: var(--cd-card-filter, none)`, like
+      `kitShell`. A card outside a panel still falls back to the normal solid
+      colour.
+    - Air purifier PM2.5 graph coloured by level (user picked "A" from
+      https://claude.ai/artifact/XNN42H7nhgtjN3svHSnnJX, with smooth blends):
+      - `kitGraph` series take `colorAt(v)`: a 21-stop vertical gradient over the
+        graph's own scale, as in the climate room graphs.
+      - `kitBlend(v, anchors)` interpolates the colours. `apScale` anchors each
+        band's colour mid-band: green at 60% of good_max, amber mid-Fair, orange
+        mid-Poor, red above; the bands follow the card's own settings.
+      - The scale still fits the readings (the user didn't ask to change it).
+      - Hover/hold: the dot follows the line colour (`colourOf: colorAt` passed to
+        `kitScrub`, as in climate zone) and the label adds the band, e.g.
+        "PM2.5 93 µg/m³ · Poor".
+    - Header widget To-do button: no "›"; the text matches the icon's lilac
+      (#b39ddb), reading "+N more" or "To-do"; 22px icon; aria-label.
+  - On release `-beta` was stripped from Mobile again. Acrylic mock-up:
+    https://claude.ai/artifact/Y9kej1q5Hxpggozpc8CkmV
+- **Energy (v0.24.0, user's request):**
+  - Octopus Energy (BottlecapDave integration, entry `01M3SXJ58FATC6QSNR4EH3X8PG`,
+    account A-26769B84) is on **Octopus Go**: 4.99p from 00:30 to 05:30, 26.57p
+    otherwise. Gas is fixed at 5.24p.
+  - **Home Mini:** it was online but `home_mini_settings.supports_live_consumption` was
+    false. It was switched on with the integration's reconfigure flow, which needs
+    `home_pro_settings: {}` and `price_cap_settings: {}` sent back. That added
+    `current_demand` (W), `current_accumulative_consumption`/`cost` (and peak /
+    off_peak), plus gas current_* sensors. The first reading was 225 W.
+  - **New cards (`src/energy-cards.js`):**
+    - `octopus-card` with `show`: `electricity` / `last_day` / `gas` / `octoplus`. It
+      finds meters from the entity registry (platform `octopus_energy`).
+      - Cheap means the day's minimum rate from the `event.*_day_rates` `rates`
+        attribute.
+      - `last_day` uses the `charges` attribute of `previous_accumulative_cost`
+        (rate + consumption per half-hour).
+    - `ev-charger-card` for a myenergi Zappi: it finds `select.*zappi*` with an Eco+
+      option, and the power / session / status / plug sensors. It can be overridden
+      per entity.
+      - Until myenergi is set up it says "Not connected yet".
+      - Mode buttons use `select.select_option`.
+    - Both support compact rows.
+  - **Icons can be pictures:** an https URL, `/local/...`, or `brand:<domain>` for
+    brands.home-assistant.io. They're used by panel titles (Octopus Electricity uses
+    `brand:octopus_energy`). A failed picture hides itself.
+  - **Nav bar:**
+    - `icons_only` (Mobile uses it): 42px icons, the current page as a filled circle.
+    - Per-page `admin_only` hides a page from non-admins (`hass.user.is_admin`).
+  - **Mobile `energy` view** (only Jamie and Hayley, the admins; the view has `visible`
+    and the section a user condition). Panels:
+    - Octopus Electricity (#f050f8, brand logo);
+    - Car charger (#00b8d4);
+    - Last full day;
+    - Gas;
+    - Octoplus.
+    Every Mobile nav bar has an Energy page (`admin_only`) and `icons_only: true`.
+  - Home has a **Car charger** panel for everyone (after Climate).
+  - **Zappi:** the HACS integration CJNE/ha-myenergi (id 401145616) is downloaded but
+    not loaded. It needs an HA restart, then a config flow with the hub serial and API
+    key, which the user will send.
+  - Energy mock-up: https://claude.ai/artifact/XRtwhvTDAuvS1YYtQgM8hz
 - The back-to-top strokes are solid white in both states.
 - **Chips capsule, 2026-09-29:**
   - Chips sit in a scrolling `.al-strip` and grow to fill it (`flex:1 0 auto`), then
@@ -862,7 +1041,7 @@ Integration modules (`custom_components/church_drive/`):
   - `church-drive-cards-beta.js` registers every card as `<name>-beta`.
   - HA loads it from resource `436186c683fe4c7d81c865b67bb0e109`:
     `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's pinned to `85a8007` (the v0.22.1 merge: chips without the open/close-all button).
+    It's pinned to the v0.24.0 merge (see below).
   - To test a branch: push it, repoint the resource, and ask for a hard refresh.
   - jsDelivr is blocked from the cloud container, but works for the user.
 - **Rollback:** download an older release in HACS and restart.

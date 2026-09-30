@@ -9,7 +9,7 @@
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
-import { KIT_COLOR, kitShell, kitHead, kitGauge, kitTiles, kitGraph, kitRange, kitCap, kitNum, kitDemoSeries, KitHistory, KitPending, kitScrub, kitHealthBanner, kitCompact, kitCompactable } from './card-kit.js';
+import { KIT_COLOR, kitShell, kitHead, kitGauge, kitTiles, kitGraph, kitRange, kitCap, kitNum, kitDemoSeries, KitHistory, KitPending, kitScrub, kitHealthBanner, kitCompact, kitCompactable, kitBlend } from './card-kit.js';
 
 // PM2.5 (µg/m³) bands. Philips purifiers follow the Chinese air-quality
 // standard (good up to 35, then 75, 115); each band can be changed per card.
@@ -21,6 +21,17 @@ function apQuality(pm, c) {
   if (pm <= apBand(c, 'fair_max')) return { color: KIT_COLOR.fair, word: 'Fair' };
   if (pm <= apBand(c, 'poor_max')) return { color: KIT_COLOR.poor, word: 'Poor' };
   return { color: KIT_COLOR.bad, word: 'Very poor' };
+}
+// The graph's colour scale: each band's colour sits in the middle of its
+// band and blends into the next around the limits.
+function apScale(c) {
+  const g = apBand(c, 'good_max'), f = apBand(c, 'fair_max'), p = apBand(c, 'poor_max');
+  return [
+    [g * 0.6, KIT_COLOR.good],
+    [(g + f) / 2, KIT_COLOR.fair],
+    [(f + p) / 2, KIT_COLOR.poor],
+    [p + (p - f) / 2, KIT_COLOR.bad],
+  ];
 }
 // Philips indoor allergen index, 1 to 12.
 function apAllergen(v) {
@@ -225,7 +236,7 @@ export class AirPurifierCard extends HTMLElement {
     if (row(c, 'show_graph') && (this._demo || c.pm25_entity)) {
       const pts = this._demo ? this._demo.pmPts : this._hist && this._hist.data ? this._hist.data[c.pm25_entity] : null;
       const meta = {};
-      const svg = kitGraph([{ pts, current: pm, color: q.color, fill: true, pad: 2, format: (v) => `PM2.5 ${Math.round(v)} µg/m³` }], { height: 48, label: 'PM2.5, last 24 hours', meta, smooth: c.smooth_graphs !== false });
+      const svg = kitGraph([{ pts, current: pm, color: q.color, colorAt: (v) => kitBlend(v, apScale(c)), fill: true, pad: 2, format: (v) => `PM2.5 ${Math.round(v)} µg/m³ · ${apQuality(v, c).word}` }], { height: 48, label: 'PM2.5, last 24 hours', meta, smooth: c.smooth_graphs !== false });
       gBox.style.display = 'block';
       const gsig = JSON.stringify([pm, q.color, this._hist && this._hist.at, !!svg, c.smooth_graphs]);
       if (gsig !== this._gsig) {

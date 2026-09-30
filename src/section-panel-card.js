@@ -69,6 +69,7 @@ const PanelFields = createFormEditor({
         { name: 'phone_start', selector: { select: { mode: 'dropdown', options: [{ value: 'compact', label: 'Compact (one row per card)' }, { value: 'open', label: 'Open' }] } } },
         { name: 'tablet_start', selector: { select: { mode: 'dropdown', options: [{ value: 'open', label: 'Open' }, { value: 'compact', label: 'Compact (one row per card)' }] } } },
         { name: 'open_when', selector: { template: {} } },
+        { name: 'empty_when', selector: { template: {} } },
         { name: 'collapsible', selector: { boolean: {} }, default: true },
       ],
     },
@@ -80,6 +81,7 @@ const PanelFields = createFormEditor({
       schema: [
         { name: 'card_width', selector: { number: { min: 0, max: 800, step: 10, mode: 'box', unit_of_measurement: 'px' } } },
         { name: 'match_height', selector: { boolean: {} }, default: true },
+        { name: 'frosted_cards', selector: { boolean: {} }, default: true },
         { name: 'full_width', selector: { select: { mode: 'dropdown', options: [{ value: 'auto', label: 'Automatic' }, { value: 'yes', label: 'Always full width' }, { value: 'no', label: 'Never' }] } } },
         { name: 'priority', selector: { select: { mode: 'dropdown', options: [{ value: 'auto', label: 'Work it out from the cards' }, { value: 'controls', label: 'Controls (goes higher)' }, { value: 'info', label: 'Information only' }] } } },
       ],
@@ -93,9 +95,11 @@ const PanelFields = createFormEditor({
     phone_start: 'On phones, starts',
     tablet_start: 'On tablets and computers, starts',
     open_when: 'Opens by itself when (optional template)',
+    empty_when: 'Counts as empty when (optional template)',
     collapsible: 'Show the ⌄ to switch between open and compact',
     card_width: 'Cards side by side when each can be at least (empty = automatic, 0 = always one per row)',
     match_height: "Line up this panel's bottom with the panels beside it",
+    frosted_cards: 'Frosted cards',
     full_width: 'Full width across an Auto Layout',
     priority: 'In an Auto Layout, counts as',
     color: 'Colour (icon and panel)',
@@ -105,7 +109,9 @@ const PanelFields = createFormEditor({
   helpers: {
     phone_start: 'Each phone or tablet remembers what you last chose with the ⌄; this is where it starts. Phones are screens under 600px wide.',
     open_when: "E.g. {{ is_state('binary_sensor.back_door', 'on') }}. The panel opens while it's true, then goes back to how you left it.",
+    empty_when: "E.g. {{ states('todo.priorities_jamie') | int(0) == 0 }}. In an Auto Layout set to put empty panels last, it moves below the others while it's true. Some cards (House Tasks) report this themselves.",
     card_width: 'Automatic: zones 200px, cameras 220px, everything else 300px. Cards fill the panel width: e.g. cameras 2 or 3 across on a tablet, one per row on a phone.',
+    frosted_cards: "The cards inside are see-through with a heavy blur of what's behind them (acrylic). Turn off for solid cards.",
     match_height: "When sections sit side by side, the last panel in a shorter section grows so its bottom lines up with its neighbours'.",
     priority: 'Auto Layout puts panels with buttons and sliders above ones that only show information. Auto: lights, alarm, thermostats, fan, purifier, blinds and tiles with controls count as controls.',
     full_width: 'Only inside an Auto Layout Card: the panel spans every column, with the panels before and after it balanced above and below. Automatic: a panel of 3 or more small cards (zones, cameras, tiles) goes full width when they would not fit side by side in one column.',
@@ -187,7 +193,10 @@ export class SectionPanelCard extends HTMLElement {
     this._built = false;
     this._fallback = null;
     this._build();
-    if (this._hass) this._watchOpenWhen();
+    if (this._hass) {
+      this._watchOpenWhen();
+      this._watchEmptyWhen();
+    }
   }
 
   set hass(hass) {
@@ -200,6 +209,7 @@ export class SectionPanelCard extends HTMLElement {
     if (first) {
       rememberUser(hass);
       this._watchOpenWhen();
+      this._watchEmptyWhen();
       this._apply(); // now that we know who's signed in
     }
   }
@@ -429,6 +439,25 @@ export class SectionPanelCard extends HTMLElement {
     return g && panel ? g.bottom + 12 - panel.getBoundingClientRect().top : this.getBoundingClientRect().height;
   }
 
+  // Whether the panel has nothing to show (its `empty_when` template, or a
+  // card inside saying so with a `cd-card-empty` event). An Auto Layout with
+  // `empty_last` moves empty panels below the rest.
+  _watchEmptyWhen() {
+    if (this._unsubEmpty) this._unsubEmpty.then((u) => u && u()).catch(() => {});
+    this._unsubEmpty = null;
+    if (!this.config.empty_when || !this._hass || !this.isConnected) return;
+    this._unsubEmpty = stcRender(this._hass, this.config.empty_when, (text) => {
+      const t = String(text || '').trim().toLowerCase();
+      this._setEmpty(!!t && !['0', 'false', 'off', 'no', 'none', 'unknown', 'unavailable'].includes(t));
+    });
+  }
+
+  _setEmpty(empty) {
+    if (empty === this._empty) return;
+    this._empty = empty;
+    window.dispatchEvent(new CustomEvent('cd-panels-changed'));
+  }
+
   _watchOpenWhen() {
     if (this._unsubOpen) this._unsubOpen.then((u) => u && u()).catch(() => {});
     this._unsubOpen = null;
@@ -446,8 +475,14 @@ export class SectionPanelCard extends HTMLElement {
   _build() {
     const c = this.config;
     const color = stcColor(c.color);
+    // Frosted cards (default): the cards inside take a see-through tint (the
+    // lighter "B" acrylic: 62%, 30px blur) and blur what's behind them, so
+    // the panel's colour shows through. The panel itself stays as it is.
+    const frost = c.frosted_cards !== false
+      ? `--cd-card-bg:color-mix(in srgb, var(--card-background-color, #1f2128) 62%, transparent); --cd-card-filter:blur(30px) saturate(125%); --ha-card-background:var(--cd-card-bg); --ha-card-backdrop-filter:var(--cd-card-filter);`
+      : '';
     this.innerHTML = `
-      <div class="spc-panel" style="position:relative; box-sizing:border-box; border-radius:24px; padding:12px; display:flex; flex-direction:column; gap:12px; isolation:isolate; transition:${PANEL_TRANSITION};">
+      <div class="spc-panel" style="position:relative; box-sizing:border-box; border-radius:24px; padding:12px; display:flex; flex-direction:column; gap:12px; isolation:isolate; transition:${PANEL_TRANSITION}; ${frost}">
         <div class="spc-bg" style="position:absolute; inset:0; border-radius:inherit; background:${color}; opacity:0.1; z-index:-1; pointer-events:none; transition:background-color .6s ease;"></div>
       </div>`;
     const panel = this.querySelector('.spc-panel');
@@ -542,6 +577,15 @@ export class SectionPanelCard extends HTMLElement {
     this._lastDevice = this._device();
     window.addEventListener('resize', this._onResize);
     this._onPanels = () => this._queueMatch();
+    if (!this._onCardEmpty) {
+      this._onCardEmpty = (ev) => {
+        if (!this.config.empty_when && ev.detail) this._setEmpty(!!ev.detail.empty);
+      };
+      this.addEventListener('cd-card-empty', this._onCardEmpty);
+    }
+    // A card may have said so before this panel was on the page.
+    const told = [...this.querySelectorAll('*')].find((e) => e._reportedEmpty !== undefined);
+    if (told && !this.config.empty_when) this._setEmpty(!!told._reportedEmpty);
     if (!this._managed) window.addEventListener('cd-panels-changed', this._onPanels);
     // Heights change as cards load, open, go compact or update. Inside an
     // Auto Layout Card that card does the lining up, so skip the watchers.
@@ -550,7 +594,10 @@ export class SectionPanelCard extends HTMLElement {
       this._ro.observe(document.body);
       this._matchTimer = setInterval(() => this._queueMatch(), 3000);
     }
-    if (this._hass) this._watchOpenWhen();
+    if (this._hass) {
+      this._watchOpenWhen();
+      this._watchEmptyWhen();
+    }
     this._apply();
   }
 
@@ -563,6 +610,8 @@ export class SectionPanelCard extends HTMLElement {
     clearInterval(this._matchTimer);
     if (this._unsubOpen) this._unsubOpen.then((u) => u && u()).catch(() => {});
     this._unsubOpen = null;
+    if (this._unsubEmpty) this._unsubEmpty.then((u) => u && u()).catch(() => {});
+    this._unsubEmpty = null;
   }
 
   // A panel right under another panel in the same section gets the same gap

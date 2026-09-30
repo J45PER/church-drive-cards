@@ -6,6 +6,20 @@
 
 import { iconHtml, hydrateIcons } from './icons.js';
 
+// Acrylic ("Deep frost"): a mostly solid dark tint over a heavy blur of
+// whatever's behind, a faint highlight at the top and fine grain, with no
+// outline. Used by the floating chips, nav bar and back-to-top circle.
+export const KIT_GRAIN = `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")`;
+export const KIT_ACRYLIC_FILTER = 'blur(42px) saturate(115%)';
+export const kitAcrylicCss = (sel) => `
+  ${sel} { position:relative; isolation:isolate; border:none;
+    background:linear-gradient(rgba(255,255,255,.04), rgba(255,255,255,0)), color-mix(in srgb, var(--card-background-color, #1f2128) 76%, transparent);
+    -webkit-backdrop-filter:${KIT_ACRYLIC_FILTER}; backdrop-filter:${KIT_ACRYLIC_FILTER}; box-shadow:0 10px 30px rgba(0,0,0,.45); }
+  ${sel}::after { content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none; z-index:-1; background-image:${KIT_GRAIN}; opacity:.08; }`;
+// Cards inside a section panel are frosted the same way: the panel sets
+// --cd-card-bg / --cd-card-filter (and HA's own --ha-card-* for its cards).
+export const KIT_CARD_BG = 'var(--cd-card-bg, var(--card-background-color))';
+
 export const KIT_COLOR = {
   off: '#8b919c',
   good: '#4caf50',
@@ -36,7 +50,7 @@ export const KIT_HEALTH_CSS = `.ck-stale .ck-row, .ck-stale .ck-dim { opacity:.5
 // The card shell: ha-card, shared styles, the title row, then `body`.
 export function kitShell(body, extraCss = '') {
   return `
-    <ha-card class="ck-card" style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; padding:16px; background:var(--card-background-color); transition:background-color .6s ease; display:flex; flex-direction:column; gap:12px;">
+    <ha-card class="ck-card" style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; padding:16px; background:${KIT_CARD_BG}; -webkit-backdrop-filter:var(--cd-card-filter, none); backdrop-filter:var(--cd-card-filter, none); transition:background-color .6s ease; display:flex; flex-direction:column; gap:12px;">
       <style>
         /* Narrow cards (e.g. five side by side): a smaller title, and the
            status word drops to its own line instead of cutting the title. */
@@ -74,6 +88,21 @@ export function kitShell(body, extraCss = '') {
     </ha-card>`;
 }
 
+// A colour on a scale of [value, '#rrggbb'] anchors, blended between them.
+export function kitBlend(v, anchors) {
+  if (v == null || isNaN(v) || !anchors.length) return KIT_COLOR.off;
+  if (v <= anchors[0][0]) return anchors[0][1];
+  const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  for (let i = 0; i < anchors.length - 1; i++) {
+    const [a, ca] = anchors[i], [b, cb] = anchors[i + 1];
+    if (v <= b) {
+      const f = (v - a) / (b - a || 1), A = rgb(ca), B = rgb(cb);
+      return `rgb(${A.map((c, k) => Math.round(c + (B[k] - c) * f)).join(',')})`;
+    }
+  }
+  return anchors[anchors.length - 1][1];
+}
+
 // Title, status word and card tint (percent of the colour mixed in).
 export function kitHead(root, title, word, color, tint = 0) {
   const t = root.querySelector('.ck-title');
@@ -82,7 +111,7 @@ export function kitHead(root, title, word, color, tint = 0) {
   t.textContent = title;
   t.style.color = color;
   w.textContent = word;
-  card.style.backgroundColor = tint ? `color-mix(in srgb, ${color} ${tint}%, var(--card-background-color))` : 'var(--card-background-color)';
+  card.style.backgroundColor = tint ? `color-mix(in srgb, ${color} ${tint}%, ${KIT_CARD_BG})` : KIT_CARD_BG;
 }
 
 // A 270° arc filled to `p` (0..1) with a label in the middle.
@@ -327,9 +356,20 @@ export function kitGraph(series, { hours = 24, height = 48, label = '', meta = n
     const lo = Math.min(...vals) - (s.pad || 0.3), hi = Math.max(...vals) + (s.pad || 0.3);
     const y = (v) => H - 3 - ((v - lo) / (hi - lo || 1)) * (H - 6);
     const d = kitPath(pts.map((p) => [x(p[0]), y(p[1])]), smooth);
-    if (s.fill) under += `<path d="${d} L${W},${H} L0,${H} Z" fill="${s.color}" fill-opacity="0.16"></path>`;
-    over += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.width || 2}" vector-effect="non-scaling-stroke"></path>`;
-    scrub.push({ pts, raw, lo, hi, color: s.color, format: s.format, linear: smooth });
+    // `colorAt(v)` colours the line by its value (a blended vertical
+    // gradient over this graph's own scale, like the climate room graphs);
+    // otherwise it's all `color`.
+    let paint = s.color;
+    if (s.colorAt) {
+      const id = `kg${Math.random().toString(36).slice(2, 8)}`;
+      let stops = '';
+      for (let k = 0; k <= 20; k++) stops += `<stop offset="${k * 5}%" stop-color="${s.colorAt(hi - ((hi - lo) * k) / 20)}"></stop>`;
+      under += `<defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="${H}" gradientUnits="userSpaceOnUse">${stops}</linearGradient></defs>`;
+      paint = `url(#${id})`;
+    }
+    if (s.fill) under += `<path d="${d} L${W},${H} L0,${H} Z" fill="${paint}" fill-opacity="0.16"></path>`;
+    over += `<path d="${d}" fill="none" stroke="${paint}" stroke-width="${s.width || 2}" vector-effect="non-scaling-stroke"></path>`;
+    scrub.push({ pts, raw, lo, hi, color: s.color, colourOf: s.colorAt, format: s.format, linear: smooth });
   });
   if (!under && !over) return '';
   if (meta) Object.assign(meta, { from, now, height: H, series: scrub });
@@ -591,7 +631,7 @@ export function kitHealthBanner(root, hass, entityId, demo) {
 // spec = { name, color, value, valueColor, status, buttons: [{ key, icon,
 //   label, on, color }], chips: [{ label, color }], onButton(b) }
 const KIT_CPT_CSS = `
-  .ck-cpt { display:flex; flex-direction:column; gap:6px; border:none; box-shadow:0 3px 10px rgba(0,0,0,.45); border-radius:14px; padding:8px 10px; background:var(--card-background-color); }
+  .ck-cpt { display:flex; flex-direction:column; gap:6px; border:none; box-shadow:0 3px 10px rgba(0,0,0,.45); border-radius:14px; padding:8px 10px; background:${KIT_CARD_BG}; -webkit-backdrop-filter:var(--cd-card-filter, none); backdrop-filter:var(--cd-card-filter, none); }
   .ck-cpt-row { display:flex; align-items:center; gap:8px; min-height:32px; }
   .ck-cpt-name { font-weight:600; font-size:0.92rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; min-width:0; flex:0 1 auto; }
   .ck-cpt-val { font-weight:700; font-size:1.05rem; font-variant-numeric:tabular-nums; white-space:nowrap; flex:none; }

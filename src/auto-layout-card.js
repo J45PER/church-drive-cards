@@ -11,7 +11,7 @@ import { SUFFIX, LABEL } from './suffix.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { stcColor } from './section-title-card.js';
 import { nbHuiRoot } from './nav-bar-card.js';
-import { kitScrollParent, kitGlide, kitNavigate } from './card-kit.js';
+import { kitScrollParent, kitScrollTop, kitGlide, kitNavigate, kitAcrylicCss } from './card-kit.js';
 import { PANEL_TRANSITION } from './section-panel-card.js';
 import { HOUSE_TASKS_LIST, HOUSE_TASKS_COLOR, houseTask, houseTaskFor } from './house-tasks-card.js';
 
@@ -81,6 +81,7 @@ const LayoutFields = createFormEditor({
     { name: 'column_width', selector: { number: { min: 200, max: 800, step: 10, mode: 'box', unit_of_measurement: 'px' } } },
     { name: 'max_columns', selector: { number: { min: 1, max: 6, step: 1, mode: 'box' } } },
     { name: 'controls_first', selector: { boolean: {} }, default: true },
+    { name: 'empty_last', selector: { boolean: {} }, default: false },
     { name: 'jump_chips', selector: { select: { mode: 'dropdown', options: [{ value: 'auto', label: 'Automatic (phones)' }, { value: 'always', label: 'Always' }, { value: 'never', label: 'Never' }] } } },
   ],
   labels: {
@@ -91,6 +92,7 @@ const LayoutFields = createFormEditor({
     column_width: 'Columns at least this wide',
     max_columns: 'At most this many columns',
     controls_first: 'Panels with buttons and sliders go above ones that only show information',
+    empty_last: 'Empty panels go last',
     jump_chips: 'Jump-to chips at the top',
   },
   helpers: {
@@ -99,6 +101,7 @@ const LayoutFields = createFormEditor({
     widget_width: 'Default 520px, centred under the title. Phones use the full width.',
     column_width: 'Default 340px. Phones (under 600px) always get one column in list order.',
     max_columns: 'Default 3. Mark a panel "Full width across an Auto Layout" to have it span the page.',
+    empty_last: 'A panel counts as empty when its "Counts as empty when" is true, or a card inside says so (House Tasks with nothing to do). Otherwise list order holds.',
     controls_first: 'Keeps list order otherwise, on phones too. Each panel can override what it counts as ("Counts as" in the panel).',
     jump_chips: "One chip per panel, in its colour; tapping one scrolls to that panel, and the chip for the panel you're looking at is filled in.",
   },
@@ -106,11 +109,8 @@ const LayoutFields = createFormEditor({
 
 // The chips capsule.
 const CHIPS_CSS = `
-  .al-chips .al-cap {
-    flex:1 1 auto; min-width:0; padding:6px; border-radius:999px; box-sizing:border-box;
-    background:color-mix(in srgb, var(--card-background-color, #1f2128) 88%, transparent);
-    box-shadow:0 6px 18px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.06);
-    -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); }
+  .al-chips .al-cap { flex:1 1 auto; min-width:0; padding:6px; border-radius:999px; box-sizing:border-box; }
+  ${kitAcrylicCss('.al-chips .al-cap')}
   .al-chips .al-strip { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; }
 `;
 
@@ -390,7 +390,10 @@ export class AutoLayoutCard extends HTMLElement {
       return;
     }
     cancelAnimationFrame(this._frame);
-    this._frame = requestAnimationFrame(() => this._layout(false));
+    this._frame = requestAnimationFrame(() => {
+      this._layout(false);
+      this._trimTail();
+    });
   }
 
   // Work out bands (split at full-width items) and columns; only move cards
@@ -403,8 +406,11 @@ export class AutoLayoutCard extends HTMLElement {
     // them (in list order), so a full-width panel never strands one panel on
     // its own row.
     const colWidth = ((this.getBoundingClientRect().width || window.innerWidth) - gap * (cols - 1)) / cols;
-    const wide = cols > 1 ? this._items.filter((it) => this._full(it, colWidth)) : [];
-    const rest = this._items.filter((it) => !wide.includes(it));
+    // With empty_last, panels with nothing to show (their "counts as empty
+    // when", or a card inside saying so) go below the rest, keeping order.
+    const order = this.config.empty_last ? [...this._items.filter((it) => !it.el._empty), ...this._items.filter((it) => it.el._empty)] : this._items;
+    const wide = cols > 1 ? order.filter((it) => this._full(it, colWidth)) : [];
+    const rest = order.filter((it) => !wide.includes(it));
     const bands = [];
     if (rest.length) bands.push({ items: rest });
     const first = this.config.controls_first !== false;
@@ -444,7 +450,7 @@ export class AutoLayoutCard extends HTMLElement {
       this._prevSplits[b.items.map((it) => this._items.indexOf(it)).join(',')] = b.split;
     });
     if (placed) planRemember(planKey, bands.map((b) => b.split));
-    const plan = `${cols}|${bands.map((b) => `${b.full ? 'F' : ''}${b.split.map((c) => c.join('.')).join(',')}`).join('/')}`;
+    const plan = `${cols}|${bands.map((b) => `${b.full ? 'F' : ''}${b.items.map((it) => this._items.indexOf(it)).join('-')}:${b.split.map((c) => c.join('.')).join(',')}`).join('/')}`;
     if (force || plan !== this._plan) {
       this._plan = plan;
       this._root.innerHTML = '';
@@ -560,10 +566,10 @@ export class AutoLayoutCard extends HTMLElement {
     };
     const side =
       todo && this.config.priorities_page
-        ? `<button type="button" data-todo style="flex:none; width:58px; padding:0 4px; border:none; border-radius:12px; cursor:pointer; font:inherit; font-size:0.72rem; font-weight:700; line-height:1.2; color:var(--primary-text-color); background:color-mix(in srgb, #7e57c2 22%, transparent); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;">${iconHtml(
+        ? `<button type="button" data-todo style="flex:none; width:58px; padding:0 4px; border:none; border-radius:12px; cursor:pointer; font:inherit; font-size:0.72rem; font-weight:700; line-height:1.2; color:#b39ddb; background:color-mix(in srgb, #7e57c2 22%, transparent); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;" aria-label="${extra > 0 ? `${extra} more to do` : 'Open to-do'}">${iconHtml(
             'mdi:format-list-checks',
-            { size: '18px', style: 'color:#b39ddb;' }
-          )}${extra > 0 ? `+${extra}` : 'To-do'}<span style="font-size:0.9rem; line-height:1;">›</span></button>`
+            { size: '22px', style: 'color:#b39ddb;' }
+          )}<span style="white-space:nowrap;">${extra > 0 ? `+${extra} more` : 'To-do'}</span></button>`
         : '';
     head.innerHTML = `<div style="height:40px; font-size:2rem; font-weight:700; line-height:40px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--primary-text-color);">${esc(title)}</div>
       <div class="al-widget" style="height:96px; width:100%; max-width:${Number(this.config.widget_width) || 520}px; margin:0 auto; box-sizing:border-box; display:flex; gap:6px; padding:6px; border-radius:18px; background:color-mix(in srgb, var(--card-background-color, #1f2128) 70%, transparent);">
@@ -733,7 +739,7 @@ export class AutoLayoutCard extends HTMLElement {
     let below = this._root.getBoundingClientRect().bottom - r.top;
     // A panel closing further down makes the page shorter: allow for it.
     if (prev && prev.getBoundingClientRect().top > r.top) below -= prev.getBoundingClientRect().height;
-    const need = Math.max(0, Math.ceil(window.innerHeight - top - below));
+    const need = Math.max(0, Math.ceil(window.innerHeight - top - below), this._restTail());
     this._tail.style.height = `${need}px`;
     this._jump = { el, top, arrived: false, since: performance.now() };
     kitGlide(kitScrollParent(this), () => el.getBoundingClientRect().top - top);
@@ -750,18 +756,43 @@ export class AutoLayoutCard extends HTMLElement {
     return el;
   }
 
-  // Drop the extra room once the jump has landed and you scroll back up
-  // away from that panel (or if the jump never lands).
+  // Room at the end of the page so the last panel can always be scrolled
+  // up to just under the chips, where a chip jump puts it (phones, with the
+  // chips showing). It follows the last panel's height as panels open/close.
+  _restTail() {
+    if (!this._tail || !this._chipsWanted() || !this._chipsFloat()) return 0;
+    const order = this._pageOrder();
+    const last = order[order.length - 1];
+    if (!last) return 0;
+    // Measured against the real end of the scroller (the nav bar's spacer and
+    // anything else below this card count), without the room already added.
+    const sc = kitScrollParent(this);
+    const doc = sc === document.scrollingElement || sc === document.documentElement;
+    const scTop = doc ? 0 : sc.getBoundingClientRect().top;
+    const view = doc ? window.innerHeight : sc.clientHeight;
+    const tail = parseFloat(this._tail.style.height) || 0;
+    const after = sc.scrollHeight - tail - (last.r.top - scTop + kitScrollTop(sc));
+    return Math.max(0, Math.ceil(view - (this._pinnedChipsBottom() + 10 - scTop) - after));
+  }
+
+  // A chip jump may need more room than that (to bring a panel that isn't
+  // last to the top); drop back to the resting room once the jump has
+  // landed and you scroll back up away from that panel (or if it never lands).
   _trimTail() {
+    if (!this._tail) return;
+    const rest = this._restTail();
     const j = this._jump;
-    if (!j) return;
-    const at = j.el.getBoundingClientRect().top;
-    if (Math.abs(at - j.top) < 8) j.arrived = true;
-    const leftIt = j.arrived && at > j.top + 40;
-    if (leftIt || (!j.arrived && performance.now() - j.since > 3000)) {
-      this._tail.style.height = '0px';
+    if (j) {
+      const at = j.el.getBoundingClientRect().top;
+      if (Math.abs(at - j.top) < 8) j.arrived = true;
+      const leftIt = j.arrived && at > j.top + 40;
+      if (!leftIt && (j.arrived || performance.now() - j.since <= 3000)) {
+        if ((parseFloat(this._tail.style.height) || 0) < rest) this._tail.style.height = `${rest}px`;
+        return;
+      }
       this._jump = null;
     }
+    this._tail.style.height = `${rest}px`;
   }
 
   _pinnedChipsBottom() {

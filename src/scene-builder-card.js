@@ -11,6 +11,7 @@ import { createFormEditor } from './form-editor.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { loadUniversalScenes } from './universal-scenes.js';
 import { iconHtml, hydrateIcons } from './icons.js';
+import { KIT_CARD_BG } from './card-kit.js';
 
 const BLANK = { name: '', kind: 'colour', kelvin: 2700, brightness: 80, colors: ['#ff7b39', '#7b2cbf'], dynamic: true, speed: 0.63, icon: '' };
 
@@ -123,7 +124,7 @@ export class SceneBuilderCard extends HTMLElement {
     const cfg = this.config || {};
     const d = this._draft;
     this.innerHTML = `
-      <ha-card style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; background:var(--card-background-color); padding:16px; color:var(--primary-text-color);">
+      <ha-card style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; background:${KIT_CARD_BG}; -webkit-backdrop-filter:var(--cd-card-filter, none); backdrop-filter:var(--cd-card-filter, none); padding:16px; color:var(--primary-text-color);">
         <style>
           .sbc-row { display:flex; align-items:center; gap:12px; padding:8px; border-radius:12px; background:rgba(127,127,127,0.08); margin-top:8px; }
           .sbc-sw { width:44px; height:44px; border-radius:10px; flex:none; display:flex; align-items:center; justify-content:center; color:#fff; }

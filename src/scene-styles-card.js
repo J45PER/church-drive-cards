@@ -8,6 +8,7 @@ import { createFormEditor } from './form-editor.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { builtInSceneNames, sceneBackground, sceneIcon, sceneKey, setSceneStyles } from './scene-style.js';
 import { iconHtml, hydrateIcons } from './icons.js';
+import { KIT_CARD_BG } from './card-kit.js';
 
 function titleCase(key) {
   return key.replace(/\b\w/g, (c) => c.toUpperCase());
@@ -95,7 +96,7 @@ export class SceneStylesCard extends HTMLElement {
     const styled = new Set((cfg.styles || []).map((s) => s && s.scene && sceneKey(s.scene)).filter(Boolean));
     const names = sceneNames(this._hass, cfg.styles).filter((n) => !cfg.only_home || n.inHome || styled.has(n.key));
     this.innerHTML = `
-      <ha-card style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; background:var(--card-background-color); padding:16px;">
+      <ha-card style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; background:${KIT_CARD_BG}; -webkit-backdrop-filter:var(--cd-card-filter, none); backdrop-filter:var(--cd-card-filter, none); padding:16px;">
         <style>
           .ssc-grid { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px; margin-top:12px; }
           .ssc-tile { position:relative; container-type:inline-size; aspect-ratio:1 / 1; border-radius:14px; overflow:hidden; }

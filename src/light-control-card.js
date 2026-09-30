@@ -4,7 +4,7 @@
 
 import { createFormEditor } from './form-editor.js';
 import { SUFFIX, LABEL } from './suffix.js';
-import { KIT_COLOR, kitCompact, kitCompactable } from './card-kit.js';
+import { KIT_COLOR, kitCompact, kitCompactable, KIT_CARD_BG } from './card-kit.js';
 import { sceneBackground, sceneIcon, scenePalette, loadSceneStyles, onSceneStylesChanged } from './scene-style.js';
 import { DemoHome } from './demo-home.js';
 import { iconHtml, hydrateIcons } from './icons.js';
@@ -1008,7 +1008,7 @@ export class LightControlCard extends HTMLElement {
 
     if (!this._built) {
       this.innerHTML = `
-        <ha-card style="border:none; box-shadow: 0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; background: var(--card-background-color); padding:16px 16px 14px 16px;">
+        <ha-card style="border:none; box-shadow: 0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; background:${KIT_CARD_BG}; -webkit-backdrop-filter:var(--cd-card-filter, none); backdrop-filter:var(--cd-card-filter, none); padding:16px 16px 14px 16px;">
           <style>
             @keyframes lcc-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
             .lcc-playing { animation: lcc-pulse 1.6s ease-in-out infinite; }
