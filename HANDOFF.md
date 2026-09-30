@@ -1000,6 +1000,23 @@ Integration modules (`custom_components/church_drive/`):
     lines now live in the card's own `set hass`.
   - Smoke test: `scratchpad/editors.html` + `editors.mjs` builds every registered
     editor with a stub config and fake hass, and reports any that throw.
+- **No repeat notifications after a restart (user's request, 2026-09-30).** A
+  restart makes sensors briefly `unavailable`. Anything that reacts to "became low" or
+  "task added" must not treat coming back from unavailable as news. Fixes so far:
+  - `automation.church_drive_automatic_to_do_tasks`:
+    - It never removes tasks in the 10 minutes after HA starts or the automation
+      reloads (`now() - as_datetime(this.last_changed)`).
+    - `wanted` also carries `hold: true` entries for tasks whose source can't be read
+      (a battery or part sensor `unavailable`/`unknown`, or a device offline for less
+      than "offline for", whose `last_changed` restarts at boot). Holds are never
+      added, reopened or refreshed; they only stop a drop.
+    - Before this, the Ring keypad task was dropped at boot and re-added two minutes
+      later, which re-sent "New to-do" to everyone.
+  - `automation.battery_notes_low_battery_alert`: the trigger has
+    `not_from: [unavailable, unknown]`.
+  - `automation.church_drive_tell_jamie_when_a_device_stays_stale`: the "stale" branch
+    needs `trigger.from_state` to be a number (a numeric_state trigger re-arms when
+    it comes back from unavailable).
 - **Design Presets uses pretend lights only.** On the main and Beta tabs, light cards
   are in demo mode, battery/gauge cards use fixed values, and the alarm uses
   `demo: true`. The Scene builder tab is the exception: its "Try it in" uses real
