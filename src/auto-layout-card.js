@@ -92,7 +92,7 @@ const LayoutFields = createFormEditor({
   },
   helpers: {
     title: "Shown large at the top of the page, above the chips. Any panel that has opened by itself (its 'opens by itself when' is true) shows under it as an alert; tapping one goes to that panel.",
-    priorities: 'Reads the to-do list named "Priorities <first name>" (e.g. todo.priorities_jamie). The top item shows in the alerts line with a ✓; overdue and due-soonest come first.',
+    priorities: 'Reads the to-do list named "Priorities <first name>" (e.g. todo.priorities_jamie), plus the shared "Priorities Everyone" list if there is one. Items fill the header rows with a ✓ (a shared item ticked off clears for everyone); overdue and due-soonest come first. Automatic tasks (description starting "Automatic") have no ✓: they clear when the device reports it is sorted.',
     column_width: 'Default 340px. Phones (under 600px) always get one column in list order.',
     max_columns: 'Default 3. Mark a panel "Full width across an Auto Layout" to have it span the page.',
     controls_first: 'Keeps list order otherwise, on phones too. Each panel can override what it counts as ("Counts as" in the panel).',
@@ -544,11 +544,11 @@ export class AutoLayoutCard extends HTMLElement {
     const extra = rows.length - shown.length;
     const row = (r) => {
       if (!r) return '<div style="height:26px;"></div>';
-      const c = r.kind === 'todo' ? (r.overdue ? '#e53935' : '#7e57c2') : r.colour;
-      const icon = r.kind === 'todo' ? 'mdi:flag' : r.icon;
+      const c = r.kind === 'todo' ? (r.overdue ? '#e53935' : r.auto ? '#ffa726' : '#7e57c2') : r.colour;
+      const icon = r.icon;
       const tick =
-        r.kind === 'todo'
-          ? `<button type="button" data-done="${esc(r.uid)}" aria-label="Done" title="Done" style="flex:none; width:22px; height:22px; padding:0; border:2px solid color-mix(in srgb, ${c} 70%, transparent); border-radius:50%; background:transparent; color:var(--primary-text-color); cursor:pointer; display:flex; align-items:center; justify-content:center;">${iconHtml('mdi:check', { size: '14px' })}</button>`
+        r.kind === 'todo' && !r.auto
+          ? `<button type="button" data-done="${esc(r.uid)}" data-list="${esc(r.list)}" aria-label="Done" title="Done" style="flex:none; width:22px; height:22px; padding:0; border:2px solid color-mix(in srgb, ${c} 70%, transparent); border-radius:50%; background:transparent; color:var(--primary-text-color); cursor:pointer; display:flex; align-items:center; justify-content:center;">${iconHtml('mdi:check', { size: '14px' })}</button>`
           : '';
       return `<div ${r.kind === 'alert' ? `data-alert="${r.i}" role="button"` : ''} style="height:26px; display:flex; align-items:center; gap:8px; padding:0 4px 0 8px; border-radius:13px; cursor:${r.kind === 'alert' ? 'pointer' : 'default'}; background:color-mix(in srgb, ${c} 16%, transparent);">${
         icon ? iconHtml(icon, { size: '16px', style: `color:${c}; flex:none;` }) : ''
@@ -568,52 +568,87 @@ export class AutoLayoutCard extends HTMLElement {
     hydrateIcons(head);
   }
 
-  // ---- Priorities: the signed-in person's to-do list ("Priorities Jamie").
-  _todoEntity() {
-    if (!this.config.priorities || !this._hass || !this._hass.user) return null;
+  // ---- Priorities: the signed-in person's to-do list ("Priorities Jamie"),
+  // plus the shared one ("Priorities Everyone") when it exists. A shared item
+  // is a single copy, so ticking it off clears it for everyone.
+  _todoEntities() {
+    if (!this.config.priorities || !this._hass || !this._hass.user) return [];
     const first = String(this._hass.user.name || '').split(' ')[0].toLowerCase().replace(/[^a-z0-9]+/g, '_');
-    const id = `todo.priorities_${first}`;
-    return this._hass.states[id] ? id : null;
+    return [`todo.priorities_${first}`, 'todo.priorities_everyone'].filter((id) => this._hass.states[id]);
   }
 
   _watchTodo() {
-    const id = this._todoEntity();
-    if (id === this._todoId) return;
-    if (this._todoUnsub) this._todoUnsub.then((u) => u && u()).catch(() => {});
-    this._todoUnsub = null;
-    this._todoId = id;
-    this._todoItems = [];
-    if (!id || !this.isConnected) return;
-    this._todoUnsub = this._hass.connection
-      .subscribeMessage(
-        (msg) => {
-          this._todoItems = (msg && msg.items) || [];
-          this._renderHead();
-        },
-        { type: 'todo/item/subscribe', entity_id: id }
-      )
-      .catch(() => null);
+    const ids = this._todoEntities();
+    const key = ids.join(',');
+    if (key === this._todoKey) return;
+    this._unwatchTodo();
+    this._todoKey = key;
+    this._todoId = ids[0] || null;
+    if (!ids.length || !this.isConnected) return;
+    this._todoUnsubs = ids.map((id) =>
+      this._hass.connection
+        .subscribeMessage(
+          (msg) => {
+            this._todoItems[id] = (msg && msg.items) || [];
+            this._renderHead();
+          },
+          { type: 'todo/item/subscribe', entity_id: id }
+        )
+        .catch(() => null)
+    );
   }
 
-  // Open items, overdue and due-soonest first, then in list order.
+  _unwatchTodo() {
+    (this._todoUnsubs || []).forEach((u) => u.then((f) => f && f()).catch(() => {}));
+    this._todoUnsubs = [];
+    this._todoItems = {};
+    this._todoKey = undefined;
+    this._todoId = null;
+  }
+
+  // Open items, overdue and due-soonest first, then in list order (personal
+  // before shared). Automatic ones (description "Automatic · <kind>") are
+  // resolved by the device itself, so they get no ✓ and an icon by kind.
   _todoView() {
-    if (!this._todoId) return null;
-    const open = (this._todoItems || []).filter((t) => t.status === 'needs_action');
+    if (!this._todoKey) return null;
+    const shared = 'todo.priorities_everyone';
+    const open = [];
+    Object.keys(this._todoItems || {})
+      .sort((x, y) => (x === shared) - (y === shared))
+      .forEach((list) => (this._todoItems[list] || []).forEach((t) => t.status === 'needs_action' && open.push({ t, list })));
     const rank = (t) => (t.due ? new Date(t.due).getTime() : Infinity);
     const today = new Date().toISOString().slice(0, 10);
+    const kindIcon = (d) =>
+      /batter/i.test(d) ? 'mdi:battery-alert-variant-outline'
+        : /filter/i.test(d) ? 'mdi:air-filter'
+        : /vacuum/i.test(d) ? 'mdi:robot-vacuum'
+        : /respond|device/i.test(d) ? 'mdi:heart-pulse'
+        : 'mdi:home-alert-outline';
     const items = open
-      .map((t, n) => ({ t, n }))
+      .map((o, n) => ({ ...o, n }))
       .sort((a, b) => rank(a.t) - rank(b.t) || a.n - b.n)
-      .map(({ t }) => ({ uid: t.uid, text: t.summary, overdue: !!t.due && String(t.due).slice(0, 10) < today }));
+      .map(({ t, list }) => {
+        const auto = /^Automatic/.test(t.description || '');
+        return {
+          uid: t.uid,
+          list,
+          text: t.summary,
+          overdue: !!t.due && String(t.due).slice(0, 10) < today,
+          auto,
+          shared: list === shared,
+          icon: auto ? kindIcon(t.description) : list === shared ? 'mdi:account-group' : 'mdi:flag',
+        };
+      });
     return { items };
   }
 
   _completeTop(tick) {
     const uid = tick.dataset.done;
-    if (!uid || !this._todoId) return;
+    const list = tick.dataset.list;
+    if (!uid || !list) return;
     tick.style.background = '#4caf50';
     tick.style.borderColor = '#4caf50';
-    this._hass.callService('todo', 'update_item', { item: uid, status: 'completed' }, { entity_id: this._todoId }).catch(() => {});
+    this._hass.callService('todo', 'update_item', { item: uid, status: 'completed' }, { entity_id: list }).catch(() => {});
   }
 
   // ---- Jump-to chips: one per panel, in page order, in the panel's colour.
@@ -835,9 +870,7 @@ export class AutoLayoutCard extends HTMLElement {
     window.removeEventListener('cd-anim', this._onAnim);
     window.removeEventListener('cd-to-top', this._onTop);
     if (this._chips && this._chips.parentNode === document.body) this._chips.remove();
-    if (this._todoUnsub) this._todoUnsub.then((u) => u && u()).catch(() => {});
-    this._todoUnsub = null;
-    this._todoId = undefined;
+    this._unwatchTodo();
     window.removeEventListener('cd-panels-changed', this._onChange);
     if (this._ro) this._ro.disconnect();
     this._ro = null;
