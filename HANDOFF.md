@@ -130,6 +130,38 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
         stale assignee.
       - Tested: Jamie+Hayley, all three (Everyone) and none (removed) on the
         pre-filter task.
+    - **More sources (2026-09-30, after v0.23.0; user: "the filter is just an
+      example"):** `wanted` now covers:
+      - Batteries: every Battery Notes sensor (`*_battery_plus[_N]`) below
+        `input_number.to_do_battery_low_below` (30%), or whose `*_battery_plus_low`
+        flag is on.
+        - Phones and tablets are skipped (any device with a `mobile_app` entity).
+        - Rechargeables ("Li-ion"/"Rechargeable" in `battery_type_and_quantity`)
+          become "Charge <name>". Others become "Replace battery: <name>" with the
+          type in the detail.
+        - Names come from the `batteries` map first, then the device name.
+        - Duplicates (Ring registers some devices twice) are merged by device name
+          plus rechargeable.
+      - Devices not responding: the health sensor, plus any light / switch / fan /
+        climate / cover / camera / vacuum / lock / alarm unavailable longer than
+        `input_number.to_do_offline_for` (60 min). Media players are left out, since
+        TVs go unavailable when off.
+      - Filters and parts: the purifier filters (<10%), plus all six Gregg
+        consumables due within `input_number.to_do_parts_due_within` (24h): filter,
+        main and side brush, sensors, dock tray, mop cloth.
+      - Safety alarms: smoke/CO `*life_end` / `*end_of_life` sensors on. New kind,
+        `input_boolean.to_do_safety_alarms_*`.
+      - Updates: `update.*` on. New kind, `input_boolean.to_do_updates_*`.
+      - Anything labelled `ignore_in_to_dos` ("Ignore in to-dos"), on the device or
+        the entity, is skipped.
+      - First run: "Charge Ring Alarm Keypad" (25%), "Replace battery: Hue Living
+        Room Light Dial" (29%, CR2032), and the pre-filter. Gregg's sensors (34h)
+        and dock tray (30h) come next.
+      - Manager's grid has the two new kinds plus a "When to make a task" block with
+        the three thresholds.
+      - HA restarted on its own at 11:03 on 2026-09-30, not by us. The switches
+        restored with values someone had set in Manager in the meantime; they were
+        left as they are.
     - Manager's "Automatic to-dos" panel has a "Who gets each kind of task" grid: a
       heading per kind and three purple person tiles (tap to toggle). Below it are
       the lists and `house-tasks-card` with `show: all`.

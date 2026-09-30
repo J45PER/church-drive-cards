@@ -32,7 +32,11 @@ export function houseTask(item) {
         ? 'mdi:robot-vacuum'
         : /respond|device/i.test(kind)
           ? 'mdi:heart-pulse'
-          : 'mdi:home-alert-outline';
+          : /safety|smoke|alarm/i.test(kind)
+            ? 'mdi:smoke-detector-alert'
+            : /update/i.test(kind)
+              ? 'mdi:update'
+              : 'mdi:home-alert-outline';
   return { kind, detail: rest.slice(1).join(' · '), who, icon };
 }
 

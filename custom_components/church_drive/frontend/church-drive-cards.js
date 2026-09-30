@@ -7223,7 +7223,7 @@
     const who = /^for /.test(last) ? last.slice(4).trim() : "Everyone";
     const rest = parts.slice(1, /^for /.test(last) ? -1 : void 0);
     const kind = rest[0] || "";
-    const icon = /batter/i.test(kind) ? "mdi:battery-alert-variant-outline" : /filter/i.test(kind) ? "mdi:air-filter" : /vacuum/i.test(kind) ? "mdi:robot-vacuum" : /respond|device/i.test(kind) ? "mdi:heart-pulse" : "mdi:home-alert-outline";
+    const icon = /batter/i.test(kind) ? "mdi:battery-alert-variant-outline" : /filter/i.test(kind) ? "mdi:air-filter" : /vacuum/i.test(kind) ? "mdi:robot-vacuum" : /respond|device/i.test(kind) ? "mdi:heart-pulse" : /safety|smoke|alarm/i.test(kind) ? "mdi:smoke-detector-alert" : /update/i.test(kind) ? "mdi:update" : "mdi:home-alert-outline";
     return { kind, detail: rest.slice(1).join(" \xB7 "), who, icon };
   }
   function houseTaskFor(task, first) {
