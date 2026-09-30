@@ -496,7 +496,7 @@
       }
       if (s.fill) under += `<path d="${d} L${W},${H} L0,${H} Z" fill="${paint}" fill-opacity="0.16"></path>`;
       over += `<path d="${d}" fill="none" stroke="${paint}" stroke-width="${s.width || 2}" vector-effect="non-scaling-stroke"></path>`;
-      scrub.push({ pts, raw, lo, hi, color: s.color, format: s.format, linear: smooth });
+      scrub.push({ pts, raw, lo, hi, color: s.color, colourOf: s.colorAt, format: s.format, linear: smooth });
     });
     if (!under && !over) return "";
     if (meta) Object.assign(meta, { from, now, height: H, series: scrub });
@@ -5853,7 +5853,7 @@
       if (row2(c, "show_graph") && (this._demo || c.pm25_entity)) {
         const pts = this._demo ? this._demo.pmPts : this._hist && this._hist.data ? this._hist.data[c.pm25_entity] : null;
         const meta = {};
-        const svg2 = kitGraph([{ pts, current: pm, color: q.color, colorAt: (v) => kitBlend(v, apScale(c)), fill: true, pad: 2, format: (v) => `PM2.5 ${Math.round(v)} \xB5g/m\xB3` }], { height: 48, label: "PM2.5, last 24 hours", meta, smooth: c.smooth_graphs !== false });
+        const svg2 = kitGraph([{ pts, current: pm, color: q.color, colorAt: (v) => kitBlend(v, apScale(c)), fill: true, pad: 2, format: (v) => `PM2.5 ${Math.round(v)} \xB5g/m\xB3 \xB7 ${apQuality(v, c).word}` }], { height: 48, label: "PM2.5, last 24 hours", meta, smooth: c.smooth_graphs !== false });
         gBox.style.display = "block";
         const gsig = JSON.stringify([pm, q.color, this._hist && this._hist.at, !!svg2, c.smooth_graphs]);
         if (gsig !== this._gsig) {

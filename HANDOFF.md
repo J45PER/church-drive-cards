@@ -281,6 +281,9 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
         band's colour mid-band: green at 60% of good_max, amber mid-Fair, orange
         mid-Poor, red above; the bands follow the card's own settings.
       - The scale still fits the readings (the user didn't ask to change it).
+      - Hover/hold: the dot follows the line colour (`colourOf: colorAt` passed to
+        `kitScrub`, as in climate zone) and the label adds the band, e.g.
+        "PM2.5 93 µg/m³ · Poor".
     - Header widget To-do button: no "›"; the text matches the icon's lilac
       (#b39ddb), reading "+N more" or "To-do"; 22px icon; aria-label.
   - Mobile is on `-beta` cards again for testing; strip them on release. Mock-up:

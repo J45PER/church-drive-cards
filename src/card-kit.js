@@ -369,7 +369,7 @@ export function kitGraph(series, { hours = 24, height = 48, label = '', meta = n
     }
     if (s.fill) under += `<path d="${d} L${W},${H} L0,${H} Z" fill="${paint}" fill-opacity="0.16"></path>`;
     over += `<path d="${d}" fill="none" stroke="${paint}" stroke-width="${s.width || 2}" vector-effect="non-scaling-stroke"></path>`;
-    scrub.push({ pts, raw, lo, hi, color: s.color, format: s.format, linear: smooth });
+    scrub.push({ pts, raw, lo, hi, color: s.color, colourOf: s.colorAt, format: s.format, linear: smooth });
   });
   if (!under && !over) return '';
   if (meta) Object.assign(meta, { from, now, height: H, series: scrub });

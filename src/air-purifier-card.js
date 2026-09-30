@@ -236,7 +236,7 @@ export class AirPurifierCard extends HTMLElement {
     if (row(c, 'show_graph') && (this._demo || c.pm25_entity)) {
       const pts = this._demo ? this._demo.pmPts : this._hist && this._hist.data ? this._hist.data[c.pm25_entity] : null;
       const meta = {};
-      const svg = kitGraph([{ pts, current: pm, color: q.color, colorAt: (v) => kitBlend(v, apScale(c)), fill: true, pad: 2, format: (v) => `PM2.5 ${Math.round(v)} µg/m³` }], { height: 48, label: 'PM2.5, last 24 hours', meta, smooth: c.smooth_graphs !== false });
+      const svg = kitGraph([{ pts, current: pm, color: q.color, colorAt: (v) => kitBlend(v, apScale(c)), fill: true, pad: 2, format: (v) => `PM2.5 ${Math.round(v)} µg/m³ · ${apQuality(v, c).word}` }], { height: 48, label: 'PM2.5, last 24 hours', meta, smooth: c.smooth_graphs !== false });
       gBox.style.display = 'block';
       const gsig = JSON.stringify([pm, q.color, this._hist && this._hist.at, !!svg, c.smooth_graphs]);
       if (gsig !== this._gsig) {
