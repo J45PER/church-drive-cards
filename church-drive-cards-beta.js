@@ -7004,6 +7004,8 @@
         this._scrollFrame = requestAnimationFrame(() => this._syncTop());
       };
       window.addEventListener("scroll", this._onScroll, { capture: true, passive: true });
+      this._onResize = () => this._fit();
+      window.addEventListener("resize", this._onResize);
       if (this._hass && !this._subs) this._resubscribe();
       this._render();
       this._holdTabs();
@@ -7027,6 +7029,7 @@
       window.removeEventListener("location-changed", this._onLocation);
       window.removeEventListener("popstate", this._onLocation);
       window.removeEventListener("scroll", this._onScroll, { capture: true });
+      window.removeEventListener("resize", this._onResize);
       this._unsubscribe();
     }
     _unsubscribe() {
@@ -7087,6 +7090,12 @@
             display:flex; align-items:center; justify-content:center; gap:6px; color:var(--secondary-text-color); transition:background-color .25s, padding .25s; -webkit-tap-highlight-color:transparent; }
           .nb-it.nb-on { padding:0 14px 0 12px; color:#fff; font-weight:600; font-size:0.85rem; }
           .nb-it span.nb-name { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:110px; }
+          /* Too many pages for the width (e.g. six on a phone): tighter spacing,
+             and the current page is its coloured pill without the label. */
+          .nb.nb-tight { gap:2px; padding:0 5px; }
+          .nb.nb-tight .nb-it { min-width:40px; }
+          .nb.nb-tight .nb-it.nb-on { padding:0 12px; }
+          .nb.nb-tight .nb-it span.nb-name { display:none; }
           .nb-it:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
           .nb-dot { position:absolute; left:28px; top:6px; width:8px; height:8px; border-radius:50%; background:#ff9800; box-shadow:0 0 0 2px var(--card-background-color, #1f2128); }
           .nb-it.nb-on .nb-dot { left:auto; right:6px; }
@@ -7150,6 +7159,14 @@
         })
       );
       hydrateIcons(this._host || this);
+      this._fit();
+    }
+    // Tight mode when the pages don't fit side by side at full size.
+    _fit() {
+      const nav = this._nav;
+      if (!nav) return;
+      nav.classList.remove("nb-tight");
+      if (nav.scrollWidth > nav.clientWidth + 1) nav.classList.add("nb-tight");
     }
     // ---- Back to top: an arrow once the page is scrolled, a dash at the top.
     _scroller() {

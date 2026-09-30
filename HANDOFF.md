@@ -91,28 +91,52 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       - Battery Status batteries under 20%;
       - purifier filters under 10%, and Gregg's filter under 24h;
       - unread Gregg messages.
-    - Automatic items have the description "Automatic · <kind>". The device resolves
-      them, not a person: they're removed once the device reports it's sorted (e.g.
-      the doorbell going from 17% to 95% after a battery change), and if someone
-      ticks one off while it's still needed, it reopens (`todo.update_item`
-      needs_action; the lists are also triggers, so this is immediate). The widget
-      shows them without a ✓, in amber, with an icon by kind (battery, filter,
-      heart-pulse for devices, vacuum). Items people add themselves are never
-      touched.
-    - Shared tasks (added 2026-09-30, user's request): `todo.priorities_everyone`
-      ("Priorities Everyone", local_todo). Choosing "Everyone" in a select puts that
-      kind of task there once, instead of on all three lists. The widget merges it
-      after the person's own list (shared manual items get `mdi:account-group`), and
-      ticking one there clears it for everyone. Each person's To-do page has a
-      teal "Shared" panel with it, and Manager shows it too. Tested: switching
-      `_filters_due` to Everyone moved the pre-filter task across, then set back to
-      Jamie.
+    - **Automatic tasks live on their own list, `todo.priorities_automatic`**
+      ("Priorities Automatic", local_todo entry 01M3RR7QJ3FWB8TKKGKQVPWT5J), never on
+      the lists people tick. The user asked for no tick box at all on tasks the
+      device confirms. The description is "Automatic · <kind> · <detail> · for
+      <Jamie|Hayley|Diane|Everyone>" (e.g. "Automatic · Filters due · 8% left · for
+      Jamie").
+      - The automation removes a task once the device reports it's sorted (e.g. the
+        doorbell going from 17% to 95% after a battery change).
+      - It keeps the detail and assignee up to date in place (`refresh`,
+        `todo.update_item` description).
+      - It reopens a task ticked off elsewhere (e.g. HA's own To-do panel) while it's
+        still needed.
+      - It clears any automatic items left on the personal or shared lists.
+    - **Showing them:**
+      - The widget reads `todo.priorities_automatic` and shows the person's tasks and
+        everyone's, with no ✓, in amber, with an icon by kind (battery, filter,
+        heart-pulse for devices, vacuum).
+      - The new **`house-tasks-card`** is a read-only list of the same tasks. Its
+        `show` option is `mine` (default: this person's and everyone's) or `all`
+        (every task, with names). Each person's To-do page has it in an amber
+        "From the house" panel; Manager has it with `show: all`.
+    - **Shared tasks** (added 2026-09-30, user's request): `todo.priorities_everyone`
+      ("Priorities Everyone") is for tasks people add for everyone. The widget merges
+      it after the person's own list (`mdi:account-group`), and ticking one clears it
+      for everyone. Each To-do page has a teal "Shared" panel for it.
     - Who gets each kind is set by `input_select.to_do_devices_not_responding`,
       `_low_batteries`, `_filters_due` and `_vacuum_messages` (Jamie / Hayley /
       Diane / Everyone / Nobody; all start as Jamie).
     - Manager has an "Automatic to-dos" panel with those selects and all three lists.
-    - Mobile runs every Church Drive card as `-beta` for testing this; strip `-beta`
-      on release.
+    - **Navigation:** every Mobile nav bar has a sixth page, To-do
+      (`/dashboard-mobile/todo`, #7e57c2). The nav bar gained a tight mode
+      (`.nb-tight`, set by `_fit()` when the items overflow, and on resize): 2px
+      gaps, 40px items, and the current page shown as its coloured pill without a
+      label. It kicks in below about 430px wide.
+    - **Tasks dashboard** (`dashboard-tasks`, in the sidebar, mdi:clipboard-check-outline;
+      user's request):
+      - a **To-do** view that mirrors Mobile's To-do view, per person (the same three
+        panels, 3 columns on wide screens);
+      - a **Shopping** view with `todo.shopping_list`;
+      - its own nav bar: Home (Mobile) / To-do / Shopping.
+      - It's a copy of Mobile's config, not a live link, so change both together. More
+        lists (e.g. other shopping lists) go on the Shopping view as extra panels.
+    - The header widget is capped at `widget_width` (default 520px) and centred, so it
+      isn't page-wide on tablets and PCs.
+    - Mobile, Tasks and Manager's `house-tasks-card` all use the `-beta` card types
+      for testing; strip `-beta` from all three on release.
 - The back-to-top strokes are solid white in both states.
 - **Chips capsule, 2026-09-29:**
   - Chips sit in a scrolling `.al-strip` and grow to fill it (`flex:1 0 auto`), then
