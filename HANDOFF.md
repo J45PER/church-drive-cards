@@ -162,6 +162,27 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       - HA restarted on its own at 11:03 on 2026-09-30, not by us. The switches
         restored with values someone had set in Manager in the meantime; they were
         left as they are.
+    - **Daily reminder (2026-09-30):** `automation.church_drive_to_do_reminders` runs at
+      `input_datetime.to_do_reminder_time` (18:00). It sends each person one
+      notification listing their open to-dos:
+      - their own list, the shared list (marked "(shared)"), and the automatic
+        tasks that name them or Everyone, with details (e.g. "Charge Ring Alarm
+        Keypad (25%)");
+      - at most 8 lines, then "…and N more";
+      - title "To-do (N)"; tapping opens `/dashboard-mobile/todo`;
+      - tag `church-drive-todo`, so each day's notification replaces the last;
+      - nothing is sent to someone with nothing to do.
+      - Each person can be turned off with `input_boolean.to_do_reminders_<person>`.
+      - Devices are set in the automation's `people` variable: Jamie's iPhone and
+        Pixel (not the iPad or the watch), Hayley's Pixel 9, Diane's phone.
+      - Manager has a "Daily reminder" block with the time and three tiles.
+      - Tested for Jamie only; Hayley's and Diane's were paused for the test and
+        switched back on.
+      - Why the old battery alert never fired:
+        `automation.battery_notes_low_battery_alert` only triggers when a Battery
+        Notes `_low` flag turns on, at Battery Notes' 10% threshold. Nothing has
+        been that low, and it only notifies the Pixel. It's left in place. The
+        weekly Friday 18:00 battery report does run.
     - Manager's "Automatic to-dos" panel has a "Who gets each kind of task" grid: a
       heading per kind and three purple person tiles (tap to toggle). Below it are
       the lists and `house-tasks-card` with `show: all`.
