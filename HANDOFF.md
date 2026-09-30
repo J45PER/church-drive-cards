@@ -994,6 +994,12 @@ Integration modules (`custom_components/church_drive/`):
     shows them. Put them in a first "variables" step with an alias instead (both
     to-do automations do this).
   - Card editors: every card has one, and every option it reads is in its schema.
+  - **Auto Layout editor bug (fixed on beta 2026-09-30):** since f87fb14 its
+    `set hass` called the card's `_renderHead()` / `_watchTodo()`, which don't exist on
+    the editor. It threw, so HA fell back to YAML for every Auto Layout card. Those
+    lines now live in the card's own `set hass`.
+  - Smoke test: `scratchpad/editors.html` + `editors.mjs` builds every registered
+    editor with a stub config and fake hass, and reports any that throw.
 - **Design Presets uses pretend lights only.** On the main and Beta tabs, light cards
   are in demo mode, battery/gauge cards use fixed values, and the alarm uses
   `demo: true`. The Scene builder tab is the exception: its "Try it in" uses real
@@ -1062,7 +1068,8 @@ Integration modules (`custom_components/church_drive/`):
   - `church-drive-cards-beta.js` registers every card as `<name>-beta`.
   - HA loads it from resource `436186c683fe4c7d81c865b67bb0e109`:
     `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's pinned to the v0.24.1 merge (see below).
+    It's pinned to the Auto Layout editor fix, and the Mobile Energy view uses the
+    `-beta` types to test it. Strip `-beta` there when it's released.
   - To test a branch: push it, repoint the resource, and ask for a hard refresh.
   - jsDelivr is blocked from the cloud container, but works for the user.
 - **Rollback:** download an older release in HACS and restart.

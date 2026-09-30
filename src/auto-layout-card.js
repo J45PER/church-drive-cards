@@ -191,10 +191,7 @@ export class AutoLayoutCardEditor extends HTMLElement {
   }
 
   set hass(hass) {
-    const first = !this._hass;
     this._hass = hass;
-    if (first) this._renderHead();
-    if (this.config && this.config.priorities) this._watchTodo();
     this._render();
   }
 
@@ -260,10 +257,14 @@ export class AutoLayoutCard extends HTMLElement {
   }
 
   set hass(hass) {
+    const first = !this._hass;
     this._hass = hass;
     (this._items || []).forEach((it) => {
       it.el.hass = hass;
     });
+    // The title can use {user}, so draw the header once there's a user.
+    if (first) this._renderHead();
+    if (this.isConnected && this.config && this.config.priorities) this._watchTodo();
   }
 
   _build() {
