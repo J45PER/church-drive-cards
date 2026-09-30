@@ -13,7 +13,7 @@ import { stcColor } from './section-title-card.js';
 import { nbHuiRoot } from './nav-bar-card.js';
 import { kitScrollParent, kitGlide, kitNavigate } from './card-kit.js';
 import { PANEL_TRANSITION } from './section-panel-card.js';
-import { HOUSE_TASKS_LIST, houseTask, houseTaskFor } from './house-tasks-card.js';
+import { HOUSE_TASKS_LIST, HOUSE_TASKS_COLOR, houseTask, houseTaskFor } from './house-tasks-card.js';
 
 let helpersPromise;
 function cardHelpers() {
@@ -548,7 +548,7 @@ export class AutoLayoutCard extends HTMLElement {
     const extra = rows.length - shown.length;
     const row = (r) => {
       if (!r) return '<div style="height:26px;"></div>';
-      const c = r.kind === 'todo' ? (r.overdue ? '#e53935' : r.auto ? '#ffa726' : '#7e57c2') : r.colour;
+      const c = r.kind === 'todo' ? (r.overdue ? '#e53935' : r.auto ? HOUSE_TASKS_COLOR : '#7e57c2') : r.colour;
       const icon = r.icon;
       const tick =
         r.kind === 'todo' && !r.auto

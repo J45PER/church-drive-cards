@@ -106,12 +106,12 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       - It clears any automatic items left on the personal or shared lists.
     - **Showing them:**
       - The widget reads `todo.priorities_automatic` and shows the person's tasks and
-        everyone's, with no ✓, in amber, with an icon by kind (battery, filter,
+        everyone's, with no ✓, in purple (#ab47bc, `HOUSE_TASKS_COLOR`), with an icon by kind (battery, filter,
         heart-pulse for devices, vacuum).
       - The new **`house-tasks-card`** is a read-only list of the same tasks. Its
         `show` option is `mine` (default: this person's and everyone's) or `all`
-        (every task, with names). Each person's To-do page has it in an amber
-        "From the house" panel; Manager has it with `show: all`.
+        (every task, with names). Each person's To-do page has it in a purple (#ab47bc,
+        the user's choice) "From the house" panel; Manager has it with `show: all`.
     - **Shared tasks** (added 2026-09-30, user's request): `todo.priorities_everyone`
       ("Priorities Everyone") is for tasks people add for everyone. The widget merges
       it after the person's own list (`mdi:account-group`), and ticking one clears it
@@ -130,7 +130,7 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       - a **To-do** view that mirrors Mobile's To-do view, per person (the same three
         panels, 3 columns on wide screens);
       - a **Shopping** view with `todo.shopping_list`;
-      - its own nav bar: Home (Mobile) / To-do / Shopping.
+      - its own nav bar: To-do / Shopping (no Home button; the user didn't want a link back to Mobile).
       - It's a copy of Mobile's config, not a live link, so change both together. More
         lists (e.g. other shopping lists) go on the Shopping view as extra panels.
     - The header widget is capped at `widget_width` (default 520px) and centred, so it

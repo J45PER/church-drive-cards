@@ -13,6 +13,8 @@ import { SUFFIX, LABEL } from './suffix.js';
 import { KIT_COLOR, kitShell, kitHead } from './card-kit.js';
 
 export const HOUSE_TASKS_LIST = 'todo.priorities_automatic';
+// Their colour: a lighter purple than the person's own to-dos (#7e57c2).
+export const HOUSE_TASKS_COLOR = '#ab47bc';
 
 // Kind, detail, who and icon from an automatic item's description.
 export function houseTask(item) {
@@ -51,15 +53,18 @@ export const HouseTasksCardEditor = createFormEditor({
     { name: 'title', selector: { text: {} } },
     { name: 'entity', selector: { entity: { domain: 'todo' } } },
     { name: 'show', selector: { select: { mode: 'dropdown', options: [{ value: 'mine', label: 'The signed-in person’s and everyone’s' }, { value: 'all', label: 'Everyone’s, with names' }] } } },
+    { name: 'color', selector: { text: {} } },
     { name: 'demo', selector: { boolean: {} } },
   ],
   labels: {
     title: 'Title (optional)',
+    color: 'Colour',
     entity: 'Automatic to-do list',
     show: 'Show',
     demo: 'Show pretend tasks (for Design Presets)',
   },
   helpers: {
+    color: `Default ${HOUSE_TASKS_COLOR} (purple). Any CSS colour.`,
     entity: `Defaults to ${HOUSE_TASKS_LIST}. Who gets each kind of task is set in Manager → Automatic to-dos.`,
   },
 });
@@ -122,13 +127,14 @@ export class HouseTasksCard extends HTMLElement {
     }
     const first = this._hass.user && this._hass.user.name ? String(this._hass.user.name).split(' ')[0] : '';
     const all = c.show === 'all';
+    const colour = c.color || HOUSE_TASKS_COLOR;
     const missing = !c.demo && !this._hass.states[this._entity()];
     const tasks = (c.demo ? htDemo() : this._items || [])
       .filter((t) => t.status === 'needs_action')
       .map((t) => ({ t, h: houseTask(t) }))
       .filter(({ h }) => all || houseTaskFor(h, first));
-    if (c.title) kitHead(this, c.title, missing ? 'Not set up' : tasks.length ? `${tasks.length} to sort` : 'All sorted', tasks.length ? KIT_COLOR.fair : KIT_COLOR.good);
-    const sig = JSON.stringify([tasks, missing, all, first]);
+    if (c.title) kitHead(this, c.title, missing ? 'Not set up' : tasks.length ? `${tasks.length} to sort` : 'All sorted', tasks.length ? colour : KIT_COLOR.good);
+    const sig = JSON.stringify([tasks, missing, all, first, colour]);
     if (sig === this._sig) return;
     this._sig = sig;
     if (missing) {
@@ -145,7 +151,7 @@ export class HouseTasksCard extends HTMLElement {
         .map(({ h }, i) => {
           const tag = all || h.who.toLowerCase() === 'everyone' ? `<span class="ck-chip ht-who" style="color:var(--secondary-text-color); background:rgba(127,127,127,0.16);"></span>` : '';
           return `<div class="ht-row" style="display:flex; align-items:center; gap:10px; padding:9px 0;${i ? ' border-top:1px solid var(--divider-color, rgba(127,127,127,0.22));' : ''}">
-            ${iconHtml(h.icon, { size: '22px', style: `color:${KIT_COLOR.fair}; flex:none;` })}
+            ${iconHtml(h.icon, { size: '22px', style: `color:${colour}; flex:none;` })}
             <div style="flex:1; min-width:0;">
               <div class="ht-name" style="font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
               <div class="ht-sub ck-sub" style="font-size:0.74rem; line-height:1.35;"></div>

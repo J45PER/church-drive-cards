@@ -7216,6 +7216,7 @@
 
   // src/house-tasks-card.js
   var HOUSE_TASKS_LIST = "todo.priorities_automatic";
+  var HOUSE_TASKS_COLOR = "#ab47bc";
   function houseTask(item) {
     const parts = String(item && item.description || "").split(" \xB7 ");
     const last = parts[parts.length - 1] || "";
@@ -7240,15 +7241,18 @@
       { name: "title", selector: { text: {} } },
       { name: "entity", selector: { entity: { domain: "todo" } } },
       { name: "show", selector: { select: { mode: "dropdown", options: [{ value: "mine", label: "The signed-in person\u2019s and everyone\u2019s" }, { value: "all", label: "Everyone\u2019s, with names" }] } } },
+      { name: "color", selector: { text: {} } },
       { name: "demo", selector: { boolean: {} } }
     ],
     labels: {
       title: "Title (optional)",
+      color: "Colour",
       entity: "Automatic to-do list",
       show: "Show",
       demo: "Show pretend tasks (for Design Presets)"
     },
     helpers: {
+      color: `Default ${HOUSE_TASKS_COLOR} (purple). Any CSS colour.`,
       entity: `Defaults to ${HOUSE_TASKS_LIST}. Who gets each kind of task is set in Manager \u2192 Automatic to-dos.`
     }
   });
@@ -7302,10 +7306,11 @@
       }
       const first = this._hass.user && this._hass.user.name ? String(this._hass.user.name).split(" ")[0] : "";
       const all = c.show === "all";
+      const colour = c.color || HOUSE_TASKS_COLOR;
       const missing = !c.demo && !this._hass.states[this._entity()];
       const tasks = (c.demo ? htDemo() : this._items || []).filter((t) => t.status === "needs_action").map((t) => ({ t, h: houseTask(t) })).filter(({ h }) => all || houseTaskFor(h, first));
-      if (c.title) kitHead(this, c.title, missing ? "Not set up" : tasks.length ? `${tasks.length} to sort` : "All sorted", tasks.length ? KIT_COLOR.fair : KIT_COLOR.good);
-      const sig = JSON.stringify([tasks, missing, all, first]);
+      if (c.title) kitHead(this, c.title, missing ? "Not set up" : tasks.length ? `${tasks.length} to sort` : "All sorted", tasks.length ? colour : KIT_COLOR.good);
+      const sig = JSON.stringify([tasks, missing, all, first, colour]);
       if (sig === this._sig) return;
       this._sig = sig;
       if (missing) {
@@ -7320,7 +7325,7 @@
       this._list.innerHTML = tasks.map(({ h }, i) => {
         const tag = all || h.who.toLowerCase() === "everyone" ? `<span class="ck-chip ht-who" style="color:var(--secondary-text-color); background:rgba(127,127,127,0.16);"></span>` : "";
         return `<div class="ht-row" style="display:flex; align-items:center; gap:10px; padding:9px 0;${i ? " border-top:1px solid var(--divider-color, rgba(127,127,127,0.22));" : ""}">
-            ${iconHtml(h.icon, { size: "22px", style: `color:${KIT_COLOR.fair}; flex:none;` })}
+            ${iconHtml(h.icon, { size: "22px", style: `color:${colour}; flex:none;` })}
             <div style="flex:1; min-width:0;">
               <div class="ht-name" style="font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
               <div class="ht-sub ck-sub" style="font-size:0.74rem; line-height:1.35;"></div>
@@ -7836,7 +7841,7 @@
       const extra = rows.length - shown.length;
       const row3 = (r) => {
         if (!r) return '<div style="height:26px;"></div>';
-        const c = r.kind === "todo" ? r.overdue ? "#e53935" : r.auto ? "#ffa726" : "#7e57c2" : r.colour;
+        const c = r.kind === "todo" ? r.overdue ? "#e53935" : r.auto ? HOUSE_TASKS_COLOR : "#7e57c2" : r.colour;
         const icon = r.icon;
         const tick = r.kind === "todo" && !r.auto ? `<button type="button" data-done="${esc2(r.uid)}" data-list="${esc2(r.list)}" aria-label="Done" title="Done" style="flex:none; width:22px; height:22px; padding:0; border:2px solid color-mix(in srgb, ${c} 70%, transparent); border-radius:50%; background:transparent; color:var(--primary-text-color); cursor:pointer; display:flex; align-items:center; justify-content:center;">${iconHtml("mdi:check", { size: "14px" })}</button>` : "";
         return `<div ${r.kind === "alert" ? `data-alert="${r.i}" role="button"` : ""} style="height:26px; display:flex; align-items:center; gap:8px; padding:0 4px 0 8px; border-radius:13px; cursor:${r.kind === "alert" ? "pointer" : "default"}; background:color-mix(in srgb, ${c} 16%, transparent);">${icon ? iconHtml(icon, { size: "16px", style: `color:${c}; flex:none;` }) : ""}<span style="flex:1; min-width:0; font-size:0.8rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc2(r.text)}</span>${tick}</div>`;
