@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-30. Current release: **v0.24.1**.*
+*Last updated 2026-09-30. Current release: **v0.24.2**.*
 
 ## Where this stands
 
@@ -230,6 +230,10 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **v0.24.2 (released 2026-09-30, reload-only): Auto Layout visual editor fixed.**
+  - The editor threw on its first `hass` (see the conventions section), so every
+    Auto Layout card was YAML-only. Released with the HA-side fixes for visual editing
+    and for repeat notifications after a restart.
 - **v0.24.1 (released 2026-09-30, reload-only): Octopus violet for gas.**
   - The Gas card uses `OCTO_VIOLET` (#7b61ff). On the Mobile Energy view, the
     Electricity and Gas panels use the flat `phu:octopusenergy` icon.
@@ -1085,8 +1089,7 @@ Integration modules (`custom_components/church_drive/`):
   - `church-drive-cards-beta.js` registers every card as `<name>-beta`.
   - HA loads it from resource `436186c683fe4c7d81c865b67bb0e109`:
     `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's pinned to the Auto Layout editor fix, and the Mobile Energy view uses the
-    `-beta` types to test it. Strip `-beta` there when it's released.
+    It's pinned to the v0.24.2 merge (see below).
   - To test a branch: push it, repoint the resource, and ask for a hard refresh.
   - jsDelivr is blocked from the cloud container, but works for the user.
 - **Rollback:** download an older release in HACS and restart.
