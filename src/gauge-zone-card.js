@@ -4,6 +4,7 @@
 
 import { createFormEditor } from './form-editor.js';
 import { SUFFIX, LABEL } from './suffix.js';
+import { KIT_CARD_BG } from './card-kit.js';
 
 export const GaugeZoneCardEditor = createFormEditor({
   schema: (config) => [
@@ -135,7 +136,7 @@ export class GaugeZoneCard extends HTMLElement {
 
     if (!this._built) {
       this.innerHTML = `
-        <ha-card style="border:none; box-shadow: 0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; background: var(--card-background-color);">
+        <ha-card style="border:none; box-shadow: 0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; background:${KIT_CARD_BG}; -webkit-backdrop-filter:var(--cd-card-filter, none); backdrop-filter:var(--cd-card-filter, none);">
           <div class="bzc-title" style="padding:16px 16px 8px 16px; font-size:1.5rem; font-weight:500; color: var(--primary-text-color);">${cfg.title || ''}</div>
           <div class="bzc-rows" style="padding:0; margin:0;"></div>
         </ha-card>`;

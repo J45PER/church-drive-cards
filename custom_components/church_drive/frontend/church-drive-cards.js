@@ -103,290 +103,6 @@
   var SUFFIX = typeof __CARD_SUFFIX__ !== "undefined" ? __CARD_SUFFIX__ : "";
   var LABEL = SUFFIX ? " (beta)" : "";
 
-  // src/gauge-zone-card.js
-  var GaugeZoneCardEditor = createFormEditor({
-    schema: (config) => [
-      { name: "title", selector: { text: {} } },
-      {
-        type: "expandable",
-        name: "",
-        title: "Colours, units and icons",
-        flatten: true,
-        schema: [
-          {
-            name: "direction",
-            selector: {
-              select: {
-                mode: "dropdown",
-                options: [
-                  { value: "low", label: "Low value is bad (battery, signal)" },
-                  { value: "high", label: "High value is bad (storage, CPU)" }
-                ]
-              }
-            }
-          },
-          {
-            type: "grid",
-            name: "",
-            schema: [
-              { name: "alert_at", selector: { number: { mode: "box" } } },
-              { name: "warn_at", selector: { number: { mode: "box" } } },
-              { name: "unit", selector: { text: {} } },
-              { name: "max", selector: { number: { mode: "box", min: 0 } } }
-            ]
-          },
-          {
-            name: "icon_mode",
-            selector: {
-              select: {
-                mode: "dropdown",
-                options: [
-                  { value: "battery", label: "Battery (steps with the value)" },
-                  { value: "gauge", label: "Gauge" },
-                  { value: "entity", label: "Each entity's own icon" },
-                  { value: "custom", label: "Custom icon (pick below)" }
-                ]
-              }
-            }
-          },
-          ...config.icon_mode === "custom" ? [{ name: "icon", selector: { icon: {} } }] : []
-        ]
-      },
-      {
-        name: "entities",
-        selector: {
-          object: {
-            multiple: true,
-            label_field: "name",
-            description_field: "entity",
-            fields: {
-              entity: { label: "Entity", selector: { entity: {} } },
-              name: { label: "Name", required: true, selector: { text: {} } },
-              word: {
-                label: "Battery wording (shows the Battery Notes date)",
-                selector: {
-                  select: {
-                    mode: "dropdown",
-                    custom_value: true,
-                    options: ["replaced", "charged", "swapped"]
-                  }
-                }
-              },
-              secondary: { label: "Secondary text (instead of wording)", selector: { text: {} } },
-              icon: { label: "Icon override", selector: { icon: {} } },
-              value: { label: "Fixed value (instead of an entity)", selector: { number: { mode: "box" } } },
-              date: { label: "Replaced/charged date (fixed-value rows only)", selector: { date: {} } },
-              unit: { label: "Unit override", selector: { text: {} } },
-              max: { label: "Max override", selector: { number: { mode: "box", min: 0 } } }
-            }
-          }
-        }
-      }
-    ],
-    labels: {
-      title: "Title",
-      direction: "Which end is bad",
-      alert_at: "Red at",
-      warn_at: "Orange at",
-      unit: "Unit",
-      max: "Full bar value",
-      icon_mode: "Icons",
-      icon: "Icon for every row",
-      entities: "Rows"
-    },
-    helpers: {
-      alert_at: "Defaults: 20 (low is bad) / 90 (high is bad)",
-      warn_at: "Defaults: 50 (low is bad) / 75 (high is bad)",
-      unit: "Default %",
-      max: "Default 100"
-    }
-  });
-  function lczFormatDate(raw) {
-    const d = /^\d{4}-\d{2}-\d{2}/.test(raw) ? new Date(raw) : null;
-    return d && !isNaN(d) ? d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : raw;
-  }
-  var GaugeZoneCard = class _GaugeZoneCard extends HTMLElement {
-    setConfig(config) {
-      if (!config.entities) throw new Error("entities required");
-      this.config = config;
-      this._built = false;
-    }
-    _batteryIcon(pct) {
-      if (pct <= 5) return "mdi:battery-alert";
-      if (pct >= 95) return "mdi:battery";
-      const r = Math.round(pct / 10) * 10;
-      return `mdi:battery-${r}`;
-    }
-    set hass(hass) {
-      this._hass = hass;
-      const cfg = this.config;
-      const iconMode = cfg.icon_mode || (this.tagName.toLowerCase() === `battery-zone-card${SUFFIX}` ? "battery" : "gauge");
-      const direction = cfg.direction || "low";
-      const alertAt = cfg.alert_at !== void 0 ? cfg.alert_at : direction === "low" ? 20 : 90;
-      const warnAt = cfg.warn_at !== void 0 ? cfg.warn_at : direction === "low" ? 50 : 75;
-      const cardUnit = cfg.unit !== void 0 ? cfg.unit : "%";
-      const cardMax = cfg.max || 100;
-      if (!this._built) {
-        this.innerHTML = `
-        <ha-card style="border:none; box-shadow: 0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; background: var(--card-background-color);">
-          <div class="bzc-title" style="padding:16px 16px 8px 16px; font-size:1.5rem; font-weight:500; color: var(--primary-text-color);">${cfg.title || ""}</div>
-          <div class="bzc-rows" style="padding:0; margin:0;"></div>
-        </ha-card>`;
-        this._rows = this.querySelector(".bzc-rows");
-        this._built = true;
-      }
-      this._rows.innerHTML = "";
-      const entries = cfg.entities.map((e) => {
-        const literal = e.value !== void 0 ? e.value : e.demo_pct;
-        if (literal !== void 0) {
-          const available2 = literal >= 0;
-          return { ...e, val: available2 ? literal : -1, available: available2, demo: true };
-        }
-        const st = hass.states[e.entity];
-        const raw = st ? parseFloat(st.state) : NaN;
-        const available = st && !["unknown", "unavailable"].includes(st.state) && !isNaN(raw);
-        return { ...e, st, val: available ? raw : -1, available };
-      });
-      entries.sort((a, b) => direction === "low" ? a.val - b.val : b.val - a.val);
-      entries.forEach((e, i) => {
-        const val = e.available ? e.val : 0;
-        const max = e.max || cardMax;
-        const widthPct = Math.min(Math.max(val / max * 100, 0), 100);
-        const unit = e.unit !== void 0 ? e.unit : cardUnit;
-        let colorState;
-        if (direction === "low") {
-          colorState = val <= alertAt ? "red" : val <= warnAt ? "orange" : "green";
-        } else {
-          colorState = val >= alertAt ? "red" : val >= warnAt ? "orange" : "green";
-        }
-        const color = { red: "var(--error-color, #db4437)", orange: "var(--warning-color, #ff9800)", green: "var(--success-color, #43a047)" }[colorState];
-        const unavailableColor = "#9e9e9e";
-        let iconColor;
-        if (!e.available) {
-          iconColor = unavailableColor;
-        } else if (colorState === "red" && (direction === "low" ? val <= 0 : val >= max)) {
-          iconColor = color;
-        } else {
-          iconColor = "#ffffff";
-        }
-        let dateStr = null;
-        if (e.demo) {
-          const raw = e.date || e.demo_date;
-          dateStr = raw ? lczFormatDate(raw) : "unknown";
-        } else {
-          const replaced = e.st && e.st.attributes ? e.st.attributes.battery_last_replaced : null;
-          if (replaced) {
-            const d = new Date(replaced);
-            dateStr = d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-          } else if (e.word) {
-            dateStr = "unknown";
-          }
-        }
-        let secondaryText = e.secondary;
-        if (secondaryText === void 0) {
-          secondaryText = e.word ? `${e.word} ${dateStr}` : "";
-        }
-        let icon;
-        let useStateIcon = false;
-        if (e.icon) {
-          icon = e.icon;
-        } else if (iconMode === "battery") {
-          icon = this._batteryIcon(e.available ? e.val : 0);
-        } else if (iconMode === "custom" && cfg.icon) {
-          icon = cfg.icon;
-        } else if (iconMode === "entity" && e.st) {
-          const entry = hass.entities && hass.entities[e.entity];
-          icon = entry && entry.icon || e.st.attributes.icon;
-          useStateIcon = !icon && !!customElements.get("ha-state-icon");
-          icon = icon || "mdi:gauge";
-        } else {
-          icon = "mdi:gauge";
-        }
-        const isFirst = i === 0;
-        const isLast = i === entries.length - 1;
-        let mask = null;
-        if (!isFirst && !isLast) {
-          mask = "linear-gradient(to bottom, transparent 0%, black 2%, black 98%, transparent 100%)";
-        } else if (!isFirst && isLast) {
-          mask = "linear-gradient(to bottom, transparent 0%, black 2%, black 100%)";
-        } else if (isFirst && !isLast) {
-          mask = "linear-gradient(to bottom, black 0%, black 98%, transparent 100%)";
-        }
-        const radius = `${isFirst ? "16px 16px" : "0 0"} ${isLast ? "16px 16px" : "0 0"}`;
-        const maskCss = mask ? `-webkit-mask-image:${mask}; mask-image:${mask};` : "";
-        const row3 = document.createElement("div");
-        row3.style.cssText = `display:flex; align-items:center; box-sizing:border-box; width:100%; padding:10px 16px; margin:${isFirst ? "0" : "4px"} 0 0 0; border:none; border-radius:${radius}; ${maskCss} background: linear-gradient(to right, ${color} 0%, transparent ${widthPct}%);`;
-        row3.innerHTML = `
-        <ha-icon icon="${icon}" style="color:${iconColor}; margin-right:14px; flex-shrink:0; --mdc-icon-size:26px;"></ha-icon>
-        <div style="flex:1; min-width:0;">
-          <div style="font-weight:500; color:#ffffff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${e.name || e.st && e.st.attributes.friendly_name || e.entity || ""}</div>
-          ${secondaryText ? `<div style="font-size:0.85rem; color:rgba(255,255,255,0.65);">${secondaryText}</div>` : ""}
-        </div>
-        <div style="font-weight:600; color:#ffffff; margin-left:8px; flex-shrink:0;">${e.available ? Math.round(e.val) + unit : "n/a"}</div>
-      `;
-        if (useStateIcon) {
-          const placeholder = row3.querySelector("ha-icon");
-          const stateIcon = document.createElement("ha-state-icon");
-          stateIcon.hass = hass;
-          stateIcon.stateObj = e.st;
-          stateIcon.style.cssText = placeholder.style.cssText;
-          placeholder.replaceWith(stateIcon);
-        }
-        this._rows.appendChild(row3);
-      });
-    }
-    // Rows with a secondary line are ~60px, so count them as 1.2 units.
-    getCardSize() {
-      const rows = this.config.entities || [];
-      const tall = rows.filter((e) => e.secondary || e.word).length;
-      return 1 + Math.ceil(rows.length + tall * 0.2);
-    }
-    // Sections-view defaults; the editor's Layout tab can override them.
-    getGridOptions() {
-      return { columns: 12, min_columns: 6, rows: "auto" };
-    }
-    static getConfigElement() {
-      return document.createElement(`gauge-zone-card-editor${SUFFIX}`);
-    }
-    // What a new card starts with in the card picker (and its preview).
-    // battery-zone-card: up to three real battery sensors, lowest first.
-    // gauge-zone-card: a single fixed example row to edit.
-    static getStubConfig(hass) {
-      if (this === _GaugeZoneCard) {
-        const batteries = Object.values(hass && hass.states || {}).filter((st) => st.attributes.device_class === "battery" && st.attributes.unit_of_measurement === "%" && !isNaN(parseFloat(st.state))).sort((a, b) => parseFloat(a.state) - parseFloat(b.state)).slice(0, 3).map((st) => ({ entity: st.entity_id, name: st.attributes.friendly_name || st.entity_id }));
-        return { title: "Batteries", entities: batteries };
-      }
-      return { title: "Gauge", direction: "high", entities: [{ name: "Example", value: 42 }] };
-    }
-  };
-  function registerGaugeZoneCard() {
-    if (!customElements.get(`gauge-zone-card-editor${SUFFIX}`)) {
-      customElements.define(`gauge-zone-card-editor${SUFFIX}`, GaugeZoneCardEditor);
-    }
-    if (!customElements.get(`battery-zone-card${SUFFIX}`)) {
-      customElements.define(`battery-zone-card${SUFFIX}`, GaugeZoneCard);
-    }
-    if (!customElements.get(`gauge-zone-card${SUFFIX}`)) {
-      customElements.define(`gauge-zone-card${SUFFIX}`, class extends GaugeZoneCard {
-      });
-    }
-    window.customCards = window.customCards || [];
-    window.customCards.push({
-      type: `battery-zone-card${SUFFIX}`,
-      name: `Battery Zone Card${LABEL}`,
-      description: "Zone battery status with gradient rows",
-      preview: true,
-      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
-    });
-    window.customCards.push({
-      type: `gauge-zone-card${SUFFIX}`,
-      name: `Gauge Zone Card${LABEL}`,
-      description: "Generic % / value gauge rows with gradient fill \u2014 storage, signal, humidity, CPU, anything measurable",
-      preview: true,
-      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
-    });
-  }
-
   // src/icons.js
   var cache = /* @__PURE__ */ new Map();
   var pending = /* @__PURE__ */ new Map();
@@ -1069,6 +785,290 @@
     Cls.prototype.supportsCompact = true;
   }
 
+  // src/gauge-zone-card.js
+  var GaugeZoneCardEditor = createFormEditor({
+    schema: (config) => [
+      { name: "title", selector: { text: {} } },
+      {
+        type: "expandable",
+        name: "",
+        title: "Colours, units and icons",
+        flatten: true,
+        schema: [
+          {
+            name: "direction",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "low", label: "Low value is bad (battery, signal)" },
+                  { value: "high", label: "High value is bad (storage, CPU)" }
+                ]
+              }
+            }
+          },
+          {
+            type: "grid",
+            name: "",
+            schema: [
+              { name: "alert_at", selector: { number: { mode: "box" } } },
+              { name: "warn_at", selector: { number: { mode: "box" } } },
+              { name: "unit", selector: { text: {} } },
+              { name: "max", selector: { number: { mode: "box", min: 0 } } }
+            ]
+          },
+          {
+            name: "icon_mode",
+            selector: {
+              select: {
+                mode: "dropdown",
+                options: [
+                  { value: "battery", label: "Battery (steps with the value)" },
+                  { value: "gauge", label: "Gauge" },
+                  { value: "entity", label: "Each entity's own icon" },
+                  { value: "custom", label: "Custom icon (pick below)" }
+                ]
+              }
+            }
+          },
+          ...config.icon_mode === "custom" ? [{ name: "icon", selector: { icon: {} } }] : []
+        ]
+      },
+      {
+        name: "entities",
+        selector: {
+          object: {
+            multiple: true,
+            label_field: "name",
+            description_field: "entity",
+            fields: {
+              entity: { label: "Entity", selector: { entity: {} } },
+              name: { label: "Name", required: true, selector: { text: {} } },
+              word: {
+                label: "Battery wording (shows the Battery Notes date)",
+                selector: {
+                  select: {
+                    mode: "dropdown",
+                    custom_value: true,
+                    options: ["replaced", "charged", "swapped"]
+                  }
+                }
+              },
+              secondary: { label: "Secondary text (instead of wording)", selector: { text: {} } },
+              icon: { label: "Icon override", selector: { icon: {} } },
+              value: { label: "Fixed value (instead of an entity)", selector: { number: { mode: "box" } } },
+              date: { label: "Replaced/charged date (fixed-value rows only)", selector: { date: {} } },
+              unit: { label: "Unit override", selector: { text: {} } },
+              max: { label: "Max override", selector: { number: { mode: "box", min: 0 } } }
+            }
+          }
+        }
+      }
+    ],
+    labels: {
+      title: "Title",
+      direction: "Which end is bad",
+      alert_at: "Red at",
+      warn_at: "Orange at",
+      unit: "Unit",
+      max: "Full bar value",
+      icon_mode: "Icons",
+      icon: "Icon for every row",
+      entities: "Rows"
+    },
+    helpers: {
+      alert_at: "Defaults: 20 (low is bad) / 90 (high is bad)",
+      warn_at: "Defaults: 50 (low is bad) / 75 (high is bad)",
+      unit: "Default %",
+      max: "Default 100"
+    }
+  });
+  function lczFormatDate(raw) {
+    const d = /^\d{4}-\d{2}-\d{2}/.test(raw) ? new Date(raw) : null;
+    return d && !isNaN(d) ? d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : raw;
+  }
+  var GaugeZoneCard = class _GaugeZoneCard extends HTMLElement {
+    setConfig(config) {
+      if (!config.entities) throw new Error("entities required");
+      this.config = config;
+      this._built = false;
+    }
+    _batteryIcon(pct) {
+      if (pct <= 5) return "mdi:battery-alert";
+      if (pct >= 95) return "mdi:battery";
+      const r = Math.round(pct / 10) * 10;
+      return `mdi:battery-${r}`;
+    }
+    set hass(hass) {
+      this._hass = hass;
+      const cfg = this.config;
+      const iconMode = cfg.icon_mode || (this.tagName.toLowerCase() === `battery-zone-card${SUFFIX}` ? "battery" : "gauge");
+      const direction = cfg.direction || "low";
+      const alertAt = cfg.alert_at !== void 0 ? cfg.alert_at : direction === "low" ? 20 : 90;
+      const warnAt = cfg.warn_at !== void 0 ? cfg.warn_at : direction === "low" ? 50 : 75;
+      const cardUnit = cfg.unit !== void 0 ? cfg.unit : "%";
+      const cardMax = cfg.max || 100;
+      if (!this._built) {
+        this.innerHTML = `
+        <ha-card style="border:none; box-shadow: 0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; background:${KIT_CARD_BG}; -webkit-backdrop-filter:var(--cd-card-filter, none); backdrop-filter:var(--cd-card-filter, none);">
+          <div class="bzc-title" style="padding:16px 16px 8px 16px; font-size:1.5rem; font-weight:500; color: var(--primary-text-color);">${cfg.title || ""}</div>
+          <div class="bzc-rows" style="padding:0; margin:0;"></div>
+        </ha-card>`;
+        this._rows = this.querySelector(".bzc-rows");
+        this._built = true;
+      }
+      this._rows.innerHTML = "";
+      const entries = cfg.entities.map((e) => {
+        const literal = e.value !== void 0 ? e.value : e.demo_pct;
+        if (literal !== void 0) {
+          const available2 = literal >= 0;
+          return { ...e, val: available2 ? literal : -1, available: available2, demo: true };
+        }
+        const st = hass.states[e.entity];
+        const raw = st ? parseFloat(st.state) : NaN;
+        const available = st && !["unknown", "unavailable"].includes(st.state) && !isNaN(raw);
+        return { ...e, st, val: available ? raw : -1, available };
+      });
+      entries.sort((a, b) => direction === "low" ? a.val - b.val : b.val - a.val);
+      entries.forEach((e, i) => {
+        const val = e.available ? e.val : 0;
+        const max = e.max || cardMax;
+        const widthPct = Math.min(Math.max(val / max * 100, 0), 100);
+        const unit = e.unit !== void 0 ? e.unit : cardUnit;
+        let colorState;
+        if (direction === "low") {
+          colorState = val <= alertAt ? "red" : val <= warnAt ? "orange" : "green";
+        } else {
+          colorState = val >= alertAt ? "red" : val >= warnAt ? "orange" : "green";
+        }
+        const color = { red: "var(--error-color, #db4437)", orange: "var(--warning-color, #ff9800)", green: "var(--success-color, #43a047)" }[colorState];
+        const unavailableColor = "#9e9e9e";
+        let iconColor;
+        if (!e.available) {
+          iconColor = unavailableColor;
+        } else if (colorState === "red" && (direction === "low" ? val <= 0 : val >= max)) {
+          iconColor = color;
+        } else {
+          iconColor = "#ffffff";
+        }
+        let dateStr = null;
+        if (e.demo) {
+          const raw = e.date || e.demo_date;
+          dateStr = raw ? lczFormatDate(raw) : "unknown";
+        } else {
+          const replaced = e.st && e.st.attributes ? e.st.attributes.battery_last_replaced : null;
+          if (replaced) {
+            const d = new Date(replaced);
+            dateStr = d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+          } else if (e.word) {
+            dateStr = "unknown";
+          }
+        }
+        let secondaryText = e.secondary;
+        if (secondaryText === void 0) {
+          secondaryText = e.word ? `${e.word} ${dateStr}` : "";
+        }
+        let icon;
+        let useStateIcon = false;
+        if (e.icon) {
+          icon = e.icon;
+        } else if (iconMode === "battery") {
+          icon = this._batteryIcon(e.available ? e.val : 0);
+        } else if (iconMode === "custom" && cfg.icon) {
+          icon = cfg.icon;
+        } else if (iconMode === "entity" && e.st) {
+          const entry = hass.entities && hass.entities[e.entity];
+          icon = entry && entry.icon || e.st.attributes.icon;
+          useStateIcon = !icon && !!customElements.get("ha-state-icon");
+          icon = icon || "mdi:gauge";
+        } else {
+          icon = "mdi:gauge";
+        }
+        const isFirst = i === 0;
+        const isLast = i === entries.length - 1;
+        let mask = null;
+        if (!isFirst && !isLast) {
+          mask = "linear-gradient(to bottom, transparent 0%, black 2%, black 98%, transparent 100%)";
+        } else if (!isFirst && isLast) {
+          mask = "linear-gradient(to bottom, transparent 0%, black 2%, black 100%)";
+        } else if (isFirst && !isLast) {
+          mask = "linear-gradient(to bottom, black 0%, black 98%, transparent 100%)";
+        }
+        const radius = `${isFirst ? "16px 16px" : "0 0"} ${isLast ? "16px 16px" : "0 0"}`;
+        const maskCss = mask ? `-webkit-mask-image:${mask}; mask-image:${mask};` : "";
+        const row3 = document.createElement("div");
+        row3.style.cssText = `display:flex; align-items:center; box-sizing:border-box; width:100%; padding:10px 16px; margin:${isFirst ? "0" : "4px"} 0 0 0; border:none; border-radius:${radius}; ${maskCss} background: linear-gradient(to right, ${color} 0%, transparent ${widthPct}%);`;
+        row3.innerHTML = `
+        <ha-icon icon="${icon}" style="color:${iconColor}; margin-right:14px; flex-shrink:0; --mdc-icon-size:26px;"></ha-icon>
+        <div style="flex:1; min-width:0;">
+          <div style="font-weight:500; color:#ffffff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${e.name || e.st && e.st.attributes.friendly_name || e.entity || ""}</div>
+          ${secondaryText ? `<div style="font-size:0.85rem; color:rgba(255,255,255,0.65);">${secondaryText}</div>` : ""}
+        </div>
+        <div style="font-weight:600; color:#ffffff; margin-left:8px; flex-shrink:0;">${e.available ? Math.round(e.val) + unit : "n/a"}</div>
+      `;
+        if (useStateIcon) {
+          const placeholder = row3.querySelector("ha-icon");
+          const stateIcon = document.createElement("ha-state-icon");
+          stateIcon.hass = hass;
+          stateIcon.stateObj = e.st;
+          stateIcon.style.cssText = placeholder.style.cssText;
+          placeholder.replaceWith(stateIcon);
+        }
+        this._rows.appendChild(row3);
+      });
+    }
+    // Rows with a secondary line are ~60px, so count them as 1.2 units.
+    getCardSize() {
+      const rows = this.config.entities || [];
+      const tall = rows.filter((e) => e.secondary || e.word).length;
+      return 1 + Math.ceil(rows.length + tall * 0.2);
+    }
+    // Sections-view defaults; the editor's Layout tab can override them.
+    getGridOptions() {
+      return { columns: 12, min_columns: 6, rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement(`gauge-zone-card-editor${SUFFIX}`);
+    }
+    // What a new card starts with in the card picker (and its preview).
+    // battery-zone-card: up to three real battery sensors, lowest first.
+    // gauge-zone-card: a single fixed example row to edit.
+    static getStubConfig(hass) {
+      if (this === _GaugeZoneCard) {
+        const batteries = Object.values(hass && hass.states || {}).filter((st) => st.attributes.device_class === "battery" && st.attributes.unit_of_measurement === "%" && !isNaN(parseFloat(st.state))).sort((a, b) => parseFloat(a.state) - parseFloat(b.state)).slice(0, 3).map((st) => ({ entity: st.entity_id, name: st.attributes.friendly_name || st.entity_id }));
+        return { title: "Batteries", entities: batteries };
+      }
+      return { title: "Gauge", direction: "high", entities: [{ name: "Example", value: 42 }] };
+    }
+  };
+  function registerGaugeZoneCard() {
+    if (!customElements.get(`gauge-zone-card-editor${SUFFIX}`)) {
+      customElements.define(`gauge-zone-card-editor${SUFFIX}`, GaugeZoneCardEditor);
+    }
+    if (!customElements.get(`battery-zone-card${SUFFIX}`)) {
+      customElements.define(`battery-zone-card${SUFFIX}`, GaugeZoneCard);
+    }
+    if (!customElements.get(`gauge-zone-card${SUFFIX}`)) {
+      customElements.define(`gauge-zone-card${SUFFIX}`, class extends GaugeZoneCard {
+      });
+    }
+    window.customCards = window.customCards || [];
+    window.customCards.push({
+      type: `battery-zone-card${SUFFIX}`,
+      name: `Battery Zone Card${LABEL}`,
+      description: "Zone battery status with gradient rows",
+      preview: true,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
+    });
+    window.customCards.push({
+      type: `gauge-zone-card${SUFFIX}`,
+      name: `Gauge Zone Card${LABEL}`,
+      description: "Generic % / value gauge rows with gradient fill \u2014 storage, signal, humidity, CPU, anything measurable",
+      preview: true,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
+    });
+  }
+
   // src/alarm-panel-card.js
   var APC_STATE_OPTIONS = [
     { value: "disarmed", label: "Disarmed" },
@@ -1156,7 +1156,7 @@
     }
     _build() {
       this.innerHTML = `
-      <ha-card class="apc-card" style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; padding:16px; background:var(--card-background-color); transition:background-color .8s ease;">
+      <ha-card class="apc-card" style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; padding:16px; background:${KIT_CARD_BG}; -webkit-backdrop-filter:var(--cd-card-filter, none); backdrop-filter:var(--cd-card-filter, none); transition:background-color .8s ease;">
         <style>
           .apc-btn { position:relative; overflow:hidden; flex:1 1 0; min-width:0; height:56px; border:none; border-radius:12px; cursor:pointer;
             display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:0 4px;
@@ -1339,7 +1339,7 @@
       let tint = 0;
       if (this._stateName === "triggered") tint = 32;
       else if (counting) tint = Math.round(6 + 26 * (1 - frac));
-      this._card.style.backgroundColor = tint ? `color-mix(in srgb, ${this._color} ${tint}%, var(--card-background-color))` : "var(--card-background-color)";
+      this._card.style.backgroundColor = tint ? `color-mix(in srgb, ${this._color} ${tint}%, ${KIT_CARD_BG})` : KIT_CARD_BG;
     }
     // Same size in every state: title, ring row and buttons.
     getCardSize() {
@@ -2715,7 +2715,7 @@
       }
       if (!this._built) {
         this.innerHTML = `
-        <ha-card style="border:none; box-shadow: 0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; background: var(--card-background-color); padding:16px 16px 14px 16px;">
+        <ha-card style="border:none; box-shadow: 0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; background:${KIT_CARD_BG}; -webkit-backdrop-filter:var(--cd-card-filter, none); backdrop-filter:var(--cd-card-filter, none); padding:16px 16px 14px 16px;">
           <style>
             @keyframes lcc-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
             .lcc-playing { animation: lcc-pulse 1.6s ease-in-out infinite; }
@@ -2942,7 +2942,7 @@
       const styled = new Set((cfg.styles || []).map((s) => s && s.scene && sceneKey(s.scene)).filter(Boolean));
       const names = sceneNames(this._hass, cfg.styles).filter((n) => !cfg.only_home || n.inHome || styled.has(n.key));
       this.innerHTML = `
-      <ha-card style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; background:var(--card-background-color); padding:16px;">
+      <ha-card style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; background:${KIT_CARD_BG}; -webkit-backdrop-filter:var(--cd-card-filter, none); backdrop-filter:var(--cd-card-filter, none); padding:16px;">
         <style>
           .ssc-grid { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px; margin-top:12px; }
           .ssc-tile { position:relative; container-type:inline-size; aspect-ratio:1 / 1; border-radius:14px; overflow:hidden; }
@@ -3097,7 +3097,7 @@
       const cfg = this.config || {};
       const d = this._draft;
       this.innerHTML = `
-      <ha-card style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; background:var(--card-background-color); padding:16px; color:var(--primary-text-color);">
+      <ha-card style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; background:${KIT_CARD_BG}; -webkit-backdrop-filter:var(--cd-card-filter, none); backdrop-filter:var(--cd-card-filter, none); padding:16px; color:var(--primary-text-color);">
         <style>
           .sbc-row { display:flex; align-items:center; gap:12px; padding:8px; border-radius:12px; background:rgba(127,127,127,0.08); margin-top:8px; }
           .sbc-sw { width:44px; height:44px; border-radius:10px; flex:none; display:flex; align-items:center; justify-content:center; color:#fff; }
@@ -4777,7 +4777,7 @@
     }
     _build() {
       this.innerHTML = `
-      <ha-card class="cc-card" style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; padding:16px; background:var(--card-background-color); transition:background-color .6s ease; display:flex; flex-direction:column; gap:12px;">
+      <ha-card class="cc-card" style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; padding:16px; background:${KIT_CARD_BG}; -webkit-backdrop-filter:var(--cd-card-filter, none); backdrop-filter:var(--cd-card-filter, none); transition:background-color .6s ease; display:flex; flex-direction:column; gap:12px;">
         <style>
           .cc-btn { position:relative; overflow:hidden; flex:1 1 0; min-width:0; height:48px; border:none; border-radius:12px; cursor:pointer;
             background:rgba(127,127,127,0.16); color:var(--primary-text-color); font:inherit; font-size:26px; line-height:1; }
@@ -4908,7 +4908,7 @@
       const s = this._status(v);
       const a = v.a;
       this._color = s.color;
-      e.card.style.backgroundColor = s.tint ? `color-mix(in srgb, ${s.color} ${s.tint}%, var(--card-background-color))` : "var(--card-background-color)";
+      e.card.style.backgroundColor = s.tint ? `color-mix(in srgb, ${s.color} ${s.tint}%, ${KIT_CARD_BG})` : KIT_CARD_BG;
       e.title.textContent = cfg.name || a.friendly_name || cfg.entity;
       e.title.style.color = s.color;
       e.word.textContent = s.word + (this._demo ? " \xB7 demo" : "");

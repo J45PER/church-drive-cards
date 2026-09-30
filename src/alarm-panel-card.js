@@ -3,7 +3,7 @@
 
 import { createFormEditor } from './form-editor.js';
 import { SUFFIX, LABEL } from './suffix.js';
-import { kitCompact, kitCompactable } from './card-kit.js';
+import { kitCompact, kitCompactable, KIT_CARD_BG } from './card-kit.js';
 
 const APC_STATE_OPTIONS = [
   { value: 'disarmed', label: 'Disarmed' },
@@ -109,7 +109,7 @@ export class AlarmPanelCard extends HTMLElement {
 
   _build() {
     this.innerHTML = `
-      <ha-card class="apc-card" style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; padding:16px; background:var(--card-background-color); transition:background-color .8s ease;">
+      <ha-card class="apc-card" style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; overflow:hidden; padding:16px; background:${KIT_CARD_BG}; -webkit-backdrop-filter:var(--cd-card-filter, none); backdrop-filter:var(--cd-card-filter, none); transition:background-color .8s ease;">
         <style>
           .apc-btn { position:relative; overflow:hidden; flex:1 1 0; min-width:0; height:56px; border:none; border-radius:12px; cursor:pointer;
             display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:0 4px;
@@ -313,8 +313,8 @@ export class AlarmPanelCard extends HTMLElement {
     if (this._stateName === 'triggered') tint = 32;
     else if (counting) tint = Math.round(6 + 26 * (1 - frac));
     this._card.style.backgroundColor = tint
-      ? `color-mix(in srgb, ${this._color} ${tint}%, var(--card-background-color))`
-      : 'var(--card-background-color)';
+      ? `color-mix(in srgb, ${this._color} ${tint}%, ${KIT_CARD_BG})`
+      : KIT_CARD_BG;
   }
 
   // Same size in every state: title, ring row and buttons.

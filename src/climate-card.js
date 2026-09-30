@@ -18,7 +18,7 @@ import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { stcColor } from './section-title-card.js';
 import { SUFFIX, LABEL } from './suffix.js';
-import { kitScrub, kitSmooth, kitPath, kitHealthBanner, KIT_HEALTH_CSS, kitCompact, kitCompactable } from './card-kit.js';
+import { kitScrub, kitSmooth, kitPath, kitHealthBanner, KIT_HEALTH_CSS, kitCompact, kitCompactable, KIT_CARD_BG } from './card-kit.js';
 import { CZ_TYPES } from './climate-zone-card.js';
 
 const CC_MAX_QUICK = 5;
@@ -293,7 +293,7 @@ export class ClimateCard extends HTMLElement {
 
   _build() {
     this.innerHTML = `
-      <ha-card class="cc-card" style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; padding:16px; background:var(--card-background-color); transition:background-color .6s ease; display:flex; flex-direction:column; gap:12px;">
+      <ha-card class="cc-card" style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; padding:16px; background:${KIT_CARD_BG}; -webkit-backdrop-filter:var(--cd-card-filter, none); backdrop-filter:var(--cd-card-filter, none); transition:background-color .6s ease; display:flex; flex-direction:column; gap:12px;">
         <style>
           .cc-btn { position:relative; overflow:hidden; flex:1 1 0; min-width:0; height:48px; border:none; border-radius:12px; cursor:pointer;
             background:rgba(127,127,127,0.16); color:var(--primary-text-color); font:inherit; font-size:26px; line-height:1; }
@@ -417,7 +417,7 @@ export class ClimateCard extends HTMLElement {
     const s = this._status(v);
     const a = v.a;
     this._color = s.color;
-    e.card.style.backgroundColor = s.tint ? `color-mix(in srgb, ${s.color} ${s.tint}%, var(--card-background-color))` : 'var(--card-background-color)';
+    e.card.style.backgroundColor = s.tint ? `color-mix(in srgb, ${s.color} ${s.tint}%, ${KIT_CARD_BG})` : KIT_CARD_BG;
     e.title.textContent = cfg.name || a.friendly_name || cfg.entity;
     e.title.style.color = s.color;
     e.word.textContent = s.word + (this._demo ? ' · demo' : '');

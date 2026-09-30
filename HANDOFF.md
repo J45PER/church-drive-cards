@@ -266,6 +266,13 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
         `empty_when: states(todo…) == 0`.
       - Tested: with no house tasks the order became My to-do > Shared > From the
         house, and it went back when a task appeared.
+    - Consistency pass: the alarm, climate, light control, gauge/battery zone,
+      scene builder and scene styles cards drew their own solid
+      `var(--card-background-color)` surface, so they (and the alarm/climate
+      status tints) weren't frosted when a panel was open. They now use
+      `KIT_CARD_BG` plus `backdrop-filter: var(--cd-card-filter, none)`, like
+      `kitShell`. A card outside a panel still falls back to the normal solid
+      colour.
     - Header widget To-do button: no "›"; the text matches the icon's lilac
       (#b39ddb), reading "+N more" or "To-do"; 22px icon; aria-label.
   - Mobile is on `-beta` cards again for testing; strip them on release. Mock-up:
