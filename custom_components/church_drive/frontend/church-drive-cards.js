@@ -2456,9 +2456,9 @@
       const track = "rgba(255,255,255,0.06)";
       const row3 = document.createElement("div");
       row3.className = "lcc-row";
-      const pad = level > 0 ? "9px 14px" : "12px 14px";
+      const pad2 = level > 0 ? "9px 14px" : "12px 14px";
       const indent = level > 0 ? `margin-left:${16 * level}px;` : "";
-      row3.style.cssText = `position:relative; display:flex; align-items:center; gap:12px; padding:${pad}; ${indent} border-radius:12px; margin-top:6px; overflow:hidden; cursor:pointer; user-select:none; touch-action:pan-y; background: linear-gradient(to right, ${tint} 0%, ${tint} ${fillPct}%, ${track} ${fillPct}%, ${track} 100%);`;
+      row3.style.cssText = `position:relative; display:flex; align-items:center; gap:12px; padding:${pad2}; ${indent} border-radius:12px; margin-top:6px; overflow:hidden; cursor:pointer; user-select:none; touch-action:pan-y; background: linear-gradient(to right, ${tint} 0%, ${tint} ${fillPct}%, ${track} ${fillPct}%, ${track} 100%);`;
       row3.innerHTML = `
       ${iconHtml(icon, { size: "24px", cls: "lcc-row-icon", style: `color:${on ? color : "var(--secondary-text-color)"}; opacity:${on ? 1 : 0.6}; flex-shrink:0; pointer-events:none;` })}
       <div class="lcc-name" style="flex:1; min-width:0; font-weight:${on ? 600 : 400}; color:${on ? "var(--primary-text-color)" : "var(--secondary-text-color)"}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; pointer-events:none;">${name}</div>
@@ -6102,11 +6102,11 @@
       if (high) warn.innerHTML = `${iconHtml("mdi:alert", { size: "24px" })}<span>Carbon monoxide found. Get everyone outside and open doors and windows.</span>`;
       this.querySelector(".co-gauge").innerHTML = kitGauge(d.ppm == null ? 0 : Math.max(0.02, d.ppm / 100), color, d.ppm == null ? "\u2013" : String(Math.round(d.ppm)), "ppm CO");
       const when2 = d.report && !isNaN(Date.parse(d.report)) ? new Date(d.report) : null;
-      const whenText = when2 ? when2.toLocaleString(void 0, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+      const whenText2 = when2 ? when2.toLocaleString(void 0, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
       this.querySelector(".co-info").innerHTML = [
         `<span>${iconHtml(high ? "mdi:alert-circle" : "mdi:shield-check", { size: "18px", style: `color:${color};` })}${high ? "CO detected" : "No CO detected"}</span>`,
         d.battery != null ? `<span>${iconHtml(d.battery < 20 ? "mdi:battery-alert" : "mdi:battery", { size: "18px", style: `color:${d.battery < 20 ? KIT_COLOR.bad : KIT_COLOR.good};` })}Battery ${Math.round(d.battery)}%</span>` : "",
-        whenText ? `<span>${iconHtml("mdi:clock-outline", { size: "18px" })}Reported ${whenText}</span>` : ""
+        whenText2 ? `<span>${iconHtml("mdi:clock-outline", { size: "18px" })}Reported ${whenText2}</span>` : ""
       ].join("");
       const buttons = c.show_buttons === false ? [] : [
         ...this._demo || c.test_entity ? [{ key: "test", name: "Hold to test", icon: "mdi:bell-ring", color: KIT_COLOR.good, hold: true }] : [],
@@ -7462,6 +7462,401 @@
     });
   }
 
+  // src/cleaning-schedule-card.js
+  var CLEANING_LIST = "todo.cleaning";
+  function choreIcon(name) {
+    const n = String(name || "").toLowerCase();
+    if (/hoover|vacuum/.test(n)) return "mdi:vacuum-outline";
+    if (/bath|shower|en-?suite/.test(n)) return "mdi:shower";
+    if (/toilet|loo/.test(n)) return "mdi:toilet";
+    if (/sheet|bed/.test(n)) return "mdi:bed-outline";
+    if (/mop|floor/.test(n)) return "mdi:spray-bottle";
+    if (/dust|polish/.test(n)) return "mdi:feather";
+    if (/kitchen|oven|hob|fridge/.test(n)) return "mdi:countertop-outline";
+    if (/window|glass|mirror/.test(n)) return "mdi:window-closed-variant";
+    if (/bin|rubbish|recycl/.test(n)) return "mdi:trash-can-outline";
+    if (/wash|laundry|towel/.test(n)) return "mdi:washing-machine";
+    if (/garden|lawn|mow|weed/.test(n)) return "mdi:flower-outline";
+    return "mdi:broom";
+  }
+  var DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  var DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  var pad = (n) => String(n).padStart(2, "0");
+  function parseChore(description) {
+    const parts = String(description || "").split(" \xB7 ");
+    const slots = [];
+    String(parts[0] || "").split(",").map((x) => x.trim()).forEach((x) => {
+      const every2 = x.match(/^every day (\d{1,2}):(\d{2})$/i);
+      if (every2) {
+        DAYS.forEach((_, d) => slots.push([d, `${pad(every2[1])}:${every2[2]}`]));
+        return;
+      }
+      const m = x.match(/^(mon|tue|wed|thu|fri|sat|sun)[a-z]* (\d{1,2}):(\d{2})$/i);
+      if (m) slots.push([DAYS.findIndex((d) => d.toLowerCase() === m[1].toLowerCase()), `${pad(m[2])}:${m[3]}`]);
+    });
+    const tail = String(parts[1] || "").trim();
+    let who = "none";
+    if (/^for everyone$/i.test(tail)) who = "everyone";
+    else if (/^for /i.test(tail)) who = tail.slice(4).split(",").map((x) => x.trim()).filter(Boolean);
+    return { slots, who, valid: slots.length > 0 };
+  }
+  function formatChore(slots, who) {
+    const sorted = [...slots].sort((a, b) => a[0] - b[0] || a[1].localeCompare(b[1]));
+    const same2 = sorted.length === 7 && new Set(sorted.map((s) => s[0])).size === 7 && new Set(sorted.map((s) => s[1])).size === 1;
+    const when2 = same2 ? `Every day ${sorted[0][1]}` : sorted.map(([d, t]) => `${DAYS[d]} ${t}`).join(", ");
+    const whom = who === "everyone" ? "for everyone" : Array.isArray(who) && who.length ? `for ${who.join(", ")}` : "no reminders";
+    return `${when2} \xB7 ${whom}`;
+  }
+  function nextDue(slots, from = /* @__PURE__ */ new Date()) {
+    let best = null;
+    for (let add = 0; add <= 7; add += 1) {
+      const day = new Date(from.getFullYear(), from.getMonth(), from.getDate() + add);
+      const wd = (day.getDay() + 6) % 7;
+      slots.filter(([d]) => d === wd).forEach(([, t]) => {
+        const [h, m] = t.split(":").map(Number);
+        const at = new Date(day.getFullYear(), day.getMonth(), day.getDate(), h, m);
+        if (at > from && (!best || at < best)) best = at;
+      });
+      if (best) break;
+    }
+    return best;
+  }
+  var localStamp = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
+  function summarise(slots) {
+    if (!slots.length) return "No schedule yet";
+    const byTime = {};
+    slots.forEach(([d, t]) => (byTime[t] = byTime[t] || []).push(d));
+    return Object.keys(byTime).sort().map((t) => {
+      const days = byTime[t].sort((a, b) => a - b);
+      return `${days.length === 7 ? "Every day" : days.map((d) => DAYS[d]).join(", ")} ${t}`;
+    }).join(" \xB7 ");
+  }
+  function whenText(due) {
+    if (!due) return "";
+    const d = new Date(String(due).includes("T") ? due : `${due}T23:59:59`);
+    const now = /* @__PURE__ */ new Date();
+    const day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+    const days = Math.round((day(d) - day(now)) / 864e5);
+    const time = String(due).includes("T") ? ` ${pad(d.getHours())}:${pad(d.getMinutes())}` : "";
+    if (d < now) return days < 0 ? `${-days} day${days === -1 ? "" : "s"} overdue` : "due now";
+    if (days === 0) return `today${time}`;
+    if (days === 1) return `tomorrow${time}`;
+    if (days < 7) return `${DAY_NAMES[(d.getDay() + 6) % 7]}${time}`;
+    return `${d.getDate()} ${d.toLocaleDateString([], { month: "short" })}`;
+  }
+  function csDemo() {
+    const now = Date.now();
+    const iso = (ms) => new Date(ms).toISOString();
+    return [
+      { uid: "d1", summary: "Hoover upstairs", status: "needs_action", due: iso(now + 3 * 36e5), description: "Mon 09:00, Thu 18:30 \xB7 for Hayley" },
+      { uid: "d2", summary: "Clean bathrooms", status: "needs_action", due: iso(now - 26 * 36e5), description: "Fri 18:00 \xB7 for everyone" },
+      { uid: "d3", summary: "Change bed sheets", status: "needs_action", due: iso(now + 4 * 864e5), description: "Sat 10:00 \xB7 no reminders" }
+    ];
+  }
+  var CS_CSS = `
+  .cs-add[hidden], .cs-form[hidden] { display:none; }
+  .cs-row { display:flex; align-items:center; gap:10px; padding:9px 4px; border-radius:12px; cursor:pointer; }
+  .cs-row + .cs-row { border-top:1px solid var(--divider-color, rgba(127,127,127,0.22)); }
+  .cs-row:hover { background:rgba(127,127,127,0.08); }
+  .cs-row:focus-visible, .cs-form button:focus-visible, .cs-form input:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
+  .cs-name { font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .cs-when { flex:none; font-size:0.78rem; font-weight:600; white-space:nowrap; }
+  .cs-add { align-self:flex-start; border:none; border-radius:12px; padding:9px 14px; font:inherit; font-size:0.85rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; }
+  .cs-form { display:flex; flex-direction:column; gap:12px; padding:12px; border-radius:14px; background:rgba(127,127,127,0.1); }
+  .cs-form label.cs-l { display:flex; flex-direction:column; gap:6px; font-size:0.8rem; color:var(--secondary-text-color); }
+  .cs-form input[type=text], .cs-form input[type=time] { box-sizing:border-box; padding:8px 10px; border-radius:10px; border:1px solid var(--divider-color, rgba(127,127,127,0.3)); background:var(--card-background-color); color:var(--primary-text-color); font:inherit; font-size:0.95rem; }
+  .cs-form input[type=time] { color-scheme:dark light; min-width:0; }
+  .cs-chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .cs-chip { border:none; border-radius:999px; padding:7px 12px; font:inherit; font-size:0.82rem; font-weight:600; cursor:pointer; background:rgba(127,127,127,0.18); color:var(--primary-text-color); }
+  .cs-chip[aria-pressed="true"] { color:#fff; }
+  .cs-times { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:6px 10px; }
+  .cs-time { display:flex; align-items:center; gap:8px; font-size:0.85rem; }
+  .cs-time span { width:2.6em; flex:none; font-weight:600; }
+  .cs-time input { flex:1; }
+  .cs-buttons { display:flex; flex-wrap:wrap; gap:8px; }
+  .cs-buttons button { border:none; border-radius:10px; padding:9px 14px; font:inherit; font-size:0.85rem; font-weight:600; cursor:pointer; }
+  .cs-msg { font-size:0.8rem; color:#ffa726; min-height:1em; }
+  .cs-link { border:none; background:none; padding:0; font:inherit; font-size:0.78rem; color:var(--secondary-text-color); text-decoration:underline; cursor:pointer; }
+`;
+  var CleaningScheduleCardEditor = createFormEditor({
+    schema: () => [
+      { name: "title", selector: { text: {} } },
+      { name: "entity", selector: { entity: { domain: "todo" } } },
+      { name: "color", selector: { ui_color: {} } },
+      { name: "demo", selector: { boolean: {} } }
+    ],
+    labels: {
+      title: "Title (optional)",
+      entity: "To-do list",
+      color: "Colour",
+      demo: "Show pretend jobs (for Design Presets; saving is switched off)"
+    },
+    helpers: {
+      entity: `Defaults to ${CLEANING_LIST}. Each job is one item on it; the schedule is kept in the item's description, and the "Church Drive: cleaning schedule" automation sends the reminders.`,
+      color: "Default blue (#2196f3)."
+    }
+  });
+  var CleaningScheduleCard = class extends HTMLElement {
+    setConfig(config) {
+      this.config = config || {};
+      this._built = false;
+      this._sig = null;
+      this._edit = null;
+      if (this._unsub) this._unwatch();
+      if (this._hass) this._watch();
+    }
+    set hass(hass) {
+      this._hass = hass;
+      this._watch();
+      this._render();
+    }
+    connectedCallback() {
+      if (this._hass) this._watch();
+    }
+    disconnectedCallback() {
+      this._unwatch();
+    }
+    _entity() {
+      return this.config.entity || CLEANING_LIST;
+    }
+    _colour() {
+      return this.config.color || "#2196f3";
+    }
+    _watch() {
+      if (this.config.demo || this._unsub || !this.isConnected || !this._hass || !this._hass.states[this._entity()]) return;
+      this._unsub = this._hass.connection.subscribeMessage(
+        (msg) => {
+          this._items = msg && msg.items || [];
+          this._render();
+        },
+        { type: "todo/item/subscribe", entity_id: this._entity() }
+      ).catch(() => null);
+    }
+    _unwatch() {
+      if (this._unsub) this._unsub.then((u) => u && u()).catch(() => {
+      });
+      this._unsub = null;
+      this._items = null;
+    }
+    // First names of everyone with a person entity, for "who gets reminded".
+    _people() {
+      const s = this._hass && this._hass.states || {};
+      return Object.keys(s).filter((id) => id.startsWith("person.")).map((id) => String(s[id].attributes.friendly_name || id.slice(7)).split(" ")[0]).sort();
+    }
+    _jobs() {
+      const items = this.config.demo ? this._demo || (this._demo = csDemo()) : this._items || [];
+      const rank = (t) => t.due ? new Date(String(t.due).includes("T") ? t.due : `${t.due}T23:59:59`).getTime() : Infinity;
+      return items.filter((t) => t.status === "needs_action" || parseChore(t.description).valid).map((t, n) => ({ t, n, p: parseChore(t.description) })).sort((a, b) => rank(a.t) - rank(b.t) || a.n - b.n);
+    }
+    _render() {
+      if (!this._hass) return;
+      const c = this.config;
+      const colour = this._colour();
+      if (!this._built) {
+        this.innerHTML = kitShell(`<div class="cs-list" style="display:flex; flex-direction:column;"></div><div class="cs-form" hidden></div><button type="button" class="cs-add"></button>`, CS_CSS);
+        this._list = this.querySelector(".cs-list");
+        this._form = this.querySelector(".cs-form");
+        this._addBtn = this.querySelector(".cs-add");
+        this._addBtn.addEventListener("click", () => this._open(null));
+        this._list.addEventListener("click", (ev) => {
+          const row3 = ev.target.closest("[data-uid]");
+          if (row3) this._open(row3.dataset.uid);
+        });
+        this._list.addEventListener("keydown", (ev) => {
+          const row3 = ev.target.closest("[data-uid]");
+          if (row3 && (ev.key === "Enter" || ev.key === " ")) {
+            ev.preventDefault();
+            this._open(row3.dataset.uid);
+          }
+        });
+        this._built = true;
+      }
+      const missing = !c.demo && !this._hass.states[this._entity()];
+      const jobs = missing ? [] : this._jobs();
+      const late = jobs.filter(({ t }) => t.status === "needs_action" && t.due && whenText(t.due).includes("overdue")).length;
+      kitHead(this, c.title || "Cleaning schedule", missing ? "Not set up" : late ? `${late} overdue` : `${jobs.length} job${jobs.length === 1 ? "" : "s"}`, late ? "#e53935" : colour);
+      this._addBtn.style.background = `color-mix(in srgb, ${colour} 22%, transparent)`;
+      this._addBtn.style.color = `color-mix(in srgb, ${colour} 45%, white)`;
+      this._addBtn.innerHTML = `${iconHtml("mdi:plus", { size: "18px" })}Add a job`;
+      this._addBtn.hidden = missing || !!this._edit;
+      const sig = JSON.stringify([jobs.map(({ t }) => [t.uid, t.summary, t.description, t.due, t.status]), missing, colour, this._edit ? this._edit.uid : null]);
+      if (sig !== this._sig) {
+        this._sig = sig;
+        if (missing) {
+          this._list.innerHTML = `<div class="ck-sub" style="line-height:1.5;">There's no ${kitEsc(this._entity())} list yet. Add a Local To-do list named "Cleaning".</div>`;
+        } else if (!jobs.length) {
+          this._list.innerHTML = `<div class="ck-sub" style="line-height:1.5;">No jobs yet. Add one, choose its days and times, and who gets reminded.</div>`;
+        } else {
+          this._list.innerHTML = jobs.map(({ t, p }) => {
+            const when2 = t.status === "needs_action" ? whenText(t.due) : "";
+            const over = when2.includes("overdue");
+            const who = p.who === "everyone" ? "Everyone" : Array.isArray(p.who) ? p.who.join(", ") : "No reminders";
+            return `<div class="cs-row" data-uid="${kitEsc(t.uid)}" role="button" tabindex="0" aria-label="Change ${kitEsc(t.summary)}">
+              ${iconHtml(choreIcon(t.summary), { size: "22px", style: `color:${over ? "#e53935" : colour}; flex:none;` })}
+              <div style="flex:1; min-width:0;">
+                <div class="cs-name">${kitEsc(t.summary)}</div>
+                <div class="ck-sub" style="font-size:0.74rem; line-height:1.35;">${kitEsc(summarise(p.slots))} \xB7 ${kitEsc(who)}</div>
+              </div>
+              <span class="cs-when" style="color:${over ? "#e53935" : "var(--secondary-text-color)"};">${kitEsc(when2)}</span>
+            </div>`;
+          }).join("");
+        }
+        hydrateIcons(this._list);
+      }
+      hydrateIcons(this._addBtn);
+    }
+    // The add/change form. uid null = a new job.
+    _open(uid) {
+      const job = uid ? this._jobs().find(({ t }) => t.uid === uid) : null;
+      const p = job ? job.p : { slots: [], who: "none" };
+      const times = {};
+      p.slots.forEach(([d, t]) => times[d] = times[d] || t);
+      this._edit = { uid, name: job ? job.t.summary : "", times, who: p.who === "everyone" ? "everyone" : Array.isArray(p.who) ? [...p.who] : "none" };
+      this._drawForm();
+      this._sig = null;
+      this._render();
+      const name = this._form.querySelector(".cs-f-name");
+      if (name && !uid) name.focus();
+    }
+    _close() {
+      this._edit = null;
+      this._form.hidden = true;
+      this._form.innerHTML = "";
+      this._sig = null;
+      this._render();
+    }
+    _drawForm() {
+      const e = this._edit;
+      const colour = this._colour();
+      const on = `background:${colour};`;
+      const people = this._people();
+      const whoIs = (x) => x === "everyone" ? e.who === "everyone" : x === "none" ? e.who === "none" : Array.isArray(e.who) && e.who.includes(x);
+      const chosen = Object.keys(e.times).map(Number).sort((a, b) => a - b);
+      this._form.hidden = false;
+      this._form.innerHTML = `
+      <label class="cs-l">Job<input type="text" class="cs-f-name" maxlength="60" placeholder="e.g. Hoover upstairs" value="${kitEsc(e.name)}"></label>
+      <div class="cs-l" style="display:flex; flex-direction:column; gap:6px; font-size:0.8rem; color:var(--secondary-text-color);">Repeats on
+        <div class="cs-chips" role="group" aria-label="Days">${DAYS.map((d, i) => `<button type="button" class="cs-chip" data-day="${i}" aria-pressed="${i in e.times}" style="${i in e.times ? on : ""}">${d}</button>`).join("")}</div>
+      </div>
+      ${chosen.length ? `<div class="cs-l" style="display:flex; flex-direction:column; gap:6px; font-size:0.8rem; color:var(--secondary-text-color);">
+              <span style="display:flex; flex-wrap:wrap; gap:4px 12px;">Times${chosen.length > 1 ? `<button type="button" class="cs-link cs-same">Use ${DAYS[chosen[0]]}'s time for all</button>` : ""}</span>
+              <div class="cs-times">${chosen.map((d) => `<label class="cs-time"><span>${DAYS[d]}</span><input type="time" data-time="${d}" value="${e.times[d]}"></label>`).join("")}</div>
+            </div>` : ""}
+      <div class="cs-l" style="display:flex; flex-direction:column; gap:6px; font-size:0.8rem; color:var(--secondary-text-color);">Reminds
+        <div class="cs-chips" role="group" aria-label="Who gets reminded">${["everyone", ...people, "none"].map((x) => `<button type="button" class="cs-chip" data-who="${kitEsc(x)}" aria-pressed="${whoIs(x)}" style="${whoIs(x) ? on : ""}">${x === "everyone" ? "Everyone" : x === "none" ? "No one" : kitEsc(x)}</button>`).join("")}</div>
+      </div>
+      <div class="cs-msg" role="status"></div>
+      <div class="cs-buttons">
+        <button type="button" class="cs-save" style="${on} color:#fff;">${e.uid ? "Save" : "Add job"}</button>
+        <button type="button" class="cs-cancel" style="background:rgba(127,127,127,0.18); color:var(--primary-text-color);">Cancel</button>
+        ${e.uid ? `<button type="button" class="cs-delete" style="margin-left:auto; background:color-mix(in srgb, #e53935 20%, transparent); color:#ef9a9a;">Delete</button>` : ""}
+      </div>`;
+      const f = this._form;
+      f.querySelector(".cs-f-name").addEventListener("input", (ev) => e.name = ev.target.value);
+      f.querySelectorAll("[data-day]").forEach(
+        (b) => b.addEventListener("click", () => {
+          const d = Number(b.dataset.day);
+          if (d in e.times) delete e.times[d];
+          else e.times[d] = Object.values(e.times)[0] || "09:00";
+          this._drawForm();
+        })
+      );
+      f.querySelectorAll("[data-time]").forEach((i) => i.addEventListener("change", () => e.times[Number(i.dataset.time)] = i.value || "09:00"));
+      const same2 = f.querySelector(".cs-same");
+      if (same2)
+        same2.addEventListener("click", () => {
+          const t = e.times[chosen[0]];
+          Object.keys(e.times).forEach((d) => e.times[d] = t);
+          this._drawForm();
+        });
+      f.querySelectorAll("[data-who]").forEach(
+        (b) => b.addEventListener("click", () => {
+          const x = b.dataset.who;
+          if (x === "everyone" || x === "none") e.who = x;
+          else {
+            const list = Array.isArray(e.who) ? e.who : [];
+            e.who = list.includes(x) ? list.filter((y) => y !== x) : [...list, x];
+            if (!e.who.length) e.who = "none";
+          }
+          this._drawForm();
+        })
+      );
+      f.querySelector(".cs-cancel").addEventListener("click", () => this._close());
+      f.querySelector(".cs-save").addEventListener("click", () => this._save());
+      const del = f.querySelector(".cs-delete");
+      if (del)
+        del.addEventListener("click", () => {
+          if (del.dataset.sure) this._delete();
+          else {
+            del.dataset.sure = "1";
+            del.textContent = "Tap again to delete";
+          }
+        });
+    }
+    _say(text) {
+      const m = this._form.querySelector(".cs-msg");
+      if (m) m.textContent = text;
+    }
+    async _save() {
+      const e = this._edit;
+      const name = String(e.name || "").trim();
+      const slots = Object.keys(e.times).map((d) => [Number(d), e.times[d]]);
+      if (!name) return this._say("Give the job a name.");
+      if (!slots.length) return this._say("Choose at least one day.");
+      const description = formatChore(slots, e.who);
+      const due = nextDue(slots);
+      if (this.config.demo) {
+        this._demo = [...(this._demo || csDemo()).filter((t) => t.uid !== e.uid), { uid: e.uid || `d${Date.now()}`, summary: name, status: "needs_action", due: due.toISOString(), description }];
+        return this._close();
+      }
+      const target = { entity_id: this._entity() };
+      try {
+        if (e.uid) await this._hass.callService("todo", "update_item", { item: e.uid, rename: name, description, due_datetime: localStamp(due), status: "needs_action" }, target);
+        else await this._hass.callService("todo", "add_item", { item: name, description, due_datetime: localStamp(due) }, target);
+        this._close();
+      } catch (err) {
+        this._say(`Couldn't save: ${err && err.message || err}`);
+      }
+    }
+    async _delete() {
+      const e = this._edit;
+      if (this.config.demo) {
+        this._demo = (this._demo || csDemo()).filter((t) => t.uid !== e.uid);
+        return this._close();
+      }
+      try {
+        await this._hass.callService("todo", "remove_item", { item: e.uid }, { entity_id: this._entity() });
+        this._close();
+      } catch (err) {
+        this._say(`Couldn't delete: ${err && err.message || err}`);
+      }
+    }
+    getCardSize() {
+      return 4;
+    }
+    getGridOptions() {
+      return { columns: 12, min_columns: 6, rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement(`cleaning-schedule-card-editor${SUFFIX}`);
+    }
+    static getStubConfig() {
+      return { title: "Cleaning schedule" };
+    }
+  };
+  function registerCleaningScheduleCard() {
+    if (!customElements.get(`cleaning-schedule-card-editor${SUFFIX}`)) customElements.define(`cleaning-schedule-card-editor${SUFFIX}`, CleaningScheduleCardEditor);
+    if (!customElements.get(`cleaning-schedule-card${SUFFIX}`)) customElements.define(`cleaning-schedule-card${SUFFIX}`, CleaningScheduleCard);
+    window.customCards = window.customCards || [];
+    window.customCards.push({
+      type: `cleaning-schedule-card${SUFFIX}`,
+      name: `Cleaning Schedule Card${LABEL}`,
+      description: "Repeating jobs with days, times and who gets reminded",
+      preview: true,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
+    });
+  }
+
   // src/auto-layout-card.js
   var helpersPromise2;
   function cardHelpers2() {
@@ -7520,22 +7915,78 @@
     } catch (err) {
     }
   }
+  var HEADER_CONTENT = [
+    { value: "none", label: "Nothing (panel alerts only)" },
+    { value: "priorities", label: "The signed-in person's to-dos" },
+    { value: "todo_summary", label: "The signed-in person's to-do summary (due today, overdue, from the house)" },
+    { value: "lines", label: "Live lines about this page" },
+    { value: "forecast", label: "Weather forecast" },
+    { value: "list", label: "One to-do list (e.g. the cleaning schedule)" }
+  ];
   var LayoutFields = createFormEditor({
-    schema: () => [
-      { name: "title", selector: { text: {} } },
-      { name: "priorities", selector: { boolean: {} }, default: false },
-      { name: "priorities_page", selector: { navigation: {} } },
-      { name: "widget_width", selector: { number: { min: 280, max: 1200, step: 10, mode: "box", unit_of_measurement: "px" } } },
-      { name: "column_width", selector: { number: { min: 200, max: 800, step: 10, mode: "box", unit_of_measurement: "px" } } },
-      { name: "max_columns", selector: { number: { min: 1, max: 6, step: 1, mode: "box" } } },
-      { name: "controls_first", selector: { boolean: {} }, default: true },
-      { name: "empty_last", selector: { boolean: {} }, default: false },
-      { name: "jump_chips", selector: { select: { mode: "dropdown", options: [{ value: "auto", label: "Automatic (phones)" }, { value: "always", label: "Always" }, { value: "never", label: "Never" }] } } }
-    ],
+    // Older configs said `priorities: true`; they show as "The signed-in person's to-dos".
+    normalize: (c) => c.header_content || !c.priorities ? c : { ...c, header_content: "priorities" },
+    store: (c) => {
+      const out = { ...c };
+      delete out.priorities;
+      if (out.header_content === "priorities") out.priorities = true;
+      return out;
+    },
+    schema: (c) => {
+      const mode = c && c.header_content || "none";
+      return [
+        { name: "title", selector: { text: {} } },
+        { name: "header_content", selector: { select: { mode: "dropdown", options: HEADER_CONTENT } } },
+        ...mode === "lines" ? [
+          {
+            name: "header_lines",
+            selector: {
+              object: {
+                multiple: true,
+                label_field: "text",
+                fields: {
+                  text: { label: "Text (template; <b>\u2026</b> makes part bold; empty hides the line)", required: true, selector: { template: {} } },
+                  icon: { label: "Icon", selector: { icon: {} } },
+                  color: { label: "Colour", selector: { ui_color: {} } },
+                  alert_when: { label: "Needs attention when (optional template)", selector: { template: {} } },
+                  alert_color: { label: "Colour when it needs attention (default amber)", selector: { ui_color: {} } },
+                  alert_icon: { label: "Icon when it needs attention (optional)", selector: { icon: {} } },
+                  panel: { label: "Tapping it opens (a panel title on this page, or a page path)", selector: { text: {} } }
+                }
+              }
+            }
+          }
+        ] : [],
+        ...mode === "forecast" ? [
+          { name: "forecast_entity", selector: { entity: { domain: "weather" } } },
+          { name: "forecast_type", selector: { select: { mode: "dropdown", options: [{ value: "hourly", label: "Next hours" }, { value: "daily", label: "Next days" }] } } },
+          { name: "forecast_panel", selector: { text: {} } }
+        ] : [],
+        ...mode === "list" ? [
+          { name: "header_list", selector: { entity: { domain: "todo" } } },
+          { name: "list_color", selector: { ui_color: {} } },
+          { name: "list_icon", selector: { icon: {} } }
+        ] : [],
+        ...mode === "priorities" || mode === "list" || mode === "todo_summary" ? [{ name: "priorities_page", selector: { navigation: {} } }] : [],
+        { name: "widget_width", selector: { number: { min: 280, max: 1200, step: 10, mode: "box", unit_of_measurement: "px" } } },
+        { name: "column_width", selector: { number: { min: 200, max: 800, step: 10, mode: "box", unit_of_measurement: "px" } } },
+        { name: "max_columns", selector: { number: { min: 1, max: 6, step: 1, mode: "box" } } },
+        { name: "controls_first", selector: { boolean: {} }, default: true },
+        { name: "empty_last", selector: { boolean: {} }, default: false },
+        { name: "jump_chips", selector: { select: { mode: "dropdown", options: [{ value: "auto", label: "Automatic (phones)" }, { value: "always", label: "Always" }, { value: "never", label: "Never" }] } } }
+      ];
+    },
     labels: {
       title: "Page title (optional; {user} is the signed-in person's first name)",
-      priorities: "Show the signed-in person's top to-do in the header",
-      priorities_page: 'Their to-do page (for "+N more")',
+      header_content: "Under the title",
+      header_lines: "Lines",
+      forecast_entity: "Weather",
+      forecast_type: "Show",
+      forecast_panel: "Tapping it opens (a panel title or page path, optional)",
+      header_list: "To-do list",
+      list_color: "Colour",
+      list_icon: 'Icon for the "+N more" button',
+      priorities_page: 'Page for the "+N more" button',
       widget_width: "Header widget at most this wide",
       column_width: "Columns at least this wide",
       max_columns: "At most this many columns",
@@ -7545,7 +7996,10 @@
     },
     helpers: {
       title: "Shown large at the top of the page, above the chips. Any panel that has opened by itself (its 'opens by itself when' is true) shows under it as an alert; tapping one goes to that panel.",
-      priorities: `Reads the to-do list named "Priorities <first name>" (e.g. todo.priorities_jamie), plus the shared "Priorities Everyone" list if there is one, each item with a \u2713 (a shared item ticked off clears for everyone); overdue and due-soonest come first. Also shows this person's and everyone's jobs from "Priorities Automatic" (low batteries, filters and so on) with no \u2713: they go by themselves once the device reports they're done.`,
+      header_content: 'Three rows under the title, the same size on every page. A panel that opens by itself (its "opens by itself when" is true) always takes the top row as an alert.',
+      header_lines: "Up to three lines. Each line's text is a template, so it stays live, e.g. {{ states.light | selectattr('state', 'eq', 'on') | list | count }} lights on. They're snapshots only: nothing here makes tasks or sends notifications.",
+      forecast_type: "Next hours: every other hour for the next 12 or so. Next days: the week ahead with highs and lows.",
+      header_list: "Open items, soonest due first, each with a \u2713. Overdue ones turn red.",
       widget_width: "Default 520px, centred under the title. Phones use the full width.",
       column_width: "Default 340px. Phones (under 600px) always get one column in list order.",
       max_columns: 'Default 3. Mark a panel "Full width across an Auto Layout" to have it span the page.',
@@ -7554,6 +8008,24 @@
       jump_chips: "One chip per panel, in its colour; tapping one scrolls to that panel, and the chip for the panel you're looking at is filled in."
     }
   });
+  var WEATHER_ICON = {
+    "clear-night": "mdi:weather-night",
+    cloudy: "mdi:weather-cloudy",
+    exceptional: "mdi:alert-circle-outline",
+    fog: "mdi:weather-fog",
+    hail: "mdi:weather-hail",
+    lightning: "mdi:weather-lightning",
+    "lightning-rainy": "mdi:weather-lightning-rainy",
+    partlycloudy: "mdi:weather-partly-cloudy",
+    "partlycloudy-night": "mdi:weather-night-partly-cloudy",
+    pouring: "mdi:weather-pouring",
+    rainy: "mdi:weather-rainy",
+    snowy: "mdi:weather-snowy",
+    "snowy-rainy": "mdi:weather-snowy-rainy",
+    sunny: "mdi:weather-sunny",
+    windy: "mdi:weather-windy",
+    "windy-variant": "mdi:weather-windy-variant"
+  };
   var CHIPS_CSS = `
   .al-chips .al-cap { flex:1 1 auto; min-width:0; padding:6px; border-radius:999px; box-sizing:border-box; }
   ${kitAcrylicCss(".al-chips .al-cap")}
@@ -7640,7 +8112,7 @@
         this._fields.addEventListener("config-changed", (ev) => {
           ev.stopPropagation();
           const { cards: cards2, ...fields2 } = ev.detail.config;
-          this._emit({ ...this._config, ...fields2, cards: this._config.cards || [] });
+          this._emit({ ...fields2, cards: this._config.cards || [] });
         });
         const label = document.createElement("div");
         label.textContent = "Panels, in order (phones show them top to bottom in this order)";
@@ -7689,7 +8161,7 @@
         it.el.hass = hass;
       });
       if (first) this._renderHead();
-      if (this.isConnected && this.config && this.config.priorities) this._watchTodo();
+      if (this.isConnected && this.config) this._watchHead();
     }
     _build() {
       this.style.display = "block";
@@ -7724,6 +8196,15 @@
         }
         if (ev.target.closest && ev.target.closest("[data-todo]")) {
           if (this.config.priorities_page) kitNavigate(this.config.priorities_page);
+          return;
+        }
+        const line = ev.target.closest && ev.target.closest("[data-line]");
+        if (line) {
+          const want = String(line.dataset.line).toLowerCase();
+          if (!want) return;
+          const target = (this._items || []).find((x) => String(x.conf.title || "").toLowerCase() === want);
+          if (target) this._jumpTo(target);
+          else kitNavigate(line.dataset.line);
           return;
         }
         const pill = ev.target.closest && ev.target.closest("[data-alert]");
@@ -7922,8 +8403,11 @@
       });
       const user = this._hass && this._hass.user && this._hass.user.name ? String(this._hass.user.name).split(" ")[0] : "";
       const title = String(this.config.title || "").replace(/\{user\}/g, user).trim();
-      const todo = this._todoView();
-      const sig = JSON.stringify([title, alerts, todo, this.config.widget_width]);
+      const mode = this._headMode();
+      const todo = mode === "priorities" || mode === "list" ? this._todoView() : null;
+      const lines = mode === "lines" ? this._linesView() : mode === "todo_summary" ? this._summaryView() : null;
+      const forecast = mode === "forecast" && !alerts.length ? this._forecastHtml(esc2) : "";
+      const sig = JSON.stringify([title, alerts, todo, lines, forecast, this.config.widget_width]);
       if (sig === this._headSig) return;
       this._headSig = sig;
       if (!this.config.title) {
@@ -7934,32 +8418,147 @@
       head.style.display = "flex";
       const rows = [
         ...alerts.map((a) => ({ kind: "alert", ...a })),
-        ...todo ? todo.items.map((t) => ({ kind: "todo", ...t })) : []
+        ...todo ? todo.items.map((t) => ({ kind: "todo", ...t })) : [],
+        ...(lines || []).filter((l) => l.text)
       ];
       const shown = rows.slice(0, 3);
       const extra = rows.length - shown.length;
       const row3 = (r) => {
         if (!r) return '<div style="height:26px;"></div>';
-        const c = r.kind === "todo" ? r.overdue ? "#e53935" : r.auto ? HOUSE_TASKS_COLOR : "#7e57c2" : r.colour;
+        const c = r.kind === "todo" ? r.overdue ? "#e53935" : r.auto ? HOUSE_TASKS_COLOR : r.colour || "#7e57c2" : r.colour;
         const icon = r.icon;
         const tick = r.kind === "todo" && !r.auto ? `<button type="button" data-done="${esc2(r.uid)}" data-list="${esc2(r.list)}" aria-label="Done" title="Done" style="flex:none; width:22px; height:22px; padding:0; border:2px solid color-mix(in srgb, ${c} 70%, transparent); border-radius:50%; background:transparent; color:var(--primary-text-color); cursor:pointer; display:flex; align-items:center; justify-content:center;">${iconHtml("mdi:check", { size: "14px" })}</button>` : "";
-        return `<div ${r.kind === "alert" ? `data-alert="${r.i}" role="button"` : ""} style="height:26px; display:flex; align-items:center; gap:8px; padding:0 4px 0 8px; border-radius:13px; cursor:${r.kind === "alert" ? "pointer" : "default"}; background:color-mix(in srgb, ${c} 16%, transparent);">${icon ? iconHtml(icon, { size: "16px", style: `color:${c}; flex:none;` }) : ""}<span style="flex:1; min-width:0; font-size:0.8rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc2(r.text)}</span>${tick}</div>`;
+        const tap = r.kind === "alert" ? `data-alert="${r.i}" role="button"` : r.kind === "line" && r.link ? `data-line="${esc2(r.link)}" role="button"` : "";
+        const text = r.html ? esc2(r.text).replace(/&lt;(\/?)b&gt;/g, "<$1b>") : esc2(r.text);
+        return `<div ${tap} style="height:26px; display:flex; align-items:center; gap:8px; padding:0 ${tick ? 4 : 10}px 0 8px; border-radius:13px; cursor:${tap ? "pointer" : "default"}; background:color-mix(in srgb, ${c} 16%, transparent);">${icon ? iconHtml(icon, { size: "16px", style: `color:${c}; flex:none;` }) : ""}<span style="flex:1; min-width:0; font-size:0.8rem; font-weight:${r.kind === "line" ? 500 : 600}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${text}</span>${tick}</div>`;
       };
-      const side = todo && this.config.priorities_page ? `<button type="button" data-todo style="flex:none; width:58px; padding:0 4px; border:none; border-radius:12px; cursor:pointer; font:inherit; font-size:0.72rem; font-weight:700; line-height:1.2; color:#b39ddb; background:color-mix(in srgb, #7e57c2 22%, transparent); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;" aria-label="${extra > 0 ? `${extra} more to do` : "Open to-do"}">${iconHtml(
-        "mdi:format-list-checks",
-        { size: "22px", style: "color:#b39ddb;" }
-      )}<span style="white-space:nowrap;">${extra > 0 ? `+${extra} more` : "To-do"}</span></button>` : "";
+      const sideC = todo && todo.colour ? todo.colour : "#7e57c2";
+      const sideText = `color-mix(in srgb, ${sideC} 45%, white)`;
+      const side = todo && this.config.priorities_page ? `<button type="button" data-todo style="flex:none; width:58px; padding:0 4px; border:none; border-radius:12px; cursor:pointer; font:inherit; font-size:0.72rem; font-weight:700; line-height:1.2; color:${sideText}; background:color-mix(in srgb, ${sideC} 22%, transparent); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;" aria-label="${extra > 0 ? `${extra} more to do` : "Open the list"}">${iconHtml(
+        todo && todo.icon || "mdi:format-list-checks",
+        { size: "22px", style: `color:${sideText};` }
+      )}<span style="white-space:nowrap;">${extra > 0 ? `+${extra} more` : mode === "list" ? "List" : "To-do"}</span></button>` : "";
       head.innerHTML = `<div style="height:40px; font-size:2rem; font-weight:700; line-height:40px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--primary-text-color);">${esc2(title)}</div>
       <div class="al-widget" style="height:96px; width:100%; max-width:${Number(this.config.widget_width) || 520}px; margin:0 auto; box-sizing:border-box; display:flex; gap:6px; padding:6px; border-radius:18px; background:color-mix(in srgb, var(--card-background-color, #1f2128) 70%, transparent);">
-        <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:3px;">${[0, 1, 2].map((n) => row3(shown[n])).join("")}</div>${side}
+        ${forecast || `<div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:3px;">${[0, 1, 2].map((n) => row3(shown[n])).join("")}</div>`}${side}
       </div>`;
       hydrateIcons(head);
     }
     // ---- Priorities: the signed-in person's to-do list ("Priorities Jamie"),
     // plus the shared one ("Priorities Everyone") when it exists. A shared item
     // is a single copy, so ticking it off clears it for everyone.
+    // What the header widget shows under any page alerts: the signed-in
+    // person's to-dos ("priorities"), live lines, a forecast, or one to-do list.
+    _headMode() {
+      const m = this.config.header_content;
+      if (m) return m;
+      return this.config.priorities ? "priorities" : "none";
+    }
+    _watchHead() {
+      this._watchTodo();
+      this._watchLines();
+      this._watchForecast();
+    }
+    _unwatchHead() {
+      this._unwatchTodo();
+      this._unwatchLines();
+      this._unwatchForecast();
+    }
+    // ---- Lines: each line's text (and "needs attention when") is a template.
+    _watchLines() {
+      const lines = this._headMode() === "lines" && this._hass && this.isConnected ? this.config.header_lines || [] : [];
+      const key = JSON.stringify(lines);
+      if (key === this._linesKey) return;
+      this._unwatchLines();
+      this._linesKey = key;
+      this._lineVals = lines.map(() => ({ text: "", alert: false }));
+      lines.forEach((l, i) => {
+        const set = (k, v) => {
+          this._lineVals[i][k] = v;
+          this._renderHead();
+        };
+        const a = stcRender(this._hass, String(l.text || ""), (t) => set("text", t));
+        const b = l.alert_when ? stcRender(this._hass, String(l.alert_when), (t) => set("alert", !["", "0", "false", "off", "none", "unknown", "unavailable"].includes(String(t).trim().toLowerCase()))) : null;
+        this._lineSubs.push(a, b);
+      });
+    }
+    _unwatchLines() {
+      (this._lineSubs || []).forEach((u) => u && u.then((f) => f && f()).catch(() => {
+      }));
+      this._lineSubs = [];
+      this._linesKey = void 0;
+      this._lineVals = [];
+    }
+    _linesView() {
+      const lines = this.config.header_lines || [];
+      return lines.map((l, i) => {
+        const v = (this._lineVals || [])[i] || {};
+        const alert = !!v.alert;
+        return {
+          kind: "line",
+          text: v.text || "",
+          html: true,
+          icon: alert && l.alert_icon || l.icon,
+          colour: stcColor(alert && (l.alert_color || "#ffa726") || l.color || "primary"),
+          link: l.panel || ""
+        };
+      });
+    }
+    // ---- Forecast: Home Assistant's forecast subscription for a weather entity.
+    _watchForecast() {
+      const on = this._headMode() === "forecast" && this._hass && this.isConnected && this.config.forecast_entity;
+      const type = this.config.forecast_type === "daily" ? "daily" : "hourly";
+      const key = on ? `${this.config.forecast_entity}|${type}` : "";
+      if (key === this._fcKey) return;
+      this._unwatchForecast();
+      this._fcKey = key;
+      if (!on) return;
+      this._fcSub = this._hass.connection.subscribeMessage(
+        (msg) => {
+          this._forecast = msg && msg.forecast || [];
+          this._renderHead();
+        },
+        { type: "weather/subscribe_forecast", entity_id: this.config.forecast_entity, forecast_type: type }
+      ).catch(() => null);
+    }
+    _unwatchForecast() {
+      if (this._fcSub) this._fcSub.then((f) => f && f()).catch(() => {
+      });
+      this._fcSub = null;
+      this._fcKey = void 0;
+      this._forecast = null;
+    }
+    _forecastHtml(esc2) {
+      const type = this.config.forecast_type === "daily" ? "daily" : "hourly";
+      const st = this._hass && this._hass.states[this.config.forecast_entity];
+      const deg2 = (t) => t == null || t === "" ? "\u2013" : `${Math.round(Number(t))}\xB0`;
+      const all = this._forecast || [];
+      const now = Date.now();
+      const list = type === "hourly" ? all.filter((f) => new Date(f.datetime).getTime() > now - 36e5).filter((f, i) => i % 2 === 0).slice(0, 7) : all.slice(0, 6);
+      if (!list.length) return `<div style="flex:1; display:flex; align-items:center; justify-content:center; font-size:0.8rem; color:var(--secondary-text-color);">${st ? "Loading the forecast\u2026" : `No weather entity ${esc2(this.config.forecast_entity || "")}`}</div>`;
+      const colourOf = (c) => /rain|pour|hail|snow|sleet/.test(c) ? "#64b5f6" : /sunny|clear-day/.test(c) ? "#ffca28" : /lightning/.test(c) ? "#ffa726" : "#b0bec5";
+      const today = (/* @__PURE__ */ new Date()).toDateString();
+      const cols = list.map((f, i) => {
+        const d = new Date(f.datetime);
+        const label = type === "hourly" ? i === 0 ? "Now" : String(d.getHours()).padStart(2, "0") : d.toDateString() === today ? "Today" : d.toLocaleDateString([], { weekday: "short" });
+        const cond = String(f.condition || "");
+        const night = type === "hourly" && (d.getHours() >= 20 || d.getHours() < 6);
+        const icon = WEATHER_ICON[cond === "sunny" && night ? "clear-night" : cond === "partlycloudy" && night ? "partlycloudy-night" : cond] || "mdi:weather-cloudy";
+        const rain = Number(f.precipitation) > 0.05 ? `${Number(f.precipitation) < 1 ? Number(f.precipitation).toFixed(1) : Math.round(Number(f.precipitation))} mm` : f.precipitation_probability > 20 ? `${f.precipitation_probability}%` : "";
+        const lo = type === "daily" && f.templow != null ? `<span style="font-weight:600; color:var(--secondary-text-color);"> ${deg2(f.templow)}</span>` : "";
+        return `<div style="flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;">
+        <span style="font-size:0.68rem; color:var(--secondary-text-color); white-space:nowrap;">${esc2(label)}</span>
+        ${iconHtml(icon, { size: "22px", style: `color:${colourOf(cond)};` })}
+        <span style="font-size:0.78rem; font-weight:700; white-space:nowrap;">${deg2(f.temperature)}${lo}</span>
+        <span style="font-size:0.66rem; color:#64b5f6; height:1em; white-space:nowrap;">${rain}</span>
+      </div>`;
+      });
+      return `<div data-line="${esc2(this.config.forecast_panel || "")}" role="button" style="flex:1; min-width:0; display:flex; gap:2px; cursor:${this.config.forecast_panel ? "pointer" : "default"};">${cols.join("")}</div>`;
+    }
     _todoEntities() {
-      if (!this.config.priorities || !this._hass || !this._hass.user) return [];
+      const mode = this._headMode();
+      if (mode === "list") return this._hass && this.config.header_list && this._hass.states[this.config.header_list] ? [this.config.header_list] : [];
+      if (mode !== "priorities" && mode !== "todo_summary" || !this._hass || !this._hass.user) return [];
       const first = String(this._hass.user.name || "").split(" ")[0].toLowerCase().replace(/[^a-z0-9]+/g, "_");
       return [`todo.priorities_${first}`, "todo.priorities_everyone", HOUSE_TASKS_LIST].filter((id) => this._hass.states[id]);
     }
@@ -7995,6 +8594,7 @@
     // by the device itself, so they get no ✓ and an icon by kind.
     _todoView() {
       if (!this._todoKey) return null;
+      if (this._headMode() === "list") return this._listView();
       const shared = "todo.priorities_everyone";
       const order = (id) => id === HOUSE_TASKS_LIST ? 2 : id === shared ? 1 : 0;
       const first = String(this._hass && this._hass.user && this._hass.user.name || "").split(" ")[0];
@@ -8019,6 +8619,60 @@
         icon: task ? task.icon : list === shared ? "mdi:account-group" : "mdi:flag"
       }));
       return { items };
+    }
+    // Three lines from the signed-in person's lists (their own and the shared
+    // one) and the house's jobs for them: due today, overdue, from the house.
+    _summaryView() {
+      if (!this._todoKey) return [];
+      const items = this._todoItems || {};
+      const first = String(this._hass && this._hass.user && this._hass.user.name || "").split(" ")[0];
+      const today = /* @__PURE__ */ new Date();
+      const key = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const t = key(today);
+      const mine = Object.keys(items).filter((id) => id !== HOUSE_TASKS_LIST).flatMap((id) => (items[id] || []).filter((x) => x.status === "needs_action" && !/^Automatic/.test(x.description || "")));
+      const dueDay = (x) => x.due ? key(new Date(String(x.due).includes("T") ? x.due : `${x.due}T12:00:00`)) : null;
+      const due = mine.filter((x) => dueDay(x) === t);
+      const late = mine.filter((x) => dueDay(x) && dueDay(x) < t).sort((a, b) => String(a.due).localeCompare(String(b.due)));
+      const house = (items[HOUSE_TASKS_LIST] || []).filter((x) => x.status === "needs_action" && houseTaskFor(houseTask(x), first));
+      const names = (list) => list.map((x) => x.summary).join(", ");
+      const esc2 = (v) => String(v).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
+      const days = late.length ? Math.round((new Date(t) - new Date(dueDay(late[0]))) / 864e5) : 0;
+      const link = this.config.priorities_page || "";
+      return [
+        due.length ? { kind: "line", html: true, text: `<b>${due.length} due today</b> \xB7 ${esc2(names(due))}`, icon: "mdi:calendar-today", colour: "#7e57c2", link } : { kind: "line", html: true, text: "Nothing due today", icon: "mdi:calendar-check", colour: "#7e57c2", link },
+        late.length ? { kind: "line", html: true, text: `<b>${late.length} overdue</b> \xB7 ${esc2(late[0].summary)} (${days} day${days === 1 ? "" : "s"})${late.length > 1 ? ` +${late.length - 1}` : ""}`, icon: "mdi:alert-circle-outline", colour: "#e53935", link } : { kind: "line", html: true, text: "Nothing overdue", icon: "mdi:check-circle-outline", colour: "#4caf50", link },
+        house.length ? { kind: "line", html: true, text: `<b>${house.length} from the house</b> \xB7 ${esc2(names(house))}`, icon: "mdi:home-alert-outline", colour: HOUSE_TASKS_COLOR, link } : { kind: "line", html: true, text: "Nothing from the house", icon: "mdi:home-heart", colour: "#4caf50", link }
+      ];
+    }
+    // One to-do list (e.g. the cleaning schedule): open items, soonest due
+    // first, each with when it's due.
+    _listView() {
+      const list = this.config.header_list;
+      const colour = this.config.list_color || "#2196f3";
+      const now = /* @__PURE__ */ new Date();
+      const day = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+      const when2 = (due) => {
+        if (!due) return { text: "", over: false };
+        const dateOnly = !String(due).includes("T");
+        const d = dateOnly ? /* @__PURE__ */ new Date(`${due}T23:59:59`) : new Date(due);
+        const days = Math.round((day(d) - day(now)) / 864e5);
+        const time = dateOnly ? "" : ` ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+        if (d < now) {
+          const late = Math.round((day(now) - day(d)) / 864e5);
+          return { text: late >= 1 ? `${late} day${late === 1 ? "" : "s"} overdue` : "due now", over: late >= 1 };
+        }
+        if (days === 0) return { text: `today${time}`, over: false, today: true };
+        if (days === 1) return { text: `tomorrow${time}`, over: false };
+        if (days < 7) return { text: d.toLocaleDateString([], { weekday: "long" }), over: false };
+        return { text: `${d.getDate()} ${d.toLocaleDateString([], { month: "short" })}`, over: false };
+      };
+      const open = ((this._todoItems || {})[list] || []).filter((t) => t.status === "needs_action");
+      const rank = (t) => t.due ? new Date(String(t.due).includes("T") ? t.due : `${t.due}T23:59:59`).getTime() : Infinity;
+      const items = open.map((t, n) => ({ t, n })).sort((a, b) => rank(a.t) - rank(b.t) || a.n - b.n).map(({ t }) => {
+        const w = when2(t.due);
+        return { uid: t.uid, list, text: w.text ? `${t.summary} \xB7 ${w.text}` : t.summary, overdue: w.over, strong: w.over || w.today, colour, icon: choreIcon(t.summary) };
+      });
+      return { items, colour, icon: this.config.list_icon || "mdi:broom" };
     }
     _completeTop(tick) {
       const uid = tick.dataset.done;
@@ -8221,7 +8875,7 @@
       window.addEventListener("cd-anim", this._onAnim);
       this._onTop = () => this._closeJumped(null);
       window.addEventListener("cd-to-top", this._onTop);
-      if (this._hass && this.config.priorities) this._watchTodo();
+      if (this._hass) this._watchHead();
       this._onScrollBound = () => {
         cancelAnimationFrame(this._scrollFrame);
         this._scrollFrame = requestAnimationFrame(() => this._onScroll());
@@ -8247,7 +8901,7 @@
       window.removeEventListener("cd-anim", this._onAnim);
       window.removeEventListener("cd-to-top", this._onTop);
       if (this._chips && this._chips.parentNode === document.body) this._chips.remove();
-      this._unwatchTodo();
+      this._unwatchHead();
       window.removeEventListener("cd-panels-changed", this._onChange);
       if (this._ro) this._ro.disconnect();
       this._ro = null;
@@ -8738,5 +9392,6 @@
   registerAutoLayoutCard();
   registerHouseTasksCard();
   registerEnergyCards();
+  registerCleaningScheduleCard();
   console.info(`%c CHURCH-DRIVE-CARDS${SUFFIX ? " BETA" : ""} %c loaded `, "color: white; background: #2196f3; font-weight: 700;", "color: #2196f3; background: transparent;");
 })();
