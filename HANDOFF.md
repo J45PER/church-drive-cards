@@ -227,6 +227,31 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **In beta: acrylic and scroll room (2026-09-30).**
+  - The user chose option C, "Deep frost", from the acrylic mock-up.
+    - `kitAcrylicCss(sel)` in card-kit gives: a 76% card-colour tint with a 4% top
+      highlight, `blur(42px) saturate(115%)` behind it, 8% SVG grain (`KIT_GRAIN`) in
+      `::after`, and no outline.
+    - Used by the chips capsule (`.al-cap`), the nav bar (`.nb`) and back-to-top
+      (`.nb-top`). Their old `inset 0 0 0 1px` outline is gone.
+  - Frosted cards: section panels set `--cd-card-bg` (74% tint) and
+    `--cd-card-filter`, plus HA's `--ha-card-background` /
+    `--ha-card-backdrop-filter`, so both Church Drive cards (`kitShell`, compact
+    rows, `kitHead` tint) and HA's own cards go see-through and blurred.
+    - Panel option `frosted_cards` (default on).
+    - The page background stays flat dark (the user's choice for now). A soft colour
+      background was offered in the mock-up.
+  - The last panel can always scroll up under the chips.
+    - `_restTail()` keeps room at the end of the page so the last panel (in page
+      order) can scroll to just under the pinned chips, where a chip jump puts it.
+    - It's measured against the real end of the scroller, so the nav bar's spacer
+      counts, and applies on phones with chips.
+    - `_trimTail()` falls back to it after a jump; `_queue()` re-checks it after each
+      layout.
+    - Tested: at the very bottom the last panel sits at the same place its chip
+      takes it (112px vs 112px).
+  - Mobile is on `-beta` cards again for testing; strip them on release. Mock-up:
+    https://claude.ai/artifact/Y9kej1q5Hxpggozpc8CkmV
 - The back-to-top strokes are solid white in both states.
 - **Chips capsule, 2026-09-29:**
   - Chips sit in a scrolling `.al-strip` and grow to fill it (`flex:1 0 auto`), then
