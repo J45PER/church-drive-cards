@@ -13,6 +13,7 @@ import { stcColor } from './section-title-card.js';
 import { nbHuiRoot } from './nav-bar-card.js';
 import { kitScrollParent, kitGlide, kitNavigate } from './card-kit.js';
 import { PANEL_TRANSITION } from './section-panel-card.js';
+import { HOUSE_TASKS_LIST, houseTask, houseTaskFor } from './house-tasks-card.js';
 
 let helpersPromise;
 function cardHelpers() {
@@ -76,6 +77,7 @@ const LayoutFields = createFormEditor({
     { name: 'title', selector: { text: {} } },
     { name: 'priorities', selector: { boolean: {} }, default: false },
     { name: 'priorities_page', selector: { navigation: {} } },
+    { name: 'widget_width', selector: { number: { min: 280, max: 1200, step: 10, mode: 'box', unit_of_measurement: 'px' } } },
     { name: 'column_width', selector: { number: { min: 200, max: 800, step: 10, mode: 'box', unit_of_measurement: 'px' } } },
     { name: 'max_columns', selector: { number: { min: 1, max: 6, step: 1, mode: 'box' } } },
     { name: 'controls_first', selector: { boolean: {} }, default: true },
@@ -85,6 +87,7 @@ const LayoutFields = createFormEditor({
     title: 'Page title (optional; {user} is the signed-in person\'s first name)',
     priorities: "Show the signed-in person's top to-do in the header",
     priorities_page: 'Their to-do page (for "+N more")',
+    widget_width: 'Header widget at most this wide',
     column_width: 'Columns at least this wide',
     max_columns: 'At most this many columns',
     controls_first: 'Panels with buttons and sliders go above ones that only show information',
@@ -92,7 +95,8 @@ const LayoutFields = createFormEditor({
   },
   helpers: {
     title: "Shown large at the top of the page, above the chips. Any panel that has opened by itself (its 'opens by itself when' is true) shows under it as an alert; tapping one goes to that panel.",
-    priorities: 'Reads the to-do list named "Priorities <first name>" (e.g. todo.priorities_jamie), plus the shared "Priorities Everyone" list if there is one. Items fill the header rows with a ✓ (a shared item ticked off clears for everyone); overdue and due-soonest come first. Automatic tasks (description starting "Automatic") have no ✓: they clear when the device reports it is sorted.',
+    priorities: 'Reads the to-do list named "Priorities <first name>" (e.g. todo.priorities_jamie), plus the shared "Priorities Everyone" list if there is one, each item with a ✓ (a shared item ticked off clears for everyone); overdue and due-soonest come first. Also shows this person\'s and everyone\'s jobs from "Priorities Automatic" (low batteries, filters and so on) with no ✓: they go by themselves once the device reports they\'re done.',
+    widget_width: 'Default 520px, centred under the title. Phones use the full width.',
     column_width: 'Default 340px. Phones (under 600px) always get one column in list order.',
     max_columns: 'Default 3. Mark a panel "Full width across an Auto Layout" to have it span the page.',
     controls_first: 'Keeps list order otherwise, on phones too. Each panel can override what it counts as ("Counts as" in the panel).',
@@ -524,7 +528,7 @@ export class AutoLayoutCard extends HTMLElement {
     const user = this._hass && this._hass.user && this._hass.user.name ? String(this._hass.user.name).split(' ')[0] : '';
     const title = String(this.config.title || '').replace(/\{user\}/g, user).trim();
     const todo = this._todoView();
-    const sig = JSON.stringify([title, alerts, todo]);
+    const sig = JSON.stringify([title, alerts, todo, this.config.widget_width]);
     if (sig === this._headSig) return;
     this._headSig = sig;
     if (!this.config.title) {
@@ -562,7 +566,7 @@ export class AutoLayoutCard extends HTMLElement {
           )}${extra > 0 ? `+${extra}` : 'To-do'}<span style="font-size:0.9rem; line-height:1;">›</span></button>`
         : '';
     head.innerHTML = `<div style="height:40px; font-size:2rem; font-weight:700; line-height:40px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--primary-text-color);">${esc(title)}</div>
-      <div class="al-widget" style="height:96px; box-sizing:border-box; display:flex; gap:6px; padding:6px; border-radius:18px; background:color-mix(in srgb, var(--card-background-color, #1f2128) 70%, transparent);">
+      <div class="al-widget" style="height:96px; width:100%; max-width:${Number(this.config.widget_width) || 520}px; margin:0 auto; box-sizing:border-box; display:flex; gap:6px; padding:6px; border-radius:18px; background:color-mix(in srgb, var(--card-background-color, #1f2128) 70%, transparent);">
         <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:3px;">${[0, 1, 2].map((n) => row(shown[n])).join('')}</div>${side}
       </div>`;
     hydrateIcons(head);
@@ -574,7 +578,7 @@ export class AutoLayoutCard extends HTMLElement {
   _todoEntities() {
     if (!this.config.priorities || !this._hass || !this._hass.user) return [];
     const first = String(this._hass.user.name || '').split(' ')[0].toLowerCase().replace(/[^a-z0-9]+/g, '_');
-    return [`todo.priorities_${first}`, 'todo.priorities_everyone'].filter((id) => this._hass.states[id]);
+    return [`todo.priorities_${first}`, 'todo.priorities_everyone', HOUSE_TASKS_LIST].filter((id) => this._hass.states[id]);
   }
 
   _watchTodo() {
@@ -606,39 +610,40 @@ export class AutoLayoutCard extends HTMLElement {
     this._todoId = null;
   }
 
-  // Open items, overdue and due-soonest first, then in list order (personal
-  // before shared). Automatic ones (description "Automatic · <kind>") are
-  // resolved by the device itself, so they get no ✓ and an icon by kind.
+  // Open items, overdue and due-soonest first, then in list order (personal,
+  // shared, then the house's). The house's automatic tasks (from
+  // "Priorities Automatic", the ones for this person or everyone) are cleared
+  // by the device itself, so they get no ✓ and an icon by kind.
   _todoView() {
     if (!this._todoKey) return null;
     const shared = 'todo.priorities_everyone';
+    const order = (id) => (id === HOUSE_TASKS_LIST ? 2 : id === shared ? 1 : 0);
+    const first = String((this._hass && this._hass.user && this._hass.user.name) || '').split(' ')[0];
     const open = [];
     Object.keys(this._todoItems || {})
-      .sort((x, y) => (x === shared) - (y === shared))
-      .forEach((list) => (this._todoItems[list] || []).forEach((t) => t.status === 'needs_action' && open.push({ t, list })));
+      .sort((x, y) => order(x) - order(y))
+      .forEach((list) =>
+        (this._todoItems[list] || []).forEach((t) => {
+          if (t.status !== 'needs_action') return;
+          const auto = list === HOUSE_TASKS_LIST || /^Automatic/.test(t.description || '');
+          const task = auto ? houseTask(t) : null;
+          if (list === HOUSE_TASKS_LIST && !houseTaskFor(task, first)) return;
+          open.push({ t, list, task });
+        })
+      );
     const rank = (t) => (t.due ? new Date(t.due).getTime() : Infinity);
     const today = new Date().toISOString().slice(0, 10);
-    const kindIcon = (d) =>
-      /batter/i.test(d) ? 'mdi:battery-alert-variant-outline'
-        : /filter/i.test(d) ? 'mdi:air-filter'
-        : /vacuum/i.test(d) ? 'mdi:robot-vacuum'
-        : /respond|device/i.test(d) ? 'mdi:heart-pulse'
-        : 'mdi:home-alert-outline';
     const items = open
       .map((o, n) => ({ ...o, n }))
       .sort((a, b) => rank(a.t) - rank(b.t) || a.n - b.n)
-      .map(({ t, list }) => {
-        const auto = /^Automatic/.test(t.description || '');
-        return {
-          uid: t.uid,
-          list,
-          text: t.summary,
-          overdue: !!t.due && String(t.due).slice(0, 10) < today,
-          auto,
-          shared: list === shared,
-          icon: auto ? kindIcon(t.description) : list === shared ? 'mdi:account-group' : 'mdi:flag',
-        };
-      });
+      .map(({ t, list, task }) => ({
+        uid: t.uid,
+        list,
+        text: t.summary,
+        overdue: !!t.due && String(t.due).slice(0, 10) < today,
+        auto: !!task,
+        icon: task ? task.icon : list === shared ? 'mdi:account-group' : 'mdi:flag',
+      }));
     return { items };
   }
 

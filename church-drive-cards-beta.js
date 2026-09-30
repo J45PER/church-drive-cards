@@ -7197,6 +7197,154 @@
     });
   }
 
+  // src/house-tasks-card.js
+  var HOUSE_TASKS_LIST = "todo.priorities_automatic";
+  function houseTask(item) {
+    const parts = String(item && item.description || "").split(" \xB7 ");
+    const last = parts[parts.length - 1] || "";
+    const who = /^for /.test(last) ? last.slice(4).trim() : "Everyone";
+    const rest = parts.slice(1, /^for /.test(last) ? -1 : void 0);
+    const kind = rest[0] || "";
+    const icon = /batter/i.test(kind) ? "mdi:battery-alert-variant-outline" : /filter/i.test(kind) ? "mdi:air-filter" : /vacuum/i.test(kind) ? "mdi:robot-vacuum" : /respond|device/i.test(kind) ? "mdi:heart-pulse" : "mdi:home-alert-outline";
+    return { kind, detail: rest.slice(1).join(" \xB7 "), who, icon };
+  }
+  function houseTaskFor(task, first) {
+    const w = String(task.who || "").toLowerCase();
+    return w === "everyone" || !!first && w === String(first).toLowerCase();
+  }
+  function htDemo() {
+    return [
+      { uid: "d1", summary: "Replace battery: Ring Front Doorbell", status: "needs_action", description: "Automatic \xB7 Low batteries \xB7 17% \xB7 for Everyone" },
+      { uid: "d2", summary: "Clean the air purifier pre-filter", status: "needs_action", description: "Automatic \xB7 Filters due \xB7 8% left \xB7 for Jamie" }
+    ];
+  }
+  var HouseTasksCardEditor = createFormEditor({
+    schema: () => [
+      { name: "title", selector: { text: {} } },
+      { name: "entity", selector: { entity: { domain: "todo" } } },
+      { name: "show", selector: { select: { mode: "dropdown", options: [{ value: "mine", label: "The signed-in person\u2019s and everyone\u2019s" }, { value: "all", label: "Everyone\u2019s, with names" }] } } },
+      { name: "demo", selector: { boolean: {} } }
+    ],
+    labels: {
+      title: "Title (optional)",
+      entity: "Automatic to-do list",
+      show: "Show",
+      demo: "Show pretend tasks (for Design Presets)"
+    },
+    helpers: {
+      entity: `Defaults to ${HOUSE_TASKS_LIST}. Who gets each kind of task is set in Manager \u2192 Automatic to-dos.`
+    }
+  });
+  var HouseTasksCard = class extends HTMLElement {
+    setConfig(config) {
+      this.config = config || {};
+      this._built = false;
+      this._sig = null;
+      if (this._unsub) this._unwatch();
+      if (this._hass) this._watch();
+    }
+    set hass(hass) {
+      this._hass = hass;
+      this._watch();
+      this._render();
+    }
+    connectedCallback() {
+      if (this._hass) this._watch();
+    }
+    disconnectedCallback() {
+      this._unwatch();
+    }
+    _entity() {
+      return this.config.entity || HOUSE_TASKS_LIST;
+    }
+    _watch() {
+      if (this.config.demo || this._unsub || !this.isConnected || !this._hass || !this._hass.states[this._entity()]) return;
+      const id = this._entity();
+      this._unsub = this._hass.connection.subscribeMessage(
+        (msg) => {
+          this._items = msg && msg.items || [];
+          this._render();
+        },
+        { type: "todo/item/subscribe", entity_id: id }
+      ).catch(() => null);
+    }
+    _unwatch() {
+      if (this._unsub) this._unsub.then((u) => u && u()).catch(() => {
+      });
+      this._unsub = null;
+      this._items = null;
+    }
+    _render() {
+      if (!this._hass) return;
+      const c = this.config;
+      if (!this._built) {
+        this.innerHTML = kitShell(`<div class="ht-list" style="display:flex; flex-direction:column;"></div>`);
+        this._list = this.querySelector(".ht-list");
+        this.querySelector(".ck-headrow").style.display = c.title ? "" : "none";
+        this._built = true;
+      }
+      const first = this._hass.user && this._hass.user.name ? String(this._hass.user.name).split(" ")[0] : "";
+      const all = c.show === "all";
+      const missing = !c.demo && !this._hass.states[this._entity()];
+      const tasks = (c.demo ? htDemo() : this._items || []).filter((t) => t.status === "needs_action").map((t) => ({ t, h: houseTask(t) })).filter(({ h }) => all || houseTaskFor(h, first));
+      if (c.title) kitHead(this, c.title, missing ? "Not set up" : tasks.length ? `${tasks.length} to sort` : "All sorted", tasks.length ? KIT_COLOR.fair : KIT_COLOR.good);
+      const sig = JSON.stringify([tasks, missing, all, first]);
+      if (sig === this._sig) return;
+      this._sig = sig;
+      if (missing) {
+        this._list.innerHTML = `<div class="ck-sub" style="line-height:1.5;">There's no ${this._entity()} list yet. Add a Local To-do list named "Priorities Automatic".</div>`;
+        return;
+      }
+      if (!tasks.length) {
+        this._list.innerHTML = `<div style="display:flex; align-items:center; gap:10px; padding:4px 0;">${iconHtml("mdi:check-circle-outline", { size: "22px", style: `color:${KIT_COLOR.good}; flex:none;` })}<span class="ck-sub">Nothing needs doing. Jobs like a low battery or a filter due show here, and go by themselves once they're done.</span></div>`;
+        hydrateIcons(this);
+        return;
+      }
+      this._list.innerHTML = tasks.map(({ h }, i) => {
+        const tag = all || h.who.toLowerCase() === "everyone" ? `<span class="ck-chip ht-who" style="color:var(--secondary-text-color); background:rgba(127,127,127,0.16);"></span>` : "";
+        return `<div class="ht-row" style="display:flex; align-items:center; gap:10px; padding:9px 0;${i ? " border-top:1px solid var(--divider-color, rgba(127,127,127,0.22));" : ""}">
+            ${iconHtml(h.icon, { size: "22px", style: `color:${KIT_COLOR.fair}; flex:none;` })}
+            <div style="flex:1; min-width:0;">
+              <div class="ht-name" style="font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
+              <div class="ht-sub ck-sub" style="font-size:0.74rem; line-height:1.35;"></div>
+            </div>${tag}
+          </div>`;
+      }).join("") + `<div class="ck-sub" style="font-size:0.72rem; padding-top:6px;">These go by themselves once the device reports they're done.</div>`;
+      this._list.querySelectorAll(".ht-row").forEach((el, i) => {
+        const { t, h } = tasks[i];
+        el.querySelector(".ht-name").textContent = t.summary;
+        el.querySelector(".ht-sub").textContent = [h.kind, h.detail].filter(Boolean).join(" \xB7 ");
+        const who = el.querySelector(".ht-who");
+        if (who) who.textContent = h.who;
+      });
+      hydrateIcons(this);
+    }
+    getCardSize() {
+      return 3;
+    }
+    getGridOptions() {
+      return { columns: 12, min_columns: 6, rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement(`house-tasks-card-editor${SUFFIX}`);
+    }
+    static getStubConfig() {
+      return { title: "From the house" };
+    }
+  };
+  function registerHouseTasksCard() {
+    if (!customElements.get(`house-tasks-card-editor${SUFFIX}`)) customElements.define(`house-tasks-card-editor${SUFFIX}`, HouseTasksCardEditor);
+    if (!customElements.get(`house-tasks-card${SUFFIX}`)) customElements.define(`house-tasks-card${SUFFIX}`, HouseTasksCard);
+    window.customCards = window.customCards || [];
+    window.customCards.push({
+      type: `house-tasks-card${SUFFIX}`,
+      name: `House Tasks Card${LABEL}`,
+      description: "Jobs the house has spotted (batteries, filters, devices), which clear themselves once done",
+      preview: true,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
+    });
+  }
+
   // src/auto-layout-card.js
   var helpersPromise2;
   function cardHelpers2() {
@@ -7260,6 +7408,7 @@
       { name: "title", selector: { text: {} } },
       { name: "priorities", selector: { boolean: {} }, default: false },
       { name: "priorities_page", selector: { navigation: {} } },
+      { name: "widget_width", selector: { number: { min: 280, max: 1200, step: 10, mode: "box", unit_of_measurement: "px" } } },
       { name: "column_width", selector: { number: { min: 200, max: 800, step: 10, mode: "box", unit_of_measurement: "px" } } },
       { name: "max_columns", selector: { number: { min: 1, max: 6, step: 1, mode: "box" } } },
       { name: "controls_first", selector: { boolean: {} }, default: true },
@@ -7269,6 +7418,7 @@
       title: "Page title (optional; {user} is the signed-in person's first name)",
       priorities: "Show the signed-in person's top to-do in the header",
       priorities_page: 'Their to-do page (for "+N more")',
+      widget_width: "Header widget at most this wide",
       column_width: "Columns at least this wide",
       max_columns: "At most this many columns",
       controls_first: "Panels with buttons and sliders go above ones that only show information",
@@ -7276,7 +7426,8 @@
     },
     helpers: {
       title: "Shown large at the top of the page, above the chips. Any panel that has opened by itself (its 'opens by itself when' is true) shows under it as an alert; tapping one goes to that panel.",
-      priorities: 'Reads the to-do list named "Priorities <first name>" (e.g. todo.priorities_jamie), plus the shared "Priorities Everyone" list if there is one. Items fill the header rows with a \u2713 (a shared item ticked off clears for everyone); overdue and due-soonest come first. Automatic tasks (description starting "Automatic") have no \u2713: they clear when the device reports it is sorted.',
+      priorities: `Reads the to-do list named "Priorities <first name>" (e.g. todo.priorities_jamie), plus the shared "Priorities Everyone" list if there is one, each item with a \u2713 (a shared item ticked off clears for everyone); overdue and due-soonest come first. Also shows this person's and everyone's jobs from "Priorities Automatic" (low batteries, filters and so on) with no \u2713: they go by themselves once the device reports they're done.`,
+      widget_width: "Default 520px, centred under the title. Phones use the full width.",
       column_width: "Default 340px. Phones (under 600px) always get one column in list order.",
       max_columns: 'Default 3. Mark a panel "Full width across an Auto Layout" to have it span the page.',
       controls_first: 'Keeps list order otherwise, on phones too. Each panel can override what it counts as ("Counts as" in the panel).',
@@ -7651,7 +7802,7 @@
       const user = this._hass && this._hass.user && this._hass.user.name ? String(this._hass.user.name).split(" ")[0] : "";
       const title = String(this.config.title || "").replace(/\{user\}/g, user).trim();
       const todo = this._todoView();
-      const sig = JSON.stringify([title, alerts, todo]);
+      const sig = JSON.stringify([title, alerts, todo, this.config.widget_width]);
       if (sig === this._headSig) return;
       this._headSig = sig;
       if (!this.config.title) {
@@ -7678,7 +7829,7 @@
         { size: "18px", style: "color:#b39ddb;" }
       )}${extra > 0 ? `+${extra}` : "To-do"}<span style="font-size:0.9rem; line-height:1;">\u203A</span></button>` : "";
       head.innerHTML = `<div style="height:40px; font-size:2rem; font-weight:700; line-height:40px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--primary-text-color);">${esc2(title)}</div>
-      <div class="al-widget" style="height:96px; box-sizing:border-box; display:flex; gap:6px; padding:6px; border-radius:18px; background:color-mix(in srgb, var(--card-background-color, #1f2128) 70%, transparent);">
+      <div class="al-widget" style="height:96px; width:100%; max-width:${Number(this.config.widget_width) || 520}px; margin:0 auto; box-sizing:border-box; display:flex; gap:6px; padding:6px; border-radius:18px; background:color-mix(in srgb, var(--card-background-color, #1f2128) 70%, transparent);">
         <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:3px;">${[0, 1, 2].map((n) => row3(shown[n])).join("")}</div>${side}
       </div>`;
       hydrateIcons(head);
@@ -7689,7 +7840,7 @@
     _todoEntities() {
       if (!this.config.priorities || !this._hass || !this._hass.user) return [];
       const first = String(this._hass.user.name || "").split(" ")[0].toLowerCase().replace(/[^a-z0-9]+/g, "_");
-      return [`todo.priorities_${first}`, "todo.priorities_everyone"].filter((id) => this._hass.states[id]);
+      return [`todo.priorities_${first}`, "todo.priorities_everyone", HOUSE_TASKS_LIST].filter((id) => this._hass.states[id]);
     }
     _watchTodo() {
       const ids = this._todoEntities();
@@ -7717,29 +7868,35 @@
       this._todoKey = void 0;
       this._todoId = null;
     }
-    // Open items, overdue and due-soonest first, then in list order (personal
-    // before shared). Automatic ones (description "Automatic · <kind>") are
-    // resolved by the device itself, so they get no ✓ and an icon by kind.
+    // Open items, overdue and due-soonest first, then in list order (personal,
+    // shared, then the house's). The house's automatic tasks (from
+    // "Priorities Automatic", the ones for this person or everyone) are cleared
+    // by the device itself, so they get no ✓ and an icon by kind.
     _todoView() {
       if (!this._todoKey) return null;
       const shared = "todo.priorities_everyone";
+      const order = (id) => id === HOUSE_TASKS_LIST ? 2 : id === shared ? 1 : 0;
+      const first = String(this._hass && this._hass.user && this._hass.user.name || "").split(" ")[0];
       const open = [];
-      Object.keys(this._todoItems || {}).sort((x, y) => (x === shared) - (y === shared)).forEach((list) => (this._todoItems[list] || []).forEach((t) => t.status === "needs_action" && open.push({ t, list })));
+      Object.keys(this._todoItems || {}).sort((x, y) => order(x) - order(y)).forEach(
+        (list) => (this._todoItems[list] || []).forEach((t) => {
+          if (t.status !== "needs_action") return;
+          const auto = list === HOUSE_TASKS_LIST || /^Automatic/.test(t.description || "");
+          const task = auto ? houseTask(t) : null;
+          if (list === HOUSE_TASKS_LIST && !houseTaskFor(task, first)) return;
+          open.push({ t, list, task });
+        })
+      );
       const rank = (t) => t.due ? new Date(t.due).getTime() : Infinity;
       const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-      const kindIcon = (d) => /batter/i.test(d) ? "mdi:battery-alert-variant-outline" : /filter/i.test(d) ? "mdi:air-filter" : /vacuum/i.test(d) ? "mdi:robot-vacuum" : /respond|device/i.test(d) ? "mdi:heart-pulse" : "mdi:home-alert-outline";
-      const items = open.map((o, n) => ({ ...o, n })).sort((a, b) => rank(a.t) - rank(b.t) || a.n - b.n).map(({ t, list }) => {
-        const auto = /^Automatic/.test(t.description || "");
-        return {
-          uid: t.uid,
-          list,
-          text: t.summary,
-          overdue: !!t.due && String(t.due).slice(0, 10) < today,
-          auto,
-          shared: list === shared,
-          icon: auto ? kindIcon(t.description) : list === shared ? "mdi:account-group" : "mdi:flag"
-        };
-      });
+      const items = open.map((o, n) => ({ ...o, n })).sort((a, b) => rank(a.t) - rank(b.t) || a.n - b.n).map(({ t, list, task }) => ({
+        uid: t.uid,
+        list,
+        text: t.summary,
+        overdue: !!t.due && String(t.due).slice(0, 10) < today,
+        auto: !!task,
+        icon: task ? task.icon : list === shared ? "mdi:account-group" : "mdi:flag"
+      }));
       return { items };
     }
     _completeTop(tick) {
@@ -7998,5 +8155,6 @@
   registerSecurityZoneCard();
   registerNavBarCard();
   registerAutoLayoutCard();
+  registerHouseTasksCard();
   console.info(`%c CHURCH-DRIVE-CARDS${SUFFIX ? " BETA" : ""} %c loaded `, "color: white; background: #2196f3; font-weight: 700;", "color: #2196f3; background: transparent;");
 })();
