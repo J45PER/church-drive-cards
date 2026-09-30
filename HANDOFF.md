@@ -91,9 +91,22 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       - Battery Status batteries under 20%;
       - purifier filters under 10%, and Gregg's filter under 24h;
       - unread Gregg messages.
-    - Automatic items have the description "Automatic · <kind>". They're added once
-      (ticked ones aren't re-added) and removed when resolved. Items people add
-      themselves are never touched.
+    - Automatic items have the description "Automatic · <kind>". The device resolves
+      them, not a person: they're removed once the device reports it's sorted (e.g.
+      the doorbell going from 17% to 95% after a battery change), and if someone
+      ticks one off while it's still needed, it reopens (`todo.update_item`
+      needs_action; the lists are also triggers, so this is immediate). The widget
+      shows them without a ✓, in amber, with an icon by kind (battery, filter,
+      heart-pulse for devices, vacuum). Items people add themselves are never
+      touched.
+    - Shared tasks (added 2026-09-30, user's request): `todo.priorities_everyone`
+      ("Priorities Everyone", local_todo). Choosing "Everyone" in a select puts that
+      kind of task there once, instead of on all three lists. The widget merges it
+      after the person's own list (shared manual items get `mdi:account-group`), and
+      ticking one there clears it for everyone. Each person's To-do page has a
+      teal "Shared" panel with it, and Manager shows it too. Tested: switching
+      `_filters_due` to Everyone moved the pre-filter task across, then set back to
+      Jamie.
     - Who gets each kind is set by `input_select.to_do_devices_not_responding`,
       `_low_batteries`, `_filters_due` and `_vacuum_messages` (Jamie / Hayley /
       Diane / Everyone / Nobody; all start as Jamie).
