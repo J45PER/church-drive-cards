@@ -311,23 +311,29 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       - Mode buttons use `select.select_option`.
     - Both support compact rows.
   - **Icons can be pictures:** an https URL, `/local/...`, or `brand:<domain>` for
-    brands.home-assistant.io. They're used by panel titles (Octopus Electricity uses
-    `brand:octopus_energy`). A failed picture hides itself.
+    brands.home-assistant.io. A failed picture hides itself.
+  - **Octopus icon and colours (user's choice, 2026-09-30):** flat `phu:octopusenergy`
+    from Custom Brand Icons (not the logo picture, for flat-icon consistency).
+    Electricity and Octoplus are pink `#f050f8`, Gas is Octopus violet `#7b61ff`
+    (`OCTO_VIOLET`, option A of https://claude.ai/artifact/35p65QgdMS29MW5tQh2PWJ).
+    The pack also has `phu:myenergi`, which the user hasn't asked for.
   - **Nav bar:**
     - `icons_only` (Mobile uses it): 42px icons, the current page as a filled circle.
     - Per-page `admin_only` hides a page from non-admins (`hass.user.is_admin`).
   - **Mobile `energy` view** (only Jamie and Hayley, the admins; the view has `visible`
     and the section a user condition). Panels:
-    - Octopus Electricity (#f050f8, brand logo);
+    - Octopus Electricity (#f050f8, `phu:octopusenergy`);
     - Car charger (#00b8d4);
     - Last full day;
-    - Gas;
-    - Octoplus.
+    - Gas (#7b61ff, `phu:octopusenergy`);
+    - Octoplus (#f050f8, `phu:octopusenergy`).
     Every Mobile nav bar has an Energy page (`admin_only`) and `icons_only: true`.
   - Home has a **Car charger** panel for everyone (after Climate).
   - **Zappi:** the HACS integration CJNE/ha-myenergi (id 401145616) is downloaded. HA
     restarted at about 21:28 on 2026-09-30, which should have loaded it. It still needs a
-    config flow with the hub serial and API key, which the user will send.
+    config flow with the hub serial and API key, which the user will send. "Set up the
+    Zappi charger" is on Jamie's to-do list (`todo.priorities_jamie`) as a reminder;
+    tick it off once it's connected.
   - Went live 2026-09-30: the Mobile dashboard (including Energy and the Home charger
     panel) is on the release types.
   - Energy mock-up: https://claude.ai/artifact/XRtwhvTDAuvS1YYtQgM8hz
