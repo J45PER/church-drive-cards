@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-30. Current release: **v0.24.0**.*
+*Last updated 2026-09-30. Current release: **v0.24.1**.*
 
 ## Where this stands
 
@@ -227,6 +227,9 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **v0.24.1 (released 2026-09-30, reload-only): Octopus violet for gas.**
+  - The Gas card uses `OCTO_VIOLET` (#7b61ff). On the Mobile Energy view, the
+    Electricity and Gas panels use the flat `phu:octopusenergy` icon.
 - **v0.24.0 (released 2026-09-30, reload-only): acrylic, frosted cards, scroll room, To-do ordering, purifier graph, Energy.**
   - The user chose option C, "Deep frost", from the acrylic mock-up.
     - `kitAcrylicCss(sel)` in card-kit gives: a 76% card-colour tint with a 4% top
@@ -1049,8 +1052,7 @@ Integration modules (`custom_components/church_drive/`):
   - `church-drive-cards-beta.js` registers every card as `<name>-beta`.
   - HA loads it from resource `436186c683fe4c7d81c865b67bb0e109`:
     `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's pinned to `9288105` (Octopus violet gas), and the Mobile Energy view uses the
-    `-beta` types to test it. Strip `-beta` there when it's released.
+    It's pinned to the v0.24.1 merge (see below).
   - To test a branch: push it, repoint the resource, and ask for a hard refresh.
   - jsDelivr is blocked from the cloud container, but works for the user.
 - **Rollback:** download an older release in HACS and restart.
