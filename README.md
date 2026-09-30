@@ -186,9 +186,14 @@ The jobs the house has spotted, such as a low battery, a filter due, a device no
 
 Items carry the description "Automatic · <kind> · <detail> · for <names>", where the names are "Everyone" or one or more first names ("Jamie, Hayley"); an automation keeps the list up to date. `show: mine` (the default) lists the jobs that name the signed-in person (tagged "You, Hayley" when shared) and everyone's. `show: all` lists every job with a name tag. `title` is optional, `color` defaults to purple (#ab47bc), and `demo: true` shows pretend jobs for Design Presets.
 
-### `cleaning-schedule-card`
+### `task-list-card`
 
-Repeating jobs on a to-do list (`entity`, default `todo.cleaning`) and when each comes round. Tap a job, or "Add a job", to set its name, which days it repeats, a time for each day, and who gets reminded (anyone with a person entity, Everyone, or No one). Each job is one to-do item: its description holds the schedule in plain words, such as `Mon 09:00, Thu 18:30 · for Hayley`, `Every day 08:00 · for everyone` or `Sat 10:00 · no reminders`, and its due time is the next time it comes round. The "Church Drive: cleaning schedule" automation reads the same words. It reminds people when a job comes due, and when a job is ticked off it's due again at its next time. `demo: true` shows pretend jobs, and saving is switched off.
+A to-do list (`entity`, any to-do list) you can tick off, add to and change, where tasks can repeat and remind people. Tap a task, or "Add a task", to set:
+- its name and notes;
+- **Repeats**: Never (with an optional due date and time), Daily (every N days), Weekly (every week, fortnightly, or every 3 or 4 weeks, on chosen days with a time for each), Monthly (every N months on a day of the month or the last day), Yearly (on a date), or After it's done (N days, weeks or months after it's ticked off). Repeats can start on a chosen date;
+- **Reminds**: anyone with a person entity, Everyone, or No one (`remind_default` sets it for new tasks).
+
+The repeat and who it reminds are kept as plain words in the task's description, e.g. `Every 2 weeks: Mon 09:00 · for Hayley · use the blue mop` (see `src/repeat.js`). The "Church Drive: repeating tasks" automation reads the same words. It reminds people when a task comes due, and when a repeating task is ticked off it's due again at its next time. Ticked-off one-off tasks sit under "Show done", with "Clear done tasks". `icons: true` gives each task an icon from its name (hoover, bathroom and so on). `demo: true` shows pretend tasks.
 
 ### `security-zone-card`
 
@@ -232,7 +237,9 @@ Holds a page's panels in one list and arranges them itself, so adding a panel ne
 - `todo_summary`: three lines about the signed-in person's lists: what's due today, what's overdue, and the house's jobs for them.
 - `lines`: up to three live lines (`header_lines`). Each has a `text` template (`<b>…</b>` makes part bold; empty text hides the line), an `icon`, a `color`, an optional `alert_when` template with `alert_color` (default amber) and `alert_icon`, and `panel`: a panel title on the page, or a page path, to open when tapped. They're snapshots only and never make tasks or send notifications.
 - `forecast`: a weather forecast for `forecast_entity`, either `forecast_type: hourly` (every other hour, with rain) or `daily` (the week, with highs and lows). `forecast_panel` is what tapping it opens.
-- `list`: one to-do list (`header_list`, e.g. the cleaning schedule), soonest due first, each with when it's due and a ✓. Overdue items are red. `list_color` and `list_icon` style it.
+- `list`: one to-do list (`header_list`, e.g. the cleaning schedule), soonest due first, each with when it's due and a ✓. Overdue items are red. `list_color` and `list_icon` style it, and tapping a row (or "+N more") opens `priorities_page`.
+
+On the Home to-dos, a repeating task only shows when it's due in the next two days.
 
 The widget is at most `widget_width` wide (default 520px) and is centred; `priorities_page` adds a To-do › button down its right side (with "+N" when there are more). Any panel that has opened by itself (its `open_when` is true, e.g. a door open) shows under it as an alert pill with its live summary, and tapping one goes to that panel. Put it alone in a section that spans the whole page.
 
@@ -258,6 +265,8 @@ The open/compact toggle is a ring in the panel's colour with a minus that turns 
 Just the panel's heading (title, coloured icon, live summary), for use on its own.
 
 ## Development
+
+`npm test` runs the unit tests for the repeat rules (`src/repeat.js`) in UK time.
 
 ```bash
 npm install

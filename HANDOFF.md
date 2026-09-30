@@ -1004,8 +1004,8 @@ Integration modules (`custom_components/church_drive/`):
     - Every new automation or script: no templated action names, no top-level
       `variables`, and no step that forces YAML. Settings people change live in
       helpers, cards or plain to-do text, never only in YAML.
-    - 2026-10-01 check: the page-header fields, `cleaning-schedule-card` and
-      `automation.church_drive_cleaning_schedule` all follow this.
+    - 2026-10-01 check: the page-header fields, `task-list-card` and
+      `automation.church_drive_cleaning_schedule` ("repeating tasks") all follow this.
   - **Auto Layout editor bug (fixed on beta 2026-09-30):** since f87fb14 its
     `set hass` called the card's `_renderHead()` / `_watchTodo()`, which don't exist on
     the editor. It threw, so HA fell back to YAML for every Auto Layout card. Those
@@ -1044,11 +1044,40 @@ Integration modules (`custom_components/church_drive/`):
     - Energy: rate now / next cheap window (from the rates events), live W, today's
       cost.
     - The line templates were tested live with `ha_eval_template` before going in.
-  - **Cleaning schedule:**
+  - **Repeating tasks (the user's follow-up, 2026-10-01, beta at `22eebc0`):**
+    - The cleaning schedule belongs on the **To-do page**. The Cleaning page header
+      (`list` of `todo.cleaning`) opens the To-do page from its rows and "+N more"
+      (`priorities_page`).
+    - Repeats apply to every list: Cleaning, each person's own and Shared.
+    - `task-list-card` (it replaced the beta-only `cleaning-schedule-card`) is a full
+      to-do card: tick, add, edit, show and clear done. Repeat choices: Never (optional
+      due date and time), Daily (every N days), Weekly (1 to 4 weeks, days with a time
+      each), Monthly (day N or the last day, every N months), Yearly, and After it's
+      done (N days, weeks or months). It also has a start date, who it reminds, and
+      notes.
+    - The To-do page (all three per-person sections) uses it for My to-do (with
+      `remind_default` set to the person), Shared, and a new Cleaning panel. The
+      Tasks dashboard (`dashboard-tasks`) still has HA's `todo-list` cards: move it
+      over on release.
+    - **Rules live in `src/repeat.js`** (unit tests in `test/`, `npm test`, UK time).
+      Words: `<repeat> · <for …|no reminders> · <notes>`. A description that doesn't
+      start with a repeat is plain notes. "Once · for X" means no repeat, just a
+      reminder at the due time. The phase comes from the current due time
+      (fortnightly keeps its fortnight), so the start date isn't stored.
+    - The automation's Jinja (`occ` macro) is a port of `nextOccurrence`. 18 cases
+      matched exactly (scratchpad `rep/cases.mjs`, `rep/plan.jinja`). **Change both
+      together.**
+    - A repeating task is always open, so the Home widget only shows one due within
+      2 days.
+    - `automation.church_drive_to_do_reminders` "added" branch now needs
+      `trigger.to_state.context.user_id`. That way a task the automation brings back
+      isn't announced as a "New to-do".
+  - **The schedule's HA side:**
     - Local To-do "Cleaning" (`todo.cleaning`, entry `01M3T9B7S3G28WA6JG3PECQ2TH`).
-    - `cleaning-schedule-card` edits jobs. The schedule is plain words in the item
-      description (`parseChore` / `formatChore` / `nextDue` in the card).
-    - `automation.church_drive_cleaning_schedule`:
+    - `automation.church_drive_cleaning_schedule` (alias now "Church Drive: repeating
+      tasks"; the entity ID kept its first name) covers `todo.cleaning` and the
+      `todo.priorities_*` lists except automatic. The "Which lists" step lists them.
+      `input_datetime.cleaning_next_reminder` is now named "Tasks: next reminder".
       - It reschedules ticked-off or undated jobs to their next time, reminds the
         named people at due time via `script.church_drive_notify_person`, and sets
         `input_datetime.cleaning_next_reminder` (its own wake-up).
@@ -1145,7 +1174,7 @@ Integration modules (`custom_components/church_drive/`):
   - `church-drive-cards-beta.js` registers every card as `<name>-beta`.
   - HA loads it from resource `436186c683fe4c7d81c865b67bb0e109`:
     `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's pinned to `4eaca60` (page header modes and the cleaning schedule card). The
+    It's pinned to `22eebc0` (page header modes, Task List card, repeating tasks). The
     Mobile views 1 to 6 use the `-beta` types to test it; strip `-beta` there when it's released.
   - To test a branch: push it, repoint the resource, and ask for a hard refresh.
   - jsDelivr is blocked from the cloud container, but works for the user.
