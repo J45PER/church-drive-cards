@@ -998,12 +998,68 @@ Integration modules (`custom_components/church_drive/`):
     shows them. Put them in a first "variables" step with an alias instead (both
     to-do automations do this).
   - Card editors: every card has one, and every option it reads is in its schema.
+  - **Checklist for every change (the user asked again, 2026-10-01):**
+    - Every new card option goes in its editor schema. Run the editor smoke test
+      (`editors.mjs`, below) before pushing.
+    - Every new automation or script: no templated action names, no top-level
+      `variables`, and no step that forces YAML. Settings people change live in
+      helpers, cards or plain to-do text, never only in YAML.
+    - 2026-10-01 check: the page-header fields, `cleaning-schedule-card` and
+      `automation.church_drive_cleaning_schedule` all follow this.
   - **Auto Layout editor bug (fixed on beta 2026-09-30):** since f87fb14 its
     `set hass` called the card's `_renderHead()` / `_watchTodo()`, which don't exist on
     the editor. It threw, so HA fell back to YAML for every Auto Layout card. Those
     lines now live in the card's own `set hass`.
   - Smoke test: `scratchpad/editors.html` + `editors.mjs` builds every registered
     editor with a stub config and fake hass, and reports any that throw.
+- **Page header lines and the cleaning schedule (user's request, 2026-10-01, on beta at `4eaca60`):**
+  - Mock-ups: https://claude.ai/artifact/D9cz58EsbDS4VLx2e6tCsE (round 2 is the agreed
+    one). These are snapshots only: nothing in a header makes tasks or sends
+    notifications (the user was explicit).
+  - Auto Layout `header_content`: `none` / `priorities` / `todo_summary` / `lines` /
+    `forecast` / `list`. `normalize` maps the old `priorities: true`, and `store`
+    keeps `priorities` in step (the editor's field handler takes the form's values
+    whole, so removed keys stay removed).
+    - `lines`: each line's `text` and `alert_when` are templates rendered by
+      `stcRender`. `<b>` is the only markup kept. `panel` taps jump to a panel with
+      that title, or navigate.
+    - `forecast`: `weather/subscribe_forecast`. The user chose hourly and wants daily
+      as an editor option (`forecast_type`). Page alerts replace the forecast while
+      there are any.
+    - `list` and `todo_summary` are worked out in the card, because templates can't
+      see to-do items or the signed-in user.
+  - The Mobile pages use them (views 1 to 6 are on `-beta` for testing; Home isn't):
+    - Lights: lights on (Hue groups excluded), not reachable, and "maybe left on".
+      "Maybe left on" checks, in order: everyone's phone out; an area with a
+      motion/occupancy/presence sensor quiet for 30 min; outdoor lights in daylight;
+      anything on over 4 h. The sensor check picks up new presence sensors by itself
+      (the user will add some; the BSB002 bridge has no MotionAware). Diane's phone
+      doesn't share location, so "everyone's out" ignores her (unknown state).
+    - Security (no alarm line, per the user): doors, last ring/movement from Ring's
+      `event.*_ding/_motion`, who's home.
+    - Climate: hourly forecast from `weather.forecast_home`.
+    - Cleaning: `list` of `todo.cleaning`, plus a "Cleaning schedule" panel with the
+      new card.
+    - To-do (all three per-person sections): `todo_summary`.
+    - Energy: rate now / next cheap window (from the rates events), live W, today's
+      cost.
+    - The line templates were tested live with `ha_eval_template` before going in.
+  - **Cleaning schedule:**
+    - Local To-do "Cleaning" (`todo.cleaning`, entry `01M3T9B7S3G28WA6JG3PECQ2TH`).
+    - `cleaning-schedule-card` edits jobs. The schedule is plain words in the item
+      description (`parseChore` / `formatChore` / `nextDue` in the card).
+    - `automation.church_drive_cleaning_schedule`:
+      - It reschedules ticked-off or undated jobs to their next time, reminds the
+        named people at due time via `script.church_drive_notify_person`, and sets
+        `input_datetime.cleaning_next_reminder` (its own wake-up).
+      - Triggers: that helper, the list's state, `call_service` for
+        **`todo.update_item` only**, start, and hourly. Reading the list
+        (`get_items`) is itself a `call_service` event: an early version triggered
+        on any todo call and looped until it was turned off.
+      - It waits 2 s after an edit, because the event arrives before the list is
+        saved.
+      - Tested end to end: the 00:20 reminder reached Jamie's phones, and ticking
+        off brought the job back at next week's time.
 - **No repeat notifications after a restart (user's request, 2026-09-30).** A
   restart makes sensors briefly `unavailable`. Anything that reacts to "became low" or
   "task added" must not treat coming back from unavailable as news. Fixes so far:
@@ -1089,7 +1145,8 @@ Integration modules (`custom_components/church_drive/`):
   - `church-drive-cards-beta.js` registers every card as `<name>-beta`.
   - HA loads it from resource `436186c683fe4c7d81c865b67bb0e109`:
     `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's pinned to the v0.24.2 merge (see below).
+    It's pinned to `4eaca60` (page header modes and the cleaning schedule card). The
+    Mobile views 1 to 6 use the `-beta` types to test it; strip `-beta` there when it's released.
   - To test a branch: push it, repoint the resource, and ask for a hard refresh.
   - jsDelivr is blocked from the cloud container, but works for the user.
 - **Rollback:** download an older release in HACS and restart.
