@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-30. Current release: **v0.24.1**.*
+*Last updated 2026-09-30. Current release: **v0.24.2**.*
 
 ## Where this stands
 
@@ -171,8 +171,11 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
         left as they are.
     - **Notifications (2026-09-30, user's request):**
       `automation.church_drive_to_do_reminders` (queued, max 20) sends two kinds, each
-      person on their own devices. Devices are set in the `people` variable: Jamie's
-      iPhone and Pixel (not the iPad or the watch), Hayley's Pixel 9, Diane's phone.
+      person on their own devices. It sends through `script.church_drive_notify_person`
+      ("Church Drive: notify a person"; fields person / title / message / tag / link),
+      which has one plain notify step per phone: Jamie's iPhone and Pixel (not the iPad
+      or the watch), Hayley's Pixel 9, Diane's phone. The first step, "People", holds
+      each person's list and switches.
       - **Summary** (trigger id `summary`): at `input_datetime.to_do_reminder_time`
         ("To-do: summary time", 10:00) on `input_select.to_do_summary_day`
         (Saturday; "Every day" is also an option).
@@ -227,6 +230,10 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **v0.24.2 (released 2026-09-30, reload-only): Auto Layout visual editor fixed.**
+  - The editor threw on its first `hass` (see the conventions section), so every
+    Auto Layout card was YAML-only. Released with the HA-side fixes for visual editing
+    and for repeat notifications after a restart.
 - **v0.24.1 (released 2026-09-30, reload-only): Octopus violet for gas.**
   - The Gas card uses `OCTO_VIOLET` (#7b61ff). On the Mobile Energy view, the
     Electricity and Gas panels use the flat `phu:octopusenergy` icon.
@@ -983,7 +990,37 @@ Integration modules (`custom_components/church_drive/`):
 - **Beta first.** New or changed card behaviour goes on the Design Presets **Beta**
   tab. The user checks it, says "release it", and then it ships.
 - **Everything from the UI.** Every option needs a visual-editor field. Nothing is
-  YAML-only.
+  YAML-only. That covers HA config too (audited 2026-09-30):
+  - No templated action names (`action: notify.{{ … }}`). HA's editor can't show
+    them and drops that step to YAML. Templates are fine in `data` and `target`. To
+    reach different phones, call `script.church_drive_notify_person`.
+  - No top-level automation `variables:`. The visual editor keeps them but never
+    shows them. Put them in a first "variables" step with an alias instead (both
+    to-do automations do this).
+  - Card editors: every card has one, and every option it reads is in its schema.
+  - **Auto Layout editor bug (fixed on beta 2026-09-30):** since f87fb14 its
+    `set hass` called the card's `_renderHead()` / `_watchTodo()`, which don't exist on
+    the editor. It threw, so HA fell back to YAML for every Auto Layout card. Those
+    lines now live in the card's own `set hass`.
+  - Smoke test: `scratchpad/editors.html` + `editors.mjs` builds every registered
+    editor with a stub config and fake hass, and reports any that throw.
+- **No repeat notifications after a restart (user's request, 2026-09-30).** A
+  restart makes sensors briefly `unavailable`. Anything that reacts to "became low" or
+  "task added" must not treat coming back from unavailable as news. Fixes so far:
+  - `automation.church_drive_automatic_to_do_tasks`:
+    - It never removes tasks in the 10 minutes after HA starts or the automation
+      reloads (`now() - as_datetime(this.last_changed)`).
+    - `wanted` also carries `hold: true` entries for tasks whose source can't be read
+      (a battery or part sensor `unavailable`/`unknown`, or a device offline for less
+      than "offline for", whose `last_changed` restarts at boot). Holds are never
+      added, reopened or refreshed; they only stop a drop.
+    - Before this, the Ring keypad task was dropped at boot and re-added two minutes
+      later, which re-sent "New to-do" to everyone.
+  - `automation.battery_notes_low_battery_alert`: the trigger has
+    `not_from: [unavailable, unknown]`.
+  - `automation.church_drive_tell_jamie_when_a_device_stays_stale`: the "stale" branch
+    needs `trigger.from_state` to be a number (a numeric_state trigger re-arms when
+    it comes back from unavailable).
 - **Design Presets uses pretend lights only.** On the main and Beta tabs, light cards
   are in demo mode, battery/gauge cards use fixed values, and the alarm uses
   `demo: true`. The Scene builder tab is the exception: its "Try it in" uses real
@@ -1052,7 +1089,7 @@ Integration modules (`custom_components/church_drive/`):
   - `church-drive-cards-beta.js` registers every card as `<name>-beta`.
   - HA loads it from resource `436186c683fe4c7d81c865b67bb0e109`:
     `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's pinned to the v0.24.1 merge (see below).
+    It's pinned to the v0.24.2 merge (see below).
   - To test a branch: push it, repoint the resource, and ask for a hard refresh.
   - jsDelivr is blocked from the cloud container, but works for the user.
 - **Rollback:** download an older release in HACS and restart.
