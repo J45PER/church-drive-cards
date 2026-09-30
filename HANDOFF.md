@@ -76,6 +76,30 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
   - `priorities_page` adds a side button "To-do ›" (or "+N ›").
   - The user chose A-style, fixed-size ("like a widget"), with "view more" going to a
     per-person to-do page.
+  - **HA side (2026-09-30):**
+    - Local To-do lists `todo.priorities_jamie`, `todo.priorities_hayley` and
+      `todo.priorities_diane`.
+    - Mobile gets a `todo` view with one section per person (`visibility: user`),
+      holding an Auto Layout "To-do" page with a "My to-do" panel and HA's
+      `todo-list` card, plus the nav bar.
+    - Home's Auto Layout has `priorities: true` and
+      `priorities_page: /dashboard-mobile/todo`.
+    - `automation.church_drive_automatic_to_do_tasks` syncs automatic tasks every
+      15 minutes, on start, when the selects or vacuum message change, and when
+      device health holds for 15 minutes. Tasks:
+      - devices not responding;
+      - Battery Status batteries under 20%;
+      - purifier filters under 10%, and Gregg's filter under 24h;
+      - unread Gregg messages.
+    - Automatic items have the description "Automatic · <kind>". They're added once
+      (ticked ones aren't re-added) and removed when resolved. Items people add
+      themselves are never touched.
+    - Who gets each kind is set by `input_select.to_do_devices_not_responding`,
+      `_low_batteries`, `_filters_due` and `_vacuum_messages` (Jamie / Hayley /
+      Diane / Everyone / Nobody; all start as Jamie).
+    - Manager has an "Automatic to-dos" panel with those selects and all three lists.
+    - Mobile runs every Church Drive card as `-beta` for testing this; strip `-beta`
+      on release.
 - The back-to-top strokes are solid white in both states.
 - **Chips capsule, 2026-09-29:**
   - Chips sit in a scrolling `.al-strip` and grow to fill it (`flex:1 0 auto`), then
