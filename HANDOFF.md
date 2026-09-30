@@ -95,8 +95,9 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       ("Priorities Automatic", local_todo entry 01M3RR7QJ3FWB8TKKGKQVPWT5J), never on
       the lists people tick. The user asked for no tick box at all on tasks the
       device confirms. The description is "Automatic · <kind> · <detail> · for
-      <Jamie|Hayley|Diane|Everyone>" (e.g. "Automatic · Filters due · 8% left · for
-      Jamie").
+      <names>", where <names> is "Everyone" (all three) or one or more first names
+      (e.g. "Automatic · Filters due · 8% left · for Jamie, Hayley"). One copy per
+      task however many people it's for.
       - The automation removes a task once the device reports it's sorted (e.g. the
         doorbell going from 17% to 95% after a battery change).
       - It keeps the detail and assignee up to date in place (`refresh`,
@@ -109,17 +110,29 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
         everyone's, with no ✓, in purple (#ab47bc, `HOUSE_TASKS_COLOR`), with an icon by kind (battery, filter,
         heart-pulse for devices, vacuum).
       - The new **`house-tasks-card`** is a read-only list of the same tasks. Its
-        `show` option is `mine` (default: this person's and everyone's) or `all`
-        (every task, with names). Each person's To-do page has it in a purple (#ab47bc,
+        `show` option is `mine` (default: tasks naming this person, shown as "You, Hayley"
+        when shared, plus everyone's) or `all` (every task, with names). Each person's To-do page has it in a purple (#ab47bc,
         the user's choice) "From the house" panel; Manager has it with `show: all`.
     - **Shared tasks** (added 2026-09-30, user's request): `todo.priorities_everyone`
       ("Priorities Everyone") is for tasks people add for everyone. The widget merges
       it after the person's own list (`mdi:account-group`), and ticking one clears it
       for everyone. Each To-do page has a teal "Shared" panel for it.
-    - Who gets each kind is set by `input_select.to_do_devices_not_responding`,
-      `_low_batteries`, `_filters_due` and `_vacuum_messages` (Jamie / Hayley /
-      Diane / Everyone / Nobody; all start as Jamie).
-    - Manager has an "Automatic to-dos" panel with those selects and all three lists.
+    - **Who gets each kind** (multiple people allowed, user's request): 12 switches,
+      `input_boolean.to_do_<kind>_<person>`. The kinds are `devices_not_responding`,
+      `low_batteries`, `filters_due` and `vacuum_messages`; the people are `jamie`,
+      `hayley` and `diane`. Each kind started with Jamie only.
+      - The automation's `assign` variable turns them into "Jamie, Hayley",
+        "Everyone" (all on) or "" (none, no tasks).
+      - They replaced the single-choice `input_select.to_do_*` dropdowns, which were
+        deleted.
+      - The automation is queued with `max: 10` and `max_exceeded: silent`. With
+        max 2, flipping several switches at once dropped the final run and left a
+        stale assignee.
+      - Tested: Jamie+Hayley, all three (Everyone) and none (removed) on the
+        pre-filter task.
+    - Manager's "Automatic to-dos" panel has a "Who gets each kind of task" grid: a
+      heading per kind and three purple person tiles (tap to toggle). Below it are
+      the lists and `house-tasks-card` with `show: all`.
     - **Navigation:** every Mobile nav bar has a sixth page, To-do
       (`/dashboard-mobile/todo`, #7e57c2). The nav bar gained a tight mode
       (`.nb-tight`, set by `_fit()` when the items overflow, and on resize): 2px

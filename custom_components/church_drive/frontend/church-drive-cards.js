@@ -7227,8 +7227,8 @@
     return { kind, detail: rest.slice(1).join(" \xB7 "), who, icon };
   }
   function houseTaskFor(task, first) {
-    const w = String(task.who || "").toLowerCase();
-    return w === "everyone" || !!first && w === String(first).toLowerCase();
+    const names = String(task.who || "").toLowerCase().split(",").map((x) => x.trim());
+    return names.includes("everyone") || !!first && names.includes(String(first).toLowerCase());
   }
   function htDemo() {
     return [
@@ -7323,7 +7323,7 @@
         return;
       }
       this._list.innerHTML = tasks.map(({ h }, i) => {
-        const tag = all || h.who.toLowerCase() === "everyone" ? `<span class="ck-chip ht-who" style="color:var(--secondary-text-color); background:rgba(127,127,127,0.16);"></span>` : "";
+        const tag = all || h.who.toLowerCase() !== first.toLowerCase() ? `<span class="ck-chip ht-who" style="color:var(--secondary-text-color); background:rgba(127,127,127,0.16);"></span>` : "";
         return `<div class="ht-row" style="display:flex; align-items:center; gap:10px; padding:9px 0;${i ? " border-top:1px solid var(--divider-color, rgba(127,127,127,0.22));" : ""}">
             ${iconHtml(h.icon, { size: "22px", style: `color:${colour}; flex:none;` })}
             <div style="flex:1; min-width:0;">
@@ -7337,7 +7337,7 @@
         el.querySelector(".ht-name").textContent = t.summary;
         el.querySelector(".ht-sub").textContent = [h.kind, h.detail].filter(Boolean).join(" \xB7 ");
         const who = el.querySelector(".ht-who");
-        if (who) who.textContent = h.who;
+        if (who) who.textContent = all ? h.who : h.who.split(", ").map((n) => first && n.toLowerCase() === first.toLowerCase() ? "You" : n).join(", ");
       });
       hydrateIcons(this);
     }

@@ -172,7 +172,7 @@ It then fixes it automatically: a refresh, then re-sending the last real state (
 
 The jobs the house has spotted, such as a low battery, a filter due, a device not responding or a vacuum message. It reads them from the automatic to-do list (`entity`, default `todo.priorities_automatic`). There's nothing to tick: each job goes by itself once the device reports it's done.
 
-Items carry the description "Automatic · <kind> · <detail> · for <name>", where the name is a first name or "Everyone"; an automation keeps the list up to date. `show: mine` (the default) lists the signed-in person's jobs and everyone's. `show: all` lists every job with a name tag. `title` is optional, `color` defaults to purple (#ab47bc), and `demo: true` shows pretend jobs for Design Presets.
+Items carry the description "Automatic · <kind> · <detail> · for <name>", where the names are "Everyone" or one or more first names ("Jamie, Hayley"); an automation keeps the list up to date. `show: mine` (the default) lists the jobs that name the signed-in person (tagged "You, Hayley" when shared) and everyone's. `show: all` lists every job with a name tag. `title` is optional, `color` defaults to purple (#ab47bc), and `demo: true` shows pretend jobs for Design Presets.
 
 ### `security-zone-card`
 

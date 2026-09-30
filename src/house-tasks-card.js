@@ -3,9 +3,10 @@
 // automatic to-do list ("Priorities Automatic"). There's nothing to tick:
 // each one goes by itself once the device reports it's sorted.
 //
-// Items carry the description "Automatic · <kind> · <detail> · for <name>",
-// where <name> is a first name or "Everyone". By default the card shows the
-// signed-in person's plus everyone's; `show: all` lists them all with names.
+// Items carry the description "Automatic · <kind> · <detail> · for <names>",
+// where <names> is "Everyone" or one or more first names ("Jamie, Hayley").
+// By default the card shows the signed-in person's (including ones shared
+// with others) plus everyone's; `show: all` lists them all with names.
 
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
@@ -36,9 +37,10 @@ export function houseTask(item) {
 }
 
 // Whether a task is for this person (their own, or everyone's).
+// `who` is "Everyone" or one or more first names ("Jamie, Hayley").
 export function houseTaskFor(task, first) {
-  const w = String(task.who || '').toLowerCase();
-  return w === 'everyone' || (!!first && w === String(first).toLowerCase());
+  const names = String(task.who || '').toLowerCase().split(',').map((x) => x.trim());
+  return names.includes('everyone') || (!!first && names.includes(String(first).toLowerCase()));
 }
 
 function htDemo() {
@@ -149,7 +151,8 @@ export class HouseTasksCard extends HTMLElement {
     this._list.innerHTML =
       tasks
         .map(({ h }, i) => {
-          const tag = all || h.who.toLowerCase() === 'everyone' ? `<span class="ck-chip ht-who" style="color:var(--secondary-text-color); background:rgba(127,127,127,0.16);"></span>` : '';
+          // A tag when it isn't just this person's: "Everyone", or who else.
+          const tag = all || h.who.toLowerCase() !== first.toLowerCase() ? `<span class="ck-chip ht-who" style="color:var(--secondary-text-color); background:rgba(127,127,127,0.16);"></span>` : '';
           return `<div class="ht-row" style="display:flex; align-items:center; gap:10px; padding:9px 0;${i ? ' border-top:1px solid var(--divider-color, rgba(127,127,127,0.22));' : ''}">
             ${iconHtml(h.icon, { size: '22px', style: `color:${colour}; flex:none;` })}
             <div style="flex:1; min-width:0;">
@@ -164,7 +167,8 @@ export class HouseTasksCard extends HTMLElement {
       el.querySelector('.ht-name').textContent = t.summary;
       el.querySelector('.ht-sub').textContent = [h.kind, h.detail].filter(Boolean).join(' · ');
       const who = el.querySelector('.ht-who');
-      if (who) who.textContent = h.who;
+      // Shared with others: this person shows as "You" (e.g. "You, Hayley").
+      if (who) who.textContent = all ? h.who : h.who.split(', ').map((n) => (first && n.toLowerCase() === first.toLowerCase() ? 'You' : n)).join(', ');
     });
     hydrateIcons(this);
   }
