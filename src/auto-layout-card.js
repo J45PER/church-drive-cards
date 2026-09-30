@@ -152,7 +152,7 @@ const LayoutFields = createFormEditor({
     header_list: 'To-do list',
     list_color: 'Colour',
     list_icon: 'Icon for the "+N more" button',
-    priorities_page: 'Page for the "+N more" button',
+    priorities_page: 'Page for the "+N more" button (add #panel-title to jump to a panel, e.g. /dashboard-mobile/todo#cleaning)',
     widget_width: 'Header widget at most this wide',
     column_width: 'Columns at least this wide',
     max_columns: 'At most this many columns',
@@ -577,6 +577,22 @@ export class AutoLayoutCard extends HTMLElement {
     this._cols = cols;
     this._renderHead();
     this._renderChips();
+    this._jumpFromAddress();
+  }
+
+  // A page address ending in #<panel title> (e.g. /dashboard-mobile/todo#cleaning)
+  // jumps to that panel once the page is laid out, like its chip would. The
+  // #… is then taken off the address so going back or reloading doesn't jump again.
+  _jumpFromAddress() {
+    const want = decodeURIComponent(String(window.location.hash || '').slice(1)).toLowerCase();
+    if (!want || !this.isConnected || !this._items || !this._items.length) return;
+    const slug = (t) => String(t || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const it = this._items.find((x) => x.conf.title && (slug(x.conf.title) === slug(want) || String(x.conf.title).toLowerCase() === want));
+    // A hidden copy of the page (another person's section) leaves it for the one on show.
+    if (!it || !this.getBoundingClientRect().height) return;
+    history.replaceState(history.state, '', window.location.pathname + window.location.search);
+    clearTimeout(this._hashTimer);
+    this._hashTimer = setTimeout(() => this._jumpTo(it), 350);
   }
 
   // Each column's last open panel grows so the columns in a band end level,
@@ -678,7 +694,7 @@ export class AutoLayoutCard extends HTMLElement {
         ? `<button type="button" data-todo style="flex:none; width:58px; padding:0 4px; border:none; border-radius:12px; cursor:pointer; font:inherit; font-size:0.72rem; font-weight:700; line-height:1.2; color:${sideText}; background:color-mix(in srgb, ${sideC} 22%, transparent); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;" aria-label="${extra > 0 ? `${extra} more to do` : 'Open the list'}">${iconHtml(
             (todo && todo.icon) || 'mdi:format-list-checks',
             { size: '22px', style: `color:${sideText};` }
-          )}<span style="white-space:nowrap;">${extra > 0 ? `+${extra} more` : mode === 'list' ? 'List' : 'To-do'}</span></button>`
+          )}<span style="white-space:nowrap;">${extra > 0 ? `+${extra} more` : 'To-do'}</span></button>`
         : '';
     head.innerHTML = `<div style="height:40px; font-size:2rem; font-weight:700; line-height:40px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--primary-text-color);">${esc(title)}</div>
       <div class="al-widget" style="height:96px; width:100%; max-width:${Number(this.config.widget_width) || 520}px; margin:0 auto; box-sizing:border-box; display:flex; gap:6px; padding:6px; border-radius:18px; background:color-mix(in srgb, var(--card-background-color, #1f2128) 70%, transparent);">
@@ -949,7 +965,7 @@ export class AutoLayoutCard extends HTMLElement {
         const w = when(t.due);
         return { uid: t.uid, list, text: w.text ? `${t.summary} · ${w.text}` : t.summary, overdue: w.over, strong: w.over || w.today, colour, icon: choreIcon(t.summary), link: this.config.priorities_page || '' };
       });
-    return { items, colour, icon: this.config.list_icon || 'mdi:broom' };
+    return { items, colour, icon: this.config.list_icon || 'mdi:format-list-checks' };
   }
 
   _completeTop(tick) {
@@ -1191,6 +1207,9 @@ export class AutoLayoutCard extends HTMLElement {
     };
     window.addEventListener('resize', this._onResize);
     window.addEventListener('cd-panels-changed', this._onChange);
+    this._onLocation = () => setTimeout(() => this._jumpFromAddress(), 300);
+    window.addEventListener('location-changed', this._onLocation);
+    setTimeout(() => this._jumpFromAddress(), 500);
     if (window.ResizeObserver && !this._ro) {
       this._ro = new ResizeObserver(() => this._queue());
       this._ro.observe(this);
@@ -1207,6 +1226,8 @@ export class AutoLayoutCard extends HTMLElement {
     if (this._chips && this._chips.parentNode === document.body) this._chips.remove();
     this._unwatchHead();
     window.removeEventListener('cd-panels-changed', this._onChange);
+    window.removeEventListener('location-changed', this._onLocation);
+    clearTimeout(this._hashTimer);
     if (this._ro) this._ro.disconnect();
     this._ro = null;
     clearInterval(this._timer);
