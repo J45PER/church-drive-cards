@@ -22,6 +22,8 @@ import { KIT_COLOR, kitShell, kitHead, kitTiles, kitNum, kitCap, kitEsc, kitComp
 
 // Octopus's own pink, and the charger's teal.
 export const OCTO_PINK = '#f050f8';
+// Octopus's violet, for gas.
+export const OCTO_VIOLET = '#7b61ff';
 const EV_TEAL = '#00b8d4';
 const CHEAP = KIT_COLOR.good;
 const PEAK = KIT_COLOR.poor;
@@ -247,7 +249,7 @@ export class OctopusCard extends HTMLElement {
     const kwh = kitNum(this._s(m.gas, 'current_accumulative_consumption_kwh'));
     const cost = kitNum(this._s(m.gas, 'current_accumulative_cost'));
     return {
-      head: [this.config.name || 'Gas', rate == null ? 'No rate' : `${pence(rate)} per kWh`, KIT_COLOR.poor],
+      head: [this.config.name || 'Gas', rate == null ? 'No rate' : `${pence(rate)} per kWh`, OCTO_VIOLET],
       body: `
         <div class="oc-big"><b>${pence(rate)}</b><span class="ck-sub">per kWh</span></div>
         ${kwh != null || cost != null ? `<div class="oc-two"><div class="oc-stat"><b>${pounds(cost)}</b><span>Today so far${kwh != null ? ` · ${kwh.toFixed(1)} kWh` : ''}</span></div><div class="oc-stat"><b>${pence(standing)}</b><span>Standing charge a day</span></div></div>` : `<div class="ck-sub">Standing charge ${pence(standing)} a day</div>`}`,
@@ -275,7 +277,7 @@ export class OctopusCard extends HTMLElement {
     if (c.show === 'gas') {
       const rate = kitNum(this._s(m.gas, 'current_rate'));
       const cost = kitNum(this._s(m.gas, 'current_accumulative_cost'));
-      return { name: c.name || 'Gas', color: KIT_COLOR.poor, value: pence(rate), status: cost != null ? `today ${pounds(cost)}` : 'per kWh' };
+      return { name: c.name || 'Gas', color: OCTO_VIOLET, value: pence(rate), status: cost != null ? `today ${pounds(cost)}` : 'per kWh' };
     }
     if (c.show === 'octoplus') {
       const pts = kitNum(this._s(m.account, 'octoplus_points'));

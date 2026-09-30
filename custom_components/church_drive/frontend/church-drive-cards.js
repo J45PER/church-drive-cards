@@ -8282,6 +8282,7 @@
 
   // src/energy-cards.js
   var OCTO_PINK = "#f050f8";
+  var OCTO_VIOLET = "#7b61ff";
   var EV_TEAL = "#00b8d4";
   var CHEAP = KIT_COLOR.good;
   var PEAK = KIT_COLOR.poor;
@@ -8480,7 +8481,7 @@
       const kwh = kitNum(this._s(m.gas, "current_accumulative_consumption_kwh"));
       const cost = kitNum(this._s(m.gas, "current_accumulative_cost"));
       return {
-        head: [this.config.name || "Gas", rate == null ? "No rate" : `${pence(rate)} per kWh`, KIT_COLOR.poor],
+        head: [this.config.name || "Gas", rate == null ? "No rate" : `${pence(rate)} per kWh`, OCTO_VIOLET],
         body: `
         <div class="oc-big"><b>${pence(rate)}</b><span class="ck-sub">per kWh</span></div>
         ${kwh != null || cost != null ? `<div class="oc-two"><div class="oc-stat"><b>${pounds(cost)}</b><span>Today so far${kwh != null ? ` \xB7 ${kwh.toFixed(1)} kWh` : ""}</span></div><div class="oc-stat"><b>${pence(standing)}</b><span>Standing charge a day</span></div></div>` : `<div class="ck-sub">Standing charge ${pence(standing)} a day</div>`}`
@@ -8506,7 +8507,7 @@
       if (c.show === "gas") {
         const rate2 = kitNum(this._s(m.gas, "current_rate"));
         const cost = kitNum(this._s(m.gas, "current_accumulative_cost"));
-        return { name: c.name || "Gas", color: KIT_COLOR.poor, value: pence(rate2), status: cost != null ? `today ${pounds(cost)}` : "per kWh" };
+        return { name: c.name || "Gas", color: OCTO_VIOLET, value: pence(rate2), status: cost != null ? `today ${pounds(cost)}` : "per kWh" };
       }
       if (c.show === "octoplus") {
         const pts = kitNum(this._s(m.account, "octoplus_points"));
