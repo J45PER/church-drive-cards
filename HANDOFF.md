@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-29. Current release: **v0.22.1**.*
+*Last updated 2026-09-30. Current release: **v0.23.0**.*
 
 ## Where this stands
 
@@ -67,7 +67,7 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
     `title: Hello {user}`, so every Mobile page uses the same header. Chips `auto` now
     shows on every phone page (1+ titled panels), not only 4+, so the row is always
     there.
-- **In beta: header widget and priorities (2026-09-30).**
+- **v0.23.0 (released 2026-09-30, reload-only): header widget, priorities, House Tasks card, nav bar tight mode.**
   - The header's alerts line became a fixed three-row widget (26px rows, 96px box;
     header 160px on every page): page alerts first, then the person's to-dos.
   - With `priorities: true`, Auto Layout subscribes (`todo/item/subscribe`) to
@@ -148,8 +148,8 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
         lists (e.g. other shopping lists) go on the Shopping view as extra panels.
     - The header widget is capped at `widget_width` (default 520px) and centred, so it
       isn't page-wide on tablets and PCs.
-    - Mobile, Tasks and Manager's `house-tasks-card` all use the `-beta` card types
-      for testing; strip `-beta` from all three on release.
+    - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
+      so they all use the released card types.
 - The back-to-top strokes are solid white in both states.
 - **Chips capsule, 2026-09-29:**
   - Chips sit in a scrolling `.al-strip` and grow to fill it (`flex:1 0 auto`), then
