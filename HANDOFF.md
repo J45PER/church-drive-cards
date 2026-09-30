@@ -146,6 +146,13 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
         climate / cover / camera / vacuum / lock / alarm unavailable longer than
         `input_number.to_do_offline_for` (60 min). Media players are left out, since
         TVs go unavailable when off.
+        - The whole device must be quiet: nothing else on it reporting, ignoring
+          buttons/selects/times/numbers/text/events/updates, which sit at
+          "unknown". Before this, Gregg got a false "not responding" because only
+          `switch.gregg_off_peak_charging` was unavailable while the vacuum was
+          docked and fine (fixed 2026-09-30).
+        - "My Boy Hugo" (a Hue Go, a portable lamp) is genuinely unreachable. The
+          user can label it "Ignore in to-dos" if it's usually unplugged.
       - Filters and parts: the purifier filters (<10%), plus all six Gregg
         consumables due within `input_number.to_do_parts_due_within` (24h): filter,
         main and side brush, sensors, dock tray, mop cloth.
