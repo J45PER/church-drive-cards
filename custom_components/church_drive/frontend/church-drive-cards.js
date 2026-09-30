@@ -127,6 +127,10 @@
     return String(text).replace(/&/g, "&amp;").replace(/"/g, "&quot;");
   }
   function iconHtml(icon, { size = "24px", style = "", cls = "" } = {}) {
+    const pic = /^brand:/.test(icon || "") ? `https://brands.home-assistant.io/_/${encodeURIComponent(icon.slice(6))}/icon.png` : /^(https?:)?\/\//.test(icon || "") || /^\/[^/]/.test(icon || "") ? icon : null;
+    if (pic) {
+      return `<img class="${cls}" src="${escapeAttr(pic)}" alt="" style="width:${size}; height:${size}; object-fit:contain; border-radius:6px; ${style}">`;
+    }
     if (!isCustom(icon)) {
       return `<ha-icon class="${cls}" icon="${escapeAttr(icon)}" style="--mdc-icon-size:${size}; ${style}"></ha-icon>`;
     }
@@ -6821,9 +6825,9 @@
       };
     }
     _drawStrip(tracks) {
-      const now = Date.now(), span = this._hours * 36e5, from = now - span;
+      const now = Date.now(), span2 = this._hours * 36e5, from = now - span2;
       const style = this.config.strip === "ticks" ? "ticks" : "bars";
-      const x = (t) => (t - from) / span * 100;
+      const x = (t) => (t - from) / span2 * 100;
       const minute = Math.floor(now / 6e4);
       const sig = JSON.stringify([style, this._hours, minute, tracks.map(([k, s]) => [k, s.length, s.length ? s[s.length - 1] : 0])]);
       if (this._stripSig === sig) return;
@@ -6838,7 +6842,7 @@
           html += `<i style="left:${l}%; width:${Math.max(0, x(b) - l)}%; background:${SZ_COLOR[kind]};"></i>`;
         }));
       } else {
-        const slots = 24, slot = span / slots;
+        const slots = 24, slot = span2 / slots;
         const counts = Array.from({ length: slots }, () => ({}));
         tracks.filter(([k]) => k !== "light").forEach(([kind, spans]) => spans.forEach(([a]) => {
           if (a < from) return;
@@ -6856,11 +6860,11 @@
       this._stripEl.innerHTML = `${html}<span class="sz-cursor"></span>`;
       const chip = this.querySelector(".sz-chip");
       this.querySelector(".sz-axis").style.setProperty("--sz-chip-w", `${(chip.offsetWidth || 0) + 8}px`);
-      this.querySelector(".sz-axis").innerHTML = [0, 0.25, 0.5, 0.75].map((f) => `<span>${clock(from + f * span)}</span>`).join("") + "<span>now</span>";
+      this.querySelector(".sz-axis").innerHTML = [0, 0.25, 0.5, 0.75].map((f) => `<span>${clock(from + f * span2)}</span>`).join("") + "<span>now</span>";
     }
     // What happened at a point on the strip, shown in the title line.
     _at(frac) {
-      const span = this._hours * 36e5, now = Date.now(), t = now - span + frac * span, tol = span / 90;
+      const span2 = this._hours * 36e5, now = Date.now(), t = now - span2 + frac * span2, tol = span2 / 90;
       const found = /* @__PURE__ */ new Set();
       (this._tracks || []).forEach(([kind, spans]) => spans.forEach(([a, b]) => {
         if (t >= a - tol && t <= b + tol) found.add(SZ_WORD[kind]);
@@ -7035,17 +7039,20 @@
               color: { label: "Colour", selector: { ui_color: {} } },
               color_template: { label: "Colour from a template (optional)", selector: { template: {} } },
               icon_template: { label: "Icon from a template (optional, e.g. mdi:shield-off when disarmed)", selector: { template: {} } },
-              alert_template: { label: "Needs attention when (optional template)", selector: { template: {} } }
+              alert_template: { label: "Needs attention when (optional template)", selector: { template: {} } },
+              admin_only: { label: "Only admins see this page", selector: { boolean: {} } }
             }
           }
         }
       },
+      { name: "icons_only", selector: { boolean: {} }, default: false },
       { name: "hide_tabs", selector: { boolean: {} }, default: true },
       { name: "back_to_top", selector: { boolean: {} }, default: true },
       { name: "demo", selector: { boolean: {} } }
     ],
     labels: {
       pages: "Pages",
+      icons_only: "Icons only (no page names; the current page is its filled circle)",
       hide_tabs: "Hide the dashboard's own tabs at the top",
       back_to_top: "Back-to-top button beside the bar (an arrow once you scroll down, a dash at the top)",
       demo: "Show pretend pages (for Design Presets; shown in place, not pinned)"
@@ -7175,6 +7182,9 @@
           .nb.nb-tight .nb-it { min-width:40px; }
           .nb.nb-tight .nb-it.nb-on { padding:0 12px; }
           .nb.nb-tight .nb-it span.nb-name { display:none; }
+          .nb.nb-icons { gap:2px; padding:0 6px; }
+          .nb.nb-icons .nb-it, .nb.nb-icons .nb-it.nb-on { min-width:42px; width:42px; padding:0; }
+          .nb.nb-icons .nb-it.nb-on .nb-dot { left:28px; right:auto; }
           .nb-it:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
           .nb-dot { position:absolute; left:28px; top:6px; width:8px; height:8px; border-radius:50%; background:#ff9800; box-shadow:0 0 0 2px var(--card-background-color, #1f2128); }
           .nb-it.nb-on .nb-dot { left:auto; right:6px; }
@@ -7216,7 +7226,7 @@
         const alert = demo ? !!p.alert_template : !!live.alert;
         const icon = /^[a-z]+:[\w-]+$/.test(live.icon || "") ? live.icon : p.icon || "mdi:circle";
         return { i, p, icon, colour, alert, on: i === active };
-      });
+      }).filter((t) => !t.p.admin_only || demo || !!(this._hass && this._hass.user && this._hass.user.is_admin));
       const sig = JSON.stringify(items.map((t) => [t.p.name, t.icon, t.colour, t.alert, t.on]));
       if (sig === this._sig) return;
       this._sig = sig;
@@ -7244,8 +7254,9 @@
     _fit() {
       const nav = this._nav;
       if (!nav) return;
+      nav.classList.toggle("nb-icons", !!this.config.icons_only);
       nav.classList.remove("nb-tight");
-      if (nav.scrollWidth > nav.clientWidth + 1) nav.classList.add("nb-tight");
+      if (this.config.icons_only || nav.scrollWidth > nav.clientWidth + 1) nav.classList.add("nb-tight");
     }
     // ---- Back to top: an arrow once the page is scrolled, a dash at the top.
     _scroller() {
@@ -8269,6 +8280,443 @@
     });
   }
 
+  // src/energy-cards.js
+  var OCTO_PINK = "#f050f8";
+  var EV_TEAL = "#00b8d4";
+  var CHEAP = KIT_COLOR.good;
+  var PEAK = KIT_COLOR.poor;
+  var pence = (gbp) => gbp == null ? "\u2013" : `${(gbp * 100).toFixed(gbp * 100 < 10 ? 2 : 1).replace(/\.?0+$/, "")}p`;
+  var pounds = (gbp) => gbp == null ? "\u2013" : `\xA3${Number(gbp).toFixed(2)}`;
+  var hhmm = (d) => d.toLocaleTimeString(void 0, { hour: "2-digit", minute: "2-digit" });
+  var span = (ms) => {
+    const m = Math.max(0, Math.round(ms / 6e4));
+    return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60 ? `${m % 60} m` : ""}`.trim();
+  };
+  function platformEntities(hass, platform, idHint) {
+    const reg = hass.entities || {};
+    const ids = Object.keys(hass.states).filter((id) => reg[id] ? reg[id].platform === platform : id.includes(idHint));
+    return ids;
+  }
+  function octoFind(hass) {
+    const ids = platformEntities(hass, "octopus_energy", "octopus_energy_");
+    const find = (re, tail) => {
+      const id = ids.find((x) => re.test(x));
+      return id ? id.split(".")[1].slice(0, -tail.length) : null;
+    };
+    return {
+      elec: find(/^sensor\.octopus_energy_electricity_.*_current_rate$/, "current_rate"),
+      gas: find(/^sensor\.octopus_energy_gas_.*_current_rate$/, "current_rate"),
+      account: find(/^sensor\.octopus_energy_a_.*_octoplus_points$/, "octoplus_points")
+    };
+  }
+  var OCTO_VIEWS = [
+    { value: "electricity", label: "Electricity now" },
+    { value: "last_day", label: "Last full day (electricity and gas)" },
+    { value: "gas", label: "Gas" },
+    { value: "octoplus", label: "Octoplus" }
+  ];
+  var OctopusCardEditor = createFormEditor({
+    schema: () => [
+      { name: "show", selector: { select: { mode: "dropdown", options: OCTO_VIEWS } } },
+      { name: "name", selector: { text: {} } }
+    ],
+    labels: { show: "Show", name: "Title (optional)" },
+    helpers: { show: "Finds your Octopus meters by itself (the Octopus Energy integration). Live use needs a Home Mini." }
+  });
+  var OctopusCard = class extends HTMLElement {
+    setConfig(config) {
+      this.config = { show: "electricity", ...config };
+      this._built = false;
+      this._sig = null;
+    }
+    set hass(hass) {
+      this._hass = hass;
+      this._render();
+    }
+    connectedCallback() {
+      this._tick = setInterval(() => {
+        this._sig = null;
+        this._render();
+      }, 6e4);
+    }
+    disconnectedCallback() {
+      clearInterval(this._tick);
+    }
+    _s(obj, key, domain = "sensor") {
+      return obj ? this._hass.states[`${domain}.${obj}${key}`] : null;
+    }
+    // Today's and tomorrow's half-hour rates, and which count as cheap.
+    _rates(m) {
+      const get = (k) => this._s(m.elec, k, "event") && this._s(m.elec, k, "event").attributes.rates || [];
+      const all = [...get("current_day_rates"), ...get("next_day_rates")].map((r) => ({ start: new Date(r.start), end: new Date(r.end), v: Number(r.value_inc_vat) })).filter((r) => !isNaN(r.start) && !isNaN(r.v)).sort((a, b) => a.start - b.start);
+      const min = all.length ? Math.min(...all.map((r) => r.v)) : null;
+      const max = all.length ? Math.max(...all.map((r) => r.v)) : null;
+      const cheap = (v) => min != null && max != null && max - min > 1e-3 && v <= min + 1e-3;
+      return { all, cheap, min };
+    }
+    // "Cheap now until 05:30" or the next cheap window and how long until it.
+    _window(rates) {
+      const now = Date.now();
+      const i = rates.all.findIndex((r) => r.start <= now && r.end > now);
+      if (i < 0) return null;
+      const runEnd = (k2) => {
+        let j = k2;
+        while (j + 1 < rates.all.length && rates.cheap(rates.all[j + 1].v) && +rates.all[j + 1].start === +rates.all[j].end) j += 1;
+        return rates.all[j].end;
+      };
+      if (rates.cheap(rates.all[i].v)) return { now: true, until: runEnd(i), v: rates.all[i].v };
+      const k = rates.all.findIndex((r, n) => n > i && rates.cheap(r.v));
+      if (k < 0) return null;
+      return { now: false, from: rates.all[k].start, until: runEnd(k), v: rates.all[k].v };
+    }
+    _render() {
+      if (!this._hass) return;
+      const c = this.config;
+      const m = octoFind(this._hass);
+      const view = c.show;
+      if (this._compact) return kitCompact(this, this._compactSpec(m));
+      if (!this._built) {
+        this.innerHTML = kitShell(`<div class="oc-body" style="display:flex; flex-direction:column; gap:10px;"></div>`, `
+        .oc-big { display:flex; align-items:baseline; gap:10px; }
+        .oc-big b { font-size:2.2rem; font-weight:300; font-variant-numeric:tabular-nums; line-height:1.1; }
+        .oc-two { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+        .oc-stat { border-radius:12px; background:rgba(127,127,127,.12); padding:10px 12px; display:flex; flex-direction:column; gap:2px; min-width:0; }
+        .oc-stat b { font-size:1.15rem; font-weight:600; font-variant-numeric:tabular-nums; }
+        .oc-stat span { font-size:.72rem; color:var(--secondary-text-color); }
+        .oc-strip { position:relative; height:20px; border-radius:8px; overflow:hidden; display:flex; }
+        .oc-strip i { display:block; height:100%; }
+        .oc-now { position:absolute; top:-2px; bottom:-2px; width:2px; background:var(--primary-text-color); box-shadow:0 0 0 2px rgba(0,0,0,.35); }
+        .oc-ticks { display:flex; justify-content:space-between; font-size:.68rem; color:var(--secondary-text-color); font-variant-numeric:tabular-nums; }
+        .oc-bars { display:flex; align-items:flex-end; gap:1px; height:52px; }
+        .oc-bars i { flex:1; border-radius:2px 2px 0 0; min-height:2px; }
+        .oc-meter { height:8px; border-radius:99px; background:rgba(127,127,127,.2); overflow:hidden; display:flex; }
+        .oc-meter i { display:block; height:100%; }
+        .oc-pill { margin-left:auto; font-size:.72rem; font-weight:700; padding:2px 9px; border-radius:999px; }`);
+        this._body = this.querySelector(".oc-body");
+        this._built = true;
+      }
+      const minute = Math.floor(Date.now() / 6e4);
+      const html = view === "last_day" ? this._lastDay(m) : view === "gas" ? this._gas(m) : view === "octoplus" ? this._octoplus(m) : this._elec(m);
+      const sig = JSON.stringify([html.head, html.body, minute]);
+      if (sig === this._sig) return;
+      this._sig = sig;
+      kitHead(this, html.head[0], html.head[1], html.head[2]);
+      this._body.innerHTML = html.body;
+      hydrateIcons(this);
+    }
+    _missing(what) {
+      return { head: [this.config.name || "Octopus", "Not set up", KIT_COLOR.off], body: `<div class="ck-sub" style="line-height:1.5;">No Octopus ${what} found. Add the Octopus Energy integration (from HACS) and this card finds your meters by itself.</div>` };
+    }
+    _elec(m) {
+      if (!m.elec) return this._missing("electricity meter");
+      const rate = kitNum(this._s(m.elec, "current_rate"));
+      const rates = this._rates(m);
+      const cheapNow = rate != null && rates.cheap(rate);
+      const col = cheapNow ? CHEAP : PEAK;
+      const demand = kitNum(this._s(m.elec, "current_demand"));
+      const todayCost = kitNum(this._s(m.elec, "current_accumulative_cost"));
+      const todayKwh = kitNum(this._s(m.elec, "current_accumulative_consumption"));
+      const standing = kitNum(this._s(m.elec, "current_standing_charge"));
+      const tariff = (this._s(m.elec, "current_rate") || { attributes: {} }).attributes.tariff || "";
+      const w = this._window(rates);
+      const d0 = /* @__PURE__ */ new Date();
+      d0.setHours(0, 0, 0, 0);
+      const d1 = +d0 + 864e5;
+      const today = rates.all.filter((r) => r.start >= d0 && r.start < d1);
+      const strip = today.map((r) => `<i style="width:${(r.end - r.start) / 864e5 * 100}%; background:${rates.cheap(r.v) ? CHEAP : `color-mix(in srgb, ${PEAK} 55%, transparent)`};"></i>`).join("");
+      const nowPct = (Date.now() - d0) / 864e5 * 100;
+      const win = !w ? "" : w.now ? `<b style="color:${CHEAP};">Cheap now</b> at ${pence(w.v)} until ${hhmm(w.until)}` : `<b style="color:${CHEAP};">${pence(w.v)}</b> from ${hhmm(w.from)} to ${hhmm(w.until)}, in ${span(w.from - Date.now())}`;
+      const product = /GO/.test(tariff) ? "Octopus Go" : /AGILE/.test(tariff) ? "Agile Octopus" : /INTELLI/.test(tariff) ? "Intelligent Octopus" : "";
+      return {
+        head: [this.config.name || "Octopus Electricity", rate == null ? "No rate" : `${pence(rate)} \xB7 ${cheapNow ? "Cheap" : "Peak"}`, OCTO_PINK],
+        body: `
+        <div class="oc-big"><b style="color:${col};">${pence(rate)}</b><span class="ck-sub">per kWh now</span><span class="oc-pill" style="background:color-mix(in srgb, ${col} 22%, transparent); color:${col};">${cheapNow ? "Cheap" : "Peak"}</span></div>
+        ${demand != null || todayCost != null ? `<div class="oc-two">
+          <div class="oc-stat"><b>${demand == null ? "\u2013" : `${Math.round(demand)} W`}</b><span>Using now</span></div>
+          <div class="oc-stat"><b>${pounds(todayCost)}</b><span>Today so far${todayKwh != null ? ` \xB7 ${todayKwh.toFixed(1)} kWh` : ""}</span></div></div>` : ""}
+        ${today.length ? `<div class="oc-strip">${strip}<div class="oc-now" style="left:${nowPct.toFixed(2)}%;"></div></div>
+        <div class="oc-ticks"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>` : ""}
+        <div class="ck-sub">${[win, product, standing != null ? `standing charge ${pence(standing)} a day` : ""].filter(Boolean).join(" \xB7 ")}</div>`
+      };
+    }
+    _lastDay(m) {
+      if (!m.elec) return this._missing("electricity meter");
+      const cost = this._s(m.elec, "previous_accumulative_cost");
+      const charges = cost && cost.attributes.charges || [];
+      if (!charges.length) return { head: [this.config.name || "Last full day", "Waiting for Octopus", KIT_COLOR.off], body: `<div class="ck-sub">Octopus hasn't sent a full day of readings yet.</div>` };
+      const day = new Date(charges[0].start);
+      const rates = charges.map((x) => Number(x.rate));
+      const lo = Math.min(...rates), hi = Math.max(...rates);
+      const isCheap = (r) => hi - lo > 1e-3 && r <= lo + 1e-3;
+      const kwh = charges.reduce((s, x) => s + Number(x.consumption || 0), 0);
+      const cheapKwh = charges.filter((x) => isCheap(Number(x.rate))).reduce((s, x) => s + Number(x.consumption || 0), 0);
+      const share = kwh ? Math.round(cheapKwh / kwh * 100) : 0;
+      const eTotal = Number(cost.attributes.total != null ? cost.attributes.total : cost.state);
+      const gasCost = this._s(m.gas, "previous_accumulative_cost");
+      const gasKwh = kitNum(this._s(m.gas, "previous_accumulative_consumption_kwh"));
+      const gTotal = gasCost ? Number(gasCost.attributes.total != null ? gasCost.attributes.total : gasCost.state) : null;
+      const max = Math.max(...charges.map((x) => Number(x.consumption || 0)), 0.01);
+      const bars = charges.map((x) => `<i title="${kitEsc(hhmm(new Date(x.start)))} \xB7 ${Number(x.consumption).toFixed(2)} kWh \xB7 ${pence(Number(x.rate))}" style="height:${Number(x.consumption || 0) / max * 100}%; background:${isCheap(Number(x.rate)) ? CHEAP : PEAK};"></i>`).join("");
+      const saving = hi - lo > 1e-3 ? `Each kWh moved to the cheap rate saves ${pence(hi - lo)}.` : "";
+      const dayName = day.toLocaleDateString(void 0, { weekday: "short", day: "numeric", month: "short" });
+      return {
+        head: [this.config.name || "Last full day", `${dayName} \xB7 ${pounds(eTotal + (gTotal || 0))}`, KIT_COLOR.comfy],
+        body: `
+        <div class="oc-two">
+          <div class="oc-stat"><b>${pounds(eTotal)}</b><span>Electricity \xB7 ${kwh.toFixed(1)} kWh</span></div>
+          <div class="oc-stat"><b>${pounds(gTotal)}</b><span>Gas${gasKwh != null ? ` \xB7 ${gasKwh.toFixed(1)} kWh` : ""}</span></div>
+        </div>
+        <div class="oc-bars">${bars}</div>
+        <div class="oc-ticks"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
+        ${hi - lo > 1e-3 ? `<div class="oc-meter"><i style="width:${share}%; background:${CHEAP};"></i><i style="width:${100 - share}%; background:${PEAK};"></i></div>
+        <div class="ck-sub"><b style="color:${CHEAP};">${share}%</b> of electricity was used at the cheap rate. ${saving}</div>` : ""}
+        <div class="ck-sub">Octopus sends readings a day or two late. Costs include standing charges.</div>`
+      };
+    }
+    _gas(m) {
+      if (!m.gas) return this._missing("gas meter");
+      const rate = kitNum(this._s(m.gas, "current_rate"));
+      const standing = kitNum(this._s(m.gas, "current_standing_charge"));
+      const kwh = kitNum(this._s(m.gas, "current_accumulative_consumption_kwh"));
+      const cost = kitNum(this._s(m.gas, "current_accumulative_cost"));
+      return {
+        head: [this.config.name || "Gas", rate == null ? "No rate" : `${pence(rate)} per kWh`, KIT_COLOR.poor],
+        body: `
+        <div class="oc-big"><b>${pence(rate)}</b><span class="ck-sub">per kWh</span></div>
+        ${kwh != null || cost != null ? `<div class="oc-two"><div class="oc-stat"><b>${pounds(cost)}</b><span>Today so far${kwh != null ? ` \xB7 ${kwh.toFixed(1)} kWh` : ""}</span></div><div class="oc-stat"><b>${pence(standing)}</b><span>Standing charge a day</span></div></div>` : `<div class="ck-sub">Standing charge ${pence(standing)} a day</div>`}`
+      };
+    }
+    _octoplus(m) {
+      if (!m.account) return this._missing("account");
+      const pts = kitNum(this._s(m.account, "octoplus_points"));
+      const happy = kitNum(this._s(m.account, "octoplus_weekend_happy_hours"));
+      const cal = this._hass.states[`calendar.${m.account}octoplus_power_down`];
+      const up = this._hass.states[`calendar.${m.account}octoplus_power_up`];
+      const ev = (x) => x && x.attributes.start_time ? `${x.attributes.message || "Session"} \xB7 ${new Date(x.attributes.start_time).toLocaleString(void 0, { weekday: "short", hour: "2-digit", minute: "2-digit" })}` : "";
+      const sessions = [ev(cal), ev(up)].filter(Boolean);
+      return {
+        head: [this.config.name || "Octoplus", pts == null ? "" : `${pts} points`, OCTO_PINK],
+        body: `
+        <div class="oc-two"><div class="oc-stat"><b>${pts == null ? "\u2013" : pts}</b><span>Points</span></div><div class="oc-stat"><b>${happy == null ? "\u2013" : happy}</b><span>Weekend happy hours</span></div></div>
+        <div class="ck-sub">${sessions.length ? `Saving sessions: ${kitEsc(sessions.join(", "))}` : "No saving sessions booked."}</div>`
+      };
+    }
+    _compactSpec(m) {
+      const c = this.config;
+      if (c.show === "gas") {
+        const rate2 = kitNum(this._s(m.gas, "current_rate"));
+        const cost = kitNum(this._s(m.gas, "current_accumulative_cost"));
+        return { name: c.name || "Gas", color: KIT_COLOR.poor, value: pence(rate2), status: cost != null ? `today ${pounds(cost)}` : "per kWh" };
+      }
+      if (c.show === "octoplus") {
+        const pts = kitNum(this._s(m.account, "octoplus_points"));
+        return { name: c.name || "Octoplus", color: OCTO_PINK, value: pts == null ? "\u2013" : String(pts), status: "points" };
+      }
+      if (c.show === "last_day") {
+        const cost = this._s(m.elec, "previous_accumulative_cost");
+        const gas = this._s(m.gas, "previous_accumulative_cost");
+        const total = (cost ? Number(cost.attributes.total != null ? cost.attributes.total : cost.state) : 0) + (gas ? Number(gas.attributes.total != null ? gas.attributes.total : gas.state) : 0);
+        return { name: c.name || "Last full day", color: KIT_COLOR.comfy, value: pounds(total), status: "electricity and gas" };
+      }
+      const rate = kitNum(this._s(m.elec, "current_rate"));
+      const rates = this._rates(m);
+      const cheapNow = rate != null && rates.cheap(rate);
+      const demand = kitNum(this._s(m.elec, "current_demand"));
+      return {
+        name: c.name || "Octopus Electricity",
+        color: OCTO_PINK,
+        value: pence(rate),
+        valueColor: cheapNow ? CHEAP : PEAK,
+        status: [cheapNow ? "Cheap" : "Peak", demand != null ? `${Math.round(demand)} W now` : ""].filter(Boolean).join(" \xB7 ")
+      };
+    }
+    getCardSize() {
+      return 4;
+    }
+    getGridOptions() {
+      return { columns: 12, min_columns: 6, rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement(`octopus-card-editor${SUFFIX}`);
+    }
+    static getStubConfig() {
+      return { show: "electricity" };
+    }
+  };
+  kitCompactable(OctopusCard, (card) => {
+    card._built = false;
+    card._sig = null;
+  });
+  var EV_MODES = [
+    { key: "Stopped", name: "Stop", icon: "mdi:stop-circle-outline", color: KIT_COLOR.off },
+    { key: "Eco", name: "Eco", icon: "mdi:leaf", color: KIT_COLOR.good },
+    { key: "Eco+", name: "Eco+", icon: "mdi:solar-power", color: KIT_COLOR.comfy },
+    { key: "Fast", name: "Fast", icon: "mdi:lightning-bolt", color: KIT_COLOR.poor }
+  ];
+  function evFind(hass, c = {}) {
+    const ids = platformEntities(hass, "myenergi", "zappi").filter((id) => /zappi/.test(id));
+    const st = (id) => hass.states[id];
+    const pick = (dom, re) => ids.find((id) => id.startsWith(`${dom}.`) && re.test(id)) || "";
+    return {
+      mode: c.mode_entity || ids.find((id) => id.startsWith("select.") && (st(id).attributes.options || []).includes("Eco+")) || pick("select", /charge_mode/),
+      power: c.power_entity || pick("sensor", /internal_load|charging_power|power_ct_internal/) || ids.find((id) => id.startsWith("sensor.") && st(id).attributes.device_class === "power") || "",
+      session: c.session_entity || pick("sensor", /charge_added_session|session/),
+      today: c.today_entity || pick("sensor", /energy_used_today|charge_added_today/),
+      status: c.status_entity || pick("sensor", /_status$/),
+      plug: c.plug_entity || pick("sensor", /plug_status|plug/)
+    };
+  }
+  var EvChargerCardEditor = createFormEditor({
+    schema: () => [
+      { name: "name", selector: { text: {} } },
+      { name: "show_buttons", selector: { boolean: {} }, default: true },
+      {
+        type: "expandable",
+        name: "",
+        title: "Charger entities (found automatically)",
+        flatten: true,
+        schema: [
+          { name: "mode_entity", selector: { entity: { domain: "select" } } },
+          { name: "power_entity", selector: { entity: { domain: "sensor" } } },
+          { name: "session_entity", selector: { entity: { domain: "sensor" } } },
+          { name: "status_entity", selector: { entity: { domain: "sensor" } } },
+          { name: "plug_entity", selector: { entity: { domain: "sensor" } } }
+        ]
+      },
+      { name: "demo", selector: { boolean: {} } }
+    ],
+    labels: {
+      name: "Title (optional)",
+      show_buttons: "Mode buttons (Stop, Eco, Eco+, Fast)",
+      mode_entity: "Charge mode",
+      power_entity: "Charging power",
+      session_entity: "Energy added this charge",
+      status_entity: "Status",
+      plug_entity: "Plug status",
+      demo: "Show a pretend charger (for Design Presets)"
+    },
+    helpers: { name: "Finds a myenergi Zappi by itself once the myenergi integration is set up." }
+  });
+  var EvChargerCard = class extends HTMLElement {
+    setConfig(config) {
+      this.config = config || {};
+      this._built = false;
+      this._sig = null;
+    }
+    set hass(hass) {
+      this._hass = hass;
+      this._render();
+    }
+    _data() {
+      const c = this.config;
+      if (c.demo) return { found: true, mode: "Eco+", options: ["Fast", "Eco", "Eco+", "Stopped"], power: 7100, session: 18.4, status: "Charging", plug: "Connected" };
+      const e = evFind(this._hass, c);
+      const s = (id) => id && this._hass.states[id];
+      if (!s(e.mode) && !s(e.power) && !s(e.status)) return { found: false };
+      let power = kitNum(s(e.power));
+      if (power != null && s(e.power).attributes.unit_of_measurement === "kW") power *= 1e3;
+      return {
+        found: true,
+        e,
+        mode: s(e.mode) ? s(e.mode).state : null,
+        options: s(e.mode) ? s(e.mode).attributes.options || [] : [],
+        power,
+        session: kitNum(s(e.session)),
+        status: s(e.status) ? s(e.status).state : null,
+        plug: s(e.plug) ? s(e.plug).state : null,
+        unavailable: [e.mode, e.power, e.status].filter(Boolean).every((id) => !s(id) || s(id).state === "unavailable")
+      };
+    }
+    // The Octopus rate right now (for "charging at 5.0p").
+    _rate() {
+      const m = octoFind(this._hass);
+      const r = m.elec && this._hass.states[`sensor.${m.elec}current_rate`];
+      return kitNum(r);
+    }
+    _render() {
+      if (!this._hass) return;
+      const c = this.config;
+      const d = this._data();
+      const charging = d.found && d.power != null && d.power > 100;
+      const col = !d.found || d.unavailable ? KIT_COLOR.off : charging ? EV_TEAL : KIT_COLOR.off;
+      const word = !d.found ? "Not connected yet" : d.unavailable ? "Unavailable" : charging ? `Charging \xB7 ${d.mode || ""}`.replace(/ · $/, "") : kitCap(d.status || d.plug || d.mode || "Idle");
+      if (this._compact) {
+        return kitCompact(this, {
+          name: c.name || "Car charger",
+          color: col,
+          value: charging ? `${(d.power / 1e3).toFixed(1)} kW` : "",
+          valueColor: EV_TEAL,
+          status: d.found ? word : "Not connected yet",
+          buttons: d.found && c.show_buttons !== false && d.mode != null ? EV_MODES.filter((b) => !d.options.length || d.options.includes(b.key)).map((b) => ({ ...b, label: b.name, on: d.mode === b.key })) : [],
+          onButton: (b) => this._setMode(b.key)
+        });
+      }
+      if (!this._built) {
+        this.innerHTML = kitShell(`<div class="ev-body" style="display:flex; flex-direction:column; gap:10px;"></div><div class="ck-row ev-modes"></div>`, `
+        .ev-big { display:flex; align-items:baseline; gap:10px; }
+        .ev-big b { font-size:2.2rem; font-weight:300; font-variant-numeric:tabular-nums; line-height:1.1; }
+        .ev-two { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+        .ev-stat { border-radius:12px; background:rgba(127,127,127,.12); padding:10px 12px; display:flex; flex-direction:column; gap:2px; min-width:0; }
+        .ev-stat b { font-size:1.15rem; font-weight:600; font-variant-numeric:tabular-nums; }
+        .ev-stat span { font-size:.72rem; color:var(--secondary-text-color); }`);
+        this._body = this.querySelector(".ev-body");
+        this._built = true;
+      }
+      kitHead(this, c.name || "Car charger", word + (c.demo ? " \xB7 demo" : ""), col === KIT_COLOR.off ? EV_TEAL : col);
+      const rate = this._rate();
+      const sig = JSON.stringify([d, rate]);
+      if (sig !== this._sig) {
+        this._sig = sig;
+        if (!d.found) {
+          this._body.innerHTML = `<div style="display:flex; gap:10px; align-items:center;">${iconHtml("mdi:ev-station", { size: "28px", style: `color:${EV_TEAL}; flex:none;` })}<div class="ck-sub" style="line-height:1.5;">Not connected yet. Once the myenergi integration is set up (hub serial and API key), this card finds the Zappi by itself.</div></div>`;
+        } else {
+          const cheap = rate != null && rate < 0.1;
+          this._body.innerHTML = `
+          <div class="ev-big"><b style="color:${charging ? EV_TEAL : "var(--secondary-text-color)"};">${charging ? `${(d.power / 1e3).toFixed(1)} kW` : "Not charging"}</b>${charging ? '<span class="ck-sub">charging now</span>' : ""}${rate != null ? `<span style="margin-left:auto; font-size:.72rem; font-weight:700; padding:2px 9px; border-radius:999px; background:color-mix(in srgb, ${cheap ? CHEAP : PEAK} 22%, transparent); color:${cheap ? CHEAP : PEAK};">${pence(rate)} rate</span>` : ""}</div>
+          <div class="ev-two">
+            <div class="ev-stat"><b>${d.session == null ? "\u2013" : `${d.session.toFixed(1)} kWh`}</b><span>This charge${d.session != null && rate != null && charging ? ` \xB7 about ${pounds(d.session * rate)}` : ""}</span></div>
+            <div class="ev-stat"><b>${kitEsc(kitCap(d.plug || d.status || "\u2013"))}</b><span>${d.plug ? "Plug" : "Status"}</span></div>
+          </div>`;
+        }
+      }
+      const modes = d.found && c.show_buttons !== false && d.mode != null ? EV_MODES.filter((b) => !d.options.length || d.options.includes(b.key)).map((b) => ({ ...b, on: d.mode === b.key })) : [];
+      kitTiles(this.querySelector(".ev-modes"), modes, (t) => this._setMode(t.key));
+      hydrateIcons(this);
+    }
+    _setMode(mode) {
+      if (this.config.demo) return;
+      const e = evFind(this._hass, this.config);
+      if (e.mode) this._hass.callService("select", "select_option", { entity_id: e.mode, option: mode });
+    }
+    getCardSize() {
+      return 4;
+    }
+    getGridOptions() {
+      return { columns: 12, min_columns: 6, rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement(`ev-charger-card-editor${SUFFIX}`);
+    }
+    static getStubConfig() {
+      return {};
+    }
+  };
+  kitCompactable(EvChargerCard, (card) => {
+    card._built = false;
+    card._sig = null;
+  });
+  function registerEnergyCards() {
+    [
+      ["octopus-card", OctopusCard, OctopusCardEditor, "Octopus Energy Card", "Octopus rates, live use, last full day, gas and Octoplus"],
+      ["ev-charger-card", EvChargerCard, EvChargerCardEditor, "EV Charger Card", "A myenergi Zappi: charging, this charge and mode buttons"]
+    ].forEach(([name, Cls, Ed, label, description]) => {
+      if (!customElements.get(`${name}-editor${SUFFIX}`)) customElements.define(`${name}-editor${SUFFIX}`, Ed);
+      if (!customElements.get(`${name}${SUFFIX}`)) customElements.define(`${name}${SUFFIX}`, Cls);
+      window.customCards = window.customCards || [];
+      window.customCards.push({ type: `${name}${SUFFIX}`, name: `${label}${LABEL}`, description, preview: true, documentationURL: "https://github.com/J45PER/church-drive-cards#readme" });
+    });
+  }
+
   // src/index.js
   registerGaugeZoneCard();
   registerAlarmPanelCard();
@@ -8288,5 +8736,6 @@
   registerNavBarCard();
   registerAutoLayoutCard();
   registerHouseTasksCard();
+  registerEnergyCards();
   console.info(`%c CHURCH-DRIVE-CARDS${SUFFIX ? " BETA" : ""} %c loaded `, "color: white; background: #2196f3; font-weight: 700;", "color: #2196f3; background: transparent;");
 })();

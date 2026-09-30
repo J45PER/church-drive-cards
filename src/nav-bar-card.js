@@ -96,16 +96,19 @@ export const NavBarCardEditor = createFormEditor({
             color_template: { label: 'Colour from a template (optional)', selector: { template: {} } },
             icon_template: { label: 'Icon from a template (optional, e.g. mdi:shield-off when disarmed)', selector: { template: {} } },
             alert_template: { label: 'Needs attention when (optional template)', selector: { template: {} } },
+            admin_only: { label: 'Only admins see this page', selector: { boolean: {} } },
           },
         },
       },
     },
+    { name: 'icons_only', selector: { boolean: {} }, default: false },
     { name: 'hide_tabs', selector: { boolean: {} }, default: true },
     { name: 'back_to_top', selector: { boolean: {} }, default: true },
     { name: 'demo', selector: { boolean: {} } },
   ],
   labels: {
     pages: 'Pages',
+    icons_only: 'Icons only (no page names; the current page is its filled circle)',
     hide_tabs: "Hide the dashboard's own tabs at the top",
     back_to_top: 'Back-to-top button beside the bar (an arrow once you scroll down, a dash at the top)',
     demo: 'Show pretend pages (for Design Presets; shown in place, not pinned)',
@@ -236,6 +239,9 @@ export class NavBarCard extends HTMLElement {
           .nb.nb-tight .nb-it { min-width:40px; }
           .nb.nb-tight .nb-it.nb-on { padding:0 12px; }
           .nb.nb-tight .nb-it span.nb-name { display:none; }
+          .nb.nb-icons { gap:2px; padding:0 6px; }
+          .nb.nb-icons .nb-it, .nb.nb-icons .nb-it.nb-on { min-width:42px; width:42px; padding:0; }
+          .nb.nb-icons .nb-it.nb-on .nb-dot { left:28px; right:auto; }
           .nb-it:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
           .nb-dot { position:absolute; left:28px; top:6px; width:8px; height:8px; border-radius:50%; background:#ff9800; box-shadow:0 0 0 2px var(--card-background-color, #1f2128); }
           .nb-it.nb-on .nb-dot { left:auto; right:6px; }
@@ -280,7 +286,7 @@ export class NavBarCard extends HTMLElement {
       const alert = demo ? !!p.alert_template : !!live.alert;
       const icon = /^[a-z]+:[\w-]+$/.test(live.icon || '') ? live.icon : p.icon || 'mdi:circle';
       return { i, p, icon, colour, alert, on: i === active };
-    });
+    }).filter((t) => !t.p.admin_only || demo || !!(this._hass && this._hass.user && this._hass.user.is_admin));
     const sig = JSON.stringify(items.map((t) => [t.p.name, t.icon, t.colour, t.alert, t.on]));
     if (sig === this._sig) return;
     this._sig = sig;
@@ -311,8 +317,10 @@ export class NavBarCard extends HTMLElement {
   _fit() {
     const nav = this._nav;
     if (!nav) return;
+    // Icons only: always the compact look, with room for each icon.
+    nav.classList.toggle('nb-icons', !!this.config.icons_only);
     nav.classList.remove('nb-tight');
-    if (nav.scrollWidth > nav.clientWidth + 1) nav.classList.add('nb-tight');
+    if (this.config.icons_only || nav.scrollWidth > nav.clientWidth + 1) nav.classList.add('nb-tight');
   }
 
   // ---- Back to top: an arrow once the page is scrolled, a dash at the top.
