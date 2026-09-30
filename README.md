@@ -237,7 +237,9 @@ Holds a page's panels in one list and arranges them itself, so adding a panel ne
 - `todo_summary`: three lines about the signed-in person's lists: what's due today, what's overdue, and the house's jobs for them.
 - `lines`: up to three live lines (`header_lines`). Each has a `text` template (`<b>…</b>` makes part bold; empty text hides the line), an `icon`, a `color`, an optional `alert_when` template with `alert_color` (default amber) and `alert_icon`, and `panel`: a panel title on the page, or a page path, to open when tapped. They're snapshots only and never make tasks or send notifications.
 - `forecast`: a weather forecast for `forecast_entity`, either `forecast_type: hourly` (every other hour, with rain) or `daily` (the week, with highs and lows). `forecast_panel` is what tapping it opens.
-- `list`: one to-do list (`header_list`, e.g. the cleaning schedule), soonest due first, each with when it's due and a ✓. Overdue items are red. `list_color` and `list_icon` style it, and tapping a row (or "+N more") opens `priorities_page`.
+- `list`: one to-do list (`header_list`, e.g. the cleaning schedule), soonest due first, each with when it's due and a ✓. Overdue items are red. `list_color` and `list_icon` style it, and tapping a row (or the To-do button) opens `priorities_page`.
+
+A page address ending in `#<panel title>`, e.g. `/dashboard-mobile/todo#cleaning`, jumps to that panel when the page opens.
 
 On the Home to-dos, a repeating task only shows when it's due in the next two days.
 

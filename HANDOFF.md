@@ -1046,8 +1046,14 @@ Integration modules (`custom_components/church_drive/`):
     - The line templates were tested live with `ha_eval_template` before going in.
   - **Repeating tasks (the user's follow-up, 2026-10-01, beta at `22eebc0`):**
     - The cleaning schedule belongs on the **To-do page**. The Cleaning page header
-      (`list` of `todo.cleaning`) opens the To-do page from its rows and "+N more"
-      (`priorities_page`).
+      (`list` of `todo.cleaning`) opens `/dashboard-mobile/todo#cleaning` from its
+      rows and its to-do button (`priorities_page`, `list_icon:
+      mdi:format-list-checks`, label "To-do").
+    - **`#panel` addresses:** an Auto Layout page opened with `#<panel title>` (slug or
+      exact title) jumps to that panel once laid out, like its chip. It then drops the
+      `#…` with `replaceState`. It's checked on layout, connect and
+      `location-changed` (HA keeps views alive), and a hidden per-person copy of the
+      page skips it (zero height).
     - Repeats apply to every list: Cleaning, each person's own and Shared.
     - `task-list-card` (it replaced the beta-only `cleaning-schedule-card`) is a full
       to-do card: tick, add, edit, show and clear done. Repeat choices: Never (optional
@@ -1174,7 +1180,7 @@ Integration modules (`custom_components/church_drive/`):
   - `church-drive-cards-beta.js` registers every card as `<name>-beta`.
   - HA loads it from resource `436186c683fe4c7d81c865b67bb0e109`:
     `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's pinned to `22eebc0` (page header modes, Task List card, repeating tasks). The
+    It's pinned to `36ae9f3` (page header modes, Task List card, repeating tasks, #panel jumps). The
     Mobile views 1 to 6 use the `-beta` types to test it; strip `-beta` there when it's released.
   - To test a branch: push it, repoint the resource, and ask for a hard refresh.
   - jsDelivr is blocked from the cloud container, but works for the user.
