@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-30. Current release: **v0.24.2**.*
+*Last updated 2026-09-30. Current release: **v0.25.0**.*
 
 ## Where this stands
 
@@ -230,6 +230,11 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **v0.25.0 (released 2026-10-01, reload-only): page header lines, forecast, to-do summary; Task List card with repeating tasks; #panel jumps.**
+  - See "Page header lines and the cleaning schedule" and "Repeating tasks" below.
+  - On release the Mobile dashboard went back to release types. The Tasks dashboard's
+    To-do view moved to `task-list-card` too (My to-do, Shared, Cleaning), matching
+    the Mobile To-do page.
 - **v0.24.2 (released 2026-09-30, reload-only): Auto Layout visual editor fixed.**
   - The editor threw on its first `hass` (see the conventions section), so every
     Auto Layout card was YAML-only. Released with the HA-side fixes for visual editing
@@ -1180,8 +1185,7 @@ Integration modules (`custom_components/church_drive/`):
   - `church-drive-cards-beta.js` registers every card as `<name>-beta`.
   - HA loads it from resource `436186c683fe4c7d81c865b67bb0e109`:
     `https://cdn.jsdelivr.net/gh/J45PER/church-drive-cards@<commit>/church-drive-cards-beta.js`.
-    It's pinned to `36ae9f3` (page header modes, Task List card, repeating tasks, #panel jumps). The
-    Mobile views 1 to 6 use the `-beta` types to test it; strip `-beta` there when it's released.
+    It's pinned to the v0.25.0 merge (see below).
   - To test a branch: push it, repoint the resource, and ask for a hard refresh.
   - jsDelivr is blocked from the cloud container, but works for the user.
 - **Rollback:** download an older release in HACS and restart.
