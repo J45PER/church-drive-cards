@@ -25,3 +25,9 @@ SIGNAL_LIBRARY = "church_drive_library"
 CONF_HEALTH_ENTITIES = "health_entities"
 SERVICE_HEALTH_FIX = "health_fix"
 SIGNAL_HEALTH = "church_drive_health"
+
+# People and notifications.
+SERVICE_NOTIFY = "notify"
+WS_PEOPLE = "church_drive/people"
+WS_PEOPLE_ASSIGN = "church_drive/people/assign"
+WS_PEOPLE_PHONE = "church_drive/people/phone"

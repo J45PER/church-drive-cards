@@ -64,6 +64,52 @@
           "description": "refresh, resync, nudge or reconnect."
         }
       }
+    },
+    "notify": {
+      "name": "Notify people",
+      "description": "Send a notification to the people assigned to a kind in Manager, on each of their phones.",
+      "fields": {
+        "kind": {
+          "name": "Kind",
+          "description": "Which kind of notification (as set in Manager), e.g. doorbell. It goes to the people ticked for it. Leave empty to send to the people named below."
+        },
+        "people": {
+          "name": "People",
+          "description": "Only these people (first names or person entities). With a kind: only those of them ticked for it."
+        },
+        "title": {
+          "name": "Title",
+          "description": "The notification's title."
+        },
+        "message": {
+          "name": "Message",
+          "description": "The notification's text."
+        },
+        "admin_message": {
+          "name": "Admin-only line",
+          "description": "An extra line only administrators see (e.g. a cost)."
+        },
+        "tag": {
+          "name": "Tag",
+          "description": "A new notification with the same tag replaces the old one."
+        },
+        "link": {
+          "name": "Opens",
+          "description": "The page a tap opens, e.g. /dashboard-mobile/security."
+        },
+        "image": {
+          "name": "Picture",
+          "description": "A picture to show, e.g. a camera snapshot URL."
+        },
+        "critical": {
+          "name": "Sound on silent",
+          "description": "Sound even when the phone is on silent. Defaults to the kind's setting (on for safety alarms)."
+        },
+        "data": {
+          "name": "Extra data",
+          "description": "Anything else for the companion app's notification data."
+        }
+      }
     }
   }
 }

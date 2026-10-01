@@ -11,6 +11,10 @@
   has gone stale (e.g. old readings after a restart), fixes them
   automatically, and reports on sensor.church_drive_device_health for the
   cards; church_drive.health_fix runs a fix on demand.
+- People and notifications (people.py, kinds.py): the house's people and
+  their phones, picked up from Home Assistant's people; who gets each kind
+  of notification (set in Manager); church_drive.notify to send one; and
+  sensor.church_drive_people for automations and the cards.
 """
 
 from __future__ import annotations
@@ -49,10 +53,14 @@ from .const import (
     DOMAIN,
     SERVICE_APPLY_SCENE,
     SERVICE_HEALTH_FIX,
+    SERVICE_NOTIFY,
     SERVICE_SYNC_SCENES,
     SIGNAL_LIBRARY,
     URL_BASE,
     WS_LIBRARY,
+    WS_PEOPLE,
+    WS_PEOPLE_ASSIGN,
+    WS_PEOPLE_PHONE,
     WS_SCENE_DELETE,
     WS_SCENE_PREVIEW,
     WS_SCENE_SAVE,
@@ -60,6 +68,7 @@ from .const import (
 from .health import DeviceHealth
 from .hue import async_sync
 from .library import Library, normalise
+from .people import People
 
 _LOGGER = logging.getLogger(__name__)
 FRONTEND_DIR = Path(__file__).parent / "frontend"
@@ -69,6 +78,21 @@ HEALTH_FIX_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
         vol.Optional("action", default="resync"): vol.In(["refresh", "resync", "nudge", "reconnect"]),
+    }
+)
+
+NOTIFY_SCHEMA = vol.Schema(
+    {
+        vol.Optional("kind"): cv.string,
+        vol.Optional("people"): vol.All(cv.ensure_list, [cv.string]),
+        vol.Required("message"): cv.string,
+        vol.Optional("title", default=""): cv.string,
+        vol.Optional("admin_message", default=""): cv.string,
+        vol.Optional("tag", default=""): cv.string,
+        vol.Optional("link", default=""): cv.string,
+        vol.Optional("image", default=""): cv.string,
+        vol.Optional("critical"): cv.boolean,
+        vol.Optional("data"): dict,
     }
 )
 
@@ -94,6 +118,65 @@ CUSTOM_SCENE = vol.Schema(
 
 def _library(hass: HomeAssistant) -> Library:
     return hass.data[DOMAIN]["library"]
+
+
+def _people(hass: HomeAssistant) -> People | None:
+    return hass.data.get(DOMAIN, {}).get("people")
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_PEOPLE})
+@callback
+def ws_people(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """People, their phones, and every kind of notification with who's assigned."""
+    people = _people(hass)
+    if people is None:
+        connection.send_error(msg["id"], "not_ready", "People and notifications aren't running")
+        return
+    connection.send_result(msg["id"], {"people": people.people(), "kinds": people.kinds(), "rev": people.rev})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_PEOPLE_ASSIGN,
+        vol.Required("kind"): cv.string,
+        vol.Optional("person"): cv.entity_id,
+        vol.Required("on"): cv.boolean,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_people_assign(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Tick or untick a person (or "everyone") for a kind."""
+    people = _people(hass)
+    if people is None:
+        connection.send_error(msg["id"], "not_ready", "People and notifications aren't running")
+        return
+    await people.async_set(msg["kind"], msg.get("person"), msg["on"])
+    connection.send_result(msg["id"], {"kinds": people.kinds()})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_PEOPLE_PHONE,
+        vol.Required("person"): cv.entity_id,
+        vol.Required("service"): cv.string,
+        vol.Required("on"): cv.boolean,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_people_phone(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Switch one of a person's phones on or off for notifications."""
+    people = _people(hass)
+    if people is None:
+        connection.send_error(msg["id"], "not_ready", "People and notifications aren't running")
+        return
+    await people.async_set_phone(msg["person"], msg["service"], msg["on"])
+    connection.send_result(msg["id"], {"people": people.people()})
 
 
 @websocket_api.websocket_command({vol.Required("type"): WS_LIBRARY})
@@ -208,7 +291,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await hass.http.async_register_static_paths(
             [StaticPathConfig(URL_BASE, str(FRONTEND_DIR), cache_headers=False)]
         )
-        for command in (ws_library, ws_scene_save, ws_scene_delete, ws_scene_preview):
+        for command in (
+            ws_library, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_phone
+        ):
             websocket_api.async_register_command(hass, command)
     # The version in the URL makes browsers fetch the new bundle after an
     # update. It's read on every setup, so reloading Church Drive after a
@@ -232,6 +317,30 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception:  # noqa: BLE001
         _LOGGER.exception("Device health couldn't start; the cards and scenes still work")
         data["health"] = None
+
+    # People and notifications mustn't stop anything else loading either.
+    people = People(hass)
+    try:
+        await people.async_start()
+        entry.async_on_unload(people.async_stop)
+        data["people"] = people
+    except Exception:  # noqa: BLE001
+        _LOGGER.exception("People and notifications couldn't start; everything else still works")
+        data["people"] = None
+
+    async def notify(call: ServiceCall) -> ServiceResponse:
+        if data.get("people") is None:
+            raise ServiceValidationError("People and notifications aren't running")
+        d = call.data
+        result = await data["people"].async_notify(
+            d.get("kind"), d.get("people"), d.get("title", ""), d["message"], d.get("admin_message", ""),
+            d.get("tag", ""), d.get("link", ""), d.get("image", ""), d.get("critical"), d.get("data"), call.context,
+        )
+        return result if call.return_response else None
+
+    hass.services.async_register(
+        DOMAIN, SERVICE_NOTIFY, notify, schema=NOTIFY_SCHEMA, supports_response=SupportsResponse.OPTIONAL
+    )
 
     async def health_fix(call: ServiceCall) -> None:
         if data.get("health") is None:
@@ -277,6 +386,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.services.async_remove(DOMAIN, SERVICE_SYNC_SCENES)
     hass.services.async_remove(DOMAIN, SERVICE_APPLY_SCENE)
     hass.services.async_remove(DOMAIN, SERVICE_HEALTH_FIX)
+    hass.services.async_remove(DOMAIN, SERVICE_NOTIFY)
     url = hass.data.get(DOMAIN, {}).get("cards_url")
     if url:
         remove_extra_js_url(hass, url)
