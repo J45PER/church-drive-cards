@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-01. Current release: **v0.30.1**.*
+*Last updated 2026-10-01. Current release: **v0.30.2**.*
 
 ## Where this stands
 
@@ -14,7 +14,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-01, v0.30.1 live, nothing on beta):**
+**Now (2026-10-01, v0.30.2 live, nothing on beta):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -310,7 +310,7 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
-- **Next release (on the branch): Locations edit/save, zone location requests, "Live view".**
+- **v0.30.2 (released 2026-10-01, restarted): Locations Edit/Save, zone map, satellite maps everywhere, zone location requests, "Live view".**
   - **Satellite maps** (`src/map-style.js`, `installMapStyle()` in index.js):
     - A `window.L` setter catches Home Assistant's Leaflet. Its UMD build always
       sets `window.L`.
