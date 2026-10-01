@@ -211,9 +211,12 @@ export class NotificationsCard extends HTMLElement {
     const edit = this._canEdit();
     const people = this._data.people || [];
     const on = `background:${colour};`;
-    const tick = (kind, person, pressed, enabled, all) =>
+    // A person's box while All is ticked: ticked but grey (it's All that sends it);
+    // tapping it unticks that person and All, leaving everyone else ticked.
+    const viaAll = 'background:rgba(127,127,127,0.42); color:rgba(255,255,255,0.85);';
+    const tick = (kind, person, pressed, enabled, all, grey = false) =>
       `<button type="button" class="nc-tick${all ? ' nc-all' : ''}" data-kind="${kitEsc(kind.key)}"${person ? ` data-person="${kitEsc(person.entity_id)}"` : ''} aria-pressed="${pressed}" ${enabled && edit ? '' : 'disabled'}
-        aria-label="${kitEsc(kind.name)}: ${person ? kitEsc(person.first) : 'everyone'}" style="${pressed ? on : ''}${enabled ? '' : 'opacity:.45;'}">${iconHtml('mdi:check', { size: '16px' })}</button>`;
+        aria-label="${kitEsc(kind.name)}: ${person ? kitEsc(person.first) : 'everyone'}${grey ? ' (through All)' : ''}" title="${grey ? 'Ticked through All. Tap to untick this person and All.' : ''}" style="${grey ? viaAll : pressed ? on : ''}${enabled ? '' : 'opacity:.45;'}">${iconHtml('mdi:check', { size: '16px' })}</button>`;
     const kinds = (this._data.kinds || []).filter((k) => (show === 'jobs' ? k.group === 'House jobs' : show === 'notifications' ? k.group !== 'House jobs' : true));
     let html = '';
     if (show !== 'phones') {
@@ -236,7 +239,7 @@ export class NotificationsCard extends HTMLElement {
             .map((p) => {
               const allowed = !k.admin_only || p.admin;
               if (!allowed) return `<td><span class="nc-dash" title="Admins only">–</span></td>`;
-              return `<td>${tick(k, p, k.all || k.people.includes(p.entity_id), true, false)}</td>`;
+              return `<td>${tick(k, p, k.all || k.people.includes(p.entity_id), true, false, k.all)}</td>`;
             })
             .join('');
           html += `<tr>${name}<td>${k.admin_only ? '<span class="nc-dash">–</span>' : tick(k, null, k.all, true, true)}</td>${cells}</tr>`;

@@ -543,7 +543,7 @@
       }
       return v == null && pts.length ? pts[0][1] : v;
     };
-    const when2 = (t) => {
+    const when3 = (t) => {
       const d = new Date(t), today = /* @__PURE__ */ new Date();
       const time = d.toLocaleTimeString(void 0, { hour: "2-digit", minute: "2-digit" });
       return d.toDateString() === today.toDateString() ? time : `${d.toLocaleDateString(void 0, { weekday: "short" })} ${time}`;
@@ -571,7 +571,7 @@
         dot.style.display = "block";
         rows.push(`<div style="color:${colour};">\u25CF ${kitEsc(s.format ? s.format(v) : Number(v).toFixed(1))}</div>`);
       });
-      tip.innerHTML = `<div style="color:var(--secondary-text-color);">${when2(t)}</div>${rows.join("")}`;
+      tip.innerHTML = `<div style="color:var(--secondary-text-color);">${when3(t)}</div>${rows.join("")}`;
       tip.style.display = "block";
       const w = tip.offsetWidth;
       tip.style.left = `${Math.max(0, Math.min(rect.width - w, left - w / 2))}px`;
@@ -2456,9 +2456,9 @@
       const track = "rgba(255,255,255,0.06)";
       const row3 = document.createElement("div");
       row3.className = "lcc-row";
-      const pad3 = level > 0 ? "9px 14px" : "12px 14px";
+      const pad5 = level > 0 ? "9px 14px" : "12px 14px";
       const indent = level > 0 ? `margin-left:${16 * level}px;` : "";
-      row3.style.cssText = `position:relative; display:flex; align-items:center; gap:12px; padding:${pad3}; ${indent} border-radius:12px; margin-top:6px; overflow:hidden; cursor:pointer; user-select:none; touch-action:pan-y; background: linear-gradient(to right, ${tint} 0%, ${tint} ${fillPct}%, ${track} ${fillPct}%, ${track} 100%);`;
+      row3.style.cssText = `position:relative; display:flex; align-items:center; gap:12px; padding:${pad5}; ${indent} border-radius:12px; margin-top:6px; overflow:hidden; cursor:pointer; user-select:none; touch-action:pan-y; background: linear-gradient(to right, ${tint} 0%, ${tint} ${fillPct}%, ${track} ${fillPct}%, ${track} 100%);`;
       row3.innerHTML = `
       ${iconHtml(icon, { size: "24px", cls: "lcc-row-icon", style: `color:${on ? color : "var(--secondary-text-color)"}; opacity:${on ? 1 : 0.6}; flex-shrink:0; pointer-events:none;` })}
       <div class="lcc-name" style="flex:1; min-width:0; font-weight:${on ? 600 : 400}; color:${on ? "var(--primary-text-color)" : "var(--secondary-text-color)"}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; pointer-events:none;">${name}</div>
@@ -4176,7 +4176,9 @@
     office: { name: "Office / study", low: 19, high: 22 },
     hall: { name: "Hall / landing", low: 16, high: 21 },
     bathroom: { name: "Bathroom", low: 20, high: 24 },
-    kitchen: { name: "Kitchen", low: 17, high: 21 }
+    kitchen: { name: "Kitchen", low: 17, high: 21 },
+    // Outside: only marked below 3° (frost risk) or above 25°.
+    outside: { name: "Outside", low: 3, high: 25 }
   };
   var CZ_HUMIDITY = { humidity_low: 40, humidity_high: 60, humidity_dry: 30 };
   var FREEZING = "#e3f2fd";
@@ -4187,6 +4189,7 @@
     if (/landing|hall|entrance|stair|coat|porch|corridor/.test(s)) return "hall";
     if (/bath|en-?suite|shower|toilet|wc/.test(s)) return "bathroom";
     if (/kitchen|utility/.test(s)) return "kitchen";
+    if (/outside|outdoor|garden|tree|weather/.test(s)) return "outside";
     return "living";
   }
   function czRange(r) {
@@ -6111,8 +6114,8 @@
       warn.style.display = high ? "flex" : "none";
       if (high) warn.innerHTML = `${iconHtml("mdi:alert", { size: "24px" })}<span>Carbon monoxide found. Get everyone outside and open doors and windows.</span>`;
       this.querySelector(".co-gauge").innerHTML = kitGauge(d.ppm == null ? 0 : Math.max(0.02, d.ppm / 100), color, d.ppm == null ? "\u2013" : String(Math.round(d.ppm)), "ppm CO");
-      const when2 = d.report && !isNaN(Date.parse(d.report)) ? new Date(d.report) : null;
-      const whenText2 = when2 ? when2.toLocaleString(void 0, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+      const when3 = d.report && !isNaN(Date.parse(d.report)) ? new Date(d.report) : null;
+      const whenText2 = when3 ? when3.toLocaleString(void 0, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
       this.querySelector(".co-info").innerHTML = [
         `<span>${iconHtml(high ? "mdi:alert-circle" : "mdi:shield-check", { size: "18px", style: `color:${color};` })}${high ? "CO detected" : "No CO detected"}</span>`,
         d.battery != null ? `<span>${iconHtml(d.battery < 20 ? "mdi:battery-alert" : "mdi:battery", { size: "18px", style: `color:${d.battery < 20 ? KIT_COLOR.bad : KIT_COLOR.good};` })}Battery ${Math.round(d.battery)}%</span>` : "",
@@ -7772,8 +7775,8 @@
     if (!due) return "";
     const d = dueDate(due);
     const now = /* @__PURE__ */ new Date();
-    const day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
-    const days = Math.round((day(d) - day(now)) / 864e5);
+    const day2 = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+    const days = Math.round((day2(d) - day2(now)) / 864e5);
     const time = String(due).includes("T") ? ` ${timeInput(d)}` : "";
     if (d < now) return days < 0 ? `${-days} day${days === -1 ? "" : "s"} overdue` : "due now";
     if (days === 0) return `today${time}`;
@@ -8032,8 +8035,8 @@
       if (sig === this._sig) return;
       this._sig = sig;
       const row3 = ({ t, p }, isDone) => {
-        const when2 = isDone ? "" : whenText(t.due);
-        const over = when2.includes("overdue");
+        const when3 = isDone ? "" : whenText(t.due);
+        const over = when3.includes("overdue");
         const mine = this._justMe() && Array.isArray(p.who) && p.who.length === 1 && p.who[0] === this._me();
         const who = !p.repeat ? "" : mine ? "reminds you" : p.who === "everyone" ? "reminds everyone" : Array.isArray(p.who) ? `reminds ${p.who.join(", ")}` : "";
         const sub = [p.repeat && p.repeat.type !== "once" ? describeRepeat(p.repeat) : "", who, p.notes].filter(Boolean).join(" \xB7 ");
@@ -8045,7 +8048,7 @@
           <div class="tl-name" style="${isDone ? "text-decoration:line-through; color:var(--secondary-text-color);" : ""}">${kitEsc(t.summary)}</div>
           ${sub ? `<div class="ck-sub" style="font-size:0.74rem; line-height:1.35;">${kitEsc(sub)}</div>` : ""}
         </div>
-        ${when2 ? `<span class="tl-when" style="color:${over ? "#e53935" : "var(--secondary-text-color)"};">${kitEsc(when2)}</span>` : ""}
+        ${when3 ? `<span class="tl-when" style="color:${over ? "#e53935" : "var(--secondary-text-color)"};">${kitEsc(when3)}</span>` : ""}
       </div>`;
       };
       if (missing) this._list.innerHTML = `<div class="ck-sub" style="line-height:1.5;">There's no ${kitEsc(this._entity() || "to-do")} list yet.</div>`;
@@ -9099,15 +9102,15 @@
       const list = this.config.header_list;
       const colour = this.config.list_color || "#2196f3";
       const now = /* @__PURE__ */ new Date();
-      const day = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-      const when2 = (due) => {
+      const day2 = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+      const when3 = (due) => {
         if (!due) return { text: "", over: false };
         const dateOnly = !String(due).includes("T");
         const d = dateOnly ? /* @__PURE__ */ new Date(`${due}T23:59:59`) : new Date(due);
-        const days = Math.round((day(d) - day(now)) / 864e5);
+        const days = Math.round((day2(d) - day2(now)) / 864e5);
         const time = dateOnly ? "" : ` ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
         if (d < now) {
-          const late = Math.round((day(now) - day(d)) / 864e5);
+          const late = Math.round((day2(now) - day2(d)) / 864e5);
           return { text: late >= 1 ? `${late} day${late === 1 ? "" : "s"} overdue` : "due now", over: late >= 1 };
         }
         if (days === 0) return { text: `today${time}`, over: false, today: true };
@@ -9118,7 +9121,7 @@
       const open = ((this._todoItems || {})[list] || []).filter((t) => t.status === "needs_action");
       const rank = (t) => t.due ? new Date(String(t.due).includes("T") ? t.due : `${t.due}T23:59:59`).getTime() : Infinity;
       const items = open.map((t, n) => ({ t, n })).sort((a, b) => rank(a.t) - rank(b.t) || a.n - b.n).map(({ t }) => {
-        const w = when2(t.due);
+        const w = when3(t.due);
         return { uid: t.uid, list, text: w.text ? `${t.summary} \xB7 ${w.text}` : t.summary, overdue: w.over, strong: w.over || w.today, colour, icon: choreIcon(t.summary), link: this.config.priorities_page || "" };
       });
       return { items, colour, icon: this.config.list_icon || "mdi:format-list-checks" };
@@ -9422,7 +9425,8 @@
     { value: "electricity", label: "Electricity now" },
     { value: "last_day", label: "Last full day (electricity and gas)" },
     { value: "gas", label: "Gas" },
-    { value: "octoplus", label: "Octoplus" }
+    { value: "octoplus", label: "Octoplus" },
+    { value: "cheap", label: "Cheap rate and power-down sessions" }
   ];
   var OctopusCardEditor = createFormEditor({
     schema: () => [
@@ -9505,7 +9509,7 @@
         this._built = true;
       }
       const minute = Math.floor(Date.now() / 6e4);
-      const html = view === "last_day" ? this._lastDay(m) : view === "gas" ? this._gas(m) : view === "octoplus" ? this._octoplus(m) : this._elec(m);
+      const html = view === "last_day" ? this._lastDay(m) : view === "gas" ? this._gas(m) : view === "octoplus" ? this._octoplus(m) : view === "cheap" ? this._cheap(m) : this._elec(m);
       const sig = JSON.stringify([html.head, html.body, minute]);
       if (sig === this._sig) return;
       this._sig = sig;
@@ -9553,7 +9557,7 @@
       const cost = this._s(m.elec, "previous_accumulative_cost");
       const charges = cost && cost.attributes.charges || [];
       if (!charges.length) return { head: [this.config.name || "Last full day", "Waiting for Octopus", KIT_COLOR.off], body: `<div class="ck-sub">Octopus hasn't sent a full day of readings yet.</div>` };
-      const day = new Date(charges[0].start);
+      const day2 = new Date(charges[0].start);
       const rates = charges.map((x) => Number(x.rate));
       const lo = Math.min(...rates), hi = Math.max(...rates);
       const isCheap = (r) => hi - lo > 1e-3 && r <= lo + 1e-3;
@@ -9567,7 +9571,7 @@
       const max = Math.max(...charges.map((x) => Number(x.consumption || 0)), 0.01);
       const bars = charges.map((x) => `<i title="${kitEsc(hhmm2(new Date(x.start)))} \xB7 ${Number(x.consumption).toFixed(2)} kWh \xB7 ${pence(Number(x.rate))}" style="height:${Number(x.consumption || 0) / max * 100}%; background:${isCheap(Number(x.rate)) ? CHEAP : PEAK};"></i>`).join("");
       const saving = hi - lo > 1e-3 ? `Each kWh moved to the cheap rate saves ${pence(hi - lo)}.` : "";
-      const dayName = day.toLocaleDateString(void 0, { weekday: "short", day: "numeric", month: "short" });
+      const dayName = day2.toLocaleDateString(void 0, { weekday: "short", day: "numeric", month: "short" });
       return {
         head: [this.config.name || "Last full day", `${dayName} \xB7 ${pounds(eTotal + (gTotal || 0))}`, KIT_COLOR.comfy],
         body: `
@@ -9608,6 +9612,31 @@
         body: `
         <div class="oc-two"><div class="oc-stat"><b>${pts == null ? "\u2013" : pts}</b><span>Points</span></div><div class="oc-stat"><b>${happy == null ? "\u2013" : happy}</b><span>Weekend happy hours</span></div></div>
         <div class="ck-sub">${sessions.length ? `Saving sessions: ${kitEsc(sessions.join(", "))}` : "No saving sessions booked."}</div>`
+      };
+    }
+    _cheap(m) {
+      if (!m.elec) return this._missing("electricity meter");
+      const admin = !!(this._hass.user && this._hass.user.is_admin);
+      const w = this._window(this._rates(m));
+      const cal = m.account ? this._hass.states[`calendar.${m.account}octoplus_power_down`] : null;
+      const pd = cal && cal.attributes.start_time ? cal.attributes : null;
+      const pdStart = pd && new Date(pd.start_time);
+      const pdEnd = pd && new Date(pd.end_time);
+      const dayWord = (d) => {
+        const t = /* @__PURE__ */ new Date();
+        const a = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        const b = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+        const n = Math.round((a - b) / 864e5);
+        return n === 0 ? "today" : n === 1 ? "tomorrow" : d.toLocaleDateString(void 0, { weekday: "long" });
+      };
+      const price = (v) => admin && v != null ? ` \xB7 ${pence(v)}` : "";
+      const row3 = (icon, col, t1, t2, pill) => `<div class="oc-crow"><div class="oc-cico" style="background:color-mix(in srgb, ${col} 22%, transparent); color:${col};">${iconHtml(icon, { size: "19px" })}</div>
+      <div style="flex:1; min-width:0;"><div class="oc-ct1">${kitEsc(t1)}</div><div class="ck-sub">${kitEsc(t2)}</div></div>${pill ? `<span class="oc-pill" style="background:${col}; color:#0d2a10;">${kitEsc(pill)}</span>` : ""}</div>`;
+      const cheapRow = !w ? row3("mdi:weather-night", KIT_COLOR.off, "No cheap rate in the next day", "Octopus hasn't sent tomorrow's rates yet") : w.now ? row3("mdi:weather-night", CHEAP, "Cheap rate now", `Until ${hhmm2(w.until)}${price(w.v)} \xB7 a good time for the washing or dishwasher`, "Off-peak") : row3("mdi:weather-night", KIT_COLOR.off, `Next cheap rate ${hhmm2(w.from)}`, `In ${span(w.from - Date.now())}, until ${hhmm2(w.until)}${price(w.v)}`);
+      const pdRow = pd ? row3("mdi:lightning-bolt", "#b39dff", `Power-down session ${dayWord(pdStart)}`, `${hhmm2(pdStart)}\u2013${hhmm2(pdEnd)} \xB7 use less electricity then for Octoplus points`) : row3("mdi:lightning-bolt", KIT_COLOR.off, "No power-down sessions booked", "Octopus announces them a day or so ahead");
+      return {
+        head: [this.config.name || "Cheap rate", w && w.now ? "Off-peak now" : w ? `Cheap from ${hhmm2(w.from)}` : "", CHEAP],
+        body: `<style>.oc-crow{display:flex;align-items:center;gap:10px;padding:6px 2px}.oc-crow+.oc-crow{border-top:1px solid var(--divider-color, rgba(127,127,127,0.18))}.oc-cico{flex:none;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center}.oc-ct1{font-weight:600;font-size:0.92rem}</style>${cheapRow}${pdRow}`
       };
     }
     _compactSpec(m) {
@@ -10013,8 +10042,9 @@
       const edit = this._canEdit();
       const people = this._data.people || [];
       const on = `background:${colour};`;
-      const tick = (kind, person, pressed, enabled, all) => `<button type="button" class="nc-tick${all ? " nc-all" : ""}" data-kind="${kitEsc(kind.key)}"${person ? ` data-person="${kitEsc(person.entity_id)}"` : ""} aria-pressed="${pressed}" ${enabled && edit ? "" : "disabled"}
-        aria-label="${kitEsc(kind.name)}: ${person ? kitEsc(person.first) : "everyone"}" style="${pressed ? on : ""}${enabled ? "" : "opacity:.45;"}">${iconHtml("mdi:check", { size: "16px" })}</button>`;
+      const viaAll = "background:rgba(127,127,127,0.42); color:rgba(255,255,255,0.85);";
+      const tick = (kind, person, pressed, enabled, all, grey = false) => `<button type="button" class="nc-tick${all ? " nc-all" : ""}" data-kind="${kitEsc(kind.key)}"${person ? ` data-person="${kitEsc(person.entity_id)}"` : ""} aria-pressed="${pressed}" ${enabled && edit ? "" : "disabled"}
+        aria-label="${kitEsc(kind.name)}: ${person ? kitEsc(person.first) : "everyone"}${grey ? " (through All)" : ""}" title="${grey ? "Ticked through All. Tap to untick this person and All." : ""}" style="${grey ? viaAll : pressed ? on : ""}${enabled ? "" : "opacity:.45;"}">${iconHtml("mdi:check", { size: "16px" })}</button>`;
       const kinds = (this._data.kinds || []).filter((k) => show === "jobs" ? k.group === "House jobs" : show === "notifications" ? k.group !== "House jobs" : true);
       let html = "";
       if (show !== "phones") {
@@ -10032,7 +10062,7 @@
             const cells = people.map((p) => {
               const allowed = !k.admin_only || p.admin;
               if (!allowed) return `<td><span class="nc-dash" title="Admins only">\u2013</span></td>`;
-              return `<td>${tick(k, p, k.all || k.people.includes(p.entity_id), true, false)}</td>`;
+              return `<td>${tick(k, p, k.all || k.people.includes(p.entity_id), true, false, k.all)}</td>`;
             }).join("");
             html += `<tr>${name}<td>${k.admin_only ? '<span class="nc-dash">\u2013</span>' : tick(k, null, k.all, true, true)}</td>${cells}</tr>`;
           }
@@ -10080,6 +10110,757 @@
     });
   }
 
+  // src/media-card.js
+  var PLAYING = ["playing", "paused", "buffering"];
+  var ON = ["on", "idle", "standby", ...PLAYING];
+  var F = { PAUSE: 1, VOLUME_SET: 4, PREVIOUS: 16, NEXT: 32, TURN_ON: 128, TURN_OFF: 256, SELECT_SOURCE: 2048, PLAY: 16384 };
+  var has = (st, f) => !!(Number(st.attributes.supported_features || 0) & f);
+  var MC_CSS = `
+  .mc-row { display:flex; align-items:center; gap:10px; padding:8px 2px; }
+  .mc-row + .mc-row { border-top:1px solid var(--divider-color, rgba(127,127,127,0.18)); }
+  .mc-ico { flex:none; width:38px; height:38px; border-radius:11px; display:flex; align-items:center; justify-content:center; background:rgba(127,127,127,0.16); }
+  .mc-body { flex:1; min-width:0; cursor:pointer; border-radius:8px; }
+  .mc-name { font-weight:600; font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mc-sub { font-size:0.78rem; color:var(--secondary-text-color); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mc-btn { flex:none; width:38px; height:38px; border:none; border-radius:50%; background:rgba(127,127,127,0.16); color:var(--primary-text-color); cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .mc-btn:focus-visible, .mc-body:focus-visible, .mcp button:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
+  .mcp { display:flex; flex-direction:column; gap:16px; }
+  .mcp-now { display:flex; align-items:center; gap:12px; }
+  .mcp-art { flex:none; width:64px; height:64px; border-radius:12px; background:rgba(127,127,127,0.16) center/cover no-repeat; display:flex; align-items:center; justify-content:center; }
+  .mcp-t1 { font-weight:600; font-size:1rem; }
+  .mcp-t2 { font-size:0.82rem; color:var(--secondary-text-color); }
+  .mcp-row { display:flex; align-items:center; justify-content:center; gap:14px; }
+  .mcp button { border:none; cursor:pointer; color:var(--primary-text-color); background:rgba(127,127,127,0.16); font:inherit; }
+  .mcp .mcp-round { width:48px; height:48px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+  .mcp .mcp-main { width:60px; height:60px; color:#fff; }
+  .mcp-vol { display:flex; align-items:center; gap:10px; }
+  .mcp-vol input { flex:1; accent-color:var(--mc-colour); }
+  .mcp-pad { display:grid; grid-template-columns:repeat(3, 56px); grid-template-rows:repeat(3, 56px); gap:6px; justify-content:center; }
+  .mcp-pad button { border-radius:14px; display:flex; align-items:center; justify-content:center; }
+  .mcp-pad .mcp-ok { border-radius:50%; font-weight:700; }
+  .mcp-wide { display:flex; flex-wrap:wrap; gap:8px; }
+  .mcp-wide button, .mcp select { flex:1 1 30%; min-width:0; border-radius:12px; padding:10px 12px; display:flex; align-items:center; justify-content:center; gap:6px; font-size:0.85rem; font-weight:600; }
+  .mcp select { border:1px solid var(--divider-color, rgba(127,127,127,0.3)); background:rgba(127,127,127,0.1); color:var(--primary-text-color); color-scheme:dark light; }
+  .mcp-l { font-size:0.75rem; color:var(--secondary-text-color); text-transform:uppercase; letter-spacing:0.06em; font-weight:700; }
+`;
+  function mcDemo() {
+    const st = (id, name, state, attrs = {}) => ({ entity_id: id, state, attributes: { friendly_name: name, supported_features: 65535, ...attrs } });
+    return {
+      "media_player.living_room_tv": st("media_player.living_room_tv", "Living Room TV", "playing", { app_name: "Netflix", media_title: "The Great British Bake Off", volume_level: 0.3, source: "Netflix", source_list: ["Live TV", "Netflix", "YouTube", "BBC iPlayer"], device_class: "tv" }),
+      "media_player.bedroom_tv": st("media_player.bedroom_tv", "Master bedroom TV", "off", { device_class: "tv" }),
+      "media_player.kitchen": st("media_player.kitchen", "Kitchen speaker", "unavailable", { device_class: "speaker" })
+    };
+  }
+  var MediaCardEditor = createFormEditor({
+    schema: () => [
+      { name: "title", selector: { text: {} } },
+      { name: "entities", selector: { entity: { domain: "media_player", multiple: true } } },
+      { name: "color", selector: { ui_color: {} } },
+      { name: "demo", selector: { boolean: {} } }
+    ],
+    labels: {
+      title: "Title (optional)",
+      entities: "TVs and speakers (empty for all of them)",
+      color: "Colour",
+      demo: "Show pretend players (for Design Presets; buttons are switched off)"
+    },
+    helpers: {
+      entities: "Tap a player for its remote. The direction pad appears by itself for TVs with a remote (e.g. Google TV) or an LG TV.",
+      color: "Default pink (#f050f8)."
+    }
+  });
+  var MediaCard = class extends HTMLElement {
+    setConfig(config) {
+      this.config = config || {};
+      this._built = false;
+      this._sig = null;
+      if (this._pop) this._pop.close();
+    }
+    set hass(hass) {
+      this._hass = hass;
+      this._render();
+      if (this._pop && this._popEntity) this._drawPop();
+    }
+    disconnectedCallback() {
+      if (this._pop) this._pop.close();
+    }
+    _colour() {
+      return this.config.color || "#f050f8";
+    }
+    _states() {
+      if (this.config.demo) return this._demo || (this._demo = mcDemo());
+      return this._hass && this._hass.states || {};
+    }
+    _players() {
+      const s = this._states();
+      const ids = this.config.demo ? Object.keys(s) : this.config.entities && this.config.entities.length ? this.config.entities : Object.keys(s).filter((id) => id.startsWith("media_player."));
+      const rank = (st) => !st ? 9 : st.state === "playing" ? 0 : PLAYING.includes(st.state) ? 1 : ON.includes(st.state) ? 2 : st.state === "off" ? 3 : 4;
+      return ids.map((id) => s[id]).filter(Boolean).sort((a, b) => rank(a) - rank(b) || String(a.attributes.friendly_name).localeCompare(String(b.attributes.friendly_name)));
+    }
+    _sub(st) {
+      const a = st.attributes;
+      if (st.state === "unavailable") return "Not responding";
+      if (st.state === "off") return "Off";
+      const what = [a.app_name, a.media_title || a.media_series_title, a.media_artist].filter(Boolean);
+      if (PLAYING.includes(st.state)) return (st.state === "paused" ? "Paused \xB7 " : "") + (what.join(" \xB7 ") || a.source || "Playing");
+      return a.source || a.app_name || "On";
+    }
+    _icon(st) {
+      const dc = st.attributes.device_class;
+      const id = st.entity_id;
+      if (dc === "tv" || /tv|streamer|chromecast/i.test(id)) return "mdi:television";
+      if (/radio|_rb$/i.test(id)) return "mdi:radio";
+      return "mdi:speaker";
+    }
+    // How to send direction-pad presses: a remote.* on the same device, or an LG's buttons.
+    _pad(id) {
+      if (this.config.demo) return { kind: "demo" };
+      const reg = this._hass && this._hass.entities || {};
+      const entry = reg[id];
+      if (entry && entry.platform === "webostv") return { kind: "webos" };
+      const dev = entry && entry.device_id;
+      const remote = dev && Object.keys(reg).find((x) => x.startsWith("remote.") && reg[x].device_id === dev);
+      return remote ? { kind: "remote", entity: remote } : null;
+    }
+    _call(domain, service, data) {
+      if (this.config.demo) return Promise.resolve();
+      return this._hass.callService(domain, service, data).catch(() => {
+      });
+    }
+    _press(id, key) {
+      const pad5 = this._pad(id);
+      if (!pad5 || pad5.kind === "demo") return;
+      if (pad5.kind === "webos") {
+        const map = { up: "UP", down: "DOWN", left: "LEFT", right: "RIGHT", ok: "ENTER", back: "BACK", home: "HOME" };
+        this._call("webostv", "button", { entity_id: id, button: map[key] });
+      } else {
+        const map = { up: "DPAD_UP", down: "DPAD_DOWN", left: "DPAD_LEFT", right: "DPAD_RIGHT", ok: "DPAD_CENTER", back: "BACK", home: "HOME" };
+        this._call("remote", "send_command", { entity_id: pad5.entity, command: map[key] });
+      }
+    }
+    _toggle(st) {
+      if (this.config.demo) {
+        st.state = st.state === "playing" ? "paused" : st.state === "paused" ? "playing" : st.state === "off" ? "on" : "off";
+        this._sig = null;
+        this._render();
+        if (this._pop) this._drawPop();
+        return;
+      }
+      if (PLAYING.includes(st.state)) this._call("media_player", "media_play_pause", { entity_id: st.entity_id });
+      else this._call("media_player", st.state === "off" ? "turn_on" : "turn_off", { entity_id: st.entity_id });
+    }
+    _render() {
+      if (!this._hass && !this.config.demo) return;
+      const c = this.config;
+      const colour = this._colour();
+      if (!this._built) {
+        this.innerHTML = kitShell(`<div class="mc-list"></div>`, MC_CSS);
+        this._list = this.querySelector(".mc-list");
+        this._list.addEventListener("click", (ev) => {
+          const btn = ev.target.closest("[data-act]");
+          const id = (btn || ev.target.closest("[data-id]") || {}).dataset?.id;
+          const st = id && this._states()[id];
+          if (!st) return;
+          if (btn) this._toggle(st);
+          else this._open(id);
+        });
+        this._list.addEventListener("keydown", (ev) => {
+          const body = ev.target.closest(".mc-body");
+          if (body && (ev.key === "Enter" || ev.key === " ")) {
+            ev.preventDefault();
+            this._open(body.dataset.id);
+          }
+        });
+        this._built = true;
+      }
+      this.querySelector(".ck-headrow").style.display = c.title ? "" : "none";
+      const players = this._players();
+      const playing = players.filter((p) => p.state === "playing").length;
+      if (c.title) kitHead(this, c.title, playing ? `${playing} playing` : "", colour);
+      const sig = JSON.stringify([players.map((p) => [p.entity_id, p.state, this._sub(p)]), colour]);
+      if (sig === this._sig) return;
+      this._sig = sig;
+      this._list.innerHTML = players.length ? players.map((st) => {
+        const live = PLAYING.includes(st.state);
+        const on = ON.includes(st.state);
+        const name = st.attributes.friendly_name || st.entity_id;
+        const act = live ? `<button type="button" class="mc-btn" data-act="1" data-id="${kitEsc(st.entity_id)}" aria-label="${st.state === "playing" ? "Pause" : "Play"} ${kitEsc(name)}">${iconHtml(st.state === "playing" ? "mdi:pause" : "mdi:play", { size: "20px" })}</button>` : st.state === "unavailable" ? "" : `<button type="button" class="mc-btn" data-act="1" data-id="${kitEsc(st.entity_id)}" aria-label="Turn ${on ? "off" : "on"} ${kitEsc(name)}" style="${on ? `color:${colour};` : ""}">${iconHtml("mdi:power", { size: "20px" })}</button>`;
+        return `<div class="mc-row">
+              <div class="mc-ico" style="${live ? `background:color-mix(in srgb, ${colour} 25%, transparent); color:${colour};` : st.state === "unavailable" ? "opacity:.5;" : ""}">${iconHtml(this._icon(st), { size: "20px" })}</div>
+              <div class="mc-body" data-id="${kitEsc(st.entity_id)}" role="button" tabindex="0" aria-label="Remote for ${kitEsc(name)}">
+                <div class="mc-name">${kitEsc(name)}</div><div class="mc-sub">${kitEsc(this._sub(st))}</div>
+              </div>${act}</div>`;
+      }).join("") : `<div class="ck-sub">No TVs or speakers found.</div>`;
+      hydrateIcons(this);
+    }
+    _open(id) {
+      const st = this._states()[id];
+      if (!st) return;
+      if (this._pop) this._pop.close();
+      this._popEntity = id;
+      this._popBody = document.createElement("div");
+      this._popBody.className = "mcp";
+      this._popBody.style.setProperty("--mc-colour", this._colour());
+      this._popBody.addEventListener("click", (ev) => this._popClick(ev));
+      this._popBody.addEventListener("change", (ev) => this._popChange(ev));
+      this._popSig = null;
+      this._pop = openPopup(this, {
+        title: st.attributes.friendly_name || id,
+        icon: this._icon(st),
+        color: this._colour(),
+        content: this._popBody,
+        onClose: () => {
+          this._pop = null;
+          this._popEntity = null;
+        }
+      });
+      this._drawPop();
+    }
+    _drawPop() {
+      const id = this._popEntity;
+      const st = this._states()[id];
+      if (!st || !this._popBody) return;
+      const a = st.attributes;
+      const colour = this._colour();
+      const sig = JSON.stringify([st.state, a.media_title, a.app_name, a.source, a.entity_picture, a.source_list, Math.round((a.volume_level || 0) * 100)]);
+      if (sig === this._popSig || this._dragging && this._popSig) return;
+      this._popSig = sig;
+      const live = PLAYING.includes(st.state);
+      const on = ON.includes(st.state);
+      const pad5 = this._pad(id);
+      const art = a.entity_picture ? `style="background-image:url('${kitEsc(a.entity_picture)}')"` : "";
+      const btn = (act, icon, label, extra = "", cls = "mcp-round") => `<button type="button" class="${cls}" data-p="${act}" aria-label="${label}" ${extra}>${iconHtml(icon, { size: "22px" })}</button>`;
+      let html = `<div class="mcp-now"><div class="mcp-art" ${art}>${a.entity_picture ? "" : iconHtml(this._icon(st), { size: "28px" })}</div>
+      <div style="min-width:0;"><div class="mcp-t1">${kitEsc(a.media_title || (on ? a.app_name || a.source || "On" : st.state === "off" ? "Off" : "Not responding"))}</div><div class="mcp-t2">${kitEsc(this._sub(st))}</div></div></div>`;
+      if (on) {
+        html += `<div class="mcp-row">
+        ${has(st, F.PREVIOUS) || this.config.demo ? btn("prev", "mdi:skip-previous", "Previous") : ""}
+        ${btn("playpause", live && st.state === "playing" ? "mdi:pause" : "mdi:play", live && st.state === "playing" ? "Pause" : "Play", `style="background:${colour};"`, "mcp-round mcp-main")}
+        ${has(st, F.NEXT) || this.config.demo ? btn("next", "mdi:skip-next", "Next") : ""}
+      </div>`;
+        if (has(st, F.VOLUME_SET) || this.config.demo)
+          html += `<div class="mcp-vol">${iconHtml("mdi:volume-low", { size: "20px" })}<input type="range" min="0" max="100" step="1" value="${Math.round((a.volume_level || 0) * 100)}" aria-label="Volume">${iconHtml("mdi:volume-high", { size: "20px" })}</div>`;
+        if ((has(st, F.SELECT_SOURCE) || this.config.demo) && Array.isArray(a.source_list) && a.source_list.length)
+          html += `<div class="mcp-l">Source</div><select class="mcp-src" aria-label="Source">${a.source_list.map((s) => `<option ${s === a.source ? "selected" : ""}>${kitEsc(s)}</option>`).join("")}</select>`;
+        if (pad5)
+          html += `<div class="mcp-l">Remote</div><div class="mcp-pad">
+          <span></span>${btn("up", "mdi:chevron-up", "Up", "", "")}<span></span>
+          ${btn("left", "mdi:chevron-left", "Left", "", "")}<button type="button" class="mcp-ok" data-p="ok" aria-label="OK">OK</button>${btn("right", "mdi:chevron-right", "Right", "", "")}
+          <span></span>${btn("down", "mdi:chevron-down", "Down", "", "")}<span></span></div>
+          <div class="mcp-wide"><button type="button" data-p="back">${iconHtml("mdi:arrow-left", { size: "18px" })}Back</button><button type="button" data-p="home">${iconHtml("mdi:home", { size: "18px" })}Home</button></div>`;
+      }
+      if (st.state !== "unavailable")
+        html += `<div class="mcp-wide"><button type="button" data-p="power" style="${on ? "" : `background:${colour}; color:#fff;`}">${iconHtml("mdi:power", { size: "18px" })}${on ? "Turn off" : "Turn on"}</button></div>`;
+      this._popBody.innerHTML = html;
+      const vol = this._popBody.querySelector("input[type=range]");
+      if (vol) {
+        vol.addEventListener("pointerdown", () => this._dragging = true);
+        vol.addEventListener("pointerup", () => this._dragging = false);
+      }
+      hydrateIcons(this._popBody);
+    }
+    _popClick(ev) {
+      const b = ev.target.closest("[data-p]");
+      if (!b) return;
+      const id = this._popEntity;
+      const st = this._states()[id];
+      if (!st) return;
+      const p = b.dataset.p;
+      if (p === "playpause" || p === "power") {
+        if (p === "power" || !PLAYING.includes(st.state)) {
+          if (this.config.demo) st.state = ON.includes(st.state) ? "off" : "on";
+          else this._call("media_player", ON.includes(st.state) ? "turn_off" : "turn_on", { entity_id: id });
+          if (p === "playpause" && !this.config.demo) this._call("media_player", "media_play", { entity_id: id });
+        } else this._toggle(st);
+      } else if (p === "prev") this._call("media_player", "media_previous_track", { entity_id: id });
+      else if (p === "next") this._call("media_player", "media_next_track", { entity_id: id });
+      else this._press(id, p);
+      if (this.config.demo) {
+        this._sig = null;
+        this._render();
+        this._popSig = null;
+        this._drawPop();
+      }
+    }
+    _popChange(ev) {
+      const id = this._popEntity;
+      if (ev.target.matches("input[type=range]")) {
+        this._dragging = false;
+        this._call("media_player", "volume_set", { entity_id: id, volume_level: Number(ev.target.value) / 100 });
+      } else if (ev.target.matches(".mcp-src")) this._call("media_player", "select_source", { entity_id: id, source: ev.target.value });
+    }
+    getCardSize() {
+      return 3;
+    }
+    getGridOptions() {
+      return { columns: "full", rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement(`media-card-editor${SUFFIX}`);
+    }
+    static getStubConfig() {
+      return { title: "TVs & speakers" };
+    }
+  };
+  function registerMediaCard() {
+    if (!customElements.get(`media-card-editor${SUFFIX}`)) customElements.define(`media-card-editor${SUFFIX}`, MediaCardEditor);
+    if (!customElements.get(`media-card${SUFFIX}`)) customElements.define(`media-card${SUFFIX}`, MediaCard);
+    window.customCards = window.customCards || [];
+    window.customCards.push({
+      type: `media-card${SUFFIX}`,
+      name: `Media Card${LABEL}`,
+      description: "TVs and speakers, a row each, with a pop-up remote (play, volume, source, direction pad, power)",
+      preview: true,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
+    });
+  }
+
+  // src/system-card.js
+  var GOOD = "#4caf50";
+  var WARN = "#ffa726";
+  var BAD = "#e53935";
+  var SC_CSS = `
+  .sc-row { display:flex; align-items:center; gap:10px; padding:7px 2px; }
+  .sc-row + .sc-row { border-top:1px solid var(--divider-color, rgba(127,127,127,0.18)); }
+  .sc-ico { flex:none; width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:rgba(127,127,127,0.16); }
+  .sc-body { flex:1; min-width:0; }
+  .sc-name { font-weight:600; font-size:0.92rem; }
+  .sc-sub { font-size:0.78rem; color:var(--secondary-text-color); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .sc-pill { flex:none; border-radius:999px; padding:2px 9px; font-size:0.72rem; font-weight:700; }
+  .sc-tap { cursor:pointer; }
+`;
+  var pad3 = (n) => String(n).padStart(2, "0");
+  function when2(iso, now = /* @__PURE__ */ new Date()) {
+    const d = new Date(iso);
+    if (isNaN(d)) return "";
+    const day2 = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const diff = Math.round((day2 - today) / 864e5);
+    const t = `${pad3(d.getHours())}:${pad3(d.getMinutes())}`;
+    if (diff === 0) return `${t} today`;
+    if (diff === -1) return `${t} yesterday`;
+    if (diff === 1) return `${t} tomorrow`;
+    return `${d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })} ${t}`;
+  }
+  function scFind(hass, c = {}) {
+    const s = hass && hass.states || {};
+    const reg = hass && hass.entities || {};
+    const ids = Object.keys(s);
+    const pick = (id) => id && s[id] ? id : null;
+    const internet = pick(c.internet) || ids.find((id) => id.startsWith("binary_sensor.") && reg[id] && reg[id].platform === "eero" && s[id].attributes.device_class === "connectivity") || ids.find((id) => id.startsWith("binary_sensor.") && /wan|internet/.test(id) && s[id].attributes.device_class === "connectivity") || null;
+    return {
+      internet,
+      remote: pick(c.remote) || pick("binary_sensor.remote_ui"),
+      backup_last: pick(c.backup_last) || ids.find((id) => /^sensor\.backup_last_successful/.test(id)) || null,
+      backup_next: pick(c.backup_next) || ids.find((id) => /^sensor\.backup_next_scheduled/.test(id)) || null,
+      uptime: pick(c.uptime) || pick("sensor.uptime"),
+      updates: ids.filter((id) => id.startsWith("update."))
+    };
+  }
+  var SystemCardEditor = createFormEditor({
+    schema: () => [
+      { name: "title", selector: { text: {} } },
+      { name: "internet", selector: { entity: { domain: "binary_sensor" } } },
+      { name: "remote", selector: { entity: { domain: "binary_sensor" } } },
+      { name: "backup_last", selector: { entity: { domain: "sensor" } } },
+      { name: "backup_next", selector: { entity: { domain: "sensor" } } },
+      { name: "uptime", selector: { entity: { domain: "sensor" } } },
+      { name: "demo", selector: { boolean: {} } }
+    ],
+    labels: {
+      title: "Title (optional)",
+      internet: "Internet connection (optional)",
+      remote: "Remote access (optional)",
+      backup_last: "Last backup (optional)",
+      backup_next: "Next backup (optional)",
+      uptime: "Home Assistant started (optional)",
+      demo: "Show pretend values (for Design Presets)"
+    },
+    helpers: {
+      internet: "Leave these empty to use the ones found by themselves: the eero's internet status, Home Assistant Cloud, the backup sensors and the uptime sensor. Everyone sees the internet row; the rest are for administrators."
+    }
+  });
+  var SystemCard = class extends HTMLElement {
+    setConfig(config) {
+      this.config = config || {};
+      this._built = false;
+      this._sig = null;
+    }
+    set hass(hass) {
+      this._hass = hass;
+      this._render();
+    }
+    _rows() {
+      const c = this.config;
+      if (c.demo) {
+        return [
+          { icon: "mdi:web", name: "Internet", sub: "Connected \xB7 eero", pill: ["Online", GOOD] },
+          { icon: "mdi:cloud-outline", name: "Remote access", sub: "Home Assistant Cloud", pill: ["On", GOOD] },
+          { icon: "mdi:content-save-outline", name: "Backups", sub: "Last 04:49 today \xB7 next 05:37 tomorrow" },
+          { icon: "mdi:update", name: "Updates", sub: "Up to date" },
+          { icon: "mdi:home-assistant", name: "Home Assistant", sub: "Running since 09:29 today" }
+        ];
+      }
+      const h = this._hass;
+      const s = h.states;
+      const admin = !!(h.user && h.user.is_admin);
+      const f = scFind(h, c);
+      const rows = [];
+      if (f.internet) {
+        const up = s[f.internet].state === "on";
+        rows.push({ icon: "mdi:web", name: "Internet", sub: up ? "Connected" : `Down since ${when2(s[f.internet].last_changed)}`, pill: [up ? "Online" : "Down", up ? GOOD : BAD], entity: f.internet });
+      }
+      if (!admin) return rows;
+      if (f.remote) {
+        const up = s[f.remote].state === "on";
+        rows.push({ icon: "mdi:cloud-outline", name: "Remote access", sub: "Home Assistant Cloud", pill: [up ? "On" : "Down", up ? GOOD : WARN], entity: f.remote });
+      }
+      if (f.backup_last || f.backup_next) {
+        const last = f.backup_last ? s[f.backup_last].state : "";
+        const next = f.backup_next ? s[f.backup_next].state : "";
+        const old = last && Date.now() - new Date(last) > 2 * 864e5;
+        rows.push({
+          icon: "mdi:content-save-outline",
+          name: "Backups",
+          sub: [last && when2(last) ? `Last ${when2(last)}` : "No backup yet", next && when2(next) ? `next ${when2(next)}` : ""].filter(Boolean).join(" \xB7 "),
+          pill: old ? ["Overdue", WARN] : null,
+          entity: f.backup_last
+        });
+      }
+      const ups = f.updates.filter((id) => s[id].state === "on");
+      rows.push({
+        icon: "mdi:update",
+        name: "Updates",
+        sub: ups.length ? ups.map((id) => s[id].attributes.title || s[id].attributes.friendly_name).slice(0, 3).join(", ") + (ups.length > 3 ? ` and ${ups.length - 3} more` : "") : "Up to date",
+        pill: ups.length ? [`${ups.length}`, WARN] : null,
+        link: "/config/updates"
+      });
+      if (f.uptime) rows.push({ icon: "mdi:home-assistant", name: "Home Assistant", sub: `Running since ${when2(s[f.uptime].state)}`, entity: f.uptime });
+      return rows;
+    }
+    _render() {
+      if (!this._hass && !this.config.demo) return;
+      const c = this.config;
+      if (!this._built) {
+        this.innerHTML = kitShell(`<div class="sc-list"></div>`, SC_CSS);
+        this._list = this.querySelector(".sc-list");
+        this._list.addEventListener("click", (ev) => {
+          const row3 = ev.target.closest("[data-entity],[data-link]");
+          if (!row3 || c.demo) return;
+          if (row3.dataset.entity) this.dispatchEvent(new CustomEvent("hass-more-info", { detail: { entityId: row3.dataset.entity }, bubbles: true, composed: true }));
+          else {
+            history.pushState(null, "", row3.dataset.link);
+            window.dispatchEvent(new CustomEvent("location-changed"));
+          }
+        });
+        this._built = true;
+      }
+      this.querySelector(".ck-headrow").style.display = c.title ? "" : "none";
+      if (c.title) kitHead(this, c.title, "", "#4caf50");
+      const rows = this._rows();
+      const sig = JSON.stringify(rows);
+      if (sig === this._sig) return;
+      this._sig = sig;
+      this._list.innerHTML = rows.map((r) => {
+        const tint = r.pill ? r.pill[1] : null;
+        const attr = r.entity ? `data-entity="${kitEsc(r.entity)}"` : r.link ? `data-link="${kitEsc(r.link)}"` : "";
+        return `<div class="sc-row${attr ? " sc-tap" : ""}" ${attr}>
+          <div class="sc-ico" style="${tint && tint !== GOOD ? `background:color-mix(in srgb, ${tint} 22%, transparent); color:${tint};` : ""}">${iconHtml(r.icon, { size: "19px" })}</div>
+          <div class="sc-body"><div class="sc-name">${kitEsc(r.name)}</div><div class="sc-sub">${kitEsc(r.sub)}</div></div>
+          ${r.pill ? `<span class="sc-pill" style="background:color-mix(in srgb, ${r.pill[1]} 22%, transparent); color:${r.pill[1]};">${kitEsc(r.pill[0])}</span>` : ""}
+        </div>`;
+      }).join("");
+      hydrateIcons(this);
+    }
+    getCardSize() {
+      return 4;
+    }
+    getGridOptions() {
+      return { columns: "full", rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement(`system-card-editor${SUFFIX}`);
+    }
+    static getStubConfig() {
+      return { title: "Devices & services" };
+    }
+  };
+  function registerSystemCard() {
+    if (!customElements.get(`system-card-editor${SUFFIX}`)) customElements.define(`system-card-editor${SUFFIX}`, SystemCardEditor);
+    if (!customElements.get(`system-card${SUFFIX}`)) customElements.define(`system-card${SUFFIX}`, SystemCard);
+    window.customCards = window.customCards || [];
+    window.customCards.push({
+      type: `system-card${SUFFIX}`,
+      name: `System Card${LABEL}`,
+      description: "Devices & services: internet, remote access, backups, updates and how long Home Assistant has been running",
+      preview: true,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
+    });
+  }
+
+  // src/safety-card.js
+  var CLASSES = ["smoke", "heat", "carbon_monoxide"];
+  var ICON = { smoke: "mdi:smoke-detector-variant", heat: "mdi:fire", carbon_monoxide: "mdi:molecule-co" };
+  var RED = "#e53935";
+  var GREEN = "#4caf50";
+  var SF_CSS = `
+  .sf-row { display:flex; align-items:center; gap:10px; padding:7px 2px; cursor:pointer; }
+  .sf-row + .sf-row { border-top:1px solid var(--divider-color, rgba(127,127,127,0.18)); }
+  .sf-ico { flex:none; width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; }
+  .sf-body { flex:1; min-width:0; }
+  .sf-name { font-weight:600; font-size:0.92rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .sf-sub { font-size:0.78rem; color:var(--secondary-text-color); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .sf-ppm { flex:none; font-size:1.25rem; font-weight:600; }
+  .sf-ppm small { font-size:0.7rem; color:var(--secondary-text-color); font-weight:500; }
+`;
+  var pad4 = (n) => String(n).padStart(2, "0");
+  var hm = (iso) => {
+    const d = new Date(iso);
+    return isNaN(d) ? "" : `${pad4(d.getHours())}:${pad4(d.getMinutes())}`;
+  };
+  var day = (iso) => {
+    const d = new Date(iso);
+    return isNaN(d) ? "" : d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  };
+  function sfAlarms(hass, chosen) {
+    const s = hass && hass.states || {};
+    const ids = chosen && chosen.length ? chosen.filter((id) => s[id]) : Object.keys(s).filter((id) => id.startsWith("binary_sensor.") && CLASSES.includes(s[id].attributes.device_class));
+    return ids;
+  }
+  function sfDemo() {
+    const now = Date.now();
+    return [
+      { id: "a", name: "Entrance smoke alarm", cls: "smoke", on: false, battery: 96, report: new Date(now - 10 * 864e5).toISOString() },
+      { id: "b", name: "Middle floor smoke alarm", cls: "smoke", on: false, battery: 94 },
+      { id: "c", name: "Hayley's landing smoke alarm", cls: "smoke", on: false, battery: 95 },
+      { id: "d", name: "Kitchen heat alarm", cls: "heat", on: false, battery: 97 },
+      { id: "e", name: "Carbon monoxide", cls: "carbon_monoxide", on: false, ppm: 0 }
+    ];
+  }
+  var SafetyCardEditor = createFormEditor({
+    schema: () => [
+      { name: "title", selector: { text: {} } },
+      { name: "entities", selector: { entity: { domain: "binary_sensor", multiple: true } } },
+      { name: "demo", selector: { boolean: {} } }
+    ],
+    labels: { title: "Title (optional)", entities: "Alarms (empty for every smoke, heat and CO alarm)", demo: "Show pretend alarms (for Design Presets)" },
+    helpers: { entities: "Each alarm's battery, last check-in and CO reading are found on its device." }
+  });
+  var SafetyCard = class extends HTMLElement {
+    setConfig(config) {
+      this.config = config || {};
+      this._built = false;
+      this._sig = null;
+    }
+    set hass(hass) {
+      this._hass = hass;
+      this._render();
+    }
+    // A sensor on the same device as `id` that matches `test`.
+    _sibling(id, test) {
+      const reg = this._hass.entities || {};
+      const dev = reg[id] && reg[id].device_id;
+      if (!dev) return null;
+      const s = this._hass.states;
+      return Object.keys(reg).find((x) => reg[x].device_id === dev && s[x] && test(x, s[x])) || null;
+    }
+    _items() {
+      if (this.config.demo) return sfDemo();
+      const s = this._hass.states;
+      const reg = this._hass.entities || {};
+      const devices = this._hass.devices || {};
+      return sfAlarms(this._hass, this.config.entities).map((id) => {
+        const st = s[id];
+        const dev = reg[id] && devices[reg[id].device_id];
+        const name = String(dev && (dev.name_by_user || dev.name) || st.attributes.friendly_name || id).replace(/ alarm status$/i, "");
+        const bat = this._sibling(id, (x, v) => x.startsWith("sensor.") && v.attributes.device_class === "battery" && !/_plus/.test(x)) || this._sibling(id, (x, v) => x.startsWith("sensor.") && v.attributes.device_class === "battery");
+        const report = this._sibling(id, (x) => /report_time$/.test(x));
+        const ppm = st.attributes.device_class === "carbon_monoxide" ? this._sibling(id, (x, v) => x.startsWith("sensor.") && v.attributes.unit_of_measurement === "ppm") : null;
+        return {
+          id,
+          name,
+          cls: st.attributes.device_class,
+          on: st.state === "on",
+          since: st.last_changed,
+          unavailable: st.state === "unavailable",
+          battery: bat && !isNaN(Number(s[bat].state)) ? Math.round(Number(s[bat].state)) : null,
+          report: report ? s[report].state : null,
+          ppm: ppm && !isNaN(Number(s[ppm].state)) ? Number(s[ppm].state) : null
+        };
+      });
+    }
+    _render() {
+      if (!this._hass && !this.config.demo) return;
+      const c = this.config;
+      if (!this._built) {
+        this.innerHTML = kitShell(`<div class="sf-list"></div>`, SF_CSS);
+        this._list = this.querySelector(".sf-list");
+        this._list.addEventListener("click", (ev) => {
+          const row3 = ev.target.closest("[data-id]");
+          if (row3 && !c.demo) this.dispatchEvent(new CustomEvent("hass-more-info", { detail: { entityId: row3.dataset.id }, bubbles: true, composed: true }));
+        });
+        this._built = true;
+      }
+      const items = this._items().sort((a, b) => Number(b.on) - Number(a.on));
+      const alarming = items.filter((i) => i.on);
+      this.querySelector(".ck-headrow").style.display = c.title ? "" : "none";
+      if (c.title) kitHead(this, c.title, alarming.length ? "ALARM" : "All clear", alarming.length ? RED : GREEN);
+      const sig = JSON.stringify(items);
+      if (sig === this._sig) return;
+      this._sig = sig;
+      this._list.innerHTML = items.length ? items.map((i) => {
+        const col = i.on ? RED : i.unavailable ? "#9aa0ad" : GREEN;
+        const bits = i.on ? [`ALARM since ${hm(i.since)}`] : [i.unavailable ? "Not responding" : "All clear", i.battery != null ? `battery ${i.battery}%` : "", i.report && day(i.report) ? `checked in ${day(i.report)}` : ""];
+        return `<div class="sf-row" data-id="${kitEsc(i.id)}" role="button" tabindex="0" aria-label="${kitEsc(i.name)}">
+              <div class="sf-ico" style="background:${i.on ? RED : `color-mix(in srgb, ${col} 20%, transparent)`}; color:${i.on ? "#fff" : col};">${iconHtml(ICON[i.cls] || "mdi:alarm-light", { size: "19px" })}</div>
+              <div class="sf-body"><div class="sf-name">${kitEsc(i.name)}</div><div class="sf-sub" style="${i.on ? `color:${RED}; font-weight:700;` : ""}">${kitEsc(bits.filter(Boolean).join(" \xB7 "))}</div></div>
+              ${i.ppm != null ? `<div class="sf-ppm" style="${i.on ? `color:${RED};` : ""}">${i.ppm}<small> ppm</small></div>` : ""}
+            </div>`;
+      }).join("") : `<div class="ck-sub">No smoke, heat or CO alarms found.</div>`;
+      hydrateIcons(this);
+    }
+    getCardSize() {
+      return 4;
+    }
+    getGridOptions() {
+      return { columns: "full", rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement(`safety-card-editor${SUFFIX}`);
+    }
+    static getStubConfig() {
+      return {};
+    }
+  };
+  function registerSafetyCard() {
+    if (!customElements.get(`safety-card-editor${SUFFIX}`)) customElements.define(`safety-card-editor${SUFFIX}`, SafetyCardEditor);
+    if (!customElements.get(`safety-card${SUFFIX}`)) customElements.define(`safety-card${SUFFIX}`, SafetyCard);
+    window.customCards = window.customCards || [];
+    window.customCards.push({
+      type: `safety-card${SUFFIX}`,
+      name: `Safety Card${LABEL}`,
+      description: "Every smoke, heat and carbon monoxide alarm: all clear or ALARM, battery, last check-in and the CO reading",
+      preview: true,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
+    });
+  }
+
+  // src/people-card.js
+  var PC_CSS = `
+  .pc-row { display:flex; align-items:center; gap:10px; padding:7px 2px; cursor:pointer; }
+  .pc-row + .pc-row { border-top:1px solid var(--divider-color, rgba(127,127,127,0.18)); }
+  .pc-av { flex:none; width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; background:rgba(127,127,127,0.18) center/cover no-repeat; }
+  .pc-body { flex:1; min-width:0; }
+  .pc-name { font-weight:600; font-size:0.92rem; }
+  .pc-sub { font-size:0.78rem; color:var(--secondary-text-color); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pc-pill { flex:none; border-radius:999px; padding:2px 9px; font-size:0.72rem; font-weight:700; }
+`;
+  function pcDemo() {
+    return [
+      { id: "person.jamie", name: "Jamie", state: "home", phones: [["iPhone", 82], ["Pixel", 64]] },
+      { id: "person.hayley", name: "Hayley", state: "not_home", phones: [["Pixel 9", 47]] },
+      { id: "person.diane", name: "Diane", state: "unknown", phones: [["Phone", null]] },
+      { id: "person.ian", name: "Ian", state: "home", phones: [["Phone", 91]] }
+    ];
+  }
+  var PeopleCardEditor = createFormEditor({
+    schema: () => [
+      { name: "title", selector: { text: {} } },
+      { name: "color", selector: { ui_color: {} } },
+      { name: "demo", selector: { boolean: {} } }
+    ],
+    labels: { title: "Title (optional)", color: "Colour", demo: "Show pretend people (for Design Presets)" },
+    helpers: { title: "Everyone in Settings > People, and their companion-app phones' batteries." }
+  });
+  var PeopleCard = class extends HTMLElement {
+    setConfig(config) {
+      this.config = config || {};
+      this._built = false;
+      this._sig = null;
+    }
+    set hass(hass) {
+      this._hass = hass;
+      this._render();
+    }
+    _people() {
+      if (this.config.demo) return pcDemo();
+      const s = this._hass.states;
+      const reg = this._hass.entities || {};
+      const devices = this._hass.devices || {};
+      return Object.keys(s).filter((id) => id.startsWith("person.")).sort((a, b) => String(s[a].attributes.friendly_name).localeCompare(String(s[b].attributes.friendly_name))).map((id) => {
+        const st = s[id];
+        const phones = (st.attributes.device_trackers || []).map((t) => reg[t]).filter((e) => e && e.platform === "mobile_app" && e.device_id).map((e) => {
+          const dev = devices[e.device_id] || {};
+          const bat = Object.keys(reg).find((x) => reg[x].device_id === e.device_id && x.startsWith("sensor.") && /battery_level$/.test(x) && s[x]);
+          const v = bat ? Number(s[bat].state) : NaN;
+          return [dev.name_by_user || dev.model || dev.name || "Phone", isNaN(v) ? null : Math.round(v)];
+        });
+        return { id, name: st.attributes.friendly_name || id, state: st.state, picture: st.attributes.entity_picture, phones };
+      });
+    }
+    _pill(state) {
+      if (state === "home") return ["Home", "#4caf50"];
+      if (state === "not_home") return ["Away", "#9aa0ad"];
+      if (state === "unknown" || state === "unavailable") return ["Unknown", "#ffa726"];
+      return [state, "#26a69a"];
+    }
+    _render() {
+      if (!this._hass && !this.config.demo) return;
+      const c = this.config;
+      const colour = c.color || "#26a69a";
+      if (!this._built) {
+        this.innerHTML = kitShell(`<div class="pc-list"></div>`, PC_CSS);
+        this._list = this.querySelector(".pc-list");
+        this._list.addEventListener("click", (ev) => {
+          const row3 = ev.target.closest("[data-id]");
+          if (row3 && !c.demo) this.dispatchEvent(new CustomEvent("hass-more-info", { detail: { entityId: row3.dataset.id }, bubbles: true, composed: true }));
+        });
+        this._built = true;
+      }
+      const people = this._people();
+      const home = people.filter((p) => p.state === "home").length;
+      this.querySelector(".ck-headrow").style.display = c.title ? "" : "none";
+      if (c.title) kitHead(this, c.title, `${home} of ${people.length} home`, colour);
+      const sig = JSON.stringify(people);
+      if (sig === this._sig) return;
+      this._sig = sig;
+      this._list.innerHTML = people.map((p) => {
+        const [word, col] = this._pill(p.state);
+        const phones = p.phones.length ? p.phones.map(([n, b]) => `${n}${b != null ? ` ${b}%` : ""}`).join(" \xB7 ") + (p.state === "unknown" ? " \xB7 location not shared" : "") : "No companion app";
+        return `<div class="pc-row" data-id="${kitEsc(p.id)}" role="button" tabindex="0" aria-label="${kitEsc(p.name)}: ${kitEsc(word)}">
+          <div class="pc-av" style="${p.picture ? `background-image:url('${kitEsc(p.picture)}');` : `color:${colour};`}">${p.picture ? "" : kitEsc(String(p.name).charAt(0))}</div>
+          <div class="pc-body"><div class="pc-name">${kitEsc(p.name)}</div><div class="pc-sub">${kitEsc(phones)}</div></div>
+          <span class="pc-pill" style="background:color-mix(in srgb, ${col} 22%, transparent); color:${col};">${kitEsc(word)}</span>
+        </div>`;
+      }).join("");
+      hydrateIcons(this);
+    }
+    getCardSize() {
+      return 3;
+    }
+    getGridOptions() {
+      return { columns: "full", rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement(`people-card-editor${SUFFIX}`);
+    }
+    static getStubConfig() {
+      return { title: "Who's home" };
+    }
+  };
+  function registerPeopleCard() {
+    if (!customElements.get(`people-card-editor${SUFFIX}`)) customElements.define(`people-card-editor${SUFFIX}`, PeopleCardEditor);
+    if (!customElements.get(`people-card${SUFFIX}`)) customElements.define(`people-card${SUFFIX}`, PeopleCard);
+    window.customCards = window.customCards || [];
+    window.customCards.push({
+      type: `people-card${SUFFIX}`,
+      name: `People Card${LABEL}`,
+      description: "Who's home: everyone home or away, and their phones' batteries",
+      preview: true,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
+    });
+  }
+
   // src/index.js
   registerGaugeZoneCard();
   registerAlarmPanelCard();
@@ -10102,5 +10883,9 @@
   registerEnergyCards();
   registerTaskListCard();
   registerNotificationsCard();
+  registerMediaCard();
+  registerSystemCard();
+  registerSafetyCard();
+  registerPeopleCard();
   console.info(`%c CHURCH-DRIVE-CARDS${SUFFIX ? " BETA" : ""} %c loaded `, "color: white; background: #2196f3; font-weight: 700;", "color: #2196f3; background: transparent;");
 })();

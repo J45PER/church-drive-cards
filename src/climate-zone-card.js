@@ -20,6 +20,8 @@ export const CZ_TYPES = {
   hall: { name: 'Hall / landing', low: 16, high: 21 },
   bathroom: { name: 'Bathroom', low: 20, high: 24 },
   kitchen: { name: 'Kitchen', low: 17, high: 21 },
+  // Outside: only marked below 3° (frost risk) or above 25°.
+  outside: { name: 'Outside', low: 3, high: 25 },
 };
 const CZ_HUMIDITY = { humidity_low: 40, humidity_high: 60, humidity_dry: 30 };
 const FREEZING = '#e3f2fd';
@@ -32,6 +34,7 @@ function czGuessType(r) {
   if (/landing|hall|entrance|stair|coat|porch|corridor/.test(s)) return 'hall';
   if (/bath|en-?suite|shower|toilet|wc/.test(s)) return 'bathroom';
   if (/kitchen|utility/.test(s)) return 'kitchen';
+  if (/outside|outdoor|garden|tree|weather/.test(s)) return 'outside';
   return 'living';
 }
 

@@ -19,6 +19,10 @@ import { registerHouseTasksCard } from './house-tasks-card.js';
 import { registerEnergyCards } from './energy-cards.js';
 import { registerTaskListCard } from './task-list-card.js';
 import { registerNotificationsCard } from './notifications-card.js';
+import { registerMediaCard } from './media-card.js';
+import { registerSystemCard } from './system-card.js';
+import { registerSafetyCard } from './safety-card.js';
+import { registerPeopleCard } from './people-card.js';
 import { SUFFIX } from './suffix.js';
 
 registerGaugeZoneCard();
@@ -42,5 +46,9 @@ registerHouseTasksCard();
 registerEnergyCards();
 registerTaskListCard();
 registerNotificationsCard();
+registerMediaCard();
+registerSystemCard();
+registerSafetyCard();
+registerPeopleCard();
 
 console.info(`%c CHURCH-DRIVE-CARDS${SUFFIX ? ' BETA' : ''} %c loaded `, 'color: white; background: #2196f3; font-weight: 700;', 'color: #2196f3; background: transparent;');

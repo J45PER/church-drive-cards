@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-01. Current release: **v0.26.0**.*
+*Last updated 2026-10-01. Current release: **v0.27.0**.*
 
 ## Where this stands
 
@@ -14,7 +14,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-01, v0.25.0 live; on beta: Task List `assign: me` for My to-do, and its form in our new pop-up):**
+**Now (2026-10-01, v0.27.0 live, nothing on beta):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -30,22 +30,47 @@ HACS as an integration. It does two jobs:
   `ha/repeating-tasks.jinja`.
 - **House jobs:** the automatic to-dos (`house-tasks-card`, "Priorities Automatic")
   and the to-do notifications are set in Manager.
-- **In progress (2026-10-01): people picked up automatically, and assignable notifications.**
-  Plan: https://claude.ai/artifact/XmAHes61uTUSrJNL4aGgmC (user chose table B with A's phone
-  chips; N1–N27 all wanted; N14/N15 everyone, N16 and N19's cost admins only). Card
-  mock-ups: https://claude.ai/artifact/A4d6pusQxNRdBe34qYZsnP (C1 Media page, C2 Safety,
-  C3 outside temp, C5 Devices & services, C6 cheap rate, C8 Who's home on Manager; C4, C7
-  and C9 not wanted).
-  - Done on the branch, not released: `people.py` + `kinds.py` (people, phones, assignments,
-    `church_drive.notify`, `sensor.church_drive_people`, `church_drive_todo_changed`
-    event, auto "Priorities <name>" lists, one-off carry-over of the old switches),
-    `notifications-card`, `my_list`/`my_name` template variables, task-list `entity: mine`.
-  - On beta: the Mobile and Tasks To-do views are one section for everyone (beta card
-    types), My to-do uses `entity: mine` and `states(my_list)`.
-  - Next, after the integration is released (needs a restart): Manager card, move the
-    to-do automations and the stale/battery alerts to `church_drive.notify` and the
-    sensor (no names), build N1–N27, then delete the old `input_boolean.to_do_*`
-    switches and `script.church_drive_notify_person`.
+- **People and notifications (v0.26.0, live 2026-10-01).** Plan:
+  https://claude.ai/artifact/XmAHes61uTUSrJNL4aGgmC. Nothing names anyone any more:
+  - The integration (`people.py`, `kinds.py`) picks people up from HA's people and their
+    phones from the companion app, makes "Priorities <first name>" lists, and keeps who
+    gets each kind. `church_drive.notify` sends a kind (or to named `people`) on each
+    assigned person's phones; safety kinds sound on silent; `admin_message` lines and
+    `admin_only` kinds (energy cost) go to admins only (Jamie, Hayley).
+    `sensor.church_drive_people` (`assign`, `everyone`, `people`) feeds templates;
+    `church_drive_todo_changed` fires for every to-do list's count change.
+  - Manager: a **Notifications** panel (`notifications-card`: kinds × people table with
+    All, phones as chips) plus the summary day/time and house-job thresholds. The old
+    `input_boolean.to_do_*` switches and `script.church_drive_notify_person` were carried
+    over and deleted. Jamie's iPad and watch start switched off.
+  - Mobile and Tasks To-do views: one section for everyone (`entity: mine`,
+    `states(my_list)`).
+  - Automations on `church_drive.notify`: automatic to-do tasks, to-do reminders,
+    repeating tasks, "a device stays unresponsive" (entity id still
+    `..._tell_jamie_when_a_device_stays_stale`), Battery Notes alert and weekly report
+    (kind `battery_report`, Jamie and Hayley).
+  - New (N1–N27): `church_drive_safety_alarms`, `_security_alerts`, `_house_alerts`,
+    `_energy_alerts` (cheap rate is a quiet notification), `_system_alerts`,
+    `_people_alerts`. "Nobody home" only counts when every person's location is known
+    (Diane and Ian don't share theirs yet). **Car (N17–N20) waits for the Zappi:** the
+    kinds are in Manager as waiting; write the automation once myenergi is set up.
+  - **Released in v0.27.0 (2026-10-01, reload-only), mock-ups https://claude.ai/artifact/A4d6pusQxNRdBe34qYZsnP:**
+    `media-card` (style B, pop-up remote), `system-card`, `safety-card`, `people-card`,
+    octopus-card `show: cheap`, climate-zone `type: outside`, grey ticks under All.
+    Mobile: new **Devices** page (view 6, `/dashboard-mobile/devices`, nav item before
+    Energy on every page's nav bar, #ec407a, red when the internet's down) with TVs &
+    speakers and Devices & services panels and three header lines; Security's Fire Alarm
+    panel became **Safety** (safety-card + the base station tiles); Climate panel has an
+    Outside (garden sensor) zone and the summary uses it; Energy starts with a **Cheap
+    rate** panel. Manager: **Who's home** panel, Notifications card on beta type, and the
+    per-person to-do lists come from `sensor.church_drive_people` via auto-entities.
+    Design Presets Beta tab has demos of all five. On release the real dashboards went
+    back to released types.
+  - Earlier choice notes (2026-10-01): mock-ups https://claude.ai/artifact/A4d6pusQxNRdBe34qYZsnP
+    — media card **B** (a row per player, pop-up remote), a new **Devices** page (media,
+    then Devices & services: internet, remote access, backups, updates, uptime), C2 Safety
+    panel on Security, C3 garden temperature on Climate, C6 cheap rate and power-downs on
+    Energy, C8 Who's home on Manager. C4, C7 and C9 not wanted.
 - **People (2026-10-01): Jamie, Hayley, Diane and Ian** (Ian added by the user;
   user id `f9a53de72d834d778c6bd476284fb8a2`, phone `notify.mobile_app_ian`).
   Adding a person is a per-person checklist, done for Ian:
@@ -285,6 +310,7 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **v0.27.0 (released 2026-10-01, reload-only): Devices page, media/system/safety/people cards, cheap-rate view, Outside zone, grey ticks under All.**
 - **v0.26.0 (released 2026-10-01, needs a restart): people and notifications engine.**
   `people.py`/`kinds.py`, `church_drive.notify`, `sensor.church_drive_people`, the
   `church_drive/people*` websocket commands, the `church_drive_todo_changed` event,
