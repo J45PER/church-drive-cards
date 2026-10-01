@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-01. Current release: **v0.30.3**.*
+*Last updated 2026-10-01. Current release: **v0.31.0**.*
 
 ## Where this stands
 
@@ -14,7 +14,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-01, v0.30.3 live, nothing on beta):**
+**Now (2026-10-01, v0.31.0 live, nothing on beta):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -310,6 +310,39 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **v0.31.0 (released 2026-10-01, restarted): zone map fix, panels fill their width, notification boxes, Google maps, iPhone pop-ups.**
+  - **Zone map was blank:** Leaflet sets `position:relative` on a map made before it's on
+    the page, so `.zm-map` was 0 px high. `.zm-map` is `position:absolute !important`
+    with full size, and the map fits the zones once it has a size (`_wantFit`).
+  - **Panels fill their width:** `section-panel-card` uses `auto-fit` (was `auto-fill`),
+    so one or two cards share the whole row instead of leaving empty tracks (Camera
+    links was cut off at "L…"). `places-card` too.
+  - **Notifications card:** each group, and Phones, is its own box (`.nc-boxes`, CSS
+    columns of 290px), so it's about half as tall on laptops. Manager's to-do settings
+    moved from the Notifications panel into their own "To-do settings" panel.
+  - **Google maps (`map-style.js`, `zone-map-card`, `__init__.py`, `config_flow.py`):**
+    - Options step "Google maps": `google_tiles_key` (Map Tiles API; browsers use it)
+      and `google_places_key` (Places API (New); server only).
+    - `church_drive/maps` gives the tiles key and whether Places is set;
+      `church_drive/maps/search` runs Places Text Search near Home (key stays in HA).
+    - Browsers make Map Tiles sessions (satellite + `layerRoadmap`, and roadmap), kept
+      in localStorage `cd-gmap` for about two weeks. `googleTiles(style)` gives the URL;
+      HA's own maps start on Esri and switch (`cd-map-google` event, `setUrl`) once a
+      session is ready. A refused key logs a console warning and stays on Esri.
+    - Search drops a pin (`zm-pin`); tapping it starts a new zone named after the place.
+    - Keys set on 2026-10-01. The Map Tiles key was refused with API_KEY_SERVICE_BLOCKED
+      (its API restrictions need Map Tiles API ticked) and needs website restrictions for
+      the Nabu Casa address, homeassistant.local:8123 and the local IP. The Places key had
+      no restrictions yet; it should be limited to Places API (New), application
+      restrictions None.
+  - **iPhone pop-ups:** the body was `flex:1` (basis 0), which iOS WebKit sizes as
+    empty, so pop-ups that fill in later (cameras, events) were only header-high and
+    sat at the bottom. Now `flex:1 1 auto`, and the phone sheet is pinned with
+    `inset:auto 0 0 0` instead of an auto margin. Found by logging the real sizes from
+    the user's iPhone (iOS 26.6.2, HA app 2026.9.1) into the system log.
+  - **Phone sheet grab bar:** drag the bar or title down to close (over 120px, or a
+    flick over 50px), up to open to 90dvh.
+  - Event clip thumbnails use `mdi:play` instead of ▶ (iOS drew it as an emoji).
 - **v0.30.3 (released 2026-10-01, restarted): start-up no longer waits for device health fixes.**
   - `health.py` runs its automatic refresh, re-sync and nudge as background tasks
     (`_background`), which HA's start-up doesn't wait for. Each device call now has a

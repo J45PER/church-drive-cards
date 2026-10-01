@@ -38,3 +38,10 @@ WS_CAMERA_EVENTS = "church_drive/camera/events"
 WS_CAMERA_SETTINGS = "church_drive/camera/settings"
 WS_CAMERA_LINKS = "church_drive/camera/links"
 WS_CAMERA_LINK_SET = "church_drive/camera/links/set"
+
+# Google maps (options): the Map Tiles key goes to browsers (lock it to Home
+# Assistant's addresses); the Places key stays here, for searching.
+CONF_MAPS_TILES_KEY = "google_tiles_key"
+CONF_MAPS_PLACES_KEY = "google_places_key"
+WS_MAPS = "church_drive/maps"
+WS_MAPS_SEARCH = "church_drive/maps/search"

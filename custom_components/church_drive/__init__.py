@@ -23,12 +23,14 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import timedelta
 import json
 import logging
 from pathlib import Path
 from typing import Any
 
+import aiohttp
 import voluptuous as vol
 
 from homeassistant.components import websocket_api
@@ -49,10 +51,15 @@ from homeassistant.core import (
 )
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from .apply import async_apply
 from .const import (
+    CONF_MAPS_PLACES_KEY,
+    CONF_MAPS_TILES_KEY,
+    WS_MAPS,
+    WS_MAPS_SEARCH,
     CARDS_FILE,
     CONF_HEALTH_ENTITIES,
     CONF_SCENE_GROUPS,
@@ -395,6 +402,69 @@ async def ws_camera_link_set(
     connection.send_result(msg["id"], events.links())
 
 
+def _maps_option(hass: HomeAssistant, key: str) -> str:
+    entries = hass.config_entries.async_entries(DOMAIN)
+    return (entries[0].options.get(key) or "").strip() if entries else ""
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_MAPS})
+@callback
+def ws_maps(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """The Google Map Tiles key (browsers draw the tiles) and whether Places search is set up."""
+    connection.send_result(
+        msg["id"],
+        {"tiles_key": _maps_option(hass, CONF_MAPS_TILES_KEY) or None, "places": bool(_maps_option(hass, CONF_MAPS_PLACES_KEY))},
+    )
+
+
+PLACES_URL = "https://places.googleapis.com/v1/places:searchText"
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): WS_MAPS_SEARCH, vol.Required("query"): vol.All(cv.string, vol.Length(min=2, max=200))}
+)
+@websocket_api.async_response
+async def ws_maps_search(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Search Google Places (shops, businesses, addresses) near home, here so the key stays private."""
+    key = _maps_option(hass, CONF_MAPS_PLACES_KEY)
+    if not key:
+        connection.send_error(msg["id"], "no_key", "No Google Places key set")
+        return
+    body = {
+        "textQuery": msg["query"],
+        "regionCode": "gb",
+        "languageCode": "en-GB",
+        "pageSize": 6,
+        "locationBias": {"circle": {"center": {"latitude": hass.config.latitude, "longitude": hass.config.longitude}, "radius": 50000.0}},
+    }
+    headers = {"X-Goog-Api-Key": key, "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.location"}
+    try:
+        async with asyncio.timeout(10):
+            resp = await async_get_clientsession(hass).post(PLACES_URL, json=body, headers=headers)
+            result = await resp.json(content_type=None)
+    except (aiohttp.ClientError, TimeoutError, ValueError) as err:
+        connection.send_error(msg["id"], "unavailable", f"Google search didn't answer: {err}")
+        return
+    if resp.status != 200:
+        message = ((result or {}).get("error") or {}).get("message") or f"HTTP {resp.status}"
+        connection.send_error(msg["id"], "google_error", message)
+        return
+    places = []
+    for place in (result or {}).get("places", []):
+        where = place.get("location") or {}
+        if "latitude" not in where:
+            continue
+        places.append(
+            {
+                "name": (place.get("displayName") or {}).get("text", ""),
+                "address": place.get("formattedAddress", ""),
+                "lat": where["latitude"],
+                "lon": where["longitude"],
+            }
+        )
+    connection.send_result(msg["id"], places)
+
+
 def _version() -> str:
     return json.loads((Path(__file__).parent / "manifest.json").read_text())["version"]
 
@@ -410,7 +480,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         for command in (
             ws_library, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_phone,
-            ws_people_places, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set,
+            ws_people_places, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_maps, ws_maps_search,
         ):
             websocket_api.async_register_command(hass, command)
     # The version in the URL makes browsers fetch the new bundle after an

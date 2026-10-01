@@ -1,8 +1,8 @@
 // Notifications Card (Manager): who gets each kind of notification, and
 // which of each person's phones they go to.
 //
-// A table with the kinds down the side (grouped: Safety, Security, ...) and
-// the house's people across the top, plus an "All" column: ticked, it goes
+// A box per group of kinds (Safety, Security, ...), side by side when there's
+// room, each a table with the kinds down the side and the house's people across the top, plus an "All" column: ticked, it goes
 // to everyone, including people added later. Under it, each person's phones
 // as chips (tap to stop or start notifications on that phone).
 //
@@ -25,13 +25,14 @@ const SHOW = [
 ];
 
 const NC_CSS = `
+  .nc-boxes { columns:290px; column-gap:12px; }
+  .nc-box { break-inside:avoid; margin-bottom:12px; padding:10px 12px 6px; border-radius:14px; background:rgba(127,127,127,0.08); }
+  .nc-gh { font-size:0.7rem; letter-spacing:0.07em; text-transform:uppercase; font-weight:700; color:var(--secondary-text-color); margin-bottom:2px; }
   .nc-wrap { overflow-x:auto; margin:0 -4px; padding:0 4px; }
   .nc-table { border-collapse:collapse; width:100%; font-size:0.85rem; }
   .nc-table th { color:var(--secondary-text-color); font-weight:600; font-size:0.75rem; padding:4px 2px 6px; text-align:center; white-space:nowrap; }
   .nc-table th.nc-kind, .nc-table td.nc-kind { text-align:left; padding-left:0; }
   .nc-table td { padding:6px 2px; border-top:1px solid var(--divider-color, rgba(127,127,127,0.18)); text-align:center; vertical-align:middle; }
-  .nc-table tr.nc-group td { border-top:none; padding:14px 0 4px; font-size:0.7rem; letter-spacing:0.07em; text-transform:uppercase; font-weight:700; color:var(--secondary-text-color); text-align:left; }
-  .nc-table tr.nc-group:first-child td { padding-top:2px; }
   .nc-name { font-weight:500; line-height:1.25; }
   .nc-note { display:block; font-size:0.72rem; color:var(--secondary-text-color); }
   .nc-crit { display:inline-flex; align-items:center; margin-left:4px; color:#ef5350; vertical-align:-2px; }
@@ -50,7 +51,6 @@ const NC_CSS = `
   .nc-chip { border:none; border-radius:999px; padding:6px 11px; font:inherit; font-size:0.8rem; font-weight:600; cursor:pointer; background:rgba(127,127,127,0.18); color:var(--primary-text-color); display:inline-flex; align-items:center; gap:5px; }
   .nc-chip[aria-pressed="true"] { color:#fff; }
   .nc-chip:disabled { cursor:default; }
-  .nc-h { font-size:1rem; font-weight:600; margin-top:4px; }
   .nc-msg { font-size:0.8rem; color:#ffa726; }
 `;
 
@@ -239,21 +239,21 @@ export class NotificationsCard extends HTMLElement {
       `<button type="button" class="nc-tick${all ? ' nc-all' : ''}" data-kind="${kitEsc(kind.key)}"${person ? ` data-person="${kitEsc(person.entity_id)}"` : ''} aria-pressed="${pressed}" ${enabled && edit ? '' : 'disabled'}
         aria-label="${kitEsc(kind.name)}: ${person ? kitEsc(person.first) : 'everyone'}${grey ? ' (through All)' : ''}" title="${grey ? 'Ticked through All. Tap to untick this person and All.' : ''}" style="${grey ? viaAll : pressed ? on : ''}${enabled ? '' : 'opacity:.45;'}">${iconHtml('mdi:check', { size: '16px' })}</button>`;
     const kinds = (this._data.kinds || []).filter((k) => (show === 'jobs' ? k.group === 'House jobs' : show === 'notifications' ? k.group !== 'House jobs' : true));
-    let html = '';
+    // Each group (and the phones) is its own small box; on a wide card the
+    // boxes sit side by side in columns, so the card isn't one tall list.
+    const boxes = [];
+    const head = `<thead><tr><th class="nc-kind"></th><th title="Everyone, including people added later">All</th>${people.map((p) => `<th>${kitEsc(p.first)}</th>`).join('')}</tr></thead>`;
     if (show !== 'phones') {
       const groups = [...new Set(kinds.map((k) => k.group))];
       const cols = people.length + 2;
-      html += `<div class="nc-wrap"><table class="nc-table"><thead><tr><th class="nc-kind"></th><th title="Everyone, including people added later">All</th>${people
-        .map((p) => `<th>${kitEsc(p.first)}</th>`)
-        .join('')}</tr></thead><tbody>`;
       for (const g of groups) {
-        html += `<tr class="nc-group"><td colspan="${cols}">${kitEsc(g === 'House jobs' ? 'House jobs (make a to-do)' : g)}</td></tr>`;
+        let rows = '';
         for (const k of kinds.filter((x) => x.group === g)) {
           const name = `<td class="nc-kind"><span class="nc-name">${kitEsc(k.name)}${k.critical ? `<span class="nc-crit" title="Sounds even on silent">${iconHtml('mdi:alarm-light', { size: '14px' })}</span>` : ''}</span>${
             k.admin_only ? '<span class="nc-note">Admins only</span>' : k.note ? `<span class="nc-note">${kitEsc(k.note)}</span>` : ''
           }</td>`;
           if (!k.available) {
-            html += `<tr>${name}<td colspan="${cols - 1}" class="nc-wait">${k.group === 'Car' ? 'Waiting for the Zappi to be set up' : 'Waiting for its devices to be set up'}</td></tr>`;
+            rows += `<tr>${name}<td colspan="${cols - 1}" class="nc-wait">${k.group === 'Car' ? 'Waiting for the Zappi to be set up' : 'Waiting for its devices to be set up'}</td></tr>`;
             continue;
           }
           const cells = people
@@ -263,13 +263,13 @@ export class NotificationsCard extends HTMLElement {
               return `<td>${tick(k, p, k.all || k.people.includes(p.entity_id), true, false, k.all)}</td>`;
             })
             .join('');
-          html += `<tr>${name}<td>${k.admin_only ? '<span class="nc-dash">–</span>' : tick(k, null, k.all, true, true)}</td>${cells}</tr>`;
+          rows += `<tr>${name}<td>${k.admin_only ? '<span class="nc-dash">–</span>' : tick(k, null, k.all, true, true)}</td>${cells}</tr>`;
         }
+        boxes.push(`<div class="nc-box"><div class="nc-gh">${kitEsc(g === 'House jobs' ? 'House jobs (make a to-do)' : g)}</div><div class="nc-wrap"><table class="nc-table">${head}<tbody>${rows}</tbody></table></div></div>`);
       }
-      html += `</tbody></table></div>`;
     }
     if (show === 'all' || show === 'phones') {
-      html += `${show === 'all' ? '<div class="nc-h">Phones</div>' : ''}<div class="nc-phones">${people
+      boxes.push(`<div class="nc-box"><div class="nc-gh">Phones</div><div class="nc-phones">${people
         .map(
           (p) => `<div class="nc-person"><div class="nc-person-name">${kitEsc(p.name)}${p.admin ? '<span class="nc-badge">Admin</span>' : ''}</div><div class="nc-chips">${
             p.phones && p.phones.length
@@ -285,8 +285,9 @@ export class NotificationsCard extends HTMLElement {
               : '<span class="ck-sub">No companion app yet, so no notifications</span>'
           }</div></div>`
         )
-        .join('')}</div>`;
+        .join('')}</div></div>`);
     }
+    let html = `<div class="nc-boxes">${boxes.join('')}</div>`;
     if (!edit) html += `<div class="ck-sub">Only administrators can change these.</div>`;
     if (this._msg) html += `<div class="nc-msg" role="status">${kitEsc(this._msg)}</div>`;
     this._body.innerHTML = html;

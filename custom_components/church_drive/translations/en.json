@@ -10,7 +10,8 @@
         "title": "Church Drive",
         "menu_options": {
           "scenes": "Universal scenes (Hue rooms and zones)",
-          "health": "Device health (devices to watch)"
+          "health": "Device health (devices to watch)",
+          "maps": "Google maps (API keys)"
         }
       },
       "scenes": {
@@ -25,6 +26,14 @@
         "description": "Choose the devices to watch. Church Drive spots ones whose state has gone stale (old readings after a restart, stopped updating, unavailable for over 5 minutes) and fixes them automatically: it refreshes them and re-sends their last real state (fans and thermostats). If a fan still doesn't respond, it nudges it (a few seconds in another mode, then back) after 1.5, 10 and 30 minutes. It never reloads an integration on its own.",
         "data": {
           "health_entities": "Devices to watch"
+        }
+      },
+      "maps": {
+        "title": "Google maps",
+        "description": "Keys from Google Cloud (APIs & Services › Credentials). With a Map Tiles key, maps across Home Assistant use Google's satellite (with shop and road names) or road map; lock that key to Home Assistant's web addresses, as browsers use it. With a Places key, the zone map's search finds shops and businesses; Home Assistant does the searching, so that key never reaches a browser. Leave either blank to use the free Esri maps and OpenStreetMap search.",
+        "data": {
+          "google_tiles_key": "Map Tiles API key",
+          "google_places_key": "Places API key"
         }
       }
     },

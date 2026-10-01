@@ -20,7 +20,7 @@ const PEOPLE_SENSOR = 'sensor.church_drive_people';
 const SUGGEST = ['Work', 'School', 'College', 'Gym', 'Family', 'Friends', 'Shops'];
 
 const PL_CSS = `
-  .pl-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap:12px; }
+  .pl-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap:12px; }
   .pl-person .ck-card { height:100%; box-sizing:border-box; }
   .pl-row { display:flex; align-items:center; gap:8px; }
   .pl-row + .pl-row { margin-top:8px; }

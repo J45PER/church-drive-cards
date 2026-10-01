@@ -27,15 +27,21 @@ const POP_CSS = `
   dialog.cd-pop:not([open]) { display:none; }
   dialog.cd-pop::backdrop { background:rgba(0,0,0,0.55); animation:cd-pop-fade 0.18s ease-out; }
   .cd-pop-grab { display:none; flex:none; width:40px; height:4px; border-radius:2px; background:rgba(127,127,127,0.45); margin:10px auto 0; }
+  .cd-pop-drag { flex:none; touch-action:none; }
+  @media (max-width: 600px) { .cd-pop-drag { cursor:grab; } }
   .cd-pop-head { flex:none; display:flex; align-items:center; gap:12px; padding:16px 12px 8px 18px; }
   .cd-pop-icon { flex:none; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
   .cd-pop-title { flex:1; min-width:0; font-size:1.1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .cd-pop-x { flex:none; width:40px; height:40px; border:none; border-radius:50%; background:transparent; color:var(--secondary-text-color); cursor:pointer; display:flex; align-items:center; justify-content:center; }
   .cd-pop-x:hover { background:rgba(127,127,127,0.15); }
   .cd-pop-x:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
-  .cd-pop-body { flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; padding:6px 18px 20px; }
+  /* flex-basis auto: with 0 (flex:1), iPhones size the pop-up as if the body were empty. */
+  .cd-pop-body { flex:1 1 auto; min-height:0; overflow:auto; overscroll-behavior:contain; padding:6px 18px 20px; }
   @media ${PHONE} {
-    dialog.cd-pop { width:100vw; max-height:90dvh; margin:auto 0 0 0; border-radius:24px 24px 0 0; animation:cd-sheet-in 0.22s ease-out; }
+    /* Pinned to the bottom (not pushed there by an auto margin): iPhones work
+       the margin out once, so a pop-up that fills in after opening (cameras)
+       grew off the bottom of the screen. */
+    dialog.cd-pop { position:fixed; inset:auto 0 0 0; width:100vw; max-height:90dvh; margin:0; border-radius:24px 24px 0 0; animation:cd-sheet-in 0.22s ease-out; }
     .cd-pop-grab { display:block; }
     .cd-pop-head { padding-top:10px; }
     .cd-pop-body { padding-bottom:calc(20px + env(safe-area-inset-bottom, 0px)); }
@@ -51,13 +57,13 @@ export function openPopup(host, { title = '', icon = '', color = 'var(--primary-
   d.className = 'cd-pop';
   d.setAttribute('aria-label', title);
   d.innerHTML = `<style>${POP_CSS}</style>
-    <div class="cd-pop-grab" aria-hidden="true"></div>
+    <div class="cd-pop-drag"><div class="cd-pop-grab" aria-hidden="true"></div>
     <div class="cd-pop-head">
       ${icon ? `<div class="cd-pop-icon" style="background:color-mix(in srgb, ${color} 22%, transparent); color:${color};">${iconHtml(icon, { size: '20px' })}</div>` : ''}
       <div class="cd-pop-title"></div>
       <button type="button" class="cd-pop-x" aria-label="Close">${iconHtml('mdi:close', { size: '22px' })}</button>
     </div>
-    <div class="cd-pop-body"></div>`;
+    </div><div class="cd-pop-body"></div>`;
   const body = d.querySelector('.cd-pop-body');
   const heading = d.querySelector('.cd-pop-title');
   heading.textContent = title;
@@ -117,6 +123,38 @@ export function openPopup(host, { title = '', icon = '', color = 'var(--primary-
     if (downOutside && outside(ev)) close();
     downOutside = false;
   });
+
+  // Phone sheet: drag the grab bar (or the title) down to close it, or up to
+  // open it to full height.
+  const drag = d.querySelector('.cd-pop-drag');
+  let start = null;
+  drag.addEventListener('pointerdown', (ev) => {
+    if (!window.matchMedia(PHONE).matches || ev.target.closest('.cd-pop-x')) return;
+    start = { y: ev.clientY, t: Date.now() };
+    drag.setPointerCapture(ev.pointerId);
+    d.style.transition = 'none';
+  });
+  drag.addEventListener('pointermove', (ev) => {
+    if (!start) return;
+    const dy = ev.clientY - start.y;
+    d.style.transform = dy > 0 ? `translateY(${dy}px)` : '';
+  });
+  const release = (ev) => {
+    if (!start) return;
+    const dy = ev.clientY - start.y;
+    const fast = Math.abs(dy) / Math.max(1, Date.now() - start.t) > 0.6;
+    start = null;
+    d.style.transition = 'transform 0.18s ease-out, height 0.18s ease-out';
+    if (dy > 120 || (fast && dy > 50)) {
+      d.style.transform = 'translateY(100%)';
+      setTimeout(close, 170);
+      return;
+    }
+    d.style.transform = '';
+    if (dy < -40) d.style.height = '90dvh';
+  };
+  drag.addEventListener('pointerup', release);
+  drag.addEventListener('pointercancel', release);
 
   d.showModal();
   try {

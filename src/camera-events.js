@@ -53,7 +53,7 @@ const EV_CSS = `
   .ce-ev.sel { outline:2px solid var(--primary-text-color, #e6e8ee); outline-offset:1px; }
   .ce-ev .t { position:absolute; left:5px; bottom:3px; font-size:0.68rem; font-weight:700; text-shadow:0 1px 2px #000; }
   .ce-ev .k { position:absolute; right:4px; top:4px; font-size:0.6rem; font-weight:800; border-radius:999px; padding:1px 6px; }
-  .ce-ev .p { position:absolute; left:4px; top:3px; text-shadow:0 1px 2px #000; }
+  .ce-ev .p { position:absolute; left:3px; top:3px; display:flex; color:#fff; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.7)); }
   .ce-empty { color:var(--secondary-text-color); font-size:0.85rem; padding:14px 2px; }
 `;
 
@@ -292,7 +292,7 @@ export function openCameraEvents(host, hass, base, { title = '', aspect = 16 / 9
     stageMedia(box, el, aspect);
     const [label, colour] = KINDS[e.kind] || KINDS.motion;
     const from = e.kind === 'linked' && e.source ? ` from ${e.source}` : '';
-    stageTag(box, `${e.clip ? '▶ ' : ''}${label}${from} · ${hm(e.ts * 1000)} ${dayName(e.ts * 1000).toLowerCase()}`, colour);
+    stageTag(box, `${label}${from} · ${hm(e.ts * 1000)} ${dayName(e.ts * 1000).toLowerCase()}`, colour);
   };
 
   const renderChips = () => {
@@ -320,9 +320,10 @@ export function openCameraEvents(host, hass, base, { title = '', aspect = 16 / 9
       const [label, bg, fg] = KINDS[e.kind] || KINDS.motion;
       html += `<button class="ce-ev${state.sel === e.id ? ' sel' : ''}" data-id="${kitEsc(e.id)}" aria-label="${label} ${hm(e.ts * 1000)}">
         ${e.picture ? `<img src="${kitEsc(e.picture)}" alt="" loading="lazy">` : ''}
-        ${e.clip ? '<span class="p">▶</span>' : ''}<span class="k" style="background:${bg}; color:${fg};">${label}</span><span class="t">${hm(e.ts * 1000)}</span></button>`;
+        ${e.clip ? `<span class="p">${iconHtml('mdi:play', { size: '18px' })}</span>` : ''}<span class="k" style="background:${bg}; color:${fg};">${label}</span><span class="t">${hm(e.ts * 1000)}</span></button>`;
     });
     list.innerHTML = `${html}</div>`;
+    hydrateIcons(list);
   };
 
   chips.addEventListener('click', (ev) => {
