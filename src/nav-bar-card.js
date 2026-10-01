@@ -240,8 +240,10 @@ export class NavBarCard extends HTMLElement {
           .nb.nb-tight .nb-it.nb-on { padding:0 12px; }
           .nb.nb-tight .nb-it span.nb-name { display:none; }
           .nb.nb-icons { gap:2px; padding:0 6px; }
-          .nb.nb-icons .nb-it, .nb.nb-icons .nb-it.nb-on { min-width:42px; width:42px; padding:0; }
-          .nb.nb-icons .nb-it.nb-on .nb-dot { left:28px; right:auto; }
+          /* Icons shrink (down to 28px) when there are more pages than fit, e.g.
+             eight on a phone beside the back-to-top button. */
+          .nb.nb-icons .nb-it, .nb.nb-icons .nb-it.nb-on { min-width:var(--nb-sz, 42px); width:var(--nb-sz, 42px); height:var(--nb-sz, 42px); border-radius:50%; padding:0; }
+          .nb.nb-icons .nb-it.nb-on .nb-dot, .nb.nb-icons .nb-dot { left:calc(var(--nb-sz, 42px) - 14px); right:auto; }
           .nb-it:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
           .nb-dot { position:absolute; left:28px; top:6px; width:8px; height:8px; border-radius:50%; background:#ff9800; box-shadow:0 0 0 2px var(--card-background-color, #1f2128); }
           .nb-it.nb-on .nb-dot { left:auto; right:6px; }
@@ -321,6 +323,12 @@ export class NavBarCard extends HTMLElement {
     nav.classList.toggle('nb-icons', !!this.config.icons_only);
     nav.classList.remove('nb-tight');
     if (this.config.icons_only || nav.scrollWidth > nav.clientWidth + 1) nav.classList.add('nb-tight');
+    if (this.config.icons_only) {
+      const n = nav.querySelectorAll('.nb-it').length;
+      const room = nav.clientWidth - 12 - 2 * Math.max(0, n - 1);
+      const size = n && room > 0 ? Math.max(28, Math.min(42, Math.floor(room / n))) : 42;
+      nav.style.setProperty('--nb-sz', `${size}px`);
+    }
   }
 
   // ---- Back to top: an arrow once the page is scrolled, a dash at the top.
