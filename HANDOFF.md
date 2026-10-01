@@ -14,7 +14,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-01, v0.25.0 live; on beta: Task List `assign: me` for My to-do):**
+**Now (2026-10-01, v0.25.0 live; on beta: Task List `assign: me` for My to-do, and its form in our new pop-up):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -1043,6 +1043,15 @@ Integration modules (`custom_components/church_drive/`):
     `npm run build`) builds every registered editor with a stub config and fake hass,
     and reports any that throw. Set `PLAYWRIGHT_MODULE` to Playwright's `index.mjs`
     if it isn't installed in the project.
+- **Our own pop-ups (`src/popup.js`, user's request 2026-10-01, on beta):** the template
+  for every card that needs a pop-up, including when we go back to cards that use HA's
+  pop-ups or need a custom one. Size aware, the user's choice from mock-ups: **a bottom
+  sheet with a grab bar on phones (up to 600px wide), a centred window on tablets and
+  PCs.** `openPopup(card, { title, icon, color, content, onClose })` returns
+  `{ body, setTitle, close, open }`. It's a native `<dialog>` with `showModal()`, kept
+  inside the card so the card's CSS and theme variables still apply. It closes with
+  its ✕, a tap outside, Escape, or Back (it pushes one history step while open).
+  First user: the Task List card's add and change form ("New task" / "Change task").
 - **Page header lines and the cleaning schedule (user's request, 2026-10-01, released in v0.25.0):**
   - Mock-ups: https://claude.ai/artifact/D9cz58EsbDS4VLx2e6tCsE (round 2 is the agreed
     one). These are snapshots only: nothing in a header makes tasks or sends

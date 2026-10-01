@@ -7462,6 +7462,111 @@
     });
   }
 
+  // src/popup.js
+  var PHONE = "(max-width: 600px)";
+  var POP_CSS = `
+  dialog.cd-pop { box-sizing:border-box; border:none; padding:0; margin:auto; width:min(520px, calc(100vw - 32px)); max-width:none; max-height:min(86dvh, 820px);
+    border-radius:24px; overflow:hidden; display:flex; flex-direction:column;
+    background:var(--ha-dialog-surface-background, var(--mdc-theme-surface, var(--card-background-color, #1f2128)));
+    color:var(--primary-text-color); box-shadow:0 18px 50px rgba(0,0,0,0.45); font-family:var(--ha-font-family-body, inherit);
+    animation:cd-pop-in 0.18s ease-out; }
+  dialog.cd-pop:not([open]) { display:none; }
+  dialog.cd-pop::backdrop { background:rgba(0,0,0,0.55); animation:cd-pop-fade 0.18s ease-out; }
+  .cd-pop-grab { display:none; flex:none; width:40px; height:4px; border-radius:2px; background:rgba(127,127,127,0.45); margin:10px auto 0; }
+  .cd-pop-head { flex:none; display:flex; align-items:center; gap:12px; padding:16px 12px 8px 18px; }
+  .cd-pop-icon { flex:none; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+  .cd-pop-title { flex:1; min-width:0; font-size:1.1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .cd-pop-x { flex:none; width:40px; height:40px; border:none; border-radius:50%; background:transparent; color:var(--secondary-text-color); cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .cd-pop-x:hover { background:rgba(127,127,127,0.15); }
+  .cd-pop-x:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
+  .cd-pop-body { flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; padding:6px 18px 20px; }
+  @media ${PHONE} {
+    dialog.cd-pop { width:100vw; max-height:90dvh; margin:auto 0 0 0; border-radius:24px 24px 0 0; animation:cd-sheet-in 0.22s ease-out; }
+    .cd-pop-grab { display:block; }
+    .cd-pop-head { padding-top:10px; }
+    .cd-pop-body { padding-bottom:calc(20px + env(safe-area-inset-bottom, 0px)); }
+  }
+  @keyframes cd-pop-in { from { opacity:0; transform:scale(0.96); } }
+  @keyframes cd-sheet-in { from { transform:translateY(100%); } }
+  @keyframes cd-pop-fade { from { opacity:0; } }
+  @media (prefers-reduced-motion: reduce) { dialog.cd-pop, dialog.cd-pop::backdrop { animation:none; } }
+`;
+  function openPopup(host, { title = "", icon = "", color = "var(--primary-color)", content = null, onClose = null } = {}) {
+    const d = document.createElement("dialog");
+    d.className = "cd-pop";
+    d.setAttribute("aria-label", title);
+    d.innerHTML = `<style>${POP_CSS}</style>
+    <div class="cd-pop-grab" aria-hidden="true"></div>
+    <div class="cd-pop-head">
+      ${icon ? `<div class="cd-pop-icon" style="background:color-mix(in srgb, ${color} 22%, transparent); color:${color};">${iconHtml(icon, { size: "20px" })}</div>` : ""}
+      <div class="cd-pop-title"></div>
+      <button type="button" class="cd-pop-x" aria-label="Close">${iconHtml("mdi:close", { size: "22px" })}</button>
+    </div>
+    <div class="cd-pop-body"></div>`;
+    const body = d.querySelector(".cd-pop-body");
+    const heading = d.querySelector(".cd-pop-title");
+    heading.textContent = title;
+    if (content) body.appendChild(content);
+    host.appendChild(d);
+    hydrateIcons(d);
+    let closed = false;
+    let pushed = false;
+    const finish = () => {
+      if (closed) return;
+      closed = true;
+      window.removeEventListener("popstate", onBack);
+      if (d.open) d.close();
+      d.remove();
+      if (onClose) onClose();
+    };
+    const onBack = () => {
+      pushed = false;
+      finish();
+    };
+    const close = () => {
+      if (closed) return;
+      const wasPushed = pushed;
+      pushed = false;
+      finish();
+      if (wasPushed && history.state && history.state.cdPopup) history.back();
+    };
+    d.querySelector(".cd-pop-x").addEventListener("click", close);
+    d.addEventListener("cancel", (ev) => {
+      ev.preventDefault();
+      close();
+    });
+    let downOutside = false;
+    const outside = (ev) => {
+      if (ev.target !== d) return false;
+      const r = d.getBoundingClientRect();
+      return ev.clientX < r.left || ev.clientX > r.right || ev.clientY < r.top || ev.clientY > r.bottom;
+    };
+    d.addEventListener("pointerdown", (ev) => downOutside = outside(ev));
+    d.addEventListener("click", (ev) => {
+      if (downOutside && outside(ev)) close();
+      downOutside = false;
+    });
+    d.showModal();
+    try {
+      history.pushState({ ...history.state || {}, cdPopup: true }, "");
+      pushed = true;
+      window.addEventListener("popstate", onBack);
+    } catch (_) {
+    }
+    return {
+      dialog: d,
+      body,
+      close,
+      setTitle: (text) => {
+        heading.textContent = text;
+        d.setAttribute("aria-label", text);
+      },
+      get open() {
+        return !closed;
+      }
+    };
+  }
+
   // src/repeat.js
   var DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -7687,7 +7792,7 @@
     ["after", "After it's done"]
   ];
   var TL_CSS = `
-  .tl-add[hidden], .tl-form[hidden], .tl-done-list[hidden] { display:none; }
+  .tl-add[hidden], .tl-done-list[hidden] { display:none; }
   .tl-row { display:flex; align-items:center; gap:10px; padding:8px 2px; border-radius:12px; }
   .tl-row + .tl-row { border-top:1px solid var(--divider-color, rgba(127,127,127,0.22)); }
   .tl-body { flex:1; min-width:0; cursor:pointer; border-radius:8px; }
@@ -7699,10 +7804,10 @@
   .tl-foot { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
   .tl-add { border:none; border-radius:12px; padding:9px 14px; font:inherit; font-size:0.85rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; }
   .tl-link { border:none; background:none; padding:4px 2px; font:inherit; font-size:0.8rem; color:var(--secondary-text-color); text-decoration:underline; cursor:pointer; }
-  .tl-form { display:flex; flex-direction:column; gap:12px; padding:12px; border-radius:14px; background:rgba(127,127,127,0.1); }
+  .tl-form { display:flex; flex-direction:column; gap:14px; }
   .tl-l { display:flex; flex-direction:column; gap:6px; font-size:0.8rem; color:var(--secondary-text-color); }
   .tl-inline { display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:0.85rem; color:var(--primary-text-color); }
-  .tl-form input, .tl-form select { box-sizing:border-box; padding:8px 10px; border-radius:10px; border:1px solid var(--divider-color, rgba(127,127,127,0.3)); background:var(--card-background-color); color:var(--primary-text-color); font:inherit; font-size:0.92rem; color-scheme:dark light; min-width:0; }
+  .tl-form input, .tl-form select { box-sizing:border-box; padding:8px 10px; border-radius:10px; border:1px solid var(--divider-color, rgba(127,127,127,0.3)); background:rgba(127,127,127,0.1); color:var(--primary-text-color); font:inherit; font-size:0.92rem; color-scheme:dark light; min-width:0; }
   .tl-form input[type=number] { width:4.2em; }
   .tl-form input.tl-wide { width:100%; }
   .tl-chips { display:flex; flex-wrap:wrap; gap:6px; }
@@ -7763,6 +7868,7 @@
       this.config = config;
       this._built = false;
       this._sig = null;
+      if (this._pop) this._pop.close();
       this._edit = null;
       if (this._unsub) this._unwatch();
       if (this._hass) this._watch();
@@ -7777,6 +7883,7 @@
     }
     disconnectedCallback() {
       this._unwatch();
+      if (this._pop) this._pop.close();
     }
     _colour() {
       return this.config.color || "#7e57c2";
@@ -7844,13 +7951,11 @@
       if (!this._built) {
         this.innerHTML = kitShell(
           `<div class="tl-list" style="display:flex; flex-direction:column;"></div>
-        <div class="tl-form" hidden></div>
         <div class="tl-foot"><button type="button" class="tl-add"></button><button type="button" class="tl-link tl-done-toggle" hidden></button></div>
         <div class="tl-done-list" hidden style="display:flex; flex-direction:column;"></div>`,
           TL_CSS
         );
         this._list = this.querySelector(".tl-list");
-        this._form = this.querySelector(".tl-form");
         this._addBtn = this.querySelector(".tl-add");
         this._doneBtn = this.querySelector(".tl-done-toggle");
         this._doneList = this.querySelector(".tl-done-list");
@@ -7956,6 +8061,22 @@
         was: t ? t.description || "" : "",
         due: t ? t.due : null
       };
+      if (this._pop) this._pop.close();
+      this._form = document.createElement("div");
+      this._form.className = "tl-form";
+      this._pop = openPopup(this, {
+        title: uid ? "Change task" : "New task",
+        icon: uid ? "mdi:pencil-outline" : "mdi:plus",
+        color: this._colour(),
+        content: this._form,
+        onClose: () => {
+          this._pop = null;
+          this._form = null;
+          this._edit = null;
+          this._sig = null;
+          this._render();
+        }
+      });
       this._drawForm();
       this._sig = null;
       this._render();
@@ -7963,11 +8084,7 @@
       if (name && !uid) name.focus();
     }
     _close() {
-      this._edit = null;
-      this._form.hidden = true;
-      this._form.innerHTML = "";
-      this._sig = null;
-      this._render();
+      if (this._pop) this._pop.close();
     }
     _drawForm() {
       const e = this._edit;
@@ -7995,7 +8112,6 @@
       else if (e.kind === "yearly") how = `<div class="tl-inline">On <input type="date" class="tl-f-ymd" value="${e.ymd}" aria-label="Date (the year is ignored)"> ${at2}</div>`;
       else if (e.kind === "after")
         how = `<div class="tl-inline">Every <input type="number" class="tl-f-n" min="1" max="365" value="${e.n}"> <select class="tl-f-unit" aria-label="Days, weeks or months">${["day", "week", "month"].map((u) => `<option value="${u}" ${e.unit === u ? "selected" : ""}>${u}${e.n === 1 ? "" : "s"}</option>`).join("")}</select> after it's done, ${at2}</div>`;
-      this._form.hidden = false;
       this._form.innerHTML = `
       <label class="tl-l">Task<input type="text" class="tl-f-name tl-wide" maxlength="80" placeholder="e.g. Hoover upstairs" value="${kitEsc(e.name)}"></label>
       <div class="tl-l">Repeats<div class="tl-chips" role="group" aria-label="Repeats">${REPEATS.map(([k, label]) => chip("data-kind", k, label, e.kind === k)).join("")}</div></div>
@@ -8066,7 +8182,7 @@
       });
     }
     _say(text) {
-      const m = this._form.querySelector(".tl-msg");
+      const m = this._form && this._form.querySelector(".tl-msg");
       if (m) m.textContent = text;
     }
     // The repeat the form describes, or null for "Never".
