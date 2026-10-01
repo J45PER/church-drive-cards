@@ -20,7 +20,7 @@ import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { kitEsc } from './card-kit.js';
 import { openPopup } from './popup.js';
-import { KINDS, STAGE_CSS, stageMedia, liveElement, openCameraEvents, cameraBase } from './camera-events.js';
+import { KINDS, STAGE_CSS, stageMedia, stageTag, liveElement, openCameraEvents, cameraBase } from './camera-events.js';
 
 const OLD = ['#ffa726', '#221'];
 
@@ -304,6 +304,7 @@ export class CameraCard extends HTMLElement {
     }
     if (!this._popEl) return;
     stageMedia(box, el, this._aspect());
+    if (!c.demo) stageTag(box, this._talking ? '● LIVE · talking' : '● LIVE', '#e53935');
   }
 
   _renderPop() {

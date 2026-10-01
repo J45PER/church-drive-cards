@@ -1,10 +1,10 @@
 // Camera events viewer, and the video stage both camera pop-ups use.
 //
 // openCameraEvents(card, hass, 'front_door', { title }) opens the pop-up:
-// a player at the top, then every saved doorbell press and motion for that
-// camera from the last few days, as pictures by day. Tapping one plays its
-// clip (or shows its picture if Ring didn't record one); "Live" plays the
-// camera live. The events are saved by the Church Drive integration
+// every saved doorbell press and motion for that camera from the last few
+// days, as pictures by day. Tapping one opens a player above the list with
+// its clip (or its picture if Ring didn't record one). Live video is the
+// camera card's own pop-up. The events are saved by the Church Drive integration
 // (events.py) and fetched over `church_drive/camera/events`, with signed
 // links to each picture and clip.
 //
@@ -48,7 +48,7 @@ const EV_CSS = `
   .ce-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(104px, 1fr)); gap:6px; }
   .ce-ev { position:relative; border:none; padding:0; cursor:pointer; border-radius:9px; overflow:hidden; aspect-ratio:16/9; background:linear-gradient(160deg,#55606f,#2f3946); color:#fff; font:inherit; }
   .ce-ev img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
-  .ce-ev.sel { outline:2px solid var(--primary-text-color); outline-offset:1px; }
+  .ce-ev.sel { outline:2px solid var(--primary-text-color, #e6e8ee); outline-offset:1px; }
   .ce-ev .t { position:absolute; left:5px; bottom:3px; font-size:0.68rem; font-weight:700; text-shadow:0 1px 2px #000; }
   .ce-ev .k { position:absolute; right:4px; top:4px; font-size:0.6rem; font-weight:800; border-radius:999px; padding:1px 6px; }
   .ce-ev .p { position:absolute; left:4px; top:3px; text-shadow:0 1px 2px #000; }
@@ -233,16 +233,27 @@ export function stageMedia(box, el, aspect = 16 / 9) {
   return stage;
 }
 
-// The events viewer pop-up for one camera ('front_door').
+// A label on the video's top-left corner: "LIVE", or the event being played.
+export function stageTag(box, text, colour) {
+  const t = document.createElement('div');
+  t.className = 'cc-tag';
+  t.style.background = colour;
+  t.textContent = text;
+  box.appendChild(t);
+  return t;
+}
+
+// The events viewer pop-up for one camera ('front_door'): the list first; a
+// tapped event plays above it.
 export function openCameraEvents(host, hass, base, { title = '', aspect = 16 / 9 } = {}) {
   const live = `camera.${base}_live_view`;
   const name = title || String((hass.states[live] && hass.states[live].attributes.friendly_name) || base.replace(/_/g, ' ')).replace(/ Live view$/i, '');
   const content = document.createElement('div');
-  content.innerHTML = `<style>${STAGE_CSS}${EV_CSS}</style><div class="cc-pop-media"></div><div class="ce-chips"></div><div class="ce-list"><div class="ce-empty">Loading…</div></div>`;
+  content.innerHTML = `<style>${STAGE_CSS}${EV_CSS}</style><div class="cc-pop-media" style="display:none;"></div><div class="ce-chips"></div><div class="ce-list"><div class="ce-empty">Loading…</div></div>`;
   const box = content.querySelector('.cc-pop-media');
   const chips = content.querySelector('.ce-chips');
   const list = content.querySelector('.ce-list');
-  const state = { filter: 'all', events: [], sel: null, live: false, keep: 5 };
+  const state = { filter: 'all', events: [], sel: null, keep: 5 };
 
   const pop = openPopup(host, {
     title: `${name} · events`,
@@ -254,29 +265,12 @@ export function openCameraEvents(host, hass, base, { title = '', aspect = 16 / 9
     },
   });
 
-  const tag = (text, colour) => {
-    const t = document.createElement('div');
-    t.className = 'cc-tag';
-    t.style.background = colour;
-    t.textContent = text;
-    box.appendChild(t);
-  };
-
-  const play = async (e) => {
-    state.sel = e ? e.id : null;
-    state.live = !e;
+  // A tapped event opens the player above the list (the pop-up grows to fit).
+  const play = (e) => {
+    state.sel = e.id;
     renderList();
-    if (!e) {
-      try {
-        const el = await liveElement(hass, live);
-        if (!state.live) return;
-        stageMedia(box, el, aspect);
-        tag('LIVE', '#e53935');
-      } catch (err) {
-        box.innerHTML = '';
-      }
-      return;
-    }
+    box.style.display = '';
+    if (pop.body) pop.body.scrollTo({ top: 0, behavior: 'smooth' });
     let el;
     if (e.clip) {
       el = document.createElement('video');
@@ -295,12 +289,12 @@ export function openCameraEvents(host, hass, base, { title = '', aspect = 16 / 9
     }
     stageMedia(box, el, aspect);
     const [label, colour] = KINDS[e.kind] || KINDS.motion;
-    tag(`${e.clip ? '▶ ' : ''}${label} · ${hm(e.ts * 1000)} ${dayName(e.ts * 1000).toLowerCase()}`, colour);
+    stageTag(box, `${e.clip ? '▶ ' : ''}${label} · ${hm(e.ts * 1000)} ${dayName(e.ts * 1000).toLowerCase()}`, colour);
   };
 
   const renderChips = () => {
-    const opts = [['all', 'All'], ['ding', 'Doorbell'], ['motion', 'Motion'], ['live', '● Live']];
-    chips.innerHTML = opts.map(([k, t]) => `<button class="ce-chip${(k === 'live' ? state.live : state.filter === k && !state.live) ? ' on' : ''}" data-f="${k}">${t}</button>`).join('');
+    const opts = [['all', 'All'], ['ding', 'Doorbell'], ['motion', 'Motion']];
+    chips.innerHTML = opts.map(([k, t]) => `<button class="ce-chip${state.filter === k ? ' on' : ''}" data-f="${k}">${t}</button>`).join('');
   };
 
   const renderList = () => {
@@ -329,10 +323,6 @@ export function openCameraEvents(host, hass, base, { title = '', aspect = 16 / 9
   chips.addEventListener('click', (ev) => {
     const b = ev.target.closest('[data-f]');
     if (!b) return;
-    if (b.dataset.f === 'live') {
-      play(null);
-      return;
-    }
     state.filter = b.dataset.f;
     renderList();
   });
@@ -348,12 +338,9 @@ export function openCameraEvents(host, hass, base, { title = '', aspect = 16 / 9
       state.events = res.events || [];
       state.keep = (res.settings && res.settings.keep_days) || 5;
       renderList();
-      // Start on the newest event, or live if there's none.
-      play(state.events[0] || null);
     })
     .catch(() => {
       list.innerHTML = '<div class="ce-empty">Saved events need the latest Church Drive integration (and a restart).</div>';
-      play(null);
     });
   return pop;
 }
