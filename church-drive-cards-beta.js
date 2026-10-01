@@ -356,7 +356,10 @@
   .cd-pop-x:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
   .cd-pop-body { flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; padding:6px 18px 20px; }
   @media ${PHONE} {
-    dialog.cd-pop { width:100vw; max-height:90dvh; margin:auto 0 0 0; border-radius:24px 24px 0 0; animation:cd-sheet-in 0.22s ease-out; }
+    /* Pinned to the bottom (not pushed there by an auto margin): iPhones work
+       the margin out once, so a pop-up that fills in after opening (cameras)
+       grew off the bottom of the screen. */
+    dialog.cd-pop { position:fixed; inset:auto 0 0 0; width:100vw; max-height:90dvh; margin:0; border-radius:24px 24px 0 0; animation:cd-sheet-in 0.22s ease-out; }
     .cd-pop-grab { display:block; }
     .cd-pop-head { padding-top:10px; }
     .cd-pop-body { padding-bottom:calc(20px + env(safe-area-inset-bottom, 0px)); }
