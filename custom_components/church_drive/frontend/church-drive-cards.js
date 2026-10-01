@@ -543,7 +543,7 @@
       }
       return v == null && pts.length ? pts[0][1] : v;
     };
-    const when3 = (t) => {
+    const when4 = (t) => {
       const d = new Date(t), today = /* @__PURE__ */ new Date();
       const time = d.toLocaleTimeString(void 0, { hour: "2-digit", minute: "2-digit" });
       return d.toDateString() === today.toDateString() ? time : `${d.toLocaleDateString(void 0, { weekday: "short" })} ${time}`;
@@ -571,7 +571,7 @@
         dot.style.display = "block";
         rows.push(`<div style="color:${colour};">\u25CF ${kitEsc(s.format ? s.format(v) : Number(v).toFixed(1))}</div>`);
       });
-      tip.innerHTML = `<div style="color:var(--secondary-text-color);">${when3(t)}</div>${rows.join("")}`;
+      tip.innerHTML = `<div style="color:var(--secondary-text-color);">${when4(t)}</div>${rows.join("")}`;
       tip.style.display = "block";
       const w = tip.offsetWidth;
       tip.style.left = `${Math.max(0, Math.min(rect.width - w, left - w / 2))}px`;
@@ -2456,9 +2456,9 @@
       const track = "rgba(255,255,255,0.06)";
       const row3 = document.createElement("div");
       row3.className = "lcc-row";
-      const pad5 = level > 0 ? "9px 14px" : "12px 14px";
+      const pad6 = level > 0 ? "9px 14px" : "12px 14px";
       const indent = level > 0 ? `margin-left:${16 * level}px;` : "";
-      row3.style.cssText = `position:relative; display:flex; align-items:center; gap:12px; padding:${pad5}; ${indent} border-radius:12px; margin-top:6px; overflow:hidden; cursor:pointer; user-select:none; touch-action:pan-y; background: linear-gradient(to right, ${tint} 0%, ${tint} ${fillPct}%, ${track} ${fillPct}%, ${track} 100%);`;
+      row3.style.cssText = `position:relative; display:flex; align-items:center; gap:12px; padding:${pad6}; ${indent} border-radius:12px; margin-top:6px; overflow:hidden; cursor:pointer; user-select:none; touch-action:pan-y; background: linear-gradient(to right, ${tint} 0%, ${tint} ${fillPct}%, ${track} ${fillPct}%, ${track} 100%);`;
       row3.innerHTML = `
       ${iconHtml(icon, { size: "24px", cls: "lcc-row-icon", style: `color:${on ? color : "var(--secondary-text-color)"}; opacity:${on ? 1 : 0.6}; flex-shrink:0; pointer-events:none;` })}
       <div class="lcc-name" style="flex:1; min-width:0; font-weight:${on ? 600 : 400}; color:${on ? "var(--primary-text-color)" : "var(--secondary-text-color)"}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; pointer-events:none;">${name}</div>
@@ -6200,8 +6200,8 @@
       warn.style.display = high ? "flex" : "none";
       if (high) warn.innerHTML = `${iconHtml("mdi:alert", { size: "24px" })}<span>Carbon monoxide found. Get everyone outside and open doors and windows.</span>`;
       this.querySelector(".co-gauge").innerHTML = kitGauge(d.ppm == null ? 0 : Math.max(0.02, d.ppm / 100), color, d.ppm == null ? "\u2013" : String(Math.round(d.ppm)), "ppm CO");
-      const when3 = d.report && !isNaN(Date.parse(d.report)) ? new Date(d.report) : null;
-      const whenText2 = when3 ? when3.toLocaleString(void 0, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+      const when4 = d.report && !isNaN(Date.parse(d.report)) ? new Date(d.report) : null;
+      const whenText2 = when4 ? when4.toLocaleString(void 0, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
       this.querySelector(".co-info").innerHTML = [
         `<span>${iconHtml(high ? "mdi:alert-circle" : "mdi:shield-check", { size: "18px", style: `color:${color};` })}${high ? "CO detected" : "No CO detected"}</span>`,
         d.battery != null ? `<span>${iconHtml(d.battery < 20 ? "mdi:battery-alert" : "mdi:battery", { size: "18px", style: `color:${d.battery < 20 ? KIT_COLOR.bad : KIT_COLOR.good};` })}Battery ${Math.round(d.battery)}%</span>` : "",
@@ -8121,8 +8121,8 @@
       if (sig === this._sig) return;
       this._sig = sig;
       const row3 = ({ t, p }, isDone) => {
-        const when3 = isDone ? "" : whenText(t.due);
-        const over = when3.includes("overdue");
+        const when4 = isDone ? "" : whenText(t.due);
+        const over = when4.includes("overdue");
         const mine = this._justMe() && Array.isArray(p.who) && p.who.length === 1 && p.who[0] === this._me();
         const who = !p.repeat ? "" : mine ? "reminds you" : p.who === "everyone" ? "reminds everyone" : Array.isArray(p.who) ? `reminds ${p.who.join(", ")}` : "";
         const sub = [p.repeat && p.repeat.type !== "once" ? describeRepeat(p.repeat) : "", who, p.notes].filter(Boolean).join(" \xB7 ");
@@ -8134,7 +8134,7 @@
           <div class="tl-name" style="${isDone ? "text-decoration:line-through; color:var(--secondary-text-color);" : ""}">${kitEsc(t.summary)}</div>
           ${sub ? `<div class="ck-sub" style="font-size:0.74rem; line-height:1.35;">${kitEsc(sub)}</div>` : ""}
         </div>
-        ${when3 ? `<span class="tl-when" style="color:${over ? "#e53935" : "var(--secondary-text-color)"};">${kitEsc(when3)}</span>` : ""}
+        ${when4 ? `<span class="tl-when" style="color:${over ? "#e53935" : "var(--secondary-text-color)"};">${kitEsc(when4)}</span>` : ""}
       </div>`;
       };
       if (missing) this._list.innerHTML = `<div class="ck-sub" style="line-height:1.5;">There's no ${kitEsc(this._entity() || "to-do")} list yet.</div>`;
@@ -9323,7 +9323,7 @@
       const colour = this.config.list_color || "#2196f3";
       const now = /* @__PURE__ */ new Date();
       const day2 = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-      const when3 = (due) => {
+      const when4 = (due) => {
         if (!due) return { text: "", over: false };
         const dateOnly = !String(due).includes("T");
         const d = dateOnly ? /* @__PURE__ */ new Date(`${due}T23:59:59`) : new Date(due);
@@ -9341,7 +9341,7 @@
       const open = ((this._todoItems || {})[list] || []).filter((t) => t.status === "needs_action");
       const rank = (t) => t.due ? new Date(String(t.due).includes("T") ? t.due : `${t.due}T23:59:59`).getTime() : Infinity;
       const items = open.map((t, n) => ({ t, n })).sort((a, b) => rank(a.t) - rank(b.t) || a.n - b.n).map(({ t }) => {
-        const w = when3(t.due);
+        const w = when4(t.due);
         return { uid: t.uid, list, text: w.text ? `${t.summary} \xB7 ${w.text}` : t.summary, overdue: w.over, strong: w.over || w.today, colour, icon: choreIcon(t.summary), link: this.config.priorities_page || "" };
       });
       return { items, colour, icon: this.config.list_icon || "mdi:format-list-checks" };
@@ -10471,14 +10471,14 @@
       });
     }
     _press(id, key) {
-      const pad5 = this._pad(id);
-      if (!pad5 || pad5.kind === "demo") return;
-      if (pad5.kind === "webos") {
+      const pad6 = this._pad(id);
+      if (!pad6 || pad6.kind === "demo") return;
+      if (pad6.kind === "webos") {
         const map = { up: "UP", down: "DOWN", left: "LEFT", right: "RIGHT", ok: "ENTER", back: "BACK", home: "HOME" };
         this._call("webostv", "button", { entity_id: id, button: map[key] });
       } else {
         const map = { up: "DPAD_UP", down: "DPAD_DOWN", left: "DPAD_LEFT", right: "DPAD_RIGHT", ok: "DPAD_CENTER", back: "BACK", home: "HOME" };
-        this._call("remote", "send_command", { entity_id: pad5.entity, command: map[key] });
+        this._call("remote", "send_command", { entity_id: pad6.entity, command: map[key] });
       }
     }
     _toggle(st) {
@@ -10570,7 +10570,7 @@
       this._popSig = sig;
       const live = PLAYING.includes(st.state);
       const on = ON.includes(st.state);
-      const pad5 = this._pad(id);
+      const pad6 = this._pad(id);
       const art = a.entity_picture ? `style="background-image:url('${kitEsc(a.entity_picture)}')"` : "";
       const btn = (act, icon, label, extra = "", cls = "mcp-round") => `<button type="button" class="${cls}" data-p="${act}" aria-label="${label}" ${extra}>${iconHtml(icon, { size: "22px" })}</button>`;
       let html = `<div class="mcp-now"><div class="mcp-art" ${art}>${a.entity_picture ? "" : iconHtml(this._icon(st), { size: "28px" })}</div>
@@ -10585,7 +10585,7 @@
           html += `<div class="mcp-vol">${iconHtml("mdi:volume-low", { size: "20px" })}<input type="range" min="0" max="100" step="1" value="${Math.round((a.volume_level || 0) * 100)}" aria-label="Volume">${iconHtml("mdi:volume-high", { size: "20px" })}</div>`;
         if ((has(st, F.SELECT_SOURCE) || this.config.demo) && Array.isArray(a.source_list) && a.source_list.length)
           html += `<div class="mcp-l">Source</div><select class="mcp-src" aria-label="Source">${a.source_list.map((s) => `<option ${s === a.source ? "selected" : ""}>${kitEsc(s)}</option>`).join("")}</select>`;
-        if (pad5)
+        if (pad6)
           html += `<div class="mcp-l">Remote</div><div class="mcp-pad">
           <span></span>${btn("up", "mdi:chevron-up", "Up", "", "")}<span></span>
           ${btn("left", "mdi:chevron-left", "Left", "", "")}<button type="button" class="mcp-ok" data-p="ok" aria-label="OK">OK</button>${btn("right", "mdi:chevron-right", "Right", "", "")}
@@ -11104,6 +11104,387 @@
     });
   }
 
+  // src/camera-card.js
+  var KINDS = {
+    ding: ["Doorbell", "#29b6f6", "#012"],
+    motion: ["Motion", "#5c6bc0", "#fff"],
+    interval: ["Snapshot", "rgba(255,255,255,0.22)", "#fff"],
+    "on-demand": ["Snapshot", "rgba(255,255,255,0.22)", "#fff"]
+  };
+  var OLD = ["#ffa726", "#221"];
+  var asked = /* @__PURE__ */ new Map();
+  var CAM_CSS = `
+  .cc-tile { position:relative; display:block; width:100%; aspect-ratio:16/9; border-radius:var(--ha-card-border-radius, 14px); overflow:hidden; cursor:pointer;
+    background:linear-gradient(160deg, #5d6b7d, #2f3946 60%, #46503c); box-shadow:0 3px 10px rgba(0,0,0,0.45); }
+  .cc-tile img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; transition:opacity .4s ease; }
+  .cc-ov { position:absolute; left:0; right:0; bottom:0; padding:22px 12px 10px; background:linear-gradient(transparent, rgba(0,0,0,0.72)); display:flex; align-items:flex-end; gap:8px; color:#fff; }
+  .cc-name { font-weight:700; font-size:0.98rem; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-shadow:0 1px 3px rgba(0,0,0,0.6); }
+  .cc-chip { flex:none; font-size:0.7rem; font-weight:700; border-radius:999px; padding:2px 8px; white-space:nowrap; }
+  .cc-tr { position:absolute; top:8px; right:8px; display:flex; gap:6px; }
+  .cc-ib { width:28px; height:28px; border-radius:50%; background:rgba(0,0,0,0.45); color:#fff; display:flex; align-items:center; justify-content:center; }
+  .cc-pop-media { position:relative; border-radius:14px; overflow:hidden; background:#000; aspect-ratio:16/9; }
+  .cc-pop-media > * { position:absolute; inset:0; width:100%; height:100%; }
+  .cc-pop-media img { object-fit:cover; }
+  .cc-pop-sub { font-size:0.8rem; color:var(--secondary-text-color); margin:-2px 0 10px; }
+  .cc-btns { display:flex; gap:10px; margin:14px 0 6px; }
+  .cc-btn { flex:1 1 0; min-width:0; border:none; border-radius:14px; padding:10px 4px; cursor:pointer; font:inherit; font-size:0.78rem; font-weight:700;
+    background:rgba(127,127,127,0.16); color:var(--primary-text-color); display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .cc-btn.talk { background:#43a047; color:#fff; }
+  .cc-btn.talk.on { background:#e53935; }
+  .cc-btn[disabled] { opacity:.5; cursor:default; }
+  .cc-ev { display:flex; align-items:center; gap:10px; padding:8px 2px; font-size:0.86rem; }
+  .cc-ev + .cc-ev { border-top:1px solid var(--divider-color, rgba(127,127,127,0.18)); }
+  .cc-ev-ico { flex:none; width:32px; height:32px; border-radius:10px; display:flex; align-items:center; justify-content:center; }
+  .cc-ev-when { color:var(--secondary-text-color); font-size:0.78rem; }
+`;
+  var pad5 = (n) => String(n).padStart(2, "0");
+  function camAge(ms, now = Date.now()) {
+    const s = Math.max(0, (now - ms) / 1e3);
+    if (s < 60) return "just now";
+    if (s < 3600) return `${Math.floor(s / 60)} min`;
+    if (s < 86400) return `${Math.floor(s / 3600)} h`;
+    const d = new Date(ms);
+    return `${d.toLocaleDateString("en-GB", { weekday: "short" })} ${pad5(d.getHours())}:${pad5(d.getMinutes())}`;
+  }
+  function when3(ms, now = /* @__PURE__ */ new Date()) {
+    const d = new Date(ms);
+    const day2 = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const diff = Math.round((today - day2) / 864e5);
+    const t = `${pad5(d.getHours())}:${pad5(d.getMinutes())}`;
+    if (diff === 0) return `${t} today`;
+    if (diff === 1) return `Yesterday ${t}`;
+    return `${d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })} ${t}`;
+  }
+  function camFind(hass, entity, c = {}) {
+    const s = hass && hass.states || {};
+    const has2 = (id) => id && s[id] ? id : null;
+    const base = String(entity || "").replace(/^camera\./, "").replace(/_(live_view|snapshot|last_recording)$/, "");
+    let light = has2(c.light);
+    if (!light && c.light !== "none" && hass && hass.entities && hass.devices) {
+      const e = hass.entities[entity];
+      const area = e && (e.area_id || (hass.devices[e.device_id] || {}).area_id);
+      const lights = area ? Object.keys(s).filter((id) => id.startsWith("light.") && hass.entities[id] && (hass.entities[id].area_id || (hass.devices[hass.entities[id].device_id] || {}).area_id) === area) : [];
+      if (lights.length === 1) light = lights[0];
+    }
+    return {
+      live: has2(entity),
+      snap: has2(c.snapshot) || has2(`camera.${base}_snapshot`),
+      button: has2(c.snapshot_button) || has2(`button.${base}_take_snapshot`),
+      battery: has2(`sensor.${base}_battery`),
+      ding: has2(`event.${base}_ding`),
+      motion: has2(`event.${base}_motion`),
+      light
+    };
+  }
+  function camPicture(hass, f) {
+    const s = hass.states;
+    const out = [];
+    if (f.snap) {
+      const a = s[f.snap].attributes;
+      const ms = Number(a.timestamp) * 1e3 || Date.parse(s[f.snap].last_changed);
+      out.push({ id: f.snap, url: a.entity_picture, ms, kind: a.type || "interval" });
+    }
+    if (f.live) {
+      const base = f.live.replace(/^camera\./, "").replace(/_live_view$/, "");
+      const act = s[`sensor.${base}_last_activity`];
+      const ms = act ? Date.parse(act.state) : NaN;
+      const kind = act && act.attributes.category === "ding" ? "ding" : "motion";
+      out.push({ id: f.live, url: s[f.live].attributes.entity_picture, ms: isNaN(ms) ? 0 : ms, kind });
+    }
+    out.sort((a, b) => b.ms - a.ms);
+    return out[0] || null;
+  }
+  var CameraCardEditor = createFormEditor({
+    schema: () => [
+      { name: "entity", selector: { entity: { domain: "camera" } } },
+      { name: "name", selector: { text: {} } },
+      { name: "light", selector: { entity: { domain: "light" } } },
+      { name: "refresh_after", selector: { number: { min: 10, max: 1440, step: 5, mode: "box", unit_of_measurement: "min" } } },
+      { name: "talk_stream", selector: { text: {} } },
+      { name: "demo", selector: { boolean: {} } }
+    ],
+    labels: {
+      entity: "Camera",
+      name: "Name (optional)",
+      light: "Light by the camera (optional)",
+      refresh_after: "Ask for a new snapshot when the picture is older than",
+      talk_stream: "Two-way audio stream (optional, go2rtc stream name)",
+      demo: "Show a pretend camera (for Design Presets)"
+    },
+    helpers: {
+      entity: "Its snapshot, Take Snapshot button, battery and doorbell/motion events are found from the camera's name.",
+      light: "Empty: the one light in the same area, if there is exactly one.",
+      refresh_after: "Default 60. Only while someone is looking, and at most once per this time for everyone, so battery cameras last.",
+      talk_stream: "A go2rtc stream with two-way audio (e.g. front_door). Adds a Talk button to the pop-up."
+    }
+  });
+  var CameraCard = class extends HTMLElement {
+    setConfig(config) {
+      if (!config || !config.entity && !config.demo) throw new Error("Choose a camera");
+      this.config = config;
+      this._built = false;
+      this._url = null;
+    }
+    set hass(hass) {
+      this._hass = hass;
+      this._render();
+      if (this._pop) this._renderPop();
+    }
+    connectedCallback() {
+      if (!this._io && window.IntersectionObserver) {
+        this._io = new IntersectionObserver((list) => {
+          this._seen = list.some((e) => e.isIntersecting);
+          this._maybeRefresh();
+        });
+        this._io.observe(this);
+      }
+      clearInterval(this._tick);
+      this._tick = setInterval(() => this._render(true), 3e4);
+    }
+    disconnectedCallback() {
+      clearInterval(this._tick);
+    }
+    _name() {
+      const c = this.config;
+      if (c.name) return c.name;
+      const st = this._hass && this._hass.states[c.entity];
+      return String(st && st.attributes.friendly_name || c.entity || "Camera").replace(/ (Live view|Snapshot)$/i, "");
+    }
+    _render(timer = false) {
+      const c = this.config;
+      if (!this._hass && !c.demo) return;
+      if (!this._built) {
+        this.innerHTML = `<style>${CAM_CSS}</style><div class="cc-tile" role="button" tabindex="0"><img alt="" style="opacity:0"><div class="cc-tr"></div><div class="cc-ov"><span class="cc-name"></span><span class="cc-chip"></span></div></div>`;
+        this._tile = this.querySelector(".cc-tile");
+        this._img = this.querySelector("img");
+        this._img.addEventListener("load", () => this._img.style.opacity = "1");
+        this._tile.addEventListener("click", () => this._open());
+        this._tile.addEventListener("keydown", (ev) => (ev.key === "Enter" || ev.key === " ") && (ev.preventDefault(), this._open()));
+        this._built = true;
+      }
+      this.querySelector(".cc-name").textContent = this._name();
+      const chip = this.querySelector(".cc-chip");
+      if (c.demo) {
+        chip.textContent = "Doorbell \xB7 4 min";
+        chip.style.cssText = `background:${KINDS.ding[1]}; color:${KINDS.ding[2]};`;
+        return;
+      }
+      const f = camFind(this._hass, c.entity, c);
+      this._f = f;
+      const pic = camPicture(this._hass, f);
+      this._pic = pic;
+      if (pic && pic.url) {
+        const url = `${pic.url}${pic.url.includes("?") ? "&" : "?"}t=${pic.ms}`;
+        if (url !== this._url) {
+          this._url = url;
+          const next = new Image();
+          next.onload = () => {
+            if (this._url === url) this._img.src = url;
+          };
+          next.src = url;
+        }
+      }
+      const refresh = (Number(c.refresh_after) || 60) * 6e4;
+      const old = !pic || !pic.ms || Date.now() - pic.ms > refresh;
+      const waiting = asked.get(c.entity) && Date.now() - asked.get(c.entity) < 12e4 && (!pic || pic.ms < asked.get(c.entity));
+      const [label, bg, fg] = KINDS[pic && pic.kind] || KINDS.interval;
+      chip.textContent = !pic || !pic.ms ? "No picture yet" : waiting ? `${camAge(pic.ms)} \xB7 updating\u2026` : `${label} \xB7 ${camAge(pic.ms)}`;
+      chip.style.cssText = old || waiting ? `background:${OLD[0]}; color:${OLD[1]};` : `background:${bg}; color:${fg};`;
+      const bat = f.battery && Number(this._hass.states[f.battery].state);
+      const tr = this.querySelector(".cc-tr");
+      const low = !isNaN(bat) && bat < 25;
+      const sig = low ? "low" : "";
+      if (tr.dataset.sig !== sig) {
+        tr.dataset.sig = sig;
+        tr.innerHTML = low ? `<div class="cc-ib" title="Battery ${bat}%" style="color:#ffa726;">${iconHtml("mdi:battery-low", { size: "17px" })}</div>` : "";
+        hydrateIcons(tr);
+      }
+      if (!timer) this._maybeRefresh();
+    }
+    // A new snapshot when the picture is old and someone is looking, at most
+    // once per refresh_after for everyone (the button's state is when it was
+    // last pressed, from any device).
+    _maybeRefresh(force = false) {
+      const c = this.config;
+      const h = this._hass;
+      if (!h || c.demo || !this._f || !this._f.button) return;
+      if (!force && (!this._seen || document.visibilityState === "hidden")) return;
+      const refresh = (Number(c.refresh_after) || 60) * 6e4;
+      const now = Date.now();
+      const pic = this._pic;
+      if (!force && pic && pic.ms && now - pic.ms < refresh) return;
+      const last = Math.max(Date.parse(h.states[this._f.button].state) || 0, asked.get(c.entity) || 0);
+      if (!force && now - last < refresh) return;
+      if (force && now - last < 2e4) return;
+      asked.set(c.entity, now);
+      h.callService("button", "press", { entity_id: this._f.button }).catch(() => {
+      });
+      this._render(true);
+    }
+    // ---- Pop-up
+    _open() {
+      if (this._pop) return;
+      const c = this.config;
+      const content = document.createElement("div");
+      content.innerHTML = `<div class="cc-pop-sub"></div><div class="cc-pop-media"></div><div class="cc-btns"></div><div class="cc-evs"></div>`;
+      this._popEl = content;
+      this._talking = false;
+      this._pop = openPopup(this, {
+        title: this._name(),
+        icon: this._f && this._f.ding ? "mdi:doorbell-video" : "mdi:cctv",
+        color: "#78909c",
+        content,
+        onClose: () => {
+          const m = content.querySelector(".cc-pop-media");
+          if (m) m.innerHTML = "";
+          this._pop = null;
+          this._popEl = null;
+        }
+      });
+      content.querySelector(".cc-btns").addEventListener("click", (ev) => {
+        const b = ev.target.closest("[data-act]");
+        if (!b || b.disabled) return;
+        const act = b.dataset.act;
+        if (act === "talk") {
+          this._talking = !this._talking;
+          this._media();
+          this._renderPop();
+        } else if (act === "snap") {
+          this._maybeRefresh(true);
+        } else if (act === "light" && this._f.light) {
+          this._hass.callService("light", "toggle", { entity_id: this._f.light });
+        }
+      });
+      this._media();
+      this._renderPop();
+      this._events();
+    }
+    // Live video: the go2rtc stream (with the microphone while talking) when
+    // the camera has one, else Home Assistant's own live view, else the picture.
+    async _media() {
+      const box = this._popEl && this._popEl.querySelector(".cc-pop-media");
+      if (!box) return;
+      const c = this.config;
+      box.innerHTML = "";
+      if (c.demo) {
+        box.innerHTML = '<div style="background:linear-gradient(160deg,#5d6b7d,#2f3946 60%,#46503c)"></div>';
+        return;
+      }
+      if (c.talk_stream && customElements.get("webrtc-camera")) {
+        const el = document.createElement("webrtc-camera");
+        el.setConfig({ url: c.talk_stream, media: this._talking ? "video,audio,microphone" : "video,audio", muted: false, ui: true });
+        el.hass = this._hass;
+        box.appendChild(el);
+        return;
+      }
+      const st = this._f && this._f.live && this._hass.states[this._f.live];
+      if (st && customElements.get("ha-camera-stream")) {
+        const el = document.createElement("ha-camera-stream");
+        el.hass = this._hass;
+        el.stateObj = st;
+        el.controls = true;
+        el.muted = false;
+        box.appendChild(el);
+        return;
+      }
+      try {
+        const helpers = await window.loadCardHelpers();
+        const el = helpers.createCardElement({ type: "picture-entity", entity: this._f.live, camera_view: "live", show_name: false, show_state: false });
+        el.hass = this._hass;
+        box.appendChild(el);
+      } catch (err) {
+        if (this._pic) box.innerHTML = `<img src="${kitEsc(this._img.src)}" alt="">`;
+      }
+    }
+    _renderPop() {
+      const p = this._popEl;
+      if (!p) return;
+      const c = this.config;
+      const h = this._hass;
+      const f = this._f || {};
+      const bat = f.battery && h ? Number(h.states[f.battery].state) : NaN;
+      const sub = [!isNaN(bat) ? `Battery ${Math.round(bat)}%` : "", this._pic && this._pic.ms ? `Picture ${camAge(this._pic.ms)}${this._pic.ms && Date.now() - this._pic.ms >= 6e4 ? " old" : ""}` : ""].filter(Boolean).join(" \xB7 ");
+      p.querySelector(".cc-pop-sub").textContent = sub;
+      const lightOn = f.light && h && h.states[f.light].state === "on";
+      const lightName = f.light && h ? String(h.states[f.light].attributes.friendly_name || "Light") : "";
+      const btns = [];
+      if (c.talk_stream) btns.push(`<button class="cc-btn talk${this._talking ? " on" : ""}" data-act="talk">${iconHtml(this._talking ? "mdi:microphone" : "mdi:microphone-outline", { size: "22px" })}${this._talking ? "Talking\u2026 tap to stop" : "Talk"}</button>`);
+      if (f.button || c.demo) btns.push(`<button class="cc-btn" data-act="snap">${iconHtml("mdi:camera", { size: "22px" })}Snapshot</button>`);
+      if (f.light) btns.push(`<button class="cc-btn" data-act="light" style="${lightOn ? "background:color-mix(in srgb, #ffb300 30%, transparent);" : ""}">${iconHtml(lightOn ? "mdi:lightbulb-on" : "mdi:lightbulb-outline", { size: "22px" })}${kitEsc(lightName)} ${lightOn ? "on" : "off"}</button>`);
+      const html = btns.join("");
+      const box = p.querySelector(".cc-btns");
+      if (box.dataset.sig !== html) {
+        box.dataset.sig = html;
+        box.innerHTML = html;
+        box.style.display = html ? "" : "none";
+        hydrateIcons(box);
+      }
+    }
+    // Recent doorbell presses and motion, from the event entities' history.
+    async _events() {
+      const p = this._popEl;
+      const f = this._f || {};
+      const box = p && p.querySelector(".cc-evs");
+      if (!box) return;
+      let list = [];
+      if (this.config.demo) {
+        const now = Date.now();
+        list = [
+          ["ding", now - 3e5],
+          ["motion", now - 2 * 36e5],
+          ["motion", now - 15 * 36e5]
+        ];
+      } else {
+        const ids = [f.ding, f.motion].filter(Boolean);
+        if (!ids.length) return;
+        try {
+          const hist = await kitStateHistory(this._hass, ids, 48);
+          ids.forEach(
+            (id) => (hist[id] || []).forEach(([, s]) => {
+              const ms = Date.parse(s);
+              if (!isNaN(ms)) list.push([id === f.ding ? "ding" : "motion", ms]);
+            })
+          );
+        } catch (err) {
+          return;
+        }
+      }
+      list = [...new Map(list.map((e) => [`${e[0]}${e[1]}`, e])).values()].sort((a, b) => b[1] - a[1]).slice(0, 8);
+      if (!this._popEl) return;
+      box.innerHTML = list.length ? list.map(([k, ms]) => {
+        const [label, col] = KINDS[k];
+        return `<div class="cc-ev"><div class="cc-ev-ico" style="background:color-mix(in srgb, ${col} 25%, transparent); color:${col};">${iconHtml(k === "ding" ? "mdi:doorbell" : "mdi:motion-sensor", { size: "18px" })}</div><div><b>${label}</b><div class="cc-ev-when">${kitEsc(when3(ms))}</div></div></div>`;
+      }).join("") : '<div class="cc-ev-when">Nothing in the last two days.</div>';
+      hydrateIcons(box);
+    }
+    getCardSize() {
+      return 3;
+    }
+    getGridOptions() {
+      return { columns: 6, rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement(`camera-card-editor${SUFFIX}`);
+    }
+    static getStubConfig(hass) {
+      const id = Object.keys(hass && hass.states || {}).find((e) => /^camera\..*_live_view$/.test(e)) || Object.keys(hass && hass.states || {}).find((e) => e.startsWith("camera."));
+      return id ? { entity: id } : { demo: true };
+    }
+  };
+  function registerCameraCard() {
+    if (!customElements.get(`camera-card-editor${SUFFIX}`)) customElements.define(`camera-card-editor${SUFFIX}`, CameraCardEditor);
+    if (!customElements.get(`camera-card${SUFFIX}`)) customElements.define(`camera-card${SUFFIX}`, CameraCard);
+    window.customCards = window.customCards || [];
+    window.customCards.push({
+      type: `camera-card${SUFFIX}`,
+      name: `Camera Card${LABEL}`,
+      description: "A camera's freshest picture with how old it is; tap for live video, a new snapshot, the light and Talk",
+      preview: true,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
+    });
+  }
+
   // src/index.js
   registerGaugeZoneCard();
   registerAlarmPanelCard();
@@ -11130,5 +11511,6 @@
   registerSystemCard();
   registerSafetyCard();
   registerPeopleCard();
+  registerCameraCard();
   console.info(`%c CHURCH-DRIVE-CARDS${SUFFIX ? " BETA" : ""} %c loaded `, "color: white; background: #2196f3; font-weight: 700;", "color: #2196f3; background: transparent;");
 })();

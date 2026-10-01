@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-01. Current release: **v0.28.0**.*
+*Last updated 2026-10-01. Current release: **v0.29.0**.*
 
 ## Where this stands
 
@@ -14,7 +14,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-01, v0.28.0 live, nothing on beta):**
+**Now (2026-10-01, v0.29.0 live, nothing on beta):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -310,6 +310,34 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **v0.29.0 (released 2026-10-01, reload-only): Camera Card** (`src/camera-card.js`).
+  - The user chose tile style A (picture with name and age badge). Tapping a tile opens
+    the shared pop-up (`popup.js`).
+  - Pictures come from ring-mqtt's `camera.<x>_snapshot` (attributes `timestamp` and
+    `type`: motion / ding / interval) or the Ring integration's `camera.<x>_live_view`
+    (a frame from the last recording, often 12–24 h old; its time comes from
+    `sensor.<x>_last_activity`). The newer one wins.
+  - Refresh: while the tile is visible and the picture is older than `refresh_after`
+    (60 min), the card presses `button.<x>_take_snapshot`. The button's state (its
+    last press) keeps this to once per hour for everyone. There's no fixed timer on
+    battery cameras.
+  - Battery cameras are Front Door (Battery Doorbell Plus), Driveway and Garden. Their
+    ring-mqtt snapshot mode is Motion + Ding / Motion / Motion (Garden changed from
+    All with an hourly timer). Entrance and Living Room are plugged in and keep All
+    with a 30 s timer.
+  - Pop-up live video: `webrtc-camera` when `talk_stream` is set, else
+    `ha-camera-stream`, else a live picture-entity. Talk sends the microphone by
+    re-creating webrtc-camera with `media: video,audio,microphone`.
+  - **Talk is not set up yet.** The user is creating a "Church Drive" Ring account
+    (Hayley is the Ring admin; HA currently signs in as Hayley, so alarm changes
+    from HA show as her). Then:
+    1. Hayley shares the location with it.
+    2. Re-sign in the Ring integration and ring-mqtt (app `03cabcc9_ring_mqtt`) with it.
+    3. Sign in go2rtc (app `03cabcc9_go2rtc_hevc_fix`, 1.9.14, web UI → Add → Ring)
+       and add a `front_door` stream.
+    4. Set `talk_stream: front_door` on the doorbell's camera card.
+    Two-way audio on Ring through go2rtc is untested here.
+  - Security's Outdoor and Indoor Cameras panels now use `custom:camera-card`.
 - **v0.28.0 (released 2026-10-01, restarted): Auto Layout fills blank space; Manager on Auto Layout.**
   - The layout arithmetic is in `src/arrange.js` (tests: `test/arrange.test.mjs`).
     `arrange()` tries each automatically wide panel three ways: across the page below
