@@ -108,11 +108,23 @@ const TL_CSS = `
 `;
 
 export const TaskListCardEditor = createFormEditor({
-  schema: () => [
+  schema: (config) => [
     { name: 'title', selector: { text: {} } },
     { name: 'entity', selector: { entity: { domain: 'todo' } } },
     { name: 'color', selector: { ui_color: {} } },
-    { name: 'remind_default', selector: { text: {} } },
+    {
+      name: 'assign',
+      selector: {
+        select: {
+          mode: 'list',
+          options: [
+            { value: 'people', label: 'Pick who it reminds (shared lists)' },
+            { value: 'me', label: 'Just the signed-in person (a personal list)' },
+          ],
+        },
+      },
+    },
+    config.assign === 'me' ? { name: 'remind_me', selector: { boolean: {} } } : { name: 'remind_default', selector: { text: {} } },
     { name: 'icons', selector: { boolean: {} } },
     { name: 'show_done', selector: { boolean: {} } },
     { name: 'demo', selector: { boolean: {} } },
@@ -121,6 +133,8 @@ export const TaskListCardEditor = createFormEditor({
     title: 'Title (optional)',
     entity: 'To-do list',
     color: 'Colour',
+    assign: 'Who tasks are for',
+    remind_me: 'New tasks remind me (when they have a due time or repeat)',
     remind_default: 'New tasks remind (a first name, "everyone", or empty for no one)',
     icons: 'Show an icon for each task from its name (hoover, bathroom, …)',
     show_done: 'Show ticked-off tasks under the list',
@@ -129,7 +143,10 @@ export const TaskListCardEditor = createFormEditor({
   helpers: {
     entity: 'Any to-do list. A task\'s repeat and who it reminds are kept in its description, and "Church Drive: repeating tasks" sends the reminders and brings repeating tasks back.',
     color: 'Default purple (#7e57c2).',
+    assign: '"Just the signed-in person" swaps the list of people for a simple "Remind me" choice.',
   },
+  normalize: (c) => (c.assign ? c : { ...c, assign: 'people' }),
+  display: (c) => (c.assign === 'me' && c.remind_me === undefined ? { ...c, remind_me: true } : c),
 });
 
 export class TaskListCard extends HTMLElement {
@@ -191,6 +208,19 @@ export class TaskListCard extends HTMLElement {
       .filter((id) => id.startsWith('person.'))
       .map((id) => String(s[id].attributes.friendly_name || id.slice(7)).split(' ')[0])
       .sort();
+  }
+
+  // The signed-in person's first name: from their person entity, else their user name.
+  _me() {
+    const u = this._hass && this._hass.user;
+    if (!u) return '';
+    const s = this._hass.states || {};
+    const id = Object.keys(s).find((x) => x.startsWith('person.') && s[x].attributes.user_id === u.id);
+    return String((id && s[id].attributes.friendly_name) || u.name || '').split(' ')[0];
+  }
+
+  _justMe() {
+    return this.config.assign === 'me';
   }
 
   async _call(service, data) {
@@ -280,7 +310,8 @@ export class TaskListCard extends HTMLElement {
     const row = ({ t, p }, isDone) => {
       const when = isDone ? '' : whenText(t.due);
       const over = when.includes('overdue');
-      const who = p.repeat ? (p.who === 'everyone' ? 'reminds everyone' : Array.isArray(p.who) ? `reminds ${p.who.join(', ')}` : '') : '';
+      const mine = this._justMe() && Array.isArray(p.who) && p.who.length === 1 && p.who[0] === this._me();
+      const who = !p.repeat ? '' : mine ? 'reminds you' : p.who === 'everyone' ? 'reminds everyone' : Array.isArray(p.who) ? `reminds ${p.who.join(', ')}` : '';
       const sub = [p.repeat && p.repeat.type !== 'once' ? describeRepeat(p.repeat) : '', who, p.notes].filter(Boolean).join(' · ');
       const ring = isDone ? '#4caf50' : over ? '#e53935' : colour;
       return `<div class="tl-row">
@@ -324,7 +355,7 @@ export class TaskListCard extends HTMLElement {
     const r = p.repeat || {};
     const due = t && t.due ? dueDate(t.due) : null;
     const now = new Date();
-    const def = String(this.config.remind_default || '').trim();
+    const def = this._justMe() ? (this.config.remind_me === false ? '' : this._me()) : String(this.config.remind_default || '').trim();
     this._edit = {
       uid,
       name: t ? t.summary : '',
@@ -362,7 +393,8 @@ export class TaskListCard extends HTMLElement {
     const colour = this._colour();
     const on = `background:${colour};`;
     const chip = (attr, value, label, pressed) => `<button type="button" class="tl-chip" ${attr}="${kitEsc(value)}" aria-pressed="${pressed}" style="${pressed ? on : ''}">${label}</button>`;
-    const people = this._people();
+    const people = this._justMe() ? [] : this._people();
+    const me = this._me();
     const whoIs = (x) => (x === 'everyone' ? e.who === 'everyone' : x === 'none' ? e.who === 'none' : Array.isArray(e.who) && e.who.includes(x));
     const every = (unit, max) => `<label class="tl-inline">Every <input type="number" class="tl-f-n" min="1" max="${max}" value="${e.n}"> ${unit}${e.n === 1 ? '' : 's'}</label>`;
     const at = `<label class="tl-inline">at <input type="time" class="tl-f-time" value="${e.time}"></label>`;
@@ -397,9 +429,11 @@ export class TaskListCard extends HTMLElement {
       <label class="tl-l">Task<input type="text" class="tl-f-name tl-wide" maxlength="80" placeholder="e.g. Hoover upstairs" value="${kitEsc(e.name)}"></label>
       <div class="tl-l">Repeats<div class="tl-chips" role="group" aria-label="Repeats">${REPEATS.map(([k, label]) => chip('data-kind', k, label, e.kind === k)).join('')}</div></div>
       ${how}
-      <div class="tl-l">${e.kind === 'none' && !e.date && e.who !== 'none' ? 'Reminds (at the due time, so choose one above)' : 'Reminds'}<div class="tl-chips" role="group" aria-label="Who gets reminded">${['everyone', ...people, 'none']
-        .map((x) => chip('data-who', x, x === 'everyone' ? 'Everyone' : x === 'none' ? 'No one' : kitEsc(x), whoIs(x)))
-        .join('')}</div></div>
+      <div class="tl-l">${e.kind === 'none' && !e.date && e.who !== 'none' ? `${this._justMe() ? 'Remind me' : 'Reminds'} (at the due time, so choose one above)` : this._justMe() ? 'Remind me' : 'Reminds'}<div class="tl-chips" role="group" aria-label="Who gets reminded">${
+        this._justMe()
+          ? chip('data-me', 'yes', 'Yes', e.who !== 'none') + chip('data-me', 'no', 'No', e.who === 'none')
+          : ['everyone', ...people, 'none'].map((x) => chip('data-who', x, x === 'everyone' ? 'Everyone' : x === 'none' ? 'No one' : kitEsc(x), whoIs(x))).join('')
+      }</div></div>
       <label class="tl-l">Notes<input type="text" class="tl-f-notes tl-wide" maxlength="200" placeholder="Optional" value="${kitEsc(e.notes)}"></label>
       <div class="tl-msg" role="status"></div>
       <div class="tl-buttons">
@@ -447,6 +481,11 @@ export class TaskListCard extends HTMLElement {
         e.who = list.includes(x) ? list.filter((y) => y !== x) : [...list, x];
         if (!e.who.length) e.who = 'none';
       }
+      this._drawForm();
+    });
+    bind('[data-me]', 'click', (el) => {
+      if (el.dataset.me === 'no') e.who = 'none';
+      else if (e.who === 'none') e.who = me ? [me] : 'everyone';
       this._drawForm();
     });
     bind('.tl-cancel', 'click', () => this._close());

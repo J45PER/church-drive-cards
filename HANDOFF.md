@@ -14,7 +14,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-01, v0.25.0 live, nothing on beta):**
+**Now (2026-10-01, v0.25.0 live; on beta: Task List `assign: me` for My to-do):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -1093,7 +1093,9 @@ Integration modules (`custom_components/church_drive/`):
       done (N days, weeks or months). It also has a start date, who it reminds, and
       notes.
     - The To-do page (all three per-person sections) uses it for My to-do (with
-      `remind_default` set to the person), Shared, and a Cleaning panel. The Tasks
+      `assign: me`, on beta: no people chips, just "Remind me" Yes / No for the
+      signed-in person; `remind_default` kept until the release), Shared, and a
+      Cleaning panel. The Tasks
       dashboard's To-do view (`dashboard-tasks`) matches it, with a `todo_summary`
       header. Its Shopping view keeps HA's `todo-list` card: the shopping list
       integration only stores names, so it can't hold repeats.

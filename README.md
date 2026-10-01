@@ -192,6 +192,8 @@ A to-do list (`entity`, any to-do list) you can tick off, add to and change, whe
 - its name and notes;
 - **Repeats**: Never (with an optional due date and time), Daily (every N days), Weekly (every week, fortnightly, or every 3 or 4 weeks, on chosen days with a time for each), Monthly (every N months on a day of the month or the last day), Yearly (on a date), or After it's done (N days, weeks or months after it's ticked off). Repeats can start on a chosen date;
 - **Reminds**: anyone with a person entity, Everyone, or No one (`remind_default` sets it for new tasks).
+  For a personal list, set **Who tasks are for** (`assign: me`) to *Just the signed-in person*: the people
+  chips become a simple **Remind me** Yes / No (`remind_me` sets it for new tasks).
 
 The repeat and who it reminds are kept as plain words in the task's description, e.g. `Every 2 weeks: Mon 09:00 · for Hayley · use the blue mop` (see `src/repeat.js`). The "Church Drive: repeating tasks" automation reads the same words. It reminds people when a task comes due, and when a repeating task is ticked off it's due again at its next time. Ticked-off one-off tasks sit under "Show done", with "Clear done tasks". `icons: true` gives each task an icon from its name (hoover, bathroom and so on). `demo: true` shows pretend tasks.
 
