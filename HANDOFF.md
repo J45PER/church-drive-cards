@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-01. Current release: **v0.27.0**.*
+*Last updated 2026-10-01. Current release: **v0.27.1**.*
 
 ## Where this stands
 
@@ -14,7 +14,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-01, v0.27.0 live, nothing on beta):**
+**Now (2026-10-01, v0.27.1 live, nothing on beta):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -310,6 +310,7 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **v0.27.1 (released 2026-10-01, reload-only): Notifications table's All column ticks and unticks everyone; ticking the last person turns All on; solid grey for ticks through All.**
 - **v0.27.0 (released 2026-10-01, reload-only): Devices page, media/system/safety/people cards, cheap-rate view, Outside zone, grey ticks under All.**
 - **v0.26.0 (released 2026-10-01, needs a restart): people and notifications engine.**
   `people.py`/`kinds.py`, `church_drive.notify`, `sensor.church_drive_people`, the

@@ -136,26 +136,47 @@ export class NotificationsCard extends HTMLElement {
     return !!(this.config.demo || (this._hass && this._hass.user && this._hass.user.is_admin));
   }
 
+  // The All column and the people's boxes work together:
+  // - All on ticks everyone (their boxes go grey: they get it through All);
+  // - All off unticks everyone;
+  // - unticking someone while All is on turns All off and leaves the others
+  //   ticked (purple again);
+  // - ticking the last unticked person turns All on.
   async _assign(kind, person, on) {
-    if (this.config.demo) {
-      const k = this._data.kinds.find((x) => x.key === kind);
-      if (!person) {
-        if (!on && k.all) k.people = this._data.people.map((p) => p.entity_id);
-        k.all = on;
-        if (on) k.people = [];
-      } else {
-        if (k.all) {
-          k.all = false;
-          k.people = this._data.people.map((p) => p.entity_id);
-        }
-        k.people = k.people.filter((x) => x !== person).concat(on ? [person] : []);
-      }
+    const everyone = (this._data.people || []).map((p) => p.entity_id);
+    const steps = [];
+    const k0 = (this._data.kinds || []).find((x) => x.key === kind) || { people: [] };
+    if (!person) {
+      steps.push({ on });
+      if (!on) everyone.forEach((p) => steps.push({ person: p, on: false }));
     } else {
+      steps.push({ person, on });
+      const ticked = new Set(k0.all ? everyone : k0.people);
+      if (on) ticked.add(person);
+      if (on && !k0.all && !k0.admin_only && everyone.length && everyone.every((p) => ticked.has(p))) steps.push({ on: true });
+    }
+    for (const st of steps) {
+      if (this.config.demo) {
+        const k = this._data.kinds.find((x) => x.key === kind);
+        if (!st.person) {
+          if (!st.on && k.all) k.people = [...everyone];
+          k.all = st.on;
+          if (st.on) k.people = [];
+        } else {
+          if (k.all) {
+            k.all = false;
+            k.people = [...everyone];
+          }
+          k.people = k.people.filter((x) => x !== st.person).concat(st.on ? [st.person] : []);
+        }
+        continue;
+      }
       try {
-        const r = await this._hass.connection.sendMessagePromise({ type: 'church_drive/people/assign', kind, ...(person ? { person } : {}), on });
+        const r = await this._hass.connection.sendMessagePromise({ type: 'church_drive/people/assign', kind, ...(st.person ? { person: st.person } : {}), on: st.on });
         this._data = { ...this._data, kinds: r.kinds };
       } catch (err) {
         this._msg = `Couldn't save: ${(err && err.message) || err}`;
+        break;
       }
     }
     this._sig = null;
@@ -213,7 +234,7 @@ export class NotificationsCard extends HTMLElement {
     const on = `background:${colour};`;
     // A person's box while All is ticked: ticked but grey (it's All that sends it);
     // tapping it unticks that person and All, leaving everyone else ticked.
-    const viaAll = 'background:rgba(127,127,127,0.42); color:rgba(255,255,255,0.85);';
+    const viaAll = 'background:#5d6170; color:#e6e8ee;';
     const tick = (kind, person, pressed, enabled, all, grey = false) =>
       `<button type="button" class="nc-tick${all ? ' nc-all' : ''}" data-kind="${kitEsc(kind.key)}"${person ? ` data-person="${kitEsc(person.entity_id)}"` : ''} aria-pressed="${pressed}" ${enabled && edit ? '' : 'disabled'}
         aria-label="${kitEsc(kind.name)}: ${person ? kitEsc(person.first) : 'everyone'}${grey ? ' (through All)' : ''}" title="${grey ? 'Ticked through All. Tap to untick this person and All.' : ''}" style="${grey ? viaAll : pressed ? on : ''}${enabled ? '' : 'opacity:.45;'}">${iconHtml('mdi:check', { size: '16px' })}</button>`;

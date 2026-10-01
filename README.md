@@ -208,7 +208,8 @@ aren't set up yet show as waiting. Only administrators can change it. Options: `
 `show` (`all`, `notifications`, `jobs`, `phones`), `color`, `demo`.
 
 When **All** is ticked, each person's box shows a grey tick (they get it through All);
-tapping one unticks that person and All.
+tapping one unticks that person and All, leaving the others ticked. Turning All off unticks
+everyone, and ticking the last unticked person turns All on.
 
 Automations send with **`church_drive.notify`** (`kind`, `title`, `message`, optional
 `admin_message`, `people`, `tag`, `link`, `image`, `critical`). `sensor.church_drive_people`
