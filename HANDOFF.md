@@ -14,7 +14,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-01, v0.26.0 live, nothing on beta):**
+**Now (2026-10-01, v0.26.0 live; on beta: Devices page and the new cards, see People and notifications):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -54,7 +54,18 @@ HACS as an integration. It does two jobs:
     `_people_alerts`. "Nobody home" only counts when every person's location is known
     (Diane and Ian don't share theirs yet). **Car (N17–N20) waits for the Zappi:** the
     kinds are in Manager as waiting; write the automation once myenergi is set up.
-  - Next (user chose, 2026-10-01): mock-ups https://claude.ai/artifact/A4d6pusQxNRdBe34qYZsnP
+  - **On beta (2026-10-01), mock-ups https://claude.ai/artifact/A4d6pusQxNRdBe34qYZsnP:**
+    `media-card` (style B, pop-up remote), `system-card`, `safety-card`, `people-card`,
+    octopus-card `show: cheap`, climate-zone `type: outside`, grey ticks under All.
+    Mobile: new **Devices** page (view 6, `/dashboard-mobile/devices`, nav item before
+    Energy on every page's nav bar, #ec407a, red when the internet's down) with TVs &
+    speakers and Devices & services panels and three header lines; Security's Fire Alarm
+    panel became **Safety** (safety-card + the base station tiles); Climate panel has an
+    Outside (garden sensor) zone and the summary uses it; Energy starts with a **Cheap
+    rate** panel. Manager: **Who's home** panel, Notifications card on beta type, and the
+    per-person to-do lists come from `sensor.church_drive_people` via auto-entities.
+    Design Presets Beta tab has demos of all five. On release, strip `-beta`.
+  - Earlier choice notes (2026-10-01): mock-ups https://claude.ai/artifact/A4d6pusQxNRdBe34qYZsnP
     — media card **B** (a row per player, pop-up remote), a new **Devices** page (media,
     then Devices & services: internet, remote access, backups, updates, uptime), C2 Safety
     panel on Security, C3 garden temperature on Climate, C6 cheap rate and power-downs on

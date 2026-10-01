@@ -207,9 +207,36 @@ phones from the companion app, so a new person appears by themselves. Kinds whos
 aren't set up yet show as waiting. Only administrators can change it. Options: `title`,
 `show` (`all`, `notifications`, `jobs`, `phones`), `color`, `demo`.
 
+When **All** is ticked, each person's box shows a grey tick (they get it through All);
+tapping one unticks that person and All.
+
 Automations send with **`church_drive.notify`** (`kind`, `title`, `message`, optional
 `admin_message`, `people`, `tag`, `link`, `image`, `critical`). `sensor.church_drive_people`
 lists the people and who's assigned to each kind (`assign`), for templates.
+
+### `media-card`
+
+TVs and speakers, a row each (playing first) with play/pause or power; tap one for our
+pop-up remote: play/pause and skip, volume, source, a direction pad and power. The pad
+finds its own way to each TV: a `remote.*` on the same device (Google TV) or an LG's
+`webostv.button`. Options: `title`, `entities` (empty for all), `color`, `demo`.
+
+### `system-card` (Devices & services)
+
+Internet (everyone), and for admins remote access, backups, updates and how long Home
+Assistant has been running. Finds the eero, Home Assistant Cloud, backup and uptime
+sensors by itself; each can be chosen instead (`internet`, `remote`, `backup_last`,
+`backup_next`, `uptime`).
+
+### `safety-card`
+
+Every smoke, heat and CO alarm (found by device class, or `entities`): all clear or ALARM,
+battery, last check-in and the CO reading, with any alarm going off at the top in red.
+
+### `people-card` (Who's home)
+
+Everyone in Home Assistant's people, home / away / unknown (or their zone), and their
+companion-app phones' batteries. New people appear by themselves.
 
 ### `security-zone-card`
 
