@@ -42,9 +42,11 @@ const CAM_CSS = `
   .cc-chip { flex:none; font-size:0.7rem; font-weight:700; border-radius:999px; padding:2px 8px; white-space:nowrap; }
   .cc-tr { position:absolute; top:8px; right:8px; display:flex; gap:6px; }
   .cc-ib { width:28px; height:28px; border-radius:50%; background:rgba(0,0,0,0.45); color:#fff; display:flex; align-items:center; justify-content:center; }
-  .cc-pop-media { position:relative; border-radius:14px; overflow:hidden; background:#000; aspect-ratio:16/9; }
-  .cc-pop-media > * { position:absolute; inset:0; width:100%; height:100%; }
-  .cc-pop-media img { object-fit:cover; }
+  .cc-pop-media { position:relative; border-radius:14px; overflow:hidden; background:#000; aspect-ratio:16/9; touch-action:none; cursor:grab; user-select:none; }
+  .cc-stage { position:absolute; left:0; top:0; transform-origin:0 0; will-change:transform; }
+  .cc-stage > * { display:block; width:100%; height:100%; pointer-events:none; }
+  .cc-stage img { object-fit:cover; }
+  .cc-mute { position:absolute; top:8px; right:8px; border:none; cursor:pointer; z-index:1; }
   .cc-pop-sub { font-size:0.8rem; color:var(--secondary-text-color); margin:-2px 0 10px; }
   .cc-btns { display:flex; gap:10px; margin:14px 0 6px; }
   .cc-btn { flex:1 1 0; min-width:0; border:none; border-radius:14px; padding:10px 4px; cursor:pointer; font:inherit; font-size:0.78rem; font-weight:700;
@@ -307,35 +309,169 @@ export class CameraCard extends HTMLElement {
     if (!box) return;
     const c = this.config;
     box.innerHTML = '';
+    let el;
     if (c.demo) {
-      box.innerHTML = '<div style="background:linear-gradient(160deg,#5d6b7d,#2f3946 60%,#46503c)"></div>';
-      return;
-    }
-    if (c.talk_stream && customElements.get('webrtc-camera')) {
-      const el = document.createElement('webrtc-camera');
-      el.setConfig({ url: c.talk_stream, media: this._talking ? 'video,audio,microphone' : 'video,audio', muted: false, ui: true });
+      el = document.createElement('div');
+      el.style.background = 'linear-gradient(160deg,#5d6b7d,#2f3946 60%,#46503c)';
+    } else if (c.talk_stream && customElements.get('webrtc-camera')) {
+      el = document.createElement('webrtc-camera');
+      el.setConfig({ url: c.talk_stream, media: this._talking ? 'video,audio,microphone' : 'video,audio', muted: false, ui: false });
       el.hass = this._hass;
-      box.appendChild(el);
-      return;
+    } else {
+      const st = this._f && this._f.live && this._hass.states[this._f.live];
+      if (st && customElements.get('ha-camera-stream')) {
+        el = document.createElement('ha-camera-stream');
+        el.hass = this._hass;
+        el.stateObj = st;
+        el.controls = false;
+        el.muted = false;
+      } else {
+        try {
+          const helpers = await window.loadCardHelpers();
+          el = helpers.createCardElement({ type: 'picture-entity', entity: this._f.live, camera_view: 'live', show_name: false, show_state: false });
+          el.hass = this._hass;
+        } catch (err) {
+          el = document.createElement('img');
+          if (this._img && this._img.src) el.src = this._img.src;
+        }
+      }
     }
-    const st = this._f && this._f.live && this._hass.states[this._f.live];
-    if (st && customElements.get('ha-camera-stream')) {
-      const el = document.createElement('ha-camera-stream');
-      el.hass = this._hass;
-      el.stateObj = st;
-      el.controls = true;
-      el.muted = false;
-      box.appendChild(el);
-      return;
-    }
-    try {
-      const helpers = await window.loadCardHelpers();
-      const el = helpers.createCardElement({ type: 'picture-entity', entity: this._f.live, camera_view: 'live', show_name: false, show_state: false });
-      el.hass = this._hass;
-      box.appendChild(el);
-    } catch (err) {
-      if (this._pic) box.innerHTML = `<img src="${kitEsc(this._img.src)}" alt="">`;
-    }
+    if (!this._popEl) return;
+    this._stage(box, el);
+  }
+
+  // The video at its own shape (the doorbell's is square, head to toe),
+  // filling the 16:9 box: drag to look around, pinch, scroll or double-tap
+  // to zoom.
+  _stage(box, el) {
+    const stage = document.createElement('div');
+    stage.className = 'cc-stage';
+    stage.appendChild(el);
+    const mute = document.createElement('button');
+    mute.className = 'cc-ib cc-mute';
+    mute.setAttribute('aria-label', 'Sound');
+    const setMute = () => {
+      mute.innerHTML = iconHtml(el.muted ? 'mdi:volume-off' : 'mdi:volume-high', { size: '17px' });
+      hydrateIcons(mute);
+    };
+    mute.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      el.muted = !el.muted;
+      setMute();
+    });
+    box.append(stage, mute);
+    setMute();
+    const img = this._img;
+    let aspect = img && img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : 16 / 9;
+    const v = { x: 0, y: 0, z: 1, w: 0, h: 0 };
+    // clientWidth/Height, not the on-screen rectangle: the pop-up opens with
+    // a little zoom, which would make the first measurement too small.
+    const size = () => ({ width: box.clientWidth, height: box.clientHeight });
+    const clamp = () => {
+      const r = size();
+      v.x = Math.min(0, Math.max(r.width - v.w * v.z, v.x));
+      v.y = Math.min(0, Math.max(r.height - v.h * v.z, v.y));
+      stage.style.width = `${v.w * v.z}px`;
+      stage.style.height = `${v.h * v.z}px`;
+      stage.style.transform = `translate(${v.x}px, ${v.y}px)`;
+    };
+    const fit = () => {
+      const r = size();
+      if (!r.width) return;
+      const first = !v.w;
+      // Cover the box: as wide as it for a tall picture, as tall for a wide one.
+      if (aspect < r.width / r.height) {
+        v.w = r.width;
+        v.h = r.width / aspect;
+      } else {
+        v.h = r.height;
+        v.w = r.height * aspect;
+      }
+      if (first) {
+        v.x = (r.width - v.w) / 2;
+        v.y = (r.height - v.h) / 2;
+      }
+      clamp();
+    };
+    const zoomAt = (z, cx, cy) => {
+      const r = box.getBoundingClientRect();
+      const px = cx - r.left;
+      const py = cy - r.top;
+      const nz = Math.min(4, Math.max(1, z));
+      v.x = px - ((px - v.x) * nz) / v.z;
+      v.y = py - ((py - v.y) * nz) / v.z;
+      v.z = nz;
+      clamp();
+    };
+    const pts = new Map();
+    let pinch = null;
+    box.addEventListener('pointerdown', (ev) => {
+      if (ev.target.closest('.cc-mute')) return;
+      box.setPointerCapture(ev.pointerId);
+      pts.set(ev.pointerId, [ev.clientX, ev.clientY]);
+      if (pts.size === 2) {
+        const [a, b] = [...pts.values()];
+        pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), z: v.z };
+      }
+    });
+    box.addEventListener('pointermove', (ev) => {
+      const prev = pts.get(ev.pointerId);
+      if (!prev) return;
+      pts.set(ev.pointerId, [ev.clientX, ev.clientY]);
+      if (pts.size === 2 && pinch) {
+        const [a, b] = [...pts.values()];
+        zoomAt((pinch.z * Math.hypot(a[0] - b[0], a[1] - b[1])) / (pinch.d || 1), (a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+      } else if (pts.size === 1) {
+        v.x += ev.clientX - prev[0];
+        v.y += ev.clientY - prev[1];
+        clamp();
+      }
+    });
+    const up = (ev) => {
+      pts.delete(ev.pointerId);
+      if (pts.size < 2) pinch = null;
+    };
+    box.addEventListener('pointerup', up);
+    box.addEventListener('pointercancel', up);
+    box.addEventListener(
+      'wheel',
+      (ev) => {
+        ev.preventDefault();
+        zoomAt(v.z * (ev.deltaY < 0 ? 1.15 : 1 / 1.15), ev.clientX, ev.clientY);
+      },
+      { passive: false },
+    );
+    box.addEventListener('dblclick', (ev) => zoomAt(v.z > 1.4 ? 1 : 2, ev.clientX, ev.clientY));
+    if (window.ResizeObserver) new ResizeObserver(fit).observe(box);
+    requestAnimationFrame(fit);
+    // Once the video is playing, use its own shape (it's inside the
+    // player's shadow roots).
+    const findVideo = (root, depth = 0) => {
+      if (!root || depth > 6) return null;
+      const vid = root.querySelector && root.querySelector('video');
+      if (vid) return vid;
+      for (const n of root.querySelectorAll ? root.querySelectorAll('*') : []) {
+        const f = n.shadowRoot && findVideo(n.shadowRoot, depth + 1);
+        if (f) return f;
+      }
+      return null;
+    };
+    let tries = 0;
+    const look = () => {
+      if (!box.isConnected || tries++ > 30) return;
+      const vid = findVideo(el.shadowRoot || el);
+      if (vid && vid.videoWidth && vid.videoHeight) {
+        const a = vid.videoWidth / vid.videoHeight;
+        if (Math.abs(a - aspect) > 0.02) {
+          aspect = a;
+          v.w = 0;
+          fit();
+        }
+        return;
+      }
+      setTimeout(look, 500);
+    };
+    setTimeout(look, 500);
   }
 
   _renderPop() {
