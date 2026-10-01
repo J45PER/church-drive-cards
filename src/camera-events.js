@@ -298,6 +298,8 @@ export function openCameraEvents(host, hass, base, { title = '', aspect = 16 / 9
     if (e.clip) {
       el = document.createElement('video');
       el.src = e.clip;
+      // The event's picture until the clip draws (not the phone's grey placeholder).
+      if (e.picture) el.poster = e.picture;
       el.autoplay = true;
       el.playsInline = true;
       el.loop = false;
