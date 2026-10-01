@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-01. Current release: **v0.27.1**.*
+*Last updated 2026-10-01. Current release: **v0.28.0**.*
 
 ## Where this stands
 
@@ -14,7 +14,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-01, v0.27.1 live, nothing on beta):**
+**Now (2026-10-01, v0.28.0 live, nothing on beta):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -310,6 +310,31 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **v0.28.0 (released 2026-10-01, restarted): Auto Layout fills blank space; Manager on Auto Layout.**
+  - The layout arithmetic is in `src/arrange.js` (tests: `test/arrange.test.mjs`).
+    `arrange()` tries each automatically wide panel three ways: across the page below
+    the columns, across the columns beside the tallest one (a "span", under the
+    shorter columns), or in a column. It picks the shortest page. Cost counts blank
+    space inside panels (a zone alone on its last row) and gaps under short columns
+    that stretching can't fill. A wide panel in a column costs +40.
+    `balance(heights, k, gap, keep, spanH)` handles the span case.
+  - Panels estimate their size at other widths: `_fitAt` / `_heightAt` / `_emptyAt`
+    in `section-panel-card.js`.
+  - Order: controls first, then cameras (`isCamera`, a panel of only `camera.*`
+    pictures, or `priority: camera`), then info. Security's Safety panel is
+    `priority: info`, so the order is Alarm, cameras, then Safety (the user's
+    choice).
+  - Camera panels use a grid with worked-out spans (`_flow`), so a camera alone on
+    the last row fills it. Two cameras that would stack count as wide.
+  - New `full_width: wide` (editor: "Wide (two columns or more)"): never put in one
+    column. Manager's Notifications panel uses it.
+  - The layout keeps adapting while pictures load (margin 24px, 60px after 4s). It
+    only freezes once a panel is opened or closed after the page has loaded
+    (`_touched`). Plans are stored under a `v4|` key.
+  - Manager is now one section holding an Auto Layout card: Who's home, Device
+    Health, Notifications (wide), Automatic to-dos.
+  - The user's laptop scales the display, so its columns are about 350 CSS px even
+    though they look like 525: two cameras don't fit side by side there.
 - **v0.27.1 (released 2026-10-01, reload-only): Notifications table's All column ticks and unticks everyone; ticking the last person turns All on; solid grey for ticks through All.**
 - **v0.27.0 (released 2026-10-01, reload-only): Devices page, media/system/safety/people cards, cheap-rate view, Outside zone, grey ticks under All.**
 - **v0.26.0 (released 2026-10-01, needs a restart): people and notifications engine.**
@@ -494,7 +519,8 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
     a restart, which is harmless.
   - The user may want the Pixel (`mobile_app_xitol_j45per_p10pxl`) as well.
 
-**New in v0.20.0: Auto Layout Card** (`src/auto-layout-card.js`). The user
+**New in v0.20.0: Auto Layout Card** (`src/auto-layout-card.js`; v0.28.0 changed
+where wide panels go and the order; see its release notes). The user
 wanted tablet layout to adapt by itself as panels are added, not hand-arranged per
 page. Each Mobile page is one full-width section holding a
 `custom:auto-layout-card` (all its panels, in the old phone order) plus the nav bar. It shares panels between columns to make the

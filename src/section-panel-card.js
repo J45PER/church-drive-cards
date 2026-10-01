@@ -82,8 +82,8 @@ const PanelFields = createFormEditor({
         { name: 'card_width', selector: { number: { min: 0, max: 800, step: 10, mode: 'box', unit_of_measurement: 'px' } } },
         { name: 'match_height', selector: { boolean: {} }, default: true },
         { name: 'frosted_cards', selector: { boolean: {} }, default: true },
-        { name: 'full_width', selector: { select: { mode: 'dropdown', options: [{ value: 'auto', label: 'Automatic' }, { value: 'yes', label: 'Always full width' }, { value: 'no', label: 'Never' }] } } },
-        { name: 'priority', selector: { select: { mode: 'dropdown', options: [{ value: 'auto', label: 'Work it out from the cards' }, { value: 'controls', label: 'Controls (goes higher)' }, { value: 'info', label: 'Information only' }] } } },
+        { name: 'full_width', selector: { select: { mode: 'dropdown', options: [{ value: 'auto', label: 'Automatic' }, { value: 'wide', label: 'Wide (two columns or more)' }, { value: 'yes', label: 'Always full width' }, { value: 'no', label: 'Never' }] } } },
+        { name: 'priority', selector: { select: { mode: 'dropdown', options: [{ value: 'auto', label: 'Work it out from the cards' }, { value: 'camera', label: 'Cameras (after controls)' }, { value: 'controls', label: 'Controls (goes higher)' }, { value: 'info', label: 'Information only' }] } } },
       ],
     },
   ],
@@ -100,7 +100,7 @@ const PanelFields = createFormEditor({
     card_width: 'Cards side by side when each can be at least (empty = automatic, 0 = always one per row)',
     match_height: "Line up this panel's bottom with the panels beside it",
     frosted_cards: 'Frosted cards',
-    full_width: 'Full width across an Auto Layout',
+    full_width: 'Width in an Auto Layout',
     priority: 'In an Auto Layout, counts as',
     color: 'Colour (icon and panel)',
     color_template: STC_COLOR_TEMPLATE_LABEL,
@@ -113,8 +113,8 @@ const PanelFields = createFormEditor({
     card_width: 'Automatic: zones 200px, cameras 220px, everything else 300px. Cards fill the panel width: e.g. cameras 2 or 3 across on a tablet, one per row on a phone.',
     frosted_cards: "The cards inside are see-through with a heavy blur of what's behind them (acrylic). Turn off for solid cards.",
     match_height: "When sections sit side by side, the last panel in a shorter section grows so its bottom lines up with its neighbours'.",
-    priority: 'Auto Layout puts panels with buttons and sliders above ones that only show information. Auto: lights, alarm, thermostats, fan, purifier, blinds and tiles with controls count as controls.',
-    full_width: 'Only inside an Auto Layout Card: the panel spans every column, with the panels before and after it balanced above and below. Automatic: a panel of 3 or more small cards (zones, cameras, tiles) goes full width when they would not fit side by side in one column.',
+    priority: 'Auto Layout puts panels with buttons and sliders first, then cameras, then ones that only show information. Auto: a panel of only cameras counts as cameras; lights, alarm, thermostats, fan, purifier, blinds and tiles with controls count as controls.',
+    full_width: 'Only inside an Auto Layout Card. Automatic: a panel of 3 or more small cards (zones, cameras, tiles) that would not fit side by side in one column goes across the page, across the columns beside the tallest one, or into a column, whichever leaves the least blank space. Wide: never squeezed into one column (e.g. a table). Always full width: across the page, below the columns.',
     color_template: STC_COLOR_TEMPLATE_HELPER,
     summary: `A Home Assistant template, e.g. {{ states('vacuum.gregg') | title }}`,
   },
@@ -342,6 +342,10 @@ export class SectionPanelCard extends HTMLElement {
     const g = this._grid;
     if (!g) return;
     const w = this._cardWidth();
+    // Pictures (cameras): as many to a row as fit, and any on a part-filled
+    // last row share the whole row, so there's no hole beside them.
+    const flow = w > 0 && this._pictures();
+    this._flowing = flow;
     g.style.display = 'grid';
     g.style.gap = compact ? '8px' : '12px';
     // Cards on the same row share a height; each card's background fills it.
@@ -352,7 +356,41 @@ export class SectionPanelCard extends HTMLElement {
       st.textContent = '.spc-cards > * { display:flex; flex-direction:column; min-width:0; } .spc-cards > * > ha-card { flex:1 1 auto; }';
       this.prepend(st);
     }
+    if (flow) {
+      this._flow();
+      if (window.ResizeObserver && !this._flowRO) {
+        this._flowRO = new ResizeObserver(() => this._flowing && this._flow());
+        this._flowRO.observe(g);
+      }
+      return;
+    }
+    [...g.children].forEach((el) => el.style && el.style.gridColumn && (el.style.gridColumn = ''));
     g.style.gridTemplateColumns = w > 0 ? `repeat(auto-fill, minmax(min(100%, ${w}px), 1fr))` : '1fr';
+  }
+
+  // Pictures on rows of t; r left over on the last row. The grid has t × r
+  // columns (t when none are left over): each picture spans r of them, and
+  // each one on the last row spans t, so the last row is filled too.
+  _flow() {
+    const g = this._grid;
+    const w = this._cardWidth();
+    const kids = [...g.children].filter((el) => el.localName !== 'style');
+    const n = kids.length;
+    const width = g.getBoundingClientRect().width;
+    if (!n || !width) {
+      g.style.gridTemplateColumns = `repeat(auto-fill, minmax(min(100%, ${w}px), 1fr))`;
+      return;
+    }
+    const gap = parseFloat(g.style.gap) || 12;
+    const t = Math.max(1, Math.min(n, Math.floor((width + gap) / (w + gap))));
+    const r = n % t;
+    const cols = r ? t * r : t;
+    const tpl = `repeat(${cols}, minmax(0, 1fr))`;
+    if (g.style.gridTemplateColumns !== tpl) g.style.gridTemplateColumns = tpl;
+    kids.forEach((el, i) => {
+      const span = `span ${r && i >= n - r ? t : r || 1}`;
+      if (el.style.gridColumn !== span) el.style.gridColumn = span;
+    });
   }
 
   // ---- Matching heights with the sections beside this one.
@@ -437,6 +475,64 @@ export class SectionPanelCard extends HTMLElement {
     const last = this._goEl && this._goEl.style.display !== 'none' ? this._goEl : this._grid;
     const g = last && last.getBoundingClientRect();
     return g && panel ? g.bottom + 12 - panel.getBoundingClientRect().top : this.getBoundingClientRect().height;
+  }
+
+  // Whether every card is a picture (cameras): pictures fill the row, and
+  // grow or shrink with their width.
+  _pictures() {
+    const types = (this.config.cards || []).map((c) => String((c && c.type) || '').replace(/^custom:/, '').replace(/-beta$/, ''));
+    return types.length > 0 && types.every((t) => /^(picture|picture-entity|picture-glance|camera-card)$/.test(t));
+  }
+
+  // About how the panel would look at another width: its cards wrap into
+  // more or fewer rows, and pictures (cameras) grow or shrink with their
+  // width. Returns { h, empty }: its height, and the blank space left by a
+  // part-filled last row (as height). An Auto Layout Card uses this to try a panel in a
+  // column, across two columns or across the page before moving it.
+  _fitAt(width) {
+    const h = this._naturalHeight();
+    const g = this._grid;
+    const panel = this._panelEl;
+    const w = this._cardWidth();
+    const none = { h, empty: 0 };
+    if (!g || !panel || !(w > 0) || this._mode() === 'compact' || g.style.display === 'none') return none;
+    const n = [...g.children].filter((el) => el.localName !== 'style' && el.getBoundingClientRect().height > 0).length;
+    const gr = g.getBoundingClientRect();
+    const pw = panel.getBoundingClientRect().width;
+    if (!n || !gr.width || !pw) return none;
+    const gap = parseFloat(getComputedStyle(g).columnGap) || 12;
+    const fit = (W) => Math.max(1, Math.floor((W + gap) / (w + gap)));
+    const W1 = Math.max(w, gr.width + (width - pw));
+    if (this._pictures()) {
+      // Each picture keeps its shape: full rows, then a last row whose
+      // pictures share the whole width.
+      const first = [...g.children].find((el) => el.localName !== 'style' && el.getBoundingClientRect().width > 0);
+      const fr = first.getBoundingClientRect();
+      const shape = fr.height / fr.width;
+      const t = Math.min(n, fit(W1));
+      const rows = Math.floor(n / t);
+      const left = n - rows * t;
+      const rowH = (k) => shape * ((W1 - gap * (k - 1)) / k);
+      const r = rows + (left ? 1 : 0);
+      return { h: Math.round(h - gr.height + rows * rowH(t) + (left ? rowH(left) : 0) + gap * (r - 1)), empty: 0 };
+    }
+    const cell = (W, t) => (W - gap * (t - 1)) / t;
+    const t0 = fit(gr.width);
+    const r0 = Math.ceil(n / t0);
+    const t1 = fit(W1);
+    const r1 = Math.ceil(n / t1);
+    const row1 = (gr.height - gap * (r0 - 1)) / r0;
+    // Empty cells on a wrapped last row, as height across the panel's width.
+    const gaps = r1 > 1 ? r1 * t1 - n : 0;
+    return { h: Math.round(h - gr.height + r1 * row1 + gap * (r1 - 1)), empty: (gaps * cell(W1, t1) * row1) / W1 };
+  }
+
+  _heightAt(width) {
+    return this._fitAt(width).h;
+  }
+
+  _emptyAt(width) {
+    return this._fitAt(width).empty;
   }
 
   // Whether the panel has nothing to show (its `empty_when` template, or a
