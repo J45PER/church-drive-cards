@@ -33,6 +33,7 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime, timedelta
 import logging
+import os
 from pathlib import Path
 import re
 import time
@@ -84,6 +85,7 @@ class CameraEvents:
     def __init__(self, hass: HomeAssistant) -> None:
         self.hass = hass
         self._store: Store = Store(hass, STORE_VERSION, "church_drive.camera_events")
+        self._convert_lock = asyncio.Lock()
         self._data: dict[str, Any] = {"settings": dict(DEFAULTS), "events": {}, "links": None}
         self._linked_at: dict[str, float] = {}
         self._unsubs: list = []
@@ -103,6 +105,17 @@ class CameraEvents:
                 for e in events:
                     if e.get("kind") == "linked" and not e.get("trigger"):
                         e["kind"] = "live"
+            # Before v0.31.1 only the start of each clip was saved, which won't
+            # play: drop those clips (the pictures stay).
+            broken = [
+                (base, e.pop("mp4"))
+                for base, events in self._data["events"].items()
+                for e in events
+                if e.get("mp4") and not e.get("whole")
+            ]
+            if broken:
+                await self.hass.async_add_executor_job(self._remove_files, broken)
+                self._save()
         await self.hass.async_add_executor_job(self._root().mkdir, 0o755, True, True)
         self._cams = self._find_cameras()
         if self._data["links"] is None:
@@ -214,6 +227,10 @@ class CameraEvents:
     def _stamp(ts: float, kind: str) -> str:
         return f"{dt_util.as_local(dt_util.utc_from_timestamp(ts)).strftime('%Y%m%d-%H%M%S')}_{kind}"
 
+    def _remove_files(self, files: list[tuple[str, str]]) -> None:
+        for base, name in files:
+            (self._root() / base / name).unlink(missing_ok=True)
+
     def _write(self, path: Path, data: bytes) -> int:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)
@@ -275,7 +292,16 @@ class CameraEvents:
             session = async_get_clientsession(self.hass)
             async with session.get(url, timeout=120) as resp:
                 resp.raise_for_status()
-                data = await resp.content.read(MAX_CLIP)
+                # Read to the end: content.read(n) gives back only what has
+                # arrived so far, which saved just the start of each clip.
+                chunks: list[bytes] = []
+                total = 0
+                async for chunk in resp.content.iter_chunked(1 << 16):
+                    total += len(chunk)
+                    if total > MAX_CLIP:
+                        raise ValueError("recording is too big")
+                    chunks.append(chunk)
+                data = b"".join(chunks)
         except Exception as err:  # noqa: BLE001
             _LOGGER.warning("Couldn't download the %s recording: %s", base, err)
             self._save()
@@ -283,12 +309,69 @@ class CameraEvents:
         name = f"{self._stamp(entry['ts'], entry['kind'])}.mp4"
         size = await self.hass.async_add_executor_job(self._write, self._root() / base / name, data)
         entry["mp4"] = name
+        entry["whole"] = True
         entry["bytes"] = entry.get("bytes", 0) + size
+        await self._async_remux(base, entry)
         # The clip's own first moments make the best thumbnail.
         if not await self._async_thumb(base, entry) and not entry.get("jpg"):
             await self._async_picture(base, entry)
         self._save()
         await self._tidy()
+
+    async def _async_remux(self, base: str, entry: dict[str, Any]) -> None:
+        """Make the clip play on phones. Ring records HEVC, which phones' Home
+        Assistant apps show as sound over a black picture: convert it to H.264
+        (one at a time, at low priority, at most 1280 px). Anything else is
+        just repackaged with its index first, so it starts at once. If
+        converting fails, the HEVC is kept, labelled hvc1 (enough for iPhones).
+        """
+        try:
+            from homeassistant.components.ffmpeg import get_ffmpeg_manager  # noqa: PLC0415
+
+            binary = get_ffmpeg_manager(self.hass).binary
+        except Exception:  # noqa: BLE001
+            return
+        clip = self._root() / base / entry["mp4"]
+        tmp = clip.with_name(clip.stem + ".tmp.mp4")
+
+        async def run(args: list[str], limit: float) -> None:
+            proc = await asyncio.create_subprocess_exec(
+                binary, "-y", "-loglevel", "error", "-i", str(clip), *args, "-movflags", "+faststart", str(tmp),
+                stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE, preexec_fn=_low_priority,
+            )
+            try:
+                _, err = await asyncio.wait_for(proc.communicate(), limit)
+            except TimeoutError:
+                proc.kill()
+                raise
+            if proc.returncode != 0:
+                raise RuntimeError(err.decode(errors="replace").strip()[-300:])
+            await self.hass.async_add_executor_job(tmp.replace, clip)
+
+        async with self._convert_lock:
+            try:
+                probe = await asyncio.create_subprocess_exec(
+                    binary, "-hide_banner", "-i", str(clip), stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE
+                )
+                _, err = await asyncio.wait_for(probe.communicate(), 30)
+                found = re.search(r"Video: (\w+)", err.decode(errors="replace"))
+                entry["codec"] = codec = found.group(1) if found else None
+                if codec == "hevc":
+                    try:
+                        await run(
+                            ["-map", "0:v:0", "-map", "0:a?", "-c:v", "libx264", "-preset", "veryfast", "-crf", "26",
+                             "-vf", "scale='min(1280,iw)':-2", "-pix_fmt", "yuv420p", "-threads", "2", "-c:a", "aac", "-b:a", "64k"],
+                            900,
+                        )
+                        entry["codec"] = "h264"
+                        return
+                    except Exception as err:  # noqa: BLE001
+                        _LOGGER.warning("Couldn't convert the %s clip %s to H.264, keeping HEVC: %s", base, entry["mp4"], err)
+                await run(["-map", "0", "-c", "copy", *(["-tag:v", "hvc1"] if codec == "hevc" else [])], 120)
+            except Exception as err:  # noqa: BLE001
+                _LOGGER.warning("Couldn't repackage the %s clip %s (kept as it came): %s", base, entry["mp4"], err)
+            finally:
+                await self.hass.async_add_executor_job(lambda: tmp.unlink(missing_ok=True))
 
     async def _async_thumb(self, base: str, entry: dict[str, Any]) -> bool:
         """A picture from 1 second into the clip (with Home Assistant's ffmpeg)."""
@@ -452,7 +535,7 @@ class CameraEvents:
         out = []
         for e in sorted(self._data["events"].get(base, []), key=lambda e: e["ts"], reverse=True):
             out.append(
-                {"id": e["id"], "ts": e["ts"], "kind": e["kind"], "source": e.get("source"), "jpg": e.get("jpg"), "mp4": e.get("mp4")}
+                {"id": e["id"], "ts": e["ts"], "kind": e["kind"], "source": e.get("source"), "jpg": e.get("jpg"), "mp4": e.get("mp4"), "codec": e.get("codec")}
             )
         return out
 
@@ -460,6 +543,14 @@ class CameraEvents:
         if not SAFE.match(base) or not SAFE_FILE.match(name):
             return None
         return self._root() / base / name
+
+
+def _low_priority() -> None:
+    """Run ffmpeg below Home Assistant (in the child, before it starts)."""
+    try:
+        os.nice(10)
+    except OSError:
+        pass
 
 
 class EventFileView(HomeAssistantView):

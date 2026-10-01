@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-01. Current release: **v0.31.0**.*
+*Last updated 2026-10-01. Current release: **v0.31.1**.*
 
 ## Where this stands
 
@@ -14,7 +14,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-01, v0.31.0 live, nothing on beta):**
+**Now (2026-10-01, v0.31.1 live, nothing on beta):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -310,6 +310,23 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **v0.31.1 (released 2026-10-01, restarted): camera clips play on phones; live view starts muted.**
+  - **Clips were only the first chunk:** `_async_clip` used `resp.content.read(MAX_CLIP)`,
+    which returns whatever has arrived, so each saved .mp4 was a few KB (phones: "format
+    not supported" / DEMUXER_ERROR_COULD_NOT_OPEN). Now `iter_chunked` to the end. On start,
+    clips saved before (no `whole` flag) are deleted; their pictures stay.
+  - **Ring records HEVC:** phones' HA apps (iOS WKWebView, Android WebView) played the
+    sound over a black picture. `_async_remux` converts HEVC to H.264 (libx264 veryfast
+    crf 26, max 1280 px, aac 64k, faststart) with HA's ffmpeg, one at a time
+    (`_convert_lock`), `nice 10`. If that fails it keeps HEVC tagged hvc1. Other codecs are
+    just remuxed with the index first. `codec` is saved per event. Found with beta-only
+    logging of the `<video>` state from both phones (since removed).
+  - **Card:** clips start inside the tap (iOS needs a gesture), fall back to muted, a big
+    play button when paused, the event picture as poster, and a red "Couldn't play this
+    clip (…)" on error. Live view (`ha-camera-stream`) starts muted (the speaker unmutes)
+    and the tag says "Connecting…" until a video is actually playing ("Still picture" if
+    it never does).
+  - Local HA address for the Map Tiles key's website list: http://192.168.4.136:8123/*.
 - **v0.31.0 (released 2026-10-01, restarted): zone map fix, panels fill their width, notification boxes, Google maps, iPhone pop-ups.**
   - **Zone map was blank:** Leaflet sets `position:relative` on a map made before it's on
     the page, so `.zm-map` was 0 px high. `.zm-map` is `position:absolute !important`

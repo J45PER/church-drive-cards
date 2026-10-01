@@ -43,6 +43,8 @@ export const STAGE_CSS = `
 `;
 
 const EV_CSS = `
+  .ce-big { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:1; width:64px; height:64px; border:none; border-radius:50%; cursor:pointer;
+    background:rgba(0,0,0,0.5); color:#fff; display:flex; align-items:center; justify-content:center; }
   .ce-chips { display:flex; gap:6px; flex-wrap:wrap; margin:12px 0 2px; }
   .ce-chip { border:none; cursor:pointer; font:inherit; font-size:0.75rem; font-weight:700; border-radius:999px; padding:5px 11px; background:rgba(127,127,127,0.18); color:var(--primary-text-color); }
   .ce-chip.on { background:var(--primary-text-color, #e6e8ee); color:var(--card-background-color, #1f2128); }
@@ -80,13 +82,28 @@ export async function liveElement(hass, entityId) {
     el.hass = hass;
     el.stateObj = st;
     el.controls = false;
-    el.muted = false;
+    // Muted to start: iPhones won't start a live stream with sound unless a tap
+    // starts it, and show only a still until then. The sound button unmutes.
+    el.muted = true;
     return el;
   }
   const helpers = await window.loadCardHelpers();
   const el = helpers.createCardElement({ type: 'picture-entity', entity: entityId, camera_view: 'live', show_name: false, show_state: false });
   el.hass = hass;
   return el;
+}
+
+// The <video> (or picture) inside a player; live players keep it in shadow roots.
+export function findVideo(root, depth = 0) {
+  if (!root || depth > 6) return null;
+  if (root.localName === 'video' || root.localName === 'img') return root;
+  const vid = root.querySelector && root.querySelector('video');
+  if (vid) return vid;
+  for (const n of root.querySelectorAll ? root.querySelectorAll('*') : []) {
+    const f = n.shadowRoot && findVideo(n.shadowRoot, depth + 1);
+    if (f) return f;
+  }
+  return null;
 }
 
 // Put `el` in `box` at its own shape (aspect = width / height, corrected from
@@ -109,8 +126,12 @@ export function stageMedia(box, el, aspect = 16 / 9) {
     mute.addEventListener('click', (ev) => {
       ev.stopPropagation();
       el.muted = !el.muted;
+      const vid = findVideo(el.shadowRoot || el);
+      if (vid && vid !== el) vid.muted = el.muted;
+      if (vid && vid.paused) vid.play().catch(() => {});
       setMute();
     });
+    el.addEventListener('volumechange', setMute);
     box.appendChild(mute);
     setMute();
   }
@@ -201,19 +222,7 @@ export function stageMedia(box, el, aspect = 16 / 9) {
     if (window.ResizeObserver) new ResizeObserver(() => s().fit()).observe(box);
   }
   requestAnimationFrame(fit);
-  // Once the video or picture has loaded, use its own shape (a live player
-  // keeps its <video> inside shadow roots).
-  const findVideo = (root, depth = 0) => {
-    if (!root || depth > 6) return null;
-    if (root.localName === 'video' || root.localName === 'img') return root;
-    const vid = root.querySelector && root.querySelector('video');
-    if (vid) return vid;
-    for (const n of root.querySelectorAll ? root.querySelectorAll('*') : []) {
-      const f = n.shadowRoot && findVideo(n.shadowRoot, depth + 1);
-      if (f) return f;
-    }
-    return null;
-  };
+  // Once the video or picture has loaded, use its own shape.
   let tries = 0;
   const look = () => {
     if (!box.isConnected || box._cdStage.v !== v || tries++ > 30) return;
@@ -277,13 +286,14 @@ export function openCameraEvents(host, hass, base, { title = '', aspect = 16 / 9
     if (e.clip) {
       el = document.createElement('video');
       el.src = e.clip;
+      // The event's picture until the clip draws (not the phone's grey placeholder).
+      if (e.picture) el.poster = e.picture;
       el.autoplay = true;
       el.playsInline = true;
       el.loop = false;
       el.muted = false;
+      el.preload = 'auto';
       el.setAttribute('playsinline', '');
-      // Tap the video (not a drag) to pause or play.
-      el.addEventListener('loadeddata', () => el.play().catch(() => {}));
     } else {
       el = document.createElement('img');
       el.src = e.picture || '';
@@ -292,7 +302,33 @@ export function openCameraEvents(host, hass, base, { title = '', aspect = 16 / 9
     stageMedia(box, el, aspect);
     const [label, colour] = KINDS[e.kind] || KINDS.motion;
     const from = e.kind === 'linked' && e.source ? ` from ${e.source}` : '';
-    stageTag(box, `${label}${from} · ${hm(e.ts * 1000)} ${dayName(e.ts * 1000).toLowerCase()}`, colour);
+    const tag = stageTag(box, `${label}${from} · ${hm(e.ts * 1000)} ${dayName(e.ts * 1000).toLowerCase()}`, colour);
+    if (e.clip) {
+      // Start it here, inside the tap: iPhones only start a video (with sound)
+      // from a tap, and don't even load it otherwise. If sound isn't allowed,
+      // play it muted (the sound button turns it on).
+      const big = document.createElement('button');
+      big.className = 'ce-big';
+      big.setAttribute('aria-label', 'Play');
+      big.innerHTML = iconHtml('mdi:play', { size: '34px' });
+      hydrateIcons(big);
+      big.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        el.play().catch(() => {});
+      });
+      box.appendChild(big);
+      const show = () => (big.style.display = el.paused ? '' : 'none');
+      ['play', 'playing', 'pause', 'ended'].forEach((n) => el.addEventListener(n, show));
+      el.play().catch(() => {
+        el.muted = true;
+        el.play().catch(show);
+      });
+      show();
+      el.addEventListener('error', () => {
+        tag.textContent = `Couldn't play this clip${el.error ? ` (${['', 'stopped', 'network', 'decode', 'format not supported'][el.error.code] || el.error.code})` : ''}`;
+        tag.style.background = '#c62828';
+      });
+    }
   };
 
   const renderChips = () => {
