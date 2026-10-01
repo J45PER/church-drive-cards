@@ -45,6 +45,16 @@ export const STAGE_CSS = `
 const EV_CSS = `
   .ce-big { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:1; width:64px; height:64px; border:none; border-radius:50%; cursor:pointer;
     background:rgba(0,0,0,0.5); color:#fff; display:flex; align-items:center; justify-content:center; }
+  .ce-bar { display:flex; align-items:center; gap:8px; margin-top:8px; }
+  .ce-ctl { flex:none; width:38px; height:38px; border:none; border-radius:50%; cursor:pointer; background:rgba(127,127,127,0.16); color:var(--primary-text-color);
+    display:flex; align-items:center; justify-content:center; padding:0; }
+  .ce-time { flex:none; font-size:0.75rem; font-variant-numeric:tabular-nums; color:var(--secondary-text-color); min-width:30px; text-align:center; }
+  .ce-seek { flex:1; min-width:0; height:28px; margin:0; background:transparent; -webkit-appearance:none; appearance:none; cursor:pointer; --p:0%; }
+  .ce-seek::-webkit-slider-runnable-track { height:6px; border-radius:3px; background:linear-gradient(90deg, #5c6bc0 var(--p), rgba(127,127,127,0.3) var(--p)); }
+  .ce-seek::-moz-range-track { height:6px; border-radius:3px; background:linear-gradient(90deg, #5c6bc0 var(--p), rgba(127,127,127,0.3) var(--p)); }
+  .ce-seek::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; margin-top:-6px; border-radius:50%; background:#fff; border:none; box-shadow:0 1px 3px rgba(0,0,0,0.5); }
+  .ce-seek::-moz-range-thumb { width:18px; height:18px; border-radius:50%; background:#fff; border:none; }
+  .cc-pop-media:fullscreen { aspect-ratio:auto; border-radius:0; width:100vw; height:100vh; }
   .ce-chips { display:flex; gap:6px; flex-wrap:wrap; margin:12px 0 2px; }
   .ce-chip { border:none; cursor:pointer; font:inherit; font-size:0.75rem; font-weight:700; border-radius:999px; padding:5px 11px; background:rgba(127,127,127,0.18); color:var(--primary-text-color); }
   .ce-chip.on { background:var(--primary-text-color, #e6e8ee); color:var(--card-background-color, #1f2128); }
@@ -260,8 +270,9 @@ export function openCameraEvents(host, hass, base, { title = '', aspect = 16 / 9
   const live = `camera.${base}_live_view`;
   const name = title || String((hass.states[live] && hass.states[live].attributes.friendly_name) || base.replace(/_/g, ' ')).replace(/ Live view$/i, '');
   const content = document.createElement('div');
-  content.innerHTML = `<style>${STAGE_CSS}${EV_CSS}</style><div class="cc-pop-media" style="display:none;"></div><div class="ce-chips"></div><div class="ce-list"><div class="ce-empty">Loading…</div></div>`;
+  content.innerHTML = `<style>${STAGE_CSS}${EV_CSS}</style><div class="cc-pop-media" style="display:none;"></div><div class="ce-bar" style="display:none;"></div><div class="ce-chips"></div><div class="ce-list"><div class="ce-empty">Loading…</div></div>`;
   const box = content.querySelector('.cc-pop-media');
+  const bar = content.querySelector('.ce-bar');
   const chips = content.querySelector('.ce-chips');
   const list = content.querySelector('.ce-list');
   const state = { filter: 'all', events: [], sel: null, keep: 5 };
@@ -273,6 +284,7 @@ export function openCameraEvents(host, hass, base, { title = '', aspect = 16 / 9
     content,
     onClose: () => {
       box.innerHTML = ''; // stop any video
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
     },
   });
 
@@ -281,6 +293,8 @@ export function openCameraEvents(host, hass, base, { title = '', aspect = 16 / 9
     state.sel = e.id;
     renderList();
     box.style.display = '';
+    bar.style.display = 'none';
+    bar.innerHTML = '';
     if (pop.body) pop.body.scrollTo({ top: 0, behavior: 'smooth' });
     let el;
     if (e.clip) {
@@ -324,11 +338,84 @@ export function openCameraEvents(host, hass, base, { title = '', aspect = 16 / 9
         el.play().catch(show);
       });
       show();
+      controls(el, e);
       el.addEventListener('error', () => {
         tag.textContent = `Couldn't play this clip${el.error ? ` (${['', 'stopped', 'network', 'decode', 'format not supported'][el.error.code] || el.error.code})` : ''}`;
         tag.style.background = '#c62828';
       });
     }
+  };
+
+  // Under a clip: play/pause, time, a timeline to scrub, length, download
+  // and full screen.
+  const controls = (el, e) => {
+    const icon = (i) => iconHtml(i, { size: '22px' });
+    bar.innerHTML = `<button class="ce-ctl" data-c="play" aria-label="Play or pause"></button>
+      <span class="ce-time">0:00</span>
+      <input class="ce-seek" type="range" min="0" max="1000" step="1" value="0" aria-label="Timeline">
+      <span class="ce-time ce-len">0:00</span>
+      <button class="ce-ctl" data-c="save" aria-label="Download">${icon('mdi:download')}</button>
+      <button class="ce-ctl" data-c="full" aria-label="Full screen">${icon('mdi:fullscreen')}</button>`;
+    bar.style.display = '';
+    hydrateIcons(bar);
+    const btn = bar.querySelector('[data-c="play"]');
+    const seek = bar.querySelector('.ce-seek');
+    const [now, len] = bar.querySelectorAll('.ce-time');
+    const clock = (t) => (isFinite(t) ? `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}` : '0:00');
+    let dragging = false;
+    const sync = () => {
+      btn.innerHTML = icon(el.paused ? 'mdi:play' : 'mdi:pause');
+      hydrateIcons(btn);
+      now.textContent = clock(el.currentTime);
+      len.textContent = clock(el.duration);
+      if (!dragging && el.duration) seek.value = String(Math.round((el.currentTime / el.duration) * 1000));
+      seek.style.setProperty('--p', `${(Number(seek.value) / 10).toFixed(1)}%`);
+    };
+    ['play', 'pause', 'ended', 'timeupdate', 'durationchange', 'loadedmetadata'].forEach((n) => el.addEventListener(n, sync));
+    sync();
+    seek.addEventListener('input', () => {
+      dragging = true;
+      if (el.duration) el.currentTime = (Number(seek.value) / 1000) * el.duration;
+      sync();
+    });
+    seek.addEventListener('change', () => (dragging = false));
+    // The file, fetched once it's playing, so Download can hand it over at once
+    // (iPhones only open the share sheet straight from a tap).
+    let file = null;
+    const fname = `${name} ${new Date(e.ts * 1000).toISOString().slice(0, 10)} ${hm(e.ts * 1000).replace(':', '.')}.mp4`;
+    el.addEventListener(
+      'playing',
+      () => {
+        fetch(e.clip)
+          .then((r) => (r.ok ? r.blob() : null))
+          .then((b) => (file = b && new File([b], fname, { type: 'video/mp4' })))
+          .catch(() => {});
+      },
+      { once: true },
+    );
+    bar.addEventListener('click', (ev) => {
+      const c = ev.target.closest('[data-c]');
+      if (!c) return;
+      if (c.dataset.c === 'play') {
+        if (el.paused) el.play().catch(() => {});
+        else el.pause();
+      } else if (c.dataset.c === 'full') {
+        if (document.fullscreenElement) document.exitFullscreen();
+        else if (box.requestFullscreen) box.requestFullscreen().catch(() => el.webkitEnterFullscreen && el.webkitEnterFullscreen());
+        else if (el.webkitEnterFullscreen) el.webkitEnterFullscreen(); // iPhone: its own player
+      } else if (c.dataset.c === 'save') {
+        if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+          navigator.share({ files: [file], title: fname }).catch(() => {});
+          return;
+        }
+        const a = document.createElement('a');
+        a.href = file ? URL.createObjectURL(file) : e.clip;
+        a.download = fname;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+    });
   };
 
   const renderChips = () => {
