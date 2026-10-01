@@ -15,7 +15,6 @@
 // or the phone's Back button (it adds a history step while open).
 
 import { iconHtml, hydrateIcons } from './icons.js';
-import { SUFFIX } from './suffix.js';
 
 const PHONE = '(max-width: 600px)';
 
@@ -52,29 +51,6 @@ const POP_CSS = `
   @keyframes cd-pop-fade { from { opacity:0; } }
   @media (prefers-reduced-motion: reduce) { dialog.cd-pop, dialog.cd-pop::backdrop { animation:none; } }
 `;
-
-// Beta only, for now: where a pop-up ended up on this screen, into Home
-// Assistant's log (to fix phone sheets that sit too low).
-function popDebug(d) {
-  try {
-    const ha = document.querySelector('home-assistant');
-    const hass = ha && ha.hass;
-    if (!hass || !d.isConnected || window.innerWidth > 600) return;
-    const r = d.getBoundingClientRect();
-    const cs = getComputedStyle(d);
-    const vv = window.visualViewport;
-    const body = d.querySelector('.cd-pop-body');
-    const info = {
-      dialog: { top: Math.round(r.top), bottom: Math.round(r.bottom), height: Math.round(r.height), position: cs.position, inset: `${cs.top} ${cs.bottom}`, maxHeight: cs.maxHeight, transform: cs.transform, scrollTop: d.scrollTop },
-      body: { scroll: body.scrollHeight, client: body.clientHeight, scrollTop: body.scrollTop },
-      inner: [window.innerWidth, window.innerHeight], doc: document.documentElement.clientHeight, vv: vv && [Math.round(vv.height), Math.round(vv.offsetTop), vv.scale], screen: [screen.width, screen.height],
-      dvh: CSS.supports('height', '1dvh'), modal: d.matches(':modal'), ua: navigator.userAgent,
-    };
-    hass.callService('system_log', 'write', { message: `Pop-up position: ${JSON.stringify(info)}`, level: 'warning', logger: 'church_drive.popup' });
-  } catch (err) {
-    /* debugging only */
-  }
-}
 
 export function openPopup(host, { title = '', icon = '', color = 'var(--primary-color)', content = null, onClose = null } = {}) {
   const d = document.createElement('dialog');
@@ -181,7 +157,6 @@ export function openPopup(host, { title = '', icon = '', color = 'var(--primary-
   drag.addEventListener('pointercancel', release);
 
   d.showModal();
-  if (SUFFIX) setTimeout(() => popDebug(d), 2500);
   try {
     history.pushState({ ...(history.state || {}), cdPopup: true }, '');
     pushed = true;
