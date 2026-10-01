@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-01. Current release: **v0.30.2**.*
+*Last updated 2026-10-01. Current release: **v0.30.3**.*
 
 ## Where this stands
 
@@ -14,7 +14,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-01, v0.30.2 live, nothing on beta):**
+**Now (2026-10-01, v0.30.3 live, nothing on beta):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -310,7 +310,7 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
-- **Next release (on the branch): start-up no longer waits for device health fixes.**
+- **v0.30.3 (released 2026-10-01, restarted): start-up no longer waits for device health fixes.**
   - `health.py` runs its automatic refresh, re-sync and nudge as background tasks
     (`_background`), which HA's start-up doesn't wait for. Each device call now has a
     60 s limit (`CALL_TIMEOUT`).
