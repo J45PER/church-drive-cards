@@ -2,9 +2,11 @@
 // itself. It uses as many columns as fit, shares the panels between columns
 // so they're as even as possible (each column keeps list order), and
 // stretches each column's last open panel a little so the columns end
-// level. A panel marked "full width" sits across the page, with the panels
-// before and after it balanced above and below. Adding a panel, opening or
-// compacting one, or turning the tablet just rebalances the page.
+// level. A panel marked "full width" sits across the page below the
+// columns. A panel of small cards (zones, cameras) goes across the page,
+// across the columns beside the tallest one, or into a column, whichever
+// leaves the least blank space. Adding a panel, opening or compacting one,
+// or turning the tablet just rebalances the page.
 
 import { createFormEditor } from './form-editor.js';
 import { SUFFIX, LABEL } from './suffix.js';
@@ -16,6 +18,9 @@ import { PANEL_TRANSITION } from './section-panel-card.js';
 import { HOUSE_TASKS_LIST, HOUSE_TASKS_COLOR, houseTask, houseTaskFor } from './house-tasks-card.js';
 import { choreIcon } from './task-list-card.js';
 import { parseTask } from './repeat.js';
+import { balance, arrange } from './arrange.js';
+
+export { balance, arrange };
 
 let helpersPromise;
 function cardHelpers() {
@@ -211,65 +216,6 @@ function headerBottom() {
   const bar = sr && (sr.querySelector('.header') || sr.querySelector('app-header') || sr.querySelector('app-toolbar'));
   const r = bar && bar.getBoundingClientRect();
   return r && r.height ? Math.max(0, r.bottom) : 56;
-}
-
-// Share items between k columns so the tallest column is as short as
-// possible. Each column keeps list order; column 1 starts with the first
-// item. Tries every sharing for small pages (ties go to the one closest to
-// list order), and falls back to "next item into the shortest column".
-// Returns an array of columns, each a list of item indexes.
-export function balance(heights, k, gap, keep) {
-  const n = heights.length;
-  k = Math.max(1, Math.min(k, n));
-  const cost = (cols) => Math.max(...cols.map((c) => c.reduce((s, i) => s + heights[i], 0) + gap * Math.max(0, c.length - 1)));
-  let best = null;
-  let bestCost = Infinity;
-  if (n <= 11) {
-    // Restricted-growth labelling: each item joins a used column or opens
-    // the next one, so each sharing is tried once.
-    const lab = new Array(n).fill(0);
-    const sums = new Array(k).fill(0);
-    const counts = new Array(k).fill(0);
-    const walk = (i, used) => {
-      if (i === n) {
-        if (used !== k) return;
-        const c = Math.max(...sums.map((s, j) => s + gap * Math.max(0, counts[j] - 1)));
-        if (c < bestCost - 4) {
-          bestCost = c;
-          best = lab.slice();
-        }
-        return;
-      }
-      if (n - i < k - used) return;
-      for (let j = 0; j <= Math.min(used, k - 1); j += 1) {
-        sums[j] += heights[i];
-        counts[j] += 1;
-        lab[i] = j;
-        const partial = sums[j] + gap * (counts[j] - 1);
-        if (partial < bestCost - 4) walk(i + 1, Math.max(used, j + 1));
-        sums[j] -= heights[i];
-        counts[j] -= 1;
-      }
-    };
-    walk(0, 0);
-  }
-  let cols;
-  if (best) {
-    cols = Array.from({ length: k }, () => []);
-    best.forEach((j, i) => cols[j].push(i));
-  } else {
-    cols = Array.from({ length: k }, () => []);
-    const sums = new Array(k).fill(0);
-    heights.forEach((h, i) => {
-      const j = sums.indexOf(Math.min(...sums));
-      cols[j].push(i);
-      sums[j] += h + gap;
-    });
-  }
-  // Keep the current arrangement unless the new one is clearly better, so
-  // small height changes don't shuffle the page.
-  if (keep && keep.length === k && keep.flat().length === n && cost(keep) <= cost(cols) + 24) return keep;
-  return cols;
 }
 
 export class AutoLayoutCardEditor extends HTMLElement {
@@ -496,77 +442,105 @@ export class AutoLayoutCard extends HTMLElement {
     });
   }
 
-  // Work out bands (split at full-width items) and columns; only move cards
-  // when the arrangement actually changes, so cameras etc. aren't reloaded.
+  // Work out the columns, the panels across the page, and any panels across
+  // the columns beside the tallest one; only move cards when the arrangement
+  // actually changes, so cameras etc. aren't reloaded.
   _layout(force) {
     if (!this.isConnected || !this._items.length) return;
     const cols = this._columns();
     const gap = this._gap();
-    // Balanced columns first, then full-width panels across the page below
-    // them (in list order), so a full-width panel never strands one panel on
-    // its own row.
-    const colWidth = ((this.getBoundingClientRect().width || window.innerWidth) - gap * (cols - 1)) / cols;
+    const width = this.getBoundingClientRect().width || window.innerWidth;
+    const colWidth = (width - gap * (cols - 1)) / cols;
+    const spanWidth = colWidth * (cols - 1) + gap * Math.max(0, cols - 2);
     // With empty_last, panels with nothing to show (their "counts as empty
     // when", or a card inside saying so) go below the rest, keeping order.
-    const order = this.config.empty_last ? [...this._items.filter((it) => !it.el._empty), ...this._items.filter((it) => it.el._empty)] : this._items;
-    const wide = cols > 1 ? order.filter((it) => this._full(it, colWidth)) : [];
-    const rest = order.filter((it) => !wide.includes(it));
-    const bands = [];
-    if (rest.length) bands.push({ items: rest });
-    const first = this.config.controls_first !== false;
-    [...wide.filter((it) => !first || it.controls), ...wide.filter((it) => first && !it.controls)].forEach((it) => bands.push({ items: [it], full: true }));
-    // Panels with controls first within each band (stable, so list order
-    // holds otherwise).
-    if (this.config.controls_first !== false) {
-      bands.forEach((b) => {
-        b.items = [...b.items.filter((it) => it.controls), ...b.items.filter((it) => !it.controls)];
-      });
-    }
+    let list = this.config.empty_last ? [...this._items.filter((it) => !it.el._empty), ...this._items.filter((it) => it.el._empty)] : this._items;
+    // Panels with controls first (stable, so list order holds otherwise).
+    if (this.config.controls_first !== false) list = [...list.filter((it) => it.controls), ...list.filter((it) => !it.controls)];
+    const forced = (it) => it.conf.full_width === true || it.conf.full_width === 'yes';
     // Unplaced cards have no height yet: use this page's last arrangement,
     // or list order, until they can be measured.
     const placed = this._items.every((it) => it.el.isConnected);
-    const planKey = `${location.pathname}|${cols}|${bands.map((b) => b.items.map((it) => it.conf.title || it.conf.type).join(',')).join('/')}`;
-    const saved = planStore()[planKey];
-    bands.forEach((b, n) => {
-      if (b.full || cols === 1) {
-        b.split = [b.items.map((it, i) => i)];
-        return;
-      }
-      if (!placed) {
-        const s = saved && saved[n];
-        const ok = Array.isArray(s) && s.flat().length === b.items.length && s.length <= cols;
-        b.split = ok ? s : [b.items.map((it, i) => i)];
-        return;
-      }
-      const key = b.items.map((it) => this._items.indexOf(it)).join(',');
-      const prev = this._prevSplits && this._prevSplits[key];
-      // Once the page has settled, panels keep their columns: opening or
+    const planKey = `v2|${location.pathname}|${cols}|${list.map((it) => it.conf.title || it.conf.type).join(',')}`;
+    const key = `${cols}|${list.map((it) => this._items.indexOf(it)).join(',')}`;
+    const prev = this._prevArr && this._prevArr.key === key ? this._prevArr.arr : null;
+    let arr;
+    if (cols === 1) {
+      arr = { cols: [list.map((it, i) => i)], side: null, spans: [], full: [] };
+    } else if (!placed) {
+      const s = planStore()[planKey];
+      const ok = s && Array.isArray(s.cols) && [...s.cols.flat(), ...(s.spans || []), ...(s.full || [])].length === list.length;
+      arr = ok ? s : { cols: [list.map((it, i) => i)], side: null, spans: [], full: [] };
+    } else {
+      // Once the page has settled, panels keep their places: opening or
       // closing one only re-levels the bottoms, it never moves panels about.
       const settled = performance.now() > this._settleUntil && cols === this._cols;
-      b.split = settled && prev && prev.length === Math.min(cols, b.items.length) ? prev : balance(b.items.map((it) => this._height(it.el)), cols, gap, prev);
-    });
-    this._prevSplits = {};
-    bands.forEach((b) => {
-      this._prevSplits[b.items.map((it) => this._items.indexOf(it)).join(',')] = b.split;
-    });
-    if (placed) planRemember(planKey, bands.map((b) => b.split));
-    const plan = `${cols}|${bands.map((b) => `${b.full ? 'F' : ''}${b.items.map((it) => this._items.indexOf(it)).join('-')}:${b.split.map((c) => c.join('.')).join(',')}`).join('/')}`;
+      const at = (it, w) => (it.el._heightAt ? it.el._heightAt(w) : this._height(it.el));
+      arr =
+        settled && prev
+          ? prev
+          : arrange(
+              list.map((it) => {
+                const full = forced(it);
+                const noCol = it.conf.full_width === 'wide';
+                const wide = !full && (noCol || this._full(it, colWidth));
+                return { h: at(it, colWidth), full, wide, noCol, hSpan: wide ? at(it, spanWidth) : 0, hFull: full || wide ? at(it, width) : 0 };
+              }),
+              cols,
+              gap,
+              prev,
+            );
+      planRemember(planKey, arr);
+    }
+    this._prevArr = { key, arr };
+    const plan = `${key}|${JSON.stringify(arr)}`;
     if (force || plan !== this._plan) {
       this._plan = plan;
       this._root.innerHTML = '';
-      bands.forEach((b) => {
-        const row = document.createElement('div');
-        row.style.cssText = `display:flex; gap:${GAP}; align-items:stretch;`;
-        b.cols = b.split.map((idx) => {
-          const col = document.createElement('div');
-          col.style.cssText = `flex:1 1 0; min-width:0; display:flex; flex-direction:column; gap:${GAP};`;
-          idx.forEach((i) => col.appendChild(b.items[i].el));
-          row.appendChild(col);
-          return col;
-        });
-        this._root.appendChild(row);
+      const column = (ids) => {
+        const col = document.createElement('div');
+        col.style.cssText = `flex:1 1 0; min-width:0; display:flex; flex-direction:column; gap:${GAP};`;
+        ids.forEach((i) => col.appendChild(list[i].el));
+        return col;
+      };
+      const row = () => {
+        const r = document.createElement('div');
+        r.style.cssText = `display:flex; gap:${GAP}; align-items:stretch;`;
+        return r;
+      };
+      const groups = [];
+      if (arr.cols.length) {
+        const top = row();
+        if (arr.spans && arr.spans.length && arr.side != null) {
+          // The tallest column on its own, and beside it the other columns
+          // with the spanning panels under them.
+          const side = column(arr.cols[arr.side]);
+          side.style.flex = `0 0 calc((100% - ${cols - 1} * ${GAP}) / ${cols})`;
+          const block = document.createElement('div');
+          block.style.cssText = `flex:1 1 0; min-width:0; display:flex; flex-direction:column; gap:${GAP};`;
+          const sub = row();
+          const subCols = arr.cols.filter((c, j) => j !== arr.side).map(column);
+          subCols.forEach((c) => sub.appendChild(c));
+          block.appendChild(sub);
+          arr.spans.forEach((i) => block.appendChild(list[i].el));
+          if (arr.side === 0) top.append(side, block);
+          else top.append(block, side);
+          groups.push({ cols: subCols }, { cols: [side], block: { sub, spans: arr.spans.map((i) => list[i]) } });
+        } else {
+          const cs = arr.cols.map(column);
+          cs.forEach((c) => top.appendChild(c));
+          groups.push({ cols: cs });
+        }
+        this._root.appendChild(top);
+      }
+      (arr.full || []).forEach((i) => {
+        const r = row();
+        const c = column([i]);
+        r.appendChild(c);
+        this._root.appendChild(r);
+        groups.push({ cols: [c] });
       });
-      this._bands = bands;
+      this._groups = groups;
       if (!placed) {
         this._queue();
         return;
@@ -595,9 +569,11 @@ export class AutoLayoutCard extends HTMLElement {
     this._hashTimer = setTimeout(() => this._jumpTo(it), 350);
   }
 
-  // Each column's last open panel grows so the columns in a band end level,
-  // but only by a modest amount: a column that can't be evened out stays
-  // short rather than ending in a big empty panel.
+  // Each column's last open panel grows so the columns beside each other end
+  // level, but only by a modest amount: a column that can't be evened out
+  // stays short rather than ending in a big empty panel. Beside a tallest
+  // column, the columns under it level first, then the panels across them
+  // level with it.
   _stretch(cols, gap) {
     const set = (el, px) => {
       const p = el._panelEl;
@@ -612,24 +588,34 @@ export class AutoLayoutCard extends HTMLElement {
         p.style.transition = PANEL_TRANSITION;
       }
     };
-    (this._bands || []).forEach((b) => {
-      const runs = b.cols.map((col) => [...col.children].map((el) => this._items.find((it) => it.el === el)).filter(Boolean));
-      if (cols === 1 || runs.length < 2) {
-        runs.flat().forEach((it) => set(it.el, 0));
-        return;
-      }
-      const totals = runs.map((r) => r.reduce((s, it) => s + this._height(it.el), 0) + gap * Math.max(0, r.length - 1));
-      const end = Math.max(...totals);
+    const itemsIn = (col) => [...col.children].map((el) => this._items.find((it) => it.el === el)).filter(Boolean);
+    // Runs that should end level: each { items, base } where base is the
+    // height above its first item. Returns where they end once levelled.
+    const level = (runs) => {
+      const totals = runs.map((r) => r.base + (r.base && r.items.length ? gap : 0) + r.items.reduce((s, it) => s + this._height(it.el), 0) + gap * Math.max(0, r.items.length - 1));
+      const end = Math.max(0, ...totals);
       runs.forEach((r, i) => {
+        if (cols === 1 || runs.length < 2) {
+          r.items.forEach((it) => set(it.el, 0));
+          return;
+        }
         let grow = null;
-        for (let k = r.length - 1; k >= 0 && !grow; k -= 1) if (this._open(r[k].el)) grow = r[k];
-        r.forEach((it) => {
-          const extra = end - totals[i];
+        for (let k = r.items.length - 1; k >= 0 && !grow; k -= 1) if (this._open(r.items[k].el)) grow = r.items[k];
+        const extra = end - totals[i];
+        r.items.forEach((it) => {
           const h = this._height(it.el);
           const ok = extra > 1 && extra <= Math.max(160, h * 0.5);
           set(it.el, it === grow && ok ? h + extra : 0);
         });
       });
+      return end;
+    };
+    let subEnd = 0;
+    (this._groups || []).forEach((g) => {
+      const runs = g.cols.map((col) => ({ items: itemsIn(col), base: 0 }));
+      if (g.block) runs.push({ items: g.block.spans, base: subEnd });
+      const end = level(runs);
+      if (!g.block) subEnd = end;
     });
   }
 

@@ -82,7 +82,7 @@ const PanelFields = createFormEditor({
         { name: 'card_width', selector: { number: { min: 0, max: 800, step: 10, mode: 'box', unit_of_measurement: 'px' } } },
         { name: 'match_height', selector: { boolean: {} }, default: true },
         { name: 'frosted_cards', selector: { boolean: {} }, default: true },
-        { name: 'full_width', selector: { select: { mode: 'dropdown', options: [{ value: 'auto', label: 'Automatic' }, { value: 'yes', label: 'Always full width' }, { value: 'no', label: 'Never' }] } } },
+        { name: 'full_width', selector: { select: { mode: 'dropdown', options: [{ value: 'auto', label: 'Automatic' }, { value: 'wide', label: 'Wide (two columns or more)' }, { value: 'yes', label: 'Always full width' }, { value: 'no', label: 'Never' }] } } },
         { name: 'priority', selector: { select: { mode: 'dropdown', options: [{ value: 'auto', label: 'Work it out from the cards' }, { value: 'controls', label: 'Controls (goes higher)' }, { value: 'info', label: 'Information only' }] } } },
       ],
     },
@@ -100,7 +100,7 @@ const PanelFields = createFormEditor({
     card_width: 'Cards side by side when each can be at least (empty = automatic, 0 = always one per row)',
     match_height: "Line up this panel's bottom with the panels beside it",
     frosted_cards: 'Frosted cards',
-    full_width: 'Full width across an Auto Layout',
+    full_width: 'Width in an Auto Layout',
     priority: 'In an Auto Layout, counts as',
     color: 'Colour (icon and panel)',
     color_template: STC_COLOR_TEMPLATE_LABEL,
@@ -114,7 +114,7 @@ const PanelFields = createFormEditor({
     frosted_cards: "The cards inside are see-through with a heavy blur of what's behind them (acrylic). Turn off for solid cards.",
     match_height: "When sections sit side by side, the last panel in a shorter section grows so its bottom lines up with its neighbours'.",
     priority: 'Auto Layout puts panels with buttons and sliders above ones that only show information. Auto: lights, alarm, thermostats, fan, purifier, blinds and tiles with controls count as controls.',
-    full_width: 'Only inside an Auto Layout Card: the panel spans every column, with the panels before and after it balanced above and below. Automatic: a panel of 3 or more small cards (zones, cameras, tiles) goes full width when they would not fit side by side in one column.',
+    full_width: 'Only inside an Auto Layout Card. Automatic: a panel of 3 or more small cards (zones, cameras, tiles) that would not fit side by side in one column goes across the page, across the columns beside the tallest one, or into a column, whichever leaves the least blank space. Wide: never squeezed into one column (e.g. a table). Always full width: across the page, below the columns.',
     color_template: STC_COLOR_TEMPLATE_HELPER,
     summary: `A Home Assistant template, e.g. {{ states('vacuum.gregg') | title }}`,
   },
@@ -437,6 +437,36 @@ export class SectionPanelCard extends HTMLElement {
     const last = this._goEl && this._goEl.style.display !== 'none' ? this._goEl : this._grid;
     const g = last && last.getBoundingClientRect();
     return g && panel ? g.bottom + 12 - panel.getBoundingClientRect().top : this.getBoundingClientRect().height;
+  }
+
+  // About how tall the panel would be at another width: its cards wrap into
+  // more or fewer rows, and pictures (cameras) grow or shrink with their
+  // width. An Auto Layout Card uses this to try a panel in a column, across
+  // two columns or across the page before moving it.
+  _heightAt(width) {
+    const h = this._naturalHeight();
+    const g = this._grid;
+    const panel = this._panelEl;
+    const w = this._cardWidth();
+    if (!g || !panel || !(w > 0) || this._mode() === 'compact' || g.style.display === 'none') return h;
+    const kids = [...g.children].filter((el) => el.localName !== 'style' && el.getBoundingClientRect().height > 0);
+    const gw = g.getBoundingClientRect().width;
+    const gh = g.getBoundingClientRect().height;
+    const pw = panel.getBoundingClientRect().width;
+    if (!kids.length || !gw || !pw) return h;
+    const gap = parseFloat(getComputedStyle(g).columnGap) || 12;
+    const tracks = (W) => Math.max(1, Math.floor((W + gap) / (w + gap)));
+    const cell = (W, t) => (W - gap * (t - 1)) / t;
+    const t0 = tracks(gw);
+    const r0 = Math.ceil(kids.length / t0);
+    const W1 = Math.max(w, gw + (width - pw));
+    const t1 = tracks(W1);
+    const r1 = Math.ceil(kids.length / t1);
+    const row0 = (gh - gap * (r0 - 1)) / r0;
+    const types = (this.config.cards || []).map((c) => String((c && c.type) || '').replace(/^custom:/, '').replace(/-beta$/, ''));
+    const pictures = types.length && types.every((t) => /^(picture|picture-entity|picture-glance|camera-card)$/.test(t));
+    const row1 = pictures ? (row0 * cell(W1, t1)) / cell(gw, t0) : row0;
+    return Math.round(h - gh + r1 * row1 + gap * (r1 - 1));
   }
 
   // Whether the panel has nothing to show (its `empty_when` template, or a

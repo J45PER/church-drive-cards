@@ -3646,7 +3646,7 @@
           { name: "card_width", selector: { number: { min: 0, max: 800, step: 10, mode: "box", unit_of_measurement: "px" } } },
           { name: "match_height", selector: { boolean: {} }, default: true },
           { name: "frosted_cards", selector: { boolean: {} }, default: true },
-          { name: "full_width", selector: { select: { mode: "dropdown", options: [{ value: "auto", label: "Automatic" }, { value: "yes", label: "Always full width" }, { value: "no", label: "Never" }] } } },
+          { name: "full_width", selector: { select: { mode: "dropdown", options: [{ value: "auto", label: "Automatic" }, { value: "wide", label: "Wide (two columns or more)" }, { value: "yes", label: "Always full width" }, { value: "no", label: "Never" }] } } },
           { name: "priority", selector: { select: { mode: "dropdown", options: [{ value: "auto", label: "Work it out from the cards" }, { value: "controls", label: "Controls (goes higher)" }, { value: "info", label: "Information only" }] } } }
         ]
       }
@@ -3664,7 +3664,7 @@
       card_width: "Cards side by side when each can be at least (empty = automatic, 0 = always one per row)",
       match_height: "Line up this panel's bottom with the panels beside it",
       frosted_cards: "Frosted cards",
-      full_width: "Full width across an Auto Layout",
+      full_width: "Width in an Auto Layout",
       priority: "In an Auto Layout, counts as",
       color: "Colour (icon and panel)",
       color_template: STC_COLOR_TEMPLATE_LABEL,
@@ -3678,7 +3678,7 @@
       frosted_cards: "The cards inside are see-through with a heavy blur of what's behind them (acrylic). Turn off for solid cards.",
       match_height: "When sections sit side by side, the last panel in a shorter section grows so its bottom lines up with its neighbours'.",
       priority: "Auto Layout puts panels with buttons and sliders above ones that only show information. Auto: lights, alarm, thermostats, fan, purifier, blinds and tiles with controls count as controls.",
-      full_width: "Only inside an Auto Layout Card: the panel spans every column, with the panels before and after it balanced above and below. Automatic: a panel of 3 or more small cards (zones, cameras, tiles) goes full width when they would not fit side by side in one column.",
+      full_width: "Only inside an Auto Layout Card. Automatic: a panel of 3 or more small cards (zones, cameras, tiles) that would not fit side by side in one column goes across the page, across the columns beside the tallest one, or into a column, whichever leaves the least blank space. Wide: never squeezed into one column (e.g. a table). Always full width: across the page, below the columns.",
       color_template: STC_COLOR_TEMPLATE_HELPER,
       summary: `A Home Assistant template, e.g. {{ states('vacuum.gregg') | title }}`
     }
@@ -3961,6 +3961,35 @@
       const last = this._goEl && this._goEl.style.display !== "none" ? this._goEl : this._grid;
       const g = last && last.getBoundingClientRect();
       return g && panel ? g.bottom + 12 - panel.getBoundingClientRect().top : this.getBoundingClientRect().height;
+    }
+    // About how tall the panel would be at another width: its cards wrap into
+    // more or fewer rows, and pictures (cameras) grow or shrink with their
+    // width. An Auto Layout Card uses this to try a panel in a column, across
+    // two columns or across the page before moving it.
+    _heightAt(width) {
+      const h = this._naturalHeight();
+      const g = this._grid;
+      const panel = this._panelEl;
+      const w = this._cardWidth();
+      if (!g || !panel || !(w > 0) || this._mode() === "compact" || g.style.display === "none") return h;
+      const kids = [...g.children].filter((el) => el.localName !== "style" && el.getBoundingClientRect().height > 0);
+      const gw = g.getBoundingClientRect().width;
+      const gh = g.getBoundingClientRect().height;
+      const pw = panel.getBoundingClientRect().width;
+      if (!kids.length || !gw || !pw) return h;
+      const gap = parseFloat(getComputedStyle(g).columnGap) || 12;
+      const tracks = (W) => Math.max(1, Math.floor((W + gap) / (w + gap)));
+      const cell = (W, t) => (W - gap * (t - 1)) / t;
+      const t0 = tracks(gw);
+      const r0 = Math.ceil(kids.length / t0);
+      const W1 = Math.max(w, gw + (width - pw));
+      const t1 = tracks(W1);
+      const r1 = Math.ceil(kids.length / t1);
+      const row0 = (gh - gap * (r0 - 1)) / r0;
+      const types = (this.config.cards || []).map((c) => String(c && c.type || "").replace(/^custom:/, "").replace(/-beta$/, ""));
+      const pictures = types.length && types.every((t) => /^(picture|picture-entity|picture-glance|camera-card)$/.test(t));
+      const row1 = pictures ? row0 * cell(W1, t1) / cell(gw, t0) : row0;
+      return Math.round(h - gh + r1 * row1 + gap * (r1 - 1));
     }
     // Whether the panel has nothing to show (its `empty_when` template, or a
     // card inside saying so with a `cd-card-empty` event). An Auto Layout with
@@ -8293,6 +8322,113 @@
     });
   }
 
+  // src/arrange.js
+  function columnsCost(totals, gap, spanH) {
+    const top = Math.max(...totals);
+    if (spanH == null) return top;
+    const at2 = totals.indexOf(top);
+    const others = Math.max(0, ...totals.filter((t, j) => j !== at2));
+    return Math.max(top, others + (others > 0 ? gap : 0) + spanH);
+  }
+  function balance(heights, k, gap, keep, spanH = null) {
+    const n = heights.length;
+    k = Math.max(1, Math.min(k, n));
+    const totalsOf = (cols2) => cols2.map((c) => c.reduce((s, i) => s + heights[i], 0) + gap * Math.max(0, c.length - 1));
+    const cost = (cols2) => columnsCost(totalsOf(cols2), gap, spanH);
+    let best = null;
+    let bestCost = Infinity;
+    if (n <= 11) {
+      const lab = new Array(n).fill(0);
+      const sums = new Array(k).fill(0);
+      const counts = new Array(k).fill(0);
+      const walk = (i, used) => {
+        if (i === n) {
+          if (used !== k) return;
+          const c = columnsCost(sums.map((s, j) => s + gap * Math.max(0, counts[j] - 1)), gap, spanH);
+          if (c < bestCost - 4) {
+            bestCost = c;
+            best = lab.slice();
+          }
+          return;
+        }
+        if (n - i < k - used) return;
+        for (let j = 0; j <= Math.min(used, k - 1); j += 1) {
+          sums[j] += heights[i];
+          counts[j] += 1;
+          lab[i] = j;
+          const partial = sums[j] + gap * (counts[j] - 1);
+          if (partial < bestCost - 4) walk(i + 1, Math.max(used, j + 1));
+          sums[j] -= heights[i];
+          counts[j] -= 1;
+        }
+      };
+      walk(0, 0);
+    }
+    let cols;
+    if (best) {
+      cols = Array.from({ length: k }, () => []);
+      best.forEach((j, i) => cols[j].push(i));
+    } else {
+      cols = Array.from({ length: k }, () => []);
+      const sums = new Array(k).fill(0);
+      heights.forEach((h, i) => {
+        const j = sums.indexOf(Math.min(...sums));
+        cols[j].push(i);
+        sums[j] += h + gap;
+      });
+    }
+    if (keep && keep.length === k && keep.flat().length === n && cost(keep) <= cost(cols) + 24) return keep;
+    return cols;
+  }
+  function arrange(items, k, gap, prev) {
+    const idx = items.map((it, i) => i);
+    if (k <= 1) return { cols: [idx], side: null, spans: [], full: [] };
+    const wide = idx.filter((i) => items[i].wide && !items[i].full);
+    const cand = wide.slice(0, 3);
+    const modes = k >= 3 ? ["full", "col", "span"] : ["full", "col"];
+    const fullH = (list) => list.reduce((s, i) => s + gap + items[i].hFull, 0);
+    const spanHOf = (list) => list.length ? list.reduce((s, i) => s + items[i].hSpan, 0) + gap * (list.length - 1) : null;
+    const costOf = (a) => {
+      const totals = a.cols.map((c) => c.reduce((s, i) => s + items[i].h, 0) + gap * Math.max(0, c.length - 1));
+      const inCols = cand.filter((i) => a.cols.some((c) => c.includes(i))).length;
+      return columnsCost(totals, gap, spanHOf(a.spans)) + fullH(a.full) + 40 * inCols;
+    };
+    let best = null;
+    const total = modes.length ** cand.length;
+    for (let m = 0; m < total; m += 1) {
+      const pick = {};
+      let x = m;
+      cand.forEach((i) => {
+        pick[i] = modes[x % modes.length];
+        x = Math.floor(x / modes.length);
+      });
+      if (cand.some((i) => items[i].noCol && pick[i] === "col")) continue;
+      const full = idx.filter((i) => items[i].full || items[i].wide && (pick[i] || "full") === "full");
+      const spans = idx.filter((i) => pick[i] === "span");
+      const rest = idx.filter((i) => !full.includes(i) && !spans.includes(i));
+      if (spans.length && rest.length < k) continue;
+      if (!rest.length) {
+        const a2 = { cols: [], side: null, spans: [], full };
+        const c2 = costOf(a2);
+        if (!best || c2 < best.cost) best = { ...a2, cost: c2 };
+        continue;
+      }
+      const split = balance(rest.map((i) => items[i].h), k, gap, null, spanHOf(spans)).map((c2) => c2.map((j) => rest[j]));
+      let side = null;
+      if (spans.length) {
+        const totals = split.map((c2) => c2.reduce((s, i) => s + items[i].h, 0) + gap * Math.max(0, c2.length - 1));
+        side = totals.indexOf(Math.max(...totals));
+      }
+      const a = { cols: split, side, spans, full };
+      const c = costOf(a);
+      if (!best || c < best.cost - 4) best = { ...a, cost: c };
+    }
+    const { cost, ...out } = best;
+    const ok = (a) => a && Array.isArray(a.cols) && [...a.cols.flat(), ...a.spans || [], ...a.full || []].sort((p, q) => p - q).join() === idx.join() && (!a.cols.length || a.cols.length === Math.min(k, a.cols.flat().length));
+    if (ok(prev) && items.every((it, i) => !it.full || prev.full.includes(i)) && costOf(prev) <= cost + 24) return prev;
+    return out;
+  }
+
   // src/auto-layout-card.js
   var helpersPromise2;
   function cardHelpers2() {
@@ -8474,55 +8610,6 @@
     const bar = sr && (sr.querySelector(".header") || sr.querySelector("app-header") || sr.querySelector("app-toolbar"));
     const r = bar && bar.getBoundingClientRect();
     return r && r.height ? Math.max(0, r.bottom) : 56;
-  }
-  function balance(heights, k, gap, keep) {
-    const n = heights.length;
-    k = Math.max(1, Math.min(k, n));
-    const cost = (cols2) => Math.max(...cols2.map((c) => c.reduce((s, i) => s + heights[i], 0) + gap * Math.max(0, c.length - 1)));
-    let best = null;
-    let bestCost = Infinity;
-    if (n <= 11) {
-      const lab = new Array(n).fill(0);
-      const sums = new Array(k).fill(0);
-      const counts = new Array(k).fill(0);
-      const walk = (i, used) => {
-        if (i === n) {
-          if (used !== k) return;
-          const c = Math.max(...sums.map((s, j) => s + gap * Math.max(0, counts[j] - 1)));
-          if (c < bestCost - 4) {
-            bestCost = c;
-            best = lab.slice();
-          }
-          return;
-        }
-        if (n - i < k - used) return;
-        for (let j = 0; j <= Math.min(used, k - 1); j += 1) {
-          sums[j] += heights[i];
-          counts[j] += 1;
-          lab[i] = j;
-          const partial = sums[j] + gap * (counts[j] - 1);
-          if (partial < bestCost - 4) walk(i + 1, Math.max(used, j + 1));
-          sums[j] -= heights[i];
-          counts[j] -= 1;
-        }
-      };
-      walk(0, 0);
-    }
-    let cols;
-    if (best) {
-      cols = Array.from({ length: k }, () => []);
-      best.forEach((j, i) => cols[j].push(i));
-    } else {
-      cols = Array.from({ length: k }, () => []);
-      const sums = new Array(k).fill(0);
-      heights.forEach((h, i) => {
-        const j = sums.indexOf(Math.min(...sums));
-        cols[j].push(i);
-        sums[j] += h + gap;
-      });
-    }
-    if (keep && keep.length === k && keep.flat().length === n && cost(keep) <= cost(cols) + 24) return keep;
-    return cols;
   }
   var AutoLayoutCardEditor = class extends HTMLElement {
     setConfig(config) {
@@ -8718,66 +8805,93 @@
         this._trimTail();
       });
     }
-    // Work out bands (split at full-width items) and columns; only move cards
-    // when the arrangement actually changes, so cameras etc. aren't reloaded.
+    // Work out the columns, the panels across the page, and any panels across
+    // the columns beside the tallest one; only move cards when the arrangement
+    // actually changes, so cameras etc. aren't reloaded.
     _layout(force) {
       if (!this.isConnected || !this._items.length) return;
       const cols = this._columns();
       const gap = this._gap();
-      const colWidth = ((this.getBoundingClientRect().width || window.innerWidth) - gap * (cols - 1)) / cols;
-      const order = this.config.empty_last ? [...this._items.filter((it) => !it.el._empty), ...this._items.filter((it) => it.el._empty)] : this._items;
-      const wide = cols > 1 ? order.filter((it) => this._full(it, colWidth)) : [];
-      const rest = order.filter((it) => !wide.includes(it));
-      const bands = [];
-      if (rest.length) bands.push({ items: rest });
-      const first = this.config.controls_first !== false;
-      [...wide.filter((it) => !first || it.controls), ...wide.filter((it) => first && !it.controls)].forEach((it) => bands.push({ items: [it], full: true }));
-      if (this.config.controls_first !== false) {
-        bands.forEach((b) => {
-          b.items = [...b.items.filter((it) => it.controls), ...b.items.filter((it) => !it.controls)];
-        });
-      }
+      const width = this.getBoundingClientRect().width || window.innerWidth;
+      const colWidth = (width - gap * (cols - 1)) / cols;
+      const spanWidth = colWidth * (cols - 1) + gap * Math.max(0, cols - 2);
+      let list = this.config.empty_last ? [...this._items.filter((it) => !it.el._empty), ...this._items.filter((it) => it.el._empty)] : this._items;
+      if (this.config.controls_first !== false) list = [...list.filter((it) => it.controls), ...list.filter((it) => !it.controls)];
+      const forced = (it) => it.conf.full_width === true || it.conf.full_width === "yes";
       const placed = this._items.every((it) => it.el.isConnected);
-      const planKey = `${location.pathname}|${cols}|${bands.map((b) => b.items.map((it) => it.conf.title || it.conf.type).join(",")).join("/")}`;
-      const saved = planStore()[planKey];
-      bands.forEach((b, n) => {
-        if (b.full || cols === 1) {
-          b.split = [b.items.map((it, i) => i)];
-          return;
-        }
-        if (!placed) {
-          const s = saved && saved[n];
-          const ok = Array.isArray(s) && s.flat().length === b.items.length && s.length <= cols;
-          b.split = ok ? s : [b.items.map((it, i) => i)];
-          return;
-        }
-        const key = b.items.map((it) => this._items.indexOf(it)).join(",");
-        const prev = this._prevSplits && this._prevSplits[key];
+      const planKey = `v2|${location.pathname}|${cols}|${list.map((it) => it.conf.title || it.conf.type).join(",")}`;
+      const key = `${cols}|${list.map((it) => this._items.indexOf(it)).join(",")}`;
+      const prev = this._prevArr && this._prevArr.key === key ? this._prevArr.arr : null;
+      let arr;
+      if (cols === 1) {
+        arr = { cols: [list.map((it, i) => i)], side: null, spans: [], full: [] };
+      } else if (!placed) {
+        const s = planStore()[planKey];
+        const ok = s && Array.isArray(s.cols) && [...s.cols.flat(), ...s.spans || [], ...s.full || []].length === list.length;
+        arr = ok ? s : { cols: [list.map((it, i) => i)], side: null, spans: [], full: [] };
+      } else {
         const settled = performance.now() > this._settleUntil && cols === this._cols;
-        b.split = settled && prev && prev.length === Math.min(cols, b.items.length) ? prev : balance(b.items.map((it) => this._height(it.el)), cols, gap, prev);
-      });
-      this._prevSplits = {};
-      bands.forEach((b) => {
-        this._prevSplits[b.items.map((it) => this._items.indexOf(it)).join(",")] = b.split;
-      });
-      if (placed) planRemember(planKey, bands.map((b) => b.split));
-      const plan = `${cols}|${bands.map((b) => `${b.full ? "F" : ""}${b.items.map((it) => this._items.indexOf(it)).join("-")}:${b.split.map((c) => c.join(".")).join(",")}`).join("/")}`;
+        const at2 = (it, w) => it.el._heightAt ? it.el._heightAt(w) : this._height(it.el);
+        arr = settled && prev ? prev : arrange(
+          list.map((it) => {
+            const full = forced(it);
+            const noCol = it.conf.full_width === "wide";
+            const wide = !full && (noCol || this._full(it, colWidth));
+            return { h: at2(it, colWidth), full, wide, noCol, hSpan: wide ? at2(it, spanWidth) : 0, hFull: full || wide ? at2(it, width) : 0 };
+          }),
+          cols,
+          gap,
+          prev
+        );
+        planRemember(planKey, arr);
+      }
+      this._prevArr = { key, arr };
+      const plan = `${key}|${JSON.stringify(arr)}`;
       if (force || plan !== this._plan) {
         this._plan = plan;
         this._root.innerHTML = "";
-        bands.forEach((b) => {
-          const row3 = document.createElement("div");
-          row3.style.cssText = `display:flex; gap:${GAP}; align-items:stretch;`;
-          b.cols = b.split.map((idx) => {
-            const col = document.createElement("div");
-            col.style.cssText = `flex:1 1 0; min-width:0; display:flex; flex-direction:column; gap:${GAP};`;
-            idx.forEach((i) => col.appendChild(b.items[i].el));
-            row3.appendChild(col);
-            return col;
-          });
-          this._root.appendChild(row3);
+        const column = (ids) => {
+          const col = document.createElement("div");
+          col.style.cssText = `flex:1 1 0; min-width:0; display:flex; flex-direction:column; gap:${GAP};`;
+          ids.forEach((i) => col.appendChild(list[i].el));
+          return col;
+        };
+        const row3 = () => {
+          const r = document.createElement("div");
+          r.style.cssText = `display:flex; gap:${GAP}; align-items:stretch;`;
+          return r;
+        };
+        const groups = [];
+        if (arr.cols.length) {
+          const top = row3();
+          if (arr.spans && arr.spans.length && arr.side != null) {
+            const side = column(arr.cols[arr.side]);
+            side.style.flex = `0 0 calc((100% - ${cols - 1} * ${GAP}) / ${cols})`;
+            const block = document.createElement("div");
+            block.style.cssText = `flex:1 1 0; min-width:0; display:flex; flex-direction:column; gap:${GAP};`;
+            const sub = row3();
+            const subCols = arr.cols.filter((c, j) => j !== arr.side).map(column);
+            subCols.forEach((c) => sub.appendChild(c));
+            block.appendChild(sub);
+            arr.spans.forEach((i) => block.appendChild(list[i].el));
+            if (arr.side === 0) top.append(side, block);
+            else top.append(block, side);
+            groups.push({ cols: subCols }, { cols: [side], block: { sub, spans: arr.spans.map((i) => list[i]) } });
+          } else {
+            const cs = arr.cols.map(column);
+            cs.forEach((c) => top.appendChild(c));
+            groups.push({ cols: cs });
+          }
+          this._root.appendChild(top);
+        }
+        (arr.full || []).forEach((i) => {
+          const r = row3();
+          const c = column([i]);
+          r.appendChild(c);
+          this._root.appendChild(r);
+          groups.push({ cols: [c] });
         });
-        this._bands = bands;
+        this._groups = groups;
         if (!placed) {
           this._queue();
           return;
@@ -8803,9 +8917,11 @@
       clearTimeout(this._hashTimer);
       this._hashTimer = setTimeout(() => this._jumpTo(it), 350);
     }
-    // Each column's last open panel grows so the columns in a band end level,
-    // but only by a modest amount: a column that can't be evened out stays
-    // short rather than ending in a big empty panel.
+    // Each column's last open panel grows so the columns beside each other end
+    // level, but only by a modest amount: a column that can't be evened out
+    // stays short rather than ending in a big empty panel. Beside a tallest
+    // column, the columns under it level first, then the panels across them
+    // level with it.
     _stretch(cols, gap) {
       const set = (el, px) => {
         const p = el._panelEl;
@@ -8820,24 +8936,32 @@
           p.style.transition = PANEL_TRANSITION;
         }
       };
-      (this._bands || []).forEach((b) => {
-        const runs = b.cols.map((col) => [...col.children].map((el) => this._items.find((it) => it.el === el)).filter(Boolean));
-        if (cols === 1 || runs.length < 2) {
-          runs.flat().forEach((it) => set(it.el, 0));
-          return;
-        }
-        const totals = runs.map((r) => r.reduce((s, it) => s + this._height(it.el), 0) + gap * Math.max(0, r.length - 1));
-        const end = Math.max(...totals);
+      const itemsIn = (col) => [...col.children].map((el) => this._items.find((it) => it.el === el)).filter(Boolean);
+      const level = (runs) => {
+        const totals = runs.map((r) => r.base + (r.base && r.items.length ? gap : 0) + r.items.reduce((s, it) => s + this._height(it.el), 0) + gap * Math.max(0, r.items.length - 1));
+        const end = Math.max(0, ...totals);
         runs.forEach((r, i) => {
+          if (cols === 1 || runs.length < 2) {
+            r.items.forEach((it) => set(it.el, 0));
+            return;
+          }
           let grow = null;
-          for (let k = r.length - 1; k >= 0 && !grow; k -= 1) if (this._open(r[k].el)) grow = r[k];
-          r.forEach((it) => {
-            const extra = end - totals[i];
+          for (let k = r.items.length - 1; k >= 0 && !grow; k -= 1) if (this._open(r.items[k].el)) grow = r.items[k];
+          const extra = end - totals[i];
+          r.items.forEach((it) => {
             const h = this._height(it.el);
             const ok = extra > 1 && extra <= Math.max(160, h * 0.5);
             set(it.el, it === grow && ok ? h + extra : 0);
           });
         });
+        return end;
+      };
+      let subEnd = 0;
+      (this._groups || []).forEach((g) => {
+        const runs = g.cols.map((col) => ({ items: itemsIn(col), base: 0 }));
+        if (g.block) runs.push({ items: g.block.spans, base: subEnd });
+        const end = level(runs);
+        if (!g.block) subEnd = end;
       });
     }
     // ---- Page header: the title and any alerts.
