@@ -6,7 +6,9 @@
 - People: how many people live here. Its attributes say who they are and who
   gets each kind of notification, for automations and templates:
   `assign` ({kind: [first names]}), `everyone` ({kind: true when set to
-  everyone}) and `people` (name, first, entity_id, admin, home, list).
+  everyone}) and `people` (name, first, entity_id, admin, home, place, zone,
+  places, list): `place` is where they are in their own words (Home, Work,
+  a zone's name, Away), `zone` the zone's name when it's not Home.
 """
 
 from __future__ import annotations
@@ -88,7 +90,7 @@ class PeopleSensor(SensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         people = [
-            {k: p[k] for k in ("name", "first", "entity_id", "admin", "home", "list")}
+            {k: p[k] for k in ("name", "first", "entity_id", "admin", "home", "place", "zone", "places", "list")}
             for p in self._people.people()
         ]
         return {

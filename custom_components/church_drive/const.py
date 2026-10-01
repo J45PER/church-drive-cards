@@ -31,3 +31,8 @@ SERVICE_NOTIFY = "notify"
 WS_PEOPLE = "church_drive/people"
 WS_PEOPLE_ASSIGN = "church_drive/people/assign"
 WS_PEOPLE_PHONE = "church_drive/people/phone"
+WS_PEOPLE_PLACES = "church_drive/people/places"
+
+# Camera events (events.py).
+WS_CAMERA_EVENTS = "church_drive/camera/events"
+WS_CAMERA_SETTINGS = "church_drive/camera/settings"

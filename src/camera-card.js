@@ -18,22 +18,17 @@
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
-import { kitEsc, kitStateHistory } from './card-kit.js';
+import { kitEsc } from './card-kit.js';
 import { openPopup } from './popup.js';
+import { KINDS, STAGE_CSS, stageMedia, liveElement, openCameraEvents, cameraBase } from './camera-events.js';
 
-const KINDS = {
-  ding: ['Doorbell', '#29b6f6', '#012'],
-  motion: ['Motion', '#5c6bc0', '#fff'],
-  interval: ['Snapshot', 'rgba(255,255,255,0.22)', '#fff'],
-  'on-demand': ['Snapshot', 'rgba(255,255,255,0.22)', '#fff'],
-};
 const OLD = ['#ffa726', '#221'];
 
 // When each camera last asked for a snapshot from this browser, so two cards
 // for one camera don't both ask.
 const asked = new Map();
 
-const CAM_CSS = `
+const CAM_CSS = `${STAGE_CSS}
   .cc-tile { position:relative; display:block; width:100%; aspect-ratio:16/9; border-radius:var(--ha-card-border-radius, 14px); overflow:hidden; cursor:pointer;
     background:linear-gradient(160deg, #5d6b7d, #2f3946 60%, #46503c); box-shadow:0 3px 10px rgba(0,0,0,0.45); }
   .cc-tile img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; transition:opacity .4s ease; }
@@ -41,23 +36,7 @@ const CAM_CSS = `
   .cc-name { font-weight:700; font-size:0.98rem; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-shadow:0 1px 3px rgba(0,0,0,0.6); }
   .cc-chip { flex:none; font-size:0.7rem; font-weight:700; border-radius:999px; padding:2px 8px; white-space:nowrap; }
   .cc-tr { position:absolute; top:8px; right:8px; display:flex; gap:6px; }
-  .cc-ib { width:28px; height:28px; border-radius:50%; background:rgba(0,0,0,0.45); color:#fff; display:flex; align-items:center; justify-content:center; }
-  .cc-pop-media { position:relative; border-radius:14px; overflow:hidden; background:#000; aspect-ratio:16/9; touch-action:none; cursor:grab; user-select:none; }
-  .cc-stage { position:absolute; left:0; top:0; transform-origin:0 0; will-change:transform; }
-  .cc-stage > * { display:block; width:100%; height:100%; pointer-events:none; }
-  .cc-stage img { object-fit:cover; }
-  .cc-mute { position:absolute; top:8px; right:8px; border:none; cursor:pointer; z-index:1; }
   .cc-pop-sub { font-size:0.8rem; color:var(--secondary-text-color); margin:-2px 0 10px; }
-  .cc-btns { display:flex; gap:10px; margin:14px 0 6px; }
-  .cc-btn { flex:1 1 0; min-width:0; border:none; border-radius:14px; padding:10px 4px; cursor:pointer; font:inherit; font-size:0.78rem; font-weight:700;
-    background:rgba(127,127,127,0.16); color:var(--primary-text-color); display:flex; flex-direction:column; align-items:center; gap:4px; }
-  .cc-btn.talk { background:#43a047; color:#fff; }
-  .cc-btn.talk.on { background:#e53935; }
-  .cc-btn[disabled] { opacity:.5; cursor:default; }
-  .cc-ev { display:flex; align-items:center; gap:10px; padding:8px 2px; font-size:0.86rem; }
-  .cc-ev + .cc-ev { border-top:1px solid var(--divider-color, rgba(127,127,127,0.18)); }
-  .cc-ev-ico { flex:none; width:32px; height:32px; border-radius:10px; display:flex; align-items:center; justify-content:center; }
-  .cc-ev-when { color:var(--secondary-text-color); font-size:0.78rem; }
 `;
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -70,17 +49,6 @@ export function camAge(ms, now = Date.now()) {
   if (s < 86400) return `${Math.floor(s / 3600)} h`;
   const d = new Date(ms);
   return `${d.toLocaleDateString('en-GB', { weekday: 'short' })} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-function when(ms, now = new Date()) {
-  const d = new Date(ms);
-  const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const diff = Math.round((today - day) / 86400000);
-  const t = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  if (diff === 0) return `${t} today`;
-  if (diff === 1) return `Yesterday ${t}`;
-  return `${d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} ${t}`;
 }
 
 // The entities that go with a camera.
@@ -267,7 +235,7 @@ export class CameraCard extends HTMLElement {
     if (this._pop) return;
     const c = this.config;
     const content = document.createElement('div');
-    content.innerHTML = `<div class="cc-pop-sub"></div><div class="cc-pop-media"></div><div class="cc-btns"></div><div class="cc-evs"></div>`;
+    content.innerHTML = `<div class="cc-pop-sub"></div><div class="cc-pop-media"></div><div class="cc-btns"></div>`;
     this._popEl = content;
     this._talking = false;
     this._pop = openPopup(this, {
@@ -291,6 +259,10 @@ export class CameraCard extends HTMLElement {
         this._talking = !this._talking;
         this._media();
         this._renderPop();
+      } else if (act === 'events') {
+        const base = cameraBase(this._hass, this.config.entity);
+        const aspect = this._aspect();
+        this._pop.close().then(() => base && openCameraEvents(this, this._hass, base, { title: this._name(), aspect }));
       } else if (act === 'snap') {
         this._maybeRefresh(true);
       } else if (act === 'light' && this._f.light) {
@@ -299,7 +271,12 @@ export class CameraCard extends HTMLElement {
     });
     this._media();
     this._renderPop();
-    this._events();
+  }
+
+  // The picture's shape (width / height): the doorbell's is square.
+  _aspect() {
+    const img = this._img;
+    return img && img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : 16 / 9;
   }
 
   // Live video: the go2rtc stream (with the microphone while talking) when
@@ -318,160 +295,15 @@ export class CameraCard extends HTMLElement {
       el.setConfig({ url: c.talk_stream, media: this._talking ? 'video,audio,microphone' : 'video,audio', muted: false, ui: false });
       el.hass = this._hass;
     } else {
-      const st = this._f && this._f.live && this._hass.states[this._f.live];
-      if (st && customElements.get('ha-camera-stream')) {
-        el = document.createElement('ha-camera-stream');
-        el.hass = this._hass;
-        el.stateObj = st;
-        el.controls = false;
-        el.muted = false;
-      } else {
-        try {
-          const helpers = await window.loadCardHelpers();
-          el = helpers.createCardElement({ type: 'picture-entity', entity: this._f.live, camera_view: 'live', show_name: false, show_state: false });
-          el.hass = this._hass;
-        } catch (err) {
-          el = document.createElement('img');
-          if (this._img && this._img.src) el.src = this._img.src;
-        }
+      try {
+        el = await liveElement(this._hass, this._f && this._f.live);
+      } catch (err) {
+        el = document.createElement('img');
+        if (this._img && this._img.src) el.src = this._img.src;
       }
     }
     if (!this._popEl) return;
-    this._stage(box, el);
-  }
-
-  // The video at its own shape (the doorbell's is square, head to toe),
-  // filling the 16:9 box: drag to look around, pinch, scroll or double-tap
-  // to zoom.
-  _stage(box, el) {
-    const stage = document.createElement('div');
-    stage.className = 'cc-stage';
-    stage.appendChild(el);
-    const mute = document.createElement('button');
-    mute.className = 'cc-ib cc-mute';
-    mute.setAttribute('aria-label', 'Sound');
-    const setMute = () => {
-      mute.innerHTML = iconHtml(el.muted ? 'mdi:volume-off' : 'mdi:volume-high', { size: '17px' });
-      hydrateIcons(mute);
-    };
-    mute.addEventListener('click', (ev) => {
-      ev.stopPropagation();
-      el.muted = !el.muted;
-      setMute();
-    });
-    box.append(stage, mute);
-    setMute();
-    const img = this._img;
-    let aspect = img && img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : 16 / 9;
-    const v = { x: 0, y: 0, z: 1, w: 0, h: 0 };
-    // clientWidth/Height, not the on-screen rectangle: the pop-up opens with
-    // a little zoom, which would make the first measurement too small.
-    const size = () => ({ width: box.clientWidth, height: box.clientHeight });
-    const clamp = () => {
-      const r = size();
-      v.x = Math.min(0, Math.max(r.width - v.w * v.z, v.x));
-      v.y = Math.min(0, Math.max(r.height - v.h * v.z, v.y));
-      stage.style.width = `${v.w * v.z}px`;
-      stage.style.height = `${v.h * v.z}px`;
-      stage.style.transform = `translate(${v.x}px, ${v.y}px)`;
-    };
-    const fit = () => {
-      const r = size();
-      if (!r.width) return;
-      const first = !v.w;
-      // Cover the box: as wide as it for a tall picture, as tall for a wide one.
-      if (aspect < r.width / r.height) {
-        v.w = r.width;
-        v.h = r.width / aspect;
-      } else {
-        v.h = r.height;
-        v.w = r.height * aspect;
-      }
-      if (first) {
-        v.x = (r.width - v.w) / 2;
-        v.y = (r.height - v.h) / 2;
-      }
-      clamp();
-    };
-    const zoomAt = (z, cx, cy) => {
-      const r = box.getBoundingClientRect();
-      const px = cx - r.left;
-      const py = cy - r.top;
-      const nz = Math.min(4, Math.max(1, z));
-      v.x = px - ((px - v.x) * nz) / v.z;
-      v.y = py - ((py - v.y) * nz) / v.z;
-      v.z = nz;
-      clamp();
-    };
-    const pts = new Map();
-    let pinch = null;
-    box.addEventListener('pointerdown', (ev) => {
-      if (ev.target.closest('.cc-mute')) return;
-      box.setPointerCapture(ev.pointerId);
-      pts.set(ev.pointerId, [ev.clientX, ev.clientY]);
-      if (pts.size === 2) {
-        const [a, b] = [...pts.values()];
-        pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), z: v.z };
-      }
-    });
-    box.addEventListener('pointermove', (ev) => {
-      const prev = pts.get(ev.pointerId);
-      if (!prev) return;
-      pts.set(ev.pointerId, [ev.clientX, ev.clientY]);
-      if (pts.size === 2 && pinch) {
-        const [a, b] = [...pts.values()];
-        zoomAt((pinch.z * Math.hypot(a[0] - b[0], a[1] - b[1])) / (pinch.d || 1), (a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
-      } else if (pts.size === 1) {
-        v.x += ev.clientX - prev[0];
-        v.y += ev.clientY - prev[1];
-        clamp();
-      }
-    });
-    const up = (ev) => {
-      pts.delete(ev.pointerId);
-      if (pts.size < 2) pinch = null;
-    };
-    box.addEventListener('pointerup', up);
-    box.addEventListener('pointercancel', up);
-    box.addEventListener(
-      'wheel',
-      (ev) => {
-        ev.preventDefault();
-        zoomAt(v.z * (ev.deltaY < 0 ? 1.15 : 1 / 1.15), ev.clientX, ev.clientY);
-      },
-      { passive: false },
-    );
-    box.addEventListener('dblclick', (ev) => zoomAt(v.z > 1.4 ? 1 : 2, ev.clientX, ev.clientY));
-    if (window.ResizeObserver) new ResizeObserver(fit).observe(box);
-    requestAnimationFrame(fit);
-    // Once the video is playing, use its own shape (it's inside the
-    // player's shadow roots).
-    const findVideo = (root, depth = 0) => {
-      if (!root || depth > 6) return null;
-      const vid = root.querySelector && root.querySelector('video');
-      if (vid) return vid;
-      for (const n of root.querySelectorAll ? root.querySelectorAll('*') : []) {
-        const f = n.shadowRoot && findVideo(n.shadowRoot, depth + 1);
-        if (f) return f;
-      }
-      return null;
-    };
-    let tries = 0;
-    const look = () => {
-      if (!box.isConnected || tries++ > 30) return;
-      const vid = findVideo(el.shadowRoot || el);
-      if (vid && vid.videoWidth && vid.videoHeight) {
-        const a = vid.videoWidth / vid.videoHeight;
-        if (Math.abs(a - aspect) > 0.02) {
-          aspect = a;
-          v.w = 0;
-          fit();
-        }
-        return;
-      }
-      setTimeout(look, 500);
-    };
-    setTimeout(look, 500);
+    stageMedia(box, el, this._aspect());
   }
 
   _renderPop() {
@@ -486,6 +318,7 @@ export class CameraCard extends HTMLElement {
     const lightOn = f.light && h && h.states[f.light].state === 'on';
     const lightName = f.light && h ? String(h.states[f.light].attributes.friendly_name || 'Light') : '';
     const btns = [];
+    if (!c.demo && cameraBase(h, c.entity)) btns.push(`<button class="cc-btn main" data-act="events">${iconHtml('mdi:history', { size: '22px' })}Events</button>`);
     if (c.talk_stream) btns.push(`<button class="cc-btn talk${this._talking ? ' on' : ''}" data-act="talk">${iconHtml(this._talking ? 'mdi:microphone' : 'mdi:microphone-outline', { size: '22px' })}${this._talking ? 'Talking… tap to stop' : 'Talk'}</button>`);
     if (f.button || c.demo) btns.push(`<button class="cc-btn" data-act="snap">${iconHtml('mdi:camera', { size: '22px' })}Snapshot</button>`);
     if (f.light) btns.push(`<button class="cc-btn" data-act="light" style="${lightOn ? 'background:color-mix(in srgb, #ffb300 30%, transparent);' : ''}">${iconHtml(lightOn ? 'mdi:lightbulb-on' : 'mdi:lightbulb-outline', { size: '22px' })}${kitEsc(lightName)} ${lightOn ? 'on' : 'off'}</button>`);
@@ -497,48 +330,6 @@ export class CameraCard extends HTMLElement {
       box.style.display = html ? '' : 'none';
       hydrateIcons(box);
     }
-  }
-
-  // Recent doorbell presses and motion, from the event entities' history.
-  async _events() {
-    const p = this._popEl;
-    const f = this._f || {};
-    const box = p && p.querySelector('.cc-evs');
-    if (!box) return;
-    let list = [];
-    if (this.config.demo) {
-      const now = Date.now();
-      list = [
-        ['ding', now - 300000],
-        ['motion', now - 2 * 3600e3],
-        ['motion', now - 15 * 3600e3],
-      ];
-    } else {
-      const ids = [f.ding, f.motion].filter(Boolean);
-      if (!ids.length) return;
-      try {
-        const hist = await kitStateHistory(this._hass, ids, 48);
-        ids.forEach((id) =>
-          (hist[id] || []).forEach(([, s]) => {
-            const ms = Date.parse(s);
-            if (!isNaN(ms)) list.push([id === f.ding ? 'ding' : 'motion', ms]);
-          }),
-        );
-      } catch (err) {
-        return;
-      }
-    }
-    list = [...new Map(list.map((e) => [`${e[0]}${e[1]}`, e])).values()].sort((a, b) => b[1] - a[1]).slice(0, 8);
-    if (!this._popEl) return;
-    box.innerHTML = list.length
-      ? list
-          .map(([k, ms]) => {
-            const [label, col] = KINDS[k];
-            return `<div class="cc-ev"><div class="cc-ev-ico" style="background:color-mix(in srgb, ${col} 25%, transparent); color:${col};">${iconHtml(k === 'ding' ? 'mdi:doorbell' : 'mdi:motion-sensor', { size: '18px' })}</div><div><b>${label}</b><div class="cc-ev-when">${kitEsc(when(ms))}</div></div></div>`;
-          })
-          .join('')
-      : '<div class="cc-ev-when">Nothing in the last two days.</div>';
-    hydrateIcons(box);
   }
 
   getCardSize() {

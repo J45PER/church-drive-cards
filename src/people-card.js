@@ -1,12 +1,15 @@
 // People Card ("Who's home"): everyone in Home Assistant's people, home or
 // away (or the zone they're in), and each of their phones' battery. People
 // and phones are found by themselves, so someone added later appears too.
-// A person whose phone doesn't share its location shows as Unknown.
+// A person whose phone doesn't share its location shows as Unknown. In a zone
+// they've named in Manager's Locations (Work, Gym), it says so: "At work ·
+// Ashfield School".
 
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { kitShell, kitHead, kitEsc } from './card-kit.js';
+import { placeText } from './places-card.js';
 
 const PC_CSS = `
   .pc-row { display:flex; align-items:center; gap:10px; padding:7px 2px; cursor:pointer; }
@@ -15,12 +18,12 @@ const PC_CSS = `
   .pc-body { flex:1; min-width:0; }
   .pc-name { font-weight:600; font-size:0.92rem; }
   .pc-sub { font-size:0.78rem; color:var(--secondary-text-color); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .pc-pill { flex:none; border-radius:999px; padding:2px 9px; font-size:0.72rem; font-weight:700; }
+  .pc-pill { flex:none; max-width:55%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; border-radius:999px; padding:2px 9px; font-size:0.72rem; font-weight:700; }
 `;
 
 function pcDemo() {
   return [
-    { id: 'person.jamie', name: 'Jamie', state: 'home', phones: [['iPhone', 82], ['Pixel', 64]] },
+    { id: 'person.jamie', name: 'Jamie', state: 'Ashfield School', place: 'Work', zone: 'Ashfield School', phones: [['iPhone', 82], ['Pixel', 64]] },
     { id: 'person.hayley', name: 'Hayley', state: 'not_home', phones: [['Pixel 9', 47]] },
     { id: 'person.diane', name: 'Diane', state: 'unknown', phones: [['Phone', null]] },
     { id: 'person.ian', name: 'Ian', state: 'home', phones: [['Phone', 91]] },
@@ -54,6 +57,7 @@ export class PeopleCard extends HTMLElement {
     const s = this._hass.states;
     const reg = this._hass.entities || {};
     const devices = this._hass.devices || {};
+    const known = ((s['sensor.church_drive_people'] || {}).attributes || {}).people || [];
     return Object.keys(s)
       .filter((id) => id.startsWith('person.'))
       .sort((a, b) => String(s[a].attributes.friendly_name).localeCompare(String(s[b].attributes.friendly_name)))
@@ -68,12 +72,14 @@ export class PeopleCard extends HTMLElement {
             const v = bat ? Number(s[bat].state) : NaN;
             return [dev.name_by_user || dev.model || dev.name || 'Phone', isNaN(v) ? null : Math.round(v)];
           });
-        return { id, name: st.attributes.friendly_name || id, state: st.state, picture: st.attributes.entity_picture, phones };
+        const k = known.find((p) => p.entity_id === id) || {};
+        return { id, name: st.attributes.friendly_name || id, state: st.state, place: k.place, zone: k.zone, picture: st.attributes.entity_picture, phones };
       });
   }
 
-  _pill(state) {
+  _pill(state, place, zone) {
     if (state === 'home') return ['Home', '#4caf50'];
+    if (place && zone) return [placeText(place, zone), '#26a69a']; // a named zone, e.g. At work · Ashfield School
     if (state === 'not_home') return ['Away', '#9aa0ad'];
     if (state === 'unknown' || state === 'unavailable') return ['Unknown', '#ffa726'];
     return [state, '#26a69a']; // a named zone, e.g. Work
@@ -101,7 +107,7 @@ export class PeopleCard extends HTMLElement {
     this._sig = sig;
     this._list.innerHTML = people
       .map((p) => {
-        const [word, col] = this._pill(p.state);
+        const [word, col] = this._pill(p.state, p.place, p.zone);
         const phones = p.phones.length
           ? p.phones.map(([n, b]) => `${n}${b != null ? ` ${b}%` : ''}`).join(' · ') + (p.state === 'unknown' ? ' · location not shared' : '')
           : 'No companion app';

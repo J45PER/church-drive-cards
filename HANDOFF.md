@@ -310,6 +310,40 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **Next release (on the branch, not released yet): camera events and places.**
+  - **Camera events** (`events.py`, `CameraEvents`):
+    - Saves a picture 8 s after each Ring `event.<x>_ding/_motion`, from
+      `camera.<x>_snapshot` (else the live view).
+    - When the Ring camera's `last_video_id` changes, it downloads `video_url` and
+      pairs it with the event of the same kind within 4 minutes (kind from
+      `sensor.<x>_last_activity`).
+    - Files go in `/media/church_drive/events/<x>/YYYYmmdd-HHMMSS_<kind>.jpg|mp4`.
+      They're kept 5 days and capped at 3 GB (oldest first), tidied hourly.
+    - Store `church_drive.camera_events`. Websocket `church_drive/camera/events`
+      returns `{camera}` with signed links via `EventFileView`
+      (`/api/church_drive/events/<x>/<file>`). `church_drive/camera/settings`
+      (admin) sets keep_days, max_gb and folder (for a NAS later).
+    - Backups don't include `/media` (automatic backups have no
+      `include_folders`), so clips aren't backed up.
+    - Tested with a fake camera and download against HA core 2026.2 (scratch venv).
+  - **Events viewer** (`src/camera-events.js`, `openCameraEvents`):
+    - Opened from the camera pop-up's Events button, and by tapping a
+      security-zone card (its camera is the `camera` option, else found from its
+      ding/motion event entities or its name).
+    - The camera pop-up no longer lists events. `stageMedia()` (drag and zoom) and
+      `liveElement()` are shared from that file.
+    - `popup.close()` now returns a promise, so a second pop-up can open straight
+      after.
+  - **Places:**
+    - `people.py` stores `places {person: [{zone, name}]}`. `people()` gives
+      `place` (Home, their name for the zone, the zone's name, Away, Unknown),
+      `zone` and `places`; these also go into `sensor.church_drive_people`.
+    - Websocket `church_drive/people/places` (admin).
+    - `places-card` (Manager's Locations): one card per person, with Home
+      automatic, zone and name rows, and + Add a place.
+    - The people card shows `placeText()`, e.g. "At work · Ashfield School".
+    - Zones are made by the user in /config/zone; Ashfield School exists.
+      Diane's three post offices are to come.
 - **v0.29.2 (released 2026-10-01, restarted): nav bar icons shrink to fit.** In
   icons-only mode each item was a fixed 42px, so eight Mobile pages ran under the
   back-to-top button on a phone. `_fit()` now sets `--nb-sz` to the bar's width shared
