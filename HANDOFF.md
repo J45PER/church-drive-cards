@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-01. Current release: **v0.29.0**.*
+*Last updated 2026-10-01. Current release: **v0.29.1**.*
 
 ## Where this stands
 
@@ -14,7 +14,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-01, v0.29.0 live, nothing on beta):**
+**Now (2026-10-01, v0.29.1 live, nothing on beta):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -310,6 +310,15 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **v0.29.1 (released 2026-10-01, restarted): the camera pop-up video fills its 16:9 box at the video's own shape.**
+  - The Front Door is a Battery Doorbell Plus with square head-to-toe video, so it was
+    letterboxed before.
+  - Drag to look around; pinch, scroll or double-tap to zoom (up to 4×). Sound has its
+    own button. This is `_stage()` in `camera-card.js`.
+  - The shape comes from the tile picture first, then the playing `<video>`, found
+    inside the player's shadow roots.
+  - Measured with clientWidth/Height, because the pop-up opens with a little zoom.
+  - Not de-fisheyed: that would need WebGL. The user hasn't asked for it yet.
 - **v0.29.0 (released 2026-10-01, reload-only): Camera Card** (`src/camera-card.js`).
   - The user chose tile style A (picture with name and age badge). Tapping a tile opens
     the shared pop-up (`popup.js`).
