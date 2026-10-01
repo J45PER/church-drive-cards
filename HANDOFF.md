@@ -310,6 +310,13 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **Next release (on the branch): start-up no longer waits for device health fixes.**
+  - `health.py` runs its automatic refresh, re-sync and nudge as background tasks
+    (`_background`), which HA's start-up doesn't wait for. Each device call now has a
+    60 s limit (`CALL_TIMEOUT`).
+  - Before this, a Philips fan re-sync after a restart held start-up for about 5
+    minutes, and Church Drive's entities only appeared after that.
+  - Tested against HA core with a fan service that never answers.
 - **v0.30.2 (released 2026-10-01, restarted): Locations Edit/Save, zone map, satellite maps everywhere, zone location requests, "Live view".**
   - **Satellite maps** (`src/map-style.js`, `installMapStyle()` in index.js):
     - A `window.L` setter catches Home Assistant's Leaflet. Its UMD build always
