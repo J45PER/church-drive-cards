@@ -24,7 +24,9 @@ const builds = [
 
 const watch = process.argv.includes('--watch');
 for (const { outfile, define } of builds) {
-  const options = { entryPoints: ['src/index.js'], bundle: true, format: 'iife', outfile, define, logLevel: 'info' };
+  // Leaflet's CSS comes in as text, for the zone map card's own styles.
+  // Whitespace is squeezed out (Leaflet is big); names stay readable.
+  const options = { entryPoints: ['src/index.js'], bundle: true, format: 'iife', outfile, define, logLevel: 'info', loader: { '.css': 'text' }, minifyWhitespace: true };
   if (watch) await (await esbuild.context(options)).watch();
   else await esbuild.build(options);
 }

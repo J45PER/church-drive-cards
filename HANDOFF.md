@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-01. Current release: **v0.30.1**.*
+*Last updated 2026-10-01. Current release: **v0.30.2**.*
 
 ## Where this stands
 
@@ -14,7 +14,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-01, v0.30.1 live, nothing on beta):**
+**Now (2026-10-01, v0.30.2 live, nothing on beta):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -310,6 +310,35 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **v0.30.2 (released 2026-10-01, restarted): Locations Edit/Save, zone map, satellite maps everywhere, zone location requests, "Live view".**
+  - **Satellite maps** (`src/map-style.js`, `installMapStyle()` in index.js):
+    - A `window.L` setter catches Home Assistant's Leaflet. Its UMD build always
+      sets `window.L`.
+    - `TileLayer.initialize` swaps cartocdn, OSM or stadia URLs for Esri
+      World_Imagery (plus World_Transportation and World_Boundaries_and_Places
+      label layers, added in `onAdd`) or World_Street_Map.
+    - Per browser: localStorage `cd-map-style` = satellite (default), street or
+      ha. Guarded by `window.__cdMapStyle`, because the release and beta bundles
+      both load.
+  - **`zone-map-card`** (Manager › Locations, above the person cards):
+    - Uses bundled Leaflet ESM (`leaflet` dependency; the ESM build doesn't
+      touch `window.L`). Leaflet CSS is imported as text (esbuild loader).
+    - The bundle is now whitespace-minified (`minifyWhitespace`) to stay about
+      700 KB.
+    - Zones are matched to `zone/list` ids by name. Saving uses
+      zone/create/update/delete, or `config/core/update` for Home.
+    - Search uses Nominatim (gb). This environment can't reach Esri or
+      Nominatim, so it was tested in a browser with tiles blocked: the hook
+      swap, drawing, select, resize, add and the save message.
+  - `places-card` shows text with an Edit button. Edit gives the zone and name rows,
+    ✕ and + Add a place, saved together with Save (`_drafts`); Cancel drops them.
+  - `people.py`: a zone added, moved or resized sends `request_location_update` to
+    every phone 10 s later (`_ask_locations`). Phones only check zones on a new
+    location. Hayley showed Away inside Frasers Group because the zone (15:16) was
+    newer than her last location (15:09).
+  - `events.py`: an on_demand recording with no link waiting is kind `live` (someone
+    watched live). Stored "linked" entries without a trigger are relabelled on load.
+    The viewer has a "Live view" chip.
 - **v0.30.1 (released 2026-10-01, restarted): clip download fix.** Ring's
   `sensor.<x>_last_activity` attribute `created_at` is a datetime, not text, which broke
   `_async_clip` (`_when()` now takes either). Start-up note: Church Drive's entities
