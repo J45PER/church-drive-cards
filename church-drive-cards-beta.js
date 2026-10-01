@@ -354,7 +354,8 @@
   .cd-pop-x { flex:none; width:40px; height:40px; border:none; border-radius:50%; background:transparent; color:var(--secondary-text-color); cursor:pointer; display:flex; align-items:center; justify-content:center; }
   .cd-pop-x:hover { background:rgba(127,127,127,0.15); }
   .cd-pop-x:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
-  .cd-pop-body { flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; padding:6px 18px 20px; }
+  /* flex-basis auto: with 0 (flex:1), iPhones size the pop-up as if the body were empty. */
+  .cd-pop-body { flex:1 1 auto; min-height:0; overflow:auto; overscroll-behavior:contain; padding:6px 18px 20px; }
   @media ${PHONE} {
     /* Pinned to the bottom (not pushed there by an auto margin): iPhones work
        the margin out once, so a pop-up that fills in after opening (cameras)
