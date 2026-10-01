@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-01. Current release: **v0.25.0**.*
+*Last updated 2026-10-01. Current release: **v0.26.0**.*
 
 ## Where this stands
 
@@ -285,6 +285,12 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **v0.26.0 (released 2026-10-01, needs a restart): people and notifications engine.**
+  `people.py`/`kinds.py`, `church_drive.notify`, `sensor.church_drive_people`, the
+  `church_drive/people*` websocket commands, the `church_drive_todo_changed` event,
+  `notifications-card`, `my_list`/`my_name` template variables and Task List
+  `entity: mine`. On first start it carried the old `input_boolean.to_do_*` switches over.
+  See "In progress" at the top for what's wired up so far.
 - **v0.25.0 (released 2026-10-01, reload-only): page header lines, forecast, to-do summary; Task List card with repeating tasks; #panel jumps.**
   - See "Page header lines and the cleaning schedule" and "Repeating tasks" below.
   - On release the Mobile dashboard went back to release types. The Tasks dashboard's

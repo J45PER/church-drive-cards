@@ -68,6 +68,7 @@ class People:
         self._admins: dict[str, bool] = {}
         self._owner: str | None = None
         self._unsubs: list = []
+        self._unsub_started = None
         self._asked_lists: set[str] = set()
         self.rev = 0
 
@@ -82,9 +83,10 @@ class People:
         if self.hass.state is CoreState.running:
             await self._async_ready()
         else:
-            self._unsubs.append(self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, self._started))
+            self._unsub_started = self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, self._started)
 
     async def _started(self, _event: Event) -> None:
+        self._unsub_started = None  # a fired listen_once is gone already
         await self._async_ready()
 
     async def _async_ready(self) -> None:
@@ -100,6 +102,9 @@ class People:
         for unsub in self._unsubs:
             unsub()
         self._unsubs.clear()
+        if self._unsub_started is not None:
+            self._unsub_started()
+            self._unsub_started = None
 
     async def _async_save(self) -> None:
         await self._store.async_save(self._data)
