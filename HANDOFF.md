@@ -30,6 +30,22 @@ HACS as an integration. It does two jobs:
   `ha/repeating-tasks.jinja`.
 - **House jobs:** the automatic to-dos (`house-tasks-card`, "Priorities Automatic")
   and the to-do notifications are set in Manager.
+- **In progress (2026-10-01): people picked up automatically, and assignable notifications.**
+  Plan: https://claude.ai/artifact/XmAHes61uTUSrJNL4aGgmC (user chose table B with A's phone
+  chips; N1–N27 all wanted; N14/N15 everyone, N16 and N19's cost admins only). Card
+  mock-ups: https://claude.ai/artifact/A4d6pusQxNRdBe34qYZsnP (C1 Media page, C2 Safety,
+  C3 outside temp, C5 Devices & services, C6 cheap rate, C8 Who's home on Manager; C4, C7
+  and C9 not wanted).
+  - Done on the branch, not released: `people.py` + `kinds.py` (people, phones, assignments,
+    `church_drive.notify`, `sensor.church_drive_people`, `church_drive_todo_changed`
+    event, auto "Priorities <name>" lists, one-off carry-over of the old switches),
+    `notifications-card`, `my_list`/`my_name` template variables, task-list `entity: mine`.
+  - On beta: the Mobile and Tasks To-do views are one section for everyone (beta card
+    types), My to-do uses `entity: mine` and `states(my_list)`.
+  - Next, after the integration is released (needs a restart): Manager card, move the
+    to-do automations and the stale/battery alerts to `church_drive.notify` and the
+    sensor (no names), build N1–N27, then delete the old `input_boolean.to_do_*`
+    switches and `script.church_drive_notify_person`.
 - **People (2026-10-01): Jamie, Hayley, Diane and Ian** (Ian added by the user;
   user id `f9a53de72d834d778c6bd476284fb8a2`, phone `notify.mobile_app_ian`).
   Adding a person is a per-person checklist, done for Ian:
