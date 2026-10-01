@@ -20,7 +20,7 @@ import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { kitEsc } from './card-kit.js';
 import { openPopup } from './popup.js';
-import { KINDS, STAGE_CSS, stageMedia, stageTag, liveElement, openCameraEvents, cameraBase } from './camera-events.js';
+import { KINDS, STAGE_CSS, stageMedia, stageTag, liveElement, openCameraEvents, cameraBase, findVideo } from './camera-events.js';
 
 const OLD = ['#ffa726', '#221'];
 
@@ -292,7 +292,7 @@ export class CameraCard extends HTMLElement {
       el.style.background = 'linear-gradient(160deg,#5d6b7d,#2f3946 60%,#46503c)';
     } else if (c.talk_stream && customElements.get('webrtc-camera')) {
       el = document.createElement('webrtc-camera');
-      el.setConfig({ url: c.talk_stream, media: this._talking ? 'video,audio,microphone' : 'video,audio', muted: false, ui: false });
+      el.setConfig({ url: c.talk_stream, media: this._talking ? 'video,audio,microphone' : 'video,audio', muted: !this._talking, ui: false });
       el.hass = this._hass;
     } else {
       try {
@@ -304,7 +304,21 @@ export class CameraCard extends HTMLElement {
     }
     if (!this._popEl) return;
     stageMedia(box, el, this._aspect());
-    if (!c.demo) stageTag(box, this._talking ? '● LIVE · talking' : '● LIVE', '#e53935');
+    if (c.demo) return;
+    // "Connecting…" until real video is playing (players show a still first).
+    const tag = stageTag(box, '● Connecting…', '#616875');
+    const live = this._talking ? '● LIVE · talking' : '● LIVE';
+    let tries = 0;
+    const check = () => {
+      if (!tag.isConnected) return;
+      const v = findVideo(el.shadowRoot || el);
+      if (v && v.localName === 'video' && !v.paused && v.readyState >= 2) {
+        tag.textContent = live;
+        tag.style.background = '#e53935';
+      } else if (tries++ < 120) setTimeout(check, 500);
+      else tag.textContent = '● Still picture';
+    };
+    check();
   }
 
   _renderPop() {
