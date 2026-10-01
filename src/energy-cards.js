@@ -9,7 +9,9 @@
 //   cost of electricity and gas, half-hour use coloured by rate and how much
 //   ran at the cheap rate;
 // - gas: the rate, standing charge and today so far;
-// - octoplus: points, weekend happy hours and saving sessions.
+// - octoplus: points, weekend happy hours and saving sessions;
+// - cheap: a strip for everyone: cheap rate now (until when) or when it next
+//   starts, and the next Octoplus power-down session (prices for admins only).
 //
 // EV Charger Card: a Zappi's state, power, this charge and mode buttons
 // (Stop, Eco, Eco+, Fast). Until the myenergi integration is set up it says
@@ -63,6 +65,7 @@ const OCTO_VIEWS = [
   { value: 'last_day', label: 'Last full day (electricity and gas)' },
   { value: 'gas', label: 'Gas' },
   { value: 'octoplus', label: 'Octoplus' },
+  { value: 'cheap', label: 'Cheap rate and power-down sessions' },
 ];
 
 export const OctopusCardEditor = createFormEditor({
@@ -158,7 +161,7 @@ export class OctopusCard extends HTMLElement {
       this._built = true;
     }
     const minute = Math.floor(Date.now() / 60e3);
-    const html = view === 'last_day' ? this._lastDay(m) : view === 'gas' ? this._gas(m) : view === 'octoplus' ? this._octoplus(m) : this._elec(m);
+    const html = view === 'last_day' ? this._lastDay(m) : view === 'gas' ? this._gas(m) : view === 'octoplus' ? this._octoplus(m) : view === 'cheap' ? this._cheap(m) : this._elec(m);
     const sig = JSON.stringify([html.head, html.body, minute]);
     if (sig === this._sig) return;
     this._sig = sig;
@@ -269,6 +272,38 @@ export class OctopusCard extends HTMLElement {
       body: `
         <div class="oc-two"><div class="oc-stat"><b>${pts == null ? '–' : pts}</b><span>Points</span></div><div class="oc-stat"><b>${happy == null ? '–' : happy}</b><span>Weekend happy hours</span></div></div>
         <div class="ck-sub">${sessions.length ? `Saving sessions: ${kitEsc(sessions.join(', '))}` : 'No saving sessions booked.'}</div>`,
+    };
+  }
+
+  _cheap(m) {
+    if (!m.elec) return this._missing('electricity meter');
+    const admin = !!(this._hass.user && this._hass.user.is_admin);
+    const w = this._window(this._rates(m));
+    const cal = m.account ? this._hass.states[`calendar.${m.account}octoplus_power_down`] : null;
+    const pd = cal && cal.attributes.start_time ? cal.attributes : null;
+    const pdStart = pd && new Date(pd.start_time);
+    const pdEnd = pd && new Date(pd.end_time);
+    const dayWord = (d) => {
+      const t = new Date();
+      const a = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      const b = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+      const n = Math.round((a - b) / 864e5);
+      return n === 0 ? 'today' : n === 1 ? 'tomorrow' : d.toLocaleDateString(undefined, { weekday: 'long' });
+    };
+    const price = (v) => (admin && v != null ? ` · ${pence(v)}` : '');
+    const row = (icon, col, t1, t2, pill) => `<div class="oc-crow"><div class="oc-cico" style="background:color-mix(in srgb, ${col} 22%, transparent); color:${col};">${iconHtml(icon, { size: '19px' })}</div>
+      <div style="flex:1; min-width:0;"><div class="oc-ct1">${kitEsc(t1)}</div><div class="ck-sub">${kitEsc(t2)}</div></div>${pill ? `<span class="oc-pill" style="background:${col}; color:#0d2a10;">${kitEsc(pill)}</span>` : ''}</div>`;
+    const cheapRow = !w
+      ? row('mdi:weather-night', KIT_COLOR.off, 'No cheap rate in the next day', 'Octopus hasn\'t sent tomorrow\'s rates yet')
+      : w.now
+        ? row('mdi:weather-night', CHEAP, 'Cheap rate now', `Until ${hhmm(w.until)}${price(w.v)} · a good time for the washing or dishwasher`, 'Off-peak')
+        : row('mdi:weather-night', KIT_COLOR.off, `Next cheap rate ${hhmm(w.from)}`, `In ${span(w.from - Date.now())}, until ${hhmm(w.until)}${price(w.v)}`);
+    const pdRow = pd
+      ? row('mdi:lightning-bolt', '#b39dff', `Power-down session ${dayWord(pdStart)}`, `${hhmm(pdStart)}–${hhmm(pdEnd)} · use less electricity then for Octoplus points`)
+      : row('mdi:lightning-bolt', KIT_COLOR.off, 'No power-down sessions booked', 'Octopus announces them a day or so ahead');
+    return {
+      head: [this.config.name || 'Cheap rate', w && w.now ? 'Off-peak now' : w ? `Cheap from ${hhmm(w.from)}` : '', CHEAP],
+      body: `<style>.oc-crow{display:flex;align-items:center;gap:10px;padding:6px 2px}.oc-crow+.oc-crow{border-top:1px solid var(--divider-color, rgba(127,127,127,0.18))}.oc-cico{flex:none;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center}.oc-ct1{font-weight:600;font-size:0.92rem}</style>${cheapRow}${pdRow}`,
     };
   }
 
