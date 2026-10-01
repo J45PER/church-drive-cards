@@ -74,48 +74,62 @@ export function balance(heights, k, gap, keep, spanH = null) {
   return cols;
 }
 
-// Lays out a page. Each item is { h, wide, noCol, full, hSpan, hFull }: its height
-// in one column, across every column but one, and across the page. A panel
-// set to full width goes across the page below the columns. A panel that's
-// automatically wide (zones, cameras) can go across the page too, or under
-// the shorter columns beside the tallest one, or into a column: whichever
-// leaves the page shortest, so there's the least blank space. Being in a
-// column costs a little extra, so wide panels stay wide when it's close;
-// a panel set to wide (noCol) never goes into a column.
+// Lays out a page. Each item is { h, wide, noCol, full, hSpan, hFull,
+// eCol, eSpan, eFull }: its height in one column, across every column but
+// one, and across the page, and the blank space inside it at each width
+// (e.g. a zone alone on its last row), as page height.
+// A panel set to full width goes across the page below the columns. A panel
+// that's automatically wide (zones, cameras) can go across the page too, or
+// under the shorter columns beside the tallest one, or into a column. The page takes
+// whichever is shortest with the least blank space. Being in a column costs
+// a little extra, so wide panels stay wide when it's close; a panel set to
+// wide (noCol) never goes into a column.
 // Returns { cols, side, spans, full }: the columns (item indexes), which
 // column the spanning panels sit beside, those panels, and the full-width
-// ones, in order. Keeps `prev` unless the new one is clearly better.
-export function arrange(items, k, gap, prev) {
+// ones below, in order. Keeps `prev` unless the
+// new one is better by more than `margin`.
+export function arrange(items, k, gap, prev, margin = 24) {
   const idx = items.map((it, i) => i);
   if (k <= 1) return { cols: [idx], side: null, spans: [], full: [] };
   const wide = idx.filter((i) => items[i].wide && !items[i].full);
-  const cand = wide.slice(0, 3);
-  const modes = k >= 3 ? ['full', 'col', 'span'] : ['full', 'col'];
-  const fullH = (list) => list.reduce((s, i) => s + gap + items[i].hFull, 0);
+  const cand = wide.slice(0, 4);
+  const modesOf = (i) => {
+    const m = k >= 3 ? ['full', 'col', 'span'] : ['full', 'col'];
+    return items[i].noCol ? m.filter((x) => x !== 'col') : m;
+  };
+  const e = (i, key) => items[i][key] || 0;
+  const acrossH = (list) => list.reduce((s, i) => s + gap + items[i].hFull + e(i, 'eFull'), 0);
   const spanHOf = (list) => (list.length ? list.reduce((s, i) => s + items[i].hSpan, 0) + gap * (list.length - 1) : null);
   const costOf = (a) => {
     const totals = a.cols.map((c) => c.reduce((s, i) => s + items[i].h, 0) + gap * Math.max(0, c.length - 1));
     const inCols = cand.filter((i) => a.cols.some((c) => c.includes(i))).length;
-    return columnsCost(totals, gap, spanHOf(a.spans)) + fullH(a.full) + 40 * inCols;
+    const blank = a.cols.flat().reduce((s, i) => s + e(i, 'eCol'), 0) + a.spans.reduce((s, i) => s + e(i, 'eSpan'), 0);
+    // Gaps under short columns that stretching (up to 160px) can't fill,
+    // spread over the page's width.
+    let left = 0;
+    if (a.cols.length) {
+      const band = columnsCost(totals, gap, spanHOf(a.spans));
+      const block = a.spans.length ? Math.max(0, ...totals.filter((t, j) => j !== a.side)) : band;
+      totals.forEach((t, j) => (left += Math.max(0, (a.spans.length && j !== a.side ? block : band) - t - 160)));
+    }
+    return (a.cols.length ? columnsCost(totals, gap, spanHOf(a.spans)) : -gap) + acrossH(a.full) + blank + left / k + 40 * inCols;
   };
   let best = null;
-  const total = modes.length ** cand.length;
-  for (let m = 0; m < total; m += 1) {
-    const pick = {};
-    let x = m;
-    cand.forEach((i) => {
-      pick[i] = modes[x % modes.length];
-      x = Math.floor(x / modes.length);
-    });
-    if (cand.some((i) => items[i].noCol && pick[i] === 'col')) continue;
-    const full = idx.filter((i) => items[i].full || (items[i].wide && (pick[i] || 'full') === 'full'));
+  const picks = [{}];
+  cand.forEach((i) => {
+    const next = [];
+    picks.forEach((pk) => modesOf(i).forEach((m) => next.push({ ...pk, [i]: m })));
+    picks.splice(0, picks.length, ...next);
+  });
+  for (const pick of picks) {
+    const full = idx.filter((i) => items[i].full || pick[i] === 'full');
     const spans = idx.filter((i) => pick[i] === 'span');
     const rest = idx.filter((i) => !full.includes(i) && !spans.includes(i));
     if (spans.length && rest.length < k) continue;
     if (!rest.length) {
       const a = { cols: [], side: null, spans: [], full };
       const c = costOf(a);
-      if (!best || c < best.cost) best = { ...a, cost: c };
+      if (!best || c < best.cost - 4) best = { ...a, cost: c };
       continue;
     }
     const split = balance(rest.map((i) => items[i].h), k, gap, null, spanHOf(spans)).map((c) => c.map((j) => rest[j]));
@@ -129,7 +143,13 @@ export function arrange(items, k, gap, prev) {
     if (!best || c < best.cost - 4) best = { ...a, cost: c };
   }
   const { cost, ...out } = best;
-  const ok = (a) => a && Array.isArray(a.cols) && [...a.cols.flat(), ...(a.spans || []), ...(a.full || [])].sort((p, q) => p - q).join() === idx.join() && (!a.cols.length || a.cols.length === Math.min(k, a.cols.flat().length));
-  if (ok(prev) && items.every((it, i) => !it.full || prev.full.includes(i)) && costOf(prev) <= cost + 24) return prev;
+  const all = (a) => [...a.cols.flat(), ...(a.spans || []), ...(a.full || [])];
+  const ok = (a) =>
+    a &&
+    Array.isArray(a.cols) &&
+    all(a).sort((p, q) => p - q).join() === idx.join() &&
+    (!a.cols.length || a.cols.length === Math.min(k, a.cols.flat().length)) &&
+    items.every((it, i) => !it.full || a.full.includes(i));
+  if (ok(prev) && costOf(prev) <= cost + margin) return prev;
   return out;
 }

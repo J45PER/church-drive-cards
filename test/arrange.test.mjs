@@ -72,3 +72,10 @@ test('a panel set to wide never goes into a column', () => {
   assert.deepEqual(a.spans, [2]);
   assert.equal(height(items, a), 760);
 });
+
+test('blank space inside a panel counts against it', () => {
+  // The zones fit a column, but leave one zone alone on its last row.
+  const items = [p(500), p(500), p(500), p(500, { wide: true, hSpan: 200, hFull: 200, eCol: 160 })];
+  const a = arrange(items, 3, G);
+  assert.ok(!a.cols.flat().includes(3));
+});

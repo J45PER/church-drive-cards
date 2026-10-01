@@ -37,6 +37,21 @@ const CONTROL_TYPES = [
   'scene-styles-card', 'scene-builder-card', 'thermostat', 'humidifier', 'light', 'button', 'media-control', 'alarm-panel', 'area',
 ];
 
+// Whether a panel counts as cameras (after controls, before information):
+// a panel of only cameras, or one set to `priority: camera`.
+export function isCamera(conf) {
+  if (!conf || typeof conf !== 'object') return false;
+  if (conf.priority === 'camera') return true;
+  if (conf.priority && conf.priority !== 'auto') return false;
+  const cards = conf.cards || [];
+  const camera = (c) => {
+    const type = String((c && c.type) || '').replace(/^custom:/, '').replace(/-beta$/, '');
+    if (type === 'camera-card' || type === 'webrtc-camera' || type === 'advanced-camera-card') return true;
+    return /^picture/.test(type) && /^camera\./.test(String(c.camera_image || c.entity || ''));
+  };
+  return cards.length > 0 && cards.every(camera);
+}
+
 // Whether a card config (or anything inside it) has controls. A panel can
 // say so itself with `priority: controls` or `priority: info`.
 export function hasControls(conf) {
@@ -378,7 +393,7 @@ export class AutoLayoutCard extends HTMLElement {
     // Panels inside leave lining up and spacing to this card.
     el._managed = true;
     if (this._hass) el.hass = this._hass;
-    const it = { conf, el, controls: hasControls(conf) };
+    const it = { conf, el, controls: hasControls(conf), camera: isCamera(conf) };
     el.addEventListener('ll-rebuild', (ev) => {
       ev.stopPropagation();
       const fresh = helpers.createCardElement(conf);
@@ -455,13 +470,17 @@ export class AutoLayoutCard extends HTMLElement {
     // With empty_last, panels with nothing to show (their "counts as empty
     // when", or a card inside saying so) go below the rest, keeping order.
     let list = this.config.empty_last ? [...this._items.filter((it) => !it.el._empty), ...this._items.filter((it) => it.el._empty)] : this._items;
-    // Panels with controls first (stable, so list order holds otherwise).
-    if (this.config.controls_first !== false) list = [...list.filter((it) => it.controls), ...list.filter((it) => !it.controls)];
+    // Panels with controls first, then cameras, then information (stable,
+    // so list order holds otherwise).
+    if (this.config.controls_first !== false) {
+      const rank = (it) => (it.camera ? 1 : it.controls ? 0 : 2);
+      list = [0, 1, 2].flatMap((r) => list.filter((it) => rank(it) === r));
+    }
     const forced = (it) => it.conf.full_width === true || it.conf.full_width === 'yes';
     // Unplaced cards have no height yet: use this page's last arrangement,
     // or list order, until they can be measured.
     const placed = this._items.every((it) => it.el.isConnected);
-    const planKey = `v2|${location.pathname}|${cols}|${list.map((it) => it.conf.title || it.conf.type).join(',')}`;
+    const planKey = `v4|${location.pathname}|${cols}|${list.map((it) => it.conf.title || it.conf.type).join(',')}`;
     const key = `${cols}|${list.map((it) => this._items.indexOf(it)).join(',')}`;
     const prev = this._prevArr && this._prevArr.key === key ? this._prevArr.arr : null;
     let arr;
@@ -474,8 +493,11 @@ export class AutoLayoutCard extends HTMLElement {
     } else {
       // Once the page has settled, panels keep their places: opening or
       // closing one only re-levels the bottoms, it never moves panels about.
-      const settled = performance.now() > this._settleUntil && cols === this._cols;
+      // Until then (and while pictures load), it keeps adapting, but only
+      // for a clearly better arrangement.
+      const settled = this._touched && performance.now() > this._settleUntil && cols === this._cols;
       const at = (it, w) => (it.el._heightAt ? it.el._heightAt(w) : this._height(it.el));
+      const blank = (it, w) => (it.el._emptyAt ? it.el._emptyAt(w) : 0);
       arr =
         settled && prev
           ? prev
@@ -484,11 +506,22 @@ export class AutoLayoutCard extends HTMLElement {
                 const full = forced(it);
                 const noCol = it.conf.full_width === 'wide';
                 const wide = !full && (noCol || this._full(it, colWidth));
-                return { h: at(it, colWidth), full, wide, noCol, hSpan: wide ? at(it, spanWidth) : 0, hFull: full || wide ? at(it, width) : 0 };
+                return {
+                  h: at(it, colWidth),
+                  full,
+                  wide,
+                  noCol,
+                  hSpan: wide ? at(it, spanWidth) : 0,
+                  hFull: full || wide ? at(it, width) : 0,
+                  eCol: blank(it, colWidth),
+                  eSpan: wide ? blank(it, spanWidth) : 0,
+                  eFull: full || wide ? blank(it, width) : 0,
+                };
               }),
               cols,
               gap,
               prev,
+              performance.now() > this._settleUntil ? 60 : 24,
             );
       planRemember(planKey, arr);
     }
@@ -509,6 +542,13 @@ export class AutoLayoutCard extends HTMLElement {
         return r;
       };
       const groups = [];
+      const across = (i) => {
+        const r = row();
+        const c = column([i]);
+        r.appendChild(c);
+        this._root.appendChild(r);
+        groups.push({ cols: [c] });
+      };
       if (arr.cols.length) {
         const top = row();
         if (arr.spans && arr.spans.length && arr.side != null) {
@@ -533,13 +573,7 @@ export class AutoLayoutCard extends HTMLElement {
         }
         this._root.appendChild(top);
       }
-      (arr.full || []).forEach((i) => {
-        const r = row();
-        const c = column([i]);
-        r.appendChild(c);
-        this._root.appendChild(r);
-        groups.push({ cols: [c] });
-      });
+      (arr.full || []).forEach(across);
       this._groups = groups;
       if (!placed) {
         this._queue();
@@ -1169,7 +1203,11 @@ export class AutoLayoutCard extends HTMLElement {
   connectedCallback() {
     this._settleUntil = performance.now() + 4000;
     this._animating = 0;
+    this._touched = false;
     this._onAnim = (ev) => {
+      // A panel opening or closing after the page has loaded fixes where
+      // panels are, so they don't move about under your finger.
+      if (Number(ev.detail) > 0 && performance.now() > this._settleUntil) this._touched = true;
       this._animating = Math.max(0, this._animating + (Number(ev.detail) || 0));
       if (!this._animating && this._pending) {
         this._pending = false;
