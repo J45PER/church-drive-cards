@@ -3387,6 +3387,14 @@
       }
     }, 1e3);
   }
+  function stcMe(hass) {
+    const u = hass && hass.user || {};
+    const states = hass && hass.states || {};
+    const pid = Object.keys(states).find((id) => id.startsWith("person.") && states[id].attributes.user_id === u.id);
+    const first = String(pid && states[pid].attributes.friendly_name || u.name || "").trim().split(" ")[0];
+    const slug2 = first.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+    return { my_name: first, my_list: slug2 ? `todo.priorities_${slug2}` : "", my_person: pid || "", my_user_id: u.id || "" };
+  }
   function stcRender(hass, template, done) {
     if (!template || !hass || !hass.connection) return null;
     if (!/[{%]/.test(template)) {
@@ -3394,15 +3402,17 @@
       return null;
     }
     const store = tplStore();
-    if (store.has(template)) done(store.get(template));
+    const me = /\bmy_(list|name|person|user_id)\b/.test(template) ? stcMe(hass) : null;
+    const key = me ? `${me.my_user_id}|${template}` : template;
+    if (store.has(key)) done(store.get(key));
     return hass.connection.subscribeMessage(
       (msg) => {
         if (msg.result === void 0) return;
         const text = String(msg.result).trim();
-        tplRemember(template, text);
+        tplRemember(key, text);
         done(text);
       },
-      { type: "render_template", template, strict: false, report_errors: false }
+      { type: "render_template", template, strict: false, report_errors: false, ...me ? { variables: me } : {} }
     ).catch(() => null);
   }
   function stcSetInstantly(el, prop, value, instant) {
@@ -7824,7 +7834,8 @@
   var TaskListCardEditor = createFormEditor({
     schema: (config) => [
       { name: "title", selector: { text: {} } },
-      { name: "entity", selector: { entity: { domain: "todo" } } },
+      { name: "own", selector: { boolean: {} } },
+      ...config.own || config.entity === "mine" ? [] : [{ name: "entity", selector: { entity: { domain: "todo" } } }],
       { name: "color", selector: { ui_color: {} } },
       {
         name: "assign",
@@ -7845,6 +7856,7 @@
     ],
     labels: {
       title: "Title (optional)",
+      own: "The signed-in person's own list",
       entity: "To-do list",
       color: "Colour",
       assign: "Who tasks are for",
@@ -7857,10 +7869,23 @@
     helpers: {
       entity: `Any to-do list. A task's repeat and who it reminds are kept in its description, and "Church Drive: repeating tasks" sends the reminders and brings repeating tasks back.`,
       color: "Default purple (#7e57c2).",
+      own: 'Each person sees their own "Priorities <first name>" list (made for everyone automatically), so one card serves everyone.',
       assign: '"Just the signed-in person" swaps the list of people for a simple "Remind me" choice.'
     },
     normalize: (c) => c.assign ? c : { ...c, assign: "people" },
-    display: (c) => c.assign === "me" && c.remind_me === void 0 ? { ...c, remind_me: true } : c
+    display: (c) => {
+      const d = c.assign === "me" && c.remind_me === void 0 ? { ...c, remind_me: true } : { ...c };
+      if (d.entity === "mine") {
+        d.own = true;
+        delete d.entity;
+      }
+      return d;
+    },
+    store: (c) => {
+      const { own, ...rest } = c;
+      if (own) return { ...rest, entity: "mine" };
+      return rest.entity === "mine" ? { ...rest, entity: void 0 } : rest;
+    }
   });
   var TaskListCard = class extends HTMLElement {
     setConfig(config) {
@@ -7885,17 +7910,22 @@
       this._unwatch();
       if (this._pop) this._pop.close();
     }
+    // The list: config.entity, or "mine" for the signed-in person's own list.
+    _entity() {
+      const e = this.config.entity;
+      return e === "mine" ? stcMe(this._hass).my_list : e;
+    }
     _colour() {
       return this.config.color || "#7e57c2";
     }
     _watch() {
-      if (this.config.demo || this._unsub || !this.isConnected || !this._hass || !this._hass.states[this.config.entity]) return;
+      if (this.config.demo || this._unsub || !this.isConnected || !this._hass || !this._hass.states[this._entity()]) return;
       this._unsub = this._hass.connection.subscribeMessage(
         (msg) => {
           this._items = msg && msg.items || [];
           this._render();
         },
-        { type: "todo/item/subscribe", entity_id: this.config.entity }
+        { type: "todo/item/subscribe", entity_id: this._entity() }
       ).catch(() => null);
     }
     _unwatch() {
@@ -7942,7 +7972,7 @@
         this._render();
         return;
       }
-      await this._hass.callService("todo", service, data, { entity_id: this.config.entity });
+      await this._hass.callService("todo", service, data, { entity_id: this._entity() });
     }
     _render() {
       if (!this._hass) return;
@@ -7984,7 +8014,7 @@
         });
         this._built = true;
       }
-      const missing = !c.demo && !this._hass.states[c.entity];
+      const missing = !c.demo && !this._hass.states[this._entity()];
       const all = missing ? [] : this._all();
       const rank = (t) => t.due ? dueDate(t.due).getTime() : Infinity;
       const open = all.filter((t) => t.status === "needs_action").map((t, n) => ({ t, n, p: parseTask(t.description) })).sort((a, b) => rank(a.t) - rank(b.t) || a.n - b.n);
@@ -8018,7 +8048,7 @@
         ${when2 ? `<span class="tl-when" style="color:${over ? "#e53935" : "var(--secondary-text-color)"};">${kitEsc(when2)}</span>` : ""}
       </div>`;
       };
-      if (missing) this._list.innerHTML = `<div class="ck-sub" style="line-height:1.5;">There's no ${kitEsc(c.entity)} list.</div>`;
+      if (missing) this._list.innerHTML = `<div class="ck-sub" style="line-height:1.5;">There's no ${kitEsc(this._entity() || "to-do")} list yet.</div>`;
       else if (!open.length) this._list.innerHTML = `<div class="ck-sub" style="line-height:1.5; padding:4px 0;">Nothing to do. Add a task, and choose if it repeats and who it reminds.</div>`;
       else this._list.innerHTML = open.map((x) => row3(x, false)).join("");
       this._doneList.hidden = !(showDone && this._showDone);

@@ -14,6 +14,7 @@ import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { kitShell, kitHead, kitEsc } from './card-kit.js';
 import { openPopup } from './popup.js';
+import { stcMe } from './section-title-card.js';
 import { DAYS, MONTHS, parseTask, formatTask, formatRepeat, describeRepeat, firstDue } from './repeat.js';
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -111,7 +112,8 @@ const TL_CSS = `
 export const TaskListCardEditor = createFormEditor({
   schema: (config) => [
     { name: 'title', selector: { text: {} } },
-    { name: 'entity', selector: { entity: { domain: 'todo' } } },
+    { name: 'own', selector: { boolean: {} } },
+    ...(config.own || config.entity === 'mine' ? [] : [{ name: 'entity', selector: { entity: { domain: 'todo' } } }]),
     { name: 'color', selector: { ui_color: {} } },
     {
       name: 'assign',
@@ -132,6 +134,7 @@ export const TaskListCardEditor = createFormEditor({
   ],
   labels: {
     title: 'Title (optional)',
+    own: "The signed-in person's own list",
     entity: 'To-do list',
     color: 'Colour',
     assign: 'Who tasks are for',
@@ -144,10 +147,23 @@ export const TaskListCardEditor = createFormEditor({
   helpers: {
     entity: 'Any to-do list. A task\'s repeat and who it reminds are kept in its description, and "Church Drive: repeating tasks" sends the reminders and brings repeating tasks back.',
     color: 'Default purple (#7e57c2).',
+    own: 'Each person sees their own "Priorities <first name>" list (made for everyone automatically), so one card serves everyone.',
     assign: '"Just the signed-in person" swaps the list of people for a simple "Remind me" choice.',
   },
   normalize: (c) => (c.assign ? c : { ...c, assign: 'people' }),
-  display: (c) => (c.assign === 'me' && c.remind_me === undefined ? { ...c, remind_me: true } : c),
+  display: (c) => {
+    const d = c.assign === 'me' && c.remind_me === undefined ? { ...c, remind_me: true } : { ...c };
+    if (d.entity === 'mine') {
+      d.own = true;
+      delete d.entity;
+    }
+    return d;
+  },
+  store: (c) => {
+    const { own, ...rest } = c;
+    if (own) return { ...rest, entity: 'mine' };
+    return rest.entity === 'mine' ? { ...rest, entity: undefined } : rest;
+  },
 });
 
 export class TaskListCard extends HTMLElement {
@@ -177,19 +193,25 @@ export class TaskListCard extends HTMLElement {
     if (this._pop) this._pop.close();
   }
 
+  // The list: config.entity, or "mine" for the signed-in person's own list.
+  _entity() {
+    const e = this.config.entity;
+    return e === 'mine' ? stcMe(this._hass).my_list : e;
+  }
+
   _colour() {
     return this.config.color || '#7e57c2';
   }
 
   _watch() {
-    if (this.config.demo || this._unsub || !this.isConnected || !this._hass || !this._hass.states[this.config.entity]) return;
+    if (this.config.demo || this._unsub || !this.isConnected || !this._hass || !this._hass.states[this._entity()]) return;
     this._unsub = this._hass.connection
       .subscribeMessage(
         (msg) => {
           this._items = (msg && msg.items) || [];
           this._render();
         },
-        { type: 'todo/item/subscribe', entity_id: this.config.entity }
+        { type: 'todo/item/subscribe', entity_id: this._entity() }
       )
       .catch(() => null);
   }
@@ -245,7 +267,7 @@ export class TaskListCard extends HTMLElement {
       this._render();
       return;
     }
-    await this._hass.callService('todo', service, data, { entity_id: this.config.entity });
+    await this._hass.callService('todo', service, data, { entity_id: this._entity() });
   }
 
   _render() {
@@ -288,7 +310,7 @@ export class TaskListCard extends HTMLElement {
       });
       this._built = true;
     }
-    const missing = !c.demo && !this._hass.states[c.entity];
+    const missing = !c.demo && !this._hass.states[this._entity()];
     const all = missing ? [] : this._all();
     const rank = (t) => (t.due ? dueDate(t.due).getTime() : Infinity);
     const open = all
@@ -325,7 +347,7 @@ export class TaskListCard extends HTMLElement {
         ${when ? `<span class="tl-when" style="color:${over ? '#e53935' : 'var(--secondary-text-color)'};">${kitEsc(when)}</span>` : ''}
       </div>`;
     };
-    if (missing) this._list.innerHTML = `<div class="ck-sub" style="line-height:1.5;">There's no ${kitEsc(c.entity)} list.</div>`;
+    if (missing) this._list.innerHTML = `<div class="ck-sub" style="line-height:1.5;">There's no ${kitEsc(this._entity() || 'to-do')} list yet.</div>`;
     else if (!open.length) this._list.innerHTML = `<div class="ck-sub" style="line-height:1.5; padding:4px 0;">Nothing to do. Add a task, and choose if it repeats and who it reminds.</div>`;
     else this._list.innerHTML = open.map((x) => row(x, false)).join('');
     this._doneList.hidden = !(showDone && this._showDone);

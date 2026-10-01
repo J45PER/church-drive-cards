@@ -55,8 +55,22 @@ function tplRemember(template, value) {
   }, 1000);
 }
 
+// Who's signed in, for templates: `my_list` (their to-do list,
+// todo.priorities_<first name>), `my_name` (first name), `my_person`
+// (person entity) and `my_user_id`. Taken from their person in Home
+// Assistant, else their login's name.
+export function stcMe(hass) {
+  const u = (hass && hass.user) || {};
+  const states = (hass && hass.states) || {};
+  const pid = Object.keys(states).find((id) => id.startsWith('person.') && states[id].attributes.user_id === u.id);
+  const first = String((pid && states[pid].attributes.friendly_name) || u.name || '').trim().split(' ')[0];
+  const slug = first.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+  return { my_name: first, my_list: slug ? `todo.priorities_${slug}` : '', my_person: pid || '', my_user_id: u.id || '' };
+}
+
 // Render a template live, as HA's markdown card does; `done` gets the text,
-// straight away with the last known result if there is one.
+// straight away with the last known result if there is one. Templates can use
+// the signed-in person's my_list, my_name, my_person and my_user_id.
 // Returns the unsubscribe promise, or null for plain text (sent straight away).
 export function stcRender(hass, template, done) {
   if (!template || !hass || !hass.connection) return null;
@@ -65,16 +79,18 @@ export function stcRender(hass, template, done) {
     return null;
   }
   const store = tplStore();
-  if (store.has(template)) done(store.get(template));
+  const me = /\bmy_(list|name|person|user_id)\b/.test(template) ? stcMe(hass) : null;
+  const key = me ? `${me.my_user_id}|${template}` : template;
+  if (store.has(key)) done(store.get(key));
   return hass.connection
     .subscribeMessage(
       (msg) => {
         if (msg.result === undefined) return;
         const text = String(msg.result).trim();
-        tplRemember(template, text);
+        tplRemember(key, text);
         done(text);
       },
-      { type: 'render_template', template, strict: false, report_errors: false }
+      { type: 'render_template', template, strict: false, report_errors: false, ...(me ? { variables: me } : {}) }
     )
     .catch(() => null);
 }
