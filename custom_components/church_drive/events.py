@@ -17,6 +17,14 @@ Cameras are found by themselves: every Ring `camera.<x>_live_view`, with its
 
 The card asks for a camera's events over the websocket and gets short-lived
 signed links to each picture and clip (served by EventFileView).
+
+Camera links (set in Manager, like Ring's Linked Devices but for any sensor
+and per alarm mode): when a trigger fires (a camera's motion or doorbell, a
+motion sensor, a door), the linked cameras record for a few seconds, by
+turning on ring-mqtt's live stream (Ring saves live views as recordings with
+Ring Protect). Links are kept per mode: disarmed, home (and night) and away
+(and while the alarm is going off). Each camera records a linked clip at most
+once per `cooldown` seconds. These show in the events viewer as "linked".
 """
 
 from __future__ import annotations
@@ -45,7 +53,12 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 STORE_VERSION = 1
-DEFAULTS = {"keep_days": 5, "max_gb": 3.0, "dir": None}
+DEFAULTS = {"keep_days": 5, "max_gb": 3.0, "dir": None, "cooldown": 120}
+MODES = ("disarmed", "home", "away")
+ALARM_MODE = {"disarmed": "disarmed", "armed_home": "home", "armed_night": "home", "armed_vacation": "away",
+              "armed_away": "away", "armed_custom_bypass": "home", "arming": "disarmed", "pending": "away",
+              "triggered": "away"}
+ON_STATES = ("on", "open", "detected", "home")
 PICTURE_DELAY = 8  # seconds: ring-mqtt's snapshot arrives a moment after the event
 PAIR_WINDOW = 240  # seconds between an event and its recording
 MAX_CLIP = 300 * 1024 * 1024
@@ -60,7 +73,8 @@ class CameraEvents:
     def __init__(self, hass: HomeAssistant) -> None:
         self.hass = hass
         self._store: Store = Store(hass, STORE_VERSION, "church_drive.camera_events")
-        self._data: dict[str, Any] = {"settings": dict(DEFAULTS), "events": {}}
+        self._data: dict[str, Any] = {"settings": dict(DEFAULTS), "events": {}, "links": None}
+        self._linked_at: dict[str, float] = {}
         self._unsubs: list = []
         self._tasks: set[asyncio.Task] = set()
         self._cams: list[str] = []
@@ -72,8 +86,12 @@ class CameraEvents:
         if isinstance(stored, dict):
             self._data["settings"].update(stored.get("settings") or {})
             self._data["events"] = stored.get("events") or {}
+            self._data["links"] = stored.get("links")
         await self.hass.async_add_executor_job(self._root().mkdir, 0o755, True, True)
         self._cams = self._find_cameras()
+        if self._data["links"] is None:
+            self._data["links"] = self._seed_links()
+            self._save()
         self._unsubs.append(self.hass.bus.async_listen(EVENT_STATE_CHANGED, self._on_state, self._wanted))
         self._unsubs.append(async_track_time_interval(self.hass, self._tidy, timedelta(hours=1)))
         self.hass.async_create_task(self._tidy())
@@ -99,8 +117,12 @@ class CameraEvents:
     def settings(self) -> dict[str, Any]:
         return {**self._data["settings"], "folder": str(self._root())}
 
-    async def async_set_settings(self, keep_days: int | None, max_gb: float | None, folder: str | None) -> None:
+    async def async_set_settings(
+        self, keep_days: int | None, max_gb: float | None, folder: str | None, cooldown: int | None = None
+    ) -> None:
         s = self._data["settings"]
+        if cooldown is not None:
+            s["cooldown"] = max(30, int(cooldown))
         if keep_days is not None:
             s["keep_days"] = max(1, int(keep_days))
         if max_gb is not None:
@@ -133,8 +155,10 @@ class CameraEvents:
     @callback
     def _wanted(self, event_data: Any) -> bool:
         eid = event_data.get("entity_id", "") if hasattr(event_data, "get") else ""
-        return (eid.startswith("event.") and eid.endswith(("_ding", "_motion"))) or (
-            eid.startswith("camera.") and eid.endswith("_live_view")
+        return (
+            (eid.startswith("event.") and eid.endswith(("_ding", "_motion")))
+            or (eid.startswith("camera.") and eid.endswith("_live_view"))
+            or eid in self._triggers()
         )
 
     @callback
@@ -143,6 +167,8 @@ class CameraEvents:
         old, new = event.data.get("old_state"), event.data.get("new_state")
         if new is None or old is None:
             return
+        if eid in self._triggers() and self._fired(eid, old.state, new.state):
+            self._link(eid)
         base = self.base_of(eid)
         if not base or base not in self._cams:
             return
@@ -213,7 +239,8 @@ class CameraEvents:
             return
         act = self.hass.states.get(f"sensor.{base}_last_activity")
         created = dt_util.parse_datetime(act.attributes.get("created_at") or act.state) if act else None
-        kind = "ding" if act is not None and act.attributes.get("category") == "ding" else "motion"
+        category = act.attributes.get("category") if act is not None else None
+        kind = {"ding": "ding", "on_demand": "linked", "live": "linked"}.get(category, "motion")
         ts = (created or dt_util.utcnow()).timestamp()
         # The event this recording belongs to: same kind, close in time, no clip yet.
         entry = min(
@@ -238,10 +265,126 @@ class CameraEvents:
         size = await self.hass.async_add_executor_job(self._write, self._root() / base / name, data)
         entry["mp4"] = name
         entry["bytes"] = entry.get("bytes", 0) + size
-        if not entry.get("jpg"):
+        # The clip's own first moments make the best thumbnail.
+        if not await self._async_thumb(base, entry) and not entry.get("jpg"):
             await self._async_picture(base, entry)
         self._save()
         await self._tidy()
+
+    async def _async_thumb(self, base: str, entry: dict[str, Any]) -> bool:
+        """A picture from 1 second into the clip (with Home Assistant's ffmpeg)."""
+        try:
+            from homeassistant.components.ffmpeg import get_ffmpeg_manager  # noqa: PLC0415
+
+            binary = get_ffmpeg_manager(self.hass).binary
+        except Exception:  # noqa: BLE001
+            return False
+        clip = self._root() / base / entry["mp4"]
+        name = f"{self._stamp(entry['ts'], entry['kind'])}.jpg"
+        out = self._root() / base / name
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                binary, "-y", "-loglevel", "error", "-ss", "1", "-i", str(clip), "-frames:v", "1", "-vf", "scale=640:-2", str(out),
+                stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL,
+            )
+            await asyncio.wait_for(proc.wait(), 30)
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.debug("No thumbnail for %s: %s", clip, err)
+            return False
+        size = await self.hass.async_add_executor_job(lambda: out.stat().st_size if out.is_file() else 0)
+        if not size:
+            return False
+        if entry.get("jpg") and entry["jpg"] != name:
+            await self.hass.async_add_executor_job(lambda: (self._root() / base / entry["jpg"]).unlink(missing_ok=True))
+        entry["jpg"] = name
+        entry["bytes"] = entry.get("bytes", 0) + size
+        return True
+
+    # ---- camera links -------------------------------------------------
+
+    def _seed_links(self) -> dict[str, Any]:
+        """To start with: what Ring did (Front Door motion and the doorbell
+        also record the Driveway), in every mode, when those cameras exist."""
+        links: dict[str, Any] = {m: {} for m in MODES}
+        if "front_door" in self._cams and "driveway" in self._cams:
+            for trig in ("event.front_door_motion", "event.front_door_ding"):
+                for m in MODES:
+                    links[m][trig] = {"cams": ["driveway"], "secs": 30}
+        return links
+
+    def _triggers(self) -> set[str]:
+        return {t for m in MODES for t in (self._data.get("links") or {}).get(m, {})}
+
+    def mode(self) -> str:
+        alarms = sorted(self.hass.states.async_all("alarm_control_panel"), key=lambda s: s.entity_id)
+        return ALARM_MODE.get(alarms[0].state, "disarmed") if alarms else "disarmed"
+
+    @staticmethod
+    def _fired(entity_id: str, old: str, new: str) -> bool:
+        if new in ("unknown", "unavailable") or old in ("unavailable",) or new == old:
+            return False
+        if entity_id.startswith("event."):
+            return True  # a new event (its state is the time)
+        return new in ON_STATES and old not in ON_STATES
+
+    @callback
+    def _link(self, trigger: str) -> None:
+        rule = (self._data.get("links") or {}).get(self.mode(), {}).get(trigger)
+        if not rule:
+            return
+        source = self.base_of(trigger)
+        name = (self.hass.states.get(trigger).name if self.hass.states.get(trigger) else trigger)
+        cooldown = float(self._data["settings"].get("cooldown") or 120)
+        now = time.time()
+        for cam in rule.get("cams", []):
+            if cam == source or cam not in self._cams or now - self._linked_at.get(cam, 0) < cooldown:
+                continue
+            self._linked_at[cam] = now
+            self._spawn(self._async_record(cam, int(rule.get("secs") or 30), trigger, name))
+
+    async def _async_record(self, cam: str, secs: int, trigger: str, source: str) -> None:
+        switch = f"switch.{cam}_live_stream"
+        if self.hass.states.get(switch) is None:
+            _LOGGER.debug("No live stream switch for %s", cam)
+            return
+        ts = time.time()
+        self._list(cam).append(
+            {"id": f"{int(ts)}l", "ts": ts, "kind": "linked", "source": source, "trigger": trigger,
+             "jpg": None, "mp4": None, "bytes": 0}
+        )
+        self._save()
+        try:
+            await self.hass.services.async_call("switch", "turn_on", {"entity_id": switch}, blocking=True)
+            await asyncio.sleep(max(5, min(secs, 120)))
+        finally:
+            await self.hass.services.async_call("switch", "turn_off", {"entity_id": switch}, blocking=True)
+
+    def links(self) -> dict[str, Any]:
+        """Everything Manager's Camera links needs."""
+        cams = []
+        for base in self._cams:
+            st = self.hass.states.get(f"camera.{base}_live_view")
+            name = (st.name if st else base.replace("_", " ").title()).replace(" Live view", "")
+            cams.append({"base": base, "name": name, "battery": self.hass.states.get(f"sensor.{base}_battery") is not None})
+        return {
+            "modes": list(MODES),
+            "mode": self.mode(),
+            "links": self._data.get("links") or {m: {} for m in MODES},
+            "cameras": cams,
+            "cooldown": self._data["settings"].get("cooldown", 120),
+        }
+
+    async def async_set_link(self, mode: str, trigger: str, cams: list[str] | None, secs: int | None) -> None:
+        links = self._data.setdefault("links", {m: {} for m in MODES})
+        table = links.setdefault(mode, {})
+        if cams is None:
+            table.pop(trigger, None)  # removed from this mode
+        else:
+            rule = table.setdefault(trigger, {"cams": [], "secs": 30})
+            rule["cams"] = [c for c in dict.fromkeys(cams) if c in self._cams]
+            if secs is not None:
+                rule["secs"] = max(5, min(int(secs), 120))
+        self._save()
 
     # ---- tidying ------------------------------------------------------
 
@@ -289,7 +432,9 @@ class CameraEvents:
         """A camera's saved events, newest first."""
         out = []
         for e in sorted(self._data["events"].get(base, []), key=lambda e: e["ts"], reverse=True):
-            out.append({"id": e["id"], "ts": e["ts"], "kind": e["kind"], "jpg": e.get("jpg"), "mp4": e.get("mp4")})
+            out.append(
+                {"id": e["id"], "ts": e["ts"], "kind": e["kind"], "source": e.get("source"), "jpg": e.get("jpg"), "mp4": e.get("mp4")}
+            )
         return out
 
     def path(self, base: str, name: str) -> Path | None:

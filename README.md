@@ -262,6 +262,18 @@ These go in `/media/church_drive/events/<camera>/`, are kept 5 days and capped a
 3 GB (the oldest go first). They're not in backups. The time kept, the space and the
 folder (e.g. a NAS share) are set over `church_drive/camera/settings`.
 
+### `camera-links-card` (Manager's Camera links)
+
+Which cameras record when something happens, like Ring's Linked Devices but for any
+motion sensor, door or doorbell, and set separately for **Disarmed**, **Home** (and
+night) and **Away** (and while the alarm's going off). The current mode is marked "now".
+Rows are triggers (each camera's motion and doorbell, plus any you add); tick the
+cameras that should record, and for how long. The integration turns on ring-mqtt's live
+stream for those cameras (Ring saves it as a recording) and they show in the events
+viewer as "Linked · from …". Each camera records a linked clip at most once every 2
+minutes (changeable). It starts with what Ring did: Front Door motion and the doorbell
+also record the Driveway for 30 s, in every mode.
+
 ### `places-card` (Manager's Locations)
 
 A card for each person: Home (automatic), then the places they go. Each place is a

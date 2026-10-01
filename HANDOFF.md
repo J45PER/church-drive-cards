@@ -334,6 +334,26 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       `liveElement()` are shared from that file.
     - `popup.close()` now returns a promise, so a second pop-up can open straight
       after.
+  - **Camera links** (`events.py`, plus `src/camera-links-card.js` on Manager):
+    - Stored as `links {disarmed|home|away: {trigger_entity: {cams: [base], secs}}}`.
+      The mode comes from the first alarm panel (`ALARM_MODE`: night counts as
+      home; pending and triggered count as away).
+    - A trigger is an event entity changing state, or a binary_sensor turning
+      on. The linked camera's `switch.<x>_live_stream` (ring-mqtt) turns on for
+      `secs`, at most once per `cooldown` (120 s) per camera. The camera's own
+      trigger is skipped.
+    - A "linked" event is logged with its `source`, and paired with the
+      recording whose last_activity category is on_demand.
+    - Clip thumbnails now come from 1 s into the clip via HA's ffmpeg (Ring
+      depends on ffmpeg). The snapshot is the fallback.
+    - Seeded with what the user had in Ring: front_door motion and ding →
+      driveway 30 s in every mode. They need to turn Ring's own Linked Devices
+      off in the Ring app.
+    - Websocket `church_drive/camera/links` and `.../links/set` (admin);
+      `cooldown` is set in camera/settings.
+    - Tested against HA core (switch calls, cooldown, per-mode). Not yet tested
+      against real Ring: whether a ring-mqtt live view actually produces a Ring
+      recording and a new `last_video_id`.
   - **Places:**
     - `people.py` stores `places {person: [{zone, name}]}`. `people()` gives
       `place` (Home, their name for the zone, the zone's name, Away, Unknown),

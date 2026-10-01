@@ -36,3 +36,5 @@ WS_PEOPLE_PLACES = "church_drive/people/places"
 # Camera events (events.py).
 WS_CAMERA_EVENTS = "church_drive/camera/events"
 WS_CAMERA_SETTINGS = "church_drive/camera/settings"
+WS_CAMERA_LINKS = "church_drive/camera/links"
+WS_CAMERA_LINK_SET = "church_drive/camera/links/set"

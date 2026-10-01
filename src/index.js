@@ -25,6 +25,7 @@ import { registerSafetyCard } from './safety-card.js';
 import { registerPeopleCard } from './people-card.js';
 import { registerCameraCard } from './camera-card.js';
 import { registerPlacesCard } from './places-card.js';
+import { registerCameraLinksCard } from './camera-links-card.js';
 import { SUFFIX } from './suffix.js';
 
 registerGaugeZoneCard();
@@ -54,5 +55,6 @@ registerSafetyCard();
 registerPeopleCard();
 registerCameraCard();
 registerPlacesCard();
+registerCameraLinksCard();
 
 console.info(`%c CHURCH-DRIVE-CARDS${SUFFIX ? ' BETA' : ''} %c loaded `, 'color: white; background: #2196f3; font-weight: 700;', 'color: #2196f3; background: transparent;');
