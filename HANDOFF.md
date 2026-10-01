@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-01. Current release: **v0.31.2**.*
+*Last updated 2026-10-01. Current release: **v0.31.3**.*
 
 ## Where this stands
 
@@ -14,7 +14,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-01, v0.31.2 live, nothing on beta):**
+**Now (2026-10-01, v0.31.3 live, nothing on beta):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -310,6 +310,13 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **v0.31.3 (released 2026-10-01, restarted): clip player controls.**
+  - Under a playing clip (`.ce-bar` in `camera-events.js`): play/pause, time, a range
+    timeline to scrub, length, Download and Full screen.
+  - Download fetches the clip once it starts playing, so the tap can open the share sheet
+    straight away (`navigator.share` with a File; iPhone: Save Video), else an `<a download>`.
+  - Full screen is the media box on Android/PC (pan and zoom still work), and
+    `webkitEnterFullscreen` (Apple's player) on iPhone. The user tested it on both phones.
 - **v0.31.2 (released 2026-10-01, restarted): old camera events removed.**
   - Once, on start (`cleared_old` in the store): events without a `whole` clip (all from
     before v0.31.1, which could never play) are removed with their pictures. The user asked
