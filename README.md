@@ -239,6 +239,19 @@ battery, last check-in and the CO reading, with any alarm going off at the top i
 Everyone in Home Assistant's people, home / away / unknown (or their zone), and their
 companion-app phones' batteries. New people appear by themselves.
 
+### `camera-card`
+
+One camera, one card each (several sit side by side in a panel). The tile shows the
+newer of ring-mqtt's snapshot and the Ring integration's recording frame, with why and
+how long ago it was taken ("Doorbell · 4 min"). An orange badge means the picture is
+older than `refresh_after` (default 60 min). While someone's looking, the card then
+presses the camera's Take Snapshot button, at most once per `refresh_after` for everyone,
+so battery cameras last. A battery icon shows below 25%. Tap for a pop-up with live
+video, Snapshot, the light in the camera's area (or `light`), and recent doorbell
+presses and motion. With `talk_stream` (a go2rtc stream with two-way audio) it also has
+Talk. The snapshot, button, battery and events are found from the camera's name
+(`camera.front_door_live_view` → `camera.front_door_snapshot`, and so on).
+
 ### `security-zone-card`
 
 One outside or entry zone (Front Garden, Entrance, Driveway…), one card each. It has:
