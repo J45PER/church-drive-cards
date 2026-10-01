@@ -26,6 +26,8 @@ import { registerPeopleCard } from './people-card.js';
 import { registerCameraCard } from './camera-card.js';
 import { registerPlacesCard } from './places-card.js';
 import { registerCameraLinksCard } from './camera-links-card.js';
+import { registerZoneMapCard } from './zone-map-card.js';
+import { installMapStyle } from './map-style.js';
 import { SUFFIX } from './suffix.js';
 
 registerGaugeZoneCard();
@@ -56,5 +58,8 @@ registerPeopleCard();
 registerCameraCard();
 registerPlacesCard();
 registerCameraLinksCard();
+registerZoneMapCard();
+// Satellite (or street) maps everywhere in Home Assistant.
+installMapStyle();
 
 console.info(`%c CHURCH-DRIVE-CARDS${SUFFIX ? ' BETA' : ''} %c loaded `, 'color: white; background: #2196f3; font-weight: 700;', 'color: #2196f3; background: transparent;');

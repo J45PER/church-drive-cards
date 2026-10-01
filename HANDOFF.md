@@ -311,6 +311,25 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
 - **Next release (on the branch): Locations edit/save, zone location requests, "Live view".**
+  - **Satellite maps** (`src/map-style.js`, `installMapStyle()` in index.js):
+    - A `window.L` setter catches Home Assistant's Leaflet. Its UMD build always
+      sets `window.L`.
+    - `TileLayer.initialize` swaps cartocdn, OSM or stadia URLs for Esri
+      World_Imagery (plus World_Transportation and World_Boundaries_and_Places
+      label layers, added in `onAdd`) or World_Street_Map.
+    - Per browser: localStorage `cd-map-style` = satellite (default), street or
+      ha. Guarded by `window.__cdMapStyle`, because the release and beta bundles
+      both load.
+  - **`zone-map-card`** (Manager › Locations, above the person cards):
+    - Uses bundled Leaflet ESM (`leaflet` dependency; the ESM build doesn't
+      touch `window.L`). Leaflet CSS is imported as text (esbuild loader).
+    - The bundle is now whitespace-minified (`minifyWhitespace`) to stay about
+      700 KB.
+    - Zones are matched to `zone/list` ids by name. Saving uses
+      zone/create/update/delete, or `config/core/update` for Home.
+    - Search uses Nominatim (gb). This environment can't reach Esri or
+      Nominatim, so it was tested in a browser with tiles blocked: the hook
+      swap, drawing, select, resize, add and the save message.
   - `places-card` shows text with an Edit button. Edit gives the zone and name rows,
     ✕ and + Add a place, saved together with Save (`_drafts`); Cancel drops them.
   - `people.py`: a zone added, moved or resized sends `request_location_update` to

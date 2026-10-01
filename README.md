@@ -274,6 +274,17 @@ viewer as "Linked · from …". Each camera records a linked clip at most once e
 minutes (changeable). It starts with what Ring did: Front Door motion and the doorbell
 also record the Driveway for 30 s, in every mode.
 
+### `zone-map-card` (Manager's Locations) and satellite maps everywhere
+
+Home Assistant's zones on a satellite map (Esri imagery with road and place names), or
+a street map. Search an address, postcode or place (OpenStreetMap), **+ Add zone** then
+tap the map, or tap a zone to rename it, drag its centre to move it, drag the white dot
+on its edge to resize it, and **Save** or **Delete**. It changes Home Assistant's own
+zones (Home included). The **Satellite / Street** buttons also set every other map in
+Home Assistant on that device: the Zones page, map cards and person maps all use the
+same satellite or street map instead of Home Assistant's own (`cd-map-style` in the
+browser; `ha` would put Home Assistant's back).
+
 ### `places-card` (Manager's Locations)
 
 A card for each person: Home (automatic), then the places they go. Each place is a
