@@ -8,7 +8,9 @@ itself:
 - their to-do list, "Priorities <first name>" (a Local To-do list), made if
   it doesn't exist;
 - a column in Manager's notifications table, starting with whatever is set
-  to "everyone".
+  to "everyone";
+- their places: the zones they go to, each with their own name for it
+  ("Work", "Gym"), so cards can say "At work · Ashfield School".
 
 Assignments are kept here (stored across restarts), per kind of notification
 (see kinds.py): either "everyone" (anyone, now or later) or a list of people.
@@ -64,7 +66,7 @@ class People:
     def __init__(self, hass: HomeAssistant) -> None:
         self.hass = hass
         self._store: Store = Store(hass, STORE_VERSION, "church_drive.people")
-        self._data: dict[str, Any] = {"assign": {}, "phones_off": {}, "seeded": False}
+        self._data: dict[str, Any] = {"assign": {}, "phones_off": {}, "places": {}, "seeded": False}
         self._admins: dict[str, bool] = {}
         self._owner: str | None = None
         self._unsubs: list = []
@@ -184,6 +186,8 @@ class People:
                         "on": service not in self._data["phones_off"].get(st.entity_id, []),
                     }
                 )
+            places = list(self._data.get("places", {}).get(st.entity_id, []))
+            place, zone = self._place(st.state, places)
             out.append(
                 {
                     "entity_id": st.entity_id,
@@ -192,12 +196,42 @@ class People:
                     "user_id": user,
                     "admin": bool(user and self._admins.get(user)),
                     "home": st.state,
+                    "place": place,
+                    "zone": zone,
+                    "places": places,
                     "picture": st.attributes.get("entity_picture"),
                     "list": f"todo.priorities_{slugify(first)}",
                     "phones": phones,
                 }
             )
         return out
+
+    # ---- places: what each person calls the zones they go to -----------
+
+    def _place(self, state: str, places: list[dict[str, str]]) -> tuple[str, str]:
+        """(label, zone name) for where someone is: "Home", their name for a
+        zone ("Work"), the zone's own name, "Away" or "Unknown"."""
+        if state == "home":
+            return "Home", ""
+        if state in ("not_home",):
+            return "Away", ""
+        if state in ("unknown", "unavailable", ""):
+            return "Unknown", ""
+        for p in places:
+            z = self.hass.states.get(p.get("zone", ""))
+            if z is not None and z.name == state:
+                return (p.get("name") or state), state
+        return state, state
+
+    async def async_set_places(self, person: str, places: list[dict[str, str]]) -> None:
+        clean = [
+            {"zone": str(p.get("zone", "")), "name": str(p.get("name", "")).strip()[:40]}
+            for p in places
+            if str(p.get("zone", "")).startswith("zone.") and p.get("zone") != "zone.home"
+        ]
+        self._data.setdefault("places", {})[person] = clean
+        await self._async_save()
+        self._changed()
 
     async def _async_make_lists(self) -> None:
         """Give everyone a "Priorities <first name>" to-do list if they haven't one."""

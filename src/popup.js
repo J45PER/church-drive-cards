@@ -5,7 +5,8 @@
 //   const pop = openPopup(card, { title: 'New task', icon: 'mdi:plus', color: '#7e57c2', content: el, onClose });
 //   pop.body       the scrolling area `content` was put in
 //   pop.setTitle() change the heading
-//   pop.close()    close it (onClose runs once, however it was closed)
+//   pop.close()    close it (onClose runs once, however it was closed); a promise
+//                  that settles when it's fully gone, to open another straight after
 //
 // It's a native <dialog> shown with showModal(), so it sits above everything
 // on the page (sidebar, nav bar, other cards' stacking) without being moved
@@ -79,12 +80,23 @@ export function openPopup(host, { title = '', icon = '', color = 'var(--primary-
     pushed = false;
     finish();
   };
+  // Returns a promise that settles once the history step is gone, so another
+  // pop-up can open straight after without the Back closing it too.
   const close = () => {
-    if (closed) return;
+    if (closed) return Promise.resolve();
     const wasPushed = pushed;
     pushed = false;
     finish();
-    if (wasPushed && history.state && history.state.cdPopup) history.back();
+    if (!(wasPushed && history.state && history.state.cdPopup)) return Promise.resolve();
+    return new Promise((resolve) => {
+      const done = () => {
+        window.removeEventListener('popstate', done);
+        resolve();
+      };
+      window.addEventListener('popstate', done);
+      setTimeout(done, 500);
+      history.back();
+    });
   };
 
   d.querySelector('.cd-pop-x').addEventListener('click', close);

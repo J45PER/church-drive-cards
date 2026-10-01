@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-01. Current release: **v0.29.2**.*
+*Last updated 2026-10-01. Current release: **v0.30.0**.*
 
 ## Where this stands
 
@@ -14,7 +14,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-01, v0.29.2 live, nothing on beta):**
+**Now (2026-10-01, v0.30.0 live, nothing on beta):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -310,6 +310,60 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **v0.30.0 (released 2026-10-01, restarted): camera events, camera links and places.** Manager gained Locations and Camera links panels; Security's camera and zone cards open the events viewer.
+  - **Camera events** (`events.py`, `CameraEvents`):
+    - Saves a picture 8 s after each Ring `event.<x>_ding/_motion`, from
+      `camera.<x>_snapshot` (else the live view).
+    - When the Ring camera's `last_video_id` changes, it downloads `video_url` and
+      pairs it with the event of the same kind within 4 minutes (kind from
+      `sensor.<x>_last_activity`).
+    - Files go in `/media/church_drive/events/<x>/YYYYmmdd-HHMMSS_<kind>.jpg|mp4`.
+      They're kept 5 days and capped at 3 GB (oldest first), tidied hourly.
+    - Store `church_drive.camera_events`. Websocket `church_drive/camera/events`
+      returns `{camera}` with signed links via `EventFileView`
+      (`/api/church_drive/events/<x>/<file>`). `church_drive/camera/settings`
+      (admin) sets keep_days, max_gb and folder (for a NAS later).
+    - Backups don't include `/media` (automatic backups have no
+      `include_folders`), so clips aren't backed up.
+    - Tested with a fake camera and download against HA core 2026.2 (scratch venv).
+  - **Events viewer** (`src/camera-events.js`, `openCameraEvents`):
+    - Opened from the camera pop-up's Events button, and by tapping a
+      security-zone card (its camera is the `camera` option, else found from its
+      ding/motion event entities or its name).
+    - The camera pop-up no longer lists events. `stageMedia()` (drag and zoom) and
+      `liveElement()` are shared from that file.
+    - `popup.close()` now returns a promise, so a second pop-up can open straight
+      after.
+  - **Camera links** (`events.py`, plus `src/camera-links-card.js` on Manager):
+    - Stored as `links {disarmed|home|away: {trigger_entity: {cams: [base], secs}}}`.
+      The mode comes from the first alarm panel (`ALARM_MODE`: night counts as
+      home; pending and triggered count as away).
+    - A trigger is an event entity changing state, or a binary_sensor turning
+      on. The linked camera's `switch.<x>_live_stream` (ring-mqtt) turns on for
+      `secs`, at most once per `cooldown` (120 s) per camera. The camera's own
+      trigger is skipped.
+    - A "linked" event is logged with its `source`, and paired with the
+      recording whose last_activity category is on_demand.
+    - Clip thumbnails now come from 1 s into the clip via HA's ffmpeg (Ring
+      depends on ffmpeg). The snapshot is the fallback.
+    - Seeded with what the user had in Ring: front_door motion and ding →
+      driveway 30 s in every mode. They need to turn Ring's own Linked Devices
+      off in the Ring app.
+    - Websocket `church_drive/camera/links` and `.../links/set` (admin);
+      `cooldown` is set in camera/settings.
+    - Tested against HA core (switch calls, cooldown, per-mode). Not yet tested
+      against real Ring: whether a ring-mqtt live view actually produces a Ring
+      recording and a new `last_video_id`.
+  - **Places:**
+    - `people.py` stores `places {person: [{zone, name}]}`. `people()` gives
+      `place` (Home, their name for the zone, the zone's name, Away, Unknown),
+      `zone` and `places`; these also go into `sensor.church_drive_people`.
+    - Websocket `church_drive/people/places` (admin).
+    - `places-card` (Manager's Locations): one card per person, with Home
+      automatic, zone and name rows, and + Add a place.
+    - The people card shows `placeText()`, e.g. "At work · Ashfield School".
+    - Zones are made by the user in /config/zone; Ashfield School exists.
+      Diane's three post offices are to come.
 - **v0.29.2 (released 2026-10-01, restarted): nav bar icons shrink to fit.** In
   icons-only mode each item was a fixed 42px, so eight Mobile pages ran under the
   back-to-top button on a phone. `_fit()` now sets `--nb-sz` to the bar's width shared

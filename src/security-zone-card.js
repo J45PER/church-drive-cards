@@ -4,12 +4,14 @@
 // (hourly bars or ticks: motion, door open, doorbell, light on) that you can
 // press and hold to read, the last events, each battery on its own row, and
 // a tile for the zone's light. Indigo normally, amber while a door is open,
-// red on a tamper or a door opened while the alarm is set.
+// red on a tamper or a door opened while the alarm is set. Tap it to see its
+// camera's saved events (camera-events.js).
 
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { KIT_COLOR, kitShell, kitHead, kitTiles, kitNum, kitEsc, KitHistory, kitStateHistory, kitCompact, kitCompactable } from './card-kit.js';
+import { openCameraEvents, cameraBase } from './camera-events.js';
 
 export const SZ_COLOR = {
   zone: '#5c6bc0',
@@ -113,6 +115,7 @@ export const SecurityZoneCardEditor = createFormEditor({
             ]),
           },
           { name: 'alarm_entity', selector: { entity: { domain: 'alarm_control_panel' } } },
+          { name: 'camera', selector: { entity: { domain: 'camera' } } },
         ]),
     {
       type: 'expandable',
@@ -159,6 +162,7 @@ export const SecurityZoneCardEditor = createFormEditor({
     light_name: 'Light tile name (optional)',
     ...Object.fromEntries(SZ_BATTERIES.flatMap((n) => [[`battery_${n}`, `Battery ${n}`], [`battery_${n}_name`, `Battery ${n} name (e.g. Doorbell)`]])),
     alarm_entity: 'Alarm (optional: an open door turns red while it’s set)',
+    camera: 'Camera for its events (optional)',
     hours: 'Time shown',
     strip: 'Strip style',
     show_last: 'Last events line',
@@ -168,6 +172,7 @@ export const SecurityZoneCardEditor = createFormEditor({
   helpers: {
     motion_entities: 'Motion sensors (on/off) and camera motion events both work.',
     battery_1: 'Named rows, e.g. Doorbell 58% and Hue sensor 100%. Below 25% turns amber.',
+    camera: "Tapping the zone opens this camera's events. Empty: found from its doorbell or camera motion, or its name.",
   },
 });
 
@@ -307,6 +312,13 @@ export class SecurityZoneCard extends HTMLElement {
       );
       this._stripEl = this.querySelector('.sz-strip');
       this._scrub(this._stripEl);
+      // A tap on the zone opens its camera's events (not on the light or
+      // while reading the strip).
+      this.querySelector('ha-card').addEventListener('click', (ev) => {
+        if (ev.target.closest('.sz-light, button, a') || this._scrubbing || Date.now() - (this._scrubEnd || 0) < 400) return;
+        const base = this._camera();
+        if (base) openCameraEvents(this, this._hass, base, { title: this.config.name });
+      });
       this._built = true;
     }
     if (!this._demo) {
@@ -435,6 +447,7 @@ export class SecurityZoneCard extends HTMLElement {
       word().textContent = this._at(f);
     };
     const hide = () => {
+      if (this._scrubbing) this._scrubEnd = Date.now();
       this._scrubbing = false;
       const cur = el.querySelector('.sz-cursor');
       if (cur) cur.style.display = 'none';
@@ -475,6 +488,14 @@ export class SecurityZoneCard extends HTMLElement {
     }, { passive: false });
     el.addEventListener('touchend', end);
     el.addEventListener('contextmenu', (ev) => active && ev.preventDefault());
+  }
+
+  // The camera this zone's events come from: set in the editor, or found
+  // from its doorbell / motion events (event.front_door_motion → front_door)
+  // or its name (Driveway → camera.driveway_live_view).
+  _camera() {
+    const c = this.config;
+    return cameraBase(this._hass, c.camera, c.doorbell_entity, ...(c.motion_entities || []), c.name);
   }
 
   _toggleLight() {

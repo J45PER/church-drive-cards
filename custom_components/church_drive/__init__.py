@@ -14,11 +14,16 @@
 - People and notifications (people.py, kinds.py): the house's people and
   their phones, picked up from Home Assistant's people; who gets each kind
   of notification (set in Manager); church_drive.notify to send one; and
-  sensor.church_drive_people for automations and the cards.
+  sensor.church_drive_people for automations and the cards. Each person's
+  places (their names for the zones they go to) are set in Manager.
+- Camera events (events.py): a picture and the recording of every Ring
+  doorbell press and motion, kept for a few days, for the cards' events
+  viewer.
 """
 
 from __future__ import annotations
 
+from datetime import timedelta
 import json
 import logging
 from pathlib import Path
@@ -29,6 +34,7 @@ import voluptuous as vol
 from homeassistant.components import websocket_api
 from homeassistant.components.frontend import add_extra_js_url, remove_extra_js_url
 from homeassistant.components.http import StaticPathConfig
+from homeassistant.components.http.auth import async_sign_path
 from homeassistant.components.lovelace.const import LOVELACE_DATA
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ENTITY_ID, EVENT_HOMEASSISTANT_STARTED, Platform
@@ -60,11 +66,17 @@ from .const import (
     WS_LIBRARY,
     WS_PEOPLE,
     WS_PEOPLE_ASSIGN,
+    WS_CAMERA_EVENTS,
+    WS_CAMERA_LINK_SET,
+    WS_CAMERA_LINKS,
+    WS_CAMERA_SETTINGS,
     WS_PEOPLE_PHONE,
+    WS_PEOPLE_PLACES,
     WS_SCENE_DELETE,
     WS_SCENE_PREVIEW,
     WS_SCENE_SAVE,
 )
+from .events import URL as EVENTS_URL, CameraEvents, EventFileView
 from .health import DeviceHealth
 from .hue import async_sync
 from .library import Library, normalise
@@ -278,6 +290,111 @@ async def _async_remove_resource(hass: HomeAssistant) -> None:
         _LOGGER.warning("Couldn't remove the cards' dashboard resource: %s", err)
 
 
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_PEOPLE_PLACES,
+        vol.Required("person"): cv.entity_id,
+        vol.Required("places"): [
+            vol.Schema({vol.Required("zone"): cv.entity_id, vol.Optional("name", default=""): cv.string})
+        ],
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_people_places(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Set a person's places: the zones they go to, each with their name for it."""
+    people = _people(hass)
+    if people is None:
+        connection.send_error(msg["id"], "not_ready", "People and notifications aren't running")
+        return
+    await people.async_set_places(msg["person"], msg["places"])
+    connection.send_result(msg["id"], {"people": people.people()})
+
+
+def _events(hass: HomeAssistant) -> CameraEvents | None:
+    return hass.data.get(DOMAIN, {}).get("events")
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_CAMERA_EVENTS, vol.Required("camera"): cv.string})
+@callback
+def ws_camera_events(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """A camera's saved events (newest first), with signed links to each picture and clip."""
+    events = _events(hass)
+    if events is None:
+        connection.send_error(msg["id"], "not_ready", "Camera events aren't running")
+        return
+    cam = msg["camera"]
+    base = CameraEvents.base_of(cam) or cam
+    expires = timedelta(hours=2)
+
+    def sign(name: str | None) -> str | None:
+        if not name:
+            return None
+        return async_sign_path(hass, f"{EVENTS_URL}/{base}/{name}", expires, refresh_token_id=connection.refresh_token_id)
+
+    out = [{**e, "picture": sign(e.pop("jpg")), "clip": sign(e.pop("mp4"))} for e in events.events(base)]
+    connection.send_result(msg["id"], {"camera": base, "events": out, "settings": events.settings()})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_CAMERA_SETTINGS,
+        vol.Optional("keep_days"): vol.All(vol.Coerce(int), vol.Range(min=1, max=365)),
+        vol.Optional("max_gb"): vol.All(vol.Coerce(float), vol.Range(min=0.5, max=10000)),
+        vol.Optional("folder"): cv.string,
+        vol.Optional("cooldown"): vol.All(vol.Coerce(int), vol.Range(min=30, max=3600)),
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_camera_settings(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """How long camera events are kept, the space they may use, and where (e.g. a NAS share)."""
+    events = _events(hass)
+    if events is None:
+        connection.send_error(msg["id"], "not_ready", "Camera events aren't running")
+        return
+    await events.async_set_settings(msg.get("keep_days"), msg.get("max_gb"), msg.get("folder"), msg.get("cooldown"))
+    connection.send_result(msg["id"], events.settings())
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_CAMERA_LINKS})
+@callback
+def ws_camera_links(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Camera links per alarm mode, the cameras, the current mode and the cooldown."""
+    events = _events(hass)
+    if events is None:
+        connection.send_error(msg["id"], "not_ready", "Camera events aren't running")
+        return
+    connection.send_result(msg["id"], events.links())
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_CAMERA_LINK_SET,
+        vol.Required("mode"): vol.In(["disarmed", "home", "away"]),
+        vol.Required("trigger"): cv.entity_id,
+        vol.Optional("cams"): vol.Any(None, [cv.string]),
+        vol.Optional("secs"): vol.All(vol.Coerce(int), vol.Range(min=5, max=120)),
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_camera_link_set(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Which cameras a trigger records in a mode (no `cams`: take the trigger out of that mode)."""
+    events = _events(hass)
+    if events is None:
+        connection.send_error(msg["id"], "not_ready", "Camera events aren't running")
+        return
+    await events.async_set_link(msg["mode"], msg["trigger"], msg.get("cams"), msg.get("secs"))
+    connection.send_result(msg["id"], events.links())
+
+
 def _version() -> str:
     return json.loads((Path(__file__).parent / "manifest.json").read_text())["version"]
 
@@ -292,7 +409,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             [StaticPathConfig(URL_BASE, str(FRONTEND_DIR), cache_headers=False)]
         )
         for command in (
-            ws_library, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_phone
+            ws_library, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_phone,
+            ws_people_places, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set,
         ):
             websocket_api.async_register_command(hass, command)
     # The version in the URL makes browsers fetch the new bundle after an
@@ -327,6 +445,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception:  # noqa: BLE001
         _LOGGER.exception("People and notifications couldn't start; everything else still works")
         data["people"] = None
+
+    # Camera events mustn't stop anything else loading either.
+    events = CameraEvents(hass)
+    try:
+        await events.async_start()
+        entry.async_on_unload(events.async_stop)
+        data["events"] = events
+        if "events_view" not in data:
+            hass.http.register_view(EventFileView(hass))
+            data["events_view"] = True
+    except Exception:  # noqa: BLE001
+        _LOGGER.exception("Camera events couldn't start; everything else still works")
+        data["events"] = None
 
     async def notify(call: ServiceCall) -> ServiceResponse:
         if data.get("people") is None:

@@ -543,7 +543,7 @@
       }
       return v == null && pts.length ? pts[0][1] : v;
     };
-    const when4 = (t) => {
+    const when3 = (t) => {
       const d = new Date(t), today = /* @__PURE__ */ new Date();
       const time = d.toLocaleTimeString(void 0, { hour: "2-digit", minute: "2-digit" });
       return d.toDateString() === today.toDateString() ? time : `${d.toLocaleDateString(void 0, { weekday: "short" })} ${time}`;
@@ -571,7 +571,7 @@
         dot.style.display = "block";
         rows.push(`<div style="color:${colour};">\u25CF ${kitEsc(s.format ? s.format(v) : Number(v).toFixed(1))}</div>`);
       });
-      tip.innerHTML = `<div style="color:var(--secondary-text-color);">${when4(t)}</div>${rows.join("")}`;
+      tip.innerHTML = `<div style="color:var(--secondary-text-color);">${when3(t)}</div>${rows.join("")}`;
       tip.style.display = "block";
       const w = tip.offsetWidth;
       tip.style.left = `${Math.max(0, Math.min(rect.width - w, left - w / 2))}px`;
@@ -2456,9 +2456,9 @@
       const track = "rgba(255,255,255,0.06)";
       const row3 = document.createElement("div");
       row3.className = "lcc-row";
-      const pad6 = level > 0 ? "9px 14px" : "12px 14px";
+      const pad7 = level > 0 ? "9px 14px" : "12px 14px";
       const indent = level > 0 ? `margin-left:${16 * level}px;` : "";
-      row3.style.cssText = `position:relative; display:flex; align-items:center; gap:12px; padding:${pad6}; ${indent} border-radius:12px; margin-top:6px; overflow:hidden; cursor:pointer; user-select:none; touch-action:pan-y; background: linear-gradient(to right, ${tint} 0%, ${tint} ${fillPct}%, ${track} ${fillPct}%, ${track} 100%);`;
+      row3.style.cssText = `position:relative; display:flex; align-items:center; gap:12px; padding:${pad7}; ${indent} border-radius:12px; margin-top:6px; overflow:hidden; cursor:pointer; user-select:none; touch-action:pan-y; background: linear-gradient(to right, ${tint} 0%, ${tint} ${fillPct}%, ${track} ${fillPct}%, ${track} 100%);`;
       row3.innerHTML = `
       ${iconHtml(icon, { size: "24px", cls: "lcc-row-icon", style: `color:${on ? color : "var(--secondary-text-color)"}; opacity:${on ? 1 : 0.6}; flex-shrink:0; pointer-events:none;` })}
       <div class="lcc-name" style="flex:1; min-width:0; font-weight:${on ? 600 : 400}; color:${on ? "var(--primary-text-color)" : "var(--secondary-text-color)"}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; pointer-events:none;">${name}</div>
@@ -6200,8 +6200,8 @@
       warn.style.display = high ? "flex" : "none";
       if (high) warn.innerHTML = `${iconHtml("mdi:alert", { size: "24px" })}<span>Carbon monoxide found. Get everyone outside and open doors and windows.</span>`;
       this.querySelector(".co-gauge").innerHTML = kitGauge(d.ppm == null ? 0 : Math.max(0.02, d.ppm / 100), color, d.ppm == null ? "\u2013" : String(Math.round(d.ppm)), "ppm CO");
-      const when4 = d.report && !isNaN(Date.parse(d.report)) ? new Date(d.report) : null;
-      const whenText2 = when4 ? when4.toLocaleString(void 0, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+      const when3 = d.report && !isNaN(Date.parse(d.report)) ? new Date(d.report) : null;
+      const whenText2 = when3 ? when3.toLocaleString(void 0, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
       this.querySelector(".co-info").innerHTML = [
         `<span>${iconHtml(high ? "mdi:alert-circle" : "mdi:shield-check", { size: "18px", style: `color:${color};` })}${high ? "CO detected" : "No CO detected"}</span>`,
         d.battery != null ? `<span>${iconHtml(d.battery < 20 ? "mdi:battery-alert" : "mdi:battery", { size: "18px", style: `color:${d.battery < 20 ? KIT_COLOR.bad : KIT_COLOR.good};` })}Battery ${Math.round(d.battery)}%</span>` : "",
@@ -6593,6 +6593,434 @@
     });
   }
 
+  // src/popup.js
+  var PHONE = "(max-width: 600px)";
+  var POP_CSS = `
+  dialog.cd-pop { box-sizing:border-box; border:none; padding:0; margin:auto; width:min(520px, calc(100vw - 32px)); max-width:none; max-height:min(86dvh, 820px);
+    border-radius:24px; overflow:hidden; display:flex; flex-direction:column;
+    background:var(--ha-dialog-surface-background, var(--mdc-theme-surface, var(--card-background-color, #1f2128)));
+    color:var(--primary-text-color); box-shadow:0 18px 50px rgba(0,0,0,0.45); font-family:var(--ha-font-family-body, inherit);
+    animation:cd-pop-in 0.18s ease-out; }
+  dialog.cd-pop:not([open]) { display:none; }
+  dialog.cd-pop::backdrop { background:rgba(0,0,0,0.55); animation:cd-pop-fade 0.18s ease-out; }
+  .cd-pop-grab { display:none; flex:none; width:40px; height:4px; border-radius:2px; background:rgba(127,127,127,0.45); margin:10px auto 0; }
+  .cd-pop-head { flex:none; display:flex; align-items:center; gap:12px; padding:16px 12px 8px 18px; }
+  .cd-pop-icon { flex:none; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+  .cd-pop-title { flex:1; min-width:0; font-size:1.1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .cd-pop-x { flex:none; width:40px; height:40px; border:none; border-radius:50%; background:transparent; color:var(--secondary-text-color); cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .cd-pop-x:hover { background:rgba(127,127,127,0.15); }
+  .cd-pop-x:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
+  .cd-pop-body { flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; padding:6px 18px 20px; }
+  @media ${PHONE} {
+    dialog.cd-pop { width:100vw; max-height:90dvh; margin:auto 0 0 0; border-radius:24px 24px 0 0; animation:cd-sheet-in 0.22s ease-out; }
+    .cd-pop-grab { display:block; }
+    .cd-pop-head { padding-top:10px; }
+    .cd-pop-body { padding-bottom:calc(20px + env(safe-area-inset-bottom, 0px)); }
+  }
+  @keyframes cd-pop-in { from { opacity:0; transform:scale(0.96); } }
+  @keyframes cd-sheet-in { from { transform:translateY(100%); } }
+  @keyframes cd-pop-fade { from { opacity:0; } }
+  @media (prefers-reduced-motion: reduce) { dialog.cd-pop, dialog.cd-pop::backdrop { animation:none; } }
+`;
+  function openPopup(host, { title = "", icon = "", color = "var(--primary-color)", content = null, onClose = null } = {}) {
+    const d = document.createElement("dialog");
+    d.className = "cd-pop";
+    d.setAttribute("aria-label", title);
+    d.innerHTML = `<style>${POP_CSS}</style>
+    <div class="cd-pop-grab" aria-hidden="true"></div>
+    <div class="cd-pop-head">
+      ${icon ? `<div class="cd-pop-icon" style="background:color-mix(in srgb, ${color} 22%, transparent); color:${color};">${iconHtml(icon, { size: "20px" })}</div>` : ""}
+      <div class="cd-pop-title"></div>
+      <button type="button" class="cd-pop-x" aria-label="Close">${iconHtml("mdi:close", { size: "22px" })}</button>
+    </div>
+    <div class="cd-pop-body"></div>`;
+    const body = d.querySelector(".cd-pop-body");
+    const heading = d.querySelector(".cd-pop-title");
+    heading.textContent = title;
+    if (content) body.appendChild(content);
+    host.appendChild(d);
+    hydrateIcons(d);
+    let closed = false;
+    let pushed = false;
+    const finish = () => {
+      if (closed) return;
+      closed = true;
+      window.removeEventListener("popstate", onBack);
+      if (d.open) d.close();
+      d.remove();
+      if (onClose) onClose();
+    };
+    const onBack = () => {
+      pushed = false;
+      finish();
+    };
+    const close = () => {
+      if (closed) return Promise.resolve();
+      const wasPushed = pushed;
+      pushed = false;
+      finish();
+      if (!(wasPushed && history.state && history.state.cdPopup)) return Promise.resolve();
+      return new Promise((resolve2) => {
+        const done = () => {
+          window.removeEventListener("popstate", done);
+          resolve2();
+        };
+        window.addEventListener("popstate", done);
+        setTimeout(done, 500);
+        history.back();
+      });
+    };
+    d.querySelector(".cd-pop-x").addEventListener("click", close);
+    d.addEventListener("cancel", (ev) => {
+      ev.preventDefault();
+      close();
+    });
+    let downOutside = false;
+    const outside = (ev) => {
+      if (ev.target !== d) return false;
+      const r = d.getBoundingClientRect();
+      return ev.clientX < r.left || ev.clientX > r.right || ev.clientY < r.top || ev.clientY > r.bottom;
+    };
+    d.addEventListener("pointerdown", (ev) => downOutside = outside(ev));
+    d.addEventListener("click", (ev) => {
+      if (downOutside && outside(ev)) close();
+      downOutside = false;
+    });
+    d.showModal();
+    try {
+      history.pushState({ ...history.state || {}, cdPopup: true }, "");
+      pushed = true;
+      window.addEventListener("popstate", onBack);
+    } catch (_) {
+    }
+    return {
+      dialog: d,
+      body,
+      close,
+      setTitle: (text) => {
+        heading.textContent = text;
+        d.setAttribute("aria-label", text);
+      },
+      get open() {
+        return !closed;
+      }
+    };
+  }
+
+  // src/camera-events.js
+  var KINDS = {
+    ding: ["Doorbell", "#29b6f6", "#012"],
+    motion: ["Motion", "#5c6bc0", "#fff"],
+    linked: ["Linked", "#26a69a", "#fff"],
+    interval: ["Snapshot", "rgba(255,255,255,0.22)", "#fff"],
+    "on-demand": ["Snapshot", "rgba(255,255,255,0.22)", "#fff"]
+  };
+  var STAGE_CSS = `
+  .cc-pop-media { position:relative; border-radius:14px; overflow:hidden; background:#000; aspect-ratio:16/9; touch-action:none; cursor:grab; user-select:none; }
+  .cc-stage { position:absolute; left:0; top:0; transform-origin:0 0; will-change:transform; }
+  .cc-stage > * { display:block; width:100%; height:100%; pointer-events:none; }
+  .cc-stage img, .cc-stage video { object-fit:cover; }
+  .cc-ib { width:28px; height:28px; border-radius:50%; background:rgba(0,0,0,0.45); color:#fff; display:flex; align-items:center; justify-content:center; }
+  .cc-mute { position:absolute; top:8px; right:8px; border:none; cursor:pointer; z-index:1; }
+  .cc-tag { position:absolute; top:8px; left:8px; z-index:1; font-size:0.7rem; font-weight:800; border-radius:6px; padding:2px 7px; color:#fff; pointer-events:none; }
+  .cc-btns { display:flex; gap:10px; margin:14px 0 6px; }
+  .cc-btn { flex:1 1 0; min-width:0; border:none; border-radius:14px; padding:10px 4px; cursor:pointer; font:inherit; font-size:0.78rem; font-weight:700;
+    background:rgba(127,127,127,0.16); color:var(--primary-text-color); display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .cc-btn.main { background:#5c6bc0; color:#fff; }
+  .cc-btn.talk { background:#43a047; color:#fff; }
+  .cc-btn.talk.on { background:#e53935; }
+  .cc-btn[disabled] { opacity:.5; cursor:default; }
+`;
+  var EV_CSS = `
+  .ce-chips { display:flex; gap:6px; flex-wrap:wrap; margin:12px 0 2px; }
+  .ce-chip { border:none; cursor:pointer; font:inherit; font-size:0.75rem; font-weight:700; border-radius:999px; padding:5px 11px; background:rgba(127,127,127,0.18); color:var(--primary-text-color); }
+  .ce-chip.on { background:var(--primary-text-color, #e6e8ee); color:var(--card-background-color, #1f2128); }
+  .ce-day { font-size:0.78rem; font-weight:700; color:var(--secondary-text-color); margin:14px 0 6px; }
+  .ce-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(104px, 1fr)); gap:6px; }
+  .ce-ev { position:relative; border:none; padding:0; cursor:pointer; border-radius:9px; overflow:hidden; aspect-ratio:16/9; background:linear-gradient(160deg,#55606f,#2f3946); color:#fff; font:inherit; }
+  .ce-ev img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .ce-ev.sel { outline:2px solid var(--primary-text-color, #e6e8ee); outline-offset:1px; }
+  .ce-ev .t { position:absolute; left:5px; bottom:3px; font-size:0.68rem; font-weight:700; text-shadow:0 1px 2px #000; }
+  .ce-ev .k { position:absolute; right:4px; top:4px; font-size:0.6rem; font-weight:800; border-radius:999px; padding:1px 6px; }
+  .ce-ev .p { position:absolute; left:4px; top:3px; text-shadow:0 1px 2px #000; }
+  .ce-empty { color:var(--secondary-text-color); font-size:0.85rem; padding:14px 2px; }
+`;
+  var pad = (n) => String(n).padStart(2, "0");
+  var hm = (ms) => {
+    const d = new Date(ms);
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+  function dayName(ms, now = /* @__PURE__ */ new Date()) {
+    const d = new Date(ms);
+    const day2 = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const diff = Math.round((today - day2) / 864e5);
+    if (diff === 0) return "Today";
+    if (diff === 1) return "Yesterday";
+    return d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+  }
+  async function liveElement(hass, entityId) {
+    const st = hass && hass.states[entityId];
+    if (st && customElements.get("ha-camera-stream")) {
+      const el2 = document.createElement("ha-camera-stream");
+      el2.hass = hass;
+      el2.stateObj = st;
+      el2.controls = false;
+      el2.muted = false;
+      return el2;
+    }
+    const helpers = await window.loadCardHelpers();
+    const el = helpers.createCardElement({ type: "picture-entity", entity: entityId, camera_view: "live", show_name: false, show_state: false });
+    el.hass = hass;
+    return el;
+  }
+  function stageMedia(box, el, aspect = 16 / 9) {
+    box.innerHTML = "";
+    const stage = document.createElement("div");
+    stage.className = "cc-stage";
+    stage.appendChild(el);
+    box.appendChild(stage);
+    if ("muted" in el) {
+      const mute = document.createElement("button");
+      mute.className = "cc-ib cc-mute";
+      mute.setAttribute("aria-label", "Sound");
+      const setMute = () => {
+        mute.innerHTML = iconHtml(el.muted ? "mdi:volume-off" : "mdi:volume-high", { size: "17px" });
+        hydrateIcons(mute);
+      };
+      mute.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        el.muted = !el.muted;
+        setMute();
+      });
+      box.appendChild(mute);
+      setMute();
+    }
+    const v = { x: 0, y: 0, z: 1, w: 0, h: 0 };
+    const size = () => ({ width: box.clientWidth, height: box.clientHeight });
+    const clamp = () => {
+      const r = size();
+      v.x = Math.min(0, Math.max(r.width - v.w * v.z, v.x));
+      v.y = Math.min(0, Math.max(r.height - v.h * v.z, v.y));
+      stage.style.width = `${v.w * v.z}px`;
+      stage.style.height = `${v.h * v.z}px`;
+      stage.style.transform = `translate(${v.x}px, ${v.y}px)`;
+    };
+    const fit = () => {
+      const r = size();
+      if (!r.width) return;
+      const first = !v.w;
+      if (aspect < r.width / r.height) {
+        v.w = r.width;
+        v.h = r.width / aspect;
+      } else {
+        v.h = r.height;
+        v.w = r.height * aspect;
+      }
+      if (first) {
+        v.x = (r.width - v.w) / 2;
+        v.y = (r.height - v.h) / 2;
+      }
+      clamp();
+    };
+    const zoomAt = (z, cx, cy) => {
+      const r = box.getBoundingClientRect();
+      const px = cx - r.left;
+      const py = cy - r.top;
+      const nz = Math.min(4, Math.max(1, z));
+      v.x = px - (px - v.x) * nz / v.z;
+      v.y = py - (py - v.y) * nz / v.z;
+      v.z = nz;
+      clamp();
+    };
+    box._cdStage = { fit, clamp, zoomAt, v };
+    if (!box._cdWired) {
+      box._cdWired = true;
+      const s = () => box._cdStage;
+      const pts = /* @__PURE__ */ new Map();
+      let pinch = null;
+      box.addEventListener("pointerdown", (ev) => {
+        if (ev.target.closest(".cc-mute")) return;
+        box.setPointerCapture(ev.pointerId);
+        pts.set(ev.pointerId, [ev.clientX, ev.clientY]);
+        if (pts.size === 2) {
+          const [a, b] = [...pts.values()];
+          pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), z: s().v.z };
+        }
+      });
+      box.addEventListener("pointermove", (ev) => {
+        const prev = pts.get(ev.pointerId);
+        if (!prev) return;
+        pts.set(ev.pointerId, [ev.clientX, ev.clientY]);
+        if (pts.size === 2 && pinch) {
+          const [a, b] = [...pts.values()];
+          s().zoomAt(pinch.z * Math.hypot(a[0] - b[0], a[1] - b[1]) / (pinch.d || 1), (a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+        } else if (pts.size === 1) {
+          s().v.x += ev.clientX - prev[0];
+          s().v.y += ev.clientY - prev[1];
+          s().clamp();
+        }
+      });
+      const up = (ev) => {
+        pts.delete(ev.pointerId);
+        if (pts.size < 2) pinch = null;
+      };
+      box.addEventListener("pointerup", up);
+      box.addEventListener("pointercancel", up);
+      box.addEventListener(
+        "wheel",
+        (ev) => {
+          ev.preventDefault();
+          s().zoomAt(s().v.z * (ev.deltaY < 0 ? 1.15 : 1 / 1.15), ev.clientX, ev.clientY);
+        },
+        { passive: false }
+      );
+      box.addEventListener("dblclick", (ev) => s().zoomAt(s().v.z > 1.4 ? 1 : 2, ev.clientX, ev.clientY));
+      if (window.ResizeObserver) new ResizeObserver(() => s().fit()).observe(box);
+    }
+    requestAnimationFrame(fit);
+    const findVideo = (root, depth = 0) => {
+      if (!root || depth > 6) return null;
+      if (root.localName === "video" || root.localName === "img") return root;
+      const vid = root.querySelector && root.querySelector("video");
+      if (vid) return vid;
+      for (const n of root.querySelectorAll ? root.querySelectorAll("*") : []) {
+        const f = n.shadowRoot && findVideo(n.shadowRoot, depth + 1);
+        if (f) return f;
+      }
+      return null;
+    };
+    let tries = 0;
+    const look = () => {
+      if (!box.isConnected || box._cdStage.v !== v || tries++ > 30) return;
+      const m = findVideo(el.shadowRoot || el);
+      const w = m && (m.videoWidth || m.naturalWidth);
+      const h = m && (m.videoHeight || m.naturalHeight);
+      if (w && h) {
+        const a = w / h;
+        if (Math.abs(a - aspect) > 0.02) {
+          aspect = a;
+          v.w = 0;
+          fit();
+        }
+        return;
+      }
+      setTimeout(look, 400);
+    };
+    setTimeout(look, 300);
+    return stage;
+  }
+  function stageTag(box, text, colour) {
+    const t = document.createElement("div");
+    t.className = "cc-tag";
+    t.style.background = colour;
+    t.textContent = text;
+    box.appendChild(t);
+    return t;
+  }
+  function openCameraEvents(host, hass, base, { title = "", aspect = 16 / 9 } = {}) {
+    const live = `camera.${base}_live_view`;
+    const name = title || String(hass.states[live] && hass.states[live].attributes.friendly_name || base.replace(/_/g, " ")).replace(/ Live view$/i, "");
+    const content = document.createElement("div");
+    content.innerHTML = `<style>${STAGE_CSS}${EV_CSS}</style><div class="cc-pop-media" style="display:none;"></div><div class="ce-chips"></div><div class="ce-list"><div class="ce-empty">Loading\u2026</div></div>`;
+    const box = content.querySelector(".cc-pop-media");
+    const chips = content.querySelector(".ce-chips");
+    const list = content.querySelector(".ce-list");
+    const state = { filter: "all", events: [], sel: null, keep: 5 };
+    const pop = openPopup(host, {
+      title: `${name} \xB7 events`,
+      icon: "mdi:history",
+      color: "#5c6bc0",
+      content,
+      onClose: () => {
+        box.innerHTML = "";
+      }
+    });
+    const play = (e) => {
+      state.sel = e.id;
+      renderList();
+      box.style.display = "";
+      if (pop.body) pop.body.scrollTo({ top: 0, behavior: "smooth" });
+      let el;
+      if (e.clip) {
+        el = document.createElement("video");
+        el.src = e.clip;
+        el.autoplay = true;
+        el.playsInline = true;
+        el.loop = false;
+        el.muted = false;
+        el.setAttribute("playsinline", "");
+        el.addEventListener("loadeddata", () => el.play().catch(() => {
+        }));
+      } else {
+        el = document.createElement("img");
+        el.src = e.picture || "";
+        el.alt = "";
+      }
+      stageMedia(box, el, aspect);
+      const [label, colour] = KINDS[e.kind] || KINDS.motion;
+      const from = e.kind === "linked" && e.source ? ` from ${e.source}` : "";
+      stageTag(box, `${e.clip ? "\u25B6 " : ""}${label}${from} \xB7 ${hm(e.ts * 1e3)} ${dayName(e.ts * 1e3).toLowerCase()}`, colour);
+    };
+    const renderChips = () => {
+      const opts = [["all", "All"], ["ding", "Doorbell"], ["motion", "Motion"], ["linked", "Linked"]].filter(
+        ([k]) => k === "all" || state.events.some((e) => e.kind === k)
+      );
+      chips.innerHTML = opts.map(([k, t]) => `<button class="ce-chip${state.filter === k ? " on" : ""}" data-f="${k}">${t}</button>`).join("");
+    };
+    const renderList = () => {
+      renderChips();
+      const shown = state.events.filter((e) => state.filter === "all" || e.kind === state.filter);
+      if (!shown.length) {
+        list.innerHTML = `<div class="ce-empty">${state.events.length ? "Nothing of that kind" : "No events saved yet"} in the last ${state.keep} days.</div>`;
+        return;
+      }
+      let html = "";
+      let day2 = "";
+      shown.forEach((e) => {
+        const d = dayName(e.ts * 1e3);
+        if (d !== day2) {
+          html += `${day2 ? "</div>" : ""}<div class="ce-day">${kitEsc(d)}</div><div class="ce-grid">`;
+          day2 = d;
+        }
+        const [label, bg, fg] = KINDS[e.kind] || KINDS.motion;
+        html += `<button class="ce-ev${state.sel === e.id ? " sel" : ""}" data-id="${kitEsc(e.id)}" aria-label="${label} ${hm(e.ts * 1e3)}">
+        ${e.picture ? `<img src="${kitEsc(e.picture)}" alt="" loading="lazy">` : ""}
+        ${e.clip ? '<span class="p">\u25B6</span>' : ""}<span class="k" style="background:${bg}; color:${fg};">${label}</span><span class="t">${hm(e.ts * 1e3)}</span></button>`;
+      });
+      list.innerHTML = `${html}</div>`;
+    };
+    chips.addEventListener("click", (ev) => {
+      const b = ev.target.closest("[data-f]");
+      if (!b) return;
+      state.filter = b.dataset.f;
+      renderList();
+    });
+    list.addEventListener("click", (ev) => {
+      const b = ev.target.closest("[data-id]");
+      const e = b && state.events.find((x) => x.id === b.dataset.id);
+      if (e) play(e);
+    });
+    hass.callWS({ type: "church_drive/camera/events", camera: base }).then((res) => {
+      state.events = res.events || [];
+      state.keep = res.settings && res.settings.keep_days || 5;
+      renderList();
+    }).catch(() => {
+      list.innerHTML = '<div class="ce-empty">Saved events need the latest Church Drive integration (and a restart).</div>';
+    });
+    return pop;
+  }
+  function cameraBase(hass, ...hints) {
+    const s = hass && hass.states || {};
+    for (const h of hints.flat()) {
+      if (!h) continue;
+      const m = String(h).match(/^(?:camera|event)\.([a-z0-9_]+?)(?:_live_view|_snapshot|_last_recording|_ding|_motion)?$/);
+      const base = m ? m[1] : String(h).toLowerCase().trim().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+      if (base && s[`camera.${base}_live_view`]) return base;
+    }
+    return null;
+  }
+
   // src/security-zone-card.js
   var SZ_COLOR = {
     zone: "#5c6bc0",
@@ -6686,7 +7114,8 @@
             { name: `battery_${n}_name`, selector: { text: {} } }
           ])
         },
-        { name: "alarm_entity", selector: { entity: { domain: "alarm_control_panel" } } }
+        { name: "alarm_entity", selector: { entity: { domain: "alarm_control_panel" } } },
+        { name: "camera", selector: { entity: { domain: "camera" } } }
       ],
       {
         type: "expandable",
@@ -6733,6 +7162,7 @@
       light_name: "Light tile name (optional)",
       ...Object.fromEntries(SZ_BATTERIES.flatMap((n) => [[`battery_${n}`, `Battery ${n}`], [`battery_${n}_name`, `Battery ${n} name (e.g. Doorbell)`]])),
       alarm_entity: "Alarm (optional: an open door turns red while it\u2019s set)",
+      camera: "Camera for its events (optional)",
       hours: "Time shown",
       strip: "Strip style",
       show_last: "Last events line",
@@ -6741,7 +7171,8 @@
     },
     helpers: {
       motion_entities: "Motion sensors (on/off) and camera motion events both work.",
-      battery_1: "Named rows, e.g. Doorbell 58% and Hue sensor 100%. Below 25% turns amber."
+      battery_1: "Named rows, e.g. Doorbell 58% and Hue sensor 100%. Below 25% turns amber.",
+      camera: "Tapping the zone opens this camera's events. Empty: found from its doorbell or camera motion, or its name."
     }
   });
   var SecurityZoneCard = class extends HTMLElement {
@@ -6870,6 +7301,11 @@
         );
         this._stripEl = this.querySelector(".sz-strip");
         this._scrub(this._stripEl);
+        this.querySelector("ha-card").addEventListener("click", (ev) => {
+          if (ev.target.closest(".sz-light, button, a") || this._scrubbing || Date.now() - (this._scrubEnd || 0) < 400) return;
+          const base = this._camera();
+          if (base) openCameraEvents(this, this._hass, base, { title: this.config.name });
+        });
         this._built = true;
       }
       if (!this._demo) {
@@ -6985,6 +7421,7 @@
         word().textContent = this._at(f);
       };
       const hide = () => {
+        if (this._scrubbing) this._scrubEnd = Date.now();
         this._scrubbing = false;
         const cur = el.querySelector(".sz-cursor");
         if (cur) cur.style.display = "none";
@@ -7025,6 +7462,13 @@
       }, { passive: false });
       el.addEventListener("touchend", end);
       el.addEventListener("contextmenu", (ev) => active && ev.preventDefault());
+    }
+    // The camera this zone's events come from: set in the editor, or found
+    // from its doorbell / motion events (event.front_door_motion → front_door)
+    // or its name (Driveway → camera.driveway_live_view).
+    _camera() {
+      const c = this.config;
+      return cameraBase(this._hass, c.camera, c.doorbell_entity, ...c.motion_entities || [], c.name);
     }
     _toggleLight() {
       if (this._demo) {
@@ -7569,117 +8013,12 @@
     });
   }
 
-  // src/popup.js
-  var PHONE = "(max-width: 600px)";
-  var POP_CSS = `
-  dialog.cd-pop { box-sizing:border-box; border:none; padding:0; margin:auto; width:min(520px, calc(100vw - 32px)); max-width:none; max-height:min(86dvh, 820px);
-    border-radius:24px; overflow:hidden; display:flex; flex-direction:column;
-    background:var(--ha-dialog-surface-background, var(--mdc-theme-surface, var(--card-background-color, #1f2128)));
-    color:var(--primary-text-color); box-shadow:0 18px 50px rgba(0,0,0,0.45); font-family:var(--ha-font-family-body, inherit);
-    animation:cd-pop-in 0.18s ease-out; }
-  dialog.cd-pop:not([open]) { display:none; }
-  dialog.cd-pop::backdrop { background:rgba(0,0,0,0.55); animation:cd-pop-fade 0.18s ease-out; }
-  .cd-pop-grab { display:none; flex:none; width:40px; height:4px; border-radius:2px; background:rgba(127,127,127,0.45); margin:10px auto 0; }
-  .cd-pop-head { flex:none; display:flex; align-items:center; gap:12px; padding:16px 12px 8px 18px; }
-  .cd-pop-icon { flex:none; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
-  .cd-pop-title { flex:1; min-width:0; font-size:1.1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .cd-pop-x { flex:none; width:40px; height:40px; border:none; border-radius:50%; background:transparent; color:var(--secondary-text-color); cursor:pointer; display:flex; align-items:center; justify-content:center; }
-  .cd-pop-x:hover { background:rgba(127,127,127,0.15); }
-  .cd-pop-x:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
-  .cd-pop-body { flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; padding:6px 18px 20px; }
-  @media ${PHONE} {
-    dialog.cd-pop { width:100vw; max-height:90dvh; margin:auto 0 0 0; border-radius:24px 24px 0 0; animation:cd-sheet-in 0.22s ease-out; }
-    .cd-pop-grab { display:block; }
-    .cd-pop-head { padding-top:10px; }
-    .cd-pop-body { padding-bottom:calc(20px + env(safe-area-inset-bottom, 0px)); }
-  }
-  @keyframes cd-pop-in { from { opacity:0; transform:scale(0.96); } }
-  @keyframes cd-sheet-in { from { transform:translateY(100%); } }
-  @keyframes cd-pop-fade { from { opacity:0; } }
-  @media (prefers-reduced-motion: reduce) { dialog.cd-pop, dialog.cd-pop::backdrop { animation:none; } }
-`;
-  function openPopup(host, { title = "", icon = "", color = "var(--primary-color)", content = null, onClose = null } = {}) {
-    const d = document.createElement("dialog");
-    d.className = "cd-pop";
-    d.setAttribute("aria-label", title);
-    d.innerHTML = `<style>${POP_CSS}</style>
-    <div class="cd-pop-grab" aria-hidden="true"></div>
-    <div class="cd-pop-head">
-      ${icon ? `<div class="cd-pop-icon" style="background:color-mix(in srgb, ${color} 22%, transparent); color:${color};">${iconHtml(icon, { size: "20px" })}</div>` : ""}
-      <div class="cd-pop-title"></div>
-      <button type="button" class="cd-pop-x" aria-label="Close">${iconHtml("mdi:close", { size: "22px" })}</button>
-    </div>
-    <div class="cd-pop-body"></div>`;
-    const body = d.querySelector(".cd-pop-body");
-    const heading = d.querySelector(".cd-pop-title");
-    heading.textContent = title;
-    if (content) body.appendChild(content);
-    host.appendChild(d);
-    hydrateIcons(d);
-    let closed = false;
-    let pushed = false;
-    const finish = () => {
-      if (closed) return;
-      closed = true;
-      window.removeEventListener("popstate", onBack);
-      if (d.open) d.close();
-      d.remove();
-      if (onClose) onClose();
-    };
-    const onBack = () => {
-      pushed = false;
-      finish();
-    };
-    const close = () => {
-      if (closed) return;
-      const wasPushed = pushed;
-      pushed = false;
-      finish();
-      if (wasPushed && history.state && history.state.cdPopup) history.back();
-    };
-    d.querySelector(".cd-pop-x").addEventListener("click", close);
-    d.addEventListener("cancel", (ev) => {
-      ev.preventDefault();
-      close();
-    });
-    let downOutside = false;
-    const outside = (ev) => {
-      if (ev.target !== d) return false;
-      const r = d.getBoundingClientRect();
-      return ev.clientX < r.left || ev.clientX > r.right || ev.clientY < r.top || ev.clientY > r.bottom;
-    };
-    d.addEventListener("pointerdown", (ev) => downOutside = outside(ev));
-    d.addEventListener("click", (ev) => {
-      if (downOutside && outside(ev)) close();
-      downOutside = false;
-    });
-    d.showModal();
-    try {
-      history.pushState({ ...history.state || {}, cdPopup: true }, "");
-      pushed = true;
-      window.addEventListener("popstate", onBack);
-    } catch (_) {
-    }
-    return {
-      dialog: d,
-      body,
-      close,
-      setTitle: (text) => {
-        heading.textContent = text;
-        d.setAttribute("aria-label", text);
-      },
-      get open() {
-        return !closed;
-      }
-    };
-  }
-
   // src/repeat.js
   var DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  var pad = (n) => String(n).padStart(2, "0");
+  var pad2 = (n) => String(n).padStart(2, "0");
   var T = "(\\d{1,2}):(\\d{2})";
-  var hhmm = (h, m) => `${pad(h)}:${m}`;
+  var hhmm = (h, m) => `${pad2(h)}:${m}`;
   var ordinal = (n) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th"}`;
   function parseSlots(text) {
     const out = [];
@@ -7844,7 +8183,7 @@
   }
 
   // src/task-list-card.js
-  var pad2 = (n) => String(n).padStart(2, "0");
+  var pad3 = (n) => String(n).padStart(2, "0");
   var DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   function choreIcon(name) {
     const n = String(name || "").toLowerCase();
@@ -7862,8 +8201,8 @@
     return "mdi:broom";
   }
   var dueDate = (due) => due ? new Date(String(due).includes("T") ? due : `${due}T23:59:59`) : null;
-  var dateInput = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-  var timeInput = (d) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  var dateInput = (d) => `${d.getFullYear()}-${pad3(d.getMonth() + 1)}-${pad3(d.getDate())}`;
+  var timeInput = (d) => `${pad3(d.getHours())}:${pad3(d.getMinutes())}`;
   var localStamp = (d) => `${dateInput(d)} ${timeInput(d)}:00`;
   function whenText(due) {
     if (!due) return "";
@@ -8129,8 +8468,8 @@
       if (sig === this._sig) return;
       this._sig = sig;
       const row3 = ({ t, p }, isDone) => {
-        const when4 = isDone ? "" : whenText(t.due);
-        const over = when4.includes("overdue");
+        const when3 = isDone ? "" : whenText(t.due);
+        const over = when3.includes("overdue");
         const mine = this._justMe() && Array.isArray(p.who) && p.who.length === 1 && p.who[0] === this._me();
         const who = !p.repeat ? "" : mine ? "reminds you" : p.who === "everyone" ? "reminds everyone" : Array.isArray(p.who) ? `reminds ${p.who.join(", ")}` : "";
         const sub = [p.repeat && p.repeat.type !== "once" ? describeRepeat(p.repeat) : "", who, p.notes].filter(Boolean).join(" \xB7 ");
@@ -8142,7 +8481,7 @@
           <div class="tl-name" style="${isDone ? "text-decoration:line-through; color:var(--secondary-text-color);" : ""}">${kitEsc(t.summary)}</div>
           ${sub ? `<div class="ck-sub" style="font-size:0.74rem; line-height:1.35;">${kitEsc(sub)}</div>` : ""}
         </div>
-        ${when4 ? `<span class="tl-when" style="color:${over ? "#e53935" : "var(--secondary-text-color)"};">${kitEsc(when4)}</span>` : ""}
+        ${when3 ? `<span class="tl-when" style="color:${over ? "#e53935" : "var(--secondary-text-color)"};">${kitEsc(when3)}</span>` : ""}
       </div>`;
       };
       if (missing) this._list.innerHTML = `<div class="ck-sub" style="line-height:1.5;">There's no ${kitEsc(this._entity() || "to-do")} list yet.</div>`;
@@ -8180,7 +8519,7 @@
         time: r.time || (due && String(t.due).includes("T") ? timeInput(due) : "09:00"),
         times: r.type === "weekly" ? Object.fromEntries(r.slots.map(([d, tt]) => [d, tt])) : {},
         dom: r.type === "monthly" ? r.day : due ? due.getDate() : now.getDate(),
-        ymd: r.type === "yearly" ? `${now.getFullYear()}-${pad2(r.month + 1)}-${pad2(r.day)}` : dateInput(due || now),
+        ymd: r.type === "yearly" ? `${now.getFullYear()}-${pad3(r.month + 1)}-${pad3(r.day)}` : dateInput(due || now),
         unit: r.unit || "day",
         date: due ? dateInput(due) : "",
         start: dateInput(due || now),
@@ -9331,7 +9670,7 @@
       const colour = this.config.list_color || "#2196f3";
       const now = /* @__PURE__ */ new Date();
       const day2 = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-      const when4 = (due) => {
+      const when3 = (due) => {
         if (!due) return { text: "", over: false };
         const dateOnly = !String(due).includes("T");
         const d = dateOnly ? /* @__PURE__ */ new Date(`${due}T23:59:59`) : new Date(due);
@@ -9349,7 +9688,7 @@
       const open = ((this._todoItems || {})[list] || []).filter((t) => t.status === "needs_action");
       const rank = (t) => t.due ? new Date(String(t.due).includes("T") ? t.due : `${t.due}T23:59:59`).getTime() : Infinity;
       const items = open.map((t, n) => ({ t, n })).sort((a, b) => rank(a.t) - rank(b.t) || a.n - b.n).map(({ t }) => {
-        const w = when4(t.due);
+        const w = when3(t.due);
         return { uid: t.uid, list, text: w.text ? `${t.summary} \xB7 ${w.text}` : t.summary, overdue: w.over, strong: w.over || w.today, colour, icon: choreIcon(t.summary), link: this.config.priorities_page || "" };
       });
       return { items, colour, icon: this.config.list_icon || "mdi:format-list-checks" };
@@ -9801,9 +10140,9 @@
       const max = Math.max(...charges.map((x) => Number(x.consumption || 0)), 0.01);
       const bars = charges.map((x) => `<i title="${kitEsc(hhmm2(new Date(x.start)))} \xB7 ${Number(x.consumption).toFixed(2)} kWh \xB7 ${pence(Number(x.rate))}" style="height:${Number(x.consumption || 0) / max * 100}%; background:${isCheap(Number(x.rate)) ? CHEAP : PEAK};"></i>`).join("");
       const saving = hi - lo > 1e-3 ? `Each kWh moved to the cheap rate saves ${pence(hi - lo)}.` : "";
-      const dayName = day2.toLocaleDateString(void 0, { weekday: "short", day: "numeric", month: "short" });
+      const dayName2 = day2.toLocaleDateString(void 0, { weekday: "short", day: "numeric", month: "short" });
       return {
-        head: [this.config.name || "Last full day", `${dayName} \xB7 ${pounds(eTotal + (gTotal || 0))}`, KIT_COLOR.comfy],
+        head: [this.config.name || "Last full day", `${dayName2} \xB7 ${pounds(eTotal + (gTotal || 0))}`, KIT_COLOR.comfy],
         body: `
         <div class="oc-two">
           <div class="oc-stat"><b>${pounds(eTotal)}</b><span>Electricity \xB7 ${kwh.toFixed(1)} kWh</span></div>
@@ -10479,14 +10818,14 @@
       });
     }
     _press(id, key) {
-      const pad6 = this._pad(id);
-      if (!pad6 || pad6.kind === "demo") return;
-      if (pad6.kind === "webos") {
+      const pad7 = this._pad(id);
+      if (!pad7 || pad7.kind === "demo") return;
+      if (pad7.kind === "webos") {
         const map = { up: "UP", down: "DOWN", left: "LEFT", right: "RIGHT", ok: "ENTER", back: "BACK", home: "HOME" };
         this._call("webostv", "button", { entity_id: id, button: map[key] });
       } else {
         const map = { up: "DPAD_UP", down: "DPAD_DOWN", left: "DPAD_LEFT", right: "DPAD_RIGHT", ok: "DPAD_CENTER", back: "BACK", home: "HOME" };
-        this._call("remote", "send_command", { entity_id: pad6.entity, command: map[key] });
+        this._call("remote", "send_command", { entity_id: pad7.entity, command: map[key] });
       }
     }
     _toggle(st) {
@@ -10578,7 +10917,7 @@
       this._popSig = sig;
       const live = PLAYING.includes(st.state);
       const on = ON.includes(st.state);
-      const pad6 = this._pad(id);
+      const pad7 = this._pad(id);
       const art = a.entity_picture ? `style="background-image:url('${kitEsc(a.entity_picture)}')"` : "";
       const btn = (act, icon, label, extra = "", cls = "mcp-round") => `<button type="button" class="${cls}" data-p="${act}" aria-label="${label}" ${extra}>${iconHtml(icon, { size: "22px" })}</button>`;
       let html = `<div class="mcp-now"><div class="mcp-art" ${art}>${a.entity_picture ? "" : iconHtml(this._icon(st), { size: "28px" })}</div>
@@ -10593,7 +10932,7 @@
           html += `<div class="mcp-vol">${iconHtml("mdi:volume-low", { size: "20px" })}<input type="range" min="0" max="100" step="1" value="${Math.round((a.volume_level || 0) * 100)}" aria-label="Volume">${iconHtml("mdi:volume-high", { size: "20px" })}</div>`;
         if ((has(st, F.SELECT_SOURCE) || this.config.demo) && Array.isArray(a.source_list) && a.source_list.length)
           html += `<div class="mcp-l">Source</div><select class="mcp-src" aria-label="Source">${a.source_list.map((s) => `<option ${s === a.source ? "selected" : ""}>${kitEsc(s)}</option>`).join("")}</select>`;
-        if (pad6)
+        if (pad7)
           html += `<div class="mcp-l">Remote</div><div class="mcp-pad">
           <span></span>${btn("up", "mdi:chevron-up", "Up", "", "")}<span></span>
           ${btn("left", "mdi:chevron-left", "Left", "", "")}<button type="button" class="mcp-ok" data-p="ok" aria-label="OK">OK</button>${btn("right", "mdi:chevron-right", "Right", "", "")}
@@ -10680,14 +11019,14 @@
   .sc-pill { flex:none; border-radius:999px; padding:2px 9px; font-size:0.72rem; font-weight:700; }
   .sc-tap { cursor:pointer; }
 `;
-  var pad3 = (n) => String(n).padStart(2, "0");
+  var pad4 = (n) => String(n).padStart(2, "0");
   function when2(iso, now = /* @__PURE__ */ new Date()) {
     const d = new Date(iso);
     if (isNaN(d)) return "";
     const day2 = new Date(d.getFullYear(), d.getMonth(), d.getDate());
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const diff = Math.round((day2 - today) / 864e5);
-    const t = `${pad3(d.getHours())}:${pad3(d.getMinutes())}`;
+    const t = `${pad4(d.getHours())}:${pad4(d.getMinutes())}`;
     if (diff === 0) return `${t} today`;
     if (diff === -1) return `${t} yesterday`;
     if (diff === 1) return `${t} tomorrow`;
@@ -10864,10 +11203,10 @@
   .sf-ppm { flex:none; font-size:1.25rem; font-weight:600; }
   .sf-ppm small { font-size:0.7rem; color:var(--secondary-text-color); font-weight:500; }
 `;
-  var pad4 = (n) => String(n).padStart(2, "0");
-  var hm = (iso) => {
+  var pad5 = (n) => String(n).padStart(2, "0");
+  var hm2 = (iso) => {
     const d = new Date(iso);
-    return isNaN(d) ? "" : `${pad4(d.getHours())}:${pad4(d.getMinutes())}`;
+    return isNaN(d) ? "" : `${pad5(d.getHours())}:${pad5(d.getMinutes())}`;
   };
   var day = (iso) => {
     const d = new Date(iso);
@@ -10961,7 +11300,7 @@
       this._sig = sig;
       this._list.innerHTML = items.length ? items.map((i) => {
         const col = i.on ? RED : i.unavailable ? "#9aa0ad" : GREEN;
-        const bits = i.on ? [`ALARM since ${hm(i.since)}`] : [i.unavailable ? "Not responding" : "All clear", i.battery != null ? `battery ${i.battery}%` : "", i.report && day(i.report) ? `checked in ${day(i.report)}` : ""];
+        const bits = i.on ? [`ALARM since ${hm2(i.since)}`] : [i.unavailable ? "Not responding" : "All clear", i.battery != null ? `battery ${i.battery}%` : "", i.report && day(i.report) ? `checked in ${day(i.report)}` : ""];
         return `<div class="sf-row" data-id="${kitEsc(i.id)}" role="button" tabindex="0" aria-label="${kitEsc(i.name)}">
               <div class="sf-ico" style="background:${i.on ? RED : `color-mix(in srgb, ${col} 20%, transparent)`}; color:${i.on ? "#fff" : col};">${iconHtml(ICON[i.cls] || "mdi:alarm-light", { size: "19px" })}</div>
               <div class="sf-body"><div class="sf-name">${kitEsc(i.name)}</div><div class="sf-sub" style="${i.on ? `color:${RED}; font-weight:700;` : ""}">${kitEsc(bits.filter(Boolean).join(" \xB7 "))}</div></div>
@@ -10996,6 +11335,204 @@
     });
   }
 
+  // src/places-card.js
+  var PEOPLE_SENSOR = "sensor.church_drive_people";
+  var SUGGEST = ["Work", "School", "College", "Gym", "Family", "Friends", "Shops"];
+  var PL_CSS = `
+  .pl-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap:12px; }
+  .pl-person .ck-card { height:100%; box-sizing:border-box; }
+  .pl-row { display:flex; align-items:center; gap:8px; }
+  .pl-row + .pl-row { margin-top:8px; }
+  .pl-ico { flex:none; width:32px; height:32px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:rgba(127,127,127,0.16); }
+  .pl-fixed { flex:1; min-width:0; font-size:0.88rem; }
+  .pl-fixed small { display:block; color:var(--secondary-text-color); font-size:0.75rem; }
+  .pl-row select, .pl-row input { min-width:0; box-sizing:border-box; height:36px; border-radius:10px; border:1px solid var(--divider-color, rgba(127,127,127,0.3));
+    background:var(--secondary-background-color, rgba(127,127,127,0.12)); color:var(--primary-text-color); font:inherit; font-size:0.85rem; padding:0 8px; }
+  .pl-row select { flex:1.3 1 0; }
+  .pl-row input { flex:1 1 0; }
+  .pl-x { flex:none; width:32px; height:32px; border:none; border-radius:50%; background:transparent; color:var(--secondary-text-color); cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .pl-x:hover { background:rgba(127,127,127,0.15); }
+  .pl-add { margin-top:10px; border:1px dashed var(--divider-color, rgba(127,127,127,0.4)); background:transparent; color:var(--primary-text-color); border-radius:12px; height:38px; width:100%; cursor:pointer; font:inherit; font-size:0.85rem; font-weight:600; display:flex; align-items:center; justify-content:center; gap:6px; }
+  .pl-foot { margin-top:12px; font-size:0.78rem; color:var(--secondary-text-color); }
+  .pl-foot a { color:var(--primary-color); cursor:pointer; }
+  .pl-none { font-size:0.82rem; color:var(--secondary-text-color); }
+`;
+  function placeText(place, zone) {
+    if (!place) return "";
+    const word = /^work$/i.test(place) ? "At work" : place;
+    return zone && zone !== place ? `${word} \xB7 ${zone}` : word;
+  }
+  var PlacesCardEditor = createFormEditor({
+    schema: () => [
+      { name: "title", selector: { text: {} } },
+      { name: "demo", selector: { boolean: {} } }
+    ],
+    labels: { title: "Title (optional)", demo: "Show pretend people (for Design Presets)" },
+    helpers: { title: "A card for each person. Zones are made and named in Settings > Areas, labels & zones." }
+  });
+  var PlacesCard = class extends HTMLElement {
+    setConfig(config) {
+      this.config = config || {};
+      this._built = false;
+      this._data = null;
+    }
+    set hass(hass) {
+      this._hass = hass;
+      if (this.config.demo) {
+        if (!this._data) this._data = this._demo();
+      } else {
+        const st = hass.states[PEOPLE_SENSOR];
+        const rev = st ? `${st.attributes.rev}|${st.last_updated}` : "none";
+        if (rev !== this._rev) {
+          this._rev = rev;
+          this._load();
+        }
+      }
+      this._render();
+    }
+    _demo() {
+      return [
+        { entity_id: "person.jamie", name: "Jamie", first: "Jamie", place: "Work", zone: "Ashfield School", places: [{ zone: "zone.ashfield_school", name: "Work" }] },
+        { entity_id: "person.diane", name: "Diane", first: "Diane", place: "Home", zone: "", places: [{ zone: "zone.po_1", name: "Work" }, { zone: "zone.po_2", name: "Work" }, { zone: "zone.po_3", name: "Work" }] }
+      ];
+    }
+    async _load() {
+      try {
+        const r = await this._hass.connection.sendMessagePromise({ type: "church_drive/people" });
+        if (this._editing) return;
+        this._data = r.people || [];
+        this._sig = null;
+        this._render();
+      } catch (err) {
+        this._data = this._data || [];
+      }
+    }
+    _admin() {
+      return !!(this.config.demo || this._hass && this._hass.user && this._hass.user.is_admin);
+    }
+    _zones() {
+      if (this.config.demo) return [["zone.ashfield_school", "Ashfield School"], ["zone.po_1", "Post office 1"], ["zone.po_2", "Post office 2"], ["zone.po_3", "Post office 3"]];
+      const s = this._hass.states;
+      return Object.keys(s).filter((id) => id.startsWith("zone.") && id !== "zone.home").map((id) => [id, String(s[id].attributes.friendly_name || id)]).sort((a, b) => a[1].localeCompare(b[1]));
+    }
+    async _save(person, places) {
+      const p = (this._data || []).find((x) => x.entity_id === person);
+      if (p) p.places = places;
+      if (this.config.demo) return this._render();
+      try {
+        const r = await this._hass.connection.sendMessagePromise({ type: "church_drive/people/places", person, places: places.filter((x) => x.zone) });
+        this._data = r.people || this._data;
+      } catch (err) {
+      }
+      this._sig = null;
+      this._render();
+    }
+    _render() {
+      if (!this._hass && !this.config.demo) return;
+      const c = this.config;
+      if (!this._built) {
+        this.innerHTML = `<style>${PL_CSS}</style>${c.title ? `<div style="font-size:1.1rem; font-weight:600; margin:0 0 10px 4px;">${kitEsc(c.title)}</div>` : ""}<div class="pl-grid"></div>`;
+        this._grid = this.querySelector(".pl-grid");
+        this._grid.addEventListener("change", (ev) => this._edit(ev));
+        this._grid.addEventListener("input", (ev) => {
+          if (ev.target.matches("input")) {
+            this._editing = true;
+            clearTimeout(this._typing);
+            this._typing = setTimeout(() => this._edit(ev), 900);
+          }
+        });
+        this._grid.addEventListener("click", (ev) => {
+          const b = ev.target.closest("[data-act]");
+          if (!b) return;
+          if (b.dataset.act === "zones") return kitNavigate("/config/zone");
+          const person = b.closest("[data-person]").dataset.person;
+          const p = this._data.find((x) => x.entity_id === person);
+          const places = [...p.places || []];
+          if (b.dataset.act === "add") {
+            const used = new Set(places.map((x) => x.zone));
+            const free = this._zones().find(([id]) => !used.has(id));
+            if (!free) return kitNavigate("/config/zone");
+            places.push({ zone: free[0], name: "Work" });
+            this._save(person, places);
+          } else if (b.dataset.act === "remove") {
+            places.splice(Number(b.dataset.i), 1);
+            this._save(person, places);
+          }
+        });
+        this._built = true;
+      }
+      const people = this._data || [];
+      const zones = this._zones();
+      const admin = this._admin();
+      const sig = JSON.stringify([people, zones, admin]);
+      if (sig === this._sig) return;
+      this._sig = sig;
+      const zoneName = (id) => (zones.find((z) => z[0] === id) || [id, id.replace(/^zone\./, "").replace(/_/g, " ")])[1];
+      const datalist = `<datalist id="pl-names${SUFFIX}">${SUGGEST.map((n) => `<option value="${n}">`).join("")}</datalist>`;
+      this._grid.innerHTML = datalist + (people.length ? people.map((p) => {
+        const rows = (p.places || []).map(
+          (pl, i) => admin ? `<div class="pl-row"><div class="pl-ico">${iconHtml(/^work$/i.test(pl.name) ? "mdi:briefcase-outline" : "mdi:map-marker-outline", { size: "18px" })}</div>
+                        <select data-i="${i}" aria-label="Zone">${zones.map(([id, n]) => `<option value="${kitEsc(id)}"${id === pl.zone ? " selected" : ""}>${kitEsc(n)}</option>`).join("")}${zones.some((z) => z[0] === pl.zone) ? "" : `<option value="${kitEsc(pl.zone)}" selected>${kitEsc(zoneName(pl.zone))} (gone)</option>`}</select>
+                        <input data-i="${i}" list="pl-names${SUFFIX}" value="${kitEsc(pl.name)}" placeholder="Called" aria-label="What ${kitEsc(p.first)} calls it">
+                        <button class="pl-x" data-act="remove" data-i="${i}" aria-label="Remove">${iconHtml("mdi:close", { size: "18px" })}</button></div>` : `<div class="pl-row"><div class="pl-ico">${iconHtml("mdi:map-marker-outline", { size: "18px" })}</div><div class="pl-fixed">${kitEsc(pl.name || zoneName(pl.zone))}<small>${kitEsc(zoneName(pl.zone))}</small></div></div>`
+        ).join("");
+        return `<div class="pl-person" data-person="${kitEsc(p.entity_id)}">${kitShell(
+          `<div class="pl-row"><div class="pl-ico" style="color:#4caf50;">${iconHtml("mdi:home", { size: "18px" })}</div><div class="pl-fixed">Home<small>Automatic</small></div></div>
+                ${rows || (admin ? "" : '<div class="pl-none">No other places yet.</div>')}
+                ${admin ? `<button class="pl-add" data-act="add">${iconHtml("mdi:plus", { size: "18px" })}Add a place</button>` : ""}`
+        )}</div>`;
+      }).join("") : '<div class="pl-none">Loading people\u2026</div>');
+      this._grid.querySelectorAll("[data-person]").forEach((el) => {
+        const p = people.find((x) => x.entity_id === el.dataset.person);
+        kitHead(el, p.first || p.name, placeText(p.place, p.zone), /^home$/i.test(p.place) ? "#4caf50" : "#26a69a");
+      });
+      if (admin && people.length) {
+        this._grid.insertAdjacentHTML("beforeend", `<div class="pl-foot" style="grid-column:1/-1;">Places are Home Assistant's zones. <a data-act="zones">Make or rename zones</a> in Settings \u203A Areas, labels &amp; zones.</div>`);
+      }
+      hydrateIcons(this);
+    }
+    // A zone picked or a name typed: save that person's places.
+    _edit(ev) {
+      const row3 = ev.target.closest(".pl-row");
+      const wrap = ev.target.closest("[data-person]");
+      if (!row3 || !wrap || !ev.target.matches("select, input")) return;
+      const person = wrap.dataset.person;
+      const p = this._data.find((x) => x.entity_id === person);
+      const i = Number(ev.target.dataset.i);
+      const places = (p.places || []).map((x) => ({ ...x }));
+      if (!places[i]) return;
+      if (ev.target.matches("select")) places[i].zone = ev.target.value;
+      else places[i].name = ev.target.value.trim();
+      clearTimeout(this._typing);
+      this._editing = false;
+      this._save(person, places);
+    }
+    getCardSize() {
+      return 4;
+    }
+    getGridOptions() {
+      return { columns: "full", rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement(`places-card-editor${SUFFIX}`);
+    }
+    static getStubConfig() {
+      return {};
+    }
+  };
+  function registerPlacesCard() {
+    if (!customElements.get(`places-card-editor${SUFFIX}`)) customElements.define(`places-card-editor${SUFFIX}`, PlacesCardEditor);
+    if (!customElements.get(`places-card${SUFFIX}`)) customElements.define(`places-card${SUFFIX}`, PlacesCard);
+    window.customCards = window.customCards || [];
+    window.customCards.push({
+      type: `places-card${SUFFIX}`,
+      name: `Places Card${LABEL}`,
+      description: "Each person's places: the zones they go to and what they call them (Work, Gym\u2026)",
+      preview: true,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
+    });
+  }
+
   // src/people-card.js
   var PC_CSS = `
   .pc-row { display:flex; align-items:center; gap:10px; padding:7px 2px; cursor:pointer; }
@@ -11004,11 +11541,11 @@
   .pc-body { flex:1; min-width:0; }
   .pc-name { font-weight:600; font-size:0.92rem; }
   .pc-sub { font-size:0.78rem; color:var(--secondary-text-color); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .pc-pill { flex:none; border-radius:999px; padding:2px 9px; font-size:0.72rem; font-weight:700; }
+  .pc-pill { flex:none; max-width:55%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; border-radius:999px; padding:2px 9px; font-size:0.72rem; font-weight:700; }
 `;
   function pcDemo() {
     return [
-      { id: "person.jamie", name: "Jamie", state: "home", phones: [["iPhone", 82], ["Pixel", 64]] },
+      { id: "person.jamie", name: "Jamie", state: "Ashfield School", place: "Work", zone: "Ashfield School", phones: [["iPhone", 82], ["Pixel", 64]] },
       { id: "person.hayley", name: "Hayley", state: "not_home", phones: [["Pixel 9", 47]] },
       { id: "person.diane", name: "Diane", state: "unknown", phones: [["Phone", null]] },
       { id: "person.ian", name: "Ian", state: "home", phones: [["Phone", 91]] }
@@ -11038,6 +11575,7 @@
       const s = this._hass.states;
       const reg = this._hass.entities || {};
       const devices = this._hass.devices || {};
+      const known = ((s["sensor.church_drive_people"] || {}).attributes || {}).people || [];
       return Object.keys(s).filter((id) => id.startsWith("person.")).sort((a, b) => String(s[a].attributes.friendly_name).localeCompare(String(s[b].attributes.friendly_name))).map((id) => {
         const st = s[id];
         const phones = (st.attributes.device_trackers || []).map((t) => reg[t]).filter((e) => e && e.platform === "mobile_app" && e.device_id).map((e) => {
@@ -11046,11 +11584,13 @@
           const v = bat ? Number(s[bat].state) : NaN;
           return [dev.name_by_user || dev.model || dev.name || "Phone", isNaN(v) ? null : Math.round(v)];
         });
-        return { id, name: st.attributes.friendly_name || id, state: st.state, picture: st.attributes.entity_picture, phones };
+        const k = known.find((p) => p.entity_id === id) || {};
+        return { id, name: st.attributes.friendly_name || id, state: st.state, place: k.place, zone: k.zone, picture: st.attributes.entity_picture, phones };
       });
     }
-    _pill(state) {
+    _pill(state, place, zone) {
       if (state === "home") return ["Home", "#4caf50"];
+      if (place && zone) return [placeText(place, zone), "#26a69a"];
       if (state === "not_home") return ["Away", "#9aa0ad"];
       if (state === "unknown" || state === "unavailable") return ["Unknown", "#ffa726"];
       return [state, "#26a69a"];
@@ -11076,7 +11616,7 @@
       if (sig === this._sig) return;
       this._sig = sig;
       this._list.innerHTML = people.map((p) => {
-        const [word, col] = this._pill(p.state);
+        const [word, col] = this._pill(p.state, p.place, p.zone);
         const phones = p.phones.length ? p.phones.map(([n, b]) => `${n}${b != null ? ` ${b}%` : ""}`).join(" \xB7 ") + (p.state === "unknown" ? " \xB7 location not shared" : "") : "No companion app";
         return `<div class="pc-row" data-id="${kitEsc(p.id)}" role="button" tabindex="0" aria-label="${kitEsc(p.name)}: ${kitEsc(word)}">
           <div class="pc-av" style="${p.picture ? `background-image:url('${kitEsc(p.picture)}');` : `color:${colour};`}">${p.picture ? "" : kitEsc(String(p.name).charAt(0))}</div>
@@ -11113,15 +11653,9 @@
   }
 
   // src/camera-card.js
-  var KINDS = {
-    ding: ["Doorbell", "#29b6f6", "#012"],
-    motion: ["Motion", "#5c6bc0", "#fff"],
-    interval: ["Snapshot", "rgba(255,255,255,0.22)", "#fff"],
-    "on-demand": ["Snapshot", "rgba(255,255,255,0.22)", "#fff"]
-  };
   var OLD = ["#ffa726", "#221"];
   var asked = /* @__PURE__ */ new Map();
-  var CAM_CSS = `
+  var CAM_CSS = `${STAGE_CSS}
   .cc-tile { position:relative; display:block; width:100%; aspect-ratio:16/9; border-radius:var(--ha-card-border-radius, 14px); overflow:hidden; cursor:pointer;
     background:linear-gradient(160deg, #5d6b7d, #2f3946 60%, #46503c); box-shadow:0 3px 10px rgba(0,0,0,0.45); }
   .cc-tile img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; transition:opacity .4s ease; }
@@ -11129,42 +11663,16 @@
   .cc-name { font-weight:700; font-size:0.98rem; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-shadow:0 1px 3px rgba(0,0,0,0.6); }
   .cc-chip { flex:none; font-size:0.7rem; font-weight:700; border-radius:999px; padding:2px 8px; white-space:nowrap; }
   .cc-tr { position:absolute; top:8px; right:8px; display:flex; gap:6px; }
-  .cc-ib { width:28px; height:28px; border-radius:50%; background:rgba(0,0,0,0.45); color:#fff; display:flex; align-items:center; justify-content:center; }
-  .cc-pop-media { position:relative; border-radius:14px; overflow:hidden; background:#000; aspect-ratio:16/9; touch-action:none; cursor:grab; user-select:none; }
-  .cc-stage { position:absolute; left:0; top:0; transform-origin:0 0; will-change:transform; }
-  .cc-stage > * { display:block; width:100%; height:100%; pointer-events:none; }
-  .cc-stage img { object-fit:cover; }
-  .cc-mute { position:absolute; top:8px; right:8px; border:none; cursor:pointer; z-index:1; }
   .cc-pop-sub { font-size:0.8rem; color:var(--secondary-text-color); margin:-2px 0 10px; }
-  .cc-btns { display:flex; gap:10px; margin:14px 0 6px; }
-  .cc-btn { flex:1 1 0; min-width:0; border:none; border-radius:14px; padding:10px 4px; cursor:pointer; font:inherit; font-size:0.78rem; font-weight:700;
-    background:rgba(127,127,127,0.16); color:var(--primary-text-color); display:flex; flex-direction:column; align-items:center; gap:4px; }
-  .cc-btn.talk { background:#43a047; color:#fff; }
-  .cc-btn.talk.on { background:#e53935; }
-  .cc-btn[disabled] { opacity:.5; cursor:default; }
-  .cc-ev { display:flex; align-items:center; gap:10px; padding:8px 2px; font-size:0.86rem; }
-  .cc-ev + .cc-ev { border-top:1px solid var(--divider-color, rgba(127,127,127,0.18)); }
-  .cc-ev-ico { flex:none; width:32px; height:32px; border-radius:10px; display:flex; align-items:center; justify-content:center; }
-  .cc-ev-when { color:var(--secondary-text-color); font-size:0.78rem; }
 `;
-  var pad5 = (n) => String(n).padStart(2, "0");
+  var pad6 = (n) => String(n).padStart(2, "0");
   function camAge(ms, now = Date.now()) {
     const s = Math.max(0, (now - ms) / 1e3);
     if (s < 60) return "just now";
     if (s < 3600) return `${Math.floor(s / 60)} min`;
     if (s < 86400) return `${Math.floor(s / 3600)} h`;
     const d = new Date(ms);
-    return `${d.toLocaleDateString("en-GB", { weekday: "short" })} ${pad5(d.getHours())}:${pad5(d.getMinutes())}`;
-  }
-  function when3(ms, now = /* @__PURE__ */ new Date()) {
-    const d = new Date(ms);
-    const day2 = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const diff = Math.round((today - day2) / 864e5);
-    const t = `${pad5(d.getHours())}:${pad5(d.getMinutes())}`;
-    if (diff === 0) return `${t} today`;
-    if (diff === 1) return `Yesterday ${t}`;
-    return `${d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })} ${t}`;
+    return `${d.toLocaleDateString("en-GB", { weekday: "short" })} ${pad6(d.getHours())}:${pad6(d.getMinutes())}`;
   }
   function camFind(hass, entity, c = {}) {
     const s = hass && hass.states || {};
@@ -11337,7 +11845,7 @@
       if (this._pop) return;
       const c = this.config;
       const content = document.createElement("div");
-      content.innerHTML = `<div class="cc-pop-sub"></div><div class="cc-pop-media"></div><div class="cc-btns"></div><div class="cc-evs"></div>`;
+      content.innerHTML = `<div class="cc-pop-sub"></div><div class="cc-pop-media"></div><div class="cc-btns"></div>`;
       this._popEl = content;
       this._talking = false;
       this._pop = openPopup(this, {
@@ -11360,6 +11868,10 @@
           this._talking = !this._talking;
           this._media();
           this._renderPop();
+        } else if (act === "events") {
+          const base = cameraBase(this._hass, this.config.entity);
+          const aspect = this._aspect();
+          this._pop.close().then(() => base && openCameraEvents(this, this._hass, base, { title: this._name(), aspect }));
         } else if (act === "snap") {
           this._maybeRefresh(true);
         } else if (act === "light" && this._f.light) {
@@ -11368,7 +11880,11 @@
       });
       this._media();
       this._renderPop();
-      this._events();
+    }
+    // The picture's shape (width / height): the doorbell's is square.
+    _aspect() {
+      const img = this._img;
+      return img && img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : 16 / 9;
     }
     // Live video: the go2rtc stream (with the microphone while talking) when
     // the camera has one, else Home Assistant's own live view, else the picture.
@@ -11386,154 +11902,16 @@
         el.setConfig({ url: c.talk_stream, media: this._talking ? "video,audio,microphone" : "video,audio", muted: false, ui: false });
         el.hass = this._hass;
       } else {
-        const st = this._f && this._f.live && this._hass.states[this._f.live];
-        if (st && customElements.get("ha-camera-stream")) {
-          el = document.createElement("ha-camera-stream");
-          el.hass = this._hass;
-          el.stateObj = st;
-          el.controls = false;
-          el.muted = false;
-        } else {
-          try {
-            const helpers = await window.loadCardHelpers();
-            el = helpers.createCardElement({ type: "picture-entity", entity: this._f.live, camera_view: "live", show_name: false, show_state: false });
-            el.hass = this._hass;
-          } catch (err) {
-            el = document.createElement("img");
-            if (this._img && this._img.src) el.src = this._img.src;
-          }
+        try {
+          el = await liveElement(this._hass, this._f && this._f.live);
+        } catch (err) {
+          el = document.createElement("img");
+          if (this._img && this._img.src) el.src = this._img.src;
         }
       }
       if (!this._popEl) return;
-      this._stage(box, el);
-    }
-    // The video at its own shape (the doorbell's is square, head to toe),
-    // filling the 16:9 box: drag to look around, pinch, scroll or double-tap
-    // to zoom.
-    _stage(box, el) {
-      const stage = document.createElement("div");
-      stage.className = "cc-stage";
-      stage.appendChild(el);
-      const mute = document.createElement("button");
-      mute.className = "cc-ib cc-mute";
-      mute.setAttribute("aria-label", "Sound");
-      const setMute = () => {
-        mute.innerHTML = iconHtml(el.muted ? "mdi:volume-off" : "mdi:volume-high", { size: "17px" });
-        hydrateIcons(mute);
-      };
-      mute.addEventListener("click", (ev) => {
-        ev.stopPropagation();
-        el.muted = !el.muted;
-        setMute();
-      });
-      box.append(stage, mute);
-      setMute();
-      const img = this._img;
-      let aspect = img && img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : 16 / 9;
-      const v = { x: 0, y: 0, z: 1, w: 0, h: 0 };
-      const size = () => ({ width: box.clientWidth, height: box.clientHeight });
-      const clamp = () => {
-        const r = size();
-        v.x = Math.min(0, Math.max(r.width - v.w * v.z, v.x));
-        v.y = Math.min(0, Math.max(r.height - v.h * v.z, v.y));
-        stage.style.width = `${v.w * v.z}px`;
-        stage.style.height = `${v.h * v.z}px`;
-        stage.style.transform = `translate(${v.x}px, ${v.y}px)`;
-      };
-      const fit = () => {
-        const r = size();
-        if (!r.width) return;
-        const first = !v.w;
-        if (aspect < r.width / r.height) {
-          v.w = r.width;
-          v.h = r.width / aspect;
-        } else {
-          v.h = r.height;
-          v.w = r.height * aspect;
-        }
-        if (first) {
-          v.x = (r.width - v.w) / 2;
-          v.y = (r.height - v.h) / 2;
-        }
-        clamp();
-      };
-      const zoomAt = (z, cx, cy) => {
-        const r = box.getBoundingClientRect();
-        const px = cx - r.left;
-        const py = cy - r.top;
-        const nz = Math.min(4, Math.max(1, z));
-        v.x = px - (px - v.x) * nz / v.z;
-        v.y = py - (py - v.y) * nz / v.z;
-        v.z = nz;
-        clamp();
-      };
-      const pts = /* @__PURE__ */ new Map();
-      let pinch = null;
-      box.addEventListener("pointerdown", (ev) => {
-        if (ev.target.closest(".cc-mute")) return;
-        box.setPointerCapture(ev.pointerId);
-        pts.set(ev.pointerId, [ev.clientX, ev.clientY]);
-        if (pts.size === 2) {
-          const [a, b] = [...pts.values()];
-          pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), z: v.z };
-        }
-      });
-      box.addEventListener("pointermove", (ev) => {
-        const prev = pts.get(ev.pointerId);
-        if (!prev) return;
-        pts.set(ev.pointerId, [ev.clientX, ev.clientY]);
-        if (pts.size === 2 && pinch) {
-          const [a, b] = [...pts.values()];
-          zoomAt(pinch.z * Math.hypot(a[0] - b[0], a[1] - b[1]) / (pinch.d || 1), (a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
-        } else if (pts.size === 1) {
-          v.x += ev.clientX - prev[0];
-          v.y += ev.clientY - prev[1];
-          clamp();
-        }
-      });
-      const up = (ev) => {
-        pts.delete(ev.pointerId);
-        if (pts.size < 2) pinch = null;
-      };
-      box.addEventListener("pointerup", up);
-      box.addEventListener("pointercancel", up);
-      box.addEventListener(
-        "wheel",
-        (ev) => {
-          ev.preventDefault();
-          zoomAt(v.z * (ev.deltaY < 0 ? 1.15 : 1 / 1.15), ev.clientX, ev.clientY);
-        },
-        { passive: false }
-      );
-      box.addEventListener("dblclick", (ev) => zoomAt(v.z > 1.4 ? 1 : 2, ev.clientX, ev.clientY));
-      if (window.ResizeObserver) new ResizeObserver(fit).observe(box);
-      requestAnimationFrame(fit);
-      const findVideo = (root, depth = 0) => {
-        if (!root || depth > 6) return null;
-        const vid = root.querySelector && root.querySelector("video");
-        if (vid) return vid;
-        for (const n of root.querySelectorAll ? root.querySelectorAll("*") : []) {
-          const f = n.shadowRoot && findVideo(n.shadowRoot, depth + 1);
-          if (f) return f;
-        }
-        return null;
-      };
-      let tries = 0;
-      const look = () => {
-        if (!box.isConnected || tries++ > 30) return;
-        const vid = findVideo(el.shadowRoot || el);
-        if (vid && vid.videoWidth && vid.videoHeight) {
-          const a = vid.videoWidth / vid.videoHeight;
-          if (Math.abs(a - aspect) > 0.02) {
-            aspect = a;
-            v.w = 0;
-            fit();
-          }
-          return;
-        }
-        setTimeout(look, 500);
-      };
-      setTimeout(look, 500);
+      stageMedia(box, el, this._aspect());
+      if (!c.demo) stageTag(box, this._talking ? "\u25CF LIVE \xB7 talking" : "\u25CF LIVE", "#e53935");
     }
     _renderPop() {
       const p = this._popEl;
@@ -11547,6 +11925,7 @@
       const lightOn = f.light && h && h.states[f.light].state === "on";
       const lightName = f.light && h ? String(h.states[f.light].attributes.friendly_name || "Light") : "";
       const btns = [];
+      if (!c.demo && cameraBase(h, c.entity)) btns.push(`<button class="cc-btn main" data-act="events">${iconHtml("mdi:history", { size: "22px" })}Events</button>`);
       if (c.talk_stream) btns.push(`<button class="cc-btn talk${this._talking ? " on" : ""}" data-act="talk">${iconHtml(this._talking ? "mdi:microphone" : "mdi:microphone-outline", { size: "22px" })}${this._talking ? "Talking\u2026 tap to stop" : "Talk"}</button>`);
       if (f.button || c.demo) btns.push(`<button class="cc-btn" data-act="snap">${iconHtml("mdi:camera", { size: "22px" })}Snapshot</button>`);
       if (f.light) btns.push(`<button class="cc-btn" data-act="light" style="${lightOn ? "background:color-mix(in srgb, #ffb300 30%, transparent);" : ""}">${iconHtml(lightOn ? "mdi:lightbulb-on" : "mdi:lightbulb-outline", { size: "22px" })}${kitEsc(lightName)} ${lightOn ? "on" : "off"}</button>`);
@@ -11558,43 +11937,6 @@
         box.style.display = html ? "" : "none";
         hydrateIcons(box);
       }
-    }
-    // Recent doorbell presses and motion, from the event entities' history.
-    async _events() {
-      const p = this._popEl;
-      const f = this._f || {};
-      const box = p && p.querySelector(".cc-evs");
-      if (!box) return;
-      let list = [];
-      if (this.config.demo) {
-        const now = Date.now();
-        list = [
-          ["ding", now - 3e5],
-          ["motion", now - 2 * 36e5],
-          ["motion", now - 15 * 36e5]
-        ];
-      } else {
-        const ids = [f.ding, f.motion].filter(Boolean);
-        if (!ids.length) return;
-        try {
-          const hist = await kitStateHistory(this._hass, ids, 48);
-          ids.forEach(
-            (id) => (hist[id] || []).forEach(([, s]) => {
-              const ms = Date.parse(s);
-              if (!isNaN(ms)) list.push([id === f.ding ? "ding" : "motion", ms]);
-            })
-          );
-        } catch (err) {
-          return;
-        }
-      }
-      list = [...new Map(list.map((e) => [`${e[0]}${e[1]}`, e])).values()].sort((a, b) => b[1] - a[1]).slice(0, 8);
-      if (!this._popEl) return;
-      box.innerHTML = list.length ? list.map(([k, ms]) => {
-        const [label, col] = KINDS[k];
-        return `<div class="cc-ev"><div class="cc-ev-ico" style="background:color-mix(in srgb, ${col} 25%, transparent); color:${col};">${iconHtml(k === "ding" ? "mdi:doorbell" : "mdi:motion-sensor", { size: "18px" })}</div><div><b>${label}</b><div class="cc-ev-when">${kitEsc(when3(ms))}</div></div></div>`;
-      }).join("") : '<div class="cc-ev-when">Nothing in the last two days.</div>';
-      hydrateIcons(box);
     }
     getCardSize() {
       return 3;
@@ -11618,6 +11960,267 @@
       type: `camera-card${SUFFIX}`,
       name: `Camera Card${LABEL}`,
       description: "A camera's freshest picture with how old it is; tap for live video, a new snapshot, the light and Talk",
+      preview: true,
+      documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
+    });
+  }
+
+  // src/camera-links-card.js
+  var MODES = [
+    ["disarmed", "Disarmed", "mdi:shield-off-outline", "#4caf50"],
+    ["home", "Home", "mdi:shield-home", "#42a5f5"],
+    ["away", "Away", "mdi:shield-lock", "#ef5350"]
+  ];
+  var SECS = [10, 20, 30, 45, 60];
+  var COOLDOWNS = [[60, "1 min"], [120, "2 min"], [300, "5 min"], [600, "10 min"]];
+  var TRIGGER_CLASSES = ["motion", "occupancy", "presence", "door", "opening", "window", "garage_door"];
+  var CL_CSS = `
+  .cl-tabs { display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap; }
+  .cl-tab { position:relative; border:none; cursor:pointer; font:inherit; font-size:0.85rem; font-weight:700; border-radius:999px; padding:7px 14px 7px 10px; display:flex; align-items:center; gap:6px;
+    background:rgba(127,127,127,0.16); color:var(--primary-text-color); }
+  .cl-tab.on { color:#fff; }
+  .cl-now { font-size:0.62rem; font-weight:800; text-transform:uppercase; letter-spacing:.04em; border-radius:999px; padding:1px 6px; background:rgba(255,255,255,0.28); }
+  .cl-wrap { overflow-x:auto; }
+  .cl-table { width:100%; border-collapse:separate; border-spacing:0 6px; font-size:0.85rem; }
+  .cl-table th { font-size:0.72rem; color:var(--secondary-text-color); font-weight:600; padding:0 4px; text-align:center; white-space:nowrap; }
+  .cl-table th:first-child { text-align:left; }
+  .cl-table td { background:rgba(127,127,127,0.1); padding:8px 6px; text-align:center; }
+  .cl-table td:first-child { text-align:left; border-radius:10px 0 0 10px; min-width:120px; }
+  .cl-table td:last-child { border-radius:0 10px 10px 0; white-space:nowrap; }
+  .cl-nm b { display:block; font-size:0.86rem; font-weight:600; }
+  .cl-nm small { color:var(--secondary-text-color); font-size:0.72rem; }
+  .cl-tk { width:22px; height:22px; border-radius:6px; border:none; cursor:pointer; background:rgba(127,127,127,0.28); color:#fff; display:inline-flex; align-items:center; justify-content:center; padding:0; }
+  .cl-tk.on { background:#26a69a; }
+  .cl-tk.self { background:color-mix(in srgb, #26a69a 35%, transparent); cursor:default; }
+  .cl-tk[disabled]:not(.self) { cursor:default; opacity:.7; }
+  .cl-secs, .cl-add, .cl-cool { height:30px; border-radius:8px; border:1px solid var(--divider-color, rgba(127,127,127,0.3)); background:var(--secondary-background-color, rgba(127,127,127,0.12));
+    color:var(--primary-text-color); font:inherit; font-size:0.8rem; padding:0 6px; }
+  .cl-x { border:none; background:transparent; color:var(--secondary-text-color); cursor:pointer; padding:2px; vertical-align:middle; }
+  .cl-foot { display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; margin-top:10px; font-size:0.8rem; color:var(--secondary-text-color); }
+  .cl-foot select.cl-add { flex:1 1 220px; height:36px; border-style:dashed; }
+  .cl-copy { border:none; cursor:pointer; font:inherit; font-size:0.78rem; font-weight:600; border-radius:999px; padding:6px 12px; background:rgba(127,127,127,0.16); color:var(--primary-text-color); }
+  .cl-note { margin-top:10px; font-size:0.75rem; color:var(--secondary-text-color); line-height:1.4; }
+`;
+  var CameraLinksCardEditor = createFormEditor({
+    schema: () => [{ name: "demo", selector: { boolean: {} } }],
+    labels: { demo: "Show pretend links (for Design Presets)" },
+    helpers: { demo: "Rows are what triggers; tick the cameras that should record, separately for Disarmed, Home and Away." }
+  });
+  var CameraLinksCard = class extends HTMLElement {
+    setConfig(config) {
+      this.config = config || {};
+      this._built = false;
+      this._data = null;
+      this._tab = null;
+    }
+    set hass(hass) {
+      this._hass = hass;
+      if (this.config.demo) {
+        if (!this._data) this._data = this._demo();
+      } else {
+        const alarms = Object.keys(hass.states).filter((id) => id.startsWith("alarm_control_panel.")).map((id) => hass.states[id].state).join();
+        if (alarms !== this._alarms) {
+          this._alarms = alarms;
+          this._load();
+        }
+      }
+      this._render();
+    }
+    _demo() {
+      const link = { "event.front_door_motion": { cams: ["driveway"], secs: 30 }, "event.front_door_ding": { cams: ["driveway", "entrance"], secs: 30 } };
+      return {
+        mode: "away",
+        cooldown: 120,
+        cameras: [
+          { base: "front_door", name: "Front Door", battery: true },
+          { base: "driveway", name: "Driveway", battery: true },
+          { base: "garden", name: "Garden", battery: true },
+          { base: "entrance", name: "Entrance", battery: false },
+          { base: "living_room", name: "Living Room", battery: false }
+        ],
+        links: { disarmed: { "event.front_door_ding": link["event.front_door_ding"] }, home: { ...link }, away: { ...link, "binary_sensor.front_door": { cams: ["entrance"], secs: 20 } } }
+      };
+    }
+    async _load() {
+      try {
+        this._data = await this._hass.connection.sendMessagePromise({ type: "church_drive/camera/links" });
+        this._sig = null;
+        this._render();
+      } catch (err) {
+        this._failed = true;
+        this._render();
+      }
+    }
+    _admin() {
+      return !!(this.config.demo || this._hass && this._hass.user && this._hass.user.is_admin);
+    }
+    _name(id) {
+      const st = this._hass && this._hass.states[id];
+      if (st) return String(st.attributes.friendly_name || id);
+      return id.replace(/^[a-z_]+\./, "").replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+    }
+    _kind(id) {
+      if (/_ding$/.test(id)) return "Doorbell pressed";
+      if (/^event\..*_motion$/.test(id)) return "Camera motion";
+      const dc = this._hass && this._hass.states[id] && this._hass.states[id].attributes.device_class;
+      if (["door", "opening", "window", "garage_door"].includes(dc)) return "Opens";
+      return "Motion sensor";
+    }
+    // Every row: each camera's own motion and doorbell, plus anything linked in any mode.
+    _rows() {
+      const d = this._data;
+      const s = this._hass && this._hass.states || {};
+      const rows = [];
+      d.cameras.forEach((c) => {
+        [`event.${c.base}_motion`, `event.${c.base}_ding`].forEach((id) => (this.config.demo ? id.endsWith("_motion") || c.base === "front_door" : s[id]) && rows.push(id));
+      });
+      MODES.forEach(([m]) => Object.keys(d.links[m] || {}).forEach((id) => !rows.includes(id) && rows.push(id)));
+      return rows;
+    }
+    async _set(mode, trigger, cams, secs) {
+      const d = this._data;
+      const table = d.links[mode] = d.links[mode] || {};
+      if (cams === null) delete table[trigger];
+      else table[trigger] = { cams, secs: secs || table[trigger] && table[trigger].secs || 30 };
+      this._sig = null;
+      this._render();
+      if (this.config.demo) return;
+      try {
+        const msg = { type: "church_drive/camera/links/set", mode, trigger };
+        if (cams !== null) {
+          msg.cams = cams;
+          msg.secs = table[trigger].secs;
+        }
+        this._data = await this._hass.connection.sendMessagePromise(msg);
+      } catch (err) {
+        this._load();
+        return;
+      }
+      this._sig = null;
+      this._render();
+    }
+    _render() {
+      if (!this._hass && !this.config.demo) return;
+      if (!this._built) {
+        this.innerHTML = `<style>${CL_CSS}</style><div class="cl-tabs"></div><div class="cl-wrap"></div><div class="cl-foot"></div><div class="cl-note"></div>`;
+        this.addEventListener("click", (ev) => this._click(ev));
+        this.addEventListener("change", (ev) => this._change(ev));
+        this._built = true;
+      }
+      const d = this._data;
+      if (!d) {
+        this.querySelector(".cl-wrap").innerHTML = `<div class="cl-note">${this._failed ? "Camera links need the latest Church Drive integration (and a restart)." : "Loading\u2026"}</div>`;
+        return;
+      }
+      if (!this._tab) this._tab = d.mode || "disarmed";
+      const admin = this._admin();
+      const sig = JSON.stringify([d, this._tab, admin]);
+      if (sig === this._sig) return;
+      this._sig = sig;
+      const tab = this._tab;
+      const table = d.links[tab] || {};
+      this.querySelector(".cl-tabs").innerHTML = MODES.map(
+        ([m, label, icon, colour]) => `<button class="cl-tab${m === tab ? " on" : ""}" data-tab="${m}" style="${m === tab ? `background:${colour};` : ""}">${iconHtml(icon, { size: "17px" })}${label}${m === d.mode ? '<span class="cl-now">now</span>' : ""}</button>`
+      ).join("");
+      const rows = this._rows();
+      const head = `<tr><th>When this triggers</th>${d.cameras.map((c) => `<th>${kitEsc(c.name)}</th>`).join("")}<th>Record</th>${admin ? "<th></th>" : ""}</tr>`;
+      const body = rows.map((id) => {
+        const rule = table[id];
+        const cams = rule && rule.cams || [];
+        const own = (id.match(/^event\.([a-z0-9_]+?)_(motion|ding)$/) || [])[1];
+        const cells = d.cameras.map((c) => {
+          if (c.base === own) return `<td><span class="cl-tk self" title="Records its own motion">${iconHtml("mdi:check", { size: "15px" })}</span></td>`;
+          const on = cams.includes(c.base);
+          return `<td><button class="cl-tk${on ? " on" : ""}" data-tick="${kitEsc(c.base)}" data-trigger="${kitEsc(id)}" ${admin ? "" : "disabled"} aria-label="${kitEsc(c.name)}" aria-pressed="${on}">${on ? iconHtml("mdi:check", { size: "15px" }) : ""}</button></td>`;
+        }).join("");
+        const secs = cams.length ? admin ? `<select class="cl-secs" data-secs="${kitEsc(id)}">${SECS.map((n) => `<option value="${n}"${n === (rule.secs || 30) ? " selected" : ""}>${n} s</option>`).join("")}</select>` : `${rule.secs || 30} s` : "\u2014";
+        const removable = admin && !own;
+        return `<tr><td class="cl-nm"><b>${kitEsc(this._name(id))}</b><small>${this._kind(id)}</small></td>${cells}<td>${secs}</td>${admin ? `<td>${removable ? `<button class="cl-x" data-remove="${kitEsc(id)}" aria-label="Remove">${iconHtml("mdi:close", { size: "16px" })}</button>` : ""}</td>` : ""}</tr>`;
+      }).join("");
+      this.querySelector(".cl-wrap").innerHTML = `<table class="cl-table">${head}${body}</table>`;
+      const foot = this.querySelector(".cl-foot");
+      if (admin) {
+        const s = this._hass && this._hass.states || {};
+        const used = new Set(rows);
+        const choices = this.config.demo ? [["binary_sensor.front_door", "Front Door"], ["binary_sensor.back_door", "Back Door"], ["binary_sensor.garden_sensor_motion", "Garden sensor motion"]] : Object.keys(s).filter((id) => !used.has(id) && (id.startsWith("binary_sensor.") && TRIGGER_CLASSES.includes(s[id].attributes.device_class) || /^event\..*_(motion|ding)$/.test(id))).map((id) => [id, this._name(id)]).sort((a, b) => a[1].localeCompare(b[1]));
+        const label = MODES.find((m) => m[0] === tab)[1];
+        foot.innerHTML = `<select class="cl-add" aria-label="Add a trigger"><option value="">+ Add a trigger (any motion sensor, door or doorbell)</option>${choices.map(([id, n]) => `<option value="${kitEsc(id)}">${kitEsc(n)}</option>`).join("")}</select>
+        <button class="cl-copy" data-copy="1">Use these for all modes</button>
+        <span>Each camera at most once every <select class="cl-cool">${COOLDOWNS.map(([v, t]) => `<option value="${v}"${v === Number(d.cooldown) ? " selected" : ""}>${t}</option>`).join("")}</select></span>`;
+        foot.dataset.label = label;
+      } else {
+        foot.innerHTML = "";
+      }
+      const battery = d.cameras.filter((c) => c.battery).map((c) => c.name);
+      this.querySelector(".cl-note").textContent = `Linked recordings show in that camera's events as "Linked". ${battery.length ? `Battery cameras (${battery.join(", ")}) use more battery for each one. ` : ""}A camera doesn't send its own motion alerts while it's recording a linked clip. If Ring's own Linked Devices are still on in the Ring app, turn them off there so cameras don't record twice.`;
+      hydrateIcons(this);
+    }
+    _click(ev) {
+      const t = ev.target.closest("[data-tab]");
+      if (t) {
+        this._tab = t.dataset.tab;
+        this._sig = null;
+        return this._render();
+      }
+      if (!this._admin() || !this._data) return;
+      const tick = ev.target.closest("[data-tick]");
+      if (tick) {
+        const id = tick.dataset.trigger;
+        const rule = (this._data.links[this._tab] || {})[id] || { cams: [], secs: 30 };
+        const cams = rule.cams.includes(tick.dataset.tick) ? rule.cams.filter((c) => c !== tick.dataset.tick) : [...rule.cams, tick.dataset.tick];
+        return this._set(this._tab, id, cams, rule.secs);
+      }
+      const rm = ev.target.closest("[data-remove]");
+      if (rm) {
+        MODES.forEach(([m]) => (this._data.links[m] || {})[rm.dataset.remove] && this._set(m, rm.dataset.remove, null));
+        return;
+      }
+      if (ev.target.closest("[data-copy]")) {
+        const from = this._data.links[this._tab] || {};
+        MODES.forEach(([m]) => {
+          if (m === this._tab) return;
+          const to = this._data.links[m] || {};
+          Object.keys(to).forEach((id) => !(id in from) && this._set(m, id, null));
+          Object.entries(from).forEach(([id, r]) => this._set(m, id, [...r.cams], r.secs));
+        });
+      }
+    }
+    _change(ev) {
+      if (!this._admin() || !this._data) return;
+      const el = ev.target;
+      if (el.matches(".cl-secs")) {
+        const id = el.dataset.secs;
+        const rule = (this._data.links[this._tab] || {})[id];
+        if (rule) this._set(this._tab, id, rule.cams, Number(el.value));
+      } else if (el.matches(".cl-add") && el.value) {
+        this._set(this._tab, el.value, [], 30);
+      } else if (el.matches(".cl-cool")) {
+        this._data.cooldown = Number(el.value);
+        if (!this.config.demo) this._hass.connection.sendMessagePromise({ type: "church_drive/camera/settings", cooldown: Number(el.value) }).catch(() => {
+        });
+      }
+    }
+    getCardSize() {
+      return 5;
+    }
+    getGridOptions() {
+      return { columns: "full", rows: "auto" };
+    }
+    static getConfigElement() {
+      return document.createElement(`camera-links-card-editor${SUFFIX}`);
+    }
+    static getStubConfig() {
+      return {};
+    }
+  };
+  function registerCameraLinksCard() {
+    if (!customElements.get(`camera-links-card-editor${SUFFIX}`)) customElements.define(`camera-links-card-editor${SUFFIX}`, CameraLinksCardEditor);
+    if (!customElements.get(`camera-links-card${SUFFIX}`)) customElements.define(`camera-links-card${SUFFIX}`, CameraLinksCard);
+    window.customCards = window.customCards || [];
+    window.customCards.push({
+      type: `camera-links-card${SUFFIX}`,
+      name: `Camera Links Card${LABEL}`,
+      description: "Which cameras record when a sensor, door or doorbell triggers, for Disarmed, Home and Away",
       preview: true,
       documentationURL: "https://github.com/J45PER/church-drive-cards#readme"
     });
@@ -11650,5 +12253,7 @@
   registerSafetyCard();
   registerPeopleCard();
   registerCameraCard();
+  registerPlacesCard();
+  registerCameraLinksCard();
   console.info(`%c CHURCH-DRIVE-CARDS${SUFFIX ? " BETA" : ""} %c loaded `, "color: white; background: #2196f3; font-weight: 700;", "color: #2196f3; background: transparent;");
 })();
