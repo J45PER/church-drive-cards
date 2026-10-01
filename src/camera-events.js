@@ -15,7 +15,6 @@
 import { iconHtml, hydrateIcons } from './icons.js';
 import { kitEsc } from './card-kit.js';
 import { openPopup } from './popup.js';
-import { SUFFIX } from './suffix.js';
 
 export const KINDS = {
   ding: ['Doorbell', '#29b6f6', '#012'],
@@ -255,17 +254,6 @@ export function stageTag(box, text, colour) {
   return t;
 }
 
-// Beta only, for now: how a clip got on, into Home Assistant's log (to fix
-// clips that won't play on phones).
-function clipDebug(hass, el, e) {
-  try {
-    const info = { file: String(e.clip).split('?')[0].split('/').pop(), paused: el.paused, ready: el.readyState, network: el.networkState, error: el.error && [el.error.code, el.error.message], muted: el.muted, time: Number(el.currentTime.toFixed(1)), size: [el.videoWidth, el.videoHeight], ua: navigator.userAgent };
-    hass.callService('system_log', 'write', { message: `Clip playback: ${JSON.stringify(info)}`, level: 'warning', logger: 'church_drive.clips' });
-  } catch (err) {
-    /* debugging only */
-  }
-}
-
 // The events viewer pop-up for one camera ('front_door'): the list first; a
 // tapped event plays above it.
 export function openCameraEvents(host, hass, base, { title = '', aspect = 16 / 9 } = {}) {
@@ -340,7 +328,6 @@ export function openCameraEvents(host, hass, base, { title = '', aspect = 16 / 9
         tag.textContent = `Couldn't play this clip${el.error ? ` (${['', 'stopped', 'network', 'decode', 'format not supported'][el.error.code] || el.error.code})` : ''}`;
         tag.style.background = '#c62828';
       });
-      if (SUFFIX) setTimeout(() => clipDebug(hass, el, e), 5000);
     }
   };
 
