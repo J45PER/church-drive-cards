@@ -269,6 +269,7 @@ Just the panel's heading (title, coloured icon, live summary), for use on its ow
 ## Development
 
 `npm test` runs the unit tests for the repeat rules (`src/repeat.js`) in UK time.
+`node tools/editors-smoke.mjs` (after `npm run build`, with Playwright) checks every card's visual editor opens. `ha/repeating-tasks.jinja` is the Home Assistant side of the repeat rules, and `tools/repeat-cases.mjs` gives cases to cross-check it.
 
 ```bash
 npm install

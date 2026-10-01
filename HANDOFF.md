@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-09-30. Current release: **v0.25.0**.*
+*Last updated 2026-10-01. Current release: **v0.25.0**.*
 
 ## Where this stands
 
@@ -13,6 +13,30 @@ HACS as an integration. It does two jobs:
 2. **Universal scenes.** It keeps one library of scenes (Bright, Relax, Soho… plus
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
+
+**Now (2026-10-01, v0.25.0 live, nothing on beta):**
+- **Mobile pages** each have a three-row header under the title (Auto Layout
+  `header_content`):
+  - Home: the signed-in person's to-dos.
+  - Lights, Security and Energy: live template lines.
+  - Climate: an hourly forecast.
+  - Cleaning: the cleaning list, which opens the To-do page at its Cleaning panel.
+  - To-do: a summary.
+  See "Page header lines and the cleaning schedule" under the conventions.
+- **To-dos:** `task-list-card` runs My to-do, Shared and Cleaning on the Mobile To-do
+  page and the Tasks dashboard. Any task can repeat (daily, weekly or fortnightly,
+  monthly, yearly, after done) and remind people. HA's side is "Church Drive:
+  repeating tasks". The rules are in `src/repeat.js` (`npm test`) and
+  `ha/repeating-tasks.jinja`.
+- **House jobs:** the automatic to-dos (`house-tasks-card`, "Priorities Automatic")
+  and the to-do notifications are set in Manager.
+- **Every setting is visual:** see "Everything from the UI" and its checklist.
+  Run `tools/editors-smoke.mjs` before pushing.
+- **Waiting on the user:**
+  - The Zappi: myenergi hub serial number and API key. It's on Jamie's to-do list.
+    The card is ready on Energy and Home.
+  - Presence sensors, for the Lights "maybe left on" line.
+- Nothing else is pending. Ideas the user hasn't asked for are under Open items.
 
 **New in v0.22.0 (2026-09-29): smoother panels, floating chips, page headers** (the user found the
 chips didn't pin, and panels jumped to a slightly larger height before expanding):
@@ -1015,9 +1039,11 @@ Integration modules (`custom_components/church_drive/`):
     `set hass` called the card's `_renderHead()` / `_watchTodo()`, which don't exist on
     the editor. It threw, so HA fell back to YAML for every Auto Layout card. Those
     lines now live in the card's own `set hass`.
-  - Smoke test: `scratchpad/editors.html` + `editors.mjs` builds every registered
-    editor with a stub config and fake hass, and reports any that throw.
-- **Page header lines and the cleaning schedule (user's request, 2026-10-01, on beta at `4eaca60`):**
+  - Smoke test: `tools/editors-smoke.mjs` (with `tools/editors-smoke.html`, after
+    `npm run build`) builds every registered editor with a stub config and fake hass,
+    and reports any that throw. Set `PLAYWRIGHT_MODULE` to Playwright's `index.mjs`
+    if it isn't installed in the project.
+- **Page header lines and the cleaning schedule (user's request, 2026-10-01, released in v0.25.0):**
   - Mock-ups: https://claude.ai/artifact/D9cz58EsbDS4VLx2e6tCsE (round 2 is the agreed
     one). These are snapshots only: nothing in a header makes tasks or sends
     notifications (the user was explicit).
@@ -1033,7 +1059,7 @@ Integration modules (`custom_components/church_drive/`):
       there are any.
     - `list` and `todo_summary` are worked out in the card, because templates can't
       see to-do items or the signed-in user.
-  - The Mobile pages use them (views 1 to 6 are on `-beta` for testing; Home isn't):
+  - The Mobile pages use them:
     - Lights: lights on (Hue groups excluded), not reachable, and "maybe left on".
       "Maybe left on" checks, in order: everyone's phone out; an area with a
       motion/occupancy/presence sensor quiet for 30 min; outdoor lights in daylight;
@@ -1043,13 +1069,13 @@ Integration modules (`custom_components/church_drive/`):
     - Security (no alarm line, per the user): doors, last ring/movement from Ring's
       `event.*_ding/_motion`, who's home.
     - Climate: hourly forecast from `weather.forecast_home`.
-    - Cleaning: `list` of `todo.cleaning`, plus a "Cleaning schedule" panel with the
-      new card.
+    - Cleaning: `list` of `todo.cleaning`. Its rows and To-do button open
+      `/dashboard-mobile/todo#cleaning`.
     - To-do (all three per-person sections): `todo_summary`.
     - Energy: rate now / next cheap window (from the rates events), live W, today's
       cost.
     - The line templates were tested live with `ha_eval_template` before going in.
-  - **Repeating tasks (the user's follow-up, 2026-10-01, beta at `22eebc0`):**
+  - **Repeating tasks (the user's follow-up, 2026-10-01, released in v0.25.0):**
     - The cleaning schedule belongs on the **To-do page**. The Cleaning page header
       (`list` of `todo.cleaning`) opens `/dashboard-mobile/todo#cleaning` from its
       rows and its to-do button (`priorities_page`, `list_icon:
@@ -1067,17 +1093,20 @@ Integration modules (`custom_components/church_drive/`):
       done (N days, weeks or months). It also has a start date, who it reminds, and
       notes.
     - The To-do page (all three per-person sections) uses it for My to-do (with
-      `remind_default` set to the person), Shared, and a new Cleaning panel. The
-      Tasks dashboard (`dashboard-tasks`) still has HA's `todo-list` cards: move it
-      over on release.
+      `remind_default` set to the person), Shared, and a Cleaning panel. The Tasks
+      dashboard's To-do view (`dashboard-tasks`) matches it, with a `todo_summary`
+      header. Its Shopping view keeps HA's `todo-list` card: the shopping list
+      integration only stores names, so it can't hold repeats.
     - **Rules live in `src/repeat.js`** (unit tests in `test/`, `npm test`, UK time).
       Words: `<repeat> · <for …|no reminders> · <notes>`. A description that doesn't
       start with a repeat is plain notes. "Once · for X" means no repeat, just a
       reminder at the due time. The phase comes from the current due time
       (fortnightly keeps its fortnight), so the start date isn't stored.
     - The automation's Jinja (`occ` macro) is a port of `nextOccurrence`. 18 cases
-      matched exactly (scratchpad `rep/cases.mjs`, `rep/plan.jinja`). **Change both
-      together.**
+      matched exactly (`tools/repeat-cases.mjs` against `ha/repeating-tasks.jinja`,
+      run through `ha_eval_template`). **Change both together**, and paste the
+      template back into the automation's "Work out what's due" step, with `t0 =
+      now()`.
     - A repeating task is always open, so the Home widget only shows one due within
       2 days.
     - `automation.church_drive_to_do_reminders` "added" branch now needs
@@ -1443,8 +1472,13 @@ Integration modules (`custom_components/church_drive/`):
     `full_width` values; Doors & Motion (and Outdoor Cameras on narrower screens) go
     full width automatically.
     - **Every page** ends with a `nav-bar-card` (v0.18.0): Home · Lights ·
-      Security · Climate · Cleaning, floating at the bottom, HA's tabs hidden.
-      The Quick Actions view's path is `home` (`/dashboard-mobile/home`).
+      Security · Climate · Cleaning · To-do · Energy (admins only), icons only,
+      floating at the bottom, HA's tabs hidden. The Quick Actions view's path is
+      `home` (`/dashboard-mobile/home`).
+    - **Page headers (v0.25.0):** Home `priorities`; Lights, Security and Energy
+      `lines`; Climate `forecast` (hourly, `weather.forecast_home`); Cleaning `list`
+      (`todo.cleaning`); To-do `todo_summary`. The line templates are in each page's
+      Auto Layout `header_lines`, editable in the visual editor.
     - **Quick Actions:** its Security, Climate, Lights and Cleaning panels have
       "Go to …" footer buttons to their pages (v0.21.0). [Security (alarm colour, alarm state) + Climate (colour from
       `climate.downstairs`: grey off / green Eco / blue cooling / orange;
@@ -1471,7 +1505,14 @@ Integration modules (`custom_components/church_drive/`):
       if the CO alarm is on)] [Windows & Doors
       (Blind card for `cover.roller_blind`)]. The old Temperature/Humidity
       lists and graphs and the fan/purifier/blind tiles are gone.
-    - **Cleaning:** one Cleaning panel (blue, state · battery).
+    - **Cleaning:** one Cleaning panel (blue, state · battery). Its header lists the
+      cleaning jobs.
+    - **To-do** (one section per person, shown by user condition): From the house
+      (`house-tasks-card`), My to-do and Shared (`task-list-card`), and Cleaning
+      (`task-list-card` for `todo.cleaning`). `empty_last` puts empty panels last.
+    - **Energy** (admins only): Octopus Electricity, Car charger (`ev-charger-card`,
+      waiting for myenergi), Last full day, Gas, Octoplus.
+    - **Home** also has a Car charger panel for everyone.
   - **Hayley** (`dashboard-hayley`, view path `home`), Auto Layout (2026-09-29):
     - Security: alarm-panel card, alarm colours.
     - Lights: Hayley's Bedroom, Kitchen Spotlights, Living Room Ambience and Middle
@@ -1489,8 +1530,17 @@ Integration modules (`custom_components/church_drive/`):
       alarm).
   - **Manager** (`dashboard-manager`, admin-only, v0.16.0): System view with
     a Device Health section panel (green / amber from
-    `sensor.church_drive_device_health`) holding the Device Health card.
+    `sensor.church_drive_device_health`) holding the Device Health card, and an
+    "Automatic to-dos" panel:
+    - who gets each kind of house job;
+    - notifications: the summary's day and time, and who gets the summary and
+      new-task alerts;
+    - the thresholds for making a task;
+    - the lists, and the house's jobs.
     Meant for the user only (require_admin can't limit it to one account).
+  - **Tasks** (`dashboard-tasks`): To-do (per person, the same panels as the Mobile
+    To-do page, `todo_summary` header) and Shopping (HA's list card for
+    `todo.shopping_list`), with a To-do · Shopping nav bar.
   - **Battery Status** (`battery-status`), Auto Layout (2026-09-29):
     - Ground Floor, Middle Floor and Hayley's Floor panels holding the per-room
       battery-zone cards.
@@ -1505,6 +1555,32 @@ Integration modules (`custom_components/church_drive/`):
   - **Alarm cards:** Mobile → Quick Actions and Security tabs, the Alarm
     dashboard (`alarm-panel`), Design Presets main (demo), and two demo cards on
     the Beta tab (Entry delay 22s, Disarmed).
+- **Automations, scripts and helpers made for Church Drive** (all UI-editable):
+  - `automation.church_drive_automatic_to_do_tasks`: house jobs on
+    `todo.priorities_automatic`. It never removes tasks for 10 min after a restart,
+    and holds a task while its source is unavailable.
+  - `automation.church_drive_to_do_reminders`: the weekly summary and new-task
+    alerts. It ignores tasks the automations bring back.
+  - `automation.church_drive_cleaning_schedule` ("Church Drive: repeating tasks"):
+    repeats and due-time reminders on Cleaning and the personal and shared lists.
+    It wakes on `input_datetime.cleaning_next_reminder` ("Tasks: next reminder").
+  - `automation.church_drive_tell_jamie_when_a_device_stays_stale`, and
+    `automation.battery_notes_low_battery_alert` (`not_from` unavailable).
+  - `script.church_drive_notify_person`: one plain notify step per phone. Every
+    notification goes through it.
+  - Helpers:
+    - `input_boolean.to_do_<kind>_<person>` (who gets each kind of house job);
+    - `input_boolean.to_do_reminders_<person>` and
+      `input_boolean.to_do_new_task_alerts_<person>`;
+    - `input_select.to_do_summary_day` and `input_datetime.to_do_reminder_time`;
+    - `input_number.to_do_battery_low_below`, `input_number.to_do_parts_due_within`
+      and `input_number.to_do_offline_for`.
+  - The label `ignore_in_to_dos` keeps a device or entity out of the house jobs.
+  - To-do lists (Local To-do):
+    - `todo.priorities_jamie`, `todo.priorities_hayley` and `todo.priorities_diane`;
+    - `todo.priorities_everyone` (shared);
+    - `todo.priorities_automatic` (house jobs);
+    - `todo.cleaning`.
 - **Scenes on the real cards (2026-09-26):** every light card has the four
   defaults aimed at its Hue room (`universal:<key>@light.<room>`; Bedroom is
   `light.second_bedroom`, Garden `light.garden`), except:
@@ -1544,6 +1620,17 @@ Integration modules (`custom_components/church_drive/`):
   (the Go to footer only shows while the panel is open); sending the stale-device
   alert to the Pixel too.
 - "My Boy Hugo" is unavailable; the user may want to power-cycle or re-pair it.
+- **Zappi:** waiting for the myenergi hub serial and API key (a task is on Jamie's
+  list). Then run the myenergi config flow (CJNE/ha-myenergi is downloaded and
+  loaded). `ev-charger-card` finds the entities by itself.
+- **Presence:** the user plans presence sensors. The Lights "maybe left on" line
+  picks up any motion, occupancy or presence binary sensor that has an area. Hue
+  MotionAware would need a Bridge Pro (they have a BSB002).
+- **Diane's phone** doesn't share its location (`person.diane` is `unknown`), so
+  "everyone's out" checks only count Jamie and Hayley. That could be turned on in
+  her app.
+- The weekly to-do summary lists all open tasks, repeating ones included even when
+  they're due well later. Filter them if the user finds it noisy.
 - The active-scene select doesn't list Hue-only scenes (e.g. Hue's Ruby glow in a
   room). It only lists library scenes.
 - `scene.kitchen_kitchen_rest` has a doubled name. It's harmless and could be
@@ -1562,6 +1649,9 @@ Integration modules (`custom_components/church_drive/`):
 npm install
 npm run build     # release bundle into custom_components/…/frontend + beta bundle at root
 npm run watch
+npm test          # repeat rules (src/repeat.js), UK time
+PLAYWRIGHT_MODULE=/opt/node22/lib/node_modules/playwright/index.mjs node tools/editors-smoke.mjs   # every card editor opens
+TZ=Europe/London node tools/repeat-cases.mjs   # cases to cross-check ha/repeating-tasks.jinja in HA
 ruff check custom_components --select E,F,W,B --line-length 140   # Python lint (only the long palette lines in library.py fail, by design)
 ```
 
