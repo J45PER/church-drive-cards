@@ -103,6 +103,17 @@ class CameraEvents:
                 for e in events:
                     if e.get("kind") == "linked" and not e.get("trigger"):
                         e["kind"] = "live"
+            # Before v0.31.1 only the start of each clip was saved, which won't
+            # play: drop those clips (the pictures stay).
+            broken = [
+                (base, e.pop("mp4"))
+                for base, events in self._data["events"].items()
+                for e in events
+                if e.get("mp4") and not e.get("whole")
+            ]
+            if broken:
+                await self.hass.async_add_executor_job(self._remove_files, broken)
+                self._save()
         await self.hass.async_add_executor_job(self._root().mkdir, 0o755, True, True)
         self._cams = self._find_cameras()
         if self._data["links"] is None:
@@ -214,6 +225,10 @@ class CameraEvents:
     def _stamp(ts: float, kind: str) -> str:
         return f"{dt_util.as_local(dt_util.utc_from_timestamp(ts)).strftime('%Y%m%d-%H%M%S')}_{kind}"
 
+    def _remove_files(self, files: list[tuple[str, str]]) -> None:
+        for base, name in files:
+            (self._root() / base / name).unlink(missing_ok=True)
+
     def _write(self, path: Path, data: bytes) -> int:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)
@@ -275,7 +290,16 @@ class CameraEvents:
             session = async_get_clientsession(self.hass)
             async with session.get(url, timeout=120) as resp:
                 resp.raise_for_status()
-                data = await resp.content.read(MAX_CLIP)
+                # Read to the end: content.read(n) gives back only what has
+                # arrived so far, which saved just the start of each clip.
+                chunks: list[bytes] = []
+                total = 0
+                async for chunk in resp.content.iter_chunked(1 << 16):
+                    total += len(chunk)
+                    if total > MAX_CLIP:
+                        raise ValueError("recording is too big")
+                    chunks.append(chunk)
+                data = b"".join(chunks)
         except Exception as err:  # noqa: BLE001
             _LOGGER.warning("Couldn't download the %s recording: %s", base, err)
             self._save()
@@ -283,6 +307,7 @@ class CameraEvents:
         name = f"{self._stamp(entry['ts'], entry['kind'])}.mp4"
         size = await self.hass.async_add_executor_job(self._write, self._root() / base / name, data)
         entry["mp4"] = name
+        entry["whole"] = True
         entry["bytes"] = entry.get("bytes", 0) + size
         # The clip's own first moments make the best thumbnail.
         if not await self._async_thumb(base, entry) and not entry.get("jpg"):
