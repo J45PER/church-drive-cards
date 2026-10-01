@@ -7,8 +7,11 @@
 // Only administrators can change zones.
 //
 // The Satellite / Street buttons also set the style of every other map in
-// Home Assistant on this device (see map-style.js). Imagery from Esri; place
-// search from OpenStreetMap (Nominatim).
+// Home Assistant on this device (see map-style.js). Maps from Google when
+// Church Drive has a Map Tiles key (else Esri); search from Google Places
+// when it has a Places key (Home Assistant searches, so that key stays
+// private), else OpenStreetMap (Nominatim). A search drops a pin; tap the pin
+// to make a zone there, named after the place.
 
 import * as L from 'leaflet/dist/leaflet-src.esm.js';
 import LEAFLET_CSS from 'leaflet/dist/leaflet.css';
@@ -16,7 +19,7 @@ import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { kitEsc } from './card-kit.js';
-import { MAP_LAYERS, mapStyle, setMapStyle } from './map-style.js';
+import { MAP_LAYERS, mapStyle, setMapStyle, googleTiles, useGoogle } from './map-style.js';
 
 const ATTR = 'Imagery &copy; Esri, Maxar, Earthstar Geographics &middot; Search &copy; OpenStreetMap';
 const HOME = '#4caf50';
@@ -55,6 +58,9 @@ const ZM_CSS = `
   .zm-btn { border:none; cursor:pointer; font:inherit; font-size:0.82rem; font-weight:700; border-radius:999px; padding:8px 14px; background:rgba(127,127,127,0.16); color:var(--primary-text-color); }
   .zm-btn.save { background:#26a69a; color:#fff; }
   .zm-btn.del { background:rgba(229,57,53,0.18); color:#ef9a9a; }
+  .zm-pin { width:30px !important; height:40px !important; margin:-38px 0 0 -15px !important; background:none; border:none; color:#ea4335; filter:drop-shadow(0 2px 3px rgba(0,0,0,0.5)); cursor:pointer; }
+  .zm-pin svg { width:30px; height:40px; display:block; }
+  .zm-results small { display:block; color:#9aa0ad; font-size:0.72rem; margin-top:1px; }
   .zm-hint { margin-top:8px; font-size:0.75rem; color:var(--secondary-text-color); }
 `;
 
@@ -77,6 +83,10 @@ export class ZoneMapCard extends HTMLElement {
     const first = !this._hass;
     this._hass = hass;
     if (!this._built) this._build();
+    if (first && !this.config.demo) {
+      useGoogle(hass).then((ok) => ok && this._setLayer());
+      hass.callWS({ type: 'church_drive/maps' }).then((m) => (this._places = !!(m && m.places)), () => (this._places = false));
+    }
     // Redraw when zones change (not on every state change).
     const sig = Object.keys(hass.states)
       .filter((id) => id.startsWith('zone.'))
@@ -149,11 +159,12 @@ export class ZoneMapCard extends HTMLElement {
       this._searchTimer = setTimeout(() => this._search(input.value), 500);
     });
     this.querySelector('.zm-results').addEventListener('click', (ev) => {
-      const b = ev.target.closest('[data-lat]');
-      if (!b) return;
-      this._map.setView([Number(b.dataset.lat), Number(b.dataset.lon)], 17);
+      const b = ev.target.closest('[data-found]');
+      const place = b && this._found && this._found[Number(b.dataset.found)];
+      if (!place) return;
       this.querySelector('.zm-results').innerHTML = '';
-      input.value = b.textContent;
+      input.value = place.name;
+      this._dropPin(place);
     });
     // Stop the map dragging while using the controls.
     this.querySelectorAll('.zm-search, .zm-layers, .zm-zoom, .zm-add').forEach((n) => {
@@ -174,8 +185,11 @@ export class ZoneMapCard extends HTMLElement {
     if (!this._map) return;
     const style = mapStyle() === 'street' ? 'street' : 'satellite';
     (this._tiles || []).forEach((t) => this._map.removeLayer(t));
+    const g = googleTiles(style);
     const spec = MAP_LAYERS[style];
-    this._tiles = [L.tileLayer(spec.base, { maxNativeZoom: 19, maxZoom: 20, attribution: ATTR }), ...spec.labels.map((u) => L.tileLayer(u, { maxNativeZoom: 19, maxZoom: 20, zIndex: 5 }))];
+    this._tiles = g
+      ? [L.tileLayer(g.url, { maxNativeZoom: 20, maxZoom: 21, attribution: `${g.attribution}${this._places ? '' : ' &middot; Search &copy; OpenStreetMap'}` })]
+      : [L.tileLayer(spec.base, { maxNativeZoom: 19, maxZoom: 20, attribution: ATTR }), ...spec.labels.map((u) => L.tileLayer(u, { maxNativeZoom: 19, maxZoom: 20, zIndex: 5 }))];
     this._tiles.forEach((t) => t.addTo(this._map));
     this.querySelectorAll('.zm-layers button').forEach((b) => b.classList.toggle('on', b.dataset.style === style));
   }
@@ -236,6 +250,7 @@ export class ZoneMapCard extends HTMLElement {
       circle.addTo(this._layer);
       this._circles[z.entity] = circle;
     });
+    if (this._pin) this._pin.addTo(this._layer);
     if (fit) this._fit();
     if (this._sel) {
       // Keep editing the same zone after a redraw.
@@ -250,13 +265,41 @@ export class ZoneMapCard extends HTMLElement {
       box.innerHTML = '';
       return;
     }
+    const asked = (this._asked = q);
+    let list;
     try {
-      const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=gb&q=${encodeURIComponent(q)}`, { headers: { Accept: 'application/json' } });
-      const list = await r.json();
-      box.innerHTML = list.map((x) => `<button data-lat="${x.lat}" data-lon="${x.lon}">${kitEsc(x.display_name)}</button>`).join('') || '<button disabled>Nothing found</button>';
+      if (this._places) {
+        list = await this._hass.callWS({ type: 'church_drive/maps/search', query: q.trim() });
+      } else {
+        const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=gb&q=${encodeURIComponent(q)}`, { headers: { Accept: 'application/json' } });
+        list = (await r.json()).map((x) => {
+          const [name, ...rest] = String(x.display_name).split(', ');
+          return { name, address: rest.join(', '), lat: Number(x.lat), lon: Number(x.lon) };
+        });
+      }
     } catch (err) {
-      box.innerHTML = '<button disabled>Search isn’t available right now</button>';
+      if (asked === this._asked) box.innerHTML = '<button disabled>Search isn’t available right now</button>';
+      return;
     }
+    if (asked !== this._asked) return;
+    this._found = list;
+    box.innerHTML =
+      list.map((x, i) => `<button data-found="${i}">${kitEsc(x.name)}${x.address ? `<small>${kitEsc(x.address)}</small>` : ''}</button>`).join('') || '<button disabled>Nothing found</button>';
+  }
+
+  // A pin where a search result is; tap it to make a zone there.
+  _dropPin(place) {
+    if (this._pin) this._layer.removeLayer(this._pin);
+    const svg = '<svg viewBox="0 0 30 40"><path d="M15 0C6.7 0 0 6.6 0 14.8 0 25.9 15 40 15 40s15-14.1 15-25.2C30 6.6 23.3 0 15 0z" fill="currentColor"/><circle cx="15" cy="15" r="5.5" fill="#fff"/></svg>';
+    this._pin = L.marker([place.lat, place.lon], { icon: L.divIcon({ className: 'zm-pin', html: svg }), zIndexOffset: 900 });
+    this._pin.bindTooltip(`${kitEsc(place.name)}${this._admin() ? '<br><small>Tap to make a zone here</small>' : ''}`, { direction: 'top', offset: [0, -40], className: 'zm-tag' });
+    this._pin.on('click', (ev) => {
+      L.DomEvent.stopPropagation(ev);
+      if (this._admin()) this._newZone(L.latLng(place.lat, place.lon), place.name);
+    });
+    this._pin.addTo(this._layer);
+    this._pinPlace = place;
+    this._map.setView([place.lat, place.lon], 18);
   }
 
   _mapClick(ev) {
@@ -265,7 +308,12 @@ export class ZoneMapCard extends HTMLElement {
     const add = this.querySelector('.zm-add');
     add.classList.remove('on');
     add.textContent = '+ Add zone';
-    const z = { entity: null, id: null, name: '', lat: ev.latlng.lat, lon: ev.latlng.lng, r: 100, colour: PALETTE[0], editable: true, isNew: true };
+    this._newZone(ev.latlng, '');
+  }
+
+  _newZone(at, name) {
+    if (this._circles.__new) this._layer.removeLayer(this._circles.__new);
+    const z = { entity: null, id: null, name, lat: at.lat, lon: at.lng, r: 100, colour: PALETTE[0], editable: true, isNew: true };
     const circle = L.circle([z.lat, z.lon], { radius: z.r, color: z.colour, weight: 2, fillOpacity: 0.22, dashArray: '6 6' }).addTo(this._layer);
     this._circles.__new = circle;
     this._select(z);
@@ -363,6 +411,7 @@ export class ZoneMapCard extends HTMLElement {
         else if (z.isNew) await ws({ type: 'zone/create', name, latitude: lat, longitude: lon, radius, icon: 'mdi:map-marker', passive: false });
         else await ws({ type: 'zone/update', zone_id: z.id, name, latitude: lat, longitude: lon, radius, icon: z.icon || 'mdi:map-marker', passive: !!z.passive });
       }
+      if (z.isNew && this._pin) this._pin = null; // the pin's place is a zone now
       this._close(!this.config.demo);
     } catch (err) {
       b.disabled = false;

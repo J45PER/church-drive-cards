@@ -1,4 +1,4 @@
-"""Config flow for Church Drive: one entry; options for the scene rooms and device health."""
+"""Config flow for Church Drive: one entry; options for the scene rooms, device health and Google maps."""
 
 from __future__ import annotations
 
@@ -15,9 +15,12 @@ from homeassistant.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
+    TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
 )
 
-from .const import CONF_HEALTH_ENTITIES, CONF_SCENE_GROUPS, DOMAIN
+from .const import CONF_HEALTH_ENTITIES, CONF_MAPS_PLACES_KEY, CONF_MAPS_TILES_KEY, CONF_SCENE_GROUPS, DOMAIN
 from .hue import async_get_bridge_api, async_list_groups
 
 
@@ -40,10 +43,10 @@ class ChurchDriveConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class ChurchDriveOptionsFlow(OptionsFlow):
-    """Universal scenes (Hue rooms and zones) or device health (devices to watch)."""
+    """Universal scenes (Hue rooms and zones), device health (devices to watch) or Google maps (keys)."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        return self.async_show_menu(step_id="init", menu_options=["scenes", "health"])
+        return self.async_show_menu(step_id="init", menu_options=["scenes", "health", "maps"])
 
     def _save(self, user_input: dict[str, Any]) -> ConfigFlowResult:
         return self.async_create_entry(data={**self.config_entry.options, **user_input})
@@ -59,6 +62,20 @@ class ChurchDriveOptionsFlow(OptionsFlow):
             }
         )
         return self.async_show_form(step_id="health", data_schema=schema)
+
+    async def async_step_maps(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        if user_input is not None:
+            # Blank clears a key (back to the free Esri maps / OpenStreetMap search).
+            return self._save({k: (user_input.get(k) or "").strip() for k in (CONF_MAPS_TILES_KEY, CONF_MAPS_PLACES_KEY)})
+        options = self.config_entry.options
+        key = TextSelector(TextSelectorConfig(type=TextSelectorType.TEXT))
+        schema = vol.Schema(
+            {
+                vol.Optional(CONF_MAPS_TILES_KEY, default=options.get(CONF_MAPS_TILES_KEY, "")): key,
+                vol.Optional(CONF_MAPS_PLACES_KEY, default=options.get(CONF_MAPS_PLACES_KEY, "")): key,
+            }
+        )
+        return self.async_show_form(step_id="maps", data_schema=schema)
 
     async def async_step_scenes(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         api = async_get_bridge_api(self.hass)
