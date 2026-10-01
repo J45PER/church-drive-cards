@@ -67,6 +67,16 @@ SAFE = re.compile(r"^[a-z0-9_]+$")
 SAFE_FILE = re.compile(r"^[0-9]{8}-[0-9]{6}_[a-z]+(_[0-9]+)?\.(jpg|mp4)$")
 
 
+def _when(value: Any) -> datetime | None:
+    """A time from a state or attribute: Ring gives datetimes in attributes, text in states."""
+    if isinstance(value, datetime):
+        return value if value.tzinfo else dt_util.as_utc(value)
+    try:
+        return dt_util.parse_datetime(str(value)) if value else None
+    except (TypeError, ValueError):
+        return None
+
+
 class CameraEvents:
     """Saves each camera event's picture and clip, and serves the list."""
 
@@ -176,7 +186,7 @@ class CameraEvents:
             if new.state in ("unknown", "unavailable") or old.state in ("unavailable",) or new.state == old.state:
                 return
             kind = "ding" if eid.endswith("_ding") else "motion"
-            when = dt_util.parse_datetime(new.state) or dt_util.utcnow()
+            when = _when(new.state) or dt_util.utcnow()
             self._spawn(self._async_event(base, kind, when))
         else:
             vid, was = new.attributes.get("last_video_id"), old.attributes.get("last_video_id")
@@ -238,7 +248,7 @@ class CameraEvents:
         if any(e.get("video_id") == video_id for e in events):
             return
         act = self.hass.states.get(f"sensor.{base}_last_activity")
-        created = dt_util.parse_datetime(act.attributes.get("created_at") or act.state) if act else None
+        created = _when(act.attributes.get("created_at") or act.state) if act else None
         category = act.attributes.get("category") if act is not None else None
         kind = {"ding": "ding", "on_demand": "linked", "live": "linked"}.get(category, "motion")
         ts = (created or dt_util.utcnow()).timestamp()

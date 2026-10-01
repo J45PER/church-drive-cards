@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-01. Current release: **v0.30.0**.*
+*Last updated 2026-10-01. Current release: **v0.30.1**.*
 
 ## Where this stands
 
@@ -14,7 +14,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-01, v0.30.0 live, nothing on beta):**
+**Now (2026-10-01, v0.30.1 live, nothing on beta):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -310,6 +310,11 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **v0.30.1 (released 2026-10-01, restarted): clip download fix.** Ring's
+  `sensor.<x>_last_activity` attribute `created_at` is a datetime, not text, which broke
+  `_async_clip` (`_when()` now takes either). Start-up note: Church Drive's entities
+  only appear once HA says it's started, which can take about 5 minutes here. The
+  Philips fan resync holds up start-up (an existing issue).
 - **v0.30.0 (released 2026-10-01, restarted): camera events, camera links and places.** Manager gained Locations and Camera links panels; Security's camera and zone cards open the events viewer.
   - **Camera events** (`events.py`, `CameraEvents`):
     - Saves a picture 8 s after each Ring `event.<x>_ding/_motion`, from
