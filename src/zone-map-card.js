@@ -25,7 +25,8 @@ const PALETTE = ['#26a69a', '#ffb300', '#ab47bc', '#42a5f5', '#ef5350', '#8d6e63
 const ZM_CSS = `
   ${LEAFLET_CSS}
   .zm-wrap { position:relative; border-radius:16px; overflow:hidden; height:var(--zm-h, 420px); background:#2a2f2a; }
-  .zm-map { position:absolute; inset:0; }
+  /* !important: Leaflet sets position:relative on a map made before it's on the page, which would leave it 0 px high. */
+  .zm-map { position:absolute !important; inset:0; width:100%; height:100%; }
   .zm-map .leaflet-control-attribution { font-size:9px; background:rgba(0,0,0,0.45); color:#ddd; }
   .zm-map .leaflet-control-attribution a { color:#ddd; }
   .zm-search { position:absolute; z-index:500; top:10px; left:10px; right:150px; }
@@ -160,7 +161,12 @@ export class ZoneMapCard extends HTMLElement {
       L.DomEvent.disableScrollPropagation(n);
     });
     this.querySelector('.zm-edit').addEventListener('click', (ev) => this._editClick(ev));
-    if (window.ResizeObserver) new ResizeObserver(() => this._map.invalidateSize()).observe(el);
+    if (window.ResizeObserver) {
+      new ResizeObserver(() => {
+        this._map.invalidateSize();
+        if (this._wantFit) this._fit();
+      }).observe(el);
+    }
     this._built = true;
   }
 
@@ -209,7 +215,9 @@ export class ZoneMapCard extends HTMLElement {
 
   _fit() {
     const zs = this._zones();
-    if (!zs.length) return;
+    // Not on the page yet (no size): fit once it is.
+    this._wantFit = !this._map.getSize().y;
+    if (!zs.length || this._wantFit) return;
     const b = L.latLngBounds(zs.map((z) => L.latLng(z.lat, z.lon).toBounds(z.r * 2)));
     this._map.fitBounds(b, { padding: [30, 30], maxZoom: 17 });
   }

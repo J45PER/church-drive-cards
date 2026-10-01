@@ -337,7 +337,8 @@ export class SectionPanelCard extends HTMLElement {
     return Math.max(...types.map((t) => AUTO_WIDTH[t] || 300));
   }
 
-  // Cards side by side when each can be at least card_width wide.
+  // Cards side by side when each can be at least card_width wide; auto-fit,
+  // so fewer cards than fit still share the whole width (no empty columns).
   _layoutGrid(compact) {
     const g = this._grid;
     if (!g) return;
@@ -365,7 +366,7 @@ export class SectionPanelCard extends HTMLElement {
       return;
     }
     [...g.children].forEach((el) => el.style && el.style.gridColumn && (el.style.gridColumn = ''));
-    g.style.gridTemplateColumns = w > 0 ? `repeat(auto-fill, minmax(min(100%, ${w}px), 1fr))` : '1fr';
+    g.style.gridTemplateColumns = w > 0 ? `repeat(auto-fit, minmax(min(100%, ${w}px), 1fr))` : '1fr';
   }
 
   // Pictures on rows of t; r left over on the last row. The grid has t × r
@@ -378,7 +379,7 @@ export class SectionPanelCard extends HTMLElement {
     const n = kids.length;
     const width = g.getBoundingClientRect().width;
     if (!n || !width) {
-      g.style.gridTemplateColumns = `repeat(auto-fill, minmax(min(100%, ${w}px), 1fr))`;
+      g.style.gridTemplateColumns = `repeat(auto-fit, minmax(min(100%, ${w}px), 1fr))`;
       return;
     }
     const gap = parseFloat(g.style.gap) || 12;
