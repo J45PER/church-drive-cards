@@ -116,6 +116,21 @@ class CameraEvents:
             if broken:
                 await self.hass.async_add_executor_job(self._remove_files, broken)
                 self._save()
+            # Once (v0.31.2): events from before the clip fix never got a clip
+            # that plays; remove them, pictures too.
+            if not stored.get("cleared_old"):
+                old: list[tuple[str, str]] = []
+                for base, events in self._data["events"].items():
+                    keep = []
+                    for e in events:
+                        if e.get("whole"):
+                            keep.append(e)
+                        else:
+                            old += [(base, e[k]) for k in ("jpg", "mp4") if e.get(k)]
+                    events[:] = keep
+                await self.hass.async_add_executor_job(self._remove_files, old)
+                self._data["cleared_old"] = True
+                self._save()
         await self.hass.async_add_executor_job(self._root().mkdir, 0o755, True, True)
         self._cams = self._find_cameras()
         if self._data["links"] is None:

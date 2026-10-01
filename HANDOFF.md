@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-01. Current release: **v0.31.1**.*
+*Last updated 2026-10-01. Current release: **v0.31.2**.*
 
 ## Where this stands
 
@@ -14,7 +14,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-01, v0.31.1 live, nothing on beta):**
+**Now (2026-10-01, v0.31.2 live, nothing on beta):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -310,6 +310,11 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **v0.31.2 (released 2026-10-01, restarted): old camera events removed.**
+  - Once, on start (`cleared_old` in the store): events without a `whole` clip (all from
+    before v0.31.1, which could never play) are removed with their pictures. The user asked
+    for the old ones to go. First real clip after v0.31.1 (front door live view 19:48)
+    came in as `hevc` and was converted.
 - **v0.31.1 (released 2026-10-01, restarted): camera clips play on phones; live view starts muted.**
   - **Clips were only the first chunk:** `_async_clip` used `resp.content.read(MAX_CLIP)`,
     which returns whatever has arrived, so each saved .mp4 was a few KB (phones: "format
