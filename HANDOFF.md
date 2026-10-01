@@ -30,6 +30,21 @@ HACS as an integration. It does two jobs:
   `ha/repeating-tasks.jinja`.
 - **House jobs:** the automatic to-dos (`house-tasks-card`, "Priorities Automatic")
   and the to-do notifications are set in Manager.
+- **People (2026-10-01): Jamie, Hayley, Diane and Ian** (Ian added by the user;
+  user id `f9a53de72d834d778c6bd476284fb8a2`, phone `notify.mobile_app_ian`).
+  Adding a person is a per-person checklist, done for Ian:
+  - lists and switches: `todo.priorities_<name>` (Local To-do), the six
+    `input_boolean.to_do_<kind>_<name>` switches, plus the summary and new-task alert
+    switches. Ian's summary switch is `input_boolean.to_do_summary_ian` (the others
+    are `to_do_reminders_<name>`).
+  - `script.church_drive_notify_person`: a person option and a step per phone.
+  - Automations: automatic to-do tasks (trigger lists, `lists`, `people`), to-do
+    reminders ("People" step, triggers, `get_items` targets), and repeating tasks
+    (trigger, condition and `lists`).
+  - Dashboards: Manager's grids (two columns of tiles) and lists, and a per-user To-do
+    section on Mobile and Tasks (copy of another person's, user visibility).
+  - "Everyone" on an automatic task means every person is ticked, so with four people
+    the existing tasks now read "for Jamie, Hayley, Diane" until Ian is ticked too.
 - **Every setting is visual:** see "Everything from the UI" and its checklist.
   Run `tools/editors-smoke.mjs` before pushing.
 - **Waiting on the user:**
