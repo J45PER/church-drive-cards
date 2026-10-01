@@ -309,11 +309,45 @@ class CameraEvents:
         entry["mp4"] = name
         entry["whole"] = True
         entry["bytes"] = entry.get("bytes", 0) + size
+        await self._async_remux(base, entry)
         # The clip's own first moments make the best thumbnail.
         if not await self._async_thumb(base, entry) and not entry.get("jpg"):
             await self._async_picture(base, entry)
         self._save()
         await self._tidy()
+
+    async def _async_remux(self, base: str, entry: dict[str, Any]) -> None:
+        """Repackage the clip for phones (no re-encoding): the index at the
+        front so it starts at once, and HEVC labelled hvc1, without which
+        iPhones play the sound over a black picture."""
+        try:
+            from homeassistant.components.ffmpeg import get_ffmpeg_manager  # noqa: PLC0415
+
+            binary = get_ffmpeg_manager(self.hass).binary
+        except Exception:  # noqa: BLE001
+            return
+        clip = self._root() / base / entry["mp4"]
+        tmp = clip.with_name(clip.stem + ".tmp.mp4")
+        try:
+            probe = await asyncio.create_subprocess_exec(
+                binary, "-hide_banner", "-i", str(clip), stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE
+            )
+            _, err = await asyncio.wait_for(probe.communicate(), 30)
+            found = re.search(r"Video: (\w+)", err.decode(errors="replace"))
+            codec = found.group(1) if found else None
+            entry["codec"] = codec
+            tag = ["-tag:v", "hvc1"] if codec == "hevc" else []
+            proc = await asyncio.create_subprocess_exec(
+                binary, "-y", "-loglevel", "error", "-i", str(clip), "-map", "0", "-c", "copy", *tag, "-movflags", "+faststart", str(tmp),
+                stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE,
+            )
+            _, err = await asyncio.wait_for(proc.communicate(), 120)
+            if proc.returncode != 0:
+                raise RuntimeError(err.decode(errors="replace").strip()[-300:])
+            await self.hass.async_add_executor_job(tmp.replace, clip)
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.warning("Couldn't repackage the %s clip %s (kept as it came): %s", base, entry["mp4"], err)
+            await self.hass.async_add_executor_job(lambda: tmp.unlink(missing_ok=True))
 
     async def _async_thumb(self, base: str, entry: dict[str, Any]) -> bool:
         """A picture from 1 second into the clip (with Home Assistant's ffmpeg)."""
@@ -477,7 +511,7 @@ class CameraEvents:
         out = []
         for e in sorted(self._data["events"].get(base, []), key=lambda e: e["ts"], reverse=True):
             out.append(
-                {"id": e["id"], "ts": e["ts"], "kind": e["kind"], "source": e.get("source"), "jpg": e.get("jpg"), "mp4": e.get("mp4")}
+                {"id": e["id"], "ts": e["ts"], "kind": e["kind"], "source": e.get("source"), "jpg": e.get("jpg"), "mp4": e.get("mp4"), "codec": e.get("codec")}
             )
         return out
 
