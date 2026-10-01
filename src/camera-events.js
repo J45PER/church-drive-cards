@@ -20,6 +20,7 @@ export const KINDS = {
   ding: ['Doorbell', '#29b6f6', '#012'],
   motion: ['Motion', '#5c6bc0', '#fff'],
   linked: ['Linked', '#26a69a', '#fff'],
+  live: ['Live view', '#78909c', '#fff'],
   interval: ['Snapshot', 'rgba(255,255,255,0.22)', '#fff'],
   'on-demand': ['Snapshot', 'rgba(255,255,255,0.22)', '#fff'],
 };
@@ -295,7 +296,7 @@ export function openCameraEvents(host, hass, base, { title = '', aspect = 16 / 9
   };
 
   const renderChips = () => {
-    const opts = [['all', 'All'], ['ding', 'Doorbell'], ['motion', 'Motion'], ['linked', 'Linked']].filter(
+    const opts = [['all', 'All'], ['ding', 'Doorbell'], ['motion', 'Motion'], ['linked', 'Linked'], ['live', 'Live view']].filter(
       ([k]) => k === 'all' || state.events.some((e) => e.kind === k),
     );
     chips.innerHTML = opts.map(([k, t]) => `<button class="ce-chip${state.filter === k ? ' on' : ''}" data-f="${k}">${t}</button>`).join('');

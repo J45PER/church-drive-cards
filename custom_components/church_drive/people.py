@@ -33,6 +33,7 @@ from homeassistant.core import CoreState, Context, Event, HomeAssistant, callbac
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_send
+from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.storage import Store
 from homeassistant.util import slugify
 
@@ -72,6 +73,7 @@ class People:
         self._unsubs: list = []
         self._unsub_started = None
         self._asked_lists: set[str] = set()
+        self._asking = None
         self.rev = 0
 
     # ---- start / stop -------------------------------------------------
@@ -107,6 +109,9 @@ class People:
         if self._unsub_started is not None:
             self._unsub_started()
             self._unsub_started = None
+        if self._asking is not None:
+            self._asking()
+            self._asking = None
 
     async def _async_save(self) -> None:
         await self._store.async_save(self._data)
@@ -126,12 +131,22 @@ class People:
     @callback
     def _wanted(self, event_data: Any) -> bool:
         eid = event_data.get("entity_id", "") if hasattr(event_data, "get") else ""
-        return eid.startswith(("person.", "todo."))
+        return eid.startswith(("person.", "todo.", "zone."))
 
     @callback
     def _on_state(self, event: Event) -> None:
         eid = event.data.get("entity_id", "")
         old, new = event.data.get("old_state"), event.data.get("new_state")
+        if eid.startswith("zone."):
+            # A zone added or moved: phones only check zones when they send a
+            # new location, so ask them for one (a still phone might not for
+            # a long time).
+            moved = new is not None and (
+                old is None or any(old.attributes.get(k) != new.attributes.get(k) for k in ("latitude", "longitude", "radius"))
+            )
+            if moved and self.hass.state is CoreState.running:
+                self._ask_locations()
+            return
         if eid.startswith("todo."):
             o, n = _count(old), _count(new)
             if o is not None and n is not None and o != n:
@@ -147,6 +162,26 @@ class People:
             self.hass.async_create_task(self._async_person_changed())
         elif old.state != new.state:
             self._changed()  # home / away, for the cards
+
+    @callback
+    def _ask_locations(self) -> None:
+        """Ask every phone for its location now (at most once a minute)."""
+        if self._asking is not None:
+            return
+
+        async def ask(_now: Any = None) -> None:
+            self._asking = None
+            for p in self.people():
+                for phone in p["phones"]:
+                    try:
+                        await self.hass.services.async_call(
+                            "notify", phone["service"], {"message": "request_location_update"}, blocking=False
+                        )
+                    except Exception as err:  # noqa: BLE001
+                        _LOGGER.debug("Couldn't ask %s for a location: %s", phone["name"], err)
+
+        # A short wait, so several zone edits in a row ask once.
+        self._asking = async_call_later(self.hass, 10, ask)
 
     async def _async_person_changed(self) -> None:
         await self._async_users()

@@ -22,7 +22,8 @@ Camera links (set in Manager, like Ring's Linked Devices but for any sensor
 and per alarm mode): when a trigger fires (a camera's motion or doorbell, a
 motion sensor, a door), the linked cameras record for a few seconds, by
 turning on ring-mqtt's live stream (Ring saves live views as recordings with
-Ring Protect). Links are kept per mode: disarmed, home (and night) and away
+Ring Protect). A live view someone watched (not a link) is kept as "live".
+Links are kept per mode: disarmed, home (and night) and away
 (and while the alarm is going off). Each camera records a linked clip at most
 once per `cooldown` seconds. These show in the events viewer as "linked".
 """
@@ -97,6 +98,11 @@ class CameraEvents:
             self._data["settings"].update(stored.get("settings") or {})
             self._data["events"] = stored.get("events") or {}
             self._data["links"] = stored.get("links")
+            # Before v0.30.2 a watched live view was saved as "linked".
+            for events in self._data["events"].values():
+                for e in events:
+                    if e.get("kind") == "linked" and not e.get("trigger"):
+                        e["kind"] = "live"
         await self.hass.async_add_executor_job(self._root().mkdir, 0o755, True, True)
         self._cams = self._find_cameras()
         if self._data["links"] is None:
@@ -259,6 +265,9 @@ class CameraEvents:
             default=None,
         )
         if entry is None:
+            # A live view nobody linked: someone watched the camera live.
+            if kind == "linked":
+                kind = "live"
             entry = {"id": f"{int(ts)}{kind[0]}", "ts": ts, "kind": kind, "jpg": None, "mp4": None, "bytes": 0}
             events.append(entry)
         entry["video_id"] = video_id

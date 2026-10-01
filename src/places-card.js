@@ -8,7 +8,8 @@
 // people sensor's `place` says Work, for templates and notifications.
 //
 // Kept by the Church Drive integration (church_drive/people/places); only
-// administrators can change them.
+// administrators can change them, with Edit on a person's card (pick a zone
+// and name it, ✕ to delete, + to add) and then Save.
 
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
@@ -36,6 +37,10 @@ const PL_CSS = `
   .pl-foot { margin-top:12px; font-size:0.78rem; color:var(--secondary-text-color); }
   .pl-foot a { color:var(--primary-color); cursor:pointer; }
   .pl-none { font-size:0.82rem; color:var(--secondary-text-color); }
+  .pl-acts { display:flex; justify-content:flex-end; gap:8px; margin-top:10px; }
+  .pl-btn { border:none; cursor:pointer; font:inherit; font-size:0.82rem; font-weight:600; border-radius:999px; padding:7px 14px; display:flex; align-items:center; gap:6px;
+    background:rgba(127,127,127,0.16); color:var(--primary-text-color); }
+  .pl-save { background:#26a69a; color:#fff; }
 `;
 
 // "At work · Ashfield School", "Gym · PureGym", "Ashfield School", "Home", "Away".
@@ -59,6 +64,7 @@ export class PlacesCard extends HTMLElement {
     this.config = config || {};
     this._built = false;
     this._data = null;
+    this._drafts = {}; // person → places being edited (not saved yet)
   }
 
   set hass(hass) {
@@ -86,8 +92,6 @@ export class PlacesCard extends HTMLElement {
   async _load() {
     try {
       const r = await this._hass.connection.sendMessagePromise({ type: 'church_drive/people' });
-      // Don't throw away a row someone is part-way through adding.
-      if (this._editing) return;
       this._data = r.people || [];
       this._sig = null;
       this._render();
@@ -109,15 +113,20 @@ export class PlacesCard extends HTMLElement {
       .sort((a, b) => a[1].localeCompare(b[1]));
   }
 
-  async _save(person, places) {
+  async _save(person) {
+    const places = (this._drafts[person] || []).filter((x) => x.zone).map((x) => ({ zone: x.zone, name: (x.name || '').trim() }));
     const p = (this._data || []).find((x) => x.entity_id === person);
     if (p) p.places = places;
-    if (this.config.demo) return this._render();
+    delete this._drafts[person];
+    this._sig = null;
+    this._render();
+    if (this.config.demo) return;
     try {
-      const r = await this._hass.connection.sendMessagePromise({ type: 'church_drive/people/places', person, places: places.filter((x) => x.zone) });
+      const r = await this._hass.connection.sendMessagePromise({ type: 'church_drive/people/places', person, places });
       this._data = r.people || this._data;
     } catch (err) {
-      /* the sensor update will bring it back in line */
+      this._load();
+      return;
     }
     this._sig = null;
     this._render();
@@ -129,65 +138,54 @@ export class PlacesCard extends HTMLElement {
     if (!this._built) {
       this.innerHTML = `<style>${PL_CSS}</style>${c.title ? `<div style="font-size:1.1rem; font-weight:600; margin:0 0 10px 4px;">${kitEsc(c.title)}</div>` : ''}<div class="pl-grid"></div>`;
       this._grid = this.querySelector('.pl-grid');
-      this._grid.addEventListener('change', (ev) => this._edit(ev));
-      this._grid.addEventListener('input', (ev) => {
-        if (ev.target.matches('input')) {
-          this._editing = true;
-          clearTimeout(this._typing);
-          this._typing = setTimeout(() => this._edit(ev), 900);
-        }
-      });
-      this._grid.addEventListener('click', (ev) => {
-        const b = ev.target.closest('[data-act]');
-        if (!b) return;
-        if (b.dataset.act === 'zones') return kitNavigate('/config/zone');
-        const person = b.closest('[data-person]').dataset.person;
-        const p = this._data.find((x) => x.entity_id === person);
-        const places = [...(p.places || [])];
-        if (b.dataset.act === 'add') {
-          const used = new Set(places.map((x) => x.zone));
-          const free = this._zones().find(([id]) => !used.has(id));
-          if (!free) return kitNavigate('/config/zone');
-          places.push({ zone: free[0], name: 'Work' });
-          this._save(person, places);
-        } else if (b.dataset.act === 'remove') {
-          places.splice(Number(b.dataset.i), 1);
-          this._save(person, places);
-        }
-      });
+      // Typing and picking only change the draft; Save stores it.
+      const keep = (ev) => {
+        const wrap = ev.target.closest('[data-person]');
+        const d = wrap && this._drafts[wrap.dataset.person];
+        const i = Number(ev.target.dataset.i);
+        if (!d || !d[i]) return;
+        if (ev.target.matches('select')) d[i].zone = ev.target.value;
+        else if (ev.target.matches('input')) d[i].name = ev.target.value;
+      };
+      this._grid.addEventListener('change', keep);
+      this._grid.addEventListener('input', keep);
+      this._grid.addEventListener('click', (ev) => this._click(ev));
       this._built = true;
     }
     const people = this._data || [];
     const zones = this._zones();
     const admin = this._admin();
-    const sig = JSON.stringify([people, zones, admin]);
+    const sig = JSON.stringify([people, zones, admin, Object.keys(this._drafts)]);
     if (sig === this._sig) return;
     this._sig = sig;
     const zoneName = (id) => (zones.find((z) => z[0] === id) || [id, id.replace(/^zone\./, '').replace(/_/g, ' ')])[1];
+    const icon = (name) => iconHtml(/^work$/i.test(name || '') ? 'mdi:briefcase-outline' : 'mdi:map-marker-outline', { size: '18px' });
     const datalist = `<datalist id="pl-names${SUFFIX}">${SUGGEST.map((n) => `<option value="${n}">`).join('')}</datalist>`;
-    this._grid.innerHTML =
-      datalist +
-      (people.length
-        ? people
-            .map((p) => {
-              const rows = (p.places || [])
-                .map((pl, i) =>
-                  admin
-                    ? `<div class="pl-row"><div class="pl-ico">${iconHtml(/^work$/i.test(pl.name) ? 'mdi:briefcase-outline' : 'mdi:map-marker-outline', { size: '18px' })}</div>
-                        <select data-i="${i}" aria-label="Zone">${zones.map(([id, n]) => `<option value="${kitEsc(id)}"${id === pl.zone ? ' selected' : ''}>${kitEsc(n)}</option>`).join('')}${zones.some((z) => z[0] === pl.zone) ? '' : `<option value="${kitEsc(pl.zone)}" selected>${kitEsc(zoneName(pl.zone))} (gone)</option>`}</select>
-                        <input data-i="${i}" list="pl-names${SUFFIX}" value="${kitEsc(pl.name)}" placeholder="Called" aria-label="What ${kitEsc(p.first)} calls it">
-                        <button class="pl-x" data-act="remove" data-i="${i}" aria-label="Remove">${iconHtml('mdi:close', { size: '18px' })}</button></div>`
-                    : `<div class="pl-row"><div class="pl-ico">${iconHtml('mdi:map-marker-outline', { size: '18px' })}</div><div class="pl-fixed">${kitEsc(pl.name || zoneName(pl.zone))}<small>${kitEsc(zoneName(pl.zone))}</small></div></div>`,
-                )
-                .join('');
-              return `<div class="pl-person" data-person="${kitEsc(p.entity_id)}">${kitShell(
-                `<div class="pl-row"><div class="pl-ico" style="color:#4caf50;">${iconHtml('mdi:home', { size: '18px' })}</div><div class="pl-fixed">Home<small>Automatic</small></div></div>
-                ${rows || (admin ? '' : '<div class="pl-none">No other places yet.</div>')}
-                ${admin ? `<button class="pl-add" data-act="add">${iconHtml('mdi:plus', { size: '18px' })}Add a place</button>` : ''}`,
-              )}</div>`;
-            })
-            .join('')
-        : '<div class="pl-none">Loading people…</div>');
+    const cards = people.map((p) => {
+      const draft = this._drafts[p.entity_id];
+      let rows;
+      if (draft) {
+        rows = draft
+          .map(
+            (pl, i) => `<div class="pl-row"><div class="pl-ico">${icon(pl.name)}</div>
+              <select data-i="${i}" aria-label="Zone">${zones.map(([id, n]) => `<option value="${kitEsc(id)}"${id === pl.zone ? ' selected' : ''}>${kitEsc(n)}</option>`).join('')}${zones.some((z) => z[0] === pl.zone) ? '' : `<option value="${kitEsc(pl.zone)}" selected>${kitEsc(zoneName(pl.zone))} (gone)</option>`}</select>
+              <input data-i="${i}" list="pl-names${SUFFIX}" value="${kitEsc(pl.name)}" placeholder="Called" aria-label="What ${kitEsc(p.first)} calls it">
+              <button class="pl-x" data-act="remove" data-i="${i}" aria-label="Delete this place">${iconHtml('mdi:close', { size: '18px' })}</button></div>`,
+          )
+          .join('');
+        rows += `<button class="pl-add" data-act="add">${iconHtml('mdi:plus', { size: '18px' })}Add a place</button>
+          <div class="pl-acts"><button class="pl-btn" data-act="cancel">Cancel</button><button class="pl-btn pl-save" data-act="save">${iconHtml('mdi:check', { size: '18px' })}Save</button></div>`;
+      } else {
+        rows = (p.places || [])
+          .map((pl) => `<div class="pl-row"><div class="pl-ico">${icon(pl.name)}</div><div class="pl-fixed">${kitEsc(pl.name || zoneName(pl.zone))}<small>${kitEsc(zoneName(pl.zone))}</small></div></div>`)
+          .join('') || '<div class="pl-none">No other places yet.</div>';
+        if (admin) rows += `<div class="pl-acts"><button class="pl-btn" data-act="edit">${iconHtml('mdi:pencil', { size: '16px' })}Edit</button></div>`;
+      }
+      return `<div class="pl-person" data-person="${kitEsc(p.entity_id)}">${kitShell(
+        `<div class="pl-row"><div class="pl-ico" style="color:#4caf50;">${iconHtml('mdi:home', { size: '18px' })}</div><div class="pl-fixed">Home<small>Automatic</small></div></div>${rows}`,
+      )}</div>`;
+    });
+    this._grid.innerHTML = datalist + (people.length ? cards.join('') : '<div class="pl-none">Loading people…</div>');
     // Each person's card heading: their name and where they are now.
     this._grid.querySelectorAll('[data-person]').forEach((el) => {
       const p = people.find((x) => x.entity_id === el.dataset.person);
@@ -199,21 +197,32 @@ export class PlacesCard extends HTMLElement {
     hydrateIcons(this);
   }
 
-  // A zone picked or a name typed: save that person's places.
-  _edit(ev) {
-    const row = ev.target.closest('.pl-row');
-    const wrap = ev.target.closest('[data-person]');
-    if (!row || !wrap || !ev.target.matches('select, input')) return;
+  _click(ev) {
+    const b = ev.target.closest('[data-act]');
+    if (!b) return;
+    const act = b.dataset.act;
+    if (act === 'zones') return kitNavigate('/config/zone');
+    const wrap = b.closest('[data-person]');
+    if (!wrap || !this._admin()) return;
     const person = wrap.dataset.person;
     const p = this._data.find((x) => x.entity_id === person);
-    const i = Number(ev.target.dataset.i);
-    const places = (p.places || []).map((x) => ({ ...x }));
-    if (!places[i]) return;
-    if (ev.target.matches('select')) places[i].zone = ev.target.value;
-    else places[i].name = ev.target.value.trim();
-    clearTimeout(this._typing);
-    this._editing = false;
-    this._save(person, places);
+    if (act === 'edit') {
+      this._drafts[person] = (p.places || []).map((x) => ({ ...x }));
+    } else if (act === 'cancel') {
+      delete this._drafts[person];
+    } else if (act === 'save') {
+      return this._save(person);
+    } else if (act === 'add') {
+      const d = this._drafts[person];
+      const used = new Set(d.map((x) => x.zone));
+      const free = this._zones().find(([id]) => !used.has(id));
+      if (!free) return kitNavigate('/config/zone');
+      d.push({ zone: free[0], name: 'Work' });
+    } else if (act === 'remove') {
+      this._drafts[person].splice(Number(b.dataset.i), 1);
+    }
+    this._sig = null;
+    this._render();
   }
 
   getCardSize() {

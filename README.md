@@ -277,8 +277,11 @@ also record the Driveway for 30 s, in every mode.
 ### `places-card` (Manager's Locations)
 
 A card for each person: Home (automatic), then the places they go. Each place is a
-Home Assistant zone with their own name for it (Work, Gym, anything). **+ Add a place**
-adds one; zones are made and named in Settings › Areas, labels & zones. Who's home
+Home Assistant zone with their own name for it (Work, Gym, anything). **Edit** shows the
+zone and name boxes, ✕ to delete one and **+ Add a place**; nothing changes until
+**Save** (or **Cancel**). Zones are made and named in Settings › Areas, labels & zones;
+adding or moving one asks everyone's phones for their location, so it applies straight
+away. Who's home
 then says "At work · Ashfield School", and `sensor.church_drive_people` gives each
 person's `place` and `zone` for templates.
 

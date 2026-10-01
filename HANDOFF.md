@@ -310,6 +310,16 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **Next release (on the branch): Locations edit/save, zone location requests, "Live view".**
+  - `places-card` shows text with an Edit button. Edit gives the zone and name rows,
+    ✕ and + Add a place, saved together with Save (`_drafts`); Cancel drops them.
+  - `people.py`: a zone added, moved or resized sends `request_location_update` to
+    every phone 10 s later (`_ask_locations`). Phones only check zones on a new
+    location. Hayley showed Away inside Frasers Group because the zone (15:16) was
+    newer than her last location (15:09).
+  - `events.py`: an on_demand recording with no link waiting is kind `live` (someone
+    watched live). Stored "linked" entries without a trigger are relabelled on load.
+    The viewer has a "Live view" chip.
 - **v0.30.1 (released 2026-10-01, restarted): clip download fix.** Ring's
   `sensor.<x>_last_activity` attribute `created_at` is a datetime, not text, which broke
   `_async_clip` (`_when()` now takes either). Start-up note: Church Drive's entities
