@@ -422,14 +422,16 @@ export class AutoLayoutCard extends HTMLElement {
   }
 
   // Full width: set on the panel, or automatic for a panel of 3+ small cards
-  // (zones, cameras, tiles) that won't fit side by side in one column.
+  // (zones, tiles) or 2+ cameras that won't fit side by side in one column.
   _full(it, colWidth) {
     const f = it.conf.full_width;
     if (f === true || f === 'yes') return true;
     if (f === false || f === 'no') return false;
     const cards = it.conf.cards || [];
     const w = it.el._cardWidth ? it.el._cardWidth() : 300;
-    if (cards.length < 3 || !w || w > 240) return false;
+    // Two cameras that would stack in a column can go wide too.
+    const least = it.el._pictures && it.el._pictures() ? 2 : 3;
+    if (cards.length < least || !w || w > 240) return false;
     const across = Math.max(1, Math.floor((colWidth - 24 + 12) / (w + 12)));
     return cards.length > across;
   }

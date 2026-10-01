@@ -342,24 +342,55 @@ export class SectionPanelCard extends HTMLElement {
     const g = this._grid;
     if (!g) return;
     const w = this._cardWidth();
-    // Pictures (cameras) flow: as many to a row as fit, and any on a part-
-    // filled last row grow to fill it, so there's no hole beside them.
+    // Pictures (cameras): as many to a row as fit, and any on a part-filled
+    // last row share the whole row, so there's no hole beside them.
     const flow = w > 0 && this._pictures();
-    g.classList.toggle('spc-flow', flow);
-    g.style.setProperty('--spc-w', `${w}px`);
-    g.style.display = flow ? 'flex' : 'grid';
-    g.style.flexWrap = flow ? 'wrap' : '';
+    this._flowing = flow;
+    g.style.display = 'grid';
     g.style.gap = compact ? '8px' : '12px';
     // Cards on the same row share a height; each card's background fills it.
     g.style.alignItems = w > 0 ? 'stretch' : 'start';
     if (!this.querySelector('style.spc-fill')) {
       const st = document.createElement('style');
       st.className = 'spc-fill';
-      st.textContent =
-        '.spc-cards > * { display:flex; flex-direction:column; min-width:0; } .spc-cards > * > ha-card { flex:1 1 auto; } .spc-cards.spc-flow > * { flex:1 1 var(--spc-w); min-width:min(100%, var(--spc-w)); }';
+      st.textContent = '.spc-cards > * { display:flex; flex-direction:column; min-width:0; } .spc-cards > * > ha-card { flex:1 1 auto; }';
       this.prepend(st);
     }
-    g.style.gridTemplateColumns = flow ? '' : w > 0 ? `repeat(auto-fill, minmax(min(100%, ${w}px), 1fr))` : '1fr';
+    if (flow) {
+      this._flow();
+      if (window.ResizeObserver && !this._flowRO) {
+        this._flowRO = new ResizeObserver(() => this._flowing && this._flow());
+        this._flowRO.observe(g);
+      }
+      return;
+    }
+    [...g.children].forEach((el) => el.style && el.style.gridColumn && (el.style.gridColumn = ''));
+    g.style.gridTemplateColumns = w > 0 ? `repeat(auto-fill, minmax(min(100%, ${w}px), 1fr))` : '1fr';
+  }
+
+  // Pictures on rows of t; r left over on the last row. The grid has t × r
+  // columns (t when none are left over): each picture spans r of them, and
+  // each one on the last row spans t, so the last row is filled too.
+  _flow() {
+    const g = this._grid;
+    const w = this._cardWidth();
+    const kids = [...g.children].filter((el) => el.localName !== 'style');
+    const n = kids.length;
+    const width = g.getBoundingClientRect().width;
+    if (!n || !width) {
+      g.style.gridTemplateColumns = `repeat(auto-fill, minmax(min(100%, ${w}px), 1fr))`;
+      return;
+    }
+    const gap = parseFloat(g.style.gap) || 12;
+    const t = Math.max(1, Math.min(n, Math.floor((width + gap) / (w + gap))));
+    const r = n % t;
+    const cols = r ? t * r : t;
+    const tpl = `repeat(${cols}, minmax(0, 1fr))`;
+    if (g.style.gridTemplateColumns !== tpl) g.style.gridTemplateColumns = tpl;
+    kids.forEach((el, i) => {
+      const span = `span ${r && i >= n - r ? t : r || 1}`;
+      if (el.style.gridColumn !== span) el.style.gridColumn = span;
+    });
   }
 
   // ---- Matching heights with the sections beside this one.

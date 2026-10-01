@@ -3880,19 +3880,50 @@
       if (!g) return;
       const w = this._cardWidth();
       const flow = w > 0 && this._pictures();
-      g.classList.toggle("spc-flow", flow);
-      g.style.setProperty("--spc-w", `${w}px`);
-      g.style.display = flow ? "flex" : "grid";
-      g.style.flexWrap = flow ? "wrap" : "";
+      this._flowing = flow;
+      g.style.display = "grid";
       g.style.gap = compact ? "8px" : "12px";
       g.style.alignItems = w > 0 ? "stretch" : "start";
       if (!this.querySelector("style.spc-fill")) {
         const st = document.createElement("style");
         st.className = "spc-fill";
-        st.textContent = ".spc-cards > * { display:flex; flex-direction:column; min-width:0; } .spc-cards > * > ha-card { flex:1 1 auto; } .spc-cards.spc-flow > * { flex:1 1 var(--spc-w); min-width:min(100%, var(--spc-w)); }";
+        st.textContent = ".spc-cards > * { display:flex; flex-direction:column; min-width:0; } .spc-cards > * > ha-card { flex:1 1 auto; }";
         this.prepend(st);
       }
-      g.style.gridTemplateColumns = flow ? "" : w > 0 ? `repeat(auto-fill, minmax(min(100%, ${w}px), 1fr))` : "1fr";
+      if (flow) {
+        this._flow();
+        if (window.ResizeObserver && !this._flowRO) {
+          this._flowRO = new ResizeObserver(() => this._flowing && this._flow());
+          this._flowRO.observe(g);
+        }
+        return;
+      }
+      [...g.children].forEach((el) => el.style && el.style.gridColumn && (el.style.gridColumn = ""));
+      g.style.gridTemplateColumns = w > 0 ? `repeat(auto-fill, minmax(min(100%, ${w}px), 1fr))` : "1fr";
+    }
+    // Pictures on rows of t; r left over on the last row. The grid has t × r
+    // columns (t when none are left over): each picture spans r of them, and
+    // each one on the last row spans t, so the last row is filled too.
+    _flow() {
+      const g = this._grid;
+      const w = this._cardWidth();
+      const kids = [...g.children].filter((el) => el.localName !== "style");
+      const n = kids.length;
+      const width = g.getBoundingClientRect().width;
+      if (!n || !width) {
+        g.style.gridTemplateColumns = `repeat(auto-fill, minmax(min(100%, ${w}px), 1fr))`;
+        return;
+      }
+      const gap = parseFloat(g.style.gap) || 12;
+      const t = Math.max(1, Math.min(n, Math.floor((width + gap) / (w + gap))));
+      const r = n % t;
+      const cols = r ? t * r : t;
+      const tpl = `repeat(${cols}, minmax(0, 1fr))`;
+      if (g.style.gridTemplateColumns !== tpl) g.style.gridTemplateColumns = tpl;
+      kids.forEach((el, i) => {
+        const span2 = `span ${r && i >= n - r ? t : r || 1}`;
+        if (el.style.gridColumn !== span2) el.style.gridColumn = span2;
+      });
     }
     // ---- Matching heights with the sections beside this one.
     // Sections that sit side by side (same top) are lined up item by item:
@@ -8823,14 +8854,15 @@
       return Number.isFinite(v) ? v : 32;
     }
     // Full width: set on the panel, or automatic for a panel of 3+ small cards
-    // (zones, cameras, tiles) that won't fit side by side in one column.
+    // (zones, tiles) or 2+ cameras that won't fit side by side in one column.
     _full(it, colWidth) {
       const f = it.conf.full_width;
       if (f === true || f === "yes") return true;
       if (f === false || f === "no") return false;
       const cards = it.conf.cards || [];
       const w = it.el._cardWidth ? it.el._cardWidth() : 300;
-      if (cards.length < 3 || !w || w > 240) return false;
+      const least = it.el._pictures && it.el._pictures() ? 2 : 3;
+      if (cards.length < least || !w || w > 240) return false;
       const across = Math.max(1, Math.floor((colWidth - 24 + 12) / (w + 12)));
       return cards.length > across;
     }
