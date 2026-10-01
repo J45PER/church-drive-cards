@@ -61,6 +61,7 @@ RESYNC_AFTER = 0  # re-sync as soon as a device looks stale
 # reloaded automatically: the Philips one gets stuck unloading.
 NUDGE_AT = (90, 600, 1800)
 NUDGE_HOLD = 5
+CALL_TIMEOUT = 60  # seconds to wait for a device to answer a fix
 # Nudge modes, quietest first. Never auto/turbo/natural (they can ramp up).
 QUIET_PRESETS = ("sleep", "speed_1", "low", "silent", "medium", "speed_2")
 RECONNECT_EVERY = 6 * 3600
@@ -255,7 +256,7 @@ class DeviceHealth:
         if live["status"] == "ok":
             live.update(status="stale", reason=reason, since=time.time(), step=0, fixes=[])
             _LOGGER.warning("%s looks stale: %s", entity_id, reason)
-            self.hass.async_create_task(self._refresh(entity_id))
+            self._background(self._refresh(entity_id), entity_id)
             self._advance_fix(entity_id, time.time())
             self._publish()
         else:
@@ -274,13 +275,19 @@ class DeviceHealth:
         age = now - (live["since"] or now)
         if live["step"] < 1 and age >= RESYNC_AFTER:
             live["step"] = 1
-            self.hass.async_create_task(self.async_resync(entity_id))
+            self._background(self.async_resync(entity_id), entity_id)
             return
         for n, at in enumerate(NUDGE_AT, start=2):
             if live["step"] < n and age >= at:
                 live["step"] = n
-                self.hass.async_create_task(self.async_nudge(entity_id))
+                self._background(self.async_nudge(entity_id), entity_id)
                 return
+
+    def _background(self, coro, entity_id: str) -> None:
+        """Run an automatic fix without Home Assistant waiting for it: a slow
+        device (e.g. a Philips fan that's just reconnecting) mustn't hold up
+        start-up."""
+        self.hass.async_create_background_task(coro, f"church_drive health fix {entity_id}")
 
     def _note(self, entity_id: str, what: str) -> None:
         self.live[entity_id]["fixes"] = (self.live[entity_id]["fixes"] + [f"{dt_util.now().strftime('%H:%M')} {what}"])[-5:]
@@ -325,7 +332,11 @@ class DeviceHealth:
         when = dt_util.as_local(dt_util.utc_from_timestamp(real["at"])).strftime("%H:%M")
         for dom, service, data in calls:
             try:
-                await self.hass.services.async_call(dom, service, {"entity_id": entity_id, **data}, blocking=True)
+                async with asyncio.timeout(CALL_TIMEOUT):
+                    await self.hass.services.async_call(dom, service, {"entity_id": entity_id, **data}, blocking=True)
+            except TimeoutError:
+                self._note(entity_id, "Re-sync got no answer from the device")
+                return False
             except Exception as err:  # noqa: BLE001
                 self._note(entity_id, f"Re-sync failed: {err}")
                 return False
@@ -354,7 +365,11 @@ class DeviceHealth:
             pct = real.get("attrs", {}).get("percentage") or 50
             call = ("set_percentage", {"percentage": 25 if pct > 25 else 50})
         try:
-            await self.hass.services.async_call("fan", call[0], {"entity_id": entity_id, **call[1]}, blocking=True)
+            async with asyncio.timeout(CALL_TIMEOUT):
+                await self.hass.services.async_call("fan", call[0], {"entity_id": entity_id, **call[1]}, blocking=True)
+        except TimeoutError:
+            self._note(entity_id, "Nudge got no answer from the device")
+            return False
         except Exception as err:  # noqa: BLE001
             self._note(entity_id, f"Nudge failed: {err}")
             return False
