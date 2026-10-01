@@ -39,3 +39,41 @@ health_fix:
             - resync
             - nudge
             - reconnect
+notify:
+  fields:
+    kind:
+      example: doorbell
+      selector:
+        text:
+    people:
+      example: Jamie
+      selector:
+        text:
+          multiple: true
+    title:
+      selector:
+        text:
+    message:
+      required: true
+      selector:
+        text:
+          multiline: true
+    admin_message:
+      selector:
+        text:
+    tag:
+      selector:
+        text:
+    link:
+      example: /dashboard-mobile/todo
+      selector:
+        text:
+    image:
+      selector:
+        text:
+    critical:
+      selector:
+        boolean:
+    data:
+      selector:
+        object:

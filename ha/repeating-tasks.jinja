@@ -1,0 +1,97 @@
+{#- The "Work out what's due" template from automation.church_drive_cleaning_schedule
+    ("Church Drive: repeating tasks"), a port of nextOccurrence() in src/repeat.js.
+    Keep the two in step; tools/repeat-cases.mjs cross-checks them. In the
+    automation, the fixed_now line is just: set t0 = now(). -#}
+{%- macro occ(k, n, t, slots, dom, mon, unit, a, after) -%}
+{%- set ns = namespace(o='') -%}
+{%- if k == 'after' -%}
+  {%- if unit == 'month' -%}
+    {%- set mm = a.month - 1 + n -%}{%- set y = a.year + mm // 12 -%}{%- set m = mm % 12 + 1 -%}
+    {%- set last = (strptime((y + m // 12) ~ '-' ~ (m % 12 + 1) ~ '-1', '%Y-%m-%d').date() - timedelta(days=1)).day -%}
+    {%- set ns.o = strptime(y ~ '-' ~ m ~ '-' ~ ([a.day, last] | min), '%Y-%m-%d').date().isoformat() ~ ' ' ~ t -%}
+  {%- else -%}
+    {%- set ns.o = (a + timedelta(days=n * (7 if unit == 'week' else 1))).isoformat() ~ ' ' ~ t -%}
+  {%- endif -%}
+{%- elif k == 'days' -%}
+  {%- set k0 = [0, ((after.date() - a).days // n) - 1] | max -%}
+  {%- for i in range(5) -%}{%- if not ns.o -%}
+    {%- set dd = a + timedelta(days=(k0 + i) * n) -%}
+    {%- if as_local(as_datetime(dd.isoformat() ~ ' ' ~ t)) > after -%}{%- set ns.o = dd.isoformat() ~ ' ' ~ t -%}{%- endif -%}
+  {%- endif -%}{%- endfor -%}
+{%- elif k == 'weekly' -%}
+  {%- set monday = a - timedelta(days=a.weekday()) -%}
+  {%- set k0 = [0, ((after.date() - monday).days // (7 * n)) - 1] | max -%}
+  {%- for i in range(5) -%}{%- for s in slots | sort -%}{%- if not ns.o -%}
+    {%- set dd = monday + timedelta(days=(k0 + i) * 7 * n + (s[:1] | int)) -%}
+    {%- if dd >= a and as_local(as_datetime(dd.isoformat() ~ ' ' ~ s[2:])) > after -%}{%- set ns.o = dd.isoformat() ~ ' ' ~ s[2:] -%}{%- endif -%}
+  {%- endif -%}{%- endfor -%}{%- endfor -%}
+{%- elif k == 'monthly' -%}
+  {%- set months = (after.year - a.year) * 12 + after.month - a.month -%}
+  {%- set k0 = [0, (months // n) - 1] | max -%}
+  {%- for i in range(5) -%}{%- if not ns.o -%}
+    {%- set mm = a.month - 1 + (k0 + i) * n -%}{%- set y = a.year + mm // 12 -%}{%- set m = mm % 12 + 1 -%}
+    {%- set last = (strptime((y + m // 12) ~ '-' ~ (m % 12 + 1) ~ '-1', '%Y-%m-%d').date() - timedelta(days=1)).day -%}
+    {%- set dd = strptime(y ~ '-' ~ m ~ '-' ~ (last if dom == 'last' else [dom | int, last] | min), '%Y-%m-%d').date() -%}
+    {%- if dd >= a and as_local(as_datetime(dd.isoformat() ~ ' ' ~ t)) > after -%}{%- set ns.o = dd.isoformat() ~ ' ' ~ t -%}{%- endif -%}
+  {%- endif -%}{%- endfor -%}
+{%- elif k == 'yearly' -%}
+  {%- for y in range([a.year, after.year - 1] | max, after.year + 3) -%}{%- if not ns.o -%}
+    {%- set last = (strptime((y + mon // 12) ~ '-' ~ (mon % 12 + 1) ~ '-1', '%Y-%m-%d').date() - timedelta(days=1)).day -%}
+    {%- set dd = strptime(y ~ '-' ~ mon ~ '-' ~ ([dom | int, last] | min), '%Y-%m-%d').date() -%}
+    {%- if dd >= a and as_local(as_datetime(dd.isoformat() ~ ' ' ~ t)) > after -%}{%- set ns.o = dd.isoformat() ~ ' ' ~ t -%}{%- endif -%}
+  {%- endif -%}{%- endfor -%}
+{%- endif -%}
+{{ ns.o }}
+{%- endmacro -%}
+{%- set people = states.person | map(attribute='name') | map('regex_replace', ' .*', '') | list -%}
+{%- set dnames = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] -%}
+{%- set mnames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'] -%}
+{%- set T = '(\\d{1,2}):(\\d{2})' -%}
+{%- set t0 = as_datetime(fixed_now) if fixed_now is defined else now() -%}
+{%- set ns = namespace(set=[], due=[], next=none) -%}
+{%- for lst in lists -%}{%- for i in r[lst]['items'] -%}
+  {%- set parts = (i.description or '').split(' · ') -%}
+  {%- set rep = parts[0] | trim | lower -%}
+  {%- set R = namespace(k='', n=1, t='', slots=[], dom=1, mon=1, unit='') -%}
+  {%- if rep == 'once' -%}{%- set R.k = 'once' -%}
+  {%- elif rep | regex_findall('^every (?:(\\d+) )?days? ' ~ T ~ '$') and 'after done' not in rep -%}
+    {%- set f = (rep | regex_findall('^every (?:(\\d+) )?days? ' ~ T ~ '$'))[0] -%}{%- set R.k = 'days' -%}{%- set R.n = [f[0] | int(1), 1] | max -%}{%- set R.t = '%02d:%s' | format(f[1] | int, f[2]) -%}
+  {%- else -%}
+    {%- set wk = rep | regex_findall('^every (\\d+) weeks: (.+)$') -%}
+    {%- set body = wk[0][1] if wk else rep -%}
+    {%- set sl = namespace(ok=true, l=[]) -%}
+    {%- for p in body.split(',') -%}
+      {%- set g = p | trim | regex_findall('^(mon|tue|wed|thu|fri|sat|sun)[a-z]* ' ~ T ~ '$') -%}
+      {%- if g -%}{%- set sl.l = sl.l + [(dnames.index(g[0][0])) ~ '|' ~ ('%02d:%s' | format(g[0][1] | int, g[0][2]))] -%}{%- else -%}{%- set sl.ok = false -%}{%- endif -%}
+    {%- endfor -%}
+    {%- set mo = rep | regex_findall('^(?:monthly|every (\\d+) months) on the (?:(\\d{1,2})(?:st|nd|rd|th)|(last) day) ' ~ T ~ '$') -%}
+    {%- set yr = rep | regex_findall('^yearly on (\\d{1,2}) (jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]* ' ~ T ~ '$') -%}
+    {%- set af = rep | regex_findall('^every (?:(\\d+) )?(day|week|month)s? after done ' ~ T ~ '$') -%}
+    {%- if sl.ok and sl.l -%}{%- set R.k = 'weekly' -%}{%- set R.n = [(wk[0][0] | int(1)) if wk else 1, 1] | max -%}{%- set R.slots = sl.l -%}
+    {%- elif mo -%}{%- set R.k = 'monthly' -%}{%- set R.n = [mo[0][0] | int(1), 1] | max -%}{%- set R.dom = 'last' if mo[0][2] else ([[mo[0][1] | int, 1] | max, 31] | min) -%}{%- set R.t = '%02d:%s' | format(mo[0][3] | int, mo[0][4]) -%}
+    {%- elif yr -%}{%- set R.k = 'yearly' -%}{%- set R.dom = yr[0][0] | int -%}{%- set R.mon = mnames.index(yr[0][1]) + 1 -%}{%- set R.t = '%02d:%s' | format(yr[0][2] | int, yr[0][3]) -%}
+    {%- elif af -%}{%- set R.k = 'after' -%}{%- set R.n = [af[0][0] | int(1), 1] | max -%}{%- set R.unit = af[0][1] -%}{%- set R.t = '%02d:%s' | format(af[0][2] | int, af[0][3]) -%}
+    {%- endif -%}
+  {%- endif -%}
+  {%- if R.k -%}
+    {%- set tail = (parts[1] if parts | count > 1 else '') | trim -%}
+    {%- set who = people if tail | lower == 'for everyone' else ((tail[4:].split(',') | map('trim') | list) if tail | lower is match('^for ') else []) -%}
+    {%- set due = as_local(as_datetime(i.due)) if i.due and 'T' in i.due else (as_local(as_datetime(i.due ~ ' 23:59')) if i.due else none) -%}
+    {%- set nxt = '' -%}
+    {%- if R.k != 'once' and i.status == 'completed' -%}
+      {%- if R.k == 'after' -%}{%- set nxt = occ(R.k, R.n, R.t, R.slots, R.dom, R.mon, R.unit, t0.date(), t0) | trim -%}
+      {%- else -%}{%- set anchor = due if due else t0 -%}{%- set nxt = occ(R.k, R.n, R.t, R.slots, R.dom, R.mon, R.unit, anchor.date(), [t0, anchor] | max) | trim -%}{%- endif -%}
+    {%- elif R.k != 'once' and i.status == 'needs_action' and due is none -%}
+      {%- if R.k == 'after' and as_local(as_datetime(t0.date().isoformat() ~ ' ' ~ R.t)) > t0 -%}{%- set nxt = t0.date().isoformat() ~ ' ' ~ R.t -%}
+      {%- else -%}{%- set nxt = occ(R.k, R.n, R.t, R.slots, R.dom, R.mon, R.unit, t0.date(), t0) | trim -%}{%- endif -%}
+    {%- endif -%}
+    {%- if nxt -%}
+      {%- set ns.set = ns.set + [{'list': lst, 'uid': i.uid, 'due': nxt ~ ':00'}] -%}
+      {%- set due = as_local(as_datetime(nxt)) -%}
+    {%- elif i.status == 'needs_action' and due and due <= t0 and due > t0 - timedelta(minutes=5) and who -%}
+      {%- set ns.due = ns.due + [{'list': lst, 'item': i.summary, 'who': who}] -%}
+    {%- endif -%}
+    {%- if who and due and due > t0 and (i.status == 'needs_action' or nxt) and (ns.next is none or due < ns.next) -%}{%- set ns.next = due -%}{%- endif -%}
+  {%- endif -%}
+{%- endfor -%}{%- endfor -%}
+{{ {'set': ns.set, 'due': ns.due, 'next': (ns.next or (t0 + timedelta(days=30))).strftime('%Y-%m-%d %H:%M:00')} }}

@@ -13,6 +13,8 @@ import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { kitShell, kitHead, kitEsc } from './card-kit.js';
+import { openPopup } from './popup.js';
+import { stcMe } from './section-title-card.js';
 import { DAYS, MONTHS, parseTask, formatTask, formatRepeat, describeRepeat, firstDue } from './repeat.js';
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -77,7 +79,7 @@ const REPEATS = [
 ];
 
 const TL_CSS = `
-  .tl-add[hidden], .tl-form[hidden], .tl-done-list[hidden] { display:none; }
+  .tl-add[hidden], .tl-done-list[hidden] { display:none; }
   .tl-row { display:flex; align-items:center; gap:10px; padding:8px 2px; border-radius:12px; }
   .tl-row + .tl-row { border-top:1px solid var(--divider-color, rgba(127,127,127,0.22)); }
   .tl-body { flex:1; min-width:0; cursor:pointer; border-radius:8px; }
@@ -89,10 +91,10 @@ const TL_CSS = `
   .tl-foot { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
   .tl-add { border:none; border-radius:12px; padding:9px 14px; font:inherit; font-size:0.85rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; }
   .tl-link { border:none; background:none; padding:4px 2px; font:inherit; font-size:0.8rem; color:var(--secondary-text-color); text-decoration:underline; cursor:pointer; }
-  .tl-form { display:flex; flex-direction:column; gap:12px; padding:12px; border-radius:14px; background:rgba(127,127,127,0.1); }
+  .tl-form { display:flex; flex-direction:column; gap:14px; }
   .tl-l { display:flex; flex-direction:column; gap:6px; font-size:0.8rem; color:var(--secondary-text-color); }
   .tl-inline { display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:0.85rem; color:var(--primary-text-color); }
-  .tl-form input, .tl-form select { box-sizing:border-box; padding:8px 10px; border-radius:10px; border:1px solid var(--divider-color, rgba(127,127,127,0.3)); background:var(--card-background-color); color:var(--primary-text-color); font:inherit; font-size:0.92rem; color-scheme:dark light; min-width:0; }
+  .tl-form input, .tl-form select { box-sizing:border-box; padding:8px 10px; border-radius:10px; border:1px solid var(--divider-color, rgba(127,127,127,0.3)); background:rgba(127,127,127,0.1); color:var(--primary-text-color); font:inherit; font-size:0.92rem; color-scheme:dark light; min-width:0; }
   .tl-form input[type=number] { width:4.2em; }
   .tl-form input.tl-wide { width:100%; }
   .tl-chips { display:flex; flex-wrap:wrap; gap:6px; }
@@ -108,19 +110,35 @@ const TL_CSS = `
 `;
 
 export const TaskListCardEditor = createFormEditor({
-  schema: () => [
+  schema: (config) => [
     { name: 'title', selector: { text: {} } },
-    { name: 'entity', selector: { entity: { domain: 'todo' } } },
+    { name: 'own', selector: { boolean: {} } },
+    ...(config.own || config.entity === 'mine' ? [] : [{ name: 'entity', selector: { entity: { domain: 'todo' } } }]),
     { name: 'color', selector: { ui_color: {} } },
-    { name: 'remind_default', selector: { text: {} } },
+    {
+      name: 'assign',
+      selector: {
+        select: {
+          mode: 'list',
+          options: [
+            { value: 'people', label: 'Pick who it reminds (shared lists)' },
+            { value: 'me', label: 'Just the signed-in person (a personal list)' },
+          ],
+        },
+      },
+    },
+    config.assign === 'me' ? { name: 'remind_me', selector: { boolean: {} } } : { name: 'remind_default', selector: { text: {} } },
     { name: 'icons', selector: { boolean: {} } },
     { name: 'show_done', selector: { boolean: {} } },
     { name: 'demo', selector: { boolean: {} } },
   ],
   labels: {
     title: 'Title (optional)',
+    own: "The signed-in person's own list",
     entity: 'To-do list',
     color: 'Colour',
+    assign: 'Who tasks are for',
+    remind_me: 'New tasks remind me (when they have a due time or repeat)',
     remind_default: 'New tasks remind (a first name, "everyone", or empty for no one)',
     icons: 'Show an icon for each task from its name (hoover, bathroom, …)',
     show_done: 'Show ticked-off tasks under the list',
@@ -129,6 +147,22 @@ export const TaskListCardEditor = createFormEditor({
   helpers: {
     entity: 'Any to-do list. A task\'s repeat and who it reminds are kept in its description, and "Church Drive: repeating tasks" sends the reminders and brings repeating tasks back.',
     color: 'Default purple (#7e57c2).',
+    own: 'Each person sees their own "Priorities <first name>" list (made for everyone automatically), so one card serves everyone.',
+    assign: '"Just the signed-in person" swaps the list of people for a simple "Remind me" choice.',
+  },
+  normalize: (c) => (c.assign ? c : { ...c, assign: 'people' }),
+  display: (c) => {
+    const d = c.assign === 'me' && c.remind_me === undefined ? { ...c, remind_me: true } : { ...c };
+    if (d.entity === 'mine') {
+      d.own = true;
+      delete d.entity;
+    }
+    return d;
+  },
+  store: (c) => {
+    const { own, ...rest } = c;
+    if (own) return { ...rest, entity: 'mine' };
+    return rest.entity === 'mine' ? { ...rest, entity: undefined } : rest;
   },
 });
 
@@ -138,6 +172,7 @@ export class TaskListCard extends HTMLElement {
     this.config = config;
     this._built = false;
     this._sig = null;
+    if (this._pop) this._pop.close();
     this._edit = null;
     if (this._unsub) this._unwatch();
     if (this._hass) this._watch();
@@ -155,6 +190,13 @@ export class TaskListCard extends HTMLElement {
 
   disconnectedCallback() {
     this._unwatch();
+    if (this._pop) this._pop.close();
+  }
+
+  // The list: config.entity, or "mine" for the signed-in person's own list.
+  _entity() {
+    const e = this.config.entity;
+    return e === 'mine' ? stcMe(this._hass).my_list : e;
   }
 
   _colour() {
@@ -162,14 +204,14 @@ export class TaskListCard extends HTMLElement {
   }
 
   _watch() {
-    if (this.config.demo || this._unsub || !this.isConnected || !this._hass || !this._hass.states[this.config.entity]) return;
+    if (this.config.demo || this._unsub || !this.isConnected || !this._hass || !this._hass.states[this._entity()]) return;
     this._unsub = this._hass.connection
       .subscribeMessage(
         (msg) => {
           this._items = (msg && msg.items) || [];
           this._render();
         },
-        { type: 'todo/item/subscribe', entity_id: this.config.entity }
+        { type: 'todo/item/subscribe', entity_id: this._entity() }
       )
       .catch(() => null);
   }
@@ -193,6 +235,19 @@ export class TaskListCard extends HTMLElement {
       .sort();
   }
 
+  // The signed-in person's first name: from their person entity, else their user name.
+  _me() {
+    const u = this._hass && this._hass.user;
+    if (!u) return '';
+    const s = this._hass.states || {};
+    const id = Object.keys(s).find((x) => x.startsWith('person.') && s[x].attributes.user_id === u.id);
+    return String((id && s[id].attributes.friendly_name) || u.name || '').split(' ')[0];
+  }
+
+  _justMe() {
+    return this.config.assign === 'me';
+  }
+
   async _call(service, data) {
     if (this.config.demo) {
       const items = this._all();
@@ -212,7 +267,7 @@ export class TaskListCard extends HTMLElement {
       this._render();
       return;
     }
-    await this._hass.callService('todo', service, data, { entity_id: this.config.entity });
+    await this._hass.callService('todo', service, data, { entity_id: this._entity() });
   }
 
   _render() {
@@ -222,13 +277,11 @@ export class TaskListCard extends HTMLElement {
     if (!this._built) {
       this.innerHTML = kitShell(
         `<div class="tl-list" style="display:flex; flex-direction:column;"></div>
-        <div class="tl-form" hidden></div>
         <div class="tl-foot"><button type="button" class="tl-add"></button><button type="button" class="tl-link tl-done-toggle" hidden></button></div>
         <div class="tl-done-list" hidden style="display:flex; flex-direction:column;"></div>`,
         TL_CSS
       );
       this._list = this.querySelector('.tl-list');
-      this._form = this.querySelector('.tl-form');
       this._addBtn = this.querySelector('.tl-add');
       this._doneBtn = this.querySelector('.tl-done-toggle');
       this._doneList = this.querySelector('.tl-done-list');
@@ -257,7 +310,7 @@ export class TaskListCard extends HTMLElement {
       });
       this._built = true;
     }
-    const missing = !c.demo && !this._hass.states[c.entity];
+    const missing = !c.demo && !this._hass.states[this._entity()];
     const all = missing ? [] : this._all();
     const rank = (t) => (t.due ? dueDate(t.due).getTime() : Infinity);
     const open = all
@@ -280,7 +333,8 @@ export class TaskListCard extends HTMLElement {
     const row = ({ t, p }, isDone) => {
       const when = isDone ? '' : whenText(t.due);
       const over = when.includes('overdue');
-      const who = p.repeat ? (p.who === 'everyone' ? 'reminds everyone' : Array.isArray(p.who) ? `reminds ${p.who.join(', ')}` : '') : '';
+      const mine = this._justMe() && Array.isArray(p.who) && p.who.length === 1 && p.who[0] === this._me();
+      const who = !p.repeat ? '' : mine ? 'reminds you' : p.who === 'everyone' ? 'reminds everyone' : Array.isArray(p.who) ? `reminds ${p.who.join(', ')}` : '';
       const sub = [p.repeat && p.repeat.type !== 'once' ? describeRepeat(p.repeat) : '', who, p.notes].filter(Boolean).join(' · ');
       const ring = isDone ? '#4caf50' : over ? '#e53935' : colour;
       return `<div class="tl-row">
@@ -293,7 +347,7 @@ export class TaskListCard extends HTMLElement {
         ${when ? `<span class="tl-when" style="color:${over ? '#e53935' : 'var(--secondary-text-color)'};">${kitEsc(when)}</span>` : ''}
       </div>`;
     };
-    if (missing) this._list.innerHTML = `<div class="ck-sub" style="line-height:1.5;">There's no ${kitEsc(c.entity)} list.</div>`;
+    if (missing) this._list.innerHTML = `<div class="ck-sub" style="line-height:1.5;">There's no ${kitEsc(this._entity() || 'to-do')} list yet.</div>`;
     else if (!open.length) this._list.innerHTML = `<div class="ck-sub" style="line-height:1.5; padding:4px 0;">Nothing to do. Add a task, and choose if it repeats and who it reminds.</div>`;
     else this._list.innerHTML = open.map((x) => row(x, false)).join('');
     this._doneList.hidden = !(showDone && this._showDone);
@@ -324,7 +378,7 @@ export class TaskListCard extends HTMLElement {
     const r = p.repeat || {};
     const due = t && t.due ? dueDate(t.due) : null;
     const now = new Date();
-    const def = String(this.config.remind_default || '').trim();
+    const def = this._justMe() ? (this.config.remind_me === false ? '' : this._me()) : String(this.config.remind_default || '').trim();
     this._edit = {
       uid,
       name: t ? t.summary : '',
@@ -342,6 +396,22 @@ export class TaskListCard extends HTMLElement {
       was: t ? t.description || '' : '',
       due: t ? t.due : null,
     };
+    if (this._pop) this._pop.close();
+    this._form = document.createElement('div');
+    this._form.className = 'tl-form';
+    this._pop = openPopup(this, {
+      title: uid ? 'Change task' : 'New task',
+      icon: uid ? 'mdi:pencil-outline' : 'mdi:plus',
+      color: this._colour(),
+      content: this._form,
+      onClose: () => {
+        this._pop = null;
+        this._form = null;
+        this._edit = null;
+        this._sig = null;
+        this._render();
+      },
+    });
     this._drawForm();
     this._sig = null;
     this._render();
@@ -350,11 +420,7 @@ export class TaskListCard extends HTMLElement {
   }
 
   _close() {
-    this._edit = null;
-    this._form.hidden = true;
-    this._form.innerHTML = '';
-    this._sig = null;
-    this._render();
+    if (this._pop) this._pop.close();
   }
 
   _drawForm() {
@@ -362,7 +428,8 @@ export class TaskListCard extends HTMLElement {
     const colour = this._colour();
     const on = `background:${colour};`;
     const chip = (attr, value, label, pressed) => `<button type="button" class="tl-chip" ${attr}="${kitEsc(value)}" aria-pressed="${pressed}" style="${pressed ? on : ''}">${label}</button>`;
-    const people = this._people();
+    const people = this._justMe() ? [] : this._people();
+    const me = this._me();
     const whoIs = (x) => (x === 'everyone' ? e.who === 'everyone' : x === 'none' ? e.who === 'none' : Array.isArray(e.who) && e.who.includes(x));
     const every = (unit, max) => `<label class="tl-inline">Every <input type="number" class="tl-f-n" min="1" max="${max}" value="${e.n}"> ${unit}${e.n === 1 ? '' : 's'}</label>`;
     const at = `<label class="tl-inline">at <input type="time" class="tl-f-time" value="${e.time}"></label>`;
@@ -392,14 +459,15 @@ export class TaskListCard extends HTMLElement {
       how = `<div class="tl-inline">Every <input type="number" class="tl-f-n" min="1" max="365" value="${e.n}"> <select class="tl-f-unit" aria-label="Days, weeks or months">${['day', 'week', 'month']
         .map((u) => `<option value="${u}" ${e.unit === u ? 'selected' : ''}>${u}${e.n === 1 ? '' : 's'}</option>`)
         .join('')}</select> after it's done, ${at}</div>`;
-    this._form.hidden = false;
     this._form.innerHTML = `
       <label class="tl-l">Task<input type="text" class="tl-f-name tl-wide" maxlength="80" placeholder="e.g. Hoover upstairs" value="${kitEsc(e.name)}"></label>
       <div class="tl-l">Repeats<div class="tl-chips" role="group" aria-label="Repeats">${REPEATS.map(([k, label]) => chip('data-kind', k, label, e.kind === k)).join('')}</div></div>
       ${how}
-      <div class="tl-l">${e.kind === 'none' && !e.date && e.who !== 'none' ? 'Reminds (at the due time, so choose one above)' : 'Reminds'}<div class="tl-chips" role="group" aria-label="Who gets reminded">${['everyone', ...people, 'none']
-        .map((x) => chip('data-who', x, x === 'everyone' ? 'Everyone' : x === 'none' ? 'No one' : kitEsc(x), whoIs(x)))
-        .join('')}</div></div>
+      <div class="tl-l">${e.kind === 'none' && !e.date && e.who !== 'none' ? `${this._justMe() ? 'Remind me' : 'Reminds'} (at the due time, so choose one above)` : this._justMe() ? 'Remind me' : 'Reminds'}<div class="tl-chips" role="group" aria-label="Who gets reminded">${
+        this._justMe()
+          ? chip('data-me', 'yes', 'Yes', e.who !== 'none') + chip('data-me', 'no', 'No', e.who === 'none')
+          : ['everyone', ...people, 'none'].map((x) => chip('data-who', x, x === 'everyone' ? 'Everyone' : x === 'none' ? 'No one' : kitEsc(x), whoIs(x))).join('')
+      }</div></div>
       <label class="tl-l">Notes<input type="text" class="tl-f-notes tl-wide" maxlength="200" placeholder="Optional" value="${kitEsc(e.notes)}"></label>
       <div class="tl-msg" role="status"></div>
       <div class="tl-buttons">
@@ -449,6 +517,11 @@ export class TaskListCard extends HTMLElement {
       }
       this._drawForm();
     });
+    bind('[data-me]', 'click', (el) => {
+      if (el.dataset.me === 'no') e.who = 'none';
+      else if (e.who === 'none') e.who = me ? [me] : 'everyone';
+      this._drawForm();
+    });
     bind('.tl-cancel', 'click', () => this._close());
     bind('.tl-save', 'click', () => this._save());
     bind('.tl-delete', 'click', (el) => {
@@ -461,7 +534,7 @@ export class TaskListCard extends HTMLElement {
   }
 
   _say(text) {
-    const m = this._form.querySelector('.tl-msg');
+    const m = this._form && this._form.querySelector('.tl-msg');
     if (m) m.textContent = text;
   }
 

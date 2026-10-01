@@ -1,0 +1,23 @@
+<!doctype html><meta charset="utf-8"><body><script type="module">
+window.__errs=[];
+window.addEventListener('error',e=>window.__errs.push('global: '+e.message));
+window.addEventListener('unhandledrejection',e=>window.__errs.push('rejection: '+(e.reason&&e.reason.message||e.reason)));
+await import('../church-drive-cards-beta.js');
+const hass={states:{},entities:{},devices:{},areas:{},user:{name:'Jamie Test',is_admin:true},language:'en',locale:{language:'en'},themes:{darkMode:true},localize:k=>k,connection:{subscribeMessage:async()=>()=>{},subscribeEvents:async()=>()=>{}},callWS:async()=>({}),callService:async()=>{}};
+const out=[];
+for(const c of window.customCards){
+  const tag=c.type; const Cls=customElements.get(tag);
+  if(!Cls||!Cls.getConfigElement){out.push(tag+': NO EDITOR');continue;}
+  let stub={}; try{stub=Cls.getStubConfig?Cls.getStubConfig(hass,[],[]):{};}catch(e){}
+  const cfg={type:'custom:'+tag,...stub,title:stub.title||'T',cards:stub.cards||[],pages:stub.pages||[{name:'Home',icon:'mdi:home',path:'/x'}]};
+  try{
+    const ed=await Cls.getConfigElement();
+    if(!ed||!ed.setConfig){out.push(tag+': editor has no setConfig');continue;}
+    document.body.appendChild(ed);
+    ed.setConfig(cfg); ed.hass=hass; ed.hass=hass; ed.setConfig({...cfg,priorities:true});
+    out.push(tag+': ok');
+  }catch(e){out.push(tag+': THROWS '+e.message);}
+}
+await new Promise(r=>setTimeout(r,500));
+window.__out=out;
+</script>

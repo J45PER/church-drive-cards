@@ -192,8 +192,24 @@ A to-do list (`entity`, any to-do list) you can tick off, add to and change, whe
 - its name and notes;
 - **Repeats**: Never (with an optional due date and time), Daily (every N days), Weekly (every week, fortnightly, or every 3 or 4 weeks, on chosen days with a time for each), Monthly (every N months on a day of the month or the last day), Yearly (on a date), or After it's done (N days, weeks or months after it's ticked off). Repeats can start on a chosen date;
 - **Reminds**: anyone with a person entity, Everyone, or No one (`remind_default` sets it for new tasks).
+- **The signed-in person's own list** (`entity: mine`): each person sees their own "Priorities <first name>" list, so one card serves everyone.
+  For a personal list, set **Who tasks are for** (`assign: me`) to *Just the signed-in person*: the people
+  chips become a simple **Remind me** Yes / No (`remind_me` sets it for new tasks).
 
 The repeat and who it reminds are kept as plain words in the task's description, e.g. `Every 2 weeks: Mon 09:00 · for Hayley · use the blue mop` (see `src/repeat.js`). The "Church Drive: repeating tasks" automation reads the same words. It reminds people when a task comes due, and when a repeating task is ticked off it's due again at its next time. Ticked-off one-off tasks sit under "Show done", with "Clear done tasks". `icons: true` gives each task an icon from its name (hoover, bathroom and so on). `demo: true` shows pretend tasks.
+
+### `notifications-card`
+
+Who gets each kind of notification and house job (a table: kinds down the side, people
+across, plus **All** for everyone including people added later), and which of each
+person's phones they go to. People come from Home Assistant (Settings > People) and their
+phones from the companion app, so a new person appears by themselves. Kinds whose devices
+aren't set up yet show as waiting. Only administrators can change it. Options: `title`,
+`show` (`all`, `notifications`, `jobs`, `phones`), `color`, `demo`.
+
+Automations send with **`church_drive.notify`** (`kind`, `title`, `message`, optional
+`admin_message`, `people`, `tag`, `link`, `image`, `critical`). `sensor.church_drive_people`
+lists the people and who's assigned to each kind (`assign`), for templates.
 
 ### `security-zone-card`
 
@@ -269,6 +285,7 @@ Just the panel's heading (title, coloured icon, live summary), for use on its ow
 ## Development
 
 `npm test` runs the unit tests for the repeat rules (`src/repeat.js`) in UK time.
+`node tools/editors-smoke.mjs` (after `npm run build`, with Playwright) checks every card's visual editor opens. `ha/repeating-tasks.jinja` is the Home Assistant side of the repeat rules, and `tools/repeat-cases.mjs` gives cases to cross-check it.
 
 ```bash
 npm install

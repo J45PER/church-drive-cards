@@ -18,6 +18,7 @@ import { registerAutoLayoutCard } from './auto-layout-card.js';
 import { registerHouseTasksCard } from './house-tasks-card.js';
 import { registerEnergyCards } from './energy-cards.js';
 import { registerTaskListCard } from './task-list-card.js';
+import { registerNotificationsCard } from './notifications-card.js';
 import { SUFFIX } from './suffix.js';
 
 registerGaugeZoneCard();
@@ -40,5 +41,6 @@ registerAutoLayoutCard();
 registerHouseTasksCard();
 registerEnergyCards();
 registerTaskListCard();
+registerNotificationsCard();
 
 console.info(`%c CHURCH-DRIVE-CARDS${SUFFIX ? ' BETA' : ''} %c loaded `, 'color: white; background: #2196f3; font-weight: 700;', 'color: #2196f3; background: transparent;');
