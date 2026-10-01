@@ -23,6 +23,7 @@ import { registerMediaCard } from './media-card.js';
 import { registerSystemCard } from './system-card.js';
 import { registerSafetyCard } from './safety-card.js';
 import { registerPeopleCard } from './people-card.js';
+import { registerCameraCard } from './camera-card.js';
 import { SUFFIX } from './suffix.js';
 
 registerGaugeZoneCard();
@@ -50,5 +51,6 @@ registerMediaCard();
 registerSystemCard();
 registerSafetyCard();
 registerPeopleCard();
+registerCameraCard();
 
 console.info(`%c CHURCH-DRIVE-CARDS${SUFFIX ? ' BETA' : ''} %c loaded `, 'color: white; background: #2196f3; font-weight: 700;', 'color: #2196f3; background: transparent;');
