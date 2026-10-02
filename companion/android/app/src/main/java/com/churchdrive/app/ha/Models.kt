@@ -19,6 +19,17 @@ data class EntityState(
     fun str(attr: String): String? =
         if (attributes.has(attr) && !attributes.isNull(attr)) attributes.optString(attr) else null
 
+    /** Whether a light can be dimmed: it declares any colour mode other than plain on/off. */
+    fun dimmable(): Boolean {
+        val modes = attributes.optJSONArray("supported_color_modes")
+        return if (modes != null) (0 until modes.length()).any { modes.getString(it) != "onoff" }
+        else num("brightness") != null
+    }
+
+    /** A light's live colour as [r, g, b], when it reports one. */
+    fun rgb(): IntArray? = attributes.optJSONArray("rgb_color")?.takeIf { it.length() == 3 }
+        ?.let { intArrayOf(it.getInt(0), it.getInt(1), it.getInt(2)) }
+
     fun options(): List<String> =
         attributes.optJSONArray("options")?.let { a -> (0 until a.length()).map { a.getString(it) } } ?: emptyList()
 
