@@ -172,6 +172,7 @@ function applyHaLeaflet(el) {
       l.setOpacity(style === 'ha' ? 1 : 0);
     }
   });
+  addSwitch(m, Lf);
   if (style === 'ha') return true;
   layersFor(style).forEach((spec, i) => {
     const t = Lf.tileLayer(spec.url, { maxNativeZoom: spec.maxzoom, maxZoom: 20, attribution: spec.attribution || undefined, zIndex: 1 + i });
@@ -183,6 +184,47 @@ function applyHaLeaflet(el) {
     m.__cdLayers.push(t);
   });
   return true;
+}
+
+// A Satellite / Street switch in the map's top right corner (Leaflet maps).
+function addSwitch(m, Lf) {
+  if (m.__cdSwitch || !Lf.Control) return;
+  const Switch = Lf.Control.extend({
+    onAdd() {
+      const box = document.createElement('div');
+      box.className = 'leaflet-bar';
+      box.style.cssText = 'display:flex; overflow:hidden; border-radius:10px; border:none; box-shadow:0 1px 4px rgba(0,0,0,0.4);';
+      const paint = () => {
+        const now = mapStyle() === 'street' ? 'street' : 'satellite';
+        box.querySelectorAll('button').forEach((b) => {
+          const on = b.dataset.style === now;
+          b.style.background = on ? '#26a69a' : 'rgba(31,33,40,0.92)';
+          b.style.color = '#fff';
+        });
+      };
+      [['satellite', 'Satellite'], ['street', 'Street']].forEach(([style, label]) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.dataset.style = style;
+        b.textContent = label;
+        b.style.cssText = 'border:none; cursor:pointer; font:700 12px/1 sans-serif; padding:8px 10px;';
+        b.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          setMapStyle(style);
+        });
+        box.appendChild(b);
+      });
+      Lf.DomEvent.disableClickPropagation(box);
+      paint();
+      this._paint = paint;
+      window.addEventListener('cd-map-style', paint);
+      return box;
+    },
+    onRemove() {
+      window.removeEventListener('cd-map-style', this._paint);
+    },
+  });
+  m.__cdSwitch = new Switch({ position: 'topright' }).addTo(m);
 }
 
 // Whichever map an ha-map has: a newer Home Assistant's engine (MapLibre or

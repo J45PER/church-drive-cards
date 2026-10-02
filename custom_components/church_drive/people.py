@@ -35,7 +35,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.storage import Store
-from homeassistant.util import slugify
+from homeassistant.util import location, slugify
 
 from .kinds import ARRIVALS, JOB_KINDS, KINDS, arrival_kind
 
@@ -222,7 +222,7 @@ class People:
                     }
                 )
             places = list(self._data.get("places", {}).get(st.entity_id, []))
-            place, zone = self._place(st.state, places)
+            place, zone = self._place(self._nearest_zone(st), places)
             out.append(
                 {
                     "entity_id": st.entity_id,
@@ -242,6 +242,22 @@ class People:
         return out
 
     # ---- places: what each person calls the zones they go to -----------
+
+    def _nearest_zone(self, st: Any) -> str:
+        """The person's state, but where they're inside more than one zone (GPS
+        accuracy wider than the zones), the zone whose centre is nearest: Home
+        Assistant picks the smallest of them instead."""
+        a = st.attributes
+        zones = [self.hass.states.get(z) for z in a.get("in_zones") or []]
+        zones = [z for z in zones if z is not None and z.entity_id != "zone.home"]
+        lat, lon = a.get("latitude"), a.get("longitude")
+        if len(zones) < 2 or lat is None or lon is None or st.state == "home":
+            return st.state
+        nearest = min(
+            zones,
+            key=lambda z: location.distance(lat, lon, z.attributes.get("latitude"), z.attributes.get("longitude")) or 0,
+        )
+        return nearest.name
 
     def _place(self, state: str, places: list[dict[str, str]]) -> tuple[str, str]:
         """(label, zone name) for where someone is: "Home", their name for a
