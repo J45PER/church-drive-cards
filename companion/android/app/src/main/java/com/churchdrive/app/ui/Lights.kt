@@ -46,7 +46,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
@@ -282,7 +282,8 @@ private fun SceneTile(scene: LightScene, active: Boolean, dimmed: Boolean, modif
         ?: SCENE_COLOURS[scene.key]
         ?: looks.whiteColours(scene.key, scene.name)?.map { Color(it) }
         ?: nameColours(scene.key))
-    val ink = if (colours.map { it.luminance() }.average() > 0.55) Color(0xFF202124) else Color.White
+    // Dark or white text, whichever has the better contrast on this tile's colours.
+    val ink = if (SceneLooks.darkInkOn(colours.map { it.toArgb() })) Color(0xFF202124) else Color.White
     val shape = RoundedCornerShape(18.dp)
     Box(
         modifier = modifier

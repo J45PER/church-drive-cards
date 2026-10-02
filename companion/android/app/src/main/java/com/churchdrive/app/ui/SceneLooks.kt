@@ -110,6 +110,21 @@ class SceneLooks(val library: Map<String, LibraryScene>, val styles: Map<String,
             else -> null
         }
 
+        /** Relative luminance of an ARGB colour (WCAG), 0 black to 1 white. */
+        fun luminance(c: Int): Double {
+            fun lin(v: Int): Double {
+                val s = v / 255.0
+                return if (s <= 0.03928) s / 12.92 else ((s + 0.055) / 1.055).pow(2.4)
+            }
+            return 0.2126 * lin(c shr 16 and 0xFF) + 0.7152 * lin(c shr 8 and 0xFF) + 0.0722 * lin(c and 0xFF)
+        }
+
+        /**
+         * Whether dark text reads better than white on a tile with these colours. White and the dark text
+         * (about 0.017 luminance) have equal contrast at a background luminance of about 0.18, so that's the line.
+         */
+        fun darkInkOn(colours: List<Int>): Boolean = colours.map { luminance(it) }.average() > 0.18
+
         private fun pair(c: List<Int>) = if (c.size == 1) listOf(c[0], c[0]) else c
 
         private fun argb(r: Int, g: Int, b: Int) =
