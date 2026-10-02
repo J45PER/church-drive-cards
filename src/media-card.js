@@ -127,7 +127,41 @@ export class MediaCard extends HTMLElement {
     return this._states()[id] ? id : '';
   }
 
+  // A TV takes a while to come on (or go off) and report it: say so straight
+  // away, until its state catches up (at most 45 s).
+  _pend(id, to) {
+    this._pending = this._pending || {};
+    this._pending[id] = { to, until: Date.now() + 45000 };
+    clearTimeout(this._pendTimer);
+    this._pendTimer = setTimeout(() => this._refresh(), 45500);
+    this._refresh();
+  }
+
+  _pendingFor(st) {
+    const p = this._pending && this._pending[st.entity_id];
+    if (!p) return '';
+    const done = p.to === 'on' ? ON.includes(st.state) || PLAYING.includes(st.state) : st.state === 'off' || this._asleep(st);
+    if (done || Date.now() > p.until) {
+      delete this._pending[st.entity_id];
+      return '';
+    }
+    return p.to;
+  }
+
+  _refresh() {
+    this._sig = null;
+    this._popSig = null;
+    this._render();
+    if (this._pop && this._popEntity) this._drawPop();
+  }
+
+  _powerOff(st) {
+    this._call('media_player', 'turn_off', { entity_id: st.entity_id });
+    this._pend(st.entity_id, 'off');
+  }
+
   _powerOn(st) {
+    this._pend(st.entity_id, 'on');
     const w = this._wake(st);
     if (w) this._call('script', 'turn_on', { entity_id: w });
     else this._call('media_player', 'turn_on', { entity_id: st.entity_id });
@@ -135,6 +169,8 @@ export class MediaCard extends HTMLElement {
 
   _sub(st) {
     const a = st.attributes;
+    const pend = this._pendingFor(st);
+    if (pend) return pend === 'on' ? 'Turning on…' : 'Turning off…';
     if (this._asleep(st)) return 'Off';
     if (st.state === 'unavailable') return 'Not responding';
     if (st.state === 'off') return 'Off';
@@ -189,7 +225,7 @@ export class MediaCard extends HTMLElement {
     }
     if (PLAYING.includes(st.state)) this._call('media_player', 'media_play_pause', { entity_id: st.entity_id });
     else if (st.state === 'off' || this._asleep(st)) this._powerOn(st);
-    else this._call('media_player', 'turn_off', { entity_id: st.entity_id });
+    else this._powerOff(st);
   }
 
   _render() {
@@ -275,7 +311,7 @@ export class MediaCard extends HTMLElement {
     if (!st || !this._popBody) return;
     const a = st.attributes;
     const colour = this._colour();
-    const sig = JSON.stringify([st.state, a.media_title, a.app_name, a.source, a.entity_picture, a.source_list, Math.round((a.volume_level || 0) * 100)]);
+    const sig = JSON.stringify([st.state, this._pendingFor(st), a.media_title, a.app_name, a.source, a.entity_picture, a.source_list, Math.round((a.volume_level || 0) * 100)]);
     if (sig === this._popSig || (this._dragging && this._popSig)) return;
     this._popSig = sig;
     const live = PLAYING.includes(st.state);
@@ -284,7 +320,7 @@ export class MediaCard extends HTMLElement {
     const art = a.entity_picture ? `style="background-image:url('${kitEsc(a.entity_picture)}')"` : '';
     const btn = (act, icon, label, extra = '', cls = 'mcp-round') => `<button type="button" class="${cls}" data-p="${act}" aria-label="${label}" ${extra}>${iconHtml(icon, { size: '22px' })}</button>`;
     let html = `<div class="mcp-now"><div class="mcp-art" ${art}>${a.entity_picture ? '' : iconHtml(this._icon(st), { size: '28px' })}</div>
-      <div style="min-width:0;"><div class="mcp-t1">${kitEsc(a.media_title || (on ? a.app_name || a.source || 'On' : st.state === 'off' ? 'Off' : 'Not responding'))}</div><div class="mcp-t2">${kitEsc(this._sub(st))}</div></div></div>`;
+      <div style="min-width:0;"><div class="mcp-t1">${kitEsc(a.media_title || (on ? a.app_name || a.source || 'On' : st.state === 'off' || this._asleep(st) ? 'Off' : 'Not responding'))}</div><div class="mcp-t2">${kitEsc(this._sub(st))}</div></div></div>`;
     if (on) {
       html += `<div class="mcp-row">
         ${has(st, F.PREVIOUS) || this.config.demo ? btn('prev', 'mdi:skip-previous', 'Previous') : ''}
@@ -303,7 +339,11 @@ export class MediaCard extends HTMLElement {
           <div class="mcp-wide"><button type="button" data-p="back">${iconHtml('mdi:arrow-left', { size: '18px' })}Back</button><button type="button" data-p="home">${iconHtml('mdi:home', { size: '18px' })}Home</button></div>`;
     }
     if (st.state !== 'unavailable' || this._wake(st))
-      html += `<div class="mcp-wide"><button type="button" data-p="power" style="${on ? '' : `background:${colour}; color:#fff;`}">${iconHtml('mdi:power', { size: '18px' })}${on ? 'Turn off' : 'Turn on'}</button></div>`;
+      html += (() => {
+        const pend = this._pendingFor(st);
+        const label = pend === 'on' ? 'Turning on…' : pend === 'off' ? 'Turning off…' : on ? 'Turn off' : 'Turn on';
+        return `<div class="mcp-wide"><button type="button" data-p="power" ${pend ? 'disabled' : ''} style="${on ? '' : `background:${colour}; color:#fff;`}${pend ? ' opacity:.7;' : ''}">${iconHtml('mdi:power', { size: '18px' })}${label}</button></div>`;
+      })();
     this._popBody.innerHTML = html;
     const vol = this._popBody.querySelector('input[type=range]');
     if (vol) {
@@ -323,7 +363,7 @@ export class MediaCard extends HTMLElement {
     if (p === 'playpause' || p === 'power') {
       if (p === 'power' || !PLAYING.includes(st.state)) {
         if (this.config.demo) st.state = ON.includes(st.state) ? 'off' : 'on';
-        else if (ON.includes(st.state)) this._call('media_player', 'turn_off', { entity_id: id });
+        else if (ON.includes(st.state)) this._powerOff(st);
         else this._powerOn(st);
         if (p === 'playpause' && !this.config.demo) this._call('media_player', 'media_play', { entity_id: id });
       } else this._toggle(st);
