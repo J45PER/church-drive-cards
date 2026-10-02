@@ -43,6 +43,31 @@ This branch is a scratch space for design; nothing here ships with the HACS inte
   Church Drive integration, so the Windows manager can edit them and apps fetch
   them without a new APK.
 
+## User app pages (draft)
+
+Taken from the current `dashboard-mobile` views, without Media (TVs & speakers) and
+Energy (admin only). Each page is a stack of titled sections, as on the dashboard.
+
+| Page | Sections |
+|---|---|
+| Home (Quick Actions) | Security (alarm), Climate (downstairs), Lights, Cleaning (vacuum), Car charger |
+| Lighting | Ground Floor, Middle Floor, Top Floor, Garden, Front Garden |
+| Security | Alarm, Safety, Outdoor cameras, Indoor cameras, Doors & Motion |
+| Climate | Heating, Climate zones, Cooling (fan), Air quality, Windows & Doors (blind) |
+| Cleaning | Vacuum controls and settings |
+| To-do | From the house, My to-do, Shared, Cleaning |
+| Devices | Devices & services (system card); TVs & speakers dropped |
+
+Native pieces needed: alarm panel, light control, climate (and zone), camera, safety,
+security zone, fan, air purifier, CO alarm, cover, vacuum, EV charger (the Home page
+shows it), house tasks and task list, system.
+
+## Native widgets
+
+A main purpose of the app is to provide Android home-screen widgets that look like the
+cards in their sections (alarm, lights, climate and so on), so common actions don't
+need the app opened.
+
 ## Open questions
 
 - Manager <-> devices: via the HA API (entities/services exposed by a Church Drive
