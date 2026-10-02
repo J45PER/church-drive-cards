@@ -1965,8 +1965,11 @@ Integration modules (`custom_components/church_drive/`):
     Camera, Ring Chime). Their entity_ids were put back to the originals
     (`camera.<x>_live_view`, `event.<x>_ding/_motion`, `sensor.<x>_last_activity`, …),
     which events.py, the cards, links and automations use.
-  - Battery Notes left extra copies (`sensor.front_door_battery_plus_3`,
-    `sensor.garden_battery_plus_2`); Driveway's is now `sensor.driveway_battery_plus_2`.
+  - Battery Notes for the Ring cameras: the kept notes are on the Ring-MQTT devices
+    (`sensor.front_door_battery_plus_3`, `sensor.driveway_battery_plus_2`,
+    `sensor.garden_battery_plus_2`, used by Battery Status, the automatic to-dos and "Any
+    Battery Low"). The copies on the Ring integration's devices were removed 2026-10-02;
+    if Battery Notes offers them again as discovered, ignore them.
 
 - **Future (not now): our own Android app.** The user wants home-screen widgets
   showing the panels, and later the same app for Android-based satellite
