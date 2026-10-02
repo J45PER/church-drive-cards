@@ -1,5 +1,6 @@
 package com.churchdrive.app.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -13,11 +14,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Bedtime
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -41,6 +45,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
@@ -157,13 +162,11 @@ fun NotBuiltCard() {
 @Composable
 fun AlarmCard(alarm: EntityState?, onAlarm: (service: String, code: String?) -> Unit) {
     val state = alarm?.state
-    val colors = MaterialTheme.colorScheme
-    val (container, content) = when (state) {
-        "triggered" -> colors.errorContainer to colors.onErrorContainer
-        "disarmed" -> colors.secondaryContainer to colors.onSecondaryContainer
-        null -> colors.surfaceContainer to colors.onSurface
-        else -> colors.primaryContainer to colors.onPrimaryContainer
-    }
+    val tone = toneColors(alarmTone(state))
+    val triggered = state == "triggered"
+    // Triggered is fully tinted, like the dashboard card.
+    val container = if (triggered) tone.accent else tone.container
+    val content = if (triggered) tone.onAccent else tone.onContainer
     val enabled = alarm != null
 
     Card(
@@ -177,33 +180,52 @@ fun AlarmCard(alarm: EntityState?, onAlarm: (service: String, code: String?) -> 
                 Text(alarmLabel(state), style = MaterialTheme.typography.headlineSmall)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ModeButton("Disarm", state == "disarmed", enabled, Modifier.weight(1f)) { onAlarm("alarm_disarm", null) }
-                ModeButton("Home", state == "armed_home", enabled, Modifier.weight(1f)) { onAlarm("alarm_arm_home", null) }
-                ModeButton("Away", state == "armed_away", enabled, Modifier.weight(1f)) { onAlarm("alarm_arm_away", null) }
-                ModeButton("Night", state == "armed_night", enabled, Modifier.weight(1f)) { onAlarm("alarm_arm_night", null) }
+                ModeButton("Disarm", state == "disarmed", enabled, tone, content, Modifier.weight(1f)) { onAlarm("alarm_disarm", null) }
+                ModeButton("Home", state == "armed_home", enabled, tone, content, Modifier.weight(1f)) { onAlarm("alarm_arm_home", null) }
+                ModeButton("Away", state == "armed_away", enabled, tone, content, Modifier.weight(1f)) { onAlarm("alarm_arm_away", null) }
+                ModeButton("Night", state == "armed_night", enabled, tone, content, Modifier.weight(1f)) { onAlarm("alarm_arm_night", null) }
             }
         }
     }
 }
 
 @Composable
-private fun ModeButton(label: String, selected: Boolean, enabled: Boolean, modifier: Modifier, onClick: () -> Unit) {
+private fun ModeButton(
+    label: String,
+    selected: Boolean,
+    enabled: Boolean,
+    tone: ToneColors,
+    content: Color,
+    modifier: Modifier,
+    onClick: () -> Unit,
+) {
     val padding = PaddingValues(horizontal = 4.dp)
     if (selected) {
-        Button(onClick = onClick, enabled = enabled, modifier = modifier, contentPadding = padding) {
-            Text(label, maxLines = 1)
-        }
+        Button(
+            onClick = onClick,
+            enabled = enabled,
+            modifier = modifier,
+            contentPadding = padding,
+            colors = ButtonDefaults.buttonColors(containerColor = tone.accent, contentColor = tone.onAccent),
+        ) { Text(label, maxLines = 1) }
     } else {
-        OutlinedButton(onClick = onClick, enabled = enabled, modifier = modifier, contentPadding = padding) {
-            Text(label, maxLines = 1)
-        }
+        OutlinedButton(
+            onClick = onClick,
+            enabled = enabled,
+            modifier = modifier,
+            contentPadding = padding,
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = content),
+            border = BorderStroke(1.dp, content.copy(alpha = 0.4f)),
+        ) { Text(label, maxLines = 1) }
     }
 }
 
 private fun alarmIcon(state: String?): ImageVector = when (state) {
     "disarmed" -> Icons.Filled.LockOpen
     "triggered" -> Icons.Filled.Warning
-    "armed_home", "armed_away", "armed_night" -> Icons.Filled.Lock
+    "armed_home" -> Icons.Filled.Home
+    "armed_away" -> Icons.Filled.Lock
+    "armed_night" -> Icons.Filled.Bedtime
     else -> Icons.Filled.Security
 }
 

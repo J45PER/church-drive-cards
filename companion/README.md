@@ -43,6 +43,15 @@ This branch is a scratch space for design; nothing here ships with the HACS inte
   Church Drive integration, so the Windows manager can edit them and apps fetch
   them without a new APK.
 
+## Look
+
+Material 3, in the style of Google's own apps: Material You colours for the app chrome
+(they follow the phone's wallpaper), real Material icons, a large collapsing title bar.
+Entity colours keep the meaning they have on the dashboards but use Google's palette,
+fixed (not wallpaper-driven) with light and dark variants (`ui/StateColors.kt`):
+alarm disarmed green, home blue, away red, night purple, arming amber, entry delay
+deep orange, triggered red; heating orange, cooling blue, eco green, off grey.
+
 ## User app pages (draft)
 
 Taken from the current `dashboard-mobile` views, without Media, Devices or Energy.
