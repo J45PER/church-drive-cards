@@ -9,7 +9,7 @@ This branch is a scratch space for design; nothing here ships with the HACS inte
    kiosk-locked, with a native UI designed for its room. Auto-reconnects, screen
    on/off and brightness controlled from HA, and reports device state back to HA
    (battery, screen, app version, current layout).
-2. **User app (Android/iOS)**: a Church Drive branded app for residents, so
+2. **User app (Android)**: a Church Drive branded app for residents, so
    Ian and Diane don't need the stock Home Assistant app. Signs in to Church
    Drive's HA, shows a curated set of native controls, and handles notifications
    and presence.
@@ -29,6 +29,7 @@ This branch is a scratch space for design; nothing here ships with the HACS inte
 - **Kiosk UIs are room-appropriate**: each kiosk gets a layout designed for its room,
   not a generic dashboard. Each kiosk has its own HA user/token, so one tablet can be
   changed or revoked without affecting the others.
+- **Android only**: Ian and Diane both use Android, so no iOS app is needed.
 - **User app is curated**: a limited set of screens and controls, not full HA.
 - **Priority: user app first**, then kiosks.
 - Shared code: one Kotlin module for the HA connection, auth, entity state and the
@@ -51,7 +52,7 @@ This branch is a scratch space for design; nothing here ships with the HACS inte
   exposes (relays, firmware update), not kiosk settings. Needs checking.
 - Notifications and presence for the User app: reuse HA's mobile_app integration
   protocol, or something simpler?
-- Distribution: sideloaded APK for kiosks; Play Store / TestFlight or private for users?
+- Distribution: sideloaded APK for kiosks; Play Store (private/internal track) or sideloaded APK for users?
 
 ## Suggested order
 
