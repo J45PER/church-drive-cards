@@ -1,17 +1,19 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-02. Current release: **v0.32.2**.*
+*Last updated 2026-10-02. Current release: **v0.33.0**.*
 
 ## Where this stands
 
-**Mirror card (branch `mirror-card`, beta only, 2026-10-02).** `custom:mirror-card` shows
+**Mirror card (released in v0.33.0, 2026-10-02).** `custom:mirror-card` shows
 another page's card on this one (Home's Kitchen lights = the Lighting page's Kitchen card),
 picked in the visual editor: dashboard, page, card. Logic is in `src/mirror.js` (tested in
 `test/mirror.test.mjs`): a card is keyed by its area, else entity, else name (`area:kitchen`,
 `#2` for repeats). It reads `lovelace/config`, reloads on the `lovelace_updated` event,
 and forwards the Section Panel's compact mode. The companion Android app follows mirrors too
-(`DashboardLights.kt` has to keep the same keys). Not released: waits for the user's test on
-the Beta channel, then "release it".
+(`DashboardLights.kt` has to keep the same keys). The Home Lights panel on the Mobile dashboard uses three mirrors of the Lighting page's
+Kitchen, Living room and Middle floor cards (`source: area:kitchen` etc.). Also in v0.33.0:
+light cards retry loading the scene library (`universal-scenes.js`) if HA wasn't ready, so a
+page opened during a restart no longer stays without scenes.
 
 This repo (`github.com/J45PER/church-drive-cards`, public) is the **Church Drive**
 Home Assistant integration (`custom_components/church_drive`). It's installed through
