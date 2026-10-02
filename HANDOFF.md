@@ -1903,6 +1903,24 @@ Integration modules (`custom_components/church_drive/`):
 
 ## Open items
 
+- **Ring as the Church Drive account (job for later).** On 2026-10-02 the Ring
+  integration was briefly moved to church-drive-63@outlook.com (Advanced user under
+  Ring's Feb 2026 "User Permissions"), but Ring returned no devices to it
+  (diagnostics `device_data: []`, also after a fresh sign-in), so Hayley's account was
+  re-added. That entry and Ring-MQTT are still Hayley's; Ring shows HA's mode changes
+  as Hayley. An empty church-drive entry is kept. To try later, in order:
+  1. Hayley's app: Church Drive's per-device toggles all on; delete any old/offline Ring devices.
+  2. As Church Drive: Control Center › Authorized Client Devices, remove HA/Python sessions;
+     delete and re-add the Church Drive Ring entry; check for devices.
+  3. If still empty: sign Ring-MQTT in as Church Drive (different library) with Hayley on
+     hand to revert. Mode changes go through Ring-MQTT, so that's what shows the account.
+  - The user renamed the Ring devices (Front Doorbell, Driveway/Garden/Entrance/Living Room
+    Camera, Ring Chime). Their entity_ids were put back to the originals
+    (`camera.<x>_live_view`, `event.<x>_ding/_motion`, `sensor.<x>_last_activity`, …),
+    which events.py, the cards, links and automations use.
+  - Battery Notes left extra copies (`sensor.front_door_battery_plus_3`,
+    `sensor.garden_battery_plus_2`); Driveway's is now `sensor.driveway_battery_plus_2`.
+
 - **Future (not now): our own Android app.** The user wants home-screen widgets
   showing the panels, and later the same app for Android-based satellite
   devices (wall tablets, voice satellites). Lovelace cards can't become Android
