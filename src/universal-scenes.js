@@ -9,18 +9,29 @@ export const UNIVERSAL_PREFIX = 'universal:';
 
 let library = [];
 let loading = null;
+// A failed load is tried again, a little later each time (5 s, 10 s... up to a minute), so a page that
+// was open while Home Assistant was still starting up gets its scenes without being reloaded.
+let retryAfter = 0;
+let retryDelay = 5000;
 
 export function loadUniversalScenes(hass, force = false) {
-  if (force) loading = null;
-  if (loading || !hass || !hass.callWS) return loading;
+  if (force) {
+    loading = null;
+    retryAfter = 0;
+  }
+  if (loading || !hass || !hass.callWS || Date.now() < retryAfter) return loading;
   loading = hass
     .callWS({ type: 'church_drive/library' })
     .then((res) => {
       library = (res && res.scenes) || [];
+      retryDelay = 5000;
       window.dispatchEvent(new CustomEvent(EVENT));
     })
     .catch(() => {
-      // Integration not installed: no universal scenes, Hue scenes still work.
+      // Integration not installed (no universal scenes, Hue scenes still work) or not started yet.
+      loading = null;
+      retryAfter = Date.now() + retryDelay;
+      retryDelay = Math.min(retryDelay * 2, 60000);
     });
   return loading;
 }
