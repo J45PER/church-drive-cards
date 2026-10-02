@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.churchdrive.app.ha.ConnectionState
 import com.churchdrive.app.ha.EntityState
 import com.churchdrive.app.ha.HaClient
+import com.churchdrive.app.ha.IconPack
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -20,13 +21,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val _signedIn = MutableStateFlow(session.signedIn)
     val signedIn: StateFlow<Boolean> = _signedIn
 
+    private val appContext = app
+
     init {
-        if (session.signedIn) client.connect(session.url!!, session.token!!)
+        if (session.signedIn) start(session.url!!, session.token!!)
+    }
+
+    private fun start(url: String, token: String) {
+        client.connect(url, token)
+        IconPack.load(viewModelScope, appContext.filesDir, url, token)
     }
 
     fun signIn(url: String, token: String) {
         session.save(url, token)
-        client.connect(url, token)
+        start(url, token)
         _signedIn.value = true
     }
 

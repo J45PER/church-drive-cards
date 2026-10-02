@@ -247,7 +247,7 @@ private fun SceneTile(scene: LightScene, active: Boolean, dimmed: Boolean, modif
     val shape = RoundedCornerShape(18.dp)
     Box(
         modifier = modifier
-            .height(72.dp)
+            .height(64.dp)
             .alpha(if (dimmed) 0.55f else 1f)
             .clip(shape)
             .background(Brush.linearGradient(colours))
@@ -255,8 +255,8 @@ private fun SceneTile(scene: LightScene, active: Boolean, dimmed: Boolean, modif
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Icon(sceneIcon(scene.key), contentDescription = null, tint = ink, modifier = Modifier.size(22.dp))
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Icon(sceneIcon(scene.key), contentDescription = null, tint = ink, modifier = Modifier.size(20.dp))
             Text(
                 scene.name, color = ink, fontSize = 11.sp, maxLines = 1,
                 overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 4.dp),
@@ -335,10 +335,10 @@ fun LightPill(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Icon(
-                Icons.Filled.Lightbulb, contentDescription = null,
+            HaIcon(
+                light?.str("icon"), Icons.Filled.Lightbulb,
                 tint = if (on) tint else tone.onContainer.copy(alpha = 0.55f),
-                modifier = Modifier.size(24.dp),
+                size = 26.dp,
             )
             Text(
                 name ?: light?.friendlyName ?: entityId,
