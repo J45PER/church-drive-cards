@@ -1,18 +1,20 @@
 // Map style for every map in Home Assistant (the Zones page, map cards,
 // person and device maps): satellite photos with road and place names on top,
-// or a clearer street map, instead of Home Assistant's CartoDB map.
-//
-// Home Assistant draws maps with Leaflet, which registers itself as window.L
-// when it loads. This catches that moment and changes Leaflet's tile layers:
-// a CartoDB or OpenStreetMap layer becomes Esri's World Imagery (with Esri's
-// place names and roads as a second layer) or Esri's World Street Map. If
-// anything here fails, Home Assistant keeps its own map.
+// or a street map, instead of Home Assistant's own.
 //
 // With a Google Map Tiles key in Church Drive's options (Configure › Google
-// maps), Google's maps are used instead: satellite with Google's roads, shop
-// and place names on top, or Google's road map. Google's tiles need a session
-// (made once, kept in this browser for about two weeks); until there is one,
-// or if Google refuses the key, the Esri maps are shown.
+// maps), the maps are Google's: satellite with Google's roads, shop and place
+// names on top, or Google's road map. Home Assistant fetches them from Google
+// (maps.py; the key is locked to Home Assistant's addresses, which browsers
+// don't send) and serves them at church_drive/maps' `tile_url`. Without a key,
+// Esri's World Imagery (with Esri's roads and place names) or World Street Map.
+//
+// Home Assistant's maps (<ha-map>) draw with MapLibre, or Leaflet where there's
+// no WebGL2. Each ha-map is watched for its map engine; once it has one, the
+// base map is swapped: on MapLibre the style's own (vector) layers are hidden
+// and raster layers added underneath everything else (zones, people), on
+// Leaflet the tile layer's address is changed. If anything here fails, Home
+// Assistant keeps its own map.
 //
 // The style is kept per browser (localStorage `cd-map-style`): 'satellite'
 // (the default), 'street', or 'ha' for Home Assistant's own. The zone map
@@ -28,14 +30,8 @@ export const MAP_LAYERS = {
   street: { base: `${ESRI}/World_Street_Map/MapServer/tile/{z}/{y}/{x}`, labels: [] },
 };
 const KEY = 'cd-map-style';
-const GKEY = 'cd-gmap';
 const GATTR = 'Map data &copy; Google';
-const GTILES = 'https://tile.googleapis.com/v1';
-const GSESSION = {
-  satellite: { mapType: 'satellite', language: 'en-GB', region: 'GB', layerTypes: ['layerRoadmap'] },
-  street: { mapType: 'roadmap', language: 'en-GB', region: 'GB' },
-};
-const REPLACE = /basemaps\.cartocdn\.com|tile\.openstreetmap\.org|tiles\.stadiamaps\.com/;
+const RASTER = 'cd-raster-';
 
 export function mapStyle() {
   try {
@@ -55,167 +51,192 @@ export function setMapStyle(style) {
   window.dispatchEvent(new CustomEvent('cd-map-style', { detail: style }));
 }
 
-function gCache() {
-  try {
-    return JSON.parse(localStorage.getItem(GKEY) || 'null') || {};
-  } catch (err) {
-    return {};
-  }
-}
-
-function gSave(cache) {
-  try {
-    localStorage.setItem(GKEY, JSON.stringify(cache));
-  } catch (err) {
-    /* storage blocked: a new session next time */
-  }
-}
-
-let gMemory = null; // when localStorage is blocked
-
-// Google's tiles for a style, if there's a key and a live session: { url, attribution }.
-export function googleTiles(style) {
-  const cache = gMemory || gCache();
-  const s = cache.key && cache.sessions && cache.sessions[style];
-  if (!s || Number(s.expiry) * 1000 < Date.now() + 3600e3) return null;
-  return { url: `${GTILES}/2dtiles/{z}/{x}/{y}?session=${encodeURIComponent(s.session)}&key=${encodeURIComponent(cache.key)}`, attribution: GATTR };
-}
-
+let gUrl = null; // Home Assistant's tile address for Google, with {style}
 let gReady = null;
 
-// Ask Church Drive for the Google key and make the tile sessions (once a
-// page). Resolves true when Google's maps can be used.
+// Google's tiles for a style (through Home Assistant), if there's a key: { url, attribution }.
+export function googleTiles(style) {
+  if (!gUrl) return null;
+  return { url: new URL(gUrl.replace('{style}', style), location.href).href.replace(/%7B/g, '{').replace(/%7D/g, '}'), attribution: GATTR };
+}
+
+// Ask Church Drive where Google's tiles are (once a page). Resolves true when
+// Google's maps can be used.
 export function useGoogle(hass) {
   if (gReady) return gReady;
   if (!hass || !hass.callWS) return Promise.resolve(false);
-  gReady = (async () => {
-    let key = null;
-    try {
-      key = (await hass.callWS({ type: 'church_drive/maps' })).tiles_key;
-    } catch (err) {
-      return false; // older Church Drive
-    }
-    const cache = gCache();
-    if (!key) {
-      if (cache.key) gSave({});
-      gMemory = {};
-      return false;
-    }
-    if (cache.key !== key) Object.assign(cache, { key, sessions: {} });
-    cache.sessions = cache.sessions || {};
-    for (const style of Object.keys(GSESSION)) {
-      const s = cache.sessions[style];
-      if (s && Number(s.expiry) * 1000 > Date.now() + 86400e3) continue;
-      try {
-        const r = await fetch(`${GTILES}/createSession?key=${encodeURIComponent(key)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(GSESSION[style]) });
-        const j = await r.json();
-        if (!r.ok || !j.session) throw new Error((j.error && j.error.message) || r.status);
-        cache.sessions[style] = { session: j.session, expiry: j.expiry };
-      } catch (err) {
-        console.warn('Church Drive maps: Google refused the Map Tiles key, so Esri maps are shown.', err && err.message);
-        delete cache.sessions[style];
-      }
-    }
-    gSave(cache);
-    gMemory = cache;
-    const ok = !!googleTiles('satellite') || !!googleTiles('street');
-    if (ok) window.dispatchEvent(new CustomEvent('cd-map-google'));
-    return ok;
-  })();
+  gReady = hass.callWS({ type: 'church_drive/maps' }).then(
+    (r) => {
+      gUrl = (r && r.tile_url) || null;
+      if (gUrl) window.dispatchEvent(new CustomEvent('cd-map-google'));
+      return !!gUrl;
+    },
+    () => false, // older Church Drive
+  );
   return gReady;
 }
 
-// Change a Leaflet's tile layers (once per Leaflet).
-function patch(L) {
-  if (!L || !L.TileLayer || L.TileLayer.prototype.__cdPatched) return;
-  const proto = L.TileLayer.prototype;
-  proto.__cdPatched = true;
-  const init = proto.initialize;
-  const onAdd = proto.onAdd;
-  const onRemove = proto.onRemove;
-  proto.initialize = function (url, options) {
-    const style = mapStyle();
-    if (style !== 'ha' && typeof url === 'string' && REPLACE.test(url)) {
-      const g = googleTiles(style);
-      if (g) return init.call(this, g.url, { ...(options || {}), attribution: g.attribution, subdomains: 'abc', maxNativeZoom: 20, detectRetina: false, tileSize: 256, zoomOffset: 0 });
-      // Esri for now; Google once its session is ready (see onAdd).
-      this.__cdWait = style;
-      const layer = MAP_LAYERS[style];
-      this.__cdLabels = layer.labels;
-      return init.call(this, layer.base, { ...(options || {}), attribution: ATTR, subdomains: 'abc', maxNativeZoom: 19, detectRetina: false, tileSize: 256, zoomOffset: 0 });
-    }
-    return init.call(this, url, options);
-  };
-  proto.onAdd = function (map) {
-    const out = onAdd.call(this, map);
-    if (this.__cdWait && !this.__cdListen) {
-      this.__cdListen = () => this.__cdToGoogle(map);
-      window.addEventListener('cd-map-google', this.__cdListen);
-    }
-    try {
-      if (this.__cdLabels && this.__cdLabels.length && !this.__cdOver) {
-        this.__cdOver = this.__cdLabels.map((u) => {
-          const over = new L.TileLayer(u, { maxNativeZoom: 19, maxZoom: this.options.maxZoom, zIndex: 5 });
-          over.__cdOverlay = true;
-          return over;
-        });
-      }
-      (this.__cdOver || []).forEach((o) => !map.hasLayer(o) && o.addTo(map));
-    } catch (err) {
-      /* labels are a nice-to-have */
-    }
-    return out;
-  };
-  // Swap an Esri layer for Google's once a session is ready.
-  proto.__cdToGoogle = function (map) {
-    const g = googleTiles(this.__cdWait);
-    if (!g || !this._map) return;
-    this.__cdWait = null;
-    window.removeEventListener('cd-map-google', this.__cdListen);
-    (this.__cdOver || []).forEach((o) => map.hasLayer(o) && map.removeLayer(o));
-    this.__cdOver = [];
-    this.__cdLabels = [];
-    if (map.attributionControl) {
-      map.attributionControl.removeAttribution(this.options.attribution);
-      map.attributionControl.addAttribution(g.attribution);
-    }
-    this.options.attribution = g.attribution;
-    this.options.maxNativeZoom = 20;
-    this.setUrl(g.url);
-  };
-  proto.onRemove = function (map) {
-    if (this.__cdListen) window.removeEventListener('cd-map-google', this.__cdListen);
-    this.__cdListen = null;
-    (this.__cdOver || []).forEach((o) => map.hasLayer(o) && map.removeLayer(o));
-    return onRemove.call(this, map);
-  };
+// The layers to draw for the chosen style: Google's, or Esri's (base, then labels).
+function layersFor(style) {
+  const g = googleTiles(style);
+  if (g) return [{ url: g.url, attribution: g.attribution, maxzoom: 20 }];
+  const e = MAP_LAYERS[style];
+  return [e.base, ...e.labels].map((url, i) => ({ url, attribution: i ? '' : ATTR, maxzoom: 19 }));
 }
 
-// Watch for Leaflet arriving (Home Assistant loads it when a map is first
-// shown). Runs once per page, even with the beta bundle loaded too.
-export function installMapStyle() {
-  if (window.__cdMapStyle) return;
-  window.__cdMapStyle = true;
-  try {
-    let current = window.L;
-    if (current) patch(current);
-    Object.defineProperty(window, 'L', {
-      configurable: true,
-      enumerable: true,
-      get: () => current,
-      set: (v) => {
-        current = v;
-        try {
-          patch(v);
-        } catch (err) {
-          /* leave Home Assistant's map as it is */
-        }
-      },
+// MapLibre: hide the style's own map (its vector and background layers) and
+// put the raster layers underneath whatever else is drawn (zones, people).
+function applyMaplibre(m) {
+  const st = m.getStyle && m.getStyle();
+  if (!st || !st.layers) return;
+  st.layers.filter((l) => l.id.startsWith(RASTER)).forEach((l) => m.removeLayer(l.id));
+  Object.keys(st.sources || {}).filter((s) => s.startsWith(RASTER)).forEach((s) => m.removeSource(s));
+  const style = mapStyle();
+  const own = st.layers.filter((l) => !l.id.startsWith(RASTER));
+  const isBase = (l) => l.type === 'background' || (l.source && st.sources[l.source] && st.sources[l.source].type === 'vector');
+  own.filter(isBase).forEach((l) => m.setLayoutProperty(l.id, 'visibility', style === 'ha' ? 'visible' : 'none'));
+  if (style === 'ha') return;
+  const before = own.length ? own[0].id : undefined;
+  layersFor(style).forEach((spec, i) => {
+    const id = `${RASTER}${i}`;
+    m.addSource(id, { type: 'raster', tiles: [spec.url], tileSize: 256, maxzoom: spec.maxzoom, attribution: spec.attribution || undefined });
+    m.addLayer({ id, type: 'raster', source: id }, before);
+  });
+}
+
+function hookMaplibre(m) {
+  if (m.__cdHooked) return m.__cdApply();
+  m.__cdHooked = true;
+  m.__cdApply = () => {
+    try {
+      if (m.isStyleLoaded()) applyMaplibre(m);
+      else m.once('idle', () => m.__cdApply());
+    } catch (err) {
+      /* leave Home Assistant's map as it is */
+    }
+  };
+  // A new style (Home Assistant swaps it for dark mode) drops the raster layers.
+  m.on('styledata', () => {
+    const st = m.getStyle && m.getStyle();
+    const want = mapStyle() !== 'ha';
+    const have = !!(st && st.sources && st.sources[`${RASTER}0`]);
+    if (want !== have) m.__cdApply();
+  });
+  m.__cdApply();
+}
+
+// Leaflet: point the base tile layer at the new tiles (labels as extra layers).
+function applyLeaflet(m) {
+  const style = mapStyle();
+  m.eachLayer((l) => {
+    if (l.__cdOverlay) m.removeLayer(l);
+  });
+  m.eachLayer((l) => {
+    if (!l.setUrl || !l._url || l.__cdOverlay) return;
+    if (!l.__cdOrig) l.__cdOrig = { url: l._url, max: l.options.maxNativeZoom };
+    if (style === 'ha') {
+      l.options.maxNativeZoom = l.__cdOrig.max;
+      l.setUrl(l.__cdOrig.url);
+      return;
+    }
+    const [base, ...labels] = layersFor(style);
+    l.options.maxNativeZoom = base.maxzoom;
+    l.setUrl(base.url);
+    labels.forEach((spec) => {
+      const over = new l.constructor(spec.url, { maxNativeZoom: spec.maxzoom, maxZoom: l.options.maxZoom, zIndex: 5 });
+      over.__cdOverlay = true;
+      over.addTo(m);
     });
+  });
+}
+
+const engines = new Set();
+
+function applyEngine(engine) {
+  const m = engine && engine._map;
+  if (!m) return false;
+  try {
+    if (typeof m.addSource === 'function') hookMaplibre(m);
+    else if (typeof m.eachLayer === 'function') applyLeaflet(m);
+    else return false;
   } catch (err) {
-    /* couldn't watch: Home Assistant keeps its own map */
+    return false;
   }
-  // Get the Google key once Home Assistant's connection is up.
+  return true;
+}
+
+function reapplyAll() {
+  engines.forEach((engine) => {
+    if (!engine._map) engines.delete(engine);
+    else applyEngine(engine);
+  });
+}
+
+// Watch each <ha-map> for its map engine (it sets one up after connecting,
+// and again after a fallback or rebuild).
+function hookHaMap(Cls) {
+  const proto = Cls.prototype;
+  if (proto.__cdHooked) return;
+  proto.__cdHooked = true;
+  const connected = proto.connectedCallback;
+  const disconnected = proto.disconnectedCallback;
+  proto.connectedCallback = function (...args) {
+    const out = connected && connected.apply(this, args);
+    watch(this);
+    return out;
+  };
+  proto.disconnectedCallback = function (...args) {
+    clearInterval(this.__cdWatch);
+    if (this.__cdEngine) engines.delete(this.__cdEngine);
+    this.__cdEngine = null;
+    return disconnected && disconnected.apply(this, args);
+  };
+  // Maps already on the page before this ran.
+  findAll(document, 'ha-map').forEach(watch);
+}
+
+// Every <tag> on the page, inside shadow roots too.
+function findAll(root, tag, out = []) {
+  root.querySelectorAll('*').forEach((el) => {
+    if (el.localName === tag) out.push(el);
+    if (el.shadowRoot) findAll(el.shadowRoot, tag, out);
+  });
+  return out;
+}
+
+// Check a map for a new engine: often at first, then every few seconds (an
+// engine can be rebuilt later, e.g. falling back to Leaflet).
+function watch(el) {
+  clearInterval(el.__cdWatch);
+  let ticks = 0;
+  const check = () => {
+    const engine = el._engine;
+    if (engine && engine !== el.__cdEngine && applyEngine(engine)) {
+      el.__cdEngine = engine;
+      engines.add(engine);
+    }
+  };
+  el.__cdWatch = setInterval(() => {
+    check();
+    if (++ticks === 60) {
+      clearInterval(el.__cdWatch);
+      el.__cdWatch = setInterval(check, 3000);
+    }
+  }, 250);
+}
+
+// Once per page, even with the beta bundle loaded too.
+export function installMapStyle() {
+  if (window.__cdMapStyle2) return;
+  window.__cdMapStyle2 = true;
+  try {
+    if (window.customElements) customElements.whenDefined('ha-map').then(hookHaMap);
+  } catch (err) {
+    /* Home Assistant keeps its own maps */
+  }
+  window.addEventListener('cd-map-google', reapplyAll);
+  window.addEventListener('cd-map-style', reapplyAll);
+  // Ask where Google's tiles are once Home Assistant's connection is up.
   let tries = 0;
   const look = () => {
     const ha = document.querySelector('home-assistant');

@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-01. Current release: **v0.31.3**.*
+*Last updated 2026-10-01. Current release: **v0.32.0**.*
 
 ## Where this stands
 
@@ -14,7 +14,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-01, v0.31.3 live, nothing on beta):**
+**Now (2026-10-02, v0.32.0 live, nothing on beta):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -310,6 +310,26 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **v0.32.0 (released 2026-10-02, restarted): Google maps through Home Assistant, on Home Assistant's own maps.**
+  - **HA 2026.9's maps are MapLibre** (Leaflet only as a fallback without WebGL2), and its
+    bundled Leaflet never sets `window.L`, so the old `window.L` patch never fired on real
+    pages: HA's maps were never swapped. Now `map-style.js` hooks `<ha-map>`
+    (`customElements.whenDefined`, patching connected/disconnected, plus a shadow-DOM walk
+    for maps already shown) and watches `el._engine._map`:
+    - MapLibre: hides the style's background and vector layers, adds raster sources/layers
+      `cd-raster-N` under everything else (zones and people stay on top), and re-applies on
+      `styledata` when HA swaps the style (dark mode).
+    - Leaflet: `setUrl` on the base tile layer, extra label layers for Esri.
+    - Esri satellite/street without a Google key; `ha` style restores HA's map.
+  - **Tile proxy (`maps.py`):** HA's page has `<meta name="referrer" content="same-origin">`, so
+    a referrer-locked Map Tiles key can't work from the browser. `MapTileView` at
+    `/api/church_drive/maptile/<style>/<z>/<x>/<y>?t=<token>` (no auth; the token comes from the
+    signed-in `church_drive/maps` command and changes each start) fetches from Google with HA's
+    external URL as Referer, caching sessions per style. `church_drive/maps` now returns
+    `tile_url` (the key never reaches the browser).
+  - Keys (2026-10-02): Map Tiles = "Maps Platform API Key" …7cx0 (websites: Nabu Casa,
+    homeassistant.local:8123, 192.168.4.136:8123); Places = "Church Drive search" …bzyU (no app
+    restriction, Places API (New) only). The …bReuE key isn't in the project; nothing uses it.
 - **v0.31.3 (released 2026-10-01, restarted): clip player controls.**
   - Under a playing clip (`.ce-bar` in `camera-events.js`): play/pause, time, a range
     timeline to scrub, length, Download and Full screen.
@@ -1902,6 +1922,24 @@ Integration modules (`custom_components/church_drive/`):
   `light.living_room_table_lights`.
 
 ## Open items
+
+- **Ring as the Church Drive account (job for later).** On 2026-10-02 the Ring
+  integration was briefly moved to church-drive-63@outlook.com (Advanced user under
+  Ring's Feb 2026 "User Permissions"), but Ring returned no devices to it
+  (diagnostics `device_data: []`, also after a fresh sign-in), so Hayley's account was
+  re-added. That entry and Ring-MQTT are still Hayley's; Ring shows HA's mode changes
+  as Hayley. An empty church-drive entry is kept. To try later, in order:
+  1. Hayley's app: Church Drive's per-device toggles all on; delete any old/offline Ring devices.
+  2. As Church Drive: Control Center › Authorized Client Devices, remove HA/Python sessions;
+     delete and re-add the Church Drive Ring entry; check for devices.
+  3. If still empty: sign Ring-MQTT in as Church Drive (different library) with Hayley on
+     hand to revert. Mode changes go through Ring-MQTT, so that's what shows the account.
+  - The user renamed the Ring devices (Front Doorbell, Driveway/Garden/Entrance/Living Room
+    Camera, Ring Chime). Their entity_ids were put back to the originals
+    (`camera.<x>_live_view`, `event.<x>_ding/_motion`, `sensor.<x>_last_activity`, …),
+    which events.py, the cards, links and automations use.
+  - Battery Notes left extra copies (`sensor.front_door_battery_plus_3`,
+    `sensor.garden_battery_plus_2`); Driveway's is now `sensor.driveway_battery_plus_2`.
 
 - **Future (not now): our own Android app.** The user wants home-screen widgets
   showing the panels, and later the same app for Android-based satellite

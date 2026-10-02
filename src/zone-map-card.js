@@ -7,8 +7,8 @@
 // Only administrators can change zones.
 //
 // The Satellite / Street buttons also set the style of every other map in
-// Home Assistant on this device (see map-style.js). Maps from Google when
-// Church Drive has a Map Tiles key (else Esri); search from Google Places
+// Home Assistant on this device (see map-style.js). Maps from Google (through
+// Home Assistant) when Church Drive has a Map Tiles key (else Esri); search from Google Places
 // when it has a Places key (Home Assistant searches, so that key stays
 // private), else OpenStreetMap (Nominatim). A search drops a pin; tap the pin
 // to make a zone there, named after the place.
