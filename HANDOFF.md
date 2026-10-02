@@ -1984,9 +1984,6 @@ Integration modules (`custom_components/church_drive/`):
   (the Go to footer only shows while the panel is open); sending the stale-device
   alert to the Pixel too.
 - "My Boy Hugo" is unavailable; the user may want to power-cycle or re-pair it.
-- **Zappi:** waiting for the myenergi hub serial and API key (a task is on Jamie's
-  list). Then run the myenergi config flow (CJNE/ha-myenergi is downloaded and
-  loaded). `ev-charger-card` finds the entities by itself.
 - **Presence:** the user plans presence sensors. The Lights "maybe left on" line
   picks up any motion, occupancy or presence binary sensor that has an area. Hue
   MotionAware would need a Bridge Pro (they have a BSB002).
