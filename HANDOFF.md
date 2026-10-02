@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-02. Current release: **v0.32.1**.*
+*Last updated 2026-10-02. Current release: **v0.32.2**.*
 
 ## Where this stands
 
@@ -14,7 +14,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-02, v0.32.1 live, nothing on beta):**
+**Now (2026-10-02, v0.32.2 live, nothing on beta):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -52,8 +52,10 @@ HACS as an integration. It does two jobs:
   - New (N1–N27): `church_drive_safety_alarms`, `_security_alerts`, `_house_alerts`,
     `_energy_alerts` (cheap rate is a quiet notification), `_system_alerts`,
     `_people_alerts`. "Nobody home" only counts when every person's location is known
-    (Diane and Ian don't share theirs yet). **Car (N17–N20) waits for the Zappi:** the
-    kinds are in Manager as waiting; write the automation once myenergi is set up.
+    (Diane and Ian don't share theirs yet). **Car (N17–N20)** is "Church Drive: car
+    alerts" (2026-10-02): plugged in, charging started/paused (5 minutes steady), charged
+    (`Completed`; rough cost to admins at the rate when it finished), and at 9pm "not
+    plugged in" when the next 12 hours have a rate under half of now's.
   - **Released in v0.27.0 (2026-10-01, reload-only), mock-ups https://claude.ai/artifact/A4d6pusQxNRdBe34qYZsnP:**
     `media-card` (style B, pop-up remote), `system-card`, `safety-card`, `people-card`,
     octopus-card `show: cheap`, climate-zone `type: outside`, grey ticks under All.
@@ -89,9 +91,13 @@ HACS as an integration. It does two jobs:
 - **Every setting is visual:** see "Everything from the UI" and its checklist.
   Run `tools/editors-smoke.mjs` before pushing.
 - **Waiting on the user:**
-  - The Zappi: myenergi hub serial number and API key. It's on Jamie's to-do list.
-    The card is ready on Energy and Home.
   - Presence sensors, for the Lights "maybe left on" line.
+  - The cars (2026-10-02): Stellantis Vehicles (HACS 839422993, domain `stellantis_vehicles`)
+    for the Vauxhall PHEV and VW Group Connect (HACS 1207816350, domain `vag_connect`) for the
+    VW full EV are downloaded and loaded, not signed in. The Stellantis remote login service
+    timed out (free Render worker); the user will do the manual code method on a laptop
+    (Chrome console `mymap://oauth2redirect…?code=`). On Jamie's to-do list. Then: battery %
+    on the charger card (work out which car is plugged in) and in "Car charged".
 - Nothing else is pending. Ideas the user hasn't asked for are under Open items.
 
 **New in v0.22.0 (2026-09-29): smoother panels, floating chips, page headers** (the user found the
@@ -310,6 +316,16 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **v0.32.2 (released 2026-10-02, reload-only): media card.** A TV asleep in standby
+  (unavailable, e.g. the LG) shows as Off; its power button runs `script.<player>_wake` when
+  there is one (Wake-on-LAN); "Turning on…/off…" shows straight away until the TV reports
+  (at most 45 s).
+- **After v0.32.1 (live config, no release):** garden and front door sensors are motion only
+  (their temperatures hidden; the Climate panel's Outside zone removed and "Outside" and the
+  frost alert use `weather.forecast_home`). The alarm-mode notification names the HA user who
+  changed it (`trigger.to_state.context.user_id` → person); keypad / Ring app changes wait up
+  to 20 s for Ring's `lastDisarmedBy` / `lastArmedBy` (it lags the state, and HA's own changes
+  show as Hayley, the Ring account). Zappi connected and car alerts written (see above).
 - **v0.32.1 (released 2026-10-02, restarted): map switch and nearest zone.**
   - Home Assistant's own maps (person more-info, zones page) get a Satellite / Street
     switch top right (`addSwitch` in `src/map-style.js`, a Leaflet control). It shares
@@ -684,7 +700,13 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
     - Octoplus (#f050f8, `mdi:gift-outline`).
     Every Mobile nav bar has an Energy page (`admin_only`) and `icons_only: true`.
   - Home has a **Car charger** panel for everyone (after Climate).
-  - **Zappi:** the HACS integration CJNE/ha-myenergi (id 401145616) is downloaded. HA
+  - **Zappi (connected 2026-10-02):** myenergi entry `01M3YEKEVKPTN4PZH6EGDMMH3V`, hub
+    serial 20220859; device "Zappi", entities tidied to `*.zappi_*` (`select.zappi_charge_mode`,
+    `sensor.zappi_plug_status`, `_status`, `_charge_added_session`, `_charging_power` (CT1),
+    `_grid_power` (CT2), `_energy_used_today`, …).
+    Plug values: EV Disconnected / EV Connected / Waiting for EV / EV ready to charge /
+    Charging / Fault; status: Paused / Charging / Boosting / Completed.
+    Earlier notes: the HACS integration CJNE/ha-myenergi (id 401145616) is downloaded. HA
     restarted at about 21:28 on 2026-09-30, which should have loaded it. It still needs a
     config flow with the hub serial and API key, which the user will send. "Set up the
     Zappi charger" is on Jamie's to-do list (`todo.priorities_jamie`) as a reminder;
@@ -1947,8 +1969,11 @@ Integration modules (`custom_components/church_drive/`):
     Camera, Ring Chime). Their entity_ids were put back to the originals
     (`camera.<x>_live_view`, `event.<x>_ding/_motion`, `sensor.<x>_last_activity`, …),
     which events.py, the cards, links and automations use.
-  - Battery Notes left extra copies (`sensor.front_door_battery_plus_3`,
-    `sensor.garden_battery_plus_2`); Driveway's is now `sensor.driveway_battery_plus_2`.
+  - Battery Notes for the Ring cameras: the kept notes are on the Ring-MQTT devices
+    (`sensor.front_door_battery_plus_3`, `sensor.driveway_battery_plus_2`,
+    `sensor.garden_battery_plus_2`, used by Battery Status, the automatic to-dos and "Any
+    Battery Low"). The copies on the Ring integration's devices were removed 2026-10-02;
+    if Battery Notes offers them again as discovered, ignore them.
 
 - **Future (not now): our own Android app.** The user wants home-screen widgets
   showing the panels, and later the same app for Android-based satellite
@@ -1966,9 +1991,12 @@ Integration modules (`custom_components/church_drive/`):
   (the Go to footer only shows while the panel is open); sending the stale-device
   alert to the Pixel too.
 - "My Boy Hugo" is unavailable; the user may want to power-cycle or re-pair it.
-- **Zappi:** waiting for the myenergi hub serial and API key (a task is on Jamie's
-  list). Then run the myenergi config flow (CJNE/ha-myenergi is downloaded and
-  loaded). `ev-charger-card` finds the entities by itself.
+- **LG TV turn-on (done 2026-10-02, live config):** two Wake on LAN entries (wired
+  64:E4:A5:F4:ED:8E, Wi-Fi 54:B7:BD:FA:3B:FC; "Turn on via Wi-Fi" is on), `script.living_room_tv_wake`
+  sends both, "Living Room TV: turn on" (`webostv.turn_on` trigger) runs it. The media card
+  (beta) shows an asleep TV as Off and its power button runs `script.<player>_wake` when one
+  exists. Removed: the stale DLNA entries (the Windows PC renderer, an unknown "Bedroom") and
+  the empty LG ThinQ entry (ThinQ doesn't cover webOS TVs).
 - **Presence:** the user plans presence sensors. The Lights "maybe left on" line
   picks up any motion, occupancy or presence binary sensor that has an area. Hue
   MotionAware would need a Bridge Pro (they have a BSB002).
