@@ -20,6 +20,8 @@
 // (the default), 'street', or 'ha' for Home Assistant's own. The zone map
 // card's Satellite / Street buttons set it.
 
+import { SUFFIX } from './suffix.js';
+
 const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services';
 const ATTR = 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community';
 export const MAP_LAYERS = {
@@ -251,7 +253,27 @@ function findAll(root, tag, out = []) {
 
 // Check a map for a new engine: often at first, then every few seconds (an
 // engine can be rebuilt later, e.g. falling back to Leaflet).
+// Beta only, for now: what a map looks like on this device, into Home
+// Assistant's log (to fix maps that aren't swapped).
+function mapDebug(el, when) {
+  if (!SUFFIX) return;
+  try {
+    const ha = document.querySelector('home-assistant');
+    const hass = ha && ha.hass;
+    if (!hass) return;
+    const own = Object.getOwnPropertyNames(el).filter((k) => /map|leaf|engine|layer|base/i.test(k));
+    const m = el.leafletMap || (el._engine && el._engine._map);
+    const layers = [];
+    if (m && m.eachLayer) m.eachLayer((l) => layers.push({ ctor: l.constructor && l.constructor.name, ml: typeof l.getMaplibreMap === 'function', url: l._url ? String(l._url).slice(0, 60) : null, ours: !!l.__cdOurs }));
+    const info = { when, own, leafletMap: !!el.leafletMap, Leaflet: !!el.Leaflet, engine: !!el._engine, maplibre: !!(m && m.addSource), layers, gUrl: !!gUrl, style: mapStyle(), key: !!el.__cdKey, hooked: !!(customElements.get('ha-map') && customElements.get('ha-map').prototype.__cdHooked3) };
+    hass.callService('system_log', 'write', { message: `Map debug: ${JSON.stringify(info)}`, level: 'warning', logger: 'church_drive.maps' });
+  } catch (err) {
+    /* debugging only */
+  }
+}
+
 function watch(el) {
+  setTimeout(() => mapDebug(el, 'after 4s'), 4000);
   clearInterval(el.__cdWatch);
   let ticks = 0;
   const check = () => {
