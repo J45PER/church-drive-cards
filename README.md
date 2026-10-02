@@ -287,8 +287,9 @@ browser; `ha` would put Home Assistant's back).
 
 **Google maps (optional):** in Church Drive's settings (**Configure › Google maps**), a
 Google **Map Tiles API** key switches these maps to Google's satellite (with shop, road
-and place names) and road maps; lock that key to Home Assistant's web addresses, as
-browsers use it. A Google **Places API (New)** key makes the search find shops and
+and place names) and road maps; lock that key to Home Assistant's web addresses. Home
+Assistant fetches the tiles (giving its own address), so the key never reaches a browser,
+and Home Assistant's own maps (MapLibre or Leaflet) get them too. A Google **Places API (New)** key makes the search find shops and
 businesses; Home Assistant does the searching, so that key never reaches a browser.
 Without keys (or if Google refuses one) it uses Esri and OpenStreetMap. A search drops a
 pin; tap the pin to start a zone there, named after the place.
