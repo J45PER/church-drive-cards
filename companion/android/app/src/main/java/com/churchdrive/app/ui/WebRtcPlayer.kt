@@ -63,14 +63,15 @@ fun WebRtcPlayer(entityId: String, muted: Boolean, modifier: Modifier = Modifier
 }
 
 /**
- * The order the offer's media sections are set up in. Home Assistant's own player uses the first (a data
- * channel, then audio, then video); if a camera's answer comes back in another order, the others are tried.
+ * The media sections the offer is set up with, tried in turn if a camera rejects the answer's order. Home Assistant's
+ * cameras here answer with just video then audio (no data channel), so that comes first.
  */
 private val ORDERS = listOf(
-    listOf("data", "audio", "video"),
-    listOf("audio", "video", "data"),
+    listOf("video", "audio"),
+    listOf("audio", "video"),
+    listOf("video"),
     listOf("video", "audio", "data"),
-    listOf("data", "video", "audio"),
+    listOf("data", "audio", "video"),
 )
 
 /** One live view's connection. Everything is cleaned up by [close]. */
