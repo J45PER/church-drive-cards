@@ -85,16 +85,25 @@ class SceneLooksTest {
     }
 
     @Test
-    fun picksDarkOrWhiteTextByContrast() {
-        // Bright, pastel and warm tiles take dark text; deep ones keep white.
-        assertEquals(true, SceneLooks.darkInkOn(listOf(argb(0xFFF1D6), argb(0xFFD9A0))))                      // Bright
-        assertEquals(true, SceneLooks.darkInkOn(listOf(argb(0xFFC8D3), argb(0xFF95AB), argb(0xFF618B))))      // Ruby glow
-        assertEquals(true, SceneLooks.darkInkOn(listOf(argb(0xFFB36B), argb(0xE07A3A))))                      // Relax
-        assertEquals(true, SceneLooks.darkInkOn(listOf(argb(0xFF2778), argb(0xFFA06F), argb(0xFF6F9A), argb(0x8313FF), argb(0x67FFDB)))) // Soho
-        assertEquals(true, SceneLooks.darkInkOn(listOf(argb(0x3A92FF), argb(0x9DF6FF), argb(0xFF9B6B))))      // Phantom
-        assertEquals(false, SceneLooks.darkInkOn(listOf(argb(0xA8793A), argb(0x5C3D1A))))                     // Dimmed
-        assertEquals(false, SceneLooks.darkInkOn(listOf(argb(0x7A2E10), argb(0x3A1408))))                     // Nightlight
-        assertEquals(false, SceneLooks.darkInkOn(listOf(argb(0xE26779), argb(0x7862FF), argb(0x3695FF))))     // Cyber fidelity, as drawn
-        assertEquals(false, SceneLooks.darkInkOn(listOf(argb(0x3A2552), argb(0x1C3358))))                     // deep purple and navy
+    fun picksDarkOrWhiteTextFromTheMiddleOfTheGradient() {
+        // Colours are the real library ones. Light and warm tiles take dark text; deep ones keep white.
+        fun dark(vararg c: Long) = SceneLooks.darkInkOn(c.map { argb(it) })
+        assertEquals(true, dark(0xFFF1D6, 0xFFD9A0))                                    // Bright
+        assertEquals(true, dark(0xFFC8D3, 0xFFADBE, 0xFF95AB, 0xFF7B9C, 0xFF618B))      // Ruby glow
+        assertEquals(true, dark(0xFFB36B, 0xE07A3A))                                    // Relax
+        assertEquals(true, dark(0xFF2778, 0xFFA06F, 0xFF6F9A, 0x8313FF, 0x67FFDB))      // Soho
+        assertEquals(true, dark(0x3A92FF, 0x3AD0FF, 0x9DF6FF, 0xFFBDAA, 0xFF9B6B))      // Phantom
+        assertEquals(false, dark(0xA8793A, 0x5C3D1A))                                   // Dimmed
+        assertEquals(false, dark(0x7A2E10, 0x3A1408))                                   // Nightlight
+        assertEquals(false, dark(0xFF7B39, 0xA63EFF, 0x00BFFF))                         // Cyber Fidelity: orange, purple, blue
+        assertEquals(false, dark(0x3900FF, 0x3A3DFF, 0x398BFF, 0x38A8FF, 0x38E7FF))     // Motown
+        assertEquals(false, dark(0xB526FF, 0x3AB1FF, 0x4996FF, 0x3C65FF, 0x481CFF))     // City Blue
+    }
+
+    @Test
+    fun theMiddleColourOfAGradient() {
+        assertEquals(argb(0x808080), SceneLooks.middleColour(listOf(argb(0x000000), argb(0xFFFFFF))))
+        assertEquals(argb(0xA63EFF), SceneLooks.middleColour(listOf(argb(0xFF7B39), argb(0xA63EFF), argb(0x00BFFF))))
+        assertEquals(argb(0x123456), SceneLooks.middleColour(listOf(argb(0x123456))))
     }
 }

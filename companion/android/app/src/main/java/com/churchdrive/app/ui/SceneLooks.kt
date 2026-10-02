@@ -119,14 +119,30 @@ class SceneLooks(val library: Map<String, LibraryScene>, val styles: Map<String,
             return 0.2126 * lin(c shr 16 and 0xFF) + 0.7152 * lin(c shr 8 and 0xFF) + 0.0722 * lin(c and 0xFF)
         }
 
+        /** The colour in the middle of an evenly spaced gradient (where a tile's icon and name sit), blended in sRGB. */
+        fun middleColour(colours: List<Int>): Int {
+            if (colours.size == 1) return colours[0]
+            val n = colours.size - 1
+            val t = 0.5 * n
+            val i = min(t.toInt(), n - 1)
+            val f = t - i
+            fun channel(shift: Int): Int {
+                val a = colours[i] shr shift and 0xFF
+                val b = colours[i + 1] shr shift and 0xFF
+                return (a + (b - a) * f).roundToInt()
+            }
+            return argb(channel(16), channel(8), channel(0))
+        }
+
         /**
-         * Whether dark text reads better than white on a tile with these colours. Plain contrast maths puts the
-         * line at about 0.18 luminance, but saturated blues and purples look darker than that suggests and read
-         * better with white text, so the line is set higher (0.30), tuned on the real tiles: bright, pastel and
-         * warm scenes (Bright, Relax, Soho, Ruby glow, Phantom) get dark text; deep ones (Dimmed, Nightlight,
-         * Cyber fidelity) keep white.
+         * Whether dark text reads better than white on a tile with these colours. It's judged on the colour
+         * in the middle of the gradient, where the text actually is, not the average (a scene that's orange,
+         * purple and blue has a purple middle and wants white). The line is 0.32 luminance, higher than plain
+         * contrast maths (0.18) because saturated blues and purples look darker than the maths says. Tuned on
+         * the real library: Bright, Relax, Soho, Ruby glow and Phantom get dark text; Dimmed, Nightlight and
+         * Cyber Fidelity keep white.
          */
-        fun darkInkOn(colours: List<Int>): Boolean = colours.map { luminance(it) }.average() > 0.30
+        fun darkInkOn(colours: List<Int>): Boolean = luminance(middleColour(colours)) > 0.32
 
         private fun pair(c: List<Int>) = if (c.size == 1) listOf(c[0], c[0]) else c
 
