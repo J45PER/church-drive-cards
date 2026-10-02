@@ -1,0 +1,27 @@
+name: Companion Android
+
+on:
+  push:
+    branches: [companion-apps]
+    paths: ["companion/android/**", ".github/workflows/companion-android.yml"]
+  pull_request:
+    paths: ["companion/android/**", ".github/workflows/companion-android.yml"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: companion/android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew testDebugUnitTest assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: church-drive-debug-apk
+          path: companion/android/app/build/outputs/apk/debug/*.apk
