@@ -52,8 +52,10 @@ HACS as an integration. It does two jobs:
   - New (N1–N27): `church_drive_safety_alarms`, `_security_alerts`, `_house_alerts`,
     `_energy_alerts` (cheap rate is a quiet notification), `_system_alerts`,
     `_people_alerts`. "Nobody home" only counts when every person's location is known
-    (Diane and Ian don't share theirs yet). **Car (N17–N20) waits for the Zappi:** the
-    kinds are in Manager as waiting; write the automation once myenergi is set up.
+    (Diane and Ian don't share theirs yet). **Car (N17–N20)** is "Church Drive: car
+    alerts" (2026-10-02): plugged in, charging started/paused (5 minutes steady), charged
+    (`Completed`; rough cost to admins at the rate when it finished), and at 9pm "not
+    plugged in" when the next 12 hours have a rate under half of now's.
   - **Released in v0.27.0 (2026-10-01, reload-only), mock-ups https://claude.ai/artifact/A4d6pusQxNRdBe34qYZsnP:**
     `media-card` (style B, pop-up remote), `system-card`, `safety-card`, `people-card`,
     octopus-card `show: cheap`, climate-zone `type: outside`, grey ticks under All.
@@ -89,8 +91,6 @@ HACS as an integration. It does two jobs:
 - **Every setting is visual:** see "Everything from the UI" and its checklist.
   Run `tools/editors-smoke.mjs` before pushing.
 - **Waiting on the user:**
-  - The Zappi: myenergi hub serial number and API key. It's on Jamie's to-do list.
-    The card is ready on Energy and Home.
   - Presence sensors, for the Lights "maybe left on" line.
 - Nothing else is pending. Ideas the user hasn't asked for are under Open items.
 
@@ -310,6 +310,12 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **After v0.32.1 (live config, no release):** garden and front door sensors are motion only
+  (their temperatures hidden; the Climate panel's Outside zone removed and "Outside" and the
+  frost alert use `weather.forecast_home`). The alarm-mode notification names the HA user who
+  changed it (`trigger.to_state.context.user_id` → person); keypad / Ring app changes wait up
+  to 20 s for Ring's `lastDisarmedBy` / `lastArmedBy` (it lags the state, and HA's own changes
+  show as Hayley, the Ring account). Zappi connected and car alerts written (see above).
 - **v0.32.1 (released 2026-10-02, restarted): map switch and nearest zone.**
   - Home Assistant's own maps (person more-info, zones page) get a Satellite / Street
     switch top right (`addSwitch` in `src/map-style.js`, a Leaflet control). It shares
@@ -684,7 +690,12 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
     - Octoplus (#f050f8, `mdi:gift-outline`).
     Every Mobile nav bar has an Energy page (`admin_only`) and `icons_only: true`.
   - Home has a **Car charger** panel for everyone (after Climate).
-  - **Zappi:** the HACS integration CJNE/ha-myenergi (id 401145616) is downloaded. HA
+  - **Zappi (connected 2026-10-02):** myenergi entry `01M3YEKEVKPTN4PZH6EGDMMH3V`, hub
+    serial 20220859; entities are `*.zappi_20220859_myenergi_zappi_20220859_*` (charge mode
+    select, plug_status, status, charge_added_session, internal_load_ct1 = charging power).
+    Plug values: EV Disconnected / EV Connected / Waiting for EV / EV ready to charge /
+    Charging / Fault; status: Paused / Charging / Boosting / Completed.
+    Earlier notes: the HACS integration CJNE/ha-myenergi (id 401145616) is downloaded. HA
     restarted at about 21:28 on 2026-09-30, which should have loaded it. It still needs a
     config flow with the hub serial and API key, which the user will send. "Set up the
     Zappi charger" is on Jamie's to-do list (`todo.priorities_jamie`) as a reminder;
