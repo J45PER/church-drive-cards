@@ -120,6 +120,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         _signedIn.value = false
     }
 
+    /** Home Assistant's address, for pictures and video links. */
+    val baseUrl: String get() = session.url?.trim()?.trimEnd('/').orEmpty()
+
+    /** A live (HLS) stream of a camera: its link (relative to the address), or null if Home Assistant can't give one. */
+    fun cameraStream(entityId: String, done: (String?) -> Unit) {
+        client.request("camera/stream", data("entity_id" to entityId, "format" to "hls")) { result ->
+            done((result as? org.json.JSONObject)?.optString("url")?.takeIf { it.isNotBlank() })
+        }
+    }
+
     fun call(domain: String, service: String, entityId: String, data: org.json.JSONObject) =
         client.callService(domain, service, entityId, data)
 

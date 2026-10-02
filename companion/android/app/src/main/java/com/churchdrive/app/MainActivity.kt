@@ -15,6 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.churchdrive.app.ui.ChurchDriveTheme
 import com.churchdrive.app.ui.HomeScreen
+import com.churchdrive.app.ui.LocalBaseUrl
+import com.churchdrive.app.ui.LocalCameraStream
 import com.churchdrive.app.ui.LocalSceneLooks
 import com.churchdrive.app.ui.LocalTemplates
 import com.churchdrive.app.ui.LoginScreen
@@ -43,7 +45,12 @@ class MainActivity : ComponentActivity() {
                         val panels by vm.panels.collectAsStateWithLifecycle()
                         val registry by vm.registry.collectAsStateWithLifecycle()
                         val areaNames by vm.areaNames.collectAsStateWithLifecycle()
-                        CompositionLocalProvider(LocalSceneLooks provides sceneLooks, LocalTemplates provides vm.templates) {
+                        CompositionLocalProvider(
+                            LocalSceneLooks provides sceneLooks,
+                            LocalTemplates provides vm.templates,
+                            LocalBaseUrl provides vm.baseUrl,
+                            LocalCameraStream provides vm::cameraStream,
+                        ) {
                             if (signedIn) {
                                 HomeScreen(
                                     connection = connection,
