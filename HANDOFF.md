@@ -4,6 +4,15 @@
 
 ## Where this stands
 
+**Mirror card (branch `mirror-card`, beta only, 2026-10-02).** `custom:mirror-card` shows
+another page's card on this one (Home's Kitchen lights = the Lighting page's Kitchen card),
+picked in the visual editor: dashboard, page, card. Logic is in `src/mirror.js` (tested in
+`test/mirror.test.mjs`): a card is keyed by its area, else entity, else name (`area:kitchen`,
+`#2` for repeats). It reads `lovelace/config`, reloads on the `lovelace_updated` event,
+and forwards the Section Panel's compact mode. The companion Android app follows mirrors too
+(`DashboardLights.kt` has to keep the same keys). Not released: waits for the user's test on
+the Beta channel, then "release it".
+
 This repo (`github.com/J45PER/church-drive-cards`, public) is the **Church Drive**
 Home Assistant integration (`custom_components/church_drive`). It's installed through
 HACS as an integration. It does two jobs:
