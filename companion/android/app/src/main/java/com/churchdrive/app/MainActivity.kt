@@ -3,10 +3,10 @@ package com.churchdrive.app
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
@@ -21,15 +21,16 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         setContent {
             ChurchDriveTheme {
-                // The surface fills the whole window (behind the system bars); content is kept clear of them.
+                // Edge to edge: the surface fills the window, and each screen keeps its content clear of the system bars.
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                     contentColor = MaterialTheme.colorScheme.onBackground,
                 ) {
-                    Box(modifier = Modifier.safeDrawingPadding()) {
+                    Box {
                         val signedIn by vm.signedIn.collectAsStateWithLifecycle()
                         val connection by vm.connection.collectAsStateWithLifecycle()
                         val entities by vm.entities.collectAsStateWithLifecycle()
