@@ -84,6 +84,7 @@ from .const import (
     WS_SCENE_SAVE,
 )
 from .events import URL as EVENTS_URL, CameraEvents, EventFileView
+from .maps import GoogleTiles, MapTileView
 from .health import DeviceHealth
 from .hue import async_sync
 from .library import Library, normalise
@@ -410,10 +411,11 @@ def _maps_option(hass: HomeAssistant, key: str) -> str:
 @websocket_api.websocket_command({vol.Required("type"): WS_MAPS})
 @callback
 def ws_maps(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
-    """The Google Map Tiles key (browsers draw the tiles) and whether Places search is set up."""
+    """Where browsers get Google's map tiles (through Home Assistant), and whether Places search is set up."""
+    tiles: GoogleTiles | None = hass.data.get(DOMAIN, {}).get("tiles")
     connection.send_result(
         msg["id"],
-        {"tiles_key": _maps_option(hass, CONF_MAPS_TILES_KEY) or None, "places": bool(_maps_option(hass, CONF_MAPS_PLACES_KEY))},
+        {"tile_url": tiles.url() if tiles else None, "places": bool(_maps_option(hass, CONF_MAPS_PLACES_KEY))},
     )
 
 
@@ -528,6 +530,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception:  # noqa: BLE001
         _LOGGER.exception("Camera events couldn't start; everything else still works")
         data["events"] = None
+
+    # Google map tiles through Home Assistant (maps.py), with a Map Tiles key.
+    key = (entry.options.get(CONF_MAPS_TILES_KEY) or "").strip()
+    data["tiles"] = GoogleTiles(hass, key) if key else None
+    if "tiles_view" not in data:
+        hass.http.register_view(MapTileView(hass))
+        data["tiles_view"] = True
 
     async def notify(call: ServiceCall) -> ServiceResponse:
         if data.get("people") is None:
