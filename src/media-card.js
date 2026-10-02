@@ -119,6 +119,20 @@ export class MediaCard extends HTMLElement {
     return st.state === 'unavailable' && (st.attributes.device_class === 'tv' || /tv|streamer/i.test(st.entity_id));
   }
 
+  // A TV that can't hear turn_on while asleep can name a script.<player>_wake
+  // (e.g. Wake-on-LAN): the power button runs that instead.
+  _wake(st) {
+    if (!this._asleep(st)) return '';
+    const id = `script.${st.entity_id.split('.')[1]}_wake`;
+    return this._states()[id] ? id : '';
+  }
+
+  _powerOn(st) {
+    const w = this._wake(st);
+    if (w) this._call('script', 'turn_on', { entity_id: w });
+    else this._call('media_player', 'turn_on', { entity_id: st.entity_id });
+  }
+
   _sub(st) {
     const a = st.attributes;
     if (this._asleep(st)) return 'Off';
@@ -174,7 +188,8 @@ export class MediaCard extends HTMLElement {
       return;
     }
     if (PLAYING.includes(st.state)) this._call('media_player', 'media_play_pause', { entity_id: st.entity_id });
-    else this._call('media_player', st.state === 'off' ? 'turn_on' : 'turn_off', { entity_id: st.entity_id });
+    else if (st.state === 'off' || this._asleep(st)) this._powerOn(st);
+    else this._call('media_player', 'turn_off', { entity_id: st.entity_id });
   }
 
   _render() {
@@ -216,7 +231,7 @@ export class MediaCard extends HTMLElement {
             const name = st.attributes.friendly_name || st.entity_id;
             const act = live
               ? `<button type="button" class="mc-btn" data-act="1" data-id="${kitEsc(st.entity_id)}" aria-label="${st.state === 'playing' ? 'Pause' : 'Play'} ${kitEsc(name)}">${iconHtml(st.state === 'playing' ? 'mdi:pause' : 'mdi:play', { size: '20px' })}</button>`
-              : st.state === 'unavailable'
+              : st.state === 'unavailable' && !this._wake(st)
                 ? ''
                 : `<button type="button" class="mc-btn" data-act="1" data-id="${kitEsc(st.entity_id)}" aria-label="Turn ${on ? 'off' : 'on'} ${kitEsc(name)}" style="${on ? `color:${colour};` : ''}">${iconHtml('mdi:power', { size: '20px' })}</button>`;
             return `<div class="mc-row">
@@ -287,7 +302,7 @@ export class MediaCard extends HTMLElement {
           <span></span>${btn('down', 'mdi:chevron-down', 'Down', '', '')}<span></span></div>
           <div class="mcp-wide"><button type="button" data-p="back">${iconHtml('mdi:arrow-left', { size: '18px' })}Back</button><button type="button" data-p="home">${iconHtml('mdi:home', { size: '18px' })}Home</button></div>`;
     }
-    if (st.state !== 'unavailable')
+    if (st.state !== 'unavailable' || this._wake(st))
       html += `<div class="mcp-wide"><button type="button" data-p="power" style="${on ? '' : `background:${colour}; color:#fff;`}">${iconHtml('mdi:power', { size: '18px' })}${on ? 'Turn off' : 'Turn on'}</button></div>`;
     this._popBody.innerHTML = html;
     const vol = this._popBody.querySelector('input[type=range]');
@@ -308,7 +323,8 @@ export class MediaCard extends HTMLElement {
     if (p === 'playpause' || p === 'power') {
       if (p === 'power' || !PLAYING.includes(st.state)) {
         if (this.config.demo) st.state = ON.includes(st.state) ? 'off' : 'on';
-        else this._call('media_player', ON.includes(st.state) ? 'turn_off' : 'turn_on', { entity_id: id });
+        else if (ON.includes(st.state)) this._call('media_player', 'turn_off', { entity_id: id });
+        else this._powerOn(st);
         if (p === 'playpause' && !this.config.demo) this._call('media_player', 'media_play', { entity_id: id });
       } else this._toggle(st);
     } else if (p === 'prev') this._call('media_player', 'media_previous_track', { entity_id: id });
