@@ -20,19 +20,15 @@ This branch is a scratch space for design; nothing here ships with the HACS inte
 
 ## Decisions
 
-- **Android apps are native** (Kotlin + Jetpack Compose), not a wrapper around the HA
-  frontend. They talk to HA over its WebSocket/REST API and draw their own UI.
-- Each kiosk has its own screen (layout) and its own HA user/token, so one tablet can
-  be changed or revoked without affecting the others.
-
-## Consequences of going native
-
-- The existing Lovelace cards (`src/`, JavaScript) can't run in a native UI. Each
-  card a kiosk needs (light control, alarm panel, etc.) has to be rebuilt in Compose.
-- So the native app needs its own screen definitions: which cards, in what layout,
-  per kiosk. Preferred: stored in HA via the Church Drive integration, so the manager
-  can edit them and the kiosk fetches them, instead of baking them into the APK.
-- Possible hybrid: a native shell with a "web card" tile for anything not yet ported.
+- **Kiosk app: native Android shell + WebView running the existing JavaScript cards.**
+  The shell (Kotlin) handles device control (full-screen, kiosk lock, screen/brightness,
+  boot start, state reporting to HA). The screen itself is web, so the cards in `src/`
+  are reused as they are.
+- **User app: native UI (Kotlin + Jetpack Compose), curated.** A limited set of screens
+  (alarm, a few lights/scenes, cameras, notifications, presence), not a full dashboard.
+  Only the controls it needs are built natively.
+- Each kiosk has its own screen (a dashboard URL) and its own HA user/token, so one
+  tablet can be changed or revoked without affecting the others.
 
 ## Open questions
 
