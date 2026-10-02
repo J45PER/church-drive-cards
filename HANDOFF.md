@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-02. Current release: **v0.32.1**.*
+*Last updated 2026-10-02. Current release: **v0.32.2**.*
 
 ## Where this stands
 
@@ -14,7 +14,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-02, v0.32.1 live, nothing on beta):**
+**Now (2026-10-02, v0.32.2 live, nothing on beta):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -316,6 +316,10 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **v0.32.2 (released 2026-10-02, reload-only): media card.** A TV asleep in standby
+  (unavailable, e.g. the LG) shows as Off; its power button runs `script.<player>_wake` when
+  there is one (Wake-on-LAN); "Turning on…/off…" shows straight away until the TV reports
+  (at most 45 s).
 - **After v0.32.1 (live config, no release):** garden and front door sensors are motion only
   (their temperatures hidden; the Climate panel's Outside zone removed and "Outside" and the
   frost alert use `weather.forecast_home`). The alarm-mode notification names the HA user who
