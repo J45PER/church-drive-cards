@@ -275,7 +275,13 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
 /** A scene as a tile: its colours as a gradient, an icon and its name; the playing scene has a ring. */
 @Composable
 private fun SceneTile(scene: LightScene, active: Boolean, dimmed: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    val colours = SCENE_COLOURS[scene.key] ?: listOf(Color(0xFF9AA0A6), Color(0xFF5F6368))
+    val looks = LocalSceneLooks.current
+    // The look set on the dashboards, then the scene's own colours; then a built-in look, then one worked out
+    // from a white scene's colour temperature; and last, a colour made from its name so tiles aren't all alike.
+    val colours = (looks.colours(scene.key, scene.name)?.map { Color(it) }
+        ?: SCENE_COLOURS[scene.key]
+        ?: looks.whiteColours(scene.key, scene.name)?.map { Color(it) }
+        ?: nameColours(scene.key))
     val ink = if (colours.map { it.luminance() }.average() > 0.55) Color(0xFF202124) else Color.White
     val shape = RoundedCornerShape(18.dp)
     Box(
@@ -289,7 +295,7 @@ private fun SceneTile(scene: LightScene, active: Boolean, dimmed: Boolean, modif
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Icon(sceneIcon(scene.key), contentDescription = null, tint = ink, modifier = Modifier.size(20.dp))
+            HaIcon(looks.icon(scene.key, scene.name), sceneIcon(scene.key), ink, 20.dp)
             Text(
                 scene.name, color = ink, maxLines = 1,
                 overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 3.dp),
@@ -302,6 +308,13 @@ private fun SceneTile(scene: LightScene, active: Boolean, dimmed: Boolean, modif
             )
         }
     }
+}
+
+/** A steady pair of colours made from a scene's key, for a scene nothing else describes. */
+private fun nameColours(key: String): List<Color> {
+    var h = 0
+    for (c in key) h = (h * 31 + c.code) % 360
+    return listOf(Color.hsv(h.toFloat(), 0.55f, 0.85f), Color.hsv(((h + 50) % 360).toFloat(), 0.6f, 0.55f))
 }
 
 private fun brightnessPct(light: EntityState?): Int =

@@ -10,6 +10,7 @@ import com.churchdrive.app.ha.IconPack
 import com.churchdrive.app.ha.data
 import com.churchdrive.app.ui.DashboardLights
 import com.churchdrive.app.ui.LightLayout
+import com.churchdrive.app.ui.SceneLooks
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -25,6 +26,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _lights = MutableStateFlow(LightLayout.Fallback)
     val lights: StateFlow<LightLayout> = _lights
+
+    private val _sceneLooks = MutableStateFlow(SceneLooks.Empty)
+    val sceneLooks: StateFlow<SceneLooks> = _sceneLooks
+    private var libraryResult: Any? = null
+    private var stylesDashboard: org.json.JSONObject? = null
 
     private val _areaNames = MutableStateFlow<Map<String, String>>(emptyMap())
     val areaNames: StateFlow<Map<String, String>> = _areaNames
@@ -48,6 +54,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             (config as? org.json.JSONObject)?.let { _lights.value = DashboardLights.parse(it) }
         }
         client.request("config/area_registry/list") { _areaNames.value = DashboardLights.areaNames(it) }
+        // Each scene's colours and icon: Church Drive's scene library, and the looks set in the Scene Styles card.
+        client.request("church_drive/library") {
+            libraryResult = it
+            _sceneLooks.value = SceneLooks.parse(libraryResult, stylesDashboard)
+        }
+        client.request("lovelace/config", data("url_path" to "design-presets")) {
+            stylesDashboard = it as? org.json.JSONObject
+            _sceneLooks.value = SceneLooks.parse(libraryResult, stylesDashboard)
+        }
     }
 
     init {

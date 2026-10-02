@@ -9,11 +9,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.churchdrive.app.ui.ChurchDriveTheme
 import com.churchdrive.app.ui.HomeScreen
+import com.churchdrive.app.ui.LocalSceneLooks
 import com.churchdrive.app.ui.LoginScreen
 
 class MainActivity : ComponentActivity() {
@@ -36,19 +38,22 @@ class MainActivity : ComponentActivity() {
                         val entities by vm.entities.collectAsStateWithLifecycle()
                         val userName by vm.userName.collectAsStateWithLifecycle()
                         val lights by vm.lights.collectAsStateWithLifecycle()
+                        val sceneLooks by vm.sceneLooks.collectAsStateWithLifecycle()
                         val areaNames by vm.areaNames.collectAsStateWithLifecycle()
-                        if (signedIn) {
-                            HomeScreen(
-                                connection = connection,
-                                entities = entities,
-                                userName = userName,
-                                lights = lights,
-                                areaNames = areaNames,
-                                call = vm::call,
-                                onSignOut = vm::signOut,
-                            )
-                        } else {
-                            LoginScreen(onSignIn = vm::signIn)
+                        CompositionLocalProvider(LocalSceneLooks provides sceneLooks) {
+                            if (signedIn) {
+                                HomeScreen(
+                                    connection = connection,
+                                    entities = entities,
+                                    userName = userName,
+                                    lights = lights,
+                                    areaNames = areaNames,
+                                    call = vm::call,
+                                    onSignOut = vm::signOut,
+                                )
+                            } else {
+                                LoginScreen(onSignIn = vm::signIn)
+                            }
                         }
                     }
                 }
