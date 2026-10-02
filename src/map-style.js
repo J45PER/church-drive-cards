@@ -225,18 +225,13 @@ function hookHaMap(Cls) {
   const proto = Cls.prototype;
   if (proto.__cdHooked3) return;
   proto.__cdHooked3 = true;
-  const connected = proto.connectedCallback;
-  const disconnected = proto.disconnectedCallback;
-  proto.connectedCallback = function (...args) {
-    const out = connected && connected.apply(this, args);
-    watch(this);
-    return out;
-  };
-  proto.disconnectedCallback = function (...args) {
-    clearInterval(this.__cdWatch);
-    maps.delete(this);
-    this.__cdKey = null;
-    return disconnected && disconnected.apply(this, args);
+  // Not connectedCallback: the browser keeps the one the element was defined
+  // with. Lit's updated() is looked up each time, so a map is caught on its
+  // first render.
+  const updated = proto.updated;
+  proto.updated = function (...args) {
+    if (!this.__cdWatch) watch(this);
+    return updated && updated.apply(this, args);
   };
   // Maps already on the page before this ran.
   findAll(document, 'ha-map').forEach(watch);
@@ -276,20 +271,26 @@ function watch(el) {
   setTimeout(() => mapDebug(el, 'after 4s'), 4000);
   clearInterval(el.__cdWatch);
   let ticks = 0;
-  const check = () => {
+  const tick = () => {
+    if (!el.isConnected) {
+      // Gone (a closed dialog); updated() starts watching again if it's reused.
+      clearInterval(el.__cdWatch);
+      el.__cdWatch = null;
+      el.__cdKey = null;
+      maps.delete(el);
+      return;
+    }
     const key = mapKey(el);
     if (key && key !== el.__cdKey && applyMap(el)) {
       el.__cdKey = key;
       maps.add(el);
     }
-  };
-  el.__cdWatch = setInterval(() => {
-    check();
     if (++ticks === 60) {
       clearInterval(el.__cdWatch);
-      el.__cdWatch = setInterval(check, 3000);
+      el.__cdWatch = setInterval(tick, 3000);
     }
-  }, 250);
+  };
+  el.__cdWatch = setInterval(tick, 250);
 }
 
 // Once per page, even with the beta bundle loaded too.
