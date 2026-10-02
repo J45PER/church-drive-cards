@@ -25,7 +25,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -48,7 +48,7 @@ import com.churchdrive.app.ha.CallService
 import com.churchdrive.app.ha.ConnectionState
 import com.churchdrive.app.ha.EntityState
 
-/** The signed-in app: a page at a time, a large collapsing title, and the page bar along the bottom. */
+/** The signed-in app: a page at a time, a collapsing title, and the page bar along the bottom. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -66,7 +66,7 @@ fun HomeScreen(
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            LargeTopAppBar(
+            MediumTopAppBar(
                 title = { Text(title) },
                 actions = {
                     IconButton(onClick = { menuOpen = true }) {
