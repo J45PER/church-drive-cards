@@ -1987,6 +1987,11 @@ Integration modules (`custom_components/church_drive/`):
   (the Go to footer only shows while the panel is open); sending the stale-device
   alert to the Pixel too.
 - "My Boy Hugo" is unavailable; the user may want to power-cycle or re-pair it.
+- **LG TV turn-on (later):** the Living Room LG (webostv) drops off the network in standby
+  (unavailable; the media card shows that as Off since 2026-10-02, on beta). To turn it on
+  from HA: the user turns on "Turn on via Wi-Fi" on the TV and sends its MAC; then add the
+  Wake-on-LAN integration and a `webostv.turn_on` trigger automation sending the packet.
+  The two stale DLNA entries (the Windows PC's renderer, an unknown "Bedroom") were removed.
 - **Presence:** the user plans presence sensors. The Lights "maybe left on" line
   picks up any motion, occupancy or presence binary sensor that has an area. Hue
   MotionAware would need a Bridge Pro (they have a BSB002).
