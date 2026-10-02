@@ -16,13 +16,21 @@ import com.churchdrive.app.ha.IconPack
 
 /**
  * An entity's own icon. `phu:` icons (the Hue-style set the dashboards use) are drawn from the
- * icon pack Home Assistant serves; anything else, or while the pack is still loading, shows [fallback].
+ * icon pack Home Assistant serves, and `mdi:` icons the app knows (see MdiIcons) are drawn from their path
+ * data; anything else, or while the pack is still loading, shows [fallback].
  */
 @Composable
 fun HaIcon(icon: String?, fallback: ImageVector, tint: Color, size: Dp, modifier: Modifier = Modifier) {
     val name = icon?.takeIf { it.startsWith("phu:") }?.removePrefix("phu:")
     val pack = IconPack.text
-    val found = remember(name, pack) { if (name != null) IconPack.find(name) else null }
+    val mdi = icon?.takeIf { it.startsWith("mdi:") }?.removePrefix("mdi:")?.let { MdiIcons.paths[it] }
+    val found = remember(name, mdi, pack) {
+        when {
+            mdi != null -> 24f to mdi
+            name != null -> IconPack.find(name)
+            else -> null
+        }
+    }
     val path = remember(found) { found?.let { runCatching { PathParser().parsePathString(it.second).toPath() }.getOrNull() } }
 
     if (found != null && path != null) {

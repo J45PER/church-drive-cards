@@ -2,6 +2,21 @@ package com.churchdrive.app.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import kotlinx.coroutines.delay
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -117,6 +132,49 @@ fun ChoiceButton(
 
 // ---- Alarm ----
 
+const val ALARM_ENTITY = "alarm_control_panel.church_drive_alarm"
+
+private data class AlarmInfo(val label: String, val icon: String)
+
+private val ALARM_STATES = mapOf(
+    "disarmed" to AlarmInfo("Disarmed", "mdi:shield-off-outline"),
+    "armed_home" to AlarmInfo("Armed Home", "mdi:shield-home"),
+    "armed_away" to AlarmInfo("Armed Away", "mdi:shield-lock"),
+    "armed_night" to AlarmInfo("Armed Night", "mdi:shield-moon"),
+    "arming" to AlarmInfo("Arming", "mdi:shield-sync"),
+    "pending" to AlarmInfo("Entry Delay", "mdi:shield-sync"),
+    "triggered" to AlarmInfo("Triggered!", "mdi:shield-alert"),
+)
+
+private val ALARM_MODE_NAMES = mapOf("armed_home" to "Home", "armed_away" to "Away", "armed_night" to "Night")
+
+fun alarmLabel(state: String?): String = when (state) {
+    null -> "Loading…"
+    else -> ALARM_STATES[state]?.label ?: state.replaceFirstChar { it.uppercase() }
+}
+
+private val ALARM_TIME = java.time.format.DateTimeFormatter.ofPattern("dd MMM, HH:mm", java.util.Locale.UK)
+    .withZone(java.time.ZoneId.systemDefault())
+
+private fun alarmTime(iso: String?): String? =
+    runCatching { ALARM_TIME.format(java.time.Instant.parse(iso)) }.getOrNull()
+
+/** The two lines beside the shield: what to do during a delay, otherwise who armed or disarmed it, and when. */
+private fun alarmLines(alarm: EntityState): Pair<String, String> {
+    fun by(who: String?, at: String?) = alarmTime(at)?.let { t -> who?.takeIf { it.isNotBlank() }?.let { it to t } }
+    return when (alarm.state) {
+        "arming" -> "Leave now" to "until armed"
+        "pending" -> "Disarm now" to "until the alarm sounds"
+        "triggered" -> "Alarm sounding" to "Disarm to stop it"
+        "disarmed" -> by(alarm.str("lastDisarmedBy"), alarm.str("lastDisarmedTime"))?.let { "Disarmed by ${it.first}" to it.second }
+        else -> by(alarm.str("lastArmedBy"), alarm.str("lastArmedTime"))?.let { "Armed by ${it.first}" to it.second }
+    } ?: ("" to "")
+}
+
+/**
+ * The dashboard's alarm card: the state as the title in its colour, a shield inside a ring that empties
+ * during an entry or exit delay, what to do (or who and when), and a button for each mode the alarm supports.
+ */
 @Composable
 fun AlarmCard(alarm: EntityState?, call: CallService) {
     val state = alarm?.state
@@ -125,45 +183,110 @@ fun AlarmCard(alarm: EntityState?, call: CallService) {
     // Triggered is fully tinted, like the dashboard card.
     val container = if (triggered) tone.accent else tone.container
     val content = if (triggered) tone.onAccent else tone.onContainer
+    val ring = if (triggered) tone.onAccent else tone.accent
     val enabled = alarm != null
     fun send(service: String) = call("alarm_control_panel", service, ALARM_ENTITY, data())
 
+    val inDelay = state == "arming" || state == "pending"
+    val secsLeft = when (state) {
+        "pending" -> alarm?.num("entrySecondsLeft")?.toInt() ?: 0
+        "arming" -> alarm?.num("exitSecondsLeft")?.toInt() ?: 0
+        else -> 0
+    }
+    // Count down locally between updates; the ring is full at the start of a delay.
+    var remaining by remember(state, secsLeft) { mutableIntStateOf(secsLeft) }
+    val total = remember(state) { secsLeft.coerceAtLeast(1) }
+    LaunchedEffect(state, secsLeft) {
+        remaining = secsLeft
+        while (remaining > 0) {
+            delay(1000)
+            remaining -= 1
+        }
+    }
+
+    val target = ALARM_MODE_NAMES[alarm?.str("targetState")]
+    val title = when {
+        state == "arming" && target != null -> "Arming $target"
+        else -> alarmLabel(state)
+    }
+    val (line1, line2) = alarm?.let { alarmLines(it) } ?: ("" to "")
+    val features = alarm?.num("supported_features")?.toInt() ?: 0
+    // During a delay the mode being armed is lit; otherwise the current state.
+    val activeKey = if (inDelay || triggered) alarm?.str("targetState") else state
+
     EntityCard(container, content) {
+        Text(title, style = MaterialTheme.typography.headlineSmall, color = if (triggered) content else tone.accent)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Icon(alarmIcon(state), contentDescription = null, modifier = Modifier.size(36.dp))
-            Text(alarmLabel(state), style = MaterialTheme.typography.headlineSmall)
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(64.dp)) {
+                Canvas(Modifier.size(64.dp)) {
+                    val stroke = 5.dp.toPx()
+                    val inset = stroke / 2
+                    val arcSize = Size(size.width - stroke, size.height - stroke)
+                    drawArc(ring.copy(alpha = 0.2f), 0f, 360f, false, Offset(inset, inset), arcSize, style = Stroke(stroke))
+                    val sweep = if (inDelay) 360f * (remaining.toFloat() / total).coerceIn(0f, 1f) else 360f
+                    drawArc(ring, -90f, sweep, false, Offset(inset, inset), arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
+                }
+                HaIcon(ALARM_STATES[state]?.icon ?: "mdi:shield-outline", Icons.Filled.Security, ring, 30.dp)
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                if (line1.isNotEmpty()) Text(line1, style = MaterialTheme.typography.titleMedium)
+                if (line2.isNotEmpty()) Text(line2, style = MaterialTheme.typography.bodyMedium)
+            }
+            if (inDelay) Text("${remaining}s", style = MaterialTheme.typography.headlineMedium, color = ring)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             val m = Modifier.weight(1f)
-            ChoiceButton("Disarm", state == "disarmed", tone, content, m, enabled) { send("alarm_disarm") }
-            ChoiceButton("Home", state == "armed_home", tone, content, m, enabled) { send("alarm_arm_home") }
-            ChoiceButton("Away", state == "armed_away", tone, content, m, enabled) { send("alarm_arm_away") }
-            ChoiceButton("Night", state == "armed_night", tone, content, m, enabled) { send("alarm_arm_night") }
+            ModeTile("Disarm", "mdi:shield-off-outline", activeKey == "disarmed", tone, content, m, enabled) { send("alarm_disarm") }
+            if (features and 1 != 0) {
+                ModeTile("Home", "mdi:shield-home", activeKey == "armed_home", tone, content, m, enabled) { send("alarm_arm_home") }
+            }
+            if (features and 2 != 0) {
+                ModeTile("Away", "mdi:shield-lock", activeKey == "armed_away", tone, content, m, enabled) { send("alarm_arm_away") }
+            }
+            if (features and 4 != 0) {
+                ModeTile("Night", "mdi:shield-moon", activeKey == "armed_night", tone, content, m, enabled) { send("alarm_arm_night") }
+            }
         }
     }
 }
 
-const val ALARM_ENTITY = "alarm_control_panel.church_drive_alarm"
-
-private fun alarmIcon(state: String?): ImageVector = when (state) {
-    "disarmed" -> Icons.Filled.LockOpen
-    "triggered" -> Icons.Filled.Warning
-    "armed_home" -> Icons.Filled.Home
-    "armed_away" -> Icons.Filled.Lock
-    "armed_night" -> Icons.Filled.Bedtime
-    else -> Icons.Filled.Security
-}
-
-fun alarmLabel(state: String?): String = when (state) {
-    "disarmed" -> "Disarmed"
-    "armed_home" -> "Armed home"
-    "armed_away" -> "Armed away"
-    "armed_night" -> "Armed night"
-    "arming" -> "Arming"
-    "pending" -> "Entry delay"
-    "triggered" -> "Triggered"
-    null -> "Loading…"
-    else -> state.replaceFirstChar { it.uppercase() }
+/** A mode button: the dashboard's icon over the label; the current mode is filled in the state colour. */
+@Composable
+private fun ModeTile(
+    label: String,
+    icon: String,
+    selected: Boolean,
+    tone: ToneColors,
+    content: Color,
+    modifier: Modifier,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    val shape = RoundedCornerShape(18.dp)
+    val ink = if (selected) tone.onAccent else content
+    Column(
+        modifier = modifier
+            .height(64.dp)
+            .clip(shape)
+            .then(
+                if (selected) Modifier.background(tone.accent)
+                else Modifier.border(1.dp, content.copy(alpha = 0.4f), shape),
+            )
+            .clickable(enabled = enabled, onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        HaIcon(icon, Icons.Filled.Security, ink, 24.dp)
+        Text(
+            label, color = ink, maxLines = 1,
+            style = LocalTextStyle.current.copy(
+                fontSize = 12.sp,
+                lineHeight = 14.sp,
+                lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both),
+            ),
+            modifier = Modifier.padding(top = 4.dp),
+        )
+    }
 }
 
 // ---- Climate ----
