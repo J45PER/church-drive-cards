@@ -10,6 +10,7 @@ import com.churchdrive.app.ha.IconPack
 import com.churchdrive.app.ha.data
 import com.churchdrive.app.ha.Registry
 import com.churchdrive.app.ha.Templates
+import com.churchdrive.app.ui.CameraHost
 import com.churchdrive.app.ui.DashboardLights
 import com.churchdrive.app.ui.DashboardPanels
 import com.churchdrive.app.ui.PanelSpec
@@ -138,11 +139,38 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Home Assistant's address, for pictures and video links. */
     val baseUrl: String get() = session.url?.trim()?.trimEnd('/').orEmpty()
 
-    /** A live (HLS) stream of a camera: its link (relative to the address), or null if Home Assistant can't give one. */
-    fun cameraStream(entityId: String, done: (String?) -> Unit) {
-        client.request("camera/stream", data("entity_id" to entityId, "format" to "hls")) { result ->
-            done((result as? org.json.JSONObject)?.optString("url")?.takeIf { it.isNotBlank() })
+    /** What the live view needs from Home Assistant: how a camera can be watched, and the WebRTC set-up. */
+    val cameraHost = object : CameraHost {
+        override fun capabilities(entityId: String, done: (List<String>) -> Unit) {
+            client.request("camera/capabilities", data("entity_id" to entityId)) { result ->
+                val types = (result as? org.json.JSONObject)?.optJSONArray("frontend_stream_types")
+                done((0 until (types?.length() ?: 0)).map { types!!.getString(it) })
+            }
         }
+
+        override fun hlsStream(entityId: String, done: (String?) -> Unit) {
+            client.request("camera/stream", data("entity_id" to entityId, "format" to "hls")) { result ->
+                done((result as? org.json.JSONObject)?.optString("url")?.takeIf { it.isNotBlank() })
+            }
+        }
+
+        override fun iceServers(entityId: String, done: (org.json.JSONArray?) -> Unit) {
+            client.request("camera/webrtc/get_client_config", data("entity_id" to entityId)) { result ->
+                done((result as? org.json.JSONObject)?.optJSONObject("configuration")?.optJSONArray("iceServers"))
+            }
+        }
+
+        override fun webRtcOffer(entityId: String, sdp: String, onEvent: (org.json.JSONObject) -> Unit): Int =
+            client.subscribe("camera/webrtc/offer", data("entity_id" to entityId, "offer" to sdp), onEvent)
+
+        override fun webRtcCandidate(entityId: String, sessionId: String, candidate: org.json.JSONObject) {
+            client.request(
+                "camera/webrtc/candidate",
+                data("entity_id" to entityId, "session_id" to sessionId, "candidate" to candidate),
+            ) { }
+        }
+
+        override fun close(subscription: Int) = client.unsubscribe(subscription)
     }
 
     fun call(domain: String, service: String, entityId: String, data: org.json.JSONObject) =

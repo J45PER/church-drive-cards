@@ -29,7 +29,6 @@ import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -92,11 +91,10 @@ fun HomeScreen(
             )
         },
         bottomBar = {
-            // The dashboard's nav bar: each page's own icon and colour (Security follows the alarm).
+            // The dashboard's icons, in the phone's own (wallpaper) colours. The Security icon follows the alarm.
             val alarmState = entities[ALARM_ENTITY]?.state
             NavigationBar {
                 Page.entries.forEach { p ->
-                    val tone = toneColors(pageTone(p, alarmState))
                     val selected = p == page
                     NavigationBarItem(
                         selected = selected,
@@ -105,16 +103,11 @@ fun HomeScreen(
                             HaIcon(
                                 if (p == Page.Security) alarmIconName(alarmState) else p.mdi,
                                 p.fallback,
-                                tint = if (selected) tone.onAccent else tone.accent,
+                                tint = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                                 size = 24.dp,
                             )
                         },
                         label = { Text(p.label, fontSize = 11.sp, maxLines = 1) },
-                        colors = NavigationBarItemDefaults.colors(
-                            indicatorColor = tone.accent,
-                            selectedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        ),
                     )
                 }
             }
@@ -136,7 +129,7 @@ fun HomeScreen(
             }
 
             if (page == Page.Home) {
-                HomePage(lights, areaNames, entities, call, onOpen = { page = it })
+                HomePage(lights, areaNames, panels["home"].orEmpty(), entities, call, onOpen = { page = it })
             } else if (page == Page.Lighting) {
                 LightingPage(lights, entities, areaNames, call)
             } else if (page == Page.Security) {
@@ -163,6 +156,7 @@ fun HomeScreen(
 private fun HomePage(
     lights: LightLayout,
     areaNames: Map<String, String>,
+    panels: List<PanelSpec>,
     entities: Map<String, EntityState>,
     call: CallService,
     onOpen: (Page) -> Unit,
@@ -170,36 +164,52 @@ private fun HomePage(
     val alarm = entities[ALARM_ENTITY]
     val climate = entities[CLIMATE_ENTITY]
     val vacuum = entities[VACUUM_ENTITY]
+    val byTitle = panels.associateBy { it.title }
 
-    SectionPanel(
-        "Security", icon = Icons.Filled.Security, tone = alarmTone(alarm?.state),
-        summary = alarmLabel(alarm?.state), onClick = { onOpen(Page.Security) },
-    ) { AlarmCard(alarm, call) }
-
-    SectionPanel(
-        "Climate", icon = Icons.Filled.Thermostat, tone = climateTone(climate),
-        summary = "${temp(climate?.num("current_temperature"))} °C · ${climateWord(climate)}",
-        onClick = { onOpen(Page.Climate) },
-    ) { ClimateCard(climate, call) }
-
-    SectionPanel(
-        "Lights", icon = Icons.Filled.Lightbulb, tone = Tone.Amber,
-        summary = lightsSummary(lights.home, entities), onClick = { onOpen(Page.Lighting) },
+    /**
+     * A Home panel: the icon is the nav bar's own for that page; the summary line and colour are the dashboard
+     * panel's (rendered by Home Assistant), with the app's own as a fallback until they arrive.
+     */
+    @Composable
+    fun HomePanel(
+        title: String,
+        icon: String,
+        fallbackTone: Tone,
+        fallbackSummary: String,
+        page: Page?,
+        content: @Composable () -> Unit,
     ) {
+        val spec = byTitle[title]
+        val summary = rememberTemplate(spec?.summaryTemplate) ?: fallbackSummary
+        val colour = rememberTemplate(spec?.colorTemplate) ?: spec?.color
+        SectionPanel(
+            title,
+            iconName = icon,
+            tone = toneFromColour(colour) ?: fallbackTone,
+            summary = summary,
+            onClick = page?.let { { onOpen(it) } },
+            content = content,
+        )
+    }
+
+    HomePanel("Security", alarmIconName(alarm?.state), alarmTone(alarm?.state), alarmLabel(alarm?.state), Page.Security) {
+        AlarmCard(alarm, call)
+    }
+    HomePanel(
+        "Climate", Page.Climate.mdi, climateTone(climate),
+        "${temp(climate?.num("current_temperature"))} °C · ${climateWord(climate)}", Page.Climate,
+    ) { ClimateCard(climate, call) }
+    HomePanel("Lights", Page.Lighting.mdi, Tone.Amber, lightsSummary(lights.home, entities), Page.Lighting) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             lights.home.forEach { LightRoomCard(it, entities, areaNames, call) }
         }
     }
-
-    SectionPanel(
-        "Cleaning", icon = Icons.Filled.CleaningServices, tone = vacuumTone(vacuum),
-        summary = vacuumSummary(vacuum, entities[VACUUM_BATTERY]), onClick = { onOpen(Page.Cleaning) },
-    ) { VacuumCard(vacuum, entities[VACUUM_BATTERY], call) }
-
-    SectionPanel(
-        "Car charger", icon = Icons.Filled.EvStation, tone = Tone.Teal,
-        summary = entities[ZAPPI_MODE]?.state ?: "", onClick = null,
-    ) { ChargerCard(entities, call) }
+    HomePanel("Cleaning", Page.Cleaning.mdi, vacuumTone(vacuum), vacuumSummary(vacuum, entities[VACUUM_BATTERY]), Page.Cleaning) {
+        VacuumCard(vacuum, entities[VACUUM_BATTERY], call)
+    }
+    HomePanel("Car charger", "mdi:ev-station", Tone.Teal, entities[ZAPPI_MODE]?.state ?: "", null) {
+        ChargerCard(entities, call)
+    }
 }
 
 /**

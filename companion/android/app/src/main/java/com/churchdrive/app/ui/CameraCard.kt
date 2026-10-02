@@ -57,9 +57,6 @@ import org.json.JSONObject
 /** Home Assistant's address, for pictures and video (they're fetched with a token in the link). Set in MainActivity. */
 val LocalBaseUrl = compositionLocalOf { "" }
 
-/** Asks Home Assistant for a live (HLS) stream of a camera and gives its link, or null if it can't be had. */
-val LocalCameraStream = compositionLocalOf<(String, (String?) -> Unit) -> Unit> { { _, done -> done(null) } }
-
 /** When each camera last had a snapshot asked for from here, so the app doesn't ask again straight away. */
 private val askedAt = mutableMapOf<String, Long>()
 
@@ -158,16 +155,43 @@ fun CameraCard(config: JSONObject, entities: Map<String, EntityState>, call: Cal
     if (viewing) CameraViewer(name, entityId, found.button, call) { viewing = false }
 }
 
-/** Full-screen live video (muted to start, as on the dashboard), with a new-snapshot button. */
+/**
+ * Full-screen live video (muted to start, as on the dashboard), with a new-snapshot button. It uses WebRTC when
+ * the camera offers it (as Home Assistant's own player does), else an HLS stream.
+ */
 @Composable
 private fun CameraViewer(name: String, entityId: String, button: String?, call: CallService, onClose: () -> Unit) {
-    val requestStream = LocalCameraStream.current
+    val host = LocalCameraHost.current
     val base = LocalBaseUrl.current
+    var mode by remember { mutableStateOf<String?>(null) } // webrtc, hls or none, once known
     var link by remember { mutableStateOf<String?>(null) }
-    var failed by remember { mutableStateOf(false) }
+    var status by remember { mutableStateOf<String?>("Starting live view…") }
     var muted by remember { mutableStateOf(true) }
     LaunchedEffect(entityId) {
-        requestStream(entityId) { url -> if (url == null) failed = true else link = url }
+        if (host == null) {
+            mode = "none"
+            status = "Live view isn't available."
+            return@LaunchedEffect
+        }
+        host.capabilities(entityId) { types ->
+            when {
+                "web_rtc" in types -> mode = "webrtc"
+                "hls" in types || types.isEmpty() -> host.hlsStream(entityId) { url ->
+                    if (url == null) {
+                        mode = "none"
+                        status = "Live view isn't available for this camera."
+                    } else {
+                        link = url
+                        mode = "hls"
+                        status = null
+                    }
+                }
+                else -> {
+                    mode = "none"
+                    status = "Live view isn't available for this camera."
+                }
+            }
+        }
     }
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(modifier = Modifier.fillMaxSize(), color = Color.Black) {
@@ -177,14 +201,15 @@ private fun CameraViewer(name: String, entityId: String, button: String?, call: 
                     IconButton(onClick = onClose) { Icon(Icons.Filled.Close, contentDescription = "Close", tint = Color.White) }
                 }
                 Box(modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(Color(0xFF111111)), contentAlignment = Alignment.Center) {
-                    when {
-                        link != null -> LivePlayer(base + link, muted)
-                        failed -> Text("Live view isn't available for this camera.", color = Color.White.copy(alpha = 0.7f))
-                        else -> Text("Starting live view…", color = Color.White.copy(alpha = 0.7f))
+                    when (mode) {
+                        "webrtc" -> WebRtcPlayer(entityId, muted, Modifier.fillMaxSize()) { status = it }
+                        "hls" -> link?.let { LivePlayer(base + it, muted) }
+                        else -> Unit
                     }
+                    status?.let { Text(it, color = Color.White.copy(alpha = 0.75f), modifier = Modifier.padding(16.dp)) }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(horizontal = 8.dp)) {
-                    Button(onClick = { muted = !muted }, enabled = link != null) { Text(if (muted) "Unmute" else "Mute") }
+                    Button(onClick = { muted = !muted }, enabled = mode == "webrtc" || mode == "hls") { Text(if (muted) "Unmute" else "Mute") }
                     if (button != null) {
                         OutlinedButton(onClick = { call("button", "press", button, data()) }) { Text("New snapshot") }
                     }
