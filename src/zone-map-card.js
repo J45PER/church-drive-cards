@@ -19,7 +19,7 @@ import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { kitEsc } from './card-kit.js';
-import { MAP_LAYERS, mapStyle, setMapStyle, googleTiles, useGoogle } from './map-style.js';
+import { MAP_LAYERS, mapStyle, setMapStyle, googleTiles, useGoogle, GREFERRER } from './map-style.js';
 
 const ATTR = 'Imagery &copy; Esri, Maxar, Earthstar Geographics &middot; Search &copy; OpenStreetMap';
 const HOME = '#4caf50';
@@ -188,7 +188,7 @@ export class ZoneMapCard extends HTMLElement {
     const g = googleTiles(style);
     const spec = MAP_LAYERS[style];
     this._tiles = g
-      ? [L.tileLayer(g.url, { maxNativeZoom: 20, maxZoom: 21, attribution: `${g.attribution}${this._places ? '' : ' &middot; Search &copy; OpenStreetMap'}` })]
+      ? [L.tileLayer(g.url, { referrerPolicy: GREFERRER, maxNativeZoom: 20, maxZoom: 21, attribution: `${g.attribution}${this._places ? '' : ' &middot; Search &copy; OpenStreetMap'}` })]
       : [L.tileLayer(spec.base, { maxNativeZoom: 19, maxZoom: 20, attribution: ATTR }), ...spec.labels.map((u) => L.tileLayer(u, { maxNativeZoom: 19, maxZoom: 20, zIndex: 5 }))];
     this._tiles.forEach((t) => t.addTo(this._map));
     this.querySelectorAll('.zm-layers button').forEach((b) => b.classList.toggle('on', b.dataset.style === style));

@@ -31,6 +31,10 @@ const KEY = 'cd-map-style';
 const GKEY = 'cd-gmap';
 const GATTR = 'Map data &copy; Google';
 const GTILES = 'https://tile.googleapis.com/v1';
+// Home Assistant's page sends no referrer to other sites ("same-origin"), but
+// the Map Tiles key is locked to Home Assistant's addresses, which Google reads
+// from the referrer: send just the origin on Google's requests.
+export const GREFERRER = 'strict-origin-when-cross-origin';
 const GSESSION = {
   satellite: { mapType: 'satellite', language: 'en-GB', region: 'GB', layerTypes: ['layerRoadmap'] },
   street: { mapType: 'roadmap', language: 'en-GB', region: 'GB' },
@@ -107,7 +111,7 @@ export function useGoogle(hass) {
       const s = cache.sessions[style];
       if (s && Number(s.expiry) * 1000 > Date.now() + 86400e3) continue;
       try {
-        const r = await fetch(`${GTILES}/createSession?key=${encodeURIComponent(key)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(GSESSION[style]) });
+        const r = await fetch(`${GTILES}/createSession?key=${encodeURIComponent(key)}`, { method: 'POST', referrerPolicy: GREFERRER, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(GSESSION[style]) });
         const j = await r.json();
         if (!r.ok || !j.session) throw new Error((j.error && j.error.message) || r.status);
         cache.sessions[style] = { session: j.session, expiry: j.expiry };
@@ -137,7 +141,7 @@ function patch(L) {
     const style = mapStyle();
     if (style !== 'ha' && typeof url === 'string' && REPLACE.test(url)) {
       const g = googleTiles(style);
-      if (g) return init.call(this, g.url, { ...(options || {}), attribution: g.attribution, subdomains: 'abc', maxNativeZoom: 20, detectRetina: false, tileSize: 256, zoomOffset: 0 });
+      if (g) return init.call(this, g.url, { ...(options || {}), referrerPolicy: GREFERRER, attribution: g.attribution, subdomains: 'abc', maxNativeZoom: 20, detectRetina: false, tileSize: 256, zoomOffset: 0 });
       // Esri for now; Google once its session is ready (see onAdd).
       this.__cdWait = style;
       const layer = MAP_LAYERS[style];
@@ -180,6 +184,7 @@ function patch(L) {
       map.attributionControl.addAttribution(g.attribution);
     }
     this.options.attribution = g.attribution;
+    this.options.referrerPolicy = GREFERRER;
     this.options.maxNativeZoom = 20;
     this.setUrl(g.url);
   };
