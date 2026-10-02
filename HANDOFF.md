@@ -92,6 +92,12 @@ HACS as an integration. It does two jobs:
   Run `tools/editors-smoke.mjs` before pushing.
 - **Waiting on the user:**
   - Presence sensors, for the Lights "maybe left on" line.
+  - The cars (2026-10-02): Stellantis Vehicles (HACS 839422993, domain `stellantis_vehicles`)
+    for the Vauxhall PHEV and VW Group Connect (HACS 1207816350, domain `vag_connect`) for the
+    VW full EV are downloaded and loaded, not signed in. The Stellantis remote login service
+    timed out (free Render worker); the user will do the manual code method on a laptop
+    (Chrome console `mymap://oauth2redirect…?code=`). On Jamie's to-do list. Then: battery %
+    on the charger card (work out which car is plugged in) and in "Car charged".
 - Nothing else is pending. Ideas the user hasn't asked for are under Open items.
 
 **New in v0.22.0 (2026-09-29): smoother panels, floating chips, page headers** (the user found the
