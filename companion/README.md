@@ -12,11 +12,14 @@ This branch is a scratch space for design; nothing here ships with the HACS inte
 2. **User app (Android/iOS)**: a Church Drive branded app for residents, so
    Ian and Diane don't need the stock Home Assistant app. Signs in to Church
    Drive's HA, shows the dashboard, and handles notifications and presence.
-3. **Manager app (Windows)**: one place to see and manage the fleet.
-   - Android kiosk devices: configure, push updates, restart, set dashboard URL, view status.
+3. **Manager app (Windows)**: one place to manage both Android apps.
+   - Kiosk devices: configure, set each tablet's screen/dashboard URL, restart,
+     push updates, view status.
+   - User app: manage which screens/controls each person gets, who has the app
+     and their access, notification settings, and revoke a lost phone.
    - Embedded browser-based panels (e.g. a Shelly wall panel running the normal
-     HA frontend): can't run our app, so manage them only to the extent the
-     device exposes (see open questions). Fallback: manage Android kiosks only.
+     HA frontend): can't run our app, so manage them only as far as the device
+     exposes (see open questions). Fallback: kiosks and user app only.
 
 ## Decisions
 
@@ -45,6 +48,6 @@ This branch is a scratch space for design; nothing here ships with the HACS inte
 
 1. Kiosk app MVP (immediate payoff, simplest).
 2. Church Drive integration additions: a `church_drive` device registry for companions.
-3. Windows manager for Android kiosks.
+3. Windows manager for the kiosks, then add user app management once that app exists.
 4. User app.
 5. Embedded panels in the manager, if feasible.
