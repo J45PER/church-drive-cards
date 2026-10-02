@@ -6,14 +6,15 @@ This branch is a scratch space for design; nothing here ships with the HACS inte
 ## Planned apps
 
 1. **Kiosk app (Android)**: runs on wall-mounted Android tablets. Full-screen,
-   locked to a chosen Home Assistant dashboard, auto-reconnects, screen on/off
-   and brightness controlled from HA, and reports device state back to HA
-   (battery, screen, app version, current URL).
+   kiosk-locked, with a native UI designed for its room. Auto-reconnects, screen
+   on/off and brightness controlled from HA, and reports device state back to HA
+   (battery, screen, app version, current layout).
 2. **User app (Android/iOS)**: a Church Drive branded app for residents, so
    Ian and Diane don't need the stock Home Assistant app. Signs in to Church
-   Drive's HA, shows the dashboard, and handles notifications and presence.
+   Drive's HA, shows a curated set of native controls, and handles notifications
+   and presence.
 3. **Manager app (Windows)**: one place to manage both Android apps.
-   - Kiosk devices: configure, set each tablet's screen/dashboard URL, restart,
+   - Kiosk devices: configure, set each tablet's room layout, restart,
      push updates, view status.
    - User app: manage which screens/controls each person gets, who has the app
      and their access, notification settings, and revoke a lost phone.
@@ -23,15 +24,23 @@ This branch is a scratch space for design; nothing here ships with the HACS inte
 
 ## Decisions
 
-- **Kiosk app: native Android shell + WebView running the existing JavaScript cards.**
-  The shell (Kotlin) handles device control (full-screen, kiosk lock, screen/brightness,
-  boot start, state reporting to HA). The screen itself is web, so the cards in `src/`
-  are reused as they are.
-- **User app: native UI (Kotlin + Jetpack Compose), curated.** A limited set of screens
-  (alarm, a few lights/scenes, cameras, notifications, presence), not a full dashboard.
-  Only the controls it needs are built natively.
-- Each kiosk has its own screen (a dashboard URL) and its own HA user/token, so one
-  tablet can be changed or revoked without affecting the others.
+- **Both Android apps are fully native** (Kotlin + Jetpack Compose), talking to HA over
+  its WebSocket/REST API. No WebView wrapper around the HA frontend.
+- **Kiosk UIs are room-appropriate**: each kiosk gets a layout designed for its room,
+  not a generic dashboard. Each kiosk has its own HA user/token, so one tablet can be
+  changed or revoked without affecting the others.
+- **User app is curated**: a limited set of screens and controls, not full HA.
+- **Priority: user app first**, then kiosks.
+- Shared code: one Kotlin module for the HA connection, auth, entity state and the
+  native controls (light, alarm, scenes, cameras) that both apps use.
+
+## Consequences
+
+- The Lovelace cards in `src/` can't be reused; the controls both apps need are
+  rebuilt in Compose, and only those (not every card).
+- Screen layouts (which controls, which room template) should live in HA via the
+  Church Drive integration, so the Windows manager can edit them and apps fetch
+  them without a new APK.
 
 ## Open questions
 
@@ -46,8 +55,9 @@ This branch is a scratch space for design; nothing here ships with the HACS inte
 
 ## Suggested order
 
-1. Kiosk app MVP (immediate payoff, simplest).
-2. Church Drive integration additions: a `church_drive` device registry for companions.
-3. Windows manager for the kiosks, then add user app management once that app exists.
-4. User app.
+1. Shared Kotlin core (HA connection, auth, state) plus the Church Drive integration
+   additions for per-device/per-person settings.
+2. User app MVP (alarm, lights/scenes, notifications, presence).
+3. Kiosk app with the first room template.
+4. Windows manager (user app and kiosk management).
 5. Embedded panels in the manager, if feasible.
