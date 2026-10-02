@@ -1,6 +1,7 @@
 package com.churchdrive.app.ui
 
 import com.churchdrive.app.ha.EntityState
+import com.churchdrive.app.ha.text
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.Instant
@@ -43,7 +44,7 @@ data class ZoneConfig(
 
 fun zoneConfig(c: JSONObject): ZoneConfig {
     fun list(key: String): List<String> = c.optJSONArray(key)?.let { a -> (0 until a.length()).mapNotNull { a.optString(it).takeIf { s -> s.isNotBlank() } } }.orEmpty()
-    fun text(key: String): String? = c.optString(key).takeIf { it.isNotBlank() }
+    fun text(key: String): String? = c.text(key)
     return ZoneConfig(
         name = text("name") ?: "Zone",
         door = text("door_entity"),

@@ -69,4 +69,10 @@ class RtcDataTest {
         )
         assertEquals(emptyList<IceServerSpec>(), parseIceServers(null))
     }
+
+    @Test
+    fun readsTheOrderOfMediaSections() {
+        val sdp = "v=0\r\nm=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\nm=video 9 UDP/TLS/RTP/SAVPF 96\r\n"
+        assertEquals(listOf("application", "audio", "video"), mediaOrder(sdp))
+    }
 }

@@ -14,6 +14,8 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
+        // The commit this build is from (set by CI), shown beside the account icon so a build can be told apart.
+        buildConfigField("String", "COMMIT", "\"${(System.getenv("GITHUB_SHA") ?: "dev").take(7)}\"")
         // The WebRTC library is large; phones are 64 or 32 bit ARM.
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a")
@@ -43,6 +45,7 @@ android {
         jvmTarget = "17"
     }
     buildFeatures {
+        buildConfig = true
         compose = true
     }
 }

@@ -58,3 +58,7 @@ fun parseIceServers(servers: JSONArray?): List<IceServerSpec> {
     }
     return out
 }
+
+/** The kinds of media in an SDP, in order of its `m=` lines (`audio`, `video`, `application`): for telling offer and answer apart. */
+fun mediaOrder(sdp: String): List<String> =
+    sdp.lineSequence().filter { it.startsWith("m=") }.map { it.removePrefix("m=").substringBefore(' ') }.toList()

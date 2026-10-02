@@ -1,5 +1,6 @@
 package com.churchdrive.app.ui
 
+import com.churchdrive.app.ha.text
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -44,11 +45,11 @@ object DashboardPanels {
     }
 
     private fun panel(o: JSONObject) = PanelSpec(
-        title = o.optString("title"),
-        icon = o.optString("icon").takeIf { it.isNotBlank() },
-        color = o.optString("color").takeIf { it.isNotBlank() },
-        colorTemplate = o.optString("color_template").takeIf { it.isNotBlank() },
-        summaryTemplate = o.optString("summary").takeIf { it.isNotBlank() },
+        title = o.text("title").orEmpty(),
+        icon = o.text("icon"),
+        color = o.text("color"),
+        colorTemplate = o.text("color_template"),
+        summaryTemplate = o.text("summary"),
         cards = cards(o.opt("cards")),
     )
 

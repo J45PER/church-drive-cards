@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.churchdrive.app.BuildConfig
 import com.churchdrive.app.ha.CallService
 import com.churchdrive.app.ha.ConnectionState
 import com.churchdrive.app.ha.EntityState
@@ -74,6 +75,12 @@ fun HomeScreen(
             MediumTopAppBar(
                 title = { Text(title) },
                 actions = {
+                    // Temporary: which build this is.
+                    Text(
+                        "v${BuildConfig.VERSION_NAME} · ${BuildConfig.COMMIT}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                     IconButton(onClick = { menuOpen = true }) {
                         Icon(Icons.Filled.AccountCircle, contentDescription = "Account")
                     }

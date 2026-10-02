@@ -51,3 +51,9 @@ enum class ConnectionState { Disconnected, Connecting, Connected, AuthFailed }
 typealias CallService = (domain: String, service: String, entityId: String, data: JSONObject) -> Unit
 
 fun data(vararg pairs: Pair<String, Any>): JSONObject = JSONObject().apply { pairs.forEach { put(it.first, it.second) } }
+
+/**
+ * A text value, or null when it's missing, JSON null or blank. (org.json's own `optString` gives the text "null"
+ * for a JSON null, which is how a name of `null` once showed up on screen.)
+ */
+fun JSONObject.text(key: String): String? = if (isNull(key)) null else optString(key).takeIf { it.isNotBlank() }

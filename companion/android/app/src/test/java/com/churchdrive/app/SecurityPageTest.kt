@@ -138,4 +138,13 @@ class SecurityPageTest {
         assertEquals("", clockTime("not a time", london))
         assertEquals("", clockTime(null, london))
     }
+
+    @Test
+    fun aJsonNullDeviceNameIsNotTheTextNull() {
+        val reg = Registry.parse(
+            JSONObject("""{"entities":[{"ei":"binary_sensor.a","di":"d1"}]}"""),
+            JSONArray("""[{"id":"d1","name":"Hall alarm","name_by_user":null},{"id":"d2","name":null,"name_by_user":null}]"""),
+        )
+        assertEquals("Hall alarm", reg.deviceName("binary_sensor.a"))
+    }
 }

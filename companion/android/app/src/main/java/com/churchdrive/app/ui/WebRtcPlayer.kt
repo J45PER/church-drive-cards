@@ -62,6 +62,17 @@ fun WebRtcPlayer(entityId: String, muted: Boolean, modifier: Modifier = Modifier
     AndroidView(factory = { renderer }, modifier = modifier)
 }
 
+/**
+ * The order the offer's media sections are set up in. Home Assistant's own player uses the first (a data
+ * channel, then audio, then video); if a camera's answer comes back in another order, the others are tried.
+ */
+private val ORDERS = listOf(
+    listOf("data", "audio", "video"),
+    listOf("audio", "video", "data"),
+    listOf("video", "audio", "data"),
+    listOf("data", "video", "audio"),
+)
+
 /** One live view's connection. Everything is cleaned up by [close]. */
 private class RtcSession(
     private val context: Context,
@@ -76,31 +87,40 @@ private class RtcSession(
     private var connection: PeerConnection? = null
     private var subscription = -1
     private var sessionId: String? = null
+    private var servers: List<IceServerSpec> = emptyList()
+    private var generation = 0
+    private var lastOffer = ""
     private val pendingCandidates = mutableListOf<IceCandidate>()
     private val closed = AtomicBoolean(false)
     private val playing = AtomicBoolean(false)
     private var timeout: Thread? = null
 
     fun start() {
-        host.iceServers(entityId) { servers -> if (!closed.get()) connect(parseIceServers(servers)) }
+        host.iceServers(entityId) { list ->
+            if (closed.get()) return@iceServers
+            servers = parseIceServers(list)
+            attempt(0)
+        }
         // Give up if nothing is playing after a while, so the viewer says so instead of waiting for ever.
         timeout = Thread {
             try {
-                Thread.sleep(20_000)
+                Thread.sleep(25_000)
                 if (!closed.get() && !playing.get()) onStatus("The camera didn't answer. Try again.")
             } catch (_: InterruptedException) {
             }
         }.also { it.isDaemon = true; it.start() }
     }
 
-    private fun connect(servers: List<IceServerSpec>) {
+    /** One try at connecting, with the offer's media sections in [ORDERS] order number [n]. */
+    private fun attempt(n: Int) {
         runCatching {
+            teardown()
+            val mine = ++generation
             ensureInitialised(context)
-            val f = PeerConnectionFactory.builder()
+            val f = factory ?: PeerConnectionFactory.builder()
                 .setVideoDecoderFactory(DefaultVideoDecoderFactory(egl.eglBaseContext))
                 .setVideoEncoderFactory(DefaultVideoEncoderFactory(egl.eglBaseContext, true, true))
-                .createPeerConnectionFactory()
-            factory = f
+                .createPeerConnectionFactory().also { factory = it }
             val ice = servers.map { s ->
                 PeerConnection.IceServer.builder(s.urls).apply {
                     s.username?.let { setUsername(it) }
@@ -110,31 +130,39 @@ private class RtcSession(
             val config = PeerConnection.RTCConfiguration(ice).apply { sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN }
             val pc = f.createPeerConnection(config, this) ?: error("No connection")
             connection = pc
-            pc.addTransceiver(
-                org.webrtc.MediaStreamTrack.MediaType.MEDIA_TYPE_VIDEO,
-                RtpTransceiver.RtpTransceiverInit(RtpTransceiver.RtpTransceiverDirection.RECV_ONLY),
-            )
-            pc.addTransceiver(
-                org.webrtc.MediaStreamTrack.MediaType.MEDIA_TYPE_AUDIO,
-                RtpTransceiver.RtpTransceiverInit(RtpTransceiver.RtpTransceiverDirection.RECV_ONLY),
-            )
-            // Home Assistant's own player opens a data channel too; it makes the setup behave the same.
-            pc.createDataChannel("dataSendChannel", DataChannel.Init())
+            for (kind in ORDERS[n]) {
+                when (kind) {
+                    "audio" -> pc.addTransceiver(
+                        org.webrtc.MediaStreamTrack.MediaType.MEDIA_TYPE_AUDIO,
+                        RtpTransceiver.RtpTransceiverInit(RtpTransceiver.RtpTransceiverDirection.RECV_ONLY),
+                    )
+                    "video" -> pc.addTransceiver(
+                        org.webrtc.MediaStreamTrack.MediaType.MEDIA_TYPE_VIDEO,
+                        RtpTransceiver.RtpTransceiverInit(RtpTransceiver.RtpTransceiverDirection.RECV_ONLY),
+                    )
+                    // Home Assistant's own player opens a data channel too; some cameras need it.
+                    else -> pc.createDataChannel("dataSendChannel", DataChannel.Init())
+                }
+            }
             pc.createOffer(object : Sdp() {
                 override fun onCreateSuccess(sdp: SessionDescription) {
                     pc.setLocalDescription(object : Sdp() {
-                        override fun onSetSuccess() = sendOffer(sdp.description)
+                        override fun onSetSuccess() = sendOffer(sdp.description, mine)
                         override fun onSetFailure(error: String?) = fail("Couldn't start the live view ($error)")
                     }, sdp)
                 }
 
                 override fun onCreateFailure(error: String?) = fail("Couldn't start the live view ($error)")
             }, MediaConstraints())
+            lastAttempt = n
         }.onFailure { fail("Couldn't start the live view (${it.message})") }
     }
 
-    private fun sendOffer(sdp: String) {
-        subscription = host.webRtcOffer(entityId, sdp) { event -> handle(parseRtcEvent(event)) }
+    private var lastAttempt = 0
+
+    private fun sendOffer(sdp: String, mine: Int) {
+        lastOffer = sdp
+        subscription = host.webRtcOffer(entityId, sdp) { event -> if (mine == generation) handle(parseRtcEvent(event)) }
         if (subscription < 0) fail("Not connected to Home Assistant.")
     }
 
@@ -150,7 +178,17 @@ private class RtcSession(
                 }
             }
             is RtcEvent.Answer -> connection?.setRemoteDescription(object : Sdp() {
-                override fun onSetFailure(error: String?) = fail("The camera's answer wasn't accepted ($error)")
+                override fun onSetFailure(error: String?) {
+                    // A camera that answers in another order: try the next way of setting up the offer.
+                    if (error?.contains("m-lines") == true && lastAttempt + 1 < ORDERS.size && !closed.get()) {
+                        attempt(lastAttempt + 1)
+                    } else {
+                        fail(
+                            "The camera's answer wasn't accepted ($error). " +
+                                "Offer: ${mediaOrder(lastOffer).joinToString(",")}; answer: ${mediaOrder(event.sdp).joinToString(",")}.",
+                        )
+                    }
+                }
             }, SessionDescription(SessionDescription.Type.ANSWER, event.sdp))
             is RtcEvent.Candidate -> connection?.addIceCandidate(IceCandidate(event.sdpMid ?: "0", event.sdpMLineIndex, event.candidate))
             is RtcEvent.Error -> fail(event.message)
@@ -168,12 +206,21 @@ private class RtcSession(
         onStatus(message)
     }
 
+    /** Ends the current try (the connection and its subscription), keeping the factory for the next one. */
+    private fun teardown() {
+        if (subscription >= 0) host.close(subscription)
+        subscription = -1
+        sessionId = null
+        synchronized(pendingCandidates) { pendingCandidates.clear() }
+        runCatching { connection?.close() }
+        runCatching { connection?.dispose() }
+        connection = null
+    }
+
     fun close() {
         if (!closed.compareAndSet(false, true)) return
         timeout?.interrupt()
-        if (subscription >= 0) host.close(subscription)
-        runCatching { connection?.close() }
-        runCatching { connection?.dispose() }
+        teardown()
         runCatching { factory?.dispose() }
     }
 

@@ -29,16 +29,17 @@ class Registry(private val entityDevice: Map<String, String>, private val device
             val entityDevice = mutableMapOf<String, String>()
             for (i in 0 until (list?.length() ?: 0)) {
                 val e = list?.optJSONObject(i) ?: continue
-                val id = e.optString("ei")
-                val device = e.optString("di")
-                if (id.isNotEmpty() && device.isNotEmpty()) entityDevice[id] = device
+                val id = e.text("ei")
+                val device = e.text("di")
+                if (id != null && device != null) entityDevice[id] = device
             }
             val names = mutableMapOf<String, String>()
             val d = devices as? JSONArray
             for (i in 0 until (d?.length() ?: 0)) {
                 val o = d?.optJSONObject(i) ?: continue
-                val name = o.optString("name_by_user").takeIf { it.isNotBlank() } ?: o.optString("name").takeIf { it.isNotBlank() }
-                if (name != null && o.has("id")) names[o.getString("id")] = name
+                val name = o.text("name_by_user") ?: o.text("name")
+                val id = o.text("id")
+                if (name != null && id != null) names[id] = name
             }
             return Registry(entityDevice, names)
         }

@@ -1,6 +1,7 @@
 package com.churchdrive.app.ui
 
 import androidx.compose.runtime.compositionLocalOf
+import com.churchdrive.app.ha.text
 import org.json.JSONArray
 import org.json.JSONObject
 import kotlin.math.ln
@@ -70,7 +71,7 @@ class SceneLooks(val library: Map<String, LibraryScene>, val styles: Map<String,
                 key, o.optString("name", key), hex,
                 kelvin = if (o.has("color_temp_kelvin")) o.optInt("color_temp_kelvin") else null,
                 xy = xy,
-                icon = o.optString("icon").takeIf { it.isNotBlank() },
+                icon = o.text("icon"),
                 dynamic = o.optBoolean("dynamic", false),
             )
         }
@@ -85,9 +86,9 @@ class SceneLooks(val library: Map<String, LibraryScene>, val styles: Map<String,
                             val list = node.optJSONArray("styles")
                             for (i in 0 until (list?.length() ?: 0)) {
                                 val s = list?.optJSONObject(i) ?: continue
-                                val name = s.optString("scene").takeIf { it.isNotBlank() } ?: continue
+                                val name = s.text("scene") ?: continue
                                 val colours = listOf("colour_1", "colour_2", "colour_3").mapNotNull { parseColour(s.opt(it)) }
-                                val icon = s.optString("icon").takeIf { it.isNotBlank() }
+                                val icon = s.text("icon")
                                 // The released card wins over a beta one, as in the cards.
                                 if (colours.isNotEmpty() || icon != null) out.putIfAbsent(sceneKey(name), SceneStyle(colours, icon))
                             }
