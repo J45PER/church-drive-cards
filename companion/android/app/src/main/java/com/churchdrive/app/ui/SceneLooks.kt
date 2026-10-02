@@ -120,10 +120,13 @@ class SceneLooks(val library: Map<String, LibraryScene>, val styles: Map<String,
         }
 
         /**
-         * Whether dark text reads better than white on a tile with these colours. White and the dark text
-         * (about 0.017 luminance) have equal contrast at a background luminance of about 0.18, so that's the line.
+         * Whether dark text reads better than white on a tile with these colours. Plain contrast maths puts the
+         * line at about 0.18 luminance, but saturated blues and purples look darker than that suggests and read
+         * better with white text, so the line is set higher (0.30), tuned on the real tiles: bright, pastel and
+         * warm scenes (Bright, Relax, Soho, Ruby glow, Phantom) get dark text; deep ones (Dimmed, Nightlight,
+         * Cyber fidelity) keep white.
          */
-        fun darkInkOn(colours: List<Int>): Boolean = colours.map { luminance(it) }.average() > 0.18
+        fun darkInkOn(colours: List<Int>): Boolean = colours.map { luminance(it) }.average() > 0.30
 
         private fun pair(c: List<Int>) = if (c.size == 1) listOf(c[0], c[0]) else c
 

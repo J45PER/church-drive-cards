@@ -86,12 +86,15 @@ class SceneLooksTest {
 
     @Test
     fun picksDarkOrWhiteTextByContrast() {
-        // Bright or pastel tiles take dark text; deep ones keep white.
-        assertEquals(true, SceneLooks.darkInkOn(listOf(argb(0xFFF1D6), argb(0xFFD9A0))))   // Bright
-        assertEquals(true, SceneLooks.darkInkOn(listOf(argb(0xFF95AB), argb(0xFFA06B))))   // pink and orange, like Soho/Ruby glow
-        assertEquals(true, SceneLooks.darkInkOn(listOf(argb(0xFFB36B), argb(0xE07A3A))))   // Relax
-        assertEquals(false, SceneLooks.darkInkOn(listOf(argb(0xA8793A), argb(0x5C3D1A))))  // Dimmed
-        assertEquals(false, SceneLooks.darkInkOn(listOf(argb(0x7A2E10), argb(0x3A1408))))  // Nightlight
-        assertEquals(false, SceneLooks.darkInkOn(listOf(argb(0x3A2552), argb(0x1C3358))))  // deep purple and navy
+        // Bright, pastel and warm tiles take dark text; deep ones keep white.
+        assertEquals(true, SceneLooks.darkInkOn(listOf(argb(0xFFF1D6), argb(0xFFD9A0))))                      // Bright
+        assertEquals(true, SceneLooks.darkInkOn(listOf(argb(0xFFC8D3), argb(0xFF95AB), argb(0xFF618B))))      // Ruby glow
+        assertEquals(true, SceneLooks.darkInkOn(listOf(argb(0xFFB36B), argb(0xE07A3A))))                      // Relax
+        assertEquals(true, SceneLooks.darkInkOn(listOf(argb(0xFF2778), argb(0xFFA06F), argb(0xFF6F9A), argb(0x8313FF), argb(0x67FFDB)))) // Soho
+        assertEquals(true, SceneLooks.darkInkOn(listOf(argb(0x3A92FF), argb(0x9DF6FF), argb(0xFF9B6B))))      // Phantom
+        assertEquals(false, SceneLooks.darkInkOn(listOf(argb(0xA8793A), argb(0x5C3D1A))))                     // Dimmed
+        assertEquals(false, SceneLooks.darkInkOn(listOf(argb(0x7A2E10), argb(0x3A1408))))                     // Nightlight
+        assertEquals(false, SceneLooks.darkInkOn(listOf(argb(0xE26779), argb(0x7862FF), argb(0x3695FF))))     // Cyber fidelity, as drawn
+        assertEquals(false, SceneLooks.darkInkOn(listOf(argb(0x3A2552), argb(0x1C3358))))                     // deep purple and navy
     }
 }
