@@ -301,6 +301,7 @@ export function installMapStyle() {
   } catch (err) {
     /* Home Assistant keeps its own maps */
   }
+  if (SUFFIX) setTimeout(() => mapDebug({ leafletMap: null }, `page: ha-map defined ${!!customElements.get('ha-map')}, maps on page ${findAll(document, 'ha-map').length}`), 5000);
   window.addEventListener('cd-map-google', reapplyAll);
   window.addEventListener('cd-map-style', reapplyAll);
   // Ask where Google's tiles are once Home Assistant's connection is up.
