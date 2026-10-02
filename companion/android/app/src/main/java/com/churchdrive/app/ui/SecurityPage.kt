@@ -89,6 +89,7 @@ fun CardView(card: CardSpec, entities: Map<String, EntityState>, registry: Regis
         "custom:safety-card" -> SafetyCard(card.config, entities, registry)
         "tile" -> TileCard(card.config, entities, call)
         "custom:camera-card" -> CameraCard(card.config, entities, call)
+        "custom:security-zone-card" -> ZoneCard(card.config, entities, call)
         else -> NotBuiltCard()
     }
 }

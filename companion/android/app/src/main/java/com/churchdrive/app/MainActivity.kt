@@ -17,6 +17,7 @@ import com.churchdrive.app.ui.ChurchDriveTheme
 import com.churchdrive.app.ui.HomeScreen
 import com.churchdrive.app.ui.LocalBaseUrl
 import com.churchdrive.app.ui.LocalCameraStream
+import com.churchdrive.app.ui.LocalHistory
 import com.churchdrive.app.ui.LocalSceneLooks
 import com.churchdrive.app.ui.LocalTemplates
 import com.churchdrive.app.ui.LoginScreen
@@ -50,6 +51,7 @@ class MainActivity : ComponentActivity() {
                             LocalTemplates provides vm.templates,
                             LocalBaseUrl provides vm.baseUrl,
                             LocalCameraStream provides vm::cameraStream,
+                            LocalHistory provides vm::history,
                         ) {
                             if (signedIn) {
                                 HomeScreen(

@@ -120,6 +120,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         _signedIn.value = false
     }
 
+    /** History of some entities over the last [hours]: each one's (time in ms, state) list, for the zone strips. */
+    fun history(ids: List<String>, hours: Int, done: (Map<String, List<Pair<Long, String>>>) -> Unit) {
+        if (ids.isEmpty()) {
+            done(emptyMap())
+            return
+        }
+        val params = org.json.JSONObject()
+            .put("start_time", java.time.Instant.now().minusSeconds(hours * 3600L).toString())
+            .put("entity_ids", org.json.JSONArray(ids))
+            .put("minimal_response", true)
+            .put("no_attributes", true)
+            .put("significant_changes_only", false)
+        client.request("history/history_during_period", params) { done(com.churchdrive.app.ui.parseHistory(it)) }
+    }
+
     /** Home Assistant's address, for pictures and video links. */
     val baseUrl: String get() = session.url?.trim()?.trimEnd('/').orEmpty()
 
