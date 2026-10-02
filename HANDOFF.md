@@ -703,7 +703,10 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
   - **Zappi (connected 2026-10-02):** myenergi entry `01M3YEKEVKPTN4PZH6EGDMMH3V`, hub
     serial 20220859; device "Zappi", entities tidied to `*.zappi_*` (`select.zappi_charge_mode`,
     `sensor.zappi_plug_status`, `_status`, `_charge_added_session`, `_charging_power` (CT1),
-    `_grid_power` (CT2), `_energy_used_today`, …).
+    `_grid_power` (CT2), `_energy_used_today`, …). The hub is device "myenergi Hub" with
+    `sensor.myenergi_*` (`house_power` = live whole-house use, `grid_import_today`,
+    `import_power`, `grid_voltage`, …), not used by any card yet (idea: live house power on
+    Energy).
     Plug values: EV Disconnected / EV Connected / Waiting for EV / EV ready to charge /
     Charging / Fault; status: Paused / Charging / Boosting / Completed.
     Earlier notes: the HACS integration CJNE/ha-myenergi (id 401145616) is downloaded. HA
