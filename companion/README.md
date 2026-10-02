@@ -45,8 +45,8 @@ This branch is a scratch space for design; nothing here ships with the HACS inte
 
 ## User app pages (draft)
 
-Taken from the current `dashboard-mobile` views, without Media (TVs & speakers) and
-Energy (admin only). Each page is a stack of titled sections, as on the dashboard.
+Taken from the current `dashboard-mobile` views, without Media, Devices or Energy.
+The car charger stays, for all users. Each page is a stack of titled sections, as on the dashboard.
 
 | Page | Sections |
 |---|---|
@@ -56,11 +56,10 @@ Energy (admin only). Each page is a stack of titled sections, as on the dashboar
 | Climate | Heating, Climate zones, Cooling (fan), Air quality, Windows & Doors (blind) |
 | Cleaning | Vacuum controls and settings |
 | To-do | From the house, My to-do, Shared, Cleaning |
-| Devices | Devices & services (system card); TVs & speakers dropped |
 
 Native pieces needed: alarm panel, light control, climate (and zone), camera, safety,
 security zone, fan, air purifier, CO alarm, cover, vacuum, EV charger (the Home page
-shows it), house tasks and task list, system.
+shows it), house tasks and task list.
 
 ## Native widgets
 
