@@ -1,27 +1,23 @@
 package com.churchdrive.app.ui
 
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Bedtime
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.EvStation
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.filled.Thermostat
+import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -33,7 +29,6 @@ import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -45,11 +40,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.churchdrive.app.ha.CallService
 import com.churchdrive.app.ha.ConnectionState
 import com.churchdrive.app.ha.EntityState
 
@@ -58,19 +53,21 @@ import com.churchdrive.app.ha.EntityState
 @Composable
 fun HomeScreen(
     connection: ConnectionState,
-    alarm: EntityState?,
-    onAlarm: (service: String, code: String?) -> Unit,
+    entities: Map<String, EntityState>,
+    userName: String?,
+    call: CallService,
     onSignOut: () -> Unit,
 ) {
     var page by rememberSaveable { mutableStateOf(Page.Home) }
     var menuOpen by remember { mutableStateOf(false) }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val title = if (page == Page.Home) "Hello ${userName?.substringBefore(' ') ?: ""}".trim() else page.label
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             LargeTopAppBar(
-                title = { Text(page.label) },
+                title = { Text(title) },
                 actions = {
                     IconButton(onClick = { menuOpen = true }) {
                         Icon(Icons.Filled.AccountCircle, contentDescription = "Account")
@@ -109,7 +106,7 @@ fun HomeScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp),
+            verticalArrangement = Arrangement.spacedBy(28.dp),
         ) {
             when (connection) {
                 ConnectionState.Connected -> Unit
@@ -118,11 +115,15 @@ fun HomeScreen(
                 else -> Text("Connecting…", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
-            page.sections.forEach { section ->
-                SectionPanel(section.title) {
-                    when (section.kind) {
-                        SectionKind.Alarm -> AlarmCard(alarm, onAlarm)
-                        SectionKind.NotBuilt -> NotBuiltCard()
+            if (page == Page.Home) {
+                HomePage(entities, call, onOpen = { page = it })
+            } else {
+                page.sections.forEach { section ->
+                    SectionPanel(section.title) {
+                        when (section.kind) {
+                            SectionKind.Alarm -> AlarmCard(entities[ALARM_ENTITY], call)
+                            SectionKind.NotBuilt -> NotBuiltCard()
+                        }
                     }
                 }
             }
@@ -130,16 +131,83 @@ fun HomeScreen(
     }
 }
 
-/** A titled group of cards, like the section-panel-card on the dashboards. */
+/**
+ * Home: the same five panels as the dashboard's Quick Actions page, each with a coloured icon,
+ * a live one-line summary, and a tap through to its own page.
+ */
 @Composable
-fun SectionPanel(title: String, content: @Composable () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            title,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 4.dp),
-        )
+private fun HomePage(entities: Map<String, EntityState>, call: CallService, onOpen: (Page) -> Unit) {
+    val alarm = entities[ALARM_ENTITY]
+    val climate = entities[CLIMATE_ENTITY]
+    val vacuum = entities[VACUUM_ENTITY]
+
+    SectionPanel(
+        "Security", icon = Icons.Filled.Security, tone = alarmTone(alarm?.state),
+        summary = alarmLabel(alarm?.state), onClick = { onOpen(Page.Security) },
+    ) { AlarmCard(alarm, call) }
+
+    SectionPanel(
+        "Climate", icon = Icons.Filled.Thermostat, tone = climateTone(climate),
+        summary = "${temp(climate?.num("current_temperature"))} °C · ${climateWord(climate)}",
+        onClick = { onOpen(Page.Climate) },
+    ) { ClimateCard(climate, call) }
+
+    SectionPanel(
+        "Lights", icon = Icons.Filled.Lightbulb, tone = Tone.Amber,
+        summary = lightsSummary(entities), onClick = { onOpen(Page.Lighting) },
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            LIGHT_ROOMS.forEach { id -> LightRoomCard(entities[id], id, call) }
+        }
+    }
+
+    SectionPanel(
+        "Cleaning", icon = Icons.Filled.CleaningServices, tone = vacuumTone(vacuum),
+        summary = vacuumSummary(vacuum, entities[VACUUM_BATTERY]), onClick = { onOpen(Page.Cleaning) },
+    ) { VacuumCard(vacuum, entities[VACUUM_BATTERY], call) }
+
+    SectionPanel(
+        "Car charger", icon = Icons.Filled.EvStation, tone = Tone.Teal,
+        summary = entities[ZAPPI_MODE]?.state ?: "", onClick = null,
+    ) { ChargerCard(entities, call) }
+}
+
+/**
+ * A titled group of cards, like the dashboard's section panel: a coloured icon, the title,
+ * a live summary on the right, and a chevron when tapping the header opens the section's page.
+ */
+@Composable
+fun SectionPanel(
+    title: String,
+    icon: ImageVector? = null,
+    tone: Tone = Tone.Grey,
+    summary: String? = null,
+    onClick: (() -> Unit)? = null,
+    content: @Composable () -> Unit,
+) {
+    val colors = toneColors(tone)
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .let { if (onClick != null) it.clickable(onClick = onClick) else it }
+                .padding(horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            if (icon != null) ToneIcon(icon, colors, size = 36)
+            Text(
+                title,
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.weight(1f),
+            )
+            if (!summary.isNullOrBlank()) {
+                Text(summary, style = MaterialTheme.typography.bodyMedium, color = colors.accent)
+            }
+            if (onClick != null) {
+                Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
         content()
     }
 }
@@ -157,86 +225,4 @@ fun NotBuiltCard() {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
-}
-
-@Composable
-fun AlarmCard(alarm: EntityState?, onAlarm: (service: String, code: String?) -> Unit) {
-    val state = alarm?.state
-    val tone = toneColors(alarmTone(state))
-    val triggered = state == "triggered"
-    // Triggered is fully tinted, like the dashboard card.
-    val container = if (triggered) tone.accent else tone.container
-    val content = if (triggered) tone.onAccent else tone.onContainer
-    val enabled = alarm != null
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = container, contentColor = content),
-    ) {
-        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Icon(alarmIcon(state), contentDescription = null, modifier = Modifier.size(36.dp))
-                Text(alarmLabel(state), style = MaterialTheme.typography.headlineSmall)
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ModeButton("Disarm", state == "disarmed", enabled, tone, content, Modifier.weight(1f)) { onAlarm("alarm_disarm", null) }
-                ModeButton("Home", state == "armed_home", enabled, tone, content, Modifier.weight(1f)) { onAlarm("alarm_arm_home", null) }
-                ModeButton("Away", state == "armed_away", enabled, tone, content, Modifier.weight(1f)) { onAlarm("alarm_arm_away", null) }
-                ModeButton("Night", state == "armed_night", enabled, tone, content, Modifier.weight(1f)) { onAlarm("alarm_arm_night", null) }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ModeButton(
-    label: String,
-    selected: Boolean,
-    enabled: Boolean,
-    tone: ToneColors,
-    content: Color,
-    modifier: Modifier,
-    onClick: () -> Unit,
-) {
-    val padding = PaddingValues(horizontal = 4.dp)
-    if (selected) {
-        Button(
-            onClick = onClick,
-            enabled = enabled,
-            modifier = modifier,
-            contentPadding = padding,
-            colors = ButtonDefaults.buttonColors(containerColor = tone.accent, contentColor = tone.onAccent),
-        ) { Text(label, maxLines = 1) }
-    } else {
-        OutlinedButton(
-            onClick = onClick,
-            enabled = enabled,
-            modifier = modifier,
-            contentPadding = padding,
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = content),
-            border = BorderStroke(1.dp, content.copy(alpha = 0.4f)),
-        ) { Text(label, maxLines = 1) }
-    }
-}
-
-private fun alarmIcon(state: String?): ImageVector = when (state) {
-    "disarmed" -> Icons.Filled.LockOpen
-    "triggered" -> Icons.Filled.Warning
-    "armed_home" -> Icons.Filled.Home
-    "armed_away" -> Icons.Filled.Lock
-    "armed_night" -> Icons.Filled.Bedtime
-    else -> Icons.Filled.Security
-}
-
-fun alarmLabel(state: String?): String = when (state) {
-    "disarmed" -> "Disarmed"
-    "armed_home" -> "Armed home"
-    "armed_away" -> "Armed away"
-    "armed_night" -> "Armed night"
-    "arming" -> "Arming"
-    "pending" -> "Entry delay"
-    "triggered" -> "Triggered"
-    null -> "Loading…"
-    else -> state.replaceFirstChar { it.uppercase() }
 }

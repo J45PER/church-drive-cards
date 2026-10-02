@@ -15,6 +15,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     val connection: StateFlow<ConnectionState> = client.connection
     val entities: StateFlow<Map<String, EntityState>> = client.entities
+    val userName: StateFlow<String?> = client.userName
 
     private val _signedIn = MutableStateFlow(session.signedIn)
     val signedIn: StateFlow<Boolean> = _signedIn
@@ -35,13 +36,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         _signedIn.value = false
     }
 
-    fun alarm(service: String, code: String? = null) {
-        val data = org.json.JSONObject()
-        if (!code.isNullOrBlank()) data.put("code", code)
-        client.callService("alarm_control_panel", service, ALARM_ENTITY, data)
-    }
+    fun call(domain: String, service: String, entityId: String, data: org.json.JSONObject) =
+        client.callService(domain, service, entityId, data)
 
     companion object {
-        const val ALARM_ENTITY = "alarm_control_panel.church_drive_alarm"
     }
 }

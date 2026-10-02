@@ -34,11 +34,13 @@ class MainActivity : ComponentActivity() {
                         val signedIn by vm.signedIn.collectAsStateWithLifecycle()
                         val connection by vm.connection.collectAsStateWithLifecycle()
                         val entities by vm.entities.collectAsStateWithLifecycle()
+                        val userName by vm.userName.collectAsStateWithLifecycle()
                         if (signedIn) {
                             HomeScreen(
                                 connection = connection,
-                                alarm = entities[AppViewModel.ALARM_ENTITY],
-                                onAlarm = vm::alarm,
+                                entities = entities,
+                                userName = userName,
+                                call = vm::call,
                                 onSignOut = vm::signOut,
                             )
                         } else {

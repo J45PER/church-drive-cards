@@ -10,7 +10,7 @@ import androidx.compose.ui.graphics.Color
  * Google's own palette, with a light and a dark variant. They stay fixed rather than
  * following the wallpaper, so green always means "fine" and red always means "look".
  */
-enum class Tone { Green, Blue, Red, Purple, Amber, Orange, Grey }
+enum class Tone { Green, Blue, Red, Purple, Amber, Orange, Teal, Grey }
 
 data class ToneColors(
     /** Card background. */
@@ -36,6 +36,7 @@ private val lightTones = mapOf(
     Tone.Purple to light(0xFFF3E8FD, 0xFF681DA8, 0xFF9334E6),
     Tone.Amber to light(0xFFFEF7E0, 0xFF7A4F01, 0xFFE37400),
     Tone.Orange to light(0xFFFEEFE3, 0xFF8C3A00, 0xFFE8590C),
+    Tone.Teal to light(0xFFE0F7FA, 0xFF006064, 0xFF00838F),
     Tone.Grey to light(0xFFF1F3F4, 0xFF3C4043, 0xFF5F6368),
 )
 
@@ -46,6 +47,7 @@ private val darkTones = mapOf(
     Tone.Purple to dark(0xFF3A2552, 0xFFC58AF9, 0xFFC58AF9),
     Tone.Amber to dark(0xFF4A3A12, 0xFFFDD663, 0xFFFDD663),
     Tone.Orange to dark(0xFF4A2A14, 0xFFFFAB70, 0xFFFFAB70),
+    Tone.Teal to dark(0xFF0F3A40, 0xFF4DD0E1, 0xFF4DD0E1),
     Tone.Grey to dark(0xFF303134, 0xFFBDC1C6, 0xFF9AA0A6),
 )
 

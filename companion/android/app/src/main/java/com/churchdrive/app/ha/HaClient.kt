@@ -31,6 +31,9 @@ class HaClient(private val scope: CoroutineScope) {
     private val _entities = MutableStateFlow<Map<String, EntityState>>(emptyMap())
     val entities: StateFlow<Map<String, EntityState>> = _entities
 
+    private val _userName = MutableStateFlow<String?>(null)
+    val userName: StateFlow<String?> = _userName
+
     private var socket: WebSocket? = null
     private var job: Job? = null
     private var nextId = 1
@@ -65,6 +68,7 @@ class HaClient(private val scope: CoroutineScope) {
         socket = null
         _connection.value = ConnectionState.Disconnected
         _entities.value = emptyMap()
+        _userName.value = null
     }
 
     fun callService(domain: String, service: String, entityId: String, data: JSONObject = JSONObject()) {
@@ -80,6 +84,7 @@ class HaClient(private val scope: CoroutineScope) {
 
     private inner class Listener(private val closed: kotlinx.coroutines.CompletableDeferred<Unit>) : WebSocketListener() {
         private var getStatesId = -1
+        private var userId = -1
 
         override fun onMessage(webSocket: WebSocket, text: String) {
             val msg = JSONObject(text)
@@ -93,6 +98,8 @@ class HaClient(private val scope: CoroutineScope) {
                         JSONObject().put("id", id()).put("type", "subscribe_events")
                             .put("event_type", "state_changed").toString(),
                     )
+                    userId = id()
+                    webSocket.send(JSONObject().put("id", userId).put("type", "auth/current_user").toString())
                     getStatesId = id()
                     webSocket.send(JSONObject().put("id", getStatesId).put("type", "get_states").toString())
                 }
@@ -100,8 +107,11 @@ class HaClient(private val scope: CoroutineScope) {
                     _connection.value = ConnectionState.AuthFailed
                     webSocket.close(1000, null)
                 }
-                "result" -> if (msg.optInt("id") == getStatesId && msg.optBoolean("success")) {
-                    _entities.value = parseStates(msg.getJSONArray("result"))
+                "result" -> if (msg.optBoolean("success")) {
+                    when (msg.optInt("id")) {
+                        getStatesId -> _entities.value = parseStates(msg.getJSONArray("result"))
+                        userId -> _userName.value = msg.optJSONObject("result")?.optString("name")?.takeIf { it.isNotBlank() }
+                    }
                 }
                 "event" -> applyEvent(msg.getJSONObject("event"))
             }
