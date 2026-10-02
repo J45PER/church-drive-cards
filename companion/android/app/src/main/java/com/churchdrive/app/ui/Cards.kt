@@ -98,6 +98,17 @@ fun ToneIcon(icon: ImageVector, tone: ToneColors, size: Int = 40) {
     }
 }
 
+/** An icon drawn from its name (`mdi:` or `phu:`) in a tinted circle; [fallback] shows when the name isn't known. */
+@Composable
+fun ToneIconName(name: String?, fallback: ImageVector, tone: ToneColors, size: Int = 40) {
+    Box(
+        modifier = Modifier.size(size.dp).background(tone.accent.copy(alpha = 0.18f), CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        HaIcon(name, fallback, tone.accent, (size * 0.55f).dp)
+    }
+}
+
 /** One of a row of mutually exclusive choices; the current one is filled in the tone's strong colour. */
 @Composable
 fun ChoiceButton(
@@ -135,6 +146,9 @@ fun ChoiceButton(
 const val ALARM_ENTITY = "alarm_control_panel.church_drive_alarm"
 
 private data class AlarmInfo(val label: String, val icon: String)
+
+/** The dashboard's icon for an alarm state, e.g. `mdi:shield-home`. */
+fun alarmIconName(state: String?): String = ALARM_STATES[state]?.icon ?: "mdi:shield-lock"
 
 private val ALARM_STATES = mapOf(
     "disarmed" to AlarmInfo("Disarmed", "mdi:shield-off-outline"),
@@ -176,7 +190,7 @@ private fun alarmLines(alarm: EntityState): Pair<String, String> {
  * during an entry or exit delay, what to do (or who and when), and a button for each mode the alarm supports.
  */
 @Composable
-fun AlarmCard(alarm: EntityState?, call: CallService) {
+fun AlarmCard(alarm: EntityState?, call: CallService, entityId: String = ALARM_ENTITY) {
     val state = alarm?.state
     val tone = toneColors(alarmTone(state))
     val triggered = state == "triggered"
@@ -185,7 +199,7 @@ fun AlarmCard(alarm: EntityState?, call: CallService) {
     val content = if (triggered) tone.onAccent else tone.onContainer
     val ring = if (triggered) tone.onAccent else tone.accent
     val enabled = alarm != null
-    fun send(service: String) = call("alarm_control_panel", service, ALARM_ENTITY, data())
+    fun send(service: String) = call("alarm_control_panel", service, entityId, data())
 
     val inDelay = state == "arming" || state == "pending"
     val secsLeft = when (state) {
@@ -363,7 +377,7 @@ fun ClimateCard(climate: EntityState?, call: CallService) {
 }
 
 @Composable
-private fun StepButton(icon: ImageVector, description: String, tone: ToneColors, enabled: Boolean, onClick: () -> Unit) {
+fun StepButton(icon: ImageVector, description: String, tone: ToneColors, enabled: Boolean, onClick: () -> Unit) {
     FilledIconButton(
         onClick = onClick,
         enabled = enabled,

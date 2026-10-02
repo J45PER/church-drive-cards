@@ -6,6 +6,8 @@ data class EntityState(
     val entityId: String,
     val state: String,
     val attributes: JSONObject,
+    /** When the state last changed (ISO 8601), as Home Assistant sends it. */
+    val lastChanged: String? = null,
 ) {
     val friendlyName: String
         get() = attributes.optString("friendly_name", entityId)
@@ -38,6 +40,7 @@ data class EntityState(
             entityId = o.getString("entity_id"),
             state = o.optString("state", "unknown"),
             attributes = o.optJSONObject("attributes") ?: JSONObject(),
+            lastChanged = o.optString("last_changed").takeIf { it.isNotBlank() },
         )
     }
 }

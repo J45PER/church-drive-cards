@@ -39,6 +39,7 @@ class HaClient(private val scope: CoroutineScope) {
     val dashboardTick: StateFlow<Int> = _dashboardTick
 
     private val pending = java.util.concurrent.ConcurrentHashMap<Int, (Any?) -> Unit>()
+    private val subscriptions = java.util.concurrent.ConcurrentHashMap<Int, (JSONObject) -> Unit>()
 
     private var socket: WebSocket? = null
     private var job: Job? = null
@@ -93,6 +94,31 @@ class HaClient(private val scope: CoroutineScope) {
         if (!ws.send(msg.toString())) pending.remove(id)?.invoke(null)
     }
 
+    /**
+     * Starts a streaming command (such as render_template) and passes each event it sends to [onEvent].
+     * Returns the subscription id, or -1 when not connected. Subscriptions end when the connection drops,
+     * so callers start them again after reconnecting.
+     */
+    fun subscribe(type: String, params: JSONObject, onEvent: (JSONObject) -> Unit): Int {
+        val ws = socket ?: return -1
+        val id = id()
+        subscriptions[id] = onEvent
+        val msg = JSONObject(params.toString()).put("id", id).put("type", type)
+        if (!ws.send(msg.toString())) {
+            subscriptions.remove(id)
+            return -1
+        }
+        return id
+    }
+
+    fun unsubscribe(subscriptionId: Int) {
+        if (subscriptions.remove(subscriptionId) != null) {
+            socket?.send(
+                JSONObject().put("id", id()).put("type", "unsubscribe_events").put("subscription", subscriptionId).toString(),
+            )
+        }
+    }
+
     fun callService(domain: String, service: String, entityId: String, data: JSONObject = JSONObject()) {
         val msg = JSONObject()
             .put("id", id())
@@ -115,6 +141,8 @@ class HaClient(private val scope: CoroutineScope) {
                     JSONObject().put("type", "auth").put("access_token", token).toString(),
                 )
                 "auth_ok" -> {
+                    pending.clear()
+                    subscriptions.clear()
                     _connection.value = ConnectionState.Connected
                     webSocket.send(
                         JSONObject().put("id", id()).put("type", "subscribe_events")
@@ -142,7 +170,10 @@ class HaClient(private val scope: CoroutineScope) {
                         userId -> _userName.value = msg.optJSONObject("result")?.optString("name")?.takeIf { it.isNotBlank() }
                     }
                 }
-                "event" -> applyEvent(msg.getJSONObject("event"))
+                "event" -> {
+                    val subscriber = subscriptions[msg.optInt("id")]
+                    if (subscriber != null) subscriber(msg.getJSONObject("event")) else applyEvent(msg.getJSONObject("event"))
+                }
             }
         }
 

@@ -16,6 +16,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.churchdrive.app.ui.ChurchDriveTheme
 import com.churchdrive.app.ui.HomeScreen
 import com.churchdrive.app.ui.LocalSceneLooks
+import com.churchdrive.app.ui.LocalTemplates
 import com.churchdrive.app.ui.LoginScreen
 
 class MainActivity : ComponentActivity() {
@@ -39,8 +40,10 @@ class MainActivity : ComponentActivity() {
                         val userName by vm.userName.collectAsStateWithLifecycle()
                         val lights by vm.lights.collectAsStateWithLifecycle()
                         val sceneLooks by vm.sceneLooks.collectAsStateWithLifecycle()
+                        val panels by vm.panels.collectAsStateWithLifecycle()
+                        val registry by vm.registry.collectAsStateWithLifecycle()
                         val areaNames by vm.areaNames.collectAsStateWithLifecycle()
-                        CompositionLocalProvider(LocalSceneLooks provides sceneLooks) {
+                        CompositionLocalProvider(LocalSceneLooks provides sceneLooks, LocalTemplates provides vm.templates) {
                             if (signedIn) {
                                 HomeScreen(
                                     connection = connection,
@@ -48,6 +51,8 @@ class MainActivity : ComponentActivity() {
                                     userName = userName,
                                     lights = lights,
                                     areaNames = areaNames,
+                                    panels = panels,
+                                    registry = registry,
                                     call = vm::call,
                                     onSignOut = vm::signOut,
                                 )

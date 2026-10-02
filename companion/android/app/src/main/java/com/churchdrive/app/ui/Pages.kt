@@ -1,12 +1,6 @@
 package com.churchdrive.app.ui
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Checklist
-import androidx.compose.material.icons.filled.CleaningServices
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Lightbulb
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material.icons.outlined.Checklist
 import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.Home
@@ -15,15 +9,18 @@ import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Thermostat
 import androidx.compose.ui.graphics.vector.ImageVector
 
-/** The app's pages and the sections on each, from the mobile dashboard (without Media, Devices and Energy). */
+/**
+ * The app's pages, with the same icons as the dashboard's nav bar (`mdi:` names), and the sections on each.
+ * [fallback] shows if an icon can't be drawn.
+ */
 enum class Page(
     val label: String,
-    val icon: ImageVector,
-    val selectedIcon: ImageVector,
+    val mdi: String,
+    val fallback: ImageVector,
     val sections: List<Section>,
 ) {
     Home(
-        "Home", Icons.Outlined.Home, Icons.Filled.Home,
+        "Home", "mdi:home", Icons.Outlined.Home,
         listOf(
             Section("Security", SectionKind.Alarm),
             Section("Climate"),
@@ -33,11 +30,11 @@ enum class Page(
         ),
     ),
     Lighting(
-        "Lighting", Icons.Outlined.Lightbulb, Icons.Filled.Lightbulb,
+        "Lights", "mdi:lightbulb", Icons.Outlined.Lightbulb,
         listOf("Ground Floor", "Middle Floor", "Top Floor", "Garden", "Front Garden").map { Section(it) },
     ),
     Security(
-        "Security", Icons.Outlined.Security, Icons.Filled.Security,
+        "Security", "mdi:shield-lock", Icons.Outlined.Security,
         listOf(
             Section("Alarm", SectionKind.Alarm),
             Section("Safety"),
@@ -47,17 +44,27 @@ enum class Page(
         ),
     ),
     Climate(
-        "Climate", Icons.Outlined.Thermostat, Icons.Filled.Thermostat,
+        "Climate", "mdi:thermostat", Icons.Outlined.Thermostat,
         listOf("Heating", "Climate", "Cooling", "Air Quality", "Windows & Doors").map { Section(it) },
     ),
     Cleaning(
-        "Cleaning", Icons.Outlined.CleaningServices, Icons.Filled.CleaningServices,
+        "Cleaning", "mdi:robot-vacuum", Icons.Outlined.CleaningServices,
         listOf(Section("Cleaning")),
     ),
     Todo(
-        "To-do", Icons.Outlined.Checklist, Icons.Filled.Checklist,
+        "To-do", "mdi:format-list-checks", Icons.Outlined.Checklist,
         listOf("From the house", "My to-do", "Shared", "Cleaning").map { Section(it) },
     ),
+}
+
+/** The nav bar's colour for a page, as on the dashboard: the Security page follows the alarm. */
+fun pageTone(page: Page, alarmState: String?): Tone = when (page) {
+    Page.Home -> Tone.Blue
+    Page.Lighting -> Tone.Amber
+    Page.Security -> alarmTone(alarmState)
+    Page.Climate -> Tone.Orange
+    Page.Cleaning -> Tone.Blue
+    Page.Todo -> Tone.Purple
 }
 
 enum class SectionKind { Alarm, NotBuilt }

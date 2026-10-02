@@ -29,6 +29,7 @@ import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -47,6 +48,7 @@ import androidx.compose.ui.unit.sp
 import com.churchdrive.app.ha.CallService
 import com.churchdrive.app.ha.ConnectionState
 import com.churchdrive.app.ha.EntityState
+import com.churchdrive.app.ha.Registry
 
 /** The signed-in app: a page at a time, a collapsing title, and the page bar along the bottom. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -57,6 +59,8 @@ fun HomeScreen(
     userName: String?,
     lights: LightLayout,
     areaNames: Map<String, String>,
+    panels: Map<String, List<PanelSpec>>,
+    registry: Registry,
     call: CallService,
     onSignOut: () -> Unit,
 ) {
@@ -88,15 +92,29 @@ fun HomeScreen(
             )
         },
         bottomBar = {
+            // The dashboard's nav bar: each page's own icon and colour (Security follows the alarm).
+            val alarmState = entities[ALARM_ENTITY]?.state
             NavigationBar {
                 Page.entries.forEach { p ->
+                    val tone = toneColors(pageTone(p, alarmState))
+                    val selected = p == page
                     NavigationBarItem(
-                        selected = p == page,
+                        selected = selected,
                         onClick = { page = p },
                         icon = {
-                            Icon(if (p == page) p.selectedIcon else p.icon, contentDescription = p.label)
+                            HaIcon(
+                                if (p == Page.Security) alarmIconName(alarmState) else p.mdi,
+                                p.fallback,
+                                tint = if (selected) tone.onAccent else tone.accent,
+                                size = 24.dp,
+                            )
                         },
                         label = { Text(p.label, fontSize = 11.sp, maxLines = 1) },
+                        colors = NavigationBarItemDefaults.colors(
+                            indicatorColor = tone.accent,
+                            selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
                     )
                 }
             }
@@ -121,6 +139,8 @@ fun HomeScreen(
                 HomePage(lights, areaNames, entities, call, onOpen = { page = it })
             } else if (page == Page.Lighting) {
                 LightingPage(lights, entities, areaNames, call)
+            } else if (page == Page.Security) {
+                SecurityPage(panels["security"].orEmpty(), entities, registry, call)
             } else {
                 page.sections.forEach { section ->
                     SectionPanel(section.title) {
@@ -190,6 +210,7 @@ private fun HomePage(
 fun SectionPanel(
     title: String,
     icon: ImageVector? = null,
+    iconName: String? = null,
     tone: Tone = Tone.Grey,
     summary: String? = null,
     onClick: (() -> Unit)? = null,
@@ -205,7 +226,8 @@ fun SectionPanel(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            if (icon != null) ToneIcon(icon, colors, size = 36)
+            if (iconName != null) ToneIconName(iconName, icon ?: Icons.Filled.Security, colors, size = 36)
+            else if (icon != null) ToneIcon(icon, colors, size = 36)
             Text(
                 title,
                 style = MaterialTheme.typography.titleLarge,
