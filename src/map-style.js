@@ -290,27 +290,7 @@ function findAll(root, tag, out = []) {
 
 // Check a map for a new engine: often at first, then every few seconds (an
 // engine can be rebuilt later, e.g. falling back to Leaflet).
-// Beta only, for now: what a map looks like on this device, into Home
-// Assistant's log (to fix maps that aren't swapped).
-function mapDebug(el, when) {
-  if (!SUFFIX) return;
-  try {
-    const ha = document.querySelector('home-assistant');
-    const hass = ha && ha.hass;
-    if (!hass) return;
-    const own = Object.getOwnPropertyNames(el).filter((k) => /map|leaf|engine|layer|base/i.test(k));
-    const m = el.leafletMap || (el._engine && el._engine._map);
-    const layers = [];
-    if (m && m.eachLayer) m.eachLayer((l) => layers.push({ ctor: l.constructor && l.constructor.name, ml: typeof l.getMaplibreMap === 'function', url: l._url ? String(l._url).slice(0, 60) : null, ours: !!l.__cdOurs }));
-    const info = { when, own, leafletMap: !!el.leafletMap, Leaflet: !!el.Leaflet, engine: !!el._engine, maplibre: !!(m && m.addSource), layers, gUrl: !!gUrl, style: mapStyle(), key: !!el.__cdKey, hooked: !!(customElements.get('ha-map') && customElements.get('ha-map').prototype.__cdHooked3) };
-    hass.callService('system_log', 'write', { message: `Map debug: ${JSON.stringify(info)}`, level: 'warning', logger: 'church_drive.maps' });
-  } catch (err) {
-    /* debugging only */
-  }
-}
-
 function watch(el) {
-  setTimeout(() => mapDebug(el, 'after 4s'), 4000);
   clearInterval(el.__cdWatch);
   let ticks = 0;
   const tick = () => {
@@ -344,7 +324,6 @@ export function installMapStyle() {
   } catch (err) {
     /* Home Assistant keeps its own maps */
   }
-  if (SUFFIX) setTimeout(() => mapDebug({ leafletMap: null }, `page: ha-map defined ${!!customElements.get('ha-map')}, maps on page ${findAll(document, 'ha-map').length}`), 5000);
   window.addEventListener('cd-map-google', reapplyAll);
   window.addEventListener('cd-map-style', reapplyAll);
   // Ask where Google's tiles are once Home Assistant's connection is up.

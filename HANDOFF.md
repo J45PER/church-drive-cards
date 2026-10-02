@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-01. Current release: **v0.32.0**.*
+*Last updated 2026-10-02. Current release: **v0.32.1**.*
 
 ## Where this stands
 
@@ -14,7 +14,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-02, v0.32.0 live, nothing on beta):**
+**Now (2026-10-02, v0.32.1 live, nothing on beta):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -310,6 +310,15 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **v0.32.1 (released 2026-10-02, restarted): map switch and nearest zone.**
+  - Home Assistant's own maps (person more-info, zones page) get a Satellite / Street
+    switch top right (`addSwitch` in `src/map-style.js`, a Leaflet control). It shares
+    the choice with the zone map card (`cd-map-style`).
+  - A person's place picks the zone whose centre is nearest when their phone is in
+    several (`_nearest_zone` in `people.py`). HA itself picks the smaller zone when GPS
+    accuracy is wide (Diane at the Banking Hub showed as the Post Office). HA's own
+    person state still uses HA's choice.
+  - The beta map debug logging is gone.
 - **v0.32.0 (released 2026-10-02, restarted): Google maps through Home Assistant, on Home Assistant's own maps.**
   - **HA 2026.9's maps are MapLibre** (Leaflet only as a fallback without WebGL2), and its
     bundled Leaflet never sets `window.L`, so the old `window.L` patch never fired on real
