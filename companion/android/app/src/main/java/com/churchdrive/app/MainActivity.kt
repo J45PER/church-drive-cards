@@ -35,11 +35,15 @@ class MainActivity : ComponentActivity() {
                         val connection by vm.connection.collectAsStateWithLifecycle()
                         val entities by vm.entities.collectAsStateWithLifecycle()
                         val userName by vm.userName.collectAsStateWithLifecycle()
+                        val lights by vm.lights.collectAsStateWithLifecycle()
+                        val areaNames by vm.areaNames.collectAsStateWithLifecycle()
                         if (signedIn) {
                             HomeScreen(
                                 connection = connection,
                                 entities = entities,
                                 userName = userName,
+                                lights = lights,
+                                areaNames = areaNames,
                                 call = vm::call,
                                 onSignOut = vm::signOut,
                             )

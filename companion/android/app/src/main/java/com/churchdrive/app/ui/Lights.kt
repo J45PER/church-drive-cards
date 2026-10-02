@@ -67,16 +67,34 @@ private val SCENE_NAMES = mapOf(
     "spellbound" to "Spellbound",
 )
 
-/** A scene tile: the Church Drive scene [key], played on [target]. */
-data class LightScene(val key: String, val target: String) {
-    val name: String get() = SCENE_NAMES[key] ?: key.replace('_', ' ').replaceFirstChar { it.uppercase() }
+/**
+ * A scene tile: a Church Drive scene [key] played on [target], or (when [haScene] is set) a Home Assistant
+ * scene entity. [label] is a name the card gives it.
+ */
+data class LightScene(val key: String, val target: String, val label: String? = null, val haScene: String? = null) {
+    val name: String get() = label ?: SCENE_NAMES[key] ?: key.replace('_', ' ').replaceFirstChar { it.uppercase() }
 
     /** The scene select entity Church Drive keeps for a Hue room or zone, e.g. select.kitchen_scene. */
     val selectEntity: String get() = "select.${target.removePrefix("light.")}_scene"
 }
 
-/** A room: its group light on top, the zones and lights under it, and its scenes. */
-data class LightRoom(val title: String, val head: String, val rows: List<String>, val scenes: List<LightScene>)
+/** A zone or light under a room. [level] is how far it is indented (1 = directly under the room). */
+data class LightRowSpec(val entity: String, val name: String? = null, val level: Int = 1)
+
+/**
+ * A room card: its group light on top, the zones and lights under it, and its scenes. [title] is the
+ * card's own name for it, or null to use the area's name, then the group light's name.
+ */
+data class LightRoom(
+    val title: String?,
+    val area: String?,
+    val head: String,
+    val rows: List<LightRowSpec>,
+    val scenes: List<LightScene>,
+)
+
+private fun room(title: String, head: String, rowIds: List<String>, scenes: List<LightScene>) =
+    LightRoom(title, null, head, rowIds.map { LightRowSpec(it) }, scenes)
 
 private fun scenes(vararg specs: String, room: String): List<LightScene> =
     specs.map { spec ->
@@ -86,13 +104,13 @@ private fun scenes(vararg specs: String, room: String): List<LightScene> =
 
 private val WHITE = arrayOf("bright", "dimmed", "relax", "nightlight")
 
-/** The Home page's three rooms, as on the dashboard's Quick Actions page. */
-val HOME_LIGHT_ROOMS = listOf(
-    LightRoom(
+/** What the app shows until (or unless) it can read the dashboard: copied from the dashboard when the app was built. */
+private val FALLBACK_HOME_ROOMS = listOf(
+    room(
         "Kitchen", "light.kitchen", listOf("light.kitchen_spotlights", "light.kitchen_ambience"),
         scenes(*WHITE, "cool_bright", "energise", "soho@light.kitchen_ambience", "emerald_isle", room = "light.kitchen"),
     ),
-    LightRoom(
+    room(
         "Living room", "light.living_room",
         listOf("light.living_room_centris", "light.tv_lightstrip", "light.tv_table_lamp", "light.living_room_lamp"),
         scenes(
@@ -100,22 +118,21 @@ val HOME_LIGHT_ROOMS = listOf(
             room = "light.living_room",
         ),
     ),
-    LightRoom(
+    room(
         "Middle floor", "light.middle_floor", emptyList(),
         scenes(*WHITE, room = "light.middle_floor"),
     ),
 )
 
-private fun plain(title: String, head: String) = LightRoom(title, head, emptyList(), scenes(*WHITE, room = head))
+private fun plain(title: String, head: String) = room(title, head, emptyList(), scenes(*WHITE, room = head))
 
-/** The Lighting page: floors of rooms, as on the dashboard's Lighting page. */
-val LIGHTING_FLOORS: List<Pair<String, List<LightRoom>>> = listOf(
+private val FALLBACK_FLOORS: List<Pair<String, List<LightRoom>>> = listOf(
     "Ground Floor" to listOf(
-        LightRoom(
+        room(
             "Kitchen", "light.kitchen", listOf("light.kitchen_spotlights", "light.kitchen_ambience"),
             scenes(*WHITE, "cool_bright", "cyber_fidelity", "lake_placid", "emerald_isle", room = "light.kitchen"),
         ),
-        LightRoom(
+        room(
             "Living room", "light.living_room",
             listOf("light.living_room_table_lights", "light.living_room_ambience", "light.living_room_centris", "light.tv_lightstrip"),
             scenes(
@@ -131,12 +148,12 @@ val LIGHTING_FLOORS: List<Pair<String, List<LightRoom>>> = listOf(
         plain("Spare bedroom", "light.spare_bedroom"),
     ),
     "Top Floor" to listOf(
-        LightRoom(
+        room(
             "Hayley's landing", "light.hayley_s_landing_main", listOf("light.hayley_s_landing_ambience"),
             scenes("cyber_fidelity@light.hayley_s_landing_ambience", room = "light.hayley_s_landing_main"),
         ),
         plain("Office", "light.office"),
-        LightRoom(
+        room(
             "Hayley's bedroom", "light.hayleys_bedroom", listOf("light.hayley_s_bedroom_main", "light.hayley_s_bedroom_ambiance"),
             scenes(
                 "bright", "cool_bright", "dimmed@light.hayley_s_bedroom_main", "nightlight", "city_blue",
@@ -147,7 +164,7 @@ val LIGHTING_FLOORS: List<Pair<String, List<LightRoom>>> = listOf(
         plain("Hayley's en suite", "light.hayley_s_en_suite"),
     ),
     "Garden" to listOf(
-        LightRoom(
+        room(
             "Garden", "light.garden", listOf("light.patio_light_strip", "light.outside"),
             scenes(
                 *WHITE, "cool_bright", "cyber_fidelity@light.patio_ambience", "emerald_isle", "city_blue",
@@ -157,6 +174,13 @@ val LIGHTING_FLOORS: List<Pair<String, List<LightRoom>>> = listOf(
     ),
     "Front Garden" to listOf(plain("Front garden", "light.front")),
 )
+
+/** The rooms on the Home page, and the floors of rooms on the Lighting page. */
+data class LightLayout(val home: List<LightRoom>, val floors: List<Pair<String, List<LightRoom>>>) {
+    companion object {
+        val Fallback = LightLayout(FALLBACK_HOME_ROOMS, FALLBACK_FLOORS)
+    }
+}
 
 fun roomsOn(rooms: List<LightRoom>, entities: Map<String, EntityState>) = rooms.count { entities[it.head]?.state == "on" }
 
@@ -185,9 +209,13 @@ private fun sceneIcon(key: String): ImageVector = when (key) {
     else -> Icons.Filled.Palette
 }
 
+/** A room's title: the card's own name, else its area's name in Home Assistant, else the group light's name. */
+private fun roomTitle(room: LightRoom, head: EntityState?, areaNames: Map<String, String>): String =
+    room.title ?: room.area?.let { areaNames[it] } ?: head?.friendlyName ?: room.head
+
 /** A room that opens out to its zones, lights and scenes when tapped. */
 @Composable
-fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, call: CallService) {
+fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames: Map<String, String>, call: CallService) {
     val head = entities[room.head]
     val on = head?.state == "on"
     val tone = toneColors(if (on) Tone.Amber else Tone.Grey)
@@ -196,7 +224,7 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, call: Cal
 
     EntityCard(tone.container, tone.onContainer) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            LightPill(head, room.head, room.title, tone, call, Modifier.weight(1f))
+            LightPill(head, room.head, roomTitle(room, head, areaNames), tone, call, Modifier.weight(1f))
             if (expandable) {
                 IconButton(onClick = { expanded = !expanded }) {
                     Icon(
@@ -209,8 +237,8 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, call: Cal
 
         AnimatedVisibility(visible = expanded) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                room.rows.forEach { id ->
-                    LightPill(entities[id], id, null, tone, call, Modifier.padding(start = 16.dp))
+                room.rows.forEach { row ->
+                    LightPill(entities[row.entity], row.entity, row.name, tone, call, Modifier.padding(start = 16.dp * row.level))
                 }
                 if (room.scenes.isNotEmpty()) {
                     Text(
@@ -230,7 +258,10 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, call: Cal
                                         active = scene in active,
                                         dimmed = active.isNotEmpty() && scene !in active,
                                         modifier = Modifier.weight(1f),
-                                    ) { call("church_drive", "apply_scene", scene.target, data("scene" to scene.key)) }
+                                    ) {
+                                        if (scene.haScene != null) call("scene", "turn_on", scene.haScene, data())
+                                        else call("church_drive", "apply_scene", scene.target, data("scene" to scene.key))
+                                    }
                                 }
                             }
                         }
@@ -361,14 +392,14 @@ fun LightPill(
 
 /** The Lighting page: a panel per floor, a card per room. */
 @Composable
-fun LightingPage(entities: Map<String, EntityState>, call: CallService) {
-    LIGHTING_FLOORS.forEach { (floor, rooms) ->
+fun LightingPage(layout: LightLayout, entities: Map<String, EntityState>, areaNames: Map<String, String>, call: CallService) {
+    layout.floors.forEach { (floor, rooms) ->
         SectionPanel(
             floor, icon = Icons.Filled.Lightbulb, tone = Tone.Amber,
             summary = lightsSummary(rooms, entities),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                rooms.forEach { LightRoomCard(it, entities, call) }
+                rooms.forEach { LightRoomCard(it, entities, areaNames, call) }
             }
         }
     }

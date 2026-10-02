@@ -55,6 +55,8 @@ fun HomeScreen(
     connection: ConnectionState,
     entities: Map<String, EntityState>,
     userName: String?,
+    lights: LightLayout,
+    areaNames: Map<String, String>,
     call: CallService,
     onSignOut: () -> Unit,
 ) {
@@ -116,9 +118,9 @@ fun HomeScreen(
             }
 
             if (page == Page.Home) {
-                HomePage(entities, call, onOpen = { page = it })
+                HomePage(lights, areaNames, entities, call, onOpen = { page = it })
             } else if (page == Page.Lighting) {
-                LightingPage(entities, call)
+                LightingPage(lights, entities, areaNames, call)
             } else {
                 page.sections.forEach { section ->
                     SectionPanel(section.title) {
@@ -138,7 +140,13 @@ fun HomeScreen(
  * a live one-line summary, and a tap through to its own page.
  */
 @Composable
-private fun HomePage(entities: Map<String, EntityState>, call: CallService, onOpen: (Page) -> Unit) {
+private fun HomePage(
+    lights: LightLayout,
+    areaNames: Map<String, String>,
+    entities: Map<String, EntityState>,
+    call: CallService,
+    onOpen: (Page) -> Unit,
+) {
     val alarm = entities[ALARM_ENTITY]
     val climate = entities[CLIMATE_ENTITY]
     val vacuum = entities[VACUUM_ENTITY]
@@ -156,10 +164,10 @@ private fun HomePage(entities: Map<String, EntityState>, call: CallService, onOp
 
     SectionPanel(
         "Lights", icon = Icons.Filled.Lightbulb, tone = Tone.Amber,
-        summary = lightsSummary(HOME_LIGHT_ROOMS, entities), onClick = { onOpen(Page.Lighting) },
+        summary = lightsSummary(lights.home, entities), onClick = { onOpen(Page.Lighting) },
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            HOME_LIGHT_ROOMS.forEach { LightRoomCard(it, entities, call) }
+            lights.home.forEach { LightRoomCard(it, entities, areaNames, call) }
         }
     }
 

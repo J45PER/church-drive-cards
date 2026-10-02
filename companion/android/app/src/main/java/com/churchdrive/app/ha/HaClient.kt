@@ -34,6 +34,12 @@ class HaClient(private val scope: CoroutineScope) {
     private val _userName = MutableStateFlow<String?>(null)
     val userName: StateFlow<String?> = _userName
 
+    /** Counts `lovelace_updated` events: a dashboard was saved in Home Assistant. */
+    private val _dashboardTick = MutableStateFlow(0)
+    val dashboardTick: StateFlow<Int> = _dashboardTick
+
+    private val pending = java.util.concurrent.ConcurrentHashMap<Int, (Any?) -> Unit>()
+
     private var socket: WebSocket? = null
     private var job: Job? = null
     private var nextId = 1
@@ -71,6 +77,22 @@ class HaClient(private val scope: CoroutineScope) {
         _userName.value = null
     }
 
+    /**
+     * Sends any WebSocket command and gives its result (a JSONObject or JSONArray) to [onResult],
+     * or null if it failed (for example, an admin-only command asked by a non-admin).
+     */
+    fun request(type: String, params: JSONObject = JSONObject(), onResult: (Any?) -> Unit) {
+        val ws = socket
+        if (ws == null) {
+            onResult(null)
+            return
+        }
+        val id = id()
+        pending[id] = onResult
+        val msg = JSONObject(params.toString()).put("id", id).put("type", type)
+        if (!ws.send(msg.toString())) pending.remove(id)?.invoke(null)
+    }
+
     fun callService(domain: String, service: String, entityId: String, data: JSONObject = JSONObject()) {
         val msg = JSONObject()
             .put("id", id())
@@ -98,6 +120,10 @@ class HaClient(private val scope: CoroutineScope) {
                         JSONObject().put("id", id()).put("type", "subscribe_events")
                             .put("event_type", "state_changed").toString(),
                     )
+                    webSocket.send(
+                        JSONObject().put("id", id()).put("type", "subscribe_events")
+                            .put("event_type", "lovelace_updated").toString(),
+                    )
                     userId = id()
                     webSocket.send(JSONObject().put("id", userId).put("type", "auth/current_user").toString())
                     getStatesId = id()
@@ -107,8 +133,11 @@ class HaClient(private val scope: CoroutineScope) {
                     _connection.value = ConnectionState.AuthFailed
                     webSocket.close(1000, null)
                 }
-                "result" -> if (msg.optBoolean("success")) {
-                    when (msg.optInt("id")) {
+                "result" -> {
+                    val callback = pending.remove(msg.optInt("id"))
+                    if (callback != null) {
+                        callback(if (msg.optBoolean("success")) msg.opt("result") else null)
+                    } else if (msg.optBoolean("success")) when (msg.optInt("id")) {
                         getStatesId -> _entities.value = parseStates(msg.getJSONArray("result"))
                         userId -> _userName.value = msg.optJSONObject("result")?.optString("name")?.takeIf { it.isNotBlank() }
                     }
@@ -127,6 +156,10 @@ class HaClient(private val scope: CoroutineScope) {
     }
 
     private fun applyEvent(event: JSONObject) {
+        if (event.optString("event_type") == "lovelace_updated") {
+            _dashboardTick.update { it + 1 }
+            return
+        }
         val data = event.optJSONObject("data") ?: return
         val entityId = data.optString("entity_id")
         val new = data.optJSONObject("new_state")
