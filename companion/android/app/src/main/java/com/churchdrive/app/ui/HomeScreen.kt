@@ -11,15 +11,24 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.churchdrive.app.ha.ConnectionState
 import com.churchdrive.app.ha.EntityState
 
+/** The signed-in app: a page at a time, with the page bar along the bottom. */
 @Composable
 fun HomeScreen(
     connection: ConnectionState,
@@ -27,20 +36,51 @@ fun HomeScreen(
     onAlarm: (service: String, code: String?) -> Unit,
     onSignOut: () -> Unit,
 ) {
-    Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Text("Home", style = MaterialTheme.typography.headlineLarge)
-        when (connection) {
-            ConnectionState.Connected -> Unit
-            ConnectionState.AuthFailed -> Text("Sign-in failed. Check the token.", color = MaterialTheme.colorScheme.error)
-            else -> Text("Connecting…")
+    var page by rememberSaveable { mutableStateOf(Page.Home) }
+
+    Scaffold(
+        bottomBar = {
+            NavigationBar {
+                Page.entries.forEach { p ->
+                    NavigationBarItem(
+                        selected = p == page,
+                        onClick = { page = p },
+                        icon = { Text(p.icon, fontSize = 20.sp) },
+                        label = { Text(p.label, fontSize = 10.sp, maxLines = 1) },
+                    )
+                }
+            }
+        },
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Text(page.label, style = MaterialTheme.typography.headlineLarge)
+            when (connection) {
+                ConnectionState.Connected -> Unit
+                ConnectionState.AuthFailed ->
+                    Text("Sign-in failed. Check the token.", color = MaterialTheme.colorScheme.error)
+                else -> Text("Connecting…")
+            }
+
+            page.sections.forEach { section ->
+                SectionPanel(section.title) {
+                    when (section.kind) {
+                        SectionKind.Alarm -> AlarmCard(alarm, onAlarm)
+                        SectionKind.NotBuilt -> NotBuiltCard()
+                    }
+                }
+            }
+
+            if (page == Page.Home) {
+                TextButton(onClick = onSignOut) { Text("Sign out") }
+            }
         }
-
-        SectionPanel("Security") { AlarmCard(alarm, onAlarm) }
-
-        TextButton(onClick = onSignOut) { Text("Sign out") }
     }
 }
 
@@ -50,6 +90,17 @@ fun SectionPanel(title: String, content: @Composable () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(title, style = MaterialTheme.typography.titleMedium)
         content()
+    }
+}
+
+@Composable
+fun NotBuiltCard() {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            "Coming soon",
+            modifier = Modifier.padding(16.dp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
