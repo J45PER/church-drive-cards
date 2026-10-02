@@ -115,7 +115,9 @@ class SecurityPageTest {
     @Test
     fun theLineUnderAnAlarm() {
         val hall = safetyItems(entities, registry).first { it.id == "binary_sensor.hall_smoke" }
-        assertEquals("All clear · battery 96% · checked in 22 Sep", safetySubtitle(hall))
+        // September is "Sep" or "Sept" depending on the platform's UK locale data; both are fine.
+        val line = safetySubtitle(hall)
+        assertEquals(true, line.startsWith("All clear · battery 96% · checked in 22 Sep"))
         val co = safetyItems(entities, registry).first { it.id == "binary_sensor.co" }
         assertEquals("ALARM since ${clockTime("2026-10-02T13:25:00Z")}", safetySubtitle(co))
         val gone = safetyItems(entities, registry).first { it.id == "binary_sensor.no_device" }
