@@ -18,10 +18,24 @@ This branch is a scratch space for design; nothing here ships with the HACS inte
      HA frontend): can't run our app, so manage them only to the extent the
      device exposes (see open questions). Fallback: manage Android kiosks only.
 
+## Decisions
+
+- **Android apps are native** (Kotlin + Jetpack Compose), not a wrapper around the HA
+  frontend. They talk to HA over its WebSocket/REST API and draw their own UI.
+- Each kiosk has its own screen (layout) and its own HA user/token, so one tablet can
+  be changed or revoked without affecting the others.
+
+## Consequences of going native
+
+- The existing Lovelace cards (`src/`, JavaScript) can't run in a native UI. Each
+  card a kiosk needs (light control, alarm panel, etc.) has to be rebuilt in Compose.
+- So the native app needs its own screen definitions: which cards, in what layout,
+  per kiosk. Preferred: stored in HA via the Church Drive integration, so the manager
+  can edit them and the kiosk fetches them, instead of baking them into the APK.
+- Possible hybrid: a native shell with a "web card" tile for anything not yet ported.
+
 ## Open questions
 
-- Kiosk/User: native (Kotlin) vs. a WebView wrapper (Capacitor/Flutter)? A WebView
-  wrapper around the HA frontend is far less work and keeps the cards as they are.
 - Manager <-> devices: via the HA API (entities/services exposed by a Church Drive
   companion integration) or direct to each device? Going via HA is simpler and
   works for any device HA already knows about, including the Shelly panel.
