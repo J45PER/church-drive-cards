@@ -81,4 +81,44 @@ class DashboardLightsTest {
         assertEquals("Living Room", names["living_room"])
         assertEquals(emptyMap<String, String>(), DashboardLights.areaNames(null))
     }
+
+    private val mirrored = JSONObject(
+        """
+        {"views":[
+          {"path":"home","sections":[{"cards":[{"type":"custom:auto-layout-card","cards":[
+            {"type":"custom:section-panel-card","title":"Lights","cards":[
+              {"type":"custom:mirror-card","dashboard":"this","view":"lighting","source":"area:kitchen"},
+              {"type":"custom:mirror-card-beta","view":"1","source":"area:living_room#2"},
+              {"type":"custom:mirror-card","view":"lighting","source":"area:gone"},
+              {"type":"custom:mirror-card","dashboard":"other-dash","view":"lighting","source":"area:kitchen"}
+            ]}]}]}]},
+          {"path":"lighting","sections":[{"cards":[{"type":"custom:auto-layout-card","cards":[
+            {"type":"custom:section-panel-card","title":"Ground","cards":[
+              {"type":"custom:light-control-card","mode":"room","area":"kitchen","entities":["light.kitchen"],
+               "scenes":[{"entity":"universal:bright@light.kitchen"},{"entity":"universal:soho@light.kitchen"}]},
+              {"type":"custom:climate-card","area":"living_room","entity":"climate.a"},
+              {"type":"custom:light-control-card","mode":"room","area":"living_room","entities":["light.living_room"],
+               "scenes":[{"entity":"universal:relax@light.living_room"}]}
+            ]}]}]}]}
+        ]}
+        """,
+    )
+
+    @Test
+    fun aMirrorShowsTheCardItPointsAt() {
+        val home = DashboardLights.parse(mirrored).home
+        // The kitchen and living room mirrors resolve; the missing source and another dashboard are skipped.
+        assertEquals(listOf("light.kitchen", "light.living_room"), home.map { it.head })
+        assertEquals(listOf("bright", "soho"), home[0].scenes.map { it.key })
+    }
+
+    @Test
+    fun keysMatchTheMirrorCardsRules() {
+        // The climate card has the same area as the second light card, so the light card is "area:living_room#2".
+        val view = mirrored.getJSONArray("views").getJSONObject(1)
+        assertEquals(
+            listOf("area:kitchen", "area:living_room", "area:living_room#2"),
+            DashboardLights.mirrorable(view).map { it.first },
+        )
+    }
 }

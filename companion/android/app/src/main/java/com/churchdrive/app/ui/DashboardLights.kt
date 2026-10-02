@@ -23,8 +23,8 @@ object DashboardLights {
             val view = views.optJSONObject(i) ?: continue
             when (view.optString("path")) {
                 "home" -> home = panels(view).firstOrNull { it.optString("title").equals("Lights", ignoreCase = true) }
-                    ?.let { rooms(it) }
-                "lighting" -> floors = panels(view).map { it.optString("title") to rooms(it) }.filter { it.second.isNotEmpty() }
+                    ?.let { rooms(it, views) }
+                "lighting" -> floors = panels(view).map { it.optString("title") to rooms(it, views) }.filter { it.second.isNotEmpty() }
             }
         }
         return LightLayout(
@@ -33,19 +33,79 @@ object DashboardLights {
         )
     }
 
-    /** All objects of [type] under [node], not looking inside a match. */
-    private fun find(node: Any?, type: String, found: MutableList<JSONObject> = mutableListOf()): List<JSONObject> {
+    /** All objects under [node] whose type matches, in order, not looking inside a match. */
+    private fun findAll(node: Any?, found: MutableList<JSONObject> = mutableListOf(), match: (String) -> Boolean): List<JSONObject> {
         when (node) {
-            is JSONObject -> if (node.optString("type") == type) found += node
-            else node.keys().forEach { find(node.opt(it), type, found) }
-            is JSONArray -> for (i in 0 until node.length()) find(node.opt(i), type, found)
+            is JSONObject -> if (match(node.optString("type"))) found += node
+            else node.keys().forEach { findAll(node.opt(it), found, match) }
+            is JSONArray -> for (i in 0 until node.length()) findAll(node.opt(i), found, match)
         }
         return found
     }
 
-    private fun panels(view: JSONObject) = find(view, "custom:section-panel-card")
+    private fun panels(view: JSONObject) = findAll(view) { it == "custom:section-panel-card" }
 
-    private fun rooms(panel: JSONObject) = find(panel.opt("cards"), "custom:light-control-card").mapNotNull { room(it) }
+    private val MIRRORS = setOf("custom:mirror-card", "custom:mirror-card-beta")
+
+    /**
+     * The rooms in a panel, in order. A mirror card stands for the card it points at (another page's light
+     * card), so it's replaced by that card's room: the original is set up once in Home Assistant.
+     */
+    private fun rooms(panel: JSONObject, views: JSONArray): List<LightRoom> {
+        val cards = findAll(panel.opt("cards")) { it == "custom:light-control-card" || it in MIRRORS }
+        return cards.mapNotNull { card ->
+            if (card.optString("type") in MIRRORS) resolveMirror(card, views)?.let { room(it) } else room(card)
+        }
+    }
+
+    /** The card a mirror points at: its page is `view` (a path, or a position), and it's found by key. */
+    fun resolveMirror(mirror: JSONObject, views: JSONArray): JSONObject? {
+        // Only mirrors of this dashboard can be followed (the app reads one dashboard).
+        val dashboard = mirror.optString("dashboard", "this")
+        if (dashboard != "this" && dashboard != DASHBOARD) return null
+        val ref = mirror.optString("view")
+        val view = (0 until views.length()).mapNotNull { views.optJSONObject(it) }.firstOrNull { it.optString("path") == ref }
+            ?: ref.toIntOrNull()?.let { views.optJSONObject(it) }
+            ?: return null
+        return mirrorable(view).firstOrNull { it.first == mirror.optString("source") }?.second
+    }
+
+    private val CONTAINERS = setOf(
+        "custom:auto-layout-card", "custom:section-panel-card", "custom:nav-bar-card", "custom:section-title-card",
+        "vertical-stack", "horizontal-stack", "grid", "conditional", "custom:stack-in-card",
+    )
+
+    /** What a card is about, as the first part of its key: the same rules as the Mirror Card (mirror.js). */
+    fun identity(card: JSONObject): String {
+        card.optString("area").takeIf { it.isNotBlank() }?.let { return "area:${it.trim()}" }
+        (card.opt("entity") as? String)?.takeIf { it.isNotBlank() }?.let { return "entity:${it.trim()}" }
+        (card.optString("name").takeIf { it.isNotBlank() } ?: card.optString("title").takeIf { it.isNotBlank() })
+            ?.let { return "name:${it.trim()}" }
+        return "type:${card.optString("type", "card").trim()}"
+    }
+
+    /** Every card on a page that can be mirrored, in page order, as (key, card). Repeats get "#2", "#3". */
+    fun mirrorable(view: JSONObject): List<Pair<String, JSONObject>> {
+        val found = mutableListOf<Pair<String, JSONObject>>()
+        val seen = mutableMapOf<String, Int>()
+        fun walk(node: Any?) {
+            when (node) {
+                is JSONArray -> for (i in 0 until node.length()) walk(node.opt(i))
+                is JSONObject -> {
+                    val type = node.optString("type")
+                    if (type.isNotEmpty() && type !in CONTAINERS && type !in MIRRORS) {
+                        val base = identity(node)
+                        val n = (seen[base] ?: 0) + 1
+                        seen[base] = n
+                        found += (if (n > 1) "$base#$n" else base) to node
+                    }
+                    listOf("cards", "card", "sections").forEach { k -> node.opt(k)?.let { walk(it) } }
+                }
+            }
+        }
+        walk(view.opt("sections") ?: view.opt("cards"))
+        return found
+    }
 
     private fun entityOf(item: Any?): String? = when (item) {
         is String -> item
