@@ -249,59 +249,6 @@ private fun StepButton(icon: ImageVector, description: String, tone: ToneColors,
     ) { Icon(icon, contentDescription = description) }
 }
 
-// ---- Lights ----
-
-val LIGHT_ROOMS = listOf("light.kitchen", "light.living_room", "light.middle_floor")
-
-fun lightsSummary(entities: Map<String, EntityState>): String {
-    val n = LIGHT_ROOMS.count { entities[it]?.state == "on" }
-    return if (n == 0) "All off" else "$n room${if (n > 1) "s" else ""} on"
-}
-
-@Composable
-fun LightRoomCard(light: EntityState?, entityId: String, call: CallService) {
-    val tone = toneColors(if (light?.state == "on") Tone.Amber else Tone.Grey)
-    val on = light?.state == "on"
-    val pct = ((light?.num("brightness") ?: 0.0) / 255.0 * 100).roundToInt().coerceIn(1, 100)
-    var dragging by remember(pct) { mutableFloatStateOf(pct.toFloat()) }
-
-    EntityCard(tone.container, tone.onContainer) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            ToneIcon(Icons.Filled.Lightbulb, tone)
-            Column(modifier = Modifier.weight(1f)) {
-                Text(light?.friendlyName ?: entityId, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    if (on) "On · $pct%" else if (light == null) "Loading…" else "Off",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-            Switch(
-                checked = on,
-                enabled = light?.available == true,
-                onCheckedChange = { want ->
-                    call("light", if (want) "turn_on" else "turn_off", entityId, data())
-                },
-                colors = SwitchDefaults.colors(checkedTrackColor = tone.accent, checkedThumbColor = tone.onAccent),
-            )
-        }
-        if (on) {
-            Slider(
-                value = dragging,
-                onValueChange = { dragging = it },
-                onValueChangeFinished = {
-                    call("light", "turn_on", entityId, data("brightness_pct" to dragging.roundToInt()))
-                },
-                valueRange = 1f..100f,
-                colors = SliderDefaults.colors(
-                    thumbColor = tone.accent,
-                    activeTrackColor = tone.accent,
-                    inactiveTrackColor = tone.accent.copy(alpha = 0.24f),
-                ),
-            )
-        }
-    }
-}
-
 // ---- Vacuum ----
 
 const val VACUUM_ENTITY = "vacuum.gregg"

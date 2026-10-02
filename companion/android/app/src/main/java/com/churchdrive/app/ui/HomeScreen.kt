@@ -117,6 +117,8 @@ fun HomeScreen(
 
             if (page == Page.Home) {
                 HomePage(entities, call, onOpen = { page = it })
+            } else if (page == Page.Lighting) {
+                LightingPage(entities, call)
             } else {
                 page.sections.forEach { section ->
                     SectionPanel(section.title) {
@@ -154,10 +156,10 @@ private fun HomePage(entities: Map<String, EntityState>, call: CallService, onOp
 
     SectionPanel(
         "Lights", icon = Icons.Filled.Lightbulb, tone = Tone.Amber,
-        summary = lightsSummary(entities), onClick = { onOpen(Page.Lighting) },
+        summary = lightsSummary(HOME_LIGHT_ROOMS, entities), onClick = { onOpen(Page.Lighting) },
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            LIGHT_ROOMS.forEach { id -> LightRoomCard(entities[id], id, call) }
+            HOME_LIGHT_ROOMS.forEach { LightRoomCard(it, entities, call) }
         }
     }
 
