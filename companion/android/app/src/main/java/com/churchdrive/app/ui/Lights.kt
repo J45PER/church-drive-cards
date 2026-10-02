@@ -220,7 +220,7 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, call: Cal
                         entities[it.selectEntity]?.state.equals(it.name, ignoreCase = true)
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        room.scenes.chunked(3).forEach { rowScenes ->
+                        room.scenes.chunked(4).forEach { rowScenes ->
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 rowScenes.forEach { scene ->
                                     SceneTile(
@@ -258,8 +258,8 @@ private fun SceneTile(scene: LightScene, active: Boolean, dimmed: Boolean, modif
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Icon(sceneIcon(scene.key), contentDescription = null, tint = ink, modifier = Modifier.size(20.dp))
             Text(
-                scene.name, color = ink, fontSize = 11.sp, maxLines = 1,
-                overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 4.dp),
+                scene.name, color = ink, fontSize = 10.sp, maxLines = 1,
+                overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 3.dp),
             )
         }
     }
