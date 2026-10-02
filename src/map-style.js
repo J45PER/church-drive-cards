@@ -9,16 +9,18 @@
 // don't send) and serves them at church_drive/maps' `tile_url`. Without a key,
 // Esri's World Imagery (with Esri's roads and place names) or World Street Map.
 //
-// Home Assistant's maps (<ha-map>) draw with MapLibre, or Leaflet where there's
-// no WebGL2. Each ha-map is watched for its map engine; once it has one, the
-// base map is swapped: on MapLibre the style's own (vector) layers are hidden
-// and raster layers added underneath everything else (zones, people), on
-// Leaflet the tile layer's address is changed. If anything here fails, Home
+// Home Assistant's maps (<ha-map>): in 2026.9 a Leaflet map whose base is a
+// MapLibre layer (or raster tiles without WebGL2); in newer versions a map
+// engine (MapLibre, or Leaflet as a fallback). Each ha-map is watched for its
+// map; once it has one, the base map is swapped and ours goes underneath
+// everything else (zones, people). If anything here fails, Home
 // Assistant keeps its own map.
 //
 // The style is kept per browser (localStorage `cd-map-style`): 'satellite'
 // (the default), 'street', or 'ha' for Home Assistant's own. The zone map
 // card's Satellite / Street buttons set it.
+
+import { SUFFIX } from './suffix.js';
 
 const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services';
 const ATTR = 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community';
@@ -150,46 +152,128 @@ function applyLeaflet(m) {
   });
 }
 
-const engines = new Set();
+// Home Assistant 2026.9's ha-map: a Leaflet map (el.leafletMap, el.Leaflet)
+// whose base layer is a MapLibre layer (maplibre-gl-leaflet), or a raster tile
+// layer without WebGL2. That layer is hidden and ours go under everything else;
+// Home Assistant inverts tiles in dark mode (--map-filter), which ours undo.
+function applyHaLeaflet(el) {
+  const m = el.leafletMap;
+  const Lf = el.Leaflet;
+  if (!m || !Lf || !Lf.tileLayer) return false;
+  (m.__cdLayers || []).forEach((l) => m.removeLayer(l));
+  m.__cdLayers = [];
+  const style = mapStyle();
+  m.eachLayer((l) => {
+    if (l.__cdOurs) return;
+    if (typeof l.getMaplibreMap === 'function') {
+      const c = l.getContainer && l.getContainer();
+      if (c) c.style.visibility = style === 'ha' ? '' : 'hidden';
+    } else if (l._url && typeof l.setOpacity === 'function') {
+      l.setOpacity(style === 'ha' ? 1 : 0);
+    }
+  });
+  addSwitch(m, Lf);
+  if (style === 'ha') return true;
+  layersFor(style).forEach((spec, i) => {
+    const t = Lf.tileLayer(spec.url, { maxNativeZoom: spec.maxzoom, maxZoom: 20, attribution: spec.attribution || undefined, zIndex: 1 + i });
+    t.__cdOurs = true;
+    t.on('tileloadstart tileload', (e) => {
+      e.tile.style.filter = 'none';
+    });
+    t.addTo(m);
+    m.__cdLayers.push(t);
+  });
+  return true;
+}
+
+// A Satellite / Street switch in the map's top right corner (Leaflet maps).
+function addSwitch(m, Lf) {
+  if (m.__cdSwitch || !Lf.Control) return;
+  const Switch = Lf.Control.extend({
+    onAdd() {
+      const box = document.createElement('div');
+      box.className = 'leaflet-bar';
+      box.style.cssText = 'display:flex; overflow:hidden; border-radius:10px; border:none; box-shadow:0 1px 4px rgba(0,0,0,0.4);';
+      const paint = () => {
+        const now = mapStyle() === 'street' ? 'street' : 'satellite';
+        box.querySelectorAll('button').forEach((b) => {
+          const on = b.dataset.style === now;
+          b.style.background = on ? '#26a69a' : 'rgba(31,33,40,0.92)';
+          b.style.color = '#fff';
+        });
+      };
+      [['satellite', 'Satellite'], ['street', 'Street']].forEach(([style, label]) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.dataset.style = style;
+        b.textContent = label;
+        b.style.cssText = 'border:none; cursor:pointer; font:700 12px/1 sans-serif; padding:8px 10px;';
+        b.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          setMapStyle(style);
+        });
+        box.appendChild(b);
+      });
+      Lf.DomEvent.disableClickPropagation(box);
+      paint();
+      this._paint = paint;
+      window.addEventListener('cd-map-style', paint);
+      return box;
+    },
+    onRemove() {
+      window.removeEventListener('cd-map-style', this._paint);
+    },
+  });
+  m.__cdSwitch = new Switch({ position: 'topright' }).addTo(m);
+}
+
+// Whichever map an ha-map has: a newer Home Assistant's engine (MapLibre or
+// Leaflet), or 2026.9's Leaflet map.
+function mapKey(el) {
+  return el._engine || el.leafletMap || null;
+}
+
+function applyMap(el) {
+  try {
+    if (el._engine) return applyEngine(el._engine);
+    if (el.leafletMap) return applyHaLeaflet(el);
+  } catch (err) {
+    /* leave Home Assistant's map as it is */
+  }
+  return false;
+}
 
 function applyEngine(engine) {
   const m = engine && engine._map;
   if (!m) return false;
-  try {
-    if (typeof m.addSource === 'function') hookMaplibre(m);
-    else if (typeof m.eachLayer === 'function') applyLeaflet(m);
-    else return false;
-  } catch (err) {
-    return false;
-  }
+  if (typeof m.addSource === 'function') hookMaplibre(m);
+  else if (typeof m.eachLayer === 'function') applyLeaflet(m);
+  else return false;
   return true;
 }
 
+const maps = new Set();
+
 function reapplyAll() {
-  engines.forEach((engine) => {
-    if (!engine._map) engines.delete(engine);
-    else applyEngine(engine);
+  maps.forEach((el) => {
+    if (!el.isConnected || !mapKey(el)) maps.delete(el);
+    else applyMap(el);
   });
 }
 
-// Watch each <ha-map> for its map engine (it sets one up after connecting,
-// and again after a fallback or rebuild).
+// Watch each <ha-map> for its map (it sets one up after connecting, and again
+// after a fallback or rebuild).
 function hookHaMap(Cls) {
   const proto = Cls.prototype;
-  if (proto.__cdHooked) return;
-  proto.__cdHooked = true;
-  const connected = proto.connectedCallback;
-  const disconnected = proto.disconnectedCallback;
-  proto.connectedCallback = function (...args) {
-    const out = connected && connected.apply(this, args);
-    watch(this);
-    return out;
-  };
-  proto.disconnectedCallback = function (...args) {
-    clearInterval(this.__cdWatch);
-    if (this.__cdEngine) engines.delete(this.__cdEngine);
-    this.__cdEngine = null;
-    return disconnected && disconnected.apply(this, args);
+  if (proto.__cdHooked3) return;
+  proto.__cdHooked3 = true;
+  // Not connectedCallback: the browser keeps the one the element was defined
+  // with. Lit's updated() is looked up each time, so a map is caught on its
+  // first render.
+  const updated = proto.updated;
+  proto.updated = function (...args) {
+    if (!this.__cdWatch) watch(this);
+    return updated && updated.apply(this, args);
   };
   // Maps already on the page before this ran.
   findAll(document, 'ha-map').forEach(watch);
@@ -209,26 +293,32 @@ function findAll(root, tag, out = []) {
 function watch(el) {
   clearInterval(el.__cdWatch);
   let ticks = 0;
-  const check = () => {
-    const engine = el._engine;
-    if (engine && engine !== el.__cdEngine && applyEngine(engine)) {
-      el.__cdEngine = engine;
-      engines.add(engine);
+  const tick = () => {
+    if (!el.isConnected) {
+      // Gone (a closed dialog); updated() starts watching again if it's reused.
+      clearInterval(el.__cdWatch);
+      el.__cdWatch = null;
+      el.__cdKey = null;
+      maps.delete(el);
+      return;
     }
-  };
-  el.__cdWatch = setInterval(() => {
-    check();
+    const key = mapKey(el);
+    if (key && key !== el.__cdKey && applyMap(el)) {
+      el.__cdKey = key;
+      maps.add(el);
+    }
     if (++ticks === 60) {
       clearInterval(el.__cdWatch);
-      el.__cdWatch = setInterval(check, 3000);
+      el.__cdWatch = setInterval(tick, 3000);
     }
-  }, 250);
+  };
+  el.__cdWatch = setInterval(tick, 250);
 }
 
 // Once per page, even with the beta bundle loaded too.
 export function installMapStyle() {
-  if (window.__cdMapStyle2) return;
-  window.__cdMapStyle2 = true;
+  if (window.__cdMapStyle3) return;
+  window.__cdMapStyle3 = true;
   try {
     if (window.customElements) customElements.whenDefined('ha-map').then(hookHaMap);
   } catch (err) {
