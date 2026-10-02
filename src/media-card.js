@@ -106,15 +106,22 @@ export class MediaCard extends HTMLElement {
   _players() {
     const s = this._states();
     const ids = this.config.demo ? Object.keys(s) : (this.config.entities && this.config.entities.length ? this.config.entities : Object.keys(s).filter((id) => id.startsWith('media_player.')));
-    const rank = (st) => (!st ? 9 : st.state === 'playing' ? 0 : PLAYING.includes(st.state) ? 1 : ON.includes(st.state) ? 2 : st.state === 'off' ? 3 : 4);
+    const rank = (st) => (!st ? 9 : st.state === 'playing' ? 0 : PLAYING.includes(st.state) ? 1 : ON.includes(st.state) ? 2 : st.state === 'off' || this._asleep(st) ? 3 : 4);
     return ids
       .map((id) => s[id])
       .filter(Boolean)
       .sort((a, b) => rank(a) - rank(b) || String(a.attributes.friendly_name).localeCompare(String(b.attributes.friendly_name)));
   }
 
+  // A TV that drops off the network in standby (an LG, a Google TV) reads as
+  // unavailable whenever it's off: show it as off, not as a fault.
+  _asleep(st) {
+    return st.state === 'unavailable' && (st.attributes.device_class === 'tv' || /tv|streamer/i.test(st.entity_id));
+  }
+
   _sub(st) {
     const a = st.attributes;
+    if (this._asleep(st)) return 'Off';
     if (st.state === 'unavailable') return 'Not responding';
     if (st.state === 'off') return 'Off';
     const what = [a.app_name, a.media_title || a.media_series_title, a.media_artist].filter(Boolean);
@@ -213,7 +220,7 @@ export class MediaCard extends HTMLElement {
                 ? ''
                 : `<button type="button" class="mc-btn" data-act="1" data-id="${kitEsc(st.entity_id)}" aria-label="Turn ${on ? 'off' : 'on'} ${kitEsc(name)}" style="${on ? `color:${colour};` : ''}">${iconHtml('mdi:power', { size: '20px' })}</button>`;
             return `<div class="mc-row">
-              <div class="mc-ico" style="${live ? `background:color-mix(in srgb, ${colour} 25%, transparent); color:${colour};` : st.state === 'unavailable' ? 'opacity:.5;' : ''}">${iconHtml(this._icon(st), { size: '20px' })}</div>
+              <div class="mc-ico" style="${live ? `background:color-mix(in srgb, ${colour} 25%, transparent); color:${colour};` : st.state === 'unavailable' && !this._asleep(st) ? 'opacity:.5;' : ''}">${iconHtml(this._icon(st), { size: '20px' })}</div>
               <div class="mc-body" data-id="${kitEsc(st.entity_id)}" role="button" tabindex="0" aria-label="Remote for ${kitEsc(name)}">
                 <div class="mc-name">${kitEsc(name)}</div><div class="mc-sub">${kitEsc(this._sub(st))}</div>
               </div>${act}</div>`;
