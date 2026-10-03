@@ -150,7 +150,11 @@ fun HomeScreen(
                 ConnectionState.Connected ->
                     if (!statesLoaded) LoadingNote("Updating from the house…")
                 ConnectionState.AuthFailed ->
-                    Text("Sign-in failed. Check the token.", color = MaterialTheme.colorScheme.error)
+                    if (LocalCanRetrySignIn.current) LoadingNote("Can't sign in just now. Trying again…")
+                    else Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Sign-in failed. The token may have been deleted or have run out.", color = MaterialTheme.colorScheme.error)
+                        TileRow(listOf(TileItem("mdi:login", "Sign in again", false) { onSignOut() }), toneColors(Tone.Grey), MaterialTheme.colorScheme.onSurface, perRow = 1)
+                    }
                 else -> LoadingNote("Connecting…")
             }
 

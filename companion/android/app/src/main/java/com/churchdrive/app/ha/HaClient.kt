@@ -66,6 +66,7 @@ class HaClient(private val scope: CoroutineScope) {
         token = accessToken
         this.light = light
         job?.cancel()
+        socket?.close(1000, null)
         job = scope.launch {
             var backoff = 1_000L
             while (true) {
@@ -181,10 +182,6 @@ class HaClient(private val scope: CoroutineScope) {
                         JSONObject().put("id", id()).put("type", "subscribe_events")
                             .put("event_type", "lovelace_updated").toString(),
                     )
-                    webSocket.send(
-                        JSONObject().put("id", id()).put("type", "subscribe_events")
-                            .put("event_type", "church_drive_icons_changed").toString(),
-                    )
                     userId = id()
                     webSocket.send(JSONObject().put("id", userId).put("type", "auth/current_user").toString())
                     getStatesId = id()
@@ -207,6 +204,11 @@ class HaClient(private val scope: CoroutineScope) {
                             val me = msg.optJSONObject("result")
                             _userName.value = me?.optString("name")?.takeIf { it.isNotBlank() }
                             _isAdmin.value = me?.optBoolean("is_admin", false) ?: false
+                            // Home Assistant lets only administrators subscribe to this event; everyone else would be refused (and it is logged as an error).
+                            if (_isAdmin.value) webSocket.send(
+                                JSONObject().put("id", id()).put("type", "subscribe_events")
+                                    .put("event_type", "church_drive_icons_changed").toString(),
+                            )
                         }
                     }
                 }

@@ -26,3 +26,6 @@ val LocalUserName = compositionLocalOf<String?> { null }
 
 /** Every area's name by its id, for cards that name a room by its area. */
 val LocalAreaNames = compositionLocalOf<Map<String, String>> { emptyMap() }
+
+/** Whether a refused sign-in is tried again by itself, so the screen says so instead of blaming the token. */
+val LocalCanRetrySignIn = compositionLocalOf { false }
