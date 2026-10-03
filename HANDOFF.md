@@ -110,6 +110,16 @@ HACS as an integration. It does two jobs:
     `binary_sensor…_battery_plugged/_charging`, buttons for preconditioning, lock, charge).
     The **VW (full EV)** still needs signing in: VW Group Connect (HACS 1207816350, domain
     `vag_connect`) is loaded; on Jamie's to-do list.
+  - **People manager** (`src/people-manager-card.js`, `custom:people-manager-card`, beta
+    2026-10-03, on Manager as the first panel "People"; mock-up
+    https://claude.ai/artifact/X9iAro1YMDVjzTv2M6DiR8): a list of people (chips on a phone)
+    and the chosen person's page: picture (Home Assistant image upload, then `person/update`;
+    a YAML person can't be changed), Places (replaces `places-card`, removed from Locations),
+    Phones, Cars (new: `church_drive/people/cars`, kept in the people store, `cars` on
+    `sensor.church_drive_people`), Alerts by group, To-dos (To-dos and House jobs kinds),
+    Arrivals (who's told about this person). Admins see everyone; others only themselves,
+    read-only. The Car card reads owners from the sensor (its own `people` setting is gone);
+    car alerts (plugged in, charged) go only to the car's owners when it has any.
   - **Car card** (`src/car-card.js`, `custom:car-card`, v0.35.0): each car from those
     integrations (`carDevices`/`carEntities`): battery bar and %, electric range, fuel % and
     range, Plugged in / Charging / where it is, "Full by" when charging; tap for more-info.
