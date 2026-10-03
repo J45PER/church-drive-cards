@@ -83,3 +83,24 @@ fun shortDayOf(iso: String?): String? {
     return java.time.Instant.ofEpochMilli(ms).atZone(java.time.ZoneId.systemDefault())
         .format(java.time.format.DateTimeFormatter.ofPattern("d MMM", java.util.Locale.UK))
 }
+
+/** The sensor holding the home's climate quality score (0 to 100), made in Home Assistant from the rooms' temperatures, humidity and air. */
+const val CLIMATE_QUALITY_ENTITY = "sensor.home_climate_quality"
+
+/** The score in a word, with the same bands as the dashboard: Excellent from 85, Good 70, Fair 50, Poor 30, else Bad. */
+fun qualityWord(score: Int): String = when {
+    score >= 85 -> "Excellent"
+    score >= 70 -> "Good"
+    score >= 50 -> "Fair"
+    score >= 30 -> "Poor"
+    else -> "Bad"
+}
+
+/** The score's colour, as on the dashboard: green, amber, orange, red; grey when there's no score yet. */
+fun qualityTone(score: Int?): Tone = when {
+    score == null -> Tone.Grey
+    score >= 70 -> Tone.Green
+    score >= 50 -> Tone.Amber
+    score >= 30 -> Tone.Orange
+    else -> Tone.Red
+}

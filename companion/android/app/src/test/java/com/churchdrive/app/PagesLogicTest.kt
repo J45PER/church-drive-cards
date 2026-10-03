@@ -67,6 +67,20 @@ class PagesLogicTest {
     }
 
     @Test
+    fun theClimateScoreHasWordsAndColours() {
+        assertEquals("Excellent", com.churchdrive.app.ui.qualityWord(90))
+        assertEquals("Good", com.churchdrive.app.ui.qualityWord(70))
+        assertEquals("Fair", com.churchdrive.app.ui.qualityWord(64))
+        assertEquals("Poor", com.churchdrive.app.ui.qualityWord(30))
+        assertEquals("Bad", com.churchdrive.app.ui.qualityWord(12))
+        assertEquals(Tone.Green, com.churchdrive.app.ui.qualityTone(85))
+        assertEquals(Tone.Amber, com.churchdrive.app.ui.qualityTone(64))
+        assertEquals(Tone.Orange, com.churchdrive.app.ui.qualityTone(40))
+        assertEquals(Tone.Red, com.churchdrive.app.ui.qualityTone(10))
+        assertEquals(Tone.Grey, com.churchdrive.app.ui.qualityTone(null))
+    }
+
+    @Test
     fun readsAForecastAndSkipsBadSteps() {
         val event = JSONObject(
             """{"type":"hourly","forecast":[

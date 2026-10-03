@@ -351,6 +351,7 @@ fun ClimateCard(
     humidity: EntityState? = null,
     outdoor: Double? = null,
     quick: List<QuickSetting>? = null,
+    quality: Int? = null,
 ) {
     val tone = toneColors(climateTone(climate))
     val enabled = climate?.available == true
@@ -385,6 +386,7 @@ fun ClimateCard(
             }
         }
         val extra = listOfNotNull(
+            quality?.let { "Home climate $it/100 · ${qualityWord(it)}" },
             humidity?.state?.toDoubleOrNull()?.let { "Humidity ${temp(it)}%" },
             outdoor?.let { "Outside ${temp(it)}°" },
         ).joinToString(" · ")

@@ -200,10 +200,13 @@ private fun HomePage(
     HomePanel("Security", alarmIconName(alarm?.state), alarmTone(alarm?.state), alarmLabel(alarm?.state), Page.Security) {
         AlarmCard(alarm, call)
     }
+    // The home's climate quality score (a sensor made in Home Assistant) leads the Climate panel, as on the dashboard.
+    val quality = entities[CLIMATE_QUALITY_ENTITY]?.state?.toIntOrNull()
     HomePanel(
-        "Climate", Page.Climate.mdi, climateTone(climate),
-        "${temp(climate?.num("current_temperature"))} °C · ${climateWord(climate)}", Page.Climate,
-    ) { ClimateCard(climate, call) }
+        "Climate", Page.Climate.mdi, if (quality != null) qualityTone(quality) else climateTone(climate),
+        if (quality != null) "$quality/100 · ${qualityWord(quality)}" else "${temp(climate?.num("current_temperature"))} °C · ${climateWord(climate)}",
+        Page.Climate,
+    ) { ClimateCard(climate, call, quality = quality) }
     HomePanel("Lights", Page.Lighting.mdi, Tone.Amber, lightsSummary(lights.home, entities), Page.Lighting) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             lights.home.forEach { LightRoomCard(it, entities, areaNames, call) }
