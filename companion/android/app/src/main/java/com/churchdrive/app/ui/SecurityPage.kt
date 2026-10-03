@@ -37,8 +37,14 @@ val LocalTemplates = compositionLocalOf<Templates?> { null }
 fun rememberTemplate(template: String?): String? {
     val templates = LocalTemplates.current ?: return null
     if (template.isNullOrBlank()) return null
-    LaunchedEffect(template) { templates.watch(template) }
-    return templates.value(template)
+    // Templates may use the signed-in person's `my_list` and `my_name`, as the dashboard's do.
+    val me = LocalUserName.current
+    val full = if (Regex("\\bmy_(list|name)\\b").containsMatchIn(template)) {
+        "{% set my_name = '${me?.trim()?.substringBefore(' ').orEmpty().replace("'", "")}' %}" +
+            "{% set my_list = '${myTodoList(me).orEmpty()}' %}" + template
+    } else template
+    LaunchedEffect(full) { templates.watch(full) }
+    return templates.value(full)
 }
 
 /** What the page shows if the dashboard can't be read: the alarm, as on the dashboard's Security page. */
@@ -69,13 +75,7 @@ fun DashboardPanel(panel: PanelSpec, content: @Composable () -> Unit) {
 /** The Security page: the panels of the dashboard's Security page, in order. */
 @Composable
 fun SecurityPage(panels: List<PanelSpec>, entities: Map<String, EntityState>, registry: Registry, call: CallService) {
-    panels.ifEmpty { FALLBACK_SECURITY }.forEach { panel ->
-        DashboardPanel(panel) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                panel.cards.forEach { CardView(it, entities, registry, call) }
-            }
-        }
-    }
+    panels.ifEmpty { FALLBACK_SECURITY }.forEach { PanelView(it, entities, registry, call) }
 }
 
 /** One dashboard card, as a native card, by its type. */
@@ -90,6 +90,15 @@ fun CardView(card: CardSpec, entities: Map<String, EntityState>, registry: Regis
         "tile" -> TileCard(card.config, entities, call)
         "custom:camera-card" -> CameraCard(card.config, entities, registry, call)
         "custom:security-zone-card" -> ZoneCard(card.config, entities, call)
+        "custom:climate-card" -> ClimateRoomCard(card.config, entities, call)
+        "custom:climate-zone-card" -> ClimateZoneCard(card.config, entities)
+        "custom:fan-card" -> FanCard(card.config, entities, call)
+        "custom:air-purifier-card" -> AirPurifierCard(card.config, entities, call)
+        "custom:co-alarm-card" -> CoAlarmCard(card.config, entities, call)
+        "custom:cover-card" -> CoverCard(card.config, entities, call)
+        "entities" -> EntitiesCard(card.config, entities)
+        "custom:task-list-card" -> TaskListCard(card.config, entities, call)
+        "custom:house-tasks-card" -> HouseTasksCard(card.config, entities)
         else -> NotBuiltCard()
     }
 }
@@ -149,27 +158,33 @@ fun SafetyCard(config: JSONObject, entities: Map<String, EntityState>, registry:
 
 // ---- Tile ----
 
-/** A plain entity tile (Home Assistant's own `tile` card): its icon, name and state; a number gets − and +. */
+/**
+ * A plain entity tile (Home Assistant's own `tile` card): its icon, name and state; a number gets - and +, a vacuum
+ * its Start, Stop and Dock buttons, and a choice (select) its options.
+ */
 @Composable
 fun TileCard(config: JSONObject, entities: Map<String, EntityState>, call: CallService) {
     val id = config.optString("entity")
     val entity = entities[id]
-    val neutral = toneColors(Tone.Grey)
+    val isVacuum = id.startsWith("vacuum.")
+    val tone = if (isVacuum) toneColors(vacuumTone(entity)) else toneColors(Tone.Grey)
     val name = config.optString("name").ifBlank { entity?.friendlyName ?: id }
     val unit = entity?.str("unit_of_measurement")?.let { " $it" }.orEmpty()
     val value = when {
         entity == null -> "Loading…"
+        id.startsWith("input_text.") -> entity.state
         else -> entity.state.replace('_', ' ').replaceFirstChar { it.uppercase() } + unit
     }
     val features = config.optJSONArray("features")
-    val numeric = id.startsWith("number.") && (0 until (features?.length() ?: 0)).any { features?.optJSONObject(it)?.optString("type") == "numeric-input" }
+    fun hasFeature(type: String) = (0 until (features?.length() ?: 0)).any { features?.optJSONObject(it)?.optString("type") == type }
+    val numeric = id.startsWith("number.") && hasFeature("numeric-input")
 
-    EntityCard(neutral.container, neutral.onContainer) {
+    EntityCard(tone.container, tone.onContainer) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ToneIconName(config.optString("icon").ifBlank { entity?.str("icon") ?: "" }, Icons.Filled.Info, neutral)
+            ToneIconName(config.optString("icon").ifBlank { entity?.str("icon") ?: "" }, Icons.Filled.Info, tone)
             Column(modifier = Modifier.weight(1f)) {
                 Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 1)
-                Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 3)
             }
             if (numeric && entity != null) {
                 val step = entity.num("step") ?: 1.0
@@ -179,9 +194,26 @@ fun TileCard(config: JSONObject, entities: Map<String, EntityState>, call: CallS
                     call("number", "set_value", id, data("value" to next))
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    StepButton(Icons.Filled.Remove, "Lower", neutral, current != null) { nudge(-step) }
-                    StepButton(Icons.Filled.Add, "Raise", neutral, current != null) { nudge(step) }
+                    StepButton(Icons.Filled.Remove, "Lower", tone, current != null) { nudge(-step) }
+                    StepButton(Icons.Filled.Add, "Raise", tone, current != null) { nudge(step) }
                 }
+            }
+        }
+        if (isVacuum && entity != null && hasFeature("vacuum-commands")) {
+            val cleaning = entity.state == "cleaning"
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                val m = Modifier.weight(1f)
+                ChoiceButton(
+                    label = if (cleaning) "Pause" else if (entity.state == "paused") "Resume" else "Start",
+                    selected = true, tone = tone, content = tone.onContainer, modifier = m, enabled = entity.available,
+                ) { call("vacuum", if (cleaning) "pause" else "start", id, data()) }
+                ChoiceButton("Stop", false, tone, tone.onContainer, m, entity.available) { call("vacuum", "stop", id, data()) }
+                ChoiceButton("Dock", false, tone, tone.onContainer, m, entity.available) { call("vacuum", "return_to_base", id, data()) }
+            }
+        }
+        if (id.startsWith("select.") && entity != null && hasFeature("select-options")) {
+            OptionRow(entity.options(), entity.state, tone, entity.available) { o ->
+                call("select", "select_option", id, data("option" to o))
             }
         }
     }

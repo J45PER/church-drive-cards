@@ -29,9 +29,22 @@ object DashboardPanels {
         for (i in 0 until views.length()) {
             val view = views.optJSONObject(i) ?: continue
             val path = view.optString("path").takeIf { it.isNotBlank() } ?: continue
-            out[path] = panels(view).map { panel(it) }
+            out[path] = listOfNotNull(header(view)) + panels(view).map { panel(it) }
         }
         return out
+    }
+
+    /** A page's header (`header_content`: forecast, lines, list, todo_summary), as a panel with no title and one `header:` card. */
+    private fun header(node: Any?): PanelSpec? {
+        when (node) {
+            is JSONObject -> {
+                val kind = node.text("header_content")
+                if (kind != null && kind != "none") return PanelSpec("", null, null, null, null, listOf(CardSpec("header:$kind", node)))
+                for (key in node.keys()) header(node.opt(key))?.let { return it }
+            }
+            is JSONArray -> for (i in 0 until node.length()) header(node.opt(i))?.let { return it }
+        }
+        return null
     }
 
     private fun panels(node: Any?, found: MutableList<JSONObject> = mutableListOf()): List<JSONObject> {

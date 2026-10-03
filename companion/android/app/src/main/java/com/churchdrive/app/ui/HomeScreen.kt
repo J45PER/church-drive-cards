@@ -142,14 +142,12 @@ fun HomeScreen(
             } else if (page == Page.Security) {
                 SecurityPage(panels["security"].orEmpty(), entities, registry, call)
             } else {
-                page.sections.forEach { section ->
-                    SectionPanel(section.title) {
-                        when (section.kind) {
-                            SectionKind.Alarm -> AlarmCard(entities[ALARM_ENTITY], call)
-                            SectionKind.NotBuilt -> NotBuiltCard()
-                        }
-                    }
+                val key = when (page) {
+                    Page.Climate -> "climate"
+                    Page.Cleaning -> "cleaning"
+                    else -> "todo"
                 }
+                DashboardPage(panels[key].orEmpty(), entities, registry, call)
             }
         }
     }

@@ -28,7 +28,9 @@ import com.churchdrive.app.ui.ChurchDriveTheme
 import com.churchdrive.app.ui.HomeScreen
 import com.churchdrive.app.ui.LocalBaseUrl
 import com.churchdrive.app.ui.LocalCameraHost
+import com.churchdrive.app.ui.LocalHaApi
 import com.churchdrive.app.ui.LocalHistory
+import com.churchdrive.app.ui.LocalUserName
 import com.churchdrive.app.ui.LocalSceneLooks
 import com.churchdrive.app.ui.LocalTemplates
 import com.churchdrive.app.ui.LoginScreen
@@ -76,6 +78,8 @@ class MainActivity : ComponentActivity() {
                             LocalBaseUrl provides vm.baseUrl,
                             LocalCameraHost provides vm.cameraHost,
                             LocalHistory provides vm::history,
+                            LocalHaApi provides vm.haApi,
+                            LocalUserName provides userName,
                         ) {
                             if (signedIn) {
                                 HomeScreen(

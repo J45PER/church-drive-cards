@@ -66,6 +66,8 @@ import androidx.compose.ui.unit.dp
 import com.churchdrive.app.ha.CallService
 import com.churchdrive.app.ha.EntityState
 import com.churchdrive.app.ha.data
+import com.churchdrive.app.ha.text
+import org.json.JSONObject
 import kotlin.math.roundToInt
 
 private val CardShape = RoundedCornerShape(28.dp)
@@ -326,8 +328,30 @@ fun climateWord(c: EntityState?): String = when {
 
 fun temp(v: Double?): String = if (v == null) "–" else "%.1f".format(v).removeSuffix(".0")
 
+/** A shortcut button on a thermostat card: a heating mode or a preset. */
+data class QuickSetting(val name: String, val hvacMode: String?, val presetMode: String?)
+
+private val DEFAULT_QUICK = listOf(QuickSetting("Off", "off", null), QuickSetting("Heat", "heat", null), QuickSetting("Eco", null, "eco"))
+
+/** The `quick_settings` of a dashboard climate card, or null for the usual Off, Heat and Eco. */
+fun quickSettings(config: JSONObject): List<QuickSetting>? {
+    val a = config.optJSONArray("quick_settings") ?: return null
+    val list = (0 until a.length()).mapNotNull { i ->
+        val o = a.optJSONObject(i) ?: return@mapNotNull null
+        QuickSetting(o.optString("name"), o.text("hvac_mode"), o.text("preset_mode"))
+    }
+    return list.ifEmpty { null }
+}
+
 @Composable
-fun ClimateCard(climate: EntityState?, call: CallService) {
+fun ClimateCard(
+    climate: EntityState?,
+    call: CallService,
+    id: String = CLIMATE_ENTITY,
+    humidity: EntityState? = null,
+    outdoor: Double? = null,
+    quick: List<QuickSetting>? = null,
+) {
     val tone = toneColors(climateTone(climate))
     val enabled = climate?.available == true
     val target = climate?.num("temperature")
@@ -337,7 +361,7 @@ fun ClimateCard(climate: EntityState?, call: CallService) {
     fun nudge(by: Double) {
         val next = ((pending ?: return) + by).coerceIn(climate?.num("min_temp") ?: 5.0, climate?.num("max_temp") ?: 30.0)
         pending = next
-        call("climate", "set_temperature", CLIMATE_ENTITY, data("temperature" to next))
+        call("climate", "set_temperature", id, data("temperature" to next))
     }
 
     EntityCard(tone.container, tone.onContainer) {
@@ -360,17 +384,24 @@ fun ClimateCard(climate: EntityState?, call: CallService) {
                 StepButton(Icons.Filled.Add, "Raise", tone, enabled && climate?.state != "off") { nudge(step) }
             }
         }
+        val extra = listOfNotNull(
+            humidity?.state?.toDoubleOrNull()?.let { "Humidity ${temp(it)}%" },
+            outdoor?.let { "Outside ${temp(it)}°" },
+        ).joinToString(" · ")
+        if (extra.isNotEmpty()) Text(extra, style = MaterialTheme.typography.bodyMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             val m = Modifier.weight(1f)
             val eco = climate?.str("preset_mode") == "eco"
-            ChoiceButton("Off", climate?.state == "off", tone, tone.onContainer, m, enabled) {
-                call("climate", "set_hvac_mode", CLIMATE_ENTITY, data("hvac_mode" to "off"))
-            }
-            ChoiceButton("Heat", climate?.state == "heat" && !eco, tone, tone.onContainer, m, enabled) {
-                call("climate", "set_hvac_mode", CLIMATE_ENTITY, data("hvac_mode" to "heat"))
-            }
-            ChoiceButton("Eco", eco && climate?.state != "off", tone, tone.onContainer, m, enabled) {
-                call("climate", "set_preset_mode", CLIMATE_ENTITY, data("preset_mode" to "eco"))
+            (quick ?: DEFAULT_QUICK).forEach { q ->
+                val selected = when {
+                    q.hvacMode != null -> climate?.state == q.hvacMode && (q.hvacMode == "off" || !eco)
+                    q.presetMode != null -> climate?.str("preset_mode") == q.presetMode && climate?.state != "off"
+                    else -> false
+                }
+                ChoiceButton(q.name, selected, tone, tone.onContainer, m, enabled) {
+                    if (q.hvacMode != null) call("climate", "set_hvac_mode", id, data("hvac_mode" to q.hvacMode))
+                    else if (q.presetMode != null) call("climate", "set_preset_mode", id, data("preset_mode" to q.presetMode))
+                }
             }
         }
     }

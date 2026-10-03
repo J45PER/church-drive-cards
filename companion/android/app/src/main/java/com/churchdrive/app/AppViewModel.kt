@@ -177,6 +177,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Plain access to Home Assistant's commands, for the cards that fetch their own data. */
+    val haApi = object : com.churchdrive.app.ui.HaApi {
+        override fun request(type: String, params: org.json.JSONObject, done: (Any?) -> Unit) = client.request(type, params, done)
+
+        override fun subscribe(type: String, params: org.json.JSONObject, onEvent: (org.json.JSONObject) -> Unit): Int =
+            client.subscribe(type, params, onEvent)
+
+        override fun close(subscription: Int) = client.unsubscribe(subscription)
+    }
+
     fun call(domain: String, service: String, entityId: String, data: org.json.JSONObject) =
         client.callService(domain, service, entityId, data)
 
