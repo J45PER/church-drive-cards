@@ -409,3 +409,13 @@ fun LightingPage(layout: LightLayout, entities: Map<String, EntityState>, areaNa
         }
     }
 }
+
+/** Every room grouped for a picker: the Home panel's rooms first, then each floor's (a room is listed once). */
+fun allRoomsByFloor(layout: LightLayout): List<Pair<String, List<LightRoom>>> {
+    val seen = mutableSetOf<String>()
+    val groups = buildList {
+        add("Home" to layout.home)
+        addAll(layout.floors)
+    }
+    return groups.map { (name, rooms) -> name to rooms.filter { seen.add(it.head) } }.filter { it.second.isNotEmpty() }
+}

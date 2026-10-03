@@ -1,52 +1,75 @@
 package com.churchdrive.app.widget
 
 import android.content.Context
+import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.RectF
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.PathParser
+import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
+import androidx.glance.LocalContext
 import androidx.glance.action.Action
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
+import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
+import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
+import androidx.glance.appwidget.updateAll
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
+import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
+import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
+import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
-import androidx.compose.runtime.Composable
+import com.churchdrive.app.MainActivity
 import com.churchdrive.app.ui.MdiIcons
 import com.churchdrive.app.ui.ToneColors
 import com.churchdrive.app.ui.Ui
 import com.churchdrive.app.ui.tileRowSizes
-import androidx.glance.appwidget.GlanceAppWidget
-import androidx.glance.appwidget.updateAll
 import kotlinx.coroutines.delay
+import org.json.JSONArray
 import org.json.JSONObject
 
 /** Whether the phone is in dark mode now (the widgets are drawn in the matching colours). */
 fun isDark(context: Context): Boolean =
     context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+
+/** The sizes the widgets lay themselves out for; the widget uses the closest that fits how big it has been made. */
+object WidgetSizes {
+    val strip = DpSize(250.dp, 70.dp)
+    val square = DpSize(110.dp, 110.dp)
+    val wide = DpSize(250.dp, 140.dp)
+    val tall = DpSize(250.dp, 230.dp)
+    val all = setOf(strip, square, wide, tall)
+}
+
+fun DpSize.sizeClass(): SizeClass = sizeClass(width.value, height.value)
 
 /** A Material Design icon drawn into a bitmap in [colour], for a widget (which can't use the app's own icon drawing). */
 fun iconBitmap(name: String, colour: Color, sizePx: Int = 96): Bitmap? {
@@ -57,6 +80,38 @@ fun iconBitmap(name: String, colour: Color, sizePx: Int = 96): Bitmap? {
     val canvas = Canvas(bitmap)
     canvas.scale(scale, scale)
     canvas.drawPath(path, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = colour.toArgb() })
+    return bitmap
+}
+
+/**
+ * A gauge ring as a picture: a track and, over it, the value as an arc ([fraction] of the way round), with an optional
+ * white marker (the heating target). The ring leaves a gap at the bottom, like the dashboard's gauges.
+ */
+fun ringBitmap(sizePx: Int, fraction: Float, track: Color, colour: Color, marker: Float? = null, stroke: Float = 0.09f): Bitmap {
+    val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val width = sizePx * stroke
+    val inset = width / 2f + 1f
+    val rect = RectF(inset, inset, sizePx - inset, sizePx - inset)
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = width
+        strokeCap = Paint.Cap.ROUND
+    }
+    paint.color = track.toArgb()
+    canvas.drawArc(rect, 135f, 270f, false, paint)
+    val f = fraction.coerceIn(0f, 1f)
+    if (f > 0f) {
+        paint.color = colour.toArgb()
+        canvas.drawArc(rect, 135f, 270f * f, false, paint)
+    }
+    marker?.let { m ->
+        val angle = Math.toRadians((135f + 270f * m.coerceIn(0f, 1f)).toDouble())
+        val r = (sizePx - 2 * inset) / 2f
+        val cx = sizePx / 2f + (r * Math.cos(angle)).toFloat()
+        val cy = sizePx / 2f + (r * Math.sin(angle)).toFloat()
+        canvas.drawCircle(cx, cy, width * 0.62f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.WHITE })
+    }
     return bitmap
 }
 
@@ -73,68 +128,145 @@ fun serviceAction(domain: String, service: String, entity: String, data: String 
         actionParametersOf(WidgetKeys.DOMAIN to domain, WidgetKeys.SERVICE to service, WidgetKeys.ENTITY to entity, WidgetKeys.DATA to data),
     )
 
-/** A widget button press: calls the service, then redraws the widgets once the house has caught up. */
+fun WidgetTile.action(): Action = serviceAction(domain, service, entity, data)
+
+/**
+ * A widget button press: calls the service (and any calls that must follow it, kept in `__then`, such as Eco after Heat),
+ * then redraws the widgets once the house has caught up.
+ */
 class ServiceCallback : ActionCallback {
-    override suspend fun onAction(context: Context, glanceId: androidx.glance.GlanceId, parameters: ActionParameters) {
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         val domain = parameters[WidgetKeys.DOMAIN] ?: return
         val service = parameters[WidgetKeys.SERVICE] ?: return
         val entity = parameters[WidgetKeys.ENTITY] ?: return
         val extra = runCatching { JSONObject(parameters[WidgetKeys.DATA] ?: "{}") }.getOrDefault(JSONObject())
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { WidgetSource.callService(context, domain, service, entity, extra) }
+        val then = extra.optJSONArray("__then") ?: JSONArray()
+        extra.remove("__then")
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            WidgetSource.callService(context, domain, service, entity, extra)
+        }
+        for (i in 0 until then.length()) {
+            val step = then.optJSONObject(i) ?: continue
+            // Eco only takes hold once the thermostat is on: give it a moment.
+            delay(1_500)
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                WidgetSource.callService(context, domain, step.optString("service"), entity, JSONObject().put(step.optString("key"), step.opt("value")))
+            }
+        }
         delay(1_000)
-        for (w in listOf<GlanceAppWidget>(AlarmGlanceWidget(), LightsGlanceWidget(), ClimateGlanceWidget())) w.updateAll(context)
+        for (w in listOf<GlanceAppWidget>(AlarmGlanceWidget(), LightsGlanceWidget(), ClimateGlanceWidget(), AirGlanceWidget(), SummaryGlanceWidget(), ShortcutsGlanceWidget())) {
+            w.updateAll(context)
+        }
     }
 }
 
-private fun provider(c: Color) = ColorProvider(c)
+fun cp(c: Color) = ColorProvider(c)
 
-/**
- * The card's heading row, as the app's Home panels have it: an icon in a circle tinted with the section's colour
- * ([tone]), the title, and a line under it in that colour.
- */
+/** The widget's card: the phone's surface colour with a little see-through, 28 dp corners (a circle when [round]); tapping the background opens the app. */
 @Composable
-fun CardHeader(icon: String, title: String, subtitle: String, neutral: ToneColors, tone: ToneColors, trailing: @Composable () -> Unit = {}) {
+fun WidgetCard(p: WidgetPalette, round: Boolean = false, padding: Dp = 14.dp, content: @Composable () -> Unit) {
+    val context = LocalContext.current
+    Column(
+        GlanceModifier.fillMaxSize()
+            .cornerRadius(if (round) 999.dp else 28.dp)
+            .background(cp(p.surface))
+            .padding(padding)
+            .clickable(actionStartActivity(Intent(context, MainActivity::class.java))),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalAlignment = if (round) Alignment.CenterHorizontally else Alignment.Start,
+    ) { content() }
+}
+
+/** Shown when the house can't be read, or what the widget is for is missing. */
+@Composable
+fun Unreachable(title: String, p: WidgetPalette, why: String) {
+    WidgetCard(p) {
+        Text(title, style = TextStyle(color = cp(p.onSurface), fontSize = 18.sp, fontWeight = FontWeight.Bold))
+        Text(why, style = TextStyle(color = cp(p.muted), fontSize = 12.sp))
+    }
+}
+
+/** An icon in a circle tinted with the section's colour. */
+@Composable
+fun IconCircle(icon: String, tone: ToneColors, size: Dp = 44.dp) {
+    Box(GlanceModifier.size(size).cornerRadius(size / 2).background(cp(tone.accent.copy(alpha = 0.20f))), contentAlignment = Alignment.Center) {
+        iconBitmap(icon, tone.accent)?.let { Image(ImageProvider(it), null, GlanceModifier.size(size * 0.58f)) }
+    }
+}
+
+/** A round button with an icon: filled with [fill] when it is the current choice, the tile colour otherwise. */
+@Composable
+fun IconButton(icon: String, p: WidgetPalette, action: Action, size: Dp = 36.dp, fill: ToneColors? = null) {
+    Box(
+        GlanceModifier.size(size).cornerRadius(size / 2).background(cp(fill?.accent ?: p.tile)).clickable(action),
+        contentAlignment = Alignment.Center,
+    ) {
+        iconBitmap(icon, fill?.onAccent ?: p.onSurface)?.let { Image(ImageProvider(it), null, GlanceModifier.size(size * 0.5f)) }
+    }
+}
+
+/** The heading row: an icon circle, the title, and a line under it in the section's colour; [trailing] goes at the end. */
+@Composable
+fun HeaderRow(icon: String, title: String, subtitle: String, p: WidgetPalette, tone: ToneColors, trailing: @Composable () -> Unit = {}) {
     Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            GlanceModifier.size(44.dp).cornerRadius(22.dp).background(provider(tone.accent.copy(alpha = 0.18f))),
-            contentAlignment = Alignment.Center,
-        ) {
-            iconBitmap(icon, tone.accent)?.let { Image(ImageProvider(it), null, GlanceModifier.size(26.dp)) }
-        }
+        IconCircle(icon, tone)
         Spacer(GlanceModifier.width(12.dp))
         Column(GlanceModifier.defaultWeight()) {
-            Text(title, style = TextStyle(color = provider(neutral.onContainer), fontSize = 18.sp, fontWeight = FontWeight.Bold), maxLines = 1)
-            if (subtitle.isNotBlank()) Text(subtitle, style = TextStyle(color = provider(tone.accent), fontSize = 13.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+            Text(title, style = TextStyle(color = cp(p.onSurface), fontSize = 18.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+            if (subtitle.isNotBlank()) Text(subtitle, style = TextStyle(color = cp(tone.accent), fontSize = 13.sp, fontWeight = FontWeight.Medium), maxLines = 1)
         }
         trailing()
     }
 }
 
-/** Buttons filling the width, as the app's tiles do: icon over label; the chosen one in the section's colour ([tone]). */
+/** Buttons filling the width, as the app's tiles do (icon over label); the chosen one fills with [tone]. Up to [maxRows] rows of [perRow]. */
 @Composable
-fun TileButtons(tiles: List<WidgetTile>, neutral: ToneColors, tone: ToneColors, perRow: Int = 4) {
+fun TileButtons(tiles: List<WidgetTile>, p: WidgetPalette, tone: ToneColors, perRow: Int = 4, maxRows: Int = 2, showLabels: Boolean = true) {
+    val shown = tiles.take(perRow * maxRows)
     var i = 0
     Column(GlanceModifier.fillMaxWidth()) {
-        tileRowSizes(tiles.size, perRow).forEachIndexed { r, size ->
+        tileRowSizes(shown.size, perRow).forEachIndexed { r, size ->
             if (r > 0) Spacer(GlanceModifier.height(8.dp))
             Row(GlanceModifier.fillMaxWidth()) {
                 repeat(size) { n ->
-                    val tile = tiles[i++]
+                    val tile = shown[i++]
                     if (n > 0) Spacer(GlanceModifier.width(8.dp))
-                    val fg = if (tile.selected) tone.onAccent else neutral.onContainer
+                    val fg = if (tile.selected) tone.onAccent else p.onSurface
                     Column(
                         GlanceModifier.defaultWeight().height(Ui.TileHeight)
                             .cornerRadius(16.dp)
-                            .background(provider(if (tile.selected) tone.accent else neutral.onContainer.copy(alpha = 0.10f)))
-                            .clickable(serviceAction(tile.domain, tile.service, tile.entity, tile.data)),
+                            .background(cp(if (tile.selected) tone.accent else p.tile))
+                            .clickable(tile.action()),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         iconBitmap(tile.icon, fg)?.let { Image(ImageProvider(it), null, GlanceModifier.size(20.dp)) }
-                        Text(tile.label, style = TextStyle(color = provider(fg), fontSize = 11.sp), maxLines = 1)
+                        if (showLabels) Text(tile.label, style = TextStyle(color = cp(fg), fontSize = 11.sp, textAlign = TextAlign.Center), maxLines = 1)
                     }
                 }
             }
         }
+    }
+}
+
+/** A row of round icon-only buttons (the strip layouts). */
+@Composable
+fun IconRow(tiles: List<WidgetTile>, p: WidgetPalette, tone: ToneColors, size: Dp = 36.dp) {
+    tiles.forEach { tile ->
+        Spacer(GlanceModifier.width(6.dp))
+        IconButton(tile.icon, p, tile.action(), size, if (tile.selected) tone else null)
+    }
+}
+
+/** A small reading: a value over its label, on a tile. */
+@Composable
+fun StatTile(stat: Stat, p: WidgetPalette, modifier: GlanceModifier = GlanceModifier, big: Boolean = true) {
+    val tone = p.tone(stat.tone)
+    Column(
+        modifier.cornerRadius(16.dp).background(cp(p.tile)).padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(stat.value, style = TextStyle(color = cp(tone.accent), fontSize = if (big) 20.sp else 16.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+        Text(stat.label, style = TextStyle(color = cp(p.muted), fontSize = 11.sp), maxLines = 1)
     }
 }

@@ -1,14 +1,20 @@
 package com.churchdrive.app.widget
 
 import android.content.Context
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.Image
+import androidx.glance.ImageProvider
+import androidx.glance.LocalSize
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
-import androidx.glance.appwidget.action.actionStartActivity
+import androidx.glance.appwidget.LinearProgressIndicator
+import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
@@ -25,11 +31,8 @@ import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
+import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
-import androidx.glance.Image
-import androidx.glance.ImageProvider
-import com.churchdrive.app.MainActivity
 import com.churchdrive.app.ui.ALARM_ENTITY
 import com.churchdrive.app.ui.CLIMATE_ENTITY
 import com.churchdrive.app.ui.CLIMATE_QUALITY_ENTITY
@@ -43,139 +46,458 @@ import com.churchdrive.app.ui.climateWord
 import com.churchdrive.app.ui.lightsSummary
 import com.churchdrive.app.ui.qualityTone
 import com.churchdrive.app.ui.qualityWord
-import com.churchdrive.app.ui.toneColorsFor
-import androidx.compose.runtime.Composable
-import com.churchdrive.app.ui.ToneColors
+import com.churchdrive.app.ha.EntityState
+import com.churchdrive.app.ha.data
+import org.json.JSONObject
 
-/** The card shell the widgets share: rounded, tinted, opening the app when its background is tapped. */
-@Composable
-private fun CardShell(colours: ToneColors, content: @Composable () -> Unit) {
-    val context = androidx.glance.LocalContext.current
-    Column(
-        GlanceModifier.fillMaxSize()
-            .cornerRadius(28.dp)
-            .background(ColorProvider(colours.container))
-            .padding(16.dp)
-            .clickable(actionStartActivity(android.content.Intent(context, MainActivity::class.java))),
-        verticalAlignment = Alignment.CenterVertically,
-    ) { content() }
-}
+/** The widget's own id as Android knows it (its saved choices are kept under it). */
+private suspend fun appWidgetId(context: Context, id: GlanceId): Int = GlanceAppWidgetManager(context).getAppWidgetId(id)
 
-@Composable
-private fun Unreachable(title: String, colours: ToneColors, why: String) {
-    CardShell(colours) {
-        Text(title, style = TextStyle(color = ColorProvider(colours.onContainer), fontSize = 18.sp, fontWeight = FontWeight.Bold))
-        Text(why, style = TextStyle(color = ColorProvider(colours.onContainer.copy(alpha = 0.75f)), fontSize = 12.sp))
-    }
-}
+// ---------------------------------------------------------------------------------------------- Alarm
 
-/** The alarm card: Security with the state in its colour (green disarmed, blue home, red away), and the Disarm, Home, Away and Night buttons. */
+/** The alarm panel: fixed, it only ever shows the alarm. A strip, a small square with one smart button, or the four modes. */
 class AlarmGlanceWidget : GlanceAppWidget() {
+    override val sizeMode = SizeMode.Responsive(WidgetSizes.all)
+
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val data = WidgetSource.load(context)
-        val dark = isDark(context)
+        val p = WidgetPalette.of(context)
         provideContent {
             val alarm = data?.entities?.get(ALARM_ENTITY)
-            val neutral = toneColorsFor(Tone.Grey, dark)
             if (data == null || alarm == null) {
-                Unreachable("Security", neutral, if (data == null) "Can't reach the house" else "Alarm not found")
+                Unreachable("Security", p, if (data == null) "Can't reach the house" else "Alarm not found")
             } else {
-                val tone = toneColorsFor(alarmTone(alarm.state), dark)
-                CardShell(neutral) {
-                    CardHeader(alarmIconName(alarm.state), "Security", alarmLabel(alarm.state), neutral, tone)
-                    Spacer(GlanceModifier.height(12.dp))
-                    TileButtons(WidgetModel.alarmTiles(alarm, ALARM_ENTITY), neutral, tone)
+                AlarmContent(alarm, p, LocalSize.current.sizeClass())
+            }
+        }
+    }
+}
+
+@Composable
+private fun AlarmContent(alarm: EntityState, p: WidgetPalette, size: SizeClass) {
+    val tone = p.tone(alarmTone(alarm.state))
+    val icon = alarmIconName(alarm.state)
+    val tiles = WidgetModel.alarmTiles(alarm, ALARM_ENTITY)
+    when (size) {
+        SizeClass.Strip -> WidgetCard(p, padding = 10.dp) {
+            Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                IconCircle(icon, tone, 40.dp)
+                Spacer(GlanceModifier.width(10.dp))
+                Column(GlanceModifier.defaultWeight()) {
+                    Text("Security", style = TextStyle(color = cp(p.onSurface), fontSize = 16.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                    Text(alarmLabel(alarm.state), style = TextStyle(color = cp(tone.accent), fontSize = 12.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+                }
+                IconRow(tiles, p, tone, 34.dp)
+            }
+        }
+        SizeClass.Square -> WidgetCard(p, padding = 12.dp) {
+            Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { IconCircle(icon, tone, 40.dp) }
+            Spacer(GlanceModifier.height(6.dp))
+            Text("Security", style = TextStyle(color = cp(p.onSurface), fontSize = 16.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+            Text(alarmLabel(alarm.state), style = TextStyle(color = cp(tone.accent), fontSize = 12.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+            Spacer(GlanceModifier.height(8.dp))
+            // One smart button: arm when it is off, disarm when it is armed.
+            val disarmed = alarm.state == "disarmed"
+            val button = tiles.first { it.service == if (disarmed) "alarm_arm_home" else "alarm_disarm" }
+            Box(
+                GlanceModifier.fillMaxWidth().height(34.dp).cornerRadius(17.dp).background(cp(tone.accent)).clickable(button.action()),
+                contentAlignment = Alignment.Center,
+            ) { Text(if (disarmed) "Arm home" else "Disarm", style = TextStyle(color = cp(tone.onAccent), fontSize = 13.sp, fontWeight = FontWeight.Bold)) }
+        }
+        else -> WidgetCard(p) {
+            HeaderRow(icon, "Security", alarmLabel(alarm.state), p, tone)
+            Spacer(GlanceModifier.height(12.dp))
+            TileButtons(tiles, p, tone)
+            if (size == SizeClass.Tall) {
+                val who = alarm.str(if (alarm.state == "disarmed") "lastDisarmedBy" else "lastArmedBy")
+                if (!who.isNullOrBlank()) {
+                    Spacer(GlanceModifier.height(10.dp))
+                    Text("by $who", style = TextStyle(color = cp(p.muted), fontSize = 12.sp))
                 }
             }
         }
     }
 }
 
-/** The Home lights card: Lights with how many rooms are on, and a tile for each room, lit amber when it's on; a tap switches the room. */
+// ---------------------------------------------------------------------------------------------- Lights
+
+/** Lights: for one room or several, chosen when the widget is added; with scenes or with a brightness bar. */
 class LightsGlanceWidget : GlanceAppWidget() {
+    override val sizeMode = SizeMode.Responsive(WidgetSizes.all)
+
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val data = WidgetSource.load(context)
-        val dark = isDark(context)
+        val p = WidgetPalette.of(context)
+        val config = WidgetConfig.get(context, appWidgetId(context, id))
         provideContent {
-            val neutral = toneColorsFor(Tone.Grey, dark)
             if (data == null) {
-                Unreachable("Lights", neutral, "Can't reach the house")
+                Unreachable("Lights", p, "Can't reach the house")
             } else {
-                val rooms = data.lights.home
-                val tone = toneColorsFor(Tone.Amber, dark)
-                CardShell(neutral) {
-                    CardHeader("mdi:lightbulb", "Lights", lightsSummary(rooms, data.entities), neutral, tone)
-                    Spacer(GlanceModifier.height(12.dp))
-                    TileButtons(WidgetModel.roomTiles(rooms, data.areaNames, data.entities), neutral, tone, perRow = 3)
+                val rooms = chosenRooms(data.lights, WidgetConfig.strings(config, "rooms"))
+                val withScenes = config.optBoolean("scenes", true)
+                LightsContent(rooms, data, withScenes, p, LocalSize.current.sizeClass())
+            }
+        }
+    }
+}
+
+@Composable
+private fun LightsContent(rooms: List<com.churchdrive.app.ui.LightRoom>, data: WidgetData, withScenes: Boolean, p: WidgetPalette, size: SizeClass) {
+    val e = data.entities
+    val amber = p.tone(Tone.Amber)
+    val any = rooms.any { e[it.head]?.state == "on" }
+    val tone = if (any) amber else p.tone(Tone.Grey)
+    if (rooms.size == 1) {
+        val room = rooms.first()
+        val head = e[room.head]
+        val on = head?.state == "on"
+        val name = WidgetModel.roomName(room, data.areaNames, e)
+        val brightness = head?.num("brightness")?.let { it / 255.0 }
+        val sub = if (!on) "Off" else brightness?.let { "On · ${(it * 100).toInt()}%" } ?: "On"
+        val toggle = serviceAction("light", "toggle", room.head)
+        when (size) {
+            SizeClass.Strip -> WidgetCard(p, padding = 10.dp) {
+                Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    IconCircle("mdi:lightbulb", tone, 40.dp)
+                    Spacer(GlanceModifier.width(10.dp))
+                    Column(GlanceModifier.defaultWeight()) {
+                        Text(name, style = TextStyle(color = cp(p.onSurface), fontSize = 16.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                        Text(sub, style = TextStyle(color = cp(tone.accent), fontSize = 12.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+                    }
+                    Spacer(GlanceModifier.width(6.dp))
+                    IconButton("mdi:power", p, toggle, 36.dp, if (on) amber else null)
+                }
+            }
+            SizeClass.Square -> WidgetCard(p, padding = 12.dp) {
+                Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Box(GlanceModifier.clickable(toggle)) { IconCircle("mdi:lightbulb", tone, 40.dp) }
+                }
+                Spacer(GlanceModifier.height(6.dp))
+                Text(name, style = TextStyle(color = cp(p.onSurface), fontSize = 16.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                Text(sub, style = TextStyle(color = cp(tone.accent), fontSize = 12.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+                if (on && brightness != null) {
+                    Spacer(GlanceModifier.height(8.dp))
+                    LinearProgressIndicator(
+                        progress = brightness.toFloat().coerceIn(0f, 1f), modifier = GlanceModifier.fillMaxWidth().height(8.dp),
+                        color = cp(amber.accent), backgroundColor = cp(p.tile),
+                    )
+                }
+            }
+            else -> WidgetCard(p) {
+                HeaderRow("mdi:lightbulb", name, sub, p, tone) { IconButton("mdi:power", p, toggle, 40.dp, if (on) amber else null) }
+                Spacer(GlanceModifier.height(12.dp))
+                if (withScenes && room.scenes.isNotEmpty()) {
+                    val tiles = room.scenes.map { s ->
+                        val action = if (s.haScene != null) Triple("scene", "turn_on", s.haScene) else Triple("church_drive", "apply_scene", s.target)
+                        WidgetTile("mdi:lightbulb-group", s.name, false, action.first, action.second, action.third, if (s.haScene != null) "{}" else JSONObject().put("scene", s.key).toString())
+                    }
+                    TileButtons(tiles, p, amber, perRow = 4, maxRows = if (size == SizeClass.Tall) 2 else 1, showLabels = true)
+                } else {
+                    // No scenes: a brightness bar with − and +.
+                    Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        IconButton("mdi:minus", p, serviceAction("light", "turn_on", room.head, """{"brightness_step_pct":-10}"""), 40.dp)
+                        Spacer(GlanceModifier.width(10.dp))
+                        Box(GlanceModifier.defaultWeight(), contentAlignment = Alignment.Center) {
+                            LinearProgressIndicator(
+                                progress = (brightness ?: 0.0).toFloat().coerceIn(0f, 1f), modifier = GlanceModifier.fillMaxWidth().height(10.dp),
+                                color = cp(amber.accent), backgroundColor = cp(p.tile),
+                            )
+                        }
+                        Spacer(GlanceModifier.width(10.dp))
+                        IconButton("mdi:plus", p, serviceAction("light", "turn_on", room.head, """{"brightness_step_pct":10}"""), 40.dp)
+                    }
+                }
+            }
+        }
+        return
+    }
+    // Several rooms.
+    val tiles = WidgetModel.roomTiles(rooms, data.areaNames, e, max = 6)
+    when (size) {
+        SizeClass.Strip -> WidgetCard(p, padding = 10.dp) {
+            Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                IconCircle("mdi:lightbulb", tone, 40.dp)
+                Spacer(GlanceModifier.width(10.dp))
+                Column(GlanceModifier.defaultWeight()) {
+                    Text("Lights", style = TextStyle(color = cp(p.onSurface), fontSize = 16.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                    Text(lightsSummary(rooms, e), style = TextStyle(color = cp(tone.accent), fontSize = 12.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+                }
+                IconRow(tiles.take(4).map { it.copy(label = "") }, p, amber, 34.dp)
+            }
+        }
+        SizeClass.Square -> WidgetCard(p, padding = 12.dp) {
+            Text("Lights", style = TextStyle(color = cp(p.onSurface), fontSize = 14.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+            Text(lightsSummary(rooms, e), style = TextStyle(color = cp(tone.accent), fontSize = 12.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+            Spacer(GlanceModifier.height(8.dp))
+            TileButtons(tiles.take(4), p, amber, perRow = 2, maxRows = 2, showLabels = false)
+        }
+        else -> WidgetCard(p) {
+            HeaderRow("mdi:lightbulb", "Lights", lightsSummary(rooms, e), p, tone)
+            Spacer(GlanceModifier.height(12.dp))
+            TileButtons(tiles, p, amber, perRow = 3, maxRows = if (size == SizeClass.Tall) 2 else 1)
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------- Thermostat
+
+/** The thermostat: you choose which one when you add it. A dial, a strip, or the temperature with the Off, Heat and Eco buttons. */
+class ClimateGlanceWidget : GlanceAppWidget() {
+    override val sizeMode = SizeMode.Responsive(WidgetSizes.all)
+
+    override suspend fun provideGlance(context: Context, id: GlanceId) {
+        val data = WidgetSource.load(context)
+        val p = WidgetPalette.of(context)
+        val config = WidgetConfig.get(context, appWidgetId(context, id))
+        val entity = config.optString("climate").ifBlank { CLIMATE_ENTITY }
+        provideContent {
+            val climate = data?.entities?.get(entity)
+            if (data == null || climate == null) {
+                Unreachable("Heating", p, if (data == null) "Can't reach the house" else "Thermostat not found")
+            } else {
+                ClimateContent(climate, entity, data.entities[CLIMATE_QUALITY_ENTITY]?.state?.toIntOrNull(), p, LocalSize.current.sizeClass())
+            }
+        }
+    }
+}
+
+@Composable
+private fun ClimateContent(climate: EntityState, entity: String, score: Int?, p: WidgetPalette, size: SizeClass) {
+    val current = climate.num("current_temperature")
+    val temp = current?.let { "%.1f°".format(it) } ?: "–"
+    val target = climate.takeIf { it.state != "off" }?.num("temperature")
+    val mode = p.tone(climateTone(climate))
+    val tone = p.tone(if (score != null && size == SizeClass.Tall) qualityTone(score) else climateTone(climate))
+    val status = listOfNotNull(climateWord(climate), target?.let { "target %.1f°".format(it) }).joinToString(" · ")
+    val minus = WidgetModel.nextTarget(climate, -1)
+    val plus = WidgetModel.nextTarget(climate, 1)
+    when (size) {
+        SizeClass.Strip -> WidgetCard(p, padding = 10.dp) {
+            Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                IconCircle("mdi:thermostat", mode, 40.dp)
+                Spacer(GlanceModifier.width(10.dp))
+                Column(GlanceModifier.defaultWeight()) {
+                    Text(temp, style = TextStyle(color = cp(p.onSurface), fontSize = 18.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                    Text(status, style = TextStyle(color = cp(mode.accent), fontSize = 12.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+                }
+                if (target != null) {
+                    StepButton("mdi:minus", p, mode, entity, minus, 34.dp)
+                    Spacer(GlanceModifier.width(6.dp))
+                    StepButton("mdi:plus", p, mode, entity, plus, 34.dp)
+                }
+            }
+        }
+        SizeClass.Square -> WidgetCard(p, round = true, padding = 6.dp) {
+            val range = (climate.num("min_temp") ?: 7.0) to (climate.num("max_temp") ?: 25.0)
+            fun frac(v: Double?) = if (v == null) 0f else ((v - range.first) / (range.second - range.first)).toFloat()
+            Box(GlanceModifier.size(100.dp), contentAlignment = Alignment.Center) {
+                Image(ImageProvider(ringBitmap(300, frac(current), p.tile, mode.accent, target?.let { frac(it) })), null, GlanceModifier.size(100.dp))
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(temp, style = TextStyle(color = cp(p.onSurface), fontSize = 22.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center), maxLines = 1)
+                    Text(climateWord(climate), style = TextStyle(color = cp(mode.accent), fontSize = 11.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center), maxLines = 1)
+                    if (target != null) Text("→ %.1f°".format(target), style = TextStyle(color = cp(p.muted), fontSize = 10.sp, textAlign = TextAlign.Center), maxLines = 1)
+                }
+            }
+            if (target != null) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    StepButton("mdi:minus", p, mode, entity, minus, 28.dp)
+                    Spacer(GlanceModifier.width(14.dp))
+                    StepButton("mdi:plus", p, mode, entity, plus, 28.dp)
+                }
+            }
+        }
+        else -> WidgetCard(p) {
+            HeaderRow("mdi:leaf", temp, status, p, mode) {
+                if (target != null) {
+                    Spacer(GlanceModifier.width(8.dp))
+                    StepButton("mdi:minus", p, mode, entity, minus, 38.dp)
+                    Spacer(GlanceModifier.width(8.dp))
+                    StepButton("mdi:plus", p, mode, entity, plus, 38.dp)
+                }
+            }
+            Spacer(GlanceModifier.height(12.dp))
+            TileButtons(WidgetModel.climateTiles(climate, entity, DEFAULT_QUICK), p, mode, perRow = 5, maxRows = 1)
+            if (size == SizeClass.Tall) {
+                val humidity = climate.num("current_humidity")?.let { "${it.toInt()}% humidity" }
+                val line = listOfNotNull(humidity, score?.let { "air $it/100 ${qualityWord(it)}" }).joinToString(" · ")
+                if (line.isNotBlank()) {
+                    Spacer(GlanceModifier.height(10.dp))
+                    Text(line, style = TextStyle(color = cp(p.muted), fontSize = 12.sp), maxLines = 1)
                 }
             }
         }
     }
 }
 
-/**
- * The thermostat card: the temperature, then the state, target and the home's quality score in the score's colour
- * (as the app's Climate panel), − and + for the target, and the Off, Heat and Eco buttons.
- */
-class ClimateGlanceWidget : GlanceAppWidget() {
+/** A round − or + that sets the thermostat's target to [to]. */
+@Composable
+private fun StepButton(icon: String, p: WidgetPalette, tone: com.churchdrive.app.ui.ToneColors, entity: String, to: Double?, size: androidx.compose.ui.unit.Dp) {
+    if (to == null) return
+    IconButton(icon, p, serviceAction("climate", "set_temperature", entity, """{"temperature":$to}"""), size, tone)
+}
+
+// ---------------------------------------------------------------------------------------------- Air quality
+
+/** The home's air quality score: fixed. A circle with the score in a ring, a thin pill, or a card with the readings behind it. */
+class AirGlanceWidget : GlanceAppWidget() {
+    override val sizeMode = SizeMode.Responsive(WidgetSizes.all)
+
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val data = WidgetSource.load(context)
-        val dark = isDark(context)
+        val p = WidgetPalette.of(context)
         provideContent {
-            val neutral = toneColorsFor(Tone.Grey, dark)
-            val climate = data?.entities?.get(CLIMATE_ENTITY)
-            if (data == null || climate == null) {
-                Unreachable("Climate", neutral, if (data == null) "Can't reach the house" else "Thermostat not found")
+            val score = data?.entities?.get(CLIMATE_QUALITY_ENTITY)?.state?.toIntOrNull()
+            if (data == null || score == null) {
+                Unreachable("Air quality", p, if (data == null) "Can't reach the house" else "No score yet")
             } else {
-                val temp = climate.num("current_temperature")?.let { "%.1f°".format(it) } ?: "–"
-                val target = climate.takeIf { it.state != "off" }?.num("temperature")
-                val score = data.entities[CLIMATE_QUALITY_ENTITY]?.state?.toIntOrNull()
-                val sub = listOfNotNull(
-                    climateWord(climate),
-                    target?.let { "target %.1f°".format(it) },
-                    score?.let { "$it/100 ${qualityWord(it)}" },
-                ).joinToString(" · ")
-                // The header takes the quality score's colour, as the app's Home Climate panel does; the chosen button the thermostat's.
-                val tone = toneColorsFor(if (score != null) qualityTone(score) else climateTone(climate), dark)
-                val mode = toneColorsFor(climateTone(climate), dark)
-                CardShell(neutral) {
-                    CardHeader("mdi:leaf", temp, sub, neutral, tone) {
-                        if (target != null) {
-                            Spacer(GlanceModifier.width(8.dp))
-                            StepButton("mdi:minus", mode, WidgetModel.nextTarget(climate, -1))
-                            Spacer(GlanceModifier.width(8.dp))
-                            StepButton("mdi:plus", mode, WidgetModel.nextTarget(climate, 1))
+                val tone = p.tone(qualityTone(score))
+                val climate = data.entities[CLIMATE_ENTITY]
+                when (LocalSize.current.sizeClass()) {
+                    SizeClass.Strip -> WidgetCard(p, padding = 10.dp) {
+                        Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            IconCircle("mdi:leaf", tone, 40.dp)
+                            Spacer(GlanceModifier.width(10.dp))
+                            Column(GlanceModifier.defaultWeight()) {
+                                Text("Air quality", style = TextStyle(color = cp(p.onSurface), fontSize = 16.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                                Text(qualityWord(score), style = TextStyle(color = cp(tone.accent), fontSize = 12.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+                            }
+                            Text("$score", style = TextStyle(color = cp(p.onSurface), fontSize = 28.sp, fontWeight = FontWeight.Bold))
                         }
                     }
-                    Spacer(GlanceModifier.height(12.dp))
-                    TileButtons(WidgetModel.climateTiles(climate, CLIMATE_ENTITY, DEFAULT_QUICK), neutral, mode, perRow = 5)
+                    SizeClass.Square -> WidgetCard(p, round = true, padding = 6.dp) {
+                        Box(GlanceModifier.size(104.dp), contentAlignment = Alignment.Center) {
+                            Image(ImageProvider(ringBitmap(312, score / 100f, p.tile, tone.accent)), null, GlanceModifier.size(104.dp))
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("$score", style = TextStyle(color = cp(p.onSurface), fontSize = 30.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center))
+                                Text(qualityWord(score), style = TextStyle(color = cp(tone.accent), fontSize = 12.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center), maxLines = 1)
+                            }
+                        }
+                    }
+                    else -> WidgetCard(p) {
+                        Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Box(GlanceModifier.size(92.dp), contentAlignment = Alignment.Center) {
+                                Image(ImageProvider(ringBitmap(276, score / 100f, p.tile, tone.accent)), null, GlanceModifier.size(92.dp))
+                                Text("$score", style = TextStyle(color = cp(p.onSurface), fontSize = 26.sp, fontWeight = FontWeight.Bold))
+                            }
+                            Spacer(GlanceModifier.width(14.dp))
+                            Column(GlanceModifier.defaultWeight()) {
+                                Text("Air quality", style = TextStyle(color = cp(p.onSurface), fontSize = 18.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                                Text(qualityWord(score), style = TextStyle(color = cp(tone.accent), fontSize = 14.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+                                val detail = listOfNotNull(
+                                    climate?.num("current_temperature")?.let { "%.1f°".format(it) },
+                                    climate?.num("current_humidity")?.let { "${it.toInt()}%" },
+                                ).joinToString(" · ")
+                                if (detail.isNotBlank()) Text(detail, style = TextStyle(color = cp(p.muted), fontSize = 12.sp), maxLines = 1)
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 }
 
-/** A round − or + button that sets the thermostat's target to [to]. */
-@Composable
-private fun StepButton(icon: String, colours: ToneColors, to: Double?) {
-    if (to == null) return
-    Box(
-        GlanceModifier.size(40.dp).cornerRadius(20.dp).background(ColorProvider(colours.accent))
-            .clickable(serviceAction("climate", "set_temperature", CLIMATE_ENTITY, """{"temperature":$to}""")),
-        contentAlignment = Alignment.Center,
-    ) {
-        iconBitmap(icon, colours.onAccent)?.let { Image(ImageProvider(it), null, GlanceModifier.size(22.dp)) }
+// ---------------------------------------------------------------------------------------------- Summary
+
+/** Summary: up to four readings you pick when you add it. */
+class SummaryGlanceWidget : GlanceAppWidget() {
+    override val sizeMode = SizeMode.Responsive(WidgetSizes.all)
+
+    override suspend fun provideGlance(context: Context, id: GlanceId) {
+        val data = WidgetSource.load(context)
+        val p = WidgetPalette.of(context)
+        val config = WidgetConfig.get(context, appWidgetId(context, id))
+        provideContent {
+            if (data == null) {
+                Unreachable("Summary", p, "Can't reach the house")
+            } else {
+                val stats = Stats.chosen(WidgetConfig.strings(config, "stats"), data.entities)
+                val size = LocalSize.current.sizeClass()
+                WidgetCard(p, padding = if (size == SizeClass.Square) 10.dp else 12.dp) {
+                    // A strip or a wide card is a single row; a square or tall card is two rows of two.
+                    val perRow = if (size == SizeClass.Strip || size == SizeClass.Wide) (if (size == SizeClass.Strip) 3 else 4) else 2
+                    val rows = stats.take(if (size == SizeClass.Strip) 3 else 4).chunked(perRow)
+                    Column(GlanceModifier.fillMaxWidth()) {
+                        rows.forEachIndexed { r, row ->
+                            if (r > 0) Spacer(GlanceModifier.height(8.dp))
+                            Row(GlanceModifier.fillMaxWidth()) {
+                                row.forEachIndexed { i, stat ->
+                                    if (i > 0) Spacer(GlanceModifier.width(8.dp))
+                                    StatTile(stat, p, GlanceModifier.defaultWeight(), big = size != SizeClass.Square)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
+
+// ---------------------------------------------------------------------------------------------- Shortcuts
+
+/** Shortcuts: up to eight buttons you pick when you add it. */
+class ShortcutsGlanceWidget : GlanceAppWidget() {
+    override val sizeMode = SizeMode.Responsive(WidgetSizes.all)
+
+    override suspend fun provideGlance(context: Context, id: GlanceId) {
+        val data = WidgetSource.load(context)
+        val p = WidgetPalette.of(context)
+        val config = WidgetConfig.get(context, appWidgetId(context, id))
+        provideContent {
+            if (data == null) {
+                Unreachable("Shortcuts", p, "Can't reach the house")
+            } else {
+                val chosen = Shortcuts.chosen(WidgetConfig.strings(config, "actions"), data.entities, data.lights).map { it.tile }
+                val blue = p.tone(Tone.Blue)
+                when (LocalSize.current.sizeClass()) {
+                    SizeClass.Strip -> WidgetCard(p, padding = 10.dp) {
+                        Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            chosen.take(5).forEachIndexed { i, tile ->
+                                if (i > 0) Spacer(GlanceModifier.width(10.dp))
+                                Box(GlanceModifier.defaultWeight(), contentAlignment = Alignment.Center) { IconButton(tile.icon, p, tile.action(), 44.dp) }
+                            }
+                        }
+                    }
+                    SizeClass.Square -> WidgetCard(p, padding = 10.dp) { TileButtons(chosen.take(4), p, blue, perRow = 2, maxRows = 2, showLabels = false) }
+                    SizeClass.Wide -> WidgetCard(p, padding = 12.dp) { TileButtons(chosen.take(4), p, blue, perRow = 4, maxRows = 1) }
+                    SizeClass.Tall -> WidgetCard(p, padding = 12.dp) { TileButtons(chosen, p, blue, perRow = 4, maxRows = 2) }
+                }
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------- Receivers
+
+/** Forgets a removed widget's choices. */
+private fun forget(context: Context, ids: IntArray) = WidgetConfig.remove(context, ids)
 
 class AlarmWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = AlarmGlanceWidget()
+    override fun onDeleted(context: Context, appWidgetIds: IntArray) { super.onDeleted(context, appWidgetIds); forget(context, appWidgetIds) }
 }
 
 class LightsWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = LightsGlanceWidget()
+    override fun onDeleted(context: Context, appWidgetIds: IntArray) { super.onDeleted(context, appWidgetIds); forget(context, appWidgetIds) }
 }
 
 class ClimateWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = ClimateGlanceWidget()
+    override fun onDeleted(context: Context, appWidgetIds: IntArray) { super.onDeleted(context, appWidgetIds); forget(context, appWidgetIds) }
+}
+
+class AirWidgetReceiver : GlanceAppWidgetReceiver() {
+    override val glanceAppWidget: GlanceAppWidget = AirGlanceWidget()
+}
+
+class SummaryWidgetReceiver : GlanceAppWidgetReceiver() {
+    override val glanceAppWidget: GlanceAppWidget = SummaryGlanceWidget()
+    override fun onDeleted(context: Context, appWidgetIds: IntArray) { super.onDeleted(context, appWidgetIds); forget(context, appWidgetIds) }
+}
+
+class ShortcutsWidgetReceiver : GlanceAppWidgetReceiver() {
+    override val glanceAppWidget: GlanceAppWidget = ShortcutsGlanceWidget()
+    override fun onDeleted(context: Context, appWidgetIds: IntArray) { super.onDeleted(context, appWidgetIds); forget(context, appWidgetIds) }
 }
