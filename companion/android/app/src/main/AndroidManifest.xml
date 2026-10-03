@@ -57,6 +57,171 @@
                 android:resource="@xml/widget_alarm" />
         </receiver>
         <receiver
+            android:name=".widget.PeopleWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive people">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_people" />
+        </receiver>
+        <receiver
+            android:name=".widget.DoorsWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive doors">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_doors" />
+        </receiver>
+        <receiver
+            android:name=".widget.WeatherWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive weather">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_weather" />
+        </receiver>
+        <receiver
+            android:name=".widget.JobsWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive jobs">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_jobs" />
+        </receiver>
+        <receiver
+            android:name=".widget.VacuumWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive vacuum">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_vacuum" />
+        </receiver>
+        <receiver
+            android:name=".widget.ChargerWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive car charger">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_charger" />
+        </receiver>
+        <receiver
+            android:name=".widget.TodoWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive to-do">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_todo" />
+        </receiver>
+        <receiver
+            android:name=".widget.CameraWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive camera">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_camera" />
+        </receiver>
+        <receiver
+            android:name=".widget.ActivityWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive doorbell">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_activity" />
+        </receiver>
+        <receiver
+            android:name=".widget.FanWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive fan">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_fan" />
+        </receiver>
+        <receiver
+            android:name=".widget.PurifierWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive air purifier">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_purifier" />
+        </receiver>
+        <receiver
+            android:name=".widget.BlindsWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive blinds">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_blinds" />
+        </receiver>
+        <receiver
+            android:name=".widget.ScenesWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive scenes">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_scenes" />
+        </receiver>
+        <receiver
+            android:name=".widget.GaugeWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive gauge">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_gauge" />
+        </receiver>
+        <receiver
+            android:name=".widget.ClusterWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive gauge cluster">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_cluster" />
+        </receiver>
+        <receiver
             android:name=".widget.LightsWidgetReceiver"
             android:exported="false"
             android:label="Church Drive lights">

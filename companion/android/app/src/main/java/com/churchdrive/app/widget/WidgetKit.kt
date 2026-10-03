@@ -154,7 +154,7 @@ class ServiceCallback : ActionCallback {
             }
         }
         delay(1_000)
-        for (w in listOf<GlanceAppWidget>(AlarmGlanceWidget(), LightsGlanceWidget(), ClimateGlanceWidget(), AirGlanceWidget(), SummaryGlanceWidget(), ShortcutsGlanceWidget())) {
+        for (w in allGlanceWidgets()) {
             w.updateAll(context)
         }
     }
