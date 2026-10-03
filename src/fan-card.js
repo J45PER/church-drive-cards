@@ -11,6 +11,7 @@ import { createFormEditor } from './form-editor.js';
 import { hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { KIT_COLOR, kitShell, kitHead, kitGauge, kitTiles, kitCap, kitNum, kitMoreInfo, KitPending, kitHealthBanner, kitCompact, kitCompactable } from './card-kit.js';
+import { iconFor, watchIcons } from './icon-library.js';
 
 const FAN_PRESET_ICONS = {
   natural: 'mdi:weather-windy',
@@ -108,6 +109,7 @@ export class FanCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    watchIcons(this, hass);
     this._render();
   }
 
@@ -156,11 +158,11 @@ export class FanCard extends HTMLElement {
 
     // Row 1: Off and speeds.
     const speedTiles = c.show_speeds === false ? [] : [
-      { key: 'off', name: 'Off', icon: 'mdi:power', color: KIT_COLOR.off, on: !on },
+      { key: 'off', name: 'Off', icon: iconFor('fan', 'off', 'mdi:power'), color: KIT_COLOR.off, on: !on },
       ...speeds.map((s, i) => ({
         key: `s${s.n}`,
         name: String(s.n),
-        icon: ['mdi:speedometer-slow', 'mdi:speedometer-medium', 'mdi:speedometer'][Math.min(2, Math.round((i / Math.max(1, speeds.length - 1)) * 2))],
+        icon: iconFor('fan', ['speed_low', 'speed_medium', 'speed_high'][Math.min(2, Math.round((i / Math.max(1, speeds.length - 1)) * 2))], ['mdi:speedometer-slow', 'mdi:speedometer-medium', 'mdi:speedometer'][Math.min(2, Math.round((i / Math.max(1, speeds.length - 1)) * 2))]),
         color: KIT_COLOR.fan,
         on: current === s,
         speed: s,
@@ -172,8 +174,8 @@ export class FanCard extends HTMLElement {
     const others = (a.preset_modes || []).filter((p) => speedOf(p) == null);
     const canOscillate = a.oscillating != null || ((a.supported_features || 0) & 2) === 2;
     const presetTiles = [
-      ...(c.show_presets === false ? [] : others.map((p) => ({ key: p, name: kitCap(p), icon: FAN_PRESET_ICONS[String(p).toLowerCase()] || 'mdi:fan', color: p === 'sleep' ? KIT_COLOR.sleep : KIT_COLOR.fan, on: preset === p }))),
-      ...(c.show_oscillate === false || !canOscillate ? [] : [{ key: '__osc', name: 'Oscillate', icon: 'mdi:arrow-oscillating', color: KIT_COLOR.fan, on: on && !!a.oscillating }]),
+      ...(c.show_presets === false ? [] : others.map((p) => ({ key: p, name: kitCap(p), icon: iconFor('fan', p, FAN_PRESET_ICONS[String(p).toLowerCase()] || iconFor('fan', 'other', 'mdi:fan')), color: p === 'sleep' ? KIT_COLOR.sleep : KIT_COLOR.fan, on: preset === p }))),
+      ...(c.show_oscillate === false || !canOscillate ? [] : [{ key: '__osc', name: 'Oscillate', icon: iconFor('fan', 'oscillate', 'mdi:arrow-oscillating'), color: KIT_COLOR.fan, on: on && !!a.oscillating }]),
     ];
     kitTiles(this.querySelector('.fc-presets'), presetTiles, (t) => {
       if (t.key === '__osc') this._call('oscillate', { oscillating: !this._state().attributes.oscillating });
@@ -195,7 +197,7 @@ export class FanCard extends HTMLElement {
       name: c.name || a.friendly_name || c.entity,
       color,
       status: [preset ? word : '', tv != null ? `${tv.toFixed(1)}°` : ''].filter(Boolean).join(' · ') || word,
-      buttons: [{ key: 'off', icon: 'mdi:power', title: 'Off', on: !on, color: KIT_COLOR.off }, ...speeds.map((s) => ({ key: `s${s.n}`, label: String(s.n), title: `Speed ${s.n}`, on: current === s, color: KIT_COLOR.fan, speed: s }))],
+      buttons: [{ key: 'off', icon: iconFor('fan', 'off', 'mdi:power'), title: 'Off', on: !on, color: KIT_COLOR.off }, ...speeds.map((s) => ({ key: `s${s.n}`, label: String(s.n), title: `Speed ${s.n}`, on: current === s, color: KIT_COLOR.fan, speed: s }))],
       onButton: (b) => (b.key === 'off' ? this._call('turn_off', {}) : this._setSpeed(b.speed)),
     };
   }

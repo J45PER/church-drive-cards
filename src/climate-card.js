@@ -20,6 +20,7 @@ import { stcColor } from './section-title-card.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { kitScrub, kitSmooth, kitPath, kitHealthBanner, KIT_HEALTH_CSS, kitCompact, kitCompactable, KIT_CARD_BG } from './card-kit.js';
 import { CZ_TYPES } from './climate-zone-card.js';
+import { iconFor, watchIcons } from './icon-library.js';
 
 const CC_MAX_QUICK = 5;
 const CC_RING = 84;
@@ -44,6 +45,17 @@ const CC_PRESETS = {
   comfort: { name: 'Comfort', icon: 'mdi:sofa', color: '#ffa94d', colors: ['#ffb36b', '#d9731f'] },
   home: { name: 'Home', icon: 'mdi:home', color: '#64b5f6', colors: ['#7fb3d5', '#3b6e99'] },
 };
+
+// The icons for modes and presets: Home Assistant's choice (icon-library.js), else the built-in one.
+const ccModeIcon = (m) => iconFor('climate_mode', m, (CC_MODES[m] || {}).icon || 'mdi:thermostat');
+const ccPresetIcon = (p) => iconFor('climate_preset', p, (CC_PRESETS[p] || {}).icon || 'mdi:tune-variant');
+// A quick setting's icon: its own, else its preset's or its mode's.
+function ccQuickIcon(q, look) {
+  if (q.icon) return q.icon;
+  if (q.preset_mode && !noPreset(q.preset_mode) && CC_PRESETS[q.preset_mode]) return ccPresetIcon(q.preset_mode);
+  if (q.hvac_mode && CC_MODES[q.hvac_mode]) return ccModeIcon(q.hvac_mode);
+  return look.icon;
+}
 const CC_COLOR = { heating: '#ff7a2f', cooling: '#3aa0ff', drying: '#d4a72c', fan: '#26c6da', eco: '#4caf50', off: '#8b919c' };
 
 // Rows and whether a new card shows them.
@@ -280,6 +292,7 @@ export class ClimateCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    watchIcons(this, hass);
     this._render();
   }
 
@@ -396,7 +409,7 @@ export class ClimateCard extends HTMLElement {
       status: off || v.target == null ? s.word : `${s.word} · ${deg(v.target)}`,
       buttons: this._quickList(st).map((q, i) => {
         const look = (q.preset_mode && !noPreset(q.preset_mode) && CC_PRESETS[q.preset_mode]) || (q.hvac_mode && CC_MODES[q.hvac_mode]) || CC_MODES.heat;
-        return { key: `q${i}`, icon: q.icon || look.icon, title: q.name, on: i === active, color: q.color ? stcColor(q.color) : look.color || CC_MODES.heat.color, q };
+        return { key: `q${i}`, icon: ccQuickIcon(q, look), title: q.name, on: i === active, color: q.color ? stcColor(q.color) : look.color || CC_MODES.heat.color, q };
       }),
       onButton: (b) => this._applyQuick(b.q),
     };
@@ -645,7 +658,7 @@ export class ClimateCard extends HTMLElement {
     if (row(cfg, 'show_mode') && (a.hvac_modes || []).length > 1) {
       defs.push({
         key: 'mode', label: 'Mode', value: v.mode,
-        options: a.hvac_modes.map((m) => ({ value: m, name: (CC_MODES[m] || {}).name || cap(m), icon: (CC_MODES[m] || {}).icon || 'mdi:thermostat', color: (CC_MODES[m] || {}).color })),
+        options: a.hvac_modes.map((m) => ({ value: m, name: (CC_MODES[m] || {}).name || cap(m), icon: ccModeIcon(m), color: (CC_MODES[m] || {}).color })),
         set: (val) => this._set('set_hvac_mode', { hvac_mode: val }, () => { this._demo.state = val; }),
       });
     }
@@ -653,7 +666,7 @@ export class ClimateCard extends HTMLElement {
       const opts = a.preset_modes.includes('none') ? a.preset_modes : ['none', ...a.preset_modes];
       defs.push({
         key: 'preset', label: 'Preset', value: noPreset(a.preset_mode) ? 'none' : a.preset_mode,
-        options: opts.map((p) => ({ value: p, name: (CC_PRESETS[p] || {}).name || cap(p), icon: (CC_PRESETS[p] || {}).icon || 'mdi:tune-variant', color: (CC_PRESETS[p] || {}).color })),
+        options: opts.map((p) => ({ value: p, name: (CC_PRESETS[p] || {}).name || cap(p), icon: ccPresetIcon(p), color: (CC_PRESETS[p] || {}).color })),
         set: (val) => this._set('set_preset_mode', { preset_mode: val }, () => { this._demo.attributes.preset_mode = val; }),
       });
     }
@@ -773,7 +786,7 @@ export class ClimateCard extends HTMLElement {
       const look = (q.preset_mode && !noPreset(q.preset_mode) && CC_PRESETS[q.preset_mode]) || (q.hvac_mode && CC_MODES[q.hvac_mode]) || CC_MODES.heat;
       // Like the alarm card's buttons: grey until selected, then solid colour.
       const color = q.color ? stcColor(q.color) : look.color || CC_MODES.heat.color;
-      const icon = q.icon || look.icon;
+      const icon = ccQuickIcon(q, look);
       const on = i === active;
       const tile = document.createElement('button');
       tile.className = `cc-q${on ? ' cc-on' : ''}`;
