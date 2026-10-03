@@ -346,6 +346,8 @@ class WeatherGlanceWidget : SceneWidget("Weather") {
 
 /** A to-do list's open tasks; [fixedList] makes it the house's jobs rather than a list the person chose (theirs by default). */
 open class TodoGlanceWidget(private val heading: String, private val fixedList: String?) : SceneWidget(heading) {
+    override val sizeMode: SizeMode = SizeMode.Responsive(WidgetSizes.lists)
+
     private fun listOf(context: Context, config: JSONObject): String =
         fixedList ?: config.optString("list").ifBlank { myTodoList(Session(context).personName) ?: "todo.priorities_automatic" }
 
@@ -381,7 +383,7 @@ open class TodoGlanceWidget(private val heading: String, private val fixedList: 
                 HeaderRow(icon, heading, sub, p, tone)
                 Spacer(GlanceModifier.height(6.dp))
                 // Each task on two lines: its name, then when it is due and what repeats.
-                items.take(if (s.size == SizeClass.Tall) 6 else 2).forEach { row ->
+                items.take(((s.height.value - 68f) / 36f).toInt().coerceIn(1, 8)).forEach { row ->
                     Column(GlanceModifier.fillMaxWidth().padding(vertical = 3.dp)) {
                         Text(row.summary, style = TextStyle(color = cp(p.onSurface), fontSize = 14.sp, fontWeight = FontWeight.Medium), maxLines = 1)
                         if (row.line.isNotBlank()) Text(row.line, style = TextStyle(color = cp(p.muted), fontSize = 11.sp), maxLines = 1)
@@ -394,6 +396,8 @@ open class TodoGlanceWidget(private val heading: String, private val fixedList: 
 
 /** Everything waiting for the signed-in person across the To-do page's categories, each in its colour. No setup. */
 class MyTodoGlanceWidget : SceneWidget("To-do") {
+    override val sizeMode: SizeMode = SizeMode.Responsive(WidgetSizes.lists)
+
     override fun asks(context: Context, config: JSONObject) =
         TodoLists.lists(Session(context).personName).map { (_, list) -> Ask.Request("todo:$list", "todo/item/list", data("entity_id" to list)) }
 
@@ -427,7 +431,7 @@ class MyTodoGlanceWidget : SceneWidget("To-do") {
                 HeaderRow(icon, "To-do", sub, p, tone)
                 Spacer(GlanceModifier.height(6.dp))
                 // Each task on two lines, with a bar in its category's colour: its name, then its category and when it is due.
-                val rows = (((s.height.value - 24f - 44f - 6f) / 40f).toInt()).coerceIn(1, 8)
+                val rows = ((s.height.value - 68f) / 36f).toInt().coerceIn(1, 8)
                 entries.take(rows).forEach { e ->
                     val t = p.tone(e.tone)
                     Row(GlanceModifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {

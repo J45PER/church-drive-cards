@@ -81,6 +81,11 @@ object WidgetSizes {
      * Finer sizes: three widths by four heights. Android picks the largest that fits how big the widget really is, which
      * is reliable where the exact size it reports is not, so a thin card is laid out as thin and a card knows how much room it has.
      */
+    /** Finer steps in height, for the lists (to-do, jobs) whose number of rows follows the height. */
+    val lists: Set<DpSize> = buildSet {
+        for (w in listOf(110, 250)) for (h in listOf(70, 110, 150, 190, 230, 270, 320)) add(DpSize(w.dp, h.dp))
+    }
+
     val fine: Set<DpSize> = buildSet {
         for (w in listOf(110, 250, 320)) for (h in listOf(70, 140, 230, 320)) add(DpSize(w.dp, h.dp))
     }
