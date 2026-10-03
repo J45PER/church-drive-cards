@@ -150,7 +150,8 @@ fun HomeScreen(
                 ConnectionState.Connected ->
                     if (!statesLoaded) LoadingNote("Updating from the house…")
                 ConnectionState.AuthFailed ->
-                    Text("Sign-in failed. Check the token.", color = MaterialTheme.colorScheme.error)
+                    if (LocalCanRetrySignIn.current) LoadingNote("Can't sign in just now. Trying again…")
+                    else Text("Sign-in failed. Check the token.", color = MaterialTheme.colorScheme.error)
                 else -> LoadingNote("Connecting…")
             }
 

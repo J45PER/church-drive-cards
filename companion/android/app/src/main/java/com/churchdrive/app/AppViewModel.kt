@@ -268,9 +268,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             var failures = 0
             client.connection.collect {
                 if (it == ConnectionState.Connected) failures = 0
-                if (it == ConnectionState.AuthFailed && session.refreshToken != null && session.signedIn && failures < 8) {
+                // Not given up on: Home Assistant may be restarting or the phone offline, and neither is the token's fault.
+                if (it == ConnectionState.AuthFailed && session.refreshToken != null && session.signedIn) {
                     failures++
-                    kotlinx.coroutines.delay((2_000L * failures).coerceAtMost(15_000L))
+                    kotlinx.coroutines.delay((2_000L * failures).coerceAtMost(30_000L))
                     if (session.signedIn) startSession()
                 }
             }
@@ -284,6 +285,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Connects with the stored sign-in, first making a fresh access token when there's a refresh token. */
     private var lastStart = 0L
+
+    /** Whether a failed sign-in is tried again by itself (it is, when the phone has a refresh token). */
+    val canRetrySignIn: Boolean get() = session.refreshToken != null
+
+    /** The app came to the front: if it isn't connected, connect again now rather than waiting for the next try. */
+    fun onForeground() {
+        if (session.signedIn && client.connection.value != ConnectionState.Connected && System.currentTimeMillis() - lastStart > 5_000) startSession()
+    }
 
     private fun startSession() {
         lastStart = System.currentTimeMillis()

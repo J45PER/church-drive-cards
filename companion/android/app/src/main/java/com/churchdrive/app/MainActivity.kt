@@ -45,6 +45,11 @@ class MainActivity : ComponentActivity() {
     /** The camera a widget asked to see live, until it is closed. */
     private var openCamera by mutableStateOf<String?>(null)
 
+    override fun onStart() {
+        super.onStart()
+        vm.onForeground()
+    }
+
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
@@ -106,6 +111,7 @@ class MainActivity : ComponentActivity() {
                             LocalHaApi provides vm.haApi,
                             LocalUserName provides userName,
                             com.churchdrive.app.ui.LocalAreaNames provides areaNames,
+                            com.churchdrive.app.ui.LocalCanRetrySignIn provides vm.canRetrySignIn,
                         ) {
                             if (signedIn) {
                                 HomeScreen(
