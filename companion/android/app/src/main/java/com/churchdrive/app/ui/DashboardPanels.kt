@@ -29,9 +29,29 @@ object DashboardPanels {
         for (i in 0 until views.length()) {
             val view = views.optJSONObject(i) ?: continue
             val path = view.optString("path").takeIf { it.isNotBlank() } ?: continue
-            out[path] = listOfNotNull(header(view)) + panels(view).map { panel(it) }
+            out[path] = arrange(path, listOfNotNull(header(view)) + panels(view).map { panel(it) })
         }
         return out
+    }
+
+    /**
+     * The dashboard's page has a header above its panels; in the app the header's information goes where it belongs:
+     * the weather leads the Climate section, with the temperatures; the alarm leads the Security page, above the notices.
+     */
+    fun arrange(path: String, panels: List<PanelSpec>): List<PanelSpec> {
+        fun isHeader(p: PanelSpec, kind: String) = p.title.isBlank() && p.cards.firstOrNull()?.type == kind
+        if (path == "security") {
+            val alarm = panels.firstOrNull { it.title == "Alarm" } ?: return panels
+            val header = panels.indexOfFirst { isHeader(it, "header:lines") }
+            if (header < 0) return panels
+            return listOf(alarm) + panels.filter { it !== alarm }
+        }
+        if (path == "climate") {
+            val weather = panels.firstOrNull { isHeader(it, "header:forecast") } ?: return panels
+            val climate = panels.firstOrNull { it.title == "Climate" } ?: return panels
+            return panels.filter { it !== weather }.map { if (it === climate) it.copy(cards = weather.cards + it.cards) else it }
+        }
+        return panels
     }
 
     /** A page's header (`header_content`: forecast, lines, list, todo_summary), as a panel with no title and one `header:` card. */

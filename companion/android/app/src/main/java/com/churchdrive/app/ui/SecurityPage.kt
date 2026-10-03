@@ -81,6 +81,11 @@ fun SecurityPage(panels: List<PanelSpec>, entities: Map<String, EntityState>, re
 /** One dashboard card, as a native card, by its type. */
 @Composable
 fun CardView(card: CardSpec, entities: Map<String, EntityState>, registry: Registry, call: CallService) {
+    // A page's header information that the app has moved into a panel (the weather in Climate).
+    if (card.type.startsWith("header:")) {
+        HeaderView(card, entities, call)
+        return
+    }
     when (card.type.removeSuffix("-beta")) {
         "custom:alarm-panel-card" -> {
             val id = card.config.optString("entity").ifBlank { ALARM_ENTITY }
