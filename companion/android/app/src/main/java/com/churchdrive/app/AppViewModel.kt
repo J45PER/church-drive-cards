@@ -171,6 +171,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
 
         override fun close(subscription: Int) = client.unsubscribe(subscription)
+
+        override fun events(base: String, done: (org.json.JSONObject?) -> Unit) {
+            client.request("church_drive/camera/events", data("camera" to base)) { done(it as? org.json.JSONObject) }
+        }
     }
 
     fun call(domain: String, service: String, entityId: String, data: org.json.JSONObject) =

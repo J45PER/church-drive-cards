@@ -50,6 +50,7 @@ import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
 import com.churchdrive.app.ha.CallService
 import com.churchdrive.app.ha.EntityState
+import com.churchdrive.app.ha.Registry
 import com.churchdrive.app.ha.data
 import kotlinx.coroutines.delay
 import org.json.JSONObject
@@ -60,7 +61,7 @@ val LocalBaseUrl = compositionLocalOf { "" }
 /** When each camera last had a snapshot asked for from here, so the app doesn't ask again straight away. */
 private val askedAt = mutableMapOf<String, Long>()
 
-private fun chipColours(kind: String, old: Boolean): Pair<Color, Color> = when {
+internal fun chipColours(kind: String, old: Boolean): Pair<Color, Color> = when {
     old -> Color(0xFFFFA726) to Color(0xFF222211)
     kind == "ding" -> Color(0xFF29B6F6) to Color(0xFF001122)
     kind == "motion" -> Color(0xFF5C6BC0) to Color.White
@@ -76,7 +77,7 @@ private fun chipColours(kind: String, old: Boolean): Pair<Color, Color> = when {
  * live video.
  */
 @Composable
-fun CameraCard(config: JSONObject, entities: Map<String, EntityState>, call: CallService) {
+fun CameraCard(config: JSONObject, entities: Map<String, EntityState>, registry: Registry, call: CallService) {
     val entityId = config.optString("entity")
     val found = cameraFind(
         entities, entityId,
@@ -152,7 +153,11 @@ fun CameraCard(config: JSONObject, entities: Map<String, EntityState>, call: Cal
         }
     }
 
-    if (viewing) CameraViewer(name, entityId, found.button, call) { viewing = false }
+    if (viewing) {
+        val eventsBase = cameraBaseName(entities, entityId)
+        val light = cameraLight(entities, registry, entityId, config.optString("light").takeIf { it.isNotBlank() })
+        CameraViewer(name, entityId, found.button, eventsBase, light, entities, call) { viewing = false }
+    }
 }
 
 /**
@@ -160,13 +165,23 @@ fun CameraCard(config: JSONObject, entities: Map<String, EntityState>, call: Cal
  * the camera offers it (as Home Assistant's own player does), else an HLS stream.
  */
 @Composable
-private fun CameraViewer(name: String, entityId: String, button: String?, call: CallService, onClose: () -> Unit) {
+private fun CameraViewer(
+    name: String,
+    entityId: String,
+    button: String?,
+    eventsBase: String?,
+    light: String?,
+    entities: Map<String, EntityState>,
+    call: CallService,
+    onClose: () -> Unit,
+) {
     val host = LocalCameraHost.current
     val base = LocalBaseUrl.current
     var mode by remember { mutableStateOf<String?>(null) } // webrtc, hls or none, once known
     var link by remember { mutableStateOf<String?>(null) }
     var status by remember { mutableStateOf<String?>("Starting live view…") }
     var muted by remember { mutableStateOf(true) }
+    var showEvents by remember { mutableStateOf(false) }
     LaunchedEffect(entityId) {
         if (host == null) {
             mode = "none"
@@ -193,6 +208,7 @@ private fun CameraViewer(name: String, entityId: String, button: String?, call: 
             }
         }
     }
+    if (showEvents && eventsBase != null) CameraEventsViewer(name, eventsBase) { showEvents = false }
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(modifier = Modifier.fillMaxSize(), color = Color.Black) {
             Column(modifier = Modifier.fillMaxSize().padding(8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -212,6 +228,16 @@ private fun CameraViewer(name: String, entityId: String, button: String?, call: 
                     Button(onClick = { muted = !muted }, enabled = mode == "webrtc" || mode == "hls") { Text(if (muted) "Unmute" else "Mute") }
                     if (button != null) {
                         OutlinedButton(onClick = { call("button", "press", button, data()) }) { Text("New snapshot") }
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(horizontal = 8.dp)) {
+                    if (eventsBase != null) {
+                        Button(onClick = { showEvents = true }) { Text("Events") }
+                    }
+                    if (light != null) {
+                        val on = entities[light]?.state == "on"
+                        val lightName = entities[light]?.friendlyName?.replace(Regex(" light$", RegexOption.IGNORE_CASE), "") ?: "Light"
+                        OutlinedButton(onClick = { call("light", "toggle", light, data()) }) { Text("$lightName ${if (on) "on" else "off"}") }
                     }
                 }
             }

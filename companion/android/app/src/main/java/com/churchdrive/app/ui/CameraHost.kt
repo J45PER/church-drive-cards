@@ -21,6 +21,9 @@ interface CameraHost {
     fun webRtcCandidate(entityId: String, sessionId: String, candidate: JSONObject)
 
     fun close(subscription: Int)
+
+    /** A camera's saved events (`church_drive/camera/events`), or null if the integration can't give them. */
+    fun events(base: String, done: (JSONObject?) -> Unit)
 }
 
 val LocalCameraHost = compositionLocalOf<CameraHost?> { null }
