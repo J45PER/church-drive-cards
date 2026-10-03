@@ -71,7 +71,7 @@ class CameraEventsDataTest {
         val now = ms(2026, 10, 3, 12, 0)
         assertEquals("Today", eventDay(ms(2026, 10, 3, 9, 0), now, london))
         assertEquals("Yesterday", eventDay(ms(2026, 10, 2, 23, 30), now, london))
-        assertEquals("Wednesday 30 Sep", eventDay(ms(2026, 9, 30, 8, 0), now, london))
+        assertEquals(true, eventDay(ms(2026, 9, 30, 8, 0), now, london).startsWith("Wednesday 30 Sep")) // "Sep" or "Sept", by platform
         assertEquals("21:40", eventClock(ms(2026, 10, 2, 21, 40), london))
         val events = parseCameraEvents(
             JSONObject(
