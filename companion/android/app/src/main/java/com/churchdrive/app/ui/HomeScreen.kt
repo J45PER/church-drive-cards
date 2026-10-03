@@ -65,6 +65,7 @@ fun HomeScreen(
     lights: LightLayout,
     areaNames: Map<String, String>,
     panels: Map<String, List<PanelSpec>>,
+    managerPanels: List<PanelSpec> = emptyList(),
     registry: Registry,
     call: CallService,
     onSignOut: () -> Unit,
@@ -177,6 +178,12 @@ fun HomeScreen(
     AccountOverlay(
         panel, { panel = it }, userName, isAdmin, account, updateAvailable, onSignOut,
         adminPages = adminPages,
+        managerPages = if (isAdmin) managerPanels else emptyList(),
+        managerContent = { panel ->
+            androidx.compose.foundation.layout.Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                panel.cards.forEach { CardView(it, entities, registry, call) }
+            }
+        },
         pageContent = { p ->
             // The app has no media controls: the dashboard's "TVs & speakers" panel is left out.
             val key = if (p == Page.Energy) "energy" else "devices"

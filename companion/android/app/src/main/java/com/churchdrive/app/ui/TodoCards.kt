@@ -73,6 +73,7 @@ fun TaskListCard(config: JSONObject, entities: Map<String, EntityState>, call: C
     editing?.let { TaskDialog(it, listId, me?.trim()?.substringBefore(' '), tone, call) { editing = null } }
 
     EntityCard(tone.container, tone.onContainer) {
+        config.optString("title").takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.titleMedium) }
         if (listId.isBlank()) {
             Text("Your list isn't ready yet.", style = MaterialTheme.typography.bodyMedium)
             return@EntityCard

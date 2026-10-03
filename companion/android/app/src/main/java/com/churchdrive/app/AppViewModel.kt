@@ -48,6 +48,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val _panels = MutableStateFlow<Map<String, List<PanelSpec>>>(emptyMap())
     val panels: StateFlow<Map<String, List<PanelSpec>>> = _panels
 
+    /** The Manager dashboard's panels, for administrators: each is a page in the account panel. */
+    private val _managerPanels = MutableStateFlow<List<PanelSpec>>(emptyList())
+    val managerPanels: StateFlow<List<PanelSpec>> = _managerPanels
+
     private val _registry = MutableStateFlow(Registry.Empty)
     val registry: StateFlow<Registry> = _registry
     private var entityRegistryResult: Any? = null
@@ -110,6 +114,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     init {
+        // An administrator also reads the Manager dashboard, again whenever a dashboard is saved.
+        viewModelScope.launch {
+            combine(client.connection, client.isAdmin, client.dashboardTick) { connection, admin, _ -> connection == ConnectionState.Connected && admin }.collect { go ->
+                if (go) fetch("lovelace/config", data("url_path" to "dashboard-manager")) { config ->
+                    (config as? org.json.JSONObject)?.let { c ->
+                        _managerPanels.value = DashboardPanels.parse(c).values.flatten()
+                        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { cache.write("manager", c.toString()) }
+                    }
+                }
+            }
+        }
+    }
+
+    init {
         // Read the dashboard's light cards on connecting, and again whenever a dashboard is saved in HA.
         viewModelScope.launch {
             combine(client.connection, client.dashboardTick) { connection, _ -> connection }.collect {
@@ -151,6 +169,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     if (_panels.value.isEmpty()) { _lights.value = lights; _panels.value = panels }
                 }
+            }
+            runCatching { cache.read("manager")?.let { org.json.JSONObject(it) } }.getOrNull()?.let { config ->
+                val panels = DashboardPanels.parse(config).values.flatten()
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { if (_managerPanels.value.isEmpty()) _managerPanels.value = panels }
             }
             runCatching { cache.read("areas")?.let { org.json.JSONArray(it) } }.getOrNull()?.let { areas ->
                 val names = DashboardLights.areaNames(areas)

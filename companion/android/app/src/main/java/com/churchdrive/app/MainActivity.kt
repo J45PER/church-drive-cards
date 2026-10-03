@@ -94,6 +94,7 @@ class MainActivity : ComponentActivity() {
                         val lights by vm.lights.collectAsStateWithLifecycle()
                         val sceneLooks by vm.sceneLooks.collectAsStateWithLifecycle()
                         val panels by vm.panels.collectAsStateWithLifecycle()
+                        val managerPanels by vm.managerPanels.collectAsStateWithLifecycle()
                         val registry by vm.registry.collectAsStateWithLifecycle()
                         val areaNames by vm.areaNames.collectAsStateWithLifecycle()
                         CompositionLocalProvider(
@@ -124,6 +125,7 @@ class MainActivity : ComponentActivity() {
                                     lights = lights,
                                     areaNames = areaNames,
                                     panels = panels,
+                                    managerPanels = managerPanels,
                                     registry = registry,
                                     call = vm::call,
                                     onSignOut = vm::signOut,

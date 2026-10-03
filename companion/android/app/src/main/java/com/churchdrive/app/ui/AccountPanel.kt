@@ -90,6 +90,9 @@ fun AccountOverlay(
     onSignOut: () -> Unit,
     adminPages: List<Page> = emptyList(),
     pageContent: @Composable (Page) -> Unit = {},
+    /** The Manager dashboard's panels (administrators): each is a sub-page, and [managerContent] draws its cards. */
+    managerPages: List<PanelSpec> = emptyList(),
+    managerContent: @Composable (PanelSpec) -> Unit = {},
 ) {
     // The last page shown, so a page keeps its words while it slides away.
     var shown by remember { mutableStateOf("account") }
@@ -121,7 +124,11 @@ fun AccountOverlay(
                     "energy", "devices" -> adminPages.firstOrNull { it.name.lowercase() == which }?.let { p ->
                         AdminPage(p.label, { onPanel("account") }) { pageContent(p) }
                     }
-                    else -> AccountPage(userName, isAdmin, adminPages, onClose = { onPanel(null) }, onOpen = onPanel, onSignOut = {
+                    else -> if (which.startsWith("manager:")) {
+                        managerPages.firstOrNull { it.title == which.removePrefix("manager:") }?.let { p ->
+                            AdminPage(p.title, { onPanel("account") }) { managerContent(p) }
+                        }
+                    } else AccountPage(userName, isAdmin, adminPages, managerPages, onClose = { onPanel(null) }, onOpen = onPanel, onSignOut = {
                         onPanel(null)
                         onSignOut()
                     })
@@ -164,7 +171,7 @@ private fun PanelTitle(title: String, onBack: () -> Unit) {
 }
 
 @Composable
-private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Page>, onClose: () -> Unit, onOpen: (String) -> Unit, onSignOut: () -> Unit) {
+private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Page>, managerPages: List<PanelSpec>, onClose: () -> Unit, onOpen: (String) -> Unit, onSignOut: () -> Unit) {
     Column(
         Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -198,6 +205,22 @@ private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Pa
         if (adminPages.isNotEmpty()) {
             PanelCard {
                 adminPages.forEach { p -> PanelRow(p.fallback, p.label, onClick = { onOpen(p.name.lowercase()) }) }
+            }
+        }
+        // The Manager's sections (administrators), each its own page.
+        if (managerPages.isNotEmpty()) {
+            Text("Manager", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 8.dp, top = 4.dp))
+            PanelCard {
+                managerPages.forEach { p ->
+                    val summary = rememberTemplate(p.summaryTemplate)
+                    ListItem(
+                        headlineContent = { Text(p.title) },
+                        supportingContent = summary?.takeIf { it.isNotBlank() }?.let { { Text(it) } },
+                        leadingContent = { HaIcon(p.icon, Icons.Outlined.Settings, MaterialTheme.colorScheme.onSurfaceVariant, 24.dp) },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable { onOpen("manager:${p.title}") },
+                    )
+                }
             }
         }
         PanelCard {
