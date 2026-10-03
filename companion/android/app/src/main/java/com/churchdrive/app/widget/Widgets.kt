@@ -49,12 +49,13 @@ import com.churchdrive.app.ui.ToneColors
 /** The card shell the widgets share: rounded, tinted, opening the app when its background is tapped. */
 @Composable
 private fun CardShell(colours: ToneColors, content: @Composable () -> Unit) {
+    val context = androidx.glance.LocalContext.current
     Column(
         GlanceModifier.fillMaxSize()
             .cornerRadius(28.dp)
             .background(ColorProvider(colours.container))
             .padding(16.dp)
-            .clickable(actionStartActivity<MainActivity>()),
+            .clickable(actionStartActivity(android.content.Intent(context, MainActivity::class.java))),
         verticalAlignment = Alignment.CenterVertically,
     ) { content() }
 }
