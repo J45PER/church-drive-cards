@@ -109,7 +109,7 @@ fun CardView(card: CardSpec, entities: Map<String, EntityState>, registry: Regis
         "vertical-stack" -> StackCard(card.config, entities, registry, call)
         "custom:auto-entities" -> PeopleListsCard(entities, call)
         "todo-list" -> TaskListCard(card.config, entities, call)
-        "custom:people-manager-card" -> PeoplePage(entities)
+        "custom:people-manager-card" -> PeoplePage(entities, registry)
         "custom:zone-map-card" -> LocationsPage(entities)
         "custom:notifications-card" -> NotificationsPage(entities)
         "custom:camera-links-card" -> CameraLinksPage(entities)

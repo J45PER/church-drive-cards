@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.churchdrive.app.ha.EntityState
+import com.churchdrive.app.ha.Registry
 import com.churchdrive.app.ha.data
 import kotlinx.coroutines.launch
 import org.json.JSONArray
@@ -144,6 +145,22 @@ private fun ManagerNote(text: String) {
     }
 }
 
+/** A card with a button that opens the Manager page in Home Assistant, for what the app doesn't do itself. */
+@Composable
+fun OpenInHomeAssistant(label: String, why: String, path: String = "dashboard-manager/system") {
+    val base = LocalHaUrl.current
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val neutral = toneColors(Tone.Grey)
+    EntityCard(neutral.container, neutral.onContainer) {
+        Text(why, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (base.isNotBlank()) Choices(listOf(TileItem("mdi:open-in-new", label, false) {
+            runCatching {
+                context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("$base/$path")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
+        }), neutral, perRow = 1)
+    }
+}
+
 /** A group of choices as the kit's tiles: the ones in [on] selected. */
 @Composable
 private fun Choices(items: List<TileItem>, tone: ToneColors, perRow: Int = 3, enabled: Boolean = true) =
@@ -212,7 +229,7 @@ fun NotificationsPage(entities: Map<String, EntityState>) {
 
 /** Each person: their phones (switch alerts on and off) and their places, with the names they give them. */
 @Composable
-fun PeoplePage(entities: Map<String, EntityState>) {
+fun PeoplePage(entities: Map<String, EntityState>, registry: Registry) {
     val rev = entities["sensor.church_drive_people"]?.let { "${it.attributes.opt("rev")}|${it.state}" }
     val view = rememberWs("church_drive/people", rev)
     Waiting(view, "people") { d ->
@@ -269,9 +286,51 @@ fun PeoplePage(entities: Map<String, EntityState>) {
                         TileItem("mdi:close", "Cancel", false) { editing = null },
                     ), teal, perRow = 2)
                 }
+                // Cars: the ones this person has (a car can belong to several people; one nobody has is everyone's).
+                val cars = registry.devicesOfPlatforms(CAR_PLATFORMS).filter { (_, ids) -> carEntities(ids, entities).battery.isNotEmpty() }.keys.toList()
+                if (cars.isNotEmpty()) {
+                    Text("Cars", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    val mine = p.optJSONArray("cars")?.let { a -> (0 until a.length()).map { a.optString(it) } }.orEmpty()
+                    Choices(cars.map { device ->
+                        TileItem("mdi:car", registry.deviceNameById(device) ?: "Car", device in mine) {
+                            val next = if (device in mine) mine - device else mine + device
+                            view.send("church_drive/people/cars", JSONObject().put("person", id).put("cars", JSONArray(next)))
+                        }
+                    }, teal, perRow = 2)
+                }
+                // Alerts and to-dos: each kind this person gets, grouped as on the dashboard.
+                val kinds = d.optJSONArray("kinds").objects()
+                val todoGroups = setOf("To-dos", "House jobs")
+                fun kindTiles(list: List<JSONObject>) = list.filter { it.optBoolean("available", true) && canTick(it, p) }.map { k ->
+                    TileItem("mdi:bell-outline", k.optString("name"), kindGoesTo(k, id)) {
+                        view.send("church_drive/people/assign", data("kind" to k.optString("key"), "person" to id, "on" to !kindGoesTo(k, id)))
+                    }
+                }
+                val alerts = kinds.filter { !(it.optString("group") == "People" && it.optString("key").startsWith("arrivals:")) && it.optString("group") !in todoGroups }
+                kindGroups(JSONArray(alerts)).forEach { (group, list) ->
+                    Text("Alerts · $group", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Choices(kindTiles(list), tone = toneColors(Tone.Purple), perRow = 2)
+                }
+                val todos = kinds.filter { it.optString("group") in todoGroups }
+                if (todos.isNotEmpty()) {
+                    Text("To-dos", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Choices(kindTiles(todos), tone = toneColors(Tone.Purple), perRow = 2)
+                }
+                // Arrivals: who is told when this person gets home or leaves.
+                val arrivals = kinds.firstOrNull { it.optString("key") == "arrivals:$id" }
+                val others = d.optJSONArray("people").objects().filter { it.optString("entity_id") != id }
+                if (arrivals != null && others.isNotEmpty()) {
+                    Text("Told when ${p.optString("first")} gets home or leaves", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Choices(others.map { o ->
+                        val oid = o.optString("entity_id")
+                        TileItem("mdi:account", o.optString("first").ifBlank { o.optString("name") }, kindGoesTo(arrivals, oid)) {
+                            view.send("church_drive/people/assign", data("kind" to "arrivals:$id", "person" to oid, "on" to !kindGoesTo(arrivals, oid)))
+                        }
+                    }, toneColors(Tone.Purple))
+                }
             }
         }
-        ManagerNote("Pictures, cars and each person's own alerts are changed on the Manager dashboard in Home Assistant for now. Who gets what is on the Notifications page.")
+        OpenInHomeAssistant("Change pictures", "Pictures are Home Assistant's own person pictures, so they're changed there.")
     }
 }
 
@@ -295,7 +354,7 @@ fun LocationsPage(entities: Map<String, EntityState>) {
             }
         }
     }
-    ManagerNote("Drawing, moving and resizing zones on the map is on the Manager dashboard in Home Assistant for now.")
+    OpenInHomeAssistant("Edit zones on the map", "Drawing, moving and resizing zones is done on the map in Home Assistant.")
 }
 
 // ---------------------------------------------------------------------------------------------- Camera links
