@@ -41,7 +41,7 @@ fun ClimateRoomCard(config: JSONObject, entities: Map<String, EntityState>, call
         humidity = config.optString("humidity_entity").takeIf { it.isNotBlank() }?.let { entities[it] },
         outdoor = config.optString("outdoor_entity").takeIf { it.isNotBlank() }?.let { entities[it]?.num("temperature") },
         quick = quickSettings(config),
-        extra = {
+        below = {
             // Temperature and humidity over the last day (each is a switch on the dashboard card), sharing one graph.
             val showT = config.optBoolean("show_temperature_history")
             val showH = config.optBoolean("show_humidity_history")
