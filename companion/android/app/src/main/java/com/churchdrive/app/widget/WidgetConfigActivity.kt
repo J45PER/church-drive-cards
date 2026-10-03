@@ -85,7 +85,6 @@ class WidgetConfigActivity : ComponentActivity() {
                             "ShortcutsWidgetReceiver" -> ShortcutsGlanceWidget()
                             "ScenesWidgetReceiver" -> ScenesGlanceWidget()
                             "FanWidgetReceiver" -> FanGlanceWidget()
-                            "PurifierWidgetReceiver" -> PurifierGlanceWidget()
                             "BlindsWidgetReceiver" -> BlindsGlanceWidget()
                             "CameraWidgetReceiver" -> CameraGlanceWidget()
                             "ActivityWidgetReceiver" -> ActivityGlanceWidget()
@@ -142,8 +141,7 @@ private fun ConfigScreen(kind: String, existing: JSONObject, onSave: (JSONObject
 
     val title = when (kind) {
         "ScenesWidgetReceiver" -> "Scenes widget"
-        "FanWidgetReceiver" -> "Fan widget"
-        "PurifierWidgetReceiver" -> "Air purifier widget"
+        "FanWidgetReceiver" -> "Fan, air purifier or air conditioner widget"
         "BlindsWidgetReceiver" -> "Blinds widget"
         "CameraWidgetReceiver" -> "Camera widget"
         "ActivityWidgetReceiver" -> "Doorbell and movement widget"
@@ -248,12 +246,12 @@ private fun ConfigScreen(kind: String, existing: JSONObject, onSave: (JSONObject
 
 /** The kinds that ask for one thing, and the name its choice is kept under. */
 private val SINGLE_KEYS = mapOf(
-    "FanWidgetReceiver" to "fan", "PurifierWidgetReceiver" to "fan", "BlindsWidgetReceiver" to "cover", "CameraWidgetReceiver" to "camera",
+    "FanWidgetReceiver" to "fan", "BlindsWidgetReceiver" to "cover", "CameraWidgetReceiver" to "camera",
     "ActivityWidgetReceiver" to "base", "TodoWidgetReceiver" to "list", "GaugeWidgetReceiver" to "reading",
 )
 
 private val SINGLE_PROMPT = mapOf(
-    "FanWidgetReceiver" to "Which fan?", "PurifierWidgetReceiver" to "Which air purifier?", "BlindsWidgetReceiver" to "Which blind (or group)?",
+    "FanWidgetReceiver" to "Which fan, air purifier or air conditioner?", "BlindsWidgetReceiver" to "Which blind (or group)?",
     "CameraWidgetReceiver" to "Which camera?", "ActivityWidgetReceiver" to "Which doorbell or camera zone?", "TodoWidgetReceiver" to "Which list?",
     "GaugeWidgetReceiver" to "Which reading? Heating also gets − and + for the target.",
 )
@@ -261,8 +259,7 @@ private val SINGLE_PROMPT = mapOf(
 private fun singleChoices(kind: String, d: WidgetData): List<Pair<String, String>> {
     val e = d.entities.values
     return when (kind) {
-        "FanWidgetReceiver" -> fansFor(false, d.entities).map { it.entityId to it.friendlyName }
-        "PurifierWidgetReceiver" -> fansFor(true, d.entities).map { it.entityId to it.friendlyName }
+        "FanWidgetReceiver" -> airDevices(d.entities).map { it.entityId to (it.friendlyName + if (it.entityId.startsWith("climate.")) " (air conditioner or thermostat)" else if (isPurifier(it, d.entities)) " (air purifier)" else "") }
         "BlindsWidgetReceiver" -> e.filter { it.entityId.startsWith("cover.") }.sortedBy { it.friendlyName }.map { it.entityId to it.friendlyName }
         "CameraWidgetReceiver" -> e.filter { it.entityId.startsWith("camera.") && it.entityId.endsWith("_live_view") }.sortedBy { it.friendlyName }.map { it.entityId to it.friendlyName }
         "ActivityWidgetReceiver" -> activityBases(d.entities).map { it to it.replace('_', ' ').replaceFirstChar { c -> c.uppercase() } }

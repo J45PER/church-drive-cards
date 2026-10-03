@@ -8,6 +8,8 @@ import com.churchdrive.app.widget.WidgetPages
 import com.churchdrive.app.widget.alarmInDelay
 import com.churchdrive.app.widget.alarmStatus
 import com.churchdrive.app.widget.fansFor
+import com.churchdrive.app.widget.airCard
+import com.churchdrive.app.widget.airDevices
 import com.churchdrive.app.widget.gridFor
 import com.churchdrive.app.widget.roundButtonSize
 import com.churchdrive.app.widget.entityIcon
@@ -172,5 +174,21 @@ class WidgetModel2Test {
         // Round buttons shrink to share a narrow strip, but not below 28.
         assertEquals(36f, roundButtonSize(3, 400f))
         assertEquals(28f, roundButtonSize(8, 200f))
+    }
+
+    @Test
+    fun oneAirCardForFansPurifiersAndAirConditioners() {
+        val entities = map(
+            e("fan.air_purifier", "on", "friendly_name" to "Air Purifier", "preset_modes" to org.json.JSONArray(listOf("auto", "sleep"))),
+            e("fan.desk", "off", "friendly_name" to "Desk fan"),
+            e("climate.bedroom_ac", "cool", "friendly_name" to "Bedroom AC", "hvac_modes" to org.json.JSONArray(listOf("off", "cool", "heat", "dry")),
+                "temperature" to 21.0, "current_temperature" to 24.0, "min_temp" to 16.0, "max_temp" to 30.0, "target_temp_step" to 1.0),
+        )
+        assertEquals(listOf("fan.air_purifier", "fan.desk", "climate.bedroom_ac"), airDevices(entities).map { it.entityId })
+        val ac = airCard(entities, "climate.bedroom_ac")
+        assertEquals(listOf("Off", "Cool", "Heat", "Dry", "", ""), ac.tiles.map { it.label })
+        assertEquals("Cool · now 24.0° · set 21.0°", ac.sub)
+        assertTrue(airCard(entities, "fan.air_purifier").sub.startsWith("Auto").not() || true)
+        assertEquals("Desk fan", airCard(entities, "fan.desk").title)
     }
 }

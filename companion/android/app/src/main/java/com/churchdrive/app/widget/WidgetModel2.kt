@@ -197,6 +197,49 @@ fun fansFor(purifiers: Boolean, entities: Map<String, EntityState>): List<Entity
     return all.filter { isPurifier(it, entities) == purifiers }.ifEmpty { all }
 }
 
+/** Every air device a card can be made for: the fans (purifiers among them) and air conditioners or other thermostats, by name. */
+fun airDevices(entities: Map<String, EntityState>): List<EntityState> =
+    entities.values.filter { it.entityId.startsWith("fan.") || it.entityId.startsWith("climate.") }
+        .sortedWith(compareBy({ !it.entityId.startsWith("fan.") }, { it.friendlyName }))
+
+/** The card for whichever air device was picked: a purifier, a fan or an air conditioner, by what it is. */
+fun airCard(entities: Map<String, EntityState>, entity: String): Card {
+    val e = entities[entity]
+    return when {
+        entity.startsWith("climate.") -> acCard(e, entity)
+        e != null && isPurifier(e, entities) -> purifierCard(e, entity, entities)
+        else -> fanCard(e, entity)
+    }
+}
+
+private val AC_MODE_ICONS = mapOf(
+    "off" to "mdi:power", "cool" to "mdi:snowflake", "heat" to "mdi:fire", "auto" to "mdi:autorenew",
+    "heat_cool" to "mdi:sun-snowflake-variant", "dry" to "mdi:water-percent", "fan_only" to "mdi:fan",
+)
+
+/** An air conditioner (or any thermostat): its modes as buttons, and − and + for the target when it has one. */
+fun acCard(c: EntityState?, entity: String): Card {
+    val modes = c?.list("hvac_modes").orEmpty()
+    val tiles = buildList {
+        modes.forEach { m ->
+            add(WidgetTile(AC_MODE_ICONS[m] ?: "mdi:thermostat", presetLabel(m.replace('_', ' ')), c?.state == m, "climate", "set_hvac_mode", entity, JSONObject().put("hvac_mode", m).toString()))
+        }
+        val target = c?.num("temperature")
+        if (c != null && target != null && c.state != "off") {
+            val step = c.num("target_temp_step") ?: 0.5
+            val low = c.num("min_temp") ?: 7.0
+            val high = c.num("max_temp") ?: 35.0
+            add(WidgetTile("mdi:minus", "", false, "climate", "set_temperature", entity, JSONObject().put("temperature", (target - step).coerceIn(low, high)).toString()))
+            add(WidgetTile("mdi:plus", "", false, "climate", "set_temperature", entity, JSONObject().put("temperature", (target + step).coerceIn(low, high)).toString()))
+        }
+    }
+    val now = c?.num("current_temperature")?.let { "now %.1f°".format(it) }
+    val set = c?.num("temperature")?.takeIf { c.state != "off" }?.let { "set %.1f°".format(it) }
+    val sub = listOfNotNull(c?.state?.let { presetLabel(it.replace('_', ' ')) } ?: "–", now, set).joinToString(" · ")
+    val tone = when (c?.state) { "cool" -> Tone.Blue; "heat" -> Tone.Orange; "off", null -> Tone.Grey; "unavailable" -> Tone.Grey; else -> Tone.Teal }
+    return Card(c?.friendlyName ?: "Air conditioner", sub, tone, entityIcon(c, "mdi:air-conditioner"), tiles)
+}
+
 /** The PM2.5 reading that belongs to a purifier: a sensor whose id says PM2.5 and starts like the purifier's own. */
 fun purifierPm(fanId: String, entities: Map<String, EntityState>): EntityState? {
     val sensors = entities.values.filter { it.entityId.startsWith("sensor.") && Regex("pm2_?5").containsMatchIn(it.entityId) }

@@ -377,19 +377,12 @@ class ChargerGlanceWidget : SceneWidget("Car charger") {
     override fun Draw(s: WidgetScene) = CardContent(chargerCard(s.data.entities), s.p, s.size, s.width, s.height)
 }
 
-class FanGlanceWidget : SceneWidget("Fan") {
+/** One card for any air device you pick: a fan, an air purifier or an air conditioner. */
+class FanGlanceWidget : SceneWidget("Fan and air") {
     @Composable
     override fun Draw(s: WidgetScene) {
-        val id = s.entity("fan").ifBlank { fansFor(false, s.data.entities).firstOrNull()?.entityId.orEmpty() }
-        CardContent(fanCard(s.data.entities[id], id), s.p, s.size, s.width, s.height)
-    }
-}
-
-class PurifierGlanceWidget : SceneWidget("Air purifier") {
-    @Composable
-    override fun Draw(s: WidgetScene) {
-        val id = s.entity("fan").ifBlank { fansFor(true, s.data.entities).firstOrNull()?.entityId.orEmpty() }
-        CardContent(purifierCard(s.data.entities[id], id, s.data.entities), s.p, s.size, s.width, s.height)
+        val id = s.entity("fan").ifBlank { airDevices(s.data.entities).firstOrNull()?.entityId.orEmpty() }
+        CardContent(airCard(s.data.entities, id), s.p, s.size, s.width, s.height)
     }
 }
 
@@ -618,10 +611,6 @@ class FanWidgetReceiver : LiveReceiver() {
     override val glanceAppWidget: GlanceAppWidget = FanGlanceWidget()
     override fun onDeleted(context: Context, appWidgetIds: IntArray) { super.onDeleted(context, appWidgetIds); forget2(context, appWidgetIds) }
 }
-class PurifierWidgetReceiver : LiveReceiver() {
-    override val glanceAppWidget: GlanceAppWidget = PurifierGlanceWidget()
-    override fun onDeleted(context: Context, appWidgetIds: IntArray) { super.onDeleted(context, appWidgetIds); forget2(context, appWidgetIds) }
-}
 class BlindsWidgetReceiver : LiveReceiver() {
     override val glanceAppWidget: GlanceAppWidget = BlindsGlanceWidget()
     override fun onDeleted(context: Context, appWidgetIds: IntArray) { super.onDeleted(context, appWidgetIds); forget2(context, appWidgetIds) }
@@ -642,6 +631,6 @@ class ClusterWidgetReceiver : LiveReceiver() {
 /** Every widget the app has, to redraw after a button press. */
 fun allGlanceWidgets(): List<GlanceAppWidget> = listOf(
     AlarmGlanceWidget(), LightsGlanceWidget(), ClimateGlanceWidget(), SummaryGlanceWidget(), ShortcutsGlanceWidget(),
-    ScenesGlanceWidget(), FanGlanceWidget(), PurifierGlanceWidget(), BlindsGlanceWidget(), VacuumGlanceWidget(), ChargerGlanceWidget(),
+    ScenesGlanceWidget(), FanGlanceWidget(), BlindsGlanceWidget(), VacuumGlanceWidget(), ChargerGlanceWidget(),
     MyTodoGlanceWidget(), JobsGlanceWidget(), GaugeGlanceWidget(), ClusterGlanceWidget(), DoorsGlanceWidget(),
 )

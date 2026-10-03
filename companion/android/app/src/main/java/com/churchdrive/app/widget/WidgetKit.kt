@@ -202,7 +202,7 @@ object WidgetPages {
         "Lights" to "Lighting",
         "Climate" to "Climate", "Weather" to "Climate", "Gauge" to "Climate", "Cluster" to "Climate",
         // Widgets that are all buttons open nothing when the background is tapped.
-        "Fan" to "", "Purifier" to "", "Blinds" to "", "Scenes" to "", "Shortcuts" to "",
+        "Fan" to "", "Blinds" to "", "Scenes" to "", "Shortcuts" to "",
         "Vacuum" to "Cleaning", "Todo" to "Todo", "Jobs" to "Todo",
         "People" to "Home", "Charger" to "Home", "Summary" to "Home",
     )

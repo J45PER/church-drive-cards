@@ -159,24 +159,13 @@
         <receiver
             android:name=".widget.FanWidgetReceiver"
             android:exported="false"
-            android:label="Church Drive fan">
+            android:label="Church Drive fan and air">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_fan" />
-        </receiver>
-        <receiver
-            android:name=".widget.PurifierWidgetReceiver"
-            android:exported="false"
-            android:label="Church Drive air purifier">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/widget_purifier" />
         </receiver>
         <receiver
             android:name=".widget.BlindsWidgetReceiver"
