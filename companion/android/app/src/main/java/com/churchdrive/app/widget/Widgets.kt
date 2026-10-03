@@ -125,8 +125,8 @@ private fun AlarmContent(alarm: EntityState, p: WidgetPalette, size: SizeClass) 
 
 /** Lights: for one room or several, chosen when the widget is added; with scenes or with a brightness bar. */
 class LightsGlanceWidget : GlanceAppWidget() {
-    // Exact, so a room's scenes can fill as many rows as the widget has been made tall enough for.
-    override val sizeMode = SizeMode.Exact
+    // Several heights, so a room's scenes can fill as many rows as the widget has been made tall enough for.
+    override val sizeMode = SizeMode.Responsive(WidgetSizes.fine)
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideLive(context, id, ) { l ->
@@ -355,8 +355,8 @@ private fun StepButton(icon: String, p: WidgetPalette, tone: com.churchdrive.app
 
 /** Shortcuts: up to eight buttons you pick when you add it. */
 class ShortcutsGlanceWidget : GlanceAppWidget() {
-    // Exact, so every button fits whatever size the widget has been made.
-    override val sizeMode = SizeMode.Exact
+    // Several widths and heights, so every button fits whatever size the widget has been made.
+    override val sizeMode = SizeMode.Responsive(WidgetSizes.fine)
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideLive(context, id, ) { l ->

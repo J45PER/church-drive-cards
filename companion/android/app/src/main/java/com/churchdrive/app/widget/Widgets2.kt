@@ -60,8 +60,8 @@ class WidgetScene(val data: WidgetData, val config: JSONObject, val p: WidgetPal
 
 /** The common shape of the widgets: read the house once, then draw in whichever of the four sizes the widget has been made. */
 abstract class SceneWidget(private val title: String) : GlanceAppWidget() {
-    // Exact, so a thin card can tell how much room its buttons really have.
-    override val sizeMode: SizeMode = SizeMode.Exact
+    // Several widths and heights, so a thin card can tell how much room its buttons have.
+    override val sizeMode: SizeMode = SizeMode.Responsive(WidgetSizes.fine)
 
     open fun asks(context: Context, config: JSONObject): List<Ask> = emptyList()
 
@@ -436,6 +436,9 @@ class JobsGlanceWidget : TodoGlanceWidget("Jobs", "todo.cleaning")
 // ---------------------------------------------------------------------------------------------- Camera
 
 class CameraGlanceWidget : SceneWidget("Camera") {
+    // Few sizes: each one carries its own copy of the picture.
+    override val sizeMode: SizeMode = SizeMode.Responsive(WidgetSizes.all)
+
     private fun pick(data: WidgetData, config: JSONObject): EntityState? =
         data.entities[config.optString("camera")] ?: data.entities.values.firstOrNull { it.entityId.startsWith("camera.") && it.entityId.endsWith("_live_view") }
 

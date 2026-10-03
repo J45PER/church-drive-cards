@@ -76,6 +76,14 @@ object WidgetSizes {
     val wide = DpSize(250.dp, 140.dp)
     val tall = DpSize(250.dp, 230.dp)
     val all = setOf(strip, square, wide, tall)
+
+    /**
+     * Finer sizes: three widths by four heights. Android picks the largest that fits how big the widget really is, which
+     * is reliable where the exact size it reports is not, so a thin card is laid out as thin and a card knows how much room it has.
+     */
+    val fine: Set<DpSize> = buildSet {
+        for (w in listOf(110, 250, 320)) for (h in listOf(70, 140, 230, 320)) add(DpSize(w.dp, h.dp))
+    }
 }
 
 fun DpSize.sizeClass(): SizeClass = sizeClass(width.value, height.value)
