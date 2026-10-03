@@ -344,6 +344,7 @@ fun ClimateCard(
     outdoor: Double? = null,
     quick: List<QuickSetting>? = null,
     quality: Int? = null,
+    extra: (@Composable () -> Unit)? = null,
 ) {
     val tone = toneColors(climateTone(climate))
     val enabled = climate?.available == true
@@ -398,6 +399,7 @@ fun ClimateCard(
             },
             tone, tone.onContainer, enabled, perRow = 5,
         )
+        extra?.invoke()
     }
 }
 

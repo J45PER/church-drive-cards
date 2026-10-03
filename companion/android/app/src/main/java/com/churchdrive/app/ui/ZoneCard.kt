@@ -2,6 +2,8 @@ package com.churchdrive.app.ui
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -93,7 +96,15 @@ fun ZoneCard(config: JSONObject, entities: Map<String, EntityState>, call: CallS
     val container = if (tinted) tone.container else neutral.container
     val ink = if (tinted) tone.onContainer else neutral.onContainer
 
-    EntityCard(container, ink) {
+    // Tapping the card opens that camera's events, when the zone has a camera.
+    val eventsBase = cameraBaseName(entities, cfg.doorbell, cfg.motion.firstOrNull(), cfg.door, cfg.name)
+    var showEvents by remember { mutableStateOf(false) }
+    if (showEvents && eventsBase != null) CameraEventsViewer(cfg.name, eventsBase) { showEvents = false }
+    var scrub by remember { mutableStateOf<Float?>(null) }
+    EntityCard(
+        container, ink,
+        if (eventsBase != null) Modifier.clickable { showEvents = true } else Modifier,
+    ) {
         if (view.warn.isNotEmpty()) {
             val red = toneColors(Tone.Red)
             Row(
@@ -111,7 +122,7 @@ fun ZoneCard(config: JSONObject, entities: Map<String, EntityState>, call: CallS
         }
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Strip(view.tracks, now, cfg.hours, cfg.ticks, ink, Modifier.weight(1f))
+                Strip(view.tracks, now, cfg.hours, cfg.ticks, ink, Modifier.weight(1f), scrub) { scrub = it }
                 ZoneChip(view)
             }
             val from = now - cfg.hours * 3_600_000L
@@ -121,6 +132,11 @@ fun ZoneCard(config: JSONObject, entities: Map<String, EntityState>, call: CallS
                     Text(clockMs(from + (f * span).toLong()), fontSize = 10.sp, color = ink.copy(alpha = 0.6f))
                 }
                 Text("now", fontSize = 10.sp, color = ink.copy(alpha = 0.6f))
+            }
+            // Dragging along the strip says what happened at that moment.
+            scrub?.let { f ->
+                val t = from + (span * f).toLong()
+                Text(clockMs(t) + " · " + happenedAt(view.tracks, t, span / 48), style = MaterialTheme.typography.bodySmall, color = ink)
             }
         }
         if (cfg.showLast && view.last.isNotEmpty()) {
@@ -153,10 +169,19 @@ private fun ZoneChip(view: ZoneView) {
 
 /** The strip: the light as a faint band behind, then bars (busy periods) or ticks (each event). */
 @Composable
-private fun Strip(tracks: List<ZoneTrack>, now: Long, hours: Int, ticks: Boolean, ink: Color, modifier: Modifier) {
+private fun Strip(tracks: List<ZoneTrack>, now: Long, hours: Int, ticks: Boolean, ink: Color, modifier: Modifier, scrub: Float?, onScrub: (Float?) -> Unit) {
     val span = hours * 3_600_000L
     val from = now - span
-    Canvas(modifier = modifier.height(22.dp).clip(RoundedCornerShape(6.dp)).background(ink.copy(alpha = 0.10f))) {
+    Canvas(
+        modifier = modifier.height(22.dp).clip(RoundedCornerShape(6.dp)).background(ink.copy(alpha = 0.10f)).pointerInput(Unit) {
+            detectHorizontalDragGestures(
+                onDragStart = { onScrub((it.x / size.width).coerceIn(0f, 1f)) },
+                onDragEnd = { onScrub(null) },
+                onDragCancel = { onScrub(null) },
+                onHorizontalDrag = { change, _ -> onScrub((change.position.x / size.width).coerceIn(0f, 1f)) },
+            )
+        },
+    ) {
         val w = size.width
         val h = size.height
         fun x(t: Long) = ((t - from).toFloat() / span) * w
@@ -187,6 +212,7 @@ private fun Strip(tracks: List<ZoneTrack>, now: Long, hours: Int, ticks: Boolean
                 )
             }
         }
+        scrub?.let { f -> drawRect(ink.copy(alpha = 0.8f), Offset(f * w, 0f), Size(2f, h)) }
     }
 }
 
