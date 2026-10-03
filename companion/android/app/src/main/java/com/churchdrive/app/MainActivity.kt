@@ -99,7 +99,7 @@ class MainActivity : ComponentActivity() {
                                     onSignOut = vm::signOut,
                                 )
                             } else {
-                                LoginScreen(onSignIn = vm::signIn)
+                                LoginScreen(onSignIn = vm::signIn, onLogin = vm::login, onCode = vm::loginCode)
                             }
                         }
                     }

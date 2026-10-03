@@ -5,8 +5,11 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.churchdrive.app.ha.ConnectionState
 import com.churchdrive.app.ha.EntityState
+import com.churchdrive.app.ha.HaAuth
 import com.churchdrive.app.ha.HaClient
 import com.churchdrive.app.ha.IconPack
+import com.churchdrive.app.ha.LoginStep
+import com.churchdrive.app.ha.Refresh
 import com.churchdrive.app.ha.data
 import com.churchdrive.app.ha.Registry
 import com.churchdrive.app.ha.Templates
@@ -115,12 +118,87 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         checkForUpdate()
-        if (session.signedIn) start(session.url!!, session.token!!)
+        if (session.signedIn) startSession()
+        // A username-and-password sign-in's access token lasts half an hour. If the connection is refused later
+        // (the phone slept past that), get a new one from the refresh token and connect again.
+        viewModelScope.launch {
+            client.connection.collect {
+                if (it == ConnectionState.AuthFailed && session.refreshToken != null && session.signedIn &&
+                    System.currentTimeMillis() - lastStart > 30_000
+                ) startSession()
+            }
+        }
     }
 
     private fun start(url: String, token: String) {
         client.connect(url, token)
         IconPack.load(viewModelScope, appContext.filesDir, url, token)
+    }
+
+    /** Connects with the stored sign-in, first making a fresh access token when there's a refresh token. */
+    private var lastStart = 0L
+
+    private fun startSession() {
+        lastStart = System.currentTimeMillis()
+        val url = session.url ?: return
+        val refresh = session.refreshToken
+        if (refresh == null) {
+            start(url, session.token ?: return)
+            return
+        }
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            when (val r = HaAuth.refresh(url, refresh)) {
+                is Refresh.Fresh -> {
+                    session.saveAccess(r.tokens.access)
+                    start(url, r.tokens.access)
+                }
+                // Revoked in Home Assistant: back to the sign-in screen.
+                Refresh.Rejected -> signOut()
+                // Offline: try the last token; the next failure tries again.
+                Refresh.Unreachable -> start(url, session.token ?: return@launch)
+            }
+        }
+    }
+
+    private var openFlow: String? = null
+    private var flowUrl = ""
+
+    /** Where the username-and-password sign-in is: null before it starts. [onStep] runs on the main thread. */
+    fun login(url: String, username: String, password: String, onStep: (LoginStep) -> Unit) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            flowUrl = url
+            val opened = HaAuth.start(url)
+            val step = if (opened is LoginStep.Credentials) {
+                openFlow = opened.flowId
+                HaAuth.submit(url, opened.flowId, mapOf("username" to username.trim(), "password" to password))
+            } else opened
+            finishLogin(step, onStep)
+        }
+    }
+
+    /** The two-step code, after [login] asked for it. */
+    fun loginCode(code: String, onStep: (LoginStep) -> Unit) {
+        val flow = openFlow ?: return onStep(LoginStep.Failed("Start again."))
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { finishLogin(HaAuth.submit(flowUrl, flow, mapOf("code" to code.trim())), onStep) }
+    }
+
+    private suspend fun finishLogin(step: LoginStep, onStep: (LoginStep) -> Unit) {
+        var result = step
+        if (step is LoginStep.Mfa) openFlow = step.flowId
+        if (step is LoginStep.Done) {
+            val tokens = HaAuth.exchange(flowUrl, step.code)
+            if (tokens == null) {
+                result = LoginStep.Failed("Signed in, but Home Assistant wouldn't give the app access.")
+            } else {
+                session.saveSignIn(flowUrl, tokens.access, tokens.refresh)
+                openFlow = null
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    start(flowUrl, tokens.access)
+                    _signedIn.value = true
+                }
+            }
+        }
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { onStep(result) }
     }
 
     fun signIn(url: String, token: String) {
@@ -130,6 +208,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun signOut() {
+        val url = session.url
+        val refresh = session.refreshToken
+        if (url != null && refresh != null) viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { HaAuth.revoke(url, refresh) }
         client.disconnect()
         session.clear()
         _signedIn.value = false
