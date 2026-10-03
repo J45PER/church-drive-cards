@@ -21,6 +21,7 @@ import { SUFFIX, LABEL } from './suffix.js';
 import { kitScrub, kitSmooth, kitPath, kitHealthBanner, KIT_HEALTH_CSS, kitCompact, kitCompactable, KIT_CARD_BG } from './card-kit.js';
 import { CZ_TYPES } from './climate-zone-card.js';
 import { iconFor, watchIcons } from './icon-library.js';
+import { quickPlan } from './climate-quick.js';
 
 const CC_MAX_QUICK = 5;
 const CC_RING = 84;
@@ -834,7 +835,7 @@ export class ClimateCard extends HTMLElement {
       this._demoSettle();
       return;
     }
-    this._hass.callService('climate', service, { entity_id: this.config.entity, ...data });
+    return this._hass.callService('climate', service, { entity_id: this.config.entity, ...data });
   }
 
   _demoSettle() {
@@ -849,28 +850,21 @@ export class ClimateCard extends HTMLElement {
     this._render();
   }
 
-  _applyQuick(q) {
+  async _applyQuick(q) {
     const st = this._state();
     const a = st.attributes;
     if (this._demo) {
+      // Eco on a thermostat that is off switches it on first, as the real one does.
       if (q.hvac_mode) this._demo.state = q.hvac_mode;
+      else if (q.preset_mode && q.preset_mode !== 'none' && this._demo.state === 'off') this._demo.state = 'heat';
       if (q.preset_mode) this._demo.attributes.preset_mode = q.preset_mode;
       else if (q.hvac_mode || q.temperature != null) this._demo.attributes.preset_mode = 'none';
       if (q.temperature != null) this._demo.attributes.temperature = Number(q.temperature);
       this._demoSettle();
       return;
     }
-    if (q.temperature != null) {
-      this._set('set_temperature', { temperature: Number(q.temperature), ...(q.hvac_mode ? { hvac_mode: q.hvac_mode } : {}) });
-    } else if (q.hvac_mode && q.hvac_mode !== st.state) {
-      this._set('set_hvac_mode', { hvac_mode: q.hvac_mode });
-    }
-    if (q.preset_mode) {
-      this._set('set_preset_mode', { preset_mode: q.preset_mode });
-    } else if ((q.hvac_mode || q.temperature != null) && q.hvac_mode !== 'off' && !noPreset(a.preset_mode) && (a.preset_modes || []).includes('none')) {
-      // A plain mode or temperature setting leaves any preset (e.g. Eco).
-      this._set('set_preset_mode', { preset_mode: 'none' });
-    }
+    // In order, each waiting for the last: Eco only takes hold once the thermostat is on.
+    for (const step of quickPlan(st.state, a, q)) await this._set(step.service, step.data);
   }
 
   // − / + change the target locally and send it once tapping stops.

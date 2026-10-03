@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-03. Current release: **v0.36.0**.*
+*Last updated 2026-10-03. Current release: **v0.36.1**.*
 
 ## Where this stands
 
@@ -25,7 +25,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-03, v0.36.0 live, nothing on beta):**
+**Now (2026-10-03, v0.36.1 live, nothing on beta):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -361,6 +361,11 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
 - **v0.36.0 (released 2026-10-03, restarted): People manager.** Manager's first panel is
   People (`people-manager-card`): picture, places, phones, cars, alerts, to-dos, arrivals per
   person; car owners kept by the integration (see the cars notes above).
+- **v0.36.1 (reload-only): Eco switches the thermostat on.** A thermostat's Eco is a preset, which only
+  takes hold while it is on, so a quick setting with just a preset (Eco) on a thermostat that is *off*
+  now sets Heat first (Heat, else Auto, else the first mode that isn't Off), waits for it, then sets the
+  preset: one tap, not Heat then Eco. The steps live in `src/climate-quick.js` (`quickPlan`, tested in
+  `test/climate-quick.test.mjs`); the Android app does the same (`ecoSteps` in `ClimateData.kt`).
 - **v0.35.0 (released 2026-10-03, reload-only): Car card.** Cars moved off the charger card
   onto `custom:car-card`, which can give cars to people (see the cars notes above).
 - **v0.33.1 (released 2026-10-03, reload-only): charger card shows the cars.** Each car from
