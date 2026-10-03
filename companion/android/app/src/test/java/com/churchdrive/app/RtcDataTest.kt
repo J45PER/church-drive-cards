@@ -6,6 +6,7 @@ import com.churchdrive.app.ui.candidateJson
 import com.churchdrive.app.ui.mediaOrder
 import com.churchdrive.app.ui.parseIceServers
 import com.churchdrive.app.ui.parseRtcEvent
+import com.churchdrive.app.ui.withoutVideoFormats
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
