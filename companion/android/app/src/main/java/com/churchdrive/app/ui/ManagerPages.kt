@@ -1,11 +1,11 @@
 package com.churchdrive.app.ui
 
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Info
@@ -80,6 +80,13 @@ fun modeLabel(mode: String): String = when (mode) {
     else -> presetLabel(mode)
 }
 
+fun modeIcon(mode: String): String = when (mode) {
+    "disarmed" -> "mdi:shield-off-outline"
+    "home" -> "mdi:shield-home-outline"
+    "away" -> "mdi:shield-lock-outline"
+    else -> "mdi:shield-outline"
+}
+
 /** A zone for the Locations page: its name, radius and the people in it. */
 data class ZoneRow(val id: String, val name: String, val radius: Int?, val people: List<String>, val home: Boolean)
 
@@ -137,12 +144,16 @@ private fun ManagerNote(text: String) {
     }
 }
 
+/** A group of choices as the kit's tiles: the ones in [on] selected. */
+@Composable
+private fun Choices(items: List<TileItem>, tone: ToneColors, perRow: Int = 3, enabled: Boolean = true) =
+    TileRow(items, tone, tone.onContainer, enabled, perRow)
+
 private fun JSONArray?.objects(): List<JSONObject> = (0 until (this?.length() ?: 0)).mapNotNull { this?.optJSONObject(it) }
 
 // ---------------------------------------------------------------------------------------------- Notifications
 
 /** Who gets each kind of notification, and which of each person's phones. */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun NotificationsPage(entities: Map<String, EntityState>) {
     val rev = entities["sensor.church_drive_people"]?.let { "${it.attributes.opt("rev")}|${it.state}" }
@@ -162,18 +173,16 @@ fun NotificationsPage(entities: Map<String, EntityState>) {
                         if (!kind.optBoolean("available", true)) {
                             Text("Waiting for its devices to be set up", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         } else {
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                val everyone = kind.optBoolean("all")
-                                ChoiceButton("Everyone", everyone, purple, purple.onContainer) {
-                                    view.send("church_drive/people/assign", data("kind" to key, "on" to !everyone))
+                            val everyone = kind.optBoolean("all")
+                            Choices(listOf(TileItem("mdi:account-group", "Everyone", everyone) {
+                                view.send("church_drive/people/assign", data("kind" to key, "on" to !everyone))
+                            }), purple, perRow = 1)
+                            Choices(people.filter { canTick(kind, it) }.map { p ->
+                                val id = p.optString("entity_id")
+                                TileItem("mdi:account", p.optString("first").ifBlank { p.optString("name") }, kindGoesTo(kind, id)) {
+                                    view.send("church_drive/people/assign", data("kind" to key, "person" to id, "on" to !kindGoesTo(kind, id)))
                                 }
-                                people.forEach { p ->
-                                    val id = p.optString("entity_id")
-                                    ChoiceButton(p.optString("first").ifBlank { p.optString("name") }, kindGoesTo(kind, id), purple, purple.onContainer, enabled = !everyone && canTick(kind, p)) {
-                                        view.send("church_drive/people/assign", data("kind" to key, "person" to id, "on" to !kindGoesTo(kind, id)))
-                                    }
-                                }
-                            }
+                            }, purple, enabled = !everyone)
                         }
                     }
                 }
@@ -188,13 +197,11 @@ fun NotificationsPage(entities: Map<String, EntityState>) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(p.optString("name") + if (p.optBoolean("admin")) " · Admin" else "", style = MaterialTheme.typography.bodyLarge)
                     if (phones.isEmpty()) Text("No phones yet", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        phones.forEach { ph ->
-                            ChoiceButton(ph.optString("name"), ph.optBoolean("on"), purple, purple.onContainer) {
-                                view.send("church_drive/people/phone", data("person" to p.optString("entity_id"), "service" to ph.optString("service"), "on" to !ph.optBoolean("on")))
-                            }
+                    Choices(phones.map { ph ->
+                        TileItem("mdi:cellphone", ph.optString("name"), ph.optBoolean("on")) {
+                            view.send("church_drive/people/phone", data("person" to p.optString("entity_id"), "service" to ph.optString("service"), "on" to !ph.optBoolean("on")))
                         }
-                    }
+                    }, purple, perRow = 2)
                 }
             }
         }
@@ -204,7 +211,6 @@ fun NotificationsPage(entities: Map<String, EntityState>) {
 // ---------------------------------------------------------------------------------------------- People
 
 /** Each person: their phones (switch alerts on and off) and their places, with the names they give them. */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PeoplePage(entities: Map<String, EntityState>) {
     val rev = entities["sensor.church_drive_people"]?.let { "${it.attributes.opt("rev")}|${it.state}" }
@@ -226,13 +232,11 @@ fun PeoplePage(entities: Map<String, EntityState>) {
                 Text("Phones", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 val phones = p.optJSONArray("phones").objects()
                 if (phones.isEmpty()) Text("No phones yet. They join by themselves when the Home Assistant app signs in as ${p.optString("first")}.", style = MaterialTheme.typography.bodySmall)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    phones.forEach { ph ->
-                        ChoiceButton(ph.optString("name"), ph.optBoolean("on"), teal, teal.onContainer) {
-                            view.send("church_drive/people/phone", data("person" to id, "service" to ph.optString("service"), "on" to !ph.optBoolean("on")))
-                        }
+                Choices(phones.map { ph ->
+                    TileItem("mdi:cellphone", ph.optString("name"), ph.optBoolean("on")) {
+                        view.send("church_drive/people/phone", data("person" to id, "service" to ph.optString("service"), "on" to !ph.optBoolean("on")))
                     }
-                }
+                }, teal, perRow = 2)
                 Text("Places", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 val draft = editing
                 if (draft == null) {
@@ -240,7 +244,7 @@ fun PeoplePage(entities: Map<String, EntityState>) {
                     places.forEach { (zone, name) ->
                         Text("${entities[zone]?.friendlyName ?: zone} · $name", style = MaterialTheme.typography.bodyMedium)
                     }
-                    ChoiceButton("Edit places", false, teal, teal.onContainer) { editing = places }
+                    Choices(listOf(TileItem("mdi:pencil", "Edit places", false) { editing = places }), teal, perRow = 1)
                 } else {
                     draft.forEachIndexed { i, (zone, name) ->
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -254,18 +258,16 @@ fun PeoplePage(entities: Map<String, EntityState>) {
                     val free = zones.filter { z -> draft.none { it.first == z.entityId } }
                     if (free.isNotEmpty()) {
                         Text("Add a place", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            free.forEach { z -> ChoiceButton(z.friendlyName, false, teal, teal.onContainer) { editing = draft + (z.entityId to z.friendlyName) } }
-                        }
+                        Choices(free.map { z -> TileItem("mdi:map-marker-outline", z.friendlyName, false) { editing = draft + (z.entityId to z.friendlyName) } }, teal, perRow = 2)
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        ChoiceButton("Save", true, teal, teal.onContainer) {
+                    Choices(listOf(
+                        TileItem("mdi:check", "Save", true) {
                             val list = JSONArray().also { a -> draft.forEach { (z, n) -> a.put(JSONObject().put("zone", z).put("name", n.trim())) } }
                             view.send("church_drive/people/places", JSONObject().put("person", id).put("places", list))
                             editing = null
-                        }
-                        ChoiceButton("Cancel", false, teal, teal.onContainer) { editing = null }
-                    }
+                        },
+                        TileItem("mdi:close", "Cancel", false) { editing = null },
+                    ), teal, perRow = 2)
                 }
             }
         }
@@ -299,7 +301,6 @@ fun LocationsPage(entities: Map<String, EntityState>) {
 // ---------------------------------------------------------------------------------------------- Camera links
 
 /** Which cameras record when each trigger fires, per alarm mode. */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CameraLinksPage(entities: Map<String, EntityState>) {
     val view = rememberWs("church_drive/camera/links")
@@ -312,46 +313,40 @@ fun CameraLinksPage(entities: Map<String, EntityState>) {
         val neutral = toneColors(Tone.Grey)
         EntityCard(neutral.container, neutral.onContainer) {
             Text("Alarm mode", style = MaterialTheme.typography.titleMedium)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                modes.forEach { m -> ChoiceButton(modeLabel(m) + if (m == current) " (now)" else "", m == mode, tone, tone.onContainer) { mode = m } }
-            }
+            Choices(modes.map { m -> TileItem(modeIcon(m), modeLabel(m) + if (m == current) " (now)" else "", m == mode) { mode = m } }, tone)
             Text("Choose what records in ${modeLabel(mode)}.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         val links = linksOf(d.optJSONObject("links"), mode)
         links.forEach { link ->
             EntityCard(neutral.container, neutral.onContainer) {
                 Text(entities[link.trigger]?.friendlyName ?: link.trigger, style = MaterialTheme.typography.titleMedium)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    cameras.forEach { (base, name) ->
-                        val on = base in link.cams
-                        ChoiceButton(name, on, tone, tone.onContainer) {
-                            val next = if (on) link.cams - base else link.cams + base
-                            view.send("church_drive/camera/links/set", JSONObject().put("mode", mode).put("trigger", link.trigger).put("cams", JSONArray(next)).put("secs", link.secs))
-                        }
+                Choices(cameras.map { (base, name) ->
+                    val on = base in link.cams
+                    TileItem("mdi:cctv", name, on) {
+                        val next = if (on) link.cams - base else link.cams + base
+                        view.send("church_drive/camera/links/set", JSONObject().put("mode", mode).put("trigger", link.trigger).put("cams", JSONArray(next)).put("secs", link.secs))
                     }
-                }
+                }, tone, perRow = 2)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Records for", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                     IconButton(onClick = { view.send("church_drive/camera/links/set", JSONObject().put("mode", mode).put("trigger", link.trigger).put("cams", JSONArray(link.cams)).put("secs", (link.secs - 5).coerceAtLeast(5))) }) { Icon(Icons.Filled.Remove, contentDescription = "Shorter") }
                     Text("${link.secs} s", style = MaterialTheme.typography.bodyLarge)
                     IconButton(onClick = { view.send("church_drive/camera/links/set", JSONObject().put("mode", mode).put("trigger", link.trigger).put("cams", JSONArray(link.cams)).put("secs", (link.secs + 5).coerceAtMost(120))) }) { Icon(Icons.Filled.Add, contentDescription = "Longer") }
                 }
-                ChoiceButton("Take out of ${modeLabel(mode)}", false, tone, tone.onContainer) {
+                Choices(listOf(TileItem("mdi:delete-outline", "Take out of ${modeLabel(mode)}", false) {
                     view.send("church_drive/camera/links/set", JSONObject().put("mode", mode).put("trigger", link.trigger))
-                }
+                }), tone, perRow = 1)
             }
         }
         val free = triggerChoices(entities, links.map { it.trigger }.toSet())
         if (free.isNotEmpty() && cameras.isNotEmpty()) {
             EntityCard(neutral.container, neutral.onContainer) {
                 Text("Add a trigger", style = MaterialTheme.typography.titleMedium)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    free.take(40).forEach { e ->
-                        ChoiceButton(e.friendlyName, false, tone, tone.onContainer) {
-                            view.send("church_drive/camera/links/set", JSONObject().put("mode", mode).put("trigger", e.entityId).put("cams", JSONArray(listOf(cameras.first().first))).put("secs", 30))
-                        }
+                Choices(free.take(40).map { e ->
+                    TileItem("mdi:motion-sensor", e.friendlyName, false) {
+                        view.send("church_drive/camera/links/set", JSONObject().put("mode", mode).put("trigger", e.entityId).put("cams", JSONArray(listOf(cameras.first().first))).put("secs", 30))
                     }
-                }
+                }, tone, perRow = 2)
             }
         }
         val cooldown = d.optInt("cooldown", 120)
@@ -397,22 +392,27 @@ fun IconStylesPage() {
                                 Text(presetLabel(key), style = MaterialTheme.typography.bodyLarge)
                                 Text(icon, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            ChoiceButton(if (isOpen) "Close" else "Change", isOpen, tone, tone.onContainer) {
-                                if (isOpen) open = null else { open = group to key; text = icon }
+                            Box(Modifier.width(120.dp)) {
+                                Choices(listOf(TileItem(if (isOpen) "mdi:close" else "mdi:pencil", if (isOpen) "Close" else "Change", isOpen) {
+                                    if (isOpen) open = null else { open = group to key; text = icon }
+                                }), tone, perRow = 1)
                             }
                         }
                         if (isOpen) {
                             OutlinedTextField(text, { text = it }, singleLine = true, label = { Text("Icon, like mdi:fan") }, isError = text.isNotBlank() && !validIconName(text), modifier = Modifier.fillMaxWidth())
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                ChoiceButton("Save", true, tone, tone.onContainer, enabled = validIconName(text)) {
-                                    view.send("church_drive/icons/set", data("group" to group, "key" to key, "icon" to text.trim()))
-                                    open = null
-                                }
-                                ChoiceButton("Built-in (${defaults.optJSONObject(group)?.optString(key).orEmpty()})", false, tone, tone.onContainer) {
+                            Choices(listOf(
+                                TileItem("mdi:check", "Save", validIconName(text)) {
+                                    if (validIconName(text)) {
+                                        view.send("church_drive/icons/set", data("group" to group, "key" to key, "icon" to text.trim()))
+                                        open = null
+                                    }
+                                },
+                                TileItem("mdi:restore", "Built-in", false) {
                                     view.send("church_drive/icons/set", JSONObject().put("group", group).put("key", key))
                                     open = null
-                                }
-                            }
+                                },
+                            ), tone, perRow = 2)
+                            Text("Built-in is ${defaults.optJSONObject(group)?.optString(key).orEmpty()}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
