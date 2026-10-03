@@ -83,6 +83,8 @@ class WidgetConfigActivity : ComponentActivity() {
                             "ClimateWidgetReceiver" -> ClimateGlanceWidget()
                             "ShortcutsWidgetReceiver" -> ShortcutsGlanceWidget()
                             "ScenesWidgetReceiver" -> ScenesGlanceWidget()
+                            "VacuumWidgetReceiver" -> VacuumGlanceWidget()
+                            "ChargerWidgetReceiver" -> ChargerGlanceWidget()
                             "FanWidgetReceiver" -> FanGlanceWidget()
                             "BlindsWidgetReceiver" -> BlindsGlanceWidget()
                             "CameraWidgetReceiver" -> CameraGlanceWidget()
@@ -135,10 +137,13 @@ private fun ConfigScreen(kind: String, existing: JSONObject, onSave: (JSONObject
     var single by remember { mutableStateOf("") }
     val many = remember { mutableStateListOf<String>().also { it.addAll(WidgetConfig.strings(existing, when (kind) { "ScenesWidgetReceiver" -> "scenes"; "SecurityWidgetReceiver" -> "rows"; else -> "readings" })) } }
     val singleKey = SINGLE_KEYS[kind]
+    val buttons = remember { mutableStateListOf<String>().also { it.addAll(WidgetConfig.strings(existing, "buttons")) } }
     LaunchedEffect(singleKey) { if (singleKey != null) single = existing.optString(singleKey) }
 
     val title = when (kind) {
         "ScenesWidgetReceiver" -> "Scenes widget"
+        "VacuumWidgetReceiver" -> "Vacuum widget"
+        "ChargerWidgetReceiver" -> "Car charger widget"
         "FanWidgetReceiver" -> "Fan, air purifier or air conditioner widget"
         "BlindsWidgetReceiver" -> "Blinds widget"
         "CameraWidgetReceiver" -> "Camera widget"
@@ -192,6 +197,11 @@ private fun ConfigScreen(kind: String, existing: JSONObject, onSave: (JSONObject
                     Text(SINGLE_PROMPT[kind].orEmpty(), style = MaterialTheme.typography.bodyMedium)
                     val choices = if (kind == "GaugeWidgetReceiver") Gauges.BASIC + Gauges.sensorChoices(d.entities) else singleChoices(kind, d)
                     choices.forEach { (key, label) -> RadioRow(label, single == key) { single = key } }
+                    if (kind in BUTTON_KINDS && single.isNotBlank()) ButtonPicker(buttonTiles(kind, d, single), buttons)
+                }
+                "VacuumWidgetReceiver", "ChargerWidgetReceiver" -> {
+                    Text("Nothing to choose except the buttons for a widget one row high.", style = MaterialTheme.typography.bodyMedium)
+                    ButtonPicker(buttonTiles(kind, d, ""), buttons)
                 }
                 "ClimateWidgetReceiver" -> {
                     Text("Which thermostat?", style = MaterialTheme.typography.bodyMedium)
@@ -228,7 +238,8 @@ private fun ConfigScreen(kind: String, existing: JSONObject, onSave: (JSONObject
                     "ClimateWidgetReceiver" -> config.put("climate", climate)
                     "ScenesWidgetReceiver" -> WidgetConfig.put(config, "scenes", many.toList())
                     "ClusterWidgetReceiver" -> WidgetConfig.put(config, "readings", many.toList())
-                    in SINGLE_KEYS -> singleKey?.let { config.put(it, single) }
+                    in SINGLE_KEYS -> { singleKey?.let { config.put(it, single) }; if (kind in BUTTON_KINDS) WidgetConfig.put(config, "buttons", buttons.toList()) }
+                    "VacuumWidgetReceiver", "ChargerWidgetReceiver" -> WidgetConfig.put(config, "buttons", buttons.toList())
                     "SecurityWidgetReceiver" -> WidgetConfig.put(config, "rows", many.toList())
                     else -> WidgetConfig.put(config, "actions", actions.toList())
                 }
@@ -257,5 +268,30 @@ private fun singleChoices(kind: String, d: WidgetData): List<Pair<String, String
         "BlindsWidgetReceiver" -> e.filter { it.entityId.startsWith("cover.") }.sortedBy { it.friendlyName }.map { it.entityId to it.friendlyName }
         "CameraWidgetReceiver" -> e.filter { it.entityId.startsWith("camera.") && it.entityId.endsWith("_live_view") }.sortedBy { it.friendlyName }.map { it.entityId to it.friendlyName }
         else -> e.filter { it.entityId.startsWith("todo.") }.sortedBy { it.friendlyName }.map { it.entityId to it.friendlyName }
+    }
+}
+
+/** The widgets whose one-row layout may have room for only some of their buttons, so the person picks which. */
+private val BUTTON_KINDS = setOf("FanWidgetReceiver", "BlindsWidgetReceiver", "VacuumWidgetReceiver", "ChargerWidgetReceiver")
+
+private fun buttonTiles(kind: String, d: WidgetData, entity: String): Card = when (kind) {
+    "VacuumWidgetReceiver" -> vacuumCard(d.entities)
+    "ChargerWidgetReceiver" -> chargerCard(d.entities)
+    "BlindsWidgetReceiver" -> coverCard(d.entities[entity], entity)
+    else -> airCard(d.entities, entity)
+}
+
+/** Which buttons a one-row widget shows when there is room for only three; a card's pinned ones (the charger's Stop) are always there. */
+@Composable
+private fun ButtonPicker(card: Card, chosen: androidx.compose.runtime.snapshots.SnapshotStateList<String>) {
+    if (card.tiles.size <= 3) return
+    Heading("Buttons when the widget is one row high")
+    Text("Up to 3 fit. Pick which." + if (card.pinned.isNotEmpty()) " ${card.pinned.joinToString(", ")} is always there." else "", style = MaterialTheme.typography.bodyMedium)
+    val room = 3 - card.pinned.size
+    card.tiles.forEach { t ->
+        val pinned = t.key() in card.pinned
+        CheckRow(t.display(), pinned || t.key() in chosen, pinned || chosen.size < room) {
+            if (!pinned) { if (t.key() in chosen) chosen.remove(t.key()) else if (chosen.size < room) chosen.add(t.key()) }
+        }
     }
 }

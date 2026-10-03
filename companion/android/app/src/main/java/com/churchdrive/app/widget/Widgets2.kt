@@ -91,7 +91,7 @@ private fun line(color: Color, size: Int = 12) = TextStyle(color = cp(color), fo
 
 /** A card of an icon, a title, a line under it, and buttons: a strip, a square with a few round buttons, or the full tiles. */
 @Composable
-fun CardContent(card: Card, p: WidgetPalette, size: SizeClass, width: androidx.compose.ui.unit.Dp = 250.dp, height: androidx.compose.ui.unit.Dp = 110.dp, labelled: Boolean = true, compact: Boolean = false) {
+fun CardContent(card: Card, p: WidgetPalette, size: SizeClass, width: androidx.compose.ui.unit.Dp = 250.dp, height: androidx.compose.ui.unit.Dp = 110.dp, labelled: Boolean = true, compact: Boolean = false, chosen: List<String> = emptyList()) {
     val tone = p.tone(card.tone)
     when (size) {
         SizeClass.Strip -> WidgetCard(p, padding = 10.dp) {
@@ -105,7 +105,7 @@ fun CardContent(card: Card, p: WidgetPalette, size: SizeClass, width: androidx.c
                     Text(card.title, style = title(p), maxLines = 1)
                     Text(card.sub, style = line(tone.accent), maxLines = 1)
                 }
-                StripButtons(card.tiles, p, tone, width.value - 20f - (if (compact) 0f else 50f) - 110f, labelled)
+                StripButtons(card, chosen, p, tone, width.value - 20f - (if (compact) 0f else 50f) - 100f, labelled)
             }
         }
         SizeClass.Square -> WidgetCard(p, padding = 12.dp) {
@@ -114,14 +114,12 @@ fun CardContent(card: Card, p: WidgetPalette, size: SizeClass, width: androidx.c
             Text(card.title, style = title(p), maxLines = 1)
             Text(card.sub, style = line(tone.accent), maxLines = 1)
             Spacer(GlanceModifier.height(8.dp))
-            // Every button, in as many rows as it takes.
+            // Every button, in as many rows as it takes (gaps are padding: Glance draws only ten children of a column).
             val perRow = ((width.value - 24f + 6f) / 36f).toInt().coerceAtLeast(2)
             card.tiles.chunked(perRow).forEachIndexed { r, rowTiles ->
-                if (r > 0) Spacer(GlanceModifier.height(6.dp))
-                Row(GlanceModifier.fillMaxWidth()) {
-                    rowTiles.forEachIndexed { i, t ->
-                        if (i > 0) Spacer(GlanceModifier.width(6.dp))
-                        IconButton(t.icon, p, t.action(), 30.dp, if (t.selected) tone else null)
+                Row(GlanceModifier.fillMaxWidth().padding(top = if (r > 0) 6.dp else 0.dp)) {
+                    rowTiles.forEach { t ->
+                        Box(GlanceModifier.padding(end = 6.dp)) { IconButton(t.icon, p, t.action(), 30.dp, if (t.selected) tone else null) }
                     }
                 }
             }
@@ -135,24 +133,35 @@ fun CardContent(card: Card, p: WidgetPalette, size: SizeClass, width: androidx.c
     }
 }
 
-/** The buttons of a thin card: each with its icon and name when they fit in [room] dp, else round icon-only buttons. */
+/**
+ * The buttons of a thin card: each with its icon and name when they fit in [room] dp, else round icon-only buttons. If even those
+ * do not all fit, the ones the person chose for a thin card (the card's pinned ones always), the rest filling any space.
+ */
 @Composable
-private fun StripButtons(tiles: List<WidgetTile>, p: WidgetPalette, tone: ToneColors, room: Float, labelled: Boolean = true) {
+private fun StripButtons(card: Card, chosen: List<String>, p: WidgetPalette, tone: ToneColors, room: Float, labelled: Boolean = true) {
+    val tiles = card.tiles
     val need = tiles.sumOf { 34 + 7 * it.label.length } + 6 * (tiles.size - 1)
     if (labelled && tiles.size in 1..3 && need <= room) {
         tiles.forEach { t ->
-            Spacer(GlanceModifier.width(6.dp))
             val fg = if (t.selected) tone.onAccent else p.onSurface
-            Row(
-                GlanceModifier.height(40.dp).cornerRadius(14.dp).background(cp(if (t.selected) tone.accent else p.tile)).padding(horizontal = 10.dp).clickable(t.action()),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                iconBitmap(t.icon, fg)?.let { Image(ImageProvider(it), null, GlanceModifier.size(18.dp)) }
-                Spacer(GlanceModifier.width(4.dp))
-                Text(t.label, style = TextStyle(color = cp(fg), fontSize = 12.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+            // The gap is padding on a wrapper: Glance draws only the first ten children of a row.
+            Box(GlanceModifier.padding(start = 6.dp)) {
+                Row(
+                    GlanceModifier.height(40.dp).cornerRadius(14.dp).background(cp(if (t.selected) tone.accent else p.tile)).padding(horizontal = 10.dp).clickable(t.action()),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    iconBitmap(t.icon, fg)?.let { Image(ImageProvider(it), null, GlanceModifier.size(18.dp)) }
+                    Spacer(GlanceModifier.width(4.dp))
+                    Text(t.label, style = TextStyle(color = cp(fg), fontSize = 12.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+                }
             }
         }
-    } else IconRow(tiles, p, tone, roundButtonSize(tiles.size, room + 20f).dp)
+    } else {
+        // As many round buttons (32 dp or more) as the room allows.
+        val fit = ((room + 6f) / 38f).toInt().coerceAtLeast(1)
+        val shown = chooseTiles(tiles, chosen, fit, card.pinned)
+        IconRow(shown, p, tone, roundButtonSize(shown.size, room).dp)
+    }
 }
 
 /** Reads like a sentence under a title, for the plain pill widgets (people, doors, doorbell). */
@@ -418,7 +427,7 @@ class MyTodoGlanceWidget : SceneWidget("To-do") {
                 HeaderRow(icon, "To-do", sub, p, tone)
                 Spacer(GlanceModifier.height(6.dp))
                 // Each task on two lines, with a bar in its category's colour: its name, then its category and when it is due.
-                val rows = (((s.height.value - 24f - 44f - 6f) / 40f).toInt()).coerceIn(1, 12)
+                val rows = (((s.height.value - 24f - 44f - 6f) / 40f).toInt()).coerceIn(1, 8)
                 entries.take(rows).forEach { e ->
                     val t = p.tone(e.tone)
                     Row(GlanceModifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -476,12 +485,12 @@ class CameraGlanceWidget : SceneWidget("Camera") {
 
 class VacuumGlanceWidget : SceneWidget("Vacuum") {
     @Composable
-    override fun Draw(s: WidgetScene) = CardContent(vacuumCard(s.data.entities).let { c -> c.copy(icon = dashboardIcon(s.data.panels, VACUUM_ENTITY) ?: c.icon) }, s.p, s.size, s.width, s.height)
+    override fun Draw(s: WidgetScene) = CardContent(vacuumCard(s.data.entities).let { c -> c.copy(icon = dashboardIcon(s.data.panels, VACUUM_ENTITY) ?: c.icon) }, s.p, s.size, s.width, s.height, chosen = WidgetConfig.strings(s.config, "buttons"))
 }
 
 class ChargerGlanceWidget : SceneWidget("Car charger") {
     @Composable
-    override fun Draw(s: WidgetScene) = CardContent(chargerCard(s.data.entities), s.p, s.size, s.width, s.height, compact = true)
+    override fun Draw(s: WidgetScene) = CardContent(chargerCard(s.data.entities), s.p, s.size, s.width, s.height, compact = true, chosen = WidgetConfig.strings(s.config, "buttons"))
 }
 
 /** One card for any air device you pick: a fan, an air purifier or an air conditioner. */
@@ -489,7 +498,7 @@ class FanGlanceWidget : SceneWidget("Fan and air") {
     @Composable
     override fun Draw(s: WidgetScene) {
         val id = s.entity("fan").ifBlank { airDevices(s.data.entities).firstOrNull()?.entityId.orEmpty() }
-        CardContent(airCard(s.data.entities, id).let { c -> c.copy(icon = dashboardIcon(s.data.panels, id) ?: c.icon) }, s.p, s.size, s.width, s.height)
+        CardContent(airCard(s.data.entities, id).let { c -> c.copy(icon = dashboardIcon(s.data.panels, id) ?: c.icon) }, s.p, s.size, s.width, s.height, chosen = WidgetConfig.strings(s.config, "buttons"))
     }
 }
 
@@ -497,7 +506,7 @@ class BlindsGlanceWidget : SceneWidget("Blinds") {
     @Composable
     override fun Draw(s: WidgetScene) {
         val id = s.entity("cover").ifBlank { s.data.entities.keys.firstOrNull { it.startsWith("cover.") }.orEmpty() }
-        CardContent(coverCard(s.data.entities[id], id).let { c -> c.copy(icon = dashboardIcon(s.data.panels, id) ?: c.icon) }, s.p, s.size, s.width, s.height, labelled = false)
+        CardContent(coverCard(s.data.entities[id], id).let { c -> c.copy(icon = dashboardIcon(s.data.panels, id) ?: c.icon) }, s.p, s.size, s.width, s.height, labelled = false, chosen = WidgetConfig.strings(s.config, "buttons"))
     }
 }
 
@@ -527,19 +536,19 @@ fun SceneGrid(items: List<SceneTile>, perRow: Int, maxRows: Int) {
     var i = 0
     Column(GlanceModifier.fillMaxWidth()) {
         tileRows(shown.size, perRow).forEachIndexed { r, n ->
-            if (r > 0) Spacer(GlanceModifier.height(8.dp))
-            Row(GlanceModifier.fillMaxWidth()) {
+            Row(GlanceModifier.fillMaxWidth().padding(top = if (r > 0) 8.dp else 0.dp)) {
                 repeat(n) { c ->
                     val b = shown[i++]
-                    if (c > 0) Spacer(GlanceModifier.width(8.dp))
                     val ink = if (b.colour.luminance() > 0.45f) Color(0xFF202124) else Color.White
-                    Column(
-                        GlanceModifier.defaultWeight().height(com.churchdrive.app.ui.Ui.TileHeight).cornerRadius(16.dp).background(cp(b.colour.copy(alpha = 0.88f))).clickable(b.tile.action()),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        iconBitmap("mdi:lightbulb-group", ink)?.let { Image(ImageProvider(it), null, GlanceModifier.size(20.dp)) }
-                        Text(b.tile.label, style = TextStyle(color = cp(ink), fontSize = 11.sp, textAlign = TextAlign.Center), maxLines = 1)
+                    Box(GlanceModifier.defaultWeight().padding(start = if (c > 0) 8.dp else 0.dp)) {
+                        Column(
+                            GlanceModifier.fillMaxWidth().height(com.churchdrive.app.ui.Ui.TileHeight).cornerRadius(16.dp).background(cp(b.colour.copy(alpha = 0.88f))).clickable(b.tile.action()),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            iconBitmap("mdi:lightbulb-group", ink)?.let { Image(ImageProvider(it), null, GlanceModifier.size(20.dp)) }
+                            Text(b.tile.label, style = TextStyle(color = cp(ink), fontSize = 11.sp, textAlign = TextAlign.Center), maxLines = 1)
+                        }
                     }
                 }
             }

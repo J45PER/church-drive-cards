@@ -8,6 +8,9 @@ import com.churchdrive.app.widget.WidgetPages
 import com.churchdrive.app.widget.alarmInDelay
 import com.churchdrive.app.widget.alarmStatus
 import com.churchdrive.app.widget.fansFor
+import com.churchdrive.app.widget.chooseTiles
+import com.churchdrive.app.widget.chargerCard
+import com.churchdrive.app.widget.WidgetTile
 import com.churchdrive.app.widget.dashboardIcon
 import com.churchdrive.app.widget.SecurityRows
 import com.churchdrive.app.widget.TodoLists
@@ -245,5 +248,18 @@ class WidgetModel2Test {
         val panel = com.churchdrive.app.ui.PanelSpec("Climate", null, null, null, null, listOf(card))
         assertEquals("mdi:blinds-horizontal", dashboardIcon(mapOf("climate" to listOf(panel)), "cover.hb"))
         assertNull(dashboardIcon(mapOf("climate" to listOf(panel)), "cover.other"))
+    }
+
+    @Test
+    fun aThinCardKeepsItsPinnedButtonThenTheChosenOnes() {
+        val tiles = listOf("Stop", "Eco", "Eco+", "Fast").map { WidgetTile("mdi:x", it, false, "select", "select_option", "select.m") }
+        // All of them when there is room.
+        assertEquals(4, chooseTiles(tiles, emptyList(), 4, listOf("Stop")).size)
+        // Room for three: Stop is pinned, the person chose Fast, and Eco fills the third; kept in the card's order.
+        assertEquals(listOf("Stop", "Eco", "Fast"), chooseTiles(tiles, listOf("Fast"), 3, listOf("Stop")).map { it.label })
+        // Chosen twice and no room for all: pinned first, then chosen in order.
+        assertEquals(listOf("Stop", "Eco+", "Fast"), chooseTiles(tiles, listOf("Fast", "Eco+", "Eco"), 3, listOf("Stop")).map { it.label })
+        // Nothing chosen: the first ones fill it.
+        assertEquals(listOf("Stop", "Eco"), chooseTiles(tiles, emptyList(), 2, listOf("Stop")).map { it.label })
     }
 }

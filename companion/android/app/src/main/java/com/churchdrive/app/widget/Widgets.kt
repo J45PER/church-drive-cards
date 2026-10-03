@@ -373,8 +373,7 @@ class ShortcutsGlanceWidget : GlanceAppWidget() {
                     SizeClass.Strip -> WidgetCard(p, padding = 10.dp) {
                         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             chosen.forEachIndexed { i, tile ->
-                                if (i > 0) Spacer(GlanceModifier.width(6.dp))
-                                Box(GlanceModifier.defaultWeight(), contentAlignment = Alignment.Center) { IconButton(tile.icon, p, tile.action(), roundButtonSize(chosen.size, LocalSize.current.width.value - 20f).dp.coerceAtLeast(28.dp)) }
+                                Box(GlanceModifier.defaultWeight().padding(start = if (i > 0) 6.dp else 0.dp), contentAlignment = Alignment.Center) { IconButton(tile.icon, p, tile.action(), roundButtonSize(chosen.size, LocalSize.current.width.value - 20f).dp.coerceAtLeast(28.dp)) }
                             }
                         }
                     }

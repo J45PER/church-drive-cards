@@ -178,7 +178,25 @@ fun alarmInDelay(alarm: EntityState?): Boolean = alarm?.state == "arming" || ala
 
 // ---------------------------------------------------------------------------------------------- Vacuum, charger, fan, purifier, blinds
 
-data class Card(val title: String, val sub: String, val tone: Tone, val icon: String, val tiles: List<WidgetTile>)
+data class Card(val title: String, val sub: String, val tone: Tone, val icon: String, val tiles: List<WidgetTile>, val pinned: List<String> = emptyList())
+
+/** What a button is called when choosing it: its name, else (for − and +) what it does. */
+fun WidgetTile.key(): String = label.ifBlank { icon }
+
+fun WidgetTile.display(): String = label.ifBlank { when (icon) { "mdi:minus" -> "Lower"; "mdi:plus" -> "Raise"; else -> "Button" } }
+
+/**
+ * The buttons a thin card has room for ([max]): those it must always have ([pinned]), then the ones the person chose,
+ * then the first of the rest to fill it; all of them in the card's own order. All of them when there is room.
+ */
+fun chooseTiles(tiles: List<WidgetTile>, chosen: List<String>, max: Int, pinned: List<String>): List<WidgetTile> {
+    if (tiles.size <= max) return tiles
+    val keep = LinkedHashSet<String>()
+    pinned.forEach { k -> if (keep.size < max && tiles.any { it.key() == k }) keep += k }
+    chosen.forEach { k -> if (keep.size < max && tiles.any { it.key() == k }) keep += k }
+    tiles.forEach { if (keep.size < max) keep += it.key() }
+    return tiles.filter { it.key() in keep }
+}
 
 fun vacuumCard(entities: Map<String, EntityState>): Card {
     val v = entities[VACUUM_ENTITY]
@@ -203,7 +221,7 @@ fun chargerCard(entities: Map<String, EntityState>): Card {
     val tiles = chargerModes(mode?.options().orEmpty()).map {
         WidgetTile(it.icon, it.name, mode?.state == it.key, "select", "select_option", ZAPPI_MODE, JSONObject().put("option", it.key).toString())
     }
-    return Card("Car charger", listOfNotNull(status, session?.let { "%.1f kWh added".format(it) }).joinToString(" · "), if (charging) Tone.Teal else Tone.Grey, "mdi:ev-station", tiles)
+    return Card("Car charger", listOfNotNull(status, session?.let { "%.1f kWh added".format(it) }).joinToString(" · "), if (charging) Tone.Teal else Tone.Grey, "mdi:ev-station", tiles, tiles.filter { it.label.equals("Stop", ignoreCase = true) }.map { it.key() })
 }
 
 fun fanCard(fan: EntityState?, entity: String): Card {

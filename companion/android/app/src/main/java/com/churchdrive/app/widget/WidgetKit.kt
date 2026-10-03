@@ -325,24 +325,25 @@ fun HeaderRow(icon: String, title: String, subtitle: String, p: WidgetPalette, t
 fun TileButtons(tiles: List<WidgetTile>, p: WidgetPalette, tone: ToneColors, perRow: Int = 4, maxRows: Int = 2, showLabels: Boolean = true) {
     val shown = tiles.take(perRow * maxRows)
     var i = 0
+    // Glance draws only the first ten children of a row or column, so the gaps are padding, not spacers.
     Column(GlanceModifier.fillMaxWidth()) {
         tileRowSizes(shown.size, perRow).forEachIndexed { r, size ->
-            if (r > 0) Spacer(GlanceModifier.height(8.dp))
-            Row(GlanceModifier.fillMaxWidth()) {
+            Row(GlanceModifier.fillMaxWidth().padding(top = if (r > 0) 8.dp else 0.dp)) {
                 repeat(size) { n ->
                     val tile = shown[i++]
-                    if (n > 0) Spacer(GlanceModifier.width(8.dp))
                     val fg = if (tile.selected) tone.onAccent else p.onSurface
-                    Column(
-                        GlanceModifier.defaultWeight().height(Ui.TileHeight)
-                            .cornerRadius(16.dp)
-                            .background(cp(if (tile.selected) tone.accent else p.tile))
-                            .clickable(tile.action()),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        iconBitmap(tile.icon, fg)?.let { Image(ImageProvider(it), null, GlanceModifier.size(20.dp)) }
-                        if (showLabels) Text(tile.label, style = TextStyle(color = cp(fg), fontSize = 11.sp, textAlign = TextAlign.Center), maxLines = 1)
+                    Box(GlanceModifier.defaultWeight().padding(start = if (n > 0) 8.dp else 0.dp)) {
+                        Column(
+                            GlanceModifier.fillMaxWidth().height(Ui.TileHeight)
+                                .cornerRadius(16.dp)
+                                .background(cp(if (tile.selected) tone.accent else p.tile))
+                                .clickable(tile.action()),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            iconBitmap(tile.icon, fg)?.let { Image(ImageProvider(it), null, GlanceModifier.size(20.dp)) }
+                            if (showLabels) Text(tile.label, style = TextStyle(color = cp(fg), fontSize = 11.sp, textAlign = TextAlign.Center), maxLines = 1)
+                        }
                     }
                 }
             }
@@ -354,8 +355,7 @@ fun TileButtons(tiles: List<WidgetTile>, p: WidgetPalette, tone: ToneColors, per
 @Composable
 fun IconRow(tiles: List<WidgetTile>, p: WidgetPalette, tone: ToneColors, size: Dp = 36.dp) {
     tiles.forEach { tile ->
-        Spacer(GlanceModifier.width(6.dp))
-        IconButton(tile.icon, p, tile.action(), size, if (tile.selected) tone else null)
+        Box(GlanceModifier.padding(start = 6.dp)) { IconButton(tile.icon, p, tile.action(), size, if (tile.selected) tone else null) }
     }
 }
 
