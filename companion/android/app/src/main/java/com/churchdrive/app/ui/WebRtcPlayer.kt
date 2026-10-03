@@ -28,6 +28,7 @@ import org.webrtc.SdpObserver
 import org.webrtc.SessionDescription
 import org.webrtc.SurfaceViewRenderer
 import org.webrtc.VideoTrack
+import org.webrtc.audio.JavaAudioDeviceModule
 import com.churchdrive.app.CrashReport
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -98,6 +99,7 @@ private class RtcSession(
     private var timeout: Thread? = null
     private val main = android.os.Handler(android.os.Looper.getMainLooper())
     private var videoTrack: VideoTrack? = null
+    private var audioModule: JavaAudioDeviceModule? = null
 
     fun start() {
         CrashReport.note("live view: $entityId")
@@ -125,6 +127,8 @@ private class RtcSession(
             CrashReport.note("try ${n + 1}: ${ORDERS[n].joinToString(",")}")
             ensureInitialised(context)
             val f = factory ?: PeerConnectionFactory.builder()
+                // WebRTC's own Java audio output: the default native one crashed on a Pixel with Android 17.
+                .setAudioDeviceModule(JavaAudioDeviceModule.builder(context.applicationContext).createAudioDeviceModule().also { audioModule = it })
                 .setVideoDecoderFactory(DefaultVideoDecoderFactory(egl.eglBaseContext))
                 .setVideoEncoderFactory(DefaultVideoEncoderFactory(egl.eglBaseContext, true, true))
                 .createPeerConnectionFactory().also { factory = it }
@@ -239,6 +243,7 @@ private class RtcSession(
         videoTrack = null
         teardown()
         runCatching { factory?.dispose() }
+        runCatching { audioModule?.release() }
     }
 
     private fun gotTrack(track: org.webrtc.MediaStreamTrack?) {
@@ -246,12 +251,16 @@ private class RtcSession(
         CrashReport.note("track: ${track?.kind()}")
         when (track) {
             is VideoTrack -> {
+                if (videoTrack === track) return
                 videoTrack = track
                 track.setEnabled(true)
                 track.addSink(renderer)
                 if (playing.compareAndSet(false, true)) onStatus(null)
             }
-            is AudioTrack -> onAudio(track)
+            is AudioTrack -> {
+                track.setEnabled(false) // muted until asked, so nothing plays at first
+                onAudio(track)
+            }
             else -> Unit
         }
     }
@@ -263,7 +272,7 @@ private class RtcSession(
     }
 
     override fun onTrack(transceiver: RtpTransceiver) = gotTrack(transceiver.receiver.track())
-    override fun onAddTrack(receiver: RtpReceiver, streams: Array<out MediaStream>) = gotTrack(receiver.track())
+    override fun onAddTrack(receiver: RtpReceiver, streams: Array<out MediaStream>) = Unit
     override fun onIceConnectionChange(state: PeerConnection.IceConnectionState) {
         CrashReport.note("ice: $state")
         if (state == PeerConnection.IceConnectionState.FAILED) fail("Couldn't reach the camera.")
