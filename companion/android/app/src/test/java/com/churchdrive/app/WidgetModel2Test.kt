@@ -4,6 +4,10 @@ import com.churchdrive.app.ha.EntityState
 import com.churchdrive.app.ui.Tone
 import com.churchdrive.app.ui.TodoItem
 import com.churchdrive.app.widget.Gauges
+import com.churchdrive.app.widget.WidgetPages
+import com.churchdrive.app.widget.alarmInDelay
+import com.churchdrive.app.widget.alarmStatus
+import com.churchdrive.app.widget.fansFor
 import com.churchdrive.app.widget.coverCard
 import com.churchdrive.app.widget.doorsStatus
 import com.churchdrive.app.widget.fanCard
@@ -104,5 +108,41 @@ class WidgetModel2Test {
         val fan = fanCard(e("fan.f", "on", "percentage" to 50, "percentage_step" to 25.0, "oscillating" to false), "fan.f")
         assertEquals("Off", fan.tiles.first().label)
         assertTrue(fan.tiles.any { it.label == "Swing" })
+    }
+
+    @Test
+    fun alarmCountdownShowsTheModeAndSeconds() {
+        val arming = e("alarm_control_panel.a", "arming", "targetState" to "armed_home", "exitSecondsLeft" to 23)
+        assertEquals("Arming Home · 23s", alarmStatus(arming))
+        assertTrue(alarmInDelay(arming))
+        assertEquals("Entry delay · 9s", alarmStatus(e("alarm_control_panel.a", "pending", "entrySecondsLeft" to 9)))
+        assertEquals("Armed Home", alarmStatus(e("alarm_control_panel.a", "armed_home")))
+        assertEquals(false, alarmInDelay(e("alarm_control_panel.a", "armed_home")))
+    }
+
+    @Test
+    fun fansAndPurifiersAreOfferedApart() {
+        val entities = map(
+            e("fan.air_purifier", "on", "friendly_name" to "Air Purifier"),
+            e("fan.desk", "off", "friendly_name" to "Desk fan"),
+        )
+        assertEquals(listOf("fan.desk"), fansFor(false, entities).map { it.entityId })
+        assertEquals(listOf("fan.air_purifier"), fansFor(true, entities).map { it.entityId })
+    }
+
+    @Test
+    fun aClusterKeepsAnUnavailableReadingInPlace() {
+        val entities = map(e("climate.downstairs", "heat", "current_temperature" to 20.0, "current_humidity" to 50))
+        val readings = Gauges.cluster(listOf("inside", "air", "humidity", "charger"), entities)
+        assertEquals(listOf("20.0°", "–", "50%", "–"), readings.map { it.value })
+    }
+
+    @Test
+    fun eachWidgetOpensItsPageOfTheApp() {
+        assertEquals("Security", WidgetPages.of("com.churchdrive.app.widget.AlarmWidgetReceiver"))
+        assertEquals("Todo", WidgetPages.of("com.churchdrive.app.widget.JobsWidgetReceiver"))
+        assertEquals("Lighting", WidgetPages.of("com.churchdrive.app.widget.ScenesWidgetReceiver"))
+        assertEquals("Climate", WidgetPages.of("com.churchdrive.app.widget.GaugeWidgetReceiver"))
+        assertNull(WidgetPages.of(null))
     }
 }

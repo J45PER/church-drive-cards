@@ -59,7 +59,7 @@ class WidgetScene(val data: WidgetData, val config: JSONObject, val p: WidgetPal
 
 /** The common shape of the widgets: read the house once, then draw in whichever of the four sizes the widget has been made. */
 abstract class SceneWidget(private val title: String) : GlanceAppWidget() {
-    override val sizeMode = SizeMode.Responsive(WidgetSizes.all)
+    override val sizeMode: SizeMode = SizeMode.Responsive(WidgetSizes.all)
 
     open fun asks(context: Context, config: JSONObject): List<Ask> = emptyList()
 
@@ -268,16 +268,33 @@ open class TodoGlanceWidget(private val heading: String, private val fixedList: 
         val tone = p.tone(if (items.isEmpty()) Tone.Green else Tone.Blue)
         val icon = if (fixedList == null) "mdi:format-list-checks" else "mdi:broom"
         val sub = if (items.isEmpty()) "All done" else "${items.size} to do"
-        WidgetCard(p, padding = 12.dp) {
-            HeaderRow(icon, heading, sub, p, tone)
-            Spacer(GlanceModifier.height(8.dp))
-            items.take(if (s.size == SizeClass.Tall) 6 else 3).forEach { row ->
-                Row(
-                    GlanceModifier.fillMaxWidth().padding(vertical = 3.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(row.summary, GlanceModifier.defaultWeight(), style = TextStyle(color = cp(p.onSurface), fontSize = 13.sp), maxLines = 1)
-                    if (row.line.isNotBlank()) Text(row.line, style = TextStyle(color = cp(p.muted), fontSize = 11.sp), maxLines = 1)
+        when (s.size) {
+            SizeClass.Strip -> WidgetCard(p, padding = 10.dp) {
+                Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    IconCircle(icon, tone, 40.dp)
+                    Spacer(GlanceModifier.width(10.dp))
+                    Column(GlanceModifier.defaultWeight()) {
+                        Text(items.firstOrNull()?.summary ?: heading, style = title(p), maxLines = 1)
+                        Text(if (items.size > 1) "$sub · next: ${items.first().line.substringBefore(" · ")}" else sub, style = line(tone.accent), maxLines = 1)
+                    }
+                }
+            }
+            SizeClass.Square -> WidgetCard(p, padding = 12.dp) {
+                IconCircle(icon, tone, 40.dp)
+                Spacer(GlanceModifier.height(6.dp))
+                Text(heading, style = title(p), maxLines = 1)
+                Text(sub, style = line(tone.accent), maxLines = 1)
+                items.firstOrNull()?.let { Text(it.summary, style = TextStyle(color = cp(p.muted), fontSize = 12.sp), maxLines = 2) }
+            }
+            else -> WidgetCard(p, padding = 12.dp, top = true) {
+                HeaderRow(icon, heading, sub, p, tone)
+                Spacer(GlanceModifier.height(6.dp))
+                // Each task on two lines: its name, then when it is due and what repeats.
+                items.take(if (s.size == SizeClass.Tall) 6 else 2).forEach { row ->
+                    Column(GlanceModifier.fillMaxWidth().padding(vertical = 3.dp)) {
+                        Text(row.summary, style = TextStyle(color = cp(p.onSurface), fontSize = 14.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+                        if (row.line.isNotBlank()) Text(row.line, style = TextStyle(color = cp(p.muted), fontSize = 11.sp), maxLines = 1)
+                    }
                 }
             }
         }
@@ -335,7 +352,7 @@ class ChargerGlanceWidget : SceneWidget("Car charger") {
 class FanGlanceWidget : SceneWidget("Fan") {
     @Composable
     override fun Draw(s: WidgetScene) {
-        val id = s.entity("fan").ifBlank { s.data.entities.keys.firstOrNull { it.startsWith("fan.") }.orEmpty() }
+        val id = s.entity("fan").ifBlank { fansFor(false, s.data.entities).firstOrNull()?.entityId.orEmpty() }
         CardContent(fanCard(s.data.entities[id], id), s.p, s.size)
     }
 }
@@ -343,7 +360,7 @@ class FanGlanceWidget : SceneWidget("Fan") {
 class PurifierGlanceWidget : SceneWidget("Air purifier") {
     @Composable
     override fun Draw(s: WidgetScene) {
-        val id = s.entity("fan").ifBlank { s.data.entities.keys.firstOrNull { it.startsWith("fan.") }.orEmpty() }
+        val id = s.entity("fan").ifBlank { fansFor(true, s.data.entities).firstOrNull()?.entityId.orEmpty() }
         CardContent(purifierCard(s.data.entities[id], id, s.data.entities), s.p, s.size)
     }
 }
@@ -413,6 +430,9 @@ private fun Ring(r: GaugeReading, p: WidgetPalette, size: androidx.compose.ui.un
 
 /** One reading as a ring (square), a pill (strip) or ring and words (wide). The heating gauge also has − and + for its target and the modes. */
 class GaugeGlanceWidget : SceneWidget("Gauge") {
+    // Exact, so the circle can be as big as the widget really is.
+    override val sizeMode = SizeMode.Exact
+
     @Composable
     override fun Draw(s: WidgetScene) {
         val id = s.entity("reading").ifBlank { "inside" }
@@ -478,7 +498,7 @@ class GaugeGlanceWidget : SceneWidget("Gauge") {
                     }
                 }
             }
-            SizeClass.Square -> WidgetCard(p, round = true, padding = 8.dp) { Ring(r, p, 96.dp, 22) }
+            SizeClass.Square -> WidgetCircle(p, LocalSize.current) { d -> Ring(r, p, d * 0.84f, ((d.value * 0.84f) * 0.24f).toInt()) }
             else -> WidgetCard(p, padding = 12.dp) {
                 Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Ring(r, p, 100.dp, 24)

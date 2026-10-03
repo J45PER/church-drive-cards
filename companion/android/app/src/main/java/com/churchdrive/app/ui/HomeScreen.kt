@@ -68,8 +68,17 @@ fun HomeScreen(
     registry: Registry,
     call: CallService,
     onSignOut: () -> Unit,
+    /** A page a widget asked for (a [Page] name); [onOpened] says it has been opened. */
+    openPage: String? = null,
+    onOpened: () -> Unit = {},
 ) {
     var page by rememberSaveable { mutableStateOf(Page.Home) }
+    androidx.compose.runtime.LaunchedEffect(openPage) {
+        if (openPage != null) {
+            Page.entries.firstOrNull { it.name == openPage && !it.adminOnly }?.let { page = it }
+            onOpened()
+        }
+    }
     // Administrator-only pages (Devices, Energy) are opened from the account panel, and only while an administrator is signed in.
     val adminPages = if (isAdmin) Page.entries.filter { it.adminOnly } else emptyList()
     val pages = Page.entries.filter { !it.adminOnly }

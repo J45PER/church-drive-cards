@@ -39,9 +39,19 @@ import com.churchdrive.app.ui.LoginScreen
 class MainActivity : ComponentActivity() {
     private val vm: AppViewModel by viewModels()
 
+    /** The page a widget asked for, until the app has opened it. */
+    private var openPage by mutableStateOf<String?>(null)
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        openPage = intent.getStringExtra("page")
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        openPage = intent?.getStringExtra("page")
         val lastCrash = CrashReport.take(this)
         CrashReport.install(this)
         com.churchdrive.app.ui.MdiAll.load(this)
@@ -112,6 +122,8 @@ class MainActivity : ComponentActivity() {
                                     registry = registry,
                                     call = vm::call,
                                     onSignOut = vm::signOut,
+                                    openPage = openPage,
+                                    onOpened = { openPage = null },
                                 )
                             } else {
                                 LoginScreen(onSignIn = vm::signIn, onLogin = vm::login, onCode = vm::loginCode)

@@ -62,6 +62,8 @@ class AlarmGlanceWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val data = WidgetSource.load(context)
         val p = WidgetPalette.of(context)
+        // A countdown ticks by itself: look again in a few seconds, until it is over.
+        if (alarmInDelay(data?.entities?.get(ALARM_ENTITY))) refreshSoon(context, AlarmWidgetReceiver::class.java, 4)
         provideContent {
             val alarm = data?.entities?.get(ALARM_ENTITY)
             if (data == null || alarm == null) {
@@ -85,7 +87,7 @@ private fun AlarmContent(alarm: EntityState, p: WidgetPalette, size: SizeClass) 
                 Spacer(GlanceModifier.width(10.dp))
                 Column(GlanceModifier.defaultWeight()) {
                     Text("Security", style = TextStyle(color = cp(p.onSurface), fontSize = 16.sp, fontWeight = FontWeight.Bold), maxLines = 1)
-                    Text(alarmLabel(alarm.state), style = TextStyle(color = cp(tone.accent), fontSize = 12.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+                    Text(alarmStatus(alarm), style = TextStyle(color = cp(tone.accent), fontSize = 12.sp, fontWeight = FontWeight.Medium), maxLines = 1)
                 }
                 IconRow(tiles, p, tone, 34.dp)
             }
@@ -94,7 +96,7 @@ private fun AlarmContent(alarm: EntityState, p: WidgetPalette, size: SizeClass) 
             Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { IconCircle(icon, tone, 40.dp) }
             Spacer(GlanceModifier.height(6.dp))
             Text("Security", style = TextStyle(color = cp(p.onSurface), fontSize = 16.sp, fontWeight = FontWeight.Bold), maxLines = 1)
-            Text(alarmLabel(alarm.state), style = TextStyle(color = cp(tone.accent), fontSize = 12.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+            Text(alarmStatus(alarm), style = TextStyle(color = cp(tone.accent), fontSize = 12.sp, fontWeight = FontWeight.Medium), maxLines = 1)
             Spacer(GlanceModifier.height(8.dp))
             // One smart button: arm when it is off, disarm when it is armed.
             val disarmed = alarm.state == "disarmed"
@@ -105,7 +107,7 @@ private fun AlarmContent(alarm: EntityState, p: WidgetPalette, size: SizeClass) 
             ) { Text(if (disarmed) "Arm home" else "Disarm", style = TextStyle(color = cp(tone.onAccent), fontSize = 13.sp, fontWeight = FontWeight.Bold)) }
         }
         else -> WidgetCard(p) {
-            HeaderRow(icon, "Security", alarmLabel(alarm.state), p, tone)
+            HeaderRow(icon, "Security", alarmStatus(alarm), p, tone)
             Spacer(GlanceModifier.height(12.dp))
             TileButtons(tiles, p, tone)
             if (size == SizeClass.Tall) {
@@ -340,7 +342,8 @@ private fun StepButton(icon: String, p: WidgetPalette, tone: com.churchdrive.app
 
 /** The home's air quality score: fixed. A circle with the score in a ring, a thin pill, or a card with the readings behind it. */
 class AirGlanceWidget : GlanceAppWidget() {
-    override val sizeMode = SizeMode.Responsive(WidgetSizes.all)
+    // Exact, so the circle can be as big as the widget really is.
+    override val sizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val data = WidgetSource.load(context)
@@ -364,11 +367,12 @@ class AirGlanceWidget : GlanceAppWidget() {
                             Text("$score", style = TextStyle(color = cp(p.onSurface), fontSize = 28.sp, fontWeight = FontWeight.Bold))
                         }
                     }
-                    SizeClass.Square -> WidgetCard(p, round = true, padding = 6.dp) {
-                        Box(GlanceModifier.size(104.dp), contentAlignment = Alignment.Center) {
-                            Image(ImageProvider(ringBitmap(312, score / 100f, p.tile, tone.accent)), null, GlanceModifier.size(104.dp))
+                    SizeClass.Square -> WidgetCircle(p, LocalSize.current) { d ->
+                        val ring = d * 0.84f
+                        Box(GlanceModifier.size(ring), contentAlignment = Alignment.Center) {
+                            Image(ImageProvider(ringBitmap(312, score / 100f, p.tile, tone.accent)), null, GlanceModifier.size(ring))
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("$score", style = TextStyle(color = cp(p.onSurface), fontSize = 30.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center))
+                                Text("$score", style = TextStyle(color = cp(p.onSurface), fontSize = (ring.value * 0.29f).sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center))
                                 Text(qualityWord(score), style = TextStyle(color = cp(tone.accent), fontSize = 12.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center), maxLines = 1)
                             }
                         }

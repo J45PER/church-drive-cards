@@ -25,6 +25,7 @@ import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
@@ -162,19 +163,81 @@ class ServiceCallback : ActionCallback {
 
 fun cp(c: Color) = ColorProvider(c)
 
-/** The widget's card: the phone's surface colour with a little see-through, 28 dp corners (a circle when [round]); tapping the background opens the app. */
+/** The page of the app a widget opens, by the widget's receiver name; the app's [com.churchdrive.app.ui.Page] names. */
+object WidgetPages {
+    private val BY_WIDGET = mapOf(
+        "Alarm" to "Security", "Doors" to "Security", "Activity" to "Security", "Camera" to "Security",
+        "Lights" to "Lighting", "Scenes" to "Lighting",
+        "Climate" to "Climate", "Air" to "Climate", "Weather" to "Climate", "Gauge" to "Climate", "Cluster" to "Climate",
+        "Fan" to "Climate", "Purifier" to "Climate", "Blinds" to "Climate",
+        "Vacuum" to "Cleaning", "Todo" to "Todo", "Jobs" to "Todo",
+        "People" to "Home", "Charger" to "Home", "Summary" to "Home", "Shortcuts" to "Home",
+    )
+
+    fun of(receiverName: String?): String? = receiverName?.substringAfterLast('.')?.removeSuffix("WidgetReceiver")?.let { BY_WIDGET[it] }
+
+    /** Opens the app on [page]. The address makes each page's intent its own (else Android would share one between widgets). */
+    fun intent(context: Context, page: String?): Intent = Intent(context, MainActivity::class.java).apply {
+        if (page != null) {
+            putExtra("page", page)
+            data = android.net.Uri.parse("churchdrive://open/$page")
+        }
+    }
+}
+
+/** The page the widget being drawn belongs to, found from its provider. */
 @Composable
-fun WidgetCard(p: WidgetPalette, round: Boolean = false, padding: Dp = 14.dp, content: @Composable () -> Unit) {
+fun widgetPage(): String? {
     val context = LocalContext.current
+    val id = androidx.glance.LocalGlanceId.current
+    return runCatching {
+        val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
+        WidgetPages.of(android.appwidget.AppWidgetManager.getInstance(context).getAppWidgetInfo(appWidgetId)?.provider?.className)
+    }.getOrNull()
+}
+
+/** The widget's card: the phone's surface colour with a little see-through, 28 dp corners; tapping the background opens the app on its page. */
+@Composable
+fun WidgetCard(p: WidgetPalette, round: Boolean = false, padding: Dp = 14.dp, top: Boolean = false, content: @Composable () -> Unit) {
+    val context = LocalContext.current
+    val page = widgetPage()
     Column(
         GlanceModifier.fillMaxSize()
             .cornerRadius(if (round) 999.dp else 28.dp)
             .background(cp(p.surface))
             .padding(padding)
-            .clickable(actionStartActivity(Intent(context, MainActivity::class.java))),
-        verticalAlignment = Alignment.CenterVertically,
+            .clickable(actionStartActivity(WidgetPages.intent(context, page))),
+        verticalAlignment = if (top) Alignment.Top else Alignment.CenterVertically,
         horizontalAlignment = if (round) Alignment.CenterHorizontally else Alignment.Start,
     ) { content() }
+}
+
+/** A true circle card: as wide as the widget's shorter side, centred, whatever shape the widget has been made. */
+@Composable
+fun WidgetCircle(p: WidgetPalette, size: DpSize, content: @Composable (Dp) -> Unit) {
+    val context = LocalContext.current
+    val page = widgetPage()
+    val d = if (size.width < size.height) size.width else size.height
+    Box(GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(
+            GlanceModifier.size(d).cornerRadius(d / 2).background(cp(p.surface)).clickable(actionStartActivity(WidgetPages.intent(context, page))),
+            contentAlignment = Alignment.Center,
+        ) { content(d) }
+    }
+}
+
+/** Draws the widgets again in [seconds] seconds, for something that changes by itself (the alarm's countdown). */
+fun refreshSoon(context: Context, receiver: Class<*>, seconds: Int) {
+    runCatching {
+        val ids = android.appwidget.AppWidgetManager.getInstance(context).getAppWidgetIds(android.content.ComponentName(context, receiver))
+        if (ids.isEmpty()) return
+        val intent = Intent(android.appwidget.AppWidgetManager.ACTION_APPWIDGET_UPDATE).setClass(context, receiver)
+            .putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+        val pending = android.app.PendingIntent.getBroadcast(
+            context, receiver.name.hashCode(), intent, android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE,
+        )
+        context.getSystemService(android.app.AlarmManager::class.java).set(android.app.AlarmManager.RTC, System.currentTimeMillis() + seconds * 1000L, pending)
+    }
 }
 
 /** Shown when the house can't be read, or what the widget is for is missing. */

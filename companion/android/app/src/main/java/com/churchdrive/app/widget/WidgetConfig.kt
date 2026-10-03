@@ -12,7 +12,7 @@ object WidgetConfig {
         runCatching { JSONObject(prefs(context).getString(appWidgetId.toString(), null) ?: "{}") }.getOrDefault(JSONObject())
 
     fun save(context: Context, appWidgetId: Int, config: JSONObject) {
-        prefs(context).edit().putString(appWidgetId.toString(), config.toString()).apply()
+        prefs(context).edit().putString(appWidgetId.toString(), config.toString()).commit()
     }
 
     fun remove(context: Context, appWidgetIds: IntArray) {

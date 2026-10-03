@@ -68,26 +68,34 @@ class WidgetConfigActivity : ComponentActivity() {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     ConfigScreen(kind, existing) { config ->
                         WidgetConfig.save(context, id, config)
-                        CoroutineScope(Dispatchers.Main).launch {
-                            val widget: GlanceAppWidget? = when (kind) {
-                                "LightsWidgetReceiver" -> LightsGlanceWidget()
-                                "ClimateWidgetReceiver" -> ClimateGlanceWidget()
-                                "SummaryWidgetReceiver" -> SummaryGlanceWidget()
-                                "ShortcutsWidgetReceiver" -> ShortcutsGlanceWidget()
-                                "ScenesWidgetReceiver" -> ScenesGlanceWidget()
-                                "FanWidgetReceiver" -> FanGlanceWidget()
-                                "PurifierWidgetReceiver" -> PurifierGlanceWidget()
-                                "BlindsWidgetReceiver" -> BlindsGlanceWidget()
-                                "CameraWidgetReceiver" -> CameraGlanceWidget()
-                                "ActivityWidgetReceiver" -> ActivityGlanceWidget()
-                                "TodoWidgetReceiver" -> MyTodoGlanceWidget()
-                                "GaugeWidgetReceiver" -> GaugeGlanceWidget()
-                                "ClusterWidgetReceiver" -> ClusterGlanceWidget()
-                                else -> null
-                            }
+                        setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id))
+                        // Tell the widget to draw again with its new choices: by the usual update message, and directly.
+                        runCatching {
+                            sendBroadcast(
+                                Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE)
+                                    .setComponent(android.content.ComponentName(context, "com.churchdrive.app.widget.$kind"))
+                                    .putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(id)),
+                            )
+                        }
+                        val widget: GlanceAppWidget? = when (kind) {
+                            "LightsWidgetReceiver" -> LightsGlanceWidget()
+                            "ClimateWidgetReceiver" -> ClimateGlanceWidget()
+                            "SummaryWidgetReceiver" -> SummaryGlanceWidget()
+                            "ShortcutsWidgetReceiver" -> ShortcutsGlanceWidget()
+                            "ScenesWidgetReceiver" -> ScenesGlanceWidget()
+                            "FanWidgetReceiver" -> FanGlanceWidget()
+                            "PurifierWidgetReceiver" -> PurifierGlanceWidget()
+                            "BlindsWidgetReceiver" -> BlindsGlanceWidget()
+                            "CameraWidgetReceiver" -> CameraGlanceWidget()
+                            "ActivityWidgetReceiver" -> ActivityGlanceWidget()
+                            "TodoWidgetReceiver" -> MyTodoGlanceWidget()
+                            "GaugeWidgetReceiver" -> GaugeGlanceWidget()
+                            "ClusterWidgetReceiver" -> ClusterGlanceWidget()
+                            else -> null
+                        }
+                        finish()
+                        CoroutineScope(Dispatchers.Default).launch {
                             runCatching { widget?.update(context, GlanceAppWidgetManager(context).getGlanceIdBy(id)) }
-                            setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id))
-                            finish()
                         }
                     }
                 }
@@ -97,10 +105,10 @@ class WidgetConfigActivity : ComponentActivity() {
 }
 
 @Composable
-private fun CheckRow(text: String, checked: Boolean, onToggle: () -> Unit) {
-    Row(Modifier.fillMaxWidth().clickable(onClick = onToggle), verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(checked, onCheckedChange = { onToggle() })
-        Text(text, style = MaterialTheme.typography.bodyLarge)
+private fun CheckRow(text: String, checked: Boolean, enabled: Boolean = true, onToggle: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable(enabled = enabled || checked, onClick = onToggle), verticalAlignment = Alignment.CenterVertically) {
+        Checkbox(checked, onCheckedChange = { onToggle() }, enabled = enabled || checked)
+        Text(text, style = MaterialTheme.typography.bodyLarge, color = if (enabled || checked) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
     }
 }
 
@@ -169,20 +177,20 @@ private fun ConfigScreen(kind: String, existing: JSONObject, onSave: (JSONObject
                     }
                 }
                 "ScenesWidgetReceiver" -> {
-                    Text("Pick up to 8 scenes, in the colours you gave them.", style = MaterialTheme.typography.bodyMedium)
+                    Text("Pick up to 8 scenes, in the colours you gave them. Chosen: ${many.size} of 8.", style = MaterialTheme.typography.bodyMedium)
                     SceneButtons.catalogue(d.entities, d.lights).groupBy { it.group }.forEach { (group, list) ->
                         Heading(group)
                         list.forEach { b ->
-                            CheckRow(b.label.substringAfter(" · "), b.id in many) {
+                            CheckRow(b.label.substringAfter(" · "), b.id in many, many.size < 8) {
                                 if (b.id in many) many.remove(b.id) else if (many.size < 8) many.add(b.id)
                             }
                         }
                     }
                 }
                 "ClusterWidgetReceiver" -> {
-                    Text("Pick 2 to 4 readings.", style = MaterialTheme.typography.bodyMedium)
+                    Text("Pick 2 to 4 readings. Chosen: ${many.size} of 4.", style = MaterialTheme.typography.bodyMedium)
                     (Gauges.BASIC.filter { it.first != "heating" } + Gauges.sensorChoices(d.entities)).forEach { (key, label) ->
-                        CheckRow(label, key in many) { if (key in many) many.remove(key) else if (many.size < 4) many.add(key) }
+                        CheckRow(label, key in many, many.size < 4) { if (key in many) many.remove(key) else if (many.size < 4) many.add(key) }
                     }
                 }
                 in SINGLE_KEYS -> {
@@ -197,19 +205,19 @@ private fun ConfigScreen(kind: String, existing: JSONObject, onSave: (JSONObject
                     }
                 }
                 "SummaryWidgetReceiver" -> {
-                    Text("Pick up to 4 readings.", style = MaterialTheme.typography.bodyMedium)
+                    Text("Pick up to 4 readings. Chosen: ${stats.size} of 4.", style = MaterialTheme.typography.bodyMedium)
                     Stats.CATALOGUE.forEach { (key, label) ->
-                        CheckRow(label, key in stats) {
+                        CheckRow(label, key in stats, stats.size < 4) {
                             if (key in stats) stats.remove(key) else if (stats.size < 4) stats.add(key)
                         }
                     }
                 }
                 else -> {
-                    Text("Pick up to 8 buttons.", style = MaterialTheme.typography.bodyMedium)
+                    Text("Pick up to 8 buttons. Chosen: ${actions.size} of 8.", style = MaterialTheme.typography.bodyMedium)
                     Shortcuts.catalogue(d.entities, d.lights).groupBy { it.group }.forEach { (group, list) ->
                         Heading(group)
                         list.forEach { s ->
-                            CheckRow(s.label, s.id in actions) {
+                            CheckRow(s.label, s.id in actions, actions.size < 8) {
                                 if (s.id in actions) actions.remove(s.id) else if (actions.size < 8) actions.add(s.id)
                             }
                         }
@@ -252,7 +260,8 @@ private val SINGLE_PROMPT = mapOf(
 private fun singleChoices(kind: String, d: WidgetData): List<Pair<String, String>> {
     val e = d.entities.values
     return when (kind) {
-        "FanWidgetReceiver", "PurifierWidgetReceiver" -> e.filter { it.entityId.startsWith("fan.") }.sortedBy { it.friendlyName }.map { it.entityId to it.friendlyName }
+        "FanWidgetReceiver" -> fansFor(false, d.entities).map { it.entityId to it.friendlyName }
+        "PurifierWidgetReceiver" -> fansFor(true, d.entities).map { it.entityId to it.friendlyName }
         "BlindsWidgetReceiver" -> e.filter { it.entityId.startsWith("cover.") }.sortedBy { it.friendlyName }.map { it.entityId to it.friendlyName }
         "CameraWidgetReceiver" -> e.filter { it.entityId.startsWith("camera.") && it.entityId.endsWith("_live_view") }.sortedBy { it.friendlyName }.map { it.entityId to it.friendlyName }
         "ActivityWidgetReceiver" -> activityBases(d.entities).map { it to it.replace('_', ' ').replaceFirstChar { c -> c.uppercase() } }

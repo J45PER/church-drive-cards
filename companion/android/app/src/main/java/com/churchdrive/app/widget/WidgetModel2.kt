@@ -90,6 +90,23 @@ fun lastActivity(base: String, entities: Map<String, EntityState>, now: Long = S
 fun activityBases(entities: Map<String, EntityState>): List<String> =
     entities.keys.mapNotNull { Regex("^event\\.(.+)_(ding|motion)$").find(it)?.groupValues?.get(1) }.distinct().sorted()
 
+// ---------------------------------------------------------------------------------------------- Alarm
+
+private val ALARM_MODES = mapOf("armed_home" to "Home", "armed_away" to "Away", "armed_night" to "Night")
+
+/** The alarm's line: during a delay, what is happening and the seconds left (as of the last reading), else its state. */
+fun alarmStatus(alarm: EntityState): String {
+    fun secs(key: String) = alarm.num(key)?.toInt()?.takeIf { it > 0 }?.let { " · ${it}s" }.orEmpty()
+    return when (alarm.state) {
+        "arming" -> "Arming" + (ALARM_MODES[alarm.str("targetState")]?.let { " $it" }.orEmpty()) + secs("exitSecondsLeft")
+        "pending" -> "Entry delay" + secs("entrySecondsLeft")
+        else -> com.churchdrive.app.ui.alarmLabel(alarm.state)
+    }
+}
+
+/** Whether the alarm is counting down, so its widget should keep refreshing itself. */
+fun alarmInDelay(alarm: EntityState?): Boolean = alarm?.state == "arming" || alarm?.state == "pending"
+
 // ---------------------------------------------------------------------------------------------- Vacuum, charger, fan, purifier, blinds
 
 data class Card(val title: String, val sub: String, val tone: Tone, val icon: String, val tiles: List<WidgetTile>)
@@ -140,6 +157,20 @@ fun fanCard(fan: EntityState?, entity: String): Card {
     }
     val sub = if (!on) "Off" else fan?.str("preset_mode")?.let { presetLabel(it) } ?: fan?.num("percentage")?.let { "${it.toInt()}%" } ?: "On"
     return Card(fan?.friendlyName ?: "Fan", sub, if (on) Tone.Teal else Tone.Grey, "mdi:fan", tiles)
+}
+
+/** Whether a fan is an air purifier: it says so in its name, or a PM2.5 reading goes with it. */
+fun isPurifier(fan: EntityState, entities: Map<String, EntityState>): Boolean {
+    val said = Regex("purif|air_clean|air clean", RegexOption.IGNORE_CASE)
+    if (said.containsMatchIn(fan.entityId) || said.containsMatchIn(fan.friendlyName)) return true
+    val stem = fan.entityId.removePrefix("fan.").split('_').take(2).joinToString("_")
+    return entities.keys.any { Regex("pm2_?5").containsMatchIn(it) && it.removePrefix("sensor.").startsWith(stem) }
+}
+
+/** The fans a Fan widget offers (not the purifiers), or the purifiers a Purifier widget does; every fan if the split leaves nothing. */
+fun fansFor(purifiers: Boolean, entities: Map<String, EntityState>): List<EntityState> {
+    val all = entities.values.filter { it.entityId.startsWith("fan.") }.sortedBy { it.friendlyName }
+    return all.filter { isPurifier(it, entities) == purifiers }.ifEmpty { all }
 }
 
 /** The PM2.5 reading that belongs to a purifier: a sensor whose id says PM2.5 and starts like the purifier's own. */
@@ -287,5 +318,12 @@ object Gauges {
 
     /** The chosen readings (2 to 4) for a cluster, in order, those that exist. */
     fun cluster(ids: List<String>, entities: Map<String, EntityState>): List<GaugeReading> =
-        (ids.ifEmpty { listOf("inside", "humidity", "air") }).take(4).mapNotNull { compute(it, entities) }
+        (ids.ifEmpty { listOf("inside", "humidity", "air") }).take(4).map { compute(it, entities) ?: missing(it, entities) }
+
+    /** A reading that can't be had right now keeps its place, empty, so the widget always shows what was chosen. */
+    fun missing(id: String, entities: Map<String, EntityState>): GaugeReading {
+        val label = BASIC.firstOrNull { it.first == id }?.second?.substringBefore(" (")?.substringBefore(" temperature")
+            ?: entities[id.removePrefix("entity:")]?.friendlyName ?: id
+        return GaugeReading(id, label, "–", 0f, Tone.Grey, "mdi:speedometer")
+    }
 }
