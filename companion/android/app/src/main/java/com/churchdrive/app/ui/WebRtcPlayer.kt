@@ -28,6 +28,7 @@ import org.webrtc.SdpObserver
 import org.webrtc.SessionDescription
 import org.webrtc.SurfaceViewRenderer
 import org.webrtc.VideoTrack
+import com.churchdrive.app.CrashReport
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -99,9 +100,11 @@ private class RtcSession(
     private var videoTrack: VideoTrack? = null
 
     fun start() {
+        CrashReport.note("live view: $entityId")
         host.iceServers(entityId) { list ->
             if (closed.get()) return@iceServers
             servers = parseIceServers(list)
+            CrashReport.note("ice servers: ${servers.size}")
             attempt(0)
         }
         // Give up if nothing is playing after a while, so the viewer says so instead of waiting for ever.
@@ -119,6 +122,7 @@ private class RtcSession(
         runCatching {
             teardown()
             val mine = ++generation
+            CrashReport.note("try ${n + 1}: ${ORDERS[n].joinToString(",")}")
             ensureInitialised(context)
             val f = factory ?: PeerConnectionFactory.builder()
                 .setVideoDecoderFactory(DefaultVideoDecoderFactory(egl.eglBaseContext))
@@ -165,12 +169,14 @@ private class RtcSession(
 
     private fun sendOffer(sdp: String, mine: Int) {
         lastOffer = sdp
+        CrashReport.note("offer sent: ${mediaOrder(sdp).joinToString(",")}")
         subscription = host.webRtcOffer(entityId, sdp) { event -> if (mine == generation) handle(parseRtcEvent(event)) }
         if (subscription < 0) fail("Not connected to Home Assistant.")
     }
 
     private fun handle(event: RtcEvent?) {
         if (closed.get()) return
+        CrashReport.note("from camera: ${event?.javaClass?.simpleName}")
         when (event) {
             is RtcEvent.Session -> {
                 sessionId = event.id
@@ -181,6 +187,7 @@ private class RtcSession(
                 }
             }
             is RtcEvent.Answer -> connection?.setRemoteDescription(object : Sdp() {
+                override fun onSetSuccess() = CrashReport.note("answer accepted: ${mediaOrder(event.sdp).joinToString(",")}")
                 override fun onSetFailure(error: String?) {
                     // A camera that answers in another order: try the next way of setting up the offer.
                     if (error?.contains("m-lines") == true && lastAttempt + 1 < ORDERS.size && !closed.get()) {
@@ -196,7 +203,10 @@ private class RtcSession(
                 }
             }, SessionDescription(SessionDescription.Type.ANSWER, event.sdp))
             is RtcEvent.Candidate -> connection?.addIceCandidate(IceCandidate(event.sdpMid ?: "0", event.sdpMLineIndex, event.candidate))
-            is RtcEvent.Error -> fail(event.message)
+            is RtcEvent.Error -> {
+                CrashReport.note("camera error: ${event.message}")
+                fail(event.message)
+            }
             null -> Unit
         }
     }
@@ -233,6 +243,7 @@ private class RtcSession(
 
     private fun gotTrack(track: org.webrtc.MediaStreamTrack?) {
         if (closed.get()) return
+        CrashReport.note("track: ${track?.kind()}")
         when (track) {
             is VideoTrack -> {
                 videoTrack = track
@@ -254,6 +265,7 @@ private class RtcSession(
     override fun onTrack(transceiver: RtpTransceiver) = gotTrack(transceiver.receiver.track())
     override fun onAddTrack(receiver: RtpReceiver, streams: Array<out MediaStream>) = gotTrack(receiver.track())
     override fun onIceConnectionChange(state: PeerConnection.IceConnectionState) {
+        CrashReport.note("ice: $state")
         if (state == PeerConnection.IceConnectionState.FAILED) fail("Couldn't reach the camera.")
     }
 
