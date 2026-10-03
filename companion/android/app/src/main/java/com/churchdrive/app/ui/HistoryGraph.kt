@@ -199,7 +199,7 @@ fun LineGraph(layers: List<GraphLayer>, from: Long, now: Long, smooth: Boolean, 
     var scrub by remember { mutableStateOf<Float?>(null) }
     Column {
         Canvas(
-            Modifier.fillMaxWidth().height(64.dp).pointerInput(drawn.size) {
+            Modifier.fillMaxWidth().height(62.dp).pointerInput(drawn.size) {
                 detectHorizontalDragGestures(
                     onDragStart = { scrub = (it.x / size.width).coerceIn(0f, 1f) },
                     onDragEnd = { scrub = null },
