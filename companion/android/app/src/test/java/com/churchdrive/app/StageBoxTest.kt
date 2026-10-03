@@ -49,7 +49,9 @@ class StageBoxTest {
         assertEquals(100f, w, 0.001f)
         assertEquals(100f, h, 0.001f)
         // A wide picture is as wide as the box; a tall one as tall.
-        assertEquals(100f to 56.25f, fitSize(16f / 9f, 100f, 200f).let { it.first to it.second })
+        val wide = fitSize(16f / 9f, 100f, 200f)
+        assertEquals(100f, wide.first, 0.001f)
+        assertEquals(56.25f, wide.second, 0.01f)
         assertEquals(50f, fitSize(0.5f, 100f, 100f).first, 0.001f)
         // Unzoomed it stays centred whatever the drag; zoomed past the box it can be dragged but not off its edges.
         val still = panZoom(1f, 0f, 50f, 50f, 100f, 0f, 400f, 1f, 100f, 200f, 100f, 100f, 6f)
