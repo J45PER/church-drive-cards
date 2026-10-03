@@ -119,3 +119,33 @@ fun qualityTone(score: Int?): Tone = when {
     score >= 30 -> Tone.Orange
     else -> Tone.Red
 }
+
+/** One service call on a thermostat: the service and its data. */
+data class ClimateStep(val service: String, val key: String, val value: String)
+
+/** The mode that means "on" for a thermostat that is off: Heat, else Auto, else the first mode that isn't Off. */
+fun onMode(modes: List<String>): String? =
+    listOf("heat", "auto", "heat_cool").firstOrNull { it in modes } ?: modes.firstOrNull { it != "off" }
+
+/**
+ * What a quick setting does, as the calls to make in order (the same as the dashboard's thermostat card). A preset such as
+ * Eco only takes hold while the thermostat is on, so Eco pressed on a thermostat that is off switches it on first:
+ * one tap, not Heat and then Eco. A mode (Heat) also leaves any preset (Eco).
+ */
+fun quickSteps(climate: EntityState?, q: QuickSetting): List<ClimateStep> {
+    val steps = mutableListOf<ClimateStep>()
+    val preset = q.presetMode?.takeIf { it.isNotBlank() }
+    if (q.hvacMode != null) {
+        steps += ClimateStep("set_hvac_mode", "hvac_mode", q.hvacMode)
+        val active = climate?.str("preset_mode")
+        if (q.hvacMode != "off" && !active.isNullOrBlank() && active != "none" && "none" in (climate?.list("preset_modes").orEmpty())) {
+            steps += ClimateStep("set_preset_mode", "preset_mode", "none")
+        }
+    } else if (preset != null) {
+        if (preset != "none" && climate?.state == "off") {
+            onMode(climate?.list("hvac_modes").orEmpty())?.let { steps += ClimateStep("set_hvac_mode", "hvac_mode", it) }
+        }
+        steps += ClimateStep("set_preset_mode", "preset_mode", preset)
+    }
+    return steps
+}

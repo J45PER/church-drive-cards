@@ -3,6 +3,9 @@ package com.churchdrive.app.ui
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.LocalTextStyle
@@ -358,6 +361,8 @@ fun ClimateCard(
         call("climate", "set_temperature", id, data("temperature" to next))
     }
 
+    val scope = rememberCoroutineScope()
+    val latest by rememberUpdatedState(climate)
     EntityCard(tone.container, tone.onContainer) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
@@ -393,8 +398,20 @@ fun ClimateCard(
                     else -> false
                 }
                 TileItem(quickSettingIcon(q), q.name, selected) {
-                    if (q.hvacMode != null) call("climate", "set_hvac_mode", id, data("hvac_mode" to q.hvacMode))
-                    else if (q.presetMode != null) call("climate", "set_preset_mode", id, data("preset_mode" to q.presetMode))
+                    val steps = quickSteps(climate, q)
+                    scope.launch {
+                        steps.forEachIndexed { i, step ->
+                            // A preset waits for the thermostat to come on (up to five seconds).
+                            if (i > 0 && step.service == "set_preset_mode") {
+                                var waited = 0
+                                while (latest?.state == "off" && waited < 5_000) {
+                                    delay(250)
+                                    waited += 250
+                                }
+                            }
+                            call("climate", step.service, id, data(step.key to step.value))
+                        }
+                    }
                 }
             },
             tone, tone.onContainer, enabled, perRow = 5,
