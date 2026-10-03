@@ -141,7 +141,9 @@ class WidgetModel2Test {
     fun eachWidgetOpensItsPageOfTheApp() {
         assertEquals("Security", WidgetPages.of("com.churchdrive.app.widget.AlarmWidgetReceiver"))
         assertEquals("Todo", WidgetPages.of("com.churchdrive.app.widget.JobsWidgetReceiver"))
-        assertEquals("Lighting", WidgetPages.of("com.churchdrive.app.widget.ScenesWidgetReceiver"))
+        assertEquals("", WidgetPages.of("com.churchdrive.app.widget.ScenesWidgetReceiver"))
+        assertEquals("", WidgetPages.of("com.churchdrive.app.widget.BlindsWidgetReceiver"))
+        assertEquals("Lighting", WidgetPages.of("com.churchdrive.app.widget.LightsWidgetReceiver"))
         assertEquals("Climate", WidgetPages.of("com.churchdrive.app.widget.GaugeWidgetReceiver"))
         assertNull(WidgetPages.of(null))
     }

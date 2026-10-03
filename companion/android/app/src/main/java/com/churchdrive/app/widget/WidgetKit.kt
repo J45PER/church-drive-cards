@@ -167,21 +167,23 @@ fun cp(c: Color) = ColorProvider(c)
 object WidgetPages {
     private val BY_WIDGET = mapOf(
         "Alarm" to "Security", "Doors" to "Security", "Activity" to "Security", "Camera" to "Security",
-        "Lights" to "Lighting", "Scenes" to "Lighting",
+        "Lights" to "Lighting",
         "Climate" to "Climate", "Air" to "Climate", "Weather" to "Climate", "Gauge" to "Climate", "Cluster" to "Climate",
-        "Fan" to "Climate", "Purifier" to "Climate", "Blinds" to "Climate",
+        // Widgets that are all buttons open nothing when the background is tapped.
+        "Fan" to "", "Purifier" to "", "Blinds" to "", "Scenes" to "", "Shortcuts" to "",
         "Vacuum" to "Cleaning", "Todo" to "Todo", "Jobs" to "Todo",
-        "People" to "Home", "Charger" to "Home", "Summary" to "Home", "Shortcuts" to "Home",
+        "People" to "Home", "Charger" to "Home", "Summary" to "Home",
     )
 
     fun of(receiverName: String?): String? = receiverName?.substringAfterLast('.')?.removeSuffix("WidgetReceiver")?.let { BY_WIDGET[it] }
 
     /** Opens the app on [page]. The address makes each page's intent its own (else Android would share one between widgets). */
-    fun intent(context: Context, page: String?): Intent = Intent(context, MainActivity::class.java).apply {
-        if (page != null) {
+    fun intent(context: Context, page: String?, camera: String? = null): Intent = Intent(context, MainActivity::class.java).apply {
+        if (!page.isNullOrEmpty()) {
             putExtra("page", page)
-            data = android.net.Uri.parse("churchdrive://open/$page")
+            data = android.net.Uri.parse("churchdrive://open/$page" + (camera?.let { "/$it" } ?: ""))
         }
+        if (camera != null) putExtra("camera", camera)
     }
 }
 
@@ -198,15 +200,13 @@ fun widgetPage(): String? {
 
 /** The widget's card: the phone's surface colour with a little see-through, 28 dp corners; tapping the background opens the app on its page. */
 @Composable
-fun WidgetCard(p: WidgetPalette, round: Boolean = false, padding: Dp = 14.dp, top: Boolean = false, content: @Composable () -> Unit) {
+fun WidgetCard(p: WidgetPalette, round: Boolean = false, padding: Dp = 14.dp, top: Boolean = false, camera: String? = null, content: @Composable () -> Unit) {
     val context = LocalContext.current
     val page = widgetPage()
+    val base = GlanceModifier.fillMaxSize().cornerRadius(if (round) 999.dp else 28.dp).background(cp(p.surface)).padding(padding)
     Column(
-        GlanceModifier.fillMaxSize()
-            .cornerRadius(if (round) 999.dp else 28.dp)
-            .background(cp(p.surface))
-            .padding(padding)
-            .clickable(actionStartActivity(WidgetPages.intent(context, page))),
+        // A page of "" means the widget is all buttons: tapping its background does nothing.
+        if (page == "" && camera == null) base else base.clickable(actionStartActivity(WidgetPages.intent(context, page, camera))),
         verticalAlignment = if (top) Alignment.Top else Alignment.CenterVertically,
         horizontalAlignment = if (round) Alignment.CenterHorizontally else Alignment.Start,
     ) { content() }
@@ -219,10 +219,8 @@ fun WidgetCircle(p: WidgetPalette, size: DpSize, content: @Composable (Dp) -> Un
     val page = widgetPage()
     val d = if (size.width < size.height) size.width else size.height
     Box(GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Box(
-            GlanceModifier.size(d).cornerRadius(d / 2).background(cp(p.surface)).clickable(actionStartActivity(WidgetPages.intent(context, page))),
-            contentAlignment = Alignment.Center,
-        ) { content(d) }
+        val disc = GlanceModifier.size(d).cornerRadius(d / 2).background(cp(p.surface))
+        Box(if (page == "") disc else disc.clickable(actionStartActivity(WidgetPages.intent(context, page))), contentAlignment = Alignment.Center) { content(d) }
     }
 }
 

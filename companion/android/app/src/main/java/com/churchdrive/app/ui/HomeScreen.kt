@@ -71,6 +71,9 @@ fun HomeScreen(
     /** A page a widget asked for (a [Page] name); [onOpened] says it has been opened. */
     openPage: String? = null,
     onOpened: () -> Unit = {},
+    /** A camera (entity id) a widget asked to see live, until it is closed. */
+    openCamera: String? = null,
+    onCameraClosed: () -> Unit = {},
 ) {
     var page by rememberSaveable { mutableStateOf(Page.Home) }
     androidx.compose.runtime.LaunchedEffect(openPage) {
@@ -170,6 +173,7 @@ fun HomeScreen(
             }
         }
     }
+    if (openCamera != null) CameraViewerFor(openCamera, entities, registry, call, onCameraClosed)
     AccountOverlay(
         panel, { panel = it }, userName, isAdmin, account, updateAvailable, onSignOut,
         adminPages = adminPages,

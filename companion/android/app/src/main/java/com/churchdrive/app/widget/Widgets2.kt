@@ -126,9 +126,9 @@ fun CardContent(card: Card, p: WidgetPalette, size: SizeClass) {
 
 /** Reads like a sentence under a title, for the plain pill widgets (people, doors, doorbell). */
 @Composable
-private fun Pill(icon: String, heading: String, text: String, tone: ToneColors, p: WidgetPalette, size: SizeClass, extra: @Composable () -> Unit = {}) {
+private fun Pill(icon: String, heading: String, text: String, tone: ToneColors, p: WidgetPalette, size: SizeClass, camera: String? = null, extra: @Composable () -> Unit = {}) {
     if (size == SizeClass.Strip || size == SizeClass.Wide) {
-        WidgetCard(p, padding = 12.dp) {
+        WidgetCard(p, padding = 12.dp, camera = camera) {
             Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 IconCircle(icon, tone, 40.dp)
                 Spacer(GlanceModifier.width(10.dp))
@@ -139,7 +139,7 @@ private fun Pill(icon: String, heading: String, text: String, tone: ToneColors, 
             }
             if (size == SizeClass.Wide) extra()
         }
-    } else WidgetCard(p, padding = 12.dp) {
+    } else WidgetCard(p, padding = 12.dp, camera = camera) {
         IconCircle(icon, tone, 40.dp)
         Spacer(GlanceModifier.height(6.dp))
         Text(heading, style = title(p), maxLines = 1)
@@ -205,7 +205,7 @@ class ActivityGlanceWidget : SceneWidget("Doorbell") {
         val (text, t) = lastActivity(base, s.data.entities)
         val name = s.data.entities["camera.${base}_live_view"]?.friendlyName?.removeSuffix(" live view")?.removeSuffix(" Live view")
             ?: presetLabel(base).ifBlank { "Doorbell" }
-        Pill(if (text.startsWith("Doorbell")) "mdi:doorbell" else "mdi:motion-sensor", name, text, s.p.tone(t), s.p, s.size)
+        Pill(if (text.startsWith("Doorbell")) "mdi:doorbell" else "mdi:motion-sensor", name, text, s.p.tone(t), s.p, s.size, camera = "camera.${base}_live_view".takeIf { it in s.data.entities })
     }
 }
 
@@ -321,7 +321,7 @@ class CameraGlanceWidget : SceneWidget("Camera") {
         if (cam == null || shot == null) {
             return Unreachable(cam?.friendlyName ?: "Camera", p, if (cam == null) "No camera chosen" else "No picture right now")
         }
-        WidgetCard(p, padding = 0.dp) {
+        WidgetCard(p, padding = 0.dp, camera = cam.entityId) {
             Box(GlanceModifier.fillMaxSize(), contentAlignment = Alignment.BottomStart) {
                 Image(ImageProvider(shot), cam.friendlyName, GlanceModifier.fillMaxSize().cornerRadius(28.dp), contentScale = ContentScale.Crop)
                 Box(GlanceModifier.padding(12.dp)) {

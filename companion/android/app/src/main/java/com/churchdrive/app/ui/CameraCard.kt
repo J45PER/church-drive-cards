@@ -165,7 +165,7 @@ fun CameraCard(config: JSONObject, entities: Map<String, EntityState>, registry:
  * the camera offers it (as Home Assistant's own player does), else an HLS stream.
  */
 @Composable
-private fun CameraViewer(
+internal fun CameraViewer(
     name: String,
     entityId: String,
     button: String?,
@@ -265,4 +265,12 @@ private fun LivePlayer(url: String, muted: Boolean) {
         update = { it.player = player },
         modifier = Modifier.fillMaxSize(),
     )
+}
+
+/** The live view of a camera by its entity, for opening it from outside its card (a widget's tap). */
+@Composable
+fun CameraViewerFor(entityId: String, entities: Map<String, EntityState>, registry: Registry, call: CallService, onClose: () -> Unit) {
+    val found = cameraFind(entities, entityId, null, null)
+    val name = entities[entityId]?.friendlyName?.replace(Regex(" (Live view|Snapshot)$", RegexOption.IGNORE_CASE), "") ?: entityId
+    CameraViewer(name, entityId, found.button, cameraBaseName(entities, entityId), cameraLight(entities, registry, entityId, null), entities, call, onClose)
 }
