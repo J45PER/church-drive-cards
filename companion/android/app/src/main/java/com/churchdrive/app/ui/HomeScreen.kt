@@ -69,9 +69,10 @@ fun HomeScreen(
     onSignOut: () -> Unit,
 ) {
     var page by rememberSaveable { mutableStateOf(Page.Home) }
-    // Administrator-only pages (Devices, Energy) appear only while an administrator is signed in.
-    val pages = Page.entries.filter { !it.adminOnly || isAdmin }
-    if (page !in pages) page = Page.Home
+    // Administrator-only pages (Devices, Energy) are opened from the account panel, and only while an administrator is signed in.
+    val adminPages = if (isAdmin) Page.entries.filter { it.adminOnly } else emptyList()
+    val pages = Page.entries.filter { !it.adminOnly }
+    if (page !in pages && page !in adminPages) page = Page.Home
     // The account panel (null shut, "account", "settings" or "about"), which slides in from the right.
     var panel by rememberSaveable { mutableStateOf<String?>(null) }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -158,7 +159,11 @@ fun HomeScreen(
             }
         }
     }
-    AccountOverlay(panel, { panel = it }, userName, isAdmin, account, updateAvailable, onSignOut)
+    AccountOverlay(
+        panel, { panel = it }, userName, isAdmin, account, updateAvailable, onSignOut,
+        adminPages = adminPages,
+        onOpenPage = { page = it; panel = null },
+    )
     }
 }
 

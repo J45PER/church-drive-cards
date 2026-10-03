@@ -88,6 +88,8 @@ fun AccountOverlay(
     settings: AccountSettings,
     updateAvailable: Boolean,
     onSignOut: () -> Unit,
+    adminPages: List<Page> = emptyList(),
+    onOpenPage: (Page) -> Unit = {},
 ) {
     // The last page shown, so a page keeps its words while it slides away.
     var shown by remember { mutableStateOf("account") }
@@ -110,7 +112,7 @@ fun AccountOverlay(
                 when (which) {
                     "settings" -> SettingsPage(settings, isAdmin) { onPanel("account") }
                     "about" -> AboutPage(settings, updateAvailable) { onPanel("account") }
-                    else -> AccountPage(userName, isAdmin, onClose = { onPanel(null) }, onOpen = onPanel, onSignOut = {
+                    else -> AccountPage(userName, isAdmin, adminPages, onOpenPage, onClose = { onPanel(null) }, onOpen = onPanel, onSignOut = {
                         onPanel(null)
                         onSignOut()
                     })
@@ -152,7 +154,7 @@ private fun PanelTitle(title: String, onBack: () -> Unit) {
 }
 
 @Composable
-private fun AccountPage(userName: String?, isAdmin: Boolean, onClose: () -> Unit, onOpen: (String) -> Unit, onSignOut: () -> Unit) {
+private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Page>, onOpenPage: (Page) -> Unit, onClose: () -> Unit, onOpen: (String) -> Unit, onSignOut: () -> Unit) {
     Column(
         Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -180,6 +182,12 @@ private fun AccountPage(userName: String?, isAdmin: Boolean, onClose: () -> Unit
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+            }
+        }
+        // Administrator-only pages (Energy, Devices).
+        if (adminPages.isNotEmpty()) {
+            PanelCard {
+                adminPages.forEach { p -> PanelRow(p.fallback, p.label, onClick = { onOpenPage(p) }) }
             }
         }
         PanelCard {
