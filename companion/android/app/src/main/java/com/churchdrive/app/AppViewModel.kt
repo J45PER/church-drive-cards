@@ -118,31 +118,113 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun loadDashboard() {
-        client.request("lovelace/config", data("url_path" to DashboardLights.DASHBOARD)) { config ->
-            (config as? org.json.JSONObject)?.let {
-                _lights.value = DashboardLights.parse(it)
-                _panels.value = DashboardPanels.parse(it)
+    /** What was read last time, kept on the phone so pages show at once on opening while the live reading catches up. */
+    private val cache = com.churchdrive.app.ha.DiskCache(app)
+
+    /**
+     * A command that tries again (a few times, a little slower each time) while the line is up, so a slow or dropped answer
+     * does not leave a page empty. Its answer goes to [onResult] once it comes.
+     */
+    private fun fetch(type: String, params: org.json.JSONObject = org.json.JSONObject(), attempt: Int = 0, onResult: (Any?) -> Unit) {
+        client.request(type, params) { result ->
+            if (result != null) onResult(result)
+            else if (attempt < 4 && client.connection.value == ConnectionState.Connected) {
+                viewModelScope.launch {
+                    kotlinx.coroutines.delay(2_000L * (attempt + 1))
+                    fetch(type, params, attempt + 1, onResult)
+                }
             }
         }
-        client.request("config/area_registry/list") { _areaNames.value = DashboardLights.areaNames(it) }
+    }
+
+    private fun applyDashboard(config: org.json.JSONObject) {
+        _lights.value = DashboardLights.parse(config)
+        _panels.value = DashboardPanels.parse(config)
+    }
+
+    /** The dashboard, registries and states as they were last time, shown straight away. */
+    private fun loadCaches() {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching { cache.read("dashboard")?.let { org.json.JSONObject(it) } }.getOrNull()?.let { config ->
+                val lights = DashboardLights.parse(config)
+                val panels = DashboardPanels.parse(config)
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    if (_panels.value.isEmpty()) { _lights.value = lights; _panels.value = panels }
+                }
+            }
+            runCatching { cache.read("areas")?.let { org.json.JSONArray(it) } }.getOrNull()?.let { areas ->
+                val names = DashboardLights.areaNames(areas)
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { if (_areaNames.value.isEmpty()) _areaNames.value = names }
+            }
+            runCatching { cache.read("registry")?.let { org.json.JSONObject(it) } }.getOrNull()?.let { reg ->
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    if (entityRegistryResult == null) {
+                        entityRegistryResult = reg
+                        _registry.value = Registry.parse(entityRegistryResult, deviceRegistryResult)
+                    }
+                }
+            }
+            runCatching {
+                cache.read("states")?.let { text ->
+                    val a = org.json.JSONArray(text)
+                    HaClient.parseStates(a)
+                }
+            }.getOrNull()?.let { states -> kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { client.seed(states) } }
+        }
+        // The live states, saved now and then so the next opening has something to show.
+        viewModelScope.launch {
+            client.statesLoaded.collect { loaded ->
+                if (loaded) {
+                    kotlinx.coroutines.delay(5_000L)
+                    while (client.statesLoaded.value) {
+                        val snapshot = client.entities.value
+                        withContextIO { cache.write("states", statesJson(snapshot)) }
+                        kotlinx.coroutines.delay(60_000L)
+                    }
+                }
+            }
+        }
+    }
+
+    private suspend fun withContextIO(block: () -> Unit) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { block() }
+
+    private fun statesJson(states: Map<String, EntityState>): String {
+        val a = org.json.JSONArray()
+        states.values.forEach { e ->
+            a.put(org.json.JSONObject().put("entity_id", e.entityId).put("state", e.state).put("attributes", e.attributes).put("last_changed", e.lastChanged ?: ""))
+        }
+        return a.toString()
+    }
+
+    private fun loadDashboard() {
+        fetch("lovelace/config", data("url_path" to DashboardLights.DASHBOARD)) { config ->
+            (config as? org.json.JSONObject)?.let {
+                applyDashboard(it)
+                viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { cache.write("dashboard", it.toString()) }
+            }
+        }
+        fetch("config/area_registry/list") {
+            _areaNames.value = DashboardLights.areaNames(it)
+            (it as? org.json.JSONArray)?.let { a -> viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { cache.write("areas", a.toString()) } }
+        }
         // Which entities belong to which device (a smoke alarm's battery, for example) and the devices' names.
-        client.request("config/entity_registry/list_for_display") {
+        fetch("config/entity_registry/list_for_display") {
             entityRegistryResult = it
             _registry.value = Registry.parse(entityRegistryResult, deviceRegistryResult)
+            (it as? org.json.JSONObject)?.let { o -> viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { cache.write("registry", o.toString()) } }
         }
         client.request("config/device_registry/list") {
             deviceRegistryResult = it
             _registry.value = Registry.parse(entityRegistryResult, deviceRegistryResult)
         }
         // The icons for modes (fan Sleep, thermostat Eco, charger Stop...) set in Home Assistant's Icon Styles card.
-        client.request("church_drive/icons") { com.churchdrive.app.ui.IconMap.load(it) }
+        fetch("church_drive/icons") { com.churchdrive.app.ui.IconMap.load(it) }
         // Each scene's colours and icon: Church Drive's scene library, and the looks set in the Scene Styles card.
-        client.request("church_drive/library") {
+        fetch("church_drive/library") {
             libraryResult = it
             _sceneLooks.value = SceneLooks.parse(libraryResult, stylesDashboard)
         }
-        client.request("lovelace/config", data("url_path" to "design-presets")) {
+        fetch("lovelace/config", data("url_path" to "design-presets")) {
             stylesDashboard = it as? org.json.JSONObject
             _sceneLooks.value = SceneLooks.parse(libraryResult, stylesDashboard)
         }
@@ -151,6 +233,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     init {
         checkForUpdate()
         if (session.signedIn) {
+            loadCaches()
             startSession()
             com.churchdrive.app.house.House.sync(appContext)
         }
@@ -255,6 +338,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (url != null && refresh != null) viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { HaAuth.revoke(url, refresh) }
         client.disconnect()
         session.clear()
+        cache.clear()
         // Nothing left to run: stops the notification connection and the location updates.
         com.churchdrive.app.house.House.sync(appContext)
         _notifyOn.value = false
@@ -320,7 +404,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Plain access to Home Assistant's commands, for the cards that fetch their own data. */
     val haApi = object : com.churchdrive.app.ui.HaApi {
-        override fun request(type: String, params: org.json.JSONObject, done: (Any?) -> Unit) = client.request(type, params, done)
+        override fun request(type: String, params: org.json.JSONObject, done: (Any?) -> Unit) = client.request(type, params) { done(it) }
 
         override fun subscribe(type: String, params: org.json.JSONObject, onEvent: (org.json.JSONObject) -> Unit): Int =
             client.subscribe(type, params, onEvent)

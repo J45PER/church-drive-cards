@@ -24,7 +24,7 @@ import org.json.JSONObject
 @Composable
 fun DashboardPage(panels: List<PanelSpec>, entities: Map<String, EntityState>, registry: Registry, call: CallService) {
     if (panels.isEmpty()) {
-        Text("Loading this page from Home Assistant…", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        LoadingNote("Loading this page from Home Assistant…")
         return
     }
     panels.forEach { PanelView(it, entities, registry, call) }

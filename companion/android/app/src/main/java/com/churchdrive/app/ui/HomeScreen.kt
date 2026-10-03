@@ -147,10 +147,10 @@ fun HomeScreen(
             if (updateAvailable) UpdateBanner()
             when (connection) {
                 ConnectionState.Connected ->
-                    if (!statesLoaded) Text("Loading the house…", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (!statesLoaded) LoadingNote("Updating from the house…")
                 ConnectionState.AuthFailed ->
                     Text("Sign-in failed. Check the token.", color = MaterialTheme.colorScheme.error)
-                else -> Text("Connecting…", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                else -> LoadingNote("Connecting…")
             }
 
             if (page == Page.Home) {
@@ -324,5 +324,14 @@ private fun UpdateBanner() {
                 )
             }) { Text("Update") }
         }
+    }
+}
+
+/** A line of what the app is waiting for, over a thin moving bar, so a page that is still filling in does not look broken. */
+@Composable
+fun LoadingNote(text: String) {
+    androidx.compose.foundation.layout.Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth())
+        Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
     }
 }

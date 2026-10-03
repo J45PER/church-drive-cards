@@ -1,6 +1,7 @@
 package com.churchdrive.app.ui
 
 import androidx.compose.runtime.compositionLocalOf
+import kotlin.coroutines.resume
 import org.json.JSONObject
 
 /** Plain access to Home Assistant's commands for the cards that fetch their own data (to-do lists, the forecast). */
@@ -15,6 +16,10 @@ interface HaApi {
 }
 
 val LocalHaApi = compositionLocalOf<HaApi?> { null }
+
+/** One command, waited for: its result, or null if it failed or timed out. */
+suspend fun HaApi.ask(type: String, params: JSONObject): Any? =
+    kotlinx.coroutines.suspendCancellableCoroutine { cont -> request(type, params) { if (cont.isActive) cont.resume(it) } }
 
 /** The signed-in person's name, for their own to-do list. */
 val LocalUserName = compositionLocalOf<String?> { null }

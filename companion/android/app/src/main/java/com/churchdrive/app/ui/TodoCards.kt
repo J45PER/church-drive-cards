@@ -37,7 +37,17 @@ private fun rememberTodoItems(listId: String, entities: Map<String, EntityState>
     val count = entities[listId]?.state
     LaunchedEffect(listId, count) {
         if (api != null && listId.isNotBlank()) {
-            api.request("todo/item/list", data("entity_id" to listId)) { items = parseTodoItems(it) }
+            // A failed or slow answer is asked for again (a few times); it is not taken for an empty list.
+            var tries = 0
+            while (tries < 5) {
+                val result = api.ask("todo/item/list", data("entity_id" to listId))
+                if (result != null) {
+                    items = parseTodoItems(result)
+                    break
+                }
+                tries++
+                kotlinx.coroutines.delay(2_000L * tries)
+            }
         }
     }
     return items

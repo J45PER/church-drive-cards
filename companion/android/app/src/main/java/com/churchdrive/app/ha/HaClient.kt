@@ -96,7 +96,7 @@ class HaClient(private val scope: CoroutineScope) {
      * Sends any WebSocket command and gives its result (a JSONObject or JSONArray) to [onResult],
      * or null if it failed (for example, an admin-only command asked by a non-admin).
      */
-    fun request(type: String, params: JSONObject = JSONObject(), onResult: (Any?) -> Unit) {
+    fun request(type: String, params: JSONObject = JSONObject(), timeoutMs: Long = 30_000L, onResult: (Any?) -> Unit) {
         val ws = socket
         if (ws == null) {
             onResult(null)
@@ -104,8 +104,18 @@ class HaClient(private val scope: CoroutineScope) {
         }
         val id = id()
         pending[id] = onResult
+        // An answer that never comes (a slow house, a dropped line) is a failure the caller can try again, not a page left empty.
+        scope.launch {
+            delay(timeoutMs)
+            pending.remove(id)?.invoke(null)
+        }
         val msg = JSONObject(params.toString()).put("id", id).put("type", type)
         if (!ws.send(msg.toString())) pending.remove(id)?.invoke(null)
+    }
+
+    /** Shows what was known last time until the live states arrive (and only until then). */
+    fun seed(states: Map<String, EntityState>) {
+        if (!_statesLoaded.value && _entities.value.isEmpty()) _entities.value = states
     }
 
     /**
@@ -155,7 +165,10 @@ class HaClient(private val scope: CoroutineScope) {
                     JSONObject().put("type", "auth").put("access_token", token).toString(),
                 )
                 "auth_ok" -> {
+                    // Asks still waiting from before the line dropped will not be answered: tell their askers so they can ask again.
+                    val lost = pending.values.toList()
                     pending.clear()
+                    lost.forEach { it(null) }
                     subscriptions.clear()
                     _statesLoaded.value = false
                     _connection.value = ConnectionState.Connected

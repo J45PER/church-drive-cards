@@ -286,8 +286,14 @@ fun ClimateGraph(
                 .put("minimal_response", false)
                 .put("no_attributes", false)
                 .put("significant_changes_only", false)
-            api.request("history/history_during_period", params) { history = climateHistory(it, id, humiditySensor) }
-            delay(5 * 60_000L)
+            val result = api.ask("history/history_during_period", params)
+            if (result != null) {
+                history = climateHistory(result, id, humiditySensor)
+                delay(5 * 60_000L)
+            } else {
+                // Not answered: try again soon rather than leave the graph out for five minutes.
+                delay(8_000L)
+            }
         }
     }
     val h = history ?: return
