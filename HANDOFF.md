@@ -92,12 +92,17 @@ HACS as an integration. It does two jobs:
   Run `tools/editors-smoke.mjs` before pushing.
 - **Waiting on the user:**
   - Presence sensors, for the Lights "maybe left on" line.
-  - The cars (2026-10-02): Stellantis Vehicles (HACS 839422993, domain `stellantis_vehicles`)
-    for the Vauxhall PHEV and VW Group Connect (HACS 1207816350, domain `vag_connect`) for the
-    VW full EV are downloaded and loaded, not signed in. The Stellantis remote login service
-    timed out (free Render worker); the user will do the manual code method on a laptop
-    (Chrome console `mymap://oauth2redirect…?code=`). On Jamie's to-do list. Then: battery %
-    on the charger card (work out which car is plugged in) and in "Car charged".
+  - The cars: **Vauxhall Astra (PHEV, AMZ 2927) connected 2026-10-03** through Stellantis Vehicles
+    (HACS 839422993, manual OAuth code from Chrome's console `mymvxsdk://oauth2redirect…?code=`;
+    the code is single-use and lasts a minute or two). Device "Vauxhall Astra", entities
+    `*.amz_2927_vauxhall_astra_*` (battery %, range/fuel range/mileage set to miles,
+    `binary_sensor…_battery_plugged/_charging`, buttons for preconditioning, lock, charge).
+    The **VW (full EV)** still needs signing in: VW Group Connect (HACS 1207816350, domain
+    `vag_connect`) is loaded; on Jamie's to-do list.
+  - `ev-charger-card` (beta, on Home and Energy) lists each car from those integrations
+    (`carsFind`: battery %, range, Plugged in / Charging); `show_cars`, or `cars:` to override.
+    "Church Drive: car alerts" names the plugged-in car and its % (plugged in waits up to 3
+    minutes for the car to report; charged).
 - Nothing else is pending. Ideas the user hasn't asked for are under Open items.
 
 **New in v0.22.0 (2026-09-29): smoother panels, floating chips, page headers** (the user found the
