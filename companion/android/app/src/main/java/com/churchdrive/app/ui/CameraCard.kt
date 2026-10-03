@@ -227,14 +227,15 @@ private fun CameraViewer(
                 val white = ToneColors(Color.Black, Color.White, Color.White, Color.Black)
                 val canListen = mode == "webrtc" || mode == "hls"
                 Column(modifier = Modifier.padding(horizontal = 8.dp)) {
-                    IconRow(
+                    TileRow(
                         buildList {
-                            add(IconItem(if (muted) "mdi:volume-off" else "mdi:volume-high", if (muted) "Unmute" else "Mute", !muted && canListen) { if (canListen) muted = !muted })
-                            if (button != null) add(IconItem("mdi:camera-retake", "New snapshot", false) { call("button", "press", button, data()) })
-                            if (eventsBase != null) add(IconItem("mdi:history", "Events", false) { showEvents = true })
+                            add(TileItem(if (muted) "mdi:volume-off" else "mdi:volume-high", if (muted) "Unmute" else "Mute", !muted && canListen) { if (canListen) muted = !muted })
+                            if (button != null) add(TileItem(IconMap.of("camera", "snapshot", "mdi:camera-retake"), "New snapshot", false) { call("button", "press", button, data()) })
+                            if (eventsBase != null) add(TileItem(IconMap.of("camera", "events", "mdi:history"), "Events", false) { showEvents = true })
                             if (light != null) {
                                 val on = entities[light]?.state == "on"
-                                add(IconItem(if (on) "mdi:lightbulb-on" else "mdi:lightbulb-outline", if (on) "Light off" else "Light on", on) { call("light", "toggle", light, data()) })
+                                val lightName = entities[light]?.friendlyName?.replace(Regex(" light$", RegexOption.IGNORE_CASE), "") ?: "Light"
+                                add(TileItem(if (on) "mdi:lightbulb-on" else "mdi:lightbulb-outline", "$lightName ${if (on) "on" else "off"}", on) { call("light", "toggle", light, data()) })
                             }
                         },
                         white, Color.White,

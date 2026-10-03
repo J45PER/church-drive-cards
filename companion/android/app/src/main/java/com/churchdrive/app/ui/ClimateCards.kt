@@ -102,15 +102,38 @@ fun FanCard(config: JSONObject, entities: Map<String, EntityState>, call: CallSe
             }
             if (room != null) Text("${temp(room)}°", style = MaterialTheme.typography.titleLarge)
         }
-        val icons = fanPresetIcons(presets)
-        val items = buildList {
-            add(IconItem("mdi:power", "Off", !on) { call("fan", "turn_off", id, data()) })
-            if (presets.isEmpty()) add(IconItem("mdi:fan", "On", on) { call("fan", "turn_on", id, data()) })
-            presets.forEach { p ->
-                add(IconItem(icons[p] ?: "mdi:fan", presetLabel(p), on && preset == p) { call("fan", "set_preset_mode", id, data("preset_mode" to p)) })
+        val speeds = fanSpeeds(fan)
+        val percentage = fan?.num("percentage") ?: 0.0
+        val current = if (on) speeds.firstOrNull { sp -> if (sp.preset != null) sp.preset == preset else Math.abs(percentage - (sp.percentage ?: 0)) < 5 } else null
+        val others = presets.filter { speedNumber(it) == null }
+        val canOscillate = fan?.str("oscillating") != null || ((fan?.num("supported_features")?.toInt() ?: 0) and 2) == 2
+        // Row one: Off and the speeds. Row two: the other modes and Oscillate. As on the dashboard.
+        if (config.optBoolean("show_speeds", true)) {
+            TileRow(
+                buildList {
+                    add(TileItem("mdi:power", "Off", !on) { call("fan", "turn_off", id, data()) })
+                    speeds.forEachIndexed { i, sp ->
+                        add(TileItem(fanSpeedIcon(i, speeds.size), "${sp.n}", current === sp) {
+                            if (sp.preset != null) call("fan", "set_preset_mode", id, data("preset_mode" to sp.preset))
+                            else call("fan", "set_percentage", id, data("percentage" to (sp.percentage ?: 0)))
+                        })
+                    }
+                },
+                tone, tone.onContainer, enabled, perRow = 4,
+            )
+        }
+        val second = buildList {
+            if (config.optBoolean("show_presets", true)) {
+                others.forEach { p -> add(TileItem(fanPresetIcon(p), presetLabel(p), on && preset == p) { call("fan", "set_preset_mode", id, data("preset_mode" to p)) }) }
+            }
+            if (config.optBoolean("show_oscillate", true) && canOscillate) {
+                val oscillating = fan?.attributes?.optBoolean("oscillating", false) == true
+                add(TileItem(IconMap.of("fan", "oscillate", "mdi:arrow-oscillating"), "Oscillate", on && oscillating) {
+                    call("fan", "oscillate", id, data("oscillating" to !oscillating))
+                })
             }
         }
-        IconRow(items, tone, tone.onContainer, enabled)
+        TileRow(second, tone, tone.onContainer, enabled, perRow = 4)
     }
 }
 
@@ -143,14 +166,16 @@ fun AirPurifierCard(config: JSONObject, entities: Map<String, EntityState>, call
             }
         }
         if (allergen != null) Text("Allergen index ${allergen.roundToInt()}", style = MaterialTheme.typography.bodyMedium)
-        val items = buildList {
-            add(IconItem("mdi:power", "Off", !on) { call("fan", "turn_off", id, data()) })
-            if (presets.isEmpty()) add(IconItem("mdi:air-purifier", "On", on) { call("fan", "turn_on", id, data()) })
-            presets.forEach { p ->
-                add(IconItem(purifierModeIcon(p), presetLabel(p), on && preset == p) { call("fan", "set_preset_mode", id, data("preset_mode" to p)) })
-            }
-        }
-        IconRow(items, tone, tone.onContainer, enabled)
+        TileRow(
+            buildList {
+                add(TileItem("mdi:power", "Off", !on) { call("fan", "turn_off", id, data()) })
+                if (presets.isEmpty()) add(TileItem("mdi:air-purifier", "On", on) { call("fan", "turn_on", id, data()) })
+                presets.forEach { p ->
+                    add(TileItem(purifierModeIcon(p), presetLabel(p), on && preset == p) { call("fan", "set_preset_mode", id, data("preset_mode" to p)) })
+                }
+            },
+            tone, tone.onContainer, enabled, perRow = 4, column = true,
+        )
         for (i in 0 until (filters?.length() ?: 0)) {
             val f = filters?.optJSONObject(i) ?: continue
             val left = entities[f.optString("entity")]?.state?.toDoubleOrNull() ?: continue
@@ -197,11 +222,13 @@ fun CoAlarmCard(config: JSONObject, entities: Map<String, EntityState>, call: Ca
         ).joinToString(" · ")
         if (facts.isNotEmpty()) Text(facts, style = MaterialTheme.typography.bodyMedium)
         if (test != null || mute != null) {
-            val items = buildList {
-                if (test != null) add(IconItem("mdi:bell-ring", "Test", false) { call("button", "press", test, data()) })
-                if (mute != null) add(IconItem("mdi:volume-off", "Mute", alarm) { call("button", "press", mute, data()) })
-            }
-            IconRow(items, tone, tone.onContainer)
+            TileRow(
+                buildList {
+                    if (test != null) add(TileItem(IconMap.of("co", "test", "mdi:bell-ring"), "Test", false) { call("button", "press", test, data()) })
+                    if (mute != null) add(TileItem(IconMap.of("co", "mute", "mdi:volume-off"), "Mute", alarm) { call("button", "press", mute, data()) })
+                },
+                tone, tone.onContainer,
+            )
         }
     }
 }
@@ -239,11 +266,11 @@ fun CoverCard(config: JSONObject, entities: Map<String, EntityState>, call: Call
                 enabled = enabled,
             )
         }
-        IconRow(
+        TileRow(
             listOf(
-                IconItem("mdi:arrow-up", "Open", cover?.state == "open") { call("cover", "open_cover", id, data()) },
-                IconItem("mdi:stop", "Stop", false) { call("cover", "stop_cover", id, data()) },
-                IconItem("mdi:arrow-down", "Close", cover?.state == "closed") { call("cover", "close_cover", id, data()) },
+                TileItem(IconMap.of("cover", "open", "mdi:arrow-up"), "Open", cover?.state == "open") { call("cover", "open_cover", id, data()) },
+                TileItem(IconMap.of("cover", "stop", "mdi:stop"), "Stop", false) { call("cover", "stop_cover", id, data()) },
+                TileItem(IconMap.of("cover", "close", "mdi:arrow-down"), "Close", cover?.state == "closed") { call("cover", "close_cover", id, data()) },
             ),
             tone, tone.onContainer, enabled,
         )

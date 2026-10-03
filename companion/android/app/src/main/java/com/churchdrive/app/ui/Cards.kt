@@ -392,19 +392,19 @@ fun ClimateCard(
         ).joinToString(" · ")
         if (extra.isNotEmpty()) Text(extra, style = MaterialTheme.typography.bodyMedium)
         val eco = climate?.str("preset_mode") == "eco"
-        IconRow(
+        TileRow(
             (quick ?: DEFAULT_QUICK).map { q ->
                 val selected = when {
                     q.hvacMode != null -> climate?.state == q.hvacMode && (q.hvacMode == "off" || !eco)
                     q.presetMode != null -> climate?.str("preset_mode") == q.presetMode && climate?.state != "off"
                     else -> false
                 }
-                IconItem(quickSettingIcon(q), q.name, selected) {
+                TileItem(quickSettingIcon(q), q.name, selected) {
                     if (q.hvacMode != null) call("climate", "set_hvac_mode", id, data("hvac_mode" to q.hvacMode))
                     else if (q.presetMode != null) call("climate", "set_preset_mode", id, data("preset_mode" to q.presetMode))
                 }
             },
-            tone, tone.onContainer, enabled,
+            tone, tone.onContainer, enabled, perRow = 5,
         )
     }
 }
@@ -491,10 +491,10 @@ fun ChargerCard(entities: Map<String, EntityState>, call: CallService) {
             }
         }
         val teal = toneColors(Tone.Teal)
-        IconRow(
-            mode?.options().orEmpty().map { option ->
-                IconItem(chargerModeIcon(option), option, mode?.state == option) {
-                    call("select", "select_option", ZAPPI_MODE, data("option" to option))
+        TileRow(
+            chargerModes(mode?.options().orEmpty()).map { m ->
+                TileItem(m.icon, m.name, mode?.state == m.key) {
+                    call("select", "select_option", ZAPPI_MODE, data("option" to m.key))
                 }
             },
             teal, tone.onContainer, mode?.available == true,
