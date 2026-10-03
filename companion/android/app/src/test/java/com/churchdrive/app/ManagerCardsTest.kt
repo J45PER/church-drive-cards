@@ -54,7 +54,7 @@ class ManagerCardsTest {
     fun watchedDevicesListTroubleFirstWithWhenTheyWereHeard() {
         val now = java.time.Instant.parse("2026-10-03T12:00:00Z").toEpochMilli()
         val devices = JSONObject()
-            .put("fan.a", JSONObject().put("name", "Fan A").put("status", "ok").put("last_heard", "2026-10-03T11:59:30Z"))
+            .put("fan.a", JSONObject().put("name", "Fan A").put("status", "ok").put("last_heard", "2026-10-03T11:59:50Z"))
             .put("sensor.b", JSONObject().put("name", "Sensor B").put("status", "stale").put("reason", "Old readings").put("last_heard", "2026-10-03T10:00:00Z").put("usual_gap", 900).put("fixes", JSONArray().put("Refreshed")))
         val list = watchedDevices(map(e("sensor.church_drive_device_health", "1", "devices" to devices)), now)
         assertEquals(listOf("Sensor B", "Fan A"), list.map { it.name })
