@@ -8,6 +8,7 @@ import com.churchdrive.app.widget.WidgetPages
 import com.churchdrive.app.widget.alarmInDelay
 import com.churchdrive.app.widget.alarmStatus
 import com.churchdrive.app.widget.fansFor
+import com.churchdrive.app.widget.registryIcon
 import com.churchdrive.app.widget.chooseTiles
 import com.churchdrive.app.widget.chargerCard
 import com.churchdrive.app.widget.WidgetTile
@@ -261,5 +262,13 @@ class WidgetModel2Test {
         assertEquals(listOf("Stop", "Eco+", "Fast"), chooseTiles(tiles, listOf("Fast", "Eco+", "Eco"), 3, listOf("Stop")).map { it.label })
         // Nothing chosen: the first ones fill it.
         assertEquals(listOf("Stop", "Eco"), chooseTiles(tiles, emptyList(), 2, listOf("Stop")).map { it.label })
+    }
+
+    @Test
+    fun theIconSetOnAnEntityInHomeAssistantIsFound() {
+        val result = JSONObject("""{"entities":[{"ei":"cover.a","ic":"mdi:blinds-horizontal"},{"ei":"cover.b"},{"ei":"cover.c","ic":"mdi:something"}]}""")
+        assertEquals("mdi:blinds-horizontal", registryIcon(result, "cover.a"))
+        assertNull(registryIcon(result, "cover.b"))
+        assertNull(registryIcon(null, "cover.a"))
     }
 }

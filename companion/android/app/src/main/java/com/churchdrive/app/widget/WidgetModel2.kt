@@ -147,6 +147,19 @@ fun coverIcon(deviceClass: String?, state: String?): String {
     }
 }
 
+/** The icon set on an entity in Home Assistant (its entity settings), from `config/entity_registry/list_for_display`. */
+fun registryIcon(result: Any?, entity: String): String? {
+    val list = (result as? JSONObject)?.optJSONArray("entities") ?: return null
+    for (i in 0 until list.length()) {
+        val o = list.optJSONObject(i) ?: continue
+        if (o.optString("ei") == entity) return o.optString("ic").takeIf { it.startsWith("mdi:") }
+    }
+    return null
+}
+
+/** The registry's icons are asked for by the cards that show one entity's icon. */
+fun registryAsk(): Ask = Ask.Request("registry", "config/entity_registry/list_for_display", JSONObject())
+
 /** The icon the dashboard gives an entity on one of its cards (a blind's `icon`), if it says one. */
 fun dashboardIcon(panels: Map<String, List<com.churchdrive.app.ui.PanelSpec>>, entity: String): String? =
     panels.values.asSequence().flatten().flatMap { it.cards.asSequence() }

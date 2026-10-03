@@ -484,8 +484,10 @@ class CameraGlanceWidget : SceneWidget("Camera") {
 // ---------------------------------------------------------------------------------------------- Vacuum, charger, fan, purifier, blinds
 
 class VacuumGlanceWidget : SceneWidget("Vacuum") {
+    override fun asks(context: Context, config: JSONObject) = listOf(registryAsk())
+
     @Composable
-    override fun Draw(s: WidgetScene) = CardContent(vacuumCard(s.data.entities).let { c -> c.copy(icon = dashboardIcon(s.data.panels, VACUUM_ENTITY) ?: c.icon) }, s.p, s.size, s.width, s.height, chosen = WidgetConfig.strings(s.config, "buttons"))
+    override fun Draw(s: WidgetScene) = CardContent(vacuumCard(s.data.entities).let { c -> c.copy(icon = dashboardIcon(s.data.panels, VACUUM_ENTITY) ?: registryIcon(s.data.extras["registry"], VACUUM_ENTITY) ?: c.icon) }, s.p, s.size, s.width, s.height, chosen = WidgetConfig.strings(s.config, "buttons"))
 }
 
 class ChargerGlanceWidget : SceneWidget("Car charger") {
@@ -495,18 +497,22 @@ class ChargerGlanceWidget : SceneWidget("Car charger") {
 
 /** One card for any air device you pick: a fan, an air purifier or an air conditioner. */
 class FanGlanceWidget : SceneWidget("Fan and air") {
+    override fun asks(context: Context, config: JSONObject) = listOf(registryAsk())
+
     @Composable
     override fun Draw(s: WidgetScene) {
         val id = s.entity("fan").ifBlank { airDevices(s.data.entities).firstOrNull()?.entityId.orEmpty() }
-        CardContent(airCard(s.data.entities, id).let { c -> c.copy(icon = dashboardIcon(s.data.panels, id) ?: c.icon) }, s.p, s.size, s.width, s.height, chosen = WidgetConfig.strings(s.config, "buttons"))
+        CardContent(airCard(s.data.entities, id).let { c -> c.copy(icon = dashboardIcon(s.data.panels, id) ?: registryIcon(s.data.extras["registry"], id) ?: c.icon) }, s.p, s.size, s.width, s.height, chosen = WidgetConfig.strings(s.config, "buttons"))
     }
 }
 
 class BlindsGlanceWidget : SceneWidget("Blinds") {
+    override fun asks(context: Context, config: JSONObject) = listOf(registryAsk())
+
     @Composable
     override fun Draw(s: WidgetScene) {
         val id = s.entity("cover").ifBlank { s.data.entities.keys.firstOrNull { it.startsWith("cover.") }.orEmpty() }
-        CardContent(coverCard(s.data.entities[id], id).let { c -> c.copy(icon = dashboardIcon(s.data.panels, id) ?: c.icon) }, s.p, s.size, s.width, s.height, labelled = false, chosen = WidgetConfig.strings(s.config, "buttons"))
+        CardContent(coverCard(s.data.entities[id], id).let { c -> c.copy(icon = dashboardIcon(s.data.panels, id) ?: registryIcon(s.data.extras["registry"], id) ?: c.icon) }, s.p, s.size, s.width, s.height, labelled = false, chosen = WidgetConfig.strings(s.config, "buttons"))
     }
 }
 
