@@ -29,6 +29,8 @@ class WidgetData(
     val areaNames: Map<String, String>,
     /** The answers to what the widget asked for besides the states (to-do items, a forecast), by key. */
     val extras: Map<String, Any?> = emptyMap(),
+    /** The dashboard's panels by page (the To-do page's, for the colours of its lists). */
+    val panels: Map<String, List<com.churchdrive.app.ui.PanelSpec>> = emptyMap(),
 )
 
 /** Something a widget needs besides the states: a command's answer, or the first event of a subscription (the forecast). */
@@ -70,6 +72,7 @@ object WidgetSource {
                 (lovelace as? JSONObject)?.let { DashboardLights.parse(it) } ?: LightLayout.Fallback,
                 DashboardLights.areaNames(areas),
                 extras,
+                (lovelace as? JSONObject)?.let { runCatching { com.churchdrive.app.ui.DashboardPanels.parse(it) }.getOrNull() }.orEmpty(),
             )
         } finally {
             client.disconnect()

@@ -88,7 +88,6 @@ class WidgetConfigActivity : ComponentActivity() {
                             "BlindsWidgetReceiver" -> BlindsGlanceWidget()
                             "CameraWidgetReceiver" -> CameraGlanceWidget()
                             "ActivityWidgetReceiver" -> ActivityGlanceWidget()
-                            "TodoWidgetReceiver" -> MyTodoGlanceWidget()
                             "GaugeWidgetReceiver" -> GaugeGlanceWidget()
                             "ClusterWidgetReceiver" -> ClusterGlanceWidget()
                             else -> null
@@ -145,7 +144,6 @@ private fun ConfigScreen(kind: String, existing: JSONObject, onSave: (JSONObject
         "BlindsWidgetReceiver" -> "Blinds widget"
         "CameraWidgetReceiver" -> "Camera widget"
         "ActivityWidgetReceiver" -> "Doorbell and movement widget"
-        "TodoWidgetReceiver" -> "To-do widget"
         "GaugeWidgetReceiver" -> "Gauge widget"
         "ClusterWidgetReceiver" -> "Gauge cluster widget"
         "LightsWidgetReceiver" -> "Lights widget"
@@ -247,12 +245,12 @@ private fun ConfigScreen(kind: String, existing: JSONObject, onSave: (JSONObject
 /** The kinds that ask for one thing, and the name its choice is kept under. */
 private val SINGLE_KEYS = mapOf(
     "FanWidgetReceiver" to "fan", "BlindsWidgetReceiver" to "cover", "CameraWidgetReceiver" to "camera",
-    "ActivityWidgetReceiver" to "base", "TodoWidgetReceiver" to "list", "GaugeWidgetReceiver" to "reading",
+    "ActivityWidgetReceiver" to "base", "GaugeWidgetReceiver" to "reading",
 )
 
 private val SINGLE_PROMPT = mapOf(
     "FanWidgetReceiver" to "Which fan, air purifier or air conditioner?", "BlindsWidgetReceiver" to "Which blind (or group)?",
-    "CameraWidgetReceiver" to "Which camera?", "ActivityWidgetReceiver" to "Which doorbell or camera zone?", "TodoWidgetReceiver" to "Which list?",
+    "CameraWidgetReceiver" to "Which camera?", "ActivityWidgetReceiver" to "Which doorbell or camera zone?",
     "GaugeWidgetReceiver" to "Which reading? Heating also gets − and + for the target.",
 )
 

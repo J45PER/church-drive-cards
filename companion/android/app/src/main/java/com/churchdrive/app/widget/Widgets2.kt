@@ -329,7 +329,57 @@ open class TodoGlanceWidget(private val heading: String, private val fixedList: 
     }
 }
 
-class MyTodoGlanceWidget : TodoGlanceWidget("To-do", null)
+/** Everything waiting for the signed-in person across the To-do page's categories, each in its colour. No setup. */
+class MyTodoGlanceWidget : SceneWidget("To-do") {
+    override fun asks(context: Context, config: JSONObject) =
+        TodoLists.lists(Session(context).personName).map { (_, list) -> Ask.Request("todo:$list", "todo/item/list", data("entity_id" to list)) }
+
+    @Composable
+    override fun Draw(s: WidgetScene) {
+        val results = TodoLists.lists(s.me).associate { (_, list) -> list to parseTodoItems(s.data.extras["todo:$list"]) }
+        val entries = TodoLists.entries(s.me, results, TodoLists.tones(s.data.panels))
+        val p = s.p
+        val tone = p.tone(if (entries.isEmpty()) Tone.Green else Tone.Purple)
+        val sub = if (entries.isEmpty()) "All done" else "${entries.size} to do"
+        val icon = "mdi:format-list-checks"
+        when (s.size) {
+            SizeClass.Strip -> WidgetCard(p, padding = 10.dp) {
+                Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    IconCircle(icon, tone, 40.dp)
+                    Spacer(GlanceModifier.width(10.dp))
+                    Column(GlanceModifier.defaultWeight()) {
+                        Text(entries.firstOrNull()?.summary ?: "To-do", style = title(p), maxLines = 1)
+                        Text(if (entries.size > 1) "$sub · next: ${entries.first().category}" else sub, style = line(p.tone(entries.firstOrNull()?.tone ?: Tone.Green).accent), maxLines = 1)
+                    }
+                }
+            }
+            SizeClass.Square -> WidgetCard(p, padding = 12.dp) {
+                IconCircle(icon, tone, 40.dp)
+                Spacer(GlanceModifier.height(6.dp))
+                Text("To-do", style = title(p), maxLines = 1)
+                Text(sub, style = line(tone.accent), maxLines = 1)
+                entries.firstOrNull()?.let { Text(it.summary, style = TextStyle(color = cp(p.muted), fontSize = 12.sp), maxLines = 2) }
+            }
+            else -> WidgetCard(p, padding = 12.dp, top = true) {
+                HeaderRow(icon, "To-do", sub, p, tone)
+                Spacer(GlanceModifier.height(6.dp))
+                // Each task on two lines, with a bar in its category's colour: its name, then its category and when it is due.
+                val rows = (((s.height.value - 24f - 44f - 6f) / 40f).toInt()).coerceIn(1, 12)
+                entries.take(rows).forEach { e ->
+                    val t = p.tone(e.tone)
+                    Row(GlanceModifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(GlanceModifier.width(4.dp).height(32.dp).cornerRadius(2.dp).background(cp(t.accent))) {}
+                        Spacer(GlanceModifier.width(8.dp))
+                        Column(GlanceModifier.defaultWeight()) {
+                            Text(e.summary, style = TextStyle(color = cp(p.onSurface), fontSize = 14.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+                            Text(listOf(e.category, e.line).filter { it.isNotBlank() }.joinToString(" · "), style = TextStyle(color = cp(t.accent), fontSize = 11.sp), maxLines = 1)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 class JobsGlanceWidget : TodoGlanceWidget("Jobs", "todo.cleaning")
 
 // ---------------------------------------------------------------------------------------------- Camera

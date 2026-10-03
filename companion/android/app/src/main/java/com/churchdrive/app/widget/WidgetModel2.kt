@@ -26,6 +26,7 @@ import com.churchdrive.app.ui.purifierModeIcon
 import com.churchdrive.app.ui.qualityTone
 import com.churchdrive.app.ui.qualityWord
 import com.churchdrive.app.ui.taskLine
+import com.churchdrive.app.ui.myTodoList
 import com.churchdrive.app.ui.vacuumSummary
 import com.churchdrive.app.ui.vacuumTone
 import org.json.JSONObject
@@ -310,6 +311,47 @@ data class TodoRow(val uid: String, val summary: String, val line: String)
 fun todoRows(items: List<TodoItem>, max: Int): List<TodoRow> =
     items.filter { !it.done }.sortedWith(compareBy<TodoItem>({ it.due == null }, { it.due })).take(max)
         .map { TodoRow(it.uid, it.summary, taskLine(it)) }
+
+/** A task for the To-do widget: from which of the To-do page's categories, and in that category's colour. */
+data class TodoEntry(val uid: String, val summary: String, val line: String, val tone: Tone, val category: String, val due: String?)
+
+/** The To-do page's categories: the list behind each, and the colour it gets unless the dashboard says another. */
+object TodoLists {
+    private val CATEGORIES = listOf(
+        Triple("My to-do", "mine", Tone.Purple),
+        Triple("Shared", "todo.priorities_everyone", Tone.Blue),
+        Triple("Cleaning", "todo.cleaning", Tone.Teal),
+        Triple("From the house", "todo.priorities_automatic", Tone.Purple),
+    )
+
+    /** The lists to read for this person (their own among them), by category name. */
+    fun lists(me: String?): List<Pair<String, String>> =
+        CATEGORIES.mapNotNull { (name, list, _) -> (if (list == "mine") myTodoList(me) else list)?.let { name to it } }
+
+    /** Each category's colour as the dashboard's To-do page has it: its cards' colour, else the panel's. */
+    fun tones(panels: Map<String, List<com.churchdrive.app.ui.PanelSpec>>): Map<String, Tone> {
+        val todo = panels["todo"].orEmpty()
+        return CATEGORIES.associate { (name, _, default) ->
+            val panel = todo.firstOrNull { it.title.equals(name, ignoreCase = true) }
+            val fromCard = panel?.cards?.firstNotNullOfOrNull { com.churchdrive.app.ui.toneFromColour(it.config.optString("color")) }
+            name to (fromCard ?: com.churchdrive.app.ui.toneFromColour(panel?.color) ?: default)
+        }
+    }
+
+    /**
+     * What is waiting for this person across the categories, soonest first. The house's and the cleaning jobs are only theirs
+     * (or everyone's): each says who it is for in its note.
+     */
+    fun entries(me: String?, results: Map<String, List<TodoItem>>, tones: Map<String, Tone>, now: java.time.LocalDateTime = java.time.LocalDateTime.now()): List<TodoEntry> {
+        val first = me?.trim()?.substringBefore(' ')
+        val order = CATEGORIES.map { it.first }
+        return lists(me).flatMap { (category, list) ->
+            results[list].orEmpty().filter { !it.done }
+                .filter { category == "My to-do" || category == "Shared" || com.churchdrive.app.ui.houseTaskFor(com.churchdrive.app.ui.houseTask(it), first) }
+                .map { TodoEntry(it.uid, it.summary, taskLine(it, now), tones[category] ?: Tone.Purple, category, it.due) }
+        }.sortedWith(compareBy<TodoEntry>({ it.due == null }, { it.due }, { order.indexOf(it.category) }))
+    }
+}
 
 /** One day of the forecast for the Weather widget. */
 data class Day(val label: String, val temp: String, val condition: String)

@@ -8,6 +8,7 @@ import com.churchdrive.app.widget.WidgetPages
 import com.churchdrive.app.widget.alarmInDelay
 import com.churchdrive.app.widget.alarmStatus
 import com.churchdrive.app.widget.fansFor
+import com.churchdrive.app.widget.TodoLists
 import com.churchdrive.app.widget.airCard
 import com.churchdrive.app.widget.airDevices
 import com.churchdrive.app.widget.gridFor
@@ -190,5 +191,27 @@ class WidgetModel2Test {
         assertEquals("Cool · now 24.0° · set 21.0°", ac.sub)
         assertTrue(airCard(entities, "fan.air_purifier").sub.startsWith("Auto").not() || true)
         assertEquals("Desk fan", airCard(entities, "fan.desk").title)
+    }
+
+    @Test
+    fun todoGathersThePersonsTasksFromEveryCategory() {
+        assertEquals(
+            listOf("My to-do" to "todo.priorities_jamie", "Shared" to "todo.priorities_everyone", "Cleaning" to "todo.cleaning", "From the house" to "todo.priorities_automatic"),
+            TodoLists.lists("Jamie Smith"),
+        )
+        val results = mapOf(
+            "todo.priorities_jamie" to listOf(TodoItem("1", "Call the bank", false, "2026-10-05", null)),
+            "todo.priorities_everyone" to listOf(TodoItem("2", "Buy milk", false, null, null)),
+            "todo.cleaning" to listOf(
+                TodoItem("3", "Dust bedroom", false, "2026-10-04", "Every 2 weeks: Sun 10:00 · for Jamie"),
+                TodoItem("4", "Hoover hall", false, "2026-10-03", "Every week: Sat 10:00 · for Hayley"),
+            ),
+            "todo.priorities_automatic" to listOf(TodoItem("5", "Change battery", false, "2026-10-06", "Battery · Hall sensor · for Everyone")),
+        )
+        val tones = TodoLists.tones(emptyMap())
+        val entries = TodoLists.entries("Jamie Smith", results, tones, java.time.LocalDateTime.of(2026, 10, 3, 12, 0))
+        assertEquals(listOf("Dust bedroom", "Call the bank", "Change battery", "Buy milk"), entries.map { it.summary })
+        assertEquals(listOf("Cleaning", "My to-do", "From the house", "Shared"), entries.map { it.category })
+        assertEquals(Tone.Teal, entries.first().tone)
     }
 }
