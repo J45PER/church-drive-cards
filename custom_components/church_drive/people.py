@@ -67,7 +67,7 @@ class People:
     def __init__(self, hass: HomeAssistant) -> None:
         self.hass = hass
         self._store: Store = Store(hass, STORE_VERSION, "church_drive.people")
-        self._data: dict[str, Any] = {"assign": {}, "phones_off": {}, "places": {}, "seeded": False}
+        self._data: dict[str, Any] = {"assign": {}, "phones_off": {}, "places": {}, "cars": {}, "seeded": False}
         self._admins: dict[str, bool] = {}
         self._owner: str | None = None
         self._unsubs: list = []
@@ -234,6 +234,7 @@ class People:
                     "place": place,
                     "zone": zone,
                     "places": places,
+                    "cars": list(self._data.get("cars", {}).get(st.entity_id, [])),
                     "picture": st.attributes.get("entity_picture"),
                     "list": f"todo.priorities_{slugify(first)}",
                     "phones": phones,
@@ -281,6 +282,14 @@ class People:
             if str(p.get("zone", "")).startswith("zone.") and p.get("zone") != "zone.home"
         ]
         self._data.setdefault("places", {})[person] = clean
+        await self._async_save()
+        self._changed()
+
+    # ---- cars: whose car is whose (a car nobody has is everyone's) ------
+
+    async def async_set_cars(self, person: str, cars: list[str]) -> None:
+        clean = list(dict.fromkeys(str(c) for c in cars if c))
+        self._data.setdefault("cars", {})[person] = clean
         await self._async_save()
         self._changed()
 

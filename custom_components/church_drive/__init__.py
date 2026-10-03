@@ -82,6 +82,7 @@ from .const import (
     WS_CAMERA_SETTINGS,
     WS_PEOPLE_PHONE,
     WS_PEOPLE_PLACES,
+    WS_PEOPLE_CARS,
     WS_SCENE_DELETE,
     WS_SCENE_PREVIEW,
     WS_SCENE_SAVE,
@@ -356,6 +357,27 @@ async def ws_people_places(
     connection.send_result(msg["id"], {"people": people.people()})
 
 
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_PEOPLE_CARS,
+        vol.Required("person"): cv.entity_id,
+        vol.Required("cars"): [cv.string],
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_people_cars(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Set a person's cars (car device ids)."""
+    people = _people(hass)
+    if people is None:
+        connection.send_error(msg["id"], "not_ready", "People and notifications aren't running")
+        return
+    await people.async_set_cars(msg["person"], msg["cars"])
+    connection.send_result(msg["id"], {"people": people.people()})
+
+
 def _events(hass: HomeAssistant) -> CameraEvents | None:
     return hass.data.get(DOMAIN, {}).get("events")
 
@@ -517,7 +539,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         for command in (
             ws_library, ws_icons, ws_icon_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_phone,
-            ws_people_places, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_maps, ws_maps_search,
+            ws_people_places, ws_people_cars, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_maps, ws_maps_search,
         ):
             websocket_api.async_register_command(hass, command)
     # The version in the URL makes browsers fetch the new bundle after an

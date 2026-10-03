@@ -1,8 +1,9 @@
 // Car Card: each car's battery, range and charging, from the car's own
 // integration (Vauxhall/Peugeot/… via Stellantis Vehicles, VW group via VW Group
-// Connect), wherever it's charging. Cars can be given to people: with "Only my
-// cars" on, each person sees just theirs (a car with nobody picked is everyone's),
-// and the card hides itself for someone with none.
+// Connect), wherever it's charging. Whose car is whose is set in Manager ›
+// People (kept by the Church Drive integration): with "Only my cars" on, each
+// person sees just theirs (a car nobody has is everyone's), and the card hides
+// itself for someone with none.
 
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
@@ -66,7 +67,6 @@ export const CarCardEditor = createFormEditor({
                 fields: {
                   device: { label: 'Car', required: true, selector: { device: { filter: CAR_PLATFORMS.map((integration) => ({ integration })) } } },
                   name: { label: 'Name (optional)', selector: { text: {} } },
-                  people: { label: 'Whose car (empty for everyone)', selector: { entity: { domain: 'person', multiple: true } } },
                 },
               },
             },
@@ -77,11 +77,11 @@ export const CarCardEditor = createFormEditor({
   labels: {
     title: 'Title (optional)',
     only_mine: 'Only show the signed-in person their own cars',
-    cars: 'Cars (empty for every car)',
+    cars: 'Cars to show (empty for every car)',
     demo: 'Show pretend cars (for Design Presets)',
   },
   helpers: {
-    cars: 'Cars come from their own integrations (Stellantis Vehicles for Vauxhall, VW Group Connect for VW). Pick who each one belongs to; with nothing listed, every car shows to everyone.',
+    cars: "Cars come from their own integrations (Stellantis Vehicles for Vauxhall, VW Group Connect for VW). Whose car is whose is set in Manager › People.",
   },
 });
 
@@ -109,14 +109,17 @@ export class CarCard extends HTMLElement {
     if (c.demo) return DEMO_CARS;
     const hass = this._hass;
     const all = carDevices(hass);
+    // Owners from the Church Drive people sensor ({ people: [{ entity_id, cars }] }).
+    const ppl = (hass.states['sensor.church_drive_people'] || { attributes: {} }).attributes.people || [];
+    const owners = (dev) => ppl.filter((p) => (p.cars || []).includes(dev)).map((p) => p.entity_id);
     const list = Array.isArray(c.cars) && c.cars.length
       ? c.cars
           .map((x) => {
             const d = all.find((y) => y.device === x.device);
-            return d ? { ...d, name: x.name || d.name, people: x.people || [] } : null;
+            return d ? { ...d, name: x.name || d.name, people: x.people && x.people.length ? x.people : owners(d.device) } : null;
           })
           .filter(Boolean)
-      : all.map((d) => ({ ...d, people: [] }));
+      : all.map((d) => ({ ...d, people: owners(d.device) }));
     const me = this._me();
     const mine = c.only_mine !== false ? list.filter((x) => !x.people.length || x.people.includes(me)) : list;
     const st = (id) => (id && hass.states[id]) || null;
@@ -194,7 +197,7 @@ export class CarCard extends HTMLElement {
     this._sig = sig;
     const barCol = (p) => (p == null ? KIT_COLOR.off : p < 20 ? '#ef5350' : p < 40 ? '#ffa726' : CAR_TEAL);
     this._list.innerHTML = empty
-      ? `<div class="ck-sub">No cars to show here. Cars come from their own integrations, and can be given to people in this card's settings.</div>`
+      ? `<div class="ck-sub">No cars to show here. Cars come from their own integrations, and are given to people in Manager › People.</div>`
       : cars
           .map((x) => {
             const tag = x.charging ? ['Charging', CAR_TEAL] : x.plugged ? ['Plugged in', '#42a5f5'] : x.where ? [x.where, 'var(--secondary-text-color)'] : null;
