@@ -88,28 +88,31 @@ class ServiceCallback : ActionCallback {
 
 private fun provider(c: Color) = ColorProvider(c)
 
-/** The card's heading row: a tinted circle with the icon, a title and a line under it, and anything at the end. */
+/**
+ * The card's heading row, as the app's Home panels have it: an icon in a circle tinted with the section's colour
+ * ([tone]), the title, and a line under it in that colour.
+ */
 @Composable
-fun CardHeader(icon: String, title: String, subtitle: String, colours: ToneColors, trailing: @Composable () -> Unit = {}) {
+fun CardHeader(icon: String, title: String, subtitle: String, neutral: ToneColors, tone: ToneColors, trailing: @Composable () -> Unit = {}) {
     Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Box(
-            GlanceModifier.size(44.dp).cornerRadius(22.dp).background(provider(colours.accent.copy(alpha = 0.18f))),
+            GlanceModifier.size(44.dp).cornerRadius(22.dp).background(provider(tone.accent.copy(alpha = 0.18f))),
             contentAlignment = Alignment.Center,
         ) {
-            iconBitmap(icon, colours.accent)?.let { Image(ImageProvider(it), null, GlanceModifier.size(26.dp)) }
+            iconBitmap(icon, tone.accent)?.let { Image(ImageProvider(it), null, GlanceModifier.size(26.dp)) }
         }
         Spacer(GlanceModifier.width(12.dp))
         Column(GlanceModifier.defaultWeight()) {
-            Text(title, style = TextStyle(color = provider(colours.onContainer), fontSize = 18.sp, fontWeight = FontWeight.Bold), maxLines = 1)
-            if (subtitle.isNotBlank()) Text(subtitle, style = TextStyle(color = provider(colours.onContainer.copy(alpha = 0.75f)), fontSize = 12.sp), maxLines = 1)
+            Text(title, style = TextStyle(color = provider(neutral.onContainer), fontSize = 18.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+            if (subtitle.isNotBlank()) Text(subtitle, style = TextStyle(color = provider(tone.accent), fontSize = 13.sp, fontWeight = FontWeight.Medium), maxLines = 1)
         }
         trailing()
     }
 }
 
-/** A row of buttons filling the width, as the app's tiles do: icon over label, the chosen one in the accent colour. */
+/** Buttons filling the width, as the app's tiles do: icon over label; the chosen one in the section's colour ([tone]). */
 @Composable
-fun TileButtons(tiles: List<WidgetTile>, colours: ToneColors, perRow: Int = 4) {
+fun TileButtons(tiles: List<WidgetTile>, neutral: ToneColors, tone: ToneColors, perRow: Int = 4) {
     var i = 0
     Column(GlanceModifier.fillMaxWidth()) {
         tileRowSizes(tiles.size, perRow).forEachIndexed { r, size ->
@@ -118,11 +121,11 @@ fun TileButtons(tiles: List<WidgetTile>, colours: ToneColors, perRow: Int = 4) {
                 repeat(size) { n ->
                     val tile = tiles[i++]
                     if (n > 0) Spacer(GlanceModifier.width(8.dp))
-                    val fg = if (tile.selected) colours.onAccent else colours.onContainer
+                    val fg = if (tile.selected) tone.onAccent else neutral.onContainer
                     Column(
                         GlanceModifier.defaultWeight().height(Ui.TileHeight)
                             .cornerRadius(16.dp)
-                            .background(provider(if (tile.selected) colours.accent else colours.onContainer.copy(alpha = 0.10f)))
+                            .background(provider(if (tile.selected) tone.accent else neutral.onContainer.copy(alpha = 0.10f)))
                             .clickable(serviceAction(tile.domain, tile.service, tile.entity, tile.data)),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalAlignment = Alignment.CenterHorizontally,

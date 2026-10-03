@@ -39,11 +39,12 @@ object WidgetSource {
         val client = HaClient(scope)
         try {
             client.connect(url, token)
-            val states = client.entities.first { it.isNotEmpty() }
+            // Every entity's state has to have arrived: before that, the list holds only what happened to change.
+            client.statesLoaded.first { it }
             val lovelace = ask(client, "lovelace/config", data("url_path" to DashboardLights.DASHBOARD))
             val areas = ask(client, "config/area_registry/list", JSONObject())
             WidgetData(
-                states,
+                client.entities.value,
                 (lovelace as? JSONObject)?.let { DashboardLights.parse(it) } ?: LightLayout.Fallback,
                 DashboardLights.areaNames(areas),
             )

@@ -32,6 +32,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val entities: StateFlow<Map<String, EntityState>> = client.entities
     val userName: StateFlow<String?> = client.userName
     val isAdmin: StateFlow<Boolean> = client.isAdmin
+    val statesLoaded: StateFlow<Boolean> = client.statesLoaded
 
     private val _lights = MutableStateFlow(LightLayout.Fallback)
     val lights: StateFlow<LightLayout> = _lights

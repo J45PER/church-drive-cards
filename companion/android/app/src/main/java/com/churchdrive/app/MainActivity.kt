@@ -72,6 +72,7 @@ class MainActivity : ComponentActivity() {
                         val entities by vm.entities.collectAsStateWithLifecycle()
                         val userName by vm.userName.collectAsStateWithLifecycle()
                         val isAdmin by vm.isAdmin.collectAsStateWithLifecycle()
+                        val statesLoaded by vm.statesLoaded.collectAsStateWithLifecycle()
                         val updateAvailable by vm.updateAvailable.collectAsStateWithLifecycle()
                         val notifyOn by vm.notifyOn.collectAsStateWithLifecycle()
                         val locationOn by vm.locationOn.collectAsStateWithLifecycle()
@@ -95,6 +96,7 @@ class MainActivity : ComponentActivity() {
                                     entities = entities,
                                     userName = userName,
                                     isAdmin = isAdmin,
+                                    statesLoaded = statesLoaded,
                                     updateAvailable = updateAvailable,
                                     account = AccountSettings(
                                         notifyOn = notifyOn,

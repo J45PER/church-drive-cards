@@ -31,6 +31,10 @@ class HaClient(private val scope: CoroutineScope) {
     private val _entities = MutableStateFlow<Map<String, EntityState>>(emptyMap())
     val entities: StateFlow<Map<String, EntityState>> = _entities
 
+    /** True once Home Assistant has sent every entity's state (before that, [entities] holds only what has changed since connecting). */
+    private val _statesLoaded = MutableStateFlow(false)
+    val statesLoaded: StateFlow<Boolean> = _statesLoaded
+
     private val _userName = MutableStateFlow<String?>(null)
     val userName: StateFlow<String?> = _userName
 
@@ -85,6 +89,7 @@ class HaClient(private val scope: CoroutineScope) {
         _entities.value = emptyMap()
         _userName.value = null
         _isAdmin.value = false
+        _statesLoaded.value = false
     }
 
     /**
@@ -152,6 +157,7 @@ class HaClient(private val scope: CoroutineScope) {
                 "auth_ok" -> {
                     pending.clear()
                     subscriptions.clear()
+                    _statesLoaded.value = false
                     _connection.value = ConnectionState.Connected
                     if (light) return
                     webSocket.send(
@@ -180,7 +186,10 @@ class HaClient(private val scope: CoroutineScope) {
                     if (callback != null) {
                         callback(if (msg.optBoolean("success")) msg.opt("result") else null)
                     } else if (msg.optBoolean("success")) when (msg.optInt("id")) {
-                        getStatesId -> _entities.value = parseStates(msg.getJSONArray("result"))
+                        getStatesId -> {
+                            _entities.value = parseStates(msg.getJSONArray("result"))
+                            _statesLoaded.value = true
+                        }
                         userId -> {
                             val me = msg.optJSONObject("result")
                             _userName.value = me?.optString("name")?.takeIf { it.isNotBlank() }

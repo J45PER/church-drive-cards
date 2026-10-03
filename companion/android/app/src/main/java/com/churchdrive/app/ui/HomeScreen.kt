@@ -59,6 +59,7 @@ fun HomeScreen(
     entities: Map<String, EntityState>,
     userName: String?,
     isAdmin: Boolean,
+    statesLoaded: Boolean,
     updateAvailable: Boolean,
     account: AccountSettings,
     lights: LightLayout,
@@ -133,7 +134,8 @@ fun HomeScreen(
         ) {
             if (updateAvailable) UpdateBanner()
             when (connection) {
-                ConnectionState.Connected -> Unit
+                ConnectionState.Connected ->
+                    if (!statesLoaded) Text("Loading the house…", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 ConnectionState.AuthFailed ->
                     Text("Sign-in failed. Check the token.", color = MaterialTheme.colorScheme.error)
                 else -> Text("Connecting…", color = MaterialTheme.colorScheme.onSurfaceVariant)
