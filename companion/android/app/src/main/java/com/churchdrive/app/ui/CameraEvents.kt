@@ -205,6 +205,7 @@ fun panZoom(
  * A 16:9 box with media of its own shape inside, covering the box, as on the dashboard: a square clip fills the
  * width and can be dragged up and down to look around. Pinch or double-tap to zoom.
  */
+@Composable
 fun StageBox(
     aspect: Float,
     modifier: Modifier = Modifier,
