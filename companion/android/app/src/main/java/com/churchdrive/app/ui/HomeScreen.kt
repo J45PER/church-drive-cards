@@ -155,7 +155,7 @@ fun HomeScreen(
             }
 
             if (page == Page.Home) {
-                HomePage(lights, areaNames, panels["home"].orEmpty(), entities, call, onOpen = { page = it })
+                HomePage(lights, areaNames, panels["home"].orEmpty(), entities, registry, call, onOpen = { page = it })
             } else if (page == Page.Lighting) {
                 LightingPage(lights, entities, areaNames, call)
             } else if (page == Page.Security) {
@@ -168,9 +168,7 @@ fun HomeScreen(
                     Page.Energy -> "energy"
                     else -> "todo"
                 }
-                // The app has no media controls: the dashboard's "TVs & speakers" panel is left out.
-                val shown = panels[key].orEmpty().filter { it.title != "TVs & speakers" }
-                DashboardPage(shown, entities, registry, call)
+                DashboardPage(panels[key].orEmpty(), entities, registry, call)
             }
         }
     }
@@ -185,9 +183,8 @@ fun HomeScreen(
             }
         },
         pageContent = { p ->
-            // The app has no media controls: the dashboard's "TVs & speakers" panel is left out.
             val key = if (p == Page.Energy) "energy" else "devices"
-            DashboardPage(panels[key].orEmpty().filter { it.title != "TVs & speakers" }, entities, registry, call)
+            DashboardPage(panels[key].orEmpty(), entities, registry, call)
         },
     )
     }
@@ -203,6 +200,7 @@ private fun HomePage(
     areaNames: Map<String, String>,
     panels: List<PanelSpec>,
     entities: Map<String, EntityState>,
+    registry: Registry,
     call: CallService,
     onOpen: (Page) -> Unit,
 ) {
@@ -237,26 +235,40 @@ private fun HomePage(
         )
     }
 
-    HomePanel("Security", alarmIconName(alarm?.state), alarmTone(alarm?.state), alarmLabel(alarm?.state), Page.Security) {
-        AlarmCard(alarm, call)
-    }
-    // The home's climate quality score (a sensor made in Home Assistant) leads the Climate panel, as on the dashboard.
+    // The panels are the dashboard's own, in its order, so a card added in Home Assistant appears here too. The ones the
+    // app draws its own way (alarm, climate, lights, vacuum) keep that; any other panel shows its cards as they are.
+    val titles = panels.map { it.title }.ifEmpty { listOf("Security", "Climate", "Lights", "Cleaning", "Car charging") }
     val quality = entities[CLIMATE_QUALITY_ENTITY]?.state?.toIntOrNull()
-    HomePanel(
-        "Climate", Page.Climate.mdi, if (quality != null) qualityTone(quality) else climateTone(climate),
-        if (quality != null) "$quality/100 · ${qualityWord(quality)}" else "${temp(climate?.num("current_temperature"))} °C · ${climateWord(climate)}",
-        Page.Climate,
-    ) { ClimateCard(climate, call, quality = quality) }
-    HomePanel("Lights", Page.Lighting.mdi, Tone.Amber, lightsSummary(lights.home, entities), Page.Lighting) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            lights.home.forEach { LightRoomCard(it, entities, areaNames, call) }
+    titles.forEach { title ->
+        when (title) {
+            "Security" -> HomePanel("Security", alarmIconName(alarm?.state), alarmTone(alarm?.state), alarmLabel(alarm?.state), Page.Security) {
+                AlarmCard(alarm, call)
+            }
+            // The home's climate quality score (a sensor made in Home Assistant) leads the Climate panel, as on the dashboard.
+            "Climate" -> HomePanel(
+                "Climate", Page.Climate.mdi, if (quality != null) qualityTone(quality) else climateTone(climate),
+                if (quality != null) "$quality/100 · ${qualityWord(quality)}" else "${temp(climate?.num("current_temperature"))} °C · ${climateWord(climate)}",
+                Page.Climate,
+            ) { ClimateCard(climate, call, quality = quality) }
+            "Lights" -> HomePanel("Lights", Page.Lighting.mdi, Tone.Amber, lightsSummary(lights.home, entities), Page.Lighting) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    lights.home.forEach { LightRoomCard(it, entities, areaNames, call) }
+                }
+            }
+            "Cleaning" -> HomePanel("Cleaning", Page.Cleaning.mdi, vacuumTone(vacuum), vacuumSummary(vacuum, entities[VACUUM_BATTERY]), Page.Cleaning) {
+                VacuumCard(vacuum, entities[VACUUM_BATTERY], call)
+            }
+            else -> {
+                val spec = byTitle[title]
+                if (spec != null) HomePanel(title, spec.icon ?: "mdi:view-dashboard-outline", Tone.Teal, "", null) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        spec.cards.forEach { CardView(it, entities, registry, call) }
+                    }
+                } else if (title == "Car charging") HomePanel("Car charging", "mdi:ev-station", Tone.Teal, entities[ZAPPI_MODE]?.state ?: "", null) {
+                    ChargerCard(entities, call)
+                }
+            }
         }
-    }
-    HomePanel("Cleaning", Page.Cleaning.mdi, vacuumTone(vacuum), vacuumSummary(vacuum, entities[VACUUM_BATTERY]), Page.Cleaning) {
-        VacuumCard(vacuum, entities[VACUUM_BATTERY], call)
-    }
-    HomePanel("Car charger", "mdi:ev-station", Tone.Teal, entities[ZAPPI_MODE]?.state ?: "", null) {
-        ChargerCard(entities, call)
     }
 }
 

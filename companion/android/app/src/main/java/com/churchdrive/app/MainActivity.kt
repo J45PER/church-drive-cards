@@ -105,6 +105,7 @@ class MainActivity : ComponentActivity() {
                             LocalHistory provides vm::history,
                             LocalHaApi provides vm.haApi,
                             LocalUserName provides userName,
+                            com.churchdrive.app.ui.LocalHaUrl provides vm.baseUrl,
                         ) {
                             if (signedIn) {
                                 HomeScreen(

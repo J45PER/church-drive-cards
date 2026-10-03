@@ -29,7 +29,7 @@ object DashboardPanels {
         for (i in 0 until views.length()) {
             val view = views.optJSONObject(i) ?: continue
             val path = view.optString("path").takeIf { it.isNotBlank() } ?: continue
-            out[path] = arrange(path, listOfNotNull(header(view)) + panels(view).map { panel(it) })
+            out[path] = arrange(path, listOfNotNull(header(view)) + panels(view).map { panel(it, views) })
         }
         return out
     }
@@ -77,24 +77,32 @@ object DashboardPanels {
         return found
     }
 
-    private fun panel(o: JSONObject) = PanelSpec(
+    private fun panel(o: JSONObject, views: JSONArray) = PanelSpec(
         title = o.text("title").orEmpty(),
         icon = o.text("icon"),
         color = o.text("color"),
         colorTemplate = o.text("color_template"),
         summaryTemplate = o.text("summary"),
-        cards = cards(o.opt("cards")),
+        cards = cards(o.opt("cards"), views),
     )
 
     /** The cards in a panel, in order; a stack's cards are taken out of it. */
-    private fun cards(node: Any?): List<CardSpec> {
+    private fun cards(node: Any?, views: JSONArray): List<CardSpec> {
         val out = mutableListOf<CardSpec>()
         val a = node as? JSONArray ?: return out
         for (i in 0 until a.length()) {
             val c = a.optJSONObject(i) ?: continue
             val type = c.optString("type")
-            if (type == "vertical-stack" || type == "horizontal-stack") out += cards(c.opt("cards"))
-            else if (type.isNotEmpty()) out += CardSpec(type, c)
+            when {
+                type == "vertical-stack" || type == "horizontal-stack" || type == "grid" -> out += cards(c.opt("cards"), views)
+                type == "custom:mirror-card" || type == "custom:mirror-card-beta" ->
+                    // A mirror stands for the card it points at, on this dashboard: set up once in Home Assistant.
+                    DashboardLights.resolveMirror(c, views)?.let { target ->
+                        val t = target.optString("type")
+                        if (t.isNotEmpty()) out += CardSpec(t, target)
+                    }
+                type.isNotEmpty() -> out += CardSpec(type, c)
+            }
         }
         return out
     }
