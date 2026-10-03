@@ -110,8 +110,13 @@ HACS as an integration. It does two jobs:
     `binary_sensor…_battery_plugged/_charging`, buttons for preconditioning, lock, charge).
     The **VW (full EV)** still needs signing in: VW Group Connect (HACS 1207816350, domain
     `vag_connect`) is loaded; on Jamie's to-do list.
-  - `ev-charger-card` (v0.33.1, on Home and Energy) lists each car from those integrations
-    (`carsFind`: battery %, range, Plugged in / Charging); `show_cars`, or `cars:` to override.
+  - **Car card** (`src/car-card.js`, `custom:car-card`, beta 2026-10-03): each car from those
+    integrations (`carDevices`/`carEntities`): battery bar and %, electric range, fuel % and
+    range, Plugged in / Charging / where it is, "Full by" when charging; tap for more-info.
+    `cars:` [{device, name, people}] gives cars to people; `only_mine` (default on) shows the
+    signed-in person only their cars (a car with no people is everyone's) and the card hides
+    itself when they have none. It sits at the top of the "Car charging" panel on Home and
+    Energy; `ev-charger-card` is the Zappi alone again (the v0.33.1 car rows are gone).
     "Church Drive: car alerts" names the plugged-in car and its % (plugged in waits up to 3
     minutes for the car to report; charged).
 - Nothing else is pending. Ideas the user hasn't asked for are under Open items.
