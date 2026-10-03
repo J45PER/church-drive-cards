@@ -12,10 +12,16 @@ fun styledLine(html: String): AnnotatedString = buildAnnotatedString {
     Regex("(<[^>]*>)|([^<]+)").findAll(html).forEach { m ->
         val tag = m.groupValues[1]
         val text = m.groupValues[2]
-        when {
-            tag.equals("<b>", ignoreCase = true) -> bold = true
-            tag.equals("</b>", ignoreCase = true) -> bold = false
-            text.isNotEmpty() -> if (bold) withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(text) } else append(text)
+        if (tag.equals("<b>", ignoreCase = true)) {
+            bold = true
+        } else if (tag.equals("</b>", ignoreCase = true)) {
+            bold = false
+        } else if (text.isNotEmpty()) {
+            if (bold) {
+                withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(text) }
+            } else {
+                append(text)
+            }
         }
     }
 }
