@@ -14,6 +14,8 @@
     <!-- Cleartext allowed because Home Assistant is often reached over plain http on the LAN. -->
     <application
         android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:label="Church Drive"
         android:theme="@style/Theme.ChurchDrive"
         android:usesCleartextTraffic="true">

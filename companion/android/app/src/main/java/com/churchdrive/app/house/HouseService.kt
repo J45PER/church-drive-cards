@@ -90,6 +90,7 @@ class HouseService : Service() {
     private fun foregroundNotification(): Notification =
         NotificationCompat.Builder(this, CHANNEL_SERVICE)
             .setSmallIcon(R.drawable.ic_notification)
+            .setColor(0xFF4B837A.toInt())
             .setContentTitle("Church Drive is connected")
             .setContentText("Keeping in touch with the house")
             .setPriority(NotificationCompat.PRIORITY_MIN)
@@ -151,6 +152,7 @@ class HouseService : Service() {
         ensureChannel(this, push.channel)
         val n = NotificationCompat.Builder(this, push.channel)
             .setSmallIcon(R.drawable.ic_notification)
+            .setColor(0xFF4B837A.toInt())
             .setContentTitle(push.title)
             .setContentText(push.message)
             .setStyle(NotificationCompat.BigTextStyle().bigText(push.message))
