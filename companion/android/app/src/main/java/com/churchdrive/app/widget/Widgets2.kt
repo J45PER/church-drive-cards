@@ -54,7 +54,7 @@ import org.json.JSONObject
 private suspend fun widgetId(context: Context, id: GlanceId): Int = GlanceAppWidgetManager(context).getAppWidgetId(id)
 
 /** What a widget has to hand when it draws: the house, the person's choices, a picture if it asked for one. */
-class WidgetScene(val data: WidgetData, val config: JSONObject, val p: WidgetPalette, val size: SizeClass, val picture: Bitmap?, val me: String?, val width: androidx.compose.ui.unit.Dp = 250.dp) {
+class WidgetScene(val data: WidgetData, val config: JSONObject, val p: WidgetPalette, val size: SizeClass, val picture: Bitmap?, val me: String?, val width: androidx.compose.ui.unit.Dp = 250.dp, val height: androidx.compose.ui.unit.Dp = 110.dp) {
     fun entity(key: String): String = config.optString(key)
 }
 
@@ -80,7 +80,7 @@ abstract class SceneWidget(private val title: String) : GlanceAppWidget() {
         val me = Session(androidx.glance.LocalContext.current).personName
         val data = l.data
         if (data == null) Unreachable(title, p, "Can't reach the house")
-        else Draw(WidgetScene(data, l.config, p, LocalSize.current.sizeClass(), l.picture, me, LocalSize.current.width))
+        else Draw(WidgetScene(data, l.config, p, LocalSize.current.sizeClass(), l.picture, me, LocalSize.current.width, LocalSize.current.height))
     }
 }
 
@@ -91,7 +91,7 @@ private fun line(color: Color, size: Int = 12) = TextStyle(color = cp(color), fo
 
 /** A card of an icon, a title, a line under it, and buttons: a strip, a square with a few round buttons, or the full tiles. */
 @Composable
-fun CardContent(card: Card, p: WidgetPalette, size: SizeClass, width: androidx.compose.ui.unit.Dp = 250.dp) {
+fun CardContent(card: Card, p: WidgetPalette, size: SizeClass, width: androidx.compose.ui.unit.Dp = 250.dp, height: androidx.compose.ui.unit.Dp = 110.dp) {
     val tone = p.tone(card.tone)
     when (size) {
         SizeClass.Strip -> WidgetCard(p, padding = 10.dp) {
@@ -111,17 +111,23 @@ fun CardContent(card: Card, p: WidgetPalette, size: SizeClass, width: androidx.c
             Text(card.title, style = title(p), maxLines = 1)
             Text(card.sub, style = line(tone.accent), maxLines = 1)
             Spacer(GlanceModifier.height(8.dp))
-            Row(GlanceModifier.fillMaxWidth()) {
-                card.tiles.take(3).forEachIndexed { i, t ->
-                    if (i > 0) Spacer(GlanceModifier.width(6.dp))
-                    IconButton(t.icon, p, t.action(), 30.dp, if (t.selected) tone else null)
+            // Every button, in as many rows as it takes.
+            val perRow = ((width.value - 24f + 6f) / 36f).toInt().coerceAtLeast(2)
+            card.tiles.chunked(perRow).forEachIndexed { r, rowTiles ->
+                if (r > 0) Spacer(GlanceModifier.height(6.dp))
+                Row(GlanceModifier.fillMaxWidth()) {
+                    rowTiles.forEachIndexed { i, t ->
+                        if (i > 0) Spacer(GlanceModifier.width(6.dp))
+                        IconButton(t.icon, p, t.action(), 30.dp, if (t.selected) tone else null)
+                    }
                 }
             }
         }
         else -> WidgetCard(p) {
             HeaderRow(card.icon, card.title, card.sub, p, tone)
             Spacer(GlanceModifier.height(12.dp))
-            TileButtons(card.tiles, p, tone, perRow = 4, maxRows = if (size == SizeClass.Tall) 2 else 1)
+            val (rows, perRow) = gridFor(card.tiles.size, height.value, 48f, 4, 6)
+            TileButtons(card.tiles, p, tone, perRow = perRow, maxRows = rows)
         }
     }
 }
@@ -143,7 +149,7 @@ private fun StripButtons(tiles: List<WidgetTile>, p: WidgetPalette, tone: ToneCo
                 Text(t.label, style = TextStyle(color = cp(fg), fontSize = 12.sp, fontWeight = FontWeight.Medium), maxLines = 1)
             }
         }
-    } else IconRow(tiles.take(4), p, tone, 34.dp)
+    } else IconRow(tiles, p, tone, roundButtonSize(tiles.size, room + 20f).dp)
 }
 
 /** Reads like a sentence under a title, for the plain pill widgets (people, doors, doorbell). */
@@ -363,19 +369,19 @@ class CameraGlanceWidget : SceneWidget("Camera") {
 
 class VacuumGlanceWidget : SceneWidget("Vacuum") {
     @Composable
-    override fun Draw(s: WidgetScene) = CardContent(vacuumCard(s.data.entities), s.p, s.size, s.width)
+    override fun Draw(s: WidgetScene) = CardContent(vacuumCard(s.data.entities), s.p, s.size, s.width, s.height)
 }
 
 class ChargerGlanceWidget : SceneWidget("Car charger") {
     @Composable
-    override fun Draw(s: WidgetScene) = CardContent(chargerCard(s.data.entities), s.p, s.size, s.width)
+    override fun Draw(s: WidgetScene) = CardContent(chargerCard(s.data.entities), s.p, s.size, s.width, s.height)
 }
 
 class FanGlanceWidget : SceneWidget("Fan") {
     @Composable
     override fun Draw(s: WidgetScene) {
         val id = s.entity("fan").ifBlank { fansFor(false, s.data.entities).firstOrNull()?.entityId.orEmpty() }
-        CardContent(fanCard(s.data.entities[id], id), s.p, s.size, s.width)
+        CardContent(fanCard(s.data.entities[id], id), s.p, s.size, s.width, s.height)
     }
 }
 
@@ -383,7 +389,7 @@ class PurifierGlanceWidget : SceneWidget("Air purifier") {
     @Composable
     override fun Draw(s: WidgetScene) {
         val id = s.entity("fan").ifBlank { fansFor(true, s.data.entities).firstOrNull()?.entityId.orEmpty() }
-        CardContent(purifierCard(s.data.entities[id], id, s.data.entities), s.p, s.size, s.width)
+        CardContent(purifierCard(s.data.entities[id], id, s.data.entities), s.p, s.size, s.width, s.height)
     }
 }
 
@@ -391,7 +397,7 @@ class BlindsGlanceWidget : SceneWidget("Blinds") {
     @Composable
     override fun Draw(s: WidgetScene) {
         val id = s.entity("cover").ifBlank { s.data.entities.keys.firstOrNull { it.startsWith("cover.") }.orEmpty() }
-        CardContent(coverCard(s.data.entities[id], id), s.p, s.size, s.width)
+        CardContent(coverCard(s.data.entities[id], id), s.p, s.size, s.width, s.height)
     }
 }
 
@@ -403,8 +409,8 @@ class ScenesGlanceWidget : SceneWidget("Scenes") {
         val p = s.p
         val chosen = SceneButtons.chosen(WidgetConfig.strings(s.config, "scenes"), s.data.entities, s.data.lights)
         if (chosen.isEmpty()) return Unreachable("Scenes", p, "Long-press the widget to choose scenes")
-        val perRow = if (s.size == SizeClass.Square) 2 else 4
-        val rows = when (s.size) { SizeClass.Tall -> 2; SizeClass.Square -> 2; else -> 1 }
+        // Every chosen scene: as many to a row as it takes, in as many rows as the widget has room for.
+        val (rows, perRow) = gridFor(chosen.size, s.height.value, 48f, if (s.size == SizeClass.Square) 2 else 4, 6)
         WidgetCard(p, padding = 12.dp) {
             SceneGrid(chosen.map { SceneTile(it.tile, it.key?.let { k -> sceneSwatch(k) } ?: p.tone(Tone.Amber).accent) }, perRow, rows)
         }

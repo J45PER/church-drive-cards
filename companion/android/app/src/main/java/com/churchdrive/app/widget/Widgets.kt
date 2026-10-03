@@ -139,14 +139,14 @@ class LightsGlanceWidget : GlanceAppWidget() {
             } else {
                 val rooms = chosenRooms(data.lights, WidgetConfig.strings(config, "rooms"))
                 val withScenes = config.optBoolean("scenes", true)
-                LightsContent(rooms, data, withScenes, p, LocalSize.current.sizeClass(), LocalSize.current.height)
+                LightsContent(rooms, data, withScenes, p, LocalSize.current.sizeClass(), LocalSize.current.height, LocalSize.current.width)
             }
         }
     }
 }
 
 @Composable
-private fun LightsContent(rooms: List<com.churchdrive.app.ui.LightRoom>, data: WidgetData, withScenes: Boolean, p: WidgetPalette, size: SizeClass, height: androidx.compose.ui.unit.Dp) {
+private fun LightsContent(rooms: List<com.churchdrive.app.ui.LightRoom>, data: WidgetData, withScenes: Boolean, p: WidgetPalette, size: SizeClass, height: androidx.compose.ui.unit.Dp, width: androidx.compose.ui.unit.Dp) {
     val e = data.entities
     val amber = p.tone(Tone.Amber)
     val any = rooms.any { e[it.head]?.state == "on" }
@@ -222,7 +222,7 @@ private fun LightsContent(rooms: List<com.churchdrive.app.ui.LightRoom>, data: W
         return
     }
     // Several rooms.
-    val tiles = WidgetModel.roomTiles(rooms, data.areaNames, e, max = 6)
+    val tiles = WidgetModel.roomTiles(rooms, data.areaNames, e, max = 12)
     when (size) {
         SizeClass.Strip -> WidgetCard(p, padding = 10.dp) {
             Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -232,19 +232,21 @@ private fun LightsContent(rooms: List<com.churchdrive.app.ui.LightRoom>, data: W
                     Text("Lights", style = TextStyle(color = cp(p.onSurface), fontSize = 16.sp, fontWeight = FontWeight.Bold), maxLines = 1)
                     Text(lightsSummary(rooms, e), style = TextStyle(color = cp(tone.accent), fontSize = 12.sp, fontWeight = FontWeight.Medium), maxLines = 1)
                 }
-                IconRow(tiles.take(4).map { it.copy(label = "") }, p, amber, 34.dp)
+                IconRow(tiles.map { it.copy(label = "") }, p, amber, roundButtonSize(tiles.size, width.value - 20f - 40f - 10f - 80f).dp)
             }
         }
         SizeClass.Square -> WidgetCard(p, padding = 12.dp) {
             Text("Lights", style = TextStyle(color = cp(p.onSurface), fontSize = 14.sp, fontWeight = FontWeight.Bold), maxLines = 1)
             Text(lightsSummary(rooms, e), style = TextStyle(color = cp(tone.accent), fontSize = 12.sp, fontWeight = FontWeight.Medium), maxLines = 1)
             Spacer(GlanceModifier.height(8.dp))
-            TileButtons(tiles.take(4), p, amber, perRow = 2, maxRows = 2, showLabels = false)
+            val (rows, perRow) = gridFor(tiles.size, height.value, 48f, 2, 3)
+            TileButtons(tiles, p, amber, perRow = perRow, maxRows = rows, showLabels = false)
         }
         else -> WidgetCard(p) {
             HeaderRow("mdi:lightbulb", "Lights", lightsSummary(rooms, e), p, tone)
             Spacer(GlanceModifier.height(12.dp))
-            TileButtons(tiles, p, amber, perRow = 3, maxRows = if (size == SizeClass.Tall) 2 else 1)
+            val (rows, perRow) = gridFor(tiles.size, height.value, 48f, 3, 4)
+            TileButtons(tiles, p, amber, perRow = perRow, maxRows = rows)
         }
     }
 }
@@ -391,7 +393,8 @@ class SummaryGlanceWidget : GlanceAppWidget() {
 
 /** Shortcuts: up to eight buttons you pick when you add it. */
 class ShortcutsGlanceWidget : GlanceAppWidget() {
-    override val sizeMode = SizeMode.Responsive(WidgetSizes.all)
+    // Exact, so every button fits whatever size the widget has been made.
+    override val sizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideLive(context, id, ) { l ->
@@ -407,15 +410,15 @@ class ShortcutsGlanceWidget : GlanceAppWidget() {
                 when (LocalSize.current.sizeClass()) {
                     SizeClass.Strip -> WidgetCard(p, padding = 10.dp) {
                         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            chosen.take(5).forEachIndexed { i, tile ->
-                                if (i > 0) Spacer(GlanceModifier.width(10.dp))
-                                Box(GlanceModifier.defaultWeight(), contentAlignment = Alignment.Center) { IconButton(tile.icon, p, tile.action(), 44.dp) }
+                            chosen.forEachIndexed { i, tile ->
+                                if (i > 0) Spacer(GlanceModifier.width(6.dp))
+                                Box(GlanceModifier.defaultWeight(), contentAlignment = Alignment.Center) { IconButton(tile.icon, p, tile.action(), roundButtonSize(chosen.size, LocalSize.current.width.value - 20f).dp.coerceAtLeast(28.dp)) }
                             }
                         }
                     }
-                    SizeClass.Square -> WidgetCard(p, padding = 10.dp) { TileButtons(chosen.take(4), p, blue, perRow = 2, maxRows = 2, showLabels = false) }
-                    SizeClass.Wide -> WidgetCard(p, padding = 12.dp) { TileButtons(chosen.take(4), p, blue, perRow = 4, maxRows = 1) }
-                    SizeClass.Tall -> WidgetCard(p, padding = 12.dp) { TileButtons(chosen, p, blue, perRow = 4, maxRows = 2) }
+                    SizeClass.Square -> WidgetCard(p, padding = 10.dp) { val (rows, perRow) = gridFor(chosen.size, LocalSize.current.height.value + 44f + 12f, 48f, 2, 3); TileButtons(chosen, p, blue, perRow = perRow, maxRows = rows, showLabels = false) }
+                    SizeClass.Wide -> WidgetCard(p, padding = 12.dp) { val (rows, perRow) = gridFor(chosen.size, LocalSize.current.height.value + 44f + 12f, 48f, 4, 6); TileButtons(chosen, p, blue, perRow = perRow, maxRows = rows) }
+                    SizeClass.Tall -> WidgetCard(p, padding = 12.dp) { val (rows, perRow) = gridFor(chosen.size, LocalSize.current.height.value + 44f + 12f, 48f, 4, 6); TileButtons(chosen, p, blue, perRow = perRow, maxRows = rows) }
                 }
             }
         }

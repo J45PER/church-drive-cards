@@ -8,6 +8,8 @@ import com.churchdrive.app.widget.WidgetPages
 import com.churchdrive.app.widget.alarmInDelay
 import com.churchdrive.app.widget.alarmStatus
 import com.churchdrive.app.widget.fansFor
+import com.churchdrive.app.widget.gridFor
+import com.churchdrive.app.widget.roundButtonSize
 import com.churchdrive.app.widget.entityIcon
 import com.churchdrive.app.widget.coverCard
 import com.churchdrive.app.widget.doorsStatus
@@ -156,5 +158,19 @@ class WidgetModel2Test {
         assertEquals("mdi:blinds", entityIcon(e("cover.b", "closed", "device_class" to "blind"), "mdi:blinds"))
         assertEquals("mdi:fan", entityIcon(e("fan.f", "on"), "mdi:fan"))
         assertEquals("mdi:fan", entityIcon(null, "mdi:fan"))
+    }
+
+    @Test
+    fun buttonsAreNeverLeftOut() {
+        // A wide card of 160 dp has room for one row: 7 buttons go 4 to a row in 2 rows rather than losing 3.
+        val (rows, perRow) = gridFor(7, 160f, 48f, 4, 6)
+        assertTrue(rows * perRow >= 7)
+        // A tall one has room for more rows.
+        val (tallRows, tallPerRow) = gridFor(7, 300f, 48f, 4, 6)
+        assertTrue(tallRows * tallPerRow >= 7)
+        assertEquals(4, tallPerRow)
+        // Round buttons shrink to share a narrow strip, but not below 28.
+        assertEquals(36f, roundButtonSize(3, 400f))
+        assertEquals(28f, roundButtonSize(8, 200f))
     }
 }

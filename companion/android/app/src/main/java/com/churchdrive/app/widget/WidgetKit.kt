@@ -421,3 +421,18 @@ abstract class LiveReceiver : androidx.glance.appwidget.GlanceAppWidgetReceiver(
         super.onUpdate(context, appWidgetManager, appWidgetIds)
     }
 }
+
+/**
+ * Rows and buttons per row that show all [count] buttons: as many rows as fit under a heading in [height] dp (the card's
+ * padding, the heading and a gap taken off), with more to a row (up to [maxPerRow]) and then more rows when they don't all fit.
+ * Buttons are never left out.
+ */
+fun gridFor(count: Int, height: Float, tile: Float, minPerRow: Int, maxPerRow: Int): Pair<Int, Int> {
+    val fit = (((height - 28f - 44f - 12f) + 8f) / (tile + 8f)).toInt().coerceAtLeast(1)
+    val perRow = maxOf(minPerRow, (count + fit - 1) / fit).coerceAtMost(maxPerRow)
+    val rows = maxOf(fit, (count + perRow - 1) / perRow)
+    return rows to perRow
+}
+
+/** The size of round buttons when [count] of them share [room] dp: as big as 36, shrinking to 28 but no further. */
+fun roundButtonSize(count: Int, room: Float): Float = ((room - 6f * count) / count.coerceAtLeast(1)).coerceIn(28f, 36f)
