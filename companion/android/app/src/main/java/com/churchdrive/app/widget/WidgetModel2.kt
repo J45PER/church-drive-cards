@@ -275,14 +275,15 @@ fun fansFor(purifiers: Boolean, entities: Map<String, EntityState>): List<Entity
 
 /** Every air device a card can be made for: the fans (purifiers among them) and air conditioners or other thermostats, by name. */
 fun airDevices(entities: Map<String, EntityState>): List<EntityState> =
-    entities.values.filter { it.entityId.startsWith("fan.") || it.entityId.startsWith("climate.") }
-        .sortedWith(compareBy({ !it.entityId.startsWith("fan.") }, { it.friendlyName }))
+    entities.values.filter { it.entityId.startsWith("fan.") || it.entityId.startsWith("climate.") || it.entityId.startsWith("humidifier.") }
+        .sortedWith(compareBy({ !it.entityId.startsWith("fan.") }, { it.entityId.startsWith("humidifier.") }, { it.friendlyName }))
 
 /** The card for whichever air device was picked: a purifier, a fan or an air conditioner, by what it is. */
 fun airCard(entities: Map<String, EntityState>, entity: String): Card {
     val e = entities[entity]
     return when {
         entity.startsWith("climate.") -> acCard(e, entity)
+        entity.startsWith("humidifier.") -> humidifierCard(e, entity)
         e != null && isPurifier(e, entities) -> purifierCard(e, entity, entities)
         else -> fanCard(e, entity)
     }
@@ -314,6 +315,30 @@ fun acCard(c: EntityState?, entity: String): Card {
     val sub = listOfNotNull(c?.state?.let { presetLabel(it.replace('_', ' ')) } ?: "–", now, set).joinToString(" · ")
     val tone = when (c?.state) { "cool" -> Tone.Blue; "heat" -> Tone.Orange; "off", null -> Tone.Grey; "unavailable" -> Tone.Grey; else -> Tone.Teal }
     return Card(c?.friendlyName ?: "Air conditioner", sub, tone, entityIcon(c, "mdi:air-conditioner"), tiles)
+}
+
+/** A humidifier or dehumidifier: Off, its modes, and − and + for the target humidity. */
+fun humidifierCard(h: EntityState?, entity: String): Card {
+    val on = h?.state == "on"
+    val target = h?.num("humidity")
+    val tiles = buildList {
+        add(WidgetTile("mdi:power", "Off", !on, "humidifier", "turn_off", entity))
+        if (h != null && !on) add(WidgetTile("mdi:water-percent", "On", false, "humidifier", "turn_on", entity))
+        h?.list("available_modes")?.take(3)?.forEach { m ->
+            add(WidgetTile("mdi:water-percent", presetLabel(m), on && h.str("mode") == m, "humidifier", "set_mode", entity, JSONObject().put("mode", m).toString()))
+        }
+        if (h != null && target != null) {
+            val step = 5.0
+            val low = h.num("min_humidity") ?: 0.0
+            val high = h.num("max_humidity") ?: 100.0
+            add(WidgetTile("mdi:minus", "", false, "humidifier", "set_humidity", entity, JSONObject().put("humidity", (target - step).coerceIn(low, high).toInt()).toString()))
+            add(WidgetTile("mdi:plus", "", false, "humidifier", "set_humidity", entity, JSONObject().put("humidity", (target + step).coerceIn(low, high).toInt()).toString()))
+        }
+    }
+    val now = h?.num("current_humidity")?.let { "now ${it.toInt()}%" }
+    val set = target?.takeIf { on }?.let { "set ${it.toInt()}%" }
+    val sub = listOfNotNull(if (on) h?.str("mode")?.let { presetLabel(it) } ?: "On" else "Off", now, set).joinToString(" · ")
+    return Card(h?.friendlyName ?: "Humidifier", sub, if (on) Tone.Blue else Tone.Grey, entityIcon(h, "mdi:air-humidifier"), tiles)
 }
 
 /** The PM2.5 reading that belongs to a purifier: a sensor whose id says PM2.5 and starts like the purifier's own. */

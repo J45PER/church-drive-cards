@@ -264,7 +264,7 @@ private val SINGLE_PROMPT = mapOf(
 private fun singleChoices(kind: String, d: WidgetData): List<Pair<String, String>> {
     val e = d.entities.values
     return when (kind) {
-        "FanWidgetReceiver" -> airDevices(d.entities).map { it.entityId to (it.friendlyName + if (it.entityId.startsWith("climate.")) " (air conditioner or thermostat)" else if (isPurifier(it, d.entities)) " (air purifier)" else "") }
+        "FanWidgetReceiver" -> airDevices(d.entities).map { it.entityId to (it.friendlyName + if (it.entityId.startsWith("climate.")) " (air conditioner or thermostat)" else if (it.entityId.startsWith("humidifier.")) " (humidifier)" else if (isPurifier(it, d.entities)) " (air purifier)" else "") }
         "BlindsWidgetReceiver" -> e.filter { it.entityId.startsWith("cover.") }.sortedBy { it.friendlyName }.map { it.entityId to it.friendlyName }
         "CameraWidgetReceiver" -> e.filter { it.entityId.startsWith("camera.") && it.entityId.endsWith("_live_view") }.sortedBy { it.friendlyName }.map { it.entityId to it.friendlyName }
         else -> e.filter { it.entityId.startsWith("todo.") }.sortedBy { it.friendlyName }.map { it.entityId to it.friendlyName }

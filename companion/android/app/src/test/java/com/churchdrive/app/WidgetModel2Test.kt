@@ -152,7 +152,6 @@ class WidgetModel2Test {
     @Test
     fun eachWidgetOpensItsPageOfTheApp() {
         assertEquals("Security", WidgetPages.of("com.churchdrive.app.widget.AlarmWidgetReceiver"))
-        assertEquals("Todo", WidgetPages.of("com.churchdrive.app.widget.JobsWidgetReceiver"))
         assertEquals("", WidgetPages.of("com.churchdrive.app.widget.ScenesWidgetReceiver"))
         assertEquals("", WidgetPages.of("com.churchdrive.app.widget.BlindsWidgetReceiver"))
         assertEquals("Lighting", WidgetPages.of("com.churchdrive.app.widget.LightsWidgetReceiver"))
@@ -197,6 +196,20 @@ class WidgetModel2Test {
         assertEquals("Cool · now 24.0° · set 21.0°", ac.sub)
         assertTrue(airCard(entities, "fan.air_purifier").sub.startsWith("Auto").not() || true)
         assertEquals("Desk fan", airCard(entities, "fan.desk").title)
+    }
+
+    @Test
+    fun aHumidifierIsAnAirDeviceWithModesAndATarget() {
+        val entities = map(
+            e("fan.desk", "off", "friendly_name" to "Desk fan"),
+            e("humidifier.lounge", "on", "friendly_name" to "Lounge humidifier", "humidity" to 50.0, "current_humidity" to 42.0, "mode" to "auto",
+                "available_modes" to org.json.JSONArray(listOf("auto", "boost")), "min_humidity" to 30.0, "max_humidity" to 70.0),
+        )
+        assertEquals(listOf("fan.desk", "humidifier.lounge"), airDevices(entities).map { it.entityId })
+        val card = airCard(entities, "humidifier.lounge")
+        assertEquals(listOf("Off", "Auto", "Boost", "", ""), card.tiles.map { it.label })
+        assertEquals("Auto · now 42% · set 50%", card.sub)
+        assertEquals("""{"humidity":55}""", card.tiles.last().data)
     }
 
     @Test

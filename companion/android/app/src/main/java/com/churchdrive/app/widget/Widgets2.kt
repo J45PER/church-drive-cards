@@ -190,43 +190,6 @@ private fun Pill(icon: String, heading: String, text: String, tone: ToneColors, 
 
 // ---------------------------------------------------------------------------------------------- People, doors, activity
 
-class PeopleGlanceWidget : SceneWidget("People") {
-    @Composable
-    override fun Draw(s: WidgetScene) {
-        val people = peopleOf(s.data.entities)
-        val p = s.p
-        val home = people.count { it.home }
-        val tone = p.tone(if (home > 0) Tone.Green else Tone.Grey)
-        if (s.size == SizeClass.Strip || s.size == SizeClass.Wide) {
-            WidgetCard(p, padding = 10.dp) {
-                Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    people.take(5).forEach { who ->
-                        val t = p.tone(if (who.home) Tone.Green else Tone.Grey)
-                        Column(GlanceModifier.defaultWeight(), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Box(GlanceModifier.size(38.dp).cornerRadius(19.dp).background(cp(t.accent.copy(alpha = 0.25f))), contentAlignment = Alignment.Center) {
-                                Text(who.initial, style = TextStyle(color = cp(t.accent), fontSize = 17.sp, fontWeight = FontWeight.Bold))
-                            }
-                            Text(who.name, style = TextStyle(color = cp(p.onSurface), fontSize = 12.sp, fontWeight = FontWeight.Medium), maxLines = 1)
-                            Text(who.where, style = TextStyle(color = cp(t.accent), fontSize = 11.sp), maxLines = 1)
-                        }
-                    }
-                    if (people.isEmpty()) Text("No people set up", style = line(p.muted))
-                }
-            }
-        } else WidgetCard(p, padding = 12.dp) {
-            HeaderRow("mdi:account-group", "People", "$home home", p, tone)
-            Spacer(GlanceModifier.height(8.dp))
-            people.take(if (s.size == SizeClass.Tall) 6 else 3).forEach { who ->
-                val t = p.tone(if (who.home) Tone.Green else Tone.Grey)
-                Row(GlanceModifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(who.name, GlanceModifier.defaultWeight(), style = TextStyle(color = cp(p.onSurface), fontSize = 13.sp), maxLines = 1)
-                    Text(who.where, style = line(t.accent, 13), maxLines = 1)
-                }
-            }
-        }
-    }
-}
-
 /** Up to four rows of security information, chosen from a list: the alarm, doors and windows, who is home, doorbells and movement. */
 class SecurityGlanceWidget : SceneWidget("Security") {
     @Composable
@@ -447,7 +410,6 @@ class MyTodoGlanceWidget : SceneWidget("To-do") {
         }
     }
 }
-class JobsGlanceWidget : TodoGlanceWidget("Jobs", "todo.cleaning")
 
 // ---------------------------------------------------------------------------------------------- Camera
 
@@ -719,9 +681,7 @@ class ClusterGlanceWidget : SceneWidget("Gauges") {
 
 private fun forget2(context: Context, ids: IntArray) = WidgetConfig.remove(context, ids)
 
-class PeopleWidgetReceiver : LiveReceiver() { override val glanceAppWidget: GlanceAppWidget = PeopleGlanceWidget() }
 class WeatherWidgetReceiver : LiveReceiver() { override val glanceAppWidget: GlanceAppWidget = WeatherGlanceWidget() }
-class JobsWidgetReceiver : LiveReceiver() { override val glanceAppWidget: GlanceAppWidget = JobsGlanceWidget() }
 class VacuumWidgetReceiver : LiveReceiver() { override val glanceAppWidget: GlanceAppWidget = VacuumGlanceWidget() }
 class ChargerWidgetReceiver : LiveReceiver() { override val glanceAppWidget: GlanceAppWidget = ChargerGlanceWidget() }
 
@@ -762,5 +722,5 @@ class ClusterWidgetReceiver : LiveReceiver() {
 fun allGlanceWidgets(): List<GlanceAppWidget> = listOf(
     AlarmGlanceWidget(), LightsGlanceWidget(), ClimateGlanceWidget(), ShortcutsGlanceWidget(),
     ScenesGlanceWidget(), FanGlanceWidget(), BlindsGlanceWidget(), VacuumGlanceWidget(), ChargerGlanceWidget(),
-    MyTodoGlanceWidget(), JobsGlanceWidget(), GaugeGlanceWidget(), ClusterGlanceWidget(), SecurityGlanceWidget(),
+    MyTodoGlanceWidget(), GaugeGlanceWidget(), ClusterGlanceWidget(), SecurityGlanceWidget(),
 )

@@ -58,17 +58,6 @@
                 android:resource="@xml/widget_alarm" />
         </receiver>
         <receiver
-            android:name=".widget.PeopleWidgetReceiver"
-            android:exported="false"
-            android:label="Church Drive people">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/widget_people" />
-        </receiver>
-        <receiver
             android:name=".widget.WeatherWidgetReceiver"
             android:exported="false"
             android:label="Church Drive weather">
@@ -78,17 +67,6 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_weather" />
-        </receiver>
-        <receiver
-            android:name=".widget.JobsWidgetReceiver"
-            android:exported="false"
-            android:label="Church Drive jobs">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/widget_jobs" />
         </receiver>
         <receiver
             android:name=".widget.VacuumWidgetReceiver"
