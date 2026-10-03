@@ -40,7 +40,7 @@ private fun RateStrip(rates: List<Rate>, now: Long, accent: Color, cheap: Color,
     if (rates.isEmpty()) return
     val top = rates.maxOf { it.pence }.coerceAtLeast(1.0)
     val low = rates.minOf { it.pence }
-    Canvas(Modifier.fillMaxWidth().height(56.dp)) {
+    Canvas(Modifier.fillMaxWidth().height(60.dp)) {
         val gap = 2f
         val w = (size.width - gap * (rates.size - 1)) / rates.size
         rates.forEachIndexed { i, r ->
