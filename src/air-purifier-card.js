@@ -10,6 +10,7 @@ import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { KIT_COLOR, kitShell, kitHead, kitGauge, kitTiles, kitGraph, kitRange, kitCap, kitNum, kitDemoSeries, KitHistory, KitPending, kitScrub, kitHealthBanner, kitCompact, kitCompactable, kitBlend } from './card-kit.js';
+import { iconFor, watchIcons } from './icon-library.js';
 
 // PM2.5 (µg/m³) bands. Philips purifiers follow the Chinese air-quality
 // standard (good up to 35, then 75, 115); each band can be changed per card.
@@ -186,6 +187,7 @@ export class AirPurifierCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    watchIcons(this, hass);
     this._render();
   }
 
@@ -252,11 +254,11 @@ export class AirPurifierCard extends HTMLElement {
     const presets = a.preset_modes || [];
     const modes = row(c, 'show_modes')
       ? [
-          { key: '__off', name: 'Off', icon: 'mdi:power', color: KIT_COLOR.off, on: !on },
+          { key: '__off', name: 'Off', icon: iconFor('purifier', 'off', 'mdi:power'), color: KIT_COLOR.off, on: !on },
           ...presets.map((p) => ({
             key: p,
             name: kitCap(p),
-            icon: AP_MODE_ICONS[String(p).toLowerCase()] || 'mdi:fan',
+            icon: iconFor('purifier', p, AP_MODE_ICONS[String(p).toLowerCase()] || iconFor('purifier', 'other', 'mdi:fan')),
             color: /sleep|night/i.test(p) ? KIT_COLOR.sleep : KIT_COLOR.good,
             on: on && a.preset_mode === p,
           })),
@@ -312,8 +314,8 @@ export class AirPurifierCard extends HTMLElement {
       valueColor: q.color,
       status: pm == null ? mode : `PM2.5 · ${q.word || mode}`,
       buttons: [
-        { key: '__off', icon: 'mdi:power', title: 'Off', on: !on, color: KIT_COLOR.off },
-        ...pick.map((p) => ({ key: p, icon: AP_MODE_ICONS[String(p).toLowerCase()] || 'mdi:fan', title: kitCap(p), on: on && a.preset_mode === p, color: /sleep|night/i.test(p) ? KIT_COLOR.sleep : KIT_COLOR.good })),
+        { key: '__off', icon: iconFor('purifier', 'off', 'mdi:power'), title: 'Off', on: !on, color: KIT_COLOR.off },
+        ...pick.map((p) => ({ key: p, icon: iconFor('purifier', p, AP_MODE_ICONS[String(p).toLowerCase()] || iconFor('purifier', 'other', 'mdi:fan')), title: kitCap(p), on: on && a.preset_mode === p, color: /sleep|night/i.test(p) ? KIT_COLOR.sleep : KIT_COLOR.good })),
       ],
       onButton: (b) => this._mode(b.key),
     };

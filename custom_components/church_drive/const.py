@@ -33,6 +33,11 @@ WS_PEOPLE_ASSIGN = "church_drive/people/assign"
 WS_PEOPLE_PHONE = "church_drive/people/phone"
 WS_PEOPLE_PLACES = "church_drive/people/places"
 
+# Mode icons (icons.py): read by the cards and the app, changed in the Icon Styles card.
+WS_ICONS = "church_drive/icons"
+WS_ICON_SET = "church_drive/icons/set"
+EVENT_ICONS = "church_drive_icons_changed"
+
 # Camera events (events.py).
 WS_CAMERA_EVENTS = "church_drive/camera/events"
 WS_CAMERA_SETTINGS = "church_drive/camera/settings"

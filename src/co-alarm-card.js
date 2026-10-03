@@ -9,6 +9,7 @@ import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { KIT_COLOR, kitShell, kitHead, kitGauge, kitTiles, kitCap, kitNum, kitHealthBanner, kitCompact, kitCompactable } from './card-kit.js';
+import { iconFor, watchIcons } from './icon-library.js';
 
 // Where each related entity is found, from the device's name prefix.
 const CO_PARTS = {
@@ -99,6 +100,7 @@ export class CoAlarmCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    watchIcons(this, hass);
     this._render();
   }
 
@@ -163,8 +165,8 @@ export class CoAlarmCard extends HTMLElement {
     ].join('');
 
     const buttons = c.show_buttons === false ? [] : [
-      ...(this._demo || c.test_entity ? [{ key: 'test', name: 'Hold to test', icon: 'mdi:bell-ring', color: KIT_COLOR.good, hold: true }] : []),
-      ...(this._demo || c.mute_entity ? [{ key: 'mute', name: 'Mute', icon: 'mdi:volume-off', color: KIT_COLOR.off }] : []),
+      ...(this._demo || c.test_entity ? [{ key: 'test', name: 'Hold to test', icon: iconFor('co', 'test', 'mdi:bell-ring'), color: KIT_COLOR.good, hold: true }] : []),
+      ...(this._demo || c.mute_entity ? [{ key: 'mute', name: 'Mute', icon: iconFor('co', 'mute', 'mdi:volume-off'), color: KIT_COLOR.off }] : []),
     ];
     kitTiles(this.querySelector('.co-buttons'), buttons, (t) => this._press(t.key));
     hydrateIcons(this);
