@@ -382,10 +382,44 @@ export function evFind(hass, c = {}) {
   };
 }
 
+// Cars from their own integrations (Vauxhall/Peugeot/… via Stellantis Vehicles,
+// VW group via VW Group Connect): one per device, with its battery %, range and
+// whether it's plugged in / charging. Found by themselves; `cars` overrides.
+const CAR_PLATFORMS = ['stellantis_vehicles', 'vag_connect', 'volkswagencarnet', 'volkswagen_we_connect_id'];
+
+export function carsFind(hass, c = {}) {
+  if (c.show_cars === false || !hass) return [];
+  const st = (id) => (id && hass.states[id]) || null;
+  if (Array.isArray(c.cars) && c.cars.length)
+    return c.cars.map((x) => ({ name: x.name || '', battery: x.battery || '', range: x.range || '', plugged: x.plugged || '', charging: x.charging || '' })).filter((x) => st(x.battery));
+  const reg = hass.entities || {};
+  const devs = {};
+  Object.values(reg).forEach((e) => {
+    if (!CAR_PLATFORMS.includes(e.platform) || !e.device_id || e.hidden || e.disabled_by) return;
+    (devs[e.device_id] = devs[e.device_id] || []).push(e.entity_id);
+  });
+  return Object.entries(devs)
+    .map(([dev, ids]) => {
+      const pick = (dom, re, skip) => ids.find((id) => id.startsWith(`${dom}.`) && re.test(id) && !(skip && skip.test(id)) && st(id)) || '';
+      const battery =
+        ids.find((id) => id.startsWith('sensor.') && st(id) && st(id).attributes.device_class === 'battery' && st(id).attributes.unit_of_measurement === '%' && !/_(service|12v|aux|soh|key)/i.test(id)) || '';
+      const d = (hass.devices || {})[dev] || {};
+      return {
+        name: d.name_by_user || d.name || '',
+        battery,
+        range: pick('sensor', /(electric_|battery_)?range$/, /fuel|combustion|total/),
+        plugged: pick('binary_sensor', /plug/, /lock/),
+        charging: pick('binary_sensor', /charging$/),
+      };
+    })
+    .filter((x) => x.battery);
+}
+
 export const EvChargerCardEditor = createFormEditor({
   schema: () => [
     { name: 'name', selector: { text: {} } },
     { name: 'show_buttons', selector: { boolean: {} }, default: true },
+    { name: 'show_cars', selector: { boolean: {} }, default: true },
     {
       type: 'expandable',
       name: '',
@@ -404,6 +438,7 @@ export const EvChargerCardEditor = createFormEditor({
   labels: {
     name: 'Title (optional)',
     show_buttons: 'Mode buttons (Stop, Eco, Eco+, Fast)',
+    show_cars: "Cars' battery (found from their own integrations)",
     mode_entity: 'Charge mode',
     power_entity: 'Charging power',
     session_entity: 'Energy added this charge',
@@ -428,10 +463,24 @@ export class EvChargerCard extends HTMLElement {
 
   _data() {
     const c = this.config;
-    if (c.demo) return { found: true, mode: 'Eco+', options: ['Fast', 'Eco', 'Eco+', 'Stopped'], power: 7100, session: 18.4, status: 'Charging', plug: 'Connected' };
+    if (c.demo)
+      return {
+        found: true, mode: 'Eco+', options: ['Fast', 'Eco', 'Eco+', 'Stopped'], power: 7100, session: 18.4, status: 'Charging', plug: 'Connected',
+        cars: c.show_cars === false ? [] : [{ name: 'Electric car', battery: 64, range: '142 mi', plugged: true, charging: true }, { name: 'Hybrid', battery: 100, range: '28 mi', plugged: false, charging: false }],
+      };
     const e = evFind(this._hass, c);
     const s = (id) => id && this._hass.states[id];
-    if (!s(e.mode) && !s(e.power) && !s(e.status)) return { found: false };
+    const cars = carsFind(this._hass, c).map((x) => {
+      const r = s(x.range);
+      return {
+        name: x.name,
+        battery: kitNum(s(x.battery)),
+        range: r && kitNum(r) != null ? `${Math.round(kitNum(r))} ${r.attributes.unit_of_measurement || ''}`.trim() : '',
+        plugged: !!(s(x.plugged) && s(x.plugged).state === 'on'),
+        charging: !!(s(x.charging) && s(x.charging).state === 'on'),
+      };
+    });
+    if (!s(e.mode) && !s(e.power) && !s(e.status)) return { found: false, cars };
     let power = kitNum(s(e.power));
     if (power != null && s(e.power).attributes.unit_of_measurement === 'kW') power *= 1000;
     return {
@@ -444,6 +493,7 @@ export class EvChargerCard extends HTMLElement {
       status: s(e.status) ? s(e.status).state : null,
       plug: s(e.plug) ? s(e.plug).state : null,
       unavailable: [e.mode, e.power, e.status].filter(Boolean).every((id) => !s(id) || s(id).state === 'unavailable'),
+      cars,
     };
   }
 
@@ -467,7 +517,7 @@ export class EvChargerCard extends HTMLElement {
         color: col,
         value: charging ? `${(d.power / 1000).toFixed(1)} kW` : '',
         valueColor: EV_TEAL,
-        status: d.found ? word : 'Not connected yet',
+        status: (d.found ? word : 'Not connected yet') + this._carsShort(d),
         buttons: d.found && c.show_buttons !== false && d.mode != null ? EV_MODES.filter((b) => !d.options.length || d.options.includes(b.key)).map((b) => ({ ...b, label: b.name, on: d.mode === b.key })) : [],
         onButton: (b) => this._setMode(b.key),
       });
@@ -479,7 +529,16 @@ export class EvChargerCard extends HTMLElement {
         .ev-two { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
         .ev-stat { border-radius:12px; background:rgba(127,127,127,.12); padding:10px 12px; display:flex; flex-direction:column; gap:2px; min-width:0; }
         .ev-stat b { font-size:1.15rem; font-weight:600; font-variant-numeric:tabular-nums; }
-        .ev-stat span { font-size:.72rem; color:var(--secondary-text-color); }`);
+        .ev-stat span { font-size:.72rem; color:var(--secondary-text-color); }
+        .ev-cars { display:flex; flex-direction:column; gap:8px; }
+        .ev-car { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:10px; }
+        .ev-car-name { font-size:.85rem; font-weight:600; display:flex; gap:6px; align-items:center; min-width:0; }
+        .ev-car-name em { font-style:normal; font-size:.68rem; font-weight:700; padding:1px 7px; border-radius:999px; white-space:nowrap; }
+        .ev-bar { height:6px; border-radius:3px; background:rgba(127,127,127,.2); overflow:hidden; margin-top:4px; }
+        .ev-bar i { display:block; height:100%; border-radius:3px; }
+        .ev-car-pc { text-align:right; font-variant-numeric:tabular-nums; }
+        .ev-car-pc b { font-size:1.05rem; font-weight:600; }
+        .ev-car-pc span { display:block; font-size:.7rem; color:var(--secondary-text-color); }`);
       this._body = this.querySelector('.ev-body');
       this._built = true;
     }
@@ -489,7 +548,7 @@ export class EvChargerCard extends HTMLElement {
     if (sig !== this._sig) {
       this._sig = sig;
       if (!d.found) {
-        this._body.innerHTML = `<div style="display:flex; gap:10px; align-items:center;">${iconHtml('mdi:ev-station', { size: '28px', style: `color:${EV_TEAL}; flex:none;` })}<div class="ck-sub" style="line-height:1.5;">Not connected yet. Once the myenergi integration is set up (hub serial and API key), this card finds the Zappi by itself.</div></div>`;
+        this._body.innerHTML = `<div style="display:flex; gap:10px; align-items:center;">${iconHtml('mdi:ev-station', { size: '28px', style: `color:${EV_TEAL}; flex:none;` })}<div class="ck-sub" style="line-height:1.5;">Not connected yet. Once the myenergi integration is set up (hub serial and API key), this card finds the Zappi by itself.</div></div>${this._carsHtml(d)}`;
       } else {
         const cheap = rate != null && rate < 0.1;
         this._body.innerHTML = `
@@ -497,12 +556,34 @@ export class EvChargerCard extends HTMLElement {
           <div class="ev-two">
             <div class="ev-stat"><b>${d.session == null ? '–' : `${d.session.toFixed(1)} kWh`}</b><span>This charge${d.session != null && rate != null && charging ? ` · about ${pounds(d.session * rate)}` : ''}</span></div>
             <div class="ev-stat"><b>${kitEsc(kitCap(d.plug || d.status || '–'))}</b><span>${d.plug ? 'Plug' : 'Status'}</span></div>
-          </div>`;
+          </div>${this._carsHtml(d)}`;
       }
     }
     const modes = d.found && c.show_buttons !== false && d.mode != null ? EV_MODES.filter((b) => !d.options.length || d.options.includes(b.key)).map((b) => ({ ...b, on: d.mode === b.key })) : [];
     kitTiles(this.querySelector('.ev-modes'), modes, (t) => this._setMode(t.key));
     hydrateIcons(this);
+  }
+
+  // One row per car: name (with Plugged in / Charging), battery bar, % and range.
+  _carsHtml(d) {
+    const cars = d.cars || [];
+    if (!cars.length) return '';
+    const barCol = (p) => (p == null ? KIT_COLOR.off : p < 20 ? '#ef5350' : p < 40 ? '#ffa726' : EV_TEAL);
+    return `<div class="ev-cars">${cars
+      .map((x) => {
+        const tag = x.charging ? ['Charging', EV_TEAL] : x.plugged ? ['Plugged in', '#42a5f5'] : null;
+        return `<div class="ev-car">${iconHtml(x.charging ? 'mdi:car-electric' : 'mdi:car', { size: '22px', style: `color:${x.plugged || x.charging ? EV_TEAL : 'var(--secondary-text-color)'};` })}
+          <div style="min-width:0;"><div class="ev-car-name"><span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${kitEsc(x.name || 'Car')}</span>${tag ? `<em style="background:color-mix(in srgb, ${tag[1]} 22%, transparent); color:${tag[1]};">${tag[0]}</em>` : ''}</div>
+          <div class="ev-bar"><i style="width:${Math.max(0, Math.min(100, x.battery || 0))}%; background:${barCol(x.battery)};"></i></div></div>
+          <div class="ev-car-pc"><b>${x.battery == null ? '–' : `${Math.round(x.battery)}%`}</b>${x.range ? `<span>${kitEsc(x.range)}</span>` : ''}</div></div>`;
+      })
+      .join('')}</div>`;
+  }
+
+  // For the compact row: the plugged-in car's battery, e.g. " · Astra 67%".
+  _carsShort(d) {
+    const x = (d.cars || []).find((y) => y.plugged || y.charging);
+    return x && x.battery != null ? ` · ${(x.name || 'Car').replace(/^(vauxhall|volkswagen|vw)\s+/i, '')} ${Math.round(x.battery)}%` : '';
   }
 
   _setMode(mode) {
