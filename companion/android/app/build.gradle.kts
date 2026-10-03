@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -14,7 +16,7 @@ android {
         targetSdk = 35
         // The version is set by hand in version.properties; every CI build also counts up (its build number), so a newer
         // build is always recognisable and installs over an older one.
-        val appVersion = java.util.Properties().apply { file("../version.properties").inputStream().use { load(it) } }.getProperty("version")
+        val appVersion = Properties().apply { file("../version.properties").inputStream().use { load(it) } }.getProperty("version")
         val build = (System.getenv("GITHUB_RUN_NUMBER") ?: "0").toInt()
         versionCode = maxOf(build, 1)
         versionName = appVersion
