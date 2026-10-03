@@ -12,10 +12,13 @@ android {
         applicationId = "com.churchdrive.app"
         minSdk = 26
         targetSdk = 35
-        // Every CI build counts up (0.1.1, 0.1.2, ...), so a newer build is always recognisable and installs over an older one.
+        // The version is set by hand in version.properties; every CI build also counts up (its build number), so a newer
+        // build is always recognisable and installs over an older one.
+        val appVersion = java.util.Properties().apply { file("../version.properties").inputStream().use { load(it) } }.getProperty("version")
         val build = (System.getenv("GITHUB_RUN_NUMBER") ?: "0").toInt()
         versionCode = maxOf(build, 1)
-        versionName = "0.1.$build"
+        versionName = appVersion
+        buildConfigField("String", "BUILD", "\"$build\"")
         // The commit this build is from (set by CI), shown beside the account icon so a build can be told apart.
         buildConfigField("String", "COMMIT", "\"${(System.getenv("GITHUB_SHA") ?: "dev").take(7)}\"")
         // The WebRTC library is large; phones are 64 or 32 bit ARM.

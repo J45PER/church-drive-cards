@@ -305,7 +305,7 @@ private fun AboutPage(settings: AccountSettings, updateAvailable: Boolean, onBac
     ) {
         PanelTitle("About", onBack)
         PanelCard {
-            PanelRow(Icons.Outlined.Info, "Church Drive", "Version ${BuildConfig.VERSION_NAME} · ${BuildConfig.COMMIT}")
+            PanelRow(Icons.Outlined.Info, "Church Drive", "Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.BUILD}) · ${BuildConfig.COMMIT}")
             PanelRow(
                 Icons.Outlined.SystemUpdate, "Check for updates",
                 when {

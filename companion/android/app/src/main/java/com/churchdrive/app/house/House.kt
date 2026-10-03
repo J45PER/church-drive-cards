@@ -33,7 +33,7 @@ object House {
         val token = session.freshToken() ?: return null
         val name = MobileApp.deviceName(session.personName, Build.MODEL)
         val body = MobileApp.registrationBody(
-            session.deviceId, name, BuildConfig.VERSION_NAME, Build.VERSION.RELEASE, Build.MANUFACTURER, Build.MODEL,
+            session.deviceId, name, "${BuildConfig.VERSION_NAME} (${BuildConfig.BUILD})", Build.VERSION.RELEASE, Build.MANUFACTURER, Build.MODEL,
         )
         return MobileApp.register(url, token, body)?.also { session.saveWebhook(it, name) }
     }

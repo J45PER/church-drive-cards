@@ -101,7 +101,7 @@ fun HomeScreen(
                     // Administrators see which build this is.
                     if (isAdmin) {
                         Text(
-                            "v${BuildConfig.VERSION_NAME} · ${BuildConfig.COMMIT}",
+                            "v${BuildConfig.VERSION_NAME} (${BuildConfig.BUILD}) · ${BuildConfig.COMMIT}",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
