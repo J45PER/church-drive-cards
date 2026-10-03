@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-02. Current release: **v0.33.0**.*
+*Last updated 2026-10-03. Current release: **v0.33.1**.*
 
 ## Where this stands
 
@@ -25,7 +25,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-02, v0.32.2 live, nothing on beta):**
+**Now (2026-10-03, v0.33.1 live, nothing on beta):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -103,12 +103,17 @@ HACS as an integration. It does two jobs:
   Run `tools/editors-smoke.mjs` before pushing.
 - **Waiting on the user:**
   - Presence sensors, for the Lights "maybe left on" line.
-  - The cars (2026-10-02): Stellantis Vehicles (HACS 839422993, domain `stellantis_vehicles`)
-    for the Vauxhall PHEV and VW Group Connect (HACS 1207816350, domain `vag_connect`) for the
-    VW full EV are downloaded and loaded, not signed in. The Stellantis remote login service
-    timed out (free Render worker); the user will do the manual code method on a laptop
-    (Chrome console `mymap://oauth2redirect…?code=`). On Jamie's to-do list. Then: battery %
-    on the charger card (work out which car is plugged in) and in "Car charged".
+  - The cars: **Vauxhall Astra (PHEV, AMZ 2927) connected 2026-10-03** through Stellantis Vehicles
+    (HACS 839422993, manual OAuth code from Chrome's console `mymvxsdk://oauth2redirect…?code=`;
+    the code is single-use and lasts a minute or two). Device "Vauxhall Astra", entities
+    `*.amz_2927_vauxhall_astra_*` (battery %, range/fuel range/mileage set to miles,
+    `binary_sensor…_battery_plugged/_charging`, buttons for preconditioning, lock, charge).
+    The **VW (full EV)** still needs signing in: VW Group Connect (HACS 1207816350, domain
+    `vag_connect`) is loaded; on Jamie's to-do list.
+  - `ev-charger-card` (v0.33.1, on Home and Energy) lists each car from those integrations
+    (`carsFind`: battery %, range, Plugged in / Charging); `show_cars`, or `cars:` to override.
+    "Church Drive: car alerts" names the plugged-in car and its % (plugged in waits up to 3
+    minutes for the car to report; charged).
 - Nothing else is pending. Ideas the user hasn't asked for are under Open items.
 
 **New in v0.22.0 (2026-09-29): smoother panels, floating chips, page headers** (the user found the
@@ -327,6 +332,9 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **v0.33.1 (released 2026-10-03, reload-only): charger card shows the cars.** Each car from
+  Stellantis Vehicles / VW Group Connect (battery bar and %, range, Plugged in / Charging);
+  `show_cars` in the editor, `cars:` to override.
 - **v0.32.2 (released 2026-10-02, reload-only): media card.** A TV asleep in standby
   (unavailable, e.g. the LG) shows as Off; its power button runs `script.<player>_wake` when
   there is one (Wake-on-LAN); "Turning on…/off…" shows straight away until the TV reports
@@ -714,7 +722,10 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
   - **Zappi (connected 2026-10-02):** myenergi entry `01M3YEKEVKPTN4PZH6EGDMMH3V`, hub
     serial 20220859; device "Zappi", entities tidied to `*.zappi_*` (`select.zappi_charge_mode`,
     `sensor.zappi_plug_status`, `_status`, `_charge_added_session`, `_charging_power` (CT1),
-    `_grid_power` (CT2), `_energy_used_today`, …).
+    `_grid_power` (CT2), `_energy_used_today`, …). The hub is device "myenergi Hub" with
+    `sensor.myenergi_*` (`house_power` = live whole-house use, `grid_import_today`,
+    `import_power`, `grid_voltage`, …), not used by any card yet (idea: live house power on
+    Energy).
     Plug values: EV Disconnected / EV Connected / Waiting for EV / EV ready to charge /
     Charging / Fault; status: Paused / Charging / Boosting / Completed.
     Earlier notes: the HACS integration CJNE/ha-myenergi (id 401145616) is downloaded. HA
