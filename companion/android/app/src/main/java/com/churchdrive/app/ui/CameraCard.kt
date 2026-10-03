@@ -224,21 +224,21 @@ private fun CameraViewer(
                     }
                     status?.let { Text(it, color = Color.White.copy(alpha = 0.75f), modifier = Modifier.padding(16.dp)) }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(horizontal = 8.dp)) {
-                    Button(onClick = { muted = !muted }, enabled = mode == "webrtc" || mode == "hls") { Text(if (muted) "Unmute" else "Mute") }
-                    if (button != null) {
-                        OutlinedButton(onClick = { call("button", "press", button, data()) }) { Text("New snapshot") }
-                    }
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(horizontal = 8.dp)) {
-                    if (eventsBase != null) {
-                        Button(onClick = { showEvents = true }) { Text("Events") }
-                    }
-                    if (light != null) {
-                        val on = entities[light]?.state == "on"
-                        val lightName = entities[light]?.friendlyName?.replace(Regex(" light$", RegexOption.IGNORE_CASE), "") ?: "Light"
-                        OutlinedButton(onClick = { call("light", "toggle", light, data()) }) { Text("$lightName ${if (on) "on" else "off"}") }
-                    }
+                val white = ToneColors(Color.Black, Color.White, Color.White, Color.Black)
+                val canListen = mode == "webrtc" || mode == "hls"
+                Column(modifier = Modifier.padding(horizontal = 8.dp)) {
+                    IconRow(
+                        buildList {
+                            add(IconItem(if (muted) "mdi:volume-off" else "mdi:volume-high", if (muted) "Unmute" else "Mute", !muted && canListen) { if (canListen) muted = !muted })
+                            if (button != null) add(IconItem("mdi:camera-retake", "New snapshot", false) { call("button", "press", button, data()) })
+                            if (eventsBase != null) add(IconItem("mdi:history", "Events", false) { showEvents = true })
+                            if (light != null) {
+                                val on = entities[light]?.state == "on"
+                                add(IconItem(if (on) "mdi:lightbulb-on" else "mdi:lightbulb-outline", if (on) "Light off" else "Light on", on) { call("light", "toggle", light, data()) })
+                            }
+                        },
+                        white, Color.White,
+                    )
                 }
             }
         }

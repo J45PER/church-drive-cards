@@ -173,3 +173,34 @@ class PagesLogicTest {
         assertEquals("custom:climate-card", panels[1].cards[0].type)
     }
 }
+
+class ModeIconsTest {
+    @Test
+    fun fanSpeedsAreSpeedometersAndModesHaveTheirOwnIcons() {
+        val icons = com.churchdrive.app.ui.fanPresetIcons(listOf("auto", "speed_1", "speed_2", "speed_3", "sleep", "odd"))
+        assertEquals("mdi:fan-auto", icons["auto"])
+        assertEquals("mdi:speedometer-slow", icons["speed_1"])
+        assertEquals("mdi:speedometer-medium", icons["speed_2"])
+        assertEquals("mdi:speedometer", icons["speed_3"])
+        assertEquals("mdi:power-sleep", icons["sleep"])
+        assertEquals("mdi:fan", icons["odd"])
+    }
+
+    @Test
+    fun purifierModesHaveIcons() {
+        assertEquals("mdi:autorenew", com.churchdrive.app.ui.purifierModeIcon("Auto"))
+        assertEquals("mdi:flower", com.churchdrive.app.ui.purifierModeIcon("allergen"))
+        assertEquals("mdi:fan-speed-2", com.churchdrive.app.ui.purifierModeIcon("speed_2"))
+        assertEquals("mdi:fan", com.churchdrive.app.ui.purifierModeIcon("whatever"))
+    }
+
+    @Test
+    fun thermostatShortcutsAndChargerModesHaveIcons() {
+        val ui = com.churchdrive.app.ui.QuickSetting("Off", "off", null)
+        assertEquals("mdi:power", com.churchdrive.app.ui.quickSettingIcon(ui))
+        assertEquals("mdi:fire", com.churchdrive.app.ui.quickSettingIcon(com.churchdrive.app.ui.QuickSetting("Heat", "heat", null)))
+        assertEquals("mdi:leaf", com.churchdrive.app.ui.quickSettingIcon(com.churchdrive.app.ui.QuickSetting("Eco", null, "eco")))
+        assertEquals("mdi:lightning-bolt", com.churchdrive.app.ui.chargerModeIcon("Fast"))
+        assertEquals("mdi:leaf-circle-outline", com.churchdrive.app.ui.chargerModeIcon("Eco+"))
+    }
+}

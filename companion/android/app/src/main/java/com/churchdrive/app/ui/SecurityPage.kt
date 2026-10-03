@@ -201,15 +201,16 @@ fun TileCard(config: JSONObject, entities: Map<String, EntityState>, call: CallS
         }
         if (isVacuum && entity != null && hasFeature("vacuum-commands")) {
             val cleaning = entity.state == "cleaning"
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                val m = Modifier.weight(1f)
-                ChoiceButton(
-                    label = if (cleaning) "Pause" else if (entity.state == "paused") "Resume" else "Start",
-                    selected = true, tone = tone, content = tone.onContainer, modifier = m, enabled = entity.available,
-                ) { call("vacuum", if (cleaning) "pause" else "start", id, data()) }
-                ChoiceButton("Stop", false, tone, tone.onContainer, m, entity.available) { call("vacuum", "stop", id, data()) }
-                ChoiceButton("Dock", false, tone, tone.onContainer, m, entity.available) { call("vacuum", "return_to_base", id, data()) }
-            }
+            IconRow(
+                listOf(
+                    IconItem(if (cleaning) "mdi:pause" else "mdi:play", if (cleaning) "Pause" else if (entity.state == "paused") "Resume" else "Start", true) {
+                        call("vacuum", if (cleaning) "pause" else "start", id, data())
+                    },
+                    IconItem("mdi:stop", "Stop", false) { call("vacuum", "stop", id, data()) },
+                    IconItem("mdi:home-import-outline", "Dock", false) { call("vacuum", "return_to_base", id, data()) },
+                ),
+                tone, tone.onContainer, entity.available,
+            )
         }
         if (id.startsWith("select.") && entity != null && hasFeature("select-options")) {
             OptionRow(entity.options(), entity.state, tone, entity.available) { o ->

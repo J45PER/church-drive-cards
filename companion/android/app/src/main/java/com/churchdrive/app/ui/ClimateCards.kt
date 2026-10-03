@@ -102,14 +102,15 @@ fun FanCard(config: JSONObject, entities: Map<String, EntityState>, call: CallSe
             }
             if (room != null) Text("${temp(room)}°", style = MaterialTheme.typography.titleLarge)
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            val m = Modifier.weight(1f)
-            ChoiceButton("Off", !on, tone, tone.onContainer, m, enabled) { call("fan", "turn_off", id, data()) }
-            ChoiceButton("On", on && presets.isEmpty(), tone, tone.onContainer, m, enabled) { call("fan", "turn_on", id, data()) }
+        val icons = fanPresetIcons(presets)
+        val items = buildList {
+            add(IconItem("mdi:power", "Off", !on) { call("fan", "turn_off", id, data()) })
+            if (presets.isEmpty()) add(IconItem("mdi:fan", "On", on) { call("fan", "turn_on", id, data()) })
+            presets.forEach { p ->
+                add(IconItem(icons[p] ?: "mdi:fan", presetLabel(p), on && preset == p) { call("fan", "set_preset_mode", id, data("preset_mode" to p)) })
+            }
         }
-        if (presets.isNotEmpty()) {
-            OptionRow(presets, if (on) preset else null, tone, enabled) { p -> call("fan", "set_preset_mode", id, data("preset_mode" to p)) }
-        }
+        IconRow(items, tone, tone.onContainer, enabled)
     }
 }
 
@@ -142,14 +143,14 @@ fun AirPurifierCard(config: JSONObject, entities: Map<String, EntityState>, call
             }
         }
         if (allergen != null) Text("Allergen index ${allergen.roundToInt()}", style = MaterialTheme.typography.bodyMedium)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            val m = Modifier.weight(1f)
-            ChoiceButton("Off", !on, tone, tone.onContainer, m, enabled) { call("fan", "turn_off", id, data()) }
-            ChoiceButton("On", on && presets.isEmpty(), tone, tone.onContainer, m, enabled) { call("fan", "turn_on", id, data()) }
+        val items = buildList {
+            add(IconItem("mdi:power", "Off", !on) { call("fan", "turn_off", id, data()) })
+            if (presets.isEmpty()) add(IconItem("mdi:air-purifier", "On", on) { call("fan", "turn_on", id, data()) })
+            presets.forEach { p ->
+                add(IconItem(purifierModeIcon(p), presetLabel(p), on && preset == p) { call("fan", "set_preset_mode", id, data("preset_mode" to p)) })
+            }
         }
-        if (presets.isNotEmpty()) {
-            OptionRow(presets, if (on) preset else null, tone, enabled) { p -> call("fan", "set_preset_mode", id, data("preset_mode" to p)) }
-        }
+        IconRow(items, tone, tone.onContainer, enabled)
         for (i in 0 until (filters?.length() ?: 0)) {
             val f = filters?.optJSONObject(i) ?: continue
             val left = entities[f.optString("entity")]?.state?.toDoubleOrNull() ?: continue
@@ -196,11 +197,11 @@ fun CoAlarmCard(config: JSONObject, entities: Map<String, EntityState>, call: Ca
         ).joinToString(" · ")
         if (facts.isNotEmpty()) Text(facts, style = MaterialTheme.typography.bodyMedium)
         if (test != null || mute != null) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                val m = Modifier.weight(1f)
-                if (test != null) ChoiceButton("Test", false, tone, tone.onContainer, m) { call("button", "press", test, data()) }
-                if (mute != null) ChoiceButton("Mute", alarm, tone, tone.onContainer, m) { call("button", "press", mute, data()) }
+            val items = buildList {
+                if (test != null) add(IconItem("mdi:bell-ring", "Test", false) { call("button", "press", test, data()) })
+                if (mute != null) add(IconItem("mdi:volume-off", "Mute", alarm) { call("button", "press", mute, data()) })
             }
+            IconRow(items, tone, tone.onContainer)
         }
     }
 }
@@ -238,12 +239,14 @@ fun CoverCard(config: JSONObject, entities: Map<String, EntityState>, call: Call
                 enabled = enabled,
             )
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            val m = Modifier.weight(1f)
-            ChoiceButton("Open", cover?.state == "open", tone, tone.onContainer, m, enabled) { call("cover", "open_cover", id, data()) }
-            ChoiceButton("Stop", false, tone, tone.onContainer, m, enabled) { call("cover", "stop_cover", id, data()) }
-            ChoiceButton("Close", cover?.state == "closed", tone, tone.onContainer, m, enabled) { call("cover", "close_cover", id, data()) }
-        }
+        IconRow(
+            listOf(
+                IconItem("mdi:arrow-up", "Open", cover?.state == "open") { call("cover", "open_cover", id, data()) },
+                IconItem("mdi:stop", "Stop", false) { call("cover", "stop_cover", id, data()) },
+                IconItem("mdi:arrow-down", "Close", cover?.state == "closed") { call("cover", "close_cover", id, data()) },
+            ),
+            tone, tone.onContainer, enabled,
+        )
     }
 }
 

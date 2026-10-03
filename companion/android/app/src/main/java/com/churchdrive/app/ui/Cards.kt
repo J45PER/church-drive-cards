@@ -389,21 +389,21 @@ fun ClimateCard(
             outdoor?.let { "Outside ${temp(it)}°" },
         ).joinToString(" · ")
         if (extra.isNotEmpty()) Text(extra, style = MaterialTheme.typography.bodyMedium)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            val m = Modifier.weight(1f)
-            val eco = climate?.str("preset_mode") == "eco"
-            (quick ?: DEFAULT_QUICK).forEach { q ->
+        val eco = climate?.str("preset_mode") == "eco"
+        IconRow(
+            (quick ?: DEFAULT_QUICK).map { q ->
                 val selected = when {
                     q.hvacMode != null -> climate?.state == q.hvacMode && (q.hvacMode == "off" || !eco)
                     q.presetMode != null -> climate?.str("preset_mode") == q.presetMode && climate?.state != "off"
                     else -> false
                 }
-                ChoiceButton(q.name, selected, tone, tone.onContainer, m, enabled) {
+                IconItem(quickSettingIcon(q), q.name, selected) {
                     if (q.hvacMode != null) call("climate", "set_hvac_mode", id, data("hvac_mode" to q.hvacMode))
                     else if (q.presetMode != null) call("climate", "set_preset_mode", id, data("preset_mode" to q.presetMode))
                 }
-            }
-        }
+            },
+            tone, tone.onContainer, enabled,
+        )
     }
 }
 
@@ -449,16 +449,15 @@ fun VacuumCard(vacuum: EntityState?, battery: EntityState?, call: CallService) {
                 Text(vacuumSummary(vacuum, battery), style = MaterialTheme.typography.bodyMedium)
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            val m = Modifier.weight(1f)
-            ChoiceButton(
-                label = if (cleaning) "Pause" else if (vacuum?.state == "paused") "Resume" else "Start",
-                selected = true, tone = tone, content = tone.onContainer, modifier = m, enabled = enabled,
-            ) { call("vacuum", if (cleaning) "pause" else "start", VACUUM_ENTITY, data()) }
-            ChoiceButton("Dock", false, tone, tone.onContainer, m, enabled) {
-                call("vacuum", "return_to_base", VACUUM_ENTITY, data())
-            }
-        }
+        IconRow(
+            listOf(
+                IconItem(if (cleaning) "mdi:pause" else "mdi:play", if (cleaning) "Pause" else if (vacuum?.state == "paused") "Resume" else "Start", true) {
+                    call("vacuum", if (cleaning) "pause" else "start", VACUUM_ENTITY, data())
+                },
+                IconItem("mdi:home-import-outline", "Dock", false) { call("vacuum", "return_to_base", VACUUM_ENTITY, data()) },
+            ),
+            tone, tone.onContainer, enabled,
+        )
     }
 }
 
@@ -489,14 +488,14 @@ fun ChargerCard(entities: Map<String, EntityState>, call: CallService) {
                 Text("${temp(session)} kWh this session", style = MaterialTheme.typography.bodyMedium)
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            val m = Modifier.weight(1f)
-            val teal = toneColors(Tone.Teal)
-            mode?.options()?.forEach { option ->
-                ChoiceButton(option, mode.state == option, teal, tone.onContainer, m, mode.available) {
+        val teal = toneColors(Tone.Teal)
+        IconRow(
+            mode?.options().orEmpty().map { option ->
+                IconItem(chargerModeIcon(option), option, mode?.state == option) {
                     call("select", "select_option", ZAPPI_MODE, data("option" to option))
                 }
-            }
-        }
+            },
+            teal, tone.onContainer, mode?.available == true,
+        )
     }
 }

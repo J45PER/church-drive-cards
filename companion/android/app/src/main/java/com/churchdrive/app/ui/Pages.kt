@@ -44,7 +44,7 @@ enum class Page(
         ),
     ),
     Climate(
-        "Climate", "mdi:thermostat", Icons.Outlined.Thermostat,
+        "Climate", "mdi:leaf", Icons.Outlined.Thermostat,
         listOf("Heating", "Climate", "Cooling", "Air Quality", "Windows & Doors").map { Section(it) },
     ),
     Cleaning(
