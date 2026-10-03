@@ -51,12 +51,16 @@ class HaClient(private val scope: CoroutineScope) {
     private var url = ""
     private var token = ""
 
+    /** A light connection (the background service's): no entity states, no dashboard events, just what it asks for. */
+    private var light = false
+
     @Synchronized
     private fun id() = nextId++
 
-    fun connect(baseUrl: String, accessToken: String) {
+    fun connect(baseUrl: String, accessToken: String, light: Boolean = false) {
         url = baseUrl
         token = accessToken
+        this.light = light
         job?.cancel()
         job = scope.launch {
             var backoff = 1_000L
@@ -149,6 +153,7 @@ class HaClient(private val scope: CoroutineScope) {
                     pending.clear()
                     subscriptions.clear()
                     _connection.value = ConnectionState.Connected
+                    if (light) return
                     webSocket.send(
                         JSONObject().put("id", id()).put("type", "subscribe_events")
                             .put("event_type", "state_changed").toString(),

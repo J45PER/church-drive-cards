@@ -24,6 +24,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.churchdrive.app.ui.AccountSettings
 import com.churchdrive.app.ui.ChurchDriveTheme
 import com.churchdrive.app.ui.HomeScreen
 import com.churchdrive.app.ui.LocalBaseUrl
@@ -46,7 +47,9 @@ class MainActivity : ComponentActivity() {
         com.churchdrive.app.ui.MdiAll.load(this)
         setContent {
             var crash by remember { mutableStateOf(lastCrash) }
-            crash?.let { text ->
+            // The crash report is for administrators only.
+            val admin by vm.isAdmin.collectAsStateWithLifecycle()
+            crash?.takeIf { admin }?.let { text ->
                 val clipboard = LocalClipboardManager.current
                 AlertDialog(
                     onDismissRequest = { crash = null },
@@ -70,6 +73,8 @@ class MainActivity : ComponentActivity() {
                         val userName by vm.userName.collectAsStateWithLifecycle()
                         val isAdmin by vm.isAdmin.collectAsStateWithLifecycle()
                         val updateAvailable by vm.updateAvailable.collectAsStateWithLifecycle()
+                        val notifyOn by vm.notifyOn.collectAsStateWithLifecycle()
+                        val locationOn by vm.locationOn.collectAsStateWithLifecycle()
                         val lights by vm.lights.collectAsStateWithLifecycle()
                         val sceneLooks by vm.sceneLooks.collectAsStateWithLifecycle()
                         val panels by vm.panels.collectAsStateWithLifecycle()
@@ -91,6 +96,14 @@ class MainActivity : ComponentActivity() {
                                     userName = userName,
                                     isAdmin = isAdmin,
                                     updateAvailable = updateAvailable,
+                                    account = AccountSettings(
+                                        notifyOn = notifyOn,
+                                        locationOn = locationOn,
+                                        onNotify = vm::setNotifications,
+                                        onLocation = vm::setLocation,
+                                        notifyService = vm.notifyService,
+                                        onCheckUpdate = vm::checkUpdateNow,
+                                    ),
                                     lights = lights,
                                     areaNames = areaNames,
                                     panels = panels,

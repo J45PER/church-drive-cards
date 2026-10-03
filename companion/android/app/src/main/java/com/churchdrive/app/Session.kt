@@ -37,5 +37,30 @@ class Session(context: Context) {
         prefs.edit().putString("token", access).apply()
     }
 
+    // This phone's place in Home Assistant as a mobile app (notifications and location), and the person's choices.
+    val webhookId: String? get() = prefs.getString("webhook", null)
+    val deviceName: String? get() = prefs.getString("device_name", null)
+    val personName: String? get() = prefs.getString("person", null)
+    var notifyOn: Boolean
+        get() = prefs.getBoolean("notify_on", false)
+        set(v) = prefs.edit().putBoolean("notify_on", v).apply()
+    var locationOn: Boolean
+        get() = prefs.getBoolean("location_on", false)
+        set(v) = prefs.edit().putBoolean("location_on", v).apply()
+
+    /** A random id for this install, kept so a re-registration is recognised as the same phone. */
+    val deviceId: String
+        get() = prefs.getString("device_id", null) ?: java.util.UUID.randomUUID().toString().also {
+            prefs.edit().putString("device_id", it).apply()
+        }
+
+    fun saveWebhook(id: String, deviceName: String) {
+        prefs.edit().putString("webhook", id).putString("device_name", deviceName).apply()
+    }
+
+    fun clearWebhook() = prefs.edit().remove("webhook").remove("device_name").apply()
+
+    fun savePerson(name: String) = prefs.edit().putString("person", name).apply()
+
     fun clear() = prefs.edit().clear().apply()
 }

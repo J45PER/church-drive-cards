@@ -65,6 +65,37 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** What the person has chosen: notifications from the house, and sharing their location with it. */
+    private val _notifyOn = MutableStateFlow(session.notifyOn)
+    val notifyOn: StateFlow<Boolean> = _notifyOn
+    private val _locationOn = MutableStateFlow(session.locationOn)
+    val locationOn: StateFlow<Boolean> = _locationOn
+
+    fun setNotifications(on: Boolean) {
+        session.notifyOn = on
+        _notifyOn.value = on
+        com.churchdrive.app.house.HouseService.sync(appContext)
+    }
+
+    fun setLocation(on: Boolean) {
+        session.locationOn = on
+        _locationOn.value = on
+        com.churchdrive.app.house.HouseService.sync(appContext)
+    }
+
+    /** The notify service for this phone (for an administrator to test with), once it's registered with Home Assistant. */
+    val notifyService: String?
+        get() = session.deviceName?.let { com.churchdrive.app.ha.MobileApp.notifyService(it) }
+
+    /** Asks GitHub now whether a newer build is out; [done] gets the answer on the main thread. */
+    fun checkUpdateNow(done: (Boolean) -> Unit) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val available = UpdateCheck.check(okhttp3.OkHttpClient(), BuildConfig.COMMIT)
+            _updateAvailable.value = available
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { done(available) }
+        }
+    }
+
     private val _signedIn = MutableStateFlow(session.signedIn)
     val signedIn: StateFlow<Boolean> = _signedIn
 
@@ -118,7 +149,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         checkForUpdate()
-        if (session.signedIn) startSession()
+        if (session.signedIn) {
+            startSession()
+            com.churchdrive.app.house.HouseService.sync(appContext)
+        }
+        // The person's name, kept for naming this phone in Home Assistant.
+        viewModelScope.launch { client.userName.collect { if (it != null) session.savePerson(it) } }
         // A username-and-password sign-in's access token lasts half an hour. If the connection is refused later
         // (the phone slept past that), get a new one from the refresh token and connect again.
         viewModelScope.launch {
@@ -211,8 +247,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val url = session.url
         val refresh = session.refreshToken
         if (url != null && refresh != null) viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { HaAuth.revoke(url, refresh) }
+        appContext.stopService(android.content.Intent(appContext, com.churchdrive.app.house.HouseService::class.java))
         client.disconnect()
         session.clear()
+        _notifyOn.value = false
+        _locationOn.value = false
         _signedIn.value = false
     }
 

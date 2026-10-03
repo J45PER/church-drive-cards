@@ -2,6 +2,7 @@ package com.churchdrive.app.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -59,6 +60,7 @@ fun HomeScreen(
     userName: String?,
     isAdmin: Boolean,
     updateAvailable: Boolean,
+    account: AccountSettings,
     lights: LightLayout,
     areaNames: Map<String, String>,
     panels: Map<String, List<PanelSpec>>,
@@ -70,38 +72,28 @@ fun HomeScreen(
     // Administrator-only pages (Devices, Energy) appear only while an administrator is signed in.
     val pages = Page.entries.filter { !it.adminOnly || isAdmin }
     if (page !in pages) page = Page.Home
-    var menuOpen by remember { mutableStateOf(false) }
+    // The account panel (null shut, "account", "settings" or "about"), which slides in from the right.
+    var panel by rememberSaveable { mutableStateOf<String?>(null) }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val title = if (page == Page.Home) "Hello ${userName?.substringBefore(' ') ?: ""}".trim() else page.label
 
+    Box {
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             MediumTopAppBar(
                 title = { Text(title) },
                 actions = {
-                    IconButton(onClick = { menuOpen = true }) {
-                        Icon(Icons.Filled.AccountCircle, contentDescription = "Account")
+                    // Administrators see which build this is.
+                    if (isAdmin) {
+                        Text(
+                            "v${BuildConfig.VERSION_NAME} · ${BuildConfig.COMMIT}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
-                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    "Version ${BuildConfig.VERSION_NAME} · ${BuildConfig.COMMIT}",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            },
-                            enabled = false,
-                            onClick = {},
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Sign out") },
-                            onClick = {
-                                menuOpen = false
-                                onSignOut()
-                            },
-                        )
+                    IconButton(onClick = { panel = "account" }) {
+                        Icon(Icons.Filled.AccountCircle, contentDescription = "Account")
                     }
                 },
                 scrollBehavior = scrollBehavior,
@@ -165,6 +157,8 @@ fun HomeScreen(
                 DashboardPage(shown, entities, registry, call)
             }
         }
+    }
+    AccountOverlay(panel, { panel = it }, userName, isAdmin, account, updateAvailable, onSignOut)
     }
 }
 

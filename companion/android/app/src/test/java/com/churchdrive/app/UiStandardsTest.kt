@@ -70,6 +70,7 @@ class UiStandardsTest {
         val allowed = mapOf(
             "Cards.kt" to mapOf("Button(" to 1, "OutlinedButton(" to 1, "FilledIconButton(" to 1, "ChoiceButton(" to 1),
             "ClimateCards.kt" to mapOf("ChoiceButton(" to 1),
+            "AccountPanel.kt" to mapOf("Button(" to 1),
             "LoginScreen.kt" to mapOf("Button(" to 1, "TextButton(" to 1),
             "HomeScreen.kt" to mapOf("TextButton(" to 1),
             "TodoCards.kt" to mapOf("FilledIconButton(" to 1),
