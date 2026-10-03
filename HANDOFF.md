@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-03. Current release: **v0.34.0**.*
+*Last updated 2026-10-03. Current release: **v0.35.0**.*
 
 ## Where this stands
 
@@ -25,7 +25,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-03, v0.33.1 live, nothing on beta):**
+**Now (2026-10-03, v0.35.0 live, nothing on beta):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -110,8 +110,13 @@ HACS as an integration. It does two jobs:
     `binary_sensor…_battery_plugged/_charging`, buttons for preconditioning, lock, charge).
     The **VW (full EV)** still needs signing in: VW Group Connect (HACS 1207816350, domain
     `vag_connect`) is loaded; on Jamie's to-do list.
-  - `ev-charger-card` (v0.33.1, on Home and Energy) lists each car from those integrations
-    (`carsFind`: battery %, range, Plugged in / Charging); `show_cars`, or `cars:` to override.
+  - **Car card** (`src/car-card.js`, `custom:car-card`, v0.35.0): each car from those
+    integrations (`carDevices`/`carEntities`): battery bar and %, electric range, fuel % and
+    range, Plugged in / Charging / where it is, "Full by" when charging; tap for more-info.
+    `cars:` [{device, name, people}] gives cars to people; `only_mine` (default on) shows the
+    signed-in person only their cars (a car with no people is everyone's) and the card hides
+    itself when they have none. It sits at the top of the "Car charging" panel on Home and
+    Energy; `ev-charger-card` is the Zappi alone again (the v0.33.1 car rows are gone).
     "Church Drive: car alerts" names the plugged-in car and its % (plugged in waits up to 3
     minutes for the car to report; charged).
 - Nothing else is pending. Ideas the user hasn't asked for are under Open items.
@@ -344,6 +349,8 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
   oscillate, other...), `purifier`, `climate_mode`, `climate_preset`, `charger` (stopped, eco, eco+,
   fast), `cover` (open, stop, close), `co` (test, mute). A quick setting's own `icon` on a thermostat
   card still wins. Tests: `test/icon-library.test.mjs`.
+- **v0.35.0 (released 2026-10-03, reload-only): Car card.** Cars moved off the charger card
+  onto `custom:car-card`, which can give cars to people (see the cars notes above).
 - **v0.33.1 (released 2026-10-03, reload-only): charger card shows the cars.** Each car from
   Stellantis Vehicles / VW Group Connect (battery bar and %, range, Plugged in / Charging);
   `show_cars` in the editor, `cars:` to override.
