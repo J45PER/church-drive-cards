@@ -85,6 +85,18 @@ entity: light.living_room
 name: Living Room (group)
 ```
 
+### `mirror-card`
+Shows another page's card here, so a card that's on two pages (the Kitchen lights on Home and on Lighting) is set up once. Edit the original and every mirror of it follows: its rows, scenes, names and anything else, within a moment of the dashboard being saved. Everything is picked in the visual editor: the **dashboard** (default "This dashboard"), then the **page**, then the **card to mirror**. The card list shows each card by its panel and name ("Ground Floor › Kitchen (Light control)"); layout cards (Auto Layout, Section Panel, Nav Bar, stacks) and other mirrors aren't listed.
+
+A card is found again by what it's about: its area, else its entity, else its name, so moving cards around or adding others doesn't break a mirror. Rename the area, entity or name on the original and the mirror says it can't be found; pick it again. A mirror shrinks with its Section Panel exactly as the original would, and waits for the panel to open if the original has no one-row version. The Android app follows mirrors too.
+
+```yaml
+type: custom:mirror-card
+dashboard: this
+view: lighting
+source: area:kitchen
+```
+
 ### `scene-builder-card`
 Make your own universal scenes: a name, white or colours, brightness, animated or still with a speed, and an icon. Try them on a room before saving. Saved scenes appear in every light card's scene list. It lives on the Design Presets dashboard's **Scene builder** tab. Saving needs an admin user.
 

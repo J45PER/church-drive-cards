@@ -1,8 +1,19 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-03. Current release: **v0.32.3**.*
+*Last updated 2026-10-03. Current release: **v0.33.1**.*
 
 ## Where this stands
+
+**Mirror card (released in v0.33.0, 2026-10-02).** `custom:mirror-card` shows
+another page's card on this one (Home's Kitchen lights = the Lighting page's Kitchen card),
+picked in the visual editor: dashboard, page, card. Logic is in `src/mirror.js` (tested in
+`test/mirror.test.mjs`): a card is keyed by its area, else entity, else name (`area:kitchen`,
+`#2` for repeats). It reads `lovelace/config`, reloads on the `lovelace_updated` event,
+and forwards the Section Panel's compact mode. The companion Android app follows mirrors too
+(`DashboardLights.kt` has to keep the same keys). The Home Lights panel on the Mobile dashboard uses three mirrors of the Lighting page's
+Kitchen, Living room and Middle floor cards (`source: area:kitchen` etc.). Also in v0.33.0:
+light cards retry loading the scene library (`universal-scenes.js`) if HA wasn't ready, so a
+page opened during a restart no longer stays without scenes.
 
 This repo (`github.com/J45PER/church-drive-cards`, public) is the **Church Drive**
 Home Assistant integration (`custom_components/church_drive`). It's installed through
@@ -14,7 +25,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-03, v0.32.3 live, nothing on beta):**
+**Now (2026-10-03, v0.33.1 live, nothing on beta):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -99,7 +110,7 @@ HACS as an integration. It does two jobs:
     `binary_sensor…_battery_plugged/_charging`, buttons for preconditioning, lock, charge).
     The **VW (full EV)** still needs signing in: VW Group Connect (HACS 1207816350, domain
     `vag_connect`) is loaded; on Jamie's to-do list.
-  - `ev-charger-card` (v0.32.3, on Home and Energy) lists each car from those integrations
+  - `ev-charger-card` (v0.33.1, on Home and Energy) lists each car from those integrations
     (`carsFind`: battery %, range, Plugged in / Charging); `show_cars`, or `cars:` to override.
     "Church Drive: car alerts" names the plugged-in car and its % (plugged in waits up to 3
     minutes for the car to report; charged).
@@ -321,7 +332,7 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
-- **v0.32.3 (released 2026-10-03, reload-only): charger card shows the cars.** Each car from
+- **v0.33.1 (released 2026-10-03, reload-only): charger card shows the cars.** Each car from
   Stellantis Vehicles / VW Group Connect (battery bar and %, range, Plugged in / Charging);
   `show_cars` in the editor, `cars:` to override.
 - **v0.32.2 (released 2026-10-02, reload-only): media card.** A TV asleep in standby
