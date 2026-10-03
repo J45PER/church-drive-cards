@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-03. Current release: **v0.35.1**.*
+*Last updated 2026-10-03. Current release: **v0.36.1**.*
 
 ## Where this stands
 
@@ -25,7 +25,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-03, v0.35.1 live, nothing on beta):**
+**Now (2026-10-03, v0.36.1 live, nothing on beta):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -110,6 +110,15 @@ HACS as an integration. It does two jobs:
     `binary_sensor…_battery_plugged/_charging`, buttons for preconditioning, lock, charge).
     The **VW (full EV)** still needs signing in: VW Group Connect (HACS 1207816350, domain
     `vag_connect`) is loaded; on Jamie's to-do list.
+  - **People manager** (`src/people-manager-card.js`, `custom:people-manager-card`, v0.36.0, on Manager as the first panel "People"; mock-up
+    https://claude.ai/artifact/X9iAro1YMDVjzTv2M6DiR8): a list of people (chips on a phone)
+    and the chosen person's page: picture (Home Assistant image upload, then `person/update`;
+    a YAML person can't be changed), Places (replaces `places-card`, removed from Locations),
+    Phones, Cars (new: `church_drive/people/cars`, kept in the people store, `cars` on
+    `sensor.church_drive_people`), Alerts by group, To-dos (To-dos and House jobs kinds),
+    Arrivals (who's told about this person). Admins see everyone; others only themselves,
+    read-only. The Car card reads owners from the sensor (its own `people` setting is gone);
+    car alerts (plugged in, charged) go only to the car's owners when it has any.
   - **Car card** (`src/car-card.js`, `custom:car-card`, v0.35.0): each car from those
     integrations (`carDevices`/`carEntities`): battery bar and %, electric range, fuel % and
     range, Plugged in / Charging / where it is, "Full by" when charging; tap for more-info.
@@ -349,7 +358,10 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
   oscillate, other...), `purifier`, `climate_mode`, `climate_preset`, `charger` (stopped, eco, eco+,
   fast), `cover` (open, stop, close), `co` (test, mute). A quick setting's own `icon` on a thermostat
   card still wins. Tests: `test/icon-library.test.mjs`.
-- **v0.35.1 (reload-only): Eco switches the thermostat on.** A thermostat's Eco is a preset, which only
+- **v0.36.0 (released 2026-10-03, restarted): People manager.** Manager's first panel is
+  People (`people-manager-card`): picture, places, phones, cars, alerts, to-dos, arrivals per
+  person; car owners kept by the integration (see the cars notes above).
+- **v0.36.1 (reload-only): Eco switches the thermostat on.** A thermostat's Eco is a preset, which only
   takes hold while it is on, so a quick setting with just a preset (Eco) on a thermostat that is *off*
   now sets Heat first (Heat, else Auto, else the first mode that isn't Off), waits for it, then sets the
   preset: one tap, not Heat then Eco. The steps live in `src/climate-quick.js` (`quickPlan`, tested in
