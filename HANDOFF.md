@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-02. Current release: **v0.32.2**.*
+*Last updated 2026-10-03. Current release: **v0.32.3**.*
 
 ## Where this stands
 
@@ -14,7 +14,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-02, v0.32.2 live, nothing on beta):**
+**Now (2026-10-03, v0.32.3 live, nothing on beta):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -99,7 +99,7 @@ HACS as an integration. It does two jobs:
     `binary_sensor…_battery_plugged/_charging`, buttons for preconditioning, lock, charge).
     The **VW (full EV)** still needs signing in: VW Group Connect (HACS 1207816350, domain
     `vag_connect`) is loaded; on Jamie's to-do list.
-  - `ev-charger-card` (beta, on Home and Energy) lists each car from those integrations
+  - `ev-charger-card` (v0.32.3, on Home and Energy) lists each car from those integrations
     (`carsFind`: battery %, range, Plugged in / Charging); `show_cars`, or `cars:` to override.
     "Church Drive: car alerts" names the plugged-in car and its % (plugged in waits up to 3
     minutes for the car to report; charged).
@@ -321,6 +321,9 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **v0.32.3 (released 2026-10-03, reload-only): charger card shows the cars.** Each car from
+  Stellantis Vehicles / VW Group Connect (battery bar and %, range, Plugged in / Charging);
+  `show_cars` in the editor, `cars:` to override.
 - **v0.32.2 (released 2026-10-02, reload-only): media card.** A TV asleep in standby
   (unavailable, e.g. the LG) shows as Off; its power button runs `script.<player>_wake` when
   there is one (Wake-on-LAN); "Turning on…/off…" shows straight away until the TV reports
