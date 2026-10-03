@@ -278,13 +278,3 @@ private fun TimeInput(entity: EntityState, call: CallService) {
             TimePickerDialog(context, { _, h, m -> call("input_datetime", "set_datetime", entity.entityId, data("time" to "%02d:%02d:00".format(h, m))) }, hour, minute, true).show()
         }.padding(horizontal = 12.dp, vertical = 6.dp))
 }
-
-/** A Manager section the app can't show yet. */
-@Composable
-fun ManagerSoonCard(what: String) {
-    val neutral = toneColors(Tone.Grey)
-    EntityCard(neutral.container, neutral.onContainer) {
-        Text(what, style = MaterialTheme.typography.titleMedium)
-        Text("This part of the Manager isn't in the app yet. For now it's on the Manager dashboard in Home Assistant.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
