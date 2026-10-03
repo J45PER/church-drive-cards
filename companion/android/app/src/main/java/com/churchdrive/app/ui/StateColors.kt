@@ -54,8 +54,10 @@ private val darkTones = mapOf(
 )
 
 @Composable
-fun toneColors(tone: Tone): ToneColors =
-    (if (isSystemInDarkTheme()) darkTones else lightTones).getValue(tone)
+fun toneColors(tone: Tone): ToneColors = toneColorsFor(tone, isSystemInDarkTheme())
+
+/** The same colours without Compose, for places that draw themselves (the home-screen widgets). */
+fun toneColorsFor(tone: Tone, dark: Boolean): ToneColors = (if (dark) darkTones else lightTones).getValue(tone)
 
 /** The alarm card's colours, as on the dashboard. */
 fun alarmTone(state: String?): Tone = when (state) {

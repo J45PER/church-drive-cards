@@ -41,7 +41,7 @@
             </intent-filter>
         </receiver>
         <receiver
-            android:name=".widget.AlarmWidget"
+            android:name=".widget.AlarmWidgetReceiver"
             android:exported="false"
             android:label="Church Drive alarm">
             <intent-filter>
@@ -52,7 +52,7 @@
                 android:resource="@xml/widget_alarm" />
         </receiver>
         <receiver
-            android:name=".widget.LightsWidget"
+            android:name=".widget.LightsWidgetReceiver"
             android:exported="false"
             android:label="Church Drive lights">
             <intent-filter>
@@ -63,7 +63,7 @@
                 android:resource="@xml/widget_lights" />
         </receiver>
         <receiver
-            android:name=".widget.ClimateWidget"
+            android:name=".widget.ClimateWidgetReceiver"
             android:exported="false"
             android:label="Church Drive climate">
             <intent-filter>

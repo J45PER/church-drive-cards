@@ -323,7 +323,7 @@ fun temp(v: Double?): String = if (v == null) "–" else "%.1f".format(v).remove
 /** A shortcut button on a thermostat card: a heating mode or a preset. */
 data class QuickSetting(val name: String, val hvacMode: String?, val presetMode: String?)
 
-private val DEFAULT_QUICK = listOf(QuickSetting("Off", "off", null), QuickSetting("Heat", "heat", null), QuickSetting("Eco", null, "eco"))
+val DEFAULT_QUICK = listOf(QuickSetting("Off", "off", null), QuickSetting("Heat", "heat", null), QuickSetting("Eco", null, "eco"))
 
 /** The `quick_settings` of a dashboard climate card, or null for the usual Off, Heat and Eco. */
 fun quickSettings(config: JSONObject): List<QuickSetting>? {
