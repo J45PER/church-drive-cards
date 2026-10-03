@@ -31,7 +31,7 @@ import org.json.JSONObject
 
 /** A to-do list's items, kept up to date: fetched again whenever the list's count changes. Null until they arrive. */
 @Composable
-private fun rememberTodoItems(listId: String, entities: Map<String, EntityState>): List<TodoItem>? {
+internal fun rememberTodoItems(listId: String, entities: Map<String, EntityState>): List<TodoItem>? {
     val api = LocalHaApi.current
     var items by remember(listId) { mutableStateOf<List<TodoItem>?>(null) }
     val count = entities[listId]?.state
