@@ -111,7 +111,7 @@ fun FanCard(config: JSONObject, entities: Map<String, EntityState>, call: CallSe
         if (config.optBoolean("show_speeds", true)) {
             TileRow(
                 buildList {
-                    add(TileItem("mdi:power", "Off", !on) { call("fan", "turn_off", id, data()) })
+                    add(TileItem(IconMap.of("fan", "off", "mdi:power"), "Off", !on) { call("fan", "turn_off", id, data()) })
                     speeds.forEachIndexed { i, sp ->
                         add(TileItem(fanSpeedIcon(i, speeds.size), "${sp.n}", current === sp) {
                             if (sp.preset != null) call("fan", "set_preset_mode", id, data("preset_mode" to sp.preset))
@@ -168,7 +168,7 @@ fun AirPurifierCard(config: JSONObject, entities: Map<String, EntityState>, call
         if (allergen != null) Text("Allergen index ${allergen.roundToInt()}", style = MaterialTheme.typography.bodyMedium)
         TileRow(
             buildList {
-                add(TileItem("mdi:power", "Off", !on) { call("fan", "turn_off", id, data()) })
+                add(TileItem(IconMap.of("purifier", "off", "mdi:power"), "Off", !on) { call("fan", "turn_off", id, data()) })
                 if (presets.isEmpty()) add(TileItem("mdi:air-purifier", "On", on) { call("fan", "turn_on", id, data()) })
                 presets.forEach { p ->
                     add(TileItem(purifierModeIcon(p), presetLabel(p), on && preset == p) { call("fan", "set_preset_mode", id, data("preset_mode" to p)) })

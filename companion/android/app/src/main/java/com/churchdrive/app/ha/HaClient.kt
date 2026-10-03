@@ -34,7 +34,7 @@ class HaClient(private val scope: CoroutineScope) {
     private val _userName = MutableStateFlow<String?>(null)
     val userName: StateFlow<String?> = _userName
 
-    /** Counts `lovelace_updated` events: a dashboard was saved in Home Assistant. */
+    /** Counts `lovelace_updated` events (a dashboard was saved in Home Assistant) and icon changes. */
     private val _dashboardTick = MutableStateFlow(0)
     val dashboardTick: StateFlow<Int> = _dashboardTick
 
@@ -152,6 +152,10 @@ class HaClient(private val scope: CoroutineScope) {
                         JSONObject().put("id", id()).put("type", "subscribe_events")
                             .put("event_type", "lovelace_updated").toString(),
                     )
+                    webSocket.send(
+                        JSONObject().put("id", id()).put("type", "subscribe_events")
+                            .put("event_type", "church_drive_icons_changed").toString(),
+                    )
                     userId = id()
                     webSocket.send(JSONObject().put("id", userId).put("type", "auth/current_user").toString())
                     getStatesId = id()
@@ -187,7 +191,8 @@ class HaClient(private val scope: CoroutineScope) {
     }
 
     private fun applyEvent(event: JSONObject) {
-        if (event.optString("event_type") == "lovelace_updated") {
+        // A dashboard was saved, or an icon was changed in the Icon Styles card: read them again.
+        if (event.optString("event_type") == "lovelace_updated" || event.optString("event_type") == "church_drive_icons_changed") {
             _dashboardTick.update { it + 1 }
             return
         }

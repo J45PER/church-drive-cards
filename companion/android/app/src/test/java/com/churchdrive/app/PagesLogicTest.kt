@@ -238,6 +238,26 @@ class ModeIconsTest {
     }
 
     @Test
+    fun readsHomeAssistantsIconList() {
+        val list = JSONObject(
+            """{"icons":{"fan":{"sleep":"mdi:moon-waning-crescent","speed_low":"mdi:numeric-1"},"climate_preset":{"eco":"mdi:sprout"},"charger":{"Eco+":"mdi:solar-panel"}}}""",
+        )
+        com.churchdrive.app.ui.IconMap.load(list)
+        try {
+            assertEquals("mdi:moon-waning-crescent", com.churchdrive.app.ui.fanPresetIcon("sleep"))
+            assertEquals("mdi:numeric-1", com.churchdrive.app.ui.fanSpeedIcon(0, 3))
+            assertEquals("mdi:speedometer-medium", com.churchdrive.app.ui.fanSpeedIcon(1, 3))
+            assertEquals("mdi:sprout", com.churchdrive.app.ui.quickSettingIcon(com.churchdrive.app.ui.QuickSetting("Eco", null, "eco")))
+            assertEquals("mdi:solar-panel", com.churchdrive.app.ui.chargerModes(emptyList()).first { it.key == "Eco+" }.icon)
+            // Without the integration the answer is an error (null): what's there stays.
+            com.churchdrive.app.ui.IconMap.load(null)
+            assertEquals("mdi:moon-waning-crescent", com.churchdrive.app.ui.fanPresetIcon("sleep"))
+        } finally {
+            com.churchdrive.app.ui.IconMap.overrides.clear()
+        }
+    }
+
+    @Test
     fun iconsFromHomeAssistantTakeOverFromTheDefaults() {
         com.churchdrive.app.ui.IconMap.overrides["fan.sleep"] = "mdi:moon-waning-crescent"
         try {

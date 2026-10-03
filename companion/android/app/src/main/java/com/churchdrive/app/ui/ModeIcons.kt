@@ -82,6 +82,21 @@ object IconMap {
     val overrides = mutableStateMapOf<String, String>()
 
     fun of(group: String, key: String, default: String): String = overrides["$group.${key.lowercase()}"] ?: default
+
+    /** Takes Home Assistant's list (`church_drive/icons`: group, then mode, then icon). Without the integration, nothing changes. */
+    fun load(result: Any?) {
+        val icons = (result as? org.json.JSONObject)?.optJSONObject("icons") ?: return
+        val next = mutableMapOf<String, String>()
+        for (group in icons.keys()) {
+            val modes = icons.optJSONObject(group) ?: continue
+            for (key in modes.keys()) {
+                val icon = if (modes.isNull(key)) null else modes.optString(key).takeIf { it.isNotBlank() }
+                if (icon != null) next["$group.${key.lowercase()}"] = icon
+            }
+        }
+        overrides.clear()
+        overrides.putAll(next)
+    }
 }
 
 /** One tile: an icon and a label (as on the dashboard's cards), filled when it's the current choice. */
@@ -161,11 +176,13 @@ fun fanSpeeds(fan: com.churchdrive.app.ha.EntityState?): List<FanSpeed> {
 /** The speedometer for the [i]th of [count] speeds: slow, medium or fast. */
 fun fanSpeedIcon(i: Int, count: Int): String {
     val gauges = listOf("mdi:speedometer-slow", "mdi:speedometer-medium", "mdi:speedometer")
-    return IconMap.of("fan", "speed_${i + 1}", gauges[minOf(2, Math.round(i.toDouble() / maxOf(1, count - 1) * 2).toInt())])
+    val slot = minOf(2, Math.round(i.toDouble() / maxOf(1, count - 1) * 2).toInt())
+    return IconMap.of("fan", listOf("speed_low", "speed_medium", "speed_high")[slot], gauges[slot])
 }
 
 /** The icon of a fan's other modes (sleep, auto, natural...), as on the dashboard's fan card. */
-fun fanPresetIcon(preset: String): String = IconMap.of("fan", preset, FAN_PRESET_ICONS[preset.lowercase()] ?: "mdi:fan")
+fun fanPresetIcon(preset: String): String =
+    IconMap.of("fan", preset, FAN_PRESET_ICONS[preset.lowercase()] ?: IconMap.of("fan", "other", "mdi:fan"))
 
 private val PURIFIER_MODE_ICONS = mapOf(
     "auto" to "mdi:autorenew", "auto (general)" to "mdi:autorenew", "allergen" to "mdi:flower", "medium" to "mdi:fan",
@@ -176,7 +193,10 @@ private val PURIFIER_MODE_ICONS = mapOf(
 /** An icon for an air purifier's mode, as the dashboard's air purifier card has them. */
 fun purifierModeIcon(mode: String): String {
     val speed = SPEED_NAME.find(mode)?.groupValues?.get(1)?.toIntOrNull()
-    return IconMap.of("purifier", mode, PURIFIER_MODE_ICONS[mode.lowercase()] ?: speed?.let { "mdi:fan-speed-${it.coerceIn(1, 3)}" } ?: "mdi:fan")
+    return IconMap.of(
+        "purifier", mode,
+        PURIFIER_MODE_ICONS[mode.lowercase()] ?: speed?.let { "mdi:fan-speed-${it.coerceIn(1, 3)}" } ?: IconMap.of("purifier", "other", "mdi:fan"),
+    )
 }
 
 private val HVAC_MODE_ICONS = mapOf(
@@ -191,8 +211,8 @@ private val CLIMATE_PRESET_ICONS = mapOf(
 
 /** The icon of a thermostat shortcut: its heating mode's or its preset's, as on the dashboard's climate card. */
 fun quickSettingIcon(q: QuickSetting): String = when {
-    q.hvacMode != null -> IconMap.of("climate", q.hvacMode, HVAC_MODE_ICONS[q.hvacMode] ?: "mdi:thermostat")
-    q.presetMode != null -> IconMap.of("climate", q.presetMode, CLIMATE_PRESET_ICONS[q.presetMode] ?: "mdi:tune-variant")
+    q.hvacMode != null -> IconMap.of("climate_mode", q.hvacMode, HVAC_MODE_ICONS[q.hvacMode] ?: "mdi:thermostat")
+    q.presetMode != null -> IconMap.of("climate_preset", q.presetMode, CLIMATE_PRESET_ICONS[q.presetMode] ?: "mdi:tune-variant")
     else -> "mdi:tune-variant"
 }
 

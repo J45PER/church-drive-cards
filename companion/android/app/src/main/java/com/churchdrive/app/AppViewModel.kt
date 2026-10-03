@@ -89,6 +89,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             deviceRegistryResult = it
             _registry.value = Registry.parse(entityRegistryResult, deviceRegistryResult)
         }
+        // The icons for modes (fan Sleep, thermostat Eco, charger Stop...) set in Home Assistant's Icon Styles card.
+        client.request("church_drive/icons") { com.churchdrive.app.ui.IconMap.load(it) }
         // Each scene's colours and icon: Church Drive's scene library, and the looks set in the Scene Styles card.
         client.request("church_drive/library") {
             libraryResult = it
