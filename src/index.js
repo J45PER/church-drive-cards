@@ -28,6 +28,7 @@ import { registerPlacesCard } from './places-card.js';
 import { registerCameraLinksCard } from './camera-links-card.js';
 import { registerZoneMapCard } from './zone-map-card.js';
 import { registerMirrorCard } from './mirror-card.js';
+import { registerCarCard } from './car-card.js';
 import { installMapStyle } from './map-style.js';
 import { SUFFIX } from './suffix.js';
 
@@ -50,6 +51,7 @@ registerNavBarCard();
 registerAutoLayoutCard();
 registerHouseTasksCard();
 registerEnergyCards();
+registerCarCard();
 registerTaskListCard();
 registerNotificationsCard();
 registerMediaCard();
