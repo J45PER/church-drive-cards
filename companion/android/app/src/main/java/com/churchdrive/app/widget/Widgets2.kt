@@ -490,7 +490,7 @@ class VacuumGlanceWidget : SceneWidget("Vacuum") {
 
 class ChargerGlanceWidget : SceneWidget("Car charger") {
     @Composable
-    override fun Draw(s: WidgetScene) = CardContent(chargerCard(s.data.entities), s.p, s.size, s.width, s.height, compact = true, chosen = WidgetConfig.strings(s.config, "buttons"))
+    override fun Draw(s: WidgetScene) = CardContent(chargerCard(s.data.entities), s.p, s.size, s.width, s.height, chosen = WidgetConfig.strings(s.config, "buttons"))
 }
 
 /** One card for any air device you pick: a fan, an air purifier or an air conditioner. */
