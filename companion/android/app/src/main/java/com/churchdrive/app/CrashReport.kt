@@ -88,7 +88,7 @@ object CrashReport {
         val out = StringBuilder()
         val run = StringBuilder()
         // The app's own idle threads and the runtime's plumbing fill the dump and hide the thread that crashed.
-        val noise = listOf("art::", "libart", "bionic", "kotlinx", "ExecuteSwitch", "dalvik", "art_quick", "java.", "android.", "libc.so", "libandroid_runtime", "interpreter", "boot-")
+        val noise = listOf("art::", "libart", "bionic", "kotlinx", "ExecuteSwitch", "dalvik", "art_quick", "java.", "android.", "libc.so", "libandroid_runtime", "interpreter", "boot-", "pthread", "futex", "std::__1", "uirenderer", "libhwui", "libbinder", "libutils", "libc++", "epoll", "ioctl", "vulkan", "syscall", "Looper", "framework.jar", "libjingle_peerconnection_so", "libandroid")
         fun flush() {
             if (run.length >= 6 && noise.none { run.contains(it) }) out.append(run).append('\n')
             run.clear()

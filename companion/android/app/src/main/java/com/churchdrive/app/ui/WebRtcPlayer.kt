@@ -99,6 +99,14 @@ private class RtcSession(
     private var timeout: Thread? = null
     private val main = android.os.Handler(android.os.Looper.getMainLooper())
     private var videoTrack: VideoTrack? = null
+    private var firstFrame = false
+    private val sink = org.webrtc.VideoSink { frame ->
+        if (!firstFrame) {
+            firstFrame = true
+            CrashReport.note("first picture ${frame.rotatedWidth}x${frame.rotatedHeight}")
+        }
+        renderer.onFrame(frame)
+    }
     private var audioModule: JavaAudioDeviceModule? = null
 
     fun start() {
@@ -129,7 +137,8 @@ private class RtcSession(
             val f = factory ?: PeerConnectionFactory.builder()
                 // WebRTC's own Java audio output: the default native one crashed on a Pixel with Android 17.
                 .setAudioDeviceModule(JavaAudioDeviceModule.builder(context.applicationContext).createAudioDeviceModule().also { audioModule = it })
-                .setVideoDecoderFactory(DefaultVideoDecoderFactory(egl.eglBaseContext))
+                // No shared GL context: the decoder gives plain frames instead of graphics textures, which crashed on this phone's PowerVR GPU.
+                .setVideoDecoderFactory(DefaultVideoDecoderFactory(null))
                 .setVideoEncoderFactory(DefaultVideoEncoderFactory(egl.eglBaseContext, true, true))
                 .createPeerConnectionFactory().also { factory = it }
             val ice = servers.map { s ->
@@ -191,7 +200,9 @@ private class RtcSession(
                 }
             }
             is RtcEvent.Answer -> connection?.setRemoteDescription(object : Sdp() {
-                override fun onSetSuccess() = CrashReport.note("answer accepted: ${mediaOrder(event.sdp).joinToString(",")}")
+                override fun onSetSuccess() = CrashReport.note(
+                    "answer accepted: ${mediaOrder(event.sdp).joinToString(",")}; formats ${codecs(event.sdp)}",
+                )
                 override fun onSetFailure(error: String?) {
                     // A camera that answers in another order: try the next way of setting up the offer.
                     if (error?.contains("m-lines") == true && lastAttempt + 1 < ORDERS.size && !closed.get()) {
@@ -214,6 +225,11 @@ private class RtcSession(
             null -> Unit
         }
     }
+
+    /** The formats an answer offers (for example H264 or VP8, and the H264 profile), for the trail. */
+    private fun codecs(sdp: String): String =
+        (Regex("a=rtpmap:\\d+ ([\\w-]+)").findAll(sdp).map { it.groupValues[1] } +
+            Regex("profile-level-id=(\\w+)").findAll(sdp).map { "profile " + it.groupValues[1] }).joinToString(" ")
 
     private fun sendCandidate(c: IceCandidate) {
         val id = sessionId ?: return
@@ -239,7 +255,7 @@ private class RtcSession(
     fun close() {
         if (!closed.compareAndSet(false, true)) return
         timeout?.interrupt()
-        runCatching { videoTrack?.removeSink(renderer) }
+        runCatching { videoTrack?.removeSink(sink) }
         videoTrack = null
         teardown()
         runCatching { factory?.dispose() }
@@ -254,7 +270,7 @@ private class RtcSession(
                 if (videoTrack === track) return
                 videoTrack = track
                 track.setEnabled(true)
-                track.addSink(renderer)
+                track.addSink(sink)
                 if (playing.compareAndSet(false, true)) onStatus(null)
             }
             is AudioTrack -> {
