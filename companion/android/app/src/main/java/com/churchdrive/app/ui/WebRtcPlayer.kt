@@ -137,8 +137,7 @@ private class RtcSession(
             val f = factory ?: PeerConnectionFactory.builder()
                 // WebRTC's own Java audio output: the default native one crashed on a Pixel with Android 17.
                 .setAudioDeviceModule(JavaAudioDeviceModule.builder(context.applicationContext).createAudioDeviceModule().also { audioModule = it })
-                // No shared GL context: the decoder gives plain frames instead of graphics textures, which crashed on this phone's PowerVR GPU.
-                .setVideoDecoderFactory(DefaultVideoDecoderFactory(null))
+                .setVideoDecoderFactory(DefaultVideoDecoderFactory(egl.eglBaseContext))
                 .setVideoEncoderFactory(DefaultVideoEncoderFactory(egl.eglBaseContext, true, true))
                 .createPeerConnectionFactory().also { factory = it }
             val ice = servers.map { s ->
@@ -165,7 +164,9 @@ private class RtcSession(
                 }
             }
             pc.createOffer(object : Sdp() {
-                override fun onCreateSuccess(sdp: SessionDescription) {
+                override fun onCreateSuccess(created: SessionDescription) {
+                    // Without H265, which crashed the phone's decoder (see withoutVideoFormats).
+                    val sdp = SessionDescription(created.type, withoutVideoFormats(created.description))
                     pc.setLocalDescription(object : Sdp() {
                         override fun onSetSuccess() = sendOffer(sdp.description, mine)
                         override fun onSetFailure(error: String?) = fail("Couldn't start the live view ($error)")
@@ -182,7 +183,7 @@ private class RtcSession(
 
     private fun sendOffer(sdp: String, mine: Int) {
         lastOffer = sdp
-        CrashReport.note("offer sent: ${mediaOrder(sdp).joinToString(",")}")
+        CrashReport.note("offer sent: ${mediaOrder(sdp).joinToString(",")}; formats ${codecs(sdp)}")
         subscription = host.webRtcOffer(entityId, sdp) { event -> if (mine == generation) handle(parseRtcEvent(event)) }
         if (subscription < 0) fail("Not connected to Home Assistant.")
     }

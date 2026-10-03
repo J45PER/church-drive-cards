@@ -76,4 +76,23 @@ class RtcDataTest {
         val sdp = "v=0\r\nm=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\nm=video 9 UDP/TLS/RTP/SAVPF 96\r\n"
         assertEquals(listOf("application", "audio", "video"), mediaOrder(sdp))
     }
+
+    @Test
+    fun dropsH265AndItsRetransmissionFromTheOffer() {
+        val sdp = listOf(
+            "v=0", "m=audio 9 UDP/TLS/RTP/SAVPF 111", "a=rtpmap:111 opus/48000/2",
+            "m=video 9 UDP/TLS/RTP/SAVPF 96 97 98 99 100",
+            "a=rtpmap:96 H265/90000", "a=rtcp-fb:96 nack", "a=rtpmap:97 rtx/90000", "a=fmtp:97 apt=96",
+            "a=rtpmap:98 H264/90000", "a=fmtp:98 profile-level-id=42e01f", "a=rtpmap:99 rtx/90000", "a=fmtp:99 apt=98",
+            "a=rtpmap:100 VP8/90000", "",
+        ).joinToString("\r\n")
+        val out = withoutVideoFormats(sdp)
+        assertEquals(true, out.contains("m=video 9 UDP/TLS/RTP/SAVPF 98 99 100"))
+        assertEquals(false, out.contains("H265"))
+        assertEquals(false, out.contains("apt=96"))
+        assertEquals(false, out.contains("rtcp-fb:96"))
+        assertEquals(true, out.contains("a=rtpmap:98 H264/90000"))
+        assertEquals(true, out.contains("a=rtpmap:111 opus/48000/2"))
+        assertEquals(sdp, withoutVideoFormats(sdp, setOf("nothing")))
+    }
 }

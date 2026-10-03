@@ -62,3 +62,34 @@ fun parseIceServers(servers: JSONArray?): List<IceServerSpec> {
 /** The kinds of media in an SDP, in order of its `m=` lines (`audio`, `video`, `application`): for telling offer and answer apart. */
 fun mediaOrder(sdp: String): List<String> =
     sdp.lineSequence().filter { it.startsWith("m=") }.map { it.removePrefix("m=").substringBefore(' ') }.toList()
+
+/**
+ * The offer without the video formats a phone can't be trusted to decode. H265 (HEVC) is dropped: on a Pixel the
+ * hardware decoder crashed the whole app when a camera answered with it, and H264 is offered as well. Each dropped
+ * format's retransmission twin goes too. If nothing would be left, the offer is returned as it was.
+ */
+fun withoutVideoFormats(sdp: String, drop: Set<String> = setOf("H265", "HEVC")): String {
+    val eol = if (sdp.contains("\r\n")) "\r\n" else "\n"
+    val lines = sdp.split(eol)
+    val start = lines.indexOfFirst { it.startsWith("m=video") }
+    if (start < 0) return sdp
+    val end = lines.drop(start + 1).indexOfFirst { it.startsWith("m=") }.let { if (it < 0) lines.size else start + 1 + it }
+    val section = lines.subList(start, end)
+    val names = Regex("^a=rtpmap:(\\d+) ([^/\\s]+)").let { r -> section.mapNotNull { r.find(it) }.associate { it.groupValues[1] to it.groupValues[2] } }
+    val dropped = names.filterValues { n -> drop.any { it.equals(n, ignoreCase = true) } }.keys.toMutableSet()
+    val apt = Regex("^a=fmtp:(\\d+) apt=(\\d+)")
+    section.mapNotNull { apt.find(it) }.filter { it.groupValues[2] in dropped }.forEach { dropped += it.groupValues[1] }
+    if (dropped.isEmpty()) return sdp
+    val tokens = lines[start].split(" ")
+    val kept = tokens.drop(3).filter { it !in dropped }
+    if (kept.isEmpty()) return sdp
+    val prefixes = dropped.flatMap { listOf("a=rtpmap:$it ", "a=fmtp:$it ", "a=rtcp-fb:$it ") }
+    val out = lines.mapIndexedNotNull { i, line ->
+        when {
+            i == start -> (tokens.take(3) + kept).joinToString(" ")
+            i in start until end && prefixes.any { line.startsWith(it) } -> null
+            else -> line
+        }
+    }
+    return out.joinToString(eol)
+}
