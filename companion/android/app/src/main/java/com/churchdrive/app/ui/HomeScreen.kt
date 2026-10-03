@@ -173,7 +173,7 @@ fun HomeScreen(
             }
         }
     }
-    if (openCamera != null) CameraViewerFor(openCamera, entities, registry, call, onCameraClosed)
+    if (openCamera != null && statesLoaded) CameraViewerFor(openCamera, entities, registry, call, onCameraClosed)
     AccountOverlay(
         panel, { panel = it }, userName, isAdmin, account, updateAvailable, onSignOut,
         adminPages = adminPages,

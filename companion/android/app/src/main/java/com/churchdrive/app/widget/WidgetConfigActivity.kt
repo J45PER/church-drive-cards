@@ -69,6 +69,7 @@ class WidgetConfigActivity : ComponentActivity() {
                     ConfigScreen(kind, existing) { config ->
                         WidgetConfig.save(context, id, config)
                         setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id))
+                        WidgetTicks.bump(id)
                         // Tell the widget to draw again with its new choices: by the usual update message, and directly.
                         runCatching {
                             sendBroadcast(

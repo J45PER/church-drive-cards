@@ -43,7 +43,7 @@ object WidgetModel {
     /** A tile for each of the first [max] rooms: lit when its light is on, a tap switches it. */
     fun roomTiles(rooms: List<LightRoom>, areaNames: Map<String, String>, entities: Map<String, EntityState>, max: Int = 6): List<WidgetTile> =
         rooms.filter { entities[it.head]?.available == true }.take(max).map {
-            WidgetTile("mdi:lightbulb", roomName(it, areaNames, entities), entities[it.head]?.state == "on", "light", "toggle", it.head)
+            WidgetTile(entityIcon(entities[it.head], "mdi:lightbulb"), roomName(it, areaNames, entities), entities[it.head]?.state == "on", "light", "toggle", it.head)
         }
 
     /**

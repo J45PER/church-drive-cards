@@ -90,6 +90,30 @@ fun lastActivity(base: String, entities: Map<String, EntityState>, now: Long = S
 fun activityBases(entities: Map<String, EntityState>): List<String> =
     entities.keys.mapNotNull { Regex("^event\\.(.+)_(ding|motion)$").find(it)?.groupValues?.get(1) }.distinct().sorted()
 
+// ---------------------------------------------------------------------------------------------- Icons
+
+/** The icon of a cover as Home Assistant draws it by default: by its kind, open or closed. */
+fun coverIcon(deviceClass: String?, state: String?): String {
+    val closed = state == "closed"
+    return when (deviceClass) {
+        "blind" -> if (closed) "mdi:blinds" else "mdi:blinds-open"
+        "curtain" -> if (closed) "mdi:curtains-closed" else "mdi:curtains"
+        "shade" -> if (closed) "mdi:roller-shade-closed" else "mdi:roller-shade"
+        "shutter" -> if (closed) "mdi:window-shutter" else "mdi:window-shutter-open"
+        "garage" -> if (closed) "mdi:garage" else "mdi:garage-open"
+        "door" -> if (closed) "mdi:door-closed" else "mdi:door-open"
+        "gate" -> if (closed) "mdi:gate" else "mdi:gate-open"
+        else -> if (closed) "mdi:window-closed" else "mdi:window-open"
+    }
+}
+
+/** The icon Home Assistant shows for an entity: the one set on it, else its kind's own, else [fallback]. */
+fun entityIcon(e: EntityState?, fallback: String): String {
+    if (e == null) return fallback
+    e.str("icon")?.takeIf { it.startsWith("mdi:") }?.let { return it }
+    return if (e.entityId.startsWith("cover.")) coverIcon(e.str("device_class"), e.state) else fallback
+}
+
 // ---------------------------------------------------------------------------------------------- Alarm
 
 private val ALARM_MODES = mapOf("armed_home" to "Home", "armed_away" to "Away", "armed_night" to "Night")
@@ -118,7 +142,7 @@ fun vacuumCard(entities: Map<String, EntityState>): Card {
         WidgetTile(if (cleaning) "mdi:pause" else "mdi:play", if (cleaning) "Pause" else if (v?.state == "paused") "Resume" else "Start", cleaning, "vacuum", if (cleaning) "pause" else "start", VACUUM_ENTITY),
         WidgetTile("mdi:home-import-outline", "Dock", v?.state == "docked", "vacuum", "return_to_base", VACUUM_ENTITY),
     )
-    return Card(v?.friendlyName ?: "Vacuum", vacuumSummary(v, entities[VACUUM_BATTERY]), vacuumTone(v), "mdi:robot-vacuum", tiles)
+    return Card(v?.friendlyName ?: "Vacuum", vacuumSummary(v, entities[VACUUM_BATTERY]), vacuumTone(v), entityIcon(v, "mdi:robot-vacuum"), tiles)
 }
 
 fun chargerCard(entities: Map<String, EntityState>): Card {
@@ -156,7 +180,7 @@ fun fanCard(fan: EntityState?, entity: String): Card {
         }
     }
     val sub = if (!on) "Off" else fan?.str("preset_mode")?.let { presetLabel(it) } ?: fan?.num("percentage")?.let { "${it.toInt()}%" } ?: "On"
-    return Card(fan?.friendlyName ?: "Fan", sub, if (on) Tone.Teal else Tone.Grey, "mdi:fan", tiles)
+    return Card(fan?.friendlyName ?: "Fan", sub, if (on) Tone.Teal else Tone.Grey, entityIcon(fan, "mdi:fan"), tiles)
 }
 
 /** Whether a fan is an air purifier: it says so in its name, or a PM2.5 reading goes with it. */
@@ -190,7 +214,7 @@ fun purifierCard(fan: EntityState?, entity: String, entities: Map<String, Entity
         }
     }
     val sub = listOfNotNull(if (!on) "Off" else fan?.str("preset_mode")?.let { presetLabel(it) } ?: "On", pm?.let { "PM2.5 ${it.toInt()} · ${pmWord(it)}" }).joinToString(" · ")
-    return Card(fan?.friendlyName ?: "Air purifier", sub, pmTone(pm), "mdi:air-purifier", tiles)
+    return Card(fan?.friendlyName ?: "Air purifier", sub, pmTone(pm), entityIcon(fan, "mdi:air-purifier"), tiles)
 }
 
 fun coverCard(cover: EntityState?, entity: String): Card {
@@ -205,7 +229,7 @@ fun coverCard(cover: EntityState?, entity: String): Card {
         "open", "closed" -> presetLabel(s) + (position?.let { " · ${it.toInt()}%" } ?: "")
         else -> presetLabel(s)
     }
-    return Card(cover?.friendlyName ?: "Blind", sub, if (cover?.state == "closed" || cover?.available != true) Tone.Grey else Tone.Blue, "mdi:blinds", tiles)
+    return Card(cover?.friendlyName ?: "Blind", sub, if (cover?.state == "closed" || cover?.available != true) Tone.Grey else Tone.Blue, entityIcon(cover, "mdi:blinds"), tiles)
 }
 
 // ---------------------------------------------------------------------------------------------- Scenes
@@ -305,7 +329,7 @@ object Gauges {
                 val unit = e.str("unit_of_measurement").orEmpty()
                 val text = (if (v % 1.0 == 0.0) v.toInt().toString() else "%.1f".format(v)) + unit
                 when (e.str("device_class")) {
-                    "battery" -> GaugeReading(id, e.friendlyName, text, frac(v, 0.0, 100.0), if (v < 20) Tone.Red else if (v < 40) Tone.Amber else Tone.Green, "mdi:battery")
+                    "battery" -> GaugeReading(id, e.friendlyName, text, frac(v, 0.0, 100.0), if (v < 20) Tone.Red else if (v < 40) Tone.Amber else Tone.Green, entityIcon(e, "mdi:battery"))
                     "temperature" -> GaugeReading(id, e.friendlyName, text, frac(v, 0.0, 40.0), Tone.Orange, "mdi:thermometer")
                     "humidity" -> GaugeReading(id, e.friendlyName, text, frac(v, 0.0, 100.0), Tone.Teal, "mdi:water-percent")
                     "pm25", "pm10" -> GaugeReading(id, e.friendlyName, text, frac(v, 0.0, 150.0), pmTone(v), "mdi:air-purifier")

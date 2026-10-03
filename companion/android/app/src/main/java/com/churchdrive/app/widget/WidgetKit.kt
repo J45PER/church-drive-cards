@@ -8,6 +8,14 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.flow.MutableStateFlow
+import androidx.glance.appwidget.provideContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.Dp
@@ -72,9 +80,31 @@ object WidgetSizes {
 
 fun DpSize.sizeClass(): SizeClass = sizeClass(width.value, height.value)
 
+/** Every Material Design icon's path, for the icons Home Assistant gives entities (the app's own short list has only the usual ones). */
+object WidgetMdi {
+    @Volatile private var appContext: Context? = null
+    @Volatile private var all: Map<String, String>? = null
+
+    fun init(context: Context) { appContext = context.applicationContext }
+
+    fun path(name: String): String? {
+        MdiIcons.paths[name]?.let { return it }
+        com.churchdrive.app.ui.MdiAll.paths?.get(name)?.let { return it }
+        return (all ?: load())?.get(name)
+    }
+
+    @Synchronized
+    private fun load(): Map<String, String>? = all ?: runCatching {
+        appContext!!.assets.open("mdi-icons.json").bufferedReader().use { r ->
+            val json = JSONObject(r.readText())
+            HashMap<String, String>(json.length() * 2).also { map -> for (k in json.keys()) map[k] = json.getString(k) }
+        }
+    }.getOrNull().also { all = it }
+}
+
 /** A Material Design icon drawn into a bitmap in [colour], for a widget (which can't use the app's own icon drawing). */
 fun iconBitmap(name: String, colour: Color, sizePx: Int = 96): Bitmap? {
-    val d = MdiIcons.paths[name.removePrefix("mdi:")] ?: return null
+    val d = WidgetMdi.path(name.removePrefix("mdi:")) ?: return null
     val path = runCatching { PathParser.createPathFromPathData(d) }.getOrNull() ?: return null
     val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
     val scale = sizePx / 24f
@@ -155,6 +185,8 @@ class ServiceCallback : ActionCallback {
             }
         }
         delay(1_000)
+        // Widgets still drawn from an earlier reading read again; those with no drawing in progress start one.
+        WidgetTicks.bumpAll()
         for (w in allGlanceWidgets()) {
             w.updateAll(context)
         }
@@ -168,7 +200,7 @@ object WidgetPages {
     private val BY_WIDGET = mapOf(
         "Alarm" to "Security", "Doors" to "Security", "Activity" to "Security", "Camera" to "Security",
         "Lights" to "Lighting",
-        "Climate" to "Climate", "Air" to "Climate", "Weather" to "Climate", "Gauge" to "Climate", "Cluster" to "Climate",
+        "Climate" to "Climate", "Weather" to "Climate", "Gauge" to "Climate", "Cluster" to "Climate",
         // Widgets that are all buttons open nothing when the background is tapped.
         "Fan" to "", "Purifier" to "", "Blinds" to "", "Scenes" to "", "Shortcuts" to "",
         "Vacuum" to "Cleaning", "Todo" to "Todo", "Jobs" to "Todo",
@@ -329,5 +361,63 @@ fun StatTile(stat: Stat, p: WidgetPalette, modifier: GlanceModifier = GlanceModi
     ) {
         Text(stat.value, style = TextStyle(color = cp(tone.accent), fontSize = if (big) 20.sp else 16.sp, fontWeight = FontWeight.Bold), maxLines = 1)
         Text(stat.label, style = TextStyle(color = cp(p.muted), fontSize = 11.sp), maxLines = 1)
+    }
+}
+
+
+// ---------------------------------------------------------------------------------------------- Reading the house again
+
+/** What a widget drew from: the house, the person's choices for this widget, a picture if it asked for one. */
+class Loaded(val data: WidgetData?, val config: JSONObject, val picture: Bitmap?)
+
+/**
+ * A nudge for each widget, in this process: when it changes the widget reads its choices and the house again. Android
+ * can hand an update to a drawing already in progress without running it afresh, so changes of choice or state go
+ * through here as well as through Android's own update.
+ */
+object WidgetTicks {
+    private val flows = java.util.concurrent.ConcurrentHashMap<Int, MutableStateFlow<Long>>()
+    fun of(id: Int): MutableStateFlow<Long> = flows.getOrPut(id) { MutableStateFlow(0L) }
+    fun bump(id: Int) { of(id).value = System.nanoTime() }
+    fun bumpAll() { flows.values.forEach { it.value = System.nanoTime() } }
+}
+
+/** Draws a widget from what [Loaded] reads (its choices, then the house), and again each time the widget is nudged. */
+suspend fun GlanceAppWidget.provideLive(
+    context: Context,
+    id: GlanceId,
+    asks: (Context, JSONObject) -> List<Ask> = { _, _ -> emptyList() },
+    picture: (Context, WidgetData, JSONObject) -> Bitmap? = { _, _, _ -> null },
+    onLoaded: (Context, Loaded) -> Unit = { _, _ -> },
+    content: @Composable (Loaded) -> Unit,
+) {
+    WidgetMdi.init(context)
+    val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
+    provideContent {
+        val tick by WidgetTicks.of(appWidgetId).collectAsState()
+        var loaded by remember { mutableStateOf<Loaded?>(null) }
+        LaunchedEffect(tick) {
+            val config = WidgetConfig.get(context, appWidgetId)
+            val data = WidgetSource.load(context, asks(context, config))
+            val shot = data?.let { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { picture(context, it, config) } }
+            val result = Loaded(data, config, shot)
+            onLoaded(context, result)
+            loaded = result
+        }
+        loaded?.let { content(it) } ?: LoadingCard()
+    }
+}
+
+@Composable
+fun LoadingCard() {
+    val p = WidgetPalette.of(LocalContext.current)
+    WidgetCard(p) { Text("Loading the house…", style = TextStyle(color = cp(p.muted), fontSize = 13.sp)) }
+}
+
+/** Every widget's receiver: nudges the widget to read afresh when Android asks it to update. */
+abstract class LiveReceiver : androidx.glance.appwidget.GlanceAppWidgetReceiver() {
+    override fun onUpdate(context: Context, appWidgetManager: android.appwidget.AppWidgetManager, appWidgetIds: IntArray) {
+        appWidgetIds.forEach { WidgetTicks.bump(it) }
+        super.onUpdate(context, appWidgetManager, appWidgetIds)
     }
 }

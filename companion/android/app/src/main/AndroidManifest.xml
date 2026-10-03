@@ -245,17 +245,6 @@
                 android:resource="@xml/widget_climate" />
         </receiver>
         <receiver
-            android:name=".widget.AirWidgetReceiver"
-            android:exported="false"
-            android:label="Church Drive air quality">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/widget_air" />
-        </receiver>
-        <receiver
             android:name=".widget.SummaryWidgetReceiver"
             android:exported="false"
             android:label="Church Drive summary">

@@ -158,11 +158,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { client.userName.collect { if (it != null) session.savePerson(it) } }
         // A username-and-password sign-in's access token lasts half an hour. If the connection is refused later
         // (the phone slept past that), get a new one from the refresh token and connect again.
+        // Also when the app was opened just after waking (the network or the stored token not ready yet): try again a few times, a little slower each time.
         viewModelScope.launch {
+            var failures = 0
             client.connection.collect {
-                if (it == ConnectionState.AuthFailed && session.refreshToken != null && session.signedIn &&
-                    System.currentTimeMillis() - lastStart > 30_000
-                ) startSession()
+                if (it == ConnectionState.Connected) failures = 0
+                if (it == ConnectionState.AuthFailed && session.refreshToken != null && session.signedIn && failures < 8) {
+                    failures++
+                    kotlinx.coroutines.delay((2_000L * failures).coerceAtMost(15_000L))
+                    if (session.signedIn) startSession()
+                }
             }
         }
     }

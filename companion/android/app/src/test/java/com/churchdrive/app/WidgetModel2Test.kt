@@ -8,6 +8,7 @@ import com.churchdrive.app.widget.WidgetPages
 import com.churchdrive.app.widget.alarmInDelay
 import com.churchdrive.app.widget.alarmStatus
 import com.churchdrive.app.widget.fansFor
+import com.churchdrive.app.widget.entityIcon
 import com.churchdrive.app.widget.coverCard
 import com.churchdrive.app.widget.doorsStatus
 import com.churchdrive.app.widget.fanCard
@@ -146,5 +147,14 @@ class WidgetModel2Test {
         assertEquals("Lighting", WidgetPages.of("com.churchdrive.app.widget.LightsWidgetReceiver"))
         assertEquals("Climate", WidgetPages.of("com.churchdrive.app.widget.GaugeWidgetReceiver"))
         assertNull(WidgetPages.of(null))
+    }
+
+    @Test
+    fun entitiesShowTheirOwnHomeAssistantIcon() {
+        assertEquals("mdi:blinds-horizontal", entityIcon(e("cover.b", "open", "icon" to "mdi:blinds-horizontal"), "mdi:blinds"))
+        assertEquals("mdi:blinds-open", entityIcon(e("cover.b", "open", "device_class" to "blind"), "mdi:blinds"))
+        assertEquals("mdi:blinds", entityIcon(e("cover.b", "closed", "device_class" to "blind"), "mdi:blinds"))
+        assertEquals("mdi:fan", entityIcon(e("fan.f", "on"), "mdi:fan"))
+        assertEquals("mdi:fan", entityIcon(null, "mdi:fan"))
     }
 }

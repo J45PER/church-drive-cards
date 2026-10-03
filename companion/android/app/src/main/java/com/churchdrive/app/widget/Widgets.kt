@@ -60,11 +60,11 @@ class AlarmGlanceWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Responsive(WidgetSizes.all)
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val data = WidgetSource.load(context)
-        val p = WidgetPalette.of(context)
-        // A countdown ticks by itself: look again in a few seconds, until it is over.
-        if (alarmInDelay(data?.entities?.get(ALARM_ENTITY))) refreshSoon(context, AlarmWidgetReceiver::class.java, 4)
-        provideContent {
+        provideLive(context, id, onLoaded = { c, l -> if (alarmInDelay(l.data?.entities?.get(ALARM_ENTITY))) refreshSoon(c, AlarmWidgetReceiver::class.java, 4) }, ) { l ->
+            val data = l.data
+            val config = l.config
+            val p = WidgetPalette.of(androidx.glance.LocalContext.current)
+
             val alarm = data?.entities?.get(ALARM_ENTITY)
             if (data == null || alarm == null) {
                 Unreachable("Security", p, if (data == null) "Can't reach the house" else "Alarm not found")
@@ -128,10 +128,11 @@ class LightsGlanceWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Responsive(WidgetSizes.all)
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val data = WidgetSource.load(context)
-        val p = WidgetPalette.of(context)
-        val config = WidgetConfig.get(context, appWidgetId(context, id))
-        provideContent {
+        provideLive(context, id, ) { l ->
+            val data = l.data
+            val config = l.config
+            val p = WidgetPalette.of(androidx.glance.LocalContext.current)
+
             if (data == null) {
                 Unreachable("Lights", p, "Can't reach the house")
             } else {
@@ -160,7 +161,7 @@ private fun LightsContent(rooms: List<com.churchdrive.app.ui.LightRoom>, data: W
         when (size) {
             SizeClass.Strip -> WidgetCard(p, padding = 10.dp) {
                 Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    IconCircle("mdi:lightbulb", tone, 40.dp)
+                    IconCircle(entityIcon(head, "mdi:lightbulb"), tone, 40.dp)
                     Spacer(GlanceModifier.width(10.dp))
                     Column(GlanceModifier.defaultWeight()) {
                         Text(name, style = TextStyle(color = cp(p.onSurface), fontSize = 16.sp, fontWeight = FontWeight.Bold), maxLines = 1)
@@ -172,7 +173,7 @@ private fun LightsContent(rooms: List<com.churchdrive.app.ui.LightRoom>, data: W
             }
             SizeClass.Square -> WidgetCard(p, padding = 12.dp) {
                 Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Box(GlanceModifier.clickable(toggle)) { IconCircle("mdi:lightbulb", tone, 40.dp) }
+                    Box(GlanceModifier.clickable(toggle)) { IconCircle(entityIcon(head, "mdi:lightbulb"), tone, 40.dp) }
                 }
                 Spacer(GlanceModifier.height(6.dp))
                 Text(name, style = TextStyle(color = cp(p.onSurface), fontSize = 16.sp, fontWeight = FontWeight.Bold), maxLines = 1)
@@ -186,7 +187,7 @@ private fun LightsContent(rooms: List<com.churchdrive.app.ui.LightRoom>, data: W
                 }
             }
             else -> WidgetCard(p) {
-                HeaderRow("mdi:lightbulb", name, sub, p, tone) { IconButton("mdi:power", p, toggle, 40.dp, if (on) amber else null) }
+                HeaderRow(entityIcon(head, "mdi:lightbulb"), name, sub, p, tone) { IconButton("mdi:power", p, toggle, 40.dp, if (on) amber else null) }
                 Spacer(GlanceModifier.height(12.dp))
                 if (withScenes && room.scenes.isNotEmpty()) {
                     val tiles = room.scenes.map { s ->
@@ -248,11 +249,12 @@ class ClimateGlanceWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Responsive(WidgetSizes.all)
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val data = WidgetSource.load(context)
-        val p = WidgetPalette.of(context)
-        val config = WidgetConfig.get(context, appWidgetId(context, id))
-        val entity = config.optString("climate").ifBlank { CLIMATE_ENTITY }
-        provideContent {
+        provideLive(context, id, ) { l ->
+            val data = l.data
+            val config = l.config
+            val p = WidgetPalette.of(androidx.glance.LocalContext.current)
+            val entity = config.optString("climate").ifBlank { CLIMATE_ENTITY }
+
             val climate = data?.entities?.get(entity)
             if (data == null || climate == null) {
                 Unreachable("Heating", p, if (data == null) "Can't reach the house" else "Thermostat not found")
@@ -340,67 +342,6 @@ private fun StepButton(icon: String, p: WidgetPalette, tone: com.churchdrive.app
 
 // ---------------------------------------------------------------------------------------------- Air quality
 
-/** The home's air quality score: fixed. A circle with the score in a ring, a thin pill, or a card with the readings behind it. */
-class AirGlanceWidget : GlanceAppWidget() {
-    // Exact, so the circle can be as big as the widget really is.
-    override val sizeMode = SizeMode.Exact
-
-    override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val data = WidgetSource.load(context)
-        val p = WidgetPalette.of(context)
-        provideContent {
-            val score = data?.entities?.get(CLIMATE_QUALITY_ENTITY)?.state?.toIntOrNull()
-            if (data == null || score == null) {
-                Unreachable("Air quality", p, if (data == null) "Can't reach the house" else "No score yet")
-            } else {
-                val tone = p.tone(qualityTone(score))
-                val climate = data.entities[CLIMATE_ENTITY]
-                when (LocalSize.current.sizeClass()) {
-                    SizeClass.Strip -> WidgetCard(p, padding = 10.dp) {
-                        Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            IconCircle("mdi:leaf", tone, 40.dp)
-                            Spacer(GlanceModifier.width(10.dp))
-                            Column(GlanceModifier.defaultWeight()) {
-                                Text("Air quality", style = TextStyle(color = cp(p.onSurface), fontSize = 16.sp, fontWeight = FontWeight.Bold), maxLines = 1)
-                                Text(qualityWord(score), style = TextStyle(color = cp(tone.accent), fontSize = 12.sp, fontWeight = FontWeight.Medium), maxLines = 1)
-                            }
-                            Text("$score", style = TextStyle(color = cp(p.onSurface), fontSize = 28.sp, fontWeight = FontWeight.Bold))
-                        }
-                    }
-                    SizeClass.Square -> WidgetCircle(p, LocalSize.current) { d ->
-                        val ring = d * 0.84f
-                        Box(GlanceModifier.size(ring), contentAlignment = Alignment.Center) {
-                            Image(ImageProvider(ringBitmap(312, score / 100f, p.tile, tone.accent)), null, GlanceModifier.size(ring))
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("$score", style = TextStyle(color = cp(p.onSurface), fontSize = (ring.value * 0.29f).sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center))
-                                Text(qualityWord(score), style = TextStyle(color = cp(tone.accent), fontSize = 12.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center), maxLines = 1)
-                            }
-                        }
-                    }
-                    else -> WidgetCard(p) {
-                        Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Box(GlanceModifier.size(92.dp), contentAlignment = Alignment.Center) {
-                                Image(ImageProvider(ringBitmap(276, score / 100f, p.tile, tone.accent)), null, GlanceModifier.size(92.dp))
-                                Text("$score", style = TextStyle(color = cp(p.onSurface), fontSize = 26.sp, fontWeight = FontWeight.Bold))
-                            }
-                            Spacer(GlanceModifier.width(14.dp))
-                            Column(GlanceModifier.defaultWeight()) {
-                                Text("Air quality", style = TextStyle(color = cp(p.onSurface), fontSize = 18.sp, fontWeight = FontWeight.Bold), maxLines = 1)
-                                Text(qualityWord(score), style = TextStyle(color = cp(tone.accent), fontSize = 14.sp, fontWeight = FontWeight.Medium), maxLines = 1)
-                                val detail = listOfNotNull(
-                                    climate?.num("current_temperature")?.let { "%.1f°".format(it) },
-                                    climate?.num("current_humidity")?.let { "${it.toInt()}%" },
-                                ).joinToString(" · ")
-                                if (detail.isNotBlank()) Text(detail, style = TextStyle(color = cp(p.muted), fontSize = 12.sp), maxLines = 1)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
 // ---------------------------------------------------------------------------------------------- Summary
 
 /** Summary: up to four readings you pick when you add it. */
@@ -408,10 +349,11 @@ class SummaryGlanceWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Responsive(WidgetSizes.all)
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val data = WidgetSource.load(context)
-        val p = WidgetPalette.of(context)
-        val config = WidgetConfig.get(context, appWidgetId(context, id))
-        provideContent {
+        provideLive(context, id, ) { l ->
+            val data = l.data
+            val config = l.config
+            val p = WidgetPalette.of(androidx.glance.LocalContext.current)
+
             if (data == null) {
                 Unreachable("Summary", p, "Can't reach the house")
             } else {
@@ -445,10 +387,11 @@ class ShortcutsGlanceWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Responsive(WidgetSizes.all)
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val data = WidgetSource.load(context)
-        val p = WidgetPalette.of(context)
-        val config = WidgetConfig.get(context, appWidgetId(context, id))
-        provideContent {
+        provideLive(context, id, ) { l ->
+            val data = l.data
+            val config = l.config
+            val p = WidgetPalette.of(androidx.glance.LocalContext.current)
+
             if (data == null) {
                 Unreachable("Shortcuts", p, "Can't reach the house")
             } else {
@@ -477,31 +420,27 @@ class ShortcutsGlanceWidget : GlanceAppWidget() {
 /** Forgets a removed widget's choices. */
 private fun forget(context: Context, ids: IntArray) = WidgetConfig.remove(context, ids)
 
-class AlarmWidgetReceiver : GlanceAppWidgetReceiver() {
+class AlarmWidgetReceiver : LiveReceiver() {
     override val glanceAppWidget: GlanceAppWidget = AlarmGlanceWidget()
     override fun onDeleted(context: Context, appWidgetIds: IntArray) { super.onDeleted(context, appWidgetIds); forget(context, appWidgetIds) }
 }
 
-class LightsWidgetReceiver : GlanceAppWidgetReceiver() {
+class LightsWidgetReceiver : LiveReceiver() {
     override val glanceAppWidget: GlanceAppWidget = LightsGlanceWidget()
     override fun onDeleted(context: Context, appWidgetIds: IntArray) { super.onDeleted(context, appWidgetIds); forget(context, appWidgetIds) }
 }
 
-class ClimateWidgetReceiver : GlanceAppWidgetReceiver() {
+class ClimateWidgetReceiver : LiveReceiver() {
     override val glanceAppWidget: GlanceAppWidget = ClimateGlanceWidget()
     override fun onDeleted(context: Context, appWidgetIds: IntArray) { super.onDeleted(context, appWidgetIds); forget(context, appWidgetIds) }
 }
 
-class AirWidgetReceiver : GlanceAppWidgetReceiver() {
-    override val glanceAppWidget: GlanceAppWidget = AirGlanceWidget()
-}
-
-class SummaryWidgetReceiver : GlanceAppWidgetReceiver() {
+class SummaryWidgetReceiver : LiveReceiver() {
     override val glanceAppWidget: GlanceAppWidget = SummaryGlanceWidget()
     override fun onDeleted(context: Context, appWidgetIds: IntArray) { super.onDeleted(context, appWidgetIds); forget(context, appWidgetIds) }
 }
 
-class ShortcutsWidgetReceiver : GlanceAppWidgetReceiver() {
+class ShortcutsWidgetReceiver : LiveReceiver() {
     override val glanceAppWidget: GlanceAppWidget = ShortcutsGlanceWidget()
     override fun onDeleted(context: Context, appWidgetIds: IntArray) { super.onDeleted(context, appWidgetIds); forget(context, appWidgetIds) }
 }

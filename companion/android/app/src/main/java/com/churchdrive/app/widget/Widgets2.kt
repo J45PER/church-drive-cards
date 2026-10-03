@@ -69,16 +69,16 @@ abstract class SceneWidget(private val title: String) : GlanceAppWidget() {
     @Composable
     abstract fun Draw(s: WidgetScene)
 
-    override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val config = WidgetConfig.get(context, widgetId(context, id))
-        val data = WidgetSource.load(context, asks(context, config))
-        val p = WidgetPalette.of(context)
-        val picture = data?.let { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { picture(context, it, config) } }
-        val me = Session(context).personName
-        provideContent {
-            if (data == null) Unreachable(title, p, "Can't reach the house")
-            else Draw(WidgetScene(data, config, p, LocalSize.current.sizeClass(), picture, me))
-        }
+    override suspend fun provideGlance(context: Context, id: GlanceId) = provideLive(
+        context, id,
+        asks = { c, config -> asks(c, config) },
+        picture = { c, data, config -> picture(c, data, config) },
+    ) { l ->
+        val p = WidgetPalette.of(androidx.glance.LocalContext.current)
+        val me = Session(androidx.glance.LocalContext.current).personName
+        val data = l.data
+        if (data == null) Unreachable(title, p, "Can't reach the house")
+        else Draw(WidgetScene(data, l.config, p, LocalSize.current.sizeClass(), l.picture, me))
     }
 }
 
@@ -558,53 +558,53 @@ class ClusterGlanceWidget : SceneWidget("Gauges") {
 
 private fun forget2(context: Context, ids: IntArray) = WidgetConfig.remove(context, ids)
 
-class PeopleWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = PeopleGlanceWidget() }
-class DoorsWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = DoorsGlanceWidget() }
-class WeatherWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = WeatherGlanceWidget() }
-class JobsWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = JobsGlanceWidget() }
-class VacuumWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = VacuumGlanceWidget() }
-class ChargerWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = ChargerGlanceWidget() }
+class PeopleWidgetReceiver : LiveReceiver() { override val glanceAppWidget: GlanceAppWidget = PeopleGlanceWidget() }
+class DoorsWidgetReceiver : LiveReceiver() { override val glanceAppWidget: GlanceAppWidget = DoorsGlanceWidget() }
+class WeatherWidgetReceiver : LiveReceiver() { override val glanceAppWidget: GlanceAppWidget = WeatherGlanceWidget() }
+class JobsWidgetReceiver : LiveReceiver() { override val glanceAppWidget: GlanceAppWidget = JobsGlanceWidget() }
+class VacuumWidgetReceiver : LiveReceiver() { override val glanceAppWidget: GlanceAppWidget = VacuumGlanceWidget() }
+class ChargerWidgetReceiver : LiveReceiver() { override val glanceAppWidget: GlanceAppWidget = ChargerGlanceWidget() }
 
-class TodoWidgetReceiver : GlanceAppWidgetReceiver() {
+class TodoWidgetReceiver : LiveReceiver() {
     override val glanceAppWidget: GlanceAppWidget = MyTodoGlanceWidget()
     override fun onDeleted(context: Context, appWidgetIds: IntArray) { super.onDeleted(context, appWidgetIds); forget2(context, appWidgetIds) }
 }
-class CameraWidgetReceiver : GlanceAppWidgetReceiver() {
+class CameraWidgetReceiver : LiveReceiver() {
     override val glanceAppWidget: GlanceAppWidget = CameraGlanceWidget()
     override fun onDeleted(context: Context, appWidgetIds: IntArray) { super.onDeleted(context, appWidgetIds); forget2(context, appWidgetIds) }
 }
-class ActivityWidgetReceiver : GlanceAppWidgetReceiver() {
+class ActivityWidgetReceiver : LiveReceiver() {
     override val glanceAppWidget: GlanceAppWidget = ActivityGlanceWidget()
     override fun onDeleted(context: Context, appWidgetIds: IntArray) { super.onDeleted(context, appWidgetIds); forget2(context, appWidgetIds) }
 }
-class FanWidgetReceiver : GlanceAppWidgetReceiver() {
+class FanWidgetReceiver : LiveReceiver() {
     override val glanceAppWidget: GlanceAppWidget = FanGlanceWidget()
     override fun onDeleted(context: Context, appWidgetIds: IntArray) { super.onDeleted(context, appWidgetIds); forget2(context, appWidgetIds) }
 }
-class PurifierWidgetReceiver : GlanceAppWidgetReceiver() {
+class PurifierWidgetReceiver : LiveReceiver() {
     override val glanceAppWidget: GlanceAppWidget = PurifierGlanceWidget()
     override fun onDeleted(context: Context, appWidgetIds: IntArray) { super.onDeleted(context, appWidgetIds); forget2(context, appWidgetIds) }
 }
-class BlindsWidgetReceiver : GlanceAppWidgetReceiver() {
+class BlindsWidgetReceiver : LiveReceiver() {
     override val glanceAppWidget: GlanceAppWidget = BlindsGlanceWidget()
     override fun onDeleted(context: Context, appWidgetIds: IntArray) { super.onDeleted(context, appWidgetIds); forget2(context, appWidgetIds) }
 }
-class ScenesWidgetReceiver : GlanceAppWidgetReceiver() {
+class ScenesWidgetReceiver : LiveReceiver() {
     override val glanceAppWidget: GlanceAppWidget = ScenesGlanceWidget()
     override fun onDeleted(context: Context, appWidgetIds: IntArray) { super.onDeleted(context, appWidgetIds); forget2(context, appWidgetIds) }
 }
-class GaugeWidgetReceiver : GlanceAppWidgetReceiver() {
+class GaugeWidgetReceiver : LiveReceiver() {
     override val glanceAppWidget: GlanceAppWidget = GaugeGlanceWidget()
     override fun onDeleted(context: Context, appWidgetIds: IntArray) { super.onDeleted(context, appWidgetIds); forget2(context, appWidgetIds) }
 }
-class ClusterWidgetReceiver : GlanceAppWidgetReceiver() {
+class ClusterWidgetReceiver : LiveReceiver() {
     override val glanceAppWidget: GlanceAppWidget = ClusterGlanceWidget()
     override fun onDeleted(context: Context, appWidgetIds: IntArray) { super.onDeleted(context, appWidgetIds); forget2(context, appWidgetIds) }
 }
 
 /** Every widget the app has, to redraw after a button press. */
 fun allGlanceWidgets(): List<GlanceAppWidget> = listOf(
-    AlarmGlanceWidget(), LightsGlanceWidget(), ClimateGlanceWidget(), AirGlanceWidget(), SummaryGlanceWidget(), ShortcutsGlanceWidget(),
+    AlarmGlanceWidget(), LightsGlanceWidget(), ClimateGlanceWidget(), SummaryGlanceWidget(), ShortcutsGlanceWidget(),
     ScenesGlanceWidget(), FanGlanceWidget(), PurifierGlanceWidget(), BlindsGlanceWidget(), VacuumGlanceWidget(), ChargerGlanceWidget(),
     MyTodoGlanceWidget(), JobsGlanceWidget(), GaugeGlanceWidget(), ClusterGlanceWidget(), DoorsGlanceWidget(),
 )
