@@ -41,16 +41,14 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 /**
- * Keeps the house in touch with the phone while the app is closed: it receives the house's notifications (over its own
- * connection to Home Assistant) and reports where the phone is, so the house knows who is home, at work or out.
- * Android shows a quiet "connected" notification while it runs.
+ * Receives the house's notifications while the app is closed, over its own connection to Home Assistant. Android requires
+ * a notice while an app keeps a connection like this; it's a quiet one the person can swipe away. (Location doesn't
+ * need this: see [House].)
  */
 class HouseService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var work: Job? = null
     private var client: HaClient? = null
-    private var locationListener: LocationListener? = null
-    private var lastPost = 0L
     private var lastRefresh = 0L
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -74,8 +72,6 @@ class HouseService : Service() {
     private fun stopAll() {
         work?.cancel()
         work = null
-        locationListener?.let { l -> runCatching { getSystemService(LocationManager::class.java).removeUpdates(l) } }
-        locationListener = null
         client?.disconnect()
         client = null
     }
@@ -84,7 +80,7 @@ class HouseService : Service() {
     private fun restart() {
         stopAll()
         val session = Session(this)
-        if (!session.signedIn || !(session.notifyOn || session.locationOn)) {
+        if (!session.signedIn || !session.notifyOn) {
             stopSelf()
             return
         }
@@ -97,7 +93,8 @@ class HouseService : Service() {
             .setContentTitle("Church Drive is connected")
             .setContentText("Keeping in touch with the house")
             .setPriority(NotificationCompat.PRIORITY_MIN)
-            .setOngoing(true)
+            // The person can swipe this away (Android 13 and later); the service carries on.
+            .setOngoing(false)
             .setContentIntent(openApp(this))
             .build()
 
@@ -114,19 +111,11 @@ class HouseService : Service() {
     private suspend fun run(session: Session) {
         val url = session.url ?: return
         // Register this phone with Home Assistant once; it keeps the id.
-        var webhook = session.webhookId
+        var webhook = House.ensureRegistered(this)
         while (webhook == null) {
-            val token = freshToken(session)
-            if (token != null) {
-                val name = MobileApp.deviceName(session.personName, Build.MODEL)
-                val body = MobileApp.registrationBody(
-                    session.deviceId, name, BuildConfig.VERSION_NAME, Build.VERSION.RELEASE, Build.MANUFACTURER, Build.MODEL,
-                )
-                webhook = MobileApp.register(url, token, body)?.also { session.saveWebhook(it, name) }
-            }
-            if (webhook == null) delay(60_000)
+            delay(60_000)
+            webhook = House.ensureRegistered(this)
         }
-        if (session.locationOn) withContext(Dispatchers.Main) { startLocation(session, url, webhook) }
         if (session.notifyOn) listen(session, url, webhook)
     }
 
@@ -172,52 +161,6 @@ class HouseService : Service() {
         runCatching { NotificationManagerCompat.from(this).notify(push.tag, push.tag?.hashCode() ?: System.currentTimeMillis().toInt(), n) }
     }
 
-    @SuppressLint("MissingPermission")
-    private fun startLocation(session: Session, url: String, webhook: String) {
-        if (!Permissions.canLocate(this)) return
-        val manager = getSystemService(LocationManager::class.java)
-        val listener = object : LocationListener {
-            override fun onLocationChanged(location: Location) = report(session, url, webhook, location)
-        }
-        locationListener = listener
-        // Network and passive fixes are cheap; GPS is asked only for a fix every few minutes, so the battery isn't drained.
-        for ((provider, minTime, minDistance) in listOf(
-            Triple(LocationManager.NETWORK_PROVIDER, 5 * 60_000L, 100f),
-            Triple(LocationManager.GPS_PROVIDER, 10 * 60_000L, 200f),
-            Triple(LocationManager.PASSIVE_PROVIDER, 2 * 60_000L, 50f),
-        )) {
-            runCatching {
-                if (manager.isProviderEnabled(provider)) {
-                    manager.requestLocationUpdates(provider, minTime, minDistance, listener, Looper.getMainLooper())
-                    manager.getLastKnownLocation(provider)?.let { report(session, url, webhook, it) }
-                }
-            }
-        }
-    }
-
-    private fun report(session: Session, url: String, webhook: String, location: Location) {
-        // A fix that could be anywhere in a few streets isn't worth sending; and not more than one a minute.
-        if (location.accuracy > 500f) return
-        val now = System.currentTimeMillis()
-        if (now - lastPost < 60_000) return
-        lastPost = now
-        val battery = getSystemService(BatteryManager::class.java).getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
-        val body = MobileApp.locationBody(
-            location.latitude, location.longitude, location.accuracy,
-            location.altitude.takeIf { location.hasAltitude() },
-            location.speed.takeIf { location.hasSpeed() },
-            location.bearing.takeIf { location.hasBearing() },
-            battery,
-        )
-        scope.launch {
-            // Home Assistant has forgotten this phone (someone deleted it there): register it again.
-            if (MobileApp.post(url, webhook, body) == WebhookResult.Gone) {
-                session.clearWebhook()
-                withContext(Dispatchers.Main) { restart() }
-            }
-        }
-    }
-
     companion object {
         private const val FOREGROUND_ID = 4201
         private const val CHANNEL_SERVICE = "service"
@@ -244,19 +187,10 @@ class HouseService : Service() {
             }
         }
 
-        /** Starts the service when the person has asked for notifications or location, stops it when neither. */
-        fun sync(context: Context) {
-            val session = Session(context)
+        /** Starts the service when the person has asked for notifications, stops it when not. */
+        fun sync(context: Context, on: Boolean) {
             val intent = Intent(context, HouseService::class.java)
-            if (session.signedIn && (session.notifyOn || session.locationOn)) ContextCompat.startForegroundService(context, intent)
-            else context.stopService(intent)
+            if (on) ContextCompat.startForegroundService(context, intent) else context.stopService(intent)
         }
-    }
-}
-
-/** Starts the service again when the phone starts, if it was on. */
-class BootReceiver : BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == Intent.ACTION_BOOT_COMPLETED) runCatching { HouseService.sync(context) }
     }
 }

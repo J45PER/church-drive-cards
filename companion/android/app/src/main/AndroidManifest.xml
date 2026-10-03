@@ -34,6 +34,9 @@
                 android:value="Keeps a connection to the home's Home Assistant for notifications, and reports the phone's location to it" />
         </service>
         <receiver
+            android:name=".house.LocationReceiver"
+            android:exported="false" />
+        <receiver
             android:name=".house.BootReceiver"
             android:exported="false">
             <intent-filter>

@@ -251,7 +251,7 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
         PanelCard {
             PanelRow(
                 Icons.Outlined.Notifications, "Notifications",
-                "Messages from the house, such as the doorbell or an alarm, come to this phone.",
+                "Messages from the house, such as the doorbell or an alarm, come to this phone. Android shows a small \"connected\" notice while this is on; you can swipe it away.",
                 trailing = {
                     Switch(checked = settings.notifyOn, onCheckedChange = { on ->
                         message = null
@@ -263,7 +263,7 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
             )
             PanelRow(
                 Icons.Outlined.LocationOn, "Share my location",
-                "So the house knows when you're home, at work or out.",
+                "So the house knows when you're home, at work or out. Reported when you move, with no notice on your screen.",
                 trailing = {
                     Switch(checked = settings.locationOn, onCheckedChange = { on ->
                         message = null

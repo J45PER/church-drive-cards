@@ -75,13 +75,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun setNotifications(on: Boolean) {
         session.notifyOn = on
         _notifyOn.value = on
-        com.churchdrive.app.house.HouseService.sync(appContext)
+        com.churchdrive.app.house.House.sync(appContext)
     }
 
     fun setLocation(on: Boolean) {
         session.locationOn = on
         _locationOn.value = on
-        com.churchdrive.app.house.HouseService.sync(appContext)
+        com.churchdrive.app.house.House.sync(appContext)
     }
 
     /** The notify service for this phone (for an administrator to test with), once it's registered with Home Assistant. */
@@ -152,7 +152,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         checkForUpdate()
         if (session.signedIn) {
             startSession()
-            com.churchdrive.app.house.HouseService.sync(appContext)
+            com.churchdrive.app.house.House.sync(appContext)
         }
         // The person's name, kept for naming this phone in Home Assistant.
         viewModelScope.launch { client.userName.collect { if (it != null) session.savePerson(it) } }
@@ -248,9 +248,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val url = session.url
         val refresh = session.refreshToken
         if (url != null && refresh != null) viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { HaAuth.revoke(url, refresh) }
-        appContext.stopService(android.content.Intent(appContext, com.churchdrive.app.house.HouseService::class.java))
         client.disconnect()
         session.clear()
+        // Nothing left to run: stops the notification connection and the location updates.
+        com.churchdrive.app.house.House.sync(appContext)
         _notifyOn.value = false
         _locationOn.value = false
         _signedIn.value = false
