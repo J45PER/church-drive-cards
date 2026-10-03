@@ -70,7 +70,7 @@ fun TaskDialog(item: TodoItem, listId: String, first: String?, tone: ToneColors,
                     val words2 = repeatWords(repeat, cleaned ?: "09:00", day)
                     val fields = updateFields(
                         item.uid, name, due, if (due == "No date") null else timeOrNull, today,
-                        buildDescription(words2, whoWords(who, first), notes), keepDay,
+                        buildDescription(words2, whoWords(who, first), notes),
                     )
                     call("todo", "update_item", listId, data(*fields.map { it.key to (it.value ?: JSONObject.NULL) }.toTypedArray()))
                     onClose()

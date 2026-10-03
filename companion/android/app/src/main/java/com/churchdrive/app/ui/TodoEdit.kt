@@ -120,11 +120,10 @@ fun updateFields(
     time: String?,
     today: LocalDate,
     description: String,
-    keepDay: LocalDate? = null,
 ): Map<String, Any?> {
     val out = linkedMapOf<String, Any?>("item" to uid, "rename" to name.trim())
-    val day = if (dueChoice == "Keep") keepDay else dueDateOf(dueChoice, today)
-    if (dueChoice != "Keep" || keepDay != null) {
+    val day = dueDateOf(dueChoice, today)
+    if (dueChoice != "Keep") {
         if (day == null) out["due_date"] = null
         else if (time != null) out["due_datetime"] = "$day $time:00"
         else out["due_date"] = day.toString()
