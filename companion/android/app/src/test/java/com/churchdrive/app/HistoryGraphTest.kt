@@ -3,7 +3,8 @@ package com.churchdrive.app
 import com.churchdrive.app.ui.Reading
 import com.churchdrive.app.ui.ZoneKind
 import com.churchdrive.app.ui.ZoneTrack
-import com.churchdrive.app.ui.climateSeries
+import com.churchdrive.app.ui.climateHistory
+import com.churchdrive.app.ui.smoothSeries
 import com.churchdrive.app.ui.happenedAt
 import com.churchdrive.app.ui.numericSeries
 import com.churchdrive.app.ui.valueAt
@@ -44,8 +45,28 @@ class HistoryGraphTest {
             """{"climate.hall":[{"s":"heat","a":{"current_temperature":19.5,"current_humidity":48},"lu":100.0},
                 {"s":"heat","lu":200.0},{"s":"heat","a":{"current_temperature":20.0},"lu":300.0}]}""",
         )
-        val (t, h) = climateSeries(result, "climate.hall", null)
-        assertEquals(listOf(19.5, 19.5, 20.0), t.map { it.value })
-        assertEquals(2, h.size)
+        val h = climateHistory(result, "climate.hall", null)
+        assertEquals(listOf(19.5, 19.5, 20.0), h.temps.map { it.value })
+        assertEquals(2, h.hums.size)
+    }
+
+    @Test
+    fun targetsAreOnlyThereWhileOn() {
+        val result = JSONObject(
+            """{"climate.hall":[{"s":"heat","a":{"current_temperature":19.0,"temperature":21.0},"lu":100.0},
+                {"s":"off","lu":200.0}]}""",
+        )
+        assertEquals(listOf(21.0), climateHistory(result, "climate.hall", null).targets.map { it.value })
+    }
+
+    @Test
+    fun smoothingEvensOutASpikeAndReachesNow() {
+        val from = 0L
+        val now = 96_000L
+        val raw = (0..95).map { Reading(it * 1_000L, if (it == 48) 30.0 else 20.0) }
+        val s = smoothSeries(raw, from, now)
+        assertEquals(now, s.last().time)
+        assertEquals(true, s.maxOf { it.value } < 24.0)
+        assertEquals(2, smoothSeries(listOf(Reading(0, 1.0), Reading(1, 2.0)), from, now).size)
     }
 }

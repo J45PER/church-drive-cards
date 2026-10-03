@@ -14,7 +14,22 @@ fun EntityState.list(key: String): List<String> {
 fun presetLabel(value: String): String = value.replace('_', ' ').trim().replaceFirstChar { it.uppercase() }
 
 /** The comfortable range of a room by its type, in °C, as on the dashboard's Climate panel. */
-private val COMFORT = mapOf("living" to (19.0 to 22.0), "office" to (19.0 to 22.0), "bedroom" to (16.0 to 20.0), "hall" to (16.0 to 21.0))
+
+/** A room type with its comfortable range in °C (the dashboard's Climate Zone card types). */
+data class RoomType(val name: String, val low: Double, val high: Double)
+
+val ROOM_TYPES: Map<String, RoomType> = mapOf(
+    "living" to RoomType("Living room", 19.0, 22.0),
+    "bedroom" to RoomType("Bedroom", 16.0, 20.0),
+    "office" to RoomType("Office / study", 19.0, 22.0),
+    "hall" to RoomType("Hall / landing", 16.0, 21.0),
+    "bathroom" to RoomType("Bathroom", 20.0, 24.0),
+    "kitchen" to RoomType("Kitchen", 17.0, 21.0),
+    "outside" to RoomType("Outside", 3.0, 25.0),
+)
+
+private val COMFORT = ROOM_TYPES.mapValues { it.value.low to it.value.high }
+
 
 /** Green in the comfortable range; cyan or blue when it's cold, amber or red when it's hot, by how far out. */
 fun comfortTone(temperature: Double?, type: String?): Tone {

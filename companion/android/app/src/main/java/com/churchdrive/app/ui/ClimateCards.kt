@@ -43,12 +43,12 @@ fun ClimateRoomCard(config: JSONObject, entities: Map<String, EntityState>, call
         quick = quickSettings(config),
         below = {
             // Temperature and humidity over the last day (each is a switch on the dashboard card), sharing one graph.
-            val showT = config.optBoolean("show_temperature_history")
-            val showH = config.optBoolean("show_humidity_history")
-            if (showT || showH) {
+            if (config.optBoolean("show_temperature_history") || config.optBoolean("show_humidity_history")) {
+                val tone = toneColors(climateTone(entities[id]))
                 ClimateGraph(
-                    id, config.optString("humidity_entity").takeIf { it.isNotBlank() }, showT, showH,
-                    toneColors(climateTone(entities[id])).onContainer,
+                    entities[id], id,
+                    config.optString("humidity_entity").takeIf { it.isNotBlank() }?.let { entities[it] },
+                    config, tone.onContainer, tone.accent,
                 )
             }
         },
@@ -177,7 +177,7 @@ fun AirPurifierCard(config: JSONObject, entities: Map<String, EntityState>, call
             }
         }
         if (config.optBoolean("show_graph", true) && config.optString("pm25_entity").isNotBlank()) {
-            SensorGraph(config.optString("pm25_entity"), 24, " µg/m³", tone.accent, tone.onContainer)
+            SensorGraph(config.optString("pm25_entity"), 24, " µg/m³", tone.accent, tone.onContainer, config.optBoolean("smooth_graphs", true))
         }
         if (allergen != null) Text("Allergen index ${allergen.roundToInt()}", style = MaterialTheme.typography.bodyMedium)
         TileRow(
