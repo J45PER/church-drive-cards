@@ -43,6 +43,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         val lastCrash = CrashReport.take(this)
         CrashReport.install(this)
+        com.churchdrive.app.ui.MdiAll.load(this)
         setContent {
             var crash by remember { mutableStateOf(lastCrash) }
             crash?.let { text ->

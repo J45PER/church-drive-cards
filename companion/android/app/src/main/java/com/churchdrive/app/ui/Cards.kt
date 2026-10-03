@@ -282,7 +282,7 @@ private fun ModeTile(
     val ink = if (selected) tone.onAccent else content
     Column(
         modifier = modifier
-            .height(64.dp)
+            .height(Ui.TallTileHeight)
             .clip(shape)
             .then(
                 if (selected) Modifier.background(tone.accent)
@@ -293,15 +293,7 @@ private fun ModeTile(
         verticalArrangement = Arrangement.Center,
     ) {
         HaIcon(icon, Icons.Filled.Security, ink, 24.dp)
-        Text(
-            label, color = ink, maxLines = 1,
-            style = LocalTextStyle.current.copy(
-                fontSize = 12.sp,
-                lineHeight = 14.sp,
-                lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both),
-            ),
-            modifier = Modifier.padding(top = 4.dp),
-        )
+        CentredText(label, ink, 12.sp, Modifier.padding(top = 4.dp), lineHeight = 14.sp)
     }
 }
 

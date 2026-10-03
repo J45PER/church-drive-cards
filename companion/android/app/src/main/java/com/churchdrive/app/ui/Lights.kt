@@ -287,7 +287,7 @@ private fun SceneTile(scene: LightScene, active: Boolean, dimmed: Boolean, modif
     val shape = RoundedCornerShape(18.dp)
     Box(
         modifier = modifier
-            .height(64.dp)
+            .height(Ui.TallTileHeight)
             .alpha(if (dimmed) 0.55f else 1f)
             .clip(shape)
             .background(Brush.linearGradient(colours))
@@ -297,16 +297,7 @@ private fun SceneTile(scene: LightScene, active: Boolean, dimmed: Boolean, modif
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
             HaIcon(looks.icon(scene.key, scene.name), sceneIcon(scene.key), ink, 20.dp)
-            Text(
-                scene.name, color = ink, maxLines = 1,
-                overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 3.dp),
-                // Trim the spare space the line height leaves above and below, so icon and name sit centred.
-                style = LocalTextStyle.current.copy(
-                    fontSize = 10.sp,
-                    lineHeight = 12.sp,
-                    lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both),
-                ),
-            )
+            CentredText(scene.name, ink, 10.sp, Modifier.padding(horizontal = 3.dp), lineHeight = 12.sp)
         }
     }
 }
@@ -358,7 +349,7 @@ fun LightPill(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(64.dp)
+            .height(Ui.TallTileHeight)
             .clip(shape)
             .background(tone.onContainer.copy(alpha = 0.10f))
             .onSizeChanged { widthPx = it.width.coerceAtLeast(1) }

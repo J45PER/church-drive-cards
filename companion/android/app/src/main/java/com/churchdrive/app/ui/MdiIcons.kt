@@ -1,5 +1,10 @@
 package com.churchdrive.app.ui
 
+import android.content.Context
+import androidx.compose.runtime.mutableStateOf
+import org.json.JSONObject
+import kotlin.concurrent.thread
+
 /**
  * The Material Design Icons (the `mdi:` icons the dashboards use) that the app draws itself, as SVG path
  * data on a 24 x 24 grid. Icons are added here as screens need them.
@@ -144,4 +149,29 @@ object MdiIcons {
         "stop-circle-outline" to "M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4M9,9V15H15V9",
         "solar-power" to "M11.45,2V5.55L15,3.77L11.45,2M10.45,8L8,10.46L11.75,11.71L10.45,8M2,11.45L3.77,15L5.55,11.45H2M10,2H2V10C2.57,10.17 3.17,10.25 3.77,10.25C7.35,10.26 10.26,7.35 10.27,3.75C10.26,3.16 10.17,2.57 10,2M17,22V16H14L19,7V13H22L17,22Z",
     )
+}
+
+/**
+ * The whole Material Design Icons set (about 7,400 icons, in `assets/mdi-icons.json`), read once in the background so
+ * any icon chosen in Home Assistant draws, not only the ones in [MdiIcons]. Until it's read, [MdiIcons] and each
+ * caller's fallback show.
+ */
+object MdiAll {
+    private val loaded = mutableStateOf<Map<String, String>?>(null)
+
+    /** Every icon's path by name, or null until the set has been read. Reading it from a composable redraws when it arrives. */
+    val paths: Map<String, String>? get() = loaded.value
+
+    fun load(context: Context) {
+        if (loaded.value != null) return
+        val app = context.applicationContext
+        thread(name = "mdi-icons", isDaemon = true) {
+            runCatching {
+                val json = app.assets.open("mdi-icons.json").bufferedReader().use { JSONObject(it.readText()) }
+                val map = HashMap<String, String>(json.length() * 2)
+                for (name in json.keys()) map[name] = json.getString(name)
+                loaded.value = map
+            }
+        }
+    }
 }

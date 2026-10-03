@@ -45,10 +45,10 @@ fun IconChoice(
     enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
-    val shape = RoundedCornerShape(16.dp)
+    val shape = Ui.TileShape
     Box(
         modifier = modifier
-            .height(48.dp)
+            .height(Ui.TileHeight)
             .clip(shape)
             .background(if (selected) tone.accent else Color.Transparent, shape)
             .border(1.dp, if (selected) tone.accent else content.copy(alpha = 0.4f), shape)
@@ -56,7 +56,7 @@ fun IconChoice(
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {
-        HaIcon(icon, Icons.Filled.Info, (if (selected) tone.onAccent else content).copy(alpha = if (enabled) 1f else 0.4f), 24.dp)
+        HaIcon(icon, Icons.Filled.Info, (if (selected) tone.onAccent else content).copy(alpha = if (enabled) 1f else 0.4f), Ui.TileIcon)
     }
 }
 
@@ -104,45 +104,45 @@ data class TileItem(val icon: String, val label: String, val selected: Boolean, 
 
 @Composable
 private fun Tile(item: TileItem, tone: ToneColors, content: Color, enabled: Boolean, column: Boolean, modifier: Modifier) {
-    val shape = RoundedCornerShape(12.dp)
     val ink = (if (item.selected) tone.onAccent else content).copy(alpha = if (enabled) 1f else 0.4f)
     Box(
         modifier = modifier
-            .height(if (column) 56.dp else 48.dp)
-            .clip(shape)
-            .background(if (item.selected) tone.accent else content.copy(alpha = 0.10f), shape)
+            .height(Ui.TileHeight)
+            .clip(Ui.TileShape)
+            .background(if (item.selected) tone.accent else content.copy(alpha = 0.10f), Ui.TileShape)
             .clickable(enabled = enabled, onClickLabel = item.label, onClick = item.onClick)
             .semantics { contentDescription = item.label },
         contentAlignment = Alignment.Center,
     ) {
         if (column) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                HaIcon(item.icon, Icons.Filled.Info, ink, 20.dp)
-                if (item.showLabel) Text(item.label, color = ink, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                HaIcon(item.icon, Icons.Filled.Info, ink, Ui.TileIcon)
+                if (item.showLabel) CentredText(item.label, ink, Ui.TileTextStacked, Modifier.padding(horizontal = 4.dp))
             }
         } else {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                HaIcon(item.icon, Icons.Filled.Info, ink, 20.dp)
-                if (item.showLabel) Text(item.label, color = ink, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(end = 2.dp))
+                HaIcon(item.icon, Icons.Filled.Info, ink, Ui.TileIcon)
+                if (item.showLabel) CentredText(item.label, ink, Ui.TileText, Modifier.padding(end = 2.dp))
             }
         }
     }
 }
 
 /**
- * Tiles in rows of up to [perRow], shared out evenly (so six tiles are two rows of three) and, as on the dashboard,
- * going onto more rows rather than scrolling. [column] puts the label under the icon.
+ * Tiles in rows of up to [perRow], shared out evenly by [tileRowSizes] and, as on the dashboard, going onto more rows
+ * rather than scrolling. Every row fills the width: a short last row's tiles are wider, not left with a gap.
+ * [column] puts the label under the icon. All tiles are the same height ([Ui.TileHeight]).
  */
 @Composable
-fun TileRow(items: List<TileItem>, tone: ToneColors, content: Color, enabled: Boolean = true, perRow: Int = 4, column: Boolean = false) {
+fun TileRow(items: List<TileItem>, tone: ToneColors, content: Color, enabled: Boolean = true, perRow: Int = Ui.TilesPerRow, column: Boolean = false) {
     if (items.isEmpty()) return
-    val rows = (items.size + perRow - 1) / perRow
-    val size = (items.size + rows - 1) / rows
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        items.chunked(size).forEach { chunk ->
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                chunk.forEach { Tile(it, tone, content, enabled, column, Modifier.weight(1f)) }
-                repeat(size - chunk.size) { Spacer(Modifier.weight(1f)) }
+    var next = 0
+    Column(verticalArrangement = Arrangement.spacedBy(Ui.TileGap)) {
+        tileRowSizes(items.size, perRow).forEach { size ->
+            val row = items.subList(next, next + size)
+            next += size
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Ui.TileGap)) {
+                row.forEach { Tile(it, tone, content, enabled, column, Modifier.weight(1f)) }
             }
         }
     }

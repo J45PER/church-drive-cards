@@ -95,3 +95,7 @@ need the app opened.
 3. Kiosk app with the first room template.
 4. Windows manager (user app and kiosk management).
 5. Embedded panels in the manager, if feasible.
+
+## Standards
+
+How the app should look and how to add to it: [android/UI-STANDARDS.md](android/UI-STANDARDS.md) (checked by `UiStandardsTest`).
