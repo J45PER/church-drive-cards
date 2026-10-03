@@ -89,7 +89,7 @@ fun AccountOverlay(
     updateAvailable: Boolean,
     onSignOut: () -> Unit,
     adminPages: List<Page> = emptyList(),
-    onOpenPage: (Page) -> Unit = {},
+    pageContent: @Composable (Page) -> Unit = {},
 ) {
     // The last page shown, so a page keeps its words while it slides away.
     var shown by remember { mutableStateOf("account") }
@@ -112,7 +112,11 @@ fun AccountOverlay(
                 when (which) {
                     "settings" -> SettingsPage(settings, isAdmin) { onPanel("account") }
                     "about" -> AboutPage(settings, updateAvailable) { onPanel("account") }
-                    else -> AccountPage(userName, isAdmin, adminPages, onOpenPage, onClose = { onPanel(null) }, onOpen = onPanel, onSignOut = {
+                    // The administrator's pages open here, as sub-pages of the panel.
+                    "energy", "devices" -> adminPages.firstOrNull { it.name.lowercase() == which }?.let { p ->
+                        AdminPage(p.label, { onPanel("account") }) { pageContent(p) }
+                    }
+                    else -> AccountPage(userName, isAdmin, adminPages, onClose = { onPanel(null) }, onOpen = onPanel, onSignOut = {
                         onPanel(null)
                         onSignOut()
                     })
@@ -154,7 +158,7 @@ private fun PanelTitle(title: String, onBack: () -> Unit) {
 }
 
 @Composable
-private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Page>, onOpenPage: (Page) -> Unit, onClose: () -> Unit, onOpen: (String) -> Unit, onSignOut: () -> Unit) {
+private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Page>, onClose: () -> Unit, onOpen: (String) -> Unit, onSignOut: () -> Unit) {
     Column(
         Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -187,7 +191,7 @@ private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Pa
         // Administrator-only pages (Energy, Devices).
         if (adminPages.isNotEmpty()) {
             PanelCard {
-                adminPages.forEach { p -> PanelRow(p.fallback, p.label, onClick = { onOpenPage(p) }) }
+                adminPages.forEach { p -> PanelRow(p.fallback, p.label, onClick = { onOpen(p.name.lowercase()) }) }
             }
         }
         PanelCard {
@@ -195,6 +199,18 @@ private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Pa
             PanelRow(Icons.Outlined.Info, "About", onClick = { onOpen("about") })
         }
         PanelCard { PanelRow(Icons.AutoMirrored.Outlined.Logout, "Sign out", onClick = onSignOut) }
+    }
+}
+
+/** One of the administrator's pages (Energy, Devices) as a sub-page of the panel. */
+@Composable
+private fun AdminPage(title: String, onBack: () -> Unit, content: @Composable () -> Unit) {
+    Column(
+        Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(28.dp),
+    ) {
+        PanelTitle(title, onBack)
+        content()
     }
 }
 

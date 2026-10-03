@@ -72,7 +72,7 @@ fun HomeScreen(
     // Administrator-only pages (Devices, Energy) are opened from the account panel, and only while an administrator is signed in.
     val adminPages = if (isAdmin) Page.entries.filter { it.adminOnly } else emptyList()
     val pages = Page.entries.filter { !it.adminOnly }
-    if (page !in pages && page !in adminPages) page = Page.Home
+    if (page !in pages) page = Page.Home
     // The account panel (null shut, "account", "settings" or "about"), which slides in from the right.
     var panel by rememberSaveable { mutableStateOf<String?>(null) }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -162,7 +162,11 @@ fun HomeScreen(
     AccountOverlay(
         panel, { panel = it }, userName, isAdmin, account, updateAvailable, onSignOut,
         adminPages = adminPages,
-        onOpenPage = { page = it; panel = null },
+        pageContent = { p ->
+            // The app has no media controls: the dashboard's "TVs & speakers" panel is left out.
+            val key = if (p == Page.Energy) "energy" else "devices"
+            DashboardPage(panels[key].orEmpty().filter { it.title != "TVs & speakers" }, entities, registry, call)
+        },
     )
     }
 }
