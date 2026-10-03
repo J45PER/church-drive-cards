@@ -24,5 +24,5 @@ suspend fun HaApi.ask(type: String, params: JSONObject): Any? =
 /** The signed-in person's name, for their own to-do list. */
 val LocalUserName = compositionLocalOf<String?> { null }
 
-/** The Home Assistant address the app is signed in to, for links that open its own pages. */
-val LocalHaUrl = compositionLocalOf { "" }
+/** Every area's name by its id, for cards that name a room by its area. */
+val LocalAreaNames = compositionLocalOf<Map<String, String>> { emptyMap() }

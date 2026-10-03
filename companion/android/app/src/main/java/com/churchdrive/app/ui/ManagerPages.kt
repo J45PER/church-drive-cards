@@ -148,7 +148,7 @@ private fun ManagerNote(text: String) {
 /** A card with a button that opens the Manager page in Home Assistant, for what the app doesn't do itself. */
 @Composable
 fun OpenInHomeAssistant(label: String, why: String, path: String = "dashboard-manager/system") {
-    val base = LocalHaUrl.current
+    val base = LocalBaseUrl.current
     val context = androidx.compose.ui.platform.LocalContext.current
     val neutral = toneColors(Tone.Grey)
     EntityCard(neutral.container, neutral.onContainer) {
