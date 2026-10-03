@@ -38,7 +38,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * same connection. [onStatus] gets null once the picture is playing, or a message if it can't be.
  */
 @Composable
-fun WebRtcPlayer(entityId: String, muted: Boolean, modifier: Modifier = Modifier, onStatus: (String?) -> Unit) {
+fun WebRtcPlayer(entityId: String, muted: Boolean, modifier: Modifier = Modifier, onAspect: (Float) -> Unit = {}, onStatus: (String?) -> Unit) {
     val context = LocalContext.current
     val host = LocalCameraHost.current
     val egl = remember { EglBase.create() }
@@ -53,7 +53,7 @@ fun WebRtcPlayer(entityId: String, muted: Boolean, modifier: Modifier = Modifier
     LaunchedEffect(muted, audio) { audio?.setEnabled(!muted) }
 
     DisposableEffect(entityId) {
-        val session = host?.let { RtcSession(context, egl, it, entityId, renderer, { track -> audio = track }, onStatus) }
+        val session = host?.let { RtcSession(context, egl, it, entityId, renderer, { track -> audio = track }, onStatus, onAspect) }
         if (session == null) onStatus("Live view isn't available.") else session.start()
         onDispose {
             session?.close()
@@ -85,6 +85,7 @@ private class RtcSession(
     private val renderer: SurfaceViewRenderer,
     private val onAudio: (AudioTrack) -> Unit,
     private val onStatus: (String?) -> Unit,
+    private val onAspect: (Float) -> Unit,
 ) : PeerConnection.Observer {
     private var factory: PeerConnectionFactory? = null
     private var connection: PeerConnection? = null
@@ -104,6 +105,8 @@ private class RtcSession(
         if (!firstFrame) {
             firstFrame = true
             CrashReport.note("first picture ${frame.rotatedWidth}x${frame.rotatedHeight}")
+            // The picture's own shape, so a square or portrait camera can fill the screen when shown full screen.
+            if (frame.rotatedHeight > 0) main.post { onAspect(frame.rotatedWidth.toFloat() / frame.rotatedHeight) }
         }
         renderer.onFrame(frame)
     }

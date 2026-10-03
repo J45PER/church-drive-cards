@@ -179,27 +179,48 @@ private fun EventPlayer(event: CameraEvent, baseUrl: String) {
 fun coverSize(aspect: Float, boxW: Float, boxH: Float): Pair<Float, Float> =
     if (aspect < boxW / boxH) boxW to boxW / aspect else boxH * aspect to boxH
 
-/** Moves a picture by [pan] and zooms it by [zoom] about [centre], keeping it covering the box. Returns the new zoom and offset. */
+/** What fits inside a box of [boxW] x [boxH] with media of [aspect] (width / height), whole: the opposite of [coverSize]. */
+fun fitSize(aspect: Float, boxW: Float, boxH: Float): Pair<Float, Float> =
+    if (aspect > boxW / boxH) boxW to boxW / aspect else boxH * aspect to boxH
+
+/** Keeps one axis of a picture of [size] (after zooming) in a box of [box]: edge to edge when it is bigger, centred when it is smaller. */
+private fun keepIn(offset: Float, box: Float, size: Float): Float =
+    if (size <= box) (box - size) / 2f else offset.coerceIn(box - size, 0f)
+
+/**
+ * Moves a picture by [pan] and zooms it by [zoom] (up to [maxZoom]) about [centre], keeping it in the box: covering it when the picture
+ * is bigger than the box, centred when it is smaller. Returns the new zoom and offset.
+ */
 fun panZoom(
     zoom: Float, offsetX: Float, offsetY: Float, centreX: Float, centreY: Float, panX: Float, panY: Float, zoomBy: Float,
-    boxW: Float, boxH: Float, coverW: Float, coverH: Float,
+    boxW: Float, boxH: Float, coverW: Float, coverH: Float, maxZoom: Float = 4f,
 ): Triple<Float, Float, Float> {
-    val z = (zoom * zoomBy).coerceIn(1f, 4f)
+    val z = (zoom * zoomBy).coerceIn(1f, maxZoom)
     val x = centreX - (centreX - offsetX) * z / zoom + panX
     val y = centreY - (centreY - offsetY) * z / zoom + panY
-    return Triple(z, x.coerceIn(boxW - coverW * z, 0f), y.coerceIn(boxH - coverH * z, 0f))
+    return Triple(z, keepIn(x, boxW, coverW * z), keepIn(y, boxH, coverH * z))
 }
 
 /**
  * A 16:9 box with media of its own shape inside, covering the box, as on the dashboard: a square clip fills the
  * width and can be dragged up and down to look around. Pinch or double-tap to zoom.
  */
-@Composable
-fun StageBox(aspect: Float, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    BoxWithConstraints(modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(14.dp)).background(Color(0xFF111111))) {
+fun StageBox(
+    aspect: Float,
+    modifier: Modifier = Modifier,
+    /** Fill whatever space it is given (full screen), instead of being a 16:9 box. */
+    fill: Boolean = false,
+    /** Show the whole picture (a live view) rather than covering the box with it (a clip). */
+    contain: Boolean = false,
+    maxZoom: Float = 4f,
+    content: @Composable () -> Unit,
+) {
+    val shape = modifier.then(if (fill) Modifier.fillMaxSize() else Modifier.fillMaxWidth().aspectRatio(16f / 9f))
+        .clip(RoundedCornerShape(if (fill) 0.dp else 14.dp)).background(if (fill) Color.Black else Color(0xFF111111))
+    BoxWithConstraints(shape) {
         val boxW = constraints.maxWidth.toFloat()
         val boxH = constraints.maxHeight.toFloat()
-        val (coverW, coverH) = coverSize(aspect, boxW, boxH)
+        val (coverW, coverH) = if (contain) fitSize(aspect, boxW, boxH) else coverSize(aspect, boxW, boxH)
         var view by remember(aspect, boxW, boxH) { mutableStateOf(Triple(1f, (boxW - coverW) / 2f, (boxH - coverH) / 2f)) }
         val density = androidx.compose.ui.platform.LocalDensity.current
         Box(
@@ -208,13 +229,13 @@ fun StageBox(aspect: Float, modifier: Modifier = Modifier, content: @Composable 
                 .pointerInput(aspect, boxW, boxH) {
                     detectTransformGestures { centroid, pan, zoom, _ ->
                         val (z, x, y) = view
-                        view = panZoom(z, x, y, centroid.x, centroid.y, pan.x, pan.y, zoom, boxW, boxH, coverW, coverH)
+                        view = panZoom(z, x, y, centroid.x, centroid.y, pan.x, pan.y, zoom, boxW, boxH, coverW, coverH, maxZoom)
                     }
                 }
                 .pointerInput(aspect, boxW, boxH) {
                     detectTapGestures(onDoubleTap = { at ->
                         val (z, x, y) = view
-                        view = panZoom(z, x, y, at.x, at.y, 0f, 0f, if (z > 1.5f) 1f / z else 2f, boxW, boxH, coverW, coverH)
+                        view = panZoom(z, x, y, at.x, at.y, 0f, 0f, if (z > 1.5f) 1f / z else 2f, boxW, boxH, coverW, coverH, maxZoom)
                     })
                 },
         ) {

@@ -2,6 +2,8 @@ package com.churchdrive.app.ui
 
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -209,37 +211,69 @@ internal fun CameraViewer(
         }
     }
     if (showEvents && eventsBase != null) CameraEventsViewer(name, eventsBase) { showEvents = false }
-    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    // The picture's own shape (known once it plays), so a square or portrait camera fills the screen when full screen.
+    var aspect by remember { mutableStateOf(16f / 9f) }
+    var full by remember { mutableStateOf(false) }
+    Dialog(
+        // Back leaves full screen first, then the viewer.
+        onDismissRequest = { if (full) full = false else onClose() },
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+    ) {
         Surface(modifier = Modifier.fillMaxSize(), color = Color.Black) {
-            Column(modifier = Modifier.fillMaxSize().padding(8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(name, color = Color.White, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f).padding(start = 8.dp))
-                    IconButton(onClick = onClose) { Icon(Icons.Filled.Close, contentDescription = "Close", tint = Color.White) }
+            Column(
+                modifier = Modifier.fillMaxSize().then(if (full) Modifier else Modifier.padding(8.dp)),
+                verticalArrangement = Arrangement.spacedBy(if (full) 0.dp else 12.dp),
+            ) {
+                if (!full) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(name, color = Color.White, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f).padding(start = 8.dp))
+                        IconButton(onClick = onClose) { Icon(Icons.Filled.Close, contentDescription = "Close", tint = Color.White) }
+                    }
                 }
-                Box(modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(Color(0xFF111111)), contentAlignment = Alignment.Center) {
-                    when (mode) {
-                        "webrtc" -> WebRtcPlayer(entityId, muted, Modifier.fillMaxSize()) { status = it }
-                        "hls" -> link?.let { LivePlayer(base + it, muted) }
-                        else -> Unit
+                // One stage for both: pinch to zoom, drag to look around, double-tap to zoom in and out. Full screen just gives it all the room.
+                Box(modifier = if (full) Modifier.weight(1f).fillMaxWidth() else Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    StageBox(aspect, fill = full, contain = true, maxZoom = 6f) {
+                        when (mode) {
+                            "webrtc" -> WebRtcPlayer(entityId, muted, Modifier.fillMaxSize(), onAspect = { aspect = it }) { status = it }
+                            "hls" -> link?.let { LivePlayer(base + it, muted) { aspect = it } }
+                            else -> Unit
+                        }
                     }
                     status?.let { Text(it, color = Color.White.copy(alpha = 0.75f), modifier = Modifier.padding(16.dp)) }
-                }
-                val white = ToneColors(Color.Black, Color.White, Color.White, Color.Black)
-                val canListen = mode == "webrtc" || mode == "hls"
-                Column(modifier = Modifier.padding(horizontal = 8.dp)) {
-                    TileRow(
-                        buildList {
-                            add(TileItem(if (muted) "mdi:volume-off" else "mdi:volume-high", if (muted) "Unmute" else "Mute", !muted && canListen) { if (canListen) muted = !muted })
-                            if (button != null) add(TileItem(IconMap.of("camera", "snapshot", "mdi:camera-retake"), "New snapshot", false) { call("button", "press", button, data()) })
-                            if (eventsBase != null) add(TileItem(IconMap.of("camera", "events", "mdi:history"), "Events", false) { showEvents = true })
-                            if (light != null) {
-                                val on = entities[light]?.state == "on"
-                                val lightName = entities[light]?.friendlyName?.replace(Regex(" light$", RegexOption.IGNORE_CASE), "") ?: "Light"
-                                add(TileItem(if (on) "mdi:lightbulb-on" else "mdi:lightbulb-outline", "$lightName ${if (on) "on" else "off"}", on) { call("light", "toggle", light, data()) })
+                    if (full) {
+                        Row(
+                            modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).statusBarsPadding(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            val canListen = mode == "webrtc" || mode == "hls"
+                            if (canListen) IconButton(onClick = { muted = !muted }, modifier = Modifier.background(Color.Black.copy(alpha = 0.45f), CircleShape)) {
+                                HaIcon(if (muted) "mdi:volume-off" else "mdi:volume-high", Icons.Filled.Info, Color.White, 22.dp)
                             }
-                        },
-                        white, Color.White,
-                    )
+                            IconButton(onClick = { full = false }, modifier = Modifier.background(Color.Black.copy(alpha = 0.45f), CircleShape)) {
+                                HaIcon("mdi:fullscreen-exit", Icons.Filled.Info, Color.White, 22.dp)
+                            }
+                        }
+                    }
+                }
+                if (!full) {
+                    val white = ToneColors(Color.Black, Color.White, Color.White, Color.Black)
+                    val canListen = mode == "webrtc" || mode == "hls"
+                    Column(modifier = Modifier.padding(horizontal = 8.dp)) {
+                        TileRow(
+                            buildList {
+                                add(TileItem(if (muted) "mdi:volume-off" else "mdi:volume-high", if (muted) "Unmute" else "Mute", !muted && canListen) { if (canListen) muted = !muted })
+                                add(TileItem("mdi:fullscreen", "Full screen", false) { full = true })
+                                if (button != null) add(TileItem(IconMap.of("camera", "snapshot", "mdi:camera-retake"), "New snapshot", false) { call("button", "press", button, data()) })
+                                if (eventsBase != null) add(TileItem(IconMap.of("camera", "events", "mdi:history"), "Events", false) { showEvents = true })
+                                if (light != null) {
+                                    val on = entities[light]?.state == "on"
+                                    val lightName = entities[light]?.friendlyName?.replace(Regex(" light$", RegexOption.IGNORE_CASE), "") ?: "Light"
+                                    add(TileItem(if (on) "mdi:lightbulb-on" else "mdi:lightbulb-outline", "$lightName ${if (on) "on" else "off"}", on) { call("light", "toggle", light, data()) })
+                                }
+                            },
+                            white, Color.White,
+                        )
+                    }
                 }
             }
         }
@@ -249,13 +283,18 @@ internal fun CameraViewer(
 /** An HLS live stream, played in the app. The player is released as soon as the viewer closes. */
 @OptIn(UnstableApi::class)
 @Composable
-private fun LivePlayer(url: String, muted: Boolean) {
+private fun LivePlayer(url: String, muted: Boolean, onAspect: (Float) -> Unit) {
     val context = LocalContext.current
     val player = remember(url) {
         ExoPlayer.Builder(context).build().apply {
             setMediaItem(MediaItem.fromUri(url))
             prepare()
             playWhenReady = true
+            addListener(object : androidx.media3.common.Player.Listener {
+                override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+                    if (videoSize.height > 0) onAspect(videoSize.width * videoSize.pixelWidthHeightRatio / videoSize.height)
+                }
+            })
         }
     }
     LaunchedEffect(muted, player) { player.volume = if (muted) 0f else 1f }
