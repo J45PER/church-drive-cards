@@ -421,4 +421,4 @@ fun allRoomsByFloor(layout: LightLayout): List<Pair<String, List<LightRoom>>> {
 }
 
 /** A colour that stands for a scene on a button: its own first colour, else a neutral blue. */
-fun sceneSwatch(key: String): Color = SCENE_COLOURS[key]?.firstOrNull()?.let { Color(it) } ?: Color(0xFF8AB4F8)
+fun sceneSwatch(key: String): Color = SCENE_COLOURS[key]?.firstOrNull() ?: Color(0xFF8AB4F8)
