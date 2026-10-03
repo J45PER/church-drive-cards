@@ -219,7 +219,7 @@ class WidgetModel2Test {
     @Test
     fun securitySummaryOffersRowsAndFillsThem() {
         val entities = map(
-            e("alarm_control_panel.house", "armed_home", "targetState" to "armed_home"),
+            e("alarm_control_panel.church_drive_alarm", "armed_home", "targetState" to "armed_home"),
             e("binary_sensor.front", "on", "device_class" to "door", "friendly_name" to "Front door"),
             e("person.ann", "home", "friendly_name" to "Ann Smith"),
             e("person.bo", "not_home", "friendly_name" to "Bo"),
