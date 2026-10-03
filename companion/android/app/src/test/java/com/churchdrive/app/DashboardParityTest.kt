@@ -82,7 +82,7 @@ class DashboardParityTest {
     @Test
     fun aMirrorStandsForTheCardItPointsAt() {
         val config = JSONObject("""{"views":[
-          {"path":"home","sections":[{"cards":[{"type":"custom:section-panel-card","title":"Charging","cards":[{"type":"custom:mirror-card","dashboard":"this","view":"energy","source":"type:custom:car-card"}]}]}]},
+          {"path":"home","sections":[{"cards":[{"type":"custom:section-panel-card","title":"Charging","cards":[{"type":"custom:mirror-card","dashboard":"this","view":"energy","source":"name:Cars"}]}]}]},
           {"path":"energy","sections":[{"cards":[{"type":"custom:section-panel-card","title":"Car","cards":[{"type":"custom:car-card","title":"Cars"}]}]}]}]}""")
         val home = DashboardPanels.parse(config).getValue("home")
         assertEquals(listOf("custom:car-card"), home[0].cards.map { it.type })
