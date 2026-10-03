@@ -54,13 +54,14 @@ import org.json.JSONObject
 private suspend fun widgetId(context: Context, id: GlanceId): Int = GlanceAppWidgetManager(context).getAppWidgetId(id)
 
 /** What a widget has to hand when it draws: the house, the person's choices, a picture if it asked for one. */
-class WidgetScene(val data: WidgetData, val config: JSONObject, val p: WidgetPalette, val size: SizeClass, val picture: Bitmap?, val me: String?) {
+class WidgetScene(val data: WidgetData, val config: JSONObject, val p: WidgetPalette, val size: SizeClass, val picture: Bitmap?, val me: String?, val width: androidx.compose.ui.unit.Dp = 250.dp) {
     fun entity(key: String): String = config.optString(key)
 }
 
 /** The common shape of the widgets: read the house once, then draw in whichever of the four sizes the widget has been made. */
 abstract class SceneWidget(private val title: String) : GlanceAppWidget() {
-    override val sizeMode: SizeMode = SizeMode.Responsive(WidgetSizes.all)
+    // Exact, so a thin card can tell how much room its buttons really have.
+    override val sizeMode: SizeMode = SizeMode.Exact
 
     open fun asks(context: Context, config: JSONObject): List<Ask> = emptyList()
 
@@ -79,7 +80,7 @@ abstract class SceneWidget(private val title: String) : GlanceAppWidget() {
         val me = Session(androidx.glance.LocalContext.current).personName
         val data = l.data
         if (data == null) Unreachable(title, p, "Can't reach the house")
-        else Draw(WidgetScene(data, l.config, p, LocalSize.current.sizeClass(), l.picture, me))
+        else Draw(WidgetScene(data, l.config, p, LocalSize.current.sizeClass(), l.picture, me, LocalSize.current.width))
     }
 }
 
@@ -90,7 +91,7 @@ private fun line(color: Color, size: Int = 12) = TextStyle(color = cp(color), fo
 
 /** A card of an icon, a title, a line under it, and buttons: a strip, a square with a few round buttons, or the full tiles. */
 @Composable
-fun CardContent(card: Card, p: WidgetPalette, size: SizeClass) {
+fun CardContent(card: Card, p: WidgetPalette, size: SizeClass, width: androidx.compose.ui.unit.Dp = 250.dp) {
     val tone = p.tone(card.tone)
     when (size) {
         SizeClass.Strip -> WidgetCard(p, padding = 10.dp) {
@@ -101,7 +102,7 @@ fun CardContent(card: Card, p: WidgetPalette, size: SizeClass) {
                     Text(card.title, style = title(p), maxLines = 1)
                     Text(card.sub, style = line(tone.accent), maxLines = 1)
                 }
-                IconRow(card.tiles.take(4), p, tone, 34.dp)
+                StripButtons(card.tiles, p, tone, width.value - 20f - 40f - 10f - 110f)
             }
         }
         SizeClass.Square -> WidgetCard(p, padding = 12.dp) {
@@ -123,6 +124,26 @@ fun CardContent(card: Card, p: WidgetPalette, size: SizeClass) {
             TileButtons(card.tiles, p, tone, perRow = 4, maxRows = if (size == SizeClass.Tall) 2 else 1)
         }
     }
+}
+
+/** The buttons of a thin card: each with its icon and name when they fit in [room] dp, else round icon-only buttons. */
+@Composable
+private fun StripButtons(tiles: List<WidgetTile>, p: WidgetPalette, tone: ToneColors, room: Float) {
+    val need = tiles.sumOf { 34 + 7 * it.label.length } + 6 * (tiles.size - 1)
+    if (tiles.size in 1..3 && need <= room) {
+        tiles.forEach { t ->
+            Spacer(GlanceModifier.width(6.dp))
+            val fg = if (t.selected) tone.onAccent else p.onSurface
+            Row(
+                GlanceModifier.height(40.dp).cornerRadius(14.dp).background(cp(if (t.selected) tone.accent else p.tile)).padding(horizontal = 10.dp).clickable(t.action()),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                iconBitmap(t.icon, fg)?.let { Image(ImageProvider(it), null, GlanceModifier.size(18.dp)) }
+                Spacer(GlanceModifier.width(4.dp))
+                Text(t.label, style = TextStyle(color = cp(fg), fontSize = 12.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+            }
+        }
+    } else IconRow(tiles.take(4), p, tone, 34.dp)
 }
 
 /** Reads like a sentence under a title, for the plain pill widgets (people, doors, doorbell). */
@@ -342,19 +363,19 @@ class CameraGlanceWidget : SceneWidget("Camera") {
 
 class VacuumGlanceWidget : SceneWidget("Vacuum") {
     @Composable
-    override fun Draw(s: WidgetScene) = CardContent(vacuumCard(s.data.entities), s.p, s.size)
+    override fun Draw(s: WidgetScene) = CardContent(vacuumCard(s.data.entities), s.p, s.size, s.width)
 }
 
 class ChargerGlanceWidget : SceneWidget("Car charger") {
     @Composable
-    override fun Draw(s: WidgetScene) = CardContent(chargerCard(s.data.entities), s.p, s.size)
+    override fun Draw(s: WidgetScene) = CardContent(chargerCard(s.data.entities), s.p, s.size, s.width)
 }
 
 class FanGlanceWidget : SceneWidget("Fan") {
     @Composable
     override fun Draw(s: WidgetScene) {
         val id = s.entity("fan").ifBlank { fansFor(false, s.data.entities).firstOrNull()?.entityId.orEmpty() }
-        CardContent(fanCard(s.data.entities[id], id), s.p, s.size)
+        CardContent(fanCard(s.data.entities[id], id), s.p, s.size, s.width)
     }
 }
 
@@ -362,7 +383,7 @@ class PurifierGlanceWidget : SceneWidget("Air purifier") {
     @Composable
     override fun Draw(s: WidgetScene) {
         val id = s.entity("fan").ifBlank { fansFor(true, s.data.entities).firstOrNull()?.entityId.orEmpty() }
-        CardContent(purifierCard(s.data.entities[id], id, s.data.entities), s.p, s.size)
+        CardContent(purifierCard(s.data.entities[id], id, s.data.entities), s.p, s.size, s.width)
     }
 }
 
@@ -370,7 +391,7 @@ class BlindsGlanceWidget : SceneWidget("Blinds") {
     @Composable
     override fun Draw(s: WidgetScene) {
         val id = s.entity("cover").ifBlank { s.data.entities.keys.firstOrNull { it.startsWith("cover.") }.orEmpty() }
-        CardContent(coverCard(s.data.entities[id], id), s.p, s.size)
+        CardContent(coverCard(s.data.entities[id], id), s.p, s.size, s.width)
     }
 }
 
