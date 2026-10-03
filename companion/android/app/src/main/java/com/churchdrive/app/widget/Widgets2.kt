@@ -497,13 +497,13 @@ fun tileRows(count: Int, perRow: Int): List<Int> = com.churchdrive.app.ui.tileRo
 
 /** A ring with the reading in the middle. */
 @Composable
-private fun Ring(r: GaugeReading, p: WidgetPalette, size: androidx.compose.ui.unit.Dp, valueSize: Int) {
+private fun Ring(r: GaugeReading, p: WidgetPalette, size: androidx.compose.ui.unit.Dp, valueSize: Int, label: Boolean = true) {
     val tone = p.tone(r.tone)
     Box(GlanceModifier.size(size), contentAlignment = Alignment.Center) {
         Image(ImageProvider(ringBitmap(240, r.fraction, p.tile, tone.accent, r.marker)), null, GlanceModifier.size(size))
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(r.value, style = TextStyle(color = cp(p.onSurface), fontSize = valueSize.sp, fontWeight = FontWeight.Bold), maxLines = 1)
-            if (size >= 80.dp) Text(r.label, style = TextStyle(color = cp(p.muted), fontSize = 11.sp), maxLines = 1)
+            if (label && size >= 80.dp) Text(r.label, style = TextStyle(color = cp(p.muted), fontSize = 11.sp), maxLines = 1)
         }
     }
 }
@@ -624,9 +624,14 @@ class ClusterGlanceWidget : SceneWidget("Gauges") {
             }
             else -> WidgetCard(p, padding = 12.dp) {
                 Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    // Each ring with its name under it, however many there are.
+                    val ring = ((s.width.value - 24f - 6f * (readings.size - 1)) / readings.size).coerceIn(52f, 88f)
                     readings.forEachIndexed { i, r ->
                         if (i > 0) Spacer(GlanceModifier.width(6.dp))
-                        Box(GlanceModifier.defaultWeight(), contentAlignment = Alignment.Center) { Ring(r, p, if (readings.size > 3) 72.dp else 84.dp, 16) }
+                        Column(GlanceModifier.defaultWeight(), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Ring(r, p, ring.dp, (ring * 0.24f).toInt(), label = false)
+                            Text(r.label, style = TextStyle(color = cp(p.muted), fontSize = 11.sp, textAlign = TextAlign.Center), maxLines = 1)
+                        }
                     }
                 }
             }
