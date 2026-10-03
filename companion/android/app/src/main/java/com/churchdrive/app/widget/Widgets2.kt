@@ -215,25 +215,76 @@ class PeopleGlanceWidget : SceneWidget("People") {
     }
 }
 
-class DoorsGlanceWidget : SceneWidget("Doors") {
+/** Up to four rows of security information, chosen from a list: the alarm, doors and windows, who is home, doorbells and movement. */
+class SecurityGlanceWidget : SceneWidget("Security") {
     @Composable
     override fun Draw(s: WidgetScene) {
-        val d = doorsStatus(s.data.entities)
-        val tone = s.p.tone(d.tone)
-        Pill(if (d.open.isEmpty()) "mdi:door-closed" else "mdi:door-open", "Doors and windows", d.line, tone, s.p, s.size) {
-            if (d.open.size > 1) Text(d.open.take(4).joinToString(", "), style = TextStyle(color = cp(s.p.muted), fontSize = 12.sp), maxLines = 2)
+        val ids = WidgetConfig.strings(s.config, "rows").ifEmpty { SecurityRows.DEFAULT }
+        val rows = SecurityRows.rows(ids, s.data.entities)
+        val p = s.p
+        if (rows.isEmpty()) return Unreachable("Security", p, "Long-press the widget to choose rows")
+        when (s.size) {
+            // A thin card: the rows side by side.
+            SizeClass.Strip -> WidgetCard(p, padding = 10.dp) {
+                Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    rows.forEachIndexed { i, r ->
+                        if (i > 0) Spacer(GlanceModifier.width(6.dp))
+                        SecCell(r, p, GlanceModifier.defaultWeight())
+                    }
+                }
+            }
+            // A wide card: two to a line.
+            SizeClass.Wide -> WidgetCard(p, padding = 12.dp, top = true) {
+                rows.chunked(2).forEachIndexed { i, pair ->
+                    if (i > 0) Spacer(GlanceModifier.height(8.dp))
+                    Row(GlanceModifier.fillMaxWidth()) {
+                        pair.forEachIndexed { j, r ->
+                            if (j > 0) Spacer(GlanceModifier.width(8.dp))
+                            SecLine(r, p, GlanceModifier.defaultWeight())
+                        }
+                        if (pair.size == 1) Spacer(GlanceModifier.defaultWeight())
+                    }
+                }
+            }
+            else -> WidgetCard(p, padding = 12.dp, top = true) {
+                rows.forEachIndexed { i, r ->
+                    if (i > 0) Spacer(GlanceModifier.height(8.dp))
+                    SecLine(r, p, GlanceModifier.fillMaxWidth())
+                }
+            }
         }
     }
 }
 
-class ActivityGlanceWidget : SceneWidget("Doorbell") {
-    @Composable
-    override fun Draw(s: WidgetScene) {
-        val base = s.entity("base").ifBlank { activityBases(s.data.entities).firstOrNull().orEmpty() }
-        val (text, t) = lastActivity(base, s.data.entities)
-        val name = s.data.entities["camera.${base}_live_view"]?.friendlyName?.removeSuffix(" live view")?.removeSuffix(" Live view")
-            ?: presetLabel(base).ifBlank { "Doorbell" }
-        Pill(if (text.startsWith("Doorbell")) "mdi:doorbell" else "mdi:motion-sensor", name, text, s.p.tone(t), s.p, s.size, camera = "camera.${base}_live_view".takeIf { it in s.data.entities })
+/** Tapping a row about a camera opens that camera's live view. */
+@Composable
+private fun secTap(r: SecRow, modifier: GlanceModifier): GlanceModifier {
+    val context = androidx.glance.LocalContext.current
+    return if (r.camera != null) modifier.clickable(androidx.glance.appwidget.action.actionStartActivity(WidgetPages.intent(context, "Security", r.camera))) else modifier
+}
+
+/** A row as an icon, its name and its value. */
+@Composable
+private fun SecLine(r: SecRow, p: WidgetPalette, modifier: GlanceModifier) {
+    val t = p.tone(r.tone)
+    Row(secTap(r, modifier), verticalAlignment = Alignment.CenterVertically) {
+        IconCircle(r.icon, t, 34.dp)
+        Spacer(GlanceModifier.width(8.dp))
+        Column(GlanceModifier.defaultWeight()) {
+            Text(r.label, style = TextStyle(color = cp(p.muted), fontSize = 11.sp), maxLines = 1)
+            Text(r.value, style = TextStyle(color = cp(t.accent), fontSize = 14.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+        }
+    }
+}
+
+/** A row in a thin card: its icon over its value, and its name under that. */
+@Composable
+private fun SecCell(r: SecRow, p: WidgetPalette, modifier: GlanceModifier) {
+    val t = p.tone(r.tone)
+    Column(secTap(r, modifier), horizontalAlignment = Alignment.CenterHorizontally) {
+        IconCircle(r.icon, t, 30.dp)
+        Text(r.value, style = TextStyle(color = cp(t.accent), fontSize = 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center), maxLines = 1)
+        Text(r.label, style = TextStyle(color = cp(p.muted), fontSize = 10.sp, textAlign = TextAlign.Center), maxLines = 1)
     }
 }
 
@@ -644,7 +695,6 @@ class ClusterGlanceWidget : SceneWidget("Gauges") {
 private fun forget2(context: Context, ids: IntArray) = WidgetConfig.remove(context, ids)
 
 class PeopleWidgetReceiver : LiveReceiver() { override val glanceAppWidget: GlanceAppWidget = PeopleGlanceWidget() }
-class DoorsWidgetReceiver : LiveReceiver() { override val glanceAppWidget: GlanceAppWidget = DoorsGlanceWidget() }
 class WeatherWidgetReceiver : LiveReceiver() { override val glanceAppWidget: GlanceAppWidget = WeatherGlanceWidget() }
 class JobsWidgetReceiver : LiveReceiver() { override val glanceAppWidget: GlanceAppWidget = JobsGlanceWidget() }
 class VacuumWidgetReceiver : LiveReceiver() { override val glanceAppWidget: GlanceAppWidget = VacuumGlanceWidget() }
@@ -658,8 +708,8 @@ class CameraWidgetReceiver : LiveReceiver() {
     override val glanceAppWidget: GlanceAppWidget = CameraGlanceWidget()
     override fun onDeleted(context: Context, appWidgetIds: IntArray) { super.onDeleted(context, appWidgetIds); forget2(context, appWidgetIds) }
 }
-class ActivityWidgetReceiver : LiveReceiver() {
-    override val glanceAppWidget: GlanceAppWidget = ActivityGlanceWidget()
+class SecurityWidgetReceiver : LiveReceiver() {
+    override val glanceAppWidget: GlanceAppWidget = SecurityGlanceWidget()
     override fun onDeleted(context: Context, appWidgetIds: IntArray) { super.onDeleted(context, appWidgetIds); forget2(context, appWidgetIds) }
 }
 class FanWidgetReceiver : LiveReceiver() {
@@ -685,7 +735,7 @@ class ClusterWidgetReceiver : LiveReceiver() {
 
 /** Every widget the app has, to redraw after a button press. */
 fun allGlanceWidgets(): List<GlanceAppWidget> = listOf(
-    AlarmGlanceWidget(), LightsGlanceWidget(), ClimateGlanceWidget(), SummaryGlanceWidget(), ShortcutsGlanceWidget(),
+    AlarmGlanceWidget(), LightsGlanceWidget(), ClimateGlanceWidget(), ShortcutsGlanceWidget(),
     ScenesGlanceWidget(), FanGlanceWidget(), BlindsGlanceWidget(), VacuumGlanceWidget(), ChargerGlanceWidget(),
-    MyTodoGlanceWidget(), JobsGlanceWidget(), GaugeGlanceWidget(), ClusterGlanceWidget(), DoorsGlanceWidget(),
+    MyTodoGlanceWidget(), JobsGlanceWidget(), GaugeGlanceWidget(), ClusterGlanceWidget(), SecurityGlanceWidget(),
 )

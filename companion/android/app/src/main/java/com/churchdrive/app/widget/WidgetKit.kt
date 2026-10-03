@@ -198,13 +198,13 @@ fun cp(c: Color) = ColorProvider(c)
 /** The page of the app a widget opens, by the widget's receiver name; the app's [com.churchdrive.app.ui.Page] names. */
 object WidgetPages {
     private val BY_WIDGET = mapOf(
-        "Alarm" to "Security", "Doors" to "Security", "Activity" to "Security", "Camera" to "Security",
+        "Alarm" to "Security", "Security" to "Security", "Camera" to "Security",
         "Lights" to "Lighting",
         "Climate" to "Climate", "Weather" to "Climate", "Gauge" to "Climate", "Cluster" to "Climate",
         // Widgets that are all buttons open nothing when the background is tapped.
         "Fan" to "", "Blinds" to "", "Scenes" to "", "Shortcuts" to "",
         "Vacuum" to "Cleaning", "Todo" to "Todo", "Jobs" to "Todo",
-        "People" to "Home", "Charger" to "Home", "Summary" to "Home",
+        "People" to "Home", "Charger" to "Home",
     )
 
     fun of(receiverName: String?): String? = receiverName?.substringAfterLast('.')?.removeSuffix("WidgetReceiver")?.let { BY_WIDGET[it] }

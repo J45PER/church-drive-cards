@@ -1,7 +1,10 @@
 package com.churchdrive.app.widget
 
 import com.churchdrive.app.ha.EntityState
+import com.churchdrive.app.ui.ALARM_ENTITY
 import com.churchdrive.app.ui.CLIMATE_ENTITY
+import com.churchdrive.app.ui.alarmIconName
+import com.churchdrive.app.ui.alarmTone
 import com.churchdrive.app.ui.CLIMATE_QUALITY_ENTITY
 import com.churchdrive.app.ui.LightLayout
 import com.churchdrive.app.ui.Tone
@@ -90,6 +93,42 @@ fun lastActivity(base: String, entities: Map<String, EntityState>, now: Long = S
 /** The camera base names that have a doorbell or movement event, for a picker. */
 fun activityBases(entities: Map<String, EntityState>): List<String> =
     entities.keys.mapNotNull { Regex("^event\\.(.+)_(ding|motion)$").find(it)?.groupValues?.get(1) }.distinct().sorted()
+
+// ---------------------------------------------------------------------------------------------- Security summary
+
+/** A row of the security summary: its icon, what it is about, the words and their colour; [camera] opens that camera when tapped. */
+class SecRow(val id: String, val icon: String, val label: String, val value: String, val tone: Tone, val camera: String? = null)
+
+/** What the security summary can show, up to four rows chosen from these. */
+object SecurityRows {
+    val DEFAULT = listOf("alarm", "doors", "people")
+
+    private fun cameraName(base: String, entities: Map<String, EntityState>): String =
+        entities["camera.${base}_live_view"]?.friendlyName?.replace(Regex(" live view$", RegexOption.IGNORE_CASE), "")
+            ?: base.replace('_', ' ').replaceFirstChar { it.uppercase() }
+
+    /** The rows to choose from: the alarm, the doors and windows, who is home, and each doorbell or movement sensor. */
+    fun catalogue(entities: Map<String, EntityState>): List<Pair<String, String>> =
+        listOf("alarm" to "Alarm", "doors" to "Doors and windows", "people" to "Who is home") +
+            activityBases(entities).map { "activity:$it" to "Doorbell and movement: ${cameraName(it, entities)}" }
+
+    fun rows(ids: List<String>, entities: Map<String, EntityState>, now: Long = System.currentTimeMillis(), zone: ZoneId = ZoneId.systemDefault()): List<SecRow> =
+        ids.take(4).mapNotNull { id ->
+            when {
+                id == "alarm" -> entities[ALARM_ENTITY]?.let { SecRow(id, alarmIconName(it.state), "Alarm", alarmStatus(it), alarmTone(it.state)) }
+                id == "doors" -> doorsStatus(entities).let { d -> SecRow(id, if (d.open.isEmpty()) "mdi:door-closed" else "mdi:door-open", "Doors and windows", d.line, d.tone) }
+                id == "people" -> peopleOf(entities).let { people ->
+                    val home = people.filter { it.home }
+                    SecRow(id, "mdi:account-group", "Who is home", if (home.isEmpty()) "Nobody home" else home.joinToString(", ") { it.name } + " home", if (home.isEmpty()) Tone.Grey else Tone.Green)
+                }
+                id.startsWith("activity:") -> id.removePrefix("activity:").let { base ->
+                    val (text, tone) = lastActivity(base, entities, now, zone)
+                    SecRow(id, if (text.startsWith("Doorbell")) "mdi:doorbell" else "mdi:motion-sensor", cameraName(base, entities), text, tone, "camera.${base}_live_view".takeIf { it in entities })
+                }
+                else -> null
+            }
+        }
+}
 
 // ---------------------------------------------------------------------------------------------- Icons
 

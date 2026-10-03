@@ -15,7 +15,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:text="F"
-            android:textColor="#FF81C995"
+            android:textColor="#FF78D9EC"
             android:textSize="20sp"
             android:textStyle="bold" />
     </FrameLayout>
@@ -28,15 +28,15 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Front door"
+            android:text="Security"
             android:textColor="#FFBDC1C6"
             android:textSize="18sp"
             android:textStyle="bold" />
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Movement · 17:41"
-            android:textColor="#FF81C995"
+            android:text="Alarm · Doors · People"
+            android:textColor="#FF78D9EC"
             android:textSize="13sp" />
     </LinearLayout>
 </LinearLayout>

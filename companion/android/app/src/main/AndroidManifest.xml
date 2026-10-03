@@ -69,17 +69,6 @@
                 android:resource="@xml/widget_people" />
         </receiver>
         <receiver
-            android:name=".widget.DoorsWidgetReceiver"
-            android:exported="false"
-            android:label="Church Drive doors">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/widget_doors" />
-        </receiver>
-        <receiver
             android:name=".widget.WeatherWidgetReceiver"
             android:exported="false"
             android:label="Church Drive weather">
@@ -146,17 +135,6 @@
                 android:resource="@xml/widget_camera" />
         </receiver>
         <receiver
-            android:name=".widget.ActivityWidgetReceiver"
-            android:exported="false"
-            android:label="Church Drive doorbell">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/widget_activity" />
-        </receiver>
-        <receiver
             android:name=".widget.FanWidgetReceiver"
             android:exported="false"
             android:label="Church Drive fan and air">
@@ -212,6 +190,17 @@
                 android:resource="@xml/widget_cluster" />
         </receiver>
         <receiver
+            android:name=".widget.SecurityWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive security summary">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_security" />
+        </receiver>
+        <receiver
             android:name=".widget.LightsWidgetReceiver"
             android:exported="false"
             android:label="Church Drive lights">
@@ -232,17 +221,6 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_climate" />
-        </receiver>
-        <receiver
-            android:name=".widget.SummaryWidgetReceiver"
-            android:exported="false"
-            android:label="Church Drive summary">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/widget_summary" />
         </receiver>
         <receiver
             android:name=".widget.ShortcutsWidgetReceiver"

@@ -351,44 +351,6 @@ private fun StepButton(icon: String, p: WidgetPalette, tone: com.churchdrive.app
 
 // ---------------------------------------------------------------------------------------------- Air quality
 
-// ---------------------------------------------------------------------------------------------- Summary
-
-/** Summary: up to four readings you pick when you add it. */
-class SummaryGlanceWidget : GlanceAppWidget() {
-    override val sizeMode = SizeMode.Responsive(WidgetSizes.all)
-
-    override suspend fun provideGlance(context: Context, id: GlanceId) {
-        provideLive(context, id, ) { l ->
-            val data = l.data
-            val config = l.config
-            val p = WidgetPalette.of(androidx.glance.LocalContext.current)
-
-            if (data == null) {
-                Unreachable("Summary", p, "Can't reach the house")
-            } else {
-                val stats = Stats.chosen(WidgetConfig.strings(config, "stats"), data.entities)
-                val size = LocalSize.current.sizeClass()
-                WidgetCard(p, padding = if (size == SizeClass.Square) 10.dp else 12.dp) {
-                    // A strip or a wide card is a single row; a square or tall card is two rows of two.
-                    val perRow = if (size == SizeClass.Strip || size == SizeClass.Wide) (if (size == SizeClass.Strip) 3 else 4) else 2
-                    val rows = stats.take(if (size == SizeClass.Strip) 3 else 4).chunked(perRow)
-                    Column(GlanceModifier.fillMaxWidth()) {
-                        rows.forEachIndexed { r, row ->
-                            if (r > 0) Spacer(GlanceModifier.height(8.dp))
-                            Row(GlanceModifier.fillMaxWidth()) {
-                                row.forEachIndexed { i, stat ->
-                                    if (i > 0) Spacer(GlanceModifier.width(8.dp))
-                                    StatTile(stat, p, GlanceModifier.defaultWeight(), big = size != SizeClass.Square)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
 // ---------------------------------------------------------------------------------------------- Shortcuts
 
 /** Shortcuts: up to eight buttons you pick when you add it. */
@@ -442,11 +404,6 @@ class LightsWidgetReceiver : LiveReceiver() {
 
 class ClimateWidgetReceiver : LiveReceiver() {
     override val glanceAppWidget: GlanceAppWidget = ClimateGlanceWidget()
-    override fun onDeleted(context: Context, appWidgetIds: IntArray) { super.onDeleted(context, appWidgetIds); forget(context, appWidgetIds) }
-}
-
-class SummaryWidgetReceiver : LiveReceiver() {
-    override val glanceAppWidget: GlanceAppWidget = SummaryGlanceWidget()
     override fun onDeleted(context: Context, appWidgetIds: IntArray) { super.onDeleted(context, appWidgetIds); forget(context, appWidgetIds) }
 }
 

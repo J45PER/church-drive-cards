@@ -8,6 +8,7 @@ import com.churchdrive.app.widget.WidgetPages
 import com.churchdrive.app.widget.alarmInDelay
 import com.churchdrive.app.widget.alarmStatus
 import com.churchdrive.app.widget.fansFor
+import com.churchdrive.app.widget.SecurityRows
 import com.churchdrive.app.widget.TodoLists
 import com.churchdrive.app.widget.airCard
 import com.churchdrive.app.widget.airDevices
@@ -213,5 +214,27 @@ class WidgetModel2Test {
         assertEquals(listOf("Dust bedroom", "Call the bank", "Change battery", "Buy milk"), entries.map { it.summary })
         assertEquals(listOf("Cleaning", "My to-do", "From the house", "Shared"), entries.map { it.category })
         assertEquals(Tone.Teal, entries.first().tone)
+    }
+
+    @Test
+    fun securitySummaryOffersRowsAndFillsThem() {
+        val entities = map(
+            e("alarm_control_panel.house", "armed_home", "targetState" to "armed_home"),
+            e("binary_sensor.front", "on", "device_class" to "door", "friendly_name" to "Front door"),
+            e("person.ann", "home", "friendly_name" to "Ann Smith"),
+            e("person.bo", "not_home", "friendly_name" to "Bo"),
+            e("camera.front_door_live_view", "idle", "friendly_name" to "Front door live view"),
+            e("event.front_door_ding", "2026-10-03T17:41:00+00:00"),
+        )
+        val catalogue = SecurityRows.catalogue(entities).map { it.first }
+        assertEquals(listOf("alarm", "doors", "people", "activity:front_door"), catalogue)
+        val now = java.time.Instant.parse("2026-10-03T18:00:00Z").toEpochMilli()
+        val rows = SecurityRows.rows(listOf("doors", "people", "activity:front_door", "alarm", "doors"), entities, now, ZoneOffset.UTC)
+        assertEquals(4, rows.size)
+        assertEquals("Front door open", rows[0].value)
+        assertEquals("Ann home", rows[1].value)
+        assertEquals("Doorbell · 17:41", rows[2].value)
+        assertEquals("camera.front_door_live_view", rows[2].camera)
+        assertEquals("Front door", rows[2].label)
     }
 }
