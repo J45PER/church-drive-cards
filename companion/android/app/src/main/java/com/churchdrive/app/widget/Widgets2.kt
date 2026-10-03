@@ -91,18 +91,21 @@ private fun line(color: Color, size: Int = 12) = TextStyle(color = cp(color), fo
 
 /** A card of an icon, a title, a line under it, and buttons: a strip, a square with a few round buttons, or the full tiles. */
 @Composable
-fun CardContent(card: Card, p: WidgetPalette, size: SizeClass, width: androidx.compose.ui.unit.Dp = 250.dp, height: androidx.compose.ui.unit.Dp = 110.dp) {
+fun CardContent(card: Card, p: WidgetPalette, size: SizeClass, width: androidx.compose.ui.unit.Dp = 250.dp, height: androidx.compose.ui.unit.Dp = 110.dp, labelled: Boolean = true, compact: Boolean = false) {
     val tone = p.tone(card.tone)
     when (size) {
         SizeClass.Strip -> WidgetCard(p, padding = 10.dp) {
             Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                IconCircle(card.icon, tone, 40.dp)
-                Spacer(GlanceModifier.width(10.dp))
+                // A compact card has no icon, to leave the room to its title and buttons.
+                if (!compact) {
+                    IconCircle(card.icon, tone, 40.dp)
+                    Spacer(GlanceModifier.width(10.dp))
+                }
                 Column(GlanceModifier.defaultWeight()) {
                     Text(card.title, style = title(p), maxLines = 1)
                     Text(card.sub, style = line(tone.accent), maxLines = 1)
                 }
-                StripButtons(card.tiles, p, tone, width.value - 20f - 40f - 10f - 110f)
+                StripButtons(card.tiles, p, tone, width.value - 20f - (if (compact) 0f else 50f) - 110f, labelled)
             }
         }
         SizeClass.Square -> WidgetCard(p, padding = 12.dp) {
@@ -134,9 +137,9 @@ fun CardContent(card: Card, p: WidgetPalette, size: SizeClass, width: androidx.c
 
 /** The buttons of a thin card: each with its icon and name when they fit in [room] dp, else round icon-only buttons. */
 @Composable
-private fun StripButtons(tiles: List<WidgetTile>, p: WidgetPalette, tone: ToneColors, room: Float) {
+private fun StripButtons(tiles: List<WidgetTile>, p: WidgetPalette, tone: ToneColors, room: Float, labelled: Boolean = true) {
     val need = tiles.sumOf { 34 + 7 * it.label.length } + 6 * (tiles.size - 1)
-    if (tiles.size in 1..3 && need <= room) {
+    if (labelled && tiles.size in 1..3 && need <= room) {
         tiles.forEach { t ->
             Spacer(GlanceModifier.width(6.dp))
             val fg = if (t.selected) tone.onAccent else p.onSurface
@@ -473,12 +476,12 @@ class CameraGlanceWidget : SceneWidget("Camera") {
 
 class VacuumGlanceWidget : SceneWidget("Vacuum") {
     @Composable
-    override fun Draw(s: WidgetScene) = CardContent(vacuumCard(s.data.entities), s.p, s.size, s.width, s.height)
+    override fun Draw(s: WidgetScene) = CardContent(vacuumCard(s.data.entities).let { c -> c.copy(icon = dashboardIcon(s.data.panels, VACUUM_ENTITY) ?: c.icon) }, s.p, s.size, s.width, s.height)
 }
 
 class ChargerGlanceWidget : SceneWidget("Car charger") {
     @Composable
-    override fun Draw(s: WidgetScene) = CardContent(chargerCard(s.data.entities), s.p, s.size, s.width, s.height)
+    override fun Draw(s: WidgetScene) = CardContent(chargerCard(s.data.entities), s.p, s.size, s.width, s.height, compact = true)
 }
 
 /** One card for any air device you pick: a fan, an air purifier or an air conditioner. */
@@ -486,7 +489,7 @@ class FanGlanceWidget : SceneWidget("Fan and air") {
     @Composable
     override fun Draw(s: WidgetScene) {
         val id = s.entity("fan").ifBlank { airDevices(s.data.entities).firstOrNull()?.entityId.orEmpty() }
-        CardContent(airCard(s.data.entities, id), s.p, s.size, s.width, s.height)
+        CardContent(airCard(s.data.entities, id).let { c -> c.copy(icon = dashboardIcon(s.data.panels, id) ?: c.icon) }, s.p, s.size, s.width, s.height)
     }
 }
 
@@ -494,7 +497,7 @@ class BlindsGlanceWidget : SceneWidget("Blinds") {
     @Composable
     override fun Draw(s: WidgetScene) {
         val id = s.entity("cover").ifBlank { s.data.entities.keys.firstOrNull { it.startsWith("cover.") }.orEmpty() }
-        CardContent(coverCard(s.data.entities[id], id), s.p, s.size, s.width, s.height)
+        CardContent(coverCard(s.data.entities[id], id).let { c -> c.copy(icon = dashboardIcon(s.data.panels, id) ?: c.icon) }, s.p, s.size, s.width, s.height, labelled = false)
     }
 }
 

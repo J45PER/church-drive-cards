@@ -442,5 +442,5 @@ fun gridFor(count: Int, height: Float, tile: Float, minPerRow: Int, maxPerRow: I
     return rows to perRow
 }
 
-/** The size of round buttons when [count] of them share [room] dp: as big as 36, shrinking to 28 but no further. */
-fun roundButtonSize(count: Int, room: Float): Float = ((room - 6f * count) / count.coerceAtLeast(1)).coerceIn(28f, 36f)
+/** The size of round buttons when [count] of them share [room] dp: as big as 36, shrinking to 32 but no further. */
+fun roundButtonSize(count: Int, room: Float): Float = ((room - 6f * count) / count.coerceAtLeast(1)).coerceIn(32f, 36f)

@@ -147,6 +147,11 @@ fun coverIcon(deviceClass: String?, state: String?): String {
     }
 }
 
+/** The icon the dashboard gives an entity on one of its cards (a blind's `icon`), if it says one. */
+fun dashboardIcon(panels: Map<String, List<com.churchdrive.app.ui.PanelSpec>>, entity: String): String? =
+    panels.values.asSequence().flatten().flatMap { it.cards.asSequence() }
+        .firstNotNullOfOrNull { c -> c.config.optString("icon").takeIf { it.startsWith("mdi:") && c.config.optString("entity") == entity } }
+
 /** The icon Home Assistant shows for an entity: the one set on it, else its kind's own, else [fallback]. */
 fun entityIcon(e: EntityState?, fallback: String): String {
     if (e == null) return fallback

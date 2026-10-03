@@ -8,6 +8,7 @@ import com.churchdrive.app.widget.WidgetPages
 import com.churchdrive.app.widget.alarmInDelay
 import com.churchdrive.app.widget.alarmStatus
 import com.churchdrive.app.widget.fansFor
+import com.churchdrive.app.widget.dashboardIcon
 import com.churchdrive.app.widget.SecurityRows
 import com.churchdrive.app.widget.TodoLists
 import com.churchdrive.app.widget.airCard
@@ -175,7 +176,7 @@ class WidgetModel2Test {
         assertEquals(4, tallPerRow)
         // Round buttons shrink to share a narrow strip, but not below 28.
         assertEquals(36f, roundButtonSize(3, 400f))
-        assertEquals(28f, roundButtonSize(8, 200f))
+        assertEquals(32f, roundButtonSize(8, 200f))
     }
 
     @Test
@@ -236,5 +237,13 @@ class WidgetModel2Test {
         assertEquals("Doorbell · 17:41", rows[2].value)
         assertEquals("camera.front_door_live_view", rows[2].camera)
         assertEquals("Front door", rows[2].label)
+    }
+
+    @Test
+    fun theDashboardsIconForAnEntityWins() {
+        val card = com.churchdrive.app.ui.CardSpec("custom:cover-card", JSONObject().put("entity", "cover.hb").put("icon", "mdi:blinds-horizontal"))
+        val panel = com.churchdrive.app.ui.PanelSpec("Climate", null, null, null, null, listOf(card))
+        assertEquals("mdi:blinds-horizontal", dashboardIcon(mapOf("climate" to listOf(panel)), "cover.hb"))
+        assertNull(dashboardIcon(mapOf("climate" to listOf(panel)), "cover.other"))
     }
 }
