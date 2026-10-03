@@ -125,7 +125,8 @@ private fun AlarmContent(alarm: EntityState, p: WidgetPalette, size: SizeClass) 
 
 /** Lights: for one room or several, chosen when the widget is added; with scenes or with a brightness bar. */
 class LightsGlanceWidget : GlanceAppWidget() {
-    override val sizeMode = SizeMode.Responsive(WidgetSizes.all)
+    // Exact, so a room's scenes can fill as many rows as the widget has been made tall enough for.
+    override val sizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideLive(context, id, ) { l ->
@@ -138,14 +139,14 @@ class LightsGlanceWidget : GlanceAppWidget() {
             } else {
                 val rooms = chosenRooms(data.lights, WidgetConfig.strings(config, "rooms"))
                 val withScenes = config.optBoolean("scenes", true)
-                LightsContent(rooms, data, withScenes, p, LocalSize.current.sizeClass())
+                LightsContent(rooms, data, withScenes, p, LocalSize.current.sizeClass(), LocalSize.current.height)
             }
         }
     }
 }
 
 @Composable
-private fun LightsContent(rooms: List<com.churchdrive.app.ui.LightRoom>, data: WidgetData, withScenes: Boolean, p: WidgetPalette, size: SizeClass) {
+private fun LightsContent(rooms: List<com.churchdrive.app.ui.LightRoom>, data: WidgetData, withScenes: Boolean, p: WidgetPalette, size: SizeClass, height: androidx.compose.ui.unit.Dp) {
     val e = data.entities
     val amber = p.tone(Tone.Amber)
     val any = rooms.any { e[it.head]?.state == "on" }
@@ -192,9 +193,15 @@ private fun LightsContent(rooms: List<com.churchdrive.app.ui.LightRoom>, data: W
                 if (withScenes && room.scenes.isNotEmpty()) {
                     val tiles = room.scenes.map { s ->
                         val action = if (s.haScene != null) Triple("scene", "turn_on", s.haScene) else Triple("church_drive", "apply_scene", s.target)
-                        WidgetTile("mdi:lightbulb-group", s.name, false, action.first, action.second, action.third, if (s.haScene != null) "{}" else JSONObject().put("scene", s.key).toString())
+                        SceneTile(
+                            WidgetTile("mdi:lightbulb-group", s.name, false, action.first, action.second, action.third, if (s.haScene != null) "{}" else JSONObject().put("scene", s.key).toString()),
+                            com.churchdrive.app.ui.sceneSwatch(s.key),
+                        )
                     }
-                    TileButtons(tiles, p, amber, perRow = 4, maxRows = if (size == SizeClass.Tall) 2 else 1, showLabels = true)
+                    // As many rows as the widget is tall enough for (it has the card's padding, the heading and a gap around the buttons).
+                    val room4 = height.value - 28f - 44f - 12f
+                    val rows = ((room4 + 8f) / (com.churchdrive.app.ui.Ui.TileHeight.value + 8f)).toInt().coerceIn(1, 4)
+                    SceneGrid(tiles, 4, rows)
                 } else {
                     // No scenes: a brightness bar with − and +.
                     Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

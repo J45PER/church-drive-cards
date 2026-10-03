@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
@@ -384,25 +385,34 @@ class ScenesGlanceWidget : SceneWidget("Scenes") {
         val perRow = if (s.size == SizeClass.Square) 2 else 4
         val rows = when (s.size) { SizeClass.Tall -> 2; SizeClass.Square -> 2; else -> 1 }
         WidgetCard(p, padding = 12.dp) {
-            val shown = chosen.take(perRow * rows)
-            var i = 0
-            Column(GlanceModifier.fillMaxWidth()) {
-                tileRows(shown.size, perRow).forEachIndexed { r, n ->
-                    if (r > 0) Spacer(GlanceModifier.height(8.dp))
-                    Row(GlanceModifier.fillMaxWidth()) {
-                        repeat(n) { c ->
-                            val b = shown[i++]
-                            if (c > 0) Spacer(GlanceModifier.width(8.dp))
-                            val swatch = b.key?.let { sceneSwatch(it) } ?: p.tone(Tone.Amber).accent
-                            Column(
-                                GlanceModifier.defaultWeight().height(56.dp).cornerRadius(16.dp).background(cp(swatch.copy(alpha = 0.85f))).clickable(b.tile.action()),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                            ) {
-                                iconBitmap("mdi:lightbulb-group", Color(0xFF202124))?.let { Image(ImageProvider(it), null, GlanceModifier.size(20.dp)) }
-                                Text(b.tile.label, style = TextStyle(color = cp(Color(0xFF202124)), fontSize = 11.sp, textAlign = TextAlign.Center), maxLines = 1)
-                            }
-                        }
+            SceneGrid(chosen.map { SceneTile(it.tile, it.key?.let { k -> sceneSwatch(k) } ?: p.tone(Tone.Amber).accent) }, perRow, rows)
+        }
+    }
+}
+
+/** A scene button: what it does, and the colour that stands for the scene. */
+class SceneTile(val tile: WidgetTile, val colour: Color)
+
+/** Scene buttons in their own colours, as the app draws them; text is dark on a light colour and white on a dark one. */
+@Composable
+fun SceneGrid(items: List<SceneTile>, perRow: Int, maxRows: Int) {
+    val shown = items.take(perRow * maxRows.coerceAtLeast(1))
+    var i = 0
+    Column(GlanceModifier.fillMaxWidth()) {
+        tileRows(shown.size, perRow).forEachIndexed { r, n ->
+            if (r > 0) Spacer(GlanceModifier.height(8.dp))
+            Row(GlanceModifier.fillMaxWidth()) {
+                repeat(n) { c ->
+                    val b = shown[i++]
+                    if (c > 0) Spacer(GlanceModifier.width(8.dp))
+                    val ink = if (b.colour.luminance() > 0.45f) Color(0xFF202124) else Color.White
+                    Column(
+                        GlanceModifier.defaultWeight().height(com.churchdrive.app.ui.Ui.TileHeight).cornerRadius(16.dp).background(cp(b.colour.copy(alpha = 0.88f))).clickable(b.tile.action()),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        iconBitmap("mdi:lightbulb-group", ink)?.let { Image(ImageProvider(it), null, GlanceModifier.size(20.dp)) }
+                        Text(b.tile.label, style = TextStyle(color = cp(ink), fontSize = 11.sp, textAlign = TextAlign.Center), maxLines = 1)
                     }
                 }
             }
@@ -411,7 +421,7 @@ class ScenesGlanceWidget : SceneWidget("Scenes") {
 }
 
 /** The widths of rows for [count] buttons, [perRow] to a row, the last row shared out evenly. */
-private fun tileRows(count: Int, perRow: Int): List<Int> = com.churchdrive.app.ui.tileRowSizes(count, perRow)
+fun tileRows(count: Int, perRow: Int): List<Int> = com.churchdrive.app.ui.tileRowSizes(count, perRow)
 
 // ---------------------------------------------------------------------------------------------- Gauges
 
