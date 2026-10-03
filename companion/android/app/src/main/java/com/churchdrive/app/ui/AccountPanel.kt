@@ -104,11 +104,16 @@ fun AccountOverlay(
             AnimatedContent(
                 targetState = shown,
                 transitionSpec = {
-                    if (targetState != "account") slideInHorizontally { it } togetherWith slideOutHorizontally { -it / 4 }
+                    // Going deeper, the new page slides over the old; going back, the old page slides away off the top of the one below.
+                    val deeper = targetState != "account"
+                    val move = if (deeper) slideInHorizontally { it } togetherWith slideOutHorizontally { -it / 4 }
                     else slideInHorizontally { -it / 4 } togetherWith slideOutHorizontally { it }
+                    move.apply { targetContentZIndex = if (deeper) 1f else -1f }
                 },
                 label = "account",
             ) { which ->
+                // Each page has its own solid background, so one never shows through another while they slide.
+                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                 when (which) {
                     "settings" -> SettingsPage(settings, isAdmin) { onPanel("account") }
                     "about" -> AboutPage(settings, updateAvailable) { onPanel("account") }
@@ -120,6 +125,7 @@ fun AccountOverlay(
                         onPanel(null)
                         onSignOut()
                     })
+                }
                 }
             }
         }

@@ -11,6 +11,19 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Slider
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.media3.common.Player
+import androidx.media3.common.VideoSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -152,20 +165,97 @@ private fun EventThumb(event: CameraEvent, baseUrl: String, selected: Boolean, o
 /** The chosen event: its clip with controls, or its picture when it has no clip. */
 @Composable
 private fun EventPlayer(event: CameraEvent, baseUrl: String) {
-    Box(modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(14.dp)).background(Color(0xFF111111)), contentAlignment = Alignment.Center) {
-        when {
-            event.clip != null -> ClipPlayer(baseUrl + event.clip)
-            event.picture != null -> AsyncImage(model = baseUrl + event.picture, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
-            else -> Text("Nothing was saved for this event.", color = Color.White.copy(alpha = 0.75f))
+    when {
+        event.clip != null -> ClipPlayer(baseUrl + event.clip)
+        event.picture != null -> StillPicture(baseUrl + event.picture)
+        else -> Box(
+            modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(14.dp)).background(Color(0xFF111111)),
+            contentAlignment = Alignment.Center,
+        ) { Text("Nothing was saved for this event.", color = Color.White.copy(alpha = 0.75f)) }
+    }
+}
+
+/** What fills a box of [boxW] x [boxH] with media of [aspect] (width / height): as wide as the box for a tall picture, as tall for a wide one. */
+fun coverSize(aspect: Float, boxW: Float, boxH: Float): Pair<Float, Float> =
+    if (aspect < boxW / boxH) boxW to boxW / aspect else boxH * aspect to boxH
+
+/** Moves a picture by [pan] and zooms it by [zoom] about [centre], keeping it covering the box. Returns the new zoom and offset. */
+fun panZoom(
+    zoom: Float, offsetX: Float, offsetY: Float, centreX: Float, centreY: Float, panX: Float, panY: Float, zoomBy: Float,
+    boxW: Float, boxH: Float, coverW: Float, coverH: Float,
+): Triple<Float, Float, Float> {
+    val z = (zoom * zoomBy).coerceIn(1f, 4f)
+    val x = centreX - (centreX - offsetX) * z / zoom + panX
+    val y = centreY - (centreY - offsetY) * z / zoom + panY
+    return Triple(z, x.coerceIn(boxW - coverW * z, 0f), y.coerceIn(boxH - coverH * z, 0f))
+}
+
+/**
+ * A 16:9 box with media of its own shape inside, covering the box, as on the dashboard: a square clip fills the
+ * width and can be dragged up and down to look around. Pinch or double-tap to zoom.
+ */
+@Composable
+fun StageBox(aspect: Float, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    BoxWithConstraints(modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(14.dp)).background(Color(0xFF111111))) {
+        val boxW = constraints.maxWidth.toFloat()
+        val boxH = constraints.maxHeight.toFloat()
+        val (coverW, coverH) = coverSize(aspect, boxW, boxH)
+        var view by remember(aspect, boxW, boxH) { mutableStateOf(Triple(1f, (boxW - coverW) / 2f, (boxH - coverH) / 2f)) }
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        Box(
+            Modifier
+                .fillMaxSize()
+                .pointerInput(aspect, boxW, boxH) {
+                    detectTransformGestures { centroid, pan, zoom, _ ->
+                        val (z, x, y) = view
+                        view = panZoom(z, x, y, centroid.x, centroid.y, pan.x, pan.y, zoom, boxW, boxH, coverW, coverH)
+                    }
+                }
+                .pointerInput(aspect, boxW, boxH) {
+                    detectTapGestures(onDoubleTap = { at ->
+                        val (z, x, y) = view
+                        view = panZoom(z, x, y, at.x, at.y, 0f, 0f, if (z > 1.5f) 1f / z else 2f, boxW, boxH, coverW, coverH)
+                    })
+                },
+        ) {
+            Box(
+                Modifier
+                    .requiredSize(with(density) { coverW.toDp() }, with(density) { coverH.toDp() })
+                    .graphicsLayer {
+                        transformOrigin = TransformOrigin(0f, 0f)
+                        scaleX = view.first
+                        scaleY = view.first
+                        translationX = view.second
+                        translationY = view.third
+                    },
+            ) { content() }
         }
     }
 }
 
-/** A saved clip, played from the start with the usual controls. Released as soon as it's replaced or closed. */
+/** An event's picture at its own shape in the stage. */
+@Composable
+private fun StillPicture(url: String) {
+    var aspect by remember(url) { mutableFloatStateOf(16f / 9f) }
+    StageBox(aspect) {
+        AsyncImage(
+            model = url, contentDescription = null, contentScale = ContentScale.FillBounds, modifier = Modifier.fillMaxSize(),
+            onSuccess = { state ->
+                val d = state.result.drawable
+                if (d.intrinsicHeight > 0) aspect = d.intrinsicWidth.toFloat() / d.intrinsicHeight
+            },
+        )
+    }
+}
+
+/** A saved clip at its own shape in the stage, played from the start with a play button and a seek bar. Released as soon as it's replaced or closed. */
 @OptIn(UnstableApi::class)
 @Composable
 private fun ClipPlayer(url: String) {
     val context = LocalContext.current
+    var aspect by remember(url) { mutableFloatStateOf(16f / 9f) }
+    var playing by remember(url) { mutableStateOf(true) }
+    var progress by remember(url) { mutableFloatStateOf(0f) }
     val player = remember(url) {
         ExoPlayer.Builder(context).build().apply {
             setMediaItem(MediaItem.fromUri(url))
@@ -173,10 +263,52 @@ private fun ClipPlayer(url: String) {
             playWhenReady = true
         }
     }
-    DisposableEffect(player) { onDispose { player.release() } }
-    AndroidView(
-        factory = { PlayerView(it).apply { useController = true; this.player = player } },
-        update = { it.player = player },
-        modifier = Modifier.fillMaxSize(),
-    )
+    DisposableEffect(player) {
+        val listener = object : Player.Listener {
+            override fun onVideoSizeChanged(size: VideoSize) {
+                if (size.height > 0) aspect = size.width * size.pixelWidthHeightRatio / size.height
+            }
+
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                playing = isPlaying
+            }
+        }
+        player.addListener(listener)
+        onDispose {
+            player.removeListener(listener)
+            player.release()
+        }
+    }
+    LaunchedEffect(player) {
+        while (true) {
+            val d = player.duration
+            if (d > 0) progress = (player.currentPosition.toFloat() / d).coerceIn(0f, 1f)
+            kotlinx.coroutines.delay(250)
+        }
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        StageBox(aspect) {
+            AndroidView(
+                factory = { PlayerView(it).apply { useController = false; this.player = player } },
+                update = { it.player = player },
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = {
+                if (player.playbackState == Player.STATE_ENDED) player.seekTo(0)
+                if (player.isPlaying) player.pause() else player.play()
+            }) {
+                Icon(if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow, contentDescription = if (playing) "Pause" else "Play", tint = Color.White)
+            }
+            Slider(
+                value = progress,
+                onValueChange = {
+                    progress = it
+                    if (player.duration > 0) player.seekTo((player.duration * it).toLong())
+                },
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
 }
