@@ -9,6 +9,7 @@ import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { KIT_COLOR, kitShell, kitHead, kitTiles, kitMoreInfo, kitHealthBanner, kitCompact, kitCompactable } from './card-kit.js';
+import { iconFor, watchIcons } from './icon-library.js';
 
 const COVER_ICONS = {
   curtain: ['mdi:curtains', 'mdi:curtains-closed'],
@@ -87,6 +88,7 @@ export class CoverCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    watchIcons(this, hass);
     this._render();
   }
 
@@ -109,9 +111,9 @@ export class CoverCard extends HTMLElement {
         color,
         status: word,
         buttons: [
-          ...(f & 1 ? [{ key: 'open', icon: 'mdi:arrow-up', title: 'Open', on: active === 'open', color }] : []),
-          ...(f & 8 ? [{ key: 'stop', icon: 'mdi:stop', title: 'Stop', on: !known && this._last === 'stop', color }] : []),
-          ...(f & 2 ? [{ key: 'close', icon: 'mdi:arrow-down', title: 'Close', on: active === 'close', color }] : []),
+          ...(f & 1 ? [{ key: 'open', icon: iconFor('cover', 'open', 'mdi:arrow-up'), title: 'Open', on: active === 'open', color }] : []),
+          ...(f & 8 ? [{ key: 'stop', icon: iconFor('cover', 'stop', 'mdi:stop'), title: 'Stop', on: !known && this._last === 'stop', color }] : []),
+          ...(f & 2 ? [{ key: 'close', icon: iconFor('cover', 'close', 'mdi:arrow-down'), title: 'Close', on: active === 'close', color }] : []),
         ],
         onButton: (b) => this._press(b.key),
       });
@@ -163,9 +165,9 @@ export class CoverCard extends HTMLElement {
     const f = a.supported_features || 0;
     const active = !known ? this._last : st.state === 'open' || st.state === 'opening' ? 'open' : 'close';
     const tiles = [
-      ...(f & 1 ? [{ key: 'open', name: 'Open', icon: 'mdi:arrow-up', color, on: active === 'open' }] : []),
-      ...(f & 8 ? [{ key: 'stop', name: 'Stop', icon: 'mdi:stop', color, on: !known && this._last === 'stop' }] : []),
-      ...(f & 2 ? [{ key: 'close', name: 'Close', icon: 'mdi:arrow-down', color, on: active === 'close' }] : []),
+      ...(f & 1 ? [{ key: 'open', name: 'Open', icon: iconFor('cover', 'open', 'mdi:arrow-up'), color, on: active === 'open' }] : []),
+      ...(f & 8 ? [{ key: 'stop', name: 'Stop', icon: iconFor('cover', 'stop', 'mdi:stop'), color, on: !known && this._last === 'stop' }] : []),
+      ...(f & 2 ? [{ key: 'close', name: 'Close', icon: iconFor('cover', 'close', 'mdi:arrow-down'), color, on: active === 'close' }] : []),
     ];
     kitTiles(this.querySelector('.cv-buttons'), tiles, (t) => this._press(t.key));
     hydrateIcons(this);

@@ -21,6 +21,7 @@ import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { KIT_COLOR, kitShell, kitHead, kitTiles, kitNum, kitCap, kitEsc, kitCompact, kitCompactable } from './card-kit.js';
+import { iconFor, watchIcons } from './icon-library.js';
 
 // Octopus's own pink, and the charger's teal.
 export const OCTO_PINK = '#f050f8';
@@ -423,6 +424,7 @@ export class EvChargerCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    watchIcons(this, hass);
     this._render();
   }
 
@@ -468,7 +470,7 @@ export class EvChargerCard extends HTMLElement {
         value: charging ? `${(d.power / 1000).toFixed(1)} kW` : '',
         valueColor: EV_TEAL,
         status: d.found ? word : 'Not connected yet',
-        buttons: d.found && c.show_buttons !== false && d.mode != null ? EV_MODES.filter((b) => !d.options.length || d.options.includes(b.key)).map((b) => ({ ...b, label: b.name, on: d.mode === b.key })) : [],
+        buttons: d.found && c.show_buttons !== false && d.mode != null ? EV_MODES.filter((b) => !d.options.length || d.options.includes(b.key)).map((b) => ({ ...b, icon: iconFor('charger', b.key, b.icon), label: b.name, on: d.mode === b.key })) : [],
         onButton: (b) => this._setMode(b.key),
       });
     }
@@ -500,7 +502,7 @@ export class EvChargerCard extends HTMLElement {
           </div>`;
       }
     }
-    const modes = d.found && c.show_buttons !== false && d.mode != null ? EV_MODES.filter((b) => !d.options.length || d.options.includes(b.key)).map((b) => ({ ...b, on: d.mode === b.key })) : [];
+    const modes = d.found && c.show_buttons !== false && d.mode != null ? EV_MODES.filter((b) => !d.options.length || d.options.includes(b.key)).map((b) => ({ ...b, icon: iconFor('charger', b.key, b.icon), on: d.mode === b.key })) : [];
     kitTiles(this.querySelector('.ev-modes'), modes, (t) => this._setMode(t.key));
     hydrateIcons(this);
   }

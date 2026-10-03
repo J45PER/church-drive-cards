@@ -70,6 +70,9 @@ from .const import (
     SERVICE_SYNC_SCENES,
     SIGNAL_LIBRARY,
     URL_BASE,
+    EVENT_ICONS,
+    WS_ICON_SET,
+    WS_ICONS,
     WS_LIBRARY,
     WS_PEOPLE,
     WS_PEOPLE_ASSIGN,
@@ -88,6 +91,7 @@ from .maps import GoogleTiles, MapTileView
 from .health import DeviceHealth
 from .hue import async_sync
 from .library import Library, normalise
+from .icons import Icons
 from .people import People
 
 _LOGGER = logging.getLogger(__name__)
@@ -204,6 +208,37 @@ async def ws_people_phone(
 def ws_library(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
     """Send the scene library (built-in and custom) to the cards."""
     connection.send_result(msg["id"], {"scenes": _library(hass).as_list(), "custom": _library(hass).custom})
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_ICONS})
+@callback
+def ws_icons(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Send the mode icons (built-in and changed) to the cards and the app."""
+    icons = hass.data.get(DOMAIN, {}).get("icons")
+    if icons is None:
+        connection.send_error(msg["id"], "not_ready", "Icons aren't running")
+        return
+    connection.send_result(msg["id"], icons.as_dict())
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): WS_ICON_SET, vol.Required("group"): cv.string, vol.Required("key"): cv.string, vol.Optional("icon"): vol.Any(None, cv.string)}
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_icon_set(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Change one mode's icon (or put the built-in one back with no icon)."""
+    icons = hass.data.get(DOMAIN, {}).get("icons")
+    if icons is None:
+        connection.send_error(msg["id"], "not_ready", "Icons aren't running")
+        return
+    try:
+        await icons.async_set(msg["group"], msg["key"], msg.get("icon"))
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid", str(err))
+        return
+    hass.bus.async_fire(EVENT_ICONS)
+    connection.send_result(msg["id"], icons.as_dict())
 
 
 @websocket_api.websocket_command({vol.Required("type"): WS_SCENE_SAVE, vol.Required("scene"): CUSTOM_SCENE})
@@ -481,7 +516,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             [StaticPathConfig(URL_BASE, str(FRONTEND_DIR), cache_headers=False)]
         )
         for command in (
-            ws_library, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_phone,
+            ws_library, ws_icons, ws_icon_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_phone,
             ws_people_places, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_maps, ws_maps_search,
         ):
             websocket_api.async_register_command(hass, command)
@@ -497,6 +532,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     library = Library(hass)
     await library.async_load()
     data["library"] = library
+
+    # The mode icons are optional extras: if they can't load, the cards use their built-in ones.
+    icons = Icons(hass)
+    try:
+        await icons.async_load()
+        data["icons"] = icons
+    except Exception:  # noqa: BLE001
+        _LOGGER.exception("Icons couldn't load; the cards use their built-in icons")
 
     # Device health must never stop the cards and scenes from loading.
     health = DeviceHealth(hass, entry.options.get(CONF_HEALTH_ENTITIES, []))

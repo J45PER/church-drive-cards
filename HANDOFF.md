@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-03. Current release: **v0.33.1**.*
+*Last updated 2026-10-03. Current release: **v0.34.0**.*
 
 ## Where this stands
 
@@ -332,6 +332,18 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
       isn't page-wide on tablets and PCs.
     - On release, `-beta` was stripped from the Mobile, Tasks and Manager dashboards,
       so they all use the released card types.
+- **v0.34.0 (released 2026-10-03, restarted): mode icons in one list.** The icon each mode gets (a
+  fan's Sleep, a thermostat's Eco, the Zappi's Stop, a blind's Open, the CO alarm's Mute) is kept once
+  in the integration (`icons.py`: built-in icons, the user's changes in storage `church_drive.icons`)
+  and read over the websocket `church_drive/icons` (changed with `church_drive/icons/set`, admin only;
+  it fires the event `church_drive_icons_changed`). The cards ask `iconFor(group, key, fallback)` in
+  `src/icon-library.js` (fallback = the icon the card always had, used until the list arrives and
+  without the integration), the new **Icon Styles card** (`src/icon-styles-card.js`, on Manager) changes
+  them, and the Android app reads the same list (`IconMap` in `ModeIcons.kt`), so one change shows
+  everywhere. Groups and keys: `fan` (off, speed_low/medium/high, natural, sleep, auto, turbo, eco,
+  oscillate, other...), `purifier`, `climate_mode`, `climate_preset`, `charger` (stopped, eco, eco+,
+  fast), `cover` (open, stop, close), `co` (test, mute). A quick setting's own `icon` on a thermostat
+  card still wins. Tests: `test/icon-library.test.mjs`.
 - **v0.33.1 (released 2026-10-03, reload-only): charger card shows the cars.** Each car from
   Stellantis Vehicles / VW Group Connect (battery bar and %, range, Plugged in / Charging);
   `show_cars` in the editor, `cars:` to override.
