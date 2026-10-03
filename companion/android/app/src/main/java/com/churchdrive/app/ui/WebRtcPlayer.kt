@@ -95,6 +95,8 @@ private class RtcSession(
     private val closed = AtomicBoolean(false)
     private val playing = AtomicBoolean(false)
     private var timeout: Thread? = null
+    private val main = android.os.Handler(android.os.Looper.getMainLooper())
+    private var videoTrack: VideoTrack? = null
 
     fun start() {
         host.iceServers(entityId) { list ->
@@ -182,7 +184,9 @@ private class RtcSession(
                 override fun onSetFailure(error: String?) {
                     // A camera that answers in another order: try the next way of setting up the offer.
                     if (error?.contains("m-lines") == true && lastAttempt + 1 < ORDERS.size && !closed.get()) {
-                        attempt(lastAttempt + 1)
+                        // Not from inside this connection's own callback: closing it from here can crash.
+                        val next = lastAttempt + 1
+                        main.post { if (!closed.get()) attempt(next) }
                     } else {
                         fail(
                             "The camera's answer wasn't accepted ($error). " +
@@ -221,13 +225,17 @@ private class RtcSession(
     fun close() {
         if (!closed.compareAndSet(false, true)) return
         timeout?.interrupt()
+        runCatching { videoTrack?.removeSink(renderer) }
+        videoTrack = null
         teardown()
         runCatching { factory?.dispose() }
     }
 
     private fun gotTrack(track: org.webrtc.MediaStreamTrack?) {
+        if (closed.get()) return
         when (track) {
             is VideoTrack -> {
+                videoTrack = track
                 track.setEnabled(true)
                 track.addSink(renderer)
                 if (playing.compareAndSet(false, true)) onStatus(null)

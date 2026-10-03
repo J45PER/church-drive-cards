@@ -7,7 +7,18 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -28,7 +39,20 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        val lastCrash = CrashReport.take(this)
+        CrashReport.install(this)
         setContent {
+            var crash by remember { mutableStateOf(lastCrash) }
+            crash?.let { text ->
+                val clipboard = LocalClipboardManager.current
+                AlertDialog(
+                    onDismissRequest = { crash = null },
+                    title = { Text("The app crashed last time") },
+                    text = { Text(text, fontSize = 11.sp, modifier = Modifier.verticalScroll(rememberScrollState())) },
+                    confirmButton = { TextButton(onClick = { clipboard.setText(AnnotatedString(text)) }) { Text("Copy") } },
+                    dismissButton = { TextButton(onClick = { crash = null }) { Text("Close") } },
+                )
+            }
             ChurchDriveTheme {
                 // Edge to edge: the surface fills the window, and each screen keeps its content clear of the system bars.
                 Surface(
