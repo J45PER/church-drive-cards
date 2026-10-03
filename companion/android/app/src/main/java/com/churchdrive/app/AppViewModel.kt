@@ -28,6 +28,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val connection: StateFlow<ConnectionState> = client.connection
     val entities: StateFlow<Map<String, EntityState>> = client.entities
     val userName: StateFlow<String?> = client.userName
+    val isAdmin: StateFlow<Boolean> = client.isAdmin
 
     private val _lights = MutableStateFlow(LightLayout.Fallback)
     val lights: StateFlow<LightLayout> = _lights
@@ -50,6 +51,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _areaNames = MutableStateFlow<Map<String, String>>(emptyMap())
     val areaNames: StateFlow<Map<String, String>> = _areaNames
+
+    /** A newer test build has been published (checked each time the app opens). */
+    private val _updateAvailable = MutableStateFlow(false)
+    val updateAvailable: StateFlow<Boolean> = _updateAvailable
+
+    private fun checkForUpdate() {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            _updateAvailable.value = UpdateCheck.check(okhttp3.OkHttpClient(), BuildConfig.COMMIT)
+        }
+    }
 
     private val _signedIn = MutableStateFlow(session.signedIn)
     val signedIn: StateFlow<Boolean> = _signedIn
@@ -103,6 +114,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     init {
+        checkForUpdate()
         if (session.signedIn) start(session.url!!, session.token!!)
     }
 

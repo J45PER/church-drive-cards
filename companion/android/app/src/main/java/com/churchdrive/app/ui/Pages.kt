@@ -3,6 +3,8 @@ package com.churchdrive.app.ui
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Checklist
 import androidx.compose.material.icons.outlined.CleaningServices
+import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.Security
@@ -18,6 +20,8 @@ enum class Page(
     val mdi: String,
     val fallback: ImageVector,
     val sections: List<Section>,
+    /** Only shown to a Home Assistant administrator. */
+    val adminOnly: Boolean = false,
 ) {
     Home(
         "Home", "mdi:home", Icons.Outlined.Home,
@@ -55,6 +59,8 @@ enum class Page(
         "To-do", "mdi:format-list-checks", Icons.Outlined.Checklist,
         listOf("From the house", "My to-do", "Shared", "Cleaning").map { Section(it) },
     ),
+    Devices("Devices", "mdi:server-network", Icons.Outlined.Dns, emptyList(), adminOnly = true),
+    Energy("Energy", "mdi:lightning-bolt", Icons.Outlined.Bolt, emptyList(), adminOnly = true),
 }
 
 /** The nav bar's colour for a page, as on the dashboard: the Security page follows the alarm. */
@@ -65,6 +71,8 @@ fun pageTone(page: Page, alarmState: String?): Tone = when (page) {
     Page.Climate -> Tone.Orange
     Page.Cleaning -> Tone.Blue
     Page.Todo -> Tone.Purple
+    Page.Devices -> Tone.Green
+    Page.Energy -> Tone.Indigo
 }
 
 enum class SectionKind { Alarm, NotBuilt }

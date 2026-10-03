@@ -34,6 +34,10 @@ class HaClient(private val scope: CoroutineScope) {
     private val _userName = MutableStateFlow<String?>(null)
     val userName: StateFlow<String?> = _userName
 
+    /** Whether the signed-in person is a Home Assistant administrator (`auth/current_user`). */
+    private val _isAdmin = MutableStateFlow(false)
+    val isAdmin: StateFlow<Boolean> = _isAdmin
+
     /** Counts `lovelace_updated` events (a dashboard was saved in Home Assistant) and icon changes. */
     private val _dashboardTick = MutableStateFlow(0)
     val dashboardTick: StateFlow<Int> = _dashboardTick
@@ -76,6 +80,7 @@ class HaClient(private val scope: CoroutineScope) {
         _connection.value = ConnectionState.Disconnected
         _entities.value = emptyMap()
         _userName.value = null
+        _isAdmin.value = false
     }
 
     /**
@@ -171,7 +176,11 @@ class HaClient(private val scope: CoroutineScope) {
                         callback(if (msg.optBoolean("success")) msg.opt("result") else null)
                     } else if (msg.optBoolean("success")) when (msg.optInt("id")) {
                         getStatesId -> _entities.value = parseStates(msg.getJSONArray("result"))
-                        userId -> _userName.value = msg.optJSONObject("result")?.optString("name")?.takeIf { it.isNotBlank() }
+                        userId -> {
+                            val me = msg.optJSONObject("result")
+                            _userName.value = me?.optString("name")?.takeIf { it.isNotBlank() }
+                            _isAdmin.value = me?.optBoolean("is_admin", false) ?: false
+                        }
                     }
                 }
                 "event" -> {

@@ -99,6 +99,9 @@ fun CardView(card: CardSpec, entities: Map<String, EntityState>, registry: Regis
         "entities" -> EntitiesCard(card.config, entities)
         "custom:task-list-card" -> TaskListCard(card.config, entities, call)
         "custom:house-tasks-card" -> HouseTasksCard(card.config, entities)
+        "custom:octopus-card" -> OctopusCard(card.config, entities)
+        "custom:system-card" -> SystemCard(entities)
+        "custom:ev-charger-card" -> ChargerCard(entities, call)
         else -> NotBuiltCard()
     }
 }

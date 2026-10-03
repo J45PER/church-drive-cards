@@ -68,6 +68,8 @@ class MainActivity : ComponentActivity() {
                         val connection by vm.connection.collectAsStateWithLifecycle()
                         val entities by vm.entities.collectAsStateWithLifecycle()
                         val userName by vm.userName.collectAsStateWithLifecycle()
+                        val isAdmin by vm.isAdmin.collectAsStateWithLifecycle()
+                        val updateAvailable by vm.updateAvailable.collectAsStateWithLifecycle()
                         val lights by vm.lights.collectAsStateWithLifecycle()
                         val sceneLooks by vm.sceneLooks.collectAsStateWithLifecycle()
                         val panels by vm.panels.collectAsStateWithLifecycle()
@@ -87,6 +89,8 @@ class MainActivity : ComponentActivity() {
                                     connection = connection,
                                     entities = entities,
                                     userName = userName,
+                                    isAdmin = isAdmin,
+                                    updateAvailable = updateAvailable,
                                     lights = lights,
                                     areaNames = areaNames,
                                     panels = panels,

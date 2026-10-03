@@ -57,6 +57,8 @@ fun HomeScreen(
     connection: ConnectionState,
     entities: Map<String, EntityState>,
     userName: String?,
+    isAdmin: Boolean,
+    updateAvailable: Boolean,
     lights: LightLayout,
     areaNames: Map<String, String>,
     panels: Map<String, List<PanelSpec>>,
@@ -65,6 +67,9 @@ fun HomeScreen(
     onSignOut: () -> Unit,
 ) {
     var page by rememberSaveable { mutableStateOf(Page.Home) }
+    // Administrator-only pages (Devices, Energy) appear only while an administrator is signed in.
+    val pages = Page.entries.filter { !it.adminOnly || isAdmin }
+    if (page !in pages) page = Page.Home
     var menuOpen by remember { mutableStateOf(false) }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val title = if (page == Page.Home) "Hello ${userName?.substringBefore(' ') ?: ""}".trim() else page.label
@@ -75,16 +80,21 @@ fun HomeScreen(
             MediumTopAppBar(
                 title = { Text(title) },
                 actions = {
-                    // Temporary: which build this is.
-                    Text(
-                        "v${BuildConfig.VERSION_NAME} · ${BuildConfig.COMMIT}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                     IconButton(onClick = { menuOpen = true }) {
                         Icon(Icons.Filled.AccountCircle, contentDescription = "Account")
                     }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    "Version ${BuildConfig.VERSION_NAME} · ${BuildConfig.COMMIT}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            },
+                            enabled = false,
+                            onClick = {},
+                        )
                         DropdownMenuItem(
                             text = { Text("Sign out") },
                             onClick = {
@@ -101,7 +111,7 @@ fun HomeScreen(
             // The dashboard's icons, in the phone's own (wallpaper) colours. The Security icon follows the alarm.
             val alarmState = entities[ALARM_ENTITY]?.state
             NavigationBar {
-                Page.entries.forEach { p ->
+                pages.forEach { p ->
                     val selected = p == page
                     NavigationBarItem(
                         selected = selected,
@@ -128,6 +138,7 @@ fun HomeScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(28.dp),
         ) {
+            if (updateAvailable) UpdateBanner()
             when (connection) {
                 ConnectionState.Connected -> Unit
                 ConnectionState.AuthFailed ->
@@ -145,9 +156,13 @@ fun HomeScreen(
                 val key = when (page) {
                     Page.Climate -> "climate"
                     Page.Cleaning -> "cleaning"
+                    Page.Devices -> "devices"
+                    Page.Energy -> "energy"
                     else -> "todo"
                 }
-                DashboardPage(panels[key].orEmpty(), entities, registry, call)
+                // The app has no media controls: the dashboard's "TVs & speakers" panel is left out.
+                val shown = panels[key].orEmpty().filter { it.title != "TVs & speakers" }
+                DashboardPage(shown, entities, registry, call)
             }
         }
     }
@@ -274,5 +289,22 @@ fun NotBuiltCard() {
             modifier = Modifier.padding(20.dp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+}
+
+/** A banner shown when a newer test build is out: tapping Update downloads it (Android then offers to install it). */
+@Composable
+private fun UpdateBanner() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val tone = toneColors(Tone.Blue)
+    EntityCard(tone.container, tone.onContainer) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("A newer version of the app is ready", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+            androidx.compose.material3.TextButton(onClick = {
+                context.startActivity(
+                    android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(com.churchdrive.app.UpdateCheck.APK_URL)),
+                )
+            }) { Text("Update") }
+        }
     }
 }
