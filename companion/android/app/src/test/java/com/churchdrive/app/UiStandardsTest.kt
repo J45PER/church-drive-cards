@@ -73,6 +73,8 @@ class UiStandardsTest {
             "LoginScreen.kt" to mapOf("Button(" to 1),
             "HomeScreen.kt" to mapOf("TextButton(" to 1),
             "TodoCards.kt" to mapOf("FilledIconButton(" to 1),
+            // The edit dialog's own Save, Delete and Cancel are dialog actions, not choices.
+            "TaskDialog.kt" to mapOf("TextButton(" to 3),
         )
         val names = listOf("Button(", "OutlinedButton(", "FilledTonalButton(", "TextButton(", "FilledIconButton(", "ChoiceButton(")
         for (file in uiFiles()) {

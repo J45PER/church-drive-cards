@@ -1,8 +1,10 @@
 package com.churchdrive.app.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
@@ -56,6 +58,9 @@ fun TaskListCard(config: JSONObject, entities: Map<String, EntityState>, call: C
     var ticked by remember(listId) { mutableStateOf(setOf<String>()) }
     var text by remember(listId) { mutableStateOf("") }
     val now = java.time.LocalDateTime.now()
+    var editing by remember { mutableStateOf<TodoItem?>(null) }
+    var showDone by remember(listId) { mutableStateOf(false) }
+    editing?.let { TaskDialog(it, listId, me?.trim()?.substringBefore(' '), tone, call) { editing = null } }
 
     EntityCard(tone.container, tone.onContainer) {
         if (listId.isBlank()) {
@@ -78,11 +83,40 @@ fun TaskListCard(config: JSONObject, entities: Map<String, EntityState>, call: C
                     colors = CheckboxDefaults.colors(checkedColor = tone.accent, uncheckedColor = tone.accent),
                 )
                 if (showIcons) HaIcon(choreIcon(item.summary), Icons.Filled.Info, tone.accent, 22.dp)
-                Column(modifier = Modifier.weight(1f).padding(start = if (showIcons) 8.dp else 0.dp)) {
+                Column(
+                    modifier = Modifier.weight(1f).padding(start = if (showIcons) 8.dp else 0.dp).clickable { editing = item },
+                ) {
                     Text(item.summary, style = MaterialTheme.typography.bodyLarge)
                     taskLine(item, now).takeIf { it.isNotBlank() }?.let {
                         Text(it, style = MaterialTheme.typography.bodySmall, color = tone.onContainer.copy(alpha = 0.75f))
                     }
+                }
+            }
+        }
+        // Finished tasks, kept out of the way until asked for; tap one to edit or delete it, tick it to bring it back.
+        val finished = items.orEmpty().filter { it.done }
+        if (finished.isNotEmpty()) {
+            Row(
+                modifier = Modifier.fillMaxWidth().clickable { showDone = !showDone },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("Done (${finished.size})", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                HaIcon(if (showDone) "mdi:chevron-up" else "mdi:chevron-down", Icons.Filled.Info, tone.onContainer, 22.dp)
+            }
+            if (showDone) finished.forEach { item ->
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Checkbox(
+                        checked = true,
+                        onCheckedChange = { call("todo", "update_item", listId, data("item" to item.uid, "status" to "needs_action")) },
+                        colors = CheckboxDefaults.colors(checkedColor = tone.accent, uncheckedColor = tone.accent),
+                    )
+                    Text(
+                        item.summary,
+                        style = MaterialTheme.typography.bodyLarge,
+                        textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough,
+                        color = tone.onContainer.copy(alpha = 0.6f),
+                        modifier = Modifier.weight(1f).clickable { editing = item },
+                    )
                 }
             }
         }
