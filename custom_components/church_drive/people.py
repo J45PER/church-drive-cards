@@ -3,8 +3,15 @@
 Everything is worked out from Home Assistant's own people, so nothing names
 anyone. A person added in Home Assistant (Settings > People) is picked up by
 itself:
-- their phones: the companion-app devices on their person, each sending
-  unless switched off in Manager;
+- their phones: the companion-app devices on their person or signed in as
+  them, each sending unless switched off in Manager, and each one showing
+  where they are or not (the person's own device trackers, so an iPad left
+  at home needn't say they're home);
+- how old their location is: when a phone that shows where they are last
+  sent one. A location older than a few hours (set in Manager) gets a
+  silent "send your location" to the phone; if it still doesn't answer,
+  the person is flagged "location old" (the app's location is off or
+  blocked on the phone);
 - their to-do list, "Priorities <first name>" (a Local To-do list), made if
   it doesn't exist;
 - a column in Manager's notifications table, starting with whatever is set
@@ -26,16 +33,17 @@ can follow every list without naming them.
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 from typing import Any
 
-from homeassistant.const import EVENT_HOMEASSISTANT_STARTED, EVENT_STATE_CHANGED
+from homeassistant.const import EVENT_HOMEASSISTANT_STARTED, EVENT_STATE_CHANGED, EVENT_STATE_REPORTED
 from homeassistant.core import CoreState, Context, Event, HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_call_later
+from homeassistant.helpers.event import async_call_later, async_track_time_interval
 from homeassistant.helpers.storage import Store
-from homeassistant.util import location, slugify
+from homeassistant.util import dt as dt_util, location, slugify
 
 from .kinds import ARRIVALS, JOB_KINDS, KINDS, arrival_kind
 
@@ -45,6 +53,9 @@ STORE_VERSION = 1
 SIGNAL_PEOPLE = "church_drive_people"
 EVENT_TODO_CHANGED = "church_drive_todo_changed"
 PERSON_KEYS = ("friendly_name", "user_id", "device_trackers", "entity_picture")
+STALE_HOURS = 6  # a location older than this is "old" (changeable in Manager)
+ASK_WAIT = timedelta(minutes=15)  # how long a phone gets to answer "send your location"
+CHECK_EVERY = timedelta(minutes=10)
 
 # One-off: the switches the to-do automations used before this, carried over
 # the first time this runs. <first> is the person's first name in lower case.
@@ -67,13 +78,15 @@ class People:
     def __init__(self, hass: HomeAssistant) -> None:
         self.hass = hass
         self._store: Store = Store(hass, STORE_VERSION, "church_drive.people")
-        self._data: dict[str, Any] = {"assign": {}, "phones_off": {}, "places": {}, "cars": {}, "access": {}, "seeded": False}
+        self._data: dict[str, Any] = {"assign": {}, "phones_off": {}, "places": {}, "cars": {}, "access": {}, "seen": {}, "stale_hours": STALE_HOURS, "seeded": False}
         self._admins: dict[str, bool] = {}
         self._owner: str | None = None
         self._unsubs: list = []
         self._unsub_started = None
         self._asked_lists: set[str] = set()
         self._asking = None
+        self._asked: dict[str, Any] = {}  # tracker: when it was asked for a location
+        self._stale: set[str] = set()  # people whose location is old
         self.rev = 0
 
     # ---- start / stop -------------------------------------------------
@@ -84,6 +97,8 @@ class People:
             self._data.update(stored)
         await self._async_users()
         self._unsubs.append(self.hass.bus.async_listen(EVENT_STATE_CHANGED, self._on_state, self._wanted))
+        self._unsubs.append(self.hass.bus.async_listen(EVENT_STATE_REPORTED, self._on_report, self._tracker_event))
+        self._unsubs.append(async_track_time_interval(self.hass, self._check_locations, CHECK_EVERY))
         if self.hass.state is CoreState.running:
             await self._async_ready()
         else:
@@ -99,6 +114,7 @@ class People:
         self._fill_defaults()
         await self._async_save()
         await self._async_make_lists()
+        self._seed_seen()
         self._changed()
 
     @callback
@@ -131,12 +147,17 @@ class People:
     @callback
     def _wanted(self, event_data: Any) -> bool:
         eid = event_data.get("entity_id", "") if hasattr(event_data, "get") else ""
-        return eid.startswith(("person.", "todo.", "zone."))
+        return eid.startswith(("person.", "todo.", "zone.", "device_tracker."))
 
     @callback
     def _on_state(self, event: Event) -> None:
         eid = event.data.get("entity_id", "")
         old, new = event.data.get("old_state"), event.data.get("new_state")
+        if eid.startswith("device_tracker."):
+            # A phone sent a location (not one restored at start-up: no old state).
+            if old is not None and new is not None and new.state not in ("unknown", "unavailable"):
+                self._saw(eid)
+            return
         if eid.startswith("zone."):
             # A zone added or moved: phones only check zones when they send a
             # new location, so ask them for one (a still phone might not for
@@ -202,7 +223,8 @@ class People:
             user = st.attributes.get("user_id")
             first = first_name(st.name)
             phones = []
-            for tracker in st.attributes.get("device_trackers") or []:
+            tracking = st.attributes.get("device_trackers") or []
+            for tracker in self._phone_trackers(st):
                 entry = ent_reg.async_get(tracker)
                 if entry is None or entry.platform != "mobile_app" or not entry.device_id:
                     continue
@@ -212,15 +234,20 @@ class People:
                     service = f"mobile_app_{slugify(device.name or '')}"
                 if service not in notify:
                     continue
+                seen = self._seen(tracker)
                 phones.append(
                     {
                         "service": service,
-                        "name": (device.name_by_user or device.name) if device else tracker,
+                        "name": ((device.name_by_user or device.name) if device else tracker).strip(),
                         "model": (device.model or "") if device else "",
                         "apple": bool(device and (device.manufacturer or "").lower().startswith("apple")),
                         "on": service not in self._data["phones_off"].get(st.entity_id, []),
+                        "tracker": tracker,
+                        "tracks": tracker in tracking,
+                        "seen": seen.isoformat() if seen else None,
                     }
                 )
+            located = self._located(st)
             places = list(self._data.get("places", {}).get(st.entity_id, []))
             place, zone = self._place(self._nearest_zone(st), places)
             out.append(
@@ -238,9 +265,139 @@ class People:
                     "picture": st.attributes.get("entity_picture"),
                     "list": f"todo.priorities_{slugify(first)}",
                     "phones": phones,
+                    "located": located.isoformat() if located else None,
+                    "stale": st.entity_id in self._stale,
                 }
             )
         return out
+
+    # ---- locations: which phones show where someone is, and how old it is
+
+    def _phone_trackers(self, st: Any) -> list[str]:
+        """The person's device trackers plus every companion-app tracker
+        signed in as them (one taken off the person still gets alerts)."""
+        out = list(st.attributes.get("device_trackers") or [])
+        user = st.attributes.get("user_id")
+        if user:
+            ent_reg = er.async_get(self.hass)
+            for entry in self.hass.config_entries.async_entries("mobile_app"):
+                if entry.data.get("user_id") != user:
+                    continue
+                for e in er.async_entries_for_config_entry(ent_reg, entry.entry_id):
+                    if e.domain == "device_tracker" and e.entity_id not in out:
+                        out.append(e.entity_id)
+        return out
+
+    @callback
+    def _tracker_event(self, event_data: Any) -> bool:
+        eid = event_data.get("entity_id", "") if hasattr(event_data, "get") else ""
+        return eid.startswith("device_tracker.")
+
+    @callback
+    def _on_report(self, event: Event) -> None:
+        """The same location sent again: still a sign the phone's sending."""
+        new = event.data.get("new_state")
+        if new is not None and new.state not in ("unknown", "unavailable"):
+            self._saw(event.data.get("entity_id", ""))
+
+    @callback
+    def _saw(self, tracker: str) -> None:
+        if not any(tracker in (st.attributes.get("device_trackers") or []) or tracker in self._phone_trackers(st)
+                   for st in self.hass.states.async_all("person")):
+            return
+        self._data.setdefault("seen", {})[tracker] = dt_util.utcnow().isoformat()
+        self._asked.pop(tracker, None)
+        self._store.async_delay_save(lambda: self._data, 60)
+        self._update_stale()
+
+    @callback
+    def _seed_seen(self) -> None:
+        """First time a phone's seen: count from its state's last update."""
+        seen = self._data.setdefault("seen", {})
+        for st in self.hass.states.async_all("person"):
+            for tracker in self._phone_trackers(st):
+                t = self.hass.states.get(tracker)
+                if tracker not in seen and t is not None and t.state not in ("unknown", "unavailable"):
+                    seen[tracker] = t.last_updated.isoformat()
+
+    def _seen(self, tracker: str) -> Any:
+        when = self._data.get("seen", {}).get(tracker)
+        return dt_util.parse_datetime(when) if when else None
+
+    def _located(self, st: Any) -> Any:
+        """When the person's location was last sent, by any phone showing it."""
+        times = [self._seen(t) for t in st.attributes.get("device_trackers") or []]
+        times = [t for t in times if t is not None]
+        return max(times) if times else None
+
+    def _is_stale(self, st: Any) -> bool:
+        """Old, and asked for a new one at least 15 minutes ago with no answer."""
+        located = self._located(st)
+        trackers = st.attributes.get("device_trackers") or []
+        if not trackers or located is None:
+            return False
+        now = dt_util.utcnow()
+        if now - located < timedelta(hours=float(self._data.get("stale_hours") or STALE_HOURS)):
+            return False
+        asked = [self._asked.get(t) for t in trackers]
+        return any(a is not None and now - a >= ASK_WAIT for a in asked)
+
+    @callback
+    def _update_stale(self) -> None:
+        stale = {st.entity_id for st in self.hass.states.async_all("person") if self._is_stale(st)}
+        if stale != self._stale:
+            self._stale = stale
+            self._changed()
+
+    async def _check_locations(self, _now: Any = None) -> None:
+        """Every 10 minutes: ask phones with an old location to send one."""
+        now = dt_util.utcnow()
+        limit = timedelta(hours=float(self._data.get("stale_hours") or STALE_HOURS))
+        for p in self.people():
+            st = self.hass.states.get(p["entity_id"])
+            located = self._located(st) if st is not None else None
+            if located is None or now - located < limit:
+                continue
+            for phone in p["phones"]:
+                tracker = phone.get("tracker")
+                if not phone["tracks"] or not phone["service"]:
+                    continue
+                asked = self._asked.get(tracker)
+                if asked is not None and now - asked < limit:
+                    continue  # asked already; ask again after another few hours
+                self._asked[tracker] = now
+                try:
+                    await self.hass.services.async_call(
+                        "notify", phone["service"], {"message": "request_location_update"}, blocking=False
+                    )
+                except Exception as err:  # noqa: BLE001
+                    _LOGGER.debug("Couldn't ask %s for a location: %s", phone["name"], err)
+        self._update_stale()
+
+    async def async_set_tracking(self, person: str, tracker: str, on: bool) -> None:
+        """Make a phone show where someone is, or not (the person's own device
+        trackers, as in Settings > People)."""
+        from homeassistant.components.person import DOMAIN as PERSON
+
+        coll = self.hass.data[PERSON][1]
+        entry = er.async_get(self.hass).async_get(person)
+        item = next((i for i in coll.async_items() if entry is not None and i.get("id") == entry.unique_id), None)
+        if item is None:
+            raise ValueError(f"{person} isn't a person made in the app")
+        trackers = [t for t in item.get("device_trackers") or [] if t != tracker]
+        if on:
+            trackers.append(tracker)
+        await coll.async_update_item(item["id"], {"device_trackers": trackers})
+        self._changed()
+
+    async def async_set_stale_hours(self, hours: float) -> None:
+        self._data["stale_hours"] = max(1.0, min(72.0, float(hours)))
+        await self._async_save()
+        self._update_stale()
+        self._changed()
+
+    def stale_hours(self) -> float:
+        return float(self._data.get("stale_hours") or STALE_HOURS)
 
     # ---- places: what each person calls the zones they go to -----------
 

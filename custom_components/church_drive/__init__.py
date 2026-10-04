@@ -84,6 +84,8 @@ from .const import (
     WS_PEOPLE_PLACES,
     WS_PEOPLE_CARS,
     WS_PEOPLE_ACCESS,
+    WS_PEOPLE_SETTINGS,
+    WS_PEOPLE_TRACKING,
     WS_SCENE_DELETE,
     WS_SCENE_PREVIEW,
     WS_SCENE_SAVE,
@@ -159,7 +161,13 @@ def ws_people(hass: HomeAssistant, connection: websocket_api.ActiveConnection, m
         connection.send_error(msg["id"], "not_ready", "People and notifications aren't running")
         return
     connection.send_result(
-        msg["id"], {"people": people.people(), "kinds": people.kinds(), "access": people.access(), "rev": people.rev}
+        msg["id"], {
+            "people": people.people(),
+            "kinds": people.kinds(),
+            "access": people.access(),
+            "stale_hours": people.stale_hours(),
+            "rev": people.rev,
+        }
     )
 
 
@@ -402,6 +410,49 @@ async def ws_people_access(
     connection.send_result(msg["id"], {"access": people.access()})
 
 
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_PEOPLE_TRACKING,
+        vol.Required("person"): cv.entity_id,
+        vol.Required("tracker"): cv.entity_id,
+        vol.Required("on"): cv.boolean,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_people_tracking(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Make a phone show where someone is, or not."""
+    people = _people(hass)
+    if people is None:
+        connection.send_error(msg["id"], "not_ready", "People and notifications aren't running")
+        return
+    try:
+        await people.async_set_tracking(msg["person"], msg["tracker"], msg["on"])
+    except ValueError as err:
+        connection.send_error(msg["id"], "not_found", str(err))
+        return
+    connection.send_result(msg["id"], {"people": people.people()})
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): WS_PEOPLE_SETTINGS, vol.Required("stale_hours"): vol.Coerce(float)}
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_people_settings(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """How many hours before a location counts as old."""
+    people = _people(hass)
+    if people is None:
+        connection.send_error(msg["id"], "not_ready", "People and notifications aren't running")
+        return
+    await people.async_set_stale_hours(msg["stale_hours"])
+    connection.send_result(msg["id"], {"stale_hours": people.stale_hours(), "people": people.people()})
+
+
 def _events(hass: HomeAssistant) -> CameraEvents | None:
     return hass.data.get(DOMAIN, {}).get("events")
 
@@ -563,7 +614,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         for command in (
             ws_library, ws_icons, ws_icon_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_phone,
-            ws_people_places, ws_people_cars, ws_people_access, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_maps, ws_maps_search,
+            ws_people_places, ws_people_cars, ws_people_access, ws_people_tracking, ws_people_settings, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_maps, ws_maps_search,
         ):
             websocket_api.async_register_command(hass, command)
     # The version in the URL makes browsers fetch the new bundle after an
