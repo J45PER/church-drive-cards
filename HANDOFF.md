@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-04. Current release: **v0.37.0**.*
+*Last updated 2026-10-04. Current release: **v0.38.0**.*
 
 ## Where this stands
 
@@ -25,7 +25,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-04, v0.37.0 live, nothing on beta):**
+**Now (2026-10-04, v0.38.0 live, nothing on beta):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -126,7 +126,7 @@ HACS as an integration. It does two jobs:
     `card-kit.js`; a section panel hides a child card whose every entity (from its config,
     templates aside) is someone else's, and hides itself when that leaves nothing (Auto Layout
     then skips it); light cards drop such lights from their rows. Hiding only, not a lock.
-  - **Phone locations** (beta 2026-10-04): each phone in People manager › Phones has Alerts and
+  - **Phone locations** (v0.38.0): each phone in People manager › Phones has Alerts and
     **Location** switches. Location is the person's own device trackers (Settings › People), set
     with `church_drive/people/tracking` {person, tracker, on}; the phones list is now the
     person's trackers plus every companion-app tracker signed in as them (`mobile_app` entry
@@ -396,6 +396,8 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
   `test/climate-quick.test.mjs`); the Android app does the same (`ecoSteps` in `ClimateData.kt`).
 - **v0.37.0 (released 2026-10-04, restarted): Device access.** Manager › People › Devices limits a
   device to some people; cards and panels hide it from everyone else (see the Device access notes above).
+- **v0.38.0 (released 2026-10-04, restarted): Phone locations.** People manager › Phones has a
+  Location switch per phone and flags a location that's stopped updating (see the Phone locations notes above).
 - **v0.35.0 (released 2026-10-03, reload-only): Car card.** Cars moved off the charger card
   onto `custom:car-card`, which can give cars to people (see the cars notes above).
 - **v0.33.1 (released 2026-10-03, reload-only): charger card shows the cars.** Each car from
