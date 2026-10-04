@@ -54,7 +54,7 @@ fun choreIcon(name: String): String {
     }
 }
 
-private fun dueTime(due: String, zone: ZoneId): LocalDateTime? {
+internal fun dueTime(due: String, zone: ZoneId): LocalDateTime? {
     if ('T' !in due) return runCatching { LocalDate.parse(due).atTime(23, 59, 59) }.getOrNull()
     return runCatching { OffsetDateTime.parse(due).atZoneSameInstant(zone).toLocalDateTime() }.getOrNull()
         ?: runCatching { LocalDateTime.parse(due) }.getOrNull()

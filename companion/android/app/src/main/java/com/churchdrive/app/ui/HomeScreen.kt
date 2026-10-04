@@ -241,6 +241,7 @@ private fun HomePage(
 
     // The panels are the dashboard's own, in its order, so a card added in Home Assistant appears here too. The ones the
     // app draws its own way (alarm, climate, lights, vacuum) keep that; any other panel shows its cards as they are.
+    TodoHighlights(entities, call) { onOpen(Page.Todo) }
     val titles = panels.map { it.title }.ifEmpty { listOf("Security", "Climate", "Lights", "Cleaning", "Car charging") }
     val quality = entities[CLIMATE_QUALITY_ENTITY]?.state?.toIntOrNull()
     titles.forEach { title ->
