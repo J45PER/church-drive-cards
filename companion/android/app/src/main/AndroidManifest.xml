@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Notifications from the house, and telling the house where the phone is. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Cleartext allowed because Home Assistant is often reached over plain http on the LAN. -->
+    <application
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="Church Drive"
+        android:theme="@style/Theme.ChurchDrive"
+        android:usesCleartextTraffic="true">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <service
+            android:name=".house.HouseService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps a connection to the home's Home Assistant for notifications, and reports the phone's location to it" />
+        </service>
+        <receiver
+            android:name=".house.LocationReceiver"
+            android:exported="false" />
+        <receiver
+            android:name=".house.BootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+        <receiver
+            android:name=".widget.AlarmWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive alarm">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_alarm" />
+        </receiver>
+        <receiver
+            android:name=".widget.WeatherWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive weather">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_weather" />
+        </receiver>
+        <receiver
+            android:name=".widget.VacuumWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive vacuum">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_vacuum" />
+        </receiver>
+        <receiver
+            android:name=".widget.ChargerWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive car charger">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_charger" />
+        </receiver>
+        <receiver
+            android:name=".widget.TodoWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive to-do">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_todo" />
+        </receiver>
+        <receiver
+            android:name=".widget.CameraWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive camera">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_camera" />
+        </receiver>
+        <receiver
+            android:name=".widget.FanWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive fan and air">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_fan" />
+        </receiver>
+        <receiver
+            android:name=".widget.BlindsWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive blinds">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_blinds" />
+        </receiver>
+        <receiver
+            android:name=".widget.ScenesWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive scenes">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_scenes" />
+        </receiver>
+        <receiver
+            android:name=".widget.GaugeWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive gauge">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_gauge" />
+        </receiver>
+        <receiver
+            android:name=".widget.ClusterWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive gauge cluster">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_cluster" />
+        </receiver>
+        <receiver
+            android:name=".widget.SecurityWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive security summary">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_security" />
+        </receiver>
+        <receiver
+            android:name=".widget.LightsWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive lights">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_lights" />
+        </receiver>
+        <receiver
+            android:name=".widget.ClimateWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive thermostat">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_climate" />
+        </receiver>
+        <receiver
+            android:name=".widget.ShortcutsWidgetReceiver"
+            android:exported="false"
+            android:label="Church Drive shortcuts">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_shortcuts" />
+        </receiver>
+        <activity
+            android:name=".widget.WidgetConfigActivity"
+            android:exported="true"
+            android:theme="@style/Theme.ChurchDrive">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

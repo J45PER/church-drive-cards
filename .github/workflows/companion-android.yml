@@ -1,0 +1,53 @@
+name: Companion Android
+
+on:
+  push:
+    branches: [companion-apps, main]
+    paths: ["companion/android/**", ".github/workflows/companion-android.yml"]
+  pull_request:
+    paths: ["companion/android/**", ".github/workflows/companion-android.yml"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: companion/android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew testDebugUnitTest assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: church-drive-debug-apk
+          path: companion/android/app/build/outputs/apk/debug/*.apk
+      - name: Publish APK as a pre-release
+        if: github.event_name == 'push'
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(sed -n 's/^version=//p' companion/android/version.properties)
+          apk=$(ls companion/android/app/build/outputs/apk/debug/*.apk)
+          cp "$apk" church-drive.apk
+          # The latest test build: replaced on every push (the app looks here for updates).
+          gh release delete companion-android-latest --yes --cleanup-tag || true
+          gh release create companion-android-latest church-drive.apk \
+            --prerelease --target "$GITHUB_SHA" \
+            --title "Church Drive Android ${version} (test build ${GITHUB_RUN_NUMBER})" \
+            --notes "Latest test build, version ${version}, build ${GITHUB_RUN_NUMBER}, from the ${GITHUB_REF_NAME} branch (commit ${GITHUB_SHA::7}). Download church-drive.apk on an Android phone and install it."
+          # Each version keeps its own release, made the first time a build has that version: a permanent record of what shipped.
+          if ! gh release view "android-v${version}" >/dev/null 2>&1; then
+            notes=$(awk -v v="$version" '$0 ~ "^## "v"( |$)" {on=1; next} /^## / {on=0} on' companion/android/CHANGELOG.md)
+            gh release create "android-v${version}" church-drive.apk \
+              --target "$GITHUB_SHA" \
+              --title "Church Drive Android ${version}" \
+              --notes "${notes:-Version ${version}.} (Build ${GITHUB_RUN_NUMBER}, commit ${GITHUB_SHA::7}.)"
+          fi
