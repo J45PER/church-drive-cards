@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-03. Current release: **v0.36.1**.*
+*Last updated 2026-10-04. Current release: **v0.37.0**.*
 
 ## Where this stands
 
@@ -25,7 +25,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-03, v0.36.1 live, nothing on beta):**
+**Now (2026-10-04, v0.37.0 live, nothing on beta):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -119,7 +119,7 @@ HACS as an integration. It does two jobs:
     Arrivals (who's told about this person). Admins see everyone; others only themselves,
     read-only. The Car card reads owners from the sensor (its own `people` setting is gone);
     car alerts (plugged in, charged) go only to the car's owners when it has any.
-  - **Device access** (beta 2026-10-04): People manager › Devices limits a device to some
+  - **Device access** (v0.37.0): People manager › Devices limits a device to some
     people (`church_drive/people/access` {key: device id or entity id, people}; none = everyone's
     again). Kept in the people store (`access`); `sensor.church_drive_people` has `access` per
     entity (a device's entities all take its people). Cards: `kitCanUse` / `kitCardDenied` in
@@ -378,6 +378,8 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
   now sets Heat first (Heat, else Auto, else the first mode that isn't Off), waits for it, then sets the
   preset: one tap, not Heat then Eco. The steps live in `src/climate-quick.js` (`quickPlan`, tested in
   `test/climate-quick.test.mjs`); the Android app does the same (`ecoSteps` in `ClimateData.kt`).
+- **v0.37.0 (released 2026-10-04, restarted): Device access.** Manager › People › Devices limits a
+  device to some people; cards and panels hide it from everyone else (see the Device access notes above).
 - **v0.35.0 (released 2026-10-03, reload-only): Car card.** Cars moved off the charger card
   onto `custom:car-card`, which can give cars to people (see the cars notes above).
 - **v0.33.1 (released 2026-10-03, reload-only): charger card shows the cars.** Each car from
