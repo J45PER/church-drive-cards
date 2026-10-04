@@ -2,7 +2,9 @@
 // place. A list of people (chips on a phone), and the chosen person's page:
 // their picture (upload or remove), where they are, their places (what they call
 // each zone), which phones get alerts, which cars are theirs, which alerts they
-// get, their to-dos and house jobs, and who's told when they get home.
+// get, their to-dos and house jobs, who's told when they get home, and the
+// devices only some people use (everything else is everyone's; cards hide a
+// device from people who can't use it).
 //
 // Kept by the Church Drive integration (church_drive/people/…; only
 // administrators can change anything); pictures are Home Assistant's own person
@@ -21,6 +23,8 @@ const TEAL = '#26a69a';
 const PURPLE = '#7e57c2';
 const COLOURS = ['#26a69a', '#7e57c2', '#ef6c00', '#5c6bc0', '#d81b60', '#00897b', '#6d4c41'];
 const TODO_GROUPS = ['To-dos', 'House jobs'];
+// Devices worth limiting: ones with something to control or watch.
+const DEVICE_DOMAINS = ['light', 'switch', 'cover', 'fan', 'climate', 'media_player', 'lock', 'camera', 'vacuum', 'humidifier', 'water_heater', 'remote', 'siren', 'valve', 'lawn_mower'];
 
 const PM_CSS = `
   .pm { display:flex; flex-wrap:wrap; gap:16px; align-items:flex-start; container-type:inline-size; }
@@ -73,6 +77,10 @@ const PM_CSS = `
   .pm-x { flex:none; width:32px; height:32px; border:none; border-radius:50%; background:transparent; color:var(--secondary-text-color); cursor:pointer; display:flex; align-items:center; justify-content:center; }
   .pm-acts { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
   .pm-err { font-size:0.8rem; color:#ffab91; }
+  .pm-dev { border-radius:12px; background:rgba(127,127,127,.08); padding:10px 12px; display:flex; flex-direction:column; gap:8px; }
+  .pm-dev .pm-chip { padding:6px 11px; }
+  .pm-add select { flex:1; min-width:0; height:40px; border-radius:10px; border:1px solid var(--divider-color, rgba(127,127,127,0.3));
+    background:var(--secondary-background-color, rgba(127,127,127,0.12)); color:var(--primary-text-color); font:inherit; font-size:0.85rem; padding:0 8px; }
 `;
 
 export const PeopleManagerCardEditor = createFormEditor({
@@ -116,6 +124,7 @@ export class PeopleManagerCard extends HTMLElement {
     ].map(([key, group, name]) => ({ key, group, name, available: true, all: false, people: ['person.jamie', 'person.hayley'] }));
     return {
       kinds,
+      access: { 'demo-blind': ['person.jamie', 'person.hayley'] },
       people: [
         { entity_id: 'person.jamie', name: 'Jamie', first: 'Jamie', admin: true, home: 'home', place: 'Home', zone: '', places: [{ zone: 'zone.work', name: 'Work' }], cars: [], phones: [{ service: 'a', name: 'iPhone', on: true }], list: 'todo.x' },
         { entity_id: 'person.hayley', name: 'Hayley', first: 'Hayley', admin: true, home: 'Frasers Group', place: 'Work', zone: 'Frasers Group', places: [], cars: ['demo-car'], phones: [{ service: 'b', name: 'Pixel 9', on: true }], list: 'todo.y' },
@@ -278,6 +287,7 @@ export class PeopleManagerCard extends HTMLElement {
           ${this._alerts(p, admin)}
           ${this._todos(p, admin, todo)}
           ${this._arrivals(p, admin)}
+          ${this._devices(p, admin)}
         </div>
       </div>`;
     hydrateIcons(this);
@@ -401,6 +411,63 @@ export class PeopleManagerCard extends HTMLElement {
     );
   }
 
+  // Every device worth limiting: [{ id, name, area }].
+  _deviceList() {
+    if (this.config.demo) return [{ id: 'demo-blind', name: "Hayley's Bedroom Blind", area: "Hayley's Bedroom" }, { id: 'demo-tv', name: 'Living Room TV', area: 'Living Room' }];
+    const h = this._hass;
+    const devs = h.devices || {};
+    const used = new Set();
+    Object.values(h.entities || {}).forEach((e) => {
+      if (e.device_id && !e.hidden && !e.entity_category && DEVICE_DOMAINS.includes(e.entity_id.split('.')[0])) used.add(e.device_id);
+    });
+    return [...used]
+      .filter((id) => devs[id] && devs[id].entry_type !== 'service')
+      .map((id) => {
+        const d = devs[id];
+        const area = d.area_id && h.areas && h.areas[d.area_id];
+        return { id, name: d.name_by_user || d.name || id, area: (area && area.name) || '' };
+      })
+      .sort((a, b) => (a.area || '~').localeCompare(b.area || '~') || a.name.localeCompare(b.name));
+  }
+
+  _devices(p, admin) {
+    const access = (this._data && this._data.access) || {};
+    const all = this._deviceList();
+    const people = (this._data && this._data.people) || [];
+    const limited = all.filter((d) => access[d.id]);
+    const rows = limited
+      .map((d) => {
+        const who = access[d.id] || [];
+        const chips = people
+          .map((x) => {
+            const on = who.includes(x.entity_id);
+            return `<button type="button" class="pm-chip${on ? ' on' : ''}" style="--pm-c:${this._colour(x)};${x.entity_id === p.entity_id ? ' outline:1px solid var(--pm-c);' : ''}" data-act="dev-who" data-dev="${kitEsc(d.id)}" data-who="${kitEsc(x.entity_id)}" aria-pressed="${on}"${admin ? '' : ' disabled'}>${kitEsc(x.first || x.name)}</button>`;
+          })
+          .join('');
+        return `<div class="pm-dev"><div class="pm-row" style="min-height:0;"><span>${kitEsc(d.name)}${d.area ? `<small>${kitEsc(d.area)}</small>` : ''}</span>
+          ${admin ? `<button type="button" class="pm-x" data-act="dev-free" data-dev="${kitEsc(d.id)}" aria-label="Make ${kitEsc(d.name)} everyone's again">${iconHtml('mdi:close', { size: '18px' })}</button>` : ''}</div>
+          <div class="pm-chips">${chips}</div></div>`;
+      })
+      .join('');
+    const free = all.filter((d) => !access[d.id]);
+    const add =
+      admin && free.length
+        ? `<div class="pm-row pm-add"><select aria-label="Device to limit" data-dev-pick><option value="">Limit a device to some people…</option>${free
+            .map((d) => `<option value="${kitEsc(d.id)}">${kitEsc(d.area ? `${d.area} · ${d.name}` : d.name)}</option>`)
+            .join('')}</select><button type="button" class="pm-btn" data-act="dev-add">${iconHtml('mdi:plus', { size: '16px' })}Add</button></div>`
+        : '';
+    const mine = limited.filter((d) => (access[d.id] || []).includes(p.entity_id)).length;
+    return this._sec(
+      'mdi:devices',
+      PURPLE,
+      'Devices',
+      limited.length ? `${kitEsc(p.first)} can use ${mine} of ${limited.length} limited` : 'Everyone can use everything',
+      (rows || "<div class=\"pm-note\">Every device is everyone's. Limit one (e.g. a bedroom blind) to the people who use it, and it disappears from everyone else's screens.</div>") +
+        add +
+        "<div class=\"pm-note\">Tap names to choose who can use each one; ✕ makes it everyone's again. This tidies the screens; it isn't a lock.</div>",
+    );
+  }
+
   async _click(ev) {
     const b = ev.target.closest('[data-act]');
     if (!b) return;
@@ -430,6 +497,33 @@ export class PeopleManagerCard extends HTMLElement {
       if (!free) return kitNavigate('/config/zone');
       this._draft.push({ zone: free[0], name: 'Work' });
     } else if (act === 'pl-del') this._draft.splice(Number(b.dataset.i), 1);
+    else if (act === 'dev-add' || act === 'dev-who' || act === 'dev-free') {
+      const access = (this._data.access = this._data.access || {});
+      let key;
+      let who;
+      if (act === 'dev-add') {
+        const pick = this._root.querySelector('[data-dev-pick]');
+        key = pick && pick.value;
+        if (!key) return;
+        who = [p.entity_id];
+      } else {
+        key = b.dataset.dev;
+        const now = access[key] || [];
+        who = act === 'dev-free' ? [] : now.includes(b.dataset.who) ? now.filter((x) => x !== b.dataset.who) : [...now, b.dataset.who];
+        // Nobody left would make it everyone's again: that's what ✕ is for.
+        if (act === 'dev-who' && !who.length) {
+          this._err = "A limited device needs someone. To make it everyone's again, use ✕.";
+          this._sig = null;
+          return this._render();
+        }
+      }
+      if (who.length) access[key] = who;
+      else delete access[key];
+      const r = await this._send({ type: 'church_drive/people/access', key, people: who });
+      if (r && r.access) this._data.access = r.access;
+      this._sig = null;
+      return this._render();
+    }
     else if (act === 'pl-save') {
       const places = this._draft.filter((x) => x.zone).map((x) => ({ zone: x.zone, name: (x.name || '').trim() }));
       p.places = places;

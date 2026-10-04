@@ -97,5 +97,6 @@ class PeopleSensor(SensorEntity):
             "people": people,
             "assign": self._people.assigned_names(),
             "everyone": self._people.everyone(),
+            "access": self._people.access_entities(),
             "rev": self._people.rev,
         }

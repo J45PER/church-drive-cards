@@ -83,6 +83,7 @@ from .const import (
     WS_PEOPLE_PHONE,
     WS_PEOPLE_PLACES,
     WS_PEOPLE_CARS,
+    WS_PEOPLE_ACCESS,
     WS_SCENE_DELETE,
     WS_SCENE_PREVIEW,
     WS_SCENE_SAVE,
@@ -157,7 +158,9 @@ def ws_people(hass: HomeAssistant, connection: websocket_api.ActiveConnection, m
     if people is None:
         connection.send_error(msg["id"], "not_ready", "People and notifications aren't running")
         return
-    connection.send_result(msg["id"], {"people": people.people(), "kinds": people.kinds(), "rev": people.rev})
+    connection.send_result(
+        msg["id"], {"people": people.people(), "kinds": people.kinds(), "access": people.access(), "rev": people.rev}
+    )
 
 
 @websocket_api.websocket_command(
@@ -378,6 +381,27 @@ async def ws_people_cars(
     connection.send_result(msg["id"], {"people": people.people()})
 
 
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_PEOPLE_ACCESS,
+        vol.Required("key"): cv.string,
+        vol.Required("people"): [cv.entity_id],
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_people_access(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Set who can use a device (or entity); no people makes it everyone's again."""
+    people = _people(hass)
+    if people is None:
+        connection.send_error(msg["id"], "not_ready", "People and notifications aren't running")
+        return
+    await people.async_set_access(msg["key"], msg["people"])
+    connection.send_result(msg["id"], {"access": people.access()})
+
+
 def _events(hass: HomeAssistant) -> CameraEvents | None:
     return hass.data.get(DOMAIN, {}).get("events")
 
@@ -539,7 +563,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         for command in (
             ws_library, ws_icons, ws_icon_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_phone,
-            ws_people_places, ws_people_cars, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_maps, ws_maps_search,
+            ws_people_places, ws_people_cars, ws_people_access, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_maps, ws_maps_search,
         ):
             websocket_api.async_register_command(hass, command)
     # The version in the URL makes browsers fetch the new bundle after an

@@ -716,3 +716,59 @@ export function kitCompactable(Cls, rebuild = (card) => { card._built = false; }
   });
   Cls.prototype.supportsCompact = true;
 }
+
+// ---- Device access (Manager › People › Devices) --------------------------
+// The Church Drive people sensor lists the entities only some people use
+// ({ entity_id: [person entity ids] }); everything else is everyone's. Cards
+// hide what the signed-in person can't use. It tidies the screens; it isn't a
+// lock (Home Assistant has no per-device permissions).
+
+const ACCESS_SENSOR = 'sensor.church_drive_people';
+const ENTITY_RE = /^[a-z_]+\.[a-z0-9_]+$/;
+
+function accessOf(hass) {
+  const st = hass && hass.states && hass.states[ACCESS_SENSOR];
+  const a = st && st.attributes;
+  if (!a || !a.access || !Object.keys(a.access).length) return null;
+  const u = hass.user;
+  const me = u && (a.people || []).find((p) => p.user_id === u.id);
+  let mine = me && me.entity_id;
+  if (!mine && u) mine = Object.keys(hass.states).find((x) => x.startsWith('person.') && hass.states[x].attributes.user_id === u.id) || '';
+  return { map: a.access, me: mine || '' };
+}
+
+// Whether the signed-in person can use this entity.
+export function kitCanUse(hass, entityId) {
+  const acc = accessOf(hass);
+  if (!acc || !entityId) return true;
+  const who = acc.map[entityId];
+  return !who || who.includes(acc.me);
+}
+
+// Every entity a card's config names (entity, entities, rooms' sensors…),
+// leaving out templates and other text.
+export function kitConfigEntities(hass, conf, out = new Set(), depth = 0) {
+  if (!conf || depth > 6) return out;
+  if (typeof conf === 'string') {
+    if (ENTITY_RE.test(conf) && hass && hass.states && hass.states[conf]) out.add(conf);
+    return out;
+  }
+  if (Array.isArray(conf)) {
+    conf.forEach((x) => kitConfigEntities(hass, x, out, depth + 1));
+    return out;
+  }
+  if (typeof conf === 'object') {
+    Object.entries(conf).forEach(([k, v]) => {
+      if (k === 'cards' || k === 'card') return; // a stack's own cards decide for themselves
+      kitConfigEntities(hass, v, out, depth + 1);
+    });
+  }
+  return out;
+}
+
+// A card to hide: everything it names is someone else's.
+export function kitCardDenied(hass, conf) {
+  if (!accessOf(hass)) return false;
+  const ids = [...kitConfigEntities(hass, conf)];
+  return ids.length > 0 && ids.every((id) => !kitCanUse(hass, id));
+}

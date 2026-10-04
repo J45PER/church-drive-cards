@@ -119,6 +119,18 @@ HACS as an integration. It does two jobs:
     Arrivals (who's told about this person). Admins see everyone; others only themselves,
     read-only. The Car card reads owners from the sensor (its own `people` setting is gone);
     car alerts (plugged in, charged) go only to the car's owners when it has any.
+  - **Device access** (beta 2026-10-04): People manager › Devices limits a device to some
+    people (`church_drive/people/access` {key: device id or entity id, people}; none = everyone's
+    again). Kept in the people store (`access`); `sensor.church_drive_people` has `access` per
+    entity (a device's entities all take its people). Cards: `kitCanUse` / `kitCardDenied` in
+    `card-kit.js`; a section panel hides a child card whose every entity (from its config,
+    templates aside) is someone else's, and hides itself when that leaves nothing (Auto Layout
+    then skips it); light cards drop such lights from their rows. Hiding only, not a lock.
+  - **App to match** (the Android app on `companion-apps` should follow these): Car card and
+    owners (`church_drive/people/cars`, `cars` on the people sensor); People manager (picture via
+    image upload + `person/update`, Cars, Arrivals, To-dos apart from Alerts, Devices);
+    device access (`access` on the people sensor: hide what the person can't use); media: a TV
+    in standby is Off and power runs `script.<player>_wake`.
   - **Car card** (`src/car-card.js`, `custom:car-card`, v0.35.0): each car from those
     integrations (`carDevices`/`carEntities`): battery bar and %, electric range, fuel % and
     range, Plugged in / Charging / where it is, "Full by" when charging; tap for more-info.
