@@ -156,6 +156,14 @@ HACS as an integration. It does two jobs:
     Energy; `ev-charger-card` is the Zappi alone again (the v0.33.1 car rows are gone).
     "Church Drive: car alerts" names the plugged-in car and its % (plugged in waits up to 3
     minutes for the car to report; charged).
+  - **Car figures while charging** (beta 2026-10-04): Stellantis cars only send figures when
+    something happens, so a charging Astra showed 12% for hours (the integration polls every 60 s
+    but gets the car's last report). "Church Drive: car figures while charging" (automation,
+    live) presses each charging Stellantis car's `button.*_wakeup` every 30 minutes (the car
+    answers in ~20 s). Car card: past 20 minutes old while plugged in or charging, a line
+    "Updated HH:MM" (from the battery sensor's `Last updated` attribute, else its state) and a
+    **Refresh** button that presses the car's wake-up (`carAsOf`, `carTime`, `wake` in
+    `carEntities`).
 - Nothing else is pending. Ideas the user hasn't asked for are under Open items.
 
 **New in v0.22.0 (2026-09-29): smoother panels, floating chips, page headers** (the user found the
