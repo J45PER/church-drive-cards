@@ -471,7 +471,10 @@ export class AutoLayoutCard extends HTMLElement {
     const spanWidth = colWidth * (cols - 1) + gap * Math.max(0, cols - 2);
     // With empty_last, panels with nothing to show (their "counts as empty
     // when", or a card inside saying so) go below the rest, keeping order.
-    let list = this.config.empty_last ? [...this._items.filter((it) => !it.el._empty), ...this._items.filter((it) => it.el._empty)] : this._items;
+    // Panels whose every card is for things only other people use (device
+    // access) take no place at all.
+    const items = this._items.filter((it) => !it.el._denied);
+    let list = this.config.empty_last ? [...items.filter((it) => !it.el._empty), ...items.filter((it) => it.el._empty)] : items;
     // Panels with controls first, then cameras, then information (stable,
     // so list order holds otherwise).
     if (this.config.controls_first !== false) {
@@ -481,7 +484,7 @@ export class AutoLayoutCard extends HTMLElement {
     const forced = (it) => it.conf.full_width === true || it.conf.full_width === 'yes';
     // Unplaced cards have no height yet: use this page's last arrangement,
     // or list order, until they can be measured.
-    const placed = this._items.every((it) => it.el.isConnected);
+    const placed = list.every((it) => it.el.isConnected);
     const planKey = `v4|${location.pathname}|${cols}|${list.map((it) => it.conf.title || it.conf.type).join(',')}`;
     const key = `${cols}|${list.map((it) => this._items.indexOf(it)).join(',')}`;
     const prev = this._prevArr && this._prevArr.key === key ? this._prevArr.arr : null;
@@ -662,7 +665,7 @@ export class AutoLayoutCard extends HTMLElement {
     const esc = (t) => String(t).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
     const alerts = (this._items || [])
       .map((it, i) => ({ it, i }))
-      .filter(({ it }) => it.el._alert && it.conf.title)
+      .filter(({ it }) => it.el._alert && !it.el._denied && it.conf.title)
       .map(({ it, i }) => {
         const bg = it.el.querySelector && it.el.querySelector('.spc-bg');
         const colour = (bg && bg.style.background) || stcColor(it.conf.color || 'primary');

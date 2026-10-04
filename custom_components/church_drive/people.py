@@ -67,7 +67,7 @@ class People:
     def __init__(self, hass: HomeAssistant) -> None:
         self.hass = hass
         self._store: Store = Store(hass, STORE_VERSION, "church_drive.people")
-        self._data: dict[str, Any] = {"assign": {}, "phones_off": {}, "places": {}, "cars": {}, "seeded": False}
+        self._data: dict[str, Any] = {"assign": {}, "phones_off": {}, "places": {}, "cars": {}, "access": {}, "seeded": False}
         self._admins: dict[str, bool] = {}
         self._owner: str | None = None
         self._unsubs: list = []
@@ -290,6 +290,35 @@ class People:
     async def async_set_cars(self, person: str, cars: list[str]) -> None:
         clean = list(dict.fromkeys(str(c) for c in cars if c))
         self._data.setdefault("cars", {})[person] = clean
+        await self._async_save()
+        self._changed()
+
+    # ---- device access: who can use a device (only the restricted ones) --
+
+    def access(self) -> dict[str, list[str]]:
+        """{device id or entity id: [person entity ids]}: the devices only some
+        people use. Anything not listed is everyone's."""
+        return {k: list(v) for k, v in self._data.get("access", {}).items() if v}
+
+    def access_entities(self) -> dict[str, list[str]]:
+        """The same, per entity: a device's entities all take its people."""
+        ent_reg = er.async_get(self.hass)
+        out: dict[str, list[str]] = {}
+        for key, people in self.access().items():
+            if "." in key:
+                out[key] = sorted(set(out.get(key, [])) | set(people))
+                continue
+            for entry in er.async_entries_for_device(ent_reg, key):
+                out[entry.entity_id] = sorted(set(out.get(entry.entity_id, [])) | set(people))
+        return out
+
+    async def async_set_access(self, key: str, people: list[str]) -> None:
+        clean = list(dict.fromkeys(str(p) for p in people if str(p).startswith("person.")))
+        access = self._data.setdefault("access", {})
+        if clean:
+            access[key] = clean
+        else:
+            access.pop(key, None)
         await self._async_save()
         self._changed()
 
