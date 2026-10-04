@@ -126,11 +126,27 @@ HACS as an integration. It does two jobs:
     `card-kit.js`; a section panel hides a child card whose every entity (from its config,
     templates aside) is someone else's, and hides itself when that leaves nothing (Auto Layout
     then skips it); light cards drop such lights from their rows. Hiding only, not a lock.
+  - **Phone locations** (beta 2026-10-04): each phone in People manager › Phones has Alerts and
+    **Location** switches. Location is the person's own device trackers (Settings › People), set
+    with `church_drive/people/tracking` {person, tracker, on}; the phones list is now the
+    person's trackers plus every companion-app tracker signed in as them (`mobile_app` entry
+    `user_id`), so a tracker taken off still gets alerts. Why: HA's person follows whichever
+    tracker updated last, so Jamie's iPad at home kept saying "home" (2026-10-04 Jamie was set to
+    the Pixel and iPhone only by hand). **Location age:** the integration keeps when each
+    tracker last sent a location (`seen` in the people store; state changes and same-place
+    reports, not restores at start-up). Every 10 minutes, a person whose location is older than
+    `stale_hours` (default 6, set in Phones; `church_drive/people/settings`) gets a silent
+    `request_location_update` to their tracked phones; no answer in 15 minutes flags them
+    `stale` (`located`, `stale` on the people sensor and in `church_drive/people`). People
+    manager shows a warning with the phone fixes; "where" and the Who's home card add "· 2 days
+    old". Diane's phone stopped sending locations on 2026-10-01 (battery still reports): her
+    app's location is off or blocked on the phone; Ian has never shared one.
   - **App to match** (the Android app on `companion-apps` should follow these): Car card and
     owners (`church_drive/people/cars`, `cars` on the people sensor); People manager (picture via
     image upload + `person/update`, Cars, Arrivals, To-dos apart from Alerts, Devices);
     device access (`access` on the people sensor: hide what the person can't use); media: a TV
-    in standby is Off and power runs `script.<player>_wake`.
+    in standby is Off and power runs `script.<player>_wake`; phone Location switches and
+    "location old" (`tracker`/`tracks`/`seen` per phone, `located`/`stale` per person).
   - **Car card** (`src/car-card.js`, `custom:car-card`, v0.35.0): each car from those
     integrations (`carDevices`/`carEntities`): battery bar and %, electric range, fuel % and
     range, Plugged in / Charging / where it is, "Full by" when charging; tap for more-info.

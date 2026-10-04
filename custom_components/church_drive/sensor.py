@@ -90,7 +90,7 @@ class PeopleSensor(SensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         people = [
-            {k: p[k] for k in ("name", "first", "entity_id", "admin", "home", "place", "zone", "places", "cars", "picture", "list")}
+            {k: p[k] for k in ("name", "first", "entity_id", "admin", "home", "place", "zone", "places", "cars", "picture", "list", "located", "stale")}
             for p in self._people.people()
         ]
         return {

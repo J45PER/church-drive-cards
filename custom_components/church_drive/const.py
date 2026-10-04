@@ -34,6 +34,8 @@ WS_PEOPLE_PHONE = "church_drive/people/phone"
 WS_PEOPLE_PLACES = "church_drive/people/places"
 WS_PEOPLE_CARS = "church_drive/people/cars"
 WS_PEOPLE_ACCESS = "church_drive/people/access"
+WS_PEOPLE_TRACKING = "church_drive/people/tracking"
+WS_PEOPLE_SETTINGS = "church_drive/people/settings"
 
 # Mode icons (icons.py): read by the cards and the app, changed in the Icon Styles card.
 WS_ICONS = "church_drive/icons"

@@ -77,11 +77,30 @@ const PM_CSS = `
   .pm-x { flex:none; width:32px; height:32px; border:none; border-radius:50%; background:transparent; color:var(--secondary-text-color); cursor:pointer; display:flex; align-items:center; justify-content:center; }
   .pm-acts { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
   .pm-err { font-size:0.8rem; color:#ffab91; }
+  .pm-warn { font-size:0.8rem; line-height:1.45; border-radius:12px; padding:10px 12px; background:rgba(255,171,64,.14); color:var(--primary-text-color); }
+  .pm-warn b { color:#ffb74d; }
+  .pm-phone { flex-wrap:wrap; }
+  .pm-mini { display:flex; align-items:center; gap:6px; font-size:0.74rem; color:var(--secondary-text-color); }
+  .pm-hours { width:64px; height:32px; box-sizing:border-box; border-radius:10px; border:1px solid var(--divider-color, rgba(127,127,127,0.3));
+    background:var(--secondary-background-color, rgba(127,127,127,0.12)); color:var(--primary-text-color); font:inherit; font-size:0.85rem; padding:0 8px; }
   .pm-dev { border-radius:12px; background:rgba(127,127,127,.08); padding:10px 12px; display:flex; flex-direction:column; gap:8px; }
   .pm-dev .pm-chip { padding:6px 11px; }
   .pm-add select { flex:1; min-width:0; height:40px; border-radius:10px; border:1px solid var(--divider-color, rgba(127,127,127,0.3));
     background:var(--secondary-background-color, rgba(127,127,127,0.12)); color:var(--primary-text-color); font:inherit; font-size:0.85rem; padding:0 8px; }
 `;
+
+// "5 min ago", "3 hours ago", "2 days ago".
+export function ageText(iso, now = Date.now()) {
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return '';
+  const m = Math.max(0, Math.round((now - t) / 60000));
+  if (m < 2) return 'just now';
+  if (m < 60) return `${m} min ago`;
+  const h = Math.round(m / 60);
+  if (h < 36) return `${h} hour${h === 1 ? '' : 's'} ago`;
+  const d = Math.round(h / 24);
+  return `${d} day${d === 1 ? '' : 's'} ago`;
+}
 
 export const PeopleManagerCardEditor = createFormEditor({
   schema: () => [{ name: 'demo', selector: { boolean: {} } }],
@@ -126,8 +145,8 @@ export class PeopleManagerCard extends HTMLElement {
       kinds,
       access: { 'demo-blind': ['person.jamie', 'person.hayley'] },
       people: [
-        { entity_id: 'person.jamie', name: 'Jamie', first: 'Jamie', admin: true, home: 'home', place: 'Home', zone: '', places: [{ zone: 'zone.work', name: 'Work' }], cars: [], phones: [{ service: 'a', name: 'iPhone', on: true }], list: 'todo.x' },
-        { entity_id: 'person.hayley', name: 'Hayley', first: 'Hayley', admin: true, home: 'Frasers Group', place: 'Work', zone: 'Frasers Group', places: [], cars: ['demo-car'], phones: [{ service: 'b', name: 'Pixel 9', on: true }], list: 'todo.y' },
+        { entity_id: 'person.jamie', name: 'Jamie', first: 'Jamie', admin: true, home: 'home', place: 'Home', zone: '', places: [{ zone: 'zone.work', name: 'Work' }], cars: [], phones: [{ service: 'a', name: 'iPhone', on: true, tracker: 'device_tracker.a', tracks: true, seen: new Date(Date.now() - 300000).toISOString() }, { service: 'c', name: 'iPad', on: false, tracker: 'device_tracker.c', tracks: false }], list: 'todo.x' },
+        { entity_id: 'person.hayley', name: 'Hayley', first: 'Hayley', admin: true, home: 'Frasers Group', place: 'Work', zone: 'Frasers Group', places: [], cars: ['demo-car'], phones: [{ service: 'b', name: 'Pixel 9', on: true, tracker: 'device_tracker.b', tracks: true, seen: new Date(Date.now() - 2 * 86400000).toISOString() }], located: new Date(Date.now() - 2 * 86400000).toISOString(), stale: true, list: 'todo.y' },
       ],
     };
   }
@@ -244,6 +263,13 @@ export class PeopleManagerCard extends HTMLElement {
         else if (ev.target.matches('input')) this._draft[i].name = ev.target.value;
       };
       this._root.addEventListener('change', keep);
+      this._root.addEventListener('change', (ev) => {
+        if (!ev.target.matches('[data-hours]') || !this._admin()) return;
+        const h = Number(ev.target.value);
+        if (!(h >= 1 && h <= 72)) return;
+        this._data.stale_hours = h;
+        this._send({ type: 'church_drive/people/settings', stale_hours: h });
+      });
       this._root.addEventListener('input', keep);
       this._built = true;
     }
@@ -295,7 +321,7 @@ export class PeopleManagerCard extends HTMLElement {
 
   _where(p) {
     if (!p.home || p.home === 'unknown' || p.home === 'unavailable') return 'Location not shared';
-    return placeText(p.place, p.zone);
+    return placeText(p.place, p.zone) + (p.stale && p.located ? ` · ${ageText(p.located).replace(/ ago$/, '')} old` : '');
   }
 
   _sec(icon, colour, title, note, body) {
@@ -327,14 +353,30 @@ export class PeopleManagerCard extends HTMLElement {
     return this._sec('mdi:map-marker-outline', TEAL, 'Places', 'What "where" says for them', body);
   }
 
+  // Each phone: whether it gets alerts, and whether it shows where the person is
+  // (an iPad left at home shouldn't say they're home).
   _phones(p, admin) {
-    const rows = (p.phones || []).map((ph) => `<div class="pm-row"><span>${kitEsc(ph.name)}${ph.model ? `<small>${kitEsc(ph.model)}</small>` : ''}</span>${this._sw(ph.on, `data-act="phone" data-service="${kitEsc(ph.service)}"`, `Alerts to ${ph.name}`, !admin)}</div>`).join('');
+    const rows = (p.phones || [])
+      .map((ph) => {
+        const sub = [ph.model, ph.tracks ? (ph.seen ? `location ${ageText(ph.seen)}` : 'no location yet') : ''].filter(Boolean).join(' · ');
+        return `<div class="pm-row pm-phone"><span>${kitEsc(ph.name)}${sub ? `<small>${kitEsc(sub)}</small>` : ''}</span>
+          <span class="pm-mini">Alerts${this._sw(ph.on, `data-act="phone" data-service="${kitEsc(ph.service)}"`, `Alerts to ${ph.name}`, !admin)}</span>
+          ${ph.tracker ? `<span class="pm-mini">Location${this._sw(ph.tracks, `data-act="track" data-tracker="${kitEsc(ph.tracker)}"`, `${ph.name} shows where ${p.first} is`, !admin)}</span>` : ''}</div>`;
+      })
+      .join('');
+    const hours = (this._data && this._data.stale_hours) || 6;
+    const warn = p.stale
+      ? `<div class="pm-warn"><b>${kitEsc(p.first)}'s location is ${kitEsc(ageText(p.located).replace(/ ago$/, ''))} old.</b> The phone didn't answer when asked for a new one. On ${kitEsc(p.first)}'s phone, in the Home Assistant app's settings, turn on Background location; then in the phone's settings give the app location "Allow all the time" and battery "Unrestricted".</div>`
+      : '';
     return this._sec(
       'mdi:cellphone',
       TEAL,
       'Phones',
-      'Alerts go to switched-on phones',
-      (rows || '<div class="pm-note">No phones yet.</div>') + `<div class="pm-note">Phones join by themselves when the Home Assistant app signs in as ${kitEsc(p.first)}.</div>`,
+      'Alerts, and which phones show where they are',
+      warn +
+        (rows || '<div class="pm-note">No phones yet.</div>') +
+        `<div class="pm-note">Phones join by themselves when the Home Assistant app signs in as ${kitEsc(p.first)}. Turn Location off for a device that stays at home, like a tablet.</div>` +
+        (admin ? `<div class="pm-row pm-note"><span>A location counts as old after</span><input class="pm-hours" type="number" min="1" max="72" step="1" data-hours value="${kitEsc(hours)}" aria-label="Hours before a location counts as old"><span>hours</span></div>` : ''),
     );
   }
 
@@ -533,6 +575,11 @@ export class PeopleManagerCard extends HTMLElement {
       const ph = (p.phones || []).find((x) => x.service === b.dataset.service);
       if (ph) ph.on = !ph.on;
       return this._send({ type: 'church_drive/people/phone', person: p.entity_id, service: b.dataset.service, on: !!(ph && ph.on) });
+    } else if (act === 'track') {
+      const ph = (p.phones || []).find((x) => x.tracker === b.dataset.tracker);
+      if (!ph) return;
+      ph.tracks = !ph.tracks;
+      return this._send({ type: 'church_drive/people/tracking', person: p.entity_id, tracker: ph.tracker, on: ph.tracks });
     } else if (act === 'car') {
       const set = new Set(p.cars || []);
       if (set.has(b.dataset.device)) set.delete(b.dataset.device);

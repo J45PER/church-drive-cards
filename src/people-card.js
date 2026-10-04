@@ -10,6 +10,7 @@ import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { kitShell, kitHead, kitEsc } from './card-kit.js';
 import { placeText } from './places-card.js';
+import { ageText } from './people-manager-card.js';
 
 const PC_CSS = `
   .pc-row { display:flex; align-items:center; gap:10px; padding:7px 2px; cursor:pointer; }
@@ -73,7 +74,7 @@ export class PeopleCard extends HTMLElement {
             return [dev.name_by_user || dev.model || dev.name || 'Phone', isNaN(v) ? null : Math.round(v)];
           });
         const k = known.find((p) => p.entity_id === id) || {};
-        return { id, name: st.attributes.friendly_name || id, state: st.state, place: k.place, zone: k.zone, picture: st.attributes.entity_picture, phones };
+        return { id, name: st.attributes.friendly_name || id, state: st.state, place: k.place, zone: k.zone, picture: st.attributes.entity_picture, phones, stale: k.stale ? k.located : null };
       });
   }
 
@@ -109,7 +110,7 @@ export class PeopleCard extends HTMLElement {
       .map((p) => {
         const [word, col] = this._pill(p.state, p.place, p.zone);
         const phones = p.phones.length
-          ? p.phones.map(([n, b]) => `${n}${b != null ? ` ${b}%` : ''}`).join(' · ') + (p.state === 'unknown' ? ' · location not shared' : '')
+          ? p.phones.map(([n, b]) => `${n}${b != null ? ` ${b}%` : ''}`).join(' · ') + (p.state === 'unknown' ? ' · location not shared' : p.stale ? ` · location ${ageText(p.stale).replace(/ ago$/, '')} old` : '')
           : 'No companion app';
         return `<div class="pc-row" data-id="${kitEsc(p.id)}" role="button" tabindex="0" aria-label="${kitEsc(p.name)}: ${kitEsc(word)}">
           <div class="pc-av" style="${p.picture ? `background-image:url('${kitEsc(p.picture)}');` : `color:${colour};`}">${p.picture ? '' : kitEsc(String(p.name).charAt(0))}</div>
