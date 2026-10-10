@@ -178,8 +178,8 @@ HACS as an integration. It does two jobs:
     marker (Stop is the mode tile); with no car a greyed **No car connected** (expanded card only; the
     compact view shows the modes then). Why: `binary_sensor.zappi_locked` stayed on for 72 h, including
     a 7.6 kW overnight charge, so the lock button was misleading. "Charging" also counts plug status
-    "Charging", because the Zappi sits at 0 W / "Waiting for EV" between bursts. The Android app
-    (`chargerOverrides`, widget) still has the old Unlock / Charge now / Pause: **TODO**, same change.
+    "Charging", because the Zappi sits at 0 W / "Waiting for EV" between bursts. Colours: grey
+    No car connected, teal Charging. Android app 0.2.3 has the same (card and widget).
 - Nothing else is pending. Ideas the user hasn't asked for are under Open items.
 
 **New in v0.22.0 (2026-09-29): smoother panels, floating chips, page headers** (the user found the

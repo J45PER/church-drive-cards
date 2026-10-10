@@ -108,6 +108,8 @@ class DashboardParityTest {
         val going = chargerOverrides(z("Charging", "6400", "off"))
         assertTrue(going.show && going.locked == false && going.charging)
         assertEquals(null, chargerOverrides(z("EV Connected", "0", null)).locked)
+        // 0 W between bursts while the plug status still says Charging.
+        assertTrue(chargerOverrides(z("Charging", "0", "on")).charging)
     }
 
     @Test

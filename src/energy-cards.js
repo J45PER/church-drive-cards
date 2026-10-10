@@ -485,7 +485,8 @@ export class EvChargerCard extends HTMLElement {
           display:flex; align-items:center; justify-content:center; gap:8px; background:rgba(127,127,127,.14); color:var(--primary-text-color); }
         .ev-act.go { background:color-mix(in srgb, ${EV_TEAL} 24%, transparent); }
         .ev-act:disabled { cursor:default; opacity:.75; }
-        .ev-act.done { background:color-mix(in srgb, ${EV_TEAL} 10%, transparent); color:color-mix(in srgb, ${EV_TEAL} 70%, var(--secondary-text-color)); opacity:1; }
+        .ev-act.none { color:var(--secondary-text-color); }
+        .ev-act.live { background:color-mix(in srgb, ${EV_TEAL} 32%, transparent); color:${EV_TEAL}; opacity:1; }
         .ev-big { display:flex; align-items:baseline; gap:10px; }
         .ev-big b { font-size:2.2rem; font-weight:300; font-variant-numeric:tabular-nums; line-height:1.1; }
         .ev-two { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
@@ -547,9 +548,9 @@ export class EvChargerCard extends HTMLElement {
     const html = !a || d.unavailable || !d.found
       ? ''
       : a.none
-        ? `<button type="button" class="ev-act done" disabled aria-label="No car connected">${iconHtml('mdi:ev-plug-type2', { size: '18px' })}No car connected</button>`
+        ? `<button type="button" class="ev-act none" disabled aria-label="No car connected">${iconHtml('mdi:ev-plug-type2', { size: '18px' })}No car connected</button>`
         : a.charging
-        ? `<button type="button" class="ev-act done" disabled aria-label="Charging">${iconHtml('mdi:lightning-bolt', { size: '18px' })}Charging</button>`
+        ? `<button type="button" class="ev-act live" disabled aria-label="Charging">${iconHtml('mdi:lightning-bolt', { size: '18px' })}Charging</button>`
         : `<button type="button" class="ev-act go" data-act="charge"${a.pend ? ' disabled' : ''}>${iconHtml('mdi:lightning-bolt', { size: '18px' })}${a.pend ? 'Starting…' : 'Start charge'}</button>`;
     if (html !== this._actsHtml) {
       this._actsHtml = html;
