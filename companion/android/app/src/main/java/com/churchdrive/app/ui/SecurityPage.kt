@@ -121,7 +121,7 @@ fun CardView(card: CardSpec, entities: Map<String, EntityState>, registry: Regis
         "custom:ev-charger-card" -> ChargerCard(entities, call)
         "custom:light-control-card" -> DashboardLights.room(card.config)?.let { LightRoomCard(it, entities, LocalAreaNames.current, call) }
         "custom:media-card" -> MediaCard(card.config, entities, registry, call)
-        "custom:car-card" -> CarCard(card.config, entities, registry)
+        "custom:car-card" -> CarCard(card.config, entities, registry, call)
         else -> NotBuiltCard()
     }
 }

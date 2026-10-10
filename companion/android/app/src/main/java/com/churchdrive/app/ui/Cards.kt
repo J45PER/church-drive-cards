@@ -481,6 +481,23 @@ const val ZAPPI_POWER = "sensor.zappi_charging_power"
 const val ZAPPI_STATUS = "sensor.zappi_status"
 const val ZAPPI_PLUG = "sensor.zappi_plug_status"
 const val ZAPPI_SESSION = "sensor.zappi_charge_added_session"
+const val ZAPPI_LOCKED = "binary_sensor.zappi_locked"
+
+/**
+ * The charger's manual overrides, as on the dashboard's charger card: shown while a car is plugged in (or charging).
+ * [locked] is null when the charger doesn't say. The integration can unlock the charger but not lock it: it locks
+ * itself again next time a car is plugged in.
+ */
+data class ChargerOverrides(val show: Boolean, val locked: Boolean?, val charging: Boolean)
+
+fun chargerOverrides(entities: Map<String, EntityState>): ChargerOverrides {
+    val power = entities[ZAPPI_POWER]?.state?.toDoubleOrNull() ?: 0.0
+    val charging = power > 100
+    val plug = entities[ZAPPI_PLUG]?.takeIf { it.available }?.state
+    val plugged = plug != null && !plug.contains("disconnected", ignoreCase = true)
+    val locked = entities[ZAPPI_LOCKED]?.takeIf { it.available }?.let { it.state == "on" }
+    return ChargerOverrides(plugged || charging, locked, charging)
+}
 
 @Composable
 fun ChargerCard(entities: Map<String, EntityState>, call: CallService) {
@@ -502,6 +519,49 @@ fun ChargerCard(entities: Map<String, EntityState>, call: CallService) {
             }
         }
         val teal = toneColors(Tone.Teal)
+        val over = chargerOverrides(entities)
+        // "Unlocking…", "Starting…", "Pausing…" for up to a minute after a tap.
+        var pending by remember { mutableStateOf("") }
+        LaunchedEffect(pending) { if (pending.isNotEmpty()) { delay(60_000); pending = "" } }
+        if (over.show && mode?.available == true) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Ui.TileGap)) {
+                if (over.locked != null) Box(Modifier.weight(1f)) {
+                    if (over.locked) {
+                        TileRow(
+                            listOf(TileItem("mdi:lock", if (pending == "unlock") "Unlocking…" else "Locked · Unlock", true) {
+                                pending = "unlock"
+                                call("myenergi", "myenergi_unlock", ZAPPI_MODE, data())
+                            }),
+                            toneColors(Tone.Amber), tone.onContainer, pending != "unlock",
+                        )
+                    } else {
+                        // Greyed out in the card's colour: the integration can't lock it again.
+                        TileRow(listOf(TileItem("mdi:lock-open-variant-outline", "Unlocked", false) {}), teal, teal.accent, false)
+                    }
+                }
+                Box(Modifier.weight(1f)) {
+                    if (over.charging) {
+                        TileRow(
+                            listOf(TileItem("mdi:pause", if (pending == "pause") "Pausing…" else "Pause", false) {
+                                pending = "pause"
+                                call("select", "select_option", ZAPPI_MODE, data("option" to "Stopped"))
+                            }),
+                            teal, tone.onContainer, pending != "pause",
+                        )
+                    } else {
+                        TileRow(
+                            listOf(TileItem("mdi:lightning-bolt", if (pending == "charge") "Starting…" else "Charge now", true) {
+                                pending = "charge"
+                                // Unlock first when locked, then Fast (the charger otherwise waits at the unit).
+                                if (over.locked == true) call("myenergi", "myenergi_unlock", ZAPPI_MODE, data())
+                                call("select", "select_option", ZAPPI_MODE, data("option" to "Fast"))
+                            }),
+                            teal, tone.onContainer, pending != "charge",
+                        )
+                    }
+                }
+            }
+        }
         TileRow(
             chargerModes(mode?.options().orEmpty()).map { m ->
                 TileItem(m.icon, m.name, mode?.state == m.key) {

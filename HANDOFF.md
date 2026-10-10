@@ -147,7 +147,8 @@ HACS as an integration. It does two jobs:
     device access (`access` on the people sensor: hide what the person can't use); media: a TV
     in standby is Off and power runs `script.<player>_wake`; phone Location switches and
     "location old" (`tracker`/`tracks`/`seen` per phone, `located`/`stale` per person); car card
-    "Updated HH:MM" + Refresh (car's `button.*_wakeup`); charger Unlock / Charge now / Pause.
+    "Updated HH:MM" + Refresh (car's `button.*_wakeup`); charger Unlock / Charge now / Pause (both done
+    in app 0.2.1, `chargerOverrides` in `Cards.kt`, `carAsOf`/`carStale` in `CarCard.kt`).
   - **Car card** (`src/car-card.js`, `custom:car-card`, v0.35.0): each car from those
     integrations (`carDevices`/`carEntities`): battery bar and %, electric range, fuel % and
     range, Plugged in / Charging / where it is, "Full by" when charging; tap for more-info.
