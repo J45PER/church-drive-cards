@@ -47,6 +47,38 @@ function platformEntities(hass, platform, idHint) {
   return ids;
 }
 
+// Today's and tomorrow's half-hour rates for a meter, and which count as cheap (the day's lowest, when rates differ).
+export function ratesOf(hass, m) {
+  const get = (k) => {
+    const e = m.elec && hass.states[`event.${m.elec}${k}`];
+    return (e && e.attributes.rates) || [];
+  };
+  const all = [...get('current_day_rates'), ...get('next_day_rates')]
+    .map((r) => ({ start: new Date(r.start), end: new Date(r.end), v: Number(r.value_inc_vat) }))
+    .filter((r) => !isNaN(r.start) && !isNaN(r.v))
+    .sort((a, b) => a.start - b.start);
+  const min = all.length ? Math.min(...all.map((r) => r.v)) : null;
+  const max = all.length ? Math.max(...all.map((r) => r.v)) : null;
+  const cheap = (v) => min != null && max != null && max - min > 0.001 && v <= min + 0.001;
+  return { all, cheap, min };
+}
+
+// "Cheap now until 05:30" or the next cheap window ({ now, from, until, v }), or null.
+export function windowOf(rates) {
+  const now = Date.now();
+  const i = rates.all.findIndex((r) => r.start <= now && r.end > now);
+  if (i < 0) return null;
+  const runEnd = (k) => {
+    let j = k;
+    while (j + 1 < rates.all.length && rates.cheap(rates.all[j + 1].v) && +rates.all[j + 1].start === +rates.all[j].end) j += 1;
+    return rates.all[j].end;
+  };
+  if (rates.cheap(rates.all[i].v)) return { now: true, until: runEnd(i), v: rates.all[i].v };
+  const k = rates.all.findIndex((r, n) => n > i && rates.cheap(r.v));
+  if (k < 0) return null;
+  return { now: false, from: rates.all[k].start, until: runEnd(k), v: rates.all[k].v };
+}
+
 // The Octopus meters: { elec: 'octopus_energy_electricity_<mpan>_<serial>_', gas: …, account: … }.
 export function octoFind(hass) {
   const ids = platformEntities(hass, 'octopus_energy', 'octopus_energy_');
@@ -108,31 +140,12 @@ export class OctopusCard extends HTMLElement {
 
   // Today's and tomorrow's half-hour rates, and which count as cheap.
   _rates(m) {
-    const get = (k) => (this._s(m.elec, k, 'event') && this._s(m.elec, k, 'event').attributes.rates) || [];
-    const all = [...get('current_day_rates'), ...get('next_day_rates')]
-      .map((r) => ({ start: new Date(r.start), end: new Date(r.end), v: Number(r.value_inc_vat) }))
-      .filter((r) => !isNaN(r.start) && !isNaN(r.v))
-      .sort((a, b) => a.start - b.start);
-    const min = all.length ? Math.min(...all.map((r) => r.v)) : null;
-    const max = all.length ? Math.max(...all.map((r) => r.v)) : null;
-    const cheap = (v) => min != null && max != null && max - min > 0.001 && v <= min + 0.001;
-    return { all, cheap, min };
+    return ratesOf(this._hass, m);
   }
 
   // "Cheap now until 05:30" or the next cheap window and how long until it.
   _window(rates) {
-    const now = Date.now();
-    const i = rates.all.findIndex((r) => r.start <= now && r.end > now);
-    if (i < 0) return null;
-    const runEnd = (k) => {
-      let j = k;
-      while (j + 1 < rates.all.length && rates.cheap(rates.all[j + 1].v) && +rates.all[j + 1].start === +rates.all[j].end) j += 1;
-      return rates.all[j].end;
-    };
-    if (rates.cheap(rates.all[i].v)) return { now: true, until: runEnd(i), v: rates.all[i].v };
-    const k = rates.all.findIndex((r, n) => n > i && rates.cheap(r.v));
-    if (k < 0) return null;
-    return { now: false, from: rates.all[k].start, until: runEnd(k), v: rates.all[k].v };
+    return windowOf(rates);
   }
 
   _render() {
