@@ -1,0 +1,54 @@
+# Automation 'Church Drive: Zappi catches up after a mode change': a copy of the live automation.
+alias: 'Church Drive: Zappi catches up after a mode change'
+description: The Zappi's readings (status, power, plug) only refresh about once a minute, so after Stop the card and app could say 'Charging'
+  for up to a minute, and Start the same. After any charge mode change, ask for fresh readings every 6 seconds for 30 seconds. If the Zappi is
+  still charging 30 seconds after Stopped was picked, send Stopped once more.
+triggers:
+- trigger: state
+  entity_id: select.zappi_charge_mode
+  not_from:
+  - unavailable
+  - unknown
+  not_to:
+  - unavailable
+  - unknown
+conditions: []
+actions:
+- alias: Fresh readings, five times
+  repeat:
+    count: 5
+    sequence:
+    - delay:
+        seconds: 6
+    - action: homeassistant.update_entity
+      target:
+        entity_id:
+        - sensor.zappi_status
+        - sensor.zappi_plug_status
+        - sensor.zappi_charging_power
+- alias: 'Still charging after Stop: send Stop again'
+  if:
+  - condition: state
+    entity_id: select.zappi_charge_mode
+    state: Stopped
+  - condition: state
+    entity_id: sensor.zappi_status
+    state:
+    - Charging
+    - Boosting
+  then:
+  - action: select.select_option
+    target:
+      entity_id: select.zappi_charge_mode
+    data:
+      option: Stopped
+  - delay:
+      seconds: 6
+  - action: homeassistant.update_entity
+    target:
+      entity_id:
+      - sensor.zappi_status
+      - sensor.zappi_plug_status
+      - sensor.zappi_charging_power
+mode: restart
+max_exceeded: silent

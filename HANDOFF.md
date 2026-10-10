@@ -180,6 +180,16 @@ HACS as an integration. It does two jobs:
     a 7.6 kW overnight charge, so the lock button was misleading. "Charging" also counts plug status
     "Charging", because the Zappi sits at 0 W / "Waiting for EV" between bursts. Colours: grey
     No car connected, teal Charging. Android app 0.2.3 has the same (card and widget).
+  - **Zappi smart charge** (automation + helpers, live 2026-10-10, copy in `ha/zappi-smart-charge.yaml`): a car plugged
+    in with no mode picked waits for the cheapest Octopus half-hours (within 10% of the cheapest before "ready by",
+    07:00, and no dearer than the max price, 15p), then picks Fast; at the end of the window it picks Stopped. Anyone
+    picking a mode takes over until unplugged. State in `input_select.zappi_smart_charge_state` (Idle, Waiting,
+    Charging, Done, Manual); switch `input_boolean.zappi_smart_charge`. Not run through a real cheap window yet
+    (first chance: the 00:30 start after the car is plugged in with Stopped).
+  - **Smart charge in the card (v0.41.0) and app (0.5.0):** `ev-charger-card` has a Smart charge switch
+    (`input_boolean.zappi_smart_charge`), "Stopping…" while Stop waits for the readings, and a prompt when Start charge or
+    Fast is pressed at the normal rate with a cheap window within 18 h: Charge at HH:MM (`script.zappi_charge_later`) or
+    Charge now. "Church Drive: Zappi catches up after a mode change" refreshes the readings after any mode change.
 - Nothing else is pending. Ideas the user hasn't asked for are under Open items.
 
 **New in v0.22.0 (2026-09-29): smoother panels, floating chips, page headers** (the user found the

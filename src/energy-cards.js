@@ -15,13 +15,18 @@
 //
 // EV Charger Card: a Zappi's state, power, this charge and mode buttons
 // (Stop, Eco, Eco+, Fast). Until the myenergi integration is set up it says
-// so and waits.
+// so and waits. With "Zappi smart charge" set up in Home Assistant (see
+// ha/zappi-smart-charge.yaml) it also has a Smart charge switch (charge at
+// the cheapest Octopus rate by itself), and pressing Start charge or Fast at
+// the normal rate offers "Charge at 00:30" or "Charge now". Right after Stop
+// it says "Stopping…" until the charger's readings catch up.
 
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { KIT_COLOR, kitShell, kitHead, kitTiles, kitNum, kitCap, kitEsc, kitCompact, kitCompactable } from './card-kit.js';
 import { iconFor, watchIcons } from './icon-library.js';
+import { openPopup } from './popup.js';
 
 // Octopus's own pink, and the charger's teal.
 export const OCTO_PINK = '#f050f8';
@@ -45,6 +50,38 @@ function platformEntities(hass, platform, idHint) {
   const reg = hass.entities || {};
   const ids = Object.keys(hass.states).filter((id) => (reg[id] ? reg[id].platform === platform : id.includes(idHint)));
   return ids;
+}
+
+// Today's and tomorrow's half-hour rates for a meter, and which count as cheap (the day's lowest, when rates differ).
+export function ratesOf(hass, m) {
+  const get = (k) => {
+    const e = m.elec && hass.states[`event.${m.elec}${k}`];
+    return (e && e.attributes.rates) || [];
+  };
+  const all = [...get('current_day_rates'), ...get('next_day_rates')]
+    .map((r) => ({ start: new Date(r.start), end: new Date(r.end), v: Number(r.value_inc_vat) }))
+    .filter((r) => !isNaN(r.start) && !isNaN(r.v))
+    .sort((a, b) => a.start - b.start);
+  const min = all.length ? Math.min(...all.map((r) => r.v)) : null;
+  const max = all.length ? Math.max(...all.map((r) => r.v)) : null;
+  const cheap = (v) => min != null && max != null && max - min > 0.001 && v <= min + 0.001;
+  return { all, cheap, min };
+}
+
+// "Cheap now until 05:30" or the next cheap window ({ now, from, until, v }), or null.
+export function windowOf(rates) {
+  const now = Date.now();
+  const i = rates.all.findIndex((r) => r.start <= now && r.end > now);
+  if (i < 0) return null;
+  const runEnd = (k) => {
+    let j = k;
+    while (j + 1 < rates.all.length && rates.cheap(rates.all[j + 1].v) && +rates.all[j + 1].start === +rates.all[j].end) j += 1;
+    return rates.all[j].end;
+  };
+  if (rates.cheap(rates.all[i].v)) return { now: true, until: runEnd(i), v: rates.all[i].v };
+  const k = rates.all.findIndex((r, n) => n > i && rates.cheap(r.v));
+  if (k < 0) return null;
+  return { now: false, from: rates.all[k].start, until: runEnd(k), v: rates.all[k].v };
 }
 
 // The Octopus meters: { elec: 'octopus_energy_electricity_<mpan>_<serial>_', gas: …, account: … }.
@@ -108,31 +145,12 @@ export class OctopusCard extends HTMLElement {
 
   // Today's and tomorrow's half-hour rates, and which count as cheap.
   _rates(m) {
-    const get = (k) => (this._s(m.elec, k, 'event') && this._s(m.elec, k, 'event').attributes.rates) || [];
-    const all = [...get('current_day_rates'), ...get('next_day_rates')]
-      .map((r) => ({ start: new Date(r.start), end: new Date(r.end), v: Number(r.value_inc_vat) }))
-      .filter((r) => !isNaN(r.start) && !isNaN(r.v))
-      .sort((a, b) => a.start - b.start);
-    const min = all.length ? Math.min(...all.map((r) => r.v)) : null;
-    const max = all.length ? Math.max(...all.map((r) => r.v)) : null;
-    const cheap = (v) => min != null && max != null && max - min > 0.001 && v <= min + 0.001;
-    return { all, cheap, min };
+    return ratesOf(this._hass, m);
   }
 
   // "Cheap now until 05:30" or the next cheap window and how long until it.
   _window(rates) {
-    const now = Date.now();
-    const i = rates.all.findIndex((r) => r.start <= now && r.end > now);
-    if (i < 0) return null;
-    const runEnd = (k) => {
-      let j = k;
-      while (j + 1 < rates.all.length && rates.cheap(rates.all[j + 1].v) && +rates.all[j + 1].start === +rates.all[j].end) j += 1;
-      return rates.all[j].end;
-    };
-    if (rates.cheap(rates.all[i].v)) return { now: true, until: runEnd(i), v: rates.all[i].v };
-    const k = rates.all.findIndex((r, n) => n > i && rates.cheap(r.v));
-    if (k < 0) return null;
-    return { now: false, from: rates.all[k].start, until: runEnd(k), v: rates.all[k].v };
+    return windowOf(rates);
   }
 
   _render() {
@@ -431,15 +449,18 @@ export class EvChargerCard extends HTMLElement {
 
   _data() {
     const c = this.config;
-    if (c.demo) return { found: true, mode: 'Eco+', options: ['Fast', 'Eco', 'Eco+', 'Stopped'], power: 7100, session: 18.4, status: 'Charging', plug: 'Connected', locked: false };
+    if (c.demo) return { found: true, mode: 'Eco+', options: ['Fast', 'Eco', 'Eco+', 'Stopped'], power: 7100, session: 18.4, status: 'Charging', plug: 'Connected', locked: false, smart: { on: true, phase: 'Waiting', later: true } };
     const e = evFind(this._hass, c);
     const s = (id) => id && this._hass.states[id];
     if (!s(e.mode) && !s(e.power) && !s(e.status)) return { found: false };
     let power = kitNum(s(e.power));
     if (power != null && s(e.power).attributes.unit_of_measurement === 'kW') power *= 1000;
+    const smartOn = s('input_boolean.zappi_smart_charge');
+    const smartPhase = s('input_select.zappi_smart_charge_state');
     return {
       found: true,
       e,
+      smart: smartOn ? { on: smartOn.state === 'on', phase: smartPhase ? smartPhase.state : null, later: !!s('script.zappi_charge_later') } : null,
       mode: s(e.mode) ? s(e.mode).state : null,
       options: s(e.mode) ? s(e.mode).attributes.options || [] : [],
       power,
@@ -463,8 +484,10 @@ export class EvChargerCard extends HTMLElement {
     const c = this.config;
     const d = this._data();
     const charging = d.found && d.power != null && d.power > 100;
+    // Stop was picked but the charger's readings haven't caught up yet (they refresh about once a minute).
+    const stopping = d.found && !d.unavailable && d.mode === 'Stopped' && (charging || /^charging/i.test(d.plug || ''));
     const col = !d.found || d.unavailable ? KIT_COLOR.off : charging ? EV_TEAL : KIT_COLOR.off;
-    const word = !d.found ? 'Not connected yet' : d.unavailable ? 'Unavailable' : charging ? `Charging · ${d.mode || ''}`.replace(/ · $/, '') : kitCap(d.status || d.plug || d.mode || 'Idle');
+    const word = !d.found ? 'Not connected yet' : d.unavailable ? 'Unavailable' : stopping ? 'Stopping…' : charging ? `Charging · ${d.mode || ''}`.replace(/ · $/, '') : kitCap(d.status || d.plug || d.mode || 'Idle');
     if (this._compact) {
       return kitCompact(this, {
         name: c.name || 'Car charger',
@@ -473,8 +496,11 @@ export class EvChargerCard extends HTMLElement {
         valueColor: EV_TEAL,
         status: d.found ? word : 'Not connected yet',
         // While a car's plugged in, the overrides take the modes' place (tap the name for the modes).
-        buttons: this._compactActs(d, charging) || (d.found && c.show_buttons !== false && d.mode != null ? EV_MODES.filter((b) => !d.options.length || d.options.includes(b.key)).map((b) => ({ ...b, icon: iconFor('charger', b.key, b.icon), label: b.name, on: d.mode === b.key })) : []),
-        onButton: (b) => (b.act ? this._override(b.act) : this._setMode(b.key)),
+        buttons: [
+          ...(this._compactActs(d, charging) || (d.found && c.show_buttons !== false && d.mode != null ? EV_MODES.filter((b) => !d.options.length || d.options.includes(b.key)).map((b) => ({ ...b, icon: iconFor('charger', b.key, b.icon), label: b.name, on: d.mode === b.key })) : [])),
+          ...(d.found && !d.unavailable && d.smart ? [{ key: 'smart', act: 'smart', icon: 'mdi:clock-fast', label: 'Smart', on: d.smart.on, color: EV_TEAL }] : []),
+        ],
+        onButton: (b) => (b.act ? this._override(b.act) : this._pick(b.key)),
       });
     }
     if (!this._built) {
@@ -487,6 +513,14 @@ export class EvChargerCard extends HTMLElement {
         .ev-act:disabled { cursor:default; opacity:.75; }
         .ev-act.none { color:var(--secondary-text-color); }
         .ev-act.live { background:color-mix(in srgb, ${EV_TEAL} 32%, transparent); color:${EV_TEAL}; opacity:1; }
+        .ev-act.stopping { background:rgba(127,127,127,.2); color:var(--secondary-text-color); opacity:1; }
+        .ev-act.smart { justify-content:flex-start; text-align:left; min-height:52px; }
+        .ev-act.smart .ev-st { flex:1; display:flex; flex-direction:column; gap:1px; min-width:0; }
+        .ev-act.smart .ev-st small { font-weight:400; font-size:.72rem; color:var(--secondary-text-color); white-space:normal; line-height:1.25; }
+        .ev-sw { flex:none; width:38px; height:22px; border-radius:999px; background:rgba(127,127,127,.45); position:relative; transition:background .15s; }
+        .ev-sw::after { content:''; position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:#fff; transition:left .15s; }
+        .ev-sw.on { background:${EV_TEAL}; }
+        .ev-sw.on::after { left:19px; }
         .ev-big { display:flex; align-items:baseline; gap:10px; }
         .ev-big b { font-size:2.2rem; font-weight:300; font-variant-numeric:tabular-nums; line-height:1.1; }
         .ev-two { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
@@ -498,12 +532,13 @@ export class EvChargerCard extends HTMLElement {
       this._acts.addEventListener('click', (ev) => {
         const b = ev.target.closest('[data-act]');
         if (b && !b.disabled) this._override(b.dataset.act);
+        if (ev.target.closest('[data-smart]')) this._override('smart');
       });
       this._built = true;
     }
     kitHead(this, c.name || 'Car charger', word + (c.demo ? ' · demo' : ''), col === KIT_COLOR.off ? EV_TEAL : col);
     const rate = this._rate();
-    const sig = JSON.stringify([d, rate]);
+    const sig = JSON.stringify([d, rate, stopping, d.smart ? this._smartText(d) : '']);
     if (sig !== this._sig) {
       this._sig = sig;
       if (!d.found) {
@@ -511,7 +546,7 @@ export class EvChargerCard extends HTMLElement {
       } else {
         const cheap = rate != null && rate < 0.1;
         this._body.innerHTML = `
-          <div class="ev-big"><b style="color:${charging ? EV_TEAL : 'var(--secondary-text-color)'};">${charging ? `${(d.power / 1000).toFixed(1)} kW` : 'Not charging'}</b>${charging ? '<span class="ck-sub">charging now</span>' : ''}${rate != null ? `<span style="margin-left:auto; font-size:.72rem; font-weight:700; padding:2px 9px; border-radius:999px; background:color-mix(in srgb, ${cheap ? CHEAP : PEAK} 22%, transparent); color:${cheap ? CHEAP : PEAK};">${pence(rate)} rate</span>` : ''}</div>
+          <div class="ev-big"><b style="color:${charging ? EV_TEAL : 'var(--secondary-text-color)'};">${charging ? `${(d.power / 1000).toFixed(1)} kW` : 'Not charging'}</b>${charging ? `<span class="ck-sub">${stopping ? 'stopping…' : 'charging now'}</span>` : ''}${rate != null ? `<span style="margin-left:auto; font-size:.72rem; font-weight:700; padding:2px 9px; border-radius:999px; background:color-mix(in srgb, ${cheap ? CHEAP : PEAK} 22%, transparent); color:${cheap ? CHEAP : PEAK};">${pence(rate)} rate</span>` : ''}</div>
           <div class="ev-two">
             <div class="ev-stat"><b>${d.session == null ? '–' : `${d.session.toFixed(1)} kWh`}</b><span>This charge${d.session != null && rate != null && charging ? ` · about ${pounds(d.session * rate)}` : ''}</span></div>
             <div class="ev-stat"><b>${kitEsc(kitCap(d.plug || d.status || '–'))}</b><span>${d.plug ? 'Plug' : 'Status'}</span></div>
@@ -520,7 +555,7 @@ export class EvChargerCard extends HTMLElement {
     }
     this._renderActs(d, charging);
     const modes = d.found && c.show_buttons !== false && d.mode != null ? EV_MODES.filter((b) => !d.options.length || d.options.includes(b.key)).map((b) => ({ ...b, icon: iconFor('charger', b.key, b.icon), on: d.mode === b.key })) : [];
-    kitTiles(this.querySelector('.ev-modes'), modes, (t) => this._setMode(t.key));
+    kitTiles(this.querySelector('.ev-modes'), modes, (t) => this._pick(t.key));
     hydrateIcons(this);
   }
 
@@ -539,6 +574,7 @@ export class EvChargerCard extends HTMLElement {
     const active = charging || /^charging/i.test(d.plug || '');
     if (!plugged && !active) return { none: true };
     const pend = this._pend && Date.now() - this._pend.at < 60000 && this._pend.act === 'charge';
+    if (active && d.mode === 'Stopped') return { charging: true, stopping: true };
     return active ? { charging: true } : { charging: false, pend };
   }
 
@@ -549,12 +585,19 @@ export class EvChargerCard extends HTMLElement {
       ? ''
       : a.none
         ? `<button type="button" class="ev-act none" disabled aria-label="No car connected">${iconHtml('mdi:ev-plug-type2', { size: '18px' })}No car connected</button>`
+        : a.stopping
+        ? `<button type="button" class="ev-act stopping" disabled aria-label="Stopping">${iconHtml('mdi:stop-circle-outline', { size: '18px' })}Stopping…</button>`
         : a.charging
         ? `<button type="button" class="ev-act live" disabled aria-label="Charging">${iconHtml('mdi:lightning-bolt', { size: '18px' })}Charging</button>`
         : `<button type="button" class="ev-act go" data-act="charge"${a.pend ? ' disabled' : ''}>${iconHtml('mdi:lightning-bolt', { size: '18px' })}${a.pend ? 'Starting…' : 'Start charge'}</button>`;
-    if (html !== this._actsHtml) {
-      this._actsHtml = html;
-      this._acts.innerHTML = html;
+    const sm = d.smart;
+    const smart = sm && d.found && !d.unavailable
+      ? `<button type="button" class="ev-act smart" data-smart role="switch" aria-checked="${sm.on}" aria-label="Smart charge">${iconHtml('mdi:clock-fast', { size: '20px' })}<span class="ev-st">Smart charge<small>${kitEsc(this._smartText(d))}</small></span><span class="ev-sw${sm.on ? ' on' : ''}"></span></button>`
+      : '';
+    const all = html + smart;
+    if (all !== this._actsHtml) {
+      this._actsHtml = all;
+      this._acts.innerHTML = all;
       hydrateIcons(this._acts);
     }
   }
@@ -563,20 +606,86 @@ export class EvChargerCard extends HTMLElement {
   _compactActs(d, charging) {
     const a = d.mode == null ? null : this._actState(d, charging);
     if (!a || a.none) return null;
-    return [a.charging
+    return [a.stopping
+      ? { key: 'stopping', act: 'none', icon: 'mdi:stop-circle-outline', label: 'Stopping…', on: true, color: EV_TEAL }
+      : a.charging
       ? { key: 'charging', act: 'none', icon: 'mdi:lightning-bolt', label: 'Charging', on: true, color: EV_TEAL }
       : { key: 'charge', act: 'charge', icon: 'mdi:lightning-bolt', label: a.pend ? 'Starting…' : 'Start charge', on: true, color: EV_TEAL }];
   }
 
+  // The cheap rate window as { now, from, until, v }, or null when Octopus hasn't sent rates.
+  _cheapWindow() {
+    if (this.config.demo) return { now: false, from: new Date(new Date().setHours(24, 30, 0, 0)), until: new Date(new Date().setHours(29, 30, 0, 0)), v: 0.0476 };
+    return windowOf(ratesOf(this._hass, octoFind(this._hass)));
+  }
+
+  // What the Smart charge switch says under its name.
+  _smartText(d) {
+    const sm = d.smart;
+    if (!sm.on) return 'Off: it only charges when you start it';
+    const w = this._cheapWindow();
+    if (sm.phase === 'Charging') return w && w.now ? `Charging at the cheap rate until ${hhmm(w.until)}` : 'Charging at the cheap rate';
+    if (sm.phase === 'Waiting') return w && !w.now ? `Waiting for the cheap rate, ${hhmm(w.from)}` : 'Starting at the cheap rate';
+    if (sm.phase === 'Done') return 'Finished for this plug-in';
+    if (sm.phase === 'Manual') return "You're in control for this plug-in";
+    return 'Charges at the cheap rate when a car is plugged in';
+  }
+
+  // Start charge / Fast pressed at the normal rate with the cheap rate coming up: ask first.
+  // Returns true when it asked (the choice carries on from the pop-up).
+  _ask(kind) {
+    const d = this._data();
+    if (!d.found || !d.smart || !d.smart.later) return false;
+    const w = this._cheapWindow();
+    if (!w || w.now || w.from - Date.now() > 18 * 3600e3) return false;
+    const rate = this.config.demo ? 0.253 : this._rate();
+    const at = hhmm(w.from);
+    const box = document.createElement('div');
+    box.style.cssText = 'display:flex; flex-direction:column; gap:10px; padding:2px 2px 10px;';
+    box.innerHTML = `<div style="line-height:1.5; font-size:.92rem;">It's the normal rate now${rate != null ? ` (<b>${pence(rate)}</b> a kWh)` : ''}. The cheap rate (<b>${pence(w.v)}</b>) starts at <b>${at}</b>, in ${span(w.from - Date.now())}.</div>
+      <button type="button" class="ev-act go" data-later>${iconHtml('mdi:clock-fast', { size: '18px' })}Charge at ${at} (cheap rate)</button>
+      <button type="button" class="ev-act" data-now>${iconHtml('mdi:lightning-bolt', { size: '18px' })}Charge now${rate != null ? ` at ${pence(rate)}` : ''}</button>
+      <div class="ck-sub" style="line-height:1.4;">Charging later hands it to smart charge: it starts by itself at the cheap rate and stops when that ends.</div>`;
+    const pop = openPopup(this, { title: 'Wait for the cheap rate?', icon: 'mdi:clock-fast', color: EV_TEAL, content: box });
+    box.querySelector('[data-later]').addEventListener('click', () => {
+      if (!this.config.demo) this._hass.callService('script', 'turn_on', {}, { entity_id: 'script.zappi_charge_later' }).catch(() => {});
+      pop.close();
+    });
+    box.querySelector('[data-now]').addEventListener('click', () => {
+      pop.close();
+      if (kind === 'fast') this._setMode('Fast');
+      else this._start();
+    });
+    return true;
+  }
+
+  // A mode tile: Fast at the normal rate is asked about first.
+  _pick(mode) {
+    if (mode === 'Fast' && this._ask('fast')) return;
+    this._setMode(mode);
+  }
+
   _override(act) {
-    if (this.config.demo || act !== 'charge') return;
+    if (act === 'smart') {
+      const d = this._data();
+      if (!this.config.demo && d.smart) this._hass.callService('input_boolean', d.smart.on ? 'turn_off' : 'turn_on', {}, { entity_id: 'input_boolean.zappi_smart_charge' }).catch(() => {});
+      return;
+    }
+    if (act !== 'charge') return;
+    if (this._ask('charge')) return;
+    this._start();
+  }
+
+  // Start charge: unlock if locked, then Fast.
+  _start() {
+    if (this.config.demo) return;
     const e = evFind(this._hass, this.config);
     if (!e.mode) return;
     const locked = e.locked && this._hass.states[e.locked] && this._hass.states[e.locked].state === 'on';
     const unlock = () => this._hass.callService('myenergi', 'myenergi_unlock', {}, { entity_id: e.mode }).catch(() => {});
     // Unlock first when locked, then Fast (the charger otherwise waits at the unit).
     (locked ? unlock() : Promise.resolve()).then(() => this._setMode('Fast'));
-    this._pend = { act, at: Date.now() };
+    this._pend = { act: 'charge', at: Date.now() };
     this._actsHtml = null;
     this._sig = null;
     this._render();

@@ -1,0 +1,31 @@
+# Script script.zappi_charge_later: the 'Charge at HH:MM' choice in the charger prompt calls it. A copy of the live script.
+alias: 'Zappi: charge at the cheap rate'
+description: 'Used by the ''Charge at HH:MM'' choice in Church Drive''s charger prompt (dashboard and app): hand the charge to Zappi smart charge.
+  It puts smart charge into Waiting (so it takes over even if someone had picked a mode earlier), makes sure smart charge is on, then stops the
+  Zappi. Smart charge starts it at the next cheap Octopus rate, or straight away if the rate is cheap already.'
+icon: mdi:ev-station
+mode: single
+sequence:
+- alias: Smart charge is in charge
+  action: input_select.select_option
+  target:
+    entity_id: input_select.zappi_smart_charge_state
+  data:
+    option: Waiting
+- alias: Make sure smart charge is on
+  action: input_boolean.turn_on
+  target:
+    entity_id: input_boolean.zappi_smart_charge
+- alias: Hold the charge until the cheap rate
+  if:
+  - condition: not
+    conditions:
+    - condition: state
+      entity_id: select.zappi_charge_mode
+      state: Stopped
+  then:
+  - action: select.select_option
+    target:
+      entity_id: select.zappi_charge_mode
+    data:
+      option: Stopped
