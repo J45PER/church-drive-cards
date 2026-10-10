@@ -191,12 +191,17 @@ export class CarCard extends HTMLElement {
     const word = empty ? 'No cars' : charging ? `${charging} charging` : cars.length === 1 ? (cars[0].plugged ? 'Plugged in' : cars[0].where || '') : `${cars.length} cars`;
     if (this._compact) {
       const x = cars[0];
+      const old = !!x && (x.plugged || x.charging) && x.asOf && Date.now() - x.asOf > STALE_MS;
+      const asking = !!x && this._asking && this._asking[x.wake] && Date.now() - this._asking[x.wake] < 3 * 60000;
       return kitCompact(this, {
         name: c.title || (cars.length === 1 ? x.name : 'Cars'),
         color: charging ? CAR_TEAL : KIT_COLOR.off,
         value: x && x.battery != null ? `${Math.round(x.battery)}%` : '',
         valueColor: CAR_TEAL,
-        status: word + (c.demo ? ' · demo' : ''),
+        status: word + (old ? ` · Updated ${carTime(x.asOf)}` : '') + (c.demo ? ' · demo' : ''),
+        // Old figures while plugged in: Refresh (wakes the car).
+        buttons: old && x.wake ? [{ key: 'refresh', icon: 'mdi:refresh', label: asking ? 'Asking…' : 'Refresh', title: 'Ask the car for its figures now' }] : [],
+        onButton: () => !asking && this._wake(x.wake),
       });
     }
     if (!this._built) {
@@ -220,13 +225,7 @@ export class CarCard extends HTMLElement {
         const wake = ev.target.closest('[data-wake]');
         if (wake) {
           ev.stopPropagation();
-          if (this.config.demo) return;
-          this._asking = { ...(this._asking || {}), [wake.dataset.wake]: Date.now() };
-          this._hass.callService('button', 'press', { entity_id: wake.dataset.wake }).catch(() => {});
-          this._sig = null;
-          this._render();
-          // Back to "Refresh" if the car hasn't answered in 3 minutes.
-          setTimeout(() => { this._sig = null; this._render(); }, 3 * 60000 + 500);
+          this._wake(wake.dataset.wake);
           return;
         }
         const el = ev.target.closest('[data-id]');
@@ -265,6 +264,17 @@ export class CarCard extends HTMLElement {
           })
           .join('');
     hydrateIcons(this);
+  }
+
+  // Press the car's wake-up button: it sends its figures in about 20 seconds.
+  _wake(id) {
+    if (this.config.demo || !id) return;
+    this._asking = { ...(this._asking || {}), [id]: Date.now() };
+    this._hass.callService('button', 'press', { entity_id: id }).catch(() => {});
+    this._sig = null;
+    this._render();
+    // Back to "Refresh" if the car hasn't answered in 3 minutes.
+    setTimeout(() => { this._sig = null; this._render(); }, 3 * 60000 + 500);
   }
 
   getCardSize() {

@@ -472,8 +472,9 @@ export class EvChargerCard extends HTMLElement {
         value: charging ? `${(d.power / 1000).toFixed(1)} kW` : '',
         valueColor: EV_TEAL,
         status: d.found ? word : 'Not connected yet',
-        buttons: d.found && c.show_buttons !== false && d.mode != null ? EV_MODES.filter((b) => !d.options.length || d.options.includes(b.key)).map((b) => ({ ...b, icon: iconFor('charger', b.key, b.icon), label: b.name, on: d.mode === b.key })) : [],
-        onButton: (b) => this._setMode(b.key),
+        // While a car's plugged in, the overrides take the modes' place (tap the name for the modes).
+        buttons: this._compactActs(d, charging) || (d.found && c.show_buttons !== false && d.mode != null ? EV_MODES.filter((b) => !d.options.length || d.options.includes(b.key)).map((b) => ({ ...b, icon: iconFor('charger', b.key, b.icon), label: b.name, on: d.mode === b.key })) : []),
+        onButton: (b) => (b.act ? this._override(b.act) : this._setMode(b.key)),
       });
     }
     if (!this._built) {
@@ -554,6 +555,19 @@ export class EvChargerCard extends HTMLElement {
       this._acts.innerHTML = html;
       hydrateIcons(this._acts);
     }
+  }
+
+  // The overrides as compact buttons, or null when no car's plugged in.
+  _compactActs(d, charging) {
+    const plugged = d.found && !d.unavailable && d.plug && !/disconnected/i.test(d.plug);
+    if ((!plugged && !charging) || d.mode == null) return null;
+    const pend = this._pend && Date.now() - this._pend.at < 60000 ? this._pend.act : '';
+    return [
+      d.locked ? { key: 'unlock', act: 'unlock', icon: 'mdi:lock', label: pend === 'unlock' ? 'Unlocking…' : 'Unlock', title: 'Locked: unlock the charger' } : null,
+      charging
+        ? { key: 'pause', act: 'pause', icon: 'mdi:pause', label: pend === 'pause' ? 'Pausing…' : 'Pause' }
+        : { key: 'charge', act: 'charge', icon: 'mdi:lightning-bolt', label: pend === 'charge' ? 'Starting…' : 'Charge now', on: true, color: EV_TEAL },
+    ].filter(Boolean);
   }
 
   _override(act) {
