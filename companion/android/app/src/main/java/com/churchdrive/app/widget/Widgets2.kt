@@ -381,8 +381,6 @@ class MyTodoGlanceWidget : SceneWidget("To-do") {
                         Text(entries.firstOrNull()?.summary ?: "To-do", style = title(p), maxLines = 1)
                         Text(if (entries.size > 1) "$sub · next: ${entries.first().category}" else sub, style = line(p.tone(entries.firstOrNull()?.tone ?: Tone.Green).accent), maxLines = 1)
                     }
-                    Spacer(GlanceModifier.width(8.dp))
-                    VoiceTaskButton(p, 40.dp)
                 }
             }
             SizeClass.Square -> WidgetCard(p, padding = 12.dp) {
@@ -393,7 +391,7 @@ class MyTodoGlanceWidget : SceneWidget("To-do") {
                 entries.firstOrNull()?.let { Text(it.summary, style = TextStyle(color = cp(p.muted), fontSize = 12.sp), maxLines = 2) }
             }
             else -> WidgetCard(p, padding = 12.dp, top = true) {
-                HeaderRow(icon, "To-do", sub, p, tone) { VoiceTaskButton(p) }
+                HeaderRow(icon, "To-do", sub, p, tone)
                 Spacer(GlanceModifier.height(6.dp))
                 // Each task on two lines, with a bar in its category's colour: its name, then its category and when it is due.
                 val rows = ((s.height.value - 68f) / 36f).toInt().coerceIn(1, 8)

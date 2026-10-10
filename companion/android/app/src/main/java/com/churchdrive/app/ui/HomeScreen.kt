@@ -13,7 +13,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.EvStation
 import androidx.compose.material.icons.filled.Lightbulb
@@ -107,12 +106,6 @@ fun HomeScreen(
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                    }
-                    val context = androidx.compose.ui.platform.LocalContext.current
-                    IconButton(onClick = {
-                        context.startActivity(android.content.Intent(context, com.churchdrive.app.VoiceTaskActivity::class.java))
-                    }) {
-                        Icon(Icons.Filled.Mic, contentDescription = "Add a task by voice")
                     }
                     IconButton(onClick = { panel = "account" }) {
                         Icon(Icons.Filled.AccountCircle, contentDescription = "Account")
