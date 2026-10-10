@@ -1,0 +1,33 @@
+# Church Drive: add tasks by voice.
+#
+# Say (to Assist on the phone, a Home Assistant Voice speaker, or the Assist button on a watch):
+#   "Add task <anything>"      "Remind me to <anything>"      "Jobs to do <anything>"
+#
+# The words go to church_drive.add_tasks, the AI splits them into tasks and picks each list, and they wait in the
+# lists, no check. If you say several things it splits them and chooses each list. Set auto_add false to check them first.
+#
+# Paste into Settings > Automations > Create automation > Edit in YAML.
+alias: "Church Drive: tasks by voice"
+mode: queued
+triggers:
+  - trigger: conversation
+    command:
+      - "add (a )task [that ]{text}"
+      - "add (a )tasks [that ]{text}"
+      - "remind me to {text}"
+      - "jobs to do {text}"
+actions:
+  - action: church_drive.add_tasks
+    data:
+      text: "{{ trigger.slots.text }}"
+      source: Voice
+      # Who it is for. Leave this out and, with no name in the words, tasks go on the shared "everyone" list; put a first
+      # name here (one automation per person, e.g. for their own phone) to use their list.
+      # person: Jamie
+      auto_add: true
+    response_variable: found
+  - set_conversation_response: >-
+      {% set n = found.tasks | length %}
+      {% if n == 0 %}I couldn't find a task in that.
+      {% elif n == 1 %}Added: {{ found.tasks[0].summary }}.
+      {% else %}Added {{ n }} tasks.{% endif %}

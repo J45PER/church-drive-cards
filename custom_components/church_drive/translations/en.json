@@ -30,7 +30,7 @@
       },
       "maps": {
         "title": "Google maps",
-        "description": "Keys from Google Cloud (APIs & Services › Credentials). With a Map Tiles key, maps across Home Assistant use Google's satellite (with shop and road names) or road map; lock that key to Home Assistant's web addresses, as browsers use it. With a Places key, the zone map's search finds shops and businesses; Home Assistant does the searching, so that key never reaches a browser. Leave either blank to use the free Esri maps and OpenStreetMap search.",
+        "description": "Keys from Google Cloud (APIs & Services \u203a Credentials). With a Map Tiles key, maps across Home Assistant use Google's satellite (with shop and road names) or road map; lock that key to Home Assistant's web addresses, as browsers use it. With a Places key, the zone map's search finds shops and businesses; Home Assistant does the searching, so that key never reaches a browser. Leave either blank to use the free Esri maps and OpenStreetMap search.",
         "data": {
           "google_tiles_key": "Map Tiles API key",
           "google_places_key": "Places API key"
@@ -117,6 +117,32 @@
         "data": {
           "name": "Extra data",
           "description": "Anything else for the companion app's notification data."
+        }
+      }
+    },
+    "add_tasks": {
+      "name": "Add tasks from text",
+      "description": "Read a message or note with AI, split it into tasks and put each on the right to-do list. By default the tasks wait in the inbox to be checked; Auto add puts them straight on the lists.",
+      "fields": {
+        "text": {
+          "name": "Text",
+          "description": "The message or note."
+        },
+        "person": {
+          "name": "Person",
+          "description": "Who it's for or from; their own list is used when the text doesn't say."
+        },
+        "source": {
+          "name": "Source",
+          "description": "Where it came from, e.g. WhatsApp or Voice."
+        },
+        "auto_add": {
+          "name": "Auto add",
+          "description": "Skip the check and add the tasks now."
+        },
+        "ai_task_entity": {
+          "name": "AI Task",
+          "description": "Which AI Task entity reads it (the first one by default)."
         }
       }
     }

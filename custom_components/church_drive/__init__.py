@@ -64,6 +64,7 @@ from .const import (
     CONF_HEALTH_ENTITIES,
     CONF_SCENE_GROUPS,
     DOMAIN,
+    SERVICE_ADD_TASKS,
     SERVICE_APPLY_SCENE,
     SERVICE_HEALTH_FIX,
     SERVICE_NOTIFY,
@@ -73,6 +74,10 @@ from .const import (
     EVENT_ICONS,
     WS_ICON_SET,
     WS_ICONS,
+    WS_INBOX,
+    WS_INBOX_CONFIRM,
+    WS_INBOX_DISMISS,
+    WS_INBOX_SUBMIT,
     WS_LIBRARY,
     WS_PEOPLE,
     WS_PEOPLE_ASSIGN,
@@ -96,6 +101,7 @@ from .health import DeviceHealth
 from .hue import async_sync
 from .library import Library, normalise
 from .icons import Icons
+from .inbox import Inbox
 from .people import People
 
 _LOGGER = logging.getLogger(__name__)
@@ -122,6 +128,26 @@ NOTIFY_SCHEMA = vol.Schema(
         vol.Optional("critical"): cv.boolean,
         vol.Optional("data"): dict,
     }
+)
+
+ADD_TASKS_SCHEMA = vol.Schema(
+    {
+        vol.Required("text"): vol.All(cv.string, vol.Length(min=1)),
+        vol.Optional("source", default=""): cv.string,
+        vol.Optional("person"): cv.string,
+        vol.Optional("auto_add", default=False): cv.boolean,
+        vol.Optional("ai_task_entity"): cv.entity_id,
+    }
+)
+
+TASK_EDIT = vol.Schema(
+    {
+        vol.Required("summary"): cv.string,
+        vol.Required("list"): cv.entity_id,
+        vol.Optional("due", default=""): cv.string,
+        vol.Optional("note", default=""): cv.string,
+    },
+    extra=vol.ALLOW_EXTRA,
 )
 
 APPLY_SCENE_SCHEMA = vol.Schema(
@@ -453,6 +479,88 @@ async def ws_people_settings(
     connection.send_result(msg["id"], {"stale_hours": people.stale_hours(), "people": people.people()})
 
 
+def _inbox(hass: HomeAssistant) -> Inbox | None:
+    return hass.data.get(DOMAIN, {}).get("inbox")
+
+
+def _person_of(hass: HomeAssistant, connection: websocket_api.ActiveConnection) -> str | None:
+    """The first name of the person signed in on this connection, if they are one."""
+    people = _people(hass)
+    if people is None:
+        return None
+    user = connection.user.id
+    return next((p["first"] for p in people.people() if p["user_id"] == user), None)
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_INBOX})
+@callback
+def ws_inbox(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """The signed-in person's batches of tasks waiting to be checked, and the lists they can go on."""
+    inbox = _inbox(hass)
+    if inbox is None:
+        connection.send_error(msg["id"], "not_ready", "The task inbox isn't running")
+        return
+    connection.send_result(msg["id"], {"batches": inbox.batches(_person_of(hass, connection)), "lists": inbox.lists()})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_INBOX_SUBMIT,
+        vol.Required("text"): cv.string,
+        vol.Optional("source", default=""): cv.string,
+        vol.Optional("auto_add", default=False): cv.boolean,
+    }
+)
+@websocket_api.async_response
+async def ws_inbox_submit(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Send text (shared or highlighted on the phone) to be turned into tasks for checking."""
+    inbox = _inbox(hass)
+    if inbox is None:
+        connection.send_error(msg["id"], "not_ready", "The task inbox isn't running")
+        return
+    result = await inbox.async_submit(
+        msg["text"], msg["source"], _person_of(hass, connection), msg["auto_add"], context=connection.context(msg)
+    )
+    connection.send_result(msg["id"], result)
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_INBOX_CONFIRM,
+        vol.Required("batch"): cv.string,
+        vol.Optional("tasks"): [TASK_EDIT],
+    }
+)
+@websocket_api.async_response
+async def ws_inbox_confirm(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Add a batch's checked tasks (as edited) to their lists."""
+    inbox = _inbox(hass)
+    if inbox is None:
+        connection.send_error(msg["id"], "not_ready", "The task inbox isn't running")
+        return
+    try:
+        added = await inbox.async_confirm(msg["batch"], msg.get("tasks"), connection.context(msg))
+    except KeyError:
+        connection.send_error(msg["id"], "not_found", "That batch has already been dealt with")
+        return
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid_format", str(err))
+        return
+    connection.send_result(msg["id"], {"added": added})
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_INBOX_DISMISS, vol.Required("batch"): cv.string})
+@websocket_api.async_response
+async def ws_inbox_dismiss(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Throw a batch away without adding anything."""
+    inbox = _inbox(hass)
+    if inbox is None:
+        connection.send_error(msg["id"], "not_ready", "The task inbox isn't running")
+        return
+    await inbox.async_dismiss(msg["batch"], connection.context(msg))
+    connection.send_result(msg["id"], {})
+
+
 def _events(hass: HomeAssistant) -> CameraEvents | None:
     return hass.data.get(DOMAIN, {}).get("events")
 
@@ -615,6 +723,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         for command in (
             ws_library, ws_icons, ws_icon_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_phone,
             ws_people_places, ws_people_cars, ws_people_access, ws_people_tracking, ws_people_settings, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_maps, ws_maps_search,
+            ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss,
         ):
             websocket_api.async_register_command(hass, command)
     # The version in the URL makes browsers fetch the new bundle after an
@@ -657,6 +766,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception:  # noqa: BLE001
         _LOGGER.exception("People and notifications couldn't start; everything else still works")
         data["people"] = None
+
+    # The task inbox mustn't stop anything else loading either.
+    inbox = Inbox(hass, data.get("people"))
+    try:
+        await inbox.async_load()
+        data["inbox"] = inbox
+    except Exception:  # noqa: BLE001
+        _LOGGER.exception("The task inbox couldn't start; everything else still works")
+        data["inbox"] = None
+
+    async def add_tasks(call: ServiceCall) -> ServiceResponse:
+        if data.get("inbox") is None:
+            raise ServiceValidationError("The task inbox isn't running")
+        d = call.data
+        result = await data["inbox"].async_submit(
+            d["text"], d["source"], d.get("person"), d["auto_add"], d.get("ai_task_entity"), call.context
+        )
+        return result if call.return_response else None
+
+    hass.services.async_register(
+        DOMAIN, SERVICE_ADD_TASKS, add_tasks, schema=ADD_TASKS_SCHEMA, supports_response=SupportsResponse.OPTIONAL
+    )
 
     # Camera events mustn't stop anything else loading either.
     events = CameraEvents(hass)
@@ -737,6 +868,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.services.async_remove(DOMAIN, SERVICE_APPLY_SCENE)
     hass.services.async_remove(DOMAIN, SERVICE_HEALTH_FIX)
     hass.services.async_remove(DOMAIN, SERVICE_NOTIFY)
+    hass.services.async_remove(DOMAIN, SERVICE_ADD_TASKS)
     url = hass.data.get(DOMAIN, {}).get("cards_url")
     if url:
         remove_extra_js_url(hass, url)
