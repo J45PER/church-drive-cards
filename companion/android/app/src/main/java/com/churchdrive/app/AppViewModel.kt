@@ -441,6 +441,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             client.subscribe(type, params, onEvent)
 
         override fun close(subscription: Int) = client.unsubscribe(subscription)
+
+        override val connected: Boolean get() = client.connection.value == com.churchdrive.app.ha.ConnectionState.Connected
     }
 
     fun call(domain: String, service: String, entityId: String, data: org.json.JSONObject) =

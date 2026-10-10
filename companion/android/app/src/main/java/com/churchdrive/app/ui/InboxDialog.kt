@@ -27,6 +27,7 @@ import org.json.JSONObject
 private sealed interface InboxState {
     object Reading : InboxState
     object Empty : InboxState
+    object Refused : InboxState
     data class Added(val lines: List<String>) : InboxState
     data object Failed : InboxState
     data class Check(val batch: InboxBatch, val lists: List<InboxList>) : InboxState
@@ -48,15 +49,25 @@ fun InboxDialog(text: String?, source: String, autoAdd: Boolean = false, onClose
             state = InboxState.Failed
             return@LaunchedEffect
         }
-        // Opening the app from another one can beat the connection to the house: ask again for a few seconds before giving up.
+        var refused = false
+        // Opening the app from another one can beat the connection to the house: wait for it, up to about eight seconds.
+        // Once the line is up, a command that fails was refused (the house doesn't have the task inbox yet), so stop at once.
         suspend fun ask(type: String, params: JSONObject): Any? {
-            repeat(6) {
+            repeat(8) {
                 ha.ask(type, params)?.let { return it }
-                kotlinx.coroutines.delay(1_500)
+                if (ha.connected) {
+                    refused = true
+                    return null
+                }
+                kotlinx.coroutines.delay(1_000)
             }
             return null
         }
         val lists = parseInboxLists(ask("church_drive/inbox", JSONObject()))
+        if (refused) {
+            state = InboxState.Refused
+            return@LaunchedEffect
+        }
         if (text != null) {
             val reply = ask("church_drive/inbox/submit", JSONObject().put("text", text).put("source", source).put("auto_add", autoAdd))
             val batch = parseSubmitted(reply, source)
@@ -64,7 +75,7 @@ fun InboxDialog(text: String?, source: String, autoAdd: Boolean = false, onClose
             state = when {
                 added != null && added.isNotEmpty() -> InboxState.Added(added)
                 added != null -> InboxState.Empty
-                reply == null -> InboxState.Failed
+                reply == null -> if (refused) InboxState.Refused else InboxState.Failed
                 batch == null -> InboxState.Empty
                 else -> InboxState.Check(batch, lists)
             }
@@ -75,12 +86,24 @@ fun InboxDialog(text: String?, source: String, autoAdd: Boolean = false, onClose
         }
     }
 
+    // A quick answer shows no box at all; one that takes a moment shows a small one.
+    var waited by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(800)
+        waited = true
+    }
+
     when (val s = state) {
-        InboxState.Reading -> AlertDialog(
+        InboxState.Reading -> if (waited) AlertDialog(
             onDismissRequest = onClose,
-            title = { Text("Reading for tasks…") },
-            text = { Text("The house is working out what needs doing.") },
+            title = { Text(if (autoAdd) "Adding…" else "Reading…") },
             confirmButton = { TextButton(onClick = onClose) { Text("Cancel") } },
+        )
+        InboxState.Refused -> AlertDialog(
+            onDismissRequest = onClose,
+            title = { Text("The house can't do that yet") },
+            text = { Text("Church Drive in Home Assistant needs updating to 0.39.0 or later for tasks from text and voice. Nothing was added.") },
+            confirmButton = { TextButton(onClick = onClose) { Text("OK") } },
         )
         InboxState.Empty -> AlertDialog(
             onDismissRequest = onClose,
@@ -104,7 +127,7 @@ fun InboxDialog(text: String?, source: String, autoAdd: Boolean = false, onClose
         InboxState.Failed -> AlertDialog(
             onDismissRequest = onClose,
             title = { Text("Couldn't reach the house") },
-            text = { Text("Your text wasn't sent. Check the connection and try again.") },
+            text = { Text("Nothing was added. Check the connection and try again.") },
             confirmButton = { TextButton(onClick = onClose) { Text("OK") } },
         )
         is InboxState.Check -> CheckTasks(s.batch, s.lists, onClose)

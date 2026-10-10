@@ -4,6 +4,13 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.3.1
+
+- **Tasks from text and voice, quicker and clearer**: no waiting box for a quick answer (a small "Adding…" or "Reading…"
+  only shows if it takes more than a moment). If the house doesn't have the task inbox yet it now says so straight away
+  ("Church Drive in Home Assistant needs updating to 0.39.0 or later"), instead of waiting several seconds and giving a vague
+  error. Waiting for the connection still lasts up to about eight seconds.
+
 ## 0.3.0
 
 - **Tasks from messages**: highlight text in any app and choose **Church Drive to-do** in the menu, or use **Share** >
