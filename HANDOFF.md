@@ -164,6 +164,12 @@ HACS as an integration. It does two jobs:
     "Updated HH:MM" (from the battery sensor's `Last updated` attribute, else its state) and a
     **Refresh** button that presses the car's wake-up (`carAsOf`, `carTime`, `wake` in
     `carEntities`).
+  - **Zappi starts when a mode is picked** (automation, live 2026-10-10): the Zappi has "lock when
+    plugged in" on (set in the myenergi app), so Fast picked from HA or the apps waited for an
+    unlock and "change now" at the charger. On a mode change to Fast/Eco/Eco+ (waiting up to 10
+    minutes for the car to be plugged in, then 20 s for the lock), if `binary_sensor.zappi_locked`
+    is on and it isn't charging: `myenergi.myenergi_unlock`, then the same mode again. A car
+    plugged in with no mode picked stays locked.
 - Nothing else is pending. Ideas the user hasn't asked for are under Open items.
 
 **New in v0.22.0 (2026-09-29): smoother panels, floating chips, page headers** (the user found the
