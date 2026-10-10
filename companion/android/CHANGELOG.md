@@ -11,6 +11,9 @@ with the APK, so there is a record of what shipped. Newest first.
   cleaning, a person's own, everyone's) with a day if the text gives one. Check them first: untick any, change the words,
   pick a different list, then **Add**. Tasks waiting to be checked (from a voice request, or if you closed the box) show
   when you next open the app. Needs Church Drive v0.39.0 and an AI Task in Home Assistant.
+- **Tasks by voice** without Gemini or Assistant: a microphone in the top bar, an **Add task** Quick Settings tile (add it
+  from the tile editor), and **Add task** in the app icon's long-press menu. It uses the phone's own speech box, listens only
+  when you tap (never in the background), and the tasks go straight onto the right lists; the app shows where each went.
 
 ## 0.2.3
 

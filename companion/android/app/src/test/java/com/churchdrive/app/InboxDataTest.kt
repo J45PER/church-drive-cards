@@ -2,7 +2,9 @@ package com.churchdrive.app
 
 import com.churchdrive.app.ui.InboxTask
 import com.churchdrive.app.ui.confirmTasks
+import com.churchdrive.app.ui.InboxList
 import com.churchdrive.app.ui.listChipName
+import com.churchdrive.app.ui.parseAdded
 import com.churchdrive.app.ui.parseInbox
 import com.churchdrive.app.ui.parseInboxLists
 import com.churchdrive.app.ui.parseSubmitted
@@ -61,5 +63,15 @@ class InboxDataTest {
         assertEquals("a", sharedText("a", "b"))
         assertEquals("b", sharedText(" ", "b"))
         assertNull(sharedText(null, "  "))
+    }
+
+    @Test
+    fun addedTasksSayWhichListEachWentOn() {
+        val lists = listOf(InboxList("todo.shopping_list", "Shopping list"), InboxList("todo.priorities_jamie", "Priorities Jamie"))
+        val reply = JSONObject("""{"batch":null,"added":2,"tasks":[
+            {"summary":"Get milk","list":"todo.shopping_list","due":"","note":""},
+            {"summary":"Book dentist","list":"todo.priorities_jamie","due":"","note":""}]}""")
+        assertEquals(listOf("Get milk → Shopping list", "Book dentist → Jamie"), parseAdded(reply, lists))
+        assertNull(parseAdded(null, lists))
     }
 }

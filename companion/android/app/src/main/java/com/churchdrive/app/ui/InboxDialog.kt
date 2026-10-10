@@ -27,6 +27,7 @@ import org.json.JSONObject
 private sealed interface InboxState {
     object Reading : InboxState
     object Empty : InboxState
+    data class Added(val lines: List<String>) : InboxState
     data object Failed : InboxState
     data class Check(val batch: InboxBatch, val lists: List<InboxList>) : InboxState
 }
@@ -38,7 +39,7 @@ private sealed interface InboxState {
  * when the person is done.
  */
 @Composable
-fun InboxDialog(text: String?, source: String, onClose: () -> Unit) {
+fun InboxDialog(text: String?, source: String, autoAdd: Boolean = false, onClose: () -> Unit) {
     val api = LocalHaApi.current
     var state by remember { mutableStateOf<InboxState>(InboxState.Reading) }
     LaunchedEffect(text) {
@@ -57,9 +58,12 @@ fun InboxDialog(text: String?, source: String, onClose: () -> Unit) {
         }
         val lists = parseInboxLists(ask("church_drive/inbox", JSONObject()))
         if (text != null) {
-            val reply = ask("church_drive/inbox/submit", JSONObject().put("text", text).put("source", source))
+            val reply = ask("church_drive/inbox/submit", JSONObject().put("text", text).put("source", source).put("auto_add", autoAdd))
             val batch = parseSubmitted(reply, source)
+            val added = if (autoAdd) parseAdded(reply, lists) else null
             state = when {
+                added != null && added.isNotEmpty() -> InboxState.Added(added)
+                added != null -> InboxState.Empty
                 reply == null -> InboxState.Failed
                 batch == null -> InboxState.Empty
                 else -> InboxState.Check(batch, lists)
@@ -84,6 +88,19 @@ fun InboxDialog(text: String?, source: String, onClose: () -> Unit) {
             text = { Text("There was nothing in that text to do.") },
             confirmButton = { TextButton(onClick = onClose) { Text("OK") } },
         )
+        is InboxState.Added -> {
+            // Said by voice and already on the lists: show where each went, and go away by itself.
+            LaunchedEffect(s) {
+                kotlinx.coroutines.delay(4_000)
+                onClose()
+            }
+            AlertDialog(
+                onDismissRequest = onClose,
+                title = { Text(if (s.lines.size == 1) "Task added" else "${s.lines.size} tasks added") },
+                text = { Text(s.lines.joinToString("\n")) },
+                confirmButton = { TextButton(onClick = onClose) { Text("OK") } },
+            )
+        }
         InboxState.Failed -> AlertDialog(
             onDismissRequest = onClose,
             title = { Text("Couldn't reach the house") },

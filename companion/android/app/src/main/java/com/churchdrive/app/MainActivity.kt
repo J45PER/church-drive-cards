@@ -48,6 +48,7 @@ class MainActivity : ComponentActivity() {
     /** Text shared or highlighted in another app, until it has been sent to be read for tasks. */
     private var shareText by mutableStateOf<String?>(null)
     private var shareSource = "Share"
+    private var shareAutoAdd by mutableStateOf(false)
 
     /** True each time the app comes to the front, to show tasks waiting to be checked (from the "Tasks to check" notice or a voice request). */
     private var showInbox by mutableStateOf(false)
@@ -56,6 +57,7 @@ class MainActivity : ComponentActivity() {
         intent?.getStringExtra(EXTRA_SHARE_TEXT)?.let {
             shareText = it
             shareSource = intent.getStringExtra(EXTRA_SHARE_SOURCE) ?: "Share"
+            shareAutoAdd = intent.getBooleanExtra(EXTRA_SHARE_AUTO_ADD, false)
             intent.removeExtra(EXTRA_SHARE_TEXT)
         }
     }
@@ -161,7 +163,7 @@ class MainActivity : ComponentActivity() {
                                 )
                                 // Text sent from another app, or tasks waiting from earlier: checked here before they go on a list.
                                 if (shareText != null || showInbox) {
-                                    com.churchdrive.app.ui.InboxDialog(shareText, shareSource) { shareText = null; showInbox = false }
+                                    com.churchdrive.app.ui.InboxDialog(shareText, shareSource, shareAutoAdd) { shareText = null; showInbox = false }
                                 }
                             } else {
                                 LoginScreen(onSignIn = vm::signIn, onLogin = vm::login, onCode = vm::loginCode)
@@ -176,5 +178,6 @@ class MainActivity : ComponentActivity() {
     companion object {
         const val EXTRA_SHARE_TEXT = "share_text"
         const val EXTRA_SHARE_SOURCE = "share_source"
+        const val EXTRA_SHARE_AUTO_ADD = "share_auto_add"
     }
 }

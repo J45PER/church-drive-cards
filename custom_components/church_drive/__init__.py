@@ -504,7 +504,12 @@ def ws_inbox(hass: HomeAssistant, connection: websocket_api.ActiveConnection, ms
 
 
 @websocket_api.websocket_command(
-    {vol.Required("type"): WS_INBOX_SUBMIT, vol.Required("text"): cv.string, vol.Optional("source", default=""): cv.string}
+    {
+        vol.Required("type"): WS_INBOX_SUBMIT,
+        vol.Required("text"): cv.string,
+        vol.Optional("source", default=""): cv.string,
+        vol.Optional("auto_add", default=False): cv.boolean,
+    }
 )
 @websocket_api.async_response
 async def ws_inbox_submit(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
@@ -514,7 +519,7 @@ async def ws_inbox_submit(hass: HomeAssistant, connection: websocket_api.ActiveC
         connection.send_error(msg["id"], "not_ready", "The task inbox isn't running")
         return
     result = await inbox.async_submit(
-        msg["text"], msg["source"], _person_of(hass, connection), context=connection.context(msg)
+        msg["text"], msg["source"], _person_of(hass, connection), msg["auto_add"], context=connection.context(msg)
     )
     connection.send_result(msg["id"], result)
 

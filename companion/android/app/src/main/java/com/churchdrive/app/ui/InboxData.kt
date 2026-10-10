@@ -51,3 +51,12 @@ fun listChipName(name: String): String = name.removePrefix("Priorities ").trim()
 /** The text of a share: the shared text, else the highlighted text. Blank is nothing to send. */
 fun sharedText(sendText: CharSequence?, processText: CharSequence?): String? =
     (sendText?.toString()?.takeIf { it.isNotBlank() } ?: processText?.toString()?.takeIf { it.isNotBlank() })?.trim()?.take(6000)
+
+/** What `church_drive/inbox/submit` with auto_add put on the lists: each task's wording and its list's name, or null if it failed. */
+fun parseAdded(result: Any?, lists: List<InboxList>): List<String>? {
+    val o = result as? JSONObject ?: return null
+    return parseTasks(o.optJSONArray("tasks")).map { t ->
+        val where = lists.firstOrNull { it.id == t.list }?.let { listChipName(it.name) } ?: t.list.removePrefix("todo.")
+        "${t.summary} → $where"
+    }
+}
