@@ -4,6 +4,16 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.4.0
+
+- **Reminders at a place**: in a task's edit box, **Remind me at a place** (Home, or any place the house knows). You're reminded
+  each time you arrive there, until the task is done.
+- **Done and Snooze on task reminders**, for both place and time reminders. **Done** ticks the task off; **Snooze** asks for
+  5, 10, 20, 30 minutes or 1 hour. A time reminder comes back after the snooze; a place reminder comes back after it only if
+  you're still there (if you've left, it waits for your next arrival). Needs Church Drive v0.40.0.
+- Setting a place is on a task you edit; a brand-new task from the app gets its place when you edit it (the dashboard can
+  set it when adding).
+
 ## 0.3.1
 
 - **Tasks from text and voice, quicker and clearer**: no waiting box for a quick answer (a small "Adding…" or "Reading…"

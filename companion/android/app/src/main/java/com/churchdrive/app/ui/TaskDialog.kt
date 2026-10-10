@@ -8,6 +8,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -16,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.churchdrive.app.ha.CallService
 import com.churchdrive.app.ha.data
+import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDate
 
@@ -31,6 +33,17 @@ fun TaskDialog(item: TodoItem, listId: String, first: String?, tone: ToneColors,
     var who by remember { mutableStateOf(whoChoiceOf(words.who, first)) }
     var time by remember { mutableStateOf(timeOf(words.repeat) ?: timeOf(item.due?.takeIf { 'T' in it }?.substringAfter('T')) ?: "09:00") }
     var notes by remember { mutableStateOf(words.notes) }
+    // A reminder at a place instead of a time: the places come from the house, and a house without them shows nothing here.
+    val api = LocalHaApi.current
+    var places by remember { mutableStateOf<List<Place>?>(null) }
+    var place by remember { mutableStateOf(NO_PLACE) }
+    var placeWas by remember { mutableStateOf(NO_PLACE) }
+    LaunchedEffect(item.uid) {
+        val found = api?.ask("church_drive/reminders", JSONObject())?.let(::parsePlaceReminders) ?: return@LaunchedEffect
+        places = found.places
+        placeWas = placeChoiceOf(found.places, found.zoneByTask[reminderKey(listId, item.uid)])
+        place = placeWas
+    }
 
     val dueOptions = DUE_CHOICES + if (due == "Keep") listOf("Keep") else emptyList()
     val repeatOptions = REPEAT_CHOICES + if (repeat !in REPEAT_CHOICES) listOf(repeat) else emptyList()
@@ -58,6 +71,11 @@ fun TaskDialog(item: TodoItem, listId: String, first: String?, tone: ToneColors,
                     Text("Remind", style = MaterialTheme.typography.labelLarge)
                     OptionRow(whoOptions, who, tone) { who = it }
                 }
+                places?.takeIf { it.isNotEmpty() && first != null }?.let { all ->
+                    Text("Remind me at a place", style = MaterialTheme.typography.labelLarge)
+                    OptionRow(placeChoices(all), place, tone) { place = it }
+                    if (place != NO_PLACE) Text("Reminds you each time you arrive, until it's done.", style = MaterialTheme.typography.bodySmall)
+                }
                 OutlinedTextField(notes, { notes = it }, label = { Text("Notes") }, modifier = Modifier)
             }
         },
@@ -73,6 +91,13 @@ fun TaskDialog(item: TodoItem, listId: String, first: String?, tone: ToneColors,
                         buildDescription(words2, whoWords(who, first), notes),
                     )
                     call("todo", "update_item", listId, data(*fields.map { it.key to (it.value ?: JSONObject.NULL) }.toTypedArray()))
+                    if (place != placeWas && first != null) {
+                        api?.request(
+                            "church_drive/reminders/set",
+                            JSONObject().put("list", listId).put("uid", item.uid).put("zone", places?.let { zoneOfChoice(it, place) } ?: JSONObject.NULL)
+                                .put("who", JSONArray().put(first)),
+                        ) { }
+                    }
                     onClose()
                 },
             ) { Text("Save") }
@@ -80,6 +105,7 @@ fun TaskDialog(item: TodoItem, listId: String, first: String?, tone: ToneColors,
         dismissButton = {
             TextButton(onClick = {
                 call("todo", "remove_item", listId, data("item" to item.uid))
+                if (placeWas != NO_PLACE) api?.request("church_drive/reminders/set", JSONObject().put("list", listId).put("uid", item.uid).put("zone", JSONObject.NULL).put("who", JSONArray())) { }
                 onClose()
             }) { Text("Delete") }
             TextButton(onClick = onClose) { Text("Cancel") }

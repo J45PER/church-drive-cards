@@ -28,6 +28,7 @@ import com.churchdrive.app.Session
 import com.churchdrive.app.ha.ConnectionState
 import com.churchdrive.app.ha.HaAuth
 import com.churchdrive.app.ha.HaClient
+import com.churchdrive.app.ha.parseTaskAction
 import com.churchdrive.app.ha.MobileApp
 import com.churchdrive.app.ha.Refresh
 import com.churchdrive.app.ha.WebhookResult
@@ -150,7 +151,8 @@ class HouseService : Service() {
         val push = MobileApp.parsePush(event) ?: return
         if (!Permissions.canNotify(this)) return
         ensureChannel(this, push.channel)
-        val n = NotificationCompat.Builder(this, push.channel)
+        val noticeId = push.tag?.hashCode() ?: System.currentTimeMillis().toInt()
+        val builder = NotificationCompat.Builder(this, push.channel)
             .setSmallIcon(R.drawable.ic_notification)
             .setColor(0xFF2B5BB5.toInt())
             .setContentTitle(push.title)
@@ -158,9 +160,20 @@ class HouseService : Service() {
             .setStyle(NotificationCompat.BigTextStyle().bigText(push.message))
             .setAutoCancel(true)
             .setContentIntent(openApp(this))
-            .build()
+        // A task reminder's buttons: Done ticks it off, Snooze asks how long.
+        push.actions.forEach { button ->
+            val action = parseTaskAction(button.id) ?: return@forEach
+            val extras = { i: Intent -> i.putExtra(EXTRA_TASK_ACTION, button.id).putExtra(EXTRA_NOTICE_TAG, push.tag).putExtra(EXTRA_NOTICE_ID, noticeId) }
+            val code = (button.id.hashCode() xor noticeId)
+            val pending = if (action.kind == "done") {
+                PendingIntent.getBroadcast(this, code, extras(Intent(this, TaskActionReceiver::class.java)), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            } else {
+                PendingIntent.getActivity(this, code, extras(Intent(this, SnoozeActivity::class.java)), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            }
+            builder.addAction(0, button.title, pending)
+        }
         // The same tag replaces the earlier notification, as in the Home Assistant app.
-        runCatching { NotificationManagerCompat.from(this).notify(push.tag, push.tag?.hashCode() ?: System.currentTimeMillis().toInt(), n) }
+        runCatching { NotificationManagerCompat.from(this).notify(push.tag, noticeId, builder.build()) }
     }
 
     companion object {

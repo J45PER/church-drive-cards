@@ -74,6 +74,16 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Keeps a connection to the home's Home Assistant for notifications, and reports the phone's location to it" />
         </service>
+        <!-- The Done and Snooze buttons on a task reminder. -->
+        <receiver
+            android:name=".house.TaskActionReceiver"
+            android:exported="false" />
+        <activity
+            android:name=".house.SnoozeActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:excludeFromRecents="true"
+            android:taskAffinity="" />
         <receiver
             android:name=".house.LocationReceiver"
             android:exported="false" />

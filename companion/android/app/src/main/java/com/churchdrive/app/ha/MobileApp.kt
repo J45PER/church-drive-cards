@@ -8,7 +8,10 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /** A message the house sent to this phone (from `notify.mobile_app_...`). */
-data class Push(val title: String, val message: String, val tag: String?, val channel: String)
+data class Push(val title: String, val message: String, val tag: String?, val channel: String, val actions: List<PushAction> = emptyList())
+
+/** A button on a notification: [id] is what comes back when it is pressed, [title] what it says. */
+data class PushAction(val id: String, val title: String)
 
 /** How a post to the phone's webhook went. [Gone] means Home Assistant no longer knows this phone: register again. */
 enum class WebhookResult { Ok, Gone, Failed }
@@ -83,7 +86,22 @@ object MobileApp {
             message = message,
             tag = data?.text("tag"),
             channel = data?.text("channel") ?: "house",
+            // Only the house's own task buttons (Done, Snooze): anything else would have nothing to do here.
+            actions = (data?.optJSONArray("actions")?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it) } } ?: emptyList())
+                .mapNotNull { o ->
+                    val id = o.text("action")
+                    val title = o.text("title")
+                    if (id != null && title != null && parseTaskAction(id) != null) PushAction(id, title) else null
+                },
         )
+    }
+
+    /** The webhook message that tells the house a task button was pressed (it arrives there as the `church_drive_task_action` event). */
+    fun taskActionBody(action: TaskAction, kind: String, minutes: Int? = null): JSONObject {
+        val event = JSONObject().put("action", kind).put("list", action.todo).put("uid", action.uid).put("who", action.who).put("zone", action.zone)
+        if (minutes != null) event.put("minutes", minutes)
+        return JSONObject().put("type", "fire_event")
+            .put("data", JSONObject().put("event_type", "church_drive_task_action").put("event_data", event))
     }
 
     /** The name of the notify service for a phone, as Home Assistant makes it: `notify.mobile_app_<name>`. */
