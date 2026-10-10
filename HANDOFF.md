@@ -170,6 +170,12 @@ HACS as an integration. It does two jobs:
     minutes for the car to be plugged in, then 20 s for the lock), if `binary_sensor.zappi_locked`
     is on and it isn't charging: `myenergi.myenergi_unlock`, then the same mode again. A car
     plugged in with no mode picked stays locked.
+  - **Charger overrides** (beta 2026-10-10): while a car's plugged in (or charging),
+    `ev-charger-card` shows two buttons above the modes: the lock (`binary_sensor.*_locked`):
+    "Locked · Unlock" runs `myenergi.myenergi_unlock`, "Unlocked" is display only (the
+    integration has no lock command; the charger locks itself next time a car's plugged in);
+    and **Charge now** (unlock if locked, then Fast) which becomes **Pause** (Stopped) while
+    charging. "Unlocking…/Starting…/Pausing…" for up to a minute.
 - Nothing else is pending. Ideas the user hasn't asked for are under Open items.
 
 **New in v0.22.0 (2026-09-29): smoother panels, floating chips, page headers** (the user found the
