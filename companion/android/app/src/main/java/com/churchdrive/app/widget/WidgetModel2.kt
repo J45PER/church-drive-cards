@@ -235,12 +235,10 @@ fun chargerCard(entities: Map<String, EntityState>): Card {
     val modes = chargerModes(mode?.options().orEmpty()).map {
         WidgetTile(it.icon, it.name, mode?.state == it.key, "select", "select_option", ZAPPI_MODE, JSONObject().put("option", it.key).toString())
     }
-    // While a car's plugged in, the app card's overrides first: Unlock (when locked; it can't be locked again from
-    // here) and Charge now, which is Pause while charging. A widget button makes one call, so Charge now picks Fast
-    // and the "Zappi starts when a mode is picked" automation unlocks the charger.
+    // While a car's plugged in, the app card's override first: Charge now (Fast), which is Pause while charging.
+    // (No Unlock: myenergi's unlock command rewrites the charger's lock settings.)
     val over = chargerOverrides(entities)
     val extra = if (over.show && mode?.available == true) listOfNotNull(
-        if (over.locked == true) WidgetTile("mdi:lock", "Unlock", false, "myenergi", "myenergi_unlock", ZAPPI_MODE) else null,
         if (over.charging) WidgetTile("mdi:pause", "Pause", false, "select", "select_option", ZAPPI_MODE, JSONObject().put("option", "Stopped").toString())
         else WidgetTile("mdi:lightning-bolt", "Charge now", false, "select", "select_option", ZAPPI_MODE, JSONObject().put("option", "Fast").toString()),
     ) else emptyList()

@@ -484,7 +484,7 @@ export class EvChargerCard extends HTMLElement {
         .ev-act { border:none; cursor:pointer; font:inherit; font-size:.85rem; font-weight:600; border-radius:12px; min-height:44px; padding:8px 12px;
           display:flex; align-items:center; justify-content:center; gap:8px; background:rgba(127,127,127,.14); color:var(--primary-text-color); }
         .ev-act.go { background:color-mix(in srgb, ${EV_TEAL} 24%, transparent); }
-        .ev-act.warn { background:color-mix(in srgb, #ffa726 20%, transparent); }
+        .ev-act.warn { background:color-mix(in srgb, #ffa726 20%, transparent); color:#ffb74d; opacity:1; }
         .ev-act:disabled { cursor:default; opacity:.75; }
         .ev-act.done { background:color-mix(in srgb, ${EV_TEAL} 10%, transparent); color:color-mix(in srgb, ${EV_TEAL} 70%, var(--secondary-text-color)); opacity:1; }
         .ev-act small { font-weight:400; color:var(--secondary-text-color); }
@@ -531,9 +531,10 @@ export class EvChargerCard extends HTMLElement {
     if (e.mode) this._hass.callService('select', 'select_option', { entity_id: e.mode, option: mode });
   }
 
-  // Manual overrides, while a car's plugged in: the charger's lock (it locks
-  // itself when a car is plugged in; the integration can unlock it but not lock
-  // it) and Charge now (unlock + Fast), which becomes Pause (Stop) while charging.
+  // Manual overrides, while a car's plugged in: the charger's lock, shown only
+  // (myenergi's unlock command rewrites all the lock settings, which turned
+  // "Charge when locked" off, so it isn't sent), and Charge now (Fast), which
+  // becomes Pause (Stop) while charging.
   _renderActs(d, charging) {
     if (!this._acts) return;
     const plugged = d.found && !d.unavailable && d.plug && !/disconnected/i.test(d.plug);
@@ -544,7 +545,7 @@ export class EvChargerCard extends HTMLElement {
           d.locked == null
             ? ''
             : d.locked
-              ? `<button type="button" class="ev-act warn" data-act="unlock"${pend === 'unlock' ? ' disabled' : ''}>${iconHtml('mdi:lock', { size: '18px' })}${pend === 'unlock' ? 'Unlocking…' : 'Locked <small>· Unlock</small>'}</button>`
+              ? `<button type="button" class="ev-act warn" disabled aria-label="Locked">${iconHtml('mdi:lock', { size: '18px' })}Locked</button>`
               : `<button type="button" class="ev-act done" disabled aria-label="Unlocked">${iconHtml('mdi:lock-open-variant-outline', { size: '18px' })}Unlocked</button>`,
           charging
             ? `<button type="button" class="ev-act" data-act="pause"${pend === 'pause' ? ' disabled' : ''}>${iconHtml('mdi:pause', { size: '18px' })}${pend === 'pause' ? 'Pausing…' : 'Pause'}</button>`
@@ -563,7 +564,6 @@ export class EvChargerCard extends HTMLElement {
     if ((!plugged && !charging) || d.mode == null) return null;
     const pend = this._pend && Date.now() - this._pend.at < 60000 ? this._pend.act : '';
     return [
-      d.locked ? { key: 'unlock', act: 'unlock', icon: 'mdi:lock', label: pend === 'unlock' ? 'Unlocking…' : 'Unlock', title: 'Locked: unlock the charger' } : null,
       charging
         ? { key: 'pause', act: 'pause', icon: 'mdi:pause', label: pend === 'pause' ? 'Pausing…' : 'Pause' }
         : { key: 'charge', act: 'charge', icon: 'mdi:lightning-bolt', label: pend === 'charge' ? 'Starting…' : 'Charge now', on: true, color: EV_TEAL },
@@ -574,13 +574,8 @@ export class EvChargerCard extends HTMLElement {
     if (this.config.demo) return;
     const e = evFind(this._hass, this.config);
     if (!e.mode) return;
-    const locked = e.locked && this._hass.states[e.locked] && this._hass.states[e.locked].state === 'on';
-    const unlock = () => this._hass.callService('myenergi', 'myenergi_unlock', {}, { entity_id: e.mode }).catch(() => {});
-    if (act === 'unlock') unlock();
-    else if (act === 'charge') {
-      // Unlock first when locked, then Fast (the charger otherwise waits at the unit).
-      (locked ? unlock() : Promise.resolve()).then(() => this._setMode('Fast'));
-    } else if (act === 'pause') this._setMode('Stopped');
+    if (act === 'charge') this._setMode('Fast');
+    else if (act === 'pause') this._setMode('Stopped');
     this._pend = { act, at: Date.now() };
     this._actsHtml = null;
     this._sig = null;

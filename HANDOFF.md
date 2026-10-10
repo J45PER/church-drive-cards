@@ -422,6 +422,14 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
   Location switch per phone and flags a location that's stopped updating (see the Phone locations notes above).
 - **v0.38.1 (reload-only): car and charger overrides.** Car card says when a plugged-in car's figures
   are from, with Refresh (wakes the car); charger card has Unlock and Charge now / Pause while a car's plugged in.
+- **OPEN (2026-10-10): the Zappi unlock may turn "Charge when locked" off.** After the overrides went live the user
+  found the charger stuck on locked and not charging. `myenergi.myenergi_unlock` sends `cgi-jlock-<serial>-00000010`
+  (pymyenergi 0.2.3), which looks like it writes all the lock settings at once, not just "unlock". To check (HA was
+  unreachable from the session): history of `binary_sensor.zappi_charge_when_locked` / `_lock_when_plugged_in` around
+  each `myenergi_unlock` (automation "Church Drive: Zappi starts when a mode is picked" traces, and taps of the Unlock /
+  Charge now buttons). If confirmed: delete that automation (the user was asked to turn it off) and release the prepared
+  fix on the branch (cards and app no longer send the unlock: lock shown only, Charge now = Fast); the user puts
+  "Charge when locked" back on in the myenergi app.
 - **v0.38.2 (reload-only): the same in compact.** The Home page's Car charging panel is compact on phones, which
   showed only the modes: now, while a car's plugged in, the charger's compact row has Unlock (when locked) and Charge now /
   Pause in the modes' place (tap its name for the modes), and the car's row adds "Updated HH:MM" and Refresh.
