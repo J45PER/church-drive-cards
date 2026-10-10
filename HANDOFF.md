@@ -161,8 +161,11 @@ HACS as an integration. It does two jobs:
   - **Car figures while charging** (v0.38.1): Stellantis cars only send figures when
     something happens, so a charging Astra showed 12% for hours (the integration polls every 60 s
     but gets the car's last report). "Church Drive: car figures while charging" (automation,
-    live) presses each charging Stellantis car's `button.*_wakeup` every 30 minutes (the car
-    answers in ~20 s). Car card: past 20 minutes old while plugged in or charging, a line
+    live) presses each charging Stellantis car's `button.*_wakeup` every 15 minutes, and the
+    Astra's as soon as it starts charging (2026-10-11: it was every 30 minutes, so a charge
+    starting at 00:32 showed 7% until 01:00 while the car had reached 30%; the PHEV gains about
+    20% in 20 minutes). The car answers in ~20 s; the command status can read "Failed" while the
+    figures still refresh. Car card: past 20 minutes old while plugged in or charging, a line
     "Updated HH:MM" (from the battery sensor's `Last updated` attribute, else its state) and a
     **Refresh** button that presses the car's wake-up (`carAsOf`, `carTime`, `wake` in
     `carEntities`).
@@ -171,7 +174,9 @@ HACS as an integration. It does two jobs:
     unlock and "change now" at the charger. On a mode change to Fast/Eco/Eco+ (waiting up to 10
     minutes for the car to be plugged in, then 20 s for the lock), if `binary_sensor.zappi_locked`
     is on and it isn't charging: `myenergi.myenergi_unlock`, then the same mode again. A car
-    plugged in with no mode picked stays locked.
+    plugged in with no mode picked stays locked. Checked 2026-10-11 00:30: it ran (unlock, 5 s, Fast)
+    and charging started; "Charge when locked" stayed on, so the unlock does not turn it off and
+    PR #121 (drop the unlock) isn't needed.
   - **Charger button** (v0.38.3, replaces the v0.38.1 Unlock / Charge now / Pause overrides): while a
     car's plugged in, `ev-charger-card` (expanded and compact) shows one button above the modes:
     **Start charge** (unlock if locked, then Fast) until it's charging, then a greyed **Charging**
