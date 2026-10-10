@@ -1,7 +1,9 @@
 package com.churchdrive.app
 
 import com.churchdrive.app.ui.InboxTask
+import com.churchdrive.app.ui.InboxProblem
 import com.churchdrive.app.ui.confirmTasks
+import com.churchdrive.app.ui.inboxProblem
 import com.churchdrive.app.ui.InboxList
 import com.churchdrive.app.ui.listChipName
 import com.churchdrive.app.ui.parseAdded
@@ -73,5 +75,15 @@ class InboxDataTest {
             {"summary":"Book dentist","list":"todo.priorities_jamie","due":"","note":""}]}""")
         assertEquals(listOf("Get milk → Shopping list", "Book dentist → Jamie"), parseAdded(reply, lists))
         assertNull(parseAdded(null, lists))
+    }
+
+    @Test
+    fun onlyAnUnknownCommandMeansTheHouseNeedsUpdating() {
+        assertEquals(InboxProblem.OutOfDate, inboxProblem("unknown_command", true))
+        assertEquals(InboxProblem.Declined, inboxProblem("unknown_error", true))
+        assertEquals(InboxProblem.Declined, inboxProblem("invalid_format", true))
+        assertEquals(InboxProblem.Offline, inboxProblem(null, true))
+        assertEquals(InboxProblem.Offline, inboxProblem(null, false))
+        assertEquals(InboxProblem.Offline, inboxProblem("unknown_error", false))
     }
 }

@@ -29,7 +29,7 @@ private sealed interface InboxState {
     object Empty : InboxState
     object Refused : InboxState
     data class Added(val lines: List<String>) : InboxState
-    data object Failed : InboxState
+    data class Failed(val code: String? = null) : InboxState
     data class Check(val batch: InboxBatch, val lists: List<InboxList>) : InboxState
 }
 
@@ -46,26 +46,30 @@ fun InboxDialog(text: String?, source: String, autoAdd: Boolean = false, onClose
     LaunchedEffect(text) {
         val ha = api
         if (ha == null) {
-            state = InboxState.Failed
+            state = InboxState.Failed()
             return@LaunchedEffect
         }
-        var refused = false
-        // Opening the app from another one can beat the connection to the house: wait for it, up to about eight seconds.
-        // Once the line is up, a command that fails was refused (the house doesn't have the task inbox yet), so stop at once.
+        var code: String? = null
+        // Wait for the line to the house to be signed in before asking (up to about fifteen seconds; opening the app from another one
+        // can beat it), then ask. A command that fails on a live line was refused: its code says why.
         suspend fun ask(type: String, params: JSONObject): Any? {
-            repeat(8) {
-                ha.ask(type, params)?.let { return it }
-                if (ha.connected) {
-                    refused = true
-                    return null
+            repeat(3) {
+                var waited = 0
+                while (!ha.connected && waited < 15_000) {
+                    kotlinx.coroutines.delay(500)
+                    waited += 500
                 }
-                kotlinx.coroutines.delay(1_000)
+                if (!ha.connected) return null
+                ha.ask(type, params)?.let { return it }
+                code = ha.lastErrorCode
+                if (ha.connected && code != null) return null
+                // The line dropped while asking: wait for it and ask again.
             }
             return null
         }
         val lists = parseInboxLists(ask("church_drive/inbox", JSONObject()))
-        if (refused) {
-            state = InboxState.Refused
+        if (code != null) {
+            state = if (inboxProblem(code, ha.connected) == InboxProblem.OutOfDate) InboxState.Refused else InboxState.Failed(code)
             return@LaunchedEffect
         }
         if (text != null) {
@@ -75,7 +79,7 @@ fun InboxDialog(text: String?, source: String, autoAdd: Boolean = false, onClose
             state = when {
                 added != null && added.isNotEmpty() -> InboxState.Added(added)
                 added != null -> InboxState.Empty
-                reply == null -> if (refused) InboxState.Refused else InboxState.Failed
+                reply == null -> if (inboxProblem(code, ha.connected) == InboxProblem.OutOfDate) InboxState.Refused else InboxState.Failed(code)
                 batch == null -> InboxState.Empty
                 else -> InboxState.Check(batch, lists)
             }
@@ -124,10 +128,10 @@ fun InboxDialog(text: String?, source: String, autoAdd: Boolean = false, onClose
                 confirmButton = { TextButton(onClick = onClose) { Text("OK") } },
             )
         }
-        InboxState.Failed -> AlertDialog(
+        is InboxState.Failed -> AlertDialog(
             onDismissRequest = onClose,
-            title = { Text("Couldn't reach the house") },
-            text = { Text("Nothing was added. Check the connection and try again.") },
+            title = { Text(if (s.code != null) "The house couldn't do that" else "Couldn't reach the house") },
+            text = { Text(if (s.code != null) "Nothing was added. Home Assistant said: ${s.code}. Try again, and tell Jamie if it keeps happening." else "Nothing was added. Check the connection and try again.") },
             confirmButton = { TextButton(onClick = onClose) { Text("OK") } },
         )
         is InboxState.Check -> CheckTasks(s.batch, s.lists, onClose)

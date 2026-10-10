@@ -4,6 +4,14 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.5.1
+
+- **Connection fix**: the app no longer sends anything to the house before the sign-in has finished. Sent early, Home Assistant
+  took it for a failed sign-in and dropped the connection, which showed as "Can't sign in just now. Trying again…" and made
+  voice and share fail. It waits for the connection first.
+- **The right message when the house says no**: "Church Drive in Home Assistant needs updating" now shows only when Home Assistant
+  really doesn't have the command. Any other refusal says "The house couldn't do that" and what Home Assistant said.
+
 ## 0.5.0
 
 - **Smart charge** on the car charger: a **Smart charge** switch under the Start charge button, saying what it's doing

@@ -60,3 +60,13 @@ fun parseAdded(result: Any?, lists: List<InboxList>): List<String>? {
         "${t.summary} → $where"
     }
 }
+
+/** What a failed command to the house means, for what the dialog says. */
+enum class InboxProblem { OutOfDate, Declined, Offline }
+
+/** Home Assistant's `unknown_command` means it doesn't have the task inbox yet; any other code is a real refusal; no code is no answer. */
+fun inboxProblem(errorCode: String?, connected: Boolean): InboxProblem = when {
+    errorCode == "unknown_command" -> InboxProblem.OutOfDate
+    connected && errorCode != null -> InboxProblem.Declined
+    else -> InboxProblem.Offline
+}
