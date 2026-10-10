@@ -117,6 +117,14 @@
         "data": {
           "name": "Extra data",
           "description": "Anything else for the companion app's notification data."
+        },
+        "task_list": {
+          "name": "Task's list",
+          "description": "With the task's id, adds Done and Snooze buttons (for a reminder about a to-do task sent to one person)."
+        },
+        "task_uid": {
+          "name": "Task's id",
+          "description": "The to-do item's uid, from todo.get_items."
         }
       }
     },

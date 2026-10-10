@@ -61,3 +61,7 @@ WS_INBOX = "church_drive/inbox"
 WS_INBOX_SUBMIT = "church_drive/inbox/submit"
 WS_INBOX_CONFIRM = "church_drive/inbox/confirm"
 WS_INBOX_DISMISS = "church_drive/inbox/dismiss"
+
+# Place reminders and snoozing (reminders.py).
+WS_REMINDERS = "church_drive/reminders"
+WS_REMINDER_SET = "church_drive/reminders/set"

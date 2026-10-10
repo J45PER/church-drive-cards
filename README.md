@@ -19,6 +19,12 @@ Turn text into to-do tasks without typing them out. The text goes to Home Assist
 - **Voice assistant**: `ha/voice-tasks.yaml` is an automation that lets Assist (phone, watch or a Voice speaker) say "add task …" or "remind me to …".
 - **Anything else**: the `church_drive.add_tasks` action (`text`, optional `person`, `source`, `auto_add`, `ai_task_entity`) returns the tasks it found. `auto_add: true` skips the check. Websocket commands `church_drive/inbox`, `/submit`, `/confirm` and `/dismiss` serve the app, and `church_drive_inbox_changed` fires when the inbox changes.
 
+## Place reminders and snoozing
+
+A task can remind people when they **arrive at a place** instead of at a time. In the Task List card's form (or the app's task box), choose **Remind at a place**: Home, or any zone. Everyone it reminds gets a notification each time they arrive there, until the task is ticked off. Both place and time reminders come with **Done** and **Snooze** buttons on the phone: Done ticks the task off, and Snooze offers 5, 10, 20, 30 minutes or an hour. A time reminder comes back after the snooze; a place reminder comes back only if the person is still at that place (if they've left, it waits for their next arrival).
+
+How it works: the place and who it's for are kept by the integration (`reminders.py`), keyed by the to-do list and the item, so the task's description is unchanged. Arriving is a person's state changing to the zone's name, so it relies on the person's phone reporting location (the app's Location switch). Each phone's button press comes back as the `church_drive_task_action` event. Websocket commands `church_drive/reminders` and `church_drive/reminders/set` serve the card and app. For a time reminder, pass `task_list` and `task_uid` to `church_drive.notify` (with one person) to add the buttons; "Church Drive: repeating tasks" does (see `ha/repeating-tasks.jinja`, which now carries each task's uid).
+
 ## Cards
 
 Every card is set up like a built-in one: **Add Card** → search for it, pick it from the preview, and configure it in the visual editor. No YAML is needed. The YAML examples below are for reference or copy-paste only.
