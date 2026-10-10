@@ -77,6 +77,14 @@ notify:
     data:
       selector:
         object:
+    task_list:
+      example: todo.priorities_jamie
+      selector:
+        entity:
+          domain: todo
+    task_uid:
+      selector:
+        text:
 add_tasks:
   fields:
     text:

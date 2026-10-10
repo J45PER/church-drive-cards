@@ -89,7 +89,7 @@
       {%- set ns.set = ns.set + [{'list': lst, 'uid': i.uid, 'due': nxt ~ ':00'}] -%}
       {%- set due = as_local(as_datetime(nxt)) -%}
     {%- elif i.status == 'needs_action' and due and due <= t0 and due > t0 - timedelta(minutes=5) and who -%}
-      {%- set ns.due = ns.due + [{'list': lst, 'item': i.summary, 'who': who}] -%}
+      {%- set ns.due = ns.due + [{'list': lst, 'item': i.summary, 'who': who, 'uid': i.uid}] -%}
     {%- endif -%}
     {%- if who and due and due > t0 and (i.status == 'needs_action' or nxt) and (ns.next is none or due < ns.next) -%}{%- set ns.next = due -%}{%- endif -%}
   {%- endif -%}
