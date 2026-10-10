@@ -29,8 +29,9 @@ import com.churchdrive.app.VoiceTaskActivity
 import com.churchdrive.app.ui.Tone
 
 /**
- * Add task: one tap opens the phone's speech box, and what you say goes onto the right lists. It needs nothing from the
- * house to draw, so it is always there; wide enough, it says what it does, and a narrow one is just the microphone.
+ * Add task: a one-cell microphone. One tap opens the phone's speech box, and what you say goes onto the right lists. It
+ * needs nothing from the house to draw, so it is always there; made wide, it also says what it does. The to-do widget has
+ * the same microphone beside its heading.
  */
 class VoiceTaskGlanceWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Responsive(WidgetSizes.fine)
@@ -40,11 +41,21 @@ class VoiceTaskGlanceWidget : GlanceAppWidget() {
     }
 }
 
+/** Opens the phone's speech box to add a task by voice. */
+@Composable
+fun voiceTaskAction(): androidx.glance.action.Action =
+    actionStartActivity(Intent(androidx.glance.LocalContext.current, VoiceTaskActivity::class.java))
+
+/** The microphone button the to-do widget carries as well. */
+@Composable
+fun VoiceTaskButton(p: WidgetPalette, size: androidx.compose.ui.unit.Dp = 36.dp) =
+    IconButton("mdi:microphone", p, voiceTaskAction(), size, fill = p.tone(Tone.Blue))
+
 @Composable
 private fun VoiceTaskBody(context: Context) {
     val p = WidgetPalette.of(androidx.glance.LocalContext.current)
     val blue = p.tone(Tone.Blue)
-    val start = actionStartActivity(Intent(context, VoiceTaskActivity::class.java))
+    val start = voiceTaskAction()
     val wide = LocalSize.current.width.value >= 250f
     Box(
         GlanceModifier.fillMaxSize().cornerRadius(if (wide) 28.dp else 999.dp).background(cp(p.surface)).padding(10.dp).clickable(start),

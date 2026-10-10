@@ -6,7 +6,7 @@
     android:minResizeWidth="40dp"
     android:minResizeHeight="40dp"
     android:previewLayout="@layout/widget_preview_voicetask"
-    android:targetCellWidth="4"
+    android:targetCellWidth="1"
     android:targetCellHeight="1"
     android:resizeMode="horizontal|vertical"
     android:updatePeriodMillis="0"
