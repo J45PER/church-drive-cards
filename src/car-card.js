@@ -4,6 +4,11 @@
 // People (kept by the Church Drive integration): with "Only my cars" on, each
 // person sees just theirs (a car nobody has is everyone's), and the card hides
 // itself for someone with none.
+//
+// Some cars (Stellantis) only send new figures when something happens, so a
+// charging car can show the same % for hours: past 20 minutes the card says
+// when the figures are from, and Refresh presses the car's own wake-up button
+// (asks it to send them now).
 
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
@@ -29,6 +34,25 @@ export function carDevices(hass) {
     .filter((c) => carEntities(hass, c.ids).battery);
 }
 
+const STALE_MS = 20 * 60000;
+
+// When a car's figures are from: the integration's own "Last updated" time if
+// it gives one (Stellantis: when the car last sent them), else the state's.
+export function carAsOf(st) {
+  if (!st) return null;
+  const a = st.attributes || {};
+  const raw = a['Last updated'] || a.last_updated || a.updated_at || a.last_update || st.last_changed;
+  const t = Date.parse(raw);
+  return Number.isFinite(t) ? t : null;
+}
+
+// "20:41", or "Sat 20:41" when it's not today.
+export function carTime(t, now = Date.now()) {
+  const d = new Date(t);
+  const hm = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  return new Date(now).toDateString() === d.toDateString() ? hm : `${d.toLocaleDateString([], { weekday: 'short' })} ${hm}`;
+}
+
 // A car's entities, from its entity ids.
 export function carEntities(hass, ids) {
   const st = (id) => (id && hass.states[id]) || null;
@@ -43,11 +67,12 @@ export function carEntities(hass, ids) {
     charging: pick('binary_sensor', /charging$/),
     end: pick('sensor', /charging_end|charge_end|charging_time_left|remaining_charging/),
     tracker: pick('device_tracker', /./),
+    wake: pick('button', /wake_?up$/),
   };
 }
 
 const DEMO_CARS = [
-  { name: 'Electric car', battery: 64, range: '142 mi', fuel: null, fuelRange: '', plugged: true, charging: true, end: 'Full by 06:30', where: 'Home' },
+  { name: 'Electric car', battery: 64, range: '142 mi', fuel: null, fuelRange: '', plugged: true, charging: true, end: 'Full by 06:30', where: 'Home', asOf: Date.now() - 95 * 60000, wake: 'button.demo_wakeup' },
   { name: 'Hybrid', battery: 35, range: '9 mi', fuel: 62, fuelRange: '261 mi', plugged: false, charging: false, end: '', where: 'Away' },
 ];
 
@@ -149,6 +174,8 @@ export class CarCard extends HTMLElement {
         end: endText,
         where,
         entity: e.battery,
+        asOf: carAsOf(st(e.battery)),
+        wake: e.wake && st(e.wake) && st(e.wake).state !== 'unavailable' ? e.wake : '',
       };
     });
   }
@@ -183,16 +210,33 @@ export class CarCard extends HTMLElement {
         .cc-pc { font-size:1.6rem; font-weight:300; font-variant-numeric:tabular-nums; line-height:1; }
         .cc-bar { height:8px; border-radius:4px; background:rgba(127,127,127,.2); overflow:hidden; }
         .cc-bar i { display:block; height:100%; border-radius:4px; transition:width .4s; }
-        .cc-sub { font-size:.75rem; color:var(--secondary-text-color); display:flex; flex-wrap:wrap; gap:4px 12px; }`);
+        .cc-sub { font-size:.75rem; color:var(--secondary-text-color); display:flex; flex-wrap:wrap; gap:4px 12px; }
+        .cc-old { align-items:center; color:#ffb74d; }
+        .cc-old span { display:inline-flex; align-items:center; gap:4px; }
+        .cc-wake { border:none; cursor:pointer; font:inherit; font-size:.75rem; font-weight:600; border-radius:999px; padding:4px 11px; background:rgba(127,127,127,.18); color:var(--primary-text-color); }
+        .cc-wake:disabled { opacity:.6; cursor:default; }`);
       this._list = this.querySelector('.cc-list');
       this._list.addEventListener('click', (ev) => {
+        const wake = ev.target.closest('[data-wake]');
+        if (wake) {
+          ev.stopPropagation();
+          if (this.config.demo) return;
+          this._asking = { ...(this._asking || {}), [wake.dataset.wake]: Date.now() };
+          this._hass.callService('button', 'press', { entity_id: wake.dataset.wake }).catch(() => {});
+          this._sig = null;
+          this._render();
+          // Back to "Refresh" if the car hasn't answered in 3 minutes.
+          setTimeout(() => { this._sig = null; this._render(); }, 3 * 60000 + 500);
+          return;
+        }
         const el = ev.target.closest('[data-id]');
         if (el && el.dataset.id && !this.config.demo) kitMoreInfo(this, el.dataset.id);
       });
       this._built = true;
     }
     kitHead(this, c.title || 'Cars', word + (c.demo ? ' · demo' : ''), CAR_TEAL);
-    const sig = JSON.stringify(cars);
+    // The minute too, so "Updated 20:41" appears once the figures pass 20 minutes old.
+    const sig = JSON.stringify([cars, this._asking, Math.floor(Date.now() / 60000)]);
     if (sig === this._sig) return;
     this._sig = sig;
     const barCol = (p) => (p == null ? KIT_COLOR.off : p < 20 ? '#ef5350' : p < 40 ? '#ffa726' : CAR_TEAL);
@@ -202,12 +246,21 @@ export class CarCard extends HTMLElement {
           .map((x) => {
             const tag = x.charging ? ['Charging', CAR_TEAL] : x.plugged ? ['Plugged in', '#42a5f5'] : x.where ? [x.where, 'var(--secondary-text-color)'] : null;
             const sub = [x.range ? `${x.range} electric` : '', x.fuel != null ? `Fuel ${Math.round(x.fuel)}%${x.fuelRange ? ` · ${x.fuelRange}` : ''}` : '', x.end].filter(Boolean);
+            // Old figures (only matters while it's plugged in and should be changing).
+            const old = (x.plugged || x.charging) && x.asOf && Date.now() - x.asOf > STALE_MS;
+            const asking = this._asking && this._asking[x.wake] && Date.now() - this._asking[x.wake] < 3 * 60000;
+            const fresh = old
+              ? `<div class="cc-sub cc-old"><span>${iconHtml('mdi:clock-alert-outline', { size: '14px' })} Updated ${kitEsc(carTime(x.asOf))}</span>${
+                  x.wake ? `<button type="button" class="cc-wake" data-wake="${kitEsc(x.wake)}"${asking ? ' disabled' : ''}>${asking ? 'Asking the car…' : 'Refresh'}</button>` : ''
+                }</div>`
+              : '';
             return `<div class="cc-car" data-id="${kitEsc(x.entity || '')}" role="button" tabindex="0" aria-label="${kitEsc(x.name)}">
               <div class="cc-top">${iconHtml(x.charging ? 'mdi:car-electric' : 'mdi:car', { size: '24px', style: `color:${x.plugged || x.charging ? CAR_TEAL : 'var(--secondary-text-color)'};` })}
                 <div class="cc-name"><span>${kitEsc(x.name)}</span>${tag ? `<em style="background:color-mix(in srgb, ${tag[1]} 20%, transparent); color:${tag[1]};">${kitEsc(tag[0])}</em>` : ''}</div>
                 <div class="cc-pc" style="color:${barCol(x.battery)};">${x.battery == null ? '–' : `${Math.round(x.battery)}%`}</div></div>
               <div class="cc-bar"><i style="width:${Math.max(0, Math.min(100, x.battery || 0))}%; background:${barCol(x.battery)};"></i></div>
               ${sub.length ? `<div class="cc-sub">${sub.map((s) => `<span>${kitEsc(s)}</span>`).join('')}</div>` : ''}
+              ${fresh}
             </div>`;
           })
           .join('');

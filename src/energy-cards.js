@@ -380,6 +380,7 @@ export function evFind(hass, c = {}) {
     today: c.today_entity || pick('sensor', /energy_used_today|charge_added_today/),
     status: c.status_entity || pick('sensor', /_status$/),
     plug: c.plug_entity || pick('sensor', /plug_status|plug/),
+    locked: pick('binary_sensor', /_locked$/),
   };
 }
 
@@ -430,7 +431,7 @@ export class EvChargerCard extends HTMLElement {
 
   _data() {
     const c = this.config;
-    if (c.demo) return { found: true, mode: 'Eco+', options: ['Fast', 'Eco', 'Eco+', 'Stopped'], power: 7100, session: 18.4, status: 'Charging', plug: 'Connected' };
+    if (c.demo) return { found: true, mode: 'Eco+', options: ['Fast', 'Eco', 'Eco+', 'Stopped'], power: 7100, session: 18.4, status: 'Charging', plug: 'Connected', locked: false };
     const e = evFind(this._hass, c);
     const s = (id) => id && this._hass.states[id];
     if (!s(e.mode) && !s(e.power) && !s(e.status)) return { found: false };
@@ -445,6 +446,7 @@ export class EvChargerCard extends HTMLElement {
       session: kitNum(s(e.session)),
       status: s(e.status) ? s(e.status).state : null,
       plug: s(e.plug) ? s(e.plug).state : null,
+      locked: s(e.locked) ? s(e.locked).state === 'on' : null,
       unavailable: [e.mode, e.power, e.status].filter(Boolean).every((id) => !s(id) || s(id).state === 'unavailable'),
     };
   }
@@ -475,7 +477,16 @@ export class EvChargerCard extends HTMLElement {
       });
     }
     if (!this._built) {
-      this.innerHTML = kitShell(`<div class="ev-body" style="display:flex; flex-direction:column; gap:10px;"></div><div class="ck-row ev-modes"></div>`, `
+      this.innerHTML = kitShell(`<div class="ev-body" style="display:flex; flex-direction:column; gap:10px;"></div><div class="ev-acts"></div><div class="ck-row ev-modes"></div>`, `
+        .ev-acts { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+        .ev-acts:empty { display:none; }
+        .ev-act { border:none; cursor:pointer; font:inherit; font-size:.85rem; font-weight:600; border-radius:12px; min-height:44px; padding:8px 12px;
+          display:flex; align-items:center; justify-content:center; gap:8px; background:rgba(127,127,127,.14); color:var(--primary-text-color); }
+        .ev-act.go { background:color-mix(in srgb, ${EV_TEAL} 24%, transparent); }
+        .ev-act.warn { background:color-mix(in srgb, #ffa726 20%, transparent); }
+        .ev-act:disabled { cursor:default; opacity:.75; }
+        .ev-act.done { background:color-mix(in srgb, ${EV_TEAL} 10%, transparent); color:color-mix(in srgb, ${EV_TEAL} 70%, var(--secondary-text-color)); opacity:1; }
+        .ev-act small { font-weight:400; color:var(--secondary-text-color); }
         .ev-big { display:flex; align-items:baseline; gap:10px; }
         .ev-big b { font-size:2.2rem; font-weight:300; font-variant-numeric:tabular-nums; line-height:1.1; }
         .ev-two { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
@@ -483,6 +494,11 @@ export class EvChargerCard extends HTMLElement {
         .ev-stat b { font-size:1.15rem; font-weight:600; font-variant-numeric:tabular-nums; }
         .ev-stat span { font-size:.72rem; color:var(--secondary-text-color); }`);
       this._body = this.querySelector('.ev-body');
+      this._acts = this.querySelector('.ev-acts');
+      this._acts.addEventListener('click', (ev) => {
+        const b = ev.target.closest('[data-act]');
+        if (b && !b.disabled) this._override(b.dataset.act);
+      });
       this._built = true;
     }
     kitHead(this, c.name || 'Car charger', word + (c.demo ? ' · demo' : ''), col === KIT_COLOR.off ? EV_TEAL : col);
@@ -502,6 +518,7 @@ export class EvChargerCard extends HTMLElement {
           </div>`;
       }
     }
+    this._renderActs(d, charging);
     const modes = d.found && c.show_buttons !== false && d.mode != null ? EV_MODES.filter((b) => !d.options.length || d.options.includes(b.key)).map((b) => ({ ...b, icon: iconFor('charger', b.key, b.icon), on: d.mode === b.key })) : [];
     kitTiles(this.querySelector('.ev-modes'), modes, (t) => this._setMode(t.key));
     hydrateIcons(this);
@@ -511,6 +528,52 @@ export class EvChargerCard extends HTMLElement {
     if (this.config.demo) return;
     const e = evFind(this._hass, this.config);
     if (e.mode) this._hass.callService('select', 'select_option', { entity_id: e.mode, option: mode });
+  }
+
+  // Manual overrides, while a car's plugged in: the charger's lock (it locks
+  // itself when a car is plugged in; the integration can unlock it but not lock
+  // it) and Charge now (unlock + Fast), which becomes Pause (Stop) while charging.
+  _renderActs(d, charging) {
+    if (!this._acts) return;
+    const plugged = d.found && !d.unavailable && d.plug && !/disconnected/i.test(d.plug);
+    const pend = this._pend && Date.now() - this._pend.at < 60000 ? this._pend.act : '';
+    const html = !plugged && !charging
+      ? ''
+      : [
+          d.locked == null
+            ? ''
+            : d.locked
+              ? `<button type="button" class="ev-act warn" data-act="unlock"${pend === 'unlock' ? ' disabled' : ''}>${iconHtml('mdi:lock', { size: '18px' })}${pend === 'unlock' ? 'Unlocking…' : 'Locked <small>· Unlock</small>'}</button>`
+              : `<button type="button" class="ev-act done" disabled aria-label="Unlocked">${iconHtml('mdi:lock-open-variant-outline', { size: '18px' })}Unlocked</button>`,
+          charging
+            ? `<button type="button" class="ev-act" data-act="pause"${pend === 'pause' ? ' disabled' : ''}>${iconHtml('mdi:pause', { size: '18px' })}${pend === 'pause' ? 'Pausing…' : 'Pause'}</button>`
+            : `<button type="button" class="ev-act go" data-act="charge"${pend === 'charge' ? ' disabled' : ''}>${iconHtml('mdi:lightning-bolt', { size: '18px' })}${pend === 'charge' ? 'Starting…' : 'Charge now'}</button>`,
+        ].join('');
+    if (html !== this._actsHtml) {
+      this._actsHtml = html;
+      this._acts.innerHTML = html;
+      hydrateIcons(this._acts);
+    }
+  }
+
+  _override(act) {
+    if (this.config.demo) return;
+    const e = evFind(this._hass, this.config);
+    if (!e.mode) return;
+    const locked = e.locked && this._hass.states[e.locked] && this._hass.states[e.locked].state === 'on';
+    const unlock = () => this._hass.callService('myenergi', 'myenergi_unlock', {}, { entity_id: e.mode }).catch(() => {});
+    if (act === 'unlock') unlock();
+    else if (act === 'charge') {
+      // Unlock first when locked, then Fast (the charger otherwise waits at the unit).
+      (locked ? unlock() : Promise.resolve()).then(() => this._setMode('Fast'));
+    } else if (act === 'pause') this._setMode('Stopped');
+    this._pend = { act, at: Date.now() };
+    this._actsHtml = null;
+    this._sig = null;
+    this._render();
+    // Clear "Starting…" if nothing's changed after a minute.
+    clearTimeout(this._pendTimer);
+    this._pendTimer = setTimeout(() => { this._pend = null; this._actsHtml = null; this._sig = null; this._render(); }, 60500);
   }
 
   getCardSize() {
