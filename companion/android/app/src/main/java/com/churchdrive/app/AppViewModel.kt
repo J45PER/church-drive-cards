@@ -60,11 +60,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val _areaNames = MutableStateFlow<Map<String, String>>(emptyMap())
     val areaNames: StateFlow<Map<String, String>> = _areaNames
 
-    /** A newer test build has been published (checked each time the app opens). */
+    /** A newer test build has been published (checked when the app starts and each time it comes to the front, at most every ten minutes). */
     private val _updateAvailable = MutableStateFlow(false)
     val updateAvailable: StateFlow<Boolean> = _updateAvailable
 
+    private var lastUpdateCheck = 0L
+
     private fun checkForUpdate() {
+        lastUpdateCheck = System.currentTimeMillis()
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             _updateAvailable.value = UpdateCheck.check(okhttp3.OkHttpClient(), BuildConfig.COMMIT)
         }
@@ -95,6 +98,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Asks GitHub now whether a newer build is out; [done] gets the answer on the main thread. */
     fun checkUpdateNow(done: (Boolean) -> Unit) {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            lastUpdateCheck = System.currentTimeMillis()
             val available = UpdateCheck.check(okhttp3.OkHttpClient(), BuildConfig.COMMIT)
             _updateAvailable.value = available
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { done(available) }
@@ -291,6 +295,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** The app came to the front: if it isn't connected, connect again now rather than waiting for the next try. */
     fun onForeground() {
+        // Each time the app comes to the front, not just when it starts afresh (spaced out: see UpdateCheck.MIN_GAP_MS).
+        if (UpdateCheck.due(System.currentTimeMillis(), lastUpdateCheck)) checkForUpdate()
         if (session.signedIn && client.connection.value != ConnectionState.Connected && System.currentTimeMillis() - lastStart > 5_000) startSession()
     }
 

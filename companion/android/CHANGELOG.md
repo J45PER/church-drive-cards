@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.4.1
+
+- **Update prompts**: the app now checks for a newer version each time it comes to the front, not only when it starts afresh,
+  so the update banner shows up without closing the app first. It checks at most every ten minutes.
+
 ## 0.4.0
 
 - **Reminders at a place**: in a task's edit box, **Remind me at a place** (Home, or any place the house knows). You're reminded

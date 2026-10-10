@@ -83,4 +83,12 @@ class EnergyDataTest {
         assertFalse(UpdateCheck.isNewer(null, "def5678"))
         assertFalse(UpdateCheck.isNewer(body, ""))
     }
+
+    @Test
+    fun theUpdateIsAskedForAtMostEveryTenMinutes() {
+        assertTrue(UpdateCheck.due(now = 1_000L, last = 0L))
+        assertFalse(UpdateCheck.due(now = 5 * 60_000L, last = 60_000L))
+        assertTrue(UpdateCheck.due(now = 11 * 60_000L, last = 60_000L))
+        assertFalse(UpdateCheck.due(now = 60_000L + 9 * 60_000L, last = 60_000L))
+    }
 }
