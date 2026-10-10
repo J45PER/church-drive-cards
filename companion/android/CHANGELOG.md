@@ -4,6 +4,17 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.5.0
+
+- **Smart charge** on the car charger: a **Smart charge** switch under the Start charge button, saying what it's doing
+  ("Waiting for the cheap rate, 00:30"). It charges a plugged-in car at the cheapest Octopus rate by itself, and anyone
+  picking a mode takes over. Needs the smart charge set up in Home Assistant.
+- **A question before charging at the normal rate**: pressing **Start charge** (or **Fast**) when the rate is high and the cheap
+  rate is coming up asks **Charge at 00:30** or **Charge now at 25.3p**. The charger widget's Start charge opens the same
+  question in the app.
+- **Stop shows "Stopping…"** until the charger's readings catch up (they refresh about once a minute; the house now asks for
+  fresh ones every few seconds after a mode change), instead of saying "Charging" for up to a minute.
+
 ## 0.4.1
 
 - **Update prompts**: the app now checks for a newer version each time it comes to the front, not only when it starts afresh,

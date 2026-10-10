@@ -50,6 +50,9 @@ class MainActivity : ComponentActivity() {
     private var shareSource = "Share"
     private var shareAutoAdd by mutableStateOf(false)
 
+    /** The charger widget's Start charge asked the app to ask: "Charge at 00:30" or "Charge now". */
+    private var chargePrompt by mutableStateOf(false)
+
     /** True each time the app comes to the front, to show tasks waiting to be checked (from the "Tasks to check" notice or a voice request). */
     private var showInbox by mutableStateOf(false)
 
@@ -59,6 +62,10 @@ class MainActivity : ComponentActivity() {
             shareSource = intent.getStringExtra(EXTRA_SHARE_SOURCE) ?: "Share"
             shareAutoAdd = intent.getBooleanExtra(EXTRA_SHARE_AUTO_ADD, false)
             intent.removeExtra(EXTRA_SHARE_TEXT)
+        }
+        if (intent?.getBooleanExtra("charge_prompt", false) == true) {
+            chargePrompt = true
+            intent.removeExtra("charge_prompt")
         }
     }
 
@@ -161,6 +168,9 @@ class MainActivity : ComponentActivity() {
                                     openCamera = openCamera,
                                     onCameraClosed = { openCamera = null },
                                 )
+                                if (chargePrompt) {
+                                    com.churchdrive.app.ui.ChargePromptHost(entities, statesLoaded, vm::call) { chargePrompt = false }
+                                }
                                 // Text sent from another app, or tasks waiting from earlier: checked here before they go on a list.
                                 if (shareText != null || showInbox) {
                                     com.churchdrive.app.ui.InboxDialog(shareText, shareSource, shareAutoAdd) { shareText = null; showInbox = false }

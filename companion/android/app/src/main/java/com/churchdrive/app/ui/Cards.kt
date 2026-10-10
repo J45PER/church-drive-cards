@@ -505,12 +505,34 @@ fun ChargerCard(entities: Map<String, EntityState>, call: CallService) {
     val mode = entities[ZAPPI_MODE]
     val power = entities[ZAPPI_POWER]?.state?.toDoubleOrNull() ?: 0.0
     val charging = power > 0
+    val over = chargerOverrides(entities)
+    // Stop was picked but the charger's readings haven't caught up yet (they refresh about once a minute).
+    val stopping = mode?.state == "Stopped" && over.charging
     val tone = toneColors(if (charging) Tone.Teal else Tone.Grey)
     val session = entities[ZAPPI_SESSION]?.state?.toDoubleOrNull()
     val status = when {
         mode == null -> "Loading…"
+        stopping -> "Stopping…"
         charging -> "Charging · ${"%.1f".format(power / 1000)} kW"
         else -> entities[ZAPPI_PLUG]?.state ?: entities[ZAPPI_STATUS]?.state ?: "Idle"
+    }
+    // "Starting…" for up to a minute after a tap.
+    var pending by remember { mutableStateOf("") }
+    LaunchedEffect(pending) { if (pending.isNotEmpty()) { delay(60_000); pending = "" } }
+    // Start charge or Fast at the normal rate with the cheap rate coming up: ask first.
+    var ask by remember { mutableStateOf<ChargeAsk?>(null) }
+    var askFor by remember { mutableStateOf("charge") }
+    ask?.let {
+        ChargeAskDialog(
+            it,
+            onLater = { chargeLater(call); ask = null },
+            onNow = {
+                if (askFor == "fast") call("select", "select_option", ZAPPI_MODE, data("option" to "Fast"))
+                else { pending = "charge"; chargeNow(entities, call) }
+                ask = null
+            },
+            onCancel = { ask = null },
+        )
     }
     EntityCard(tone.container, tone.onContainer) {
         Column {
@@ -520,30 +542,36 @@ fun ChargerCard(entities: Map<String, EntityState>, call: CallService) {
             }
         }
         val teal = toneColors(Tone.Teal)
-        val over = chargerOverrides(entities)
-        // "Starting…" for up to a minute after a tap.
-        var pending by remember { mutableStateOf("") }
-        LaunchedEffect(pending) { if (pending.isNotEmpty()) { delay(60_000); pending = "" } }
         if (mode?.available == true) {
             // Always shown: a button and a status. Grey with no car, teal while charging, tappable when it can start.
             when {
+                stopping -> TileRow(listOf(TileItem("mdi:stop-circle-outline", "Stopping…", true) {}), toneColors(Tone.Grey), tone.onContainer, false)
                 over.charging -> TileRow(listOf(TileItem("mdi:lightning-bolt", "Charging", true) {}), teal, teal.accent, false)
                 over.show -> TileRow(
                     listOf(TileItem("mdi:lightning-bolt", if (pending == "charge") "Starting…" else "Start charge", true) {
-                        pending = "charge"
-                        // Unlock first when locked, then Fast (the charger otherwise waits at the unit).
-                        if (over.locked == true) call("myenergi", "myenergi_unlock", ZAPPI_MODE, data())
-                        call("select", "select_option", ZAPPI_MODE, data("option" to "Fast"))
+                        val q = chargeAsk(entities, System.currentTimeMillis())
+                        if (q != null) { askFor = "charge"; ask = q } else { pending = "charge"; chargeNow(entities, call) }
                     }),
                     teal, tone.onContainer, pending != "charge",
                 )
                 else -> TileRow(listOf(TileItem("mdi:ev-plug-type2", "No car connected", false) {}), toneColors(Tone.Grey), tone.onContainer, false)
             }
+            // Smart charge: the cheapest Octopus rate, by itself. Only when the house has it set up.
+            smartCharge(entities)?.let { sm ->
+                TileRow(
+                    listOf(TileItem("mdi:clock-fast", "Smart charge", sm.on) {
+                        call("input_boolean", if (sm.on) "turn_off" else "turn_on", SMART_ENABLED, data())
+                    }),
+                    teal, tone.onContainer, true,
+                )
+                Text(smartText(sm, Octopus.allRates(entities), System.currentTimeMillis()), style = MaterialTheme.typography.bodySmall)
+            }
         }
         TileRow(
             chargerModes(mode?.options().orEmpty()).map { m ->
                 TileItem(m.icon, m.name, mode?.state == m.key) {
-                    call("select", "select_option", ZAPPI_MODE, data("option" to m.key))
+                    val q = if (m.key == "Fast") chargeAsk(entities, System.currentTimeMillis()) else null
+                    if (q != null) { askFor = "fast"; ask = q } else call("select", "select_option", ZAPPI_MODE, data("option" to m.key))
                 }
             },
             teal, tone.onContainer, mode?.available == true,

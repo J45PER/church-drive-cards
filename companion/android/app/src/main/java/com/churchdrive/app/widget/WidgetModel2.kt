@@ -18,6 +18,7 @@ import com.churchdrive.app.ui.ZAPPI_SESSION
 import com.churchdrive.app.ui.ZAPPI_STATUS
 import com.churchdrive.app.ui.chargerModes
 import com.churchdrive.app.ui.chargerOverrides
+import com.churchdrive.app.ui.chargeAsk
 import com.churchdrive.app.ui.fanPresetIcon
 import com.churchdrive.app.ui.fanSpeedIcon
 import com.churchdrive.app.ui.fanSpeeds
@@ -229,6 +230,7 @@ fun chargerCard(entities: Map<String, EntityState>): Card {
     val session = entities[ZAPPI_SESSION]?.state?.toDoubleOrNull()
     val status = when {
         mode == null -> "Not connected"
+        mode.state == "Stopped" && chargerOverrides(entities).charging -> "Stopping…"
         charging -> "Charging · %.1f kW".format(power / 1000)
         else -> entities[ZAPPI_PLUG]?.state ?: entities[ZAPPI_STATUS]?.state ?: "Idle"
     }
@@ -238,8 +240,11 @@ fun chargerCard(entities: Map<String, EntityState>): Card {
     // While a car's plugged in and not charging, Start charge first, as on the app card. A widget button makes one
     // call, so it picks Fast and the "Zappi starts when a mode is picked" automation unlocks the charger.
     val over = chargerOverrides(entities)
+    // At the normal rate with the cheap rate coming up it opens the app's question ("Charge at 00:30" or "Charge now") instead.
+    val ask = chargeAsk(entities, System.currentTimeMillis())
     val extra = if (over.show && !over.charging && mode?.available == true) listOf(
-        WidgetTile("mdi:lightning-bolt", "Start charge", false, "select", "select_option", ZAPPI_MODE, JSONObject().put("option", "Fast").toString()),
+        if (ask != null) WidgetTile("mdi:lightning-bolt", "Start charge", false, "app", "charge_prompt", ZAPPI_MODE)
+        else WidgetTile("mdi:lightning-bolt", "Start charge", false, "select", "select_option", ZAPPI_MODE, JSONObject().put("option", "Fast").toString()),
     ) else emptyList()
     val tiles = extra + modes
     val pinned = (extra + modes.filter { it.label.equals("Stop", ignoreCase = true) }).map { it.key() }

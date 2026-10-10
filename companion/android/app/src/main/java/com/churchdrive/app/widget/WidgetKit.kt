@@ -172,7 +172,14 @@ fun serviceAction(domain: String, service: String, entity: String, data: String 
         actionParametersOf(WidgetKeys.DOMAIN to domain, WidgetKeys.SERVICE to service, WidgetKeys.ENTITY to entity, WidgetKeys.DATA to data),
     )
 
-fun WidgetTile.action(): Action = serviceAction(domain, service, entity, data)
+fun WidgetTile.action(): Action =
+    if (domain == "app") {
+        // Not a call to the house: open the app, which asks the question (the widget can't).
+        val pkg = "com.churchdrive.app"
+        actionStartActivity(
+            Intent().setClassName(pkg, "$pkg.MainActivity").putExtra(service, true).setData(android.net.Uri.parse("churchdrive://$service")),
+        )
+    } else serviceAction(domain, service, entity, data)
 
 /**
  * A widget button press: calls the service (and any calls that must follow it, kept in `__then`, such as Eco after Heat),

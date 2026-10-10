@@ -78,6 +78,8 @@ class UiStandardsTest {
             "TaskDialog.kt" to mapOf("TextButton(" to 3),
             // The tasks-to-check dialog's Add, Discard, Cancel and OK are dialog actions, not choices.
             "InboxDialog.kt" to mapOf("TextButton(" to 7),
+            // The cheap-rate question's two choices ("Charge at 00:30", "Charge now") are dialog actions, not choices.
+            "ChargePrompt.kt" to mapOf("TextButton(" to 2),
         )
         val names = listOf("Button(", "OutlinedButton(", "FilledTonalButton(", "TextButton(", "FilledIconButton(", "ChoiceButton(")
         for (file in uiFiles()) {
