@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-04. Current release: **v0.38.1**.*
+*Last updated 2026-10-04. Current release: **v0.38.2**.*
 
 ## Where this stands
 
@@ -25,7 +25,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-04, v0.38.1 live, nothing on beta):**
+**Now (2026-10-04, v0.38.2 live, nothing on beta):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -422,6 +422,9 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
   Location switch per phone and flags a location that's stopped updating (see the Phone locations notes above).
 - **v0.38.1 (reload-only): car and charger overrides.** Car card says when a plugged-in car's figures
   are from, with Refresh (wakes the car); charger card has Unlock and Charge now / Pause while a car's plugged in.
+- **v0.38.2 (reload-only): the same in compact.** The Home page's Car charging panel is compact on phones, which
+  showed only the modes: now, while a car's plugged in, the charger's compact row has Unlock (when locked) and Charge now /
+  Pause in the modes' place (tap its name for the modes), and the car's row adds "Updated HH:MM" and Refresh.
 - **v0.35.0 (released 2026-10-03, reload-only): Car card.** Cars moved off the charger card
   onto `custom:car-card`, which can give cars to people (see the cars notes above).
 - **v0.33.1 (released 2026-10-03, reload-only): charger card shows the cars.** Each car from
