@@ -4,6 +4,14 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.3.0
+
+- **Tasks from messages**: highlight text in any app and choose **Church Drive to-do** in the menu, or use **Share** >
+  **Church Drive to-do**. The house reads it with AI and splits it into tasks, each on the list it belongs on (shopping,
+  cleaning, a person's own, everyone's) with a day if the text gives one. Check them first: untick any, change the words,
+  pick a different list, then **Add**. Tasks waiting to be checked (from a voice request, or if you closed the box) show
+  when you next open the app. Needs Church Drive v0.39.0 and an AI Task in Home Assistant.
+
 ## 0.2.3
 
 - **Car charger**: one button instead of Unlock / Charge now / Pause, always shown on the card. Grey **No car connected**,

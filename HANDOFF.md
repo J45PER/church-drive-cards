@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-04. Current release: **v0.38.2**.*
+*Last updated 2026-10-10. Current release: **v0.38.3**; v0.39.0 (task inbox) in review.*
 
 ## Where this stands
 

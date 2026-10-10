@@ -45,9 +45,25 @@ class MainActivity : ComponentActivity() {
     /** The camera a widget asked to see live, until it is closed. */
     private var openCamera by mutableStateOf<String?>(null)
 
+    /** Text shared or highlighted in another app, until it has been sent to be read for tasks. */
+    private var shareText by mutableStateOf<String?>(null)
+    private var shareSource = "Share"
+
+    /** True each time the app comes to the front, to show tasks waiting to be checked (from the "Tasks to check" notice or a voice request). */
+    private var showInbox by mutableStateOf(false)
+
+    private fun readShare(intent: android.content.Intent?) {
+        intent?.getStringExtra(EXTRA_SHARE_TEXT)?.let {
+            shareText = it
+            shareSource = intent.getStringExtra(EXTRA_SHARE_SOURCE) ?: "Share"
+            intent.removeExtra(EXTRA_SHARE_TEXT)
+        }
+    }
+
     override fun onStart() {
         super.onStart()
         vm.onForeground()
+        showInbox = true
     }
 
     override fun onNewIntent(intent: android.content.Intent) {
@@ -55,6 +71,7 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         openPage = intent.getStringExtra("page")
         openCamera = intent.getStringExtra("camera")
+        readShare(intent)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,6 +79,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         openPage = intent?.getStringExtra("page")
         openCamera = intent?.getStringExtra("camera")
+        readShare(intent)
         val lastCrash = CrashReport.take(this)
         CrashReport.install(this)
         com.churchdrive.app.ui.MdiAll.load(this)
@@ -141,6 +159,10 @@ class MainActivity : ComponentActivity() {
                                     openCamera = openCamera,
                                     onCameraClosed = { openCamera = null },
                                 )
+                                // Text sent from another app, or tasks waiting from earlier: checked here before they go on a list.
+                                if (shareText != null || showInbox) {
+                                    com.churchdrive.app.ui.InboxDialog(shareText, shareSource) { shareText = null; showInbox = false }
+                                }
                             } else {
                                 LoginScreen(onSignIn = vm::signIn, onLogin = vm::login, onCode = vm::loginCode)
                             }
@@ -149,5 +171,10 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    companion object {
+        const val EXTRA_SHARE_TEXT = "share_text"
+        const val EXTRA_SHARE_SOURCE = "share_source"
     }
 }

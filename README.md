@@ -10,6 +10,14 @@ Pick them in a light card's Scenes list, once for the room and once for each of 
 
 The cards share one bundle and one look: no border, drop shadow, rounded top/bottom corners only, hover tints on interactive elements.
 
+## Tasks from messages and voice
+
+Turn text into to-do tasks without typing them out. The text goes to Home Assistant's **AI Task** (any provider; the first AI Task entity is used, or pass `ai_task_entity`), which splits it into separate tasks and picks the list each belongs on: shopping, cleaning, a named person's own list, everyone's, or the sender's own if it isn't clear. A day or time in the text becomes the due date. **Nothing goes on a list until it's checked**: the tasks wait in the inbox, the sender gets a "Tasks to check" notice, and in the app they tick the ones to keep, change the words or the list, and add them. If no AI Task is set up or it fails, the whole text is kept as one task on the sender's list, so nothing is lost. The house's automatic list is never offered.
+
+- **Android app**: highlight text in any app and choose **Church Drive to-do** (Copy/Share menu), or **Share** > **Church Drive to-do**.
+- **Voice**: `ha/voice-tasks.yaml` is an automation that lets Assist (phone, watch or a Voice speaker) say "add task …" or "remind me to …".
+- **Anything else**: the `church_drive.add_tasks` action (`text`, optional `person`, `source`, `auto_add`, `ai_task_entity`) returns the tasks it found. `auto_add: true` skips the check. Websocket commands `church_drive/inbox`, `/submit`, `/confirm` and `/dismiss` serve the app, and `church_drive_inbox_changed` fires when the inbox changes.
+
 ## Cards
 
 Every card is set up like a built-in one: **Add Card** → search for it, pick it from the preview, and configure it in the visual editor. No YAML is needed. The YAML examples below are for reference or copy-paste only.

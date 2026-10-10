@@ -54,3 +54,10 @@ CONF_MAPS_TILES_KEY = "google_tiles_key"
 CONF_MAPS_PLACES_KEY = "google_places_key"
 WS_MAPS = "church_drive/maps"
 WS_MAPS_SEARCH = "church_drive/maps/search"
+
+# Task inbox (inbox.py): text in, checked tasks out to the to-do lists.
+SERVICE_ADD_TASKS = "add_tasks"
+WS_INBOX = "church_drive/inbox"
+WS_INBOX_SUBMIT = "church_drive/inbox/submit"
+WS_INBOX_CONFIRM = "church_drive/inbox/confirm"
+WS_INBOX_DISMISS = "church_drive/inbox/dismiss"

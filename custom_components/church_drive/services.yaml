@@ -77,3 +77,27 @@ notify:
     data:
       selector:
         object:
+add_tasks:
+  fields:
+    text:
+      required: true
+      example: "Can you pick up milk and book the dentist before Friday?"
+      selector:
+        text:
+          multiline: true
+    person:
+      example: Jamie
+      selector:
+        text:
+    source:
+      example: WhatsApp
+      selector:
+        text:
+    auto_add:
+      default: false
+      selector:
+        boolean:
+    ai_task_entity:
+      selector:
+        entity:
+          domain: ai_task
