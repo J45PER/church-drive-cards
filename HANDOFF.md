@@ -172,12 +172,13 @@ HACS as an integration. It does two jobs:
     minutes for the car to be plugged in, then 20 s for the lock), if `binary_sensor.zappi_locked`
     is on and it isn't charging: `myenergi.myenergi_unlock`, then the same mode again. A car
     plugged in with no mode picked stays locked.
-  - **Charger overrides** (v0.38.1): while a car's plugged in (or charging),
-    `ev-charger-card` shows two buttons above the modes: the lock (`binary_sensor.*_locked`):
-    "Locked · Unlock" runs `myenergi.myenergi_unlock`, "Unlocked" is greyed out in the card's teal and does nothing (the
-    integration has no lock command; the charger locks itself next time a car's plugged in);
-    and **Charge now** (unlock if locked, then Fast) which becomes **Pause** (Stopped) while
-    charging. "Unlocking…/Starting…/Pausing…" for up to a minute.
+  - **Charger button** (v0.38.3, replaces the v0.38.1 Unlock / Charge now / Pause overrides): while a
+    car's plugged in, `ev-charger-card` (expanded and compact) shows one button above the modes:
+    **Start charge** (unlock if locked, then Fast) until it's charging, then a greyed **Charging**
+    marker (Stop is the mode tile). Why: `binary_sensor.zappi_locked` stayed on for 72 h, including
+    a 7.6 kW overnight charge, so the lock button was misleading. "Charging" also counts plug status
+    "Charging", because the Zappi sits at 0 W / "Waiting for EV" between bursts. The Android app
+    (`chargerOverrides`, widget) still has the old Unlock / Charge now / Pause: **TODO**, same change.
 - Nothing else is pending. Ideas the user hasn't asked for are under Open items.
 
 **New in v0.22.0 (2026-09-29): smoother panels, floating chips, page headers** (the user found the
