@@ -17,6 +17,7 @@ import com.churchdrive.app.ui.ZAPPI_POWER
 import com.churchdrive.app.ui.ZAPPI_SESSION
 import com.churchdrive.app.ui.ZAPPI_STATUS
 import com.churchdrive.app.ui.chargerModes
+import com.churchdrive.app.ui.chargerOverrides
 import com.churchdrive.app.ui.fanPresetIcon
 import com.churchdrive.app.ui.fanSpeedIcon
 import com.churchdrive.app.ui.fanSpeeds
@@ -231,10 +232,18 @@ fun chargerCard(entities: Map<String, EntityState>): Card {
         charging -> "Charging · %.1f kW".format(power / 1000)
         else -> entities[ZAPPI_PLUG]?.state ?: entities[ZAPPI_STATUS]?.state ?: "Idle"
     }
-    val tiles = chargerModes(mode?.options().orEmpty()).map {
+    val modes = chargerModes(mode?.options().orEmpty()).map {
         WidgetTile(it.icon, it.name, mode?.state == it.key, "select", "select_option", ZAPPI_MODE, JSONObject().put("option", it.key).toString())
     }
-    return Card("Car charger", listOfNotNull(status, session?.let { "%.1f kWh added".format(it) }).joinToString(" · "), if (charging) Tone.Teal else Tone.Grey, "mdi:ev-station", tiles, tiles.filter { it.label.equals("Stop", ignoreCase = true) }.map { it.key() })
+    // While a car's plugged in and not charging, Start charge first, as on the app card. A widget button makes one
+    // call, so it picks Fast and the "Zappi starts when a mode is picked" automation unlocks the charger.
+    val over = chargerOverrides(entities)
+    val extra = if (over.show && !over.charging && mode?.available == true) listOf(
+        WidgetTile("mdi:lightning-bolt", "Start charge", false, "select", "select_option", ZAPPI_MODE, JSONObject().put("option", "Fast").toString()),
+    ) else emptyList()
+    val tiles = extra + modes
+    val pinned = (extra + modes.filter { it.label.equals("Stop", ignoreCase = true) }).map { it.key() }
+    return Card("Car charger", listOfNotNull(status, session?.let { "%.1f kWh added".format(it) }).joinToString(" · "), if (charging) Tone.Teal else Tone.Grey, "mdi:ev-station", tiles, pinned)
 }
 
 fun fanCard(fan: EntityState?, entity: String): Card {

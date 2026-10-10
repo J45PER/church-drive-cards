@@ -16,6 +16,16 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.width
+import com.churchdrive.app.ha.CallService
+import com.churchdrive.app.ha.data
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -29,12 +39,14 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 // The dashboard's Car card: each car's battery, range and charging, from the car's own integration.
+// Some cars (Stellantis) only send new figures when something happens, so while a car's plugged in and its figures
+// are over 20 minutes old the card says when they're from, and Refresh presses the car's wake-up button.
 
 /** The integrations that make cars (Vauxhall and Peugeot through Stellantis, the VW group). */
 val CAR_PLATFORMS = setOf("stellantis_vehicles", "vag_connect", "volkswagencarnet", "volkswagen_we_connect_id")
 
 /** The entities of one car that the card reads, by their ids ("" when the car hasn't got one). */
-data class CarEntities(val battery: String, val range: String, val fuel: String, val fuelRange: String, val plugged: String, val charging: String, val end: String, val tracker: String)
+data class CarEntities(val battery: String, val range: String, val fuel: String, val fuelRange: String, val plugged: String, val charging: String, val end: String, val tracker: String, val wake: String = "")
 
 fun carEntities(ids: List<String>, entities: Map<String, EntityState>): CarEntities {
     fun pick(domain: String, match: Regex, skip: Regex? = null) =
@@ -52,13 +64,36 @@ fun carEntities(ids: List<String>, entities: Map<String, EntityState>): CarEntit
         charging = pick("binary_sensor", Regex("charging$")),
         end = pick("sensor", Regex("charging_end|charge_end|charging_time_left|remaining_charging")),
         tracker = pick("device_tracker", Regex(".")),
+        wake = pick("button", Regex("wake_?up$")),
     )
 }
 
 data class CarRow(
     val device: String, val name: String, val battery: Double?, val range: String, val fuel: Double?, val fuelRange: String,
     val plugged: Boolean, val charging: Boolean, val end: String, val where: String, val owners: List<String>,
+    /** When the figures are from (epoch ms), and the car's wake-up button ("" when it hasn't one). */
+    val asOf: Long? = null, val wake: String = "",
 )
+
+/** Figures this old, while plugged in, get "Updated HH:MM" and Refresh. */
+const val CAR_STALE_MS = 20 * 60_000L
+
+/** When a car's figures are from: the integration's own "Last updated" (Stellantis: when the car sent them), else the state's. */
+fun carAsOf(battery: EntityState?): Long? {
+    if (battery == null) return null
+    val raw = listOf("Last updated", "last_updated", "updated_at", "last_update").firstNotNullOfOrNull { battery.str(it)?.takeIf { v -> v.isNotBlank() } }
+    return parseMillis(raw) ?: parseMillis(battery.lastChanged)
+}
+
+/** Whether to say when the figures are from: plugged in or charging, and over 20 minutes old. */
+fun carStale(car: CarRow, now: Long): Boolean = (car.plugged || car.charging) && car.asOf != null && now - car.asOf > CAR_STALE_MS
+
+/** "Updated 20:41", or "Updated Sat 20:41" when it isn't today. */
+fun carUpdatedText(at: Long, now: Long, zone: ZoneId = ZoneId.systemDefault()): String {
+    val t = Instant.ofEpochMilli(at).atZone(zone)
+    val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate() == t.toLocalDate()
+    return "Updated " + DateTimeFormatter.ofPattern(if (today) "HH:mm" else "EEE HH:mm", java.util.Locale.UK).format(t)
+}
 
 private fun reading(e: EntityState?): String =
     e?.state?.toDoubleOrNull()?.let { "${Math.round(it)} ${e.str("unit_of_measurement").orEmpty()}".trim() }.orEmpty()
@@ -102,6 +137,7 @@ fun carRows(config: JSONObject, entities: Map<String, EntityState>, registry: Re
             CarRow(
                 device, name, entities[e.battery]?.state?.toDoubleOrNull(), reading(entities[e.range]), entities[e.fuel]?.state?.toDoubleOrNull(),
                 reading(entities[e.fuelRange]), entities[e.plugged]?.state == "on", charging, endText, where, owned,
+                carAsOf(entities[e.battery]), e.wake.takeIf { entities[it]?.state != "unavailable" }.orEmpty(),
             )
         }
 }
@@ -114,8 +150,13 @@ fun personOf(name: String?, entities: Map<String, EntityState>): String? {
 }
 
 @Composable
-fun CarCard(config: JSONObject, entities: Map<String, EntityState>, registry: Registry) {
+fun CarCard(config: JSONObject, entities: Map<String, EntityState>, registry: Registry, call: CallService) {
     val rows = carRows(config, entities, registry, personOf(LocalUserName.current, entities))
+    // The minute, so "Updated 20:41" appears once the figures pass 20 minutes old.
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) { while (true) { delay(60_000); now = System.currentTimeMillis() } }
+    // Cars asked for figures in the last 3 minutes ("Asking the car…").
+    var asked by remember { mutableStateOf(mapOf<String, Long>()) }
     if (rows.isEmpty()) return
     val charging = rows.count { it.charging }
     val tone = toneColors(Tone.Teal)
@@ -157,6 +198,24 @@ fun CarCard(config: JSONObject, entities: Map<String, EntityState>, registry: Re
                         Box(Modifier.fillMaxWidth(((car.battery ?: 0.0) / 100.0).coerceIn(0.0, 1.0).toFloat()).fillMaxHeight().background(barColour, RoundedCornerShape(4.dp)))
                     }
                     if (sub.isNotEmpty()) Text(sub.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (carStale(car, now)) {
+                        val amber = toneColors(Tone.Amber)
+                        val asking = (asked[car.wake] ?: 0L) > now - 3 * 60_000L
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            HaIcon("mdi:clock-alert-outline", Icons.Filled.Info, amber.accent, 16.dp)
+                            Text(carUpdatedText(car.asOf!!, now), color = amber.accent, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                            if (car.wake.isNotEmpty()) Box(Modifier.width(150.dp)) {
+                                TileRow(
+                                    listOf(TileItem("mdi:refresh", if (asking) "Asking the car…" else "Refresh", false) {
+                                        asked = asked + (car.wake to System.currentTimeMillis())
+                                        now = System.currentTimeMillis()
+                                        call("button", "press", car.wake, data())
+                                    }),
+                                    tone, tone.onContainer, !asking,
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
