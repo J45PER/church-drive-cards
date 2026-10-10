@@ -485,6 +485,7 @@ export class EvChargerCard extends HTMLElement {
         .ev-act.go { background:color-mix(in srgb, ${EV_TEAL} 24%, transparent); }
         .ev-act.warn { background:color-mix(in srgb, #ffa726 20%, transparent); }
         .ev-act:disabled { cursor:default; opacity:.75; }
+        .ev-act.done { background:color-mix(in srgb, ${EV_TEAL} 10%, transparent); color:color-mix(in srgb, ${EV_TEAL} 70%, var(--secondary-text-color)); opacity:1; }
         .ev-act small { font-weight:400; color:var(--secondary-text-color); }
         .ev-big { display:flex; align-items:baseline; gap:10px; }
         .ev-big b { font-size:2.2rem; font-weight:300; font-variant-numeric:tabular-nums; line-height:1.1; }
@@ -543,7 +544,7 @@ export class EvChargerCard extends HTMLElement {
             ? ''
             : d.locked
               ? `<button type="button" class="ev-act warn" data-act="unlock"${pend === 'unlock' ? ' disabled' : ''}>${iconHtml('mdi:lock', { size: '18px' })}${pend === 'unlock' ? 'Unlocking…' : 'Locked <small>· Unlock</small>'}</button>`
-              : `<button type="button" class="ev-act" disabled title="Locks again next time a car is plugged in">${iconHtml('mdi:lock-open-variant-outline', { size: '18px' })}Unlocked</button>`,
+              : `<button type="button" class="ev-act done" disabled aria-label="Unlocked">${iconHtml('mdi:lock-open-variant-outline', { size: '18px' })}Unlocked</button>`,
           charging
             ? `<button type="button" class="ev-act" data-act="pause"${pend === 'pause' ? ' disabled' : ''}>${iconHtml('mdi:pause', { size: '18px' })}${pend === 'pause' ? 'Pausing…' : 'Pause'}</button>`
             : `<button type="button" class="ev-act go" data-act="charge"${pend === 'charge' ? ' disabled' : ''}>${iconHtml('mdi:lightning-bolt', { size: '18px' })}${pend === 'charge' ? 'Starting…' : 'Charge now'}</button>`,
