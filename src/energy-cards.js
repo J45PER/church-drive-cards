@@ -529,14 +529,14 @@ export class EvChargerCard extends HTMLElement {
     if (e.mode) this._hass.callService('select', 'select_option', { entity_id: e.mode, option: mode });
   }
 
-  // One manual override, while a car's plugged in: "Start charge" (unlock if locked,
-  // then Fast) until it's charging, then a "Charging" marker. The charger's lock
+  // One button that's also the status: "No car connected" (greyed), "Start charge" (unlock if locked,
+  // then Fast) until it's charging, then a "Charging" marker (compact view: modes instead when no car). The charger's lock
   // sensor stays on even mid-charge, so it isn't shown. Stop is the mode tile.
   _actState(d, charging) {
     const plugged = d.found && !d.unavailable && d.plug && !/disconnected/i.test(d.plug);
     // The Zappi flips to "Waiting for EV" with 0 W between bursts; its plug status still says Charging.
     const active = charging || /^charging/i.test(d.plug || '');
-    if (!plugged && !active) return null;
+    if (!plugged && !active) return { none: true };
     const pend = this._pend && Date.now() - this._pend.at < 60000 && this._pend.act === 'charge';
     return active ? { charging: true } : { charging: false, pend };
   }
@@ -544,9 +544,11 @@ export class EvChargerCard extends HTMLElement {
   _renderActs(d, charging) {
     if (!this._acts) return;
     const a = this._actState(d, charging);
-    const html = !a
+    const html = !a || d.unavailable || !d.found
       ? ''
-      : a.charging
+      : a.none
+        ? `<button type="button" class="ev-act done" disabled aria-label="No car connected">${iconHtml('mdi:ev-plug-type2', { size: '18px' })}No car connected</button>`
+        : a.charging
         ? `<button type="button" class="ev-act done" disabled aria-label="Charging">${iconHtml('mdi:lightning-bolt', { size: '18px' })}Charging</button>`
         : `<button type="button" class="ev-act go" data-act="charge"${a.pend ? ' disabled' : ''}>${iconHtml('mdi:lightning-bolt', { size: '18px' })}${a.pend ? 'Starting…' : 'Start charge'}</button>`;
     if (html !== this._actsHtml) {
@@ -559,7 +561,7 @@ export class EvChargerCard extends HTMLElement {
   // The override as a compact button, or null when no car's plugged in.
   _compactActs(d, charging) {
     const a = d.mode == null ? null : this._actState(d, charging);
-    if (!a) return null;
+    if (!a || a.none) return null;
     return [a.charging
       ? { key: 'charging', act: 'none', icon: 'mdi:lightning-bolt', label: 'Charging', on: true, color: EV_TEAL }
       : { key: 'charge', act: 'charge', icon: 'mdi:lightning-bolt', label: a.pend ? 'Starting…' : 'Start charge', on: true, color: EV_TEAL }];

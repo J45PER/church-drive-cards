@@ -175,7 +175,8 @@ HACS as an integration. It does two jobs:
   - **Charger button** (v0.38.3, replaces the v0.38.1 Unlock / Charge now / Pause overrides): while a
     car's plugged in, `ev-charger-card` (expanded and compact) shows one button above the modes:
     **Start charge** (unlock if locked, then Fast) until it's charging, then a greyed **Charging**
-    marker (Stop is the mode tile). Why: `binary_sensor.zappi_locked` stayed on for 72 h, including
+    marker (Stop is the mode tile); with no car a greyed **No car connected** (expanded card only; the
+    compact view shows the modes then). Why: `binary_sensor.zappi_locked` stayed on for 72 h, including
     a 7.6 kW overnight charge, so the lock button was misleading. "Charging" also counts plug status
     "Charging", because the Zappi sits at 0 W / "Waiting for EV" between bursts. The Android app
     (`chargerOverrides`, widget) still has the old Unlock / Charge now / Pause: **TODO**, same change.
