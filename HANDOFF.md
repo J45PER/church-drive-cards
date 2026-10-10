@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-04. Current release: **v0.38.0**.*
+*Last updated 2026-10-04. Current release: **v0.38.1**.*
 
 ## Where this stands
 
@@ -25,7 +25,7 @@ HACS as an integration. It does two jobs:
    the user's own). Any light card can use them in any room or zone without Hue
    scene setup. There's also a scene select per room/zone and a scene builder.
 
-**Now (2026-10-04, v0.38.0 live, nothing on beta):**
+**Now (2026-10-04, v0.38.1 live, nothing on beta):**
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.
@@ -146,7 +146,8 @@ HACS as an integration. It does two jobs:
     image upload + `person/update`, Cars, Arrivals, To-dos apart from Alerts, Devices);
     device access (`access` on the people sensor: hide what the person can't use); media: a TV
     in standby is Off and power runs `script.<player>_wake`; phone Location switches and
-    "location old" (`tracker`/`tracks`/`seen` per phone, `located`/`stale` per person).
+    "location old" (`tracker`/`tracks`/`seen` per phone, `located`/`stale` per person); car card
+    "Updated HH:MM" + Refresh (car's `button.*_wakeup`); charger Unlock / Charge now / Pause.
   - **Car card** (`src/car-card.js`, `custom:car-card`, v0.35.0): each car from those
     integrations (`carDevices`/`carEntities`): battery bar and %, electric range, fuel % and
     range, Plugged in / Charging / where it is, "Full by" when charging; tap for more-info.
@@ -156,7 +157,7 @@ HACS as an integration. It does two jobs:
     Energy; `ev-charger-card` is the Zappi alone again (the v0.33.1 car rows are gone).
     "Church Drive: car alerts" names the plugged-in car and its % (plugged in waits up to 3
     minutes for the car to report; charged).
-  - **Car figures while charging** (beta 2026-10-04): Stellantis cars only send figures when
+  - **Car figures while charging** (v0.38.1): Stellantis cars only send figures when
     something happens, so a charging Astra showed 12% for hours (the integration polls every 60 s
     but gets the car's last report). "Church Drive: car figures while charging" (automation,
     live) presses each charging Stellantis car's `button.*_wakeup` every 30 minutes (the car
@@ -170,7 +171,7 @@ HACS as an integration. It does two jobs:
     minutes for the car to be plugged in, then 20 s for the lock), if `binary_sensor.zappi_locked`
     is on and it isn't charging: `myenergi.myenergi_unlock`, then the same mode again. A car
     plugged in with no mode picked stays locked.
-  - **Charger overrides** (beta 2026-10-10): while a car's plugged in (or charging),
+  - **Charger overrides** (v0.38.1): while a car's plugged in (or charging),
     `ev-charger-card` shows two buttons above the modes: the lock (`binary_sensor.*_locked`):
     "Locked · Unlock" runs `myenergi.myenergi_unlock`, "Unlocked" is greyed out in the card's teal and does nothing (the
     integration has no lock command; the charger locks itself next time a car's plugged in);
@@ -418,6 +419,8 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
   device to some people; cards and panels hide it from everyone else (see the Device access notes above).
 - **v0.38.0 (released 2026-10-04, restarted): Phone locations.** People manager › Phones has a
   Location switch per phone and flags a location that's stopped updating (see the Phone locations notes above).
+- **v0.38.1 (reload-only): car and charger overrides.** Car card says when a plugged-in car's figures
+  are from, with Refresh (wakes the car); charger card has Unlock and Charge now / Pause while a car's plugged in.
 - **v0.35.0 (released 2026-10-03, reload-only): Car card.** Cars moved off the charger card
   onto `custom:car-card`, which can give cars to people (see the cars notes above).
 - **v0.33.1 (released 2026-10-03, reload-only): charger card shows the cars.** Each car from
