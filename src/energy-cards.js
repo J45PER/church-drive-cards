@@ -479,15 +479,14 @@ export class EvChargerCard extends HTMLElement {
     }
     if (!this._built) {
       this.innerHTML = kitShell(`<div class="ev-body" style="display:flex; flex-direction:column; gap:10px;"></div><div class="ev-acts"></div><div class="ck-row ev-modes"></div>`, `
-        .ev-acts { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+        .ev-acts { display:grid; grid-template-columns:1fr; gap:8px; }
         .ev-acts:empty { display:none; }
         .ev-act { border:none; cursor:pointer; font:inherit; font-size:.85rem; font-weight:600; border-radius:12px; min-height:44px; padding:8px 12px;
           display:flex; align-items:center; justify-content:center; gap:8px; background:rgba(127,127,127,.14); color:var(--primary-text-color); }
         .ev-act.go { background:color-mix(in srgb, ${EV_TEAL} 24%, transparent); }
-        .ev-act.warn { background:color-mix(in srgb, #ffa726 20%, transparent); }
         .ev-act:disabled { cursor:default; opacity:.75; }
-        .ev-act.done { background:color-mix(in srgb, ${EV_TEAL} 10%, transparent); color:color-mix(in srgb, ${EV_TEAL} 70%, var(--secondary-text-color)); opacity:1; }
-        .ev-act small { font-weight:400; color:var(--secondary-text-color); }
+        .ev-act.none { color:var(--secondary-text-color); }
+        .ev-act.live { background:color-mix(in srgb, ${EV_TEAL} 32%, transparent); color:${EV_TEAL}; opacity:1; }
         .ev-big { display:flex; align-items:baseline; gap:10px; }
         .ev-big b { font-size:2.2rem; font-weight:300; font-variant-numeric:tabular-nums; line-height:1.1; }
         .ev-two { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
@@ -531,25 +530,28 @@ export class EvChargerCard extends HTMLElement {
     if (e.mode) this._hass.callService('select', 'select_option', { entity_id: e.mode, option: mode });
   }
 
-  // Manual overrides, while a car's plugged in: the charger's lock (it locks
-  // itself when a car is plugged in; the integration can unlock it but not lock
-  // it) and Charge now (unlock + Fast), which becomes Pause (Stop) while charging.
+  // One button that's also the status: "No car connected" (greyed), "Start charge" (unlock if locked,
+  // then Fast) until it's charging, then a "Charging" marker (compact view: modes instead when no car). The charger's lock
+  // sensor stays on even mid-charge, so it isn't shown. Stop is the mode tile.
+  _actState(d, charging) {
+    const plugged = d.found && !d.unavailable && d.plug && !/disconnected/i.test(d.plug);
+    // The Zappi flips to "Waiting for EV" with 0 W between bursts; its plug status still says Charging.
+    const active = charging || /^charging/i.test(d.plug || '');
+    if (!plugged && !active) return { none: true };
+    const pend = this._pend && Date.now() - this._pend.at < 60000 && this._pend.act === 'charge';
+    return active ? { charging: true } : { charging: false, pend };
+  }
+
   _renderActs(d, charging) {
     if (!this._acts) return;
-    const plugged = d.found && !d.unavailable && d.plug && !/disconnected/i.test(d.plug);
-    const pend = this._pend && Date.now() - this._pend.at < 60000 ? this._pend.act : '';
-    const html = !plugged && !charging
+    const a = this._actState(d, charging);
+    const html = !a || d.unavailable || !d.found
       ? ''
-      : [
-          d.locked == null
-            ? ''
-            : d.locked
-              ? `<button type="button" class="ev-act warn" data-act="unlock"${pend === 'unlock' ? ' disabled' : ''}>${iconHtml('mdi:lock', { size: '18px' })}${pend === 'unlock' ? 'Unlocking…' : 'Locked <small>· Unlock</small>'}</button>`
-              : `<button type="button" class="ev-act done" disabled aria-label="Unlocked">${iconHtml('mdi:lock-open-variant-outline', { size: '18px' })}Unlocked</button>`,
-          charging
-            ? `<button type="button" class="ev-act" data-act="pause"${pend === 'pause' ? ' disabled' : ''}>${iconHtml('mdi:pause', { size: '18px' })}${pend === 'pause' ? 'Pausing…' : 'Pause'}</button>`
-            : `<button type="button" class="ev-act go" data-act="charge"${pend === 'charge' ? ' disabled' : ''}>${iconHtml('mdi:lightning-bolt', { size: '18px' })}${pend === 'charge' ? 'Starting…' : 'Charge now'}</button>`,
-        ].join('');
+      : a.none
+        ? `<button type="button" class="ev-act none" disabled aria-label="No car connected">${iconHtml('mdi:ev-plug-type2', { size: '18px' })}No car connected</button>`
+        : a.charging
+        ? `<button type="button" class="ev-act live" disabled aria-label="Charging">${iconHtml('mdi:lightning-bolt', { size: '18px' })}Charging</button>`
+        : `<button type="button" class="ev-act go" data-act="charge"${a.pend ? ' disabled' : ''}>${iconHtml('mdi:lightning-bolt', { size: '18px' })}${a.pend ? 'Starting…' : 'Start charge'}</button>`;
     if (html !== this._actsHtml) {
       this._actsHtml = html;
       this._acts.innerHTML = html;
@@ -557,30 +559,23 @@ export class EvChargerCard extends HTMLElement {
     }
   }
 
-  // The overrides as compact buttons, or null when no car's plugged in.
+  // The override as a compact button, or null when no car's plugged in.
   _compactActs(d, charging) {
-    const plugged = d.found && !d.unavailable && d.plug && !/disconnected/i.test(d.plug);
-    if ((!plugged && !charging) || d.mode == null) return null;
-    const pend = this._pend && Date.now() - this._pend.at < 60000 ? this._pend.act : '';
-    return [
-      d.locked ? { key: 'unlock', act: 'unlock', icon: 'mdi:lock', label: pend === 'unlock' ? 'Unlocking…' : 'Unlock', title: 'Locked: unlock the charger' } : null,
-      charging
-        ? { key: 'pause', act: 'pause', icon: 'mdi:pause', label: pend === 'pause' ? 'Pausing…' : 'Pause' }
-        : { key: 'charge', act: 'charge', icon: 'mdi:lightning-bolt', label: pend === 'charge' ? 'Starting…' : 'Charge now', on: true, color: EV_TEAL },
-    ].filter(Boolean);
+    const a = d.mode == null ? null : this._actState(d, charging);
+    if (!a || a.none) return null;
+    return [a.charging
+      ? { key: 'charging', act: 'none', icon: 'mdi:lightning-bolt', label: 'Charging', on: true, color: EV_TEAL }
+      : { key: 'charge', act: 'charge', icon: 'mdi:lightning-bolt', label: a.pend ? 'Starting…' : 'Start charge', on: true, color: EV_TEAL }];
   }
 
   _override(act) {
-    if (this.config.demo) return;
+    if (this.config.demo || act !== 'charge') return;
     const e = evFind(this._hass, this.config);
     if (!e.mode) return;
     const locked = e.locked && this._hass.states[e.locked] && this._hass.states[e.locked].state === 'on';
     const unlock = () => this._hass.callService('myenergi', 'myenergi_unlock', {}, { entity_id: e.mode }).catch(() => {});
-    if (act === 'unlock') unlock();
-    else if (act === 'charge') {
-      // Unlock first when locked, then Fast (the charger otherwise waits at the unit).
-      (locked ? unlock() : Promise.resolve()).then(() => this._setMode('Fast'));
-    } else if (act === 'pause') this._setMode('Stopped');
+    // Unlock first when locked, then Fast (the charger otherwise waits at the unit).
+    (locked ? unlock() : Promise.resolve()).then(() => this._setMode('Fast'));
     this._pend = { act, at: Date.now() };
     this._actsHtml = null;
     this._sig = null;

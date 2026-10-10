@@ -286,7 +286,7 @@ class WidgetModel2Test {
     }
 
     @Test
-    fun chargerWidgetHasTheOverridesWhilePluggedIn() {
+    fun chargerWidgetHasStartChargeWhilePluggedIn() {
         val modes = org.json.JSONArray(listOf("Fast", "Eco", "Eco+", "Stopped"))
         fun z(plug: String, power: String, locked: String) = map(
             e("select.zappi_charge_mode", "Eco+", "options" to modes), e("sensor.zappi_plug_status", plug),
@@ -294,12 +294,11 @@ class WidgetModel2Test {
         )
         assertEquals(listOf("Stop", "Eco", "Eco+", "Fast"), chargerCard(z("EV Disconnected", "0", "on")).tiles.map { it.label })
         val waiting = chargerCard(z("EV Connected", "0", "on"))
-        assertEquals(listOf("Unlock", "Charge now", "Stop", "Eco", "Eco+", "Fast"), waiting.tiles.map { it.label })
-        assertEquals(listOf("Unlock", "Charge now", "Stop"), waiting.pinned)
-        assertEquals("myenergi_unlock", waiting.tiles[0].service)
-        assertTrue(waiting.tiles[1].data.contains("Fast"))
-        val going = chargerCard(z("Charging", "6400", "off"))
-        assertEquals(listOf("Pause", "Stop", "Eco", "Eco+", "Fast"), going.tiles.map { it.label })
-        assertTrue(going.tiles[0].data.contains("Stopped"))
+        assertEquals(listOf("Start charge", "Stop", "Eco", "Eco+", "Fast"), waiting.tiles.map { it.label })
+        assertEquals(listOf("Start charge", "Stop"), waiting.pinned)
+        assertTrue(waiting.tiles[0].data.contains("Fast"))
+        // Charging (even at 0 W between bursts): no override tile, the card says Charging.
+        assertEquals(listOf("Stop", "Eco", "Eco+", "Fast"), chargerCard(z("Charging", "6400", "off")).tiles.map { it.label })
+        assertEquals(listOf("Stop", "Eco", "Eco+", "Fast"), chargerCard(z("Charging", "0", "on")).tiles.map { it.label })
     }
 }
