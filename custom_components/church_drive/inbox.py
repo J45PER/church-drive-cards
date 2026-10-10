@@ -39,9 +39,14 @@ AI_TIMEOUT = 60
 
 INSTRUCTIONS = """You turn a message into to-do tasks for a family home.
 
-Today is {today} ({weekday}). The message was sent by {sender}.
+Today is {today} ({weekday}). {sender} is the person using this phone, and is the one who will do the tasks unless the text says otherwise.
+The people in this house are: {household}.
 The to-do lists you may use (use the list_id exactly as written):
 {lists}
+
+The message may be a single note, something spoken, or a copied group chat with lines like "Sam: can you ring the school?". In a chat:
+- "I" or "me" is whoever wrote that line; "you" is the person being addressed. If the line is addressed to {sender} (or to everyone, or is a request with no one named) it is {sender}'s task. If it is addressed to or about another person in this house, put it on that person's list. If it is for someone outside the house, only make a task when {sender} has to act.
+- Ignore chat that is only banter, thanks, or confirmations, and tasks already agreed as done.
 
 Rules:
 - Extract only real actions someone has to do. Skip chat, greetings and things already done.
@@ -150,7 +155,8 @@ class Inbox:
         prompt = INSTRUCTIONS.format(
             today=now.date().isoformat(),
             weekday=now.strftime("%A"),
-            sender=sender or "someone in the house",
+            sender=sender or "Someone in the house",
+            household=", ".join(p["first"] for p in self._people.people()) if self._people else "unknown",
             lists="\n".join(f"- {l['id']}: {l['name']}" for l in lists),
             text=text,
         )

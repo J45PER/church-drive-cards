@@ -4,7 +4,7 @@
 #   "Add task <anything>"      "Remind me to <anything>"      "Jobs to do <anything>"
 #
 # The words go to church_drive.add_tasks, the AI splits them into tasks and picks each list, and they wait in the
-# app (Tasks to check). Leave auto_add false to check them first; set it true to add straight to the lists.
+# lists, no check. If you say several things it splits them and chooses each list. Set auto_add false to check them first.
 #
 # Paste into Settings > Automations > Create automation > Edit in YAML.
 alias: "Church Drive: tasks by voice"
@@ -24,10 +24,10 @@ actions:
       # Who it is for. Leave this out and, with no name in the words, tasks go on the shared "everyone" list; put a first
       # name here (one automation per person, e.g. for their own phone) to use their list.
       # person: Jamie
-      auto_add: false
+      auto_add: true
     response_variable: found
   - set_conversation_response: >-
       {% set n = found.tasks | length %}
       {% if n == 0 %}I couldn't find a task in that.
-      {% elif n == 1 %}Got it: {{ found.tasks[0].summary }}. Check it in the app.
-      {% else %}Got {{ n }} tasks. Check them in the app.{% endif %}
+      {% elif n == 1 %}Added: {{ found.tasks[0].summary }}.
+      {% else %}Added {{ n }} tasks.{% endif %}
