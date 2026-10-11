@@ -121,8 +121,8 @@ fun AssistPanel(
 @Composable
 fun AssistOrb(state: AssistState, level: Float, size: androidx.compose.ui.unit.Dp) {
     val t = rememberInfiniteTransition(label = "orb")
-    val slow = state == AssistState.Idle || state == AssistState.Waiting
-    val phase by t.animateFloat(0f, (2 * Math.PI).toFloat(), infiniteRepeatable(tween(if (slow) 18000 else 9000, easing = LinearEasing)), label = "phase")
+    // One drift cycle, always the same length (changing it with the state made the clouds jump); the multipliers below are whole numbers so the end of a cycle meets its start.
+    val phase by t.animateFloat(0f, (2 * Math.PI).toFloat(), infiniteRepeatable(tween(9000, easing = LinearEasing)), label = "phase")
     val breathe by t.animateFloat(-1f, 1f, infiniteRepeatable(tween(4500), RepeatMode.Reverse), label = "breathe")
     // One 12 second clock: the bloom (2 s), heartbeat (1.5 s) and wave (1.2 s) repeat a whole number of times in it, so nothing jumps.
     val clock by t.animateFloat(0f, 1f, infiniteRepeatable(tween(12000, easing = LinearEasing)), label = "clock")
@@ -173,9 +173,9 @@ fun AssistOrb(state: AssistState, level: Float, size: androidx.compose.ui.unit.D
                 radius = outer, center = at, blendMode = BlendMode.Screen,
             )
         }
-        cloud(AssistColours.Indigo, -13f, -1f, 42f, 1f, 1.3f, 0f)
-        cloud(AssistColours.Purple, 15.5f, -13.5f, 39.5f, 1.2f, 0.8f, 0.33f)
-        cloud(AssistColours.Green, -3f, 15f, 37f, 0.9f, 1.1f, 0.66f)
+        cloud(AssistColours.Indigo, -13f, -1f, 42f, 1f, 2f, 0f)
+        cloud(AssistColours.Purple, 15.5f, -13.5f, 39.5f, 2f, 1f, 0.33f)
+        cloud(AssistColours.Green, -3f, 15f, 37f, 1f, 1f, 0.66f)
         // Listening: soft rings bloom outwards from the cloud and melt away, one colour after another.
         if (state == AssistState.Listening) {
             listOf(AssistColours.Indigo, AssistColours.Purple, AssistColours.Green).forEachIndexed { i, colour ->

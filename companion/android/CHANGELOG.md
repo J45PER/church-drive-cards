@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.11.7
+
+- Jarvis's cloud now loops smoothly: the colours used to reach the end of their drift and jump back to the start, and also jumped when the state changed.
+
 ## 0.11.6
 
 - The small Jarvis cloud in the minimised sheet is no longer cut off in a square: its glow has room to fade out.
