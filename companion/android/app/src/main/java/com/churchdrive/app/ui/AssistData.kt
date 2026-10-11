@@ -158,3 +158,19 @@ fun assistStatus(state: AssistState): String = when (state) {
     AssistState.Thinking -> "Thinking"
     AssistState.Speaking -> "Speaking"
 }
+
+
+private val DISMISS_PHRASES = listOf(
+    "that's it", "that is it", "that's all", "that is all", "that will be all", "that'll be all", "that's everything",
+    "no thanks", "no thank you", "nothing else", "nothing more", "i'm done", "i am done", "we're done",
+    "never mind", "nevermind", "goodbye", "good bye", "stop listening", "go away",
+)
+private val DISMISS_WORDS = setOf("no", "nope", "nah", "stop", "cancel", "bye", "thanks", "thank you", "cheers", "ok thanks", "okay thanks", "ok thank you")
+
+/** Whether what was said ends the conversation ("that's it", "no thanks", "bye"): the assistant then answers and closes instead of listening again. */
+fun isDismissal(text: String): Boolean {
+    val t = text.lowercase().replace('\u2019', '\'').replace(Regex("[^a-z' ]"), " ").replace(Regex("\\s+"), " ").trim()
+        .removePrefix("jarvis ").removeSuffix(" jarvis").removeSuffix(" please").trim()
+    if (t.isEmpty() || t.split(' ').size > 8) return false
+    return t in DISMISS_WORDS || DISMISS_PHRASES.any { it in t }
+}

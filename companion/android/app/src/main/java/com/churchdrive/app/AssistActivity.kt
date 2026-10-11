@@ -80,6 +80,7 @@ class AssistActivity : ComponentActivity() {
         val m = AssistModel(this, api, base)
         model = m
         m.followUp = true
+        m.onDismiss = { finish() }
         lifecycleScope.launch {
             val token = withContext(Dispatchers.IO) { freshToken(session) }
             if (token != null) c.connect(base, token, light = true)

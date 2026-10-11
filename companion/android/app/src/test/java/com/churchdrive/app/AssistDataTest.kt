@@ -3,6 +3,7 @@ package com.churchdrive.app
 import com.churchdrive.app.ui.AssistEvent
 import com.churchdrive.app.ui.assistAudioUrl
 import com.churchdrive.app.ui.introDue
+import com.churchdrive.app.ui.isDismissal
 import com.churchdrive.app.ui.isNotUnderstood
 import com.churchdrive.app.ui.parseAssistEvent
 import org.json.JSONObject
@@ -136,5 +137,19 @@ class AssistDataTest {
             JSONObject("""{"type":"intent-end","data":{"intent_output":{"response":{"speech":{"plain":{"speech":"Done."}}}}}}"""),
         ) as AssistEvent.Answer
         assertFalse(b.continueConversation)
+    }
+
+    @Test
+    fun sayingThatsItEndsTheConversation() {
+        listOf("That's it", "that\u2019s it, thanks", "No thanks", "nope", "That's all Jarvis", "Okay thanks", "Nothing else", "bye", "Never mind", "Thank you").forEach {
+            assertTrue(it, isDismissal(it))
+        }
+    }
+
+    @Test
+    fun anythingElseKeepsTheConversationGoing() {
+        listOf("Turn off the lights", "Is the alarm on", "What time is it", "Turn on the lamp and then tell me that is it done", "", "no one is home, is that right and who is in the house now").forEach {
+            assertFalse(it, isDismissal(it))
+        }
     }
 }

@@ -73,6 +73,12 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     var followUp = false
     private var continueAfter = false
     private var speakingIntro = false
+
+    /** What was just said ends the conversation ("that's it"): after the answer, close instead of listening again. */
+    private var closing = false
+
+    /** Called to close the screen once a dismissed conversation's last words have been spoken. */
+    var onDismiss: (() -> Unit)? = null
     private var autoListening = false
 
     // The wake word loop.
@@ -140,6 +146,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
         stopVoiceRun()
         messages += AssistMessage(true, sentence)
         said = sentence
+        closing = isDismissal(sentence)
         partial = ""
         notice = ""
         notUnderstood = null
@@ -282,6 +289,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
                 endAudio()
                 if (e.text.isNotBlank()) {
                     said = e.text
+                    closing = isDismissal(e.text)
                     messages += AssistMessage(true, e.text)
                     state = AssistState.Thinking
                 }
@@ -300,6 +308,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
                 stopVoiceRun()
                 if (state == AssistState.Thinking || state == AssistState.Listening) state = AssistState.Idle
                 if (state == AssistState.Idle || state == AssistState.Waiting) resumeWake()
+                if (closing && state == AssistState.Idle && player == null) dismiss()
             }
             null -> Unit
         }
@@ -352,9 +361,16 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
             state = AssistState.Idle
             resumeWake()
             // Keep the voice live: after an answer (not the introduction), listen again for a follow-up.
-            if (followUp && !speakingIntro) main.postDelayed({ if (followUp && state == AssistState.Idle) listen(auto = true) }, 350)
+            if (closing) dismiss()
+            else if (followUp && !speakingIntro) main.postDelayed({ if (followUp && state == AssistState.Idle && !closing) listen(auto = true) }, 350)
         }
         runCatching { p.release() }
+    }
+
+    private fun dismiss() {
+        closing = false
+        followUp = false
+        main.post { onDismiss?.invoke() }
     }
 
     /** A short note for the diagnostics line in Settings (the last few things the voice pipeline did). */

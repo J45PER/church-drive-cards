@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.12.2
+
+- When you dismiss Jarvis ("that's it", "no thanks", "nothing else", "bye", "thanks"), he answers and then closes instead of listening again.
+
 ## 0.12.1
 
 - Jarvis waits longer before deciding you have finished speaking (about 1.7 seconds of quiet after "Hey Jarvis", and a longer pause on the phone's own listening when you tap the microphone), so he cuts you off less.

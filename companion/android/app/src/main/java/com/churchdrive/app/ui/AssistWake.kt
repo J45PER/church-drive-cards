@@ -92,6 +92,8 @@ fun AssistWakeHost(connected: Boolean, base: String, api: HaApi?, userName: Stri
             intro = AssistIntroStore.kind(context)
             open = true
         }
+        // Said "that's it": the screen closes once he has answered.
+        model.onDismiss = { open = false; model.panelClosed() }
         onDispose { model.release() }
     }
     DisposableEffect(owner, model, enabled, connected) {
