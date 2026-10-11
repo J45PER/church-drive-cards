@@ -18,10 +18,13 @@ import androidx.compose.runtime.setValue
 import org.json.JSONObject
 
 /**
- * The voice assistant's brain, drawn by AssistScreen. What is said is turned into text by the phone's own recogniser (shown
- * as it is heard, inside the app, no pop-up box), then run through the house's Assist, so anything Home Assistant can do by
- * voice works: lights, heating, the alarm, lists, and your own automations. The answer is shown and spoken in the voice
- * the house's preferred Assist pipeline uses. Must be made, used and released on the main thread.
+ * The voice assistant's brain, drawn by AssistScreen. Two ways to talk to it:
+ *  - tap the microphone: the phone's own recogniser turns the speech into text (shown as it is heard, inside the app, no pop-up),
+ *    which goes to the house's Assist;
+ *  - say the wake word (the one on the house's Assist pipeline, such as "Hey Jarvis"): the microphone is streamed to Home Assistant,
+ *    which hears the wake word and then does the speech-to-text itself, exactly as a Voice Assistant satellite does.
+ * Either way anything Home Assistant can do by voice works (lights, heating, the alarm, lists, your own automations) and the answer
+ * is shown and spoken in the voice of the house's pipeline. Must be made, used and released on the main thread.
  */
 class AssistModel(private val context: Context, private val api: HaApi, private val base: String) {
     var state by mutableStateOf(AssistState.Idle)
@@ -43,7 +46,17 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     var notUnderstood by mutableStateOf<String?>(null)
         private set
 
+    /** The wake word id on the house's preferred pipeline (such as `hey_jarvis`), or null if it has none (or isn't known yet). */
+    var wakeWord by mutableStateOf<String?>(null)
+        private set
+
+    /** The assistant's name, from the wake word ("Jarvis"), or empty. */
+    val name: String get() = assistantName(wakeWord)
+
     val messages = mutableStateListOf<AssistMessage>()
+
+    /** Called when the wake word is heard, so the screen can open. */
+    var onWake: (() -> Unit)? = null
 
     private val main = Handler(Looper.getMainLooper())
     private var conversationId: String? = null
@@ -51,11 +64,26 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     private var player: MediaPlayer? = null
     private var subscription = -1
     private var answered = false
+    private var said = ""
+
+    // The wake word loop.
+    private var wakeEnabled = false
+    private var panelOpen = false
+    private var mic: MicStream? = null
+    private var handlerId: Int? = null
+    private var audioEnded = false
+
+    /** Asks the house what the assistant is called (its pipeline's wake word). */
+    fun loadName() {
+        api.request("assist_pipeline/pipeline/list", JSONObject()) { r -> main.post { wakeWord = preferredWakeWord(r) } }
+    }
 
     /** Shows a message to the person (such as the microphone not being allowed). */
     fun say(text: String) {
         notice = text
     }
+
+    // ---- listening by tapping the microphone ----
 
     /** Starts listening (or stops, if it already is). */
     fun listen() {
@@ -64,6 +92,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
             return
         }
         stopSpeaking()
+        stopVoiceRun()
         if (!SpeechRecognizer.isRecognitionAvailable(context)) {
             notice = "This phone has no speech recogniser."
             return
@@ -83,11 +112,12 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
 
     /** Sends a sentence (spoken or typed) to the house's Assist and shows and speaks the answer. */
     fun send(text: String) {
-        val said = text.trim()
-        if (said.isEmpty()) return
+        val sentence = text.trim()
+        if (sentence.isEmpty()) return
         stopSpeaking()
-        closeRun()
-        messages += AssistMessage(true, said)
+        stopVoiceRun()
+        messages += AssistMessage(true, sentence)
+        said = sentence
         partial = ""
         notice = ""
         notUnderstood = null
@@ -96,18 +126,117 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
         val params = JSONObject()
             .put("start_stage", "intent")
             .put("end_stage", "tts")
-            .put("input", JSONObject().put("text", said))
+            .put("input", JSONObject().put("text", sentence))
             .put("timeout", 30)
         conversationId?.let { params.put("conversation_id", it) }
-        subscription = api.subscribe("assist_pipeline/run", params) { event -> main.post { onEvent(event, said) } }
+        subscription = api.subscribe("assist_pipeline/run", params) { event -> main.post { onEvent(event) } }
         if (subscription < 0) {
             state = AssistState.Idle
             notice = "Can't reach the house right now."
         }
     }
 
-    private fun onEvent(event: JSONObject, said: String) {
+    // ---- listening for the wake word ----
+
+    /** Starts listening for the wake word, with nothing on screen, until [stopWake]. Needs the microphone permission. */
+    fun startWake() {
+        wakeEnabled = true
+        beginWakeRun()
+    }
+
+    fun stopWake() {
+        wakeEnabled = false
+        stopVoiceRun()
+        if (state == AssistState.Waiting) state = AssistState.Idle
+    }
+
+    /** The screen is showing (after the wake word): don't start another wake run until it is [panelClosed]. */
+    fun panelOpened() {
+        panelOpen = true
+    }
+
+    fun panelClosed() {
+        panelOpen = false
+        stop()
+        if (wakeEnabled) beginWakeRun()
+    }
+
+    private fun beginWakeRun() {
+        if (!wakeEnabled || panelOpen || subscription >= 0) return
+        if (state != AssistState.Idle && state != AssistState.Waiting) return
+        val params = JSONObject()
+            .put("start_stage", "wake_word")
+            .put("end_stage", "tts")
+            .put("input", JSONObject().put("sample_rate", MicStream.RATE))
+            .put("timeout", 300)
+        conversationId?.let { params.put("conversation_id", it) }
+        answered = false
+        said = ""
+        subscription = api.subscribe("assist_pipeline/run", params) { event -> main.post { onEvent(event) } }
+        if (subscription < 0) {
+            // The house isn't reachable: try again shortly.
+            main.postDelayed({ beginWakeRun() }, 5_000)
+            return
+        }
+        state = AssistState.Waiting
+    }
+
+    private fun startMic() {
+        val id = handlerId ?: return
+        audioEnded = false
+        val m = MicStream({ buf, n -> if (!audioEnded) api.sendAudio(id, buf, n) }, { l -> main.post { level = if (state == AssistState.Listening) l else 0f } })
+        if (m.start()) {
+            mic = m
+        } else {
+            notice = "Allow the microphone to use the wake word."
+            stopWake()
+        }
+    }
+
+    /** No more audio is wanted: tell the pipeline the speech is over and let go of the microphone. */
+    private fun endAudio() {
+        if (audioEnded) return
+        audioEnded = true
+        handlerId?.let { api.sendAudio(it, ByteArray(0), 0) }
+        mic?.stop()
+        mic = null
+    }
+
+    private fun stopVoiceRun() {
+        mic?.stop()
+        mic = null
+        audioEnded = true
+        handlerId = null
+        closeRun()
+    }
+
+    // ---- what the house says back ----
+
+    private fun onEvent(event: JSONObject) {
         when (val e = parseAssistEvent(event)) {
+            is AssistEvent.Started -> {
+                handlerId = e.handlerId
+                if (e.handlerId != null) startMic()
+            }
+            is AssistEvent.Woke -> if (e.word != null) {
+                partial = ""
+                notice = ""
+                notUnderstood = null
+                state = AssistState.Listening
+                onWake?.invoke()
+            }
+            AssistEvent.SpeechEnded -> {
+                endAudio()
+                if (state == AssistState.Listening) state = AssistState.Thinking
+            }
+            is AssistEvent.Heard -> {
+                endAudio()
+                if (e.text.isNotBlank()) {
+                    said = e.text
+                    messages += AssistMessage(true, e.text)
+                    state = AssistState.Thinking
+                }
+            }
             is AssistEvent.Answer -> {
                 if (e.conversationId != null) conversationId = e.conversationId
                 answered = true
@@ -115,22 +244,34 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
                 if (isNotUnderstood(e.text)) notUnderstood = said
             }
             is AssistEvent.Audio -> play(assistAudioUrl(base, e.path))
-            is AssistEvent.Failed -> {
-                if (!answered) {
-                    messages += AssistMessage(false, if (e.noMatch) "Sorry, I didn't understand that." else e.message)
-                    if (e.noMatch) notUnderstood = said
-                } else {
-                    notice = "The house answered, but couldn't speak it."
-                }
-                if (state != AssistState.Speaking) state = AssistState.Idle
-                closeRun()
-            }
+            is AssistEvent.Failed -> onFailed(e)
             AssistEvent.Done -> {
-                if (state == AssistState.Thinking) state = AssistState.Idle
-                closeRun()
+                stopVoiceRun()
+                if (state == AssistState.Thinking || state == AssistState.Listening) state = AssistState.Idle
+                if (state == AssistState.Idle || state == AssistState.Waiting) resumeWake()
             }
             null -> Unit
         }
+    }
+
+    private fun onFailed(e: AssistEvent.Failed) {
+        stopVoiceRun()
+        when {
+            e.code == "wake-word-timeout" -> Unit // nothing was said for a while: just listen again
+            e.code == "stt-no-text-recognized" -> notice = "I didn't catch that."
+            !answered -> {
+                messages += AssistMessage(false, if (e.noMatch) "Sorry, I didn't understand that." else e.message)
+                if (e.noMatch) notUnderstood = said
+            }
+            else -> notice = "The house answered, but couldn't speak it."
+        }
+        if (state != AssistState.Speaking) state = AssistState.Idle
+        resumeWake()
+    }
+
+    /** After a run (and its speech) is over, start listening for the wake word again, if that is switched on and nothing is on screen. */
+    private fun resumeWake() {
+        if (wakeEnabled && !panelOpen && state != AssistState.Speaking) main.postDelayed({ beginWakeRun() }, 400)
     }
 
     private fun play(url: String) {
@@ -156,11 +297,12 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
         if (player === p) {
             player = null
             state = AssistState.Idle
+            resumeWake()
         }
         runCatching { p.release() }
     }
 
-    /** Stops the voice and the listening. */
+    /** Stops the voice. */
     fun stopSpeaking() {
         player?.let { runCatching { it.stop() }; runCatching { it.release() } }
         player = null
@@ -170,6 +312,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     fun stop() {
         recogniser?.cancel()
         stopSpeaking()
+        stopVoiceRun()
         if (state != AssistState.Thinking) state = AssistState.Idle
         partial = ""
         level = 0f
@@ -180,9 +323,10 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
         subscription = -1
     }
 
-    /** Frees the recogniser, the player and the line to the house. */
+    /** Frees the recogniser, the player, the microphone and the line to the house. */
     fun release() {
-        closeRun()
+        wakeEnabled = false
+        stopVoiceRun()
         stopSpeaking()
         recogniser?.destroy()
         recogniser = null
@@ -210,12 +354,12 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
         }
         override fun onResults(results: Bundle?) {
             level = 0f
-            val said = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
-            if (said.isBlank()) {
+            val heard = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
+            if (heard.isBlank()) {
                 state = AssistState.Idle
                 notice = "I didn't hear anything. Tap the microphone to try again."
             } else {
-                send(said)
+                send(heard)
             }
         }
         override fun onPartialResults(partialResults: Bundle?) {

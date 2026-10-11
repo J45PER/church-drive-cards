@@ -14,6 +14,9 @@ interface HaApi {
 
     fun close(subscription: Int)
 
+    /** A piece of microphone audio for a running voice pipeline (see HaClient.sendAudio); false if it couldn't be sent. */
+    fun sendAudio(handlerId: Int, chunk: ByteArray, length: Int): Boolean = false
+
     /** Whether the line to the house is up right now. A failed command while it is up was refused, not lost. */
     val connected: Boolean get() = true
 

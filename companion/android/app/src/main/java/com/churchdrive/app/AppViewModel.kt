@@ -448,6 +448,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
         override fun close(subscription: Int) = client.unsubscribe(subscription)
 
+        override fun sendAudio(handlerId: Int, chunk: ByteArray, length: Int): Boolean = client.sendAudio(handlerId, chunk, length)
+
         override val connected: Boolean get() = client.connection.value == com.churchdrive.app.ha.ConnectionState.Connected
 
         override val lastErrorCode: String? get() = client.lastErrorCode

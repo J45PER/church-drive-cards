@@ -111,7 +111,7 @@ private fun Waveform(state: AssistState, level: Float) {
             val amount = when (state) {
                 AssistState.Listening -> 0.25f + level * wave * 0.75f
                 AssistState.Thinking, AssistState.Speaking -> 0.2f + wave * 0.5f
-                AssistState.Idle -> 0.12f
+                AssistState.Idle, AssistState.Waiting -> 0.12f
             }
             Box(modifier = Modifier.width(4.dp).height((44 * amount).dp).clip(RoundedCornerShape(2.dp)).background(AssistColours.down))
         }
@@ -206,7 +206,7 @@ private fun FullAssist(model: AssistModel, onFull: (Boolean) -> Unit, onClose: (
         Box(modifier = Modifier.fillMaxWidth().height(4.dp).background(AssistColours.across))
         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             RoundIcon("mdi:close", "Close", false) { onClose() }
-            Text("Assistant", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+            Text(model.name.ifBlank { "Assistant" }, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
             RoundIcon("mdi:arrow-collapse-down", "Smaller", false) { onFull(false) }
         }
         if (!chatting) {
@@ -219,7 +219,7 @@ private fun FullAssist(model: AssistModel, onFull: (Boolean) -> Unit, onClose: (
                 Text(assistStatus(model.state), style = MaterialTheme.typography.labelLarge, color = AssistColours.Green)
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    model.partial.ifEmpty { "Ask or tell the house" }, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center,
+                    model.partial.ifEmpty { if (model.wakeWord != null) "Say \u201C${wakePhrase(model.wakeWord)}\u201D or tap the microphone" else "Ask or tell the house" }, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center,
                     color = if (model.partial.isEmpty()) scheme.onSurfaceVariant else scheme.onSurface,
                 )
                 Spacer(Modifier.height(16.dp))
@@ -277,7 +277,7 @@ private fun Bubble(message: AssistMessage, faded: Boolean = false) {
 
 /** What the first time after an update shows: the assistant introduces itself and what is new, with a sentence to try for each. */
 @Composable
-fun AssistIntro(name: String, onTry: () -> Unit, onSkip: () -> Unit) {
+fun AssistIntro(name: String, assistant: String, wakeWord: String?, onTry: () -> Unit, onSkip: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
     val tone = toneColors(Tone.Indigo)
     Column(modifier = Modifier.fillMaxSize().background(scheme.background).statusBarsPadding().navigationBarsPadding()) {
@@ -287,7 +287,11 @@ fun AssistIntro(name: String, onTry: () -> Unit, onSkip: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             AssistOrb(AssistState.Idle, 0f, 104.dp)
-            Text(if (name.isNotBlank()) "Hi $name, I'm your house assistant" else "Hi, I'm your house assistant", style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+            val who = assistant.ifBlank { "your house assistant" }
+            Text(if (name.isNotBlank()) "Hi $name, I'm $who" else "Hi, I'm $who", style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+            if (wakeWord != null) {
+                Text("Say \u201C${wakePhrase(wakeWord)}\u201D any time the app is open, or tap the microphone.", style = MaterialTheme.typography.bodyMedium, color = AssistColours.Green, textAlign = TextAlign.Center)
+            }
             Text(
                 "I can do anything Home Assistant can: lights, heating, cleaning, the alarm, your lists and your own automations. Just ask.",
                 style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center,
