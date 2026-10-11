@@ -115,7 +115,7 @@ class AssistDataTest {
         assertTrue(first.startsWith("Hello Jamie. I'm Jarvis."))
         assertTrue("hands-free with the wake word and natural conversation" in first)
         val update = com.churchdrive.app.ui.introSpeech(com.churchdrive.app.ui.IntroKind.Update, "Jamie", "Jarvis", feats)
-        assertTrue(update.startsWith("Welcome back, Jamie. Here's what's new:"))
+        assertTrue(update.startsWith("Welcome back Jamie. Here's what's new:"))
         assertFalse("I'm Jarvis" in update)
         assertEquals("a, b and c", com.churchdrive.app.ui.spokenList(listOf("a", "b", "c")))
     }

@@ -116,7 +116,7 @@ fun introSpeech(kind: IntroKind, person: String, assistant: String, features: Li
             "Hello${if (name.isNotEmpty()) " $name" else ""}. I'm $who. I can run anything Home Assistant can: the lights, the heating, the cleaning, the alarm, your lists, and your own automations. " +
                 "Here's what I can do for you now: $news. Just ask whenever you need me."
         IntroKind.Update ->
-            "Welcome back${if (name.isNotEmpty()) ", $name" else ""}. Here's what's new: $news."
+            "Welcome back${if (name.isNotEmpty()) " $name" else ""}. Here's what's new: $news."
     }
 }
 
