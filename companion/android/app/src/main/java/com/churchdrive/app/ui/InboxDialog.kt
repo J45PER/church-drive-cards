@@ -151,74 +151,66 @@ private fun CheckTasks(batch: InboxBatch, lists: List<InboxList>, onClose: () ->
     val hasShopping = choice != null && tasks.any { it.keep && it.list == "shopping" }
     var target by remember(batch.id) { mutableStateOf(choice?.default ?: "new") }
     var newName by remember(batch.id) { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onClose,
-        title = { Text(if (batch.tasks.size == 1) "Add this task?" else "Add these ${batch.tasks.size} tasks?") },
-        text = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                if (failed) Text("That didn't save. Try again.", color = MaterialTheme.colorScheme.error)
-                if (hasShopping && choice != null) {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("Shopping goes on:", style = MaterialTheme.typography.titleSmall)
-                        val labels = choice.lists.map { optionLabel(it) } + NEW_LIST
-                        val picked = if (target == "new") NEW_LIST else choice.lists.firstOrNull { it.id == target }?.let { optionLabel(it) }
-                        OptionRow(labels, picked, tone) { label ->
-                            target = choice.lists.firstOrNull { optionLabel(it) == label }?.id ?: "new"
-                        }
-                        if (target == "new") {
-                            OutlinedTextField(
-                                newName, { newName = it }, modifier = Modifier.fillMaxWidth(), singleLine = true,
-                                placeholder = { Text("Name for the new list (optional)") },
-                            )
-                        }
-                        if (choice.missed.isNotEmpty() && target == "new") {
-                            Text("Not available last time, added too: ${choice.missed.joinToString(", ")}", style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
+    FullPage(if (batch.tasks.size == 1) "Add this task?" else "Add these ${batch.tasks.size} tasks?", onClose) {
+        if (failed) Text("That didn't save. Try again.", color = MaterialTheme.colorScheme.error)
+        if (hasShopping && choice != null) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Shopping goes on:", style = MaterialTheme.typography.titleSmall)
+                val labels = choice.lists.map { optionLabel(it) } + NEW_LIST
+                val picked = if (target == "new") NEW_LIST else choice.lists.firstOrNull { it.id == target }?.let { optionLabel(it) }
+                OptionRow(labels, picked, tone) { label ->
+                    target = choice.lists.firstOrNull { optionLabel(it) == label }?.id ?: "new"
                 }
-                tasks.forEachIndexed { i, t ->
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(t.keep, { tasks[i] = t.copy(keep = it) })
-                            OutlinedTextField(
-                                t.summary, { tasks[i] = t.copy(summary = it) },
-                                modifier = Modifier.fillMaxWidth(), singleLine = true, enabled = t.keep,
-                            )
-                        }
-                        if (t.due.isNotEmpty()) Text("Due ${t.due.replace('T', ' ')}", style = MaterialTheme.typography.labelMedium)
-                        if (t.keep && lists.isNotEmpty()) {
-                            val names = lists.map { listChipName(it.name) }
-                            OptionRow(names, lists.firstOrNull { it.id == t.list }?.let { listChipName(it.name) }, tone) { picked ->
-                                lists.firstOrNull { listChipName(it.name) == picked }?.let { tasks[i] = t.copy(list = it.id) }
-                            }
-                        }
+                if (target == "new") {
+                    OutlinedTextField(
+                        newName, { newName = it }, modifier = Modifier.fillMaxWidth(), singleLine = true,
+                        placeholder = { Text("Name for the new list (optional)") },
+                    )
+                }
+                if (choice.missed.isNotEmpty() && target == "new") {
+                    Text("Not available last time, added too: ${choice.missed.joinToString(", ")}", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+        tasks.forEachIndexed { i, t ->
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(t.keep, { tasks[i] = t.copy(keep = it) })
+                    OutlinedTextField(
+                        t.summary, { tasks[i] = t.copy(summary = it) },
+                        modifier = Modifier.fillMaxWidth(), singleLine = true, enabled = t.keep,
+                    )
+                }
+                if (t.due.isNotEmpty()) Text("Due ${t.due.replace('T', ' ')}", style = MaterialTheme.typography.labelMedium)
+                if (t.keep && lists.isNotEmpty()) {
+                    val names = lists.map { listChipName(it.name) }
+                    OptionRow(names, lists.firstOrNull { it.id == t.list }?.let { listChipName(it.name) }, tone) { picked ->
+                        lists.firstOrNull { listChipName(it.name) == picked }?.let { tasks[i] = t.copy(list = it.id) }
                     }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(
-                enabled = chosen > 0 && !saving,
-                onClick = {
-                    val ha = api ?: return@TextButton
-                    saving = true
-                    ha.request(
-                        "church_drive/inbox/confirm",
-                        JSONObject().put("batch", batch.id).put("tasks", confirmTasks(tasks.toList()))
-                            .also { if (hasShopping) it.put("shopping", shoppingConfirm(target, newName)) },
-                    ) { reply ->
-                        if (reply == null) { saving = false; failed = true } else onClose()
-                    }
-                },
-            ) { Text(if (chosen == 1) "Add 1 task" else "Add $chosen tasks") }
-        },
-        dismissButton = {
-            TextButton(
-                onClick = {
+        }
+        TileRow(
+            listOf(
+                TileItem("mdi:delete-outline", "Discard", false) {
                     api?.request("church_drive/inbox/dismiss", JSONObject().put("batch", batch.id)) { }
                     onClose()
                 },
-            ) { Text("Discard") }
-        },
-    )
+                TileItem("mdi:check", if (chosen == 1) "Add 1 task" else "Add $chosen tasks", chosen > 0 && !saving) {
+                    val ha = api
+                    if (ha != null && chosen > 0 && !saving) {
+                        saving = true
+                        ha.request(
+                            "church_drive/inbox/confirm",
+                            JSONObject().put("batch", batch.id).put("tasks", confirmTasks(tasks.toList()))
+                                .also { if (hasShopping) it.put("shopping", shoppingConfirm(target, newName)) },
+                        ) { reply ->
+                            if (reply == null) { saving = false; failed = true } else onClose()
+                        }
+                    }
+                },
+            ),
+            tone, MaterialTheme.colorScheme.onSurface,
+        )
+    }
 }

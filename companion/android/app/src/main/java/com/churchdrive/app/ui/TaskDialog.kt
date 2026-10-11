@@ -1,12 +1,9 @@
 package com.churchdrive.app.ui
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -51,64 +48,63 @@ fun TaskDialog(item: TodoItem, listId: String, first: String?, tone: ToneColors,
     val repeating = repeat != "None"
     val cleaned = cleanTime(time)
 
-    AlertDialog(
-        onDismissRequest = onClose,
-        title = { Text("Edit task") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(name, { name = it }, label = { Text("Task") }, singleLine = true, modifier = Modifier)
-                Text("Day", style = MaterialTheme.typography.labelLarge)
-                OptionRow(dueOptions, due, tone) { due = it }
-                Text("Repeat", style = MaterialTheme.typography.labelLarge)
-                OptionRow(repeatOptions, repeat, tone) { repeat = it }
-                if (repeating || due != "No date") {
-                    OutlinedTextField(
-                        time, { time = it }, label = { Text("Time (24 hour, like 09:00)") }, singleLine = true,
-                        isError = cleaned == null && time.isNotBlank(),
-                    )
-                }
-                if (repeating) {
-                    Text("Remind", style = MaterialTheme.typography.labelLarge)
-                    OptionRow(whoOptions, who, tone) { who = it }
-                }
-                places?.takeIf { it.isNotEmpty() && first != null }?.let { all ->
-                    Text("Remind me at a place", style = MaterialTheme.typography.labelLarge)
-                    OptionRow(placeChoices(all), place, tone) { place = it }
-                    if (place != NO_PLACE) Text("Reminds you each time you arrive, until it's done.", style = MaterialTheme.typography.bodySmall)
-                }
-                OutlinedTextField(notes, { notes = it }, label = { Text("Notes") }, modifier = Modifier)
-            }
-        },
-        confirmButton = {
-            TextButton(
-                enabled = name.isNotBlank() && (!repeating || cleaned != null),
-                onClick = {
-                    val day = dueDateOf(due, today) ?: keepDay ?: today
-                    val timeOrNull = if (repeating || due != "No date") cleaned else null
-                    val words2 = repeatWords(repeat, cleaned ?: "09:00", day)
-                    val fields = updateFields(
-                        item.uid, name, due, if (due == "No date") null else timeOrNull, today,
-                        buildDescription(words2, whoWords(who, first), notes),
-                    )
-                    call("todo", "update_item", listId, data(*fields.map { it.key to (it.value ?: JSONObject.NULL) }.toTypedArray()))
-                    if (place != placeWas && first != null) {
-                        api?.request(
-                            "church_drive/reminders/set",
-                            JSONObject().put("list", listId).put("uid", item.uid).put("zone", places?.let { zoneOfChoice(it, place) } ?: JSONObject.NULL)
-                                .put("who", JSONArray().put(first)),
-                        ) { }
-                    }
-                    onClose()
-                },
-            ) { Text("Save") }
-        },
-        dismissButton = {
-            TextButton(onClick = {
-                call("todo", "remove_item", listId, data("item" to item.uid))
-                if (placeWas != NO_PLACE) api?.request("church_drive/reminders/set", JSONObject().put("list", listId).put("uid", item.uid).put("zone", JSONObject.NULL).put("who", JSONArray())) { }
-                onClose()
-            }) { Text("Delete") }
-            TextButton(onClick = onClose) { Text("Cancel") }
-        },
-    )
+    val save = {
+        val day = dueDateOf(due, today) ?: keepDay ?: today
+        val timeOrNull = if (repeating || due != "No date") cleaned else null
+        val words2 = repeatWords(repeat, cleaned ?: "09:00", day)
+        val fields = updateFields(
+            item.uid, name, due, if (due == "No date") null else timeOrNull, today,
+            buildDescription(words2, whoWords(who, first), notes),
+        )
+        call("todo", "update_item", listId, data(*fields.map { it.key to (it.value ?: JSONObject.NULL) }.toTypedArray()))
+        if (place != placeWas && first != null) {
+            api?.request(
+                "church_drive/reminders/set",
+                JSONObject().put("list", listId).put("uid", item.uid).put("zone", places?.let { zoneOfChoice(it, place) } ?: JSONObject.NULL)
+                    .put("who", JSONArray().put(first)),
+            ) { }
+        }
+        onClose()
+    }
+    var sure by remember { mutableStateOf(false) }
+    val delete = {
+        call("todo", "remove_item", listId, data("item" to item.uid))
+        if (placeWas != NO_PLACE) api?.request("church_drive/reminders/set", JSONObject().put("list", listId).put("uid", item.uid).put("zone", JSONObject.NULL).put("who", JSONArray())) { }
+        onClose()
+    }
+
+    FullPage("Edit task", onClose) {
+        OutlinedTextField(name, { name = it }, label = { Text("Task") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        Text("Day", style = MaterialTheme.typography.labelLarge)
+        OptionRow(dueOptions, due, tone) { due = it }
+        Text("Repeat", style = MaterialTheme.typography.labelLarge)
+        OptionRow(repeatOptions, repeat, tone) { repeat = it }
+        if (repeating || due != "No date") {
+            OutlinedTextField(
+                time, { time = it }, label = { Text("Time (24 hour, like 09:00)") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                isError = cleaned == null && time.isNotBlank(),
+            )
+        }
+        if (repeating) {
+            Text("Remind", style = MaterialTheme.typography.labelLarge)
+            OptionRow(whoOptions, who, tone) { who = it }
+        }
+        places?.takeIf { it.isNotEmpty() && first != null }?.let { all ->
+            Text("Remind me at a place", style = MaterialTheme.typography.labelLarge)
+            OptionRow(placeChoices(all), place, tone) { place = it }
+            if (place != NO_PLACE) Text("Reminds you each time you arrive, until it's done.", style = MaterialTheme.typography.bodySmall)
+        }
+        OutlinedTextField(notes, { notes = it }, label = { Text("Notes") }, modifier = Modifier.fillMaxWidth(), minLines = 3)
+        TileRow(
+            listOf(
+                TileItem("mdi:close", "Cancel", false) { onClose() },
+                TileItem("mdi:check", "Save", true) { if (name.isNotBlank() && (!repeating || cleaned != null)) save() },
+            ),
+            tone, tone.onContainer,
+        )
+        TileRow(
+            listOf(TileItem("mdi:delete-outline", if (sure) "Tap again to delete" else "Delete", sure) { if (sure) delete() else sure = true }),
+            toneColors(Tone.Red), tone.onContainer,
+        )
+    }
 }
