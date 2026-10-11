@@ -98,7 +98,7 @@ fun AccountOverlay(
     // The last page shown, so a page keeps its words while it slides away.
     var shown by remember { mutableStateOf("account") }
     if (panel != null) shown = panel
-    BackHandler(enabled = panel != null) { onPanel(if (panel == "account") null else "account") }
+    BackHandler(enabled = panel != null) { onPanel(panelParent(panel)) }
     AnimatedVisibility(
         visible = panel != null,
         enter = slideInHorizontally(initialOffsetX = { it }),
@@ -109,7 +109,7 @@ fun AccountOverlay(
                 targetState = shown,
                 transitionSpec = {
                     // Going deeper, the new page slides over the old; going back, the old page slides away off the top of the one below.
-                    val deeper = targetState != "account"
+                    val deeper = panelDepth(targetState) > panelDepth(initialState)
                     val move = if (deeper) slideInHorizontally { it } togetherWith slideOutHorizontally { -it / 4 }
                     else slideInHorizontally { -it / 4 } togetherWith slideOutHorizontally { it }
                     move.apply { targetContentZIndex = if (deeper) 1f else -1f }
@@ -125,9 +125,10 @@ fun AccountOverlay(
                     "energy", "devices" -> adminPages.firstOrNull { it.name.lowercase() == which }?.let { p ->
                         AdminPage(p.label, { onPanel("account") }) { pageContent(p) }
                     }
+                    "manager" -> ManagerHub(managerPages, { onPanel("account") }, onPanel)
                     else -> if (which.startsWith("manager:")) {
                         managerPages.firstOrNull { it.title == which.removePrefix("manager:") }?.let { p ->
-                            AdminPage(p.title, { onPanel("account") }) { managerContent(p) }
+                            AdminPage(p.title, { onPanel("manager") }) { managerContent(p) }
                         }
                     } else AccountPage(userName, isAdmin, adminPages, managerPages, onClose = { onPanel(null) }, onOpen = onPanel, onSignOut = {
                         onPanel(null)
@@ -138,6 +139,21 @@ fun AccountOverlay(
             }
         }
     }
+}
+
+/** Where Back goes from a page of the account panel: the Manager's sections go back to the Manager, every other page to the account page. */
+internal fun panelParent(panel: String?): String? = when {
+    panel == null -> null
+    panel == "account" -> null
+    panel.startsWith("manager:") -> "manager"
+    else -> "account"
+}
+
+/** How deep a page is in the account panel (the account page 0, its pages 1, a Manager section 2), for the slide direction. */
+internal fun panelDepth(panel: String?): Int = when {
+    panel == null || panel == "account" -> 0
+    panel.startsWith("manager:") -> 2
+    else -> 1
 }
 
 private val PanelShape = RoundedCornerShape(28.dp)
@@ -208,27 +224,38 @@ private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Pa
                 adminPages.forEach { p -> PanelRow(p.fallback, p.label, onClick = { onOpen(p.name.lowercase()) }) }
             }
         }
-        // The Manager's sections (administrators), each its own page.
+        // The Manager (administrators): one button here, and a page of its sections.
         if (managerPages.isNotEmpty()) {
-            Text("Manager", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 8.dp, top = 4.dp))
-            PanelCard {
-                managerPages.forEach { p ->
-                    val summary = rememberTemplate(p.summaryTemplate)
-                    ListItem(
-                        headlineContent = { Text(p.title) },
-                        supportingContent = summary?.takeIf { it.isNotBlank() }?.let { { Text(it) } },
-                        leadingContent = { HaIcon(p.icon, Icons.Outlined.Settings, MaterialTheme.colorScheme.onSurfaceVariant, 24.dp) },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        modifier = Modifier.clickable { onOpen("manager:${p.title}") },
-                    )
-                }
-            }
+            PanelCard { PanelRow(Icons.Outlined.Settings, "Manager", "${managerPages.size} sections: people, cameras, reminders and more", onClick = { onOpen("manager") }) }
         }
         PanelCard {
             PanelRow(Icons.Outlined.Settings, "Settings", onClick = { onOpen("settings") })
             PanelRow(Icons.Outlined.Info, "About", onClick = { onOpen("about") })
         }
         PanelCard { PanelRow(Icons.AutoMirrored.Outlined.Logout, "Sign out", onClick = onSignOut) }
+    }
+}
+
+/** The Manager's sections as a page of buttons; each opens its own page. */
+@Composable
+private fun ManagerHub(managerPages: List<PanelSpec>, onBack: () -> Unit, onOpen: (String) -> Unit) {
+    Column(
+        Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        PanelTitle("Manager", onBack)
+        PanelCard {
+            managerPages.forEach { p ->
+                val summary = rememberTemplate(p.summaryTemplate)
+                ListItem(
+                    headlineContent = { Text(p.title) },
+                    supportingContent = summary?.takeIf { it.isNotBlank() }?.let { { Text(it) } },
+                    leadingContent = { HaIcon(p.icon, Icons.Outlined.Settings, MaterialTheme.colorScheme.onSurfaceVariant, 24.dp) },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    modifier = Modifier.clickable { onOpen("manager:${p.title}") },
+                )
+            }
+        }
     }
 }
 

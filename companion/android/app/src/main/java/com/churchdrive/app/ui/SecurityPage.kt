@@ -68,6 +68,7 @@ fun DashboardPanel(panel: PanelSpec, content: @Composable () -> Unit) {
         iconName = panel.icon,
         tone = toneFromColour(colour) ?: Tone.Grey,
         summary = summary,
+        collapsible = panel.title.isNotBlank(),
         content = content,
     )
 }
