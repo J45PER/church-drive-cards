@@ -174,3 +174,15 @@ fun isDismissal(text: String): Boolean {
     if (t.isEmpty() || t.split(' ').size > 8) return false
     return t in DISMISS_WORDS || DISMISS_PHRASES.any { it in t }
 }
+
+
+/** Names the voice says wrongly, and what to write instead so it says them right ("Die Ann" for Diane). */
+private val NAME_RESPELLINGS = listOf("Diane" to "Die Ann")
+
+/** [text] with names respelled so the voice pronounces them properly. */
+fun forSpeech(text: String): String =
+    NAME_RESPELLINGS.fold(text) { t, (name, spoken) -> t.replace(Regex("\\b$name\\b", RegexOption.IGNORE_CASE), spoken) }
+
+/** [text] with the respellings turned back into the real names, for showing on screen. */
+fun forDisplay(text: String): String =
+    NAME_RESPELLINGS.fold(text) { t, (name, spoken) -> t.replace(Regex("\\b" + spoken.replace(" ", "[ -]") + "\\b", RegexOption.IGNORE_CASE), name) }

@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.12.4
+
+- Jarvis says Diane's name properly ("Die Ann"): the house is told to spell it that way for the voice, and the app shows it as "Diane" on screen and speaks it that way in his own welcome.
+
 ## 0.12.3
 
 - Jarvis's spoken welcome says "Welcome back Jamie" with no comma, which the voice turned into a long pause before the name.
