@@ -144,6 +144,20 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
         }
     }
 
+    /** Says [text] aloud in the voice of the house's Assist pipeline (without adding it to the conversation). Tries again while the line to the house comes up. */
+    fun speak(text: String, attempt: Int = 0) {
+        if (text.isBlank()) return
+        stopSpeaking()
+        stopVoiceRun()
+        val params = JSONObject()
+            .put("start_stage", "tts")
+            .put("end_stage", "tts")
+            .put("input", JSONObject().put("text", text))
+            .put("timeout", 30)
+        subscription = api.subscribe("assist_pipeline/run", params) { event -> main.post { onEvent(event) } }
+        if (subscription < 0 && attempt < 10) main.postDelayed({ speak(text, attempt + 1) }, 1_000)
+    }
+
     // ---- listening for the wake word ----
 
     /** Starts listening for the wake word, with nothing on screen, until [stopWake]. Needs the microphone permission. */

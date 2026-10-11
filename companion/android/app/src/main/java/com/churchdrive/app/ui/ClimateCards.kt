@@ -70,7 +70,7 @@ fun OptionRow(options: List<String>, selected: String?, tone: ToneColors, enable
 /** The dashboard's `custom:climate-zone-card`: a floor's rooms, each with its temperature (coloured by comfort) and humidity. */
 @Composable
 fun ClimateZoneCard(config: JSONObject, entities: Map<String, EntityState>) {
-    val neutral = panelNeutral()
+    val neutral = toneColors(Tone.Grey)
     val rooms = config.optJSONArray("rooms")
     // Tap the heading to open the floor out: each room's temperature (and humidity) over the last day.
     var open by remember { mutableStateOf(false) }
@@ -105,10 +105,8 @@ fun ClimateZoneCard(config: JSONObject, entities: Map<String, EntityState>) {
                 }
             }
             if (open) {
-                SensorGraph(r.optString("temperature"), 24, "°", tone.accent, neutral.onContainer)
-                r.optString("humidity").takeIf { it.isNotBlank() }?.let {
-                    SensorGraph(it, 24, "%", toneColors(Tone.Purple).accent, neutral.onContainer)
-                }
+                // The same graph as the thermostat cards: the comfort band for the room, the humidity limits, smoothed.
+                RoomGraph(r.optString("temperature"), r.optString("humidity").takeIf { it.isNotBlank() }, r.optString("type"), neutral.onContainer, tone.accent)
             }
         }
     }

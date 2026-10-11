@@ -252,6 +252,7 @@ private fun HomePage(
     call: CallService,
     onOpen: (Page) -> Unit,
 ) {
+    val quality = entities[CLIMATE_QUALITY_ENTITY]?.state?.toIntOrNull()
     val alarm = entities[ALARM_ENTITY]
     val climate = entities[CLIMATE_ENTITY]
     val vacuum = entities[VACUUM_ENTITY]
@@ -276,7 +277,7 @@ private fun HomePage(
         SectionPanel(
             title,
             iconName = icon,
-            tone = toneFromColour(colour) ?: fallbackTone,
+            tone = if (title == "Climate" && quality != null) qualityTone(quality) else toneFromColour(colour) ?: fallbackTone,
             summary = summary,
             onClick = page?.let { { onOpen(it) } },
             content = content,
@@ -287,7 +288,6 @@ private fun HomePage(
     // app draws its own way (alarm, climate, lights, vacuum) keep that; any other panel shows its cards as they are.
     TodoHighlights(entities, call) { onOpen(Page.Todo) }
     val titles = panels.map { it.title }.ifEmpty { listOf("Security", "Climate", "Lights", "Cleaning", "Car charging") }
-    val quality = entities[CLIMATE_QUALITY_ENTITY]?.state?.toIntOrNull()
     titles.forEach { title ->
         when (title) {
             "Security" -> HomePanel("Security", alarmIconName(alarm?.state), alarmTone(alarm?.state), alarmLabel(alarm?.state), Page.Security) {
