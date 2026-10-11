@@ -27,6 +27,7 @@ import androidx.media3.common.VideoSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -85,12 +86,12 @@ fun CameraEventsViewer(name: String, base: String, onClose: () -> Unit) {
         }
         host.events(base) { result -> if (result == null) failed = true else events = parseCameraEvents(result) }
     }
-    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    PopupWindow(onDismissRequest = onClose) { close ->
         Surface(modifier = Modifier.fillMaxSize(), color = Color.Black) {
-            Column(modifier = Modifier.fillMaxSize().padding(8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("$name events", color = Color.White, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f).padding(start = 8.dp))
-                    IconButton(onClick = onClose) { Icon(Icons.Filled.Close, contentDescription = "Close", tint = Color.White) }
+                    IconButton(onClick = close) { Icon(Icons.Filled.Close, contentDescription = "Close", tint = Color.White) }
                 }
                 playing?.let { EventPlayer(it, baseUrl) }
                 val all = events

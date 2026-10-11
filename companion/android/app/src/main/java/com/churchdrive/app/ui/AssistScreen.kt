@@ -311,15 +311,16 @@ private fun SheetAssist(model: AssistModel, onFull: (Boolean) -> Unit, onClose: 
     var leaving by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { shown = true }
     val close: () -> Unit = { if (!leaving) { leaving = true; shown = false } }
-    LaunchedEffect(leaving) { if (leaving) { kotlinx.coroutines.delay(260); onClose() } }
-    val dim by animateFloatAsState(if (shown) 0.34f else 0f, tween(240), label = "scrim")
-    FrostedWindow(dim / 0.34f)
+    LaunchedEffect(model.closeRequested) { if (model.closeRequested) close() }
+    LaunchedEffect(leaving) { if (leaving) { kotlinx.coroutines.delay(PopupMotion.ExitMs + 30L); onClose() } }
+    val dim by animateFloatAsState(if (shown) PopupMotion.ScrimAlpha else 0f, tween(PopupMotion.ScrimMs), label = "scrim")
+    FrostedWindow(dim / PopupMotion.ScrimAlpha)
     Box(modifier = Modifier.fillMaxSize()) {
         Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = dim)).clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { close() })
         AnimatedVisibility(
             visible = shown, modifier = Modifier.align(Alignment.BottomCenter),
-            enter = slideInVertically(tween(280)) { it } + fadeIn(tween(200)),
-            exit = slideOutVertically(tween(240)) { it } + fadeOut(tween(200)),
+            enter = slideInVertically(tween(PopupMotion.EnterMs)) { it } + fadeIn(tween(PopupMotion.EnterMs - 80)),
+            exit = slideOutVertically(tween(PopupMotion.ExitMs)) { it } + fadeOut(tween(PopupMotion.ExitMs - 40)),
         ) {
         Column(
             modifier = Modifier.fillMaxWidth()
@@ -390,6 +391,7 @@ private fun FullAssist(model: AssistModel, onFull: (Boolean) -> Unit, onClose: (
     var typing by remember { mutableStateOf(false) }
     val chatting = model.messages.isNotEmpty()
     val active = model.state == AssistState.Listening || model.state == AssistState.Thinking || model.state == AssistState.Speaking
+    LaunchedEffect(model.closeRequested) { if (model.closeRequested) onClose() }
     Box(modifier = Modifier.fillMaxSize().background(scheme.background)) {
         BottomGlow(active, model.level, Modifier.align(Alignment.BottomCenter))
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {

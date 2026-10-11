@@ -113,8 +113,8 @@ private fun MediaRemote(player: EntityState, registry: Registry, tone: ToneColor
     val id = player.entityId
     val on = player.state !in setOf("off", "unavailable", "unknown")
     val pad = padFor(player, registry)
-    Dialog(onDismissRequest = onClose) {
-        Card {
+    PopupWindow(onDismissRequest = onClose, shape = PopupShape.Card) { close ->
+        Card(Modifier.padding(horizontal = 24.dp)) {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     ToneIconName(mediaIcon(player), Icons.Filled.Info, tone, 44)
@@ -122,7 +122,7 @@ private fun MediaRemote(player: EntityState, registry: Registry, tone: ToneColor
                         Text(player.friendlyName, style = MaterialTheme.typography.titleMedium)
                         Text(mediaLine(player), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    IconButton(onClick = onClose) { HaIcon("mdi:close", Icons.Filled.Info, MaterialTheme.colorScheme.onSurface, 22.dp) }
+                    IconButton(onClick = close) { HaIcon("mdi:close", Icons.Filled.Info, MaterialTheme.colorScheme.onSurface, 22.dp) }
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
                     if (player.supports(Feature.TURN_ON) || player.supports(Feature.TURN_OFF)) IconButton(onClick = { call("media_player", if (on) "turn_off" else "turn_on", id, data()) }) { HaIcon("mdi:power", Icons.Filled.Info, if (on) tone.accent else MaterialTheme.colorScheme.onSurface, 26.dp) }

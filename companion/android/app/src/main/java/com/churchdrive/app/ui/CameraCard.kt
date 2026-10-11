@@ -214,11 +214,8 @@ internal fun CameraViewer(
     // The picture's own shape (known once it plays), so a square or portrait camera fills the screen when full screen.
     var aspect by remember { mutableStateOf(16f / 9f) }
     var full by remember { mutableStateOf(false) }
-    Dialog(
-        // Back leaves full screen first, then the viewer.
-        onDismissRequest = { if (full) full = false else onClose() },
-        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
-    ) {
+    // Back leaves full screen first, then the viewer.
+    PopupWindow(onDismissRequest = onClose, handleBack = { if (full) { full = false; true } else false }) { close ->
         Surface(modifier = Modifier.fillMaxSize(), color = Color.Black) {
             Column(
                 modifier = Modifier.fillMaxSize().then(if (full) Modifier else Modifier.padding(8.dp)),
@@ -227,7 +224,7 @@ internal fun CameraViewer(
                 if (!full) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(name, color = Color.White, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f).padding(start = 8.dp))
-                        IconButton(onClick = onClose) { Icon(Icons.Filled.Close, contentDescription = "Close", tint = Color.White) }
+                        IconButton(onClick = close) { Icon(Icons.Filled.Close, contentDescription = "Close", tint = Color.White) }
                     }
                 }
                 // One stage for both: pinch to zoom, drag to look around, double-tap to zoom in and out. Full screen just gives it all the room.

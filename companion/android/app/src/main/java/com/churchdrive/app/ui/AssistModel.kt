@@ -77,8 +77,9 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     /** What was just said ends the conversation ("that's it"): after the answer, close instead of listening again. */
     private var closing = false
 
-    /** Called to close the screen once a dismissed conversation's last words have been spoken. */
-    var onDismiss: (() -> Unit)? = null
+    /** Set once a dismissed conversation's last words have been spoken: the screen then closes itself, with its usual exit. */
+    var closeRequested by mutableStateOf(false)
+        private set
     private var autoListening = false
 
     // The wake word loop.
@@ -111,6 +112,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     /** Starts listening (or stops, if it already is). [auto] is for a follow-up the person didn't ask for: silence then isn't an error. */
     fun listen(auto: Boolean = false) {
         autoListening = auto
+        closeRequested = false
         if (state == AssistState.Listening) {
             recogniser?.stopListening()
             return
@@ -142,6 +144,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     fun send(text: String) {
         val sentence = text.trim()
         if (sentence.isEmpty()) return
+        closeRequested = false
         stopSpeaking()
         stopVoiceRun()
         messages += AssistMessage(true, sentence)
@@ -198,6 +201,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
 
     /** The screen is showing (after the wake word): don't start another wake run until it is [panelClosed]. */
     fun panelOpened() {
+        closeRequested = false
         panelOpen = true
         followUp = true
     }
@@ -370,7 +374,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     private fun dismiss() {
         closing = false
         followUp = false
-        main.post { onDismiss?.invoke() }
+        closeRequested = true
     }
 
     /** A short note for the diagnostics line in Settings (the last few things the voice pipeline did). */
