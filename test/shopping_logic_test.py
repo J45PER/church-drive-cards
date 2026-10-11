@@ -86,3 +86,37 @@ class Shopping(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PlaceTests(unittest.TestCase):
+    LIDL = {"name": "Lidl Protaras", "address": "Protaras, Cyprus", "lat": 35.0123456789, "lon": 34.0567891234}
+
+    def test_clean_place_rounds_and_names(self):
+        p = sl.clean_place(self.LIDL)
+        self.assertEqual((p["lat"], p["lon"]), (35.012346, 34.056789))
+        self.assertEqual(sl.clean_place({"lat": 1, "lon": 2})["name"], "Shop")
+
+    def test_clean_place_rejects_bad(self):
+        for bad in (None, "zone.home", {"lat": "x", "lon": 1}, {"lat": 91, "lon": 0}, {"lat": 0, "lon": 0}, {"lat": 5}):
+            self.assertIsNone(sl.clean_place(bad))
+
+    def test_clean_places_dedupes_and_limits(self):
+        many = [{"lat": 50 + i * 0.01, "lon": 1} for i in range(9)]
+        self.assertEqual(len(sl.clean_places(many)), sl.MAX_PLACES)
+        self.assertEqual(len(sl.clean_places([self.LIDL, dict(self.LIDL)])), 1)
+
+    def test_valid_time(self):
+        self.assertEqual(sl.valid_time("9:05"), "09:05")
+        self.assertEqual(sl.valid_time("23:59"), "23:59")
+        for bad in ("24:00", "9", "", None, "ab:cd"):
+            self.assertEqual(sl.valid_time(bad), "")
+
+    def test_near_place(self):
+        p = sl.clean_place(self.LIDL)
+        self.assertEqual(sl.near_place([p], 35.0124, 34.0568)["name"], "Lidl Protaras")
+        self.assertIsNone(sl.near_place([p], 35.02, 34.06))
+        self.assertIsNone(sl.near_place([p], None, None))
+        self.assertAlmostEqual(sl.distance_m(51.5, 0, 51.5, 0), 0)
+
+    def test_maps_url(self):
+        self.assertEqual(sl.maps_url({"lat": 35.1, "lon": 34.2}), "https://www.google.com/maps/dir/?api=1&destination=35.1,34.2")

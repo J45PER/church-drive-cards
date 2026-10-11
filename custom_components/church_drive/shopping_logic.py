@@ -8,6 +8,7 @@ left open. Items that were unavailable are remembered ("missed") and offered the
 
 from __future__ import annotations
 
+import math
 import re
 from datetime import date
 from typing import Any
@@ -147,6 +148,64 @@ def is_shop_zone(zone_name: str, list_places: set[str], zone_entity: str) -> boo
         return True
     n = norm(zone_name)
     return any(w in n for w in SHOP_WORDS)
+
+
+MAX_PLACES = 5
+NEAR_METRES = 150  # how close counts as "at the shop"
+
+
+def clean_place(raw: Any) -> dict[str, Any] | None:
+    """A place from a map search ({name, address, lat, lon}), checked, or None if it isn't one."""
+    if not isinstance(raw, dict):
+        return None
+    try:
+        lat, lon = float(raw.get("lat")), float(raw.get("lon"))
+    except (TypeError, ValueError):
+        return None
+    if not (-90 <= lat <= 90 and -180 <= lon <= 180) or (lat == 0 and lon == 0):
+        return None
+    name = " ".join(str(raw.get("name") or "").split())[:80]
+    address = " ".join(str(raw.get("address") or "").split())[:160]
+    return {"name": name or address or "Shop", "address": address, "lat": round(lat, 6), "lon": round(lon, 6)}
+
+
+def clean_places(raw: Any) -> list[dict[str, Any]]:
+    """Up to MAX_PLACES checked places, without repeats."""
+    out: list[dict[str, Any]] = []
+    for item in raw or []:
+        p = clean_place(item)
+        if p and not any(abs(p["lat"] - q["lat"]) < 1e-5 and abs(p["lon"] - q["lon"]) < 1e-5 for q in out):
+            out.append(p)
+    return out[:MAX_PLACES]
+
+
+def valid_time(value: Any) -> str:
+    """HH:MM or empty."""
+    m = re.fullmatch(r"\s*([01]?\d|2[0-3]):([0-5]\d)\s*", str(value or ""))
+    return f"{int(m.group(1)):02d}:{m.group(2)}" if m else ""
+
+
+def distance_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Metres between two points on the earth (haversine)."""
+    r = 6371000.0
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dp, dl = p2 - p1, math.radians(lon2 - lon1)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 2 * r * math.asin(math.sqrt(a))
+
+
+def near_place(places: list[dict[str, Any]], lat: Any, lon: Any, metres: float = NEAR_METRES) -> dict[str, Any] | None:
+    """The first place within [metres] of a position, or None (also when the position is unknown)."""
+    try:
+        la, lo = float(lat), float(lon)
+    except (TypeError, ValueError):
+        return None
+    return next((p for p in places if distance_m(la, lo, p["lat"], p["lon"]) <= metres), None)
+
+
+def maps_url(place: dict[str, Any]) -> str:
+    """A Google Maps link that starts directions to the place."""
+    return f"https://www.google.com/maps/dir/?api=1&destination={place['lat']},{place['lon']}"
 
 
 def list_line(l: dict[str, Any]) -> str:

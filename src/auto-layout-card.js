@@ -765,10 +765,13 @@ export class AutoLayoutCard extends HTMLElement {
     if (key === this._linesKey) return;
     this._unwatchLines();
     this._linesKey = key;
-    this._lineVals = lines.map(() => ({ text: '', alert: false }));
+    const vals = lines.map(() => ({ text: '', alert: false }));
+    this._lineVals = vals;
     lines.forEach((l, i) => {
+      // An answer that arrives after the lines changed (or the card was reset) belongs to the old lines: drop it.
       const set = (k, v) => {
-        this._lineVals[i][k] = v;
+        if (this._lineVals !== vals) return;
+        vals[i][k] = v;
         this._renderHead();
       };
       const a = stcRender(this._hass, String(l.text || ''), (t) => set('text', t));

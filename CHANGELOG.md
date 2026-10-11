@@ -2,6 +2,8 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **v0.45.0** (2026-10-11): shopping-list places come from a Google Maps search (any shop anywhere, e.g. a Lidl on holiday) instead of zones; an optional time; reminder at that time; the list comes up when you get near a place; Navigate button in the app (app 0.8.0)
+- **v0.44.1** (2026-10-11): fix a crash in the page header lines when the lines change while a page is open (logged as an uncaught error on iPhones)
 - **v0.44.0** (2026-10-11): Octopus "Last 7 days" replaces "Last full day": per-day stacked bars, electricity/gas balance bar, read from Home Assistant's long-term statistics (app 0.7.0)
 - **v0.43.3** (2026-10-11): the Home page highlights show a shopping list with a cart and no tick, and tapping it opens the list
 - **v0.43.2** (2026-10-11): a banner offers to reload when a page is still running older Church Drive cards than the installed update

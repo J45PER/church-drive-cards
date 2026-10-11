@@ -21,11 +21,12 @@ Turn text into to-do tasks without typing them out. The text goes to Home Assist
 
 ## Shopping lists
 
-A shopping list is one task, not a pile of items. It has a **name**, the **people** it is for, an optional **date**, optional **places** (zones where you will buy it) and its **items**, each of which ends up *bought* or *unavailable*.
+A shopping list is one task, not a pile of items. It has a **name**, the **people** it is for, an optional **date** and **time**, optional **places** (shops found with a Google Maps search, so any shop anywhere, kept with their map position) and its **items**, each of which ends up *bought* or *unavailable*.
 
 - **One task per person.** The list shows on each person's to-do list as "Shopping: Weekly (3 of 8)", due on its date. Opening it shows the items. The task is ticked off by itself when no item is left open.
 - **Not available.** Items marked unavailable are remembered. When the next list is made they are added to it and the people on it are told ("Eggs was not available on your last shop"). Arriving at a shop with no list also reminds you of them.
-- **Dates.** On a list's date, at 08:00, the people on it are reminded to go shopping.
+- **Dates and times.** On a list's date, at 08:00, the people on it are reminded to go shopping; if the list has a **time** they are reminded at that time instead (and the to-do task is due then). A time needs a date.
+- **Places.** Search Google Maps (needs the Google Places key in the integration options, the same one the zone map uses) and pick the shop, up to five per list; the search covers the whole world, so a holiday Lidl works. When someone on the list gets within about 150 m of a place, they are told the list (once every 3 hours per place). A list with a place has a **Navigate** button in the app that opens Google Maps directions (and a link on the web page). Lists with no place still come up when someone arrives at a zone named like a shop. Lists made earlier with zones are converted to places automatically.
 - **Places and supermarkets.** Arriving at a zone a list names, or any zone whose name looks like a shop (Tesco, Aldi, Co-op, shop, market…), brings up your open lists (a list that names places only comes up at those places).
 - **Shared text.** Shopping items found in shared or spoken text no longer go to Home Assistant's own shopping list. The check screen asks whether to add them to an existing list or make a new one (the person's soonest list is the default; voice and Auto add use it too).
 - **Tidy.** A finished list, and its tasks, are deleted a day later.
@@ -35,7 +36,7 @@ A shopping list is one task, not a pile of items. It has a **name**, the **peopl
 
 The rules are in `shopping_logic.py` (tested in `test/shopping_logic_test.py`) and the lists in `shopping.py`.
 
-**Shopping card** (`custom:shopping-card`, options `title` and `all`): your open lists with how many items are left, a **New shopping list** button and a line for anything not available last time. Tapping a list (or its task on any Task List card, or a reminder) opens the **full-page list**: tick each item **Bought** or **Not available**, add items (several at once with commas), edit the name, people, date and places, delete the list. The arrow, Escape or the phone's back button closes it. A page address ending `?list=<id>` opens that list (reminders link there; the card lives on the Tasks dashboard's Shopping view, `/dashboard-tasks/shopping`).
+**Shopping card** (`custom:shopping-card`, options `title` and `all`): your open lists with how many items are left, a **New shopping list** button and a line for anything not available last time. Tapping a list (or its task on any Task List card, or a reminder) opens the **full-page list**: tick each item **Bought** or **Not available**, add items (several at once with commas), edit the name, people, date, time and places, navigate to a place, delete the list. The arrow, Escape or the phone's back button closes it. A page address ending `?list=<id>` opens that list (reminders link there; the card lives on the Tasks dashboard's Shopping view, `/dashboard-tasks/shopping`).
 
 ## Place reminders and snoozing
 
