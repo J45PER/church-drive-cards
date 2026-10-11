@@ -404,13 +404,13 @@ private fun ThinkingDots() {
         modifier = Modifier.padding(vertical = 6.dp)
             .drawBehind {
                 // Drawn behind the Row's own centre, so the glow is exactly behind the dots (and spills out around them).
-                val r = 38.dp.toPx()
-                listOf(-16 to AssistColours.Indigo, 0 to AssistColours.Purple, 16 to AssistColours.Green).forEach { (dx, colour) ->
+                val r = 17.dp.toPx()
+                listOf(-8 to AssistColours.Indigo, 0 to AssistColours.Purple, 8 to AssistColours.Green).forEach { (dx, colour) ->
                     val at = Offset(center.x + dx.dp.toPx(), center.y)
-                    drawCircle(Brush.radialGradient(listOf(colour.copy(alpha = 0.5f * glow), Color.Transparent), center = at, radius = r), radius = r, center = at)
+                    drawCircle(Brush.radialGradient(listOf(colour.copy(alpha = 0.34f * glow), Color.Transparent), center = at, radius = r), radius = r, center = at)
                 }
             }
-            .padding(horizontal = 22.dp, vertical = 18.dp),
+            .padding(horizontal = 20.dp, vertical = 14.dp),
         horizontalArrangement = Arrangement.spacedBy(9.dp), verticalAlignment = Alignment.CenterVertically,
     ) {
         listOf(1050 to 0, 1450 to 180, 1250 to 360).forEachIndexed { i, (ms, delay) ->

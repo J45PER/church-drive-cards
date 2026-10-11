@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.11.2
+
+- The glow behind the thinking dots is much smaller and softer: it hugs the three dots.
+
 ## 0.11.1
 
 - **Thinking dots:** darker grey, and the colour glow is now exactly behind all three dots (it had been drawn off to the side).
