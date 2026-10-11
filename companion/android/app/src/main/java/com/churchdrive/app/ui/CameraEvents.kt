@@ -165,7 +165,7 @@ private fun EventThumb(event: CameraEvent, baseUrl: String, selected: Boolean, o
 
 /** The chosen event: its clip with controls, or its picture when it has no clip. */
 @Composable
-internal fun EventPlayer(event: CameraEvent, baseUrl: String) {
+private fun EventPlayer(event: CameraEvent, baseUrl: String) {
     when {
         event.clip != null -> ClipPlayer(baseUrl + event.clip)
         event.picture != null -> StillPicture(baseUrl + event.picture)
@@ -215,11 +215,9 @@ fun StageBox(
     /** Show the whole picture (a live view) rather than covering the box with it (a clip). */
     contain: Boolean = false,
     maxZoom: Float = 4f,
-    /** The box's own shape (width / height) when it isn't full: 16:9 unless the picture is a different shape, so nothing is cropped. */
-    boxAspect: Float = 16f / 9f,
     content: @Composable () -> Unit,
 ) {
-    val shape = modifier.then(if (fill) Modifier.fillMaxSize() else Modifier.fillMaxWidth().aspectRatio(boxAspect))
+    val shape = modifier.then(if (fill) Modifier.fillMaxSize() else Modifier.fillMaxWidth().aspectRatio(16f / 9f))
         .clip(RoundedCornerShape(if (fill) 0.dp else 14.dp)).background(if (fill) Color.Black else Color(0xFF111111))
     BoxWithConstraints(shape) {
         val boxW = constraints.maxWidth.toFloat()
@@ -262,7 +260,7 @@ fun StageBox(
 @Composable
 private fun StillPicture(url: String) {
     var aspect by remember(url) { mutableFloatStateOf(16f / 9f) }
-    StageBox(aspect, boxAspect = aspect.coerceIn(0.75f, 16f / 9f), contain = true) {
+    StageBox(aspect) {
         AsyncImage(
             model = url, contentDescription = null, contentScale = ContentScale.FillBounds, modifier = Modifier.fillMaxSize(),
             onSuccess = { state ->
@@ -312,7 +310,7 @@ private fun ClipPlayer(url: String) {
         }
     }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        StageBox(aspect, boxAspect = aspect.coerceIn(0.75f, 16f / 9f), contain = true) {
+        StageBox(aspect) {
             AndroidView(
                 factory = { PlayerView(it).apply { useController = false; this.player = player } },
                 update = { it.player = player },

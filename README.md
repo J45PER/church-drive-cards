@@ -299,35 +299,15 @@ companion-app phones' batteries. New people appear by themselves.
 
 ### `camera-card`
 
-One camera, one card each (several sit side by side in a panel). The tile is the
-picture's own shape (a square doorbell stays square, kept between 3:4 and 16:9) and
-shows the newer of ring-mqtt's snapshot and the Ring integration's recording frame,
-with why and how long ago it was taken ("Doorbell · 4 min", top left). An orange badge
-means the picture is older than `refresh_after` (default 60 min). While someone's
-looking, the card then presses the camera's Take Snapshot button, at most once per
-`refresh_after` for everyone, so battery cameras last. Low battery and weak signal show
-top right; the name is along the bottom, so nothing sits on top of anything else.
-
-**Ringing.** While the doorbell rings (its `binary_sensor.<x>_ding` is on, or its ding
-event fired in the last 45 s) the tile has a green outline and an **Answer** button.
-Answer opens live video with the sound on and, with `talk_stream`, the microphone too.
-`ring_popup: true` opens the pop-up by itself when it rings.
-
-Tap for a pop-up with live video, the activity timeline, Events, Snapshot, the light in
-the camera's area (or `light`), and Talk with `talk_stream` (a go2rtc stream with
-two-way audio; the page needs https for the microphone). The video keeps its own shape.
-Over it: **bigger / smaller** (remembered per camera on this device), **full screen**
-(the video turns landscape; on iPhones, which only allow full screen for a bare video,
-the card fills the screen itself, turned sideways) and sound. **Battery and signal**
-icons appear top right when it's bigger or full screen (`sensor.<x>_battery`, and
-`sensor.<x>_wireless` in dBm or the Ring integration's `_wifi_signal_strength` /
-`_category`).
-
-**Activity timeline.** Under the video, a strip of the saved events (newest first, by
-day) after a red **LIVE** tile. Tap one to play it in the video, tap LIVE to go back.
-It updates a few seconds after a new doorbell press or motion.
-
-The snapshot, button, battery and events are found from the camera's name
+One camera, one card each (several sit side by side in a panel). The tile shows the
+newer of ring-mqtt's snapshot and the Ring integration's recording frame, with why and
+how long ago it was taken ("Doorbell · 4 min"). An orange badge means the picture is
+older than `refresh_after` (default 60 min). While someone's looking, the card then
+presses the camera's Take Snapshot button, at most once per `refresh_after` for everyone,
+so battery cameras last. A battery icon shows below 25%. Tap for a pop-up with live
+video, Events (the events viewer), Snapshot and the light in the camera's area (or
+`light`). With `talk_stream` (a go2rtc stream with two-way audio) it also has
+Talk. The snapshot, button, battery and events are found from the camera's name
 (`camera.front_door_live_view` → `camera.front_door_snapshot`, and so on).
 
 ### Camera events viewer
