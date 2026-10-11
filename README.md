@@ -310,6 +310,10 @@ video, Events (the events viewer), Snapshot and the light in the camera's area (
 Talk. The snapshot, button, battery and events are found from the camera's name
 (`camera.front_door_live_view` → `camera.front_door_snapshot`, and so on).
 
+### `camera-experimental-card`
+
+The camera card with a new live view, for trying out before it replaces `camera-card` (same options, plus `ring_popup`). The video is always a 16:9 box (the doorbell's tall picture is cropped to it: drag up and down). Normal: only two small icons on the picture (bigger, full screen); under it a timer, **Hang up / Talk / Sound**, then Light, Snapshot and Events (which leaves the live view; there is no timeline in it). **Bigger** fills the pop-up and is remembered per camera. **Full screen** turns the video landscape. In both, tap the picture to show or hide the buttons (they hide after 3 s); battery and signal stay on the picture. In full screen, Hang up / Talk / Sound are bottom left and **+** (Light, Snapshot, Events) bottom right. While the doorbell rings the tile has **Answer**, and Answer opens the live view with sound on and, with `talk_stream`, the microphone.
+
 ### Camera events viewer
 
 Tap **Events** in a camera's pop-up, or tap a zone card, to see that camera's

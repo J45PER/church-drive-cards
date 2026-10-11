@@ -33,6 +33,8 @@ export const STAGE_CSS = `
   .cc-ib { width:28px; height:28px; border-radius:50%; background:rgba(0,0,0,0.45); color:#fff; display:flex; align-items:center; justify-content:center; }
   .cc-mute { position:absolute; top:8px; right:8px; border:none; cursor:pointer; z-index:1; }
   .cc-tag { position:absolute; top:8px; left:8px; z-index:1; font-size:0.7rem; font-weight:800; border-radius:6px; padding:2px 7px; color:#fff; pointer-events:none; }
+  .cc-pop-media.cc-fs { position:fixed; inset:0; z-index:2147483000; width:100vw; height:100dvh; aspect-ratio:auto; border-radius:0; }
+  .cc-pop-media.cc-fs.cc-rot { inset:auto; left:100vw; top:0; width:100dvh; height:100vw; transform-origin:0 0; transform:rotate(90deg); }
   .cc-btns { display:flex; gap:10px; margin:14px 0 6px; }
   .cc-btn { flex:1 1 0; min-width:0; border:none; border-radius:14px; padding:10px 4px; cursor:pointer; font:inherit; font-size:0.78rem; font-weight:700;
     background:rgba(127,127,127,0.16); color:var(--primary-text-color); display:flex; flex-direction:column; align-items:center; gap:4px; }
@@ -119,13 +121,14 @@ export function findVideo(root, depth = 0) {
 // Put `el` in `box` at its own shape (aspect = width / height, corrected from
 // the playing video), covering the box, with drag, pinch, scroll and
 // double-tap zoom, and a sound button. Returns the stage element.
-export function stageMedia(box, el, aspect = 16 / 9) {
-  box.innerHTML = '';
+export function stageMedia(box, el, aspect = 16 / 9, { mute = true } = {}) {
+  // Only the picture is replaced: the buttons the card put over it stay.
+  box.querySelectorAll(':scope > .cc-stage, :scope > .cc-mute').forEach((n) => n.remove());
   const stage = document.createElement('div');
   stage.className = 'cc-stage';
   stage.appendChild(el);
-  box.appendChild(stage);
-  if ('muted' in el) {
+  box.insertBefore(stage, box.firstChild);
+  if (mute && 'muted' in el) {
     const mute = document.createElement('button');
     mute.className = 'cc-ib cc-mute';
     mute.setAttribute('aria-label', 'Sound');
@@ -193,7 +196,7 @@ export function stageMedia(box, el, aspect = 16 / 9) {
     const pts = new Map();
     let pinch = null;
     box.addEventListener('pointerdown', (ev) => {
-      if (ev.target.closest('.cc-mute')) return;
+      if (ev.target.closest('.cc-mute, .cc-ui')) return;
       box.setPointerCapture(ev.pointerId);
       pts.set(ev.pointerId, [ev.clientX, ev.clientY]);
       if (pts.size === 2) {
@@ -262,6 +265,62 @@ export function stageTag(box, text, colour) {
   t.textContent = text;
   box.appendChild(t);
   return t;
+}
+
+// Full screen: the video box fills the screen and, on a phone, turns to
+// landscape. Uses the browser's full screen where there is one (and locks the
+// screen to landscape), else (iPhones, which only do it for a bare <video>)
+// fills the screen itself, turned sideways when the phone is upright. The
+// box fires `cc-fullscreen` (detail: true or false) when it changes, however
+// it was left (Escape included). Everything the card put in the box stays
+// with it, so its buttons are still there.
+export function toggleFullscreen(box) {
+  const on = document.fullscreenElement === box || box.classList.contains('cc-fs');
+  const tell = (state) => box.dispatchEvent(new CustomEvent('cc-fullscreen', { detail: state }));
+  const turn = () => box.classList.toggle('cc-rot', box.classList.contains('cc-fs') && window.innerHeight > window.innerWidth);
+  const unlock = () => {
+    try {
+      screen.orientation.unlock();
+    } catch (_) {}
+  };
+  if (!box._cdFsWired) {
+    box._cdFsWired = true;
+    // The browser's own exit (Escape, a swipe): tell the card.
+    document.addEventListener('fullscreenchange', () => {
+      if (box.isConnected && !document.fullscreenElement && !box.classList.contains('cc-fs') && box._cdFull) {
+        box._cdFull = false;
+        unlock();
+        tell(false);
+      }
+    });
+  }
+  if (on) {
+    box._cdFull = false;
+    if (document.fullscreenElement === box) document.exitFullscreen().catch(() => {});
+    box.classList.remove('cc-fs', 'cc-rot');
+    unlock();
+    tell(false);
+    return false;
+  }
+  box._cdFull = true;
+  const fake = () => {
+    box.classList.add('cc-fs');
+    turn();
+    window.addEventListener('resize', turn);
+    tell(true);
+  };
+  if (box.requestFullscreen) {
+    box
+      .requestFullscreen()
+      .then(() => {
+        try {
+          screen.orientation.lock('landscape').catch(() => {});
+        } catch (_) {}
+        tell(true);
+      })
+      .catch(fake);
+  } else fake();
+  return true;
 }
 
 // The events viewer pop-up for one camera ('front_door'): the list first; a
