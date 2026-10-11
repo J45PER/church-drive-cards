@@ -4,6 +4,12 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.12.0
+
+- Press and hold a light, zone or room to open its settings full screen. What it shows follows the light: brightness (with 10 to 100% shortcuts) for a dimmable light, a warm-to-cool slider with Candle, Warm, Neutral, Daylight and Cool shortcuts for a white one, a colour wheel with swatches (and a White tab if it can do white too) for a colour one, and On/Off for a light that only switches.
+- A room, zone or group has All lights (one set of controls for the whole group) and Each light (a switch per light; tap one to open its own settings), so rooms that only expose a group can still set each bulb.
+- The first time a light with settings is on screen, a one-line "Hold for colours" hint shows under it, until you have held one.
+
 ## 0.11.8
 
 - The bottom of a shopping list (and the other full-screen editors) is no longer cut off: there is now room to scroll the last buttons clear of the phone's gesture bar.

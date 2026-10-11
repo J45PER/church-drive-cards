@@ -48,6 +48,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.style.LineHeightStyle
@@ -224,7 +227,7 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
 
     EntityCard(tone.container, tone.onContainer) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            LightPill(head, room.head, roomTitle(room, head, areaNames), tone, call, Modifier.weight(1f))
+            LightPill(head, room.head, roomTitle(room, head, areaNames), tone, call, Modifier.weight(1f), entities)
             if (expandable) {
                 IconButton(onClick = { expanded = !expanded }) {
                     Icon(
@@ -235,10 +238,15 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
             }
         }
 
+        val hintContext = LocalContext.current
+        if (opensSettings(head) && remember(room.head) { LightHoldHint.wants(hintContext, room.head) }) {
+            Text("Hold for colours", style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(start = 4.dp), color = tone.onContainer.copy(alpha = 0.7f))
+        }
+
         AnimatedVisibility(visible = expanded) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 room.rows.forEach { row ->
-                    LightPill(entities[row.entity], row.entity, row.name, tone, call, Modifier.padding(start = 16.dp * row.level))
+                    LightPill(entities[row.entity], row.entity, row.name, tone, call, Modifier.padding(start = 16.dp * row.level), entities)
                 }
                 if (room.scenes.isNotEmpty()) {
                     Text(
@@ -325,8 +333,12 @@ fun LightPill(
     tone: ToneColors,
     call: CallService,
     modifier: Modifier = Modifier,
+    entities: Map<String, EntityState>? = null,
 ) {
     val on = light?.state == "on"
+    val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
+    var settings by remember { mutableStateOf(false) }
     val dimmable = light?.dimmable() == true
     val pct = if (on) brightnessPct(light) else 0
     var drag by remember(pct) { mutableStateOf<Float?>(null) }
@@ -354,9 +366,17 @@ fun LightPill(
             .background(tone.onContainer.copy(alpha = 0.10f))
             .onSizeChanged { widthPx = it.width.coerceAtLeast(1) }
             .pointerInput(entityId, light?.available, on) {
-                detectTapGestures {
-                    if (light?.available == true) call("light", if (on) "turn_off" else "turn_on", entityId, data())
-                }
+                detectTapGestures(
+                    // Press and hold opens the light's full-screen settings, when there is more to set than on and off.
+                    onLongPress = {
+                        if (entities != null && opensSettings(light)) {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            LightHoldHint.markSeen(context)
+                            settings = true
+                        }
+                    },
+                    onTap = { if (light?.available == true) call("light", if (on) "turn_off" else "turn_on", entityId, data()) },
+                )
             }
             .pointerInput(entityId, dimmable) {
                 if (dimmable) {
@@ -392,6 +412,25 @@ fun LightPill(
             )
             Text(status, style = MaterialTheme.typography.bodyMedium)
         }
+    }
+    if (settings && entities != null) LightSettings(entityId, name, entities, call) { settings = false }
+}
+
+/** The one-line "Hold for colours" hint: shown under the first light that has settings, until someone has held one. */
+object LightHoldHint {
+    private const val PREFS = "church_drive_ui"
+    private const val KEY = "light_hold_seen"
+    private var shownOn: String? = null
+
+    fun markSeen(context: android.content.Context) {
+        context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).edit().putBoolean(KEY, true).apply()
+    }
+
+    /** Whether the hint should show under [id]: not yet seen, and [id] is the first card to ask. */
+    fun wants(context: android.content.Context, id: String): Boolean {
+        if (context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).getBoolean(KEY, false)) return false
+        if (shownOn == null) shownOn = id
+        return shownOn == id
     }
 }
 

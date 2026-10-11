@@ -146,7 +146,7 @@ fun ZoneCard(config: JSONObject, entities: Map<String, EntityState>, call: CallS
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) { view.bats.forEach { BatteryRow(it, ink) } }
         }
         cfg.light?.let { id ->
-            LightPill(entities[id], id, view.light?.first, toneColors(if (view.light?.second == true) Tone.Amber else Tone.Grey), call)
+            LightPill(entities[id], id, view.light?.first, toneColors(if (view.light?.second == true) Tone.Amber else Tone.Grey), call, entities = entities)
         }
     }
 }
