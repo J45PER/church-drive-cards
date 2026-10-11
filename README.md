@@ -229,7 +229,7 @@ It then fixes it automatically: a refresh, then re-sending the last real state (
 
 Octopus Energy at a glance, from the Octopus Energy integration. It finds your meters by itself. `show` picks one of four views:
 - `electricity`: the rate this half-hour, marked Cheap or Peak, and live use from a Home Mini. It also shows today's running cost and a 24-hour strip of today's rates with the cheap window and how long until it starts.
-- `last_day`: the latest complete day Octopus has sent. That's the cost of electricity and gas, half-hour use coloured by rate, and how much ran at the cheap rate.
+- `week` (**Last 7 days**, was `last_day`, which still works): the last seven finished days, read from the long-term statistics the Octopus Energy integration keeps in Home Assistant (the ones the Energy dashboard uses), so a day Octopus sends late fills in by itself and nothing extra is stored. A stacked bar per day in the electricity (pink) and gas (violet) colours, the week's electricity/gas balance as a colour bar, and tap a day for its cost, kWh and the share used at the cheap rate. Days Octopus hasn't sent show as gaps, with a note saying how far behind electricity and gas are (Octopus can run several days behind on one fuel).
 - `gas`: the rate, standing charge and today so far.
 - `octoplus`: points, weekend happy hours and saving sessions.
 

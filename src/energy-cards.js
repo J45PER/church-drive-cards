@@ -5,9 +5,11 @@
 // - electricity: the rate this half-hour (Cheap or Peak), live use from a
 //   Home Mini, today's running cost, and a 24-hour strip of today's rates
 //   with the cheap window and how long until it starts;
-// - last_day: the latest complete day Octopus has sent (a day or two late):
-//   cost of electricity and gas, half-hour use coloured by rate and how much
-//   ran at the cheap rate;
+// - week: the last seven finished days, from the long-term statistics the
+//   integration keeps (so days Octopus sends late fill in): a bar per day in
+//   the electricity and gas colours, the week's electricity/gas balance, a
+//   day's cost and kWh and how much ran at the cheap rate, and how far behind
+//   Octopus is;
 // - gas: the rate, standing charge and today so far;
 // - octoplus: points, weekend happy hours and saving sessions;
 // - cheap: a strip for everyone: cheap rate now (until when) or when it next
@@ -27,6 +29,7 @@ import { SUFFIX, LABEL } from './suffix.js';
 import { KIT_COLOR, kitShell, kitHead, kitTiles, kitNum, kitCap, kitEsc, kitCompact, kitCompactable } from './card-kit.js';
 import { iconFor, watchIcons } from './icon-library.js';
 import { openPopup } from './popup.js';
+import { weekStatIds, buildWeek, dayCheapShare, lagNote, balance } from './energy-week.js';
 
 // Octopus's own pink, and the charger's teal.
 export const OCTO_PINK = '#f050f8';
@@ -100,7 +103,7 @@ export function octoFind(hass) {
 
 const OCTO_VIEWS = [
   { value: 'electricity', label: 'Electricity now' },
-  { value: 'last_day', label: 'Last full day (electricity and gas)' },
+  { value: 'week', label: 'Last 7 days (electricity and gas)' },
   { value: 'gas', label: 'Gas' },
   { value: 'octoplus', label: 'Octoplus' },
   { value: 'cheap', label: 'Cheap rate and power-down sessions' },
@@ -117,7 +120,9 @@ export const OctopusCardEditor = createFormEditor({
 
 export class OctopusCard extends HTMLElement {
   setConfig(config) {
+    // "Last full day" became "Last 7 days": cards set to the old one show the new one.
     this.config = { show: 'electricity', ...config };
+    if (this.config.show === 'last_day') this.config.show = 'week';
     this._built = false;
     this._sig = null;
   }
@@ -175,12 +180,31 @@ export class OctopusCard extends HTMLElement {
         .oc-bars i { flex:1; border-radius:2px 2px 0 0; min-height:2px; }
         .oc-meter { height:8px; border-radius:99px; background:rgba(127,127,127,.2); overflow:hidden; display:flex; }
         .oc-meter i { display:block; height:100%; }
-        .oc-pill { margin-left:auto; font-size:.72rem; font-weight:700; padding:2px 9px; border-radius:999px; }`);
+        .oc-pill { margin-left:auto; font-size:.72rem; font-weight:700; padding:2px 9px; border-radius:999px; }
+        .oc-days { display:grid; grid-template-columns:repeat(7, 1fr); gap:6px; }
+        .oc-day { border:none; background:none; padding:4px 0; border-radius:10px; cursor:pointer; color:var(--primary-text-color); font:inherit; display:flex; flex-direction:column; align-items:center; gap:4px; min-width:0; }
+        .oc-day.oc-sel { background:rgba(127,127,127,.18); }
+        .oc-day:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
+        .oc-amt { font-size:.68rem; font-variant-numeric:tabular-nums; color:var(--secondary-text-color); }
+        .oc-col { width:70%; max-width:34px; height:64px; display:flex; flex-direction:column-reverse; justify-content:flex-start; border-radius:6px 6px 3px 3px; overflow:hidden; }
+        .oc-col i { display:block; width:100%; }
+        .oc-col i.oc-gap { height:100%; border:1px dashed rgba(127,127,127,.5); background:none; border-radius:6px 6px 3px 3px; box-sizing:border-box; }
+        .oc-dn { font-size:.7rem; font-weight:600; }
+        .oc-bal { height:12px; border-radius:99px; overflow:hidden; display:flex; background:rgba(127,127,127,.2); }
+        .oc-bal i { display:block; height:100%; }
+        .oc-legend { display:flex; justify-content:space-between; gap:8px; font-size:.78rem; flex-wrap:wrap; }`);
       this._body = this.querySelector('.oc-body');
+      this._body.addEventListener('click', (ev) => {
+        const b = ev.target.closest && ev.target.closest('[data-day]');
+        if (!b) return;
+        this._selDay = b.dataset.day;
+        this._sig = null;
+        this._render();
+      });
       this._built = true;
     }
     const minute = Math.floor(Date.now() / 60e3);
-    const html = view === 'last_day' ? this._lastDay(m) : view === 'gas' ? this._gas(m) : view === 'octoplus' ? this._octoplus(m) : view === 'cheap' ? this._cheap(m) : this._elec(m);
+    const html = view === 'week' ? this._week(m) : view === 'gas' ? this._gas(m) : view === 'octoplus' ? this._octoplus(m) : view === 'cheap' ? this._cheap(m) : this._elec(m);
     const sig = JSON.stringify([html.head, html.body, minute]);
     if (sig === this._sig) return;
     this._sig = sig;
@@ -229,38 +253,75 @@ export class OctopusCard extends HTMLElement {
     };
   }
 
-  _lastDay(m) {
-    if (!m.elec) return this._missing('electricity meter');
-    const cost = this._s(m.elec, 'previous_accumulative_cost');
-    const charges = (cost && cost.attributes.charges) || [];
-    if (!charges.length) return { head: [this.config.name || 'Last full day', 'Waiting for Octopus', KIT_COLOR.off], body: '<div class="ck-sub">Octopus hasn\'t sent a full day of readings yet.</div>' };
-    const day = new Date(charges[0].start);
-    const rates = charges.map((x) => Number(x.rate));
-    const lo = Math.min(...rates), hi = Math.max(...rates);
-    const isCheap = (r) => hi - lo > 0.001 && r <= lo + 0.001;
-    const kwh = charges.reduce((s, x) => s + Number(x.consumption || 0), 0);
-    const cheapKwh = charges.filter((x) => isCheap(Number(x.rate))).reduce((s, x) => s + Number(x.consumption || 0), 0);
-    const share = kwh ? Math.round((cheapKwh / kwh) * 100) : 0;
-    const eTotal = Number(cost.attributes.total != null ? cost.attributes.total : cost.state);
-    const gasCost = this._s(m.gas, 'previous_accumulative_cost');
-    const gasKwh = kitNum(this._s(m.gas, 'previous_accumulative_consumption_kwh'));
-    const gTotal = gasCost ? Number(gasCost.attributes.total != null ? gasCost.attributes.total : gasCost.state) : null;
-    const max = Math.max(...charges.map((x) => Number(x.consumption || 0)), 0.01);
-    const bars = charges.map((x) => `<i title="${kitEsc(hhmm(new Date(x.start)))} · ${Number(x.consumption).toFixed(2)} kWh · ${pence(Number(x.rate))}" style="height:${(Number(x.consumption || 0) / max) * 100}%; background:${isCheap(Number(x.rate)) ? CHEAP : PEAK};"></i>`).join('');
-    const saving = hi - lo > 0.001 ? `Each kWh moved to the cheap rate saves ${pence(hi - lo)}.` : '';
-    const dayName = day.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+  // The last seven finished days, read from the long-term statistics the Octopus integration keeps in Home Assistant (the
+  // ones the Energy dashboard uses), so every day is there, including ones Octopus sent late.
+  _weekData(m) {
+    const ids = weekStatIds(m);
+    const key = Object.values(ids).join(',');
+    const have = this._wk && this._wk.key === key;
+    if ((!have || Date.now() - this._wk.at > 30 * 60e3) && !this._wkBusy && key) this._loadWeek(ids, key);
+    return have ? { ids, wk: this._wk } : null;
+  }
+
+  async _loadWeek(ids, key) {
+    this._wkBusy = true;
+    try {
+      const start = new Date();
+      start.setDate(start.getDate() - 10);
+      start.setHours(0, 0, 0, 0);
+      const result = await this._hass.callWS({ type: 'recorder/statistics_during_period', start_time: start.toISOString(), statistic_ids: Object.values(ids), period: 'day', types: ['change'] });
+      this._wk = { key, at: Date.now(), result };
+    } catch (err) {
+      this._wk = { key, at: Date.now(), error: (err && err.message) || 'failed' };
+    }
+    this._wkBusy = false;
+    this._sig = null;
+    this._render();
+  }
+
+  _week(m) {
+    const name = this.config.name || 'Last 7 days';
+    if (!m.elec && !m.gas) return this._missing('meter');
+    const got = this._weekData(m);
+    if (!got) return { head: [name, 'Loading…', KIT_COLOR.off], body: '<div class="ck-sub">Reading the Octopus history…</div>' };
+    if (got.wk.error) return { head: [name, 'Not available', KIT_COLOR.off], body: `<div class="ck-sub" style="line-height:1.5;">Couldn't read the Octopus history from Home Assistant (${kitEsc(got.wk.error)}).</div>` };
+    const tz = this._hass.config && this._hass.config.time_zone;
+    const w = buildWeek(got.wk.result, got.ids, Date.now(), 7, tz);
+    const label = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+    const dow = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short' });
+    if (!w.days.some((d) => d.elecCost != null || d.gasCost != null)) {
+      return { head: [name, 'Waiting for Octopus', KIT_COLOR.off], body: '<div class="ck-sub" style="line-height:1.5;">Octopus hasn\'t sent any of the last seven days yet.</div>' };
+    }
+    const sel = w.days.find((d) => d.date === this._selDay) || w.days.find((d) => d.date === w.latestWithData);
+    const total = (d) => (d.elecCost || 0) + (d.gasCost || 0);
+    const max = Math.max(...w.days.map(total), 0.01);
+    const bars = w.days
+      .map((d) => {
+        const has = d.elecCost != null || d.gasCost != null;
+        const col = has
+          ? `<i style="height:${((d.gasCost || 0) / max) * 100}%; background:${OCTO_VIOLET};"></i><i style="height:${((d.elecCost || 0) / max) * 100}%; background:${OCTO_PINK};"></i>`
+          : '<i class="oc-gap"></i>';
+        return `<button type="button" class="oc-day${d === sel ? ' oc-sel' : ''}" data-day="${d.date}" aria-label="${kitEsc(label(d.date))}: ${has ? pounds(total(d)) : 'no data yet'}"><span class="oc-amt">${has ? pounds(total(d)) : '–'}</span><span class="oc-col">${col}</span><span class="oc-dn">${dow(d.date)}</span></button>`;
+      })
+      .join('');
+    const bal = balance(w);
+    const share = dayCheapShare(sel);
+    const note = lagNote(w, label);
+    const kwh = (v) => (v == null ? '' : ` · ${v.toFixed(1)} kWh`);
     return {
-      head: [this.config.name || 'Last full day', `${dayName} · ${pounds(eTotal + (gTotal || 0))}`, KIT_COLOR.comfy],
+      head: [name, `${pounds(w.cost)} · ${pounds(w.average)} a day`, KIT_COLOR.comfy],
       body: `
+        <div class="oc-days">${bars}</div>
+        ${bal ? `<div class="oc-bal" role="img" aria-label="Electricity ${bal.elec}%, gas ${bal.gas}%"><i style="width:${bal.elec}%; background:${OCTO_PINK};"></i><i style="width:${bal.gas}%; background:${OCTO_VIOLET};"></i></div>
+        <div class="oc-legend"><span><b style="color:${OCTO_PINK};">Electricity ${pounds(w.elecCost)}</b> · ${bal.elec}%${kwh(w.elecKwh)}</span><span><b style="color:${OCTO_VIOLET};">Gas ${pounds(w.gasCost)}</b> · ${bal.gas}%${kwh(w.gasKwh)}</span></div>` : ''}
+        <div class="ck-sub"><b>${kitEsc(label(sel.date))}</b></div>
         <div class="oc-two">
-          <div class="oc-stat"><b>${pounds(eTotal)}</b><span>Electricity · ${kwh.toFixed(1)} kWh</span></div>
-          <div class="oc-stat"><b>${pounds(gTotal)}</b><span>Gas${gasKwh != null ? ` · ${gasKwh.toFixed(1)} kWh` : ''}</span></div>
+          <div class="oc-stat"><b style="color:${OCTO_PINK};">${sel.elecCost == null ? '–' : pounds(sel.elecCost)}</b><span>Electricity${kwh(sel.elecKwh)}</span></div>
+          <div class="oc-stat"><b style="color:${OCTO_VIOLET};">${sel.gasCost == null ? '–' : pounds(sel.gasCost)}</b><span>Gas${kwh(sel.gasKwh)}</span></div>
         </div>
-        <div class="oc-bars">${bars}</div>
-        <div class="oc-ticks"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
-        ${hi - lo > 0.001 ? `<div class="oc-meter"><i style="width:${share}%; background:${CHEAP};"></i><i style="width:${100 - share}%; background:${PEAK};"></i></div>
-        <div class="ck-sub"><b style="color:${CHEAP};">${share}%</b> of electricity was used at the cheap rate. ${saving}</div>` : ''}
-        <div class="ck-sub">Octopus sends readings a day or two late. Costs include standing charges.</div>`,
+        ${share != null ? `<div class="oc-meter"><i style="width:${share}%; background:${CHEAP};"></i><i style="width:${100 - share}%; background:${PEAK};"></i></div>
+        <div class="ck-sub"><b style="color:${CHEAP};">${share}%</b> of that day's electricity was used at the cheap rate.</div>` : ''}
+        ${note ? `<div class="ck-sub" style="color:#ffa726;">${kitEsc(note)}</div>` : ''}`,
     };
   }
 
@@ -337,11 +398,10 @@ export class OctopusCard extends HTMLElement {
       const pts = kitNum(this._s(m.account, 'octoplus_points'));
       return { name: c.name || 'Octoplus', color: OCTO_PINK, value: pts == null ? '–' : String(pts), status: 'points' };
     }
-    if (c.show === 'last_day') {
-      const cost = this._s(m.elec, 'previous_accumulative_cost');
-      const gas = this._s(m.gas, 'previous_accumulative_cost');
-      const total = (cost ? Number(cost.attributes.total != null ? cost.attributes.total : cost.state) : 0) + (gas ? Number(gas.attributes.total != null ? gas.attributes.total : gas.state) : 0);
-      return { name: c.name || 'Last full day', color: KIT_COLOR.comfy, value: pounds(total), status: 'electricity and gas' };
+    if (c.show === 'week') {
+      const got = this._weekData(m);
+      const w = got && !got.wk.error ? buildWeek(got.wk.result, got.ids, Date.now(), 7, this._hass.config && this._hass.config.time_zone) : null;
+      return { name: c.name || 'Last 7 days', color: KIT_COLOR.comfy, value: w ? pounds(w.cost) : '–', status: w ? `${pounds(w.average)} a day` : 'last 7 days' };
     }
     const rate = kitNum(this._s(m.elec, 'current_rate'));
     const rates = this._rates(m);

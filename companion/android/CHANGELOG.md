@@ -4,6 +4,13 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.7.0
+
+- **Octopus: Last 7 days** replaces Last full day on the Energy page (needs nothing new in Home Assistant). A stacked bar per day in the
+  electricity and gas colours, the week's electricity/gas balance as a colour bar, and tap a day for its cost, kWh and cheap-rate share.
+  Days Octopus hasn't sent show as gaps with a note saying how far behind each fuel is. It reads the long-term statistics Home
+  Assistant keeps, so late days fill in by themselves.
+
 ## 0.6.1
 
 - **Shopping is a section of the To-do page**, not a button of its own in the bottom bar (it showed as "Shoppin" and crowded the

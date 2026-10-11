@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **v0.44.0** (2026-10-11): Octopus "Last 7 days" replaces "Last full day": per-day stacked bars, electricity/gas balance bar, read from Home Assistant's long-term statistics (app 0.7.0)
 - **v0.43.3** (2026-10-11): the Home page highlights show a shopping list with a cart and no tick, and tapping it opens the list
 - **v0.43.2** (2026-10-11): a banner offers to reload when a page is still running older Church Drive cards than the installed update
 - **v0.43.1** (2026-10-11): shopping is a section of the To-do page (no separate page), indigo blue
