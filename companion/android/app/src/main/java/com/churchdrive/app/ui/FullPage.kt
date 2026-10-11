@@ -47,7 +47,7 @@ fun FullPage(title: String, onBack: () -> Unit, content: @Composable ColumnScope
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     content()
-                    Spacer(Modifier.height(24.dp))
+                    Spacer(Modifier.height(96.dp)) // clears the gesture bar even where the dialog window reports no bottom inset
                 }
             }
         }
