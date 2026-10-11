@@ -6,7 +6,8 @@ with the APK, so there is a record of what shipped. Newest first.
 
 ## 0.11.5
 
-- The listening rings are smaller, softer and fainter: they melt away instead of showing hard edges.
+- Jarvis's cloud is now drawn exactly like the approved design: the same colour positions, soft edges and sizes (the earlier version had the three colours piled on top of each other, with an extra halo and white centre).
+- The listening rings follow the design too: small, soft and fading.
 
 ## 0.11.4
 
