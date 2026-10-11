@@ -11,9 +11,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -97,9 +98,9 @@ fun ShoppingScreen(listId: String, onClose: () -> Unit) {
         }
     }
     val back = { if (editing && list != null) editing = false else onClose() }
-    Dialog(onDismissRequest = back, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    Dialog(onDismissRequest = back, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+            Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
                 Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(modifier = Modifier.clickable { back() }.padding(12.dp)) {
                         HaIcon("mdi:arrow-left", Icons.Filled.Info, MaterialTheme.colorScheme.onBackground, 24.dp)
@@ -121,6 +122,7 @@ fun ShoppingScreen(listId: String, onClose: () -> Unit) {
                         list == null -> Text("This list has been deleted or finished.")
                         else -> ShoppingItemsView(list, state, tone, send, { editing = true }, onClose)
                     }
+                    Spacer(Modifier.height(24.dp)) // room to scroll the last buttons clear of the screen's edge
                 }
             }
         }
