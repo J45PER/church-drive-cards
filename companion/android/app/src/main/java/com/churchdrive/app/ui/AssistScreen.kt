@@ -55,6 +55,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
+import kotlinx.coroutines.flow.first
 import kotlin.math.cos
 import kotlin.math.sin
 import androidx.compose.ui.graphics.Color
@@ -84,10 +85,21 @@ fun AssistPanel(
     onFull: (Boolean) -> Unit,
     onClose: () -> Unit,
     onTask: (String) -> Unit,
+    /** The introduction to show first (and say out loud), or null. */
+    intro: IntroKind? = null,
+    person: String = "",
+    onIntroDone: () -> Unit = {},
+    /** "Try it" in the introduction: done with it, and start listening (asking for the microphone first if needed). */
+    onIntroTry: () -> Unit = { onIntroDone(); model.listen() },
 ) {
     // A dialog doesn't set the text colour, so it would be dark on dark.
     androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
-        if (full) FullAssist(model, onFull, onClose, onTask) else SheetAssist(model, onFull, onClose, onTask)
+        if (intro != null) {
+            AssistIntro(
+                kind = intro, person = person, assistant = model.name, wakeWord = model.wakeWord, model = model,
+                onTry = onIntroTry, onSkip = onIntroDone,
+            )
+        } else if (full) FullAssist(model, onFull, onClose, onTask) else SheetAssist(model, onFull, onClose, onTask)
     }
 }
 
@@ -335,11 +347,19 @@ private fun Bubble(message: AssistMessage, faded: Boolean = false) {
     }
 }
 
-/** What the first time after an update shows: the assistant introduces itself and what is new, with a sentence to try for each. */
+/**
+ * The introduction, said out loud as well as shown. The first time ever the assistant introduces itself and what it can do;
+ * after an update it just says what is new.
+ */
 @Composable
-fun AssistIntro(name: String, assistant: String, wakeWord: String?, onTry: () -> Unit, onSkip: () -> Unit) {
+fun AssistIntro(kind: IntroKind, person: String, assistant: String, wakeWord: String?, model: AssistModel, onTry: () -> Unit, onSkip: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
     val tone = toneColors(Tone.Indigo)
+    // Say it once the name is known (it arrives from the house a moment after opening), or after a short wait if the house has none.
+    LaunchedEffect(kind) {
+        kotlinx.coroutines.withTimeoutOrNull(2_500) { androidx.compose.runtime.snapshotFlow { model.wakeWord }.first { it != null } }
+        model.speak(introSpeech(kind, person, model.name, ASSIST_FEATURES))
+    }
     androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides scheme.onSurface) {
     Column(modifier = Modifier.fillMaxSize().background(scheme.background).statusBarsPadding().navigationBarsPadding()) {
         Box(modifier = Modifier.fillMaxWidth().height(4.dp).background(AssistColours.across))
@@ -347,17 +367,23 @@ fun AssistIntro(name: String, assistant: String, wakeWord: String?, onTry: () ->
             modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            AssistOrb(AssistState.Idle, 0f, 104.dp)
+            AssistOrb(AssistState.Speaking, 0.4f, 104.dp)
             val who = assistant.ifBlank { "your house assistant" }
-            Text(if (name.isNotBlank()) "Hi $name, I'm $who" else "Hi, I'm $who", style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+            val first = person.trim().substringBefore(' ')
+            if (kind == IntroKind.First) {
+                Text(if (first.isNotBlank()) "Hi $first, I'm $who" else "Hi, I'm $who", style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+                Text(
+                    "I can do anything Home Assistant can: lights, heating, cleaning, the alarm, your lists and your own automations. Just ask.",
+                    style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center,
+                )
+            } else {
+                Text("What's new", style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+                Text("$who, with the latest.", style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center)
+            }
             if (wakeWord != null) {
                 Text("Say \u201C${wakePhrase(wakeWord)}\u201D any time the app is open, or tap the microphone.", style = MaterialTheme.typography.bodyMedium, color = AssistColours.Green, textAlign = TextAlign.Center)
             }
-            Text(
-                "I can do anything Home Assistant can: lights, heating, cleaning, the alarm, your lists and your own automations. Just ask.",
-                style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center,
-            )
-            Text("New in this version", style = MaterialTheme.typography.labelLarge, color = AssistColours.Green, modifier = Modifier.align(Alignment.Start))
+            Text(if (kind == IntroKind.First) "What I can do" else "New in this version", style = MaterialTheme.typography.labelLarge, color = AssistColours.Green, modifier = Modifier.align(Alignment.Start))
             ASSIST_FEATURES.forEach { f ->
                 EntityCard(tone.container, tone.onContainer) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -372,7 +398,7 @@ fun AssistIntro(name: String, assistant: String, wakeWord: String?, onTry: () ->
         }
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
             TileRow(
-                listOf(TileItem("mdi:close", "Not now", false) { onSkip() }, TileItem("mdi:microphone", "Try it", true) { onTry() }),
+                listOf(TileItem("mdi:close", "Got it", false) { onSkip() }, TileItem("mdi:microphone", "Try it", true) { onTry() }),
                 tone, scheme.onSurface,
             )
         }

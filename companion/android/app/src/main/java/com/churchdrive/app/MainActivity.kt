@@ -183,7 +183,7 @@ class MainActivity : ComponentActivity() {
                                 // Text sent from another app, or tasks waiting from earlier: checked here before they go on a list.
                                 com.churchdrive.app.ui.AssistWakeHost(
                                     connected = connection == com.churchdrive.app.ha.ConnectionState.Connected,
-                                    base = vm.baseUrl, api = vm.haApi,
+                                    base = vm.baseUrl, api = vm.haApi, userName = userName.orEmpty(),
                                     onTask = { said -> shareText = said; shareSource = "Voice"; shareAutoAdd = true },
                                 )
                                 if (shareText != null || showInbox) {

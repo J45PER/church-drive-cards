@@ -19,12 +19,12 @@ import com.churchdrive.app.ha.ConnectionState
 import com.churchdrive.app.ha.HaAuth
 import com.churchdrive.app.ha.HaClient
 import com.churchdrive.app.ha.Refresh
-import com.churchdrive.app.ui.AssistIntro
+import com.churchdrive.app.ui.AssistIntroStore
+import com.churchdrive.app.ui.IntroKind
 import com.churchdrive.app.ui.AssistModel
 import com.churchdrive.app.ui.AssistPanel
 import com.churchdrive.app.ui.ChurchDriveTheme
 import com.churchdrive.app.ui.HaApi
-import com.churchdrive.app.ui.introDue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -40,7 +40,7 @@ import org.json.JSONObject
 class AssistActivity : ComponentActivity() {
     private var client: HaClient? = null
     private var model: AssistModel? = null
-    private var introShown by mutableStateOf(false)
+    private var intro by mutableStateOf<IntroKind?>(null)
 
     private val askMicrophone = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) model?.listen() else model?.say("Allow the microphone to talk to the house (Settings > Apps > Church Drive > Permissions).")
@@ -74,41 +74,29 @@ class AssistActivity : ComponentActivity() {
             c.connection.first { it == ConnectionState.Connected }
             m.loadName()
         }
-        introShown = introDue(prefs.getString(KEY_INTRO, null), BuildConfig.VERSION_NAME)
+        intro = AssistIntroStore.kind(this)
         var full by mutableStateOf(intent.getBooleanExtra(EXTRA_FULL, false) || prefs.getBoolean(KEY_FULL, false))
         setContent {
             ChurchDriveTheme {
-                if (introShown) {
-                    AssistIntro(
-                        name = session.personName.orEmpty(),
-                        assistant = m.name,
-                        wakeWord = m.wakeWord,
-                        onTry = { markIntroSeen(); talk() },
-                        onSkip = { markIntroSeen() },
-                    )
-                } else {
-                    AssistPanel(
-                        model = m, full = full, onFull = { full = it }, onClose = { finish() },
-                        onTask = { said ->
-                            startActivity(
-                                Intent(this, MainActivity::class.java)
-                                    .putExtra(MainActivity.EXTRA_SHARE_TEXT, said)
-                                    .putExtra(MainActivity.EXTRA_SHARE_SOURCE, "Voice")
-                                    .putExtra(MainActivity.EXTRA_SHARE_AUTO_ADD, true)
-                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
-                            )
-                            finish()
-                        },
-                    )
-                }
+                AssistPanel(
+                    model = m, full = full, onFull = { full = it }, onClose = { finish() },
+                    onTask = { said ->
+                        startActivity(
+                            Intent(this, MainActivity::class.java)
+                                .putExtra(MainActivity.EXTRA_SHARE_TEXT, said)
+                                .putExtra(MainActivity.EXTRA_SHARE_SOURCE, "Voice")
+                                .putExtra(MainActivity.EXTRA_SHARE_AUTO_ADD, true)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+                        )
+                        finish()
+                    },
+                    intro = intro, person = session.personName.orEmpty(),
+                    onIntroDone = { AssistIntroStore.markSeen(this); m.stopSpeaking(); intro = null },
+                    onIntroTry = { AssistIntroStore.markSeen(this); m.stopSpeaking(); intro = null; talk() },
+                )
             }
         }
-        if (!introShown) talk()
-    }
-
-    private fun markIntroSeen() {
-        getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_INTRO, BuildConfig.VERSION_NAME).apply()
-        introShown = false
+        if (intro == null) talk()
     }
 
     /** Listens, asking for the microphone first if it hasn't been allowed yet. */

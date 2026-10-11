@@ -42,6 +42,21 @@ object AssistWakeSetting {
     }
 }
 
+/** Remembers whether the assistant has introduced itself to this person, and which version they last heard what is new in. */
+object AssistIntroStore {
+    private const val KEY_EVER = "introduced"
+    private fun prefs(context: Context) = context.getSharedPreferences(AssistActivity.PREFS, Context.MODE_PRIVATE)
+
+    fun kind(context: Context): IntroKind? {
+        val p = prefs(context)
+        return introKind(p.getBoolean(KEY_EVER, false), p.getString(AssistActivity.KEY_INTRO, null), com.churchdrive.app.BuildConfig.VERSION_NAME)
+    }
+
+    fun markSeen(context: Context) {
+        prefs(context).edit().putBoolean(KEY_EVER, true).putString(AssistActivity.KEY_INTRO, com.churchdrive.app.BuildConfig.VERSION_NAME).apply()
+    }
+}
+
 fun hasMicrophone(context: Context): Boolean =
     ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
 
@@ -52,13 +67,14 @@ fun hasMicrophone(context: Context): Boolean =
  * It listens only while the app is on screen, and stops the moment the app is left.
  */
 @Composable
-fun AssistWakeHost(connected: Boolean, base: String, api: HaApi?, onTask: (String) -> Unit) {
+fun AssistWakeHost(connected: Boolean, base: String, api: HaApi?, userName: String, onTask: (String) -> Unit) {
     if (api == null) return
     val context = LocalContext.current
     val enabled = AssistWakeSetting.enabled
     val model = remember(api) { AssistModel(context, api, base) }
     var open by remember { mutableStateOf(false) }
     var full by remember { mutableStateOf(false) }
+    var intro by remember { mutableStateOf<IntroKind?>(null) }
     val owner = LocalLifecycleOwner.current
     LaunchedEffect(connected) { if (connected) model.loadName() }
     LaunchedEffect(model.state) { AssistWakeStatus.waiting = model.state == AssistState.Waiting }
@@ -68,6 +84,7 @@ fun AssistWakeHost(connected: Boolean, base: String, api: HaApi?, onTask: (Strin
         model.onWake = {
             full = context.getSharedPreferences(AssistActivity.PREFS, Context.MODE_PRIVATE).getBoolean(AssistActivity.KEY_FULL, false)
             model.panelOpened()
+            intro = AssistIntroStore.kind(context)
             open = true
         }
         onDispose { model.release() }
@@ -89,7 +106,11 @@ fun AssistWakeHost(connected: Boolean, base: String, api: HaApi?, onTask: (Strin
             model.panelClosed()
         }
         Dialog(onDismissRequest = close, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-            AssistPanel(model = model, full = full, onFull = { full = it }, onClose = close, onTask = { said -> close(); onTask(said) })
+            AssistPanel(
+                model = model, full = full, onFull = { full = it }, onClose = close, onTask = { said -> close(); onTask(said) },
+                intro = intro, person = userName,
+                onIntroDone = { AssistIntroStore.markSeen(context); model.stopSpeaking(); intro = null },
+            )
         }
     }
 }

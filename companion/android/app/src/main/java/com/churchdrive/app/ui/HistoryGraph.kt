@@ -297,7 +297,39 @@ fun ClimateGraph(
         }
     }
     val h = history ?: return
-    val now = remember(history) { System.currentTimeMillis() }
+    ClimateGraphBody(
+        h, climate?.num("current_temperature"), climate?.takeIf { it.state != "off" }?.num("temperature"),
+        humidity?.state?.toDoubleOrNull() ?: climate?.num("current_humidity"), config, ink, lineColour,
+    )
+}
+
+/**
+ * A room's temperature and humidity over the last day, from its two sensors, drawn exactly like the thermostat card's graph
+ * (the comfort band for the kind of room, the humidity limits, smoothed). [type] is the room's kind, such as "living" or "bedroom".
+ */
+@Composable
+fun RoomGraph(tempId: String, humidityId: String?, type: String, ink: Color, lineColour: Color) {
+    val load = LocalHistory.current
+    var history by remember { mutableStateOf<Map<String, List<Pair<Long, String>>>>(emptyMap()) }
+    LaunchedEffect(tempId, humidityId) {
+        while (true) {
+            load(listOfNotNull(tempId, humidityId), GRAPH_HOURS) { history = it }
+            delay(5 * 60_000L)
+        }
+    }
+    val temps = numericSeries(history[tempId])
+    val hums = humidityId?.let { numericSeries(history[it]) }.orEmpty()
+    if (temps.size < 2 && hums.size < 2) return
+    val config = org.json.JSONObject().put("room_type", type).put("show_temperature_history", temps.size > 1).put("show_humidity_history", hums.size > 1)
+    ClimateGraphBody(ClimateHistory(temps, hums, emptyList()), temps.lastOrNull()?.value, null, hums.lastOrNull()?.value, config, ink, lineColour)
+}
+
+/** The drawing shared by the thermostat card and the room graphs. */
+@Composable
+private fun ClimateGraphBody(h: ClimateHistory, currentTemp: Double?, target: Double?, currentHumidity: Double?, config: org.json.JSONObject, ink: Color, lineColour: Color) {
+    val showT = config.optBoolean("show_temperature_history")
+    val showH = config.optBoolean("show_humidity_history")
+    val now = remember(h) { System.currentTimeMillis() }
     val from = now - GRAPH_HOURS * 3_600_000L
     val smooth = if (config.has("smooth_graphs")) config.optBoolean("smooth_graphs", true) else true
     val limits = if (config.has("show_limits")) config.optBoolean("show_limits", true) else true
@@ -307,17 +339,15 @@ fun ClimateGraph(
     val cHigh = maxOf(cfg("comfort_high", type.high), cLow + 0.5)
     val hLow = cfg("humidity_low", 40.0)
     val hHigh = cfg("humidity_high", 60.0)
-    val currentHumidity = humidity?.state?.toDoubleOrNull() ?: climate?.num("current_humidity")
     val purple = toneColors(Tone.Purple).accent
     val green = toneColors(Tone.Green).accent
 
     val layers = mutableListOf<GraphLayer>()
     val legend = mutableListOf<Pair<String, Color>>()
-    val tRaw = if (showT) h.temps.upTo(now, climate?.num("current_temperature")) else emptyList()
+    val tRaw = if (showT) h.temps.upTo(now, currentTemp) else emptyList()
     val hRaw = if (showH) h.hums.upTo(now, currentHumidity) else emptyList()
     val hums = if (smooth) smoothSeries(hRaw, from, now) else hRaw
     val temps = if (smooth) smoothSeries(tRaw, from, now) else tRaw
-    val target = climate?.takeIf { it.state != "off" }?.num("temperature")
     if (hums.size > 1) {
         val vals = hums.map { it.value }
         val lo = minOf(vals.min(), if (limits) hLow - 5 else vals.min()) - 3

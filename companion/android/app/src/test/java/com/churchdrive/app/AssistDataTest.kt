@@ -95,4 +95,27 @@ class AssistDataTest {
         val loud = ByteArray(200) { if (it % 2 == 0) 0x00 else 0x40 }
         assertTrue(com.churchdrive.app.ui.MicStream.levelOf(loud, loud.size) > 0.9f)
     }
+
+    @Test
+    fun theFirstIntroductionIsTheAssistantsOwnAndLaterOnesAreWhatIsNew() {
+        assertEquals(com.churchdrive.app.ui.IntroKind.First, com.churchdrive.app.ui.introKind(false, null, "0.10.1"))
+        assertEquals(com.churchdrive.app.ui.IntroKind.First, com.churchdrive.app.ui.introKind(false, "0.10.1", "0.10.1"))
+        assertEquals(com.churchdrive.app.ui.IntroKind.Update, com.churchdrive.app.ui.introKind(true, "0.10.0", "0.10.1"))
+        assertNull(com.churchdrive.app.ui.introKind(true, "0.10.1", "0.10.1"))
+    }
+
+    @Test
+    fun theSpokenIntroductionNamesTheAssistantOnlyTheFirstTime() {
+        val feats = listOf(
+            com.churchdrive.app.ui.AssistFeature("mdi:x", "Hands-free with the wake word", "a"),
+            com.churchdrive.app.ui.AssistFeature("mdi:y", "Natural conversation", "b"),
+        )
+        val first = com.churchdrive.app.ui.introSpeech(com.churchdrive.app.ui.IntroKind.First, "Jamie Power", "Jarvis", feats)
+        assertTrue(first.startsWith("Hello Jamie. I'm Jarvis."))
+        assertTrue("hands-free with the wake word and natural conversation" in first)
+        val update = com.churchdrive.app.ui.introSpeech(com.churchdrive.app.ui.IntroKind.Update, "Jamie", "Jarvis", feats)
+        assertTrue(update.startsWith("Welcome back, Jamie. Here's what's new:"))
+        assertFalse("I'm Jarvis" in update)
+        assertEquals("a, b and c", com.churchdrive.app.ui.spokenList(listOf("a", "b", "c")))
+    }
 }

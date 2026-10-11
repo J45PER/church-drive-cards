@@ -4,6 +4,15 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.10.2
+
+- **The assistant speaks its introduction.** The first time ever it introduces itself (name, what it can do, what is new), out loud in the house's
+  voice as well as on screen; after each update it just says what is new. It plays when you open the assistant (the widget, the microphone, or the
+  wake word) after installing a new version.
+- **Climate:** the floors' graphs now look like the thermostat cards': the comfort band for the room, humidity limits, smoothed. The floor cards are grey
+  again (they had taken the panel's colour, which turned amber whenever one room was warm), and the Home page's Climate icon follows the home's
+  climate score (green for a good score).
+
 ## 0.10.1
 
 - The assistant looks more like Siri or Gemini: a soft glow of indigo, purple and green clouds that blend and drift, and swell with your voice.

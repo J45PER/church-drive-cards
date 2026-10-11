@@ -69,22 +69,56 @@ fun isNotUnderstood(answer: String): Boolean {
     return "didn't understand" in a || "sorry, i" in a && "understand" in a || "couldn't understand" in a
 }
 
-/** Whether the introduction is due: the first time the assistant opens after a new version. */
+/** Which introduction is due: [First] the first time ever (the assistant introduces itself), [Update] after a new version (what is new). */
+enum class IntroKind { First, Update }
+
+/** The introduction that is due, or null: never introduced is [IntroKind.First]; a version not seen yet is [IntroKind.Update]. */
+fun introKind(introducedEver: Boolean, seenVersion: String?, current: String): IntroKind? = when {
+    !introducedEver -> IntroKind.First
+    seenVersion != current -> IntroKind.Update
+    else -> null
+}
+
+/** Whether any introduction is due. */
 fun introDue(seenVersion: String?, current: String): Boolean = seenVersion != current
 
 /** One thing the assistant can do, shown in the introduction and as an example sentence. */
 data class AssistFeature(val icon: String, val title: String, val example: String)
 
 /**
- * What is new in the assistant's introduction. Add the new things of each release to the top, and drop the oldest when it
- * is long; the introduction shows again once for every new version of the app.
+ * What is new, newest first, shown (and spoken) in the introduction. Add the new things of each release to the top and drop the
+ * oldest when it is long; the introduction comes again once for every new version of the app.
  */
 val ASSIST_FEATURES = listOf(
+    AssistFeature("mdi:microphone-message", "Hands-free with the wake word", "Hey Jarvis, who is home?"),
+    AssistFeature("mdi:chat-processing-outline", "Natural conversation", "Is it going to rain tomorrow?"),
     AssistFeature("mdi:cart-outline", "Shopping lists", "Add washing powder to the Lidl list"),
-    AssistFeature("mdi:map-marker-outline", "Places on a map", "Where is the shop on my list?"),
-    AssistFeature("mdi:chart-bar", "Last 7 days of energy", "How much did we spend this week?"),
     AssistFeature("mdi:lightbulb-outline", "Lights, heating and the alarm", "Turn the lounge lights down"),
 )
+
+/** "A, B and C". */
+fun spokenList(items: List<String>): String = when (items.size) {
+    0 -> ""
+    1 -> items[0]
+    else -> items.dropLast(1).joinToString(", ") + " and " + items.last()
+}
+
+/**
+ * What the assistant says out loud in the introduction. The first time: who it is and what it can do, then what is new. After an
+ * update: just what is new.
+ */
+fun introSpeech(kind: IntroKind, person: String, assistant: String, features: List<AssistFeature>): String {
+    val who = assistant.ifBlank { "your house assistant" }
+    val news = spokenList(features.take(4).map { it.title.replaceFirstChar { c -> c.lowercase() } })
+    val name = person.trim().substringBefore(' ')
+    return when (kind) {
+        IntroKind.First ->
+            "Hello${if (name.isNotEmpty()) " $name" else ""}. I'm $who. I can run anything Home Assistant can: the lights, the heating, the cleaning, the alarm, your lists, and your own automations. " +
+                "Here's what I can do for you now: $news. Just ask whenever you need me."
+        IntroKind.Update ->
+            "Welcome back${if (name.isNotEmpty()) ", $name" else ""}. Here's what's new: $news."
+    }
+}
 
 /** Sentences to try, shown under the microphone. */
 val ASSIST_SUGGESTIONS = listOf("Who is home?", "Turn off all the lights", "Any doors open?", "Good night")
