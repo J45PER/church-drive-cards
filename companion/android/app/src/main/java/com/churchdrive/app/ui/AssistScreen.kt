@@ -55,6 +55,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
 import kotlinx.coroutines.flow.first
 import kotlin.math.cos
@@ -137,8 +138,8 @@ fun AssistOrb(state: AssistState, level: Float, size: androidx.compose.ui.unit.D
             val at = Offset(c.x + cos(phase * a) * wander, c.y + sin(phase * b) * wander)
             val radius = r * scale
             drawCircle(
-                Brush.radialGradient(listOf(colour.copy(alpha = 0.95f), colour.copy(alpha = 0.5f), Color.Transparent), center = at, radius = radius),
-                radius = radius, center = at, blendMode = BlendMode.Plus,
+                Brush.radialGradient(listOf(colour.copy(alpha = 0.9f), colour.copy(alpha = 0.45f), Color.Transparent), center = at, radius = radius),
+                radius = radius, center = at, blendMode = BlendMode.Screen,
             )
         }
         cloud(AssistColours.Indigo, 1f, 1.3f, 1.0f)
@@ -146,8 +147,8 @@ fun AssistOrb(state: AssistState, level: Float, size: androidx.compose.ui.unit.D
         cloud(AssistColours.Green, 0.9f, 1.1f, 0.9f)
         // A bright, soft centre.
         drawCircle(
-            Brush.radialGradient(listOf(Color.White.copy(alpha = 0.35f + 0.4f * energy), Color.Transparent), center = c, radius = r * 0.55f),
-            radius = r * 0.55f, center = c, blendMode = BlendMode.Plus,
+            Brush.radialGradient(listOf(Color.White.copy(alpha = 0.10f + 0.18f * energy), Color.Transparent), center = c, radius = r * 0.5f),
+            radius = r * 0.5f, center = c, blendMode = BlendMode.Screen,
         )
     }
 }
@@ -199,7 +200,7 @@ private fun RoundIcon(icon: String, label: String, glow: Boolean, onClick: () ->
         }
         Box(
             modifier = Modifier.size(size).clip(CircleShape)
-                .background(scheme.onSurface.copy(alpha = if (glow) 0.18f else 0.1f))
+                .background(if (glow) scheme.surfaceVariant else scheme.onSurface.copy(alpha = 0.1f).compositeOver(scheme.surface))
                 .clickable(onClickLabel = label) { onClick() },
             contentAlignment = Alignment.Center,
         ) {
@@ -281,7 +282,7 @@ private fun FullAssist(model: AssistModel, onFull: (Boolean) -> Unit, onClose: (
     val chatting = model.messages.isNotEmpty()
     Column(
         modifier = Modifier.fillMaxSize()
-            .background(Brush.verticalGradient(listOf(scheme.background, scheme.background, AssistColours.Indigo.copy(alpha = 0.14f))))
+            .background(Brush.verticalGradient(listOf(scheme.background, scheme.background, AssistColours.Indigo.copy(alpha = 0.14f).compositeOver(scheme.background))))
             .statusBarsPadding().navigationBarsPadding().imePadding(),
     ) {
         Box(modifier = Modifier.fillMaxWidth().height(4.dp).background(AssistColours.across))

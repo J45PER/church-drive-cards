@@ -127,6 +127,13 @@ class AssistActivity : ComponentActivity() {
         }
     }
 
+    /** Opened again while it is already open (a second tap of the microphone): use the one that's there, don't stack another. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (this.intro == null) talk()
+    }
+
     override fun onStop() {
         super.onStop()
         // An overlay doesn't linger: leaving it (home, another app) ends it.

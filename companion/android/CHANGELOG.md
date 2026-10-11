@@ -4,6 +4,12 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.10.4
+
+- **Fix: the full-screen assistant is solid again** (it faded to see-through at the bottom, showing the app behind it), and tapping the microphone
+  again no longer stacks a second copy on top of the first.
+- The microphone button is a plain grey button with the glow clearly behind it, and the orb keeps its indigo, purple and green instead of washing out to white.
+
 ## 0.10.3
 
 - **Fix: asking a question no longer starts streaming the microphone to the house.** Home Assistant says "no audio handler" for a text question with a
