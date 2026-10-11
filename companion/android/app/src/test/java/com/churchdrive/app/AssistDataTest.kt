@@ -39,7 +39,7 @@ class AssistDataTest {
         val other = parseAssistEvent(JSONObject("""{"type":"error","data":{"code":"stt-no-text-recognized","message":"quiet"}}""")) as AssistEvent.Failed
         assertFalse(other.noMatch)
         assertEquals(AssistEvent.Done, parseAssistEvent(JSONObject("""{"type":"run-end"}""")))
-        assertNull(parseAssistEvent(JSONObject("""{"type":"run-start","data":{}}""")))
+        assertNull(parseAssistEvent(JSONObject("""{"type":"intent-start","data":{}}""")))
     }
 
     @Test
