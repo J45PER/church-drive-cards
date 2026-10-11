@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **v0.42.1** (2026-10-11): shopping reminders link to the Tasks dashboard's Shopping view
 - **v0.42.0** (2026-10-11): shopping lists in the integration: one task per list, bought / unavailable items, carry-over of unavailable items, date and shop-arrival reminders, add-to-existing-or-new question for shared items
 - **v0.41.0** (2026-10-10): Zappi smart charge switch, cheap-rate prompt and Stopping state (+ docs)
 - **v0.40.0** (2026-10-10): place reminders, and Done / Snooze on task reminders

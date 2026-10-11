@@ -35,7 +35,7 @@ SIGNAL_SHOPPING = "church_drive_shopping"
 EVENT_SHOPPING = "church_drive_shopping_changed"
 KEEP_DONE = timedelta(days=1)
 AGAIN = timedelta(minutes=30)  # one prompt per person per shop per visit
-LINK = "/dashboard-mobile/shopping"
+LINK = "/dashboard-tasks/shopping"
 HA_SHOPPING = "todo.shopping_list"
 
 
