@@ -17,7 +17,7 @@ import org.json.JSONObject
 /** The dashboard's `entities` card: a plain list of rows, each an icon, a name and a value. */
 @Composable
 fun EntitiesCard(config: JSONObject, entities: Map<String, EntityState>) {
-    val neutral = toneColors(Tone.Grey)
+    val neutral = panelNeutral()
     val rows = config.optJSONArray("entities")
     EntityCard(neutral.container, neutral.onContainer) {
         config.optString("title").takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.titleMedium) }

@@ -184,7 +184,7 @@ private fun OctopusWeek(entities: Map<String, EntityState>, tone: ToneColors) {
 /** The dashboard's Octopus card: `show` picks electricity, gas, week (last 7 days), cheap or octoplus. */
 @Composable
 fun OctopusCard(config: JSONObject, entities: Map<String, EntityState>) {
-    val tone = toneColors(Tone.Grey)
+    val tone = panelNeutral()
     val now = remember { System.currentTimeMillis() }
     EntityCard(tone.container, tone.onContainer) {
         when (config.optString("show")) {
@@ -216,7 +216,7 @@ fun OctopusCard(config: JSONObject, entities: Map<String, EntityState>) {
 /** The dashboard's System card for an administrator: internet, remote access, backups and updates. */
 @Composable
 fun SystemCard(entities: Map<String, EntityState>) {
-    val tone = toneColors(Tone.Grey)
+    val tone = panelNeutral()
     EntityCard(tone.container, tone.onContainer) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             SystemRows.rows(entities).forEach { row ->

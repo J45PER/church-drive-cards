@@ -217,8 +217,10 @@ fun HomeScreen(
         adminPages = adminPages,
         managerPages = if (isAdmin) managerPanels else emptyList(),
         managerContent = { panel ->
-            androidx.compose.foundation.layout.Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                panel.cards.forEach { CardView(it, entities, registry, call) }
+            androidx.compose.runtime.CompositionLocalProvider(LocalPanelTone provides toneFromColour(panel.color)) {
+                androidx.compose.foundation.layout.Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    panel.cards.forEach { CardView(it, entities, registry, call) }
+                }
             }
         },
         pageContent = { p ->

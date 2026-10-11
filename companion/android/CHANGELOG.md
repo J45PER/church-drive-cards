@@ -12,6 +12,12 @@ with the APK, so there is a record of what shipped. Newest first.
   goes to Home Assistant's own Assist, so lights, heating, the alarm, lists and your own automations all work, and the answer is spoken in the
   house's voice. If the house doesn't understand a sentence it offers to add it as a task. The first time after each update it introduces itself
   and what is new. Account > Settings > "Voice opens full screen" makes the full screen the default. The microphone is asked for the first time.
+- **Easier to reach the account and settings:** a round button with your initial, and a left swipe anywhere that doesn't scroll sideways opens it.
+- **Manager is one button** in the account panel, opening a page of its sections (people, cameras, reminders...), each its own page; Back goes one step at a time.
+- **Security:** the green messages under the alarm fade away after a few seconds, or swipe off sooner; amber and red ones stay (and a green one comes back if it starts to warn). Panels such as Safety fold away when you tap their heading.
+- **Climate:** tap a floor (ground, middle, top) to see each room's temperature and humidity graph for the last day.
+- **To-do editors are full-screen pages** (edit a task; the tasks to check from shared text), like the shopping list, with Cancel, Save and Delete as the app's own buttons.
+- **Consistent colours:** cards inside a dashboard panel (Safety, the climate floors, cleaning, energy, the manager's cards) take their panel's colour, as on the dashboard, instead of grey.
 
 ## 0.8.2
 

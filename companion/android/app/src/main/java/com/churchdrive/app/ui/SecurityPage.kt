@@ -63,13 +63,14 @@ val FALLBACK_SECURITY = listOf(
 fun DashboardPanel(panel: PanelSpec, content: @Composable () -> Unit) {
     val summary = rememberTemplate(panel.summaryTemplate)
     val colour = rememberTemplate(panel.colorTemplate) ?: panel.color
+    val tone = toneFromColour(colour) ?: Tone.Grey
     SectionPanel(
         panel.title,
         iconName = panel.icon,
-        tone = toneFromColour(colour) ?: Tone.Grey,
+        tone = tone,
         summary = summary,
         collapsible = panel.title.isNotBlank(),
-        content = content,
+        content = { androidx.compose.runtime.CompositionLocalProvider(LocalPanelTone provides tone) { content() } },
     )
 }
 
@@ -141,7 +142,7 @@ private val SAFETY_ICONS = mapOf(
 fun SafetyCard(config: JSONObject, entities: Map<String, EntityState>, registry: Registry) {
     val chosen = config.optJSONArray("entities")?.let { a -> (0 until a.length()).mapNotNull { a.optString(it).takeIf { s -> s.isNotBlank() } } }.orEmpty()
     val items = safetyItems(entities, registry, chosen)
-    val neutral = toneColors(Tone.Grey)
+    val neutral = panelNeutral()
     EntityCard(neutral.container, neutral.onContainer) {
         if (items.isEmpty()) {
             Text("No smoke, heat or CO alarms found.", style = MaterialTheme.typography.bodyMedium)

@@ -120,7 +120,7 @@ fun plainMarkdown(text: String): String = text.replace("**", "").replace("__", "
 @Composable
 fun PeopleStatusCard(entities: Map<String, EntityState>, registry: Registry) {
     val rows = peopleRows(entities, registry)
-    val neutral = toneColors(Tone.Grey)
+    val neutral = panelNeutral()
     EntityCard(neutral.container, neutral.onContainer) {
         if (rows.isEmpty()) Text("No people set up yet.", style = MaterialTheme.typography.bodyMedium)
         rows.forEach { p ->
@@ -149,7 +149,7 @@ fun DeviceHealthCard(config: JSONObject, entities: Map<String, EntityState>, cal
     val devices = watchedDevices(entities)
     val showOk = if (config.has("show_ok")) config.optBoolean("show_ok", true) else true
     val shown = devices.filter { showOk || !it.ok }
-    val neutral = toneColors(Tone.Grey)
+    val neutral = panelNeutral()
     EntityCard(neutral.container, neutral.onContainer) {
         config.optString("title").takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.titleMedium) }
         if (shown.isEmpty()) Text(if (devices.isEmpty()) "No devices are being watched yet." else "Every device is responding.", style = MaterialTheme.typography.bodyMedium)
@@ -187,7 +187,7 @@ fun HeadingCard(config: JSONObject) {
 /** A markdown card as plain text. */
 @Composable
 fun MarkdownCard(config: JSONObject) {
-    val neutral = toneColors(Tone.Grey)
+    val neutral = panelNeutral()
     EntityCard(neutral.container, neutral.onContainer) {
         Text(plainMarkdown(config.optString("content")), style = MaterialTheme.typography.bodyMedium)
     }
@@ -216,7 +216,7 @@ fun PeopleListsCard(entities: Map<String, EntityState>, call: CallService) {
 /** A plain list of entities where an input (a choice, a time, a number) can be changed in place; other rows just show their value. */
 @Composable
 fun SettingsEntitiesCard(config: JSONObject, entities: Map<String, EntityState>, call: CallService) {
-    val neutral = toneColors(Tone.Grey)
+    val neutral = panelNeutral()
     val rows = config.optJSONArray("entities")
     EntityCard(neutral.container, neutral.onContainer) {
         config.optString("title").takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.titleMedium) }
