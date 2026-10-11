@@ -15,6 +15,8 @@ import { SUFFIX, LABEL } from './suffix.js';
 import { kitShell, kitHead, kitEsc } from './card-kit.js';
 import { openPopup } from './popup.js';
 import { stcMe } from './section-title-card.js';
+import { openShoppingPage } from './shopping-card.js';
+import { shoppingIdOf } from './shopping-logic.js';
 import { DAYS, MONTHS, parseTask, formatTask, formatRepeat, describeRepeat, firstDue } from './repeat.js';
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -444,6 +446,9 @@ export class TaskListCard extends HTMLElement {
   // The add/change form. uid null = a new task.
   _open(uid) {
     const t = uid ? this._all().find((x) => x.uid === uid) : null;
+    // A shopping list's task opens the list page, not the task form.
+    const shop = t && shoppingIdOf(t.description);
+    if (shop && !this.config.demo) return openShoppingPage(this._hass, shop);
     const p = t ? parseTask(t.description) : { repeat: null, who: 'none', notes: '' };
     const r = p.repeat || {};
     const due = t && t.due ? dueDate(t.due) : null;
