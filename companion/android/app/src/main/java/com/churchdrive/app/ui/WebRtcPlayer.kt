@@ -38,7 +38,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * same connection. [onStatus] gets null once the picture is playing, or a message if it can't be.
  */
 @Composable
-fun WebRtcPlayer(entityId: String, muted: Boolean, modifier: Modifier = Modifier, onAspect: (Float) -> Unit = {}, onStatus: (String?) -> Unit) {
+fun WebRtcPlayer(entityId: String, muted: Boolean, modifier: Modifier = Modifier, talking: Boolean = false, onAspect: (Float) -> Unit = {}, onStatus: (String?) -> Unit) {
     val context = LocalContext.current
     val host = LocalCameraHost.current
     val egl = remember { EglBase.create() }
@@ -52,14 +52,19 @@ fun WebRtcPlayer(entityId: String, muted: Boolean, modifier: Modifier = Modifier
     var audio by remember { mutableStateOf<AudioTrack?>(null) }
     LaunchedEffect(muted, audio) { audio?.setEnabled(!muted) }
 
-    DisposableEffect(entityId) {
-        val session = host?.let { RtcSession(context, egl, it, entityId, renderer, { track -> audio = track }, onStatus, onAspect) }
-        if (session == null) onStatus("Live view isn't available.") else session.start()
+    // The picture's surface lives as long as the player; the connection restarts when Talk is turned on or off (the camera
+    // is asked again, now with or without our microphone).
+    DisposableEffect(Unit) {
         onDispose {
-            session?.close()
             renderer.release()
             egl.release()
         }
+    }
+    DisposableEffect(entityId, talking) {
+        onStatus("Starting live view…")
+        val session = host?.let { RtcSession(context, egl, it, entityId, renderer, talking, { track -> audio = track }, onStatus, onAspect) }
+        if (session == null) onStatus("Live view isn't available.") else session.start()
+        onDispose { session?.close() }
     }
     AndroidView(factory = { renderer }, modifier = modifier)
 }
@@ -83,6 +88,8 @@ private class RtcSession(
     private val host: CameraHost,
     private val entityId: String,
     private val renderer: SurfaceViewRenderer,
+    /** Send our microphone too (two-way audio). */
+    private val talk: Boolean,
     private val onAudio: (AudioTrack) -> Unit,
     private val onStatus: (String?) -> Unit,
     private val onAspect: (Float) -> Unit,
@@ -111,6 +118,8 @@ private class RtcSession(
         renderer.onFrame(frame)
     }
     private var audioModule: JavaAudioDeviceModule? = null
+    private var micSource: org.webrtc.AudioSource? = null
+    private var micTrack: AudioTrack? = null
 
     fun start() {
         CrashReport.note("live view: $entityId")
@@ -152,9 +161,15 @@ private class RtcSession(
             val config = PeerConnection.RTCConfiguration(ice).apply { sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN }
             val pc = f.createPeerConnection(config, this) ?: error("No connection")
             connection = pc
+            // Two-way audio: our microphone goes on the audio section, which then sends and receives.
+            val mic = if (talk) {
+                val source = f.createAudioSource(MediaConstraints()).also { micSource = it }
+                f.createAudioTrack("mic", source).also { micTrack = it }
+            } else null
             for (kind in ORDERS[n]) {
                 when (kind) {
-                    "audio" -> pc.addTransceiver(
+                    "audio" -> if (mic != null) pc.addTransceiver(mic, RtpTransceiver.RtpTransceiverInit(RtpTransceiver.RtpTransceiverDirection.SEND_RECV))
+                    else pc.addTransceiver(
                         org.webrtc.MediaStreamTrack.MediaType.MEDIA_TYPE_AUDIO,
                         RtpTransceiver.RtpTransceiverInit(RtpTransceiver.RtpTransceiverDirection.RECV_ONLY),
                     )
@@ -242,7 +257,7 @@ private class RtcSession(
 
     private fun fail(message: String) {
         if (closed.get() || playing.get()) return
-        onStatus(message)
+        onStatus(if (talk) "$message (Two-way audio may not be supported by this camera: tap Talk again to go back to listening.)" else message)
     }
 
     /** Ends the current try (the connection and its subscription), keeping the factory for the next one. */
@@ -254,6 +269,10 @@ private class RtcSession(
         runCatching { connection?.close() }
         runCatching { connection?.dispose() }
         connection = null
+        runCatching { micTrack?.setEnabled(false); micTrack?.dispose() }
+        runCatching { micSource?.dispose() }
+        micTrack = null
+        micSource = null
     }
 
     fun close() {

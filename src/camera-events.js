@@ -26,20 +26,34 @@ export const KINDS = {
 };
 
 export const STAGE_CSS = `
-  .cc-pop-media { position:relative; border-radius:14px; overflow:hidden; background:#000; aspect-ratio:16/9; touch-action:none; cursor:grab; user-select:none; }
+  .cc-pop-media { position:relative; border-radius:14px; overflow:hidden; background:#000; aspect-ratio:var(--cc-aspect, 16/9); max-height:var(--cc-max, 56dvh); width:100%; margin:0 auto; touch-action:none; cursor:grab; user-select:none; }
+  .cc-pop-media.cc-big { --cc-max: 78dvh; }
   .cc-stage { position:absolute; left:0; top:0; transform-origin:0 0; will-change:transform; }
   .cc-stage > * { display:block; width:100%; height:100%; pointer-events:none; }
-  .cc-stage img, .cc-stage video { object-fit:cover; }
-  .cc-ib { width:28px; height:28px; border-radius:50%; background:rgba(0,0,0,0.45); color:#fff; display:flex; align-items:center; justify-content:center; }
-  .cc-mute { position:absolute; top:8px; right:8px; border:none; cursor:pointer; z-index:1; }
-  .cc-tag { position:absolute; top:8px; left:8px; z-index:1; font-size:0.7rem; font-weight:800; border-radius:6px; padding:2px 7px; color:#fff; pointer-events:none; }
+  .cc-stage img, .cc-stage video { object-fit:contain; }
+  .cc-ib { width:30px; height:30px; border-radius:50%; background:rgba(0,0,0,0.5); color:#fff; display:flex; align-items:center; justify-content:center; border:none; padding:0; }
+  .cc-ib.pill { width:auto; min-width:30px; border-radius:999px; padding:0 8px; gap:4px; font-size:0.72rem; font-weight:700; }
+  button.cc-ib { cursor:pointer; }
+  /* One bar for everything over the video, so nothing can sit on top of anything else. */
+  .cc-top { position:absolute; left:0; right:0; top:0; z-index:2; display:flex; align-items:flex-start; justify-content:space-between; gap:8px; padding:8px; pointer-events:none;
+    background:linear-gradient(rgba(0,0,0,0.45), transparent); }
+  .cc-top-l { display:flex; gap:6px; align-items:center; min-width:0; flex:1 1 auto; flex-wrap:wrap; }
+  .cc-top-r { display:flex; gap:6px; align-items:center; flex:none; }
+  .cc-top button { pointer-events:auto; }
+  .cc-tag { font-size:0.7rem; font-weight:800; border-radius:6px; padding:3px 7px; color:#fff; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cc-pop-media.cc-fs { position:fixed; inset:0; z-index:2147483000; width:100vw; height:100dvh; max-height:none; aspect-ratio:auto; border-radius:0; }
+  .cc-pop-media.cc-fs.cc-rot { inset:auto; left:100vw; top:0; width:100dvh; height:100vw; transform-origin:0 0; transform:rotate(90deg); }
+  .cc-pop-media:fullscreen { aspect-ratio:auto; max-height:none; border-radius:0; width:100vw; height:100vh; }
   .cc-btns { display:flex; gap:10px; margin:14px 0 6px; }
   .cc-btn { flex:1 1 0; min-width:0; border:none; border-radius:14px; padding:10px 4px; cursor:pointer; font:inherit; font-size:0.78rem; font-weight:700;
     background:rgba(127,127,127,0.16); color:var(--primary-text-color); display:flex; flex-direction:column; align-items:center; gap:4px; }
   .cc-btn.main { background:#5c6bc0; color:#fff; }
   .cc-btn.talk { background:#43a047; color:#fff; }
   .cc-btn.talk.on { background:#e53935; }
+  .cc-btn.answer { background:#43a047; color:#fff; animation:cc-ring 1s ease-in-out infinite; }
   .cc-btn[disabled] { opacity:.5; cursor:default; }
+  @keyframes cc-ring { 50% { box-shadow:0 0 0 6px rgba(67,160,71,0.35); } }
+  @media (prefers-reduced-motion: reduce) { .cc-btn.answer { animation:none; } }
 `;
 
 const EV_CSS = `
@@ -54,7 +68,6 @@ const EV_CSS = `
   .ce-seek::-moz-range-track { height:6px; border-radius:3px; background:linear-gradient(90deg, #5c6bc0 var(--p), rgba(127,127,127,0.3) var(--p)); }
   .ce-seek::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; margin-top:-6px; border-radius:50%; background:#fff; border:none; box-shadow:0 1px 3px rgba(0,0,0,0.5); }
   .ce-seek::-moz-range-thumb { width:18px; height:18px; border-radius:50%; background:#fff; border:none; }
-  .cc-pop-media:fullscreen { aspect-ratio:auto; border-radius:0; width:100vw; height:100vh; }
   .ce-chips { display:flex; gap:6px; flex-wrap:wrap; margin:12px 0 2px; }
   .ce-chip { border:none; cursor:pointer; font:inherit; font-size:0.75rem; font-weight:700; border-radius:999px; padding:5px 11px; background:rgba(127,127,127,0.18); color:var(--primary-text-color); }
   .ce-chip.on { background:var(--primary-text-color, #e6e8ee); color:var(--card-background-color, #1f2128); }
@@ -116,21 +129,36 @@ export function findVideo(root, depth = 0) {
   return null;
 }
 
+// The bar over the top of the video: a label on the left, buttons and status
+// icons on the right. Everything that sits over the video goes in it.
+export function stageBar(box) {
+  let top = box.querySelector(':scope > .cc-top');
+  if (!top) {
+    top = document.createElement('div');
+    top.className = 'cc-top';
+    top.innerHTML = '<div class="cc-top-l"></div><div class="cc-top-r"></div>';
+    box.appendChild(top);
+  }
+  return { left: top.firstChild, right: top.lastChild };
+}
+
 // Put `el` in `box` at its own shape (aspect = width / height, corrected from
-// the playing video), covering the box, with drag, pinch, scroll and
-// double-tap zoom, and a sound button. Returns the stage element.
+// the playing video): the box takes that shape, so nothing is cropped. Drag,
+// pinch, scroll or double-tap to zoom in, and a sound button. Returns the stage.
 export function stageMedia(box, el, aspect = 16 / 9) {
-  box.innerHTML = '';
+  box.querySelectorAll(':scope > .cc-stage').forEach((n) => n.remove());
+  box.querySelectorAll(':scope > .cc-top').forEach((n) => n.remove());
   const stage = document.createElement('div');
   stage.className = 'cc-stage';
   stage.appendChild(el);
-  box.appendChild(stage);
+  box.insertBefore(stage, box.firstChild);
+  box.style.setProperty('--cc-aspect', String(aspect));
   if ('muted' in el) {
     const mute = document.createElement('button');
     mute.className = 'cc-ib cc-mute';
     mute.setAttribute('aria-label', 'Sound');
     const setMute = () => {
-      mute.innerHTML = iconHtml(el.muted ? 'mdi:volume-off' : 'mdi:volume-high', { size: '17px' });
+      mute.innerHTML = iconHtml(el.muted ? 'mdi:volume-off' : 'mdi:volume-high', { size: '18px' });
       hydrateIcons(mute);
     };
     mute.addEventListener('click', (ev) => {
@@ -142,7 +170,7 @@ export function stageMedia(box, el, aspect = 16 / 9) {
       setMute();
     });
     el.addEventListener('volumechange', setMute);
-    box.appendChild(mute);
+    stageBar(box).right.appendChild(mute);
     setMute();
   }
   const v = { x: 0, y: 0, z: 1, w: 0, h: 0 };
@@ -151,27 +179,25 @@ export function stageMedia(box, el, aspect = 16 / 9) {
   const size = () => ({ width: box.clientWidth, height: box.clientHeight });
   const clamp = () => {
     const r = size();
-    v.x = Math.min(0, Math.max(r.width - v.w * v.z, v.x));
-    v.y = Math.min(0, Math.max(r.height - v.h * v.z, v.y));
-    stage.style.width = `${v.w * v.z}px`;
-    stage.style.height = `${v.h * v.z}px`;
+    const w = v.w * v.z;
+    const h = v.h * v.z;
+    // Smaller than the box: centred. Larger: can't be dragged off the edge.
+    v.x = w <= r.width ? (r.width - w) / 2 : Math.min(0, Math.max(r.width - w, v.x));
+    v.y = h <= r.height ? (r.height - h) / 2 : Math.min(0, Math.max(r.height - h, v.y));
+    stage.style.width = `${w}px`;
+    stage.style.height = `${h}px`;
     stage.style.transform = `translate(${v.x}px, ${v.y}px)`;
   };
   const fit = () => {
     const r = size();
-    if (!r.width) return;
-    const first = !v.w;
-    // Cover the box: as wide as it for a tall picture, as tall for a wide one.
-    if (aspect < r.width / r.height) {
+    if (!r.width || !r.height) return;
+    // The whole picture inside the box: as wide as it for a wide picture, as tall for a tall one.
+    if (aspect > r.width / r.height) {
       v.w = r.width;
       v.h = r.width / aspect;
     } else {
       v.h = r.height;
       v.w = r.height * aspect;
-    }
-    if (first) {
-      v.x = (r.width - v.w) / 2;
-      v.y = (r.height - v.h) / 2;
     }
     clamp();
   };
@@ -192,8 +218,10 @@ export function stageMedia(box, el, aspect = 16 / 9) {
     const s = () => box._cdStage;
     const pts = new Map();
     let pinch = null;
+    // Turned sideways by the fallback full screen: screen movements don't match the picture's.
+    const turned = () => box.classList.contains('cc-rot');
     box.addEventListener('pointerdown', (ev) => {
-      if (ev.target.closest('.cc-mute')) return;
+      if (ev.target.closest('.cc-top button')) return;
       box.setPointerCapture(ev.pointerId);
       pts.set(ev.pointerId, [ev.clientX, ev.clientY]);
       if (pts.size === 2) {
@@ -205,6 +233,7 @@ export function stageMedia(box, el, aspect = 16 / 9) {
       const prev = pts.get(ev.pointerId);
       if (!prev) return;
       pts.set(ev.pointerId, [ev.clientX, ev.clientY]);
+      if (turned()) return;
       if (pts.size === 2 && pinch) {
         const [a, b] = [...pts.values()];
         s().zoomAt((pinch.z * Math.hypot(a[0] - b[0], a[1] - b[1])) / (pinch.d || 1), (a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
@@ -224,11 +253,11 @@ export function stageMedia(box, el, aspect = 16 / 9) {
       'wheel',
       (ev) => {
         ev.preventDefault();
-        s().zoomAt(s().v.z * (ev.deltaY < 0 ? 1.15 : 1 / 1.15), ev.clientX, ev.clientY);
+        if (!turned()) s().zoomAt(s().v.z * (ev.deltaY < 0 ? 1.15 : 1 / 1.15), ev.clientX, ev.clientY);
       },
       { passive: false },
     );
-    box.addEventListener('dblclick', (ev) => s().zoomAt(s().v.z > 1.4 ? 1 : 2, ev.clientX, ev.clientY));
+    box.addEventListener('dblclick', (ev) => !turned() && s().zoomAt(s().v.z > 1.4 ? 1 : 2, ev.clientX, ev.clientY));
     if (window.ResizeObserver) new ResizeObserver(() => s().fit()).observe(box);
   }
   requestAnimationFrame(fit);
@@ -243,9 +272,10 @@ export function stageMedia(box, el, aspect = 16 / 9) {
       const a = w / h;
       if (Math.abs(a - aspect) > 0.02) {
         aspect = a;
-        v.w = 0;
-        fit();
+        box.style.setProperty('--cc-aspect', String(a));
+        if (box.onaspect) box.onaspect(a);
       }
+      requestAnimationFrame(fit);
       return;
     }
     setTimeout(look, 400);
@@ -260,8 +290,201 @@ export function stageTag(box, text, colour) {
   t.className = 'cc-tag';
   t.style.background = colour;
   t.textContent = text;
-  box.appendChild(t);
+  stageBar(box).left.appendChild(t);
   return t;
+}
+
+// Full screen: the video box fills the screen and, on a phone, turns to
+// landscape. Uses the browser's full screen where there is one (and locks the
+// screen to landscape), else (iPhones, which only do it for a bare <video>)
+// fills the screen itself, turned sideways when the phone is upright.
+// Returns whether it is now full screen.
+export function toggleFullscreen(box) {
+  const on = !!(document.fullscreenElement === box || box.classList.contains('cc-fs'));
+  const done = (state) => box.dispatchEvent(new CustomEvent('cc-fullscreen', { detail: state }));
+  const turn = () => box.classList.toggle('cc-rot', box.classList.contains('cc-fs') && window.innerHeight > window.innerWidth);
+  if (on) {
+    if (document.fullscreenElement === box) document.exitFullscreen().catch(() => {});
+    box.classList.remove('cc-fs', 'cc-rot');
+    try {
+      screen.orientation.unlock();
+    } catch (_) {}
+    done(false);
+    return false;
+  }
+  const fake = () => {
+    box.classList.add('cc-fs');
+    turn();
+    if (!box._cdFsWatch) {
+      box._cdFsWatch = true;
+      window.addEventListener('resize', turn);
+    }
+    done(true);
+  };
+  if (box.requestFullscreen) {
+    box
+      .requestFullscreen()
+      .then(() => {
+        try {
+          screen.orientation.lock('landscape').catch(() => {});
+        } catch (_) {}
+        done(true);
+      })
+      .catch(fake);
+  } else fake();
+  if (!box._cdFsEvent) {
+    box._cdFsEvent = true;
+    // The browser's own exit (Escape, swipe): tell the buttons.
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement && box.isConnected && !box.classList.contains('cc-fs')) {
+        try {
+          screen.orientation.unlock();
+        } catch (_) {}
+        done(false);
+      }
+    });
+  }
+  return true;
+}
+
+// Saved events for a camera ('front_door'): { events, keep } or null.
+export async function loadCameraEvents(hass, base) {
+  try {
+    const res = await hass.callWS({ type: 'church_drive/camera/events', camera: base });
+    return { events: res.events || [], keep: (res.settings && res.settings.keep_days) || 5 };
+  } catch (_) {
+    return null;
+  }
+}
+
+export { hm, dayName };
+
+// Play one saved event in `box` with its controls in `bar`: the clip (or the
+// picture if Ring didn't record one). Returns { tag, el }.
+export function playEvent(box, bar, e, { aspect = 16 / 9, name = '' } = {}) {
+  bar.style.display = 'none';
+  bar.innerHTML = '';
+  let el;
+  if (e.clip) {
+    el = document.createElement('video');
+    el.src = e.clip;
+    // The event's picture until the clip draws (not the phone's grey placeholder).
+    if (e.picture) el.poster = e.picture;
+    el.autoplay = true;
+    el.playsInline = true;
+    el.loop = false;
+    el.muted = false;
+    el.preload = 'auto';
+    el.setAttribute('playsinline', '');
+  } else {
+    el = document.createElement('img');
+    el.src = e.picture || '';
+    el.alt = '';
+  }
+  stageMedia(box, el, aspect);
+  const [label, colour] = KINDS[e.kind] || KINDS.motion;
+  const from = e.kind === 'linked' && e.source ? ` from ${e.source}` : '';
+  const tag = stageTag(box, `${label}${from} · ${hm(e.ts * 1000)} ${dayName(e.ts * 1000).toLowerCase()}`, colour);
+  if (e.clip) {
+    // Start it here, inside the tap: iPhones only start a video (with sound)
+    // from a tap, and don't even load it otherwise. If sound isn't allowed,
+    // play it muted (the sound button turns it on).
+    const big = document.createElement('button');
+    big.className = 'ce-big';
+    big.setAttribute('aria-label', 'Play');
+    big.innerHTML = iconHtml('mdi:play', { size: '34px' });
+    hydrateIcons(big);
+    big.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      el.play().catch(() => {});
+    });
+    box.appendChild(big);
+    const show = () => (big.style.display = el.paused ? '' : 'none');
+    ['play', 'playing', 'pause', 'ended'].forEach((n) => el.addEventListener(n, show));
+    el.play().catch(() => {
+      el.muted = true;
+      el.play().catch(show);
+    });
+    show();
+    clipControls(box, bar, el, e, name);
+    el.addEventListener('error', () => {
+      tag.textContent = `Couldn't play this clip${el.error ? ` (${['', 'stopped', 'network', 'decode', 'format not supported'][el.error.code] || el.error.code})` : ''}`;
+      tag.style.background = '#c62828';
+    });
+  }
+  return { tag, el };
+}
+
+// Under a clip: play/pause, time, a timeline to scrub, length, download
+// and full screen.
+function clipControls(box, bar, el, e, name) {
+  const icon = (i) => iconHtml(i, { size: '22px' });
+  bar.innerHTML = `<button class="ce-ctl" data-c="play" aria-label="Play or pause"></button>
+    <span class="ce-time">0:00</span>
+    <input class="ce-seek" type="range" min="0" max="1000" step="1" value="0" aria-label="Timeline">
+    <span class="ce-time ce-len">0:00</span>
+    <button class="ce-ctl" data-c="save" aria-label="Download">${icon('mdi:download')}</button>
+    <button class="ce-ctl" data-c="full" aria-label="Full screen">${icon('mdi:fullscreen')}</button>`;
+  bar.style.display = '';
+  hydrateIcons(bar);
+  const btn = bar.querySelector('[data-c="play"]');
+  const seek = bar.querySelector('.ce-seek');
+  const [now, len] = bar.querySelectorAll('.ce-time');
+  const clock = (t) => (isFinite(t) ? `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}` : '0:00');
+  let dragging = false;
+  const sync = () => {
+    btn.innerHTML = icon(el.paused ? 'mdi:play' : 'mdi:pause');
+    hydrateIcons(btn);
+    now.textContent = clock(el.currentTime);
+    len.textContent = clock(el.duration);
+    if (!dragging && el.duration) seek.value = String(Math.round((el.currentTime / el.duration) * 1000));
+    seek.style.setProperty('--p', `${(Number(seek.value) / 10).toFixed(1)}%`);
+  };
+  ['play', 'pause', 'ended', 'timeupdate', 'durationchange', 'loadedmetadata'].forEach((n) => el.addEventListener(n, sync));
+  sync();
+  seek.addEventListener('input', () => {
+    dragging = true;
+    if (el.duration) el.currentTime = (Number(seek.value) / 1000) * el.duration;
+    sync();
+  });
+  seek.addEventListener('change', () => (dragging = false));
+  // The file, fetched once it's playing, so Download can hand it over at once
+  // (iPhones only open the share sheet straight from a tap).
+  let file = null;
+  const fname = `${name} ${new Date(e.ts * 1000).toISOString().slice(0, 10)} ${hm(e.ts * 1000).replace(':', '.')}.mp4`;
+  el.addEventListener(
+    'playing',
+    () => {
+      fetch(e.clip)
+        .then((r) => (r.ok ? r.blob() : null))
+        .then((b) => (file = b && new File([b], fname, { type: 'video/mp4' })))
+        .catch(() => {});
+    },
+    { once: true },
+  );
+  bar.addEventListener('click', (ev) => {
+    const c = ev.target.closest('[data-c]');
+    if (!c) return;
+    if (c.dataset.c === 'play') {
+      if (el.paused) el.play().catch(() => {});
+      else el.pause();
+    } else if (c.dataset.c === 'full') {
+      if (box.requestFullscreen || document.fullscreenEnabled === false) toggleFullscreen(box);
+      else if (el.webkitEnterFullscreen) el.webkitEnterFullscreen(); // iPhone: its own player
+      else toggleFullscreen(box);
+    } else if (c.dataset.c === 'save') {
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: fname }).catch(() => {});
+        return;
+      }
+      const a = document.createElement('a');
+      a.href = file ? URL.createObjectURL(file) : e.clip;
+      a.download = fname;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+  });
 }
 
 // The events viewer pop-up for one camera ('front_door'): the list first; a
@@ -293,129 +516,9 @@ export function openCameraEvents(host, hass, base, { title = '', aspect = 16 / 9
     state.sel = e.id;
     renderList();
     box.style.display = '';
-    bar.style.display = 'none';
-    bar.innerHTML = '';
     if (pop.body) pop.body.scrollTo({ top: 0, behavior: 'smooth' });
-    let el;
-    if (e.clip) {
-      el = document.createElement('video');
-      el.src = e.clip;
-      // The event's picture until the clip draws (not the phone's grey placeholder).
-      if (e.picture) el.poster = e.picture;
-      el.autoplay = true;
-      el.playsInline = true;
-      el.loop = false;
-      el.muted = false;
-      el.preload = 'auto';
-      el.setAttribute('playsinline', '');
-    } else {
-      el = document.createElement('img');
-      el.src = e.picture || '';
-      el.alt = '';
-    }
-    stageMedia(box, el, aspect);
-    const [label, colour] = KINDS[e.kind] || KINDS.motion;
-    const from = e.kind === 'linked' && e.source ? ` from ${e.source}` : '';
-    const tag = stageTag(box, `${label}${from} · ${hm(e.ts * 1000)} ${dayName(e.ts * 1000).toLowerCase()}`, colour);
-    if (e.clip) {
-      // Start it here, inside the tap: iPhones only start a video (with sound)
-      // from a tap, and don't even load it otherwise. If sound isn't allowed,
-      // play it muted (the sound button turns it on).
-      const big = document.createElement('button');
-      big.className = 'ce-big';
-      big.setAttribute('aria-label', 'Play');
-      big.innerHTML = iconHtml('mdi:play', { size: '34px' });
-      hydrateIcons(big);
-      big.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        el.play().catch(() => {});
-      });
-      box.appendChild(big);
-      const show = () => (big.style.display = el.paused ? '' : 'none');
-      ['play', 'playing', 'pause', 'ended'].forEach((n) => el.addEventListener(n, show));
-      el.play().catch(() => {
-        el.muted = true;
-        el.play().catch(show);
-      });
-      show();
-      controls(el, e);
-      el.addEventListener('error', () => {
-        tag.textContent = `Couldn't play this clip${el.error ? ` (${['', 'stopped', 'network', 'decode', 'format not supported'][el.error.code] || el.error.code})` : ''}`;
-        tag.style.background = '#c62828';
-      });
-    }
-  };
-
-  // Under a clip: play/pause, time, a timeline to scrub, length, download
-  // and full screen.
-  const controls = (el, e) => {
-    const icon = (i) => iconHtml(i, { size: '22px' });
-    bar.innerHTML = `<button class="ce-ctl" data-c="play" aria-label="Play or pause"></button>
-      <span class="ce-time">0:00</span>
-      <input class="ce-seek" type="range" min="0" max="1000" step="1" value="0" aria-label="Timeline">
-      <span class="ce-time ce-len">0:00</span>
-      <button class="ce-ctl" data-c="save" aria-label="Download">${icon('mdi:download')}</button>
-      <button class="ce-ctl" data-c="full" aria-label="Full screen">${icon('mdi:fullscreen')}</button>`;
-    bar.style.display = '';
-    hydrateIcons(bar);
-    const btn = bar.querySelector('[data-c="play"]');
-    const seek = bar.querySelector('.ce-seek');
-    const [now, len] = bar.querySelectorAll('.ce-time');
-    const clock = (t) => (isFinite(t) ? `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}` : '0:00');
-    let dragging = false;
-    const sync = () => {
-      btn.innerHTML = icon(el.paused ? 'mdi:play' : 'mdi:pause');
-      hydrateIcons(btn);
-      now.textContent = clock(el.currentTime);
-      len.textContent = clock(el.duration);
-      if (!dragging && el.duration) seek.value = String(Math.round((el.currentTime / el.duration) * 1000));
-      seek.style.setProperty('--p', `${(Number(seek.value) / 10).toFixed(1)}%`);
-    };
-    ['play', 'pause', 'ended', 'timeupdate', 'durationchange', 'loadedmetadata'].forEach((n) => el.addEventListener(n, sync));
-    sync();
-    seek.addEventListener('input', () => {
-      dragging = true;
-      if (el.duration) el.currentTime = (Number(seek.value) / 1000) * el.duration;
-      sync();
-    });
-    seek.addEventListener('change', () => (dragging = false));
-    // The file, fetched once it's playing, so Download can hand it over at once
-    // (iPhones only open the share sheet straight from a tap).
-    let file = null;
-    const fname = `${name} ${new Date(e.ts * 1000).toISOString().slice(0, 10)} ${hm(e.ts * 1000).replace(':', '.')}.mp4`;
-    el.addEventListener(
-      'playing',
-      () => {
-        fetch(e.clip)
-          .then((r) => (r.ok ? r.blob() : null))
-          .then((b) => (file = b && new File([b], fname, { type: 'video/mp4' })))
-          .catch(() => {});
-      },
-      { once: true },
-    );
-    bar.addEventListener('click', (ev) => {
-      const c = ev.target.closest('[data-c]');
-      if (!c) return;
-      if (c.dataset.c === 'play') {
-        if (el.paused) el.play().catch(() => {});
-        else el.pause();
-      } else if (c.dataset.c === 'full') {
-        if (document.fullscreenElement) document.exitFullscreen();
-        else if (box.requestFullscreen) box.requestFullscreen().catch(() => el.webkitEnterFullscreen && el.webkitEnterFullscreen());
-        else if (el.webkitEnterFullscreen) el.webkitEnterFullscreen(); // iPhone: its own player
-      } else if (c.dataset.c === 'save') {
-        if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
-          navigator.share({ files: [file], title: fname }).catch(() => {});
-          return;
-        }
-        const a = document.createElement('a');
-        a.href = file ? URL.createObjectURL(file) : e.clip;
-        a.download = fname;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-      }
-    });
+    playEvent(box, bar, e, { aspect, name });
+    bar.style.display = e.clip ? '' : 'none';
   };
 
   const renderChips = () => {
