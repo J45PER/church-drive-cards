@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **v0.48.0** (2026-10-11): experimental `camera-experimental-card`: the new live view (16:9 video, tap-to-show buttons, bigger and landscape full screen, battery/signal, Answer and Talk); the stable camera card is unchanged
 - **v0.47.1** (2026-10-11): camera card and app back to how they were before v0.47.0 / app 0.14.0 (overlapping buttons, full screen, Talk crash); a redesign follows
 - **v0.45.2** (2026-10-11): the app's shopping list page scrolls (it ran under the navigation bar); app 0.8.2
 - **v0.46.0** (2026-10-11): the app can ask the house for its Assist wake word (church_drive/assist/info), so the assistant is named after it (Jarvis); app 0.10.1
