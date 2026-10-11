@@ -6,6 +6,9 @@
 // for, its date and the places it will be bought at. Back (the arrow, Escape, or the phone's back) closes it.
 // Items that weren't available are offered again the next time a list is made.
 
+import * as L from 'leaflet/dist/leaflet-src.esm.js';
+import LEAFLET_CSS from 'leaflet/dist/leaflet.css';
+import { MAP_LAYERS, mapStyle, googleTiles } from './map-style.js';
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
@@ -169,6 +172,11 @@ export class ShoppingCard extends HTMLElement {
 // ---- the full page -----------------------------------------------------------------------------------------
 
 const PAGE_CSS = `
+  ${LEAFLET_CSS}
+  .shp-map { height:280px; border-radius:12px; overflow:hidden; background:#2a2f2a; position:relative; z-index:0; }
+  .shp-pin { background:none; border:none; }
+  .shp-pin svg { width:28px; height:38px; margin:-36px 0 0 -14px; filter:drop-shadow(0 2px 3px rgba(0,0,0,0.5)); }
+  .shp-pop b { display:block; } .shp-pop button { margin-top:6px; }
   .shp { position:fixed; inset:0; z-index:9999; overflow-y:auto; overscroll-behavior:contain; background:var(--primary-background-color, #111); color:var(--primary-text-color); font-family:var(--paper-font-body1_-_font-family, inherit); }
   .shp * { box-sizing:border-box; }
   .shp-bar { position:sticky; top:0; z-index:2; display:flex; align-items:center; gap:6px; padding:calc(env(safe-area-inset-top, 0px) + 8px) 12px 8px; background:var(--primary-background-color, #111); }
@@ -251,6 +259,7 @@ class ShoppingPage {
     this.off();
     window.removeEventListener('popstate', this._pop);
     window.removeEventListener('keydown', this._key);
+    if (this._pmap) this._pmap.remove();
     this.root.remove();
   }
 
@@ -335,6 +344,7 @@ class ShoppingPage {
         <div class="shp-field"><span>Where will you buy it? Search Google Maps (optional)</span>
           <div class="shp-chips f-places"></div>
           <div class="shp-add"><input class="f-q" type="search" placeholder="e.g. Lidl Protaras Cyprus" enterkeyhint="search" autocomplete="off" value="${kitEsc(f.q)}"><button type="button" class="shp-btn go" data-act="search">${iconHtml('mdi:magnify', { size: '18px' })}Search</button></div>
+          <div class="shp-map f-map" style="display:none;"></div>
           <div class="f-results"></div>
           <div class="shp-sub f-note"></div></div>
         ${f.edit ? '' : `<label class="shp-field"><span>Items (one per line)</span><textarea class="f-items" placeholder="Milk&#10;Eggs&#10;Bread">${kitEsc(f.items)}</textarea></label>`}
@@ -364,9 +374,47 @@ class ShoppingPage {
       .map((p, n) => `<button type="button" class="shp-btn" style="width:100%; text-align:left; margin-bottom:6px;" data-addplace="${n}"><span><b>${kitEsc(p.name)}</b><br><span class="shp-sub">${kitEsc(p.address)}</span></span></button>`)
       .join('');
     body.querySelector('.f-note').textContent = f.note;
+    this.drawMap(f, body.querySelector('.f-map'));
     const m = body.querySelector('.f-missed');
     if (m) m.innerHTML = pick('missed', '1', `Add the ${d.missed.length} item${d.missed.length === 1 ? '' : 's'} not available last time`, f.missed);
     hydrateIcons(this.root);
+  }
+
+  // The search results (red pins) and the places already chosen (indigo pins) on a map: tap a red pin, then "Use this place".
+  drawMap(f, el) {
+    const show = f.results.length > 0 || f.places.length > 0;
+    el.style.display = show ? '' : 'none';
+    if (!show) return;
+    if (!this._pmap || this._pmapEl !== el) {
+      if (this._pmap) this._pmap.remove();
+      this._pmapEl = el;
+      this._pmap = L.map(el, { zoomControl: true, attributionControl: true }).setView([35, 33], 5);
+      this._pmap.attributionControl.setPrefix(false);
+      const style = mapStyle() === 'street' ? 'street' : 'satellite';
+      const g = googleTiles(style);
+      const spec = MAP_LAYERS[style];
+      (g ? [L.tileLayer(g.url, { maxNativeZoom: 20, maxZoom: 21, attribution: g.attribution })] : [L.tileLayer(spec.base, { maxNativeZoom: 19, maxZoom: 20, attribution: 'Imagery &copy; Esri' }), ...spec.labels.map((u) => L.tileLayer(u, { maxNativeZoom: 19, maxZoom: 20, zIndex: 5 }))]).forEach((t) => t.addTo(this._pmap));
+      this._pins = L.layerGroup().addTo(this._pmap);
+    }
+    const pin = (colour) => L.divIcon({ className: 'shp-pin', html: `<svg viewBox="0 0 30 40"><path d="M15 0C6.7 0 0 6.6 0 14.8 0 25.9 15 40 15 40s15-14.1 15-25.2C30 6.6 23.3 0 15 0z" fill="${colour}"/><circle cx="15" cy="15" r="5.5" fill="#fff"/></svg>` });
+    this._pins.clearLayers();
+    const all = [];
+    f.places.forEach((p) => {
+      L.marker([p.lat, p.lon], { icon: pin(COLOUR) }).bindTooltip(kitEsc(p.name)).addTo(this._pins);
+      all.push([p.lat, p.lon]);
+    });
+    f.results.forEach((p, n) => {
+      const m = L.marker([p.lat, p.lon], { icon: pin('#ea4335'), zIndexOffset: 500 }).addTo(this._pins);
+      m.bindPopup(`<div class="shp-pop"><b>${kitEsc(p.name)}</b>${kitEsc(p.address)}<br><button type="button" class="shp-btn go" data-addplace="${n}">Use this place</button></div>`);
+      all.push([p.lat, p.lon]);
+    });
+    // Zoom to the new results once; a later redraw (picking who it is for) leaves the view where it is.
+    const key = JSON.stringify(f.results.map((p) => [p.lat, p.lon]));
+    if (all.length && this._pmapKey !== key) {
+      this._pmapKey = key;
+      this._pmap.fitBounds(L.latLngBounds(all), { padding: [30, 30], maxZoom: 16 });
+    }
+    setTimeout(() => this._pmap && this._pmap.invalidateSize(), 0);
   }
 
   async search() {
