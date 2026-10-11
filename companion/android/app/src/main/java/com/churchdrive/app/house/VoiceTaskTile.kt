@@ -5,20 +5,20 @@ import android.content.Intent
 import android.os.Build
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
-import com.churchdrive.app.VoiceTaskActivity
+import com.churchdrive.app.AssistActivity
 
 /** A Quick Settings tile, "Add task": pull down the shade, tap it, say what needs doing. */
 class VoiceTaskTile : TileService() {
     override fun onStartListening() {
         qsTile?.apply {
             state = Tile.STATE_INACTIVE
-            label = "Add task"
+            label = "Assistant"
             updateTile()
         }
     }
 
     override fun onClick() {
-        val intent = Intent(this, VoiceTaskActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val intent = Intent(this, AssistActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         if (Build.VERSION.SDK_INT >= 34) {
             startActivityAndCollapse(PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE))
         } else {

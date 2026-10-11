@@ -4,6 +4,15 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.9.0
+
+- **A voice assistant that looks like part of the app.** The widget, the microphone in the app, the Quick Settings tile and the long-press
+  shortcut open it as a sheet over whatever you are doing (over the home screen from the widget, without opening the app); swipe it up for the
+  full screen (an orb, then the conversation) and down to close. A turning indigo, purple and green gradient shows when it is listening. What you say
+  goes to Home Assistant's own Assist, so lights, heating, the alarm, lists and your own automations all work, and the answer is spoken in the
+  house's voice. If the house doesn't understand a sentence it offers to add it as a task. The first time after each update it introduces itself
+  and what is new. Account > Settings > "Voice opens full screen" makes the full screen the default. The microphone is asked for the first time.
+
 ## 0.8.2
 
 - The shopping list page scrolls up and down again, and its bottom buttons are no longer hidden by the navigation bar.

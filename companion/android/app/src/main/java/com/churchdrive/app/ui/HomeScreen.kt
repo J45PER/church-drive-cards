@@ -110,9 +110,9 @@ fun HomeScreen(
                     }
                     val context = androidx.compose.ui.platform.LocalContext.current
                     IconButton(onClick = {
-                        context.startActivity(android.content.Intent(context, com.churchdrive.app.VoiceTaskActivity::class.java))
+                        context.startActivity(android.content.Intent(context, com.churchdrive.app.AssistActivity::class.java))
                     }) {
-                        Icon(Icons.Filled.Mic, contentDescription = "Add a task by voice")
+                        Icon(Icons.Filled.Mic, contentDescription = "Talk to the house")
                     }
                     IconButton(onClick = { panel = "account" }) {
                         Icon(Icons.Filled.AccountCircle, contentDescription = "Account")

@@ -47,6 +47,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -281,6 +282,18 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                         if (!on) settings.onNotify(false)
                         else if (Permissions.canNotify(context)) settings.onNotify(true)
                         else notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    })
+                },
+            )
+            val voicePrefs = remember { context.getSharedPreferences(com.churchdrive.app.AssistActivity.PREFS, android.content.Context.MODE_PRIVATE) }
+            var voiceFull by remember { mutableStateOf(voicePrefs.getBoolean(com.churchdrive.app.AssistActivity.KEY_FULL, false)) }
+            PanelRow(
+                Icons.Outlined.Mic, "Voice opens full screen",
+                "The assistant opens as a small sheet over what you're doing; swipe it up for the whole screen. Turn this on to open it full screen every time.",
+                trailing = {
+                    Switch(checked = voiceFull, onCheckedChange = { on ->
+                        voiceFull = on
+                        voicePrefs.edit().putBoolean(com.churchdrive.app.AssistActivity.KEY_FULL, on).apply()
                     })
                 },
             )

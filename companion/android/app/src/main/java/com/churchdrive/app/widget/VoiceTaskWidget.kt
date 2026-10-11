@@ -25,11 +25,11 @@ import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import com.churchdrive.app.VoiceTaskActivity
+import com.churchdrive.app.AssistActivity
 import com.churchdrive.app.ui.Tone
 
 /**
- * Add task: a one-cell microphone. One tap opens the phone's speech box, and what you say goes onto the right lists. It
+ * Assistant: a one-cell microphone. One tap opens the voice assistant over the home screen (without opening the app). It
  * needs nothing from the house to draw, so it is always there; made wide, it also says what it does. The to-do widget has
  * the same microphone beside its heading.
  */
@@ -41,10 +41,10 @@ class VoiceTaskGlanceWidget : GlanceAppWidget() {
     }
 }
 
-/** Opens the phone's speech box to add a task by voice. */
+/** Opens the voice assistant as a sheet over the screen. */
 @Composable
 fun voiceTaskAction(): androidx.glance.action.Action =
-    actionStartActivity(Intent(androidx.glance.LocalContext.current, VoiceTaskActivity::class.java))
+    actionStartActivity(Intent(androidx.glance.LocalContext.current, AssistActivity::class.java))
 
 /** The microphone button the to-do widget carries as well. */
 @Composable
@@ -65,7 +65,7 @@ private fun VoiceTaskBody(context: Context) {
             IconButton("mdi:microphone", p, start, 44.dp, fill = blue)
             if (wide) {
                 Spacer(GlanceModifier.width(12.dp))
-                Text("Add task", style = TextStyle(color = cp(p.onSurface), fontSize = 16.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                Text("Assistant", style = TextStyle(color = cp(p.onSurface), fontSize = 16.sp, fontWeight = FontWeight.Bold), maxLines = 1)
             }
         }
     }
