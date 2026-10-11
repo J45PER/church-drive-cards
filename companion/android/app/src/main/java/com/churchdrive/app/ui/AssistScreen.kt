@@ -59,7 +59,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
@@ -170,13 +169,20 @@ fun AssistOrb(state: AssistState, level: Float, size: androidx.compose.ui.unit.D
                 radius = r * 0.5f, center = c, blendMode = BlendMode.Screen,
             )
         }
-        // Listening: soft rings bloom outwards and fade, one colour after another, stronger with your voice.
+        // Listening: soft, small rings of colour swell out from the cloud and melt away, one after another, a little stronger with your voice.
         if (state == AssistState.Listening) {
             listOf(AssistColours.Indigo, AssistColours.Purple, AssistColours.Green).forEachIndexed { i, colour ->
-                val x = ((clock * 5f) + i / 3f) % 1f
-                val ringR = r * (0.6f + 0.75f * x)
-                val a = (1f - x) * (0.35f + 0.5f * level.coerceIn(0f, 1f))
-                drawCircle(colour.copy(alpha = a), radius = ringR, center = c, style = Stroke(width = r * 0.22f), blendMode = BlendMode.Screen)
+                val x = ((clock * 3f) + i / 3f) % 1f
+                val ringR = r * (0.55f + 0.4f * x)
+                val outer = ringR * 1.3f
+                val a = (1f - x) * (0.14f + 0.2f * level.coerceIn(0f, 1f))
+                drawCircle(
+                    Brush.radialGradient(
+                        0f to Color.Transparent, (ringR * 0.7f / outer) to Color.Transparent, (ringR / outer) to colour.copy(alpha = a), 1f to Color.Transparent,
+                        center = c, radius = outer,
+                    ),
+                    radius = outer, center = c, blendMode = BlendMode.Screen,
+                )
             }
         }
     }

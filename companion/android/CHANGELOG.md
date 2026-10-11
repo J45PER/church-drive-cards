@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.11.5
+
+- The listening rings are smaller, softer and fainter: they melt away instead of showing hard edges.
+
 ## 0.11.4
 
 - Jarvis's cloud is livelier (between the old calm and lively): the colours drift further and a little faster.
