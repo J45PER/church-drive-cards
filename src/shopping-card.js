@@ -43,10 +43,10 @@ function watch(hass, fn) {
 
 const call = (msg) => store.hass.callWS(msg);
 const people = (hass) =>
-  Object.keys(hass.states)
+  (store.data && store.data.people && store.data.people.length ? store.data.people : Object.keys(hass.states)
     .filter((id) => id.startsWith('person.'))
     .map((id) => String(hass.states[id].attributes.friendly_name || id.slice(7)).split(' ')[0])
-    .sort();
+    .sort());
 const day = (iso) => {
   if (!iso) return '';
   const d = new Date(`${iso}T12:00:00`);

@@ -16,7 +16,7 @@ import { kitShell, kitHead, kitEsc } from './card-kit.js';
 import { openPopup } from './popup.js';
 import { stcMe } from './section-title-card.js';
 import { openShoppingPage } from './shopping-card.js';
-import { shoppingIdOf } from './shopping-logic.js';
+import { shoppingIdOf, shoppingNote } from './shopping-logic.js';
 import { DAYS, MONTHS, parseTask, formatTask, formatRepeat, describeRepeat, firstDue } from './repeat.js';
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -407,7 +407,7 @@ export class TaskListCard extends HTMLElement {
       const mine = this._justMe() && Array.isArray(p.who) && p.who.length === 1 && p.who[0] === this._me();
       const who = !p.repeat ? '' : mine ? 'reminds you' : p.who === 'everyone' ? 'reminds everyone' : Array.isArray(p.who) ? `reminds ${p.who.join(', ')}` : '';
       const place = this._placeName(this._placeOf(t.uid));
-      const sub = [p.repeat && p.repeat.type !== 'once' ? describeRepeat(p.repeat) : '', who, place ? `at ${place}` : '', p.notes].filter(Boolean).join(' · ');
+      const sub = [p.repeat && p.repeat.type !== 'once' ? describeRepeat(p.repeat) : '', who, place ? `at ${place}` : '', shoppingIdOf(t.description) ? shoppingNote(t.description) : p.notes].filter(Boolean).join(' · ');
       const ring = isDone ? '#4caf50' : over ? '#e53935' : colour;
       return `<div class="tl-row">
         <button type="button" class="tl-tick" data-tick="${kitEsc(t.uid)}" data-to="${isDone ? 'needs_action' : 'completed'}" aria-label="${isDone ? 'Not done' : 'Done'}: ${kitEsc(t.summary)}" style="border-color:${ring}; ${isDone ? `background:${ring};` : ''}">${isDone ? iconHtml('mdi:check', { size: '15px' }) : ''}</button>

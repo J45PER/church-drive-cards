@@ -84,6 +84,10 @@ class Shopping:
     def _firsts(self) -> list[str]:
         return [p["first"] for p in self._people.people()] if self._people else []
 
+    def firsts(self) -> list[str]:
+        """First names of the people a list can be for."""
+        return self._firsts()
+
     def _todo_of(self, first: str) -> str | None:
         return next((p["list"] for p in (self._people.people() if self._people else []) if p["first"] == first), None)
 

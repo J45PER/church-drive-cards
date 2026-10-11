@@ -146,12 +146,36 @@ private fun CheckTasks(batch: InboxBatch, lists: List<InboxList>, onClose: () ->
     var saving by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
     val chosen = tasks.count { it.keep && it.summary.isNotBlank() }
+    // Shopping in the batch: ask whether it joins a list that exists or starts a new one.
+    val choice = batch.shopping
+    val hasShopping = choice != null && tasks.any { it.keep && it.list == "shopping" }
+    var target by remember(batch.id) { mutableStateOf(choice?.default ?: "new") }
+    var newName by remember(batch.id) { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onClose,
         title = { Text(if (batch.tasks.size == 1) "Add this task?" else "Add these ${batch.tasks.size} tasks?") },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 if (failed) Text("That didn't save. Try again.", color = MaterialTheme.colorScheme.error)
+                if (hasShopping && choice != null) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("Shopping goes on:", style = MaterialTheme.typography.titleSmall)
+                        val labels = choice.lists.map { optionLabel(it) } + NEW_LIST
+                        val picked = if (target == "new") NEW_LIST else choice.lists.firstOrNull { it.id == target }?.let { optionLabel(it) }
+                        OptionRow(labels, picked, tone) { label ->
+                            target = choice.lists.firstOrNull { optionLabel(it) == label }?.id ?: "new"
+                        }
+                        if (target == "new") {
+                            OutlinedTextField(
+                                newName, { newName = it }, modifier = Modifier.fillMaxWidth(), singleLine = true,
+                                placeholder = { Text("Name for the new list (optional)") },
+                            )
+                        }
+                        if (choice.missed.isNotEmpty() && target == "new") {
+                            Text("Not available last time, added too: ${choice.missed.joinToString(", ")}", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
                 tasks.forEachIndexed { i, t ->
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -180,7 +204,8 @@ private fun CheckTasks(batch: InboxBatch, lists: List<InboxList>, onClose: () ->
                     saving = true
                     ha.request(
                         "church_drive/inbox/confirm",
-                        JSONObject().put("batch", batch.id).put("tasks", confirmTasks(tasks.toList())),
+                        JSONObject().put("batch", batch.id).put("tasks", confirmTasks(tasks.toList()))
+                            .also { if (hasShopping) it.put("shopping", shoppingConfirm(target, newName)) },
                     ) { reply ->
                         if (reply == null) { saving = false; failed = true } else onClose()
                     }

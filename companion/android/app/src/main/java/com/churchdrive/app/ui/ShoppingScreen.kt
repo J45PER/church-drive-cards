@@ -1,0 +1,302 @@
+package com.churchdrive.app.ui
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.temporal.TemporalAdjusters
+
+/** The shopping lists, kept up to date: asked for when shown, and again whenever the house says they changed. */
+class ShoppingModel(val state: ShoppingState?, val failed: Boolean, val reload: () -> Unit)
+
+@Composable
+fun rememberShoppingModel(): ShoppingModel {
+    val api = LocalHaApi.current
+    val scope = rememberCoroutineScope()
+    var state by remember { mutableStateOf<ShoppingState?>(null) }
+    var failed by remember { mutableStateOf(false) }
+    val reload: () -> Unit = {
+        scope.launch {
+            val parsed = parseShopping(api?.ask("church_drive/shopping", JSONObject()))
+            if (parsed != null) {
+                state = parsed
+                failed = false
+            } else if (state == null) failed = true
+        }
+    }
+    LaunchedEffect(api) { reload() }
+    DisposableEffect(api) {
+        val sub = api?.subscribe("subscribe_events", JSONObject().put("event_type", "church_drive_shopping_changed")) { reload() } ?: -1
+        onDispose { if (sub >= 0) api?.close(sub) }
+    }
+    return ShoppingModel(state, failed, reload)
+}
+
+private typealias Send = (String, JSONObject, (Any?) -> Unit) -> Unit
+
+private const val NOT_READY = "Couldn't read the shopping lists. The house may need Church Drive 0.42 or newer."
+
+/**
+ * A shopping list as a full page you can scroll and leave with Back: tick each item Bought or Not available, add more,
+ * change who it is for, its date and where it will be bought. [listId] is a list's id, or "new" to make one.
+ */
+@Composable
+fun ShoppingScreen(listId: String, onClose: () -> Unit) {
+    val api = LocalHaApi.current
+    val model = rememberShoppingModel()
+    val tone = toneColors(Tone.Green)
+    var id by remember(listId) { mutableStateOf(listId) }
+    var editing by remember(listId) { mutableStateOf(listId == "new") }
+    var message by remember { mutableStateOf("") }
+    val list = model.state?.lists?.firstOrNull { it.id == id }
+    val send: Send = { type, params, then ->
+        api?.request(type, params) { r ->
+            if (r == null) message = "That didn't work. Try again." else {
+                message = ""
+                then(r)
+            }
+            model.reload()
+        }
+    }
+    val back = { if (editing && list != null) editing = false else onClose() }
+    Dialog(onDismissRequest = back, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(modifier = Modifier.clickable { back() }.padding(12.dp)) {
+                        HaIcon("mdi:arrow-left", Icons.Filled.Info, MaterialTheme.colorScheme.onBackground, 24.dp)
+                    }
+                    Text(
+                        if (editing) (if (list == null) "New shopping list" else "Edit list") else list?.title ?: "Shopping",
+                        style = MaterialTheme.typography.titleLarge, maxLines = 1, modifier = Modifier.weight(1f),
+                    )
+                }
+                Column(
+                    modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    if (message.isNotEmpty()) Text(message, color = MaterialTheme.colorScheme.error)
+                    val state = model.state
+                    when {
+                        state == null -> Text(if (model.failed) NOT_READY else "Loading…")
+                        editing -> ShoppingForm(list, state, tone, send, { newId -> if (newId != null) id = newId; editing = false }, back)
+                        list == null -> Text("This list has been deleted or finished.")
+                        else -> ShoppingItemsView(list, state, tone, send, { editing = true }, onClose)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ShoppingItemsView(list: ShoppingList, state: ShoppingState, tone: ToneColors, send: Send, onEdit: () -> Unit, onDeleted: () -> Unit) {
+    val neutral = toneColors(Tone.Grey)
+    val zoneNames = state.zones.associate { it.id to it.name }
+    val meta = listOf(whenText(list.date.ifEmpty { null }), list.people.joinToString(", "), list.places.mapNotNull { zoneNames[it] }.joinToString(", "))
+        .filter { it.isNotBlank() }.joinToString(" · ")
+    if (meta.isNotEmpty()) Text(meta, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    val total = list.items.size
+    Text(if (total == 0) "Nothing on the list yet." else "${total - list.open} of $total done", style = MaterialTheme.typography.titleSmall)
+    if (list.done) {
+        val missed = list.items.count { it.status == "unavailable" }
+        EntityCard(tone.container, tone.onContainer) {
+            Text("All done. This list goes tomorrow.", style = MaterialTheme.typography.titleMedium)
+            if (missed > 0) Text("$missed ${if (missed == 1) "wasn't" else "weren't"} available; you'll be reminded next time.", style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+    var text by remember(list.id) { mutableStateOf("") }
+    OutlinedTextField(
+        value = text, onValueChange = { text = it }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+        placeholder = { Text("Add an item (or several, with commas)") },
+    )
+    TileRow(
+        listOf(
+            TileItem("mdi:plus", "Add", text.isNotBlank()) {
+                val items = splitItems(text)
+                if (items.isNotEmpty()) {
+                    send("church_drive/shopping/add", JSONObject().put("list", list.id).put("items", JSONArray(items))) { }
+                    text = ""
+                }
+            },
+        ),
+        tone, neutral.onContainer, enabled = text.isNotBlank(),
+    )
+    val setStatus = { item: ShoppingItem, status: String ->
+        send("church_drive/shopping/item", JSONObject().put("list", list.id).put("item", item.id).put("status", status)) { }
+    }
+    list.items.filter { it.status == "open" }.forEach { item ->
+        EntityCard(neutral.container, neutral.onContainer) {
+            Text(item.text, style = MaterialTheme.typography.bodyLarge)
+            TileRow(
+                listOf(
+                    TileItem("mdi:close", "Not available", false) { setStatus(item, "unavailable") },
+                    TileItem("mdi:check", "Bought", true) { setStatus(item, "bought") },
+                ),
+                tone, neutral.onContainer,
+            )
+        }
+    }
+    val finished = list.items.filter { it.status != "open" }
+    if (finished.isNotEmpty()) {
+        Text("Bought and not available", style = MaterialTheme.typography.titleSmall)
+        finished.forEach { item ->
+            Row(modifier = Modifier.fillMaxWidth().clickable { setStatus(item, "open") }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    item.text + if (item.status == "unavailable") " (not available)" else "",
+                    style = MaterialTheme.typography.bodyLarge, textDecoration = TextDecoration.LineThrough,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f),
+                )
+                HaIcon("mdi:undo", Icons.Filled.Info, MaterialTheme.colorScheme.onSurfaceVariant, 22.dp)
+            }
+        }
+    }
+    var sure by remember(list.id) { mutableStateOf(false) }
+    TileRow(
+        listOf(
+            TileItem("mdi:pencil-outline", "Edit", false) { onEdit() },
+            TileItem("mdi:delete-outline", if (sure) "Tap again" else "Delete", sure) {
+                if (sure) send("church_drive/shopping/delete", JSONObject().put("list", list.id)) { onDeleted() } else sure = true
+            },
+        ),
+        toneColors(Tone.Red), neutral.onContainer,
+    )
+}
+
+@Composable
+private fun ShoppingForm(existing: ShoppingList?, state: ShoppingState, tone: ToneColors, send: Send, onSaved: (String?) -> Unit, onCancel: () -> Unit) {
+    val neutral = toneColors(Tone.Grey)
+    var name by remember { mutableStateOf(existing?.name.orEmpty()) }
+    var who by remember { mutableStateOf(existing?.people ?: listOfNotNull(state.mine.ifEmpty { null })) }
+    var date by remember { mutableStateOf(existing?.date.orEmpty()) }
+    var places by remember { mutableStateOf(existing?.places ?: emptyList()) }
+    var items by remember { mutableStateOf("") }
+    var withMissed by remember { mutableStateOf(existing == null && state.missed.isNotEmpty()) }
+    var error by remember { mutableStateOf("") }
+    if (error.isNotEmpty()) Text(error, color = MaterialTheme.colorScheme.error)
+    OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+    Text("Who is it for?", style = MaterialTheme.typography.titleSmall)
+    TileRow(state.people.map { p -> TileItem("mdi:account-outline", p, p in who) { who = if (p in who) who - p else who + p } }, tone, neutral.onContainer)
+    Text("Date to go shopping", style = MaterialTheme.typography.titleSmall)
+    val today = LocalDate.now()
+    val weekend = today.with(TemporalAdjusters.nextOrSame(DayOfWeek.SATURDAY)).toString()
+    TileRow(
+        listOf(
+            TileItem("mdi:calendar-remove-outline", "None", date.isEmpty()) { date = "" },
+            TileItem("mdi:calendar-today", "Today", date == today.toString()) { date = today.toString() },
+            TileItem("mdi:calendar-arrow-right", "Tomorrow", date == today.plusDays(1).toString()) { date = today.plusDays(1).toString() },
+            TileItem("mdi:calendar-weekend", "Saturday", date == weekend) { date = weekend },
+        ),
+        tone, neutral.onContainer,
+    )
+    OutlinedTextField(value = date, onValueChange = { date = it.trim() }, label = { Text("Date (YYYY-MM-DD)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+    val shops = state.zones.filter { it.id != "zone.home" }
+    if (shops.isNotEmpty()) {
+        Text("Where will you buy it?", style = MaterialTheme.typography.titleSmall)
+        TileRow(shops.map { z -> TileItem("mdi:map-marker-outline", z.name, z.id in places) { places = if (z.id in places) places - z.id else places + z.id } }, tone, neutral.onContainer)
+    }
+    if (existing == null) {
+        OutlinedTextField(
+            value = items, onValueChange = { items = it }, label = { Text("Items (one per line)") },
+            minLines = 3, modifier = Modifier.fillMaxWidth(),
+        )
+        if (state.missed.isNotEmpty()) {
+            val n = state.missed.size
+            TileRow(
+                listOf(TileItem("mdi:alert-circle-outline", "Add the $n not available last time", withMissed) { withMissed = !withMissed }),
+                tone, neutral.onContainer,
+            )
+            Text(state.missed.joinToString(", "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+    TileRow(
+        listOf(
+            TileItem("mdi:close", "Cancel", false) { onCancel() },
+            TileItem("mdi:check", if (existing == null) "Make the list" else "Save", true) {
+                if (who.isEmpty()) {
+                    error = "Choose who the list is for."
+                } else if (existing == null) {
+                    val body = JSONObject().put("name", name.trim()).put("people", JSONArray(who)).put("date", date).put("places", JSONArray(places))
+                        .put("items", JSONArray(splitItems(items))).put("include_missed", withMissed)
+                    send("church_drive/shopping/create", body) { r -> onSaved(((r as? JSONObject)?.optJSONObject("list"))?.optString("id")) }
+                } else {
+                    val body = JSONObject().put("list", existing.id).put("name", name.trim()).put("people", JSONArray(who)).put("date", date).put("places", JSONArray(places))
+                    send("church_drive/shopping/update", body) { onSaved(null) }
+                }
+            },
+        ),
+        tone, neutral.onContainer,
+    )
+}
+
+/** The dashboard's `custom:shopping-card`: the open lists, a way to make one, and what wasn't available last time. */
+@Composable
+fun ShoppingCard(config: JSONObject) {
+    val model = rememberShoppingModel()
+    val tone = toneColors(Tone.Green)
+    var open by remember { mutableStateOf<String?>(null) }
+    open?.let { ShoppingScreen(it) { open = null } }
+    EntityCard(tone.container, tone.onContainer) {
+        config.optString("title").takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.titleMedium) }
+        val state = model.state
+        if (state == null) {
+            Text(if (model.failed) NOT_READY else "Loading…", style = MaterialTheme.typography.bodyMedium)
+        } else {
+            val lists = openLists(state, if (config.optBoolean("all")) null else state.mine)
+            if (lists.isEmpty()) Text("No shopping lists.", style = MaterialTheme.typography.bodyMedium)
+            val zoneNames = state.zones.associate { it.id to it.name }
+            lists.forEach { l ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().clickable { open = l.id }.padding(vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    HaIcon("mdi:cart-outline", Icons.Filled.Info, tone.accent, 26.dp)
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(l.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+                        val sub = listOf(whenText(l.date.ifEmpty { null }), l.people.joinToString(", "), l.places.mapNotNull { zoneNames[it] }.joinToString(", "))
+                            .filter { it.isNotBlank() }.joinToString(" · ")
+                        if (sub.isNotEmpty()) Text(sub, style = MaterialTheme.typography.bodySmall, color = tone.onContainer.copy(alpha = 0.75f), maxLines = 1)
+                    }
+                    Text("${l.open} to get", style = MaterialTheme.typography.labelLarge)
+                }
+            }
+            if (state.missed.isNotEmpty()) {
+                Text("Not available last time: ${state.missed.joinToString(", ")}", style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        TileRow(listOf(TileItem("mdi:plus", "New shopping list", false) { open = "new" }), tone, tone.onContainer)
+    }
+}

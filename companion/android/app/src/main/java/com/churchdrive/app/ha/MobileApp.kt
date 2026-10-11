@@ -8,7 +8,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /** A message the house sent to this phone (from `notify.mobile_app_...`). */
-data class Push(val title: String, val message: String, val tag: String?, val channel: String, val actions: List<PushAction> = emptyList())
+data class Push(val title: String, val message: String, val tag: String?, val channel: String, val actions: List<PushAction> = emptyList(), val url: String? = null)
 
 /** A button on a notification: [id] is what comes back when it is pressed, [title] what it says. */
 data class PushAction(val id: String, val title: String)
@@ -85,6 +85,7 @@ object MobileApp {
             title = event.text("title") ?: "Church Drive",
             message = message,
             tag = data?.text("tag"),
+            url = data?.text("url"),
             channel = data?.text("channel") ?: "house",
             // Only the house's own task buttons (Done, Snooze): anything else would have nothing to do here.
             actions = (data?.optJSONArray("actions")?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it) } } ?: emptyList())

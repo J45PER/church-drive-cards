@@ -50,6 +50,9 @@ class MainActivity : ComponentActivity() {
     private var shareSource = "Share"
     private var shareAutoAdd by mutableStateOf(false)
 
+    /** The shopping list a reminder asked to open, until it is closed. */
+    private var openShopping by mutableStateOf<String?>(null)
+
     /** The charger widget's Start charge asked the app to ask: "Charge at 00:30" or "Charge now". */
     private var chargePrompt by mutableStateOf(false)
 
@@ -62,6 +65,10 @@ class MainActivity : ComponentActivity() {
             shareSource = intent.getStringExtra(EXTRA_SHARE_SOURCE) ?: "Share"
             shareAutoAdd = intent.getBooleanExtra(EXTRA_SHARE_AUTO_ADD, false)
             intent.removeExtra(EXTRA_SHARE_TEXT)
+        }
+        intent?.getStringExtra(EXTRA_SHOPPING_LIST)?.let {
+            openShopping = it
+            intent.removeExtra(EXTRA_SHOPPING_LIST)
         }
         if (intent?.getBooleanExtra("charge_prompt", false) == true) {
             chargePrompt = true
@@ -168,6 +175,7 @@ class MainActivity : ComponentActivity() {
                                     openCamera = openCamera,
                                     onCameraClosed = { openCamera = null },
                                 )
+                                openShopping?.let { com.churchdrive.app.ui.ShoppingScreen(it) { openShopping = null } }
                                 if (chargePrompt) {
                                     com.churchdrive.app.ui.ChargePromptHost(entities, statesLoaded, vm::call) { chargePrompt = false }
                                 }
@@ -186,6 +194,7 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
+        const val EXTRA_SHOPPING_LIST = "shopping_list"
         const val EXTRA_SHARE_TEXT = "share_text"
         const val EXTRA_SHARE_SOURCE = "share_source"
         const val EXTRA_SHARE_AUTO_ADD = "share_auto_add"

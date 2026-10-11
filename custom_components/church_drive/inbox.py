@@ -249,7 +249,7 @@ class Inbox:
         await self._async_save()
         self._changed(context)
         await self._async_tell(batch, who, context)
-        return {"batch": batch["id"], "tasks": batch["tasks"], "added": 0}
+        return {"batch": batch["id"], "tasks": batch["tasks"], "added": 0, "shopping": self._shopping_choice(batch)}
 
     async def _async_tell(self, batch: dict[str, Any], who: dict[str, Any] | None, context: Context | None) -> None:
         """Tell the sender their tasks are ready to check, on their phones."""

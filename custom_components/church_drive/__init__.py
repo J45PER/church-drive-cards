@@ -636,7 +636,10 @@ def ws_shopping(hass: HomeAssistant, connection: websocket_api.ActiveConnection,
         return
     connection.send_result(
         msg["id"],
-        {"lists": shopping.lists(), "mine": _person_of(hass, connection), "missed": shopping.missed(), "zones": shopping.zones()},
+        {
+            "lists": shopping.lists(), "mine": _person_of(hass, connection), "missed": shopping.missed(),
+            "zones": shopping.zones(), "people": shopping.firsts(),
+        },
     )
 
 

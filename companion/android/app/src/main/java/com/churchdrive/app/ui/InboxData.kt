@@ -10,7 +10,7 @@ data class InboxTask(val summary: String, val list: String, val due: String, val
 data class InboxList(val id: String, val name: String)
 
 /** Tasks found in one piece of text, waiting for the person to check them. */
-data class InboxBatch(val id: String, val source: String, val tasks: List<InboxTask>)
+data class InboxBatch(val id: String, val source: String, val tasks: List<InboxTask>, val shopping: ShoppingChoice? = null)
 
 private fun JSONArray?.objects(): List<JSONObject> = if (this == null) emptyList() else (0 until length()).mapNotNull { optJSONObject(it) }
 
@@ -24,7 +24,7 @@ fun parseInbox(result: Any?): List<InboxBatch> =
     (result as? JSONObject)?.optJSONArray("batches").objects().mapNotNull { o ->
         val tasks = parseTasks(o.optJSONArray("tasks"))
         val id = o.optString("id")
-        if (id.isEmpty() || tasks.isEmpty()) null else InboxBatch(id, o.optString("source"), tasks)
+        if (id.isEmpty() || tasks.isEmpty()) null else InboxBatch(id, o.optString("source"), tasks, parseShoppingChoice(o.optJSONObject("shopping")))
     }
 
 /** The lists from `church_drive/inbox`, with their friendly names. */
@@ -35,7 +35,7 @@ fun parseInboxLists(result: Any?): List<InboxList> =
 fun parseSubmitted(result: Any?, source: String): InboxBatch? {
     val o = result as? JSONObject ?: return null
     val id = o.optString("batch").takeIf { it.isNotEmpty() && it != "null" } ?: return null
-    return parseTasks(o.optJSONArray("tasks")).takeIf { it.isNotEmpty() }?.let { InboxBatch(id, source, it) }
+    return parseTasks(o.optJSONArray("tasks")).takeIf { it.isNotEmpty() }?.let { InboxBatch(id, source, it, parseShoppingChoice(o.optJSONObject("shopping"))) }
 }
 
 /** The body of `church_drive/inbox/confirm`: only the ticked tasks, as edited. */

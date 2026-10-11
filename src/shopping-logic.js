@@ -9,3 +9,9 @@ export const splitItems = (text) =>
     .split(/\n|,|;/)
     .map((s) => s.trim())
     .filter(Boolean);
+
+// What to show under a shopping task instead of its raw description: how many are left to get.
+export const shoppingNote = (description) => {
+  const n = String(description || '').split('\n').filter((l) => l.trim().startsWith('•')).length;
+  return n ? `${n} to get` : 'Shopping list';
+};

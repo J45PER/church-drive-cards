@@ -159,7 +159,7 @@ class HouseService : Service() {
             .setContentText(push.message)
             .setStyle(NotificationCompat.BigTextStyle().bigText(push.message))
             .setAutoCancel(true)
-            .setContentIntent(openApp(this))
+            .setContentIntent(openApp(this, push.url))
         // A task reminder's buttons: Done ticks it off, Snooze asks how long.
         push.actions.forEach { button ->
             val action = parseTaskAction(button.id) ?: return@forEach
@@ -180,11 +180,15 @@ class HouseService : Service() {
         private const val FOREGROUND_ID = 4201
         private const val CHANNEL_SERVICE = "service"
 
-        private fun openApp(context: Context): PendingIntent =
-            PendingIntent.getActivity(
-                context, 0, Intent(context, MainActivity::class.java),
+        /** Opens the app; a shopping reminder's link opens that list (each list its own request code, so the extras don't mix). */
+        private fun openApp(context: Context, url: String? = null): PendingIntent {
+            val list = com.churchdrive.app.ui.shoppingIdFromLink(url)
+            val intent = Intent(context, MainActivity::class.java).also { if (list != null) it.putExtra(MainActivity.EXTRA_SHOPPING_LIST, list) }
+            return PendingIntent.getActivity(
+                context, list?.hashCode() ?: 0, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
+        }
 
         fun createChannels(context: Context) {
             val manager = context.getSystemService(NotificationManager::class.java)
