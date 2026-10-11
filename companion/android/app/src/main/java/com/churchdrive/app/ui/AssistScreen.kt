@@ -241,7 +241,7 @@ private fun JarvisHeader(model: AssistModel, modifier: Modifier = Modifier) {
 private fun SheetAssist(model: AssistModel, onFull: (Boolean) -> Unit, onClose: () -> Unit, onTask: (String) -> Unit) {
     val scheme = MaterialTheme.colorScheme
     var drag by remember { mutableFloatStateOf(0f) }
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)).clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { onClose() }) {
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.34f)).clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { onClose() }) {
         Column(
             modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
                 .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
@@ -266,7 +266,7 @@ private fun SheetAssist(model: AssistModel, onFull: (Boolean) -> Unit, onClose: 
             val heard = model.partial.ifEmpty { model.messages.lastOrNull { it.fromUser }?.text.orEmpty() }
             if (heard.isNotEmpty()) Text(heard, style = MaterialTheme.typography.headlineSmall)
             if (model.partial.isEmpty() && last != null && !last.fromUser) {
-                Text(last.text, style = MaterialTheme.typography.bodyLarge, color = scheme.onSurfaceVariant)
+                JarvisBubble(last.text)
             }
             if (model.state == AssistState.Thinking) ThinkingDots()
             Notice(model, onTask)
@@ -315,12 +315,18 @@ private fun FullAssist(model: AssistModel, onFull: (Boolean) -> Unit, onClose: (
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 RoundIcon("mdi:close", "Close", false, { onClose() }, size = 44.dp)
-                if (chatting) {
-                    JarvisHeader(model, Modifier.weight(1f).padding(start = 12.dp))
-                } else {
+                run {
                     Text(model.name.ifBlank { "Assistant" }, style = MaterialTheme.typography.titleMedium, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
                 }
                 RoundIcon("mdi:chevron-down", "Smaller", false, { onFull(false) }, size = 44.dp)
+            }
+            if (chatting) {
+                // The larger Jarvis icon stays at the top; the conversation starts below it.
+                Column(modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    AssistOrb(model.state, model.level, 96.dp)
+                    Spacer(Modifier.height(8.dp))
+                    Text(assistStatus(model.state), style = MaterialTheme.typography.labelLarge, color = AssistColours.Green)
+                }
             }
             if (!chatting) {
                 Column(
@@ -438,7 +444,21 @@ private fun ChatLine(message: AssistMessage, faded: Boolean = false) {
             }
         }
     } else {
-        Text(message.text, style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 26.sp), color = scheme.onSurface.copy(alpha = 0.92f), modifier = Modifier.widthIn(max = 330.dp))
+        JarvisBubble(message.text)
+    }
+}
+
+/** Jarvis's words in a speech bubble: the tail corner is bottom-left, the mirror of the user's gradient bubble. */
+@Composable
+private fun JarvisBubble(text: String) {
+    val scheme = MaterialTheme.colorScheme
+    Box(
+        modifier = Modifier.widthIn(max = 320.dp)
+            .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 6.dp, bottomEnd = 20.dp))
+            .background(scheme.surfaceContainerHigh)
+            .padding(horizontal = 16.dp, vertical = 11.dp),
+    ) {
+        Text(text, style = MaterialTheme.typography.bodyLarge, color = scheme.onSurface)
     }
 }
 

@@ -4,6 +4,12 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.11.3
+
+- The dimmed background behind the small assistant fades in and out instead of sliding down with the sheet, and is frosted (blurred) on Android 12 and newer.
+- Jarvis's replies are speech bubbles, in the small sheet and in the conversation.
+- In the full-screen conversation the larger Jarvis cloud and his status stay at the top and the chat starts below it.
+
 ## 0.11.2
 
 - The glow behind the thinking dots is much smaller and softer: it hugs the three dots.
