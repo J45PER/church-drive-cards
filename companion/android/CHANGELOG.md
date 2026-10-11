@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.12.6
+
+- Every pop-up now opens and closes the same way: the page behind fades dark in place, and the pop-up rises from below and fades in (and leaves the same way backwards). This covers the task editors, the shopping list, light settings, the camera viewers, the media remote and Jarvis. (Small yes/no boxes keep Android's own look.)
+- When Jarvis closes himself after "that's it", his screen now leaves with the same exit instead of vanishing.
+
 ## 0.12.5
 
 - The dimmed, frosted backdrop behind the small assistant now fades in and out in place. Before, it was part of the window, so it slid up and down with the card. Now only the card slides, and the backdrop (and its blur) fades by itself.

@@ -97,8 +97,8 @@ fun ShoppingScreen(listId: String, onClose: () -> Unit) {
             model.reload()
         }
     }
-    val back = { if (editing && list != null) editing = false else onClose() }
-    Dialog(onDismissRequest = back, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+    PopupWindow(onDismissRequest = onClose, handleBack = { if (editing && list != null) { editing = false; true } else false }) { close ->
+        val back = { if (editing && list != null) editing = false else close() }
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
                 Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -120,7 +120,7 @@ fun ShoppingScreen(listId: String, onClose: () -> Unit) {
                         state == null -> Text(if (model.failed) NOT_READY else "Loading…")
                         editing -> ShoppingForm(list, state, tone, send, { newId -> if (newId != null) id = newId; editing = false }, back)
                         list == null -> Text("This list has been deleted or finished.")
-                        else -> ShoppingItemsView(list, state, tone, send, { editing = true }, onClose)
+                        else -> ShoppingItemsView(list, state, tone, send, { editing = true }, close)
                     }
                     Spacer(Modifier.height(96.dp)) // room to scroll the last buttons clear of the gesture bar (a dialog window doesn't always report that bar's height)
                 }
