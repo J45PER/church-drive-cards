@@ -59,6 +59,7 @@ from .const import (
     CONF_MAPS_PLACES_KEY,
     CONF_MAPS_TILES_KEY,
     WS_MAPS,
+    WS_ASSIST_INFO,
     WS_MAPS_SEARCH,
     CARDS_FILE,
     CONF_HEALTH_ENTITIES,
@@ -935,6 +936,22 @@ async def ws_maps_search(hass: HomeAssistant, connection: websocket_api.ActiveCo
     connection.send_result(msg["id"], places)
 
 
+@websocket_api.websocket_command({vol.Required("type"): WS_ASSIST_INFO})
+@websocket_api.async_response
+async def ws_assist_info(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """The preferred Assist pipeline's wake word, for anyone signed in (Home Assistant's own pipeline list is administrators only).
+
+    The app names the assistant after it ("hey_jarvis" is Jarvis) and listens for it."""
+    wake_word = None
+    try:
+        from homeassistant.components import assist_pipeline
+
+        wake_word = assist_pipeline.async_get_pipeline(hass).wake_word_id
+    except Exception:  # noqa: BLE001 - no Assist, or no preferred pipeline: the assistant just has no wake word
+        _LOGGER.debug("Couldn't read the preferred Assist pipeline", exc_info=True)
+    connection.send_result(msg["id"], {"wake_word": wake_word or None})
+
+
 def _version() -> str:
     return json.loads((Path(__file__).parent / "manifest.json").read_text())["version"]
 
@@ -950,7 +967,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         for command in (
             ws_library, ws_icons, ws_icon_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_phone,
-            ws_people_places, ws_people_cars, ws_people_access, ws_people_tracking, ws_people_settings, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_maps, ws_maps_search,
+            ws_people_places, ws_people_cars, ws_people_access, ws_people_tracking, ws_people_settings, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_maps, ws_maps_search, ws_assist_info,
             ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss, ws_reminders, ws_reminder_set,
             ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_import,
         ):

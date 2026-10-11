@@ -54,6 +54,7 @@ CONF_MAPS_TILES_KEY = "google_tiles_key"
 CONF_MAPS_PLACES_KEY = "google_places_key"
 WS_MAPS = "church_drive/maps"
 WS_MAPS_SEARCH = "church_drive/maps/search"
+WS_ASSIST_INFO = "church_drive/assist/info"
 
 # Task inbox (inbox.py): text in, checked tasks out to the to-do lists.
 SERVICE_ADD_TASKS = "add_tasks"
