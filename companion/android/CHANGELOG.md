@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.12.8
+
+- A new setting, Classic Jarvis colours (Account > Settings), keeps his original indigo, purple and green instead of following the phone's theme.
+
 ## 0.12.7
 
 - Jarvis now uses your phone's own theme colours (the Material You accent colours from your wallpaper) instead of fixed indigo, purple and green: the cloud, the glow behind the microphone, the thinking dots, your message bubbles and the status text all follow the phone.

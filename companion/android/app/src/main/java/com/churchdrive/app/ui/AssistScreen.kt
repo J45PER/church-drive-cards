@@ -86,10 +86,14 @@ class AssistPalette(val first: Color, val second: Color, val third: Color) {
     val across: Brush get() = Brush.horizontalGradient(listOf(first, second, third))
 }
 
+/** The original Church Drive look: indigo, purple and green. */
+private val ClassicPalette = AssistPalette(Color(0xFF5C6BC0), Color(0xFFAB47BC), Color(0xFF4FD08A))
+
 @Composable
 fun assistPalette(): AssistPalette {
     val s = MaterialTheme.colorScheme
-    return remember(s.primary, s.tertiary, s.secondary) { AssistPalette(s.primary, s.tertiary, s.secondary) }
+    val classic = AssistColourSetting.classic
+    return remember(classic, s.primary, s.tertiary, s.secondary) { if (classic) ClassicPalette else AssistPalette(s.primary, s.tertiary, s.secondary) }
 }
 
 /**

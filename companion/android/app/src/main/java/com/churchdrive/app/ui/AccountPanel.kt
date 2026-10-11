@@ -324,6 +324,11 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                     })
                 },
             )
+            PanelRow(
+                Icons.Outlined.Mic, "Classic Jarvis colours",
+                "Jarvis normally takes his colours from your phone's theme. Turn this on to keep his original indigo, purple and green.",
+                trailing = { Switch(checked = AssistColourSetting.classic, onCheckedChange = { on -> AssistColourSetting.set(context, on) }) },
+            )
             val micAsk = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
                 if (granted) AssistWakeSetting.set(context, true) else message = "The microphone is off for this app. Allow it in Android's settings to use the wake word."
             }

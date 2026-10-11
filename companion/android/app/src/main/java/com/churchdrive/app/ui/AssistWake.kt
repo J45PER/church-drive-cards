@@ -36,11 +36,28 @@ object AssistWakeSetting {
 
     fun load(context: Context) {
         enabled = context.getSharedPreferences(AssistActivity.PREFS, Context.MODE_PRIVATE).getBoolean(KEY, false)
+        AssistColourSetting.load(context)
     }
 
     fun set(context: Context, on: Boolean) {
         context.getSharedPreferences(AssistActivity.PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY, on).apply()
         enabled = on
+    }
+}
+
+/** Whether Jarvis keeps his classic indigo, purple and green instead of following the phone's theme colours (Account > Settings). */
+object AssistColourSetting {
+    private const val KEY = "classic_colours"
+    var classic by mutableStateOf(false)
+        private set
+
+    fun load(context: Context) {
+        classic = context.getSharedPreferences(AssistActivity.PREFS, Context.MODE_PRIVATE).getBoolean(KEY, false)
+    }
+
+    fun set(context: Context, on: Boolean) {
+        context.getSharedPreferences(AssistActivity.PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY, on).apply()
+        classic = on
     }
 }
 
