@@ -432,5 +432,5 @@ private fun LivePlayer(url: String, muted: Boolean, onAspect: (Float) -> Unit) {
 fun CameraViewerFor(entityId: String, entities: Map<String, EntityState>, registry: Registry, call: CallService, onClose: () -> Unit) {
     val found = cameraFind(entities, entityId, null, null)
     val name = entities[entityId]?.friendlyName?.replace(Regex(" (Live view|Snapshot)$", RegexOption.IGNORE_CASE), "") ?: entityId
-    CameraViewer(name, entityId, found, cameraBaseName(entities, entityId), cameraLight(entities, registry, entityId, null), entities, call, onClose)
+    CameraViewer(name, entityId, found, cameraBaseName(entities, entityId), cameraLight(entities, registry, entityId, null), entities, call, onClose = onClose)
 }
