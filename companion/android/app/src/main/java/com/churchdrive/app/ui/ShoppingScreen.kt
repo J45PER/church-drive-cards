@@ -1,5 +1,9 @@
 package com.churchdrive.app.ui
 
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,6 +32,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -122,13 +127,26 @@ fun ShoppingScreen(listId: String, onClose: () -> Unit) {
     }
 }
 
+/** Start navigation to [p] in Google Maps, or open its directions page if the Maps app isn't there. */
+private fun navigateTo(context: Context, p: ShoppingPlace) {
+    val nav = Intent(Intent.ACTION_VIEW, Uri.parse(navigationUri(p))).setPackage("com.google.android.apps.maps").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    try {
+        context.startActivity(nav)
+    } catch (_: ActivityNotFoundException) {
+        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(mapsWebUrl(p))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+}
+
 @Composable
 private fun ShoppingItemsView(list: ShoppingList, state: ShoppingState, tone: ToneColors, send: Send, onEdit: () -> Unit, onDeleted: () -> Unit) {
     val neutral = toneColors(Tone.Grey)
-    val zoneNames = state.zones.associate { it.id to it.name }
-    val meta = listOf(whenText(list.date.ifEmpty { null }), list.people.joinToString(", "), list.places.mapNotNull { zoneNames[it] }.joinToString(", "))
+    val context = LocalContext.current
+    val meta = listOf(whenText(list.date.ifEmpty { null }), list.time.takeIf { list.date.isNotEmpty() && !list.done }.orEmpty(), list.people.joinToString(", "), list.places.joinToString(", ") { it.name })
         .filter { it.isNotBlank() }.joinToString(" · ")
     if (meta.isNotEmpty()) Text(meta, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    if (list.places.isNotEmpty() && !list.done) {
+        TileRow(list.places.map { p -> TileItem("mdi:navigation-variant", "Navigate to ${p.name}", true) { navigateTo(context, p) } }, tone, neutral.onContainer)
+    }
     val total = list.items.size
     Text(if (total == 0) "Nothing on the list yet." else "${total - list.open} of $total done", style = MaterialTheme.typography.titleSmall)
     if (list.done) {
@@ -202,7 +220,11 @@ private fun ShoppingForm(existing: ShoppingList?, state: ShoppingState, tone: To
     var name by remember { mutableStateOf(existing?.name.orEmpty()) }
     var who by remember { mutableStateOf(existing?.people ?: listOfNotNull(state.mine.ifEmpty { null })) }
     var date by remember { mutableStateOf(existing?.date.orEmpty()) }
+    var time by remember { mutableStateOf(existing?.time.orEmpty()) }
     var places by remember { mutableStateOf(existing?.places ?: emptyList()) }
+    var query by remember { mutableStateOf("") }
+    var results by remember { mutableStateOf<List<ShoppingPlace>>(emptyList()) }
+    var searchNote by remember { mutableStateOf("") }
     var items by remember { mutableStateOf("") }
     var withMissed by remember { mutableStateOf(existing == null && state.missed.isNotEmpty()) }
     var error by remember { mutableStateOf("") }
@@ -223,10 +245,45 @@ private fun ShoppingForm(existing: ShoppingList?, state: ShoppingState, tone: To
         tone, neutral.onContainer,
     )
     OutlinedTextField(value = date, onValueChange = { date = it.trim() }, label = { Text("Date (YYYY-MM-DD)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-    val shops = state.zones.filter { it.id != "zone.home" }
-    if (shops.isNotEmpty()) {
-        Text("Where will you buy it?", style = MaterialTheme.typography.titleSmall)
-        TileRow(shops.map { z -> TileItem("mdi:map-marker-outline", z.name, z.id in places) { places = if (z.id in places) places - z.id else places + z.id } }, tone, neutral.onContainer)
+    if (date.isNotEmpty()) {
+        OutlinedTextField(value = time, onValueChange = { time = it.trim() }, label = { Text("Time (HH:MM, optional)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+    }
+    Text("Where will you buy it? Search Google Maps", style = MaterialTheme.typography.titleSmall)
+    if (places.isNotEmpty()) {
+        TileRow(places.map { p -> TileItem("mdi:map-marker-remove-outline", p.name, true) { places = places - p } }, tone, neutral.onContainer)
+    }
+    OutlinedTextField(
+        value = query, onValueChange = { query = it }, label = { Text("e.g. Lidl Protaras Cyprus") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+    )
+    TileRow(
+        listOf(
+            TileItem("mdi:magnify", "Search", query.trim().length >= 2) {
+                searchNote = "Searching…"
+                results = emptyList()
+                send("church_drive/maps/search", JSONObject().put("query", query.trim()).put("anywhere", true)) { r ->
+                    val found = ((r as? JSONArray)?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it)?.let(::parsePlace) } }).orEmpty()
+                    results = found
+                    searchNote = if (found.isEmpty()) "Nothing found. Try the shop name and the town." else ""
+                }
+            },
+        ),
+        tone, neutral.onContainer, enabled = query.trim().length >= 2,
+    )
+    if (searchNote.isNotEmpty()) Text(searchNote, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    results.forEach { p ->
+        Row(
+            modifier = Modifier.fillMaxWidth().clickable {
+                if (places.none { it.lat == p.lat && it.lon == p.lon } && places.size < 5) places = places + p
+                results = emptyList()
+            }.padding(vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            HaIcon("mdi:map-marker-outline", Icons.Filled.Info, tone.accent, 24.dp)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(p.name, style = MaterialTheme.typography.bodyLarge)
+                Text(p.address, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
     }
     if (existing == null) {
         OutlinedTextField(
@@ -249,11 +306,11 @@ private fun ShoppingForm(existing: ShoppingList?, state: ShoppingState, tone: To
                 if (who.isEmpty()) {
                     error = "Choose who the list is for."
                 } else if (existing == null) {
-                    val body = JSONObject().put("name", name.trim()).put("people", JSONArray(who)).put("date", date).put("places", JSONArray(places))
+                    val body = JSONObject().put("name", name.trim()).put("people", JSONArray(who)).put("date", date).put("time", time).put("places", JSONArray(places.map { it.toJson() }))
                         .put("items", JSONArray(splitItems(items))).put("include_missed", withMissed)
                     send("church_drive/shopping/create", body) { r -> onSaved(((r as? JSONObject)?.optJSONObject("list"))?.optString("id")) }
                 } else {
-                    val body = JSONObject().put("list", existing.id).put("name", name.trim()).put("people", JSONArray(who)).put("date", date).put("places", JSONArray(places))
+                    val body = JSONObject().put("list", existing.id).put("name", name.trim()).put("people", JSONArray(who)).put("date", date).put("time", time).put("places", JSONArray(places.map { it.toJson() }))
                     send("church_drive/shopping/update", body) { onSaved(null) }
                 }
             },
@@ -277,7 +334,6 @@ fun ShoppingCard(config: JSONObject) {
         } else {
             val lists = openLists(state, if (config.optBoolean("all")) null else state.mine)
             if (lists.isEmpty()) Text("No shopping lists.", style = MaterialTheme.typography.bodyMedium)
-            val zoneNames = state.zones.associate { it.id to it.name }
             lists.forEach { l ->
                 Row(
                     modifier = Modifier.fillMaxWidth().clickable { open = l.id }.padding(vertical = 6.dp),
@@ -286,7 +342,7 @@ fun ShoppingCard(config: JSONObject) {
                     HaIcon("mdi:cart-outline", Icons.Filled.Info, tone.accent, 26.dp)
                     Column(modifier = Modifier.weight(1f)) {
                         Text(l.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
-                        val sub = listOf(whenText(l.date.ifEmpty { null }), l.people.joinToString(", "), l.places.mapNotNull { zoneNames[it] }.joinToString(", "))
+                        val sub = listOf(whenText(l.date.ifEmpty { null }), l.time.takeIf { l.date.isNotEmpty() }.orEmpty(), l.people.joinToString(", "), l.places.joinToString(", ") { it.name })
                             .filter { it.isNotBlank() }.joinToString(" · ")
                         if (sub.isNotEmpty()) Text(sub, style = MaterialTheme.typography.bodySmall, color = tone.onContainer.copy(alpha = 0.75f), maxLines = 1)
                     }

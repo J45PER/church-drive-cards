@@ -1,7 +1,7 @@
 """Shopping lists: a list is one task, with items you tick off as bought or unavailable.
 
-Each list has a name, the people it is for, an optional date and optional places (zones) where it will
-be bought. It shows on every person's to-do list as a single task ("Shopping: Weekly (3 of 8)", due on its
+Each list has a name, the people it is for, an optional date (and time) and optional places where it will
+be bought: found with a Google Maps search, so any shop anywhere, kept with their coordinates. It shows on every person's to-do list as a single task ("Shopping: Weekly (3 of 8)", due on its
 date) whose description carries a marker, so the cards and the phone app know to open the list instead
 of a plain task. The task is ticked off when no item is left open. Items that were unavailable are
 remembered and offered when the next list is made, and again if someone arrives at a shop without a list.
@@ -35,6 +35,7 @@ SIGNAL_SHOPPING = "church_drive_shopping"
 EVENT_SHOPPING = "church_drive_shopping_changed"
 KEEP_DONE = timedelta(days=1)
 AGAIN = timedelta(minutes=30)  # one prompt per person per shop per visit
+PLACE_AGAIN = timedelta(hours=3)  # and per place a list names
 LINK = "/dashboard-tasks/shopping"
 HA_SHOPPING = "todo.shopping_list"
 
@@ -61,8 +62,19 @@ class Shopping:
         data = await self._store.async_load() or {}
         self._lists = list(data.get("lists", []))
         self._missed = list(data.get("missed", []))
+        changed = False
+        for lst in self._lists:
+            # Lists made when places were zones kept zone ids: turn them into places. Every list also gets a time.
+            kept = self._places_valid(lst.get("places", []))
+            if kept != lst.get("places") or "time" not in lst:
+                lst["places"] = kept
+                lst.setdefault("time", "")
+                changed = True
+        if changed:
+            await self._async_save()
         self._unsub.append(self.hass.bus.async_listen(EVENT_STATE_CHANGED, self._on_state))
         self._unsub.append(async_track_time_change(self.hass, self._on_morning, hour=8, minute=0, second=0))
+        self._unsub.append(async_track_time_change(self.hass, self._on_minute, second=0))
         self._unsub.append(async_track_time_change(self.hass, self._on_housekeeping, minute=15, second=0))
         await self._async_purge()
 
@@ -123,18 +135,42 @@ class Shopping:
             return known
         return [k for k in known if k.lower() in {n.lower() for n in named}]
 
-    def _places_valid(self, places: list[str]) -> list[str]:
-        return [p for p in dict.fromkeys(places) if str(p).startswith("zone.") and self.hass.states.get(p) is not None]
+    def _places_valid(self, places: list[Any]) -> list[dict[str, Any]]:
+        """Checked places from a map search. An old zone id becomes the place that zone is."""
+        out = []
+        for p in places or []:
+            if isinstance(p, str):
+                st = self.hass.states.get(p) if p.startswith("zone.") else None
+                if st is None:
+                    continue
+                p = {"name": st.name, "lat": st.attributes.get("latitude"), "lon": st.attributes.get("longitude")}
+            out.append(p)
+        return sl.clean_places(out)
+
+    @staticmethod
+    def _when(lst: dict[str, Any], time: str | None) -> None:
+        """Keep a list's time only while it has a date (a time of day means nothing without a day)."""
+        lst["time"] = sl.valid_time(time) if lst.get("date") else ""
+
+    @staticmethod
+    def _due(lst: dict[str, Any]) -> dict[str, str]:
+        """The to-do task's due: the date, or the date and time when the list has one."""
+        if not lst["date"]:
+            return {}
+        if lst.get("time"):
+            return {"due_datetime": f"{lst['date']} {lst['time']}:00"}
+        return {"due_date": lst["date"]}
 
     async def async_create(
         self,
         name: str,
         people: list[str],
         date: str = "",
-        places: list[str] | None = None,
+        places: list[Any] | None = None,
         items: list[str] | None = None,
         include_missed: bool = True,
         context: Context | None = None,
+        time: str = "",
     ) -> dict[str, Any]:
         """Make a list. Items that weren't available last time are added when [include_missed] (and returned in 'offered')."""
         who = self._people_valid(people)
@@ -154,6 +190,7 @@ class Shopping:
             "done_at": "",
             "tasks": {},
         }
+        self._when(lst, time)
         self._lists.append(lst)
         if offered:
             self._missed = sl.drop_missed(self._missed, offered)
@@ -167,7 +204,8 @@ class Shopping:
         return {"list": self._public(lst), "offered": offered}
 
     async def async_update(
-        self, list_id: str, name: str | None, people: list[str] | None, date: str | None, places: list[str] | None, context: Context | None = None
+        self, list_id: str, name: str | None, people: list[str] | None, date: str | None, places: list[Any] | None, context: Context | None = None,
+        time: str | None = None,
     ) -> dict[str, Any]:
         lst = self._find(list_id)
         if name is not None:
@@ -183,6 +221,7 @@ class Shopping:
             lst["date"] = sl.valid_date(date)
         if places is not None:
             lst["places"] = self._places_valid(places)
+        self._when(lst, lst.get("time", "") if time is None else time)
         await self._async_after(lst, context)
         return self._public(lst)
 
@@ -265,8 +304,7 @@ class Shopping:
             "description": sl.task_description(lst["id"], lst["items"]),
             "status": "completed" if lst["done"] else "needs_action",
         }
-        if lst["date"]:
-            data["due_date"] = lst["date"]
+        data.update(self._due(lst))
         uid = lst["tasks"].get(first)
         if uid:
             data["item"] = uid
@@ -276,8 +314,7 @@ class Shopping:
             except Exception:  # noqa: BLE001 - deleted by hand: make it again below
                 lst["tasks"].pop(first, None)
         add = {"entity_id": todo, "item": data["rename"], "description": data["description"]}
-        if lst["date"]:
-            add["due_date"] = lst["date"]
+        add.update(self._due(lst))
         await self.hass.services.async_call("todo", "add_item", add, blocking=True, context=context)
         uid = await self._async_find_uid(todo, lst["id"])
         if uid:
@@ -328,9 +365,25 @@ class Shopping:
         """On a list's date, remind the people it is for."""
         today = dt_util.now().date().isoformat()
         for lst in sl.due_today(self._lists, today):
+            if lst.get("time"):
+                continue  # a list with a time reminds at that time instead
             c = sl.counts(lst["items"])
             await self._async_notify(
                 lst["people"], "Shopping today", f"{lst['name'] or 'Shopping'}: {c[sl.OPEN]} to get. Tap to open the list.", lst["id"], tag=f"shopping-day-{lst['id']}"
+            )
+
+    async def _on_minute(self, now: Any) -> None:
+        """At a list's time on its date, remind the people it is for, naming the place when it has one."""
+        local = dt_util.as_local(now)
+        today, hm = local.date().isoformat(), local.strftime("%H:%M")
+        for lst in self._lists:
+            if lst["done"] or lst["date"] != today or lst.get("time") != hm:
+                continue
+            where = f" at {lst['places'][0]['name']}" if lst["places"] else ""
+            c = sl.counts(lst["items"])
+            await self._async_notify(
+                lst["people"], "Time to go shopping", f"{lst['name'] or 'Shopping'}{where}: {c[sl.OPEN]} to get. Tap to open the list.",
+                lst["id"], tag=f"shopping-time-{lst['id']}",
             )
 
     async def _async_guard(self, todo: str) -> None:
@@ -363,11 +416,38 @@ class Shopping:
             return
         if new is None or not new.entity_id.startswith("person."):
             return
+        self._check_near(old, new)
         if old is None or old.state in ("unknown", "unavailable") or old.state == new.state:
             return
         if new.state in ("not_home", "home", "unknown", "unavailable", ""):
             return
         self.hass.async_create_task(self._async_arrived(new.entity_id, new.state))
+
+    def _check_near(self, old: Any, new: Any) -> None:
+        """A phone has moved close to a place one of the person's lists will be bought at: bring that list up."""
+        if not any(l["places"] and not l["done"] for l in self._lists):
+            return
+        accuracy = new.attributes.get("gps_accuracy")
+        if isinstance(accuracy, (int, float)) and accuracy > 200:
+            return  # a vague fix could put them anywhere
+        first = next((p["first"] for p in (self._people.people() if self._people else []) if p["entity_id"] == new.entity_id), None)
+        if first is None:
+            return
+        for lst in sl.for_person(self._lists, first):
+            hit = sl.near_place(lst["places"], new.attributes.get("latitude"), new.attributes.get("longitude"))
+            if hit is None:
+                continue
+            if old is not None and sl.near_place(lst["places"], old.attributes.get("latitude"), old.attributes.get("longitude")):
+                continue  # they were already there
+            key = (first, f"{lst['id']}|{hit['lat']},{hit['lon']}")
+            now = dt_util.utcnow()
+            seen = self._last.get(key)
+            if seen and now - seen < PLACE_AGAIN:
+                continue
+            self._last[key] = now
+            said = sl.arrival_message(hit["name"], [lst], [])
+            if said:
+                self.hass.async_create_task(self._async_notify([first], said[0], said[1], lst["id"], tag=f"shopping-near-{lst['id']}"))
 
     async def _async_arrived(self, person_entity: str, state: str) -> None:
         first = next((p["first"] for p in (self._people.people() if self._people else []) if p["entity_id"] == person_entity), None)
@@ -376,16 +456,15 @@ class Shopping:
         zone = next((z for z in self.hass.states.async_all("zone") if arrived_in(state, z.entity_id, z.name)), None)
         if zone is None:
             return
-        places = {p for l in self._lists if not l["done"] for p in l["places"]}
-        if not sl.is_shop_zone(zone.name, places, zone.entity_id):
+        # Zones named like a shop bring up lists with no place of their own; a list with places comes up near those instead.
+        if not sl.is_shop_zone(zone.name, set(), zone.entity_id):
             return
         now = dt_util.utcnow()
         seen = self._last.get((first, zone.entity_id))
         if seen and now - seen < AGAIN:
             return
         self._last[(first, zone.entity_id)] = now
-        # A list that names places only comes up at those places; one with none comes up at any shop.
-        mine = [l for l in sl.for_person(self._lists, first) if not l["places"] or zone.entity_id in l["places"]]
+        mine = [l for l in sl.for_person(self._lists, first) if not l["places"]]
         said = sl.arrival_message(zone.name, mine, self._missed)
         if said is None:
             return

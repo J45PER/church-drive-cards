@@ -12,7 +12,8 @@ data class ShoppingList(
     val name: String,
     val people: List<String>,
     val date: String,
-    val places: List<String>,
+    val time: String,
+    val places: List<ShoppingPlace>,
     val done: Boolean,
     val items: List<ShoppingItem>,
 ) {
@@ -20,14 +21,25 @@ data class ShoppingList(
     val title: String get() = name.ifBlank { "Shopping" }
 }
 
-data class ShoppingZone(val id: String, val name: String)
+/** Somewhere a list will be bought, found with a Google Maps search (any shop anywhere), kept with its coordinates. */
+data class ShoppingPlace(val name: String, val address: String, val lat: Double, val lon: Double) {
+    fun toJson(): JSONObject = JSONObject().put("name", name).put("address", address).put("lat", lat).put("lon", lon)
+}
+
+fun parsePlace(o: JSONObject): ShoppingPlace? =
+    if (o.has("lat") && o.has("lon")) ShoppingPlace(o.optString("name"), o.optString("address"), o.optDouble("lat"), o.optDouble("lon")) else null
+
+/** The Google Maps link that starts directions to [p], for a browser if no maps app takes it. */
+fun mapsWebUrl(p: ShoppingPlace): String = "https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lon}"
+
+/** The link the Google Maps app opens straight into turn-by-turn navigation. */
+fun navigationUri(p: ShoppingPlace): String = "google.navigation:q=${p.lat},${p.lon}"
 
 /** Everything `church_drive/shopping` returns. [mine] is the signed-in person's first name, [missed] what wasn't available last time. */
 data class ShoppingState(
     val lists: List<ShoppingList>,
     val mine: String,
     val missed: List<String>,
-    val zones: List<ShoppingZone>,
     val people: List<String>,
 )
 
@@ -39,7 +51,8 @@ fun parseShoppingList(o: JSONObject): ShoppingList = ShoppingList(
     name = o.optString("name"),
     people = o.optJSONArray("people").strings(),
     date = o.optString("date"),
-    places = o.optJSONArray("places").strings(),
+    time = o.optString("time"),
+    places = o.optJSONArray("places").objects().mapNotNull { parsePlace(it) },
     done = o.optBoolean("done"),
     items = o.optJSONArray("items").objects().map { ShoppingItem(it.optString("id"), it.optString("text"), it.optString("status", "open")) },
 )
@@ -52,7 +65,6 @@ fun parseShopping(result: Any?): ShoppingState? {
         lists = lists.objects().map { parseShoppingList(it) }.filter { it.id.isNotEmpty() },
         mine = o.optString("mine"),
         missed = o.optJSONArray("missed").objects().map { it.optString("text") }.filter { it.isNotEmpty() },
-        zones = o.optJSONArray("zones").objects().map { ShoppingZone(it.optString("zone"), it.optString("name")) },
         people = o.optJSONArray("people").strings(),
     )
 }

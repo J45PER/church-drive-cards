@@ -26,6 +26,7 @@ HACS as an integration. It does two jobs:
    scene setup. There's also a scene select per room/zone and a scene builder.
 
 **Now (2026-10-04, v0.38.2 live, nothing on beta):**
+- **Shopping places (v0.45.0).** Places on a list are Google Maps search results `{name,address,lat,lon}` (`shopping_logic.clean_places`, `near_place`, `maps_url`), not zones; `church_drive/maps/search` takes `anywhere: true`. Old zone ids are converted on start. `time` is optional (needs a date): `_on_minute` reminds, `_check_near` fires on person lat/lon within 150 m, keyword shop-zone prompts only cover lists with no places. Not tested on a real phone yet.
 - **Shopping lists (v0.42.0; v0.43.0 restyled it to match the task cards ; v0.43.1 made it an indigo Shopping panel on the To-do page, not a page of its own).** `shopping.py` /
   `shopping_logic.py` (see README "Shopping lists"). Data in `.storage/church_drive.shopping`. The to-do
   task for a list carries `church-drive-shopping:<id>` in its description: the cards and app must open the

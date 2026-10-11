@@ -4,6 +4,12 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.8.0
+
+- **Shopping lists: places from a Google Maps search.** Search for a shop anywhere (for example "Lidl Protaras Cyprus") instead of picking a zone, and
+  give the list a time as well as a date. A list with a place has a **Navigate** button that opens Google Maps with directions to it. Needs
+  Church Drive 0.45 in Home Assistant and a Google Places key in its options for the search.
+
 ## 0.7.0
 
 - **Octopus: Last 7 days** replaces Last full day on the Energy page (needs nothing new in Home Assistant). A stacked bar per day in the

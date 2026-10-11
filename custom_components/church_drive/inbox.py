@@ -301,7 +301,7 @@ class Inbox:
             people = opts.get("people") or ([first] if first else ["everyone"])
             made = await self.shopping.async_create(
                 opts.get("name") or "Shopping", people, opts.get("date") or "", opts.get("places") or [], texts,
-                include_missed=opts.get("include_missed", True), context=context,
+                include_missed=opts.get("include_missed", True), context=context, time=opts.get("time") or "",
             )
             return len(made["list"]["items"])
         done = await self.shopping.async_add_items(target, texts, context)

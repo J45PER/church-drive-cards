@@ -10,7 +10,7 @@ import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { kitShell, kitHead, kitEsc } from './card-kit.js';
-import { shoppingIdOf, splitItems } from './shopping-logic.js';
+import { shoppingIdOf, splitItems, mapsUrl, samePlace } from './shopping-logic.js';
 import { checkStale } from './stale.js';
 
 export { shoppingIdOf };
@@ -278,8 +278,8 @@ class ShoppingPage {
     const d = store.data;
     this.mode = 'form';
     this.form = l
-      ? { edit: true, name: l.name, who: [...l.people], date: l.date, places: [...l.places], items: '', missed: false }
-      : { edit: false, name: '', who: d && d.mine ? [d.mine] : [], date: '', places: [], items: '', missed: !!(d && d.missed.length) };
+      ? { edit: true, name: l.name, who: [...l.people], date: l.date, time: l.time || '', places: l.places.map((p) => ({ ...p })), items: '', missed: false, q: '', results: [], note: '' }
+      : { edit: false, name: '', who: d && d.mine ? [d.mine] : [], date: '', time: '', places: [], items: '', missed: !!(d && d.missed.length), q: '', results: [], note: '' };
   }
 
   draw() {
@@ -303,10 +303,11 @@ class ShoppingPage {
     const doneRow = (i) =>
       `<div class="shp-row off" data-item="${i.id}"><button type="button" class="shp-tick ${i.status === 'bought' ? 'bought' : 'na'}" data-set="open" aria-label="Put back: ${kitEsc(i.text)}">${iconHtml(i.status === 'bought' ? 'mdi:check' : 'mdi:close', { size: '15px' })}</button><div class="shp-name">${kitEsc(i.text)}</div>${i.status === 'unavailable' ? '<span class="shp-sub" style="text-decoration:none;">not available</span>' : ''}</div>`;
     const c = l.counts;
-    const meta = [l.date && day(l.date), l.people.join(', '), ...l.places.map((p) => (store.data.zones.find((z) => z.zone === p) || {}).name || p)].filter(Boolean).join(' · ');
+    const meta = [l.date && day(l.date), l.people.join(', '), l.time && !l.done ? l.time : '', ...l.places.map((p) => p.name)].filter(Boolean).join(' · ');
     body.innerHTML = `
       <div class="shp-card">
         ${meta ? `<div class="shp-sub">${kitEsc(meta)}</div>` : ''}
+        ${l.places.length ? `<div class="shp-chips">${l.places.map((p, n) => `<a class="shp-btn go" href="${kitEsc(mapsUrl(p))}" target="_blank" rel="noopener" data-nav="${n}">${iconHtml('mdi:navigation-variant', { size: '18px' })}Navigate to ${kitEsc(p.name)}</a>`).join('')}</div>` : ''}
         ${l.done ? `<div class="shp-banner">All done. This list goes tomorrow.${c.unavailable ? ` ${c.unavailable} ${c.unavailable === 1 ? 'wasn’t' : 'weren’t'} available; you’ll be reminded next time.` : ''}</div>` : ''}
         <div class="shp-add"><input type="text" placeholder="Add an item (or several, with commas)" enterkeyhint="done" autocomplete="off"><button class="shp-btn go" data-act="add">${iconHtml('mdi:plus', { size: '18px' })}Add</button></div>
         ${open.length ? `<div>${open.map(openRow).join('')}</div>` : `<div class="shp-sub">${c.total ? 'Everything is ticked off.' : 'Nothing on the list yet.'}</div>`}
@@ -325,31 +326,62 @@ class ShoppingPage {
     const d = store.data || { zones: [], missed: [], lists: [] };
     bar.innerHTML = `<button class="shp-icon" data-act="${f.edit ? 'cancel-edit' : 'back'}" aria-label="Back">${iconHtml('mdi:arrow-left')}</button><div class="shp-title">${f.edit ? 'Edit list' : 'New shopping list'}</div>`;
     const pick = (kind, value, label, on) => `<button type="button" class="shp-pick" data-${kind}="${kitEsc(value)}" aria-pressed="${on}">${kitEsc(label)}</button>`;
-    const shopZones = d.zones.filter((z) => z.zone !== 'zone.home');
     // Redraw only on structural changes so typing is never interrupted.
     if (this._formDrawn !== f) {
       body.innerHTML = `<div class="shp-card">
         <label class="shp-field"><span>Name</span><input class="f-name" type="text" placeholder="Weekly shop" value="${kitEsc(f.name)}"></label>
         <div class="shp-field"><span>Who is it for?</span><div class="shp-chips f-who"></div></div>
-        <label class="shp-field"><span>Date to go shopping (optional)</span><input class="f-date" type="date" value="${kitEsc(f.date)}"></label>
-        <div class="shp-field"><span>Where will you buy it? (optional)</span><div class="shp-chips f-places"></div></div>
+        <div class="shp-field"><span>Date and time to go shopping (optional)</span><div class="shp-add"><input class="f-date" type="date" value="${kitEsc(f.date)}"><input class="f-time" type="time" value="${kitEsc(f.time)}"></div></div>
+        <div class="shp-field"><span>Where will you buy it? Search Google Maps (optional)</span>
+          <div class="shp-chips f-places"></div>
+          <div class="shp-add"><input class="f-q" type="search" placeholder="e.g. Lidl Protaras Cyprus" enterkeyhint="search" autocomplete="off" value="${kitEsc(f.q)}"><button type="button" class="shp-btn go" data-act="search">${iconHtml('mdi:magnify', { size: '18px' })}Search</button></div>
+          <div class="f-results"></div>
+          <div class="shp-sub f-note"></div></div>
         ${f.edit ? '' : `<label class="shp-field"><span>Items (one per line)</span><textarea class="f-items" placeholder="Milk&#10;Eggs&#10;Bread">${kitEsc(f.items)}</textarea></label>`}
         ${!f.edit && d.missed.length ? `<div class="shp-field"><div class="shp-chips f-missed"></div><div class="shp-sub">${kitEsc(d.missed.map((m) => m.text).join(', '))}</div></div>` : ''}
         <div class="shp-warn"></div>
         <div class="shp-actions"><button class="shp-btn go" data-act="save">${iconHtml('mdi:check', { size: '18px' })}${f.edit ? 'Save' : 'Make the list'}</button><button class="shp-btn" data-act="${f.edit ? 'cancel-edit' : 'back'}">Cancel</button></div></div>`;
       body.querySelector('.f-name').addEventListener('input', (e) => (f.name = e.target.value));
       body.querySelector('.f-date').addEventListener('change', (e) => (f.date = e.target.value));
+      body.querySelector('.f-time').addEventListener('change', (e) => (f.time = e.target.value));
+      const q = body.querySelector('.f-q');
+      q.addEventListener('input', (e) => (f.q = e.target.value));
+      q.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          this.search();
+        }
+      });
       const t = body.querySelector('.f-items');
       if (t) t.addEventListener('input', (e) => (f.items = e.target.value));
       this._formDrawn = f;
     }
     body.querySelector('.f-who').innerHTML = people(this.hass).map((p) => pick('who', p, p, f.who.includes(p))).join('');
-    body.querySelector('.f-places').innerHTML = shopZones.length
-      ? shopZones.map((z) => pick('place', z.zone, z.name, f.places.includes(z.zone))).join('')
-      : '<span class="shp-sub">Add places in Home Assistant’s Zones to pick them here.</span>';
+    body.querySelector('.f-places').innerHTML = f.places
+      .map((p, n) => `<button type="button" class="shp-pick" data-unplace="${n}" aria-pressed="true" title="${kitEsc(p.address)}">${kitEsc(p.name)} ${iconHtml('mdi:close', { size: '13px' })}</button>`)
+      .join('');
+    body.querySelector('.f-results').innerHTML = f.results
+      .map((p, n) => `<button type="button" class="shp-btn" style="width:100%; text-align:left; margin-bottom:6px;" data-addplace="${n}"><span><b>${kitEsc(p.name)}</b><br><span class="shp-sub">${kitEsc(p.address)}</span></span></button>`)
+      .join('');
+    body.querySelector('.f-note').textContent = f.note;
     const m = body.querySelector('.f-missed');
     if (m) m.innerHTML = pick('missed', '1', `Add the ${d.missed.length} item${d.missed.length === 1 ? '' : 's'} not available last time`, f.missed);
     hydrateIcons(this.root);
+  }
+
+  async search() {
+    const f = this.form;
+    if (f.q.trim().length < 2) return;
+    f.note = 'Searching…';
+    f.results = [];
+    this.draw();
+    try {
+      f.results = await call({ type: 'church_drive/maps/search', query: f.q.trim(), anywhere: true });
+      f.note = f.results.length ? '' : 'Nothing found. Try the shop name and the town.';
+    } catch (err) {
+      f.note = err && err.code === 'no_key' ? 'Add a Google Places key in the Church Drive options to search.' : (err && err.message) || 'The search failed.';
+    }
+    this.draw();
   }
 
   async add() {
@@ -376,10 +408,16 @@ class ShoppingPage {
       this.form.who = this.form.who.includes(w) ? this.form.who.filter((x) => x !== w) : [...this.form.who, w];
       return this.draw();
     }
-    const place = t.closest('[data-place]');
-    if (place) {
-      const p = place.dataset.place;
-      this.form.places = this.form.places.includes(p) ? this.form.places.filter((x) => x !== p) : [...this.form.places, p];
+    const found = t.closest('[data-addplace]');
+    if (found) {
+      const p = this.form.results[Number(found.dataset.addplace)];
+      if (p && !this.form.places.some((x) => samePlace(x, p)) && this.form.places.length < 5) this.form.places = [...this.form.places, p];
+      this.form.results = [];
+      return this.draw();
+    }
+    const drop = t.closest('[data-unplace]');
+    if (drop) {
+      this.form.places = this.form.places.filter((_, n) => n !== Number(drop.dataset.unplace));
       return this.draw();
     }
     if (t.closest('[data-missed]')) {
@@ -400,6 +438,8 @@ class ShoppingPage {
         return this.draw();
       case 'add':
         return this.add();
+      case 'search':
+        return this.search();
       case 'delete':
         if (!act.dataset.sure) {
           act.dataset.sure = '1';
@@ -417,7 +457,7 @@ class ShoppingPage {
     const f = this.form;
     if (!f.who.length) return this.say('Choose who the list is for.');
     if (f.edit) {
-      const r = await this.run({ type: 'church_drive/shopping/update', list: this.id, name: f.name, people: f.who, date: f.date, places: f.places });
+      const r = await this.run({ type: 'church_drive/shopping/update', list: this.id, name: f.name, people: f.who, date: f.date, time: f.time, places: f.places });
       if (r) {
         this.mode = 'list';
         this._formDrawn = null;
@@ -425,7 +465,7 @@ class ShoppingPage {
       }
       return;
     }
-    const r = await this.run({ type: 'church_drive/shopping/create', name: f.name, people: f.who, date: f.date, places: f.places, items: splitItems(f.items), include_missed: f.missed });
+    const r = await this.run({ type: 'church_drive/shopping/create', name: f.name, people: f.who, date: f.date, time: f.time, places: f.places, items: splitItems(f.items), include_missed: f.missed });
     if (r) {
       this.id = r.list.id;
       this.mode = 'list';

@@ -18,9 +18,9 @@ import org.junit.Test
 
 class ShoppingDataTest {
     private val reply = JSONObject(
-        """{"mine":"Jamie","missed":[{"text":"Eggs"}],"zones":[{"zone":"zone.tesco","name":"Tesco"}],"people":["Hayley","Jamie"],
+        """{"mine":"Jamie","missed":[{"text":"Eggs"}],"people":["Hayley","Jamie"],
         "lists":[
-          {"id":"aaaaaa111111","name":"Weekly","people":["Jamie","Hayley"],"date":"2026-10-14","places":["zone.tesco"],"done":false,
+          {"id":"aaaaaa111111","name":"Weekly","people":["Jamie","Hayley"],"date":"2026-10-14","time":"09:30","places":[{"name":"Lidl Protaras","address":"Protaras, Cyprus","lat":35.0123,"lon":34.0567}],"done":false,
            "items":[{"id":"i1","text":"Milk","status":"open"},{"id":"i2","text":"Bread","status":"bought"}]},
           {"id":"bbbbbb222222","name":"","people":["Hayley"],"date":"","places":[],"done":false,"items":[]},
           {"id":"cccccc333333","name":"Old","people":["Jamie"],"date":"2026-10-01","places":[],"done":true,"items":[]}]}""",
@@ -31,7 +31,9 @@ class ShoppingDataTest {
         val s = parseShopping(reply)!!
         assertEquals(3, s.lists.size)
         assertEquals(listOf("Eggs"), s.missed)
-        assertEquals("Tesco", s.zones.single().name)
+        assertEquals("Lidl Protaras", s.lists[0].places.single().name)
+        assertEquals("09:30", s.lists[0].time)
+        assertEquals("", s.lists[1].time)
         assertEquals(1, s.lists[0].open)
         assertEquals("Shopping", s.lists[1].title)
         assertNull(parseShopping(null))
@@ -77,5 +79,14 @@ class ShoppingDataTest {
         assertEquals("new", shoppingConfirm("new", " Big shop ").getString("target"))
         assertEquals("Big shop", shoppingConfirm("new", " Big shop ").getString("name"))
         assertEquals(false, shoppingConfirm("aaaaaa111111", "x").has("name"))
+    }
+
+    @Test
+    fun aPlaceStartsNavigationInGoogleMaps() {
+        val p = parseShopping(reply)!!.lists[0].places.single()
+        assertEquals("google.navigation:q=35.0123,34.0567", navigationUri(p))
+        assertEquals("https://www.google.com/maps/dir/?api=1&destination=35.0123,34.0567", mapsWebUrl(p))
+        assertEquals(p, parsePlace(p.toJson()))
+        assertNull(parsePlace(JSONObject("""{"name":"x"}""")))
     }
 }

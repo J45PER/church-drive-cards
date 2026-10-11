@@ -166,6 +166,17 @@ TASK_EDIT = vol.Schema(
     extra=vol.ALLOW_EXTRA,
 )
 
+# A place found with the map search (a shop anywhere), kept on a shopping list with its coordinates.
+PLACE = vol.Schema(
+    {
+        vol.Required("lat"): vol.Coerce(float),
+        vol.Required("lon"): vol.Coerce(float),
+        vol.Optional("name", default=""): cv.string,
+        vol.Optional("address", default=""): cv.string,
+    },
+    extra=vol.REMOVE_EXTRA,
+)
+
 SHOPPING_CHOICE = vol.Schema(
     {
         # An existing list's id, or "new".
@@ -173,7 +184,8 @@ SHOPPING_CHOICE = vol.Schema(
         vol.Optional("name", default=""): cv.string,
         vol.Optional("people", default=[]): [cv.string],
         vol.Optional("date", default=""): cv.string,
-        vol.Optional("places", default=[]): [cv.entity_id],
+        vol.Optional("time", default=""): cv.string,
+        vol.Optional("places", default=[]): [PLACE],
         vol.Optional("include_missed", default=True): cv.boolean,
     }
 )
@@ -649,7 +661,8 @@ def ws_shopping(hass: HomeAssistant, connection: websocket_api.ActiveConnection,
         vol.Optional("name", default=""): cv.string,
         vol.Optional("people", default=[]): [cv.string],
         vol.Optional("date", default=""): cv.string,
-        vol.Optional("places", default=[]): [cv.entity_id],
+        vol.Optional("time", default=""): cv.string,
+        vol.Optional("places", default=[]): [PLACE],
         vol.Optional("items", default=[]): [cv.string],
         vol.Optional("include_missed", default=True): cv.boolean,
     }
@@ -660,7 +673,7 @@ async def ws_shopping_create(hass, shopping, connection, msg):
     """Make a shopping list. Anything not available last time is added and reported back as 'offered'."""
     people = msg["people"] or [p for p in [_person_of(hass, connection)] if p]
     return await shopping.async_create(
-        msg["name"], people, msg["date"], msg["places"], msg["items"], msg["include_missed"], connection.context(msg)
+        msg["name"], people, msg["date"], msg["places"], msg["items"], msg["include_missed"], connection.context(msg), msg["time"]
     )
 
 
@@ -671,16 +684,17 @@ async def ws_shopping_create(hass, shopping, connection, msg):
         vol.Optional("name"): cv.string,
         vol.Optional("people"): [cv.string],
         vol.Optional("date"): cv.string,
-        vol.Optional("places"): [cv.entity_id],
+        vol.Optional("time"): cv.string,
+        vol.Optional("places"): [PLACE],
     }
 )
 @websocket_api.async_response
 @_shopping_ws
 async def ws_shopping_update(hass, shopping, connection, msg):
-    """Rename a list, change who it is for, its date or its places."""
+    """Rename a list, change who it is for, its date, time or places."""
     return {
         "list": await shopping.async_update(
-            msg["list"], msg.get("name"), msg.get("people"), msg.get("date"), msg.get("places"), connection.context(msg)
+            msg["list"], msg.get("name"), msg.get("people"), msg.get("date"), msg.get("places"), connection.context(msg), msg.get("time")
         )
     }
 
@@ -875,22 +889,24 @@ PLACES_URL = "https://places.googleapis.com/v1/places:searchText"
 
 
 @websocket_api.websocket_command(
-    {vol.Required("type"): WS_MAPS_SEARCH, vol.Required("query"): vol.All(cv.string, vol.Length(min=2, max=200))}
+    {
+        vol.Required("type"): WS_MAPS_SEARCH,
+        vol.Required("query"): vol.All(cv.string, vol.Length(min=2, max=200)),
+        # Search the whole world instead of near home (a shop on holiday).
+        vol.Optional("anywhere", default=False): cv.boolean,
+    }
 )
 @websocket_api.async_response
 async def ws_maps_search(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
-    """Search Google Places (shops, businesses, addresses) near home, here so the key stays private."""
+    """Search Google Places (shops, businesses, addresses) near home, or anywhere, here so the key stays private."""
     key = _maps_option(hass, CONF_MAPS_PLACES_KEY)
     if not key:
         connection.send_error(msg["id"], "no_key", "No Google Places key set")
         return
-    body = {
-        "textQuery": msg["query"],
-        "regionCode": "gb",
-        "languageCode": "en-GB",
-        "pageSize": 6,
-        "locationBias": {"circle": {"center": {"latitude": hass.config.latitude, "longitude": hass.config.longitude}, "radius": 50000.0}},
-    }
+    body: dict[str, Any] = {"textQuery": msg["query"], "languageCode": "en-GB", "pageSize": 6}
+    if not msg["anywhere"]:
+        body["regionCode"] = "gb"
+        body["locationBias"] = {"circle": {"center": {"latitude": hass.config.latitude, "longitude": hass.config.longitude}, "radius": 50000.0}}
     headers = {"X-Goog-Api-Key": key, "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.location"}
     try:
         async with asyncio.timeout(10):

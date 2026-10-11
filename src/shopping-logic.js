@@ -15,3 +15,9 @@ export const shoppingNote = (description) => {
   const n = String(description || '').split('\n').filter((l) => l.trim().startsWith('•')).length;
   return n ? `${n} to get` : 'Shopping list';
 };
+
+// A Google Maps link that starts directions to a place ({ lat, lon }).
+export const mapsUrl = (place) => `https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lon}`;
+
+// The same place found twice (a search result picked again) is one place.
+export const samePlace = (a, b) => Math.abs(a.lat - b.lat) < 1e-5 && Math.abs(a.lon - b.lon) < 1e-5;
