@@ -215,6 +215,8 @@ fun StageBox(
     /** Show the whole picture (a live view) rather than covering the box with it (a clip). */
     contain: Boolean = false,
     maxZoom: Float = 4f,
+    /** A single tap on the picture (not a drag or a double tap). */
+    onTap: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     val shape = modifier.then(if (fill) Modifier.fillMaxSize() else Modifier.fillMaxWidth().aspectRatio(16f / 9f))
@@ -235,7 +237,7 @@ fun StageBox(
                     }
                 }
                 .pointerInput(aspect, boxW, boxH) {
-                    detectTapGestures(onDoubleTap = { at ->
+                    detectTapGestures(onTap = { onTap?.invoke() }, onDoubleTap = { at ->
                         val (z, x, y) = view
                         view = panZoom(z, x, y, at.x, at.y, 0f, 0f, if (z > 1.5f) 1f / z else 2f, boxW, boxH, coverW, coverH, maxZoom)
                     })
