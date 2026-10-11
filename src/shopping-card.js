@@ -14,7 +14,7 @@ import { shoppingIdOf, splitItems } from './shopping-logic.js';
 
 export { shoppingIdOf };
 
-const COLOUR = '#66bb6a';
+const COLOUR = '#5c6bc0';
 
 // ---- the lists, shared by every card and the full page -----------------------------------------------------
 

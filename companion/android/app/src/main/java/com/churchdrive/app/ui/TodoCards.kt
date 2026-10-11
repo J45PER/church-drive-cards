@@ -90,7 +90,7 @@ fun TaskListCard(config: JSONObject, entities: Map<String, EntityState>, call: C
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (shoppingIdOf(item.description).isNotEmpty()) {
                     // A shopping list has no tick of its own: it is finished by finishing its items.
-                    Box(modifier = Modifier.padding(12.dp)) { HaIcon("mdi:cart-outline", Icons.Filled.Info, toneColors(Tone.Green).accent, 24.dp) }
+                    Box(modifier = Modifier.padding(12.dp)) { HaIcon("mdi:cart-outline", Icons.Filled.Info, toneColors(Tone.Indigo).accent, 24.dp) }
                 } else Checkbox(
                     checked = false,
                     onCheckedChange = {

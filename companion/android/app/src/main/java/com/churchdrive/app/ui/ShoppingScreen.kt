@@ -77,7 +77,7 @@ private const val NOT_READY = "Couldn't read the shopping lists. The house may n
 fun ShoppingScreen(listId: String, onClose: () -> Unit) {
     val api = LocalHaApi.current
     val model = rememberShoppingModel()
-    val tone = toneColors(Tone.Green)
+    val tone = toneColors(Tone.Indigo)
     var id by remember(listId) { mutableStateOf(listId) }
     var editing by remember(listId) { mutableStateOf(listId == "new") }
     var message by remember { mutableStateOf("") }
@@ -266,7 +266,7 @@ private fun ShoppingForm(existing: ShoppingList?, state: ShoppingState, tone: To
 @Composable
 fun ShoppingCard(config: JSONObject) {
     val model = rememberShoppingModel()
-    val tone = toneColors(Tone.Green)
+    val tone = toneColors(Tone.Indigo)
     var open by remember { mutableStateOf<String?>(null) }
     open?.let { ShoppingScreen(it) { open = null } }
     EntityCard(tone.container, tone.onContainer) {
@@ -299,10 +299,4 @@ fun ShoppingCard(config: JSONObject) {
         }
         TileRow(listOf(TileItem("mdi:plus", "New shopping list", false) { open = "new" }), tone, tone.onContainer)
     }
-}
-
-/** The Shopping page: your lists, and a way to make one. Each opens as a full page. */
-@Composable
-fun ShoppingPage() {
-    ShoppingCard(JSONObject().put("title", "Shopping lists"))
 }
