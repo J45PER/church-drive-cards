@@ -26,6 +26,9 @@ import org.json.JSONObject
  * Either way anything Home Assistant can do by voice works (lights, heating, the alarm, lists, your own automations) and the answer
  * is shown and spoken in the voice of the house's pipeline. Must be made, used and released on the main thread.
  */
+/** How long the house waits in silence before it decides you have finished speaking (its own default is 0.7 s). */
+private const val SILENCE_SECONDS = 1.7
+
 class AssistModel(private val context: Context, private val api: HaApi, private val base: String) {
     var state by mutableStateOf(AssistState.Idle)
         private set
@@ -118,6 +121,10 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-GB")
+            // Give the phone's recogniser more patience before it decides you have finished (it treats these as hints).
+            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2_200L)
+            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1_800L)
+            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 1_500L)
         partial = ""
         notice = ""
         notUnderstood = null
@@ -201,7 +208,8 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
         val params = JSONObject()
             .put("start_stage", "wake_word")
             .put("end_stage", "tts")
-            .put("input", JSONObject().put("sample_rate", MicStream.RATE))
+            // Home Assistant ends your sentence after 0.7 seconds of quiet by default, which cuts people off mid-thought: wait longer.
+            .put("input", JSONObject().put("sample_rate", MicStream.RATE).put("silence_seconds", SILENCE_SECONDS))
             .put("timeout", 300)
         conversationId?.let { params.put("conversation_id", it) }
         answered = false
