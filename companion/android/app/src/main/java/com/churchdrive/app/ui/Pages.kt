@@ -8,7 +8,6 @@ import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.Security
-import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material.icons.outlined.Thermostat
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -58,9 +57,8 @@ enum class Page(
     ),
     Todo(
         "To-do", "mdi:format-list-checks", Icons.Outlined.Checklist,
-        listOf("From the house", "My to-do", "Shared", "Cleaning").map { Section(it) },
+        listOf("From the house", "My to-do", "Shopping", "Shared", "Cleaning").map { Section(it) },
     ),
-    Shopping("Shopping", "mdi:cart", Icons.Outlined.ShoppingCart, emptyList()),
     Devices("Devices", "mdi:server-network", Icons.Outlined.Dns, emptyList(), adminOnly = true),
     Energy("Energy", "mdi:lightning-bolt", Icons.Outlined.Bolt, emptyList(), adminOnly = true),
 }
@@ -73,7 +71,6 @@ fun pageTone(page: Page, alarmState: String?): Tone = when (page) {
     Page.Climate -> Tone.Orange
     Page.Cleaning -> Tone.Blue
     Page.Todo -> Tone.Purple
-    Page.Shopping -> Tone.Green
     Page.Devices -> Tone.Green
     Page.Energy -> Tone.Indigo
 }

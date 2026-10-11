@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **v0.43.1** (2026-10-11): shopping is a section of the To-do page (no separate page), indigo blue
 - **v0.43.0** (2026-10-11): shopping lists look like the task cards, can't be ticked off before their items, own Shopping page in the app (app 0.6.0)
 - **v0.42.1** (2026-10-11): shopping reminders link to the Tasks dashboard's Shopping view
 - **v0.42.0** (2026-10-11): shopping lists in the integration: one task per list, bought / unavailable items, carry-over of unavailable items, date and shop-arrival reminders, add-to-existing-or-new question for shared items

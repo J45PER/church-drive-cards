@@ -4,6 +4,12 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.6.1
+
+- **Shopping is a section of the To-do page**, not a button of its own in the bottom bar (it showed as "Shoppin" and crowded the
+  bar). The section comes from the dashboard's To-do page, like the others.
+- Shopping uses an indigo blue instead of green.
+
 ## 0.6.0
 
 - **Shopping lists** (needs Church Drive 0.43.0 or later in Home Assistant): a **Shopping** page of its own in the bottom bar. Each
