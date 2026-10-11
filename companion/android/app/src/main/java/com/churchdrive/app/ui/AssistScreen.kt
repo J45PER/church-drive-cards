@@ -97,14 +97,12 @@ fun assistPalette(): AssistPalette {
 }
 
 /**
- * The assistant, drawn two ways that share everything: a bottom sheet over the page ([full] false: swipe it up for the
- * whole screen, down to close), and the whole screen (the orb to start with, then the conversation).
+ * The assistant, full screen (the orb to start with, then the conversation). It opens and closes the same way as every other pop-up
+ * (see [PopupWindow]): it rises from below with a fade, and leaves the same way. [onClose] is called once it has gone.
  */
 @Composable
 fun AssistPanel(
     model: AssistModel,
-    full: Boolean,
-    onFull: (Boolean) -> Unit,
     onClose: () -> Unit,
     onTask: (String) -> Unit,
     /** The introduction to show first (and say out loud), or null. */
@@ -117,14 +115,28 @@ fun AssistPanel(
     wakeOn: Boolean = true,
     onEnableWake: () -> Unit = {},
 ) {
+    var shown by remember { mutableStateOf(false) }
+    var leaving by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { shown = true }
+    val close: () -> Unit = { if (!leaving) { leaving = true; shown = false } }
+    // Said "that's it": he closes himself once he has answered, with the same exit.
+    LaunchedEffect(model.closeRequested) { if (model.closeRequested) close() }
+    LaunchedEffect(leaving) { if (leaving) { kotlinx.coroutines.delay(PopupMotion.ExitMs + 30L); onClose() } }
+    QuietWindow()
     // A dialog doesn't set the text colour, so it would be dark on dark.
     androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
-        if (intro != null) {
-            AssistIntro(
-                kind = intro, person = person, assistant = model.name, wakeWord = model.wakeWord, model = model,
-                onTry = onIntroTry, onSkip = onIntroDone, wakeOn = wakeOn, onEnableWake = onEnableWake,
-            )
-        } else if (full) FullAssist(model, onFull, onClose, onTask) else SheetAssist(model, onFull, onClose, onTask)
+        AnimatedVisibility(
+            visible = shown, modifier = Modifier.fillMaxSize(),
+            enter = slideInVertically(tween(PopupMotion.EnterMs)) { it } + fadeIn(tween(PopupMotion.EnterMs - 80)),
+            exit = slideOutVertically(tween(PopupMotion.ExitMs)) { it } + fadeOut(tween(PopupMotion.ExitMs - 40)),
+        ) {
+            if (intro != null) {
+                AssistIntro(
+                    kind = intro, person = person, assistant = model.name, wakeWord = model.wakeWord, model = model,
+                    onTry = onIntroTry, onSkip = onIntroDone, wakeOn = wakeOn, onEnableWake = onEnableWake,
+                )
+            } else FullAssist(model, close, onTask)
+        }
     }
 }
 
@@ -274,109 +286,18 @@ private fun SuggestionRow(model: AssistModel) {
     }
 }
 
-/** A small cloud with his name and what he is doing. */
-@Composable
-private fun JarvisHeader(model: AssistModel, modifier: Modifier = Modifier) {
-    val pal = assistPalette()
-    val scheme = MaterialTheme.colorScheme
-    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Box(modifier = Modifier.size(46.dp), contentAlignment = Alignment.Center) { AssistOrb(model.state, model.level, 34.dp) }
-        Column {
-            Text(model.name.ifBlank { "Assistant" }, style = MaterialTheme.typography.titleMedium)
-            Text(assistStatus(model.state), style = MaterialTheme.typography.bodySmall, color = if (model.state == AssistState.Idle) scheme.onSurfaceVariant else pal.third)
-        }
-    }
-}
-
 /**
- * Dims and (on Android 12 and newer, where the phone allows it) blurs whatever is behind the assistant, by [amount] (0 to 1), so the
- * backdrop can fade in and out by itself. Also turns off the window's own slide, which would drag the backdrop along with the card.
+ * Switches off the window's own open and close animation and dimming (the system would slide it as well as the card does), so the
+ * assistant moves only the way [AssistPanel] moves it, the same as every other pop-up.
  */
 @Composable
-private fun FrostedWindow(amount: Float) {
+private fun QuietWindow() {
     val view = androidx.compose.ui.platform.LocalView.current
-    val window = remember(view) {
-        (view.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window
-            ?: generateSequence(view.context) { (it as? android.content.ContextWrapper)?.baseContext }.filterIsInstance<android.app.Activity>().firstOrNull()?.window
-    }
     androidx.compose.runtime.SideEffect {
+        val window = (view.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window
+            ?: generateSequence(view.context) { (it as? android.content.ContextWrapper)?.baseContext }.filterIsInstance<android.app.Activity>().firstOrNull()?.window
         window?.setWindowAnimations(-1)
         window?.setDimAmount(0f)
-        if (android.os.Build.VERSION.SDK_INT >= 31 && window != null) {
-            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
-            window.attributes = window.attributes.also { it.blurBehindRadius = (38 * amount.coerceIn(0f, 1f)).toInt() }
-        }
-    }
-    androidx.compose.runtime.DisposableEffect(window) {
-        onDispose {
-            if (android.os.Build.VERSION.SDK_INT >= 31 && window != null) window.attributes = window.attributes.also { it.blurBehindRadius = 0 }
-        }
-    }
-}
-
-@Composable
-private fun SheetAssist(model: AssistModel, onFull: (Boolean) -> Unit, onClose: () -> Unit, onTask: (String) -> Unit) {
-    val scheme = MaterialTheme.colorScheme
-    var drag by remember { mutableFloatStateOf(0f) }
-    // The dimmed, frosted backdrop fades in and out on its own, in place; only the card slides. (The window itself has no animation.)
-    var shown by remember { mutableStateOf(false) }
-    var leaving by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { shown = true }
-    val close: () -> Unit = { if (!leaving) { leaving = true; shown = false } }
-    LaunchedEffect(model.closeRequested) { if (model.closeRequested) close() }
-    LaunchedEffect(leaving) { if (leaving) { kotlinx.coroutines.delay(PopupMotion.ExitMs + 30L); onClose() } }
-    val dim by animateFloatAsState(if (shown) PopupMotion.ScrimAlpha else 0f, tween(PopupMotion.ScrimMs), label = "scrim")
-    FrostedWindow(dim / PopupMotion.ScrimAlpha)
-    Box(modifier = Modifier.fillMaxSize()) {
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = dim)).clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { close() })
-        AnimatedVisibility(
-            visible = shown, modifier = Modifier.align(Alignment.BottomCenter),
-            enter = slideInVertically(tween(PopupMotion.EnterMs)) { it } + fadeIn(tween(PopupMotion.EnterMs - 80)),
-            exit = slideOutVertically(tween(PopupMotion.ExitMs)) { it } + fadeOut(tween(PopupMotion.ExitMs - 40)),
-        ) {
-        Column(
-            modifier = Modifier.fillMaxWidth()
-                .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
-                .background(scheme.surface)
-                .clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { }
-                .pointerInput(Unit) {
-                    detectVerticalDragGestures(
-                        onDragStart = { drag = 0f },
-                        onDragEnd = { if (drag < -60f) onFull(true) else if (drag > 140f) close() },
-                        onVerticalDrag = { _, dy -> drag += dy },
-                    )
-                }
-                .navigationBarsPadding().padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Box(modifier = Modifier.width(36.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(scheme.onSurface.copy(alpha = 0.2f)).align(Alignment.CenterHorizontally))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                JarvisHeader(model, Modifier.weight(1f))
-                RoundIcon("mdi:chevron-up", "Full screen", false, { onFull(true) }, size = 40.dp)
-            }
-            val last = model.messages.lastOrNull()
-            val heard = model.partial.ifEmpty { model.messages.lastOrNull { it.fromUser }?.text.orEmpty() }
-            if (heard.isNotEmpty()) Text(heard, style = MaterialTheme.typography.headlineSmall)
-            if (model.partial.isEmpty() && last != null && !last.fromUser) {
-                JarvisBubble(last.text)
-            }
-            if (model.state == AssistState.Thinking) ThinkingDots()
-            Notice(model, onTask)
-            if (model.state != AssistState.Listening) SuggestionRow(model)
-            // The controls sit at the very back, so the microphone's glow is behind the chips above them.
-            Row(
-                modifier = Modifier.fillMaxWidth().zIndex(-1f).padding(horizontal = 12.dp),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                RoundIcon("mdi:keyboard-outline", "Type instead", false, { onFull(true) })
-                RoundIcon(
-                    if (model.state == AssistState.Listening) "mdi:stop" else "mdi:microphone", "Talk",
-                    model.state != AssistState.Idle && model.state != AssistState.Waiting, { model.listen() }, size = 68.dp,
-                )
-                RoundIcon("mdi:close", "Close", false, { close() })
-            }
-        }
-        }
     }
 }
 
@@ -398,14 +319,13 @@ private fun BottomGlow(active: Boolean, level: Float, modifier: Modifier = Modif
 }
 
 @Composable
-private fun FullAssist(model: AssistModel, onFull: (Boolean) -> Unit, onClose: () -> Unit, onTask: (String) -> Unit) {
+private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String) -> Unit) {
     val pal = assistPalette()
     val scheme = MaterialTheme.colorScheme
     var typed by remember { mutableStateOf("") }
     var typing by remember { mutableStateOf(false) }
     val chatting = model.messages.isNotEmpty()
     val active = model.state == AssistState.Listening || model.state == AssistState.Thinking || model.state == AssistState.Speaking
-    LaunchedEffect(model.closeRequested) { if (model.closeRequested) onClose() }
     Box(modifier = Modifier.fillMaxSize().background(scheme.background)) {
         BottomGlow(active, model.level, Modifier.align(Alignment.BottomCenter))
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
@@ -414,7 +334,7 @@ private fun FullAssist(model: AssistModel, onFull: (Boolean) -> Unit, onClose: (
                 run {
                     Text(model.name.ifBlank { "Assistant" }, style = MaterialTheme.typography.titleMedium, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
                 }
-                RoundIcon("mdi:chevron-down", "Smaller", false, { onFull(false) }, size = 44.dp)
+                Spacer(Modifier.size(44.dp))
             }
             if (chatting) {
                 // The larger Jarvis icon stays at the top; the conversation starts below it.

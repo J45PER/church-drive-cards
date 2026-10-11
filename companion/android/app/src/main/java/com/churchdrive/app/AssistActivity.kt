@@ -61,7 +61,6 @@ class AssistActivity : ComponentActivity() {
             return
         }
         AssistWakeSetting.load(this)
-        val prefs = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val base = session.url?.trim()?.trimEnd('/').orEmpty()
         val c = HaClient(lifecycleScope)
         client = c
@@ -82,11 +81,10 @@ class AssistActivity : ComponentActivity() {
             m.loadName()
         }
         intro = AssistIntroStore.kind(this)
-        var full by mutableStateOf(intent.getBooleanExtra(EXTRA_FULL, false) || prefs.getBoolean(KEY_FULL, false))
         setContent {
             ChurchDriveTheme {
                 AssistPanel(
-                    model = m, full = full, onFull = { full = it }, onClose = { finish() },
+                    model = m, onClose = { finish() },
                     onTask = { said ->
                         startActivity(
                             Intent(this, MainActivity::class.java)
@@ -154,11 +152,7 @@ class AssistActivity : ComponentActivity() {
     }
 
     companion object {
-        /** Open at the whole screen instead of the sheet. */
-        const val EXTRA_FULL = "full"
         const val PREFS = "assist"
         const val KEY_INTRO = "intro_version"
-        /** The person's choice (Account) of opening as the whole screen rather than the sheet. */
-        const val KEY_FULL = "open_full"
     }
 }
