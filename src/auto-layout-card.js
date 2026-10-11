@@ -18,6 +18,8 @@ import { PANEL_TRANSITION } from './section-panel-card.js';
 import { HOUSE_TASKS_LIST, HOUSE_TASKS_COLOR, houseTask, houseTaskFor } from './house-tasks-card.js';
 import { choreIcon } from './task-list-card.js';
 import { parseTask } from './repeat.js';
+import { openShoppingPage } from './shopping-card.js';
+import { shoppingIdOf } from './shopping-logic.js';
 import { balance, arrange } from './arrange.js';
 
 export { balance, arrange };
@@ -356,6 +358,11 @@ export class AutoLayoutCard extends HTMLElement {
       const tick = ev.target.closest && ev.target.closest('[data-done]');
       if (tick) {
         this._completeTop(tick);
+        return;
+      }
+      const shop = ev.target.closest && ev.target.closest('[data-shop]');
+      if (shop) {
+        openShoppingPage(this._hass, shop.dataset.shop);
         return;
       }
       if (ev.target.closest && ev.target.closest('[data-todo]')) {
@@ -699,13 +706,13 @@ export class AutoLayoutCard extends HTMLElement {
     const extra = rows.length - shown.length;
     const row = (r) => {
       if (!r) return '<div style="height:26px;"></div>';
-      const c = r.kind === 'todo' ? (r.overdue ? '#e53935' : r.auto ? HOUSE_TASKS_COLOR : r.colour || '#7e57c2') : r.colour;
+      const c = r.kind === 'todo' ? (r.overdue ? '#e53935' : r.shop ? '#5c6bc0' : r.auto ? HOUSE_TASKS_COLOR : r.colour || '#7e57c2') : r.colour;
       const icon = r.icon;
       const tick =
-        r.kind === 'todo' && !r.auto
+        r.kind === 'todo' && !r.auto && !r.shop
           ? `<button type="button" data-done="${esc(r.uid)}" data-list="${esc(r.list)}" aria-label="Done" title="Done" style="flex:none; width:22px; height:22px; padding:0; border:2px solid color-mix(in srgb, ${c} 70%, transparent); border-radius:50%; background:transparent; color:var(--primary-text-color); cursor:pointer; display:flex; align-items:center; justify-content:center;">${iconHtml('mdi:check', { size: '14px' })}</button>`
           : '';
-      const tap = r.kind === 'alert' ? `data-alert="${r.i}" role="button"` : (r.kind === 'line' || r.kind === 'todo') && r.link ? `data-line="${esc(r.link)}" role="button"` : '';
+      const tap = r.shop ? `data-shop="${esc(r.shop)}" role="button"` : r.kind === 'alert' ? `data-alert="${r.i}" role="button"` : (r.kind === 'line' || r.kind === 'todo') && r.link ? `data-line="${esc(r.link)}" role="button"` : '';
       // A line's text can use <b>…</b> for its key figure; nothing else is kept.
       const text = r.html ? esc(r.text).replace(/&lt;(\/?)b&gt;/g, '<$1b>') : esc(r.text);
       return `<div ${tap} style="height:26px; display:flex; align-items:center; gap:8px; padding:0 ${tick ? 4 : 10}px 0 8px; border-radius:13px; cursor:${tap ? 'pointer' : 'default'}; background:color-mix(in srgb, ${c} 16%, transparent);">${
@@ -921,7 +928,9 @@ export class AutoLayoutCard extends HTMLElement {
         text: t.summary,
         overdue: !!t.due && String(t.due).slice(0, 10) < today,
         auto: !!task,
-        icon: task ? task.icon : list === shared ? 'mdi:account-group' : 'mdi:flag',
+        // A shopping list has no tick: it is finished by finishing its items, and tapping it opens the list.
+        shop: shoppingIdOf(t.description),
+        icon: task ? task.icon : shoppingIdOf(t.description) ? 'mdi:cart-outline' : list === shared ? 'mdi:account-group' : 'mdi:flag',
       }));
     return { items };
   }
