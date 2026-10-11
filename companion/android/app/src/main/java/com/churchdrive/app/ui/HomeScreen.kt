@@ -171,6 +171,8 @@ fun HomeScreen(
                 LightingPage(lights, entities, areaNames, call)
             } else if (page == Page.Security) {
                 SecurityPage(panels["security"].orEmpty(), entities, registry, call)
+            } else if (page == Page.Shopping) {
+                ShoppingPage()
             } else {
                 val key = when (page) {
                     Page.Climate -> "climate"

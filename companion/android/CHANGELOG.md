@@ -4,6 +4,17 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.6.0
+
+- **Shopping lists** (needs Church Drive 0.43.0 or later in Home Assistant): a **Shopping** page of its own in the bottom bar. Each
+  list opens as a full page you can scroll and leave with Back: tick items Bought or Not available, add several at once with commas,
+  and change the list's name, people, date and shop places from Edit. A new list can start with what wasn't available last time.
+- **A shopping list is one task.** On a to-do list it shows a cart instead of a tick and opens the list when tapped. It is finished
+  by finishing its items, never by ticking it. On Home it shows with a cart and no tick too.
+- **Sharing shopping**: when shared or spoken text has shopping in it, the check box asks whether it goes on a list you already have
+  or a new one.
+- A shopping reminder (the list's date, or arriving at a shop) opens that list when tapped.
+
 ## 0.5.1
 
 - **Connection fix**: the app no longer sends anything to the house before the sign-in has finished. Sent early, Home Assistant

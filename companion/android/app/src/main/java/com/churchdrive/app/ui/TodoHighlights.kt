@@ -73,8 +73,9 @@ fun todoHighlights(lists: Map<String, List<TodoItem>>, first: String?, now: Loca
             Highlight(
                 item.uid, list, item.summary,
                 overdue = item.due?.take(10)?.let { it < today } == true,
-                auto = task != null,
-                icon = task?.icon ?: if (list == SHARED_LIST) "mdi:account-group" else "mdi:flag",
+                // No tick for the house's own jobs, nor for a shopping list: it is finished by finishing its items.
+                auto = task != null || shoppingIdOf(item.description).isNotEmpty(),
+                icon = task?.icon ?: if (shoppingIdOf(item.description).isNotEmpty()) "mdi:cart-outline" else if (list == SHARED_LIST) "mdi:account-group" else "mdi:flag",
             )
         }
 }
