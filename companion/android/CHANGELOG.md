@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.12.3
+
+- Jarvis's spoken welcome says "Welcome back Jamie" with no comma, which the voice turned into a long pause before the name.
+
 ## 0.12.2
 
 - When you dismiss Jarvis ("that's it", "no thanks", "nothing else", "bye", "thanks"), he answers and then closes instead of listening again.
