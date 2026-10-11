@@ -2,6 +2,7 @@ package com.churchdrive.app.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -87,7 +88,10 @@ fun TaskListCard(config: JSONObject, entities: Map<String, EntityState>, call: C
         }
         open.forEach { item ->
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Checkbox(
+                if (shoppingIdOf(item.description).isNotEmpty()) {
+                    // A shopping list has no tick of its own: it is finished by finishing its items.
+                    Box(modifier = Modifier.padding(12.dp)) { HaIcon("mdi:cart-outline", Icons.Filled.Info, toneColors(Tone.Green).accent, 24.dp) }
+                } else Checkbox(
                     checked = false,
                     onCheckedChange = {
                         ticked = ticked + item.uid

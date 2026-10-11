@@ -31,6 +31,8 @@ A shopping list is one task, not a pile of items. It has a **name**, the **peopl
 - **Tidy.** A finished list, and its tasks, are deleted a day later.
 - **Actions and commands.** `church_drive.shopping_add` (`items`, optional `list`, `person`, `name`, `date`) for automations; websocket commands `church_drive/shopping`, `/create`, `/update`, `/add`, `/item` (status `open`, `bought`, `unavailable` or `remove`), `/delete` and `/import` (moves Home Assistant's `todo.shopping_list` onto a list here) serve the cards and app; `church_drive_shopping_changed` fires when lists change.
 
+**Shopping is its own section**: the app has a **Shopping** page in its bottom bar, and the Mobile dashboard has a **Shopping** view (with the Shopping card) in its nav bar. A shopping list's task on a to-do list shows a cart, not a tick: ticking it in Home Assistant switches it back, because it is finished by finishing its items.
+
 The rules are in `shopping_logic.py` (tested in `test/shopping_logic_test.py`) and the lists in `shopping.py`.
 
 **Shopping card** (`custom:shopping-card`, options `title` and `all`): your open lists with how many items are left, a **New shopping list** button and a line for anything not available last time. Tapping a list (or its task on any Task List card, or a reminder) opens the **full-page list**: tick each item **Bought** or **Not available**, add items (several at once with commas), edit the name, people, date and places, delete the list. The arrow, Escape or the phone's back button closes it. A page address ending `?list=<id>` opens that list (reminders link there; the card lives on the Tasks dashboard's Shopping view, `/dashboard-tasks/shopping`).

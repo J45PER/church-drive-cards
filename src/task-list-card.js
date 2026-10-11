@@ -410,7 +410,7 @@ export class TaskListCard extends HTMLElement {
       const sub = [p.repeat && p.repeat.type !== 'once' ? describeRepeat(p.repeat) : '', who, place ? `at ${place}` : '', shoppingIdOf(t.description) ? shoppingNote(t.description) : p.notes].filter(Boolean).join(' · ');
       const ring = isDone ? '#4caf50' : over ? '#e53935' : colour;
       return `<div class="tl-row">
-        <button type="button" class="tl-tick" data-tick="${kitEsc(t.uid)}" data-to="${isDone ? 'needs_action' : 'completed'}" aria-label="${isDone ? 'Not done' : 'Done'}: ${kitEsc(t.summary)}" style="border-color:${ring}; ${isDone ? `background:${ring};` : ''}">${isDone ? iconHtml('mdi:check', { size: '15px' }) : ''}</button>
+        ${shoppingIdOf(t.description) ? `<span class="tl-tick" style="border:none; color:${isDone ? ring : '#66bb6a'}; cursor:default;" aria-hidden="true">${iconHtml(isDone ? 'mdi:cart-check' : 'mdi:cart-outline', { size: '22px' })}</span>` : `<button type="button" class="tl-tick" data-tick="${kitEsc(t.uid)}" data-to="${isDone ? 'needs_action' : 'completed'}" aria-label="${isDone ? 'Not done' : 'Done'}: ${kitEsc(t.summary)}" style="border-color:${ring}; ${isDone ? `background:${ring};` : ''}">${isDone ? iconHtml('mdi:check', { size: '15px' }) : ''}</button>`}
         ${c.icons ? iconHtml(choreIcon(t.summary), { size: '20px', style: `color:${over ? '#e53935' : colour}; flex:none;` }) : ''}
         <div class="tl-body" data-uid="${kitEsc(t.uid)}" role="button" tabindex="0" aria-label="Change ${kitEsc(t.summary)}">
           <div class="tl-name" style="${isDone ? 'text-decoration:line-through; color:var(--secondary-text-color);' : ''}">${kitEsc(t.summary)}</div>

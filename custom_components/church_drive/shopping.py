@@ -333,10 +333,34 @@ class Shopping:
                 lst["people"], "Shopping today", f"{lst['name'] or 'Shopping'}: {c[sl.OPEN]} to get. Tap to open the list.", lst["id"], tag=f"shopping-day-{lst['id']}"
             )
 
+    async def _async_guard(self, todo: str) -> None:
+        """Re-open the shopping tasks on [todo] that were ticked while their list still has items to get."""
+        try:
+            result = await self.hass.services.async_call(
+                "todo", "get_items", {"entity_id": todo, "status": ["completed"]}, blocking=True, return_response=True
+            )
+        except Exception:  # noqa: BLE001
+            return
+        ticked = {sl.parse_marker(i.get("description")) for i in ((result or {}).get(todo) or {}).get("items") or []}
+        for lst in self._lists:
+            if lst["done"] or lst["id"] not in ticked:
+                continue
+            for first in lst["people"]:
+                if self._todo_of(first) == todo:
+                    try:
+                        await self._async_sync_task(lst, first, None)
+                    except Exception:  # noqa: BLE001
+                        _LOGGER.debug("Couldn't put %s's shopping task back", first, exc_info=True)
+
     @callback
     def _on_state(self, event: Event) -> None:
         new = event.data.get("new_state")
         old = event.data.get("old_state")
+        if new is not None and new.entity_id.startswith("todo."):
+            # A shopping task is only finished by finishing its list: if someone ticks it, put it back.
+            if any(not l["done"] and self._todo_of(f) == new.entity_id for l in self._lists for f in l["tasks"]):
+                self.hass.async_create_task(self._async_guard(new.entity_id))
+            return
         if new is None or not new.entity_id.startswith("person."):
             return
         if old is None or old.state in ("unknown", "unavailable") or old.state == new.state:

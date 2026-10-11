@@ -14,7 +14,7 @@ import { shoppingIdOf, splitItems } from './shopping-logic.js';
 
 export { shoppingIdOf };
 
-const COLOUR = '#43a047';
+const COLOUR = '#66bb6a';
 
 // ---- the lists, shared by every card and the full page -----------------------------------------------------
 
@@ -58,15 +58,15 @@ const day = (iso) => {
 };
 
 const CSS = `
-  .sh-row { display:flex; align-items:center; gap:12px; padding:10px 6px; border-radius:12px; cursor:pointer; }
-  .sh-row:hover { background:rgba(127,127,127,.12); }
-  .sh-row .sh-main { flex:1; min-width:0; }
-  .sh-name { font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .sh-sub { font-size:.8rem; color:var(--secondary-text-color); }
-  .sh-badge { font-size:.8rem; font-weight:700; color:#fff; background:${COLOUR}; border-radius:999px; padding:2px 10px; }
-  .sh-btn { border:none; border-radius:10px; padding:9px 14px; font:inherit; font-size:.85rem; font-weight:600; cursor:pointer; color:var(--primary-text-color); background:rgba(127,127,127,.18); display:inline-flex; align-items:center; gap:6px; }
-  .sh-btn.sh-go { background:${COLOUR}; color:#fff; }
-  .sh-missed { font-size:.82rem; color:#ffa726; }
+  .sh-row { display:flex; align-items:center; gap:10px; padding:8px 2px; border-radius:12px; cursor:pointer; }
+  .sh-row + .sh-row { border-top:1px solid var(--divider-color, rgba(127,127,127,0.22)); }
+  .sh-row:hover { background:rgba(127,127,127,0.07); }
+  .sh-main { flex:1; min-width:0; }
+  .sh-name { font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .sh-when { flex:none; font-size:0.78rem; font-weight:600; white-space:nowrap; color:var(--secondary-text-color); }
+  .sh-missed { font-size:0.8rem; color:#ffa726; }
+  .sh-add { border:none; border-radius:12px; padding:9px 14px; font:inherit; font-size:0.85rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; background:color-mix(in srgb, ${COLOUR} 22%, transparent); color:color-mix(in srgb, ${COLOUR} 45%, white); }
+  .sh-row :focus-visible, .sh-add:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
 `;
 
 // ---- the card ---------------------------------------------------------------------------------------------
@@ -107,15 +107,22 @@ export class ShoppingCard extends HTMLElement {
     if (!this._built) {
       this.innerHTML = kitShell(
         `<div class="sh-list" style="display:flex; flex-direction:column;"></div><div class="sh-missed"></div>
-         <div><button type="button" class="sh-btn sh-go sh-new"></button></div>`,
+         <div class="sh-foot"><button type="button" class="sh-add sh-new"></button></div>`,
         CSS
       );
       this.querySelector('.ck-headrow').style.display = this.config.title ? '' : 'none';
       this.querySelector('.sh-new').innerHTML = `${iconHtml('mdi:plus', { size: '18px' })}New shopping list`;
       this.querySelector('.sh-new').addEventListener('click', () => openShoppingPage(this._hass, 'new'));
-      this.querySelector('.sh-list').addEventListener('click', (ev) => {
+      const openRow = (ev) => {
         const row = ev.target.closest('[data-list]');
         if (row) openShoppingPage(this._hass, row.dataset.list);
+      };
+      this.querySelector('.sh-list').addEventListener('click', openRow);
+      this.querySelector('.sh-list').addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter' || ev.key === ' ') {
+          ev.preventDefault();
+          openRow(ev);
+        }
       });
       this._built = true;
     }
@@ -123,18 +130,18 @@ export class ShoppingCard extends HTMLElement {
     const mine = d ? d.lists.filter((l) => !l.done && (this.config.all || !d.mine || l.people.includes(d.mine))) : [];
     if (this.config.title) kitHead(this, this.config.title, store.error ? 'Not set up' : mine.length ? `${mine.length} list${mine.length === 1 ? '' : 's'}` : 'No lists', COLOUR);
     this.querySelector('.sh-list').innerHTML = store.error
-      ? `<div class="sh-sub">${kitEsc(store.error)}</div>`
+      ? `<div class="ck-sub" style="line-height:1.5;">${kitEsc(store.error)}</div>`
       : mine.length
       ? mine
           .map(
             (l) => `<div class="sh-row" data-list="${l.id}" tabindex="0" role="button">
-              ${iconHtml('mdi:cart-outline', { size: '26px', style: `color:${COLOUR}` })}
+              ${iconHtml('mdi:cart-outline', { size: '20px', style: `color:${COLOUR}; flex:none;` })}
               <div class="sh-main"><div class="sh-name">${kitEsc(l.name || 'Shopping')}</div>
-              <div class="sh-sub">${[day(l.date), l.people.join(', '), l.places.length ? `${l.places.length} place${l.places.length === 1 ? '' : 's'}` : ''].filter(Boolean).map(kitEsc).join(' · ')}</div></div>
-              <span class="sh-badge">${l.counts.open} to get</span></div>`
+              <div class="ck-sub" style="font-size:0.74rem; line-height:1.35;">${[day(l.date), l.people.join(', '), l.places.length ? `${l.places.length} place${l.places.length === 1 ? '' : 's'}` : ''].filter(Boolean).map(kitEsc).join(' · ')}</div></div>
+              <span class="sh-when">${l.counts.open} to get</span></div>`
           )
           .join('')
-      : `<div class="sh-sub">No shopping lists. Share some items, or make one.</div>`;
+      : `<div class="ck-sub" style="line-height:1.5; padding:4px 0;">No shopping lists. Share some items, or make one.</div>`;
     const miss = d ? d.missed : [];
     this.querySelector('.sh-missed').textContent = miss.length ? `Not available last time: ${miss.map((m) => m.text).join(', ')}` : '';
     hydrateIcons(this);
@@ -162,35 +169,40 @@ export class ShoppingCard extends HTMLElement {
 const PAGE_CSS = `
   .shp { position:fixed; inset:0; z-index:9999; overflow-y:auto; overscroll-behavior:contain; background:var(--primary-background-color, #111); color:var(--primary-text-color); font-family:var(--paper-font-body1_-_font-family, inherit); }
   .shp * { box-sizing:border-box; }
-  .shp-bar { position:sticky; top:0; z-index:2; display:flex; align-items:center; gap:8px; padding:calc(env(safe-area-inset-top, 0px) + 10px) 12px 10px; background:var(--card-background-color, #1c1c1c); box-shadow:0 2px 8px rgba(0,0,0,.35); }
-  .shp-bar h1 { flex:1; margin:0; font-size:1.2rem; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .shp-icon { border:none; background:none; color:inherit; width:44px; height:44px; border-radius:50%; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
+  .shp-bar { position:sticky; top:0; z-index:2; display:flex; align-items:center; gap:6px; padding:calc(env(safe-area-inset-top, 0px) + 8px) 12px 8px; background:var(--primary-background-color, #111); }
+  .shp-title { flex:1; min-width:0; font-size:1.5rem; font-weight:500; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:${COLOUR}; }
+  .shp-word { flex:none; font-size:0.85rem; color:var(--secondary-text-color); }
+  .shp-icon { border:none; background:none; color:inherit; width:44px; height:44px; border-radius:50%; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; flex:none; }
   .shp-icon:hover { background:rgba(127,127,127,.2); }
-  .shp-body { max-width:640px; margin:0 auto; padding:14px 14px calc(env(safe-area-inset-bottom, 0px) + 60px); display:flex; flex-direction:column; gap:14px; }
-  .shp-meta { display:flex; flex-wrap:wrap; gap:6px; }
-  .shp-chip { font-size:.78rem; font-weight:600; border-radius:999px; padding:3px 10px; background:rgba(127,127,127,.2); }
-  .shp-bar2 { height:8px; border-radius:99px; background:rgba(127,127,127,.25); overflow:hidden; }
-  .shp-bar2 > i { display:block; height:100%; background:${COLOUR}; transition:width .3s; }
-  .shp-h { font-size:.8rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--secondary-text-color); margin:6px 0 -6px; }
-  .shp-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:14px; background:var(--card-background-color, #1c1c1c); }
-  .shp-item .t { flex:1; min-width:0; font-size:1.05rem; word-break:break-word; }
-  .shp-item.off .t { text-decoration:line-through; opacity:.6; }
-  .shp-act { border:none; border-radius:12px; height:44px; min-width:44px; padding:0 12px; cursor:pointer; font:inherit; font-weight:600; display:inline-flex; align-items:center; justify-content:center; gap:4px; color:#fff; }
-  .shp-buy { background:${COLOUR}; } .shp-na { background:#8d6e63; } .shp-undo { background:rgba(127,127,127,.35); }
+  .shp-body { max-width:640px; margin:0 auto; padding:6px 12px calc(env(safe-area-inset-bottom, 0px) + 60px); display:flex; flex-direction:column; gap:12px; }
+  .shp-card { border-radius:16px; padding:16px; background:var(--card-background-color, #1c1c1c); box-shadow:0 3px 10px rgba(0,0,0,0.45); display:flex; flex-direction:column; gap:12px; }
+  .shp-h { font-size:1rem; font-weight:500; }
+  .shp-sub { font-size:0.8rem; color:var(--secondary-text-color); }
+  .shp-row { display:flex; align-items:center; gap:10px; padding:8px 2px; border-radius:12px; }
+  .shp-row + .shp-row { border-top:1px solid var(--divider-color, rgba(127,127,127,0.22)); }
+  .shp-name { flex:1; min-width:0; font-size:0.95rem; word-break:break-word; }
+  .shp-row.off .shp-name { text-decoration:line-through; color:var(--secondary-text-color); }
+  .shp-tick { flex:none; width:24px; height:24px; padding:0; border-radius:50%; border:2px solid ${COLOUR}; background:transparent; color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .shp-tick.bought { background:#4caf50; border-color:#4caf50; }
+  .shp-tick.na { background:#8d6e63; border-color:#8d6e63; }
+  .shp-chip { flex:none; border:none; border-radius:12px; padding:7px 10px; font:inherit; font-size:0.78rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:4px; background:rgba(127,127,127,0.18); color:var(--primary-text-color); }
+  .shp-btn { border:none; border-radius:12px; padding:9px 14px; font:inherit; font-size:0.85rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; background:rgba(127,127,127,0.18); color:var(--primary-text-color); }
+  .shp-btn.go { background:color-mix(in srgb, ${COLOUR} 22%, transparent); color:color-mix(in srgb, ${COLOUR} 45%, white); }
+  .shp-btn.danger { background:color-mix(in srgb, #e53935 22%, transparent); color:color-mix(in srgb, #e53935 45%, white); }
+  .shp-link { border:none; background:none; padding:4px 2px; font:inherit; font-size:0.8rem; color:var(--secondary-text-color); text-decoration:underline; cursor:pointer; align-self:flex-start; }
   .shp-add { display:flex; gap:8px; }
-  .shp-add input, .shp input, .shp textarea { font:inherit; color:inherit; background:rgba(127,127,127,.15); border:1px solid rgba(127,127,127,.35); border-radius:10px; padding:11px 12px; min-width:0; }
-  .shp-add input { flex:1; font-size:1rem; }
+  .shp input, .shp textarea { font:inherit; font-size:0.92rem; color:var(--primary-text-color); background:rgba(127,127,127,0.1); border:1px solid var(--divider-color, rgba(127,127,127,0.3)); border-radius:10px; padding:8px 10px; min-width:0; color-scheme:dark light; }
+  .shp-add input { flex:1; }
   .shp textarea { width:100%; min-height:110px; }
-  .shp-field { display:flex; flex-direction:column; gap:6px; }
-  .shp-field > span { font-size:.8rem; font-weight:700; color:var(--secondary-text-color); }
+  .shp-field { display:flex; flex-direction:column; gap:6px; font-size:0.8rem; color:var(--secondary-text-color); }
+  .shp-field input { width:100%; }
   .shp-chips { display:flex; flex-wrap:wrap; gap:6px; }
-  .shp-pick { border:none; border-radius:999px; padding:8px 14px; font:inherit; font-size:.85rem; font-weight:600; cursor:pointer; color:inherit; background:rgba(127,127,127,.2); }
+  .shp-pick { border:none; border-radius:999px; padding:7px 12px; font:inherit; font-size:0.82rem; font-weight:600; cursor:pointer; background:rgba(127,127,127,0.18); color:var(--primary-text-color); }
   .shp-pick[aria-pressed="true"] { background:${COLOUR}; color:#fff; }
-  .shp-banner { padding:12px 14px; border-radius:14px; background:color-mix(in srgb, ${COLOUR} 25%, transparent); font-size:.9rem; }
-  .shp-warn { color:#ffa726; font-size:.85rem; }
-  .shp-btn { border:none; border-radius:12px; padding:12px 16px; font:inherit; font-weight:700; cursor:pointer; color:inherit; background:rgba(127,127,127,.25); }
-  .shp-btn.go { background:${COLOUR}; color:#fff; } .shp-btn.danger { background:#c62828; color:#fff; }
-  .shp-row { display:flex; gap:8px; flex-wrap:wrap; }
+  .shp-banner { padding:10px 12px; border-radius:12px; background:color-mix(in srgb, ${COLOUR} 22%, transparent); font-size:0.88rem; }
+  .shp-warn { color:#ffa726; font-size:0.8rem; min-height:1em; }
+  .shp-actions { display:flex; flex-wrap:wrap; gap:8px; }
+  .shp :focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
 `;
 
 let page = null;
@@ -275,34 +287,31 @@ class ShoppingPage {
     const l = this.list;
     const keep = body.querySelector('.shp-add input');
     const typed = keep ? keep.value : '';
-    bar.innerHTML = `<button class="shp-icon" data-act="back" aria-label="Back">${iconHtml('mdi:arrow-left')}</button><h1>${kitEsc(l ? l.name || 'Shopping' : 'Shopping')}</h1>${l ? `<button class="shp-icon" data-act="edit" aria-label="Edit">${iconHtml('mdi:pencil-outline')}</button>` : ''}`;
+    bar.innerHTML = `<button class="shp-icon" data-act="back" aria-label="Back">${iconHtml('mdi:arrow-left')}</button><div class="shp-title">${kitEsc(l ? l.name || 'Shopping' : 'Shopping')}</div>${l ? `<span class="shp-word">${l.done ? 'All done' : `${l.counts.open} to get`}</span><button class="shp-icon" data-act="edit" aria-label="Edit">${iconHtml('mdi:pencil-outline')}</button>` : ''}`;
     if (!l) {
-      body.innerHTML = `<div class="shp-banner">${store.data || store.error ? 'This list has been deleted or finished.' : 'Loading…'}</div>`;
+      body.innerHTML = `<div class="shp-card"><div class="shp-sub">${store.data || store.error ? 'This list has been deleted or finished.' : 'Loading…'}</div></div>`;
       hydrateIcons(this.root);
       return;
     }
     const items = (s) => l.items.filter((i) => i.status === s);
     const open = items('open');
-    const row = (i, cls) =>
-      `<div class="shp-item ${cls}" data-item="${i.id}"><div class="t">${kitEsc(i.text)}</div>` +
-      (cls === ''
-        ? `<button class="shp-act shp-na" data-set="unavailable" aria-label="Not available">${iconHtml('mdi:close', { size: '22px' })}</button><button class="shp-act shp-buy" data-set="bought" aria-label="Bought">${iconHtml('mdi:check', { size: '22px' })}</button>`
-        : `<button class="shp-act shp-undo" data-set="open" aria-label="Put back">${iconHtml('mdi:undo', { size: '20px' })}</button>`) +
-      '</div>';
+    const finished = l.items.filter((i) => i.status !== 'open');
+    const openRow = (i) =>
+      `<div class="shp-row" data-item="${i.id}"><button type="button" class="shp-tick" data-set="bought" aria-label="Bought: ${kitEsc(i.text)}"></button><div class="shp-name">${kitEsc(i.text)}</div><button type="button" class="shp-chip" data-set="unavailable" aria-label="Not available: ${kitEsc(i.text)}">${iconHtml('mdi:close', { size: '14px' })}Not available</button></div>`;
+    const doneRow = (i) =>
+      `<div class="shp-row off" data-item="${i.id}"><button type="button" class="shp-tick ${i.status === 'bought' ? 'bought' : 'na'}" data-set="open" aria-label="Put back: ${kitEsc(i.text)}">${iconHtml(i.status === 'bought' ? 'mdi:check' : 'mdi:close', { size: '15px' })}</button><div class="shp-name">${kitEsc(i.text)}</div>${i.status === 'unavailable' ? '<span class="shp-sub" style="text-decoration:none;">not available</span>' : ''}</div>`;
     const c = l.counts;
+    const meta = [l.date && day(l.date), l.people.join(', '), ...l.places.map((p) => (store.data.zones.find((z) => z.zone === p) || {}).name || p)].filter(Boolean).join(' · ');
     body.innerHTML = `
-      <div class="shp-meta">${[l.date && `${day(l.date)}`, l.people.join(', '), ...l.places.map((p) => (store.data.zones.find((z) => z.zone === p) || {}).name || p)]
-        .filter(Boolean)
-        .map((t) => `<span class="shp-chip">${kitEsc(t)}</span>`)
-        .join('')}</div>
-      <div class="shp-bar2"><i style="width:${c.total ? Math.round(((c.total - c.open) / c.total) * 100) : 0}%"></i></div>
-      ${l.done ? `<div class="shp-banner">All done. This list goes tomorrow.${c.unavailable ? ` ${c.unavailable} ${c.unavailable === 1 ? 'wasn’t' : 'weren’t'} available; you’ll be reminded next time.` : ''}</div>` : ''}
-      <div class="shp-add"><input type="text" placeholder="Add an item (or several, separated by commas)" enterkeyhint="done" autocomplete="off"><button class="shp-btn go" data-act="add">Add</button></div>
-      ${open.length ? `<div class="shp-h">To get (${open.length})</div>${open.map((i) => row(i, '')).join('')}` : ''}
-      ${items('bought').length ? `<div class="shp-h">Bought (${items('bought').length})</div>${items('bought').map((i) => row(i, 'off')).join('')}` : ''}
-      ${items('unavailable').length ? `<div class="shp-h">Not available (${items('unavailable').length})</div>${items('unavailable').map((i) => row(i, 'off')).join('')}` : ''}
+      <div class="shp-card">
+        ${meta ? `<div class="shp-sub">${kitEsc(meta)}</div>` : ''}
+        ${l.done ? `<div class="shp-banner">All done. This list goes tomorrow.${c.unavailable ? ` ${c.unavailable} ${c.unavailable === 1 ? 'wasn’t' : 'weren’t'} available; you’ll be reminded next time.` : ''}</div>` : ''}
+        <div class="shp-add"><input type="text" placeholder="Add an item (or several, with commas)" enterkeyhint="done" autocomplete="off"><button class="shp-btn go" data-act="add">${iconHtml('mdi:plus', { size: '18px' })}Add</button></div>
+        ${open.length ? `<div>${open.map(openRow).join('')}</div>` : `<div class="shp-sub">${c.total ? 'Everything is ticked off.' : 'Nothing on the list yet.'}</div>`}
+      </div>
+      ${finished.length ? `<div class="shp-card"><div class="shp-h">Done (${finished.length})</div><div>${finished.map(doneRow).join('')}</div></div>` : ''}
       <div class="shp-warn"></div>
-      <div class="shp-row"><button class="shp-btn danger" data-act="delete">Delete this list</button></div>`;
+      <div class="shp-actions"><button class="shp-btn danger" data-act="delete">${iconHtml('mdi:delete-outline', { size: '18px' })}Delete this list</button></div>`;
     const input = body.querySelector('.shp-add input');
     input.value = typed;
     if (keep && document.activeElement === keep) input.focus();
@@ -312,20 +321,20 @@ class ShoppingPage {
   drawForm(bar, body) {
     const f = this.form;
     const d = store.data || { zones: [], missed: [], lists: [] };
-    bar.innerHTML = `<button class="shp-icon" data-act="${f.edit ? 'cancel-edit' : 'back'}" aria-label="Back">${iconHtml('mdi:arrow-left')}</button><h1>${f.edit ? 'Edit list' : 'New shopping list'}</h1>`;
+    bar.innerHTML = `<button class="shp-icon" data-act="${f.edit ? 'cancel-edit' : 'back'}" aria-label="Back">${iconHtml('mdi:arrow-left')}</button><div class="shp-title">${f.edit ? 'Edit list' : 'New shopping list'}</div>`;
     const pick = (kind, value, label, on) => `<button type="button" class="shp-pick" data-${kind}="${kitEsc(value)}" aria-pressed="${on}">${kitEsc(label)}</button>`;
     const shopZones = d.zones.filter((z) => z.zone !== 'zone.home');
     // Redraw only on structural changes so typing is never interrupted.
     if (this._formDrawn !== f) {
-      body.innerHTML = `
+      body.innerHTML = `<div class="shp-card">
         <label class="shp-field"><span>Name</span><input class="f-name" type="text" placeholder="Weekly shop" value="${kitEsc(f.name)}"></label>
         <div class="shp-field"><span>Who is it for?</span><div class="shp-chips f-who"></div></div>
         <label class="shp-field"><span>Date to go shopping (optional)</span><input class="f-date" type="date" value="${kitEsc(f.date)}"></label>
         <div class="shp-field"><span>Where will you buy it? (optional)</span><div class="shp-chips f-places"></div></div>
         ${f.edit ? '' : `<label class="shp-field"><span>Items (one per line)</span><textarea class="f-items" placeholder="Milk&#10;Eggs&#10;Bread">${kitEsc(f.items)}</textarea></label>`}
-        ${!f.edit && d.missed.length ? `<div class="shp-field"><div class="shp-chips f-missed"></div><div class="sh-sub">${kitEsc(d.missed.map((m) => m.text).join(', '))}</div></div>` : ''}
+        ${!f.edit && d.missed.length ? `<div class="shp-field"><div class="shp-chips f-missed"></div><div class="shp-sub">${kitEsc(d.missed.map((m) => m.text).join(', '))}</div></div>` : ''}
         <div class="shp-warn"></div>
-        <div class="shp-row"><button class="shp-btn go" data-act="save">${f.edit ? 'Save' : 'Make the list'}</button><button class="shp-btn" data-act="${f.edit ? 'cancel-edit' : 'back'}">Cancel</button></div>`;
+        <div class="shp-actions"><button class="shp-btn go" data-act="save">${iconHtml('mdi:check', { size: '18px' })}${f.edit ? 'Save' : 'Make the list'}</button><button class="shp-btn" data-act="${f.edit ? 'cancel-edit' : 'back'}">Cancel</button></div></div>`;
       body.querySelector('.f-name').addEventListener('input', (e) => (f.name = e.target.value));
       body.querySelector('.f-date').addEventListener('change', (e) => (f.date = e.target.value));
       const t = body.querySelector('.f-items');
@@ -335,7 +344,7 @@ class ShoppingPage {
     body.querySelector('.f-who').innerHTML = people(this.hass).map((p) => pick('who', p, p, f.who.includes(p))).join('');
     body.querySelector('.f-places').innerHTML = shopZones.length
       ? shopZones.map((z) => pick('place', z.zone, z.name, f.places.includes(z.zone))).join('')
-      : '<span class="sh-sub">Add places in Home Assistant’s Zones to pick them here.</span>';
+      : '<span class="shp-sub">Add places in Home Assistant’s Zones to pick them here.</span>';
     const m = body.querySelector('.f-missed');
     if (m) m.innerHTML = pick('missed', '1', `Add the ${d.missed.length} item${d.missed.length === 1 ? '' : 's'} not available last time`, f.missed);
     hydrateIcons(this.root);

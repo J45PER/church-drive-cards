@@ -49,6 +49,16 @@ class TodoHighlightsTest {
     }
 
     @Test
+    fun aShoppingListHasNoTickAndAnIconOfItsOwn() {
+        val note = "• Milk\nchurch-drive-shopping:aaaaaa111111"
+        val rows = todoHighlights(mapOf("todo.priorities_jamie" to listOf(item("s", "Shopping: Weekly (0 of 1)", note = note), item("t", "Ring school"))), "Jamie", now, ZoneOffset.UTC)
+        assertEquals(listOf("Shopping: Weekly (0 of 1)", "Ring school"), rows.map { it.text })
+        assertTrue(rows[0].auto)
+        assertEquals("mdi:cart-outline", rows[0].icon)
+        assertFalse(rows[1].auto)
+    }
+
+    @Test
     fun aRepeatingTaskShowsOnlyWhenDueWithinTwoDays() {
         val lists = mapOf(
             "todo.priorities_jamie" to listOf(

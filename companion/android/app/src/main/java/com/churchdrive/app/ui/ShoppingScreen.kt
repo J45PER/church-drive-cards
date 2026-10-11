@@ -300,3 +300,9 @@ fun ShoppingCard(config: JSONObject) {
         TileRow(listOf(TileItem("mdi:plus", "New shopping list", false) { open = "new" }), tone, tone.onContainer)
     }
 }
+
+/** The Shopping page: your lists, and a way to make one. Each opens as a full page. */
+@Composable
+fun ShoppingPage() {
+    ShoppingCard(JSONObject().put("title", "Shopping lists"))
+}
