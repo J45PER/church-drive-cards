@@ -26,6 +26,7 @@ import com.churchdrive.app.ui.ChurchDriveTheme
 import com.churchdrive.app.ui.HaApi
 import com.churchdrive.app.ui.introDue
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -62,6 +63,7 @@ class AssistActivity : ComponentActivity() {
             override fun request(type: String, params: JSONObject, done: (Any?) -> Unit) = c.request(type, params) { done(it) }
             override fun subscribe(type: String, params: JSONObject, onEvent: (JSONObject) -> Unit): Int = c.subscribe(type, params, onEvent)
             override fun close(subscription: Int) = c.unsubscribe(subscription)
+            override fun sendAudio(handlerId: Int, chunk: ByteArray, length: Int): Boolean = c.sendAudio(handlerId, chunk, length)
             override val connected: Boolean get() = c.connection.value == ConnectionState.Connected
         }
         val m = AssistModel(this, api, base)
@@ -69,6 +71,8 @@ class AssistActivity : ComponentActivity() {
         lifecycleScope.launch {
             val token = withContext(Dispatchers.IO) { freshToken(session) }
             if (token != null) c.connect(base, token, light = true)
+            c.connection.first { it == ConnectionState.Connected }
+            m.loadName()
         }
         introShown = introDue(prefs.getString(KEY_INTRO, null), BuildConfig.VERSION_NAME)
         var full by mutableStateOf(intent.getBooleanExtra(EXTRA_FULL, false) || prefs.getBoolean(KEY_FULL, false))
@@ -77,6 +81,8 @@ class AssistActivity : ComponentActivity() {
                 if (introShown) {
                     AssistIntro(
                         name = session.personName.orEmpty(),
+                        assistant = m.name,
+                        wakeWord = m.wakeWord,
                         onTry = { markIntroSeen(); talk() },
                         onSkip = { markIntroSeen() },
                     )

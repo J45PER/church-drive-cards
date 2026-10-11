@@ -99,6 +99,7 @@ class MainActivity : ComponentActivity() {
         val lastCrash = CrashReport.take(this)
         CrashReport.install(this)
         com.churchdrive.app.ui.MdiAll.load(this)
+        com.churchdrive.app.ui.AssistWakeSetting.load(this)
         setContent {
             var crash by remember { mutableStateOf(lastCrash) }
             // The crash report is for administrators only.
@@ -180,6 +181,11 @@ class MainActivity : ComponentActivity() {
                                     com.churchdrive.app.ui.ChargePromptHost(entities, statesLoaded, vm::call) { chargePrompt = false }
                                 }
                                 // Text sent from another app, or tasks waiting from earlier: checked here before they go on a list.
+                                com.churchdrive.app.ui.AssistWakeHost(
+                                    connected = connection == com.churchdrive.app.ha.ConnectionState.Connected,
+                                    base = vm.baseUrl, api = vm.haApi,
+                                    onTask = { said -> shareText = said; shareSource = "Voice"; shareAutoAdd = true },
+                                )
                                 if (shareText != null || showInbox) {
                                     com.churchdrive.app.ui.InboxDialog(shareText, shareSource, shareAutoAdd) { shareText = null; showInbox = false }
                                 }

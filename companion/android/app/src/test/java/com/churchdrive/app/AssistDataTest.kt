@@ -54,4 +54,45 @@ class AssistDataTest {
         assertTrue(isNotUnderstood("Sorry, I couldn't understand that"))
         assertFalse(isNotUnderstood("Done. The lounge is heating to 21 degrees."))
     }
+
+    @Test
+    fun theAssistantIsNamedAfterItsWakeWord() {
+        assertEquals("Jarvis", com.churchdrive.app.ui.assistantName("hey_jarvis"))
+        assertEquals("Nabu", com.churchdrive.app.ui.assistantName("okay_nabu"))
+        assertEquals("Alexa", com.churchdrive.app.ui.assistantName("alexa"))
+        assertEquals("", com.churchdrive.app.ui.assistantName(null))
+        assertEquals("Hey Jarvis", com.churchdrive.app.ui.wakePhrase("hey_jarvis"))
+    }
+
+    @Test
+    fun theWakeWordIsThePreferredPipelinesOwn() {
+        val r = JSONObject(
+            """{"preferred_pipeline":"b","pipelines":[{"id":"a","wake_word_id":"alexa"},{"id":"b","wake_word_id":"hey_jarvis"}]}""",
+        )
+        assertEquals("hey_jarvis", com.churchdrive.app.ui.preferredWakeWord(r))
+        assertNull(com.churchdrive.app.ui.preferredWakeWord(JSONObject("""{"preferred_pipeline":"a","pipelines":[{"id":"a","wake_word_id":null}]}""")))
+        assertNull(com.churchdrive.app.ui.preferredWakeWord(null))
+    }
+
+    @Test
+    fun theWakeWordAndSpeechEventsAreRecognised() {
+        val start = parseAssistEvent(JSONObject("""{"type":"run-start","data":{"runner_data":{"stt_binary_handler_id":1,"timeout":300}}}""")) as AssistEvent.Started
+        assertEquals(1, start.handlerId)
+        assertNull((parseAssistEvent(JSONObject("""{"type":"run-start","data":{}}""")) as AssistEvent.Started).handlerId)
+        val woke = parseAssistEvent(JSONObject("""{"type":"wake_word-end","data":{"wake_word_output":{"wake_word_id":"hey_jarvis"}}}""")) as AssistEvent.Woke
+        assertEquals("hey_jarvis", woke.word)
+        assertEquals(AssistEvent.SpeechEnded, parseAssistEvent(JSONObject("""{"type":"stt-vad-end","data":{}}""")))
+        val heard = parseAssistEvent(JSONObject("""{"type":"stt-end","data":{"stt_output":{"text":"turn the lights off"}}}""")) as AssistEvent.Heard
+        assertEquals("turn the lights off", heard.text)
+        val timeout = parseAssistEvent(JSONObject("""{"type":"error","data":{"code":"wake-word-timeout","message":"x"}}""")) as AssistEvent.Failed
+        assertEquals("wake-word-timeout", timeout.code)
+    }
+
+    @Test
+    fun theMicrophoneLevelIsLoudnessFromSilenceToShouting() {
+        val quiet = ByteArray(200)
+        assertEquals(0f, com.churchdrive.app.ui.MicStream.levelOf(quiet, quiet.size), 0.001f)
+        val loud = ByteArray(200) { if (it % 2 == 0) 0x00 else 0x40 }
+        assertTrue(com.churchdrive.app.ui.MicStream.levelOf(loud, loud.size) > 0.9f)
+    }
 }

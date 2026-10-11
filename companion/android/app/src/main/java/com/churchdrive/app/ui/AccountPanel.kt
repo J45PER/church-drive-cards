@@ -324,6 +324,21 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                     })
                 },
             )
+            val micAsk = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+                if (granted) AssistWakeSetting.set(context, true) else message = "The microphone is off for this app. Allow it in Android's settings to use the wake word."
+            }
+            PanelRow(
+                Icons.Outlined.Mic, "Listen for the wake word",
+                "While the app is open, say your assistant's wake word (the one on the house's Assist, such as Hey Jarvis) to talk hands-free. The microphone is only used while the app is on screen.",
+                trailing = {
+                    Switch(checked = AssistWakeSetting.enabled, onCheckedChange = { on ->
+                        message = null
+                        if (!on) AssistWakeSetting.set(context, false)
+                        else if (hasMicrophone(context)) AssistWakeSetting.set(context, true)
+                        else micAsk.launch(Manifest.permission.RECORD_AUDIO)
+                    })
+                },
+            )
             PanelRow(
                 Icons.Outlined.LocationOn, "Share my location",
                 "So the house knows when you're home, at work or out. Reported when you move, with no notice on your screen.",

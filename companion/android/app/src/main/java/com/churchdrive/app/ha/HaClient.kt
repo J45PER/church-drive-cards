@@ -152,6 +152,19 @@ class HaClient(private val scope: CoroutineScope) {
         return id
     }
 
+    /**
+     * Sends a piece of microphone audio (16 kHz, 16-bit, mono) to a running voice pipeline: a binary message that starts with the
+     * pipeline's handler id. A piece with no audio ([length] 0) tells it the speech is over. False if it couldn't be sent.
+     */
+    fun sendAudio(handlerId: Int, chunk: ByteArray, length: Int): Boolean {
+        val ws = socket ?: return false
+        if (!authed) return false
+        val frame = ByteArray(length + 1)
+        frame[0] = handlerId.toByte()
+        System.arraycopy(chunk, 0, frame, 1, length)
+        return ws.send(okio.ByteString.of(*frame))
+    }
+
     fun unsubscribe(subscriptionId: Int) {
         if (subscriptions.remove(subscriptionId) != null && authed) {
             socket?.send(

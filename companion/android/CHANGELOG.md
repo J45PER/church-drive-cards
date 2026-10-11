@@ -4,6 +4,14 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.10.0
+
+- **A wake word for the assistant.** With "Listen for the wake word" switched on (Account > Settings, asks for the microphone), say the wake word
+  of the house's Assist pipeline, such as "Hey Jarvis", while the app is open and the assistant opens by itself. The microphone goes to Home
+  Assistant, which listens for the wake word and then does the speech-to-text, the answer and the voice, exactly as a Voice Assistant satellite does. It listens
+  only while the app is on screen. The assistant is named after its wake word (Jarvis) in its introduction and its title; with no wake word it is
+  "your house assistant". Needs a wake word engine (the openWakeWord add-on) and a wake word on the pipeline.
+
 ## 0.9.0
 
 - **A voice assistant that looks like part of the app.** The widget, the microphone in the app, the Quick Settings tile and the long-press
