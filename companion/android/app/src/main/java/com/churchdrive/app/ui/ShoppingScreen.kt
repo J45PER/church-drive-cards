@@ -270,6 +270,12 @@ private fun ShoppingForm(existing: ShoppingList?, state: ShoppingState, tone: To
         tone, neutral.onContainer, enabled = query.trim().length >= 2,
     )
     if (searchNote.isNotEmpty()) Text(searchNote, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    if (results.isNotEmpty() || places.isNotEmpty()) {
+        PlaceMap(results, places) { p ->
+            if (places.none { it.lat == p.lat && it.lon == p.lon } && places.size < 5) places = places + p
+            results = emptyList()
+        }
+    }
     results.forEach { p ->
         Row(
             modifier = Modifier.fillMaxWidth().clickable {

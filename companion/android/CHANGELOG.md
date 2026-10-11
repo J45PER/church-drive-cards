@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.8.1
+
+- Searching for a shopping-list place shows the results as red pins on a satellite map: tap the right one, then "Use this place".
+
 ## 0.8.0
 
 - **Shopping lists: places from a Google Maps search.** Search for a shop anywhere (for example "Lidl Protaras Cyprus") instead of picking a zone, and

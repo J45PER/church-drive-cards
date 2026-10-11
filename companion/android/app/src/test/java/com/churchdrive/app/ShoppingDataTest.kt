@@ -2,7 +2,9 @@ package com.churchdrive.app
 
 import com.churchdrive.app.ui.mapsWebUrl
 import com.churchdrive.app.ui.navigationUri
+import com.churchdrive.app.ui.ShoppingPlace
 import com.churchdrive.app.ui.optionLabel
+import com.churchdrive.app.ui.placeMapHtml
 import com.churchdrive.app.ui.parsePlace
 import com.churchdrive.app.ui.ShoppingOption
 import com.churchdrive.app.ui.openLists
@@ -91,5 +93,13 @@ class ShoppingDataTest {
         assertEquals("https://www.google.com/maps/dir/?api=1&destination=35.0123,34.0567", mapsWebUrl(p))
         assertEquals(p, parsePlace(p.toJson()))
         assertNull(parsePlace(JSONObject("""{"name":"x"}""")))
+    }
+
+    @Test
+    fun theMapPageHasAPinPerResultAndNeverBreaksOutOfItsScript() {
+        val p = ShoppingPlace("Lidl </script>", "Protaras", 35.0, 34.0)
+        val html = placeMapHtml(listOf(p), emptyList())
+        assertEquals(1, Regex("""</script>""").findAll(html.substringAfter("var results=")).count())
+        assertEquals(true, html.contains("\"lat\":35"))
     }
 }
