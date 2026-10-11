@@ -1,22 +1,9 @@
 package com.churchdrive.app.ui
 
 import androidx.annotation.OptIn
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.shape.CircleShape
-import android.Manifest
-import android.app.Activity
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import android.content.Context
-import android.content.ContextWrapper
-import android.content.pm.ActivityInfo
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.size
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -76,15 +63,6 @@ val LocalBaseUrl = compositionLocalOf { "" }
 /** When each camera last had a snapshot asked for from here, so the app doesn't ask again straight away. */
 private val askedAt = mutableMapOf<String, Long>()
 
-/** Each camera's last picture shape, so its tile is the right height before the picture loads. */
-private val tileShapes = mutableMapOf<String, Float>()
-
-/** A small round status icon over a picture. */
-@Composable
-private fun StatusDot(icon: String, tint: Color) {
-    Box(modifier = Modifier.clip(CircleShape).background(Color.Black.copy(alpha = 0.5f)).padding(6.dp)) { HaIcon(icon, Icons.Filled.Info, tint, 18.dp) }
-}
-
 internal fun chipColours(kind: String, old: Boolean): Pair<Color, Color> = when {
     old -> Color(0xFFFFA726) to Color(0xFF222211)
     kind == "ding" -> Color(0xFF29B6F6) to Color(0xFF001122)
@@ -141,53 +119,20 @@ fun CameraCard(config: JSONObject, entities: Map<String, EntityState>, registry:
         else -> "${cameraKindLabel(picture.kind)} · ${cameraAge(picture.ms, now)}"
     }
     val battery = found.battery?.let { entities[it]?.state?.toDoubleOrNull() }
-    val bars = found.signal?.let { signalBars(entities[it]?.state, entities[it]?.state) } ?: -1
     val base = LocalBaseUrl.current
     var viewing by remember { mutableStateOf(false) }
-    var answeredAt by remember { mutableLongStateOf(0L) }
-    var answerOnOpen by remember { mutableStateOf(false) }
-    val ringing = isRinging(found.ringSensor?.let { entities[it]?.state }, found.ding?.let { entities[it]?.state }, System.currentTimeMillis(), answeredAt)
-    // The tile is the picture's own shape (kept between 3:4 and 16:9), remembered so it is the right height before the picture loads.
-    var shape by remember(entityId) { mutableFloatStateOf(tileShapes[entityId] ?: (16f / 9f)) }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(shape)
+            .aspectRatio(16f / 9f)
             .clip(RoundedCornerShape(24.dp))
             .background(Brush.linearGradient(listOf(Color(0xFF5D6B7D), Color(0xFF2F3946), Color(0xFF46503C))))
-            .then(if (ringing) Modifier.border(BorderStroke(2.dp, Color(0xFF43A047)), RoundedCornerShape(24.dp)) else Modifier)
             .clickable { viewing = true },
     ) {
         if (picture != null) {
             val url = base + picture.url + (if ('?' in picture.url) "&" else "?") + "t=${picture.ms}"
-            AsyncImage(
-                model = url, contentDescription = name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize(),
-                onSuccess = { state ->
-                    val d = state.result.drawable
-                    val a = tileAspect(d.intrinsicWidth, d.intrinsicHeight)
-                    tileShapes[entityId] = a
-                    shape = a
-                },
-            )
-        }
-        // Top row: why and when on the left, what needs attention on the right. Bottom row: the name, and Answer when it rings.
-        Row(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.5f), Color.Transparent)))
-                .padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 22.dp),
-            verticalAlignment = Alignment.Top,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Box(modifier = Modifier.weight(1f, fill = false).clip(RoundedCornerShape(999.dp)).background(chipBg).padding(horizontal = 10.dp, vertical = 3.dp)) {
-                Text(chip, color = chipInk, fontSize = 11.sp, maxLines = 1)
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                if (battery != null && battery < 25) StatusDot(batteryIconName(battery), Color(0xFFFFA726))
-                if (bars in 0..1) StatusDot(signalIconName(bars), Color(0xFFFFA726))
-            }
+            AsyncImage(model = url, contentDescription = name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
         }
         Row(
             modifier = Modifier
@@ -199,80 +144,46 @@ fun CameraCard(config: JSONObject, entities: Map<String, EntityState>, registry:
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(name, color = Color.White, style = MaterialTheme.typography.titleMedium, maxLines = 1, modifier = Modifier.weight(1f))
-            if (ringing) {
-                Row(
-                    modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(Color(0xFF43A047)).clickable { answerOnOpen = true; answeredAt = System.currentTimeMillis(); viewing = true }
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    HaIcon("mdi:phone", Icons.Filled.Info, Color.White, 18.dp)
-                    Text("Answer", color = Color.White, fontSize = 13.sp)
-                }
+            Box(modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(chipBg).padding(horizontal = 10.dp, vertical = 3.dp)) {
+                Text(chip, color = chipInk, fontSize = 11.sp, maxLines = 1)
             }
+        }
+        if (battery != null && battery < 25) {
+            Box(
+                modifier = Modifier.align(Alignment.TopEnd).padding(10.dp).clip(RoundedCornerShape(999.dp)).background(Color.Black.copy(alpha = 0.5f)).padding(6.dp),
+            ) { HaIcon("mdi:battery-alert", Icons.Filled.Info, Color(0xFFFFA726), 18.dp) }
         }
     }
 
     if (viewing) {
         val eventsBase = cameraBaseName(entities, entityId)
         val light = cameraLight(entities, registry, entityId, config.optString("light").takeIf { it.isNotBlank() })
-        CameraViewer(name, entityId, found, eventsBase, light, entities, call, startUnmuted = answerOnOpen) { viewing = false; answerOnOpen = false }
+        CameraViewer(name, entityId, found.button, eventsBase, light, entities, call) { viewing = false }
     }
 }
 
-/** The activity a composable is shown in (a dialog's context wraps it), to turn the screen sideways. */
-private fun Context.findActivity(): Activity? = generateSequence(this) { (it as? ContextWrapper)?.baseContext }.filterIsInstance<Activity>().firstOrNull()
-
 /**
- * Live video as a pop-up (muted to start, as on the dashboard, unless it was opened with Answer). It uses WebRTC when the
- * camera offers it (as Home Assistant's own player does), else an HLS stream.
- *
- * Three sizes: the video at its own shape under the title; **expanded**, which fills the screen between the title and the
- * buttons (remembered per camera); and **full screen**, which turns the phone to landscape and shows only the video. Battery
- * and signal icons show on the video when it is expanded or full screen. Under the buttons is the activity timeline.
+ * Full-screen live video (muted to start, as on the dashboard), with a new-snapshot button. It uses WebRTC when
+ * the camera offers it (as Home Assistant's own player does), else an HLS stream.
  */
 @Composable
 internal fun CameraViewer(
     name: String,
     entityId: String,
-    found: CameraEntities,
+    button: String?,
     eventsBase: String?,
     light: String?,
     entities: Map<String, EntityState>,
     call: CallService,
-    startUnmuted: Boolean = false,
     onClose: () -> Unit,
 ) {
     val host = LocalCameraHost.current
     val base = LocalBaseUrl.current
-    val context = LocalContext.current
-    val prefs = remember { context.getSharedPreferences("camera_view", Context.MODE_PRIVATE) }
     var mode by remember { mutableStateOf<String?>(null) } // webrtc, hls or none, once known
     var link by remember { mutableStateOf<String?>(null) }
     var status by remember { mutableStateOf<String?>("Starting live view…") }
-    var muted by remember { mutableStateOf(!startUnmuted) }
+    var muted by remember { mutableStateOf(true) }
     var showEvents by remember { mutableStateOf(false) }
-    var expanded by remember { mutableStateOf(prefs.getBoolean(entityId, false)) }
-    var events by remember { mutableStateOf<List<CameraEvent>>(emptyList()) }
-    var playing by remember { mutableStateOf<CameraEvent?>(null) }
-    var answeredAt by remember { mutableStateOf(if (startUnmuted) System.currentTimeMillis() else 0L) }
-    // Two-way audio: the microphone goes to the camera over the same WebRTC connection (only WebRTC can carry it).
-    var talking by remember { mutableStateOf(false) }
-    var micDenied by remember { mutableStateOf(false) }
-    val micAsk = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) { talking = true; muted = false } else micDenied = true
-    }
-    fun startTalking() {
-        micDenied = false
-        if (hasMicrophone(context)) {
-            talking = true
-            muted = false
-        } else {
-            micAsk.launch(Manifest.permission.RECORD_AUDIO)
-        }
-    }
-    // Answer opens the live view already talking.
-    LaunchedEffect(Unit) { if (startUnmuted) startTalking() }
     LaunchedEffect(entityId) {
         if (host == null) {
             mode = "none"
@@ -299,27 +210,10 @@ internal fun CameraViewer(
             }
         }
     }
-    // The timeline: the saved events, loaded again a few seconds after a new one (the picture is saved after the event).
-    val activity = eventsBase?.let { entities["sensor.${it}_last_activity"]?.state }
-    LaunchedEffect(eventsBase, activity) {
-        if (eventsBase == null || host == null) return@LaunchedEffect
-        if (events.isNotEmpty()) delay(8_000)
-        host.events(eventsBase) { result -> if (result != null) events = parseCameraEvents(result).take(40) }
-    }
     if (showEvents && eventsBase != null) CameraEventsViewer(name, eventsBase) { showEvents = false }
-    // The picture's own shape (known once it plays), so a square or portrait camera isn't cropped.
+    // The picture's own shape (known once it plays), so a square or portrait camera fills the screen when full screen.
     var aspect by remember { mutableStateOf(16f / 9f) }
     var full by remember { mutableStateOf(false) }
-    // Full screen turns the phone to landscape; leaving it (or closing) gives the screen back.
-    DisposableEffect(full) {
-        val act = context.findActivity()
-        if (full) act?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        onDispose { if (full) act?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
-    }
-    val battery = found.battery?.let { entities[it]?.state?.toDoubleOrNull() }
-    val bars = found.signal?.let { signalBars(entities[it]?.state, entities[it]?.state) } ?: -1
-    val ringing = isRinging(found.ringSensor?.let { entities[it]?.state }, found.ding?.let { entities[it]?.state }, System.currentTimeMillis(), answeredAt)
-    val canListen = mode == "webrtc" || mode == "hls"
     // Back leaves full screen first, then the viewer.
     PopupWindow(onDismissRequest = onClose, handleBack = { if (full) { full = false; true } else false }) { close ->
         Surface(modifier = Modifier.fillMaxSize(), color = Color.Black) {
@@ -333,75 +227,40 @@ internal fun CameraViewer(
                         IconButton(onClick = close) { Icon(Icons.Filled.Close, contentDescription = "Close", tint = Color.White) }
                     }
                 }
-                val fill = full || expanded
-                // One stage for both: pinch to zoom, drag to look around, double-tap to zoom in and out.
-                Box(modifier = if (fill) Modifier.weight(1f).fillMaxWidth() else Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    val clipEvent = playing
-                    if (clipEvent != null && !full) {
-                        EventPlayer(clipEvent, base)
-                    } else {
-                        StageBox(aspect, fill = fill, boxAspect = aspect.coerceIn(0.75f, 16f / 9f), contain = true, maxZoom = 6f) {
-                            when (mode) {
-                                "webrtc" -> WebRtcPlayer(entityId, muted, Modifier.fillMaxSize(), talking = talking, onAspect = { aspect = it }) { status = it }
-                                "hls" -> link?.let { LivePlayer(base + it, muted) { aspect = it } }
-                                else -> Unit
-                            }
+                // One stage for both: pinch to zoom, drag to look around, double-tap to zoom in and out. Full screen just gives it all the room.
+                Box(modifier = if (full) Modifier.weight(1f).fillMaxWidth() else Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    StageBox(aspect, fill = full, contain = true, maxZoom = 6f) {
+                        when (mode) {
+                            "webrtc" -> WebRtcPlayer(entityId, muted, Modifier.fillMaxSize(), onAspect = { aspect = it }) { status = it }
+                            "hls" -> link?.let { LivePlayer(base + it, muted) { aspect = it } }
+                            else -> Unit
                         }
                     }
-                    if (micDenied) Text("The microphone is off for this app. Allow it in Android's settings to talk.", color = Color(0xFFFFA726), fontSize = 12.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp))
-                    status?.let { if (clipEvent == null || full) Text(it, color = Color.White.copy(alpha = 0.75f), modifier = Modifier.padding(16.dp)) }
-                    // One bar over the top of the video for everything on it, so nothing can sit on anything else.
-                    Row(
-                        modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(8.dp).then(if (full) Modifier.statusBarsPadding() else Modifier),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Top,
-                    ) {
-                        val live = clipEvent == null && canListen && status == null
-                        val label = when {
-                            clipEvent != null && !full -> "${cameraKindLabel(clipEvent.kind)} · ${timelineLabel(clipEvent.ts, System.currentTimeMillis())}"
-                            live -> if (talking) "● LIVE · talking" else "● LIVE"
-                            else -> ""
-                        }
-                        if (label.isNotEmpty()) {
-                            Box(modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(if (live) Color(0xFFE53935) else chipColours(clipEvent?.kind ?: "motion", false).first).padding(horizontal = 7.dp, vertical = 3.dp)) {
-                                Text(label, color = Color.White, fontSize = 11.sp, maxLines = 1)
+                    status?.let { Text(it, color = Color.White.copy(alpha = 0.75f), modifier = Modifier.padding(16.dp)) }
+                    if (full) {
+                        Row(
+                            modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).statusBarsPadding(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            val canListen = mode == "webrtc" || mode == "hls"
+                            if (canListen) IconButton(onClick = { muted = !muted }, modifier = Modifier.background(Color.Black.copy(alpha = 0.45f), CircleShape)) {
+                                HaIcon(if (muted) "mdi:volume-off" else "mdi:volume-high", Icons.Filled.Info, Color.White, 22.dp)
                             }
-                        } else Spacer(Modifier.size(1.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                            if (expanded || full) {
-                                if (battery != null) {
-                                    Row(
-                                        modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(Color.Black.copy(alpha = 0.5f)).padding(horizontal = 8.dp, vertical = 5.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                    ) {
-                                        HaIcon(batteryIconName(battery), Icons.Filled.Info, if (battery < 15) Color(0xFFEF5350) else if (battery < 30) Color(0xFFFFA726) else Color.White, 18.dp)
-                                        Text("${battery.toInt()}%", color = Color.White, fontSize = 12.sp)
-                                    }
-                                }
-                                if (found.signal != null) StatusDot(signalIconName(bars), if (bars in 0..1) Color(0xFFEF5350) else if (bars == 2) Color(0xFFFFA726) else Color.White)
+                            IconButton(onClick = { full = false }, modifier = Modifier.background(Color.Black.copy(alpha = 0.45f), CircleShape)) {
+                                HaIcon("mdi:fullscreen-exit", Icons.Filled.Info, Color.White, 22.dp)
                             }
-                            if (canListen && clipEvent == null) OverlayButton(if (muted) "mdi:volume-off" else "mdi:volume-high") { muted = !muted }
-                            if (!full) OverlayButton(if (expanded) "mdi:arrow-collapse-vertical" else "mdi:arrow-expand-vertical") {
-                                expanded = !expanded
-                                prefs.edit().putBoolean(entityId, expanded).apply()
-                            }
-                            OverlayButton(if (full) "mdi:fullscreen-exit" else "mdi:fullscreen") { full = !full }
                         }
                     }
                 }
                 if (!full) {
                     val white = ToneColors(Color.Black, Color.White, Color.White, Color.Black)
+                    val canListen = mode == "webrtc" || mode == "hls"
                     Column(modifier = Modifier.padding(horizontal = 8.dp)) {
                         TileRow(
                             buildList {
-                                if (ringing && mode == "webrtc") add(TileItem("mdi:phone", "Answer", true) { playing = null; answeredAt = System.currentTimeMillis(); startTalking() })
-                                else if (ringing) add(TileItem("mdi:phone", "Answer", true) { muted = false; playing = null; answeredAt = System.currentTimeMillis() })
-                                if (mode == "webrtc") add(TileItem(if (talking) "mdi:microphone" else "mdi:microphone-outline", if (talking) "Stop talking" else "Talk", talking) {
-                                    playing = null
-                                    if (talking) talking = false else startTalking()
-                                })
-                                if (found.button != null) add(TileItem(IconMap.of("camera", "snapshot", "mdi:camera-retake"), "New snapshot", false) { call("button", "press", found.button, data()) })
+                                add(TileItem(if (muted) "mdi:volume-off" else "mdi:volume-high", if (muted) "Unmute" else "Mute", !muted && canListen) { if (canListen) muted = !muted })
+                                add(TileItem("mdi:fullscreen", "Full screen", false) { full = true })
+                                if (button != null) add(TileItem(IconMap.of("camera", "snapshot", "mdi:camera-retake"), "New snapshot", false) { call("button", "press", button, data()) })
                                 if (eventsBase != null) add(TileItem(IconMap.of("camera", "events", "mdi:history"), "Events", false) { showEvents = true })
                                 if (light != null) {
                                     val on = entities[light]?.state == "on"
@@ -412,18 +271,9 @@ internal fun CameraViewer(
                             white, Color.White,
                         )
                     }
-                    CameraTimeline(events, playing?.id, base, onLive = { playing = null }, onPick = { playing = it })
                 }
             }
         }
-    }
-}
-
-/** A round button over the video. */
-@Composable
-private fun OverlayButton(icon: String, onClick: () -> Unit) {
-    IconButton(onClick = onClick, modifier = Modifier.size(34.dp).background(Color.Black.copy(alpha = 0.5f), CircleShape)) {
-        HaIcon(icon, Icons.Filled.Info, Color.White, 20.dp)
     }
 }
 
@@ -458,5 +308,5 @@ private fun LivePlayer(url: String, muted: Boolean, onAspect: (Float) -> Unit) {
 fun CameraViewerFor(entityId: String, entities: Map<String, EntityState>, registry: Registry, call: CallService, onClose: () -> Unit) {
     val found = cameraFind(entities, entityId, null, null)
     val name = entities[entityId]?.friendlyName?.replace(Regex(" (Live view|Snapshot)$", RegexOption.IGNORE_CASE), "") ?: entityId
-    CameraViewer(name, entityId, found, cameraBaseName(entities, entityId), cameraLight(entities, registry, entityId, null), entities, call, onClose = onClose)
+    CameraViewer(name, entityId, found.button, cameraBaseName(entities, entityId), cameraLight(entities, registry, entityId, null), entities, call, onClose)
 }

@@ -75,13 +75,3 @@ fun filterEvents(events: List<CameraEvent>, label: String?): List<CameraEvent> =
 /** The events grouped by day, in order. */
 fun groupByDay(events: List<CameraEvent>, now: Long, zone: ZoneId = ZoneId.systemDefault()): List<Pair<String, List<CameraEvent>>> =
     events.groupBy { eventDay(it.ts, now, zone) }.toList()
-
-/** A timeline tile's time: "21:40" today, "Yest 21:40" yesterday, "Mon 21:40" before that. */
-fun timelineLabel(ms: Long, now: Long, zone: ZoneId = ZoneId.systemDefault()): String {
-    val clock = eventClock(ms, zone)
-    return when (val day = eventDay(ms, now, zone)) {
-        "Today" -> clock
-        "Yesterday" -> "Yest $clock"
-        else -> "${day.take(3)} $clock"
-    }
-}

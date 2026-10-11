@@ -4,14 +4,9 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
-## 0.14.0
+## 0.14.1
 
-- Cameras: the picture and video keep their own shape (a square doorbell is no longer cropped to 16:9). The tile's name, age, battery and signal warnings and the video's buttons are on separate rows or one bar, so nothing overlaps.
-- When the doorbell rings, its tile gets a green outline and an Answer button; Answer opens the live view with the sound on and the microphone open.
-- Two-way talk: a Talk button in the live view sends the phone's microphone to the camera over the same WebRTC connection as the picture (it asks for the microphone the first time, and reconnects when you start or stop). It depends on the camera or Home Assistant's WebRTC provider accepting audio from us; if it doesn't, the view says so and Talk again goes back to listening.
-- The live view has a bigger / smaller button that fills the screen between the title and the buttons, and the app remembers your choice for each camera. Full screen now turns the phone to landscape and back.
-- Battery and Wi-Fi signal icons show in the video's corner when it is bigger or full screen.
-- An activity timeline under the buttons, as in Ring: a Live tile then the saved events, newest first. Tap one to play it in the video.
+- Back to the 0.13.0 camera view. The 0.14.0 camera changes (Answer, Talk, bigger and full-screen views, status icons, timeline) are taken out for now: the buttons overlapped, disappeared in full screen, and Talk crashed (a disposed WebRTC audio track). They will come back with a new design.
 
 ## 0.13.0
 
