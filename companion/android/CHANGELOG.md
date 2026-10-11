@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.11.4
+
+- Jarvis's cloud is livelier (between the old calm and lively): the colours drift further and a little faster.
+- Each action has its own movement: listening blooms outwards in soft rings that grow with your voice, thinking beats like a heart, speaking sends a wave of swelling through the colours, and idle breathes slowly.
+
 ## 0.11.3
 
 - The dimmed background behind the small assistant fades in and out instead of sliding down with the sheet, and is frosted (blurred) on Android 12 and newer.

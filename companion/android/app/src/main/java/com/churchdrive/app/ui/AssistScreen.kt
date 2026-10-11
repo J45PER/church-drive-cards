@@ -59,6 +59,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
@@ -122,8 +123,10 @@ fun AssistPanel(
 fun AssistOrb(state: AssistState, level: Float, size: androidx.compose.ui.unit.Dp) {
     val t = rememberInfiniteTransition(label = "orb")
     val slow = state == AssistState.Idle || state == AssistState.Waiting
-    val phase by t.animateFloat(0f, (2 * Math.PI).toFloat(), infiniteRepeatable(tween(if (slow) 26000 else 15000, easing = LinearEasing)), label = "phase")
-    val breathe by t.animateFloat(0.97f, 1.03f, infiniteRepeatable(tween(4200), RepeatMode.Reverse), label = "breathe")
+    val phase by t.animateFloat(0f, (2 * Math.PI).toFloat(), infiniteRepeatable(tween(if (slow) 22000 else 11000, easing = LinearEasing)), label = "phase")
+    val breathe by t.animateFloat(0.96f, 1.04f, infiniteRepeatable(tween(3600), RepeatMode.Reverse), label = "breathe")
+    // One 12 second clock: the bloom (2.4 s), heartbeat and wave (1.2 s) all repeat a whole number of times in it, so nothing jumps.
+    val clock by t.animateFloat(0f, 1f, infiniteRepeatable(tween(12000, easing = LinearEasing)), label = "clock")
     val energy = when (state) {
         AssistState.Listening -> 0.3f + level * 0.5f
         AssistState.Speaking -> 0.5f
@@ -133,7 +136,12 @@ fun AssistOrb(state: AssistState, level: Float, size: androidx.compose.ui.unit.D
     val orb = size
     Canvas(modifier = Modifier.size(orb * 1.5f).graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)) {
         val c = center
-        val r = orb.toPx() * 0.5f * breathe * (1f + energy * 0.06f)
+        // Thinking beats like a heart: two quick swells, then a rest.
+        val beat = if (state == AssistState.Thinking) {
+            val x = (clock * 10f) % 1f
+            1f + 0.12f * kotlin.math.exp(-((x - 0.15f) * (x - 0.15f)) / 0.004f) + 0.07f * kotlin.math.exp(-((x - 0.45f) * (x - 0.45f)) / 0.006f)
+        } else 1f
+        val r = orb.toPx() * 0.5f * breathe * beat * (1f + energy * 0.06f)
         // A wide, faint halo.
         drawCircle(
             Brush.radialGradient(listOf(AssistColours.Purple.copy(alpha = 0.12f + 0.14f * energy), Color.Transparent), center = c, radius = r * 1.5f),
@@ -141,24 +149,35 @@ fun AssistOrb(state: AssistState, level: Float, size: androidx.compose.ui.unit.D
         )
         // Small clouds (the header) spread their colours further apart and skip the bright centre, so they don't wash out to white.
         val small = orb < 80.dp
-        val wander = r * ((if (small) 0.26f else 0.07f) + 0.12f * energy)
-        fun cloud(colour: Color, a: Float, b: Float, scale: Float) {
+        val wander = r * ((if (small) 0.26f else 0.12f) + 0.12f * energy)
+        fun cloud(colour: Color, a: Float, b: Float, scale: Float, wavePhase: Float) {
             val at = Offset(c.x + cos(phase * a) * wander, c.y + sin(phase * b) * wander)
-            val radius = r * scale
+            // Speaking: each colour swells in turn, a wave passing through the cloud.
+            val wave = if (state == AssistState.Speaking) 1f + 0.2f * sin(((clock * 10f + wavePhase) % 1f) * 2f * Math.PI.toFloat()) else 1f
+            val radius = r * scale * wave
             drawCircle(
                 Brush.radialGradient(listOf(colour.copy(alpha = if (small) 0.8f else 0.9f), colour.copy(alpha = if (small) 0.35f else 0.45f), Color.Transparent), center = at, radius = radius),
                 radius = radius, center = at, blendMode = BlendMode.Screen,
             )
         }
         val k = if (small) 0.85f else 1.0f
-        cloud(AssistColours.Indigo, 1f, 1.3f, 1.0f * k)
-        cloud(AssistColours.Purple, 1.2f, 0.8f, 0.95f * k)
-        cloud(AssistColours.Green, 0.9f, 1.1f, 0.9f * k)
+        cloud(AssistColours.Indigo, 1f, 1.3f, 1.0f * k, 0f)
+        cloud(AssistColours.Purple, 1.2f, 0.8f, 0.95f * k, 0.33f)
+        cloud(AssistColours.Green, 0.9f, 1.1f, 0.9f * k, 0.66f)
         if (!small) {
             drawCircle(
                 Brush.radialGradient(listOf(Color.White.copy(alpha = 0.08f + 0.1f * energy), Color.Transparent), center = c, radius = r * 0.5f),
                 radius = r * 0.5f, center = c, blendMode = BlendMode.Screen,
             )
+        }
+        // Listening: soft rings bloom outwards and fade, one colour after another, stronger with your voice.
+        if (state == AssistState.Listening) {
+            listOf(AssistColours.Indigo, AssistColours.Purple, AssistColours.Green).forEachIndexed { i, colour ->
+                val x = ((clock * 5f) + i / 3f) % 1f
+                val ringR = r * (0.6f + 0.75f * x)
+                val a = (1f - x) * (0.35f + 0.5f * level.coerceIn(0f, 1f))
+                drawCircle(colour.copy(alpha = a), radius = ringR, center = c, style = Stroke(width = r * 0.22f), blendMode = BlendMode.Screen)
+            }
         }
     }
 }
