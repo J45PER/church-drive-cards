@@ -45,7 +45,11 @@ export function signalColour(bars) {
 // Ringing: the doorbell's binary sensor is on, or its ding event fired within
 // `within` ms. `answered` (ms, when someone answered or dismissed) ends it.
 export function ringing(dingBinary, dingEventState, now = Date.now(), answered = 0, within = 45000) {
-  if (dingBinary === 'on') return !answered || now - answered > within ? true : false;
+  if (dingBinary === 'on') {
+    // Still ringing unless answered from here, and then only again for a newer ring.
+    const at = Date.parse(dingEventState);
+    return !answered || (isFinite(at) && at > answered);
+  }
   const ms = Date.parse(dingEventState);
   if (!isFinite(ms)) return false;
   return now - ms < within && ms > answered;
