@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.11.1
+
+- **Thinking dots:** darker grey, and the colour glow is now exactly behind all three dots (it had been drawn off to the side).
+- The small cloud beside his name keeps its indigo, purple and green instead of washing out to white.
+
 ## 0.11.0
 
 - **A calmer, cleaner Jarvis.** The small sheet has no coloured bar and uses a small living cloud beside his name; what you said and his answer are

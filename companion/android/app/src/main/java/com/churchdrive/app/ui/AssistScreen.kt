@@ -53,6 +53,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
@@ -138,22 +139,27 @@ fun AssistOrb(state: AssistState, level: Float, size: androidx.compose.ui.unit.D
             Brush.radialGradient(listOf(AssistColours.Purple.copy(alpha = 0.12f + 0.14f * energy), Color.Transparent), center = c, radius = r * 1.5f),
             radius = r * 1.5f, center = c,
         )
-        val wander = r * (0.07f + 0.12f * energy)
+        // Small clouds (the header) spread their colours further apart and skip the bright centre, so they don't wash out to white.
+        val small = orb < 80.dp
+        val wander = r * ((if (small) 0.26f else 0.07f) + 0.12f * energy)
         fun cloud(colour: Color, a: Float, b: Float, scale: Float) {
             val at = Offset(c.x + cos(phase * a) * wander, c.y + sin(phase * b) * wander)
             val radius = r * scale
             drawCircle(
-                Brush.radialGradient(listOf(colour.copy(alpha = 0.9f), colour.copy(alpha = 0.45f), Color.Transparent), center = at, radius = radius),
+                Brush.radialGradient(listOf(colour.copy(alpha = if (small) 0.8f else 0.9f), colour.copy(alpha = if (small) 0.35f else 0.45f), Color.Transparent), center = at, radius = radius),
                 radius = radius, center = at, blendMode = BlendMode.Screen,
             )
         }
-        cloud(AssistColours.Indigo, 1f, 1.3f, 1.0f)
-        cloud(AssistColours.Purple, 1.2f, 0.8f, 0.95f)
-        cloud(AssistColours.Green, 0.9f, 1.1f, 0.9f)
-        drawCircle(
-            Brush.radialGradient(listOf(Color.White.copy(alpha = 0.08f + 0.1f * energy), Color.Transparent), center = c, radius = r * 0.5f),
-            radius = r * 0.5f, center = c, blendMode = BlendMode.Screen,
-        )
+        val k = if (small) 0.85f else 1.0f
+        cloud(AssistColours.Indigo, 1f, 1.3f, 1.0f * k)
+        cloud(AssistColours.Purple, 1.2f, 0.8f, 0.95f * k)
+        cloud(AssistColours.Green, 0.9f, 1.1f, 0.9f * k)
+        if (!small) {
+            drawCircle(
+                Brush.radialGradient(listOf(Color.White.copy(alpha = 0.08f + 0.1f * energy), Color.Transparent), center = c, radius = r * 0.5f),
+                radius = r * 0.5f, center = c, blendMode = BlendMode.Screen,
+            )
+        }
     }
 }
 
@@ -386,31 +392,32 @@ private fun FullAssist(model: AssistModel, onFull: (Boolean) -> Unit, onClose: (
 }
 
 /**
- * Three small grey dots while the house works out an answer: one soft indigo, purple and green glow behind all of them, and each
- * dot moving in its own time, so it feels alive without being busy.
+ * Three small grey dots while the house works out an answer: one soft indigo, purple and green glow behind all of them (a small
+ * version of the one behind the microphone), and each dot moving in its own time, so it feels alive without being busy.
  */
 @Composable
 private fun ThinkingDots() {
     val t = rememberInfiniteTransition(label = "dots")
-    val grey = Color(0xFF9AA3A0)
-    Box(modifier = Modifier.padding(vertical = 4.dp)) {
-        Canvas(modifier = Modifier.align(Alignment.Center).requiredSize(130.dp, 72.dp).graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)) {
-            val c = center
-            listOf(-0.28f to AssistColours.Indigo, 0f to AssistColours.Purple, 0.28f to AssistColours.Green).forEach { (dx, colour) ->
-                val at = Offset(c.x + size.width * dx, c.y)
-                drawCircle(Brush.radialGradient(listOf(colour.copy(alpha = 0.32f), Color.Transparent), center = at, radius = 26.dp.toPx()), radius = 26.dp.toPx(), center = at)
+    val grey = Color(0xFF767F7B)
+    val glow by t.animateFloat(0.7f, 1f, infiniteRepeatable(tween(2400), RepeatMode.Reverse), label = "dotGlow")
+    Row(
+        modifier = Modifier.padding(vertical = 6.dp)
+            .drawBehind {
+                // Drawn behind the Row's own centre, so the glow is exactly behind the dots (and spills out around them).
+                val r = 38.dp.toPx()
+                listOf(-16 to AssistColours.Indigo, 0 to AssistColours.Purple, 16 to AssistColours.Green).forEach { (dx, colour) ->
+                    val at = Offset(center.x + dx.dp.toPx(), center.y)
+                    drawCircle(Brush.radialGradient(listOf(colour.copy(alpha = 0.5f * glow), Color.Transparent), center = at, radius = r), radius = r, center = at)
+                }
             }
-        }
-        Row(modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp), horizontalArrangement = Arrangement.spacedBy(9.dp), verticalAlignment = Alignment.CenterVertically) {
-            listOf(1050 to 0, 1450 to 180, 1250 to 360).forEachIndexed { i, (ms, delay) ->
-                val a by t.animateFloat(0.5f, 1f, infiniteRepeatable(tween(ms, delayMillis = delay), RepeatMode.Reverse), label = "dotA$i")
-                val s by t.animateFloat(0.75f, 1.2f, infiniteRepeatable(tween(ms, delayMillis = delay), RepeatMode.Reverse), label = "dotS$i")
-                val y by t.animateFloat(2f, -3f, infiniteRepeatable(tween(ms + 200, delayMillis = delay), RepeatMode.Reverse), label = "dotY$i")
-                Box(
-                    modifier = Modifier.size(6.dp).graphicsLayer { translationY = y; scaleX = s; scaleY = s; alpha = a }
-                        .clip(CircleShape).background(grey),
-                )
-            }
+            .padding(horizontal = 22.dp, vertical = 18.dp),
+        horizontalArrangement = Arrangement.spacedBy(9.dp), verticalAlignment = Alignment.CenterVertically,
+    ) {
+        listOf(1050 to 0, 1450 to 180, 1250 to 360).forEachIndexed { i, (ms, delay) ->
+            val a by t.animateFloat(0.55f, 1f, infiniteRepeatable(tween(ms, delayMillis = delay), RepeatMode.Reverse), label = "dotA$i")
+            val sc by t.animateFloat(0.75f, 1.2f, infiniteRepeatable(tween(ms, delayMillis = delay), RepeatMode.Reverse), label = "dotS$i")
+            val y by t.animateFloat(2f, -3f, infiniteRepeatable(tween(ms + 200, delayMillis = delay), RepeatMode.Reverse), label = "dotY$i")
+            Box(modifier = Modifier.size(6.dp).graphicsLayer { translationY = y; scaleX = sc; scaleY = sc; alpha = a }.clip(CircleShape).background(grey))
         }
     }
 }
