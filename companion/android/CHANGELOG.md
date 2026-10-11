@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.14.1
+
+- Back to the 0.13.0 camera view. The 0.14.0 camera changes (Answer, Talk, bigger and full-screen views, status icons, timeline) are taken out for now: the buttons overlapped, disappeared in full screen, and Talk crashed (a disposed WebRTC audio track). They will come back with a new design.
+
 ## 0.13.0
 
 - Jarvis is full screen only. The small sheet is gone (it kept sliding and was a second layout to keep matching), along with the "Voice opens full screen" setting. He opens and closes the same way as every other pop-up.
