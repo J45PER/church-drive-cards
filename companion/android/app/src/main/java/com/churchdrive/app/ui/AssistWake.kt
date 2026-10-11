@@ -19,6 +19,13 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.churchdrive.app.AssistActivity
 
+/** What the wake word listening is doing, for the top bar's microphone and the Settings line: listening, or why not. */
+object AssistWakeStatus {
+    var waiting by mutableStateOf(false)
+    var phrase by mutableStateOf("")
+    var problem by mutableStateOf("")
+}
+
 /** Whether the person has switched on "listen for the wake word while the app is open" (Account > Settings). */
 object AssistWakeSetting {
     private const val KEY = "wake_in_app"
@@ -54,6 +61,9 @@ fun AssistWakeHost(connected: Boolean, base: String, api: HaApi?, onTask: (Strin
     var full by remember { mutableStateOf(false) }
     val owner = LocalLifecycleOwner.current
     LaunchedEffect(connected) { if (connected) model.loadName() }
+    LaunchedEffect(model.state) { AssistWakeStatus.waiting = model.state == AssistState.Waiting }
+    LaunchedEffect(model.wakeWord) { AssistWakeStatus.phrase = wakePhrase(model.wakeWord) }
+    LaunchedEffect(enabled) { if (!enabled) { AssistWakeStatus.waiting = false; AssistWakeStatus.problem = "" } }
     DisposableEffect(model) {
         model.onWake = {
             full = context.getSharedPreferences(AssistActivity.PREFS, Context.MODE_PRIVATE).getBoolean(AssistActivity.KEY_FULL, false)

@@ -3,6 +3,7 @@
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
 - **v0.45.2** (2026-10-11): the app's shopping list page scrolls (it ran under the navigation bar); app 0.8.2
+- **v0.46.0** (2026-10-11): the app can ask the house for its Assist wake word (church_drive/assist/info), so the assistant is named after it (Jarvis); app 0.10.1
 - **v0.45.1** (2026-10-11): searching for a shop shows the results as pins on a map to tap and pick (web and app); app 0.8.1
 - **v0.45.0** (2026-10-11): shopping-list places come from a Google Maps search (any shop anywhere, e.g. a Lidl on holiday) instead of zones; an optional time; reminder at that time; the list comes up when you get near a place; Navigate button in the app (app 0.8.0)
 - **v0.44.1** (2026-10-11): fix a crash in the page header lines when the lines change while a page is open (logged as an uncaught error on iPhones)

@@ -6,6 +6,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
@@ -48,8 +50,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlin.math.cos
+import kotlin.math.sin
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.input.ImeAction
@@ -78,25 +85,53 @@ fun AssistPanel(
     onClose: () -> Unit,
     onTask: (String) -> Unit,
 ) {
-    if (full) FullAssist(model, onFull, onClose, onTask) else SheetAssist(model, onFull, onClose, onTask)
+    // A dialog doesn't set the text colour, so it would be dark on dark.
+    androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
+        if (full) FullAssist(model, onFull, onClose, onTask) else SheetAssist(model, onFull, onClose, onTask)
+    }
 }
 
-/** The ball of colour: a turning gradient of the three colours that swells with the voice. */
+/**
+ * The glow of colour, like Siri's or Gemini's: three soft clouds (indigo, purple, green) drifting round each other and blending
+ * where they meet, with a bright centre. It stirs faster and swells with the voice when listening or speaking.
+ */
 @Composable
 fun AssistOrb(state: AssistState, level: Float, size: androidx.compose.ui.unit.Dp) {
     val t = rememberInfiniteTransition(label = "orb")
-    val turn by t.animateFloat(0f, 360f, infiniteRepeatable(tween(if (state == AssistState.Idle) 14000 else 5000, easing = LinearEasing)), label = "turn")
-    val breathe by t.animateFloat(0.96f, 1.04f, infiniteRepeatable(tween(1800), RepeatMode.Reverse), label = "breathe")
-    val live = state == AssistState.Listening
-    val grow = if (live) 1f + level * 0.22f else if (state == AssistState.Idle) 1f else breathe
-    Box(modifier = Modifier.size(size).scale(grow), contentAlignment = Alignment.Center) {
-        Box(
-            modifier = Modifier.size(size).rotate(turn).clip(CircleShape)
-                .background(Brush.sweepGradient(listOf(AssistColours.Indigo, AssistColours.Purple, AssistColours.Green, AssistColours.Indigo))),
+    val slow = state == AssistState.Idle || state == AssistState.Waiting
+    val phase by t.animateFloat(0f, (2 * Math.PI).toFloat(), infiniteRepeatable(tween(if (slow) 11000 else 4800, easing = LinearEasing)), label = "phase")
+    val breathe by t.animateFloat(0.94f, 1.06f, infiniteRepeatable(tween(2200), RepeatMode.Reverse), label = "breathe")
+    val energy = when (state) {
+        AssistState.Listening -> 0.35f + level * 0.65f
+        AssistState.Speaking -> 0.7f
+        AssistState.Thinking -> 0.55f
+        else -> 0.15f
+    }
+    val orb = size
+    Canvas(modifier = Modifier.size(orb * 1.5f).graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)) {
+        val c = center
+        val r = orb.toPx() * 0.5f * breathe * (1f + energy * 0.12f)
+        // A wide, faint halo.
+        drawCircle(
+            Brush.radialGradient(listOf(AssistColours.Purple.copy(alpha = 0.16f + 0.2f * energy), Color.Transparent), center = c, radius = r * 1.5f),
+            radius = r * 1.5f, center = c,
         )
-        Box(
-            modifier = Modifier.size(size).clip(CircleShape)
-                .background(Brush.radialGradient(listOf(Color.White.copy(alpha = 0.45f), Color.Transparent), radius = size.value * 2.2f)),
+        val wander = r * (0.16f + 0.26f * energy)
+        fun cloud(colour: Color, a: Float, b: Float, scale: Float) {
+            val at = Offset(c.x + cos(phase * a) * wander, c.y + sin(phase * b) * wander)
+            val radius = r * scale
+            drawCircle(
+                Brush.radialGradient(listOf(colour.copy(alpha = 0.95f), colour.copy(alpha = 0.5f), Color.Transparent), center = at, radius = radius),
+                radius = radius, center = at, blendMode = BlendMode.Plus,
+            )
+        }
+        cloud(AssistColours.Indigo, 1f, 1.3f, 1.0f)
+        cloud(AssistColours.Purple, 1.2f + 0.0f, 0.8f, 0.95f)
+        cloud(AssistColours.Green, 0.9f, 1.1f, 0.9f)
+        // A bright, soft centre.
+        drawCircle(
+            Brush.radialGradient(listOf(Color.White.copy(alpha = 0.35f + 0.4f * energy), Color.Transparent), center = c, radius = r * 0.55f),
+            radius = r * 0.55f, center = c, blendMode = BlendMode.Plus,
         )
     }
 }
@@ -118,16 +153,42 @@ private fun Waveform(state: AssistState, level: Float) {
     }
 }
 
+/**
+ * A round grey button. When [glow] is on, a soft indigo, purple and green glow shines out from behind it (it breathes while it
+ * is on), so the button stays calm and quiet and the colour says what is happening.
+ */
 @Composable
-private fun RoundIcon(icon: String, label: String, filled: Boolean, onClick: () -> Unit) {
+private fun RoundIcon(icon: String, label: String, glow: Boolean, onClick: () -> Unit, size: androidx.compose.ui.unit.Dp = 48.dp) {
     val scheme = MaterialTheme.colorScheme
-    Box(
-        modifier = Modifier.size(48.dp).clip(CircleShape)
-            .background(if (filled) AssistColours.Purple.copy(alpha = 0.9f) else scheme.onSurface.copy(alpha = 0.1f))
-            .clickable(onClickLabel = label) { onClick() },
-        contentAlignment = Alignment.Center,
-    ) {
-        HaIcon(icon, Icons.Filled.Info, if (filled) Color.White else scheme.onSurface, 24.dp)
+    val t = rememberInfiniteTransition(label = "glow")
+    val pulse by t.animateFloat(0.55f, 1f, infiniteRepeatable(tween(1400), RepeatMode.Reverse), label = "pulse")
+    val turn by t.animateFloat(0f, 360f, infiniteRepeatable(tween(6000, easing = LinearEasing)), label = "turn")
+    // The glow is drawn bigger than the button without taking any room: it spills out around it.
+    Box(modifier = Modifier.size(size), contentAlignment = Alignment.Center) {
+        if (glow) {
+            Canvas(
+                modifier = Modifier.requiredSize(size * 1.9f).rotate(turn).graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen),
+            ) {
+                val r = this.size.minDimension / 2f
+                drawCircle(
+                    Brush.sweepGradient(listOf(AssistColours.Indigo, AssistColours.Purple, AssistColours.Green, AssistColours.Indigo)),
+                    radius = r, alpha = 0.7f * pulse,
+                )
+                // Fade it out towards the edge (keeping only the alpha of this gradient) so it is a glow, not a disc.
+                drawCircle(
+                    Brush.radialGradient(0.3f to Color.Black, 1f to Color.Transparent, center = center, radius = r),
+                    radius = r, blendMode = BlendMode.DstIn,
+                )
+            }
+        }
+        Box(
+            modifier = Modifier.size(size).clip(CircleShape)
+                .background(scheme.onSurface.copy(alpha = if (glow) 0.18f else 0.1f))
+                .clickable(onClickLabel = label) { onClick() },
+            contentAlignment = Alignment.Center,
+        ) {
+            HaIcon(icon, Icons.Filled.Info, scheme.onSurface, size.value.dp / 2)
+        }
     }
 }
 
@@ -174,12 +235,12 @@ private fun SheetAssist(model: AssistModel, onFull: (Boolean) -> Unit, onClose: 
             ) {
                 Box(modifier = Modifier.width(40.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(scheme.onSurface.copy(alpha = 0.25f)).align(Alignment.CenterHorizontally))
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    RoundIcon("mdi:microphone", "Talk", model.state == AssistState.Listening) { model.listen() }
+                    RoundIcon("mdi:microphone", "Talk", model.state == AssistState.Listening, { model.listen() })
                     Column(modifier = Modifier.weight(1f)) {
                         Text(assistStatus(model.state), style = MaterialTheme.typography.titleMedium)
-                        Text("Swipe up for the full screen", style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
+                        Text("${model.name.ifBlank { "Assistant" }} \u00B7 swipe up for the full screen", style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
                     }
-                    RoundIcon("mdi:arrow-expand-up", "Full screen", false) { onFull(true) }
+                    RoundIcon("mdi:chevron-up", "Full screen", false, { onFull(true) })
                 }
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Waveform(model.state, model.level) }
                 val last = model.messages.lastOrNull()
@@ -205,9 +266,9 @@ private fun FullAssist(model: AssistModel, onFull: (Boolean) -> Unit, onClose: (
     Column(modifier = Modifier.fillMaxSize().background(scheme.background).statusBarsPadding().navigationBarsPadding().imePadding()) {
         Box(modifier = Modifier.fillMaxWidth().height(4.dp).background(AssistColours.across))
         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            RoundIcon("mdi:close", "Close", false) { onClose() }
+            RoundIcon("mdi:close", "Close", false, { onClose() })
             Text(model.name.ifBlank { "Assistant" }, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-            RoundIcon("mdi:arrow-collapse-down", "Smaller", false) { onFull(false) }
+            RoundIcon("mdi:chevron-down", "Smaller", false, { onFull(false) })
         }
         if (!chatting) {
             Column(
@@ -248,12 +309,11 @@ private fun FullAssist(model: AssistModel, onFull: (Boolean) -> Unit, onClose: (
                     keyboardActions = KeyboardActions(onSend = { model.send(typed); typed = "" }),
                     shape = RoundedCornerShape(28.dp),
                 )
-                Box(
-                    modifier = Modifier.size(56.dp).clip(CircleShape).background(AssistColours.across).clickable(onClickLabel = "Talk") { model.listen() },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    HaIcon(if (model.state == AssistState.Listening) "mdi:stop" else "mdi:microphone", Icons.Filled.Info, Color.White, 28.dp)
-                }
+                RoundIcon(
+                    if (model.state == AssistState.Listening) "mdi:stop" else "mdi:microphone", "Talk",
+                    model.state == AssistState.Listening || model.state == AssistState.Speaking || model.state == AssistState.Thinking,
+                    { model.listen() }, size = 56.dp,
+                )
             }
         }
     }
@@ -280,6 +340,7 @@ private fun Bubble(message: AssistMessage, faded: Boolean = false) {
 fun AssistIntro(name: String, assistant: String, wakeWord: String?, onTry: () -> Unit, onSkip: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
     val tone = toneColors(Tone.Indigo)
+    androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides scheme.onSurface) {
     Column(modifier = Modifier.fillMaxSize().background(scheme.background).statusBarsPadding().navigationBarsPadding()) {
         Box(modifier = Modifier.fillMaxWidth().height(4.dp).background(AssistColours.across))
         Column(
@@ -315,5 +376,6 @@ fun AssistIntro(name: String, assistant: String, wakeWord: String?, onTry: () ->
                 tone, scheme.onSurface,
             )
         }
+    }
     }
 }

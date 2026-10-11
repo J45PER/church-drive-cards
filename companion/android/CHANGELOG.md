@@ -4,6 +4,12 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.10.1
+
+- The assistant looks more like Siri or Gemini: a soft glow of indigo, purple and green clouds that blend and drift, and swell with your voice.
+  The text in it is readable again, and it is named from the house's wake word (Jarvis) wherever it appears. A green microphone shows in the
+  top bar while it is listening for the wake word, and Settings says why if it isn't. (Needs Church Drive 0.46 in Home Assistant for the name.)
+
 ## 0.10.0
 
 - **A wake word for the assistant.** With "Listen for the wake word" switched on (Account > Settings, asks for the microphone), say the wake word

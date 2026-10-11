@@ -75,7 +75,15 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
 
     /** Asks the house what the assistant is called (its pipeline's wake word). */
     fun loadName() {
-        api.request("assist_pipeline/pipeline/list", JSONObject()) { r -> main.post { wakeWord = preferredWakeWord(r) } }
+        // The house's own answer (anyone may ask it); Home Assistant's pipeline list is for administrators only.
+        api.request("church_drive/assist/info", JSONObject()) { r ->
+            if (r is JSONObject) {
+                val word = if (r.isNull("wake_word")) null else r.optString("wake_word").takeIf { it.isNotBlank() }
+                main.post { wakeWord = word }
+            } else {
+                api.request("assist_pipeline/pipeline/list", JSONObject()) { list -> main.post { wakeWord = preferredWakeWord(list) } }
+            }
+        }
     }
 
     /** Shows a message to the person (such as the microphone not being allowed). */
@@ -175,6 +183,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
         subscription = api.subscribe("assist_pipeline/run", params) { event -> main.post { onEvent(event) } }
         if (subscription < 0) {
             // The house isn't reachable: try again shortly.
+            AssistWakeStatus.problem = "Can't reach the house"
             main.postDelayed({ beginWakeRun() }, 5_000)
             return
         }
@@ -189,6 +198,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
             mic = m
         } else {
             notice = "Allow the microphone to use the wake word."
+            AssistWakeStatus.problem = "The microphone isn't allowed"
             stopWake()
         }
     }
@@ -215,6 +225,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     private fun onEvent(event: JSONObject) {
         when (val e = parseAssistEvent(event)) {
             is AssistEvent.Started -> {
+                AssistWakeStatus.problem = ""
                 handlerId = e.handlerId
                 if (e.handlerId != null) startMic()
             }
@@ -257,7 +268,8 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     private fun onFailed(e: AssistEvent.Failed) {
         stopVoiceRun()
         when {
-            e.code == "wake-word-timeout" -> Unit // nothing was said for a while: just listen again
+            e.code == "wake-word-timeout" || e.code == "timeout" -> Unit // nothing was said for a while: just listen again
+            wakeEnabled && !panelOpen && state == AssistState.Waiting -> AssistWakeStatus.problem = e.message.ifBlank { e.code }
             e.code == "stt-no-text-recognized" -> notice = "I didn't catch that."
             !answered -> {
                 messages += AssistMessage(false, if (e.noMatch) "Sorry, I didn't understand that." else e.message)

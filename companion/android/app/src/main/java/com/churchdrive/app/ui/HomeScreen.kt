@@ -129,6 +129,12 @@ fun HomeScreen(
                         )
                     }
                     val context = androidx.compose.ui.platform.LocalContext.current
+                    // Listening for the wake word: a small green microphone, so you can see it is on.
+                    if (AssistWakeStatus.waiting) {
+                        Box(Modifier.padding(horizontal = 4.dp), contentAlignment = Alignment.Center) {
+                            HaIcon("mdi:microphone", Icons.Filled.Mic, AssistColours.Green, 20.dp)
+                        }
+                    }
                     IconButton(onClick = {
                         context.startActivity(android.content.Intent(context, com.churchdrive.app.AssistActivity::class.java))
                     }) {
