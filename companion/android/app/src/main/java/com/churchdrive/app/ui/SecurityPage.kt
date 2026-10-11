@@ -115,6 +115,7 @@ fun CardView(card: CardSpec, entities: Map<String, EntityState>, registry: Regis
         "custom:camera-links-card" -> CameraLinksPage(entities)
         "custom:icon-styles-card" -> IconStylesPage()
         "custom:task-list-card" -> TaskListCard(card.config, entities, call)
+        "custom:shopping-card" -> ShoppingCard(card.config)
         "custom:house-tasks-card" -> HouseTasksCard(card.config, entities)
         "custom:octopus-card" -> OctopusCard(card.config, entities)
         "custom:system-card" -> SystemCard(entities)

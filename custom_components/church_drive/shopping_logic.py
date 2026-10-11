@@ -1,0 +1,166 @@
+"""The plain rules behind shopping lists (no Home Assistant in here, so they can be tested alone).
+
+A shopping list has a name, the people it is for, an optional date, optional places (zones) where it
+will be bought, and items. Each item is open, bought or unavailable. The list shows on each person's
+to-do list as one task that carries a marker in its description, and is ticked off when no item is
+left open. Items that were unavailable are remembered ("missed") and offered the next time a list is made.
+"""
+
+from __future__ import annotations
+
+import re
+from datetime import date
+from typing import Any
+
+OPEN, BOUGHT, UNAVAILABLE = "open", "bought", "unavailable"
+STATUSES = (OPEN, BOUGHT, UNAVAILABLE)
+MARKER = "church-drive-shopping:"
+MAX_ITEMS = 200
+
+# Words in a zone's name that mean a shop, so arriving there can bring up the list.
+SHOP_WORDS = (
+    "supermarket", "tesco", "asda", "sainsbury", "morrisons", "aldi", "lidl", "waitrose", "co-op", "coop",
+    "m&s", "marks", "iceland", "ocado", "booths", "costco", "farmfoods", "spar", "shop", "store", "market", "pharmacy", "boots",
+)
+
+_LEAD = re.compile(r"^\s*(?:[-*••☐☑\[\]x ]+\s*)?(?:(?:please|also|and)\s+)?(?:buy|get|pick up|grab|need|order)\s+(?:some\s+|more\s+)?", re.I)
+
+
+def norm(text: Any) -> str:
+    return " ".join(str(text or "").lower().split())
+
+
+def clean_item(text: Any) -> str:
+    """An item as shown: bullets and 'buy ' removed, first letter capital, no longer than a task."""
+    t = " ".join(str(text or "").split())
+    t = re.sub(r"^[-*••☐]+\s*", "", t)
+    t = _LEAD.sub("", t).strip(" .,;")
+    return (t[:1].upper() + t[1:])[:120]
+
+
+def add_items(items: list[dict[str, Any]], texts: list[str], new_id: Any) -> tuple[list[dict[str, Any]], int]:
+    """[items] with each of [texts] added unless an open item already says the same. Returns (items, how many were added).
+    An item that was bought or unavailable and is asked for again is reopened."""
+    out = [dict(i) for i in items]
+    added = 0
+    for raw in texts:
+        text = clean_item(raw)
+        if not text or len(out) >= MAX_ITEMS:
+            continue
+        same = next((i for i in out if norm(i["text"]) == norm(text)), None)
+        if same is not None:
+            if same["status"] != OPEN:
+                same["status"] = OPEN
+                added += 1
+            continue
+        out.append({"id": new_id(), "text": text, "status": OPEN})
+        added += 1
+    return out, added
+
+
+def set_status(items: list[dict[str, Any]], item_id: str, status: str) -> list[dict[str, Any]]:
+    if status not in STATUSES:
+        raise ValueError(f"Unknown status: {status}")
+    if not any(i["id"] == item_id for i in items):
+        raise KeyError(item_id)
+    return [{**i, "status": status} if i["id"] == item_id else dict(i) for i in items]
+
+
+def counts(items: list[dict[str, Any]]) -> dict[str, int]:
+    c = {OPEN: 0, BOUGHT: 0, UNAVAILABLE: 0}
+    for i in items:
+        c[i["status"]] = c.get(i["status"], 0) + 1
+    c["total"] = len(items)
+    return c
+
+
+def is_done(items: list[dict[str, Any]]) -> bool:
+    """A list is done when it has items and none is left open."""
+    return bool(items) and all(i["status"] != OPEN for i in items)
+
+
+def task_summary(name: str, items: list[dict[str, Any]]) -> str:
+    c = counts(items)
+    base = f"Shopping: {name}" if name and norm(name) != "shopping" else "Shopping"
+    return f"{base} ({c['total'] - c[OPEN]} of {c['total']})" if c["total"] else base
+
+
+def task_description(list_id: str, items: list[dict[str, Any]]) -> str:
+    """The open items, one a line, then the marker the cards and app look for."""
+    lines = [f"• {i['text']}" for i in items if i["status"] == OPEN][:20]
+    return "\n".join([*lines, f"{MARKER}{list_id}"])
+
+
+def parse_marker(description: Any) -> str | None:
+    """The shopping list id a task's description points at, if it does."""
+    m = re.search(re.escape(MARKER) + r"([0-9a-f]{6,32})", str(description or ""))
+    return m.group(1) if m else None
+
+
+def missed_from(items: list[dict[str, Any]]) -> list[str]:
+    return [i["text"] for i in items if i["status"] == UNAVAILABLE]
+
+
+def merge_missed(missed: list[dict[str, Any]], texts: list[str], list_name: str, today: str, limit: int = 60) -> list[dict[str, Any]]:
+    """Add the unavailable items of a finished list to what is remembered, without repeats."""
+    out = [dict(m) for m in missed]
+    for t in texts:
+        if not any(norm(m["text"]) == norm(t) for m in out):
+            out.append({"text": t, "list": list_name, "date": today})
+    return out[-limit:]
+
+
+def drop_missed(missed: list[dict[str, Any]], texts: list[str]) -> list[dict[str, Any]]:
+    """Forget items that are on a list again (or were bought)."""
+    gone = {norm(t) for t in texts}
+    return [dict(m) for m in missed if norm(m["text"]) not in gone]
+
+
+def valid_date(value: Any) -> str:
+    """YYYY-MM-DD or empty."""
+    text = str(value or "").strip()[:10]
+    try:
+        return date.fromisoformat(text).isoformat() if text else ""
+    except ValueError:
+        return ""
+
+
+def for_person(lists: list[dict[str, Any]], first: str) -> list[dict[str, Any]]:
+    """Open (not finished) lists the person is on, soonest date first, undated last."""
+    mine = [l for l in lists if first in l["people"] and not l.get("done")]
+    return sorted(mine, key=lambda l: (l["date"] == "", l["date"], l["created"]))
+
+
+def pick_list(lists: list[dict[str, Any]], first: str) -> dict[str, Any] | None:
+    """Where shared items go by default: the person's soonest open list."""
+    mine = for_person(lists, first)
+    return mine[0] if mine else None
+
+
+def due_today(lists: list[dict[str, Any]], today: str) -> list[dict[str, Any]]:
+    return [l for l in lists if l["date"] == today and not l.get("done")]
+
+
+def is_shop_zone(zone_name: str, list_places: set[str], zone_entity: str) -> bool:
+    """Whether a zone is somewhere to shop: one a list says it will be bought at, or named like a shop."""
+    if zone_entity in list_places:
+        return True
+    n = norm(zone_name)
+    return any(w in n for w in SHOP_WORDS)
+
+
+def list_line(l: dict[str, Any]) -> str:
+    c = counts(l["items"])
+    return f"{l['name'] or 'Shopping'} ({c[OPEN]} to get)"
+
+
+def arrival_message(place: str, mine: list[dict[str, Any]], missed: list[dict[str, Any]]) -> tuple[str, str] | None:
+    """(title, message) for arriving at a shop, or None when there is nothing to say."""
+    open_lists = [l for l in mine if counts(l["items"])[OPEN]]
+    if open_lists:
+        names = ", ".join(list_line(l) for l in open_lists[:3])
+        return f"At {place}: shopping list", f"{names}. Tap to open the list."
+    if missed:
+        texts = ", ".join(m["text"] for m in missed[:8]) + (" …" if len(missed) > 8 else "")
+        return f"At {place}: not available last time", f"You couldn't get: {texts}."
+    return None

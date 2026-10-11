@@ -45,9 +45,41 @@ class MainActivity : ComponentActivity() {
     /** The camera a widget asked to see live, until it is closed. */
     private var openCamera by mutableStateOf<String?>(null)
 
+    /** Text shared or highlighted in another app, until it has been sent to be read for tasks. */
+    private var shareText by mutableStateOf<String?>(null)
+    private var shareSource = "Share"
+    private var shareAutoAdd by mutableStateOf(false)
+
+    /** The shopping list a reminder asked to open, until it is closed. */
+    private var openShopping by mutableStateOf<String?>(null)
+
+    /** The charger widget's Start charge asked the app to ask: "Charge at 00:30" or "Charge now". */
+    private var chargePrompt by mutableStateOf(false)
+
+    /** True each time the app comes to the front, to show tasks waiting to be checked (from the "Tasks to check" notice or a voice request). */
+    private var showInbox by mutableStateOf(false)
+
+    private fun readShare(intent: android.content.Intent?) {
+        intent?.getStringExtra(EXTRA_SHARE_TEXT)?.let {
+            shareText = it
+            shareSource = intent.getStringExtra(EXTRA_SHARE_SOURCE) ?: "Share"
+            shareAutoAdd = intent.getBooleanExtra(EXTRA_SHARE_AUTO_ADD, false)
+            intent.removeExtra(EXTRA_SHARE_TEXT)
+        }
+        intent?.getStringExtra(EXTRA_SHOPPING_LIST)?.let {
+            openShopping = it
+            intent.removeExtra(EXTRA_SHOPPING_LIST)
+        }
+        if (intent?.getBooleanExtra("charge_prompt", false) == true) {
+            chargePrompt = true
+            intent.removeExtra("charge_prompt")
+        }
+    }
+
     override fun onStart() {
         super.onStart()
         vm.onForeground()
+        showInbox = true
     }
 
     override fun onNewIntent(intent: android.content.Intent) {
@@ -55,6 +87,7 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         openPage = intent.getStringExtra("page")
         openCamera = intent.getStringExtra("camera")
+        readShare(intent)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,6 +95,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         openPage = intent?.getStringExtra("page")
         openCamera = intent?.getStringExtra("camera")
+        readShare(intent)
         val lastCrash = CrashReport.take(this)
         CrashReport.install(this)
         com.churchdrive.app.ui.MdiAll.load(this)
@@ -141,6 +175,14 @@ class MainActivity : ComponentActivity() {
                                     openCamera = openCamera,
                                     onCameraClosed = { openCamera = null },
                                 )
+                                openShopping?.let { com.churchdrive.app.ui.ShoppingScreen(it) { openShopping = null } }
+                                if (chargePrompt) {
+                                    com.churchdrive.app.ui.ChargePromptHost(entities, statesLoaded, vm::call) { chargePrompt = false }
+                                }
+                                // Text sent from another app, or tasks waiting from earlier: checked here before they go on a list.
+                                if (shareText != null || showInbox) {
+                                    com.churchdrive.app.ui.InboxDialog(shareText, shareSource, shareAutoAdd) { shareText = null; showInbox = false }
+                                }
                             } else {
                                 LoginScreen(onSignIn = vm::signIn, onLogin = vm::login, onCode = vm::loginCode)
                             }
@@ -149,5 +191,12 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    companion object {
+        const val EXTRA_SHOPPING_LIST = "shopping_list"
+        const val EXTRA_SHARE_TEXT = "share_text"
+        const val EXTRA_SHARE_SOURCE = "share_source"
+        const val EXTRA_SHARE_AUTO_ADD = "share_auto_add"
     }
 }

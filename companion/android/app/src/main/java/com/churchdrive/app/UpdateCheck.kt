@@ -19,6 +19,12 @@ object UpdateCheck {
         return !latest.startsWith(running) && !running.startsWith(latest)
     }
 
+    /** Not more than one check every ten minutes: GitHub allows an app that isn't signed in only 60 questions an hour. */
+    const val MIN_GAP_MS = 10 * 60_000L
+
+    /** Whether it is time to ask again: never asked yet, or the last time was at least [gap] ago. */
+    fun due(now: Long, last: Long, gap: Long = MIN_GAP_MS): Boolean = last == 0L || now - last >= gap
+
     /** True when an update is available; false on any problem (no network, rate limit). Call off the main thread. */
     fun check(http: OkHttpClient, running: String): Boolean = runCatching {
         http.newCall(Request.Builder().url(RELEASE_API).header("Accept", "application/vnd.github+json").build()).execute().use { r ->

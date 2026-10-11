@@ -153,6 +153,32 @@
           "description": "Which AI Task entity reads it (the first one by default)."
         }
       }
+    },
+    "shopping_add": {
+      "name": "Add to shopping list",
+      "description": "Add items to a person's soonest shopping list, or the list you name; a new list is made if they have none.",
+      "fields": {
+        "items": {
+          "name": "Items",
+          "description": "What to buy."
+        },
+        "list": {
+          "name": "List",
+          "description": "A shopping list's id (optional)."
+        },
+        "person": {
+          "name": "Person",
+          "description": "Whose list to use."
+        },
+        "name": {
+          "name": "New list name",
+          "description": "Name for a list made because none was open."
+        },
+        "date": {
+          "name": "Date",
+          "description": "The date of a list made because none was open."
+        }
+      }
     }
   }
 }

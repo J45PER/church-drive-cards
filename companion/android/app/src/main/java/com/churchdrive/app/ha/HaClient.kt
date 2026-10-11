@@ -50,6 +50,19 @@ class HaClient(private val scope: CoroutineScope) {
     private val subscriptions = java.util.concurrent.ConcurrentHashMap<Int, (JSONObject) -> Unit>()
 
     private var socket: WebSocket? = null
+
+    /**
+     * True only between Home Assistant accepting the sign-in (`auth_ok`) and the line closing. A command sent before that is
+     * read by Home Assistant as a badly formed sign-in: it refuses it and drops the connection, which looked like "Can't
+     * sign in just now" and made whatever asked fail. So nothing is sent until this is true.
+     */
+    @Volatile
+    private var authed = false
+
+    /** Why the last command Home Assistant refused was refused (its error code, e.g. `unknown_command`), or null. */
+    @Volatile
+    var lastErrorCode: String? = null
+        private set
     private var job: Job? = null
     private var nextId = 1
     private var url = ""
@@ -71,6 +84,7 @@ class HaClient(private val scope: CoroutineScope) {
             var backoff = 1_000L
             while (true) {
                 _connection.value = ConnectionState.Connecting
+                authed = false
                 val closed = kotlinx.coroutines.CompletableDeferred<Unit>()
                 socket = http.newWebSocket(Request.Builder().url(websocketUrl(url)).build(), Listener(closed))
                 closed.await()
@@ -84,6 +98,7 @@ class HaClient(private val scope: CoroutineScope) {
 
     fun disconnect() {
         job?.cancel()
+        authed = false
         socket?.close(1000, null)
         socket = null
         _connection.value = ConnectionState.Disconnected
@@ -99,7 +114,7 @@ class HaClient(private val scope: CoroutineScope) {
      */
     fun request(type: String, params: JSONObject = JSONObject(), timeoutMs: Long = 30_000L, onResult: (Any?) -> Unit) {
         val ws = socket
-        if (ws == null) {
+        if (ws == null || !authed) {
             onResult(null)
             return
         }
@@ -126,6 +141,7 @@ class HaClient(private val scope: CoroutineScope) {
      */
     fun subscribe(type: String, params: JSONObject, onEvent: (JSONObject) -> Unit): Int {
         val ws = socket ?: return -1
+        if (!authed) return -1
         val id = id()
         subscriptions[id] = onEvent
         val msg = JSONObject(params.toString()).put("id", id).put("type", type)
@@ -137,7 +153,7 @@ class HaClient(private val scope: CoroutineScope) {
     }
 
     fun unsubscribe(subscriptionId: Int) {
-        if (subscriptions.remove(subscriptionId) != null) {
+        if (subscriptions.remove(subscriptionId) != null && authed) {
             socket?.send(
                 JSONObject().put("id", id()).put("type", "unsubscribe_events").put("subscription", subscriptionId).toString(),
             )
@@ -145,6 +161,7 @@ class HaClient(private val scope: CoroutineScope) {
     }
 
     fun callService(domain: String, service: String, entityId: String, data: JSONObject = JSONObject()) {
+        if (!authed) return
         val msg = JSONObject()
             .put("id", id())
             .put("type", "call_service")
@@ -166,6 +183,7 @@ class HaClient(private val scope: CoroutineScope) {
                     JSONObject().put("type", "auth").put("access_token", token).toString(),
                 )
                 "auth_ok" -> {
+                    authed = true
                     // Asks still waiting from before the line dropped will not be answered: tell their askers so they can ask again.
                     val lost = pending.values.toList()
                     pending.clear()
@@ -194,7 +212,9 @@ class HaClient(private val scope: CoroutineScope) {
                 "result" -> {
                     val callback = pending.remove(msg.optInt("id"))
                     if (callback != null) {
-                        callback(if (msg.optBoolean("success")) msg.opt("result") else null)
+                        val ok = msg.optBoolean("success")
+                        lastErrorCode = if (ok) null else msg.optJSONObject("error")?.optString("code")?.takeIf { it.isNotBlank() } ?: "error"
+                        callback(if (ok) msg.opt("result") else null)
                     } else if (msg.optBoolean("success")) when (msg.optInt("id")) {
                         getStatesId -> {
                             _entities.value = parseStates(msg.getJSONArray("result"))
@@ -220,10 +240,12 @@ class HaClient(private val scope: CoroutineScope) {
         }
 
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+            authed = false
             closed.complete(Unit)
         }
 
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+            authed = false
             closed.complete(Unit)
         }
     }

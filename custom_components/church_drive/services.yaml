@@ -109,3 +109,24 @@ add_tasks:
       selector:
         entity:
           domain: ai_task
+shopping_add:
+  fields:
+    items:
+      required: true
+      example: "milk, eggs"
+      selector:
+        object:
+    list:
+      selector:
+        text:
+    person:
+      example: Jamie
+      selector:
+        text:
+    name:
+      example: Weekly shop
+      selector:
+        text:
+    date:
+      selector:
+        date:

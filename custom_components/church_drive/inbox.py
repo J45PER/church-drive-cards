@@ -36,6 +36,8 @@ KEEP = timedelta(days=7)
 MAX_TEXT = 6000
 MAX_ITEMS = 20
 AI_TIMEOUT = 60
+SHOPPING = "shopping"  # the id the AI and the cards use for "a shopping list"
+SHOPPING_TODO = "todo.shopping_list"
 
 INSTRUCTIONS = """You turn a message into to-do tasks for a family home.
 
@@ -50,7 +52,7 @@ The message may be a single note, something spoken, or a copied group chat with 
 
 Rules:
 - Extract only real actions someone has to do. Skip chat, greetings and things already done.
-- One task per action. Keep each task short, starting with a verb ("Book dentist", "Buy milk").
+- One task per action. Keep each task short, starting with a verb ("Book dentist"). For shopping the summary is just the item ("Milk", "Hand soap"), one item per task.
 - Choose the list that fits the task: shopping goes on the shopping list, cleaning jobs on the cleaning list, a task for a named person on that person's list, a task for the whole household on the "everyone" list. If nobody is named and it isn't shopping or cleaning, use the sender's own list.
 - If the text gives a day or time ("by Friday", "tomorrow 5pm") set due as an ISO date (YYYY-MM-DD) or date-time (YYYY-MM-DDTHH:MM:SS). Otherwise leave due empty.
 - note holds useful detail (an address, amount, who asked). Leave it empty if there is none.
@@ -92,6 +94,7 @@ class Inbox:
         self._people = people
         self._store: Store = Store(hass, STORE_VERSION, "church_drive.inbox")
         self._batches: list[dict[str, Any]] = []
+        self.shopping: Any = None  # the shopping lists (shopping.py), set once they are running
 
     async def async_load(self) -> None:
         data = await self._store.async_load() or {}
@@ -120,7 +123,11 @@ class Inbox:
             name = st.name or st.entity_id
             if "automatic" in st.entity_id:
                 continue
+            if st.entity_id == SHOPPING_TODO and self.shopping is not None:
+                continue  # shopping has lists of its own now
             out.append({"id": st.entity_id, "name": name})
+        if self.shopping is not None:
+            out.append({"id": SHOPPING, "name": "Shopping list"})
         return out
 
     def _person(self, who: str | None) -> dict[str, Any] | None:
@@ -235,14 +242,14 @@ class Inbox:
         if not batch["tasks"]:
             return {"batch": None, "tasks": [], "added": 0}
         if auto_add:
-            added = await self._async_add(batch["tasks"], context)
+            added = await self._async_add(batch["tasks"], context, batch["person"])
             return {"batch": None, "tasks": batch["tasks"], "added": added}
         self._batches.append(batch)
         self._expire()
         await self._async_save()
         self._changed(context)
         await self._async_tell(batch, who, context)
-        return {"batch": batch["id"], "tasks": batch["tasks"], "added": 0}
+        return {"batch": batch["id"], "tasks": batch["tasks"], "added": 0, "shopping": self._shopping_choice(batch)}
 
     async def _async_tell(self, batch: dict[str, Any], who: dict[str, Any] | None, context: Context | None) -> None:
         """Tell the sender their tasks are ready to check, on their phones."""
@@ -265,12 +272,50 @@ class Inbox:
         self._expire()
         mine = self._person(person)
         out = [b for b in self._batches if not mine or b["person"] in ("", mine["first"])]
-        return sorted(out, key=lambda b: b["created"], reverse=True)
+        out = sorted(out, key=lambda b: b["created"], reverse=True)
+        return [{**b, "shopping": self._shopping_choice(b)} for b in out]
 
-    async def _async_add(self, tasks: list[dict[str, Any]], context: Context | None) -> int:
+    def _shopping_choice(self, batch: dict[str, Any]) -> dict[str, Any] | None:
+        """For a batch with shopping in it: the lists it could join and the one it would, so the app can ask."""
+        if self.shopping is None or not any(t["list"] == SHOPPING for t in batch["tasks"]):
+            return None
+        first = batch["person"]
+        mine = self.shopping.lists(first or None)
+        chosen = self.shopping.default_for(first)
+        return {
+            "lists": [{"id": l["id"], "name": l["name"] or "Shopping", "date": l["date"], "open": l["counts"]["open"]} for l in mine if not l["done"]],
+            "default": chosen["id"] if chosen else "new",
+            "missed": [m["text"] for m in self.shopping.missed()],
+        }
+
+    async def _async_add_shopping(self, texts: list[str], person: str, opts: dict[str, Any] | None, context: Context | None) -> int:
+        """Shopping items go onto an existing list, or a new one, as the person chose; with no choice, their soonest list."""
+        opts = opts or {}
+        target = opts.get("target") or ""
+        who = self._person(person)
+        first = who["first"] if who else ""
+        if not target:
+            chosen = self.shopping.default_for(first)
+            target = chosen["id"] if chosen else "new"
+        if target == "new":
+            people = opts.get("people") or ([first] if first else ["everyone"])
+            made = await self.shopping.async_create(
+                opts.get("name") or "Shopping", people, opts.get("date") or "", opts.get("places") or [], texts,
+                include_missed=opts.get("include_missed", True), context=context,
+            )
+            return len(made["list"]["items"])
+        done = await self.shopping.async_add_items(target, texts, context)
+        return done["added"]
+
+    async def _async_add(self, tasks: list[dict[str, Any]], context: Context | None, person: str = "", shopping: dict[str, Any] | None = None) -> int:
         valid = {l["id"] for l in self.lists()}
         added = 0
+        shop = [t["summary"] for t in tasks if t.get("list") == SHOPPING and self.shopping is not None]
+        if shop:
+            added += await self._async_add_shopping(shop, person, shopping, context)
         for t in tasks:
+            if t.get("list") == SHOPPING and self.shopping is not None:
+                continue
             if t.get("list") not in valid:
                 raise ValueError(f"Unknown to-do list: {t.get('list')}")
             data: dict[str, Any] = {"entity_id": t["list"], "item": _clean(t["summary"])}
@@ -286,7 +331,7 @@ class Inbox:
         return added
 
     async def async_confirm(
-        self, batch_id: str, tasks: list[dict[str, Any]] | None, context: Context | None = None
+        self, batch_id: str, tasks: list[dict[str, Any]] | None, context: Context | None = None, shopping: dict[str, Any] | None = None
     ) -> int:
         """Add the checked tasks. [tasks] are the person's edits (a task left out is dropped);
         None adds the batch as it was proposed."""
@@ -298,7 +343,7 @@ class Inbox:
             for t in tasks
             if _clean(t.get("summary"))
         ]
-        added = await self._async_add(chosen, context)
+        added = await self._async_add(chosen, context, batch["person"], shopping)
         await self.async_dismiss(batch_id, context)
         return added
 

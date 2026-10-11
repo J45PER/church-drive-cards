@@ -19,6 +19,22 @@ Turn text into to-do tasks without typing them out. The text goes to Home Assist
 - **Voice assistant**: `ha/voice-tasks.yaml` is an automation that lets Assist (phone, watch or a Voice speaker) say "add task …" or "remind me to …".
 - **Anything else**: the `church_drive.add_tasks` action (`text`, optional `person`, `source`, `auto_add`, `ai_task_entity`) returns the tasks it found. `auto_add: true` skips the check. Websocket commands `church_drive/inbox`, `/submit`, `/confirm` and `/dismiss` serve the app, and `church_drive_inbox_changed` fires when the inbox changes.
 
+## Shopping lists
+
+A shopping list is one task, not a pile of items. It has a **name**, the **people** it is for, an optional **date**, optional **places** (zones where you will buy it) and its **items**, each of which ends up *bought* or *unavailable*.
+
+- **One task per person.** The list shows on each person's to-do list as "Shopping: Weekly (3 of 8)", due on its date. Opening it shows the items. The task is ticked off by itself when no item is left open.
+- **Not available.** Items marked unavailable are remembered. When the next list is made they are added to it and the people on it are told ("Eggs was not available on your last shop"). Arriving at a shop with no list also reminds you of them.
+- **Dates.** On a list's date, at 08:00, the people on it are reminded to go shopping.
+- **Places and supermarkets.** Arriving at a zone a list names, or any zone whose name looks like a shop (Tesco, Aldi, Co-op, shop, market…), brings up your open lists (a list that names places only comes up at those places).
+- **Shared text.** Shopping items found in shared or spoken text no longer go to Home Assistant's own shopping list. The check screen asks whether to add them to an existing list or make a new one (the person's soonest list is the default; voice and Auto add use it too).
+- **Tidy.** A finished list, and its tasks, are deleted a day later.
+- **Actions and commands.** `church_drive.shopping_add` (`items`, optional `list`, `person`, `name`, `date`) for automations; websocket commands `church_drive/shopping`, `/create`, `/update`, `/add`, `/item` (status `open`, `bought`, `unavailable` or `remove`), `/delete` and `/import` (moves Home Assistant's `todo.shopping_list` onto a list here) serve the cards and app; `church_drive_shopping_changed` fires when lists change.
+
+The rules are in `shopping_logic.py` (tested in `test/shopping_logic_test.py`) and the lists in `shopping.py`.
+
+**Shopping card** (`custom:shopping-card`, options `title` and `all`): your open lists with how many items are left, a **New shopping list** button and a line for anything not available last time. Tapping a list (or its task on any Task List card, or a reminder) opens the **full-page list**: tick each item **Bought** or **Not available**, add items (several at once with commas), edit the name, people, date and places, delete the list. The arrow, Escape or the phone's back button closes it. A page address ending `?list=<id>` opens that list (reminders link there; put the card on a view called `shopping`, i.e. `/dashboard-mobile/shopping`).
+
 ## Place reminders and snoozing
 
 A task can remind people when they **arrive at a place** instead of at a time. In the Task List card's form (or the app's task box), choose **Remind at a place**: Home, or any zone. Everyone it reminds gets a notification each time they arrive there, until the task is ticked off. Both place and time reminders come with **Done** and **Snooze** buttons on the phone: Done ticks the task off, and Snooze offers 5, 10, 20, 30 minutes or an hour. A time reminder comes back after the snooze; a place reminder comes back only if the person is still at that place (if they've left, it waits for their next arrival).

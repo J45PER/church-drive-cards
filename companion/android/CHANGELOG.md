@@ -4,6 +4,59 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.5.1
+
+- **Connection fix**: the app no longer sends anything to the house before the sign-in has finished. Sent early, Home Assistant
+  took it for a failed sign-in and dropped the connection, which showed as "Can't sign in just now. Trying again…" and made
+  voice and share fail. It waits for the connection first.
+- **The right message when the house says no**: "Church Drive in Home Assistant needs updating" now shows only when Home Assistant
+  really doesn't have the command. Any other refusal says "The house couldn't do that" and what Home Assistant said.
+
+## 0.5.0
+
+- **Smart charge** on the car charger: a **Smart charge** switch under the Start charge button, saying what it's doing
+  ("Waiting for the cheap rate, 00:30"). It charges a plugged-in car at the cheapest Octopus rate by itself, and anyone
+  picking a mode takes over. Needs the smart charge set up in Home Assistant.
+- **A question before charging at the normal rate**: pressing **Start charge** (or **Fast**) when the rate is high and the cheap
+  rate is coming up asks **Charge at 00:30** or **Charge now at 25.3p**. The charger widget's Start charge opens the same
+  question in the app.
+- **Stop shows "Stopping…"** until the charger's readings catch up (they refresh about once a minute; the house now asks for
+  fresh ones every few seconds after a mode change), instead of saying "Charging" for up to a minute.
+
+## 0.4.1
+
+- **Update prompts**: the app now checks for a newer version each time it comes to the front, not only when it starts afresh,
+  so the update banner shows up without closing the app first. It checks at most every ten minutes.
+
+## 0.4.0
+
+- **Reminders at a place**: in a task's edit box, **Remind me at a place** (Home, or any place the house knows). You're reminded
+  each time you arrive there, until the task is done.
+- **Done and Snooze on task reminders**, for both place and time reminders. **Done** ticks the task off; **Snooze** asks for
+  5, 10, 20, 30 minutes or 1 hour. A time reminder comes back after the snooze; a place reminder comes back after it only if
+  you're still there (if you've left, it waits for your next arrival). Needs Church Drive v0.40.0.
+- Setting a place is on a task you edit; a brand-new task from the app gets its place when you edit it (the dashboard can
+  set it when adding).
+
+## 0.3.1
+
+- **Tasks from text and voice, quicker and clearer**: no waiting box for a quick answer (a small "Adding…" or "Reading…"
+  only shows if it takes more than a moment). If the house doesn't have the task inbox yet it now says so straight away
+  ("Church Drive in Home Assistant needs updating to 0.39.0 or later"), instead of waiting several seconds and giving a vague
+  error. Waiting for the connection still lasts up to about eight seconds.
+
+## 0.3.0
+
+- **Tasks from messages**: highlight text in any app and choose **Church Drive to-do** in the menu, or use **Share** >
+  **Church Drive to-do**. The house reads it with AI and splits it into tasks, each on the list it belongs on (shopping,
+  cleaning, a person's own, everyone's) with a day if the text gives one. Check them first: untick any, change the words,
+  pick a different list, then **Add**. Tasks waiting to be checked (from a voice request, or if you closed the box) show
+  when you next open the app. Needs Church Drive v0.39.0 and an AI Task in Home Assistant.
+- **Tasks by voice** without Gemini or Assistant: a microphone in the top bar, an **Add task** Quick Settings tile (add it
+  from the tile editor), and **Add task** in the app icon's long-press menu. It uses the phone's own speech box, listens only
+  when you tap (never in the background), and the tasks go straight onto the right lists; the app shows where each went. There is also an **Add task** widget
+  (one cell, just the microphone), and the **To-do** widget has the same microphone beside its heading.
+
 ## 0.2.3
 
 - **Car charger**: one button instead of Unlock / Charge now / Pause, always shown on the card. Grey **No car connected**,

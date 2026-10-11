@@ -69,6 +69,8 @@ fun TaskListCard(config: JSONObject, entities: Map<String, EntityState>, call: C
     var text by remember(listId) { mutableStateOf("") }
     val now = java.time.LocalDateTime.now()
     var editing by remember { mutableStateOf<TodoItem?>(null) }
+    var shopping by remember { mutableStateOf<String?>(null) }
+    shopping?.let { ShoppingScreen(it) { shopping = null } }
     var showDone by remember(listId) { mutableStateOf(false) }
     editing?.let { TaskDialog(it, listId, me?.trim()?.substringBefore(' '), tone, call) { editing = null } }
 
@@ -95,7 +97,11 @@ fun TaskListCard(config: JSONObject, entities: Map<String, EntityState>, call: C
                 )
                 if (showIcons) HaIcon(choreIcon(item.summary), Icons.Filled.Info, tone.accent, 22.dp)
                 Column(
-                    modifier = Modifier.weight(1f).padding(start = if (showIcons) 8.dp else 0.dp).clickable { editing = item },
+                    modifier = Modifier.weight(1f).padding(start = if (showIcons) 8.dp else 0.dp).clickable {
+                        // A shopping list's task opens the list page, not the task form.
+                        val list = shoppingIdOf(item.description)
+                        if (list.isNotEmpty()) shopping = list else editing = item
+                    },
                 ) {
                     Text(item.summary, style = MaterialTheme.typography.bodyLarge)
                     taskLine(item, now).takeIf { it.isNotBlank() }?.let {

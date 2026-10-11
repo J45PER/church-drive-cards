@@ -13,6 +13,12 @@ interface HaApi {
     fun subscribe(type: String, params: JSONObject, onEvent: (JSONObject) -> Unit): Int
 
     fun close(subscription: Int)
+
+    /** Whether the line to the house is up right now. A failed command while it is up was refused, not lost. */
+    val connected: Boolean get() = true
+
+    /** Why Home Assistant refused the last command it refused (its error code), or null. */
+    val lastErrorCode: String? get() = null
 }
 
 val LocalHaApi = compositionLocalOf<HaApi?> { null }
