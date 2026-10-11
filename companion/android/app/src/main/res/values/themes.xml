@@ -4,8 +4,32 @@
         <item name="android:windowActionBar">false</item>
         <item name="android:windowNoTitle">true</item>
     </style>
-    <!-- The voice overlay: no window animation of its own, so the dimmed backdrop never slides with the card. -->
+    <!-- The voice overlay: the system adds no open, close or task slide of its own, so nothing slides with the card (it animates its own backdrop and card). -->
     <style name="Theme.Assist" parent="android:Theme.Translucent.NoTitleBar">
-        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:windowAnimationStyle">@style/AssistWindowAnimation</item>
+    </style>
+    <style name="AssistWindowAnimation" parent="@android:style/Animation">
+        <item name="android:activityOpenEnterAnimation">@anim/assist_none</item>
+        <item name="android:activityOpenExitAnimation">@anim/assist_none</item>
+        <item name="android:activityCloseEnterAnimation">@anim/assist_none</item>
+        <item name="android:activityCloseExitAnimation">@anim/assist_none</item>
+        <item name="android:taskOpenEnterAnimation">@anim/assist_none</item>
+        <item name="android:taskOpenExitAnimation">@anim/assist_none</item>
+        <item name="android:taskCloseEnterAnimation">@anim/assist_none</item>
+        <item name="android:taskCloseExitAnimation">@anim/assist_none</item>
+        <item name="android:taskToFrontEnterAnimation">@anim/assist_none</item>
+        <item name="android:taskToFrontExitAnimation">@anim/assist_none</item>
+        <item name="android:taskToBackEnterAnimation">@anim/assist_none</item>
+        <item name="android:taskToBackExitAnimation">@anim/assist_none</item>
+        <item name="android:wallpaperOpenEnterAnimation">@anim/assist_none</item>
+        <item name="android:wallpaperOpenExitAnimation">@anim/assist_none</item>
+        <item name="android:wallpaperCloseEnterAnimation">@anim/assist_none</item>
+        <item name="android:wallpaperCloseExitAnimation">@anim/assist_none</item>
+        <item name="android:wallpaperIntraOpenEnterAnimation">@anim/assist_none</item>
+        <item name="android:wallpaperIntraOpenExitAnimation">@anim/assist_none</item>
+        <item name="android:wallpaperIntraCloseEnterAnimation">@anim/assist_none</item>
+        <item name="android:wallpaperIntraCloseExitAnimation">@anim/assist_none</item>
+        <item name="android:windowEnterAnimation">@anim/assist_none</item>
+        <item name="android:windowExitAnimation">@anim/assist_none</item>
     </style>
 </resources>

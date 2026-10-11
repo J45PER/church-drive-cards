@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.12.9
+
+- Opening Jarvis from the microphone button, the widget or the Quick Settings tile no longer lets Android slide his screen up and down: the system's own open, close and task animations are switched off for it (it runs as its own screen), so only the card slides and the backdrop fades.
+
 ## 0.12.8
 
 - A new setting, Classic Jarvis colours (Account > Settings), keeps his original indigo, purple and green instead of following the phone's theme.
