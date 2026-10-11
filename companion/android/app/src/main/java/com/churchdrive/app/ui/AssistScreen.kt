@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -91,13 +92,16 @@ fun AssistPanel(
     onIntroDone: () -> Unit = {},
     /** "Try it" in the introduction: done with it, and start listening (asking for the microphone first if needed). */
     onIntroTry: () -> Unit = { onIntroDone(); model.listen() },
+    /** Whether "listen for the wake word" is on, and a way to turn it on (the introduction offers it). */
+    wakeOn: Boolean = true,
+    onEnableWake: () -> Unit = {},
 ) {
     // A dialog doesn't set the text colour, so it would be dark on dark.
     androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
         if (intro != null) {
             AssistIntro(
                 kind = intro, person = person, assistant = model.name, wakeWord = model.wakeWord, model = model,
-                onTry = onIntroTry, onSkip = onIntroDone,
+                onTry = onIntroTry, onSkip = onIntroDone, wakeOn = wakeOn, onEnableWake = onEnableWake,
             )
         } else if (full) FullAssist(model, onFull, onClose, onTask) else SheetAssist(model, onFull, onClose, onTask)
     }
@@ -179,7 +183,7 @@ private fun RoundIcon(icon: String, label: String, glow: Boolean, onClick: () ->
     Box(modifier = Modifier.size(size), contentAlignment = Alignment.Center) {
         if (glow) {
             Canvas(
-                modifier = Modifier.requiredSize(size * 1.9f).rotate(turn).graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen),
+                modifier = Modifier.requiredSize(size * 1.55f).rotate(turn).graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen),
             ) {
                 val r = this.size.minDimension / 2f
                 drawCircle(
@@ -275,7 +279,11 @@ private fun FullAssist(model: AssistModel, onFull: (Boolean) -> Unit, onClose: (
     val scheme = MaterialTheme.colorScheme
     var typed by remember { mutableStateOf("") }
     val chatting = model.messages.isNotEmpty()
-    Column(modifier = Modifier.fillMaxSize().background(scheme.background).statusBarsPadding().navigationBarsPadding().imePadding()) {
+    Column(
+        modifier = Modifier.fillMaxSize()
+            .background(Brush.verticalGradient(listOf(scheme.background, scheme.background, AssistColours.Indigo.copy(alpha = 0.14f))))
+            .statusBarsPadding().navigationBarsPadding().imePadding(),
+    ) {
         Box(modifier = Modifier.fillMaxWidth().height(4.dp).background(AssistColours.across))
         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             RoundIcon("mdi:close", "Close", false, { onClose() })
@@ -301,17 +309,27 @@ private fun FullAssist(model: AssistModel, onFull: (Boolean) -> Unit, onClose: (
         } else {
             val list = rememberLazyListState()
             LaunchedEffect(model.messages.size, model.partial) { if (model.messages.isNotEmpty()) list.animateScrollToItem(model.messages.size) }
-            LazyColumn(state = list, modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                item { Spacer(Modifier.height(4.dp)) }
-                items(model.messages.size) { i -> Bubble(model.messages[i]) }
-                item {
-                    if (model.partial.isNotEmpty()) Bubble(AssistMessage(true, model.partial), faded = true)
-                    if (model.state == AssistState.Thinking) Text("…", style = MaterialTheme.typography.headlineMedium, color = AssistColours.Purple)
-                    Notice(model, onTask)
+            Column(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                // The glow stays with the conversation, so you can see it listening, thinking and speaking.
+                Box(modifier = Modifier.fillMaxWidth().height(96.dp), contentAlignment = Alignment.Center) {
+                    AssistOrb(model.state, model.level, 70.dp)
+                }
+                Text(
+                    assistStatus(model.state), style = MaterialTheme.typography.labelLarge, color = AssistColours.Green,
+                    textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                )
+                LazyColumn(state = list, modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    item { Spacer(Modifier.height(4.dp)) }
+                    items(model.messages.size) { i -> Bubble(model.messages[i]) }
+                    item {
+                        if (model.partial.isNotEmpty()) Bubble(AssistMessage(true, model.partial), faded = true)
+                        if (model.state == AssistState.Thinking) ThinkingDots()
+                        Notice(model, onTask)
+                    }
                 }
             }
         }
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(modifier = Modifier.padding(start = 16.dp, end = 24.dp, top = 8.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (!chatting) Suggestions(model) else if (model.state == AssistState.Listening) Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Waveform(model.state, model.level) }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
@@ -331,13 +349,29 @@ private fun FullAssist(model: AssistModel, onFull: (Boolean) -> Unit, onClose: (
     }
 }
 
+/** Three dots that pulse one after another while the house is working out an answer. */
+@Composable
+private fun ThinkingDots() {
+    val t = rememberInfiniteTransition(label = "dots")
+    Row(
+        modifier = Modifier.clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp, bottomStart = 6.dp, bottomEnd = 22.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant).padding(horizontal = 18.dp, vertical = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        listOf(AssistColours.Indigo, AssistColours.Purple, AssistColours.Green).forEachIndexed { i, colour ->
+            val a by t.animateFloat(0.25f, 1f, infiniteRepeatable(tween(700, delayMillis = i * 180), RepeatMode.Reverse), label = "dot$i")
+            Box(modifier = Modifier.size(9.dp).clip(CircleShape).background(colour.copy(alpha = a)))
+        }
+    }
+}
+
 @Composable
 private fun Bubble(message: AssistMessage, faded: Boolean = false) {
     val scheme = MaterialTheme.colorScheme
     val mine = message.fromUser
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start) {
         Box(
-            modifier = Modifier.fillMaxWidth(0.82f)
+            modifier = Modifier.widthIn(max = 300.dp)
                 .clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp, bottomStart = if (mine) 22.dp else 6.dp, bottomEnd = if (mine) 6.dp else 22.dp))
                 .background(if (mine) Brush.horizontalGradient(listOf(AssistColours.Indigo, AssistColours.Purple)) else Brush.horizontalGradient(listOf(scheme.surfaceVariant, scheme.surfaceVariant)))
                 .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -352,7 +386,7 @@ private fun Bubble(message: AssistMessage, faded: Boolean = false) {
  * after an update it just says what is new.
  */
 @Composable
-fun AssistIntro(kind: IntroKind, person: String, assistant: String, wakeWord: String?, model: AssistModel, onTry: () -> Unit, onSkip: () -> Unit) {
+fun AssistIntro(kind: IntroKind, person: String, assistant: String, wakeWord: String?, model: AssistModel, onTry: () -> Unit, onSkip: () -> Unit, wakeOn: Boolean = true, onEnableWake: () -> Unit = {}) {
     val scheme = MaterialTheme.colorScheme
     val tone = toneColors(Tone.Indigo)
     // Say it once the name is known (it arrives from the house a moment after opening), or after a short wait if the house has none.
@@ -396,7 +430,10 @@ fun AssistIntro(kind: IntroKind, person: String, assistant: String, wakeWord: St
                 }
             }
         }
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (!wakeOn && wakeWord != null) {
+                TileRow(listOf(TileItem("mdi:microphone-message", "Turn on \u201C${wakePhrase(wakeWord)}\u201D", false) { onEnableWake() }), tone, scheme.onSurface)
+            }
             TileRow(
                 listOf(TileItem("mdi:close", "Got it", false) { onSkip() }, TileItem("mdi:microphone", "Try it", true) { onTry() }),
                 tone, scheme.onSurface,

@@ -4,6 +4,18 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.10.3
+
+- **Fix: asking a question no longer starts streaming the microphone to the house.** Home Assistant says "no audio handler" for a text question with a
+  null, and the app read that as handler 0, so every question sent audio nobody was listening for (the "non-existing handler 0" errors in Home
+  Assistant). Only the wake word listening streams audio now.
+- **The voice stays live.** After Jarvis answers (and finishes speaking) the app listens again for your follow-up, and stops by itself after a moment
+  of silence; if the house asks you something it listens at once.
+- **Jarvis looks more like part of the app:** the glow stays with the conversation, three pulsing dots while he thinks, bubbles sized to their words,
+  a tinted background, and the microphone's glow no longer runs off the screen edge.
+- **"Hey Jarvis" is easier to find and diagnose:** the first-time and what's-new screens offer to turn it on; Settings shows, when it is on but not
+  listening, the last things the voice pipeline did.
+
 ## 0.10.2
 
 - **The assistant speaks its introduction.** The first time ever it introduces itself (name, what it can do, what is new), out loud in the house's

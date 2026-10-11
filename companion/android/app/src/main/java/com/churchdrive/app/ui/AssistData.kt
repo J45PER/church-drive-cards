@@ -12,7 +12,7 @@ data class AssistMessage(val fromUser: Boolean, val text: String)
 /** What one event of Home Assistant's `assist_pipeline/run` means for the screen. */
 sealed interface AssistEvent {
     /** The house's written answer. */
-    data class Answer(val text: String, val conversationId: String?) : AssistEvent
+    data class Answer(val text: String, val conversationId: String?, val continueConversation: Boolean = false) : AssistEvent
 
     /** The spoken answer is ready to play at [path] (an address on the house). */
     data class Audio(val path: String) : AssistEvent
@@ -43,7 +43,7 @@ fun parseAssistEvent(event: JSONObject): AssistEvent? {
         "intent-end" -> {
             val out = data?.optJSONObject("intent_output")
             val speech = out?.optJSONObject("response")?.optJSONObject("speech")?.optJSONObject("plain")?.optString("speech").orEmpty()
-            AssistEvent.Answer(speech, out?.optString("conversation_id")?.takeIf { it.isNotBlank() })
+            AssistEvent.Answer(speech, out?.optString("conversation_id")?.takeIf { it.isNotBlank() }, out?.optBoolean("continue_conversation", false) ?: false)
         }
         "tts-end" -> data?.optJSONObject("tts_output")?.optString("url")?.takeIf { it.isNotBlank() }?.let { AssistEvent.Audio(it) }
         "error" -> {
@@ -51,7 +51,7 @@ fun parseAssistEvent(event: JSONObject): AssistEvent? {
             AssistEvent.Failed(data?.optString("message").orEmpty().ifBlank { "That didn't work." }, code == "intent-failed" || code.contains("no_intent_match"), code)
         }
         "run-end" -> AssistEvent.Done
-        "run-start" -> AssistEvent.Started(data?.optJSONObject("runner_data")?.let { if (it.has("stt_binary_handler_id")) it.optInt("stt_binary_handler_id") else null })
+        "run-start" -> AssistEvent.Started(data?.optJSONObject("runner_data")?.let { if (it.isNull("stt_binary_handler_id")) null else it.optInt("stt_binary_handler_id") })
         "wake_word-end" -> AssistEvent.Woke(data?.optJSONObject("wake_word_output")?.optString("wake_word_id")?.takeIf { it.isNotBlank() })
         "stt-end" -> AssistEvent.Heard(data?.optJSONObject("stt_output")?.optString("text").orEmpty())
         "stt-vad-end" -> AssistEvent.SpeechEnded
