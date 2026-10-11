@@ -17,6 +17,7 @@ import { openPopup } from './popup.js';
 import { stcMe } from './section-title-card.js';
 import { openShoppingPage } from './shopping-card.js';
 import { shoppingIdOf, shoppingNote } from './shopping-logic.js';
+import { checkStale } from './stale.js';
 import { DAYS, MONTHS, parseTask, formatTask, formatRepeat, describeRepeat, firstDue } from './repeat.js';
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -182,6 +183,7 @@ export class TaskListCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    checkStale(hass);
     if (!this._placesLoaded) {
       this._placesLoaded = true;
       this._loadPlaces();

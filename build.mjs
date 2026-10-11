@@ -18,8 +18,8 @@ if (manifest.version !== version) {
 }
 
 const builds = [
-  { outfile: 'custom_components/church_drive/frontend/church-drive-cards.js', define: {} },
-  { outfile: 'church-drive-cards-beta.js', define: { __CARD_SUFFIX__: '"-beta"' } },
+  { outfile: 'custom_components/church_drive/frontend/church-drive-cards.js', define: { __CD_VERSION__: JSON.stringify(version) } },
+  { outfile: 'church-drive-cards-beta.js', define: { __CARD_SUFFIX__: '"-beta"', __CD_VERSION__: JSON.stringify(version) } },
 ];
 
 const watch = process.argv.includes('--watch');

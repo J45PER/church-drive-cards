@@ -11,6 +11,7 @@ import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { kitShell, kitHead, kitEsc } from './card-kit.js';
 import { shoppingIdOf, splitItems } from './shopping-logic.js';
+import { checkStale } from './stale.js';
 
 export { shoppingIdOf };
 
@@ -88,6 +89,7 @@ export class ShoppingCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    checkStale(hass);
     if (!this._off && this.isConnected) this._off = watch(hass, () => this._render());
     openFromUrl(hass);
     this._render();
