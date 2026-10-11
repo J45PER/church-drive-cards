@@ -43,6 +43,9 @@ jobs:
             --prerelease --target "$GITHUB_SHA" \
             --title "Church Drive Android ${version} (test build ${GITHUB_RUN_NUMBER})" \
             --notes "Latest test build, version ${version}, build ${GITHUB_RUN_NUMBER}, from the ${GITHUB_REF_NAME} branch (commit ${GITHUB_SHA::7}). Download church-drive.apk on an Android phone and install it."
+          # The app looks for updates through the public releases API, which cannot see a draft: make sure this one is published.
+          gh release edit companion-android-latest --draft=false --prerelease
+          gh release view companion-android-latest --json isDraft,isPrerelease,tagName
           # Each version keeps its own release, made the first time a build has that version: a permanent record of what shipped.
           if ! gh release view "android-v${version}" >/dev/null 2>&1; then
             notes=$(awk -v v="$version" '$0 ~ "^## "v"( |$)" {on=1; next} /^## / {on=0} on' companion/android/CHANGELOG.md)
