@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.12.7
+
+- Jarvis now uses your phone's own theme colours (the Material You accent colours from your wallpaper) instead of fixed indigo, purple and green: the cloud, the glow behind the microphone, the thinking dots, your message bubbles and the status text all follow the phone.
+
 ## 0.12.6
 
 - Every pop-up now opens and closes the same way: the page behind fades dark in place, and the pop-up rises from below and fades in (and leaves the same way backwards). This covers the task editors, the shopping list, light settings, the camera viewers, the media remote and Jarvis. (Small yes/no boxes keep Android's own look.)
