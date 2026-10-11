@@ -176,7 +176,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
         val params = JSONObject()
             .put("start_stage", "tts")
             .put("end_stage", "tts")
-            .put("input", JSONObject().put("text", text))
+            .put("input", JSONObject().put("text", forSpeech(text)))
             .put("timeout", 30)
         subscription = api.subscribe("assist_pipeline/run", params) { event -> main.post { onEvent(event) } }
         if (subscription < 0 && attempt < 10) main.postDelayed({ speak(text, attempt + 1) }, 1_000)
@@ -299,7 +299,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
                 if (e.conversationId != null) conversationId = e.conversationId
                 answered = true
                 continueAfter = e.continueConversation
-                if (e.text.isNotBlank()) messages += AssistMessage(false, e.text)
+                if (e.text.isNotBlank()) messages += AssistMessage(false, forDisplay(e.text))
                 if (isNotUnderstood(e.text)) notUnderstood = said
             }
             is AssistEvent.Audio -> play(assistAudioUrl(base, e.path))

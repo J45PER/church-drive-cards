@@ -2,6 +2,8 @@ package com.churchdrive.app
 
 import com.churchdrive.app.ui.AssistEvent
 import com.churchdrive.app.ui.assistAudioUrl
+import com.churchdrive.app.ui.forDisplay
+import com.churchdrive.app.ui.forSpeech
 import com.churchdrive.app.ui.introDue
 import com.churchdrive.app.ui.isDismissal
 import com.churchdrive.app.ui.isNotUnderstood
@@ -151,5 +153,15 @@ class AssistDataTest {
         listOf("Turn off the lights", "Is the alarm on", "What time is it", "Turn on the lamp and then tell me that is it done", "", "no one is home, is that right and who is in the house now").forEach {
             assertFalse(it, isDismissal(it))
         }
+    }
+
+    @Test
+    fun dianeIsRespelledForTheVoiceAndRestoredOnScreen() {
+        assertEquals("Hello Die Ann. Welcome back.", forSpeech("Hello Diane. Welcome back."))
+        assertEquals("Die Ann's lights are off", forSpeech("Diane's lights are off"))
+        assertEquals("Jamie and Diane are home", forDisplay("Jamie and Die Ann are home"))
+        assertEquals("Diane's phone", forDisplay("Die-Ann's phone"))
+        assertEquals("Diana is not Diane", forDisplay(forSpeech("Diana is not Diane")))
+        assertEquals("Hayley is out", forDisplay("Hayley is out"))
     }
 }
