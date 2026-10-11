@@ -100,6 +100,6 @@ class ShoppingDataTest {
         val p = ShoppingPlace("Lidl </script>", "Protaras", 35.0, 34.0)
         val html = placeMapHtml(listOf(p), emptyList())
         assertEquals(1, Regex("""</script>""").findAll(html.substringAfter("var results=")).count())
-        assert(html.contains("35.0"))
+        assertEquals(true, html.contains("\"lat\":35"))
     }
 }
