@@ -1,5 +1,10 @@
 package com.churchdrive.app.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -271,20 +276,60 @@ private fun JarvisHeader(model: AssistModel, modifier: Modifier = Modifier) {
     }
 }
 
+/**
+ * Dims and (on Android 12 and newer, where the phone allows it) blurs whatever is behind the assistant, by [amount] (0 to 1), so the
+ * backdrop can fade in and out by itself. Also turns off the window's own slide, which would drag the backdrop along with the card.
+ */
+@Composable
+private fun FrostedWindow(amount: Float) {
+    val view = androidx.compose.ui.platform.LocalView.current
+    val window = remember(view) {
+        (view.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window
+            ?: generateSequence(view.context) { (it as? android.content.ContextWrapper)?.baseContext }.filterIsInstance<android.app.Activity>().firstOrNull()?.window
+    }
+    androidx.compose.runtime.SideEffect {
+        window?.setWindowAnimations(-1)
+        window?.setDimAmount(0f)
+        if (android.os.Build.VERSION.SDK_INT >= 31 && window != null) {
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+            window.attributes = window.attributes.also { it.blurBehindRadius = (38 * amount.coerceIn(0f, 1f)).toInt() }
+        }
+    }
+    androidx.compose.runtime.DisposableEffect(window) {
+        onDispose {
+            if (android.os.Build.VERSION.SDK_INT >= 31 && window != null) window.attributes = window.attributes.also { it.blurBehindRadius = 0 }
+        }
+    }
+}
+
 @Composable
 private fun SheetAssist(model: AssistModel, onFull: (Boolean) -> Unit, onClose: () -> Unit, onTask: (String) -> Unit) {
     val scheme = MaterialTheme.colorScheme
     var drag by remember { mutableFloatStateOf(0f) }
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.34f)).clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { onClose() }) {
+    // The dimmed, frosted backdrop fades in and out on its own, in place; only the card slides. (The window itself has no animation.)
+    var shown by remember { mutableStateOf(false) }
+    var leaving by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { shown = true }
+    val close: () -> Unit = { if (!leaving) { leaving = true; shown = false } }
+    LaunchedEffect(leaving) { if (leaving) { kotlinx.coroutines.delay(260); onClose() } }
+    val dim by animateFloatAsState(if (shown) 0.34f else 0f, tween(240), label = "scrim")
+    FrostedWindow(dim / 0.34f)
+    Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = dim)).clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { close() })
+        AnimatedVisibility(
+            visible = shown, modifier = Modifier.align(Alignment.BottomCenter),
+            enter = slideInVertically(tween(280)) { it } + fadeIn(tween(200)),
+            exit = slideOutVertically(tween(240)) { it } + fadeOut(tween(200)),
+        ) {
         Column(
-            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+            modifier = Modifier.fillMaxWidth()
                 .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
                 .background(scheme.surface)
                 .clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { }
                 .pointerInput(Unit) {
                     detectVerticalDragGestures(
                         onDragStart = { drag = 0f },
-                        onDragEnd = { if (drag < -60f) onFull(true) else if (drag > 140f) onClose() },
+                        onDragEnd = { if (drag < -60f) onFull(true) else if (drag > 140f) close() },
                         onVerticalDrag = { _, dy -> drag += dy },
                     )
                 }
@@ -315,8 +360,9 @@ private fun SheetAssist(model: AssistModel, onFull: (Boolean) -> Unit, onClose: 
                     if (model.state == AssistState.Listening) "mdi:stop" else "mdi:microphone", "Talk",
                     model.state != AssistState.Idle && model.state != AssistState.Waiting, { model.listen() }, size = 68.dp,
                 )
-                RoundIcon("mdi:close", "Close", false, { onClose() })
+                RoundIcon("mdi:close", "Close", false, { close() })
             }
+        }
         }
     }
 }

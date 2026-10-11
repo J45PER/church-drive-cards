@@ -72,11 +72,6 @@ class AssistActivity : ComponentActivity() {
             override fun sendAudio(handlerId: Int, chunk: ByteArray, length: Int): Boolean = c.sendAudio(handlerId, chunk, length)
             override val connected: Boolean get() = c.connection.value == ConnectionState.Connected
         }
-        // A frosted blur of whatever is behind (Android 12+, where the phone allows it); older phones just get the dimming.
-        if (android.os.Build.VERSION.SDK_INT >= 31) {
-            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
-            window.attributes = window.attributes.also { it.blurBehindRadius = 38 }
-        }
         val m = AssistModel(this, api, base)
         model = m
         m.followUp = true
@@ -138,6 +133,13 @@ class AssistActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         if (this.intro == null) talk()
+    }
+
+    override fun finish() {
+        super.finish()
+        // No window slide or fade: the sheet fades its own backdrop.
+        @Suppress("DEPRECATION")
+        overridePendingTransition(0, 0)
     }
 
     override fun onStop() {
