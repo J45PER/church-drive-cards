@@ -2,7 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
-- **v0.47.0** (2026-10-11): camera card: Answer button when the doorbell rings, picture-shaped tile and video, one overlay bar, bigger/smaller view remembered, proper landscape full screen, battery and signal icons, activity timeline under the video; app 0.14.0 gets the same except Talk
+- **v0.47.0** (2026-10-11): camera card: Answer button when the doorbell rings, picture-shaped tile and video, one overlay bar, bigger/smaller view remembered, proper landscape full screen, battery and signal icons, activity timeline under the video; app 0.14.0 gets the same, with Talk over WebRTC
 - **v0.45.2** (2026-10-11): the app's shopping list page scrolls (it ran under the navigation bar); app 0.8.2
 - **v0.46.0** (2026-10-11): the app can ask the house for its Assist wake word (church_drive/assist/info), so the assistant is named after it (Jarvis); app 0.10.1
 - **v0.45.1** (2026-10-11): searching for a shop shows the results as pins on a map to tap and pick (web and app); app 0.8.1

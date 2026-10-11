@@ -7,7 +7,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.shape.CircleShape
+import android.Manifest
 import android.app.Activity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.pm.ActivityInfo
@@ -253,6 +256,23 @@ internal fun CameraViewer(
     var events by remember { mutableStateOf<List<CameraEvent>>(emptyList()) }
     var playing by remember { mutableStateOf<CameraEvent?>(null) }
     var answeredAt by remember { mutableStateOf(if (startUnmuted) System.currentTimeMillis() else 0L) }
+    // Two-way audio: the microphone goes to the camera over the same WebRTC connection (only WebRTC can carry it).
+    var talking by remember { mutableStateOf(false) }
+    var micDenied by remember { mutableStateOf(false) }
+    val micAsk = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) { talking = true; muted = false } else micDenied = true
+    }
+    fun startTalking() {
+        micDenied = false
+        if (hasMicrophone(context)) {
+            talking = true
+            muted = false
+        } else {
+            micAsk.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
+    // Answer opens the live view already talking.
+    LaunchedEffect(Unit) { if (startUnmuted) startTalking() }
     LaunchedEffect(entityId) {
         if (host == null) {
             mode = "none"
@@ -322,12 +342,13 @@ internal fun CameraViewer(
                     } else {
                         StageBox(aspect, fill = fill, boxAspect = aspect.coerceIn(0.75f, 16f / 9f), contain = true, maxZoom = 6f) {
                             when (mode) {
-                                "webrtc" -> WebRtcPlayer(entityId, muted, Modifier.fillMaxSize(), onAspect = { aspect = it }) { status = it }
+                                "webrtc" -> WebRtcPlayer(entityId, muted, Modifier.fillMaxSize(), talking = talking, onAspect = { aspect = it }) { status = it }
                                 "hls" -> link?.let { LivePlayer(base + it, muted) { aspect = it } }
                                 else -> Unit
                             }
                         }
                     }
+                    if (micDenied) Text("The microphone is off for this app. Allow it in Android's settings to talk.", color = Color(0xFFFFA726), fontSize = 12.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp))
                     status?.let { if (clipEvent == null || full) Text(it, color = Color.White.copy(alpha = 0.75f), modifier = Modifier.padding(16.dp)) }
                     // One bar over the top of the video for everything on it, so nothing can sit on anything else.
                     Row(
@@ -338,7 +359,7 @@ internal fun CameraViewer(
                         val live = clipEvent == null && canListen && status == null
                         val label = when {
                             clipEvent != null && !full -> "${cameraKindLabel(clipEvent.kind)} · ${timelineLabel(clipEvent.ts, System.currentTimeMillis())}"
-                            live -> "● LIVE"
+                            live -> if (talking) "● LIVE · talking" else "● LIVE"
                             else -> ""
                         }
                         if (label.isNotEmpty()) {
@@ -374,7 +395,12 @@ internal fun CameraViewer(
                     Column(modifier = Modifier.padding(horizontal = 8.dp)) {
                         TileRow(
                             buildList {
-                                if (ringing) add(TileItem("mdi:phone", "Answer", true) { muted = false; playing = null; answeredAt = System.currentTimeMillis() })
+                                if (ringing && mode == "webrtc") add(TileItem("mdi:phone", "Answer", true) { playing = null; answeredAt = System.currentTimeMillis(); startTalking() })
+                                else if (ringing) add(TileItem("mdi:phone", "Answer", true) { muted = false; playing = null; answeredAt = System.currentTimeMillis() })
+                                if (mode == "webrtc") add(TileItem(if (talking) "mdi:microphone" else "mdi:microphone-outline", if (talking) "Stop talking" else "Talk", talking) {
+                                    playing = null
+                                    if (talking) talking = false else startTalking()
+                                })
                                 if (found.button != null) add(TileItem(IconMap.of("camera", "snapshot", "mdi:camera-retake"), "New snapshot", false) { call("button", "press", found.button, data()) })
                                 if (eventsBase != null) add(TileItem(IconMap.of("camera", "events", "mdi:history"), "Events", false) { showEvents = true })
                                 if (light != null) {
