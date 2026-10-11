@@ -4,6 +4,22 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.11.0
+
+- **A calmer, cleaner Jarvis.** The small sheet has no coloured bar and uses a small living cloud beside his name; what you said and his answer are
+  plain words, with one scrolling row of suggestions and the controls underneath (keyboard, a grey microphone with a soft glow behind it, close).
+- **Full screen:** a big, slow cloud while you talk; a Gemini-style colour glow along the bottom edge that strengthens while he listens, thinks or
+  speaks; in a conversation your words are a soft gradient pill and his are plain text, with a typing box and the glowing microphone.
+- **Thinking:** three small grey dots, each moving in its own time, with one soft glow of all three colours behind them.
+- **The microphone's glow is at the very back**, behind the typing box, buttons and suggestions, never over them.
+- The cloud moves much more slowly than before.
+
+## 0.10.4
+
+- **Fix: the full-screen assistant is solid again** (it faded to see-through at the bottom, showing the app behind it), and tapping the microphone
+  again no longer stacks a second copy on top of the first.
+- The microphone button is a plain grey button with the glow clearly behind it, and the orb keeps its indigo, purple and green instead of washing out to white.
+
 ## 0.10.3
 
 - **Fix: asking a question no longer starts streaming the microphone to the house.** Home Assistant says "no audio handler" for a text question with a
