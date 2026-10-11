@@ -719,7 +719,7 @@ Older release notes (v0.10 to v0.38 detail) are archived in [docs/HISTORY.md](do
       (`house-tasks-card`), My to-do and Shared (`task-list-card`), and Cleaning
       (`task-list-card` for `todo.cleaning`). `empty_last` puts empty panels last.
     - **Energy** (admins only): Octopus Electricity, Car charger (`ev-charger-card`,
-      waiting for myenergi), Last full day, Gas, Octoplus.
+      waiting for myenergi), Last 7 days (`octopus-card show: week`, replaced Last full day in v0.44.0: reads HA's long-term statistics `octopus_energy:<meter>_previous_accumulative_*`, per-day `change`, days keyed in HA's time zone), Gas, Octoplus.
     - **Home** also has a Car charger panel for everyone.
   - **Hayley** (`dashboard-hayley`, view path `home`), Auto Layout (2026-09-29):
     - Security: alarm-panel card, alarm colours.
