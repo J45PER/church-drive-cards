@@ -23,6 +23,8 @@ import com.churchdrive.app.ui.AssistIntroStore
 import com.churchdrive.app.ui.IntroKind
 import com.churchdrive.app.ui.AssistModel
 import com.churchdrive.app.ui.AssistPanel
+import com.churchdrive.app.ui.AssistWakeSetting
+import com.churchdrive.app.ui.hasMicrophone
 import com.churchdrive.app.ui.ChurchDriveTheme
 import com.churchdrive.app.ui.HaApi
 import kotlinx.coroutines.Dispatchers
@@ -42,8 +44,11 @@ class AssistActivity : ComponentActivity() {
     private var model: AssistModel? = null
     private var intro by mutableStateOf<IntroKind?>(null)
 
+    private var enableWakeAfterPermission = false
+
     private val askMicrophone = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) model?.listen() else model?.say("Allow the microphone to talk to the house (Settings > Apps > Church Drive > Permissions).")
+        if (granted && enableWakeAfterPermission) { enableWakeAfterPermission = false; AssistWakeSetting.set(this, true) }
+        else if (granted) model?.listen() else model?.say("Allow the microphone to talk to the house (Settings > Apps > Church Drive > Permissions).")
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -55,6 +60,7 @@ class AssistActivity : ComponentActivity() {
             finish()
             return
         }
+        AssistWakeSetting.load(this)
         val prefs = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val base = session.url?.trim()?.trimEnd('/').orEmpty()
         val c = HaClient(lifecycleScope)
@@ -68,6 +74,7 @@ class AssistActivity : ComponentActivity() {
         }
         val m = AssistModel(this, api, base)
         model = m
+        m.followUp = true
         lifecycleScope.launch {
             val token = withContext(Dispatchers.IO) { freshToken(session) }
             if (token != null) c.connect(base, token, light = true)
@@ -93,6 +100,8 @@ class AssistActivity : ComponentActivity() {
                     intro = intro, person = session.personName.orEmpty(),
                     onIntroDone = { AssistIntroStore.markSeen(this); m.stopSpeaking(); intro = null },
                     onIntroTry = { AssistIntroStore.markSeen(this); m.stopSpeaking(); intro = null; talk() },
+                    wakeOn = AssistWakeSetting.enabled,
+                    onEnableWake = { if (hasMicrophone(this)) AssistWakeSetting.set(this, true) else { enableWakeAfterPermission = true; askMicrophone.launch(Manifest.permission.RECORD_AUDIO) } },
                 )
             }
         }

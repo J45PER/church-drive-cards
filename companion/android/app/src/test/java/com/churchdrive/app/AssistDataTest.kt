@@ -118,4 +118,23 @@ class AssistDataTest {
         assertFalse("I'm Jarvis" in update)
         assertEquals("a, b and c", com.churchdrive.app.ui.spokenList(listOf("a", "b", "c")))
     }
+
+    @Test
+    fun aQuestionRunHasNoAudioHandlerSoNoMicrophoneIsStreamed() {
+        // Home Assistant sends runner_data with stt_binary_handler_id null for text-only runs: that is no handler, not handler 0.
+        val e = parseAssistEvent(JSONObject("""{"type":"run-start","data":{"runner_data":{"stt_binary_handler_id":null,"timeout":30}}}""")) as AssistEvent.Started
+        assertNull(e.handlerId)
+    }
+
+    @Test
+    fun anAnswerSaysWhetherTheHouseWantsToKeepTalking() {
+        val a = parseAssistEvent(
+            JSONObject("""{"type":"intent-end","data":{"intent_output":{"continue_conversation":true,"response":{"speech":{"plain":{"speech":"Which room?"}}}}}}"""),
+        ) as AssistEvent.Answer
+        assertTrue(a.continueConversation)
+        val b = parseAssistEvent(
+            JSONObject("""{"type":"intent-end","data":{"intent_output":{"response":{"speech":{"plain":{"speech":"Done."}}}}}}"""),
+        ) as AssistEvent.Answer
+        assertFalse(b.continueConversation)
+    }
 }

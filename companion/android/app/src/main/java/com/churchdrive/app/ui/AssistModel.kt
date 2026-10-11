@@ -66,6 +66,12 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     private var answered = false
     private var said = ""
 
+    /** Keep the voice live: after each spoken answer, listen again for a follow-up (set while the assistant is on screen). */
+    var followUp = false
+    private var continueAfter = false
+    private var speakingIntro = false
+    private var autoListening = false
+
     // The wake word loop.
     private var wakeEnabled = false
     private var panelOpen = false
@@ -93,8 +99,9 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
 
     // ---- listening by tapping the microphone ----
 
-    /** Starts listening (or stops, if it already is). */
-    fun listen() {
+    /** Starts listening (or stops, if it already is). [auto] is for a follow-up the person didn't ask for: silence then isn't an error. */
+    fun listen(auto: Boolean = false) {
+        autoListening = auto
         if (state == AssistState.Listening) {
             recogniser?.stopListening()
             return
@@ -130,6 +137,8 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
         notice = ""
         notUnderstood = null
         answered = false
+        continueAfter = false
+        speakingIntro = false
         state = AssistState.Thinking
         val params = JSONObject()
             .put("start_stage", "intent")
@@ -149,6 +158,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
         if (text.isBlank()) return
         stopSpeaking()
         stopVoiceRun()
+        speakingIntro = true
         val params = JSONObject()
             .put("start_stage", "tts")
             .put("end_stage", "tts")
@@ -175,10 +185,12 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     /** The screen is showing (after the wake word): don't start another wake run until it is [panelClosed]. */
     fun panelOpened() {
         panelOpen = true
+        followUp = true
     }
 
     fun panelClosed() {
         panelOpen = false
+        followUp = false
         stop()
         if (wakeEnabled) beginWakeRun()
     }
@@ -239,11 +251,15 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     private fun onEvent(event: JSONObject) {
         when (val e = parseAssistEvent(event)) {
             is AssistEvent.Started -> {
-                AssistWakeStatus.problem = ""
-                handlerId = e.handlerId
-                if (e.handlerId != null) startMic()
+                note("run-start")
+                if (e.handlerId != null && e.handlerId > 0) {
+                    AssistWakeStatus.problem = ""
+                    handlerId = e.handlerId
+                    startMic()
+                }
             }
             is AssistEvent.Woke -> if (e.word != null) {
+                note("wake word heard")
                 partial = ""
                 notice = ""
                 notUnderstood = null
@@ -263,8 +279,10 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
                 }
             }
             is AssistEvent.Answer -> {
+                note("answer")
                 if (e.conversationId != null) conversationId = e.conversationId
                 answered = true
+                continueAfter = e.continueConversation
                 if (e.text.isNotBlank()) messages += AssistMessage(false, e.text)
                 if (isNotUnderstood(e.text)) notUnderstood = said
             }
@@ -280,6 +298,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     }
 
     private fun onFailed(e: AssistEvent.Failed) {
+        note("error ${e.code}")
         stopVoiceRun()
         when {
             e.code == "wake-word-timeout" || e.code == "timeout" -> Unit // nothing was said for a while: just listen again
@@ -324,8 +343,16 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
             player = null
             state = AssistState.Idle
             resumeWake()
+            // Keep the voice live: after an answer (not the introduction), listen again for a follow-up.
+            if (followUp && !speakingIntro) main.postDelayed({ if (followUp && state == AssistState.Idle) listen(auto = true) }, 350)
         }
         runCatching { p.release() }
+    }
+
+    /** A short note for the diagnostics line in Settings (the last few things the voice pipeline did). */
+    private fun note(text: String) {
+        AssistWakeStatus.log.add(text)
+        while (AssistWakeStatus.log.size > 8) AssistWakeStatus.log.removeAt(0)
     }
 
     /** Stops the voice. */
@@ -352,6 +379,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     /** Frees the recogniser, the player, the microphone and the line to the house. */
     fun release() {
         wakeEnabled = false
+        followUp = false
         stopVoiceRun()
         stopSpeaking()
         recogniser?.destroy()
@@ -371,6 +399,8 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
         override fun onError(error: Int) {
             level = 0f
             state = AssistState.Idle
+            // Silence after a follow-up we started ourselves isn't a problem: the conversation is simply over.
+            if (autoListening && (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT)) return
             notice = when (error) {
                 SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "I didn't hear anything. Tap the microphone to try again."
                 SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Allow the microphone to talk to the house."

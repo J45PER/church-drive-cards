@@ -24,6 +24,8 @@ object AssistWakeStatus {
     var waiting by mutableStateOf(false)
     var phrase by mutableStateOf("")
     var problem by mutableStateOf("")
+    /** The last few things the voice pipeline did, so a problem can be seen (Settings shows them). */
+    val log = androidx.compose.runtime.mutableStateListOf<String>()
 }
 
 /** Whether the person has switched on "listen for the wake word while the app is open" (Account > Settings). */
@@ -76,6 +78,9 @@ fun AssistWakeHost(connected: Boolean, base: String, api: HaApi?, userName: Stri
     var full by remember { mutableStateOf(false) }
     var intro by remember { mutableStateOf<IntroKind?>(null) }
     val owner = LocalLifecycleOwner.current
+    val micAsk = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) AssistWakeSetting.set(context, true)
+    }
     LaunchedEffect(connected) { if (connected) model.loadName() }
     LaunchedEffect(model.state) { AssistWakeStatus.waiting = model.state == AssistState.Waiting }
     LaunchedEffect(model.wakeWord) { AssistWakeStatus.phrase = wakePhrase(model.wakeWord) }
@@ -110,6 +115,8 @@ fun AssistWakeHost(connected: Boolean, base: String, api: HaApi?, userName: Stri
                 model = model, full = full, onFull = { full = it }, onClose = close, onTask = { said -> close(); onTask(said) },
                 intro = intro, person = userName,
                 onIntroDone = { AssistIntroStore.markSeen(context); model.stopSpeaking(); intro = null },
+                wakeOn = enabled,
+                onEnableWake = { if (hasMicrophone(context)) AssistWakeSetting.set(context, true) else micAsk.launch(Manifest.permission.RECORD_AUDIO) },
             )
         }
     }
