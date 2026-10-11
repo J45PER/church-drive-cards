@@ -36,7 +36,7 @@
             android:exported="true"
             android:launchMode="singleTask"
             android:label="Assistant"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:theme="@style/Theme.Assist"
             android:excludeFromRecents="true"
             android:windowSoftInputMode="adjustResize"
             android:taskAffinity="" />
