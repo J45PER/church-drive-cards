@@ -1,0 +1,147 @@
+package com.churchdrive.app
+
+import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Bundle
+import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
+import com.churchdrive.app.ha.ConnectionState
+import com.churchdrive.app.ha.HaAuth
+import com.churchdrive.app.ha.HaClient
+import com.churchdrive.app.ha.Refresh
+import com.churchdrive.app.ui.AssistIntro
+import com.churchdrive.app.ui.AssistModel
+import com.churchdrive.app.ui.AssistPanel
+import com.churchdrive.app.ui.ChurchDriveTheme
+import com.churchdrive.app.ui.HaApi
+import com.churchdrive.app.ui.introDue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+
+/**
+ * The voice assistant. It opens over whatever is on the screen (the home screen, when started from the widget) as a bottom
+ * sheet, without opening the app: swipe it up for the whole screen. It has its own line to the house, so the app need not be
+ * running, and it closes when you leave it. The first time after each new version it introduces itself and what is new.
+ * Reached from the widget, the microphone in the app, the Quick Settings tile and the icon's long-press menu.
+ */
+class AssistActivity : ComponentActivity() {
+    private var client: HaClient? = null
+    private var model: AssistModel? = null
+    private var introShown by mutableStateOf(false)
+
+    private val askMicrophone = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) model?.listen() else model?.say("Allow the microphone to talk to the house (Settings > Apps > Church Drive > Permissions).")
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        val session = Session(this)
+        if (!session.signedIn) {
+            Toast.makeText(this, "Open Church Drive and sign in first", Toast.LENGTH_LONG).show()
+            finish()
+            return
+        }
+        val prefs = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val base = session.url?.trim()?.trimEnd('/').orEmpty()
+        val c = HaClient(lifecycleScope)
+        client = c
+        val api = object : HaApi {
+            override fun request(type: String, params: JSONObject, done: (Any?) -> Unit) = c.request(type, params) { done(it) }
+            override fun subscribe(type: String, params: JSONObject, onEvent: (JSONObject) -> Unit): Int = c.subscribe(type, params, onEvent)
+            override fun close(subscription: Int) = c.unsubscribe(subscription)
+            override val connected: Boolean get() = c.connection.value == ConnectionState.Connected
+        }
+        val m = AssistModel(this, api, base)
+        model = m
+        lifecycleScope.launch {
+            val token = withContext(Dispatchers.IO) { freshToken(session) }
+            if (token != null) c.connect(base, token, light = true)
+        }
+        introShown = introDue(prefs.getString(KEY_INTRO, null), BuildConfig.VERSION_NAME)
+        var full by mutableStateOf(intent.getBooleanExtra(EXTRA_FULL, false) || prefs.getBoolean(KEY_FULL, false))
+        setContent {
+            ChurchDriveTheme {
+                if (introShown) {
+                    AssistIntro(
+                        name = session.personName.orEmpty(),
+                        onTry = { markIntroSeen(); talk() },
+                        onSkip = { markIntroSeen() },
+                    )
+                } else {
+                    AssistPanel(
+                        model = m, full = full, onFull = { full = it }, onClose = { finish() },
+                        onTask = { said ->
+                            startActivity(
+                                Intent(this, MainActivity::class.java)
+                                    .putExtra(MainActivity.EXTRA_SHARE_TEXT, said)
+                                    .putExtra(MainActivity.EXTRA_SHARE_SOURCE, "Voice")
+                                    .putExtra(MainActivity.EXTRA_SHARE_AUTO_ADD, true)
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+                            )
+                            finish()
+                        },
+                    )
+                }
+            }
+        }
+        if (!introShown) talk()
+    }
+
+    private fun markIntroSeen() {
+        getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_INTRO, BuildConfig.VERSION_NAME).apply()
+        introShown = false
+    }
+
+    /** Listens, asking for the microphone first if it hasn't been allowed yet. */
+    private fun talk() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            model?.listen()
+        } else {
+            askMicrophone.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
+
+    /** A fresh access token from the refresh token when there is one, else the stored token. Blocking. */
+    private fun freshToken(session: Session): String? {
+        val url = session.url ?: return null
+        val refresh = session.refreshToken ?: return session.token
+        return when (val r = HaAuth.refresh(url, refresh)) {
+            is Refresh.Fresh -> r.tokens.access.also { session.saveAccess(it) }
+            else -> session.token
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // An overlay doesn't linger: leaving it (home, another app) ends it.
+        if (!isChangingConfigurations) finish()
+    }
+
+    override fun onDestroy() {
+        model?.release()
+        client?.disconnect()
+        super.onDestroy()
+    }
+
+    companion object {
+        /** Open at the whole screen instead of the sheet. */
+        const val EXTRA_FULL = "full"
+        const val PREFS = "assist"
+        const val KEY_INTRO = "intro_version"
+        /** The person's choice (Account) of opening as the whole screen rather than the sheet. */
+        const val KEY_FULL = "open_full"
+    }
+}

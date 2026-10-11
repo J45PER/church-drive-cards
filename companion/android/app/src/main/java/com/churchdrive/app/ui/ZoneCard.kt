@@ -90,7 +90,7 @@ fun ZoneCard(config: JSONObject, entities: Map<String, EntityState>, call: CallS
 
     val view = zoneView(cfg, entities, history, now, ZoneId.systemDefault())
     val tone = toneColors(levelTone(view.level))
-    val neutral = toneColors(Tone.Grey)
+    val neutral = panelNeutral()
     // Open and tamper tint the whole card; otherwise it's the neutral card with an indigo title.
     val tinted = view.level == ZoneLevel.Open || view.level == ZoneLevel.Tamper
     val container = if (tinted) tone.container else neutral.container

@@ -10,6 +10,13 @@ import androidx.compose.ui.graphics.Color
  * Google's own palette, with a light and a dark variant. They stay fixed rather than
  * following the wallpaper, so green always means "fine" and red always means "look".
  */
+/** The colour of the dashboard panel a card sits in: a card with no colour of its own takes it, as on the dashboard. */
+val LocalPanelTone = androidx.compose.runtime.compositionLocalOf<Tone?> { null }
+
+/** The colours for a card that has none of its own: its panel's, else grey. */
+@androidx.compose.runtime.Composable
+fun panelNeutral(): ToneColors = toneColors(LocalPanelTone.current ?: Tone.Grey)
+
 enum class Tone { Green, Blue, Red, Purple, Amber, Orange, Teal, Indigo, Grey }
 
 data class ToneColors(

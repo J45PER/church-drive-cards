@@ -1,5 +1,6 @@
 package com.churchdrive.app.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -9,7 +10,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -66,10 +70,22 @@ fun OptionRow(options: List<String>, selected: String?, tone: ToneColors, enable
 /** The dashboard's `custom:climate-zone-card`: a floor's rooms, each with its temperature (coloured by comfort) and humidity. */
 @Composable
 fun ClimateZoneCard(config: JSONObject, entities: Map<String, EntityState>) {
-    val neutral = toneColors(Tone.Grey)
+    val neutral = panelNeutral()
     val rooms = config.optJSONArray("rooms")
+    // Tap the heading to open the floor out: each room's temperature (and humidity) over the last day.
+    var open by remember { mutableStateOf(false) }
     EntityCard(neutral.container, neutral.onContainer) {
-        config.optString("title").takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.titleMedium) }
+        Row(
+            modifier = Modifier.fillMaxWidth().clickable(onClickLabel = if (open) "Hide graphs" else "Show graphs") { open = !open },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(config.optString("title").ifBlank { "Rooms" }, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            if (!open) Text("Graphs", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(
+                if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         for (i in 0 until (rooms?.length() ?: 0)) {
             val r = rooms?.optJSONObject(i) ?: continue
             val t = entities[r.optString("temperature")]?.state?.toDoubleOrNull()
@@ -86,6 +102,12 @@ fun ClimateZoneCard(config: JSONObject, entities: Map<String, EntityState>) {
                 Column(horizontalAlignment = Alignment.End) {
                     Text(if (t == null) "–" else "${temp(t)}°", style = MaterialTheme.typography.titleLarge, color = tone.accent)
                     if (h != null) Text("${h.roundToInt()}%", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            if (open) {
+                SensorGraph(r.optString("temperature"), 24, "°", tone.accent, neutral.onContainer)
+                r.optString("humidity").takeIf { it.isNotBlank() }?.let {
+                    SensorGraph(it, 24, "%", toneColors(Tone.Purple).accent, neutral.onContainer)
                 }
             }
         }

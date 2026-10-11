@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- Notifications from the house, and telling the house where the phone is. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -29,7 +30,16 @@
             </intent-filter>
             <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity>
-        <!-- Add a task by voice: from the app's microphone, the Quick Settings tile and the icon's long-press menu. -->
+        <!-- The voice assistant: a sheet over whatever is on screen, from the widget, the app's microphone, the Quick Settings tile and the icon's long-press menu. -->
+        <activity
+            android:name=".AssistActivity"
+            android:exported="true"
+            android:label="Assistant"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:excludeFromRecents="true"
+            android:windowSoftInputMode="adjustResize"
+            android:taskAffinity="" />
+        <!-- Add a task by voice (the older phone speech box; the assistant offers "Add as a task" for what the house doesn't understand). -->
         <activity
             android:name=".VoiceTaskActivity"
             android:exported="true"
@@ -41,7 +51,7 @@
             android:name=".house.VoiceTaskTile"
             android:exported="true"
             android:icon="@mipmap/ic_launcher"
-            android:label="Add task"
+            android:label="Assistant"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />

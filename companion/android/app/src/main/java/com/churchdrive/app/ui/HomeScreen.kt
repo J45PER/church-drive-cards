@@ -1,6 +1,12 @@
 package com.churchdrive.app.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +21,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.EvStation
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Security
@@ -93,7 +101,19 @@ fun HomeScreen(
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val title = if (page == Page.Home) "Hello ${userName?.substringBefore(' ') ?: ""}".trim() else page.label
 
-    Box {
+    // Swiping left anywhere that doesn't scroll sideways opens the account panel, as well as its button.
+    var swiped by remember { mutableStateOf(0f) }
+    Box(
+        Modifier.pointerInput(panel) {
+            if (panel == null) {
+                detectHorizontalDragGestures(
+                    onDragStart = { swiped = 0f },
+                    onDragEnd = { if (swiped < -120f) panel = "account" },
+                    onHorizontalDrag = { _, dx -> swiped += dx },
+                )
+            }
+        },
+    ) {
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
@@ -110,12 +130,21 @@ fun HomeScreen(
                     }
                     val context = androidx.compose.ui.platform.LocalContext.current
                     IconButton(onClick = {
-                        context.startActivity(android.content.Intent(context, com.churchdrive.app.VoiceTaskActivity::class.java))
+                        context.startActivity(android.content.Intent(context, com.churchdrive.app.AssistActivity::class.java))
                     }) {
-                        Icon(Icons.Filled.Mic, contentDescription = "Add a task by voice")
+                        Icon(Icons.Filled.Mic, contentDescription = "Talk to the house")
                     }
-                    IconButton(onClick = { panel = "account" }) {
-                        Icon(Icons.Filled.AccountCircle, contentDescription = "Account")
+                    // A round button with the person's initial: easy to see and to hit.
+                    Box(
+                        Modifier.padding(horizontal = 6.dp).size(44.dp).clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .clickable(onClickLabel = "Account and settings") { panel = "account" },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            userName?.trim()?.firstOrNull()?.uppercase() ?: "?",
+                            style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
                     }
                 },
                 scrollBehavior = scrollBehavior,
@@ -189,8 +218,10 @@ fun HomeScreen(
         adminPages = adminPages,
         managerPages = if (isAdmin) managerPanels else emptyList(),
         managerContent = { panel ->
-            androidx.compose.foundation.layout.Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                panel.cards.forEach { CardView(it, entities, registry, call) }
+            androidx.compose.runtime.CompositionLocalProvider(LocalPanelTone provides toneFromColour(panel.color)) {
+                androidx.compose.foundation.layout.Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    panel.cards.forEach { CardView(it, entities, registry, call) }
+                }
             }
         },
         pageContent = { p ->
@@ -296,14 +327,17 @@ fun SectionPanel(
     tone: Tone = Tone.Grey,
     summary: String? = null,
     onClick: (() -> Unit)? = null,
+    /** Tapping the heading folds the panel away and back (remembered for the title while the app is open). */
+    collapsible: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val colors = toneColors(tone)
+    var open by androidx.compose.runtime.saveable.rememberSaveable(title) { mutableStateOf(true) }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .let { if (onClick != null) it.clickable(onClick = onClick) else it }
+                .let { if (onClick != null) it.clickable(onClick = onClick) else if (collapsible) it.clickable(onClickLabel = if (open) "Collapse $title" else "Expand $title") { open = !open } else it }
                 .padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -320,9 +354,13 @@ fun SectionPanel(
             }
             if (onClick != null) {
                 Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else if (collapsible) {
+                Icon(if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        content()
+        androidx.compose.animation.AnimatedVisibility(visible = open || !collapsible) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { content() }
+        }
     }
 }
 

@@ -9,6 +9,6 @@
         <intent
             android:action="android.intent.action.VIEW"
             android:targetPackage="com.churchdrive.app"
-            android:targetClass="com.churchdrive.app.VoiceTaskActivity" />
+            android:targetClass="com.churchdrive.app.AssistActivity" />
     </shortcut>
 </shortcuts>
