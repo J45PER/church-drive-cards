@@ -4,18 +4,8 @@
         <item name="android:windowActionBar">false</item>
         <item name="android:windowNoTitle">true</item>
     </style>
-    <!-- The voice overlay: it fades in and out, the dimmed background never slides away with the sheet. -->
+    <!-- The voice overlay: no window animation of its own, so the dimmed backdrop never slides with the card. -->
     <style name="Theme.Assist" parent="android:Theme.Translucent.NoTitleBar">
-        <item name="android:windowAnimationStyle">@style/AssistWindowAnimation</item>
-    </style>
-    <style name="AssistWindowAnimation" parent="@android:style/Animation">
-        <item name="android:activityOpenEnterAnimation">@anim/assist_fade_in</item>
-        <item name="android:activityOpenExitAnimation">@anim/assist_fade_out</item>
-        <item name="android:activityCloseEnterAnimation">@anim/assist_fade_in</item>
-        <item name="android:activityCloseExitAnimation">@anim/assist_fade_out</item>
-        <item name="android:taskOpenEnterAnimation">@anim/assist_fade_in</item>
-        <item name="android:taskOpenExitAnimation">@anim/assist_fade_out</item>
-        <item name="android:taskCloseEnterAnimation">@anim/assist_fade_in</item>
-        <item name="android:taskCloseExitAnimation">@anim/assist_fade_out</item>
+        <item name="android:windowAnimationStyle">@null</item>
     </style>
 </resources>
