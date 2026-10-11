@@ -312,18 +312,6 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                     })
                 },
             )
-            val voicePrefs = remember { context.getSharedPreferences(com.churchdrive.app.AssistActivity.PREFS, android.content.Context.MODE_PRIVATE) }
-            var voiceFull by remember { mutableStateOf(voicePrefs.getBoolean(com.churchdrive.app.AssistActivity.KEY_FULL, false)) }
-            PanelRow(
-                Icons.Outlined.Mic, "Voice opens full screen",
-                "The assistant opens as a small sheet over what you're doing; swipe it up for the whole screen. Turn this on to open it full screen every time.",
-                trailing = {
-                    Switch(checked = voiceFull, onCheckedChange = { on ->
-                        voiceFull = on
-                        voicePrefs.edit().putBoolean(com.churchdrive.app.AssistActivity.KEY_FULL, on).apply()
-                    })
-                },
-            )
             PanelRow(
                 Icons.Outlined.Mic, "Classic Jarvis colours",
                 "Jarvis normally takes his colours from your phone's theme. Turn this on to keep his original indigo, purple and green.",

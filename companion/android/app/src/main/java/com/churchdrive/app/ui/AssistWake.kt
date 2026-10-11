@@ -92,7 +92,6 @@ fun AssistWakeHost(connected: Boolean, base: String, api: HaApi?, userName: Stri
     val enabled = AssistWakeSetting.enabled
     val model = remember(api) { AssistModel(context, api, base) }
     var open by remember { mutableStateOf(false) }
-    var full by remember { mutableStateOf(false) }
     var intro by remember { mutableStateOf<IntroKind?>(null) }
     val owner = LocalLifecycleOwner.current
     val micAsk = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { granted ->
@@ -104,7 +103,6 @@ fun AssistWakeHost(connected: Boolean, base: String, api: HaApi?, userName: Stri
     LaunchedEffect(enabled) { if (!enabled) { AssistWakeStatus.waiting = false; AssistWakeStatus.problem = "" } }
     DisposableEffect(model) {
         model.onWake = {
-            full = context.getSharedPreferences(AssistActivity.PREFS, Context.MODE_PRIVATE).getBoolean(AssistActivity.KEY_FULL, false)
             model.panelOpened()
             intro = AssistIntroStore.kind(context)
             open = true
@@ -129,7 +127,7 @@ fun AssistWakeHost(connected: Boolean, base: String, api: HaApi?, userName: Stri
         }
         Dialog(onDismissRequest = close, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
             AssistPanel(
-                model = model, full = full, onFull = { full = it }, onClose = close, onTask = { said -> close(); onTask(said) },
+                model = model, onClose = close, onTask = { said -> close(); onTask(said) },
                 intro = intro, person = userName,
                 onIntroDone = { AssistIntroStore.markSeen(context); model.stopSpeaking(); intro = null },
                 wakeOn = enabled,
