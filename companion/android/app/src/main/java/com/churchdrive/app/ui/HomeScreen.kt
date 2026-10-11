@@ -132,7 +132,7 @@ fun HomeScreen(
                     // Listening for the wake word: a small green microphone, so you can see it is on.
                     if (AssistWakeStatus.waiting) {
                         Box(Modifier.padding(horizontal = 4.dp), contentAlignment = Alignment.Center) {
-                            HaIcon("mdi:microphone", Icons.Filled.Mic, AssistColours.Green, 20.dp)
+                            HaIcon("mdi:microphone", Icons.Filled.Mic, assistPalette().third, 20.dp)
                         }
                     }
                     IconButton(onClick = {

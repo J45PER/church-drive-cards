@@ -77,14 +77,23 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlinx.coroutines.flow.first
 
-/** The three colours of the assistant, a gradient like Siri's or Gemini's: Church Drive's indigo, purple and green. */
-object AssistColours {
-    val Indigo = Color(0xFF5C6BC0)
-    val Purple = Color(0xFFAB47BC)
-    val Green = Color(0xFF4FD08A)
-    val all = listOf(Indigo, Purple, Green)
-    val across: Brush get() = Brush.horizontalGradient(listOf(Indigo, Purple, Green))
-    val down: Brush get() = Brush.verticalGradient(listOf(Indigo, Purple, Green))
+/**
+ * The three colours of the assistant, a gradient like Siri's or Gemini's. They come from the phone's own theme (Material You: the
+ * primary, tertiary and secondary colours of the wallpaper palette), so Jarvis matches the rest of the phone.
+ */
+@androidx.compose.runtime.Immutable
+class AssistPalette(val first: Color, val second: Color, val third: Color) {
+    val across: Brush get() = Brush.horizontalGradient(listOf(first, second, third))
+}
+
+/** The original Church Drive look: indigo, purple and green. */
+private val ClassicPalette = AssistPalette(Color(0xFF5C6BC0), Color(0xFFAB47BC), Color(0xFF4FD08A))
+
+@Composable
+fun assistPalette(): AssistPalette {
+    val s = MaterialTheme.colorScheme
+    val classic = AssistColourSetting.classic
+    return remember(classic, s.primary, s.tertiary, s.secondary) { if (classic) ClassicPalette else AssistPalette(s.primary, s.tertiary, s.secondary) }
 }
 
 /**
@@ -120,11 +129,12 @@ fun AssistPanel(
 }
 
 /**
- * The cloud: three soft clouds (indigo, purple, green) that drift slowly round each other and blend where they meet. Calm when it
+ * The cloud: three soft clouds (the phone theme's three accent colours) that drift slowly round each other and blend where they meet. Calm when it
  * is waiting, a little livelier and a gentle swell with the voice when listening, thinking or speaking.
  */
 @Composable
 fun AssistOrb(state: AssistState, level: Float, size: androidx.compose.ui.unit.Dp) {
+    val pal = assistPalette()
     val t = rememberInfiniteTransition(label = "orb")
     // One drift cycle, always the same length (changing it with the state made the clouds jump); the multipliers below are whole numbers so the end of a cycle meets its start.
     val phase by t.animateFloat(0f, (2 * Math.PI).toFloat(), infiniteRepeatable(tween(9000, easing = LinearEasing)), label = "phase")
@@ -178,12 +188,12 @@ fun AssistOrb(state: AssistState, level: Float, size: androidx.compose.ui.unit.D
                 radius = outer, center = at, blendMode = BlendMode.Screen,
             )
         }
-        cloud(AssistColours.Indigo, -13f, -1f, 42f, 1f, 2f, 0f)
-        cloud(AssistColours.Purple, 15.5f, -13.5f, 39.5f, 2f, 1f, 0.33f)
-        cloud(AssistColours.Green, -3f, 15f, 37f, 1f, 1f, 0.66f)
+        cloud(pal.first, -13f, -1f, 42f, 1f, 2f, 0f)
+        cloud(pal.second, 15.5f, -13.5f, 39.5f, 2f, 1f, 0.33f)
+        cloud(pal.third, -3f, 15f, 37f, 1f, 1f, 0.66f)
         // Listening: soft rings bloom outwards from the cloud and melt away, one colour after another.
         if (state == AssistState.Listening) {
-            listOf(AssistColours.Indigo, AssistColours.Purple, AssistColours.Green).forEachIndexed { i, colour ->
+            listOf(pal.first, pal.second, pal.third).forEachIndexed { i, colour ->
                 val x = ((clock * 6f) + i / 3f) % 1f
                 val ringR = (35f + 35f * x) * u
                 val outer = ringR + 19f * u
@@ -208,6 +218,7 @@ fun AssistOrb(state: AssistState, level: Float, size: androidx.compose.ui.unit.D
  */
 @Composable
 private fun RoundIcon(icon: String, label: String, glow: Boolean, onClick: () -> Unit, size: androidx.compose.ui.unit.Dp = 48.dp) {
+    val pal = assistPalette()
     val scheme = MaterialTheme.colorScheme
     val t = rememberInfiniteTransition(label = "glow")
     val pulse by t.animateFloat(0.55f, 1f, infiniteRepeatable(tween(2600), RepeatMode.Reverse), label = "pulse")
@@ -220,7 +231,7 @@ private fun RoundIcon(icon: String, label: String, glow: Boolean, onClick: () ->
             ) {
                 val r = this.size.minDimension / 2f
                 drawCircle(
-                    Brush.sweepGradient(listOf(AssistColours.Indigo, AssistColours.Purple, AssistColours.Green, AssistColours.Indigo)),
+                    Brush.sweepGradient(listOf(pal.first, pal.second, pal.third, pal.first)),
                     radius = r, alpha = 0.65f * pulse,
                 )
                 drawCircle(
@@ -266,12 +277,13 @@ private fun SuggestionRow(model: AssistModel) {
 /** A small cloud with his name and what he is doing. */
 @Composable
 private fun JarvisHeader(model: AssistModel, modifier: Modifier = Modifier) {
+    val pal = assistPalette()
     val scheme = MaterialTheme.colorScheme
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Box(modifier = Modifier.size(46.dp), contentAlignment = Alignment.Center) { AssistOrb(model.state, model.level, 34.dp) }
         Column {
             Text(model.name.ifBlank { "Assistant" }, style = MaterialTheme.typography.titleMedium)
-            Text(assistStatus(model.state), style = MaterialTheme.typography.bodySmall, color = if (model.state == AssistState.Idle) scheme.onSurfaceVariant else AssistColours.Green)
+            Text(assistStatus(model.state), style = MaterialTheme.typography.bodySmall, color = if (model.state == AssistState.Idle) scheme.onSurfaceVariant else pal.third)
         }
     }
 }
@@ -371,12 +383,13 @@ private fun SheetAssist(model: AssistModel, onFull: (Boolean) -> Unit, onClose: 
 /** The glow along the bottom edge, like Gemini's: stronger while he listens, thinks or speaks. */
 @Composable
 private fun BottomGlow(active: Boolean, level: Float, modifier: Modifier = Modifier) {
+    val pal = assistPalette()
     val t = rememberInfiniteTransition(label = "band")
     val breathe by t.animateFloat(0.7f, 1f, infiniteRepeatable(tween(6000), RepeatMode.Reverse), label = "b")
     val on by animateFloatAsState(if (active) 1f else 0.3f, tween(900), label = "on")
     Canvas(modifier = modifier.fillMaxWidth().height(200.dp)) {
         val a = (0.42f * breathe + 0.2f * level) * on
-        listOf(0.2f to AssistColours.Indigo, 0.5f to AssistColours.Purple, 0.82f to AssistColours.Green).forEach { (fx, colour) ->
+        listOf(0.2f to pal.first, 0.5f to pal.second, 0.82f to pal.third).forEach { (fx, colour) ->
             val c = Offset(size.width * fx, size.height + 24.dp.toPx())
             val r = size.width * 0.55f
             drawCircle(Brush.radialGradient(listOf(colour.copy(alpha = a), Color.Transparent), center = c, radius = r), radius = r, center = c)
@@ -386,6 +399,7 @@ private fun BottomGlow(active: Boolean, level: Float, modifier: Modifier = Modif
 
 @Composable
 private fun FullAssist(model: AssistModel, onFull: (Boolean) -> Unit, onClose: () -> Unit, onTask: (String) -> Unit) {
+    val pal = assistPalette()
     val scheme = MaterialTheme.colorScheme
     var typed by remember { mutableStateOf("") }
     var typing by remember { mutableStateOf(false) }
@@ -407,7 +421,7 @@ private fun FullAssist(model: AssistModel, onFull: (Boolean) -> Unit, onClose: (
                 Column(modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     AssistOrb(model.state, model.level, 96.dp)
                     Spacer(Modifier.height(8.dp))
-                    Text(assistStatus(model.state), style = MaterialTheme.typography.labelLarge, color = AssistColours.Green)
+                    Text(assistStatus(model.state), style = MaterialTheme.typography.labelLarge, color = pal.third)
                 }
             }
             if (!chatting) {
@@ -417,7 +431,7 @@ private fun FullAssist(model: AssistModel, onFull: (Boolean) -> Unit, onClose: (
                 ) {
                     AssistOrb(model.state, model.level, 170.dp)
                     Spacer(Modifier.height(24.dp))
-                    Text(assistStatus(model.state), style = MaterialTheme.typography.labelLarge, color = AssistColours.Green)
+                    Text(assistStatus(model.state), style = MaterialTheme.typography.labelLarge, color = pal.third)
                     Spacer(Modifier.height(10.dp))
                     Text(
                         model.partial.ifEmpty { if (model.wakeWord != null) "Say \u201C${wakePhrase(model.wakeWord)}\u201D or tap the microphone" else "Ask or tell the house" },
@@ -485,6 +499,7 @@ private fun FullAssist(model: AssistModel, onFull: (Boolean) -> Unit, onClose: (
  */
 @Composable
 private fun ThinkingDots() {
+    val pal = assistPalette()
     val t = rememberInfiniteTransition(label = "dots")
     val grey = Color(0xFF767F7B)
     val glow by t.animateFloat(0.7f, 1f, infiniteRepeatable(tween(2400), RepeatMode.Reverse), label = "dotGlow")
@@ -493,7 +508,7 @@ private fun ThinkingDots() {
             .drawBehind {
                 // Drawn behind the Row's own centre, so the glow is exactly behind the dots (and spills out around them).
                 val r = 17.dp.toPx()
-                listOf(-8 to AssistColours.Indigo, 0 to AssistColours.Purple, 8 to AssistColours.Green).forEach { (dx, colour) ->
+                listOf(-8 to pal.first, 0 to pal.second, 8 to pal.third).forEach { (dx, colour) ->
                     val at = Offset(center.x + dx.dp.toPx(), center.y)
                     drawCircle(Brush.radialGradient(listOf(colour.copy(alpha = 0.34f * glow), Color.Transparent), center = at, radius = r), radius = r, center = at)
                 }
@@ -513,13 +528,14 @@ private fun ThinkingDots() {
 /** One line of the conversation: what you said in a soft gradient pill, and what Jarvis said as plain words. */
 @Composable
 private fun ChatLine(message: AssistMessage, faded: Boolean = false) {
+    val pal = assistPalette()
     val scheme = MaterialTheme.colorScheme
     if (message.fromUser) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             Box(
                 modifier = Modifier.widthIn(max = 300.dp)
                     .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 20.dp, bottomEnd = 6.dp))
-                    .background(Brush.horizontalGradient(listOf(AssistColours.Indigo.copy(alpha = 0.55f), AssistColours.Purple.copy(alpha = 0.55f))))
+                    .background(Brush.horizontalGradient(listOf(pal.first.copy(alpha = 0.55f), pal.second.copy(alpha = 0.55f))))
                     .padding(horizontal = 16.dp, vertical = 11.dp),
             ) {
                 Text(message.text, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = if (faded) 0.7f else 1f))
@@ -550,6 +566,7 @@ private fun JarvisBubble(text: String) {
  */
 @Composable
 fun AssistIntro(kind: IntroKind, person: String, assistant: String, wakeWord: String?, model: AssistModel, onTry: () -> Unit, onSkip: () -> Unit, wakeOn: Boolean = true, onEnableWake: () -> Unit = {}) {
+    val pal = assistPalette()
     val scheme = MaterialTheme.colorScheme
     val tone = toneColors(Tone.Indigo)
     // Say it once the name is known (it arrives from the house a moment after opening), or after a short wait if the house has none.
@@ -559,7 +576,7 @@ fun AssistIntro(kind: IntroKind, person: String, assistant: String, wakeWord: St
     }
     androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides scheme.onSurface) {
     Column(modifier = Modifier.fillMaxSize().background(scheme.background).statusBarsPadding().navigationBarsPadding()) {
-        Box(modifier = Modifier.fillMaxWidth().height(4.dp).background(AssistColours.across))
+        Box(modifier = Modifier.fillMaxWidth().height(4.dp).background(pal.across))
         Column(
             modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -578,9 +595,9 @@ fun AssistIntro(kind: IntroKind, person: String, assistant: String, wakeWord: St
                 Text("$who, with the latest.", style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center)
             }
             if (wakeWord != null) {
-                Text("Say \u201C${wakePhrase(wakeWord)}\u201D any time the app is open, or tap the microphone.", style = MaterialTheme.typography.bodyMedium, color = AssistColours.Green, textAlign = TextAlign.Center)
+                Text("Say \u201C${wakePhrase(wakeWord)}\u201D any time the app is open, or tap the microphone.", style = MaterialTheme.typography.bodyMedium, color = pal.third, textAlign = TextAlign.Center)
             }
-            Text(if (kind == IntroKind.First) "What I can do" else "New in this version", style = MaterialTheme.typography.labelLarge, color = AssistColours.Green, modifier = Modifier.align(Alignment.Start))
+            Text(if (kind == IntroKind.First) "What I can do" else "New in this version", style = MaterialTheme.typography.labelLarge, color = pal.third, modifier = Modifier.align(Alignment.Start))
             ASSIST_FEATURES.forEach { f ->
                 EntityCard(tone.container, tone.onContainer) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
