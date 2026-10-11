@@ -122,7 +122,7 @@ fun ShoppingScreen(listId: String, onClose: () -> Unit) {
                         list == null -> Text("This list has been deleted or finished.")
                         else -> ShoppingItemsView(list, state, tone, send, { editing = true }, onClose)
                     }
-                    Spacer(Modifier.height(24.dp)) // room to scroll the last buttons clear of the screen's edge
+                    Spacer(Modifier.height(96.dp)) // room to scroll the last buttons clear of the gesture bar (a dialog window doesn't always report that bar's height)
                 }
             }
         }
