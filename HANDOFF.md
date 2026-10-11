@@ -26,6 +26,15 @@ HACS as an integration. It does two jobs:
    scene setup. There's also a scene select per room/zone and a scene builder.
 
 **Now (2026-10-04, v0.38.2 live, nothing on beta):**
+- **Shopping lists (v0.42.0, integration only; cards and app pages still to build).** `shopping.py` /
+  `shopping_logic.py` (see README "Shopping lists"). Data in `.storage/church_drive.shopping`. The to-do
+  task for a list carries `church-drive-shopping:<id>` in its description: the cards and app must open the
+  list page when they see it. The inbox's pseudo list id `shopping` replaces `todo.shopping_list` for AI
+  output; `ws_inbox` batches carry `shopping: {lists, default, missed}` and `inbox/confirm` takes
+  `shopping: {target: <id>|new, name, people, date, places}`. Not yet live-tested against HA: after
+  installing, try `church_drive.shopping_add`, then tick items in `church_drive/shopping/item`.
+  Next: web Shopping card (full page, scroll, back), Android full-page list with the share question
+  (needs PR #128 merged first), per-list place picker in both, and `ha/` nothing needed.
 - **Mobile pages** each have a three-row header under the title (Auto Layout
   `header_content`):
   - Home: the signed-in person's to-dos.

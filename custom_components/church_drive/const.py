@@ -65,3 +65,13 @@ WS_INBOX_DISMISS = "church_drive/inbox/dismiss"
 # Place reminders and snoozing (reminders.py).
 WS_REMINDERS = "church_drive/reminders"
 WS_REMINDER_SET = "church_drive/reminders/set"
+
+# Shopping lists (shopping.py): one task per list, items bought or unavailable.
+SERVICE_SHOPPING_ADD = "shopping_add"
+WS_SHOPPING = "church_drive/shopping"
+WS_SHOPPING_CREATE = "church_drive/shopping/create"
+WS_SHOPPING_UPDATE = "church_drive/shopping/update"
+WS_SHOPPING_ADD = "church_drive/shopping/add"
+WS_SHOPPING_ITEM = "church_drive/shopping/item"
+WS_SHOPPING_DELETE = "church_drive/shopping/delete"
+WS_SHOPPING_IMPORT = "church_drive/shopping/import"
