@@ -129,7 +129,9 @@ fun AssistOrb(state: AssistState, level: Float, size: androidx.compose.ui.unit.D
     val orb = size
     // Everything below is measured in the design mock-up's pixels (the cloud is 120 wide) and scaled to the real size, so it looks like the mock-up.
     val small = orb < 80.dp
-    Canvas(modifier = Modifier.size(orb * 1.5f).graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)) {
+    // The soft edges and the rings reach well past the cloud, so the drawing area is twice its size (centred, not taking room): a smaller one cut the glow off in a square.
+    Box(modifier = Modifier.size(orb * 1.5f), contentAlignment = Alignment.Center) {
+    Canvas(modifier = Modifier.requiredSize(orb * 2.2f).graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)) {
         val c = center
         val twoPi = 2f * Math.PI.toFloat()
         // The whole cloud swells or beats as one: idle breathes, listening swells with the bloom, thinking has a heartbeat.
@@ -149,7 +151,7 @@ fun AssistOrb(state: AssistState, level: Float, size: androidx.compose.ui.unit.D
         val u = orb.toPx() / 120f * group
         // Idle and thinking drift gently; listening and speaking hold still so the bloom and the wave read clearly.
         val drift = if (state == AssistState.Listening || state == AssistState.Speaking) 0f else 11f * u
-        val spread = if (small) 1.8f else 1f
+        val spread = if (small) 1.5f else 1f
         fun cloud(colour: Color, dx: Float, dy: Float, disc: Float, a: Float, b: Float, wavePhase: Float) {
             val at = Offset(c.x + dx * u * spread + cos(phase * a) * drift, c.y + dy * u * spread + sin(phase * b) * drift)
             var radius = disc * u
@@ -191,6 +193,7 @@ fun AssistOrb(state: AssistState, level: Float, size: androidx.compose.ui.unit.D
                 )
             }
         }
+    }
     }
 }
 
