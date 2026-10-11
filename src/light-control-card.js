@@ -4,7 +4,7 @@
 
 import { createFormEditor } from './form-editor.js';
 import { SUFFIX, LABEL } from './suffix.js';
-import { KIT_COLOR, kitCompact, kitCompactable, KIT_CARD_BG } from './card-kit.js';
+import { KIT_COLOR, kitCompact, kitCompactable, KIT_CARD_BG, kitCanUse } from './card-kit.js';
 import { sceneBackground, sceneIcon, scenePalette, loadSceneStyles, onSceneStylesChanged } from './scene-style.js';
 import { DemoHome } from './demo-home.js';
 import { iconHtml, hydrateIcons } from './icons.js';
@@ -1088,6 +1088,14 @@ export class LightControlCard extends HTMLElement {
         return Number.isNaN(n) ? fallback : Math.max(0, Math.min(2, n));
       };
       rows = [{ id: cfg.entity, level: 0 }, ...memberIds.map((id) => ({ id, level: level(id, 1) }))];
+    }
+    // Device access: lights only other people use drop out (the card's own
+    // light stays; a card that's all someone else's is hidden by its panel).
+    if (!cfg.demo) {
+      const head = mode === 'room' ? null : cfg.entity;
+      rows = rows.filter((r) => r.id === head || kitCanUse(hass, r.id));
+      memberIds = memberIds.filter((id) => kitCanUse(hass, id));
+      headIds = headIds.filter((id) => id === head || kitCanUse(hass, id));
     }
     const relevantEntityIds = rows.map((r) => r.id);
     this._cardLightIds = relevantEntityIds;

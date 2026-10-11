@@ -33,6 +33,9 @@ WS_PEOPLE_ASSIGN = "church_drive/people/assign"
 WS_PEOPLE_PHONE = "church_drive/people/phone"
 WS_PEOPLE_PLACES = "church_drive/people/places"
 WS_PEOPLE_CARS = "church_drive/people/cars"
+WS_PEOPLE_ACCESS = "church_drive/people/access"
+WS_PEOPLE_TRACKING = "church_drive/people/tracking"
+WS_PEOPLE_SETTINGS = "church_drive/people/settings"
 
 # Mode icons (icons.py): read by the cards and the app, changed in the Icon Styles card.
 WS_ICONS = "church_drive/icons"
@@ -51,3 +54,14 @@ CONF_MAPS_TILES_KEY = "google_tiles_key"
 CONF_MAPS_PLACES_KEY = "google_places_key"
 WS_MAPS = "church_drive/maps"
 WS_MAPS_SEARCH = "church_drive/maps/search"
+
+# Task inbox (inbox.py): text in, checked tasks out to the to-do lists.
+SERVICE_ADD_TASKS = "add_tasks"
+WS_INBOX = "church_drive/inbox"
+WS_INBOX_SUBMIT = "church_drive/inbox/submit"
+WS_INBOX_CONFIRM = "church_drive/inbox/confirm"
+WS_INBOX_DISMISS = "church_drive/inbox/dismiss"
+
+# Place reminders and snoozing (reminders.py).
+WS_REMINDERS = "church_drive/reminders"
+WS_REMINDER_SET = "church_drive/reminders/set"

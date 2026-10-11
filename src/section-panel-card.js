@@ -5,7 +5,7 @@
 
 import { createFormEditor } from './form-editor.js';
 import { SUFFIX, LABEL } from './suffix.js';
-import { kitNavigate } from './card-kit.js';
+import { kitNavigate, kitCardDenied } from './card-kit.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import {
   stcColor,
@@ -206,6 +206,7 @@ export class SectionPanelCard extends HTMLElement {
     (this._cards || []).forEach((card) => {
       card.hass = hass;
     });
+    this._applyAccess();
     if (first) {
       rememberUser(hass);
       this._watchOpenWhen();
@@ -549,6 +550,27 @@ export class SectionPanelCard extends HTMLElement {
     });
   }
 
+  // Device access (Manager › People › Devices): hide cards for things only
+  // other people use, and the whole panel when that leaves nothing.
+  _applyAccess() {
+    if (!this._hass || !this.config) return;
+    const confs = this.config.cards || [];
+    const denied = confs.map((conf) => kitCardDenied(this._hass, conf));
+    (this._cards || []).forEach((el, i) => {
+      const hide = !!denied[i];
+      if (el._cdDenied !== hide) {
+        el._cdDenied = hide;
+        el.style.display = hide ? 'none' : '';
+      }
+    });
+    const all = confs.length > 0 && denied.every(Boolean);
+    if (all !== !!this._denied) {
+      this._denied = all;
+      this.style.display = all ? 'none' : this._managed ? '' : 'block';
+      window.dispatchEvent(new CustomEvent('cd-panels-changed'));
+    }
+  }
+
   _setEmpty(empty) {
     if (empty === this._empty) return;
     this._empty = empty;
@@ -656,6 +678,7 @@ export class SectionPanelCard extends HTMLElement {
           this._cards.push(el);
           this._grid.appendChild(el);
         });
+        this._applyAccess();
         this._apply();
       })
       .catch(() => {});
@@ -727,7 +750,7 @@ export class SectionPanelCard extends HTMLElement {
     const prevCard = prev && (prev.localName === 'hui-card' ? prev : prev.querySelector && prev.querySelector('hui-card'));
     const type = prevCard && prevCard.config && String(prevCard.config.type || '');
     const stacked = !!type && type.includes('section-panel-card');
-    this.style.display = 'block';
+    this.style.display = this._denied ? 'none' : 'block';
     this.style.marginTop = stacked ? 'calc(var(--ha-view-sections-column-gap, 32px) - 8px)' : '';
   }
 

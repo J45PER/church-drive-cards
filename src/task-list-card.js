@@ -180,6 +180,10 @@ export class TaskListCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    if (!this._placesLoaded) {
+      this._placesLoaded = true;
+      this._loadPlaces();
+    }
     this._watch();
     this._render();
   }
@@ -246,6 +250,71 @@ export class TaskListCard extends HTMLElement {
 
   _justMe() {
     return this.config.assign === 'me';
+  }
+
+  // The places a task can be tied to (a reminder when someone arrives there, instead of at a time), and which
+  // tasks are tied to one: Church Drive's place reminders. An older Church Drive without them has no place row.
+  async _loadPlaces() {
+    if (this.config.demo) {
+      this._zones = [
+        { zone: 'zone.home', name: 'Home' },
+        { zone: 'zone.tesco', name: 'Tesco' },
+      ];
+      this._places = {};
+      return;
+    }
+    if (!this._hass || this._placesBusy) return;
+    this._placesBusy = true;
+    try {
+      const r = await this._hass.callWS({ type: 'church_drive/reminders' });
+      this._zones = r.zones || [];
+      this._places = r.reminders || {};
+    } catch (err) {
+      /* no place reminders here */
+    }
+    this._placesBusy = false;
+    this._sig = null;
+    this._render();
+    if (this._form && this._edit) this._drawForm();
+  }
+
+  _placeOf(uid) {
+    const r = this._places && this._places[`${this._entity()}|${uid}`];
+    return r ? r.zone : '';
+  }
+
+  _placeName(zone) {
+    const z = (this._zones || []).find((x) => x.zone === zone);
+    return z ? z.name : '';
+  }
+
+  // The uid of a task just added (its list reports it a moment after the add).
+  async _findNew(name, before) {
+    for (let i = 0; i < 6; i++) {
+      const r = await this._hass.callWS({
+        type: 'call_service',
+        domain: 'todo',
+        service: 'get_items',
+        target: { entity_id: this._entity() },
+        service_data: { status: ['needs_action'] },
+        return_response: true,
+      });
+      const items = (((r && r.response) || {})[this._entity()] || {}).items || [];
+      const found = items.find((t) => t.summary === name && !before.has(t.uid));
+      if (found) return found.uid;
+      await new Promise((done) => setTimeout(done, 300));
+    }
+    return null;
+  }
+
+  // Tie the task to the chosen place (or clear it), for the people the form reminds.
+  async _savePlace(e, name, before) {
+    if (this.config.demo || !this._zones || (!e.place && !e.placeWas)) return;
+    const uid = e.uid || (await this._findNew(name, before));
+    if (!uid) throw new Error('the new task was not found to set its place');
+    const who = e.who === 'none' ? [] : e.who === 'everyone' ? ['everyone'] : e.who;
+    await this._hass.callWS({ type: 'church_drive/reminders/set', list: this._entity(), uid, zone: e.place || null, who });
+    await this._loadPlaces();
   }
 
   async _call(service, data) {
@@ -327,7 +396,7 @@ export class TaskListCard extends HTMLElement {
     const showDone = c.show_done !== false && done.length > 0 && !this._edit;
     this._doneBtn.hidden = !showDone;
     this._doneBtn.textContent = `${this._showDone ? 'Hide' : 'Show'} done (${done.length})`;
-    const sig = JSON.stringify([all.map((t) => [t.uid, t.summary, t.description, t.due, t.status]), missing, colour, !!this._edit, this._showDone, c.icons]);
+    const sig = JSON.stringify([all.map((t) => [t.uid, t.summary, t.description, t.due, t.status]), missing, colour, !!this._edit, this._showDone, c.icons, this._places, this._zones]);
     if (sig === this._sig) return;
     this._sig = sig;
     const row = ({ t, p }, isDone) => {
@@ -335,7 +404,8 @@ export class TaskListCard extends HTMLElement {
       const over = when.includes('overdue');
       const mine = this._justMe() && Array.isArray(p.who) && p.who.length === 1 && p.who[0] === this._me();
       const who = !p.repeat ? '' : mine ? 'reminds you' : p.who === 'everyone' ? 'reminds everyone' : Array.isArray(p.who) ? `reminds ${p.who.join(', ')}` : '';
-      const sub = [p.repeat && p.repeat.type !== 'once' ? describeRepeat(p.repeat) : '', who, p.notes].filter(Boolean).join(' · ');
+      const place = this._placeName(this._placeOf(t.uid));
+      const sub = [p.repeat && p.repeat.type !== 'once' ? describeRepeat(p.repeat) : '', who, place ? `at ${place}` : '', p.notes].filter(Boolean).join(' · ');
       const ring = isDone ? '#4caf50' : over ? '#e53935' : colour;
       return `<div class="tl-row">
         <button type="button" class="tl-tick" data-tick="${kitEsc(t.uid)}" data-to="${isDone ? 'needs_action' : 'completed'}" aria-label="${isDone ? 'Not done' : 'Done'}: ${kitEsc(t.summary)}" style="border-color:${ring}; ${isDone ? `background:${ring};` : ''}">${isDone ? iconHtml('mdi:check', { size: '15px' }) : ''}</button>
@@ -395,7 +465,10 @@ export class TaskListCard extends HTMLElement {
       who: t ? (p.who === 'everyone' ? 'everyone' : Array.isArray(p.who) ? [...p.who] : 'none') : !def ? 'none' : def.toLowerCase() === 'everyone' ? 'everyone' : [def],
       was: t ? t.description || '' : '',
       due: t ? t.due : null,
+      place: uid ? this._placeOf(uid) : '',
+      placeWas: uid ? this._placeOf(uid) : '',
     };
+    this._loadPlaces();
     if (this._pop) this._pop.close();
     this._form = document.createElement('div');
     this._form.className = 'tl-form';
@@ -463,11 +536,18 @@ export class TaskListCard extends HTMLElement {
       <label class="tl-l">Task<input type="text" class="tl-f-name tl-wide" maxlength="80" placeholder="e.g. Hoover upstairs" value="${kitEsc(e.name)}"></label>
       <div class="tl-l">Repeats<div class="tl-chips" role="group" aria-label="Repeats">${REPEATS.map(([k, label]) => chip('data-kind', k, label, e.kind === k)).join('')}</div></div>
       ${how}
-      <div class="tl-l">${e.kind === 'none' && !e.date && e.who !== 'none' ? `${this._justMe() ? 'Remind me' : 'Reminds'} (at the due time, so choose one above)` : this._justMe() ? 'Remind me' : 'Reminds'}<div class="tl-chips" role="group" aria-label="Who gets reminded">${
+      <div class="tl-l">${e.kind === 'none' && !e.date && !e.place && e.who !== 'none' ? `${this._justMe() ? 'Remind me' : 'Reminds'} (at the due time, so choose one above)` : this._justMe() ? 'Remind me' : 'Reminds'}<div class="tl-chips" role="group" aria-label="Who gets reminded">${
         this._justMe()
           ? chip('data-me', 'yes', 'Yes', e.who !== 'none') + chip('data-me', 'no', 'No', e.who === 'none')
           : ['everyone', ...people, 'none'].map((x) => chip('data-who', x, x === 'everyone' ? 'Everyone' : x === 'none' ? 'No one' : kitEsc(x), whoIs(x))).join('')
       }</div></div>
+      ${
+        this._zones && this._zones.length
+          ? `<label class="tl-l">Remind at a place instead of a time<select class="tl-f-place tl-wide" aria-label="Remind when they arrive at a place"><option value="">No place</option>${this._zones
+              .map((z) => `<option value="${kitEsc(z.zone)}" ${e.place === z.zone ? 'selected' : ''}>${kitEsc(z.name)}</option>`)
+              .join('')}</select><span class="ck-sub" style="line-height:1.35;">${e.place ? 'Reminds each time they arrive there, until the task is done. The reminder has Done and Snooze buttons.' : ''}</span></label>`
+          : ''
+      }
       <label class="tl-l">Notes<input type="text" class="tl-f-notes tl-wide" maxlength="200" placeholder="Optional" value="${kitEsc(e.notes)}"></label>
       <div class="tl-msg" role="status"></div>
       <div class="tl-buttons">
@@ -479,6 +559,10 @@ export class TaskListCard extends HTMLElement {
     const bind = (sel, ev, fn) => f.querySelectorAll(sel).forEach((el) => el.addEventListener(ev, () => fn(el)));
     bind('.tl-f-name', 'input', (el) => (e.name = el.value));
     bind('.tl-f-notes', 'input', (el) => (e.notes = el.value));
+    bind('.tl-f-place', 'change', (el) => {
+      e.place = el.value;
+      this._drawForm();
+    });
     bind('.tl-f-n', 'change', (el) => {
       e.n = Math.max(1, Number(el.value) || 1);
       this._drawForm();
@@ -557,6 +641,8 @@ export class TaskListCard extends HTMLElement {
     const name = String(e.name || '').trim();
     if (!name) return this._say('Give the task a name.');
     if (e.kind === 'weekly' && !Object.keys(e.times).length) return this._say('Choose at least one day.');
+    if (e.place && e.who === 'none') return this._say('Choose who to remind at that place.');
+    const before = new Set(this._all().map((t) => t.uid));
     // A one-off task reminds at its due time, so without one there's nothing to remind about.
     const reminds = e.who !== 'none' && (e.kind !== 'none' || !!e.date);
     const repeat = this._repeat() || (reminds ? { type: 'once' } : null);
@@ -577,15 +663,22 @@ export class TaskListCard extends HTMLElement {
     try {
       if (e.uid) await this._call('update_item', { item: e.uid, rename: name, status: 'needs_action', ...data });
       else await this._call('add_item', { item: name, ...data });
-      this._close();
     } catch (err) {
-      this._say(`Couldn't save: ${(err && err.message) || err}`);
+      return this._say(`Couldn't save: ${(err && err.message) || err}`);
     }
+    try {
+      await this._savePlace(e, name, before);
+    } catch (err) {
+      return this._say(`The task is saved, but its place wasn't: ${(err && err.message) || err}`);
+    }
+    this._close();
   }
 
   async _delete() {
     try {
       await this._call('remove_item', { item: this._edit.uid });
+      if (this._edit.placeWas && !this.config.demo)
+        await this._hass.callWS({ type: 'church_drive/reminders/set', list: this._entity(), uid: this._edit.uid, zone: null, who: [] }).catch(() => {});
       this._close();
     } catch (err) {
       this._say(`Couldn't delete: ${(err && err.message) || err}`);

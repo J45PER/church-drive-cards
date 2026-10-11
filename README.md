@@ -10,6 +10,33 @@ Pick them in a light card's Scenes list, once for the room and once for each of 
 
 The cards share one bundle and one look: no border, drop shadow, rounded top/bottom corners only, hover tints on interactive elements.
 
+## Tasks from messages and voice
+
+Turn text into to-do tasks without typing them out. The text goes to Home Assistant's **AI Task** (any provider; the first AI Task entity is used, or pass `ai_task_entity`), which splits it into separate tasks and picks the list each belongs on: shopping, cleaning, a named person's own list, everyone's, or the sender's own if it isn't clear. A day or time in the text becomes the due date. **Nothing goes on a list until it's checked**: the tasks wait in the inbox, the sender gets a "Tasks to check" notice, and in the app they tick the ones to keep, change the words or the list, and add them. If no AI Task is set up or it fails, the whole text is kept as one task on the sender's list, so nothing is lost. The house's automatic list is never offered.
+
+- **Android app**: highlight text in any app and choose **Church Drive to-do** (Copy/Share menu), or **Share** > **Church Drive to-do**.
+- **Voice in the app**: the microphone in the top bar, the Add task Quick Settings tile and the icon menu add by voice straight to the lists (the phone only listens when tapped).
+- **Voice assistant**: `ha/voice-tasks.yaml` is an automation that lets Assist (phone, watch or a Voice speaker) say "add task …" or "remind me to …".
+- **Anything else**: the `church_drive.add_tasks` action (`text`, optional `person`, `source`, `auto_add`, `ai_task_entity`) returns the tasks it found. `auto_add: true` skips the check. Websocket commands `church_drive/inbox`, `/submit`, `/confirm` and `/dismiss` serve the app, and `church_drive_inbox_changed` fires when the inbox changes.
+
+## Place reminders and snoozing
+
+A task can remind people when they **arrive at a place** instead of at a time. In the Task List card's form (or the app's task box), choose **Remind at a place**: Home, or any zone. Everyone it reminds gets a notification each time they arrive there, until the task is ticked off. Both place and time reminders come with **Done** and **Snooze** buttons on the phone: Done ticks the task off, and Snooze offers 5, 10, 20, 30 minutes or an hour. A time reminder comes back after the snooze; a place reminder comes back only if the person is still at that place (if they've left, it waits for their next arrival).
+
+How it works: the place and who it's for are kept by the integration (`reminders.py`), keyed by the to-do list and the item, so the task's description is unchanged. Arriving is a person's state changing to the zone's name, so it relies on the person's phone reporting location (the app's Location switch). Each phone's button press comes back as the `church_drive_task_action` event. Websocket commands `church_drive/reminders` and `church_drive/reminders/set` serve the card and app. For a time reminder, pass `task_list` and `task_uid` to `church_drive.notify` (with one person) to add the buttons; "Church Drive: repeating tasks" does (see `ha/repeating-tasks.jinja`, which now carries each task's uid).
+
+## Zappi smart charge
+
+When a car is plugged in and nobody has picked a charge mode, the Zappi waits for the cheapest Octopus rate and charges then. The automation "Church Drive: Zappi smart charge" (a copy is in `ha/zappi-smart-charge.yaml`) reads the half-hourly rates from the Octopus Energy integration. A half-hour counts as cheap when its rate is within 10% of the cheapest rate between now and **ready by** (07:00 by default) and no more than **max price** (15p by default). On Octopus Go that is the 00:30 to 05:30 window. At the start of it, it picks **Fast** (the "Zappi starts when a mode is picked" automation unlocks the charger); when the window ends it picks **Stopped**. The car stops itself when it's full.
+
+- **Anyone choosing a mode wins.** Picking Fast, Eco or Eco+ (or Stopped) from the Church Drive app, the card or the myenergi app takes over for that plug-in, and smart charge leaves the car alone until it's unplugged.
+- **Settings** (Settings > Devices & services > Helpers): `input_boolean.zappi_smart_charge` turns it on or off (off stops it starting new charges), `input_number.zappi_smart_charge_max_price`, `input_datetime.zappi_smart_charge_ready_by`.
+- **State** is in `input_select.zappi_smart_charge_state`: Idle (no car), Waiting (plugged in, waiting for a cheap rate), Charging (we started it), Done (the window ended or the car's full), Manual (someone took over).
+- **Card and app.** The charger card (and the Android app's) has a **Smart charge** switch under the Start charge button, saying what it's doing ("Waiting for the cheap rate, 00:30"). Pressing **Start charge** (or **Fast**) at the normal rate with the cheap rate coming up asks first: **Charge at 00:30 (cheap rate)** runs `script.zappi_charge_later` (`ha/zappi-charge-later.yaml`: it puts smart charge in Waiting, switches it on and holds the Zappi on Stopped), or **Charge now at 25.3p** starts as before. No prompt when the rate is cheap already, or when smart charge isn't set up.
+- **Stop.** The Zappi's readings only refresh about once a minute, so the card used to say "Charging" for up to a minute after Stop. It now says **Stopping…** until the readings catch up, and "Church Drive: Zappi catches up after a mode change" (`ha/zappi-catches-up.yaml`) asks for fresh readings every few seconds after any mode change, and sends Stop again if the Zappi is still charging 30 seconds later.
+- If the Octopus rates aren't available, it doesn't start, and it leaves a charge it has started running rather than stopping it blind.
+- It doesn't know how full the car is or how long it needs: it charges through the whole cheap window and the car stops when it's full. A car plugged in after the cheap rates have started charges straight away; one plugged in when the only rate left before ready-by is dearer than the max price waits for the next cheap window (use **Start charge** to override).
+
 ## Cards
 
 Every card is set up like a built-in one: **Add Card** → search for it, pick it from the preview, and configure it in the visual editor. No YAML is needed. The YAML examples below are for reference or copy-paste only.

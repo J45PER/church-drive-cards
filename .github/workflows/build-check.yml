@@ -3,6 +3,7 @@ name: Build check
 # Fails if the committed bundles (or the manifest version) don't match a fresh
 # build of src/, i.e. someone edited src/ or package.json and forgot to run
 # `npm run build` (or edited a bundle by hand). It never commits anything.
+# It also runs the unit tests (`npm test`: JS and Python).
 
 on:
   push:
@@ -19,6 +20,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm test
       - run: npm run build
       - name: Committed bundle matches fresh build
         run: |

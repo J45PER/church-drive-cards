@@ -1,0 +1,220 @@
+# Church Drive: Zappi smart charge. A copy of the live automation (automation.church_drive_zappi_smart_charge)
+# so it can be restored; the live one is what runs. See "Zappi smart charge" in README.md.
+#
+# Helpers it uses (create these first, in Settings > Devices & services > Helpers):
+#   input_boolean.zappi_smart_charge            "Zappi smart charge"             on/off
+#   input_select.zappi_smart_charge_state       "Zappi smart charge state"       options: Idle, Waiting, Charging, Done, Manual
+#   input_number.zappi_smart_charge_max_price   "Zappi smart charge max price"   1-100 step 0.5, p/kWh (15)
+#   input_datetime.zappi_smart_charge_ready_by  "Zappi smart charge ready by"    time only (07:00)
+# The Octopus entities are for this house's meter; change them if the meter changes.
+alias: 'Church Drive: Zappi smart charge'
+description: 'When a car is plugged in and nobody has picked a charge mode, wait for the cheapest Octopus rate and charge then. ''Cheap'' means
+  the current half-hour is within 10% of the cheapest rate between now and ''Zappi smart charge ready by'', and no dearer than ''Zappi smart charge
+  max price''. On Octopus Go that is the 00:30 to 05:30 window; the car stops itself when it''s full. It starts by picking Fast (the ''Zappi starts
+  when a mode is picked'' automation then unlocks the charger) and stops by picking Stopped when the cheap window ends. Anyone picking a mode
+  themselves (the Church Drive app, the card, the myenergi app) takes over for that plug-in: this leaves it alone until the car is unplugged.
+  Progress is in input_select.zappi_smart_charge_state (Idle, Waiting, Charging, Done, Manual); turn input_boolean.zappi_smart_charge off to stop
+  it starting new charges.'
+triggers:
+- trigger: state
+  entity_id: sensor.zappi_plug_status
+  from: EV Disconnected
+  not_to:
+  - unavailable
+  - unknown
+  - EV Disconnected
+  id: plugged
+- trigger: state
+  entity_id: sensor.zappi_plug_status
+  to: EV Disconnected
+  id: unplugged
+- trigger: time_pattern
+  minutes: /30
+  seconds: 5
+  id: slot
+- trigger: state
+  entity_id: select.zappi_charge_mode
+  not_from:
+  - unavailable
+  - unknown
+  not_to:
+  - unavailable
+  - unknown
+  id: mode
+- trigger: state
+  entity_id: sensor.zappi_status
+  to: Completed
+  id: completed
+- trigger: state
+  entity_id:
+  - input_boolean.zappi_smart_charge
+  - input_datetime.zappi_smart_charge_ready_by
+  - input_number.zappi_smart_charge_max_price
+  id: settings
+- trigger: homeassistant
+  event: start
+  id: start
+conditions:
+- condition: not
+  conditions:
+  - condition: state
+    entity_id: sensor.zappi_plug_status
+    state:
+    - unavailable
+    - unknown
+- condition: not
+  conditions:
+  - condition: state
+    entity_id: select.zappi_charge_mode
+    state:
+    - unavailable
+    - unknown
+actions:
+- alias: 'No car: back to Idle (and stop it if we''d started it)'
+  if:
+  - condition: state
+    entity_id: sensor.zappi_plug_status
+    state: EV Disconnected
+  then:
+  - if:
+    - condition: state
+      entity_id: input_select.zappi_smart_charge_state
+      state: Charging
+    then:
+    - action: input_select.select_option
+      target:
+        entity_id: input_select.zappi_smart_charge_state
+      data:
+        option: Idle
+    - action: select.select_option
+      target:
+        entity_id: select.zappi_charge_mode
+      data:
+        option: Stopped
+    else:
+    - if:
+      - condition: not
+        conditions:
+        - condition: state
+          entity_id: input_select.zappi_smart_charge_state
+          state: Idle
+      then:
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.zappi_smart_charge_state
+        data:
+          option: Idle
+  - stop: No car plugged in
+- alias: 'A car just arrived: start waiting'
+  if:
+  - condition: state
+    entity_id: input_select.zappi_smart_charge_state
+    state: Idle
+  then:
+  - action: input_select.select_option
+    target:
+      entity_id: input_select.zappi_smart_charge_state
+    data:
+      option: Waiting
+- alias: Is this half hour cheap?
+  variables:
+    rates_ok: '{{ ((state_attr(''event.octopus_energy_electricity_24l3478610_1160001231179_current_day_rates'', ''rates'') or []) | count) > 0
+      }}'
+    cheap: '{%- set rates = (state_attr(''event.octopus_energy_electricity_24l3478610_1160001231179_current_day_rates'', ''rates'') or []) + (state_attr(''event.octopus_energy_electricity_24l3478610_1160001231179_next_day_rates'',
+      ''rates'') or []) -%}{%- set t = now() -%}{%- set d0 = today_at(states(''input_datetime.zappi_smart_charge_ready_by'')) -%}{%- set deadline
+      = d0 if d0 > t else d0 + timedelta(days=1) -%}{%- set cur = rates | selectattr(''start'', ''le'', t) | selectattr(''end'', ''gt'', t) |
+      first -%}{%- set ahead = rates | selectattr(''end'', ''gt'', t) | selectattr(''start'', ''lt'', deadline) | map(attribute=''value_inc_vat'')
+      | list -%}{{ cur is defined and cur and ahead | count > 0 and cur.value_inc_vat <= (ahead | min) * 1.1 + 0.0001 and cur.value_inc_vat *
+      100 <= states(''input_number.zappi_smart_charge_max_price'') | float(15) }}'
+- alias: What to do
+  choose:
+  - alias: 'Someone picked a mode first: leave it to them'
+    conditions:
+    - condition: state
+      entity_id: input_select.zappi_smart_charge_state
+      state: Waiting
+    - condition: not
+      conditions:
+      - condition: state
+        entity_id: select.zappi_charge_mode
+        state: Stopped
+    sequence:
+    - action: input_select.select_option
+      target:
+        entity_id: input_select.zappi_smart_charge_state
+      data:
+        option: Manual
+  - alias: 'Cheap now: start charging'
+    conditions:
+    - condition: state
+      entity_id: input_select.zappi_smart_charge_state
+      state: Waiting
+    - condition: state
+      entity_id: input_boolean.zappi_smart_charge
+      state: 'on'
+    - condition: state
+      entity_id: select.zappi_charge_mode
+      state: Stopped
+    - condition: template
+      value_template: '{{ rates_ok and cheap }}'
+    sequence:
+    - action: input_select.select_option
+      target:
+        entity_id: input_select.zappi_smart_charge_state
+      data:
+        option: Charging
+    - action: select.select_option
+      target:
+        entity_id: select.zappi_charge_mode
+      data:
+        option: Fast
+  - alias: 'Someone changed the mode while we were charging: leave it to them'
+    conditions:
+    - condition: state
+      entity_id: input_select.zappi_smart_charge_state
+      state: Charging
+    - condition: not
+      conditions:
+      - condition: state
+        entity_id: select.zappi_charge_mode
+        state: Fast
+    sequence:
+    - action: input_select.select_option
+      target:
+        entity_id: input_select.zappi_smart_charge_state
+      data:
+        option: Manual
+  - alias: The car is full
+    conditions:
+    - condition: state
+      entity_id: input_select.zappi_smart_charge_state
+      state: Charging
+    - condition: trigger
+      id: completed
+    sequence:
+    - action: input_select.select_option
+      target:
+        entity_id: input_select.zappi_smart_charge_state
+      data:
+        option: Done
+  - alias: 'The cheap window is over: stop'
+    conditions:
+    - condition: state
+      entity_id: input_select.zappi_smart_charge_state
+      state: Charging
+    - condition: template
+      value_template: '{{ rates_ok and not cheap }}'
+    sequence:
+    - action: input_select.select_option
+      target:
+        entity_id: input_select.zappi_smart_charge_state
+      data:
+        option: Done
+    - action: select.select_option
+      target:
+        entity_id: select.zappi_charge_mode
+      data:
+        option: Stopped
+mode: queued
+max: 5
+max_exceeded: silent
