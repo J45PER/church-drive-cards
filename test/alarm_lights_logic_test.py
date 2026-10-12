@@ -85,7 +85,7 @@ class Profiles(unittest.TestCase):
     def test_fire_by_day_strobes_only(self):
         p = al.profile("fire", "home", True)
         self.assertFalse(p["constant"])
-        self.assertEqual(p["cycle"], [("red", 0.5), (None, 0.5), ("amber", 0.5), (None, 0.5)])
+        self.assertEqual(p["cycle"], [("red", 0.25), (None, 0.25), ("amber", 0.25), (None, 0.25)])
 
     def test_fire_at_night_adds_the_constant_lights(self):
         self.assertTrue(al.profile("fire", "home", False)["constant"])
@@ -108,6 +108,26 @@ class Profiles(unittest.TestCase):
             cycle = al.profile(*args)["cycle"]
             self.assertEqual(len(cycle) % 2, 0)
             self.assertTrue(all(cycle[i][0] is None for i in range(1, len(cycle), 2)))
+
+    def test_pulse_speed_comes_from_the_setting(self):
+        cfg = al.clean_config({"pulse_ms": 400})
+        for test in ("fire", "security_home", "security_away"):
+            self.assertTrue(all(secs == 0.4 for _c, secs in al.plan_for(test, "night", False, cfg)["cycle"]), test)
+        self.assertTrue(all(secs == 0.25 for _c, secs in al.profile("fire", "home", True)["cycle"]))  # quick by default
+
+    def test_the_hue_bridge_signals(self):
+        self.assertEqual(al.profile("fire", "home", True)["signal"], ("alternating", ["red", "amber"]))
+        self.assertEqual(al.profile("security", "home", True)["signal"], ("alternating", ["red", "blue"]))
+        self.assertEqual(al.profile("security", "away", True)["signal"], ("on_off_color", ["red"]))
+        for colours in (["red", "amber"], ["red", "blue"], ["red"]):
+            self.assertTrue(set(colours) <= set(al.XY))
+
+    def test_method_and_pulse_settings_are_cleaned(self):
+        self.assertEqual(al.clean_config({"method": "pulses"})["method"], "pulses")
+        self.assertEqual(al.clean_config({"method": "magic"})["method"], "hue")
+        cfg = al.clean_config({"pulse_ms": 5})
+        self.assertEqual(cfg["pulse_ms"], 100)
+        self.assertEqual(al.clean_config({"pulse_ms": 99999})["pulse_ms"], 1000)
 
     def test_endings(self):
         cfg = al.clean_config({"green_seconds": 90, "blue_seconds": 5})

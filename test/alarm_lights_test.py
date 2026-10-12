@@ -32,7 +32,8 @@ def _install_stubs():
     mod("homeassistant")
     mod("homeassistant.const", EVENT_STATE_CHANGED="state_changed")
     mod("homeassistant.core", Event=object, HomeAssistant=object, callback=lambda f: f)
-    mod("homeassistant.helpers")
+    helpers = mod("homeassistant.helpers")
+    helpers.entity_registry = mod("homeassistant.helpers.entity_registry", async_get=lambda hass: hass.registry)
     mod("homeassistant.helpers.storage", Store=Store)
     pkg = types.ModuleType("church_drive")
     pkg.__path__ = [str(ROOT)]
@@ -89,10 +90,42 @@ class Services:
             self.hass.states.all["scene." + data["scene_id"]] = State("scene." + data["scene_id"], "unknown")
 
 
+class Registry:
+    def __init__(self):
+        self.entries = {}
+
+    def async_get(self, entity_id):
+        return self.entries.get(entity_id)
+
+
+class Bridge:
+    """A pretend Hue bridge: records what is PUT to it."""
+
+    api_version = 2
+
+    def __init__(self):
+        self.puts, self.fail = [], False
+        self.api = self
+
+    async def request(self, method, path, **kwargs):
+        if self.fail:
+            raise RuntimeError("bridge says no")
+        self.puts.append((method, path, kwargs["json"]))
+
+
+class ConfigEntries:
+    def __init__(self):
+        self.entries = []
+
+    def async_entries(self, domain):
+        return self.entries if domain == "hue" else []
+
+
 class Hass:
     def __init__(self):
         self.states, self.bus = States(), Bus()
         self.services = Services(self)
+        self.registry, self.config_entries = Registry(), ConfigEntries()
         self.tasks = []
 
     def async_create_task(self, coro):
@@ -112,7 +145,7 @@ class Hass:
 def house():
     h = Hass()
     for e, members in (("light.ambience", ["light.a1", "light.a2"]), ("light.hall", None), ("light.lounge", None), ("light.bed", None)):
-        h.states.all[e] = State(e, "off", {"entity_id": members} if members else {})
+        h.states.all[e] = State(e, "off", {"entity_id": set(members)} if members else {})  # Hue gives a set
     for e in ("light.a1", "light.a2"):
         h.states.all[e] = State(e, "off")
     h.states.all["binary_sensor.smoke_1"] = State("binary_sensor.smoke_1", "off", device_class="smoke")
@@ -122,6 +155,16 @@ def house():
     h.states.all["sensor.lux_a"] = State("sensor.lux_a", "0")
     h.states.all["sensor.lux_b"] = State("sensor.lux_b", "0")
     return h
+
+
+def on_hue(hass, *lights):
+    """Make these lights Hue lights on one pretend bridge (resource id = 'id-<name>'); returns the bridge."""
+    bridge = Bridge()
+    entry = types.SimpleNamespace(entry_id="hue1", runtime_data=bridge)
+    hass.config_entries.entries.append(entry)
+    for light in lights:
+        hass.registry.entries[light] = types.SimpleNamespace(platform="hue", config_entry_id="hue1", unique_id="id-" + light.split(".")[1])
+    return bridge
 
 
 class AlarmLightsCase(unittest.IsolatedAsyncioTestCase):
@@ -196,7 +239,7 @@ class AlarmLightsCase(unittest.IsolatedAsyncioTestCase):
         await self.wait(1)
         first = self.hass.services.calls[0]
         self.assertEqual(first[:2], ("scene", "create"))
-        self.assertEqual(sorted(first[2]["snapshot_entities"]), ["light.a1", "light.a2", "light.hall", "light.lounge"])
+        self.assertEqual(sorted(first[2]["snapshot_entities"]), ["light.a1", "light.a2", "light.hall", "light.lounge"])  # single lights, not the group
 
     async def test_day_is_read_once_when_the_alarm_starts(self):
         self.hass.set("sensor.lux_a", "300")  # day: one of two sensors is bright, which is half
@@ -291,7 +334,7 @@ class AlarmLightsCase(unittest.IsolatedAsyncioTestCase):
         await self.wait(1)
         self.hass.services.calls.clear()
         await self.wait(4)
-        self.assertEqual(self.colours_seen(), [al.COLOURS["red"], al.COLOURS["amber"]])
+        self.assertEqual(sorted(self.colours_seen()), sorted([al.COLOURS["red"], al.COLOURS["amber"]]))  # either may come first
         self.assertEqual(self.lights.status()["state"], "fire")
 
     async def test_when_the_fire_stops_but_the_siren_goes_on_it_goes_back_to_the_siren(self):
@@ -303,7 +346,7 @@ class AlarmLightsCase(unittest.IsolatedAsyncioTestCase):
         self.hass.services.calls.clear()
         self.fire_out()
         await self.wait(4)
-        self.assertEqual(self.colours_seen(), [al.COLOURS["red"], al.COLOURS["blue"]])  # no green: the alarm is still going
+        self.assertEqual(sorted(self.colours_seen()), sorted([al.COLOURS["red"], al.COLOURS["blue"]]))  # no green: the alarm is still going
         self.assertEqual(self.lights.status()["state"], "security")
         self.assertEqual(saves, 1)  # saved once, at the start
 
@@ -335,6 +378,92 @@ class AlarmLightsCase(unittest.IsolatedAsyncioTestCase):
         await self.wait(3)
         self.assertEqual(self.calls("turn_on"), [])
         self.assertEqual(self.lights.status()["state"], "idle")
+
+    # ---- Hue's own flashing ------------------------------------------------------------
+
+    async def test_hue_lights_are_flashed_by_the_bridge_not_pulsed_by_home_assistant(self):
+        bridge = on_hue(self.hass, "light.a1", "light.a2")
+        self.fire()
+        await self.wait(4)
+        puts = [p for p in bridge.puts if p[2]["signaling"]["signal"] != "no_signal"]
+        self.assertEqual(sorted(p[1] for p in puts), ["clip/v2/resource/light/id-a1", "clip/v2/resource/light/id-a2"])  # once each
+        sig = puts[0][2]["signaling"]
+        self.assertEqual(sig["signal"], "alternating")
+        self.assertEqual([(c["xy"]["x"], c["xy"]["y"]) for c in sig["colors"]], [al.XY["red"], al.XY["amber"]])
+        self.assertEqual(sig["duration"], al.SIGNAL_SECONDS * 1000)
+        self.assertEqual(self.colours_seen(), [])  # no commands from Home Assistant: nothing for the bridge to throttle
+
+    async def test_security_signals_match_the_mode(self):
+        bridge = on_hue(self.hass, "light.a1", "light.a2")
+        self.siren()  # at home
+        await self.wait(3)
+        self.assertEqual(bridge.puts[0][2]["signaling"]["signal"], "alternating")
+        self.assertEqual(len(bridge.puts[0][2]["signaling"]["colors"]), 2)
+        await self.lights.async_stop_test()
+        self.hass.set("alarm_control_panel.ring", "disarmed", old="triggered")
+        await self.wait(40)
+        bridge.puts.clear()
+        self.hass.set("alarm_control_panel.ring", "armed_away", old="disarmed")
+        self.hass.set("alarm_control_panel.ring", "triggered", old="armed_away")
+        await self.wait(3)
+        sig = [p for p in bridge.puts if p[2]["signaling"]["signal"] != "no_signal"][0][2]["signaling"]
+        self.assertEqual((sig["signal"], len(sig["colors"])), ("on_off_color", 1))
+
+    async def test_the_bridge_is_told_to_stop_and_the_lights_put_back_twice_after(self):
+        bridge = on_hue(self.hass, "light.a1", "light.a2")
+        self.fire()
+        await self.wait(2)
+        bridge.puts.clear()
+        self.hass.services.calls.clear()
+        self.fire_out()
+        await self.wait(30)
+        stops = [p for p in bridge.puts if p[2]["signaling"]["signal"] == "no_signal"]
+        self.assertEqual(len(stops), 2)  # the signal is stopped before the green all-clear
+        await self.wait(120)
+        self.assertEqual(len(self.calls("turn_on", "scene")), 2)  # a slow light that missed the first still gets put back
+        self.assertEqual(self.lights.status()["state"], "idle")
+
+    async def test_a_light_the_bridge_refuses_is_pulsed_from_home_assistant_instead(self):
+        bridge = on_hue(self.hass, "light.a1", "light.a2")
+        bridge.fail = True
+        self.fire()
+        await self.wait(3)
+        self.assertTrue(self.colours_seen())
+
+    async def test_pulses_method_ignores_hue(self):
+        bridge = on_hue(self.hass, "light.a1", "light.a2")
+        await self.lights.async_set({"method": "pulses"})
+        self.fire()
+        await self.wait(3)
+        self.assertEqual(bridge.puts, [])
+        self.assertTrue(self.colours_seen())
+
+    async def test_non_hue_lights_in_a_mixed_group_are_pulsed_and_hue_ones_signalled(self):
+        bridge = on_hue(self.hass, "light.a1")  # a2 is not Hue
+        self.fire()
+        await self.wait(3)
+        self.assertEqual([p[1] for p in bridge.puts if p[2]["signaling"]["signal"] != "no_signal"], ["clip/v2/resource/light/id-a1"])
+        self.assertTrue(all(c[2]["entity_id"] == ["light.a2"] for c in self.calls() if "rgb_color" in c[2]))
+
+    async def test_a_test_stops_the_bridge_flashing_when_it_ends(self):
+        bridge = on_hue(self.hass, "light.a1", "light.a2")
+        await self.lights.async_test("fire", "night", 1)
+        await real_sleep(1.6)
+        await self.wait(5)
+        kinds = [p[2]["signaling"]["signal"] for p in bridge.puts]
+        self.assertEqual(kinds.count("alternating"), 2)
+        self.assertEqual(kinds.count("no_signal"), 2)
+        self.assertEqual(self.lights.status()["state"], "idle")
+
+    # ---- saving and restoring -----------------------------------------------------------
+
+    async def test_hue_groups_are_saved_as_their_single_lights(self):
+        """Hue gives a group's lights as a set; the lights, not the group, are what is saved and put back."""
+        self.fire()
+        await self.wait(1)
+        saved = self.hass.services.calls[0][2]["snapshot_entities"]
+        self.assertEqual(sorted(saved), ["light.a1", "light.a2", "light.hall", "light.lounge"])
+        self.assertNotIn("light.ambience", saved)
 
     async def test_a_light_that_has_gone_is_skipped(self):
         await self.lights.async_set({"constant": ["light.hall", "light.deleted"]})

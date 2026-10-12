@@ -2,10 +2,12 @@
 //
 // Two kinds of alarm, two answers (the rules and the playing are in the Church
 // Drive integration, alarm_lights.py; this page sets them and tests them):
-//   - Fire, smoke, heat or carbon monoxide: the strobe lights pulse red and amber;
+//   - Fire, smoke, heat or carbon monoxide: the strobe lights alternate red and amber;
 //     at night the constant lights come on bright as well. Green afterwards.
 //   - The house alarm: set to home, red and blue strobes and the constant lights;
 //     set to away, red strobes only. Blue when it's turned off.
+// Hue lights are flashed by the Hue bridge itself (it repeats the flashing on its own,
+// so it's quick); other lights, or all of them if chosen, are pulsed by Home Assistant.
 // Each light is a Strobe light, a Constant light, or neither. Day or night is read
 // from the chosen light sensors for the whole house. The test buttons play any
 // of it on the lights alone: no alarm, no notification, then the lights go back.
@@ -19,6 +21,11 @@ import { kitShell, kitHead, kitEsc } from './card-kit.js';
 const WS = 'church_drive/alarm_lights';
 const EVENT = 'church_drive_alarm_lights_changed';
 const COLOUR = { red: '#ff1744', amber: '#ff9100', blue: '#2979ff', green: '#00e676' };
+
+const METHODS = [
+  { value: 'hue', label: 'Hue bridge for Hue lights (quickest)' },
+  { value: 'pulses', label: 'Home Assistant pulses for every light' },
+];
 
 const RULES = [
   { value: 'any', label: 'Any one sensor' },
@@ -35,9 +42,9 @@ const TESTS = [
 ];
 
 const WHAT = [
-  { name: 'Fire, smoke, heat or CO', day: 'Strobe lights pulse red and amber', night: 'Constant lights bright white, strobe lights pulse red and amber', after: 'Strobe lights green' },
-  { name: 'House alarm, set to home', day: 'Strobe lights pulse red and blue, constant lights bright white', night: 'The same', after: 'Strobe lights blue' },
-  { name: 'House alarm, set to away', day: 'Strobe lights pulse red', night: 'The same', after: 'Strobe lights blue' },
+  { name: 'Fire, smoke, heat or CO', day: 'Strobe lights alternate red and amber', night: 'Constant lights bright white, strobe lights alternate red and amber', after: 'Strobe lights green' },
+  { name: 'House alarm, set to home', day: 'Strobe lights alternate red and blue, constant lights bright white', night: 'The same', after: 'Strobe lights blue' },
+  { name: 'House alarm, set to away', day: 'Strobe lights flash red', night: 'The same', after: 'Strobe lights blue' },
 ];
 
 const AL_CSS = `
@@ -79,7 +86,7 @@ const AL_CSS = `
 
 function alDemo() {
   return {
-    config: { enabled: true, strobe: ['light.living_room_ambience'], constant: ['light.kitchen', 'light.hall'], sensors: ['sensor.garden_illuminance', 'sensor.entrance_illuminance'], lux: 50, rule: 'half', green_seconds: 60, blue_seconds: 10 },
+    config: { enabled: true, strobe: ['light.living_room_ambience'], constant: ['light.kitchen', 'light.hall'], sensors: ['sensor.garden_illuminance', 'sensor.entrance_illuminance'], lux: 50, rule: 'half', green_seconds: 60, blue_seconds: 10, method: 'hue', pulse_ms: 250 },
     state: 'idle',
     test: null,
     mode: null,
@@ -239,6 +246,7 @@ export class AlarmLightsCard extends HTMLElement {
         <div class="al-box al-status"></div>
         <div class="al-box al-whatbox"></div>
         <div class="al-box"><div class="al-gh">Lights</div><div class="ck-sub">Strobe lights pulse. Constant lights just come on bright. Pick rooms and zones; a light in neither is left alone.</div>
+          <div class="al-strobe"></div>
           <div class="al-field"><input class="al-in al-find" type="search" placeholder="Find a light" aria-label="Find a light" style="flex:1 1 140px;"><button type="button" class="al-chip al-showall"></button></div>
           <div class="al-list"></div></div>
         <div class="al-box al-day"></div>
@@ -248,7 +256,7 @@ export class AlarmLightsCard extends HTMLElement {
       AL_CSS
     );
     const q = (sel) => this.querySelector(sel);
-    this._els = { status: q('.al-status'), what: q('.al-whatbox'), list: q('.al-list'), day: q('.al-day'), after: q('.al-after'), test: q('.al-test'), foot: q('.al-foot'), find: q('.al-find'), showall: q('.al-showall') };
+    this._els = { status: q('.al-status'), what: q('.al-whatbox'), list: q('.al-list'), strobe: q('.al-strobe'), day: q('.al-day'), after: q('.al-after'), test: q('.al-test'), foot: q('.al-foot'), find: q('.al-find'), showall: q('.al-showall') };
     this._els.find.value = this._filter;
     this._els.find.addEventListener('input', () => {
       this._filter = this._els.find.value;
@@ -284,6 +292,7 @@ export class AlarmLightsCard extends HTMLElement {
       const el = ev.target;
       if (el.dataset.num) this._set({ [el.dataset.num]: Number(el.value) });
       else if (el.dataset.rule !== undefined) this._set({ rule: el.value });
+      else if (el.dataset.method !== undefined) this._set({ method: el.value });
       else if (el.dataset.seconds !== undefined) {
         this._seconds = Math.max(5, Math.min(120, Number(el.value) || 20));
         el.value = this._seconds;
@@ -331,6 +340,9 @@ export class AlarmLightsCard extends HTMLElement {
     ).join('')}<span style="margin-top:6px;">Fire wins if both are going. When it's all over the lights go back as they were.</span></div>`;
 
     this._renderLights();
+    e.strobe.innerHTML = `<label class="al-field"><span>Strobe lights flash using</span><select class="al-in" data-method ${dis}>${METHODS.map((m) => `<option value="${m.value}"${m.value === c.method ? ' selected' : ''}>${kitEsc(m.label)}</option>`).join('')}</select></label>
+      <label class="al-field"><span>Each Home Assistant pulse lasts</span><input class="al-in al-num" type="number" min="100" max="1000" step="50" value="${kitEsc(c.pulse_ms)}" data-num="pulse_ms" ${dis}> ms</label>
+      <div class="ck-sub">The Hue bridge flashes its own lights and repeats it by itself; its speed is fixed. Pulses from Home Assistant can be quicker but the Hue bridge slows them down if there are many rooms.</div>`;
 
     // Day or night.
     const sensors = this._sensorList();

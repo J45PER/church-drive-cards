@@ -55,7 +55,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from .alarm_lights import AlarmLights
-from .alarm_lights_logic import KINDS as ALARM_LIGHT_TESTS, RULES as ALARM_LIGHT_RULES, WHEN as ALARM_LIGHT_WHEN
+from .alarm_lights_logic import KINDS as ALARM_LIGHT_TESTS, METHODS as ALARM_LIGHT_METHODS, RULES as ALARM_LIGHT_RULES, WHEN as ALARM_LIGHT_WHEN
 from .apply import async_apply
 from .const import (
     CONF_MAPS_PLACES_KEY,
@@ -833,6 +833,8 @@ def ws_alarm_lights(hass: HomeAssistant, connection: websocket_api.ActiveConnect
         vol.Optional("rule"): vol.In(ALARM_LIGHT_RULES),
         vol.Optional("green_seconds"): vol.Coerce(float),
         vol.Optional("blue_seconds"): vol.Coerce(float),
+        vol.Optional("method"): vol.In(ALARM_LIGHT_METHODS),
+        vol.Optional("pulse_ms"): vol.Coerce(float),
     }
 )
 @websocket_api.require_admin
