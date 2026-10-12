@@ -113,6 +113,29 @@ fun TaskListCard(config: JSONObject, entities: Map<String, EntityState>, call: C
                     }
                 }
             }
+            // The task's steps, each ticked on its own.
+            if (shoppingIdOf(item.description).isEmpty()) stepsOf(item.description).forEachIndexed { i, step ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(start = 48.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Checkbox(
+                        checked = step.done,
+                        onCheckedChange = {
+                            flipStep(item.description, i)?.let { d -> call("todo", "update_item", listId, data("item" to item.uid, "description" to d)) }
+                        },
+                        colors = CheckboxDefaults.colors(checkedColor = tone.accent, uncheckedColor = tone.accent),
+                    )
+                    Text(
+                        step.text,
+                        style = MaterialTheme.typography.bodyMedium,
+                        textDecoration = if (step.done) androidx.compose.ui.text.style.TextDecoration.LineThrough else null,
+                        color = tone.onContainer.copy(alpha = if (step.done) 0.6f else 1f),
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
         }
         // Finished tasks, kept out of the way until asked for; tap one to edit or delete it, tick it to bring it back.
         val finished = items.orEmpty().filter { it.done }

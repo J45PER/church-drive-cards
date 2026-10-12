@@ -248,6 +248,7 @@ Items carry the description "Automatic · <kind> · <detail> · for <names>", wh
 
 A to-do list (`entity`, any to-do list) you can tick off, add to and change, where tasks can repeat and remind people. Tap a task, or "Add a task", to set:
 - its name and notes;
+- **Steps**: a task can have a list of steps ("Add a step"). Each step is ticked on its own in the list, which also shows how many are done ("2 of 5"). They are kept as tick lines at the end of the notes (`- [ ] step` / `- [x] step`, see `src/task-steps.js`), so the Android app shows and ticks the same ones;
 - **Repeats**: Never (with an optional due date and time), Daily (every N days), Weekly (every week, fortnightly, or every 3 or 4 weeks, on chosen days with a time for each), Monthly (every N months on a day of the month or the last day), Yearly (on a date), or After it's done (N days, weeks or months after it's ticked off). Repeats can start on a chosen date;
 - **Reminds**: anyone with a person entity, Everyone, or No one (`remind_default` sets it for new tasks).
 - **The signed-in person's own list** (`entity: mine`): each person sees their own "Priorities <first name>" list, so one card serves everyone.

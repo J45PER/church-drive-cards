@@ -1,6 +1,11 @@
 package com.churchdrive.app.ui
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -29,7 +34,9 @@ fun TaskDialog(item: TodoItem, listId: String, first: String?, tone: ToneColors,
     var repeat by remember { mutableStateOf(repeatChoiceOf(words.repeat)) }
     var who by remember { mutableStateOf(whoChoiceOf(words.who, first)) }
     var time by remember { mutableStateOf(timeOf(words.repeat) ?: timeOf(item.due?.takeIf { 'T' in it }?.substringAfter('T')) ?: "09:00") }
-    var notes by remember { mutableStateOf(words.notes) }
+    val split = remember(item) { splitSteps(words.notes) }
+    var notes by remember { mutableStateOf(split.text) }
+    var steps by remember { mutableStateOf(split.steps) }
     // A reminder at a place instead of a time: the places come from the house, and a house without them shows nothing here.
     val api = LocalHaApi.current
     var places by remember { mutableStateOf<List<Place>?>(null) }
@@ -54,7 +61,7 @@ fun TaskDialog(item: TodoItem, listId: String, first: String?, tone: ToneColors,
         val words2 = repeatWords(repeat, cleaned ?: "09:00", day)
         val fields = updateFields(
             item.uid, name, due, if (due == "No date") null else timeOrNull, today,
-            buildDescription(words2, whoWords(who, first), notes),
+            buildDescription(words2, whoWords(who, first), joinSteps(notes, steps)),
         )
         call("todo", "update_item", listId, data(*fields.map { it.key to (it.value ?: JSONObject.NULL) }.toTypedArray()))
         if (place != placeWas && first != null) {
@@ -94,7 +101,23 @@ fun TaskDialog(item: TodoItem, listId: String, first: String?, tone: ToneColors,
             OptionRow(placeChoices(all), place, tone) { place = it }
             if (place != NO_PLACE) Text("Reminds you each time you arrive, until it's done.", style = MaterialTheme.typography.bodySmall)
         }
-        OutlinedTextField(notes, { notes = it }, label = { Text("Notes") }, modifier = Modifier.fillMaxWidth(), minLines = 3)
+        OutlinedTextField(notes, { notes = it }, label = { Text("Notes") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+        Text("Steps", style = MaterialTheme.typography.labelLarge)
+        steps.forEachIndexed { i, step ->
+            OutlinedTextField(
+                step.text,
+                { v -> steps = steps.mapIndexed { j, s -> if (j == i) s.copy(text = v) else s } },
+                label = { Text("Step ${i + 1}") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                trailingIcon = {
+                    Box(modifier = Modifier.clickable { steps = steps.filterIndexed { j, _ -> j != i } }.padding(8.dp)) {
+                        HaIcon("mdi:close", Icons.Filled.Info, tone.onContainer, 22.dp)
+                    }
+                },
+            )
+        }
+        TileRow(listOf(TileItem("mdi:plus", "Add a step", false) { steps = steps + TaskStep("", false) }), tone, tone.onContainer)
         TileRow(
             listOf(
                 TileItem("mdi:close", "Cancel", false) { onClose() },
