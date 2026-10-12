@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-12. Current release: **v0.52.2**.*
+*Last updated 2026-10-12. Current release: **v0.52.2** (v0.52.3 / Android 0.19.3 in PR, not yet released).*
 
 ## Where this stands
 
@@ -179,7 +179,7 @@ HACS as an integration. It does two jobs:
     starting at 00:32 showed 7% until 01:00 while the car had reached 30%; the PHEV gains about
     20% in 20 minutes). The car answers in ~20 s; the command status can read "Failed" while the
     figures still refresh. Car card: past 20 minutes old while plugged in or charging, a line
-    "Updated HH:MM" (from the battery sensor's `Last updated` attribute, else its state) and a
+    "Car last reported HH:MM · 23h ago" (v0.52.3; was "Updated HH:MM"; the time is the battery sensor's `Last updated` attribute, i.e. when the car last sent figures, not when HA last polled; else its state) and a
     **Refresh** button that presses the car's wake-up (`carAsOf`, `carTime`, `wake` in
     `carEntities`).
   - **Zappi starts when a mode is picked** (automation, live 2026-10-10): the Zappi has "lock when

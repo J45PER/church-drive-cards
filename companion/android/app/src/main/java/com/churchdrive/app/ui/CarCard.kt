@@ -75,7 +75,7 @@ data class CarRow(
     val asOf: Long? = null, val wake: String = "",
 )
 
-/** Figures this old, while plugged in, get "Updated HH:MM" and Refresh. */
+/** Figures this old, while plugged in, get "Car last reported HH:MM · 25m ago" and Refresh. */
 const val CAR_STALE_MS = 20 * 60_000L
 
 /** When a car's figures are from: the integration's own "Last updated" (Stellantis: when the car sent them), else the state's. */
@@ -88,11 +88,17 @@ fun carAsOf(battery: EntityState?): Long? {
 /** Whether to say when the figures are from: plugged in or charging, and over 20 minutes old. */
 fun carStale(car: CarRow, now: Long): Boolean = (car.plugged || car.charging) && car.asOf != null && now - car.asOf > CAR_STALE_MS
 
-/** "Updated 20:41", or "Updated Sat 20:41" when it isn't today. */
+/** "Car last reported 20:41 · 25m ago", or "Car last reported Sat 20:41 · 2d ago" when it isn't today. */
 fun carUpdatedText(at: Long, now: Long, zone: ZoneId = ZoneId.systemDefault()): String {
     val t = Instant.ofEpochMilli(at).atZone(zone)
     val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate() == t.toLocalDate()
-    return "Updated " + DateTimeFormatter.ofPattern(if (today) "HH:mm" else "EEE HH:mm", java.util.Locale.UK).format(t)
+    val mins = maxOf(0L, (now - at) / 60_000)
+    val ago = when {
+        mins < 60 -> "${mins}m ago"
+        mins < 1440 -> "${mins / 60}h ago"
+        else -> "${mins / 1440}d ago"
+    }
+    return "Car last reported " + DateTimeFormatter.ofPattern(if (today) "HH:mm" else "EEE HH:mm", java.util.Locale.UK).format(t) + " · " + ago
 }
 
 private fun reading(e: EntityState?): String =
@@ -152,7 +158,7 @@ fun personOf(name: String?, entities: Map<String, EntityState>): String? {
 @Composable
 fun CarCard(config: JSONObject, entities: Map<String, EntityState>, registry: Registry, call: CallService) {
     val rows = carRows(config, entities, registry, personOf(LocalUserName.current, entities))
-    // The minute, so "Updated 20:41" appears once the figures pass 20 minutes old.
+    // The minute, so "Car last reported 20:41" appears once the figures pass 20 minutes old.
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) { while (true) { delay(60_000); now = System.currentTimeMillis() } }
     // Cars asked for figures in the last 3 minutes ("Asking the car…").
