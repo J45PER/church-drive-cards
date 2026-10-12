@@ -19,19 +19,20 @@ index 7fdb284..9fb64bf 100644
  		return ring.Dial(source)
  	})
 diff --git a/pkg/ring/client.go b/pkg/ring/client.go
-index fb77e19..a5410cb 100644
+index fb77e19..e2b2ceb 100644
 --- a/pkg/ring/client.go
 +++ b/pkg/ring/client.go
-@@ -6,6 +6,8 @@ import (
+@@ -6,6 +6,9 @@ import (
  	"fmt"
  	"net/url"
  	"strconv"
++	"strings"
 +	"sync/atomic"
 +	"time"
  
  	"github.com/AlexxIT/go2rtc/pkg/core"
  	"github.com/AlexxIT/go2rtc/pkg/webrtc"
-@@ -13,7 +15,13 @@ import (
+@@ -13,7 +16,13 @@ import (
  	pion "github.com/pion/webrtc/v4"
  )
  
@@ -45,7 +46,7 @@ index fb77e19..a5410cb 100644
  	api       *RingApi
  	wsClient  *WSClient
  	prod      core.Producer
-@@ -35,6 +43,11 @@ func Dial(rawURL string) (*Client, error) {
+@@ -35,6 +44,11 @@ func Dial(rawURL string) (*Client, error) {
  	deviceID := query.Get("device_id")
  	_, isSnapshot := query["snapshot"]
  
@@ -57,7 +58,15 @@ index fb77e19..a5410cb 100644
  	if encodedToken == "" || deviceID == "" || cameraID == "" {
  		return nil, errors.New("ring: wrong query")
  	}
-@@ -215,40 +228,69 @@ func Dial(rawURL string) (*Client, error) {
+@@ -109,6 +123,7 @@ func Dial(rawURL string) (*Client, error) {
+ 	prod := webrtc.NewConn(pc)
+ 	prod.FormatName = "ring/webrtc"
+ 	prod.Mode = core.ModeActiveProducer
++	prod.RequestKeyframes = true
+ 	prod.Protocol = "ws"
+ 	prod.URL = rawURL
+ 
+@@ -215,40 +230,97 @@ func Dial(rawURL string) (*Client, error) {
  
  	sendOffer.Done(nil)
  
@@ -86,6 +95,7 @@ index fb77e19..a5410cb 100644
 +				return nil, err
 +			}
 +			Log.Debug().Msgf("[ring] connected (%s)", state())
++			go client.watchMedia(pc, prod)
 +			return client, nil
 +		case <-tick.C:
 +			Log.Debug().Msgf("[ring] waiting (%s)", state())
@@ -100,11 +110,40 @@ index fb77e19..a5410cb 100644
  
 -func (c *Client) onWSMessage(msg WSMessage) {
 -	rawMsg, _ := json.Marshal(msg)
--
++// watchMedia logs, for the first minute after connecting, whether video and
++// audio packets are really arriving from Ring: the connection can be up with no
++// media on it, and nothing else would say so.
++func (c *Client) watchMedia(pc *pion.PeerConnection, prod *webrtc.Conn) {
++	tick := time.NewTicker(5 * time.Second)
++	defer tick.Stop()
+ 
 -	// fmt.Printf("ring: onWSMessage: %s\n", string(rawMsg))
--
++	for i := 0; i < 12; i++ {
++		<-tick.C
++		if c.closed {
++			return
++		}
+ 
 -	// check if "doorbot_id" is present
 -	if _, ok := msg.Body["doorbot_id"]; !ok {
+-		return
++		var parts []string
++		for _, stat := range pc.GetStats() {
++			if in, ok := stat.(pion.InboundRTPStreamStats); ok {
++				parts = append(parts, fmt.Sprintf("%s %d packets %d bytes lost %d", in.Kind, in.PacketsReceived, in.BytesReceived, in.PacketsLost))
++			}
++		}
++		if len(parts) == 0 {
++			parts = append(parts, "no inbound RTP yet")
++		}
++
++		Log.Debug().Msgf("[ring] media: %s; receivers=%d recv=%d bytes", strings.Join(parts, "; "), len(prod.Receivers), prod.Recv)
+ 	}
++}
+ 
+-	// check if the message is from the correct doorbot
+-	doorbotID := msg.Body["doorbot_id"].(float64)
+-	if int(doorbotID) != c.cameraID {
 -		return
 +// acceptMessage reports whether a signalling message is for this camera and
 +// session. Ring sends messages for our dialog only, so the first session_id we
@@ -116,22 +155,13 @@ index fb77e19..a5410cb 100644
 +		return false
  	}
  
--	// check if the message is from the correct doorbot
--	doorbotID := msg.Body["doorbot_id"].(float64)
--	if int(doorbotID) != c.cameraID {
--		return
-+	session, hasSession := msg.Body["session_id"].(string)
-+	if !hasSession || session == "" {
-+		return true
- 	}
- 
 -	if msg.Method == "session_created" || msg.Method == "session_started" {
 -		if _, ok := msg.Body["session_id"]; ok && c.wsClient.sessionID == "" {
 -			c.wsClient.sessionID = msg.Body["session_id"].(string)
 -		}
-+	if c.wsClient.sessionID == "" {
-+		c.wsClient.sessionID = session
-+		Log.Debug().Msgf("[ring] session %s", summarize(WSMessage{Body: map[string]any{"session_id": session}}))
++	session, hasSession := msg.Body["session_id"].(string)
++	if !hasSession || session == "" {
++		return true
  	}
  
 -	// check if the message is from the correct session
@@ -139,6 +169,11 @@ index fb77e19..a5410cb 100644
 -		if msg.Body["session_id"].(string) != c.wsClient.sessionID {
 -			return
 -		}
++	if c.wsClient.sessionID == "" {
++		c.wsClient.sessionID = session
++		Log.Debug().Msgf("[ring] session %s", summarize(WSMessage{Body: map[string]any{"session_id": session}}))
++	}
++
 +	return session == c.wsClient.sessionID
 +}
 +
@@ -151,7 +186,7 @@ index fb77e19..a5410cb 100644
  	}
  
  	switch msg.Method {
-@@ -262,7 +304,11 @@ func (c *Client) onWSMessage(msg WSMessage) {
+@@ -262,7 +334,11 @@ func (c *Client) onWSMessage(msg WSMessage) {
  				return
  			}
  
@@ -163,7 +198,7 @@ index fb77e19..a5410cb 100644
  				c.Stop()
  				c.connected.Done(err)
  				return
-@@ -290,6 +336,7 @@ func (c *Client) onWSMessage(msg WSMessage) {
+@@ -290,6 +366,7 @@ func (c *Client) onWSMessage(msg WSMessage) {
  			}
  
  			if err := prod.AddCandidate(msg.Body.Ice); err != nil {
@@ -171,7 +206,7 @@ index fb77e19..a5410cb 100644
  				c.Stop()
  				c.connected.Done(err)
  				return
-@@ -300,6 +347,10 @@ func (c *Client) onWSMessage(msg WSMessage) {
+@@ -300,6 +377,10 @@ func (c *Client) onWSMessage(msg WSMessage) {
  		c.Stop()
  		c.connected.Done(errors.New("ring: close"))
  
@@ -338,3 +373,28 @@ index 51e72fe..a691322 100644
  	if c.onMessage != nil {
  		c.onMessage(msg)
  	}
+diff --git a/pkg/webrtc/conn.go b/pkg/webrtc/conn.go
+index 924fd55..ea95602 100644
+--- a/pkg/webrtc/conn.go
++++ b/pkg/webrtc/conn.go
+@@ -18,6 +18,11 @@ type Conn struct {
+ 
+ 	Mode core.Mode `json:"mode"`
+ 
++	// RequestKeyframes makes an active producer ask for a keyframe every two
++	// seconds (like a passive producer always does). Ring battery cameras only
++	// start a viewer on a keyframe it asks for.
++	RequestKeyframes bool `json:"-"`
++
+ 	pc *webrtc.PeerConnection
+ 
+ 	offer  string
+@@ -87,7 +92,7 @@ func NewConn(pc *webrtc.PeerConnection) *Conn {
+ 			}
+ 		}
+ 
+-		if c.Mode == core.ModePassiveProducer && remote.Kind() == webrtc.RTPCodecTypeVideo {
++		if (c.Mode == core.ModePassiveProducer || c.RequestKeyframes) && remote.Kind() == webrtc.RTPCodecTypeVideo {
+ 			go func() {
+ 				pkts := []rtcp.Packet{&rtcp.PictureLossIndication{MediaSSRC: uint32(remote.SSRC())}}
+ 				for range time.NewTicker(time.Second * 2).C {

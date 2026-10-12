@@ -18,9 +18,12 @@ All in go2rtc's Ring source (`pkg/ring`). Nothing else about go2rtc changes.
   session id from `session_created` and silently dropped everything else until then, so an answer
   that came first (or without it) was lost and go2rtc waited forever.
 - **Answers Ring's pings with a pong,** as Ring's own client library does.
+- **Asks Ring for keyframes.** Every 2 seconds, so a battery camera gives the player a picture
+  to start from (Ring's own client does this; go2rtc did not for Ring).
 - **Gives up with a reason.** After 30 seconds (`&connect_timeout=N` on the ring URL changes it)
   it stops, closes the Ring session and logs where it stuck (answer received or not, ICE and
-  connection state) instead of leaving a battery camera streaming.
+  connection state) instead of leaving a battery camera streaming. With debug on it also logs, for
+  the first minute after connecting, whether video and audio packets are really arriving.
 
 ## Installing
 
