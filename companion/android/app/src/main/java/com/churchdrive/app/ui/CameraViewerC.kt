@@ -88,6 +88,8 @@ internal fun CameraViewerC(
     entities: Map<String, EntityState>,
     call: CallService,
     startAnswered: Boolean = false,
+    /** The go2rtc stream for two-way audio (from the card's `talk_stream`); a doorbell with none given uses its own name. */
+    talkStream: String? = null,
     onClose: () -> Unit,
 ) {
     val host = LocalCameraHost.current
@@ -101,6 +103,9 @@ internal fun CameraViewerC(
     var talking by remember { mutableStateOf(false) }
     var micDenied by remember { mutableStateOf(false) }
     var talkRefused by remember { mutableStateOf(false) }
+    var go2rtcFailed by remember { mutableStateOf(false) }
+    // Home Assistant's own WebRTC can only listen to a Ring camera, so Talk goes through go2rtc: the card's talk_stream, or a doorbell's own name.
+    val stream = (talkStream ?: if (found.ding != null) eventsBase else null)?.takeIf { !go2rtcFailed }
     var expanded by remember { mutableStateOf(prefs.getBoolean(entityId, false)) }
     var full by remember { mutableStateOf(false) }
     var aspect by remember { mutableStateOf(16f / 9f) }
@@ -183,7 +188,7 @@ internal fun CameraViewerC(
     val battery = found.battery?.let { entities[it]?.state?.toDoubleOrNull() }
     val bars = found.signal?.let { signalBars(entities[it]?.state, entities[it]?.state) } ?: -1
     val ringing = isRinging(found.ringSensor?.let { entities[it]?.state }, found.ding?.let { entities[it]?.state }, System.currentTimeMillis(), answeredAt)
-    val canTalk = mode == "webrtc"
+    val canTalk = mode == "webrtc" && stream != null
     val canListen = mode == "webrtc" || mode == "hls"
     val live = canListen && status == null
 
@@ -229,7 +234,13 @@ internal fun CameraViewerC(
                     // A 16:9 box that the picture covers: a tall picture is cropped and can be dragged up and down.
                     StageBox(aspect, fill = fill, contain = false, maxZoom = 6f, onTap = { if (over) { shown = !shown; touched++ } }) {
                         when (mode) {
-                            "webrtc" -> WebRtcPlayer(entityId, !sound, Modifier.fillMaxSize(), talking = talking, texture = true, onTalkRefused = { talking = false; talkRefused = true }, onAspect = { aspect = it }) { status = it }
+                            "webrtc" -> WebRtcPlayer(
+                                entityId, !sound, Modifier.fillMaxSize(), talking = talking && canTalk, texture = true,
+                                onTalkRefused = { talking = false; talkRefused = true },
+                                go2rtc = stream,
+                                onGo2rtcFailed = { go2rtcFailed = true; talking = false },
+                                onAspect = { aspect = it },
+                            ) { status = it }
                             "hls" -> link?.let { LivePlayer(base + it, !sound) { aspect = it } }
                             else -> Unit
                         }
@@ -309,6 +320,12 @@ internal fun CameraViewerC(
                                 callRow(false) { touched++; close() }
                             }
                         }
+                    }
+                    if (go2rtcFailed && (talkStream != null || found.ding != null)) {
+                        Text(
+                            "No go2rtc stream for this camera, so this is listen-only (through Home Assistant).",
+                            color = Color(0xFFFFA726), fontSize = 12.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp),
+                        )
                     }
                     if (talkRefused) {
                         Text(

@@ -178,7 +178,7 @@ fun CameraCard(config: JSONObject, entities: Map<String, EntityState>, registry:
     if (viewing) {
         val eventsBase = cameraBaseName(entities, entityId)
         val light = cameraLight(entities, registry, entityId, config.optString("light").takeIf { it.isNotBlank() })
-        if (experimental) CameraViewerC(name, entityId, found, eventsBase, light, entities, call, startAnswered = answerOnOpen) { viewing = false; answerOnOpen = false }
+        if (experimental) CameraViewerC(name, entityId, found, eventsBase, light, entities, call, startAnswered = answerOnOpen, talkStream = config.optString("talk_stream").takeIf { it.isNotBlank() }) { viewing = false; answerOnOpen = false }
         else CameraViewer(name, entityId, found.button, eventsBase, light, entities, call) { viewing = false }
     }
 }
@@ -326,8 +326,13 @@ internal fun LivePlayer(url: String, muted: Boolean, onAspect: (Float) -> Unit) 
 
 /** The live view of a camera by its entity, for opening it from outside its card (a widget's tap). */
 @Composable
-fun CameraViewerFor(entityId: String, entities: Map<String, EntityState>, registry: Registry, call: CallService, onClose: () -> Unit) {
+fun CameraViewerFor(entityId: String, entities: Map<String, EntityState>, registry: Registry, call: CallService, onClose: () -> Unit, answer: Boolean = false) {
     val found = cameraFind(entities, entityId, null, null)
     val name = entities[entityId]?.friendlyName?.replace(Regex(" (Live view|Snapshot)$", RegexOption.IGNORE_CASE), "") ?: entityId
+    // A doorbell notification's Answer opens the new live view, already answering.
+    if (answer) {
+        CameraViewerC(name, entityId, found, cameraBaseName(entities, entityId), cameraLight(entities, registry, entityId, null), entities, call, startAnswered = true, onClose = onClose)
+        return
+    }
     CameraViewer(name, entityId, found.button, cameraBaseName(entities, entityId), cameraLight(entities, registry, entityId, null), entities, call, onClose)
 }

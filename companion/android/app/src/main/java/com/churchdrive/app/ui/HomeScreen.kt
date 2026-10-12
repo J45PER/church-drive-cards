@@ -83,6 +83,7 @@ fun HomeScreen(
     onOpened: () -> Unit = {},
     /** A camera (entity id) a widget asked to see live, until it is closed. */
     openCamera: String? = null,
+    openCameraAnswer: Boolean = false,
     onCameraClosed: () -> Unit = {},
 ) {
     var page by rememberSaveable { mutableStateOf(Page.Home) }
@@ -218,7 +219,7 @@ fun HomeScreen(
             }
         }
     }
-    if (openCamera != null && statesLoaded) CameraViewerFor(openCamera, entities, registry, call, onCameraClosed)
+    if (openCamera != null && statesLoaded) CameraViewerFor(openCamera, entities, registry, call, onCameraClosed, answer = openCameraAnswer)
     AccountOverlay(
         panel, { panel = it }, userName, isAdmin, account, updateAvailable, onSignOut,
         adminPages = adminPages,

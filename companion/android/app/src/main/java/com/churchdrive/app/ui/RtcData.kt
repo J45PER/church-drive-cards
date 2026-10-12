@@ -93,3 +93,17 @@ fun withoutVideoFormats(sdp: String, drop: Set<String> = setOf("H265", "HEVC")):
     }
     return out.joinToString(eol)
 }
+
+/** One message of go2rtc's WebRTC socket as an [RtcEvent]: its answer, a network candidate, or an error. */
+fun parseGo2rtcMessage(message: JSONObject): RtcEvent? = when (message.optString("type")) {
+    "webrtc/answer" -> message.optString("value").takeIf { it.isNotBlank() }?.let { RtcEvent.Answer(it) }
+    "webrtc/candidate" -> message.optString("value").takeIf { it.isNotBlank() }?.let { RtcEvent.Candidate(it.removePrefix("a="), "0", 0) }
+    "error" -> RtcEvent.Error(message.optString("value").ifBlank { "go2rtc couldn't open the stream" })
+    else -> null
+}
+
+/** Our offer, as go2rtc's socket takes it. */
+fun go2rtcOffer(sdp: String): JSONObject = JSONObject().put("type", "webrtc/offer").put("value", sdp)
+
+/** One of our network candidates (the `candidate:...` line), as go2rtc's socket takes it. */
+fun go2rtcCandidate(candidate: String): JSONObject = JSONObject().put("type", "webrtc/candidate").put("value", candidate)

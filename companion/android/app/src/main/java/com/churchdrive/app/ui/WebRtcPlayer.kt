@@ -48,6 +48,10 @@ fun WebRtcPlayer(
     texture: Boolean = false,
     /** The camera's answer didn't take our microphone. */
     onTalkRefused: () -> Unit = {},
+    /** Connect through go2rtc's stream of this name (two-way audio) instead of Home Assistant's own WebRTC. */
+    go2rtc: String? = null,
+    /** go2rtc couldn't give the stream (not set up, not reachable). */
+    onGo2rtcFailed: () -> Unit = {},
     onAspect: (Float) -> Unit = {},
     onStatus: (String?) -> Unit,
 ) {
@@ -79,9 +83,9 @@ fun WebRtcPlayer(
             egl.release()
         }
     }
-    DisposableEffect(entityId, talking) {
+    DisposableEffect(entityId, talking, go2rtc) {
         onStatus("Starting live view…")
-        val session = host?.let { RtcSession(context, egl, it, entityId, renderer.sink, talking, { track -> audio = track }, onStatus, onAspect, onTalkRefused) }
+        val session = host?.let { RtcSession(context, egl, it, entityId, renderer.sink, talking, { track -> audio = track }, onStatus, onAspect, onTalkRefused, go2rtc, onGo2rtcFailed) }
         if (session == null) onStatus("Live view isn't available.") else session.start()
         onDispose {
             audio = null
@@ -116,10 +120,14 @@ private class RtcSession(
     private val onStatus: (String?) -> Unit,
     private val onAspect: (Float) -> Unit,
     private val onTalkRefused: () -> Unit,
+    /** The go2rtc stream to use, or null for Home Assistant's own WebRTC. */
+    private val go2rtc: String?,
+    private val onGo2rtcFailed: () -> Unit,
 ) : PeerConnection.Observer {
     private var factory: PeerConnectionFactory? = null
     private var connection: PeerConnection? = null
     private var subscription = -1
+    private var socket: Go2rtcSocket? = null
     private var sessionId: String? = null
     private var servers: List<IceServerSpec> = emptyList()
     private var generation = 0
@@ -145,18 +153,24 @@ private class RtcSession(
     private var micTrack: AudioTrack? = null
 
     fun start() {
-        CrashReport.note("live view: $entityId")
-        host.iceServers(entityId) { list ->
-            if (closed.get()) return@iceServers
-            servers = parseIceServers(list)
-            CrashReport.note("ice servers: ${servers.size}")
+        CrashReport.note("live view: $entityId${if (go2rtc != null) " through go2rtc stream $go2rtc" else ""}")
+        if (go2rtc != null) {
+            // go2rtc is on the home network: a public STUN server is enough to find our address from away.
+            servers = listOf(IceServerSpec(listOf("stun:stun.l.google.com:19302"), null, null))
             attempt(0)
+        } else {
+            host.iceServers(entityId) { list ->
+                if (closed.get()) return@iceServers
+                servers = parseIceServers(list)
+                CrashReport.note("ice servers: ${servers.size}")
+                attempt(0)
+            }
         }
         // Give up if nothing is playing after a while, so the viewer says so instead of waiting for ever.
         timeout = Thread {
             try {
-                Thread.sleep(25_000)
-                if (!closed.get() && !playing.get()) onStatus("The camera didn't answer. Try again.")
+                Thread.sleep(if (go2rtc != null) 12_000 else 25_000)
+                if (!closed.get() && !playing.get()) fail("The camera didn't answer. Try again.")
             } catch (_: InterruptedException) {
             }
         }.also { it.isDaemon = true; it.start() }
@@ -225,6 +239,32 @@ private class RtcSession(
     private fun sendOffer(sdp: String, mine: Int) {
         lastOffer = sdp
         CrashReport.note("offer sent: ${mediaOrder(sdp).joinToString(",")}; formats ${codecs(sdp)}")
+        if (go2rtc != null) {
+            host.go2rtcSocket(
+                go2rtc,
+                { message -> if (mine == generation) handle(parseGo2rtcMessage(message)) },
+                { reason -> if (mine == generation && !playing.get()) fail(reason ?: "go2rtc closed the connection.") },
+                { opened ->
+                    if (closed.get() || mine != generation) {
+                        opened?.close()
+                        return@go2rtcSocket
+                    }
+                    if (opened == null) {
+                        fail("Couldn't reach go2rtc.")
+                        return@go2rtcSocket
+                    }
+                    socket = opened
+                    opened.send(go2rtcOffer(sdp))
+                    // Candidates found while the socket was opening go now, and the rest as they come.
+                    synchronized(pendingCandidates) {
+                        sessionId = "go2rtc"
+                        pendingCandidates.forEach { sendCandidate(it) }
+                        pendingCandidates.clear()
+                    }
+                },
+            )
+            return
+        }
         subscription = host.webRtcOffer(entityId, sdp) { event -> if (mine == generation) handle(parseRtcEvent(event)) }
         if (subscription < 0) fail("Not connected to Home Assistant.")
     }
@@ -284,12 +324,22 @@ private class RtcSession(
             Regex("profile-level-id=(\\w+)").findAll(sdp).map { "profile " + it.groupValues[1] }).joinToString(" ")
 
     private fun sendCandidate(c: IceCandidate) {
+        if (go2rtc != null) {
+            socket?.send(go2rtcCandidate(c.sdp))
+            return
+        }
         val id = sessionId ?: return
         host.webRtcCandidate(entityId, id, candidateJson(c.sdp, c.sdpMid, c.sdpMLineIndex))
     }
 
     private fun fail(message: String) {
         if (closed.get() || playing.get()) return
+        if (go2rtc != null) {
+            // The stream isn't there (or can't be reached): let the view go back to Home Assistant's connection.
+            CrashReport.note("go2rtc failed: $message")
+            main.post { if (!closed.get()) onGo2rtcFailed() }
+            return
+        }
         onStatus(if (talk) "$message (Two-way audio may not be supported by this camera: tap Talk again to go back to listening.)" else message)
     }
 
@@ -297,6 +347,8 @@ private class RtcSession(
     private fun teardown() {
         if (subscription >= 0) host.close(subscription)
         subscription = -1
+        runCatching { socket?.close() }
+        socket = null
         sessionId = null
         synchronized(pendingCandidates) { pendingCandidates.clear() }
         runCatching { connection?.close() }
