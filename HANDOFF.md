@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-11. Current release: **v0.41.0**.*
+*Last updated 2026-10-12. Current release: **v0.52.0** (on beta first; not merged until the user says "release it").*
 
 ## Where this stands
 
@@ -26,6 +26,7 @@ HACS as an integration. It does two jobs:
    scene setup. There's also a scene select per room/zone and a scene builder.
 
 **Now (2026-10-04, v0.38.2 live, nothing on beta):**
+- **Alarm lights (v0.52.0, 2026-10-12, PR #179, not live-tested).** `alarm_lights.py` (runtime: listens for smoke/heat/CO binary sensors and alarm panels, plays strobes, saves and restores the lights in `scene.church_drive_before_alarm`, light-only test) and `alarm_lights_logic.py` (rules, tested). `src/alarm-lights-card.js` is the Manager page. See README "Alarm lights" for the table. Decided with the user: strobe vs constant is a per-room/zone setting; day/night from light sensors, whole house, read once at alarm start; security home = red/blue + constant, away = red only (no constant), day/night does not change security yet; fire = red/amber, green for a minute after; blue when disarmed. Not decided or not built: presence-based constant lights in a fire (rooms with people and pets), green lights for safest exits, a different pattern for security by night. Still to do: put the card on the Manager page, try the light test on the real lights, check the Hue bridge copes with 0.5 s pulses on many groups, and choose the light sensors (indoor landing sensors see the house's own lights).
 - **Shopping places (v0.45.0).** Places on a list are Google Maps search results `{name,address,lat,lon}` (`shopping_logic.clean_places`, `near_place`, `maps_url`), not zones; `church_drive/maps/search` takes `anywhere: true`. Old zone ids are converted on start. `time` is optional (needs a date): `_on_minute` reminds, `_check_near` fires on person lat/lon within 150 m, keyword shop-zone prompts only cover lists with no places. Not tested on a real phone yet.
 - **Shopping lists (v0.42.0; v0.43.0 restyled it to match the task cards ; v0.43.1 made it an indigo Shopping panel on the To-do page, not a page of its own).** `shopping.py` /
   `shopping_logic.py` (see README "Shopping lists"). Data in `.storage/church_drive.shopping`. The to-do

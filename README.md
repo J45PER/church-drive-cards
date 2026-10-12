@@ -60,14 +60,26 @@ When a car is plugged in and nobody has picked a charge mode, the Zappi waits fo
 
 ## Alarm lights
 
-"Church Drive: alarm lights" (a copy is in `ha/alarm-lights.yaml`) makes the lights answer an alarm, and it answers differently for each kind:
+The lights answer an alarm, and answer differently for each kind. It's set up and tested on the **Alarm lights card** (`custom:alarm-lights-card`, on the Manager page) and runs inside the integration (`alarm_lights.py`, rules in `alarm_lights_logic.py`, tested in `test/alarm_lights_logic_test.py` and `test/alarm_lights_test.py`). It reacts to every smoke, heat and carbon monoxide alarm (binary sensors of those classes) and every alarm control panel, so nothing is named in YAML.
 
-- **Fire, smoke, heat or carbon monoxide** (the same five sensors as "Church Drive: safety alarms"): every light comes on at full brightness, steady cool white, so everyone can see the way out. They stay on until the alarm stops.
-- **House (security) alarm** (`alarm_control_panel.church_drive_alarm` going to `triggered`): every light comes on full, then the room and zone groups flash red and white every 3 seconds until the alarm is turned off.
-- **Fire wins.** If a smoke, heat or CO alarm goes off while the house alarm is flashing, the flashing stops and the lights go steady white.
-- **Back as they were.** When the last alarm stops, every light returns to how it was before the first one went off (saved in `scene.church_drive_before_alarm`).
+Each light, room or zone is a **Strobe** light (it pulses), a **Constant** light (it just comes on bright white, like Hue's Energise) or neither. A light is never both.
 
-Backlights (such as the air purifier's display) are left alone. To stop it touching the lights, turn the automation off in Settings > Automations. Not installed on the house until it's been checked.
+| What goes off | Strobe lights | Constant lights |
+|---|---|---|
+| Fire, smoke, heat or CO, by day | red and amber pulses | left alone |
+| Fire, smoke, heat or CO, at night | red and amber pulses | bright white |
+| House alarm, set to **home** or night | red and blue strobes | bright white |
+| House alarm, set to **away** | red strobes | left alone |
+
+- **A pulse** is half a second lit, half a second dark. Fire alternates a red pulse and an amber one; the house alarm a red and a blue.
+- **Fire wins** if both are going; when the fire stops and the house alarm still goes, it goes back to the house alarm.
+- **When it's over** the strobe lights show **green** for a minute after a fire, or **blue** for 10 seconds when the house alarm is turned off (both lengths are settings), then every light goes back to how it was before the first alarm (saved as `scene.church_drive_before_alarm`). An alarm that times out back to armed puts the lights back with no blue.
+- **Day or night** is for the whole house. Tick the light sensors to use, how bright counts as day (50 lx by default) and how many must agree (any, at least half, or all). It's read once, when the alarm starts, because the alarm's own lights would otherwise change the readings. With no readings it counts as night, which lights more.
+- **Test (lights only).** The card's buttons play Fire, Alarm home, Alarm away, Fire over and Alarm off on the lights alone, pretending it is day, night or as it is now, for 5 to 120 seconds, then put the lights back. No alarm, no notification, nothing else. A test is refused while a real alarm is going, a real alarm ends a test, and **Stop** ends one at once.
+- **Off switch.** Turning it off on the card leaves the lights alone in an alarm (and puts them back if one is going).
+- Hue only takes a few commands a second, so with many strobe rooms the half-second pulses may lag; try a test and choose fewer rooms if so.
+
+Settings are kept in `.storage/church_drive.alarm_lights`. Websocket commands `church_drive/alarm_lights` (read), `/set`, `/test` and `/stop` (administrators) serve the card, and `church_drive_alarm_lights_changed` fires when anything changes. Later ideas: lights only in rooms where someone is (people and pets) during a fire, and green lights marking the safest way out.
 
 ## Cards
 
@@ -285,6 +297,10 @@ everyone, and ticking the last unticked person turns All on.
 Automations send with **`church_drive.notify`** (`kind`, `title`, `message`, optional
 `admin_message`, `people`, `tag`, `link`, `image`, `critical`). `sensor.church_drive_people`
 lists the people and who's assigned to each kind (`assign`), for templates.
+
+### `alarm-lights-card`
+
+What the lights do when an alarm goes off (see **Alarm lights** above): a Strobe / Constant / Off choice for each room and zone, the light sensors that decide day or night (with their live readings), how long the green and blue "all clear" colours last, an on/off switch, and a **lights-only test** with Stop. Only administrators can change it. Options: `title`, `color`, `demo`.
 
 ### `media-card`
 
