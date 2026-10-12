@@ -280,7 +280,7 @@ class Inbox:
         if self.shopping is None or not any(t["list"] == SHOPPING for t in batch["tasks"]):
             return None
         first = batch["person"]
-        mine = self.shopping.lists(first or None)
+        mine = self.shopping.lists(first or None, "shopping")
         chosen = self.shopping.default_for(first)
         return {
             "lists": [{"id": l["id"], "name": l["name"] or "Shopping", "date": l["date"], "open": l["counts"]["open"]} for l in mine if not l["done"]],

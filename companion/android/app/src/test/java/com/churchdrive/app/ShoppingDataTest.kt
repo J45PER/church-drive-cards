@@ -1,5 +1,7 @@
 package com.churchdrive.app
 
+import com.churchdrive.app.ui.isStepsTask
+import com.churchdrive.app.ui.parseShoppingList
 import com.churchdrive.app.ui.mapsWebUrl
 import com.churchdrive.app.ui.navigationUri
 import com.churchdrive.app.ui.ShoppingPlace
@@ -101,5 +103,21 @@ class ShoppingDataTest {
         val html = placeMapHtml(listOf(p), emptyList())
         assertEquals(1, Regex("""</script>""").findAll(html.substringAfter("var results=")).count())
         assertEquals(true, html.contains("\"lat\":35"))
+    }
+
+    @Test
+    fun aStepsListIsKnownByItsKindAndMarker() {
+        assertEquals("shopping", parseShoppingList(JSONObject("""{"id":"aaaaaa111111"}""")).kind)
+        val steps = parseShoppingList(JSONObject("""{"id":"aaaaaa111111","kind":"steps","name":""}"""))
+        assertEquals("steps", steps.kind)
+        assertEquals(true, steps.isSteps)
+        assertEquals("Steps", steps.title)
+        val d = "• Pack bags\n• Lock up\nchurch-drive-shopping:aaaaaa111111 steps"
+        assertEquals(true, isStepsTask(d))
+        assertEquals(false, isStepsTask("• Milk\nchurch-drive-shopping:aaaaaa111111"))
+        assertEquals(false, isStepsTask(null))
+        assertEquals("aaaaaa111111", shoppingIdOf(d))
+        assertEquals("2 to do", shoppingNote(d))
+        assertEquals("Steps", shoppingNote("church-drive-shopping:aaaaaa111111 steps"))
     }
 }

@@ -26,3 +26,15 @@ test('samePlace treats a repeat of the same spot as one place', () => {
   assert.equal(samePlace({ lat: 35.01, lon: 34.05 }, { lat: 35.010001, lon: 34.050001 }), true);
   assert.equal(samePlace({ lat: 35.01, lon: 34.05 }, { lat: 35.02, lon: 34.05 }), false);
 });
+
+test('a steps task is known by the word after its marker and says "to do"', async () => {
+  const { isStepsTask, shoppingIdOf, shoppingNote } = await import('../src/shopping-logic.js');
+  const steps = '• One\n• Two\nchurch-drive-shopping:abc123def456 steps';
+  const shop = '• Milk\nchurch-drive-shopping:abc123def456';
+  assert.equal(isStepsTask(steps), true);
+  assert.equal(isStepsTask(shop), false);
+  assert.equal(shoppingIdOf(steps), 'abc123def456');
+  assert.equal(shoppingNote(steps), '2 to do');
+  assert.equal(shoppingNote('church-drive-shopping:abc123def456 steps'), 'Steps');
+  assert.equal(shoppingNote(shop), '1 to get');
+});

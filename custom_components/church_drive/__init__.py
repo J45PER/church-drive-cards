@@ -67,6 +67,7 @@ from .const import (
     DOMAIN,
     SERVICE_ADD_TASKS,
     SERVICE_SHOPPING_ADD,
+    SERVICE_STEPS_CREATE,
     WS_SHOPPING,
     WS_SHOPPING_ADD,
     WS_SHOPPING_CREATE,
@@ -198,6 +199,17 @@ SHOPPING_ADD_SCHEMA = vol.Schema(
         vol.Optional("person"): cv.string,
         vol.Optional("name", default=""): cv.string,
         vol.Optional("date", default=""): cv.string,
+    }
+)
+
+STEPS_CREATE_SCHEMA = vol.Schema(
+    {
+        vol.Required("name"): cv.string,
+        vol.Required("steps"): vol.All(cv.ensure_list, [cv.string]),
+        vol.Optional("people", default=[]): vol.All(cv.ensure_list, [cv.string]),
+        vol.Optional("date", default=""): cv.string,
+        vol.Optional("time", default=""): cv.string,
+        vol.Optional("at_home", default=False): cv.boolean,
     }
 )
 
@@ -666,15 +678,16 @@ def ws_shopping(hass: HomeAssistant, connection: websocket_api.ActiveConnection,
         vol.Optional("places", default=[]): [PLACE],
         vol.Optional("items", default=[]): [cv.string],
         vol.Optional("include_missed", default=True): cv.boolean,
+        vol.Optional("kind", default="shopping"): vol.In(["shopping", "steps"]),
     }
 )
 @websocket_api.async_response
 @_shopping_ws
 async def ws_shopping_create(hass, shopping, connection, msg):
-    """Make a shopping list. Anything not available last time is added and reported back as 'offered'."""
+    """Make a shopping list, or a steps list (kind "steps": a checklist done the same way). Anything not available last time is added to a shopping list and reported back as 'offered'."""
     people = msg["people"] or [p for p in [_person_of(hass, connection)] if p]
     return await shopping.async_create(
-        msg["name"], people, msg["date"], msg["places"], msg["items"], msg["include_missed"], connection.context(msg), msg["time"]
+        msg["name"], people, msg["date"], msg["places"], msg["items"], msg["include_missed"], connection.context(msg), msg["time"], msg["kind"]
     )
 
 
@@ -1067,6 +1080,29 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         DOMAIN, SERVICE_SHOPPING_ADD, shopping_add, schema=SHOPPING_ADD_SCHEMA, supports_response=SupportsResponse.OPTIONAL
     )
 
+    async def steps_create(call: ServiceCall) -> ServiceResponse:
+        shop = data.get("shopping")
+        if shop is None:
+            raise ServiceValidationError("Lists aren't running")
+        d = call.data
+        places = []
+        if d["at_home"]:
+            home = hass.states.get("zone.home")
+            if home is None or home.attributes.get("latitude") is None:
+                raise ServiceValidationError("Home has no position set")
+            places = [{"name": "Home", "address": "", "lat": home.attributes["latitude"], "lon": home.attributes["longitude"]}]
+        try:
+            result = await shop.async_create(
+                d["name"], d["people"] or ["everyone"], d["date"], places, d["steps"], False, call.context, d["time"], "steps"
+            )
+        except ValueError as err:
+            raise ServiceValidationError(str(err)) from err
+        return result if call.return_response else None
+
+    hass.services.async_register(
+        DOMAIN, SERVICE_STEPS_CREATE, steps_create, schema=STEPS_CREATE_SCHEMA, supports_response=SupportsResponse.OPTIONAL
+    )
+
     async def add_tasks(call: ServiceCall) -> ServiceResponse:
         if data.get("inbox") is None:
             raise ServiceValidationError("The task inbox isn't running")
@@ -1166,6 +1202,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.services.async_remove(DOMAIN, SERVICE_NOTIFY)
     hass.services.async_remove(DOMAIN, SERVICE_ADD_TASKS)
     hass.services.async_remove(DOMAIN, SERVICE_SHOPPING_ADD)
+    hass.services.async_remove(DOMAIN, SERVICE_STEPS_CREATE)
     url = hass.data.get(DOMAIN, {}).get("cards_url")
     if url:
         remove_extra_js_url(hass, url)

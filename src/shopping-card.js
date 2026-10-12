@@ -1,4 +1,6 @@
-// Shopping Card: your shopping lists, and the full-page list you shop from.
+// Shopping Card: your shopping lists, and the full-page list you shop from. A "steps list" is the same thing for
+// a checklist (kind "steps"): one task on a to-do list that you can't tick off by hand, finished by finishing its
+// steps on this page. It has one tick per step (no "Not available") and can remind you at a place, such as Home.
 //
 // A shopping list is one task on a person's to-do list (see shopping.py in the integration). The card lists
 // the open lists; tapping one (here, or its task on a to-do list, or a reminder's link ending ?list=<id>) opens
@@ -13,7 +15,7 @@ import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { kitShell, kitHead, kitEsc } from './card-kit.js';
-import { shoppingIdOf, splitItems, mapsUrl, samePlace } from './shopping-logic.js';
+import { shoppingIdOf, isStepsTask, splitItems, mapsUrl, samePlace } from './shopping-logic.js';
 import { checkStale } from './stale.js';
 
 export { shoppingIdOf };
@@ -46,6 +48,13 @@ function watch(hass, fn) {
 }
 
 const call = (msg) => store.hass.callWS(msg);
+// The house as a place a steps list can remind at (Home's position from its zone), or null if it has none.
+const homePlace = (hass) => {
+  const z = hass && hass.states && hass.states['zone.home'];
+  const lat = z && Number(z.attributes.latitude);
+  const lon = z && Number(z.attributes.longitude);
+  return z && Number.isFinite(lat) && Number.isFinite(lon) && !(lat === 0 && lon === 0) ? { name: 'Home', address: '', lat, lon } : null;
+};
 const people = (hass) =>
   (store.data && store.data.people && store.data.people.length ? store.data.people : Object.keys(hass.states)
     .filter((id) => id.startsWith('person.'))
@@ -112,12 +121,14 @@ export class ShoppingCard extends HTMLElement {
     if (!this._built) {
       this.innerHTML = kitShell(
         `<div class="sh-list" style="display:flex; flex-direction:column;"></div><div class="sh-missed"></div>
-         <div class="sh-foot"><button type="button" class="sh-add sh-new"></button></div>`,
+         <div class="sh-foot" style="display:flex; flex-wrap:wrap; gap:8px;"><button type="button" class="sh-add sh-new"></button><button type="button" class="sh-add sh-new-steps"></button></div>`,
         CSS
       );
       this.querySelector('.ck-headrow').style.display = this.config.title ? '' : 'none';
       this.querySelector('.sh-new').innerHTML = `${iconHtml('mdi:plus', { size: '18px' })}New shopping list`;
       this.querySelector('.sh-new').addEventListener('click', () => openShoppingPage(this._hass, 'new'));
+      this.querySelector('.sh-new-steps').innerHTML = `${iconHtml('mdi:format-list-checks', { size: '18px' })}New steps list`;
+      this.querySelector('.sh-new-steps').addEventListener('click', () => openShoppingPage(this._hass, 'new-steps'));
       const openRow = (ev) => {
         const row = ev.target.closest('[data-list]');
         if (row) openShoppingPage(this._hass, row.dataset.list);
@@ -140,13 +151,13 @@ export class ShoppingCard extends HTMLElement {
       ? mine
           .map(
             (l) => `<div class="sh-row" data-list="${l.id}" tabindex="0" role="button">
-              ${iconHtml('mdi:cart-outline', { size: '20px', style: `color:${COLOUR}; flex:none;` })}
-              <div class="sh-main"><div class="sh-name">${kitEsc(l.name || 'Shopping')}</div>
+              ${iconHtml(l.kind === 'steps' ? 'mdi:format-list-checks' : 'mdi:cart-outline', { size: '20px', style: `color:${COLOUR}; flex:none;` })}
+              <div class="sh-main"><div class="sh-name">${kitEsc(l.name || (l.kind === 'steps' ? 'Steps' : 'Shopping'))}</div>
               <div class="ck-sub" style="font-size:0.74rem; line-height:1.35;">${[day(l.date), l.people.join(', '), l.places.length ? `${l.places.length} place${l.places.length === 1 ? '' : 's'}` : ''].filter(Boolean).map(kitEsc).join(' · ')}</div></div>
-              <span class="sh-when">${l.counts.open} to get</span></div>`
+              <span class="sh-when">${l.counts.open} to ${l.kind === 'steps' ? 'do' : 'get'}</span></div>`
           )
           .join('')
-      : `<div class="ck-sub" style="line-height:1.5; padding:4px 0;">No shopping lists. Share some items, or make one.</div>`;
+      : `<div class="ck-sub" style="line-height:1.5; padding:4px 0;">No lists. Share some items, or make a shopping or steps list.</div>`;
     const miss = d ? d.missed : [];
     this.querySelector('.sh-missed').textContent = miss.length ? `Not available last time: ${miss.map((m) => m.text).join(', ')}` : '';
     hydrateIcons(this);
@@ -235,7 +246,8 @@ class ShoppingPage {
   constructor(hass, id) {
     this.hass = hass;
     this.id = id;
-    this.mode = id === 'new' ? 'form' : 'list';
+    this.mode = id === 'new' || id === 'new-steps' ? 'form' : 'list';
+    this.newKind = id === 'new-steps' ? 'steps' : 'shopping';
     this.form = null;
     this.root = document.createElement('div');
     this.root.className = 'shp';
@@ -283,12 +295,16 @@ class ShoppingPage {
     }
   }
 
+  get steps() {
+    return this.mode === 'form' ? this.form.kind === 'steps' : !!this.list && this.list.kind === 'steps';
+  }
+
   openForm(l) {
     const d = store.data;
     this.mode = 'form';
     this.form = l
-      ? { edit: true, name: l.name, who: [...l.people], date: l.date, time: l.time || '', places: l.places.map((p) => ({ ...p })), items: '', missed: false, q: '', results: [], note: '' }
-      : { edit: false, name: '', who: d && d.mine ? [d.mine] : [], date: '', time: '', places: [], items: '', missed: !!(d && d.missed.length), q: '', results: [], note: '' };
+      ? { edit: true, kind: l.kind || 'shopping', name: l.name, who: [...l.people], date: l.date, time: l.time || '', places: l.places.map((p) => ({ ...p })), items: '', missed: false, q: '', results: [], note: '' }
+      : { edit: false, kind: this.newKind, name: '', who: d && d.mine ? [d.mine] : [], date: '', time: '', places: [], items: '', missed: this.newKind !== 'steps' && !!(d && d.missed.length), q: '', results: [], note: '' };
   }
 
   draw() {
@@ -298,7 +314,8 @@ class ShoppingPage {
     const l = this.list;
     const keep = body.querySelector('.shp-add input');
     const typed = keep ? keep.value : '';
-    bar.innerHTML = `<button class="shp-icon" data-act="back" aria-label="Back">${iconHtml('mdi:arrow-left')}</button><div class="shp-title">${kitEsc(l ? l.name || 'Shopping' : 'Shopping')}</div>${l ? `<span class="shp-word">${l.done ? 'All done' : `${l.counts.open} to get`}</span><button class="shp-icon" data-act="edit" aria-label="Edit">${iconHtml('mdi:pencil-outline')}</button>` : ''}`;
+    const st = !!l && l.kind === 'steps';
+    bar.innerHTML = `<button class="shp-icon" data-act="back" aria-label="Back">${iconHtml('mdi:arrow-left')}</button><div class="shp-title">${kitEsc(l ? l.name || (st ? 'Steps' : 'Shopping') : 'Shopping')}</div>${l ? `<span class="shp-word">${l.done ? 'All done' : `${l.counts.open} to ${st ? 'do' : 'get'}`}</span><button class="shp-icon" data-act="edit" aria-label="Edit">${iconHtml('mdi:pencil-outline')}</button>` : ''}`;
     if (!l) {
       body.innerHTML = `<div class="shp-card"><div class="shp-sub">${store.data || store.error ? 'This list has been deleted or finished.' : 'Loading…'}</div></div>`;
       hydrateIcons(this.root);
@@ -308,7 +325,7 @@ class ShoppingPage {
     const open = items('open');
     const finished = l.items.filter((i) => i.status !== 'open');
     const openRow = (i) =>
-      `<div class="shp-row" data-item="${i.id}"><button type="button" class="shp-tick" data-set="bought" aria-label="Bought: ${kitEsc(i.text)}"></button><div class="shp-name">${kitEsc(i.text)}</div><button type="button" class="shp-chip" data-set="unavailable" aria-label="Not available: ${kitEsc(i.text)}">${iconHtml('mdi:close', { size: '14px' })}Not available</button></div>`;
+      `<div class="shp-row" data-item="${i.id}"><button type="button" class="shp-tick" data-set="bought" aria-label="${st ? 'Done' : 'Bought'}: ${kitEsc(i.text)}"></button><div class="shp-name">${kitEsc(i.text)}</div>${st ? '' : `<button type="button" class="shp-chip" data-set="unavailable" aria-label="Not available: ${kitEsc(i.text)}">${iconHtml('mdi:close', { size: '14px' })}Not available</button>`}</div>`;
     const doneRow = (i) =>
       `<div class="shp-row off" data-item="${i.id}"><button type="button" class="shp-tick ${i.status === 'bought' ? 'bought' : 'na'}" data-set="open" aria-label="Put back: ${kitEsc(i.text)}">${iconHtml(i.status === 'bought' ? 'mdi:check' : 'mdi:close', { size: '15px' })}</button><div class="shp-name">${kitEsc(i.text)}</div>${i.status === 'unavailable' ? '<span class="shp-sub" style="text-decoration:none;">not available</span>' : ''}</div>`;
     const c = l.counts;
@@ -317,9 +334,9 @@ class ShoppingPage {
       <div class="shp-card">
         ${meta ? `<div class="shp-sub">${kitEsc(meta)}</div>` : ''}
         ${l.places.length ? `<div class="shp-chips">${l.places.map((p, n) => `<a class="shp-btn go" href="${kitEsc(mapsUrl(p))}" target="_blank" rel="noopener" data-nav="${n}">${iconHtml('mdi:navigation-variant', { size: '18px' })}Navigate to ${kitEsc(p.name)}</a>`).join('')}</div>` : ''}
-        ${l.done ? `<div class="shp-banner">All done. This list goes tomorrow.${c.unavailable ? ` ${c.unavailable} ${c.unavailable === 1 ? 'wasn’t' : 'weren’t'} available; you’ll be reminded next time.` : ''}</div>` : ''}
-        <div class="shp-add"><input type="text" placeholder="Add an item (or several, with commas)" enterkeyhint="done" autocomplete="off"><button class="shp-btn go" data-act="add">${iconHtml('mdi:plus', { size: '18px' })}Add</button></div>
-        ${open.length ? `<div>${open.map(openRow).join('')}</div>` : `<div class="shp-sub">${c.total ? 'Everything is ticked off.' : 'Nothing on the list yet.'}</div>`}
+        ${l.done ? `<div class="shp-banner">All done. This list goes tomorrow.${c.unavailable && !st ? ` ${c.unavailable} ${c.unavailable === 1 ? 'wasn’t' : 'weren’t'} available; you’ll be reminded next time.` : ''}</div>` : ''}
+        <div class="shp-add"><input type="text" placeholder="${st ? 'Add a step (or several, with commas)' : 'Add an item (or several, with commas)'}" enterkeyhint="done" autocomplete="off"><button class="shp-btn go" data-act="add">${iconHtml('mdi:plus', { size: '18px' })}Add</button></div>
+        ${open.length ? `<div>${open.map(openRow).join('')}</div>` : `<div class="shp-sub">${c.total ? 'Everything is ticked off.' : st ? 'No steps yet.' : 'Nothing on the list yet.'}</div>`}
       </div>
       ${finished.length ? `<div class="shp-card"><div class="shp-h">Done (${finished.length})</div><div>${finished.map(doneRow).join('')}</div></div>` : ''}
       <div class="shp-warn"></div>
@@ -333,22 +350,24 @@ class ShoppingPage {
   drawForm(bar, body) {
     const f = this.form;
     const d = store.data || { zones: [], missed: [], lists: [] };
-    bar.innerHTML = `<button class="shp-icon" data-act="${f.edit ? 'cancel-edit' : 'back'}" aria-label="Back">${iconHtml('mdi:arrow-left')}</button><div class="shp-title">${f.edit ? 'Edit list' : 'New shopping list'}</div>`;
+    bar.innerHTML = `<button class="shp-icon" data-act="${f.edit ? 'cancel-edit' : 'back'}" aria-label="Back">${iconHtml('mdi:arrow-left')}</button><div class="shp-title">${f.kind === 'steps' ? (f.edit ? 'Edit steps' : 'New steps list') : f.edit ? 'Edit list' : 'New shopping list'}</div>`;
+    const steps = f.kind === 'steps';
     const pick = (kind, value, label, on) => `<button type="button" class="shp-pick" data-${kind}="${kitEsc(value)}" aria-pressed="${on}">${kitEsc(label)}</button>`;
     // Redraw only on structural changes so typing is never interrupted.
     if (this._formDrawn !== f) {
       body.innerHTML = `<div class="shp-card">
-        <label class="shp-field"><span>Name</span><input class="f-name" type="text" placeholder="Weekly shop" value="${kitEsc(f.name)}"></label>
+        <label class="shp-field"><span>Name</span><input class="f-name" type="text" placeholder="${steps ? 'Set up Ring Talk' : 'Weekly shop'}" value="${kitEsc(f.name)}"></label>
         <div class="shp-field"><span>Who is it for?</span><div class="shp-chips f-who"></div></div>
-        <div class="shp-field"><span>Date and time to go shopping (optional)</span><div class="shp-add"><input class="f-date" type="date" value="${kitEsc(f.date)}"><input class="f-time" type="time" value="${kitEsc(f.time)}"></div></div>
-        <div class="shp-field"><span>Where will you buy it? Search Google Maps (optional)</span>
+        <div class="shp-field"><span>${steps ? 'Date and time (optional)' : 'Date and time to go shopping (optional)'}</span><div class="shp-add"><input class="f-date" type="date" value="${kitEsc(f.date)}"><input class="f-time" type="time" value="${kitEsc(f.time)}"></div></div>
+        <div class="shp-field"><span>${steps ? 'Remind me at a place, as I arrive (optional). Search Google Maps, or use Home' : 'Where will you buy it? Search Google Maps (optional)'}</span>
           <div class="shp-chips f-places"></div>
+          ${steps && homePlace(this.hass) ? `<div class="shp-chips"><button type="button" class="shp-pick" data-home="1" aria-pressed="${f.places.some((p) => samePlace(p, homePlace(this.hass)))}">Home</button></div>` : ''}
           <div class="shp-add"><input class="f-q" type="search" placeholder="e.g. Lidl Protaras Cyprus" enterkeyhint="search" autocomplete="off" value="${kitEsc(f.q)}"><button type="button" class="shp-btn go" data-act="search">${iconHtml('mdi:magnify', { size: '18px' })}Search</button></div>
           <div class="shp-map f-map" style="display:none;"></div>
           <div class="f-results"></div>
           <div class="shp-sub f-note"></div></div>
-        ${f.edit ? '' : `<label class="shp-field"><span>Items (one per line)</span><textarea class="f-items" placeholder="Milk&#10;Eggs&#10;Bread">${kitEsc(f.items)}</textarea></label>`}
-        ${!f.edit && d.missed.length ? `<div class="shp-field"><div class="shp-chips f-missed"></div><div class="shp-sub">${kitEsc(d.missed.map((m) => m.text).join(', '))}</div></div>` : ''}
+        ${f.edit ? '' : `<label class="shp-field"><span>${steps ? 'Steps (one per line)' : 'Items (one per line)'}</span><textarea class="f-items" placeholder="${steps ? 'Check the Hub&#10;Reserve the address&#10;Forward the port' : 'Milk&#10;Eggs&#10;Bread'}">${kitEsc(f.items)}</textarea></label>`}
+        ${!f.edit && !steps && d.missed.length ? `<div class="shp-field"><div class="shp-chips f-missed"></div><div class="shp-sub">${kitEsc(d.missed.map((m) => m.text).join(', '))}</div></div>` : ''}
         <div class="shp-warn"></div>
         <div class="shp-actions"><button class="shp-btn go" data-act="save">${iconHtml('mdi:check', { size: '18px' })}${f.edit ? 'Save' : 'Make the list'}</button><button class="shp-btn" data-act="${f.edit ? 'cancel-edit' : 'back'}">Cancel</button></div></div>`;
       body.querySelector('.f-name').addEventListener('input', (e) => (f.name = e.target.value));
@@ -463,6 +482,12 @@ class ShoppingPage {
       this.form.results = [];
       return this.draw();
     }
+    if (t.closest('[data-home]')) {
+      const h = homePlace(this.hass);
+      if (h) this.form.places = this.form.places.some((x) => samePlace(x, h)) ? this.form.places.filter((x) => !samePlace(x, h)) : [...this.form.places, h];
+      this._formDrawn = null;
+      return this.draw();
+    }
     const drop = t.closest('[data-unplace]');
     if (drop) {
       this.form.places = this.form.places.filter((_, n) => n !== Number(drop.dataset.unplace));
@@ -513,7 +538,7 @@ class ShoppingPage {
       }
       return;
     }
-    const r = await this.run({ type: 'church_drive/shopping/create', name: f.name, people: f.who, date: f.date, time: f.time, places: f.places, items: splitItems(f.items), include_missed: f.missed });
+    const r = await this.run({ type: 'church_drive/shopping/create', name: f.name, people: f.who, date: f.date, time: f.time, places: f.places, items: splitItems(f.items), include_missed: f.missed && f.kind !== 'steps', kind: f.kind });
     if (r) {
       this.id = r.list.id;
       this.mode = 'list';

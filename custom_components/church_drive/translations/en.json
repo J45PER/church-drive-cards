@@ -30,7 +30,7 @@
       },
       "maps": {
         "title": "Google maps",
-        "description": "Keys from Google Cloud (APIs & Services \u203a Credentials). With a Map Tiles key, maps across Home Assistant use Google's satellite (with shop and road names) or road map; lock that key to Home Assistant's web addresses, as browsers use it. With a Places key, the zone map's search finds shops and businesses; Home Assistant does the searching, so that key never reaches a browser. Leave either blank to use the free Esri maps and OpenStreetMap search.",
+        "description": "Keys from Google Cloud (APIs & Services › Credentials). With a Map Tiles key, maps across Home Assistant use Google's satellite (with shop and road names) or road map; lock that key to Home Assistant's web addresses, as browsers use it. With a Places key, the zone map's search finds shops and businesses; Home Assistant does the searching, so that key never reaches a browser. Leave either blank to use the free Esri maps and OpenStreetMap search.",
         "data": {
           "google_tiles_key": "Map Tiles API key",
           "google_places_key": "Places API key"
@@ -177,6 +177,36 @@
         "date": {
           "name": "Date",
           "description": "The date of a list made because none was open."
+        }
+      }
+    },
+    "steps_create": {
+      "name": "Make a steps list",
+      "description": "Make a checklist that works like a shopping list: one task on each person's to-do list, finished by finishing its steps. Optionally reminds when they arrive home.",
+      "fields": {
+        "name": {
+          "name": "Name",
+          "description": "What the list is called."
+        },
+        "steps": {
+          "name": "Steps",
+          "description": "The steps, in order."
+        },
+        "people": {
+          "name": "People",
+          "description": "First names; everyone if empty."
+        },
+        "date": {
+          "name": "Date",
+          "description": "Optional day."
+        },
+        "time": {
+          "name": "Time",
+          "description": "Optional time on that day."
+        },
+        "at_home": {
+          "name": "Remind at home",
+          "description": "Remind each person when they arrive home."
         }
       }
     }

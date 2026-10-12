@@ -16,9 +16,8 @@ import { kitShell, kitHead, kitEsc } from './card-kit.js';
 import { openPopup } from './popup.js';
 import { stcMe } from './section-title-card.js';
 import { openShoppingPage } from './shopping-card.js';
-import { shoppingIdOf, shoppingNote } from './shopping-logic.js';
+import { shoppingIdOf, shoppingNote, isStepsTask } from './shopping-logic.js';
 import { checkStale } from './stale.js';
-import { splitSteps, joinSteps, stepsCount, flipStep } from './task-steps.js';
 import { DAYS, MONTHS, parseTask, formatTask, formatRepeat, describeRepeat, firstDue } from './repeat.js';
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -84,12 +83,7 @@ const REPEATS = [
 
 const TL_CSS = `
   .tl-add[hidden], .tl-done-list[hidden] { display:none; }
-  .tl-row { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:8px 2px; border-radius:12px; }
-  .tl-steps { flex:1 0 100%; display:flex; flex-direction:column; gap:2px; padding-left:34px; }
-  .tl-step { display:flex; align-items:center; gap:8px; width:100%; padding:4px 2px; border:0; background:transparent; color:var(--primary-text-color); font:inherit; font-size:0.85rem; text-align:left; cursor:pointer; border-radius:8px; }
-  .tl-box { flex:none; width:18px; height:18px; border-radius:5px; border:2px solid; display:flex; align-items:center; justify-content:center; color:#fff; }
-  .tl-srow { display:flex; align-items:center; gap:6px; }
-  .tl-srow input { flex:1; min-width:0; }
+  .tl-row { display:flex; align-items:center; gap:10px; padding:8px 2px; border-radius:12px; }
   .tl-row + .tl-row { border-top:1px solid var(--divider-color, rgba(127,127,127,0.22)); }
   .tl-body { flex:1; min-width:0; cursor:pointer; border-radius:8px; }
   .tl-body:hover { background:rgba(127,127,127,0.07); }
@@ -374,8 +368,6 @@ export class TaskListCard extends HTMLElement {
       const onClick = (ev) => {
         const tick = ev.target.closest('[data-tick]');
         if (tick) return this._tick(tick.dataset.tick, tick.dataset.to);
-        const step = ev.target.closest('[data-step]');
-        if (step) return this._flip(step.dataset.step, Number(step.dataset.i));
         if (ev.target.closest('[data-clear]')) return this._clearDone();
         const row = ev.target.closest('[data-uid]');
         if (row) this._open(row.dataset.uid);
@@ -417,19 +409,16 @@ export class TaskListCard extends HTMLElement {
       const mine = this._justMe() && Array.isArray(p.who) && p.who.length === 1 && p.who[0] === this._me();
       const who = !p.repeat ? '' : mine ? 'reminds you' : p.who === 'everyone' ? 'reminds everyone' : Array.isArray(p.who) ? `reminds ${p.who.join(', ')}` : '';
       const place = this._placeName(this._placeOf(t.uid));
-      const sp = splitSteps(p.notes);
-      const sub = [p.repeat && p.repeat.type !== 'once' ? describeRepeat(p.repeat) : '', who, place ? `at ${place}` : '', shoppingIdOf(t.description) ? shoppingNote(t.description) : sp.text, stepsCount(sp.steps)].filter(Boolean).join(' · ');
-      const steps = shoppingIdOf(t.description) || !sp.steps.length ? '' : `<div class="tl-steps">${sp.steps.map((st, i) => `<button type="button" class="tl-step" data-step="${kitEsc(t.uid)}" data-i="${i}" aria-pressed="${st.done}" aria-label="${kitEsc(st.text)}"><span class="tl-box" style="border-color:${st.done ? '#4caf50' : ring}; ${st.done ? 'background:#4caf50;' : ''}">${st.done ? iconHtml('mdi:check', { size: '12px' }) : ''}</span><span style="${st.done ? 'text-decoration:line-through; color:var(--secondary-text-color);' : ''}">${kitEsc(st.text)}</span></button>`).join('')}</div>`;
+      const sub = [p.repeat && p.repeat.type !== 'once' ? describeRepeat(p.repeat) : '', who, place ? `at ${place}` : '', shoppingIdOf(t.description) ? shoppingNote(t.description) : p.notes].filter(Boolean).join(' · ');
       const ring = isDone ? '#4caf50' : over ? '#e53935' : colour;
       return `<div class="tl-row">
-        ${shoppingIdOf(t.description) ? `<span class="tl-tick" style="border:none; color:${isDone ? ring : '#5c6bc0'}; cursor:default;" aria-hidden="true">${iconHtml(isDone ? 'mdi:cart-check' : 'mdi:cart-outline', { size: '22px' })}</span>` : `<button type="button" class="tl-tick" data-tick="${kitEsc(t.uid)}" data-to="${isDone ? 'needs_action' : 'completed'}" aria-label="${isDone ? 'Not done' : 'Done'}: ${kitEsc(t.summary)}" style="border-color:${ring}; ${isDone ? `background:${ring};` : ''}">${isDone ? iconHtml('mdi:check', { size: '15px' }) : ''}</button>`}
+        ${shoppingIdOf(t.description) ? `<span class="tl-tick" style="border:none; color:${isDone ? ring : '#5c6bc0'}; cursor:default;" aria-hidden="true">${iconHtml(isStepsTask(t.description) ? (isDone ? 'mdi:check-circle-outline' : 'mdi:format-list-checks') : isDone ? 'mdi:cart-check' : 'mdi:cart-outline', { size: '22px' })}</span>` : `<button type="button" class="tl-tick" data-tick="${kitEsc(t.uid)}" data-to="${isDone ? 'needs_action' : 'completed'}" aria-label="${isDone ? 'Not done' : 'Done'}: ${kitEsc(t.summary)}" style="border-color:${ring}; ${isDone ? `background:${ring};` : ''}">${isDone ? iconHtml('mdi:check', { size: '15px' }) : ''}</button>`}
         ${c.icons ? iconHtml(choreIcon(t.summary), { size: '20px', style: `color:${over ? '#e53935' : colour}; flex:none;` }) : ''}
         <div class="tl-body" data-uid="${kitEsc(t.uid)}" role="button" tabindex="0" aria-label="Change ${kitEsc(t.summary)}">
           <div class="tl-name" style="${isDone ? 'text-decoration:line-through; color:var(--secondary-text-color);' : ''}">${kitEsc(t.summary)}</div>
           ${sub ? `<div class="ck-sub" style="font-size:0.74rem; line-height:1.35;">${kitEsc(sub)}</div>` : ''}
         </div>
         ${when ? `<span class="tl-when" style="color:${over ? '#e53935' : 'var(--secondary-text-color)'};">${kitEsc(when)}</span>` : ''}
-        ${steps}
       </div>`;
     };
     if (missing) this._list.innerHTML = `<div class="ck-sub" style="line-height:1.5;">There's no ${kitEsc(this._entity() || 'to-do')} list yet.</div>`;
@@ -446,18 +435,6 @@ export class TaskListCard extends HTMLElement {
   async _tick(uid, to) {
     try {
       await this._call('update_item', { item: uid, status: to });
-    } catch (err) {
-      /* the list refreshes itself */
-    }
-  }
-
-  // Tick or untick one step of a task, leaving the rest of its description as it is.
-  async _flip(uid, i) {
-    const t = this._all().find((x) => x.uid === uid);
-    const description = t && flipStep(t.description, i);
-    if (description == null) return;
-    try {
-      await this._call('update_item', { item: uid, description });
     } catch (err) {
       /* the list refreshes itself */
     }
@@ -482,8 +459,7 @@ export class TaskListCard extends HTMLElement {
     this._edit = {
       uid,
       name: t ? t.summary : '',
-      notes: splitSteps(p.notes).text,
-      steps: splitSteps(p.notes).steps,
+      notes: p.notes,
       kind: !r.type || r.type === 'once' ? 'none' : r.type,
       n: r.n || 1,
       time: r.time || (due && String(t.due).includes('T') ? timeInput(due) : '09:00'),
@@ -580,12 +556,6 @@ export class TaskListCard extends HTMLElement {
           : ''
       }
       <label class="tl-l">Notes<input type="text" class="tl-f-notes tl-wide" maxlength="200" placeholder="Optional" value="${kitEsc(e.notes)}"></label>
-      <div class="tl-l">Steps<div role="group" aria-label="Steps" style="display:flex; flex-direction:column; gap:6px;">${e.steps
-        .map(
-          (st, i) =>
-            `<div class="tl-srow"><input type="text" class="tl-f-step" data-i="${i}" maxlength="120" aria-label="Step ${i + 1}" value="${kitEsc(st.text)}"><button type="button" class="tl-link" data-del-step="${i}" aria-label="Remove step ${i + 1}">Remove</button></div>`
-        )
-        .join('')}</div><button type="button" class="tl-link tl-add-step" style="align-self:flex-start;">Add a step</button></div>
       <div class="tl-msg" role="status"></div>
       <div class="tl-buttons">
         <button type="button" class="tl-save" style="${on} color:#fff;">${e.uid ? 'Save' : 'Add task'}</button>
@@ -596,17 +566,6 @@ export class TaskListCard extends HTMLElement {
     const bind = (sel, ev, fn) => f.querySelectorAll(sel).forEach((el) => el.addEventListener(ev, () => fn(el)));
     bind('.tl-f-name', 'input', (el) => (e.name = el.value));
     bind('.tl-f-notes', 'input', (el) => (e.notes = el.value));
-    bind('.tl-f-step', 'input', (el) => (e.steps[Number(el.dataset.i)].text = el.value));
-    bind('[data-del-step]', 'click', (el) => {
-      e.steps.splice(Number(el.dataset.delStep), 1);
-      this._drawForm();
-    });
-    bind('.tl-add-step', 'click', () => {
-      e.steps.push({ text: '', done: false });
-      this._drawForm();
-      const boxes = this._form.querySelectorAll('.tl-f-step');
-      if (boxes.length) boxes[boxes.length - 1].focus();
-    });
     bind('.tl-f-place', 'change', (el) => {
       e.place = el.value;
       this._drawForm();
@@ -694,7 +653,7 @@ export class TaskListCard extends HTMLElement {
     // A one-off task reminds at its due time, so without one there's nothing to remind about.
     const reminds = e.who !== 'none' && (e.kind !== 'none' || !!e.date);
     const repeat = this._repeat() || (reminds ? { type: 'once' } : null);
-    const description = formatTask(repeat, e.who, joinSteps(e.notes, e.steps));
+    const description = formatTask(repeat, e.who, e.notes);
     const data = { description };
     if (repeat && repeat.type !== 'once') {
       // Keep the current due time if the repeat itself didn't change (so a
