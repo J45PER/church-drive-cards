@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **ha/alarm-lights.yaml** (2026-10-12): new automation, not a release: lights answer an alarm differently for fire/smoke/heat/CO (all on, steady white) and the house alarm (all on, flashing red and white), fire wins, lights restored when it stops
 - **add-on go2rtc-ring 1.9.14-ring.3** (2026-10-12): the Ring offer is H264 only (Ring answered the battery cameras with H265, so the player got an empty H264 track: go2rtc issue #1961)
 - **add-on go2rtc-ring 1.9.14-ring.2** (2026-10-12): asks Ring for keyframes (battery cameras connected but gave no picture) and logs whether media arrives
 - **add-on go2rtc-ring 1.9.14-ring.1** (2026-10-12): a private go2rtc add-on (HEVC fix + Ring signalling fix and logging) to find and fix the Ring battery cameras that go2rtc's Ring source never starts; add this repository in the Add-on Store to install it

@@ -58,6 +58,17 @@ When a car is plugged in and nobody has picked a charge mode, the Zappi waits fo
 - If the Octopus rates aren't available, it doesn't start, and it leaves a charge it has started running rather than stopping it blind.
 - It doesn't know how full the car is or how long it needs: it charges through the whole cheap window and the car stops when it's full. A car plugged in after the cheap rates have started charges straight away; one plugged in when the only rate left before ready-by is dearer than the max price waits for the next cheap window (use **Start charge** to override).
 
+## Alarm lights
+
+"Church Drive: alarm lights" (a copy is in `ha/alarm-lights.yaml`) makes the lights answer an alarm, and it answers differently for each kind:
+
+- **Fire, smoke, heat or carbon monoxide** (the same five sensors as "Church Drive: safety alarms"): every light comes on at full brightness, steady cool white, so everyone can see the way out. They stay on until the alarm stops.
+- **House (security) alarm** (`alarm_control_panel.church_drive_alarm` going to `triggered`): every light comes on full, then the room and zone groups flash red and white every 3 seconds until the alarm is turned off.
+- **Fire wins.** If a smoke, heat or CO alarm goes off while the house alarm is flashing, the flashing stops and the lights go steady white.
+- **Back as they were.** When the last alarm stops, every light returns to how it was before the first one went off (saved in `scene.church_drive_before_alarm`).
+
+Backlights (such as the air purifier's display) are left alone. To stop it touching the lights, turn the automation off in Settings > Automations. Not installed on the house until it's been checked.
+
 ## Cards
 
 Every card is set up like a built-in one: **Add Card** → search for it, pick it from the preview, and configure it in the visual editor. No YAML is needed. The YAML examples below are for reference or copy-paste only.
