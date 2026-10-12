@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.16.1
+
+- Experimental camera view: every camera now tries the go2rtc stream named after it (`driveway`, `entrance`, `garden`, `living_room`, `front_door`) for Talk, not just the doorbell. A camera with no such stream just listens, as before.
+
 ## 0.16.0
 
 - Experimental camera view, Talk through go2rtc: for a doorbell (or a camera whose card sets `talk_stream`) the live view now connects to the go2rtc stream of that name (a doorbell uses its own name, e.g. `front_door`) through Home Assistant's WebRTC Camera integration, and sends the phone's microphone to it. Home Assistant's own WebRTC could only listen to a Ring camera. If there is no such go2rtc stream the view says so and carries on, listen-only, through Home Assistant.

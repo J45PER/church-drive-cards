@@ -88,7 +88,7 @@ internal fun CameraViewerC(
     entities: Map<String, EntityState>,
     call: CallService,
     startAnswered: Boolean = false,
-    /** The go2rtc stream for two-way audio (from the card's `talk_stream`); a doorbell with none given uses its own name. */
+    /** The go2rtc stream for two-way audio (from the card's `talk_stream`); a camera with none given uses its own name. */
     talkStream: String? = null,
     onClose: () -> Unit,
 ) {
@@ -104,8 +104,8 @@ internal fun CameraViewerC(
     var micDenied by remember { mutableStateOf(false) }
     var talkRefused by remember { mutableStateOf(false) }
     var go2rtcFailed by remember { mutableStateOf(false) }
-    // Home Assistant's own WebRTC can only listen to a Ring camera, so Talk goes through go2rtc: the card's talk_stream, or a doorbell's own name.
-    val stream = (talkStream ?: if (found.ding != null) eventsBase else null)?.takeIf { !go2rtcFailed }
+    // Home Assistant's own WebRTC can only listen to a Ring camera, so Talk goes through go2rtc: the card's talk_stream, or the camera's own name (front_door, driveway...).
+    val stream = (talkStream ?: eventsBase)?.takeIf { !go2rtcFailed }
     var expanded by remember { mutableStateOf(prefs.getBoolean(entityId, false)) }
     var full by remember { mutableStateOf(false) }
     var aspect by remember { mutableStateOf(16f / 9f) }
