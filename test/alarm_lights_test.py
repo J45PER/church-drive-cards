@@ -110,6 +110,9 @@ class Bridge:
     async def request(self, method, path, **kwargs):
         if self.fail:
             raise RuntimeError("bridge says no")
+        # The real bridge's rules: every signaling body needs a duration, even no_signal.
+        if "duration" not in kwargs["json"]["signaling"]:
+            raise RuntimeError("json-schema validation: missing ['duration'] in #/signaling")
         self.puts.append((method, path, kwargs["json"]))
 
 
@@ -422,6 +425,35 @@ class AlarmLightsCase(unittest.IsolatedAsyncioTestCase):
         await self.wait(120)
         self.assertEqual(len(self.calls("turn_on", "scene")), 2)  # a slow light that missed the first still gets put back
         self.assertEqual(self.lights.status()["state"], "idle")
+
+    async def test_stopping_sends_a_duration_like_the_bridge_demands(self):
+        bridge = on_hue(self.hass, "light.a1", "light.a2")
+        self.fire()
+        await self.wait(2)
+        self.fire_out()
+        await self.wait(30)
+        stops = [p for p in bridge.puts if p[2]["signaling"]["signal"] == "no_signal"]
+        self.assertEqual(len(stops), 2)  # accepted, so nothing is left flashing
+        self.assertTrue(all("duration" in p[2]["signaling"] for p in bridge.puts))
+
+    async def test_a_stop_the_bridge_missed_is_sent_again(self):
+        bridge = on_hue(self.hass, "light.a1", "light.a2")
+        self.fire()
+        await self.wait(2)
+        real = bridge.request
+        refused = []
+
+        async def flaky(method, path, **kw):
+            if kw["json"]["signaling"]["signal"] == "no_signal" and path.endswith("id-a1") and not refused:
+                refused.append(path)
+                raise RuntimeError("busy")
+            return await real(method, path, **kw)
+
+        bridge.request = flaky
+        self.fire_out()
+        await self.wait(30)
+        stops = [p for p in bridge.puts if p[2]["signaling"]["signal"] == "no_signal"]
+        self.assertEqual(sorted(p[1] for p in stops), ["clip/v2/resource/light/id-a1", "clip/v2/resource/light/id-a2"])
 
     async def test_a_light_the_bridge_refuses_is_pulsed_from_home_assistant_instead(self):
         bridge = on_hue(self.hass, "light.a1", "light.a2")
