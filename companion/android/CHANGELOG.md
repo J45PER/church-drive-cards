@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.19.2
+
+- The icon keeps the artwork's own vertical position (the whole picture is scaled down as it was drawn, not re-centred on the house), in the app icon, the themed icon and the splash screen.
+
 ## 0.19.1
 
 - The app icon is on a white background again, and the house is smaller inside the icon so it isn't cut or crowded by round and rounded-square icon shapes. The splash screen matches (white, with the same house).
