@@ -3,6 +3,7 @@ package com.churchdrive.app
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
@@ -95,6 +96,8 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // The splash screen (the icon on its dark background) shows until the first screen is ready; this also puts the normal theme back.
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         openPage = intent?.getStringExtra("page")
