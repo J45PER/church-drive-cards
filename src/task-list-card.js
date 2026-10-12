@@ -350,7 +350,7 @@ export class TaskListCard extends HTMLElement {
     if (!this._built) {
       this.innerHTML = kitShell(
         `<div class="tl-list" style="display:flex; flex-direction:column;"></div>
-        <div class="tl-foot"><button type="button" class="tl-add"></button><button type="button" class="tl-link tl-done-toggle" hidden></button></div>
+        <div class="tl-foot"><button type="button" class="tl-add"></button><button type="button" class="tl-add tl-steps" hidden></button><button type="button" class="tl-link tl-done-toggle" hidden></button></div>
         <div class="tl-done-list" hidden style="display:flex; flex-direction:column;"></div>`,
         TL_CSS
       );
@@ -360,6 +360,8 @@ export class TaskListCard extends HTMLElement {
       this._doneList = this.querySelector('.tl-done-list');
       this.querySelector('.ck-headrow').style.display = c.title ? '' : 'none';
       this._addBtn.addEventListener('click', () => this._open(null));
+      this._stepsBtn = this.querySelector('.tl-steps');
+      this._stepsBtn.addEventListener('click', () => openShoppingPage(this._hass, 'new-steps'));
       this._doneBtn.addEventListener('click', () => {
         this._showDone = !this._showDone;
         this._sig = null;
@@ -397,6 +399,10 @@ export class TaskListCard extends HTMLElement {
     this._addBtn.style.color = `color-mix(in srgb, ${colour} 45%, white)`;
     this._addBtn.innerHTML = `${iconHtml('mdi:plus', { size: '18px' })}Add a task`;
     this._addBtn.hidden = missing || !!this._edit;
+    // A steps list is a checklist that shows here as one task (see shopping.py); it is made from this card.
+    this._stepsBtn.style.cssText = this._addBtn.style.cssText;
+    this._stepsBtn.innerHTML = `${iconHtml('mdi:format-list-checks', { size: '18px' })}New steps list`;
+    this._stepsBtn.hidden = missing || !!this._edit || !!c.demo;
     const showDone = c.show_done !== false && done.length > 0 && !this._edit;
     this._doneBtn.hidden = !showDone;
     this._doneBtn.textContent = `${this._showDone ? 'Hide' : 'Show'} done (${done.length})`;

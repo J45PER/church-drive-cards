@@ -4,6 +4,14 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.19.1
+
+- The app icon is on a white background again, and the house is smaller inside the icon so it isn't cut or crowded by round and rounded-square icon shapes. The splash screen matches (white, with the same house).
+
+## 0.19.0
+
+- Steps lists show only as tasks on the to-do page, never in the Shopping section. "New steps list" is now beside "Add a task" on the to-do list, not on the Shopping card.
+
 ## 0.18.1
 
 - The app has a new icon (the Church Drive house with its glow) and a matching splash screen. The icon sits on a dark background and, on Android 13 and newer, has a themed version that takes your wallpaper's colours.

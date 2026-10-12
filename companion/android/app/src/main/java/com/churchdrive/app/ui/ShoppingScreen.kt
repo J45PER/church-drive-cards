@@ -378,26 +378,20 @@ fun ShoppingCard(config: JSONObject) {
                     modifier = Modifier.fillMaxWidth().clickable { open = l.id }.padding(vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    HaIcon(if (l.isSteps) "mdi:format-list-checks" else "mdi:cart-outline", Icons.Filled.Info, tone.accent, 26.dp)
+                    HaIcon("mdi:cart-outline", Icons.Filled.Info, tone.accent, 26.dp)
                     Column(modifier = Modifier.weight(1f)) {
                         Text(l.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
                         val sub = listOf(whenText(l.date.ifEmpty { null }), l.time.takeIf { l.date.isNotEmpty() }.orEmpty(), l.people.joinToString(", "), l.places.joinToString(", ") { it.name })
                             .filter { it.isNotBlank() }.joinToString(" · ")
                         if (sub.isNotEmpty()) Text(sub, style = MaterialTheme.typography.bodySmall, color = tone.onContainer.copy(alpha = 0.75f), maxLines = 1)
                     }
-                    Text("${l.open} ${if (l.isSteps) "to do" else "to get"}", style = MaterialTheme.typography.labelLarge)
+                    Text("${l.open} to get", style = MaterialTheme.typography.labelLarge)
                 }
             }
             if (state.missed.isNotEmpty()) {
                 Text("Not available last time: ${state.missed.joinToString(", ")}", style = MaterialTheme.typography.bodySmall)
             }
         }
-        TileRow(
-            listOf(
-                TileItem("mdi:plus", "New shopping list", false) { open = "new" },
-                TileItem("mdi:format-list-checks", "New steps list", false) { open = NEW_STEPS },
-            ),
-            tone, tone.onContainer,
-        )
+        TileRow(listOf(TileItem("mdi:plus", "New shopping list", false) { open = "new" }), tone, tone.onContainer)
     }
 }
