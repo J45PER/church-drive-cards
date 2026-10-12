@@ -19,7 +19,7 @@ index 7fdb284..9fb64bf 100644
  		return ring.Dial(source)
  	})
 diff --git a/pkg/ring/client.go b/pkg/ring/client.go
-index fb77e19..e2b2ceb 100644
+index fb77e19..227033a 100644
 --- a/pkg/ring/client.go
 +++ b/pkg/ring/client.go
 @@ -6,6 +6,9 @@ import (
@@ -58,7 +58,18 @@ index fb77e19..e2b2ceb 100644
  	if encodedToken == "" || deviceID == "" || cameraID == "" {
  		return nil, errors.New("ring: wrong query")
  	}
-@@ -109,6 +123,7 @@ func Dial(rawURL string) (*Client, error) {
+@@ -88,7 +102,9 @@ func Dial(rawURL string) (*Client, error) {
+ 		BundlePolicy:       pion.BundlePolicyBalanced,
+ 	}
+ 
+-	api, err := webrtc.NewAPI()
++	// H264 only: with H265 in the offer Ring answers H265 for the cameras that have it,
++	// and the browser player then waits on an H264 track that never gets data.
++	api, err := webrtc.NewAPIWithoutH265()
+ 	if err != nil {
+ 		client.Stop()
+ 		return nil, err
+@@ -109,6 +125,7 @@ func Dial(rawURL string) (*Client, error) {
  	prod := webrtc.NewConn(pc)
  	prod.FormatName = "ring/webrtc"
  	prod.Mode = core.ModeActiveProducer
@@ -66,7 +77,7 @@ index fb77e19..e2b2ceb 100644
  	prod.Protocol = "ws"
  	prod.URL = rawURL
  
-@@ -215,40 +230,97 @@ func Dial(rawURL string) (*Client, error) {
+@@ -215,40 +232,97 @@ func Dial(rawURL string) (*Client, error) {
  
  	sendOffer.Done(nil)
  
@@ -186,7 +197,7 @@ index fb77e19..e2b2ceb 100644
  	}
  
  	switch msg.Method {
-@@ -262,7 +334,11 @@ func (c *Client) onWSMessage(msg WSMessage) {
+@@ -262,7 +336,11 @@ func (c *Client) onWSMessage(msg WSMessage) {
  				return
  			}
  
@@ -198,7 +209,7 @@ index fb77e19..e2b2ceb 100644
  				c.Stop()
  				c.connected.Done(err)
  				return
-@@ -290,6 +366,7 @@ func (c *Client) onWSMessage(msg WSMessage) {
+@@ -290,6 +368,7 @@ func (c *Client) onWSMessage(msg WSMessage) {
  			}
  
  			if err := prod.AddCandidate(msg.Body.Ice); err != nil {
@@ -206,7 +217,7 @@ index fb77e19..e2b2ceb 100644
  				c.Stop()
  				c.connected.Done(err)
  				return
-@@ -300,6 +377,10 @@ func (c *Client) onWSMessage(msg WSMessage) {
+@@ -300,6 +379,10 @@ func (c *Client) onWSMessage(msg WSMessage) {
  		c.Stop()
  		c.connected.Done(errors.New("ring: close"))
  
@@ -373,6 +384,118 @@ index 51e72fe..a691322 100644
  	if c.onMessage != nil {
  		c.onMessage(msg)
  	}
+diff --git a/pkg/webrtc/api.go b/pkg/webrtc/api.go
+index 5551d65..525fd01 100644
+--- a/pkg/webrtc/api.go
++++ b/pkg/webrtc/api.go
+@@ -93,12 +93,24 @@ func (f *Filters) IPFilter(ip net.IP) bool {
+ }
+ 
+ func NewServerAPI(network, address string, filters *Filters) (*webrtc.API, error) {
++	return newServerAPI(network, address, filters, true)
++}
++
++// NewAPIWithoutH265 is NewAPI for a connection that must offer H264 only. Every
++// WebRTC connection offers all registered codecs, and Ring answers an offer that
++// lists H265 with H265 for the cameras that have it, which browsers can't play
++// (Ring's own client offers H264 only and gets H264).
++func NewAPIWithoutH265() (*webrtc.API, error) {
++	return newServerAPI("", "", nil, false)
++}
++
++func newServerAPI(network, address string, filters *Filters, withH265 bool) (*webrtc.API, error) {
+ 	// for debug logs add to env: `PION_LOG_DEBUG=all`
+ 	m := &webrtc.MediaEngine{}
+ 	//if err := m.RegisterDefaultCodecs(); err != nil {
+ 	//	return nil, err
+ 	//}
+-	if err := RegisterDefaultCodecs(m); err != nil {
++	if err := registerCodecs(m, withH265); err != nil {
+ 		return nil, err
+ 	}
+ 
+@@ -238,6 +250,10 @@ func newUDPMux(address string, filters *Filters) ice.UDPMux {
+ }
+ 
+ func RegisterDefaultCodecs(m *webrtc.MediaEngine) error {
++	return registerCodecs(m, true)
++}
++
++func registerCodecs(m *webrtc.MediaEngine, withH265 bool) error {
+ 	for _, codec := range []webrtc.RTPCodecParameters{
+ 		{
+ 			RTPCodecCapability: webrtc.RTPCodecCapability{
+@@ -307,6 +323,9 @@ func RegisterDefaultCodecs(m *webrtc.MediaEngine) error {
+ 			PayloadType: 100,
+ 		},
+ 	} {
++		if !withH265 && codec.MimeType == webrtc.MimeTypeH265 {
++			continue
++		}
+ 		if err := m.RegisterCodec(codec, webrtc.RTPCodecTypeVideo); err != nil {
+ 			return err
+ 		}
+diff --git a/pkg/webrtc/api_test.go b/pkg/webrtc/api_test.go
+new file mode 100644
+index 0000000..9be988e
+--- /dev/null
++++ b/pkg/webrtc/api_test.go
+@@ -0,0 +1,55 @@
++package webrtc
++
++import (
++	"strings"
++	"testing"
++
++	"github.com/pion/webrtc/v4"
++)
++
++func videoOffer(t *testing.T, api *webrtc.API) string {
++	t.Helper()
++
++	pc, err := api.NewPeerConnection(webrtc.Configuration{})
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer pc.Close()
++
++	_, err = pc.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo, webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly})
++	if err != nil {
++		t.Fatal(err)
++	}
++
++	offer, err := pc.CreateOffer(nil)
++	if err != nil {
++		t.Fatal(err)
++	}
++	return offer.SDP
++}
++
++func TestNewAPIWithoutH265OffersOnlyH264(t *testing.T) {
++	api, err := NewAPIWithoutH265()
++	if err != nil {
++		t.Fatal(err)
++	}
++
++	sdp := videoOffer(t, api)
++	if strings.Contains(sdp, "H265") {
++		t.Fatalf("offer still lists H265:\n%s", sdp)
++	}
++	if !strings.Contains(sdp, "H264") {
++		t.Fatalf("offer lost H264:\n%s", sdp)
++	}
++}
++
++func TestNewAPIStillOffersH265(t *testing.T) {
++	api, err := NewAPI()
++	if err != nil {
++		t.Fatal(err)
++	}
++
++	if sdp := videoOffer(t, api); !strings.Contains(sdp, "H265") {
++		t.Fatalf("the default API no longer offers H265:\n%s", sdp)
++	}
++}
 diff --git a/pkg/webrtc/conn.go b/pkg/webrtc/conn.go
 index 924fd55..ea95602 100644
 --- a/pkg/webrtc/conn.go
