@@ -5,7 +5,7 @@ description: >-
   Ring source that logs its signalling, answers Ring's pings, accepts Ring's
   answer whichever message carries the session id, and gives up with a reason
   instead of hanging.
-version: 1.9.14-ring.1
+version: 1.9.14-ring.2
 slug: go2rtc_church_ring
 url: https://github.com/J45PER/church-drive-cards/tree/main/go2rtc-ring
 arch:
