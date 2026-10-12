@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **add-on go2rtc-ring 1.9.14-ring.3** (2026-10-12): the Ring offer is H264 only (Ring answered the battery cameras with H265, so the player got an empty H264 track: go2rtc issue #1961)
 - **add-on go2rtc-ring 1.9.14-ring.2** (2026-10-12): asks Ring for keyframes (battery cameras connected but gave no picture) and logs whether media arrives
 - **add-on go2rtc-ring 1.9.14-ring.1** (2026-10-12): a private go2rtc add-on (HEVC fix + Ring signalling fix and logging) to find and fix the Ring battery cameras that go2rtc's Ring source never starts; add this repository in the Add-on Store to install it
 - **v0.51.0 + app 0.19.0** (2026-10-12): steps lists show only as tasks on the to-do page, not in the Shopping section; "New steps list" is beside "Add a task"

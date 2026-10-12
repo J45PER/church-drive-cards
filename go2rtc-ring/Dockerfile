@@ -15,7 +15,7 @@ RUN git -c advice.detachedHead=false clone --depth 1 \
 COPY go2rtc-hevc-ap.patch go2rtc-ring.patch /tmp/
 RUN git apply /tmp/go2rtc-hevc-ap.patch \
     && git apply /tmp/go2rtc-ring.patch \
-    && go test ./pkg/h265/ ./pkg/ring/ \
+    && go test ./pkg/h265/ ./pkg/ring/ ./pkg/webrtc/ \
     && CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o /go2rtc .
 
 FROM ${BUILD_FROM}

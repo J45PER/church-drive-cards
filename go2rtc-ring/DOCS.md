@@ -18,6 +18,8 @@ All in go2rtc's Ring source (`pkg/ring`). Nothing else about go2rtc changes.
   session id from `session_created` and silently dropped everything else until then, so an answer
   that came first (or without it) was lost and go2rtc waited forever.
 - **Answers Ring's pings with a pong,** as Ring's own client library does.
+- **Offers Ring H264 only.** go2rtc listed H265 as well, and Ring answered the battery cameras with
+  H265, which left the browser player on an empty H264 track (go2rtc issue #1961).
 - **Asks Ring for keyframes.** Every 2 seconds, so a battery camera gives the player a picture
   to start from (Ring's own client does this; go2rtc did not for Ring).
 - **Gives up with a reason.** After 30 seconds (`&connect_timeout=N` on the ring URL changes it)

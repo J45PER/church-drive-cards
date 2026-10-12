@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.9.14-ring.3
+
+- The Ring offer is now H264 only. go2rtc offered H264 and H265 on every WebRTC connection, and
+  Ring answered the battery cameras (Battery Video Doorbell Plus, Outdoor Cam) with H265. go2rtc then
+  made an empty H264 track for the browser player and a separate H265 track holding all the data,
+  so the player sat on "loading" while picture arrived. Ring's own client offers H264 only and gets
+  H264. This is go2rtc issue #1961. Other sources are unchanged (they still offer H265).
+
 ## 1.9.14-ring.2
 
 - Asks Ring for a keyframe every 2 seconds (Ring only), as go2rtc already does for other sources
