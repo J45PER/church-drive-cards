@@ -104,6 +104,7 @@ internal fun CameraViewerC(
     var micDenied by remember { mutableStateOf(false) }
     var talkRefused by remember { mutableStateOf(false) }
     var go2rtcFailed by remember { mutableStateOf(false) }
+    var go2rtcWhy by remember { mutableStateOf("") }
     // Home Assistant's own WebRTC can only listen to a Ring camera, so Talk goes through go2rtc: the card's talk_stream, or the camera's own name (front_door, driveway...).
     val stream = (talkStream ?: eventsBase)?.takeIf { !go2rtcFailed }
     var expanded by remember { mutableStateOf(prefs.getBoolean(entityId, false)) }
@@ -232,19 +233,25 @@ internal fun CameraViewerC(
                 val fill = full || expanded
                 Box(modifier = if (fill) Modifier.weight(1f).fillMaxWidth() else Modifier.fillMaxWidth()) {
                     // A 16:9 box that the picture covers: a tall picture is cropped and can be dragged up and down.
-                    StageBox(aspect, fill = fill, contain = false, maxZoom = 6f, onTap = { if (over) { shown = !shown; touched++ } }) {
-                        when (mode) {
-                            "webrtc" -> WebRtcPlayer(
-                                entityId, !sound, Modifier.fillMaxSize(), talking = talking && canTalk, texture = true,
-                                onTalkRefused = { talking = false; talkRefused = true },
-                                go2rtc = stream,
-                                onGo2rtcFailed = { go2rtcFailed = true; talking = false },
-                                onAspect = { aspect = it },
-                            ) { status = it }
-                            "hls" -> link?.let { LivePlayer(base + it, !sound) { aspect = it } }
-                            else -> Unit
-                        }
-                    }
+                    StageBox(
+                        aspect, fill = fill, contain = false, maxZoom = 6f, onTap = { if (over) { shown = !shown; touched++ } },
+                        // The picture view is exactly the box; dragging and pinching change which part of the frame it shows.
+                        viewportContent = { viewport ->
+                            when (mode) {
+                                "webrtc" -> WebRtcPlayer(
+                                    entityId, !sound, Modifier.fillMaxSize(), talking = talking && canTalk, texture = true,
+                                    onTalkRefused = { talking = false; talkRefused = true },
+                                    go2rtc = stream,
+                                    onGo2rtcFailed = { why -> go2rtcFailed = true; go2rtcWhy = why; talking = false },
+                                    viewport = viewport,
+                                    onAspect = { aspect = it },
+                                ) { status = it }
+                                "hls" -> link?.let { LivePlayer(base + it, !sound) { aspect = it } }
+                                else -> Unit
+                            }
+                        },
+                        content = {},
+                    )
                     status?.let { Text(it, color = Color.White.copy(alpha = 0.75f), modifier = Modifier.align(Alignment.Center).padding(16.dp)) }
 
                     // Top left: what this is. Top right: battery and signal when expanded or full screen, and the way out of full screen.
@@ -321,9 +328,9 @@ internal fun CameraViewerC(
                             }
                         }
                     }
-                    if (go2rtcFailed && (talkStream != null || found.ding != null)) {
+                    if (go2rtcFailed) {
                         Text(
-                            "No go2rtc stream for this camera, so this is listen-only (through Home Assistant).",
+                            "No two-way audio: go2rtc stream \"${talkStream ?: eventsBase}\" didn't connect ($go2rtcWhy). Listening through Home Assistant.",
                             color = Color(0xFFFFA726), fontSize = 12.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp),
                         )
                     }

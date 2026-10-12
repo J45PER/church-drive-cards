@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,8 +51,10 @@ fun WebRtcPlayer(
     onTalkRefused: () -> Unit = {},
     /** Connect through go2rtc's stream of this name (two-way audio) instead of Home Assistant's own WebRTC. */
     go2rtc: String? = null,
-    /** go2rtc couldn't give the stream (not set up, not reachable). */
-    onGo2rtcFailed: () -> Unit = {},
+    /** go2rtc couldn't give the stream (not set up, not reachable); says why. */
+    onGo2rtcFailed: (String) -> Unit = {},
+    /** The part of the picture to show (only on a texture view): the frames are cropped to it. */
+    viewport: ViewRect? = null,
     onAspect: (Float) -> Unit = {},
     onStatus: (String?) -> Unit,
 ) {
@@ -61,17 +64,18 @@ fun WebRtcPlayer(
     val renderer = remember {
         if (texture) {
             val t = VideoTextureRenderer(context).also { it.init(egl.eglBaseContext) }
-            RtcPicture(t, t) { t.release() }
+            RtcPicture(t, t, t) { t.release() }
         } else {
             val s = SurfaceViewRenderer(context).apply {
                 init(egl.eglBaseContext, null)
                 setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT)
                 setEnableHardwareScaler(true)
             }
-            RtcPicture(s, s) { s.release() }
+            RtcPicture(s, s, null) { s.release() }
         }
     }
     var audio by remember { mutableStateOf<AudioTrack?>(null) }
+    SideEffect { renderer.texture?.viewport = viewport }
     // The track belongs to one connection: once that is closed it can't be touched (a stale one crashed the app).
     LaunchedEffect(muted, audio) { runCatching { audio?.setEnabled(!muted) } }
 
@@ -122,7 +126,7 @@ private class RtcSession(
     private val onTalkRefused: () -> Unit,
     /** The go2rtc stream to use, or null for Home Assistant's own WebRTC. */
     private val go2rtc: String?,
-    private val onGo2rtcFailed: () -> Unit,
+    private val onGo2rtcFailed: (String) -> Unit,
 ) : PeerConnection.Observer {
     private var factory: PeerConnectionFactory? = null
     private var connection: PeerConnection? = null
@@ -155,9 +159,13 @@ private class RtcSession(
     fun start() {
         CrashReport.note("live view: $entityId${if (go2rtc != null) " through go2rtc stream $go2rtc" else ""}")
         if (go2rtc != null) {
-            // go2rtc is on the home network: a public STUN server is enough to find our address from away.
-            servers = listOf(IceServerSpec(listOf("stun:stun.l.google.com:19302"), null, null))
-            attempt(0)
+            // go2rtc is at home: from away (mobile data) the phone needs the same relay Home Assistant gives for its own live view, as well as a public STUN server.
+            host.iceServers(entityId) { list ->
+                if (closed.get()) return@iceServers
+                servers = parseIceServers(list) + IceServerSpec(listOf("stun:stun.l.google.com:19302"), null, null)
+                CrashReport.note("ice servers for go2rtc: ${servers.size}")
+                attempt(0)
+            }
         } else {
             host.iceServers(entityId) { list ->
                 if (closed.get()) return@iceServers
@@ -337,7 +345,7 @@ private class RtcSession(
         if (go2rtc != null) {
             // The stream isn't there (or can't be reached): let the view go back to Home Assistant's connection.
             CrashReport.note("go2rtc failed: $message")
-            main.post { if (!closed.get()) onGo2rtcFailed() }
+            main.post { if (!closed.get()) onGo2rtcFailed(message) }
             return
         }
         onStatus(if (talk) "$message (Two-way audio may not be supported by this camera: tap Talk again to go back to listening.)" else message)
@@ -435,7 +443,7 @@ private class RtcSession(
 }
 
 /** What the live view draws into: the view to show, the sink video frames go to, and how to let go of it. */
-private class RtcPicture(val view: android.view.View, val sink: VideoSink, val release: () -> Unit)
+private class RtcPicture(val view: android.view.View, val sink: VideoSink, val texture: VideoTextureRenderer?, val release: () -> Unit)
 
 /**
  * A video view on a TextureView, so it can be scaled, moved and cropped by its parent like any other view (a SurfaceView
@@ -455,7 +463,33 @@ private class VideoTextureRenderer(context: Context) : android.view.TextureView(
 
     fun release() = eglRenderer.release()
 
-    override fun onFrame(frame: org.webrtc.VideoFrame) = eglRenderer.onFrame(frame)
+    /** The part of the picture to show, or null for all of it. Set from the UI thread, read per frame. */
+    @Volatile
+    var viewport: ViewRect? = null
+
+    override fun onFrame(frame: org.webrtc.VideoFrame) {
+        val v = viewport
+        // The whole picture: draw it as it is. Otherwise cut the frame down to the part in view, and draw that stretched to this view (which is the box's shape).
+        if (v == null || (v.du >= 0.999f && v.dv >= 0.999f) || frame.rotation != 0) {
+            eglRenderer.onFrame(frame)
+            return
+        }
+        val buffer = frame.buffer
+        val w = buffer.width
+        val h = buffer.height
+        val cw = (v.du * w).toInt().coerceIn(2, w) and 1.inv()
+        val ch = (v.dv * h).toInt().coerceIn(2, h) and 1.inv()
+        val cx = (v.u0 * w).toInt().coerceIn(0, w - cw) and 1.inv()
+        val cy = (v.v0 * h).toInt().coerceIn(0, h - ch) and 1.inv()
+        val cropped = runCatching { buffer.cropAndScale(cx, cy, cw, ch, cw, ch) }.getOrNull()
+        if (cropped == null) {
+            eglRenderer.onFrame(frame)
+            return
+        }
+        val part = org.webrtc.VideoFrame(cropped, frame.rotation, frame.timestampNs)
+        eglRenderer.onFrame(part)
+        part.release()
+    }
 
     override fun onSurfaceTextureAvailable(surface: android.graphics.SurfaceTexture, width: Int, height: Int) = eglRenderer.createEglSurface(surface)
 

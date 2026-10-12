@@ -4,6 +4,12 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.16.2
+
+- Experimental camera view: expanded and full screen are drawn a different way. The picture is no longer a view bigger than the screen that is moved and scaled (that left black areas and showed the wrong part); it is exactly the box, and the video is cropped to the part in view. Dragging and pinching still move and zoom it, and the doorbell's tall picture is still cropped to 16:9 and can be dragged up and down.
+- Talk through go2rtc now also uses the relay server Home Assistant gives for its own live view, so it can work on mobile data and not only on the home Wi-Fi.
+- When go2rtc can't connect, the view now says why (for any camera) before carrying on listen-only.
+
 ## 0.16.1
 
 - Experimental camera view: every camera now tries the go2rtc stream named after it (`driveway`, `entrance`, `garden`, `living_room`, `front_door`) for Talk, not just the doorbell. A camera with no such stream just listens, as before.
