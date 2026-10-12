@@ -100,6 +100,7 @@ internal fun CameraViewerC(
     var sound by remember { mutableStateOf(startAnswered) }
     var talking by remember { mutableStateOf(false) }
     var micDenied by remember { mutableStateOf(false) }
+    var talkRefused by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf(prefs.getBoolean(entityId, false)) }
     var full by remember { mutableStateOf(false) }
     var aspect by remember { mutableStateOf(16f / 9f) }
@@ -121,6 +122,7 @@ internal fun CameraViewerC(
     }
     fun startTalking() {
         micDenied = false
+        talkRefused = false
         if (hasMicrophone(context)) {
             talking = true
             sound = true
@@ -227,7 +229,7 @@ internal fun CameraViewerC(
                     // A 16:9 box that the picture covers: a tall picture is cropped and can be dragged up and down.
                     StageBox(aspect, fill = fill, contain = false, maxZoom = 6f, onTap = { if (over) { shown = !shown; touched++ } }) {
                         when (mode) {
-                            "webrtc" -> WebRtcPlayer(entityId, !sound, Modifier.fillMaxSize(), talking = talking, onAspect = { aspect = it }) { status = it }
+                            "webrtc" -> WebRtcPlayer(entityId, !sound, Modifier.fillMaxSize(), talking = talking, texture = true, onTalkRefused = { talking = false; talkRefused = true }, onAspect = { aspect = it }) { status = it }
                             "hls" -> link?.let { LivePlayer(base + it, !sound) { aspect = it } }
                             else -> Unit
                         }
@@ -307,6 +309,12 @@ internal fun CameraViewerC(
                                 callRow(false) { touched++; close() }
                             }
                         }
+                    }
+                    if (talkRefused) {
+                        Text(
+                            "This camera didn't take audio from the phone, so Talk can't work through Home Assistant's connection to it.",
+                            color = Color(0xFFFFA726), fontSize = 12.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp),
+                        )
                     }
                     if (micDenied) {
                         Text(

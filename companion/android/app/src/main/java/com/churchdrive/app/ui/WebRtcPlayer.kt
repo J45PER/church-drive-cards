@@ -27,6 +27,7 @@ import org.webrtc.RtpTransceiver
 import org.webrtc.SdpObserver
 import org.webrtc.SessionDescription
 import org.webrtc.SurfaceViewRenderer
+import org.webrtc.VideoSink
 import org.webrtc.VideoTrack
 import org.webrtc.audio.JavaAudioDeviceModule
 import com.churchdrive.app.CrashReport
@@ -38,15 +39,32 @@ import java.util.concurrent.atomic.AtomicBoolean
  * same connection. [onStatus] gets null once the picture is playing, or a message if it can't be.
  */
 @Composable
-fun WebRtcPlayer(entityId: String, muted: Boolean, modifier: Modifier = Modifier, talking: Boolean = false, onAspect: (Float) -> Unit = {}, onStatus: (String?) -> Unit) {
+fun WebRtcPlayer(
+    entityId: String,
+    muted: Boolean,
+    modifier: Modifier = Modifier,
+    talking: Boolean = false,
+    /** Draw into a TextureView, which (unlike a SurfaceView) can be scaled, moved and cropped like any other view. */
+    texture: Boolean = false,
+    /** The camera's answer didn't take our microphone. */
+    onTalkRefused: () -> Unit = {},
+    onAspect: (Float) -> Unit = {},
+    onStatus: (String?) -> Unit,
+) {
     val context = LocalContext.current
     val host = LocalCameraHost.current
     val egl = remember { EglBase.create() }
     val renderer = remember {
-        SurfaceViewRenderer(context).apply {
-            init(egl.eglBaseContext, null)
-            setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT)
-            setEnableHardwareScaler(true)
+        if (texture) {
+            val t = VideoTextureRenderer(context).also { it.init(egl.eglBaseContext) }
+            RtcPicture(t, t) { t.release() }
+        } else {
+            val s = SurfaceViewRenderer(context).apply {
+                init(egl.eglBaseContext, null)
+                setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT)
+                setEnableHardwareScaler(true)
+            }
+            RtcPicture(s, s) { s.release() }
         }
     }
     var audio by remember { mutableStateOf<AudioTrack?>(null) }
@@ -63,14 +81,14 @@ fun WebRtcPlayer(entityId: String, muted: Boolean, modifier: Modifier = Modifier
     }
     DisposableEffect(entityId, talking) {
         onStatus("Starting live view…")
-        val session = host?.let { RtcSession(context, egl, it, entityId, renderer, talking, { track -> audio = track }, onStatus, onAspect) }
+        val session = host?.let { RtcSession(context, egl, it, entityId, renderer.sink, talking, { track -> audio = track }, onStatus, onAspect, onTalkRefused) }
         if (session == null) onStatus("Live view isn't available.") else session.start()
         onDispose {
             audio = null
             session?.close()
         }
     }
-    AndroidView(factory = { renderer }, modifier = modifier)
+    AndroidView(factory = { renderer.view }, modifier = modifier)
 }
 
 /**
@@ -91,12 +109,13 @@ private class RtcSession(
     private val egl: EglBase,
     private val host: CameraHost,
     private val entityId: String,
-    private val renderer: SurfaceViewRenderer,
+    private val renderer: VideoSink,
     /** Send our microphone too (two-way audio). */
     private val talk: Boolean,
     private val onAudio: (AudioTrack) -> Unit,
     private val onStatus: (String?) -> Unit,
     private val onAspect: (Float) -> Unit,
+    private val onTalkRefused: () -> Unit,
 ) : PeerConnection.Observer {
     private var factory: PeerConnectionFactory? = null
     private var connection: PeerConnection? = null
@@ -223,9 +242,11 @@ private class RtcSession(
                 }
             }
             is RtcEvent.Answer -> connection?.setRemoteDescription(object : Sdp() {
-                override fun onSetSuccess() = CrashReport.note(
-                    "answer accepted: ${mediaOrder(event.sdp).joinToString(",")}; formats ${codecs(event.sdp)}",
-                )
+                override fun onSetSuccess() {
+                    CrashReport.note("answer accepted: ${mediaOrder(event.sdp).joinToString(",")}; formats ${codecs(event.sdp)}; audio ${audioDirection(event.sdp)}")
+                    // A camera that will only send audio (never take ours) answers our sendrecv with sendonly.
+                    if (talk && audioDirection(event.sdp).let { it == "sendonly" || it == "inactive" }) main.post { if (!closed.get()) onTalkRefused() }
+                }
                 override fun onSetFailure(error: String?) {
                     // A camera that answers in another order: try the next way of setting up the offer.
                     if (error?.contains("m-lines") == true && lastAttempt + 1 < ORDERS.size && !closed.get()) {
@@ -247,6 +268,14 @@ private class RtcSession(
             }
             null -> Unit
         }
+    }
+
+    /** The direction the camera's answer gives its audio: sendrecv, recvonly, sendonly or inactive. */
+    private fun audioDirection(sdp: String): String? {
+        val i = sdp.indexOf("m=audio")
+        if (i < 0) return null
+        val j = sdp.indexOf("\nm=", i + 1).let { if (it < 0) sdp.length else it }
+        return Regex("a=(sendrecv|recvonly|sendonly|inactive)").find(sdp.substring(i, j))?.groupValues?.get(1)
     }
 
     /** The formats an answer offers (for example H264 or VP8, and the H264 profile), for the trail. */
@@ -351,4 +380,41 @@ private class RtcSession(
             }
         }
     }
+}
+
+/** What the live view draws into: the view to show, the sink video frames go to, and how to let go of it. */
+private class RtcPicture(val view: android.view.View, val sink: VideoSink, val release: () -> Unit)
+
+/**
+ * A video view on a TextureView, so it can be scaled, moved and cropped by its parent like any other view (a SurfaceView
+ * keeps drawing where it was, which left half the picture black when the live view was expanded).
+ * Frames are drawn stretched to the view, so the view should be the picture's own shape.
+ */
+private class VideoTextureRenderer(context: Context) : android.view.TextureView(context), VideoSink, android.view.TextureView.SurfaceTextureListener {
+    private val eglRenderer = org.webrtc.EglRenderer("live-view-${System.identityHashCode(this)}")
+
+    init {
+        surfaceTextureListener = this
+    }
+
+    fun init(shared: EglBase.Context) {
+        eglRenderer.init(shared, EglBase.CONFIG_PLAIN, org.webrtc.GlRectDrawer())
+    }
+
+    fun release() = eglRenderer.release()
+
+    override fun onFrame(frame: org.webrtc.VideoFrame) = eglRenderer.onFrame(frame)
+
+    override fun onSurfaceTextureAvailable(surface: android.graphics.SurfaceTexture, width: Int, height: Int) = eglRenderer.createEglSurface(surface)
+
+    override fun onSurfaceTextureSizeChanged(surface: android.graphics.SurfaceTexture, width: Int, height: Int) = Unit
+
+    override fun onSurfaceTextureDestroyed(surface: android.graphics.SurfaceTexture): Boolean {
+        val done = java.util.concurrent.CountDownLatch(1)
+        eglRenderer.releaseEglSurface { done.countDown() }
+        done.await(2, java.util.concurrent.TimeUnit.SECONDS)
+        return true
+    }
+
+    override fun onSurfaceTextureUpdated(surface: android.graphics.SurfaceTexture) = Unit
 }
