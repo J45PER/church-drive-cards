@@ -7,7 +7,6 @@ import android.content.ContextWrapper
 import android.content.pm.ActivityInfo
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -265,14 +264,14 @@ internal fun CameraViewerC(
                                 }
                             }
                         }
-                        if (full) AnimatedVisibility(visible = shown, enter = fadeIn(), exit = fadeOut()) {
+                        if (full) Fade(visible = shown) {
                             OverlayButton("mdi:fullscreen-exit") { full = false; touched++ }
                         }
                     }
 
                     // Bottom right: bigger and full screen on the picture (always in the normal view); in full screen, + for Light, Snapshot and Events.
                     if (!full) {
-                        AnimatedVisibility(visible = !over || shown, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.BottomEnd)) {
+                        Fade(visible = !over || shown, modifier = Modifier.align(Alignment.BottomEnd)) {
                             Row(modifier = Modifier.padding(8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 OverlayButton(if (expanded) "mdi:arrow-collapse-vertical" else "mdi:arrow-expand-vertical") {
                                     expanded = !expanded
@@ -282,7 +281,7 @@ internal fun CameraViewerC(
                             }
                         }
                     } else {
-                        AnimatedVisibility(visible = shown, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.BottomEnd)) {
+                        Fade(visible = shown, modifier = Modifier.align(Alignment.BottomEnd)) {
                             Box(modifier = Modifier.padding(10.dp)) {
                                 CircleButton("mdi:plus", Color.White, Color(0xFF3C4248), 44) { menuOpen = true; touched++ }
                                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
@@ -300,8 +299,8 @@ internal fun CameraViewerC(
 
                     // Expanded and full screen: the call row sits on the picture (bottom centre; bottom left in full screen).
                     if (over) {
-                        AnimatedVisibility(
-                            visible = shown, enter = fadeIn(), exit = fadeOut(),
+                        Fade(
+                            visible = shown,
                             modifier = if (full) Modifier.align(Alignment.BottomStart) else Modifier.align(Alignment.BottomCenter),
                         ) {
                             Box(modifier = if (full) Modifier.padding(10.dp) else Modifier.fillMaxWidth().padding(bottom = 56.dp), contentAlignment = Alignment.Center) {
@@ -392,4 +391,10 @@ private fun OverlayButton(icon: String, onClick: () -> Unit) {
         modifier = Modifier.size(34.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.55f)).clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) { HaIcon(icon, Icons.Filled.Info, Color.White, 20.dp) }
+}
+
+/** Fades [content] in and out. Not an extension of a layout scope, so it can be called from inside any Box, Row or Column. */
+@Composable
+private fun Fade(visible: Boolean, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    androidx.compose.animation.AnimatedVisibility(visible = visible, modifier = modifier, enter = fadeIn(), exit = fadeOut()) { content() }
 }
