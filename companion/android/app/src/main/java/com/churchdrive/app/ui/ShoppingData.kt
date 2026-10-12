@@ -16,9 +16,12 @@ data class ShoppingList(
     val places: List<ShoppingPlace>,
     val done: Boolean,
     val items: List<ShoppingItem>,
+    /** "shopping" (the default) or "steps": a checklist that works the same way with different words. */
+    val kind: String = "shopping",
 ) {
     val open: Int get() = items.count { it.status == "open" }
-    val title: String get() = name.ifBlank { "Shopping" }
+    val isSteps: Boolean get() = kind == "steps"
+    val title: String get() = name.ifBlank { if (isSteps) "Steps" else "Shopping" }
 }
 
 /** Somewhere a list will be bought, found with a Google Maps search (any shop anywhere), kept with its coordinates. */
@@ -55,6 +58,7 @@ fun parseShoppingList(o: JSONObject): ShoppingList = ShoppingList(
     places = o.optJSONArray("places").objects().mapNotNull { parsePlace(it) },
     done = o.optBoolean("done"),
     items = o.optJSONArray("items").objects().map { ShoppingItem(it.optString("id"), it.optString("text"), it.optString("status", "open")) },
+    kind = if (o.optString("kind") == "steps") "steps" else "shopping",
 )
 
 /** The reply of `church_drive/shopping`, or null if it isn't one. */
@@ -79,10 +83,19 @@ private val MARKER = Regex("church-drive-shopping:([0-9a-f]{6,32})")
 /** The shopping list a to-do task stands for, from the marker in its description, or "". */
 fun shoppingIdOf(description: String?): String = MARKER.find(description.orEmpty())?.groupValues?.get(1).orEmpty()
 
-/** What to show under a shopping task instead of its raw description: how many are left to get. */
+private val STEPS_MARKER = Regex("church-drive-shopping:[0-9a-f]{6,32} steps")
+
+/** Whether a to-do task's description marks a steps list (the marker is followed by " steps"). */
+fun isStepsTask(description: String?): Boolean = STEPS_MARKER.containsMatchIn(description.orEmpty())
+
+/** What to show under a shopping or steps task instead of its raw description: how many are left. */
 fun shoppingNote(description: String?): String {
     val n = description.orEmpty().lines().count { it.trimStart().startsWith("•") }
-    return if (n == 0) "Shopping list" else "$n to get"
+    return if (isStepsTask(description)) {
+        if (n == 0) "Steps" else "$n to do"
+    } else {
+        if (n == 0) "Shopping list" else "$n to get"
+    }
 }
 
 /** The list id at the end of a reminder's link (`/dashboard-mobile/shopping?list=<id>`), or null. */

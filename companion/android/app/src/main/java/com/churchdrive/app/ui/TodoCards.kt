@@ -90,7 +90,7 @@ fun TaskListCard(config: JSONObject, entities: Map<String, EntityState>, call: C
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (shoppingIdOf(item.description).isNotEmpty()) {
                     // A shopping list has no tick of its own: it is finished by finishing its items.
-                    Box(modifier = Modifier.padding(12.dp)) { HaIcon("mdi:cart-outline", Icons.Filled.Info, toneColors(Tone.Indigo).accent, 24.dp) }
+                    Box(modifier = Modifier.padding(12.dp)) { HaIcon(if (isStepsTask(item.description)) "mdi:format-list-checks" else "mdi:cart-outline", Icons.Filled.Info, toneColors(Tone.Indigo).accent, 24.dp) }
                 } else Checkbox(
                     checked = false,
                     onCheckedChange = {
@@ -111,29 +111,6 @@ fun TaskListCard(config: JSONObject, entities: Map<String, EntityState>, call: C
                     taskLine(item, now).takeIf { it.isNotBlank() }?.let {
                         Text(it, style = MaterialTheme.typography.bodySmall, color = tone.onContainer.copy(alpha = 0.75f))
                     }
-                }
-            }
-            // The task's steps, each ticked on its own.
-            if (shoppingIdOf(item.description).isEmpty()) stepsOf(item.description).forEachIndexed { i, step ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(start = 48.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Checkbox(
-                        checked = step.done,
-                        onCheckedChange = {
-                            flipStep(item.description, i)?.let { d -> call("todo", "update_item", listId, data("item" to item.uid, "description" to d)) }
-                        },
-                        colors = CheckboxDefaults.colors(checkedColor = tone.accent, uncheckedColor = tone.accent),
-                    )
-                    Text(
-                        step.text,
-                        style = MaterialTheme.typography.bodyMedium,
-                        textDecoration = if (step.done) androidx.compose.ui.text.style.TextDecoration.LineThrough else null,
-                        color = tone.onContainer.copy(alpha = if (step.done) 0.6f else 1f),
-                        modifier = Modifier.weight(1f),
-                    )
                 }
             }
         }

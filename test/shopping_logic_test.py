@@ -120,3 +120,44 @@ class PlaceTests(unittest.TestCase):
 
     def test_maps_url(self):
         self.assertEqual(sl.maps_url({"lat": 35.1, "lon": 34.2}), "https://www.google.com/maps/dir/?api=1&destination=35.1,34.2")
+
+
+class Steps(unittest.TestCase):
+    def mk_steps(self, *texts):
+        items, _ = sl.add_items([], list(texts), nid, sl.STEPS)
+        return items
+
+    def test_a_step_keeps_its_words(self):
+        self.assertEqual(sl.clean_item("Get a ladder", sl.STEPS), "Get a ladder")
+        self.assertEqual(sl.clean_item("- check the Hub.", sl.STEPS), "Check the Hub")
+        self.assertEqual(sl.clean_item("Get bread"), "Bread")
+
+    def test_a_steps_task_says_steps_and_carries_the_marker_and_word(self):
+        items = self.mk_steps("Check the Hub", "Forward the port")
+        self.assertEqual(sl.task_summary("Ring Talk", items, sl.STEPS), "Steps: Ring Talk (0 of 2)")
+        self.assertEqual(sl.task_summary("", [], sl.STEPS), "Steps")
+        d = sl.task_description("abc123def456", items, sl.STEPS)
+        self.assertEqual(d.split("\n")[-1], "church-drive-shopping:abc123def456 steps")
+        self.assertIn("• Check the Hub", d)
+        self.assertEqual(sl.parse_marker(d), "abc123def456")
+        # A shopping task is unchanged.
+        self.assertEqual(sl.task_description("abc123def456", items).split("\n")[-1], "church-drive-shopping:abc123def456")
+
+    def test_a_step_is_never_unavailable(self):
+        items = self.mk_steps("One")
+        with self.assertRaises(ValueError):
+            sl.set_status(items, items[0]["id"], sl.UNAVAILABLE, sl.STEPS)
+        done = sl.set_status(items, items[0]["id"], sl.BOUGHT, sl.STEPS)
+        self.assertTrue(sl.is_done(done))
+
+    def test_shared_shopping_never_goes_on_a_steps_list(self):
+        steps = {"id": "s", "people": ["Jamie"], "date": "", "created": "1", "done": False, "kind": "steps", "items": self.mk_steps("One")}
+        shop = {"id": "p", "people": ["Jamie"], "date": "", "created": "2", "done": False, "items": mk("Milk")}
+        self.assertEqual(sl.pick_list([steps, shop], "Jamie")["id"], "p")
+        self.assertIsNone(sl.pick_list([steps], "Jamie"))
+
+    def test_arriving_somewhere_with_steps_says_steps(self):
+        steps = {"id": "s", "name": "Ring Talk", "kind": "steps", "items": self.mk_steps("One", "Two")}
+        title, message = sl.arrival_message("Home", [steps], [])
+        self.assertEqual(title, "At Home: steps to do")
+        self.assertIn("Ring Talk (2 to do)", message)

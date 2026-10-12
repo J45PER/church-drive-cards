@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.18.0
+
+- Steps lists replace steps inside a to-do task. A steps list works like a shopping list: it is one task on the to-do page (no tick of its own, and no steps shown under it), and you work through its steps on its own page, one tick each. The task finishes itself when the last step is done. Make one from the Shopping card's "New steps list"; it can remind you at Home.
+- The inline steps of 0.17.0 are gone.
+
 ## 0.17.0
 
 - To-do tasks can have steps. Edit a task and use "Add a step"; each step is ticked on its own in the list, and the line under the task says how many are done ("2 of 5"). The steps are kept in the task's notes, so the dashboard's task list shows and ticks the same ones.

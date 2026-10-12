@@ -36,6 +36,8 @@ A shopping list is one task, not a pile of items. It has a **name**, the **peopl
 
 The rules are in `shopping_logic.py` (tested in `test/shopping_logic_test.py`) and the lists in `shopping.py`.
 
+**Steps lists** work the same way for a checklist (a list with `kind: steps`): one task on each person's to-do list ("Steps: Ring Talk (2 of 6)"), no tick of its own and nothing shown under it; you work through its steps on its own page, one tick each (no "Not available"), and the task finishes itself when the last step is done. A steps list can remind at a **place** (the house as **Home**, or any place from a Google Maps search): each time you arrive there, until it's done. Steps never go on a shopping list, and shared shopping text never goes on a steps list. Make one from the Shopping card's **New steps list** (and the same button in the Android app), or with the `church_drive.steps_create` service (`name`, `steps`, optional `people`, `date`, `time`, `at_home`). The task's description ends with `church-drive-shopping:<id> steps`.
+
 **Shopping card** (`custom:shopping-card`, options `title` and `all`): your open lists with how many items are left, a **New shopping list** button and a line for anything not available last time. Tapping a list (or its task on any Task List card, or a reminder) opens the **full-page list**: tick each item **Bought** or **Not available**, add items (several at once with commas), edit the name, people, date, time and places, navigate to a place, delete the list. The arrow, Escape or the phone's back button closes it. A page address ending `?list=<id>` opens that list (reminders link there; the card lives on the Tasks dashboard's Shopping view, `/dashboard-tasks/shopping`).
 
 ## Place reminders and snoozing
@@ -248,7 +250,6 @@ Items carry the description "Automatic · <kind> · <detail> · for <names>", wh
 
 A to-do list (`entity`, any to-do list) you can tick off, add to and change, where tasks can repeat and remind people. Tap a task, or "Add a task", to set:
 - its name and notes;
-- **Steps**: a task can have a list of steps ("Add a step"). Each step is ticked on its own in the list, which also shows how many are done ("2 of 5"). They are kept as tick lines at the end of the notes (`- [ ] step` / `- [x] step`, see `src/task-steps.js`), so the Android app shows and ticks the same ones;
 - **Repeats**: Never (with an optional due date and time), Daily (every N days), Weekly (every week, fortnightly, or every 3 or 4 weeks, on chosen days with a time for each), Monthly (every N months on a day of the month or the last day), Yearly (on a date), or After it's done (N days, weeks or months after it's ticked off). Repeats can start on a chosen date;
 - **Reminds**: anyone with a person entity, Everyone, or No one (`remind_default` sets it for new tasks).
 - **The signed-in person's own list** (`entity: mine`): each person sees their own "Priorities <first name>" list, so one card serves everyone.

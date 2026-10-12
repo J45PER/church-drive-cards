@@ -78,10 +78,8 @@ fun whenText(due: String?, now: LocalDateTime = LocalDateTime.now(), zone: ZoneI
 /** The line under a task: when it's due, then its note (a repeat such as "Every 2 weeks: Mon 09:00 · for Hayley"). */
 fun taskLine(item: TodoItem, now: LocalDateTime = LocalDateTime.now()): String {
     // A shopping list's task carries its items and a marker in the description; say how many are left instead.
-    val shopping = shoppingIdOf(item.description).isNotEmpty()
-    val note = if (shopping) shoppingNote(item.description) else withoutSteps(item.description)
-    val count = if (shopping) "" else stepsCount(stepsOf(item.description))
-    return listOf(whenText(item.due, now), note, count).filter { it.isNotBlank() }.joinToString(" · ")
+    val note = if (shoppingIdOf(item.description).isNotEmpty()) shoppingNote(item.description) else item.description.orEmpty()
+    return listOf(whenText(item.due, now), note).filter { it.isNotBlank() }.joinToString(" · ")
 }
 
 /** A job the house spotted: its kind, detail, who it's for and an icon, from the item's description. */

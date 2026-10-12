@@ -66,9 +66,10 @@ class Shopping:
         for lst in self._lists:
             # Lists made when places were zones kept zone ids: turn them into places. Every list also gets a time.
             kept = self._places_valid(lst.get("places", []))
-            if kept != lst.get("places") or "time" not in lst:
+            if kept != lst.get("places") or "time" not in lst or "kind" not in lst:
                 lst["places"] = kept
                 lst.setdefault("time", "")
+                lst.setdefault("kind", sl.SHOPPING)
                 changed = True
         if changed:
             await self._async_save()
@@ -109,9 +110,9 @@ class Shopping:
             raise KeyError(list_id)
         return found
 
-    def lists(self, first: str | None = None) -> list[dict[str, Any]]:
-        """Every list (or those a person is on), unfinished first, soonest date first."""
-        mine = [l for l in self._lists if first is None or first in l["people"]]
+    def lists(self, first: str | None = None, kind: str | None = None) -> list[dict[str, Any]]:
+        """Every list (or those a person is on, or of one kind), unfinished first, soonest date first."""
+        mine = [l for l in self._lists if (first is None or first in l["people"]) and (kind is None or sl.kind_of(l) == kind)]
         out = sorted(mine, key=lambda l: (l["done"], l["date"] == "", l["date"], l["created"]))
         return [{**l, "counts": sl.counts(l["items"])} for l in out]
 
@@ -171,15 +172,19 @@ class Shopping:
         include_missed: bool = True,
         context: Context | None = None,
         time: str = "",
+        kind: str = sl.SHOPPING,
     ) -> dict[str, Any]:
-        """Make a list. Items that weren't available last time are added when [include_missed] (and returned in 'offered')."""
+        """Make a list. Items that weren't available last time are added when [include_missed] (and returned in 'offered').
+        A steps list is a checklist: it has no missed items."""
+        kind = sl.STEPS if kind == sl.STEPS else sl.SHOPPING
         who = self._people_valid(people)
         if not who:
-            raise ValueError("A shopping list needs at least one person")
-        offered = [m["text"] for m in self._missed] if include_missed else []
-        entries, _ = sl.add_items([], [*(items or []), *offered], lambda: uuid.uuid4().hex[:8])
+            raise ValueError("A list needs at least one person")
+        offered = [m["text"] for m in self._missed] if include_missed and kind == sl.SHOPPING else []
+        entries, _ = sl.add_items([], [*(items or []), *offered], lambda: uuid.uuid4().hex[:8], kind)
         lst = {
             "id": uuid.uuid4().hex[:12],
+            "kind": kind,
             "name": _clean(name),
             "people": who,
             "date": sl.valid_date(date),
@@ -213,7 +218,7 @@ class Shopping:
         if people is not None:
             who = self._people_valid(people)
             if not who:
-                raise ValueError("A shopping list needs at least one person")
+                raise ValueError("A list needs at least one person")
             for first in set(lst["people"]) - set(who):
                 await self._async_remove_task(lst, first, context)
             lst["people"] = who
@@ -227,14 +232,15 @@ class Shopping:
 
     async def async_add_items(self, list_id: str, texts: list[str], context: Context | None = None) -> dict[str, Any]:
         lst = self._find(list_id)
-        lst["items"], added = sl.add_items(lst["items"], texts, lambda: uuid.uuid4().hex[:8])
-        self._missed = sl.drop_missed(self._missed, [i["text"] for i in lst["items"]])
+        lst["items"], added = sl.add_items(lst["items"], texts, lambda: uuid.uuid4().hex[:8], sl.kind_of(lst))
+        if sl.kind_of(lst) == sl.SHOPPING:
+            self._missed = sl.drop_missed(self._missed, [i["text"] for i in lst["items"]])
         await self._async_after(lst, context)
         return {"list": self._public(lst), "added": added}
 
     async def async_set_item(self, list_id: str, item_id: str, status: str, context: Context | None = None) -> dict[str, Any]:
         lst = self._find(list_id)
-        lst["items"] = sl.set_status(lst["items"], item_id, status)
+        lst["items"] = sl.set_status(lst["items"], item_id, status, sl.kind_of(lst))
         await self._async_after(lst, context)
         return self._public(lst)
 
@@ -274,7 +280,8 @@ class Shopping:
         lst["done"] = sl.is_done(lst["items"])
         if lst["done"] and not was_done:
             lst["done_at"] = dt_util.utcnow().isoformat()
-            self._missed = sl.merge_missed(self._missed, sl.missed_from(lst["items"]), lst["name"] or "Shopping", dt_util.now().date().isoformat())
+            if sl.kind_of(lst) == sl.SHOPPING:
+                self._missed = sl.merge_missed(self._missed, sl.missed_from(lst["items"]), lst["name"] or "Shopping", dt_util.now().date().isoformat())
         elif was_done and not lst["done"]:
             lst["done_at"] = ""
         for first in lst["people"]:
@@ -300,8 +307,8 @@ class Shopping:
             return
         data: dict[str, Any] = {
             "entity_id": todo,
-            "rename": sl.task_summary(lst["name"], lst["items"]),
-            "description": sl.task_description(lst["id"], lst["items"]),
+            "rename": sl.task_summary(lst["name"], lst["items"], sl.kind_of(lst)),
+            "description": sl.task_description(lst["id"], lst["items"], sl.kind_of(lst)),
             "status": "completed" if lst["done"] else "needs_action",
         }
         data.update(self._due(lst))
@@ -368,8 +375,11 @@ class Shopping:
             if lst.get("time"):
                 continue  # a list with a time reminds at that time instead
             c = sl.counts(lst["items"])
+            steps = sl.kind_of(lst) == sl.STEPS
             await self._async_notify(
-                lst["people"], "Shopping today", f"{lst['name'] or 'Shopping'}: {c[sl.OPEN]} to get. Tap to open the list.", lst["id"], tag=f"shopping-day-{lst['id']}"
+                lst["people"], "Steps today" if steps else "Shopping today",
+                f"{lst['name'] or ('Steps' if steps else 'Shopping')}: {c[sl.OPEN]} to {'do' if steps else 'get'}. Tap to open the list.",
+                lst["id"], tag=f"shopping-day-{lst['id']}",
             )
 
     async def _on_minute(self, now: Any) -> None:
@@ -381,8 +391,10 @@ class Shopping:
                 continue
             where = f" at {lst['places'][0]['name']}" if lst["places"] else ""
             c = sl.counts(lst["items"])
+            steps = sl.kind_of(lst) == sl.STEPS
             await self._async_notify(
-                lst["people"], "Time to go shopping", f"{lst['name'] or 'Shopping'}{where}: {c[sl.OPEN]} to get. Tap to open the list.",
+                lst["people"], "Time for your steps" if steps else "Time to go shopping",
+                f"{lst['name'] or ('Steps' if steps else 'Shopping')}{where}: {c[sl.OPEN]} to {'do' if steps else 'get'}. Tap to open the list.",
                 lst["id"], tag=f"shopping-time-{lst['id']}",
             )
 
@@ -464,7 +476,7 @@ class Shopping:
         if seen and now - seen < AGAIN:
             return
         self._last[(first, zone.entity_id)] = now
-        mine = [l for l in sl.for_person(self._lists, first) if not l["places"]]
+        mine = [l for l in sl.for_person(self._lists, first) if not l["places"] and sl.kind_of(l) == sl.SHOPPING]
         said = sl.arrival_message(zone.name, mine, self._missed)
         if said is None:
             return
