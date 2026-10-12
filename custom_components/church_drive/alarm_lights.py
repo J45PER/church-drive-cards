@@ -346,7 +346,12 @@ class AlarmLights:
         flashing, self._signalled = self._signalled, []
         if not flashing:
             return
-        await self._hue_all([(bridge, light_id, {"signal": "no_signal"}) for bridge, light_id in flashing])
+        # The bridge ignores the duration of no_signal but its rules still insist it is there.
+        stop = {"signal": "no_signal", "duration": 1000}
+        done = await self._hue_all([(bridge, light_id, stop) for bridge, light_id in flashing])
+        if not all(done):  # one more go for any it missed, so nothing is left flashing
+            await asyncio.sleep(0.5)
+            await self._hue_all([(bridge, light_id, stop) for (bridge, light_id), ok in zip(flashing, done) if not ok])
         await asyncio.sleep(SETTLE)
 
     async def _play(self, plan: dict[str, Any], seconds: float | None = None) -> None:
