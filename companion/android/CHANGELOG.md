@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.16.0
+
+- Experimental camera view, Talk through go2rtc: for a doorbell (or a camera whose card sets `talk_stream`) the live view now connects to the go2rtc stream of that name (a doorbell uses its own name, e.g. `front_door`) through Home Assistant's WebRTC Camera integration, and sends the phone's microphone to it. Home Assistant's own WebRTC could only listen to a Ring camera. If there is no such go2rtc stream the view says so and carries on, listen-only, through Home Assistant.
+- A doorbell notification can open the live view answering: give the notification the link `church-drive-camera:camera.front_door_live_view?answer`.
+
 ## 0.15.1
 
 - Experimental camera view: the picture no longer stops at half the screen with a black bar on the right when expanded or full screen. It now fills the box and starts centred, and dragging and zooming work (the live picture is drawn on a surface that scales properly).

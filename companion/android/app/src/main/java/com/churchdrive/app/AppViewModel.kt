@@ -398,6 +398,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         client.request("history/history_during_period", params) { done(com.churchdrive.app.ui.parseHistory(it)) }
     }
 
+    /** For go2rtc's signalling socket (kept alive with pings; a quiet socket is dropped by many routers). */
+    private val wsHttp = okhttp3.OkHttpClient.Builder().pingInterval(20, java.util.concurrent.TimeUnit.SECONDS).build()
+
     /** Home Assistant's address, for pictures and video links. */
     val baseUrl: String get() = session.url?.trim()?.trimEnd('/').orEmpty()
 
@@ -433,6 +436,44 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
 
         override fun close(subscription: Int) = client.unsubscribe(subscription)
+
+        override fun go2rtcSocket(stream: String, incoming: (org.json.JSONObject) -> Unit, ended: (String?) -> Unit, opened: (com.churchdrive.app.ui.Go2rtcSocket?) -> Unit) {
+            client.request("auth/sign_path", data("path" to "/api/webrtc/ws")) { result ->
+                val path = (result as? org.json.JSONObject)?.optString("path")?.takeIf { it.isNotBlank() }
+                if (path == null) {
+                    opened(null)
+                    return@request
+                }
+                val url = (baseUrl + path + (if ('?' in path) "&" else "?") + "url=" + java.net.URLEncoder.encode(stream, "UTF-8")).replaceFirst("http", "ws")
+                runCatching {
+                    wsHttp.newWebSocket(
+                        okhttp3.Request.Builder().url(url).build(),
+                        object : okhttp3.WebSocketListener() {
+                            override fun onOpen(webSocket: okhttp3.WebSocket, response: okhttp3.Response) {
+                                opened(object : com.churchdrive.app.ui.Go2rtcSocket {
+                                    override fun send(message: org.json.JSONObject) {
+                                        webSocket.send(message.toString())
+                                    }
+
+                                    override fun close() {
+                                        webSocket.close(1000, null)
+                                    }
+                                })
+                            }
+
+                            override fun onMessage(webSocket: okhttp3.WebSocket, text: String) {
+                                runCatching { org.json.JSONObject(text) }.getOrNull()?.let { incoming(it) }
+                            }
+
+                            override fun onClosed(webSocket: okhttp3.WebSocket, code: Int, reason: String) = ended(null)
+
+                            override fun onFailure(webSocket: okhttp3.WebSocket, t: Throwable, response: okhttp3.Response?) =
+                                ended(response?.let { "go2rtc answered ${it.code}" } ?: t.message ?: "Couldn't reach go2rtc")
+                        },
+                    )
+                }.onFailure { opened(null) }
+            }
+        }
 
         override fun events(base: String, done: (org.json.JSONObject?) -> Unit) {
             client.request("church_drive/camera/events", data("camera" to base)) { done(it as? org.json.JSONObject) }

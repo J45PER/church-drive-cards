@@ -183,9 +183,14 @@ class HouseService : Service() {
         /** Opens the app; a shopping reminder's link opens that list (each list its own request code, so the extras don't mix). */
         private fun openApp(context: Context, url: String? = null): PendingIntent {
             val list = com.churchdrive.app.ui.shoppingIdFromLink(url)
-            val intent = Intent(context, MainActivity::class.java).also { if (list != null) it.putExtra(MainActivity.EXTRA_SHOPPING_LIST, list) }
+            // A doorbell notification's link opens that camera, answering.
+            val camera = com.churchdrive.app.ui.cameraOpenFromLink(url)
+            val intent = Intent(context, MainActivity::class.java).also {
+                if (list != null) it.putExtra(MainActivity.EXTRA_SHOPPING_LIST, list)
+                if (camera != null) it.putExtra("camera", camera.entityId).putExtra("answer", camera.answer)
+            }
             return PendingIntent.getActivity(
-                context, list?.hashCode() ?: 0, intent,
+                context, list?.hashCode() ?: camera?.entityId?.hashCode() ?: 0, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
         }
