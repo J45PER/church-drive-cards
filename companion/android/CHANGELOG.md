@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.16.3
+
+- Live view: "LIVE" now means a picture has actually arrived, not just that the connection is up. A camera slow to start sending (a battery camera) shows "Connecting…" until its first picture. If go2rtc sends no picture within 15 seconds the view falls back to Home Assistant's connection (listen-only), and says so.
+
 ## 0.16.2
 
 - Experimental camera view: expanded and full screen are drawn a different way. The picture is no longer a view bigger than the screen that is moved and scaled (that left black areas and showed the wrong part); it is exactly the box, and the video is cropped to the part in view. Dragging and pinching still move and zoom it, and the doorbell's tall picture is still cropped to 16:9 and can be dragged up and down.
