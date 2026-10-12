@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **app 0.15.1** (2026-10-12): experimental camera view: fixes the black bar when expanded; says so when the camera won't take Talk audio
 - **app 0.15.0** (2026-10-11): Experimental page in the app's panel: the new camera live view (layout C), Talk and Answer
 - **v0.48.0** (2026-10-11): experimental `camera-experimental-card`: the new live view (16:9 video, tap-to-show buttons, bigger and landscape full screen, battery/signal, Answer and Talk); the stable camera card is unchanged
 - **v0.47.1** (2026-10-11): camera card and app back to how they were before v0.47.0 / app 0.14.0 (overlapping buttons, full screen, Talk crash); a redesign follows

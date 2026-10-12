@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.15.1
+
+- Experimental camera view: the picture no longer stops at half the screen with a black bar on the right when expanded or full screen. It now fills the box and starts centred, and dragging and zooming work (the live picture is drawn on a surface that scales properly).
+- Talk: if the camera's answer shows it won't take audio from the phone (as Ring's connection through Home Assistant may not), the view now says so and drops back to listening, instead of looking as though it is working.
+
 ## 0.15.0
 
 - A new Experimental page in the panel that opens from your name, with every camera as a tile that opens the new live view (the cameras elsewhere in the app are unchanged):
