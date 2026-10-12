@@ -1,8 +1,8 @@
 package com.churchdrive.app
 
-import com.churchdrive.app.ui.CameraLink
+import com.churchdrive.app.ui.CameraOpenLink
 import com.churchdrive.app.ui.RtcEvent
-import com.churchdrive.app.ui.cameraFromLink
+import com.churchdrive.app.ui.cameraOpenFromLink
 import com.churchdrive.app.ui.go2rtcCandidate
 import com.churchdrive.app.ui.go2rtcOffer
 import com.churchdrive.app.ui.parseGo2rtcMessage
@@ -30,10 +30,10 @@ class Go2rtcTest {
 
     @Test
     fun readsCameraLinks() {
-        assertEquals(CameraLink("camera.front_door_live_view", false), cameraFromLink("church-drive-camera:camera.front_door_live_view"))
-        assertEquals(CameraLink("camera.front_door_live_view", true), cameraFromLink("church-drive-camera:camera.front_door_live_view?answer"))
-        assertNull(cameraFromLink("church-drive-camera:light.kitchen"))
-        assertNull(cameraFromLink("https://example.com"))
-        assertNull(cameraFromLink(null))
+        assertEquals(CameraOpenLink("camera.front_door_live_view", false), cameraOpenFromLink("church-drive-camera:camera.front_door_live_view"))
+        assertEquals(CameraOpenLink("camera.front_door_live_view", true), cameraOpenFromLink("church-drive-camera:camera.front_door_live_view?answer"))
+        assertNull(cameraOpenFromLink("church-drive-camera:light.kitchen"))
+        assertNull(cameraOpenFromLink("https://example.com"))
+        assertNull(cameraOpenFromLink(null))
     }
 }

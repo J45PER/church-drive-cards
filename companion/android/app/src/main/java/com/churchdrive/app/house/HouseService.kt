@@ -184,7 +184,7 @@ class HouseService : Service() {
         private fun openApp(context: Context, url: String? = null): PendingIntent {
             val list = com.churchdrive.app.ui.shoppingIdFromLink(url)
             // A doorbell notification's link opens that camera, answering.
-            val camera = com.churchdrive.app.ui.cameraFromLink(url)
+            val camera = com.churchdrive.app.ui.cameraOpenFromLink(url)
             val intent = Intent(context, MainActivity::class.java).also {
                 if (list != null) it.putExtra(MainActivity.EXTRA_SHOPPING_LIST, list)
                 if (camera != null) it.putExtra("camera", camera.entityId).putExtra("answer", camera.answer)

@@ -140,14 +140,14 @@ fun tileAspect(width: Int, height: Int): Float =
     if (width <= 0 || height <= 0) 16f / 9f else (width.toFloat() / height).coerceIn(3f / 4f, 16f / 9f)
 
 /** A notification's link to a camera: `church-drive-camera:camera.front_door_live_view`, with `?answer` to open it answering. */
-data class CameraLink(val entityId: String, val answer: Boolean)
+data class CameraOpenLink(val entityId: String, val answer: Boolean)
 
-fun cameraFromLink(url: String?): CameraLink? {
+fun cameraOpenFromLink(url: String?): CameraOpenLink? {
     val link = url?.trim() ?: return null
     val prefix = "church-drive-camera:"
     if (!link.startsWith(prefix)) return null
     val rest = link.removePrefix(prefix)
     val id = rest.substringBefore('?')
     if (!Regex("^camera\\.[a-z0-9_]+$").matches(id)) return null
-    return CameraLink(id, "answer" in rest.substringAfter('?', ""))
+    return CameraOpenLink(id, "answer" in rest.substringAfter('?', ""))
 }
