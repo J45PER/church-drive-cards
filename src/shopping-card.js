@@ -121,14 +121,12 @@ export class ShoppingCard extends HTMLElement {
     if (!this._built) {
       this.innerHTML = kitShell(
         `<div class="sh-list" style="display:flex; flex-direction:column;"></div><div class="sh-missed"></div>
-         <div class="sh-foot" style="display:flex; flex-wrap:wrap; gap:8px;"><button type="button" class="sh-add sh-new"></button><button type="button" class="sh-add sh-new-steps"></button></div>`,
+         <div class="sh-foot"><button type="button" class="sh-add sh-new"></button></div>`,
         CSS
       );
       this.querySelector('.ck-headrow').style.display = this.config.title ? '' : 'none';
       this.querySelector('.sh-new').innerHTML = `${iconHtml('mdi:plus', { size: '18px' })}New shopping list`;
       this.querySelector('.sh-new').addEventListener('click', () => openShoppingPage(this._hass, 'new'));
-      this.querySelector('.sh-new-steps').innerHTML = `${iconHtml('mdi:format-list-checks', { size: '18px' })}New steps list`;
-      this.querySelector('.sh-new-steps').addEventListener('click', () => openShoppingPage(this._hass, 'new-steps'));
       const openRow = (ev) => {
         const row = ev.target.closest('[data-list]');
         if (row) openShoppingPage(this._hass, row.dataset.list);
@@ -143,7 +141,7 @@ export class ShoppingCard extends HTMLElement {
       this._built = true;
     }
     const d = store.data;
-    const mine = d ? d.lists.filter((l) => !l.done && (this.config.all || !d.mine || l.people.includes(d.mine))) : [];
+    const mine = d ? d.lists.filter((l) => l.kind !== 'steps' && !l.done && (this.config.all || !d.mine || l.people.includes(d.mine))) : [];
     if (this.config.title) kitHead(this, this.config.title, store.error ? 'Not set up' : mine.length ? `${mine.length} list${mine.length === 1 ? '' : 's'}` : 'No lists', COLOUR);
     this.querySelector('.sh-list').innerHTML = store.error
       ? `<div class="ck-sub" style="line-height:1.5;">${kitEsc(store.error)}</div>`
@@ -151,13 +149,13 @@ export class ShoppingCard extends HTMLElement {
       ? mine
           .map(
             (l) => `<div class="sh-row" data-list="${l.id}" tabindex="0" role="button">
-              ${iconHtml(l.kind === 'steps' ? 'mdi:format-list-checks' : 'mdi:cart-outline', { size: '20px', style: `color:${COLOUR}; flex:none;` })}
-              <div class="sh-main"><div class="sh-name">${kitEsc(l.name || (l.kind === 'steps' ? 'Steps' : 'Shopping'))}</div>
+              ${iconHtml('mdi:cart-outline', { size: '20px', style: `color:${COLOUR}; flex:none;` })}
+              <div class="sh-main"><div class="sh-name">${kitEsc(l.name || 'Shopping')}</div>
               <div class="ck-sub" style="font-size:0.74rem; line-height:1.35;">${[day(l.date), l.people.join(', '), l.places.length ? `${l.places.length} place${l.places.length === 1 ? '' : 's'}` : ''].filter(Boolean).map(kitEsc).join(' · ')}</div></div>
-              <span class="sh-when">${l.counts.open} to ${l.kind === 'steps' ? 'do' : 'get'}</span></div>`
+              <span class="sh-when">${l.counts.open} to get</span></div>`
           )
           .join('')
-      : `<div class="ck-sub" style="line-height:1.5; padding:4px 0;">No lists. Share some items, or make a shopping or steps list.</div>`;
+      : `<div class="ck-sub" style="line-height:1.5; padding:4px 0;">No shopping lists. Share some items, or make one.</div>`;
     const miss = d ? d.missed : [];
     this.querySelector('.sh-missed').textContent = miss.length ? `Not available last time: ${miss.map((m) => m.text).join(', ')}` : '';
     hydrateIcons(this);

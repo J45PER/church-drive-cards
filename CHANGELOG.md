@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **v0.51.0 + app 0.19.0** (2026-10-12): steps lists show only as tasks on the to-do page, not in the Shopping section; "New steps list" is beside "Add a task"
 - **v0.50.0 + app 0.18.0** (2026-10-12): steps lists work like shopping lists (one task on the to-do page, no tick of its own, a page of steps, finished by finishing them, optional reminder at Home); the inline steps of 0.49.0 are removed; `church_drive.steps_create` service
 - **v0.49.0 + app 0.17.0** (2026-10-12): to-do tasks can have steps: add them when changing a task, tick each on its own in the list (dashboard card and app); kept as tick lines in the task's notes
 - **app 0.16.3** (2026-10-12): live view: LIVE means a picture has arrived; falls back to Home Assistant if go2rtc sends none in 15 s

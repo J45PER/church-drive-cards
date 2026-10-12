@@ -75,7 +75,7 @@ fun parseShopping(result: Any?): ShoppingState? {
 
 /** The lists still to do, soonest date first and undated last, optionally only those [first] is on. */
 fun openLists(state: ShoppingState, first: String? = null): List<ShoppingList> =
-    state.lists.filter { !it.done && (first.isNullOrBlank() || first in it.people) }
+    state.lists.filter { !it.isSteps && !it.done && (first.isNullOrBlank() || first in it.people) }
         .sortedWith(compareBy<ShoppingList>({ it.date.isEmpty() }, { it.date }))
 
 private val MARKER = Regex("church-drive-shopping:([0-9a-f]{6,32})")

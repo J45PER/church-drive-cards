@@ -160,6 +160,8 @@ fun TaskListCard(config: JSONObject, entities: Map<String, EntityState>, call: C
                 colors = IconButtonDefaults.filledIconButtonColors(containerColor = tone.accent, contentColor = tone.onAccent),
             ) { HaIcon("mdi:plus", Icons.Filled.Info, tone.onAccent, 22.dp) }
         }
+        // A steps list is a checklist that shows in this list as one task; it is made here and worked through on its own page.
+        TileRow(listOf(TileItem("mdi:format-list-checks", "New steps list", false) { shopping = NEW_STEPS }), tone, tone.onContainer)
     }
 }
 
