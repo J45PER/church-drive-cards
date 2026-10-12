@@ -4,6 +4,15 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.15.0
+
+- A new Experimental page in the panel that opens from your name, with every camera as a tile that opens the new live view (the cameras elsewhere in the app are unchanged):
+  - The video is a 16:9 box for every camera; the doorbell's tall picture is cropped to it and can be dragged up and down.
+  - Normal: two small icons on the picture (bigger, full screen); under it a timer and Hang up / Talk / Sound, then Light, Snapshot and Events.
+  - Bigger (remembered for each camera) and full screen (the phone turns to landscape): tap the picture to show or hide the buttons, which hide after 3 seconds. Battery and signal stay on the picture. In full screen the call buttons are bottom left, + (Light, Snapshot, Events) bottom right, exit top right.
+  - Talk sends the phone's microphone to the camera over the live connection; it needs the camera or Home Assistant to accept audio from the app. A crash when switching Talk on or off is fixed.
+  - When the doorbell rings its tile has Answer, and the live view opens with a big Answer button that turns on the sound and the microphone.
+
 ## 0.14.1
 
 - Back to the 0.13.0 camera view. The 0.14.0 camera changes (Answer, Talk, bigger and full-screen views, status icons, timeline) are taken out for now: the buttons overlapped, disappeared in full screen, and Talk crashed (a disposed WebRTC audio track). They will come back with a new design.
