@@ -2,12 +2,16 @@
 
 Two kinds of alarm, two answers:
 
-- **fire**: a smoke, heat or carbon monoxide alarm. Red and amber pulses (two pulses of half a second, each
-  followed by half a second dark). By day only the strobe lights pulse; at night the constant lights come on
-  bright white as well. When it stops the strobe lights show green for a minute.
-- **security**: the house alarm going off. Set to home (or night): red and blue strobes and the constant lights
-  on. Set to away: red strobes only, the constant lights left alone. When it's turned off the strobe lights show
-  blue for a few seconds.
+- **fire**: a smoke, heat or carbon monoxide alarm. The strobe lights alternate red and amber. By day only the
+  strobe lights flash; at night the constant lights come on bright white as well. When it stops the strobe
+  lights show green for a minute.
+- **security**: the house alarm going off. Set to home (or night): the strobes alternate red and blue and the
+  constant lights come on. Set to away: red strobes only, the constant lights left alone. When it's turned off
+  the strobe lights show blue for a few seconds.
+
+How the strobes flash: Hue lights are flashed by the Hue bridge itself (one command per light, which the bridge
+repeats on its own: Hue's "signaling"), because a stream of commands from Home Assistant is throttled by the
+bridge and doesn't strobe. Any other light, or Hue if chosen, is pulsed by Home Assistant (quick on/off pulses).
 
 Fire wins if both are going. Day or night is a reading of the whole house: it is day when enough of the chosen
 light sensors are bright, and if the readings can't be had it is night, which is the safer answer (more lights).
@@ -30,6 +34,15 @@ COLOURS: dict[str, tuple[int, int, int]] = {
 # The constant lights: bright and cool, like the Hue app's Energise (156 mirek is about 6400 K).
 CONSTANT_KELVIN = 6000
 
+# The same colours as Hue CIE xy points (Hue's own gamut C primaries), for the bridge's own flashing.
+XY: dict[str, tuple[float, float]] = {
+    "red": (0.6915, 0.3083),
+    "amber": (0.5614, 0.4156),
+    "blue": (0.1532, 0.0475),
+    "green": (0.17, 0.70),
+}
+
+METHODS = ("hue", "pulses")
 RULES = ("any", "half", "all")
 KINDS = ("fire", "security_home", "security_away", "fire_ended", "disarmed")
 WHEN = ("auto", "day", "night")
@@ -44,6 +57,8 @@ DEFAULTS: dict[str, Any] = {
     "rule": "half",  # how many sensors must say day: any, half or all
     "green_seconds": 60,  # strobes show green this long after a fire stops
     "blue_seconds": 10,  # strobes show blue this long after the alarm is turned off
+    "method": "hue",  # hue: Hue lights flash on the bridge itself; pulses: Home Assistant pulses every light
+    "pulse_ms": 250,  # how long each pulse is lit, and dark, when Home Assistant does the pulsing
 }
 
 Frame = tuple[str | None, float]  # (colour name, or None for dark; seconds)
@@ -86,6 +101,10 @@ def clean_config(raw: Any, base: dict[str, Any] | None = None) -> dict[str, Any]
         cfg["green_seconds"] = _int(raw["green_seconds"], 0, 600, cfg["green_seconds"])
     if "blue_seconds" in raw:
         cfg["blue_seconds"] = _int(raw["blue_seconds"], 0, 600, cfg["blue_seconds"])
+    if raw.get("method") in METHODS:
+        cfg["method"] = raw["method"]
+    if "pulse_ms" in raw:
+        cfg["pulse_ms"] = _int(raw["pulse_ms"], 100, 1000, cfg["pulse_ms"])
     cfg["constant"] = [e for e in cfg["constant"] if e not in cfg["strobe"]]
     return {k: cfg[k] for k in DEFAULTS}
 
@@ -119,7 +138,7 @@ def security_mode(armed_before: str | None, last_armed: str | None = None, targe
     return "home"
 
 
-def pulses(colours: list[str], on: float = 0.5, off: float = 0.5) -> list[Frame]:
+def pulses(colours: list[str], on: float = 0.25, off: float = 0.25) -> list[Frame]:
     """Each colour as a pulse: `on` seconds lit, then `off` seconds dark."""
     frames: list[Frame] = []
     for colour in colours:
@@ -128,15 +147,19 @@ def pulses(colours: list[str], on: float = 0.5, off: float = 0.5) -> list[Frame]
     return frames
 
 
-def profile(kind: str, mode: str, daytime: bool) -> dict[str, Any]:
-    """What to do for a kind of alarm: whether the constant lights come on, and the strobes' repeating pattern.
+def profile(kind: str, mode: str, daytime: bool, pulse: float = 0.25) -> dict[str, Any]:
+    """What to do for a kind of alarm: whether the constant lights come on, and how the strobes flash.
 
-    kind is "fire" or "security"; mode is "home" or "away" (security only); daytime is the whole house's answer."""
+    kind is "fire" or "security"; mode is "home" or "away" (security only); daytime is the whole house's answer;
+    `pulse` is how long a pulse is lit (and dark) when Home Assistant does the pulsing.
+
+    `signal` is the Hue bridge's own flashing (alternate two colours, or flash one); `cycle` is the same thing
+    as Home Assistant pulses, for lights that aren't Hue."""
     if kind == "fire":
-        return {"constant": not daytime, "cycle": pulses(["red", "amber"])}
+        return {"constant": not daytime, "cycle": pulses(["red", "amber"], pulse, pulse), "signal": ("alternating", ["red", "amber"])}
     if mode == "away":
-        return {"constant": False, "cycle": pulses(["red"])}
-    return {"constant": True, "cycle": pulses(["red", "blue"])}
+        return {"constant": False, "cycle": pulses(["red"], pulse, pulse), "signal": ("on_off_color", ["red"])}
+    return {"constant": True, "cycle": pulses(["red", "blue"], pulse, pulse), "signal": ("alternating", ["red", "blue"])}
 
 
 def ending(kind: str, cfg: dict[str, Any]) -> tuple[str | None, int]:
@@ -157,9 +180,10 @@ def plan_for(test: str, when: str, daytime_now: bool, mode_cfg: dict[str, Any]) 
         kind = "fire" if test == "fire_ended" else "security"
         colour, seconds = ending(kind, mode_cfg)
         return {"end": colour, "seconds": seconds, "daytime": day}
+    pulse = mode_cfg["pulse_ms"] / 1000
     if test == "fire":
-        return {**profile("fire", "home", day), "daytime": day}
-    return {**profile("security", "home" if test == "security_home" else "away", day), "daytime": day}
+        return {**profile("fire", "home", day, pulse), "daytime": day}
+    return {**profile("security", "home" if test == "security_home" else "away", day, pulse), "daytime": day}
 
 
 def roles(cfg: dict[str, Any], expand) -> tuple[list[str], list[str]]:

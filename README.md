@@ -66,18 +66,18 @@ Each light, room or zone is a **Strobe** light (it pulses), a **Constant** light
 
 | What goes off | Strobe lights | Constant lights |
 |---|---|---|
-| Fire, smoke, heat or CO, by day | red and amber pulses | left alone |
-| Fire, smoke, heat or CO, at night | red and amber pulses | bright white |
-| House alarm, set to **home** or night | red and blue strobes | bright white |
-| House alarm, set to **away** | red strobes | left alone |
+| Fire, smoke, heat or CO, by day | alternate red and amber | left alone |
+| Fire, smoke, heat or CO, at night | alternate red and amber | bright white |
+| House alarm, set to **home** or night | alternate red and blue | bright white |
+| House alarm, set to **away** | flash red | left alone |
 
-- **A pulse** is half a second lit, half a second dark. Fire alternates a red pulse and an amber one; the house alarm a red and a blue.
+- **How the strobes flash.** Hue lights are flashed by the **Hue bridge itself** (Hue's "signaling": one command per light, which the bridge then repeats on its own for the whole alarm, renewed every 5 minutes). Sending the bridge a stream of on/off commands doesn't strobe, because it throttles them. Any light that isn't Hue, or every light if you pick "Home Assistant pulses" on the card, is pulsed by Home Assistant instead: quick on/off pulses (250 ms lit and 250 ms dark by default, a setting), each waiting for the last, so they can't queue up. The bridge's own flashing speed is fixed.
 - **Fire wins** if both are going; when the fire stops and the house alarm still goes, it goes back to the house alarm.
-- **When it's over** the strobe lights show **green** for a minute after a fire, or **blue** for 10 seconds when the house alarm is turned off (both lengths are settings), then every light goes back to how it was before the first alarm (saved as `scene.church_drive_before_alarm`). An alarm that times out back to armed puts the lights back with no blue.
+- **When it's over** the strobe lights show **green** for a minute after a fire, or **blue** for 10 seconds when the house alarm is turned off (both lengths are settings), then every light goes back to how it was before the first alarm (saved as `scene.church_drive_before_alarm`, one entry per single light, never per room). The bridge is told to stop flashing first and the lights are put back twice (a second time a couple of seconds later) in case a slow one missed the first. An alarm that times out back to armed puts the lights back with no blue.
 - **Day or night** is for the whole house. Tick the light sensors to use, how bright counts as day (50 lx by default) and how many must agree (any, at least half, or all). It's read once, when the alarm starts, because the alarm's own lights would otherwise change the readings. With no readings it counts as night, which lights more.
 - **Test (lights only).** The card's buttons play Fire, Alarm home, Alarm away, Fire over and Alarm off on the lights alone, pretending it is day, night or as it is now, for 5 to 120 seconds, then put the lights back. No alarm, no notification, nothing else. A test is refused while a real alarm is going, a real alarm ends a test, and **Stop** ends one at once.
 - **Off switch.** Turning it off on the card leaves the lights alone in an alarm (and puts them back if one is going).
-- Hue only takes a few commands a second, so with many strobe rooms the half-second pulses may lag; try a test and choose fewer rooms if so.
+- Hue only takes about ten commands a second, which is why Hue lights flash on the bridge. If you choose Home Assistant pulses, many strobe rooms will lag.
 
 Settings are kept in `.storage/church_drive.alarm_lights`. Websocket commands `church_drive/alarm_lights` (read), `/set`, `/test` and `/stop` (administrators) serve the card, and `church_drive_alarm_lights_changed` fires when anything changes. Later ideas: lights only in rooms where someone is (people and pets) during a fire, and green lights marking the safest way out.
 
@@ -300,7 +300,7 @@ lists the people and who's assigned to each kind (`assign`), for templates.
 
 ### `alarm-lights-card`
 
-What the lights do when an alarm goes off (see **Alarm lights** above): a Strobe / Constant / Off choice for each room and zone, the light sensors that decide day or night (with their live readings), how long the green and blue "all clear" colours last, an on/off switch, and a **lights-only test** with Stop. Only administrators can change it. Options: `title`, `color`, `demo`.
+What the lights do when an alarm goes off (see **Alarm lights** above): a Strobe / Constant / Off choice for each room and zone, the light sensors that decide day or night (with their live readings), how the strobes flash (Hue bridge or Home Assistant pulses, and the pulse length), how long the green and blue "all clear" colours last, an on/off switch, and a **lights-only test** with Stop. Only administrators can change it. Options: `title`, `color`, `demo`.
 
 ### `media-card`
 
