@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **app 0.16.3** (2026-10-12): live view: LIVE means a picture has arrived; falls back to Home Assistant if go2rtc sends none in 15 s
 - **app 0.16.2** (2026-10-12): experimental camera view: expanded/full screen cropped in the video (fixes black areas); go2rtc Talk uses HA's relay; says why go2rtc failed
 - **app 0.16.1** (2026-10-12): experimental camera view: every camera tries its own go2rtc stream for Talk
 - **v0.48.1** (2026-10-12): experimental camera card: with `talk_stream` it falls back to Home Assistant's live view (listen-only) if the go2rtc stream isn't there

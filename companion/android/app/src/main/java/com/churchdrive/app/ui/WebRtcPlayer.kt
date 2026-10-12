@@ -147,6 +147,8 @@ private class RtcSession(
         if (!firstFrame) {
             firstFrame = true
             CrashReport.note("first picture ${frame.rotatedWidth}x${frame.rotatedHeight}")
+            // Playing means a picture has arrived, not just that the connection is up (a battery camera can be slow to start sending).
+            if (playing.compareAndSet(false, true)) main.post { onStatus(null) }
             // The picture's own shape, so a square or portrait camera can fill the screen when shown full screen.
             if (frame.rotatedHeight > 0) main.post { onAspect(frame.rotatedWidth.toFloat() / frame.rotatedHeight) }
         }
@@ -177,8 +179,8 @@ private class RtcSession(
         // Give up if nothing is playing after a while, so the viewer says so instead of waiting for ever.
         timeout = Thread {
             try {
-                Thread.sleep(if (go2rtc != null) 12_000 else 25_000)
-                if (!closed.get() && !playing.get()) fail("The camera didn't answer. Try again.")
+                Thread.sleep(if (go2rtc != null) 15_000 else 25_000)
+                if (!closed.get() && !playing.get()) fail(if (go2rtc != null) "no picture from go2rtc in 15 seconds" else "The camera didn't answer. Try again.")
             } catch (_: InterruptedException) {
             }
         }.also { it.isDaemon = true; it.start() }
@@ -387,7 +389,6 @@ private class RtcSession(
                 videoTrack = track
                 track.setEnabled(true)
                 track.addSink(sink)
-                if (playing.compareAndSet(false, true)) onStatus(null)
             }
             is AudioTrack -> {
                 track.setEnabled(false) // muted until asked, so nothing plays at first
