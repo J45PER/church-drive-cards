@@ -4,6 +4,56 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.18.1
+
+- The app has a new icon (the Church Drive house with its glow) and a matching splash screen. The icon sits on a dark background and, on Android 13 and newer, has a themed version that takes your wallpaper's colours.
+
+## 0.18.0
+
+- Steps lists replace steps inside a to-do task. A steps list works like a shopping list: it is one task on the to-do page (no tick of its own, and no steps shown under it), and you work through its steps on its own page, one tick each. The task finishes itself when the last step is done. Make one from the Shopping card's "New steps list"; it can remind you at Home.
+- The inline steps of 0.17.0 are gone.
+
+## 0.17.0
+
+- To-do tasks can have steps. Edit a task and use "Add a step"; each step is ticked on its own in the list, and the line under the task says how many are done ("2 of 5"). The steps are kept in the task's notes, so the dashboard's task list shows and ticks the same ones.
+
+## 0.16.3
+
+- Live view: "LIVE" now means a picture has actually arrived, not just that the connection is up. A camera slow to start sending (a battery camera) shows "Connecting…" until its first picture. If go2rtc sends no picture within 15 seconds the view falls back to Home Assistant's connection (listen-only), and says so.
+
+## 0.16.2
+
+- Experimental camera view: expanded and full screen are drawn a different way. The picture is no longer a view bigger than the screen that is moved and scaled (that left black areas and showed the wrong part); it is exactly the box, and the video is cropped to the part in view. Dragging and pinching still move and zoom it, and the doorbell's tall picture is still cropped to 16:9 and can be dragged up and down.
+- Talk through go2rtc now also uses the relay server Home Assistant gives for its own live view, so it can work on mobile data and not only on the home Wi-Fi.
+- When go2rtc can't connect, the view now says why (for any camera) before carrying on listen-only.
+
+## 0.16.1
+
+- Experimental camera view: every camera now tries the go2rtc stream named after it (`driveway`, `entrance`, `garden`, `living_room`, `front_door`) for Talk, not just the doorbell. A camera with no such stream just listens, as before.
+
+## 0.16.0
+
+- Experimental camera view, Talk through go2rtc: for a doorbell (or a camera whose card sets `talk_stream`) the live view now connects to the go2rtc stream of that name (a doorbell uses its own name, e.g. `front_door`) through Home Assistant's WebRTC Camera integration, and sends the phone's microphone to it. Home Assistant's own WebRTC could only listen to a Ring camera. If there is no such go2rtc stream the view says so and carries on, listen-only, through Home Assistant.
+- A doorbell notification can open the live view answering: give the notification the link `church-drive-camera:camera.front_door_live_view?answer`.
+
+## 0.15.1
+
+- Experimental camera view: the picture no longer stops at half the screen with a black bar on the right when expanded or full screen. It now fills the box and starts centred, and dragging and zooming work (the live picture is drawn on a surface that scales properly).
+- Talk: if the camera's answer shows it won't take audio from the phone (as Ring's connection through Home Assistant may not), the view now says so and drops back to listening, instead of looking as though it is working.
+
+## 0.15.0
+
+- A new Experimental page in the panel that opens from your name, with every camera as a tile that opens the new live view (the cameras elsewhere in the app are unchanged):
+  - The video is a 16:9 box for every camera; the doorbell's tall picture is cropped to it and can be dragged up and down.
+  - Normal: two small icons on the picture (bigger, full screen); under it a timer and Hang up / Talk / Sound, then Light, Snapshot and Events.
+  - Bigger (remembered for each camera) and full screen (the phone turns to landscape): tap the picture to show or hide the buttons, which hide after 3 seconds. Battery and signal stay on the picture. In full screen the call buttons are bottom left, + (Light, Snapshot, Events) bottom right, exit top right.
+  - Talk sends the phone's microphone to the camera over the live connection; it needs the camera or Home Assistant to accept audio from the app. A crash when switching Talk on or off is fixed.
+  - When the doorbell rings its tile has Answer, and the live view opens with a big Answer button that turns on the sound and the microphone.
+
+## 0.14.1
+
+- Back to the 0.13.0 camera view. The 0.14.0 camera changes (Answer, Talk, bigger and full-screen views, status icons, timeline) are taken out for now: the buttons overlapped, disappeared in full screen, and Talk crashed (a disposed WebRTC audio track). They will come back with a new design.
+
 ## 0.13.0
 
 - Jarvis is full screen only. The small sheet is gone (it kept sliding and was a second layout to keep matching), along with the "Voice opens full screen" setting. He opens and closes the same way as every other pop-up.

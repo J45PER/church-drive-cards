@@ -83,6 +83,7 @@ fun HomeScreen(
     onOpened: () -> Unit = {},
     /** A camera (entity id) a widget asked to see live, until it is closed. */
     openCamera: String? = null,
+    openCameraAnswer: Boolean = false,
     onCameraClosed: () -> Unit = {},
 ) {
     var page by rememberSaveable { mutableStateOf(Page.Home) }
@@ -218,7 +219,7 @@ fun HomeScreen(
             }
         }
     }
-    if (openCamera != null && statesLoaded) CameraViewerFor(openCamera, entities, registry, call, onCameraClosed)
+    if (openCamera != null && statesLoaded) CameraViewerFor(openCamera, entities, registry, call, onCameraClosed, answer = openCameraAnswer)
     AccountOverlay(
         panel, { panel = it }, userName, isAdmin, account, updateAvailable, onSignOut,
         adminPages = adminPages,
@@ -234,6 +235,7 @@ fun HomeScreen(
             val key = if (p == Page.Energy) "energy" else "devices"
             DashboardPage(panels[key].orEmpty(), entities, registry, call)
         },
+        experimentalContent = { ExperimentalPage(entities, registry, call) },
     )
     }
 }
@@ -408,5 +410,20 @@ fun LoadingNote(text: String) {
     androidx.compose.foundation.layout.Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth())
         Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+/** The Experimental page: every camera as a tile that opens the new live view ("layout C"). */
+@Composable
+private fun ExperimentalPage(entities: Map<String, EntityState>, registry: Registry, call: CallService) {
+    val cameras = entities.keys.filter { it.startsWith("camera.") && it.endsWith("_live_view") }.sorted()
+    androidx.compose.foundation.layout.Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            "The new camera live view. Tap a camera. The two small icons on the picture are bigger and full screen; in those, tap the picture to show or hide the buttons. The doorbell shows Answer while it rings.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (cameras.isEmpty()) Text("No cameras found.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        cameras.forEach { id -> CameraCard(org.json.JSONObject().put("entity", id), entities, registry, call, experimental = true) }
     }
 }

@@ -22,8 +22,21 @@ interface CameraHost {
 
     fun close(subscription: Int)
 
+    /**
+     * A socket to go2rtc's WebRTC signalling for [stream] (through Home Assistant's WebRTC Camera integration, signed in with our login).
+     * [opened] gets the socket, or null if it can't be opened; [onMessage] every message from go2rtc; [onClosed] why it ended (null if it just closed).
+     */
+    fun go2rtcSocket(stream: String, onMessage: (JSONObject) -> Unit, onClosed: (String?) -> Unit, opened: (Go2rtcSocket?) -> Unit)
+
     /** A camera's saved events (`church_drive/camera/events`), or null if the integration can't give them. */
     fun events(base: String, done: (JSONObject?) -> Unit)
 }
 
 val LocalCameraHost = compositionLocalOf<CameraHost?> { null }
+
+/** An open connection to go2rtc's signalling. */
+interface Go2rtcSocket {
+    fun send(message: JSONObject)
+
+    fun close()
+}

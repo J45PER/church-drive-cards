@@ -69,6 +69,7 @@ WS_REMINDER_SET = "church_drive/reminders/set"
 
 # Shopping lists (shopping.py): one task per list, items bought or unavailable.
 SERVICE_SHOPPING_ADD = "shopping_add"
+SERVICE_STEPS_CREATE = "steps_create"
 WS_SHOPPING = "church_drive/shopping"
 WS_SHOPPING_CREATE = "church_drive/shopping/create"
 WS_SHOPPING_UPDATE = "church_drive/shopping/update"

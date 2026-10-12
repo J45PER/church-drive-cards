@@ -73,6 +73,9 @@ fun rememberShoppingModel(): ShoppingModel {
 
 private typealias Send = (String, JSONObject, (Any?) -> Unit) -> Unit
 
+/** The list id [ShoppingScreen] is given to start a new steps list (as "new" starts a shopping list). */
+const val NEW_STEPS = "new-steps"
+
 private const val NOT_READY = "Couldn't read the shopping lists. The house may need Church Drive 0.42 or newer."
 
 /**
@@ -85,9 +88,10 @@ fun ShoppingScreen(listId: String, onClose: () -> Unit) {
     val model = rememberShoppingModel()
     val tone = toneColors(Tone.Indigo)
     var id by remember(listId) { mutableStateOf(listId) }
-    var editing by remember(listId) { mutableStateOf(listId == "new") }
+    var editing by remember(listId) { mutableStateOf(listId == "new" || listId == NEW_STEPS) }
     var message by remember { mutableStateOf("") }
     val list = model.state?.lists?.firstOrNull { it.id == id }
+    val steps = list?.isSteps ?: (listId == NEW_STEPS)
     val send: Send = { type, params, then ->
         api?.request(type, params) { r ->
             if (r == null) message = "That didn't work. Try again." else {
@@ -106,7 +110,8 @@ fun ShoppingScreen(listId: String, onClose: () -> Unit) {
                         HaIcon("mdi:arrow-left", Icons.Filled.Info, MaterialTheme.colorScheme.onBackground, 24.dp)
                     }
                     Text(
-                        if (editing) (if (list == null) "New shopping list" else "Edit list") else list?.title ?: "Shopping",
+                        if (editing) (if (list == null) (if (steps) "New steps list" else "New shopping list") else if (steps) "Edit steps" else "Edit list")
+                        else list?.title ?: (if (steps) "Steps" else "Shopping"),
                         style = MaterialTheme.typography.titleLarge, maxLines = 1, modifier = Modifier.weight(1f),
                     )
                 }
@@ -118,7 +123,7 @@ fun ShoppingScreen(listId: String, onClose: () -> Unit) {
                     val state = model.state
                     when {
                         state == null -> Text(if (model.failed) NOT_READY else "Loading…")
-                        editing -> ShoppingForm(list, state, tone, send, { newId -> if (newId != null) id = newId; editing = false }, back)
+                        editing -> ShoppingForm(list, steps, state, tone, send, { newId -> if (newId != null) id = newId; editing = false }, back)
                         list == null -> Text("This list has been deleted or finished.")
                         else -> ShoppingItemsView(list, state, tone, send, { editing = true }, close)
                     }
@@ -149,10 +154,14 @@ private fun ShoppingItemsView(list: ShoppingList, state: ShoppingState, tone: To
     if (list.places.isNotEmpty() && !list.done) {
         TileRow(list.places.map { p -> TileItem("mdi:navigation-variant", "Navigate to ${p.name}", true) { navigateTo(context, p) } }, tone, neutral.onContainer)
     }
+    val steps = list.isSteps
     val total = list.items.size
-    Text(if (total == 0) "Nothing on the list yet." else "${total - list.open} of $total done", style = MaterialTheme.typography.titleSmall)
+    Text(
+        if (total == 0) (if (steps) "No steps yet." else "Nothing on the list yet.") else "${total - list.open} of $total done" + if (steps) " · ${list.open} to do" else "",
+        style = MaterialTheme.typography.titleSmall,
+    )
     if (list.done) {
-        val missed = list.items.count { it.status == "unavailable" }
+        val missed = if (steps) 0 else list.items.count { it.status == "unavailable" }
         EntityCard(tone.container, tone.onContainer) {
             Text("All done. This list goes tomorrow.", style = MaterialTheme.typography.titleMedium)
             if (missed > 0) Text("$missed ${if (missed == 1) "wasn't" else "weren't"} available; you'll be reminded next time.", style = MaterialTheme.typography.bodyMedium)
@@ -161,7 +170,7 @@ private fun ShoppingItemsView(list: ShoppingList, state: ShoppingState, tone: To
     var text by remember(list.id) { mutableStateOf("") }
     OutlinedTextField(
         value = text, onValueChange = { text = it }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-        placeholder = { Text("Add an item (or several, with commas)") },
+        placeholder = { Text(if (steps) "Add a step" else "Add an item (or several, with commas)") },
     )
     TileRow(
         listOf(
@@ -182,7 +191,8 @@ private fun ShoppingItemsView(list: ShoppingList, state: ShoppingState, tone: To
         EntityCard(neutral.container, neutral.onContainer) {
             Text(item.text, style = MaterialTheme.typography.bodyLarge)
             TileRow(
-                listOf(
+                if (steps) listOf(TileItem("mdi:check", "Done", true) { setStatus(item, "bought") })
+                else listOf(
                     TileItem("mdi:close", "Not available", false) { setStatus(item, "unavailable") },
                     TileItem("mdi:check", "Bought", true) { setStatus(item, "bought") },
                 ),
@@ -192,7 +202,7 @@ private fun ShoppingItemsView(list: ShoppingList, state: ShoppingState, tone: To
     }
     val finished = list.items.filter { it.status != "open" }
     if (finished.isNotEmpty()) {
-        Text("Bought and not available", style = MaterialTheme.typography.titleSmall)
+        Text(if (steps) "Done" else "Bought and not available", style = MaterialTheme.typography.titleSmall)
         finished.forEach { item ->
             Row(modifier = Modifier.fillMaxWidth().clickable { setStatus(item, "open") }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -217,7 +227,7 @@ private fun ShoppingItemsView(list: ShoppingList, state: ShoppingState, tone: To
 }
 
 @Composable
-private fun ShoppingForm(existing: ShoppingList?, state: ShoppingState, tone: ToneColors, send: Send, onSaved: (String?) -> Unit, onCancel: () -> Unit) {
+private fun ShoppingForm(existing: ShoppingList?, steps: Boolean, state: ShoppingState, tone: ToneColors, send: Send, onSaved: (String?) -> Unit, onCancel: () -> Unit) {
     val neutral = toneColors(Tone.Grey)
     var name by remember { mutableStateOf(existing?.name.orEmpty()) }
     var who by remember { mutableStateOf(existing?.people ?: listOfNotNull(state.mine.ifEmpty { null })) }
@@ -228,13 +238,26 @@ private fun ShoppingForm(existing: ShoppingList?, state: ShoppingState, tone: To
     var results by remember { mutableStateOf<List<ShoppingPlace>>(emptyList()) }
     var searchNote by remember { mutableStateOf("") }
     var items by remember { mutableStateOf("") }
-    var withMissed by remember { mutableStateOf(existing == null && state.missed.isNotEmpty()) }
+    var withMissed by remember { mutableStateOf(!steps && existing == null && state.missed.isNotEmpty()) }
+    // The house, for a one-tap "Home" place on a steps list (Home Assistant's zone.home).
+    val api = LocalHaApi.current
+    var home by remember { mutableStateOf<ShoppingPlace?>(null) }
+    LaunchedEffect(steps, api) {
+        if (steps) {
+            val all = api?.ask("get_states", JSONObject()) as? JSONArray
+            val zone = all?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it) }.firstOrNull { it.optString("entity_id") == "zone.home" } }
+            val at = zone?.optJSONObject("attributes")
+            if (at != null && at.has("latitude") && at.has("longitude")) {
+                home = ShoppingPlace("Home", "", at.optDouble("latitude"), at.optDouble("longitude"))
+            }
+        }
+    }
     var error by remember { mutableStateOf("") }
     if (error.isNotEmpty()) Text(error, color = MaterialTheme.colorScheme.error)
     OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
     Text("Who is it for?", style = MaterialTheme.typography.titleSmall)
     TileRow(state.people.map { p -> TileItem("mdi:account-outline", p, p in who) { who = if (p in who) who - p else who + p } }, tone, neutral.onContainer)
-    Text("Date to go shopping", style = MaterialTheme.typography.titleSmall)
+    Text(if (steps) "Date and time (optional)" else "Date to go shopping", style = MaterialTheme.typography.titleSmall)
     val today = LocalDate.now()
     val weekend = today.with(TemporalAdjusters.nextOrSame(DayOfWeek.SATURDAY)).toString()
     TileRow(
@@ -250,7 +273,14 @@ private fun ShoppingForm(existing: ShoppingList?, state: ShoppingState, tone: To
     if (date.isNotEmpty()) {
         OutlinedTextField(value = time, onValueChange = { time = it.trim() }, label = { Text("Time (HH:MM, optional)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
     }
-    Text("Where will you buy it? Search Google Maps", style = MaterialTheme.typography.titleSmall)
+    Text(if (steps) "Remind me at a place (optional)" else "Where will you buy it? Search Google Maps", style = MaterialTheme.typography.titleSmall)
+    home?.let { h ->
+        val chosen = places.any { it.name == "Home" && it.lat == h.lat && it.lon == h.lon }
+        TileRow(
+            listOf(TileItem("mdi:home-outline", "Home", chosen) { places = if (chosen) places.filterNot { it.name == "Home" && it.lat == h.lat && it.lon == h.lon } else if (places.size < 5) places + h else places }),
+            tone, neutral.onContainer,
+        )
+    }
     if (places.isNotEmpty()) {
         TileRow(places.map { p -> TileItem("mdi:map-marker-remove-outline", p.name, true) { places = places - p } }, tone, neutral.onContainer)
     }
@@ -295,10 +325,10 @@ private fun ShoppingForm(existing: ShoppingList?, state: ShoppingState, tone: To
     }
     if (existing == null) {
         OutlinedTextField(
-            value = items, onValueChange = { items = it }, label = { Text("Items (one per line)") },
+            value = items, onValueChange = { items = it }, label = { Text(if (steps) "Steps (one per line)" else "Items (one per line)") },
             minLines = 3, modifier = Modifier.fillMaxWidth(),
         )
-        if (state.missed.isNotEmpty()) {
+        if (!steps && state.missed.isNotEmpty()) {
             val n = state.missed.size
             TileRow(
                 listOf(TileItem("mdi:alert-circle-outline", "Add the $n not available last time", withMissed) { withMissed = !withMissed }),
@@ -316,6 +346,7 @@ private fun ShoppingForm(existing: ShoppingList?, state: ShoppingState, tone: To
                 } else if (existing == null) {
                     val body = JSONObject().put("name", name.trim()).put("people", JSONArray(who)).put("date", date).put("time", time).put("places", JSONArray(places.map { it.toJson() }))
                         .put("items", JSONArray(splitItems(items))).put("include_missed", withMissed)
+                    if (steps) body.put("kind", "steps")
                     send("church_drive/shopping/create", body) { r -> onSaved(((r as? JSONObject)?.optJSONObject("list"))?.optString("id")) }
                 } else {
                     val body = JSONObject().put("list", existing.id).put("name", name.trim()).put("people", JSONArray(who)).put("date", date).put("time", time).put("places", JSONArray(places.map { it.toJson() }))
@@ -347,20 +378,26 @@ fun ShoppingCard(config: JSONObject) {
                     modifier = Modifier.fillMaxWidth().clickable { open = l.id }.padding(vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    HaIcon("mdi:cart-outline", Icons.Filled.Info, tone.accent, 26.dp)
+                    HaIcon(if (l.isSteps) "mdi:format-list-checks" else "mdi:cart-outline", Icons.Filled.Info, tone.accent, 26.dp)
                     Column(modifier = Modifier.weight(1f)) {
                         Text(l.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
                         val sub = listOf(whenText(l.date.ifEmpty { null }), l.time.takeIf { l.date.isNotEmpty() }.orEmpty(), l.people.joinToString(", "), l.places.joinToString(", ") { it.name })
                             .filter { it.isNotBlank() }.joinToString(" · ")
                         if (sub.isNotEmpty()) Text(sub, style = MaterialTheme.typography.bodySmall, color = tone.onContainer.copy(alpha = 0.75f), maxLines = 1)
                     }
-                    Text("${l.open} to get", style = MaterialTheme.typography.labelLarge)
+                    Text("${l.open} ${if (l.isSteps) "to do" else "to get"}", style = MaterialTheme.typography.labelLarge)
                 }
             }
             if (state.missed.isNotEmpty()) {
                 Text("Not available last time: ${state.missed.joinToString(", ")}", style = MaterialTheme.typography.bodySmall)
             }
         }
-        TileRow(listOf(TileItem("mdi:plus", "New shopping list", false) { open = "new" }), tone, tone.onContainer)
+        TileRow(
+            listOf(
+                TileItem("mdi:plus", "New shopping list", false) { open = "new" },
+                TileItem("mdi:format-list-checks", "New steps list", false) { open = NEW_STEPS },
+            ),
+            tone, tone.onContainer,
+        )
     }
 }

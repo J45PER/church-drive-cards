@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -27,6 +28,7 @@ import org.webrtc.RtpTransceiver
 import org.webrtc.SdpObserver
 import org.webrtc.SessionDescription
 import org.webrtc.SurfaceViewRenderer
+import org.webrtc.VideoSink
 import org.webrtc.VideoTrack
 import org.webrtc.audio.JavaAudioDeviceModule
 import com.churchdrive.app.CrashReport
@@ -38,30 +40,63 @@ import java.util.concurrent.atomic.AtomicBoolean
  * same connection. [onStatus] gets null once the picture is playing, or a message if it can't be.
  */
 @Composable
-fun WebRtcPlayer(entityId: String, muted: Boolean, modifier: Modifier = Modifier, onAspect: (Float) -> Unit = {}, onStatus: (String?) -> Unit) {
+fun WebRtcPlayer(
+    entityId: String,
+    muted: Boolean,
+    modifier: Modifier = Modifier,
+    talking: Boolean = false,
+    /** Draw into a TextureView, which (unlike a SurfaceView) can be scaled, moved and cropped like any other view. */
+    texture: Boolean = false,
+    /** The camera's answer didn't take our microphone. */
+    onTalkRefused: () -> Unit = {},
+    /** Connect through go2rtc's stream of this name (two-way audio) instead of Home Assistant's own WebRTC. */
+    go2rtc: String? = null,
+    /** go2rtc couldn't give the stream (not set up, not reachable); says why. */
+    onGo2rtcFailed: (String) -> Unit = {},
+    /** The part of the picture to show (only on a texture view): the frames are cropped to it. */
+    viewport: ViewRect? = null,
+    onAspect: (Float) -> Unit = {},
+    onStatus: (String?) -> Unit,
+) {
     val context = LocalContext.current
     val host = LocalCameraHost.current
     val egl = remember { EglBase.create() }
     val renderer = remember {
-        SurfaceViewRenderer(context).apply {
-            init(egl.eglBaseContext, null)
-            setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT)
-            setEnableHardwareScaler(true)
+        if (texture) {
+            val t = VideoTextureRenderer(context).also { it.init(egl.eglBaseContext) }
+            RtcPicture(t, t, t) { t.release() }
+        } else {
+            val s = SurfaceViewRenderer(context).apply {
+                init(egl.eglBaseContext, null)
+                setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT)
+                setEnableHardwareScaler(true)
+            }
+            RtcPicture(s, s, null) { s.release() }
         }
     }
     var audio by remember { mutableStateOf<AudioTrack?>(null) }
-    LaunchedEffect(muted, audio) { audio?.setEnabled(!muted) }
+    SideEffect { renderer.texture?.viewport = viewport }
+    // The track belongs to one connection: once that is closed it can't be touched (a stale one crashed the app).
+    LaunchedEffect(muted, audio) { runCatching { audio?.setEnabled(!muted) } }
 
-    DisposableEffect(entityId) {
-        val session = host?.let { RtcSession(context, egl, it, entityId, renderer, { track -> audio = track }, onStatus, onAspect) }
-        if (session == null) onStatus("Live view isn't available.") else session.start()
+    // The picture's surface lives as long as the player; the connection restarts when Talk is turned on or off (the camera
+    // is asked again, now with or without our microphone).
+    DisposableEffect(Unit) {
         onDispose {
-            session?.close()
             renderer.release()
             egl.release()
         }
     }
-    AndroidView(factory = { renderer }, modifier = modifier)
+    DisposableEffect(entityId, talking, go2rtc) {
+        onStatus("Starting live view…")
+        val session = host?.let { RtcSession(context, egl, it, entityId, renderer.sink, talking, { track -> audio = track }, onStatus, onAspect, onTalkRefused, go2rtc, onGo2rtcFailed) }
+        if (session == null) onStatus("Live view isn't available.") else session.start()
+        onDispose {
+            audio = null
+            session?.close()
+        }
+    }
+    AndroidView(factory = { renderer.view }, modifier = modifier)
 }
 
 /**
@@ -82,14 +117,21 @@ private class RtcSession(
     private val egl: EglBase,
     private val host: CameraHost,
     private val entityId: String,
-    private val renderer: SurfaceViewRenderer,
+    private val renderer: VideoSink,
+    /** Send our microphone too (two-way audio). */
+    private val talk: Boolean,
     private val onAudio: (AudioTrack) -> Unit,
     private val onStatus: (String?) -> Unit,
     private val onAspect: (Float) -> Unit,
+    private val onTalkRefused: () -> Unit,
+    /** The go2rtc stream to use, or null for Home Assistant's own WebRTC. */
+    private val go2rtc: String?,
+    private val onGo2rtcFailed: (String) -> Unit,
 ) : PeerConnection.Observer {
     private var factory: PeerConnectionFactory? = null
     private var connection: PeerConnection? = null
     private var subscription = -1
+    private var socket: Go2rtcSocket? = null
     private var sessionId: String? = null
     private var servers: List<IceServerSpec> = emptyList()
     private var generation = 0
@@ -105,26 +147,40 @@ private class RtcSession(
         if (!firstFrame) {
             firstFrame = true
             CrashReport.note("first picture ${frame.rotatedWidth}x${frame.rotatedHeight}")
+            // Playing means a picture has arrived, not just that the connection is up (a battery camera can be slow to start sending).
+            if (playing.compareAndSet(false, true)) main.post { onStatus(null) }
             // The picture's own shape, so a square or portrait camera can fill the screen when shown full screen.
             if (frame.rotatedHeight > 0) main.post { onAspect(frame.rotatedWidth.toFloat() / frame.rotatedHeight) }
         }
         renderer.onFrame(frame)
     }
     private var audioModule: JavaAudioDeviceModule? = null
+    private var micSource: org.webrtc.AudioSource? = null
+    private var micTrack: AudioTrack? = null
 
     fun start() {
-        CrashReport.note("live view: $entityId")
-        host.iceServers(entityId) { list ->
-            if (closed.get()) return@iceServers
-            servers = parseIceServers(list)
-            CrashReport.note("ice servers: ${servers.size}")
-            attempt(0)
+        CrashReport.note("live view: $entityId${if (go2rtc != null) " through go2rtc stream $go2rtc" else ""}")
+        if (go2rtc != null) {
+            // go2rtc is at home: from away (mobile data) the phone needs the same relay Home Assistant gives for its own live view, as well as a public STUN server.
+            host.iceServers(entityId) { list ->
+                if (closed.get()) return@iceServers
+                servers = parseIceServers(list) + IceServerSpec(listOf("stun:stun.l.google.com:19302"), null, null)
+                CrashReport.note("ice servers for go2rtc: ${servers.size}")
+                attempt(0)
+            }
+        } else {
+            host.iceServers(entityId) { list ->
+                if (closed.get()) return@iceServers
+                servers = parseIceServers(list)
+                CrashReport.note("ice servers: ${servers.size}")
+                attempt(0)
+            }
         }
         // Give up if nothing is playing after a while, so the viewer says so instead of waiting for ever.
         timeout = Thread {
             try {
-                Thread.sleep(25_000)
-                if (!closed.get() && !playing.get()) onStatus("The camera didn't answer. Try again.")
+                Thread.sleep(if (go2rtc != null) 15_000 else 25_000)
+                if (!closed.get() && !playing.get()) fail(if (go2rtc != null) "no picture from go2rtc in 15 seconds" else "The camera didn't answer. Try again.")
             } catch (_: InterruptedException) {
             }
         }.also { it.isDaemon = true; it.start() }
@@ -152,9 +208,15 @@ private class RtcSession(
             val config = PeerConnection.RTCConfiguration(ice).apply { sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN }
             val pc = f.createPeerConnection(config, this) ?: error("No connection")
             connection = pc
+            // Two-way audio: our microphone goes on the audio section, which then sends and receives.
+            val mic = if (talk) {
+                val source = f.createAudioSource(MediaConstraints()).also { micSource = it }
+                f.createAudioTrack("mic", source).also { micTrack = it }
+            } else null
             for (kind in ORDERS[n]) {
                 when (kind) {
-                    "audio" -> pc.addTransceiver(
+                    "audio" -> if (mic != null) pc.addTransceiver(mic, RtpTransceiver.RtpTransceiverInit(RtpTransceiver.RtpTransceiverDirection.SEND_RECV))
+                    else pc.addTransceiver(
                         org.webrtc.MediaStreamTrack.MediaType.MEDIA_TYPE_AUDIO,
                         RtpTransceiver.RtpTransceiverInit(RtpTransceiver.RtpTransceiverDirection.RECV_ONLY),
                     )
@@ -187,6 +249,32 @@ private class RtcSession(
     private fun sendOffer(sdp: String, mine: Int) {
         lastOffer = sdp
         CrashReport.note("offer sent: ${mediaOrder(sdp).joinToString(",")}; formats ${codecs(sdp)}")
+        if (go2rtc != null) {
+            host.go2rtcSocket(
+                go2rtc,
+                { message -> if (mine == generation) handle(parseGo2rtcMessage(message)) },
+                { reason -> if (mine == generation && !playing.get()) fail(reason ?: "go2rtc closed the connection.") },
+                { opened ->
+                    if (closed.get() || mine != generation) {
+                        opened?.close()
+                        return@go2rtcSocket
+                    }
+                    if (opened == null) {
+                        fail("Couldn't reach go2rtc.")
+                        return@go2rtcSocket
+                    }
+                    socket = opened
+                    opened.send(go2rtcOffer(sdp))
+                    // Candidates found while the socket was opening go now, and the rest as they come.
+                    synchronized(pendingCandidates) {
+                        sessionId = "go2rtc"
+                        pendingCandidates.forEach { sendCandidate(it) }
+                        pendingCandidates.clear()
+                    }
+                },
+            )
+            return
+        }
         subscription = host.webRtcOffer(entityId, sdp) { event -> if (mine == generation) handle(parseRtcEvent(event)) }
         if (subscription < 0) fail("Not connected to Home Assistant.")
     }
@@ -204,9 +292,11 @@ private class RtcSession(
                 }
             }
             is RtcEvent.Answer -> connection?.setRemoteDescription(object : Sdp() {
-                override fun onSetSuccess() = CrashReport.note(
-                    "answer accepted: ${mediaOrder(event.sdp).joinToString(",")}; formats ${codecs(event.sdp)}",
-                )
+                override fun onSetSuccess() {
+                    CrashReport.note("answer accepted: ${mediaOrder(event.sdp).joinToString(",")}; formats ${codecs(event.sdp)}; audio ${audioDirection(event.sdp)}")
+                    // A camera that will only send audio (never take ours) answers our sendrecv with sendonly.
+                    if (talk && audioDirection(event.sdp).let { it == "sendonly" || it == "inactive" }) main.post { if (!closed.get()) onTalkRefused() }
+                }
                 override fun onSetFailure(error: String?) {
                     // A camera that answers in another order: try the next way of setting up the offer.
                     if (error?.contains("m-lines") == true && lastAttempt + 1 < ORDERS.size && !closed.get()) {
@@ -230,30 +320,54 @@ private class RtcSession(
         }
     }
 
+    /** The direction the camera's answer gives its audio: sendrecv, recvonly, sendonly or inactive. */
+    private fun audioDirection(sdp: String): String? {
+        val i = sdp.indexOf("m=audio")
+        if (i < 0) return null
+        val j = sdp.indexOf("\nm=", i + 1).let { if (it < 0) sdp.length else it }
+        return Regex("a=(sendrecv|recvonly|sendonly|inactive)").find(sdp.substring(i, j))?.groupValues?.get(1)
+    }
+
     /** The formats an answer offers (for example H264 or VP8, and the H264 profile), for the trail. */
     private fun codecs(sdp: String): String =
         (Regex("a=rtpmap:\\d+ ([\\w-]+)").findAll(sdp).map { it.groupValues[1] } +
             Regex("profile-level-id=(\\w+)").findAll(sdp).map { "profile " + it.groupValues[1] }).joinToString(" ")
 
     private fun sendCandidate(c: IceCandidate) {
+        if (go2rtc != null) {
+            socket?.send(go2rtcCandidate(c.sdp))
+            return
+        }
         val id = sessionId ?: return
         host.webRtcCandidate(entityId, id, candidateJson(c.sdp, c.sdpMid, c.sdpMLineIndex))
     }
 
     private fun fail(message: String) {
         if (closed.get() || playing.get()) return
-        onStatus(message)
+        if (go2rtc != null) {
+            // The stream isn't there (or can't be reached): let the view go back to Home Assistant's connection.
+            CrashReport.note("go2rtc failed: $message")
+            main.post { if (!closed.get()) onGo2rtcFailed(message) }
+            return
+        }
+        onStatus(if (talk) "$message (Two-way audio may not be supported by this camera: tap Talk again to go back to listening.)" else message)
     }
 
     /** Ends the current try (the connection and its subscription), keeping the factory for the next one. */
     private fun teardown() {
         if (subscription >= 0) host.close(subscription)
         subscription = -1
+        runCatching { socket?.close() }
+        socket = null
         sessionId = null
         synchronized(pendingCandidates) { pendingCandidates.clear() }
         runCatching { connection?.close() }
         runCatching { connection?.dispose() }
         connection = null
+        runCatching { micTrack?.setEnabled(false); micTrack?.dispose() }
+        runCatching { micSource?.dispose() }
+        micTrack = null
+        micSource = null
     }
 
     fun close() {
@@ -275,7 +389,6 @@ private class RtcSession(
                 videoTrack = track
                 track.setEnabled(true)
                 track.addSink(sink)
-                if (playing.compareAndSet(false, true)) onStatus(null)
             }
             is AudioTrack -> {
                 track.setEnabled(false) // muted until asked, so nothing plays at first
@@ -328,4 +441,67 @@ private class RtcSession(
             }
         }
     }
+}
+
+/** What the live view draws into: the view to show, the sink video frames go to, and how to let go of it. */
+private class RtcPicture(val view: android.view.View, val sink: VideoSink, val texture: VideoTextureRenderer?, val release: () -> Unit)
+
+/**
+ * A video view on a TextureView, so it can be scaled, moved and cropped by its parent like any other view (a SurfaceView
+ * keeps drawing where it was, which left half the picture black when the live view was expanded).
+ * Frames are drawn stretched to the view, so the view should be the picture's own shape.
+ */
+private class VideoTextureRenderer(context: Context) : android.view.TextureView(context), VideoSink, android.view.TextureView.SurfaceTextureListener {
+    private val eglRenderer = org.webrtc.EglRenderer("live-view-${System.identityHashCode(this)}")
+
+    init {
+        surfaceTextureListener = this
+    }
+
+    fun init(shared: EglBase.Context) {
+        eglRenderer.init(shared, EglBase.CONFIG_PLAIN, org.webrtc.GlRectDrawer())
+    }
+
+    fun release() = eglRenderer.release()
+
+    /** The part of the picture to show, or null for all of it. Set from the UI thread, read per frame. */
+    @Volatile
+    var viewport: ViewRect? = null
+
+    override fun onFrame(frame: org.webrtc.VideoFrame) {
+        val v = viewport
+        // The whole picture: draw it as it is. Otherwise cut the frame down to the part in view, and draw that stretched to this view (which is the box's shape).
+        if (v == null || (v.du >= 0.999f && v.dv >= 0.999f) || frame.rotation != 0) {
+            eglRenderer.onFrame(frame)
+            return
+        }
+        val buffer = frame.buffer
+        val w = buffer.width
+        val h = buffer.height
+        val cw = (v.du * w).toInt().coerceIn(2, w) and 1.inv()
+        val ch = (v.dv * h).toInt().coerceIn(2, h) and 1.inv()
+        val cx = (v.u0 * w).toInt().coerceIn(0, w - cw) and 1.inv()
+        val cy = (v.v0 * h).toInt().coerceIn(0, h - ch) and 1.inv()
+        val cropped = runCatching { buffer.cropAndScale(cx, cy, cw, ch, cw, ch) }.getOrNull()
+        if (cropped == null) {
+            eglRenderer.onFrame(frame)
+            return
+        }
+        val part = org.webrtc.VideoFrame(cropped, frame.rotation, frame.timestampNs)
+        eglRenderer.onFrame(part)
+        part.release()
+    }
+
+    override fun onSurfaceTextureAvailable(surface: android.graphics.SurfaceTexture, width: Int, height: Int) = eglRenderer.createEglSurface(surface)
+
+    override fun onSurfaceTextureSizeChanged(surface: android.graphics.SurfaceTexture, width: Int, height: Int) = Unit
+
+    override fun onSurfaceTextureDestroyed(surface: android.graphics.SurfaceTexture): Boolean {
+        val done = java.util.concurrent.CountDownLatch(1)
+        eglRenderer.releaseEglSurface { done.countDown() }
+        done.await(2, java.util.concurrent.TimeUnit.SECONDS)
+        return true
+    }
+
+    override fun onSurfaceTextureUpdated(surface: android.graphics.SurfaceTexture) = Unit
 }

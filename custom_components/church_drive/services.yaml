@@ -130,3 +130,30 @@ shopping_add:
     date:
       selector:
         date:
+
+steps_create:
+  fields:
+    name:
+      required: true
+      example: Set up Ring Talk
+      selector:
+        text:
+    steps:
+      required: true
+      example: "Check the Hub, Reserve the address"
+      selector:
+        object:
+    people:
+      example: Jamie
+      selector:
+        object:
+    date:
+      selector:
+        date:
+    time:
+      selector:
+        time:
+    at_home:
+      default: false
+      selector:
+        boolean:

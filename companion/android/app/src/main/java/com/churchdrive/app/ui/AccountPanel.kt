@@ -94,6 +94,8 @@ fun AccountOverlay(
     /** The Manager dashboard's panels (administrators): each is a sub-page, and [managerContent] draws its cards. */
     managerPages: List<PanelSpec> = emptyList(),
     managerContent: @Composable (PanelSpec) -> Unit = {},
+    /** The Experimental page: things being tried out before they replace what is there. */
+    experimentalContent: @Composable () -> Unit = {},
 ) {
     // The last page shown, so a page keeps its words while it slides away.
     var shown by remember { mutableStateOf("account") }
@@ -126,6 +128,7 @@ fun AccountOverlay(
                         AdminPage(p.label, { onPanel("account") }) { pageContent(p) }
                     }
                     "manager" -> ManagerHub(managerPages, { onPanel("account") }, onPanel)
+                    "experimental" -> AdminPage("Experimental", { onPanel("account") }) { experimentalContent() }
                     else -> if (which.startsWith("manager:")) {
                         managerPages.firstOrNull { it.title == which.removePrefix("manager:") }?.let { p ->
                             AdminPage(p.title, { onPanel("manager") }) { managerContent(p) }
@@ -227,6 +230,15 @@ private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Pa
         // The Manager (administrators): one button here, and a page of its sections.
         if (managerPages.isNotEmpty()) {
             PanelCard { PanelRow(Icons.Outlined.Settings, "Manager", "${managerPages.size} sections: people, cameras, reminders and more", onClick = { onOpen("manager") }) }
+        }
+        PanelCard {
+            ListItem(
+                headlineContent = { Text("Experimental") },
+                supportingContent = { Text("New camera view to try") },
+                leadingContent = { HaIcon("mdi:flask-outline", Icons.Outlined.Settings, MaterialTheme.colorScheme.onSurfaceVariant, 24.dp) },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                modifier = Modifier.clickable { onOpen("experimental") },
+            )
         }
         PanelCard {
             PanelRow(Icons.Outlined.Settings, "Settings", onClick = { onOpen("settings") })

@@ -202,6 +202,20 @@ fun panZoom(
     return Triple(z, keepIn(x, boxW, coverW * z), keepIn(y, boxH, coverH * z))
 }
 
+/** The part of a picture in view: where it starts (as a fraction of its width and height) and how much of each it covers. */
+data class ViewRect(val u0: Float, val v0: Float, val du: Float, val dv: Float)
+
+/**
+ * The window a box of [boxW] x [boxH] has on a picture that covers it ([coverW] x [coverH]), shown at zoom [z] with its top left corner at
+ * ([x], [y]) in the box: as fractions of the picture.
+ */
+fun viewRect(x: Float, y: Float, z: Float, boxW: Float, boxH: Float, coverW: Float, coverH: Float): ViewRect = ViewRect(
+    u0 = (-x / z / coverW).coerceIn(0f, 1f),
+    v0 = (-y / z / coverH).coerceIn(0f, 1f),
+    du = (boxW / z / coverW).coerceIn(0.01f, 1f),
+    dv = (boxH / z / coverH).coerceIn(0.01f, 1f),
+)
+
 /**
  * A 16:9 box with media of its own shape inside, covering the box, as on the dashboard: a square clip fills the
  * width and can be dragged up and down to look around. Pinch or double-tap to zoom.
@@ -215,6 +229,13 @@ fun StageBox(
     /** Show the whole picture (a live view) rather than covering the box with it (a clip). */
     contain: Boolean = false,
     maxZoom: Float = 4f,
+    /** A single tap on the picture (not a drag or a double tap). */
+    onTap: (() -> Unit)? = null,
+    /**
+     * Instead of a bigger-than-the-box view that is moved and scaled (which a video surface doesn't follow), a view that is exactly the
+     * box, told which part of the picture to show: drag and pinch change the part, and the player crops its frames to it.
+     */
+    viewportContent: (@Composable (ViewRect) -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     val shape = modifier.then(if (fill) Modifier.fillMaxSize() else Modifier.fillMaxWidth().aspectRatio(16f / 9f))
@@ -235,23 +256,29 @@ fun StageBox(
                     }
                 }
                 .pointerInput(aspect, boxW, boxH) {
-                    detectTapGestures(onDoubleTap = { at ->
+                    detectTapGestures(onTap = { onTap?.invoke() }, onDoubleTap = { at ->
                         val (z, x, y) = view
                         view = panZoom(z, x, y, at.x, at.y, 0f, 0f, if (z > 1.5f) 1f / z else 2f, boxW, boxH, coverW, coverH, maxZoom)
                     })
                 },
         ) {
-            Box(
-                Modifier
-                    .requiredSize(with(density) { coverW.toDp() }, with(density) { coverH.toDp() })
-                    .graphicsLayer {
-                        transformOrigin = TransformOrigin(0f, 0f)
-                        scaleX = view.first
-                        scaleY = view.first
-                        translationX = view.second
-                        translationY = view.third
-                    },
-            ) { content() }
+            if (viewportContent != null) {
+                val (z, x, y) = view
+                // The part of the picture in view, as fractions of it (the box covers the picture, so these are the box's window on it).
+                Box(Modifier.fillMaxSize()) { viewportContent(viewRect(x, y, z, boxW, boxH, coverW, coverH)) }
+            } else {
+                Box(
+                    Modifier
+                        .requiredSize(with(density) { coverW.toDp() }, with(density) { coverH.toDp() })
+                        .graphicsLayer {
+                            transformOrigin = TransformOrigin(0f, 0f)
+                            scaleX = view.first
+                            scaleY = view.first
+                            translationX = view.second
+                            translationY = view.third
+                        },
+                ) { content() }
+            }
         }
     }
 }

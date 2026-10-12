@@ -3,6 +3,7 @@ package com.churchdrive.app
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
@@ -44,6 +45,9 @@ class MainActivity : ComponentActivity() {
 
     /** The camera a widget asked to see live, until it is closed. */
     private var openCamera by mutableStateOf<String?>(null)
+
+    /** The camera was opened from a doorbell notification's Answer. */
+    private var openCameraAnswer by mutableStateOf(false)
 
     /** Text shared or highlighted in another app, until it has been sent to be read for tasks. */
     private var shareText by mutableStateOf<String?>(null)
@@ -87,14 +91,18 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         openPage = intent.getStringExtra("page")
         openCamera = intent.getStringExtra("camera")
+        openCameraAnswer = intent.getBooleanExtra("answer", false)
         readShare(intent)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // The splash screen (the icon on its dark background) shows until the first screen is ready; this also puts the normal theme back.
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         openPage = intent?.getStringExtra("page")
         openCamera = intent?.getStringExtra("camera")
+        openCameraAnswer = intent?.getBooleanExtra("answer", false) == true
         readShare(intent)
         val lastCrash = CrashReport.take(this)
         CrashReport.install(this)
@@ -174,7 +182,8 @@ class MainActivity : ComponentActivity() {
                                     openPage = openPage,
                                     onOpened = { openPage = null },
                                     openCamera = openCamera,
-                                    onCameraClosed = { openCamera = null },
+                                    openCameraAnswer = openCameraAnswer,
+                                    onCameraClosed = { openCamera = null; openCameraAnswer = false },
                                 )
                                 openShopping?.let { com.churchdrive.app.ui.ShoppingScreen(it) { openShopping = null } }
                                 if (chargePrompt) {

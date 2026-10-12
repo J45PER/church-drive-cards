@@ -2,6 +2,17 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **v0.50.0 + app 0.18.0** (2026-10-12): steps lists work like shopping lists (one task on the to-do page, no tick of its own, a page of steps, finished by finishing them, optional reminder at Home); the inline steps of 0.49.0 are removed; `church_drive.steps_create` service
+- **v0.49.0 + app 0.17.0** (2026-10-12): to-do tasks can have steps: add them when changing a task, tick each on its own in the list (dashboard card and app); kept as tick lines in the task's notes
+- **app 0.16.3** (2026-10-12): live view: LIVE means a picture has arrived; falls back to Home Assistant if go2rtc sends none in 15 s
+- **app 0.16.2** (2026-10-12): experimental camera view: expanded/full screen cropped in the video (fixes black areas); go2rtc Talk uses HA's relay; says why go2rtc failed
+- **app 0.16.1** (2026-10-12): experimental camera view: every camera tries its own go2rtc stream for Talk
+- **v0.48.1** (2026-10-12): experimental camera card: with `talk_stream` it falls back to Home Assistant's live view (listen-only) if the go2rtc stream isn't there
+- **app 0.16.0** (2026-10-12): experimental camera view: Talk through go2rtc, falling back to listen-only; notification link that opens a camera answering
+- **app 0.15.1** (2026-10-12): experimental camera view: fixes the black bar when expanded; says so when the camera won't take Talk audio
+- **app 0.15.0** (2026-10-11): Experimental page in the app's panel: the new camera live view (layout C), Talk and Answer
+- **v0.48.0** (2026-10-11): experimental `camera-experimental-card`: the new live view (16:9 video, tap-to-show buttons, bigger and landscape full screen, battery/signal, Answer and Talk); the stable camera card is unchanged
+- **v0.47.1** (2026-10-11): camera card and app back to how they were before v0.47.0 / app 0.14.0 (overlapping buttons, full screen, Talk crash); a redesign follows
 - **v0.45.2** (2026-10-11): the app's shopping list page scrolls (it ran under the navigation bar); app 0.8.2
 - **v0.46.0** (2026-10-11): the app can ask the house for its Assist wake word (church_drive/assist/info), so the assistant is named after it (Jarvis); app 0.10.1
 - **v0.45.1** (2026-10-11): searching for a shop shows the results as pins on a map to tap and pick (web and app); app 0.8.1

@@ -15,7 +15,12 @@ from typing import Any
 
 OPEN, BOUGHT, UNAVAILABLE = "open", "bought", "unavailable"
 STATUSES = (OPEN, BOUGHT, UNAVAILABLE)
+# A list is either shopping (items bought or unavailable) or steps (a checklist: each step open or done, "bought").
+SHOPPING, STEPS = "shopping", "steps"
+KINDS = (SHOPPING, STEPS)
 MARKER = "church-drive-shopping:"
+# A steps task's marker has this word after the id, so the cards and app say "to do" instead of "to get".
+STEPS_WORD = " steps"
 MAX_ITEMS = 200
 
 # Words in a zone's name that mean a shop, so arriving there can bring up the list.
@@ -31,21 +36,21 @@ def norm(text: Any) -> str:
     return " ".join(str(text or "").lower().split())
 
 
-def clean_item(text: Any) -> str:
-    """An item as shown: bullets and 'buy ' removed, first letter capital, no longer than a task."""
+def clean_item(text: Any, kind: str = SHOPPING) -> str:
+    """An item as shown: bullets and 'buy ' removed (not for steps, where "Get a ladder" stays as written), first letter capital, no longer than a task."""
     t = " ".join(str(text or "").split())
     t = re.sub(r"^[-*••☐]+\s*", "", t)
-    t = _LEAD.sub("", t).strip(" .,;")
+    t = t.strip(" .,;") if kind == STEPS else _LEAD.sub("", t).strip(" .,;")
     return (t[:1].upper() + t[1:])[:120]
 
 
-def add_items(items: list[dict[str, Any]], texts: list[str], new_id: Any) -> tuple[list[dict[str, Any]], int]:
+def add_items(items: list[dict[str, Any]], texts: list[str], new_id: Any, kind: str = SHOPPING) -> tuple[list[dict[str, Any]], int]:
     """[items] with each of [texts] added unless an open item already says the same. Returns (items, how many were added).
     An item that was bought or unavailable and is asked for again is reopened."""
     out = [dict(i) for i in items]
     added = 0
     for raw in texts:
-        text = clean_item(raw)
+        text = clean_item(raw, kind)
         if not text or len(out) >= MAX_ITEMS:
             continue
         same = next((i for i in out if norm(i["text"]) == norm(text)), None)
@@ -59,8 +64,8 @@ def add_items(items: list[dict[str, Any]], texts: list[str], new_id: Any) -> tup
     return out, added
 
 
-def set_status(items: list[dict[str, Any]], item_id: str, status: str) -> list[dict[str, Any]]:
-    if status not in STATUSES:
+def set_status(items: list[dict[str, Any]], item_id: str, status: str, kind: str = SHOPPING) -> list[dict[str, Any]]:
+    if status not in STATUSES or (kind == STEPS and status == UNAVAILABLE):
         raise ValueError(f"Unknown status: {status}")
     if not any(i["id"] == item_id for i in items):
         raise KeyError(item_id)
@@ -80,16 +85,21 @@ def is_done(items: list[dict[str, Any]]) -> bool:
     return bool(items) and all(i["status"] != OPEN for i in items)
 
 
-def task_summary(name: str, items: list[dict[str, Any]]) -> str:
+def task_summary(name: str, items: list[dict[str, Any]], kind: str = SHOPPING) -> str:
     c = counts(items)
-    base = f"Shopping: {name}" if name and norm(name) != "shopping" else "Shopping"
+    word = "Steps" if kind == STEPS else "Shopping"
+    base = f"{word}: {name}" if name and norm(name) != norm(word) else word
     return f"{base} ({c['total'] - c[OPEN]} of {c['total']})" if c["total"] else base
 
 
-def task_description(list_id: str, items: list[dict[str, Any]]) -> str:
-    """The open items, one a line, then the marker the cards and app look for."""
+def task_description(list_id: str, items: list[dict[str, Any]], kind: str = SHOPPING) -> str:
+    """The open items, one a line, then the marker the cards and app look for (with STEPS_WORD after it for a steps list)."""
     lines = [f"• {i['text']}" for i in items if i["status"] == OPEN][:20]
-    return "\n".join([*lines, f"{MARKER}{list_id}"])
+    return "\n".join([*lines, f"{MARKER}{list_id}{STEPS_WORD if kind == STEPS else ''}"])
+
+
+def kind_of(lst: dict[str, Any]) -> str:
+    return STEPS if lst.get("kind") == STEPS else SHOPPING
 
 
 def parse_marker(description: Any) -> str | None:
@@ -133,8 +143,8 @@ def for_person(lists: list[dict[str, Any]], first: str) -> list[dict[str, Any]]:
 
 
 def pick_list(lists: list[dict[str, Any]], first: str) -> dict[str, Any] | None:
-    """Where shared items go by default: the person's soonest open list."""
-    mine = for_person(lists, first)
+    """Where shared items go by default: the person's soonest open shopping list (never a steps list)."""
+    mine = [l for l in for_person(lists, first) if kind_of(l) == SHOPPING]
     return mine[0] if mine else None
 
 
@@ -210,6 +220,8 @@ def maps_url(place: dict[str, Any]) -> str:
 
 def list_line(l: dict[str, Any]) -> str:
     c = counts(l["items"])
+    if kind_of(l) == STEPS:
+        return f"{l['name'] or 'Steps'} ({c[OPEN]} to do)"
     return f"{l['name'] or 'Shopping'} ({c[OPEN]} to get)"
 
 
@@ -218,6 +230,8 @@ def arrival_message(place: str, mine: list[dict[str, Any]], missed: list[dict[st
     open_lists = [l for l in mine if counts(l["items"])[OPEN]]
     if open_lists:
         names = ", ".join(list_line(l) for l in open_lists[:3])
+        if all(kind_of(l) == STEPS for l in open_lists):
+            return f"At {place}: steps to do", f"{names}. Tap to open the list."
         return f"At {place}: shopping list", f"{names}. Tap to open the list."
     if missed:
         texts = ", ".join(m["text"] for m in missed[:8]) + (" …" if len(missed) > 8 else "")

@@ -1,7 +1,9 @@
 package com.churchdrive.app.ui
 
 import androidx.annotation.OptIn
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.clickable
@@ -79,7 +81,7 @@ internal fun chipColours(kind: String, old: Boolean): Pair<Color, Color> = when 
  * live video.
  */
 @Composable
-fun CameraCard(config: JSONObject, entities: Map<String, EntityState>, registry: Registry, call: CallService) {
+fun CameraCard(config: JSONObject, entities: Map<String, EntityState>, registry: Registry, call: CallService, experimental: Boolean = false) {
     val entityId = config.optString("entity")
     val found = cameraFind(
         entities, entityId,
@@ -121,6 +123,10 @@ fun CameraCard(config: JSONObject, entities: Map<String, EntityState>, registry:
     val battery = found.battery?.let { entities[it]?.state?.toDoubleOrNull() }
     val base = LocalBaseUrl.current
     var viewing by remember { mutableStateOf(false) }
+    // Experimental: while the doorbell rings the tile has a green outline and an Answer button (answering opens the live view talking).
+    var answeredAt by remember { mutableLongStateOf(0L) }
+    var answerOnOpen by remember { mutableStateOf(false) }
+    val ringing = experimental && isRinging(found.ringSensor?.let { entities[it]?.state }, found.ding?.let { entities[it]?.state }, System.currentTimeMillis(), answeredAt)
 
     Box(
         modifier = Modifier
@@ -128,6 +134,7 @@ fun CameraCard(config: JSONObject, entities: Map<String, EntityState>, registry:
             .aspectRatio(16f / 9f)
             .clip(RoundedCornerShape(24.dp))
             .background(Brush.linearGradient(listOf(Color(0xFF5D6B7D), Color(0xFF2F3946), Color(0xFF46503C))))
+            .then(if (ringing) Modifier.border(BorderStroke(2.dp, Color(0xFF2E9D4F)), RoundedCornerShape(24.dp)) else Modifier)
             .clickable { viewing = true },
     ) {
         if (picture != null) {
@@ -144,8 +151,21 @@ fun CameraCard(config: JSONObject, entities: Map<String, EntityState>, registry:
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(name, color = Color.White, style = MaterialTheme.typography.titleMedium, maxLines = 1, modifier = Modifier.weight(1f))
-            Box(modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(chipBg).padding(horizontal = 10.dp, vertical = 3.dp)) {
-                Text(chip, color = chipInk, fontSize = 11.sp, maxLines = 1)
+            if (ringing) {
+                Row(
+                    modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(Color(0xFF2E9D4F))
+                        .clickable { answerOnOpen = true; answeredAt = System.currentTimeMillis(); viewing = true }
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    HaIcon("mdi:phone", Icons.Filled.Info, Color.White, 18.dp)
+                    Text("Answer", color = Color.White, fontSize = 13.sp)
+                }
+            } else {
+                Box(modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(chipBg).padding(horizontal = 10.dp, vertical = 3.dp)) {
+                    Text(chip, color = chipInk, fontSize = 11.sp, maxLines = 1)
+                }
             }
         }
         if (battery != null && battery < 25) {
@@ -158,7 +178,8 @@ fun CameraCard(config: JSONObject, entities: Map<String, EntityState>, registry:
     if (viewing) {
         val eventsBase = cameraBaseName(entities, entityId)
         val light = cameraLight(entities, registry, entityId, config.optString("light").takeIf { it.isNotBlank() })
-        CameraViewer(name, entityId, found.button, eventsBase, light, entities, call) { viewing = false }
+        if (experimental) CameraViewerC(name, entityId, found, eventsBase, light, entities, call, startAnswered = answerOnOpen, talkStream = config.optString("talk_stream").takeIf { it.isNotBlank() }) { viewing = false; answerOnOpen = false }
+        else CameraViewer(name, entityId, found.button, eventsBase, light, entities, call) { viewing = false }
     }
 }
 
@@ -280,7 +301,7 @@ internal fun CameraViewer(
 /** An HLS live stream, played in the app. The player is released as soon as the viewer closes. */
 @OptIn(UnstableApi::class)
 @Composable
-private fun LivePlayer(url: String, muted: Boolean, onAspect: (Float) -> Unit) {
+internal fun LivePlayer(url: String, muted: Boolean, onAspect: (Float) -> Unit) {
     val context = LocalContext.current
     val player = remember(url) {
         ExoPlayer.Builder(context).build().apply {
@@ -305,8 +326,13 @@ private fun LivePlayer(url: String, muted: Boolean, onAspect: (Float) -> Unit) {
 
 /** The live view of a camera by its entity, for opening it from outside its card (a widget's tap). */
 @Composable
-fun CameraViewerFor(entityId: String, entities: Map<String, EntityState>, registry: Registry, call: CallService, onClose: () -> Unit) {
+fun CameraViewerFor(entityId: String, entities: Map<String, EntityState>, registry: Registry, call: CallService, onClose: () -> Unit, answer: Boolean = false) {
     val found = cameraFind(entities, entityId, null, null)
     val name = entities[entityId]?.friendlyName?.replace(Regex(" (Live view|Snapshot)$", RegexOption.IGNORE_CASE), "") ?: entityId
+    // A doorbell notification's Answer opens the new live view, already answering.
+    if (answer) {
+        CameraViewerC(name, entityId, found, cameraBaseName(entities, entityId), cameraLight(entities, registry, entityId, null), entities, call, startAnswered = true, onClose = onClose)
+        return
+    }
     CameraViewer(name, entityId, found.button, cameraBaseName(entities, entityId), cameraLight(entities, registry, entityId, null), entities, call, onClose)
 }

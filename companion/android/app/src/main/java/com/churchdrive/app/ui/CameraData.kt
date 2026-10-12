@@ -15,6 +15,10 @@ data class CameraEntities(
     val battery: String?,
     val ding: String?,
     val motion: String?,
+    /** Wi-Fi signal (`sensor.<x>_wireless` in dBm, or the Ring integration's `_wifi_signal_strength` / `_category`). */
+    val signal: String? = null,
+    /** `binary_sensor.<x>_ding`: on while the doorbell is ringing. */
+    val ringSensor: String? = null,
 )
 
 /** The newest picture of a camera: where to fetch it, when it was taken (ms) and why. */
@@ -34,6 +38,8 @@ fun cameraFind(entities: Map<String, EntityState>, entity: String, snapshot: Str
         battery = has("sensor.${base}_battery"),
         ding = has("event.${base}_ding"),
         motion = has("event.${base}_motion"),
+        signal = has("sensor.${base}_wireless") ?: has("sensor.${base}_wifi_signal_strength") ?: has("sensor.${base}_wifi_signal_category"),
+        ringSensor = has("binary_sensor.${base}_ding"),
     )
 }
 
@@ -85,4 +91,63 @@ fun cameraKindLabel(kind: String): String = when (kind) {
     "linked" -> "Linked"
     "live" -> "Live view"
     else -> "Snapshot"
+}
+
+/** Wi-Fi signal as 0-4 bars (from dBm, or Ring's category), or -1 when unknown. */
+fun signalBars(state: String?, category: String? = null): Int {
+    val n = state?.toDoubleOrNull()
+    if (n != null && n < 0) return when {
+        n >= -55 -> 4
+        n >= -65 -> 3
+        n >= -75 -> 2
+        else -> 1
+    }
+    return when ((category ?: state).orEmpty().lowercase()) {
+        "excellent" -> 4
+        "good" -> 3
+        "fair" -> 2
+        "poor", "bad" -> 1
+        else -> -1
+    }
+}
+
+fun signalIconName(bars: Int): String = if (bars < 0) "mdi:wifi-strength-off-outline" else listOf("mdi:wifi-strength-outline", "mdi:wifi-strength-1", "mdi:wifi-strength-2", "mdi:wifi-strength-3", "mdi:wifi-strength-4")[bars.coerceIn(0, 4)]
+
+/** mdi:battery-10 ... mdi:battery, in steps of 10. */
+fun batteryIconName(pct: Double?): String {
+    if (pct == null) return "mdi:battery-unknown"
+    val p = pct.toInt().coerceIn(0, 100)
+    return when {
+        p >= 95 -> "mdi:battery"
+        p < 5 -> "mdi:battery-outline"
+        else -> "mdi:battery-${p / 10 * 10}"
+    }
+}
+
+/**
+ * Is the doorbell ringing? Its binary sensor is on, or its ding event fired in the last [withinMs]. [answeredAt] (ms) ends it
+ * once someone has answered from here.
+ */
+fun isRinging(dingBinary: String?, dingEvent: String?, now: Long, answeredAt: Long = 0L, withinMs: Long = 45_000L): Boolean {
+    // Still ringing unless answered from here, and then only again for a newer ring.
+    if (dingBinary == "on") return answeredAt == 0L || (parseMillis(dingEvent) ?: 0L) > answeredAt
+    val ms = parseMillis(dingEvent) ?: return false
+    return now - ms < withinMs && ms > answeredAt
+}
+
+/** The tile's shape (width / height) from the picture's own, kept between 3:4 and 16:9 so a tall doorbell still fits. */
+fun tileAspect(width: Int, height: Int): Float =
+    if (width <= 0 || height <= 0) 16f / 9f else (width.toFloat() / height).coerceIn(3f / 4f, 16f / 9f)
+
+/** A notification's link to a camera: `church-drive-camera:camera.front_door_live_view`, with `?answer` to open it answering. */
+data class CameraOpenLink(val entityId: String, val answer: Boolean)
+
+fun cameraOpenFromLink(url: String?): CameraOpenLink? {
+    val link = url?.trim() ?: return null
+    val prefix = "church-drive-camera:"
+    if (!link.startsWith(prefix)) return null
+    val rest = link.removePrefix(prefix)
+    val id = rest.substringBefore('?')
+    if (!Regex("^camera\\.[a-z0-9_]+$").matches(id)) return null
+    return CameraOpenLink(id, "answer" in rest.substringAfter('?', ""))
 }

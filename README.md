@@ -36,6 +36,8 @@ A shopping list is one task, not a pile of items. It has a **name**, the **peopl
 
 The rules are in `shopping_logic.py` (tested in `test/shopping_logic_test.py`) and the lists in `shopping.py`.
 
+**Steps lists** work the same way for a checklist (a list with `kind: steps`): one task on each person's to-do list ("Steps: Ring Talk (2 of 6)"), no tick of its own and nothing shown under it; you work through its steps on its own page, one tick each (no "Not available"), and the task finishes itself when the last step is done. A steps list can remind at a **place** (the house as **Home**, or any place from a Google Maps search): each time you arrive there, until it's done. Steps never go on a shopping list, and shared shopping text never goes on a steps list. Make one from the Shopping card's **New steps list** (and the same button in the Android app), or with the `church_drive.steps_create` service (`name`, `steps`, optional `people`, `date`, `time`, `at_home`). The task's description ends with `church-drive-shopping:<id> steps`.
+
 **Shopping card** (`custom:shopping-card`, options `title` and `all`): your open lists with how many items are left, a **New shopping list** button and a line for anything not available last time. Tapping a list (or its task on any Task List card, or a reminder) opens the **full-page list**: tick each item **Bought** or **Not available**, add items (several at once with commas), edit the name, people, date, time and places, navigate to a place, delete the list. The arrow, Escape or the phone's back button closes it. A page address ending `?list=<id>` opens that list (reminders link there; the card lives on the Tasks dashboard's Shopping view, `/dashboard-tasks/shopping`).
 
 ## Place reminders and snoozing
@@ -309,6 +311,10 @@ video, Events (the events viewer), Snapshot and the light in the camera's area (
 `light`). With `talk_stream` (a go2rtc stream with two-way audio) it also has
 Talk. The snapshot, button, battery and events are found from the camera's name
 (`camera.front_door_live_view` → `camera.front_door_snapshot`, and so on).
+
+### `camera-experimental-card`
+
+The camera card with a new live view, for trying out before it replaces `camera-card` (same options, plus `ring_popup`). The video is always a 16:9 box (the doorbell's tall picture is cropped to it: drag up and down). Normal: only two small icons on the picture (bigger, full screen); under it a timer, **Hang up / Talk / Sound**, then Light, Snapshot and Events (which leaves the live view; there is no timeline in it). **Bigger** fills the pop-up and is remembered per camera. **Full screen** turns the video landscape. In both, tap the picture to show or hide the buttons (they hide after 3 s); battery and signal stay on the picture. In full screen, Hang up / Talk / Sound are bottom left and **+** (Light, Snapshot, Events) bottom right. While the doorbell rings the tile has **Answer**, and Answer opens the live view with sound on and, with `talk_stream`, the microphone.
 
 ### Camera events viewer
 
