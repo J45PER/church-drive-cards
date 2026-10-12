@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **v0.48.1** (2026-10-12): experimental camera card: with `talk_stream` it falls back to Home Assistant's live view (listen-only) if the go2rtc stream isn't there
 - **app 0.16.0** (2026-10-12): experimental camera view: Talk through go2rtc, falling back to listen-only; notification link that opens a camera answering
 - **app 0.15.1** (2026-10-12): experimental camera view: fixes the black bar when expanded; says so when the camera won't take Talk audio
 - **app 0.15.0** (2026-10-11): Experimental page in the app's panel: the new camera live view (layout C), Talk and Answer

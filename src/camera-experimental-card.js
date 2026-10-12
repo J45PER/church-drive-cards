@@ -336,7 +336,8 @@ export class CameraExperimentalCard extends CameraCard {
     box.querySelectorAll(':scope > .cc-tag').forEach((n) => n.remove());
     const noMic = this._talking && !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
     let el;
-    if (c.talk_stream && customElements.get('webrtc-camera')) {
+    const viaGo2rtc = c.talk_stream && !this._go2rtcBad && customElements.get('webrtc-camera');
+    if (viaGo2rtc) {
       el = document.createElement('webrtc-camera');
       el.setConfig({ url: c.talk_stream, media: this._talking && !noMic ? 'video,audio,microphone' : 'video,audio', muted: !this._sound, ui: false });
       el.hass = this._hass;
@@ -363,6 +364,12 @@ export class CameraExperimentalCard extends CameraCard {
         if (!noMic) tag.textContent = live;
         tag.style.background = noMic ? '#c62828' : '#e53935';
         this._applySound();
+      } else if (viaGo2rtc && tries++ > 24) {
+        // The go2rtc stream isn't there (not set up, or not reachable): carry on with Home Assistant's own live view, listen-only.
+        this._go2rtcBad = true;
+        this._talking = false;
+        this._media();
+        this._renderPop();
       } else if (tries++ < 120) setTimeout(check, 500);
       else tag.textContent = '● Still picture';
     };
@@ -398,7 +405,7 @@ export class CameraExperimentalCard extends CameraCard {
     const lab = mode === 'normal';
     const callHtml = ring
       ? `<button class="cc-answer-big" data-act="answer">${iconHtml('mdi:phone', { size: '22px' })}Answer</button>`
-      : `${this._circ('red', 'mdi:phone-hangup', 'Hang up', 'hang')}${c.talk_stream ? this._circ(this._talking ? 'on' : '', this._talking ? 'mdi:microphone' : 'mdi:microphone-off', this._talking ? 'Talking' : 'Talk', 'talk', 20) : ''}${this._circ(this._sound ? 'on' : '', this._sound ? 'mdi:volume-high' : 'mdi:volume-off', 'Sound', 'sound', 20)}`;
+      : `${this._circ('red', 'mdi:phone-hangup', 'Hang up', 'hang')}${c.talk_stream && !this._go2rtcBad ? this._circ(this._talking ? 'on' : '', this._talking ? 'mdi:microphone' : 'mdi:microphone-off', this._talking ? 'Talking' : 'Talk', 'talk', 20) : ''}${this._circ(this._sound ? 'on' : '', this._sound ? 'mdi:volume-high' : 'mdi:volume-off', 'Sound', 'sound', 20)}`;
     const sig = `${callHtml}|${lab}`;
     if (this._callEl.dataset.sig !== sig) {
       this._callEl.dataset.sig = sig;
