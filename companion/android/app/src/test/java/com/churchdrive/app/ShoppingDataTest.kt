@@ -55,6 +55,18 @@ class ShoppingDataTest {
     }
 
     @Test
+    fun theShoppingCardNeverListsAStepsList() {
+        val withSteps = JSONObject(
+            """{"mine":"Jamie","missed":[],"people":["Jamie"],"lists":[
+              {"id":"aaaaaa111111","name":"Weekly","people":["Jamie"],"date":"","places":[],"done":false,"items":[{"id":"i1","text":"Milk","status":"open"}]},
+              {"id":"dddddd444444","kind":"steps","name":"Ring","people":["Jamie"],"date":"","places":[],"done":false,"items":[{"id":"i2","text":"Step","status":"open"}]}]}""",
+        )
+        val s = parseShopping(withSteps)!!
+        assertEquals(2, s.lists.size)
+        assertEquals(listOf("aaaaaa111111"), openLists(s, "Jamie").map { it.id })
+    }
+
+    @Test
     fun aTaskPointsAtItsListThroughTheMarker() {
         val d = "• Milk\n• Eggs\nchurch-drive-shopping:aaaaaa111111"
         assertEquals("aaaaaa111111", shoppingIdOf(d))
