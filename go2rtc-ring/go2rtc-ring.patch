@@ -1,0 +1,340 @@
+diff --git a/internal/ring/ring.go b/internal/ring/ring.go
+index 7fdb284..9fb64bf 100644
+--- a/internal/ring/ring.go
++++ b/internal/ring/ring.go
+@@ -7,12 +7,15 @@ import (
+ 	"fmt"
+ 
+ 	"github.com/AlexxIT/go2rtc/internal/api"
++	"github.com/AlexxIT/go2rtc/internal/app"
+ 	"github.com/AlexxIT/go2rtc/internal/streams"
+ 	"github.com/AlexxIT/go2rtc/pkg/core"
+ 	"github.com/AlexxIT/go2rtc/pkg/ring"
+ )
+ 
+ func Init() {
++	ring.Log = app.GetLogger("ring")
++
+ 	streams.HandleFunc("ring", func(source string) (core.Producer, error) {
+ 		return ring.Dial(source)
+ 	})
+diff --git a/pkg/ring/client.go b/pkg/ring/client.go
+index fb77e19..a5410cb 100644
+--- a/pkg/ring/client.go
++++ b/pkg/ring/client.go
+@@ -6,6 +6,8 @@ import (
+ 	"fmt"
+ 	"net/url"
+ 	"strconv"
++	"sync/atomic"
++	"time"
+ 
+ 	"github.com/AlexxIT/go2rtc/pkg/core"
+ 	"github.com/AlexxIT/go2rtc/pkg/webrtc"
+@@ -13,7 +15,13 @@ import (
+ 	pion "github.com/pion/webrtc/v4"
+ )
+ 
++// DefaultConnectTimeout is how long Dial waits for Ring to answer and for the
++// media connection to come up before giving up. Without it a camera that never
++// answers leaves go2rtc waiting forever (and a battery camera streaming).
++const DefaultConnectTimeout = 30 * time.Second
++
+ type Client struct {
++	gotAnswer atomic.Bool
+ 	api       *RingApi
+ 	wsClient  *WSClient
+ 	prod      core.Producer
+@@ -35,6 +43,11 @@ func Dial(rawURL string) (*Client, error) {
+ 	deviceID := query.Get("device_id")
+ 	_, isSnapshot := query["snapshot"]
+ 
++	connectTimeout := DefaultConnectTimeout
++	if v, err := strconv.Atoi(query.Get("connect_timeout")); err == nil && v > 0 {
++		connectTimeout = time.Duration(v) * time.Second
++	}
++
+ 	if encodedToken == "" || deviceID == "" || cameraID == "" {
+ 		return nil, errors.New("ring: wrong query")
+ 	}
+@@ -215,40 +228,69 @@ func Dial(rawURL string) (*Client, error) {
+ 
+ 	sendOffer.Done(nil)
+ 
+-	if err = client.connected.Wait(); err != nil {
+-		return nil, err
++	// Wait for the media connection, but not forever, and say where it stuck.
++	done := make(chan error, 1)
++	go func() { done <- client.connected.Wait() }()
++
++	state := func() string {
++		return fmt.Sprintf("answer received: %t, ice: %s, connection: %s, signaling: %s",
++			client.gotAnswer.Load(), pc.ICEConnectionState(), pc.ConnectionState(), pc.SignalingState())
+ 	}
+ 
+-	return client, nil
++	tick := time.NewTicker(5 * time.Second)
++	defer tick.Stop()
++	timeout := time.NewTimer(connectTimeout)
++	defer timeout.Stop()
++
++	for {
++		select {
++		case err = <-done:
++			if err != nil {
++				Log.Debug().Err(err).Msgf("[ring] connect failed (%s)", state())
++				return nil, err
++			}
++			Log.Debug().Msgf("[ring] connected (%s)", state())
++			return client, nil
++		case <-tick.C:
++			Log.Debug().Msgf("[ring] waiting (%s)", state())
++		case <-timeout.C:
++			err = fmt.Errorf("ring: timeout after %s (%s)", connectTimeout, state())
++			client.Stop()
++			client.connected.Done(err)
++			return nil, err
++		}
++	}
+ }
+ 
+-func (c *Client) onWSMessage(msg WSMessage) {
+-	rawMsg, _ := json.Marshal(msg)
+-
+-	// fmt.Printf("ring: onWSMessage: %s\n", string(rawMsg))
+-
+-	// check if "doorbot_id" is present
+-	if _, ok := msg.Body["doorbot_id"]; !ok {
+-		return
++// acceptMessage reports whether a signalling message is for this camera and
++// session. Ring sends messages for our dialog only, so the first session_id we
++// see is adopted whichever message carries it: the answer can arrive before (or
++// without) session_created, and dropping it would leave Dial waiting forever.
++func (c *Client) acceptMessage(msg WSMessage) bool {
++	id, ok := msg.Body["doorbot_id"].(float64)
++	if !ok || int(id) != c.cameraID {
++		return false
+ 	}
+ 
+-	// check if the message is from the correct doorbot
+-	doorbotID := msg.Body["doorbot_id"].(float64)
+-	if int(doorbotID) != c.cameraID {
+-		return
++	session, hasSession := msg.Body["session_id"].(string)
++	if !hasSession || session == "" {
++		return true
+ 	}
+ 
+-	if msg.Method == "session_created" || msg.Method == "session_started" {
+-		if _, ok := msg.Body["session_id"]; ok && c.wsClient.sessionID == "" {
+-			c.wsClient.sessionID = msg.Body["session_id"].(string)
+-		}
++	if c.wsClient.sessionID == "" {
++		c.wsClient.sessionID = session
++		Log.Debug().Msgf("[ring] session %s", summarize(WSMessage{Body: map[string]any{"session_id": session}}))
+ 	}
+ 
+-	// check if the message is from the correct session
+-	if _, ok := msg.Body["session_id"]; ok {
+-		if msg.Body["session_id"].(string) != c.wsClient.sessionID {
+-			return
+-		}
++	return session == c.wsClient.sessionID
++}
++
++func (c *Client) onWSMessage(msg WSMessage) {
++	rawMsg, _ := json.Marshal(msg)
++
++	if !c.acceptMessage(msg) {
++		Log.Debug().Str("method", msg.Method).Msg("[ring] ignored (other camera or session)")
++		return
+ 	}
+ 
+ 	switch msg.Method {
+@@ -262,7 +304,11 @@ func (c *Client) onWSMessage(msg WSMessage) {
+ 				return
+ 			}
+ 
++			c.gotAnswer.Store(true)
++			Log.Trace().Msgf("[ring] answer sdp:\n%s", msg.Body.SDP)
++
+ 			if err := prod.SetAnswer(msg.Body.SDP); err != nil {
++				Log.Debug().Err(err).Msg("[ring] set answer failed")
+ 				c.Stop()
+ 				c.connected.Done(err)
+ 				return
+@@ -290,6 +336,7 @@ func (c *Client) onWSMessage(msg WSMessage) {
+ 			}
+ 
+ 			if err := prod.AddCandidate(msg.Body.Ice); err != nil {
++				Log.Debug().Err(err).Msg("[ring] add candidate failed")
+ 				c.Stop()
+ 				c.connected.Done(err)
+ 				return
+@@ -300,6 +347,10 @@ func (c *Client) onWSMessage(msg WSMessage) {
+ 		c.Stop()
+ 		c.connected.Done(errors.New("ring: close"))
+ 
++	case "ping":
++		// Ring's own client answers Ring's pings, so do the same.
++		_ = c.wsClient.sendSessionMessage("pong", nil)
++
+ 	case "pong":
+ 		// Ignore
+ 	}
+diff --git a/pkg/ring/client_test.go b/pkg/ring/client_test.go
+new file mode 100644
+index 0000000..6a485e1
+--- /dev/null
++++ b/pkg/ring/client_test.go
+@@ -0,0 +1,73 @@
++package ring
++
++import (
++	"strings"
++	"testing"
++)
++
++func newTestClient() *Client {
++	return &Client{cameraID: 42, wsClient: &WSClient{}}
++}
++
++func msg(method string, body map[string]any) WSMessage {
++	return WSMessage{Method: method, Body: body}
++}
++
++func TestAcceptMessageAdoptsFirstSessionFromAnyMessage(t *testing.T) {
++	c := newTestClient()
++
++	// The answer arriving before session_created must not be dropped.
++	if !c.acceptMessage(msg("sdp", map[string]any{"doorbot_id": float64(42), "session_id": "abc", "sdp": "v=0"})) {
++		t.Fatal("answer with the first session id was dropped")
++	}
++	if c.wsClient.sessionID != "abc" {
++		t.Fatalf("session not adopted: %q", c.wsClient.sessionID)
++	}
++
++	// Same session still accepted, a different one is not.
++	if !c.acceptMessage(msg("ice", map[string]any{"doorbot_id": float64(42), "session_id": "abc"})) {
++		t.Fatal("message of the adopted session was dropped")
++	}
++	if c.acceptMessage(msg("ice", map[string]any{"doorbot_id": float64(42), "session_id": "other"})) {
++		t.Fatal("message of another session was accepted")
++	}
++}
++
++func TestAcceptMessageFiltersOtherCamerasAndBadTypes(t *testing.T) {
++	c := newTestClient()
++
++	if c.acceptMessage(msg("sdp", map[string]any{"doorbot_id": float64(7)})) {
++		t.Fatal("other camera accepted")
++	}
++	if c.acceptMessage(msg("sdp", map[string]any{})) {
++		t.Fatal("message without doorbot_id accepted")
++	}
++	if c.acceptMessage(msg("sdp", map[string]any{"doorbot_id": "42"})) {
++		t.Fatal("doorbot_id of the wrong type accepted")
++	}
++
++	// A session_id of the wrong type must not panic and is treated as no session.
++	if !c.acceptMessage(msg("notification", map[string]any{"doorbot_id": float64(42), "session_id": 5})) {
++		t.Fatal("message with a non-string session_id was dropped")
++	}
++	if c.wsClient.sessionID != "" {
++		t.Fatal("a bad session_id was adopted")
++	}
++}
++
++func TestSummarizeLeavesSecretsOut(t *testing.T) {
++	s := summarize(msg("sdp", map[string]any{
++		"doorbot_id": float64(42),
++		"session_id": "0123456789abcdef",
++		"sdp":        "v=0\r\na=ice-pwd:secret",
++		"token":      "should-not-appear",
++	}))
++	for _, bad := range []string{"secret", "should-not-appear", "0123456789abcdef"} {
++		if strings.Contains(s, bad) {
++			t.Fatalf("summary leaks %q: %s", bad, s)
++		}
++	}
++	if !strings.Contains(s, "sdp=") || !strings.Contains(s, "doorbot_id=42") {
++		t.Fatalf("summary missing fields: %s", s)
++	}
++}
+diff --git a/pkg/ring/log.go b/pkg/ring/log.go
+new file mode 100644
+index 0000000..0b9f5af
+--- /dev/null
++++ b/pkg/ring/log.go
+@@ -0,0 +1,8 @@
++package ring
++
++import "github.com/rs/zerolog"
++
++// Log is replaced by internal/ring with the "ring" module logger, so
++// "log: ring: debug" (or trace) in go2rtc.yaml shows the Ring signalling.
++// Tokens, tickets and SDP are never logged above trace level.
++var Log = zerolog.Nop()
+diff --git a/pkg/ring/ws.go b/pkg/ring/ws.go
+index 51e72fe..a691322 100644
+--- a/pkg/ring/ws.go
++++ b/pkg/ring/ws.go
+@@ -4,6 +4,8 @@ import (
+ 	"fmt"
+ 	"net/http"
+ 	"net/url"
++	"sort"
++	"strings"
+ 	"sync"
+ 	"time"
+ 
+@@ -236,8 +238,7 @@ func (c *WSClient) sendSessionMessage(method string, payload map[string]interfac
+ 		"body":      payload,
+ 	}
+ 
+-	// rawMsg, _ := json.Marshal(msg)
+-	// fmt.Printf("ring: sendSessionMessage: %s: %s\n", method, string(rawMsg))
++	Log.Debug().Str("method", method).Msg("[ring] send")
+ 
+ 	if err := c.ws.WriteJSON(msg); err != nil {
+ 		return err
+@@ -246,7 +247,39 @@ func (c *WSClient) sendSessionMessage(method string, payload map[string]interfac
+ 	return nil
+ }
+ 
++// summarize describes a message for the debug log without anything secret:
++// the SDP and the ticket are left out, ICE candidates and notification text are kept.
++func summarize(msg WSMessage) string {
++	var parts []string
++	keys := make([]string, 0, len(msg.Body))
++	for k := range msg.Body {
++		keys = append(keys, k)
++	}
++	sort.Strings(keys)
++	for _, k := range keys {
++		switch k {
++		case "doorbot_id", "session_id":
++			if v, ok := msg.Body[k].(string); ok && len(v) > 8 {
++				parts = append(parts, k+"="+v[:8]+"…")
++			} else {
++				parts = append(parts, fmt.Sprintf("%s=%v", k, msg.Body[k]))
++			}
++		case "sdp":
++			if v, ok := msg.Body[k].(string); ok {
++				parts = append(parts, fmt.Sprintf("sdp=%d bytes", len(v)))
++			}
++		case "ice", "text", "is_ok", "transcoding", "transcoding_reason", "mlineindex", "type":
++			parts = append(parts, fmt.Sprintf("%s=%v", k, msg.Body[k]))
++		default:
++			parts = append(parts, k)
++		}
++	}
++	return strings.Join(parts, " ")
++}
++
+ func (c *WSClient) onWsMessage(msg WSMessage) {
++	Log.Debug().Str("method", msg.Method).Msgf("[ring] recv %s", summarize(msg))
++
+ 	if c.onMessage != nil {
+ 		c.onMessage(msg)
+ 	}

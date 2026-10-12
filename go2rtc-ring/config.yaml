@@ -1,0 +1,27 @@
+name: go2rtc (Church Drive, Ring fix)
+description: >-
+  A drop-in replacement for the go2rtc add-on (and for go2rtc-hevc-fix): go2rtc
+  1.9.14 with the HEVC aggregation-packet fix (upstream PR #2296) and a patched
+  Ring source that logs its signalling, answers Ring's pings, accepts Ring's
+  answer whichever message carries the session id, and gives up with a reason
+  instead of hanging.
+version: 1.9.14-ring.1
+slug: go2rtc_church_ring
+url: https://github.com/J45PER/church-drive-cards/tree/main/go2rtc-ring
+arch:
+  - amd64
+  - aarch64
+  - armv7
+init: false
+startup: system
+host_network: true
+homeassistant_api: true
+video: true
+audio: true
+ingress: true
+ingress_port: 1984
+panel_icon: mdi:camera-wireless
+map:
+  - config:rw
+  - media
+  - ssl
