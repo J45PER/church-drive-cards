@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-12. Current release: **v0.52.2** (v0.52.3 / Android 0.19.3 in PR, not yet released).*
+*Last updated 2026-10-12. Current release: **v0.52.3** (Android 0.19.3).*
 
 ## Where this stands
 
@@ -190,6 +190,15 @@ HACS as an integration. It does two jobs:
     plugged in with no mode picked stays locked. Checked 2026-10-11 00:30: it ran (unlock, 5 s, Fast)
     and charging started; "Charge when locked" stayed on, so the unlock does not turn it off and
     PR #121 (drop the unlock) isn't needed.
+    2026-10-13: it did NOT start overnight. The mode was already Fast (left on from earlier), so there
+    was no mode change to trigger the unlock, and "Zappi smart charge" saw a non-Stopped mode and went
+    Manual. The Zappi said Boosting 00:30-05:30 but stayed "EV Connected" at 0 W (locked, waiting at
+    the unit). Fixed live 2026-10-13: a second trigger, `sensor.zappi_status` Boosting for 3 minutes,
+    runs the same unlock + resend-the-mode. (Charge when locked goes on at an unlock and off at
+    unplug; it is not turned off by the unlock.) **Rule from the user: at 00:30, if a car is plugged
+    in it must start. The Vauxhall always charges Fast when plugged in; when the VW is set up it
+    should be Eco+.** Not built: today the mode is one global select, so a per-car mode (which car is
+    plugged in comes from that car's integration plug sensor) is a TODO for when the VW is added.
   - **Charger button** (v0.38.3, replaces the v0.38.1 Unlock / Charge now / Pause overrides): while a
     car's plugged in, `ev-charger-card` (expanded and compact) shows one button above the modes:
     **Start charge** (unlock if locked, then Fast) until it's charging, then a greyed **Charging**
