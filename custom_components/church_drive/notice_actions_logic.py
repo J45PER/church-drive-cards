@@ -181,3 +181,8 @@ def tap_link_for(kind: str | None, tag: str = "", link_given: str = "", entity_i
         return given
     page = KIND_PAGES.get(kind or "")
     return page_uri(page) if page else ""
+
+
+def is_app_only_link(link: str) -> bool:
+    """A link only the Church Drive app understands (a device or Device Health page)."""
+    return link.startswith(DEVICE_PREFIX) or link == HEALTH_URI

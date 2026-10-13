@@ -90,6 +90,12 @@ class NoticeActionsLogic(unittest.TestCase):
         self.assertEqual(na.tap_link_for("door_away", "", "/dashboard-mobile/security?x=1"), "/dashboard-mobile/security?x=1")
         self.assertEqual(na.tap_link_for("doorbell", "", "church-drive-camera:camera.front_door_live_view?answer"), "church-drive-camera:camera.front_door_live_view?answer")
 
+    def test_device_links_are_for_the_church_drive_app_only(self):
+        self.assertTrue(na.is_app_only_link("church-drive-health"))
+        self.assertTrue(na.is_app_only_link("church-drive-device:sensor.x"))
+        self.assertFalse(na.is_app_only_link("/dashboard-mobile/security"))
+        self.assertFalse(na.is_app_only_link("church-drive-camera:camera.x"))
+
 
 if __name__ == "__main__":
     unittest.main()
