@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **v0.53.0 + app 0.20.0** (2026-10-13): Notification styles: anyone can choose which notifications they get and how each appears on their phone (new `church_drive/people/mine` command for your own tick; `church_drive/people` now says which person you are)
 - **v0.52.2** (2026-10-12): alarm lights fix: the Hue bridge refused the "stop flashing" command (it insists on a duration), so lights kept flashing until the bridge's own timer ran out; now accepted, and retried if missed
 - **v0.52.1** (2026-10-12): alarm lights: Hue lights are flashed by the Hue bridge itself (quick, not throttled), pulses from Home Assistant are quicker and can't queue up, a method and pulse speed setting; fix: lights are saved and put back one by one (Hue groups weren't being expanded, so rooms came back wrong or not at all)
 - **v0.52.0** (2026-10-12): alarm lights: the lights answer an alarm (fire/smoke/heat/CO: red-amber pulses, constant lights at night; house alarm home: red-blue + constant, away: red only; green or blue all-clear; lights restored), day or night from light sensors for the whole house, a Manager card with a lights-only test

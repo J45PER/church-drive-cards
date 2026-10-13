@@ -99,6 +99,7 @@ from .const import (
     WS_LIBRARY,
     WS_PEOPLE,
     WS_PEOPLE_ASSIGN,
+    WS_PEOPLE_MINE,
     WS_CAMERA_EVENTS,
     WS_CAMERA_LINK_SET,
     WS_CAMERA_LINKS,
@@ -262,6 +263,8 @@ def ws_people(hass: HomeAssistant, connection: websocket_api.ActiveConnection, m
             "access": people.access(),
             "stale_hours": people.stale_hours(),
             "rev": people.rev,
+            # Which person this login is, so the app can show "me" without guessing from a name.
+            "me": people.person_for_user(connection.user.id if connection.user else None),
         }
     )
 
@@ -286,6 +289,33 @@ async def ws_people_assign(
         return
     await people.async_set(msg["kind"], msg.get("person"), msg["on"])
     connection.send_result(msg["id"], {"kinds": people.kinds()})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_PEOPLE_MINE,
+        vol.Required("kind"): cv.string,
+        vol.Required("on"): cv.boolean,
+    }
+)
+@websocket_api.async_response
+async def ws_people_mine(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Tick or untick a kind of notification for the person who is signed in (anyone may change their own)."""
+    people = _people(hass)
+    if people is None:
+        connection.send_error(msg["id"], "not_ready", "People and notifications aren't running")
+        return
+    me = people.person_for_user(connection.user.id if connection.user else None)
+    if not me:
+        connection.send_error(msg["id"], "no_person", "This login isn't linked to a person")
+        return
+    if not people.may_tick(msg["kind"], me):
+        connection.send_error(msg["id"], "unauthorized", "Only an administrator can have that notification")
+        return
+    await people.async_set(msg["kind"], me, msg["on"])
+    connection.send_result(msg["id"], {"kinds": people.kinds(), "me": me})
 
 
 @websocket_api.websocket_command(
@@ -1063,7 +1093,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             [StaticPathConfig(URL_BASE, str(FRONTEND_DIR), cache_headers=False)]
         )
         for command in (
-            ws_library, ws_icons, ws_icon_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_phone,
+            ws_library, ws_icons, ws_icon_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_mine, ws_people_phone,
             ws_people_places, ws_people_cars, ws_people_access, ws_people_tracking, ws_people_settings, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_maps, ws_maps_search, ws_assist_info,
             ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss, ws_reminders, ws_reminder_set,
             ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_import,
