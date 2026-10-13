@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.9.14-ring.4
+
+- More Ring logging (with `log: ring: debug`): the peer connection's state changes, when the signalling
+  connection closes or errors, and a short call trail every time a Ring stream is stopped, so a feed that
+  goes black says why (a viewer left, Ring ended it, or the connection failed). No behaviour change.
+
 ## 1.9.14-ring.3
 
 - The Ring offer is now H264 only. go2rtc offered H264 and H265 on every WebRTC connection, and

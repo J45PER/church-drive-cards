@@ -3,7 +3,8 @@
 #   1. go2rtc-hevc-ap.patch  upstream go2rtc PR #2296 (HEVC aggregation packets),
 #      the same patch as the go2rtc-hevc-fix add-on this replaces.
 #   2. go2rtc-ring.patch     Church Drive's Ring signalling fix (see DOCS.md).
-# A build only exists if both patches apply and their packages' tests pass.
+#   3. go2rtc-ring-logging.patch  more Ring logging: peer state, why a stream stopped.
+# A build only exists if all the patches apply and their packages' tests pass.
 ARG BUILD_FROM
 
 FROM golang:1.25-alpine AS build
@@ -12,9 +13,10 @@ RUN apk add --no-cache git
 WORKDIR /src
 RUN git -c advice.detachedHead=false clone --depth 1 \
         --branch "v${GO2RTC_VERSION}" https://github.com/AlexxIT/go2rtc.git .
-COPY go2rtc-hevc-ap.patch go2rtc-ring.patch /tmp/
+COPY go2rtc-hevc-ap.patch go2rtc-ring.patch go2rtc-ring-logging.patch /tmp/
 RUN git apply /tmp/go2rtc-hevc-ap.patch \
     && git apply /tmp/go2rtc-ring.patch \
+    && git apply /tmp/go2rtc-ring-logging.patch \
     && go test ./pkg/h265/ ./pkg/ring/ ./pkg/webrtc/ \
     && CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o /go2rtc .
 

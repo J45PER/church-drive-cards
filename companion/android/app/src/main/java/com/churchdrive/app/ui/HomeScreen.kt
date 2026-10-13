@@ -413,17 +413,12 @@ fun LoadingNote(text: String) {
     }
 }
 
-/** The Experimental page: every camera as a tile that opens the new live view ("layout C"). */
+/** The Experimental page: things being tried out before they replace what is there. Nothing is at the moment (the new camera live view is now the main one). */
 @Composable
-private fun ExperimentalPage(entities: Map<String, EntityState>, registry: Registry, call: CallService) {
-    val cameras = entities.keys.filter { it.startsWith("camera.") && it.endsWith("_live_view") }.sorted()
-    androidx.compose.foundation.layout.Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            "The new camera live view. Tap a camera. The two small icons on the picture are bigger and full screen; in those, tap the picture to show or hide the buttons. The doorbell shows Answer while it rings.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        if (cameras.isEmpty()) Text("No cameras found.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        cameras.forEach { id -> CameraCard(org.json.JSONObject().put("entity", id), entities, registry, call, experimental = true) }
-    }
+private fun ExperimentalPage(@Suppress("UNUSED_PARAMETER") entities: Map<String, EntityState>, @Suppress("UNUSED_PARAMETER") registry: Registry, @Suppress("UNUSED_PARAMETER") call: CallService) {
+    Text(
+        "Nothing is being tried out right now. The new camera live view (bigger and full-screen pictures, Answer on the doorbell, Talk) is now the main one, on the Security page and wherever a camera shows.",
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
