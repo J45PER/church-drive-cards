@@ -1,6 +1,6 @@
 # go2rtc (Church Drive, Ring fix)
 
-A drop-in replacement for the **go2rtc-hevc-fix** add-on (and the official go2rtc add-on). It is
+The go2rtc used for the Ring cameras and doorbell here; a drop-in replacement for the official go2rtc add-on and for go2rtc-hevc-fix (which it replaced). It is
 go2rtc **1.9.14**, built from source on your device, with two patches:
 
 1. **HEVC aggregation packets** (upstream go2rtc PR #2296): the same patch as go2rtc-hevc-fix.

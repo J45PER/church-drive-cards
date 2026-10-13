@@ -484,7 +484,7 @@ chips didn't pin, and panels jumped to a slightly larger height before expanding
     from HA show as her). Then:
     1. Hayley shares the location with it.
     2. Re-sign in the Ring integration and ring-mqtt (app `03cabcc9_ring_mqtt`) with it.
-    3. Sign in go2rtc (app `03cabcc9_go2rtc_hevc_fix`, 1.9.14, web UI → Add → Ring)
+    3. Sign in go2rtc (first the `go2rtc-hevc-fix` app, since replaced by our own `57e66166_go2rtc_church_ring`, see HANDOFF.md, web UI → Add → Ring)
        and add a `front_door` stream.
     4. Set `talk_stream: front_door` on the doorbell's camera card.
     Two-way audio on Ring through go2rtc is untested here.

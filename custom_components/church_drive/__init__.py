@@ -104,6 +104,7 @@ from .const import (
     WS_NOTICES_MISSED,
     WS_PEOPLE_MINE,
     WS_CAMERA_EVENTS,
+    WS_CAMERA_ALERT_SET,
     WS_CAMERA_LINK_SET,
     WS_CAMERA_LINKS,
     WS_CAMERA_SETTINGS,
@@ -1023,6 +1024,28 @@ async def ws_camera_link_set(
     connection.send_result(msg["id"], events.links())
 
 
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_CAMERA_ALERT_SET,
+        vol.Required("mode"): vol.In(["disarmed", "home", "away"]),
+        vol.Required("cam"): cv.string,
+        vol.Required("on"): cv.boolean,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_camera_alert_set(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Whether a camera's movement is told to the house in an alarm mode."""
+    events = _events(hass)
+    if events is None:
+        connection.send_error(msg["id"], "not_ready", "Camera events aren't running")
+        return
+    await events.async_set_alert(msg["mode"], msg["cam"], msg["on"])
+    connection.send_result(msg["id"], events.links())
+
+
 def _maps_option(hass: HomeAssistant, key: str) -> str:
     entries = hass.config_entries.async_entries(DOMAIN)
     return (entries[0].options.get(key) or "").strip() if entries else ""
@@ -1120,7 +1143,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         for command in (
             ws_library, ws_icons, ws_icon_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_mine, ws_notices_missed, ws_people_phone,
-            ws_people_places, ws_people_cars, ws_people_access, ws_people_tracking, ws_people_settings, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_maps, ws_maps_search, ws_assist_info,
+            ws_people_places, ws_people_cars, ws_people_access, ws_people_tracking, ws_people_settings, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_camera_alert_set, ws_maps, ws_maps_search, ws_assist_info,
             ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss, ws_reminders, ws_reminder_set,
             ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_import,
             ws_alarm_lights, ws_alarm_lights_set, ws_alarm_lights_test, ws_alarm_lights_stop,

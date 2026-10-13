@@ -39,7 +39,7 @@ KINDS: list[dict[str, Any]] = [
      "needs": [("class", "binary_sensor", "door")]},
     {"key": "alarm_mode", "group": "Security", "name": "Alarm set or turned off", "default": "admins",
      "needs": [("domain", "alarm_control_panel")]},
-    {"key": "night_motion", "group": "Security", "name": "Movement outside at night", "default": "admins",
+    {"key": "night_motion", "group": "Security", "name": "Movement on a camera", "note": "Which cameras, in which alarm modes: Camera links", "default": "admins",
      "needs": [("class", "event", "motion")]},
     {"key": "tamper", "group": "Security", "name": "Sensor tampered with", "default": "admins",
      "needs": [("class", "binary_sensor", "tamper")]},
