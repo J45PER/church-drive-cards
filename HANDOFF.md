@@ -199,6 +199,12 @@ HACS as an integration. It does two jobs:
     in it must start. The Vauxhall always charges Fast when plugged in; when the VW is set up it
     should be Eco+.** Not built: today the mode is one global select, so a per-car mode (which car is
     plugged in comes from that car's integration plug sensor) is a TODO for when the VW is added.
+    **Safety net (live 2026-10-13):** "Church Drive: Zappi safety net at 00:40" (automation). At 00:40,
+    if a car is plugged in, the mode isn't Stopped, the status isn't Completed and it isn't charging:
+    unlock (if locked), send the mode again, wait up to 5 min for plug status Charging, and if it still
+    isn't, `church_drive.notify` kind `car_charging` ("Car didn't start charging", to whoever is ticked
+    for that in Manager). Note a `for:` trigger (the Boosting one) restarts its clock on an HA restart
+    or an `unavailable` blip, which is why this second chance exists.
   - **Charger button** (v0.38.3, replaces the v0.38.1 Unlock / Charge now / Pause overrides): while a
     car's plugged in, `ev-charger-card` (expanded and compact) shows one button above the modes:
     **Start charge** (unlock if locked, then Fast) until it's charging, then a greyed **Charging**
