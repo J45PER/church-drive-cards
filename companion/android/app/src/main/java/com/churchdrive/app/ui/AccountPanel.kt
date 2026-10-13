@@ -36,6 +36,7 @@ import androidx.compose.material.icons.outlined.BatteryChargingFull
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.NotificationsOff
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material3.Button
@@ -370,6 +371,11 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                         }
                     })
                 },
+            )
+            PanelRow(
+                Icons.Outlined.NotificationsOff, "Hide the connected notice",
+                "Android shows a small \"connected\" notice while the connection runs. Turn its switch off there to hide it: notifications still arrive.",
+                onClick = { com.churchdrive.app.house.openServiceNoticeSettings(context) },
             )
             PanelRow(
                 Icons.Outlined.BatteryChargingFull, "Keep it running",

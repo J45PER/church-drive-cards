@@ -266,7 +266,8 @@ class HouseService : Service() {
         }
 
         private const val FOREGROUND_ID = 4201
-        private const val CHANNEL_SERVICE = "service"
+        /** The channel of the small "connected" notice Android requires while the connection runs. */
+        const val CHANNEL_SERVICE = "service"
 
         /** Opens the app; a shopping reminder's link opens that list (each list its own request code, so the extras don't mix). */
         private fun openApp(context: Context, url: String? = null): PendingIntent {

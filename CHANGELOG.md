@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **v0.57.0 + app 0.25.0** (2026-10-13): one copy of each notification per phone: if a person's phone runs the Church Drive app and it's connected, the Home Assistant app on that phone (same model) isn't sent a second copy; if the app isn't connected, the Home Assistant app gets it as before. Missed notices are only kept for the app's catch-up when nothing else carried them. App: Settings > "Hide the connected notice" opens Android's switch for the small "connected" notice
 - **v0.56.0 + app 0.24.0** (2026-10-13): the notification preview and "Send me a test" simulate each kind properly: its own words, picture and buttons, sent through the real path in the style you chose (new `church_drive_notice_test` event; each kind in `church_drive/people` carries a `sample`)
 - **app 0.23.0** (2026-10-13): the new camera live view is the main one (Security page, camera cards, notification and widget taps); the old one is no longer used
 - **app 0.22.0** (2026-10-13): doorbell and movement notifications show the camera's picture above their buttons
