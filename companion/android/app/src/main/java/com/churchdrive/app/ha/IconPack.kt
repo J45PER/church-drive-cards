@@ -28,6 +28,13 @@ object IconPack {
 
     private val http = OkHttpClient()
 
+    /**
+     * Makes sure the pack's state exists before any screen is composed. If the first thing to touch [IconPack] is an icon in the
+     * middle of drawing the screen, the state is created inside that drawing pass and the app crashes the next time it is read
+     * ("Reading a state that was created after the snapshot was taken"). Called once at start-up.
+     */
+    fun prepare() = Unit
+
     fun load(scope: CoroutineScope, dir: File, baseUrl: String, token: String) {
         if (text != null) return
         scope.launch(Dispatchers.IO) {

@@ -7,6 +7,11 @@ import com.churchdrive.app.ui.deviceHealthList
 import com.churchdrive.app.ui.deviceHealthSummary
 import com.churchdrive.app.ui.deviceIdFor
 import com.churchdrive.app.ui.healthOfDevice
+import com.churchdrive.app.ui.percentLevel
+import com.churchdrive.app.ui.BATTERY_CRITICAL
+import com.churchdrive.app.ui.BATTERY_LOW
+import com.churchdrive.app.ui.FILTER_CRITICAL
+import com.churchdrive.app.ui.FILTER_LOW
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -59,6 +64,23 @@ class DeviceHealthDataTest {
         assertEquals(8, d.battery)
         assertTrue(d.batteryLow)
         assertEquals(HealthLevel.Bad, d.level)
+    }
+
+    @Test fun aBatteryGettingLowIsAmberAndNearlyFlatIsRed() {
+        assertEquals(HealthLevel.Ok, percentLevel(62, BATTERY_LOW, BATTERY_CRITICAL))
+        assertEquals(HealthLevel.Ok, percentLevel(41, BATTERY_LOW, BATTERY_CRITICAL))
+        assertEquals(HealthLevel.Warn, percentLevel(40, BATTERY_LOW, BATTERY_CRITICAL))
+        assertEquals(HealthLevel.Warn, percentLevel(28, BATTERY_LOW, BATTERY_CRITICAL))
+        assertEquals(HealthLevel.Bad, percentLevel(20, BATTERY_LOW, BATTERY_CRITICAL))
+        assertEquals(HealthLevel.Warn, percentLevel(30, FILTER_LOW, FILTER_CRITICAL))
+        assertEquals(HealthLevel.Bad, percentLevel(8, FILTER_LOW, FILTER_CRITICAL))
+    }
+
+    @Test fun aBatteryAt28PercentNeedsAttention() {
+        val low = entities + entity("sensor.door_battery", "28", "device_class" to "battery").let { it.entityId to it }
+        val d = healthOfDevice("door", low, registry, areas)!!
+        assertEquals(HealthLevel.Warn, d.level)
+        assertTrue(d.needsAttention)
     }
 
     @Test fun aLowFilterIsAWarning() {

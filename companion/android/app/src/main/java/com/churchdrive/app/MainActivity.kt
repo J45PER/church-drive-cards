@@ -120,6 +120,7 @@ class MainActivity : ComponentActivity() {
         readShare(intent)
         val lastCrash = CrashReport.take(this)
         CrashReport.install(this)
+        com.churchdrive.app.ha.IconPack.prepare()
         com.churchdrive.app.ui.MdiAll.load(this)
         com.churchdrive.app.ui.AssistWakeSetting.load(this)
         setContent {
