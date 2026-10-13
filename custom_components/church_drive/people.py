@@ -701,10 +701,15 @@ class People:
         phones = 0
         for p in self.recipients(None if test else kind, only):
             seq = self.notice_log.next_seq(int(dt_util.utcnow().timestamp() * 1000))
-            logged = False
             text = message + (f"\n{admin_message}" if admin_message and p["admin"] else "")
-            for phone in p["phones"]:
-                if not phone["on"]:
+            # The Church Drive app goes first. A phone that hears it there doesn't also get the Home Assistant app's
+            # copy (the same person's phone of the same model); if the app isn't connected, that copy is sent as before.
+            on = sorted((ph for ph in p["phones"] if ph["on"]), key=lambda ph: not ph.get("own_app"))
+            covered: set[str] = set()
+            missed: dict[str, Any] | None = None
+            elsewhere = False
+            for phone in on:
+                if not phone.get("own_app") and phone.get("model") and phone["model"] in covered:
                     continue
                 data: dict[str, Any] = {"group": kind or "church-drive"}
                 if tag:
@@ -728,17 +733,24 @@ class People:
                 if phone.get("own_app"):
                     # The Church Drive app keeps the number of the last notice it saw, and asks for what it missed.
                     data["cd_seq"] = seq
-                    if not logged:
-                        logged = True
-                        self.notice_log.record(p["entity_id"], seq, title, text, dict(data))
                 try:
                     await self.hass.services.async_call(
                         "notify", phone["service"], {"title": title, "message": text, "data": data},
                         blocking=True, context=context,
                     )
                     phones += 1
+                    if phone.get("own_app"):
+                        if phone.get("model"):
+                            covered.add(phone["model"])
+                    else:
+                        elsewhere = True
                 except Exception as err:  # noqa: BLE001 - one phone failing mustn't stop the rest
                     _LOGGER.warning("Couldn't notify %s on %s: %s", p["name"], phone["name"], err)
+                    if phone.get("own_app"):
+                        missed = dict(data)
+            # The app wasn't connected and nothing else carried it: keep it for when the app next connects.
+            if missed is not None and not elsewhere:
+                self.notice_log.record(p["entity_id"], seq, title, text, missed)
             sent.append(p["first"])
         return {"people": sent, "phones": phones}
 
