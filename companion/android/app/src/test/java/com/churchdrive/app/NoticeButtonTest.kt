@@ -66,4 +66,11 @@ class NoticeButtonTest {
         assertEquals(5, again.seq)
         assertEquals("door_away", again.kind)
     }
+
+    @Test fun thisPhoneIsFoundByItsRegisteredName() {
+        val people = listOf(JSONObject("""{"entity_id":"person.jamie","phones":[{"service":"mobile_app_a","on":true},{"service":"mobile_app_jamie_pixel","on":false}]}"""))
+        assertEquals(false, com.churchdrive.app.ui.thisPhone(people, "person.jamie", "mobile_app_jamie_pixel")!!.getBoolean("on"))
+        assertNull(com.churchdrive.app.ui.thisPhone(people, "person.jamie", "mobile_app_other"))
+        assertNull(com.churchdrive.app.ui.thisPhone(people, "person.ian", "mobile_app_a"))
+    }
 }

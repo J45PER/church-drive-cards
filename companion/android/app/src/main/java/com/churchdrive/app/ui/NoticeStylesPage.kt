@@ -28,6 +28,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.churchdrive.app.Session
+import com.churchdrive.app.ha.MobileApp
 import com.churchdrive.app.ha.data
 import com.churchdrive.app.house.NoticeStyle
 import com.churchdrive.app.house.NoticeStyles
@@ -52,6 +54,10 @@ private fun groupIcon(group: String): String = when (group) {
     else -> "mdi:wrench"
 }
 
+/** This phone's entry among a person's phones (matched by the name it is registered under), or null if the house doesn't list it. */
+internal fun thisPhone(people: List<JSONObject>, me: String, service: String): JSONObject? =
+    people.firstOrNull { it.optString("entity_id") == me }?.optJSONArray("phones").items().firstOrNull { it.optString("service") == service }
+
 /** What a kind does on this phone until the person chooses: loud for a safety alarm, otherwise a pop-up. */
 private fun styleOf(context: android.content.Context, kind: JSONObject): NoticeStyle =
     NoticeStyles.chosen(context, kind.optString("key")) ?: defaultNoticeStyle(kind.optBoolean("critical"), false, false)
@@ -75,6 +81,23 @@ fun NoticeStylesPage(isAdmin: Boolean, onBack: () -> Unit) {
         } else {
             val me = d.optString("me")
             val kinds = d.optJSONArray("kinds").items().filter { it.optBoolean("available", true) && (isAdmin || !it.optBoolean("admin_only")) }
+            val phone = thisPhone(d.optJSONArray("people").items(), me, MobileApp.notifyService(Session(context).deviceName ?: ""))
+            if (phone != null && !phone.optBoolean("on", true)) {
+                Card(Modifier.fillMaxWidth()) {
+                    ListItem(
+                        headlineContent = { Text("Notifications are off for this phone") },
+                        supportingContent = {
+                            Text(if (isAdmin) "The house isn't sending anything to this phone. Turn it on to get them here." else "The house isn't sending anything to this phone. Ask an administrator to turn it on.")
+                        },
+                        trailingContent = {
+                            if (isAdmin) Switch(checked = false, onCheckedChange = {
+                                view.send("church_drive/people/phone", data("person" to me, "service" to phone.optString("service"), "on" to true))
+                            })
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    )
+                }
+            }
             Text(
                 "Choose which notifications you get, and how each one appears on this phone. Anything marked as a safety alarm can ring through silent mode.",
                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
