@@ -1,0 +1,75 @@
+diff --git a/pkg/ring/client.go b/pkg/ring/client.go
+index 227033a..9ddaeea 100644
+--- a/pkg/ring/client.go
++++ b/pkg/ring/client.go
+@@ -5,6 +5,7 @@ import (
+ 	"errors"
+ 	"fmt"
+ 	"net/url"
++	"runtime"
+ 	"strconv"
+ 	"strings"
+ 	"sync/atomic"
+@@ -141,6 +142,7 @@ func Dial(rawURL string) (*Client, error) {
+ 
+ 	client.wsClient.onClose = func() {
+ 		// fmt.Println("ring: disconnect")
++		Log.Debug().Msg("[ring] signalling connection closed")
+ 		client.Stop()
+ 		client.connected.Done(errors.New("ring: disconnect"))
+ 	}
+@@ -168,6 +170,7 @@ func Dial(rawURL string) (*Client, error) {
+ 			}
+ 
+ 		case pion.PeerConnectionState:
++			Log.Debug().Msgf("[ring] peer connection %s", msg)
+ 			switch msg {
+ 			case pion.PeerConnectionStateNew:
+ 				break
+@@ -421,6 +424,7 @@ func (c *Client) Stop() error {
+ 	}
+ 
+ 	c.closed = true
++	Log.Debug().Msgf("[ring] stopping (called from %s)", callers())
+ 
+ 	if c.prod != nil {
+ 		_ = c.prod.Stop()
+@@ -433,6 +437,26 @@ func (c *Client) Stop() error {
+ 	return nil
+ }
+ 
++// callers names the functions that led to a Stop, so the log says who ended a stream.
++func callers() string {
++	pcs := make([]uintptr, 8)
++	n := runtime.Callers(3, pcs)
++	frames := runtime.CallersFrames(pcs[:n])
++	var names []string
++	for {
++		frame, more := frames.Next()
++		name := frame.Function
++		if i := strings.LastIndex(name, "/"); i >= 0 {
++			name = name[i+1:]
++		}
++		names = append(names, name)
++		if !more || len(names) >= 4 {
++			break
++		}
++	}
++	return strings.Join(names, " < ")
++}
++
+ func (c *Client) MarshalJSON() ([]byte, error) {
+ 	return json.Marshal(c.prod)
+ }
+diff --git a/pkg/ring/ws.go b/pkg/ring/ws.go
+index a691322..eed5fc1 100644
+--- a/pkg/ring/ws.go
++++ b/pkg/ring/ws.go
+@@ -286,6 +286,7 @@ func (c *WSClient) onWsMessage(msg WSMessage) {
+ }
+ 
+ func (c *WSClient) onWsError(err error) {
++	Log.Debug().Err(err).Msg("[ring] signalling error")
+ 	if c.onError != nil {
+ 		c.onError(err)
+ 	}
