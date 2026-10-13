@@ -9,6 +9,7 @@ import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.content.pm.ServiceInfo
 import android.location.Location
 import android.location.LocationListener
@@ -226,6 +227,31 @@ class HouseService : Service() {
             }
             // The same tag replaces the earlier notification, as in the Home Assistant app.
             runCatching { NotificationManagerCompat.from(context).notify(push.tag, noticeId, builder.build()) }
+            NoticePicture.path(push.image)?.let { addPicture(context, builder, push.tag, noticeId, push.message, it) }
+        }
+
+        /**
+         * Puts the camera's snapshot on the notification, above its buttons, a moment after it first shows (so the pop-up is not
+         * held up). The snapshot may still be the previous one, so it is fetched again a few seconds later. The notification
+         * is not put back if it was dismissed meanwhile, and the update makes no second sound.
+         */
+        private fun addPicture(context: Context, builder: NotificationCompat.Builder, tag: String?, noticeId: Int, message: String, path: String) {
+            val app = context.applicationContext
+            kotlin.concurrent.thread(name = "notice-picture") {
+                var last: Bitmap? = null
+                for (wait in longArrayOf(1_500, 4_500)) {
+                    Thread.sleep(wait)
+                    val manager = app.getSystemService(NotificationManager::class.java)
+                    if (manager.activeNotifications.none { it.id == noticeId && it.tag == tag }) return@thread
+                    val picture = NoticePicture.load(app, path) ?: continue
+                    if (last != null && last.sameAs(picture)) continue
+                    last = picture
+                    builder.setOnlyAlertOnce(true)
+                        .setLargeIcon(picture)
+                        .setStyle(NotificationCompat.BigPictureStyle().bigPicture(picture).bigLargeIcon(null as Bitmap?).setSummaryText(message))
+                    runCatching { NotificationManagerCompat.from(app).notify(tag, noticeId, builder.build()) }
+                }
+            }
         }
 
         /** A Link button: a camera opens that camera (answering for a doorbell), a page opens that page. */

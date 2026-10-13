@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.22.0
+
+- Doorbell and movement notifications show the camera's picture above their buttons, like Ring's own app. The words and buttons appear straight away and the picture follows a second or two later (fetched again a few seconds after in case the first was the previous snapshot). Pull the notification down, or expand it, to see the picture.
+
 ## 0.21.0
 
 - Notification buttons: notifications from the house can carry buttons that open a camera (answering a doorbell) or a page, turn lights on, send the vacuum home, charge or pause the car, run a backup, mute that kind for a while on this phone, or snooze it. Buttons that change the house need the phone unlocked. There are no calling buttons, and nothing can disarm the alarm.
