@@ -91,6 +91,10 @@
         <receiver
             android:name=".house.TaskActionReceiver"
             android:exported="false" />
+        <!-- The buttons on house notifications: do something, mute, snooze. -->
+        <receiver android:name=".house.NoticeActionReceiver" android:exported="false" />
+        <receiver android:name=".house.NoticeMuteReceiver" android:exported="false" />
+        <receiver android:name=".house.NoticeSnoozeReceiver" android:exported="false" />
         <activity
             android:name=".house.SnoozeActivity"
             android:exported="false"

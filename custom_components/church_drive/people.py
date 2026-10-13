@@ -45,7 +45,9 @@ from homeassistant.helpers.event import async_call_later, async_track_time_inter
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util, location, slugify
 
+from .notice_log import NoticeLog
 from .kinds import ARRIVALS, JOB_KINDS, KINDS, arrival_kind
+from .notice_actions_logic import actions_for, is_phone_action
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -76,6 +78,7 @@ class People:
     """The house's people, their phones and their notification assignments."""
 
     def __init__(self, hass: HomeAssistant) -> None:
+        self.notice_log = NoticeLog()
         self.hass = hass
         self._store: Store = Store(hass, STORE_VERSION, "church_drive.people")
         self._data: dict[str, Any] = {"assign": {}, "phones_off": {}, "places": {}, "cars": {}, "access": {}, "seen": {}, "stale_hours": STALE_HOURS, "seeded": False}
@@ -235,8 +238,10 @@ class People:
                 if service not in notify:
                     continue
                 seen = self._seen(tracker)
+                config = self.hass.config_entries.async_get_entry(entry.config_entry_id) if entry.config_entry_id else None
                 phones.append(
                     {
+                        "own_app": bool(config and config.data.get("app_id") == "com.churchdrive.app"),
                         "service": service,
                         "name": ((device.name_by_user or device.name) if device else tracker).strip(),
                         "model": (device.model or "") if device else "",
@@ -674,9 +679,15 @@ class People:
     ) -> dict[str, Any]:
         spec = next((k for k in self._catalogue() if k["key"] == kind), {}) if kind else {}
         loud = bool(spec.get("critical")) if critical is None else bool(critical)
+        # The buttons this kind carries (a task reminder brings its own).
+        buttons = [] if (extra or {}).get("actions") else actions_for(
+            kind, tag, image, title, exists=lambda e: self.hass.states.get(e) is not None
+        )
         sent: list[str] = []
         phones = 0
         for p in self.recipients(kind, only):
+            seq = self.notice_log.next_seq(int(dt_util.utcnow().timestamp() * 1000))
+            logged = False
             text = message + (f"\n{admin_message}" if admin_message and p["admin"] else "")
             for phone in p["phones"]:
                 if not phone["on"]:
@@ -697,6 +708,15 @@ class People:
                         data.update({"ttl": 0, "priority": "high", "channel": "alarm_stream"})
                 if extra:
                     data.update(extra)
+                mine = [b for b in buttons if phone.get("own_app") or not is_phone_action(b["action"])]
+                if mine:
+                    data["actions"] = mine
+                if phone.get("own_app"):
+                    # The Church Drive app keeps the number of the last notice it saw, and asks for what it missed.
+                    data["cd_seq"] = seq
+                    if not logged:
+                        logged = True
+                        self.notice_log.record(p["entity_id"], seq, title, text, dict(data))
                 try:
                     await self.hass.services.async_call(
                         "notify", phone["service"], {"title": title, "message": text, "data": data},

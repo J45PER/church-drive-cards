@@ -1,0 +1,75 @@
+import importlib.util
+import pathlib
+import unittest
+
+spec = importlib.util.spec_from_file_location(
+    "notice_actions_logic",
+    pathlib.Path(__file__).parent.parent / "custom_components" / "church_drive" / "notice_actions_logic.py",
+)
+na = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(na)
+
+
+def titles(buttons):
+    return [b["title"] for b in buttons]
+
+
+class NoticeActionsLogic(unittest.TestCase):
+    def test_the_doorbell_can_be_answered_viewed_and_muted(self):
+        b = na.actions_for("doorbell")
+        self.assertEqual(titles(b), ["Answer", "View", "Mute 1 hour"])
+        self.assertEqual(b[0]["uri"], "church-drive-camera:camera.front_door_live_view?answer")
+        self.assertEqual(b[1]["uri"], "church-drive-camera:camera.front_door_live_view")
+        self.assertEqual(b[2]["action"], "CD_mute:60")
+
+    def test_a_smoke_alarm_shows_its_rooms_camera_and_can_turn_lights_on(self):
+        b = na.actions_for("smoke", tag="church-drive-safety-binary_sensor_entrance_smoke_alarm_alarm_status")
+        self.assertEqual(titles(b), ["View camera", "Lights on"])
+        self.assertEqual(b[0]["uri"], "church-drive-camera:camera.entrance_live_view")
+        # A room with no camera: just the lights.
+        self.assertEqual(titles(na.actions_for("smoke", tag="church-drive-safety-binary_sensor_top_floor_smoke_alarm_alarm_status")), ["Lights on"])
+
+    def test_a_missing_camera_gives_no_view_button(self):
+        self.assertEqual(titles(na.actions_for("doorbell", exists=lambda e: False)), ["Mute 1 hour"])
+
+    def test_the_back_door_looks_at_the_garden(self):
+        b = na.actions_for("door_left_open", tag="church-drive-door-open-binary_sensor_back_door")
+        self.assertEqual(titles(b), ["Snooze 10 min", "View camera"])
+        self.assertEqual(b[1]["uri"], "church-drive-camera:camera.garden_live_view")
+
+    def test_motion_uses_the_camera_in_its_photo(self):
+        b = na.actions_for("night_motion", image="/api/camera_proxy/camera.driveway_snapshot")
+        self.assertEqual(b[0]["uri"], "church-drive-camera:camera.driveway_live_view")
+
+    def test_only_a_stuck_vacuum_offers_the_dock(self):
+        self.assertEqual(titles(na.actions_for("vacuum", title="🧹 Gregg needs help")), ["Send to dock", "Open Cleaning"])
+        self.assertEqual(titles(na.actions_for("vacuum", title="🧹 Gregg's finished")), ["Open Cleaning"])
+
+    def test_never_a_call_never_the_alarm(self):
+        every = []
+        for kind in ["smoke", "heat", "co", "alarm_triggered", "doorbell", "door_away", "door_left_open", "alarm_mode",
+                     "night_motion", "tamper", "vacuum", "damp", "left_on", "cheap_rate", "power_down", "car_plugged",
+                     "car_charged", "car_not_plugged", "backup"]:
+            every += na.actions_for(kind, tag="church-drive-door-binary_sensor_front_door", title="needs help")
+        for b in every:
+            text = (b["action"] + b.get("uri", "") + b["title"]).lower()
+            self.assertNotIn("tel:", text)
+            self.assertNotIn("call", text)
+            self.assertNotIn("disarm", text)
+        self.assertTrue(all(len(na.actions_for(k)) <= 3 for k in ["smoke", "doorbell", "vacuum"]))
+
+    def test_action_ids_split_and_unknown_ones_are_ignored(self):
+        self.assertEqual(na.split_action("CD_snooze:30"), ("snooze", 30))
+        self.assertEqual(na.split_action("CD_lights_on"), ("lights_on", None))
+        self.assertIsNone(na.split_action("CD_format_everything"))
+        self.assertIsNone(na.split_action("DONE_abc"))
+
+    def test_the_home_assistant_app_is_not_given_the_phone_only_buttons(self):
+        self.assertTrue(na.is_phone_action("CD_mute:60"))
+        self.assertTrue(na.is_phone_action("CD_snooze:10"))
+        self.assertFalse(na.is_phone_action("CD_lights_on"))
+        self.assertFalse(na.is_phone_action("URI"))
+
+
+if __name__ == "__main__":
+    unittest.main()

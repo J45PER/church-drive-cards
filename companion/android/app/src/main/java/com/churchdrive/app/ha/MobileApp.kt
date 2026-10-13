@@ -21,10 +21,12 @@ data class Push(
     val loud: Boolean = false,
     /** The house asked for it to be quiet (no sound). */
     val quiet: Boolean = false,
+    /** The house numbers each notice it sends to this app, so the app can ask for any it missed while offline. 0 when it has none. */
+    val seq: Long = 0,
 )
 
 /** A button on a notification: [id] is what comes back when it is pressed, [title] what it says. */
-data class PushAction(val id: String, val title: String)
+data class PushAction(val id: String, val title: String, val uri: String? = null)
 
 /** How a post to the phone's webhook went. [Gone] means Home Assistant no longer knows this phone: register again. */
 enum class WebhookResult { Ok, Gone, Failed }
@@ -100,15 +102,17 @@ object MobileApp {
             tag = data?.text("tag"),
             url = data?.text("url"),
             channel = data?.text("channel") ?: "house",
+            seq = data?.optLong("cd_seq", 0) ?: 0,
             kind = data?.text("group")?.takeIf { it != "church-drive" },
             loud = data?.text("priority") == "high" || data?.text("channel") == "alarm_stream",
             quiet = data?.text("importance") == "low" || data?.text("channel")?.contains("quiet", ignoreCase = true) == true,
-            // Only the house's own task buttons (Done, Snooze): anything else would have nothing to do here.
+            // Only the house's own buttons (task Done and Snooze, links, house actions, mute): anything else would have nothing to do here.
             actions = (data?.optJSONArray("actions")?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it) } } ?: emptyList())
                 .mapNotNull { o ->
                     val id = o.text("action")
                     val title = o.text("title")
-                    if (id != null && title != null && parseTaskAction(id) != null) PushAction(id, title) else null
+                    val uri = o.text("uri")
+                    if (id != null && title != null && (parseTaskAction(id) != null || parseNoticeButton(id, uri) != null)) PushAction(id, title, uri) else null
                 },
         )
     }
@@ -120,6 +124,12 @@ object MobileApp {
         return JSONObject().put("type", "fire_event")
             .put("data", JSONObject().put("event_type", "church_drive_task_action").put("event_data", event))
     }
+
+    /** The webhook message that asks the house to do what a notification button says (it arrives there as the `church_drive_notice_action` event). */
+    fun noticeActionBody(verb: String, who: String?): JSONObject =
+        JSONObject().put("type", "fire_event")
+            .put("data", JSONObject().put("event_type", "church_drive_notice_action")
+                .put("event_data", JSONObject().put("action", "CD_$verb").put("who", who ?: "")))
 
     /** The name of the notify service for a phone, as Home Assistant makes it: `notify.mobile_app_<name>`. */
     fun notifyService(deviceName: String): String =
