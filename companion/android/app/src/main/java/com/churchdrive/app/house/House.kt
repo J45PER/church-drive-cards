@@ -38,6 +38,15 @@ object House {
         return MobileApp.register(url, token, body)?.also { session.saveWebhook(it, name) }
     }
 
+    /**
+     * The app's own connection to the house (and its small "connected" notice) is only for phones Google push doesn't reach:
+     * once the house has this phone's Google token, notifications come through Google and the connection is stopped.
+     */
+    fun syncNotifications(context: Context) {
+        val session = Session(context)
+        HouseService.sync(context, com.churchdrive.app.ha.connectionNeeded(session.signedIn, session.notifyOn, session.googlePush))
+    }
+
     /** The phone's own name (the one the Home Assistant app on it uses), else the person and model, with "-CDA" after it. */
     private fun desiredName(context: Context, session: Session): String {
         val phoneName = runCatching { android.provider.Settings.Global.getString(context.contentResolver, "device_name") }.getOrNull()
@@ -63,7 +72,9 @@ object House {
     fun sync(context: Context) {
         val session = Session(context)
         val on = session.signedIn
-        HouseService.sync(context, on && session.notifyOn)
+        syncNotifications(context)
+        // Google push: give the house this phone's token (it keeps the app's own connection only until then).
+        if (on && session.notifyOn) GooglePush.register(context)
         syncLocation(context, on && session.locationOn)
         // A phone that isn't registered yet is registered now, in the background.
         if (on && (session.notifyOn || session.locationOn) && session.webhookId == null) thread { ensureRegistered(context) }

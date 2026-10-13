@@ -36,7 +36,6 @@ import androidx.compose.material.icons.outlined.BatteryChargingFull
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.NotificationsOff
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material3.Button
@@ -315,7 +314,7 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
         PanelCard {
             PanelRow(
                 Icons.Outlined.Notifications, "Notifications",
-                "Messages from the house, such as the doorbell or an alarm, come to this phone. Android shows a small \"connected\" notice while this is on; you can swipe it away.",
+                "Messages from the house, such as the doorbell or an alarm, come to this phone.",
                 trailing = {
                     Switch(checked = settings.notifyOn, onCheckedChange = { on ->
                         message = null
@@ -384,11 +383,6 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                 Icons.Outlined.Notifications, "Google push",
                 "$pushStatus. Tap to try again.",
                 onClick = { com.churchdrive.app.house.GooglePush.register(context) },
-            )
-            PanelRow(
-                Icons.Outlined.NotificationsOff, "Hide the connected notice",
-                "Android shows a small \"connected\" notice while the connection runs. Turn its switch off there to hide it: notifications still arrive.",
-                onClick = { com.churchdrive.app.house.openServiceNoticeSettings(context) },
             )
             PanelRow(
                 Icons.Outlined.BatteryChargingFull, "Keep it running",

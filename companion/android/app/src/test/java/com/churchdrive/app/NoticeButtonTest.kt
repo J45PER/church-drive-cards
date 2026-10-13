@@ -80,4 +80,11 @@ class NoticeButtonTest {
         assertEquals("mobile_app_jamie_pixel", data.getJSONObject("event_data").getString("service"))
         assertEquals("abc", data.getJSONObject("event_data").getString("token"))
     }
+
+    @Test fun theOwnConnectionRunsOnlyUntilGooglePushHasThePhone() {
+        assertTrue(com.churchdrive.app.ha.connectionNeeded(signedIn = true, notifyOn = true, googlePush = false))
+        assertFalse(com.churchdrive.app.ha.connectionNeeded(signedIn = true, notifyOn = true, googlePush = true))
+        assertFalse(com.churchdrive.app.ha.connectionNeeded(signedIn = true, notifyOn = false, googlePush = false))
+        assertFalse(com.churchdrive.app.ha.connectionNeeded(signedIn = false, notifyOn = true, googlePush = false))
+    }
 }

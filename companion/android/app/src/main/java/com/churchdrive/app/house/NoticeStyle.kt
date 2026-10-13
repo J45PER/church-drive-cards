@@ -106,13 +106,3 @@ fun openAndroidNoticeSettings(context: Context, style: NoticeStyle) {
     }.putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
     runCatching { context.startActivity(intent) }
 }
-
-/** Opens Android's settings for the small "connected" notice, where it can be switched off (the connection carries on without it). */
-fun openServiceNoticeSettings(context: Context) {
-    runCatching { HouseService.createChannels(context) }
-    val intent = android.content.Intent(android.provider.Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
-        .putExtra(android.provider.Settings.EXTRA_CHANNEL_ID, HouseService.CHANNEL_SERVICE)
-        .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)
-        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-    runCatching { context.startActivity(intent) }
-}

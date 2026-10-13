@@ -90,6 +90,11 @@ object GooglePush {
                 return@thread
             }
             val result = MobileApp.post(url, webhook, MobileApp.fcmTokenBody(MobileApp.notifyService(name), token))
+            // With the token at the house, notifications come through Google and the app's own connection (and its notice) stops.
+            if (result == com.churchdrive.app.ha.WebhookResult.Ok && !session.googlePush) {
+                session.googlePush = true
+                House.syncNotifications(context)
+            }
             setStatus(
                 context,
                 when (result) {
