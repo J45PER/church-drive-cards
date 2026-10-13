@@ -26,14 +26,15 @@ export const KINDS = {
 };
 
 export const STAGE_CSS = `
-  .cc-pop-media { position:relative; border-radius:14px; overflow:hidden; background:#000; aspect-ratio:16/9; touch-action:none; cursor:grab; user-select:none; }
+  /* The box takes the picture's own shape (--cc-aspect, set by stageMedia: the doorbell's is square), as wide as fits and no taller than 66% of the screen. */
+  .cc-pop-media { position:relative; border-radius:14px; overflow:hidden; background:#000; aspect-ratio:var(--cc-aspect, 16/9); width:min(100%, calc(66dvh * var(--cc-aspect, 1.7778))); margin:0 auto; touch-action:none; cursor:grab; user-select:none; }
   .cc-stage { position:absolute; left:0; top:0; transform-origin:0 0; will-change:transform; }
   .cc-stage > * { display:block; width:100%; height:100%; pointer-events:none; }
   .cc-stage img, .cc-stage video { object-fit:cover; }
   .cc-ib { width:28px; height:28px; border-radius:50%; background:rgba(0,0,0,0.45); color:#fff; display:flex; align-items:center; justify-content:center; }
   .cc-mute { position:absolute; top:8px; right:8px; border:none; cursor:pointer; z-index:1; }
   .cc-tag { position:absolute; top:8px; left:8px; z-index:1; font-size:0.7rem; font-weight:800; border-radius:6px; padding:2px 7px; color:#fff; pointer-events:none; }
-  .cc-pop-media.cc-fs { position:fixed; inset:0; z-index:2147483000; width:100vw; height:100dvh; aspect-ratio:auto; border-radius:0; }
+  .cc-pop-media.cc-fs { margin:0; position:fixed; inset:0; z-index:2147483000; width:100vw; height:100dvh; aspect-ratio:auto; border-radius:0; }
   .cc-pop-media.cc-fs.cc-rot { inset:auto; left:100vw; top:0; width:100dvh; height:100vw; transform-origin:0 0; transform:rotate(90deg); }
   .cc-btns { display:flex; gap:10px; margin:14px 0 6px; }
   .cc-btn { flex:1 1 0; min-width:0; border:none; border-radius:14px; padding:10px 4px; cursor:pointer; font:inherit; font-size:0.78rem; font-weight:700;
@@ -126,6 +127,7 @@ export function stageMedia(box, el, aspect = 16 / 9, { mute = true } = {}) {
   box.querySelectorAll(':scope > .cc-stage, :scope > .cc-mute').forEach((n) => n.remove());
   const stage = document.createElement('div');
   stage.className = 'cc-stage';
+  box.style.setProperty('--cc-aspect', String(aspect));
   stage.appendChild(el);
   box.insertBefore(stage, box.firstChild);
   if (mute && 'muted' in el) {
@@ -246,6 +248,7 @@ export function stageMedia(box, el, aspect = 16 / 9, { mute = true } = {}) {
       const a = w / h;
       if (Math.abs(a - aspect) > 0.02) {
         aspect = a;
+        box.style.setProperty('--cc-aspect', String(a));
         v.w = 0;
         fit();
       }

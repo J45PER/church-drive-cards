@@ -164,7 +164,13 @@ export class CameraCard extends HTMLElement {
       this.innerHTML = `<style>${CAM_CSS}</style><div class="cc-tile" role="button" tabindex="0"><img alt="" style="opacity:0"><div class="cc-tr"></div><div class="cc-ov"><span class="cc-name"></span><span class="cc-chip"></span></div></div>`;
       this._tile = this.querySelector('.cc-tile');
       this._img = this.querySelector('img');
-      this._img.addEventListener('load', () => (this._img.style.opacity = '1'));
+      this._img.addEventListener('load', () => {
+        this._img.style.opacity = '1';
+        // A square picture (the doorbell's) is shown whole, not cropped to the tile's wide shape.
+        const square = this._img.naturalWidth / (this._img.naturalHeight || 1) < 1.5;
+        this._img.style.objectFit = square ? 'contain' : 'cover';
+        this._tile.style.background = square ? '#000' : '';
+      });
       this._tile.addEventListener('click', () => this._open());
       this._tile.addEventListener('keydown', (ev) => (ev.key === 'Enter' || ev.key === ' ') && (ev.preventDefault(), this._open()));
       this._built = true;

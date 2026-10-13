@@ -40,8 +40,8 @@ const EXP_CSS = `${STAGE_CSS}
 
   /* The live view. Everything over the picture lives in the box (so it goes full screen with it) and is a .cc-ui, so touching it never pans the picture. */
   .cc-pop-media { --cc-pad:8px; }
-  .cc-pop-media[data-mode="expanded"] { aspect-ratio:auto; height:min(66dvh, 150vw); }
-  .cc-pop-media[data-mode="full"] { aspect-ratio:auto; }
+  .cc-pop-media[data-mode="expanded"] { aspect-ratio:auto; width:100%; height:min(66dvh, 150vw); }
+  .cc-pop-media[data-mode="full"] { aspect-ratio:auto; width:100%; }
   .cc-pop-media .cc-tag { z-index:3; }
   .cc-ui { position:absolute; z-index:3; display:flex; gap:6px; align-items:center; transition:opacity .2s, visibility .2s; pointer-events:none; }
   .cc-ui button, .cc-ui .cc-pill, .cc-ui .cc-menu, .cc-ui .cc-circles { pointer-events:auto; }
