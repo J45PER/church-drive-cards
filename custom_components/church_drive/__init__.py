@@ -81,6 +81,7 @@ from .const import (
     WS_SHOPPING_UPDATE,
     SERVICE_APPLY_SCENE,
     SERVICE_HEALTH_FIX,
+    EVENT_NOTICE_TEST,
     SERVICE_NOTIFY,
     SERVICE_SYNC_SCENES,
     SIGNAL_LIBRARY,
@@ -128,6 +129,7 @@ from .inbox import Inbox
 from .shopping import Shopping
 from .shopping_logic import STATUSES
 from .notice_actions import NoticeActions
+from .notice_samples import sample_for
 from .people import People
 from .reminder_logic import SNOOZE_MINUTES, actions_for
 from .reminders import Reminders
@@ -1190,6 +1192,30 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         notice_actions = NoticeActions(hass)
         notice_actions.async_start()
         entry.async_on_unload(notice_actions.async_stop)
+
+        # "Send me a test" in the app (Notification styles): a pretend notice of one kind to that person's phones,
+        # sent the way a real one is (its buttons, its camera picture, the person's own style for it).
+        async def notice_test(event: Event) -> None:
+            kind, who = str(event.data.get("kind") or ""), str(event.data.get("who") or "")
+            known = next((k for k in people.kinds() if k["key"] == kind), None)
+            if not who or known is None:
+                return
+            events = data.get("events")
+            camera = sample_for(kind, known["name"], known["note"])["camera"]
+            if events is not None and camera and camera in events.cameras():
+                payload = events.notice("ding" if kind == "doorbell" else "motion", camera) if kind in ("doorbell", "night_motion") else {
+                    "title": known["sample"]["title"], "message": known["sample"]["message"],
+                    "image": f"/api/camera_proxy/camera.{camera}_snapshot", "tag": f"church-drive-{kind}",
+                    "link": f"church-drive-camera:camera.{camera}_live_view",
+                }
+            else:
+                payload = {"title": known["sample"]["title"], "message": known["sample"]["message"], "tag": f"church-drive-{kind}"}
+            await people.async_notify(
+                kind, [who], "Test: " + payload["title"], payload["message"], "", payload.get("tag", "") + "-test",
+                payload.get("link", ""), payload.get("image", ""), None, None, event.context, test=True,
+            )
+
+        entry.async_on_unload(hass.bus.async_listen(EVENT_NOTICE_TEST, notice_test))
     except Exception:  # noqa: BLE001
         _LOGGER.exception("People and notifications couldn't start; everything else still works")
         data["people"] = None

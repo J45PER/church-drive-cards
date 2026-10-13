@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.24.0
+
+- Notification styles: the preview and "Send me a test" now simulate each kind properly. The preview shows that kind's own words, a camera picture box for the ones that have a picture (doorbell, movement, door, smoke), and its buttons (Answer, View, Mute and so on). "Send me a test" asks the house to send a pretend one of that kind to this phone, so it comes the real way: the real buttons and picture, in the style you chose for that kind (an Alert rings through silent). Its title starts with "Test:". Needs Church Drive 0.56.0 in Home Assistant; without it you get the old plain test.
+
 ## 0.23.0
 
 - The new camera live view is now the main one: on the Security page, in the Cameras cards and when opened from a notification or widget. It has the bigger and full-screen pictures, Talk, Events, and Answer on the doorbell (a green outline and an Answer button on its tile while it rings). The old live view is no longer used, and the Experimental page no longer lists the cameras.

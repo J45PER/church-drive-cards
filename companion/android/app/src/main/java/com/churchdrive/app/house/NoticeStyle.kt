@@ -83,6 +83,18 @@ fun sendNoticeTest(context: Context, kindName: String, style: NoticeStyle): Bool
     return runCatching { androidx.core.app.NotificationManagerCompat.from(context).notify("church-drive-test", 4299, notice) }.isSuccess
 }
 
+/**
+ * Asks the house to send this person a pretend notice of [kind]: it comes back through the real path, so it has the real
+ * buttons and picture and is shown in the style the person chose for it. False when the house can't be reached. Blocking.
+ */
+fun askHouseForNoticeTest(context: Context, kind: String): Boolean {
+    val session = com.churchdrive.app.Session(context)
+    val url = session.url ?: return false
+    val webhook = House.ensureRegistered(context) ?: return false
+    val who = session.personName?.substringBefore(' ')
+    return com.churchdrive.app.ha.MobileApp.post(url, webhook, com.churchdrive.app.ha.MobileApp.noticeTestBody(kind, who)) == com.churchdrive.app.ha.WebhookResult.Ok
+}
+
 /** Opens Android's own settings for the channel [style] uses (or the app's notification settings for Off). */
 fun openAndroidNoticeSettings(context: Context, style: NoticeStyle) {
     NoticeStyles.ensureChannels(context)

@@ -28,6 +28,7 @@ SIGNAL_HEALTH = "church_drive_health"
 
 # People and notifications.
 SERVICE_NOTIFY = "notify"
+EVENT_NOTICE_TEST = "church_drive_notice_test"  # fired by the Church Drive app's "Send me a test"
 WS_PEOPLE = "church_drive/people"
 WS_PEOPLE_ASSIGN = "church_drive/people/assign"
 WS_PEOPLE_MINE = "church_drive/people/mine"

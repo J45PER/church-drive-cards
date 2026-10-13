@@ -32,6 +32,14 @@ class MobileAppTest {
     }
 
     @Test
+    fun aNoticeTestAsksTheHouseForOneKindForOnePerson() {
+        val e = MobileApp.noticeTestBody("doorbell", "Jamie").getJSONObject("data")
+        assertEquals("church_drive_notice_test", e.getString("event_type"))
+        assertEquals("doorbell", e.getJSONObject("event_data").getString("kind"))
+        assertEquals("Jamie", e.getJSONObject("event_data").getString("who"))
+    }
+
+    @Test
     fun aPushNeedsWordsAndDefaultsTheRest() {
         val p = MobileApp.parsePush(JSONObject("""{"message":"Someone is at the door","data":{"tag":"door","channel":"doorbell"}}"""))!!
         assertEquals("Church Drive", p.title)

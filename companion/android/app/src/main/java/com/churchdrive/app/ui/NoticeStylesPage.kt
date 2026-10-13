@@ -1,6 +1,16 @@
 package com.churchdrive.app.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import com.churchdrive.app.house.askHouseForNoticeTest
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.churchdrive.app.Session
 import com.churchdrive.app.ha.MobileApp
 import com.churchdrive.app.ha.data
@@ -148,6 +159,40 @@ fun NoticeStylesPage(isAdmin: Boolean, onBack: () -> Unit) {
     if (kind != null) NoticeKindPage(kind) { openKind = null; changes++ }
 }
 
+/** A notification as it will look: the words, the camera picture if it has one, and its buttons (from the house's sample for the kind). */
+@Composable
+private fun NoticePreview(sample: JSONObject?, name: String, note: String, style: NoticeStyle) {
+    val title = sample?.optString("title")?.ifBlank { null } ?: name
+    val message = sample?.optString("message")?.ifBlank { null } ?: note.ifBlank { "This is how it will look on this phone." }
+    val buttons = sample?.optJSONArray("buttons")?.let { a -> (0 until a.length()).map { a.optString(it) } } ?: emptyList()
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                "Church Drive · now" + if (style == NoticeStyle.Alert) " · rings through silent" else "",
+                style = MaterialTheme.typography.labelMedium,
+                color = if (style == NoticeStyle.Alert) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(message, style = MaterialTheme.typography.bodyMedium)
+            if (sample?.optBoolean("picture") == true) {
+                Box(
+                    Modifier.fillMaxWidth().height(110.dp).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center,
+                ) { Text("Camera picture", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            }
+            if (buttons.isNotEmpty()) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    buttons.forEach { label ->
+                        Box(Modifier.clip(RoundedCornerShape(999.dp)).background(MaterialTheme.colorScheme.secondaryContainer).padding(horizontal = 12.dp, vertical = 6.dp)) {
+                            CentredText(label, MaterialTheme.colorScheme.onSecondaryContainer, 13.sp)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 /** One kind: a preview, the ways it can appear, and buttons to try it and to open Android's own settings for it. */
 @Composable
 private fun NoticeKindPage(kind: JSONObject, onBack: () -> Unit) {
@@ -156,15 +201,10 @@ private fun NoticeKindPage(kind: JSONObject, onBack: () -> Unit) {
     val critical = kind.optBoolean("critical")
     var chosen by remember(key) { mutableStateOf(styleOf(context, kind)) }
     var message by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
     val tone = toneColors(Tone.Grey)
     FullPage(kind.optString("name"), onBack) {
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Church Drive · now", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(kind.optString("name"), style = MaterialTheme.typography.titleMedium)
-                Text(kind.optString("note").ifBlank { "This is how it will look on this phone." }, style = MaterialTheme.typography.bodyMedium)
-            }
-        }
+        NoticePreview(kind.optJSONObject("sample"), kind.optString("name"), kind.optString("note"), chosen)
         Text("How it appears on this phone", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
         noticeStylesFor(critical).forEach { style ->
             Row(
@@ -184,7 +224,16 @@ private fun NoticeKindPage(kind: JSONObject, onBack: () -> Unit) {
         TileRow(
             listOf(
                 TileItem("mdi:bell-ring", "Send me a test", false) {
-                    message = if (sendNoticeTest(context, kind.optString("name"), chosen)) "Sent. Look at the top of your screen." else "Nothing sent: it is off, or notifications are not allowed for this app."
+                    message = "Sending…"
+                    scope.launch {
+                        // From the house, so it has the real buttons and picture; if the house can't be reached, a plain one made here.
+                        val fromHouse = chosen != NoticeStyle.Off && withContext(Dispatchers.IO) { askHouseForNoticeTest(context, key) }
+                        message = when {
+                            fromHouse -> "Sent from the house: look at the top of your screen. It is how the real one will look, with its buttons and picture."
+                            sendNoticeTest(context, kind.optString("name"), chosen) -> "Couldn't reach the house, so this is a plain test (no buttons or picture)."
+                            else -> "Nothing sent: it is off, or notifications are not allowed for this app."
+                        }
+                    }
                 },
                 TileItem("mdi:cog", "Android settings", false) { openAndroidNoticeSettings(context, chosen) },
             ),
