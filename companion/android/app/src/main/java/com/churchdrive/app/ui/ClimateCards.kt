@@ -124,7 +124,7 @@ fun FanCard(config: JSONObject, entities: Map<String, EntityState>, call: CallSe
     val presets = fan?.list("preset_modes").orEmpty()
     val preset = fan?.str("preset_mode")
     val enabled = fan?.available == true
-    EntityCard(tone.container, tone.onContainer) {
+    EntityCard(tone.container, tone.onContainer, deviceEntity = id) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ToneIconName(config.optString("icon").ifBlank { "mdi:fan" }, Icons.Filled.Info, tone)
             Column(modifier = Modifier.weight(1f)) {
@@ -182,7 +182,7 @@ fun AirPurifierCard(config: JSONObject, entities: Map<String, EntityState>, call
     val preset = fan?.str("preset_mode")
     val enabled = fan?.available == true
     val filters = config.optJSONArray("filters")
-    EntityCard(tone.container, tone.onContainer) {
+    EntityCard(tone.container, tone.onContainer, deviceEntity = id) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ToneIconName("mdi:air-purifier", Icons.Filled.Info, tone)
             Column(modifier = Modifier.weight(1f)) {
@@ -240,7 +240,7 @@ fun CoAlarmCard(config: JSONObject, entities: Map<String, EntityState>, call: Ca
     val report = entity("report_entity")?.state
     val test = config.optString("test_entity").takeIf { it.isNotBlank() }
     val mute = config.optString("mute_entity").takeIf { it.isNotBlank() }
-    EntityCard(tone.container, tone.onContainer) {
+    EntityCard(tone.container, tone.onContainer, deviceEntity = config.optString("entity")) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ToneIconName("mdi:molecule-co", Icons.Filled.Info, tone)
             Column(modifier = Modifier.weight(1f)) {
@@ -283,7 +283,7 @@ fun CoverCard(config: JSONObject, entities: Map<String, EntityState>, call: Call
         else -> presetLabel(state)
     }
     val enabled = cover?.available == true
-    EntityCard(tone.container, tone.onContainer) {
+    EntityCard(tone.container, tone.onContainer, deviceEntity = id) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ToneIconName(config.optString("icon").ifBlank { "mdi:blinds" }, Icons.Filled.Info, tone)
             Column(modifier = Modifier.weight(1f)) {

@@ -4,6 +4,14 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.30.0
+
+- Notification sounds: each kind of pop-up has its own default sound instead of the phone's one: a doorbell ding-dong, a soft ping for movement, rising notes for energy and the car, a blip for to-dos, low beats for device and system problems. Safety alarms still ring through silent. Each sound family is its own Android channel (Settings > Notifications > Church Drive), so you can change or silence one in Android's settings. Anything else keeps the old pop-up sound.
+- Tapping a notification now goes to the right place: a page, a camera (answering for the doorbell), a shopping list, or a device. A battery alert opens that device's page; other device and battery alerts open Device Health.
+- Device Health: a new full-page view for everyone, from the account panel (Device health) or by pressing and holding a device's card (fans, purifiers, covers, lights, CO alarms, sensors, the vacuum). It lists devices with a battery, a filter or that stopped answering, those needing attention first; a device opens its own page with its status, last heard, a week of battery history and all its entities.
+- Google push is shown in Settings to administrators only. Phones still register by themselves.
+- Needs Church Drive 0.62.0 or later in Home Assistant for the device and Device Health links.
+
 ## 0.29.0
 
 - No more "Church Drive is connected" notice. Once the house has this phone's Google push token, notifications come through Google and the app's own connection (the thing that needed that notice) is stopped. If Google push isn't working on a phone, the connection still runs as before, but its notice is created blocked so it doesn't show or leave a dot. The "Hide the connected notice" row in Settings is gone because it is no longer needed.

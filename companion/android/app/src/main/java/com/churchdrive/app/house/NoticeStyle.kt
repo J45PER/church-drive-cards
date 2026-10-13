@@ -48,10 +48,12 @@ object NoticeStyles {
     /** Creates the channels (once; Android keeps what the person changes in its own settings afterwards). */
     fun ensureChannels(context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java)
-        fun make(style: NoticeStyle, name: String, importance: Int, setup: NotificationChannel.() -> Unit = {}) {
-            if (manager.getNotificationChannel(style.channel) != null) return
-            manager.createNotificationChannel(NotificationChannel(style.channel, name, importance).apply { description = style.about; setup() })
+        fun makeChannel(id: String, name: String, about: String, importance: Int, setup: NotificationChannel.() -> Unit = {}) {
+            if (manager.getNotificationChannel(id) != null) return
+            manager.createNotificationChannel(NotificationChannel(id, name, importance).apply { description = about; setup() })
         }
+        fun make(style: NoticeStyle, name: String, importance: Int, setup: NotificationChannel.() -> Unit = {}) =
+            makeChannel(style.channel, name, style.about, importance, setup)
         make(NoticeStyle.Alert, "Alerts (ring through silent)", NotificationManager.IMPORTANCE_HIGH) {
             setSound(
                 RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM) ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
@@ -61,6 +63,15 @@ object NoticeStyles {
             setBypassDnd(true)
         }
         make(NoticeStyle.Popup, "Pop-ups", NotificationManager.IMPORTANCE_HIGH)
+        // A pop-up with its own sound for each family (doorbell, movement, energy, to-dos, devices).
+        SoundFamily.entries.filter { it.raw != null }.forEach { family ->
+            makeChannel(family.channel, "Pop-ups: ${family.label}", NoticeStyle.Popup.about, NotificationManager.IMPORTANCE_HIGH) {
+                setSound(
+                    android.net.Uri.parse("android.resource://${context.packageName}/raw/${family.raw}"),
+                    AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build(),
+                )
+            }
+        }
         make(NoticeStyle.PopupQuiet, "Quiet pop-ups", NotificationManager.IMPORTANCE_HIGH) {
             setSound(null, null)
             enableVibration(false)

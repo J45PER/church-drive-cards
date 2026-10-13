@@ -47,7 +47,7 @@ from homeassistant.util import dt as dt_util, location, slugify
 
 from .notice_log import NoticeLog
 from .kinds import ARRIVALS, JOB_KINDS, KINDS, arrival_kind
-from .notice_actions_logic import actions_for, is_phone_action
+from .notice_actions_logic import actions_for, is_phone_action, tap_link_for
 from .notice_samples import sample_for
 
 _LOGGER = logging.getLogger(__name__)
@@ -698,6 +698,8 @@ class People:
         buttons = [] if (extra or {}).get("actions") else actions_for(
             kind, tag, image, title, exists=lambda e: self.hass.states.get(e) is not None
         )
+        # Where a tap on the notification goes (the right page or device for its kind).
+        link = tap_link_for(kind, tag, link, [s.entity_id for s in self.hass.states.async_all("binary_sensor")] if kind == "battery_report" else None)
         sent: list[str] = []
         phones = 0
         for p in self.recipients(None if test else kind, only):

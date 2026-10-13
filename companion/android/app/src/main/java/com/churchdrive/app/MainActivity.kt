@@ -57,6 +57,10 @@ class MainActivity : ComponentActivity() {
     /** The shopping list a reminder asked to open, until it is closed. */
     private var openShopping by mutableStateOf<String?>(null)
 
+    /** Device Health is open (a notification, a long press on a card or the account panel opened it), on [openDevice] if it names one. */
+    private var deviceHealthOpen by mutableStateOf(false)
+    private var openDevice by mutableStateOf<String?>(null)
+
     /** The charger widget's Start charge asked the app to ask: "Charge at 00:30" or "Charge now". */
     private var chargePrompt by mutableStateOf(false)
 
@@ -73,6 +77,16 @@ class MainActivity : ComponentActivity() {
         intent?.getStringExtra(EXTRA_SHOPPING_LIST)?.let {
             openShopping = it
             intent.removeExtra(EXTRA_SHOPPING_LIST)
+        }
+        intent?.getStringExtra(EXTRA_DEVICE)?.let {
+            openDevice = it
+            deviceHealthOpen = true
+            intent.removeExtra(EXTRA_DEVICE)
+        }
+        if (intent?.getBooleanExtra(EXTRA_DEVICE_HEALTH, false) == true) {
+            openDevice = null
+            deviceHealthOpen = true
+            intent.removeExtra(EXTRA_DEVICE_HEALTH)
         }
         if (intent?.getBooleanExtra("charge_prompt", false) == true) {
             chargePrompt = true
@@ -151,6 +165,7 @@ class MainActivity : ComponentActivity() {
                             LocalBaseUrl provides vm.baseUrl,
                             LocalCameraHost provides vm.cameraHost,
                             LocalHistory provides vm::history,
+                            com.churchdrive.app.ui.LocalOpenDevice provides { ref -> openDevice = ref; deviceHealthOpen = true },
                             LocalHaApi provides vm.haApi,
                             LocalUserName provides userName,
                             com.churchdrive.app.ui.LocalAreaNames provides areaNames,
@@ -184,7 +199,11 @@ class MainActivity : ComponentActivity() {
                                     openCamera = openCamera,
                                     openCameraAnswer = openCameraAnswer,
                                     onCameraClosed = { openCamera = null; openCameraAnswer = false },
+                                    onDeviceHealth = { openDevice = null; deviceHealthOpen = true },
                                 )
+                                if (deviceHealthOpen && statesLoaded) {
+                                    com.churchdrive.app.ui.DeviceHealthOverlay(openDevice, entities, registry, areaNames) { deviceHealthOpen = false; openDevice = null }
+                                }
                                 openShopping?.let { com.churchdrive.app.ui.ShoppingScreen(it) { openShopping = null } }
                                 if (chargePrompt) {
                                     com.churchdrive.app.ui.ChargePromptHost(entities, statesLoaded, vm::call) { chargePrompt = false }
@@ -210,6 +229,9 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         const val EXTRA_SHOPPING_LIST = "shopping_list"
+        /** A notification asked for a device's health page (an entity id or a device id), or for the Device Health list. */
+        const val EXTRA_DEVICE = "device"
+        const val EXTRA_DEVICE_HEALTH = "device_health"
         const val EXTRA_SHARE_TEXT = "share_text"
         const val EXTRA_SHARE_SOURCE = "share_source"
         const val EXTRA_SHARE_AUTO_ADD = "share_auto_add"

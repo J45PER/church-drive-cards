@@ -89,6 +89,9 @@ fun AccountOverlay(
     settings: AccountSettings,
     updateAvailable: Boolean,
     onSignOut: () -> Unit,
+    /** One line on the Device Health row, and what the row does (it opens the Device Health page over the app). */
+    healthSummary: String = "",
+    onDeviceHealth: () -> Unit = {},
     adminPages: List<Page> = emptyList(),
     pageContent: @Composable (Page) -> Unit = {},
     /** The Manager dashboard's panels (administrators): each is a sub-page, and [managerContent] draws its cards. */
@@ -133,7 +136,7 @@ fun AccountOverlay(
                         managerPages.firstOrNull { it.title == which.removePrefix("manager:") }?.let { p ->
                             AdminPage(p.title, { onPanel("manager") }) { managerContent(p) }
                         }
-                    } else AccountPage(userName, isAdmin, adminPages, managerPages, onClose = { onPanel(null) }, onOpen = onPanel, onSignOut = {
+                    } else AccountPage(userName, isAdmin, adminPages, managerPages, healthSummary, onDeviceHealth, onClose = { onPanel(null) }, onOpen = onPanel, onSignOut = {
                         onPanel(null)
                         onSignOut()
                     })
@@ -191,7 +194,7 @@ private fun PanelTitle(title: String, onBack: () -> Unit) {
 }
 
 @Composable
-private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Page>, managerPages: List<PanelSpec>, onClose: () -> Unit, onOpen: (String) -> Unit, onSignOut: () -> Unit) {
+private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Page>, managerPages: List<PanelSpec>, healthSummary: String, onDeviceHealth: () -> Unit, onClose: () -> Unit, onOpen: (String) -> Unit, onSignOut: () -> Unit) {
     Column(
         Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -221,6 +224,8 @@ private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Pa
                 }
             }
         }
+        // Device Health, for everyone: batteries, filters and devices that stopped answering.
+        PanelCard { PanelRow(Icons.Outlined.BatteryChargingFull, "Device health", healthSummary.ifBlank { null }, onClick = onDeviceHealth) }
         // Administrator-only pages (Energy, Devices).
         if (adminPages.isNotEmpty()) {
             PanelCard {
@@ -371,19 +376,23 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                     })
                 },
             )
-            // The status changes as Google answers, so it is re-read while this page is open.
-            var pushStatus by remember { mutableStateOf(com.churchdrive.app.house.GooglePush.status(context)) }
-            androidx.compose.runtime.LaunchedEffect(Unit) {
-                while (true) {
-                    pushStatus = com.churchdrive.app.house.GooglePush.status(context)
-                    kotlinx.coroutines.delay(1_000)
+            // Google push is the house's own setup (its key lives in Home Assistant), so only administrators see it. Every phone
+            // still gives the house its token by itself (House.sync); this row is just the status and a way to try again.
+            if (isAdmin) {
+                // The status changes as Google answers, so it is re-read while this page is open.
+                var pushStatus by remember { mutableStateOf(com.churchdrive.app.house.GooglePush.status(context)) }
+                androidx.compose.runtime.LaunchedEffect(Unit) {
+                    while (true) {
+                        pushStatus = com.churchdrive.app.house.GooglePush.status(context)
+                        kotlinx.coroutines.delay(1_000)
+                    }
                 }
+                PanelRow(
+                    Icons.Outlined.Notifications, "Google push",
+                    "$pushStatus. Tap to try again.",
+                    onClick = { com.churchdrive.app.house.GooglePush.register(context) },
+                )
             }
-            PanelRow(
-                Icons.Outlined.Notifications, "Google push",
-                "$pushStatus. Tap to try again.",
-                onClick = { com.churchdrive.app.house.GooglePush.register(context) },
-            )
             PanelRow(
                 Icons.Outlined.BatteryChargingFull, "Keep it running",
                 "Set this app's battery use to Unrestricted so Android doesn't stop the connection.",
