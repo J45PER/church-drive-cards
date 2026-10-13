@@ -53,6 +53,14 @@ export function carTime(t, now = Date.now()) {
   return new Date(now).toDateString() === d.toDateString() ? hm : `${d.toLocaleDateString([], { weekday: 'short' })} ${hm}`;
 }
 
+// "25m ago", "23h ago", "2d ago".
+export function carAgo(t, now = Date.now()) {
+  const m = Math.max(0, Math.round((now - t) / 60000));
+  if (m < 60) return `${m}m ago`;
+  if (m < 1440) return `${Math.floor(m / 60)}h ago`;
+  return `${Math.floor(m / 1440)}d ago`;
+}
+
 // A car's entities, from its entity ids.
 export function carEntities(hass, ids) {
   const st = (id) => (id && hass.states[id]) || null;
@@ -198,7 +206,7 @@ export class CarCard extends HTMLElement {
         color: charging ? CAR_TEAL : KIT_COLOR.off,
         value: x && x.battery != null ? `${Math.round(x.battery)}%` : '',
         valueColor: CAR_TEAL,
-        status: word + (old ? ` · Updated ${carTime(x.asOf)}` : '') + (c.demo ? ' · demo' : ''),
+        status: word + (old ? ` · Car reported ${carTime(x.asOf)} · ${carAgo(x.asOf)}` : '') + (c.demo ? ' · demo' : ''),
         // Old figures while plugged in: Refresh (wakes the car).
         buttons: old && x.wake ? [{ key: 'refresh', icon: 'mdi:refresh', label: asking ? 'Asking…' : 'Refresh', title: 'Ask the car for its figures now' }] : [],
         onButton: () => !asking && this._wake(x.wake),
@@ -234,7 +242,7 @@ export class CarCard extends HTMLElement {
       this._built = true;
     }
     kitHead(this, c.title || 'Cars', word + (c.demo ? ' · demo' : ''), CAR_TEAL);
-    // The minute too, so "Updated 20:41" appears once the figures pass 20 minutes old.
+    // The minute too, so "Car last reported 20:41" appears once the figures pass 20 minutes old.
     const sig = JSON.stringify([cars, this._asking, Math.floor(Date.now() / 60000)]);
     if (sig === this._sig) return;
     this._sig = sig;
@@ -249,7 +257,7 @@ export class CarCard extends HTMLElement {
             const old = (x.plugged || x.charging) && x.asOf && Date.now() - x.asOf > STALE_MS;
             const asking = this._asking && this._asking[x.wake] && Date.now() - this._asking[x.wake] < 3 * 60000;
             const fresh = old
-              ? `<div class="cc-sub cc-old"><span>${iconHtml('mdi:clock-alert-outline', { size: '14px' })} Updated ${kitEsc(carTime(x.asOf))}</span>${
+              ? `<div class="cc-sub cc-old"><span>${iconHtml('mdi:clock-alert-outline', { size: '14px' })} Car last reported ${kitEsc(carTime(x.asOf))} · ${kitEsc(carAgo(x.asOf))}</span>${
                   x.wake ? `<button type="button" class="cc-wake" data-wake="${kitEsc(x.wake)}"${asking ? ' disabled' : ''}>${asking ? 'Asking the car…' : 'Refresh'}</button>` : ''
                 }</div>`
               : '';
