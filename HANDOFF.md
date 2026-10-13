@@ -4,6 +4,19 @@
 
 ## Where this stands
 
+**Ring cameras and doorbell: the current way (2026-10-13).** Video and Talk for every Ring
+camera go through the private add-on **go2rtc (Church Drive, Ring fix)** (`go2rtc-ring/` in this
+repo, app slug `57e66166_go2rtc_church_ring`, go2rtc 1.9.14 + HEVC fix + our Ring patch). Streams
+are named `front_door`, `driveway`, `garden`, `entrance`, `living_room` in `/config/go2rtc.yaml`
+(sources `ring:?camera_id=...&device_id=...&refresh_token=...`, one login per stream; the file holds
+tokens, so never print it). The old go2rtc-hevc-fix add-on is uninstalled; so is the temporary
+Camera Test dashboard. Why it works: Ring answers HEVC-capable battery cameras with H265, so the
+patch offers H264 only and Ring transcodes on its side; it also replies to Ring's pings, asks for
+keyframes and logs the signalling (`log: ring: debug`, no secrets; turn off when not debugging).
+Router forwards 8555 (WebRTC) to Home Assistant for Talk over 5G. A refresh token with a stray space
+(from hand-editing) gives "illegal base64 data" in the go2rtc log. Next jobs: refine the camera UI;
+motion and doorbell notifications on Android (Answer/Ignore on rings, View on motion).
+
 **Mirror card (released in v0.33.0, 2026-10-02).** `custom:mirror-card` shows
 another page's card on this one (Home's Kitchen lights = the Lighting page's Kitchen card),
 picked in the visual editor: dashboard, page, card. Logic is in `src/mirror.js` (tested in
