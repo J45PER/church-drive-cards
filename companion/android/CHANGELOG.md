@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.19.6
+
+- Notifications show the Church Drive logo in the card itself (the round picture beside the title), and the accent colour matches the logo. The single-colour house stays in the status bar until you have a separate top-bar icon.
+
 ## 0.19.5
 
 - The little icon in notifications (such as "Church Drive is connected") is now the house instead of a plain white circle. It is a simple outline, because Android draws that icon in a single colour and the number is too small to read there.
