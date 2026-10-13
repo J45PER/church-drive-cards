@@ -91,6 +91,14 @@
         <receiver
             android:name=".house.TaskActionReceiver"
             android:exported="false" />
+        <!-- Notifications through Google's push service. -->
+        <service
+            android:name=".house.GooglePushService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
         <!-- The buttons on house notifications: do something, mute, snooze. -->
         <receiver android:name=".house.NoticeActionReceiver" android:exported="false" />
         <receiver android:name=".house.NoticeMuteReceiver" android:exported="false" />
