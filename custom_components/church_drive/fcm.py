@@ -12,7 +12,7 @@ from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.storage import Store
 
-from .fcm_logic import KEY_FILE, SCOPE, build_message, endpoint, token_is_dead, valid_token_event
+from .fcm_logic import KEY_FILE, SCOPE, build_message, clean_service, endpoint, token_is_dead, valid_token_event
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -61,7 +61,7 @@ class Fcm:
             self._creds = None
 
     async def _on_token(self, event: Event) -> None:
-        service, token = event.data.get("service"), event.data.get("token")
+        service, token = clean_service(event.data.get("service")), event.data.get("token")
         if not valid_token_event(service, token):
             _LOGGER.warning("A Google push token arrived in a form that can't be used (service %r)", service)
             return
