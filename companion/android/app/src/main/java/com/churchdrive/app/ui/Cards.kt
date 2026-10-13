@@ -65,6 +65,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.churchdrive.app.ha.CallService
@@ -92,7 +93,7 @@ fun EntityCard(
         modifier = modifier.fillMaxWidth().then(
             if (deviceEntity == null) Modifier
             else Modifier.pointerInput(deviceEntity) {
-                androidx.compose.foundation.gestures.detectTapGestures(onLongPress = {
+                detectTapGestures(onLongPress = {
                     haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                     openDevice(deviceEntity)
                 })
