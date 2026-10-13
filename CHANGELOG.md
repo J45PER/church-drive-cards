@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **v0.58.0 + app 0.26.0** (2026-10-13): Google push for the Church Drive app (Firebase Cloud Messaging): the app gives the house its push token, and once `church_drive_fcm.json` (a service account key for the Firebase project) is in Home Assistant's config folder, notifications for the app go through Google, falling back to the app's own connection if a push can't be sent. Nothing changes until the key is there
 - **v0.57.0 + app 0.25.0** (2026-10-13): one copy of each notification per phone: if a person's phone runs the Church Drive app and it's connected, the Home Assistant app on that phone (same model) isn't sent a second copy; if the app isn't connected, the Home Assistant app gets it as before. Missed notices are only kept for the app's catch-up when nothing else carried them. App: Settings > "Hide the connected notice" opens Android's switch for the small "connected" notice
 - **v0.56.0 + app 0.24.0** (2026-10-13): the notification preview and "Send me a test" simulate each kind properly: its own words, picture and buttons, sent through the real path in the style you chose (new `church_drive_notice_test` event; each kind in `church_drive/people` carries a `sample`)
 - **app 0.23.0** (2026-10-13): the new camera live view is the main one (Security page, camera cards, notification and widget taps); the old one is no longer used
