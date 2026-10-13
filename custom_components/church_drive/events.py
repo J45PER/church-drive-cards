@@ -55,7 +55,7 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 STORE_VERSION = 1
-DEFAULTS = {"keep_days": 5, "max_gb": 3.0, "dir": None, "cooldown": 120}
+DEFAULTS = {"keep_days": 5, "max_gb": 3.0, "dir": None, "cooldown": 120, "alert_cooldown": 300}
 MODES = ("disarmed", "home", "away")
 ALARM_MODE = {"disarmed": "disarmed", "armed_home": "home", "armed_night": "home", "armed_vacation": "away",
               "armed_away": "away", "armed_custom_bypass": "home", "arming": "disarmed", "pending": "away",
@@ -88,6 +88,7 @@ class CameraEvents:
         self._convert_lock = asyncio.Lock()
         self._data: dict[str, Any] = {"settings": dict(DEFAULTS), "events": {}, "links": None}
         self._linked_at: dict[str, float] = {}
+        self._alerted_at: dict[str, float] = {}
         self._unsubs: list = []
         self._tasks: set[asyncio.Task] = set()
         self._cams: list[str] = []
@@ -100,6 +101,7 @@ class CameraEvents:
             self._data["settings"].update(stored.get("settings") or {})
             self._data["events"] = stored.get("events") or {}
             self._data["links"] = stored.get("links")
+            self._data["alerts"] = stored.get("alerts")
             # Before v0.30.2 a watched live view was saved as "linked".
             for events in self._data["events"].values():
                 for e in events:
@@ -135,6 +137,9 @@ class CameraEvents:
         self._cams = self._find_cameras()
         if self._data["links"] is None:
             self._data["links"] = self._seed_links()
+            self._save()
+        if self._data.get("alerts") is None:
+            self._data["alerts"] = self._seed_alerts()
             self._save()
         self._unsubs.append(self.hass.bus.async_listen(EVENT_STATE_CHANGED, self._on_state, self._wanted))
         self._unsubs.append(async_track_time_interval(self.hass, self._tidy, timedelta(hours=1)))
@@ -221,6 +226,10 @@ class CameraEvents:
                 return
             kind = "ding" if eid.endswith("_ding") else "motion"
             when = _when(new.state) or dt_util.utcnow()
+            if kind == "motion":
+                self._alert(base)
+            else:
+                self._ring(base)
             self._spawn(self._async_event(base, kind, when))
         else:
             vid, was = new.attributes.get("last_video_id"), old.attributes.get("last_video_id")
@@ -489,6 +498,7 @@ class CameraEvents:
             "links": self._data.get("links") or {m: {} for m in MODES},
             "cameras": cams,
             "cooldown": self._data["settings"].get("cooldown", 120),
+            "alerts": self._data.get("alerts") or {m: [] for m in MODES},
         }
 
     async def async_set_link(self, mode: str, trigger: str, cams: list[str] | None, secs: int | None) -> None:
@@ -501,6 +511,65 @@ class CameraEvents:
             rule["cams"] = [c for c in dict.fromkeys(cams) if c in self._cams]
             if secs is not None:
                 rule["secs"] = max(5, min(int(secs), 120))
+        self._save()
+
+    # ---- motion alerts ------------------------------------------------
+
+    def _seed_alerts(self) -> dict[str, Any]:
+        """To start with: no motion alerts while disarmed; at home (and night) the battery cameras, which
+        are the outdoor ones; away, every camera."""
+        battery = [b for b in self._cams if self.hass.states.get(f"sensor.{b}_battery") is not None]
+        return {"disarmed": [], "home": battery, "away": list(self._cams)}
+
+    @callback
+    def _alert(self, base: str) -> None:
+        """Tell the people ticked for "Movement on a camera" when this camera's alerts are on in the
+        alarm's mode, at most once per camera each `alert_cooldown` seconds."""
+        if base not in ((self._data.get("alerts") or {}).get(self.mode()) or []):
+            return
+        now = time.time()
+        if now - self._alerted_at.get(base, 0) < float(self._data["settings"].get("alert_cooldown") or 300):
+            return
+        self._alerted_at[base] = now
+        self._spawn(self.hass.services.async_call(DOMAIN, "notify", self.notice("motion", base), blocking=True))
+
+    @callback
+    def _ring(self, base: str) -> None:
+        """The doorbell was pressed: always told, whatever the alarm mode."""
+        self._spawn(self.hass.services.async_call(DOMAIN, "notify", self.notice("ding", base), blocking=True))
+
+    def _name_of(self, base: str) -> str:
+        st = self.hass.states.get(f"camera.{base}_live_view")
+        return (st.name if st else base.replace("_", " ").title()).replace(" Live view", "")
+
+    def notice(self, what: str, base: str) -> dict[str, Any]:
+        """The notify service data for a doorbell press ("ding") or movement ("motion") on a camera. Its buttons
+        (Answer / View / Mute) come from its kind (notice_actions_logic.py); the picture also says which camera."""
+        name = self._name_of(base)
+        at = dt_util.now().strftime("%H:%M")
+        cam = f"church-drive-camera:camera.{base}_live_view"
+        image = f"/api/camera_proxy/camera.{base}_snapshot"
+        if what == "ding":
+            return {
+                "kind": "doorbell",
+                "title": "🔔 Someone's at the door" if name.lower() in ("front door", "front doorbell") else f"🔔 {name} doorbell",
+                "message": f"The {name.lower()} doorbell was pressed at {at}.",
+                "image": image, "tag": "church-drive-doorbell" if base == "front_door" else f"church-drive-doorbell-{base}",
+                "link": cam + "?answer",
+            }
+        return {
+            "kind": "night_motion",
+            "title": f"👀 Movement: {name}",
+            "message": f"The {name.lower()} camera saw movement at {at}.",
+            "image": image, "tag": f"church-drive-motion-{base}", "link": cam,
+        }
+
+    async def async_set_alert(self, mode: str, cam: str, on: bool) -> None:
+        alerts = self._data.setdefault("alerts", {m: [] for m in MODES})
+        cams = [c for c in alerts.get(mode, []) if c != cam]
+        if on and cam in self._cams:
+            cams.append(cam)
+        alerts[mode] = sorted(cams)
         self._save()
 
     # ---- tidying ------------------------------------------------------

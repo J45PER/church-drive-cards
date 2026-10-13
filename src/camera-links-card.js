@@ -9,6 +9,10 @@
 // recording, and those show in the camera's events as "Linked". Each camera
 // records a linked clip at most once per the cooldown. Only administrators
 // can change links.
+//
+// Below the table, "Tell the house about movement": per mode, which cameras'
+// movement sends a notification (events.py, kind night_motion); the doorbell
+// always rings.
 
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
@@ -49,6 +53,14 @@ const CL_CSS = `
   .cl-foot { display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; margin-top:10px; font-size:0.8rem; color:var(--secondary-text-color); }
   .cl-foot select.cl-add { flex:1 1 220px; height:36px; border-style:dashed; }
   .cl-copy { border:none; cursor:pointer; font:inherit; font-size:0.78rem; font-weight:600; border-radius:999px; padding:6px 12px; background:rgba(127,127,127,0.16); color:var(--primary-text-color); }
+  .cl-al { margin-top:14px; }
+  .cl-al h4 { margin:0 0 4px; font-size:0.88rem; font-weight:700; }
+  .cl-al p { margin:0 0 8px; font-size:0.75rem; color:var(--secondary-text-color); line-height:1.4; }
+  .cl-chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .cl-chip { border:none; cursor:pointer; font:inherit; font-size:0.82rem; font-weight:600; border-radius:999px; padding:6px 12px 6px 8px; display:inline-flex; align-items:center; gap:5px;
+    background:rgba(127,127,127,0.16); color:var(--primary-text-color); }
+  .cl-chip.on { background:#26a69a; color:#fff; }
+  .cl-chip[disabled] { cursor:default; }
   .cl-note { margin-top:10px; font-size:0.75rem; color:var(--secondary-text-color); line-height:1.4; }
 `;
 
@@ -93,6 +105,7 @@ export class CameraLinksCard extends HTMLElement {
         { base: 'entrance', name: 'Entrance', battery: false },
         { base: 'living_room', name: 'Living Room', battery: false },
       ],
+      alerts: { disarmed: [], home: ['front_door', 'driveway', 'garden'], away: ['front_door', 'driveway', 'garden', 'entrance', 'living_room'] },
       links: { disarmed: { 'event.front_door_ding': link['event.front_door_ding'] }, home: { ...link }, away: { ...link, 'binary_sensor.front_door': { cams: ['entrance'], secs: 20 } } },
     };
   }
@@ -161,10 +174,28 @@ export class CameraLinksCard extends HTMLElement {
     this._render();
   }
 
+  async _setAlert(mode, cam) {
+    const d = this._data;
+    d.alerts = d.alerts || { disarmed: [], home: [], away: [] };
+    const now = !(d.alerts[mode] || []).includes(cam);
+    d.alerts[mode] = now ? [...(d.alerts[mode] || []), cam] : d.alerts[mode].filter((c) => c !== cam);
+    this._sig = null;
+    this._render();
+    if (this.config.demo) return;
+    try {
+      this._data = await this._hass.connection.sendMessagePromise({ type: 'church_drive/camera/alerts/set', mode, cam, on: now });
+    } catch (err) {
+      this._load();
+      return;
+    }
+    this._sig = null;
+    this._render();
+  }
+
   _render() {
     if (!this._hass && !this.config.demo) return;
     if (!this._built) {
-      this.innerHTML = `<style>${CL_CSS}</style><div class="cl-tabs"></div><div class="cl-wrap"></div><div class="cl-foot"></div><div class="cl-note"></div>`;
+      this.innerHTML = `<style>${CL_CSS}</style><div class="cl-tabs"></div><div class="cl-wrap"></div><div class="cl-al"></div><div class="cl-foot"></div><div class="cl-note"></div>`;
       this.addEventListener('click', (ev) => this._click(ev));
       this.addEventListener('change', (ev) => this._change(ev));
       this._built = true;
@@ -212,6 +243,17 @@ export class CameraLinksCard extends HTMLElement {
       .join('');
     this.querySelector('.cl-wrap').innerHTML = `<table class="cl-table">${head}${body}</table>`;
 
+    const alertsOn = (d.alerts || {})[tab] || [];
+    const modeLabel = MODES.find((m) => m[0] === tab)[1];
+    this.querySelector('.cl-al').innerHTML = `<h4>Tell the house about movement (${modeLabel})</h4>
+      <p>A notification with a picture and a View feed button, to the people ticked for "Movement on a camera" in Notifications. At most once every 5 minutes per camera. The doorbell always rings, whatever the mode.</p>
+      <div class="cl-chips">${d.cameras
+        .map((c) => {
+          const on = alertsOn.includes(c.base);
+          return `<button class="cl-chip${on ? ' on' : ''}" data-alert="${kitEsc(c.base)}" ${admin ? '' : 'disabled'} aria-pressed="${on}">${iconHtml(on ? 'mdi:bell-ring' : 'mdi:bell-off-outline', { size: '16px' })}${kitEsc(c.name)}</button>`;
+        })
+        .join('')}</div>`;
+
     const foot = this.querySelector('.cl-foot');
     if (admin) {
       const s = (this._hass && this._hass.states) || {};
@@ -243,6 +285,8 @@ export class CameraLinksCard extends HTMLElement {
       return this._render();
     }
     if (!this._admin() || !this._data) return;
+    const al = ev.target.closest('[data-alert]');
+    if (al) return this._setAlert(this._tab, al.dataset.alert);
     const tick = ev.target.closest('[data-tick]');
     if (tick) {
       const id = tick.dataset.trigger;
