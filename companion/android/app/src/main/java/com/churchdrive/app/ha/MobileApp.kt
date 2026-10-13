@@ -134,6 +134,12 @@ object MobileApp {
             .put("data", JSONObject().put("event_type", "church_drive_notice_action")
                 .put("event_data", JSONObject().put("action", "CD_$verb").put("who", who ?: "")))
 
+    /** The webhook message that asks the house to send this person a pretend notice of one kind (it arrives there as the `church_drive_notice_test` event). */
+    fun noticeTestBody(kind: String, who: String?): JSONObject =
+        JSONObject().put("type", "fire_event")
+            .put("data", JSONObject().put("event_type", "church_drive_notice_test")
+                .put("event_data", JSONObject().put("kind", kind).put("who", who ?: "")))
+
     /** The name of the notify service for a phone, as Home Assistant makes it: `notify.mobile_app_<name>`. */
     fun notifyService(deviceName: String): String =
         "notify.mobile_app_" + deviceName.lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_')

@@ -48,6 +48,7 @@ from homeassistant.util import dt as dt_util, location, slugify
 from .notice_log import NoticeLog
 from .kinds import ARRIVALS, JOB_KINDS, KINDS, arrival_kind
 from .notice_actions_logic import actions_for, is_phone_action
+from .notice_samples import sample_for
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -582,9 +583,19 @@ class People:
                     "available": available,
                     "all": bool(a.get("all")),
                     "people": list(a.get("people", [])),
+                    "sample": self._sample(kind),
                 }
             )
         return out
+
+    def _sample(self, kind: dict[str, Any]) -> dict[str, Any]:
+        """What this kind looks like: its words, whether it has a camera picture, and the titles of its buttons."""
+        s = sample_for(kind["key"], kind["name"], kind.get("note", ""))
+        image = f"/api/camera_proxy/camera.{s['camera']}_snapshot" if s["camera"] else ""
+        buttons = actions_for(
+            kind["key"], "", image, s["title"], exists=lambda e: self.hass.states.get(e) is not None
+        )
+        return {"title": s["title"], "message": s["message"], "picture": bool(image), "buttons": [b["title"] for b in buttons]}
 
     def recipients(self, kind: str | None, only: list[str] | None = None) -> list[dict[str, Any]]:
         """The people a kind goes to (optionally only some of them)."""
@@ -676,7 +687,10 @@ class People:
         critical: bool | None = None,
         extra: dict[str, Any] | None = None,
         context: Context | None = None,
+        test: bool = False,
     ) -> dict[str, Any]:
+        """Send a notification. `test` sends it to the people named in `only` whether or not they're ticked for
+        the kind (a pretend one, to see how it looks); everything else about it is as for a real one."""
         spec = next((k for k in self._catalogue() if k["key"] == kind), {}) if kind else {}
         loud = bool(spec.get("critical")) if critical is None else bool(critical)
         # The buttons this kind carries (a task reminder brings its own).
@@ -685,7 +699,7 @@ class People:
         )
         sent: list[str] = []
         phones = 0
-        for p in self.recipients(kind, only):
+        for p in self.recipients(None if test else kind, only):
             seq = self.notice_log.next_seq(int(dt_util.utcnow().timestamp() * 1000))
             logged = False
             text = message + (f"\n{admin_message}" if admin_message and p["admin"] else "")
