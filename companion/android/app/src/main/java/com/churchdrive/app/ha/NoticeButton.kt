@@ -39,3 +39,6 @@ fun pageFromLink(uri: String?): String? {
 
 /** Whether a kind is muted at [now], given when each mute ends. */
 fun isMuted(until: Long?, now: Long): Boolean = until != null && until > now
+
+/** The app's own connection to the house (with Android's "connected" notice) runs only when notifications are on and Google push doesn't have this phone yet. */
+fun connectionNeeded(signedIn: Boolean, notifyOn: Boolean, googlePush: Boolean): Boolean = signedIn && notifyOn && !googlePush

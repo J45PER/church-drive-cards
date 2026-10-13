@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.29.0
+
+- No more "Church Drive is connected" notice. Once the house has this phone's Google push token, notifications come through Google and the app's own connection (the thing that needed that notice) is stopped. If Google push isn't working on a phone, the connection still runs as before, but its notice is created blocked so it doesn't show or leave a dot. The "Hide the connected notice" row in Settings is gone because it is no longer needed.
+- Needs Church Drive 0.61.0 or later in Home Assistant and a `church_drive_fcm.json` key there.
+
 ## 0.28.0
 
 - The phone is registered with Home Assistant under its own name with "-CDA" after it (for example XITOL-J45PER-P10PXL-CDA) instead of "Jamie Pixel 10 Pro XL", so it is plainly the same phone as the Home Assistant app on it. A phone registered under the old name is renamed in Home Assistant the next time the app connects. Its notify service name changes with it (Home Assistant picks that up on its next restart).

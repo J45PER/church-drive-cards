@@ -44,6 +44,10 @@ class Session(context: Context) {
     var notifyOn: Boolean
         get() = prefs.getBoolean("notify_on", false)
         set(v) = prefs.edit().putBoolean("notify_on", v).apply()
+    /** Whether Google push has this phone's token at the house, so notifications don't need the app's own connection. */
+    var googlePush: Boolean
+        get() = prefs.getBoolean("google_push_ok", false)
+        set(v) = prefs.edit().putBoolean("google_push_ok", v).apply()
     var locationOn: Boolean
         get() = prefs.getBoolean("location_on", false)
         set(v) = prefs.edit().putBoolean("location_on", v).apply()

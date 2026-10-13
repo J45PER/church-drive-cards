@@ -122,8 +122,6 @@ class HouseService : Service() {
             delay(60_000)
             webhook = House.ensureRegistered(this)
         }
-        // Google push: give the house this phone's token (it uses it once its key is set up there).
-        GooglePush.register(this)
         if (session.notifyOn) listen(session, url, webhook)
     }
 
@@ -269,7 +267,7 @@ class HouseService : Service() {
 
         private const val FOREGROUND_ID = 4201
         /** The channel of the small "connected" notice Android requires while the connection runs. */
-        const val CHANNEL_SERVICE = "service"
+        const val CHANNEL_SERVICE = "service_hidden"
 
         /** Opens the app; a shopping reminder's link opens that list (each list its own request code, so the extras don't mix). */
         private fun openApp(context: Context, url: String? = null): PendingIntent {
@@ -288,8 +286,10 @@ class HouseService : Service() {
 
         fun createChannels(context: Context) {
             val manager = context.getSystemService(NotificationManager::class.java)
+            // The connection's notice is created blocked (no notice, no dot), so it never shows; the old visible channel is removed.
+            runCatching { manager.deleteNotificationChannel("service") }
             manager.createNotificationChannel(
-                NotificationChannel(CHANNEL_SERVICE, "Connected to the house", NotificationManager.IMPORTANCE_MIN),
+                NotificationChannel(CHANNEL_SERVICE, "Connected to the house", NotificationManager.IMPORTANCE_NONE),
             )
             ensureChannel(context, "house")
         }
