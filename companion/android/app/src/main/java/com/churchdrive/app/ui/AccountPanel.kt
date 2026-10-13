@@ -372,14 +372,18 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                     })
                 },
             )
-            var pushTries by remember { mutableStateOf(0) }
+            // The status changes as Google answers, so it is re-read while this page is open.
+            var pushStatus by remember { mutableStateOf(com.churchdrive.app.house.GooglePush.status(context)) }
+            androidx.compose.runtime.LaunchedEffect(Unit) {
+                while (true) {
+                    pushStatus = com.churchdrive.app.house.GooglePush.status(context)
+                    kotlinx.coroutines.delay(1_000)
+                }
+            }
             PanelRow(
                 Icons.Outlined.Notifications, "Google push",
-                remember(pushTries) { com.churchdrive.app.house.GooglePush.status(context) } + ". Tap to try again.",
-                onClick = {
-                    com.churchdrive.app.house.GooglePush.register(context)
-                    pushTries++
-                },
+                "$pushStatus. Tap to try again.",
+                onClick = { com.churchdrive.app.house.GooglePush.register(context) },
             )
             PanelRow(
                 Icons.Outlined.NotificationsOff, "Hide the connected notice",

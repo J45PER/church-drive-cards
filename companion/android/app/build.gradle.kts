@@ -83,6 +83,8 @@ dependencies {
     // Google's push service: notifications reach the app without it holding its own connection.
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-messaging")
+    implementation("com.google.firebase:firebase-installations")
+    implementation("com.google.android.gms:play-services-base:18.5.0")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
