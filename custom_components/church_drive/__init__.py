@@ -23,6 +23,8 @@
 
 from __future__ import annotations
 
+from homeassistant.util import dt as dt_util
+
 import asyncio
 from datetime import timedelta
 import json
@@ -99,6 +101,7 @@ from .const import (
     WS_LIBRARY,
     WS_PEOPLE,
     WS_PEOPLE_ASSIGN,
+    WS_NOTICES_MISSED,
     WS_PEOPLE_MINE,
     WS_CAMERA_EVENTS,
     WS_CAMERA_LINK_SET,
@@ -317,6 +320,28 @@ async def ws_people_mine(
         return
     await people.async_set(msg["kind"], me, msg["on"])
     connection.send_result(msg["id"], {"kinds": people.kinds(), "me": me})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_NOTICES_MISSED,
+        vol.Optional("since", default=0): vol.Coerce(int),
+    }
+)
+@websocket_api.async_response
+async def ws_notices_missed(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """What the signed-in person was sent since the app last heard (so an offline phone can catch up)."""
+    people = _people(hass)
+    if people is None:
+        connection.send_error(msg["id"], "not_ready", "People and notifications aren't running")
+        return
+    me = people.person_for_user(connection.user.id if connection.user else None)
+    now_ms = int(dt_util.utcnow().timestamp() * 1000)
+    log = people.notice_log
+    items = log.missed(me, msg["since"], now_ms) if me else []
+    connection.send_result(msg["id"], {"notices": items, "latest": log.latest(me) if me else 0, "now": now_ms})
 
 
 @websocket_api.websocket_command(
@@ -1094,7 +1119,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             [StaticPathConfig(URL_BASE, str(FRONTEND_DIR), cache_headers=False)]
         )
         for command in (
-            ws_library, ws_icons, ws_icon_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_mine, ws_people_phone,
+            ws_library, ws_icons, ws_icon_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_mine, ws_notices_missed, ws_people_phone,
             ws_people_places, ws_people_cars, ws_people_access, ws_people_tracking, ws_people_settings, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_maps, ws_maps_search, ws_assist_info,
             ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss, ws_reminders, ws_reminder_set,
             ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_import,

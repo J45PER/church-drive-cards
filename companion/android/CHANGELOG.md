@@ -7,6 +7,7 @@ with the APK, so there is a record of what shipped. Newest first.
 ## 0.21.0
 
 - Notification buttons: notifications from the house can carry buttons that open a camera (answering a doorbell) or a page, turn lights on, send the vacuum home, charge or pause the car, run a backup, mute that kind for a while on this phone, or snooze it. Buttons that change the house need the phone unlocked. There are no calling buttons, and nothing can disarm the alarm.
+- Catching up: if the phone was offline or asleep when the house sent something, the app asks for what it missed (the last few hours, up to 8) when it reconnects and shows it, without repeating ones it already showed.
 
 ## 0.20.0
 

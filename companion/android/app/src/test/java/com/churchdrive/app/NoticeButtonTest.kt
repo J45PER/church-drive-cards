@@ -55,4 +55,15 @@ class NoticeButtonTest {
         assertEquals("church_drive_notice_action", data.getString("event_type"))
         assertEquals("CD_dock", data.getJSONObject("event_data").getString("action"))
     }
+
+    @Test fun aPushCarriesItsNumberAndAKeptNoticeBecomesAnEvent() {
+        val live = MobileApp.parsePush(JSONObject("""{"message":"Hi","data":{"cd_seq":1700000000123}}"""))!!
+        assertEquals(1700000000123, live.seq)
+        assertEquals(0, MobileApp.parsePush(JSONObject("""{"message":"Hi"}"""))!!.seq)
+        val kept = JSONObject("""{"seq":5,"title":"Door","message":"Opened","data":{"tag":"d","cd_seq":5,"group":"door_away"}}""")
+        val again = MobileApp.parsePush(com.churchdrive.app.house.missedNoticeEvent(kept))!!
+        assertEquals("Door", again.title)
+        assertEquals(5, again.seq)
+        assertEquals("door_away", again.kind)
+    }
 }

@@ -21,6 +21,8 @@ data class Push(
     val loud: Boolean = false,
     /** The house asked for it to be quiet (no sound). */
     val quiet: Boolean = false,
+    /** The house numbers each notice it sends to this app, so the app can ask for any it missed while offline. 0 when it has none. */
+    val seq: Long = 0,
 )
 
 /** A button on a notification: [id] is what comes back when it is pressed, [title] what it says. */
@@ -100,6 +102,7 @@ object MobileApp {
             tag = data?.text("tag"),
             url = data?.text("url"),
             channel = data?.text("channel") ?: "house",
+            seq = data?.optLong("cd_seq", 0) ?: 0,
             kind = data?.text("group")?.takeIf { it != "church-drive" },
             loud = data?.text("priority") == "high" || data?.text("channel") == "alarm_stream",
             quiet = data?.text("importance") == "low" || data?.text("channel")?.contains("quiet", ignoreCase = true) == true,

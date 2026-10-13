@@ -138,7 +138,7 @@ class HouseService : Service() {
                     c.subscribe(
                         "mobile_app/push_notification_channel",
                         JSONObject().put("webhook_id", webhook).put("support_confirm", false),
-                    ) { event -> show(event) }
+                    ) { event -> show(event) }.also { catchUp(c) }
                 // The access token ran out: make a new one and connect again (not more than twice a minute).
                 ConnectionState.AuthFailed ->
                     if (session.refreshToken != null && System.currentTimeMillis() - lastRefresh > 30_000) {
@@ -152,10 +152,27 @@ class HouseService : Service() {
 
     private fun show(event: JSONObject) = postNotice(this, event)
 
+    /** Asks the house for anything sent while this phone was offline and shows it (a first run only notes where things are up to). */
+    private fun catchUp(c: HaClient) {
+        val last = NoticeSeen.last(this)
+        c.request("church_drive/notices/missed", JSONObject().put("since", last)) { result ->
+            val r = result as? JSONObject ?: return@request
+            if (last == 0L) {
+                NoticeSeen.save(this, r.optLong("latest", 0))
+                return@request
+            }
+            val list = r.optJSONArray("notices") ?: return@request
+            for (i in 0 until list.length()) list.optJSONObject(i)?.let { postNotice(this, missedNoticeEvent(it)) }
+        }
+    }
+
     companion object {
         /** Shows a notification from the house, as the person chose (Account > Settings > Notification styles), else as the house asked. */
-        fun postNotice(context: Context, event: JSONObject) {
+        fun postNotice(context: Context, event: JSONObject, dedupe: Boolean = true) {
             val push = MobileApp.parsePush(event) ?: return
+            // One the phone has already shown (it arrived live, then again as a catch-up) isn't shown twice.
+            if (dedupe && push.seq > 0 && push.seq <= NoticeSeen.last(context)) return
+            NoticeSeen.save(context, push.seq)
             if (!Permissions.canNotify(context)) return
             val style = NoticeStyles.styleFor(context, push)
             if (style == NoticeStyle.Off) return

@@ -31,6 +31,21 @@ object NoticeMutes {
         kind != null && isMuted(prefs(context).takeIf { it.contains(kind) }?.getLong(kind, 0), System.currentTimeMillis())
 }
 
+/** The number of the last notice this phone has seen from the house, so it can ask for what it missed. */
+object NoticeSeen {
+    private fun prefs(context: Context) = context.getSharedPreferences("notice_seen", Context.MODE_PRIVATE)
+
+    fun last(context: Context): Long = prefs(context).getLong("seq", 0)
+
+    fun save(context: Context, seq: Long) {
+        if (seq > last(context)) prefs(context).edit().putLong("seq", seq).apply()
+    }
+}
+
+/** A notice the house kept for this phone, as an event [HouseService.postNotice] understands. */
+fun missedNoticeEvent(notice: JSONObject): JSONObject =
+    JSONObject().put("title", notice.optString("title")).put("message", notice.optString("message")).put("data", notice.optJSONObject("data") ?: JSONObject())
+
 private fun clearNotice(context: Context, intent: Intent) {
     val id = intent.getIntExtra(EXTRA_NOTICE_ID, 0)
     runCatching { NotificationManagerCompat.from(context).cancel(intent.getStringExtra(EXTRA_NOTICE_TAG), id) }
@@ -88,7 +103,7 @@ class NoticeSnoozeReceiver : BroadcastReceiver() {
             toast(context, "Snoozed for $minutes minutes")
         } else {
             // The alarm went off: show it again.
-            runCatching { HouseService.postNotice(context, JSONObject(event)) }
+            runCatching { HouseService.postNotice(context, JSONObject(event), dedupe = false) }
         }
     }
 }
