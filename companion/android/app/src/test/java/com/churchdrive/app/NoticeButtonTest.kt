@@ -73,4 +73,11 @@ class NoticeButtonTest {
         assertNull(com.churchdrive.app.ui.thisPhone(people, "person.jamie", "mobile_app_other"))
         assertNull(com.churchdrive.app.ui.thisPhone(people, "person.ian", "mobile_app_a"))
     }
+
+    @Test fun theGooglePushTokenBodyFiresTheEvent() {
+        val data = MobileApp.fcmTokenBody("mobile_app_jamie_pixel", "abc").getJSONObject("data")
+        assertEquals("church_drive_fcm_token", data.getString("event_type"))
+        assertEquals("mobile_app_jamie_pixel", data.getJSONObject("event_data").getString("service"))
+        assertEquals("abc", data.getJSONObject("event_data").getString("token"))
+    }
 }

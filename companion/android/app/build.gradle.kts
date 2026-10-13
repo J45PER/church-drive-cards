@@ -6,6 +6,9 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+// Google push is built in only when this build has the project's google-services.json (CI writes it from a secret; it is not in the repo).
+if (file("google-services.json").exists()) apply(plugin = "com.google.gms.google-services")
+
 android {
     namespace = "com.churchdrive.app"
     compileSdk = 35
@@ -77,6 +80,9 @@ dependencies {
     implementation("androidx.media3:media3-ui:1.4.1")
     implementation("io.getstream:stream-webrtc-android:1.3.8")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    // Google's push service: notifications reach the app without it holding its own connection.
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
+    implementation("com.google.firebase:firebase-messaging")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")

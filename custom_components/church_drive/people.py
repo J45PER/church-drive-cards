@@ -80,6 +80,7 @@ class People:
 
     def __init__(self, hass: HomeAssistant) -> None:
         self.notice_log = NoticeLog()
+        self.fcm: Any = None  # Google push (fcm.py), when it's set up
         self.hass = hass
         self._store: Store = Store(hass, STORE_VERSION, "church_drive.people")
         self._data: dict[str, Any] = {"assign": {}, "phones_off": {}, "places": {}, "cars": {}, "access": {}, "seen": {}, "stale_hours": STALE_HOURS, "seeded": False}
@@ -734,6 +735,14 @@ class People:
                     # The Church Drive app keeps the number of the last notice it saw, and asks for what it missed.
                     data["cd_seq"] = seq
                 try:
+                    # Through Google's push service when the app has registered for it; otherwise over the app's own connection.
+                    if phone.get("own_app") and self.fcm is not None and await self.fcm.async_send(
+                        phone["service"], {"title": title, "message": text, "data": data}
+                    ):
+                        phones += 1
+                        if phone.get("model"):
+                            covered.add(phone["model"])
+                        continue
                     await self.hass.services.async_call(
                         "notify", phone["service"], {"title": title, "message": text, "data": data},
                         blocking=True, context=context,

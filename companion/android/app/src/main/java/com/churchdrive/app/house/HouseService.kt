@@ -122,6 +122,8 @@ class HouseService : Service() {
             delay(60_000)
             webhook = House.ensureRegistered(this)
         }
+        // Google push: give the house this phone's token (it uses it once its key is set up there).
+        GooglePush.register(this)
         if (session.notifyOn) listen(session, url, webhook)
     }
 

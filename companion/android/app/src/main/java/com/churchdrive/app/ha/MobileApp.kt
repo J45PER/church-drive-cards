@@ -140,6 +140,12 @@ object MobileApp {
             .put("data", JSONObject().put("event_type", "church_drive_notice_test")
                 .put("event_data", JSONObject().put("kind", kind).put("who", who ?: "")))
 
+    /** The webhook message that tells the house this phone's Google push token (it arrives there as the `church_drive_fcm_token` event). */
+    fun fcmTokenBody(service: String, token: String): JSONObject =
+        JSONObject().put("type", "fire_event")
+            .put("data", JSONObject().put("event_type", "church_drive_fcm_token")
+                .put("event_data", JSONObject().put("service", service).put("token", token)))
+
     /** The name of the notify service for a phone, as Home Assistant makes it: `notify.mobile_app_<name>`. */
     fun notifyService(deviceName: String): String =
         "notify.mobile_app_" + deviceName.lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_')

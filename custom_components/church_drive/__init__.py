@@ -128,6 +128,7 @@ from .icons import Icons
 from .inbox import Inbox
 from .shopping import Shopping
 from .shopping_logic import STATUSES
+from .fcm import Fcm
 from .notice_actions import NoticeActions
 from .notice_samples import sample_for
 from .people import People
@@ -1192,6 +1193,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         notice_actions = NoticeActions(hass)
         notice_actions.async_start()
         entry.async_on_unload(notice_actions.async_stop)
+        # Google push for the Church Drive app (only when its key file is in the config folder).
+        fcm = Fcm(hass)
+        await fcm.async_start()
+        entry.async_on_unload(fcm.async_stop)
+        people.fcm = fcm
 
         # "Send me a test" in the app (Notification styles): a pretend notice of one kind to that person's phones,
         # sent the way a real one is (its buttons, its camera picture, the person's own style for it).
