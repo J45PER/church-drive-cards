@@ -87,8 +87,9 @@ class DashboardParityTest {
         assertTrue(!carStale(car, sent + 10 * 60_000))
         assertTrue(carStale(car, sent + 25 * 60_000))
         assertTrue(!carStale(car.copy(plugged = false, charging = false), sent + 25 * 60_000))
-        assertEquals("Updated 19:41", carUpdatedText(sent, sent + 25 * 60_000, ZoneOffset.UTC))
-        assertEquals("Updated Sun 19:41", carUpdatedText(sent, sent + 26 * 3600_000L, ZoneOffset.UTC))
+        assertEquals("Car last reported 19:41 · 25m ago", carUpdatedText(sent, sent + 25 * 60_000, ZoneOffset.UTC))
+        assertEquals("Car last reported Sun 19:41 · 1d ago", carUpdatedText(sent, sent + 26 * 3600_000L, ZoneOffset.UTC))
+        assertEquals("Car last reported 19:41 · 3h ago", carUpdatedText(sent, sent + 3 * 3600_000L + 7 * 60_000, ZoneOffset.UTC))
         // No "Last updated" attribute: the state's last change.
         assertEquals(java.time.Instant.parse("2026-10-04T20:00:00Z").toEpochMilli(),
             carAsOf(EntityState("sensor.x", "50", JSONObject(), "2026-10-04T20:00:00+00:00")))

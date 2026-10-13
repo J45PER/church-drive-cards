@@ -1,0 +1,523 @@
+diff --git a/internal/ring/ring.go b/internal/ring/ring.go
+index 7fdb284..9fb64bf 100644
+--- a/internal/ring/ring.go
++++ b/internal/ring/ring.go
+@@ -7,12 +7,15 @@ import (
+ 	"fmt"
+ 
+ 	"github.com/AlexxIT/go2rtc/internal/api"
++	"github.com/AlexxIT/go2rtc/internal/app"
+ 	"github.com/AlexxIT/go2rtc/internal/streams"
+ 	"github.com/AlexxIT/go2rtc/pkg/core"
+ 	"github.com/AlexxIT/go2rtc/pkg/ring"
+ )
+ 
+ func Init() {
++	ring.Log = app.GetLogger("ring")
++
+ 	streams.HandleFunc("ring", func(source string) (core.Producer, error) {
+ 		return ring.Dial(source)
+ 	})
+diff --git a/pkg/ring/client.go b/pkg/ring/client.go
+index fb77e19..227033a 100644
+--- a/pkg/ring/client.go
++++ b/pkg/ring/client.go
+@@ -6,6 +6,9 @@ import (
+ 	"fmt"
+ 	"net/url"
+ 	"strconv"
++	"strings"
++	"sync/atomic"
++	"time"
+ 
+ 	"github.com/AlexxIT/go2rtc/pkg/core"
+ 	"github.com/AlexxIT/go2rtc/pkg/webrtc"
+@@ -13,7 +16,13 @@ import (
+ 	pion "github.com/pion/webrtc/v4"
+ )
+ 
++// DefaultConnectTimeout is how long Dial waits for Ring to answer and for the
++// media connection to come up before giving up. Without it a camera that never
++// answers leaves go2rtc waiting forever (and a battery camera streaming).
++const DefaultConnectTimeout = 30 * time.Second
++
+ type Client struct {
++	gotAnswer atomic.Bool
+ 	api       *RingApi
+ 	wsClient  *WSClient
+ 	prod      core.Producer
+@@ -35,6 +44,11 @@ func Dial(rawURL string) (*Client, error) {
+ 	deviceID := query.Get("device_id")
+ 	_, isSnapshot := query["snapshot"]
+ 
++	connectTimeout := DefaultConnectTimeout
++	if v, err := strconv.Atoi(query.Get("connect_timeout")); err == nil && v > 0 {
++		connectTimeout = time.Duration(v) * time.Second
++	}
++
+ 	if encodedToken == "" || deviceID == "" || cameraID == "" {
+ 		return nil, errors.New("ring: wrong query")
+ 	}
+@@ -88,7 +102,9 @@ func Dial(rawURL string) (*Client, error) {
+ 		BundlePolicy:       pion.BundlePolicyBalanced,
+ 	}
+ 
+-	api, err := webrtc.NewAPI()
++	// H264 only: with H265 in the offer Ring answers H265 for the cameras that have it,
++	// and the browser player then waits on an H264 track that never gets data.
++	api, err := webrtc.NewAPIWithoutH265()
+ 	if err != nil {
+ 		client.Stop()
+ 		return nil, err
+@@ -109,6 +125,7 @@ func Dial(rawURL string) (*Client, error) {
+ 	prod := webrtc.NewConn(pc)
+ 	prod.FormatName = "ring/webrtc"
+ 	prod.Mode = core.ModeActiveProducer
++	prod.RequestKeyframes = true
+ 	prod.Protocol = "ws"
+ 	prod.URL = rawURL
+ 
+@@ -215,40 +232,97 @@ func Dial(rawURL string) (*Client, error) {
+ 
+ 	sendOffer.Done(nil)
+ 
+-	if err = client.connected.Wait(); err != nil {
+-		return nil, err
++	// Wait for the media connection, but not forever, and say where it stuck.
++	done := make(chan error, 1)
++	go func() { done <- client.connected.Wait() }()
++
++	state := func() string {
++		return fmt.Sprintf("answer received: %t, ice: %s, connection: %s, signaling: %s",
++			client.gotAnswer.Load(), pc.ICEConnectionState(), pc.ConnectionState(), pc.SignalingState())
+ 	}
+ 
+-	return client, nil
++	tick := time.NewTicker(5 * time.Second)
++	defer tick.Stop()
++	timeout := time.NewTimer(connectTimeout)
++	defer timeout.Stop()
++
++	for {
++		select {
++		case err = <-done:
++			if err != nil {
++				Log.Debug().Err(err).Msgf("[ring] connect failed (%s)", state())
++				return nil, err
++			}
++			Log.Debug().Msgf("[ring] connected (%s)", state())
++			go client.watchMedia(pc, prod)
++			return client, nil
++		case <-tick.C:
++			Log.Debug().Msgf("[ring] waiting (%s)", state())
++		case <-timeout.C:
++			err = fmt.Errorf("ring: timeout after %s (%s)", connectTimeout, state())
++			client.Stop()
++			client.connected.Done(err)
++			return nil, err
++		}
++	}
+ }
+ 
+-func (c *Client) onWSMessage(msg WSMessage) {
+-	rawMsg, _ := json.Marshal(msg)
++// watchMedia logs, for the first minute after connecting, whether video and
++// audio packets are really arriving from Ring: the connection can be up with no
++// media on it, and nothing else would say so.
++func (c *Client) watchMedia(pc *pion.PeerConnection, prod *webrtc.Conn) {
++	tick := time.NewTicker(5 * time.Second)
++	defer tick.Stop()
+ 
+-	// fmt.Printf("ring: onWSMessage: %s\n", string(rawMsg))
++	for i := 0; i < 12; i++ {
++		<-tick.C
++		if c.closed {
++			return
++		}
+ 
+-	// check if "doorbot_id" is present
+-	if _, ok := msg.Body["doorbot_id"]; !ok {
+-		return
++		var parts []string
++		for _, stat := range pc.GetStats() {
++			if in, ok := stat.(pion.InboundRTPStreamStats); ok {
++				parts = append(parts, fmt.Sprintf("%s %d packets %d bytes lost %d", in.Kind, in.PacketsReceived, in.BytesReceived, in.PacketsLost))
++			}
++		}
++		if len(parts) == 0 {
++			parts = append(parts, "no inbound RTP yet")
++		}
++
++		Log.Debug().Msgf("[ring] media: %s; receivers=%d recv=%d bytes", strings.Join(parts, "; "), len(prod.Receivers), prod.Recv)
+ 	}
++}
+ 
+-	// check if the message is from the correct doorbot
+-	doorbotID := msg.Body["doorbot_id"].(float64)
+-	if int(doorbotID) != c.cameraID {
+-		return
++// acceptMessage reports whether a signalling message is for this camera and
++// session. Ring sends messages for our dialog only, so the first session_id we
++// see is adopted whichever message carries it: the answer can arrive before (or
++// without) session_created, and dropping it would leave Dial waiting forever.
++func (c *Client) acceptMessage(msg WSMessage) bool {
++	id, ok := msg.Body["doorbot_id"].(float64)
++	if !ok || int(id) != c.cameraID {
++		return false
+ 	}
+ 
+-	if msg.Method == "session_created" || msg.Method == "session_started" {
+-		if _, ok := msg.Body["session_id"]; ok && c.wsClient.sessionID == "" {
+-			c.wsClient.sessionID = msg.Body["session_id"].(string)
+-		}
++	session, hasSession := msg.Body["session_id"].(string)
++	if !hasSession || session == "" {
++		return true
+ 	}
+ 
+-	// check if the message is from the correct session
+-	if _, ok := msg.Body["session_id"]; ok {
+-		if msg.Body["session_id"].(string) != c.wsClient.sessionID {
+-			return
+-		}
++	if c.wsClient.sessionID == "" {
++		c.wsClient.sessionID = session
++		Log.Debug().Msgf("[ring] session %s", summarize(WSMessage{Body: map[string]any{"session_id": session}}))
++	}
++
++	return session == c.wsClient.sessionID
++}
++
++func (c *Client) onWSMessage(msg WSMessage) {
++	rawMsg, _ := json.Marshal(msg)
++
++	if !c.acceptMessage(msg) {
++		Log.Debug().Str("method", msg.Method).Msg("[ring] ignored (other camera or session)")
++		return
+ 	}
+ 
+ 	switch msg.Method {
+@@ -262,7 +336,11 @@ func (c *Client) onWSMessage(msg WSMessage) {
+ 				return
+ 			}
+ 
++			c.gotAnswer.Store(true)
++			Log.Trace().Msgf("[ring] answer sdp:\n%s", msg.Body.SDP)
++
+ 			if err := prod.SetAnswer(msg.Body.SDP); err != nil {
++				Log.Debug().Err(err).Msg("[ring] set answer failed")
+ 				c.Stop()
+ 				c.connected.Done(err)
+ 				return
+@@ -290,6 +368,7 @@ func (c *Client) onWSMessage(msg WSMessage) {
+ 			}
+ 
+ 			if err := prod.AddCandidate(msg.Body.Ice); err != nil {
++				Log.Debug().Err(err).Msg("[ring] add candidate failed")
+ 				c.Stop()
+ 				c.connected.Done(err)
+ 				return
+@@ -300,6 +379,10 @@ func (c *Client) onWSMessage(msg WSMessage) {
+ 		c.Stop()
+ 		c.connected.Done(errors.New("ring: close"))
+ 
++	case "ping":
++		// Ring's own client answers Ring's pings, so do the same.
++		_ = c.wsClient.sendSessionMessage("pong", nil)
++
+ 	case "pong":
+ 		// Ignore
+ 	}
+diff --git a/pkg/ring/client_test.go b/pkg/ring/client_test.go
+new file mode 100644
+index 0000000..6a485e1
+--- /dev/null
++++ b/pkg/ring/client_test.go
+@@ -0,0 +1,73 @@
++package ring
++
++import (
++	"strings"
++	"testing"
++)
++
++func newTestClient() *Client {
++	return &Client{cameraID: 42, wsClient: &WSClient{}}
++}
++
++func msg(method string, body map[string]any) WSMessage {
++	return WSMessage{Method: method, Body: body}
++}
++
++func TestAcceptMessageAdoptsFirstSessionFromAnyMessage(t *testing.T) {
++	c := newTestClient()
++
++	// The answer arriving before session_created must not be dropped.
++	if !c.acceptMessage(msg("sdp", map[string]any{"doorbot_id": float64(42), "session_id": "abc", "sdp": "v=0"})) {
++		t.Fatal("answer with the first session id was dropped")
++	}
++	if c.wsClient.sessionID != "abc" {
++		t.Fatalf("session not adopted: %q", c.wsClient.sessionID)
++	}
++
++	// Same session still accepted, a different one is not.
++	if !c.acceptMessage(msg("ice", map[string]any{"doorbot_id": float64(42), "session_id": "abc"})) {
++		t.Fatal("message of the adopted session was dropped")
++	}
++	if c.acceptMessage(msg("ice", map[string]any{"doorbot_id": float64(42), "session_id": "other"})) {
++		t.Fatal("message of another session was accepted")
++	}
++}
++
++func TestAcceptMessageFiltersOtherCamerasAndBadTypes(t *testing.T) {
++	c := newTestClient()
++
++	if c.acceptMessage(msg("sdp", map[string]any{"doorbot_id": float64(7)})) {
++		t.Fatal("other camera accepted")
++	}
++	if c.acceptMessage(msg("sdp", map[string]any{})) {
++		t.Fatal("message without doorbot_id accepted")
++	}
++	if c.acceptMessage(msg("sdp", map[string]any{"doorbot_id": "42"})) {
++		t.Fatal("doorbot_id of the wrong type accepted")
++	}
++
++	// A session_id of the wrong type must not panic and is treated as no session.
++	if !c.acceptMessage(msg("notification", map[string]any{"doorbot_id": float64(42), "session_id": 5})) {
++		t.Fatal("message with a non-string session_id was dropped")
++	}
++	if c.wsClient.sessionID != "" {
++		t.Fatal("a bad session_id was adopted")
++	}
++}
++
++func TestSummarizeLeavesSecretsOut(t *testing.T) {
++	s := summarize(msg("sdp", map[string]any{
++		"doorbot_id": float64(42),
++		"session_id": "0123456789abcdef",
++		"sdp":        "v=0\r\na=ice-pwd:secret",
++		"token":      "should-not-appear",
++	}))
++	for _, bad := range []string{"secret", "should-not-appear", "0123456789abcdef"} {
++		if strings.Contains(s, bad) {
++			t.Fatalf("summary leaks %q: %s", bad, s)
++		}
++	}
++	if !strings.Contains(s, "sdp=") || !strings.Contains(s, "doorbot_id=42") {
++		t.Fatalf("summary missing fields: %s", s)
++	}
++}
+diff --git a/pkg/ring/log.go b/pkg/ring/log.go
+new file mode 100644
+index 0000000..0b9f5af
+--- /dev/null
++++ b/pkg/ring/log.go
+@@ -0,0 +1,8 @@
++package ring
++
++import "github.com/rs/zerolog"
++
++// Log is replaced by internal/ring with the "ring" module logger, so
++// "log: ring: debug" (or trace) in go2rtc.yaml shows the Ring signalling.
++// Tokens, tickets and SDP are never logged above trace level.
++var Log = zerolog.Nop()
+diff --git a/pkg/ring/ws.go b/pkg/ring/ws.go
+index 51e72fe..a691322 100644
+--- a/pkg/ring/ws.go
++++ b/pkg/ring/ws.go
+@@ -4,6 +4,8 @@ import (
+ 	"fmt"
+ 	"net/http"
+ 	"net/url"
++	"sort"
++	"strings"
+ 	"sync"
+ 	"time"
+ 
+@@ -236,8 +238,7 @@ func (c *WSClient) sendSessionMessage(method string, payload map[string]interfac
+ 		"body":      payload,
+ 	}
+ 
+-	// rawMsg, _ := json.Marshal(msg)
+-	// fmt.Printf("ring: sendSessionMessage: %s: %s\n", method, string(rawMsg))
++	Log.Debug().Str("method", method).Msg("[ring] send")
+ 
+ 	if err := c.ws.WriteJSON(msg); err != nil {
+ 		return err
+@@ -246,7 +247,39 @@ func (c *WSClient) sendSessionMessage(method string, payload map[string]interfac
+ 	return nil
+ }
+ 
++// summarize describes a message for the debug log without anything secret:
++// the SDP and the ticket are left out, ICE candidates and notification text are kept.
++func summarize(msg WSMessage) string {
++	var parts []string
++	keys := make([]string, 0, len(msg.Body))
++	for k := range msg.Body {
++		keys = append(keys, k)
++	}
++	sort.Strings(keys)
++	for _, k := range keys {
++		switch k {
++		case "doorbot_id", "session_id":
++			if v, ok := msg.Body[k].(string); ok && len(v) > 8 {
++				parts = append(parts, k+"="+v[:8]+"…")
++			} else {
++				parts = append(parts, fmt.Sprintf("%s=%v", k, msg.Body[k]))
++			}
++		case "sdp":
++			if v, ok := msg.Body[k].(string); ok {
++				parts = append(parts, fmt.Sprintf("sdp=%d bytes", len(v)))
++			}
++		case "ice", "text", "is_ok", "transcoding", "transcoding_reason", "mlineindex", "type":
++			parts = append(parts, fmt.Sprintf("%s=%v", k, msg.Body[k]))
++		default:
++			parts = append(parts, k)
++		}
++	}
++	return strings.Join(parts, " ")
++}
++
+ func (c *WSClient) onWsMessage(msg WSMessage) {
++	Log.Debug().Str("method", msg.Method).Msgf("[ring] recv %s", summarize(msg))
++
+ 	if c.onMessage != nil {
+ 		c.onMessage(msg)
+ 	}
+diff --git a/pkg/webrtc/api.go b/pkg/webrtc/api.go
+index 5551d65..525fd01 100644
+--- a/pkg/webrtc/api.go
++++ b/pkg/webrtc/api.go
+@@ -93,12 +93,24 @@ func (f *Filters) IPFilter(ip net.IP) bool {
+ }
+ 
+ func NewServerAPI(network, address string, filters *Filters) (*webrtc.API, error) {
++	return newServerAPI(network, address, filters, true)
++}
++
++// NewAPIWithoutH265 is NewAPI for a connection that must offer H264 only. Every
++// WebRTC connection offers all registered codecs, and Ring answers an offer that
++// lists H265 with H265 for the cameras that have it, which browsers can't play
++// (Ring's own client offers H264 only and gets H264).
++func NewAPIWithoutH265() (*webrtc.API, error) {
++	return newServerAPI("", "", nil, false)
++}
++
++func newServerAPI(network, address string, filters *Filters, withH265 bool) (*webrtc.API, error) {
+ 	// for debug logs add to env: `PION_LOG_DEBUG=all`
+ 	m := &webrtc.MediaEngine{}
+ 	//if err := m.RegisterDefaultCodecs(); err != nil {
+ 	//	return nil, err
+ 	//}
+-	if err := RegisterDefaultCodecs(m); err != nil {
++	if err := registerCodecs(m, withH265); err != nil {
+ 		return nil, err
+ 	}
+ 
+@@ -238,6 +250,10 @@ func newUDPMux(address string, filters *Filters) ice.UDPMux {
+ }
+ 
+ func RegisterDefaultCodecs(m *webrtc.MediaEngine) error {
++	return registerCodecs(m, true)
++}
++
++func registerCodecs(m *webrtc.MediaEngine, withH265 bool) error {
+ 	for _, codec := range []webrtc.RTPCodecParameters{
+ 		{
+ 			RTPCodecCapability: webrtc.RTPCodecCapability{
+@@ -307,6 +323,9 @@ func RegisterDefaultCodecs(m *webrtc.MediaEngine) error {
+ 			PayloadType: 100,
+ 		},
+ 	} {
++		if !withH265 && codec.MimeType == webrtc.MimeTypeH265 {
++			continue
++		}
+ 		if err := m.RegisterCodec(codec, webrtc.RTPCodecTypeVideo); err != nil {
+ 			return err
+ 		}
+diff --git a/pkg/webrtc/api_test.go b/pkg/webrtc/api_test.go
+new file mode 100644
+index 0000000..9be988e
+--- /dev/null
++++ b/pkg/webrtc/api_test.go
+@@ -0,0 +1,55 @@
++package webrtc
++
++import (
++	"strings"
++	"testing"
++
++	"github.com/pion/webrtc/v4"
++)
++
++func videoOffer(t *testing.T, api *webrtc.API) string {
++	t.Helper()
++
++	pc, err := api.NewPeerConnection(webrtc.Configuration{})
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer pc.Close()
++
++	_, err = pc.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo, webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly})
++	if err != nil {
++		t.Fatal(err)
++	}
++
++	offer, err := pc.CreateOffer(nil)
++	if err != nil {
++		t.Fatal(err)
++	}
++	return offer.SDP
++}
++
++func TestNewAPIWithoutH265OffersOnlyH264(t *testing.T) {
++	api, err := NewAPIWithoutH265()
++	if err != nil {
++		t.Fatal(err)
++	}
++
++	sdp := videoOffer(t, api)
++	if strings.Contains(sdp, "H265") {
++		t.Fatalf("offer still lists H265:\n%s", sdp)
++	}
++	if !strings.Contains(sdp, "H264") {
++		t.Fatalf("offer lost H264:\n%s", sdp)
++	}
++}
++
++func TestNewAPIStillOffersH265(t *testing.T) {
++	api, err := NewAPI()
++	if err != nil {
++		t.Fatal(err)
++	}
++
++	if sdp := videoOffer(t, api); !strings.Contains(sdp, "H265") {
++		t.Fatalf("the default API no longer offers H265:\n%s", sdp)
++	}
++}
+diff --git a/pkg/webrtc/conn.go b/pkg/webrtc/conn.go
+index 924fd55..ea95602 100644
+--- a/pkg/webrtc/conn.go
++++ b/pkg/webrtc/conn.go
+@@ -18,6 +18,11 @@ type Conn struct {
+ 
+ 	Mode core.Mode `json:"mode"`
+ 
++	// RequestKeyframes makes an active producer ask for a keyframe every two
++	// seconds (like a passive producer always does). Ring battery cameras only
++	// start a viewer on a keyframe it asks for.
++	RequestKeyframes bool `json:"-"`
++
+ 	pc *webrtc.PeerConnection
+ 
+ 	offer  string
+@@ -87,7 +92,7 @@ func NewConn(pc *webrtc.PeerConnection) *Conn {
+ 			}
+ 		}
+ 
+-		if c.Mode == core.ModePassiveProducer && remote.Kind() == webrtc.RTPCodecTypeVideo {
++		if (c.Mode == core.ModePassiveProducer || c.RequestKeyframes) && remote.Kind() == webrtc.RTPCodecTypeVideo {
+ 			go func() {
+ 				pkts := []rtcp.Packet{&rtcp.PictureLossIndication{MediaSSRC: uint32(remote.SSRC())}}
+ 				for range time.NewTicker(time.Second * 2).C {

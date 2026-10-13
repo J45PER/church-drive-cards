@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-11. Current release: **v0.41.0**.*
+*Last updated 2026-10-12. Current release: **v0.52.3** (Android 0.19.3).*
 
 ## Where this stands
 
@@ -26,6 +26,7 @@ HACS as an integration. It does two jobs:
    scene setup. There's also a scene select per room/zone and a scene builder.
 
 **Now (2026-10-04, v0.38.2 live, nothing on beta):**
+- **Alarm lights (v0.52.0, 2026-10-12, PR #179; v0.52.1 fixes strobing and restoring after the user's first real test).** v0.52.1: a Hue room group's `entity_id` attribute is a **set** (the code only accepted lists, so groups were saved and restored as groups, not as their lights); Hue lights now flash on the bridge through the CLIP v2 `signaling` property (`alternating` two colours, `on_off_color` one colour; found through the hue config entry's `runtime_data.api.request`, the light's registry `unique_id` is its Hue id), other lights are pulsed by Home Assistant with blocking calls; stop = `no_signal` (the bridge's rules want a `duration` even for `no_signal`: v0.52.1 left it out, so stops were refused; fixed in v0.52.2) then restore twice. The fake Home Assistant in `test/alarm_lights_test.py` now uses sets and a pretend bridge. `alarm_lights.py` (runtime: listens for smoke/heat/CO binary sensors and alarm panels, plays strobes, saves and restores the lights in `scene.church_drive_before_alarm`, light-only test) and `alarm_lights_logic.py` (rules, tested). `src/alarm-lights-card.js` is the Manager page. See README "Alarm lights" for the table. Decided with the user: strobe vs constant is a per-room/zone setting; day/night from light sensors, whole house, read once at alarm start; security home = red/blue + constant, away = red only (no constant), day/night does not change security yet; fire = red/amber, green for a minute after; blue when disarmed. Not decided or not built: presence-based constant lights in a fire (rooms with people and pets), green lights for safest exits, a different pattern for security by night. Still to do: put the card on the Manager page, try the light test on the real lights, check the Hue bridge copes with 0.5 s pulses on many groups, and choose the light sensors (indoor landing sensors see the house's own lights).
 - **Shopping places (v0.45.0).** Places on a list are Google Maps search results `{name,address,lat,lon}` (`shopping_logic.clean_places`, `near_place`, `maps_url`), not zones; `church_drive/maps/search` takes `anywhere: true`. Old zone ids are converted on start. `time` is optional (needs a date): `_on_minute` reminds, `_check_near` fires on person lat/lon within 150 m, keyword shop-zone prompts only cover lists with no places. Not tested on a real phone yet.
 - **Shopping lists (v0.42.0; v0.43.0 restyled it to match the task cards ; v0.43.1 made it an indigo Shopping panel on the To-do page, not a page of its own).** `shopping.py` /
   `shopping_logic.py` (see README "Shopping lists"). Data in `.storage/church_drive.shopping`. The to-do
@@ -178,7 +179,7 @@ HACS as an integration. It does two jobs:
     starting at 00:32 showed 7% until 01:00 while the car had reached 30%; the PHEV gains about
     20% in 20 minutes). The car answers in ~20 s; the command status can read "Failed" while the
     figures still refresh. Car card: past 20 minutes old while plugged in or charging, a line
-    "Updated HH:MM" (from the battery sensor's `Last updated` attribute, else its state) and a
+    "Car last reported HH:MM · 23h ago" (v0.52.3; was "Updated HH:MM"; the time is the battery sensor's `Last updated` attribute, i.e. when the car last sent figures, not when HA last polled; else its state) and a
     **Refresh** button that presses the car's wake-up (`carAsOf`, `carTime`, `wake` in
     `carEntities`).
   - **Zappi starts when a mode is picked** (automation, live 2026-10-10): the Zappi has "lock when
@@ -189,6 +190,21 @@ HACS as an integration. It does two jobs:
     plugged in with no mode picked stays locked. Checked 2026-10-11 00:30: it ran (unlock, 5 s, Fast)
     and charging started; "Charge when locked" stayed on, so the unlock does not turn it off and
     PR #121 (drop the unlock) isn't needed.
+    2026-10-13: it did NOT start overnight. The mode was already Fast (left on from earlier), so there
+    was no mode change to trigger the unlock, and "Zappi smart charge" saw a non-Stopped mode and went
+    Manual. The Zappi said Boosting 00:30-05:30 but stayed "EV Connected" at 0 W (locked, waiting at
+    the unit). Fixed live 2026-10-13: a second trigger, `sensor.zappi_status` Boosting for 3 minutes,
+    runs the same unlock + resend-the-mode. (Charge when locked goes on at an unlock and off at
+    unplug; it is not turned off by the unlock.) **Rule from the user: at 00:30, if a car is plugged
+    in it must start. The Vauxhall always charges Fast when plugged in; when the VW is set up it
+    should be Eco+.** Not built: today the mode is one global select, so a per-car mode (which car is
+    plugged in comes from that car's integration plug sensor) is a TODO for when the VW is added.
+    **Safety net (live 2026-10-13):** "Church Drive: Zappi safety net at 00:40" (automation). At 00:40,
+    if a car is plugged in, the mode isn't Stopped, the status isn't Completed and it isn't charging:
+    unlock (if locked), send the mode again, wait up to 5 min for plug status Charging, and if it still
+    isn't, `church_drive.notify` kind `car_charging` ("Car didn't start charging", to whoever is ticked
+    for that in Manager). Note a `for:` trigger (the Boosting one) restarts its clock on an HA restart
+    or an `unavailable` blip, which is why this second chance exists.
   - **Charger button** (v0.38.3, replaces the v0.38.1 Unlock / Charge now / Pause overrides): while a
     car's plugged in, `ev-charger-card` (expanded and compact) shows one button above the modes:
     **Start charge** (unlock if locked, then Fast) until it's charging, then a greyed **Charging**

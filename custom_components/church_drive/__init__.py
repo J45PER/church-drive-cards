@@ -54,6 +54,8 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 
+from .alarm_lights import AlarmLights
+from .alarm_lights_logic import KINDS as ALARM_LIGHT_TESTS, METHODS as ALARM_LIGHT_METHODS, RULES as ALARM_LIGHT_RULES, WHEN as ALARM_LIGHT_WHEN
 from .apply import async_apply
 from .const import (
     CONF_MAPS_PLACES_KEY,
@@ -88,6 +90,10 @@ from .const import (
     WS_INBOX_CONFIRM,
     WS_INBOX_DISMISS,
     WS_INBOX_SUBMIT,
+    WS_ALARM_LIGHTS,
+    WS_ALARM_LIGHTS_SET,
+    WS_ALARM_LIGHTS_STOP,
+    WS_ALARM_LIGHTS_TEST,
     WS_REMINDER_SET,
     WS_REMINDERS,
     WS_LIBRARY,
@@ -801,6 +807,84 @@ async def ws_reminder_set(hass: HomeAssistant, connection: websocket_api.ActiveC
     connection.send_result(msg["id"], {"reminder": kept})
 
 
+def _alarm_lights(hass: HomeAssistant) -> AlarmLights | None:
+    return hass.data.get(DOMAIN, {}).get("alarm_lights")
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_ALARM_LIGHTS})
+@callback
+def ws_alarm_lights(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """What the lights do for an alarm: the settings, what's happening now, whether it's day, and the sensors' readings."""
+    lights = _alarm_lights(hass)
+    if lights is None:
+        connection.send_error(msg["id"], "not_ready", "Alarm lights aren't running")
+        return
+    connection.send_result(msg["id"], lights.status())
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_ALARM_LIGHTS_SET,
+        vol.Optional("enabled"): bool,
+        vol.Optional("strobe"): [cv.entity_id],
+        vol.Optional("constant"): [cv.entity_id],
+        vol.Optional("sensors"): [cv.entity_id],
+        vol.Optional("lux"): vol.Coerce(float),
+        vol.Optional("rule"): vol.In(ALARM_LIGHT_RULES),
+        vol.Optional("green_seconds"): vol.Coerce(float),
+        vol.Optional("blue_seconds"): vol.Coerce(float),
+        vol.Optional("method"): vol.In(ALARM_LIGHT_METHODS),
+        vol.Optional("pulse_ms"): vol.Coerce(float),
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_alarm_lights_set(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Change any of the alarm lights settings (only what's sent changes)."""
+    lights = _alarm_lights(hass)
+    if lights is None:
+        connection.send_error(msg["id"], "not_ready", "Alarm lights aren't running")
+        return
+    change = {k: v for k, v in msg.items() if k not in ("id", "type")}
+    connection.send_result(msg["id"], await lights.async_set(change))
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_ALARM_LIGHTS_TEST,
+        vol.Required("test"): vol.In(ALARM_LIGHT_TESTS),
+        vol.Optional("when", default="auto"): vol.In(ALARM_LIGHT_WHEN),
+        vol.Optional("seconds"): vol.Coerce(int),
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_alarm_lights_test(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Play an alarm's lights with no alarm and no notification, then put the lights back (a light-only test)."""
+    lights = _alarm_lights(hass)
+    if lights is None:
+        connection.send_error(msg["id"], "not_ready", "Alarm lights aren't running")
+        return
+    try:
+        result = await lights.async_test(msg["test"], msg["when"], msg.get("seconds"))
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid_format", str(err))
+        return
+    connection.send_result(msg["id"], result)
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_ALARM_LIGHTS_STOP})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_alarm_lights_stop(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """End a light test now; the lights go back as they were."""
+    lights = _alarm_lights(hass)
+    if lights is None:
+        connection.send_error(msg["id"], "not_ready", "Alarm lights aren't running")
+        return
+    connection.send_result(msg["id"], await lights.async_stop_test())
+
+
 def _events(hass: HomeAssistant) -> CameraEvents | None:
     return hass.data.get(DOMAIN, {}).get("events")
 
@@ -983,6 +1067,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             ws_people_places, ws_people_cars, ws_people_access, ws_people_tracking, ws_people_settings, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_maps, ws_maps_search, ws_assist_info,
             ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss, ws_reminders, ws_reminder_set,
             ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_import,
+            ws_alarm_lights, ws_alarm_lights_set, ws_alarm_lights_test, ws_alarm_lights_stop,
         ):
             websocket_api.async_register_command(hass, command)
     # The version in the URL makes browsers fetch the new bundle after an
@@ -1056,6 +1141,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception:  # noqa: BLE001
         _LOGGER.exception("Shopping lists couldn't start; everything else still works")
         data["shopping"] = None
+
+    # Alarm lights mustn't stop anything else loading either.
+    alarm_lights = AlarmLights(hass)
+    try:
+        await alarm_lights.async_start()
+        entry.async_on_unload(alarm_lights.async_stop)
+        data["alarm_lights"] = alarm_lights
+    except Exception:  # noqa: BLE001
+        _LOGGER.exception("Alarm lights couldn't start; everything else still works")
+        data["alarm_lights"] = None
 
     async def shopping_add(call: ServiceCall) -> ServiceResponse:
         shop = data.get("shopping")

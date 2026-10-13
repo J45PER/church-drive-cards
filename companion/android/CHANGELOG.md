@@ -4,6 +4,14 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.19.4
+
+- New app logo: the gradient house with "63", on a white background, in the app icon, the Android 13 themed icon (a plain outline with the number cut out) and the splash screen.
+
+## 0.19.3
+
+- **Car card**: the old-figures line says whose time it is and how old it is: "Car last reported 00:46 · 23h ago" (it was "Updated 00:46"). The time is when the car last sent figures, not when Home Assistant last checked.
+
 ## 0.19.2
 
 - The icon keeps the artwork's own vertical position (the whole picture is scaled down as it was drawn, not re-centred on the house), in the app icon, the themed icon and the splash screen.
