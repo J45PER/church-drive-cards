@@ -225,7 +225,7 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
     var expanded by rememberSaveable(room.head) { mutableStateOf(false) }
     val expandable = room.rows.isNotEmpty() || room.scenes.isNotEmpty()
 
-    EntityCard(tone.container, tone.onContainer) {
+    EntityCard(tone.container, tone.onContainer, deviceEntity = room.head) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             LightPill(head, room.head, roomTitle(room, head, areaNames), tone, call, Modifier.weight(1f), entities)
             if (expandable) {

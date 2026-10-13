@@ -85,6 +85,8 @@ fun HomeScreen(
     openCamera: String? = null,
     openCameraAnswer: Boolean = false,
     onCameraClosed: () -> Unit = {},
+    /** Open Device Health (from the account panel). */
+    onDeviceHealth: () -> Unit = {},
 ) {
     var page by rememberSaveable { mutableStateOf(Page.Home) }
     androidx.compose.runtime.LaunchedEffect(openPage) {
@@ -222,6 +224,8 @@ fun HomeScreen(
     if (openCamera != null && statesLoaded) CameraViewerFor(openCamera, entities, registry, call, onCameraClosed, answer = openCameraAnswer)
     AccountOverlay(
         panel, { panel = it }, userName, isAdmin, account, updateAvailable, onSignOut,
+        healthSummary = if (panel != null) deviceHealthSummary(deviceHealthList(entities, registry, areaNames)) else "",
+        onDeviceHealth = { panel = null; onDeviceHealth() },
         adminPages = adminPages,
         managerPages = if (isAdmin) managerPanels else emptyList(),
         managerContent = { panel ->

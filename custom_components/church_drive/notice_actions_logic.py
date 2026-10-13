@@ -29,6 +29,19 @@ LIVING_ROOM = "camera.living_room_live_view"
 
 MAX_BUTTONS = 3  # Android shows three
 
+# Where tapping the notification itself goes when the sender gave no link (the page's name in the app).
+KIND_PAGES = {
+    "smoke": "security", "heat": "security", "co": "security", "alarm_triggered": "security", "door_away": "security",
+    "door_left_open": "security", "alarm_mode": "security", "tamper": "security", "doorbell": "security",
+    "night_motion": "security", "vacuum": "cleaning", "damp": "climate", "frost": "climate", "left_on": "lighting",
+    "todo_new": "todo", "todo_summary": "todo",
+}
+# Kinds about a device's own health: tapping one opens the app's Device Health page (the device's page when it is known).
+HEALTH_KINDS = ("battery_report", "device_stale", "low_batteries", "devices_not_responding")
+HEALTH_URI = "church-drive-health"
+DEVICE_PREFIX = "church-drive-device:"
+BATTERY_TAG = "church-drive-battery-"
+
 
 def page_uri(page: str) -> str:
     return f"/dashboard-mobile/{page}"
@@ -137,3 +150,39 @@ def actions_for(
     elif kind == "backup":
         out.append(verb("backup", "Run backup now"))
     return out[:MAX_BUTTONS]
+
+
+def device_uri(entity_id: str) -> str:
+    return f"{DEVICE_PREFIX}{entity_id}"
+
+
+def entity_from_slug(slug: str, entity_ids: list[str]) -> str | None:
+    """The entity whose id, slugified, is `slug` (a tag such as `church-drive-battery-binary_sensor_back_door_battery_plus_low`)."""
+    return next((e for e in entity_ids if e.replace(".", "_") == slug), None)
+
+
+def tap_link_for(kind: str | None, tag: str = "", link_given: str = "", entity_ids: list[str] | None = None) -> str:
+    """Where tapping the notification goes: the sender's own link when it is a good one, else the right place for the kind.
+
+    - A battery or device-health kind opens the device's page (the battery alert's tag names its sensor) or, failing that,
+      the Device Health list; an old `/battery-status/...` link or a page link on such a kind is replaced by that.
+    - With no link at all, a kind opens its page (a smoke alarm opens Security, the vacuum opens Cleaning, ...).
+    """
+    given = link_given or ""
+    if given.startswith(DEVICE_PREFIX) or given == HEALTH_URI:
+        return given
+    if kind in HEALTH_KINDS:
+        slug = tag[len(BATTERY_TAG):] if tag.startswith(BATTERY_TAG) else ""
+        found = entity_from_slug(slug, entity_ids or []) if slug else None
+        return device_uri(found) if found else HEALTH_URI
+    if given.startswith("/battery-status"):
+        return HEALTH_URI
+    if given:
+        return given
+    page = KIND_PAGES.get(kind or "")
+    return page_uri(page) if page else ""
+
+
+def is_app_only_link(link: str) -> bool:
+    """A link only the Church Drive app understands (a device or Device Health page)."""
+    return link.startswith(DEVICE_PREFIX) or link == HEALTH_URI

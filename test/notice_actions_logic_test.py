@@ -70,6 +70,32 @@ class NoticeActionsLogic(unittest.TestCase):
         self.assertFalse(na.is_phone_action("CD_lights_on"))
         self.assertFalse(na.is_phone_action("URI"))
 
+    def test_a_battery_alert_opens_the_device_that_ran_low(self):
+        ids = ["binary_sensor.back_door", "binary_sensor.back_door_battery_plus_low"]
+        got = na.tap_link_for("battery_report", "church-drive-battery-binary_sensor_back_door_battery_plus_low", "/battery-status/battery-status", ids)
+        self.assertEqual(got, "church-drive-device:binary_sensor.back_door_battery_plus_low")
+
+    def test_a_health_alert_with_no_known_device_opens_device_health(self):
+        self.assertEqual(na.tap_link_for("battery_report", "church-drive-battery-nothing", "/battery-status/battery-status", []), "church-drive-health")
+        self.assertEqual(na.tap_link_for("device_stale", "church-drive-health", "/dashboard-mobile/climate"), "church-drive-health")
+        self.assertEqual(na.tap_link_for("low_batteries", "", ""), "church-drive-health")
+
+    def test_an_old_battery_status_link_on_any_kind_opens_device_health(self):
+        self.assertEqual(na.tap_link_for("other", "", "/battery-status/battery-status"), "church-drive-health")
+
+    def test_a_kind_with_no_link_opens_its_page_and_a_given_link_is_kept(self):
+        self.assertEqual(na.tap_link_for("smoke"), "/dashboard-mobile/security")
+        self.assertEqual(na.tap_link_for("vacuum"), "/dashboard-mobile/cleaning")
+        self.assertEqual(na.tap_link_for("cheap_rate"), "")
+        self.assertEqual(na.tap_link_for("door_away", "", "/dashboard-mobile/security?x=1"), "/dashboard-mobile/security?x=1")
+        self.assertEqual(na.tap_link_for("doorbell", "", "church-drive-camera:camera.front_door_live_view?answer"), "church-drive-camera:camera.front_door_live_view?answer")
+
+    def test_device_links_are_for_the_church_drive_app_only(self):
+        self.assertTrue(na.is_app_only_link("church-drive-health"))
+        self.assertTrue(na.is_app_only_link("church-drive-device:sensor.x"))
+        self.assertFalse(na.is_app_only_link("/dashboard-mobile/security"))
+        self.assertFalse(na.is_app_only_link("church-drive-camera:camera.x"))
+
 
 if __name__ == "__main__":
     unittest.main()

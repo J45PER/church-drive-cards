@@ -65,6 +65,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.churchdrive.app.ha.CallService
 import com.churchdrive.app.ha.EntityState
@@ -81,10 +83,22 @@ fun EntityCard(
     container: Color,
     content: Color,
     modifier: Modifier = Modifier,
+    /** An entity of the device this card shows: pressing and holding the card opens that device's health page. */
+    deviceEntity: String? = null,
     body: @Composable () -> Unit,
 ) {
+    val openDevice = LocalOpenDevice.current
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().then(
+            if (deviceEntity == null) Modifier
+            else Modifier.pointerInput(deviceEntity) {
+                detectTapGestures(onLongPress = {
+                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                    openDevice(deviceEntity)
+                })
+            },
+        ),
         shape = CardShape,
         colors = CardDefaults.cardColors(containerColor = container, contentColor = content),
     ) {
@@ -454,7 +468,7 @@ fun VacuumCard(vacuum: EntityState?, battery: EntityState?, call: CallService) {
     val tone = toneColors(vacuumTone(vacuum))
     val enabled = vacuum?.available == true
     val cleaning = vacuum?.state == "cleaning"
-    EntityCard(tone.container, tone.onContainer) {
+    EntityCard(tone.container, tone.onContainer, deviceEntity = vacuum?.entityId) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             ToneIcon(Icons.Filled.CleaningServices, tone)
             Column(modifier = Modifier.weight(1f)) {

@@ -23,14 +23,12 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.churchdrive.app.BuildConfig
-import com.churchdrive.app.MainActivity
 import com.churchdrive.app.R
 import com.churchdrive.app.Session
 import com.churchdrive.app.ha.ConnectionState
 import com.churchdrive.app.ha.HaAuth
 import com.churchdrive.app.ha.HaClient
 import com.churchdrive.app.ha.NoticeButton
-import com.churchdrive.app.ha.pageFromLink
 import com.churchdrive.app.ha.parseNoticeButton
 import com.churchdrive.app.ha.parseTaskAction
 import com.churchdrive.app.ha.MobileApp
@@ -181,7 +179,7 @@ class HouseService : Service() {
             if (style != NoticeStyle.Alert && NoticeMutes.isMuted(context, push.kind)) return
             NoticeStyles.ensureChannels(context)
             val noticeId = push.tag?.hashCode() ?: System.currentTimeMillis().toInt()
-            val builder = NotificationCompat.Builder(context, style.channel)
+            val builder = NotificationCompat.Builder(context, channelFor(style, push.kind))
                 .setCategory(if (style == NoticeStyle.Alert) NotificationCompat.CATEGORY_ALARM else NotificationCompat.CATEGORY_MESSAGE)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setColor(0xFF6B6BBF.toInt())
@@ -254,32 +252,21 @@ class HouseService : Service() {
             }
         }
 
-        /** A Link button: a camera opens that camera (answering for a doorbell), a page opens that page. */
+        /** A Link button: it opens the same place a tap on the notification would (a camera, a page, a device, Device Health). */
         private fun linkIntent(context: Context, uri: String, code: Int): PendingIntent {
-            val camera = com.churchdrive.app.ui.cameraOpenFromLink(uri)
-            val page = pageFromLink(uri)
-            val intent = Intent(context, MainActivity::class.java).also {
-                if (camera != null) it.putExtra("camera", camera.entityId).putExtra("answer", camera.answer)
-                if (page != null) it.putExtra("page", page)
-            }
-            return PendingIntent.getActivity(context, code, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            val link = parseNoticeLink(uri)
+            return PendingIntent.getActivity(context, code xor noticeLinkCode(link), noticeIntent(context, link), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         }
 
         private const val FOREGROUND_ID = 4201
         /** The channel of the small "connected" notice Android requires while the connection runs. */
         const val CHANNEL_SERVICE = "service_hidden"
 
-        /** Opens the app; a shopping reminder's link opens that list (each list its own request code, so the extras don't mix). */
+        /** Opens the app at the notification's link (each link its own request code, so the extras don't mix). */
         private fun openApp(context: Context, url: String? = null): PendingIntent {
-            val list = com.churchdrive.app.ui.shoppingIdFromLink(url)
-            // A doorbell notification's link opens that camera, answering.
-            val camera = com.churchdrive.app.ui.cameraOpenFromLink(url)
-            val intent = Intent(context, MainActivity::class.java).also {
-                if (list != null) it.putExtra(MainActivity.EXTRA_SHOPPING_LIST, list)
-                if (camera != null) it.putExtra("camera", camera.entityId).putExtra("answer", camera.answer)
-            }
+            val link = parseNoticeLink(url)
             return PendingIntent.getActivity(
-                context, list?.hashCode() ?: camera?.entityId?.hashCode() ?: 0, intent,
+                context, noticeLinkCode(link), noticeIntent(context, link),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
         }

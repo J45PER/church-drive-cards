@@ -205,7 +205,7 @@ fun TileCard(config: JSONObject, entities: Map<String, EntityState>, call: CallS
     fun hasFeature(type: String) = (0 until (features?.length() ?: 0)).any { features?.optJSONObject(it)?.optString("type") == type }
     val numeric = id.startsWith("number.") && hasFeature("numeric-input")
 
-    EntityCard(tone.container, tone.onContainer) {
+    EntityCard(tone.container, tone.onContainer, deviceEntity = id) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ToneIconName(config.optString("icon").ifBlank { entity?.str("icon") ?: "" }, Icons.Filled.Info, tone)
             Column(modifier = Modifier.weight(1f)) {

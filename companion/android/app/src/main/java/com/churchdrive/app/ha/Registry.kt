@@ -37,6 +37,12 @@ class Registry(
     fun devicesOfPlatforms(platforms: Set<String>): Map<String, List<String>> =
         entityDevice.entries.filter { entityPlatform[it.key] in platforms && it.key !in hidden }.groupBy({ it.value }, { it.key })
 
+    /** Every device that has entities. */
+    fun deviceIds(): Set<String> = byDevice.keys
+
+    /** A device's entities (not hidden), in registry order. */
+    fun entitiesOfDevice(device: String): List<String> = byDevice[device].orEmpty().filter { it !in hidden }
+
     /** The other entities on the same device as [entityId], in registry order. */
     fun siblings(entityId: String): List<String> {
         val device = entityDevice[entityId] ?: return emptyList()
