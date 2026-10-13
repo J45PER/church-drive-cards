@@ -2,6 +2,4 @@
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@color/ic_launcher_background" />
     <foreground android:drawable="@mipmap/ic_launcher_foreground" />
-    <!-- Android 13 "themed icons": the house outline, tinted with the wallpaper's colours. -->
-    <monochrome android:drawable="@mipmap/ic_launcher_monochrome" />
 </adaptive-icon>
