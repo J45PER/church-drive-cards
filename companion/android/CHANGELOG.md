@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.19.8
+
+- Notifications no longer carry the extra logo picture on the right of the card: the app icon on the left (now the right logo) is all they show.
+
 ## 0.19.7
 
 - Fixed the app icon showing as a plain white circle (in the notification, the downloads list and on phones with a medium-density icon set): the new logo had only been added for the sharpest screens, so most phones were still using the old artwork, which disappears on the white background. The logo (and the themed icon) is now provided for every screen density.
