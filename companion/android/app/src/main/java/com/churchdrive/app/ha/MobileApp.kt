@@ -8,7 +8,20 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /** A message the house sent to this phone (from `notify.mobile_app_...`). */
-data class Push(val title: String, val message: String, val tag: String?, val channel: String, val actions: List<PushAction> = emptyList(), val url: String? = null)
+data class Push(
+    val title: String,
+    val message: String,
+    val tag: String?,
+    val channel: String,
+    val actions: List<PushAction> = emptyList(),
+    val url: String? = null,
+    /** The kind of notification (Church Drive sends it as the group), so the person's choice for it can apply. Null for any other message. */
+    val kind: String? = null,
+    /** The house asked for it to be loud (a safety alarm). */
+    val loud: Boolean = false,
+    /** The house asked for it to be quiet (no sound). */
+    val quiet: Boolean = false,
+)
 
 /** A button on a notification: [id] is what comes back when it is pressed, [title] what it says. */
 data class PushAction(val id: String, val title: String)
@@ -87,6 +100,9 @@ object MobileApp {
             tag = data?.text("tag"),
             url = data?.text("url"),
             channel = data?.text("channel") ?: "house",
+            kind = data?.text("group")?.takeIf { it != "church-drive" },
+            loud = data?.text("priority") == "high" || data?.text("channel") == "alarm_stream",
+            quiet = data?.text("importance") == "low" || data?.text("channel")?.contains("quiet", ignoreCase = true) == true,
             // Only the house's own task buttons (Done, Snooze): anything else would have nothing to do here.
             actions = (data?.optJSONArray("actions")?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it) } } ?: emptyList())
                 .mapNotNull { o ->

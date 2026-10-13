@@ -602,6 +602,24 @@ class People:
             ]
         return chosen
 
+    def person_for_user(self, user_id: str | None) -> str:
+        """The person entity linked to a Home Assistant login, or "" when there is none."""
+        if not user_id:
+            return ""
+        for p in self.people():
+            if p.get("user_id") == user_id:
+                return p["entity_id"]
+        return ""
+
+    def may_tick(self, kind: str, person: str) -> bool:
+        """Whether a person may be ticked for a kind: administrator-only kinds are for administrators."""
+        spec = next((k for k in self._catalogue() if k["key"] == kind), None)
+        if spec is None:
+            return False
+        if not spec.get("admin_only"):
+            return True
+        return any(p["entity_id"] == person and p["admin"] for p in self.people())
+
     def assigned_names(self) -> dict[str, list[str]]:
         """{kind: [first names]} for templates (house jobs use "Everyone")."""
         return {k["key"]: [p["first"] for p in self.recipients(k["key"])] for k in self._catalogue()}

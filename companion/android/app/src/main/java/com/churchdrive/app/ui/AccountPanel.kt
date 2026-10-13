@@ -324,6 +324,13 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                     })
                 },
             )
+            var showStyles by remember { mutableStateOf(false) }
+            PanelRow(
+                Icons.Outlined.Notifications, "Notification styles",
+                "Choose which notifications you get, and whether each one pops up, is quiet or is off on this phone.",
+                onClick = { showStyles = true },
+            )
+            if (showStyles) NoticeStylesPage(isAdmin) { showStyles = false }
             PanelRow(
                 Icons.Outlined.Mic, "Classic Jarvis colours",
                 "Jarvis normally takes his colours from your phone's theme. Turn this on to keep his original indigo, purple and green.",

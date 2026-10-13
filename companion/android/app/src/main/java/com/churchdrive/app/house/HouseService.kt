@@ -150,9 +150,13 @@ class HouseService : Service() {
     private fun show(event: JSONObject) {
         val push = MobileApp.parsePush(event) ?: return
         if (!Permissions.canNotify(this)) return
-        ensureChannel(this, push.channel)
+        // How it appears is the person's choice for this kind (Account > Settings > Notification styles), else what the house asked for.
+        val style = NoticeStyles.styleFor(this, push)
+        if (style == NoticeStyle.Off) return
+        NoticeStyles.ensureChannels(this)
         val noticeId = push.tag?.hashCode() ?: System.currentTimeMillis().toInt()
-        val builder = NotificationCompat.Builder(this, push.channel)
+        val builder = NotificationCompat.Builder(this, style.channel)
+            .setCategory(if (style == NoticeStyle.Alert) NotificationCompat.CATEGORY_ALARM else NotificationCompat.CATEGORY_MESSAGE)
             .setSmallIcon(R.drawable.ic_notification)
             .setColor(0xFF6B6BBF.toInt())
             .setContentTitle(push.title)
