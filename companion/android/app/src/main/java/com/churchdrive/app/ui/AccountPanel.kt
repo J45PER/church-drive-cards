@@ -372,6 +372,15 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                     })
                 },
             )
+            var pushTries by remember { mutableStateOf(0) }
+            PanelRow(
+                Icons.Outlined.Notifications, "Google push",
+                remember(pushTries) { com.churchdrive.app.house.GooglePush.status(context) } + ". Tap to try again.",
+                onClick = {
+                    com.churchdrive.app.house.GooglePush.register(context)
+                    pushTries++
+                },
+            )
             PanelRow(
                 Icons.Outlined.NotificationsOff, "Hide the connected notice",
                 "Android shows a small \"connected\" notice while the connection runs. Turn its switch off there to hide it: notifications still arrive.",

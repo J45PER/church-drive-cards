@@ -62,7 +62,11 @@ class Fcm:
 
     async def _on_token(self, event: Event) -> None:
         service, token = event.data.get("service"), event.data.get("token")
-        if not valid_token_event(service, token) or not self.hass.services.has_service("notify", service):
+        if not valid_token_event(service, token):
+            _LOGGER.warning("A Google push token arrived in a form that can't be used (service %r)", service)
+            return
+        if not self.hass.services.has_service("notify", service):
+            _LOGGER.warning("A Google push token arrived for %s, which isn't a phone this house knows", service)
             return
         if self._tokens.get(service) != token:
             self._tokens[service] = token
