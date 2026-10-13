@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.19.9
+
+- A test: the Android 13 "themed icon" layer is switched off, to see whether the Files app's Downloads list then shows the logo instead of a white circle for the downloaded app files. The home-screen icon is the full-colour logo as before. (The themed-icon pictures are still in the project, so it is easy to put back.)
+
 ## 0.19.8
 
 - Notifications no longer carry the extra logo picture on the right of the card: the app icon on the left (now the right logo) is all they show.
