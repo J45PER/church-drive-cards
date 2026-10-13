@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.19.5
+
+- The little icon in notifications (such as "Church Drive is connected") is now the house instead of a plain white circle. It is a simple outline, because Android draws that icon in a single colour and the number is too small to read there.
+
 ## 0.19.4
 
 - New app logo: the gradient house with "63", on a white background, in the app icon, the Android 13 themed icon (a plain outline with the number cut out) and the splash screen.
