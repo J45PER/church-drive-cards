@@ -3,12 +3,17 @@ package com.churchdrive.app.ui
 import com.churchdrive.app.ha.EntityState
 import com.churchdrive.app.ha.Registry
 
-/** A battery at or under this percent is low (amber); at or under [BATTERY_CRITICAL] it is nearly flat (red). */
-const val BATTERY_LOW = 20
-const val BATTERY_CRITICAL = 10
+/** A battery at or under this percent is getting low (amber); at or under [BATTERY_CRITICAL] it is nearly flat (red). */
+const val BATTERY_LOW = 40
+const val BATTERY_CRITICAL = 20
 
-/** A filter with this much life left or less needs changing soon. */
-const val FILTER_LOW = 15
+/** A filter with this much life left or less needs changing soon (amber); at or under [FILTER_CRITICAL] it is overdue (red). */
+const val FILTER_LOW = 30
+const val FILTER_CRITICAL = 10
+
+/** The level a percent reading is at: [low] and under is amber, [critical] and under is red. */
+fun percentLevel(percent: Int, low: Int, critical: Int): HealthLevel =
+    if (percent <= critical) HealthLevel.Bad else if (percent <= low) HealthLevel.Warn else HealthLevel.Ok
 
 enum class HealthLevel { Ok, Warn, Bad }
 
@@ -33,18 +38,18 @@ data class DeviceHealthItem(
 ) {
     val batteryLevel: HealthLevel?
         get() = when {
-            battery != null -> if (battery <= BATTERY_CRITICAL) HealthLevel.Bad else if (battery <= BATTERY_LOW) HealthLevel.Warn else if (batteryLow) HealthLevel.Bad else HealthLevel.Ok
+            battery != null -> percentLevel(battery, BATTERY_LOW, BATTERY_CRITICAL).let { if (batteryLow && it == HealthLevel.Ok) HealthLevel.Warn else it }
             batteryLow -> HealthLevel.Bad
             else -> null
         }
-    val filterLevel: HealthLevel? get() = filter?.let { if (it <= FILTER_LOW) HealthLevel.Warn else HealthLevel.Ok }
+    val filterLevel: HealthLevel? get() = filter?.let { percentLevel(it, FILTER_LOW, FILTER_CRITICAL) }
 
     /** Whether it is worth showing at all in the Device Health list: it has a battery or filter, or it isn't answering. */
     val tracked: Boolean get() = battery != null || batteryLow || filter != null || offline || staleReason != null
 
     val level: HealthLevel
         get() = when {
-            offline || batteryLevel == HealthLevel.Bad -> HealthLevel.Bad
+            offline || batteryLevel == HealthLevel.Bad || filterLevel == HealthLevel.Bad -> HealthLevel.Bad
             staleReason != null || batteryLevel == HealthLevel.Warn || filterLevel == HealthLevel.Warn -> HealthLevel.Warn
             else -> HealthLevel.Ok
         }

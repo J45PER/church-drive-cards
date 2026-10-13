@@ -1,7 +1,13 @@
 package com.churchdrive.app.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,7 +26,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,8 +36,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.churchdrive.app.ha.EntityState
 import com.churchdrive.app.ha.Registry
-import kotlinx.coroutines.delay
-import kotlin.math.roundToInt
 
 /** Opens a device's health page for an entity of that device (a long press on a card). Does nothing where the app hasn't set it. */
 val LocalOpenDevice = compositionLocalOf<(String) -> Unit> { {} }
@@ -71,7 +74,7 @@ fun DeviceHealthOverlay(
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         val item = selected?.let { healthOfDevice(it, entities, registry, areaNames) }
         if (item != null) {
-            DevicePage(item, entities) { if (startId == null) selected = null else onClose() }
+            DevicePage(item) { if (startId == null) selected = null else onClose() }
         } else {
             HealthList(deviceHealthList(entities, registry, areaNames), onClose) { selected = it.deviceId }
         }
@@ -109,6 +112,35 @@ private fun HealthList(items: List<DeviceHealthItem>, onClose: () -> Unit, onOpe
     }
 }
 
+/** A full-width bar showing [percent], in the colour of its level on a faint track of the same colour. */
+@Composable
+private fun HealthBar(percent: Int, level: HealthLevel) {
+    val tone = toneColors(level.tone())
+    Box(Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)).background(tone.accent.copy(alpha = 0.22f))) {
+        Box(Modifier.fillMaxWidth(percent.coerceIn(2, 100) / 100f).fillMaxHeight().clip(RoundedCornerShape(5.dp)).background(tone.accent))
+    }
+}
+
+/** One reading with its bar: "Battery" and its percent above a coloured bar. */
+@Composable
+private fun HealthReading(label: String, percent: Int, level: HealthLevel) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(label, style = MaterialTheme.typography.bodySmall)
+            Text("$percent%", style = MaterialTheme.typography.labelLarge)
+        }
+        HealthBar(percent, level)
+    }
+}
+
+/** What to say about a device that isn't simply "fine", or null. */
+private fun DeviceHealthItem.problem(): String? = when {
+    offline -> "Not responding"
+    staleReason != null -> staleReason
+    batteryLow && battery == null -> "Battery low"
+    else -> null
+}
+
 @Composable
 private fun HealthRow(item: DeviceHealthItem, onClick: () -> Unit) {
     val tone = toneColors(item.level.tone())
@@ -117,17 +149,18 @@ private fun HealthRow(item: DeviceHealthItem, onClick: () -> Unit) {
             ToneIconName(item.icon(), Icons.Filled.Info, tone, 36)
             Column(Modifier.weight(1f)) {
                 Text(item.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
-                Text(
-                    listOfNotNull(item.area, item.summary).joinToString(" · "),
-                    style = MaterialTheme.typography.bodySmall, maxLines = 2,
-                )
+                listOfNotNull(item.area, item.problem()).joinToString(" · ").takeIf { it.isNotBlank() }
+                    ?.let { Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 1) }
             }
         }
+        item.battery?.let { HealthReading("Battery", it, item.batteryLevel ?: HealthLevel.Ok) }
+        item.filter?.let { HealthReading("Filter", it, item.filterLevel ?: HealthLevel.Ok) }
     }
 }
 
+/** A device's page: just what a person needs, its battery and filter with bars, whether it is answering, and when it was last heard. */
 @Composable
-private fun DevicePage(item: DeviceHealthItem, entities: Map<String, EntityState>, onBack: () -> Unit) {
+private fun DevicePage(item: DeviceHealthItem, onBack: () -> Unit) {
     Column(
         Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -135,55 +168,17 @@ private fun DevicePage(item: DeviceHealthItem, entities: Map<String, EntityState
         HealthHeader(item.name, item.area, onBack)
         val tone = toneColors(item.level.tone())
         EntityCard(tone.container, tone.onContainer) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                ToneIconName(item.icon(), Icons.Filled.Info, tone)
-                Column(Modifier.weight(1f)) {
-                    Text(item.summary, style = MaterialTheme.typography.titleMedium)
-                    Text("Heard ${heardAgo(item.heard)}", style = MaterialTheme.typography.bodySmall)
+            item.battery?.let { HealthReading("Battery", it, item.batteryLevel ?: HealthLevel.Ok) }
+            item.filter?.let { HealthReading("Filter", it, item.filterLevel ?: HealthLevel.Ok) }
+            if (item.battery == null && item.filter == null) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ToneIconName(item.icon(), Icons.Filled.Info, tone)
+                    Text(item.problem() ?: "No battery or filter to report", style = MaterialTheme.typography.titleMedium)
                 }
+            } else {
+                item.problem()?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
             }
-            item.staleReason?.takeIf { !item.offline }?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+            Text("Heard ${heardAgo(item.heard)}", style = MaterialTheme.typography.bodySmall)
         }
-        val batterySensor = item.entityIds.firstOrNull { entities[it]?.let { e -> it.startsWith("sensor.") && e.str("device_class") == "battery" } == true }
-        if (batterySensor != null) BatteryHistory(batterySensor, item.battery)
-        Text("Everything on this device", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        val neutral = panelNeutral()
-        EntityCard(neutral.container, neutral.onContainer) {
-            item.entityIds.mapNotNull { entities[it] }.forEach { e ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(e.friendlyName, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f), maxLines = 2)
-                    Text(
-                        e.state.replace('_', ' ') + (e.str("unit_of_measurement")?.let { " $it" } ?: ""),
-                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
-    }
-}
-
-/** A battery's last week, drawn like the dashboard's history graphs. */
-@Composable
-private fun BatteryHistory(entityId: String, now: Int?) {
-    val load = LocalHistory.current
-    var history by remember { mutableStateOf<Map<String, List<Pair<Long, String>>>>(emptyMap()) }
-    LaunchedEffect(entityId) {
-        while (true) {
-            load(listOf(entityId), 24 * 7) { history = it }
-            delay(10 * 60_000L)
-        }
-    }
-    val points = numericSeries(history[entityId])
-    if (points.size < 2) return
-    val tone = toneColors(Tone.Teal)
-    val neutral = panelNeutral()
-    val to = System.currentTimeMillis()
-    EntityCard(neutral.container, neutral.onContainer) {
-        Text("Battery over the last week" + (now?.let { " · now $it%" } ?: ""), style = MaterialTheme.typography.titleSmall)
-        LineGraph(
-            listOf(GraphLayer(points, tone.accent, 0.0, 100.0, { "${it.roundToInt()}%" }, fill = true)),
-            from = to - 7 * 24 * 3_600_000L, now = to, smooth = false, ink = neutral.onContainer,
-            legend = listOf("● Battery" to tone.accent),
-        )
     }
 }

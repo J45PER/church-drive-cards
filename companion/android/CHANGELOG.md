@@ -4,6 +4,12 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.30.1
+
+- Fixed a crash on opening the app ("Reading a state that was created after the snapshot was taken"): the icon pack's state is now created at start-up, not in the middle of drawing the bottom bar.
+- Device health is simpler: a device's page (tap it, or press and hold its card) shows just its battery and filter as a coloured bar, whether it is answering, and when it was last heard. The long list of every entity, and the battery graph, are gone.
+- Device health now uses bars and colours on the list too. A battery at 40% or less is amber ("needs attention") and at 20% or less is red; a filter at 30% or less is amber and at 10% or less is red. So 28% is no longer "all fine".
+
 ## 0.30.0
 
 - Notification sounds: each kind of pop-up has its own default sound instead of the phone's one: a doorbell ding-dong, a soft ping for movement, rising notes for energy and the car, a blip for to-dos, low beats for device and system problems. Safety alarms still ring through silent. Each sound family is its own Android channel (Settings > Notifications > Church Drive), so you can change or silence one in Android's settings. Anything else keeps the old pop-up sound.
