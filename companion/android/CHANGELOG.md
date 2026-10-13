@@ -6,6 +6,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 ## 0.28.0
 
+- The phone is registered with Home Assistant under its own name with "-CDA" after it (for example XITOL-J45PER-P10PXL-CDA) instead of "Jamie Pixel 10 Pro XL", so it is plainly the same phone as the Home Assistant app on it. A phone registered under the old name is renamed in Home Assistant the next time the app connects. Its notify service name changes with it (Home Assistant picks that up on its next restart).
 - Settings > Google push now shows each step Google push needs (Google Play services, this app's install ID, the token) and which one is stuck or failed, with Google's own message, and updates while the page is open.
 
 ## 0.27.0

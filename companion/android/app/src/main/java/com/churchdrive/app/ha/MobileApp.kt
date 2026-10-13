@@ -150,6 +150,19 @@ object MobileApp {
     fun notifyService(deviceName: String): String =
         "notify.mobile_app_" + deviceName.lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_')
 
+    /**
+     * The name this app registers the phone under: the phone's own name (as the Home Assistant app on it calls itself) with
+     * "-CDA" after it, so the two are plainly one phone but not the same name. Without a phone name: the person and the model.
+     */
+    fun cdaDeviceName(phoneName: String?, personName: String?, model: String): String =
+        (phoneName?.trim()?.takeIf { it.isNotEmpty() } ?: deviceName(personName, model)) + "-CDA"
+
+    /** The webhook message that renames this phone in Home Assistant (Home Assistant needs the version and name every time). */
+    fun updateRegistrationBody(appVersion: String, deviceName: String, osVersion: String, manufacturer: String, model: String): JSONObject =
+        JSONObject().put("type", "update_registration")
+            .put("data", JSONObject().put("app_version", appVersion).put("device_name", deviceName)
+                .put("manufacturer", manufacturer).put("model", model).put("os_version", osVersion))
+
     /** The name the phone is registered under: the person's name and the phone's model. */
     fun deviceName(personName: String?, model: String): String =
         listOfNotNull(personName?.trim()?.substringBefore(' ')?.takeIf { it.isNotEmpty() }, model.takeIf { it.isNotBlank() })
