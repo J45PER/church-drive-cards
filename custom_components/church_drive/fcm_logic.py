@@ -33,6 +33,11 @@ def token_is_dead(status: int, body: Any) -> bool:
     return (status == 400 and "UNREGISTERED" in text) or "registration-token-not-registered" in text
 
 
+def clean_service(service: Any) -> Any:
+    """The app names its phone as `notify.mobile_app_x`; the house keeps the service part, `mobile_app_x`."""
+    return service.removeprefix("notify.") if isinstance(service, str) else service
+
+
 def valid_token_event(service: Any, token: Any) -> bool:
     """A token the app reports: a phone's notify service name and a plausible FCM token."""
     return (

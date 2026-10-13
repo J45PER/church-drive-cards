@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **v0.61.0** (2026-10-13): Google push: the house now accepts the phone's token (the app names its phone `notify.mobile_app_x`; the house expected `mobile_app_x` and threw every token away)
 - **v0.60.0 + app 0.28.0** (2026-10-13): Manager's Phones list shows the Church Drive app and the Home Assistant app on the same phone as one row ("with the Church Drive app"), and its Alerts switch covers both; the app's Google push line shows each step and which one is stuck
 - **v0.59.0 + app 0.27.0** (2026-10-13): Google push can be seen working: Settings in the app says where it has got to (asking Google, token sent to the house, or what went wrong) and can retry; the house logs when a token arrives or is unusable
 - **v0.58.0 + app 0.26.0** (2026-10-13): Google push for the Church Drive app (Firebase Cloud Messaging): the app gives the house its push token, and once `church_drive_fcm.json` (a service account key for the Firebase project) is in Home Assistant's config folder, notifications for the app go through Google, falling back to the app's own connection if a push can't be sent. Nothing changes until the key is there

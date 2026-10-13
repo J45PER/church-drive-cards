@@ -18,6 +18,10 @@ def test():
     assert not m.valid_token_event("mobile_app_a", "short")
     assert not m.valid_token_event("mobile_app_a", "has space " * 5)
     assert not m.valid_token_event(None, None)
+    assert m.clean_service("notify.mobile_app_x") == "mobile_app_x", "the app sends the full notify name"
+    assert m.clean_service("mobile_app_x") == "mobile_app_x"
+    assert m.clean_service(None) is None
+    assert m.valid_token_event(m.clean_service("notify.mobile_app_x_cda"), "x" * 100)
 
 test()
 print("OK")
