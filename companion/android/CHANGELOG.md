@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.27.0
+
+- Settings > Google push: says where Google push has got to on this phone (asking Google, token sent to the house, or what went wrong), and tapping it tries again.
+
 ## 0.26.0
 
 - Google push: the app registers with Google's push service and tells the house its token. When the house has its key (Church Drive 0.58.0 and a `church_drive_fcm.json` in Home Assistant's config folder), notifications arrive through Google, even when Android has put the app to sleep. Until then nothing changes.
