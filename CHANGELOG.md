@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **app 0.23.0** (2026-10-13): the new camera live view is the main one (Security page, camera cards, notification and widget taps); the old one is no longer used
 - **app 0.22.0** (2026-10-13): doorbell and movement notifications show the camera's picture above their buttons
 - **v0.55.0** (2026-10-13): movement alerts follow the alarm mode (Manager, Camera links: which cameras tell the house, for Disarmed, Home and Away; starts as none, battery cameras, all); the integration now sends the doorbell and movement notifications itself, with the picture and buttons from the notification buttons (so the doorbell and night-motion parts of the "security alerts" automation are no longer needed)
 - **v0.54.0 + app 0.21.0** (2026-10-13): Notification buttons (stage 2 of notification settings): doorbell, cameras, alarms, smoke, vacuum, energy and more now carry buttons (view camera, open the page, lights on, send vacuum home, charge car, mute, snooze). No calling and nothing that disarms the alarm; buttons that change the house need the phone unlocked. Catch-up: the house keeps the last few notices for each person and the app asks for any it missed while offline (`church_drive/notices/missed`)

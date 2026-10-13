@@ -81,7 +81,7 @@ internal fun chipColours(kind: String, old: Boolean): Pair<Color, Color> = when 
  * live video.
  */
 @Composable
-fun CameraCard(config: JSONObject, entities: Map<String, EntityState>, registry: Registry, call: CallService, experimental: Boolean = false) {
+fun CameraCard(config: JSONObject, entities: Map<String, EntityState>, registry: Registry, call: CallService) {
     val entityId = config.optString("entity")
     val found = cameraFind(
         entities, entityId,
@@ -123,10 +123,10 @@ fun CameraCard(config: JSONObject, entities: Map<String, EntityState>, registry:
     val battery = found.battery?.let { entities[it]?.state?.toDoubleOrNull() }
     val base = LocalBaseUrl.current
     var viewing by remember { mutableStateOf(false) }
-    // Experimental: while the doorbell rings the tile has a green outline and an Answer button (answering opens the live view talking).
+    // While the doorbell rings the tile has a green outline and an Answer button (answering opens the live view talking).
     var answeredAt by remember { mutableLongStateOf(0L) }
     var answerOnOpen by remember { mutableStateOf(false) }
-    val ringing = experimental && isRinging(found.ringSensor?.let { entities[it]?.state }, found.ding?.let { entities[it]?.state }, System.currentTimeMillis(), answeredAt)
+    val ringing = isRinging(found.ringSensor?.let { entities[it]?.state }, found.ding?.let { entities[it]?.state }, System.currentTimeMillis(), answeredAt)
 
     Box(
         modifier = Modifier
@@ -178,8 +178,7 @@ fun CameraCard(config: JSONObject, entities: Map<String, EntityState>, registry:
     if (viewing) {
         val eventsBase = cameraBaseName(entities, entityId)
         val light = cameraLight(entities, registry, entityId, config.optString("light").takeIf { it.isNotBlank() })
-        if (experimental) CameraViewerC(name, entityId, found, eventsBase, light, entities, call, startAnswered = answerOnOpen, talkStream = config.optString("talk_stream").takeIf { it.isNotBlank() }) { viewing = false; answerOnOpen = false }
-        else CameraViewer(name, entityId, found.button, eventsBase, light, entities, call) { viewing = false }
+        CameraViewerC(name, entityId, found, eventsBase, light, entities, call, startAnswered = answerOnOpen, talkStream = config.optString("talk_stream").takeIf { it.isNotBlank() }) { viewing = false; answerOnOpen = false }
     }
 }
 
@@ -329,10 +328,6 @@ internal fun LivePlayer(url: String, muted: Boolean, onAspect: (Float) -> Unit) 
 fun CameraViewerFor(entityId: String, entities: Map<String, EntityState>, registry: Registry, call: CallService, onClose: () -> Unit, answer: Boolean = false) {
     val found = cameraFind(entities, entityId, null, null)
     val name = entities[entityId]?.friendlyName?.replace(Regex(" (Live view|Snapshot)$", RegexOption.IGNORE_CASE), "") ?: entityId
-    // A doorbell notification's Answer opens the new live view, already answering.
-    if (answer) {
-        CameraViewerC(name, entityId, found, cameraBaseName(entities, entityId), cameraLight(entities, registry, entityId, null), entities, call, startAnswered = true, onClose = onClose)
-        return
-    }
-    CameraViewer(name, entityId, found.button, cameraBaseName(entities, entityId), cameraLight(entities, registry, entityId, null), entities, call, onClose)
+    // A doorbell notification's Answer opens the live view already answering.
+    CameraViewerC(name, entityId, found, cameraBaseName(entities, entityId), cameraLight(entities, registry, entityId, null), entities, call, startAnswered = answer, onClose = onClose)
 }

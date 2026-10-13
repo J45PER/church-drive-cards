@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.23.0
+
+- The new camera live view is now the main one: on the Security page, in the Cameras cards and when opened from a notification or widget. It has the bigger and full-screen pictures, Talk, Events, and Answer on the doorbell (a green outline and an Answer button on its tile while it rings). The old live view is no longer used, and the Experimental page no longer lists the cameras.
+
 ## 0.22.0
 
 - Doorbell and movement notifications show the camera's picture above their buttons, like Ring's own app. The words and buttons appear straight away and the picture follows a second or two later (fetched again a few seconds after in case the first was the previous snapshot). Pull the notification down, or expand it, to see the picture.
