@@ -14,8 +14,6 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.BatteryManager
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.IBinder
 import android.os.Looper
@@ -90,13 +88,9 @@ class HouseService : Service() {
         work = scope.launch { run(session) }
     }
 
-    /** The Church Drive logo, shown large in the notification card (the status bar keeps the single-colour house). */
-    private val logo: Bitmap? by lazy { runCatching { BitmapFactory.decodeResource(resources, R.drawable.notification_logo) }.getOrNull() }
-
     private fun foregroundNotification(): Notification =
         NotificationCompat.Builder(this, CHANNEL_SERVICE)
             .setSmallIcon(R.drawable.ic_notification)
-            .setLargeIcon(logo)
             .setColor(0xFF6B6BBF.toInt())
             .setContentTitle("Church Drive is connected")
             .setContentText("Keeping in touch with the house")
@@ -160,7 +154,6 @@ class HouseService : Service() {
         val noticeId = push.tag?.hashCode() ?: System.currentTimeMillis().toInt()
         val builder = NotificationCompat.Builder(this, push.channel)
             .setSmallIcon(R.drawable.ic_notification)
-            .setLargeIcon(logo)
             .setColor(0xFF6B6BBF.toInt())
             .setContentTitle(push.title)
             .setContentText(push.message)
