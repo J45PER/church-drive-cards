@@ -123,6 +123,7 @@ from .icons import Icons
 from .inbox import Inbox
 from .shopping import Shopping
 from .shopping_logic import STATUSES
+from .notice_actions import NoticeActions
 from .people import People
 from .reminder_logic import SNOOZE_MINUTES, actions_for
 from .reminders import Reminders
@@ -1137,6 +1138,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await people.async_start()
         entry.async_on_unload(people.async_stop)
         data["people"] = people
+        # What a notification's buttons ask for in the house (lights on, vacuum to dock, car charging...).
+        notice_actions = NoticeActions(hass)
+        notice_actions.async_start()
+        entry.async_on_unload(notice_actions.async_stop)
     except Exception:  # noqa: BLE001
         _LOGGER.exception("People and notifications couldn't start; everything else still works")
         data["people"] = None

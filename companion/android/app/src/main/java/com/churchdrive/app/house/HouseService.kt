@@ -28,6 +28,9 @@ import com.churchdrive.app.Session
 import com.churchdrive.app.ha.ConnectionState
 import com.churchdrive.app.ha.HaAuth
 import com.churchdrive.app.ha.HaClient
+import com.churchdrive.app.ha.NoticeButton
+import com.churchdrive.app.ha.pageFromLink
+import com.churchdrive.app.ha.parseNoticeButton
 import com.churchdrive.app.ha.parseTaskAction
 import com.churchdrive.app.ha.MobileApp
 import com.churchdrive.app.ha.Refresh
@@ -147,40 +150,78 @@ class HouseService : Service() {
         }
     }
 
-    private fun show(event: JSONObject) {
-        val push = MobileApp.parsePush(event) ?: return
-        if (!Permissions.canNotify(this)) return
-        // How it appears is the person's choice for this kind (Account > Settings > Notification styles), else what the house asked for.
-        val style = NoticeStyles.styleFor(this, push)
-        if (style == NoticeStyle.Off) return
-        NoticeStyles.ensureChannels(this)
-        val noticeId = push.tag?.hashCode() ?: System.currentTimeMillis().toInt()
-        val builder = NotificationCompat.Builder(this, style.channel)
-            .setCategory(if (style == NoticeStyle.Alert) NotificationCompat.CATEGORY_ALARM else NotificationCompat.CATEGORY_MESSAGE)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setColor(0xFF6B6BBF.toInt())
-            .setContentTitle(push.title)
-            .setContentText(push.message)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(push.message))
-            .setAutoCancel(true)
-            .setContentIntent(openApp(this, push.url))
-        // A task reminder's buttons: Done ticks it off, Snooze asks how long.
-        push.actions.forEach { button ->
-            val action = parseTaskAction(button.id) ?: return@forEach
-            val extras = { i: Intent -> i.putExtra(EXTRA_TASK_ACTION, button.id).putExtra(EXTRA_NOTICE_TAG, push.tag).putExtra(EXTRA_NOTICE_ID, noticeId) }
-            val code = (button.id.hashCode() xor noticeId)
-            val pending = if (action.kind == "done") {
-                PendingIntent.getBroadcast(this, code, extras(Intent(this, TaskActionReceiver::class.java)), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-            } else {
-                PendingIntent.getActivity(this, code, extras(Intent(this, SnoozeActivity::class.java)), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-            }
-            builder.addAction(0, button.title, pending)
-        }
-        // The same tag replaces the earlier notification, as in the Home Assistant app.
-        runCatching { NotificationManagerCompat.from(this).notify(push.tag, noticeId, builder.build()) }
-    }
+    private fun show(event: JSONObject) = postNotice(this, event)
 
     companion object {
+        /** Shows a notification from the house, as the person chose (Account > Settings > Notification styles), else as the house asked. */
+        fun postNotice(context: Context, event: JSONObject) {
+            val push = MobileApp.parsePush(event) ?: return
+            if (!Permissions.canNotify(context)) return
+            val style = NoticeStyles.styleFor(context, push)
+            if (style == NoticeStyle.Off) return
+            // A kind muted for a while stays quiet, but a safety alarm never is.
+            if (style != NoticeStyle.Alert && NoticeMutes.isMuted(context, push.kind)) return
+            NoticeStyles.ensureChannels(context)
+            val noticeId = push.tag?.hashCode() ?: System.currentTimeMillis().toInt()
+            val builder = NotificationCompat.Builder(context, style.channel)
+                .setCategory(if (style == NoticeStyle.Alert) NotificationCompat.CATEGORY_ALARM else NotificationCompat.CATEGORY_MESSAGE)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setColor(0xFF6B6BBF.toInt())
+                .setContentTitle(push.title)
+                .setContentText(push.message)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(push.message))
+                .setAutoCancel(true)
+                .setContentIntent(openApp(context, push.url))
+            val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            push.actions.forEach { button ->
+                val code = button.id.hashCode() xor noticeId xor (button.uri?.hashCode() ?: 0)
+                val common = { i: Intent -> i.putExtra(EXTRA_NOTICE_TAG, push.tag).putExtra(EXTRA_NOTICE_ID, noticeId) }
+                val task = parseTaskAction(button.id)
+                if (task != null) {
+                    // A task reminder's buttons: Done ticks it off, Snooze asks how long.
+                    val extras = { i: Intent -> common(i.putExtra(EXTRA_TASK_ACTION, button.id)) }
+                    val pending = if (task.kind == "done") {
+                        PendingIntent.getBroadcast(context, code, extras(Intent(context, TaskActionReceiver::class.java)), flags)
+                    } else {
+                        PendingIntent.getActivity(context, code, extras(Intent(context, SnoozeActivity::class.java)), flags)
+                    }
+                    builder.addAction(0, button.title, pending)
+                    return@forEach
+                }
+                when (val action = parseNoticeButton(button.id, button.uri)) {
+                    is NoticeButton.Link -> builder.addAction(0, button.title, linkIntent(context, action.uri, code))
+                    is NoticeButton.House -> builder.addAction(
+                        NotificationCompat.Action.Builder(
+                            0, button.title,
+                            PendingIntent.getBroadcast(context, code, common(Intent(context, NoticeActionReceiver::class.java).putExtra(EXTRA_NOTICE_VERB, action.verb)), flags),
+                        ).setAuthenticationRequired(true).build(),
+                    )
+                    is NoticeButton.Mute -> if (push.kind != null && style != NoticeStyle.Alert) builder.addAction(
+                        0, button.title,
+                        PendingIntent.getBroadcast(context, code, common(Intent(context, NoticeMuteReceiver::class.java).putExtra(EXTRA_NOTICE_KIND, push.kind).putExtra(EXTRA_NOTICE_MINUTES, action.minutes)), flags),
+                    )
+                    is NoticeButton.Snooze -> builder.addAction(
+                        0, button.title,
+                        PendingIntent.getBroadcast(context, code, common(Intent(context, NoticeSnoozeReceiver::class.java).putExtra(EXTRA_NOTICE_EVENT, event.toString()).putExtra(EXTRA_NOTICE_MINUTES, action.minutes)), flags),
+                    )
+                    null -> Unit
+                }
+            }
+            // The same tag replaces the earlier notification, as in the Home Assistant app.
+            runCatching { NotificationManagerCompat.from(context).notify(push.tag, noticeId, builder.build()) }
+        }
+
+        /** A Link button: a camera opens that camera (answering for a doorbell), a page opens that page. */
+        private fun linkIntent(context: Context, uri: String, code: Int): PendingIntent {
+            val camera = com.churchdrive.app.ui.cameraOpenFromLink(uri)
+            val page = pageFromLink(uri)
+            val intent = Intent(context, MainActivity::class.java).also {
+                if (camera != null) it.putExtra("camera", camera.entityId).putExtra("answer", camera.answer)
+                if (page != null) it.putExtra("page", page)
+            }
+            return PendingIntent.getActivity(context, code, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        }
+
         private const val FOREGROUND_ID = 4201
         private const val CHANNEL_SERVICE = "service"
 
