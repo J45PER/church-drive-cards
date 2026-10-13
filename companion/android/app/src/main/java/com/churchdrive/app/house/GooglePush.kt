@@ -3,7 +3,10 @@ package com.churchdrive.app.house
 import android.content.Context
 import com.churchdrive.app.Session
 import com.churchdrive.app.ha.MobileApp
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
 import com.google.firebase.FirebaseApp
+import com.google.firebase.installations.FirebaseInstallations
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
@@ -35,6 +38,15 @@ object GooglePush {
         prefs(context).edit().putString("status", text).apply()
     }
 
+    // The three steps Google push needs, so a stuck one can be seen: Google Play services, this app's install id, the token.
+    private var play = "checking"
+    private var install = "waiting"
+    private var tokenStep = "waiting"
+
+    private fun publish(context: Context) {
+        setStatus(context, "Play services: $play · Install ID: $install · Token: $tokenStep")
+    }
+
     /** Tells the house this phone's token. Safe to call often: the house only keeps a changed one. */
     fun register(context: Context) {
         val app = context.applicationContext
@@ -42,12 +54,25 @@ object GooglePush {
             setStatus(app, "Not built into this version (no Firebase settings)")
             return
         }
-        setStatus(app, "Asking Google for this phone's token…")
+        val gms = runCatching { GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(app) }.getOrDefault(-1)
+        play = if (gms == ConnectionResult.SUCCESS) "ok" else "problem (code $gms)"
+        install = "waiting"
+        tokenStep = "waiting"
+        publish(app)
         runCatching {
+            FirebaseInstallations.getInstance().id
+                .addOnSuccessListener { install = "ok"; publish(app) }
+                .addOnFailureListener { install = "failed: ${it.message ?: it.javaClass.simpleName}"; publish(app) }
             FirebaseMessaging.getInstance().token
-                .addOnSuccessListener { tell(app, it) }
-                .addOnFailureListener { setStatus(app, "Google gave no token: ${it.message ?: it.javaClass.simpleName}") }
-        }.onFailure { setStatus(app, "Couldn't ask Google: ${it.message ?: it.javaClass.simpleName}") }
+                .addOnSuccessListener { tokenStep = "received"; publish(app); tell(app, it) }
+                .addOnFailureListener { tokenStep = "failed: ${it.message ?: it.javaClass.simpleName}"; publish(app) }
+        }.onFailure { tokenStep = "couldn't ask: ${it.message ?: it.javaClass.simpleName}"; publish(app) }
+        // Google not answering at all is the likeliest fault, so say so rather than leave "waiting".
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            if (install == "waiting") install = "no answer after 20 seconds"
+            if (tokenStep == "waiting") tokenStep = "no answer after 20 seconds"
+            publish(app)
+        }, 20_000)
     }
 
     fun tell(context: Context, token: String) {
@@ -68,7 +93,7 @@ object GooglePush {
             setStatus(
                 context,
                 when (result) {
-                    com.churchdrive.app.ha.WebhookResult.Ok -> "Token sent to the house"
+                    com.churchdrive.app.ha.WebhookResult.Ok -> { tokenStep = "received and sent to the house"; "Play services: $play · Install ID: $install · Token: $tokenStep" }
                     com.churchdrive.app.ha.WebhookResult.Gone -> "The house no longer knows this phone"
                     com.churchdrive.app.ha.WebhookResult.Failed -> "Got a token, but couldn't reach the house"
                 },

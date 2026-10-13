@@ -28,14 +28,35 @@ object House {
     /** Registers the phone with Home Assistant if it isn't yet, and gives its webhook id (null when offline). Blocking. */
     fun ensureRegistered(context: Context): String? {
         val session = Session(context)
-        session.webhookId?.let { return it }
+        session.webhookId?.let { rename(context, session, it); return it }
         val url = session.url ?: return null
         val token = session.freshToken() ?: return null
-        val name = MobileApp.deviceName(session.personName, Build.MODEL)
+        val name = desiredName(context, session)
         val body = MobileApp.registrationBody(
             session.deviceId, name, "${BuildConfig.VERSION_NAME} (${BuildConfig.BUILD})", Build.VERSION.RELEASE, Build.MANUFACTURER, Build.MODEL,
         )
         return MobileApp.register(url, token, body)?.also { session.saveWebhook(it, name) }
+    }
+
+    /** The phone's own name (the one the Home Assistant app on it uses), else the person and model, with "-CDA" after it. */
+    private fun desiredName(context: Context, session: Session): String {
+        val phoneName = runCatching { android.provider.Settings.Global.getString(context.contentResolver, "device_name") }.getOrNull()
+        return MobileApp.cdaDeviceName(phoneName, session.personName, Build.MODEL)
+    }
+
+    @Volatile
+    private var lastRename = 0L
+
+    /** A phone registered under an older name is renamed in Home Assistant (at most every ten minutes until it works). Blocking. */
+    private fun rename(context: Context, session: Session, webhook: String) {
+        val name = desiredName(context, session)
+        if (session.deviceName == name) return
+        val now = System.currentTimeMillis()
+        if (now - lastRename < 10 * 60_000L) return
+        lastRename = now
+        val url = session.url ?: return
+        val body = MobileApp.updateRegistrationBody("${BuildConfig.VERSION_NAME} (${BuildConfig.BUILD})", name, Build.VERSION.RELEASE, Build.MANUFACTURER, Build.MODEL)
+        if (MobileApp.post(url, webhook, body) == WebhookResult.Ok) session.saveWebhook(webhook, name)
     }
 
     /** Starts or stops everything from what the person has chosen. Called when the choices change, when the app opens and after a reboot. */

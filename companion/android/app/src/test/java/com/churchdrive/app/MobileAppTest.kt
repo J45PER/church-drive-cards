@@ -56,4 +56,18 @@ class MobileAppTest {
         assertEquals("Jamie Pixel 10", MobileApp.deviceName(" Jamie Phillips ", "Pixel 10"))
         assertEquals("Church Drive phone", MobileApp.deviceName(null, ""))
     }
+
+    @Test fun theAppRegistersUnderThePhonesOwnNameWithCda() {
+        assertEquals("XITOL-J45PER-P10PXL-CDA", MobileApp.cdaDeviceName(" XITOL-J45PER-P10PXL ", "Jamie", "Pixel 10 Pro XL"))
+        assertEquals("Jamie Pixel 10 Pro XL-CDA", MobileApp.cdaDeviceName(null, "Jamie Phillips", "Pixel 10 Pro XL"))
+        assertEquals("Jamie Pixel 10 Pro XL-CDA", MobileApp.cdaDeviceName("  ", "Jamie", "Pixel 10 Pro XL"))
+        assertEquals("notify.mobile_app_xitol_j45per_p10pxl_cda", MobileApp.notifyService("XITOL-J45PER-P10PXL-CDA"))
+    }
+
+    @Test fun renamingAPhoneSendsItsVersionAndName() {
+        val data = MobileApp.updateRegistrationBody("0.28.0 (5)", "Name-CDA", "16", "Google", "Pixel").getJSONObject("data")
+        assertEquals("update_registration", MobileApp.updateRegistrationBody("v", "n", "o", "m", "x").getString("type"))
+        assertEquals("Name-CDA", data.getString("device_name"))
+        assertEquals("0.28.0 (5)", data.getString("app_version"))
+    }
 }

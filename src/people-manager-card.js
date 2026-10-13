@@ -11,6 +11,7 @@
 // pictures (image upload, then person/update).
 
 import { createFormEditor } from './form-editor.js';
+import { groupPhones } from './phone-groups.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { kitEsc, kitNavigate } from './card-kit.js';
@@ -356,11 +357,13 @@ export class PeopleManagerCard extends HTMLElement {
   // Each phone: whether it gets alerts, and whether it shows where the person is
   // (an iPad left at home shouldn't say they're home).
   _phones(p, admin) {
-    const rows = (p.phones || [])
-      .map((ph) => {
-        const sub = [ph.model, ph.tracks ? (ph.seen ? `location ${ageText(ph.seen)}` : 'no location yet') : ''].filter(Boolean).join(' · ');
+    const rows = groupPhones(p.phones)
+      .map(({ main: ph, also }) => {
+        const sub = [ph.model, also ? 'with the Church Drive app' : '', ph.tracks ? (ph.seen ? `location ${ageText(ph.seen)}` : 'no location yet') : ''].filter(Boolean).join(' · ');
+        const services = [ph.service, also && also.service].filter(Boolean).join(',');
+        const alertsOn = ph.on || !!(also && also.on);
         return `<div class="pm-row pm-phone"><span>${kitEsc(ph.name)}${sub ? `<small>${kitEsc(sub)}</small>` : ''}</span>
-          <span class="pm-mini">Alerts${this._sw(ph.on, `data-act="phone" data-service="${kitEsc(ph.service)}"`, `Alerts to ${ph.name}`, !admin)}</span>
+          <span class="pm-mini">Alerts${this._sw(alertsOn, `data-act="phone" data-service="${kitEsc(services)}"`, `Alerts to ${ph.name}`, !admin)}</span>
           ${ph.tracker ? `<span class="pm-mini">Location${this._sw(ph.tracks, `data-act="track" data-tracker="${kitEsc(ph.tracker)}"`, `${ph.name} shows where ${p.first} is`, !admin)}</span>` : ''}</div>`;
       })
       .join('');
@@ -572,9 +575,13 @@ export class PeopleManagerCard extends HTMLElement {
       this._draft = null;
       return this._send({ type: 'church_drive/people/places', person: p.entity_id, places });
     } else if (act === 'phone') {
-      const ph = (p.phones || []).find((x) => x.service === b.dataset.service);
-      if (ph) ph.on = !ph.on;
-      return this._send({ type: 'church_drive/people/phone', person: p.entity_id, service: b.dataset.service, on: !!(ph && ph.on) });
+      // One row can be two registrations (the Home Assistant app and the Church Drive app on the same phone): both follow the switch.
+      const services = String(b.dataset.service || '').split(',').filter(Boolean);
+      const phones = (p.phones || []).filter((x) => services.includes(x.service));
+      const on = !phones.some((x) => x.on);
+      phones.forEach((x) => { x.on = on; });
+      for (const service of services) await this._send({ type: 'church_drive/people/phone', person: p.entity_id, service, on });
+      return null;
     } else if (act === 'track') {
       const ph = (p.phones || []).find((x) => x.tracker === b.dataset.tracker);
       if (!ph) return;
