@@ -15,7 +15,7 @@ sealed class NoticeButton {
     data class Snooze(val minutes: Int) : NoticeButton()
 }
 
-private val HOUSE_VERBS = setOf("lights_on", "dock", "all_off", "car_now", "car_pause", "backup")
+private val HOUSE_VERBS = setOf("lights_on", "dock", "all_off", "car_now", "car_pause", "backup", "car_yes", "car_no")
 
 /** The button for a push action, or null for one this app does not do. */
 fun parseNoticeButton(id: String?, uri: String?): NoticeButton? {

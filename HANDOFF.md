@@ -222,17 +222,24 @@ HACS as an integration. It does two jobs:
     Stopped (it had been left on Fast, which let the car top up at the day rate at 06:48); a "Done" car is
     set back to Waiting at the end of the cheap window so a car left plugged in starts the next night.
     **Car confirmation (live 2026-10-14):** every plug-in must be confirmed before anything unlocks or
-    starts it. `Church Drive: car alerts` (plugged branch) turns `input_boolean.zappi_car_confirmed` off
-    and sends "Confirm car to charge tonight" with Yes / No buttons (`ZAPPI_CAR_YES` / `ZAPPI_CAR_NO`, event
-    `mobile_app_notification_action`) to everyone ticked for kind `car_plugged` (admins by default), with
-    no car name (the Vauxhall's feed is stale). `Church Drive: Zappi car confirmation` handles the replies
-    (Yes: confirmed + smart charge Waiting; No: smart charge Manual + Stopped), clears it on unplug, and asks
-    again at 23:30 and 00:25 while still unconfirmed. Smart charge's "Cheap now" branch, "Zappi starts when
-    a mode is picked" (incl. the Boosting trigger) and the 00:40 safety net all need it on; a person picking
-    a mode in the app or card (context user_id set) counts as Yes. The card's Start charge unlocks by itself.
-    **Android app: its notification code drops any button that isn't a task Done/Snooze
-    (`MobileApp.parsePush`), so Yes / No do not show there, only in the Home Assistant app (iPhone).**
-    TODO: let the Android app show these two buttons and fire `mobile_app_notification_action`.
+    starts it. `Church Drive: car alerts` (plugged branch) turns `input_boolean.zappi_car_confirmed` off,
+    stamps `input_datetime.zappi_car_last_asked` and sends "Confirm car to charge tonight" with Yes / No
+    buttons (`CD_car_yes` / `CD_car_no`, the Church Drive app's house-button format) to everyone ticked for
+    kind `car_plugged` (admins by default), with no car name (the Vauxhall's feed is stale).
+    `Church Drive: Zappi car confirmation` takes the replies from both apps (`church_drive_notice_action`
+    from the Church Drive app, `mobile_app_notification_action` from the Home Assistant app) and runs
+    `script.zappi_car_yes` (confirmed + smart charge Waiting + "Car confirmed") or `script.zappi_car_no`
+    (smart charge Manual + Stopped + "Not charging"); the Android Home card runs the same two scripts. It
+    clears the confirmation on unplug (so the same car plugged in again is asked again), and asks again an
+    hour after it was last asked while the car is plugged in, unconfirmed and smart charge is Waiting, never
+    while it is charging. A pause in a charge does not clear it (only unplugging does), and nothing here
+    stops a charge that is already going except an explicit No. Smart charge's "Cheap now" branch, "Zappi
+    starts when a mode is picked" (incl. the Boosting trigger) and the 00:40 safety net all need it on; a
+    person picking a mode in the app or card (context user_id set) or tapping "Charge now" counts as Yes.
+    The card's Start charge unlocks by itself.
+    **Android app 0.31.0:** `car_yes` / `car_no` added to the app's house-button verbs (`NoticeButton.kt`), so
+    the buttons show on the notification (phone unlocked first), and `CarConfirm.kt` is the Home card
+    (between the to-do highlights and Security; only while `carNeedsConfirm`).
   - **Charger button** (v0.38.3, replaces the v0.38.1 Unlock / Charge now / Pause overrides): while a
     car's plugged in, `ev-charger-card` (expanded and compact) shows one button above the modes:
     **Start charge** (unlock if locked, then Fast) until it's charging, then a greyed **Charging**

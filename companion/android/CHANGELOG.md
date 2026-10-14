@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.31.0
+
+- **Confirm the car**: each time a car is plugged in, or unplugged and plugged in again, the house asks "Confirm car to charge tonight" and nothing unlocks or starts it until someone says Yes. The question comes as a notification with **Yes** and **No** buttons (they need the phone unlocked), and as a card on the Home page, between the to-do highlights and Security, with the same two buttons. It is asked again an hour later if nobody answers, never while the car is already charging, and a pause in a charge never clears the answer.
+
 ## 0.30.1
 
 - Fixed a crash on opening the app ("Reading a state that was created after the snapshot was taken"): the icon pack's state is now created at start-up, not in the middle of drawing the bottom bar.
