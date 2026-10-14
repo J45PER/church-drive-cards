@@ -129,6 +129,7 @@ from .inbox import Inbox
 from .shopping import Shopping
 from .shopping_logic import STATUSES
 from .fcm import Fcm
+from .alarm_actor import AlarmActor
 from .notice_actions import NoticeActions
 from .notice_samples import sample_for
 from .people import People
@@ -1193,6 +1194,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         notice_actions = NoticeActions(hass)
         notice_actions.async_start()
         entry.async_on_unload(notice_actions.async_stop)
+
+        # Who changed the alarm (Ring only knows its own account): `sensor.church_drive_alarm_actor`, for the alarm cards.
+        def first_name_for_user(user_id: str | None) -> str:
+            entity = people.person_for_user(user_id)
+            return next((p["first"] for p in people.people() if p["entity_id"] == entity), "") if entity else ""
+
+        alarm_actor = AlarmActor(hass, first_name_for_user)
+        alarm_actor.async_start()
+        entry.async_on_unload(alarm_actor.async_stop)
         # Google push for the Church Drive app (only when its key file is in the config folder).
         fcm = Fcm(hass)
         await fcm.async_start()

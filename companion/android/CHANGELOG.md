@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.32.0
+
+- The alarm card (Home, Security, and the Security widget) names who really armed or disarmed it. It used to say "by Hayley" (the Ring account Home Assistant uses) even when Jamie did it from the app; now it names the person Home Assistant recorded, and still names Ring's person for the keypad or the Ring app. Needs Church Drive 0.63.0 in Home Assistant.
+
 ## 0.31.0
 
 - **Confirm the car**: each time a car is plugged in, or unplugged and plugged in again, the house asks "Confirm car to charge tonight" and nothing unlocks or starts it until someone says Yes. The question comes as a notification with **Yes** and **No** buttons (they need the phone unlocked), and as a card on the Home page, between the to-do highlights and Security, with the same two buttons. It is asked again an hour later if nobody answers, never while the car is already charging, and a pause in a charge never clears the answer.
