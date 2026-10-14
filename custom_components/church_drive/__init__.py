@@ -1200,9 +1200,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             entity = people.person_for_user(user_id)
             return next((p["first"] for p in people.people() if p["entity_id"] == entity), "") if entity else ""
 
-        alarm_actor = AlarmActor(hass, first_name_for_user)
-        alarm_actor.async_start()
-        entry.async_on_unload(alarm_actor.async_stop)
+        # Its own guard: the alarm card's "who" must never stop notifications from starting.
+        try:
+            alarm_actor = AlarmActor(hass, first_name_for_user)
+            alarm_actor.async_start()
+            entry.async_on_unload(alarm_actor.async_stop)
+        except Exception:  # noqa: BLE001
+            _LOGGER.exception("The alarm's 'who' record couldn't start; notifications still work")
         # Google push for the Church Drive app (only when its key file is in the config folder).
         fcm = Fcm(hass)
         await fcm.async_start()

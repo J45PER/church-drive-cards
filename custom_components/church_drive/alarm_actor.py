@@ -28,11 +28,15 @@ class AlarmActor:
         self._first_name_for_user = first_name_for_user
         self._unsub: Any = None
 
+    @staticmethod
+    @callback
+    def _is_alarm(data: Any) -> bool:
+        # Home Assistant only accepts an event filter marked as a callback.
+        return str(data.get("entity_id", "")).startswith("alarm_control_panel.")
+
     @callback
     def async_start(self) -> None:
-        self._unsub = self.hass.bus.async_listen(
-            EVENT_STATE_CHANGED, self._on_state, event_filter=lambda data: str(data.get("entity_id", "")).startswith("alarm_control_panel.")
-        )
+        self._unsub = self.hass.bus.async_listen(EVENT_STATE_CHANGED, self._on_state, event_filter=self._is_alarm)
 
     @callback
     def async_stop(self) -> None:
