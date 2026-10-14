@@ -45,6 +45,10 @@ with the APK, so there is a record of what shipped. Newest first.
 - Settings > Hide the connected notice: opens Android's settings for the small "connected" notice, where its switch can be turned off. The connection and notifications carry on without it.
 - Needs Church Drive 0.57.0 in Home Assistant, which sends one copy per phone (the Church Drive app's when it's connected, else the Home Assistant app's).
 
+## 0.24.1
+
+- The alarm card (Home, Security, and the Security widget) names who really armed or disarmed it. It used to say "by Hayley" (the Ring account Home Assistant uses) even when Jamie did it from the app; now it names the person Home Assistant recorded, and still names Ring's person for the keypad or the Ring app. Needs Church Drive 0.56.1 in Home Assistant.
+
 ## 0.24.0
 
 - Notification styles: the preview and "Send me a test" now simulate each kind properly. The preview shows that kind's own words, a camera picture box for the ones that have a picture (doorbell, movement, door, smoke), and its buttons (Answer, View, Mute and so on). "Send me a test" asks the house to send a pretend one of that kind to this phone, so it comes the real way: the real buttons and picture, in the style you chose for that kind (an Alert rings through silent). Its title starts with "Test:". Needs Church Drive 0.56.0 in Home Assistant; without it you get the old plain test.

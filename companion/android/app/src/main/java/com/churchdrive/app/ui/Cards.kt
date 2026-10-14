@@ -192,9 +192,28 @@ private val ALARM_TIME = java.time.format.DateTimeFormatter.ofPattern("dd MMM, H
 private fun alarmTime(iso: String?): String? =
     runCatching { ALARM_TIME.format(java.time.Instant.parse(iso)) }.getOrNull()
 
+/** The sensor the integration keeps with who really changed the alarm (Ring only knows its own account). */
+const val ALARM_ACTOR_ENTITY = "sensor.church_drive_alarm_actor"
+private const val ALARM_ACTOR_WINDOW_MS = 120_000L
+
+/**
+ * Who to name for the alarm's last change, and when: the person Home Assistant recorded ([actor], `sensor.church_drive_alarm_actor`)
+ * when it is for the alarm's current state and Ring's own time is not much newer, else Ring's own name. Null when there is neither.
+ */
+fun alarmWho(alarm: EntityState, actor: EntityState?, ringBy: String?, ringAt: String?): Pair<String, String>? {
+    val a = actor?.attributes
+    if (actor != null && a != null && actor.available && a.optString("alarm") == alarm.entityId && a.optString("alarm_state") == alarm.state) {
+        val mine = runCatching { java.time.Instant.parse(a.optString("at")).toEpochMilli() }.getOrNull()
+            ?: runCatching { java.time.OffsetDateTime.parse(a.optString("at")).toInstant().toEpochMilli() }.getOrNull()
+        val ring = ringAt?.let { r -> runCatching { java.time.Instant.parse(r).toEpochMilli() }.getOrNull() }
+        if (mine != null && (ring == null || ring <= mine + ALARM_ACTOR_WINDOW_MS)) return actor.state to a.optString("at")
+    }
+    return if (!ringBy.isNullOrBlank() && !ringAt.isNullOrBlank()) ringBy to ringAt else null
+}
+
 /** The two lines beside the shield: what to do during a delay, otherwise who armed or disarmed it, and when. */
-private fun alarmLines(alarm: EntityState): Pair<String, String> {
-    fun by(who: String?, at: String?) = alarmTime(at)?.let { t -> who?.takeIf { it.isNotBlank() }?.let { it to t } }
+private fun alarmLines(alarm: EntityState, actor: EntityState? = null): Pair<String, String> {
+    fun by(who: String?, at: String?) = alarmWho(alarm, actor, who, at)?.let { w -> alarmTime(w.second)?.let { t -> w.first to t } }
     return when (alarm.state) {
         "arming" -> "Leave now" to "until armed"
         "pending" -> "Disarm now" to "until the alarm sounds"
@@ -209,7 +228,7 @@ private fun alarmLines(alarm: EntityState): Pair<String, String> {
  * during an entry or exit delay, what to do (or who and when), and a button for each mode the alarm supports.
  */
 @Composable
-fun AlarmCard(alarm: EntityState?, call: CallService, entityId: String = ALARM_ENTITY) {
+fun AlarmCard(alarm: EntityState?, call: CallService, entityId: String = ALARM_ENTITY, actor: EntityState? = null) {
     val state = alarm?.state
     val tone = toneColors(alarmTone(state))
     val triggered = state == "triggered"
@@ -242,7 +261,7 @@ fun AlarmCard(alarm: EntityState?, call: CallService, entityId: String = ALARM_E
         state == "arming" && target != null -> "Arming $target"
         else -> alarmLabel(state)
     }
-    val (line1, line2) = alarm?.let { alarmLines(it) } ?: ("" to "")
+    val (line1, line2) = alarm?.let { alarmLines(it, actor) } ?: ("" to "")
     val features = alarm?.num("supported_features")?.toInt() ?: 0
     // During a delay the mode being armed is lit; otherwise the current state.
     val activeKey = if (inDelay || triggered) alarm?.str("targetState") else state

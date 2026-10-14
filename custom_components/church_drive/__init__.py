@@ -129,6 +129,7 @@ from .inbox import Inbox
 from .shopping import Shopping
 from .shopping_logic import STATUSES
 from .fcm import Fcm
+from .alarm_actor import AlarmActor
 from .notice_actions import NoticeActions
 from .notice_samples import sample_for
 from .people import People

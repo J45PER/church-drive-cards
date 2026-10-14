@@ -91,7 +91,7 @@ fun CardView(card: CardSpec, entities: Map<String, EntityState>, registry: Regis
     when (card.type.removeSuffix("-beta")) {
         "custom:alarm-panel-card" -> {
             val id = card.config.optString("entity").ifBlank { ALARM_ENTITY }
-            AlarmCard(entities[id], call, id)
+            AlarmCard(entities[id], call, id, entities[ALARM_ACTOR_ENTITY])
         }
         "custom:safety-card" -> SafetyCard(card.config, entities, registry)
         "tile" -> TileCard(card.config, entities, call)

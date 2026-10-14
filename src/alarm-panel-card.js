@@ -3,6 +3,7 @@
 
 import { createFormEditor } from './form-editor.js';
 import { SUFFIX, LABEL } from './suffix.js';
+import { alarmWho } from './alarm-actor.js';
 import { kitCompact, kitCompactable, KIT_CARD_BG } from './card-kit.js';
 
 const APC_STATE_OPTIONS = [
@@ -180,8 +181,13 @@ export class AlarmPanelCard extends HTMLElement {
     if (st.state === 'arming') [line1, line2] = ['Leave now', 'until armed'];
     else if (st.state === 'pending') [line1, line2] = ['Disarm now', 'until the alarm sounds'];
     else if (st.state === 'triggered') [line1, line2] = ['Alarm sounding', 'Disarm to stop it'];
-    else if (st.state === 'disarmed' && a.lastDisarmedBy && a.lastDisarmedTime) [line1, line2] = [`Disarmed by ${a.lastDisarmedBy}`, fmt(a.lastDisarmedTime)];
-    else if (a.lastArmedBy && a.lastArmedTime) [line1, line2] = [`Armed by ${a.lastArmedBy}`, fmt(a.lastArmedTime)];
+    else if (st.state === 'disarmed') {
+      const w = alarmWho(this._hass && this._hass.states, st.entity_id, st.state, a.lastDisarmedBy, a.lastDisarmedTime);
+      if (w) [line1, line2] = [`Disarmed by ${w.by}`, fmt(w.at)];
+    } else {
+      const w = alarmWho(this._hass && this._hass.states, st.entity_id, st.state, a.lastArmedBy, a.lastArmedTime);
+      if (w) [line1, line2] = [`Armed by ${w.by}`, fmt(w.at)];
+    }
     this._line1.textContent = line1;
     this._line2.textContent = line2;
 

@@ -69,14 +69,14 @@ class AlarmGlanceWidget : GlanceAppWidget() {
             if (data == null || alarm == null) {
                 Unreachable("Security", p, if (data == null) "Can't reach the house" else "Alarm not found")
             } else {
-                AlarmContent(alarm, p, LocalSize.current.sizeClass())
+                AlarmContent(alarm, data.entities[com.churchdrive.app.ui.ALARM_ACTOR_ENTITY], p, LocalSize.current.sizeClass())
             }
         }
     }
 }
 
 @Composable
-private fun AlarmContent(alarm: EntityState, p: WidgetPalette, size: SizeClass) {
+private fun AlarmContent(alarm: EntityState, actor: EntityState?, p: WidgetPalette, size: SizeClass) {
     val tone = p.tone(alarmTone(alarm.state))
     val icon = alarmIconName(alarm.state)
     val tiles = WidgetModel.alarmTiles(alarm, ALARM_ENTITY)
@@ -111,7 +111,7 @@ private fun AlarmContent(alarm: EntityState, p: WidgetPalette, size: SizeClass) 
             Spacer(GlanceModifier.height(12.dp))
             TileButtons(tiles, p, tone)
             if (size == SizeClass.Tall) {
-                val who = alarm.str(if (alarm.state == "disarmed") "lastDisarmedBy" else "lastArmedBy")
+                val who = com.churchdrive.app.ui.alarmWho(alarm, actor, alarm.str(if (alarm.state == "disarmed") "lastDisarmedBy" else "lastArmedBy"), alarm.str(if (alarm.state == "disarmed") "lastDisarmedTime" else "lastArmedTime"))?.first
                 if (!who.isNullOrBlank()) {
                     Spacer(GlanceModifier.height(10.dp))
                     Text("by $who", style = TextStyle(color = cp(p.muted), fontSize = 12.sp))

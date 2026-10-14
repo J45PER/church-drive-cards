@@ -299,7 +299,7 @@ private fun HomePage(
     titles.forEach { title ->
         when (title) {
             "Security" -> HomePanel("Security", alarmIconName(alarm?.state), alarmTone(alarm?.state), alarmLabel(alarm?.state), Page.Security) {
-                AlarmCard(alarm, call)
+                AlarmCard(alarm, call, actor = entities[ALARM_ACTOR_ENTITY])
             }
             // The home's climate quality score (a sensor made in Home Assistant) leads the Climate panel, as on the dashboard.
             "Climate" -> HomePanel(
