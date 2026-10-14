@@ -293,6 +293,8 @@ private fun HomePage(
     // The panels are the dashboard's own, in its order, so a card added in Home Assistant appears here too. The ones the
     // app draws its own way (alarm, climate, lights, vacuum) keep that; any other panel shows its cards as they are.
     TodoHighlights(entities, call) { onOpen(Page.Todo) }
+    // "Confirm car to charge tonight", only while a plugged-in car is waiting for an answer: above the panels (Security first).
+    CarConfirmCard(entities, call)
     val titles = panels.map { it.title }.ifEmpty { listOf("Security", "Climate", "Lights", "Cleaning", "Car charging") }
     titles.forEach { title ->
         when (title) {
