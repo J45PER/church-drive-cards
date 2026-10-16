@@ -97,7 +97,7 @@ fun ZoneCard(config: JSONObject, entities: Map<String, EntityState>, call: CallS
     val ink = if (tinted) tone.onContainer else neutral.onContainer
 
     // Tapping the card opens that camera's events, when the zone has a camera.
-    val eventsBase = cameraBaseName(entities, cfg.doorbell, cfg.motion.firstOrNull(), cfg.door, cfg.name)
+    val eventsBase = cameraBaseName(entities, cfg.camera, cfg.doorbell, cfg.motion.firstOrNull(), cfg.door, cfg.name)
     var showEvents by remember { mutableStateOf(false) }
     if (showEvents && eventsBase != null) CameraEventsViewer(cfg.name, eventsBase) { showEvents = false }
     var scrub by remember { mutableStateOf<Float?>(null) }

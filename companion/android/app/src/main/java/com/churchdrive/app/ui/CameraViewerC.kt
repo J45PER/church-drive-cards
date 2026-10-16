@@ -19,7 +19,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -221,7 +223,7 @@ internal fun CameraViewerC(
     PopupWindow(onDismissRequest = onClose, handleBack = { if (full) { full = false; true } else false }) { close ->
         Surface(modifier = Modifier.fillMaxSize(), color = Color.Black) {
             Column(
-                modifier = Modifier.fillMaxSize().then(if (full) Modifier else Modifier.padding(8.dp)),
+                modifier = Modifier.fillMaxSize().then(if (full) Modifier else Modifier.systemBarsPadding().padding(8.dp)),
                 verticalArrangement = Arrangement.spacedBy(if (full) 0.dp else 12.dp),
             ) {
                 if (!full) {
@@ -302,7 +304,7 @@ internal fun CameraViewerC(
                         }
                     } else {
                         Fade(visible = shown, modifier = Modifier.align(Alignment.BottomEnd)) {
-                            Box(modifier = Modifier.padding(10.dp)) {
+                            Box(modifier = Modifier.navigationBarsPadding().padding(10.dp)) {
                                 CircleButton("mdi:plus", Color.White, Color(0xFF3C4248), 44) { menuOpen = true; touched++ }
                                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                                     actions.forEach { (icon, label, run) ->
@@ -323,7 +325,7 @@ internal fun CameraViewerC(
                             visible = shown,
                             modifier = if (full) Modifier.align(Alignment.BottomStart) else Modifier.align(Alignment.BottomCenter),
                         ) {
-                            Box(modifier = if (full) Modifier.padding(10.dp) else Modifier.fillMaxWidth().padding(bottom = 56.dp), contentAlignment = Alignment.Center) {
+                            Box(modifier = if (full) Modifier.navigationBarsPadding().padding(10.dp) else Modifier.fillMaxWidth().padding(bottom = 56.dp), contentAlignment = Alignment.Center) {
                                 callRow(false) { touched++; close() }
                             }
                         }

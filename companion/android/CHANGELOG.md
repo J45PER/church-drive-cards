@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.33.0
+
+- Security zone cards can name the camera whose events they show (the card's `camera` setting): Back Garden now shows the garden camera's events and Back Door the living room's.
+- The camera viewer's bigger/smaller and full screen buttons (and the call and + buttons) now sit clear of the status and navigation bars when the picture is made bigger or full screen, so they can always be tapped to go back.
+
 ## 0.32.0
 
 - The alarm card (Home, Security, and the Security widget) names who really armed or disarmed it. It used to say "by Hayley" (the Ring account Home Assistant uses) even when Jamie did it from the app; now it names the person Home Assistant recorded, and still names Ring's person for the keypad or the Ring app. Needs Church Drive 0.63.0 in Home Assistant.
