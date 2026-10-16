@@ -12,7 +12,8 @@ class AlarmActorTest(unittest.TestCase):
     def test_the_event_filter_is_a_marked_callback_not_a_lambda(self):
         self.assertNotIn("event_filter=lambda", SRC)
         self.assertRegex(SRC, r"@staticmethod\n    @callback\n    def _is_alarm")
-        self.assertIn("event_filter=self._is_alarm", SRC)
+        self.assertRegex(SRC, r"event_filter=self\._is_alarm(_call)?")
+        self.assertRegex(SRC, r"@staticmethod\n    @callback\n    def _is_alarm_call")
 
     def test_a_failure_to_start_cannot_stop_notifications_starting(self):
         start = INIT.index("alarm_actor = AlarmActor(")
