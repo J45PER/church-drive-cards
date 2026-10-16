@@ -28,6 +28,8 @@ data class ZoneConfig(
     val door: String?,
     val motion: List<String>,
     val doorbell: String?,
+    /** The camera whose events the card shows, when it isn't the doorbell's or the sensors' own. */
+    val camera: String?,
     val tamper: List<String>,
     val light: String?,
     val lightName: String?,
@@ -50,6 +52,7 @@ fun zoneConfig(c: JSONObject): ZoneConfig {
         door = text("door_entity"),
         motion = list("motion_entities"),
         doorbell = text("doorbell_entity"),
+        camera = text("camera"),
         tamper = list("tamper_entities"),
         light = text("light_entity"),
         lightName = text("light_name"),
