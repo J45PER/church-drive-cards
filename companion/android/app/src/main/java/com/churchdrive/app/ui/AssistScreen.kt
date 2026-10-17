@@ -67,6 +67,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
@@ -333,9 +334,15 @@ private fun BottomGlow(active: Boolean, level: Float, modifier: Modifier = Modif
     val pal = assistPalette()
     val t = rememberInfiniteTransition(label = "band")
     val breathe by t.animateFloat(0.7f, 1f, infiniteRepeatable(tween(6000), RepeatMode.Reverse), label = "b")
-    val on by animateFloatAsState(if (active) 1f else 0.3f, tween(900), label = "on")
-    Canvas(modifier = modifier.fillMaxWidth().height(200.dp)) {
-        val a = (0.42f * breathe + 0.2f * level) * on
+    // Calm, not flickering: he counts as active a moment longer than the voice pipeline says (it flips between waiting and listening in quick
+    // succession), and the voice level is smoothed so the glow swells with the voice instead of jumping with every sound.
+    var held by remember { mutableStateOf(active) }
+    LaunchedEffect(active) { if (active) held = true else { kotlinx.coroutines.delay(1_500); held = false } }
+    val on by animateFloatAsState(if (held) 1f else 0.3f, tween(1200), label = "on")
+    val smooth by animateFloatAsState(level, tween(450), label = "level")
+    // Clipped to its own box: it must not spill over the bar below it.
+    Canvas(modifier = modifier.fillMaxWidth().height(200.dp).clipToBounds()) {
+        val a = (0.34f * breathe + 0.1f * smooth) * on
         listOf(0.2f to pal.first, 0.5f to pal.second, 0.82f to pal.third).forEach { (fx, colour) ->
             val c = Offset(size.width * fx, size.height + 24.dp.toPx())
             val r = size.width * 0.55f
@@ -345,19 +352,22 @@ private fun BottomGlow(active: Boolean, level: Float, modifier: Modifier = Modif
 }
 
 /**
- * The round button at the bottom right: Jarvis's logo on every page of the app, his microphone once he is open. It is the same size
- * and in the same place in both, just above the bottom bar: his own colours behind it, a grey ring round it, and a white symbol.
+ * The round button at the bottom right: his avatar (the animated orb, moving with what he is doing) on a dark ground with a dark grey ring,
+ * and a white symbol over it: his logo when he is shut, a microphone once he is open. Same size and place everywhere, above the bottom bar.
  */
 @Composable
-fun JarvisRound(label: String, onClick: () -> Unit, content: @Composable () -> Unit) {
-    val pal = assistPalette()
+fun JarvisRound(label: String, onClick: () -> Unit, state: AssistState = AssistState.Idle, level: Float = 0f, content: @Composable () -> Unit) {
+    val scheme = MaterialTheme.colorScheme
     Box(
         modifier = Modifier.size(58.dp).shadow(6.dp, CircleShape).clip(CircleShape)
-            .background(Brush.linearGradient(listOf(pal.first, pal.second, pal.third)))
-            .border(2.dp, MaterialTheme.colorScheme.outline, CircleShape)
+            .background(scheme.background)
+            .border(2.dp, scheme.outlineVariant, CircleShape)
             .clickable(onClickLabel = label, onClick = onClick),
         contentAlignment = Alignment.Center,
-    ) { content() }
+    ) {
+        AssistOrb(state, level, 38.dp)
+        content()
+    }
 }
 
 /** Jarvis's logo, drawn in one colour: a ring round a dot, like his orb seen from the side. */
@@ -518,7 +528,7 @@ private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String)
             // Alone, he brings the bar and the round button himself, in the same places as inside the app.
             NavigationBar(modifier = Modifier.align(Alignment.BottomCenter)) { JarvisBarItems(model, ui, onClose, onSettings) }
             Box(Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = pad + 16.dp)) {
-                JarvisRound("Talk", { model.listen() }) {
+                JarvisRound("Talk", { model.listen() }, model.state, model.level) {
                     HaIcon(if (model.state == AssistState.Listening) "mdi:stop" else "mdi:microphone", Icons.Filled.Info, Color.White, 28.dp)
                 }
             }

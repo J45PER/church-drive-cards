@@ -225,6 +225,16 @@ fun JarvisOverlay(onSettings: () -> Unit = {}) {
     val j = LocalJarvis.current ?: return
     val model = j.model ?: return
     if (!j.open) return
+    // While he is open the window must not pan up to keep the typing box in view (the phone's default for this window): he places the box above the
+    // keyboard himself, and a panned window would count the keyboard twice.
+    val context = LocalContext.current
+    DisposableEffect(Unit) {
+        val window = generateSequence(context) { (it as? android.content.ContextWrapper)?.baseContext }.filterIsInstance<android.app.Activity>().firstOrNull()?.window
+        val before = window?.attributes?.softInputMode
+        @Suppress("DEPRECATION")
+        window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        onDispose { if (before != null) window?.setSoftInputMode(before) }
+    }
     // Taps on him stay on him, not on the page underneath.
     androidx.compose.foundation.layout.Box(
         androidx.compose.ui.Modifier.fillMaxSize().padding(bottom = jarvisBottomPad(keyboard = true)).clickable(
@@ -262,7 +272,7 @@ fun JarvisFab(modifier: Modifier = Modifier) {
                 j.intro != null -> { j.intro = null; model.stopSpeaking(); model.listen() }
                 else -> model.listen()
             }
-        }) {
+        }, if (j.open) model.state else AssistState.Idle, if (j.open) model.level else 0f) {
             androidx.compose.animation.Crossfade(if (j.open) (if (listening) 2 else 1) else 0, label = "fabIcon") { v ->
                 when (v) {
                     0 -> JarvisLogo(Color.White)
