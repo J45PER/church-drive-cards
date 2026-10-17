@@ -6,7 +6,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -40,7 +42,7 @@ const val SHARED_LIST = "todo.priorities_everyone"
 const val HOUSE_LIST = "todo.priorities_automatic"
 
 /** One row of the highlights. */
-data class Highlight(val uid: String, val list: String, val text: String, val overdue: Boolean, val auto: Boolean, val icon: String)
+data class Highlight(val uid: String, val list: String, val text: String, val overdue: Boolean, val auto: Boolean, val icon: String, val shopping: Boolean = false)
 
 /**
  * What is waiting, soonest due first (overdue before the rest), then in list order: the person's own, the shared list, the house's.
@@ -75,6 +77,7 @@ fun todoHighlights(lists: Map<String, List<TodoItem>>, first: String?, now: Loca
                 overdue = item.due?.take(10)?.let { it < today } == true,
                 // No tick for the house's own jobs, nor for a shopping list: it is finished by finishing its items.
                 auto = task != null || shoppingIdOf(item.description).isNotEmpty(),
+                shopping = shoppingIdOf(item.description).isNotEmpty(),
                 icon = task?.icon ?: if (shoppingIdOf(item.description).isNotEmpty()) (if (isStepsTask(item.description)) "mdi:format-list-checks" else "mdi:cart-outline") else if (list == SHARED_LIST) "mdi:account-group" else "mdi:flag",
             )
         }
@@ -100,22 +103,23 @@ fun TodoHighlights(entities: Map<String, EntityState>, call: CallService, onOpen
     val purple = toneColors(Tone.Purple)
     val red = toneColors(Tone.Red)
     val green = toneColors(Tone.Green)
+    val indigo = toneColors(Tone.Indigo)
     EntityCard(purple.container, purple.onContainer) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (shown.isEmpty()) {
                     val loaded = own != null || shared != null || house != null
                     HighlightPill(if (loaded) "Nothing waiting on you" else "Loading your to-dos…", if (loaded) "mdi:check-circle-outline" else "mdi:format-list-checks", if (loaded) green else purple, null, onOpen)
                 }
                 shown.forEach { h ->
-                    HighlightPill(h.text, h.icon, if (h.overdue) red else purple, if (h.auto) null else ({
+                    HighlightPill(h.text, h.icon, if (h.overdue) red else if (h.shopping) indigo else purple, if (h.auto) null else ({
                         ticked = ticked + h.uid
                         call("todo", "update_item", h.list, data("item" to h.uid, "status" to "completed"))
                     }), onOpen)
                 }
             }
             Column(
-                Modifier.width(58.dp).background(purple.accent.copy(alpha = 0.22f), RoundedCornerShape(12.dp)).clickable { onOpen() }.padding(vertical = 6.dp),
+                Modifier.width(58.dp).fillMaxHeight().background(purple.accent.copy(alpha = 0.22f), RoundedCornerShape(12.dp)).clickable { onOpen() }.padding(vertical = 6.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
