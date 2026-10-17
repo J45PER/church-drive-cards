@@ -29,6 +29,9 @@ import com.churchdrive.app.ha.Templates
 import com.churchdrive.app.ha.data
 import org.json.JSONObject
 
+/** Whether the signed-in person is an administrator: who's home is for them only. */
+val LocalIsAdmin = compositionLocalOf { false }
+
 /** The app's template watcher, set once in MainActivity. */
 val LocalTemplates = compositionLocalOf<Templates?> { null }
 
@@ -91,7 +94,7 @@ fun CardView(card: CardSpec, entities: Map<String, EntityState>, registry: Regis
     when (card.type.removeSuffix("-beta")) {
         "custom:alarm-panel-card" -> {
             val id = card.config.optString("entity").ifBlank { ALARM_ENTITY }
-            AlarmCard(entities[id], call, id, entities[ALARM_ACTOR_ENTITY])
+            AlarmCard(entities[id], call, id, entities[ALARM_ACTOR_ENTITY], people = if (LocalIsAdmin.current) peopleRows(entities, registry) else emptyList())
         }
         "custom:safety-card" -> SafetyCard(card.config, entities, registry)
         "tile" -> TileCard(card.config, entities, call)

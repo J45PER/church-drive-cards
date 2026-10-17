@@ -61,18 +61,22 @@ object AssistColourSetting {
     }
 }
 
-/** Remembers whether the assistant has introduced itself to this person, and which version they last heard what is new in. */
+/**
+ * Remembers whether the assistant has introduced itself to this person, and which entries of the Jarvis log they have been told about.
+ * The introduction is taken once: the moment it is handed out it counts as told, however it is closed.
+ */
 object AssistIntroStore {
     private const val KEY_EVER = "introduced"
+    private const val KEY_TOLD = "told_ids"
     private fun prefs(context: Context) = context.getSharedPreferences(AssistActivity.PREFS, Context.MODE_PRIVATE)
 
-    fun kind(context: Context): IntroKind? {
+    /** The introduction due now, if any, and notes that the person has been told. */
+    fun take(context: Context): IntroDue? {
         val p = prefs(context)
-        return introKind(p.getBoolean(KEY_EVER, false), p.getString(AssistActivity.KEY_INTRO, null), com.churchdrive.app.BuildConfig.VERSION_NAME)
-    }
-
-    fun markSeen(context: Context) {
-        prefs(context).edit().putBoolean(KEY_EVER, true).putString(AssistActivity.KEY_INTRO, com.churchdrive.app.BuildConfig.VERSION_NAME).apply()
+        val told = p.getStringSet(KEY_TOLD, null)
+        val result = introDue(p.getBoolean(KEY_EVER, false), told, ASSIST_FEATURES)
+        p.edit().putBoolean(KEY_EVER, true).putStringSet(KEY_TOLD, result.told).apply()
+        return result.due
     }
 }
 
@@ -92,7 +96,7 @@ fun AssistWakeHost(connected: Boolean, base: String, api: HaApi?, userName: Stri
     val enabled = AssistWakeSetting.enabled
     val model = remember(api) { AssistModel(context, api, base) }
     var open by remember { mutableStateOf(false) }
-    var intro by remember { mutableStateOf<IntroKind?>(null) }
+    var intro by remember { mutableStateOf<IntroDue?>(null) }
     val owner = LocalLifecycleOwner.current
     val micAsk = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) AssistWakeSetting.set(context, true)
@@ -104,7 +108,7 @@ fun AssistWakeHost(connected: Boolean, base: String, api: HaApi?, userName: Stri
     DisposableEffect(model) {
         model.onWake = {
             model.panelOpened()
-            intro = AssistIntroStore.kind(context)
+            intro = AssistIntroStore.take(context)
             open = true
         }
         onDispose { model.release() }
@@ -128,8 +132,8 @@ fun AssistWakeHost(connected: Boolean, base: String, api: HaApi?, userName: Stri
         Dialog(onDismissRequest = close, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
             AssistPanel(
                 model = model, onClose = close, onTask = { said -> close(); onTask(said) },
-                intro = intro, person = userName,
-                onIntroDone = { AssistIntroStore.markSeen(context); model.stopSpeaking(); intro = null },
+                intro = intro?.kind, introFeatures = intro?.features.orEmpty(), person = userName,
+                onIntroDone = { model.stopSpeaking(); intro = null },
                 wakeOn = enabled,
                 onEnableWake = { if (hasMicrophone(context)) AssistWakeSetting.set(context, true) else micAsk.launch(Manifest.permission.RECORD_AUDIO) },
             )

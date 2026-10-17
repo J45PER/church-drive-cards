@@ -12,10 +12,10 @@ class PageArrangeTest {
         PanelSpec(title, null, null, null, null, types.map { CardSpec(it, JSONObject()) })
 
     @Test
-    fun theAlarmLeadsTheSecurityPage() {
+    fun theNoticesStayAboveTheAlarmOnTheSecurityPage() {
         val header = panel("", "header:lines")
         val out = DashboardPanels.arrange("security", listOf(header, panel("Alarm", "custom:alarm-panel-card"), panel("Safety")))
-        assertEquals(listOf("Alarm", "", "Safety"), out.map { it.title })
+        assertEquals(listOf("", "Alarm", "Safety"), out.map { it.title })
     }
 
     @Test

@@ -9,3 +9,7 @@ don't weaken the test.
 Build and test happen in CI (there is no Android SDK in the sandbox): push to `companion-apps`, wait for the
 "Companion Android" run, and only report an APK once it is green. Keep commits to `companion/` only; never run
 `git checkout origin/main -- .` on this branch.
+
+When Jarvis (the assistant) gains a feature, changes how something works or has a fix, add an entry at the top of `ASSIST_FEATURES`
+(the Jarvis log, `ui/AssistData.kt`) with a new, never-reused `id`. Each person is told about each entry once; the full
+introduction is only for the first time ever, so never rely on the app's version to bring it back.

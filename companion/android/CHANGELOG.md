@@ -4,6 +4,12 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.33.3
+
+- Jarvis's microphone is now a round button at the bottom right of every page, just above the page bar, instead of a small icon in the top corner. The green "listening for the wake word" dot stays at the top. Inside Jarvis, the microphone is now at the bottom right too (with the keyboard button on the left), so opening him and talking are the same thumb spot.
+- Jarvis's introduction ("Hi Jamie, I'm Jarvis" and "What's new") now comes once: it counts as seen the moment it is shown, however it is closed and a new app version no longer brings it back. Jarvis now has his own log (`ASSIST_FEATURES`): the full hello is for the first time ever, and after that a person is told, once, only about log entries they have not heard (a new feature, change or fix), and just those.
+- Security page notices (doors open, last movement, who is home, smoke and CO, batteries): an "all is well" notice shows once after each app update, then stays away on later visits; it only comes back when it turns amber or red. When they go, they slide off to the side one after another instead of fading. The notices now sit above the alarm card, as on the dashboard. Who's home is no longer a notice: the Security page's alarm card lists each person on a line of their own (administrators only), and the old line only appears, for administrators, when everyone is out and the alarm is off.
+
 ## 0.33.2
 
 - Home to-do highlights: each task's text now takes its colour too (shopping indigo, overdue red), and a steps task is teal so it no longer looks like a shopping list. The steps icon on the To-do page is teal as well.

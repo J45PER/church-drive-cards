@@ -36,16 +36,10 @@ object DashboardPanels {
 
     /**
      * The dashboard's page has a header above its panels; in the app the header's information goes where it belongs:
-     * the weather leads the Climate section, with the temperatures; the alarm leads the Security page, above the notices.
+     * the weather leads the Climate section, with the temperatures; the Security page keeps the dashboard's order: the notices (when there are any), then the alarm.
      */
     fun arrange(path: String, panels: List<PanelSpec>): List<PanelSpec> {
         fun isHeader(p: PanelSpec, kind: String) = p.title.isBlank() && p.cards.firstOrNull()?.type == kind
-        if (path == "security") {
-            val alarm = panels.firstOrNull { it.title == "Alarm" } ?: return panels
-            val header = panels.indexOfFirst { isHeader(it, "header:lines") }
-            if (header < 0) return panels
-            return listOf(alarm) + panels.filter { it !== alarm }
-        }
         if (path == "climate") {
             val weather = panels.firstOrNull { isHeader(it, "header:forecast") } ?: return panels
             val climate = panels.firstOrNull { it.title == "Climate" } ?: return panels

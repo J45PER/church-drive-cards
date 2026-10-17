@@ -72,34 +72,48 @@ fun HeaderView(card: CardSpec, entities: Map<String, EntityState>, call: CallSer
 @Composable
 fun HeaderLines(config: JSONObject) {
     val lines = config.optJSONArray("header_lines")
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val seen = androidx.compose.runtime.remember { HeaderSeen.load(context) }
     Column {
         for (i in 0 until (lines?.length() ?: 0)) {
             val line = lines?.optJSONObject(i) ?: continue
-            HeaderLine(line)
+            HeaderLine(line, i, seen)
         }
     }
 }
 
-/** How long an "all is well" line stays before it fades away. */
+/** The header line that says who is home: its template reads the people. */
+fun isPeopleLine(template: String) = "states.person" in template
+
+/** How long an "all is well" line stays before it slides away. */
 private const val FADE_AFTER_MS = 8_000L
 
+/** The pause between one line leaving and the next. */
+private const val LEAVE_STAGGER_MS = 180
+
 /**
- * A line of the page header. A good (green) line is only news for a few seconds: it fades away by itself, or swipes off
- * sooner. A line that warns (amber, red...) stays, can't be swiped away, and a good line comes back when it starts to warn.
+ * A line of the page header. A good (green) line is only news once after the app updates: it shows for a few seconds, then
+ * slides away to the side (each a moment after the one above), or swipes off sooner, and stays away on later visits. A line
+ * that warns (amber, red...) stays, can't be swiped away, and a good line comes back when it starts to warn.
  */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-private fun HeaderLine(line: JSONObject) {
-    val text = rememberTemplate(line.optString("text"))
+private fun HeaderLine(line: JSONObject, index: Int, seen: Set<String>) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val key = line.optString("text")
+    val text = rememberTemplate(key)
     val alert = rememberTemplate(line.optString("alert_when"))?.trim()?.lowercase() == "true"
     val colour = if (alert) line.optString("alert_color") else line.optString("color")
     val tone = toneColors(toneFromColour(colour) ?: Tone.Green)
     val icon = if (alert) line.optString("alert_icon").ifBlank { line.optString("icon") } else line.optString("icon")
     if (text.isNullOrBlank()) return
-    var gone by androidx.compose.runtime.saveable.rememberSaveable(line.optString("text")) { mutableStateOf(false) }
-    // The line is good (not a warning) and has been seen: put it away. A warning always brings it back.
+    // Who's home is part of the alarm card now (for administrators); its line only speaks up when everyone is out and the alarm is off.
+    if (isPeopleLine(key) && (!LocalIsAdmin.current || !alert)) return
+    var gone by androidx.compose.runtime.remember { mutableStateOf(!alert && key in seen) }
+    // The line is good (not a warning): note that it has been shown, and put it away. A warning always brings it back.
     LaunchedEffect(alert) {
         if (alert) gone = false else if (!gone) {
+            HeaderSeen.add(context, key)
             kotlinx.coroutines.delay(FADE_AFTER_MS)
             gone = true
         }
@@ -114,16 +128,19 @@ private fun HeaderLine(line: JSONObject) {
             Text(styledLine(text), color = tone.onContainer, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
         }
     }
+    val leave = androidx.compose.animation.core.tween<Float>(500, delayMillis = index * LEAVE_STAGGER_MS)
     androidx.compose.animation.AnimatedVisibility(
         visible = !gone,
         enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandVertically(),
-        exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(900)) + androidx.compose.animation.shrinkVertically(androidx.compose.animation.core.tween(900)),
+        exit = androidx.compose.animation.slideOutHorizontally(androidx.compose.animation.core.tween(500, delayMillis = index * LEAVE_STAGGER_MS)) { it } +
+            androidx.compose.animation.fadeOut(leave) +
+            androidx.compose.animation.shrinkVertically(androidx.compose.animation.core.tween(300, delayMillis = index * LEAVE_STAGGER_MS + 400)),
     ) {
         if (alert) {
             Box(Modifier.padding(bottom = 8.dp)) { body() }
         } else {
             val state = androidx.compose.material3.rememberSwipeToDismissBoxState(
-                confirmValueChange = { if (it != androidx.compose.material3.SwipeToDismissBoxValue.Settled) gone = true; true },
+                confirmValueChange = { if (it != androidx.compose.material3.SwipeToDismissBoxValue.Settled) { HeaderSeen.add(context, key); gone = true }; true },
             )
             androidx.compose.material3.SwipeToDismissBox(state = state, backgroundContent = { }, modifier = Modifier.padding(bottom = 8.dp)) { body() }
         }

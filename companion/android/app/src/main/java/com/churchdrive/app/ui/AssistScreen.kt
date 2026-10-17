@@ -107,6 +107,8 @@ fun AssistPanel(
     onTask: (String) -> Unit,
     /** The introduction to show first (and say out loud), or null. */
     intro: IntroKind? = null,
+    /** What the introduction lists: everything the first time, then only what is new. */
+    introFeatures: List<AssistFeature> = ASSIST_FEATURES,
     person: String = "",
     onIntroDone: () -> Unit = {},
     /** "Try it" in the introduction: done with it, and start listening (asking for the microphone first if needed). */
@@ -132,7 +134,7 @@ fun AssistPanel(
         ) {
             if (intro != null) {
                 AssistIntro(
-                    kind = intro, person = person, assistant = model.name, wakeWord = model.wakeWord, model = model,
+                    kind = intro, features = introFeatures, person = person, assistant = model.name, wakeWord = model.wakeWord, model = model,
                     onTry = onIntroTry, onSkip = onIntroDone, wakeOn = wakeOn, onEnableWake = onEnableWake,
                 )
             } else FullAssist(model, close, onTask)
@@ -396,16 +398,16 @@ private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String)
                         )
                     }
                 } else {
+                    // The microphone is at the bottom right, where Jarvis's button is on every page and where it is once you are chatting.
                     Row(
-                        modifier = Modifier.fillMaxWidth().zIndex(-1f).padding(horizontal = 20.dp),
+                        modifier = Modifier.fillMaxWidth().zIndex(-1f),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         RoundIcon("mdi:keyboard-outline", "Type instead", false, { typing = true }, size = 52.dp)
                         RoundIcon(
                             if (model.state == AssistState.Listening) "mdi:stop" else "mdi:microphone", "Talk",
-                            model.state != AssistState.Idle && model.state != AssistState.Waiting, { model.listen() }, size = 76.dp,
+                            model.state != AssistState.Idle && model.state != AssistState.Waiting, { model.listen() }, size = 58.dp,
                         )
-                        Spacer(Modifier.size(52.dp))
                     }
                 }
             }
@@ -485,14 +487,14 @@ private fun JarvisBubble(text: String) {
  * after an update it just says what is new.
  */
 @Composable
-fun AssistIntro(kind: IntroKind, person: String, assistant: String, wakeWord: String?, model: AssistModel, onTry: () -> Unit, onSkip: () -> Unit, wakeOn: Boolean = true, onEnableWake: () -> Unit = {}) {
+fun AssistIntro(kind: IntroKind, features: List<AssistFeature>, person: String, assistant: String, wakeWord: String?, model: AssistModel, onTry: () -> Unit, onSkip: () -> Unit, wakeOn: Boolean = true, onEnableWake: () -> Unit = {}) {
     val pal = assistPalette()
     val scheme = MaterialTheme.colorScheme
     val tone = toneColors(Tone.Indigo)
     // Say it once the name is known (it arrives from the house a moment after opening), or after a short wait if the house has none.
     LaunchedEffect(kind) {
         kotlinx.coroutines.withTimeoutOrNull(2_500) { androidx.compose.runtime.snapshotFlow { model.wakeWord }.first { it != null } }
-        model.speak(introSpeech(kind, person, model.name, ASSIST_FEATURES))
+        model.speak(introSpeech(kind, person, model.name, features))
     }
     androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides scheme.onSurface) {
     Column(modifier = Modifier.fillMaxSize().background(scheme.background).statusBarsPadding().navigationBarsPadding()) {
@@ -518,13 +520,14 @@ fun AssistIntro(kind: IntroKind, person: String, assistant: String, wakeWord: St
                 Text("Say \u201C${wakePhrase(wakeWord)}\u201D any time the app is open, or tap the microphone.", style = MaterialTheme.typography.bodyMedium, color = pal.third, textAlign = TextAlign.Center)
             }
             Text(if (kind == IntroKind.First) "What I can do" else "New in this version", style = MaterialTheme.typography.labelLarge, color = pal.third, modifier = Modifier.align(Alignment.Start))
-            ASSIST_FEATURES.forEach { f ->
+            features.forEach { f ->
                 EntityCard(tone.container, tone.onContainer) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                         HaIcon(f.icon, Icons.Filled.Info, tone.accent, 28.dp)
                         Column {
                             Text(f.title, style = MaterialTheme.typography.titleMedium)
-                            Text("Say: ${f.example}", style = MaterialTheme.typography.bodyMedium)
+                            val line = if (f.example.isNotBlank()) "Say: ${f.example}" else f.detail
+                            if (line.isNotBlank()) Text(line, style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                 }
