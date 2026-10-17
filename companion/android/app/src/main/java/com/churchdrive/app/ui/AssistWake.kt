@@ -61,18 +61,26 @@ object AssistColourSetting {
     }
 }
 
-/** Remembers whether the assistant has introduced itself to this person, and which version they last heard what is new in. */
+/**
+ * Remembers whether the assistant has introduced itself to this person, and which version they last heard what is new in. The
+ * introduction is taken once: the moment it is handed out it counts as seen, however it is closed.
+ */
 object AssistIntroStore {
     private const val KEY_EVER = "introduced"
     private fun prefs(context: Context) = context.getSharedPreferences(AssistActivity.PREFS, Context.MODE_PRIVATE)
 
-    fun kind(context: Context): IntroKind? {
-        val p = prefs(context)
-        return introKind(p.getBoolean(KEY_EVER, false), p.getString(AssistActivity.KEY_INTRO, null), com.churchdrive.app.BuildConfig.VERSION_NAME)
-    }
+    /** An introduction to show: which kind, and the features it lists (all the first time, then only the new ones). */
+    data class Due(val kind: IntroKind, val features: List<AssistFeature>)
 
-    fun markSeen(context: Context) {
-        prefs(context).edit().putBoolean(KEY_EVER, true).putString(AssistActivity.KEY_INTRO, com.churchdrive.app.BuildConfig.VERSION_NAME).apply()
+    /** The introduction due now, if any, and marks it seen. */
+    fun take(context: Context): Due? {
+        val p = prefs(context)
+        val ever = p.getBoolean(KEY_EVER, false)
+        val seen = p.getString(AssistActivity.KEY_INTRO, null)
+        val kind = introKind(ever, seen, com.churchdrive.app.BuildConfig.VERSION_NAME) ?: return null
+        val features = if (kind == IntroKind.First) ASSIST_FEATURES else newFeatures(seen, ASSIST_FEATURES)
+        p.edit().putBoolean(KEY_EVER, true).putString(AssistActivity.KEY_INTRO, com.churchdrive.app.BuildConfig.VERSION_NAME).apply()
+        return Due(kind, features)
     }
 }
 
@@ -92,7 +100,7 @@ fun AssistWakeHost(connected: Boolean, base: String, api: HaApi?, userName: Stri
     val enabled = AssistWakeSetting.enabled
     val model = remember(api) { AssistModel(context, api, base) }
     var open by remember { mutableStateOf(false) }
-    var intro by remember { mutableStateOf<IntroKind?>(null) }
+    var intro by remember { mutableStateOf<AssistIntroStore.Due?>(null) }
     val owner = LocalLifecycleOwner.current
     val micAsk = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) AssistWakeSetting.set(context, true)
@@ -104,7 +112,7 @@ fun AssistWakeHost(connected: Boolean, base: String, api: HaApi?, userName: Stri
     DisposableEffect(model) {
         model.onWake = {
             model.panelOpened()
-            intro = AssistIntroStore.kind(context)
+            intro = AssistIntroStore.take(context)
             open = true
         }
         onDispose { model.release() }
@@ -128,8 +136,8 @@ fun AssistWakeHost(connected: Boolean, base: String, api: HaApi?, userName: Stri
         Dialog(onDismissRequest = close, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
             AssistPanel(
                 model = model, onClose = close, onTask = { said -> close(); onTask(said) },
-                intro = intro, person = userName,
-                onIntroDone = { AssistIntroStore.markSeen(context); model.stopSpeaking(); intro = null },
+                intro = intro?.kind, introFeatures = intro?.features.orEmpty(), person = userName,
+                onIntroDone = { model.stopSpeaking(); intro = null },
                 wakeOn = enabled,
                 onEnableWake = { if (hasMicrophone(context)) AssistWakeSetting.set(context, true) else micAsk.launch(Manifest.permission.RECORD_AUDIO) },
             )

@@ -20,7 +20,6 @@ import com.churchdrive.app.ha.HaAuth
 import com.churchdrive.app.ha.HaClient
 import com.churchdrive.app.ha.Refresh
 import com.churchdrive.app.ui.AssistIntroStore
-import com.churchdrive.app.ui.IntroKind
 import com.churchdrive.app.ui.AssistModel
 import com.churchdrive.app.ui.AssistPanel
 import com.churchdrive.app.ui.AssistWakeSetting
@@ -42,7 +41,7 @@ import org.json.JSONObject
 class AssistActivity : ComponentActivity() {
     private var client: HaClient? = null
     private var model: AssistModel? = null
-    private var intro by mutableStateOf<IntroKind?>(null)
+    private var intro by mutableStateOf<AssistIntroStore.Due?>(null)
 
     private var enableWakeAfterPermission = false
 
@@ -80,7 +79,7 @@ class AssistActivity : ComponentActivity() {
             c.connection.first { it == ConnectionState.Connected }
             m.loadName()
         }
-        intro = AssistIntroStore.kind(this)
+        intro = AssistIntroStore.take(this)
         setContent {
             ChurchDriveTheme {
                 AssistPanel(
@@ -95,9 +94,9 @@ class AssistActivity : ComponentActivity() {
                         )
                         finish()
                     },
-                    intro = intro, person = session.personName.orEmpty(),
-                    onIntroDone = { AssistIntroStore.markSeen(this); m.stopSpeaking(); intro = null },
-                    onIntroTry = { AssistIntroStore.markSeen(this); m.stopSpeaking(); intro = null; talk() },
+                    intro = intro?.kind, introFeatures = intro?.features.orEmpty(), person = session.personName.orEmpty(),
+                    onIntroDone = { m.stopSpeaking(); intro = null },
+                    onIntroTry = { m.stopSpeaking(); intro = null; talk() },
                     wakeOn = AssistWakeSetting.enabled,
                     onEnableWake = { if (hasMicrophone(this)) AssistWakeSetting.set(this, true) else { enableWakeAfterPermission = true; askMicrophone.launch(Manifest.permission.RECORD_AUDIO) } },
                 )

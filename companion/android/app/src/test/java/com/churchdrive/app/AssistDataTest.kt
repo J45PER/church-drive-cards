@@ -103,8 +103,21 @@ class AssistDataTest {
     fun theFirstIntroductionIsTheAssistantsOwnAndLaterOnesAreWhatIsNew() {
         assertEquals(com.churchdrive.app.ui.IntroKind.First, com.churchdrive.app.ui.introKind(false, null, "0.10.1"))
         assertEquals(com.churchdrive.app.ui.IntroKind.First, com.churchdrive.app.ui.introKind(false, "0.10.1", "0.10.1"))
-        assertEquals(com.churchdrive.app.ui.IntroKind.Update, com.churchdrive.app.ui.introKind(true, "0.10.0", "0.10.1"))
+        val older = com.churchdrive.app.ui.AssistFeature("mdi:x", "Old", "Old", "0.10.0")
+        val newer = com.churchdrive.app.ui.AssistFeature("mdi:y", "New", "New", "0.10.1")
+        // An update brings the introduction only when a feature came after the version last heard about, and lists just those.
+        assertEquals(com.churchdrive.app.ui.IntroKind.Update, com.churchdrive.app.ui.introKind(true, "0.10.0", "0.10.1", listOf(newer, older)))
+        assertEquals(listOf(newer), com.churchdrive.app.ui.newFeatures("0.10.0", listOf(newer, older)))
+        assertNull(com.churchdrive.app.ui.introKind(true, "0.10.0", "0.10.1", listOf(older)))
         assertNull(com.churchdrive.app.ui.introKind(true, "0.10.1", "0.10.1"))
+        assertEquals(listOf(newer, older), com.churchdrive.app.ui.newFeatures(null, listOf(newer, older)))
+    }
+
+    @Test
+    fun versionsAreComparedNumberByNumber() {
+        assertTrue(com.churchdrive.app.ui.versionAfter("0.34.0", "0.33.9"))
+        assertTrue(com.churchdrive.app.ui.versionAfter("0.10.0", "0.9.9"))
+        assertTrue(!com.churchdrive.app.ui.versionAfter("0.10.0", "0.10.0"))
     }
 
     @Test

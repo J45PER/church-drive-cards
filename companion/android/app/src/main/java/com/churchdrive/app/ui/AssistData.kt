@@ -72,28 +72,48 @@ fun isNotUnderstood(answer: String): Boolean {
 /** Which introduction is due: [First] the first time ever (the assistant introduces itself), [Update] after a new version (what is new). */
 enum class IntroKind { First, Update }
 
-/** The introduction that is due, or null: never introduced is [IntroKind.First]; a version not seen yet is [IntroKind.Update]. */
-fun introKind(introducedEver: Boolean, seenVersion: String?, current: String): IntroKind? = when {
+/** Whether version [a] is later than [b] ("0.34.0" is after "0.33.9"): compared number by number. */
+fun versionAfter(a: String, b: String): Boolean {
+    fun parts(v: String) = v.split('.').map { it.filter(Char::isDigit).toIntOrNull() ?: 0 }
+    val x = parts(a)
+    val y = parts(b)
+    for (i in 0 until maxOf(x.size, y.size)) {
+        val d = x.getOrElse(i) { 0 } - y.getOrElse(i) { 0 }
+        if (d != 0) return d > 0
+    }
+    return false
+}
+
+/** The features that came after the version the person last heard about (all of them if they never have). */
+fun newFeatures(seenVersion: String?, features: List<AssistFeature>): List<AssistFeature> =
+    if (seenVersion == null) features else features.filter { versionAfter(it.since, seenVersion) }
+
+/**
+ * The introduction that is due, or null: never introduced is [IntroKind.First]; a feature added since the version last heard about
+ * is [IntroKind.Update]. A new version with nothing new for the assistant brings nothing.
+ */
+fun introKind(introducedEver: Boolean, seenVersion: String?, current: String, features: List<AssistFeature> = ASSIST_FEATURES): IntroKind? = when {
     !introducedEver -> IntroKind.First
-    seenVersion != current -> IntroKind.Update
-    else -> null
+    newFeatures(seenVersion, features).isEmpty() -> null
+    else -> IntroKind.Update
 }
 
 /** Whether any introduction is due. */
 fun introDue(seenVersion: String?, current: String): Boolean = seenVersion != current
 
 /** One thing the assistant can do, shown in the introduction and as an example sentence. */
-data class AssistFeature(val icon: String, val title: String, val example: String)
+data class AssistFeature(val icon: String, val title: String, val example: String, val since: String = "0.0.0")
 
 /**
- * What is new, newest first, shown (and spoken) in the introduction. Add the new things of each release to the top and drop the
- * oldest when it is long; the introduction comes again once for every new version of the app.
+ * What the assistant can do, newest first. Add each new thing at the top with `since` set to the app version that brings it: the
+ * introduction comes again, once, only for what is newer than the version the person last heard about, and shows just those.
+ * The first time ever it shows all of them.
  */
 val ASSIST_FEATURES = listOf(
-    AssistFeature("mdi:microphone-message", "Hands-free with the wake word", "Hey Jarvis, who is home?"),
-    AssistFeature("mdi:chat-processing-outline", "Natural conversation", "Is it going to rain tomorrow?"),
-    AssistFeature("mdi:cart-outline", "Shopping lists", "Add washing powder to the Lidl list"),
-    AssistFeature("mdi:lightbulb-outline", "Lights, heating and the alarm", "Turn the lounge lights down"),
+    AssistFeature("mdi:microphone-message", "Hands-free with the wake word", "Hey Jarvis, who is home?", "0.10.0"),
+    AssistFeature("mdi:chat-processing-outline", "Natural conversation", "Is it going to rain tomorrow?", "0.10.0"),
+    AssistFeature("mdi:cart-outline", "Shopping lists", "Add washing powder to the Lidl list", "0.10.0"),
+    AssistFeature("mdi:lightbulb-outline", "Lights, heating and the alarm", "Turn the lounge lights down", "0.10.0"),
 )
 
 /** "A, B and C". */
