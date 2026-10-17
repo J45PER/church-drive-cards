@@ -353,7 +353,7 @@ private fun BottomGlow(active: Boolean, level: Float, modifier: Modifier = Modif
 }
 
 /**
- * The round button at the bottom right: his avatar (the animated orb, moving with what he is doing) on a dark ground with a dark grey ring,
+ * The round button at the bottom right: his avatar (the animated orb, moving with what he is doing) on the same dark grey as its ring,
  * and a white symbol over it: his logo when he is shut, a microphone once he is open. Same size and place everywhere, above the bottom bar.
  */
 @Composable
@@ -361,12 +361,13 @@ fun JarvisRound(label: String, onClick: () -> Unit, state: AssistState = AssistS
     val scheme = MaterialTheme.colorScheme
     Box(
         modifier = Modifier.size(58.dp).shadow(6.dp, CircleShape).clip(CircleShape)
-            .background(scheme.background)
+            .background(scheme.outlineVariant)
             .border(2.dp, scheme.outlineVariant, CircleShape)
             .clickable(onClickLabel = label, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        AssistOrb(state, level, 38.dp)
+        // The orb's own box is one and a half times this size, so it stays inside the 54 dp the ring leaves (with a little room to spare).
+        AssistOrb(state, level, 32.dp)
         content()
     }
 }
