@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.34.1
+
+- Jarvis's round button: the ground behind his avatar is the same dark grey as the ring round it, and the avatar is a little smaller so the ring no longer clips its edge.
+
 ## 0.34.0
 
 - Thermostat target no longer jumps back (to 12.1, say). The Nest ignores a new target while Eco is on, so a tap on − or + now takes the thermostat out of Eco first, then sets the target. While Eco is on the card says "Eco target … (tap to heat)".
