@@ -104,6 +104,8 @@ fun HomeScreen(
     if (page !in pages) page = Page.Home
     // The account panel (null shut, "account", "settings" or "about"), which slides in from the right.
     var panel by rememberSaveable { mutableStateOf<String?>(null) }
+    // Asked for from outside (Jarvis alone, or the app opened on its settings).
+    androidx.compose.runtime.LaunchedEffect(openPage) { if (openPage == "settings") panel = "settings" }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val title = if (page == Page.Home) "Hello ${userName?.substringBefore(' ') ?: ""}".trim() else page.label
 
@@ -223,7 +225,7 @@ fun HomeScreen(
         }
     }
     // Jarvis, over the page, and his round button over him: one button, the same one shut or open.
-    JarvisOverlay()
+    JarvisOverlay(onSettings = { panel = "settings" })
     JarvisFab()
     if (openCamera != null && statesLoaded) CameraViewerFor(openCamera, entities, registry, call, onCameraClosed, answer = openCameraAnswer)
     AccountOverlay(

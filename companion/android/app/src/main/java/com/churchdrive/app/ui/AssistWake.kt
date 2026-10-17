@@ -51,6 +51,7 @@ object AssistWakeSetting {
         enabled = context.getSharedPreferences(AssistActivity.PREFS, Context.MODE_PRIVATE).getBoolean(KEY, false)
         AssistColourSetting.load(context)
         AssistStartSetting.load(context)
+        AssistVoiceSetting.load(context)
     }
 
     fun set(context: Context, on: Boolean) {
@@ -72,6 +73,22 @@ object AssistStartSetting {
     fun set(context: Context, on: Boolean) {
         context.getSharedPreferences(AssistActivity.PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY, on).apply()
         typing = on
+    }
+}
+
+/** Whether Jarvis speaks his answers aloud (the bar's Voice button in Jarvis); off, he only writes them. */
+object AssistVoiceSetting {
+    private const val KEY = "voice_replies"
+    var on by mutableStateOf(true)
+        private set
+
+    fun load(context: Context) {
+        on = context.getSharedPreferences(AssistActivity.PREFS, Context.MODE_PRIVATE).getBoolean(KEY, true)
+    }
+
+    fun set(context: Context, value: Boolean) {
+        context.getSharedPreferences(AssistActivity.PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY, value).apply()
+        on = value
     }
 }
 
@@ -198,7 +215,7 @@ fun AssistWakeHost(controller: JarvisController, connected: Boolean, base: Strin
 
 /** Jarvis over the app (not a window of its own, so his round button can stay above him). Nothing when he is shut. */
 @Composable
-fun JarvisOverlay() {
+fun JarvisOverlay(onSettings: () -> Unit = {}) {
     val j = LocalJarvis.current ?: return
     val model = j.model ?: return
     if (!j.open) return
@@ -214,6 +231,7 @@ fun JarvisOverlay() {
             onIntroDone = { model.stopSpeaking(); j.intro = null },
             wakeOn = AssistWakeSetting.enabled, onEnableWake = j.enableWake,
             startTyping = AssistStartSetting.typing,
+            onSettings = { j.close(); onSettings() },
             embedded = true,
         )
     }

@@ -99,6 +99,7 @@ class AssistActivity : ComponentActivity() {
                     onIntroDone = { m.stopSpeaking(); intro = null },
                     onIntroTry = { m.stopSpeaking(); intro = null; talk() },
                     startTyping = AssistStartSetting.typing,
+                    onSettings = { startActivity(Intent(this, MainActivity::class.java).putExtra("page", "settings").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)); finish() },
                     wakeOn = AssistWakeSetting.enabled,
                     onEnableWake = { if (hasMicrophone(this)) AssistWakeSetting.set(this, true) else { enableWakeAfterPermission = true; askMicrophone.launch(Manifest.permission.RECORD_AUDIO) } },
                 )

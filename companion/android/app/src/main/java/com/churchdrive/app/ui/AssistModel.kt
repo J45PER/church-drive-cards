@@ -102,6 +102,20 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
         }
     }
 
+    /** Starts a fresh conversation: what was said, and what the house remembers of it, is cleared. */
+    fun newChat() {
+        stop()
+        messages.clear()
+        conversationId = null
+        said = ""
+        answered = false
+        closing = false
+        closeRequested = false
+        notice = ""
+        notUnderstood = null
+        partial = ""
+    }
+
     /** Shows a message to the person (such as the microphone not being allowed). */
     fun say(text: String) {
         notice = text
@@ -308,7 +322,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
                 if (e.text.isNotBlank()) messages += AssistMessage(false, forDisplay(e.text))
                 if (isNotUnderstood(e.text)) notUnderstood = said
             }
-            is AssistEvent.Audio -> play(assistAudioUrl(base, e.path))
+            is AssistEvent.Audio -> if (AssistVoiceSetting.on) play(assistAudioUrl(base, e.path))
             is AssistEvent.Failed -> onFailed(e)
             AssistEvent.Done -> {
                 stopVoiceRun()

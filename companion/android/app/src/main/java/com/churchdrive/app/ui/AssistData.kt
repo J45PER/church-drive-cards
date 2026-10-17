@@ -113,6 +113,7 @@ fun introDue(introducedEver: Boolean, told: Set<String>?, log: List<AssistFeatur
  * ever do they get the full introduction. Features also make up that introduction's "what I can do".
  */
 val ASSIST_FEATURES = listOf(
+    AssistFeature("mdi:chat-plus-outline", "New chat, Voice and Settings", "", id = "jarvis-bar", detail = "Jarvis's bottom bar has five buttons: Close, New chat, Type in the middle, Voice on or off, and Settings.", kind = JarvisChange.Change),
     AssistFeature("mdi:keyboard-outline", "Type or talk", "", id = "type-or-talk", detail = "Open Jarvis with his logo button on any page, ready to type or ready to listen (your choice in Settings)."),
     AssistFeature("mdi:microphone-message", "Hands-free with the wake word", "Hey Jarvis, who is home?", id = "wake-word"),
     AssistFeature("mdi:chat-processing-outline", "Natural conversation", "Is it going to rain tomorrow?", id = "conversation"),

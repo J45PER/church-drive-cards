@@ -126,6 +126,8 @@ fun AssistPanel(
     onEnableWake: () -> Unit = {},
     /** Open with the keyboard up instead of listening (the person's choice in Settings). */
     startTyping: Boolean = false,
+    /** The bar's Settings button: take the person to Jarvis's settings. */
+    onSettings: () -> Unit = {},
     /** Shown inside the app (over the page, under the app's round Jarvis button) instead of as a window of its own. */
     embedded: Boolean = false,
 ) {
@@ -151,7 +153,7 @@ fun AssistPanel(
                     kind = intro, features = introFeatures, person = person, assistant = model.name, wakeWord = model.wakeWord, model = model,
                     onTry = onIntroTry, onSkip = onIntroDone, wakeOn = wakeOn, onEnableWake = onEnableWake,
                 )
-            } else FullAssist(model, close, onTask, startTyping, embedded)
+            } else FullAssist(model, close, onTask, startTyping, embedded, onSettings)
         }
     }
 }
@@ -361,7 +363,8 @@ fun JarvisLogo(color: Color, size: androidx.compose.ui.unit.Dp = 30.dp) {
 }
 
 @Composable
-private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String) -> Unit, startTyping: Boolean, embedded: Boolean) {
+private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String) -> Unit, startTyping: Boolean, embedded: Boolean, onSettings: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val pal = assistPalette()
     val scheme = MaterialTheme.colorScheme
     var typed by remember { mutableStateOf("") }
@@ -374,6 +377,7 @@ private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String)
         modifier = Modifier.fillMaxSize().imePadding(),
         containerColor = scheme.background,
         bottomBar = {
+            // Close, New chat, Type (the middle one), Voice, Settings.
             NavigationBar {
                 NavigationBarItem(
                     selected = false, onClick = onClose,
@@ -381,9 +385,28 @@ private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String)
                     label = { Text("Close", fontSize = 11.sp, maxLines = 1) },
                 )
                 NavigationBarItem(
+                    selected = false, enabled = chatting, onClick = { typed = ""; model.newChat() },
+                    icon = { HaIcon("mdi:chat-plus-outline", Icons.Filled.Info, scheme.onSurfaceVariant.copy(alpha = if (chatting) 1f else 0.4f), 24.dp) },
+                    label = { Text("New chat", fontSize = 11.sp, maxLines = 1) },
+                )
+                NavigationBarItem(
                     selected = typing, onClick = { typing = true; runCatching { focus.requestFocus() } },
                     icon = { HaIcon("mdi:keyboard-outline", Icons.Filled.Info, if (typing) scheme.onSecondaryContainer else scheme.onSurfaceVariant, 24.dp) },
                     label = { Text("Type", fontSize = 11.sp, maxLines = 1) },
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = {
+                        AssistVoiceSetting.set(context, !AssistVoiceSetting.on)
+                        if (!AssistVoiceSetting.on) model.stopSpeaking()
+                    },
+                    icon = { HaIcon(if (AssistVoiceSetting.on) "mdi:volume-high" else "mdi:volume-off", Icons.Filled.Info, scheme.onSurfaceVariant, 24.dp) },
+                    label = { Text(if (AssistVoiceSetting.on) "Voice" else "Muted", fontSize = 11.sp, maxLines = 1) },
+                )
+                NavigationBarItem(
+                    selected = false, onClick = onSettings,
+                    icon = { HaIcon("mdi:cog-outline", Icons.Filled.Info, scheme.onSurfaceVariant, 24.dp) },
+                    label = { Text("Settings", fontSize = 11.sp, maxLines = 1) },
                 )
             }
         },
