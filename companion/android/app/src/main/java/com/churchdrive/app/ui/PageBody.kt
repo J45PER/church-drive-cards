@@ -82,6 +82,9 @@ fun HeaderLines(config: JSONObject) {
     }
 }
 
+/** The header line that says who is home: its template reads the people. */
+fun isPeopleLine(template: String) = "states.person" in template
+
 /** How long an "all is well" line stays before it slides away. */
 private const val FADE_AFTER_MS = 8_000L
 
@@ -104,6 +107,8 @@ private fun HeaderLine(line: JSONObject, index: Int, seen: Set<String>) {
     val tone = toneColors(toneFromColour(colour) ?: Tone.Green)
     val icon = if (alert) line.optString("alert_icon").ifBlank { line.optString("icon") } else line.optString("icon")
     if (text.isNullOrBlank()) return
+    // Who's home is part of the alarm card now (for administrators); its line only speaks up when everyone is out and the alarm is off.
+    if (isPeopleLine(key) && (!LocalIsAdmin.current || !alert)) return
     var gone by androidx.compose.runtime.remember { mutableStateOf(!alert && key in seen) }
     // The line is good (not a warning): note that it has been shown, and put it away. A warning always brings it back.
     LaunchedEffect(alert) {

@@ -208,7 +208,9 @@ fun HomeScreen(
             } else if (page == Page.Lighting) {
                 LightingPage(lights, entities, areaNames, call)
             } else if (page == Page.Security) {
-                SecurityPage(panels["security"].orEmpty(), entities, registry, call)
+                androidx.compose.runtime.CompositionLocalProvider(LocalIsAdmin provides isAdmin) {
+                    SecurityPage(panels["security"].orEmpty(), entities, registry, call)
+                }
             } else {
                 val key = when (page) {
                     Page.Climate -> "climate"

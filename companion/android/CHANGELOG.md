@@ -6,7 +6,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 ## 0.33.3
 
-- Security page notices (doors open, last movement, who is home, smoke and CO, batteries): an "all is well" notice shows once after each app update, then stays away on later visits; it only comes back when it turns amber or red. When they go, they slide off to the side one after another instead of fading. The notices now sit above the alarm card, as on the dashboard.
+- Security page notices (doors open, last movement, who is home, smoke and CO, batteries): an "all is well" notice shows once after each app update, then stays away on later visits; it only comes back when it turns amber or red. When they go, they slide off to the side one after another instead of fading. The notices now sit above the alarm card, as on the dashboard. Who's home is no longer a notice: the Security page's alarm card lists each person on a line of their own (administrators only), and the old line only appears, for administrators, when everyone is out and the alarm is off.
 
 ## 0.33.2
 

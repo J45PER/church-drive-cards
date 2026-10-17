@@ -228,7 +228,7 @@ private fun alarmLines(alarm: EntityState, actor: EntityState? = null): Pair<Str
  * during an entry or exit delay, what to do (or who and when), and a button for each mode the alarm supports.
  */
 @Composable
-fun AlarmCard(alarm: EntityState?, call: CallService, entityId: String = ALARM_ENTITY, actor: EntityState? = null) {
+fun AlarmCard(alarm: EntityState?, call: CallService, entityId: String = ALARM_ENTITY, actor: EntityState? = null, people: List<PersonRow> = emptyList()) {
     val state = alarm?.state
     val tone = toneColors(alarmTone(state))
     val triggered = state == "triggered"
@@ -297,6 +297,15 @@ fun AlarmCard(alarm: EntityState?, call: CallService, entityId: String = ALARM_E
             }
             if (features and 4 != 0) {
                 ModeTile("Night", "mdi:shield-moon", activeKey == "armed_night", tone, content, m, enabled) { send("alarm_arm_night") }
+            }
+        }
+        // Who's home, one line each (administrators only: the page passes nobody for anyone else).
+        people.forEach { p ->
+            val (word, _) = presencePill(p.state, p.place, p.zone)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                HaIcon(if (p.state == "home") "mdi:home" else "mdi:home-export-outline", Icons.Filled.Security, ring, 20.dp)
+                Text(p.name, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = content, maxLines = 1)
+                Text(word, style = MaterialTheme.typography.bodyMedium, color = content.copy(alpha = 0.8f), maxLines = 1)
             }
         }
     }
