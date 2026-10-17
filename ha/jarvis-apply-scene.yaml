@@ -1,0 +1,56 @@
+# Script script.jarvis_apply_scene: Applies a scene from the Church Drive scene library (church_drive.apply_scene) to a room, zone or light. Jarvis's only way to apply scenes. Keep the scene list in sync with the library (including custom scenes from the Scene Builder). A copy of the live script.
+alias: Apply a lighting scene
+description: 'Apply a lighting scene from the Church Drive scene library to a room, zone or single light. Use this for every scene request: colour moods (Lake Placid, Cyber Fidelity, Storybook...) and white presets (Bright, Dimmed, Read, Relax...). Pass the room''s light group (e.g. light.hayleys_bedroom) or one light.'
+fields:
+  room:
+    description: 'The light entity to apply the scene to: a room or zone group such as light.hayleys_bedroom, or a single light.'
+    name: Room, zone or light
+    required: true
+    selector:
+      entity:
+        domain: light
+  scene:
+    description: The scene to apply, exactly as named in the Church Drive scene library.
+    name: Scene
+    required: true
+    selector:
+      select:
+        custom_value: false
+        options:
+        - Bright
+        - Cool bright
+        - Dimmed
+        - Read
+        - Concentrate
+        - Energise
+        - Relax
+        - Rest
+        - Nightlight
+        - Soho
+        - Magneto
+        - Ruby glow
+        - Emerald isle
+        - Dreamy dusk
+        - Lake Placid
+        - Toil and trouble
+        - Spellbound
+        - Storybook
+        - Arise
+        - Shine
+        - Unwind
+        - Pumpkin patch
+        - Phantom
+        - City Blue
+        - Motown
+        - Witching hour
+        - Meriete
+        - Aqua
+        - Cyber Fidelity
+icon: mdi:palette
+mode: restart
+sequence:
+- action: church_drive.apply_scene
+  data:
+    entity_id:
+    - '{{ room }}'
+    scene: '{{ scene }}'

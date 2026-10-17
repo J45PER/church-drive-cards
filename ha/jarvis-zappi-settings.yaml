@@ -1,0 +1,62 @@
+# Script script.jarvis_zappi_settings: Changes the smart charge settings (ready-by time, max price, on/off) by voice. It never starts or stops a charge. A copy of the live script.
+alias: Change car smart charge settings
+description: 'Change the car''s smart charge settings: the time the car should be ready by, the most it will pay per kWh in pence, and whether smart charge is switched on. Give only the settings that should change. This does not start or stop a charge; to charge at the cheap rate use the ''Zappi: charge at the cheap rate'' script.'
+fields:
+  max_price:
+    description: Most to pay per kWh, in pence. Leave out to keep the current value.
+    name: Maximum price
+    required: false
+    selector:
+      number:
+        max: 50
+        min: 1
+        mode: box
+        step: 0.5
+        unit_of_measurement: p
+  ready_by:
+    description: Time the car should be charged by, e.g. 06:00:00. Leave out to keep the current time.
+    name: Ready by
+    required: false
+    selector:
+      time: {}
+  smart_charge:
+    description: true to switch smart charge on, false to switch it off. Leave out to keep it as it is.
+    name: Smart charge on
+    required: false
+    selector:
+      boolean: {}
+icon: mdi:ev-station
+mode: single
+sequence:
+- if:
+  - condition: template
+    value_template: '{{ ready_by is defined and ready_by | string | length > 0 }}'
+  then:
+  - action: input_datetime.set_datetime
+    data:
+      time: '{{ ready_by }}'
+    target:
+      entity_id: input_datetime.zappi_smart_charge_ready_by
+- if:
+  - condition: template
+    value_template: '{{ max_price is defined and max_price is not none }}'
+  then:
+  - action: input_number.set_value
+    data:
+      value: '{{ max_price }}'
+    target:
+      entity_id: input_number.zappi_smart_charge_max_price
+- if:
+  - condition: template
+    value_template: '{{ smart_charge is defined and smart_charge is not none and smart_charge | bool(false) }}'
+  then:
+  - action: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.zappi_smart_charge
+- if:
+  - condition: template
+    value_template: '{{ smart_charge is defined and smart_charge is not none and not (smart_charge | bool(true)) }}'
+  then:
+  - action: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.zappi_smart_charge

@@ -1,0 +1,45 @@
+# Script script.jarvis_vacuum: Gregg the robot vacuum: start, pause, stop and status only. vacuum.gregg itself is NOT exposed to Assist, so these are Jarvis's only controls. A copy of the live script.
+alias: Robot vacuum (Gregg)
+description: 'Control Gregg the robot vacuum: Start (begin cleaning), Pause (pause where he is), Stop (stop cleaning), or Status (what he is doing, battery, and any error). Start/Pause/Stop send a command; his state can take a few seconds to update, so say the command was sent rather than that he is already doing it. This is all Jarvis can do with Gregg.'
+fields:
+  action:
+    description: Start, Pause, Stop or Status.
+    name: Action
+    required: true
+    selector:
+      select:
+        custom_value: false
+        options:
+        - Start
+        - Pause
+        - Stop
+        - Status
+icon: mdi:robot-vacuum
+mode: single
+sequence:
+- choose:
+  - conditions:
+    - condition: template
+      value_template: '{{ action == ''Start'' }}'
+    sequence:
+    - action: vacuum.start
+      target:
+        entity_id: vacuum.gregg
+  - conditions:
+    - condition: template
+      value_template: '{{ action == ''Pause'' }}'
+    sequence:
+    - action: vacuum.pause
+      target:
+        entity_id: vacuum.gregg
+  - conditions:
+    - condition: template
+      value_template: '{{ action == ''Stop'' }}'
+    sequence:
+    - action: vacuum.stop
+      target:
+        entity_id: vacuum.gregg
+- variables:
+    result: '{{ {''action'': action, ''command_sent'': action != ''Status'', ''state_when_checked'': states(''vacuum.gregg''), ''battery_percent'': states(''sensor.gregg_battery''), ''task_status'': states(''sensor.gregg_task_status''), ''error'': states(''sensor.gregg_error_message'') or ''none'', ''last_clean_area_m2'': states(''sensor.gregg_cleaning_area''), ''note'': ''State can take a few seconds to reflect a command that was just sent.''} }}'
+- response_variable: result
+  stop: done
