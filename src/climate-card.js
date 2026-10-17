@@ -876,7 +876,9 @@ export class ClimateCard extends HTMLElement {
     if (current == null) return;
     const step = Number(a.target_temp_step) || 0.5;
     const min = a.min_temp != null ? a.min_temp : 7, max = a.max_temp != null ? a.max_temp : 35;
-    const next = Math.round(Math.min(max, Math.max(min, Number(current) + dir * step)) * 10) / 10;
+    // Snap onto the step grid so an Eco setpoint such as 12.1 doesn't give 12.6, 13.1.
+    const raw = Math.min(max, Math.max(min, Number(current) + dir * step));
+    const next = Math.round((min + Math.round((raw - min) / step) * step) * 10) / 10;
     if (this._demo) {
       this._demo.attributes.temperature = next;
       this._demoSettle();
@@ -886,7 +888,13 @@ export class ClimateCard extends HTMLElement {
     this._render();
     clearTimeout(this._sendTimer);
     clearTimeout(this._clearTimer);
-    this._sendTimer = setTimeout(() => {
+    this._sendTimer = setTimeout(async () => {
+      // The thermostat ignores a new target while Eco is on, so leave Eco first.
+      const cur = this._state();
+      if (cur && cur.attributes.preset_mode === 'eco' && (cur.attributes.preset_modes || []).includes('none')) {
+        await this._set('set_preset_mode', { preset_mode: 'none' });
+        for (let i = 0; i < 20 && this._state()?.attributes.preset_mode === 'eco'; i++) await new Promise((r) => setTimeout(r, 250));
+      }
       this._set('set_temperature', { temperature: next });
       // Keep showing the new target until HA reports it.
       this._clearTimer = setTimeout(() => {

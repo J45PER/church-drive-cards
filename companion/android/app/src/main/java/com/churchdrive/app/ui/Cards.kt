@@ -2,6 +2,7 @@ package com.churchdrive.app.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberUpdatedState
@@ -363,6 +364,13 @@ fun climateWord(c: EntityState?): String = when {
     else -> "Idle"
 }
 
+/** [v] moved onto the thermostat's step grid (anchored at its minimum) and kept within its limits, so targets stay tidy: 18, 18.5, 19. */
+fun snapToStep(v: Double, step: Double, min: Double, max: Double): Double {
+    val s = if (step > 0) step else 0.5
+    val snapped = min + Math.round((v - min) / s) * s
+    return (Math.round(snapped.coerceIn(min, max) * 10) / 10.0)
+}
+
 fun temp(v: Double?): String = if (v == null) "–" else "%.1f".format(v).removeSuffix(".0")
 
 /** A shortcut button on a thermostat card: a heating mode or a preset. */
@@ -395,16 +403,32 @@ fun ClimateCard(
     val enabled = climate?.available == true
     val target = climate?.num("temperature")
     val step = climate?.num("target_temp_step") ?: 0.5
-    // Taps build on what was last shown, so quick presses add up.
+    val eco = climate?.str("preset_mode") == "eco"
+    // Taps build on what was last shown, so quick presses add up; one call goes out once tapping stops.
     var pending by remember(target) { mutableStateOf(target) }
-    fun nudge(by: Double) {
-        val next = ((pending ?: return) + by).coerceIn(climate?.num("min_temp") ?: 5.0, climate?.num("max_temp") ?: 30.0)
-        pending = next
-        call("climate", "set_temperature", id, data("temperature" to next))
-    }
-
+    var sendJob by remember { mutableStateOf<Job?>(null) }
     val scope = rememberCoroutineScope()
     val latest by rememberUpdatedState(climate)
+    fun nudge(by: Double) {
+        val base = pending ?: return
+        val lo = climate?.num("min_temp") ?: 5.0
+        val next = snapToStep(base + by, step, lo, climate?.num("max_temp") ?: 30.0)
+        pending = next
+        sendJob?.cancel()
+        sendJob = scope.launch {
+            delay(600)
+            // The thermostat ignores a new target while Eco is on (its number is the Eco setpoint), so leave Eco first.
+            if (latest?.str("preset_mode") == "eco" && "none" in latest?.list("preset_modes").orEmpty()) {
+                call("climate", "set_preset_mode", id, data("preset_mode" to "none"))
+                var waited = 0
+                while (latest?.str("preset_mode") == "eco" && waited < 5_000) {
+                    delay(250)
+                    waited += 250
+                }
+            }
+            call("climate", "set_temperature", id, data("temperature" to next))
+        }
+    }
     EntityCard(tone.container, tone.onContainer) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
@@ -415,7 +439,7 @@ fun ClimateCard(
                 Text(
                     buildString {
                         append(climateWord(climate))
-                        if (climate != null && climate.state != "off") append(" · target ${temp(pending)}°")
+                        if (climate != null && climate.state != "off") append(if (eco) " · Eco target ${temp(pending)}° (tap to heat)" else " · target ${temp(pending)}°")
                     },
                     style = MaterialTheme.typography.titleMedium,
                 )
@@ -431,7 +455,6 @@ fun ClimateCard(
             outdoor?.let { "Outside ${temp(it)}°" },
         ).joinToString(" · ")
         if (extra.isNotEmpty()) Text(extra, style = MaterialTheme.typography.bodyMedium)
-        val eco = climate?.str("preset_mode") == "eco"
         TileRow(
             (quick ?: DEFAULT_QUICK).map { q ->
                 val selected = when {
