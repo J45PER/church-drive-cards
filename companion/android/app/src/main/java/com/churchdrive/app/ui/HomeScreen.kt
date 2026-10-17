@@ -4,6 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -117,8 +120,24 @@ fun HomeScreen(
             }
         },
     ) {
+    val assistContext = androidx.compose.ui.platform.LocalContext.current
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        // Jarvis is always under the thumb, above the page bar, on every page.
+        floatingActionButton = {
+            Box(
+                Modifier.size(58.dp)
+                    .shadow(6.dp, CircleShape)
+                    .clip(CircleShape)
+                    .background(assistPalette().third)
+                    .clickable(onClickLabel = "Talk to Jarvis") {
+                        assistContext.startActivity(android.content.Intent(assistContext, com.churchdrive.app.AssistActivity::class.java))
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                HaIcon("mdi:microphone", Icons.Filled.Mic, MaterialTheme.colorScheme.background, 28.dp)
+            }
+        },
         topBar = {
             MediumTopAppBar(
                 title = { Text(title) },
@@ -131,17 +150,11 @@ fun HomeScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    val context = androidx.compose.ui.platform.LocalContext.current
                     // Listening for the wake word: a small green microphone, so you can see it is on.
                     if (AssistWakeStatus.waiting) {
                         Box(Modifier.padding(horizontal = 4.dp), contentAlignment = Alignment.Center) {
                             HaIcon("mdi:microphone", Icons.Filled.Mic, assistPalette().third, 20.dp)
                         }
-                    }
-                    IconButton(onClick = {
-                        context.startActivity(android.content.Intent(context, com.churchdrive.app.AssistActivity::class.java))
-                    }) {
-                        Icon(Icons.Filled.Mic, contentDescription = "Talk to the house")
                     }
                     // A round button with the person's initial: easy to see and to hit.
                     Box(
@@ -221,6 +234,8 @@ fun HomeScreen(
                 }
                 DashboardPage(panels[key].orEmpty(), entities, registry, call)
             }
+            // Room to scroll the last card clear of Jarvis's button.
+            Spacer(Modifier.height(72.dp))
         }
     }
     if (openCamera != null && statesLoaded) CameraViewerFor(openCamera, entities, registry, call, onCameraClosed, answer = openCameraAnswer)
