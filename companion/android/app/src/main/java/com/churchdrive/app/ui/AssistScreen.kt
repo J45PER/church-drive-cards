@@ -398,16 +398,16 @@ private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String)
                         )
                     }
                 } else {
+                    // The microphone is at the bottom right, where Jarvis's button is on every page and where it is once you are chatting.
                     Row(
-                        modifier = Modifier.fillMaxWidth().zIndex(-1f).padding(horizontal = 20.dp),
+                        modifier = Modifier.fillMaxWidth().zIndex(-1f),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         RoundIcon("mdi:keyboard-outline", "Type instead", false, { typing = true }, size = 52.dp)
                         RoundIcon(
                             if (model.state == AssistState.Listening) "mdi:stop" else "mdi:microphone", "Talk",
-                            model.state != AssistState.Idle && model.state != AssistState.Waiting, { model.listen() }, size = 76.dp,
+                            model.state != AssistState.Idle && model.state != AssistState.Waiting, { model.listen() }, size = 58.dp,
                         )
-                        Spacer(Modifier.size(52.dp))
                     }
                 }
             }
