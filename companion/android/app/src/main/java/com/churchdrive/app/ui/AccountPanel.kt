@@ -361,6 +361,10 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                     })
                 },
             )
+            if (AssistWakeStatus.timing.isNotEmpty()) PanelRow(
+                Icons.Outlined.Mic, "How long Jarvis took",
+                "Last answer: ${AssistWakeStatus.timing}. Thinking is the house working out the reply; voice made is the spoken version being prepared.",
+            )
             PanelRow(
                 Icons.Outlined.Mic, "Open Jarvis ready to type",
                 if (AssistStartSetting.typing) "Jarvis opens quietly, not listening, with the typing box ready. Tap the microphone to talk."

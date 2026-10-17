@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.34.3
+
+- Account > Settings shows how long Jarvis took over his last answer, step by step: hearing you, thinking, making the voice and starting to speak. It is for finding out which part is slow.
+
 ## 0.34.2
 
 - Jarvis no longer closes after asking "anything else?": he listens as soon as he finishes speaking (also when the house says the conversation continues), and if the phone's listener gives up before you have started to answer, he listens once more before closing. Only "no thanks", "that's it" and the like end the conversation.

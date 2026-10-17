@@ -7,6 +7,7 @@ import android.media.MediaPlayer
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -68,6 +69,13 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     private var subscription = -1
     private var answered = false
     private var said = ""
+    private var times = AssistTimes()
+
+    private fun mark(update: (AssistTimes) -> AssistTimes) {
+        if (speakingIntro) return // the introduction isn't an answer to time
+        times = update(times)
+        AssistWakeStatus.timing = formatTimings(times)
+    }
 
     /** Keep the voice live: after each spoken answer, listen again for a follow-up (set while the assistant is on screen). */
     var followUp = false
@@ -167,6 +175,8 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
         messages += AssistMessage(true, sentence)
         said = sentence
         closing = isDismissal(sentence)
+        times = AssistTimes()
+        mark { it.copy(start = SystemClock.elapsedRealtime()) }
         autoRetries = 0
         partial = ""
         notice = ""
@@ -306,10 +316,13 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
                 onWake?.invoke()
             }
             AssistEvent.SpeechEnded -> {
+                times = AssistTimes()
+                mark { it.copy(start = SystemClock.elapsedRealtime()) }
                 endAudio()
                 if (state == AssistState.Listening) state = AssistState.Thinking
             }
             is AssistEvent.Heard -> {
+                mark { it.copy(heard = SystemClock.elapsedRealtime()) }
                 endAudio()
                 if (e.text.isNotBlank()) {
                     said = e.text
@@ -320,13 +333,17 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
             }
             is AssistEvent.Answer -> {
                 note("answer")
+                mark { it.copy(answer = SystemClock.elapsedRealtime()) }
                 if (e.conversationId != null) conversationId = e.conversationId
                 answered = true
                 continueAfter = e.continueConversation
                 if (e.text.isNotBlank()) messages += AssistMessage(false, forDisplay(e.text))
                 if (isNotUnderstood(e.text)) notUnderstood = said
             }
-            is AssistEvent.Audio -> if (AssistVoiceSetting.on) play(assistAudioUrl(base, e.path))
+            is AssistEvent.Audio -> if (AssistVoiceSetting.on) {
+                mark { it.copy(audio = SystemClock.elapsedRealtime()) }
+                play(assistAudioUrl(base, e.path))
+            }
             is AssistEvent.Failed -> onFailed(e)
             AssistEvent.Done -> {
                 stopVoiceRun()
@@ -369,7 +386,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
                 AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANT).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build(),
             )
             p.setDataSource(url)
-            p.setOnPreparedListener { it.start() }
+            p.setOnPreparedListener { it.start(); mark { t -> t.copy(playing = SystemClock.elapsedRealtime()) } }
             p.setOnCompletionListener { finishedSpeaking(p) }
             p.setOnErrorListener { _, _, _ -> finishedSpeaking(p); true }
             state = AssistState.Speaking
