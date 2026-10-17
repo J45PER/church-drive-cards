@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.33.2
+
+- Home to-do highlights: each task's text now takes its colour too (shopping indigo, overdue red), and a steps task is teal so it no longer looks like a shopping list. The steps icon on the To-do page is teal as well.
+
 ## 0.33.1
 
 - Home page to-do highlights: the button on the right ("+N more" or "To-do") now fills the full height of the task rows, so there is no blank space under it when three tasks show. Shopping and steps tasks use the shopping indigo instead of purple (overdue ones stay red).
