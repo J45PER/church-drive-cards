@@ -362,6 +362,12 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                 },
             )
             PanelRow(
+                Icons.Outlined.Mic, "Open Jarvis ready to type",
+                if (AssistStartSetting.typing) "Jarvis opens with the keyboard up. Tap the microphone to talk instead."
+                else "Jarvis starts listening as soon as he opens. Turn this on to open with the keyboard instead.",
+                trailing = { Switch(checked = AssistStartSetting.typing, onCheckedChange = { on -> AssistStartSetting.set(context, on) }) },
+            )
+            PanelRow(
                 Icons.Outlined.LocationOn, "Share my location",
                 "So the house knows when you're home, at work or out. Reported when you move, with no notice on your screen.",
                 trailing = {
