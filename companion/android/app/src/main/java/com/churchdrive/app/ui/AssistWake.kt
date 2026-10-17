@@ -233,7 +233,7 @@ fun JarvisOverlay(onSettings: () -> Unit = {}) {
         val before = window?.attributes?.softInputMode
         @Suppress("DEPRECATION")
         window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
-        onDispose { if (before != null) window.setSoftInputMode(before) }
+        onDispose { if (before != null) window?.setSoftInputMode(before) }
     }
     // Taps on him stay on him, not on the page underneath.
     androidx.compose.foundation.layout.Box(
