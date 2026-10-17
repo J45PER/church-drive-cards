@@ -113,6 +113,8 @@ fun introDue(introducedEver: Boolean, told: Set<String>?, log: List<AssistFeatur
  * ever do they get the full introduction. Features also make up that introduction's "what I can do".
  */
 val ASSIST_FEATURES = listOf(
+    AssistFeature("mdi:timer-outline", "How long he took", "", id = "response-timing", detail = "Settings shows how long his last answer took, step by step, so a slow part can be found.", kind = JarvisChange.Change),
+    AssistFeature("mdi:timer-sand", "Quicker, and stays with you", "", id = "quicker-follow-up", detail = "Jarvis answers sooner, and when he asks \"anything else?\" he keeps listening instead of closing.", kind = JarvisChange.Fix),
     AssistFeature("mdi:chat-plus-outline", "New chat, Voice and Settings", "", id = "jarvis-bar", detail = "Jarvis's bottom bar has five buttons: Close, New chat, Type in the middle, Voice on or off, and Settings.", kind = JarvisChange.Change),
     AssistFeature("mdi:keyboard-outline", "Type or talk", "", id = "type-or-talk", detail = "Open Jarvis with his logo button on any page, ready to type or ready to listen (your choice in Settings)."),
     AssistFeature("mdi:microphone-message", "Hands-free with the wake word", "Hey Jarvis, who is home?", id = "wake-word"),
@@ -173,6 +175,29 @@ fun preferredWakeWord(result: Any?): String? {
         if (p.optString("id") == preferred) return p.optString("wake_word_id").takeIf { it.isNotBlank() && !p.isNull("wake_word_id") }
     }
     return null
+}
+
+/** When (in milliseconds on one clock) each step of the last answer happened; null for a step that didn't happen. */
+data class AssistTimes(
+    val start: Long? = null, // the person stopped speaking, or the sentence was sent
+    val heard: Long? = null, // the house had the words
+    val answer: Long? = null, // the written answer was ready
+    val audio: Long? = null, // the spoken answer was ready
+    val playing: Long? = null, // the voice began
+)
+
+/** The Settings line for how long the last answer took, step by step ("Heard 0.4s, thinking 1.9s, voice 0.6s, starts 0.2s: 3.1s in all"). */
+fun formatTimings(t: AssistTimes): String {
+    fun secs(ms: Long) = "%.1fs".format(java.util.Locale.ROOT, ms / 1000.0)
+    val parts = mutableListOf<String>()
+    fun step(label: String, from: Long?, to: Long?) { if (from != null && to != null && to >= from) parts += "$label ${secs(to - from)}" }
+    step("heard", t.start, t.heard)
+    step("thinking", t.heard ?: t.start, t.answer)
+    step("voice made", t.answer, t.audio)
+    step("voice starts", t.audio, t.playing)
+    val first = t.start ?: return parts.joinToString(", ")
+    val last = t.playing ?: t.answer ?: return parts.joinToString(", ")
+    return parts.joinToString(", ") + if (last >= first) ": ${secs(last - first)} in all" else ""
 }
 
 /** What the screen says for each state. */

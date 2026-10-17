@@ -39,6 +39,8 @@ object AssistWakeStatus {
     var problem by mutableStateOf("")
     /** The last few things the voice pipeline did, so a problem can be seen (Settings shows them). */
     val log = androidx.compose.runtime.mutableStateListOf<String>()
+    /** How long the last answer took, step by step (Settings shows it), or empty before the first. */
+    var timing by mutableStateOf("")
 }
 
 /** Whether the person has switched on "listen for the wake word while the app is open" (Account > Settings). */

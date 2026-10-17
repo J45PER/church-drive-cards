@@ -7,6 +7,7 @@ import android.media.MediaPlayer
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -26,8 +27,8 @@ import org.json.JSONObject
  * Either way anything Home Assistant can do by voice works (lights, heating, the alarm, lists, your own automations) and the answer
  * is shown and spoken in the voice of the house's pipeline. Must be made, used and released on the main thread.
  */
-/** How long the house waits in silence before it decides you have finished speaking (its own default is 0.7 s). */
-private const val SILENCE_SECONDS = 1.7
+/** How long the house waits in silence before it decides you have finished speaking (its own default is 0.7 s; every second here is a second added to every answer). */
+private const val SILENCE_SECONDS = 1.2
 
 class AssistModel(private val context: Context, private val api: HaApi, private val base: String) {
     var state by mutableStateOf(AssistState.Idle)
@@ -68,6 +69,13 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     private var subscription = -1
     private var answered = false
     private var said = ""
+    private var times = AssistTimes()
+
+    private fun mark(update: (AssistTimes) -> AssistTimes) {
+        if (speakingIntro) return // the introduction isn't an answer to time
+        times = update(times)
+        AssistWakeStatus.timing = formatTimings(times)
+    }
 
     /** Keep the voice live: after each spoken answer, listen again for a follow-up (set while the assistant is on screen). */
     var followUp = false
@@ -81,6 +89,9 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     var closeRequested by mutableStateOf(false)
         private set
     private var autoListening = false
+
+    /** Quiet follow-up listens already retried for this answer: he asked "anything else?", so give the person a second go before closing. */
+    private var autoRetries = 0
 
     // The wake word loop.
     private var wakeEnabled = false
@@ -144,8 +155,8 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
             .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-GB")
             // Give the phone's recogniser more patience before it decides you have finished (it treats these as hints).
-            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2_200L)
-            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1_800L)
+            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1_400L)
+            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1_200L)
             .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 1_500L)
         partial = ""
         notice = ""
@@ -164,6 +175,9 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
         messages += AssistMessage(true, sentence)
         said = sentence
         closing = isDismissal(sentence)
+        times = AssistTimes()
+        mark { it.copy(start = SystemClock.elapsedRealtime()) }
+        autoRetries = 0
         partial = ""
         notice = ""
         notUnderstood = null
@@ -302,10 +316,13 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
                 onWake?.invoke()
             }
             AssistEvent.SpeechEnded -> {
+                times = AssistTimes()
+                mark { it.copy(start = SystemClock.elapsedRealtime()) }
                 endAudio()
                 if (state == AssistState.Listening) state = AssistState.Thinking
             }
             is AssistEvent.Heard -> {
+                mark { it.copy(heard = SystemClock.elapsedRealtime()) }
                 endAudio()
                 if (e.text.isNotBlank()) {
                     said = e.text
@@ -316,13 +333,17 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
             }
             is AssistEvent.Answer -> {
                 note("answer")
+                mark { it.copy(answer = SystemClock.elapsedRealtime()) }
                 if (e.conversationId != null) conversationId = e.conversationId
                 answered = true
                 continueAfter = e.continueConversation
                 if (e.text.isNotBlank()) messages += AssistMessage(false, forDisplay(e.text))
                 if (isNotUnderstood(e.text)) notUnderstood = said
             }
-            is AssistEvent.Audio -> if (AssistVoiceSetting.on) play(assistAudioUrl(base, e.path))
+            is AssistEvent.Audio -> if (AssistVoiceSetting.on) {
+                mark { it.copy(audio = SystemClock.elapsedRealtime()) }
+                play(assistAudioUrl(base, e.path))
+            }
             is AssistEvent.Failed -> onFailed(e)
             AssistEvent.Done -> {
                 stopVoiceRun()
@@ -365,7 +386,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
                 AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANT).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build(),
             )
             p.setDataSource(url)
-            p.setOnPreparedListener { it.start() }
+            p.setOnPreparedListener { it.start(); mark { t -> t.copy(playing = SystemClock.elapsedRealtime()) } }
             p.setOnCompletionListener { finishedSpeaking(p) }
             p.setOnErrorListener { _, _, _ -> finishedSpeaking(p); true }
             state = AssistState.Speaking
@@ -382,7 +403,11 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
             resumeWake()
             // Keep the voice live: after an answer (not the introduction), listen again for a follow-up.
             if (closing) dismiss()
-            else if (followUp && !speakingIntro) main.postDelayed({ if (followUp && state == AssistState.Idle && !closing) listen(auto = true) }, 350)
+            else if ((followUp || continueAfter) && !speakingIntro) {
+                // He asked something ("anything else?"): listen straight away, even if the screen was closed meanwhile.
+                autoRetries = 0
+                main.postDelayed({ if ((followUp || continueAfter) && state == AssistState.Idle && !closing) listen(auto = true) }, 150)
+            }
         }
         runCatching { p.release() }
     }
@@ -443,6 +468,15 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
         override fun onError(error: Int) {
             level = 0f
             state = AssistState.Idle
+            // The phone's recogniser often gives up before the person has started to answer, or is still busy letting go of the last
+            // listen: that isn't the end of the conversation. Listen once more before closing.
+            val quiet = error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT ||
+                error == SpeechRecognizer.ERROR_CLIENT || error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY
+            if (autoListening && quiet && autoRetries < 1 && followUp && !closing) {
+                autoRetries++
+                main.postDelayed({ if (followUp && state == AssistState.Idle && !closing) listen(auto = true) }, 250)
+                return
+            }
             resumeWake()
             // Silence after a follow-up we started ourselves isn't a problem: the conversation is simply over.
             if (autoListening && (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT)) return

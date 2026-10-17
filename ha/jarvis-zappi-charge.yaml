@@ -1,0 +1,87 @@
+# Script script.jarvis_zappi_charge: Sets the Zappi charge mode. Fast at a non-cheap rate asks for confirmation first, enforced here: the question is stamped in input_datetime.zappi_fast_charge_confirm_asked, and a confirmation only counts 5 to 300 seconds later, so Jarvis cannot confirm for the user in the same breath. select.zappi_charge_mode itself is not exposed to Assist. A copy of the live script.
+alias: Set the car charger mode
+description: 'Set how the car charger behaves: Fast (charge now from the grid at the current rate), Eco or Eco+ (use solar and green power), or Stopped (stop charging). To charge now, use mode Fast. If the current electricity rate is not a cheap one, Fast does NOT start: the result is status needs_confirmation with the current and cheapest rates. You must then tell the user the current price and the cheaper rate, ask whether they still want to charge now, and WAIT for their answer. Only after they answer yes, call this again with mode Fast and confirm_expensive true. A confirmation sent without waiting for the user''s reply is rejected. Check ''status'' in the result and tell the user honestly what happened.'
+fields:
+  confirm_expensive:
+    description: Set true ONLY after you have told the user the current rate, asked them, and they have answered yes in a new message. Leave out otherwise.
+    name: User has agreed to charge at a non-cheap rate
+    required: false
+    selector:
+      boolean: {}
+  mode:
+    description: Fast = charge now from the grid. Eco = solar-led charging. Eco+ = green-only charging. Stopped = stop charging.
+    name: Mode
+    required: true
+    selector:
+      select:
+        custom_value: false
+        options:
+        - Fast
+        - Eco
+        - Eco+
+        - Stopped
+icon: mdi:ev-station
+mode: single
+sequence:
+- action: script.jarvis_zappi_info
+  response_variable: info
+- variables:
+    ask_age: '{{ now().timestamp() - (state_attr(''input_datetime.zappi_fast_charge_confirm_asked'', ''timestamp'') | float(0)) }}'
+    confirm_attempt: '{{ confirm_expensive | default(false) | bool(false) }}'
+- variables:
+    confirmed_ok: '{{ confirm_attempt and ask_age >= 5 and ask_age <= 300 }}'
+- choose:
+  - conditions:
+    - condition: template
+      value_template: '{{ mode == ''Fast'' and not info.car_connected }}'
+    sequence:
+    - variables:
+        result:
+          charge_mode: '{{ info.charge_mode }}'
+          reason: No car is plugged in, so Fast was not set.
+          status: not_done
+    - response_variable: result
+      stop: no car
+  - conditions:
+    - condition: template
+      value_template: '{{ mode == ''Fast'' and not info.rate_counts_as_cheap_now and not confirmed_ok }}'
+    sequence:
+    - if:
+      - condition: template
+        value_template: '{{ not confirm_attempt }}'
+      then:
+      - action: input_datetime.set_datetime
+        data:
+          datetime: '{{ now().strftime(''%Y-%m-%d %H:%M:%S'') }}'
+        target:
+          entity_id: input_datetime.zappi_fast_charge_confirm_asked
+    - variables:
+        result:
+          charge_mode: '{{ info.charge_mode }}'
+          cheapest_rate_pence_per_kwh: '{{ info.cheapest_rate_pence_per_kwh }}'
+          cheapest_rate_starts: '{{ info.cheapest_rate_starts }}'
+          current_rate_pence_per_kwh: '{{ info.current_rate_pence_per_kwh }}'
+          message: '{{ ''Nothing has been changed. A confirmation was sent before the user had answered, or too late. Ask the user now and wait for their reply.'' if confirm_attempt else ''Nothing has been changed yet. The current rate is not a cheap one. Tell the user the current rate, the cheapest rate and when it starts, ask if they still want to charge now, and wait for their answer. Only if they say yes, call this again with mode Fast and confirm_expensive true.'' }}'
+          status: needs_confirmation
+    - response_variable: result
+      stop: needs confirmation
+  default:
+  - action: select.select_option
+    data:
+      option: '{{ mode }}'
+    target:
+      entity_id: select.zappi_charge_mode
+  - action: input_datetime.set_datetime
+    data:
+      datetime: '2000-01-01 00:00:00'
+    target:
+      entity_id: input_datetime.zappi_fast_charge_confirm_asked
+  - variables:
+      result:
+        charge_mode: '{{ mode }}'
+        current_rate_pence_per_kwh: '{{ info.current_rate_pence_per_kwh }}'
+        note: The charger mode was changed. When someone picks a mode themselves, smart charge steps aside for this plug-in.
+        rate_was_cheap: '{{ info.rate_counts_as_cheap_now }}'
+        status: done
+  - response_variable: result
+    stop: done

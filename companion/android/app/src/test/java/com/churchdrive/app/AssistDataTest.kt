@@ -1,6 +1,8 @@
 package com.churchdrive.app
 
 import com.churchdrive.app.ui.AssistEvent
+import com.churchdrive.app.ui.AssistTimes
+import com.churchdrive.app.ui.formatTimings
 import com.churchdrive.app.ui.assistAudioUrl
 import com.churchdrive.app.ui.forDisplay
 import com.churchdrive.app.ui.forSpeech
@@ -178,5 +180,13 @@ class AssistDataTest {
         assertEquals("Diane's phone", forDisplay("Die-Ann's phone"))
         assertEquals("Diana is not Diane", forDisplay(forSpeech("Diana is not Diane")))
         assertEquals("Hayley is out", forDisplay("Hayley is out"))
+    }
+
+    @Test
+    fun theTimingLineSaysHowLongEachStepTook() {
+        val t = AssistTimes(start = 1_000, heard = 1_400, answer = 3_300, audio = 3_900, playing = 4_100)
+        assertEquals("heard 0.4s, thinking 1.9s, voice made 0.6s, voice starts 0.2s: 3.1s in all", formatTimings(t))
+        assertEquals("thinking 1.5s: 1.5s in all", formatTimings(AssistTimes(start = 0, answer = 1_500)))
+        assertEquals("", formatTimings(AssistTimes()))
     }
 }

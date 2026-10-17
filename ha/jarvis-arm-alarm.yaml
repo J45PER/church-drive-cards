@@ -1,0 +1,29 @@
+# Script script.jarvis_arm_alarm: Arm-only: Jarvis can arm the alarm but there is deliberately no way to disarm by voice. The alarm panel itself is NOT exposed to Assist; status comes from sensor.alarm_status. A copy of the live script.
+alias: Arm the alarm
+description: 'Arm the Church Drive alarm, in Home mode (people staying in) or Away mode (everyone out). This can only arm: there is deliberately no way to disarm by voice. To find out whether the alarm is set, read the Alarm status sensor instead of running this.'
+fields:
+  mode:
+    description: Home if people are staying in, Away if everyone is leaving.
+    name: Mode
+    required: true
+    selector:
+      select:
+        custom_value: false
+        options:
+        - Home
+        - Away
+icon: mdi:shield-lock
+mode: single
+sequence:
+- choose:
+  - conditions:
+    - condition: template
+      value_template: '{{ mode == ''Away'' }}'
+    sequence:
+    - action: alarm_control_panel.alarm_arm_away
+      target:
+        entity_id: alarm_control_panel.church_drive_alarm
+  default:
+  - action: alarm_control_panel.alarm_arm_home
+    target:
+      entity_id: alarm_control_panel.church_drive_alarm
