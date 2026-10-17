@@ -4,14 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
-<<<<<<< HEAD
 ## 0.34.0
 
 - Thermostat target no longer jumps back (to 12.1, say). The Nest ignores a new target while Eco is on, so a tap on − or + now takes the thermostat out of Eco first, then sets the target. While Eco is on the card says "Eco target … (tap to heat)".
 - Targets land on the thermostat's steps (12, 12.5, 13) instead of drifting from an odd starting value (12.1, 12.6, 13.1), and a run of quick taps sends one change when you stop tapping.
 
-=======
->>>>>>> origin/main
 ## 0.33.9
 
 - The glow at the bottom of Jarvis fades out completely at its top, so it has no hard edge there (clipping it to stop it covering the bar had left one).
