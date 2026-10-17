@@ -4,6 +4,12 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.33.8
+
+- Jarvis's round button has his avatar back as its background (the moving orb, following what he is doing) with a dark grey ring and a white logo or microphone over it.
+- The glow at the bottom of Jarvis no longer spills over the bottom bar, and flickers much less: it stays on a moment longer between the voice steps and follows the voice more smoothly (and a little softer).
+- The keyboard no longer counts twice in Jarvis: the phone was panning the whole window up to show the typing box as well as Jarvis moving it, so the page showed between his box and the keyboard (and the top of him was cut off). While he is open the window no longer pans.
+
 ## 0.33.7
 
 - Fixes 0.33.6, where the bottom bar was drawn at the top of the screen and the page was empty: the bar's row now has a fixed height instead of filling all the room it is offered.
