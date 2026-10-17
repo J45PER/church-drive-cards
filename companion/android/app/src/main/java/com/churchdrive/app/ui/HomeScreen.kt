@@ -123,20 +123,11 @@ fun HomeScreen(
     val assistContext = androidx.compose.ui.platform.LocalContext.current
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        // Jarvis is always under the thumb, above the page bar, on every page.
+        // Jarvis is always under the thumb, above the page bar, on every page: his logo opens him (ready to type or to talk, as chosen in Settings).
         floatingActionButton = {
-            Box(
-                Modifier.size(58.dp)
-                    .shadow(6.dp, CircleShape)
-                    .clip(CircleShape)
-                    .background(assistPalette().third)
-                    .clickable(onClickLabel = "Talk to Jarvis") {
-                        assistContext.startActivity(android.content.Intent(assistContext, com.churchdrive.app.AssistActivity::class.java))
-                    },
-                contentAlignment = Alignment.Center,
-            ) {
-                HaIcon("mdi:microphone", Icons.Filled.Mic, MaterialTheme.colorScheme.background, 28.dp)
-            }
+            JarvisRound("Open Jarvis", MaterialTheme.colorScheme.surfaceContainerHigh, {
+                assistContext.startActivity(android.content.Intent(assistContext, com.churchdrive.app.AssistActivity::class.java))
+            }) { AssistOrb(AssistState.Idle, 0f, 36.dp) }
         },
         topBar = {
             MediumTopAppBar(

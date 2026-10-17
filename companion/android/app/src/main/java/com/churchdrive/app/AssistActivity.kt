@@ -22,6 +22,7 @@ import com.churchdrive.app.ha.Refresh
 import com.churchdrive.app.ui.AssistIntroStore
 import com.churchdrive.app.ui.AssistModel
 import com.churchdrive.app.ui.AssistPanel
+import com.churchdrive.app.ui.AssistStartSetting
 import com.churchdrive.app.ui.AssistWakeSetting
 import com.churchdrive.app.ui.hasMicrophone
 import com.churchdrive.app.ui.ChurchDriveTheme
@@ -97,12 +98,13 @@ class AssistActivity : ComponentActivity() {
                     intro = intro?.kind, introFeatures = intro?.features.orEmpty(), person = session.personName.orEmpty(),
                     onIntroDone = { m.stopSpeaking(); intro = null },
                     onIntroTry = { m.stopSpeaking(); intro = null; talk() },
+                    startTyping = AssistStartSetting.typing,
                     wakeOn = AssistWakeSetting.enabled,
                     onEnableWake = { if (hasMicrophone(this)) AssistWakeSetting.set(this, true) else { enableWakeAfterPermission = true; askMicrophone.launch(Manifest.permission.RECORD_AUDIO) } },
                 )
             }
         }
-        if (intro == null) talk()
+        if (intro == null && !AssistStartSetting.typing) talk()
     }
 
     /** Listens, asking for the microphone first if it hasn't been allowed yet. */
@@ -128,7 +130,7 @@ class AssistActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        if (this.intro == null) talk()
+        if (this.intro == null && !AssistStartSetting.typing) talk()
     }
 
     override fun finish() {

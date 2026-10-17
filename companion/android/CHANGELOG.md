@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.33.4
+
+- Jarvis: the round button at the bottom right of every page now shows his logo, and opens him ready to talk or ready to type: Settings has "Open Jarvis ready to type" next to the wake word switch. Inside Jarvis the bottom bar stays, with his own buttons (Close and Type), and the microphone is the same round button in the same place. Jarvis log: "Type or talk".
+
 ## 0.33.3
 
 - Jarvis's microphone is now a round button at the bottom right of every page, just above the page bar, instead of a small icon in the top corner. The green "listening for the wake word" dot stays at the top. Inside Jarvis, the microphone is now at the bottom right too (with the keyboard button on the left), so opening him and talking are the same thumb spot.

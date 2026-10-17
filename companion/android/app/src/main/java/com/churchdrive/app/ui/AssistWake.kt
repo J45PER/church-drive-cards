@@ -37,11 +37,28 @@ object AssistWakeSetting {
     fun load(context: Context) {
         enabled = context.getSharedPreferences(AssistActivity.PREFS, Context.MODE_PRIVATE).getBoolean(KEY, false)
         AssistColourSetting.load(context)
+        AssistStartSetting.load(context)
     }
 
     fun set(context: Context, on: Boolean) {
         context.getSharedPreferences(AssistActivity.PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY, on).apply()
         enabled = on
+    }
+}
+
+/** Whether Jarvis opens ready to type (the keyboard up) instead of ready to listen (Account > Settings). */
+object AssistStartSetting {
+    private const val KEY = "start_typing"
+    var typing by mutableStateOf(false)
+        private set
+
+    fun load(context: Context) {
+        typing = context.getSharedPreferences(AssistActivity.PREFS, Context.MODE_PRIVATE).getBoolean(KEY, false)
+    }
+
+    fun set(context: Context, on: Boolean) {
+        context.getSharedPreferences(AssistActivity.PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY, on).apply()
+        typing = on
     }
 }
 
