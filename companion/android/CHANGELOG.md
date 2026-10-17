@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.33.7
+
+- Fixes 0.33.6, where the bottom bar was drawn at the top of the screen and the page was empty: the bar's row now has a fixed height instead of filling all the room it is offered.
+
 ## 0.33.6
 
 - Jarvis and the bottom bar: the app's own bar now changes into his five buttons while he is open (and back), instead of a second bar appearing. The keyboard goes over the bar, as everywhere else, and the typing box (with his round button) sits just above the keyboard instead of leaving the page showing in between.

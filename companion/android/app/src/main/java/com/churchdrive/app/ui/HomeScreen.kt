@@ -166,7 +166,8 @@ fun HomeScreen(
                 val jarvis = LocalJarvis.current
                 val jarvisModel = jarvis?.model
                 androidx.compose.animation.Crossfade(jarvis?.open == true && jarvisModel != null, Modifier.weight(1f), label = "bar") { jarvisOpen ->
-                    Row(Modifier.fillMaxSize()) {
+                    // A fixed height: the bar is laid out with room to grow, and a row that fills it would fill the whole screen.
+                    Row(Modifier.fillMaxWidth().height(80.dp)) {
                         if (jarvisOpen && jarvis != null && jarvisModel != null) {
                             JarvisBarItems(jarvisModel, jarvis.ui, onClose = jarvis.close, onSettings = { jarvis.close(); panel = "settings" })
                         } else {
