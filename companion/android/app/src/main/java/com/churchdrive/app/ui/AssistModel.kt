@@ -26,8 +26,8 @@ import org.json.JSONObject
  * Either way anything Home Assistant can do by voice works (lights, heating, the alarm, lists, your own automations) and the answer
  * is shown and spoken in the voice of the house's pipeline. Must be made, used and released on the main thread.
  */
-/** How long the house waits in silence before it decides you have finished speaking (its own default is 0.7 s). */
-private const val SILENCE_SECONDS = 1.7
+/** How long the house waits in silence before it decides you have finished speaking (its own default is 0.7 s; every second here is a second added to every answer). */
+private const val SILENCE_SECONDS = 1.2
 
 class AssistModel(private val context: Context, private val api: HaApi, private val base: String) {
     var state by mutableStateOf(AssistState.Idle)
@@ -81,6 +81,9 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     var closeRequested by mutableStateOf(false)
         private set
     private var autoListening = false
+
+    /** Quiet follow-up listens already retried for this answer: he asked "anything else?", so give the person a second go before closing. */
+    private var autoRetries = 0
 
     // The wake word loop.
     private var wakeEnabled = false
@@ -144,8 +147,8 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
             .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-GB")
             // Give the phone's recogniser more patience before it decides you have finished (it treats these as hints).
-            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2_200L)
-            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1_800L)
+            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1_400L)
+            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1_200L)
             .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 1_500L)
         partial = ""
         notice = ""
@@ -164,6 +167,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
         messages += AssistMessage(true, sentence)
         said = sentence
         closing = isDismissal(sentence)
+        autoRetries = 0
         partial = ""
         notice = ""
         notUnderstood = null
@@ -382,7 +386,11 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
             resumeWake()
             // Keep the voice live: after an answer (not the introduction), listen again for a follow-up.
             if (closing) dismiss()
-            else if (followUp && !speakingIntro) main.postDelayed({ if (followUp && state == AssistState.Idle && !closing) listen(auto = true) }, 350)
+            else if ((followUp || continueAfter) && !speakingIntro) {
+                // He asked something ("anything else?"): listen straight away, even if the screen was closed meanwhile.
+                autoRetries = 0
+                main.postDelayed({ if ((followUp || continueAfter) && state == AssistState.Idle && !closing) listen(auto = true) }, 150)
+            }
         }
         runCatching { p.release() }
     }
@@ -443,6 +451,15 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
         override fun onError(error: Int) {
             level = 0f
             state = AssistState.Idle
+            // The phone's recogniser often gives up before the person has started to answer, or is still busy letting go of the last
+            // listen: that isn't the end of the conversation. Listen once more before closing.
+            val quiet = error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT ||
+                error == SpeechRecognizer.ERROR_CLIENT || error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY
+            if (autoListening && quiet && autoRetries < 1 && followUp && !closing) {
+                autoRetries++
+                main.postDelayed({ if (followUp && state == AssistState.Idle && !closing) listen(auto = true) }, 250)
+                return
+            }
             resumeWake()
             // Silence after a follow-up we started ourselves isn't a problem: the conversation is simply over.
             if (autoListening && (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT)) return

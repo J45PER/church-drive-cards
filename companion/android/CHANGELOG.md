@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.34.2
+
+- Jarvis no longer closes after asking "anything else?": he listens as soon as he finishes speaking (also when the house says the conversation continues), and if the phone's listener gives up before you have started to answer, he listens once more before closing. Only "no thanks", "that's it" and the like end the conversation.
+- Jarvis answers sooner: he waits 1.2 seconds of quiet (was 1.7) before deciding you have finished, the phone's listener waits less too, and the follow-up listen starts 0.2 seconds after he stops speaking.
+
 ## 0.34.1
 
 - Jarvis's round button: the ground behind his avatar is the same dark grey as the ring round it, and the avatar is a little smaller so the ring no longer clips its edge.
