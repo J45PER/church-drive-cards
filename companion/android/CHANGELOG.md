@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.33.6
+
+- Jarvis and the bottom bar: the app's own bar now changes into his five buttons while he is open (and back), instead of a second bar appearing. The keyboard goes over the bar, as everywhere else, and the typing box (with his round button) sits just above the keyboard instead of leaving the page showing in between.
+
 ## 0.33.5
 
 - Jarvis's bottom bar has five buttons, Type in the middle: Close, New chat (starts a fresh conversation), Type, Voice (silences his spoken answers, so he only writes them; remembered) and Settings (takes you to the app's settings). Jarvis log: "New chat, Voice and Settings".

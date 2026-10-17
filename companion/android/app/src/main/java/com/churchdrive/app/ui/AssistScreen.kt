@@ -22,6 +22,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -56,6 +60,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -126,11 +131,14 @@ fun AssistPanel(
     onEnableWake: () -> Unit = {},
     /** Open with the keyboard up instead of listening (the person's choice in Settings). */
     startTyping: Boolean = false,
+    /** The typing box's state when the app's bar drives it; Jarvis on his own keeps his own. */
+    typingState: JarvisTyping? = null,
     /** The bar's Settings button: take the person to Jarvis's settings. */
     onSettings: () -> Unit = {},
     /** Shown inside the app (over the page, under the app's round Jarvis button) instead of as a window of its own. */
     embedded: Boolean = false,
 ) {
+    val ui = typingState ?: remember { JarvisTyping(startTyping) }
     var shown by remember { mutableStateOf(false) }
     var leaving by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { shown = true }
@@ -153,7 +161,7 @@ fun AssistPanel(
                     kind = intro, features = introFeatures, person = person, assistant = model.name, wakeWord = model.wakeWord, model = model,
                     onTry = onIntroTry, onSkip = onIntroDone, wakeOn = wakeOn, onEnableWake = onEnableWake,
                 )
-            } else FullAssist(model, close, onTask, startTyping, embedded, onSettings)
+            } else FullAssist(model, close, onTask, ui, embedded, onSettings)
         }
     }
 }
@@ -362,125 +370,156 @@ fun JarvisLogo(color: Color, size: androidx.compose.ui.unit.Dp = 30.dp) {
     }
 }
 
+/** What the typing box is doing: shared, so the app's bottom bar (which Jarvis's buttons borrow while he is open) can drive it. */
+class JarvisTyping(start: Boolean = false) {
+    var typing by mutableStateOf(start)
+    var typed by mutableStateOf("")
+    val focus = FocusRequester()
+    var focusTick by mutableIntStateOf(0)
+
+    /** Shows the typing box and brings the keyboard up. */
+    fun showKeyboard() {
+        typing = true
+        focusTick++
+    }
+}
+
+/** How far up the bottom of Jarvis sits: above the bottom bar (80 dp and the system's bar), or above the keyboard when that is higher. */
 @Composable
-private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String) -> Unit, startTyping: Boolean, embedded: Boolean, onSettings: () -> Unit) {
+fun jarvisBottomPad(keyboard: Boolean): androidx.compose.ui.unit.Dp {
+    val d = androidx.compose.ui.platform.LocalDensity.current
+    val nav = WindowInsets.navigationBars.getBottom(d)
+    val ime = if (keyboard) WindowInsets.ime.getBottom(d) else 0
+    val bar = with(d) { 80.dp.roundToPx() } + nav
+    return with(d) { maxOf(ime, bar).toDp() }
+}
+
+/**
+ * Jarvis's own buttons for the bottom bar: Close, New chat, Type (the middle one), Voice, Settings. Inside the app they take the place
+ * of the app's buttons in the same bar.
+ */
+@Composable
+fun RowScope.JarvisBarItems(model: AssistModel, ui: JarvisTyping, onClose: () -> Unit, onSettings: () -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
+    val scheme = MaterialTheme.colorScheme
+    val chatting = model.messages.isNotEmpty()
+    NavigationBarItem(
+        selected = false, onClick = onClose,
+        icon = { HaIcon("mdi:close", Icons.Filled.Info, scheme.onSurfaceVariant, 24.dp) },
+        label = { Text("Close", fontSize = 11.sp, maxLines = 1) },
+    )
+    NavigationBarItem(
+        selected = false, enabled = chatting, onClick = { ui.typed = ""; model.newChat() },
+        icon = { HaIcon("mdi:chat-plus-outline", Icons.Filled.Info, scheme.onSurfaceVariant.copy(alpha = if (chatting) 1f else 0.4f), 24.dp) },
+        label = { Text("New chat", fontSize = 11.sp, maxLines = 1) },
+    )
+    NavigationBarItem(
+        selected = ui.typing, onClick = { ui.showKeyboard() },
+        icon = { HaIcon("mdi:keyboard-outline", Icons.Filled.Info, if (ui.typing) scheme.onSecondaryContainer else scheme.onSurfaceVariant, 24.dp) },
+        label = { Text("Type", fontSize = 11.sp, maxLines = 1) },
+    )
+    NavigationBarItem(
+        selected = false,
+        onClick = {
+            AssistVoiceSetting.set(context, !AssistVoiceSetting.on)
+            if (!AssistVoiceSetting.on) model.stopSpeaking()
+        },
+        icon = { HaIcon(if (AssistVoiceSetting.on) "mdi:volume-high" else "mdi:volume-off", Icons.Filled.Info, scheme.onSurfaceVariant, 24.dp) },
+        label = { Text(if (AssistVoiceSetting.on) "Voice" else "Muted", fontSize = 11.sp, maxLines = 1) },
+    )
+    NavigationBarItem(
+        selected = false, onClick = onSettings,
+        icon = { HaIcon("mdi:cog-outline", Icons.Filled.Info, scheme.onSurfaceVariant, 24.dp) },
+        label = { Text("Settings", fontSize = 11.sp, maxLines = 1) },
+    )
+}
+
+/**
+ * Jarvis's screen. Inside the app ([embedded]) it fills the space above the app's own bottom bar, which has changed into Jarvis's
+ * buttons, and the app's round button floats over it. On its own (from a widget or tile) it brings a bar and a button of its own.
+ * Either way the keyboard goes over the bar, and the typing box rises above the keyboard.
+ */
+@Composable
+private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String) -> Unit, ui: JarvisTyping, embedded: Boolean, onSettings: () -> Unit) {
     val pal = assistPalette()
     val scheme = MaterialTheme.colorScheme
-    var typed by remember { mutableStateOf("") }
-    var typing by remember { mutableStateOf(startTyping) }
     val chatting = model.messages.isNotEmpty()
     val active = model.state == AssistState.Listening || model.state == AssistState.Thinking || model.state == AssistState.Speaking
-    val focus = remember { FocusRequester() }
-    // The same layout as the app: the bar along the bottom (here with Jarvis's own buttons) and the round button above it at the right.
-    Scaffold(
-        modifier = Modifier.fillMaxSize().imePadding(),
-        containerColor = scheme.background,
-        bottomBar = {
-            // Close, New chat, Type (the middle one), Voice, Settings.
-            NavigationBar {
-                NavigationBarItem(
-                    selected = false, onClick = onClose,
-                    icon = { HaIcon("mdi:close", Icons.Filled.Info, scheme.onSurfaceVariant, 24.dp) },
-                    label = { Text("Close", fontSize = 11.sp, maxLines = 1) },
-                )
-                NavigationBarItem(
-                    selected = false, enabled = chatting, onClick = { typed = ""; model.newChat() },
-                    icon = { HaIcon("mdi:chat-plus-outline", Icons.Filled.Info, scheme.onSurfaceVariant.copy(alpha = if (chatting) 1f else 0.4f), 24.dp) },
-                    label = { Text("New chat", fontSize = 11.sp, maxLines = 1) },
-                )
-                NavigationBarItem(
-                    selected = typing, onClick = { typing = true; runCatching { focus.requestFocus() } },
-                    icon = { HaIcon("mdi:keyboard-outline", Icons.Filled.Info, if (typing) scheme.onSecondaryContainer else scheme.onSurfaceVariant, 24.dp) },
-                    label = { Text("Type", fontSize = 11.sp, maxLines = 1) },
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = {
-                        AssistVoiceSetting.set(context, !AssistVoiceSetting.on)
-                        if (!AssistVoiceSetting.on) model.stopSpeaking()
-                    },
-                    icon = { HaIcon(if (AssistVoiceSetting.on) "mdi:volume-high" else "mdi:volume-off", Icons.Filled.Info, scheme.onSurfaceVariant, 24.dp) },
-                    label = { Text(if (AssistVoiceSetting.on) "Voice" else "Muted", fontSize = 11.sp, maxLines = 1) },
-                )
-                NavigationBarItem(
-                    selected = false, onClick = onSettings,
-                    icon = { HaIcon("mdi:cog-outline", Icons.Filled.Info, scheme.onSurfaceVariant, 24.dp) },
-                    label = { Text("Settings", fontSize = 11.sp, maxLines = 1) },
-                )
-            }
-        },
-        // Inside the app the round button is the app's own (the same one as on every page, above him); alone, he brings his.
-        floatingActionButton = {
-            if (!embedded) JarvisRound("Talk", { model.listen() }) {
-                HaIcon(if (model.state == AssistState.Listening) "mdi:stop" else "mdi:microphone", Icons.Filled.Info, Color.White, 28.dp)
-            }
-        },
-    ) { padding ->
-        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            BottomGlow(active, model.level, Modifier.align(Alignment.BottomCenter))
-            Column(modifier = Modifier.fillMaxSize()) {
-                Text(
-                    model.name.ifBlank { "Assistant" }, style = MaterialTheme.typography.titleMedium, color = scheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
-                )
-                if (chatting) {
-                    // The larger Jarvis icon stays at the top; the conversation starts below it.
-                    Column(modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        AssistOrb(model.state, model.level, 96.dp)
-                        Spacer(Modifier.height(8.dp))
-                        Text(assistStatus(model.state), style = MaterialTheme.typography.labelLarge, color = pal.third)
-                    }
+    // The keyboard is asked for after the box is on screen.
+    LaunchedEffect(ui.focusTick) { if (ui.focusTick > 0) runCatching { ui.focus.requestFocus() } }
+    val pad = jarvisBottomPad(keyboard = true)
+    Box(modifier = Modifier.fillMaxSize().background(scheme.background)) {
+        BottomGlow(active, model.level, Modifier.align(Alignment.BottomCenter).padding(bottom = if (embedded) 0.dp else pad))
+        Column(modifier = Modifier.fillMaxSize().statusBarsPadding().padding(bottom = if (embedded) 0.dp else pad)) {
+            Text(
+                model.name.ifBlank { "Assistant" }, style = MaterialTheme.typography.titleMedium, color = scheme.onSurfaceVariant,
+                textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+            )
+            if (chatting) {
+                // The larger Jarvis icon stays at the top; the conversation starts below it.
+                Column(modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    AssistOrb(model.state, model.level, 96.dp)
+                    Spacer(Modifier.height(8.dp))
+                    Text(assistStatus(model.state), style = MaterialTheme.typography.labelLarge, color = pal.third)
                 }
-                if (!chatting) {
-                    Column(
-                        modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 28.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
-                    ) {
-                        AssistOrb(model.state, model.level, 170.dp)
-                        Spacer(Modifier.height(24.dp))
-                        Text(assistStatus(model.state), style = MaterialTheme.typography.labelLarge, color = pal.third)
-                        Spacer(Modifier.height(10.dp))
-                        Text(
-                            model.partial.ifEmpty { if (model.wakeWord != null) "Say \u201C${wakePhrase(model.wakeWord)}\u201D or tap the microphone" else "Ask or tell the house" },
-                            style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center,
-                            color = if (model.partial.isEmpty()) scheme.onSurfaceVariant else scheme.onSurface,
-                        )
-                        Spacer(Modifier.height(16.dp))
+            }
+            if (!chatting) {
+                Column(
+                    modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 28.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
+                ) {
+                    AssistOrb(model.state, model.level, 170.dp)
+                    Spacer(Modifier.height(24.dp))
+                    Text(assistStatus(model.state), style = MaterialTheme.typography.labelLarge, color = pal.third)
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        model.partial.ifEmpty { if (model.wakeWord != null) "Say \u201C${wakePhrase(model.wakeWord)}\u201D or tap the microphone" else "Ask or tell the house" },
+                        style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center,
+                        color = if (model.partial.isEmpty()) scheme.onSurfaceVariant else scheme.onSurface,
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Notice(model, onTask)
+                }
+            } else {
+                val list = rememberLazyListState()
+                LaunchedEffect(model.messages.size, model.partial, model.state) { list.animateScrollToItem(maxOf(0, model.messages.size)) }
+                LazyColumn(state = list, modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                    item { Spacer(Modifier.height(4.dp)) }
+                    items(model.messages.size) { i -> ChatLine(model.messages[i]) }
+                    item {
+                        if (model.partial.isNotEmpty()) ChatLine(AssistMessage(true, model.partial), faded = true)
+                        if (model.state == AssistState.Thinking) ThinkingDots()
                         Notice(model, onTask)
                     }
-                } else {
-                    val list = rememberLazyListState()
-                    LaunchedEffect(model.messages.size, model.partial, model.state) { list.animateScrollToItem(maxOf(0, model.messages.size)) }
-                    LazyColumn(state = list, modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                        item { Spacer(Modifier.height(4.dp)) }
-                        items(model.messages.size) { i -> ChatLine(model.messages[i]) }
-                        item {
-                            if (model.partial.isNotEmpty()) ChatLine(AssistMessage(true, model.partial), faded = true)
-                            if (model.state == AssistState.Thinking) ThinkingDots()
-                            Notice(model, onTask)
-                        }
+                }
+            }
+            // Room is left at the right for the round button, which floats over this row.
+            Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                if (!chatting && !ui.typing) Box(Modifier.padding(end = 74.dp)) { SuggestionRow(model) }
+                if (chatting || ui.typing) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedTextField(
+                            value = ui.typed, onValueChange = { ui.typed = it }, singleLine = true, modifier = Modifier.weight(1f).focusRequester(ui.focus),
+                            placeholder = { Text("Ask or tell the house") },
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                            keyboardActions = KeyboardActions(onSend = { model.send(ui.typed); ui.typed = "" }),
+                            shape = RoundedCornerShape(28.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = scheme.surfaceContainer, unfocusedContainerColor = scheme.surfaceContainer,
+                                focusedBorderColor = scheme.outline, unfocusedBorderColor = scheme.outlineVariant,
+                            ),
+                        )
+                        Spacer(Modifier.size(58.dp))
                     }
                 }
-                // Room is left at the right for the round button, which floats over this row.
-                Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    if (!chatting && !typing) Box(Modifier.padding(end = 74.dp)) { SuggestionRow(model) }
-                    if (chatting || typing) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            OutlinedTextField(
-                                value = typed, onValueChange = { typed = it }, singleLine = true, modifier = Modifier.weight(1f).focusRequester(focus),
-                                placeholder = { Text("Ask or tell the house") },
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                                keyboardActions = KeyboardActions(onSend = { model.send(typed); typed = "" }),
-                                shape = RoundedCornerShape(28.dp),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedContainerColor = scheme.surfaceContainer, unfocusedContainerColor = scheme.surfaceContainer,
-                                    focusedBorderColor = scheme.outline, unfocusedBorderColor = scheme.outlineVariant,
-                                ),
-                            )
-                            Spacer(Modifier.size(58.dp))
-                        }
-                    }
+            }
+        }
+        if (!embedded) {
+            // Alone, he brings the bar and the round button himself, in the same places as inside the app.
+            NavigationBar(modifier = Modifier.align(Alignment.BottomCenter)) { JarvisBarItems(model, ui, onClose, onSettings) }
+            Box(Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = pad + 16.dp)) {
+                JarvisRound("Talk", { model.listen() }) {
+                    HaIcon(if (model.state == AssistState.Listening) "mdi:stop" else "mdi:microphone", Icons.Filled.Info, Color.White, 28.dp)
                 }
             }
         }

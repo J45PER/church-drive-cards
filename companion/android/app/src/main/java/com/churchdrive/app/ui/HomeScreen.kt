@@ -162,21 +162,33 @@ fun HomeScreen(
             // The dashboard's icons, in the phone's own (wallpaper) colours. The Security icon follows the alarm.
             val alarmState = entities[ALARM_ENTITY]?.state
             NavigationBar {
-                pages.forEach { p ->
-                    val selected = p == page
-                    NavigationBarItem(
-                        selected = selected,
-                        onClick = { page = p },
-                        icon = {
-                            HaIcon(
-                                if (p == Page.Security) alarmIconName(alarmState) else p.mdi,
-                                p.fallback,
-                                tint = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                                size = 24.dp,
-                            )
-                        },
-                        label = { Text(p.label, fontSize = 11.sp, maxLines = 1) },
-                    )
+                // The same bar: while Jarvis is open its buttons change into his (and back).
+                val jarvis = LocalJarvis.current
+                val jarvisModel = jarvis?.model
+                androidx.compose.animation.Crossfade(jarvis?.open == true && jarvisModel != null, Modifier.weight(1f), label = "bar") { jarvisOpen ->
+                    Row(Modifier.fillMaxSize()) {
+                        if (jarvisOpen && jarvis != null && jarvisModel != null) {
+                            JarvisBarItems(jarvisModel, jarvis.ui, onClose = jarvis.close, onSettings = { jarvis.close(); panel = "settings" })
+                        } else {
+                    pages.forEach { p ->
+                        val selected = p == page
+                        NavigationBarItem(
+                            selected = selected,
+                            onClick = { page = p },
+                            icon = {
+                                HaIcon(
+                                    if (p == Page.Security) alarmIconName(alarmState) else p.mdi,
+                                    p.fallback,
+                                    tint = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    size = 24.dp,
+                                )
+                            },
+                            label = { Text(p.label, fontSize = 11.sp, maxLines = 1) },
+                        )
+                    }
+            
+                        }
+                    }
                 }
             }
         },

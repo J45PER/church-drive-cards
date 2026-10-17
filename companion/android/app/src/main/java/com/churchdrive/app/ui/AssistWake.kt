@@ -138,6 +138,8 @@ class JarvisController {
     var model by mutableStateOf<AssistModel?>(null)
     var open by mutableStateOf(false)
     var intro by mutableStateOf<IntroDue?>(null)
+    /** The typing box, shared with the bottom bar (whose buttons become Jarvis's while he is open). */
+    val ui = JarvisTyping()
     var userName = ""
     var onTask: (String) -> Unit = {}
     /** Opens him from the button: ready to type, or listening, as Settings says. */
@@ -179,6 +181,8 @@ fun AssistWakeHost(controller: JarvisController, connected: Boolean, base: Strin
         controller.enableWake = { if (hasMicrophone(context)) AssistWakeSetting.set(context, true) else micAsk.launch(Manifest.permission.RECORD_AUDIO) }
         controller.openFromButton = {
             model.panelOpened()
+            controller.ui.typing = AssistStartSetting.typing
+            controller.ui.typed = ""
             controller.intro = AssistIntroStore.take(context)
             controller.open = true
             if (controller.intro == null && !AssistStartSetting.typing) {
@@ -193,6 +197,8 @@ fun AssistWakeHost(controller: JarvisController, connected: Boolean, base: Strin
     DisposableEffect(model) {
         model.onWake = {
             model.panelOpened()
+            controller.ui.typing = false
+            controller.ui.typed = ""
             controller.intro = AssistIntroStore.take(context)
             controller.open = true
         }
@@ -221,7 +227,7 @@ fun JarvisOverlay(onSettings: () -> Unit = {}) {
     if (!j.open) return
     // Taps on him stay on him, not on the page underneath.
     androidx.compose.foundation.layout.Box(
-        androidx.compose.ui.Modifier.fillMaxSize().clickable(
+        androidx.compose.ui.Modifier.fillMaxSize().padding(bottom = jarvisBottomPad(keyboard = true)).clickable(
             interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null,
         ) {},
     ) {
@@ -230,7 +236,7 @@ fun JarvisOverlay(onSettings: () -> Unit = {}) {
             intro = j.intro?.kind, introFeatures = j.intro?.features.orEmpty(), person = j.userName,
             onIntroDone = { model.stopSpeaking(); j.intro = null },
             wakeOn = AssistWakeSetting.enabled, onEnableWake = j.enableWake,
-            startTyping = AssistStartSetting.typing,
+            typingState = j.ui,
             onSettings = { j.close(); onSettings() },
             embedded = true,
         )
@@ -246,9 +252,9 @@ fun JarvisFab(modifier: Modifier = Modifier) {
     val j = LocalJarvis.current ?: return
     val model = j.model ?: return
     val listening = model.state == AssistState.Listening
-    // Above the bottom bar (80 dp) and 16 dp clear of it, at the right: the place Material's own floating button takes. Over the keyboard when he is open.
-    val insets = if (j.open) WindowInsets.ime.union(WindowInsets.navigationBars) else WindowInsets.navigationBars
-    Box(modifier.fillMaxSize().windowInsetsPadding(insets).padding(end = 16.dp, bottom = 96.dp), contentAlignment = Alignment.BottomEnd) {
+    // 16 dp above the bottom bar at the right: the place Material's own floating button takes. Over the keyboard's top when he is open and it is up.
+    val pad = jarvisBottomPad(keyboard = j.open)
+    Box(modifier.fillMaxSize().padding(end = 16.dp, bottom = pad + 16.dp), contentAlignment = Alignment.BottomEnd) {
         JarvisRound(if (j.open) "Talk" else "Open Jarvis", {
             when {
                 !j.open -> j.openFromButton()
