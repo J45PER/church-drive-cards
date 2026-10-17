@@ -104,6 +104,8 @@ fun HomeScreen(
     if (page !in pages) page = Page.Home
     // The account panel (null shut, "account", "settings" or "about"), which slides in from the right.
     var panel by rememberSaveable { mutableStateOf<String?>(null) }
+    // Asked for from outside (Jarvis alone, or the app opened on its settings).
+    androidx.compose.runtime.LaunchedEffect(openPage) { if (openPage == "settings") panel = "settings" }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val title = if (page == Page.Home) "Hello ${userName?.substringBefore(' ') ?: ""}".trim() else page.label
 
@@ -120,15 +122,8 @@ fun HomeScreen(
             }
         },
     ) {
-    val assistContext = androidx.compose.ui.platform.LocalContext.current
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        // Jarvis is always under the thumb, above the page bar, on every page: his logo opens him (ready to type or to talk, as chosen in Settings).
-        floatingActionButton = {
-            JarvisRound("Open Jarvis", MaterialTheme.colorScheme.surfaceContainerHigh, {
-                assistContext.startActivity(android.content.Intent(assistContext, com.churchdrive.app.AssistActivity::class.java))
-            }) { AssistOrb(AssistState.Idle, 0f, 36.dp) }
-        },
         topBar = {
             MediumTopAppBar(
                 title = { Text(title) },
@@ -229,6 +224,9 @@ fun HomeScreen(
             Spacer(Modifier.height(72.dp))
         }
     }
+    // Jarvis, over the page, and his round button over him: one button, the same one shut or open.
+    JarvisOverlay(onSettings = { panel = "settings" })
+    JarvisFab()
     if (openCamera != null && statesLoaded) CameraViewerFor(openCamera, entities, registry, call, onCameraClosed, answer = openCameraAnswer)
     AccountOverlay(
         panel, { panel = it }, userName, isAdmin, account, updateAvailable, onSignOut,

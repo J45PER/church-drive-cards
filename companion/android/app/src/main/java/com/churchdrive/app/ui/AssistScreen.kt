@@ -3,8 +3,8 @@ package com.churchdrive.app.ui
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -14,6 +14,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.horizontalScroll
@@ -70,6 +71,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
@@ -124,6 +126,10 @@ fun AssistPanel(
     onEnableWake: () -> Unit = {},
     /** Open with the keyboard up instead of listening (the person's choice in Settings). */
     startTyping: Boolean = false,
+    /** The bar's Settings button: take the person to Jarvis's settings. */
+    onSettings: () -> Unit = {},
+    /** Shown inside the app (over the page, under the app's round Jarvis button) instead of as a window of its own. */
+    embedded: Boolean = false,
 ) {
     var shown by remember { mutableStateOf(false) }
     var leaving by remember { mutableStateOf(false) }
@@ -132,20 +138,22 @@ fun AssistPanel(
     // Said "that's it": he closes himself once he has answered, with the same exit.
     LaunchedEffect(model.closeRequested) { if (model.closeRequested) close() }
     LaunchedEffect(leaving) { if (leaving) { kotlinx.coroutines.delay(PopupMotion.ExitMs + 30L); onClose() } }
-    QuietWindow()
+    if (!embedded) QuietWindow()
+    androidx.activity.compose.BackHandler(enabled = !leaving) { close() }
     // A dialog doesn't set the text colour, so it would be dark on dark.
     androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
         AnimatedVisibility(
             visible = shown, modifier = Modifier.fillMaxSize(),
-            enter = slideInVertically(tween(PopupMotion.EnterMs)) { it } + fadeIn(tween(PopupMotion.EnterMs - 80)),
-            exit = slideOutVertically(tween(PopupMotion.ExitMs)) { it } + fadeOut(tween(PopupMotion.ExitMs - 40)),
+            // He comes up out of his button: a soft fade and a small swell, from the bottom right, not a sheet sliding over the page.
+            enter = fadeIn(tween(PopupMotion.EnterMs)) + scaleIn(tween(PopupMotion.EnterMs), initialScale = 0.9f, transformOrigin = TransformOrigin(0.9f, 0.95f)),
+            exit = fadeOut(tween(PopupMotion.ExitMs)) + scaleOut(tween(PopupMotion.ExitMs), targetScale = 0.9f, transformOrigin = TransformOrigin(0.9f, 0.95f)),
         ) {
             if (intro != null) {
                 AssistIntro(
                     kind = intro, features = introFeatures, person = person, assistant = model.name, wakeWord = model.wakeWord, model = model,
                     onTry = onIntroTry, onSkip = onIntroDone, wakeOn = wakeOn, onEnableWake = onEnableWake,
                 )
-            } else FullAssist(model, close, onTask, startTyping)
+            } else FullAssist(model, close, onTask, startTyping, embedded, onSettings)
         }
     }
 }
@@ -330,18 +338,33 @@ private fun BottomGlow(active: Boolean, level: Float, modifier: Modifier = Modif
 
 /**
  * The round button at the bottom right: Jarvis's logo on every page of the app, his microphone once he is open. It is the same size
- * and in the same place in both, just above the bottom bar.
+ * and in the same place in both, just above the bottom bar: his own colours behind it, a grey ring round it, and a white symbol.
  */
 @Composable
-fun JarvisRound(label: String, container: Color, onClick: () -> Unit, content: @Composable () -> Unit) {
+fun JarvisRound(label: String, onClick: () -> Unit, content: @Composable () -> Unit) {
+    val pal = assistPalette()
     Box(
-        modifier = Modifier.size(58.dp).shadow(6.dp, CircleShape).clip(CircleShape).background(container).clickable(onClickLabel = label, onClick = onClick),
+        modifier = Modifier.size(58.dp).shadow(6.dp, CircleShape).clip(CircleShape)
+            .background(Brush.linearGradient(listOf(pal.first, pal.second, pal.third)))
+            .border(2.dp, MaterialTheme.colorScheme.outline, CircleShape)
+            .clickable(onClickLabel = label, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) { content() }
 }
 
+/** Jarvis's logo, drawn in one colour: a ring round a dot, like his orb seen from the side. */
 @Composable
-private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String) -> Unit, startTyping: Boolean) {
+fun JarvisLogo(color: Color, size: androidx.compose.ui.unit.Dp = 30.dp) {
+    Canvas(Modifier.size(size)) {
+        val c = center
+        drawCircle(color, radius = this.size.minDimension * 0.46f, center = c, style = androidx.compose.ui.graphics.drawscope.Stroke(width = this.size.minDimension * 0.09f))
+        drawCircle(color, radius = this.size.minDimension * 0.2f, center = c)
+    }
+}
+
+@Composable
+private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String) -> Unit, startTyping: Boolean, embedded: Boolean, onSettings: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val pal = assistPalette()
     val scheme = MaterialTheme.colorScheme
     var typed by remember { mutableStateOf("") }
@@ -349,12 +372,12 @@ private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String)
     val chatting = model.messages.isNotEmpty()
     val active = model.state == AssistState.Listening || model.state == AssistState.Thinking || model.state == AssistState.Speaking
     val focus = remember { FocusRequester() }
-    LaunchedEffect(typing) { if (typing) runCatching { focus.requestFocus() } }
     // The same layout as the app: the bar along the bottom (here with Jarvis's own buttons) and the round button above it at the right.
     Scaffold(
         modifier = Modifier.fillMaxSize().imePadding(),
         containerColor = scheme.background,
         bottomBar = {
+            // Close, New chat, Type (the middle one), Voice, Settings.
             NavigationBar {
                 NavigationBarItem(
                     selected = false, onClick = onClose,
@@ -362,15 +385,35 @@ private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String)
                     label = { Text("Close", fontSize = 11.sp, maxLines = 1) },
                 )
                 NavigationBarItem(
+                    selected = false, enabled = chatting, onClick = { typed = ""; model.newChat() },
+                    icon = { HaIcon("mdi:chat-plus-outline", Icons.Filled.Info, scheme.onSurfaceVariant.copy(alpha = if (chatting) 1f else 0.4f), 24.dp) },
+                    label = { Text("New chat", fontSize = 11.sp, maxLines = 1) },
+                )
+                NavigationBarItem(
                     selected = typing, onClick = { typing = true; runCatching { focus.requestFocus() } },
                     icon = { HaIcon("mdi:keyboard-outline", Icons.Filled.Info, if (typing) scheme.onSecondaryContainer else scheme.onSurfaceVariant, 24.dp) },
                     label = { Text("Type", fontSize = 11.sp, maxLines = 1) },
                 )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = {
+                        AssistVoiceSetting.set(context, !AssistVoiceSetting.on)
+                        if (!AssistVoiceSetting.on) model.stopSpeaking()
+                    },
+                    icon = { HaIcon(if (AssistVoiceSetting.on) "mdi:volume-high" else "mdi:volume-off", Icons.Filled.Info, scheme.onSurfaceVariant, 24.dp) },
+                    label = { Text(if (AssistVoiceSetting.on) "Voice" else "Muted", fontSize = 11.sp, maxLines = 1) },
+                )
+                NavigationBarItem(
+                    selected = false, onClick = onSettings,
+                    icon = { HaIcon("mdi:cog-outline", Icons.Filled.Info, scheme.onSurfaceVariant, 24.dp) },
+                    label = { Text("Settings", fontSize = 11.sp, maxLines = 1) },
+                )
             }
         },
+        // Inside the app the round button is the app's own (the same one as on every page, above him); alone, he brings his.
         floatingActionButton = {
-            JarvisRound("Talk", pal.third, { model.listen() }) {
-                HaIcon(if (model.state == AssistState.Listening) "mdi:stop" else "mdi:microphone", Icons.Filled.Info, scheme.background, 28.dp)
+            if (!embedded) JarvisRound("Talk", { model.listen() }) {
+                HaIcon(if (model.state == AssistState.Listening) "mdi:stop" else "mdi:microphone", Icons.Filled.Info, Color.White, 28.dp)
             }
         },
     ) { padding ->

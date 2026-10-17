@@ -345,12 +345,12 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                 if (granted) AssistWakeSetting.set(context, true) else message = "The microphone is off for this app. Allow it in Android's settings to use the wake word."
             }
             PanelRow(
-                Icons.Outlined.Mic, "Listen for the wake word",
+                Icons.Outlined.Mic, "Open Jarvis with the wake word",
                 when {
                     AssistWakeSetting.enabled && AssistWakeStatus.problem.isNotEmpty() -> "Not listening: ${AssistWakeStatus.problem}"
                     AssistWakeSetting.enabled && AssistWakeStatus.waiting -> "Listening for \u201C${AssistWakeStatus.phrase.ifBlank { "the wake word" }}\u201D while the app is open."
                     AssistWakeSetting.enabled -> "On, but not listening yet" + (if (AssistWakeStatus.log.isEmpty()) "" else " (last: ${AssistWakeStatus.log.takeLast(4).joinToString(", ")})")
-                    else -> "While the app is open, say your assistant's wake word (the one on the house's Assist, such as Hey Jarvis) to talk hands-free. The microphone is only used while the app is on screen."
+                    else -> "While the app is open, say your assistant's wake word (the one on the house's Assist, such as Hey Jarvis) to open him hands-free. Once he is open he always listens for it, whatever this says. The microphone is only used while the app is on screen."
                 },
                 trailing = {
                     Switch(checked = AssistWakeSetting.enabled, onCheckedChange = { on ->
@@ -363,8 +363,8 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
             )
             PanelRow(
                 Icons.Outlined.Mic, "Open Jarvis ready to type",
-                if (AssistStartSetting.typing) "Jarvis opens with the keyboard up. Tap the microphone to talk instead."
-                else "Jarvis starts listening as soon as he opens. Turn this on to open with the keyboard instead.",
+                if (AssistStartSetting.typing) "Jarvis opens quietly, not listening, with the typing box ready. Tap the microphone to talk."
+                else "Jarvis starts listening as soon as he opens. Turn this on and he waits for you to type or tap the microphone.",
                 trailing = { Switch(checked = AssistStartSetting.typing, onCheckedChange = { on -> AssistStartSetting.set(context, on) }) },
             )
             PanelRow(

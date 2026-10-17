@@ -4,6 +4,12 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.33.5
+
+- Jarvis's bottom bar has five buttons, Type in the middle: Close, New chat (starts a fresh conversation), Type, Voice (silences his spoken answers, so he only writes them; remembered) and Settings (takes you to the app's settings). Jarvis log: "New chat, Voice and Settings".
+- Jarvis's round button now has his three colours behind it, a grey ring round it and a white symbol: his logo when he is shut, a microphone (a stop square while he listens) when he is open. While he is open he always listens for the wake word, whatever the setting says: the Settings switch (now "Open Jarvis with the wake word") is for opening him by voice when he is shut.
+- Jarvis opens from his button instead of sliding up over the page: he fades and swells in from the bottom right, and the round button is the one button throughout (his logo when he is shut, his microphone when he is open), always on top of him. With "Open Jarvis ready to type" on he opens quietly, not listening and without the keyboard; tap Type to bring it up or the microphone to talk.
+
 ## 0.33.4
 
 - Jarvis: the round button at the bottom right of every page now shows his logo, and opens him ready to talk or ready to type: Settings has "Open Jarvis ready to type" next to the wake word switch. Inside Jarvis the bottom bar stays, with his own buttons (Close and Type), and the microphone is the same round button in the same place. Jarvis log: "Type or talk".
