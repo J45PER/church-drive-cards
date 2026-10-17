@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.33.9
+
+- The glow at the bottom of Jarvis fades out completely at its top, so it has no hard edge there (clipping it to stop it covering the bar had left one).
+- The Type button works every time: after the keyboard was folded away with the keyboard's own button, the typing box still held focus, so asking again did nothing. The focus is now let go first and the keyboard asked for again. Jarvis no longer opens with the keyboard up because of the last time (the request was remembered between openings), and the Type button is only lit while the keyboard is up.
+
 ## 0.33.8
 
 - Jarvis's round button has his avatar back as its background (the moving orb, following what he is doing) with a dark grey ring and a white logo or microphone over it.
