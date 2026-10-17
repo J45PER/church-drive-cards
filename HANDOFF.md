@@ -722,6 +722,34 @@ Older release notes (v0.10 to v0.38 detail) are archived in [docs/HISTORY.md](do
 
 ## Live Home Assistant
 
+- **Live-config changes made 2026-10-13 (no release; HA is now 2026.10.x):**
+  - **Automatic to-do tasks no longer runs continuously.** `automation.church_drive_automatic_to_do_tasks`
+    triggered on every change to `sensor.church_drive_device_health`, including its attributes
+    (`last_heard` updates every few seconds). With `for: 15 minutes`, each change started its own
+    timer, so the whole automation ran about 450 times an hour (it reads every device and eight to-do
+    lists) and HA felt slow. The trigger is now a `numeric_state` trigger (`above: 0`, `for: 15 min`).
+    The 15-minute sweep still catches the rest. If it's ever slow again, check how often this
+    automation runs in the logbook first.
+  - **Who set the alarm.** Ring confirms an arm/disarm with no HA user on the state change, so the
+    alarm notification fell back to Ring's account (Hayley). `automation.church_drive_remember_who_sets_the_alarm`
+    watches `call_service` for `alarm_control_panel.alarm_arm_*`/`alarm_disarm` on
+    `alarm_control_panel.church_drive_alarm` by a real user (the Church Drive app, HA's app) and writes
+    `First name|epoch seconds` to `input_text.church_drive_alarm_set_by`.
+    "Church Drive: security alerts" uses it when under 3 minutes old and says "from the app";
+    otherwise Ring's own name and "on the keypad or Ring app". A keypad change within 3 minutes of
+    an app change would be named after the app user.
+  - **Battery Notes needs "Battery replaced" pressed.** After swapping a battery, press
+    `button.<device>_battery_replaced[_n]` (the doorbell's is `button.front_door_battery_replaced_3`,
+    the rechargeable Li-ion one; `_2` is the door contact sensor). Ring reports a new battery level
+    slowly, so the percentage lags after a swap.
+  - **Notifications (v0.62.0 + app 0.30.x).** Taps go to the right place (`tap_link_for` in
+    `notice_actions_logic.py`; `church-drive-device:<entity>` and `church-drive-health` links are for
+    the Church Drive app only, never sent to the Home Assistant app). Each pop-up kind has its own
+    default sound (`tools/make_notice_sounds.py` makes the tones; channels `cd_popup_<family>`).
+    Device Health page for everyone (account panel, or press and hold a device's card): batteries
+    amber at 40% or less and red at 20% or less, filters 30% and 10%. Google push's status row is for
+    administrators only. Not built: an administrator's own upload of a custom sound per family.
+
 - **HA** is 2026.9.x. The Hue bridge is `ecb5fa993162` (config entry
   `01K9M3B829ZTWAA7DHVYPA79K4`), with 12 rooms and 11 zones.
 - **Dashboards using the cards:**
