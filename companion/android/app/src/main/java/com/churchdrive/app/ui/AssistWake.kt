@@ -3,6 +3,21 @@ package com.churchdrive.app.ui
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -11,8 +26,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -101,22 +114,60 @@ fun hasMicrophone(context: Context): Boolean =
     ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
 
 /**
+ * Jarvis inside the app: one controller, shared by the wake word host (which owns the microphone and the model), the overlay that
+ * shows him and the round button on every page, which is the same button whether he is shut or open.
+ */
+class JarvisController {
+    var model by mutableStateOf<AssistModel?>(null)
+    var open by mutableStateOf(false)
+    var intro by mutableStateOf<IntroDue?>(null)
+    var userName = ""
+    var onTask: (String) -> Unit = {}
+    /** Opens him from the button: ready to type, or listening, as Settings says. */
+    var openFromButton: () -> Unit = {}
+    var close: () -> Unit = {}
+    var enableWake: () -> Unit = {}
+}
+
+val LocalJarvis = androidx.compose.runtime.compositionLocalOf<JarvisController?> { null }
+
+/**
  * While the app is open (and the setting is on), listens for the house's wake word ("Hey Jarvis") by streaming the microphone to
  * Home Assistant, which does the listening, exactly as a Voice Assistant satellite does. When the wake word is heard, the assistant
- * opens over the app (as the sheet, or the whole screen if that is the person's choice) and the rest of the sentence is its command.
+ * opens over the app (see [JarvisOverlay]) and the rest of the sentence is its command.
  * It listens only while the app is on screen, and stops the moment the app is left.
  */
 @Composable
-fun AssistWakeHost(connected: Boolean, base: String, api: HaApi?, userName: String, onTask: (String) -> Unit) {
+fun AssistWakeHost(controller: JarvisController, connected: Boolean, base: String, api: HaApi?, userName: String, onTask: (String) -> Unit) {
     if (api == null) return
     val context = LocalContext.current
     val enabled = AssistWakeSetting.enabled
     val model = remember(api) { AssistModel(context, api, base) }
-    var open by remember { mutableStateOf(false) }
-    var intro by remember { mutableStateOf<IntroDue?>(null) }
     val owner = LocalLifecycleOwner.current
     val micAsk = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) AssistWakeSetting.set(context, true)
+    }
+    // Opened from the button without the microphone allowed yet: ask, then listen.
+    val talkAsk = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) model.listen()
+    }
+    androidx.compose.runtime.SideEffect {
+        controller.model = model
+        controller.userName = userName
+        controller.onTask = onTask
+        controller.close = {
+            controller.open = false
+            model.panelClosed()
+        }
+        controller.enableWake = { if (hasMicrophone(context)) AssistWakeSetting.set(context, true) else micAsk.launch(Manifest.permission.RECORD_AUDIO) }
+        controller.openFromButton = {
+            model.panelOpened()
+            controller.intro = AssistIntroStore.take(context)
+            controller.open = true
+            if (controller.intro == null && !AssistStartSetting.typing) {
+                if (hasMicrophone(context)) model.listen() else talkAsk.launch(Manifest.permission.RECORD_AUDIO)
+            }
+        }
     }
     LaunchedEffect(connected) { if (connected) model.loadName() }
     LaunchedEffect(model.state) { AssistWakeStatus.waiting = model.state == AssistState.Waiting }
@@ -125,10 +176,10 @@ fun AssistWakeHost(connected: Boolean, base: String, api: HaApi?, userName: Stri
     DisposableEffect(model) {
         model.onWake = {
             model.panelOpened()
-            intro = AssistIntroStore.take(context)
-            open = true
+            controller.intro = AssistIntroStore.take(context)
+            controller.open = true
         }
-        onDispose { model.release() }
+        onDispose { model.release(); controller.model = null }
     }
     DisposableEffect(owner, model, enabled, connected) {
         val observer = LifecycleEventObserver { _, event ->
@@ -141,19 +192,60 @@ fun AssistWakeHost(connected: Boolean, base: String, api: HaApi?, userName: Stri
             model.stopWake()
         }
     }
-    if (open) {
-        val close = {
-            open = false
-            model.panelClosed()
-        }
-        Dialog(onDismissRequest = close, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-            AssistPanel(
-                model = model, onClose = close, onTask = { said -> close(); onTask(said) },
-                intro = intro?.kind, introFeatures = intro?.features.orEmpty(), person = userName,
-                onIntroDone = { model.stopSpeaking(); intro = null },
-                wakeOn = enabled,
-                onEnableWake = { if (hasMicrophone(context)) AssistWakeSetting.set(context, true) else micAsk.launch(Manifest.permission.RECORD_AUDIO) },
-            )
+}
+
+/** Jarvis over the app (not a window of its own, so his round button can stay above him). Nothing when he is shut. */
+@Composable
+fun JarvisOverlay() {
+    val j = LocalJarvis.current ?: return
+    val model = j.model ?: return
+    if (!j.open) return
+    // Taps on him stay on him, not on the page underneath.
+    androidx.compose.foundation.layout.Box(
+        androidx.compose.ui.Modifier.fillMaxSize().clickable(
+            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null,
+        ) {},
+    ) {
+        AssistPanel(
+            model = model, onClose = j.close, onTask = { said -> j.close(); j.onTask(said) },
+            intro = j.intro?.kind, introFeatures = j.intro?.features.orEmpty(), person = j.userName,
+            onIntroDone = { model.stopSpeaking(); j.intro = null },
+            wakeOn = AssistWakeSetting.enabled, onEnableWake = j.enableWake,
+            startTyping = AssistStartSetting.typing,
+            embedded = true,
+        )
+    }
+}
+
+/**
+ * The round button at the bottom right of every page: Jarvis's logo, and once he is open the same button is his microphone. It sits
+ * above everything of his, so it never moves or doubles up.
+ */
+@Composable
+fun JarvisFab(modifier: Modifier = Modifier) {
+    val j = LocalJarvis.current ?: return
+    val model = j.model ?: return
+    val pal = assistPalette()
+    val scheme = MaterialTheme.colorScheme
+    val container by androidx.compose.animation.animateColorAsState(if (j.open) pal.third else scheme.surfaceContainerHigh, androidx.compose.animation.core.tween(220), label = "fab")
+    val listening = model.state == AssistState.Listening
+    // Above the bottom bar (80 dp) and 16 dp clear of it, at the right: the place Material's own floating button takes. Over the keyboard when he is open.
+    val insets = if (j.open) WindowInsets.ime.union(WindowInsets.navigationBars) else WindowInsets.navigationBars
+    Box(modifier.fillMaxSize().windowInsetsPadding(insets).padding(end = 16.dp, bottom = 96.dp), contentAlignment = Alignment.BottomEnd) {
+        JarvisRound(if (j.open) "Talk" else "Open Jarvis", container, {
+            when {
+                !j.open -> j.openFromButton()
+                // The introduction's "Try it": done with it, and listen.
+                j.intro != null -> { j.intro = null; model.stopSpeaking(); model.listen() }
+                else -> model.listen()
+            }
+        }) {
+            androidx.compose.animation.Crossfade(if (j.open) (if (listening) 2 else 1) else 0, label = "fabIcon") { v ->
+                when (v) {
+                    0 -> AssistOrb(AssistState.Idle, 0f, 36.dp)
+                    else -> HaIcon(if (v == 2) "mdi:stop" else "mdi:microphone", Icons.Filled.Info, scheme.background, 28.dp)
+                }
+            }
         }
     }
 }

@@ -363,8 +363,8 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
             )
             PanelRow(
                 Icons.Outlined.Mic, "Open Jarvis ready to type",
-                if (AssistStartSetting.typing) "Jarvis opens with the keyboard up. Tap the microphone to talk instead."
-                else "Jarvis starts listening as soon as he opens. Turn this on to open with the keyboard instead.",
+                if (AssistStartSetting.typing) "Jarvis opens quietly, not listening, with the typing box ready. Tap the microphone to talk."
+                else "Jarvis starts listening as soon as he opens. Turn this on and he waits for you to type or tap the microphone.",
                 trailing = { Switch(checked = AssistStartSetting.typing, onCheckedChange = { on -> AssistStartSetting.set(context, on) }) },
             )
             PanelRow(

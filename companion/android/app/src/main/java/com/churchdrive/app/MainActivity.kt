@@ -160,7 +160,9 @@ class MainActivity : ComponentActivity() {
                         val managerPanels by vm.managerPanels.collectAsStateWithLifecycle()
                         val registry by vm.registry.collectAsStateWithLifecycle()
                         val areaNames by vm.areaNames.collectAsStateWithLifecycle()
+                        val jarvis = remember { com.churchdrive.app.ui.JarvisController() }
                         CompositionLocalProvider(
+                            com.churchdrive.app.ui.LocalJarvis provides jarvis,
                             LocalSceneLooks provides sceneLooks,
                             LocalTemplates provides vm.templates,
                             LocalBaseUrl provides vm.baseUrl,
@@ -211,6 +213,7 @@ class MainActivity : ComponentActivity() {
                                 }
                                 // Text sent from another app, or tasks waiting from earlier: checked here before they go on a list.
                                 com.churchdrive.app.ui.AssistWakeHost(
+                                    controller = jarvis,
                                     connected = connection == com.churchdrive.app.ha.ConnectionState.Connected,
                                     base = vm.baseUrl, api = vm.haApi, userName = userName.orEmpty(),
                                     onTask = { said -> shareText = said; shareSource = "Voice"; shareAutoAdd = true },
