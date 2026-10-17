@@ -181,8 +181,7 @@ fun AssistWakeHost(controller: JarvisController, connected: Boolean, base: Strin
         controller.enableWake = { if (hasMicrophone(context)) AssistWakeSetting.set(context, true) else micAsk.launch(Manifest.permission.RECORD_AUDIO) }
         controller.openFromButton = {
             model.panelOpened()
-            controller.ui.typing = AssistStartSetting.typing
-            controller.ui.typed = ""
+            controller.ui.reset(AssistStartSetting.typing)
             controller.intro = AssistIntroStore.take(context)
             controller.open = true
             if (controller.intro == null && !AssistStartSetting.typing) {
@@ -197,8 +196,7 @@ fun AssistWakeHost(controller: JarvisController, connected: Boolean, base: Strin
     DisposableEffect(model) {
         model.onWake = {
             model.panelOpened()
-            controller.ui.typing = false
-            controller.ui.typed = ""
+            controller.ui.reset(false)
             controller.intro = AssistIntroStore.take(context)
             controller.open = true
         }
