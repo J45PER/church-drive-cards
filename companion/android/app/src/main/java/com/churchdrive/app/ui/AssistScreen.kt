@@ -14,6 +14,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.horizontalScroll
@@ -335,14 +336,28 @@ private fun BottomGlow(active: Boolean, level: Float, modifier: Modifier = Modif
 
 /**
  * The round button at the bottom right: Jarvis's logo on every page of the app, his microphone once he is open. It is the same size
- * and in the same place in both, just above the bottom bar.
+ * and in the same place in both, just above the bottom bar: his own colours behind it, a grey ring round it, and a white symbol.
  */
 @Composable
-fun JarvisRound(label: String, container: Color, onClick: () -> Unit, content: @Composable () -> Unit) {
+fun JarvisRound(label: String, onClick: () -> Unit, content: @Composable () -> Unit) {
+    val pal = assistPalette()
     Box(
-        modifier = Modifier.size(58.dp).shadow(6.dp, CircleShape).clip(CircleShape).background(container).clickable(onClickLabel = label, onClick = onClick),
+        modifier = Modifier.size(58.dp).shadow(6.dp, CircleShape).clip(CircleShape)
+            .background(Brush.linearGradient(listOf(pal.first, pal.second, pal.third)))
+            .border(2.dp, MaterialTheme.colorScheme.outline, CircleShape)
+            .clickable(onClickLabel = label, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) { content() }
+}
+
+/** Jarvis's logo, drawn in one colour: a ring round a dot, like his orb seen from the side. */
+@Composable
+fun JarvisLogo(color: Color, size: androidx.compose.ui.unit.Dp = 30.dp) {
+    Canvas(Modifier.size(size)) {
+        val c = center
+        drawCircle(color, radius = this.size.minDimension * 0.46f, center = c, style = androidx.compose.ui.graphics.drawscope.Stroke(width = this.size.minDimension * 0.09f))
+        drawCircle(color, radius = this.size.minDimension * 0.2f, center = c)
+    }
 }
 
 @Composable
@@ -374,8 +389,8 @@ private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String)
         },
         // Inside the app the round button is the app's own (the same one as on every page, above him); alone, he brings his.
         floatingActionButton = {
-            if (!embedded) JarvisRound("Talk", pal.third, { model.listen() }) {
-                HaIcon(if (model.state == AssistState.Listening) "mdi:stop" else "mdi:microphone", Icons.Filled.Info, scheme.background, 28.dp)
+            if (!embedded) JarvisRound("Talk", { model.listen() }) {
+                HaIcon(if (model.state == AssistState.Listening) "mdi:stop" else "mdi:microphone", Icons.Filled.Info, Color.White, 28.dp)
             }
         },
     ) { padding ->

@@ -204,6 +204,8 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
         closeRequested = false
         panelOpen = true
         followUp = true
+        // Open, he listens for the wake word again once he is idle (the host switches the wake word on while he is open).
+        if (wakeEnabled && state == AssistState.Idle) main.postDelayed({ beginWakeRun() }, 400)
     }
 
     fun panelClosed() {
@@ -214,7 +216,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     }
 
     private fun beginWakeRun() {
-        if (!wakeEnabled || panelOpen || subscription >= 0) return
+        if (!wakeEnabled || subscription >= 0) return
         if (state != AssistState.Idle && state != AssistState.Waiting) return
         val params = JSONObject()
             .put("start_stage", "wake_word")
@@ -337,7 +339,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
 
     /** After a run (and its speech) is over, start listening for the wake word again, if that is switched on and nothing is on screen. */
     private fun resumeWake() {
-        if (wakeEnabled && !panelOpen && state != AssistState.Speaking) main.postDelayed({ beginWakeRun() }, 400)
+        if (wakeEnabled && state != AssistState.Speaking) main.postDelayed({ beginWakeRun() }, 400)
     }
 
     private fun play(url: String) {
@@ -427,6 +429,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
         override fun onError(error: Int) {
             level = 0f
             state = AssistState.Idle
+            resumeWake()
             // Silence after a follow-up we started ourselves isn't a problem: the conversation is simply over.
             if (autoListening && (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT)) return
             notice = when (error) {

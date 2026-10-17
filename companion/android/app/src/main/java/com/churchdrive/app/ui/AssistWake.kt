@@ -14,7 +14,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -181,9 +181,11 @@ fun AssistWakeHost(controller: JarvisController, connected: Boolean, base: Strin
         }
         onDispose { model.release(); controller.model = null }
     }
-    DisposableEffect(owner, model, enabled, connected) {
+    // The wake word is always on while Jarvis is open (whatever the setting says); the setting is for opening him when he is shut.
+    val wake = enabled || controller.open
+    DisposableEffect(owner, model, wake, connected) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_START && enabled && connected && hasMicrophone(context)) model.startWake()
+            if (event == Lifecycle.Event.ON_START && wake && connected && hasMicrophone(context)) model.startWake()
             if (event == Lifecycle.Event.ON_STOP) model.stopWake()
         }
         owner.lifecycle.addObserver(observer)
@@ -225,14 +227,11 @@ fun JarvisOverlay() {
 fun JarvisFab(modifier: Modifier = Modifier) {
     val j = LocalJarvis.current ?: return
     val model = j.model ?: return
-    val pal = assistPalette()
-    val scheme = MaterialTheme.colorScheme
-    val container by androidx.compose.animation.animateColorAsState(if (j.open) pal.third else scheme.surfaceContainerHigh, androidx.compose.animation.core.tween(220), label = "fab")
     val listening = model.state == AssistState.Listening
     // Above the bottom bar (80 dp) and 16 dp clear of it, at the right: the place Material's own floating button takes. Over the keyboard when he is open.
     val insets = if (j.open) WindowInsets.ime.union(WindowInsets.navigationBars) else WindowInsets.navigationBars
     Box(modifier.fillMaxSize().windowInsetsPadding(insets).padding(end = 16.dp, bottom = 96.dp), contentAlignment = Alignment.BottomEnd) {
-        JarvisRound(if (j.open) "Talk" else "Open Jarvis", container, {
+        JarvisRound(if (j.open) "Talk" else "Open Jarvis", {
             when {
                 !j.open -> j.openFromButton()
                 // The introduction's "Try it": done with it, and listen.
@@ -242,8 +241,8 @@ fun JarvisFab(modifier: Modifier = Modifier) {
         }) {
             androidx.compose.animation.Crossfade(if (j.open) (if (listening) 2 else 1) else 0, label = "fabIcon") { v ->
                 when (v) {
-                    0 -> AssistOrb(AssistState.Idle, 0f, 36.dp)
-                    else -> HaIcon(if (v == 2) "mdi:stop" else "mdi:microphone", Icons.Filled.Info, scheme.background, 28.dp)
+                    0 -> JarvisLogo(Color.White)
+                    else -> HaIcon(if (v == 2) "mdi:stop" else "mdi:microphone", Icons.Filled.Info, Color.White, 28.dp)
                 }
             }
         }

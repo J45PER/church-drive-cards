@@ -6,6 +6,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 ## 0.33.5
 
+- Jarvis's round button now has his three colours behind it, a grey ring round it and a white symbol: his logo when he is shut, a microphone (a stop square while he listens) when he is open. While he is open he always listens for the wake word, whatever the setting says: the Settings switch (now "Open Jarvis with the wake word") is for opening him by voice when he is shut.
 - Jarvis opens from his button instead of sliding up over the page: he fades and swells in from the bottom right, and the round button is the one button throughout (his logo when he is shut, his microphone when he is open), always on top of him. With "Open Jarvis ready to type" on he opens quietly, not listening and without the keyboard; tap Type to bring it up or the microphone to talk.
 
 ## 0.33.4
