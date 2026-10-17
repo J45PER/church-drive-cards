@@ -340,14 +340,15 @@ private fun BottomGlow(active: Boolean, level: Float, modifier: Modifier = Modif
     LaunchedEffect(active) { if (active) held = true else { kotlinx.coroutines.delay(1_500); held = false } }
     val on by animateFloatAsState(if (held) 1f else 0.3f, tween(1200), label = "on")
     val smooth by animateFloatAsState(level, tween(450), label = "level")
-    // Clipped to its own box: it must not spill over the bar below it.
-    Canvas(modifier = modifier.fillMaxWidth().height(200.dp).clipToBounds()) {
+    // Clipped to its own box, so it cannot spill over the bar below it; the top of the box fades out completely, so it has no edge there.
+    Canvas(modifier = modifier.fillMaxWidth().height(240.dp).clipToBounds().graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)) {
         val a = (0.34f * breathe + 0.1f * smooth) * on
         listOf(0.2f to pal.first, 0.5f to pal.second, 0.82f to pal.third).forEach { (fx, colour) ->
             val c = Offset(size.width * fx, size.height + 24.dp.toPx())
             val r = size.width * 0.55f
             drawCircle(Brush.radialGradient(listOf(colour.copy(alpha = a), Color.Transparent), center = c, radius = r), radius = r, center = c)
         }
+        drawRect(Brush.verticalGradient(0f to Color.Transparent, 0.5f to Color.Black, 1f to Color.Black), blendMode = BlendMode.DstIn)
     }
 }
 
@@ -385,12 +386,20 @@ class JarvisTyping(start: Boolean = false) {
     var typing by mutableStateOf(start)
     var typed by mutableStateOf("")
     val focus = FocusRequester()
-    var focusTick by mutableIntStateOf(0)
+    /** Set by the Type button, and cleared once the keyboard has been brought up. */
+    var keyboardRequested by mutableStateOf(false)
 
     /** Shows the typing box and brings the keyboard up. */
     fun showKeyboard() {
         typing = true
-        focusTick++
+        keyboardRequested = true
+    }
+
+    /** A fresh opening: the box as Settings says, empty, and no keyboard asked for. */
+    fun reset(typingBox: Boolean) {
+        typing = typingBox
+        typed = ""
+        keyboardRequested = false
     }
 }
 
@@ -413,6 +422,7 @@ fun RowScope.JarvisBarItems(model: AssistModel, ui: JarvisTyping, onClose: () ->
     val context = androidx.compose.ui.platform.LocalContext.current
     val scheme = MaterialTheme.colorScheme
     val chatting = model.messages.isNotEmpty()
+    val keyboardUp = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
     NavigationBarItem(
         selected = false, onClick = onClose,
         icon = { HaIcon("mdi:close", Icons.Filled.Info, scheme.onSurfaceVariant, 24.dp) },
@@ -424,8 +434,8 @@ fun RowScope.JarvisBarItems(model: AssistModel, ui: JarvisTyping, onClose: () ->
         label = { Text("New chat", fontSize = 11.sp, maxLines = 1) },
     )
     NavigationBarItem(
-        selected = ui.typing, onClick = { ui.showKeyboard() },
-        icon = { HaIcon("mdi:keyboard-outline", Icons.Filled.Info, if (ui.typing) scheme.onSecondaryContainer else scheme.onSurfaceVariant, 24.dp) },
+        selected = keyboardUp, onClick = { ui.showKeyboard() },
+        icon = { HaIcon("mdi:keyboard-outline", Icons.Filled.Info, if (keyboardUp) scheme.onSecondaryContainer else scheme.onSurfaceVariant, 24.dp) },
         label = { Text("Type", fontSize = 11.sp, maxLines = 1) },
     )
     NavigationBarItem(
@@ -455,8 +465,19 @@ private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String)
     val scheme = MaterialTheme.colorScheme
     val chatting = model.messages.isNotEmpty()
     val active = model.state == AssistState.Listening || model.state == AssistState.Thinking || model.state == AssistState.Speaking
-    // The keyboard is asked for after the box is on screen.
-    LaunchedEffect(ui.focusTick) { if (ui.focusTick > 0) runCatching { ui.focus.requestFocus() } }
+    // The Type button: bring the keyboard up once the box is on screen. The box may still hold focus after the keyboard was folded away
+    // (which leaves nothing to ask for), so focus is let go first.
+    val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    LaunchedEffect(ui.keyboardRequested) {
+        if (ui.keyboardRequested) {
+            focusManager.clearFocus(force = true)
+            kotlinx.coroutines.delay(60)
+            runCatching { ui.focus.requestFocus() }
+            keyboard?.show()
+            ui.keyboardRequested = false
+        }
+    }
     val pad = jarvisBottomPad(keyboard = true)
     Box(modifier = Modifier.fillMaxSize().background(scheme.background)) {
         BottomGlow(active, model.level, Modifier.align(Alignment.BottomCenter).padding(bottom = if (embedded) 0.dp else pad))

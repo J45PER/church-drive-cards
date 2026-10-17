@@ -9,6 +9,11 @@ with the APK, so there is a record of what shipped. Newest first.
 - Thermostat target no longer jumps back (to 12.1, say). The Nest ignores a new target while Eco is on, so a tap on − or + now takes the thermostat out of Eco first, then sets the target. While Eco is on the card says "Eco target … (tap to heat)".
 - Targets land on the thermostat's steps (12, 12.5, 13) instead of drifting from an odd starting value (12.1, 12.6, 13.1), and a run of quick taps sends one change when you stop tapping.
 
+## 0.33.9
+
+- The glow at the bottom of Jarvis fades out completely at its top, so it has no hard edge there (clipping it to stop it covering the bar had left one).
+- The Type button works every time: after the keyboard was folded away with the keyboard's own button, the typing box still held focus, so asking again did nothing. The focus is now let go first and the keyboard asked for again. Jarvis no longer opens with the keyboard up because of the last time (the request was remembered between openings), and the Type button is only lit while the keyboard is up.
+
 ## 0.33.8
 
 - Jarvis's round button has his avatar back as its background (the moving orb, following what he is doing) with a dark grey ring and a white logo or microphone over it.
