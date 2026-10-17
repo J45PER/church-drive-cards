@@ -72,48 +72,51 @@ fun isNotUnderstood(answer: String): Boolean {
 /** Which introduction is due: [First] the first time ever (the assistant introduces itself), [Update] after a new version (what is new). */
 enum class IntroKind { First, Update }
 
-/** Whether version [a] is later than [b] ("0.34.0" is after "0.33.9"): compared number by number. */
-fun versionAfter(a: String, b: String): Boolean {
-    fun parts(v: String) = v.split('.').map { it.filter(Char::isDigit).toIntOrNull() ?: 0 }
-    val x = parts(a)
-    val y = parts(b)
-    for (i in 0 until maxOf(x.size, y.size)) {
-        val d = x.getOrElse(i) { 0 } - y.getOrElse(i) { 0 }
-        if (d != 0) return d > 0
-    }
-    return false
-}
-
-/** The features that came after the version the person last heard about (all of them if they never have). */
-fun newFeatures(seenVersion: String?, features: List<AssistFeature>): List<AssistFeature> =
-    if (seenVersion == null) features else features.filter { versionAfter(it.since, seenVersion) }
+/** What kind of entry the Jarvis log holds: something he can now do, something that works differently, or something that was put right. */
+enum class JarvisChange { Feature, Change, Fix }
 
 /**
- * The introduction that is due, or null: never introduced is [IntroKind.First]; a feature added since the version last heard about
- * is [IntroKind.Update]. A new version with nothing new for the assistant brings nothing.
+ * One entry of the Jarvis log: a feature, change or fix. [id] never changes and is never reused: it is how the app remembers
+ * that this person has been told. [example] is a sentence to try ("Say: ..."); [detail] says what changed when there is nothing to say.
  */
-fun introKind(introducedEver: Boolean, seenVersion: String?, current: String, features: List<AssistFeature> = ASSIST_FEATURES): IntroKind? = when {
-    !introducedEver -> IntroKind.First
-    newFeatures(seenVersion, features).isEmpty() -> null
-    else -> IntroKind.Update
-}
+data class AssistFeature(
+    val icon: String,
+    val title: String,
+    val example: String,
+    val id: String = title,
+    val detail: String = "",
+    val kind: JarvisChange = JarvisChange.Feature,
+)
 
-/** Whether any introduction is due. */
-fun introDue(seenVersion: String?, current: String): Boolean = seenVersion != current
+/** What an introduction shows: which kind, and the log entries it lists. */
+data class IntroDue(val kind: IntroKind, val features: List<AssistFeature>)
 
-/** One thing the assistant can do, shown in the introduction and as an example sentence. */
-data class AssistFeature(val icon: String, val title: String, val example: String, val since: String = "0.0.0")
+/** What to do about the introduction: what is due now (or null), and the ids the person has now been told about. */
+data class IntroResult(val due: IntroDue?, val told: Set<String>)
 
 /**
- * What the assistant can do, newest first. Add each new thing at the top with `since` set to the app version that brings it: the
- * introduction comes again, once, only for what is newer than the version the person last heard about, and shows just those.
- * The first time ever it shows all of them.
+ * Decides the introduction from the Jarvis log, not from the app's version: the first time ever is the full introduction (what he can
+ * do: the log's features); after that only log entries the person has not been told about, each once, and nothing when there are none.
+ * [told] is null for someone introduced before the log existed: they are taken to know everything in it so far.
+ */
+fun introDue(introducedEver: Boolean, told: Set<String>?, log: List<AssistFeature>): IntroResult {
+    val all = log.map { it.id }.toSet()
+    if (!introducedEver) return IntroResult(IntroDue(IntroKind.First, log.filter { it.kind == JarvisChange.Feature }), all)
+    if (told == null) return IntroResult(null, all)
+    val fresh = log.filter { it.id !in told }
+    return if (fresh.isEmpty()) IntroResult(null, told) else IntroResult(IntroDue(IntroKind.Update, fresh), told + all)
+}
+
+/**
+ * The Jarvis log, newest first: every feature, change and fix to the assistant. Add an entry at the top whenever Jarvis gains or
+ * changes something (a new, never-reused [AssistFeature.id]); each person is told about each entry once, and only the first time
+ * ever do they get the full introduction. Features also make up that introduction's "what I can do".
  */
 val ASSIST_FEATURES = listOf(
-    AssistFeature("mdi:microphone-message", "Hands-free with the wake word", "Hey Jarvis, who is home?", "0.10.0"),
-    AssistFeature("mdi:chat-processing-outline", "Natural conversation", "Is it going to rain tomorrow?", "0.10.0"),
-    AssistFeature("mdi:cart-outline", "Shopping lists", "Add washing powder to the Lidl list", "0.10.0"),
-    AssistFeature("mdi:lightbulb-outline", "Lights, heating and the alarm", "Turn the lounge lights down", "0.10.0"),
+    AssistFeature("mdi:microphone-message", "Hands-free with the wake word", "Hey Jarvis, who is home?", id = "wake-word"),
+    AssistFeature("mdi:chat-processing-outline", "Natural conversation", "Is it going to rain tomorrow?", id = "conversation"),
+    AssistFeature("mdi:cart-outline", "Shopping lists", "Add washing powder to the Lidl list", id = "shopping-lists"),
+    AssistFeature("mdi:lightbulb-outline", "Lights, heating and the alarm", "Turn the lounge lights down", id = "lights-heating-alarm"),
 )
 
 /** "A, B and C". */

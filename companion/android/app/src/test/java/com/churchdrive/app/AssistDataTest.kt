@@ -4,7 +4,6 @@ import com.churchdrive.app.ui.AssistEvent
 import com.churchdrive.app.ui.assistAudioUrl
 import com.churchdrive.app.ui.forDisplay
 import com.churchdrive.app.ui.forSpeech
-import com.churchdrive.app.ui.introDue
 import com.churchdrive.app.ui.isDismissal
 import com.churchdrive.app.ui.isNotUnderstood
 import com.churchdrive.app.ui.parseAssistEvent
@@ -43,13 +42,6 @@ class AssistDataTest {
         assertFalse(other.noMatch)
         assertEquals(AssistEvent.Done, parseAssistEvent(JSONObject("""{"type":"run-end"}""")))
         assertNull(parseAssistEvent(JSONObject("""{"type":"intent-start","data":{}}""")))
-    }
-
-    @Test
-    fun theIntroductionShowsOncePerVersion() {
-        assertTrue(introDue(null, "0.8.2"))
-        assertTrue(introDue("0.8.1", "0.8.2"))
-        assertFalse(introDue("0.8.2", "0.8.2"))
     }
 
     @Test
@@ -99,25 +91,35 @@ class AssistDataTest {
         assertTrue(com.churchdrive.app.ui.MicStream.levelOf(loud, loud.size) > 0.9f)
     }
 
+    private fun entry(id: String, kind: com.churchdrive.app.ui.JarvisChange = com.churchdrive.app.ui.JarvisChange.Feature) =
+        com.churchdrive.app.ui.AssistFeature("mdi:x", id, "say $id", id = id, kind = kind)
+
     @Test
-    fun theFirstIntroductionIsTheAssistantsOwnAndLaterOnesAreWhatIsNew() {
-        assertEquals(com.churchdrive.app.ui.IntroKind.First, com.churchdrive.app.ui.introKind(false, null, "0.10.1"))
-        assertEquals(com.churchdrive.app.ui.IntroKind.First, com.churchdrive.app.ui.introKind(false, "0.10.1", "0.10.1"))
-        val older = com.churchdrive.app.ui.AssistFeature("mdi:x", "Old", "Old", "0.10.0")
-        val newer = com.churchdrive.app.ui.AssistFeature("mdi:y", "New", "New", "0.10.1")
-        // An update brings the introduction only when a feature came after the version last heard about, and lists just those.
-        assertEquals(com.churchdrive.app.ui.IntroKind.Update, com.churchdrive.app.ui.introKind(true, "0.10.0", "0.10.1", listOf(newer, older)))
-        assertEquals(listOf(newer), com.churchdrive.app.ui.newFeatures("0.10.0", listOf(newer, older)))
-        assertNull(com.churchdrive.app.ui.introKind(true, "0.10.0", "0.10.1", listOf(older)))
-        assertNull(com.churchdrive.app.ui.introKind(true, "0.10.1", "0.10.1"))
-        assertEquals(listOf(newer, older), com.churchdrive.app.ui.newFeatures(null, listOf(newer, older)))
+    fun theFirstIntroductionIsFullAndThenOnlyUntoldLogEntriesCome() {
+        val fix = entry("fix-1", com.churchdrive.app.ui.JarvisChange.Fix)
+        val log = listOf(fix, entry("b"), entry("a"))
+        // Never introduced: the full introduction, features only, and everything in the log counts as told.
+        val first = com.churchdrive.app.ui.introDue(false, null, log)
+        assertEquals(com.churchdrive.app.ui.IntroKind.First, first.due?.kind)
+        assertEquals(listOf("b", "a"), first.due?.features?.map { it.id })
+        assertEquals(setOf("fix-1", "b", "a"), first.told)
+        // Told about everything: nothing, however many app versions have gone by.
+        assertNull(com.churchdrive.app.ui.introDue(true, setOf("fix-1", "b", "a"), log).due)
+        // A new entry (a feature, change or fix): just that, once.
+        val update = com.churchdrive.app.ui.introDue(true, setOf("b", "a"), log)
+        assertEquals(com.churchdrive.app.ui.IntroKind.Update, update.due?.kind)
+        assertEquals(listOf("fix-1"), update.due?.features?.map { it.id })
+        assertNull(com.churchdrive.app.ui.introDue(true, update.told, log).due)
+        // Introduced before the log existed: taken to know it all, then told about what is added.
+        val migrated = com.churchdrive.app.ui.introDue(true, null, log)
+        assertNull(migrated.due)
+        assertEquals(setOf("fix-1", "b", "a"), migrated.told)
     }
 
     @Test
-    fun versionsAreComparedNumberByNumber() {
-        assertTrue(com.churchdrive.app.ui.versionAfter("0.34.0", "0.33.9"))
-        assertTrue(com.churchdrive.app.ui.versionAfter("0.10.0", "0.9.9"))
-        assertTrue(!com.churchdrive.app.ui.versionAfter("0.10.0", "0.10.0"))
+    fun theJarvisLogHasUniqueIds() {
+        val ids = com.churchdrive.app.ui.ASSIST_FEATURES.map { it.id }
+        assertEquals(ids.size, ids.toSet().size)
     }
 
     @Test

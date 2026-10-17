@@ -41,7 +41,7 @@ import org.json.JSONObject
 class AssistActivity : ComponentActivity() {
     private var client: HaClient? = null
     private var model: AssistModel? = null
-    private var intro by mutableStateOf<AssistIntroStore.Due?>(null)
+    private var intro by mutableStateOf<com.churchdrive.app.ui.IntroDue?>(null)
 
     private var enableWakeAfterPermission = false
 

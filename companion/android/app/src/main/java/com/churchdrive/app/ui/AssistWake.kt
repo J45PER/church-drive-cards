@@ -62,25 +62,21 @@ object AssistColourSetting {
 }
 
 /**
- * Remembers whether the assistant has introduced itself to this person, and which version they last heard what is new in. The
- * introduction is taken once: the moment it is handed out it counts as seen, however it is closed.
+ * Remembers whether the assistant has introduced itself to this person, and which entries of the Jarvis log they have been told about.
+ * The introduction is taken once: the moment it is handed out it counts as told, however it is closed.
  */
 object AssistIntroStore {
     private const val KEY_EVER = "introduced"
+    private const val KEY_TOLD = "told_ids"
     private fun prefs(context: Context) = context.getSharedPreferences(AssistActivity.PREFS, Context.MODE_PRIVATE)
 
-    /** An introduction to show: which kind, and the features it lists (all the first time, then only the new ones). */
-    data class Due(val kind: IntroKind, val features: List<AssistFeature>)
-
-    /** The introduction due now, if any, and marks it seen. */
-    fun take(context: Context): Due? {
+    /** The introduction due now, if any, and notes that the person has been told. */
+    fun take(context: Context): IntroDue? {
         val p = prefs(context)
-        val ever = p.getBoolean(KEY_EVER, false)
-        val seen = p.getString(AssistActivity.KEY_INTRO, null)
-        val kind = introKind(ever, seen, com.churchdrive.app.BuildConfig.VERSION_NAME) ?: return null
-        val features = if (kind == IntroKind.First) ASSIST_FEATURES else newFeatures(seen, ASSIST_FEATURES)
-        p.edit().putBoolean(KEY_EVER, true).putString(AssistActivity.KEY_INTRO, com.churchdrive.app.BuildConfig.VERSION_NAME).apply()
-        return Due(kind, features)
+        val told = p.getStringSet(KEY_TOLD, null)
+        val result = introDue(p.getBoolean(KEY_EVER, false), told, ASSIST_FEATURES)
+        p.edit().putBoolean(KEY_EVER, true).putStringSet(KEY_TOLD, result.told).apply()
+        return result.due
     }
 }
 
@@ -100,7 +96,7 @@ fun AssistWakeHost(connected: Boolean, base: String, api: HaApi?, userName: Stri
     val enabled = AssistWakeSetting.enabled
     val model = remember(api) { AssistModel(context, api, base) }
     var open by remember { mutableStateOf(false) }
-    var intro by remember { mutableStateOf<AssistIntroStore.Due?>(null) }
+    var intro by remember { mutableStateOf<IntroDue?>(null) }
     val owner = LocalLifecycleOwner.current
     val micAsk = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) AssistWakeSetting.set(context, true)

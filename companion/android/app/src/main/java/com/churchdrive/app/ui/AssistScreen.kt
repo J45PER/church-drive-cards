@@ -526,7 +526,8 @@ fun AssistIntro(kind: IntroKind, features: List<AssistFeature>, person: String, 
                         HaIcon(f.icon, Icons.Filled.Info, tone.accent, 28.dp)
                         Column {
                             Text(f.title, style = MaterialTheme.typography.titleMedium)
-                            Text("Say: ${f.example}", style = MaterialTheme.typography.bodyMedium)
+                            val line = if (f.example.isNotBlank()) "Say: ${f.example}" else f.detail
+                            if (line.isNotBlank()) Text(line, style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                 }
