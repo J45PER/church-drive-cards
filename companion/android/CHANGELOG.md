@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.33.1
+
+- Home page to-do highlights: the button on the right ("+N more" or "To-do") now fills the full height of the task rows, so there is no blank space under it when three tasks show. Shopping and steps tasks use the shopping indigo instead of purple (overdue ones stay red).
+
 ## 0.33.0
 
 - Security zone cards can name the camera whose events they show (the card's `camera` setting): Back Garden now shows the garden camera's events and Back Door the living room's.
