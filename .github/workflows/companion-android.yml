@@ -29,7 +29,17 @@ jobs:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
           if [ -n "$GOOGLE_SERVICES_JSON" ]; then printf '%s' "$GOOGLE_SERVICES_JSON" > app/google-services.json; fi
-      - run: ./gradlew testDebugUnitTest assembleDebug
+      # The build's errors are also shown as an annotation (the run's log is not always readable from outside GitHub).
+      - name: Build and test
+        run: |
+          set +e
+          ./gradlew testDebugUnitTest assembleDebug --console=plain 2>&1 | tee ../build.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            msg=$(grep -E "^e: |error:|FAILED|What went wrong|Execution failed|Could not resolve|AAPT|Manifest merger" -A2 ../build.log | head -80 | cut -c1-300 | sed ':a;N;$!ba;s/\n/%0A/g')
+            echo "::error title=Gradle build failed::${msg}"
+          fi
+          exit $status
       - uses: actions/upload-artifact@v4
         with:
           name: church-drive-debug-apk
