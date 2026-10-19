@@ -2,7 +2,7 @@ name: Companion Android
 
 on:
   push:
-    branches: [companion-apps, main]
+    branches: [companion-apps, main, claude/wear-os-todo-app]
     paths: ["companion/android/**", ".github/workflows/companion-android.yml"]
   pull_request:
     paths: ["companion/android/**", ".github/workflows/companion-android.yml"]
@@ -54,7 +54,7 @@ jobs:
           name: church-drive-todo-debug-apk
           path: companion/android/todo/build/outputs/apk/debug/*.apk
       - name: Publish APK as a pre-release
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && github.ref_name != 'claude/wear-os-todo-app'
         working-directory: .
         env:
           GH_TOKEN: ${{ github.token }}
@@ -81,3 +81,20 @@ jobs:
               --title "Church Drive Android ${version}" \
               --notes "${notes:-Version ${version}.} (Build ${GITHUB_RUN_NUMBER}, commit ${GITHUB_SHA::7}.)"
           fi
+      # A branch preview of all three apps as plain downloads (no zips). It has its own tag, so the phone app's updater, which only looks
+      # at companion-android-latest, never sees it, and it is replaced on every push to the branch.
+      - name: Publish a preview release (watch and to-do apps)
+        if: github.event_name == 'push' && github.ref_name == 'claude/wear-os-todo-app'
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(sed -n 's/^version=//p' companion/android/version.properties)
+          cp "$(ls companion/android/app/build/outputs/apk/debug/*.apk)" church-drive.apk
+          cp "$(ls companion/android/wear/build/outputs/apk/debug/*.apk)" church-drive-wear.apk
+          cp "$(ls companion/android/todo/build/outputs/apk/debug/*.apk)" church-drive-todo.apk
+          gh release delete companion-android-preview --yes --cleanup-tag || true
+          gh release create companion-android-preview church-drive.apk church-drive-wear.apk church-drive-todo.apk \
+            --prerelease --latest=false --target "$GITHUB_SHA" \
+            --title "Church Drive ${version} preview (watch and to-do apps), build ${GITHUB_RUN_NUMBER}" \
+            --notes "Preview from the ${GITHUB_REF_NAME} branch (commit ${GITHUB_SHA::7}). church-drive.apk is the phone app with watch sync, church-drive-wear.apk the Pixel Watch app, church-drive-todo.apk the to-do-only app. Not used by the app's own update check."
