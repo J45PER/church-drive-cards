@@ -4,6 +4,13 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.35.0
+
+- Pixel Watch (Wear OS) app, in the same Play listing as the phone app: it is signed in by the phone (open Church Drive on the phone once and the watch has the same sign-in; signing out on the phone signs the watch out). On the watch, Church Drive has the key actions (alarm Home, Away, Night and Disarm, scenes, all lights off, the vacuum), Jarvis (speak or tap a sentence; he answers on screen and aloud, with a Voice on/off button) and a tile with Jarvis, To-Do and Actions.
+- To-Do on the watch is a mini app of its own with its own icon: your to-do list, the shared list and the cleaning jobs, tap a task to tick it off, "Add a task" by voice.
+- Church Drive To-Do: a phone app with just the to-do lists (its own install and sign-in), made from the same code.
+- Under the bonnet: the Home Assistant connection, sign-in storage and to-do and Jarvis data moved into a shared `core` module, so the phone, watch and to-do apps use one copy.
+
 ## 0.34.3
 
 - Account > Settings shows how long Jarvis took over his last answer, step by step: hearing you, thinking, making the voice and starting to speak. It is for finding out which part is slow.

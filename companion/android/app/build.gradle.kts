@@ -61,6 +61,10 @@ android {
 }
 
 dependencies {
+    // The Home Assistant connection, sign-in storage and to-do/Jarvis data, shared with the watch and to-do apps.
+    implementation(project(":core"))
+    // Sends the sign-in to a paired watch.
+    implementation("com.google.android.gms:play-services-wearable:18.2.0")
     val composeBom = platform("androidx.compose:compose-bom:2024.10.01")
     implementation(composeBom)
     implementation("androidx.compose.material3:material3")

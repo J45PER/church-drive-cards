@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-feature android:name="android.hardware.type.watch" />
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Cleartext allowed because Home Assistant is often reached over plain http on the LAN. -->
+    <application
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="Church Drive"
+        android:theme="@android:style/Theme.DeviceDefault"
+        android:usesCleartextTraffic="true">
+
+        <!-- The watch works on its own (over Wi-Fi or its own mobile connection) once it has been given the phone's sign-in. -->
+        <meta-data
+            android:name="com.google.android.wearable.standalone"
+            android:value="true" />
+
+        <!-- Key actions: alarm, scenes, lights, vacuum, with Jarvis and the to-do list one tap away. -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="Church Drive">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Jarvis, the house's voice assistant. -->
+        <activity
+            android:name=".JarvisActivity"
+            android:exported="true"
+            android:icon="@drawable/ic_jarvis"
+            android:label="Jarvis">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- The to-do mini app: its own icon on the watch. -->
+        <activity
+            android:name=".TodoActivity"
+            android:exported="true"
+            android:icon="@drawable/ic_todo"
+            android:label="To-Do">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- The phone's sign-in, as it is sent (or removed) by the phone app. -->
+        <service
+            android:name=".SessionListener"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
+                <data
+                    android:host="*"
+                    android:pathPrefix="/church-drive/session"
+                    android:scheme="wear" />
+            </intent-filter>
+        </service>
+
+        <!-- The tile: Jarvis, To-Do and key actions from the watch face's tile carousel. -->
+        <service
+            android:name=".QuickTile"
+            android:exported="true"
+            android:label="Church Drive"
+            android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
+            <intent-filter>
+                <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" />
+            </intent-filter>
+            <meta-data
+                android:name="androidx.wear.tiles.PREVIEW"
+                android:resource="@drawable/ic_jarvis" />
+        </service>
+    </application>
+</manifest>

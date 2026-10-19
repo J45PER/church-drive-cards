@@ -283,6 +283,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun start(url: String, token: String) {
+        // A paired watch gets the same sign-in (each connect: the access token may be new).
+        WearSync.push(appContext)
         client.connect(url, token)
         IconPack.load(viewModelScope, appContext.filesDir, url, token)
     }
@@ -375,6 +377,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (url != null && refresh != null) viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { HaAuth.revoke(url, refresh) }
         client.disconnect()
         session.clear()
+        WearSync.clear(appContext)
         cache.clear()
         // Nothing left to run: stops the notification connection and the location updates.
         com.churchdrive.app.house.House.sync(appContext)

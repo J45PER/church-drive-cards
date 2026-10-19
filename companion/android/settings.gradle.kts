@@ -13,4 +13,7 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "church-drive"
+include(":core")
 include(":app")
+include(":wear")
+include(":todo")
