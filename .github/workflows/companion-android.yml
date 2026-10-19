@@ -2,7 +2,7 @@ name: Companion Android
 
 on:
   push:
-    branches: [companion-apps, main, claude/wear-os-todo-app]
+    branches: [companion-apps, main]
     paths: ["companion/android/**", ".github/workflows/companion-android.yml"]
   pull_request:
     paths: ["companion/android/**", ".github/workflows/companion-android.yml"]
@@ -18,6 +18,8 @@ jobs:
         working-directory: companion/android
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -53,38 +55,32 @@ jobs:
         with:
           name: church-drive-todo-debug-apk
           path: companion/android/todo/build/outputs/apk/debug/*.apk
-      - name: Publish APK as a pre-release
-        if: github.event_name == 'push' && github.ref_name != 'claude/wear-os-todo-app'
+      # The phone app (with the watch app) and Church Drive To-Do have separate versions and separate releases, so a change to one does not
+      # show up as a release of the other. Work out which a push touched: anything in `core` or the build files is both's.
+      - name: Which apps changed
+        id: changed
+        if: github.event_name == 'push'
         working-directory: .
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          version=$(sed -n 's/^version=//p' companion/android/version.properties)
-          apk=$(ls companion/android/app/build/outputs/apk/debug/*.apk)
-          cp "$apk" church-drive.apk
-          cp "$(ls companion/android/wear/build/outputs/apk/debug/*.apk)" church-drive-wear.apk
-          cp "$(ls companion/android/todo/build/outputs/apk/debug/*.apk)" church-drive-todo.apk
-          # The latest test build: replaced on every push (the app looks here for updates).
-          gh release delete companion-android-latest --yes --cleanup-tag || true
-          gh release create companion-android-latest church-drive.apk church-drive-wear.apk church-drive-todo.apk \
-            --prerelease --target "$GITHUB_SHA" \
-            --title "Church Drive Android ${version} (test build ${GITHUB_RUN_NUMBER})" \
-            --notes "Latest test build, version ${version}, build ${GITHUB_RUN_NUMBER}, from the ${GITHUB_REF_NAME} branch (commit ${GITHUB_SHA::7}). Download church-drive.apk on an Android phone and install it (church-drive-wear.apk is the Wear OS watch app, church-drive-todo.apk the to-do-only app)."
-          # The app looks for updates through the public releases API, which cannot see a draft: make sure this one is published.
-          gh release edit companion-android-latest --draft=false --prerelease
-          gh release view companion-android-latest --json isDraft,isPrerelease,tagName
-          # Each version keeps its own release, made the first time a build has that version: a permanent record of what shipped.
-          if ! gh release view "android-v${version}" >/dev/null 2>&1; then
-            notes=$(awk -v v="$version" '$0 ~ "^## "v"( |$)" {on=1; next} /^## / {on=0} on' companion/android/CHANGELOG.md)
-            gh release create "android-v${version}" church-drive.apk church-drive-wear.apk church-drive-todo.apk \
-              --target "$GITHUB_SHA" \
-              --title "Church Drive Android ${version}" \
-              --notes "${notes:-Version ${version}.} (Build ${GITHUB_RUN_NUMBER}, commit ${GITHUB_SHA::7}.)"
+          before="${{ github.event.before }}"
+          if [ -z "$before" ] || [ "$before" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$before" 2>/dev/null; then
+            files=$(git ls-files companion/android .github/workflows/companion-android.yml)
+          else
+            files=$(git diff --name-only "$before" "$GITHUB_SHA")
           fi
-      # A branch preview of all three apps as plain downloads (no zips). It has its own tag, so the phone app's updater, which only looks
-      # at companion-android-latest, never sees it, and it is replaced on every push to the branch.
-      - name: Publish a preview release (watch and to-do apps)
-        if: github.event_name == 'push' && github.ref_name == 'claude/wear-os-todo-app'
+          main=false; todo=false
+          while read -r f; do
+            case "$f" in
+              companion/android/todo/*) todo=true ;;
+              companion/android/*) main=true; case "$f" in companion/android/core/*|companion/android/*.kts|companion/android/gradle*|companion/android/gradle/*) todo=true ;; esac ;;
+              .github/workflows/companion-android.yml) main=true; todo=true ;;
+            esac
+          done <<< "$files"
+          echo "main=$main" >> "$GITHUB_OUTPUT"
+          echo "todo=$todo" >> "$GITHUB_OUTPUT"
+          echo "Phone and watch apps changed: $main. To-Do app changed: $todo."
+      - name: Publish the phone and watch apps
+        if: github.event_name == 'push' && steps.changed.outputs.main == 'true'
         working-directory: .
         env:
           GH_TOKEN: ${{ github.token }}
@@ -92,9 +88,41 @@ jobs:
           version=$(sed -n 's/^version=//p' companion/android/version.properties)
           cp "$(ls companion/android/app/build/outputs/apk/debug/*.apk)" church-drive.apk
           cp "$(ls companion/android/wear/build/outputs/apk/debug/*.apk)" church-drive-wear.apk
+          # The latest test build: replaced on every push that touches these apps (the app looks here for updates).
+          gh release delete companion-android-latest --yes --cleanup-tag || true
+          gh release create companion-android-latest church-drive.apk church-drive-wear.apk \
+            --prerelease --target "$GITHUB_SHA" \
+            --title "Church Drive Android ${version} (test build ${GITHUB_RUN_NUMBER})" \
+            --notes "Latest test build, version ${version}, build ${GITHUB_RUN_NUMBER}, from the ${GITHUB_REF_NAME} branch (commit ${GITHUB_SHA::7}). Download church-drive.apk on an Android phone and install it (church-drive-wear.apk is the Wear OS watch app). Church Drive To-Do has its own releases."
+          # The app looks for updates through the public releases API, which cannot see a draft: make sure this one is published.
+          gh release edit companion-android-latest --draft=false --prerelease
+          gh release view companion-android-latest --json isDraft,isPrerelease,tagName
+          # Each version keeps its own release, made the first time a build has that version: a permanent record of what shipped.
+          if ! gh release view "android-v${version}" >/dev/null 2>&1; then
+            notes=$(awk -v v="$version" '$0 ~ "^## "v"( |$)" {on=1; next} /^## / {on=0} on' companion/android/CHANGELOG.md)
+            gh release create "android-v${version}" church-drive.apk church-drive-wear.apk \
+              --target "$GITHUB_SHA" \
+              --title "Church Drive Android ${version}" \
+              --notes "${notes:-Version ${version}.} (Build ${GITHUB_RUN_NUMBER}, commit ${GITHUB_SHA::7}.)"
+          fi
+      - name: Publish Church Drive To-Do
+        if: github.event_name == 'push' && steps.changed.outputs.todo == 'true'
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(sed -n 's/^version=//p' companion/android/todo/version.properties)
           cp "$(ls companion/android/todo/build/outputs/apk/debug/*.apk)" church-drive-todo.apk
-          gh release delete companion-android-preview --yes --cleanup-tag || true
-          gh release create companion-android-preview church-drive.apk church-drive-wear.apk church-drive-todo.apk \
+          gh release delete todo-latest --yes --cleanup-tag || true
+          gh release create todo-latest church-drive-todo.apk \
             --prerelease --latest=false --target "$GITHUB_SHA" \
-            --title "Church Drive ${version} preview (watch and to-do apps), build ${GITHUB_RUN_NUMBER}" \
-            --notes "Preview from the ${GITHUB_REF_NAME} branch (commit ${GITHUB_SHA::7}). church-drive.apk is the phone app with watch sync, church-drive-wear.apk the Pixel Watch app, church-drive-todo.apk the to-do-only app. Not used by the app's own update check."
+            --title "Church Drive To-Do ${version} (test build ${GITHUB_RUN_NUMBER})" \
+            --notes "Latest test build of Church Drive To-Do, version ${version}, build ${GITHUB_RUN_NUMBER}, from the ${GITHUB_REF_NAME} branch (commit ${GITHUB_SHA::7}). Download church-drive-todo.apk on an Android phone and install it."
+          gh release edit todo-latest --draft=false --prerelease --latest=false
+          if ! gh release view "todo-v${version}" >/dev/null 2>&1; then
+            notes=$(awk -v v="$version" '$0 ~ "^## "v"( |$)" {on=1; next} /^## / {on=0} on' companion/android/todo/CHANGELOG.md)
+            gh release create "todo-v${version}" church-drive-todo.apk --latest=false \
+              --target "$GITHUB_SHA" \
+              --title "Church Drive To-Do ${version}" \
+              --notes "${notes:-Version ${version}.} (Build ${GITHUB_RUN_NUMBER}, commit ${GITHUB_SHA::7}.)"
+          fi

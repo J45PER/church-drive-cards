@@ -16,7 +16,7 @@ android {
         applicationId = "com.churchdrive.todo"
         minSdk = 26
         targetSdk = 35
-        val appVersion = Properties().apply { file("../version.properties").inputStream().use { load(it) } }.getProperty("version")
+        val appVersion = Properties().apply { file("version.properties").inputStream().use { load(it) } }.getProperty("version")
         val build = (System.getenv("GITHUB_RUN_NUMBER") ?: "0").toInt()
         versionCode = maxOf(build, 1)
         versionName = appVersion

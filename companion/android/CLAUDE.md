@@ -15,3 +15,5 @@ Build and test happen in CI (there is no Android SDK in the sandbox): push to `c
 When Jarvis (the assistant) gains a feature, changes how something works or has a fix, add an entry at the top of `ASSIST_FEATURES`
 (the Jarvis log, `core/src/main/java/com/churchdrive/app/ui/AssistData.kt`: it lives in the shared `core` module because the watch app uses it too) with a new, never-reused `id`. Each person is told about each entry once; the full
 introduction is only for the first time ever, so never rely on the app's version to bring it back.
+
+Releases: the phone app (with the watch app) and Church Drive To-Do are versioned and released separately. The phone app's version is `version.properties` and its notes `CHANGELOG.md` (releases `android-v<version>` and `companion-android-latest`, which the app's update check reads); To-Do's are `todo/version.properties` and `todo/CHANGELOG.md` (releases `todo-v<version>` and `todo-latest`). CI publishes each only when a push touches it; a change in `core` or the build files touches both, so bump both versions and note it in both changelogs.
