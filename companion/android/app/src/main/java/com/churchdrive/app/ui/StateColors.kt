@@ -17,7 +17,7 @@ val LocalPanelTone = androidx.compose.runtime.compositionLocalOf<Tone?> { null }
 @androidx.compose.runtime.Composable
 fun panelNeutral(): ToneColors = toneColors(LocalPanelTone.current ?: Tone.Grey)
 
-enum class Tone { Green, Blue, Red, Purple, Amber, Orange, Teal, Indigo, Grey }
+enum class Tone { Green, Blue, Red, Purple, Amber, Orange, Teal, Indigo, Grey, Pink }
 
 data class ToneColors(
     /** Card background. */
@@ -46,6 +46,7 @@ private val lightTones = mapOf(
     Tone.Teal to light(0xFFE0F7FA, 0xFF006064, 0xFF00838F),
     Tone.Indigo to light(0xFFE8EAF6, 0xFF283593, 0xFF5C6BC0),
     Tone.Grey to light(0xFFF1F3F4, 0xFF3C4043, 0xFF5F6368),
+    Tone.Pink to light(0xFFFCE4F2, 0xFF8E1A62, 0xFFD81B8C),
 )
 
 private val darkTones = mapOf(
@@ -58,6 +59,7 @@ private val darkTones = mapOf(
     Tone.Teal to dark(0xFF0F3A40, 0xFF4DD0E1, 0xFF4DD0E1),
     Tone.Indigo to dark(0xFF262B4A, 0xFF9FA8DA, 0xFF9FA8DA),
     Tone.Grey to dark(0xFF303134, 0xFFBDC1C6, 0xFF9AA0A6),
+    Tone.Pink to dark(0xFF4A2040, 0xFFF58AD0, 0xFFF58AD0),
 )
 
 @Composable

@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.34.4
+
+- The house's own jobs have a colour of their own, pink (a new one, used nowhere else): on the To-do page's house tasks card and on the Home to-do highlights, instead of the purple of a person's own tasks. Overdue ones are still red.
+
 ## 0.34.3
 
 - Account > Settings shows how long Jarvis took over his last answer, step by step: hearing you, thinking, making the voice and starting to speak. It is for finding out which part is slow.

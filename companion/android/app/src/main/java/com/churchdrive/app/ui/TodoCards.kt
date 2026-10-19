@@ -175,7 +175,8 @@ fun HouseTasksCard(config: JSONObject, entities: Map<String, EntityState>) {
     val first = me?.trim()?.substringBefore(' ')
     val listId = config.optString("entity").ifBlank { "todo.priorities_automatic" }
     val showAll = config.optString("show") == "all"
-    val tone = toneColors(Tone.Purple)
+    // The house's own jobs have a colour of their own (pink): not the purple of a person's tasks, nor the indigo of shopping or teal of steps.
+    val tone = toneColors(Tone.Pink)
     val items = rememberTodoItems(listId, entities)
     EntityCard(tone.container, tone.onContainer) {
         val tasks = items.orEmpty().filter { !it.done }.map { it to houseTask(it) }.filter { showAll || houseTaskFor(it.second, first) }
