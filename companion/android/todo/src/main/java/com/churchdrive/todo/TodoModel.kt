@@ -7,6 +7,8 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.churchdrive.app.Session
+import com.churchdrive.app.SessionShare
+import com.churchdrive.app.SharedLookup
 import com.churchdrive.app.freshToken
 import com.churchdrive.app.ha.ConnectionState
 import com.churchdrive.app.ha.HaAuth
@@ -34,6 +36,9 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
     var signedIn by mutableStateOf(session.signedIn)
         private set
     var connected by mutableStateOf(false)
+        private set
+    /** Signed in through the Church Drive app: signing out is done there. */
+    var borrowed by mutableStateOf(session.borrowed)
         private set
 
     // Signing in.
@@ -92,7 +97,32 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
 
     /** The app came to the front: connect again if the line has gone. */
     fun onForeground() {
+        importSignIn()
         if (signedIn && !connected) connect()
+    }
+
+    /** Signs in with the Church Drive app's sign-in when it is on this phone, and follows it when it signs out or in as someone else. */
+    private fun importSignIn() {
+        if (signedIn && !session.borrowed) return
+        viewModelScope.launch(Dispatchers.IO) {
+            val found = SessionShare.read(getApplication())
+            withContext(Dispatchers.Main) {
+                when {
+                    found is SharedLookup.Found -> {
+                        val changed = !signedIn || session.url != found.session.url || session.refreshToken != found.session.refresh
+                        session.saveBorrowed(found.session)
+                        borrowed = true
+                        signedIn = true
+                        if (changed) {
+                            client.disconnect()
+                            connect()
+                        }
+                    }
+                    found is SharedLookup.SignedOut && signedIn -> signOut()
+                    else -> Unit
+                }
+            }
+        }
     }
 
     // ---- Signing in ----
@@ -130,6 +160,7 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
                     } else {
                         session.saveSignIn(flowUrl, tokens.access, tokens.refresh)
                         needCode = false
+                        borrowed = false
                         signedIn = true
                         connect()
                     }
@@ -156,9 +187,11 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
     fun signOut() {
         val url = session.url
         val refresh = session.refreshToken
-        if (url != null && refresh != null) viewModelScope.launch(Dispatchers.IO) { HaAuth.revoke(url, refresh) }
+        // A borrowed sign-in belongs to the Church Drive app: revoking it here would sign that app out too.
+        if (url != null && refresh != null && !session.borrowed) viewModelScope.launch(Dispatchers.IO) { HaAuth.revoke(url, refresh) }
         client.disconnect()
         session.clear()
+        borrowed = false
         signedIn = false
         lists = emptyList()
         openList = null

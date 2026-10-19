@@ -99,7 +99,7 @@ private fun Lists(vm: TodoModel) {
     if (open == null) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
             Text("To-Do", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
-            TextButton(onClick = { vm.signOut() }) { Text("Sign out") }
+            if (!vm.borrowed) TextButton(onClick = { vm.signOut() }) { Text("Sign out") }
         }
         if (!vm.connected) Text("Connecting to the house…", modifier = Modifier.padding(vertical = 8.dp))
         LazyColumn {
