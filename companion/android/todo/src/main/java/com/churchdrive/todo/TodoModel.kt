@@ -287,6 +287,20 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
         changed(id)
     }
 
+    /** Saves an edited task (the fields `todo.update_item` takes: see `updateFields`). */
+    fun save(tab: TodoTab, fields: Map<String, Any?>) {
+        val id = listId(tab) ?: return
+        client.callService("todo", "update_item", id, data(*fields.map { it.key to (it.value ?: JSONObject.NULL) }.toTypedArray()))
+        changed(id)
+    }
+
+    fun remove(tab: TodoTab, item: TodoItem) {
+        val id = listId(tab) ?: return
+        loaded[id] = loaded[id].orEmpty().filter { it.uid != item.uid }
+        client.callService("todo", "remove_item", id, data("item" to item.uid))
+        changed(id)
+    }
+
     fun add(tab: TodoTab, text: String) {
         val id = listId(tab) ?: return
         if (text.isBlank() || !tab.canAdd) return

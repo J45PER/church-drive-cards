@@ -149,6 +149,15 @@ private fun TaskCard(vm: TodoModel, tab: TodoTab) {
     val items = vm.items(tab)
     var text by rememberSaveable(tab) { mutableStateOf("") }
     var showDone by rememberSaveable(tab) { mutableStateOf(false) }
+    var editing by remember(tab) { mutableStateOf<TodoItem?>(null) }
+    editing?.let { item ->
+        TodoEditDialog(
+            item, vm.personName?.trim()?.substringBefore(' '),
+            onSave = { vm.save(tab, it); editing = null },
+            onDelete = { vm.remove(tab, item); editing = null },
+            onClose = { editing = null },
+        )
+    }
     Surface(shape = RoundedCornerShape(28.dp), color = tone.container, contentColor = tone.onContainer, modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (vm.listId(tab) == null) {
@@ -161,7 +170,7 @@ private fun TaskCard(vm: TodoModel, tab: TodoTab) {
                 open.isEmpty() -> Text(if (tab == TodoTab.House) "Nothing from the house right now." else "All done", style = MaterialTheme.typography.titleMedium)
             }
             open.forEach { item ->
-                if (tab == TodoTab.House) HouseRow(item, houseTask(item), tone) else TaskRow(item, tone) { vm.setDone(tab, item, true) }
+                if (tab == TodoTab.House) HouseRow(item, houseTask(item), tone) else TaskRow(item, tone, onEdit = { editing = item }) { vm.setDone(tab, item, true) }
             }
             // Finished tasks, kept out of the way until asked for; tick one to bring it back.
             val finished = items.orEmpty().filter { it.done }
@@ -175,7 +184,7 @@ private fun TaskCard(vm: TodoModel, tab: TodoTab) {
                         Checkbox(checked = true, onCheckedChange = { vm.setDone(tab, item, false) }, colors = checks(tone))
                         Text(
                             item.summary, style = MaterialTheme.typography.bodyLarge, textDecoration = TextDecoration.LineThrough,
-                            color = tone.onContainer.copy(alpha = 0.6f), modifier = Modifier.weight(1f),
+                            color = tone.onContainer.copy(alpha = 0.6f), modifier = Modifier.weight(1f).clickable { editing = item },
                         )
                     }
                 }
@@ -201,7 +210,7 @@ private fun TaskCard(vm: TodoModel, tab: TodoTab) {
 private fun checks(tone: ToneColors) = CheckboxDefaults.colors(checkedColor = tone.accent, uncheckedColor = tone.accent)
 
 @Composable
-private fun TaskRow(item: TodoItem, tone: ToneColors, onTick: () -> Unit) {
+private fun TaskRow(item: TodoItem, tone: ToneColors, onEdit: () -> Unit, onTick: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         val list = shoppingIdOf(item.description)
         if (list.isNotEmpty()) {
@@ -212,7 +221,8 @@ private fun TaskRow(item: TodoItem, tone: ToneColors, onTick: () -> Unit) {
         } else {
             Checkbox(checked = false, onCheckedChange = { onTick() }, colors = checks(tone))
         }
-        Column(Modifier.weight(1f).clickable(enabled = list.isEmpty()) { onTick() }) {
+        // Tap a task to change it (its day, repeat, next date, who is reminded, notes); the box on its left ticks it.
+        Column(Modifier.weight(1f).clickable(enabled = list.isEmpty()) { onEdit() }) {
             Text(item.summary, style = MaterialTheme.typography.bodyLarge)
             taskLine(item).takeIf { it.isNotBlank() }?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall, color = tone.onContainer.copy(alpha = 0.75f))
