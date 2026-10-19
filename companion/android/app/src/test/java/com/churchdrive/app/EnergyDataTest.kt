@@ -75,13 +75,17 @@ class EnergyDataTest {
     }
 
     @Test
-    fun updateIsOfferedOnlyWhenTheReleaseCameFromAnotherCommit() {
-        val body = "Latest test build from the companion-apps branch (commit abc1234). Download it."
-        assertEquals("abc1234", UpdateCheck.commitOf(body))
-        assertFalse(UpdateCheck.isNewer(body, "abc1234"))
-        assertTrue(UpdateCheck.isNewer(body, "def5678"))
-        assertFalse(UpdateCheck.isNewer(null, "def5678"))
-        assertFalse(UpdateCheck.isNewer(body, ""))
+    fun updateIsOfferedOnlyWhenTheReleaseIsALaterBuild() {
+        val body = "Latest test build, version 0.35.0, build 42, from the main branch (commit abc1234). Download it."
+        assertEquals(42, UpdateCheck.buildOf(body))
+        assertTrue(UpdateCheck.isNewer(body, 41))
+        // The same build, or a preview build that is ahead of the release, is not an update.
+        assertFalse(UpdateCheck.isNewer(body, 42))
+        assertFalse(UpdateCheck.isNewer(body, 50))
+        assertFalse(UpdateCheck.isNewer(null, 41))
+        assertFalse(UpdateCheck.isNewer("no build number here", 41))
+        // A local build has no number.
+        assertFalse(UpdateCheck.isNewer(body, 0))
     }
 
     @Test

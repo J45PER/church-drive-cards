@@ -69,7 +69,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private fun checkForUpdate() {
         lastUpdateCheck = System.currentTimeMillis()
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            _updateAvailable.value = UpdateCheck.check(okhttp3.OkHttpClient(), BuildConfig.COMMIT)
+            _updateAvailable.value = UpdateCheck.check(okhttp3.OkHttpClient(), BuildConfig.BUILD.toIntOrNull() ?: 0)
         }
     }
 
@@ -99,7 +99,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun checkUpdateNow(done: (Boolean) -> Unit) {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             lastUpdateCheck = System.currentTimeMillis()
-            val available = UpdateCheck.check(okhttp3.OkHttpClient(), BuildConfig.COMMIT)
+            val available = UpdateCheck.check(okhttp3.OkHttpClient(), BuildConfig.BUILD.toIntOrNull() ?: 0)
             _updateAvailable.value = available
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { done(available) }
         }

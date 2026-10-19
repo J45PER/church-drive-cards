@@ -12,6 +12,11 @@
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <!-- Lets the Church Drive To-Do app (same signing key) read this sign-in, so it needs no typing. -->
+    <permission
+        android:name="com.churchdrive.app.permission.SHARE_SESSION"
+        android:protectionLevel="signature" />
+
     <!-- Cleartext allowed because Home Assistant is often reached over plain http on the LAN. -->
     <application
         android:allowBackup="false"
@@ -20,6 +25,11 @@
         android:label="Church Drive"
         android:theme="@style/Theme.ChurchDrive"
         android:usesCleartextTraffic="true">
+        <provider
+            android:name=".SessionProvider"
+            android:authorities="com.churchdrive.app.sessionshare"
+            android:exported="true"
+            android:permission="com.churchdrive.app.permission.SHARE_SESSION" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
