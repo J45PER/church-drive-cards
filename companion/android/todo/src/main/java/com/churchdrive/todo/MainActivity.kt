@@ -38,8 +38,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.churchdrive.app.ui.TodoItem
-import com.churchdrive.app.ui.taskLine
+import com.churchdrive.app.ui.ChurchDriveTheme
 
 /** Church Drive To-Do: sign in to the house, pick a list, tick tasks off, add new ones. */
 class MainActivity : ComponentActivity() {
@@ -48,10 +47,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
+            ChurchDriveTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    Column(modifier = Modifier.statusBarsPadding().padding(horizontal = 16.dp)) {
-                        if (!vm.signedIn) SignIn(vm) else Lists(vm)
+                    if (!vm.signedIn) {
+                        Column(modifier = Modifier.statusBarsPadding().padding(horizontal = 16.dp)) { SignIn(vm) }
+                    } else {
+                        TodoApp(vm)
                     }
                 }
             }
@@ -92,60 +93,3 @@ private fun SignIn(vm: TodoModel) {
     }
 }
 
-@Composable
-private fun Lists(vm: TodoModel) {
-    val open = vm.openList
-    BackHandler(enabled = open != null) { vm.open(null) }
-    if (open == null) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
-            Text("To-Do", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
-            if (!vm.borrowed) TextButton(onClick = { vm.signOut() }) { Text("Sign out") }
-        }
-        if (!vm.connected) Text("Connecting to the house…", modifier = Modifier.padding(vertical = 8.dp))
-        LazyColumn {
-            items(vm.lists, key = { it.first }) { list ->
-                Text(list.second, style = MaterialTheme.typography.titleMedium, modifier = Modifier.fillMaxWidth().clickable { vm.open(list) }.padding(vertical = 16.dp))
-                HorizontalDivider()
-            }
-        }
-        return
-    }
-
-    var text by rememberSaveable(open.first) { mutableStateOf("") }
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
-        TextButton(onClick = { vm.open(null) }) { Text("Back") }
-        Text(open.second, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 8.dp))
-    }
-    OutlinedTextField(
-        text, { text = it }, label = { Text("Add a task") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { vm.add(text); text = "" }),
-    )
-    vm.problem?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp)) }
-    val all = vm.items
-    if (all == null) {
-        Text("Loading…", modifier = Modifier.padding(top = 16.dp))
-        return
-    }
-    val (done, todo) = all.partition { it.done }
-    LazyColumn(modifier = Modifier.padding(top = 8.dp)) {
-        if (todo.isEmpty()) item { Text("Nothing to do", modifier = Modifier.padding(vertical = 16.dp)) }
-        items(todo, key = { it.uid }) { Task(it) { checked -> vm.setDone(it, checked) } }
-        if (done.isNotEmpty()) {
-            item { Text("Done", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 24.dp, bottom = 4.dp)) }
-            items(done, key = { it.uid }) { Task(it) { checked -> vm.setDone(it, checked) } }
-        }
-    }
-}
-
-@Composable
-private fun Task(item: TodoItem, onChecked: (Boolean) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { onChecked(!item.done) }) {
-        Checkbox(checked = item.done, onCheckedChange = onChecked)
-        Column(modifier = Modifier.padding(vertical = 8.dp)) {
-            Text(item.summary)
-            val line = taskLine(item)
-            if (line.isNotBlank()) Text(line, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}

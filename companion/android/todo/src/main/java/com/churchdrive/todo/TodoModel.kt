@@ -2,6 +2,7 @@ package com.churchdrive.todo
 
 import android.app.Application
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
@@ -17,7 +18,10 @@ import com.churchdrive.app.ha.LoginStep
 import com.churchdrive.app.ha.asApi
 import com.churchdrive.app.ha.data
 import com.churchdrive.app.ui.TodoItem
+import com.churchdrive.app.ui.Tone
 import com.churchdrive.app.ui.ask
+import com.churchdrive.app.ui.houseTask
+import com.churchdrive.app.ui.houseTaskFor
 import com.churchdrive.app.ui.myTodoList
 import com.churchdrive.app.ui.parseTodoItems
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +30,18 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+
+/** The pages of the app, as on the main app's To-do page: the person's own list, the shared one, cleaning and the house's jobs. */
+enum class TodoTab(val label: String, val title: String, val tone: Tone, val canAdd: Boolean) {
+    Mine("My to-do", "My to-do", Tone.Purple, true),
+    Shared("Shared", "Shared", Tone.Blue, true),
+    Cleaning("Cleaning", "Cleaning", Tone.Teal, true),
+    House("House", "From the house", Tone.Purple, false),
+}
+
+const val SHARED_LIST = "todo.priorities_everyone"
+const val CLEANING_LIST = "todo.cleaning"
+const val HOUSE_LIST = "todo.priorities_automatic"
 
 /** Sign-in, the line to Home Assistant, the to-do lists and the tasks in the open one. */
 class TodoModel(app: Application) : AndroidViewModel(app) {
@@ -51,26 +67,46 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
     private var flowId = ""
     private var flowUrl = ""
 
-    /** Every to-do list in the house: its entity id and name, the person's own first. */
-    var lists by mutableStateOf<List<Pair<String, String>>>(emptyList())
-        private set
-    var openList by mutableStateOf<Pair<String, String>?>(null)
-        private set
-    var items by mutableStateOf<List<TodoItem>?>(null)
-        private set
-    var problem by mutableStateOf<String?>(null)
+    /** Who is signed in (their name in Home Assistant); only their own list is ever shown. */
+    var personName by mutableStateOf(session.personName)
         private set
 
+    var tab by mutableStateOf(TodoTab.Mine)
+    /** The tasks of each of the four lists, by entity id; a list is absent until it has arrived. */
+    private val loaded = mutableStateMapOf<String, List<TodoItem>>()
+    var problem by mutableStateOf<String?>(null)
+        private set
+    private val counts = HashMap<String, String?>()
+
     init {
-        viewModelScope.launch { client.userName.collect { if (it != null) session.savePerson(it) } }
+        viewModelScope.launch {
+            client.userName.collect {
+                if (it != null) {
+                    session.savePerson(it)
+                    personName = it
+                    refreshAll()
+                }
+            }
+        }
+        // A list is read again whenever its count changes in the house, as the main app does.
+        viewModelScope.launch {
+            client.entities.collect { states ->
+                listIds().forEach { id ->
+                    val count = states[id]?.state
+                    if (states.containsKey(id) && counts[id] != count) {
+                        counts[id] = count
+                        loadItems(id)
+                    }
+                }
+            }
+        }
         viewModelScope.launch {
             var failures = 0
             client.connection.collect { state ->
                 connected = state == ConnectionState.Connected
                 if (connected) {
                     failures = 0
-                    loadLists()
-                    openList?.let { loadItems() }
+                    refreshAll()
                 }
                 // Not given up on at once: Home Assistant may be restarting. A pasted token that is refused is just wrong.
                 if (state == ConnectionState.AuthFailed && signedIn) {
@@ -91,7 +127,7 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch(Dispatchers.IO) {
             val url = session.url ?: return@launch
             val token = session.freshToken() ?: return@launch
-            withContext(Dispatchers.Main) { client.connect(url, token, light = true) }
+            withContext(Dispatchers.Main) { client.connect(url, token) }
         }
     }
 
@@ -193,64 +229,76 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
         session.clear()
         borrowed = false
         signedIn = false
-        lists = emptyList()
-        openList = null
-        items = null
+        personName = null
+        loaded.clear()
+        counts.clear()
     }
 
     // ---- Lists and tasks ----
 
-    private fun loadLists() {
-        viewModelScope.launch {
-            val all = api.ask("get_states", JSONObject()) as? JSONArray ?: return@launch
-            val mine = myTodoList(session.personName)
-            lists = HaClient.parseStates(all).values
-                .filter { it.entityId.startsWith("todo.") && it.available }
-                .map { it.entityId to it.friendlyName }
-                .sortedWith(compareBy({ it.first != mine }, { it.second.lowercase() }))
-        }
+    /** The signed-in person's own list: no one else's list is ever asked for. */
+    private fun mineId() = myTodoList(personName)
+
+    fun listId(tab: TodoTab): String? = when (tab) {
+        TodoTab.Mine -> mineId()
+        TodoTab.Shared -> SHARED_LIST
+        TodoTab.Cleaning -> CLEANING_LIST
+        TodoTab.House -> HOUSE_LIST
     }
 
-    fun open(list: Pair<String, String>?) {
-        openList = list
-        items = null
-        if (list != null) loadItems()
-    }
+    private fun listIds() = TodoTab.entries.mapNotNull { listId(it) }
 
-    private fun loadItems() {
-        val list = openList ?: return
+    private fun refreshAll() = listIds().forEach { loadItems(it) }
+
+    private fun loadItems(id: String) {
         viewModelScope.launch {
-            val result = api.ask("todo/item/list", data("entity_id" to list.first))
-            if (openList?.first != list.first) return@launch
-            if (result == null) {
-                problem = "Couldn't read ${list.second}."
-            } else {
-                problem = null
-                items = parseTodoItems(result)
+            // A failed or slow answer is asked for again; it is not taken for an empty list.
+            var tries = 0
+            while (tries < 4) {
+                val result = api.ask("todo/item/list", data("entity_id" to id))
+                if (result != null) {
+                    problem = null
+                    loaded[id] = parseTodoItems(result)
+                    return@launch
+                }
+                tries++
+                delay(2_000L * tries)
             }
+            if (loaded[id] == null) problem = "Couldn't read that list."
         }
     }
 
-    private fun changed() {
+    /** The tasks of a page, null until they arrive. The house's page shows only the jobs for this person or for everyone. */
+    fun items(tab: TodoTab): List<TodoItem>? {
+        val all = listId(tab)?.let { loaded[it] } ?: return null
+        if (tab != TodoTab.House) return all
+        val first = personName?.trim()?.substringBefore(' ')
+        return all.filter { houseTaskFor(houseTask(it), first) }
+    }
+
+    /** How many tasks are still open on a page (for the badge on its button). */
+    fun openCount(tab: TodoTab): Int = items(tab)?.count { !it.done } ?: 0
+
+    fun setDone(tab: TodoTab, item: TodoItem, done: Boolean) {
+        val id = listId(tab) ?: return
+        // Shown at once; the house's list is read again a moment later.
+        loaded[id] = loaded[id].orEmpty().map { if (it.uid == item.uid) it.copy(done = done) else it }
+        client.callService("todo", "update_item", id, data("item" to item.uid, "status" to if (done) "completed" else "needs_action"))
+        changed(id)
+    }
+
+    fun add(tab: TodoTab, text: String) {
+        val id = listId(tab) ?: return
+        if (text.isBlank() || !tab.canAdd) return
+        client.callService("todo", "add_item", id, data("item" to text.trim()))
+        changed(id)
+    }
+
+    private fun changed(id: String) {
         viewModelScope.launch {
             // The house needs a moment to apply the change before the list is read again.
             delay(400)
-            loadItems()
+            loadItems(id)
         }
-    }
-
-    fun setDone(item: TodoItem, done: Boolean) {
-        val list = openList ?: return
-        // Shown at once; the house's list is read again a moment later.
-        items = items?.map { if (it.uid == item.uid) it.copy(done = done) else it }
-        client.callService("todo", "update_item", list.first, data("item" to item.uid, "status" to if (done) "completed" else "needs_action"))
-        changed()
-    }
-
-    fun add(text: String) {
-        val list = openList ?: return
-        if (text.isBlank()) return
-        client.callService("todo", "add_item", list.first, data("item" to text.trim()))
-        changed()
     }
 }
