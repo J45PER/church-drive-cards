@@ -4,6 +4,13 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.35.2
+
+- Church Drive To-Do now looks like the main app: the same Material You colours, the large collapsing title with your initial (tap it for your name and Sign out), and your tasks on a coloured card with the same tick boxes, "Add a task" box and Done section.
+- The pages are along the bottom, as in the main app: My to-do, Shared, Cleaning and House (the jobs the house has spotted for you or everyone), each with a count of what is open. A shopping or steps list shows with its cart or tick-list icon and is worked through in the main app.
+- My to-do is only ever your own list. The app used to list every to-do list in the house, other people's included; it now asks only for yours, the shared list, cleaning and the house's jobs for you.
+- Under the bonnet: the app's colours and theme moved into the shared `core` module.
+
 ## 0.35.1
 
 - Church Drive To-Do signs in by itself when the Church Drive app is on the phone and signed in: open it and your lists are there, with no address or password to type. It follows the main app (signing out or in as someone else there does the same in To-Do, which has no Sign out button of its own while it is using that sign-in). Both apps must come from the same build source (same signing key); otherwise To-Do shows its normal sign-in.

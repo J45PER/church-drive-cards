@@ -30,6 +30,9 @@ dependencies {
     api(composeBom)
     // Only the runtime (state, composition locals): the screens stay in each app.
     api("androidx.compose.runtime:runtime")
+    // The look the phone app and the to-do app share (Theme.kt, StateColors.kt).
+    implementation("androidx.compose.foundation:foundation")
+    implementation("androidx.compose.material3:material3")
     api("androidx.security:security-crypto:1.1.0-alpha06")
     api("com.squareup.okhttp3:okhttp:4.12.0")
     api("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
