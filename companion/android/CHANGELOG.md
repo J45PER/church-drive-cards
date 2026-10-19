@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.36.0
+
+- Change the date of a repeating task's next time by hand: in a task's edit page, "Pick a date" opens a calendar (the heading is "Next due" for a repeating task). The repeat carries on from the day you pick, so a fortnightly or every-30-days task moves its whole cycle. It works for any task's day too, not just the next few days.
+- Under the bonnet: the task-editing rules and the calendar moved into the shared `core` module, so Church Drive To-Do uses them too.
+
 ## 0.35.2
 
 - Church Drive To-Do now looks like the main app: the same Material You colours, the large collapsing title with your initial (tap it for your name and Sign out), and your tasks on a coloured card with the same tick boxes, "Add a task" box and Done section.

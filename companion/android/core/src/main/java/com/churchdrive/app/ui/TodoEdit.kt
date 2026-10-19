@@ -111,7 +111,8 @@ fun cleanTime(text: String): String? {
 
 /**
  * What to send `todo.update_item`: the new name, the due date (and time) unless it's to be kept, and the description.
- * Values of null are sent as JSON null, which clears them.
+ * Values of null are sent as JSON null, which clears them. A [picked] date (chosen by hand, for example to move a repeating
+ * task's next date) wins over the day choice.
  */
 fun updateFields(
     uid: String,
@@ -120,14 +121,22 @@ fun updateFields(
     time: String?,
     today: LocalDate,
     description: String,
+    picked: LocalDate? = null,
 ): Map<String, Any?> {
     val out = linkedMapOf<String, Any?>("item" to uid, "rename" to name.trim())
-    val day = dueDateOf(dueChoice, today)
-    if (dueChoice != "Keep") {
+    val day = picked ?: dueDateOf(dueChoice, today)
+    if (picked != null || dueChoice != "Keep") {
         if (day == null) out["due_date"] = null
         else if (time != null) out["due_datetime"] = "$day $time:00"
         else out["due_date"] = day.toString()
     }
     out["description"] = description.ifBlank { null }
     return out
+}
+
+/** A date in words for the edit form: "Fri 24 Oct", or "Today"/"Tomorrow". */
+fun dateWords(day: LocalDate, today: LocalDate): String = when (day) {
+    today -> "Today"
+    today.plusDays(1) -> "Tomorrow"
+    else -> day.format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM", Locale.UK))
 }

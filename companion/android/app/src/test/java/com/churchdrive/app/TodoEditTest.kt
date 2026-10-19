@@ -8,6 +8,7 @@ import com.churchdrive.app.ui.parseTaskWords
 import com.churchdrive.app.ui.repeatChoiceOf
 import com.churchdrive.app.ui.repeatWords
 import com.churchdrive.app.ui.timeOf
+import com.churchdrive.app.ui.dateWords
 import com.churchdrive.app.ui.updateFields
 import com.churchdrive.app.ui.whoChoiceOf
 import com.churchdrive.app.ui.whoWords
@@ -85,5 +86,17 @@ class TodoEditTest {
         assertNull(clear["due_date"])
         val keep = updateFields("u", "Bins", "Keep", null, today, "d")
         assertEquals(false, keep.containsKey("due_date") || keep.containsKey("due_datetime"))
+    }
+
+    @Test
+    fun aPickedDateMovesTheNextDueWhateverTheDayChoiceWas() {
+        val day = java.time.LocalDate.of(2026, 11, 20)
+        // Even when the day choice is "Keep" (an item on some other day), a picked date is sent.
+        val moved = updateFields("u", "Bins", "Keep", "09:00", today, "Every 2 weeks: Fri 09:00", day)
+        assertEquals("2026-11-20 09:00:00", moved["due_datetime"])
+        val dateOnly = updateFields("u", "Bins", "No date", null, today, "", day)
+        assertEquals("2026-11-20", dateOnly["due_date"])
+        assertEquals("Fri 20 Nov", dateWords(day, today))
+        assertEquals("Today", dateWords(today, today))
     }
 }

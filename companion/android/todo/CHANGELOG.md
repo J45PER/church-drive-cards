@@ -3,6 +3,11 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.36.0
+
+- Tap a task to edit it: its name, day, repeat, time, who is reminded and notes, or delete it. The box on its left still ticks it.
+- "Pick a date" opens a calendar for any day. For a repeating task the heading is "Next due": use it to move the next date by hand; the repeat carries on from the day you pick.
+
 ## 0.35.2
 
 - Looks like the main Church Drive app: the same Material You colours, the large collapsing title with your initial (tap it for your name and Sign out), and your tasks on a coloured card with the same tick boxes, "Add a task" box and Done section.

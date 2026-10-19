@@ -478,6 +478,10 @@ export class TaskListCard extends HTMLElement {
       who: t ? (p.who === 'everyone' ? 'everyone' : Array.isArray(p.who) ? [...p.who] : 'none') : !def ? 'none' : def.toLowerCase() === 'everyone' ? 'everyone' : [def],
       was: t ? t.description || '' : '',
       due: t ? t.due : null,
+      // When a repeating task is next due, so it can be moved by hand (it normally follows the repeat).
+      next: due ? dateInput(due) : '',
+      nextTime: due && String(t.due).includes('T') ? timeInput(due) : r.time || '09:00',
+      nextWas: due ? `${dateInput(due)} ${due && String(t.due).includes('T') ? timeInput(due) : r.time || '09:00'}` : '',
       place: uid ? this._placeOf(uid) : '',
       placeWas: uid ? this._placeOf(uid) : '',
     };
@@ -545,10 +549,15 @@ export class TaskListCard extends HTMLElement {
       how = `<div class="tl-inline">Every <input type="number" class="tl-f-n" min="1" max="365" value="${e.n}"> <select class="tl-f-unit" aria-label="Days, weeks or months">${['day', 'week', 'month']
         .map((u) => `<option value="${u}" ${e.unit === u ? 'selected' : ''}>${u}${e.n === 1 ? '' : 's'}</option>`)
         .join('')}</select> after it's done, ${at}</div>`;
+    const nextRow =
+      e.uid && e.kind !== 'none' && e.due
+        ? `<div class="tl-l">Next due<div class="tl-inline"><input type="date" class="tl-f-next" value="${e.next}" aria-label="Next due date"><input type="time" class="tl-f-nexttime" value="${e.nextTime}" aria-label="Next due time"></div><span class="ck-sub" style="line-height:1.35;">Change this if it needs moving by hand. The ones after it follow from this date.</span></div>`
+        : '';
     this._form.innerHTML = `
       <label class="tl-l">Task<input type="text" class="tl-f-name tl-wide" maxlength="80" placeholder="e.g. Hoover upstairs" value="${kitEsc(e.name)}"></label>
       <div class="tl-l">Repeats<div class="tl-chips" role="group" aria-label="Repeats">${REPEATS.map(([k, label]) => chip('data-kind', k, label, e.kind === k)).join('')}</div></div>
       ${how}
+      ${nextRow}
       <div class="tl-l">${e.kind === 'none' && !e.date && !e.place && e.who !== 'none' ? `${this._justMe() ? 'Remind me' : 'Reminds'} (at the due time, so choose one above)` : this._justMe() ? 'Remind me' : 'Reminds'}<div class="tl-chips" role="group" aria-label="Who gets reminded">${
         this._justMe()
           ? chip('data-me', 'yes', 'Yes', e.who !== 'none') + chip('data-me', 'no', 'No', e.who === 'none')
@@ -583,6 +592,8 @@ export class TaskListCard extends HTMLElement {
     bind('.tl-f-time', 'change', (el) => (e.time = el.value || '09:00'));
     bind('.tl-f-start', 'change', (el) => (e.start = el.value || dateInput(new Date())));
     bind('.tl-f-date', 'change', (el) => (e.date = el.value));
+    bind('.tl-f-next', 'change', (el) => (e.next = el.value));
+    bind('.tl-f-nexttime', 'change', (el) => (e.nextTime = el.value || '09:00'));
     bind('.tl-f-dom', 'change', (el) => (e.dom = el.value === 'last' ? 'last' : Number(el.value)));
     bind('.tl-f-ymd', 'change', (el) => (e.ymd = el.value || e.ymd));
     bind('.tl-f-unit', 'change', (el) => (e.unit = el.value));
@@ -669,6 +680,8 @@ export class TaskListCard extends HTMLElement {
         const [y, m, d] = e.start.split('-').map(Number);
         data.due_datetime = localStamp(firstDue(repeat, new Date(y, m - 1, d)));
       }
+      // A next due date set by hand wins over the repeat's own, and the repeat carries on from it.
+      if (e.uid && e.due && e.next && `${e.next} ${e.nextTime || '09:00'}` !== e.nextWas) data.due_datetime = `${e.next} ${e.nextTime || '09:00'}:00`;
     } else if (e.date) {
       if (reminds || this._form.querySelector('.tl-f-time')?.value) data.due_datetime = `${e.date} ${e.time || '09:00'}:00`;
       else data.due_date = e.date;

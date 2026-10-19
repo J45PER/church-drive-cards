@@ -26,6 +26,9 @@ fun TaskDialog(item: TodoItem, listId: String, first: String?, tone: ToneColors,
     val keepDay = remember(item) { item.due?.take(10)?.let { runCatching { LocalDate.parse(it) }.getOrNull() } }
     var name by remember { mutableStateOf(item.summary) }
     var due by remember { mutableStateOf(dueChoiceOf(item.due, today)) }
+    // A day picked from the calendar: it wins over the day choices, and for a repeating task it is its next date.
+    var picked by remember { mutableStateOf<LocalDate?>(null) }
+    var picking by remember { mutableStateOf(false) }
     var repeat by remember { mutableStateOf(repeatChoiceOf(words.repeat)) }
     var who by remember { mutableStateOf(whoChoiceOf(words.who, first)) }
     var time by remember { mutableStateOf(timeOf(words.repeat) ?: timeOf(item.due?.takeIf { 'T' in it }?.substringAfter('T')) ?: "09:00") }
@@ -49,12 +52,12 @@ fun TaskDialog(item: TodoItem, listId: String, first: String?, tone: ToneColors,
     val cleaned = cleanTime(time)
 
     val save = {
-        val day = dueDateOf(due, today) ?: keepDay ?: today
-        val timeOrNull = if (repeating || due != "No date") cleaned else null
+        val day = picked ?: dueDateOf(due, today) ?: keepDay ?: today
+        val timeOrNull = if (repeating || due != "No date" || picked != null) cleaned else null
         val words2 = repeatWords(repeat, cleaned ?: "09:00", day)
         val fields = updateFields(
-            item.uid, name, due, if (due == "No date") null else timeOrNull, today,
-            buildDescription(words2, whoWords(who, first), notes),
+            item.uid, name, due, if (due == "No date" && picked == null) null else timeOrNull, today,
+            buildDescription(words2, whoWords(who, first), notes), picked,
         )
         call("todo", "update_item", listId, data(*fields.map { it.key to (it.value ?: JSONObject.NULL) }.toTypedArray()))
         if (place != placeWas && first != null) {
@@ -75,11 +78,16 @@ fun TaskDialog(item: TodoItem, listId: String, first: String?, tone: ToneColors,
 
     FullPage("Edit task", onClose) {
         OutlinedTextField(name, { name = it }, label = { Text("Task") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        Text("Day", style = MaterialTheme.typography.labelLarge)
-        OptionRow(dueOptions, due, tone) { due = it }
+        Text(if (repeating) "Next due" else "Day", style = MaterialTheme.typography.labelLarge)
+        OptionRow(dueOptions, if (picked != null) "" else due, tone) { due = it; picked = null }
+        // Any day, for when a repeating task's next date has to be moved by hand (the repeat carries on from it).
+        val shown = picked ?: dueDateOf(due, today) ?: keepDay
+        if (shown != null) Text("${dateWords(shown, today)}${if (repeating) ": the ones after it follow from this date" else ""}", style = MaterialTheme.typography.bodySmall)
+        TileRow(listOf(TileItem("mdi:calendar-edit", "Pick a date", picked != null) { picking = true }), tone, tone.onContainer, perRow = 1)
+        if (picking) DatePickDialog(shown, { picked = it; picking = false }, { picking = false })
         Text("Repeat", style = MaterialTheme.typography.labelLarge)
         OptionRow(repeatOptions, repeat, tone) { repeat = it }
-        if (repeating || due != "No date") {
+        if (repeating || due != "No date" || picked != null) {
             OutlinedTextField(
                 time, { time = it }, label = { Text("Time (24 hour, like 09:00)") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
                 isError = cleaned == null && time.isNotBlank(),
