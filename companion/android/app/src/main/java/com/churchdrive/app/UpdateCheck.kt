@@ -9,14 +9,18 @@ object UpdateCheck {
     const val RELEASE_API = "https://api.github.com/repos/J45PER/church-drive-cards/releases/tags/companion-android-latest"
     const val APK_URL = "https://github.com/J45PER/church-drive-cards/releases/download/companion-android-latest/church-drive.apk"
 
-    /** The commit a release was built from, from its notes ("... (commit abc1234). Download ..."). */
-    fun commitOf(body: String?): String? = body?.let { Regex("commit ([0-9a-f]{7,40})").find(it)?.groupValues?.get(1) }
+    /** The CI build number a release was made from, from its notes ("..., build 42, from the ..."). */
+    fun buildOf(body: String?): Int? = body?.let { Regex("build (\\d+)").find(it)?.groupValues?.get(1)?.toIntOrNull() }
 
-    /** Whether the release was built from a different commit than [running]; false when either is unknown. */
-    fun isNewer(releaseBody: String?, running: String): Boolean {
-        val latest = commitOf(releaseBody) ?: return false
-        if (running.isBlank() || running == "dev") return false
-        return !latest.startsWith(running) && !running.startsWith(latest)
+    /**
+     * Whether the release is a later build than [running] (this app's build number). Builds count up with every CI run, so a
+     * different build of the same version, or a preview build that is ahead of the release, is not offered as an update.
+     * False when either build is unknown (a local build has number 0).
+     */
+    fun isNewer(releaseBody: String?, running: Int): Boolean {
+        val latest = buildOf(releaseBody) ?: return false
+        if (running <= 0) return false
+        return latest > running
     }
 
     /** Not more than one check every ten minutes: GitHub allows an app that isn't signed in only 60 questions an hour. */
@@ -26,7 +30,7 @@ object UpdateCheck {
     fun due(now: Long, last: Long, gap: Long = MIN_GAP_MS): Boolean = last == 0L || now - last >= gap
 
     /** True when an update is available; false on any problem (no network, rate limit). Call off the main thread. */
-    fun check(http: OkHttpClient, running: String): Boolean = runCatching {
+    fun check(http: OkHttpClient, running: Int): Boolean = runCatching {
         http.newCall(Request.Builder().url(RELEASE_API).header("Accept", "application/vnd.github+json").build()).execute().use { r ->
             r.isSuccessful && isNewer(JSONObject(r.body?.string().orEmpty()).optString("body"), running)
         }

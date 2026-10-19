@@ -18,17 +18,27 @@ class Session(context: Context) {
     val token: String? get() = prefs.getString("token", null)
     /** Set when signed in with a username and password: lasts, and makes new access tokens. Null for a pasted token. */
     val refreshToken: String? get() = prefs.getString("refresh", null)
+    /** True when this sign-in was taken from the Church Drive app (see [SessionShare]): it is that app's to end, not ours. */
+    val borrowed: Boolean get() = prefs.getBoolean("borrowed", false)
     val signedIn: Boolean get() = url != null && token != null
 
     /** A pasted long-lived token. */
     fun save(url: String, token: String) {
-        prefs.edit().putString("url", url.trim()).putString("token", token.trim()).remove("refresh").apply()
+        prefs.edit().putString("url", url.trim()).putString("token", token.trim()).remove("refresh").remove("borrowed").apply()
     }
 
     /** A username-and-password sign-in. */
     fun saveSignIn(url: String, access: String, refresh: String?) {
-        prefs.edit().putString("url", url.trim()).putString("token", access).also {
+        prefs.edit().putString("url", url.trim()).putString("token", access).remove("borrowed").also {
             if (refresh != null) it.putString("refresh", refresh) else it.remove("refresh")
+        }.apply()
+    }
+
+    /** The Church Drive app's sign-in, copied (see [SessionShare]). */
+    fun saveBorrowed(shared: SharedSession) {
+        prefs.edit().putString("url", shared.url.trim()).putString("token", shared.token).putBoolean("borrowed", true).also {
+            if (shared.refresh != null) it.putString("refresh", shared.refresh) else it.remove("refresh")
+            if (shared.person != null) it.putString("person", shared.person)
         }.apply()
     }
 

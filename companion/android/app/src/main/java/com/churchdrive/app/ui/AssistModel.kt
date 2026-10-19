@@ -301,9 +301,11 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
         when (val e = parseAssistEvent(event)) {
             is AssistEvent.Started -> {
                 note("run-start")
-                if (e.handlerId != null && e.handlerId > 0) {
+                // (Copied to a local: AssistEvent is in the shared core module, where a smart cast on its property is not allowed.)
+                val started = e.handlerId
+                if (started != null && started > 0) {
                     AssistWakeStatus.problem = ""
-                    handlerId = e.handlerId
+                    handlerId = started
                     startMic()
                 }
             }

@@ -2,7 +2,7 @@ name: Companion Android
 
 on:
   push:
-    branches: [companion-apps, main]
+    branches: [companion-apps, main, claude/wear-os-todo-app]
     paths: ["companion/android/**", ".github/workflows/companion-android.yml"]
   pull_request:
     paths: ["companion/android/**", ".github/workflows/companion-android.yml"]
@@ -29,13 +29,32 @@ jobs:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
           if [ -n "$GOOGLE_SERVICES_JSON" ]; then printf '%s' "$GOOGLE_SERVICES_JSON" > app/google-services.json; fi
-      - run: ./gradlew testDebugUnitTest assembleDebug
+      # The build's errors are also shown as an annotation (the run's log is not always readable from outside GitHub).
+      - name: Build and test
+        run: |
+          set +e
+          ./gradlew testDebugUnitTest assembleDebug --console=plain 2>&1 | tee ../build.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            msg=$(grep -E "^e: |error:|FAILED|What went wrong|Execution failed|Could not resolve|AAPT|Manifest merger" -A2 ../build.log | head -80 | cut -c1-300 | sed ':a;N;$!ba;s/\n/%0A/g')
+            echo "::error title=Gradle build failed::${msg}"
+          fi
+          exit $status
       - uses: actions/upload-artifact@v4
         with:
           name: church-drive-debug-apk
           path: companion/android/app/build/outputs/apk/debug/*.apk
+      # The Wear OS app (same application id as the phone app: one Play listing) and the to-do-only app.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: church-drive-wear-debug-apk
+          path: companion/android/wear/build/outputs/apk/debug/*.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: church-drive-todo-debug-apk
+          path: companion/android/todo/build/outputs/apk/debug/*.apk
       - name: Publish APK as a pre-release
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && github.ref_name != 'claude/wear-os-todo-app'
         working-directory: .
         env:
           GH_TOKEN: ${{ github.token }}
@@ -43,20 +62,39 @@ jobs:
           version=$(sed -n 's/^version=//p' companion/android/version.properties)
           apk=$(ls companion/android/app/build/outputs/apk/debug/*.apk)
           cp "$apk" church-drive.apk
+          cp "$(ls companion/android/wear/build/outputs/apk/debug/*.apk)" church-drive-wear.apk
+          cp "$(ls companion/android/todo/build/outputs/apk/debug/*.apk)" church-drive-todo.apk
           # The latest test build: replaced on every push (the app looks here for updates).
           gh release delete companion-android-latest --yes --cleanup-tag || true
-          gh release create companion-android-latest church-drive.apk \
+          gh release create companion-android-latest church-drive.apk church-drive-wear.apk church-drive-todo.apk \
             --prerelease --target "$GITHUB_SHA" \
             --title "Church Drive Android ${version} (test build ${GITHUB_RUN_NUMBER})" \
-            --notes "Latest test build, version ${version}, build ${GITHUB_RUN_NUMBER}, from the ${GITHUB_REF_NAME} branch (commit ${GITHUB_SHA::7}). Download church-drive.apk on an Android phone and install it."
+            --notes "Latest test build, version ${version}, build ${GITHUB_RUN_NUMBER}, from the ${GITHUB_REF_NAME} branch (commit ${GITHUB_SHA::7}). Download church-drive.apk on an Android phone and install it (church-drive-wear.apk is the Wear OS watch app, church-drive-todo.apk the to-do-only app)."
           # The app looks for updates through the public releases API, which cannot see a draft: make sure this one is published.
           gh release edit companion-android-latest --draft=false --prerelease
           gh release view companion-android-latest --json isDraft,isPrerelease,tagName
           # Each version keeps its own release, made the first time a build has that version: a permanent record of what shipped.
           if ! gh release view "android-v${version}" >/dev/null 2>&1; then
             notes=$(awk -v v="$version" '$0 ~ "^## "v"( |$)" {on=1; next} /^## / {on=0} on' companion/android/CHANGELOG.md)
-            gh release create "android-v${version}" church-drive.apk \
+            gh release create "android-v${version}" church-drive.apk church-drive-wear.apk church-drive-todo.apk \
               --target "$GITHUB_SHA" \
               --title "Church Drive Android ${version}" \
               --notes "${notes:-Version ${version}.} (Build ${GITHUB_RUN_NUMBER}, commit ${GITHUB_SHA::7}.)"
           fi
+      # A branch preview of all three apps as plain downloads (no zips). It has its own tag, so the phone app's updater, which only looks
+      # at companion-android-latest, never sees it, and it is replaced on every push to the branch.
+      - name: Publish a preview release (watch and to-do apps)
+        if: github.event_name == 'push' && github.ref_name == 'claude/wear-os-todo-app'
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(sed -n 's/^version=//p' companion/android/version.properties)
+          cp "$(ls companion/android/app/build/outputs/apk/debug/*.apk)" church-drive.apk
+          cp "$(ls companion/android/wear/build/outputs/apk/debug/*.apk)" church-drive-wear.apk
+          cp "$(ls companion/android/todo/build/outputs/apk/debug/*.apk)" church-drive-todo.apk
+          gh release delete companion-android-preview --yes --cleanup-tag || true
+          gh release create companion-android-preview church-drive.apk church-drive-wear.apk church-drive-todo.apk \
+            --prerelease --latest=false --target "$GITHUB_SHA" \
+            --title "Church Drive ${version} preview (watch and to-do apps), build ${GITHUB_RUN_NUMBER}" \
+            --notes "Preview from the ${GITHUB_REF_NAME} branch (commit ${GITHUB_SHA::7}). church-drive.apk is the phone app with watch sync, church-drive-wear.apk the Pixel Watch app, church-drive-todo.apk the to-do-only app. Not used by the app's own update check."
