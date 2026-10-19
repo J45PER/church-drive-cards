@@ -7,7 +7,7 @@ with the APK, so there is a record of what shipped. Newest first.
 ## 0.35.1
 
 - Church Drive To-Do signs in by itself when the Church Drive app is on the phone and signed in: open it and your lists are there, with no address or password to type. It follows the main app (signing out or in as someone else there does the same in To-Do, which has no Sign out button of its own while it is using that sign-in). Both apps must come from the same build source (same signing key); otherwise To-Do shows its normal sign-in.
-- Church Drive To-Do has its own icon (a ticked clipboard on indigo) instead of the house icon it shared with the main app.
+- Church Drive To-Do has its own icon (the main app's purple-blue-green gradient house with a tick).
 - The "update available" notice no longer appears when you are already on the latest version. The app used to offer an update whenever the newest test build came from a different commit than its own, which a build installed from a branch preview always was. It now offers one only when the newest build number is higher than the one you are running.
 
 ## 0.35.0
