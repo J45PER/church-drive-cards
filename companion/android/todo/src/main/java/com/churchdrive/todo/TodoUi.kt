@@ -33,8 +33,6 @@ import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
@@ -86,30 +84,27 @@ private fun TodoTab.icon(): ImageVector = when (this) {
 @Composable
 fun TodoApp(vm: TodoModel) {
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-    var menu by remember { mutableStateOf(false) }
+    // The account panel (null shut, "account", "settings" or "about"), which slides in from the right.
+    var panel by rememberSaveable { mutableStateOf<String?>(null) }
     val tab = vm.tab
+    Box(Modifier.fillMaxSize()) {
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         topBar = {
             MediumTopAppBar(
                 title = { Text(tab.title) },
                 actions = {
-                    Box {
-                        Box(
-                            Modifier.padding(horizontal = 6.dp).size(44.dp).clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primaryContainer)
-                                .clickable(onClickLabel = "Account") { menu = true },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                vm.personName?.trim()?.firstOrNull()?.uppercase() ?: "?",
-                                style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            )
-                        }
-                        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                            DropdownMenuItem(text = { Text(vm.personName ?: "Church Drive To-Do") }, onClick = { menu = false }, enabled = false)
-                            if (!vm.borrowed) DropdownMenuItem(text = { Text("Sign out") }, onClick = { menu = false; vm.signOut() })
-                        }
+                    // A round button with the person's initial opens the account panel, as in the main app.
+                    Box(
+                        Modifier.padding(horizontal = 6.dp).size(44.dp).clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .clickable(onClickLabel = "Account and settings") { panel = "account" },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            vm.personName?.trim()?.firstOrNull()?.uppercase() ?: "?",
+                            style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
                     }
                 },
                 scrollBehavior = scroll,
@@ -121,7 +116,7 @@ fun TodoApp(vm: TodoModel) {
                     val open = vm.openCount(t)
                     NavigationBarItem(
                         selected = t == tab,
-                        onClick = { vm.tab = t },
+                        onClick = { vm.openTab(t) },
                         icon = {
                             BadgedBox(badge = { if (open > 0) Badge { Text(open.toString()) } }) { Icon(t.icon(), contentDescription = null) }
                         },
@@ -135,11 +130,23 @@ fun TodoApp(vm: TodoModel) {
             modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            if (vm.updateAvailable) UpdateBanner { panel = "about" }
             if (!vm.connected) Text("Connecting to the house…", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             TaskCard(vm, tab)
             Spacer(Modifier.height(16.dp))
         }
     }
+    TodoPanel(panel, { panel = it }, vm)
+    }
+}
+
+/** A newer build is ready: taps through to About, where it can be downloaded. */
+@Composable
+private fun UpdateBanner(onOpen: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.tertiaryContainer, contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onOpen),
+    ) { Text("A newer version of Church Drive To-Do is ready. Tap to get it.", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(12.dp)) }
 }
 
 /** A page's card, in the page's colour like the main app's task cards. */
@@ -148,7 +155,7 @@ private fun TaskCard(vm: TodoModel, tab: TodoTab) {
     val tone = toneColors(tab.tone)
     val items = vm.items(tab)
     var text by rememberSaveable(tab) { mutableStateOf("") }
-    var showDone by rememberSaveable(tab) { mutableStateOf(false) }
+    var showDone by rememberSaveable(tab) { mutableStateOf(vm.showDone) }
     var editing by remember(tab) { mutableStateOf<TodoItem?>(null) }
     editing?.let { item ->
         TodoEditDialog(

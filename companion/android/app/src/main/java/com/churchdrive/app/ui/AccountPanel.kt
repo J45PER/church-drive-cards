@@ -33,6 +33,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.BatteryChargingFull
+import androidx.compose.material.icons.outlined.Checklist
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Notifications
@@ -93,6 +94,9 @@ fun AccountOverlay(
     healthSummary: String = "",
     onDeviceHealth: () -> Unit = {},
     adminPages: List<Page> = emptyList(),
+    /** The To-do row: opens Church Drive To-Do where it is installed, else this app's own To-do page (a sub-page of the panel). */
+    onTodo: () -> Unit = {},
+    todoOpensApp: Boolean = false,
     pageContent: @Composable (Page) -> Unit = {},
     /** The Manager dashboard's panels (administrators): each is a sub-page, and [managerContent] draws its cards. */
     managerPages: List<PanelSpec> = emptyList(),
@@ -127,6 +131,7 @@ fun AccountOverlay(
                     "settings" -> SettingsPage(settings, isAdmin) { onPanel("account") }
                     "about" -> AboutPage(settings, updateAvailable) { onPanel("account") }
                     // The administrator's pages open here, as sub-pages of the panel.
+                    "todo" -> AdminPage("To-do", { onPanel("account") }) { pageContent(Page.Todo) }
                     "energy", "devices" -> adminPages.firstOrNull { it.name.lowercase() == which }?.let { p ->
                         AdminPage(p.label, { onPanel("account") }) { pageContent(p) }
                     }
@@ -136,7 +141,7 @@ fun AccountOverlay(
                         managerPages.firstOrNull { it.title == which.removePrefix("manager:") }?.let { p ->
                             AdminPage(p.title, { onPanel("manager") }) { managerContent(p) }
                         }
-                    } else AccountPage(userName, isAdmin, adminPages, managerPages, healthSummary, onDeviceHealth, onClose = { onPanel(null) }, onOpen = onPanel, onSignOut = {
+                    } else AccountPage(userName, isAdmin, adminPages, managerPages, healthSummary, onDeviceHealth, todoOpensApp, { onPanel(null); onTodo() }, onClose = { onPanel(null) }, onOpen = onPanel, onSignOut = {
                         onPanel(null)
                         onSignOut()
                     })
@@ -194,7 +199,7 @@ private fun PanelTitle(title: String, onBack: () -> Unit) {
 }
 
 @Composable
-private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Page>, managerPages: List<PanelSpec>, healthSummary: String, onDeviceHealth: () -> Unit, onClose: () -> Unit, onOpen: (String) -> Unit, onSignOut: () -> Unit) {
+private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Page>, managerPages: List<PanelSpec>, healthSummary: String, onDeviceHealth: () -> Unit, todoOpensApp: Boolean, onTodo: () -> Unit, onClose: () -> Unit, onOpen: (String) -> Unit, onSignOut: () -> Unit) {
     Column(
         Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -223,6 +228,14 @@ private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Pa
                     )
                 }
             }
+        }
+        // To-do, for everyone: it moved here from the bar along the bottom. Opens Church Drive To-Do where that is installed.
+        PanelCard {
+            PanelRow(
+                Icons.Outlined.Checklist, "To-do",
+                if (todoOpensApp) "Opens Church Drive To-Do" else "Your list, the shared list, cleaning and the house's jobs",
+                onClick = onTodo,
+            )
         }
         // Device Health, for everyone: batteries, filters and devices that stopped answering.
         PanelCard { PanelRow(Icons.Outlined.BatteryChargingFull, "Device health", healthSummary.ifBlank { null }, onClick = onDeviceHealth) }

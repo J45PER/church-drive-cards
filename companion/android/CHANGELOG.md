@@ -4,6 +4,12 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.37.0
+
+- To-do moved from the bar along the bottom into the account panel (the panel that slides in from the right, from your initial). Where Church Drive To-Do is installed, tapping To-do (there, on the Home highlights, from a widget or from a notification) opens that app instead; where it isn't, the To-do page opens inside this app as before.
+- The bottom bar is now Home, Lights, Security, Climate and Cleaning.
+- Under the bonnet: the update check moved into the shared `core` module so Church Drive To-Do can use it.
+
 ## 0.36.1
 
 - The house's own tasks ("From the house") are coral instead of purple: the To-do page's house card, the Home highlights, the To-do widget and Church Drive To-Do's House page. Purple stays for your own tasks, indigo for shopping, teal for steps and red for overdue.

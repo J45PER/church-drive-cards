@@ -9,6 +9,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.churchdrive.app.Session
 import com.churchdrive.app.SessionShare
+import com.churchdrive.app.UpdateCheck
 import com.churchdrive.app.SharedLookup
 import com.churchdrive.app.freshToken
 import com.churchdrive.app.ha.ConnectionState
@@ -71,7 +72,44 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
     var personName by mutableStateOf(session.personName)
         private set
 
-    var tab by mutableStateOf(TodoTab.Mine)
+    val settings = TodoSettings(app)
+    var showDone by mutableStateOf(settings.showDone)
+    var rememberPage by mutableStateOf(settings.rememberPage)
+
+    /** The page shown: My to-do, or the one last looked at when the person has asked for that. */
+    var tab by mutableStateOf(if (settings.rememberPage) TodoTab.entries.firstOrNull { it.name == settings.lastPage } ?: TodoTab.Mine else TodoTab.Mine)
+        private set
+
+    fun openTab(t: TodoTab) {
+        tab = t
+        settings.lastPage = t.name
+    }
+
+    fun setShowDone(on: Boolean) {
+        showDone = on
+        settings.showDone = on
+    }
+
+    fun setRememberPage(on: Boolean) {
+        rememberPage = on
+        settings.rememberPage = on
+    }
+
+    // A newer test build of this app, asked about when the app comes to the front (not more than every ten minutes).
+    var updateAvailable by mutableStateOf(false)
+        private set
+    private var lastUpdateCheck = 0L
+
+    fun checkForUpdate(then: (Boolean) -> Unit = {}) {
+        lastUpdateCheck = System.currentTimeMillis()
+        viewModelScope.launch(Dispatchers.IO) {
+            val newer = UpdateCheck.check(okhttp3.OkHttpClient(), BuildConfig.BUILD.toIntOrNull() ?: 0, UpdateCheck.TODO_RELEASE_API)
+            withContext(Dispatchers.Main) {
+                updateAvailable = newer
+                then(newer)
+            }
+        }
+    }
     /** The tasks of each of the four lists, by entity id; a list is absent until it has arrived. */
     private val loaded = mutableStateMapOf<String, List<TodoItem>>()
     var problem by mutableStateOf<String?>(null)
@@ -133,6 +171,7 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
 
     /** The app came to the front: connect again if the line has gone. */
     fun onForeground() {
+        if (UpdateCheck.due(System.currentTimeMillis(), lastUpdateCheck)) checkForUpdate()
         importSignIn()
         if (signedIn && !connected) connect()
     }
