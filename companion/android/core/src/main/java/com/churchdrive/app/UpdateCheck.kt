@@ -9,6 +9,10 @@ object UpdateCheck {
     const val RELEASE_API = "https://api.github.com/repos/J45PER/church-drive-cards/releases/tags/companion-android-latest"
     const val APK_URL = "https://github.com/J45PER/church-drive-cards/releases/download/companion-android-latest/church-drive.apk"
 
+    /** Church Drive To-Do has its own releases. */
+    const val TODO_RELEASE_API = "https://api.github.com/repos/J45PER/church-drive-cards/releases/tags/todo-latest"
+    const val TODO_APK_URL = "https://github.com/J45PER/church-drive-cards/releases/download/todo-latest/church-drive-todo.apk"
+
     /** The CI build number a release was made from, from its notes ("..., build 42, from the ..."). */
     fun buildOf(body: String?): Int? = body?.let { Regex("build (\\d+)").find(it)?.groupValues?.get(1)?.toIntOrNull() }
 
@@ -30,8 +34,8 @@ object UpdateCheck {
     fun due(now: Long, last: Long, gap: Long = MIN_GAP_MS): Boolean = last == 0L || now - last >= gap
 
     /** True when an update is available; false on any problem (no network, rate limit). Call off the main thread. */
-    fun check(http: OkHttpClient, running: Int): Boolean = runCatching {
-        http.newCall(Request.Builder().url(RELEASE_API).header("Accept", "application/vnd.github+json").build()).execute().use { r ->
+    fun check(http: OkHttpClient, running: Int, api: String = RELEASE_API): Boolean = runCatching {
+        http.newCall(Request.Builder().url(api).header("Accept", "application/vnd.github+json").build()).execute().use { r ->
             r.isSuccessful && isNewer(JSONObject(r.body?.string().orEmpty()).optString("body"), running)
         }
     }.getOrDefault(false)

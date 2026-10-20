@@ -14,8 +14,8 @@ import { SUFFIX, LABEL } from './suffix.js';
 import { KIT_COLOR, kitShell, kitHead } from './card-kit.js';
 
 export const HOUSE_TASKS_LIST = 'todo.priorities_automatic';
-// Their colour: a lighter purple than the person's own to-dos (#7e57c2).
-export const HOUSE_TASKS_COLOR = '#ab47bc';
+// Their colour: coral, so they stand apart from the person's own to-dos (purple, #7e57c2), shopping (indigo) and overdue (red).
+export const HOUSE_TASKS_COLOR = '#f2705c';
 
 // Kind, detail, who and icon from an automatic item's description.
 export function houseTask(item) {
@@ -70,7 +70,7 @@ export const HouseTasksCardEditor = createFormEditor({
     demo: 'Show pretend tasks (for Design Presets)',
   },
   helpers: {
-    color: `Default ${HOUSE_TASKS_COLOR} (purple). Any CSS colour.`,
+    color: `Default ${HOUSE_TASKS_COLOR} (coral). Any CSS colour.`,
     entity: `Defaults to ${HOUSE_TASKS_LIST}. Who gets each kind of task is set in Manager → Automatic to-dos.`,
   },
 });

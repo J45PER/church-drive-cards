@@ -2,6 +2,8 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **app 0.37.0 + To-Do 0.37.0** (2026-10-20): To-do moves into the phone app's account panel and opens Church Drive To-Do where installed; the To-Do app gets a side panel (Settings, About, Sign out) like the main app's
+- **v0.64.1 + app 0.36.1 + To-Do 0.36.1** (2026-10-20): the house's own tasks ("From the house") are coral everywhere (dashboard card and Home header, phone app, widget, To-Do app) instead of purple
 - **v0.64.0 + app 0.36.0 + To-Do 0.36.0** (2026-10-19): the next date of a repeating task can be changed by hand: the dashboard task card's edit form has a "Next due" date and time for repeating tasks, the phone app's edit page has "Pick a date" (a calendar), and the To-Do app can now edit tasks (name, day, repeat, who, notes, delete) with the same calendar; the repeat carries on from the date you set
 - **v0.63.2** (2026-10-16): the alarm cards now name the person who really armed or disarmed from the app or dashboard: Home Assistant only knows the login on the arm/disarm request, not on the state change Ring confirms later (v0.63.0 and v0.63.1 looked only at the state change, so it stayed "Hayley"); the request is now remembered for 3 minutes and credited to the next change
 - **v0.63.1** (2026-10-14): fixes v0.63.0, whose alarm "who" record failed to start (Home Assistant needs a marked callback as an event filter) and took notifications down with it; it can no longer stop notifications starting

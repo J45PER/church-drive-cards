@@ -3,6 +3,16 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.37.0
+
+- A side panel, like the main app's: tap your initial and it slides in from the right with your name, Open Church Drive, Settings, About and Sign out (Sign out is there only when the app has its own sign-in; with the Church Drive app's sign-in, you sign out there).
+- Settings: "Show finished tasks" keeps each list's Done section open, and "Open on the page I left" brings you back to the page you were on. Notifications points at the Church Drive app, which delivers the house's alerts and task reminders (and Google push) to the phone once, so this app never sends a second copy.
+- About: version, build and commit, and Check for updates with a download button. A banner on the lists says when a newer version is ready.
+
+## 0.36.1
+
+- The House page is coral instead of purple, so the house's jobs stand apart from your own tasks.
+
 ## 0.36.0
 
 - Tap a task to edit it: its name, day, repeat, time, who is reminded and notes, or delete it. The box on its left still ticks it.

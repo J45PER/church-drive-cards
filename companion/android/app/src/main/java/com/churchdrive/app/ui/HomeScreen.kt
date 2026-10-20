@@ -92,18 +92,22 @@ fun HomeScreen(
     onDeviceHealth: () -> Unit = {},
 ) {
     var page by rememberSaveable { mutableStateOf(Page.Home) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    // The To-do page isn't on the bar: it is opened from the account panel, and opens Church Drive To-Do where that is installed.
+    var panel by rememberSaveable { mutableStateOf<String?>(null) }
+    val openTodo = { if (!com.churchdrive.app.TodoLink.launch(context)) panel = "todo" }
     androidx.compose.runtime.LaunchedEffect(openPage) {
         if (openPage != null) {
-            Page.entries.firstOrNull { it.name == openPage && !it.adminOnly }?.let { page = it }
+            if (openPage == Page.Todo.name) openTodo()
+            else Page.entries.firstOrNull { it.name == openPage && !it.adminOnly }?.let { page = it }
             onOpened()
         }
     }
     // Administrator-only pages (Devices, Energy) are opened from the account panel, and only while an administrator is signed in.
     val adminPages = if (isAdmin) Page.entries.filter { it.adminOnly } else emptyList()
-    val pages = Page.entries.filter { !it.adminOnly }
+    val pages = Page.entries.filter { !it.adminOnly && it != Page.Todo }
     if (page !in pages) page = Page.Home
-    // The account panel (null shut, "account", "settings" or "about"), which slides in from the right.
-    var panel by rememberSaveable { mutableStateOf<String?>(null) }
+    // The account panel (null shut, "account", "settings", "about" or "todo"), which slides in from the right: declared above.
     // Asked for from outside (Jarvis alone, or the app opened on its settings).
     androidx.compose.runtime.LaunchedEffect(openPage) { if (openPage == "settings") panel = "settings" }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -216,7 +220,7 @@ fun HomeScreen(
             }
 
             if (page == Page.Home) {
-                HomePage(lights, areaNames, panels["home"].orEmpty(), entities, registry, call, onOpen = { page = it })
+                HomePage(lights, areaNames, panels["home"].orEmpty(), entities, registry, call, onOpen = { if (it == Page.Todo) openTodo() else page = it })
             } else if (page == Page.Lighting) {
                 LightingPage(lights, entities, areaNames, call)
             } else if (page == Page.Security) {
@@ -254,8 +258,10 @@ fun HomeScreen(
                 }
             }
         },
+        onTodo = openTodo,
+        todoOpensApp = com.churchdrive.app.TodoLink.installed(context),
         pageContent = { p ->
-            val key = if (p == Page.Energy) "energy" else "devices"
+            val key = when (p) { Page.Energy -> "energy"; Page.Todo -> "todo"; else -> "devices" }
             DashboardPage(panels[key].orEmpty(), entities, registry, call)
         },
         experimentalContent = { ExperimentalPage(entities, registry, call) },

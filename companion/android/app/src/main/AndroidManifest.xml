@@ -17,6 +17,11 @@
         android:name="com.churchdrive.app.permission.SHARE_SESSION"
         android:protectionLevel="signature" />
 
+    <!-- To see whether Church Drive To-Do is installed (the To-do page opens it). -->
+    <queries>
+        <package android:name="com.churchdrive.todo" />
+    </queries>
+
     <!-- Cleartext allowed because Home Assistant is often reached over plain http on the LAN. -->
     <application
         android:allowBackup="false"

@@ -20,6 +20,9 @@ android {
         val build = (System.getenv("GITHUB_RUN_NUMBER") ?: "0").toInt()
         versionCode = maxOf(build, 1)
         versionName = appVersion
+        buildConfigField("String", "BUILD", "\"$build\"")
+        // The commit this build is from (set by CI), shown in About so a build can be told apart.
+        buildConfigField("String", "COMMIT", "\"${(System.getenv("GITHUB_SHA") ?: "dev").take(7)}\"")
     }
 
     signingConfigs {
@@ -44,6 +47,7 @@ android {
         jvmTarget = "17"
     }
     buildFeatures {
+        buildConfig = true
         compose = true
     }
 }
