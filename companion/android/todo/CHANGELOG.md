@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.36.1
+
+- The House page is coral instead of purple, so the house's jobs stand apart from your own tasks.
+
 ## 0.36.0
 
 - Tap a task to edit it: its name, day, repeat, time, who is reminded and notes, or delete it. The box on its left still ticks it.

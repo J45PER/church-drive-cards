@@ -106,6 +106,7 @@ fun TodoHighlights(entities: Map<String, EntityState>, call: CallService, onOpen
     val green = toneColors(Tone.Green)
     val indigo = toneColors(Tone.Indigo)
     val teal = toneColors(Tone.Teal)
+    val coral = toneColors(Tone.Coral)
     EntityCard(purple.container, purple.onContainer) {
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -114,7 +115,7 @@ fun TodoHighlights(entities: Map<String, EntityState>, call: CallService, onOpen
                     HighlightPill(if (loaded) "Nothing waiting on you" else "Loading your to-dos…", if (loaded) "mdi:check-circle-outline" else "mdi:format-list-checks", if (loaded) green else purple, null, onOpen)
                 }
                 shown.forEach { h ->
-                    HighlightPill(h.text, h.icon, if (h.overdue) red else if (h.steps) teal else if (h.shopping) indigo else purple, if (h.auto) null else ({
+                    HighlightPill(h.text, h.icon, if (h.overdue) red else if (h.steps) teal else if (h.shopping) indigo else if (h.auto) coral else purple, if (h.auto) null else ({
                         ticked = ticked + h.uid
                         call("todo", "update_item", h.list, data("item" to h.uid, "status" to "completed"))
                     }), onOpen)

@@ -36,7 +36,7 @@ enum class TodoTab(val label: String, val title: String, val tone: Tone, val can
     Mine("My to-do", "My to-do", Tone.Purple, true),
     Shared("Shared", "Shared", Tone.Blue, true),
     Cleaning("Cleaning", "Cleaning", Tone.Teal, true),
-    House("House", "From the house", Tone.Purple, false),
+    House("House", "From the house", Tone.Coral, false),
 }
 
 const val SHARED_LIST = "todo.priorities_everyone"

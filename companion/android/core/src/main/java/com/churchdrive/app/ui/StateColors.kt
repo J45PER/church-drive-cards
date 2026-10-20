@@ -17,7 +17,7 @@ val LocalPanelTone = androidx.compose.runtime.compositionLocalOf<Tone?> { null }
 @androidx.compose.runtime.Composable
 fun panelNeutral(): ToneColors = toneColors(LocalPanelTone.current ?: Tone.Grey)
 
-enum class Tone { Green, Blue, Red, Purple, Amber, Orange, Teal, Indigo, Grey }
+enum class Tone { Green, Blue, Red, Purple, Amber, Orange, Teal, Indigo, Grey, Coral }
 
 data class ToneColors(
     /** Card background. */
@@ -46,6 +46,8 @@ private val lightTones = mapOf(
     Tone.Teal to light(0xFFE0F7FA, 0xFF006064, 0xFF00838F),
     Tone.Indigo to light(0xFFE8EAF6, 0xFF283593, 0xFF5C6BC0),
     Tone.Grey to light(0xFFF1F3F4, 0xFF3C4043, 0xFF5F6368),
+    // The house's own tasks: a salmon coral, pinker than Orange and softer than Red (which means overdue).
+    Tone.Coral to light(0xFFFFE9E4, 0xFF8C2D19, 0xFFF2705C),
 )
 
 private val darkTones = mapOf(
@@ -58,6 +60,7 @@ private val darkTones = mapOf(
     Tone.Teal to dark(0xFF0F3A40, 0xFF4DD0E1, 0xFF4DD0E1),
     Tone.Indigo to dark(0xFF262B4A, 0xFF9FA8DA, 0xFF9FA8DA),
     Tone.Grey to dark(0xFF303134, 0xFFBDC1C6, 0xFF9AA0A6),
+    Tone.Coral to dark(0xFF4D2620, 0xFFFF9C8A, 0xFFFF9C8A),
 )
 
 @Composable
@@ -92,8 +95,11 @@ fun toneFromColour(colour: String?): Tone? {
         "purple", "deep-purple", "pink" -> return Tone.Purple
         "indigo" -> return Tone.Indigo
         "teal", "cyan" -> return Tone.Teal
+        "coral", "salmon" -> return Tone.Coral
         "grey", "gray", "blue-grey", "brown", "disabled" -> return Tone.Grey
     }
+    // The house tasks' own colour on the dashboard (its hue is too near red to tell apart by hue).
+    if (v == "#f2705c") return Tone.Coral
     val hex = v.removePrefix("#")
     val full = if (hex.length == 3) hex.map { "$it$it" }.joinToString("") else hex
     if (full.length != 6) return null

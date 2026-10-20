@@ -435,7 +435,7 @@ object TodoLists {
         Triple("My to-do", "mine", Tone.Purple),
         Triple("Shared", "todo.priorities_everyone", Tone.Blue),
         Triple("Cleaning", "todo.cleaning", Tone.Teal),
-        Triple("From the house", "todo.priorities_automatic", Tone.Purple),
+        Triple("From the house", "todo.priorities_automatic", Tone.Coral),
     )
 
     /** The lists to read for this person (their own among them), by category name. */
