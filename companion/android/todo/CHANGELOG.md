@@ -6,7 +6,7 @@ Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newe
 ## 0.38.0
 
 - A task tapped on the Church Drive app's Home page opens here, on that task (its list, then the task's edit page).
-- A job in the House page goes to the part of the house it is about when tapped: the device's page in the Church Drive app (or its Cleaning or Security page), or Home Assistant's device list if that app isn't on the phone. "Open Church Drive" in the side panel now works on every Android version (the app declares that it looks for it).
+- A job in the House page goes to the part of the house it is about when tapped: the device's page in the Church Drive app (or its Cleaning or Security page), or Home Assistant's device list if that app isn't on the phone. A job only Home Assistant can do, such as an update waiting, opens Home Assistant at Settings > Updates (its app if on the phone, else the browser). "Open Church Drive" in the side panel now works on every Android version (the app declares that it looks for it).
 
 ## 0.37.0
 

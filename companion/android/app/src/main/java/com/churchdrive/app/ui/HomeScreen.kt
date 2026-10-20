@@ -116,9 +116,13 @@ fun HomeScreen(
     // A task tapped on the Home page: a house job goes to the device (or place) it is about, a shopping or steps list to the in-app
     // page (the To-Do app doesn't have them), and any other task to that task in the To-Do app, or the in-app page.
     val openDeviceFor = com.churchdrive.app.ui.LocalOpenDevice.current
+    val houseAddress = LocalBaseUrl.current
     val openTask: (Highlight) -> Unit = { h ->
+        val haPath = houseTaskHaPath(h.kind)
         val inPage = houseTaskPage(h.kind)?.let { name -> Page.entries.firstOrNull { it.name == name } }
         when {
+            // A job only Home Assistant itself can do (an update waiting) opens Home Assistant.
+            h.house && haPath != null -> if (!com.churchdrive.app.HomeAssistantLink.open(context, houseAddress, haPath)) onDeviceHealth()
             h.house && inPage != null -> page = inPage
             h.house -> deviceForHouseTask(h.text, deviceHealthList(entities, registry, areaNames))?.let { openDeviceFor(it.deviceId) } ?: onDeviceHealth()
             h.shopping || h.steps -> panel = "todo"

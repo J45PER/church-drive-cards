@@ -121,6 +121,13 @@ fun houseTaskPage(kind: String): String? = when {
     else -> null
 }
 
+/**
+ * Where in Home Assistant a house job has to be dealt with, when only Home Assistant itself can: an update waiting (Home Assistant,
+ * an add-on or an integration) is done from Settings > Updates. Null for jobs the Church Drive apps have a page for.
+ */
+fun houseTaskHaPath(kind: String): String? =
+    if (Regex("update", RegexOption.IGNORE_CASE).containsMatchIn(kind)) "/config/updates" else null
+
 /** Whether a house task is for this person (their own, or everyone's). */
 fun houseTaskFor(task: HouseTask, first: String?): Boolean {
     val names = task.who.lowercase().split(',').map { it.trim() }

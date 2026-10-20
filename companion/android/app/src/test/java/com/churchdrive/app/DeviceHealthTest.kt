@@ -2,6 +2,7 @@ package com.churchdrive.app
 
 import com.churchdrive.app.ui.DeviceHealthItem
 import com.churchdrive.app.ui.deviceForHouseTask
+import com.churchdrive.app.ui.houseTaskHaPath
 import com.churchdrive.app.ui.houseTaskPage
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -27,5 +28,13 @@ class DeviceHealthTest {
         assertNull(houseTaskPage("Low batteries"))
         assertNull(houseTaskPage("Filters due"))
         assertNull(houseTaskPage(""))
+    }
+
+    @Test
+    fun aHouseUpdateOpensHomeAssistantsUpdatesPage() {
+        assertEquals("/config/updates", houseTaskHaPath("Updates"))
+        assertEquals("/config/updates", houseTaskHaPath("Update available"))
+        assertNull(houseTaskHaPath("Low batteries"))
+        assertNull(houseTaskHaPath("Vacuum message"))
     }
 }

@@ -64,6 +64,7 @@ import com.churchdrive.app.ui.HouseTask
 import com.churchdrive.app.ui.TodoItem
 import com.churchdrive.app.ui.ToneColors
 import com.churchdrive.app.ui.houseTask
+import com.churchdrive.app.ui.houseTaskHaPath
 import com.churchdrive.app.ui.houseTaskPage
 import com.churchdrive.app.ui.isStepsTask
 import com.churchdrive.app.ui.shoppingIdOf
@@ -263,5 +264,6 @@ private fun HouseRow(item: TodoItem, task: HouseTask, tone: ToneColors, onOpen: 
 }
 
 private fun ChurchDriveLinkOpen(context: android.content.Context, item: TodoItem, houseAddress: String?) {
-    ChurchDriveLink.openHouseJob(context, item.summary, houseTaskPage(houseTask(item).kind), houseAddress)
+    val kind = houseTask(item).kind
+    ChurchDriveLink.openHouseJob(context, item.summary, houseTaskPage(kind), houseTaskHaPath(kind), houseAddress)
 }

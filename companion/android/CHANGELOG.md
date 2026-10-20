@@ -8,6 +8,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 - Tasks on the Home page open that task in Church Drive To-Do (its edit page) when the To-Do app is installed. Settings has a new "Open To-do in Church Drive To-Do" switch (shown when the app is installed): turn it off and To-do, and the tasks on Home, open this app's own To-do page instead. Shopping and steps lists always open in this app.
 - Tapping a job the house spotted ("From the house") on Home goes to what it is about: the device's page (found by its name in the job, such as a battery or filter), the Cleaning page for the vacuum's messages, the Security page for a safety alarm, or Device Health when no device fits.
+- A job only Home Assistant can do, such as an update waiting, opens Home Assistant at Settings > Updates (in its app if it is on the phone, else the browser).
 - The To-Do app can ask this app to open a house job's device the same way.
 
 ## 0.37.0
