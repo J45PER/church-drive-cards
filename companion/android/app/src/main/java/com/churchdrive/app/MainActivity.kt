@@ -61,6 +61,9 @@ class MainActivity : ComponentActivity() {
     private var deviceHealthOpen by mutableStateOf(false)
     private var openDevice by mutableStateOf<String?>(null)
 
+    /** A house job (its words) the To-Do app asked to see the device for: worked out once the house's devices have arrived. */
+    private var openHouseTask by mutableStateOf<String?>(null)
+
     /** The charger widget's Start charge asked the app to ask: "Charge at 00:30" or "Charge now". */
     private var chargePrompt by mutableStateOf(false)
 
@@ -82,6 +85,10 @@ class MainActivity : ComponentActivity() {
             openDevice = it
             deviceHealthOpen = true
             intent.removeExtra(EXTRA_DEVICE)
+        }
+        intent?.getStringExtra(EXTRA_HOUSE_TASK)?.let {
+            openHouseTask = it
+            intent.removeExtra(EXTRA_HOUSE_TASK)
         }
         if (intent?.getBooleanExtra(EXTRA_DEVICE_HEALTH, false) == true) {
             openDevice = null
@@ -204,6 +211,14 @@ class MainActivity : ComponentActivity() {
                                     onCameraClosed = { openCamera = null; openCameraAnswer = false },
                                     onDeviceHealth = { openDevice = null; deviceHealthOpen = true },
                                 )
+                                androidx.compose.runtime.LaunchedEffect(openHouseTask, statesLoaded) {
+                                    val task = openHouseTask
+                                    if (task != null && statesLoaded) {
+                                        openDevice = com.churchdrive.app.ui.deviceForHouseTask(task, com.churchdrive.app.ui.deviceHealthList(entities, registry, areaNames))?.deviceId
+                                        deviceHealthOpen = true
+                                        openHouseTask = null
+                                    }
+                                }
                                 if (deviceHealthOpen && statesLoaded) {
                                     com.churchdrive.app.ui.DeviceHealthOverlay(openDevice, entities, registry, areaNames) { deviceHealthOpen = false; openDevice = null }
                                 }
@@ -236,6 +251,9 @@ class MainActivity : ComponentActivity() {
         /** A notification asked for a device's health page (an entity id or a device id), or for the Device Health list. */
         const val EXTRA_DEVICE = "device"
         const val EXTRA_DEVICE_HEALTH = "device_health"
+
+        /** Sent by the To-Do app: the words of a house job, to open the device it is about (or Device Health). */
+        const val EXTRA_HOUSE_TASK = "house_task"
         const val EXTRA_SHARE_TEXT = "share_text"
         const val EXTRA_SHARE_SOURCE = "share_source"
         const val EXTRA_SHARE_AUTO_ADD = "share_auto_add"

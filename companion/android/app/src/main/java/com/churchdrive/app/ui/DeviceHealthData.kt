@@ -122,3 +122,7 @@ fun deviceHealthSummary(items: List<DeviceHealthItem>): String {
     val n = items.count { it.needsAttention }
     return if (n == 0) "All ${items.size} fine" else "$n of ${items.size} need attention"
 }
+
+/** The device a house job is about, found by its name in the job's words ("Replace battery: Ring Front Doorbell"): the longest name that fits, or null. */
+fun deviceForHouseTask(text: String, items: List<DeviceHealthItem>): DeviceHealthItem? =
+    items.filter { it.name.isNotBlank() && text.contains(it.name, ignoreCase = true) }.maxByOrNull { it.name.length }

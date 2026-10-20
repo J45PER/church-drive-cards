@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **app 0.38.0 + To-Do 0.38.0** (2026-10-20): Home tasks open that task in the To-Do app (a Settings switch keeps them in the phone app); house jobs open the device or page they are about, in both apps. No Home Assistant update
 - **app 0.37.0 + To-Do 0.37.0** (2026-10-20): To-do moves into the phone app's account panel and opens Church Drive To-Do where installed; the To-Do app gets a side panel (Settings, About, Sign out) like the main app's
 - **v0.64.1 + app 0.36.1 + To-Do 0.36.1** (2026-10-20): the house's own tasks ("From the house") are coral everywhere (dashboard card and Home header, phone app, widget, To-Do app) instead of purple
 - **v0.64.0 + app 0.36.0 + To-Do 0.36.0** (2026-10-19): the next date of a repeating task can be changed by hand: the dashboard task card's edit form has a "Next due" date and time for repeating tasks, the phone app's edit page has "Pick a date" (a calendar), and the To-Do app can now edit tasks (name, day, repeat, who, notes, delete) with the same calendar; the repeat carries on from the date you set

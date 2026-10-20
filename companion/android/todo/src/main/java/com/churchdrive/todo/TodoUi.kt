@@ -64,6 +64,8 @@ import com.churchdrive.app.ui.HouseTask
 import com.churchdrive.app.ui.TodoItem
 import com.churchdrive.app.ui.ToneColors
 import com.churchdrive.app.ui.houseTask
+import com.churchdrive.app.ui.houseTaskHaPath
+import com.churchdrive.app.ui.houseTaskPage
 import com.churchdrive.app.ui.isStepsTask
 import com.churchdrive.app.ui.shoppingIdOf
 import com.churchdrive.app.ui.taskLine
@@ -154,9 +156,18 @@ private fun UpdateBanner(onOpen: () -> Unit) {
 private fun TaskCard(vm: TodoModel, tab: TodoTab) {
     val tone = toneColors(tab.tone)
     val items = vm.items(tab)
+    val context = androidx.compose.ui.platform.LocalContext.current
     var text by rememberSaveable(tab) { mutableStateOf("") }
     var showDone by rememberSaveable(tab) { mutableStateOf(vm.showDone) }
     var editing by remember(tab) { mutableStateOf<TodoItem?>(null) }
+    // A task asked for from the Church Drive app's Home page opens for editing as soon as its list has arrived.
+    val pending = vm.pendingUid
+    androidx.compose.runtime.LaunchedEffect(pending, items, tab) {
+        if (pending != null && items != null) {
+            items.firstOrNull { it.uid == pending && tab != TodoTab.House }?.let { editing = it }
+            vm.clearPending()
+        }
+    }
     editing?.let { item ->
         TodoEditDialog(
             item, vm.personName?.trim()?.substringBefore(' '),
@@ -177,7 +188,7 @@ private fun TaskCard(vm: TodoModel, tab: TodoTab) {
                 open.isEmpty() -> Text(if (tab == TodoTab.House) "Nothing from the house right now." else "All done", style = MaterialTheme.typography.titleMedium)
             }
             open.forEach { item ->
-                if (tab == TodoTab.House) HouseRow(item, houseTask(item), tone) else TaskRow(item, tone, onEdit = { editing = item }) { vm.setDone(tab, item, true) }
+                if (tab == TodoTab.House) HouseRow(item, houseTask(item), tone) { ChurchDriveLinkOpen(context, item, vm.houseAddress) } else TaskRow(item, tone, onEdit = { editing = item }) { vm.setDone(tab, item, true) }
             }
             // Finished tasks, kept out of the way until asked for; tick one to bring it back.
             val finished = items.orEmpty().filter { it.done }
@@ -240,8 +251,9 @@ private fun TaskRow(item: TodoItem, tone: ToneColors, onEdit: () -> Unit, onTick
 
 /** A job the house spotted: it clears itself once sorted, so it has no tick. */
 @Composable
-private fun HouseRow(item: TodoItem, task: HouseTask, tone: ToneColors) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(vertical = 4.dp)) {
+private fun HouseRow(item: TodoItem, task: HouseTask, tone: ToneColors, onOpen: () -> Unit) {
+    // Tap a job to go to the part of the house it is about: the device's page in the Church Drive app, or Home Assistant.
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth().clickable(onClickLabel = "Open the device") { onOpen() }.padding(vertical = 4.dp)) {
         Icon(Icons.Filled.HomeWork, contentDescription = null, tint = tone.accent)
         Column(Modifier.weight(1f)) {
             Text(item.summary, style = MaterialTheme.typography.bodyLarge)
@@ -249,4 +261,9 @@ private fun HouseRow(item: TodoItem, task: HouseTask, tone: ToneColors) {
             if (sub.isNotEmpty()) Text(sub, style = MaterialTheme.typography.bodySmall, color = tone.onContainer.copy(alpha = 0.75f))
         }
     }
+}
+
+private fun ChurchDriveLinkOpen(context: android.content.Context, item: TodoItem, houseAddress: String?) {
+    val kind = houseTask(item).kind
+    ChurchDriveLink.openHouseJob(context, item.summary, houseTaskPage(kind), houseTaskHaPath(kind), houseAddress)
 }

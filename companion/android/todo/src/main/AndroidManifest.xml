@@ -10,6 +10,8 @@
     <uses-permission android:name="com.churchdrive.app.permission.SHARE_SESSION" />
     <queries>
         <provider android:authorities="com.churchdrive.app.sessionshare" />
+        <!-- To open the Church Drive app (its device pages, and its own page for the open task). -->
+        <package android:name="com.churchdrive.app" />
     </queries>
 
     <!-- Cleartext allowed because Home Assistant is often reached over plain http on the LAN. -->

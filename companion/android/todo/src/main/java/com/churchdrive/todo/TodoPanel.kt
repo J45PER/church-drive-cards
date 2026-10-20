@@ -62,13 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.clickable
 import com.churchdrive.app.UpdateCheck
 
-/** The Church Drive app, which gives this app its sign-in and delivers the house's notifications. */
-private const val CHURCH_DRIVE_PACKAGE = "com.churchdrive.app"
-
-private fun openChurchDrive(context: Context): Boolean {
-    val intent = runCatching { context.packageManager.getLaunchIntentForPackage(CHURCH_DRIVE_PACKAGE) }.getOrNull() ?: return false
-    return runCatching { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess
-}
+private fun openChurchDrive(context: Context): Boolean = ChurchDriveLink.open(context)
 
 private val PanelShape = RoundedCornerShape(28.dp)
 
