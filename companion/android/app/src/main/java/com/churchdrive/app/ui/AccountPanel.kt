@@ -329,6 +329,16 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         PanelTitle("Settings", onBack)
+        // Where there is a Church Drive To-Do app, the person can keep the To-do page in this app instead.
+        if (com.churchdrive.app.TodoLink.installed(context)) PanelCard {
+            var openApp by remember { mutableStateOf(com.churchdrive.app.TodoLink.preferApp(context)) }
+            PanelRow(
+                Icons.Outlined.Checklist, "Open To-do in Church Drive To-Do",
+                if (openApp) "To-do, and the tasks on Home, open the To-Do app. Turn off to use the To-do page in this app instead."
+                else "To-do and the tasks on Home open the To-do page in this app. Turn on to open the To-Do app.",
+                trailing = { Switch(checked = openApp, onCheckedChange = { on -> openApp = on; com.churchdrive.app.TodoLink.setPreferApp(context, on) }) },
+            )
+        }
         PanelCard {
             PanelRow(
                 Icons.Outlined.Notifications, "Notifications",

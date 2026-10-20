@@ -39,6 +39,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.churchdrive.app.ui.ChurchDriveTheme
+import com.churchdrive.app.ui.TodoDeepLink
 
 /** Church Drive To-Do: sign in to the house, pick a list, tick tasks off, add new ones. */
 class MainActivity : ComponentActivity() {
@@ -46,6 +47,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        readLink(intent)
         setContent {
             ChurchDriveTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
@@ -57,6 +59,21 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    /** The task the Church Drive app's Home page asked to open (its list and uid), if this intent has one. */
+    private fun readLink(intent: android.content.Intent?) {
+        val list = intent?.getStringExtra(TodoDeepLink.EXTRA_LIST) ?: return
+        val uid = intent.getStringExtra(TodoDeepLink.EXTRA_UID) ?: return
+        vm.openFromLink(list, uid)
+        intent.removeExtra(TodoDeepLink.EXTRA_LIST)
+        intent.removeExtra(TodoDeepLink.EXTRA_UID)
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        readLink(intent)
     }
 
     override fun onStart() {

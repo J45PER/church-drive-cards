@@ -4,6 +4,12 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.38.0
+
+- Tasks on the Home page open that task in Church Drive To-Do (its edit page) when the To-Do app is installed. Settings has a new "Open To-do in Church Drive To-Do" switch (shown when the app is installed): turn it off and To-do, and the tasks on Home, open this app's own To-do page instead. Shopping and steps lists always open in this app.
+- Tapping a job the house spotted ("From the house") on Home goes to what it is about: the device's page (found by its name in the job, such as a battery or filter), the Cleaning page for the vacuum's messages, the Security page for a safety alarm, or Device Health when no device fits.
+- The To-Do app can ask this app to open a house job's device the same way.
+
 ## 0.37.0
 
 - To-do moved from the bar along the bottom into the account panel (the panel that slides in from the right, from your initial). Where Church Drive To-Do is installed, tapping To-do (there, on the Home highlights, from a widget or from a notification) opens that app instead; where it isn't, the To-do page opens inside this app as before.

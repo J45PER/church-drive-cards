@@ -104,6 +104,23 @@ fun houseTask(item: TodoItem): HouseTask {
     return HouseTask(kind, rest.drop(1).joinToString(" · "), who, icon)
 }
 
+/** What the apps send each other to open a particular task: the to-do list (entity id) and the task's uid. */
+object TodoDeepLink {
+    const val EXTRA_LIST = "todo_list"
+    const val EXTRA_UID = "todo_uid"
+}
+
+/**
+ * The Church Drive app page (a `Page` name) that a house job is about when it is about a place rather than a device: the vacuum's
+ * messages are Cleaning, safety alarms are Security. Null for the rest (batteries, filters, devices that stopped answering,
+ * updates), which are about a device and open its page, or Device Health.
+ */
+fun houseTaskPage(kind: String): String? = when {
+    Regex("vacuum", RegexOption.IGNORE_CASE).containsMatchIn(kind) -> "Cleaning"
+    Regex("safety|smoke|alarm", RegexOption.IGNORE_CASE).containsMatchIn(kind) -> "Security"
+    else -> null
+}
+
 /** Whether a house task is for this person (their own, or everyone's). */
 fun houseTaskFor(task: HouseTask, first: String?): Boolean {
     val names = task.who.lowercase().split(',').map { it.trim() }

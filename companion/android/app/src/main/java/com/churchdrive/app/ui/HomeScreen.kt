@@ -95,7 +95,7 @@ fun HomeScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     // The To-do page isn't on the bar: it is opened from the account panel, and opens Church Drive To-Do where that is installed.
     var panel by rememberSaveable { mutableStateOf<String?>(null) }
-    val openTodo = { if (!com.churchdrive.app.TodoLink.launch(context)) panel = "todo" }
+    val openTodo = { if (!com.churchdrive.app.TodoLink.open(context)) panel = "todo" }
     androidx.compose.runtime.LaunchedEffect(openPage) {
         if (openPage != null) {
             if (openPage == Page.Todo.name) openTodo()
@@ -112,6 +112,19 @@ fun HomeScreen(
     androidx.compose.runtime.LaunchedEffect(openPage) { if (openPage == "settings") panel = "settings" }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val title = if (page == Page.Home) "Hello ${userName?.substringBefore(' ') ?: ""}".trim() else page.label
+
+    // A task tapped on the Home page: a house job goes to the device (or place) it is about, a shopping or steps list to the in-app
+    // page (the To-Do app doesn't have them), and any other task to that task in the To-Do app, or the in-app page.
+    val openDeviceFor = com.churchdrive.app.ui.LocalOpenDevice.current
+    val openTask: (Highlight) -> Unit = { h ->
+        val inPage = houseTaskPage(h.kind)?.let { name -> Page.entries.firstOrNull { it.name == name } }
+        when {
+            h.house && inPage != null -> page = inPage
+            h.house -> deviceForHouseTask(h.text, deviceHealthList(entities, registry, areaNames))?.let { openDeviceFor(it.deviceId) } ?: onDeviceHealth()
+            h.shopping || h.steps -> panel = "todo"
+            else -> if (!com.churchdrive.app.TodoLink.open(context, h.list, h.uid)) panel = "todo"
+        }
+    }
 
     // Swiping left anywhere that doesn't scroll sideways opens the account panel, as well as its button.
     var swiped by remember { mutableStateOf(0f) }
@@ -220,7 +233,7 @@ fun HomeScreen(
             }
 
             if (page == Page.Home) {
-                HomePage(lights, areaNames, panels["home"].orEmpty(), entities, registry, call, onOpen = { if (it == Page.Todo) openTodo() else page = it })
+                HomePage(lights, areaNames, panels["home"].orEmpty(), entities, registry, call, onOpen = { if (it == Page.Todo) openTodo() else page = it }, onOpenTask = openTask)
             } else if (page == Page.Lighting) {
                 LightingPage(lights, entities, areaNames, call)
             } else if (page == Page.Security) {
@@ -259,7 +272,7 @@ fun HomeScreen(
             }
         },
         onTodo = openTodo,
-        todoOpensApp = com.churchdrive.app.TodoLink.installed(context),
+        todoOpensApp = com.churchdrive.app.TodoLink.opensApp(context),
         pageContent = { p ->
             val key = when (p) { Page.Energy -> "energy"; Page.Todo -> "todo"; else -> "devices" }
             DashboardPage(panels[key].orEmpty(), entities, registry, call)
@@ -282,6 +295,7 @@ private fun HomePage(
     registry: Registry,
     call: CallService,
     onOpen: (Page) -> Unit,
+    onOpenTask: (Highlight) -> Unit,
 ) {
     val quality = entities[CLIMATE_QUALITY_ENTITY]?.state?.toIntOrNull()
     val alarm = entities[ALARM_ENTITY]
@@ -317,7 +331,7 @@ private fun HomePage(
 
     // The panels are the dashboard's own, in its order, so a card added in Home Assistant appears here too. The ones the
     // app draws its own way (alarm, climate, lights, vacuum) keep that; any other panel shows its cards as they are.
-    TodoHighlights(entities, call) { onOpen(Page.Todo) }
+    TodoHighlights(entities, call, onOpen = { onOpen(Page.Todo) }, onOpenTask = onOpenTask)
     // "Confirm car to charge tonight", only while a plugged-in car is waiting for an answer: above the panels (Security first).
     CarConfirmCard(entities, call)
     val titles = panels.map { it.title }.ifEmpty { listOf("Security", "Climate", "Lights", "Cleaning", "Car charging") }

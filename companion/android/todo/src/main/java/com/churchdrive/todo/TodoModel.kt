@@ -68,6 +68,28 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
     private var flowId = ""
     private var flowUrl = ""
 
+    /** The house's address, for the link to Home Assistant when the Church Drive app isn't on the phone. */
+    val houseAddress: String? get() = session.url
+
+    /** A task another app asked to open (from the Church Drive app's Home page): shown on its page once its list has arrived. */
+    var pendingUid by mutableStateOf<String?>(null)
+        private set
+
+    /** Opens the page of the task's list, and the task itself once it has loaded. */
+    fun openFromLink(list: String, uid: String) {
+        tab = when (list) {
+            SHARED_LIST -> TodoTab.Shared
+            CLEANING_LIST -> TodoTab.Cleaning
+            HOUSE_LIST -> TodoTab.House
+            else -> TodoTab.Mine
+        }
+        pendingUid = uid
+    }
+
+    fun clearPending() {
+        pendingUid = null
+    }
+
     /** Who is signed in (their name in Home Assistant); only their own list is ever shown. */
     var personName by mutableStateOf(session.personName)
         private set

@@ -42,7 +42,7 @@ const val SHARED_LIST = "todo.priorities_everyone"
 const val HOUSE_LIST = "todo.priorities_automatic"
 
 /** One row of the highlights. */
-data class Highlight(val uid: String, val list: String, val text: String, val overdue: Boolean, val auto: Boolean, val icon: String, val shopping: Boolean = false, val steps: Boolean = false)
+data class Highlight(val uid: String, val list: String, val text: String, val overdue: Boolean, val auto: Boolean, val icon: String, val shopping: Boolean = false, val steps: Boolean = false, val house: Boolean = false, val kind: String = "")
 
 /**
  * What is waiting, soonest due first (overdue before the rest), then in list order: the person's own, the shared list, the house's.
@@ -79,13 +79,15 @@ fun todoHighlights(lists: Map<String, List<TodoItem>>, first: String?, now: Loca
                 auto = task != null || shoppingIdOf(item.description).isNotEmpty(),
                 shopping = shoppingIdOf(item.description).isNotEmpty() && !isStepsTask(item.description),
                 steps = shoppingIdOf(item.description).isNotEmpty() && isStepsTask(item.description),
+                house = task != null,
+                kind = task?.kind.orEmpty(),
                 icon = task?.icon ?: if (shoppingIdOf(item.description).isNotEmpty()) (if (isStepsTask(item.description)) "mdi:format-list-checks" else "mdi:cart-outline") else if (list == SHARED_LIST) "mdi:account-group" else "mdi:flag",
             )
         }
 }
 
 @Composable
-fun TodoHighlights(entities: Map<String, EntityState>, call: CallService, onOpen: () -> Unit) {
+fun TodoHighlights(entities: Map<String, EntityState>, call: CallService, onOpen: () -> Unit, onOpenTask: (Highlight) -> Unit = { onOpen() }) {
     val me = LocalUserName.current
     val first = me?.trim()?.substringBefore(' ')
     val mine = myTodoList(me)
@@ -118,7 +120,7 @@ fun TodoHighlights(entities: Map<String, EntityState>, call: CallService, onOpen
                     HighlightPill(h.text, h.icon, if (h.overdue) red else if (h.steps) teal else if (h.shopping) indigo else if (h.auto) coral else purple, if (h.auto) null else ({
                         ticked = ticked + h.uid
                         call("todo", "update_item", h.list, data("item" to h.uid, "status" to "completed"))
-                    }), onOpen)
+                    }), { onOpenTask(h) })
                 }
             }
             Column(

@@ -3,6 +3,11 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.38.0
+
+- A task tapped on the Church Drive app's Home page opens here, on that task (its list, then the task's edit page).
+- A job in the House page goes to the part of the house it is about when tapped: the device's page in the Church Drive app (or its Cleaning or Security page), or Home Assistant's device list if that app isn't on the phone. "Open Church Drive" in the side panel now works on every Android version (the app declares that it looks for it).
+
 ## 0.37.0
 
 - A side panel, like the main app's: tap your initial and it slides in from the right with your name, Open Church Drive, Settings, About and Sign out (Sign out is there only when the app has its own sign-in; with the Church Drive app's sign-in, you sign out there).
