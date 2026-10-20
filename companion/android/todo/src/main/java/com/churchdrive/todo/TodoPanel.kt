@@ -203,12 +203,12 @@ private fun SettingsPage(vm: TodoModel, onBack: () -> Unit) {
             PanelRow(
                 Icons.Outlined.Checklist, "Show finished tasks",
                 "Keep each list's Done section open, instead of folded away until you ask for it.",
-                trailing = { Switch(checked = vm.showDone, onCheckedChange = { vm.setShowDone(it) }) },
+                trailing = { Switch(checked = vm.showDone, onCheckedChange = { vm.changeShowDone(it) }) },
             )
             PanelRow(
                 Icons.Outlined.Visibility, "Open on the page I left",
                 "When this is off, the app always opens on My to-do.",
-                trailing = { Switch(checked = vm.rememberPage, onCheckedChange = { vm.setRememberPage(it) }) },
+                trailing = { Switch(checked = vm.rememberPage, onCheckedChange = { vm.changeRememberPage(it) }) },
             )
         }
     }

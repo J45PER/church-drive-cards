@@ -85,12 +85,12 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
         settings.lastPage = t.name
     }
 
-    fun setShowDone(on: Boolean) {
+    fun changeShowDone(on: Boolean) {
         showDone = on
         settings.showDone = on
     }
 
-    fun setRememberPage(on: Boolean) {
+    fun changeRememberPage(on: Boolean) {
         rememberPage = on
         settings.rememberPage = on
     }
