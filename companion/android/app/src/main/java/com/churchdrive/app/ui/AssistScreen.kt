@@ -107,8 +107,8 @@ private val ClassicPalette = AssistPalette(Color(0xFF5C6BC0), Color(0xFFAB47BC),
 @Composable
 fun assistPalette(): AssistPalette {
     val s = MaterialTheme.colorScheme
-    val classic = AssistColourSetting.classic
-    return remember(classic, s.primary, s.tertiary, s.secondary) { if (classic) ClassicPalette else AssistPalette(s.primary, s.tertiary, s.secondary) }
+    val phoneTheme = AssistColourSetting.phoneTheme
+    return remember(phoneTheme, s.primary, s.tertiary, s.secondary) { if (phoneTheme) AssistPalette(s.primary, s.tertiary, s.secondary) else ClassicPalette }
 }
 
 /**
@@ -354,15 +354,15 @@ private fun BottomGlow(active: Boolean, level: Float, modifier: Modifier = Modif
 }
 
 /**
- * The round button at the bottom right: his coloured orb on the dark grey circle, with his white mark over it (animated: see AssistantGlyph): the drifting logo when he is shut, a microphone when he waits, a squircle to stop while he listens. Same size and place everywhere, above the bottom bar.
+ * The round button at the bottom right: his coloured orb on a circle the colour of the bottom bar, with his white mark over it (animated: see AssistantGlyph): the drifting logo when he is shut, a microphone when he waits, a squircle to stop while he listens. Same size and place everywhere, above the bottom bar.
  */
 @Composable
 fun AssistantRound(label: String, onClick: () -> Unit, state: AssistState = AssistState.Idle, level: Float = 0f, content: @Composable () -> Unit) {
     val scheme = MaterialTheme.colorScheme
     Box(
         modifier = Modifier.size(58.dp).shadow(6.dp, CircleShape).clip(CircleShape)
-            .background(scheme.outlineVariant)
-            .border(2.dp, scheme.outlineVariant, CircleShape)
+            .background(androidx.compose.material3.NavigationBarDefaults.containerColor)
+            .border(2.dp, androidx.compose.material3.NavigationBarDefaults.containerColor, CircleShape)
             .clickable(onClickLabel = label, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {

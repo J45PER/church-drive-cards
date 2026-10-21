@@ -22,6 +22,13 @@ object TodoLink {
 
     fun installed(context: Context): Boolean = intent(context) != null
 
+    /** Opens Church Drive To Do's Google Play listing (the Play app, else the web page). */
+    fun openStore(context: Context) {
+        val play = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("market://details?id=$PACKAGE")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val web = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://play.google.com/store/apps/details?id=$PACKAGE")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { context.startActivity(play) }.onFailure { runCatching { context.startActivity(web) } }
+    }
+
     /** Whether the person wants the To-Do app opened (the default) rather than this app's own To-do page. */
     fun preferApp(context: Context): Boolean = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY, true)
 

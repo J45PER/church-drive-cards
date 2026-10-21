@@ -4,6 +4,15 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.44.1
+
+- First Google Play fixes. Clive keeps his original indigo, purple and green by default; Settings now has "Use phone theme colours for Clive" (off) to give him the phone's colours instead.
+- A room's pill on Home and Lights takes its colour from a light in the room that is on and showing a colour, not the group's last colour; with only plain white lights or switches on it follows the theme.
+- To-do in the account panel always shows the Church Drive To-Do icon, and its text is one line so the icon lines up with the others.
+- Experimental is hidden for now (nothing is being tried out).
+- Clive's round button is the colour of the bottom bar.
+- Settings > "Get Church Drive To Do" opens the To-Do app's Google Play listing (`com.churchdrive.todo`) when it isn't installed; once it is, To-do opens the app as before.
+
 ## 0.44.0
 
 - Ready for Google Play: CI now also builds the signed app bundles (`church-drive-manager.aab` for the phone, `church-drive-manager-wear.aab` for the watch), attached to each version's release. Built for Android 16 (target API 36; the watch stays on 35). The Play build does not check GitHub for test builds.
