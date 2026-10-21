@@ -46,7 +46,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import com.churchdrive.app.ui.JarvisLogo
+import com.churchdrive.app.ui.CliveGlyph
+import com.churchdrive.app.ui.CliveGlyphPose
 
 /** The round Clive button of the To-Do app: opens [CliveSheet]. */
 @Composable
@@ -55,7 +56,7 @@ fun CliveButton(onClick: () -> Unit) {
         Modifier.size(56.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer)
             .clickable(onClickLabel = "Clive To Do", onClick = onClick),
         contentAlignment = Alignment.Center,
-    ) { JarvisLogo(MaterialTheme.colorScheme.onPrimaryContainer, 30.dp) }
+    ) { CliveGlyph(CliveGlyphPose.Idle, MaterialTheme.colorScheme.onPrimaryContainer, 30.dp) }
 }
 
 /**
@@ -91,7 +92,7 @@ fun CliveSheet(vm: TodoModel, onClose: () -> Unit) {
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
-                    JarvisLogo(MaterialTheme.colorScheme.onPrimaryContainer, 26.dp)
+                    CliveGlyph(CliveGlyphPose.Idle, MaterialTheme.colorScheme.onPrimaryContainer, 26.dp)
                 }
                 Column {
                     Text("Clive To Do", style = MaterialTheme.typography.titleMedium)

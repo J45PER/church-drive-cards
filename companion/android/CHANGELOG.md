@@ -8,6 +8,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 - New icons use the Church Drive colours: the house (and the watch's Clive and To-do tiles) is now drawn in the indigo, purple and green gradient on white, not white on teal. The status-bar icon stays plain white, as Android needs.
 - In Account, To-do and its setting show the Church Drive To-Do app's own clipboard icon when To-do opens that app.
+- The assistant's round button is now a still circle with Clive's white mark moving on it: it drifts when he is shut, becomes a microphone (the capsule slowly breathing) when he waits, a squircle to tap to stop while he listens (it swells a little with your voice), two squircles trading size while he thinks, and two equaliser bars while he speaks.
 - Shared code change for Clive To Do (see Church Drive To-Do's notes).
 
 ## 0.38.2

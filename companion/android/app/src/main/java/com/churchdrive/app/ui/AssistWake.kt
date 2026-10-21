@@ -273,12 +273,7 @@ fun JarvisFab(modifier: Modifier = Modifier) {
                 else -> model.listen()
             }
         }, if (j.open) model.state else AssistState.Idle, if (j.open) model.level else 0f) {
-            androidx.compose.animation.Crossfade(if (j.open) (if (listening) 2 else 1) else 0, label = "fabIcon") { v ->
-                when (v) {
-                    0 -> JarvisLogo(Color.White)
-                    else -> HaIcon(if (v == 2) "mdi:stop" else "mdi:microphone", Icons.Filled.Info, Color.White, 28.dp)
-                }
-            }
+            CliveGlyph(cliveGlyphPose(j.open, model.state), Color.White, 30.dp, if (j.open) model.level else 0f)
         }
     }
 }
