@@ -42,8 +42,8 @@ enum class CliveGlyphPose {
     Idle,
     /** Open, waiting for the microphone to be pressed: a microphone (capsule over a flat bar) whose capsule slowly breathes. */
     Ready,
-    /** Listening: the microphone is now the stop button, a squircle that swells a little with the voice. */
-    Stop,
+    /** Listening: the same microphone, its capsule and base wobbling a little, like a level meter. */
+    Listening,
     /** Thinking: the two squircles trade size. */
     Thinking,
     /** Speaking: two equaliser bars. */
@@ -59,9 +59,7 @@ private val REST_B = Sq(62f, 62f, 76f, 76f, 30f, SHIFT, -SHIFT)
 
 private fun poseOf(p: CliveGlyphPose): Pair<Sq, Sq> = when (p) {
     CliveGlyphPose.Idle, CliveGlyphPose.Thinking -> REST_A to REST_B
-    CliveGlyphPose.Ready -> Sq(80f, 40f, 40f, 64f, 20f) to Sq(66f, 130f, 68f, 16f, 8f)
-    // The second square shrinks away into the first, so the stop button is one squircle (two the same size would cancel each other out).
-    CliveGlyphPose.Stop -> Sq(76f, 76f, 48f, 48f, 16f) to Sq(100f, 100f, 0f, 0f, 0f)
+    CliveGlyphPose.Ready, CliveGlyphPose.Listening -> Sq(80f, 40f, 40f, 64f, 20f) to Sq(66f, 130f, 68f, 16f, 8f)
     CliveGlyphPose.Speaking -> Sq(64f, 52f, 30f, 96f, 15f) to Sq(106f, 52f, 30f, 96f, 15f)
 }
 
@@ -95,14 +93,14 @@ fun CliveGlyph(pose: CliveGlyphPose, color: Color, size: androidx.compose.ui.uni
     fun w(p: CliveGlyphPose) = if (pose == p) 1f else 0f
     val wIdle by androidx.compose.animation.core.animateFloatAsState(w(CliveGlyphPose.Idle), spec, label = "wi")
     val wReady by androidx.compose.animation.core.animateFloatAsState(w(CliveGlyphPose.Ready), spec, label = "wr")
-    val wStop by androidx.compose.animation.core.animateFloatAsState(w(CliveGlyphPose.Stop), spec, label = "ws")
+    val wListen by androidx.compose.animation.core.animateFloatAsState(w(CliveGlyphPose.Listening), spec, label = "ws")
     val wThink by androidx.compose.animation.core.animateFloatAsState(w(CliveGlyphPose.Thinking), spec, label = "wt")
     val wSpeak by androidx.compose.animation.core.animateFloatAsState(w(CliveGlyphPose.Speaking), spec, label = "wk")
     val smooth by androidx.compose.animation.core.animateFloatAsState(level.coerceIn(0f, 1f), androidx.compose.animation.core.tween(250), label = "lv")
     val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "glyph")
     val idleP by t.phase(4000)
     val readyP by t.phase(3000)
-    val stopP by t.phase(1400)
+    val listenP by t.phase(1400)
     val thinkP by t.phase(1200)
     val speakP by t.phase(700)
     Canvas(Modifier.size(size)) {
@@ -111,7 +109,7 @@ fun CliveGlyph(pose: CliveGlyphPose, color: Color, size: androidx.compose.ui.uni
         fun wave(p: Float) = (Math.cos((p * tau).toDouble()).toFloat() + 1f) / 2f // 1 at the start, 0 half way
         // Idle: the squircles slide together to under half way and apart again.
         val together = 1f - wIdle * 0.55f * (1f - wave(idleP))
-        // Thinking trades size; speaking trades height; ready breathes; stop swells with the voice.
+        // Thinking trades size; speaking trades height; ready breathes; listening wobbles like a level meter (a little more with the voice).
         val trade = Math.cos((thinkP * tau).toDouble()).toFloat()
         val sizeA = 1f + wThink * (0.025f + 0.175f * trade)
         val sizeB = 1f + wThink * (0.025f - 0.175f * trade)
@@ -119,7 +117,13 @@ fun CliveGlyph(pose: CliveGlyphPose, color: Color, size: androidx.compose.ui.uni
         val barA = 1f + wSpeak * (-0.25f + 0.25f * bars)
         val barB = 1f + wSpeak * (-0.25f - 0.25f * bars)
         val breathe = 1f + wReady * 0.05f * (1f - wave(readyP))
-        val swell = 1f + wStop * (0.04f * (1f - wave(stopP)) + 0.12f * smooth)
+        fun keys(p: Float, vararg k: Pair<Float, Float>): Float {
+            for (i in 1 until k.size) if (p <= k[i].first) { val (p0, v0) = k[i - 1]; val (p1, v1) = k[i]; return v0 + (v1 - v0) * (p - p0) / (p1 - p0) }
+            return k.last().second
+        }
+        val amp = 1f + smooth
+        val capsule = 1f + wListen * (keys(listenP, 0f to 0.96f, 0.3f to 1.07f, 0.55f to 0.98f, 0.8f to 1.05f, 1f to 0.96f) - 1f) * amp
+        val base = 1f + wListen * (keys(listenP, 0f to 0.92f, 0.35f to 1.1f, 0.6f to 0.96f, 0.85f to 1.06f, 1f to 0.92f) - 1f) * amp
         fun shape(s: Sq, sx: Float, sy: Float) = androidx.compose.ui.geometry.RoundRect(
             100f + s.dx * together + (s.x + s.w / 2f - 100f) - s.w * sx / 2f,
             100f + s.dy * together + (s.y + s.h / 2f - 100f) - s.h * sy / 2f,
@@ -129,8 +133,8 @@ fun CliveGlyph(pose: CliveGlyphPose, color: Color, size: androidx.compose.ui.uni
         )
         val path = androidx.compose.ui.graphics.Path().apply {
             fillType = androidx.compose.ui.graphics.PathFillType.EvenOdd
-            addRoundRect(shape(a, sizeA * swell, sizeA * swell * barA * breathe))
-            if (b.w > 0.5f) addRoundRect(shape(b, sizeB * swell, sizeB * barB))
+            addRoundRect(shape(a, sizeA, sizeA * barA * breathe * capsule))
+            if (b.w > 0.5f) addRoundRect(shape(b, sizeB * base, sizeB * barB))
         }
         withTransform({
             translate(center.x, center.y)
@@ -143,7 +147,7 @@ fun CliveGlyph(pose: CliveGlyphPose, color: Color, size: androidx.compose.ui.uni
 /** The pose that goes with what the assistant is doing: [open] is whether he is on screen, [state] what he is doing. */
 fun cliveGlyphPose(open: Boolean, state: AssistState): CliveGlyphPose = when {
     !open -> CliveGlyphPose.Idle
-    state == AssistState.Listening -> CliveGlyphPose.Stop
+    state == AssistState.Listening -> CliveGlyphPose.Listening
     state == AssistState.Thinking -> CliveGlyphPose.Thinking
     state == AssistState.Speaking -> CliveGlyphPose.Speaking
     else -> CliveGlyphPose.Ready
