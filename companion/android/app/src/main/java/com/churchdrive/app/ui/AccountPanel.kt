@@ -363,15 +363,15 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
             )
             if (showStyles) NoticeStylesPage(isAdmin) { showStyles = false }
             PanelRow(
-                Icons.Outlined.Mic, "Classic Clive colours",
-                "Clive normally takes his colours from your phone's theme. Turn this on to keep his original indigo, purple and green.",
+                Icons.Outlined.Mic, "Classic ${AssistantBrand.shown} colours",
+                "${AssistantBrand.shown} normally takes his colours from your phone's theme. Turn this on to keep his original indigo, purple and green.",
                 trailing = { Switch(checked = AssistColourSetting.classic, onCheckedChange = { on -> AssistColourSetting.set(context, on) }) },
             )
             val micAsk = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
                 if (granted) AssistWakeSetting.set(context, true) else message = "The microphone is off for this app. Allow it in Android's settings to use the wake word."
             }
             PanelRow(
-                Icons.Outlined.Mic, "Open Clive with the wake word",
+                Icons.Outlined.Mic, "Open ${AssistantBrand.shown} with the wake word",
                 when {
                     AssistWakeSetting.enabled && AssistWakeStatus.problem.isNotEmpty() -> "Not listening: ${AssistWakeStatus.problem}"
                     AssistWakeSetting.enabled && AssistWakeStatus.waiting -> "Listening for \u201C${AssistWakeStatus.phrase.ifBlank { "the wake word" }}\u201D while the app is open."
@@ -388,13 +388,13 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                 },
             )
             if (AssistWakeStatus.timing.isNotEmpty()) PanelRow(
-                Icons.Outlined.Mic, "How long Clive took",
+                Icons.Outlined.Mic, "How long ${AssistantBrand.shown} took",
                 "Last answer: ${AssistWakeStatus.timing}. Thinking is the house working out the reply; voice made is the spoken version being prepared.",
             )
             PanelRow(
-                Icons.Outlined.Mic, "Open Clive ready to type",
-                if (AssistStartSetting.typing) "Clive opens quietly, not listening, with the typing box ready. Tap the microphone to talk."
-                else "Clive starts listening as soon as he opens. Turn this on and he waits for you to type or tap the microphone.",
+                Icons.Outlined.Mic, "Open ${AssistantBrand.shown} ready to type",
+                if (AssistStartSetting.typing) "${AssistantBrand.shown} opens quietly, not listening, with the typing box ready. Tap the microphone to talk."
+                else "${AssistantBrand.shown} starts listening as soon as he opens. Turn this on and he waits for you to type or tap the microphone.",
                 trailing = { Switch(checked = AssistStartSetting.typing, onCheckedChange = { on -> AssistStartSetting.set(context, on) }) },
             )
             PanelRow(

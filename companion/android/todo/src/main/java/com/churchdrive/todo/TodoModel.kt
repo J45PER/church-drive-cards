@@ -18,9 +18,10 @@ import com.churchdrive.app.ha.HaClient
 import com.churchdrive.app.ha.LoginStep
 import com.churchdrive.app.ha.asApi
 import com.churchdrive.app.ha.data
-import com.churchdrive.app.ui.CliveList
-import com.churchdrive.app.ui.CliveMatch
-import com.churchdrive.app.ui.CliveTodoCommand
+import com.churchdrive.app.ui.AssistantBrand
+import com.churchdrive.app.ui.AssistantList
+import com.churchdrive.app.ui.AssistantMatch
+import com.churchdrive.app.ui.AssistantTodoCommand
 import com.churchdrive.app.ui.TodoItem
 import com.churchdrive.app.ui.Tone
 import com.churchdrive.app.ui.ask
@@ -28,7 +29,7 @@ import com.churchdrive.app.ui.houseTask
 import com.churchdrive.app.ui.houseTaskFor
 import com.churchdrive.app.ui.matchOpenTask
 import com.churchdrive.app.ui.myTodoList
-import com.churchdrive.app.ui.parseCliveTodo
+import com.churchdrive.app.ui.parseAssistantTodo
 import com.churchdrive.app.ui.spokenList
 import com.churchdrive.app.ui.parseTodoItems
 import kotlinx.coroutines.Dispatchers
@@ -375,10 +376,10 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
         changed(id)
     }
 
-    private fun tabOf(l: CliveList) = when (l) {
-        CliveList.Mine -> TodoTab.Mine
-        CliveList.Shared -> TodoTab.Shared
-        CliveList.Cleaning -> TodoTab.Cleaning
+    private fun tabOf(l: AssistantList) = when (l) {
+        AssistantList.Mine -> TodoTab.Mine
+        AssistantList.Shared -> TodoTab.Shared
+        AssistantList.Cleaning -> TodoTab.Cleaning
     }
 
     private fun listName(t: TodoTab) = when (t) {
@@ -392,22 +393,29 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
      * Clive To Do: does one typed or spoken sentence and says what happened. It can only add a task to the person's own, the shared or
      * the cleaning list, or tick one off there; every other sentence is turned down, so nothing else in the house is reachable from here.
      */
-    fun clive(input: String): String {
+    /** Asks the house what the assistant is called (remembered, so it is right before the house answers next time). */
+    fun refreshAssistantName(context: android.content.Context) {
+        api.request("church_drive/assist/info", JSONObject()) { r ->
+            if (r is JSONObject) android.os.Handler(android.os.Looper.getMainLooper()).post { AssistantBrand.update(context, r.optString("name"), null) }
+        }
+    }
+
+    fun askAssistant(input: String): String {
         if (!connected) return "I can't reach the house right now."
-        return when (val c = parseCliveTodo(input)) {
-            is CliveTodoCommand.Add -> {
+        return when (val c = parseAssistantTodo(input)) {
+            is AssistantTodoCommand.Add -> {
                 val tab = tabOf(c.list)
                 if (listId(tab) == null) return "I can't find that list."
                 c.items.forEach { add(tab, it) }
                 "Added ${spokenList(c.items)} to ${listName(tab)}."
             }
-            is CliveTodoCommand.Done -> {
+            is AssistantTodoCommand.Done -> {
                 val tabs = c.list?.let { listOf(tabOf(it)) } ?: listOf(TodoTab.Mine, TodoTab.Shared, TodoTab.Cleaning)
                 val found = tabs.flatMap { t ->
                     when (val m = matchOpenTask(items(t).orEmpty(), c.text)) {
-                        is CliveMatch.One -> listOf(t to m.item)
-                        is CliveMatch.Several -> m.items.map { t to it }
-                        CliveMatch.None -> emptyList()
+                        is AssistantMatch.One -> listOf(t to m.item)
+                        is AssistantMatch.Several -> m.items.map { t to it }
+                        AssistantMatch.None -> emptyList()
                     }
                 }
                 when {
@@ -419,7 +427,7 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
                     else -> "Which one? " + spokenList(found.map { "${it.second.summary} (${listName(it.first)})" }) + ". Say a bit more of its name."
                 }
             }
-            CliveTodoCommand.Unknown -> "I can only add things and tick them off here. Try \"add milk\" or \"tick off the bins\"."
+            AssistantTodoCommand.Unknown -> "I can only add things and tick them off here. Try \"add milk\" or \"tick off the bins\"."
         }
     }
 

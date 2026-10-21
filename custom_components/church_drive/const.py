@@ -56,6 +56,9 @@ WS_CAMERA_ALERT_SET = "church_drive/camera/alerts/set"
 # Assistant's addresses); the Places key stays here, for searching.
 CONF_MAPS_TILES_KEY = "google_tiles_key"
 CONF_MAPS_PLACES_KEY = "google_places_key"
+CONF_ASSISTANT_NAME = "assistant_name"
+# What the voice assistant is called until the house sets a name (Settings > Devices & services > Church Drive > Configure > Assistant name).
+DEFAULT_ASSISTANT_NAME = "Clive"
 WS_MAPS = "church_drive/maps"
 WS_MAPS_SEARCH = "church_drive/maps/search"
 WS_ASSIST_INFO = "church_drive/assist/info"

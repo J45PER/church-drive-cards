@@ -4,6 +4,16 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.41.0
+
+- The assistant's name comes from the house (Church Drive > Configure > Assistant name in Home Assistant), so the phone app, watch and To-Do app all follow a rename without an update. The last name heard is kept on the device. Earlier names (Jarvis, Clive) are still understood when spoken to him.
+- Code for the assistant is named `Assistant*` throughout (Clive* and Jarvis* are gone).
+
+## 0.40.0
+
+- Internal: code is no longer named after the assistant (Jarvis* became Assistant*), and the house's scripts are now clive_*; nothing changes on screen.
+- Clive can show a picture or a link under his answer in the assistant screen when it helps (the house's new `jarvis_show` script). Only https addresses are shown, and only to the person who asked. Nothing changes when he has nothing to show, and his spoken answer never depends on it.
+
 ## 0.39.2
 
 - The coloured glow is back behind the white mark on the assistant's round button (0.39.0 had taken it away). It moves with what he is doing, and the white mark moves on top of it.

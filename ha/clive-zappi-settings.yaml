@@ -1,4 +1,4 @@
-# Script script.jarvis_zappi_settings: Changes the smart charge settings (ready-by time, max price, on/off) by voice. It never starts or stops a charge. A copy of the live script.
+# Script script.clive_zappi_settings: Changes the smart charge settings (ready-by time, max price, on/off) by voice. It never starts or stops a charge. A copy of the live script.
 alias: Change car smart charge settings
 description: 'Change the car''s smart charge settings: the time the car should be ready by, the most it will pay per kWh in pence, and whether smart charge is switched on. Give only the settings that should change. This does not start or stop a charge; to charge at the cheap rate use the ''Zappi: charge at the cheap rate'' script.'
 fields:

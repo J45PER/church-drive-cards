@@ -12,6 +12,8 @@ Build and test happen in CI (there is no Android SDK in the sandbox): push to `c
 "Companion Android" run, and only report an APK once it is green. Keep commits to `companion/` only; never run
 `git checkout origin/main -- .` on this branch.
 
+Never name code identifiers after the assistant (no `Jarvis*` or `Clive*`): it has been renamed once already. Use `Assistant*` and take the displayed name from the house (`AssistModel.name`). Only the wake word id (`hey_jarvis`, a model name) and old Clive-log ids (never reused) may keep the old name.
+
 When Clive (the assistant) gains a feature, changes how something works or has a fix, add an entry at the top of `ASSIST_FEATURES`
 (the Clive log, `core/src/main/java/com/churchdrive/app/ui/AssistData.kt`: it lives in the shared `core` module because the watch app uses it too) with a new, never-reused `id`. Each person is told about each entry once; the full
 introduction is only for the first time ever, so never rely on the app's version to bring it back.

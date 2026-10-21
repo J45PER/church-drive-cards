@@ -21,6 +21,7 @@ import androidx.wear.compose.material.Text
 import com.churchdrive.app.ha.EntityState
 import com.churchdrive.app.ha.HaClient
 import com.churchdrive.app.ha.data
+import com.churchdrive.app.ui.AssistantBrand
 import com.churchdrive.app.ui.ask
 import org.json.JSONArray
 import org.json.JSONObject
@@ -66,7 +67,7 @@ private fun Actions(connected: Boolean) {
             Page.Home -> {
                 item { ListHeader { Text("Church Drive") } }
                 if (!connected) item { Text("Connecting…", textAlign = TextAlign.Center) }
-                row("Clive") { context.startActivity(Intent(context, JarvisActivity::class.java)) }
+                row(AssistantBrand.shown) { context.startActivity(Intent(context, AssistantActivity::class.java)) }
                 row("To-Do") { context.startActivity(Intent(context, TodoActivity::class.java)) }
                 row("Alarm", alarmWords(states[ALARM]?.state)) { page = Page.Alarm }
                 row("Scenes") { page = Page.Scenes }

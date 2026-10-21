@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
  * where they overlap cut out (even-odd fill), so whatever is behind shows through. Same shape as the launcher icon's Clive mark.
  */
 @Composable
-fun JarvisLogo(color: Color, size: androidx.compose.ui.unit.Dp = 30.dp) {
+fun AssistantLogo(color: Color, size: androidx.compose.ui.unit.Dp = 30.dp) {
     val mark = androidx.compose.runtime.remember {
         // Drawn around (0, 0) in a box about 99 units across: each square is 76 wide with 30 rounding, shifted 11.3 along the diagonal.
         val half = 38f
@@ -38,7 +38,7 @@ fun JarvisLogo(color: Color, size: androidx.compose.ui.unit.Dp = 30.dp) {
 }
 
 /** What Clive's white mark shows: the pose says what he is doing, and each one has its own gentle movement. */
-enum class CliveGlyphPose {
+enum class AssistantGlyphPose {
     /** Shut: the two squircles drift gently together and apart along their diagonal. */
     Idle,
     /** Open, waiting for the microphone to be pressed: a microphone (capsule over a flat bar) whose capsule slowly breathes. */
@@ -58,10 +58,10 @@ private const val SHIFT = 11.3f
 private val REST_A = Sq(62f, 62f, 76f, 76f, 30f, -SHIFT, SHIFT)
 private val REST_B = Sq(62f, 62f, 76f, 76f, 30f, SHIFT, -SHIFT)
 
-private fun poseOf(p: CliveGlyphPose): Pair<Sq, Sq> = when (p) {
-    CliveGlyphPose.Idle, CliveGlyphPose.Thinking -> REST_A to REST_B
-    CliveGlyphPose.Ready, CliveGlyphPose.Listening -> Sq(80f, 40f, 40f, 64f, 20f) to Sq(66f, 130f, 68f, 16f, 8f)
-    CliveGlyphPose.Speaking -> Sq(64f, 52f, 30f, 96f, 15f) to Sq(106f, 52f, 30f, 96f, 15f)
+private fun poseOf(p: AssistantGlyphPose): Pair<Sq, Sq> = when (p) {
+    AssistantGlyphPose.Idle, AssistantGlyphPose.Thinking -> REST_A to REST_B
+    AssistantGlyphPose.Ready, AssistantGlyphPose.Listening -> Sq(80f, 40f, 40f, 64f, 20f) to Sq(66f, 130f, 68f, 16f, 8f)
+    AssistantGlyphPose.Speaking -> Sq(64f, 52f, 30f, 96f, 15f) to Sq(106f, 52f, 30f, 96f, 15f)
 }
 
 @Composable
@@ -83,20 +83,20 @@ private fun animSq(target: Sq): Sq {
 
 /**
  * Clive's white mark with its animations: only the mark moves (the round button behind it is still). Two squircles, cut out where
- * they overlap (even-odd fill), that morph between the poses of [CliveGlyphPose]. [level] (0 to 1) is how loud the voice is.
+ * they overlap (even-odd fill), that morph between the poses of [AssistantGlyphPose]. [level] (0 to 1) is how loud the voice is.
  */
 @Composable
-fun CliveGlyph(pose: CliveGlyphPose, color: Color, size: androidx.compose.ui.unit.Dp = 30.dp, level: Float = 0f) {
+fun AssistantGlyph(pose: AssistantGlyphPose, color: Color, size: androidx.compose.ui.unit.Dp = 30.dp, level: Float = 0f) {
     val (ta, tb) = poseOf(pose)
     val a = animSq(ta)
     val b = animSq(tb)
     val spec = androidx.compose.animation.core.tween<Float>(500)
-    fun w(p: CliveGlyphPose) = if (pose == p) 1f else 0f
-    val wIdle by androidx.compose.animation.core.animateFloatAsState(w(CliveGlyphPose.Idle), spec, label = "wi")
-    val wReady by androidx.compose.animation.core.animateFloatAsState(w(CliveGlyphPose.Ready), spec, label = "wr")
-    val wListen by androidx.compose.animation.core.animateFloatAsState(w(CliveGlyphPose.Listening), spec, label = "ws")
-    val wThink by androidx.compose.animation.core.animateFloatAsState(w(CliveGlyphPose.Thinking), spec, label = "wt")
-    val wSpeak by androidx.compose.animation.core.animateFloatAsState(w(CliveGlyphPose.Speaking), spec, label = "wk")
+    fun w(p: AssistantGlyphPose) = if (pose == p) 1f else 0f
+    val wIdle by androidx.compose.animation.core.animateFloatAsState(w(AssistantGlyphPose.Idle), spec, label = "wi")
+    val wReady by androidx.compose.animation.core.animateFloatAsState(w(AssistantGlyphPose.Ready), spec, label = "wr")
+    val wListen by androidx.compose.animation.core.animateFloatAsState(w(AssistantGlyphPose.Listening), spec, label = "ws")
+    val wThink by androidx.compose.animation.core.animateFloatAsState(w(AssistantGlyphPose.Thinking), spec, label = "wt")
+    val wSpeak by androidx.compose.animation.core.animateFloatAsState(w(AssistantGlyphPose.Speaking), spec, label = "wk")
     val smooth by androidx.compose.animation.core.animateFloatAsState(level.coerceIn(0f, 1f), androidx.compose.animation.core.tween(250), label = "lv")
     val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "glyph")
     val idleP by t.phase(4000)
@@ -146,10 +146,10 @@ fun CliveGlyph(pose: CliveGlyphPose, color: Color, size: androidx.compose.ui.uni
 }
 
 /** The pose that goes with what the assistant is doing: [open] is whether he is on screen, [state] what he is doing. */
-fun cliveGlyphPose(open: Boolean, state: AssistState): CliveGlyphPose = when {
-    !open -> CliveGlyphPose.Idle
-    state == AssistState.Listening -> CliveGlyphPose.Listening
-    state == AssistState.Thinking -> CliveGlyphPose.Thinking
-    state == AssistState.Speaking -> CliveGlyphPose.Speaking
-    else -> CliveGlyphPose.Ready
+fun assistantGlyphPose(open: Boolean, state: AssistState): AssistantGlyphPose = when {
+    !open -> AssistantGlyphPose.Idle
+    state == AssistState.Listening -> AssistantGlyphPose.Listening
+    state == AssistState.Thinking -> AssistantGlyphPose.Thinking
+    state == AssistState.Speaking -> AssistantGlyphPose.Speaking
+    else -> AssistantGlyphPose.Ready
 }

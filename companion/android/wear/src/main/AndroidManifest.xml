@@ -31,9 +31,9 @@
 
         <!-- Clive, the house's voice assistant. -->
         <activity
-            android:name=".JarvisActivity"
+            android:name=".AssistantActivity"
             android:exported="true"
-            android:icon="@drawable/ic_jarvis"
+            android:icon="@drawable/ic_assistant"
             android:label="Clive">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -77,7 +77,7 @@
             </intent-filter>
             <meta-data
                 android:name="androidx.wear.tiles.PREVIEW"
-                android:resource="@drawable/ic_jarvis" />
+                android:resource="@drawable/ic_assistant" />
         </service>
     </application>
 </manifest>

@@ -9,6 +9,7 @@ import com.churchdrive.app.ui.forSpeech
 import com.churchdrive.app.ui.isDismissal
 import com.churchdrive.app.ui.isNotUnderstood
 import com.churchdrive.app.ui.parseAssistEvent
+import com.churchdrive.app.ui.parseAssistantShow
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -54,7 +55,7 @@ class AssistDataTest {
 
     @Test
     fun theAssistantIsNamedAfterItsWakeWord() {
-        assertEquals("Clive", com.churchdrive.app.ui.assistantName("hey_jarvis"))
+        assertEquals("Jarvis", com.churchdrive.app.ui.assistantName("hey_jarvis"))
         assertEquals("Clive", com.churchdrive.app.ui.assistantName("hey_clive"))
         assertEquals("Nabu", com.churchdrive.app.ui.assistantName("okay_nabu"))
         assertEquals("Alexa", com.churchdrive.app.ui.assistantName("alexa"))
@@ -94,12 +95,12 @@ class AssistDataTest {
         assertTrue(com.churchdrive.app.ui.MicStream.levelOf(loud, loud.size) > 0.9f)
     }
 
-    private fun entry(id: String, kind: com.churchdrive.app.ui.JarvisChange = com.churchdrive.app.ui.JarvisChange.Feature) =
+    private fun entry(id: String, kind: com.churchdrive.app.ui.AssistantChange = com.churchdrive.app.ui.AssistantChange.Feature) =
         com.churchdrive.app.ui.AssistFeature("mdi:x", id, "say $id", id = id, kind = kind)
 
     @Test
     fun theFirstIntroductionIsFullAndThenOnlyUntoldLogEntriesCome() {
-        val fix = entry("fix-1", com.churchdrive.app.ui.JarvisChange.Fix)
+        val fix = entry("fix-1", com.churchdrive.app.ui.AssistantChange.Fix)
         val log = listOf(fix, entry("b"), entry("a"))
         // Never introduced: the full introduction, features only, and everything in the log counts as told.
         val first = com.churchdrive.app.ui.introDue(false, null, log)
@@ -120,7 +121,7 @@ class AssistDataTest {
     }
 
     @Test
-    fun theJarvisLogHasUniqueIds() {
+    fun theAssistantLogHasUniqueIds() {
         val ids = com.churchdrive.app.ui.ASSIST_FEATURES.map { it.id }
         assertEquals(ids.size, ids.toSet().size)
     }
@@ -189,5 +190,35 @@ class AssistDataTest {
         assertEquals("heard 0.4s, thinking 1.9s, voice made 0.6s, voice starts 0.2s: 3.1s in all", formatTimings(t))
         assertEquals("thinking 1.5s: 1.5s in all", formatTimings(AssistTimes(start = 0, answer = 1_500)))
         assertEquals("", formatTimings(AssistTimes()))
+    }
+
+    @Test
+    fun aShowEventIsOnlyForTheAskerAndOnlyHttps() {
+        fun ev(user: String, data: String) = JSONObject("""{"event_type":"church_drive_assistant_show","data":$data,"context":{"user_id":"$user"}}""")
+        val ok = parseAssistantShow(ev("u1", """{"image_url":"https://x.test/a.jpg","link_url":"","link_label":" Report "}"""), "u1")!!
+        assertEquals("https://x.test/a.jpg", ok.image)
+        assertNull(ok.link)
+        assertEquals("Report", ok.linkLabel)
+        assertNull(parseAssistantShow(ev("u2", """{"image_url":"https://x.test/a.jpg"}"""), "u1"))
+        assertNull(parseAssistantShow(ev("u1", """{"image_url":"http://x.test/a.jpg","link_url":"javascript:alert(1)"}"""), "u1"))
+        assertNull(parseAssistantShow(ev("u1", """{"link_url":"https://x.test"}"""), null))
+    }
+
+    @Test
+    fun theHousesNameIsUsedEverywhereAndEarlierNamesStillWork() {
+        val brand = com.churchdrive.app.ui.AssistantBrand
+        try {
+            brand.useForTest("Jeeves", "Hey Jeeves")
+            assertEquals("Jeeves can show it. Say Hey Jeeves.", com.churchdrive.app.ui.branded("{name} can show it. Say {wake}."))
+            assertTrue(com.churchdrive.app.ui.ASSIST_FEATURES.any { it.title == "Jeeves on your watch" })
+            assertTrue(com.churchdrive.app.ui.ASSIST_FEATURES.none { "{" in it.title + it.detail + it.example })
+            assertTrue(isDismissal("That's all Jeeves"))
+            assertTrue(isDismissal("Jarvis, no thanks"))
+            assertEquals(setOf("jarvis", "clive", "jeeves"), brand.spokenNames())
+            brand.useForTest("")
+            assertEquals("Assistant can show it. Say Hey Assistant.", com.churchdrive.app.ui.branded("{name} can show it. Say {wake}."))
+        } finally {
+            brand.useForTest("")
+        }
     }
 }

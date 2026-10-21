@@ -11,7 +11,8 @@
         "menu_options": {
           "scenes": "Universal scenes (Hue rooms and zones)",
           "health": "Device health (devices to watch)",
-          "maps": "Google maps (API keys)"
+          "maps": "Google maps (API keys)",
+          "assistant": "Assistant name"
         }
       },
       "scenes": {
@@ -34,6 +35,13 @@
         "data": {
           "google_tiles_key": "Map Tiles API key",
           "google_places_key": "Places API key"
+        }
+      },
+      "assistant": {
+        "title": "Assistant name",
+        "description": "What the voice assistant is called. The apps, the watch and the assistant's own sensor (sensor.church_drive_assistant, for its Home Assistant prompt) all use it. The wake word is set separately in the Assist pipeline.",
+        "data": {
+          "assistant_name": "Name"
         }
       }
     },

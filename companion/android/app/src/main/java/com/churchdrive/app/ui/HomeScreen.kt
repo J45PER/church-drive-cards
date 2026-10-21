@@ -184,13 +184,13 @@ fun HomeScreen(
             val alarmState = entities[ALARM_ENTITY]?.state
             NavigationBar {
                 // The same bar: while Clive is open its buttons change into his (and back).
-                val jarvis = LocalJarvis.current
-                val jarvisModel = jarvis?.model
-                androidx.compose.animation.Crossfade(jarvis?.open == true && jarvisModel != null, Modifier.weight(1f), label = "bar") { jarvisOpen ->
+                val assistantCtl = LocalAssistant.current
+                val assistantModel = assistantCtl?.model
+                androidx.compose.animation.Crossfade(assistantCtl?.open == true && assistantModel != null, Modifier.weight(1f), label = "bar") { assistantOpen ->
                     // A fixed height: the bar is laid out with room to grow, and a row that fills it would fill the whole screen.
                     Row(Modifier.fillMaxWidth().height(80.dp)) {
-                        if (jarvisOpen && jarvis != null && jarvisModel != null) {
-                            JarvisBarItems(jarvisModel, jarvis.ui, onClose = jarvis.close, onSettings = { jarvis.close(); panel = "settings" })
+                        if (assistantOpen && assistantCtl != null && assistantModel != null) {
+                            AssistantBarItems(assistantModel, assistantCtl.ui, onClose = assistantCtl.close, onSettings = { assistantCtl.close(); panel = "settings" })
                         } else {
                     pages.forEach { p ->
                         val selected = p == page
@@ -259,8 +259,8 @@ fun HomeScreen(
         }
     }
     // Clive, over the page, and his round button over him: one button, the same one shut or open.
-    JarvisOverlay(onSettings = { panel = "settings" })
-    JarvisFab()
+    AssistantOverlay(onSettings = { panel = "settings" })
+    AssistantFab()
     if (openCamera != null && statesLoaded) CameraViewerFor(openCamera, entities, registry, call, onCameraClosed, answer = openCameraAnswer)
     AccountOverlay(
         panel, { panel = it }, userName, isAdmin, account, updateAvailable, onSignOut,
