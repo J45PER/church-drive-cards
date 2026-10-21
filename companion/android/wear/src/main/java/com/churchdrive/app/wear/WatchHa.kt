@@ -18,7 +18,7 @@ import kotlinx.coroutines.withContext
  * needs, such as the scenes or a to-do list. [ensure] connects with the stored sign-in, first making a fresh access token.
  */
 object WatchHa {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     val client = HaClient(scope)
     val api: HaApi = client.asApi()
 

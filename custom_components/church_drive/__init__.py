@@ -91,6 +91,9 @@ from .const import (
     EVENT_ICONS,
     WS_ICON_SET,
     WS_ICONS,
+    WS_WATCH,
+    WS_WATCH_SET,
+    EVENT_WATCH,
     WS_INBOX,
     WS_INBOX_CONFIRM,
     WS_INBOX_DISMISS,
@@ -127,6 +130,7 @@ from .health import DeviceHealth
 from .hue import async_sync
 from .library import Library, normalise
 from .icons import Icons
+from .watch import WatchSettings
 from .inbox import Inbox
 from .shopping import Shopping
 from .shopping_logic import STATUSES
@@ -378,6 +382,31 @@ async def ws_people_phone(
 def ws_library(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
     """Send the scene library (built-in and custom) to the cards."""
     connection.send_result(msg["id"], {"scenes": _library(hass).as_list(), "custom": _library(hass).custom})
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_WATCH})
+@callback
+def ws_watch(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Send the watch settings (which pages and items the watch shows) to the watch app and the Manager card."""
+    watch = hass.data.get(DOMAIN, {}).get("watch")
+    if watch is None:
+        connection.send_error(msg["id"], "not_ready", "The watch settings aren't running")
+        return
+    connection.send_result(msg["id"], watch.config)
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_WATCH_SET, vol.Required("config"): dict})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_watch_set(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Keep new watch settings (administrators only) and tell the watches."""
+    watch = hass.data.get(DOMAIN, {}).get("watch")
+    if watch is None:
+        connection.send_error(msg["id"], "not_ready", "The watch settings aren't running")
+        return
+    kept = await watch.async_set(msg["config"])
+    hass.bus.async_fire(EVENT_WATCH)
+    connection.send_result(msg["id"], kept)
 
 
 @websocket_api.websocket_command({vol.Required("type"): WS_ICONS})
@@ -1155,7 +1184,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             [StaticPathConfig(URL_BASE, str(FRONTEND_DIR), cache_headers=False)]
         )
         for command in (
-            ws_library, ws_icons, ws_icon_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_mine, ws_notices_missed, ws_people_phone,
+            ws_library, ws_icons, ws_icon_set, ws_watch, ws_watch_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_mine, ws_notices_missed, ws_people_phone,
             ws_people_places, ws_people_cars, ws_people_access, ws_people_tracking, ws_people_settings, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_camera_alert_set, ws_maps, ws_maps_search, ws_assist_info,
             ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss, ws_reminders, ws_reminder_set,
             ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_import,
@@ -1182,6 +1211,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         data["icons"] = icons
     except Exception:  # noqa: BLE001
         _LOGGER.exception("Icons couldn't load; the cards use their built-in icons")
+
+    # The watch settings are optional too: without them the watch shows every page.
+    watch = WatchSettings(hass)
+    try:
+        await watch.async_load()
+        data["watch"] = watch
+    except Exception:  # noqa: BLE001
+        _LOGGER.exception("The watch settings couldn't load; the watch shows every page")
 
     # Device health must never stop the cards and scenes from loading.
     health = DeviceHealth(hass, entry.options.get(CONF_HEALTH_ENTITIES, []))
