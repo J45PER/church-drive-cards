@@ -23,6 +23,7 @@ import androidx.wear.compose.material.ListHeader
 import androidx.wear.compose.material.Text
 import com.churchdrive.app.Session
 import com.churchdrive.app.ui.ASSIST_SUGGESTIONS
+import com.churchdrive.app.ui.AssistantBrand
 import com.churchdrive.app.ui.AssistEvent
 import com.churchdrive.app.ui.AssistState
 import com.churchdrive.app.ui.assistAudioUrl
@@ -148,10 +149,10 @@ private fun AssistantScreen(connected: Boolean) {
     val context = LocalContext.current
     val model = remember { AssistantModel(context) }
     DisposableEffect(Unit) { onDispose { model.stop() } }
-    val listen = rememberListener("Ask Clive") { model.send(it) }
+    val listen = rememberListener("Ask ${AssistantBrand.shown}") { model.send(it) }
 
     ScalingLazyColumn(modifier = Modifier.fillMaxWidth()) {
-        item { ListHeader { Text("Clive") } }
+        item { ListHeader { Text(AssistantBrand.shown) } }
         if (model.heard.isNotEmpty()) item { Text(model.heard, textAlign = TextAlign.Center) }
         when {
             model.state == AssistState.Thinking -> item { Text("Thinking…", textAlign = TextAlign.Center) }
@@ -160,7 +161,7 @@ private fun AssistantScreen(connected: Boolean) {
             !connected -> item { Text("Connecting…", textAlign = TextAlign.Center) }
         }
         if (model.state == AssistState.Speaking) row("Stop") { model.stop() }
-        row("Talk to Clive") { listen() }
+        row("Talk to ${AssistantBrand.shown}") { listen() }
         for (suggestion in ASSIST_SUGGESTIONS) row(suggestion) { model.send(suggestion) }
         row(if (model.voice) "Voice: on" else "Voice: off") { model.voice = !model.voice; if (!model.voice) model.stop() }
     }

@@ -9,7 +9,7 @@ import com.churchdrive.app.ui.forSpeech
 import com.churchdrive.app.ui.isDismissal
 import com.churchdrive.app.ui.isNotUnderstood
 import com.churchdrive.app.ui.parseAssistEvent
-import com.churchdrive.app.ui.parseCliveShow
+import com.churchdrive.app.ui.parseAssistantShow
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -55,7 +55,7 @@ class AssistDataTest {
 
     @Test
     fun theAssistantIsNamedAfterItsWakeWord() {
-        assertEquals("Clive", com.churchdrive.app.ui.assistantName("hey_jarvis"))
+        assertEquals("Jarvis", com.churchdrive.app.ui.assistantName("hey_jarvis"))
         assertEquals("Clive", com.churchdrive.app.ui.assistantName("hey_clive"))
         assertEquals("Nabu", com.churchdrive.app.ui.assistantName("okay_nabu"))
         assertEquals("Alexa", com.churchdrive.app.ui.assistantName("alexa"))
@@ -194,13 +194,31 @@ class AssistDataTest {
 
     @Test
     fun aShowEventIsOnlyForTheAskerAndOnlyHttps() {
-        fun ev(user: String, data: String) = JSONObject("""{"event_type":"church_drive_clive_show","data":$data,"context":{"user_id":"$user"}}""")
-        val ok = parseCliveShow(ev("u1", """{"image_url":"https://x.test/a.jpg","link_url":"","link_label":" Report "}"""), "u1")!!
+        fun ev(user: String, data: String) = JSONObject("""{"event_type":"church_drive_assistant_show","data":$data,"context":{"user_id":"$user"}}""")
+        val ok = parseAssistantShow(ev("u1", """{"image_url":"https://x.test/a.jpg","link_url":"","link_label":" Report "}"""), "u1")!!
         assertEquals("https://x.test/a.jpg", ok.image)
         assertNull(ok.link)
         assertEquals("Report", ok.linkLabel)
-        assertNull(parseCliveShow(ev("u2", """{"image_url":"https://x.test/a.jpg"}"""), "u1"))
-        assertNull(parseCliveShow(ev("u1", """{"image_url":"http://x.test/a.jpg","link_url":"javascript:alert(1)"}"""), "u1"))
-        assertNull(parseCliveShow(ev("u1", """{"link_url":"https://x.test"}"""), null))
+        assertNull(parseAssistantShow(ev("u2", """{"image_url":"https://x.test/a.jpg"}"""), "u1"))
+        assertNull(parseAssistantShow(ev("u1", """{"image_url":"http://x.test/a.jpg","link_url":"javascript:alert(1)"}"""), "u1"))
+        assertNull(parseAssistantShow(ev("u1", """{"link_url":"https://x.test"}"""), null))
+    }
+
+    @Test
+    fun theHousesNameIsUsedEverywhereAndEarlierNamesStillWork() {
+        val brand = com.churchdrive.app.ui.AssistantBrand
+        try {
+            brand.useForTest("Jeeves", "Hey Jeeves")
+            assertEquals("Jeeves can show it. Say Hey Jeeves.", com.churchdrive.app.ui.branded("{name} can show it. Say {wake}."))
+            assertTrue(com.churchdrive.app.ui.ASSIST_FEATURES.any { it.title == "Jeeves on your watch" })
+            assertTrue(com.churchdrive.app.ui.ASSIST_FEATURES.none { "{" in it.title + it.detail + it.example })
+            assertTrue(isDismissal("That's all Jeeves"))
+            assertTrue(isDismissal("Jarvis, no thanks"))
+            assertEquals(setOf("jarvis", "clive", "jeeves"), brand.spokenNames())
+            brand.useForTest("")
+            assertEquals("Assistant can show it. Say Hey Assistant.", com.churchdrive.app.ui.branded("{name} can show it. Say {wake}."))
+        } finally {
+            brand.useForTest("")
+        }
     }
 }

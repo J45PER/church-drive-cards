@@ -20,7 +20,7 @@ from homeassistant.helpers.selector import (
     TextSelectorType,
 )
 
-from .const import CONF_HEALTH_ENTITIES, CONF_MAPS_PLACES_KEY, CONF_MAPS_TILES_KEY, CONF_SCENE_GROUPS, DOMAIN
+from .const import CONF_ASSISTANT_NAME, CONF_HEALTH_ENTITIES, DEFAULT_ASSISTANT_NAME, CONF_MAPS_PLACES_KEY, CONF_MAPS_TILES_KEY, CONF_SCENE_GROUPS, DOMAIN
 from .hue import async_get_bridge_api, async_list_groups
 
 
@@ -46,7 +46,7 @@ class ChurchDriveOptionsFlow(OptionsFlow):
     """Universal scenes (Hue rooms and zones), device health (devices to watch) or Google maps (keys)."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        return self.async_show_menu(step_id="init", menu_options=["scenes", "health", "maps"])
+        return self.async_show_menu(step_id="init", menu_options=["scenes", "health", "maps", "assistant"])
 
     def _save(self, user_input: dict[str, Any]) -> ConfigFlowResult:
         return self.async_create_entry(data={**self.config_entry.options, **user_input})
@@ -62,6 +62,19 @@ class ChurchDriveOptionsFlow(OptionsFlow):
             }
         )
         return self.async_show_form(step_id="health", data_schema=schema)
+
+    async def async_step_assistant(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        if user_input is not None:
+            # Blank goes back to the default name.
+            return self._save({CONF_ASSISTANT_NAME: (user_input.get(CONF_ASSISTANT_NAME) or "").strip() or DEFAULT_ASSISTANT_NAME})
+        schema = vol.Schema(
+            {
+                vol.Optional(
+                    CONF_ASSISTANT_NAME, default=self.config_entry.options.get(CONF_ASSISTANT_NAME, DEFAULT_ASSISTANT_NAME)
+                ): TextSelector(TextSelectorConfig(type=TextSelectorType.TEXT))
+            }
+        )
+        return self.async_show_form(step_id="assistant", data_schema=schema)
 
     async def async_step_maps(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:

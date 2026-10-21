@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.41.0
+
+- The assistant's name comes from the house (Church Drive > Configure > Assistant name in Home Assistant), so the phone app, watch and To-Do app all follow a rename without an update. The last name heard is kept on the device. Earlier names (Jarvis, Clive) are still understood when spoken to him.
+- Code for the assistant is named `Assistant*` throughout (Clive* and Jarvis* are gone).
+
 ## 0.40.0
 
 - Internal: code is no longer named after the assistant (Jarvis* became Assistant*), and the house's scripts are now clive_*; nothing changes on screen.

@@ -60,6 +60,8 @@ from .alarm_lights import AlarmLights
 from .alarm_lights_logic import KINDS as ALARM_LIGHT_TESTS, METHODS as ALARM_LIGHT_METHODS, RULES as ALARM_LIGHT_RULES, WHEN as ALARM_LIGHT_WHEN
 from .apply import async_apply
 from .const import (
+    CONF_ASSISTANT_NAME,
+    DEFAULT_ASSISTANT_NAME,
     CONF_MAPS_PLACES_KEY,
     CONF_MAPS_TILES_KEY,
     WS_MAPS,
@@ -1129,7 +1131,14 @@ async def ws_assist_info(hass: HomeAssistant, connection: websocket_api.ActiveCo
         wake_word = assist_pipeline.async_get_pipeline(hass).wake_word_id
     except Exception:  # noqa: BLE001 - no Assist, or no preferred pipeline: the assistant just has no wake word
         _LOGGER.debug("Couldn't read the preferred Assist pipeline", exc_info=True)
-    connection.send_result(msg["id"], {"wake_word": wake_word or None})
+    connection.send_result(msg["id"], {"wake_word": wake_word or None, "name": assistant_name(hass)})
+
+
+def assistant_name(hass: HomeAssistant) -> str:
+    """What the house calls its voice assistant (one place to change it)."""
+    entries = hass.config_entries.async_entries(DOMAIN)
+    name = (entries[0].options.get(CONF_ASSISTANT_NAME) if entries else "") or ""
+    return name.strip() or DEFAULT_ASSISTANT_NAME
 
 
 def _version() -> str:

@@ -1,7 +1,7 @@
 # Script script.clive_show: lets Clive put a picture and/or a link on the screen of the Church Drive app of the person who asked. Exposed to Assist. A copy of the live script.
-# It only fires an event (church_drive_clive_show). The event carries the asker's Home Assistant user, so the app of that person (and nobody else's) shows it under his answer.
+# It only fires an event (church_drive_assistant_show). The event carries the asker's Home Assistant user, so the app of that person (and nobody else's) shows it under his answer.
 # Anything without a screen ignores it, so Clive can call it every time without harm.
-alias: Show on screen (Clive)
+alias: Show on screen
 description: 'Show a picture and/or a link on the screen of the person who asked, under your spoken answer. Use it when a picture or a web page genuinely helps (a player, a recipe, a product, a map, a match report) and you have a real https address for it from a web search. Give image_url for a picture and link_url for a page, either or both, and a short link_label such as "Match report". Never say you have shown something unless this returned ok. It does nothing on a device with no screen, so never rely on it: your spoken answer must still make sense alone.'
 fields:
   image_url:
@@ -29,7 +29,7 @@ sequence:
 - condition: template
   value_template: >-
     {{ (image_url | default('') | string).startswith('https://') or (link_url | default('') | string).startswith('https://') }}
-- event: church_drive_clive_show
+- event: church_drive_assistant_show
   event_data:
     image_url: "{{ image_url | default('') }}"
     link_url: "{{ link_url | default('') }}"

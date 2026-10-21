@@ -18,7 +18,7 @@ The `clive-*.yaml` files here are copies of the live scripts. Edit them in Home 
 | `clive_zappi_charge` | Sets the charge mode (Fast, Eco, Eco+, Stopped). Fast at a non-cheap rate asks first, see below. |
 | `clive_zappi_settings` | Ready-by time, max price, smart charge on/off. Never starts or stops a charge. |
 | `clive_home_safety_check` | Read-only: smoke/heat/CO alarms, tamper, low batteries of home devices (not phones). Finds devices by device class. |
-| `clive_show` | Puts a picture and/or an https link on the screen of the person who asked (event `church_drive_clive_show`, carrying their Home Assistant user; the Church Drive app shows it under his answer). Does nothing on a device without a screen, so his spoken answer must stand alone. |
+| `clive_show` | Puts a picture and/or an https link on the screen of the person who asked (event `church_drive_assistant_show`, carrying their Home Assistant user; the Church Drive app shows it under his answer). Does nothing on a device without a screen, so his spoken answer must stand alone. |
 | `clive_vacuum` | Gregg: start, pause, stop, status. Nothing else. |
 
 Also exposed for the car: `zappi_charge_later`, `zappi_car_yes`, `zappi_car_no` (the existing scripts, unchanged), the smart charge helpers, and four Zappi sensors (status, plug status, charging power, charge added).
@@ -67,4 +67,13 @@ Pictures and links: add to the prompt, after "What you can see and do":
 When a picture or web page would genuinely help (what something looks like, a recipe, a match report) and a web search gave you a real https address, call the show on screen script as well as answering aloud. Your spoken answer must make sense without it, because many devices have no screen. Never read a web address aloud.
 ```
 
-Screens are decided case by case: the Church Drive Android app listens for `church_drive_clive_show` and shows it to the person it is for. A satellite with a display needs its own listener that filters on the event's `context.user_id` or its own device; satellites without one need nothing.
+Screens are decided case by case: the Church Drive Android app listens for `church_drive_assistant_show` and shows it to the person it is for. A satellite with a display needs its own listener that filters on the event's `context.user_id` or its own device; satellites without one need nothing.
+
+## The assistant's name (one setting)
+
+Set it in Home Assistant: Settings > Devices & services > Church Drive > Configure > Assistant name (default Clive). It reaches:
+- the apps, the watch and Church Drive To-Do, through `church_drive/assist/info` (remembered on each device);
+- Clive's own prompt, through `sensor.church_drive_assistant`. Start the Claude conversation prompt with `You are {{ states('sensor.church_drive_assistant') }}, the voice assistant of the Church Drive household` instead of typing the name;
+- spoken phrases: the apps still strip "Jarvis" and "Clive" as well as the current name from sentences.
+
+Not covered, because they are not in this repo: the wake word (an openWakeWord model, `hey_jarvis` until a new one is trained; the apps show whatever the Assist pipeline's wake word is), the watch launcher label (a fixed Android label) and the Assist pipeline's name in Home Assistant.

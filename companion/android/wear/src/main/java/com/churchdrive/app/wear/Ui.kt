@@ -1,5 +1,7 @@
 package com.churchdrive.app.wear
 
+import com.churchdrive.app.ui.AssistantBrand
+import com.churchdrive.app.ui.ask
 import android.content.Context
 import android.content.Intent
 import android.speech.RecognizerIntent
@@ -45,6 +47,15 @@ fun Signed(content: @Composable (connected: Boolean) -> Unit) {
             signedIn = Session(context).signedIn
             if (signedIn) WatchHa.ensure(context)
             delay(2_000)
+        }
+    }
+    // The assistant's name: the last one heard at once, the house's own whenever the line is up.
+    LaunchedEffect(connection) {
+        if (AssistantBrand.name.isEmpty()) AssistantBrand.load(context)
+        if (connection == com.churchdrive.app.ha.ConnectionState.Connected) {
+            (WatchHa.api.ask("church_drive/assist/info", org.json.JSONObject()) as? org.json.JSONObject)?.let {
+                AssistantBrand.update(context, it.optString("name"), null)
+            }
         }
     }
     MaterialTheme {

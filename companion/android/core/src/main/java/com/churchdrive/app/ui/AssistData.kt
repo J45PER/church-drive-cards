@@ -7,20 +7,20 @@ import org.json.JSONObject
 enum class AssistState { Idle, Waiting, Listening, Thinking, Speaking }
 
 /** One line of the conversation: what the person said, or what the house answered. */
-data class AssistMessage(val fromUser: Boolean, val text: String, val show: CliveShow? = null)
+data class AssistMessage(val fromUser: Boolean, val text: String, val show: AssistantShow? = null)
 
-/** A picture and/or a link Clive wants to show with his answer (the house's `church_drive_clive_show` event, fired by the `clive_show` script). */
-data class CliveShow(val image: String?, val link: String?, val linkLabel: String?)
+/** A picture and/or a link Clive wants to show with his answer (the house's `church_drive_assistant_show` event, fired by the `clive_show` script). */
+data class AssistantShow(val image: String?, val link: String?, val linkLabel: String?)
 
 /** The event name the `clive_show` script fires. */
-const val CLIVE_SHOW_EVENT = "church_drive_clive_show"
+const val ASSISTANT_SHOW_EVENT = "church_drive_assistant_show"
 
 /**
- * What a `church_drive_clive_show` event asks this screen to show, or null when it is for someone else or has nothing safe to show.
+ * What a `church_drive_assistant_show` event asks this screen to show, or null when it is for someone else or has nothing safe to show.
  * [userId] is this person's Home Assistant user id: the script runs as the person who asked, so the event carries their id, and
  * a phone shows only its own person's pictures. Only https addresses are accepted.
  */
-fun parseCliveShow(event: JSONObject, userId: String?): CliveShow? {
+fun parseAssistantShow(event: JSONObject, userId: String?): AssistantShow? {
     val from = event.optJSONObject("context")?.optString("user_id").orEmpty()
     if (userId.isNullOrBlank() || from != userId) return null
     val data = event.optJSONObject("data") ?: return null
@@ -28,7 +28,7 @@ fun parseCliveShow(event: JSONObject, userId: String?): CliveShow? {
     val image = https("image_url")
     val link = https("link_url")
     if (image == null && link == null) return null
-    return CliveShow(image, link, data.optString("link_label").trim().takeIf { it.isNotEmpty() })
+    return AssistantShow(image, link, data.optString("link_label").trim().takeIf { it.isNotEmpty() })
 }
 
 /** What one event of Home Assistant's `assist_pipeline/run` means for the screen. */
@@ -134,19 +134,23 @@ fun introDue(introducedEver: Boolean, told: Set<String>?, log: List<AssistFeatur
  * changes something (a new, never-reused [AssistFeature.id]); each person is told about each entry once, and only the first time
  * ever do they get the full introduction. Features also make up that introduction's "what I can do".
  */
-val ASSIST_FEATURES = listOf(
-    AssistFeature("mdi:image-text", "Pictures and links", "Show me what a Nottingham Forest shirt looks like", id = "pictures-and-links", detail = "Clive can now show a picture or a link under his answer on this screen, when it helps.", kind = AssistantChange.Change),
+private val RAW_ASSIST_FEATURES = listOf(
+    AssistFeature("mdi:image-text", "Pictures and links", "Show me what a Nottingham Forest shirt looks like", id = "pictures-and-links", detail = "{name} can now show a picture or a link under his answer on this screen, when it helps.", kind = AssistantChange.Change),
     AssistFeature("mdi:account-voice", "A new name: Clive", "", id = "renamed-clive", detail = "Jarvis is now Clive, with a new logo. You can still wake him with \"Hey Jarvis\" for now.", kind = AssistantChange.Change),
-    AssistFeature("mdi:watch-variant", "Clive on your watch", "", id = "jarvis-on-watch", detail = "The Church Drive app on a Pixel Watch has Clive: speak or tap a sentence and he answers on the watch, aloud too if you like.", kind = AssistantChange.Change),
+    AssistFeature("mdi:watch-variant", "{name} on your watch", "", id = "jarvis-on-watch", detail = "The Church Drive app on a Pixel Watch has {name}: speak or tap a sentence and he answers on the watch, aloud too if you like.", kind = AssistantChange.Change),
     AssistFeature("mdi:timer-outline", "How long he took", "", id = "response-timing", detail = "Settings shows how long his last answer took, step by step, so a slow part can be found.", kind = AssistantChange.Change),
-    AssistFeature("mdi:timer-sand", "Quicker, and stays with you", "", id = "quicker-follow-up", detail = "Clive answers sooner, and when he asks \"anything else?\" he keeps listening instead of closing.", kind = AssistantChange.Fix),
-    AssistFeature("mdi:chat-plus-outline", "New chat, Voice and Settings", "", id = "jarvis-bar", detail = "Clive's bottom bar has five buttons: Close, New chat, Type in the middle, Voice on or off, and Settings.", kind = AssistantChange.Change),
-    AssistFeature("mdi:keyboard-outline", "Type or talk", "", id = "type-or-talk", detail = "Open Clive with his logo button on any page, ready to type or ready to listen (your choice in Settings)."),
-    AssistFeature("mdi:microphone-message", "Hands-free with the wake word", "Hey Jarvis, who is home?", id = "wake-word"),
+    AssistFeature("mdi:timer-sand", "Quicker, and stays with you", "", id = "quicker-follow-up", detail = "{name} answers sooner, and when he asks \"anything else?\" he keeps listening instead of closing.", kind = AssistantChange.Fix),
+    AssistFeature("mdi:chat-plus-outline", "New chat, Voice and Settings", "", id = "jarvis-bar", detail = "{name}'s bottom bar has five buttons: Close, New chat, Type in the middle, Voice on or off, and Settings.", kind = AssistantChange.Change),
+    AssistFeature("mdi:keyboard-outline", "Type or talk", "", id = "type-or-talk", detail = "Open {name} with his logo button on any page, ready to type or ready to listen (your choice in Settings)."),
+    AssistFeature("mdi:microphone-message", "Hands-free with the wake word", "{wake}, who is home?", id = "wake-word"),
     AssistFeature("mdi:chat-processing-outline", "Natural conversation", "Is it going to rain tomorrow?", id = "conversation"),
     AssistFeature("mdi:cart-outline", "Shopping lists", "Add washing powder to the Lidl list", id = "shopping-lists"),
     AssistFeature("mdi:lightbulb-outline", "Lights, heating and the alarm", "Turn the lounge lights down", id = "lights-heating-alarm"),
 )
+
+/** The assistant log with `{name}` and `{wake}` filled in, so a new name shows everywhere without touching it. */
+val ASSIST_FEATURES: List<AssistFeature>
+    get() = RAW_ASSIST_FEATURES.map { it.copy(title = branded(it.title), example = branded(it.example), detail = branded(it.detail)) }
 
 /** "A, B and C". */
 fun spokenList(items: List<String>): String = when (items.size) {
@@ -176,7 +180,7 @@ fun introSpeech(kind: IntroKind, person: String, assistant: String, features: Li
 val ASSIST_SUGGESTIONS = listOf("Who is home?", "Turn off all the lights", "Any doors open?", "Good night")
 
 /**
- * The assistant's name from its wake word, as Home Assistant's pipeline names it: "hey_jarvis" is Clive, "okay_nabu" is Nabu.
+ * The assistant's name from its wake word, as Home Assistant's pipeline names it: "okay_nabu" is Nabu. Only a fallback: the house's own name for the assistant (see [AssistantBrand]) wins.
  * Empty when there is no wake word, so the assistant is just "your house assistant".
  */
 fun assistantName(wakeWordId: String?): String {
@@ -184,8 +188,7 @@ fun assistantName(wakeWordId: String?): String {
     val words = wakeWordId.orEmpty().split('_', '-', ' ').filter { it.isNotBlank() }
     val rest = words.dropWhile { it.lowercase() in skip }.ifEmpty { words }
     val name = rest.joinToString(" ") { w -> w.replaceFirstChar { it.uppercase() } }
-    // The house's wake word is still "Hey Jarvis" until a "Hey Clive" one is trained; the assistant is Clive either way.
-    return if (name == "Jarvis") "Clive" else name
+    return name
 }
 
 /** What to say to wake it: "hey_jarvis" is "Hey Jarvis". */
@@ -247,7 +250,8 @@ private val DISMISS_WORDS = setOf("no", "nope", "nah", "stop", "cancel", "bye", 
 /** Whether what was said ends the conversation ("that's it", "no thanks", "bye"): the assistant then answers and closes instead of listening again. */
 fun isDismissal(text: String): Boolean {
     val t = text.lowercase().replace('\u2019', '\'').replace(Regex("[^a-z' ]"), " ").replace(Regex("\\s+"), " ").trim()
-        .removePrefix("jarvis ").removeSuffix(" jarvis").removeSuffix(" please").trim()
+        .let { spoken -> AssistantBrand.spokenNames().fold(spoken) { acc, n -> acc.removePrefix("$n ").removeSuffix(" $n") } }
+        .removeSuffix(" please").trim()
     if (t.isEmpty() || t.split(' ').size > 8) return false
     return t in DISMISS_WORDS || DISMISS_PHRASES.any { it in t }
 }

@@ -54,6 +54,7 @@ object AssistWakeSetting {
         AssistColourSetting.load(context)
         AssistStartSetting.load(context)
         AssistVoiceSetting.load(context)
+        AssistantBrand.load(context)
     }
 
     fun set(context: Context, on: Boolean) {
@@ -265,7 +266,7 @@ fun AssistantFab(modifier: Modifier = Modifier) {
     // 16 dp above the bottom bar at the right: the place Material's own floating button takes. Over the keyboard's top when he is open and it is up.
     val pad = assistantBottomPad(keyboard = j.open)
     Box(modifier.fillMaxSize().padding(end = 16.dp, bottom = pad + 16.dp), contentAlignment = Alignment.BottomEnd) {
-        AssistantRound(if (j.open) "Talk" else "Open Clive", {
+        AssistantRound(if (j.open) "Talk" else "Open ${AssistantBrand.shown}", {
             when {
                 !j.open -> j.openFromButton()
                 // The introduction's "Try it": done with it, and listen.
@@ -273,7 +274,7 @@ fun AssistantFab(modifier: Modifier = Modifier) {
                 else -> model.listen()
             }
         }, if (j.open) model.state else AssistState.Idle, if (j.open) model.level else 0f) {
-            CliveGlyph(cliveGlyphPose(j.open, model.state), Color.White, 30.dp, if (j.open) model.level else 0f)
+            AssistantGlyph(assistantGlyphPose(j.open, model.state), Color.White, 30.dp, if (j.open) model.level else 0f)
         }
     }
 }

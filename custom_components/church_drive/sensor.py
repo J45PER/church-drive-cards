@@ -9,6 +9,8 @@
   everyone}) and `people` (name, first, entity_id, admin, home, place, zone,
   places, list): `place` is where they are in their own words (Home, Work,
   a zone's name, Away), `zone` the zone's name when it's not Home.
+- Assistant: the voice assistant's name, so its Assist prompt can say
+  `{{ states('sensor.church_drive_assistant') }}` and never hard-codes it.
 """
 
 from __future__ import annotations
@@ -21,19 +23,35 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, SIGNAL_HEALTH
+from .const import CONF_ASSISTANT_NAME, DEFAULT_ASSISTANT_NAME, DOMAIN, SIGNAL_HEALTH
 from .people import SIGNAL_PEOPLE
 
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    entities: list[SensorEntity] = []
+    entities: list[SensorEntity] = [AssistantSensor(entry)]
     if hass.data[DOMAIN].get("health") is not None:
         entities.append(DeviceHealthSensor(hass))
     if hass.data[DOMAIN].get("people") is not None:
         entities.append(PeopleSensor(hass))
     async_add_entities(entities)
+
+
+class AssistantSensor(SensorEntity):
+    """The voice assistant's name (changed in Church Drive's options, which reload the entry)."""
+
+    _attr_should_poll = False
+    _attr_icon = "mdi:account-voice"
+    _attr_name = "Church Drive assistant"
+    _attr_unique_id = f"{DOMAIN}_assistant"
+
+    def __init__(self, entry: ConfigEntry) -> None:
+        self._entry = entry
+
+    @property
+    def native_value(self) -> str:
+        return (self._entry.options.get(CONF_ASSISTANT_NAME) or "").strip() or DEFAULT_ASSISTANT_NAME
 
 
 class DeviceHealthSensor(SensorEntity):

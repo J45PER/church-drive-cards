@@ -105,15 +105,15 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     private var showSubscription = -1
 
     /** A picture or link Clive asked to show, waiting for his written answer (it is sent just before it). */
-    private var pendingShow: CliveShow? = null
+    private var pendingShow: AssistantShow? = null
 
     /** Listens for the pictures and links Clive shows with his answers (see `clive_show`). */
     private fun watchShow() {
         if (showSubscription >= 0) return
         api.request("auth/current_user", JSONObject()) { r -> userId = (r as? JSONObject)?.optString("id")?.takeIf { it.isNotBlank() } }
-        showSubscription = api.subscribe("subscribe_events", JSONObject().put("event_type", CLIVE_SHOW_EVENT)) { ev ->
+        showSubscription = api.subscribe("subscribe_events", JSONObject().put("event_type", ASSISTANT_SHOW_EVENT)) { ev ->
             main.post {
-                val show = parseCliveShow(ev, userId) ?: return@post
+                val show = parseAssistantShow(ev, userId) ?: return@post
                 val last = messages.lastOrNull()
                 if (answered && last != null && !last.fromUser) messages[messages.lastIndex] = last.copy(show = show) else pendingShow = show
             }
@@ -127,7 +127,10 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
         api.request("church_drive/assist/info", JSONObject()) { r ->
             if (r is JSONObject) {
                 val word = if (r.isNull("wake_word")) null else r.optString("wake_word").takeIf { it.isNotBlank() }
-                main.post { wakeWord = word }
+                main.post {
+                    wakeWord = word
+                    AssistantBrand.update(context, r.optString("name"), wakePhrase(word))
+                }
             } else {
                 api.request("assist_pipeline/pipeline/list", JSONObject()) { list -> main.post { wakeWord = preferredWakeWord(list) } }
             }

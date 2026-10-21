@@ -46,17 +46,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import com.churchdrive.app.ui.CliveGlyph
-import com.churchdrive.app.ui.CliveGlyphPose
+import com.churchdrive.app.ui.AssistantBrand
+import com.churchdrive.app.ui.AssistantGlyph
+import com.churchdrive.app.ui.AssistantGlyphPose
 
-/** The round Clive button of the To-Do app: opens [CliveSheet]. */
+/** The round Clive button of the To-Do app: opens [AssistantSheet]. */
 @Composable
-fun CliveButton(onClick: () -> Unit) {
+fun AssistantButton(onClick: () -> Unit) {
     Box(
         Modifier.size(56.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer)
-            .clickable(onClickLabel = "Clive To Do", onClick = onClick),
+            .clickable(onClickLabel = "${AssistantBrand.shown} To Do", onClick = onClick),
         contentAlignment = Alignment.Center,
-    ) { CliveGlyph(CliveGlyphPose.Idle, MaterialTheme.colorScheme.onPrimaryContainer, 30.dp) }
+    ) { AssistantGlyph(AssistantGlyphPose.Idle, MaterialTheme.colorScheme.onPrimaryContainer, 30.dp) }
 }
 
 /**
@@ -65,12 +66,12 @@ fun CliveButton(onClick: () -> Unit) {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CliveSheet(vm: TodoModel, onClose: () -> Unit) {
+fun AssistantSheet(vm: TodoModel, onClose: () -> Unit) {
     var text by rememberSaveable { mutableStateOf("") }
     var reply by rememberSaveable { mutableStateOf("") }
     fun send(sentence: String) {
         if (sentence.isBlank()) return
-        reply = vm.clive(sentence)
+        reply = vm.askAssistant(sentence)
         text = ""
     }
     // Speech to text is the phone's own: no microphone permission is needed, and nothing is sent to the house but the words.
@@ -92,10 +93,10 @@ fun CliveSheet(vm: TodoModel, onClose: () -> Unit) {
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
-                    CliveGlyph(CliveGlyphPose.Idle, MaterialTheme.colorScheme.onPrimaryContainer, 26.dp)
+                    AssistantGlyph(AssistantGlyphPose.Idle, MaterialTheme.colorScheme.onPrimaryContainer, 26.dp)
                 }
                 Column {
-                    Text("Clive To Do", style = MaterialTheme.typography.titleMedium)
+                    Text("${AssistantBrand.shown} To Do", style = MaterialTheme.typography.titleMedium)
                     Text("Add things and tick them off.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }

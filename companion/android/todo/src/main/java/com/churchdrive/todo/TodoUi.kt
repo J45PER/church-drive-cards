@@ -60,6 +60,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.churchdrive.app.ui.AssistantBrand
 import com.churchdrive.app.ui.HouseTask
 import com.churchdrive.app.ui.TodoItem
 import com.churchdrive.app.ui.ToneColors
@@ -89,7 +90,10 @@ fun TodoApp(vm: TodoModel) {
     // The account panel (null shut, "account", "settings" or "about"), which slides in from the right.
     var panel by rememberSaveable { mutableStateOf<String?>(null) }
     // Clive To Do: the small add-and-tick-off assistant.
-    var clive by rememberSaveable { mutableStateOf(false) }
+    var assistantOpen by rememberSaveable { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    androidx.compose.runtime.LaunchedEffect(Unit) { AssistantBrand.load(context) }
+    androidx.compose.runtime.LaunchedEffect(vm.connected) { if (vm.connected) vm.refreshAssistantName(context) }
     val tab = vm.tab
     Box(Modifier.fillMaxSize()) {
     Scaffold(
@@ -114,7 +118,7 @@ fun TodoApp(vm: TodoModel) {
                 scrollBehavior = scroll,
             )
         },
-        floatingActionButton = { if (vm.connected) CliveButton { clive = true } },
+        floatingActionButton = { if (vm.connected) AssistantButton { assistantOpen = true } },
         bottomBar = {
             NavigationBar {
                 TodoTab.entries.forEach { t ->
@@ -142,7 +146,7 @@ fun TodoApp(vm: TodoModel) {
         }
     }
     TodoPanel(panel, { panel = it }, vm)
-    if (clive) CliveSheet(vm) { clive = false }
+    if (assistantOpen) AssistantSheet(vm) { assistantOpen = false }
     }
 }
 

@@ -354,7 +354,7 @@ private fun BottomGlow(active: Boolean, level: Float, modifier: Modifier = Modif
 }
 
 /**
- * The round button at the bottom right: his coloured orb on the dark grey circle, with his white mark over it (animated: see CliveGlyph): the drifting logo when he is shut, a microphone when he waits, a squircle to stop while he listens. Same size and place everywhere, above the bottom bar.
+ * The round button at the bottom right: his coloured orb on the dark grey circle, with his white mark over it (animated: see AssistantGlyph): the drifting logo when he is shut, a microphone when he waits, a squircle to stop while he listens. Same size and place everywhere, above the bottom bar.
  */
 @Composable
 fun AssistantRound(label: String, onClick: () -> Unit, state: AssistState = AssistState.Idle, level: Float = 0f, content: @Composable () -> Unit) {
@@ -366,7 +366,7 @@ fun AssistantRound(label: String, onClick: () -> Unit, state: AssistState = Assi
             .clickable(onClickLabel = label, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        // The coloured orb behind the mark moves with what he is doing, as before; the white mark on top has its own poses (see CliveGlyph).
+        // The coloured orb behind the mark moves with what he is doing, as before; the white mark on top has its own poses (see AssistantGlyph).
         // The orb's own box is one and a half times this size, so it stays inside the 54 dp the ring leaves (with a little room to spare).
         AssistOrb(state, level, 32.dp)
         content()
@@ -543,7 +543,7 @@ private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String)
             NavigationBar(modifier = Modifier.align(Alignment.BottomCenter)) { AssistantBarItems(model, ui, onClose, onSettings) }
             Box(Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = pad + 16.dp)) {
                 AssistantRound("Talk", { model.listen() }, model.state, model.level) {
-                    CliveGlyph(cliveGlyphPose(true, model.state), Color.White, 30.dp, model.level)
+                    AssistantGlyph(assistantGlyphPose(true, model.state), Color.White, 30.dp, model.level)
                 }
             }
         }
@@ -605,7 +605,7 @@ private fun ChatLine(message: AssistMessage, faded: Boolean = false) {
 
 /** Clive's words in a speech bubble: the tail corner is bottom-left, the mirror of the user's gradient bubble. */
 @Composable
-private fun AssistantBubble(text: String, show: CliveShow? = null) {
+private fun AssistantBubble(text: String, show: AssistantShow? = null) {
     val scheme = MaterialTheme.colorScheme
     val uri = androidx.compose.ui.platform.LocalUriHandler.current
     Column(
@@ -618,7 +618,7 @@ private fun AssistantBubble(text: String, show: CliveShow? = null) {
         Text(text, style = MaterialTheme.typography.bodyLarge, color = scheme.onSurface)
         show?.image?.let {
             coil.compose.AsyncImage(
-                model = it, contentDescription = show.linkLabel ?: "Picture from Clive", contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                model = it, contentDescription = show.linkLabel ?: "Picture from ${AssistantBrand.shown}", contentScale = androidx.compose.ui.layout.ContentScale.Fit,
                 modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)),
             )
         }
