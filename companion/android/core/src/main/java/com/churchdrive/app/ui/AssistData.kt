@@ -72,11 +72,11 @@ fun isNotUnderstood(answer: String): Boolean {
 /** Which introduction is due: [First] the first time ever (the assistant introduces itself), [Update] after a new version (what is new). */
 enum class IntroKind { First, Update }
 
-/** What kind of entry the Jarvis log holds: something he can now do, something that works differently, or something that was put right. */
+/** What kind of entry the Clive log holds: something he can now do, something that works differently, or something that was put right. */
 enum class JarvisChange { Feature, Change, Fix }
 
 /**
- * One entry of the Jarvis log: a feature, change or fix. [id] never changes and is never reused: it is how the app remembers
+ * One entry of the Clive log: a feature, change or fix. [id] never changes and is never reused: it is how the app remembers
  * that this person has been told. [example] is a sentence to try ("Say: ..."); [detail] says what changed when there is nothing to say.
  */
 data class AssistFeature(
@@ -95,7 +95,7 @@ data class IntroDue(val kind: IntroKind, val features: List<AssistFeature>)
 data class IntroResult(val due: IntroDue?, val told: Set<String>)
 
 /**
- * Decides the introduction from the Jarvis log, not from the app's version: the first time ever is the full introduction (what he can
+ * Decides the introduction from the Clive log, not from the app's version: the first time ever is the full introduction (what he can
  * do: the log's features); after that only log entries the person has not been told about, each once, and nothing when there are none.
  * [told] is null for someone introduced before the log existed: they are taken to know everything in it so far.
  */
@@ -108,16 +108,17 @@ fun introDue(introducedEver: Boolean, told: Set<String>?, log: List<AssistFeatur
 }
 
 /**
- * The Jarvis log, newest first: every feature, change and fix to the assistant. Add an entry at the top whenever Jarvis gains or
+ * The Clive log, newest first: every feature, change and fix to the assistant. Add an entry at the top whenever Clive gains or
  * changes something (a new, never-reused [AssistFeature.id]); each person is told about each entry once, and only the first time
  * ever do they get the full introduction. Features also make up that introduction's "what I can do".
  */
 val ASSIST_FEATURES = listOf(
-    AssistFeature("mdi:watch-variant", "Jarvis on your watch", "", id = "jarvis-on-watch", detail = "The Church Drive app on a Pixel Watch has Jarvis: speak or tap a sentence and he answers on the watch, aloud too if you like.", kind = JarvisChange.Change),
+    AssistFeature("mdi:account-voice", "A new name: Clive", "", id = "renamed-clive", detail = "Jarvis is now Clive, with a new logo. You can still wake him with \"Hey Jarvis\" for now.", kind = JarvisChange.Change),
+    AssistFeature("mdi:watch-variant", "Clive on your watch", "", id = "jarvis-on-watch", detail = "The Church Drive app on a Pixel Watch has Clive: speak or tap a sentence and he answers on the watch, aloud too if you like.", kind = JarvisChange.Change),
     AssistFeature("mdi:timer-outline", "How long he took", "", id = "response-timing", detail = "Settings shows how long his last answer took, step by step, so a slow part can be found.", kind = JarvisChange.Change),
-    AssistFeature("mdi:timer-sand", "Quicker, and stays with you", "", id = "quicker-follow-up", detail = "Jarvis answers sooner, and when he asks \"anything else?\" he keeps listening instead of closing.", kind = JarvisChange.Fix),
-    AssistFeature("mdi:chat-plus-outline", "New chat, Voice and Settings", "", id = "jarvis-bar", detail = "Jarvis's bottom bar has five buttons: Close, New chat, Type in the middle, Voice on or off, and Settings.", kind = JarvisChange.Change),
-    AssistFeature("mdi:keyboard-outline", "Type or talk", "", id = "type-or-talk", detail = "Open Jarvis with his logo button on any page, ready to type or ready to listen (your choice in Settings)."),
+    AssistFeature("mdi:timer-sand", "Quicker, and stays with you", "", id = "quicker-follow-up", detail = "Clive answers sooner, and when he asks \"anything else?\" he keeps listening instead of closing.", kind = JarvisChange.Fix),
+    AssistFeature("mdi:chat-plus-outline", "New chat, Voice and Settings", "", id = "jarvis-bar", detail = "Clive's bottom bar has five buttons: Close, New chat, Type in the middle, Voice on or off, and Settings.", kind = JarvisChange.Change),
+    AssistFeature("mdi:keyboard-outline", "Type or talk", "", id = "type-or-talk", detail = "Open Clive with his logo button on any page, ready to type or ready to listen (your choice in Settings)."),
     AssistFeature("mdi:microphone-message", "Hands-free with the wake word", "Hey Jarvis, who is home?", id = "wake-word"),
     AssistFeature("mdi:chat-processing-outline", "Natural conversation", "Is it going to rain tomorrow?", id = "conversation"),
     AssistFeature("mdi:cart-outline", "Shopping lists", "Add washing powder to the Lidl list", id = "shopping-lists"),
@@ -152,14 +153,16 @@ fun introSpeech(kind: IntroKind, person: String, assistant: String, features: Li
 val ASSIST_SUGGESTIONS = listOf("Who is home?", "Turn off all the lights", "Any doors open?", "Good night")
 
 /**
- * The assistant's name from its wake word, as Home Assistant's pipeline names it: "hey_jarvis" is Jarvis, "okay_nabu" is Nabu.
+ * The assistant's name from its wake word, as Home Assistant's pipeline names it: "hey_jarvis" is Clive, "okay_nabu" is Nabu.
  * Empty when there is no wake word, so the assistant is just "your house assistant".
  */
 fun assistantName(wakeWordId: String?): String {
     val skip = setOf("hey", "hi", "ok", "okay", "oh")
     val words = wakeWordId.orEmpty().split('_', '-', ' ').filter { it.isNotBlank() }
     val rest = words.dropWhile { it.lowercase() in skip }.ifEmpty { words }
-    return rest.joinToString(" ") { w -> w.replaceFirstChar { it.uppercase() } }
+    val name = rest.joinToString(" ") { w -> w.replaceFirstChar { it.uppercase() } }
+    // The house's wake word is still "Hey Jarvis" until a "Hey Clive" one is trained; the assistant is Clive either way.
+    return if (name == "Jarvis") "Clive" else name
 }
 
 /** What to say to wake it: "hey_jarvis" is "Hey Jarvis". */

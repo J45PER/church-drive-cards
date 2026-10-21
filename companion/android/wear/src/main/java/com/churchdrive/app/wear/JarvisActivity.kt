@@ -32,7 +32,7 @@ import com.churchdrive.app.ui.parseAssistEvent
 import org.json.JSONObject
 
 /**
- * Jarvis on the wrist: say or tap a sentence, it goes to the house's Assist pipeline (the same one the phone's Jarvis uses, so anything
+ * Clive on the wrist: say or tap a sentence, it goes to the house's Assist pipeline (the same one the phone's Clive uses, so anything
  * Home Assistant can do by voice works) and the answer is shown and, unless turned off, spoken from the watch.
  */
 class JarvisActivity : ComponentActivity() {
@@ -148,10 +148,10 @@ private fun JarvisScreen(connected: Boolean) {
     val context = LocalContext.current
     val model = remember { JarvisModel(context) }
     DisposableEffect(Unit) { onDispose { model.stop() } }
-    val listen = rememberListener("Ask Jarvis") { model.send(it) }
+    val listen = rememberListener("Ask Clive") { model.send(it) }
 
     ScalingLazyColumn(modifier = Modifier.fillMaxWidth()) {
-        item { ListHeader { Text("Jarvis") } }
+        item { ListHeader { Text("Clive") } }
         if (model.heard.isNotEmpty()) item { Text(model.heard, textAlign = TextAlign.Center) }
         when {
             model.state == AssistState.Thinking -> item { Text("Thinking…", textAlign = TextAlign.Center) }
@@ -160,7 +160,7 @@ private fun JarvisScreen(connected: Boolean) {
             !connected -> item { Text("Connecting…", textAlign = TextAlign.Center) }
         }
         if (model.state == AssistState.Speaking) row("Stop") { model.stop() }
-        row("Talk to Jarvis") { listen() }
+        row("Talk to Clive") { listen() }
         for (suggestion in ASSIST_SUGGESTIONS) row(suggestion) { model.send(suggestion) }
         row(if (model.voice) "Voice: on" else "Voice: off") { model.voice = !model.voice; if (!model.voice) model.stop() }
     }

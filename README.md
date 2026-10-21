@@ -17,7 +17,7 @@ Turn text into to-do tasks without typing them out. The text goes to Home Assist
 - **Android app**: highlight text in any app and choose **Church Drive to-do** (Copy/Share menu), or **Share** > **Church Drive to-do**.
 - **Voice in the app**: the microphone in the top bar, the Add task Quick Settings tile and the icon menu add by voice straight to the lists (the phone only listens when tapped).
 - **Voice assistant**: `ha/voice-tasks.yaml` is an automation that lets Assist (phone, watch or a Voice speaker) say "add task …" or "remind me to …".
-- **Jarvis (what he can reach)**: `ha/jarvis.md` lists the scripts Jarvis uses (scenes, arming the alarm, the car charger, home safety and batteries, Gregg), what is deliberately kept away from him and why, and the traps found building it. The scripts are copied in `ha/jarvis-*.yaml`.
+- **Clive (what he can reach)**: `ha/clive.md` lists the scripts Clive uses (scenes, arming the alarm, the car charger, home safety and batteries, Gregg), what is deliberately kept away from him and why, and the traps found building it. The scripts are copied in `ha/jarvis-*.yaml`.
 - **Anything else**: the `church_drive.add_tasks` action (`text`, optional `person`, `source`, `auto_add`, `ai_task_entity`) returns the tasks it found. `auto_add: true` skips the check. Websocket commands `church_drive/inbox`, `/submit`, `/confirm` and `/dismiss` serve the app, and `church_drive_inbox_changed` fires when the inbox changes.
 
 ## Shopping lists

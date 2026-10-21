@@ -1121,7 +1121,7 @@ async def ws_maps_search(hass: HomeAssistant, connection: websocket_api.ActiveCo
 async def ws_assist_info(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
     """The preferred Assist pipeline's wake word, for anyone signed in (Home Assistant's own pipeline list is administrators only).
 
-    The app names the assistant after it ("hey_jarvis" is Jarvis) and listens for it."""
+    The app names the assistant after it ("hey_jarvis" is Clive) and listens for it."""
     wake_word = None
     try:
         from homeassistant.components import assist_pipeline

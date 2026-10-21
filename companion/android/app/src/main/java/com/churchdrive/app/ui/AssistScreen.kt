@@ -94,7 +94,7 @@ import kotlinx.coroutines.flow.first
 
 /**
  * The three colours of the assistant, a gradient like Siri's or Gemini's. They come from the phone's own theme (Material You: the
- * primary, tertiary and secondary colours of the wallpaper palette), so Jarvis matches the rest of the phone.
+ * primary, tertiary and secondary colours of the wallpaper palette), so Clive matches the rest of the phone.
  */
 @androidx.compose.runtime.Immutable
 class AssistPalette(val first: Color, val second: Color, val third: Color) {
@@ -133,11 +133,11 @@ fun AssistPanel(
     onEnableWake: () -> Unit = {},
     /** Open with the keyboard up instead of listening (the person's choice in Settings). */
     startTyping: Boolean = false,
-    /** The typing box's state when the app's bar drives it; Jarvis on his own keeps his own. */
+    /** The typing box's state when the app's bar drives it; Clive on his own keeps his own. */
     typingState: JarvisTyping? = null,
-    /** The bar's Settings button: take the person to Jarvis's settings. */
+    /** The bar's Settings button: take the person to Clive's settings. */
     onSettings: () -> Unit = {},
-    /** Shown inside the app (over the page, under the app's round Jarvis button) instead of as a window of its own. */
+    /** Shown inside the app (over the page, under the app's round Clive button) instead of as a window of its own. */
     embedded: Boolean = false,
 ) {
     val ui = typingState ?: remember { JarvisTyping(startTyping) }
@@ -399,7 +399,7 @@ fun JarvisLogo(color: Color, size: androidx.compose.ui.unit.Dp = 30.dp) {
     }
 }
 
-/** What the typing box is doing: shared, so the app's bottom bar (which Jarvis's buttons borrow while he is open) can drive it. */
+/** What the typing box is doing: shared, so the app's bottom bar (which Clive's buttons borrow while he is open) can drive it. */
 class JarvisTyping(start: Boolean = false) {
     var typing by mutableStateOf(start)
     var typed by mutableStateOf("")
@@ -421,7 +421,7 @@ class JarvisTyping(start: Boolean = false) {
     }
 }
 
-/** How far up the bottom of Jarvis sits: above the bottom bar (80 dp and the system's bar), or above the keyboard when that is higher. */
+/** How far up the bottom of Clive sits: above the bottom bar (80 dp and the system's bar), or above the keyboard when that is higher. */
 @Composable
 fun jarvisBottomPad(keyboard: Boolean): androidx.compose.ui.unit.Dp {
     val d = androidx.compose.ui.platform.LocalDensity.current
@@ -432,7 +432,7 @@ fun jarvisBottomPad(keyboard: Boolean): androidx.compose.ui.unit.Dp {
 }
 
 /**
- * Jarvis's own buttons for the bottom bar: Close, New chat, Type (the middle one), Voice, Settings. Inside the app they take the place
+ * Clive's own buttons for the bottom bar: Close, New chat, Type (the middle one), Voice, Settings. Inside the app they take the place
  * of the app's buttons in the same bar.
  */
 @Composable
@@ -473,7 +473,7 @@ fun RowScope.JarvisBarItems(model: AssistModel, ui: JarvisTyping, onClose: () ->
 }
 
 /**
- * Jarvis's screen. Inside the app ([embedded]) it fills the space above the app's own bottom bar, which has changed into Jarvis's
+ * Clive's screen. Inside the app ([embedded]) it fills the space above the app's own bottom bar, which has changed into Clive's
  * buttons, and the app's round button floats over it. On its own (from a widget or tile) it brings a bar and a button of its own.
  * Either way the keyboard goes over the bar, and the typing box rises above the keyboard.
  */
@@ -505,7 +505,7 @@ private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String)
                 textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
             )
             if (chatting) {
-                // The larger Jarvis icon stays at the top; the conversation starts below it.
+                // The larger Clive icon stays at the top; the conversation starts below it.
                 Column(modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     AssistOrb(model.state, model.level, 96.dp)
                     Spacer(Modifier.height(8.dp))
@@ -607,7 +607,7 @@ private fun ThinkingDots() {
     }
 }
 
-/** One line of the conversation: what you said in a soft gradient pill, and what Jarvis said as plain words. */
+/** One line of the conversation: what you said in a soft gradient pill, and what Clive said as plain words. */
 @Composable
 private fun ChatLine(message: AssistMessage, faded: Boolean = false) {
     val pal = assistPalette()
@@ -628,7 +628,7 @@ private fun ChatLine(message: AssistMessage, faded: Boolean = false) {
     }
 }
 
-/** Jarvis's words in a speech bubble: the tail corner is bottom-left, the mirror of the user's gradient bubble. */
+/** Clive's words in a speech bubble: the tail corner is bottom-left, the mirror of the user's gradient bubble. */
 @Composable
 private fun JarvisBubble(text: String) {
     val scheme = MaterialTheme.colorScheme

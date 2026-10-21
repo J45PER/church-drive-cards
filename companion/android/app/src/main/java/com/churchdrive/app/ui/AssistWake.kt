@@ -62,7 +62,7 @@ object AssistWakeSetting {
     }
 }
 
-/** Whether Jarvis opens ready to type (the keyboard up) instead of ready to listen (Account > Settings). */
+/** Whether Clive opens ready to type (the keyboard up) instead of ready to listen (Account > Settings). */
 object AssistStartSetting {
     private const val KEY = "start_typing"
     var typing by mutableStateOf(false)
@@ -78,7 +78,7 @@ object AssistStartSetting {
     }
 }
 
-/** Whether Jarvis speaks his answers aloud (the bar's Voice button in Jarvis); off, he only writes them. */
+/** Whether Clive speaks his answers aloud (the bar's Voice button in Clive); off, he only writes them. */
 object AssistVoiceSetting {
     private const val KEY = "voice_replies"
     var on by mutableStateOf(true)
@@ -94,7 +94,7 @@ object AssistVoiceSetting {
     }
 }
 
-/** Whether Jarvis keeps his classic indigo, purple and green instead of following the phone's theme colours (Account > Settings). */
+/** Whether Clive keeps his classic indigo, purple and green instead of following the phone's theme colours (Account > Settings). */
 object AssistColourSetting {
     private const val KEY = "classic_colours"
     var classic by mutableStateOf(false)
@@ -111,7 +111,7 @@ object AssistColourSetting {
 }
 
 /**
- * Remembers whether the assistant has introduced itself to this person, and which entries of the Jarvis log they have been told about.
+ * Remembers whether the assistant has introduced itself to this person, and which entries of the Clive log they have been told about.
  * The introduction is taken once: the moment it is handed out it counts as told, however it is closed.
  */
 object AssistIntroStore {
@@ -133,14 +133,14 @@ fun hasMicrophone(context: Context): Boolean =
     ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
 
 /**
- * Jarvis inside the app: one controller, shared by the wake word host (which owns the microphone and the model), the overlay that
+ * Clive inside the app: one controller, shared by the wake word host (which owns the microphone and the model), the overlay that
  * shows him and the round button on every page, which is the same button whether he is shut or open.
  */
 class JarvisController {
     var model by mutableStateOf<AssistModel?>(null)
     var open by mutableStateOf(false)
     var intro by mutableStateOf<IntroDue?>(null)
-    /** The typing box, shared with the bottom bar (whose buttons become Jarvis's while he is open). */
+    /** The typing box, shared with the bottom bar (whose buttons become Clive's while he is open). */
     val ui = JarvisTyping()
     var userName = ""
     var onTask: (String) -> Unit = {}
@@ -204,7 +204,7 @@ fun AssistWakeHost(controller: JarvisController, connected: Boolean, base: Strin
         }
         onDispose { model.release(); controller.model = null }
     }
-    // The wake word is always on while Jarvis is open (whatever the setting says); the setting is for opening him when he is shut.
+    // The wake word is always on while Clive is open (whatever the setting says); the setting is for opening him when he is shut.
     val wake = enabled || controller.open
     DisposableEffect(owner, model, wake, connected) {
         val observer = LifecycleEventObserver { _, event ->
@@ -219,7 +219,7 @@ fun AssistWakeHost(controller: JarvisController, connected: Boolean, base: Strin
     }
 }
 
-/** Jarvis over the app (not a window of its own, so his round button can stay above him). Nothing when he is shut. */
+/** Clive over the app (not a window of its own, so his round button can stay above him). Nothing when he is shut. */
 @Composable
 fun JarvisOverlay(onSettings: () -> Unit = {}) {
     val j = LocalJarvis.current ?: return
@@ -254,7 +254,7 @@ fun JarvisOverlay(onSettings: () -> Unit = {}) {
 }
 
 /**
- * The round button at the bottom right of every page: Jarvis's logo, and once he is open the same button is his microphone. It sits
+ * The round button at the bottom right of every page: Clive's logo, and once he is open the same button is his microphone. It sits
  * above everything of his, so it never moves or doubles up.
  */
 @Composable
@@ -265,7 +265,7 @@ fun JarvisFab(modifier: Modifier = Modifier) {
     // 16 dp above the bottom bar at the right: the place Material's own floating button takes. Over the keyboard's top when he is open and it is up.
     val pad = jarvisBottomPad(keyboard = j.open)
     Box(modifier.fillMaxSize().padding(end = 16.dp, bottom = pad + 16.dp), contentAlignment = Alignment.BottomEnd) {
-        JarvisRound(if (j.open) "Talk" else "Open Jarvis", {
+        JarvisRound(if (j.open) "Talk" else "Open Clive", {
             when {
                 !j.open -> j.openFromButton()
                 // The introduction's "Try it": done with it, and listen.

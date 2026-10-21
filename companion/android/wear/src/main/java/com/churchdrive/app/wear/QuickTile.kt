@@ -16,14 +16,14 @@ import androidx.wear.tiles.TileBuilders
 import androidx.wear.tiles.TileService
 import com.google.common.util.concurrent.ListenableFuture
 
-/** The tile: three big buttons, Jarvis, To-Do and key actions, each opening its screen. */
+/** The tile: three big buttons, Clive, To-Do and key actions, each opening its screen. */
 class QuickTile : TileService() {
     override fun onTileRequest(requestParams: RequestBuilders.TileRequest): ListenableFuture<TileBuilders.Tile> {
         val column = LayoutElementBuilders.Column.Builder()
             .setWidth(expand())
             .setHeight(expand())
             .setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGN_CENTER)
-            .addContent(button("Jarvis", JarvisActivity::class.java, 0xFF3A6EA5.toInt()))
+            .addContent(button("Clive", JarvisActivity::class.java, 0xFF3A6EA5.toInt()))
             .addContent(LayoutElementBuilders.Spacer.Builder().setHeight(dp(6f)).build())
             .addContent(button("To-Do", TodoActivity::class.java, 0xFF3D7A52.toInt()))
             .addContent(LayoutElementBuilders.Spacer.Builder().setHeight(dp(6f)).build())

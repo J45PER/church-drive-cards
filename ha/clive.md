@@ -1,8 +1,8 @@
-# Jarvis on the Home Assistant side
+# Clive on the Home Assistant side
 
-Jarvis is the preferred Assist pipeline ("Home Assistant Cloud"): wake word `hey_jarvis` (openWakeWord, local), Home Assistant Cloud speech-to-text and text-to-speech, and the Claude conversation agent (`conversation.claude_conversation`, Haiku 4.5, the Anthropic integration with the household's own API key). `prefer_local_intents` is on, so simple commands never reach Claude.
+Clive is the preferred Assist pipeline ("Home Assistant Cloud"): wake word `hey_jarvis` (openWakeWord, local), Home Assistant Cloud speech-to-text and text-to-speech, and the Claude conversation agent (`conversation.claude_conversation`, Haiku 4.5, the Anthropic integration with the household's own API key). `prefer_local_intents` is on, so simple commands never reach Claude.
 
-What Jarvis can reach is decided by **voice assistant exposure** (Settings > Voice assistants > Expose), which is global, not per person. Everything below changes only `conversation`; Alexa and Google exposure were left alone.
+What Clive can reach is decided by **voice assistant exposure** (Settings > Voice assistants > Expose), which is global, not per person. Everything below changes only `conversation`; Alexa and Google exposure were left alone.
 
 The `jarvis-*.yaml` files here are copies of the live scripts. Edit them in Home Assistant and re-export, or paste a file back to restore it.
 
@@ -28,21 +28,21 @@ Also exposed for the car: `zappi_charge_later`, `zappi_car_yes`, `zappi_car_no` 
 - **TVs and PCs** (`media_player.*`): until a room-aware tool exists. The app has no room, so "only the device in the same room" cannot be enforced yet. Needs a custom LLM API in this integration that reads the satellite's area. Build it with the first satellite.
 - **`select.zappi_charge_mode`**: only reachable through `jarvis_zappi_charge`.
 - **The car** (Vauxhall Astra): read-only sensors only (battery, range, fuel, fuel range, plugged, charging, charging end, mileage, service due, doors, boot). No buttons, switches or numbers, so no lock, horn or preconditioning.
-- **Hue scenes** (133) and the integration's "Church Drive" working scenes: Jarvis uses the library through `jarvis_apply_scene` instead.
+- **Hue scenes** (133) and the integration's "Church Drive" working scenes: Clive uses the library through `jarvis_apply_scene` instead.
 - Gregg's own vacuum entity, Find Robot switch, and the Ring chime switches.
 
 ## The Fast-charge confirmation
 
-`jarvis_zappi_charge` with mode Fast at a rate that is not cheap does not start. It stamps `input_datetime.zappi_fast_charge_confirm_asked`, and returns `needs_confirmation` with the current and cheapest rates. Jarvis must ask and wait. A repeat call with `confirm_expensive: true` only counts if it arrives **5 to 300 seconds** after that stamp. The first version trusted the flag, and Jarvis set it himself on the first call, so the window is enforced in the script.
+`jarvis_zappi_charge` with mode Fast at a rate that is not cheap does not start. It stamps `input_datetime.zappi_fast_charge_confirm_asked`, and returns `needs_confirmation` with the current and cheapest rates. Clive must ask and wait. A repeat call with `confirm_expensive: true` only counts if it arrives **5 to 300 seconds** after that stamp. The first version trusted the flag, and Clive set it himself on the first call, so the window is enforced in the script.
 
 The helper is an `input_datetime` (date and time), initial `2000-01-01 00:00:00`.
 
 ## Gotchas learned the hard way
 
-- **Check state after a write, not the spoken reply.** Jarvis says "Done" whenever a script runs without error. A template condition that returned a non-boolean string (a time) was silently false.
+- **Check state after a write, not the spoken reply.** Clive says "Done" whenever a script runs without error. A template condition that returned a non-boolean string (a time) was silently false.
 - **Script `variables` re-sort alphabetically when saved** through the API, so a variable that reads another declared "later" breaks. Use separate `variables` steps, or one template.
 - **Datetimes and lists of datetimes become strings between variables.** Do date maths in a single template (as the Zappi smart charge automation does).
-- **A script can return data to Jarvis** with `stop` and `response_variable`; the result is shown to him as a tool result.
+- **A script can return data to Clive** with `stop` and `response_variable`; the result is shown to him as a tool result.
 - **"Waiting for EV" means the car IS plugged in** but not asking to charge (usually full). Only "EV Disconnected" is unplugged.
 - **Octopus Go publishes tomorrow's cheap window only after midnight**, so tomorrow's rates hold just one slot. `jarvis_zappi_info` projects the 00:30 to 05:30 window from today's pattern and says so.
 - **Battery-low sensors come from Battery Notes**, not the phone app, so phones are excluded by device (`device_id` of `mobile_app` entities).

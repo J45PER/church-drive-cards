@@ -61,7 +61,7 @@ android {
 }
 
 dependencies {
-    // The Home Assistant connection, sign-in storage and to-do/Jarvis data, shared with the watch and to-do apps.
+    // The Home Assistant connection, sign-in storage and to-do/Clive data, shared with the watch and to-do apps.
     implementation(project(":core"))
     // Sends the sign-in to a paired watch.
     implementation("com.google.android.gms:play-services-wearable:18.2.0")

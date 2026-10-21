@@ -486,10 +486,10 @@ Older release notes (v0.10 to v0.38 detail) are archived in [docs/HISTORY.md](do
   - The sandbox forbids comprehensions that reference locals, so use loops.
   - HA auto-backs up each dashboard edit.
 
-## Jarvis: Home Assistant side
+## Clive: Home Assistant side
 
-Full notes in `ha/jarvis.md`, script copies in `ha/jarvis-*.yaml`. Short version:
-- Jarvis = the preferred Assist pipeline: openWakeWord `hey_jarvis` (local), HA Cloud speech, Claude Haiku 4.5 via the Anthropic integration, `prefer_local_intents` on.
+Full notes in `ha/clive.md`, script copies in `ha/jarvis-*.yaml`. Short version:
+- Clive = the preferred Assist pipeline: openWakeWord `hey_jarvis` (local), HA Cloud speech, Claude Haiku 4.5 via the Anthropic integration, `prefer_local_intents` on.
 - Exposure is global, so what must not be done by voice is simply not exposed: sirens, the alarm panel (arm-only script instead), camera motion switches, energy data, TVs and PCs (until a room-aware tool exists), the car's buttons.
 - Scenes go through `script.jarvis_apply_scene` (library scenes, applied by `church_drive.apply_scene`); the 133 Hue scenes are unexposed. The scene list in that script is typed in by hand.
 - Fast charging at a non-cheap rate needs a spoken confirmation, enforced in `jarvis_zappi_charge` with a 5 to 300 second window.

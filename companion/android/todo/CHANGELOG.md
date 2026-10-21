@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.38.2
+
+- Shared code change: the voice assistant's name is now Clive. Nothing visible in this app.
+
 ## 0.38.1
 
 - New app icon: a clipboard with ticked rows, a second clipboard behind it cut out where they overlap, in white on indigo. It is also the themed icon on Android 13 and later.

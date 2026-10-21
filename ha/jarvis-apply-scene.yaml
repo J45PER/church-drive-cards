@@ -1,4 +1,4 @@
-# Script script.jarvis_apply_scene: Applies a scene from the Church Drive scene library (church_drive.apply_scene) to a room, zone or light. Jarvis's only way to apply scenes. Keep the scene list in sync with the library (including custom scenes from the Scene Builder). A copy of the live script.
+# Script script.jarvis_apply_scene: Applies a scene from the Church Drive scene library (church_drive.apply_scene) to a room, zone or light. Clive's only way to apply scenes. Keep the scene list in sync with the library (including custom scenes from the Scene Builder). A copy of the live script.
 alias: Apply a lighting scene
 description: 'Apply a lighting scene from the Church Drive scene library to a room, zone or single light. Use this for every scene request: colour moods (Lake Placid, Cyber Fidelity, Storybook...) and white presets (Bright, Dimmed, Read, Relax...). Pass the room''s light group (e.g. light.hayleys_bedroom) or one light.'
 fields:

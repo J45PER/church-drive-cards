@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.38.2
+
+- The assistant is now called Clive everywhere in the app and on the watch (labels, buttons, settings, the watch tile). The wake word is still "Hey Jarvis" until a "Hey Clive" one is trained in Home Assistant. Everyone is told about the new name once.
+
 ## 0.38.1
 
 - New look for the app icon: the Church Drive house with a rounded square tucked into its roof, cut out where they overlap, in white on the teal of the logo. The launcher icon, the splash screen, the notification icon in the status bar and the watch app's icon all use it. (The themed-icon version is kept in the project, still switched off.)
