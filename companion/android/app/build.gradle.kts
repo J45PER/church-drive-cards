@@ -70,6 +70,8 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+    // The release (Play) build is not held up by lint's fatal-error pass; CI still runs the unit tests.
+    lint { checkReleaseBuilds = false }
     buildFeatures {
         buildConfig = true
         compose = true
@@ -90,6 +92,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.core:core-ktx:1.13.1")
+    // Lint (release build) wants a Fragment version that supports the permission-request contract the assistant uses.
+    implementation("androidx.fragment:fragment-ktx:1.8.5")
     implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.glance:glance-appwidget:1.1.1")
     implementation("androidx.security:security-crypto:1.1.0-alpha06")

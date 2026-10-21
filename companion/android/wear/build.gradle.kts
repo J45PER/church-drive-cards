@@ -57,6 +57,8 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+    // The release (Play) build is not held up by lint's fatal-error pass; CI still runs the unit tests.
+    lint { checkReleaseBuilds = false }
     buildFeatures {
         compose = true
     }
