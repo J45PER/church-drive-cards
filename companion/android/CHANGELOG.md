@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.45.0
+
+- Signing in no longer asks for the Home Assistant address: it is the house's cloud address, built in. Press and hold the "Church Drive" title on the sign-in screen to type a different one (administrators).
+- Sharing the sign-in with Church Drive To Do now works between the Google Play apps. The sign-in is offered only to Church Drive apps whose signing certificate is in the allowed list (`TrustedApps`); until the Play certificates are added there, To Do asks for the username and password itself. About shows this app's signing certificate (SHA-256) to copy into the list.
+
 ## 0.44.2
 
 - Code comment only (the To-Do app no longer declares the `SHARE_SESSION` permission; see its changelog). No change to the app.

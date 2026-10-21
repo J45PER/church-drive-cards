@@ -16,13 +16,12 @@ sealed interface SharedLookup {
 }
 
 /**
- * The Church Drive app offers its sign-in through a content provider that only apps signed with the same key (and holding
- * [PERMISSION]) can read, so the to-do app signs in with no typing. Only the phone app declares the permission (two apps declaring it under different keys, as on
- * Google Play, can't both be installed); with different keys the read is refused and the to-do app signs in for itself.
+ * The Church Drive app offers its sign-in through a content provider that answers only the other Church Drive apps ([TrustedApps]
+ * checks the caller's package and signing certificate), so the to-do app signs in with no typing. Without that trust the read is
+ * refused and the to-do app asks for the username and password itself.
  */
 object SessionShare {
     const val AUTHORITY = "com.churchdrive.app.sessionshare"
-    const val PERMISSION = "com.churchdrive.app.permission.SHARE_SESSION"
     val URI: Uri = Uri.parse("content://$AUTHORITY/session")
 
     /** Asks the Church Drive app for its sign-in. Blocking: call off the main thread. */

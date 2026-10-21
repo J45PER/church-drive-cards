@@ -1,5 +1,7 @@
 package com.churchdrive.app.ui
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,13 +29,16 @@ import com.churchdrive.app.ha.LoginStep
  * First-run sign in with the person's normal Home Assistant username and password (and their two-step code if they use
  * one). A pasted long-lived access token is still there as the other way in.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun LoginScreen(
     onSignIn: (url: String, token: String) -> Unit,
     onLogin: (url: String, username: String, password: String, onStep: (LoginStep) -> Unit) -> Unit,
     onCode: (code: String, onStep: (LoginStep) -> Unit) -> Unit,
 ) {
-    var url by rememberSaveable { mutableStateOf("http://homeassistant.local:8123") }
+    var url by rememberSaveable { mutableStateOf(com.churchdrive.app.HouseAddress.CLOUD_URL) }
+    // The address is the house's own and is not asked for; press and hold the title to change it.
+    var showAddress by rememberSaveable { mutableStateOf(false) }
     var username by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var token by rememberSaveable { mutableStateOf("") }
@@ -58,8 +63,11 @@ fun LoginScreen(
         modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp, alignment = androidx.compose.ui.Alignment.CenterVertically),
     ) {
-        Text("Church Drive", style = MaterialTheme.typography.headlineLarge)
-        OutlinedTextField(
+        Text(
+            "Church Drive", style = MaterialTheme.typography.headlineLarge,
+            modifier = Modifier.combinedClickable(onClick = {}, onLongClick = { showAddress = !showAddress }),
+        )
+        if (showAddress) OutlinedTextField(
             value = url,
             onValueChange = { url = it },
             label = { Text("Home Assistant address") },
