@@ -1,0 +1,123 @@
+package com.churchdrive.app.wear
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.wear.compose.material.Text
+import com.churchdrive.app.ui.AssistantCard
+import org.json.JSONObject
+
+private val SOFT = Color(0xFFE8EAFF)
+
+/** The symbol Clive's mark turns into for a card, or null for a card with none. */
+fun cardSymbol(card: AssistantCard?): String? {
+    card ?: return null
+    return when (card.kind) {
+        "weather" -> when (card.fields.optString("symbol").lowercase().replace('_', '-')) {
+            "sunny", "clear", "clear-day" -> "weather-sunny"
+            "partly-cloudy", "partlycloudy" -> "weather-partly-cloudy"
+            "cloudy" -> "weather-cloudy"
+            "rainy", "rain" -> "weather-rainy"
+            "pouring" -> "weather-pouring"
+            "snowy", "snow" -> "weather-snowy"
+            "lightning", "lightning-rainy" -> "weather-lightning"
+            "fog", "foggy" -> "weather-fog"
+            "night", "clear-night" -> "weather-night"
+            else -> "weather-partly-cloudy"
+        }
+        "score" -> when (card.fields.optString("sport").lowercase()) {
+            "basketball" -> "basketball"
+            "tennis" -> "tennis"
+            "cricket" -> "cricket"
+            "rugby" -> "rugby"
+            "baseball" -> "baseball"
+            "hockey" -> "hockey-puck"
+            else -> "soccer"
+        }
+        "fixture" -> "calendar-clock"
+        "music" -> "music-note"
+        else -> null
+    }
+}
+
+/** The glow's colours for a card: its own `palette` when the house sent one, else the weather's or a sport's, else Clive's. */
+fun cardPalette(card: AssistantCard?): GlowPalette {
+    card ?: return GlowPalette.Base
+    card.fields.optJSONArray("palette")?.strings()?.let { GlowPalette.from(it) }?.let { return it }
+    return when (card.kind) {
+        "weather" -> when (cardSymbol(card)) {
+            "weather-sunny", "weather-partly-cloudy" -> GlowPalette.Clear
+            "weather-night" -> GlowPalette.Night
+            "weather-snowy" -> GlowPalette.Snow
+            "weather-lightning" -> GlowPalette.Storm
+            else -> GlowPalette.Rain
+        }
+        "score", "fixture" -> GlowPalette.Sport
+        else -> GlowPalette.Base
+    }
+}
+
+private fun JSONObject.side(key: String): JSONObject = optJSONObject(key) ?: JSONObject()
+
+private fun short(side: JSONObject): String = side.optString("short").ifBlank { side.optString("name").take(3).uppercase() }
+
+/** The figures of a card, shown under its symbol. */
+@Composable
+fun CardBlock(card: AssistantCard) {
+    val ui = LocalUi.current
+    val f = card.fields
+    when (card.kind) {
+        "weather" -> Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(verticalAlignment = Alignment.Top) {
+                Text(f.optDouble("temp").takeIf { !it.isNaN() }?.let { "${Math.round(it)}" } ?: "–", color = Color.White, fontSize = ui.sp(44f), fontWeight = FontWeight.Bold)
+                Text("°", color = Color.White, fontSize = ui.sp(22f), fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = ui.d(4f)))
+            }
+            Text(f.optString("desc"), color = SOFT, fontSize = ui.sp(13f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            val hi = f.optDouble("high").takeIf { !it.isNaN() }?.let { "H ${Math.round(it)}°" }
+            val lo = f.optDouble("low").takeIf { !it.isNaN() }?.let { "L ${Math.round(it)}°" }
+            val rain = f.optDouble("rain").takeIf { !it.isNaN() }?.let { "${Math.round(it)}% rain" }
+            val line = listOfNotNull(hi, lo, rain).joinToString(" · ")
+            if (line.isNotEmpty()) Text(line, color = SOFT.copy(alpha = 0.85f), fontSize = ui.sp(11f), maxLines = 1)
+        }
+        "score" -> Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            val home = f.side("home")
+            val away = f.side("away")
+            Row(horizontalArrangement = Arrangement.spacedBy(ui.d(10f)), verticalAlignment = Alignment.CenterVertically) {
+                Badge(home.optString("badge_url").ifBlank { null }, short(home), ui.d(40f))
+                Text("${f.optInt("home_score")} – ${f.optInt("away_score")}", color = Color.White, fontSize = ui.sp(34f), fontWeight = FontWeight.Bold, maxLines = 1)
+                Badge(away.optString("badge_url").ifBlank { null }, short(away), ui.d(40f))
+            }
+            Text(f.optString("status"), color = Color.White, fontSize = ui.sp(13f), fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = ui.d(4f)))
+            val scorers = f.optString("scorers")
+            if (scorers.isNotBlank()) Text(scorers, color = SOFT.copy(alpha = 0.85f), fontSize = ui.sp(11f), textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
+        "fixture" -> Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            val home = f.side("home")
+            val away = f.side("away")
+            if (home.has("badge_url") || away.has("badge_url")) Row(horizontalArrangement = Arrangement.spacedBy(ui.d(8f)), verticalAlignment = Alignment.CenterVertically) {
+                Badge(home.optString("badge_url").ifBlank { null }, short(home), ui.d(26f))
+                Text("v", color = SOFT, fontSize = ui.sp(12f))
+                Badge(away.optString("badge_url").ifBlank { null }, short(away), ui.d(26f))
+            }
+            Text(f.optString("title"), color = Color.White, fontSize = ui.sp(14f), fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+            Text(f.optString("when"), color = Color.White, fontSize = ui.sp(26f), fontWeight = FontWeight.Bold, maxLines = 1)
+            Text(listOf(f.optString("time"), f.optString("in")).filter { it.isNotBlank() }.joinToString(" · "), color = Color.White, fontSize = ui.sp(13f), maxLines = 1)
+            Text(listOf(f.optString("where"), f.optString("comp")).filter { it.isNotBlank() }.joinToString(" · "), color = SOFT.copy(alpha = 0.85f), fontSize = ui.sp(11f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        "music" -> Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(f.optString("title"), color = Color.White, fontSize = ui.sp(16f), fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+            Text(f.optString("artist"), color = SOFT, fontSize = ui.sp(12f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            val device = f.optString("device")
+            if (device.isNotBlank()) Text("Playing on $device", color = SOFT.copy(alpha = 0.85f), fontSize = ui.sp(11f), modifier = Modifier.padding(top = ui.d(4f)), maxLines = 1)
+        }
+    }
+}

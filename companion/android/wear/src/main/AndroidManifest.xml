@@ -3,6 +3,15 @@
 
     <uses-feature android:name="android.hardware.type.watch" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Clive listens through the watch's own speech recogniser (asked for when he is first tapped) and buzzes when he has answered. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+    </queries>
 
     <!-- Cleartext allowed because Home Assistant is often reached over plain http on the LAN. -->
     <application
@@ -18,11 +27,12 @@
             android:name="com.google.android.wearable.standalone"
             android:value="true" />
 
-        <!-- Key actions: alarm, scenes, lights, vacuum, with Clive and the to-do list one tap away. -->
+        <!-- The companion: alarm, climate, lights, cleaning and the car charger, as pages the manager chooses in the Watch panel. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:label="Church Drive Manager">
+            android:theme="@style/Theme.Companion"
+            android:label="Church Drive">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

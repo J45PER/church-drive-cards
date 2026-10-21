@@ -10,7 +10,39 @@ enum class AssistState { Idle, Waiting, Listening, Thinking, Speaking }
 data class AssistMessage(val fromUser: Boolean, val text: String, val show: AssistantShow? = null)
 
 /** A picture and/or a link Clive wants to show with his answer (the house's `church_drive_assistant_show` event, fired by the `clive_show` script). */
-data class AssistantShow(val image: String?, val link: String?, val linkLabel: String?)
+data class AssistantShow(val image: String?, val link: String?, val linkLabel: String?, val card: AssistantCard? = null)
+
+/**
+ * A card for a screen that can draw one (the watch): the weather, a score or fixture (with club badges), what is playing. The house's
+ * `clive_show_card` script fires it in the same event as `card` ({kind, ...fields}); [fields] keeps only what is safe to use (every
+ * address is https).
+ */
+data class AssistantCard(val kind: String, val fields: org.json.JSONObject)
+
+/** The kinds of card the screens know how to draw. */
+val ASSISTANT_CARD_KINDS = setOf("weather", "score", "fixture", "music")
+
+/** An https address, or null. */
+fun httpsOnly(url: String?): String? = url?.trim()?.takeIf { it.startsWith("https://") }
+
+/** The card in an event's data, made safe (any address that is not https is dropped), or null when there isn't a drawable one. */
+fun parseAssistantCard(card: JSONObject?): AssistantCard? {
+    val kind = card?.optString("kind")?.lowercase().orEmpty()
+    if (card == null || kind !in ASSISTANT_CARD_KINDS) return null
+    fun clean(o: JSONObject): JSONObject {
+        val out = JSONObject()
+        for (k in o.keys()) {
+            val v = o.opt(k)
+            when {
+                v is JSONObject -> out.put(k, clean(v))
+                v is String && (k.endsWith("_url") || k == "badge" || k == "image") -> httpsOnly(v)?.let { out.put(k, it) }
+                v != null && v != JSONObject.NULL -> out.put(k, v)
+            }
+        }
+        return out
+    }
+    return AssistantCard(kind, clean(card))
+}
 
 /** The event name the `clive_show` script fires. */
 const val ASSISTANT_SHOW_EVENT = "church_drive_assistant_show"
@@ -27,8 +59,9 @@ fun parseAssistantShow(event: JSONObject, userId: String?): AssistantShow? {
     fun https(key: String) = data.optString(key).trim().takeIf { it.startsWith("https://") }
     val image = https("image_url")
     val link = https("link_url")
-    if (image == null && link == null) return null
-    return AssistantShow(image, link, data.optString("link_label").trim().takeIf { it.isNotEmpty() })
+    val card = parseAssistantCard(data.optJSONObject("card"))
+    if (image == null && link == null && card == null) return null
+    return AssistantShow(image, link, data.optString("link_label").trim().takeIf { it.isNotEmpty() }, card)
 }
 
 /** What one event of Home Assistant's `assist_pipeline/run` means for the screen. */
@@ -135,6 +168,7 @@ fun introDue(introducedEver: Boolean, told: Set<String>?, log: List<AssistFeatur
  * ever do they get the full introduction. Features also make up that introduction's "what I can do".
  */
 private val RAW_ASSIST_FEATURES = listOf(
+    AssistFeature("mdi:card-text-outline", "Cards on your watch", "What's the weather?", id = "watch-cards", detail = "On your watch {name} can answer with a card: the weather, a score with the club badges, the next game, a picture or what is playing, and his background takes on the colours of the answer."),
     AssistFeature("mdi:image-text", "Pictures and links", "Show me what a Nottingham Forest shirt looks like", id = "pictures-and-links", detail = "{name} can now show a picture or a link under his answer on this screen, when it helps.", kind = AssistantChange.Change),
     AssistFeature("mdi:account-voice", "A new name: Clive", "", id = "renamed-clive", detail = "Jarvis is now Clive, with a new logo. You can still wake him with \"Hey Jarvis\" for now.", kind = AssistantChange.Change),
     AssistFeature("mdi:watch-variant", "{name} on your watch", "", id = "jarvis-on-watch", detail = "The Church Drive app on a Pixel Watch has {name}: speak or tap a sentence and he answers on the watch, aloud too if you like.", kind = AssistantChange.Change),

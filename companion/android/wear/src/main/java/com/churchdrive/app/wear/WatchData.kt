@@ -43,10 +43,26 @@ object WatchData {
 
     private var subscription = -1
 
+    private var prefs: android.content.SharedPreferences? = null
+
+    /** Shows what was known last time until the house answers (so the pages are right on the first frame). */
+    fun restore(context: android.content.Context) {
+        val p = context.applicationContext.getSharedPreferences("watch_data", android.content.Context.MODE_PRIVATE)
+        prefs = p
+        p.getString("config", null)?.let { raw -> runCatching { config.value = WatchConfig.parse(JSONObject(raw)) } }
+    }
+
+    /** Only the watch settings (Clive's app needs no more). */
+    suspend fun loadConfig() {
+        val raw = WatchHa.api.ask("church_drive/watch", JSONObject()) ?: return
+        config.value = WatchConfig.parse(raw)
+        (raw as? JSONObject)?.let { prefs?.edit()?.putString("config", it.toString())?.apply() }
+    }
+
     /** Reads what the watch is set up to show and starts the live states. Call when the line comes up, and again after it drops. */
     suspend fun load() {
         val api = WatchHa.api
-        api.ask("church_drive/watch", JSONObject())?.let { config.value = WatchConfig.parse(it) }
+        loadConfig()
         api.ask("church_drive/library", JSONObject())?.let { looks.value = SceneLooks.parse(it, null) }
         (api.ask("lovelace/config", JSONObject().put("url_path", WatchLights.DASHBOARD)) as? JSONObject)?.let { floors.value = WatchLights.parse(it) }
         follow()

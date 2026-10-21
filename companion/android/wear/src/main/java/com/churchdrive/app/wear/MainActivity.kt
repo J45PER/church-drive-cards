@@ -59,6 +59,7 @@ import kotlinx.coroutines.withContext
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        WatchData.restore(this)
         setContent { MaterialTheme { CompanionRoot(onExit = { finish() }) } }
     }
 }

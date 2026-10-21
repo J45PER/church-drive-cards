@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The companion has pages that swipe sideways, so the system's own swipe-to-close is turned off: the app closes from the left-edge strip it draws itself. -->
+    <style name="Theme.Companion" parent="@android:style/Theme.DeviceDefault">
+        <item name="android:windowSwipeToDismiss">false</item>
+    </style>
+</resources>
