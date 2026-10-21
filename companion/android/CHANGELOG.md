@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.42.0
+
+- New colours for the app icons (Church Drive, Church Drive To-Do, the watch tiles): a soft three-point glow of indigo, purple and green on white, like the assistant's orb. The status-bar icon stays plain white.
+- New start-up screen: the app's mark, its name ("Home Manager") and "Powered by Home Assistant" with the Home Assistant logo, for a moment before the app opens. In dark mode it is all white on the app's own dark colour; in light mode the mark keeps its colours and the text is dark. Tap it to skip. The phone's own start-up screen is now just that background.
+
 ## 0.41.0
 
 - The assistant's name comes from the house (Church Drive > Configure > Assistant name in Home Assistant), so the phone app, watch and To-Do app all follow a rename without an update. The last name heard is kept on the device. Earlier names (Jarvis, Clive) are still understood when spoken to him.

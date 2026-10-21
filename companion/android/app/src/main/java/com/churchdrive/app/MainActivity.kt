@@ -243,6 +243,8 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+            // The first screen the person sees after the system splash: the logo, the name and "Powered by Home Assistant", for a moment.
+            com.churchdrive.app.ui.BrandSplash("Home Manager", R.drawable.ic_brand_house)
         }
     }
 

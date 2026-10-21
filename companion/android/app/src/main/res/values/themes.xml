@@ -4,10 +4,10 @@
         <item name="android:windowActionBar">false</item>
         <item name="android:windowNoTitle">true</item>
     </style>
-    <!-- The splash screen while the app starts: the launcher icon (its house on the teal background), then the normal theme. -->
+    <!-- The system splash while the app starts: just the background (nothing drawn), then the normal theme; the branded screen (BrandSplash) comes next. -->
     <style name="Theme.ChurchDrive.Starting" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/ic_launcher_background</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_blank</item>
         <item name="postSplashScreenTheme">@style/Theme.ChurchDrive</item>
     </style>
     <!-- The voice overlay: the system adds no open, close or task slide of its own, so nothing slides with the card (it animates its own backdrop and card). -->
