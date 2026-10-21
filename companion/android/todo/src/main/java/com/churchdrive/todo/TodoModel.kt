@@ -18,12 +18,18 @@ import com.churchdrive.app.ha.HaClient
 import com.churchdrive.app.ha.LoginStep
 import com.churchdrive.app.ha.asApi
 import com.churchdrive.app.ha.data
+import com.churchdrive.app.ui.CliveList
+import com.churchdrive.app.ui.CliveMatch
+import com.churchdrive.app.ui.CliveTodoCommand
 import com.churchdrive.app.ui.TodoItem
 import com.churchdrive.app.ui.Tone
 import com.churchdrive.app.ui.ask
 import com.churchdrive.app.ui.houseTask
 import com.churchdrive.app.ui.houseTaskFor
+import com.churchdrive.app.ui.matchOpenTask
 import com.churchdrive.app.ui.myTodoList
+import com.churchdrive.app.ui.parseCliveTodo
+import com.churchdrive.app.ui.spokenList
 import com.churchdrive.app.ui.parseTodoItems
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -367,6 +373,54 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
         if (text.isBlank() || !tab.canAdd) return
         client.callService("todo", "add_item", id, data("item" to text.trim()))
         changed(id)
+    }
+
+    private fun tabOf(l: CliveList) = when (l) {
+        CliveList.Mine -> TodoTab.Mine
+        CliveList.Shared -> TodoTab.Shared
+        CliveList.Cleaning -> TodoTab.Cleaning
+    }
+
+    private fun listName(t: TodoTab) = when (t) {
+        TodoTab.Mine -> "your list"
+        TodoTab.Shared -> "the shared list"
+        TodoTab.Cleaning -> "the cleaning list"
+        TodoTab.House -> "the house list"
+    }
+
+    /**
+     * Clive To Do: does one typed or spoken sentence and says what happened. It can only add a task to the person's own, the shared or
+     * the cleaning list, or tick one off there; every other sentence is turned down, so nothing else in the house is reachable from here.
+     */
+    fun clive(input: String): String {
+        if (!connected) return "I can't reach the house right now."
+        return when (val c = parseCliveTodo(input)) {
+            is CliveTodoCommand.Add -> {
+                val tab = tabOf(c.list)
+                if (listId(tab) == null) return "I can't find that list."
+                c.items.forEach { add(tab, it) }
+                "Added ${spokenList(c.items)} to ${listName(tab)}."
+            }
+            is CliveTodoCommand.Done -> {
+                val tabs = c.list?.let { listOf(tabOf(it)) } ?: listOf(TodoTab.Mine, TodoTab.Shared, TodoTab.Cleaning)
+                val found = tabs.flatMap { t ->
+                    when (val m = matchOpenTask(items(t).orEmpty(), c.text)) {
+                        is CliveMatch.One -> listOf(t to m.item)
+                        is CliveMatch.Several -> m.items.map { t to it }
+                        CliveMatch.None -> emptyList()
+                    }
+                }
+                when {
+                    found.isEmpty() -> "I can't find \"${c.text}\" on your open lists."
+                    found.size == 1 -> {
+                        setDone(found[0].first, found[0].second, true)
+                        "Ticked off ${found[0].second.summary}."
+                    }
+                    else -> "Which one? " + spokenList(found.map { "${it.second.summary} (${listName(it.first)})" }) + ". Say a bit more of its name."
+                }
+            }
+            CliveTodoCommand.Unknown -> "I can only add things and tick them off here. Try \"add milk\" or \"tick off the bins\"."
+        }
     }
 
     private fun changed(id: String) {

@@ -179,11 +179,11 @@ private fun PanelCard(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun PanelRow(icon: ImageVector, text: String, supporting: String? = null, onClick: (() -> Unit)? = null, trailing: (@Composable () -> Unit)? = null) {
+private fun PanelRow(icon: ImageVector, text: String, supporting: String? = null, onClick: (() -> Unit)? = null, leading: (@Composable () -> Unit)? = null, trailing: (@Composable () -> Unit)? = null) {
     ListItem(
         headlineContent = { Text(text) },
         supportingContent = supporting?.let { { Text(it) } },
-        leadingContent = { Icon(icon, contentDescription = null) },
+        leadingContent = leading ?: { Icon(icon, contentDescription = null) },
         trailingContent = trailing,
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         modifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier,
@@ -235,6 +235,8 @@ private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Pa
                 Icons.Outlined.Checklist, "To-do",
                 if (todoOpensApp) "Opens Church Drive To-Do" else "Your list, the shared list, cleaning and the house's jobs",
                 onClick = onTodo,
+                // When it opens the To-Do app, show that app's own icon.
+                leading = if (todoOpensApp) { { androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(com.churchdrive.app.R.drawable.ic_todo_mark), contentDescription = null, modifier = Modifier.size(24.dp)) } } else null,
             )
         }
         // Device Health, for everyone: batteries, filters and devices that stopped answering.
@@ -336,6 +338,7 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                 Icons.Outlined.Checklist, "Open To-do in Church Drive To-Do",
                 if (openApp) "To-do, and the tasks on Home, open the To-Do app. Turn off to use the To-do page in this app instead."
                 else "To-do and the tasks on Home open the To-do page in this app. Turn on to open the To-Do app.",
+                leading = { androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(com.churchdrive.app.R.drawable.ic_todo_mark), contentDescription = null, modifier = Modifier.size(24.dp)) },
                 trailing = { Switch(checked = openApp, onCheckedChange = { on -> openApp = on; com.churchdrive.app.TodoLink.setPreferApp(context, on) }) },
             )
         }

@@ -3,6 +3,11 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.39.0
+
+- **Clive To Do**: a round Clive button on every page opens a small sheet where you type or say a sentence. Clive can only add a task ("add milk", "add bread, milk and eggs", "put bin bags on the shared list") or tick one off ("tick off the bins", "mark hoovering as done"). He works on your own, the shared and the cleaning lists, asks "which one?" if more than one task fits, and turns down anything else. Speaking uses the phone's own speech input.
+- New icon colours: the indigo, purple and green gradient on white.
+
 ## 0.38.2
 
 - Shared code change: the voice assistant's name is now Clive. Nothing visible in this app.
