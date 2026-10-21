@@ -121,7 +121,7 @@ fun CliveGlow(state: AssistState, level: Float, palette: GlowPalette, dim: Boole
         blob(cb, -phase * 1.3f + 330f, 0.28f)
         blob(cc, phase * 0.8f + 90f, 0.3f)
         // Darker towards the edge so the bezel and the text stay clear.
-        drawCircle(Brush.radialGradient(0.45f to Color.Transparent, 1f to Color(0xB305060E), c, w * 0.55f), w * 0.55f, c)
+        drawCircle(Brush.radialGradient(0.45f to Color.Transparent, 1f to Color(0xB305060E), center = c, radius = w * 0.55f), w * 0.55f, c)
     }
 }
 
