@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.39.1
+
+- Settings no longer names the old wake word as an example. The screens still show the real wake word, whatever the house's Assist uses (today "Hey Jarvis", until a "Hey Clive" one is added).
+
 ## 0.39.0
 
 - New icons use the Church Drive colours: the house (and the watch's Clive and To-do tiles) is now drawn in the indigo, purple and green gradient on white, not white on teal. The status-bar icon stays plain white, as Android needs.
