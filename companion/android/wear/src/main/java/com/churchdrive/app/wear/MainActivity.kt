@@ -31,7 +31,7 @@ private const val VACUUM = "vacuum.gregg"
 
 private enum class Page { Home, Alarm, Scenes, Vacuum }
 
-/** Key actions: Jarvis and the to-do list, then the alarm, scenes, all lights off and the vacuum. */
+/** Key actions: Clive and the to-do list, then the alarm, scenes, all lights off and the vacuum. */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,7 +66,7 @@ private fun Actions(connected: Boolean) {
             Page.Home -> {
                 item { ListHeader { Text("Church Drive") } }
                 if (!connected) item { Text("Connecting…", textAlign = TextAlign.Center) }
-                row("Jarvis") { context.startActivity(Intent(context, JarvisActivity::class.java)) }
+                row("Clive") { context.startActivity(Intent(context, JarvisActivity::class.java)) }
                 row("To-Do") { context.startActivity(Intent(context, TodoActivity::class.java)) }
                 row("Alarm", alarmWords(states[ALARM]?.state)) { page = Page.Alarm }
                 row("Scenes") { page = Page.Scenes }

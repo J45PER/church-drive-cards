@@ -54,7 +54,8 @@ class AssistDataTest {
 
     @Test
     fun theAssistantIsNamedAfterItsWakeWord() {
-        assertEquals("Jarvis", com.churchdrive.app.ui.assistantName("hey_jarvis"))
+        assertEquals("Clive", com.churchdrive.app.ui.assistantName("hey_jarvis"))
+        assertEquals("Clive", com.churchdrive.app.ui.assistantName("hey_clive"))
         assertEquals("Nabu", com.churchdrive.app.ui.assistantName("okay_nabu"))
         assertEquals("Alexa", com.churchdrive.app.ui.assistantName("alexa"))
         assertEquals("", com.churchdrive.app.ui.assistantName(null))

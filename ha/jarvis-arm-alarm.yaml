@@ -1,4 +1,4 @@
-# Script script.jarvis_arm_alarm: Arm-only: Jarvis can arm the alarm but there is deliberately no way to disarm by voice. The alarm panel itself is NOT exposed to Assist; status comes from sensor.alarm_status. A copy of the live script.
+# Script script.jarvis_arm_alarm: Arm-only: Clive can arm the alarm but there is deliberately no way to disarm by voice. The alarm panel itself is NOT exposed to Assist; status comes from sensor.alarm_status. A copy of the live script.
 alias: Arm the alarm
 description: 'Arm the Church Drive alarm, in Home mode (people staying in) or Away mode (everyone out). This can only arm: there is deliberately no way to disarm by voice. To find out whether the alarm is set, read the Alarm status sensor instead of running this.'
 fields:

@@ -108,7 +108,7 @@ fun HomeScreen(
     val pages = Page.entries.filter { !it.adminOnly && it != Page.Todo }
     if (page !in pages) page = Page.Home
     // The account panel (null shut, "account", "settings", "about" or "todo"), which slides in from the right: declared above.
-    // Asked for from outside (Jarvis alone, or the app opened on its settings).
+    // Asked for from outside (Clive alone, or the app opened on its settings).
     androidx.compose.runtime.LaunchedEffect(openPage) { if (openPage == "settings") panel = "settings" }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val title = if (page == Page.Home) "Hello ${userName?.substringBefore(' ') ?: ""}".trim() else page.label
@@ -183,7 +183,7 @@ fun HomeScreen(
             // The dashboard's icons, in the phone's own (wallpaper) colours. The Security icon follows the alarm.
             val alarmState = entities[ALARM_ENTITY]?.state
             NavigationBar {
-                // The same bar: while Jarvis is open its buttons change into his (and back).
+                // The same bar: while Clive is open its buttons change into his (and back).
                 val jarvis = LocalJarvis.current
                 val jarvisModel = jarvis?.model
                 androidx.compose.animation.Crossfade(jarvis?.open == true && jarvisModel != null, Modifier.weight(1f), label = "bar") { jarvisOpen ->
@@ -254,11 +254,11 @@ fun HomeScreen(
                 }
                 DashboardPage(panels[key].orEmpty(), entities, registry, call)
             }
-            // Room to scroll the last card clear of Jarvis's button.
+            // Room to scroll the last card clear of Clive's button.
             Spacer(Modifier.height(72.dp))
         }
     }
-    // Jarvis, over the page, and his round button over him: one button, the same one shut or open.
+    // Clive, over the page, and his round button over him: one button, the same one shut or open.
     JarvisOverlay(onSettings = { panel = "settings" })
     JarvisFab()
     if (openCamera != null && statesLoaded) CameraViewerFor(openCamera, entities, registry, call, onCameraClosed, answer = openCameraAnswer)

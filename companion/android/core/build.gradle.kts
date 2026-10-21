@@ -4,7 +4,7 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
-// Shared by the phone app, the watch app and the to-do app: the Home Assistant connection, sign-in storage, to-do and Jarvis data.
+// Shared by the phone app, the watch app and the to-do app: the Home Assistant connection, sign-in storage, to-do and Clive data.
 // Package names are unchanged (com.churchdrive.app.*), so moving code here never changes an import.
 android {
     namespace = "com.churchdrive.core"

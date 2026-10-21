@@ -18,7 +18,7 @@
             android:name="com.google.android.wearable.standalone"
             android:value="true" />
 
-        <!-- Key actions: alarm, scenes, lights, vacuum, with Jarvis and the to-do list one tap away. -->
+        <!-- Key actions: alarm, scenes, lights, vacuum, with Clive and the to-do list one tap away. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -29,12 +29,12 @@
             </intent-filter>
         </activity>
 
-        <!-- Jarvis, the house's voice assistant. -->
+        <!-- Clive, the house's voice assistant. -->
         <activity
             android:name=".JarvisActivity"
             android:exported="true"
             android:icon="@drawable/ic_jarvis"
-            android:label="Jarvis">
+            android:label="Clive">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -66,7 +66,7 @@
             </intent-filter>
         </service>
 
-        <!-- The tile: Jarvis, To-Do and key actions from the watch face's tile carousel. -->
+        <!-- The tile: Clive, To-Do and key actions from the watch face's tile carousel. -->
         <service
             android:name=".QuickTile"
             android:exported="true"
