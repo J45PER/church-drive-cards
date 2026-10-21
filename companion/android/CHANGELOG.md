@@ -4,6 +4,12 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.38.1
+
+- New look for the app icon: the Church Drive house with a rounded square tucked into its roof, cut out where they overlap, in white on the teal of the logo. The launcher icon, the splash screen, the notification icon in the status bar and the watch app's icon all use it. (The themed-icon version is kept in the project, still switched off.)
+- The assistant's round button shows the new Clive mark (two rounded squares, cut out where they overlap) when it is shut, and the watch app's Jarvis and To-do tiles have new icons to match.
+- The mark is drawn from exact shapes now, not pictures, so it stays sharp at every size.
+
 ## 0.38.0
 
 - Tasks on the Home page open that task in Church Drive To-Do (its edit page) when the To-Do app is installed. Settings has a new "Open To-do in Church Drive To-Do" switch (shown when the app is installed): turn it off and To-do, and the tasks on Home, open this app's own To-do page instead. Shopping and steps lists always open in this app.
