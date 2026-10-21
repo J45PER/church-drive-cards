@@ -9,10 +9,10 @@ enum class AssistState { Idle, Waiting, Listening, Thinking, Speaking }
 /** One line of the conversation: what the person said, or what the house answered. */
 data class AssistMessage(val fromUser: Boolean, val text: String, val show: CliveShow? = null)
 
-/** A picture and/or a link Clive wants to show with his answer (the house's `church_drive_clive_show` event, fired by the `jarvis_show` script). */
+/** A picture and/or a link Clive wants to show with his answer (the house's `church_drive_clive_show` event, fired by the `clive_show` script). */
 data class CliveShow(val image: String?, val link: String?, val linkLabel: String?)
 
-/** The event name the `jarvis_show` script fires. */
+/** The event name the `clive_show` script fires. */
 const val CLIVE_SHOW_EVENT = "church_drive_clive_show"
 
 /**
@@ -95,7 +95,7 @@ fun isNotUnderstood(answer: String): Boolean {
 enum class IntroKind { First, Update }
 
 /** What kind of entry the Clive log holds: something he can now do, something that works differently, or something that was put right. */
-enum class JarvisChange { Feature, Change, Fix }
+enum class AssistantChange { Feature, Change, Fix }
 
 /**
  * One entry of the Clive log: a feature, change or fix. [id] never changes and is never reused: it is how the app remembers
@@ -107,7 +107,7 @@ data class AssistFeature(
     val example: String,
     val id: String = title,
     val detail: String = "",
-    val kind: JarvisChange = JarvisChange.Feature,
+    val kind: AssistantChange = AssistantChange.Feature,
 )
 
 /** What an introduction shows: which kind, and the log entries it lists. */
@@ -123,7 +123,7 @@ data class IntroResult(val due: IntroDue?, val told: Set<String>)
  */
 fun introDue(introducedEver: Boolean, told: Set<String>?, log: List<AssistFeature>): IntroResult {
     val all = log.map { it.id }.toSet()
-    if (!introducedEver) return IntroResult(IntroDue(IntroKind.First, log.filter { it.kind == JarvisChange.Feature }), all)
+    if (!introducedEver) return IntroResult(IntroDue(IntroKind.First, log.filter { it.kind == AssistantChange.Feature }), all)
     if (told == null) return IntroResult(null, all)
     val fresh = log.filter { it.id !in told }
     return if (fresh.isEmpty()) IntroResult(null, told) else IntroResult(IntroDue(IntroKind.Update, fresh), told + all)
@@ -135,12 +135,12 @@ fun introDue(introducedEver: Boolean, told: Set<String>?, log: List<AssistFeatur
  * ever do they get the full introduction. Features also make up that introduction's "what I can do".
  */
 val ASSIST_FEATURES = listOf(
-    AssistFeature("mdi:image-text", "Pictures and links", "Show me what a Nottingham Forest shirt looks like", id = "pictures-and-links", detail = "Clive can now show a picture or a link under his answer on this screen, when it helps.", kind = JarvisChange.Change),
-    AssistFeature("mdi:account-voice", "A new name: Clive", "", id = "renamed-clive", detail = "Jarvis is now Clive, with a new logo. You can still wake him with \"Hey Jarvis\" for now.", kind = JarvisChange.Change),
-    AssistFeature("mdi:watch-variant", "Clive on your watch", "", id = "jarvis-on-watch", detail = "The Church Drive app on a Pixel Watch has Clive: speak or tap a sentence and he answers on the watch, aloud too if you like.", kind = JarvisChange.Change),
-    AssistFeature("mdi:timer-outline", "How long he took", "", id = "response-timing", detail = "Settings shows how long his last answer took, step by step, so a slow part can be found.", kind = JarvisChange.Change),
-    AssistFeature("mdi:timer-sand", "Quicker, and stays with you", "", id = "quicker-follow-up", detail = "Clive answers sooner, and when he asks \"anything else?\" he keeps listening instead of closing.", kind = JarvisChange.Fix),
-    AssistFeature("mdi:chat-plus-outline", "New chat, Voice and Settings", "", id = "jarvis-bar", detail = "Clive's bottom bar has five buttons: Close, New chat, Type in the middle, Voice on or off, and Settings.", kind = JarvisChange.Change),
+    AssistFeature("mdi:image-text", "Pictures and links", "Show me what a Nottingham Forest shirt looks like", id = "pictures-and-links", detail = "Clive can now show a picture or a link under his answer on this screen, when it helps.", kind = AssistantChange.Change),
+    AssistFeature("mdi:account-voice", "A new name: Clive", "", id = "renamed-clive", detail = "Jarvis is now Clive, with a new logo. You can still wake him with \"Hey Jarvis\" for now.", kind = AssistantChange.Change),
+    AssistFeature("mdi:watch-variant", "Clive on your watch", "", id = "jarvis-on-watch", detail = "The Church Drive app on a Pixel Watch has Clive: speak or tap a sentence and he answers on the watch, aloud too if you like.", kind = AssistantChange.Change),
+    AssistFeature("mdi:timer-outline", "How long he took", "", id = "response-timing", detail = "Settings shows how long his last answer took, step by step, so a slow part can be found.", kind = AssistantChange.Change),
+    AssistFeature("mdi:timer-sand", "Quicker, and stays with you", "", id = "quicker-follow-up", detail = "Clive answers sooner, and when he asks \"anything else?\" he keeps listening instead of closing.", kind = AssistantChange.Fix),
+    AssistFeature("mdi:chat-plus-outline", "New chat, Voice and Settings", "", id = "jarvis-bar", detail = "Clive's bottom bar has five buttons: Close, New chat, Type in the middle, Voice on or off, and Settings.", kind = AssistantChange.Change),
     AssistFeature("mdi:keyboard-outline", "Type or talk", "", id = "type-or-talk", detail = "Open Clive with his logo button on any page, ready to type or ready to listen (your choice in Settings)."),
     AssistFeature("mdi:microphone-message", "Hands-free with the wake word", "Hey Jarvis, who is home?", id = "wake-word"),
     AssistFeature("mdi:chat-processing-outline", "Natural conversation", "Is it going to rain tomorrow?", id = "conversation"),

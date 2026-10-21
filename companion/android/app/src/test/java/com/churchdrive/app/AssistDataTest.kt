@@ -95,12 +95,12 @@ class AssistDataTest {
         assertTrue(com.churchdrive.app.ui.MicStream.levelOf(loud, loud.size) > 0.9f)
     }
 
-    private fun entry(id: String, kind: com.churchdrive.app.ui.JarvisChange = com.churchdrive.app.ui.JarvisChange.Feature) =
+    private fun entry(id: String, kind: com.churchdrive.app.ui.AssistantChange = com.churchdrive.app.ui.AssistantChange.Feature) =
         com.churchdrive.app.ui.AssistFeature("mdi:x", id, "say $id", id = id, kind = kind)
 
     @Test
     fun theFirstIntroductionIsFullAndThenOnlyUntoldLogEntriesCome() {
-        val fix = entry("fix-1", com.churchdrive.app.ui.JarvisChange.Fix)
+        val fix = entry("fix-1", com.churchdrive.app.ui.AssistantChange.Fix)
         val log = listOf(fix, entry("b"), entry("a"))
         // Never introduced: the full introduction, features only, and everything in the log counts as told.
         val first = com.churchdrive.app.ui.introDue(false, null, log)
@@ -121,7 +121,7 @@ class AssistDataTest {
     }
 
     @Test
-    fun theJarvisLogHasUniqueIds() {
+    fun theAssistantLogHasUniqueIds() {
         val ids = com.churchdrive.app.ui.ASSIST_FEATURES.map { it.id }
         assertEquals(ids.size, ids.toSet().size)
     }

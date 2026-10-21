@@ -1,4 +1,4 @@
-# Script script.jarvis_show: lets Clive put a picture and/or a link on the screen of the Church Drive app of the person who asked. Exposed to Assist. A copy of the live script.
+# Script script.clive_show: lets Clive put a picture and/or a link on the screen of the Church Drive app of the person who asked. Exposed to Assist. A copy of the live script.
 # It only fires an event (church_drive_clive_show). The event carries the asker's Home Assistant user, so the app of that person (and nobody else's) shows it under his answer.
 # Anything without a screen ignores it, so Clive can call it every time without harm.
 alias: Show on screen (Clive)

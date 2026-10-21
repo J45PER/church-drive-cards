@@ -6,6 +6,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 ## 0.40.0
 
+- Internal: code is no longer named after the assistant (Jarvis* became Assistant*), and the house's scripts are now clive_*; nothing changes on screen.
 - Clive can show a picture or a link under his answer in the assistant screen when it helps (the house's new `jarvis_show` script). Only https addresses are shown, and only to the person who asked. Nothing changes when he has nothing to show, and his spoken answer never depends on it.
 
 ## 0.39.2

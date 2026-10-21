@@ -136,12 +136,12 @@ fun hasMicrophone(context: Context): Boolean =
  * Clive inside the app: one controller, shared by the wake word host (which owns the microphone and the model), the overlay that
  * shows him and the round button on every page, which is the same button whether he is shut or open.
  */
-class JarvisController {
+class AssistantController {
     var model by mutableStateOf<AssistModel?>(null)
     var open by mutableStateOf(false)
     var intro by mutableStateOf<IntroDue?>(null)
     /** The typing box, shared with the bottom bar (whose buttons become Clive's while he is open). */
-    val ui = JarvisTyping()
+    val ui = AssistantTyping()
     var userName = ""
     var onTask: (String) -> Unit = {}
     /** Opens him from the button: ready to type, or listening, as Settings says. */
@@ -150,16 +150,16 @@ class JarvisController {
     var enableWake: () -> Unit = {}
 }
 
-val LocalJarvis = androidx.compose.runtime.compositionLocalOf<JarvisController?> { null }
+val LocalAssistant = androidx.compose.runtime.compositionLocalOf<AssistantController?> { null }
 
 /**
  * While the app is open (and the setting is on), listens for the house's wake word ("Hey Jarvis") by streaming the microphone to
  * Home Assistant, which does the listening, exactly as a Voice Assistant satellite does. When the wake word is heard, the assistant
- * opens over the app (see [JarvisOverlay]) and the rest of the sentence is its command.
+ * opens over the app (see [AssistantOverlay]) and the rest of the sentence is its command.
  * It listens only while the app is on screen, and stops the moment the app is left.
  */
 @Composable
-fun AssistWakeHost(controller: JarvisController, connected: Boolean, base: String, api: HaApi?, userName: String, onTask: (String) -> Unit) {
+fun AssistWakeHost(controller: AssistantController, connected: Boolean, base: String, api: HaApi?, userName: String, onTask: (String) -> Unit) {
     if (api == null) return
     val context = LocalContext.current
     val enabled = AssistWakeSetting.enabled
@@ -221,8 +221,8 @@ fun AssistWakeHost(controller: JarvisController, connected: Boolean, base: Strin
 
 /** Clive over the app (not a window of its own, so his round button can stay above him). Nothing when he is shut. */
 @Composable
-fun JarvisOverlay(onSettings: () -> Unit = {}) {
-    val j = LocalJarvis.current ?: return
+fun AssistantOverlay(onSettings: () -> Unit = {}) {
+    val j = LocalAssistant.current ?: return
     val model = j.model ?: return
     if (!j.open) return
     // While he is open the window must not pan up to keep the typing box in view (the phone's default for this window): he places the box above the
@@ -237,7 +237,7 @@ fun JarvisOverlay(onSettings: () -> Unit = {}) {
     }
     // Taps on him stay on him, not on the page underneath.
     androidx.compose.foundation.layout.Box(
-        androidx.compose.ui.Modifier.fillMaxSize().padding(bottom = jarvisBottomPad(keyboard = true)).clickable(
+        androidx.compose.ui.Modifier.fillMaxSize().padding(bottom = assistantBottomPad(keyboard = true)).clickable(
             interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null,
         ) {},
     ) {
@@ -258,14 +258,14 @@ fun JarvisOverlay(onSettings: () -> Unit = {}) {
  * above everything of his, so it never moves or doubles up.
  */
 @Composable
-fun JarvisFab(modifier: Modifier = Modifier) {
-    val j = LocalJarvis.current ?: return
+fun AssistantFab(modifier: Modifier = Modifier) {
+    val j = LocalAssistant.current ?: return
     val model = j.model ?: return
     val listening = model.state == AssistState.Listening
     // 16 dp above the bottom bar at the right: the place Material's own floating button takes. Over the keyboard's top when he is open and it is up.
-    val pad = jarvisBottomPad(keyboard = j.open)
+    val pad = assistantBottomPad(keyboard = j.open)
     Box(modifier.fillMaxSize().padding(end = 16.dp, bottom = pad + 16.dp), contentAlignment = Alignment.BottomEnd) {
-        JarvisRound(if (j.open) "Talk" else "Open Clive", {
+        AssistantRound(if (j.open) "Talk" else "Open Clive", {
             when {
                 !j.open -> j.openFromButton()
                 // The introduction's "Try it": done with it, and listen.

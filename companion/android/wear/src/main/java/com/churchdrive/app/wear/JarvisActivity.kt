@@ -35,15 +35,15 @@ import org.json.JSONObject
  * Clive on the wrist: say or tap a sentence, it goes to the house's Assist pipeline (the same one the phone's Clive uses, so anything
  * Home Assistant can do by voice works) and the answer is shown and, unless turned off, spoken from the watch.
  */
-class JarvisActivity : ComponentActivity() {
+class AssistantActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { Signed { connected -> JarvisScreen(connected) } }
+        setContent { Signed { connected -> AssistantScreen(connected) } }
     }
 }
 
 /** One conversation with the house; follow-ups carry on from the last answer. */
-private class JarvisModel(private val context: Context) {
+private class AssistantModel(private val context: Context) {
     var state by mutableStateOf(AssistState.Idle)
     var heard by mutableStateOf("")
     var answer by mutableStateOf("")
@@ -144,9 +144,9 @@ private class JarvisModel(private val context: Context) {
 }
 
 @Composable
-private fun JarvisScreen(connected: Boolean) {
+private fun AssistantScreen(connected: Boolean) {
     val context = LocalContext.current
-    val model = remember { JarvisModel(context) }
+    val model = remember { AssistantModel(context) }
     DisposableEffect(Unit) { onDispose { model.stop() } }
     val listen = rememberListener("Ask Clive") { model.send(it) }
 

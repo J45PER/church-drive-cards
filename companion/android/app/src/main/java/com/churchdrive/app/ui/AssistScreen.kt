@@ -134,13 +134,13 @@ fun AssistPanel(
     /** Open with the keyboard up instead of listening (the person's choice in Settings). */
     startTyping: Boolean = false,
     /** The typing box's state when the app's bar drives it; Clive on his own keeps his own. */
-    typingState: JarvisTyping? = null,
+    typingState: AssistantTyping? = null,
     /** The bar's Settings button: take the person to Clive's settings. */
     onSettings: () -> Unit = {},
     /** Shown inside the app (over the page, under the app's round Clive button) instead of as a window of its own. */
     embedded: Boolean = false,
 ) {
-    val ui = typingState ?: remember { JarvisTyping(startTyping) }
+    val ui = typingState ?: remember { AssistantTyping(startTyping) }
     var shown by remember { mutableStateOf(false) }
     var leaving by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { shown = true }
@@ -357,7 +357,7 @@ private fun BottomGlow(active: Boolean, level: Float, modifier: Modifier = Modif
  * The round button at the bottom right: his coloured orb on the dark grey circle, with his white mark over it (animated: see CliveGlyph): the drifting logo when he is shut, a microphone when he waits, a squircle to stop while he listens. Same size and place everywhere, above the bottom bar.
  */
 @Composable
-fun JarvisRound(label: String, onClick: () -> Unit, state: AssistState = AssistState.Idle, level: Float = 0f, content: @Composable () -> Unit) {
+fun AssistantRound(label: String, onClick: () -> Unit, state: AssistState = AssistState.Idle, level: Float = 0f, content: @Composable () -> Unit) {
     val scheme = MaterialTheme.colorScheme
     Box(
         modifier = Modifier.size(58.dp).shadow(6.dp, CircleShape).clip(CircleShape)
@@ -375,7 +375,7 @@ fun JarvisRound(label: String, onClick: () -> Unit, state: AssistState = AssistS
 
 
 /** What the typing box is doing: shared, so the app's bottom bar (which Clive's buttons borrow while he is open) can drive it. */
-class JarvisTyping(start: Boolean = false) {
+class AssistantTyping(start: Boolean = false) {
     var typing by mutableStateOf(start)
     var typed by mutableStateOf("")
     val focus = FocusRequester()
@@ -398,7 +398,7 @@ class JarvisTyping(start: Boolean = false) {
 
 /** How far up the bottom of Clive sits: above the bottom bar (80 dp and the system's bar), or above the keyboard when that is higher. */
 @Composable
-fun jarvisBottomPad(keyboard: Boolean): androidx.compose.ui.unit.Dp {
+fun assistantBottomPad(keyboard: Boolean): androidx.compose.ui.unit.Dp {
     val d = androidx.compose.ui.platform.LocalDensity.current
     val nav = WindowInsets.navigationBars.getBottom(d)
     val ime = if (keyboard) WindowInsets.ime.getBottom(d) else 0
@@ -411,7 +411,7 @@ fun jarvisBottomPad(keyboard: Boolean): androidx.compose.ui.unit.Dp {
  * of the app's buttons in the same bar.
  */
 @Composable
-fun RowScope.JarvisBarItems(model: AssistModel, ui: JarvisTyping, onClose: () -> Unit, onSettings: () -> Unit) {
+fun RowScope.AssistantBarItems(model: AssistModel, ui: AssistantTyping, onClose: () -> Unit, onSettings: () -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val scheme = MaterialTheme.colorScheme
     val chatting = model.messages.isNotEmpty()
@@ -453,7 +453,7 @@ fun RowScope.JarvisBarItems(model: AssistModel, ui: JarvisTyping, onClose: () ->
  * Either way the keyboard goes over the bar, and the typing box rises above the keyboard.
  */
 @Composable
-private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String) -> Unit, ui: JarvisTyping, embedded: Boolean, onSettings: () -> Unit) {
+private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String) -> Unit, ui: AssistantTyping, embedded: Boolean, onSettings: () -> Unit) {
     val pal = assistPalette()
     val scheme = MaterialTheme.colorScheme
     val chatting = model.messages.isNotEmpty()
@@ -471,7 +471,7 @@ private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String)
             ui.keyboardRequested = false
         }
     }
-    val pad = jarvisBottomPad(keyboard = true)
+    val pad = assistantBottomPad(keyboard = true)
     Box(modifier = Modifier.fillMaxSize().background(scheme.background)) {
         BottomGlow(active, model.level, Modifier.align(Alignment.BottomCenter).padding(bottom = if (embedded) 0.dp else pad))
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding().padding(bottom = if (embedded) 0.dp else pad)) {
@@ -540,9 +540,9 @@ private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String)
         }
         if (!embedded) {
             // Alone, he brings the bar and the round button himself, in the same places as inside the app.
-            NavigationBar(modifier = Modifier.align(Alignment.BottomCenter)) { JarvisBarItems(model, ui, onClose, onSettings) }
+            NavigationBar(modifier = Modifier.align(Alignment.BottomCenter)) { AssistantBarItems(model, ui, onClose, onSettings) }
             Box(Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = pad + 16.dp)) {
-                JarvisRound("Talk", { model.listen() }, model.state, model.level) {
+                AssistantRound("Talk", { model.listen() }, model.state, model.level) {
                     CliveGlyph(cliveGlyphPose(true, model.state), Color.White, 30.dp, model.level)
                 }
             }
@@ -599,13 +599,13 @@ private fun ChatLine(message: AssistMessage, faded: Boolean = false) {
             }
         }
     } else {
-        JarvisBubble(message.text, message.show)
+        AssistantBubble(message.text, message.show)
     }
 }
 
 /** Clive's words in a speech bubble: the tail corner is bottom-left, the mirror of the user's gradient bubble. */
 @Composable
-private fun JarvisBubble(text: String, show: CliveShow? = null) {
+private fun AssistantBubble(text: String, show: CliveShow? = null) {
     val scheme = MaterialTheme.colorScheme
     val uri = androidx.compose.ui.platform.LocalUriHandler.current
     Column(

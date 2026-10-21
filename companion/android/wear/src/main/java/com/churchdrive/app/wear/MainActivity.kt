@@ -66,7 +66,7 @@ private fun Actions(connected: Boolean) {
             Page.Home -> {
                 item { ListHeader { Text("Church Drive") } }
                 if (!connected) item { Text("Connecting…", textAlign = TextAlign.Center) }
-                row("Clive") { context.startActivity(Intent(context, JarvisActivity::class.java)) }
+                row("Clive") { context.startActivity(Intent(context, AssistantActivity::class.java)) }
                 row("To-Do") { context.startActivity(Intent(context, TodoActivity::class.java)) }
                 row("Alarm", alarmWords(states[ALARM]?.state)) { page = Page.Alarm }
                 row("Scenes") { page = Page.Scenes }

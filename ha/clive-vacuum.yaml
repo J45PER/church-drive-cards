@@ -1,4 +1,4 @@
-# Script script.jarvis_vacuum: Gregg the robot vacuum: start, pause, stop and status only. vacuum.gregg itself is NOT exposed to Assist, so these are Clive's only controls. A copy of the live script.
+# Script script.clive_vacuum: Gregg the robot vacuum: start, pause, stop and status only. vacuum.gregg itself is NOT exposed to Assist, so these are Clive's only controls. A copy of the live script.
 alias: Robot vacuum (Gregg)
 description: 'Control Gregg the robot vacuum: Start (begin cleaning), Pause (pause where he is), Stop (stop cleaning), or Status (what he is doing, battery, and any error). Start/Pause/Stop send a command; his state can take a few seconds to update, so say the command was sent rather than that he is already doing it. This is all Clive can do with Gregg.'
 fields:

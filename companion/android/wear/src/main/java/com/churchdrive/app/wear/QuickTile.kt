@@ -23,7 +23,7 @@ class QuickTile : TileService() {
             .setWidth(expand())
             .setHeight(expand())
             .setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGN_CENTER)
-            .addContent(button("Clive", JarvisActivity::class.java, 0xFF3A6EA5.toInt()))
+            .addContent(button("Clive", AssistantActivity::class.java, 0xFF3A6EA5.toInt()))
             .addContent(LayoutElementBuilders.Spacer.Builder().setHeight(dp(6f)).build())
             .addContent(button("To-Do", TodoActivity::class.java, 0xFF3D7A52.toInt()))
             .addContent(LayoutElementBuilders.Spacer.Builder().setHeight(dp(6f)).build())

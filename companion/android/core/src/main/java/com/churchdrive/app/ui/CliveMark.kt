@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
  * where they overlap cut out (even-odd fill), so whatever is behind shows through. Same shape as the launcher icon's Clive mark.
  */
 @Composable
-fun JarvisLogo(color: Color, size: androidx.compose.ui.unit.Dp = 30.dp) {
+fun AssistantLogo(color: Color, size: androidx.compose.ui.unit.Dp = 30.dp) {
     val mark = androidx.compose.runtime.remember {
         // Drawn around (0, 0) in a box about 99 units across: each square is 76 wide with 30 rounding, shifted 11.3 along the diagonal.
         val half = 38f

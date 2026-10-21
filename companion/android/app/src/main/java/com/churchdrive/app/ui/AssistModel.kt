@@ -107,7 +107,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     /** A picture or link Clive asked to show, waiting for his written answer (it is sent just before it). */
     private var pendingShow: CliveShow? = null
 
-    /** Listens for the pictures and links Clive shows with his answers (see `jarvis_show`). */
+    /** Listens for the pictures and links Clive shows with his answers (see `clive_show`). */
     private fun watchShow() {
         if (showSubscription >= 0) return
         api.request("auth/current_user", JSONObject()) { r -> userId = (r as? JSONObject)?.optString("id")?.takeIf { it.isNotBlank() } }
