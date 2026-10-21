@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
@@ -218,7 +219,7 @@ fun Modifier.ringDrag(spec: RingSpec): Modifier {
         if (!(drag.value != null)) return@pointerInput
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Main)
-            val half = size.minDimension / 2f
+            val half = minOf(size.width, size.height) / 2f
             val centre = Offset(size.width / 2f, size.height / 2f)
             val d = hypot(down.position.x - centre.x, down.position.y - centre.y)
             val onRing = d > half * 0.74f
