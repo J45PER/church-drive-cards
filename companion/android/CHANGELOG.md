@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.39.2
+
+- The coloured glow is back behind the white mark on the assistant's round button (0.39.0 had taken it away). It moves with what he is doing, and the white mark moves on top of it.
+
 ## 0.39.1
 
 - Settings no longer names the old wake word as an example. The screens still show the real wake word, whatever the house's Assist uses (today "Hey Jarvis", until a "Hey Clive" one is added).
