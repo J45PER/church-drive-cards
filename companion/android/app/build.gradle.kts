@@ -14,7 +14,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.churchdrive.app"
+        applicationId = "com.churchdrive.manager"
         minSdk = 26
         targetSdk = 35
         // The version is set by hand in version.properties; every CI build also counts up (its build number), so a newer

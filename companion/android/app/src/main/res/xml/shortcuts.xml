@@ -8,7 +8,7 @@
         android:shortcutLongLabel="@string/shortcut_add_task_long">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.churchdrive.app"
+            android:targetPackage="com.churchdrive.manager"
             android:targetClass="com.churchdrive.app.AssistActivity" />
     </shortcut>
 </shortcuts>

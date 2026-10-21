@@ -27,7 +27,7 @@
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
-        android:label="Church Drive"
+        android:label="Church Drive Manager"
         android:theme="@style/Theme.ChurchDrive"
         android:usesCleartextTraffic="true">
         <provider

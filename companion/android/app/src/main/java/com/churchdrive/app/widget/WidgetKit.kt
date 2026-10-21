@@ -176,8 +176,9 @@ fun WidgetTile.action(): Action =
     if (domain == "app") {
         // Not a call to the house: open the app, which asks the question (the widget can't).
         val pkg = "com.churchdrive.app"
+        val appId = "com.churchdrive.manager"
         actionStartActivity(
-            Intent().setClassName(pkg, "$pkg.MainActivity").putExtra(service, true).setData(android.net.Uri.parse("churchdrive://$service")),
+            Intent().setClassName(appId, "$pkg.MainActivity").putExtra(service, true).setData(android.net.Uri.parse("churchdrive://$service")),
         )
     } else serviceAction(domain, service, entity, data)
 

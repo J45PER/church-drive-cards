@@ -45,8 +45,8 @@ object MobileApp {
     fun registrationBody(deviceId: String, deviceName: String, appVersion: String, osVersion: String, manufacturer: String, model: String): JSONObject =
         JSONObject()
             .put("device_id", deviceId)
-            .put("app_id", "com.churchdrive.app")
-            .put("app_name", "Church Drive")
+            .put("app_id", "com.churchdrive.manager")
+            .put("app_name", "Church Drive Manager")
             .put("app_version", appVersion)
             .put("device_name", deviceName)
             .put("manufacturer", manufacturer)

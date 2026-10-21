@@ -11,7 +11,7 @@
     <queries>
         <provider android:authorities="com.churchdrive.app.sessionshare" />
         <!-- To open the Church Drive app (its device pages, and its own page for the open task). -->
-        <package android:name="com.churchdrive.app" />
+        <package android:name="com.churchdrive.manager" />
     </queries>
 
     <!-- Cleartext allowed because Home Assistant is often reached over plain http on the LAN. -->
@@ -19,7 +19,7 @@
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
-        android:label="Church Drive To-Do"
+        android:label="Church Drive To Do"
         android:theme="@style/Theme.ChurchDriveTodo"
         android:usesCleartextTraffic="true">
         <activity
