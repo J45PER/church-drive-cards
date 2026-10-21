@@ -354,7 +354,7 @@ private fun BottomGlow(active: Boolean, level: Float, modifier: Modifier = Modif
 }
 
 /**
- * The round button at the bottom right: a still dark grey circle with his white mark on it (animated: see CliveGlyph): the drifting logo when he is shut, a microphone when he waits, a squircle to stop while he listens. Same size and place everywhere, above the bottom bar.
+ * The round button at the bottom right: his coloured orb on the dark grey circle, with his white mark over it (animated: see CliveGlyph): the drifting logo when he is shut, a microphone when he waits, a squircle to stop while he listens. Same size and place everywhere, above the bottom bar.
  */
 @Composable
 fun JarvisRound(label: String, onClick: () -> Unit, state: AssistState = AssistState.Idle, level: Float = 0f, content: @Composable () -> Unit) {
@@ -366,7 +366,9 @@ fun JarvisRound(label: String, onClick: () -> Unit, state: AssistState = AssistS
             .clickable(onClickLabel = label, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        // The circle itself is still: only the white mark moves (see CliveGlyph).
+        // The coloured orb behind the mark moves with what he is doing, as before; the white mark on top has its own poses (see CliveGlyph).
+        // The orb's own box is one and a half times this size, so it stays inside the 54 dp the ring leaves (with a little room to spare).
+        AssistOrb(state, level, 32.dp)
         content()
     }
 }
