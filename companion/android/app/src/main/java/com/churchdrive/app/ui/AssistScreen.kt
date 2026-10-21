@@ -354,8 +354,7 @@ private fun BottomGlow(active: Boolean, level: Float, modifier: Modifier = Modif
 }
 
 /**
- * The round button at the bottom right: his avatar (the animated orb, moving with what he is doing) on the same dark grey as its ring,
- * and a white symbol over it: his logo when he is shut, a microphone once he is open. Same size and place everywhere, above the bottom bar.
+ * The round button at the bottom right: a still dark grey circle with his white mark on it (animated: see CliveGlyph): the drifting logo when he is shut, a microphone when he waits, a squircle to stop while he listens. Same size and place everywhere, above the bottom bar.
  */
 @Composable
 fun JarvisRound(label: String, onClick: () -> Unit, state: AssistState = AssistState.Idle, level: Float = 0f, content: @Composable () -> Unit) {
@@ -367,37 +366,11 @@ fun JarvisRound(label: String, onClick: () -> Unit, state: AssistState = AssistS
             .clickable(onClickLabel = label, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        // The orb's own box is one and a half times this size, so it stays inside the 54 dp the ring leaves (with a little room to spare).
-        AssistOrb(state, level, 32.dp)
+        // The circle itself is still: only the white mark moves (see CliveGlyph).
         content()
     }
 }
 
-/**
- * The assistant's logo, drawn in one colour: two overlapping rounded squares running from bottom left to top right, with the part
- * where they overlap cut out (even-odd fill), so whatever is behind shows through. Same shape as the launcher icon's Clive mark.
- */
-@Composable
-fun JarvisLogo(color: Color, size: androidx.compose.ui.unit.Dp = 30.dp) {
-    val mark = androidx.compose.runtime.remember {
-        // Drawn around (0, 0) in a box about 99 units across: each square is 76 wide with 30 rounding, shifted 11.3 along the diagonal.
-        val half = 38f
-        val shift = 11.3f
-        val corner = androidx.compose.ui.geometry.CornerRadius(30f, 30f)
-        androidx.compose.ui.graphics.Path().apply {
-            fillType = androidx.compose.ui.graphics.PathFillType.EvenOdd
-            addRoundRect(androidx.compose.ui.geometry.RoundRect(-half - shift, -half + shift, half - shift, half + shift, corner))
-            addRoundRect(androidx.compose.ui.geometry.RoundRect(-half + shift, -half - shift, half + shift, half - shift, corner))
-        }
-    }
-    Canvas(Modifier.size(size)) {
-        val unit = this.size.minDimension / 104f
-        withTransform({
-            translate(center.x, center.y)
-            scale(unit, unit, pivot = Offset.Zero)
-        }) { drawPath(mark, color) }
-    }
-}
 
 /** What the typing box is doing: shared, so the app's bottom bar (which Clive's buttons borrow while he is open) can drive it. */
 class JarvisTyping(start: Boolean = false) {
@@ -568,7 +541,7 @@ private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String)
             NavigationBar(modifier = Modifier.align(Alignment.BottomCenter)) { JarvisBarItems(model, ui, onClose, onSettings) }
             Box(Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = pad + 16.dp)) {
                 JarvisRound("Talk", { model.listen() }, model.state, model.level) {
-                    HaIcon(if (model.state == AssistState.Listening) "mdi:stop" else "mdi:microphone", Icons.Filled.Info, Color.White, 28.dp)
+                    CliveGlyph(cliveGlyphPose(true, model.state), Color.White, 30.dp, model.level)
                 }
             }
         }

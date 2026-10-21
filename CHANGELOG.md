@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **v0.64.3 + app 0.39.0 + To-Do 0.39.0** (2026-10-21): icons now use the indigo, purple and green gradient on white (phone app, watch, To-Do, and the Home Assistant brand image); the phone app's To-do shows the To-Do app's icon; Church Drive To-Do gets Clive To Do, a compact assistant that can only add tasks and tick them off
 - **app 0.38.2 + To-Do 0.38.2** (2026-10-21): Jarvis is renamed Clive in the apps, the watch and the docs (wake word stays "Hey Jarvis" for now; `script.jarvis_*` entity ids unchanged)
 - **v0.64.2 + app 0.38.1 + To-Do 0.38.1** (2026-10-21): new icons: the Church Drive house with a rounded square cut out of its roof (phone app icon, splash, notification and watch), a clipboard icon for Church Drive To-Do, the Clive mark on the assistant's button, and the same house as Home Assistant's brand image for the Church Drive integration (`custom_components/church_drive/brand/`, shown by Home Assistant 2026.3 and later)
 - **app 0.38.0 + To-Do 0.38.0** (2026-10-20): Home tasks open that task in the To-Do app (a Settings switch keeps them in the phone app); house jobs open the device or page they are about, in both apps. No Home Assistant update

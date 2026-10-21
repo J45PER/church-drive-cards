@@ -88,6 +88,8 @@ fun TodoApp(vm: TodoModel) {
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     // The account panel (null shut, "account", "settings" or "about"), which slides in from the right.
     var panel by rememberSaveable { mutableStateOf<String?>(null) }
+    // Clive To Do: the small add-and-tick-off assistant.
+    var clive by rememberSaveable { mutableStateOf(false) }
     val tab = vm.tab
     Box(Modifier.fillMaxSize()) {
     Scaffold(
@@ -112,6 +114,7 @@ fun TodoApp(vm: TodoModel) {
                 scrollBehavior = scroll,
             )
         },
+        floatingActionButton = { if (vm.connected) CliveButton { clive = true } },
         bottomBar = {
             NavigationBar {
                 TodoTab.entries.forEach { t ->
@@ -139,6 +142,7 @@ fun TodoApp(vm: TodoModel) {
         }
     }
     TodoPanel(panel, { panel = it }, vm)
+    if (clive) CliveSheet(vm) { clive = false }
     }
 }
 
