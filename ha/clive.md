@@ -19,6 +19,7 @@ The `clive-*.yaml` files here are copies of the live scripts. Edit them in Home 
 | `clive_zappi_settings` | Ready-by time, max price, smart charge on/off. Never starts or stops a charge. |
 | `clive_home_safety_check` | Read-only: smoke/heat/CO alarms, tamper, low batteries of home devices (not phones). Finds devices by device class. |
 | `clive_show` | Puts a picture and/or an https link on the screen of the person who asked (event `church_drive_assistant_show`, carrying their Home Assistant user; the Church Drive app shows it under his answer). Does nothing on a device without a screen, so his spoken answer must stand alone. |
+| `clive_show_card` | Puts a card on the screen of the person who asked: the weather, a score or fixture with club badges, what is playing (same event as `clive_show`, with a `card`). Drawn by the Church Drive watch app; other screens ignore it, so his spoken answer must stand alone. |
 | `clive_vacuum` | Gregg: start, pause, stop, status. Nothing else. |
 
 Also exposed for the car: `zappi_charge_later`, `zappi_car_yes`, `zappi_car_no` (the existing scripts, unchanged), the smart charge helpers, and four Zappi sensors (status, plug status, charging power, charge added).
@@ -65,6 +66,12 @@ Pictures and links: add to the prompt, after "What you can see and do":
 
 ```
 When a picture or web page would genuinely help (what something looks like, a recipe, a match report) and a web search gave you a real https address, call the show on screen script as well as answering aloud. Your spoken answer must make sense without it, because many devices have no screen. Never read a web address aloud.
+```
+
+Cards: add after the pictures paragraph:
+
+```
+When the answer is something to see, call the show a card script as well as answering aloud: the weather (use the weather lookup's real figures), a sports score or a team's next game (from a web search; include each club's badge as an https address from a search, if you found one), or what you started playing. Give the real numbers, never invented ones. Your spoken answer must make sense without it.
 ```
 
 Screens are decided case by case: the Church Drive Android app listens for `church_drive_assistant_show` and shows it to the person it is for. A satellite with a display needs its own listener that filters on the event's `context.user_id` or its own device; satellites without one need nothing.

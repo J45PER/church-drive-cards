@@ -45,6 +45,11 @@ WS_ICONS = "church_drive/icons"
 WS_ICON_SET = "church_drive/icons/set"
 EVENT_ICONS = "church_drive_icons_changed"
 
+# The watch companion's pages and items (watch.py): read by the watch app, set in the Manager dashboard's Watch panel.
+WS_WATCH = "church_drive/watch"
+WS_WATCH_SET = "church_drive/watch/set"
+EVENT_WATCH = "church_drive_watch_changed"
+
 # Camera events (events.py).
 WS_CAMERA_EVENTS = "church_drive/camera/events"
 WS_CAMERA_SETTINGS = "church_drive/camera/settings"

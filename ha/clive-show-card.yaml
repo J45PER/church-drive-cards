@@ -1,0 +1,42 @@
+# Script script.clive_show_card: lets Clive answer with a card on a screen that can draw one (the Church Drive watch app): the weather, a score or fixture with club badges, what is playing. Exposed to Assist. A copy of the live script.
+# It only fires the same event as clive_show (church_drive_assistant_show) with a `card` in it. The event carries the asker's Home Assistant user, so only that person's watch shows it.
+# Anything without a screen ignores it, so Clive can call it every time without harm; his spoken answer must still make sense alone.
+alias: Show a card on screen
+description: >-
+  Show a card on the screen of the person who asked, under your spoken answer, when the answer is something to see: the weather, a sports score, a team's next game, what is playing. Use it after a web search or a lookup, with the real figures. kind is one of: weather, score, fixture, music. data holds the fields for that kind.
+  weather: symbol (sunny, partly-cloudy, cloudy, rainy, pouring, snowy, lightning, fog or night), temp (number, degrees), desc (two or three words), high, low (numbers) and rain (percent chance).
+  score: home and away, each {name, short (three letters), badge_url (https address of the club badge, from a web search of the club's badge)}, home_score, away_score, status ("Full time", "74'", "Half time") and scorers (one short line).
+  fixture: home and away as for score, title ("Man City v Liverpool"), when ("Sat 25 Oct"), time ("17:30"), where (the ground), comp (the competition) and in ("in 4 days").
+  music: title, artist and device (where it is playing).
+  Never say you have shown a card unless this returned ok. It does nothing on a device with no screen, so never rely on it.
+fields:
+  kind:
+    description: weather, score, fixture or music.
+    name: Kind of card
+    required: true
+    selector:
+      select:
+        options:
+        - weather
+        - score
+        - fixture
+        - music
+  data:
+    description: The fields for that kind (see the description).
+    name: Card fields
+    required: true
+    selector:
+      object: {}
+icon: mdi:card-text-outline
+mode: parallel
+max: 5
+sequence:
+- condition: template
+  value_template: "{{ kind in ['weather', 'score', 'fixture', 'music'] }}"
+- event: church_drive_assistant_show
+  event_data:
+    card: "{{ dict(data | default({}, true), kind=kind) }}"
+- variables:
+    result: { ok: true }
+- stop: Shown
+  response_variable: result

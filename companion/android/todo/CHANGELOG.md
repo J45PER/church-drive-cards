@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.46.0
+
+- Shared code changed for the watch (scene looks and Clive's answer cards moved into `core`). No change to this app.
+
 ## 0.45.0
 
 - Signing in no longer asks for the Home Assistant address (the house's cloud address is built in; press and hold the title to change it).
