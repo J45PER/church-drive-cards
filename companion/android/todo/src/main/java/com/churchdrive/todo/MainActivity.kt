@@ -58,6 +58,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+            com.churchdrive.app.ui.BrandSplash("To Do", R.drawable.ic_brand_todo)
         }
     }
 

@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **v0.65.1 + app 0.42.0 + To-Do 0.42.0** (2026-10-21): new icon colours (three-point glow on white) everywhere, new start-up screens ("Home Manager" and "To Do", with Powered by Home Assistant), new logo files (branding folder, Home Assistant brand image, Clive wordmark set in Instrument Sans)
 - **v0.65.0 + app 0.41.0 + To-Do 0.41.0** (2026-10-21): the assistant's name is one setting (Church Drive > Configure > Assistant name, default Clive): `sensor.church_drive_assistant` for its prompt, and the apps, watch and To-Do app take the name from the house; the picture and link event is now `church_drive_assistant_show`
 - **app 0.39.2 + To-Do 0.39.2** (2026-10-21): the coloured glow is back behind the assistant button's mark
 - **app 0.39.1 + To-Do 0.39.1** (2026-10-21): Settings no longer names "Hey Jarvis" as an example

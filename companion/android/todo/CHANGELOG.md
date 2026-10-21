@@ -3,6 +3,11 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.42.0
+
+- New icon colours: a soft three-point glow of indigo, purple and green on white.
+- New start-up screen: the clipboard mark, "To Do" and "Powered by Home Assistant" with the Home Assistant logo (white on the app's dark colour in dark mode, colour and dark text in light mode). Tap to skip.
+
 ## 0.41.0
 
 - Clive To Do takes the assistant's name from the house (Assistant name setting), so it follows a rename.
