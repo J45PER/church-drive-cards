@@ -459,6 +459,8 @@ private fun AboutPage(settings: AccountSettings, updateAvailable: Boolean, onBac
         PanelTitle("About", onBack)
         PanelCard {
             PanelRow(Icons.Outlined.Info, "Church Drive", "Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.BUILD}) · ${BuildConfig.COMMIT}")
+            // For the allowed list in TrustedApps: the other Church Drive apps trust this app by this fingerprint.
+            PanelRow(Icons.Outlined.Info, "Signing certificate (SHA-256)", com.churchdrive.app.TrustedApps.ownCerts(context).joinToString("\n").ifBlank { "Not available" })
             PanelRow(
                 Icons.Outlined.SystemUpdate, "Check for updates",
                 when {

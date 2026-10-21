@@ -6,13 +6,16 @@ import android.database.Cursor
 import android.database.MatrixCursor
 import android.net.Uri
 
-/** Hands the stored sign-in to the Church Drive To-Do app (see [SessionShare]); readable only with its signature permission. */
+/** Hands the stored sign-in to the other Church Drive apps (see [SessionShare]); only apps [TrustedApps] accepts can read it. */
 class SessionProvider : ContentProvider() {
     override fun onCreate() = true
 
     override fun query(uri: Uri, projection: Array<out String>?, selection: String?, selectionArgs: Array<out String>?, sortOrder: String?): Cursor {
         val cursor = MatrixCursor(arrayOf("url", "token", "refresh", "person"))
-        val session = Session(context ?: return cursor)
+        val context = context ?: return cursor
+        // Refused (not an empty answer, which would read as "signed out") for anything we don't trust.
+        if (!TrustedApps.trusts(context, android.os.Binder.getCallingUid())) throw SecurityException("Not a Church Drive app")
+        val session = Session(context)
         // A fresh access token where the sign-in can make one, so the other app doesn't start with an expired one.
         val token = session.freshToken()
         val url = session.url

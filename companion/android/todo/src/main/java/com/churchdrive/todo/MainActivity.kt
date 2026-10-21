@@ -6,6 +6,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -83,17 +84,23 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun SignIn(vm: TodoModel) {
-    var url by rememberSaveable { mutableStateOf("http://homeassistant.local:8123") }
+    var url by rememberSaveable { mutableStateOf(com.churchdrive.app.HouseAddress.CLOUD_URL) }
+    // The address is the house's own and is not asked for; press and hold the title to change it.
+    var showAddress by rememberSaveable { mutableStateOf(false) }
     var user by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var code by rememberSaveable { mutableStateOf("") }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 32.dp)) {
-        Text("Church Drive To-Do", style = MaterialTheme.typography.headlineSmall)
+        Text(
+            "Church Drive To-Do", style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.combinedClickable(onClick = {}, onLongClick = { showAddress = !showAddress }),
+        )
         Text("Sign in with your Home Assistant login.")
         if (!vm.needCode) {
-            OutlinedTextField(url, { url = it }, label = { Text("Home Assistant address") }, singleLine = true, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri))
+            if (showAddress) OutlinedTextField(url, { url = it }, label = { Text("Home Assistant address") }, singleLine = true, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri))
             OutlinedTextField(user, { user = it }, label = { Text("Username") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(
                 password, { password = it }, label = { Text("Password") }, singleLine = true, modifier = Modifier.fillMaxWidth(),

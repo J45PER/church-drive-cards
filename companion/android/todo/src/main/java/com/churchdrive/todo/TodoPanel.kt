@@ -217,6 +217,8 @@ private fun AboutPage(vm: TodoModel, onBack: () -> Unit) {
         PanelTitle("About", onBack)
         PanelCard {
             PanelRow(Icons.Outlined.Info, "Church Drive To-Do", "Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.BUILD}) · ${BuildConfig.COMMIT}")
+            // For the allowed list in TrustedApps: the Church Drive app trusts this app by this fingerprint.
+            PanelRow(Icons.Outlined.Info, "Signing certificate (SHA-256)", com.churchdrive.app.TrustedApps.ownCerts(context).joinToString("\n").ifBlank { "Not available" })
             PanelRow(
                 Icons.Outlined.SystemUpdate, "Check for updates",
                 when {
