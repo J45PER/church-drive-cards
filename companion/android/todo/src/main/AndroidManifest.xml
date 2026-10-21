@@ -3,10 +3,9 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- The Church Drive app's sign-in (same signing key): the permission is declared here too, so install order doesn't matter. -->
-    <permission
-        android:name="com.churchdrive.app.permission.SHARE_SESSION"
-        android:protectionLevel="signature" />
+    <!-- The Church Drive app's sign-in. Only the phone app declares this permission: Google Play signs each app with its own key, and a second
+         app declaring the same permission under a different key is refused at install ("Can't install"). Asking for it is harmless: it is
+         granted only when both apps share a key (as builds from GitHub do); otherwise To-Do signs in for itself. -->
     <uses-permission android:name="com.churchdrive.app.permission.SHARE_SESSION" />
     <queries>
         <provider android:authorities="com.churchdrive.app.sessionshare" />
