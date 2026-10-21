@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.44.0
+
+- Ready for Google Play: CI now also builds the signed app bundle (`church-drive-todo.aab`), attached to each version's release. Built for Android 16 (target API 36).
+
 ## 0.43.0
 
 - Named Church Drive To Do (package `com.churchdrive.todo`, unchanged); it now finds the phone app by its new package name, `com.churchdrive.manager`.

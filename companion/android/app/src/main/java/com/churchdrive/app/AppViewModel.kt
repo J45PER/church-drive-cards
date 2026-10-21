@@ -67,6 +67,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var lastUpdateCheck = 0L
 
     private fun checkForUpdate() {
+        if (BuildConfig.PLAY) return
         lastUpdateCheck = System.currentTimeMillis()
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             _updateAvailable.value = UpdateCheck.check(okhttp3.OkHttpClient(), BuildConfig.BUILD.toIntOrNull() ?: 0)
@@ -97,6 +98,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Asks GitHub now whether a newer build is out; [done] gets the answer on the main thread. */
     fun checkUpdateNow(done: (Boolean) -> Unit) {
+        if (BuildConfig.PLAY) { done(false); return }
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             lastUpdateCheck = System.currentTimeMillis()
             val available = UpdateCheck.check(okhttp3.OkHttpClient(), BuildConfig.BUILD.toIntOrNull() ?: 0)

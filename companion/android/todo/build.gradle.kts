@@ -10,12 +10,12 @@ plugins {
 // Home Assistant itself and shares the connection and to-do code with the other apps through :core.
 android {
     namespace = "com.churchdrive.todo"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.churchdrive.todo"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         val appVersion = Properties().apply { file("version.properties").inputStream().use { load(it) } }.getProperty("version")
         val build = (System.getenv("GITHUB_RUN_NUMBER") ?: "0").toInt()
         versionCode = maxOf(build, 1)
@@ -34,9 +34,22 @@ android {
         }
     }
 
+    // Google Play upload key. Play re-signs the app with its own key (Play App Signing), so this key only proves an upload is ours; if it is
+    // ever lost or leaked, Play can reset it. CI can use a private one instead (secrets UPLOAD_KEYSTORE_BASE64, UPLOAD_STORE_PASSWORD,
+    // UPLOAD_KEY_ALIAS, UPLOAD_KEY_PASSWORD, written to UPLOAD_KEYSTORE_PATH); without them the key in the repo is used.
+    signingConfigs {
+        create("upload") {
+            storeFile = file(System.getenv("UPLOAD_KEYSTORE_PATH") ?: "../app/upload.keystore")
+            storePassword = System.getenv("UPLOAD_STORE_PASSWORD") ?: "churchdrive-upload"
+            keyAlias = System.getenv("UPLOAD_KEY_ALIAS") ?: "upload"
+            keyPassword = System.getenv("UPLOAD_KEY_PASSWORD") ?: "churchdrive-upload"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("upload")
         }
     }
     compileOptions {
