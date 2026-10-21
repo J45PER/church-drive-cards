@@ -4,10 +4,13 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
-## 0.45.0
+## 0.46.0
 
 - Watch: a new companion app (Church Drive) with pages you swipe across: Alarm, Climate, Lights, Cleaning and Car charger, on a ring and background that stay put while the content slides. Which pages, their order and the items on each are chosen in the Manager's Watch panel. Clive is a separate watch app with Talk, Prompts and Settings, a glow background, and visual answers (weather, scores with club badges, fixtures, music) that change the glow. Both watch icons are now the same size.
 - Shared code: moved the scene looks into `core`, and Clive's answers can carry a card (`watch-cards` in the Clive log).
+
+## 0.45.0
+
 - Signing in no longer asks for the Home Assistant address: it is the house's cloud address, built in. Press and hold the "Church Drive" title on the sign-in screen to type a different one (administrators).
 - Sharing the sign-in with Church Drive To Do now works between the Google Play apps. The sign-in is offered only to Church Drive apps whose signing certificate is in the allowed list (`TrustedApps`); until the Play certificates are added there, To Do asks for the username and password itself. About shows this app's signing certificate (SHA-256) to copy into the list.
 
