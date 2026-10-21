@@ -6,6 +6,8 @@ Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newe
 ## 0.45.0
 
 - Shared code changed for the watch (scene looks and Clive's answer cards moved into `core`). No change to this app.
+- Signing in no longer asks for the Home Assistant address (the house's cloud address is built in; press and hold the title to change it).
+- The phone app's sign-in is taken only from a Church Drive app whose signing certificate is allowed (see the phone app's changelog); About shows this app's certificate.
 
 ## 0.44.2
 

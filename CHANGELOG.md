@@ -2,7 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
-- **v0.66.0 + app 0.45.0 + To-Do 0.45.0** (2026-10-21): new Wear OS companion app (Alarm, Climate, Lights, Cleaning, Car charger pages on a persistent ring) and Clive watch app with visual answers and club badges; new Watch Settings card for the Manager dashboard (`church_drive/watch`: pages, order, items per page, Clive toggles); `script.clive_show_card` for weather, score, fixture and music cards
+- **v0.66.0 + app 0.46.0 + To-Do 0.46.0** (2026-10-21): new Wear OS companion app (Alarm, Climate, Lights, Cleaning, Car charger pages on a persistent ring) and Clive watch app with visual answers and club badges; new Watch Settings card for the Manager dashboard (`church_drive/watch`: pages, order, items per page, Clive toggles); `script.clive_show_card` for weather, score, fixture and music cards
 - **app 0.44.0 + To-Do 0.44.0** (2026-10-21): Google Play bundles (.aab, signed with an upload key) built by CI and attached to the releases; target Android 16 (API 36); Play builds skip the GitHub update check
 - **v0.65.2 + app 0.43.0 + To-Do 0.43.0** (2026-10-21): the main app is Church Drive Manager with the Play package name `com.churchdrive.manager` (a new install beside the old one); To-Do is Church Drive To Do (`com.churchdrive.todo`); Home Assistant recognises both the old and new app id
 - **v0.65.1 + app 0.42.0 + To-Do 0.42.0** (2026-10-21): new icon colours (three-point glow on white) everywhere, new start-up screens ("Home Manager" and "To Do", with Powered by Home Assistant), new logo files (branding folder, Home Assistant brand image, Clive wordmark set in Instrument Sans)
