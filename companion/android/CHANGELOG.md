@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.44.2
+
+- Code comment only (the To-Do app no longer declares the `SHARE_SESSION` permission; see its changelog). No change to the app.
+
 ## 0.44.1
 
 - First Google Play fixes. Clive keeps his original indigo, purple and green by default; Settings now has "Use phone theme colours for Clive" (off) to give him the phone's colours instead.
