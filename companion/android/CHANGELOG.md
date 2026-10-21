@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.45.0
+
+- Watch: a new companion app (Church Drive) with pages you swipe across: Alarm, Climate, Lights, Cleaning and Car charger, on a ring and background that stay put while the content slides. Which pages, their order and the items on each are chosen in the Manager's Watch panel. Clive is a separate watch app with Talk, Prompts and Settings, a glow background, and visual answers (weather, scores with club badges, fixtures, music) that change the glow. Both watch icons are now the same size.
+- Shared code: moved the scene looks into `core`, and Clive's answers can carry a card (`watch-cards` in the Clive log).
+
 ## 0.44.2
 
 - Code comment only (the To-Do app no longer declares the `SHARE_SESSION` permission; see its changelog). No change to the app.

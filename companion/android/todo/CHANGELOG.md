@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.45.0
+
+- Shared code changed for the watch (scene looks and Clive's answer cards moved into `core`). No change to this app.
+
 ## 0.44.2
 
 - Fixes "Can't install" from Google Play: To-Do no longer declares the phone app's `SHARE_SESSION` permission (Play signs each app with its own key, and two apps declaring the same permission under different keys can't both be installed). Signing in from the phone app now works only when both apps share a key (GitHub builds); from Play, sign in here directly.
