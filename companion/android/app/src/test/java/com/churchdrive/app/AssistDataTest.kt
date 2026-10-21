@@ -9,6 +9,7 @@ import com.churchdrive.app.ui.forSpeech
 import com.churchdrive.app.ui.isDismissal
 import com.churchdrive.app.ui.isNotUnderstood
 import com.churchdrive.app.ui.parseAssistEvent
+import com.churchdrive.app.ui.parseCliveShow
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -189,5 +190,17 @@ class AssistDataTest {
         assertEquals("heard 0.4s, thinking 1.9s, voice made 0.6s, voice starts 0.2s: 3.1s in all", formatTimings(t))
         assertEquals("thinking 1.5s: 1.5s in all", formatTimings(AssistTimes(start = 0, answer = 1_500)))
         assertEquals("", formatTimings(AssistTimes()))
+    }
+
+    @Test
+    fun aShowEventIsOnlyForTheAskerAndOnlyHttps() {
+        fun ev(user: String, data: String) = JSONObject("""{"event_type":"church_drive_clive_show","data":$data,"context":{"user_id":"$user"}}""")
+        val ok = parseCliveShow(ev("u1", """{"image_url":"https://x.test/a.jpg","link_url":"","link_label":" Report "}"""), "u1")!!
+        assertEquals("https://x.test/a.jpg", ok.image)
+        assertNull(ok.link)
+        assertEquals("Report", ok.linkLabel)
+        assertNull(parseCliveShow(ev("u2", """{"image_url":"https://x.test/a.jpg"}"""), "u1"))
+        assertNull(parseCliveShow(ev("u1", """{"image_url":"http://x.test/a.jpg","link_url":"javascript:alert(1)"}"""), "u1"))
+        assertNull(parseCliveShow(ev("u1", """{"link_url":"https://x.test"}"""), null))
     }
 }

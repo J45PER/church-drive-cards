@@ -100,8 +100,29 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     private var handlerId: Int? = null
     private var audioEnded = false
 
+    /** This person's Home Assistant user id, to know which pictures are theirs. */
+    private var userId: String? = null
+    private var showSubscription = -1
+
+    /** A picture or link Clive asked to show, waiting for his written answer (it is sent just before it). */
+    private var pendingShow: CliveShow? = null
+
+    /** Listens for the pictures and links Clive shows with his answers (see `jarvis_show`). */
+    private fun watchShow() {
+        if (showSubscription >= 0) return
+        api.request("auth/current_user", JSONObject()) { r -> userId = (r as? JSONObject)?.optString("id")?.takeIf { it.isNotBlank() } }
+        showSubscription = api.subscribe("subscribe_events", JSONObject().put("event_type", CLIVE_SHOW_EVENT)) { ev ->
+            main.post {
+                val show = parseCliveShow(ev, userId) ?: return@post
+                val last = messages.lastOrNull()
+                if (answered && last != null && !last.fromUser) messages[messages.lastIndex] = last.copy(show = show) else pendingShow = show
+            }
+        }
+    }
+
     /** Asks the house what the assistant is called (its pipeline's wake word). */
     fun loadName() {
+        watchShow()
         // The house's own answer (anyone may ask it); Home Assistant's pipeline list is for administrators only.
         api.request("church_drive/assist/info", JSONObject()) { r ->
             if (r is JSONObject) {
@@ -173,6 +194,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
         stopSpeaking()
         stopVoiceRun()
         messages += AssistMessage(true, sentence)
+        pendingShow = null
         said = sentence
         closing = isDismissal(sentence)
         times = AssistTimes()
@@ -330,6 +352,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
                     said = e.text
                     closing = isDismissal(e.text)
                     messages += AssistMessage(true, e.text)
+                    pendingShow = null
                     state = AssistState.Thinking
                 }
             }
@@ -339,7 +362,8 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
                 if (e.conversationId != null) conversationId = e.conversationId
                 answered = true
                 continueAfter = e.continueConversation
-                if (e.text.isNotBlank()) messages += AssistMessage(false, forDisplay(e.text))
+                if (e.text.isNotBlank()) messages += AssistMessage(false, forDisplay(e.text), pendingShow)
+                pendingShow = null
                 if (isNotUnderstood(e.text)) notUnderstood = said
             }
             is AssistEvent.Audio -> if (AssistVoiceSetting.on) {
@@ -451,6 +475,8 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     fun release() {
         wakeEnabled = false
         followUp = false
+        if (showSubscription >= 0) api.close(showSubscription)
+        showSubscription = -1
         stopVoiceRun()
         stopSpeaking()
         recogniser?.destroy()

@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.40.0
+
+- Clive can show a picture or a link under his answer in the assistant screen when it helps (the house's new `jarvis_show` script). Only https addresses are shown, and only to the person who asked. Nothing changes when he has nothing to show, and his spoken answer never depends on it.
+
 ## 0.39.2
 
 - The coloured glow is back behind the white mark on the assistant's round button (0.39.0 had taken it away). It moves with what he is doing, and the white mark moves on top of it.

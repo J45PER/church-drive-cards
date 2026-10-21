@@ -16,6 +16,7 @@ The `jarvis-*.yaml` files here are copies of the live scripts. Edit them in Home
 | `jarvis_zappi_charge` | Sets the charge mode (Fast, Eco, Eco+, Stopped). Fast at a non-cheap rate asks first, see below. |
 | `jarvis_zappi_settings` | Ready-by time, max price, smart charge on/off. Never starts or stops a charge. |
 | `jarvis_home_safety_check` | Read-only: smoke/heat/CO alarms, tamper, low batteries of home devices (not phones). Finds devices by device class. |
+| `jarvis_show` | Puts a picture and/or an https link on the screen of the person who asked (event `church_drive_clive_show`, carrying their Home Assistant user; the Church Drive app shows it under his answer). Does nothing on a device without a screen, so his spoken answer must stand alone. |
 | `jarvis_vacuum` | Gregg: start, pause, stop, status. Nothing else. |
 
 Also exposed for the car: `zappi_charge_later`, `zappi_car_yes`, `zappi_car_no` (the existing scripts, unchanged), the smart charge helpers, and four Zappi sensors (status, plug status, charging power, charge added).
@@ -47,3 +48,21 @@ The helper is an `input_datetime` (date and time), initial `2000-01-01 00:00:00`
 - **Octopus Go publishes tomorrow's cheap window only after midnight**, so tomorrow's rates hold just one slot. `jarvis_zappi_info` projects the 00:30 to 05:30 window from today's pattern and says so.
 - **Battery-low sensors come from Battery Notes**, not the phone app, so phones are excluded by device (`device_id` of `mobile_app` entities).
 - **Don't let him overclaim.** The safety check says what it did not check (doors, windows, locks, the burglar alarm).
+
+## Who is asking, web search, pictures (prompt additions)
+
+Each person signs in to the app with their own Home Assistant user, so the conversation agent can know who is asking: the prompt is a template and `user_name` is the signed-in user's name. Add this to the prompt (Settings > Devices & services > Claude > Claude conversation), after "Where you are":
+
+```
+{% if user_name %}The person talking to you is {{ user_name }}. When they say "my", "me" or "I", they mean {{ user_name }}: for their tasks or to-dos read the list called "Priorities" followed by their first name, and also the shared priorities list, and never ask which person they are. {% else %}You do not know who is talking, because this device has nobody signed in, so for anything personal such as to-dos ask which of Die Ann, Hayley, Ian or Jamie it is for. {% endif %}
+```
+
+Web search: the Claude agent already searches the web (sport scores and fixtures, news, facts), as the prompt asks. Check that "Allow web search" is on in the same settings page.
+
+Pictures and links: add to the prompt, after "What you can see and do":
+
+```
+When a picture or web page would genuinely help (what something looks like, a recipe, a match report) and a web search gave you a real https address, call the show on screen script as well as answering aloud. Your spoken answer must make sense without it, because many devices have no screen. Never read a web address aloud.
+```
+
+Screens are decided case by case: the Church Drive Android app listens for `church_drive_clive_show` and shows it to the person it is for. A satellite with a display needs its own listener that filters on the event's `context.user_id` or its own device; satellites without one need nothing.

@@ -7,7 +7,29 @@ import org.json.JSONObject
 enum class AssistState { Idle, Waiting, Listening, Thinking, Speaking }
 
 /** One line of the conversation: what the person said, or what the house answered. */
-data class AssistMessage(val fromUser: Boolean, val text: String)
+data class AssistMessage(val fromUser: Boolean, val text: String, val show: CliveShow? = null)
+
+/** A picture and/or a link Clive wants to show with his answer (the house's `church_drive_clive_show` event, fired by the `jarvis_show` script). */
+data class CliveShow(val image: String?, val link: String?, val linkLabel: String?)
+
+/** The event name the `jarvis_show` script fires. */
+const val CLIVE_SHOW_EVENT = "church_drive_clive_show"
+
+/**
+ * What a `church_drive_clive_show` event asks this screen to show, or null when it is for someone else or has nothing safe to show.
+ * [userId] is this person's Home Assistant user id: the script runs as the person who asked, so the event carries their id, and
+ * a phone shows only its own person's pictures. Only https addresses are accepted.
+ */
+fun parseCliveShow(event: JSONObject, userId: String?): CliveShow? {
+    val from = event.optJSONObject("context")?.optString("user_id").orEmpty()
+    if (userId.isNullOrBlank() || from != userId) return null
+    val data = event.optJSONObject("data") ?: return null
+    fun https(key: String) = data.optString(key).trim().takeIf { it.startsWith("https://") }
+    val image = https("image_url")
+    val link = https("link_url")
+    if (image == null && link == null) return null
+    return CliveShow(image, link, data.optString("link_label").trim().takeIf { it.isNotEmpty() })
+}
 
 /** What one event of Home Assistant's `assist_pipeline/run` means for the screen. */
 sealed interface AssistEvent {
@@ -113,6 +135,7 @@ fun introDue(introducedEver: Boolean, told: Set<String>?, log: List<AssistFeatur
  * ever do they get the full introduction. Features also make up that introduction's "what I can do".
  */
 val ASSIST_FEATURES = listOf(
+    AssistFeature("mdi:image-text", "Pictures and links", "Show me what a Nottingham Forest shirt looks like", id = "pictures-and-links", detail = "Clive can now show a picture or a link under his answer on this screen, when it helps.", kind = JarvisChange.Change),
     AssistFeature("mdi:account-voice", "A new name: Clive", "", id = "renamed-clive", detail = "Jarvis is now Clive, with a new logo. You can still wake him with \"Hey Jarvis\" for now.", kind = JarvisChange.Change),
     AssistFeature("mdi:watch-variant", "Clive on your watch", "", id = "jarvis-on-watch", detail = "The Church Drive app on a Pixel Watch has Clive: speak or tap a sentence and he answers on the watch, aloud too if you like.", kind = JarvisChange.Change),
     AssistFeature("mdi:timer-outline", "How long he took", "", id = "response-timing", detail = "Settings shows how long his last answer took, step by step, so a slow part can be found.", kind = JarvisChange.Change),

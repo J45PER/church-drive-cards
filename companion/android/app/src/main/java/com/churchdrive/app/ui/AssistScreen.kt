@@ -599,21 +599,37 @@ private fun ChatLine(message: AssistMessage, faded: Boolean = false) {
             }
         }
     } else {
-        JarvisBubble(message.text)
+        JarvisBubble(message.text, message.show)
     }
 }
 
 /** Clive's words in a speech bubble: the tail corner is bottom-left, the mirror of the user's gradient bubble. */
 @Composable
-private fun JarvisBubble(text: String) {
+private fun JarvisBubble(text: String, show: CliveShow? = null) {
     val scheme = MaterialTheme.colorScheme
-    Box(
+    val uri = androidx.compose.ui.platform.LocalUriHandler.current
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.widthIn(max = 320.dp)
             .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 6.dp, bottomEnd = 20.dp))
             .background(scheme.surfaceContainerHigh)
             .padding(horizontal = 16.dp, vertical = 11.dp),
     ) {
         Text(text, style = MaterialTheme.typography.bodyLarge, color = scheme.onSurface)
+        show?.image?.let {
+            coil.compose.AsyncImage(
+                model = it, contentDescription = show.linkLabel ?: "Picture from Clive", contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)),
+            )
+        }
+        show?.link?.let { l ->
+            Text(
+                show.linkLabel ?: l.removePrefix("https://").substringBefore('/'),
+                style = MaterialTheme.typography.bodyMedium, color = scheme.primary,
+                textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline,
+                modifier = Modifier.clickable { runCatching { uri.openUri(l) } },
+            )
+        }
     }
 }
 
