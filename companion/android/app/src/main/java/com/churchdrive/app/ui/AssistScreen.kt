@@ -80,6 +80,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.input.ImeAction
@@ -391,7 +392,7 @@ fun JarvisLogo(color: Color, size: androidx.compose.ui.unit.Dp = 30.dp) {
     }
     Canvas(Modifier.size(size)) {
         val unit = this.size.minDimension / 104f
-        androidx.compose.ui.graphics.drawscope.withTransform({
+        withTransform({
             translate(center.x, center.y)
             scale(unit, unit, pivot = Offset.Zero)
         }) { drawPath(mark, color) }
