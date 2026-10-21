@@ -11,12 +11,12 @@ if (file("google-services.json").exists()) apply(plugin = "com.google.gms.google
 
 android {
     namespace = "com.churchdrive.app"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.churchdrive.manager"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         // The version is set by hand in version.properties; every CI build also counts up (its build number), so a newer
         // build is always recognisable and installs over an older one.
         val appVersion = Properties().apply { file("../version.properties").inputStream().use { load(it) } }.getProperty("version")
@@ -42,9 +42,25 @@ android {
         }
     }
 
+    // Google Play upload key. Play re-signs the app with its own key (Play App Signing), so this key only proves an upload is ours; if it is
+    // ever lost or leaked, Play can reset it. CI can use a private one instead (secrets UPLOAD_KEYSTORE_BASE64, UPLOAD_STORE_PASSWORD,
+    // UPLOAD_KEY_ALIAS, UPLOAD_KEY_PASSWORD, written to UPLOAD_KEYSTORE_PATH); without them the key in the repo is used.
+    signingConfigs {
+        create("upload") {
+            storeFile = file(System.getenv("UPLOAD_KEYSTORE_PATH") ?: "upload.keystore")
+            storePassword = System.getenv("UPLOAD_STORE_PASSWORD") ?: "churchdrive-upload"
+            keyAlias = System.getenv("UPLOAD_KEY_ALIAS") ?: "upload"
+            keyPassword = System.getenv("UPLOAD_KEY_PASSWORD") ?: "churchdrive-upload"
+        }
+    }
+
     buildTypes {
+        debug { buildConfigField("Boolean", "PLAY", "false") }
         release {
+            // The Google Play build is updated by Play, not by the GitHub test-build check.
+            buildConfigField("Boolean", "PLAY", "true")
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("upload")
         }
     }
     compileOptions {
@@ -54,6 +70,8 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+    // The release (Play) build is not held up by lint's fatal-error pass; CI still runs the unit tests.
+    lint { checkReleaseBuilds = false }
     buildFeatures {
         buildConfig = true
         compose = true
@@ -74,6 +92,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.core:core-ktx:1.13.1")
+    // Lint (release build) wants a Fragment version that supports the permission-request contract the assistant uses.
+    implementation("androidx.fragment:fragment-ktx:1.8.5")
     implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.glance:glance-appwidget:1.1.1")
     implementation("androidx.security:security-crypto:1.1.0-alpha06")

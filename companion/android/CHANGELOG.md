@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.44.0
+
+- Ready for Google Play: CI now also builds the signed app bundles (`church-drive-manager.aab` for the phone, `church-drive-manager-wear.aab` for the watch), attached to each version's release. Built for Android 16 (target API 36; the watch stays on 35). The Play build does not check GitHub for test builds.
+
 ## 0.43.0
 
 - The app is now **Church Drive Manager**, with the Google Play package name `com.churchdrive.manager` (the phone app and the watch app share it). It installs as a new app beside the old Church Drive: sign in again, then remove the old one. The To-Do app keeps `com.churchdrive.todo` and is named Church Drive To Do.

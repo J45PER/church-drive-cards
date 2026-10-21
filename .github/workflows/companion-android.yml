@@ -36,7 +36,7 @@ jobs:
       - name: Build and test
         run: |
           set +e
-          ./gradlew testDebugUnitTest assembleDebug --console=plain 2>&1 | tee ../build.log
+          ./gradlew testDebugUnitTest assembleDebug :app:bundleRelease :wear:bundleRelease :todo:bundleRelease --console=plain 2>&1 | tee ../build.log
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
             msg=$(grep -E "^e: |error:|FAILED|What went wrong|Execution failed|Could not resolve|AAPT|Manifest merger" -A2 ../build.log | head -80 | cut -c1-300 | sed ':a;N;$!ba;s/\n/%0A/g')
@@ -56,6 +56,14 @@ jobs:
         with:
           name: church-drive-todo-debug-apk
           path: companion/android/todo/build/outputs/apk/debug/*.apk
+      # Google Play app bundles (signed with the upload key): phone app, watch app (same listing, Wear OS form factor) and To Do.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: church-drive-play-bundles
+          path: |
+            companion/android/app/build/outputs/bundle/release/*.aab
+            companion/android/wear/build/outputs/bundle/release/*.aab
+            companion/android/todo/build/outputs/bundle/release/*.aab
       # The phone app (with the watch app) and Church Drive To-Do have separate versions and separate releases, so a change to one does not
       # show up as a release of the other. Work out which a push touched: anything in `core` or the build files is both's.
       - name: Which apps changed
@@ -89,6 +97,8 @@ jobs:
           version=$(sed -n 's/^version=//p' companion/android/version.properties)
           cp "$(ls companion/android/app/build/outputs/apk/debug/*.apk)" church-drive.apk
           cp "$(ls companion/android/wear/build/outputs/apk/debug/*.apk)" church-drive-wear.apk
+          cp "$(ls companion/android/app/build/outputs/bundle/release/*.aab)" church-drive-manager.aab
+          cp "$(ls companion/android/wear/build/outputs/bundle/release/*.aab)" church-drive-manager-wear.aab
           # The latest test build: replaced on every push that touches these apps (the app looks here for updates).
           gh release delete companion-android-latest --yes --cleanup-tag || true
           gh release create companion-android-latest church-drive.apk church-drive-wear.apk \
@@ -101,7 +111,7 @@ jobs:
           # Each version keeps its own release, made the first time a build has that version: a permanent record of what shipped.
           if ! gh release view "android-v${version}" >/dev/null 2>&1; then
             notes=$(awk -v v="$version" '$0 ~ "^## "v"( |$)" {on=1; next} /^## / {on=0} on' companion/android/CHANGELOG.md)
-            gh release create "android-v${version}" church-drive.apk church-drive-wear.apk \
+            gh release create "android-v${version}" church-drive.apk church-drive-wear.apk church-drive-manager.aab church-drive-manager-wear.aab \
               --target "$GITHUB_SHA" \
               --title "Church Drive Android ${version}" \
               --notes "${notes:-Version ${version}.} (Build ${GITHUB_RUN_NUMBER}, commit ${GITHUB_SHA::7}.)"
@@ -114,6 +124,7 @@ jobs:
         run: |
           version=$(sed -n 's/^version=//p' companion/android/todo/version.properties)
           cp "$(ls companion/android/todo/build/outputs/apk/debug/*.apk)" church-drive-todo.apk
+          cp "$(ls companion/android/todo/build/outputs/bundle/release/*.aab)" church-drive-todo.aab
           gh release delete todo-latest --yes --cleanup-tag || true
           gh release create todo-latest church-drive-todo.apk \
             --prerelease --latest=false --target "$GITHUB_SHA" \
@@ -122,7 +133,7 @@ jobs:
           gh release edit todo-latest --draft=false --prerelease --latest=false
           if ! gh release view "todo-v${version}" >/dev/null 2>&1; then
             notes=$(awk -v v="$version" '$0 ~ "^## "v"( |$)" {on=1; next} /^## / {on=0} on' companion/android/todo/CHANGELOG.md)
-            gh release create "todo-v${version}" church-drive-todo.apk --latest=false \
+            gh release create "todo-v${version}" church-drive-todo.apk church-drive-todo.aab --latest=false \
               --target "$GITHUB_SHA" \
               --title "Church Drive To-Do ${version}" \
               --notes "${notes:-Version ${version}.} (Build ${GITHUB_RUN_NUMBER}, commit ${GITHUB_SHA::7}.)"

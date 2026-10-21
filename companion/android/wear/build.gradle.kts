@@ -10,7 +10,7 @@ plugins {
 // the same listing, and the phone can hand the watch its sign-in. It is uploaded to the Wear OS form factor of that listing.
 android {
     namespace = "com.churchdrive.app.wear"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.churchdrive.manager"
@@ -32,9 +32,22 @@ android {
         }
     }
 
+    // Google Play upload key. Play re-signs the app with its own key (Play App Signing), so this key only proves an upload is ours; if it is
+    // ever lost or leaked, Play can reset it. CI can use a private one instead (secrets UPLOAD_KEYSTORE_BASE64, UPLOAD_STORE_PASSWORD,
+    // UPLOAD_KEY_ALIAS, UPLOAD_KEY_PASSWORD, written to UPLOAD_KEYSTORE_PATH); without them the key in the repo is used.
+    signingConfigs {
+        create("upload") {
+            storeFile = file(System.getenv("UPLOAD_KEYSTORE_PATH") ?: "../app/upload.keystore")
+            storePassword = System.getenv("UPLOAD_STORE_PASSWORD") ?: "churchdrive-upload"
+            keyAlias = System.getenv("UPLOAD_KEY_ALIAS") ?: "upload"
+            keyPassword = System.getenv("UPLOAD_KEY_PASSWORD") ?: "churchdrive-upload"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("upload")
         }
     }
     compileOptions {
@@ -44,6 +57,8 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+    // The release (Play) build is not held up by lint's fatal-error pass; CI still runs the unit tests.
+    lint { checkReleaseBuilds = false }
     buildFeatures {
         compose = true
     }
