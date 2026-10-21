@@ -7,7 +7,7 @@ import com.churchdrive.app.HomeAssistantLink
 
 /** The Church Drive app, which gives this app its sign-in, delivers the house's notifications and has the device pages. */
 object ChurchDriveLink {
-    const val PACKAGE = "com.churchdrive.app"
+    const val PACKAGE = "com.churchdrive.manager"
 
     /** The intent that opens the Church Drive app, or null when it isn't installed. */
     fun intent(context: Context): Intent? = runCatching {

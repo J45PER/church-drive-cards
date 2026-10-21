@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.43.0
+
+- Named Church Drive To Do (package `com.churchdrive.todo`, unchanged); it now finds the phone app by its new package name, `com.churchdrive.manager`.
+
 ## 0.42.0
 
 - New icon colours: a soft three-point glow of indigo, purple and green on white.

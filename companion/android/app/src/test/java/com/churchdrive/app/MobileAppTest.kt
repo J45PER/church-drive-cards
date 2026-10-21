@@ -13,7 +13,7 @@ class MobileAppTest {
     fun registrationAsksForTheWebsocketPushChannel() {
         val b = MobileApp.registrationBody("id1", "Jamie Pixel", "0.1.100", "17", "Google", "Pixel")
         assertEquals("id1", b.getString("device_id"))
-        assertEquals("com.churchdrive.app", b.getString("app_id"))
+        assertEquals("com.churchdrive.manager", b.getString("app_id"))
         assertFalse(b.getBoolean("supports_encryption"))
         assertTrue(b.getJSONObject("app_data").getBoolean("push_websocket_channel"))
     }

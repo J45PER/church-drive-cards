@@ -243,7 +243,7 @@ class People:
                 config = self.hass.config_entries.async_get_entry(entry.config_entry_id) if entry.config_entry_id else None
                 phones.append(
                     {
-                        "own_app": bool(config and config.data.get("app_id") == "com.churchdrive.app"),
+                        "own_app": bool(config and config.data.get("app_id") in ("com.churchdrive.manager", "com.churchdrive.app")),
                         "service": service,
                         "name": ((device.name_by_user or device.name) if device else tracker).strip(),
                         "model": (device.model or "") if device else "",

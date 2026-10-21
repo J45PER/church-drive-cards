@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.43.0
+
+- The app is now **Church Drive Manager**, with the Google Play package name `com.churchdrive.manager` (the phone app and the watch app share it). It installs as a new app beside the old Church Drive: sign in again, then remove the old one. The To-Do app keeps `com.churchdrive.todo` and is named Church Drive To Do.
+
 ## 0.42.0
 
 - New colours for the app icons (Church Drive, Church Drive To-Do, the watch tiles): a soft three-point glow of indigo, purple and green on white, like the assistant's orb. The status-bar icon stays plain white.

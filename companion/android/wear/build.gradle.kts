@@ -13,7 +13,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.churchdrive.app"
+        applicationId = "com.churchdrive.manager"
         minSdk = 30
         targetSdk = 35
         val appVersion = Properties().apply { file("../version.properties").inputStream().use { load(it) } }.getProperty("version")
