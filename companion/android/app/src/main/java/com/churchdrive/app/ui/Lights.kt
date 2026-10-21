@@ -227,7 +227,7 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
 
     EntityCard(tone.container, tone.onContainer, deviceEntity = room.head) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            LightPill(head, room.head, roomTitle(room, head, areaNames), tone, call, Modifier.weight(1f), entities)
+            LightPill(head, room.head, roomTitle(room, head, areaNames), tone, call, Modifier.weight(1f), entities, tintFrom = room.rows.map { it.entity })
             if (expandable) {
                 IconButton(onClick = { expanded = !expanded }) {
                     Icon(
@@ -320,6 +320,8 @@ private fun nameColours(key: String): List<Color> {
 private fun brightnessPct(light: EntityState?): Int =
     ((light?.num("brightness") ?: 255.0) / 255.0 * 100).roundToInt().coerceIn(1, 100)
 
+private val COLOUR_MODES = setOf("hs", "rgb", "rgbw", "rgbww", "xy")
+
 /**
  * The dashboard's combined control: a pill filled to the light's brightness and tinted with its live
  * colour. Tap to switch it on or off; drag across it to set brightness (lights that can't dim just switch).
@@ -334,6 +336,8 @@ fun LightPill(
     call: CallService,
     modifier: Modifier = Modifier,
     entities: Map<String, EntityState>? = null,
+    /** For a room: its lights. The room's own colour is the group's last one, which lingers after a room turns to plain white or has only switches on, so the pill takes the colour of a light that is on and showing one, else the theme. */
+    tintFrom: List<String>? = null,
 ) {
     val on = light?.state == "on"
     val haptic = LocalHapticFeedback.current
@@ -344,7 +348,9 @@ fun LightPill(
     var drag by remember(pct) { mutableStateOf<Float?>(null) }
     var widthPx by remember { mutableIntStateOf(1) }
     val shown = drag ?: (pct / 100f)
-    val rgb = light?.rgb()
+    val rgb = if (tintFrom != null && entities != null) {
+        tintFrom.firstNotNullOfOrNull { id -> entities[id]?.takeIf { it.state == "on" && it.str("color_mode") in COLOUR_MODES }?.rgb() }
+    } else light?.rgb()
     val tint = if (on && rgb != null) Color(rgb[0], rgb[1], rgb[2]) else tone.accent
     val shape = RoundedCornerShape(20.dp)
     val status = when {

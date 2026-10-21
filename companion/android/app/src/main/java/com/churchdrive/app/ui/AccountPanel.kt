@@ -233,10 +233,10 @@ private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Pa
         PanelCard {
             PanelRow(
                 Icons.Outlined.Checklist, "To-do",
-                if (todoOpensApp) "Opens Church Drive To-Do" else "Your list, the shared list, cleaning and the house's jobs",
+                if (todoOpensApp) "Opens Church Drive To-Do" else "Lists, cleaning and house jobs",
                 onClick = onTodo,
-                // When it opens the To-Do app, show that app's own icon.
-                leading = if (todoOpensApp) { { androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(com.churchdrive.app.R.drawable.ic_todo_mark), contentDescription = null, modifier = Modifier.size(24.dp)) } } else null,
+                // The To-Do app's own icon, whether the row opens that app or this app's To-do page.
+                leading = { androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(com.churchdrive.app.R.drawable.ic_todo_mark), contentDescription = null, modifier = Modifier.size(24.dp)) },
             )
         }
         // Device Health, for everyone: batteries, filters and devices that stopped answering.
@@ -251,15 +251,7 @@ private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Pa
         if (managerPages.isNotEmpty()) {
             PanelCard { PanelRow(Icons.Outlined.Settings, "Manager", "${managerPages.size} sections: people, cameras, reminders and more", onClick = { onOpen("manager") }) }
         }
-        PanelCard {
-            ListItem(
-                headlineContent = { Text("Experimental") },
-                supportingContent = { Text("New camera view to try") },
-                leadingContent = { HaIcon("mdi:flask-outline", Icons.Outlined.Settings, MaterialTheme.colorScheme.onSurfaceVariant, 24.dp) },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                modifier = Modifier.clickable { onOpen("experimental") },
-            )
-        }
+        // Experimental (kept in the code, not shown): add its row back here when there is something to try out.
         PanelCard {
             PanelRow(Icons.Outlined.Settings, "Settings", onClick = { onOpen("settings") })
             PanelRow(Icons.Outlined.Info, "About", onClick = { onOpen("about") })
@@ -342,6 +334,14 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                 trailing = { Switch(checked = openApp, onCheckedChange = { on -> openApp = on; com.churchdrive.app.TodoLink.setPreferApp(context, on) }) },
             )
         }
+        else PanelCard {
+            PanelRow(
+                Icons.Outlined.Checklist, "Get Church Drive To Do",
+                "The separate to-do app. Once it is installed, To-do and the tasks on Home open it.",
+                onClick = { com.churchdrive.app.TodoLink.openStore(context) },
+                leading = { androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(com.churchdrive.app.R.drawable.ic_todo_mark), contentDescription = null, modifier = Modifier.size(24.dp)) },
+            )
+        }
         PanelCard {
             PanelRow(
                 Icons.Outlined.Notifications, "Notifications",
@@ -363,9 +363,9 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
             )
             if (showStyles) NoticeStylesPage(isAdmin) { showStyles = false }
             PanelRow(
-                Icons.Outlined.Mic, "Classic ${AssistantBrand.shown} colours",
-                "${AssistantBrand.shown} normally takes his colours from your phone's theme. Turn this on to keep his original indigo, purple and green.",
-                trailing = { Switch(checked = AssistColourSetting.classic, onCheckedChange = { on -> AssistColourSetting.set(context, on) }) },
+                Icons.Outlined.Mic, "Use phone theme colours for ${AssistantBrand.shown}",
+                "${AssistantBrand.shown} normally keeps his original indigo, purple and green. Turn this on to give him your phone's theme colours instead.",
+                trailing = { Switch(checked = AssistColourSetting.phoneTheme, onCheckedChange = { on -> AssistColourSetting.set(context, on) }) },
             )
             val micAsk = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
                 if (granted) AssistWakeSetting.set(context, true) else message = "The microphone is off for this app. Allow it in Android's settings to use the wake word."

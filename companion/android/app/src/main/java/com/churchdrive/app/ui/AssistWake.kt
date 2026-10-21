@@ -95,19 +95,19 @@ object AssistVoiceSetting {
     }
 }
 
-/** Whether Clive keeps his classic indigo, purple and green instead of following the phone's theme colours (Account > Settings). */
+/** Whether Clive takes his colours from the phone's theme instead of his original indigo, purple and green, which is the default (Account > Settings). */
 object AssistColourSetting {
-    private const val KEY = "classic_colours"
-    var classic by mutableStateOf(false)
+    private const val KEY = "phone_theme_colours"
+    var phoneTheme by mutableStateOf(false)
         private set
 
     fun load(context: Context) {
-        classic = context.getSharedPreferences(AssistActivity.PREFS, Context.MODE_PRIVATE).getBoolean(KEY, false)
+        phoneTheme = context.getSharedPreferences(AssistActivity.PREFS, Context.MODE_PRIVATE).getBoolean(KEY, false)
     }
 
     fun set(context: Context, on: Boolean) {
         context.getSharedPreferences(AssistActivity.PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY, on).apply()
-        classic = on
+        phoneTheme = on
     }
 }
 
