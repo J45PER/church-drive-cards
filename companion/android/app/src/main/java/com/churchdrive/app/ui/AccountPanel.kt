@@ -376,7 +376,7 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                     AssistWakeSetting.enabled && AssistWakeStatus.problem.isNotEmpty() -> "Not listening: ${AssistWakeStatus.problem}"
                     AssistWakeSetting.enabled && AssistWakeStatus.waiting -> "Listening for \u201C${AssistWakeStatus.phrase.ifBlank { "the wake word" }}\u201D while the app is open."
                     AssistWakeSetting.enabled -> "On, but not listening yet" + (if (AssistWakeStatus.log.isEmpty()) "" else " (last: ${AssistWakeStatus.log.takeLast(4).joinToString(", ")})")
-                    else -> "While the app is open, say your assistant's wake word (the one on the house's Assist, such as Hey Jarvis) to open him hands-free. Once he is open he always listens for it, whatever this says. The microphone is only used while the app is on screen."
+                    else -> "While the app is open, say your assistant's wake word (the one set on the house's Assist) to open him hands-free. Once he is open he always listens for it, whatever this says. The microphone is only used while the app is on screen."
                 },
                 trailing = {
                     Switch(checked = AssistWakeSetting.enabled, onCheckedChange = { on ->
