@@ -99,11 +99,8 @@ fun InboxDialog(text: String?, source: String, autoAdd: Boolean = false, onClose
     }
 
     when (val s = state) {
-        InboxState.Reading -> if (waited && text != null) AlertDialog(
-            onDismissRequest = onClose,
-            title = { Text(if (autoAdd) "Adding…" else "Reading…") },
-            confirmButton = { TextButton(onClick = onClose) { Text("Cancel") } },
-        )
+        // A small pill at the top, not a box in the middle of the page; a tap on it cancels.
+        InboxState.Reading -> if (waited && text != null) LoadingPill(visible = true, connecting = false, label = if (autoAdd) "Adding" else "Reading", onTap = onClose)
         InboxState.Refused -> AlertDialog(
             onDismissRequest = onClose,
             title = { Text("The house can't do that yet") },

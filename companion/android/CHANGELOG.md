@@ -6,7 +6,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 ## 0.46.4
 
-- The "Reading…" box no longer appears when the app opens (it was the check for tasks waiting from earlier, which waits for the connection). It only shows when you share text to be read; the pill at the top says the app is loading.
+- The big "Reading…" / "Adding…" box is gone: it no longer appears when the app opens (it was the check for tasks waiting from earlier, which waits for the connection), and when you share text to be read the same small pill as "Updating" shows at the top (tap it to cancel).
 
 ## 0.46.3
 
