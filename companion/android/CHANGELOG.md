@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.46.7
+
+- Google Play installs no longer look at GitHub for updates: Account > About says Google Play keeps the app up to date, and its row opens the app's Play page. Test builds from GitHub update as before.
+
 ## 0.46.6
 
 - Clive's cards: on the phone the card is see-through (a faint wash and a hairline edge) instead of a solid colour; the weather card shows where, the next hours and the day's high and low; club crests come from a built-in list of Premier League clubs first, then a search by name, and show without a white disc (the watch too, which also shows the next four hours).

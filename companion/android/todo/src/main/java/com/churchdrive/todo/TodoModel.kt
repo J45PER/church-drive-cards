@@ -130,6 +130,7 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
     private var lastUpdateCheck = 0L
 
     fun checkForUpdate(then: (Boolean) -> Unit = {}) {
+        if (BuildConfig.PLAY) { then(false); return }
         lastUpdateCheck = System.currentTimeMillis()
         viewModelScope.launch(Dispatchers.IO) {
             val newer = UpdateCheck.check(okhttp3.OkHttpClient(), BuildConfig.BUILD.toIntOrNull() ?: 0, UpdateCheck.TODO_RELEASE_API)

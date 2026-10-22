@@ -47,7 +47,10 @@ android {
     }
 
     buildTypes {
+        // Debug builds are the GitHub test builds (they update themselves from there); the release build is the Google Play one (Play updates it).
+        debug { buildConfigField("Boolean", "PLAY", "false") }
         release {
+            buildConfigField("Boolean", "PLAY", "true")
             isMinifyEnabled = false
             signingConfig = signingConfigs.getByName("upload")
         }
