@@ -1,15 +1,17 @@
-# Script script.clive_show_card: lets Clive answer with a card on a screen that can draw one (the Church Drive watch app): the weather, a score or fixture with club badges, what is playing. Exposed to Assist. A copy of the live script.
-# It only fires the same event as clive_show (church_drive_assistant_show) with a `card` in it. The event carries the asker's Home Assistant user, so only that person's watch shows it.
-# Anything without a screen ignores it, so Clive can call it every time without harm; his spoken answer must still make sense alone.
+# Script script.clive_show_card: lets Clive answer with a card on a screen that can draw one (the Church Drive phone and watch apps): the weather, a score or fixture, what is playing. Exposed to Assist. A copy of the live script (2026-10-22).
+# It fires the event church_drive_assistant_show with a `card` in it. The event carries the asker's Home Assistant user, so only that person's phone and watch show it.
+# The weather card fills itself from weather.forecast_home (now, today's high and low, the next 7 hours, and the place from zone.home), and the script returns the card
+# to Clive so he can speak the real figures (that entity is not exposed to Assist, which keeps Home Assistant's own built-in weather answer from taking the question).
+# Club badges are found by the apps themselves from the team's name. Anything without a screen ignores the event, so his spoken answer must stand alone.
 alias: Show a card on screen
-description: >-
-  Show a card on the screen of the person who asked, under your spoken answer, when the answer is something to see: the weather, a sports score, a team's next game, what is playing. Use it after a web search or a lookup, with the real figures. kind is one of: weather, score, fixture, music. data holds the fields for that kind.
-  weather: symbol (sunny, partly-cloudy, cloudy, rainy, pouring, snowy, lightning, fog or night), temp (number, degrees), desc (two or three words), high, low (numbers) and rain (percent chance).
-  score: home and away, each {name, short (three letters), badge_url (https address of the club badge, from a web search of the club's badge)}, home_score, away_score, status ("Full time", "74'", "Half time") and scorers (one short line).
-  fixture: home and away as for score, title ("Man City v Liverpool"), when ("Sat 25 Oct"), time ("17:30"), where (the ground), comp (the competition) and in ("in 4 days").
-  music: title, artist and device (where it is playing).
-  Never say you have shown a card unless this returned ok. It does nothing on a device with no screen, so never rely on it.
+description: 'Show a card on the screen of the person who asked, when the answer is something to see: the weather, a sports score, a team''s next game, what is playing. Call it FIRST, with no words before it, then give your spoken answer as your final reply. kind is one of: weather, score, fixture, music. For the weather give kind only: the card fills itself from the weather forecast. For the others data holds the fields. score: home and away, each {name, short (three letters)}, home_score, away_score, status ("Full time", "74''", "Half time") and scorers (one short line). fixture: home and away as for score, title ("Man City v Aston Villa"), when ("Sat 24 Oct"), time ("12:30"), where (the ground), comp (the competition) and in ("in 2 days"). music: title, artist and device (where it is playing). The club badges are found by the screen itself, so do not search for them. It does nothing on a device with no screen.'
 fields:
+  data:
+    description: The fields for that kind (not needed for the weather).
+    name: Card fields
+    required: false
+    selector:
+      object: {}
   kind:
     description: weather, score, fixture or music.
     name: Kind of card
@@ -21,25 +23,39 @@ fields:
         - score
         - fixture
         - music
-  data:
-    description: The fields for that kind (see the description).
-    name: Card fields
-    required: true
-    selector:
-      object: {}
 icon: mdi:card-text-outline
-mode: parallel
 max: 5
+mode: parallel
 sequence:
 - condition: template
-  value_template: "{{ kind in ['weather', 'score', 'fixture', 'music'] }}"
+  value_template: '{{ kind in [''weather'', ''score'', ''fixture'', ''music''] }}'
+- if:
+  - condition: template
+    value_template: '{{ kind == ''weather'' }}'
+  then:
+  - action: weather.get_forecasts
+    continue_on_error: true
+    data:
+      type: daily
+    response_variable: fc
+    target:
+      entity_id: weather.forecast_home
+  - action: weather.get_forecasts
+    continue_on_error: true
+    data:
+      type: hourly
+    response_variable: fh
+    target:
+      entity_id: weather.forecast_home
+- variables:
+    card: '{% set e = ''weather.forecast_home'' %}{% set d = (fc[e].forecast[0] if (fc is defined and fc and e in fc and fc[e].forecast) else {}) %}{% set hrs = (fh[e].forecast[:7] if (fh is defined and fh and e in fh and fh[e].forecast) else []) %}{% set ns = namespace(l=[]) %}{% for h in hrs %}{% set ns.l = ns.l + [{''t'': (as_datetime(h.datetime) | as_local).strftime(''%H:%M''), ''temp'': h.temperature, ''symbol'': h.condition}] %}{% endfor %}{% set given = data if (data is defined and data) else {} %}{% if kind == ''weather'' %}{{ ({''symbol'': states(e), ''temp'': state_attr(e, ''temperature''), ''desc'': (states(e) | replace(''-'', '' '') | replace(''partlycloudy'', ''partly cloudy'') | replace(''lightning rainy'', ''thunder and rain'') | capitalize), ''high'': d.get(''temperature''), ''low'': d.get(''templow''), ''rain'': d.get(''precipitation_probability''), ''location'': state_attr(''zone.home'', ''friendly_name''), ''hourly'': ns.l} | combine(given)) | combine({''kind'': kind}) }}{% else %}{{ given | combine({''kind'': kind}) }}{% endif %}'
 - event: church_drive_assistant_show
   event_data:
-    card: "{{ dict(data | default({}, true), kind=kind) }}"
+    card: '{{ card }}'
 - variables:
     result:
       ok: true
-      next: >-
-        The card is on the screen. Now give your spoken answer as your final reply: say the real result in a natural sentence, and do not mention the card.
-- stop: Shown
-  response_variable: result
+      card: '{{ card }}'
+      next: 'The card is on the screen. Now give your spoken answer as your final reply, from the figures in card (temperatures are in degrees Celsius): say the real result in a natural sentence, and do not mention the card.'
+- response_variable: result
+  stop: Shown
