@@ -362,7 +362,8 @@ fun AssistantRound(label: String, onClick: () -> Unit, state: AssistState = Assi
     Box(
         modifier = Modifier.size(58.dp).shadow(6.dp, CircleShape).clip(CircleShape)
             .background(androidx.compose.material3.NavigationBarDefaults.containerColor)
-            .border(2.dp, androidx.compose.material3.NavigationBarDefaults.containerColor, CircleShape)
+            // The same outline as the typing box next to it.
+            .border(1.dp, scheme.outlineVariant, CircleShape)
             .clickable(onClickLabel = label, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -525,7 +526,7 @@ private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String)
                         OutlinedTextField(
                             value = ui.typed, onValueChange = { ui.typed = it }, singleLine = true, modifier = Modifier.weight(1f).focusRequester(ui.focus),
                             placeholder = { Text("Ask or tell the house") },
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                            keyboardOptions = KeyboardOptions(capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences, imeAction = ImeAction.Send),
                             keyboardActions = KeyboardActions(onSend = { model.send(ui.typed); ui.typed = "" }),
                             shape = RoundedCornerShape(28.dp),
                             colors = OutlinedTextFieldDefaults.colors(

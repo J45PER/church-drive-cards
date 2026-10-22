@@ -92,9 +92,9 @@ fun CardBlock(card: AssistantCard) {
             val home = f.side("home")
             val away = f.side("away")
             Row(horizontalArrangement = Arrangement.spacedBy(ui.d(10f)), verticalAlignment = Alignment.CenterVertically) {
-                Badge(home.optString("badge_url").ifBlank { null }, short(home), ui.d(40f))
+                Badge(home.optString("badge_url").ifBlank { null }, short(home), ui.d(40f), clubName = home.optString("name"))
                 Text("${f.optInt("home_score")} – ${f.optInt("away_score")}", color = Color.White, fontSize = ui.sp(34f), fontWeight = FontWeight.Bold, maxLines = 1)
-                Badge(away.optString("badge_url").ifBlank { null }, short(away), ui.d(40f))
+                Badge(away.optString("badge_url").ifBlank { null }, short(away), ui.d(40f), clubName = away.optString("name"))
             }
             Text(f.optString("status"), color = Color.White, fontSize = ui.sp(13f), fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = ui.d(4f)))
             val scorers = f.optString("scorers")
@@ -103,10 +103,10 @@ fun CardBlock(card: AssistantCard) {
         "fixture" -> Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             val home = f.side("home")
             val away = f.side("away")
-            if (home.has("badge_url") || away.has("badge_url")) Row(horizontalArrangement = Arrangement.spacedBy(ui.d(8f)), verticalAlignment = Alignment.CenterVertically) {
-                Badge(home.optString("badge_url").ifBlank { null }, short(home), ui.d(26f))
+            if (home.has("name") || away.has("name") || home.has("badge_url") || away.has("badge_url")) Row(horizontalArrangement = Arrangement.spacedBy(ui.d(8f)), verticalAlignment = Alignment.CenterVertically) {
+                Badge(home.optString("badge_url").ifBlank { null }, short(home), ui.d(26f), clubName = home.optString("name"))
                 Text("v", color = SOFT, fontSize = ui.sp(12f))
-                Badge(away.optString("badge_url").ifBlank { null }, short(away), ui.d(26f))
+                Badge(away.optString("badge_url").ifBlank { null }, short(away), ui.d(26f), clubName = away.optString("name"))
             }
             Text(f.optString("title"), color = Color.White, fontSize = ui.sp(14f), fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
             Text(f.optString("when"), color = Color.White, fontSize = ui.sp(26f), fontWeight = FontWeight.Bold, maxLines = 1)
