@@ -129,7 +129,7 @@ fun AccountOverlay(
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                 when (which) {
                     "settings" -> SettingsPage(settings, isAdmin) { onPanel("account") }
-                    "about" -> AboutPage(settings, updateAvailable) { onPanel("account") }
+                    "about" -> AboutPage(settings, updateAvailable, isAdmin) { onPanel("account") }
                     // The administrator's pages open here, as sub-pages of the panel.
                     "todo" -> AdminPage("To-do", { onPanel("account") }) { pageContent(Page.Todo) }
                     "energy", "devices" -> adminPages.firstOrNull { it.name.lowercase() == which }?.let { p ->
@@ -235,8 +235,6 @@ private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Pa
                 Icons.Outlined.Checklist, "To-do",
                 if (todoOpensApp) "Opens Church Drive To-Do" else "Lists, cleaning and house jobs",
                 onClick = onTodo,
-                // The To-Do app's own icon, whether the row opens that app or this app's To-do page.
-                leading = { androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(com.churchdrive.app.R.drawable.ic_todo_mark), contentDescription = null, modifier = Modifier.size(24.dp)) },
             )
         }
         // Device Health, for everyone: batteries, filters and devices that stopped answering.
@@ -448,7 +446,7 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
 }
 
 @Composable
-private fun AboutPage(settings: AccountSettings, updateAvailable: Boolean, onBack: () -> Unit) {
+private fun AboutPage(settings: AccountSettings, updateAvailable: Boolean, isAdmin: Boolean, onBack: () -> Unit) {
     val context = LocalContext.current
     var status by remember { mutableStateOf<String?>(null) }
     val available = updateAvailable || status == "available"
@@ -459,8 +457,8 @@ private fun AboutPage(settings: AccountSettings, updateAvailable: Boolean, onBac
         PanelTitle("About", onBack)
         PanelCard {
             PanelRow(Icons.Outlined.Info, "Church Drive", "Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.BUILD}) · ${BuildConfig.COMMIT}")
-            // For the allowed list in TrustedApps: the other Church Drive apps trust this app by this fingerprint.
-            PanelRow(Icons.Outlined.Info, "Signing certificate (SHA-256)", com.churchdrive.app.TrustedApps.ownCerts(context).joinToString("\n").ifBlank { "Not available" })
+            // For the allowed list in TrustedApps (the other Church Drive apps trust this app by this fingerprint): administrators only.
+            if (isAdmin) PanelRow(Icons.Outlined.Info, "Signing certificate (SHA-256)", com.churchdrive.app.TrustedApps.ownCerts(context).joinToString("\n").ifBlank { "Not available" })
             PanelRow(
                 Icons.Outlined.SystemUpdate, "Check for updates",
                 when {

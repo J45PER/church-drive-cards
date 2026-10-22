@@ -4,6 +4,12 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.46.3
+
+- Loading: the phone app shows "Updating" (or "Connecting") as a pill under the title, with Clive's mark drifting beside it, over what it remembered from last time, instead of a line that pushed the page down. On the watch, both apps remember the last answer from the house and show it at once, with an arc of Clive's colours circling the edge and a small "Updating" pill (his mark trading size) until the live answer arrives.
+- The build number and version are only in About (not on the main pages), and the signing certificate there is for administrators only.
+- The To-do row in the account panel uses a single-colour icon like the other rows.
+
 ## 0.46.2
 
 - Manager > Watch is built (it said Coming soon): pages on or off and in order, what is shown on each (alarm modes, climate devices, rooms and zones, cleaning and charger faces, cars), how Lights starts, and Clive's toggles. The same settings as the Watch panel on the web Manager.

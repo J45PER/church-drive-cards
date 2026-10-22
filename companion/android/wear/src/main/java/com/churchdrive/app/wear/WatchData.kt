@@ -38,8 +38,13 @@ object WatchData {
     /** Area names by area id, for rooms the dashboard names by their area. */
     val areaNames = MutableStateFlow<Map<String, String>>(emptyMap())
 
-    /** True once the house has sent the first states. */
+    /** True once there is something to show: remembered from last time, or sent by the house. */
     val loaded = MutableStateFlow(false)
+
+    /** True once the house itself has sent the states (until then the remembered ones are on screen, with the loader over them). */
+    val live = MutableStateFlow(false)
+
+    private var lastSaved = 0L
 
     private var subscription = -1
 
@@ -50,6 +55,10 @@ object WatchData {
         val p = context.applicationContext.getSharedPreferences("watch_data", android.content.Context.MODE_PRIVATE)
         prefs = p
         p.getString("config", null)?.let { raw -> runCatching { config.value = WatchConfig.parse(JSONObject(raw)) } }
+        // What the house last said, so the pages are there at once while the live answer catches up.
+        p.getString("dashboard", null)?.let { raw -> runCatching { floors.value = WatchLights.parse(JSONObject(raw)) } }
+        p.getString("library", null)?.let { raw -> runCatching { looks.value = SceneLooks.parse(JSONObject(raw), null) } }
+        p.getString("entities", null)?.let { raw -> runCatching { if (!live.value) show(JSONObject(raw)) } }
     }
 
     /** Only the watch settings (Clive's app needs no more). */
@@ -63,8 +72,14 @@ object WatchData {
     suspend fun load() {
         val api = WatchHa.api
         loadConfig()
-        api.ask("church_drive/library", JSONObject())?.let { looks.value = SceneLooks.parse(it, null) }
-        (api.ask("lovelace/config", JSONObject().put("url_path", WatchLights.DASHBOARD)) as? JSONObject)?.let { floors.value = WatchLights.parse(it) }
+        api.ask("church_drive/library", JSONObject())?.let {
+            looks.value = SceneLooks.parse(it, null)
+            (it as? JSONObject)?.let { o -> prefs?.edit()?.putString("library", o.toString())?.apply() }
+        }
+        (api.ask("lovelace/config", JSONObject().put("url_path", WatchLights.DASHBOARD)) as? JSONObject)?.let {
+            floors.value = WatchLights.parse(it)
+            prefs?.edit()?.putString("dashboard", it.toString())?.apply()
+        }
         follow()
     }
 
@@ -78,6 +93,7 @@ object WatchData {
     /** The line dropped: the subscription is gone with it. */
     fun lost() {
         subscription = -1
+        live.value = false
     }
 
     private fun apply(event: JSONObject) {
@@ -87,12 +103,24 @@ object WatchData {
             is String -> runCatching { JSONObject(r) }.getOrNull()
             else -> null
         } ?: return
+        show(obj)
+        live.value = true
+        // Kept for next time, at most every twenty seconds (the house changes things all day).
+        val now = System.currentTimeMillis()
+        if (now - lastSaved > 20_000L) {
+            lastSaved = now
+            prefs?.edit()?.putString("entities", obj.toString())?.apply()
+        }
+    }
+
+    /** Puts a template answer on screen. */
+    private fun show(obj: JSONObject) {
         entities.value = parseEntities(obj)
         obj.optJSONArray("areas")?.let { a ->
             val names = (0 until a.length()).mapNotNull { a.optJSONArray(it) }.filter { it.length() == 2 && !it.isNull(1) }.associate { it.optString(0) to it.optString(1) }
             if (names.isNotEmpty()) areaNames.value = names
         }
-        loaded.value = true
+        if (entities.value.isNotEmpty()) loaded.value = true
     }
 
     /** The template's answer as entities. */

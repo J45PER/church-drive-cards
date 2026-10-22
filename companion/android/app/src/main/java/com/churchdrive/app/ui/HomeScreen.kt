@@ -149,14 +149,6 @@ fun HomeScreen(
             MediumTopAppBar(
                 title = { Text(title) },
                 actions = {
-                    // Administrators see which build this is.
-                    if (isAdmin) {
-                        Text(
-                            "v${BuildConfig.VERSION_NAME} (${BuildConfig.BUILD}) · ${BuildConfig.COMMIT}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
                     // Listening for the wake word: a small green microphone, so you can see it is on.
                     if (AssistWakeStatus.waiting) {
                         Box(Modifier.padding(horizontal = 4.dp), contentAlignment = Alignment.Center) {
@@ -224,16 +216,16 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(28.dp),
         ) {
             if (updateAvailable) UpdateBanner()
+            // Connecting and updating show as a pill at the top (LoadingPill), over what was remembered from last time.
             when (connection) {
-                ConnectionState.Connected ->
-                    if (!statesLoaded) LoadingNote("Updating from the house…")
+                ConnectionState.Connected -> Unit
                 ConnectionState.AuthFailed ->
                     if (LocalCanRetrySignIn.current) LoadingNote("Can't sign in just now. Trying again…")
                     else Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Sign-in failed. The token may have been deleted or have run out.", color = MaterialTheme.colorScheme.error)
                         TileRow(listOf(TileItem("mdi:login", "Sign in again", false) { onSignOut() }), toneColors(Tone.Grey), MaterialTheme.colorScheme.onSurface, perRow = 1)
                     }
-                else -> LoadingNote("Connecting…")
+                else -> Unit
             }
 
             if (page == Page.Home) {
@@ -261,6 +253,7 @@ fun HomeScreen(
     // Clive, over the page, and his round button over him: one button, the same one shut or open.
     AssistantOverlay(onSettings = { panel = "settings" })
     AssistantFab()
+    LoadingPill(visible = connection != ConnectionState.AuthFailed && (connection != ConnectionState.Connected || !statesLoaded), connecting = connection != ConnectionState.Connected)
     if (openCamera != null && statesLoaded) CameraViewerFor(openCamera, entities, registry, call, onCameraClosed, answer = openCameraAnswer)
     AccountOverlay(
         panel, { panel = it }, userName, isAdmin, account, updateAvailable, onSignOut,
