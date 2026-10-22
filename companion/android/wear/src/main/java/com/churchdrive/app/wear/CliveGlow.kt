@@ -187,8 +187,8 @@ fun Badge(url: String?, initials: String, size: Dp, dim: Boolean = false, clubNa
     }
     val image by rememberRemoteImage(found, 160)
     val bitmap = image
-    Box(Modifier.size(size).clip(CircleShape).background(Color.White.copy(alpha = if (dim) 0.2f else 0.94f)), contentAlignment = Alignment.Center) {
-        if (bitmap != null) Image(bitmap.asImageBitmap(), initials, Modifier.fillMaxSize().clip(CircleShape).background(Color.White), contentScale = ContentScale.Fit)
-        else Text(initials, color = if (dim) Color.White else Color(0xFF1C2C5B), fontSize = (size.value * 0.32f).sp, fontWeight = FontWeight.Bold)
+    Box(Modifier.size(size), contentAlignment = Alignment.Center) {
+        if (bitmap != null) Image(bitmap.asImageBitmap(), initials, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+        else Text(initials, color = Color.White, fontSize = (size.value * 0.32f).sp, fontWeight = FontWeight.Bold)
     }
 }

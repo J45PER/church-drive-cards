@@ -12,6 +12,20 @@ import java.util.concurrent.ConcurrentHashMap
  * Call from a background thread.
  */
 object TeamBadges {
+    /** Clubs whose crests football-data.org serves at a fixed address (name as [clean] makes it, then its id there). */
+    private val KNOWN = mapOf(
+        "arsenal" to 57, "aston villa" to 58, "chelsea" to 61, "everton" to 62, "fulham" to 63, "liverpool" to 64,
+        "man city" to 65, "man united" to 66, "man utd" to 66, "newcastle" to 67, "newcastle united" to 67,
+        "tottenham" to 73, "tottenham hotspur" to 73, "spurs" to 73, "wolves" to 76, "wolverhampton wanderers" to 76,
+        "brighton" to 397, "brighton and hove albion" to 397, "burnley" to 328, "crystal palace" to 354, "leeds" to 341,
+        "leeds united" to 341, "brentford" to 402, "nottingham forest" to 351, "nottm forest" to 351, "sunderland" to 71,
+        "west ham" to 563, "west ham united" to 563, "bournemouth" to 1044, "southampton" to 340, "leicester" to 338,
+        "leicester city" to 338, "ipswich" to 349, "ipswich town" to 349,
+    )
+
+    private fun clean(name: String) = name.lowercase().replace("&", " and ").replace(".", " ").replace("manchester ", "man ")
+        .replace(Regex("\\b(a?fc|cf)\\b"), " ").replace(Regex("\\s+"), " ").trim()
+
     private val found = ConcurrentHashMap<String, String>()
     private val missing = ConcurrentHashMap.newKeySet<String>()
 
@@ -20,6 +34,7 @@ object TeamBadges {
         val key = name.trim().lowercase()
         if (key.length < 3) return null
         found[key]?.let { return it }
+        KNOWN[clean(name)]?.let { id -> return "https://crests.football-data.org/$id.png".also { found[key] = it } }
         if (key in missing) return null
         val url = runCatching { search(name.trim()) }.getOrNull()
         if (url != null) found[key] = url else missing += key
@@ -27,7 +42,12 @@ object TeamBadges {
     }
 
     private fun search(name: String): String? {
-        val c = URL("https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=" + URLEncoder.encode(name, "UTF-8")).openConnection() as HttpURLConnection
+        for (apiKey in listOf("123", "3")) searchWith(apiKey, name)?.let { return it }
+        return null
+    }
+
+    private fun searchWith(apiKey: String, name: String): String? {
+        val c = URL("https://www.thesportsdb.com/api/v1/json/$apiKey/searchteams.php?t=" + URLEncoder.encode(name, "UTF-8")).openConnection() as HttpURLConnection
         c.connectTimeout = 6_000
         c.readTimeout = 6_000
         c.setRequestProperty("User-Agent", "ChurchDrive")
