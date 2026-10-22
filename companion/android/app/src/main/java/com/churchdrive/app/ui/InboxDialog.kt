@@ -90,7 +90,8 @@ fun InboxDialog(text: String?, source: String, autoAdd: Boolean = false, onClose
         }
     }
 
-    // A quick answer shows no box at all; one that takes a moment shows a small one.
+    // A quick answer shows no box at all; one that takes a moment shows a small one. When nothing was sent (the check for tasks waiting from
+    // earlier, made as the app opens) it never does: the loading pill at the top already says the app is reading.
     var waited by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         kotlinx.coroutines.delay(800)
@@ -98,7 +99,7 @@ fun InboxDialog(text: String?, source: String, autoAdd: Boolean = false, onClose
     }
 
     when (val s = state) {
-        InboxState.Reading -> if (waited) AlertDialog(
+        InboxState.Reading -> if (waited && text != null) AlertDialog(
             onDismissRequest = onClose,
             title = { Text(if (autoAdd) "Adding…" else "Reading…") },
             confirmButton = { TextButton(onClick = onClose) { Text("Cancel") } },
