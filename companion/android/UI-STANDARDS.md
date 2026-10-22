@@ -23,6 +23,9 @@ The mechanical ones are checked by `UiStandardsTest` (it fails the build); the r
    (`tileRowSizes`: five tiles are 3 + 2, seven are 4 + 3). A short last row's tiles are wider; there is never blank
    space at the end of a row, and the row never scrolls sideways. Tiles that belong together (like the fan's Off and
    speeds, then its modes) go in separate `TileRow`s, as on the dashboard.
+6. **Brand logos are `si:` icons** (Simple Icons: Spotify, Netflix, YouTube...), drawn single-colour through `HaIcon("si:spotify", ...)`
+   (or `ServiceLogo(name, ...)` from a service's name); only icons Simple Icons doesn't have (some are removed for trademark reasons) are
+   the owner's own to add.
 6. **Icons mirror Home Assistant.** An icon for a mode goes through `IconMap.of(group, key, default)` so the Icon
    Styles card (Manager) changes it everywhere. New modes are added to `icons.py` in the integration as well as
    here, with the same group and key. Every `"mdi:..."` in the code must be a real Material Design icon (checked).

@@ -97,6 +97,15 @@ suspend fun preloadCardImages(context: android.content.Context, card: AssistantC
     }
 }
 
+/** The logo of a service (Spotify, Netflix...) in one colour, or a music note when there is none for it. */
+@Composable
+fun ServiceLogo(name: String, tint: Color, size: Dp) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    androidx.compose.runtime.LaunchedEffect(Unit) { SimpleIcons.load(context) }
+    val has = SimpleIcons.paths?.containsKey(SimpleIcons.slugFor(name)) == true
+    HaIcon(if (has) "si:$name" else "mdi:music-note", Icons.Filled.Info, tint, size)
+}
+
 /** A club badge: its crest, with the club's three letters behind it for while it loads or when there is none. */
 @Composable
 private fun CardBadge(side: JSONObject, size: Dp) {
@@ -274,6 +283,7 @@ fun AssistantCardView(card: AssistantCard, modifier: Modifier = Modifier) {
                 }
             }
             "music" -> {
+                if (f.optString("app").isNotBlank()) ServiceLogo(f.optString("app"), ink, 30.dp)
                 Text(f.optString("title"), style = MaterialTheme.typography.titleMedium, color = ink, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 if (f.optString("artist").isNotBlank()) Text(f.optString("artist"), style = MaterialTheme.typography.bodyMedium, color = soft)
                 if (f.optString("device").isNotBlank()) Text("Playing on ${f.optString("device")}", style = MaterialTheme.typography.bodySmall, color = soft)

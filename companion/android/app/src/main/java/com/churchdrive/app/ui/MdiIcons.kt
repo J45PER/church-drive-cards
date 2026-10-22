@@ -178,3 +178,41 @@ object MdiAll {
         }
     }
 }
+
+/**
+ * Brand logos (Spotify, Netflix, YouTube and so on) as single-colour vectors on a 24 x 24 grid, for the `si:` icons the dashboards can use
+ * (the Simple Icons set, the same names as the HACS icon pack) and for the service on a music card. Read from assets/si-icons.json the first time
+ * one is needed.
+ *
+ * Simple Icons, https://simpleicons.org, CC0 1.0 (taken from the simple-icons package, version 16.35.0). The logos themselves belong to their owners.
+ */
+object SimpleIcons {
+    private val loaded = mutableStateOf<Map<String, String>?>(null)
+    @Volatile private var started = false
+
+    /** Every logo's path by name, or null until the set has been read. Reading it from a composable redraws when it arrives. */
+    val paths: Map<String, String>? get() = loaded.value
+
+    fun load(context: Context) {
+        if (started) return
+        started = true
+        val app = context.applicationContext
+        thread(name = "si-icons", isDaemon = true) {
+            runCatching {
+                val json = app.assets.open("si-icons.json").bufferedReader().use { JSONObject(it.readText()) }
+                val map = HashMap<String, String>(json.length() * 2)
+                for (name in json.keys()) map[name] = json.getString(name)
+                loaded.value = map
+            }
+        }
+    }
+
+    /** Names as the services call themselves, to the Simple Icons name. */
+    private val ALIASES = mapOf("chromecast" to "googlecast", "itvhub" to "itvx", "hue" to "philipshue", "ytmusic" to "youtubemusic")
+
+    /** The Simple Icons name for a service's name: "YouTube Music" is youtubemusic, "Disney+" is disneyplus. */
+    fun slugFor(name: String): String {
+        val k = name.trim().lowercase().replace("+", "plus").replace("&", "and").replace(".", "dot").replace(Regex("[^a-z0-9]"), "")
+        return ALIASES[k] ?: k
+    }
+}

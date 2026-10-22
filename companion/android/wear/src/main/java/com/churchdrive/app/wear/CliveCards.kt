@@ -140,6 +140,7 @@ fun CardBlock(card: AssistantCard) {
             Text(listOf(f.optString("where"), f.optString("comp")).filter { it.isNotBlank() }.joinToString(" · "), color = SOFT.copy(alpha = 0.85f), fontSize = ui.sp(11f), maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         "music" -> Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            if (hasServiceLogo(f.optString("app"))) ServiceLogo(f.optString("app"), Color.White, ui.d(22f), Modifier.padding(bottom = ui.d(3f)))
             Text(f.optString("title"), color = Color.White, fontSize = ui.sp(16f), fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
             Text(f.optString("artist"), color = SOFT, fontSize = ui.sp(12f), maxLines = 1, overflow = TextOverflow.Ellipsis)
             val device = f.optString("device")
