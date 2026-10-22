@@ -4,6 +4,14 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.46.2
+
+- Manager > Watch is built (it said Coming soon): pages on or off and in order, what is shown on each (alarm modes, climate devices, rooms and zones, cleaning and charger faces, cars), how Lights starts, and Clive's toggles. The same settings as the Watch panel on the web Manager.
+- Clive's cards: club badges are found by the screen itself from the team's name (a model can't find a real picture address); the phone's cards have the weather icon and the weather's or sport's colours, like the watch.
+- The typing box starts a sentence with a capital, and Clive's round button has the same outline as the typing box.
+- The gap above the keyboard after leaving the app and coming back: the window is set to resize again every time the app comes back.
+- Watch: the crown only turns a value (temperature, brightness), a firmer turn is needed for each step, and it never scrolls pages or faces.
+
 ## 0.46.1
 
 - Clive's cards (a score or fixture with club badges, the weather, what is playing) now show in the app's chat too, not only on the watch. Typing no longer ends with "Allow the microphone to talk to the house": a follow-up listen that can't start because the microphone isn't allowed is dropped quietly.

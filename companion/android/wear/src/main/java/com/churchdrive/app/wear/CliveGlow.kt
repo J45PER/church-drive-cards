@@ -180,8 +180,12 @@ private fun download(url: String, maxPx: Int): Bitmap? = runCatching {
 
 /** A club badge: its picture, or its three letters on a white disc while it loads or when it has none. */
 @Composable
-fun Badge(url: String?, initials: String, size: Dp, dim: Boolean = false) {
-    val image by rememberRemoteImage(url, 160)
+fun Badge(url: String?, initials: String, size: Dp, dim: Boolean = false, clubName: String? = null) {
+    // No address from the house: find the club's badge from its name.
+    val found by androidx.compose.runtime.produceState<String?>(url, url, clubName) {
+        value = url ?: clubName?.takeIf { it.isNotBlank() }?.let { n -> withContext(Dispatchers.IO) { com.churchdrive.app.ui.TeamBadges.lookup(n) } }
+    }
+    val image by rememberRemoteImage(found, 160)
     val bitmap = image
     Box(Modifier.size(size).clip(CircleShape).background(Color.White.copy(alpha = if (dim) 0.2f else 0.94f)), contentAlignment = Alignment.Center) {
         if (bitmap != null) Image(bitmap.asImageBitmap(), initials, Modifier.fillMaxSize().clip(CircleShape).background(Color.White), contentScale = ContentScale.Fit)

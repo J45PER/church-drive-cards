@@ -141,7 +141,7 @@ private fun CliveRoot() {
                 awake = false
             }
             KeepAwake(awake)
-            VerticalPager(state = pager, modifier = Modifier.fillMaxSize().crown { n -> scope.launch { pager.animateScrollToPage((pager.currentPage + n).coerceIn(0, 2)) } }) { page ->
+            VerticalPager(state = pager, modifier = Modifier.fillMaxSize()) { page ->
                 when (page) {
                     0 -> TalkFace(model, !signedIn, talk)
                     1 -> PromptsFace(signedIn) { sentence ->

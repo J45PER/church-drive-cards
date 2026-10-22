@@ -175,7 +175,7 @@ private fun CompanionScreen(connected: Boolean, onExit: () -> Unit) {
                 nested != null -> SlideIn(stack) { FaceList(nestedFaces, nestedState) }
                 else -> HorizontalPager(state = hState, modifier = Modifier.fillMaxSize(), key = { pages[it].first.id }) { i ->
                     val (page, faces) = pages[i]
-                    FaceList(faces, vStates.getValue(page)) { n -> scope.launch { hState.animateScrollToPage((hState.currentPage + n).coerceIn(0, pages.size - 1)) } }
+                    FaceList(faces, vStates.getValue(page))
                 }
             }
             if (loaded && nested == null && pages.size > 1) PageDots(hState.currentPage, pages.size)
@@ -210,23 +210,13 @@ private fun SlideIn(key: Any, content: @Composable () -> Unit) {
 
 /** One page's faces, one after another down the glass, with a rail of dots at the right edge. */
 @Composable
-private fun FaceList(faces: List<Face>, state: PagerState, onEdge: (Int) -> Unit = {}) {
+private fun FaceList(faces: List<Face>, state: PagerState) {
     val ui = LocalUi.current
     val scope = rememberCoroutineScope()
     val next: () -> Unit = { scope.launch { state.animateScrollToPage((state.currentPage + 1).coerceAtMost((faces.size - 1).coerceAtLeast(0))) } }
-    // The crown turns the ring's value when the face has one (temperature, brightness); otherwise it moves between the faces, and from
-    // the last one on (or a page with a single face) it moves between the pages.
+    // The crown only turns a value (temperature, brightness): it never scrolls, and does nothing on a face with no value to turn.
     val crownStep = faces.getOrNull(state.currentPage)?.spec?.drag?.onStep
-    val crownMod = Modifier.crown { n ->
-        when {
-            crownStep != null -> crownStep(n)
-            faces.size <= 1 -> onEdge(n)
-            else -> {
-                val to = state.currentPage + n
-                if (to in faces.indices) scope.launch { state.animateScrollToPage(to) } else onEdge(n)
-            }
-        }
-    }
+    val crownMod = if (crownStep != null) Modifier.crown { n -> crownStep(n) } else Modifier
     CompositionLocalProvider(LocalNextFace provides next) {
         Box(Modifier.fillMaxSize().then(crownMod)) {
             VerticalPager(state = state, modifier = Modifier.fillMaxSize(), key = { faces.getOrNull(it)?.id ?: it }) { i ->

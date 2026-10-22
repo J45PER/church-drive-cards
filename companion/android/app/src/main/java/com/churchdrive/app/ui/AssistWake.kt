@@ -229,12 +229,20 @@ fun AssistantOverlay(onSettings: () -> Unit = {}) {
     // While he is open the window must not pan up to keep the typing box in view (the phone's default for this window): he places the box above the
     // keyboard himself, and a panned window would count the keyboard twice.
     val context = LocalContext.current
-    DisposableEffect(Unit) {
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle) {
         val window = generateSequence(context) { (it as? android.content.ContextWrapper)?.baseContext }.filterIsInstance<android.app.Activity>().firstOrNull()?.window
         val before = window?.attributes?.softInputMode
         @Suppress("DEPRECATION")
-        window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
-        onDispose { if (before != null) window?.setSoftInputMode(before) }
+        fun resize() { window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE) }
+        resize()
+        // Coming back to the app (after the home screen, say) the window can have gone back to its own setting, which left a gap above the keyboard.
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event -> if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) resize() }
+        lifecycle.addObserver(observer)
+        onDispose {
+            lifecycle.removeObserver(observer)
+            if (before != null) window?.setSoftInputMode(before)
+        }
     }
     // Taps on him stay on him, not on the page underneath.
     androidx.compose.foundation.layout.Box(

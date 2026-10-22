@@ -15,8 +15,8 @@ import androidx.compose.ui.platform.LocalView
 import kotlin.math.abs
 
 /**
- * The watch's crown (or rotating bezel): each notch calls [onNotch] with 1 for clockwise and -1 for the other way. Slow turns gather
- * up, so one click of the crown is one notch.
+ * The watch's crown (or rotating bezel): each notch calls [onNotch] with 1 for clockwise and -1 for the other way. A notch needs a good turn (small
+ * nudges gather up rather than each counting), so a value does not race away.
  */
 @Composable
 fun Modifier.crown(onNotch: (Int) -> Unit): Modifier {
@@ -38,7 +38,7 @@ fun Modifier.crown(onNotch: (Int) -> Unit): Modifier {
         .focusable()
 }
 
-private const val NOTCH_PIXELS = 48f
+private const val NOTCH_PIXELS = 100f
 
 /** Keeps the glass lit while [on] is true (a watch turns its screen off after a few seconds otherwise, even in the middle of waiting for an answer). */
 @Composable
