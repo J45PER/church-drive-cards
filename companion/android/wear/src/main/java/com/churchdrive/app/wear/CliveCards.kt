@@ -43,6 +43,7 @@ fun cardSymbol(card: AssistantCard?): String? {
             "hockey" -> "hockey-puck"
             else -> "soccer"
         }
+        "scores" -> "soccer"
         "fixture" -> "calendar-clock"
         "music" -> "music-note"
         else -> null
@@ -61,7 +62,7 @@ fun cardPalette(card: AssistantCard?): GlowPalette {
             "weather-lightning" -> GlowPalette.Storm
             else -> GlowPalette.Rain
         }
-        "score", "fixture" -> GlowPalette.Sport
+        "score", "scores", "fixture" -> GlowPalette.Sport
         else -> GlowPalette.Base
     }
 }
@@ -111,6 +112,19 @@ fun CardBlock(card: AssistantCard) {
             Text(f.optString("status"), color = Color.White, fontSize = ui.sp(13f), fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = ui.d(4f)))
             val scorers = f.optString("scorers")
             if (scorers.isNotBlank()) Text(scorers, color = SOFT.copy(alpha = 0.85f), fontSize = ui.sp(11f), textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
+        "scores" -> Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(ui.d(4f))) {
+            val rows = f.optJSONArray("rows")
+            for (i in 0 until minOf(rows?.length() ?: 0, 6)) {
+                val r = rows?.optJSONObject(i) ?: continue
+                val home = r.side("home")
+                val away = r.side("away")
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(ui.d(5f))) {
+                    Badge(home.optString("badge_url").ifBlank { null }, short(home), ui.d(20f), clubName = home.optString("name"))
+                    Text("${r.optInt("home_score")} – ${r.optInt("away_score")}", color = Color.White, fontSize = ui.sp(18f), fontWeight = FontWeight.Bold, maxLines = 1)
+                    Badge(away.optString("badge_url").ifBlank { null }, short(away), ui.d(20f), clubName = away.optString("name"))
+                }
+            }
         }
         "fixture" -> Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             val home = f.side("home")

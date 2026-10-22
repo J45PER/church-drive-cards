@@ -23,6 +23,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -53,7 +58,8 @@ private fun cardTint(card: AssistantCard): Color? = when (card.kind) {
         "lightning", "lightning-rainy" -> Color(0xFF4527A0)
         else -> Color(0xFF455A64)
     }
-    "score", "fixture" -> Color(0xFF1C2C5B)
+    "score", "scores", "fixture" -> Color(0xFF1C2C5B)
+    "car" -> Color(0xFF00838F)
     else -> null
 }
 
@@ -62,6 +68,17 @@ private fun JSONObject.side(key: String): JSONObject = optJSONObject(key) ?: JSO
 private fun JSONObject.number(key: String): Double? = optDouble(key).takeIf { !it.isNaN() }
 
 private fun short(side: JSONObject): String = side.optString("short").ifBlank { side.optString("name").take(3).uppercase() }
+
+/** The tone and word for where a person is, as the Manager's People card shows it: Home green, a named place teal, Away grey, unknown amber. */
+fun personPill(state: String): Pair<String, Tone> = when (state.trim().lowercase()) {
+    "home" -> "Home" to Tone.Green
+    "not_home", "away", "" -> "Away" to Tone.Grey
+    "unknown", "unavailable" -> "Unknown" to Tone.Amber
+    else -> state.trim() to Tone.Teal
+}
+
+/** A colour given as #rrggbb (a light's own colour), or null. */
+private fun hexColour(v: String): Color? = v.trim().removePrefix("#").takeIf { it.length == 6 }?.toLongOrNull(16)?.let { Color(0xFF000000 or it) }
 
 /** A club badge: its crest, with the club's three letters behind it for while it loads or when there is none. */
 @Composable
@@ -114,6 +131,87 @@ fun AssistantCardView(card: AssistantCard, modifier: Modifier = Modifier) {
                 Text(listOf(home.optString("name"), away.optString("name")).filter { it.isNotBlank() }.joinToString(" v "), style = MaterialTheme.typography.bodySmall, color = soft, textAlign = TextAlign.Center)
                 if (f.optString("status").isNotBlank()) Text(f.optString("status"), style = MaterialTheme.typography.titleSmall, color = ink)
                 if (f.optString("scorers").isNotBlank()) Text(f.optString("scorers"), style = MaterialTheme.typography.bodySmall, color = soft, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+            "scores" -> {
+                if (f.optString("title").isNotBlank()) Text(f.optString("title"), style = MaterialTheme.typography.titleSmall, color = soft, modifier = Modifier.fillMaxWidth())
+                val rows = f.optJSONArray("rows")
+                for (i in 0 until (rows?.length() ?: 0)) {
+                    val r = rows?.optJSONObject(i) ?: continue
+                    val home = r.side("home")
+                    val away = r.side("away")
+                    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(short(home), Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, color = ink, textAlign = TextAlign.End, maxLines = 1)
+                        Box(Modifier.padding(horizontal = 6.dp)) { CardBadge(home, 28.dp) }
+                        Text("${r.optInt("home_score")} – ${r.optInt("away_score")}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = ink)
+                        Box(Modifier.padding(horizontal = 6.dp)) { CardBadge(away, 28.dp) }
+                        Text(short(away), Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, color = ink, maxLines = 1)
+                    }
+                    if (r.optString("status").isNotBlank() && r.optString("status") != "Full time") Text(r.optString("status"), style = MaterialTheme.typography.labelSmall, color = soft)
+                }
+            }
+            "people" -> {
+                val rows = f.optJSONArray("rows")
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    for (i in 0 until (rows?.length() ?: 0)) {
+                        val r = rows?.optJSONObject(i) ?: continue
+                        val (word, tone) = personPill(r.optString("state"))
+                        val t = toneColors(tone)
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Box(Modifier.size(38.dp).clip(CircleShape).background(t.accent), contentAlignment = Alignment.Center) {
+                                Text(r.optString("name").take(1).uppercase(), color = t.onAccent, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                            }
+                            Column(Modifier.weight(1f)) {
+                                Text(r.optString("name"), style = MaterialTheme.typography.titleSmall, color = ink, maxLines = 1)
+                                if (r.optString("detail").isNotBlank()) Text(r.optString("detail"), style = MaterialTheme.typography.bodySmall, color = soft, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                            Text(word, color = t.accent, style = MaterialTheme.typography.labelMedium, maxLines = 1, modifier = Modifier.background(t.accent.copy(alpha = 0.18f), CircleShape).padding(horizontal = 10.dp, vertical = 3.dp))
+                        }
+                    }
+                }
+            }
+            "done" -> {
+                val failed = f.has("ok") && !f.optBoolean("ok", true)
+                val given = f.optString("colour")
+                val tone = if (failed) Tone.Red else toneFromColour(given) ?: Tone.Green
+                val t = toneColors(tone)
+                val live = hexColour(given)
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Box(Modifier.size(32.dp).clip(CircleShape).background((live ?: t.accent).copy(alpha = 0.25f)), contentAlignment = Alignment.Center) {
+                        HaIcon(f.optString("icon").ifBlank { if (failed) "mdi:close" else "mdi:check" }, Icons.Filled.Info, live ?: t.accent, 20.dp)
+                    }
+                    Column(Modifier.weight(1f)) {
+                        Text(f.optString("name"), style = MaterialTheme.typography.titleSmall, color = ink)
+                        if (f.optString("detail").isNotBlank()) Text(f.optString("detail"), style = MaterialTheme.typography.bodySmall, color = soft)
+                    }
+                }
+                f.number("percent")?.let { p ->
+                    Box(Modifier.fillMaxWidth().height(6.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.12f))) {
+                        Box(Modifier.fillMaxWidth((p / 100.0).coerceIn(0.0, 1.0).toFloat()).height(6.dp).clip(CircleShape).background(live ?: t.accent))
+                    }
+                }
+            }
+            "car" -> {
+                val teal = toneColors(Tone.Teal)
+                val level = f.number("battery")
+                val colour = carBatteryColour(level, teal.accent)
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Box(Modifier.size(84.dp), contentAlignment = Alignment.Center) {
+                        Canvas(Modifier.fillMaxSize()) {
+                            val w = 9.dp.toPx()
+                            val inset = Offset(w / 2, w / 2)
+                            val s = Size(size.width - w, size.height - w)
+                            drawArc(Color.White.copy(alpha = 0.12f), 0f, 360f, false, inset, s, style = Stroke(w))
+                            drawArc(colour, -90f, 360f * ((level ?: 0.0) / 100.0).coerceIn(0.0, 1.0).toFloat(), false, inset, s, style = Stroke(w, cap = StrokeCap.Round))
+                        }
+                        Text(level?.let { "${Math.round(it)}%" } ?: "–", color = colour, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    }
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text(f.optString("name").ifBlank { "Car" }, style = MaterialTheme.typography.titleMedium, color = ink, maxLines = 1)
+                        if (f.optString("state").isNotBlank()) Text(f.optString("state"), color = teal.accent, style = MaterialTheme.typography.labelMedium, maxLines = 1, modifier = Modifier.background(teal.accent.copy(alpha = 0.18f), CircleShape).padding(horizontal = 8.dp, vertical = 2.dp))
+                        listOf(f.optString("range"), f.optString("power")).filter { it.isNotBlank() }.joinToString(" · ").takeIf { it.isNotEmpty() }?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = soft) }
+                        listOf(f.optString("until"), f.optString("rate")).filter { it.isNotBlank() }.joinToString(" · ").takeIf { it.isNotEmpty() }?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = soft) }
+                    }
+                }
             }
             "fixture" -> {
                 val home = f.side("home")

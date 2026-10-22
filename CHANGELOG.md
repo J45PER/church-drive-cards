@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **app 0.46.8 + To-Do 0.46.8** (2026-10-22): Scores card (a table of results with club badges) on the phone and watch; an answer with a card shows just the card on the phone
 - **app 0.46.7 + To-Do 0.46.7** (2026-10-22): Google Play installs no longer check GitHub for updates (no more banner pointing at GitHub); About opens the Play page
 - **app 0.46.1 + To-Do 0.46.1** (2026-10-22): the Google Play signing certificates are in the allowed list, so the two apps share one sign-in
 - **v0.66.0 + app 0.46.0 + To-Do 0.46.0** (2026-10-21): new Wear OS companion app (Alarm, Climate, Lights, Cleaning, Car charger pages on a persistent ring) and Clive watch app with visual answers and club badges; new Watch Settings card for the Manager dashboard (`church_drive/watch`: pages, order, items per page, Clive toggles); `script.clive_show_card` for weather, score, fixture and music cards

@@ -20,7 +20,7 @@ data class AssistantShow(val image: String?, val link: String?, val linkLabel: S
 data class AssistantCard(val kind: String, val fields: org.json.JSONObject)
 
 /** The kinds of card the screens know how to draw. */
-val ASSISTANT_CARD_KINDS = setOf("weather", "score", "fixture", "music")
+val ASSISTANT_CARD_KINDS = setOf("weather", "score", "scores", "fixture", "music", "people", "done", "car")
 
 /** An https address, or null. */
 fun httpsOnly(url: String?): String? = url?.trim()?.takeIf { it.startsWith("https://") }
@@ -35,6 +35,8 @@ fun parseAssistantCard(card: JSONObject?): AssistantCard? {
             val v = o.opt(k)
             when {
                 v is JSONObject -> out.put(k, clean(v))
+                // A list (a table's rows): each object in it cleaned the same way.
+                v is org.json.JSONArray -> out.put(k, org.json.JSONArray().also { a -> for (i in 0 until v.length()) a.put(v.opt(i).let { e -> if (e is JSONObject) clean(e) else e }) })
                 v is String && (k.endsWith("_url") || k == "badge" || k == "image") -> httpsOnly(v)?.let { out.put(k, it) }
                 v != null && v != JSONObject.NULL -> out.put(k, v)
             }
@@ -168,6 +170,8 @@ fun introDue(introducedEver: Boolean, told: Set<String>?, log: List<AssistFeatur
  * ever do they get the full introduction. Features also make up that introduction's "what I can do".
  */
 private val RAW_ASSIST_FEATURES = listOf(
+    AssistFeature("mdi:home-account", "Cards for the house", "Who's home?", id = "house-cards", detail = "{name} now answers who is home, how the car's charging, and what he has just done with a card in the house's colours: green for home, teal away at a place, red and orange for a low battery.", kind = AssistantChange.Change),
+    AssistFeature("mdi:table", "Score tables", "What were the Champions League scores last night?", id = "score-tables", detail = "Asked for several scores at once, {name} now shows them as a table with the club badges, and keeps his words short.", kind = AssistantChange.Change),
     AssistFeature("mdi:card-text-outline", "Cards on screen", "What's the weather?", id = "watch-cards", detail = "On your watch, and in this app, {name} can answer with a card: the weather, a score with the club badges, the next game, a picture or what is playing, and his background takes on the colours of the answer."),
     AssistFeature("mdi:image-text", "Pictures and links", "Show me what a Nottingham Forest shirt looks like", id = "pictures-and-links", detail = "{name} can now show a picture or a link under his answer on this screen, when it helps.", kind = AssistantChange.Change),
     AssistFeature("mdi:account-voice", "A new name: Clive", "", id = "renamed-clive", detail = "Jarvis is now Clive, with a new logo. You can still wake him with \"Hey Jarvis\" for now.", kind = AssistantChange.Change),

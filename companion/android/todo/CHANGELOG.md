@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.46.8
+
+- Shared code changed (the Scores card). No change to this app.
+
 ## 0.46.7
 
 - The To-Do app from Google Play no longer shows the "newer version ready" banner that pointed at GitHub. About says Google Play keeps it up to date and opens its Play page. Test builds from GitHub update as before.

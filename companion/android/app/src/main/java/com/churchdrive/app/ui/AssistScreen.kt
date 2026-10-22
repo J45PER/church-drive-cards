@@ -609,14 +609,18 @@ private fun ChatLine(message: AssistMessage, faded: Boolean = false) {
 private fun AssistantBubble(text: String, show: AssistantShow? = null) {
     val scheme = MaterialTheme.colorScheme
     val uri = androidx.compose.ui.platform.LocalUriHandler.current
+    // An answer with a card is the card alone: what he says out loud can say more, but the screen shows just the figures.
+    val cardOnly = show?.card != null
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.widthIn(max = 320.dp)
-            .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 6.dp, bottomEnd = 20.dp))
-            .background(scheme.surfaceContainerHigh)
-            .padding(horizontal = 16.dp, vertical = 11.dp),
+        modifier = Modifier.widthIn(max = 320.dp).let {
+            if (cardOnly) it else it
+                .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 6.dp, bottomEnd = 20.dp))
+                .background(scheme.surfaceContainerHigh)
+                .padding(horizontal = 16.dp, vertical = 11.dp)
+        },
     ) {
-        Text(text, style = MaterialTheme.typography.bodyLarge, color = scheme.onSurface)
+        if (!cardOnly) Text(text, style = MaterialTheme.typography.bodyLarge, color = scheme.onSurface)
         show?.card?.let { AssistantCardView(it) }
         show?.image?.let {
             coil.compose.AsyncImage(
