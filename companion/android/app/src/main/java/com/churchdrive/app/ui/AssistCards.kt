@@ -53,7 +53,7 @@ private fun cardTint(card: AssistantCard): Color? = when (card.kind) {
         "lightning", "lightning-rainy" -> Color(0xFF4527A0)
         else -> Color(0xFF455A64)
     }
-    "score", "fixture" -> Color(0xFF1C2C5B)
+    "score", "scores", "fixture" -> Color(0xFF1C2C5B)
     else -> null
 }
 
@@ -114,6 +114,23 @@ fun AssistantCardView(card: AssistantCard, modifier: Modifier = Modifier) {
                 Text(listOf(home.optString("name"), away.optString("name")).filter { it.isNotBlank() }.joinToString(" v "), style = MaterialTheme.typography.bodySmall, color = soft, textAlign = TextAlign.Center)
                 if (f.optString("status").isNotBlank()) Text(f.optString("status"), style = MaterialTheme.typography.titleSmall, color = ink)
                 if (f.optString("scorers").isNotBlank()) Text(f.optString("scorers"), style = MaterialTheme.typography.bodySmall, color = soft, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+            "scores" -> {
+                if (f.optString("title").isNotBlank()) Text(f.optString("title"), style = MaterialTheme.typography.titleSmall, color = soft, modifier = Modifier.fillMaxWidth())
+                val rows = f.optJSONArray("rows")
+                for (i in 0 until (rows?.length() ?: 0)) {
+                    val r = rows?.optJSONObject(i) ?: continue
+                    val home = r.side("home")
+                    val away = r.side("away")
+                    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(short(home), Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, color = ink, textAlign = TextAlign.End, maxLines = 1)
+                        Box(Modifier.padding(horizontal = 6.dp)) { CardBadge(home, 28.dp) }
+                        Text("${r.optInt("home_score")} – ${r.optInt("away_score")}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = ink)
+                        Box(Modifier.padding(horizontal = 6.dp)) { CardBadge(away, 28.dp) }
+                        Text(short(away), Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, color = ink, maxLines = 1)
+                    }
+                    if (r.optString("status").isNotBlank() && r.optString("status") != "Full time") Text(r.optString("status"), style = MaterialTheme.typography.labelSmall, color = soft)
+                }
             }
             "fixture" -> {
                 val home = f.side("home")

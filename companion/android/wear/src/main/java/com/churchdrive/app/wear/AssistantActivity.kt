@@ -212,7 +212,7 @@ private fun TalkFace(model: CliveModel, signedOut: Boolean, onTap: () -> Unit) {
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         if (card != null && symbol != null) CardBlock(card)
-                        Text(model.answer, color = Color.White, fontSize = ui.sp(if (card != null) 12f else 14f), textAlign = TextAlign.Center, style = SHADOW, modifier = Modifier.padding(top = if (card != null) ui.d(8f) else ui.d(0f), bottom = ui.d(18f)))
+                        if (card?.kind != "scores") Text(model.answer, color = Color.White, fontSize = ui.sp(if (card != null) 12f else 14f), textAlign = TextAlign.Center, style = SHADOW, modifier = Modifier.padding(top = if (card != null) ui.d(8f) else ui.d(0f), bottom = ui.d(18f)))
                     }
                 }
             }

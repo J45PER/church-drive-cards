@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.46.8
+
+- A new Scores card: several results at once (Champions League night, the weekend's games) as a table with the club badges, on the phone and the watch.
+- When Clive answers with a card, the phone shows just the card (no repeat of his words in a bubble); he can still say more aloud.
+
 ## 0.46.7
 
 - Google Play installs no longer look at GitHub for updates: Account > About says Google Play keeps the app up to date, and its row opens the app's Play page. Test builds from GitHub update as before.
