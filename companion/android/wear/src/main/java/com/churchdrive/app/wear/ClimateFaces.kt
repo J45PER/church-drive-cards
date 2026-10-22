@@ -116,7 +116,7 @@ private fun thermostatFace(c: EntityState, ac: Boolean): Face {
         bg = toneColours.container,
         fill = current?.let { RingFill(((it - min) / span).coerceIn(0f, 1f), colour, if (off) 0.55f else 1f) },
         dot = if (off) null else RingDot(((target - min) / span).coerceIn(0f, 1f), colour),
-        drag = if (off) null else RingDrag { f -> pending.set(snapTo(min + f * span, step, min, max), 450) { sendTarget(it) } },
+        drag = if (off) null else RingDrag(onStep = { nudge(it * step) }) { f -> pending.set(snapTo(min + f * span, step, min, max), 450) { sendTarget(it) } },
         instant = pending.dragging,
     )
     val accent = toneColours.accent

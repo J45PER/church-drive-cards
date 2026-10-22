@@ -69,8 +69,8 @@ data class RingDot(val f: Float, val color: Color)
 /** Ring cut into segments (a fan's speeds, a vacuum's suction): one alpha for each, so the ones that are lit are bright. */
 data class RingSegs(val color: Color, val alphas: List<Float>)
 
-/** What turning the ring does: [onValue] gets the new position (0 to 1) as a finger moves round it. */
-class RingDrag(val onValue: (Float) -> Unit)
+/** What turning the ring does: [onValue] gets the new position (0 to 1) as a finger moves round it, and [onStep] one notch of the crown (1 or -1). */
+class RingDrag(val onStep: ((Int) -> Unit)? = null, val onValue: (Float) -> Unit)
 
 /**
  * What the glass (the face's colour and the ring round its edge) shows for one face. The ring and the colour stay put while faces slide

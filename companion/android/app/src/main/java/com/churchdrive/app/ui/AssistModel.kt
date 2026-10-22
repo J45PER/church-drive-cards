@@ -510,7 +510,11 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
             }
             resumeWake()
             // Silence after a follow-up we started ourselves isn't a problem: the conversation is simply over.
-            if (autoListening && (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT)) return
+            // (The same when the microphone isn't allowed: the person typed, so nothing was asked of it.)
+            if (autoListening && (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT || error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS)) {
+                followUp = false
+                return
+            }
             notice = when (error) {
                 SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "I didn't hear anything. Tap the microphone to try again."
                 SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Allow the microphone to talk to the house."

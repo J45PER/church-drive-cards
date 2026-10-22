@@ -4,6 +4,12 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.46.1
+
+- Clive's cards (a score or fixture with club badges, the weather, what is playing) now show in the app's chat too, not only on the watch. Typing no longer ends with "Allow the microphone to talk to the house": a follow-up listen that can't start because the microphone isn't allowed is dropped quietly.
+- Watch: Clive's mark is no longer clipped at its edges; his glow runs smoother (it redraws each frame without rebuilding the screen); the glass stays lit while the app is in use and while Clive thinks (the companion lets it sleep two minutes after the last touch); the crown turns temperature and brightness, otherwise moves between faces and pages (in Clive, between Talk, Prompts and Settings); Clive and To-Do open in their own tasks, so the Church Drive icon always opens the companion; all three watch icons are adaptive and the same size.
+- Signing in is now shared between the Google Play Church Drive and Church Drive To Do apps: both Play signing certificates are in the allowed list (`TrustedApps`).
+
 ## 0.46.0
 
 - Watch: a new companion app (Church Drive) with pages you swipe across: Alarm, Climate, Lights, Cleaning and Car charger, on a ring and background that stay put while the content slides. Which pages, their order and the items on each are chosen in the Manager's Watch panel. Clive is a separate watch app with Talk, Prompts and Settings, a glow background, and visual answers (weather, scores with club badges, fixtures, music) that change the glow. Both watch icons are now the same size.

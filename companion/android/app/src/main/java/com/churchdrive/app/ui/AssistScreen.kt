@@ -616,6 +616,7 @@ private fun AssistantBubble(text: String, show: AssistantShow? = null) {
             .padding(horizontal = 16.dp, vertical = 11.dp),
     ) {
         Text(text, style = MaterialTheme.typography.bodyLarge, color = scheme.onSurface)
+        show?.card?.let { AssistantCardView(it) }
         show?.image?.let {
             coil.compose.AsyncImage(
                 model = it, contentDescription = show.linkLabel ?: "Picture from ${AssistantBrand.shown}", contentScale = androidx.compose.ui.layout.ContentScale.Fit,
