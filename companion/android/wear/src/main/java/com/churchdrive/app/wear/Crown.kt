@@ -15,8 +15,8 @@ import androidx.compose.ui.platform.LocalView
 import kotlin.math.abs
 
 /**
- * The watch's crown (or rotating bezel): each notch calls [onNotch] with 1 for clockwise and -1 for the other way. A notch needs a good turn (small
- * nudges gather up rather than each counting), so a value does not race away.
+ * The watch's crown (or rotating bezel): each notch calls [onNotch] with 1 for clockwise (down) and -1 for the other way (up). A notch needs a good
+ * turn (small nudges gather up rather than each counting), so a page does not race past. The crown only scrolls: it never changes a value.
  */
 @Composable
 fun Modifier.crown(onNotch: (Int) -> Unit): Modifier {
