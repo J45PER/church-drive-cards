@@ -307,7 +307,7 @@ private fun SuggestionRow(model: AssistModel) {
     Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         ASSIST_SUGGESTIONS.forEach { s ->
             Box(
-                modifier = Modifier.clip(RoundedCornerShape(18.dp)).background(scheme.surfaceContainer).clickable { model.send(s) }
+                modifier = Modifier.clip(RoundedCornerShape(18.dp)).background(scheme.surfaceContainer).clickable { model.send(s, typed = true) }
                     .padding(horizontal = 14.dp, vertical = 9.dp),
             ) { Text(s, style = MaterialTheme.typography.bodyMedium, maxLines = 1) }
         }
@@ -370,6 +370,15 @@ fun AssistantRound(label: String, onClick: () -> Unit, state: AssistState = Assi
         // The coloured orb behind the mark moves with what he is doing, as before; the white mark on top has its own poses (see AssistantGlyph).
         // The orb's own box is one and a half times this size, so it stays inside the 54 dp the ring leaves (with a little room to spare).
         AssistOrb(state, level, 32.dp)
+        // While he listens a ripple spreads from the middle of the button, over and over: it is a stop button, and it is live.
+        if (state == AssistState.Listening) {
+            val ripple = androidx.compose.animation.core.rememberInfiniteTransition(label = "ripple")
+            val p by ripple.animateFloat(0f, 1f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(1400, easing = androidx.compose.animation.core.LinearOutSlowInEasing)), label = "rp")
+            androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+                val r = size.minDimension / 2f
+                drawCircle(Color.White.copy(alpha = 0.55f * (1f - p)), radius = r * (0.4f + 0.6f * p), style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
+            }
+        }
         content()
     }
 }
@@ -527,7 +536,7 @@ private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String)
                             value = ui.typed, onValueChange = { ui.typed = it }, singleLine = true, modifier = Modifier.weight(1f).focusRequester(ui.focus),
                             placeholder = { Text("Ask or tell the house") },
                             keyboardOptions = KeyboardOptions(capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences, imeAction = ImeAction.Send),
-                            keyboardActions = KeyboardActions(onSend = { model.send(ui.typed); ui.typed = "" }),
+                            keyboardActions = KeyboardActions(onSend = { model.send(ui.typed, typed = true); ui.typed = "" }),
                             shape = RoundedCornerShape(28.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedContainerColor = scheme.surfaceContainer, unfocusedContainerColor = scheme.surfaceContainer,

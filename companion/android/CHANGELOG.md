@@ -4,6 +4,12 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.47.2
+
+- Listening now shows a stop button: a rounded square that breathes and swells with your voice, with a ripple spreading from it. Tap it to stop.
+- Typing a question (or tapping a suggestion) no longer makes Clive start listening after his answer: only a spoken question gets the follow-up listening.
+- Names on Clive's cards are always the real spelling (Diane), never the way the voice is told to say it.
+
 ## 0.47.1
 
 - Brand logos: the app now carries the Simple Icons set (3,466 logos, CC0): any icon written `si:spotify`, `si:netflix` and so on (the same names as the HACS Simple Icons pack) draws as a single-colour vector, and a music card shows the service's logo. The watch carries about 35 of the common ones for its music card.
