@@ -220,14 +220,18 @@ private fun AboutPage(vm: TodoModel, onBack: () -> Unit) {
             PanelRow(
                 Icons.Outlined.SystemUpdate, "Check for updates",
                 when {
+                    BuildConfig.PLAY -> "Google Play keeps this app up to date. Tap to open its Play page"
                     status == "checking" -> "Checking…"
                     available -> "A newer version is ready"
                     status == "current" -> "You have the newest version"
                     else -> "Tap to check"
                 },
                 onClick = {
-                    status = "checking"
-                    vm.checkForUpdate { newer -> status = if (newer) "available" else "current" }
+                    if (BuildConfig.PLAY) UpdateCheck.openPlayPage(context, context.packageName)
+                    else {
+                        status = "checking"
+                        vm.checkForUpdate { newer -> status = if (newer) "available" else "current" }
+                    }
                 },
             )
         }
