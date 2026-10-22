@@ -58,6 +58,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -101,7 +102,7 @@ fun TodoApp(vm: TodoModel) {
     Box(
         Modifier.fillMaxSize().pointerInput(panel) {
             if (panel == null) {
-                androidx.compose.foundation.gestures.detectHorizontalDragGestures(
+                detectHorizontalDragGestures(
                     onDragStart = { swiped = 0f },
                     onDragEnd = { if (swiped < -120f) panel = "account" },
                     onHorizontalDrag = { _, dx -> swiped += dx },
