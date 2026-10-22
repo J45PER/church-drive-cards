@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **app 0.47.0 + To-Do 0.47.0** (2026-10-22): Clive's cards have no background of their own; badges are loaded before the answer is shown so nothing pops in
 - **app 0.46.9** (2026-10-22): watch crown scrolls the faces and never changes a value
 - **app 0.46.8 + To-Do 0.46.8** (2026-10-22): Scores card (a table of results with club badges) on the phone and watch; an answer with a card shows just the card on the phone
 - **app 0.46.7 + To-Do 0.46.7** (2026-10-22): Google Play installs no longer check GitHub for updates (no more banner pointing at GitHub); About opens the Play page

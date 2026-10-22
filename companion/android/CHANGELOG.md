@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.47.0
+
+- Clive's cards no longer have a background of their own: they sit straight in his speech bubble.
+- Answers with club badges wait (a short thinking pause) until the badges have been found and downloaded, so the card appears finished and a crest never pops in after a flash of letters. The letters only show for a club that has no badge.
+
 ## 0.46.9
 
 - Watch: the crown scrolls (down and up the faces of a page, and between Clive's Talk, Prompts and Settings) and no longer changes temperatures, brightness or other values. Use the ring or the plus and minus buttons for values.
