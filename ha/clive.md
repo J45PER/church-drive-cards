@@ -19,7 +19,7 @@ The `clive-*.yaml` files here are copies of the live scripts. Edit them in Home 
 | `clive_zappi_settings` | Ready-by time, max price, smart charge on/off. Never starts or stops a charge. |
 | `clive_home_safety_check` | Read-only: smoke/heat/CO alarms, tamper, low batteries of home devices (not phones). Finds devices by device class. |
 | `clive_show` | Puts a picture and/or an https link on the screen of the person who asked (event `church_drive_assistant_show`, carrying their Home Assistant user; the Church Drive app shows it under his answer). Does nothing on a device without a screen, so his spoken answer must stand alone. |
-| `clive_show_card` | Puts a card on the screen of the person who asked: the weather, a score or fixture with club badges, what is playing (same event as `clive_show`, with a `card`). Drawn by the Church Drive watch app; other screens ignore it, so his spoken answer must stand alone. |
+| `clive_show_card` | Puts a card on the screen of the person who asked: the weather (it fills itself in, with the next hours and the place), a score or fixture, what is playing (same event as `clive_show`, with a `card`). Drawn by the Church Drive phone and watch apps, which find the club badges themselves; other screens ignore it, so his spoken answer must stand alone. The weather entity is deliberately not exposed to Assist. |
 | `clive_vacuum` | Gregg: start, pause, stop, status. Nothing else. |
 
 Also exposed for the car: `zappi_charge_later`, `zappi_car_yes`, `zappi_car_no` (the existing scripts, unchanged), the smart charge helpers, and four Zappi sensors (status, plug status, charging power, charge added).
