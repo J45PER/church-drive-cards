@@ -20,7 +20,12 @@ object TrustedApps {
     val PACKAGES = setOf("com.churchdrive.manager", "com.churchdrive.todo")
 
     /** SHA-256 fingerprints (hex, any case, colons optional) of the signing certificates Play uses for the apps above. Add each app's. */
-    val CERTS: Set<String> = emptySet()
+    val CERTS: Set<String> = setOf(
+        // Church Drive Manager (com.churchdrive.manager)
+        "02:4a:91:9c:3a:fb:47:31:63:55:1f:a7:b8:ec:07:30:2b:ff:77:58:1f:83:0e:af:58:e5:55:32:3f:49:5f:5a",
+        // Church Drive To Do (com.churchdrive.todo)
+        "ee:66:d8:57:1a:d5:49:ae:9a:2d:eb:5e:72:fc:6d:57:9f:15:c5:07:79:99:ba:c6:1a:6e:1f:fd:90:8e:10:6e",
+    )
 
     private fun normal(hex: String) = hex.replace(":", "").lowercase()
 

@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.46.1
+
+- Signing in is now shared between the Google Play Church Drive and Church Drive To Do apps: both Play signing certificates are in the allowed list (`TrustedApps`).
+
 ## 0.46.0
 
 - Watch: a new companion app (Church Drive) with pages you swipe across: Alarm, Climate, Lights, Cleaning and Car charger, on a ring and background that stay put while the content slides. Which pages, their order and the items on each are chosen in the Manager's Watch panel. Clive is a separate watch app with Talk, Prompts and Settings, a glow background, and visual answers (weather, scores with club badges, fixtures, music) that change the glow. Both watch icons are now the same size.

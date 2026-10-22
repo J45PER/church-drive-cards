@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.46.1
+
+- Signing in is now shared with the Google Play phone app: both Play signing certificates are in the allowed list (`TrustedApps`).
+
 ## 0.46.0
 
 - Shared code changed for the watch (scene looks and Clive's answer cards moved into `core`). No change to this app.
