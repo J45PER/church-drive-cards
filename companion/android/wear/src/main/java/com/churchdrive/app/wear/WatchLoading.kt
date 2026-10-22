@@ -33,11 +33,12 @@ import androidx.wear.compose.material.Text
 import com.churchdrive.app.ui.AssistantGlyph
 import com.churchdrive.app.ui.AssistantGlyphPose
 
-private val ARC = listOf(Color(0xFF7986CB), Color(0xFFCE93D8), Color(0xFF6EE7A8))
+/** White, brightest at the head of the arc and fading along its tail, so it reads as turning. */
+private val ARC = listOf(Color.White.copy(alpha = 0.3f), Color.White.copy(alpha = 0.65f), Color.White)
 
 /**
- * Shown over whatever the watch remembered while the house is being read (or the line comes back): the page dims a little, an arc of
- * Clive's colours circles the edge of the glass, and a small pill with his mark trading size says what is going on. It takes no touches,
+ * Shown over whatever the watch remembered while the house is being read (or the line comes back): the page dims a little, a white arc
+ * circles the edge of the glass, and a small pill with his mark trading size says what is going on. It takes no touches,
  * so the remembered page can be used meanwhile, and it fades away when the live answer is in.
  */
 @Composable
