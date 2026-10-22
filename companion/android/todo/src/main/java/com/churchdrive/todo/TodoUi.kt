@@ -58,6 +58,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.churchdrive.app.ui.AssistantBrand
@@ -95,7 +96,19 @@ fun TodoApp(vm: TodoModel) {
     androidx.compose.runtime.LaunchedEffect(Unit) { AssistantBrand.load(context) }
     androidx.compose.runtime.LaunchedEffect(vm.connected) { if (vm.connected) vm.refreshAssistantName(context) }
     val tab = vm.tab
-    Box(Modifier.fillMaxSize()) {
+    // Swiping left anywhere that doesn't scroll sideways opens the account panel, as in the main app, as well as its button.
+    var swiped by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0f) }
+    Box(
+        Modifier.fillMaxSize().pointerInput(panel) {
+            if (panel == null) {
+                androidx.compose.foundation.gestures.detectHorizontalDragGestures(
+                    onDragStart = { swiped = 0f },
+                    onDragEnd = { if (swiped < -120f) panel = "account" },
+                    onHorizontalDrag = { _, dx -> swiped += dx },
+                )
+            }
+        },
+    ) {
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         topBar = {

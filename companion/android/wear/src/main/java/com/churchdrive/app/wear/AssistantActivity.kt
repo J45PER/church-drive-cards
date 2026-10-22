@@ -152,6 +152,7 @@ private fun CliveRoot() {
                 }
             }
             Rail(pager.currentPage, 3)
+            LoadingRing(visible = signedIn && !connected, label = "Connecting")
         }
     }
 }

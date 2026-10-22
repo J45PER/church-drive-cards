@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.46.3
+
+- Swiping left anywhere that doesn't scroll sideways opens the account panel, as in the main app. The signing certificate is no longer shown in About (it is in the main app's About, for administrators).
+
 ## 0.46.2
 
 - Shared code changed for the watch and the phone's Clive cards (club badges found from the team's name). No change to this app.

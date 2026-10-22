@@ -109,6 +109,7 @@ private fun CompanionScreen(connected: Boolean, onExit: () -> Unit) {
     val looks by WatchData.looks.collectAsState()
     val areas by WatchData.areaNames.collectAsState()
     val loaded by WatchData.loaded.collectAsState()
+    val live by WatchData.live.collectAsState()
     var stack by remember { mutableStateOf(listOf<LightsRef>()) }
     val env = LightsEnv(entities, config, floors, looks, areas)
     val open: (LightsRef) -> Unit = { stack = stack + it }
@@ -179,6 +180,7 @@ private fun CompanionScreen(connected: Boolean, onExit: () -> Unit) {
                 }
             }
             if (loaded && nested == null && pages.size > 1) PageDots(hState.currentPage, pages.size)
+            LoadingRing(visible = !live, label = if (connected) "Updating" else "Connecting")
             // The strip at the left edge: swiping in from it goes back a level, and from the first level leaves the app.
             Box(
                 Modifier.align(Alignment.CenterStart).width(ui.d(26f)).fillMaxHeight().pointerInput(stack.size) {
