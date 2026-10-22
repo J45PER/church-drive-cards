@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.46.5
+
+- Watch: the loading arc round the edge is white (brightest at its head, fading along its tail).
+
 ## 0.46.4
 
 - The big "Reading…" / "Adding…" box is gone: it no longer appears when the app opens (it was the check for tasks waiting from earlier, which waits for the connection), and when you share text to be read the same small pill as "Updating" shows at the top (tap it to cancel).
