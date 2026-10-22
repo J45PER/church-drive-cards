@@ -128,7 +128,7 @@ fun rememberWs(type: String, rev: Any? = null): WsView {
 }
 
 @Composable
-private fun Waiting(view: WsView, what: String, body: @Composable (JSONObject) -> Unit) {
+internal fun Waiting(view: WsView, what: String, body: @Composable (JSONObject) -> Unit) {
     val d = view.data
     when {
         d != null -> body(d)
@@ -163,7 +163,7 @@ fun OpenInHomeAssistant(label: String, why: String, path: String = "dashboard-ma
 
 /** A group of choices as the kit's tiles: the ones in [on] selected. */
 @Composable
-private fun Choices(items: List<TileItem>, tone: ToneColors, perRow: Int = 3, enabled: Boolean = true) =
+internal fun Choices(items: List<TileItem>, tone: ToneColors, perRow: Int = 3, enabled: Boolean = true) =
     TileRow(items, tone, tone.onContainer, enabled, perRow)
 
 private fun JSONArray?.objects(): List<JSONObject> = (0 until (this?.length() ?: 0)).mapNotNull { this?.optJSONObject(it) }
