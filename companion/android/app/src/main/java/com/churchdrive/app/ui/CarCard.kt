@@ -42,6 +42,14 @@ import java.time.format.DateTimeFormatter
 // Some cars (Stellantis) only send new figures when something happens, so while a car's plugged in and its figures
 // are over 20 minutes old the card says when they're from, and Refresh presses the car's wake-up button.
 
+/** The car battery's colour, the dashboard's rule: red under 20%, orange under 40%, else [ok] (the Car card's teal); grey when unknown. */
+fun carBatteryColour(level: Double?, ok: Color): Color = when {
+    level == null -> Color.Gray
+    level < 20 -> Color(0xFFEF5350)
+    level < 40 -> Color(0xFFFFA726)
+    else -> ok
+}
+
 /** The integrations that make cars (Vauxhall and Peugeot through Stellantis, the VW group). */
 val CAR_PLATFORMS = setOf("stellantis_vehicles", "vag_connect", "volkswagencarnet", "volkswagen_we_connect_id")
 
@@ -172,12 +180,7 @@ fun CarCard(config: JSONObject, entities: Map<String, EntityState>, registry: Re
                 Text(it, style = MaterialTheme.typography.titleMedium)
             }
             rows.forEach { car ->
-                val barColour = when {
-                    car.battery == null -> Color.Gray
-                    car.battery < 20 -> Color(0xFFEF5350)
-                    car.battery < 40 -> Color(0xFFFFA726)
-                    else -> tone.accent
-                }
+                val barColour = carBatteryColour(car.battery, tone.accent)
                 val tag = when {
                     car.charging -> "Charging"
                     car.plugged -> "Plugged in"

@@ -8,6 +8,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 - A new Scores card: several results at once (Champions League night, the weekend's games) as a table with the club badges, on the phone and the watch.
 - When Clive answers with a card, the phone shows just the card (no repeat of his words in a bubble); he can still say more aloud.
+- New cards for the house: who's home (each person in their place colour: home green, a named place teal, away grey, unknown amber), how the car is charging (a ring coloured by the dashboard's battery bands: red under 20%, orange under 40%) and a receipt for what Clive has just done (a light shows its own colour).
 
 ## 0.46.7
 
