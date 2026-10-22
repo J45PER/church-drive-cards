@@ -168,7 +168,7 @@ fun introDue(introducedEver: Boolean, told: Set<String>?, log: List<AssistFeatur
  * ever do they get the full introduction. Features also make up that introduction's "what I can do".
  */
 private val RAW_ASSIST_FEATURES = listOf(
-    AssistFeature("mdi:card-text-outline", "Cards on your watch", "What's the weather?", id = "watch-cards", detail = "On your watch {name} can answer with a card: the weather, a score with the club badges, the next game, a picture or what is playing, and his background takes on the colours of the answer."),
+    AssistFeature("mdi:card-text-outline", "Cards on screen", "What's the weather?", id = "watch-cards", detail = "On your watch, and in this app, {name} can answer with a card: the weather, a score with the club badges, the next game, a picture or what is playing, and his background takes on the colours of the answer."),
     AssistFeature("mdi:image-text", "Pictures and links", "Show me what a Nottingham Forest shirt looks like", id = "pictures-and-links", detail = "{name} can now show a picture or a link under his answer on this screen, when it helps.", kind = AssistantChange.Change),
     AssistFeature("mdi:account-voice", "A new name: Clive", "", id = "renamed-clive", detail = "Jarvis is now Clive, with a new logo. You can still wake him with \"Hey Jarvis\" for now.", kind = AssistantChange.Change),
     AssistFeature("mdi:watch-variant", "{name} on your watch", "", id = "jarvis-on-watch", detail = "The Church Drive app on a Pixel Watch has {name}: speak or tap a sentence and he answers on the watch, aloud too if you like.", kind = AssistantChange.Change),
