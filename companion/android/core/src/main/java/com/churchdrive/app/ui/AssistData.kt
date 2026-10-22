@@ -38,6 +38,8 @@ fun parseAssistantCard(card: JSONObject?): AssistantCard? {
                 // A list (a table's rows): each object in it cleaned the same way.
                 v is org.json.JSONArray -> out.put(k, org.json.JSONArray().also { a -> for (i in 0 until v.length()) a.put(v.opt(i).let { e -> if (e is JSONObject) clean(e) else e }) })
                 v is String && (k.endsWith("_url") || k == "badge" || k == "image") -> httpsOnly(v)?.let { out.put(k, it) }
+                // Names written the way the voice says them ("Die Ann") are shown as they are really spelt.
+                v is String -> out.put(k, forDisplay(v))
                 v != null && v != JSONObject.NULL -> out.put(k, v)
             }
         }

@@ -43,7 +43,7 @@ enum class AssistantGlyphPose {
     Idle,
     /** Open, waiting for the microphone to be pressed: a microphone (capsule over a flat bar) whose capsule slowly breathes. */
     Ready,
-    /** Listening: the same microphone, its capsule and base wobbling a little, like a level meter. */
+    /** Listening: a stop button, a rounded square that pulses gently and grows with the voice. */
     Listening,
     /** Thinking: the two squircles trade size. */
     Thinking,
@@ -60,7 +60,9 @@ private val REST_B = Sq(62f, 62f, 76f, 76f, 30f, SHIFT, -SHIFT)
 
 private fun poseOf(p: AssistantGlyphPose): Pair<Sq, Sq> = when (p) {
     AssistantGlyphPose.Idle, AssistantGlyphPose.Thinking -> REST_A to REST_B
-    AssistantGlyphPose.Ready, AssistantGlyphPose.Listening -> Sq(80f, 40f, 40f, 64f, 20f) to Sq(66f, 130f, 68f, 16f, 8f)
+    AssistantGlyphPose.Ready -> Sq(80f, 40f, 40f, 64f, 20f) to Sq(66f, 130f, 68f, 16f, 8f)
+    // The stop button: one rounded square (the second shape shrinks away to nothing).
+    AssistantGlyphPose.Listening -> Sq(70f, 70f, 60f, 60f, 18f) to Sq(100f, 100f, 0f, 0f, 0f)
     AssistantGlyphPose.Speaking -> Sq(64f, 52f, 30f, 96f, 15f) to Sq(106f, 52f, 30f, 96f, 15f)
 }
 
@@ -118,13 +120,8 @@ fun AssistantGlyph(pose: AssistantGlyphPose, color: Color, size: androidx.compos
         val barA = 1f + wSpeak * (-0.25f + 0.25f * bars)
         val barB = 1f + wSpeak * (-0.25f - 0.25f * bars)
         val breathe = 1f + wReady * 0.05f * (1f - wave(readyP))
-        fun keys(p: Float, vararg k: Pair<Float, Float>): Float {
-            for (i in 1 until k.size) if (p <= k[i].first) { val (p0, v0) = k[i - 1]; val (p1, v1) = k[i]; return v0 + (v1 - v0) * (p - p0) / (p1 - p0) }
-            return k.last().second
-        }
-        val amp = 1f + smooth
-        val capsule = 1f + wListen * (keys(listenP, 0f to 0.96f, 0.3f to 1.07f, 0.55f to 0.98f, 0.8f to 1.05f, 1f to 0.96f) - 1f) * amp
-        val base = 1f + wListen * (keys(listenP, 0f to 0.92f, 0.35f to 1.1f, 0.6f to 0.96f, 0.85f to 1.06f, 1f to 0.92f) - 1f) * amp
+        // Listening: the stop square breathes, and swells a little more with the voice.
+        val stop = 1f + wListen * (0.07f * (1f - wave(listenP)) + 0.16f * smooth)
         fun shape(s: Sq, sx: Float, sy: Float) = androidx.compose.ui.geometry.RoundRect(
             100f + s.dx * together + (s.x + s.w / 2f - 100f) - s.w * sx / 2f,
             100f + s.dy * together + (s.y + s.h / 2f - 100f) - s.h * sy / 2f,
@@ -134,8 +131,8 @@ fun AssistantGlyph(pose: AssistantGlyphPose, color: Color, size: androidx.compos
         )
         val path = androidx.compose.ui.graphics.Path().apply {
             fillType = androidx.compose.ui.graphics.PathFillType.EvenOdd
-            addRoundRect(shape(a, sizeA, sizeA * barA * breathe * capsule))
-            if (b.w > 0.5f) addRoundRect(shape(b, sizeB * base, sizeB * barB))
+            addRoundRect(shape(a, sizeA * stop, sizeA * barA * breathe * stop))
+            if (b.w > 0.5f) addRoundRect(shape(b, sizeB, sizeB * barB))
         }
         withTransform({
             translate(center.x, center.y)

@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **app 0.47.2 + To-Do 0.47.2** (2026-10-22): animated stop button while Clive listens; no listening after a typed question; real name spelling on cards
 - **app 0.47.1 + To-Do 0.47.1** (2026-10-22): Simple Icons brand logos (`si:` icons, the music card's service logo); about 35 on the watch
 - **app 0.47.0 + To-Do 0.47.0** (2026-10-22): Clive's cards have no background of their own; badges are loaded before the answer is shown so nothing pops in
 - **app 0.46.9** (2026-10-22): watch crown scrolls the faces and never changes a value

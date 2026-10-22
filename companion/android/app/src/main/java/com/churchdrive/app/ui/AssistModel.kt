@@ -82,6 +82,9 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     private var continueAfter = false
     private var speakingIntro = false
 
+    /** The question in this run was typed (or tapped), so the voice does not start listening again afterwards. */
+    private var typedRun = false
+
     /** What was just said ends the conversation ("that's it"): after the answer, close instead of listening again. */
     private var closing = false
 
@@ -160,6 +163,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
 
     /** Starts listening (or stops, if it already is). [auto] is for a follow-up the person didn't ask for: silence then isn't an error. */
     fun listen(auto: Boolean = false) {
+        typedRun = false
         autoListening = auto
         closeRequested = false
         if (state == AssistState.Listening) {
@@ -190,9 +194,10 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     }
 
     /** Sends a sentence (spoken or typed) to the house's Assist and shows and speaks the answer. */
-    fun send(text: String) {
+    fun send(text: String, typed: Boolean = false) {
         val sentence = text.trim()
         if (sentence.isEmpty()) return
+        typedRun = typed
         closeRequested = false
         stopSpeaking()
         stopVoiceRun()
@@ -353,6 +358,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
                 endAudio()
                 if (e.text.isNotBlank()) {
                     said = e.text
+                    typedRun = false
                     closing = isDismissal(e.text)
                     messages += AssistMessage(true, e.text)
                     pendingShow = null
@@ -432,10 +438,10 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
             resumeWake()
             // Keep the voice live: after an answer (not the introduction), listen again for a follow-up.
             if (closing) dismiss()
-            else if ((followUp || continueAfter) && !speakingIntro) {
+            else if ((followUp || continueAfter) && !speakingIntro && !typedRun) {
                 // He asked something ("anything else?"): listen straight away, even if the screen was closed meanwhile.
                 autoRetries = 0
-                main.postDelayed({ if ((followUp || continueAfter) && state == AssistState.Idle && !closing) listen(auto = true) }, 150)
+                main.postDelayed({ if ((followUp || continueAfter) && !typedRun && state == AssistState.Idle && !closing) listen(auto = true) }, 150)
             }
         }
         runCatching { p.release() }
