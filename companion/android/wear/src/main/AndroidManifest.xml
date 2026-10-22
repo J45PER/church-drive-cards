@@ -43,7 +43,9 @@
         <activity
             android:name=".AssistantActivity"
             android:exported="true"
-            android:icon="@drawable/ic_assistant"
+            android:icon="@mipmap/ic_clive"
+            android:roundIcon="@mipmap/ic_clive_round"
+            android:taskAffinity="com.churchdrive.app.wear.clive"
             android:label="Clive">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -55,7 +57,9 @@
         <activity
             android:name=".TodoActivity"
             android:exported="true"
-            android:icon="@drawable/ic_todo"
+            android:taskAffinity="com.churchdrive.app.wear.todo"
+            android:icon="@mipmap/ic_todo"
+            android:roundIcon="@mipmap/ic_todo_round"
             android:label="To-Do">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

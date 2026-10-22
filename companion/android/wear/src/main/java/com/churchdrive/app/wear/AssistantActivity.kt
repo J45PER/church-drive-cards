@@ -27,6 +27,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -132,7 +133,15 @@ private fun CliveRoot() {
             }
             val visualCard = if (settings.visual && model.state != AssistState.Listening && model.state != AssistState.Thinking) model.card else null
             CliveGlow(if (signedIn) model.state else AssistState.Idle, model.level, cardPalette(visualCard), dim = pager.currentPage != 0 || !signedIn)
-            VerticalPager(state = pager, modifier = Modifier.fillMaxSize()) { page ->
+            // Lit while he is working, and for a minute after: a watch switches the glass off long before a slow answer arrives.
+            var awake by remember { mutableStateOf(true) }
+            LaunchedEffect(model.state, pager.currentPage, model.answer) {
+                awake = true
+                delay(if (model.state == AssistState.Idle) 90_000 else 300_000)
+                awake = false
+            }
+            KeepAwake(awake)
+            VerticalPager(state = pager, modifier = Modifier.fillMaxSize().crown { n -> scope.launch { pager.animateScrollToPage((pager.currentPage + n).coerceIn(0, 2)) } }) { page ->
                 when (page) {
                     0 -> TalkFace(model, !signedIn, talk)
                     1 -> PromptsFace(signedIn) { sentence ->
@@ -209,7 +218,8 @@ private fun TalkFace(model: CliveModel, signedOut: Boolean, onTap: () -> Unit) {
         }
         // His mark, straight on the glow; for a card it turns into the card's symbol.
         Box(
-            Modifier.offset(ui.d(140f) - markSize / 2, markCentreY - markSize / 2).size(markSize).clip(CircleShape).clickable(enabled = !signedOut, onClick = onTap),
+            // No clip: the mark drifts and morphs beyond its own square, and a clip cut its edges off.
+            Modifier.offset(ui.d(140f) - markSize / 2, markCentreY - markSize / 2).size(markSize).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, enabled = !signedOut, onClick = onTap),
             contentAlignment = Alignment.Center,
         ) {
             val pose = when (model.state) {

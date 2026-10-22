@@ -6,6 +6,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 ## 0.46.1
 
+- Watch: Clive's mark is no longer clipped at its edges; his glow runs smoother (it redraws each frame without rebuilding the screen); the glass stays lit while the app is in use and while Clive thinks (the companion lets it sleep two minutes after the last touch); the crown turns temperature and brightness, otherwise moves between faces and pages (in Clive, between Talk, Prompts and Settings); Clive and To-Do open in their own tasks, so the Church Drive icon always opens the companion; all three watch icons are adaptive and the same size.
 - Signing in is now shared between the Google Play Church Drive and Church Drive To Do apps: both Play signing certificates are in the allowed list (`TrustedApps`).
 
 ## 0.46.0

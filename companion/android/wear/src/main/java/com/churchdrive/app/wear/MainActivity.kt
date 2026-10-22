@@ -29,6 +29,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -38,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
@@ -127,6 +129,18 @@ private fun CompanionScreen(connected: Boolean, onExit: () -> Unit) {
         val hState = rememberPagerState { pages.size }
         val vStates = WatchPage.entries.associateWith { p -> rememberPagerState { faceLists.getValue(p).size } }
         val nestedState = key(nested) { rememberPagerState { nestedFaces.size } }
+        val scope = rememberCoroutineScope()
+
+        // The glass stays lit for two minutes after the last touch or turn of the crown (a watch would switch it off after a few seconds).
+        var lastUse by remember { mutableLongStateOf(System.currentTimeMillis()) }
+        var awake by remember { mutableStateOf(true) }
+        LaunchedEffect(lastUse) {
+            awake = true
+            delay(120_000)
+            awake = false
+        }
+        LaunchedEffect(hState.currentPage, stack.size, nestedState.currentPage, vStates.values.sumOf { it.currentPage }) { lastUse = System.currentTimeMillis() }
+        KeepAwake(awake)
 
         val currentFaces: List<Face>
         val currentIndex: Int
@@ -145,7 +159,15 @@ private fun CompanionScreen(connected: Boolean, onExit: () -> Unit) {
         }
         BackHandler(enabled = stack.isNotEmpty()) { back() }
 
-        Box(Modifier.fillMaxSize()) {
+        Box(Modifier.fillMaxSize().pointerInput(Unit) {
+            awaitPointerEventScope {
+                while (true) {
+                    awaitPointerEvent(PointerEventPass.Initial)
+                    val now = System.currentTimeMillis()
+                    if (now - lastUse > 5_000) lastUse = now
+                }
+            }
+        }) {
             Glass(spec)
             when {
                 !loaded -> Message(if (connected) "Loading…" else "Connecting…")
@@ -153,7 +175,7 @@ private fun CompanionScreen(connected: Boolean, onExit: () -> Unit) {
                 nested != null -> SlideIn(stack) { FaceList(nestedFaces, nestedState) }
                 else -> HorizontalPager(state = hState, modifier = Modifier.fillMaxSize(), key = { pages[it].first.id }) { i ->
                     val (page, faces) = pages[i]
-                    FaceList(faces, vStates.getValue(page))
+                    FaceList(faces, vStates.getValue(page)) { n -> scope.launch { hState.animateScrollToPage((hState.currentPage + n).coerceIn(0, pages.size - 1)) } }
                 }
             }
             if (loaded && nested == null && pages.size > 1) PageDots(hState.currentPage, pages.size)
@@ -188,12 +210,25 @@ private fun SlideIn(key: Any, content: @Composable () -> Unit) {
 
 /** One page's faces, one after another down the glass, with a rail of dots at the right edge. */
 @Composable
-private fun FaceList(faces: List<Face>, state: PagerState) {
+private fun FaceList(faces: List<Face>, state: PagerState, onEdge: (Int) -> Unit = {}) {
     val ui = LocalUi.current
     val scope = rememberCoroutineScope()
     val next: () -> Unit = { scope.launch { state.animateScrollToPage((state.currentPage + 1).coerceAtMost((faces.size - 1).coerceAtLeast(0))) } }
+    // The crown turns the ring's value when the face has one (temperature, brightness); otherwise it moves between the faces, and from
+    // the last one on (or a page with a single face) it moves between the pages.
+    val crownStep = faces.getOrNull(state.currentPage)?.spec?.drag?.onStep
+    val crownMod = Modifier.crown { n ->
+        when {
+            crownStep != null -> crownStep(n)
+            faces.size <= 1 -> onEdge(n)
+            else -> {
+                val to = state.currentPage + n
+                if (to in faces.indices) scope.launch { state.animateScrollToPage(to) } else onEdge(n)
+            }
+        }
+    }
     CompositionLocalProvider(LocalNextFace provides next) {
-        Box(Modifier.fillMaxSize()) {
+        Box(Modifier.fillMaxSize().then(crownMod)) {
             VerticalPager(state = state, modifier = Modifier.fillMaxSize(), key = { faces.getOrNull(it)?.id ?: it }) { i ->
                 val face = faces.getOrNull(i)
                 if (face != null) Box(Modifier.fillMaxSize().ringDrag(face.spec)) { face.content() }

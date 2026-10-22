@@ -204,7 +204,7 @@ private fun controlFace(env: LightsEnv, room: WRoom, zone: WZone?, sub: String):
         bg = colours.container,
         fill = RingFill(if (on || pending.value != null) bri / 100f else 0f, accent, if (on || pending.value != null) 1f else 0.5f),
         dot = RingDot(if (on || pending.value != null) bri / 100f else 0f, accent),
-        drag = RingDrag { f -> pending.set(f * 100f, 450) { send(it) } },
+        drag = RingDrag(onStep = { n -> pending.set((bri + n * 5f).coerceIn(0f, 100f), 450) { send(it) } }) { f -> pending.set(f * 100f, 450) { send(it) } },
         instant = pending.dragging,
     ) else RingSpec(bg = colours.container, fill = RingFill(if (on) 1f else 0f, accent))
 

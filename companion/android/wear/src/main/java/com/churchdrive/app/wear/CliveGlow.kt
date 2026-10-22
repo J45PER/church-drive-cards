@@ -20,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -83,43 +84,48 @@ private fun intensity(state: AssistState): Pair<Float, Float> = when (state) {
 @Composable
 fun CliveGlow(state: AssistState, level: Float, palette: GlowPalette, dim: Boolean, modifier: Modifier = Modifier) {
     val (bright, speed) = intensity(state)
-    val speedNow by animateFloatAsState(speed, tween(600), label = "speed")
+    val speedFollow = animateFloatAsState(speed, tween(600), label = "speed")
     val alpha by animateFloatAsState(if (dim) 0.5f else bright, tween(500), label = "alpha")
     val ca by animateColorAsState(palette.a, tween(1400), label = "a")
     val cb by animateColorAsState(palette.b, tween(1400), label = "b")
     val cc by animateColorAsState(palette.c, tween(1400), label = "c")
-    var phase by remember { mutableFloatStateOf(0f) }
-    var pulse by remember { mutableFloatStateOf(0f) }
+    // The turning and the pulse are read only while drawing, so a frame redraws the glow without recomposing it.
+    val phase = remember { mutableFloatStateOf(0f) }
+    val pulse = remember { mutableFloatStateOf(0f) }
+    val levelNow = rememberUpdatedState(level)
+    val dimNow = rememberUpdatedState(dim)
+    val stateNow = rememberUpdatedState(state)
     LaunchedEffect(Unit) {
         var last = 0L
         while (true) {
             androidx.compose.runtime.withFrameNanos { now ->
                 if (last != 0L) {
-                    val dt = (now - last) / 1_000_000_000f
-                    phase += dt * 360f / 16f * speedNow
-                    pulse += dt
+                    val dt = ((now - last) / 1_000_000_000f).coerceAtMost(0.1f)
+                    phase.floatValue += dt * 360f / 16f * speedFollow.floatValue
+                    pulse.floatValue += dt
                 }
                 last = now
             }
         }
     }
-    val extra = when (state) {
-        AssistState.Listening -> (level - 0.25f) * 0.25f
-        AssistState.Speaking -> sin(pulse * 9f) * 0.07f
-        else -> 0f
-    }
     Canvas(modifier.fillMaxSize().background(Color(0xFF090A14))) {
         val w = size.minDimension
         val c = Offset(size.width / 2f, size.height / 2f)
-        val a = (alpha + (if (dim) 0f else extra)).coerceIn(0.1f, 1f)
+        val extra = when (stateNow.value) {
+            AssistState.Listening -> (levelNow.value - 0.25f) * 0.25f
+            AssistState.Speaking -> sin(pulse.floatValue * 9f) * 0.07f
+            else -> 0f
+        }
+        val a = (alpha + (if (dimNow.value) 0f else extra)).coerceIn(0.1f, 1f)
+        val ph = phase.floatValue
         fun blob(color: Color, angle: Float, radiusFactor: Float) {
             val rad = Math.toRadians(angle.toDouble())
             val centre = Offset(c.x + (w * radiusFactor * cos(rad)).toFloat(), c.y + (w * radiusFactor * sin(rad)).toFloat())
             drawCircle(Brush.radialGradient(listOf(color.copy(alpha = a), Color.Transparent), centre, w * 0.62f), w * 0.62f, centre)
         }
-        blob(ca, phase + 210f, 0.28f)
-        blob(cb, -phase * 1.3f + 330f, 0.28f)
-        blob(cc, phase * 0.8f + 90f, 0.3f)
+        blob(ca, ph + 210f, 0.28f)
+        blob(cb, -ph * 1.3f + 330f, 0.28f)
+        blob(cc, ph * 0.8f + 90f, 0.3f)
         // Darker towards the edge so the bezel and the text stay clear.
         drawCircle(Brush.radialGradient(0.45f to Color.Transparent, 1f to Color(0xB305060E), center = c, radius = w * 0.55f), w * 0.55f, c)
     }
