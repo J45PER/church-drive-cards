@@ -29,6 +29,15 @@ object TeamBadges {
     private val found = ConcurrentHashMap<String, String>()
     private val missing = ConcurrentHashMap.newKeySet<String>()
 
+    /** What is already known about [name]'s badge without asking anyone: (true, its address), (true, null) for a club known to have none, or (false, null) when not yet found. */
+    fun peek(name: String): Pair<Boolean, String?> {
+        val key = name.trim().lowercase()
+        if (key.length < 3) return true to null
+        found[key]?.let { return true to it }
+        KNOWN[clean(name)]?.let { id -> return true to "https://crests.football-data.org/$id.png" }
+        return (key in missing) to null
+    }
+
     /** The https address of [name]'s badge, or null. */
     fun lookup(name: String): String? {
         val key = name.trim().lowercase()

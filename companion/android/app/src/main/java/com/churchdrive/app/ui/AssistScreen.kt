@@ -609,16 +609,20 @@ private fun ChatLine(message: AssistMessage, faded: Boolean = false) {
 private fun AssistantBubble(text: String, show: AssistantShow? = null) {
     val scheme = MaterialTheme.colorScheme
     val uri = androidx.compose.ui.platform.LocalUriHandler.current
-    // An answer with a card is the card alone: what he says out loud can say more, but the screen shows just the figures.
+    // An answer with a card is the card alone in his bubble: what he says out loud can say more, but the screen shows just the figures.
     val cardOnly = show?.card != null
+    // A card with pictures waits, as a thinking pause, until they have all arrived, so nothing pops in afterwards.
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val pictures by androidx.compose.runtime.produceState(show?.card?.let { !cardHasPictures(it) } ?: true, show?.card) {
+        show?.card?.let { if (cardHasPictures(it)) { preloadCardImages(context, it); value = true } }
+    }
+    if (!pictures) { ThinkingDots(); return }
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.widthIn(max = 320.dp).let {
-            if (cardOnly) it else it
-                .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 6.dp, bottomEnd = 20.dp))
-                .background(scheme.surfaceContainerHigh)
-                .padding(horizontal = 16.dp, vertical = 11.dp)
-        },
+        modifier = Modifier.widthIn(max = 320.dp)
+            .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 6.dp, bottomEnd = 20.dp))
+            .background(scheme.surfaceContainerHigh)
+            .padding(horizontal = 16.dp, vertical = 11.dp),
     ) {
         if (!cardOnly) Text(text, style = MaterialTheme.typography.bodyLarge, color = scheme.onSurface)
         show?.card?.let { AssistantCardView(it) }

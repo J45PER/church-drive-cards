@@ -1,7 +1,6 @@
 package com.churchdrive.app.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +34,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.imageLoader
+import kotlinx.coroutines.async
 import org.json.JSONObject
 
 private fun weatherIcon(symbol: String): String = when (symbol.lowercase().replace('_', '-')) {
@@ -47,20 +48,6 @@ private fun weatherIcon(symbol: String): String = when (symbol.lowercase().repla
     "fog", "foggy" -> "mdi:weather-fog"
     "night", "clear-night" -> "mdi:weather-night"
     else -> "mdi:weather-partly-cloudy"
-}
-
-/** The colour a card takes: the weather's, a sport's navy, or none (null) for what is playing. */
-private fun cardTint(card: AssistantCard): Color? = when (card.kind) {
-    "weather" -> when (card.fields.optString("symbol").lowercase().replace('_', '-')) {
-        "sunny", "clear", "clear-day", "partlycloudy", "partly-cloudy" -> Color(0xFF1E6FB8)
-        "night", "clear-night" -> Color(0xFF1A237E)
-        "snowy", "snow" -> Color(0xFF6F8794)
-        "lightning", "lightning-rainy" -> Color(0xFF4527A0)
-        else -> Color(0xFF455A64)
-    }
-    "score", "scores", "fixture" -> Color(0xFF1C2C5B)
-    "car" -> Color(0xFF00838F)
-    else -> null
 }
 
 private fun JSONObject.side(key: String): JSONObject = optJSONObject(key) ?: JSONObject()
@@ -80,21 +67,54 @@ fun personPill(state: String): Pair<String, Tone> = when (state.trim().lowercase
 /** A colour given as #rrggbb (a light's own colour), or null. */
 private fun hexColour(v: String): Color? = v.trim().removePrefix("#").takeIf { it.length == 6 }?.toLongOrNull(16)?.let { Color(0xFF000000 or it) }
 
+/** Every club in a card (a score, a table of scores or a fixture), whose badge the card draws. */
+private fun cardSides(card: AssistantCard): List<JSONObject> {
+    val f = card.fields
+    return when (card.kind) {
+        "score", "fixture" -> listOf(f.side("home"), f.side("away"))
+        "scores" -> (0 until (f.optJSONArray("rows")?.length() ?: 0)).flatMap { i -> f.optJSONArray("rows")?.optJSONObject(i)?.let { listOf(it.side("home"), it.side("away")) }.orEmpty() }
+        else -> emptyList()
+    }
+}
+
+/** Whether a card draws pictures that have to be fetched. */
+fun cardHasPictures(card: AssistantCard): Boolean = cardSides(card).isNotEmpty()
+
+/**
+ * Finds and downloads every badge in [card] before it is shown, so the card appears finished and nothing pops in afterwards. Gives up after a few
+ * seconds (a slow or missing picture then falls back to the club's letters when it fails).
+ */
+suspend fun preloadCardImages(context: android.content.Context, card: AssistantCard) {
+    kotlinx.coroutines.withTimeoutOrNull(4_000) {
+        kotlinx.coroutines.coroutineScope {
+            cardSides(card).map { side ->
+                async(kotlinx.coroutines.Dispatchers.IO) {
+                    val url = side.optString("badge_url").ifBlank { null } ?: side.optString("name").takeIf { it.isNotBlank() }?.let { TeamBadges.lookup(it) }
+                    if (url != null) context.imageLoader.execute(coil.request.ImageRequest.Builder(context).data(url).build())
+                }
+            }.forEach { it.await() }
+        }
+    }
+}
+
 /** A club badge: its crest, with the club's three letters behind it for while it loads or when there is none. */
 @Composable
 private fun CardBadge(side: JSONObject, size: Dp) {
     val given = side.optString("badge_url").ifBlank { null }
-    // No address from the house: find the club's badge from its name.
-    val url by androidx.compose.runtime.produceState<String?>(given, given, side.optString("name")) {
-        value = given ?: side.optString("name").takeIf { it.isNotBlank() }?.let { n -> kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { TeamBadges.lookup(n) } }
+    val name = side.optString("name")
+    // No address from the house: find the club's badge from its name. Anything already found (the answer waits for it, see [preloadCardImages]) shows at once.
+    val start = if (given != null) true to given else if (name.isBlank()) true to null else TeamBadges.peek(name)
+    val found by androidx.compose.runtime.produceState(start, given, name) {
+        if (!start.first) value = true to kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { TeamBadges.lookup(name) }
     }
     Box(Modifier.size(size), contentAlignment = Alignment.Center) {
-        // The club's crest as it is (they are transparent pictures); its three letters show until it arrives, or if it can't be had.
+        // The club's crest as it is (they are transparent pictures). Its three letters show only when there is no picture to be had, never while one is on its way.
         val letters: @Composable () -> Unit = { Text(short(side), color = Color.White, fontSize = (size.value * 0.3f).sp, fontWeight = FontWeight.Bold, maxLines = 1) }
-        if (url == null) letters()
-        else coil.compose.SubcomposeAsyncImage(
-            model = url, contentDescription = side.optString("name"), contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize(),
-            loading = { Box(contentAlignment = Alignment.Center) { letters() } }, error = { Box(contentAlignment = Alignment.Center) { letters() } },
+        val url = found.second
+        if (found.first && url == null) letters()
+        else if (url != null) coil.compose.SubcomposeAsyncImage(
+            model = url, contentDescription = name, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize(),
+            loading = {}, error = { Box(contentAlignment = Alignment.Center) { letters() } },
         )
     }
 }
@@ -107,16 +127,11 @@ private fun CardBadge(side: JSONObject, size: Dp) {
 fun AssistantCardView(card: AssistantCard, modifier: Modifier = Modifier) {
     val scheme = MaterialTheme.colorScheme
     val f = card.fields
-    val tint = cardTint(card)
-    // Mostly see-through, like frosted glass over the bubble: a faint wash of the card's colour and a hairline edge.
     val ink = scheme.onSurface
     val soft = scheme.onSurfaceVariant
-    val shape = RoundedCornerShape(14.dp)
+    // No background of its own: the card sits in his speech bubble.
     Column(
-        modifier.fillMaxWidth().clip(shape)
-            .background(tint?.copy(alpha = 0.16f) ?: Color.White.copy(alpha = 0.05f))
-            .border(1.dp, Color.White.copy(alpha = 0.12f), shape)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+        modifier.fillMaxWidth().padding(vertical = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         when (card.kind) {
