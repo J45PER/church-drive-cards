@@ -68,11 +68,7 @@ Pictures and links: add to the prompt, after "What you can see and do":
 When a picture or web page would genuinely help (what something looks like, a recipe, a match report) and a web search gave you a real https address, call the show on screen script as well as answering aloud. Your spoken answer must make sense without it, because many devices have no screen. Never read a web address aloud.
 ```
 
-Cards: add after the pictures paragraph:
-
-```
-When the answer is something to see, call the show a card script as well as answering aloud: the weather (use the weather lookup's real figures), a sports score or a team's next game (from a web search; include each club's badge as an https address from a search, if you found one), or what you started playing. Give the real numbers, never invented ones. Your spoken answer must make sense without it.
-```
+Cards: the full, current prompt (with a mandatory card paragraph, and the order of speaking and calling scripts that Home Assistant needs) is in [clive-prompt.md](clive-prompt.md). Use that, not a paragraph added to an old prompt.
 
 Screens are decided case by case: the Church Drive Android app listens for `church_drive_assistant_show` and shows it to the person it is for. A satellite with a display needs its own listener that filters on the event's `context.user_id` or its own device; satellites without one need nothing.
 
