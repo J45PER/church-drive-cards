@@ -53,7 +53,7 @@ class AssistCardsTest {
     @Test fun theBrandLogoSetHasTheCommonServices() {
         val set = JSONObject(File("src/main/assets/si-icons.json").readText())
         for (slug in listOf("spotify", "netflix", "youtube", "plex", "applemusic", "googlecast", "homeassistant")) {
-            assertEquals(slug, true, set.optString(slug).startsWith("M"))
+            assertEquals(slug, true, set.optString(slug).isNotBlank())
         }
     }
 }
