@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.46.9
+
+- Watch: the crown scrolls (down and up the faces of a page, and between Clive's Talk, Prompts and Settings) and no longer changes temperatures, brightness or other values. Use the ring or the plus and minus buttons for values.
+
 ## 0.46.8
 
 - A new Scores card: several results at once (Champions League night, the weekend's games) as a table with the club badges, on the phone and the watch.

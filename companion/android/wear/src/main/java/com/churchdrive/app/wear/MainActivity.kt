@@ -216,9 +216,10 @@ private fun FaceList(faces: List<Face>, state: PagerState) {
     val ui = LocalUi.current
     val scope = rememberCoroutineScope()
     val next: () -> Unit = { scope.launch { state.animateScrollToPage((state.currentPage + 1).coerceAtMost((faces.size - 1).coerceAtLeast(0))) } }
-    // The crown only turns a value (temperature, brightness): it never scrolls, and does nothing on a face with no value to turn.
-    val crownStep = faces.getOrNull(state.currentPage)?.spec?.drag?.onStep
-    val crownMod = if (crownStep != null) Modifier.crown { n -> crownStep(n) } else Modifier
+    // The crown scrolls down and up the faces, one for each notch. It never changes a temperature or a brightness.
+    val crownMod = if (faces.size > 1) Modifier.crown { n ->
+        scope.launch { state.animateScrollToPage((state.currentPage + n).coerceIn(0, faces.size - 1)) }
+    } else Modifier
     CompositionLocalProvider(LocalNextFace provides next) {
         Box(Modifier.fillMaxSize().then(crownMod)) {
             VerticalPager(state = state, modifier = Modifier.fillMaxSize(), key = { faces.getOrNull(it)?.id ?: it }) { i ->
