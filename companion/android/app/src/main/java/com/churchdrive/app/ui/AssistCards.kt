@@ -1,12 +1,14 @@
 package com.churchdrive.app.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -21,7 +23,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -62,7 +63,7 @@ private fun JSONObject.number(key: String): Double? = optDouble(key).takeIf { !i
 
 private fun short(side: JSONObject): String = side.optString("short").ifBlank { side.optString("name").take(3).uppercase() }
 
-/** A club badge: its picture on a white disc, with the club's three letters behind it for while it loads or when there is none. */
+/** A club badge: its crest, with the club's three letters behind it for while it loads or when there is none. */
 @Composable
 private fun CardBadge(side: JSONObject, size: Dp) {
     val given = side.optString("badge_url").ifBlank { null }
@@ -70,9 +71,14 @@ private fun CardBadge(side: JSONObject, size: Dp) {
     val url by androidx.compose.runtime.produceState<String?>(given, given, side.optString("name")) {
         value = given ?: side.optString("name").takeIf { it.isNotBlank() }?.let { n -> kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { TeamBadges.lookup(n) } }
     }
-    Box(Modifier.size(size).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
-        Text(short(side), color = Color(0xFF1C2C5B), fontSize = (size.value * 0.3f).sp, fontWeight = FontWeight.Bold, maxLines = 1)
-        url?.let { u -> coil.compose.AsyncImage(model = u, contentDescription = side.optString("name"), contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize().clip(CircleShape)) }
+    Box(Modifier.size(size), contentAlignment = Alignment.Center) {
+        // The club's crest as it is (they are transparent pictures); its three letters show until it arrives, or if it can't be had.
+        val letters: @Composable () -> Unit = { Text(short(side), color = Color.White, fontSize = (size.value * 0.3f).sp, fontWeight = FontWeight.Bold, maxLines = 1) }
+        if (url == null) letters()
+        else coil.compose.SubcomposeAsyncImage(
+            model = url, contentDescription = side.optString("name"), contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize(),
+            loading = { Box(contentAlignment = Alignment.Center) { letters() } }, error = { Box(contentAlignment = Alignment.Center) { letters() } },
+        )
     }
 }
 
@@ -85,11 +91,14 @@ fun AssistantCardView(card: AssistantCard, modifier: Modifier = Modifier) {
     val scheme = MaterialTheme.colorScheme
     val f = card.fields
     val tint = cardTint(card)
-    val ink = if (tint != null) Color.White else scheme.onSurface
-    val soft = if (tint != null) Color(0xFFDDE3FF) else scheme.onSurfaceVariant
+    // Mostly see-through, like frosted glass over the bubble: a faint wash of the card's colour and a hairline edge.
+    val ink = scheme.onSurface
+    val soft = scheme.onSurfaceVariant
+    val shape = RoundedCornerShape(14.dp)
     Column(
-        modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
-            .background(if (tint != null) androidx.compose.ui.graphics.Brush.verticalGradient(listOf(tint, tint.copy(alpha = 0.55f).compositeOver(Color(0xFF0B0C14)))) else androidx.compose.ui.graphics.SolidColor(scheme.surfaceContainerHighest))
+        modifier.fillMaxWidth().clip(shape)
+            .background(tint?.copy(alpha = 0.16f) ?: Color.White.copy(alpha = 0.05f))
+            .border(1.dp, Color.White.copy(alpha = 0.12f), shape)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -122,11 +131,34 @@ fun AssistantCardView(card: AssistantCard, modifier: Modifier = Modifier) {
                 if (where.isNotEmpty()) Text(where, style = MaterialTheme.typography.bodySmall, color = soft, textAlign = TextAlign.Center)
             }
             "weather" -> {
-                HaIcon(weatherIcon(f.optString("symbol")), Icons.Filled.Info, Color.White, 44.dp)
-                Text(f.number("temp")?.let { "${Math.round(it)}°" } ?: "–", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = ink)
-                if (f.optString("desc").isNotBlank()) Text(f.optString("desc"), style = MaterialTheme.typography.titleSmall, color = ink)
-                val line = listOfNotNull(f.number("high")?.let { "High ${Math.round(it)}°" }, f.number("low")?.let { "Low ${Math.round(it)}°" }, f.number("rain")?.let { "${Math.round(it)}% rain" }).joinToString(" · ")
-                if (line.isNotEmpty()) Text(line, style = MaterialTheme.typography.bodySmall, color = soft)
+                val place = f.optString("location")
+                if (place.isNotBlank()) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    HaIcon("mdi:map-marker", Icons.Filled.Info, soft, 14.dp)
+                    Text(place, style = MaterialTheme.typography.labelMedium, color = soft)
+                }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    HaIcon(weatherIcon(f.optString("symbol")), Icons.Filled.Info, ink, 52.dp)
+                    Column(Modifier.weight(1f)) {
+                        Text(f.number("temp")?.let { "${Math.round(it)}°" } ?: "–", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = ink)
+                        if (f.optString("desc").isNotBlank()) Text(f.optString("desc"), style = MaterialTheme.typography.titleSmall, color = ink)
+                    }
+                    val side = listOfNotNull(f.number("high")?.let { "High ${Math.round(it)}°" }, f.number("low")?.let { "Low ${Math.round(it)}°" }, f.number("rain")?.let { "${Math.round(it)}% rain" })
+                    if (side.isNotEmpty()) Column(horizontalAlignment = Alignment.End) { side.forEach { Text(it, style = MaterialTheme.typography.bodySmall, color = soft) } }
+                }
+                val hours = f.optJSONArray("hourly")
+                if (hours != null && hours.length() > 0) {
+                    Box(Modifier.fillMaxWidth().padding(vertical = 4.dp).height(1.dp).background(Color.White.copy(alpha = 0.10f)))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        for (i in 0 until minOf(hours.length(), 6)) {
+                            val h = hours.optJSONObject(i) ?: continue
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(h.optString("t"), style = MaterialTheme.typography.labelSmall, color = soft)
+                                HaIcon(weatherIcon(h.optString("symbol")), Icons.Filled.Info, ink, 20.dp)
+                                Text(h.number("temp")?.let { "${Math.round(it)}°" } ?: "–", style = MaterialTheme.typography.labelLarge, color = ink)
+                            }
+                        }
+                    }
+                }
             }
             "music" -> {
                 Text(f.optString("title"), style = MaterialTheme.typography.titleMedium, color = ink, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)

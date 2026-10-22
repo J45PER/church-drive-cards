@@ -77,16 +77,28 @@ fun CardBlock(card: AssistantCard) {
     val f = card.fields
     when (card.kind) {
         "weather" -> Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            val place = f.optString("location")
+            if (place.isNotBlank()) Text(place, color = SOFT.copy(alpha = 0.85f), fontSize = ui.sp(11f), maxLines = 1, overflow = TextOverflow.Ellipsis)
             Row(verticalAlignment = Alignment.Top) {
-                Text(f.optDouble("temp").takeIf { !it.isNaN() }?.let { "${Math.round(it)}" } ?: "–", color = Color.White, fontSize = ui.sp(44f), fontWeight = FontWeight.Bold)
-                Text("°", color = Color.White, fontSize = ui.sp(22f), fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = ui.d(4f)))
+                Text(f.optDouble("temp").takeIf { !it.isNaN() }?.let { "${Math.round(it)}" } ?: "–", color = Color.White, fontSize = ui.sp(40f), fontWeight = FontWeight.Bold)
+                Text("°", color = Color.White, fontSize = ui.sp(20f), fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = ui.d(4f)))
             }
-            Text(f.optString("desc"), color = SOFT, fontSize = ui.sp(13f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(f.optString("desc"), color = SOFT, fontSize = ui.sp(12f), maxLines = 1, overflow = TextOverflow.Ellipsis)
             val hi = f.optDouble("high").takeIf { !it.isNaN() }?.let { "H ${Math.round(it)}°" }
             val lo = f.optDouble("low").takeIf { !it.isNaN() }?.let { "L ${Math.round(it)}°" }
-            val rain = f.optDouble("rain").takeIf { !it.isNaN() }?.let { "${Math.round(it)}% rain" }
-            val line = listOfNotNull(hi, lo, rain).joinToString(" · ")
+            val line = listOfNotNull(hi, lo).joinToString(" · ")
             if (line.isNotEmpty()) Text(line, color = SOFT.copy(alpha = 0.85f), fontSize = ui.sp(11f), maxLines = 1)
+            // The next few hours: time over temperature.
+            val hours = f.optJSONArray("hourly")
+            if (hours != null && hours.length() > 0) Row(Modifier.padding(top = ui.d(4f)), horizontalArrangement = Arrangement.spacedBy(ui.d(10f))) {
+                for (i in 0 until minOf(hours.length(), 4)) {
+                    val h = hours.optJSONObject(i) ?: continue
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(h.optString("t").substringBefore(':'), color = SOFT.copy(alpha = 0.8f), fontSize = ui.sp(10f), maxLines = 1)
+                        Text(h.optDouble("temp").takeIf { !it.isNaN() }?.let { "${Math.round(it)}°" } ?: "–", color = Color.White, fontSize = ui.sp(12f), fontWeight = FontWeight.SemiBold, maxLines = 1)
+                    }
+                }
+            }
         }
         "score" -> Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             val home = f.side("home")
