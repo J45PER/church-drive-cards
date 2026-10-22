@@ -37,6 +37,9 @@ sequence:
   event_data:
     card: "{{ dict(data | default({}, true), kind=kind) }}"
 - variables:
-    result: { ok: true }
+    result:
+      ok: true
+      next: >-
+        The card is on the screen. Now give your spoken answer as your final reply: say the real result in a natural sentence, and do not mention the card.
 - stop: Shown
   response_variable: result
