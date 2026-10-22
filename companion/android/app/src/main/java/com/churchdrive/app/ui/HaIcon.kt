@@ -4,6 +4,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -15,7 +17,7 @@ import androidx.compose.ui.unit.Dp
 import com.churchdrive.app.ha.IconPack
 
 /**
- * An entity's own icon. `phu:` icons (the Hue-style set the dashboards use) are drawn from the
+ * An entity's own icon. `si:` icons are brand logos (Simple Icons), `phu:` icons (the Hue-style set the dashboards use) are drawn from the
  * icon pack Home Assistant serves, and every `mdi:` icon is drawn from its path data (the common ones are built in,
  * see MdiIcons; the rest come from the full set in MdiAll); anything else, or while they're still loading, shows [fallback].
  */
@@ -25,9 +27,15 @@ fun HaIcon(icon: String?, fallback: ImageVector, tint: Color, size: Dp, modifier
     val pack = IconPack.text
     val all = MdiAll.paths
     val mdi = icon?.takeIf { it.startsWith("mdi:") }?.removePrefix("mdi:")?.let { MdiIcons.paths[it] ?: all?.get(it) }
-    val found = remember(name, mdi, pack) {
+    // `si:` icons are brand logos (Simple Icons), read from their own set the first time one is wanted.
+    val siName = icon?.takeIf { it.startsWith("si:") }?.removePrefix("si:")
+    val context = LocalContext.current
+    if (siName != null) LaunchedEffect(Unit) { SimpleIcons.load(context) }
+    val si = siName?.let { SimpleIcons.paths?.get(SimpleIcons.slugFor(it)) }
+    val found = remember(name, mdi, si, pack) {
         when {
             mdi != null -> 24f to mdi
+            si != null -> 24f to si
             name != null -> IconPack.find(name)
             else -> null
         }
