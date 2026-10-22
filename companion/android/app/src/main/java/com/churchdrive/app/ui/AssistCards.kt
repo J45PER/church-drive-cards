@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -83,8 +85,8 @@ fun AssistantCardView(card: AssistantCard, modifier: Modifier = Modifier) {
     val scheme = MaterialTheme.colorScheme
     val f = card.fields
     val tint = cardTint(card)
-    val ink = if (tint != null) Color.White else ink
-    val soft = if (tint != null) Color(0xFFDDE3FF) else soft
+    val ink = if (tint != null) Color.White else scheme.onSurface
+    val soft = if (tint != null) Color(0xFFDDE3FF) else scheme.onSurfaceVariant
     Column(
         modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
             .background(if (tint != null) androidx.compose.ui.graphics.Brush.verticalGradient(listOf(tint, tint.copy(alpha = 0.55f).compositeOver(Color(0xFF0B0C14)))) else androidx.compose.ui.graphics.SolidColor(scheme.surfaceContainerHighest))
@@ -120,7 +122,7 @@ fun AssistantCardView(card: AssistantCard, modifier: Modifier = Modifier) {
                 if (where.isNotEmpty()) Text(where, style = MaterialTheme.typography.bodySmall, color = soft, textAlign = TextAlign.Center)
             }
             "weather" -> {
-                HaIcon(weatherIcon(f.optString("symbol")), androidx.compose.material.icons.Icons.Filled.Info, Color.White, 44.dp)
+                HaIcon(weatherIcon(f.optString("symbol")), Icons.Filled.Info, Color.White, 44.dp)
                 Text(f.number("temp")?.let { "${Math.round(it)}°" } ?: "–", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = ink)
                 if (f.optString("desc").isNotBlank()) Text(f.optString("desc"), style = MaterialTheme.typography.titleSmall, color = ink)
                 val line = listOfNotNull(f.number("high")?.let { "High ${Math.round(it)}°" }, f.number("low")?.let { "Low ${Math.round(it)}°" }, f.number("rain")?.let { "${Math.round(it)}% rain" }).joinToString(" · ")
