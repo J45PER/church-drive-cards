@@ -101,7 +101,7 @@ fun CliveGlow(state: AssistState, level: Float, palette: GlowPalette, dim: Boole
             androidx.compose.runtime.withFrameNanos { now ->
                 if (last != 0L) {
                     val dt = ((now - last) / 1_000_000_000f).coerceAtMost(0.1f)
-                    phase.floatValue += dt * 360f / 16f * speedFollow.floatValue
+                    phase.floatValue += dt * 360f / 16f * speedFollow.value
                     pulse.floatValue += dt
                 }
                 last = now
