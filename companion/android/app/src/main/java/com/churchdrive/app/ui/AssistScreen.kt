@@ -481,6 +481,19 @@ private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String)
             ui.keyboardRequested = false
         }
     }
+    // Leaving the app with the typing box focused makes Android put the keyboard straight back up on return, over whatever page is
+    // showing. So the box lets go of focus when the app stops, and the keyboard only comes back when the Type button asks for it.
+    val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(owner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_PAUSE) {
+                focusManager.clearFocus(force = true)
+                keyboard?.hide()
+            }
+        }
+        owner.lifecycle.addObserver(observer)
+        onDispose { owner.lifecycle.removeObserver(observer) }
+    }
     val pad = assistantBottomPad(keyboard = true)
     Box(modifier = Modifier.fillMaxSize().background(scheme.background)) {
         BottomGlow(active, model.level, Modifier.align(Alignment.BottomCenter).padding(bottom = if (embedded) 0.dp else pad))

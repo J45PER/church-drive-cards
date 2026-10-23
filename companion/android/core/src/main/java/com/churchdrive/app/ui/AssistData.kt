@@ -20,7 +20,7 @@ data class AssistantShow(val image: String?, val link: String?, val linkLabel: S
 data class AssistantCard(val kind: String, val fields: org.json.JSONObject)
 
 /** The kinds of card the screens know how to draw. */
-val ASSISTANT_CARD_KINDS = setOf("weather", "score", "scores", "fixture", "music", "people", "done", "car")
+val ASSISTANT_CARD_KINDS = setOf("weather", "score", "scores", "fixture", "music", "people", "done", "car", "climate")
 
 /** An https address, or null. */
 fun httpsOnly(url: String?): String? = url?.trim()?.takeIf { it.startsWith("https://") }
@@ -172,6 +172,8 @@ fun introDue(introducedEver: Boolean, told: Set<String>?, log: List<AssistFeatur
  * ever do they get the full introduction. Features also make up that introduction's "what I can do".
  */
 private val RAW_ASSIST_FEATURES = listOf(
+    AssistFeature("mdi:thermometer", "A card for the house's climate", "What's the climate like in the house?", id = "climate-card", detail = "Asked about the temperature in the house, {name} now shows a card with each heating zone: its temperature, target, humidity and whether it is heating, idle, on Eco or off.", kind = AssistantChange.Change),
+    AssistFeature("mdi:keyboard-off-outline", "Keyboard stays away", "", id = "keyboard-on-return", detail = "Leaving the app while the typing box was open no longer brings the keyboard back up over the page when you return.", kind = AssistantChange.Fix),
     AssistFeature("mdi:thermostat-auto", "Looks after the heating", "Resume the heating", id = "runs-the-heating", detail = "{name} now keeps the heating comfortable by himself: on when a room is cold, down or off when it is hot. If you change a thermostat yourself he leaves it alone for a couple of hours, tells you when he takes over again, and you can say \"resume the heating\" or tap Resume on the Home page or in his notification.", kind = AssistantChange.Change),
     AssistFeature("mdi:home-account", "Cards for the house", "Who's home?", id = "house-cards", detail = "{name} now answers who is home, how the car's charging, and what he has just done with a card in the house's colours: green for home, teal away at a place, red and orange for a low battery.", kind = AssistantChange.Change),
     AssistFeature("mdi:table", "Score tables", "What were the Champions League scores last night?", id = "score-tables", detail = "Asked for several scores at once, {name} now shows them as a table with the club badges, and keeps his words short.", kind = AssistantChange.Change),

@@ -3,6 +3,7 @@ package com.churchdrive.app
 import androidx.compose.ui.graphics.Color
 import com.churchdrive.app.ui.Tone
 import com.churchdrive.app.ui.carBatteryColour
+import com.churchdrive.app.ui.climatePill
 import com.churchdrive.app.ui.parseAssistantCard
 import com.churchdrive.app.ui.personPill
 import org.json.JSONObject
@@ -15,6 +16,21 @@ import java.io.File
 
 class AssistCardsTest {
     private val ok = Color(0xFF00838F)
+
+    @Test fun aHeatingZoneIsColouredAsOnTheDashboard() {
+        assertEquals("Heating" to Tone.Orange, climatePill("heating"))
+        assertEquals("Idle" to Tone.Orange, climatePill("idle"))
+        assertEquals("Eco" to Tone.Green, climatePill("Eco"))
+        assertEquals("Cooling" to Tone.Blue, climatePill("cooling"))
+        assertEquals("Off" to Tone.Grey, climatePill("off"))
+        assertEquals("Off" to Tone.Grey, climatePill(""))
+    }
+
+    @Test fun aClimateCardIsKept() {
+        val card = parseAssistantCard(JSONObject("""{"kind":"climate","rows":[{"name":"Downstairs","temp":19.7,"state":"idle"}],"outside":11.2}"""))
+        assertNotNull(card)
+        assertEquals("climate", card!!.kind)
+    }
 
     @Test fun carBatteryFollowsTheDashboardBands() {
         assertEquals(Color(0xFFEF5350), carBatteryColour(19.0, ok))
