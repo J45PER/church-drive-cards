@@ -60,7 +60,11 @@ class GreggIconTest {
     @Test fun theHuePackNamesForGreggsBrushesAreDrawnWithTheHousesOwn() {
         assertEquals("cd:roller", CdIcons.alias("phu:vac_mbrush"))
         assertEquals("cd:side", CdIcons.alias("phu:vac_sbrush"))
-        assertEquals("mdi:home", CdIcons.alias("mdi:home"))
+        // Home Assistant's houses are drawn with the house's own house: solid for home, outlined for out and away.
+        assertEquals("cd:home", CdIcons.alias("mdi:home"))
+        assertEquals("cd:home-away", CdIcons.alias("mdi:home-export-outline"))
+        assertEquals("mdi:lightbulb", CdIcons.alias("mdi:lightbulb"))
+        assertTrue(CdIcons.icons.containsKey("home-away"))
         assertNull(CdIcons.alias(null))
         assertFalse(CdIcons.icons.isEmpty())
     }
