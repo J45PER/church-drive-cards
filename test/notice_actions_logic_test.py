@@ -58,6 +58,15 @@ class NoticeActionsLogic(unittest.TestCase):
             self.assertNotIn("disarm", text)
         self.assertTrue(all(len(na.actions_for(k)) <= 3 for k in ["smoke", "doorbell", "vacuum"]))
 
+    def test_clive_offers_to_be_resumed_only_when_he_has_stepped_back(self):
+        paused = na.actions_for("clive_actions", tag="church-drive-clive-paused-upstairs")
+        self.assertEqual(titles(paused), ["Resume Clive", "Open Climate"])
+        self.assertEqual(paused[0]["action"], "CD_clive_resume")
+        self.assertEqual(titles(na.actions_for("clive_actions", tag="church-drive-clive-climate-upstairs")), ["Open Climate"])
+        self.assertEqual(na.split_action("CD_clive_resume"), ("clive_resume", None))
+        self.assertFalse(na.is_phone_action("CD_clive_resume"))
+        self.assertEqual(na.tap_link_for("clive_actions"), "/dashboard-mobile/climate")
+
     def test_action_ids_split_and_unknown_ones_are_ignored(self):
         self.assertEqual(na.split_action("CD_snooze:30"), ("snooze", 30))
         self.assertEqual(na.split_action("CD_lights_on"), ("lights_on", None))

@@ -17,7 +17,7 @@ from typing import Any, Callable
 PREFIX = "CD_"
 
 # Buttons that change something in the house.
-HOUSE_VERBS = ("lights_on", "dock", "all_off", "car_now", "car_pause", "backup")
+HOUSE_VERBS = ("lights_on", "dock", "all_off", "car_now", "car_pause", "backup", "clive_resume")
 # Buttons the Church Drive app handles on the phone: hide this kind for a while, or bring this one back later.
 PHONE_VERBS = ("mute", "snooze")
 
@@ -34,7 +34,7 @@ KIND_PAGES = {
     "smoke": "security", "heat": "security", "co": "security", "alarm_triggered": "security", "door_away": "security",
     "door_left_open": "security", "alarm_mode": "security", "tamper": "security", "doorbell": "security",
     "night_motion": "security", "vacuum": "cleaning", "damp": "climate", "frost": "climate", "left_on": "lighting",
-    "todo_new": "todo", "todo_summary": "todo",
+    "todo_new": "todo", "todo_summary": "todo", "clive_actions": "climate",
 }
 # Kinds about a device's own health: tapping one opens the app's Device Health page (the device's page when it is known).
 HEALTH_KINDS = ("battery_report", "device_stale", "low_batteries", "devices_not_responding")
@@ -149,6 +149,10 @@ def actions_for(
         out.append(verb("snooze", "Snooze 30 min", 30))
     elif kind == "backup":
         out.append(verb("backup", "Run backup now"))
+    elif kind == "clive_actions":
+        if "paused" in (tag or ""):  # "heating set by hand": Clive has stepped back; this hands it back to him now
+            out.append(verb("clive_resume", "Resume Clive"))
+        out.append(link("Open Climate", page_uri("climate")))
     return out[:MAX_BUTTONS]
 
 

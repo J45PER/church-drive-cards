@@ -22,6 +22,7 @@ SAMPLES: dict[str, tuple[str, str, str]] = {
     "vacuum": ("🤖 Gregg needs help", "Gregg is stuck in the Living Room.", ""),
     "damp": ("💧 Damp risk: Bathroom", "Humidity has been over 65% for an hour.", ""),
     "frost": ("❄️ Frost tonight", "It is forecast to drop to -2°C tonight.", ""),
+    "clive_actions": ("🌡️ Downstairs was too warm", "The living room reached 24.1°C (comfortable up to 22°C), so Clive turned the heating off. He will put it back once it is down to 20.5°C.", ""),
     "power_down": ("⚡ Power-down session", "Octopus has asked for less power use from 17:00 to 18:00.", ""),
     "cheap_rate": ("💷 Cheap rate started", "The cheap rate has started: 7p per kWh until 05:30.", ""),
     "energy_cost": ("💷 Yesterday's energy", "Yesterday cost £2.41 for 18.2 kWh.", ""),

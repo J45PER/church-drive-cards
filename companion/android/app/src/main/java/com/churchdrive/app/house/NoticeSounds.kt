@@ -28,6 +28,12 @@ fun soundFamilyOf(kind: String?): SoundFamily = when (kind) {
     else -> SoundFamily.Default
 }
 
+/**
+ * Whether a kind of notification is the assistant's own (what he did in the house, `clive_actions` in the house's `kinds.py`; that key is
+ * the house's and never changes here). His come with his mark instead of the Manager's, small and large.
+ */
+fun isAssistantNotice(kind: String?): Boolean = kind == "clive_actions"
+
 /** The channel a notification in [style] uses: a pop-up gets its family's sound; every other style is as it was. */
 fun channelFor(style: NoticeStyle, kind: String?): String =
     if (style == NoticeStyle.Popup) soundFamilyOf(kind).channel else style.channel

@@ -1,0 +1,77 @@
+# Script script.clive_scores: A sports result, or several, after Clive has searched the web for the real figures. Exposed to Assist. It puts the score card (one game) or the scores table (several) on the screen itself, through clive_show_card (the apps find the club badges from the names), and returns `say`: the exact words to speak, in the house format of one sentence with the answer and one short offer of more, so Clive no longer has to word it. A copy of the live script.
+alias: Sports scores
+description: 'Use this for ANY question about a sports score or result, one game or several. After you have searched the web for the real figures, call this with the games. It shows the card or table on the screen by itself and returns the words to say. Your whole reply must be exactly the text in "say", nothing before or after it, and do not call the card script as well. games is a list with one entry for every game asked for: home and away (club names), home_short and away_short (three letters, such as MCI), home_score, away_score and status ("Full time", "74''" or "Half time"). title is the competition (for example Champions League), when is when it was played as you would say it ("last night", "on Saturday"), and scorers is one short line, for a single game only. Never invent a figure. If they say yes to the offer, give the scorers or the other results from your search.'
+fields:
+  games:
+    name: Games
+    description: A list of games, each with home, away, home_short, away_short, home_score, away_score and status.
+    required: true
+    selector:
+      object: {}
+  title:
+    name: Competition
+    required: false
+    selector:
+      text: {}
+  when:
+    name: When
+    description: Spoken, for example last night or on Saturday.
+    required: false
+    selector:
+      text: {}
+  scorers:
+    name: Scorers
+    description: One short line, for a single game.
+    required: false
+    selector:
+      text: {}
+icon: mdi:soccer
+mode: parallel
+max: 5
+sequence:
+- variables:
+    gl: >-
+      {%- set g = (games | from_json(default=[])) if games is string else games -%}{{- g if g is list else ([g] if g else []) -}}
+- variables:
+    n: '{{ gl | length }}'
+- variables:
+    phrases: >-
+      {%- set ns = namespace(l=[]) -%}
+      {%- for g in gl -%}
+      {%- set hs = g.home_score | int(0) -%}{%- set as_ = g.away_score | int(0) -%}
+      {%- set st = (g.status | default('Full time') | string) -%}
+      {%- set live = (st != '') and (st | lower not in ['full time', 'ft', 'final', 'full-time']) -%}
+      {%- if live -%}{%- set p = g.home ~ ' and ' ~ g.away ~ ' are ' ~ hs ~ ' to ' ~ as_ -%}
+      {%- elif hs > as_ -%}{%- set p = g.home ~ ' beat ' ~ g.away ~ ' ' ~ hs ~ ' to ' ~ as_ -%}
+      {%- elif as_ > hs -%}{%- set p = g.away ~ ' beat ' ~ g.home ~ ' ' ~ as_ ~ ' to ' ~ hs -%}
+      {%- else -%}{%- set p = g.home ~ ' and ' ~ g.away ~ ' drew ' ~ hs ~ ' all' -%}
+      {%- endif -%}
+      {%- set ns.l = ns.l + [p] -%}
+      {%- endfor -%}
+      {{- ns.l -}}
+    rows: >-
+      {%- set ns = namespace(l=[]) -%}
+      {%- for g in gl -%}
+      {%- set ns.l = ns.l + [{'home': {'name': g.home, 'short': g.home_short | default(g.home[:3] | upper, true)}, 'away': {'name': g.away, 'short': g.away_short | default(g.away[:3] | upper, true)}, 'home_score': g.home_score | int(0), 'away_score': g.away_score | int(0), 'status': g.status | default('Full time')}] -%}
+      {%- endfor -%}
+      {{- ns.l -}}
+- variables:
+    say: >-
+      {{ (phrases[:2] | join(' and ')) }}{{ (' in the ' ~ title) if title | default('') else '' }}{{ (' ' ~ when) if when | default('') else '' }}. {{ 'Shall I go through the other results?' if n > 2 else 'Shall I tell you the scorers?' }}
+    card: >-
+      {%- if n == 1 -%}
+      {{ dict(rows[0], scorers=(scorers | default(''))) }}
+      {%- else -%}
+      {{ {'title': title | default(''), 'rows': rows} }}
+      {%- endif -%}
+- action: script.clive_show_card
+  data:
+    kind: '{{ ''score'' if n == 1 else ''scores'' }}'
+    data: '{{ card }}'
+- variables:
+    result:
+      say: '{{ say }}'
+      games: '{{ rows }}'
+      next: Your whole reply is exactly the text in say. The card is already on the screen.
+- response_variable: result
+  stop: Shown

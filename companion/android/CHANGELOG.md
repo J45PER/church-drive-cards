@@ -4,6 +4,12 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.48.0
+
+- Home page: a reminder below the to-do highlights when somebody has changed the heating by hand and Clive has stepped back from that zone for a while. It says when he takes over again and has a button to hand it back at once.
+- Clive's notifications can be answered from the notification: Resume Clive hands the heating back without opening the app.
+- Clive's own notifications (what he did in the house) show his mark, small and in colour; everyone else's still show the Manager's.
+
 ## 0.47.2
 
 - Listening now shows a stop button: a rounded square that breathes and swells with your voice, with a ripple spreading from it. Tap it to stop.
