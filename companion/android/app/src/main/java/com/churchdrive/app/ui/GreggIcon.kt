@@ -59,7 +59,7 @@ fun greggStateFor(vacuumState: String?, level: Double?): GreggState {
 }
 
 /**
- * The `cd:` icon for one option of Gregg's suction level (Quiet, Standard, Turbo, Max, Boost_IQ) or water level (Low, Medium, High), drawn like the
+ * The `cd:` icon for one option of Gregg's suction level (Quiet, Standard, Turbo, Max, Boost_IQ) or water level (Low, Medium, High) and cleaning mode (vacuum, mop, both), drawn like the
  * Eufy app's: a pinwheel of blades for suction (the Max and Boost IQ ones carry a badge), a drop that fills for water. Null for any other entity or option.
  */
 fun greggLevelIcon(entityId: String, option: String): String? {
@@ -73,6 +73,12 @@ fun greggLevelIcon(entityId: String, option: String): String? {
             "boostiq" -> "cd:suction-boost"
             else -> null
         }
+        entityId.endsWith("_cleaning_mode") -> when (key) {
+            "vacuum" -> "cd:vac"
+            "mop" -> "cd:mop"
+            "vacuumandmop", "moppingaftersweeping" -> "cd:both"
+            else -> null
+        }
         entityId.endsWith("_water_level") -> when (key) {
             "low" -> "cd:water-low"
             "medium" -> "cd:water-medium"
@@ -81,6 +87,18 @@ fun greggLevelIcon(entityId: String, option: String): String? {
         }
         else -> null
     }
+}
+
+/** The icon name a Cleaning page title carries to mean Gregg's resting (idle) icon, which never changes with what he is doing. */
+const val GREGG_IDLE_ICON = "gregg:idle"
+
+/** The house's own icon for one of Gregg's dock buttons or his find switch, or null for any other entity. */
+fun greggEntityIcon(entityId: String): String? = when (entityId) {
+    "button.gregg_empty_dust_bin" -> "cd:empty"
+    "button.gregg_wash_mop" -> "cd:wash"
+    "button.gregg_dry_mop" -> "cd:dry"
+    "switch.gregg_find_robot" -> "cd:find"
+    else -> null
 }
 
 /** The word for a status pill. */

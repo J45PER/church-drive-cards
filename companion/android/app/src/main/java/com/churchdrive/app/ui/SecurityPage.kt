@@ -212,7 +212,7 @@ fun TileCard(config: JSONObject, entities: Map<String, EntityState>, call: CallS
     EntityCard(tone.container, tone.onContainer, deviceEntity = id) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             if (isVacuum) GreggIcon(greggState(entity, entities[VACUUM_BATTERY]), tone.accent, 44.dp, entities[VACUUM_BATTERY]?.state?.toDoubleOrNull())
-            else ToneIconName(config.optString("icon").ifBlank { entity?.str("icon") ?: "" }, Icons.Filled.Info, tone)
+            else ToneIconName(greggEntityIcon(id) ?: config.optString("icon").ifBlank { entity?.str("icon") ?: "" }, Icons.Filled.Info, tone)
             Column(modifier = Modifier.weight(1f)) {
                 Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 1)
                 Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 3)

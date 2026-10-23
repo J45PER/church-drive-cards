@@ -4,6 +4,12 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.51.1
+
+- Gregg: the vacuum, vacuum and mop, empty dust bin and dry mop icons are redrawn in the disc-and-ring style with the outline of the glyph cut out (the vacuum's pinwheel is the one from the status icon, and the vacuum and mop pinwheel is drawn small with a thinner line to match). The cleaning mode choice shows them as tiles, and the dock buttons and Find Gregg carry their own icons on his card. Dry mop is a water drop with a line through it (Home Assistant's water-off icon, adapted).
+- Security: the house inside the Armed Home shield is the house's own house shape (the app house without its chimney, with a notched door), on the phone and the watch. The outlined one (the Manager's alarm modes) and the home and away marks beside each person in the alarm panel use the same house.
+- Cleaning: the tab in the page bar and the title of the Cleaning page show Gregg's resting icon, which never changes, instead of his status (or the older vacuum symbol).
+
 ## 0.51.0
 
 - Gregg: suction level (Quiet, Standard, Turbo, Max, Boost IQ) and water level (Low, Medium, High) show as icon tiles on his card, drawn like the Eufy app's icons: a pinwheel of curved blades (three, four, five; Max and Boost IQ carry a badge) and a drop that fills. They are `cd:suction-*` and `cd:water-*` in the house's own icon set.
