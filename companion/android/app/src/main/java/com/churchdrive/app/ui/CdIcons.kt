@@ -115,10 +115,13 @@ object CdIcons {
         ),
     )
 
-    /** Names the dashboards already use for Gregg's parts, drawn with the house's own icons instead. */
+    /** Names the dashboards already use for Gregg's parts, and Home Assistant's houses, drawn with the house's own icons instead. */
     fun alias(icon: String?): String? = when (icon) {
         "phu:vac_mbrush" -> "cd:roller"
         "phu:vac_sbrush" -> "cd:side"
+        // Home Assistant's houses: the house's own house instead (solid for home, outlined for out and away).
+        "mdi:home", "mdi:home-variant", "mdi:home-circle" -> "cd:home"
+        "mdi:home-outline", "mdi:home-variant-outline", "mdi:home-export-outline", "mdi:home-import-outline", "mdi:home-account", "mdi:home-map-marker" -> "cd:home-away"
         else -> icon
     }
 }
