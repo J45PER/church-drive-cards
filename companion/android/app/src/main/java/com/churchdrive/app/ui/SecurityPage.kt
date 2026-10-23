@@ -211,7 +211,8 @@ fun TileCard(config: JSONObject, entities: Map<String, EntityState>, call: CallS
 
     EntityCard(tone.container, tone.onContainer, deviceEntity = id) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ToneIconName(config.optString("icon").ifBlank { entity?.str("icon") ?: "" }, Icons.Filled.Info, tone)
+            if (isVacuum) GreggIcon(greggState(entity, entities[VACUUM_BATTERY]), tone.accent, 44.dp, entities[VACUUM_BATTERY]?.state?.toDoubleOrNull())
+            else ToneIconName(config.optString("icon").ifBlank { entity?.str("icon") ?: "" }, Icons.Filled.Info, tone)
             Column(modifier = Modifier.weight(1f)) {
                 Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 1)
                 Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 3)
@@ -233,11 +234,11 @@ fun TileCard(config: JSONObject, entities: Map<String, EntityState>, call: CallS
             val cleaning = entity.state == "cleaning"
             IconRow(
                 listOf(
-                    IconItem(if (cleaning) "mdi:pause" else "mdi:play", if (cleaning) "Pause" else if (entity.state == "paused") "Resume" else "Start", true) {
+                    IconItem(if (cleaning) "cd:pause" else "cd:play", if (cleaning) "Pause" else if (entity.state == "paused") "Resume" else "Start", true) {
                         call("vacuum", if (cleaning) "pause" else "start", id, data())
                     },
-                    IconItem("mdi:stop", "Stop", false) { call("vacuum", "stop", id, data()) },
-                    IconItem("mdi:home-import-outline", "Dock", false) { call("vacuum", "return_to_base", id, data()) },
+                    IconItem("cd:stop", "Stop", false) { call("vacuum", "stop", id, data()) },
+                    IconItem("cd:home", "Dock", false) { call("vacuum", "return_to_base", id, data()) },
                 ),
                 tone, tone.onContainer, entity.available,
             )
