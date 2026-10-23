@@ -63,7 +63,8 @@ fun HaIcon(iconName: String?, fallback: ImageVector, tint: Color, size: Dp, modi
             else -> null
         }
     }
-    val path = remember(found, ol) { found?.let { runCatching { PathParser().parsePathString(it.second).toPath().apply { if (ol != null) fillType = PathFillType.EvenOdd } }.getOrNull() } }
+    val evenOdd = ol != null || (mdi != null && icon?.removePrefix("mdi:") in MdiIcons.EVEN_ODD)
+    val path = remember(found, evenOdd) { found?.let { runCatching { PathParser().parsePathString(it.second).toPath().apply { if (evenOdd) fillType = PathFillType.EvenOdd } }.getOrNull() } }
 
     if (found != null && path != null) {
         Canvas(modifier.size(size)) {

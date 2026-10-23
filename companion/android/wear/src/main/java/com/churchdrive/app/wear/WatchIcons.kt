@@ -140,7 +140,7 @@ private val parsed = HashMap<String, Path>()
 
 private fun pathFor(name: String): Path? = parsed.getOrPut(name) {
     val d = ICON_PATHS[name] ?: return null
-    PathParser().parsePathString(d).toPath()
+    PathParser().parsePathString(d).toPath().apply { if (name == "shield-home") fillType = androidx.compose.ui.graphics.PathFillType.EvenOdd }
 }
 
 /** A Material Design icon by name without the "mdi:" (for example "shield-home"). Draws nothing for a name it doesn't have. */
