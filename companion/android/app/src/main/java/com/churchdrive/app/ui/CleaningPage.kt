@@ -65,13 +65,26 @@ private val CLEANING_PARTS = listOf(
 /** How much of its life is left, 0 to 1, for a part with [left] hours of [life]. */
 fun partLifeLeft(left: Double?, life: Double): Float = if (left == null || life <= 0.0) 0f else (left / life).coerceIn(0.0, 1.0).toFloat()
 
-/** Blue while a part has plenty of life, turning red as it gets close to needing replacing (fully blue above half, fully red at a tenth). */
-fun partColour(fraction: Float, blue: Color, red: Color): Color = lerp(red, blue, ((fraction - 0.1f) / 0.4f).coerceIn(0f, 1f))
+/**
+ * A part's colour as its life runs out, a smooth gradient and not steps: blue while it is nearly new (above 80% left), then green (60%), yellow
+ * (35%) and red (10% and below), blending between each pair.
+ */
+fun partColour(fraction: Float, blue: Color, green: Color, yellow: Color, red: Color): Color {
+    val stops = listOf(0.8f to blue, 0.6f to green, 0.35f to yellow, 0.1f to red)
+    val f = fraction.coerceIn(0f, 1f)
+    if (f >= stops.first().first) return stops.first().second
+    for (i in 1 until stops.size) {
+        val (upper, upperColour) = stops[i - 1]
+        val (lower, lowerColour) = stops[i]
+        if (f >= lower) return lerp(lowerColour, upperColour, (f - lower) / (upper - lower))
+    }
+    return stops.last().second
+}
 
 /**
  * The Cleaning page, drawn by the app from Gregg's own entities so every part of it looks the same, all in the cleaning blue: one card at the
  * top for what he is doing (his status icon, the battery, the last clean and the buttons), then his cleaning settings (drop-downs, the mode,
- * suction and water with the house's icons), the dock's four actions, the parts that wear out (a bar for the life left in each, turning red
+ * suction and water with the house's icons), the dock's four actions, the parts that wear out (a bar for the life left in each, fading from blue through green and yellow to red
  * as they near the end) and his switches. Each group is a panel with its title, as on the other pages.
  */
 @Composable
@@ -81,6 +94,8 @@ fun CleaningPage(entities: Map<String, EntityState>, call: CallService) {
     val tone = toneColors(vacuumTone(vac))
     val blue = toneColors(Tone.Blue)
     val red = toneColors(Tone.Red)
+    val green = toneColors(Tone.Green)
+    val yellow = toneColors(Tone.Amber)
     val enabled = vac?.available == true
     val cleaning = vac?.state == "cleaning"
     val state = greggState(vac, battery)
@@ -178,7 +193,7 @@ fun CleaningPage(entities: Map<String, EntityState>, call: CallService) {
                         val left = leftText?.toDoubleOrNull()
                         val unit = e?.str("unit_of_measurement") ?: "h"
                         val fraction = partLifeLeft(left, p.lifeHours)
-                        val colour = partColour(fraction, blue.accent, red.accent)
+                        val colour = partColour(fraction, blue.accent, green.accent, yellow.accent, red.accent)
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Box(Modifier.size(40.dp).background(colour.copy(alpha = 0.18f), CircleShape), contentAlignment = Alignment.Center) {
