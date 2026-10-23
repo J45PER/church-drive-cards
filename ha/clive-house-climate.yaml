@@ -1,0 +1,40 @@
+# Script script.clive_house_climate: how warm the house is, in one call. Exposed to Assist. Puts the climate card on the screen itself (through clive_show_card: each heating zone with temperature, target, humidity and state, then outside and the climate score) and returns `say`, the two sentences to speak, plus `more` for the follow-up about the heating. Only the two Nest zones exist (no air conditioning). A copy of the live script (2026-10-23).
+alias: House climate
+description: Use this for ANY question about the temperature or climate inside the house, how warm or cold it is, or how the heating is doing in general. It shows the card on the screen by itself and returns
+  the words to say. Your whole reply must be exactly the text in "say", nothing before or after it, and do not call the card script as well. If they say yes to the offer, tell them from "more" in one natural
+  sentence. For why the heating is how it is, or what you last did, use the heating pause and resume script with status instead.
+icon: mdi:home-thermometer-outline
+mode: parallel
+max: 5
+sequence:
+- variables:
+    rows: '{%- set ns = namespace(l=[]) -%}{%- for e in [''climate.downstairs'', ''climate.upstairs''] -%}{%- set t = state_attr(e, ''current_temperature'') -%}{%- set word = ''Off'' if is_state(e, ''off'')
+      else (''Heating'' if state_attr(e, ''hvac_action'') == ''heating'' else (''Eco'' if state_attr(e, ''preset_mode'') == ''eco'' else ''Idle'')) -%}{%- set ns.l = ns.l + [{''name'': state_attr(e, ''friendly_name'')
+      or e.split(''.'')[1] | capitalize, ''temp'': (t | float(none)), ''target'': (state_attr(e, ''temperature'') | float(none)), ''humidity'': (state_attr(e, ''current_humidity'') | float(none)), ''state'':
+      word}] -%}{%- endfor -%}{{- ns.l -}}'
+- variables:
+    temps: '{{ rows | map(attribute=''temp'') | select(''number'') | list }}'
+    outside: '{{ state_attr(''weather.forecast_home'', ''temperature'') | float(none) }}'
+    quality: '{{ states(''sensor.home_climate_quality'') }}'
+- variables:
+    avg: '{{ ((temps | sum) / (temps | length)) | round(1) if temps | length > 0 else none }}'
+    qtext: '{{ (quality ~ ''/100 climate'') if quality | is_number else '''' }}'
+- variables:
+    say: '{%- if avg is none -%}I can''t read the house temperatures right now. Anything else?{%- else -%}It''s {{ avg | round(0) | int }}°C in the house, with {{ rows[0].temp }}°C downstairs and {{ rows[1].temp
+      }}°C upstairs. Shall I tell you about the heating?{%- endif -%}'
+    more: '{%- set ns = namespace(l=[]) -%}{%- for r in rows -%}{%- set ns.l = ns.l + [r.name ~ '' is '' ~ r.temp ~ ''°C and '' ~ (r.state | lower) ~ ('', aiming for '' ~ r.target ~ ''°C'' if r.target is
+      number and r.state != ''Off'' else '''') ~ ('' with '' ~ (r.humidity | round(0) | int) ~ ''% humidity'' if r.humidity is number else '''')] -%}{%- endfor -%}{{- ns.l -}}'
+- action: script.clive_show_card
+  data:
+    kind: climate
+    data:
+      rows: '{{ rows }}'
+      outside: '{{ outside }}'
+      quality: '{{ qtext }}'
+- variables:
+    result:
+      say: '{{ say }}'
+      more: '{{ more }}'
+      next: Your whole reply is exactly the text in say. The card is already on the screen.
+- response_variable: result
+  stop: Shown
