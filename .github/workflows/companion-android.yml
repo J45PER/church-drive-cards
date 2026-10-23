@@ -160,20 +160,31 @@ jobs:
               --notes "${notes:-Version ${version}.} (Build ${GITHUB_RUN_NUMBER}, commit ${GITHUB_SHA::7}.)"
           fi
       # Each new version goes to Google Play's internal testing track, once, the first time a build has that version. Promoting it to
-      # production stays a button in Play Console. The phone app and the watch app are one listing (one package name, two form factors),
-      # so they go up together in one release; their version codes differ (the watch's is the build number x 10 + 1).
-      - name: Upload the phone and watch apps to Google Play (internal testing)
+      # production stays a button in Play Console. The phone app and the watch app are one listing (one package name, two form factors) but
+      # Play keeps them on separate tracks: the phone bundle on `internal`, the Wear OS bundle on `wear:internal` (it is refused on the phone
+      # track, as it needs the watch feature). Their version codes differ (the watch's is the build number x 10 + 1).
+      - name: Upload the phone app to Google Play (internal testing)
         if: github.event_name == 'push' && steps.publish_main.outputs.new == 'true' && env.HAS_PLAY == 'true'
         uses: r0adkll/upload-google-play@v1.1.3
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.churchdrive.manager
-          releaseFiles: church-drive-manager.aab,church-drive-manager-wear.aab
+          releaseFiles: church-drive-manager.aab
           track: internal
           status: completed
           whatsNewDirectory: play-notes-main
+      - name: Upload the watch app to Google Play (Wear OS internal testing)
+        if: ${{ !cancelled() && github.event_name == 'push' && steps.publish_main.outputs.new == 'true' && env.HAS_PLAY == 'true' }}
+        uses: r0adkll/upload-google-play@v1.1.3
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.churchdrive.manager
+          releaseFiles: church-drive-manager-wear.aab
+          track: wear:internal
+          status: completed
+          whatsNewDirectory: play-notes-main
       - name: Upload Church Drive To-Do to Google Play (internal testing)
-        if: github.event_name == 'push' && steps.publish_todo.outputs.new == 'true' && env.HAS_PLAY == 'true'
+        if: ${{ !cancelled() && github.event_name == 'push' && steps.publish_todo.outputs.new == 'true' && env.HAS_PLAY == 'true' }}
         uses: r0adkll/upload-google-play@v1.1.3
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}

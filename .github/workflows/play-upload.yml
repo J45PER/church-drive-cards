@@ -1,0 +1,74 @@
+name: Upload to Google Play
+
+# Upload the bundles of a version that already has a GitHub release to Google Play's internal testing: for when the automatic upload
+# in "Companion Android" failed or was skipped (it runs once, the first time a build has a version). Run it from the Actions tab.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to upload, for example 0.48.3 (its android-v and todo-v releases must exist)"
+        required: true
+      apps:
+        description: "Which apps"
+        type: choice
+        default: all
+        options: [all, phone-and-watch, todo]
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get the bundles and release notes
+        run: |
+          mkdir -p aabs play-notes-main play-notes-todo
+          if [ "${{ inputs.apps }}" != "todo" ]; then
+            gh release download "android-v${VERSION}" --pattern '*.aab' --dir aabs
+            notes=$(awk -v v="$VERSION" '$0 ~ "^## "v"( |$)" {on=1; next} /^## / {on=0} on' companion/android/CHANGELOG.md)
+            printf '%s' "${notes:-Version ${VERSION}.}" | sed 's/^- //' | head -c 480 > play-notes-main/whatsnew-en-GB
+          fi
+          if [ "${{ inputs.apps }}" != "phone-and-watch" ]; then
+            gh release download "todo-v${VERSION}" --pattern '*.aab' --dir aabs
+            notes=$(awk -v v="$VERSION" '$0 ~ "^## "v"( |$)" {on=1; next} /^## / {on=0} on' companion/android/todo/CHANGELOG.md)
+            printf '%s' "${notes:-Version ${VERSION}.}" | sed 's/^- //' | head -c 480 > play-notes-todo/whatsnew-en-GB
+          fi
+          ls -l aabs
+          echo "PHONE=$(ls aabs/church-drive-manager-[0-9]*.aab 2>/dev/null | head -1)" >> "$GITHUB_ENV"
+          echo "WEAR=$(ls aabs/church-drive-manager-wear-*.aab 2>/dev/null | head -1)" >> "$GITHUB_ENV"
+          echo "TODO=$(ls aabs/church-drive-todo-*.aab 2>/dev/null | head -1)" >> "$GITHUB_ENV"
+      - name: Phone app (internal testing)
+        if: ${{ env.PHONE != '' }}
+        uses: r0adkll/upload-google-play@v1.1.3
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.churchdrive.manager
+          releaseFiles: ${{ env.PHONE }}
+          track: internal
+          status: completed
+          whatsNewDirectory: play-notes-main
+      - name: Watch app (Wear OS internal testing)
+        if: ${{ !cancelled() && env.WEAR != '' }}
+        uses: r0adkll/upload-google-play@v1.1.3
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.churchdrive.manager
+          releaseFiles: ${{ env.WEAR }}
+          track: wear:internal
+          status: completed
+          whatsNewDirectory: play-notes-main
+      - name: Church Drive To-Do (internal testing)
+        if: ${{ !cancelled() && env.TODO != '' }}
+        uses: r0adkll/upload-google-play@v1.1.3
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.churchdrive.todo
+          releaseFiles: ${{ env.TODO }}
+          track: internal
+          status: completed
+          whatsNewDirectory: play-notes-todo
