@@ -1,0 +1,147 @@
+# Script script.clive_climate_control: Pause, resume or report on Clive's automatic heating. This is the one Clive uses ("resume the heating", "leave the heating alone for 3 hours", "why is the heating off?"), and the one a dashboard button or a Home Assistant notification button can call. Resume hands a zone straight back (the zone script does the rest and tells people); Pause stops Clive adjusting a zone until the time given. A copy of the live script.
+alias: Pause or resume Clive's heating
+description: 'Clive looks after the heating automatically: on when a room is cold, down or off when it is hot. When somebody changes the thermostat by hand he stops adjusting that zone for a while (2 hours unless set otherwise) and tells people when he will take over again. Use command resume when someone wants him back in charge now, pause with minutes when they want him to leave the heating alone (for example for 3 hours = 180), and status for what he is doing and why (it includes what he last did and any pause). Zone is all unless they name downstairs or upstairs. Say times as clock times.'
+fields:
+  command:
+    name: Command
+    required: true
+    selector:
+      select:
+        custom_value: false
+        options:
+        - resume
+        - pause
+        - status
+  zone:
+    name: Zone
+    description: all (the default), downstairs or upstairs.
+    required: false
+    selector:
+      select:
+        custom_value: false
+        options:
+        - all
+        - downstairs
+        - upstairs
+  minutes:
+    name: Minutes
+    description: For pause only. Leave out for the usual length.
+    required: false
+    selector:
+      number:
+        min: 15
+        max: 720
+        mode: box
+        unit_of_measurement: min
+icon: mdi:thermostat-auto
+mode: single
+sequence:
+- variables:
+    cfg:
+      downstairs:
+        entity: climate.downstairs
+        temp: sensor.downstairs_temperature
+        note: input_text.clive_climate_downstairs_note
+        expect: input_text.clive_climate_downstairs_expect
+        resume: input_datetime.clive_climate_downstairs_resume
+        name: Downstairs
+      upstairs:
+        entity: climate.upstairs
+        temp: sensor.upstairs_temperature
+        note: input_text.clive_climate_upstairs_note
+        expect: input_text.clive_climate_upstairs_expect
+        resume: input_datetime.clive_climate_upstairs_resume
+        name: Upstairs
+- variables:
+    zl: '{{ [''downstairs'', ''upstairs''] if (zone | default(''all'', true)) == ''all'' else [zone] }}'
+    mins: '{{ minutes | int(0) if minutes is defined and minutes else states(''input_number.clive_climate_pause_minutes'') | float(120) | int }}'
+- variables:
+    paused_now: >-
+      {%- set ns = namespace(l=[]) -%}
+      {%- for zn in zl -%}{%- if state_attr(cfg[zn].resume, 'timestamp') | float(0) > now().timestamp() -%}{%- set ns.l = ns.l + [zn] -%}{%- endif -%}{%- endfor -%}
+      {{- ns.l -}}
+- choose:
+  - conditions:
+    - condition: template
+      value_template: '{{ command == ''status'' }}'
+    sequence:
+    - variables:
+        result:
+          status: ok
+          zones: >-
+            {%- set ns = namespace(l=[]) -%}
+            {%- for zn in zl -%}{%- set c = cfg[zn] -%}{%- set rts = state_attr(c.resume, 'timestamp') | float(0) -%}
+            {%- set ns.l = ns.l + [ {'zone': zn, 'temperature': states(c.temp) | float(none), 'mode': states(c.entity), 'preset': state_attr(c.entity, 'preset_mode'), 'target': state_attr(c.entity, 'temperature'), 'clive': ('paused until ' ~ (rts | timestamp_custom('%H:%M'))) if rts > now().timestamp() else 'in charge', 'last_action': states(c.note)} ] -%}
+            {%- endfor -%}
+            {{- ns.l -}}
+    - response_variable: result
+      stop: status
+  - conditions:
+    - condition: template
+      value_template: '{{ command == ''resume'' }}'
+    sequence:
+    - if:
+      - condition: template
+        value_template: '{{ paused_now | length == 0 }}'
+      then:
+      - variables:
+          result:
+            status: nothing_paused
+            message: Clive is already in charge of the heating, so nothing has changed.
+      - response_variable: result
+        stop: nothing paused
+    - repeat:
+        for_each: '{{ paused_now }}'
+        sequence:
+        - action: input_datetime.set_datetime
+          target:
+            entity_id: '{{ cfg[repeat.item].resume }}'
+          data:
+            datetime: '{{ (now() - timedelta(seconds=5)).strftime(''%Y-%m-%d %H:%M:%S'') }}'
+        - action: script.clive_climate_zone
+          data:
+            zone: '{{ repeat.item }}'
+    - variables:
+        result:
+          status: resumed
+          zones: '{{ paused_now }}'
+          message: Clive is back in charge of the heating and will have checked the rooms straight away.
+    - response_variable: result
+      stop: resumed
+  default:
+  - repeat:
+      for_each: '{{ zl }}'
+      sequence:
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: '{{ cfg[repeat.item].resume }}'
+        data:
+          datetime: '{{ (now() + timedelta(minutes=mins)).strftime(''%Y-%m-%d %H:%M:%S'') }}'
+      - action: input_text.set_value
+        target:
+          entity_id: '{{ cfg[repeat.item].expect }}'
+        data:
+          value: ''
+      - action: input_text.set_value
+        target:
+          entity_id: '{{ cfg[repeat.item].note }}'
+        data:
+          value: '{{ now().strftime(''%H:%M'') }}: Paused on request until {{ (now() + timedelta(minutes=mins)).strftime(''%H:%M'') }}.'
+      - action: persistent_notification.create
+        data:
+          notification_id: clive-climate-{{ repeat.item }}
+          title: 🌡️ {{ cfg[repeat.item].name }} heating paused
+          message: 'Clive will leave the {{ cfg[repeat.item].name }} heating alone until {{ (now() + timedelta(minutes=mins)).strftime(''%H:%M'') }}. Tell Clive "resume the heating" to hand it back sooner.'
+      - action: logbook.log
+        data:
+          name: Clive
+          message: '{{ cfg[repeat.item].name }} heating paused on request until {{ (now() + timedelta(minutes=mins)).strftime(''%H:%M'') }}.'
+          entity_id: '{{ cfg[repeat.item].entity }}'
+  - variables:
+      result:
+        status: paused
+        zones: '{{ zl }}'
+        until: '{{ (now() + timedelta(minutes=mins)).strftime(''%H:%M'') }}'
+        message: Clive will leave the heating alone until then and take over again by himself.
+  - response_variable: result
+    stop: paused

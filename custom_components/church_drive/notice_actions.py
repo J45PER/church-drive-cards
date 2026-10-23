@@ -84,3 +84,6 @@ class NoticeActions:
 
     async def _do_backup(self) -> None:
         await self._call("backup", "create_automatic", {})
+
+    async def _do_clive_resume(self) -> None:
+        await self._call("script", "clive_climate_control", {"command": "resume"})

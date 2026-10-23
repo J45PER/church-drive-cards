@@ -1,0 +1,41 @@
+# Two automations that go with script.clive_climate_zone (the 10 minute one is in clive-climate-automation.yaml). Copies of the live ones.
+- alias: 'Clive: spot a manual heating change'
+  description: When the mode, preset or target of a thermostat changes and the change did not come from one of Home Assistant's own automations or scripts (a person at the thermostat, in the Nest or Google Home app, in a dashboard or by voice), the zone script checks whether it was Clive's own echo and, if not, pauses Clive on that zone and tells people when he will take over again.
+  mode: queued
+  max: 10
+  triggers:
+  - trigger: state
+    entity_id: climate.downstairs
+    id: downstairs
+  - trigger: state
+    entity_id: climate.upstairs
+    id: upstairs
+  conditions:
+  - condition: template
+    value_template: >-
+      {{ trigger.from_state is not none and trigger.to_state is not none
+         and trigger.from_state.state not in ['unavailable', 'unknown'] and trigger.to_state.state not in ['unavailable', 'unknown']
+         and (trigger.from_state.state != trigger.to_state.state
+              or trigger.from_state.attributes.preset_mode != trigger.to_state.attributes.preset_mode
+              or trigger.from_state.attributes.temperature != trigger.to_state.attributes.temperature)
+         and (trigger.to_state.context.user_id is not none or trigger.to_state.context.parent_id is none) }}
+  actions:
+  - action: script.clive_climate_zone
+    data:
+      zone: '{{ trigger.id }}'
+      by_hand: true
+- alias: 'Clive: take over again when a pause ends'
+  description: At the time a pause ends (input_datetime.clive_climate_<zone>_resume) Clive takes over the zone again and tells people.
+  mode: queued
+  max: 6
+  triggers:
+  - trigger: time
+    at: input_datetime.clive_climate_downstairs_resume
+    id: downstairs
+  - trigger: time
+    at: input_datetime.clive_climate_upstairs_resume
+    id: upstairs
+  actions:
+  - action: script.clive_climate_zone
+    data:
+      zone: '{{ trigger.id }}'
