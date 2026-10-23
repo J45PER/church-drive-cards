@@ -304,7 +304,7 @@ fun AlarmCard(alarm: EntityState?, call: CallService, entityId: String = ALARM_E
         people.forEach { p ->
             val (word, _) = presencePill(p.state, p.place, p.zone)
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                HaIcon(if (p.state == "home") "mdi:home" else "mdi:home-export-outline", Icons.Filled.Security, ring, 20.dp)
+                HaIcon(if (p.state == "home") "cd:home" else "cd:home-away", Icons.Filled.Security, ring, 20.dp)
                 Text(p.name, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = content, maxLines = 1)
                 Text(word, style = MaterialTheme.typography.bodyMedium, color = content.copy(alpha = 0.8f), maxLines = 1)
             }
