@@ -88,7 +88,7 @@ How it is done:
 - Never tick "HA-MCP Server (tool search)" for Clive: it would give him every Home Assistant tool and bypass the exposure list that keeps the alarm, sirens and TVs out of reach.
 - The AI Task entity (`ai_task_data` subentry) is a separate thing and is left alone.
 
-Settings on 2026-10-23 (the baseline to go back to):
+Settings on 2026-10-23 before the first tuning (the baseline to go back to; the same day `thinking_budget` was set to 0 and `max_tokens` to 1000 for speed, and the instructions got the "How long to talk" paragraph):
 
 | Setting | Value |
 |---|---|
@@ -100,6 +100,10 @@ Settings on 2026-10-23 (the baseline to go back to):
 | `web_fetch`, `code_execution`, `user_location` | off |
 | `llm_hass_api` | `["assist"]` |
 | `recommended` | false |
+
+Tuning log:
+
+- **2026-10-23, quicker and shorter.** `thinking_budget` 1024 to 0 (1024 is the smallest value that turns extended thinking on, which delays every reply), `max_tokens` 3000 to 1000 (spoken answers are short; stops a runaway). Instructions: a "How long to talk" paragraph (a command gets one short friendly sentence, a simple question one or two natural sentences and then an offer of more detail, a bigger question a few sentences and an offer to carry on; no web search for commands), and the "who is talking" paragraph moved to the end so the long fixed part comes first and can be reused between turns. Plain commands never reach Claude at all: the Assist pipeline has `prefer_local_intents` on. Checked with a general question and the weather: the weather answer was one warm sentence plus the offer of the forecast, with the card shown first. Not yet measured with the app's step timings.
 
 ## Gotchas learned the hard way
 
