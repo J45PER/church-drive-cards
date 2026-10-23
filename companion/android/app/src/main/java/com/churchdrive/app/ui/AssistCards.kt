@@ -48,6 +48,9 @@ private fun JSONObject.side(key: String): JSONObject = optJSONObject(key) ?: JSO
 
 private fun JSONObject.number(key: String): Double? = optDouble(key).takeIf { !it.isNaN() }
 
+/** The most rows a list card draws, so a card fits on the screen with its answer and nothing inside it needs scrolling; the rest are counted. */
+private const val CARD_MAX_ROWS = 7
+
 private fun short(side: JSONObject): String = side.optString("short").ifBlank { side.optString("name").take(3).uppercase() }
 
 /** The tone and word for where a person is, as the Manager's People card shows it: Home green, a named place teal, Away grey, unknown amber. */
@@ -162,7 +165,8 @@ fun AssistantCardView(card: AssistantCard, modifier: Modifier = Modifier, morph:
             "scores" -> {
                 if (f.optString("title").isNotBlank()) Text(f.optString("title"), style = MaterialTheme.typography.titleSmall, color = soft, modifier = Modifier.fillMaxWidth())
                 val rows = f.optJSONArray("rows")
-                for (i in 0 until (rows?.length() ?: 0)) {
+                val total = rows?.length() ?: 0
+                for (i in 0 until minOf(total, CARD_MAX_ROWS)) {
                     val r = rows?.optJSONObject(i) ?: continue
                     val home = r.side("home")
                     val away = r.side("away")
@@ -175,11 +179,13 @@ fun AssistantCardView(card: AssistantCard, modifier: Modifier = Modifier, morph:
                     }
                     if (r.optString("status").isNotBlank() && r.optString("status") != "Full time") Text(r.optString("status"), style = MaterialTheme.typography.labelSmall, color = soft)
                 }
+                if (total > CARD_MAX_ROWS) Text("and ${total - CARD_MAX_ROWS} more", style = MaterialTheme.typography.bodySmall, color = soft)
             }
             "fixtures" -> {
                 if (f.optString("title").isNotBlank()) Text(f.optString("title"), style = MaterialTheme.typography.titleSmall, color = soft, modifier = Modifier.fillMaxWidth())
                 val rows = f.optJSONArray("rows")
-                for (i in 0 until (rows?.length() ?: 0)) {
+                val total = rows?.length() ?: 0
+                for (i in 0 until minOf(total, CARD_MAX_ROWS)) {
                     val r = rows?.optJSONObject(i) ?: continue
                     val home = r.side("home")
                     val away = r.side("away")
@@ -195,6 +201,7 @@ fun AssistantCardView(card: AssistantCard, modifier: Modifier = Modifier, morph:
                         Text(short(away), Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, color = ink, maxLines = 1)
                     }
                 }
+                if (total > CARD_MAX_ROWS) Text("and ${total - CARD_MAX_ROWS} more", style = MaterialTheme.typography.bodySmall, color = soft)
             }
             "people" -> {
                 val rows = f.optJSONArray("rows")
@@ -419,7 +426,8 @@ private fun ListCardBody(card: AssistantCard, ink: Color, soft: Color) {
         val t = toneColors(toneByName(f.optString("pill_tone")) ?: Tone.Indigo)
         Text(f.optString("pill"), color = t.accent, style = MaterialTheme.typography.labelMedium, maxLines = 1, modifier = Modifier.background(t.accent.copy(alpha = 0.18f), CircleShape).padding(horizontal = 10.dp, vertical = 3.dp))
     }
-    val rows = cardRows(f)
+    val allRows = cardRows(f)
+    val rows = allRows.take(CARD_MAX_ROWS)
     if (rows.isNotEmpty()) Column(Modifier.fillMaxWidth().padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
         for (r in rows) {
             val t = toneColors(toneByName(r.tone) ?: Tone.Grey)
@@ -440,6 +448,7 @@ private fun ListCardBody(card: AssistantCard, ink: Color, soft: Color) {
             }
         }
     }
+    if (allRows.size > rows.size) Text("and ${allRows.size - rows.size} more", style = MaterialTheme.typography.bodySmall, color = soft)
     f.number("percent")?.let { p ->
         Box(Modifier.fillMaxWidth().padding(top = 4.dp).height(6.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.12f))) {
             Box(Modifier.fillMaxWidth((p / 100.0).coerceIn(0.0, 1.0).toFloat()).height(6.dp).clip(CircleShape).background(base.accent))

@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.51.4
+
+- Version kept in step with the phone app (watch smoothness and fit). Shared code changed. No change to this app.
+
 ## 0.51.3
 
 - Version kept in step with the phone app (league fixtures card). Shared code changed. No change to this app.

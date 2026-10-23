@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -33,8 +34,8 @@ import androidx.wear.compose.material.Text
 import com.churchdrive.app.ui.AssistantGlyph
 import com.churchdrive.app.ui.AssistantGlyphPose
 
-/** White, brightest at the head of the arc and fading along its tail, so it reads as turning. */
-private val ARC = listOf(Color.White.copy(alpha = 0.3f), Color.White.copy(alpha = 0.65f), Color.White)
+/** How much of the circle the arc covers, from its faded tail to its bright head. */
+private const val ARC_SWEEP = 120f
 
 /**
  * Shown over whatever the watch remembered while the house is being read (or the line comes back): the page dims a little, a white arc
@@ -56,8 +57,10 @@ fun BoxScope.LoadingRing(visible: Boolean, label: String = "Updating") {
             val centre = Offset(size.width / 2f, size.height / 2f)
             val topLeft = Offset(centre.x - r, centre.y - r)
             val box = Size(r * 2, r * 2)
+            // White, brightest at the head and fading smoothly to nothing along the tail, so it reads as turning.
+            val fade = Brush.sweepGradient(0f to Color.White.copy(alpha = 0f), (ARC_SWEEP / 360f) to Color.White, center = centre)
             rotate(spin, centre) {
-                ARC.forEachIndexed { i, c -> drawArc(c, i * 34f, 34f, false, topLeft, box, style = stroke) }
+                drawArc(fade, 0f, ARC_SWEEP, false, topLeft, box, style = stroke)
             }
         }
         Row(

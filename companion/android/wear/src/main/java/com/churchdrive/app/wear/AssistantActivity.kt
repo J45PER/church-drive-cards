@@ -17,16 +17,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -143,7 +142,7 @@ private fun CliveRoot() {
             }
             KeepAwake(awake)
             // The crown scrolls down and up his three faces.
-            VerticalPager(state = pager, modifier = Modifier.fillMaxSize().crown { n -> scope.launch { pager.animateScrollToPage((pager.currentPage + n).coerceIn(0, 2)) } }) { page ->
+            VerticalPager(state = pager, modifier = Modifier.fillMaxSize().crown { n -> scope.launch { pager.stepBy(n, 3) } }) { page ->
                 when (page) {
                     0 -> TalkFace(model, !signedIn, talk)
                     1 -> PromptsFace(signedIn) { sentence ->
@@ -211,13 +210,13 @@ private fun TalkFace(model: CliveModel, signedOut: Boolean, onTap: () -> Unit) {
                         Text(model.notice, color = Color(0xFFFFB4AB), fontSize = ui.sp(14f), textAlign = TextAlign.Center, style = SHADOW, modifier = Modifier.at(ui, 34f, 134f, 212f))
                     photoMode -> Text("${model.pictureCaption ?: "Picture"}", color = Color.White, fontSize = ui.sp(11f), fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.at(ui, 64f, 196f, 152f).background(Color(0x9E080914), RoundedCornerShape(50)).padding(horizontal = ui.d(10f), vertical = ui.d(5f)), textAlign = TextAlign.Center)
-                    else -> Column(
-                        Modifier.at(ui, 34f, if (card != null) 122f else 128f, 212f, if (card != null) 112f else 104f).verticalScroll(rememberScrollState()),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        if (model.heard.isNotEmpty()) Text(model.heard, color = Color(0xFFD5D8F6).copy(alpha = 0.85f), fontSize = ui.sp(10f), textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis, style = SHADOW, modifier = Modifier.padding(bottom = ui.d(4f)))
-                        if (card != null && symbol != null) CardBlock(card)
-                        if (card?.kind != "scores" && card?.kind != "fixtures") Text(model.answer, color = Color.White, fontSize = ui.sp(if (card != null) 12f else 14f), textAlign = TextAlign.Center, style = SHADOW, modifier = Modifier.padding(top = if (card != null) ui.d(8f) else ui.d(0f), bottom = ui.d(18f)))
+                    // Never scrolls: what does not fit the space under the mark is made smaller until it does.
+                    else -> FitBox(Modifier.at(ui, 38f, if (card != null) 118f else 126f, 204f, if (card != null) 116f else 100f)) {
+                        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                            if (model.heard.isNotEmpty()) Text(model.heard, color = Color(0xFFD5D8F6).copy(alpha = 0.85f), fontSize = ui.sp(10f), textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis, style = SHADOW, modifier = Modifier.padding(bottom = ui.d(4f)))
+                            if (card != null && symbol != null) CardBlock(card)
+                            if (card?.kind != "scores" && card?.kind != "fixtures") Text(model.answer, color = Color.White, fontSize = ui.sp(if (card != null) 12f else 14f), textAlign = TextAlign.Center, maxLines = if (card != null) 3 else 6, overflow = TextOverflow.Ellipsis, style = SHADOW, modifier = Modifier.padding(top = if (card != null) ui.d(6f) else ui.d(0f)))
+                        }
                     }
                 }
             }
