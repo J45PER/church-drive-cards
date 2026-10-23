@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.52.1
+
+- Cleaning: "How he cleans" is now "Cleaning settings", each setting a line with a drop-down (the mode, suction and water show the house's icons) instead of rows of cramped buttons. Every group on the page is in the cleaning blue. The dock keeps its four actions (empty the dust bin, wash the mop, dry the mop, find Gregg), two to a row, and drops the dry time and empty-the-bin choices. Each part shows a bar for the life it has left, blue turning to red as it nears the end, like the battery bars on the Security page.
+
 ## 0.52.0
 
 - Cleaning: a new page, drawn by the app from Gregg's own entities so it all looks the same. At the top his status icon, the battery and the last clean with the Start, Stop and Dock buttons; then how he cleans (mode, suction and water as the house's icons, with cleaning and mop intensity), the dock (empty the bin, wash and dry the mop and find him, with the house's icons, and how long to dry and when to empty), his parts with the time left on each and a Reset (tap twice), and his switches. The Home page's Cleaning title carries the same resting icon as the tab.
