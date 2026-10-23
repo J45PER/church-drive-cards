@@ -3,6 +3,7 @@ package com.churchdrive.app
 import com.churchdrive.app.ha.EntityState
 import com.churchdrive.app.ui.CdIcons
 import com.churchdrive.app.ui.GreggState
+import com.churchdrive.app.ui.greggEntityIcon
 import com.churchdrive.app.ui.greggState
 import com.churchdrive.app.ui.greggLevelIcon
 import com.churchdrive.app.ui.greggStateFor
