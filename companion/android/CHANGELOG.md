@@ -4,6 +4,12 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.52.0
+
+- Cleaning: a new page, drawn by the app from Gregg's own entities so it all looks the same. At the top his status icon, the battery and the last clean with the Start, Stop and Dock buttons; then how he cleans (mode, suction and water as the house's icons, with cleaning and mop intensity), the dock (empty the bin, wash and dry the mop and find him, with the house's icons, and how long to dry and when to empty), his parts with the time left on each and a Reset (tap twice), and his switches. The Home page's Cleaning title carries the same resting icon as the tab.
+- Clive: a long list on a card (scores, fixtures, tasks) shows its first seven rows and a Show more button for the rest; the keyboard folds away when you send a question and when the answer arrives; the orb is smaller while there is a conversation, so more of the answer shows.
+- Cars: a car's logo (Vauxhall, Tesla and the rest, from the first word of its name) replaces the plain car symbol on the charging card.
+
 ## 0.51.4
 
 - Watch: the loading ring is one arc that fades smoothly from bright at its head to nothing at its tail (it was three steps of brightness).
