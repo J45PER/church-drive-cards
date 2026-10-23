@@ -1,0 +1,16 @@
+# Automation automation.clive_keep_the_climate_comfortable: every 10 minutes Clive checks each heating zone (script.clive_climate_zone). A copy of the live automation.
+alias: 'Clive: keep the climate comfortable'
+description: Every 10 minutes Clive checks each heating zone against its comfort range (script clive_climate_zone). If a room is too hot he turns the heating down a step at a time (lower the target, eco, off), tells the people ticked for 'Clive adjusted the house' in Manager, and puts it back when the room has cooled. He leaves it alone while a timed run is going and for 2 hours after somebody changes the thermostat. He never turns heating on.
+mode: single
+triggers:
+- trigger: time_pattern
+  minutes: /10
+actions:
+- action: script.clive_climate_zone
+  data:
+    zone: downstairs
+  continue_on_error: true
+- action: script.clive_climate_zone
+  data:
+    zone: upstairs
+  continue_on_error: true

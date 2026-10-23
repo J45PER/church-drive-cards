@@ -25,6 +25,8 @@ The `clive-*.yaml` files here are copies of the live scripts. Edit them in Home 
 
 `clive_timed_revert` is its second half and is **not** exposed to Assist.
 
+Background jobs Clive runs himself (not exposed, no voice): `clive_climate_zone` with the automation "Clive: keep the climate comfortable". See "Keeping the climate comfortable" below.
+
 Also exposed for the car: `zappi_charge_later`, `zappi_car_yes`, `zappi_car_no` (the existing scripts, unchanged), the smart charge helpers, and four Zappi sensors (status, plug status, charging power, charge added).
 
 ## Deliberately not exposed
@@ -56,6 +58,19 @@ The helper is an `input_datetime` (date and time), initial `2000-01-01 00:00:00`
 - **The warning.** Heating when the room is already at or above the bottom of its comfort range, or the fan when it is already at or below the top, does **not** start. The result is `warning` with the temperature and the range, and Clive must tell the person and wait for a yes. The repeat with `confirm_unneeded` only counts 5 to 300 seconds after the warning, for the same target, and once (`input_datetime.clive_timed_warning_asked` plus `input_text.clive_timed_warning_target`, cleared on a start). The first version stamped no target, so a warning for one device let a different one through.
 - **Comfort ranges** are in the script's `cfg` block, copied from the card room types (`CZ_TYPES` in `src/climate-zone-card.js`): downstairs 19 to 22 (living room), upstairs 16 to 20 and the bedroom fan 16 to 20 (bedroom). Change them in the script if a room's range changes. To add a device, add an entry to `cfg`, a timer helper and the option to the `target` field.
 - **Limit:** the waiting lives in a running script, so a Home Assistant restart during a timed run loses the put-back (the timer survives, nothing reacts to it). The thermostat's own setpoint would stay at the timed value until someone changes it.
+
+## Keeping the climate comfortable
+
+A background job, no voice and no app. Every 10 minutes the automation `Clive: keep the climate comfortable` runs `clive_climate_zone` for Downstairs and Upstairs (the only two thermostats, both Nest, heat or off with an eco preset). **There is no air conditioning in Home Assistant**, so only the hot-room side for heating exists; cooling would be added to the same script when there is something to cool with.
+
+- **Too hot** is measured above the top of the room's comfort range (the same ranges as the timed service, copied in the script's `zones` block): up to 1°C over, lower the target to the middle of the range (only if it is heating, or the target is above the range); 1 to 2.5°C over, eco; more than 2.5°C over, heating off. A step at a time, at least 30 minutes between changes.
+- **Never turns heating on.** Cold rooms are for people and the timed service.
+- **Puts it back.** The first change saves the thermostat's mode, preset and target in `input_text.clive_climate_<zone>_expect` (the `was` part). When the room is back at the middle of the range it restores them by hand in the order mode, preset, target. A scene restore was tried first and the Nest refused to leave eco in the order the scene used.
+- **Leaves people's changes alone.** If the mode or preset is not what Clive set (or the target after a "lower"), he stops managing it, says so in the logbook and does nothing for 2 hours (`input_datetime.clive_climate_<zone>_when` is set 90 minutes ahead, the 30 minute rule does the rest). The eco preset drops the Nest's target, so the target is only compared after a "lower".
+- **Steps aside** while a timed run (`clive_timed_control`) is going on that zone.
+- **What he is holding** is in `input_text.clive_climate_<zone>_note` ("07:36: switched the heating to eco because upstairs reached 21.5°C"); empty means he is not managing it. Everything he does is also in the logbook under "Clive".
+- **Notifications.** He tells people with `church_drive.notify` kind `clive_actions` ("Clive adjusted the house", in Manager's House group, admins by default): when he turns it down and when he puts it back. The kind is added by the integration (`kinds.py`), so it appears in Manager after the next integration release and Home Assistant restart; until then nobody is ticked and nothing is sent. The Android app needs nothing: a kind it does not know gets the default pop-up sound.
+- **Testing.** `clive_climate_zone` takes `dry_run` (report the decision, change nothing) and `pretend_temperature`. Do not run it for real with a pretend temperature unless you mean to change the thermostat; a real run needs the `when` helper reset afterwards to skip the 30 minute rule.
 
 ## Gotchas learned the hard way
 

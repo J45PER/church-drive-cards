@@ -1,0 +1,270 @@
+# Script script.clive_climate_zone: Checks one heating zone against its comfort range and, if it is too hot, turns the heating down (a step at a time), then puts it back when the room has cooled. Run every 10 minutes for each zone by the automation "Clive: keep the climate comfortable". Not exposed to Assist. dry_run only reports what it would do. A copy of the live script.
+#
+# Too hot is measured above the top of the comfort range:
+#   0 to 1 degree over    lower the target to the middle of the range (only if it is heating, or the target is above the range)
+#   1 to 2.5 degrees over eco preset
+#   more than 2.5 over    heating off
+# The first change in an episode saves what the thermostat was set to (mode, preset, target) in the expect helper; when the room is back at the middle of the range it is put back by hand in the order mode, preset, target (a scene restore failed on the Nest, which refuses to leave eco in that order). If somebody changes the thermostat in between (mode or preset differs from what was set here, or the target for a "lower"), Clive stops managing it and leaves it alone for 2 hours. Skipped while a timed run (clive_timed_control) is going. At least 30 minutes between changes. Never turns heating on; that is for people and the timed service.
+alias: Keep one heating zone comfortable
+description: 'Started every 10 minutes by the automation Clive: keep the climate comfortable. Not for Clive to call.'
+fields:
+  zone:
+    name: Zone
+    required: true
+    selector:
+      select:
+        custom_value: false
+        options:
+        - downstairs
+        - upstairs
+  dry_run:
+    name: Only report
+    description: Change nothing, say what would be done.
+    required: false
+    selector:
+      boolean: {}
+  pretend_temperature:
+    name: Pretend temperature
+    description: 'For testing, use this instead of the sensor.'
+    required: false
+    selector:
+      number:
+        min: -10
+        max: 45
+        step: 0.1
+        mode: box
+icon: mdi:home-thermometer-outline
+mode: parallel
+max: 4
+sequence:
+- variables:
+    zones:
+      downstairs:
+        entity: climate.downstairs
+        temp: sensor.downstairs_temperature
+        timer: timer.clive_heating_downstairs
+        note: input_text.clive_climate_downstairs_note
+        expect: input_text.clive_climate_downstairs_expect
+        when: input_datetime.clive_climate_downstairs_when
+        low: 19
+        high: 22
+        name: Downstairs
+        room: the living room
+      upstairs:
+        entity: climate.upstairs
+        temp: sensor.upstairs_temperature
+        timer: timer.clive_heating_upstairs
+        note: input_text.clive_climate_upstairs_note
+        expect: input_text.clive_climate_upstairs_expect
+        when: input_datetime.clive_climate_upstairs_when
+        low: 16
+        high: 20
+        name: Upstairs
+        room: upstairs
+- variables:
+    z: '{{ zones[zone] }}'
+    dry: '{{ dry_run | default(false) | bool(false) }}'
+- variables:
+    temp: '{{ pretend_temperature | float(none) if pretend_temperature is defined and pretend_temperature is not none else states(z.temp) | float(none) }}'
+    mode: '{{ states(z.entity) }}'
+    preset: '{{ state_attr(z.entity, ''preset_mode'') }}'
+    setpoint: '{{ state_attr(z.entity, ''temperature'') | float(none) }}'
+    hvac_action: '{{ state_attr(z.entity, ''hvac_action'') }}'
+    timer_state: '{{ states(z.timer) }}'
+    note: '{{ states(z.note) if states(z.note) not in [''unknown'', ''unavailable''] else '''' }}'
+    expect: '{{ states(z.expect) if states(z.expect) not in [''unknown'', ''unavailable''] else '''' }}'
+    when_age: '{{ (now().timestamp() - (state_attr(z.when, ''timestamp'') | float(0))) / 60 }}'
+    mid: '{{ (z.low + z.high) / 2 }}'
+- variables:
+    adjusted: '{{ note != '''' }}'
+    exp: '{{ expect | from_json(default={}) if expect != '''' else {} }}'
+    over: '{{ (temp - z.high) if temp is not none else 0 }}'
+    unavailable: '{{ temp is none or mode in [''unavailable'', ''unknown''] }}'
+- variables:
+    overridden: '{{ adjusted and (exp | length > 0) and (mode != exp.m or preset != exp.p or (exp.t is not none and setpoint is not none and (setpoint - exp.t) | abs > 0.3)) }}'
+    tier: >-
+      {%- if over > 2.5 -%}off{%- elif over > 1 -%}eco{%- elif over > 0 -%}lower{%- else -%}none{%- endif -%}
+- variables:
+    decision: >-
+      {%- if unavailable -%}skip_unavailable
+      {%- elif timer_state != 'idle' -%}skip_timed_run
+      {%- elif overridden -%}override_cleared
+      {%- elif when_age < 30 -%}skip_cooldown
+      {%- elif adjusted and temp <= mid -%}restore
+      {%- elif tier == 'off' and mode == 'heat' -%}off
+      {%- elif tier in ['off', 'eco'] and mode == 'heat' and preset != 'eco' -%}eco
+      {%- elif tier == 'lower' and mode == 'heat' and setpoint is not none and setpoint > mid and (hvac_action == 'heating' or setpoint > z.high) -%}lower
+      {%- else -%}ok
+      {%- endif -%}
+- variables:
+    report:
+      zone: '{{ zone }}'
+      decision: '{{ decision }}'
+      temperature: '{{ temp }}'
+      comfort_low: '{{ z.low }}'
+      comfort_high: '{{ z.high }}'
+      mode: '{{ mode }}'
+      preset: '{{ preset }}'
+      target: '{{ setpoint }}'
+      managed_by_clive: '{{ adjusted }}'
+- if:
+  - condition: template
+    value_template: '{{ dry }}'
+  then:
+  - response_variable: report
+    stop: dry run
+- choose:
+  - conditions:
+    - condition: template
+      value_template: '{{ decision == ''override_cleared'' }}'
+    sequence:
+    - action: input_text.set_value
+      target:
+        entity_id: '{{ z.note }}'
+      data:
+        value: ''
+    - action: input_text.set_value
+      target:
+        entity_id: '{{ z.expect }}'
+      data:
+        value: ''
+    - action: input_datetime.set_datetime
+      target:
+        entity_id: '{{ z.when }}'
+      data:
+        datetime: '{{ (now() + timedelta(minutes=90)).strftime(''%Y-%m-%d %H:%M:%S'') }}'
+    - action: logbook.log
+      data:
+        name: Clive
+        message: '{{ z.name }} heating was changed by someone after Clive adjusted it, so Clive is leaving it alone for 2 hours.'
+        entity_id: '{{ z.entity }}'
+  - conditions:
+    - condition: template
+      value_template: '{{ decision == ''restore'' }}'
+    sequence:
+    - variables:
+        was: '{{ exp.was if exp.was is defined else {} }}'
+    - if:
+      - condition: template
+        value_template: '{{ was.m is defined and was.m != mode }}'
+      then:
+      - action: climate.set_hvac_mode
+        target:
+          entity_id: '{{ z.entity }}'
+        data:
+          hvac_mode: '{{ was.m }}'
+        continue_on_error: true
+    - if:
+      - condition: template
+        value_template: '{{ was.p is defined and was.p is not none and was.p != preset }}'
+      then:
+      - action: climate.set_preset_mode
+        target:
+          entity_id: '{{ z.entity }}'
+        data:
+          preset_mode: '{{ was.p }}'
+        continue_on_error: true
+    - if:
+      - condition: template
+        value_template: '{{ was.t is defined and was.t is not none and was.m != ''off'' }}'
+      then:
+      - action: climate.set_temperature
+        target:
+          entity_id: '{{ z.entity }}'
+        data:
+          temperature: '{{ was.t }}'
+        continue_on_error: true
+    - action: input_text.set_value
+      target:
+        entity_id: '{{ z.note }}'
+      data:
+        value: ''
+    - action: input_text.set_value
+      target:
+        entity_id: '{{ z.expect }}'
+      data:
+        value: ''
+    - action: input_datetime.set_datetime
+      target:
+        entity_id: '{{ z.when }}'
+      data:
+        datetime: '{{ now().strftime(''%Y-%m-%d %H:%M:%S'') }}'
+    - action: church_drive.notify
+      data:
+        kind: clive_actions
+        title: 🌡️ {{ z.name }} heating back to how it was
+        message: '{{ z.room | capitalize }} has cooled to {{ temp }}°C, so Clive put the heating back to how it was before he turned it down.'
+        tag: church-drive-clive-climate-{{ zone }}
+        link: /dashboard-mobile/climate
+    - action: logbook.log
+      data:
+        name: Clive
+        message: '{{ z.name }} heating put back (room {{ temp }}°C).'
+        entity_id: '{{ z.entity }}'
+  - conditions:
+    - condition: template
+      value_template: '{{ decision in [''off'', ''eco'', ''lower''] }}'
+    sequence:
+    - choose:
+      - conditions:
+        - condition: template
+          value_template: '{{ decision == ''off'' }}'
+        sequence:
+        - action: climate.set_hvac_mode
+          target:
+            entity_id: '{{ z.entity }}'
+          data:
+            hvac_mode: 'off'
+      - conditions:
+        - condition: template
+          value_template: '{{ decision == ''eco'' }}'
+        sequence:
+        - action: climate.set_preset_mode
+          target:
+            entity_id: '{{ z.entity }}'
+          data:
+            preset_mode: eco
+      default:
+      - action: climate.set_temperature
+        target:
+          entity_id: '{{ z.entity }}'
+        data:
+          temperature: '{{ mid }}'
+    - variables:
+        did: >-
+          {%- if decision == 'off' -%}turned the heating off
+          {%- elif decision == 'eco' -%}switched the heating to eco
+          {%- else -%}lowered the heating to {{ mid }}°C
+          {%- endif -%}
+    - action: input_text.set_value
+      target:
+        entity_id: '{{ z.expect }}'
+      data:
+        value: >-
+          {{ {'m': 'off' if decision == 'off' else mode, 'p': 'eco' if decision == 'eco' else preset, 't': mid if decision == 'lower' else none, 'was': exp.was if adjusted and exp.was is defined else {'m': mode, 'p': preset, 't': setpoint}} | tojson }}
+    - action: input_text.set_value
+      target:
+        entity_id: '{{ z.note }}'
+      data:
+        value: '{{ now().strftime(''%H:%M'') }}: {{ did }} because {{ z.room }} reached {{ temp }}°C (comfortable up to {{ z.high }}°C).'
+    - action: input_datetime.set_datetime
+      target:
+        entity_id: '{{ z.when }}'
+      data:
+        datetime: '{{ now().strftime(''%Y-%m-%d %H:%M:%S'') }}'
+    - action: church_drive.notify
+      data:
+        kind: clive_actions
+        title: 🌡️ {{ z.name }} was too warm
+        message: '{{ z.room | capitalize }} reached {{ temp }}°C (comfortable up to {{ z.high }}°C), so Clive {{ did }}. He will put it back once it is down to {{ mid }}°C.'
+        tag: church-drive-clive-climate-{{ zone }}
+        link: /dashboard-mobile/climate
+    - action: logbook.log
+      data:
+        name: Clive
+        message: '{{ z.name }} heating: {{ did }} (room {{ temp }}°C, comfortable up to {{ z.high }}°C).'
+        entity_id: '{{ z.entity }}'
+- variables:
+    report: '{{ dict(report, decision=decision, acted=decision in [''off'', ''eco'', ''lower'', ''restore'', ''override_cleared'']) }}'
+- response_variable: report
+  stop: done

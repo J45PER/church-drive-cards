@@ -49,6 +49,8 @@ KINDS: list[dict[str, Any]] = [
     {"key": "damp", "group": "House", "name": "Damp risk", "note": "Humidity over 65% for an hour", "default": "admins",
      "needs": [("class", "sensor", "humidity")]},
     {"key": "frost", "group": "House", "name": "Frost tonight", "default": "admins", "needs": [("domain", "weather")]},
+    {"key": "clive_actions", "group": "House", "name": "Clive adjusted the house", "note": "Heating turned down, and put back", "default": "admins",
+     "needs": [("domain", "climate")]},
     # Energy.
     {"key": "power_down", "group": "Energy", "name": "Octopus power-down session", "default": "all",
      "needs": [("platform", "octopus_energy")]},
