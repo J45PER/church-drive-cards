@@ -521,7 +521,7 @@ fun VacuumCard(vacuum: EntityState?, battery: EntityState?, call: CallService) {
     val cleaning = vacuum?.state == "cleaning"
     EntityCard(tone.container, tone.onContainer, deviceEntity = vacuum?.entityId) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            ToneIcon(Icons.Filled.CleaningServices, tone)
+            GreggIcon(greggState(vacuum, battery), tone.accent, 44.dp, battery?.state?.toDoubleOrNull())
             Column(modifier = Modifier.weight(1f)) {
                 Text(vacuum?.friendlyName ?: "Vacuum", style = MaterialTheme.typography.titleMedium)
                 Text(vacuumSummary(vacuum, battery), style = MaterialTheme.typography.bodyMedium)
@@ -529,10 +529,10 @@ fun VacuumCard(vacuum: EntityState?, battery: EntityState?, call: CallService) {
         }
         IconRow(
             listOf(
-                IconItem(if (cleaning) "mdi:pause" else "mdi:play", if (cleaning) "Pause" else if (vacuum?.state == "paused") "Resume" else "Start", true) {
+                IconItem(if (cleaning) "cd:pause" else "cd:play", if (cleaning) "Pause" else if (vacuum?.state == "paused") "Resume" else "Start", true) {
                     call("vacuum", if (cleaning) "pause" else "start", VACUUM_ENTITY, data())
                 },
-                IconItem("mdi:home-import-outline", "Dock", false) { call("vacuum", "return_to_base", VACUUM_ENTITY, data()) },
+                IconItem("cd:home", "Dock", false) { call("vacuum", "return_to_base", VACUUM_ENTITY, data()) },
             ),
             tone, tone.onContainer, enabled,
         )

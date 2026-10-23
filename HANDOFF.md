@@ -421,6 +421,13 @@ Older release notes (v0.10 to v0.38 detail) are archived in [docs/HISTORY.md](do
 - Light room cards now replace the old tiles on the real dashboards; the user asked
   for this. An earlier "keep them off the real dashboards" rule no longer applies.
 
+## House icon set (started 2026-10-23)
+
+- The house's own icons are `cd:` names, drawn from `companion/android/app/src/main/java/com/churchdrive/app/ui/CdIcons.kt` through `HaIcon`; Gregg's animated status is `GreggIcon.kt`. They come from the icon board (Gregg: https://claude.ai/artifact/8cnnwHR9FF6dACApaYF5YT, houses: https://claude.ai/artifact/6HfDaXTvvkXm8wwGueK23v, brand marks: https://claude.ai/artifact/LXyo1cjjgfPLdhiLgYCQ5r).
+- Rules the user set: one disc size on every icon, a ring round it 11 thick with a gap of 22 to the disc that never changes size and only spins or fills like a progress ring; buttons (play, pause, stop, home) are bare glyphs because they are used everywhere, and only a status shows the whole robot; the house is the app icon's house without the block, with a door notched through the floor (medium door).
+- Done in the app (0.48.3): Gregg's status icon (card and tile), the vacuum buttons, the two brush rows. Not shown anywhere yet: dock jobs, modes, the other parts. **Levels (suction, intensity) need a rethink**: not in the vacuum disc layout.
+- Not done: the same icons in the Home Assistant dashboards (a `cd:` icon pack for Lovelace, to publish through HACS), and the other devices' sets.
+
 ## Release and deployment
 
 - **Google Play (since 2026-10-23, `.github/workflows/companion-android.yml`):** the first time a build has a new version, CI uploads the signed AABs to Play's **internal testing** track with the `PLAY_SERVICE_ACCOUNT_JSON` secret (a dedicated service account with release permission on the two listings): phone and watch together (`com.churchdrive.manager`, two form factors, version codes differ) and To-Do (`com.churchdrive.todo`). Release notes are the changelog section cut to 500 characters. Production stays a button in Play Console. Untested until the first version bump after #270; if it fails, the Actions log says why and the GitHub release still has the AABs to upload by hand.

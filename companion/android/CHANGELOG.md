@@ -4,6 +4,12 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.48.3
+
+- Gregg's status icon: a disc with his lidar turret and a ring round it, replacing the plain vacuum icon on the Cleaning card and the vacuum tile. The ring turns in three parts while he cleans, backwards in two parts while he heads home, fills to the battery level while he charges, and blinks closed on an error. Once he is docked and charged it shows the house.
+- Start, Pause, Stop and Home buttons on the vacuum are plain icons with no disc or ring. Gregg's rolling brush and side brush rows use the house's own icons.
+- The beginnings of the house's own icon set (`cd:` names): the buttons, Gregg's status marks, dock jobs, cleaning modes and parts. Only the status, the buttons and the two brushes show anywhere yet.
+
 ## 0.48.2
 
 - A rebuild of 0.48.1 with a new version number, to put the app on Google Play's internal testing track automatically for the first time. No change to the app.
