@@ -6,7 +6,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 ## 0.51.1
 
-- Gregg: the vacuum, vacuum and mop, empty dust bin and dry mop icons are redrawn in the disc-and-ring style with the outline of the glyph cut out (the vacuum's pinwheel is the one from the status icon, and the vacuum and mop pinwheel is drawn small with a thinner line to match). The cleaning mode choice shows them as tiles, and the dock buttons and Find Gregg carry their own icons on his card. Dry mop is Home Assistant's hair dryer, adapted.
+- Gregg: the vacuum, vacuum and mop, empty dust bin and dry mop icons are redrawn in the disc-and-ring style with the outline of the glyph cut out (the vacuum's pinwheel is the one from the status icon, and the vacuum and mop pinwheel is drawn small with a thinner line to match). The cleaning mode choice shows them as tiles, and the dock buttons and Find Gregg carry their own icons on his card. Dry mop is a water drop with a line through it (Home Assistant's water-off icon, adapted).
 
 ## 0.51.0
 
