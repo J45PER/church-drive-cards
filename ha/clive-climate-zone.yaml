@@ -2,7 +2,7 @@
 #
 # Cold (below the bottom of the comfort range) and not already heating towards a target at least 1 degree above the room: heating on (mode heat, preset none) with the target at the middle of the range. Also puts the heating back to normal once a hot room Clive turned down has cooled to the middle of the range.
 # Too hot (above the top of the range): 0 to 1 degree over lowers the target to the middle of the range (only if it is heating, or the target is above the range); 1 to 2.5 over is eco; more than 2.5 over is off.
-# At least 30 minutes between Clive's own changes. Skipped while a timed run (clive_timed_control) is going on that zone and for 3 minutes after it.
+# At least 30 minutes between Clive's own changes. Not every change is a push notification (they are all in the logbook): only heating turned on for a cold room, eco and off, and at most one push per zone every 2 hours (input_datetime.clive_climate_<zone>_notified). Lowering the target and putting a room back to normal are silent. A pause, and the end of one, always tell people. Skipped while a timed run (clive_timed_control) is going on that zone and for 3 minutes after it.
 #
 # A change made by somebody else pauses Clive on that zone: one reported by_hand (a change to the mode, preset or target that did not come from a Home Assistant script or automation) more than 3 minutes after Clive's own last action (a Nest takes up to a minute to echo and moves its own target when it leaves eco), or, found by the 10 minute check, a mode or preset that is not what Clive last set (or the target after a "lower"). The pause lasts input_number.clive_climate_pause_minutes. input_datetime.clive_climate_<zone>_resume holds when he takes over again; in the past (and not 2000) means a pause has just ended. While paused he does nothing.
 # The helpers: _note is what he last did, in words; _expect is what he last set, as JSON {m, p, t, hot}; _when is when he last acted; _resume is the end of a pause.
@@ -54,6 +54,7 @@ sequence:
         expect: input_text.clive_climate_downstairs_expect
         when: input_datetime.clive_climate_downstairs_when
         resume: input_datetime.clive_climate_downstairs_resume
+        notified: input_datetime.clive_climate_downstairs_notified
         low: 19
         high: 22
         name: Downstairs
@@ -66,6 +67,7 @@ sequence:
         expect: input_text.clive_climate_upstairs_expect
         when: input_datetime.clive_climate_upstairs_when
         resume: input_datetime.clive_climate_upstairs_resume
+        notified: input_datetime.clive_climate_upstairs_notified
         low: 16
         high: 20
         name: Upstairs
@@ -240,6 +242,7 @@ sequence:
           {%- elif decision == 'eco' -%}switched the heating to eco
           {%- else -%}lowered the heating to {{ mid }}°C
           {%- endif -%}
+        push: '{{ decision in [''heat_on'', ''off'', ''eco''] and not (decision == ''heat_on'' and temp >= z.low) and ((now().timestamp() - (state_attr(z.notified, ''timestamp'') | float(0))) / 60) >= 120 }}'
         why: >-
           {%- if decision == 'heat_on' and temp < z.low -%}{{ z.room }} was down to {{ temp }}°C (comfortable from {{ z.low }}°C)
           {%- elif decision == 'heat_on' -%}{{ z.room }} has cooled to {{ temp }}°C, so it is back to normal
@@ -322,13 +325,22 @@ sequence:
           entity_id: '{{ z.entity }}'
         data:
           temperature: '{{ mid }}'
-    - action: church_drive.notify
-      data:
-        kind: clive_actions
-        title: '🌡️ {{ z.name }} heating {{ ''on'' if decision == ''heat_on'' else ''turned down'' }}'
-        message: '{{ why | capitalize }}, so Clive {{ did }}.'
-        tag: church-drive-clive-climate-{{ zone }}
-        link: /dashboard-mobile/climate
+    - if:
+      - condition: template
+        value_template: '{{ push }}'
+      then:
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: '{{ z.notified }}'
+        data:
+          datetime: '{{ now().strftime(''%Y-%m-%d %H:%M:%S'') }}'
+      - action: church_drive.notify
+        data:
+          kind: clive_actions
+          title: '🌡️ {{ z.name }} heating {{ ''on'' if decision == ''heat_on'' else ''turned down'' }}'
+          message: '{{ why | capitalize }}, so Clive {{ did }}.'
+          tag: church-drive-clive-climate-{{ zone }}
+          link: /dashboard-mobile/climate
     - action: logbook.log
       data:
         name: Clive

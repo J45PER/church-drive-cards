@@ -181,13 +181,17 @@ class HouseService : Service() {
             val noticeId = push.tag?.hashCode() ?: System.currentTimeMillis().toInt()
             val builder = NotificationCompat.Builder(context, channelFor(style, push.kind))
                 .setCategory(if (style == NoticeStyle.Alert) NotificationCompat.CATEGORY_ALARM else NotificationCompat.CATEGORY_MESSAGE)
-                .setSmallIcon(R.drawable.ic_notification)
+                // The assistant's own notices carry his mark (small, and large in colour); everyone else's keep the Manager's.
+                .setSmallIcon(if (isAssistantNotice(push.kind)) R.drawable.ic_notification_assistant else R.drawable.ic_notification)
                 .setColor(0xFF6B6BBF.toInt())
                 .setContentTitle(push.title)
                 .setContentText(push.message)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(push.message))
                 .setAutoCancel(true)
                 .setContentIntent(openApp(context, push.url))
+            if (isAssistantNotice(push.kind)) {
+                runCatching { android.graphics.BitmapFactory.decodeResource(context.resources, R.drawable.assistant_notification_logo) }.getOrNull()?.let { builder.setLargeIcon(it) }
+            }
             val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             push.actions.forEach { button ->
                 val code = button.id.hashCode() xor noticeId xor (button.uri?.hashCode() ?: 0)
