@@ -89,6 +89,9 @@ fun greggLevelIcon(entityId: String, option: String): String? {
     }
 }
 
+/** The icon name a Cleaning page title carries to mean Gregg's resting (idle) icon, which never changes with what he is doing. */
+const val GREGG_IDLE_ICON = "gregg:idle"
+
 /** The house's own icon for one of Gregg's dock buttons or his find switch, or null for any other entity. */
 fun greggEntityIcon(entityId: String): String? = when (entityId) {
     "button.gregg_empty_dust_bin" -> "cd:empty"

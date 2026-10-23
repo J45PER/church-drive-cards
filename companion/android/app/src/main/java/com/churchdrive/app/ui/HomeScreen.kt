@@ -191,8 +191,8 @@ fun HomeScreen(
                             onClick = { page = p },
                             icon = {
                                 val tint = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-                                // Cleaning shows Gregg's own status icon; the rest are the dashboard's icons.
-                                if (p == Page.Cleaning) GreggIcon(greggState(entities[VACUUM_ENTITY], entities[VACUUM_BATTERY]), tint, 28.dp, entities[VACUUM_BATTERY]?.state?.toDoubleOrNull())
+                                // Cleaning shows Gregg's resting icon, which never changes; the rest are the dashboard's icons.
+                                if (p == Page.Cleaning) GreggIcon(GreggState.Idle, tint, 28.dp)
                                 else HaIcon(if (p == Page.Security) alarmIconName(alarmState) else p.mdi, p.fallback, tint = tint, size = 24.dp)
                             },
                             label = { Text(p.label, fontSize = 11.sp, maxLines = 1) },
@@ -242,7 +242,7 @@ fun HomeScreen(
                     Page.Energy -> "energy"
                     else -> "todo"
                 }
-                DashboardPage(panels[key].orEmpty(), entities, registry, call)
+                DashboardPage(panels[key].orEmpty().let { list -> if (page == Page.Cleaning) list.map { it.copy(icon = GREGG_IDLE_ICON) } else list }, entities, registry, call)
             }
             // Room to scroll the last card clear of Clive's button.
             Spacer(Modifier.height(72.dp))
@@ -401,6 +401,7 @@ fun SectionPanel(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (iconSlot != null) iconSlot(colors)
+            else if (iconName == GREGG_IDLE_ICON) GreggIcon(GreggState.Idle, colors.accent, 36.dp)
             else if (iconName != null) ToneIconName(iconName, icon ?: Icons.Filled.Security, colors, size = 36)
             else if (icon != null) ToneIcon(icon, colors, size = 36)
             Text(
