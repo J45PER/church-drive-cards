@@ -1,6 +1,7 @@
 package com.churchdrive.app
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.red
 import com.churchdrive.app.ui.partColour
 import com.churchdrive.app.ui.partLifeLeft
 import org.junit.Assert.assertEquals
@@ -21,7 +22,8 @@ class CleaningPageTest {
     }
 
     @Test fun aPartFadesFromBlueThroughGreenAndYellowToRed() {
-        val blue = blue; val green = Color(0xFF4CAF50); val yellow = Color(0xFFFFC107)
+        val green = Color(0xFF4CAF50)
+        val yellow = Color(0xFFFFC107)
         assertEquals(blue, partColour(1f, blue, green, yellow, red))
         assertEquals(blue, partColour(0.8f, blue, green, yellow, red))
         assertEquals(green, partColour(0.6f, blue, green, yellow, red))
