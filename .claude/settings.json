@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Church_Drive_Home_Assistant__ha_search",
+      "mcp__Church_Drive_Home_Assistant__ha_get_state",
+      "mcp__Church_Drive_Home_Assistant__ha_get_history",
+      "mcp__Church_Drive_Home_Assistant__ha_get_logs",
+      "mcp__Church_Drive_Home_Assistant__ha_get_integration",
+      "mcp__Church_Drive_Home_Assistant__ha_get_skill_guide",
+      "mcp__Church_Drive_Home_Assistant__ha_get_entity",
+      "mcp__Church_Drive_Home_Assistant__ha_get_entity_exposure",
+      "mcp__Church_Drive_Home_Assistant__ha_get_automation_traces",
+      "mcp__Church_Drive_Home_Assistant__ha_get_overview",
+      "mcp__Church_Drive_Home_Assistant__ha_get_device",
+      "mcp__Church_Drive_Home_Assistant__ha_get_operation_status",
+      "mcp__Church_Drive_Home_Assistant__ha_list_services",
+      "mcp__Church_Drive_Home_Assistant__ha_eval_template",
+      "mcp__Church_Drive_Home_Assistant__ha_config_get_script",
+      "mcp__Church_Drive_Home_Assistant__ha_config_get_automation",
+      "mcp__Church_Drive_Home_Assistant__ha_config_list_helpers",
+      "mcp__Church_Drive_Home_Assistant__ha_config_set_script",
+      "mcp__Church_Drive_Home_Assistant__ha_config_set_automation",
+      "mcp__Church_Drive_Home_Assistant__ha_config_set_helper",
+      "mcp__Church_Drive_Home_Assistant__ha_set_entity"
+    ]
+  }
+}
