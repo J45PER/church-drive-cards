@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.51.0
+
+- Gregg: suction level (Quiet, Standard, Turbo, Max, Boost IQ) and water level (Low, Medium, High) show as icon tiles on his card, drawn like the Eufy app's icons: a pinwheel of curved blades (three, four, five; Max and Boost IQ carry a badge) and a drop that fills. They are `cd:suction-*` and `cd:water-*` in the house's own icon set.
+
 ## 0.50.1
 
 - Clive: cards carry the logo of the competition (Premier League, EFL Championship, League One and Two with one shared mark, Carabao Cup, FA Cup, Scottish Premiership, Champions, Europa and Conference Leagues, Nations League), of Disney+, Octopus Energy and Cupra, and the new Simple Icons logos (Prime Video, BBC iPlayer, Amazon Music, Mercedes-Benz, Land Rover), instead of the plain sport or car icon. Our own logos are in `assets/own-logos.json` and show through `ol:` icons.

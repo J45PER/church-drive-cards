@@ -244,7 +244,14 @@ fun TileCard(config: JSONObject, entities: Map<String, EntityState>, call: CallS
             )
         }
         if (id.startsWith("select.") && entity != null && hasFeature("select-options")) {
-            OptionRow(entity.options(), entity.state, tone, entity.available) { o ->
+            val levels = entity.options().map { it to greggLevelIcon(id, it) }
+            if (levels.isNotEmpty() && levels.all { it.second != null }) {
+                // Gregg's suction and water levels: the Eufy-style icons, as tiles.
+                TileRow(
+                    levels.map { (o, icon) -> TileItem(icon.orEmpty(), o.replace('_', ' '), o == entity.state) { call("select", "select_option", id, data("option" to o)) } },
+                    tone, tone.onContainer, entity.available,
+                )
+            } else OptionRow(entity.options(), entity.state, tone, entity.available) { o ->
                 call("select", "select_option", id, data("option" to o))
             }
         }
