@@ -78,6 +78,29 @@ A background job, no voice and no app. Clive is responsible for the automatic on
 - **In the Church Drive app (0.48.0).** The Home page shows a "Heating set by hand" reminder below the to-do highlights while any zone is paused (read from `input_datetime.clive_climate_<zone>_resume`, nothing else to set up): which zones, when he takes over again, and a **Resume** button (`script.clive_climate_control` with command resume). The Resume Clive notification button (`clive_resume` in `NoticeButton.kt`) does it without opening the app. Notifications of kind `clive_actions` carry the assistant's mark as the small status-bar icon and a colour copy as the large icon; every other kind keeps the Manager's icon. The Home Assistant app's copy of a notification has Resume Clive as well.
 - **Testing.** `clive_climate_zone` takes `dry_run` (report the decision, change nothing), `pretend_temperature` and `by_hand`. A real run with a pretend temperature changes the thermostat, and one inside 30 minutes of an action is skipped (reset `_when` to 2000-01-01 to test twice).
 
+## Tuning Clive from a session (instructions and model settings)
+
+Claude can read and change Clive's instructions and the Claude model settings through Home Assistant, with no copy and paste: the Anthropic integration (`entry_id` 01M376K2WJGE6N1C80RF6D40SE) has a `conversation` subentry (`01M376K2WJXBAQ5MWA048ZS9DZ`, "Claude conversation") whose fields are the ones on its Configure page. Read them with `ha_get_integration(entry_id, include_subentry_schema=True, subentry_type="conversation", subentry_id=...)` (the prompt and the Assist/tool choice) and `include_diagnostics=True` (everything else; the prompt shows as redacted there). Change them with `ha_config_set_helper(helper_type="config_subentry", entry_id=..., subentry_type="conversation", subentry_id=..., config={...})`: it is a patch, so only the fields given change (checked: sending `recommended` and `max_tokens` alone left everything else as it was). Always send `recommended: false` or the model settings are reset to the recommended ones.
+
+How it is done:
+- The instructions are edited in `clive-prompt.md` first, then sent as `prompt`, so git always has the previous version. The live prompt and that file are meant to be identical (they were when this was set up).
+- A change to a model setting is noted in the commit message with the old value, and checked afterwards by reading the settings back and by the timings the app shows in Settings (speech to text, Claude, tools, text to speech).
+- Never tick "HA-MCP Server (tool search)" for Clive: it would give him every Home Assistant tool and bypass the exposure list that keeps the alarm, sirens and TVs out of reach.
+- The AI Task entity (`ai_task_data` subentry) is a separate thing and is left alone.
+
+Settings on 2026-10-23 (the baseline to go back to):
+
+| Setting | Value |
+|---|---|
+| `chat_model` | `claude-haiku-4-5` |
+| `max_tokens` | 3000 |
+| `thinking_budget` | 1024 |
+| `prompt_caching` | `prompt` |
+| `web_search` / `web_search_max_uses` | on / 5 |
+| `web_fetch`, `code_execution`, `user_location` | off |
+| `llm_hass_api` | `["assist"]` |
+| `recommended` | false |
+
 ## Gotchas learned the hard way
 
 - **Check state after a write, not the spoken reply.** Clive says "Done" whenever a script runs without error. A template condition that returned a non-boolean string (a time) was silently false.
