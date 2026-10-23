@@ -26,7 +26,7 @@ private val GENERIC_KINDS = setOf("energy", "secure", "doors", "tasks", "devices
 /** The symbol Clive's mark turns into for a card, or null for a card the watch has no layout for. */
 fun cardSymbol(card: AssistantCard?): String? {
     card ?: return null
-    if (card.kind !in GENERIC_KINDS && card.kind !in setOf("weather", "score", "scores", "fixture", "music")) return null
+    if (card.kind !in GENERIC_KINDS && card.kind !in setOf("weather", "score", "scores", "fixture", "fixtures", "music")) return null
     return cardIcon(card).removePrefix("mdi:").takeIf { hasWatchIcon(it) } ?: "message-text"
 }
 
@@ -42,7 +42,7 @@ fun cardPalette(card: AssistantCard?): GlowPalette {
             "weather-lightning" -> GlowPalette.Storm
             else -> GlowPalette.Rain
         }
-        "score", "scores", "fixture" -> GlowPalette.Sport
+        "score", "scores", "fixture", "fixtures" -> GlowPalette.Sport
         else -> GlowPalette.Base
     }
 }
@@ -103,6 +103,20 @@ fun CardBlock(card: AssistantCard) {
                     Badge(home.optString("badge_url").ifBlank { null }, short(home), ui.d(20f), clubName = home.optString("name"))
                     Text("${r.optInt("home_score")} – ${r.optInt("away_score")}", color = Color.White, fontSize = ui.sp(18f), fontWeight = FontWeight.Bold, maxLines = 1)
                     Badge(away.optString("badge_url").ifBlank { null }, short(away), ui.d(20f), clubName = away.optString("name"))
+                }
+            }
+        }
+        "fixtures" -> Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(ui.d(4f))) {
+            val rows = f.optJSONArray("rows")
+            for (i in 0 until minOf(rows?.length() ?: 0, 6)) {
+                val r = rows?.optJSONObject(i) ?: continue
+                val home = r.side("home")
+                val away = r.side("away")
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(ui.d(5f))) {
+                    Badge(home.optString("badge_url").ifBlank { null }, short(home), ui.d(20f), clubName = home.optString("name"))
+                    Text("v", color = SOFT, fontSize = ui.sp(11f))
+                    Badge(away.optString("badge_url").ifBlank { null }, short(away), ui.d(20f), clubName = away.optString("name"))
+                    Text(listOf(r.optString("when").substringBefore(' ').ifBlank { r.optString("when") }, r.optString("time")).filter { it.isNotBlank() }.joinToString(" "), color = Color.White, fontSize = ui.sp(12f), fontWeight = FontWeight.SemiBold, maxLines = 1)
                 }
             }
         }

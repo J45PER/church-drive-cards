@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.51.3
+
+- Clive: ask for the games of a league ("What are the Championship games this weekend?") and he shows them as a list: each club's badge, the date and the kick off time, under the league's logo, on the phone and the watch. It needs the house's new league fixtures script (already live).
+
 ## 0.51.2
 
 - Home Assistant's house icons (home, home outline, out and away, in) everywhere in the app now draw the house's own house, including the page bar's Home tab and the people in the alarm panel.

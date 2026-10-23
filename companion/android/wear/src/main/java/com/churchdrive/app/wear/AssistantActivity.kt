@@ -217,7 +217,7 @@ private fun TalkFace(model: CliveModel, signedOut: Boolean, onTap: () -> Unit) {
                     ) {
                         if (model.heard.isNotEmpty()) Text(model.heard, color = Color(0xFFD5D8F6).copy(alpha = 0.85f), fontSize = ui.sp(10f), textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis, style = SHADOW, modifier = Modifier.padding(bottom = ui.d(4f)))
                         if (card != null && symbol != null) CardBlock(card)
-                        if (card?.kind != "scores") Text(model.answer, color = Color.White, fontSize = ui.sp(if (card != null) 12f else 14f), textAlign = TextAlign.Center, style = SHADOW, modifier = Modifier.padding(top = if (card != null) ui.d(8f) else ui.d(0f), bottom = ui.d(18f)))
+                        if (card?.kind != "scores" && card?.kind != "fixtures") Text(model.answer, color = Color.White, fontSize = ui.sp(if (card != null) 12f else 14f), textAlign = TextAlign.Center, style = SHADOW, modifier = Modifier.padding(top = if (card != null) ui.d(8f) else ui.d(0f), bottom = ui.d(18f)))
                     }
                 }
             }

@@ -5,11 +5,11 @@
 # Club badges are found by the apps themselves from the team's name. Anything without a screen ignores the event, so his spoken answer must stand alone.
 alias: Show a card on screen
 description: 'Show a card on the screen of the person who asked, when the answer is something to see: the weather, a sports score, a team''s next game, what is playing. Call it FIRST, with no words before
-  it, then give your spoken answer as your final reply. kind is one of: weather, score, scores, fixture, music, people, done, car, climate, gregg, air, energy, secure, doors, tasks, devices, lights, heat, shop, event, reminder, media, answer. For the weather at Church Drive give kind only: the
+  it, then give your spoken answer as your final reply. kind is one of: weather, score, scores, fixture, fixtures, music, people, done, car, climate, gregg, air, energy, secure, doors, tasks, devices, lights, heat, shop, event, reminder, media, answer. For the weather at Church Drive give kind only: the
   card fills itself from the weather forecast. For the weather ANYWHERE ELSE (a town, a holiday place, another country) search the web for the real figures first, then give kind weather with data holding
   location (the place name), temp (a number in degrees Celsius), symbol (one of sunny, clear-night, partlycloudy, cloudy, rainy, pouring, snowy, fog, windy, lightning-rainy), desc (two or three words such
   as Sunny), high, low, and hourly as an empty list, so the card shows that place and never Church Drive. For the others data holds the fields. score: home and away, each {name, short (three letters)},
-  home_score, away_score, status ("Full time", "74''", "Half time") and scorers (one short line). scores: several results as a table, data is {title (optional, e.g. "Champions League"), rows: a list of
+  home_score, away_score, status ("Full time", "74''", "Half time") and scorers (one short line). fixtures: the coming games of a league or competition as a list, data is {title (optional, the competition), sport (optional), rows: a list of {home, away, home_short, away_short, when (the date, "Sat 24 Oct"), time ("15:00")}} (the clive_fixtures script builds this for you). scores: several results as a table, data is {title (optional, e.g. "Champions League"), rows: a list of
   {home, away, home_score, away_score, status} with home and away as for score}; fixture: home and away as for score, title ("Man City v Aston Villa"), when ("Sat 24 Oct"), time ("12:30"), where (the ground),
   comp (the competition) and in ("in 2 days"). music: title, artist and device (where it is playing). people: rows, a list with one {name, state, detail} for each person, where state is home, not_home,
   a place name, or unknown, and detail is a short line such as "since 11:40". done: a receipt for something you have just done and the tool confirmed, with name (what, e.g. "Lounge lights"), detail ("Dimmed
@@ -25,7 +25,7 @@ fields:
     selector:
       object: {}
   kind:
-    description: weather, score, scores, fixture, music, people, done, car, climate, gregg, air, energy, secure, doors, tasks, devices, lights, heat, shop, event, reminder, media or answer.
+    description: weather, score, scores, fixture, fixtures, music, people, done, car, climate, gregg, air, energy, secure, doors, tasks, devices, lights, heat, shop, event, reminder, media or answer.
     name: Kind of card
     required: true
     selector:
@@ -35,6 +35,7 @@ fields:
         - score
         - scores
         - fixture
+        - fixtures
         - music
         - people
         - done
@@ -59,7 +60,7 @@ max: 5
 mode: parallel
 sequence:
 - condition: template
-  value_template: '{{ kind in [''weather'', ''score'', ''scores'', ''fixture'', ''music'', ''people'', ''done'', ''car'', ''climate'', ''gregg'', ''air'', ''energy'', ''secure'', ''doors'', ''tasks'', ''devices'', ''lights'', ''heat'', ''shop'', ''event'', ''reminder'', ''media'', ''answer''] }}'
+  value_template: '{{ kind in [''weather'', ''score'', ''scores'', ''fixture'', ''fixtures'', ''music'', ''people'', ''done'', ''car'', ''climate'', ''gregg'', ''air'', ''energy'', ''secure'', ''doors'', ''tasks'', ''devices'', ''lights'', ''heat'', ''shop'', ''event'', ''reminder'', ''media'', ''answer''] }}'
 - if:
   - condition: template
     value_template: '{{ kind == ''weather'' }}'
