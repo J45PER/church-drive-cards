@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.48.2
+
+- A rebuild of 0.48.1 with a new version number, to put the app on Google Play's internal testing track automatically for the first time. No change to the app.
+
 ## 0.48.1
 
 - Clive's climate card: asked about the temperature in the house, he shows each heating zone with its temperature, target, humidity and state (heating, idle, Eco, off), and the outside temperature.
