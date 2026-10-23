@@ -1,7 +1,6 @@
 package com.churchdrive.app
 
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.red
 import com.churchdrive.app.ui.partColour
 import com.churchdrive.app.ui.partLifeLeft
 import org.junit.Assert.assertEquals
