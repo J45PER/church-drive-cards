@@ -4,6 +4,7 @@ import com.churchdrive.app.ha.EntityState
 import com.churchdrive.app.ui.CdIcons
 import com.churchdrive.app.ui.GreggState
 import com.churchdrive.app.ui.greggState
+import com.churchdrive.app.ui.greggLevelIcon
 import com.churchdrive.app.ui.greggStateFor
 import com.churchdrive.app.ui.parseAssistantCard
 import com.churchdrive.app.ui.word
@@ -76,5 +77,16 @@ class GreggIconTest {
             val card = parseAssistantCard(JSONObject("""{"kind":"$kind","state":"docked","battery":100,"score":98}"""))
             assertEquals(kind, card?.kind)
         }
+    }
+
+    @Test fun suctionAndWaterLevelsHaveTheirIcons() {
+        val suction = listOf("Quiet", "Standard", "Turbo", "Max", "Boost_IQ")
+        val water = listOf("Low", "Medium", "High")
+        for (o in suction) assertTrue(o, CdIcons.icons.containsKey(greggLevelIcon("select.gregg_suction_level", o)!!.removePrefix("cd:")))
+        for (o in water) assertTrue(o, CdIcons.icons.containsKey(greggLevelIcon("select.gregg_water_level", o)!!.removePrefix("cd:")))
+        assertEquals("cd:suction-boost", greggLevelIcon("select.gregg_suction_level", "Boost IQ"))
+        assertNull(greggLevelIcon("select.gregg_cleaning_intensity", "Normal"))
+        assertNull(greggLevelIcon("select.gregg_mop_intensity", "Quiet"))
+        assertNull(greggLevelIcon("select.gregg_water_level", "Quiet"))
     }
 }

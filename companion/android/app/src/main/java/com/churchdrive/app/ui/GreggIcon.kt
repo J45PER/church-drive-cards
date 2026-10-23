@@ -58,6 +58,31 @@ fun greggStateFor(vacuumState: String?, level: Double?): GreggState {
     }
 }
 
+/**
+ * The `cd:` icon for one option of Gregg's suction level (Quiet, Standard, Turbo, Max, Boost_IQ) or water level (Low, Medium, High), drawn like the
+ * Eufy app's: a pinwheel of blades for suction (the Max and Boost IQ ones carry a badge), a drop that fills for water. Null for any other entity or option.
+ */
+fun greggLevelIcon(entityId: String, option: String): String? {
+    val key = option.lowercase().filter { it.isLetter() }
+    return when {
+        entityId.endsWith("_suction_level") -> when (key) {
+            "quiet" -> "cd:suction-quiet"
+            "standard" -> "cd:suction-standard"
+            "turbo" -> "cd:suction-turbo"
+            "max" -> "cd:suction-max"
+            "boostiq" -> "cd:suction-boost"
+            else -> null
+        }
+        entityId.endsWith("_water_level") -> when (key) {
+            "low" -> "cd:water-low"
+            "medium" -> "cd:water-medium"
+            "high" -> "cd:water-high"
+            else -> null
+        }
+        else -> null
+    }
+}
+
 /** The word for a status pill. */
 fun GreggState.word(): String = when (this) {
     GreggState.Idle -> "Idle"
