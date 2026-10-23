@@ -1,6 +1,6 @@
 # Script script.clive_scores: A sports result, or several, after Clive has searched the web for the real figures. Exposed to Assist. It puts the score card (one game) or the scores table (several) on the screen itself, through clive_show_card (the apps find the club badges from the names), and returns `say`: the exact words to speak, in the house format of one sentence with the answer and one short offer of more, so Clive no longer has to word it. A copy of the live script.
 alias: Sports scores
-description: 'After you have searched the web for a result, call this with the games. It shows the card or table on the screen by itself and returns the words to say. Your whole reply must be exactly the text in "say", nothing before or after it, and do not call the card script as well. games is a list with one entry for every game asked for: home and away (club names), home_short and away_short (three letters, such as MCI), home_score, away_score and status ("Full time", "74''" or "Half time"). title is the competition (for example Champions League), when is when it was played as you would say it ("last night", "on Saturday"), and scorers is one short line, for a single game only. Never invent a figure. If they say yes to the offer, give the scorers or the other results from your search.'
+description: 'Use this for ANY question about a sports score or result, one game or several. After you have searched the web for the real figures, call this with the games. It shows the card or table on the screen by itself and returns the words to say. Your whole reply must be exactly the text in "say", nothing before or after it, and do not call the card script as well. games is a list with one entry for every game asked for: home and away (club names), home_short and away_short (three letters, such as MCI), home_score, away_score and status ("Full time", "74''" or "Half time"). title is the competition (for example Champions League), when is when it was played as you would say it ("last night", "on Saturday"), and scorers is one short line, for a single game only. Never invent a figure. If they say yes to the offer, give the scorers or the other results from your search.'
 fields:
   games:
     name: Games
@@ -30,8 +30,10 @@ mode: parallel
 max: 5
 sequence:
 - variables:
-    gl: '{{ games if games is list else [games] }}'
-    n: '{{ (games if games is list else [games]) | length }}'
+    gl: >-
+      {%- set g = (games | from_json(default=[])) if games is string else games -%}{{- g if g is list else ([g] if g else []) -}}
+- variables:
+    n: '{{ gl | length }}'
 - variables:
     phrases: >-
       {%- set ns = namespace(l=[]) -%}
