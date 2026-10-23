@@ -7,6 +7,7 @@ with the APK, so there is a record of what shipped. Newest first.
 ## 0.51.1
 
 - Gregg: the vacuum, vacuum and mop, empty dust bin and dry mop icons are redrawn in the disc-and-ring style with the outline of the glyph cut out (the vacuum's pinwheel is the one from the status icon, and the vacuum and mop pinwheel is drawn small with a thinner line to match). The cleaning mode choice shows them as tiles, and the dock buttons and Find Gregg carry their own icons on his card. Dry mop is a water drop with a line through it (Home Assistant's water-off icon, adapted).
+- Security: the house inside the Armed Home shield is the house's own house shape (the app house without its chimney, with a notched door), on the phone and the watch.
 - Cleaning: the tab in the page bar and the title of the Cleaning page show Gregg's resting icon, which never changes, instead of his status (or the older vacuum symbol).
 
 ## 0.51.0
