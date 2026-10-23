@@ -64,6 +64,7 @@ import com.churchdrive.app.ui.AssistantBrand
 import com.churchdrive.app.ui.AssistantGlyph
 import com.churchdrive.app.ui.AssistantGlyphPose
 import com.churchdrive.app.ui.ask
+import com.churchdrive.app.ui.cardBrand
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -198,12 +199,14 @@ private fun TalkFace(model: CliveModel, signedOut: Boolean, onTap: () -> Unit) {
                 Text("Tap to talk", color = Color.White.copy(alpha = 0.9f), fontSize = ui.sp(12f), textAlign = TextAlign.Center, style = SHADOW, modifier = Modifier.at(ui, 30f, 206f, 220f))
             }
             else -> {
-                if (model.heard.isNotEmpty()) Text(model.heard, color = Color(0xFFD5D8F6), fontSize = ui.sp(12f), textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis, style = SHADOW, modifier = Modifier.at(ui, 38f, 32f, 204f))
                 when {
                     model.state == AssistState.Listening ->
                         Text(model.live.ifBlank { "Go ahead…" }, color = Color.White, fontSize = ui.sp(14f), textAlign = TextAlign.Center, maxLines = 3, overflow = TextOverflow.Ellipsis, style = SHADOW, modifier = Modifier.at(ui, 36f, 178f, 208f))
-                    model.state == AssistState.Thinking ->
-                        Text("Thinking…", color = Color(0xFFD5D8F6), fontSize = ui.sp(12f), textAlign = TextAlign.Center, style = SHADOW, modifier = Modifier.at(ui, 30f, 174f, 220f))
+                    model.state == AssistState.Thinking -> {
+                        // What was said stays under the mark, where it was while he listened.
+                        if (model.heard.isNotEmpty()) Text(model.heard, color = Color(0xFFD5D8F6), fontSize = ui.sp(12f), textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis, style = SHADOW, modifier = Modifier.at(ui, 36f, 134f, 208f))
+                        Text("Thinking…", color = Color(0xFFD5D8F6), fontSize = ui.sp(12f), textAlign = TextAlign.Center, style = SHADOW, modifier = Modifier.at(ui, 30f, 184f, 220f))
+                    }
                     model.notice.isNotEmpty() ->
                         Text(model.notice, color = Color(0xFFFFB4AB), fontSize = ui.sp(14f), textAlign = TextAlign.Center, style = SHADOW, modifier = Modifier.at(ui, 34f, 134f, 212f))
                     photoMode -> Text("${model.pictureCaption ?: "Picture"}", color = Color.White, fontSize = ui.sp(11f), fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -212,6 +215,7 @@ private fun TalkFace(model: CliveModel, signedOut: Boolean, onTap: () -> Unit) {
                         Modifier.at(ui, 34f, if (card != null) 122f else 128f, 212f, if (card != null) 112f else 104f).verticalScroll(rememberScrollState()),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
+                        if (model.heard.isNotEmpty()) Text(model.heard, color = Color(0xFFD5D8F6).copy(alpha = 0.85f), fontSize = ui.sp(10f), textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis, style = SHADOW, modifier = Modifier.padding(bottom = ui.d(4f)))
                         if (card != null && symbol != null) CardBlock(card)
                         if (card?.kind != "scores") Text(model.answer, color = Color.White, fontSize = ui.sp(if (card != null) 12f else 14f), textAlign = TextAlign.Center, style = SHADOW, modifier = Modifier.padding(top = if (card != null) ui.d(8f) else ui.d(0f), bottom = ui.d(18f)))
                     }
@@ -233,8 +237,9 @@ private fun TalkFace(model: CliveModel, signedOut: Boolean, onTap: () -> Unit) {
             Box(Modifier.fillMaxSize().graphicsLayer { alpha = 1f - morph; scaleX = 1f - 0.65f * morph; scaleY = 1f - 0.65f * morph; rotationZ = 25f * morph }, contentAlignment = Alignment.Center) {
                 AssistantGlyph(pose, Color.White, markSize, model.level)
             }
+            val logo = card?.let { cardBrand(it) }?.takeIf { hasCompetitionLogo(it) }
             if (symbol != null) Box(Modifier.fillMaxSize().graphicsLayer { alpha = morph; scaleX = 0.35f + 0.65f * morph; scaleY = 0.35f + 0.65f * morph; rotationZ = -25f * (1f - morph) }, contentAlignment = Alignment.Center) {
-                WIcon(symbol, Color.White, markSize)
+                if (logo != null) CompetitionLogo(logo, Color.White, markSize) else WIcon(symbol, Color.White, markSize)
             }
         }
     }

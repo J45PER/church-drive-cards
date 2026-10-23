@@ -4,6 +4,13 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.51.2
+
+- Home Assistant's house icons (home, home outline, out and away, in) everywhere in the app now draw the house's own house, including the page bar's Home tab and the people in the alarm panel.
+- Watch: what you said stays under Clive's mark, where it was while you spoke, instead of jumping above it (once the answer is in it is the first small line of the answer). A card for a football or other competition shows the competition's logo in place of the symbol (Premier League, EFL, the cups and the European competitions).
+- Phone: the Clive page scrolls up to the newest answer on its own, and again when its card arrives a moment later.
+- Clive (house prompt): questions about a league's or competition's next games call the next game script, and any answer to a question, including a simple fact, goes through the answer script so it shows a card instead of only words.
+
 ## 0.51.1
 
 - Gregg: the vacuum, vacuum and mop, empty dust bin and dry mop icons are redrawn in the disc-and-ring style with the outline of the glyph cut out (the vacuum's pinwheel is the one from the status icon, and the vacuum and mop pinwheel is drawn small with a thinner line to match). The cleaning mode choice shows them as tiles, and the dock buttons and Find Gregg carry their own icons on his card. Dry mop is a water drop with a line through it (Home Assistant's water-off icon, adapted).

@@ -529,7 +529,13 @@ private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String)
                 }
             } else {
                 val list = rememberLazyListState()
-                LaunchedEffect(model.messages.size, model.partial, model.state) { list.animateScrollToItem(maxOf(0, model.messages.size)) }
+                // The newest message (and its card, which arrives a moment after its words and changes the height) comes up to the top.
+                val last = model.messages.lastOrNull()
+                LaunchedEffect(model.messages.size, model.partial, model.state, last?.text, last?.show) {
+                    list.animateScrollToItem(maxOf(0, model.messages.size))
+                    kotlinx.coroutines.delay(400)
+                    list.animateScrollToItem(maxOf(0, model.messages.size))
+                }
                 LazyColumn(state = list, modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
                     item { Spacer(Modifier.height(4.dp)) }
                     items(model.messages.size) { i -> ChatLine(model.messages[i]) }
