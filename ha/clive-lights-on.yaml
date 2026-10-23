@@ -1,0 +1,35 @@
+# Script script.clive_lights_on: Which room lights are on (groups and display backlights left out), with brightness. Shows the `lights` card. A copy of the live script (2026-10-23).
+alias: Which lights are on
+description: Use this for ANY question about which lights are on, whether any lights are left on, or what the lights are doing. It shows the card on the screen by itself and returns the words to say. Your
+  whole reply is exactly the text in "say", nothing before or after it, and do not call the card script as well. If they say yes to the offer, give the details from "more".
+icon: mdi:lightbulb-group
+mode: parallel
+max: 5
+sequence:
+- variables:
+    lit: '{%- set ls = states.light | selectattr(''state'', ''eq'', ''on'') | rejectattr(''attributes.entity_id'', ''defined'') | rejectattr(''entity_id'', ''search'', ''backlight|display|purifier|night_light'')
+      | list -%}{%- set ns = namespace(l=[]) -%}{%- for s in ls -%}{%- set b = s.attributes.get(''brightness'') -%}{%- set ns.l = ns.l + [{''name'': s.name, ''value'': ((((b | int(0)) / 2.55) | round(0)
+      | int) ~ ''%'') if b is not none else '''', ''marker'': ''dot'', ''tone'': ''amber''}] -%}{%- endfor -%}{{- ns.l -}}'
+- variables:
+    n: '{{ lit | length }}'
+    names: '{{ lit | map(attribute=''name'') | list }}'
+    rows: '{{ lit[:8] }}'
+- variables:
+    say: '{% if n == 0 %}All the lights are off.{% elif n <= 3 %}{{ names | join('', '') }} {{ ''is'' if n == 1 else ''are'' }} on.{% else %}{{ n }} lights are on.{% endif %} Shall I turn {{ ''any'' if
+      n > 0 else ''some'' }} off?'
+    card:
+      title: '{{ (n ~ '' on'') if n > 0 else ''All off'' }}'
+      tone: amber
+      rows: '{{ rows }}'
+      foot: '{{ (''and '' ~ (n - 8) ~ '' more'') if n > 8 else '''' }}'
+- action: script.clive_show_card
+  data:
+    kind: lights
+    data: '{{ card }}'
+- variables:
+    result:
+      say: '{{ say }}'
+      more: 'On: {{ names | join('', '') if n > 0 else ''nothing'' }}.'
+      next: Your whole reply is exactly the text in say. The card is already on the screen.
+- response_variable: result
+  stop: Shown

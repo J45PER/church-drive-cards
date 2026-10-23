@@ -1,0 +1,53 @@
+# Script script.clive_energy_now: The price of electricity now (Octopus Go rates), the next rate change, the house's use and spend today. Shows the `energy` card and returns `say` and `more`. A copy of the live script (2026-10-23).
+alias: Electricity price now
+description: Use this for ANY question about the price of electricity, the current rate, whether it is cheap or dear right now, when the cheap rate starts, or what the house is using. It shows the card
+  on the screen by itself and returns the words to say. Your whole reply is exactly the text in "say", nothing before or after it, and do not call the card script as well. If they say yes to the offer,
+  give the details from "more".
+icon: mdi:lightning-bolt
+mode: parallel
+max: 5
+sequence:
+- variables:
+    cur: '{{ states(''sensor.octopus_energy_electricity_24l3478610_1160001231179_current_rate'') | float(0) }}'
+    nxt: '{{ states(''sensor.octopus_energy_electricity_24l3478610_1160001231179_next_rate'') | float(0) }}'
+    hi: '{{ state_attr(''sensor.octopus_energy_electricity_24l3478610_1160001231179_current_rate'', ''current_day_max_rate'') | float(0) }}'
+    lo: '{{ state_attr(''sensor.octopus_energy_electricity_24l3478610_1160001231179_current_rate'', ''current_day_min_rate'') | float(0) }}'
+    ends: '{{ (as_datetime(state_attr(''sensor.octopus_energy_electricity_24l3478610_1160001231179_current_rate'', ''end'')) | as_local).strftime(''%H:%M'') if state_attr(''sensor.octopus_energy_electricity_24l3478610_1160001231179_current_rate'',
+      ''end'') else '''' }}'
+    watts: '{{ states(''sensor.octopus_energy_electricity_24l3478610_1160001231179_current_demand'') | float(0) }}'
+    spent: '{{ states(''sensor.octopus_energy_electricity_24l3478610_1160001231179_current_accumulative_cost'') | float(0) }}'
+- variables:
+    pence: '{{ (cur * 100) | round(1) }}'
+    next_pence: '{{ (nxt * 100) | round(1) }}'
+    cheap: '{{ cur * 100 < 10 }}'
+    next_cheaper: '{{ nxt < cur }}'
+    use: '{{ ((watts / 1000) | round(1) ~ '' kW'') if watts >= 1000 else ((watts | round(0) | int) ~ '' W'') }}'
+- variables:
+    say: Electricity is {{ pence }} pence a kilowatt hour right now{% if ends and nxt > 0 %}, and from {{ ends }} it is {{ next_pence }} pence{% endif %}. {{ 'Shall I tell you what the house is using?'
+      if not cheap else 'Shall I tell you when it goes back up?' }}
+    card:
+      big: '{{ pence }}p'
+      sub: per kWh, now
+      pill: '{{ ''Cheap'' if cheap else ''Dear'' }}'
+      pill_tone: '{{ ''green'' if cheap else ''amber'' }}'
+      tone: amber
+      rows:
+      - name: Using now
+        value: '{{ use }}'
+      - name: '{{ ''Back up'' if next_cheaper == false else ''Cheaper'' }} at {{ ends }}'
+        value: '{{ next_pence }}p'
+      - name: Spent today
+        value: £{{ '%.2f' | format(spent) }}
+      foot: Today {{ (lo * 100) | round(1) }}p to {{ (hi * 100) | round(1) }}p
+- action: script.clive_show_card
+  data:
+    kind: energy
+    data: '{{ card }}'
+- variables:
+    result:
+      say: '{{ say }}'
+      more: Rate now {{ pence }}p per kWh until {{ ends }}, then {{ next_pence }}p. The house is using {{ use }} and has spent £{{ '%.2f' | format(spent) }} on electricity today. The cheapest rate today
+        is {{ (lo * 100) | round(1) }}p and the dearest {{ (hi * 100) | round(1) }}p.
+      next: Your whole reply is exactly the text in say. The card is already on the screen.
+- response_variable: result
+  stop: Shown

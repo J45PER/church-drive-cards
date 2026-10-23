@@ -1,0 +1,58 @@
+# Script script.clive_my_tasks: Reads a priorities to-do list (todo.priorities_<person>). Shows the `tasks` card. A copy of the live script (2026-10-23).
+alias: Read the to-do list
+description: Use this for ANY question about what is on the to-do list, what someone has to do, their jobs or priorities. It shows the card on the screen by itself and returns the words to say. Your whole
+  reply is exactly the text in "say", nothing before or after it, and do not call the card script as well. person is Everyone, Jamie, Hayley, Diane or Ian (Everyone if nobody is named). To ADD a task do
+  not use this. If they say yes to the offer, give the details from "more".
+fields:
+  person:
+    name: Person
+    description: Everyone, Jamie, Hayley, Diane or Ian.
+    required: false
+    selector:
+      select:
+        options:
+        - Everyone
+        - Jamie
+        - Hayley
+        - Diane
+        - Ian
+icon: mdi:format-list-checks
+mode: parallel
+max: 5
+sequence:
+- variables:
+    who: '{{ (person | default(''Everyone'', true)) | string | capitalize }}'
+    list_id: '{{ ''todo.priorities_'' ~ ((person | default(''everyone'', true)) | string | lower) }}'
+- action: todo.get_items
+  target:
+    entity_id: '{{ list_id }}'
+  data:
+    status: needs_action
+  response_variable: got
+- variables:
+    items: '{{ got[list_id][''items''] | list }}'
+    n: '{{ got[list_id][''items''] | length }}'
+- variables:
+    rows: '{%- set ns = namespace(l=[]) -%}{%- for i in items[:5] -%}{%- set ns.l = ns.l + [{''name'': i.summary, ''detail'': ((''Due '' ~ i.due) if i.due is defined and i.due else ''''), ''marker'': ''todo''}]
+      -%}{%- endfor -%}{{- ns.l -}}'
+    names: '{{ items | map(attribute=''summary'') | list }}'
+- variables:
+    say: '{% if n == 0 %}{{ who }} has nothing on the to-do list.{% elif n <= 3 %}{{ who }} has {{ names | join('', '') }} to do.{% else %}{{ who }} has {{ n }} things to do, starting with {{ names[:3]
+      | join('', '') }}.{% endif %} {{ ''Shall I read the rest?'' if n > 3 else ''Shall I add something?'' }}'
+    card:
+      title: '{{ n }} to do'
+      sub: '{{ who }}'
+      tone: purple
+      rows: '{{ rows }}'
+      foot: '{{ (''and '' ~ (n - 5) ~ '' more'') if n > 5 else '''' }}'
+- action: script.clive_show_card
+  data:
+    kind: tasks
+    data: '{{ card }}'
+- variables:
+    result:
+      say: '{{ say }}'
+      more: '{{ who }}''s list: {{ names | join('', '') if n > 0 else ''nothing'' }}.'
+      next: Your whole reply is exactly the text in say. The card is already on the screen.
+- response_variable: result
+  stop: Shown

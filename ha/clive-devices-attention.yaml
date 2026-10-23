@@ -1,0 +1,34 @@
+# Script script.clive_devices_attention: Home devices with a low battery (phones, watches and the car left out). Shows the `devices` card. Offline devices are not checked yet. A copy of the live script (2026-10-23).
+alias: Devices needing attention
+description: Use this for ANY question about which devices need attention, which batteries are low, what has stopped working or gone offline. It shows the card on the screen by itself and returns the words
+  to say. Your whole reply is exactly the text in "say", nothing before or after it, and do not call the card script as well. If they say yes to the offer, give the details from "more".
+icon: mdi:alert-circle
+mode: parallel
+max: 5
+sequence:
+- variables:
+    rows: '{%- set ns = namespace(l=[]) -%}{%- for s in states.binary_sensor | selectattr(''attributes.device_class'', ''defined'') | selectattr(''attributes.device_class'', ''eq'', ''battery'') | selectattr(''state'',
+      ''eq'', ''on'') | rejectattr(''entity_id'', ''search'', ''phone|iphone|pixel|watch|tablet|astra'') -%}{%- set ns.l = ns.l + [{''name'': (s.name | replace('' Battery low'', '''') | replace('' battery
+      low'', '''')), ''detail'': ''Battery low'', ''marker'': ''warn''}] -%}{%- endfor -%}{{- ns.l -}}'
+- variables:
+    n: '{{ rows | length }}'
+    names: '{{ rows | map(attribute=''name'') | list }}'
+- variables:
+    say: '{% if n == 0 %}Nothing needs attention: every battery is fine.{% elif n <= 3 %}{{ names | join('', '') }} {{ ''has'' if n == 1 else ''have'' }} a low battery.{% else %}{{ n }} devices have low
+      batteries, including {{ names[:3] | join('', '') }}.{% endif %} Shall I check for anything offline?'
+    card:
+      title: '{{ (n ~ '' need attention'') if n > 0 else ''All fine'' }}'
+      tone: '{{ ''amber'' if n > 0 else ''green'' }}'
+      rows: '{{ rows[:6] }}'
+      foot: '{{ (''and '' ~ (n - 6) ~ '' more'') if n > 6 else '''' }}'
+- action: script.clive_show_card
+  data:
+    kind: devices
+    data: '{{ card }}'
+- variables:
+    result:
+      say: '{{ say }}'
+      more: 'Low batteries: {{ names | join('', '') if n > 0 else ''none'' }}.'
+      next: Your whole reply is exactly the text in say. The card is already on the screen.
+- response_variable: result
+  stop: Shown
