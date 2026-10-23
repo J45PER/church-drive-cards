@@ -188,6 +188,7 @@ class CliveModel(private val context: Context, val settings: CliveSettings) {
     }
 
     fun listen() {
+        restTask?.let { main.removeCallbacks(it) }
         stopAudio()
         closeSubscription()
         heard = ""
@@ -203,6 +204,7 @@ class CliveModel(private val context: Context, val settings: CliveSettings) {
     fun send(text: String) {
         val sentence = text.trim()
         if (sentence.isEmpty()) return
+        restTask?.let { main.removeCallbacks(it) }
         stopAudio()
         closeSubscription()
         speech.stop()
@@ -253,6 +255,9 @@ class CliveModel(private val context: Context, val settings: CliveSettings) {
     /** The answer is on screen and nothing is speaking: idle, or (if asked to) listening again for a follow-up. */
     private fun finishedAnswer() {
         state = AssistState.Idle
+        // With no follow-up to listen for, the result stays for a few seconds and then the screen goes back to idle, ready for a new question
+        // (the conversation carries on underneath, so a later question is still a follow-up).
+        if (!(settings.follow && answer.isNotBlank())) rest(3500)
         if (settings.follow && answer.isNotBlank()) main.postDelayed({
             if (state == AssistState.Idle && speech.available && speech.hasPermission()) {
                 live = ""
@@ -260,6 +265,24 @@ class CliveModel(private val context: Context, val settings: CliveSettings) {
                 speech.start()
             }
         }, 600)
+    }
+
+    /** Clears the result from the screen after [ms] if nothing has started since. */
+    private var restTask: Runnable? = null
+
+    private fun rest(ms: Long) {
+        restTask?.let { main.removeCallbacks(it) }
+        val task = Runnable {
+            if (state == AssistState.Idle) {
+                heard = ""
+                answer = ""
+                notice = ""
+                card = null
+                picture = null
+            }
+        }
+        restTask = task
+        main.postDelayed(task, ms)
     }
 
     private fun buzz() {

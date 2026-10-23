@@ -54,8 +54,8 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     var wakeWord by mutableStateOf<String?>(null)
         private set
 
-    /** The assistant's name, from the wake word ("Clive"), or empty. */
-    val name: String get() = assistantName(wakeWord)
+    /** The assistant's name: the house's own (Church Drive > Configure > Assistant name), else the wake word's, or empty. */
+    val name: String get() = AssistantBrand.name.ifBlank { assistantName(wakeWord) }
 
     val messages = mutableStateListOf<AssistMessage>()
 

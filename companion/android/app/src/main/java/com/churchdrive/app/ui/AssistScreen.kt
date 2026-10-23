@@ -535,7 +535,7 @@ private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String)
                     items(model.messages.size) { i -> ChatLine(model.messages[i]) }
                     item {
                         if (model.partial.isNotEmpty()) ChatLine(AssistMessage(true, model.partial), faded = true)
-                        if (model.state == AssistState.Thinking) ThinkingDots()
+                        if (model.state == AssistState.Thinking) PendingCard()
                         Notice(model, onTask)
                     }
                 }
@@ -626,6 +626,21 @@ private fun ChatLine(message: AssistMessage, faded: Boolean = false) {
     }
 }
 
+/**
+ * What shows the moment a question has been asked: an empty card with his thinking mark in the middle. The answer's card (or words) takes
+ * its place a moment later, so the screen is never blank while he works.
+ */
+@Composable
+private fun PendingCard() {
+    val scheme = MaterialTheme.colorScheme
+    Box(
+        modifier = Modifier.fillMaxWidth(0.62f).widthIn(max = 320.dp).height(150.dp)
+            .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 6.dp, bottomEnd = 20.dp))
+            .background(scheme.surfaceContainerHigh),
+        contentAlignment = Alignment.Center,
+    ) { AssistantGlyph(AssistantGlyphPose.Thinking, scheme.onSurfaceVariant, 64.dp) }
+}
+
 /** Clive's words in a speech bubble: the tail corner is bottom-left, the mirror of the user's gradient bubble. */
 @Composable
 private fun AssistantBubble(text: String, show: AssistantShow? = null) {
@@ -638,10 +653,13 @@ private fun AssistantBubble(text: String, show: AssistantShow? = null) {
     val pictures by androidx.compose.runtime.produceState(show?.card?.let { !cardHasPictures(it) } ?: true, show?.card) {
         show?.card?.let { if (cardHasPictures(it)) { preloadCardImages(context, it); value = true } }
     }
-    if (!pictures) { ThinkingDots(); return }
+    if (!pictures) { PendingCard(); return }
+    val arrive = remember { androidx.compose.animation.core.Animatable(if (show?.card != null) 0f else 1f) }
+    LaunchedEffect(Unit) { arrive.animateTo(1f, tween(380)) }
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.widthIn(max = 320.dp)
+            .graphicsLayer { alpha = arrive.value; val k = 0.92f + 0.08f * arrive.value; scaleX = k; scaleY = k }
             .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 6.dp, bottomEnd = 20.dp))
             .background(scheme.surfaceContainerHigh)
             .padding(horizontal = 16.dp, vertical = 11.dp),
