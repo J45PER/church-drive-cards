@@ -1,6 +1,8 @@
-# Script script.clive_vacuum: Gregg the robot vacuum: start, pause, stop and status only. vacuum.gregg itself is NOT exposed to Assist, so these are Clive's only controls. A copy of the live script.
+# Script script.clive_vacuum: Gregg the robot vacuum. Exposed to Assist. Start, Pause and Stop send a command; Status shows his status card (kind gregg, through clive_show_card) and returns `say`, the two sentences to speak. vacuum.gregg itself is NOT exposed to Assist. A copy of the live script (2026-10-23).
 alias: Robot vacuum (Gregg)
-description: 'Control Gregg the robot vacuum: Start (begin cleaning), Pause (pause where he is), Stop (stop cleaning), or Status (what he is doing, battery, and any error). Start/Pause/Stop send a command; his state can take a few seconds to update, so say the command was sent rather than that he is already doing it. This is all Clive can do with Gregg.'
+description: 'Use this for ANY question about Gregg, the robot vacuum, and to control him. action Status: how he is (what he is doing, battery, last clean). It shows his status card on the screen by itself
+  and returns the words to say: your whole reply is exactly the text in "say", nothing before or after it, and do not call the card script as well. action Start (begin cleaning), Pause (pause where he is)
+  or Stop (stop cleaning) send a command; his state can take a few seconds to update, so say the command was sent rather than that he is already doing it. This is all Clive can do with Gregg.'
 fields:
   action:
     description: Start, Pause, Stop or Status.
@@ -39,7 +41,40 @@ sequence:
     - action: vacuum.stop
       target:
         entity_id: vacuum.gregg
+- if:
+  - condition: template
+    value_template: '{{ action == ''Status'' }}'
+  then:
+  - variables:
+      st: '{{ states(''vacuum.gregg'') }}'
+      level: '{{ states(''sensor.gregg_battery'') | float(none) }}'
+      area: '{{ states(''sensor.gregg_cleaning_area'') | float(none) }}'
+      mins: '{{ states(''sensor.gregg_cleaning_time'') | float(none) }}'
+      err: '{{ states(''sensor.gregg_error_message'') | default('''', true) }}'
+  - variables:
+      say: '{%- if st == ''cleaning'' -%}Gregg is cleaning{{ '' and the battery is at '' ~ (level | round(0) | int) ~ ''%'' if level is number else '''' }}. Shall I send him home?{%- elif st == ''paused''
+        -%}Gregg is paused where he stopped. Shall I carry on?{%- elif st == ''returning'' -%}Gregg is heading back to his dock. Anything else?{%- elif st == ''error'' -%}Gregg needs help{{ '': '' ~ err
+        if err else '''' }}. Anything else?{%- elif st == ''docked'' -%}Gregg is docked{{ '' with a full battery'' if level is number and level >= 100 else ('' and charging at '' ~ (level | round(0) | int)
+        ~ ''%'' if level is number else '''') }}{{ '' and his last clean covered '' ~ (area | round(0) | int) ~ '' square metres'' if area is number and area > 0 else '''' }}. Shall I send him out?{%- else
+        -%}Gregg is {{ st }}. Anything else?{%- endif -%}'
+  - action: script.clive_show_card
+    data:
+      kind: gregg
+      data:
+        name: Gregg
+        state: '{{ st }}'
+        battery: '{{ level }}'
+        area: '{{ area if area is number and area > 0 else none }}'
+        minutes: '{{ mins if mins is number and mins > 0 else none }}'
+        detail: '{{ err }}'
+  - variables:
+      result:
+        say: '{{ say }}'
+        next: Your whole reply is exactly the text in say. The card is already on the screen.
+  - response_variable: result
+    stop: Shown
 - variables:
-    result: '{{ {''action'': action, ''command_sent'': action != ''Status'', ''state_when_checked'': states(''vacuum.gregg''), ''battery_percent'': states(''sensor.gregg_battery''), ''task_status'': states(''sensor.gregg_task_status''), ''error'': states(''sensor.gregg_error_message'') or ''none'', ''last_clean_area_m2'': states(''sensor.gregg_cleaning_area''), ''note'': ''State can take a few seconds to reflect a command that was just sent.''} }}'
+    result: '{{ {''action'': action, ''command_sent'': true, ''state_when_checked'': states(''vacuum.gregg''), ''battery_percent'': states(''sensor.gregg_battery''), ''note'': ''State can take a few seconds
+      to reflect a command that was just sent.''} }}'
 - response_variable: result
   stop: done

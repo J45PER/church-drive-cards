@@ -1,0 +1,41 @@
+# Script script.clive_air_quality: the air in the house. Exposed to Assist. Shows the air card (kind air, through clive_show_card: the home's climate score, PM2.5 from the bedroom purifier, humidity, purifier and fan) and returns `say` plus `more` (the carbon monoxide alarm) for the follow-up. A copy of the live script (2026-10-23).
+alias: Air quality
+description: Use this for ANY question about the air quality or how clean the air is in the house, the purifier, or particles. It shows the air card on the screen by itself and returns the words to say.
+  Your whole reply is exactly the text in "say", nothing before or after it, and do not call the card script as well. If they say yes to the offer, tell them from "more" in one natural sentence.
+icon: mdi:air-filter
+mode: parallel
+max: 5
+sequence:
+- variables:
+    score: '{{ states(''sensor.home_climate_quality'') | float(none) }}'
+    pm25: '{{ states(''sensor.hayleys_bedroom_air_purifier_pm2_5'') | float(none) }}'
+    hum: '{{ states(''sensor.hayleys_bedroom_master_bedroom_climate_sensor_humidity'') | float(none) }}'
+    mode: '{{ state_attr(''fan.hayleys_bedroom_air_purifier'', ''preset_mode'') | default('''', true) | string | capitalize }}'
+- variables:
+    word: '{%- if score is not number -%}Not known{%- elif score >= 85 -%}Excellent{%- elif score >= 70 -%}Good{%- elif score >= 50 -%}Fair{%- elif score >= 30 -%}Poor{%- else -%}Bad{%- endif -%}'
+    purifier: '{{ (''Off'' if is_state(''fan.hayleys_bedroom_air_purifier'', ''off'') else (mode if mode else ''On'')) if states(''fan.hayleys_bedroom_air_purifier'') not in [''unavailable'', ''unknown'']
+      else '''' }}'
+    fan: '{{ (''Off'' if is_state(''fan.hayleys_bedroom_bedroom_fan'', ''off'') else ''On'') if states(''fan.hayleys_bedroom_bedroom_fan'') not in [''unavailable'', ''unknown''] else '''' }}'
+- variables:
+    say: '{%- if score is number -%}The air in the house is {{ word | lower }}, scoring {{ score | round(0) | int }} out of 100{{ '' with PM2.5 at '' ~ (pm25 | round(0) | int) ~ '' micrograms'' if pm25
+      is number else '''' }}. Shall I check the carbon monoxide alarms too?{%- else -%}I can''t read the air quality right now. Anything else?{%- endif -%}'
+    more: '{%- if is_state(''binary_sensor.carbon_monoxide_alarm_alarm_status'', ''off'') -%}The carbon monoxide alarm is clear.{%- elif is_state(''binary_sensor.carbon_monoxide_alarm_alarm_status'', ''on'')
+      -%}The carbon monoxide alarm is sounding, so open the windows and leave the house.{%- else -%}I can''t read the carbon monoxide alarm right now.{%- endif -%}'
+- action: script.clive_show_card
+  data:
+    kind: air
+    data:
+      score: '{{ score }}'
+      word: '{{ word if word != ''Not known'' else ''Air quality'' }}'
+      pm25: '{{ pm25 }}'
+      humidity: '{{ hum }}'
+      purifier: '{{ purifier }}'
+      fan: '{{ fan }}'
+      place: Hayley's bedroom
+- variables:
+    result:
+      say: '{{ say }}'
+      more: '{{ more }}'
+      next: Your whole reply is exactly the text in say. The card is already on the screen.
+- response_variable: result
+  stop: Shown
