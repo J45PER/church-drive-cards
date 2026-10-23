@@ -208,7 +208,10 @@ object SimpleIcons {
     }
 
     /** Names as the services call themselves, to the Simple Icons name. */
-    private val ALIASES = mapOf("chromecast" to "googlecast", "itvhub" to "itvx", "hue" to "philipshue", "ytmusic" to "youtubemusic")
+    private val ALIASES = mapOf(
+        "chromecast" to "googlecast", "itvhub" to "itvx", "hue" to "philipshue", "ytmusic" to "youtubemusic",
+        "mercedesbenz" to "mercedes", "airplay" to "airplayvideo", "amazonprimevideo" to "primevideo", "bbcsounds" to "bbc",
+    )
 
     /** The Simple Icons name for a service's name: "YouTube Music" is youtubemusic, "Disney+" is disneyplus. */
     fun slugFor(name: String): String {

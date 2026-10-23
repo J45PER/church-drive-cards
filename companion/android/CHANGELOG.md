@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.50.1
+
+- Clive: cards carry the logo of the competition (Premier League, EFL Championship, League One and Two with one shared mark, Carabao Cup, FA Cup, Scottish Premiership, Champions, Europa and Conference Leagues, Nations League), of Disney+, Octopus Energy and Cupra, and the new Simple Icons logos (Prime Video, BBC iPlayer, Amazon Music, Mercedes-Benz, Land Rover), instead of the plain sport or car icon. Our own logos are in `assets/own-logos.json` and show through `ol:` icons.
+- 279 more brand logos in the Simple Icons set. AirPlay, Mercedes-Benz and Prime Video now find their logos by name.
+
 ## 0.50.0
 
 - Clive: every card has its icon in the same place at the same size. The thinking mark turns into it (a crossfade, not yet a shape morph) and the figures open out underneath, on the phone, and the watch's mark no longer shifts when the card arrives.
