@@ -13,6 +13,9 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # Uploading to Google Play needs the release service account's key (a repository secret); without it the upload steps are skipped.
+      HAS_PLAY: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
     defaults:
       run:
         working-directory: companion/android
@@ -89,6 +92,7 @@ jobs:
           echo "todo=$todo" >> "$GITHUB_OUTPUT"
           echo "Phone and watch apps changed: $main. To-Do app changed: $todo."
       - name: Publish the phone and watch apps
+        id: publish_main
         if: github.event_name == 'push' && steps.changed.outputs.main == 'true'
         working-directory: .
         env:
@@ -116,6 +120,9 @@ jobs:
             for f in church-drive.apk church-drive-wear.apk church-drive-manager.aab church-drive-manager-wear.aab; do
               cp "$f" "${f%.*}-${version}-b${GITHUB_RUN_NUMBER}.${f##*.}"
             done
+            echo "new=true" >> "$GITHUB_OUTPUT"
+            mkdir -p play-notes-main
+            printf '%s' "${notes:-Version ${version}.}" | sed 's/^- //' | head -c 480 > play-notes-main/whatsnew-en-GB
             gh release create "android-v${version}" \
               "church-drive-${version}-b${GITHUB_RUN_NUMBER}.apk" "church-drive-wear-${version}-b${GITHUB_RUN_NUMBER}.apk" \
               "church-drive-manager-${version}-b${GITHUB_RUN_NUMBER}.aab" "church-drive-manager-wear-${version}-b${GITHUB_RUN_NUMBER}.aab" \
@@ -124,6 +131,7 @@ jobs:
               --notes "${notes:-Version ${version}.} (Build ${GITHUB_RUN_NUMBER}, commit ${GITHUB_SHA::7}.)"
           fi
       - name: Publish Church Drive To-Do
+        id: publish_todo
         if: github.event_name == 'push' && steps.changed.outputs.todo == 'true'
         working-directory: .
         env:
@@ -143,8 +151,34 @@ jobs:
             for f in church-drive-todo.apk church-drive-todo.aab; do
               cp "$f" "${f%.*}-${version}-b${GITHUB_RUN_NUMBER}.${f##*.}"
             done
+            echo "new=true" >> "$GITHUB_OUTPUT"
+            mkdir -p play-notes-todo
+            printf '%s' "${notes:-Version ${version}.}" | sed 's/^- //' | head -c 480 > play-notes-todo/whatsnew-en-GB
             gh release create "todo-v${version}" "church-drive-todo-${version}-b${GITHUB_RUN_NUMBER}.apk" "church-drive-todo-${version}-b${GITHUB_RUN_NUMBER}.aab" --latest=false \
               --target "$GITHUB_SHA" \
               --title "Church Drive To-Do ${version}" \
               --notes "${notes:-Version ${version}.} (Build ${GITHUB_RUN_NUMBER}, commit ${GITHUB_SHA::7}.)"
           fi
+      # Each new version goes to Google Play's internal testing track, once, the first time a build has that version. Promoting it to
+      # production stays a button in Play Console. The phone app and the watch app are one listing (one package name, two form factors),
+      # so they go up together in one release; their version codes differ (the watch's is the build number x 10 + 1).
+      - name: Upload the phone and watch apps to Google Play (internal testing)
+        if: github.event_name == 'push' && steps.publish_main.outputs.new == 'true' && env.HAS_PLAY == 'true'
+        uses: r0adkll/upload-google-play@v1.1.3
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.churchdrive.manager
+          releaseFiles: church-drive-manager.aab,church-drive-manager-wear.aab
+          track: internal
+          status: completed
+          whatsNewDirectory: play-notes-main
+      - name: Upload Church Drive To-Do to Google Play (internal testing)
+        if: github.event_name == 'push' && steps.publish_todo.outputs.new == 'true' && env.HAS_PLAY == 'true'
+        uses: r0adkll/upload-google-play@v1.1.3
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.churchdrive.todo
+          releaseFiles: church-drive-todo.aab
+          track: internal
+          status: completed
+          whatsNewDirectory: play-notes-todo
