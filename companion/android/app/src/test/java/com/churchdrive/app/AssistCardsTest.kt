@@ -2,7 +2,11 @@ package com.churchdrive.app
 
 import androidx.compose.ui.graphics.Color
 import com.churchdrive.app.ui.Tone
+import com.churchdrive.app.ui.cardBrand
+import com.churchdrive.app.ui.cardIcon
+import com.churchdrive.app.ui.cardRows
 import com.churchdrive.app.ui.carBatteryColour
+import com.churchdrive.app.ui.sportIcon
 import com.churchdrive.app.ui.climatePill
 import com.churchdrive.app.ui.parseAssistantCard
 import com.churchdrive.app.ui.personPill
@@ -71,5 +75,30 @@ class AssistCardsTest {
         for (slug in listOf("spotify", "netflix", "youtube", "plex", "applemusic", "googlecast", "homeassistant")) {
             assertEquals(slug, true, set.optString(slug).isNotBlank())
         }
+    }
+
+    @Test fun everyNewCardKindIsAccepted() {
+        for (k in listOf("energy", "secure", "doors", "tasks", "devices", "lights", "heat", "shop", "event", "reminder", "media", "answer"))
+            assertNotNull(parseAssistantCard(JSONObject("""{"kind":"$k","title":"x"}""")))
+    }
+
+    @Test fun sportsShowTheirOwnIcon() {
+        assertEquals("mdi:soccer", sportIcon(""))
+        assertEquals("mdi:tennis-ball", sportIcon("Tennis"))
+        assertEquals("mdi:golf", sportIcon("golf"))
+        for (kind in listOf("score", "scores", "fixture")) assertEquals("mdi:tennis-ball", cardIcon(parseAssistantCard(JSONObject("""{"kind":"$kind","sport":"tennis"}"""))!!))
+    }
+
+    @Test fun logosStandInForIconsWhenTheHouseNamesThem() {
+        assertEquals("Spotify", cardBrand(parseAssistantCard(JSONObject("""{"kind":"music","app":"Spotify"}"""))!!))
+        assertEquals("Vauxhall", cardBrand(parseAssistantCard(JSONObject("""{"kind":"car","name":"Vauxhall Astra"}"""))!!))
+        assertEquals("premierleague", cardBrand(parseAssistantCard(JSONObject("""{"kind":"fixture","comp":"Premier League"}"""))!!))
+        assertNull(cardBrand(parseAssistantCard(JSONObject("""{"kind":"weather"}"""))!!))
+    }
+
+    @Test fun listCardsKeepTheirRows() {
+        val card = parseAssistantCard(JSONObject("""{"kind":"doors","rows":[{"name":"Back door","pill":"Open","tone":"amber"},{"name":"Front door"}]}"""))!!
+        assertEquals(listOf("Back door", "Front door"), cardRows(card.fields).map { it.name })
+        assertEquals("amber", cardRows(card.fields)[0].tone)
     }
 }

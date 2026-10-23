@@ -14,40 +14,20 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.wear.compose.material.Text
 import com.churchdrive.app.ui.AssistantCard
+import com.churchdrive.app.ui.cardIcon
+import com.churchdrive.app.ui.cardRows
 import org.json.JSONObject
 
 private val SOFT = Color(0xFFE8EAFF)
 
-/** The symbol Clive's mark turns into for a card, or null for a card with none. */
+/** The cards drawn from the shared layout (a big figure, a title, a line, a few rows). */
+private val GENERIC_KINDS = setOf("energy", "secure", "doors", "tasks", "devices", "lights", "heat", "shop", "event", "reminder", "media", "answer")
+
+/** The symbol Clive's mark turns into for a card, or null for a card the watch has no layout for. */
 fun cardSymbol(card: AssistantCard?): String? {
     card ?: return null
-    return when (card.kind) {
-        "weather" -> when (card.fields.optString("symbol").lowercase().replace('_', '-')) {
-            "sunny", "clear", "clear-day" -> "weather-sunny"
-            "partly-cloudy", "partlycloudy" -> "weather-partly-cloudy"
-            "cloudy" -> "weather-cloudy"
-            "rainy", "rain" -> "weather-rainy"
-            "pouring" -> "weather-pouring"
-            "snowy", "snow" -> "weather-snowy"
-            "lightning", "lightning-rainy" -> "weather-lightning"
-            "fog", "foggy" -> "weather-fog"
-            "night", "clear-night" -> "weather-night"
-            else -> "weather-partly-cloudy"
-        }
-        "score" -> when (card.fields.optString("sport").lowercase()) {
-            "basketball" -> "basketball"
-            "tennis" -> "tennis"
-            "cricket" -> "cricket"
-            "rugby" -> "rugby"
-            "baseball" -> "baseball"
-            "hockey" -> "hockey-puck"
-            else -> "soccer"
-        }
-        "scores" -> "soccer"
-        "fixture" -> "calendar-clock"
-        "music" -> "music-note"
-        else -> null
-    }
+    if (card.kind !in GENERIC_KINDS && card.kind !in setOf("weather", "score", "scores", "fixture", "music")) return null
+    return cardIcon(card).removePrefix("mdi:").takeIf { hasWatchIcon(it) } ?: "message-text"
 }
 
 /** The glow's colours for a card: its own `palette` when the house sent one, else the weather's or a sport's, else Clive's. */
@@ -145,6 +125,12 @@ fun CardBlock(card: AssistantCard) {
             Text(f.optString("artist"), color = SOFT, fontSize = ui.sp(12f), maxLines = 1, overflow = TextOverflow.Ellipsis)
             val device = f.optString("device")
             if (device.isNotBlank()) Text("Playing on $device", color = SOFT.copy(alpha = 0.85f), fontSize = ui.sp(11f), modifier = Modifier.padding(top = ui.d(4f)), maxLines = 1)
+        }
+        in GENERIC_KINDS -> Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            if (f.optString("big").isNotBlank()) Text(f.optString("big"), color = Color.White, fontSize = ui.sp(30f), fontWeight = FontWeight.Bold, maxLines = 1)
+            if (f.optString("title").isNotBlank()) Text(f.optString("title"), color = Color.White, fontSize = ui.sp(15f), fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+            if (f.optString("sub").isNotBlank()) Text(f.optString("sub"), color = SOFT, fontSize = ui.sp(12f), maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+            for (r in cardRows(f).take(3)) Text(listOf(r.name, r.value.ifBlank { r.pill }).filter { it.isNotBlank() }.joinToString(" · "), color = SOFT.copy(alpha = 0.9f), fontSize = ui.sp(11f), maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }

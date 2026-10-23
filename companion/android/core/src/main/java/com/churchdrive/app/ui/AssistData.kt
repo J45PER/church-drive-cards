@@ -20,7 +20,104 @@ data class AssistantShow(val image: String?, val link: String?, val linkLabel: S
 data class AssistantCard(val kind: String, val fields: org.json.JSONObject)
 
 /** The kinds of card the screens know how to draw. */
-val ASSISTANT_CARD_KINDS = setOf("weather", "score", "scores", "fixture", "music", "people", "done", "car", "climate", "gregg", "air")
+val ASSISTANT_CARD_KINDS = setOf(
+    "weather", "score", "scores", "fixture", "music", "people", "done", "car", "climate", "gregg", "air",
+    // Cards built from one shared layout (a big figure, a title, rows, a footer): the house sends `big`, `title`, `sub`, `pill`, `rows` and `foot`.
+    "energy", "secure", "doors", "tasks", "devices", "lights", "heat", "shop", "event", "reminder", "media", "answer",
+)
+
+/** The Material icon for a card's weather symbol ("partlycloudy" is the partly cloudy sun and cloud). */
+fun weatherIconName(symbol: String): String = when (symbol.lowercase().replace('_', '-')) {
+    "sunny", "clear", "clear-day" -> "mdi:weather-sunny"
+    "cloudy" -> "mdi:weather-cloudy"
+    "rainy", "rain" -> "mdi:weather-rainy"
+    "pouring" -> "mdi:weather-pouring"
+    "snowy", "snow" -> "mdi:weather-snowy"
+    "lightning", "lightning-rainy" -> "mdi:weather-lightning"
+    "fog", "foggy" -> "mdi:weather-fog"
+    "night", "clear-night" -> "mdi:weather-night"
+    else -> "mdi:weather-partly-cloudy"
+}
+
+/** The icon for a sport (the card's `sport` field): a football when it is not named, a tennis ball for tennis, a golf club for golf. */
+fun sportIcon(sport: String): String = when (sport.trim().lowercase()) {
+    "tennis" -> "mdi:tennis-ball"
+    "golf" -> "mdi:golf"
+    "cricket" -> "mdi:cricket"
+    "rugby", "rugby union", "rugby league" -> "mdi:rugby"
+    "basketball" -> "mdi:basketball"
+    "baseball" -> "mdi:baseball"
+    "hockey", "ice hockey" -> "mdi:hockey-puck"
+    "american football", "nfl" -> "mdi:football"
+    "f1", "formula 1", "formula one", "motorsport", "racing" -> "mdi:racing-helmet"
+    "boxing" -> "mdi:boxing-glove"
+    "darts" -> "mdi:bullseye-arrow"
+    "cycling" -> "mdi:bike"
+    "swimming" -> "mdi:swim"
+    "athletics" -> "mdi:run-fast"
+    "snooker", "pool" -> "mdi:billiards"
+    else -> "mdi:soccer"
+}
+
+/**
+ * The Material icon in the middle of a card (the icon the loading mark turns into). Sport cards show their sport; the rest show what they are
+ * about. [cardBrand] names a logo that replaces it when the app has one.
+ */
+fun cardIcon(card: AssistantCard): String {
+    val f = card.fields
+    return when (card.kind) {
+        "weather" -> weatherIconName(f.optString("symbol"))
+        "score", "scores", "fixture" -> sportIcon(f.optString("sport"))
+        "music" -> "mdi:music-note"
+        "people" -> "mdi:account-multiple"
+        "done" -> if (f.has("ok") && !f.optBoolean("ok", true)) "mdi:close-circle" else "mdi:check-circle"
+        "car" -> "mdi:car-electric"
+        "climate" -> "mdi:thermometer"
+        "gregg" -> "mdi:robot-vacuum"
+        "air" -> "mdi:air-filter"
+        "energy" -> "mdi:lightning-bolt"
+        "secure" -> "mdi:shield-check"
+        "doors" -> "mdi:door"
+        "tasks" -> "mdi:format-list-checks"
+        "devices" -> "mdi:alert-circle"
+        "lights" -> "mdi:lightbulb"
+        "heat" -> "mdi:radiator"
+        "shop" -> "mdi:cart"
+        "event" -> "mdi:calendar-check"
+        "reminder" -> "mdi:bell-ring"
+        "media" -> "mdi:television-play"
+        else -> "mdi:message-text"
+    }
+}
+
+/** Competitions whose one-colour logo stands in for the sport icon, by the name the house gives (the logo is used only when the app has it). */
+private val COMPETITION_LOGOS = mapOf(
+    "premier league" to "premierleague", "champions league" to "uefa", "europa league" to "uefa", "conference league" to "uefa",
+    "la liga" to "laliga", "bundesliga" to "bundesliga", "serie a" to "seriea", "ligue 1" to "ligue1", "world cup" to "fifa",
+)
+
+/** The name of a logo that stands in for a card's icon, or null: a music card's service (Spotify), a car's make (Vauxhall), a competition's logo. */
+fun cardBrand(card: AssistantCard): String? {
+    val f = card.fields
+    return when (card.kind) {
+        "music" -> f.optString("app").takeIf { it.isNotBlank() }
+        "car" -> f.optString("brand").ifBlank { f.optString("name").trim().substringBefore(' ') }.takeIf { it.isNotBlank() }
+        "score", "scores", "fixture" -> f.optString("comp").trim().lowercase().let { c -> COMPETITION_LOGOS.entries.firstOrNull { c.contains(it.key) }?.value }
+        else -> null
+    }
+}
+
+/** One row of a list-style card: [name] and [detail] on the left, a [value] and/or a [pill] on the right, and a [marker] at the start (ok, warn, todo, done or dot). */
+data class CardRow(val name: String, val detail: String, val value: String, val pill: String, val tone: String, val marker: String)
+
+/** The rows of a list-style card ([JSONObject] `rows`), each tolerant of missing fields. */
+fun cardRows(fields: JSONObject): List<CardRow> {
+    val rows = fields.optJSONArray("rows") ?: return emptyList()
+    return (0 until rows.length()).mapNotNull { i ->
+        val r = rows.optJSONObject(i) ?: return@mapNotNull null
+        CardRow(r.optString("name"), r.optString("detail"), r.optString("value"), r.optString("pill"), r.optString("tone"), r.optString("marker"))
+    }
+}
 
 /** An https address, or null. */
 fun httpsOnly(url: String?): String? = url?.trim()?.takeIf { it.startsWith("https://") }
@@ -172,6 +269,7 @@ fun introDue(introducedEver: Boolean, told: Set<String>?, log: List<AssistFeatur
  * ever do they get the full introduction. Features also make up that introduction's "what I can do".
  */
 private val RAW_ASSIST_FEATURES = listOf(
+    AssistFeature("mdi:card-multiple-outline", "Cards that line up", "", id = "cards-in-place", detail = "Every card now has its icon in the same place at the same size: {name}'s thinking mark turns into it and the figures open out underneath. Sports cards show their sport, music shows its service's logo and the car its make's, and the watch has the same icons.", kind = AssistantChange.Change),
     AssistFeature("mdi:card-text-outline", "A card the moment you ask", "What's the weather like?", id = "card-while-thinking", detail = "As soon as you have asked, {name} shows an empty card with his thinking mark in the middle, and the answer's card appears in its place. The weather card now has its icon in the middle too.", kind = AssistantChange.Change),
     AssistFeature("mdi:robot-vacuum", "Cards for Gregg and the air", "What's the status of Gregg?", id = "gregg-air-cards", detail = "Ask how Gregg is and {name} shows his status icon, the battery and his last clean. Ask about the air quality and he shows the score, the particles and the purifier.", kind = AssistantChange.Change),
     AssistFeature("mdi:watch-variant", "The watch goes back to idle", "", id = "watch-rests", detail = "On the watch, a few seconds after an answer the screen clears, ready for a new question. If he is listening for a follow-up he goes straight to listening instead.", kind = AssistantChange.Fix),

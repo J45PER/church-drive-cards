@@ -5,7 +5,7 @@
 # Club badges are found by the apps themselves from the team's name. Anything without a screen ignores the event, so his spoken answer must stand alone.
 alias: Show a card on screen
 description: 'Show a card on the screen of the person who asked, when the answer is something to see: the weather, a sports score, a team''s next game, what is playing. Call it FIRST, with no words before
-  it, then give your spoken answer as your final reply. kind is one of: weather, score, scores, fixture, music, people, done, car, climate, gregg, air. For the weather at Church Drive give kind only: the
+  it, then give your spoken answer as your final reply. kind is one of: weather, score, scores, fixture, music, people, done, car, climate, gregg, air, energy, secure, doors, tasks, devices, lights, heat, shop, event, reminder, media, answer. For the weather at Church Drive give kind only: the
   card fills itself from the weather forecast. For the weather ANYWHERE ELSE (a town, a holiday place, another country) search the web for the real figures first, then give kind weather with data holding
   location (the place name), temp (a number in degrees Celsius), symbol (one of sunny, clear-night, partlycloudy, cloudy, rainy, pouring, snowy, fog, windy, lightning-rainy), desc (two or three words such
   as Sunny), high, low, and hourly as an empty list, so the card shows that place and never Church Drive. For the others data holds the fields. score: home and away, each {name, short (three letters)},
@@ -14,7 +14,7 @@ description: 'Show a card on the screen of the person who asked, when the answer
   comp (the competition) and in ("in 2 days"). music: title, artist and device (where it is playing). people: rows, a list with one {name, state, detail} for each person, where state is home, not_home,
   a place name, or unknown, and detail is a short line such as "since 11:40". done: a receipt for something you have just done and the tool confirmed, with name (what, e.g. "Lounge lights"), detail ("Dimmed
   to 30%"), icon (an mdi icon, optional), percent (0 to 100 for a level, optional) and colour (the light''s own colour as #rrggbb, optional); set ok false only if it failed. car: name, battery (a number,
-  the percentage), state ("Charging", "Plugged in", "Not plugged in"), range ("142 miles"), power ("7.4 kW"), until ("Full by 06:10") and rate ("3.8p/kWh"). climate, gregg and air: the house''s own scripts
+  the percentage), state ("Charging", "Plugged in", "Not plugged in"), range ("142 miles"), power ("7.4 kW"), until ("Full by 06:10") and rate ("3.8p/kWh"). score, scores and fixture may also carry sport (football by default; tennis, golf, cricket, rugby, basketball, baseball, hockey, f1, boxing, darts, cycling, swimming, athletics, snooker) and comp (the competition), which choose the icon. car may carry brand (the make, for its logo) and music app (the service, for its logo). The cards from energy to answer all use one layout, so data holds any of: big (a large figure such as "28.9p"), title, sub (a line under it), pill and pill_tone, rows (a list of {name, detail, value, pill, tone, marker} where marker is ok, warn, todo, done or dot and tone is green, amber, orange, red, blue, teal, indigo, purple or grey), percent (0 to 100, a bar), foot (a line at the bottom) and tone (the card colour). energy is the price now and the day's use, secure is whether the house is safe (alarm, doors, windows, lights), doors is each door and gate, tasks is the to-do list, devices is anything needing attention, lights is which rooms have lights on, heat is a timed heating run, shop is the shopping list, event is the next calendar event, reminder confirms a reminder, media is what is on the TVs and speakers, answer is a short answer from the web with its source in pill. climate, gregg and air: the house''s own scripts
   (house climate, robot vacuum, air quality) show these themselves, so do not call this for them. The club badges are found by the screen itself, so do not search for them. For the weather at Church Drive,
   data {quiet: true} skips the card and just returns the forecast (days and hours) in the result, for follow-up questions. It does nothing on a device with no screen.'
 fields:
@@ -25,7 +25,7 @@ fields:
     selector:
       object: {}
   kind:
-    description: weather, score, scores, fixture, music, people, done, car, climate, gregg or air.
+    description: weather, score, scores, fixture, music, people, done, car, climate, gregg, air, energy, secure, doors, tasks, devices, lights, heat, shop, event, reminder, media or answer.
     name: Kind of card
     required: true
     selector:
@@ -42,12 +42,24 @@ fields:
         - climate
         - gregg
         - air
+        - energy
+        - secure
+        - doors
+        - tasks
+        - devices
+        - lights
+        - heat
+        - shop
+        - event
+        - reminder
+        - media
+        - answer
 icon: mdi:card-text-outline
 max: 5
 mode: parallel
 sequence:
 - condition: template
-  value_template: '{{ kind in [''weather'', ''score'', ''scores'', ''fixture'', ''music'', ''people'', ''done'', ''car'', ''climate'', ''gregg'', ''air''] }}'
+  value_template: '{{ kind in [''weather'', ''score'', ''scores'', ''fixture'', ''music'', ''people'', ''done'', ''car'', ''climate'', ''gregg'', ''air'', ''energy'', ''secure'', ''doors'', ''tasks'', ''devices'', ''lights'', ''heat'', ''shop'', ''event'', ''reminder'', ''media'', ''answer''] }}'
 - if:
   - condition: template
     value_template: '{{ kind == ''weather'' }}'

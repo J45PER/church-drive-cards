@@ -47,6 +47,12 @@ fields:
     required: false
     selector:
       text: {}
+  sport:
+    name: Sport
+    description: football (the default), tennis, golf, cricket, rugby, basketball, baseball, hockey, f1, boxing, darts, cycling, swimming, athletics or snooker. It chooses the icon on the card.
+    required: false
+    selector:
+      text: {}
   in_text:
     name: How long to go
     required: false
@@ -69,6 +75,7 @@ sequence:
       time: '{{ time | default('''') }}'
       where: '{{ where | default('''') }}'
       comp: '{{ comp | default('''') }}'
+      sport: '{{ sport | default('''') }}'
       in: '{{ in_text | default('''') }}'
     say: >-
       {{ home }} play {{ away }}{{ (' ' ~ day) if day | default('') else ((' on ' ~ when) if when | default('') else '') }}{{ (' at ' ~ time) if time | default('') else '' }}. Shall I tell you where to watch it?

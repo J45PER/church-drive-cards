@@ -4,6 +4,12 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.50.0
+
+- Clive: every card has its icon in the same place at the same size. The thinking mark turns into it (a crossfade, not yet a shape morph) and the figures open out underneath, on the phone, and the watch's mark no longer shifts when the card arrives.
+- Clive: sports cards (score, scores, fixture) show their sport's icon (a tennis ball for tennis, a golf club for golf, a football by default). A competition's one-colour logo, a music service's logo (Spotify) and a car's make (Vauxhall) replace the icon when the app has the logo.
+- Clive: twelve new card layouts the house can send (energy, secure, doors, tasks, devices, lights, heat, shop, event, reminder, media, answer), all drawn by one shared layout, on the phone and the watch. The house sends them with `clive_show_card`.
+
 ## 0.49.0
 
 - Clive: a card appears the moment you ask, empty with his thinking mark in the middle, and the answer's card takes its place. The weather card's icon is now in the middle.

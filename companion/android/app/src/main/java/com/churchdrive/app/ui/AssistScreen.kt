@@ -626,6 +626,9 @@ private fun ChatLine(message: AssistMessage, faded: Boolean = false) {
     }
 }
 
+/** The width of a card, whether it is still loading or finished. */
+private val CARD_WIDTH = 280.dp
+
 /**
  * What shows the moment a question has been asked: an empty card with his thinking mark in the middle. The answer's card (or words) takes
  * its place a moment later, so the screen is never blank while he works.
@@ -633,12 +636,13 @@ private fun ChatLine(message: AssistMessage, faded: Boolean = false) {
 @Composable
 private fun PendingCard() {
     val scheme = MaterialTheme.colorScheme
+    // The same width, padding and icon box as the card that replaces it, so the mark and the icon it becomes are in exactly the same place.
     Box(
-        modifier = Modifier.fillMaxWidth(0.62f).widthIn(max = 320.dp).height(150.dp)
+        modifier = Modifier.fillMaxWidth().widthIn(max = CARD_WIDTH)
             .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 6.dp, bottomEnd = 20.dp))
-            .background(scheme.surfaceContainerHigh),
-        contentAlignment = Alignment.Center,
-    ) { AssistantGlyph(AssistantGlyphPose.Thinking, scheme.onSurfaceVariant, 64.dp) }
+            .background(scheme.surfaceContainerHigh)
+            .padding(horizontal = 16.dp, vertical = 11.dp),
+    ) { Box(Modifier.fillMaxWidth().height(CARD_ICON_ZONE), contentAlignment = Alignment.Center) { AssistantGlyph(AssistantGlyphPose.Thinking, scheme.onSurface, CARD_ICON_SIZE) } }
 }
 
 /** Clive's words in a speech bubble: the tail corner is bottom-left, the mirror of the user's gradient bubble. */
@@ -654,18 +658,25 @@ private fun AssistantBubble(text: String, show: AssistantShow? = null) {
         show?.card?.let { if (cardHasPictures(it)) { preloadCardImages(context, it); value = true } }
     }
     if (!pictures) { PendingCard(); return }
-    val arrive = remember { androidx.compose.animation.core.Animatable(if (show?.card != null) 0f else 1f) }
-    LaunchedEffect(Unit) { arrive.animateTo(1f, tween(380)) }
+    // A card starts as the thinking mark in the icon box, the mark turns into the card's icon, and the figures open out underneath.
+    val morph = remember { androidx.compose.animation.core.Animatable(if (show?.card != null) 0f else 1f) }
+    var showBody by remember { androidx.compose.runtime.mutableStateOf(show?.card == null) }
+    LaunchedEffect(Unit) {
+        if (show?.card != null) {
+            kotlinx.coroutines.delay(150)
+            morph.animateTo(1f, tween(520))
+            showBody = true
+        }
+    }
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.widthIn(max = 320.dp)
-            .graphicsLayer { alpha = arrive.value; val k = 0.92f + 0.08f * arrive.value; scaleX = k; scaleY = k }
+        modifier = (if (cardOnly) Modifier.fillMaxWidth().widthIn(max = CARD_WIDTH) else Modifier.widthIn(max = 320.dp))
             .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 6.dp, bottomEnd = 20.dp))
             .background(scheme.surfaceContainerHigh)
             .padding(horizontal = 16.dp, vertical = 11.dp),
     ) {
         if (!cardOnly) Text(text, style = MaterialTheme.typography.bodyLarge, color = scheme.onSurface)
-        show?.card?.let { AssistantCardView(it) }
+        show?.card?.let { AssistantCardView(it, morph = morph.value, showBody = showBody) }
         show?.image?.let {
             coil.compose.AsyncImage(
                 model = it, contentDescription = show.linkLabel ?: "Picture from ${AssistantBrand.shown}", contentScale = androidx.compose.ui.layout.ContentScale.Fit,
