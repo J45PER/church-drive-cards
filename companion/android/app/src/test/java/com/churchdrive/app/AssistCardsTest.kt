@@ -101,4 +101,37 @@ class AssistCardsTest {
         assertEquals(listOf("Back door", "Front door"), cardRows(card.fields).map { it.name })
         assertEquals("amber", cardRows(card.fields)[0].tone)
     }
+
+    private fun brandOf(json: String) = cardBrand(parseAssistantCard(JSONObject(json))!!)
+
+    @Test fun competitionsFindTheirLogoName() {
+        assertEquals("premierleague", brandOf("""{"kind":"fixture","comp":"Premier League"}"""))
+        assertEquals("eflleague", brandOf("""{"kind":"score","comp":"Sky Bet Championship"}"""))
+        assertEquals("eflleague", brandOf("""{"kind":"scores","comp":"EFL League One"}"""))
+        assertEquals("eflleague", brandOf("""{"kind":"fixture","comp":"League Two"}"""))
+        assertEquals("carabaocup", brandOf("""{"kind":"fixture","comp":"Carabao Cup"}"""))
+        assertEquals("facup", brandOf("""{"kind":"fixture","comp":"Emirates FA Cup"}"""))
+        assertEquals("conferenceleague", brandOf("""{"kind":"fixture","comp":"UEFA Europa Conference League"}"""))
+        assertEquals("championsleague", brandOf("""{"kind":"score","comp":"UEFA Champions League"}"""))
+        assertEquals("europaleague", brandOf("""{"kind":"score","comp":"Europa League"}"""))
+        assertEquals("europeanchampionship", brandOf("""{"kind":"score","comp":"European Championship"}"""))
+        assertNull(brandOf("""{"kind":"score","comp":"Sunday league"}"""))
+        assertEquals("Octopus Energy", brandOf("""{"kind":"energy","brand":"Octopus Energy"}"""))
+    }
+
+    @Test fun moreServiceNamesBecomeLogoNames() {
+        assertEquals("mercedes", SimpleIcons.slugFor("Mercedes-Benz"))
+        assertEquals("airplayvideo", SimpleIcons.slugFor("AirPlay"))
+        assertEquals("primevideo", SimpleIcons.slugFor("Prime Video"))
+        assertEquals("bbc", SimpleIcons.slugFor("BBC Sounds"))
+    }
+
+    @Test fun everyLogoNameTheCardsCanAskForHasALogo() {
+        val si = JSONObject(File("src/main/assets/si-icons.json").readText())
+        val own = JSONObject(File("src/main/assets/own-logos.json").readText())
+        for (slug in listOf("primevideo", "bbciplayer", "amazonmusic", "landrover", "mercedes", "premierleague", "fifa", "vauxhall", "airplayvideo")) assertEquals(slug, true, si.optString(slug).isNotBlank())
+        for (slug in listOf("championsleague", "europaleague", "conferenceleague", "facup", "eflleague", "carabaocup", "scottishpremiership", "nationsleague", "disneyplus", "cupra", "octopusenergy")) {
+            assertEquals(slug, true, own.optString(slug).startsWith("M"))
+        }
+    }
 }

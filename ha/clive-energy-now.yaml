@@ -26,6 +26,7 @@ sequence:
     say: Electricity is {{ pence }} pence a kilowatt hour right now{% if ends and nxt > 0 %}, and from {{ ends }} it is {{ next_pence }} pence{% endif %}. {{ 'Shall I tell you what the house is using?'
       if not cheap else 'Shall I tell you when it goes back up?' }}
     card:
+      brand: Octopus Energy
       big: '{{ pence }}p'
       sub: per kWh, now
       pill: '{{ ''Cheap'' if cheap else ''Dear'' }}'

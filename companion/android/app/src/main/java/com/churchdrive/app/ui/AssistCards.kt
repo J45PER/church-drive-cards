@@ -353,15 +353,21 @@ val CARD_ICON_SIZE = 72.dp
 @Composable
 fun CardIcon(card: AssistantCard, tint: Color, size: Dp) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    androidx.compose.runtime.LaunchedEffect(Unit) { SimpleIcons.load(context) }
+    androidx.compose.runtime.LaunchedEffect(Unit) { SimpleIcons.load(context); OwnLogos.load(context) }
     if (card.kind == "gregg") {
         val level = card.fields.optDouble("battery").takeIf { !it.isNaN() }
         GreggIcon(greggStateFor(card.fields.optString("state"), level), tint, size, level)
         return
     }
     val brand = cardBrand(card)
-    val logo = brand != null && SimpleIcons.paths?.containsKey(SimpleIcons.slugFor(brand)) == true
-    HaIcon(if (logo) "si:$brand" else cardIcon(card), Icons.Filled.Info, tint, size)
+    val key = brand?.let { SimpleIcons.slugFor(it) }
+    // Simple Icons first, then our own logos (the ones it does not have), else the card's own icon.
+    val icon = when {
+        key != null && SimpleIcons.paths?.containsKey(key) == true -> "si:$key"
+        key != null && OwnLogos.paths?.containsKey(key) == true -> "ol:$key"
+        else -> cardIcon(card)
+    }
+    HaIcon(icon, Icons.Filled.Info, tint, size)
 }
 
 /**

@@ -50,15 +50,20 @@ fun HaIcon(iconName: String?, fallback: ImageVector, tint: Color, size: Dp, modi
     val context = LocalContext.current
     if (siName != null) LaunchedEffect(Unit) { SimpleIcons.load(context) }
     val si = siName?.let { SimpleIcons.paths?.get(SimpleIcons.slugFor(it)) }
-    val found = remember(name, mdi, si, pack) {
+    // `ol:` icons are our own logos (OwnLogos): the ones Simple Icons does not have, drawn with the even-odd rule.
+    val olName = icon?.takeIf { it.startsWith("ol:") }?.removePrefix("ol:")
+    if (olName != null) LaunchedEffect(Unit) { OwnLogos.load(context) }
+    val ol = olName?.let { OwnLogos.paths?.get(SimpleIcons.slugFor(it)) }
+    val found = remember(name, mdi, si, ol, pack) {
         when {
             mdi != null -> 24f to mdi
             si != null -> 24f to si
+            ol != null -> 24f to ol
             name != null -> IconPack.find(name)
             else -> null
         }
     }
-    val path = remember(found) { found?.let { runCatching { PathParser().parsePathString(it.second).toPath() }.getOrNull() } }
+    val path = remember(found, ol) { found?.let { runCatching { PathParser().parsePathString(it.second).toPath().apply { if (ol != null) fillType = PathFillType.EvenOdd } }.getOrNull() } }
 
     if (found != null && path != null) {
         Canvas(modifier.size(size)) {

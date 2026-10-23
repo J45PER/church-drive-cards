@@ -91,9 +91,10 @@ fun cardIcon(card: AssistantCard): String {
 }
 
 /** Competitions whose one-colour logo stands in for the sport icon, by the name the house gives (the logo is used only when the app has it). */
-private val COMPETITION_LOGOS = mapOf(
-    "premier league" to "premierleague", "champions league" to "uefa", "europa league" to "uefa", "conference league" to "uefa",
-    "la liga" to "laliga", "bundesliga" to "bundesliga", "serie a" to "seriea", "ligue 1" to "ligue1", "world cup" to "fifa",
+private val COMPETITION_LOGOS = linkedMapOf(
+    "premier league" to "premierleague", "conference league" to "conferenceleague", "champions league" to "championsleague", "europa league" to "europaleague",
+    "nations league" to "nationsleague", "world cup" to "fifa", "fa cup" to "facup", "carabao" to "carabaocup", "efl cup" to "carabaocup", "league cup" to "carabaocup",
+    "scottish premiership" to "scottishpremiership", "european championship" to "europeanchampionship", "championship" to "eflleague", "league one" to "eflleague", "league two" to "eflleague", "efl" to "eflleague",
 )
 
 /** The name of a logo that stands in for a card's icon, or null: a music card's service (Spotify), a car's make (Vauxhall), a competition's logo. */
@@ -102,6 +103,7 @@ fun cardBrand(card: AssistantCard): String? {
     return when (card.kind) {
         "music" -> f.optString("app").takeIf { it.isNotBlank() }
         "car" -> f.optString("brand").ifBlank { f.optString("name").trim().substringBefore(' ') }.takeIf { it.isNotBlank() }
+        "energy" -> f.optString("brand").takeIf { it.isNotBlank() }
         "score", "scores", "fixture" -> f.optString("comp").trim().lowercase().let { c -> COMPETITION_LOGOS.entries.firstOrNull { c.contains(it.key) }?.value }
         else -> null
     }
@@ -269,6 +271,7 @@ fun introDue(introducedEver: Boolean, told: Set<String>?, log: List<AssistFeatur
  * ever do they get the full introduction. Features also make up that introduction's "what I can do".
  */
 private val RAW_ASSIST_FEATURES = listOf(
+    AssistFeature("mdi:shield-star-outline", "Logos on the cards", "", id = "card-logos", detail = "When {name} shows a score or fixture the card now carries the competition's logo (the Premier League, the EFL, the FA Cup, the Champions League, the Europa and Conference Leagues and more), Disney+ and the other streaming services show theirs, and cars show their make (Mercedes-Benz, Land Rover and Cupra added).", kind = AssistantChange.Change),
     AssistFeature("mdi:card-multiple-outline", "Cards that line up", "", id = "cards-in-place", detail = "Every card now has its icon in the same place at the same size: {name}'s thinking mark turns into it and the figures open out underneath. Sports cards show their sport, music shows its service's logo and the car its make's, and the watch has the same icons.", kind = AssistantChange.Change),
     AssistFeature("mdi:card-text-outline", "A card the moment you ask", "What's the weather like?", id = "card-while-thinking", detail = "As soon as you have asked, {name} shows an empty card with his thinking mark in the middle, and the answer's card appears in its place. The weather card now has its icon in the middle too.", kind = AssistantChange.Change),
     AssistFeature("mdi:robot-vacuum", "Cards for Gregg and the air", "What's the status of Gregg?", id = "gregg-air-cards", detail = "Ask how Gregg is and {name} shows his status icon, the battery and his last clean. Ask about the air quality and he shows the score, the particles and the purifier.", kind = AssistantChange.Change),
