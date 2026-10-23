@@ -21,12 +21,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Dp
@@ -137,30 +140,49 @@ fun Glass(spec: RingSpec, modifier: Modifier = Modifier) {
 
     val anim: androidx.compose.animation.core.FiniteAnimationSpec<Float> = if (spec.instant) snap() else tween(420, easing = FastOutSlowInEasing)
     val animColour: androidx.compose.animation.core.FiniteAnimationSpec<Color> = if (spec.instant) snap() else tween(420, easing = FastOutSlowInEasing)
-    val bg by animateColorAsState(spec.bg, tween(450), label = "bg")
-    val a0 by animateFloatAsState(spec.a0, anim, label = "a0")
-    val sweep by animateFloatAsState(spec.sweep, anim, label = "sweep")
-    val trackAlpha by animateFloatAsState(spec.trackAlpha, anim, label = "trackAlpha")
-    val trackColor by animateColorAsState(spec.trackColor, animColour, label = "trackColor")
-    val fillF by animateFloatAsState(mem.fill.f, anim, label = "fillF")
-    val fillAlpha by animateFloatAsState(if (spec.fill != null) mem.fill.alpha else 0f, anim, label = "fillAlpha")
-    val fillColor by animateColorAsState(mem.fill.color, animColour, label = "fillColor")
-    val dotF by animateFloatAsState(mem.dot.f, anim, label = "dotF")
-    val dotAlpha by animateFloatAsState(if (spec.dot != null) 1f else 0f, anim, label = "dotAlpha")
-    val dotColor by animateColorAsState(mem.dot.color, animColour, label = "dotColor")
-    val segColor by animateColorAsState(mem.segs.color, animColour, label = "segColor")
-    val s0 by animateFloatAsState(if (spec.segs != null) mem.segs.alphas[0] else 0f, anim, label = "s0")
-    val s1 by animateFloatAsState(if (spec.segs != null) mem.segs.alphas[1] else 0f, anim, label = "s1")
-    val s2 by animateFloatAsState(if (spec.segs != null) mem.segs.alphas[2] else 0f, anim, label = "s2")
-    val s3 by animateFloatAsState(if (spec.segs != null) mem.segs.alphas[3] else 0f, anim, label = "s3")
-    val s4 by animateFloatAsState(if (spec.segs != null) mem.segs.alphas[4] else 0f, anim, label = "s4")
+    val bg_ = animateColorAsState(spec.bg, tween(450), label = "bg")
+    val a0_ = animateFloatAsState(spec.a0, anim, label = "a0")
+    val sweep_ = animateFloatAsState(spec.sweep, anim, label = "sweep")
+    val trackAlpha_ = animateFloatAsState(spec.trackAlpha, anim, label = "trackAlpha")
+    val trackColor_ = animateColorAsState(spec.trackColor, animColour, label = "trackColor")
+    val fillF_ = animateFloatAsState(mem.fill.f, anim, label = "fillF")
+    val fillAlpha_ = animateFloatAsState(if (spec.fill != null) mem.fill.alpha else 0f, anim, label = "fillAlpha")
+    val fillColor_ = animateColorAsState(mem.fill.color, animColour, label = "fillColor")
+    val dotF_ = animateFloatAsState(mem.dot.f, anim, label = "dotF")
+    val dotAlpha_ = animateFloatAsState(if (spec.dot != null) 1f else 0f, anim, label = "dotAlpha")
+    val dotColor_ = animateColorAsState(mem.dot.color, animColour, label = "dotColor")
+    val segColor_ = animateColorAsState(mem.segs.color, animColour, label = "segColor")
+    val s0_ = animateFloatAsState(if (spec.segs != null) mem.segs.alphas[0] else 0f, anim, label = "s0")
+    val s1_ = animateFloatAsState(if (spec.segs != null) mem.segs.alphas[1] else 0f, anim, label = "s1")
+    val s2_ = animateFloatAsState(if (spec.segs != null) mem.segs.alphas[2] else 0f, anim, label = "s2")
+    val s3_ = animateFloatAsState(if (spec.segs != null) mem.segs.alphas[3] else 0f, anim, label = "s3")
+    val s4_ = animateFloatAsState(if (spec.segs != null) mem.segs.alphas[4] else 0f, anim, label = "s4")
     // The segments share the sweep out evenly, and how many there are changes between faces, so the edges between them glide too.
-    val segCount by animateFloatAsState((spec.segs?.alphas?.size ?: SEG_COUNT).toFloat().coerceIn(1f, SEG_COUNT.toFloat()), anim, label = "segCount")
-    val gradAlpha by animateFloatAsState(if (spec.gradient != null) 1f else 0f, anim, label = "gradAlpha")
-    val gradF by animateFloatAsState(mem.gradient, anim, label = "gradF")
+    val segCount_ = animateFloatAsState((spec.segs?.alphas?.size ?: SEG_COUNT).toFloat().coerceIn(1f, SEG_COUNT.toFloat()), anim, label = "segCount")
+    val gradAlpha_ = animateFloatAsState(if (spec.gradient != null) 1f else 0f, anim, label = "gradAlpha")
+    val gradF_ = animateFloatAsState(mem.gradient, anim, label = "gradF")
 
-    Box(modifier.fillMaxSize().background(bg)) {
+    Box(modifier.fillMaxSize().drawBehind { drawRect(bg_.value) }) {
         Canvas(Modifier.fillMaxSize()) {
+            val a0 = a0_.value
+            val sweep = sweep_.value
+            val trackAlpha = trackAlpha_.value
+            val trackColor = trackColor_.value
+            val fillF = fillF_.value
+            val fillAlpha = fillAlpha_.value
+            val fillColor = fillColor_.value
+            val dotF = dotF_.value
+            val dotAlpha = dotAlpha_.value
+            val dotColor = dotColor_.value
+            val segColor = segColor_.value
+            val s0 = s0_.value
+            val s1 = s1_.value
+            val s2 = s2_.value
+            val s3 = s3_.value
+            val s4 = s4_.value
+            val segCount = segCount_.value
+            val gradAlpha = gradAlpha_.value
+            val gradF = gradF_.value
             val half = size.minDimension / 2f
             val r = half * (128f / 140f)
             val stroke = half * (10f / 140f)
@@ -176,10 +198,13 @@ fun Glass(spec: RingSpec, modifier: Modifier = Modifier) {
 
             arc(trackColor, a0, sw, trackAlpha)
             if (gradAlpha > 0.01f) {
-                val n = 96
-                for (i in 0 until n) {
-                    val f0 = i / n.toFloat()
-                    arc(gradientColour((f0 + 0.5f / n)), a0 + sweep * f0 - 0.3f, sweep / n + 0.6f, (if (f0 < gradF) 1f else 0.3f) * gradAlpha, StrokeCap.Butt)
+                // One arc with the colour bands as a sweep gradient (the lit part, then the rest dimmed), not ninety-six little ones.
+                val sweepF = sweep.coerceAtLeast(1f) / 360f
+                val brush = Brush.sweepGradient(*GRADIENT.map { (p, c) -> (p * sweepF) to c }.toTypedArray(), center = centre)
+                val lit = (sweep * gradF.coerceIn(0f, 1f))
+                rotate(a0, centre) {
+                    if (lit > 0.2f) drawArc(brush, 0f, lit, false, tl, box, alpha = gradAlpha, style = Stroke(stroke, cap = StrokeCap.Butt))
+                    if (sweep - lit > 0.2f) drawArc(brush, lit, sweep - lit, false, tl, box, alpha = 0.3f * gradAlpha, style = Stroke(stroke, cap = StrokeCap.Butt))
                 }
             }
             val alphas = floatArrayOf(s0, s1, s2, s3, s4)

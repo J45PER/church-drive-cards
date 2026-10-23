@@ -294,8 +294,8 @@ private fun purifierFace(f: EntityState, pmSensor: EntityState?): Face {
         Box(Modifier.fillMaxSize()) {
             FaceHeader(f.friendlyName.trim(), word, accent)
             if (quality != null && pm != null) Column(Modifier.at(ui, 0f, 78f, 280f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(quality, color = gradientColour((pm / 150f).coerceIn(0f, 1f)), fontSize = ui.sp(24f), fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                Text("PM2.5 · ${pm.toInt()} µg/m³", color = Ink.copy(alpha = 0.85f), fontSize = ui.sp(12f), textAlign = TextAlign.Center)
+                Text(quality, color = gradientColour((pm / 150f).coerceIn(0f, 1f)), fontSize = ui.sp(24f), fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 1)
+                Text("PM2.5 · ${pm.toInt()} µg/m³", color = Ink.copy(alpha = 0.85f), fontSize = ui.sp(12f), textAlign = TextAlign.Center, maxLines = 1)
             }
             rows.forEachIndexed { r, row ->
                 ButtonRow(if (row.size <= 3) 54f else 40f, (if (quality != null) 124f else 100f) + r * 52f, 46f) {

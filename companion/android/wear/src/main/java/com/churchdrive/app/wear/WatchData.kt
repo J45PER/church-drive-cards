@@ -96,8 +96,13 @@ object WatchData {
         live.value = false
     }
 
+    /** The last rendered answer, so an answer that comes again unchanged costs nothing (no parsing and no redraw of every page). */
+    private var lastResult: String? = null
+
     private fun apply(event: JSONObject) {
         val r = event.opt("result")
+        if (r is String && r == lastResult) { live.value = true; return }
+        lastResult = r as? String
         val obj = when (r) {
             is JSONObject -> r
             is String -> runCatching { JSONObject(r) }.getOrNull()
@@ -115,12 +120,23 @@ object WatchData {
 
     /** Puts a template answer on screen. */
     private fun show(obj: JSONObject) {
-        entities.value = parseEntities(obj)
+        // Only a real change reaches the pages: a map with the same states and attributes is left as it was.
+        val parsed = parseEntities(obj)
+        if (!sameEntities(entities.value, parsed)) entities.value = parsed
         obj.optJSONArray("areas")?.let { a ->
             val names = (0 until a.length()).mapNotNull { a.optJSONArray(it) }.filter { it.length() == 2 && !it.isNull(1) }.associate { it.optString(0) to it.optString(1) }
             if (names.isNotEmpty()) areaNames.value = names
         }
         if (entities.value.isNotEmpty()) loaded.value = true
+    }
+
+    private fun sameEntities(a: Map<String, EntityState>, b: Map<String, EntityState>): Boolean {
+        if (a.size != b.size) return false
+        for ((id, n) in b) {
+            val o = a[id] ?: return false
+            if (o.state != n.state || o.attributes.toString() != n.attributes.toString()) return false
+        }
+        return true
     }
 
     /** The template's answer as entities. */

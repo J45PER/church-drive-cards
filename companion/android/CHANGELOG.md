@@ -4,6 +4,14 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.51.4
+
+- Watch: the loading ring is one arc that fades smoothly from bright at its head to nothing at its tail (it was three steps of brightness).
+- Watch: the crown moves one page for each turn of a notch and carries on smoothly through a quick turn (before, each notch started from the page you had left, so quick turns stuck or jumped), and a half turn that was never finished is forgotten.
+- Watch: smoother and lighter. The ring and background are drawn without redrawing the whole screen on every frame, the air quality gradient is one arc instead of ninety-six, and a state change that changes nothing (the house sends the same list again) no longer redraws every page.
+- Watch: Clive's answer and card never scroll; what does not fit under the mark is made smaller until it does, and a long plain answer stops at six lines. What you said stays above it in one small line. Long car and air quality names are cut with an ellipsis.
+- Phone: a list card (scores, fixtures, tasks and the rest) shows at most seven rows and says how many more, so the card fits the screen and needs no scrolling.
+
 ## 0.51.3
 
 - Clive: ask for the games of a league ("What are the Championship games this weekend?") and he shows them as a list: each club's badge, the date and the kick off time, under the league's logo, on the phone and the watch. It needs the house's new league fixtures script (already live).

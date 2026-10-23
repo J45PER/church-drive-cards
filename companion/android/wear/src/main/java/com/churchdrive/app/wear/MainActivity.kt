@@ -215,10 +215,10 @@ private fun SlideIn(key: Any, content: @Composable () -> Unit) {
 private fun FaceList(faces: List<Face>, state: PagerState) {
     val ui = LocalUi.current
     val scope = rememberCoroutineScope()
-    val next: () -> Unit = { scope.launch { state.animateScrollToPage((state.currentPage + 1).coerceAtMost((faces.size - 1).coerceAtLeast(0))) } }
+    val next: () -> Unit = { scope.launch { state.stepBy(1, faces.size) } }
     // The crown scrolls down and up the faces, one for each notch. It never changes a temperature or a brightness.
     val crownMod = if (faces.size > 1) Modifier.crown { n ->
-        scope.launch { state.animateScrollToPage((state.currentPage + n).coerceIn(0, faces.size - 1)) }
+        scope.launch { state.stepBy(n, faces.size) }
     } else Modifier
     CompositionLocalProvider(LocalNextFace provides next) {
         Box(Modifier.fillMaxSize().then(crownMod)) {

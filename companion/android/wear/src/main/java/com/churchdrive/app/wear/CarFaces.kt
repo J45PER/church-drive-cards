@@ -95,7 +95,7 @@ fun carFaces(entities: Map<String, EntityState>, config: WatchConfig): List<Face
                 car != null && battery != null -> {
                     Column(Modifier.at(ui, 0f, 78f, 280f), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("${battery.toInt()}%", color = Ink, fontSize = ui.sp(40f), fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                        Text(car.first.name, color = Ink.copy(alpha = 0.85f), fontSize = ui.sp(11f), textAlign = TextAlign.Center)
+                        Text(car.first.name, color = Ink.copy(alpha = 0.85f), fontSize = ui.sp(11f), textAlign = TextAlign.Center, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     }
                 }
                 c.plugged -> Note(if (c.cars.size > 1 && c.cars.count { entities[it.plugged]?.state == "on" } > 1) "Two cars plugged in,\ncan't tell which" else "No car says it\nis plugged in", 0f, 84f, 280f, Ink.copy(alpha = 0.75f), 11f, maxLines = 2)
