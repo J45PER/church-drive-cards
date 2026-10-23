@@ -1,6 +1,6 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-23. Current release: **v0.66.0** (Android app 0.48.0).*
+*Last updated 2026-10-23. Current release: **v0.67.0** (Android app 0.48.1).*
 
 ## Where this stands
 
@@ -423,6 +423,8 @@ Older release notes (v0.10 to v0.38 detail) are archived in [docs/HISTORY.md](do
 
 ## Release and deployment
 
+- **Google Play (since 2026-10-23, `.github/workflows/companion-android.yml`):** the first time a build has a new version, CI uploads the signed AABs to Play's **internal testing** track with the `PLAY_SERVICE_ACCOUNT_JSON` secret (a dedicated service account with release permission on the two listings): phone and watch together (`com.churchdrive.manager`, two form factors, version codes differ) and To-Do (`com.churchdrive.todo`). Release notes are the changelog section cut to 500 characters. Production stays a button in Play Console. Untested until the first version bump after #270; if it fails, the Actions log says why and the GitHub release still has the AABs to upload by hand.
+
 - **Build:** `npm run build` (`build.mjs`, esbuild) writes
   `custom_components/church_drive/frontend/church-drive-cards.js` and
   `church-drive-cards-beta.js`, and copies the `package.json` version into
@@ -496,6 +498,7 @@ Full notes in `ha/clive.md` (read it first), live prompt copy in `ha/clive-promp
 - **Answers come from scripts that return `say`.** Prompt rules alone could not make the format reliable, so `clive_who_is_home`, `clive_car_status`, `clive_scores`, `clive_fixture` and `clive_answer` show their own card and return the exact words; his reply is that text. `clive_show_card` draws the weather, score, fixture and music cards, `clive_show` a picture or link. Cards are drawn by the phone and watch apps. The model switch to Sonnet fixed the two that kept drifting (a single past score, how-to questions, which also leaked `<cite>` tags); its speed still has to be measured from the app's Settings timings.
 - **Clive runs the heating (2026-10-23, Home Assistant only except the app reminder).** `clive_timed_control` (and `clive_timed_revert`) run a zone or the bedroom fan for a set time and put it back; `Clive: keep the climate comfortable` (every 10 minutes, `clive_climate_zone`) turns heating on, down or off against each room's comfort range; a hand change to a thermostat pauses him for `input_number.clive_climate_pause_minutes` (120); `clive_climate_control` resumes, pauses or reports. Notifications use kind `clive_actions` (added in `kinds.py`; nobody is ticked until the integration release is installed and HA restarted, then tick it in Manager). App 0.48.0 shows "Heating set by hand" with Resume on Home and a Resume Clive notification button. There is no air conditioning in HA.
 - **Tuning from a session:** the live instructions and model settings can be read and changed through the Anthropic integration's `conversation` subentry (see "Tuning Clive from a session" in `ha/clive.md`); edit `clive-prompt.md` first, send it as `prompt` with `recommended: false`, and log the change in the tuning log. Live prompt and repo copy were identical on 2026-10-23.
+- **House climate card (2026-10-23, app 0.48.1):** `script.clive_house_climate` (copy in `ha/clive-house-climate.yaml`) shows a `climate` card and returns the words; the weather card also takes another place's figures from a web search (`clive_show_card` `data`). Cards are drawn by hand-written routines per kind in the apps, so a new kind needs an app release. Not drawn on the watch.
 - Known: the Vauxhall Astra's own sensors were unavailable on 2026-10-23, so the car card has no battery. The Python pieces (`kinds.py`, `notice_actions.py`) need an integration release and a restart to go live.
 - Still to build: a custom LLM API in this integration (live scene list, room-aware device power from the satellite's area). Not before the first satellite.
 - App side (0.34.2 and 0.34.3): follow-up listening after "anything else?", a shorter wait for the end of speech, and Settings shows how long each answer took. Later: Clive cards in the phone and watch apps (0.46 to 0.47), stop button while listening, no listening after a typed question (0.47.2).
