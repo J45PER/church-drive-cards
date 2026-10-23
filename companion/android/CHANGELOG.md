@@ -4,6 +4,15 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.49.0
+
+- Clive: a card appears the moment you ask, empty with his thinking mark in the middle, and the answer's card takes its place. The weather card's icon is now in the middle.
+- Clive: cards for Gregg's status and for the air quality (they need the house's scripts, which are already live).
+- Clive's title shows the name set in Home Assistant, not the old wake word's name.
+- The Home page's Security icon follows the alarm's colour (green off, blue home, red away), and Cleaning (on Home and in the bar) uses Gregg's own status icon.
+- Gregg's icon has his front bumper.
+- Watch: a few seconds after an answer the screen clears, ready for a new question; if Clive is listening for a follow-up he goes to listening instead.
+
 ## 0.48.3
 
 - Gregg's status icon: a disc with his lidar turret and a ring round it, replacing the plain vacuum icon on the Cleaning card and the vacuum tile. The ring turns in three parts while he cleans, backwards in two parts while he heads home, fills to the battery level while he charges, and blinks closed on an error. Once he is docked and charged it shows the house.

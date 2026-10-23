@@ -287,19 +287,16 @@ fun AssistantCardView(card: AssistantCard, modifier: Modifier = Modifier) {
             }
             "weather" -> {
                 val place = f.optString("location")
-                if (place.isNotBlank()) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (place.isNotBlank()) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)) {
                     HaIcon("mdi:map-marker", Icons.Filled.Info, soft, 14.dp)
                     Text(place, style = MaterialTheme.typography.labelMedium, color = soft)
                 }
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    HaIcon(weatherIcon(f.optString("symbol")), Icons.Filled.Info, ink, 52.dp)
-                    Column(Modifier.weight(1f)) {
-                        Text(f.number("temp")?.let { "${Math.round(it)}°" } ?: "–", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = ink)
-                        if (f.optString("desc").isNotBlank()) Text(f.optString("desc"), style = MaterialTheme.typography.titleSmall, color = ink)
-                    }
-                    val side = listOfNotNull(f.number("high")?.let { "High ${Math.round(it)}°" }, f.number("low")?.let { "Low ${Math.round(it)}°" }, f.number("rain")?.let { "${Math.round(it)}% rain" })
-                    if (side.isNotEmpty()) Column(horizontalAlignment = Alignment.End) { side.forEach { Text(it, style = MaterialTheme.typography.bodySmall, color = soft) } }
-                }
+                // The icon sits in the middle, where the loading mark was, with the figures under it.
+                HaIcon(weatherIcon(f.optString("symbol")), Icons.Filled.Info, ink, 64.dp)
+                Text(f.number("temp")?.let { "${Math.round(it)}°" } ?: "–", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = ink)
+                if (f.optString("desc").isNotBlank()) Text(f.optString("desc"), style = MaterialTheme.typography.titleSmall, color = ink)
+                val side = listOfNotNull(f.number("high")?.let { "High ${Math.round(it)}°" }, f.number("low")?.let { "Low ${Math.round(it)}°" }, f.number("rain")?.let { "${Math.round(it)}% rain" })
+                if (side.isNotEmpty()) Text(side.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = soft)
                 val hours = f.optJSONArray("hourly")
                 if (hours != null && hours.length() > 0) {
                     Box(Modifier.fillMaxWidth().padding(vertical = 4.dp).height(1.dp).background(Color.White.copy(alpha = 0.10f)))
@@ -314,6 +311,38 @@ fun AssistantCardView(card: AssistantCard, modifier: Modifier = Modifier) {
                         }
                     }
                 }
+            }
+            "gregg" -> {
+                val level = f.number("battery")
+                val state = greggStateFor(f.optString("state"), level)
+                val tone = toneColors(if (state == GreggState.Error) Tone.Red else Tone.Blue)
+                // His status icon sits in the middle, where the loading mark was.
+                GreggIcon(state, tone.accent, 96.dp, level)
+                Text(f.optString("name").ifBlank { "Gregg" }, style = MaterialTheme.typography.titleMedium, color = ink)
+                Text(state.word(), color = tone.accent, style = MaterialTheme.typography.labelMedium, maxLines = 1, modifier = Modifier.background(tone.accent.copy(alpha = 0.18f), CircleShape).padding(horizontal = 10.dp, vertical = 3.dp))
+                val line = listOfNotNull(level?.let { "Battery ${Math.round(it)}%" }, f.number("area")?.let { "${Math.round(it)} m² last clean" }, f.number("minutes")?.let { "${Math.round(it)} min" })
+                if (line.isNotEmpty()) Text(line.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = soft, textAlign = TextAlign.Center)
+                if (f.optString("detail").isNotBlank()) Text(f.optString("detail"), style = MaterialTheme.typography.bodySmall, color = soft, textAlign = TextAlign.Center)
+            }
+            "air" -> {
+                val score = f.number("score")
+                val tone = toneColors(qualityTone(score?.toInt()))
+                Box(Modifier.size(96.dp), contentAlignment = Alignment.Center) {
+                    Canvas(Modifier.fillMaxSize()) {
+                        val w = 10.dp.toPx()
+                        val inset = Offset(w / 2, w / 2)
+                        val s = Size(size.width - w, size.height - w)
+                        drawArc(Color.White.copy(alpha = 0.12f), 0f, 360f, false, inset, s, style = Stroke(w))
+                        drawArc(tone.accent, -90f, 360f * ((score ?: 0.0) / 100.0).coerceIn(0.0, 1.0).toFloat(), false, inset, s, style = Stroke(w, cap = StrokeCap.Round))
+                    }
+                    Text(score?.let { "${Math.round(it)}" } ?: "–", color = tone.accent, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                }
+                Text(f.optString("word").ifBlank { "Air quality" }, style = MaterialTheme.typography.titleMedium, color = ink)
+                val line = listOfNotNull(f.number("pm25")?.let { "PM2.5 ${"%.0f".format(it)} µg/m³" }, f.number("humidity")?.let { "${Math.round(it)}% humidity" })
+                if (line.isNotEmpty()) Text(line.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = soft, textAlign = TextAlign.Center)
+                val kit = listOf(f.optString("purifier").takeIf { it.isNotBlank() }?.let { "Purifier $it" }, f.optString("fan").takeIf { it.isNotBlank() }?.let { "Fan $it" }).filterNotNull()
+                if (kit.isNotEmpty()) Text(kit.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = soft, textAlign = TextAlign.Center)
+                if (f.optString("place").isNotBlank()) Text(f.optString("place"), style = MaterialTheme.typography.labelSmall, color = soft)
             }
             "music" -> {
                 if (f.optString("app").isNotBlank()) ServiceLogo(f.optString("app"), ink, 30.dp)

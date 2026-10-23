@@ -190,12 +190,10 @@ fun HomeScreen(
                             selected = selected,
                             onClick = { page = p },
                             icon = {
-                                HaIcon(
-                                    if (p == Page.Security) alarmIconName(alarmState) else p.mdi,
-                                    p.fallback,
-                                    tint = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    size = 24.dp,
-                                )
+                                val tint = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                // Cleaning shows Gregg's own status icon; the rest are the dashboard's icons.
+                                if (p == Page.Cleaning) GreggIcon(greggState(entities[VACUUM_ENTITY], entities[VACUUM_BATTERY]), tint, 28.dp, entities[VACUUM_BATTERY]?.state?.toDoubleOrNull())
+                                else HaIcon(if (p == Page.Security) alarmIconName(alarmState) else p.mdi, p.fallback, tint = tint, size = 24.dp)
                             },
                             label = { Text(p.label, fontSize = 11.sp, maxLines = 1) },
                         )
@@ -311,6 +309,7 @@ private fun HomePage(
         fallbackTone: Tone,
         fallbackSummary: String,
         page: Page?,
+        iconSlot: (@Composable (ToneColors) -> Unit)? = null,
         content: @Composable () -> Unit,
     ) {
         val spec = byTitle[title]
@@ -319,8 +318,10 @@ private fun HomePage(
         SectionPanel(
             title,
             iconName = icon,
-            tone = if (title == "Climate" && quality != null) qualityTone(quality) else toneFromColour(colour) ?: fallbackTone,
+            // Security's colour is the alarm's own (green off, blue home, red away), whatever colour the dashboard panel carries.
+            tone = if (title == "Security") alarmTone(alarm?.state) else if (title == "Climate" && quality != null) qualityTone(quality) else toneFromColour(colour) ?: fallbackTone,
             summary = summary,
+            iconSlot = iconSlot,
             onClick = page?.let { { onOpen(it) } },
             content = content,
         )
@@ -350,7 +351,10 @@ private fun HomePage(
                     lights.home.forEach { LightRoomCard(it, entities, areaNames, call) }
                 }
             }
-            "Cleaning" -> HomePanel("Cleaning", Page.Cleaning.mdi, vacuumTone(vacuum), vacuumSummary(vacuum, entities[VACUUM_BATTERY]), Page.Cleaning) {
+            "Cleaning" -> HomePanel(
+                "Cleaning", Page.Cleaning.mdi, vacuumTone(vacuum), vacuumSummary(vacuum, entities[VACUUM_BATTERY]), Page.Cleaning,
+                iconSlot = { colors -> GreggIcon(greggState(vacuum, entities[VACUUM_BATTERY]), colors.accent, 40.dp, entities[VACUUM_BATTERY]?.state?.toDoubleOrNull()) },
+            ) {
                 VacuumCard(vacuum, entities[VACUUM_BATTERY], call)
             }
             else -> {
@@ -379,6 +383,8 @@ fun SectionPanel(
     tone: Tone = Tone.Grey,
     summary: String? = null,
     onClick: (() -> Unit)? = null,
+    /** Draws the header's icon itself (Gregg's status), in place of [iconName] and [icon]. */
+    iconSlot: (@Composable (ToneColors) -> Unit)? = null,
     /** Tapping the heading folds the panel away and back (remembered for the title while the app is open). */
     collapsible: Boolean = false,
     content: @Composable () -> Unit,
@@ -394,7 +400,8 @@ fun SectionPanel(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            if (iconName != null) ToneIconName(iconName, icon ?: Icons.Filled.Security, colors, size = 36)
+            if (iconSlot != null) iconSlot(colors)
+            else if (iconName != null) ToneIconName(iconName, icon ?: Icons.Filled.Security, colors, size = 36)
             else if (icon != null) ToneIcon(icon, colors, size = 36)
             Text(
                 title,

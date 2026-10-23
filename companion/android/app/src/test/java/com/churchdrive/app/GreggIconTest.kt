@@ -4,6 +4,9 @@ import com.churchdrive.app.ha.EntityState
 import com.churchdrive.app.ui.CdIcons
 import com.churchdrive.app.ui.GreggState
 import com.churchdrive.app.ui.greggState
+import com.churchdrive.app.ui.greggStateFor
+import com.churchdrive.app.ui.parseAssistantCard
+import com.churchdrive.app.ui.word
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -58,5 +61,20 @@ class GreggIconTest {
         assertEquals("mdi:home", CdIcons.alias("mdi:home"))
         assertNull(CdIcons.alias(null))
         assertFalse(CdIcons.icons.isEmpty())
+    }
+
+    @Test fun aCardCarriesTheVacuumStateAndBattery() {
+        assertEquals(GreggState.Cleaning, greggStateFor("cleaning", 80.0))
+        assertEquals(GreggState.Charging, greggStateFor("docked", 80.0))
+        assertEquals(GreggState.Charged, greggStateFor("docked", 100.0))
+        assertEquals("Heading home", GreggState.Returning.word())
+        assertEquals("Docked", GreggState.Charged.word())
+    }
+
+    @Test fun theGreggAndAirCardsAreKept() {
+        for (kind in listOf("gregg", "air")) {
+            val card = parseAssistantCard(JSONObject("""{"kind":"$kind","state":"docked","battery":100,"score":98}"""))
+            assertEquals(kind, card?.kind)
+        }
     }
 }

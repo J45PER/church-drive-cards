@@ -44,9 +44,11 @@ enum class GreggState {
 }
 
 /** The status for Gregg's vacuum entity and battery sensor: docked is Charging until the battery reads 100, then Charged. */
-fun greggState(vacuum: EntityState?, battery: EntityState?): GreggState {
-    val level = battery?.state?.toDoubleOrNull()
-    return when (vacuum?.state) {
+fun greggState(vacuum: EntityState?, battery: EntityState?): GreggState = greggStateFor(vacuum?.state, battery?.state?.toDoubleOrNull())
+
+/** The same from the vacuum's state word and the battery level (a card sent by the house carries these). */
+fun greggStateFor(vacuumState: String?, level: Double?): GreggState {
+    return when (vacuumState) {
         "cleaning" -> GreggState.Cleaning
         "paused" -> GreggState.Paused
         "returning" -> GreggState.Returning
@@ -54,6 +56,17 @@ fun greggState(vacuum: EntityState?, battery: EntityState?): GreggState {
         "docked" -> if (level != null && level < 100.0) GreggState.Charging else GreggState.Charged
         else -> GreggState.Idle
     }
+}
+
+/** The word for a status pill. */
+fun GreggState.word(): String = when (this) {
+    GreggState.Idle -> "Idle"
+    GreggState.Charging -> "Charging"
+    GreggState.Charged -> "Docked"
+    GreggState.Cleaning -> "Cleaning"
+    GreggState.Paused -> "Paused"
+    GreggState.Returning -> "Heading home"
+    GreggState.Error -> "Needs help"
 }
 
 /** The part of the disc glyph that is cut out of the disc, in the icon board's drawing (the disc is drawn at 46 and scaled up to 57). */
@@ -123,9 +136,9 @@ private fun DrawScope.arcs(tint: Color, start: Float, sweep: Float) {
     )
 }
 
-private const val IDLE = "M54,100 a46,46 0 1,0 92,0 a46,46 0 1,0 -92,0Z M87.5,88 a12.5,12.5 0 1,0 25,0 a12.5,12.5 0 1,0 -25,0Z M95,118 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0Z"
+private const val IDLE = "M54,100 a46,46 0 1,0 92,0 a46,46 0 1,0 -92,0Z M87.5,88 a12.5,12.5 0 1,0 25,0 a12.5,12.5 0 1,0 -25,0Z M95,118 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0Z M65.23,78.27 A41,41 0 0,1 134.77,78.27 L130.53,80.92 A36,36 0 0,0 69.47,80.92Z"
 private const val CHARGING = "M54,100 a46,46 0 1,0 92,0 a46,46 0 1,0 -92,0Z M104.8,79.2 L88.8,104.8 L100,104.8 L95.2,124 L114.4,93.6 L103.2,93.6 L109.6,79.2Z"
 private const val HOUSE = "M54,100 a46,46 0 1,0 92,0 a46,46 0 1,0 -92,0Z M95.5,78.25 Q100,74.04 104.5,78.25 L122.78,95.35 Q127.28,99.56 127.28,105.72 L127.28,119.8 Q127.28,125.96 121.12,125.96 L107.92,125.96 Q107.04,125.96 107.04,125.08 L107.04,109.68 Q107.04,104.84 102.2,104.84 L97.8,104.84 Q92.96,104.84 92.96,109.68 L92.96,125.08 Q92.96,125.96 92.08,125.96 L78.88,125.96 Q72.72,125.96 72.72,119.8 L72.72,105.72 Q72.72,99.56 77.22,95.35 Z"
-private const val TURRET = "M54,100 a46,46 0 1,0 92,0 a46,46 0 1,0 -92,0Z M87.5,88 a12.5,12.5 0 1,0 25,0 a12.5,12.5 0 1,0 -25,0Z M95,118 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0Z"
+private const val TURRET = "M54,100 a46,46 0 1,0 92,0 a46,46 0 1,0 -92,0Z M87.5,88 a12.5,12.5 0 1,0 25,0 a12.5,12.5 0 1,0 -25,0Z M95,118 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0Z M65.23,78.27 A41,41 0 0,1 134.77,78.27 L130.53,80.92 A36,36 0 0,0 69.47,80.92Z"
 private const val PAUSED = "M54,100 a46,46 0 1,0 92,0 a46,46 0 1,0 -92,0Z M87,76 H87 A7,7 0 0 1 94,83 V117 A7,7 0 0 1 87,124 H87 A7,7 0 0 1 80,117 V83 A7,7 0 0 1 87,76Z M113,76 H113 A7,7 0 0 1 120,83 V117 A7,7 0 0 1 113,124 H113 A7,7 0 0 1 106,117 V83 A7,7 0 0 1 113,76Z"
 private const val ERROR = "M54,100 a46,46 0 1,0 92,0 a46,46 0 1,0 -92,0Z M100,72 H100 A8,8 0 0 1 108,80 V98 A8,8 0 0 1 100,106 H100 A8,8 0 0 1 92,98 V80 A8,8 0 0 1 100,72Z M91.5,122 a8.5,8.5 0 1,0 17,0 a8.5,8.5 0 1,0 -17,0Z"

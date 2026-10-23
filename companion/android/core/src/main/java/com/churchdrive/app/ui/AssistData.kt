@@ -20,7 +20,7 @@ data class AssistantShow(val image: String?, val link: String?, val linkLabel: S
 data class AssistantCard(val kind: String, val fields: org.json.JSONObject)
 
 /** The kinds of card the screens know how to draw. */
-val ASSISTANT_CARD_KINDS = setOf("weather", "score", "scores", "fixture", "music", "people", "done", "car", "climate")
+val ASSISTANT_CARD_KINDS = setOf("weather", "score", "scores", "fixture", "music", "people", "done", "car", "climate", "gregg", "air")
 
 /** An https address, or null. */
 fun httpsOnly(url: String?): String? = url?.trim()?.takeIf { it.startsWith("https://") }
@@ -172,6 +172,9 @@ fun introDue(introducedEver: Boolean, told: Set<String>?, log: List<AssistFeatur
  * ever do they get the full introduction. Features also make up that introduction's "what I can do".
  */
 private val RAW_ASSIST_FEATURES = listOf(
+    AssistFeature("mdi:card-text-outline", "A card the moment you ask", "What's the weather like?", id = "card-while-thinking", detail = "As soon as you have asked, {name} shows an empty card with his thinking mark in the middle, and the answer's card appears in its place. The weather card now has its icon in the middle too.", kind = AssistantChange.Change),
+    AssistFeature("mdi:robot-vacuum", "Cards for Gregg and the air", "What's the status of Gregg?", id = "gregg-air-cards", detail = "Ask how Gregg is and {name} shows his status icon, the battery and his last clean. Ask about the air quality and he shows the score, the particles and the purifier.", kind = AssistantChange.Change),
+    AssistFeature("mdi:watch-variant", "The watch goes back to idle", "", id = "watch-rests", detail = "On the watch, a few seconds after an answer the screen clears, ready for a new question. If he is listening for a follow-up he goes straight to listening instead.", kind = AssistantChange.Fix),
     AssistFeature("mdi:thermometer", "A card for the house's climate", "What's the climate like in the house?", id = "climate-card", detail = "Asked about the temperature in the house, {name} now shows a card with each heating zone: its temperature, target, humidity and whether it is heating, idle, on Eco or off.", kind = AssistantChange.Change),
     AssistFeature("mdi:keyboard-off-outline", "Keyboard stays away", "", id = "keyboard-on-return", detail = "Leaving the app while the typing box was open no longer brings the keyboard back up over the page when you return.", kind = AssistantChange.Fix),
     AssistFeature("mdi:thermostat-auto", "Looks after the heating", "Resume the heating", id = "runs-the-heating", detail = "{name} now keeps the heating comfortable by himself: on when a room is cold, down or off when it is hot. If you change a thermostat yourself he leaves it alone for a couple of hours, tells you when he takes over again, and you can say \"resume the heating\" or tap Resume on the Home page or in his notification.", kind = AssistantChange.Change),
