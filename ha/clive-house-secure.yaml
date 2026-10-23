@@ -1,0 +1,47 @@
+# Script script.clive_house_secure: Is the house secure: the alarm, doors and windows, smoke/heat/CO alarms and the lights, with a warning when nobody is home and the alarm is off or lights are on. Shows the `secure` card. A copy of the live script (2026-10-23).
+alias: Is the house secure
+description: Use this for ANY question about whether the house is secure, locked up, safe to leave or ready for bed, or what the alarm is set to. It shows the card on the screen by itself and returns the
+  words to say. Your whole reply is exactly the text in "say", nothing before or after it, and do not call the card script as well. If they say yes to the offer, give the details from "more".
+icon: mdi:shield-check
+mode: parallel
+max: 5
+sequence:
+- variables:
+    alarm: '{{ states(''alarm_control_panel.church_drive_alarm'') }}'
+    open: '{{ states.binary_sensor | selectattr(''attributes.device_class'', ''defined'') | selectattr(''attributes.device_class'', ''in'', [''door'', ''window'', ''garage_door'']) | rejectattr(''entity_id'',
+      ''search'', ''astra'') | selectattr(''state'', ''eq'', ''on'') | map(attribute=''name'') | list }}'
+    danger: '{{ states.binary_sensor | selectattr(''attributes.device_class'', ''defined'') | selectattr(''attributes.device_class'', ''in'', [''smoke'', ''heat'', ''carbon_monoxide'']) | selectattr(''state'',
+      ''eq'', ''on'') | map(attribute=''name'') | list }}'
+    lit: '{{ states.light | selectattr(''state'', ''eq'', ''on'') | rejectattr(''attributes.entity_id'', ''defined'') | rejectattr(''entity_id'', ''search'', ''backlight|display|purifier|night_light'')
+      | map(attribute=''name'') | list }}'
+    anyone: '{{ states.person | selectattr(''state'', ''eq'', ''home'') | list | length > 0 }}'
+- variables:
+    armed: '{{ alarm.startswith(''armed'') }}'
+    alarm_word: '{{ alarm | replace(''armed_'', ''set to '') | replace(''_'', '' '') | replace(''disarmed'', ''off'') }}'
+- variables:
+    rows: '{{ [{''name'': ''Alarm'', ''detail'': alarm_word | capitalize, ''marker'': (''ok'' if (armed or anyone) else ''warn'')}, {''name'': ''Doors and windows'', ''detail'': ((open | join('', '') ~
+      '' open'') if open | length > 0 else ''All closed''), ''marker'': (''warn'' if open | length > 0 else ''ok'')}, {''name'': ''Smoke and CO alarms'', ''detail'': ((danger | join('', '') ~ '' going off'')
+      if danger | length > 0 else ''All quiet''), ''marker'': (''warn'' if danger | length > 0 else ''ok'')}, {''name'': ''Lights on'', ''detail'': ((lit[:3] | join('', '')) if lit | length > 0 else ''None''),
+      ''marker'': (''warn'' if (lit | length > 0 and not anyone) else ''ok'')}] }}'
+- variables:
+    problems: '{{ rows | selectattr(''marker'', ''eq'', ''warn'') | map(attribute=''name'') | list }}'
+- variables:
+    say: '{% if problems | length == 0 %}The house looks secure: the alarm is {{ alarm_word }} and the doors and windows are closed.{% else %}{{ problems | length }} {{ ''thing needs'' if problems | length
+      == 1 else ''things need'' }} checking: {{ problems | join('', '') | lower }}.{% endif %} Shall I go through them?'
+    card:
+      title: '{{ ''All secure'' if problems | length == 0 else ((problems | length ~ '' to check'')) }}'
+      tone: '{{ ''green'' if problems | length == 0 else ''amber'' }}'
+      rows: '{{ rows }}'
+      foot: '{{ ''Nobody is home'' if not anyone else '''' }}'
+- action: script.clive_show_card
+  data:
+    kind: secure
+    data: '{{ card }}'
+- variables:
+    result:
+      say: '{{ say }}'
+      more: 'Alarm {{ alarm_word }}. Open: {{ open | join('', '') if open | length > 0 else ''nothing'' }}. Danger alarms: {{ danger | join('', '') if danger | length > 0 else ''none'' }}. Lights on: {{
+        lit | join('', '') if lit | length > 0 else ''none'' }}. {{ ''Someone is home.'' if anyone else ''Nobody is home.'' }}'
+      next: Your whole reply is exactly the text in say. The card is already on the screen.
+- response_variable: result
+  stop: Shown

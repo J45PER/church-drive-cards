@@ -19,6 +19,12 @@ fields:
     required: false
     selector:
       text: {}
+  sport:
+    name: Sport
+    description: football (the default), tennis, golf, cricket, rugby, basketball, baseball, hockey, f1, boxing, darts, cycling, swimming, athletics or snooker. It chooses the icon on the card.
+    required: false
+    selector:
+      text: {}
   scorers:
     name: Scorers
     description: One short line, for a single game.
@@ -60,9 +66,9 @@ sequence:
       {{ (phrases[:2] | join(' and ')) }}{{ (' in the ' ~ title) if title | default('') else '' }}{{ (' ' ~ when) if when | default('') else '' }}. {{ 'Shall I go through the other results?' if n > 2 else 'Shall I tell you the scorers?' }}
     card: >-
       {%- if n == 1 -%}
-      {{ dict(rows[0], scorers=(scorers | default(''))) }}
+      {{ dict(rows[0], scorers=(scorers | default('')), sport=(sport | default('')), comp=(title | default(''))) }}
       {%- else -%}
-      {{ {'title': title | default(''), 'rows': rows} }}
+      {{ {'title': title | default(''), 'comp': title | default(''), 'sport': sport | default(''), 'rows': rows} }}
       {%- endif -%}
 - action: script.clive_show_card
   data:

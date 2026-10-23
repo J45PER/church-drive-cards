@@ -1,0 +1,39 @@
+# Script script.clive_shopping_list: Reads the shopping list (todo.shopping_list). Shows the `shop` card. A copy of the live script (2026-10-23).
+alias: Read the shopping list
+description: 'Use this for ANY question about what is on the shopping list, what needs buying or what is on a list. It shows the card on the screen by itself and returns the words to say. Your whole reply
+  is exactly the text in "say", nothing before or after it, and do not call the card script as well. To ADD an item do not use this: use the normal list command. If they say yes to the offer, give the details
+  from "more".'
+icon: mdi:cart
+mode: parallel
+max: 5
+sequence:
+- action: todo.get_items
+  target:
+    entity_id: todo.shopping_list
+  data:
+    status: needs_action
+  response_variable: got
+- variables:
+    items: '{{ got[''todo.shopping_list''][''items''] | map(attribute=''summary'') | list }}'
+    n: '{{ got[''todo.shopping_list''][''items''] | length }}'
+- variables:
+    rows: '{%- set ns = namespace(l=[]) -%}{%- for i in items[:6] -%}{%- set ns.l = ns.l + [{''name'': i, ''marker'': ''todo''}] -%}{%- endfor -%}{{- ns.l -}}'
+    say: '{% if n == 0 %}The shopping list is empty.{% elif n <= 3 %}On the shopping list there is {{ items | join('', '') }}.{% else %}There are {{ n }} things on the shopping list, starting with {{ items[:3]
+      | join('', '') }}.{% endif %} {{ ''Shall I read the rest?'' if n > 3 else ''Shall I add anything?'' }}'
+- variables:
+    card:
+      title: '{{ n }} {{ ''item'' if n == 1 else ''items'' }}'
+      tone: indigo
+      rows: '{{ rows }}'
+      foot: '{{ (''and '' ~ (n - 6) ~ '' more'') if n > 6 else '''' }}'
+- action: script.clive_show_card
+  data:
+    kind: shop
+    data: '{{ card }}'
+- variables:
+    result:
+      say: '{{ say }}'
+      more: 'The whole list: {{ items | join('', '') if n > 0 else ''nothing'' }}.'
+      next: Your whole reply is exactly the text in say. The card is already on the screen.
+- response_variable: result
+  stop: Shown

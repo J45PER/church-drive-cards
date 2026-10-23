@@ -182,7 +182,7 @@ private fun TalkFace(model: CliveModel, signedOut: Boolean, onTap: () -> Unit) {
     val photoMode = bitmap != null
 
     val markSize by animateDpAsState(if (photoMode) ui.d(32f) else if (big) ui.d(104f) else ui.d(58f), tween(550), label = "markSize")
-    val markCentreY by animateDpAsState(if (photoMode) ui.d(244f) else if (big) ui.d(124f) else if (card != null) ui.d(82f) else ui.d(84f), tween(550), label = "markY")
+    val markCentreY by animateDpAsState(if (photoMode) ui.d(244f) else if (big) ui.d(124f) else ui.d(84f), tween(550), label = "markY")
     val morph by animateFloatAsState(if (symbol != null && !photoMode) 1f else 0f, tween(450), label = "morph")
     val photoAlpha by animateFloatAsState(if (photoMode) 1f else 0f, tween(600), label = "photo")
 

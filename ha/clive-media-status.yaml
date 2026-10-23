@@ -1,0 +1,32 @@
+# Script script.clive_media_status: What the TVs and speakers are doing (the PC left out). Shows the `media` card. A copy of the live script (2026-10-23).
+alias: What is on the TVs and speakers
+description: Use this for ANY question about what is on the TV, what is playing, which TVs or speakers are on, or whether the TV was left on. It shows the card on the screen by itself and returns the words
+  to say. Your whole reply is exactly the text in "say", nothing before or after it, and do not call the card script as well. If they say yes to the offer, give the details from "more".
+icon: mdi:television-play
+mode: parallel
+max: 5
+sequence:
+- variables:
+    rows: '{%- set ns = namespace(l=[]) -%}{%- for s in states.media_player | rejectattr(''entity_id'', ''search'', ''xitol|pc|laptop'') -%}{%- set on = s.state not in [''off'', ''unavailable'', ''unknown'',
+      ''standby''] -%}{%- set what = (s.attributes.get(''app_name'') or s.attributes.get(''media_title'') or '''') -%}{%- set ns.l = ns.l + [{''name'': s.name, ''detail'': (what if on else (''Offline''
+      if s.state == ''unavailable'' else ''Off'')), ''pill'': (''On'' if on else ''Off''), ''tone'': (''green'' if on else ''grey'')}] -%}{%- endfor -%}{{- ns.l -}}'
+- variables:
+    on_names: '{{ rows | selectattr(''pill'', ''eq'', ''On'') | map(attribute=''name'') | list }}'
+- variables:
+    say: '{% if on_names | length == 0 %}Everything is off.{% elif on_names | length == 1 %}The {{ on_names[0] }} is on.{% else %}{{ on_names | join('' and '') }} are on.{% endif %} Shall I turn {{ ''them''
+      if on_names | length > 1 else ''it'' }} off?'
+    card:
+      title: '{{ (on_names | length ~ '' on'') if on_names | length > 0 else ''All off'' }}'
+      tone: purple
+      rows: '{{ rows }}'
+- action: script.clive_show_card
+  data:
+    kind: media
+    data: '{{ card }}'
+- variables:
+    result:
+      say: '{{ say }}'
+      more: '{{ rows | map(attribute=''name'') | list | join('', '') }} were checked.'
+      next: Your whole reply is exactly the text in say. The card is already on the screen.
+- response_variable: result
+  stop: Shown

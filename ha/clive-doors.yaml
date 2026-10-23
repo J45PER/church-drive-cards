@@ -1,0 +1,36 @@
+# Script script.clive_doors: Every door and window sensor (not the car): open or closed and for how long. Shows the `doors` card. Note: never pass a list of state objects between variables blocks (Home Assistant turns it into a string); build the rows in one template. A copy of the live script (2026-10-23).
+alias: Doors and windows
+description: Use this for ANY question about whether a door or window is open or closed, the doors, the windows, or whether the house is locked up. It shows the card on the screen by itself and returns
+  the words to say. Your whole reply is exactly the text in "say", nothing before or after it, and do not call the card script as well. If they say yes to the offer, give the details from "more".
+icon: mdi:door
+mode: parallel
+max: 5
+sequence:
+- variables:
+    rows: '{%- set sensors = states.binary_sensor | selectattr(''attributes.device_class'', ''defined'') | selectattr(''attributes.device_class'', ''in'', [''door'', ''window'', ''garage_door'']) | rejectattr(''entity_id'',
+      ''search'', ''astra'') | list -%}{%- set ns = namespace(l=[]) -%}{%- for s in sensors -%}{%- set open = s.state == ''on'' -%}{%- set known = s.state in [''on'', ''off''] -%}{%- set ns.l = ns.l + [{''name'':
+      s.name, ''detail'': ((''Open for '' ~ relative_time(s.last_changed)) if open else ((''Closed '' ~ relative_time(s.last_changed) ~ '' ago'') if known else ''Not reporting'')), ''pill'': (''Open'' if
+      open else (''Closed'' if known else ''Unknown'')), ''tone'': (''amber'' if open else (''green'' if known else ''grey''))}] -%}{%- endfor -%}{{- ns.l -}}'
+    alarm: '{{ states(''alarm_control_panel.church_drive_alarm'') | replace(''_'', '' '') }}'
+- variables:
+    opened: '{{ rows | selectattr(''pill'', ''eq'', ''Open'') | map(attribute=''name'') | list }}'
+    names: '{{ rows | map(attribute=''name'') | list }}'
+- variables:
+    say: '{% if opened | length == 0 %}All the doors and windows are closed.{% elif opened | length == 1 %}The {{ opened[0] }} is open.{% else %}{{ opened | join('', '') }} are open.{% endif %} Shall I
+      tell you about the alarm?'
+    card:
+      title: '{{ (opened | length ~ '' open'') if opened | length > 0 else ''All closed'' }}'
+      tone: '{{ ''amber'' if opened | length > 0 else ''green'' }}'
+      rows: '{{ rows }}'
+      foot: Alarm {{ alarm }}
+- action: script.clive_show_card
+  data:
+    kind: doors
+    data: '{{ card }}'
+- variables:
+    result:
+      say: '{{ say }}'
+      more: 'The alarm is {{ alarm }}. Checked: {{ names | join('', '') }}.'
+      next: Your whole reply is exactly the text in say. The card is already on the screen.
+- response_variable: result
+  stop: Shown
