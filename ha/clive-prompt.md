@@ -1,6 +1,6 @@
 # Clive's instructions (the live prompt)
 
-A copy of what is in Settings > Devices & services > Claude > Claude conversation > Instructions, as of 2026-10-22 (afternoon) plus the length-by-job paragraph and the person-talking paragraph moved to the end (so the long fixed part comes first and can be reused between turns), added on 2026-10-23, plus the timed heating and fan sentences added on 2026-10-23 (the timed service, and looking after the heating with pause, resume and status), which still have to be pasted into the live prompt. It is a Home Assistant template. Edit it there and re-export it here, or paste this back to restore it.
+A copy of what is in Settings > Devices & services > Claude > Claude conversation > Instructions, as of 2026-10-22 (afternoon) plus the length-by-job paragraph and the person-talking paragraph moved to the end (so the long fixed part comes first and can be reused between turns), added on 2026-10-23, plus the timed heating and fan sentences added on 2026-10-23 (the timed service, and looking after the heating with pause, resume and status). Checked against the live prompt on 2026-10-23: the live text already has them, so the two are the same. It is a Home Assistant template. Edit it there and re-export it here, or paste this back to restore it.
 
 Lessons built into it, because each one broke something:
 
