@@ -234,6 +234,9 @@ fun HomeScreen(
                 androidx.compose.runtime.CompositionLocalProvider(LocalIsAdmin provides isAdmin) {
                     SecurityPage(panels["security"].orEmpty(), entities, registry, call)
                 }
+            } else if (page == Page.Cleaning && entities[VACUUM_ENTITY] != null) {
+                // Gregg's page is drawn by the app from his own entities, so every part of it looks the same.
+                CleaningPage(entities, call)
             } else {
                 val key = when (page) {
                     Page.Climate -> "climate"
@@ -353,7 +356,7 @@ private fun HomePage(
             }
             "Cleaning" -> HomePanel(
                 "Cleaning", Page.Cleaning.mdi, vacuumTone(vacuum), vacuumSummary(vacuum, entities[VACUUM_BATTERY]), Page.Cleaning,
-                iconSlot = { colors -> GreggIcon(greggState(vacuum, entities[VACUUM_BATTERY]), colors.accent, 40.dp, entities[VACUUM_BATTERY]?.state?.toDoubleOrNull()) },
+                iconSlot = { colors -> GreggIcon(GreggState.Idle, colors.accent, 40.dp) },
             ) {
                 VacuumCard(vacuum, entities[VACUUM_BATTERY], call)
             }

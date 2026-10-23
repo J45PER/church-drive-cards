@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -193,7 +194,10 @@ fun CarCard(config: JSONObject, entities: Map<String, EntityState>, registry: Re
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        ToneIconName(if (car.charging) "mdi:car-electric" else "mdi:car", Icons.Filled.Info, tone, 36)
+                        // The make's logo (Vauxhall, Tesla...) when it is known, else a car.
+                        Box(Modifier.size(36.dp).background(tone.accent.copy(alpha = 0.18f), CircleShape), contentAlignment = Alignment.Center) {
+                            BrandOrIcon(car.name.trim().substringBefore(' '), if (car.charging) "mdi:car-electric" else "mdi:car", tone.accent, 22.dp)
+                        }
                         Column(Modifier.weight(1f)) {
                             Text(car.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
                             if (tag.isNotBlank()) Text(
@@ -229,4 +233,19 @@ fun CarCard(config: JSONObject, entities: Map<String, EntityState>, registry: Re
             }
         }
     }
+}
+
+
+/** A brand's one-colour logo (Simple Icons, or our own set) when it is known by [brand], else the plain [icon]. */
+@Composable
+fun BrandOrIcon(brand: String?, icon: String, tint: Color, size: androidx.compose.ui.unit.Dp) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(Unit) { SimpleIcons.load(context); OwnLogos.load(context) }
+    val key = brand?.takeIf { it.isNotBlank() }?.let { SimpleIcons.slugFor(it) }
+    val name = when {
+        key != null && SimpleIcons.paths?.containsKey(key) == true -> "si:$key"
+        key != null && OwnLogos.paths?.containsKey(key) == true -> "ol:$key"
+        else -> icon
+    }
+    HaIcon(name, Icons.Filled.Info, tint, size)
 }

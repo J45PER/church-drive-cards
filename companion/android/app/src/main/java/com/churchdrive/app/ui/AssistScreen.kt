@@ -481,6 +481,14 @@ private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String)
             ui.keyboardRequested = false
         }
     }
+    // An answer arriving folds the keyboard away, so the whole answer (and its card) has the screen to itself.
+    val lastMessage = model.messages.lastOrNull()
+    LaunchedEffect(model.messages.size) {
+        if (lastMessage != null && !lastMessage.fromUser) {
+            keyboard?.hide()
+            focusManager.clearFocus(force = true)
+        }
+    }
     // Leaving the app with the typing box focused makes Android put the keyboard straight back up on return, over whatever page is
     // showing. So the box lets go of focus when the app stops, and the keyboard only comes back when the Type button asks for it.
     val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -504,9 +512,9 @@ private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String)
             )
             if (chatting) {
                 // The larger Clive icon stays at the top; the conversation starts below it.
-                Column(modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    AssistOrb(model.state, model.level, 96.dp)
-                    Spacer(Modifier.height(8.dp))
+                Column(modifier = Modifier.fillMaxWidth().padding(top = 0.dp, bottom = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    AssistOrb(model.state, model.level, 72.dp)
+                    Spacer(Modifier.height(4.dp))
                     Text(assistStatus(model.state), style = MaterialTheme.typography.labelLarge, color = pal.third)
                 }
             }
@@ -555,7 +563,7 @@ private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String)
                             value = ui.typed, onValueChange = { ui.typed = it }, singleLine = true, modifier = Modifier.weight(1f).focusRequester(ui.focus),
                             placeholder = { Text("Ask or tell the house") },
                             keyboardOptions = KeyboardOptions(capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences, imeAction = ImeAction.Send),
-                            keyboardActions = KeyboardActions(onSend = { model.send(ui.typed, typed = true); ui.typed = "" }),
+                            keyboardActions = KeyboardActions(onSend = { model.send(ui.typed, typed = true); ui.typed = ""; keyboard?.hide(); focusManager.clearFocus(force = true) }),
                             shape = RoundedCornerShape(28.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedContainerColor = scheme.surfaceContainer, unfocusedContainerColor = scheme.surfaceContainer,
