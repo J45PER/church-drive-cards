@@ -1,0 +1,84 @@
+# Script script.clive_fixture: A team's next game, after Clive has searched the web for the real date. Exposed to Assist. It puts the fixture card on the screen itself (through clive_show_card) and returns `say`: the exact words to speak, one sentence with the answer and one short offer of more. A copy of the live script.
+alias: Next game
+description: 'After you have searched the web for a team''s next game, call this with the details. It shows the card on the screen by itself and returns the words to say. Your whole reply must be exactly the text in "say", nothing before or after it, and do not call the card script as well. home and away are the club names, home_short and away_short three letters, day is how you would say the day ("on Saturday", "tomorrow", "next Wednesday"), when is the date for the card ("Sat 24 Oct"), time is the kick off ("12:30"), comp the competition, where the ground and in_text how long to go ("in 2 days"). Never invent a figure. If they say yes to the offer, tell them where to watch it from your search.'
+fields:
+  home:
+    name: Home club
+    required: true
+    selector:
+      text: {}
+  away:
+    name: Away club
+    required: true
+    selector:
+      text: {}
+  home_short:
+    name: Home, three letters
+    required: false
+    selector:
+      text: {}
+  away_short:
+    name: Away, three letters
+    required: false
+    selector:
+      text: {}
+  day:
+    name: Day, spoken
+    required: false
+    selector:
+      text: {}
+  when:
+    name: Date for the card
+    required: false
+    selector:
+      text: {}
+  time:
+    name: Kick off
+    required: false
+    selector:
+      text: {}
+  comp:
+    name: Competition
+    required: false
+    selector:
+      text: {}
+  where:
+    name: Ground
+    required: false
+    selector:
+      text: {}
+  in_text:
+    name: How long to go
+    required: false
+    selector:
+      text: {}
+icon: mdi:calendar-clock
+mode: parallel
+max: 5
+sequence:
+- variables:
+    card:
+      home:
+        name: '{{ home }}'
+        short: '{{ home_short | default(home[:3] | upper, true) }}'
+      away:
+        name: '{{ away }}'
+        short: '{{ away_short | default(away[:3] | upper, true) }}'
+      title: '{{ home }} v {{ away }}'
+      when: '{{ when | default('''') }}'
+      time: '{{ time | default('''') }}'
+      where: '{{ where | default('''') }}'
+      comp: '{{ comp | default('''') }}'
+      in: '{{ in_text | default('''') }}'
+    say: >-
+      {{ home }} play {{ away }}{{ (' ' ~ day) if day | default('') else ((' on ' ~ when) if when | default('') else '') }}{{ (' at ' ~ time) if time | default('') else '' }}. Shall I tell you where to watch it?
+- action: script.clive_show_card
+  data:
+    kind: fixture
+    data: '{{ card }}'
+- variables:
+    result:
+      say: '{{ say }}'
+      next: Your whole reply is exactly the text in say. The card is already on the screen.
+- response_variable: result
+  stop: Shown
