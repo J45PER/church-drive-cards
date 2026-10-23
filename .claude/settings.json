@@ -15,6 +15,7 @@
       "mcp__Church_Drive_Home_Assistant__ha_get_operation_status",
       "mcp__Church_Drive_Home_Assistant__ha_list_services",
       "mcp__Church_Drive_Home_Assistant__ha_eval_template",
+      "mcp__Church_Drive_Home_Assistant__ha_call_service",
       "mcp__Church_Drive_Home_Assistant__ha_config_get_script",
       "mcp__Church_Drive_Home_Assistant__ha_config_get_automation",
       "mcp__Church_Drive_Home_Assistant__ha_config_list_helpers",
