@@ -1,8 +1,17 @@
 # Church Drive: Handoff
 
-*Last updated 2026-10-12. Current release: **v0.52.3** (Android 0.19.3).*
+*Last updated 2026-10-23. Current release: integration **v0.66.0**, Android and To-Do **0.48.0**. (Older paragraphs below keep their own dates; the newest work is first.)*
 
 ## Where this stands
+
+**Clive: heating manager, tuning from a session, scripts (2026-10-23, PR #264, #265).** Read `ha/clive.md` (sections "Timed heating and fan", "Keeping the climate comfortable", "Tuning Clive from a session") before touching any of it.
+- **Live in Home Assistant already (no deploy needed):** timed heating and fan (`clive_timed_control`/`clive_timed_revert`), the automatic heating manager (`clive_climate_zone` every 10 minutes, `clive_climate_control` to resume/pause/status, the automation that pauses a zone when somebody changes the thermostat by hand, `input_number.clive_climate_pause_minutes` 120), and the answer scripts `clive_who_is_home`, `clive_car_status`, `clive_scores`, `clive_fixture`, `clive_answer`. Copies are in `ha/clive-*.yaml`.
+- **Clive's instructions and model settings are edited from a session**, not pasted: `ha_config_set_helper(helper_type="config_subentry", entry_id="01M376K2WJGE6N1C80RF6D40SE", subentry_id="01M376K2WJXBAQ5MWA048ZS9DZ", subentry_type="conversation", config={"recommended": false, "prompt": ...})` (patch semantics, the whole prompt is sent). The repo copy is `ha/clive-prompt.md`: keep it equal to the live one after every change. Gated write tools need the `BestPracticeKey` shown by `ha_get_skill_guide` (it rotates hourly; pass `MandatoryBPS: false`).
+- **Allow rules** are in `.claude/settings.json` on `main` (HA reads, script/automation/helper/entity edits, service calls for tests). Restarts, removals, restores and updates still ask. A session that started before the file existed does not load it, so start a new one.
+- **App 0.48.0 (phone, watch, To-Do):** Home page banner below the to-do highlights while a zone is paused with a Resume button (`AssistantPause.kt`), `clive_resume` notification button (`HOUSE_VERBS` in `core`), Clive's notifications carry his own icon (`ic_notification_assistant`, `assistant_notification_logo`). Released by CI as `android-v0.48.0` and `todo-v0.48.0`; the Play bundles are the `church-drive-play-bundles` artifact of the run.
+- **Not done yet:** (1) the notification kind `clive_actions` ("Clive adjusted the house", `kinds.py`) only appears in Manager, and pushes only go out, after an **integration release (bump from 0.66.0) and a Home Assistant restart**. (2) **How-to and single-score questions** are still answered in the model's own long words with no card, `clive_answer`/`clive_scores` are not called (who-is-home, car, weekend scores and fixtures do go through scripts). Adding the rule to the prompt's closing check did not help. Choices: a bigger model for these (slower), or a hard reply length cap; the user has not picked. (3) Astra battery and range sensors are often unavailable (the car's cloud). (4) A restart during a timed run loses the put-back; the Nest's own away/eco changes can look like a manual change.
+- **Lessons** (details in `ha/clive.md`): a Haiku model follows prompt rules inconsistently after a web search, so deterministic scripts that return a `say` text are used; script descriptions that start "Use this for ANY question about ..." are obeyed far more than "after you have searched ..."; shortening the prompt made it skip cards, so the long one stays; a bare `false` in a script `variables` block is a truthy string, use a `{{ }}` expression; Nest cannot restore through `scene.create` snapshots.
+- Rules from the user: Clive's notifications get his icon and everyone else's keep the Manager's; both app versions (phone and To-Do) stay equal; code identifiers say `Assistant*`, never the assistant's name.
 
 **Ring cameras and doorbell: the current way (2026-10-13).** Video and Talk for every Ring
 camera go through the private add-on **go2rtc (Church Drive, Ring fix)** (`go2rtc-ring/` in this
@@ -493,6 +502,7 @@ Full notes in `ha/clive.md`, script copies in `ha/clive-*.yaml`. Short version:
 - Exposure is global, so what must not be done by voice is simply not exposed: sirens, the alarm panel (arm-only script instead), camera motion switches, energy data, TVs and PCs (until a room-aware tool exists), the car's buttons.
 - Scenes go through `script.clive_apply_scene` (library scenes, applied by `church_drive.apply_scene`); the 133 Hue scenes are unexposed. The scene list in that script is typed in by hand.
 - Fast charging at a non-cheap rate needs a spoken confirmation, enforced in `clive_zappi_charge` with a 5 to 300 second window.
+- Since 2026-10-23: the heating manager, timed service, answer scripts and editing Clive's prompt from a session (see "Where this stands" at the top and `ha/clive.md`).
 - Still to build: a custom LLM API in this integration (live scene list, room-aware device power from the satellite's area). Not before the first satellite.
 - App side (0.34.2 and 0.34.3): follow-up listening after "anything else?", a shorter wait for the end of speech, and Settings shows how long each answer took.
 
