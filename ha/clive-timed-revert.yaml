@@ -1,0 +1,46 @@
+# Script script.clive_timed_revert: The waiting half of clive_timed_control, started by it and not exposed to Assist. Waits for the timer to finish or be cancelled, then puts the device back from the scene snapshot taken before it was changed. Has its own timeout (the time plus 10 minutes) so a timer lost in a restart still puts things back. A copy of the live script.
+alias: Put a timed device back
+description: 'Started by clive_timed_control with the timer, the snapshot scene and the length in seconds. Not for Clive to call.'
+fields:
+  timer:
+    description: The timer entity.
+    required: true
+    selector:
+      entity:
+        domain: timer
+  scene:
+    description: The snapshot scene entity.
+    required: true
+    selector:
+      entity:
+        domain: scene
+  secs:
+    description: Length in seconds, for the timeout.
+    required: true
+    selector:
+      number:
+        min: 60
+        max: 43200
+mode: parallel
+max: 5
+sequence:
+- wait_for_trigger:
+  - trigger: event
+    event_type: timer.finished
+    event_data:
+      entity_id: '{{ timer }}'
+  - trigger: event
+    event_type: timer.cancelled
+    event_data:
+      entity_id: '{{ timer }}'
+  timeout:
+    seconds: '{{ (secs | int(0)) + 600 }}'
+  continue_on_timeout: true
+- action: timer.cancel
+  target:
+    entity_id: '{{ timer }}'
+  continue_on_error: true
+- action: scene.turn_on
+  target:
+    entity_id: '{{ scene }}'
+icon: mdi:timer-sand-complete

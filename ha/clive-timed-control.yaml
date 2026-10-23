@@ -1,0 +1,245 @@
+# Script script.clive_timed_control: Runs the heating or the bedroom fan for a set time, then puts it back how it was. Returns at once (the waiting and the put-back are done by script.clive_timed_revert), so Clive can answer straight away. Heating always goes to the higher of the middle of the room's comfort range and 2°C above the current temperature. If the room does not need it (heating when it is already at or above the bottom of the comfort range, fan when it is at or below the top) nothing starts: the result is a warning, and a repeat with confirm_unneeded only counts 5 to 300 seconds after that warning (stamped in input_datetime.clive_timed_warning_asked together with the target in input_text.clive_timed_warning_target, so it only counts for the same target, once, the same rule as the Fast charge). A copy of the live script.
+alias: Run the heating or a fan for a set time
+description: 'Turn the heating or the bedroom fan on for a set number of minutes, then put it back how it was. For "for 2 hours" use minutes 120. Heating is set to a comfortable temperature for the room (never higher than needed), the fan to its top speed unless asked for less. To stop early, call with command cancel. If the room is already comfortable (heating when it is already warm enough, the fan when it is already cool enough) it does NOT start: the result is status warning with the current temperature and the comfort range. You must then tell the user, ask whether they still want it, and WAIT for their answer. Only after they answer yes, call this again with the same target and minutes and confirm_unneeded true. A confirmation sent without waiting for the user''s reply is rejected. If one is already running for that target the result is already_running with the time it finishes. Check ''status'' in the result and tell the user honestly what happened. Say the end time, not the minutes.'
+fields:
+  target:
+    name: What to run
+    description: Downstairs heating (the living room thermostat), Upstairs heating (the upstairs thermostat) or Bedroom fan (Hayley's bedroom).
+    required: true
+    selector:
+      select:
+        custom_value: false
+        options:
+        - Downstairs heating
+        - Upstairs heating
+        - Bedroom fan
+  minutes:
+    name: Minutes
+    description: How long to run it for, in minutes (1 hour = 60, 2 hours = 120). Up to 12 hours. Not needed for cancel.
+    required: false
+    selector:
+      number:
+        min: 1
+        max: 720
+        mode: box
+        unit_of_measurement: min
+  command:
+    name: Command
+    description: start (the default) or cancel (stop early and put it back how it was).
+    required: false
+    selector:
+      select:
+        custom_value: false
+        options:
+        - start
+        - cancel
+  fan_speed:
+    name: Fan speed
+    description: For the fan only. Max is the default, so only set it when asked for less.
+    required: false
+    selector:
+      select:
+        custom_value: false
+        options:
+        - Low
+        - Medium
+        - Max
+  confirm_unneeded:
+    name: User has agreed to run it although it is not needed
+    description: Set true ONLY after you have told the user the warning, asked them, and they have answered yes in a new message. Leave out otherwise.
+    required: false
+    selector:
+      boolean: {}
+icon: mdi:timer-cog-outline
+mode: single
+sequence:
+- variables:
+    cfg:
+      Downstairs heating:
+        kind: heat
+        entity: climate.downstairs
+        temp: sensor.downstairs_temperature
+        timer: timer.clive_heating_downstairs
+        scene: clive_timed_heating_downstairs
+        low: 19
+        high: 22
+        room: the living room
+      Upstairs heating:
+        kind: heat
+        entity: climate.upstairs
+        temp: sensor.upstairs_temperature
+        timer: timer.clive_heating_upstairs
+        scene: clive_timed_heating_upstairs
+        low: 16
+        high: 20
+        room: upstairs
+      Bedroom fan:
+        kind: fan
+        entity: fan.hayleys_bedroom_bedroom_fan
+        temp: sensor.hayleys_bedroom_master_bedroom_climate_sensor_temperature
+        timer: timer.clive_bedroom_fan
+        scene: clive_timed_bedroom_fan
+        low: 16
+        high: 20
+        room: Hayley's bedroom
+- variables:
+    t: '{{ cfg[target] }}'
+    wanted: '{{ command | default(''start'', true) }}'
+    secs: '{{ (minutes | default(0, true) | int(0)) * 60 }}'
+    confirm_attempt: '{{ confirm_unneeded | default(false) | bool(false) }}'
+- variables:
+    ask_age: '{{ now().timestamp() - (state_attr(''input_datetime.clive_timed_warning_asked'', ''timestamp'') | float(0)) }}'
+    temp: '{{ states(t.temp) | float(none) }}'
+    timer_state: '{{ states(t.timer) }}'
+    asked_target: '{{ states(''input_text.clive_timed_warning_target'') }}'
+- variables:
+    confirmed_ok: '{{ confirm_attempt and asked_target == target and ask_age >= 5 and ask_age <= 300 }}'
+    not_needed: '{{ temp is not none and ((t.kind == ''heat'' and temp >= t.low) or (t.kind == ''fan'' and temp <= t.high)) }}'
+    setpoint: >-
+      {% if t.kind == 'heat' and temp is not none %}
+        {% set want = [ (t.low + t.high) / 2, temp + 2 ] | max %}
+        {{ [ (want * 2) | round(0, 'ceil') / 2, state_attr(t.entity, 'max_temp') | float(32) ] | min }}
+      {% endif %}
+    speed_pct: '{{ {''Low'': 33, ''Medium'': 67, ''Max'': 100}[fan_speed | default(''Max'', true)] | default(100) }}'
+- variables:
+    ends_at: '{{ (now().timestamp() + secs) | timestamp_custom(''%H:%M'') }}'
+- choose:
+  - conditions:
+    - condition: template
+      value_template: '{{ wanted == ''cancel'' }}'
+    sequence:
+    - if:
+      - condition: template
+        value_template: '{{ timer_state == ''idle'' }}'
+      then:
+      - variables:
+          result:
+            status: nothing_running
+            message: Nothing was running for that, so nothing has changed.
+      - response_variable: result
+        stop: nothing running
+    - action: timer.cancel
+      target:
+        entity_id: '{{ t.timer }}'
+    - variables:
+        result:
+          status: cancelled
+          message: Stopped, and it is being put back how it was.
+    - response_variable: result
+      stop: cancelled
+  - conditions:
+    - condition: template
+      value_template: '{{ secs < 60 or secs > 43200 }}'
+    sequence:
+    - variables:
+        result:
+          status: not_done
+          message: A time between 1 minute and 12 hours is needed. Ask how long.
+    - response_variable: result
+      stop: no time
+  - conditions:
+    - condition: template
+      value_template: '{{ timer_state != ''idle'' }}'
+    sequence:
+    - variables:
+        result:
+          status: already_running
+          finishes_at: '{{ state_attr(t.timer, ''finishes_at'') | as_datetime | as_local | timestamp_custom(''%H:%M'') }}'
+          message: It is already running. Nothing has changed. To change the time, cancel it first.
+    - response_variable: result
+      stop: already running
+  - conditions:
+    - condition: template
+      value_template: '{{ temp is none }}'
+    sequence:
+    - variables:
+        result:
+          status: not_done
+          message: The room temperature reading is not available, so nothing has been started.
+    - response_variable: result
+      stop: no temperature
+  - conditions:
+    - condition: template
+      value_template: '{{ not_needed and not confirmed_ok }}'
+    sequence:
+    - if:
+      - condition: template
+        value_template: '{{ not confirm_attempt }}'
+      then:
+      - action: input_datetime.set_datetime
+        data:
+          datetime: '{{ now().strftime(''%Y-%m-%d %H:%M:%S'') }}'
+        target:
+          entity_id: input_datetime.clive_timed_warning_asked
+      - action: input_text.set_value
+        data:
+          value: '{{ target }}'
+        target:
+          entity_id: input_text.clive_timed_warning_target
+    - variables:
+        result:
+          status: warning
+          current_temperature: '{{ temp }}'
+          comfort_low: '{{ t.low }}'
+          comfort_high: '{{ t.high }}'
+          message: >-
+            {% if confirm_attempt %}Nothing has been changed. A confirmation was sent before the user had answered, or too late. Ask the user now and wait for their reply.
+            {% elif t.kind == 'heat' %}Nothing has been changed yet. {{ t.room | capitalize }} is already {{ temp }} degrees, which is not below its comfort range of {{ t.low }} to {{ t.high }}. Warn the user, ask if they still want the heating on, and wait for their answer. Only if they say yes, call this again with the same target and minutes and confirm_unneeded true.
+            {% else %}Nothing has been changed yet. {{ t.room | capitalize }} is only {{ temp }} degrees, which is not above its comfort range of {{ t.low }} to {{ t.high }}. Warn the user, ask if they still want the fan on, and wait for their answer. Only if they say yes, call this again with the same target and minutes and confirm_unneeded true.{% endif %}
+    - response_variable: result
+      stop: needs confirmation
+  default:
+  - action: input_datetime.set_datetime
+    data:
+      datetime: '2000-01-01 00:00:00'
+    target:
+      entity_id: input_datetime.clive_timed_warning_asked
+  - action: scene.create
+    data:
+      scene_id: '{{ t.scene }}'
+      snapshot_entities:
+      - '{{ t.entity }}'
+  - action: timer.start
+    target:
+      entity_id: '{{ t.timer }}'
+    data:
+      duration: '{{ secs }}'
+  - if:
+    - condition: template
+      value_template: '{{ t.kind == ''heat'' }}'
+    then:
+    - action: climate.set_hvac_mode
+      target:
+        entity_id: '{{ t.entity }}'
+      data:
+        hvac_mode: heat
+    - action: climate.set_temperature
+      target:
+        entity_id: '{{ t.entity }}'
+      data:
+        temperature: '{{ setpoint | float }}'
+    else:
+    - action: fan.turn_on
+      target:
+        entity_id: '{{ t.entity }}'
+      data:
+        percentage: '{{ speed_pct | int }}'
+  - action: script.turn_on
+    target:
+      entity_id: script.clive_timed_revert
+    data:
+      variables:
+        timer: '{{ t.timer }}'
+        scene: 'scene.{{ t.scene }}'
+        secs: '{{ secs }}'
+  - variables:
+      result:
+        status: done
+        target: '{{ target }}'
+        finishes_at: '{{ ends_at }}'
+        room_temperature: '{{ temp }}'
+        set_to: '{{ setpoint if t.kind == ''heat'' else speed_pct ~ ''% speed'' }}'
+        was_unneeded_but_agreed: '{{ not_needed }}'
+        note: It goes back to how it was at the finish time, or when cancelled. If the house restarts before then, the put-back may not happen.
+  - response_variable: result
+    stop: done

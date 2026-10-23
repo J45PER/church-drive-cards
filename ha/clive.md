@@ -21,6 +21,9 @@ The `clive-*.yaml` files here are copies of the live scripts. Edit them in Home 
 | `clive_show` | Puts a picture and/or an https link on the screen of the person who asked (event `church_drive_assistant_show`, carrying their Home Assistant user; the Church Drive app shows it under his answer). Does nothing on a device without a screen, so his spoken answer must stand alone. |
 | `clive_show_card` | Puts a card on the screen of the person who asked: the weather (it fills itself in, with the next hours and the place), a score or fixture, what is playing (same event as `clive_show`, with a `card`). Drawn by the Church Drive phone and watch apps, which find the club badges themselves; other screens ignore it, so his spoken answer must stand alone. The weather entity is deliberately not exposed to Assist. |
 | `clive_vacuum` | Gregg: start, pause, stop, status. Nothing else. |
+| `clive_timed_control` | Runs the heating (downstairs or upstairs) or the bedroom fan for a set time, then puts it back how it was. See "Timed heating and fan" below. Home Assistant only: no app change. |
+
+`clive_timed_revert` is its second half and is **not** exposed to Assist.
 
 Also exposed for the car: `zappi_charge_later`, `zappi_car_yes`, `zappi_car_no` (the existing scripts, unchanged), the smart charge helpers, and four Zappi sensors (status, plug status, charging power, charge added).
 
@@ -40,6 +43,19 @@ Also exposed for the car: `zappi_charge_later`, `zappi_car_yes`, `zappi_car_no` 
 `clive_zappi_charge` with mode Fast at a rate that is not cheap does not start. It stamps `input_datetime.zappi_fast_charge_confirm_asked`, and returns `needs_confirmation` with the current and cheapest rates. Clive must ask and wait. A repeat call with `confirm_expensive: true` only counts if it arrives **5 to 300 seconds** after that stamp. The first version trusted the flag, and Clive set it himself on the first call, so the window is enforced in the script.
 
 The helper is an `input_datetime` (date and time), initial `2000-01-01 00:00:00`.
+
+## Timed heating and fan
+
+"Bedroom fan on max for 2 hours", "heating on for an hour". Entirely in Home Assistant, so it works from the phone, watch and any voice device without an app release.
+
+- **Two scripts.** `clive_timed_control` (exposed) does the change and returns at once, so Clive can answer; it starts `clive_timed_revert` (not exposed), which waits for the timer to finish or be cancelled and then puts the device back. A script that waited itself would keep Clive's tool call open for the whole two hours.
+- **Put back from a snapshot.** Before the change it takes a `scene.create` snapshot of the climate or fan, and the revert is `scene.turn_on` of that snapshot, so heating that was off goes back to off, and a fan that was off goes back to off.
+- **Timers.** One `timer` helper per target (`timer.clive_heating_downstairs`, `timer.clive_heating_upstairs`, `timer.clive_bedroom_fan`) holds the end time and stops a second run starting on the same target (the result is `already_running`). "Cancel the heating" is `command: cancel`, which cancels the timer and so triggers the put-back. The revert also has its own timeout (length plus 10 minutes).
+- **Heating setpoint.** Always the higher of the middle of the room's comfort range and 2°C above the current temperature, rounded up to 0.5, never above the thermostat's maximum. It sets the mode to heat.
+- **Fan speed.** Max (100%) unless asked for Low (33%) or Medium (67%).
+- **The warning.** Heating when the room is already at or above the bottom of its comfort range, or the fan when it is already at or below the top, does **not** start. The result is `warning` with the temperature and the range, and Clive must tell the person and wait for a yes. The repeat with `confirm_unneeded` only counts 5 to 300 seconds after the warning, for the same target, and once (`input_datetime.clive_timed_warning_asked` plus `input_text.clive_timed_warning_target`, cleared on a start). The first version stamped no target, so a warning for one device let a different one through.
+- **Comfort ranges** are in the script's `cfg` block, copied from the card room types (`CZ_TYPES` in `src/climate-zone-card.js`): downstairs 19 to 22 (living room), upstairs 16 to 20 and the bedroom fan 16 to 20 (bedroom). Change them in the script if a room's range changes. To add a device, add an entry to `cfg`, a timer helper and the option to the `target` field.
+- **Limit:** the waiting lives in a running script, so a Home Assistant restart during a timed run loses the put-back (the timer survives, nothing reacts to it). The thermostat's own setpoint would stay at the timed value until someone changes it.
 
 ## Gotchas learned the hard way
 
