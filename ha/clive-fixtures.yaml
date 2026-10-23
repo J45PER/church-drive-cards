@@ -1,0 +1,50 @@
+# Script script.clive_fixtures: The coming games of a league or competition, after Clive has searched the web for the real fixtures. Exposed to Assist. It puts the fixtures list card on the screen itself (through clive_show_card) and returns `say`: the exact words to speak. A copy of the live script.
+alias: League fixtures
+description: Use this for ANY question about the games of a league or competition, such as the games this weekend, the fixtures, or who plays who in a league, for a day or a round. After you have searched the web for the real fixtures, call this with every game asked for, in date order. It shows the list on the screen by itself (each club with its badge, the date and the kick off time) and returns the words to say. Your whole reply must be exactly the text in "say", nothing before or after it, and do not call the card script as well. games is a list and each game has home and away (the club names), home_short and away_short (three letters), when (the date for the card, for example "Sat 24 Oct") and time (the kick off, for example "15:00"). title is the competition, for example "Championship". sport is football by default. Never invent a fixture or a time.
+fields:
+  games:
+    name: Games
+    description: A list of games, each with home, away, home_short, away_short, when and time.
+    required: true
+    selector:
+      object: {}
+  title:
+    name: Competition
+    required: false
+    selector:
+      text: {}
+  sport:
+    name: Sport
+    description: football (the default), rugby, cricket and so on. It chooses the icon on the card.
+    required: false
+    selector:
+      text: {}
+icon: mdi:calendar-month-outline
+mode: parallel
+max: 5
+sequence:
+- variables:
+    gl: '{%- set g = (games | from_json(default=[])) if games is string else games -%}{{- g if g is list else ([g] if g else []) -}}'
+- variables:
+    n: '{{ gl | length }}'
+- variables:
+    rows: '{%- set ns = namespace(l=[]) -%}{%- for g in gl -%}{%- set ns.l = ns.l + [{''home'': {''name'': g.home, ''short'': g.home_short | default(g.home[:3] | upper, true)}, ''away'': {''name'': g.away, ''short'': g.away_short | default(g.away[:3] | upper, true)}, ''when'': g.when | default(''''), ''time'': g.time | default('''')}] -%}{%- endfor -%} {{- ns.l -}}'
+- variables:
+    first: '{{ gl[0] if n > 0 else none }}'
+- variables:
+    say: '{%- if n == 0 -%}I couldn''t find any games to show.{%- else -%}The first game{{ ('' in the '' ~ title) if title | default('''') else '''' }} is {{ first.home }} against {{ first.away }}{{ ('' on '' ~ first.when) if first.when | default('''') else '''' }}{{ ('' at '' ~ first.time) if first.time | default('''') else '''' }}{{ ('', and there '' ~ (''is 1 more'' if n == 2 else ''are '' ~ (n - 1) ~ '' more'') ~ '' on the screen'') if n > 1 else '''' }}. Shall I tell you where to watch one?{%- endif -%}'
+    card: '{{ {''title'': title | default(''''), ''comp'': title | default(''''), ''sport'': sport | default(''''), ''rows'': rows} }}'
+- if:
+  - condition: template
+    value_template: '{{ n > 0 }}'
+  then:
+  - action: script.clive_show_card
+    data:
+      kind: fixtures
+      data: '{{ card }}'
+- variables:
+    result:
+      say: '{{ say }}'
+      next: Your whole reply is exactly the text in say. The card is already on the screen.
+- response_variable: result
+  stop: Shown

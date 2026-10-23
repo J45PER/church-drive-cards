@@ -21,7 +21,7 @@ data class AssistantCard(val kind: String, val fields: org.json.JSONObject)
 
 /** The kinds of card the screens know how to draw. */
 val ASSISTANT_CARD_KINDS = setOf(
-    "weather", "score", "scores", "fixture", "music", "people", "done", "car", "climate", "gregg", "air",
+    "weather", "score", "scores", "fixture", "fixtures", "music", "people", "done", "car", "climate", "gregg", "air",
     // Cards built from one shared layout (a big figure, a title, rows, a footer): the house sends `big`, `title`, `sub`, `pill`, `rows` and `foot`.
     "energy", "secure", "doors", "tasks", "devices", "lights", "heat", "shop", "event", "reminder", "media", "answer",
 )
@@ -67,7 +67,7 @@ fun cardIcon(card: AssistantCard): String {
     val f = card.fields
     return when (card.kind) {
         "weather" -> weatherIconName(f.optString("symbol"))
-        "score", "scores", "fixture" -> sportIcon(f.optString("sport"))
+        "score", "scores", "fixture", "fixtures" -> sportIcon(f.optString("sport"))
         "music" -> "mdi:music-note"
         "people" -> "mdi:account-multiple"
         "done" -> if (f.has("ok") && !f.optBoolean("ok", true)) "mdi:close-circle" else "mdi:check-circle"
@@ -104,7 +104,7 @@ fun cardBrand(card: AssistantCard): String? {
         "music" -> f.optString("app").takeIf { it.isNotBlank() }
         "car" -> f.optString("brand").ifBlank { f.optString("name").trim().substringBefore(' ') }.takeIf { it.isNotBlank() }
         "energy" -> f.optString("brand").takeIf { it.isNotBlank() }
-        "score", "scores", "fixture" -> f.optString("comp").trim().lowercase().let { c -> COMPETITION_LOGOS.entries.firstOrNull { c.contains(it.key) }?.value }
+        "score", "scores", "fixture", "fixtures" -> f.optString("comp").trim().lowercase().let { c -> COMPETITION_LOGOS.entries.firstOrNull { c.contains(it.key) }?.value }
         else -> null
     }
 }
@@ -271,6 +271,7 @@ fun introDue(introducedEver: Boolean, told: Set<String>?, log: List<AssistFeatur
  * ever do they get the full introduction. Features also make up that introduction's "what I can do".
  */
 private val RAW_ASSIST_FEATURES = listOf(
+    AssistFeature("mdi:calendar-month-outline", "A league's games", "What are the Championship games this weekend?", id = "league-fixtures", detail = "Asked for the games of a league, {name} now shows them as a list with each club's badge, the date and the kick off time, under the league's logo."),
     AssistFeature("mdi:shield-star-outline", "Logos on the cards", "", id = "card-logos", detail = "When {name} shows a score or fixture the card now carries the competition's logo (the Premier League, the EFL, the FA Cup, the Champions League, the Europa and Conference Leagues and more), Disney+ and the other streaming services show theirs, and cars show their make (Mercedes-Benz, Land Rover and Cupra added).", kind = AssistantChange.Change),
     AssistFeature("mdi:card-multiple-outline", "Cards that line up", "", id = "cards-in-place", detail = "Every card now has its icon in the same place at the same size: {name}'s thinking mark turns into it and the figures open out underneath. Sports cards show their sport, music shows its service's logo and the car its make's, and the watch has the same icons.", kind = AssistantChange.Change),
     AssistFeature("mdi:card-text-outline", "A card the moment you ask", "What's the weather like?", id = "card-while-thinking", detail = "As soon as you have asked, {name} shows an empty card with his thinking mark in the middle, and the answer's card appears in its place. The weather card now has its icon in the middle too.", kind = AssistantChange.Change),

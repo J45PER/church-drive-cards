@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -74,7 +75,7 @@ private fun cardSides(card: AssistantCard): List<JSONObject> {
     val f = card.fields
     return when (card.kind) {
         "score", "fixture" -> listOf(f.side("home"), f.side("away"))
-        "scores" -> (0 until (f.optJSONArray("rows")?.length() ?: 0)).flatMap { i -> f.optJSONArray("rows")?.optJSONObject(i)?.let { listOf(it.side("home"), it.side("away")) }.orEmpty() }
+        "scores", "fixtures" -> (0 until (f.optJSONArray("rows")?.length() ?: 0)).flatMap { i -> f.optJSONArray("rows")?.optJSONObject(i)?.let { listOf(it.side("home"), it.side("away")) }.orEmpty() }
         else -> emptyList()
     }
 }
@@ -173,6 +174,26 @@ fun AssistantCardView(card: AssistantCard, modifier: Modifier = Modifier, morph:
                         Text(short(away), Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, color = ink, maxLines = 1)
                     }
                     if (r.optString("status").isNotBlank() && r.optString("status") != "Full time") Text(r.optString("status"), style = MaterialTheme.typography.labelSmall, color = soft)
+                }
+            }
+            "fixtures" -> {
+                if (f.optString("title").isNotBlank()) Text(f.optString("title"), style = MaterialTheme.typography.titleSmall, color = soft, modifier = Modifier.fillMaxWidth())
+                val rows = f.optJSONArray("rows")
+                for (i in 0 until (rows?.length() ?: 0)) {
+                    val r = rows?.optJSONObject(i) ?: continue
+                    val home = r.side("home")
+                    val away = r.side("away")
+                    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.width(76.dp)) {
+                            Text(r.optString("when"), style = MaterialTheme.typography.labelMedium, color = soft, maxLines = 1)
+                            Text(r.optString("time"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = ink, maxLines = 1)
+                        }
+                        Text(short(home), Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, color = ink, textAlign = TextAlign.End, maxLines = 1)
+                        Box(Modifier.padding(horizontal = 6.dp)) { CardBadge(home, 28.dp) }
+                        Text("v", style = MaterialTheme.typography.labelMedium, color = soft)
+                        Box(Modifier.padding(horizontal = 6.dp)) { CardBadge(away, 28.dp) }
+                        Text(short(away), Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, color = ink, maxLines = 1)
+                    }
                 }
             }
             "people" -> {

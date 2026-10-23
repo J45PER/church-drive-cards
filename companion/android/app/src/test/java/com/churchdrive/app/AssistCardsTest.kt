@@ -52,7 +52,7 @@ class AssistCardsTest {
     }
 
     @Test fun theNewCardKindsAreAccepted() {
-        for (k in listOf("people", "done", "car", "scores")) assertNotNull(parseAssistantCard(JSONObject("""{"kind":"$k"}""")))
+        for (k in listOf("people", "done", "car", "scores", "fixtures")) assertNotNull(parseAssistantCard(JSONObject("""{"kind":"$k"}""")))
         assertNull(parseAssistantCard(JSONObject("""{"kind":"nonsense"}""")))
     }
 
@@ -86,7 +86,7 @@ class AssistCardsTest {
         assertEquals("mdi:soccer", sportIcon(""))
         assertEquals("mdi:tennis-ball", sportIcon("Tennis"))
         assertEquals("mdi:golf", sportIcon("golf"))
-        for (kind in listOf("score", "scores", "fixture")) assertEquals("mdi:tennis-ball", cardIcon(parseAssistantCard(JSONObject("""{"kind":"$kind","sport":"tennis"}"""))!!))
+        for (kind in listOf("score", "scores", "fixture", "fixtures")) assertEquals("mdi:tennis-ball", cardIcon(parseAssistantCard(JSONObject("""{"kind":"$kind","sport":"tennis"}"""))!!))
     }
 
     @Test fun logosStandInForIconsWhenTheHouseNamesThem() {
@@ -108,6 +108,7 @@ class AssistCardsTest {
         assertEquals("premierleague", brandOf("""{"kind":"fixture","comp":"Premier League"}"""))
         assertEquals("eflleague", brandOf("""{"kind":"score","comp":"Sky Bet Championship"}"""))
         assertEquals("eflleague", brandOf("""{"kind":"scores","comp":"EFL League One"}"""))
+        assertEquals("eflleague", brandOf("""{"kind":"fixtures","comp":"Championship"}"""))
         assertEquals("eflleague", brandOf("""{"kind":"fixture","comp":"League Two"}"""))
         assertEquals("carabaocup", brandOf("""{"kind":"fixture","comp":"Carabao Cup"}"""))
         assertEquals("facup", brandOf("""{"kind":"fixture","comp":"Emirates FA Cup"}"""))
