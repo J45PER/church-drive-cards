@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.48.1
+
+- Version kept in step with the phone app. Shared code changed (a new Clive card kind and two entries in his log). No change to this app.
+
 ## 0.48.0
 
 - Version kept in step with the phone app. Shared code changed (a notification button for Clive). No change to this app.

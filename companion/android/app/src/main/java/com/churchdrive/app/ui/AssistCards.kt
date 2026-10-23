@@ -64,6 +64,15 @@ fun personPill(state: String): Pair<String, Tone> = when (state.trim().lowercase
     else -> state.trim() to Tone.Teal
 }
 
+/** The word and tone for a heating zone, as the dashboard's climate card colours it: heating (or idle in heat mode) orange, Eco green, cooling blue, off grey. */
+fun climatePill(state: String): Pair<String, Tone> = when (state.trim().lowercase()) {
+    "heating", "idle", "heat" -> state.trim().replaceFirstChar { it.uppercase() } to Tone.Orange
+    "eco" -> "Eco" to Tone.Green
+    "cooling", "cool" -> "Cooling" to Tone.Blue
+    "off", "" -> "Off" to Tone.Grey
+    else -> state.trim() to Tone.Teal
+}
+
 /** A colour given as #rrggbb (a light's own colour), or null. */
 private fun hexColour(v: String): Color? = v.trim().removePrefix("#").takeIf { it.length == 6 }?.toLongOrNull(16)?.let { Color(0xFF000000 or it) }
 
@@ -192,6 +201,30 @@ fun AssistantCardView(card: AssistantCard, modifier: Modifier = Modifier) {
                         }
                     }
                 }
+            }
+            "climate" -> {
+                val rows = f.optJSONArray("rows")
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    for (i in 0 until (rows?.length() ?: 0)) {
+                        val r = rows?.optJSONObject(i) ?: continue
+                        val (word, tone) = climatePill(r.optString("state"))
+                        val t = toneColors(tone)
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Box(Modifier.size(38.dp).clip(CircleShape).background(t.accent.copy(alpha = 0.25f)), contentAlignment = Alignment.Center) {
+                                HaIcon("mdi:thermometer", Icons.Filled.Info, t.accent, 22.dp)
+                            }
+                            Column(Modifier.weight(1f)) {
+                                Text(r.optString("name"), style = MaterialTheme.typography.titleSmall, color = ink, maxLines = 1)
+                                val sub = listOfNotNull(r.number("target")?.let { "Target ${"%.1f".format(it)}°" }, r.number("humidity")?.let { "${Math.round(it)}% humidity" })
+                                if (sub.isNotEmpty()) Text(sub.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = soft, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                            Text(r.number("temp")?.let { "${"%.1f".format(it)}°" } ?: "–", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = ink)
+                            Text(word, color = t.accent, style = MaterialTheme.typography.labelMedium, maxLines = 1, modifier = Modifier.background(t.accent.copy(alpha = 0.18f), CircleShape).padding(horizontal = 10.dp, vertical = 3.dp))
+                        }
+                    }
+                }
+                val foot = listOfNotNull(f.number("outside")?.let { "Outside ${"%.1f".format(it)}°" }, f.optString("quality").takeIf { it.isNotBlank() })
+                if (foot.isNotEmpty()) Text(foot.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = soft, modifier = Modifier.fillMaxWidth())
             }
             "done" -> {
                 val failed = f.has("ok") && !f.optBoolean("ok", true)
