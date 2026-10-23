@@ -89,4 +89,12 @@ class GreggIconTest {
         assertNull(greggLevelIcon("select.gregg_mop_intensity", "Quiet"))
         assertNull(greggLevelIcon("select.gregg_water_level", "Quiet"))
     }
+
+    @Test fun cleaningModesAndDockButtonsHaveTheirIcons() {
+        for (o in listOf("Vacuum", "Mop", "Vacuum and mop", "Mopping after sweeping"))
+            assertTrue(o, CdIcons.icons.containsKey(greggLevelIcon("select.gregg_cleaning_mode", o)!!.removePrefix("cd:")))
+        for (id in listOf("button.gregg_empty_dust_bin", "button.gregg_wash_mop", "button.gregg_dry_mop", "switch.gregg_find_robot"))
+            assertTrue(id, CdIcons.icons.containsKey(greggEntityIcon(id)!!.removePrefix("cd:")))
+        assertNull(greggEntityIcon("button.gregg_reset_filter"))
+    }
 }

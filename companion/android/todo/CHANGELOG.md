@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.51.1
+
+- Version kept in step with the phone app (Gregg's mode and dock icons). Shared code changed. No change to this app.
+
 ## 0.51.0
 
 - Version kept in step with the phone app (Gregg's level icons). Shared code changed. No change to this app.
