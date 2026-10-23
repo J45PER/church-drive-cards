@@ -1,0 +1,45 @@
+# Script script.clive_who_is_home: Who is home and where everyone is, in one call. Exposed to Assist. It puts the people card on the screen itself (through clive_show_card, so the asker's own phone and watch show it) and returns the exact two sentences to say, so Clive no longer has to build the card or the wording: the first only says who is home, the second offers to say where the others are. Diane is written Die Ann in `say` (the voice mispronounces her name) and stays Diane in the card. A copy of the live script.
+alias: Who is home
+description: 'Use this for ANY question about who is home, who is out or where someone is. It shows the card on the screen by itself and returns the words to say. Your whole reply must be exactly the text in "say", nothing before or after it, and do not call the card script as well. If they answer yes to hearing where the others are, tell them from "others" in one natural sentence, for example "Die Ann is at the post office and Hayley and Jamie are out", saying that a person''s location is not known when it says so.'
+icon: mdi:home-account
+mode: parallel
+max: 5
+sequence:
+- variables:
+    rows: >-
+      {%- set ns = namespace(l=[]) -%}
+      {%- for e in ['person.diane', 'person.hayley', 'person.ian', 'person.jamie'] -%}
+      {%- set ns.l = ns.l + [{'name': state_attr(e, 'friendly_name') or (e.split('.')[1] | capitalize), 'state': states(e)}] -%}
+      {%- endfor -%}
+      {{- ns.l -}}
+- variables:
+    home_names: >-
+      {{- rows | selectattr('state', 'eq', 'home') | map(attribute='name') | list -}}
+    away_n: '{{ rows | rejectattr(''state'', ''eq'', ''home'') | list | length }}'
+- variables:
+    spoken: '{{ home_names | map(''replace'', ''Diane'', ''Die Ann'') | list }}'
+- variables:
+    say: >-
+      {%- if home_names | length == 0 -%}Nobody's home.
+      {%- elif away_n == 0 -%}Everyone's home.
+      {%- else -%}{{ (spoken[:-1] | join(', ') ~ ' and ' ~ spoken[-1]) if spoken | length > 1 else spoken[0] }} {{ 'are' if spoken | length > 1 else 'is' }} home.
+      {%- endif %} {{ 'Anything else?' if away_n == 0 else ('Shall I tell you where the others are?' if away_n > 1 else 'Shall I tell you where the other one is?') -}}
+    others: >-
+      {%- set ns = namespace(l=[]) -%}
+      {%- for r in rows if r.state != 'home' -%}
+      {%- set w = 'is out' if r.state == 'not_home' else ('has no known location' if r.state in ['unknown', 'unavailable'] else 'is at ' ~ r.state) -%}
+      {%- set ns.l = ns.l + [(r.name | replace('Diane', 'Die Ann')) ~ ' ' ~ w] -%}
+      {%- endfor -%}
+      {{- ns.l -}}
+- action: script.clive_show_card
+  data:
+    kind: people
+    data:
+      rows: '{{ rows }}'
+- variables:
+    result:
+      say: '{{ say }}'
+      others: '{{ others }}'
+      next: Your whole reply is exactly the text in say. The card is already on the screen.
+- response_variable: result
+  stop: Shown
