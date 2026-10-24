@@ -52,6 +52,7 @@ import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -293,6 +294,39 @@ private fun AdminPage(title: String, onBack: () -> Unit, content: @Composable ()
     }
 }
 
+/**
+ * The house-wide switch for the assistant's automatic heating (the helper `input_boolean.clive_auto_climate` in Home Assistant).
+ * With it off he leaves every thermostat alone. Hidden until the house has the helper.
+ */
+@Composable
+private fun AutoClimateRow() {
+    val api = LocalHaApi.current ?: return
+    var state by remember { mutableStateOf<String?>(null) }
+    DisposableEffect(api) {
+        val id = api.subscribe("render_template", org.json.JSONObject().put("template", "{{ states('$AUTO_CLIMATE_HELPER') }}").put("report_errors", false)) { ev ->
+            ev.opt("result")?.let { state = it.toString().trim() }
+        }
+        onDispose { if (id >= 0) api.close(id) }
+    }
+    if (state != "on" && state != "off") return
+    PanelRow(
+        Icons.Outlined.Settings, "${AssistantBrand.shown} adjusts the heating",
+        if (state == "on") "${AssistantBrand.shown} raises a cold room's target and lowers a hot one's, only where the heating is already on. He never turns it on or off."
+        else "${AssistantBrand.shown} leaves the heating alone. Turn this on to let him keep rooms comfortable.",
+        trailing = {
+            Switch(checked = state == "on", onCheckedChange = { on ->
+                state = if (on) "on" else "off"
+                api.request("call_service", org.json.JSONObject()
+                    .put("domain", "input_boolean").put("service", if (on) "turn_on" else "turn_off")
+                    .put("target", org.json.JSONObject().put("entity_id", AUTO_CLIMATE_HELPER))) { }
+            })
+        },
+    )
+}
+
+/** Home Assistant's own id for the switch (its id carries the assistant's old name and never changes here). */
+private const val AUTO_CLIMATE_HELPER = "input_boolean.clive_auto_climate"
+
 @Composable
 private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: () -> Unit) {
     val context = LocalContext.current
@@ -389,6 +423,7 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                 Icons.Outlined.Mic, "How long ${AssistantBrand.shown} took",
                 "Last answer: ${AssistWakeStatus.timing}. Thinking is the house working out the reply; voice made is the spoken version being prepared.",
             )
+            AutoClimateRow()
             PanelRow(
                 Icons.Outlined.Mic, "Open ${AssistantBrand.shown} ready to type",
                 if (AssistStartSetting.typing) "${AssistantBrand.shown} opens quietly, not listening, with the typing box ready. Tap the microphone to talk."

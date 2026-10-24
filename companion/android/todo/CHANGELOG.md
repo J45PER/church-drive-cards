@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.52.3
+
+- Clive's automatic heating now only adjusts the target temperature of a zone that is already heating, and never turns the heating on, off or to eco by himself. A new switch in Settings ("Clive adjusts the heating") turns his automatic adjusting off for the whole house.
+
 ## 0.52.2
 
 - Clive's cards (fixtures, scores and the rest) were lost after the phone's line to the house had dropped and come back, because the house forgets what the app is listening for; the app now starts listening again at every question. The keyboard now folds away as soon as a question is sent and again when the answer arrives.
