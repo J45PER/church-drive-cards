@@ -1,8 +1,10 @@
 # Script script.clive_climate_zone: Clive looks after one heating zone: the automatic on and off. Run every 10 minutes for each zone by the automation "Clive: keep the climate comfortable", straight away by "Clive: spot a manual heating change" when somebody changes the thermostat, and at the end of a pause by "Clive: take over again when a pause ends". Not exposed to Assist (clive_climate_control is the one Clive uses). dry_run only reports what it would do. A copy of the live script.
 #
-# Cold (below the bottom of the comfort range) and not already heating towards a target at least 1 degree above the room: heating on (mode heat, preset none) with the target at the middle of the range. Also puts the heating back to normal once a hot room Clive turned down has cooled to the middle of the range.
-# Too hot (above the top of the range): 0 to 1 degree over lowers the target to the middle of the range (only if it is heating, or the target is above the range); 1 to 2.5 over is eco; more than 2.5 over is off.
-# At least 30 minutes between Clive's own changes. Not every change is a push notification (they are all in the logbook): only heating turned on for a cold room, eco and off, and at most one push per zone every 2 hours (input_datetime.clive_climate_<zone>_notified). Lowering the target and putting a room back to normal are silent. A pause, and the end of one, always tell people. Skipped while a timed run (clive_timed_control) is going on that zone and for 3 minutes after it.
+# Clive only adjusts the target temperature of a zone that is already heating (mode heat, preset none); he never turns the heating on, off or to eco himself, so what a person has switched off stays off.
+# Cold (below the bottom of the comfort range) and the target is less than 1 degree above the room: the target is raised to the middle of the range.
+# Too hot (above the top of the range) and it is heating (or the target is above the range): the target is lowered to the middle of the range.
+# At least 30 minutes between Clive's own changes. Only a raised target pushes a notification, at most one per zone every 2 hours (input_datetime.clive_climate_<zone>_notified); lowering is silent. Both are in the logbook. A pause, and the end of one, always tell people. Skipped while a timed run (clive_timed_control) is going on that zone and for 3 minutes after it.
+# The global switch input_boolean.clive_auto_climate (Clive's settings in the app) turns all of this off: with it off the script decides skip_disabled, spots no manual changes and starts no pauses.
 #
 # A change made by somebody else pauses Clive on that zone: one reported by_hand (a change to the mode, preset or target that did not come from a Home Assistant script or automation) more than 3 minutes after Clive's own last action (a Nest takes up to a minute to echo and moves its own target when it leaves eco), or, found by the 10 minute check, a mode or preset that is not what Clive last set (or the target after a "lower"). The pause lasts input_number.clive_climate_pause_minutes. input_datetime.clive_climate_<zone>_resume holds when he takes over again; in the past (and not 2000) means a pause has just ended. While paused he does nothing.
 # The helpers: _note is what he last did, in words; _expect is what he last set, as JSON {m, p, t, hot}; _when is when he last acted; _resume is the end of a pause.
@@ -93,6 +95,7 @@ sequence:
     exp: '{{ expect | from_json(default={}) if expect != '''' else {} }}'
     over: '{{ (temp - z.high) if temp is not none else 0 }}'
     unavailable: '{{ temp is none or mode in [''unavailable'', ''unknown''] }}'
+    auto_off: "{{ is_state('input_boolean.clive_auto_climate', 'off') }}"
     timed: '{{ timer_state != ''idle'' or timer_age < 3 }}'
     resume_due: '{{ resume_at > 946684801 and resume_at <= now().timestamp() }}'
     paused: '{{ resume_at > now().timestamp() }}'
@@ -105,19 +108,18 @@ sequence:
     tier: >-
       {%- if over > 2.5 -%}off{%- elif over > 1 -%}eco{%- elif over > 0 -%}lower{%- else -%}none{%- endif -%}
 - variables:
-    manual: '{{ not paused and not unavailable and not timed and when_age_eff >= 3 and (sig_changed or hand) }}'
-    needs_heat: "{{ mode in ['heat', 'off'] and ((temp < z.low and not (mode == 'heat' and preset == 'none' and setpoint is not none and setpoint >= temp + 1)) or (held_hot and temp <= mid and not (mode == 'heat' and preset == 'none' and setpoint is not none and setpoint >= mid - 0.3))) }}"
+    manual: '{{ not auto_off and not paused and not unavailable and not timed and when_age_eff >= 3 and (sig_changed or hand) }}'
+    needs_heat: "{{ mode == 'heat' and preset == 'none' and temp < z.low and setpoint is not none and setpoint < temp + 1 }}"
 - variables:
     decision: >-
       {%- if unavailable -%}skip_unavailable
+      {%- elif auto_off -%}skip_disabled
       {%- elif timed -%}skip_timed_run
       {%- elif paused -%}skip_paused
       {%- elif manual -%}pause
       {%- elif when_age_eff < 30 -%}skip_cooldown
       {%- elif needs_heat -%}heat_on
-      {%- elif tier == 'off' and mode == 'heat' -%}off
-      {%- elif tier in ['off', 'eco'] and mode == 'heat' and preset != 'eco' -%}eco
-      {%- elif tier == 'lower' and mode == 'heat' and setpoint is not none and setpoint > mid and (hvac_action == 'heating' or setpoint > z.high) -%}lower
+      {%- elif tier != 'none' and mode == 'heat' and preset == 'none' and setpoint is not none and setpoint > mid and (hvac_action == 'heating' or setpoint > z.high) -%}lower
       {%- else -%}ok
       {%- endif -%}
     resume_at_text: '{{ (now().timestamp() + pause_min * 60) | timestamp_custom(''%H:%M'') }}'
@@ -142,7 +144,7 @@ sequence:
     stop: dry run
 - if:
   - condition: template
-    value_template: '{{ resume_due and not unavailable }}'
+    value_template: '{{ resume_due and not unavailable and not auto_off }}'
   then:
   - action: input_text.set_value
     target:
@@ -233,19 +235,16 @@ sequence:
         entity_id: '{{ z.entity }}'
   - conditions:
     - condition: template
-      value_template: '{{ decision in [''heat_on'', ''off'', ''eco'', ''lower''] }}'
+      value_template: '{{ decision in [''heat_on'', ''lower''] }}'
     sequence:
     - variables:
         did: >-
-          {%- if decision == 'heat_on' -%}turned the heating on
-          {%- elif decision == 'off' -%}turned the heating off
-          {%- elif decision == 'eco' -%}switched the heating to eco
+          {%- if decision == 'heat_on' -%}raised the heating to {{ mid }}°C
           {%- else -%}lowered the heating to {{ mid }}°C
           {%- endif -%}
-        push: '{{ decision in [''heat_on'', ''off'', ''eco''] and not (decision == ''heat_on'' and temp >= z.low) and ((now().timestamp() - (state_attr(z.notified, ''timestamp'') | float(0))) / 60) >= 120 }}'
+        push: '{{ decision == ''heat_on'' and ((now().timestamp() - (state_attr(z.notified, ''timestamp'') | float(0))) / 60) >= 120 }}'
         why: >-
-          {%- if decision == 'heat_on' and temp < z.low -%}{{ z.room }} was down to {{ temp }}°C (comfortable from {{ z.low }}°C)
-          {%- elif decision == 'heat_on' -%}{{ z.room }} has cooled to {{ temp }}°C, so it is back to normal
+          {%- if decision == 'heat_on' -%}{{ z.room }} was down to {{ temp }}°C (comfortable from {{ z.low }}°C)
           {%- else -%}{{ z.room }} reached {{ temp }}°C (comfortable up to {{ z.high }}°C)
           {%- endif -%}
     - action: input_datetime.set_datetime
@@ -272,53 +271,11 @@ sequence:
         - condition: template
           value_template: '{{ decision == ''heat_on'' }}'
         sequence:
-        - if:
-          - condition: template
-            value_template: '{{ mode != ''heat'' }}'
-          then:
-          - action: climate.set_hvac_mode
-            target:
-              entity_id: '{{ z.entity }}'
-            data:
-              hvac_mode: heat
-        - if:
-          - condition: template
-            value_template: '{{ preset != ''none'' }}'
-          then:
-          - action: climate.set_preset_mode
-            target:
-              entity_id: '{{ z.entity }}'
-            data:
-              preset_mode: none
-        - delay:
-            seconds: 4
-        - if:
-          - condition: template
-            value_template: '{{ (state_attr(z.entity, ''temperature'') | float(0)) < mid - 0.3 }}'
-          then:
-          - action: climate.set_temperature
-            target:
-              entity_id: '{{ z.entity }}'
-            data:
-              temperature: '{{ mid }}'
-      - conditions:
-        - condition: template
-          value_template: '{{ decision == ''off'' }}'
-        sequence:
-        - action: climate.set_hvac_mode
+        - action: climate.set_temperature
           target:
             entity_id: '{{ z.entity }}'
           data:
-            hvac_mode: 'off'
-      - conditions:
-        - condition: template
-          value_template: '{{ decision == ''eco'' }}'
-        sequence:
-        - action: climate.set_preset_mode
-          target:
-            entity_id: '{{ z.entity }}'
-          data:
-            preset_mode: eco
+            temperature: '{{ mid }}'
       default:
       - action: climate.set_temperature
         target:
@@ -337,7 +294,7 @@ sequence:
       - action: church_drive.notify
         data:
           kind: clive_actions
-          title: '🌡️ {{ z.name }} heating {{ ''on'' if decision == ''heat_on'' else ''turned down'' }}'
+          title: '🌡️ {{ z.name }} heating target raised'
           message: '{{ why | capitalize }}, so Clive {{ did }}.'
           tag: church-drive-clive-climate-{{ zone }}
           link: /dashboard-mobile/climate
@@ -347,6 +304,6 @@ sequence:
         message: '{{ z.name }} heating: {{ did }} (room {{ temp }}°C).'
         entity_id: '{{ z.entity }}'
 - variables:
-    report: '{{ dict(report, decision=decision, acted=decision in [''pause'', ''heat_on'', ''off'', ''eco'', ''lower''] or resume_due) }}'
+    report: '{{ dict(report, decision=decision, acted=decision in [''pause'', ''heat_on'', ''lower''] or (resume_due and not auto_off)) }}'
 - response_variable: report
   stop: done
