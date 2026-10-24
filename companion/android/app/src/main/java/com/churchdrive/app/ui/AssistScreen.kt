@@ -481,12 +481,19 @@ private fun FullAssist(model: AssistModel, onClose: () -> Unit, onTask: (String)
             ui.keyboardRequested = false
         }
     }
-    // An answer arriving folds the keyboard away, so the whole answer (and its card) has the screen to itself.
+    // A question sent, and its answer arriving, fold the keyboard away, so the whole answer (and its card) has the screen to itself.
+    // Android can ignore a hide that lands in the middle of the keyboard's own slide, so it is asked again a moment later.
     val lastMessage = model.messages.lastOrNull()
-    LaunchedEffect(model.messages.size) {
-        if (lastMessage != null && !lastMessage.fromUser) {
-            keyboard?.hide()
-            focusManager.clearFocus(force = true)
+    val view = androidx.compose.ui.platform.LocalView.current
+    LaunchedEffect(model.messages.size, model.state, lastMessage?.show) {
+        val answering = model.state == AssistState.Thinking || (lastMessage != null && !lastMessage.fromUser)
+        if (answering && !ui.keyboardRequested) {
+            repeat(2) {
+                keyboard?.hide()
+                focusManager.clearFocus(force = true)
+                androidx.core.view.ViewCompat.getWindowInsetsController(view)?.hide(androidx.core.view.WindowInsetsCompat.Type.ime())
+                kotlinx.coroutines.delay(350)
+            }
         }
     }
     // Leaving the app with the typing box focused makes Android put the keyboard straight back up on return, over whatever page is
