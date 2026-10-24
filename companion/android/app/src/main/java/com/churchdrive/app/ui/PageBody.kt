@@ -43,7 +43,11 @@ fun PanelView(panel: PanelSpec, entities: Map<String, EntityState>, registry: Re
         HeaderView(header, entities, call)
         return
     }
-    DashboardPanel(panel) {
+    // The panel holding the alarm is the alarm's colour (blue home, red away), as on Home, whatever the dashboard says.
+    val alarm = if (panel.cards.any { it.type.removeSuffix("-beta") == "custom:alarm-panel-card" }) {
+        alarmTone(entities[panel.cards.first { it.type.removeSuffix("-beta") == "custom:alarm-panel-card" }.config.optString("entity").ifBlank { ALARM_ENTITY }]?.state)
+    } else null
+    DashboardPanel(panel, toneOverride = alarm) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             panel.cards.forEach { CardView(it, entities, registry, call) }
         }

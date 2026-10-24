@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.52.2
+
+- The Security page's Alarm heading and icon now take the alarm's own colour (blue when armed home, red away), as on Home, instead of sometimes showing green.
+
 ## 0.52.1
 
 - Cleaning: "How he cleans" is now "Cleaning settings", each setting a line with a drop-down (the mode, suction and water show the house's icons) instead of rows of cramped buttons. Every group on the page is in the cleaning blue. The dock keeps its four actions (empty the dust bin, wash the mop, dry the mop, find Gregg), two to a row, and drops the dry time and empty-the-bin choices. Each part shows a bar for the life it has left, fading smoothly from blue through green and yellow to red as it nears the end, like the battery bars on the Security page.

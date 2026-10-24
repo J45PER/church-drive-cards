@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.52.2
+
+- Version kept in step with the phone app (the Security page's alarm colour). No change to this app.
+
 ## 0.52.1
 
 - Version kept in step with the phone app (the Cleaning page's settings and part bars). No change to this app.
