@@ -111,9 +111,10 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     private var pendingShow: AssistantShow? = null
 
     /** Listens for the pictures and links Clive shows with his answers (see `clive_show`). */
-    private fun watchShow() {
-        if (showSubscription >= 0) return
-        api.request("auth/current_user", JSONObject()) { r -> userId = (r as? JSONObject)?.optString("id")?.takeIf { it.isNotBlank() } }
+    private fun watchShow(fresh: Boolean = false) {
+        // The house drops every subscription when the line to it drops (the phone slept, the network changed), so a run starts it afresh.
+        if (showSubscription >= 0) { if (!fresh) return; api.close(showSubscription); showSubscription = -1 }
+        if (userId == null) api.request("auth/current_user", JSONObject()) { r -> userId = (r as? JSONObject)?.optString("id")?.takeIf { it.isNotBlank() } }
         showSubscription = api.subscribe("subscribe_events", JSONObject().put("event_type", ASSISTANT_SHOW_EVENT)) { ev ->
             main.post {
                 val show = parseAssistantShow(ev, userId) ?: return@post
@@ -203,6 +204,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
         stopVoiceRun()
         messages += AssistMessage(true, sentence)
         pendingShow = null
+        watchShow(fresh = true)
         said = sentence
         closing = isDismissal(sentence)
         times = AssistTimes()
@@ -285,6 +287,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
         conversationId?.let { params.put("conversation_id", it) }
         answered = false
         said = ""
+        watchShow(fresh = true)
         subscription = api.subscribe("assist_pipeline/run", params) { event -> main.post { onEvent(event) } }
         if (subscription < 0) {
             // The house isn't reachable: try again shortly.
