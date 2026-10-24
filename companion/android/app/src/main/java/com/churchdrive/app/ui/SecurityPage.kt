@@ -63,10 +63,11 @@ val FALLBACK_SECURITY = listOf(
  * so the colour follows the alarm and the summary says what the dashboard says), around its cards.
  */
 @Composable
-fun DashboardPanel(panel: PanelSpec, content: @Composable () -> Unit) {
+fun DashboardPanel(panel: PanelSpec, toneOverride: Tone? = null, content: @Composable () -> Unit) {
     val summary = rememberTemplate(panel.summaryTemplate)
     val colour = rememberTemplate(panel.colorTemplate) ?: panel.color
-    val tone = toneFromColour(colour) ?: Tone.Grey
+    // A fixed tone (the alarm's own) wins over the dashboard colour, which is only the fallback until Home Assistant renders it.
+    val tone = toneOverride ?: toneFromColour(colour) ?: Tone.Grey
     SectionPanel(
         panel.title,
         iconName = panel.icon,

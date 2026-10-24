@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.52.4
+
+- Version kept in step with the phone app (the Security page's alarm colour). No change to this app.
+
 ## 0.52.3
 
 - Clive's automatic heating now only adjusts the target temperature of a zone that is already heating, and never turns the heating on, off or to eco by himself. A new switch in Settings ("Clive adjusts the heating") turns his automatic adjusting off for the whole house.

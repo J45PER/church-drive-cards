@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.52.4
+
+- The Security page's Alarm heading and icon now take the alarm's own colour (blue when armed home, red away), as on Home, instead of sometimes showing green.
+
 ## 0.52.3
 
 - Clive's automatic heating now only adjusts the target temperature of a zone that is already heating, and never turns the heating on, off or to eco by himself. A new switch in Settings ("Clive adjusts the heating") turns his automatic adjusting off for the whole house.
