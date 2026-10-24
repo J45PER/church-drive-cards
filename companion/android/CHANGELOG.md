@@ -4,13 +4,13 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.52.5
+
+- Clive's automatic heating is slower to act and aims 1°C cooler: downstairs 18 to 21°C and upstairs 15 to 19°C, with the heating target only raised once a room is more than 1.5°C below the bottom of its range, and lowered once it is 1°C above the top. Each thermostat now has its own switch in Settings (Downstairs heating, Upstairs heating): Controlled by Clive, or Manual so he leaves it alone. This replaces the single house-wide switch.
+
 ## 0.52.4
 
 - The Security page's Alarm heading and icon now take the alarm's own colour (blue when armed home, red away), as on Home, instead of sometimes showing green.
-
-## 0.52.4
-
-- Clive's automatic heating is slower to act and aims 1°C cooler: downstairs 18 to 21°C and upstairs 15 to 19°C, with the heating target only raised once a room is more than 1.5°C below the bottom of its range, and lowered once it is 1°C above the top. Each thermostat now has its own switch in Settings (Downstairs heating, Upstairs heating): Controlled by Clive, or Manual so he leaves it alone. This replaces the single house-wide switch.
 
 ## 0.52.3
 
