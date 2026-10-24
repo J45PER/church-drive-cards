@@ -61,8 +61,8 @@ sequence:
         temp: sensor.downstairs_temperature
         timer: timer.clive_heating_downstairs
         scene: clive_timed_heating_downstairs
-        low: 19
-        high: 22
+        low: 18
+        high: 21
         room: the living room
       Upstairs heating:
         kind: heat
@@ -70,8 +70,8 @@ sequence:
         temp: sensor.upstairs_temperature
         timer: timer.clive_heating_upstairs
         scene: clive_timed_heating_upstairs
-        low: 16
-        high: 20
+        low: 15
+        high: 19
         room: upstairs
       Bedroom fan:
         kind: fan

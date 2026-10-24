@@ -1,10 +1,9 @@
 # Script script.clive_climate_zone: Clive looks after one heating zone: the automatic on and off. Run every 10 minutes for each zone by the automation "Clive: keep the climate comfortable", straight away by "Clive: spot a manual heating change" when somebody changes the thermostat, and at the end of a pause by "Clive: take over again when a pause ends". Not exposed to Assist (clive_climate_control is the one Clive uses). dry_run only reports what it would do. A copy of the live script.
 #
 # Clive only adjusts the target temperature of a zone that is already heating (mode heat, preset none); he never turns the heating on, off or to eco himself, so what a person has switched off stays off.
-# Cold (below the bottom of the comfort range) and the target is less than 1 degree above the room: the target is raised to the middle of the range.
-# Too hot (above the top of the range) and it is heating (or the target is above the range): the target is lowered to the middle of the range.
+# Comfort ranges (2026-10-24): downstairs 18 to 21, upstairs 15 to 19. He is slow to act: the room must be more than 1.5 degrees below the bottom of the range (downstairs below 16.5, upstairs below 13.5) and the target less than 1 degree above the room, and then the target is raised to the middle of the range. He lowers the target to the middle of the range only when the room is 1 degree or more above the top (downstairs 22, upstairs 20) and it is heating or the target is above the range. If cooling is ever added to this script it follows the same rule: nothing until 1 degree above the top of the range.
 # At least 30 minutes between Clive's own changes. Only a raised target pushes a notification, at most one per zone every 2 hours (input_datetime.clive_climate_<zone>_notified); lowering is silent. Both are in the logbook. A pause, and the end of one, always tell people. Skipped while a timed run (clive_timed_control) is going on that zone and for 3 minutes after it.
-# The global switch input_boolean.clive_auto_climate (Clive's settings in the app) turns all of this off: with it off the script decides skip_disabled, spots no manual changes and starts no pauses.
+# Each zone has its own switch, input_boolean.clive_climate_<zone>_auto (Clive controlled when on, Manual when off, set in the app's Settings): with it off the script decides skip_disabled, spots no manual changes and starts no pauses.
 #
 # A change made by somebody else pauses Clive on that zone: one reported by_hand (a change to the mode, preset or target that did not come from a Home Assistant script or automation) more than 3 minutes after Clive's own last action (a Nest takes up to a minute to echo and moves its own target when it leaves eco), or, found by the 10 minute check, a mode or preset that is not what Clive last set (or the target after a "lower"). The pause lasts input_number.clive_climate_pause_minutes. input_datetime.clive_climate_<zone>_resume holds when he takes over again; in the past (and not 2000) means a pause has just ended. While paused he does nothing.
 # The helpers: _note is what he last did, in words; _expect is what he last set, as JSON {m, p, t, hot}; _when is when he last acted; _resume is the end of a pause.
@@ -57,8 +56,9 @@ sequence:
         when: input_datetime.clive_climate_downstairs_when
         resume: input_datetime.clive_climate_downstairs_resume
         notified: input_datetime.clive_climate_downstairs_notified
-        low: 19
-        high: 22
+        low: 18
+        high: 21
+        auto: input_boolean.clive_climate_downstairs_auto
         name: Downstairs
         room: the living room
       upstairs:
@@ -70,8 +70,9 @@ sequence:
         when: input_datetime.clive_climate_upstairs_when
         resume: input_datetime.clive_climate_upstairs_resume
         notified: input_datetime.clive_climate_upstairs_notified
-        low: 16
-        high: 20
+        low: 15
+        high: 19
+        auto: input_boolean.clive_climate_upstairs_auto
         name: Upstairs
         room: upstairs
 - variables:
@@ -95,7 +96,7 @@ sequence:
     exp: '{{ expect | from_json(default={}) if expect != '''' else {} }}'
     over: '{{ (temp - z.high) if temp is not none else 0 }}'
     unavailable: '{{ temp is none or mode in [''unavailable'', ''unknown''] }}'
-    auto_off: "{{ is_state('input_boolean.clive_auto_climate', 'off') }}"
+    auto_off: "{{ is_state(z.auto, 'off') }}"
     timed: '{{ timer_state != ''idle'' or timer_age < 3 }}'
     resume_due: '{{ resume_at > 946684801 and resume_at <= now().timestamp() }}'
     paused: '{{ resume_at > now().timestamp() }}'
@@ -106,10 +107,10 @@ sequence:
     sig_changed: '{{ (exp_eff | length > 0) and (mode != exp_eff.m or preset != exp_eff.p or (exp_eff.t is not none and setpoint is not none and (setpoint - exp_eff.t) | abs > 0.3)) }}'
     held_hot: '{{ exp_eff.hot is defined and exp_eff.hot }}'
     tier: >-
-      {%- if over > 2.5 -%}off{%- elif over > 1 -%}eco{%- elif over > 0 -%}lower{%- else -%}none{%- endif -%}
+      {%- if over >= 1 -%}lower{%- else -%}none{%- endif -%}
 - variables:
     manual: '{{ not auto_off and not paused and not unavailable and not timed and when_age_eff >= 3 and (sig_changed or hand) }}'
-    needs_heat: "{{ mode == 'heat' and preset == 'none' and temp < z.low and setpoint is not none and setpoint < temp + 1 }}"
+    needs_heat: "{{ mode == 'heat' and preset == 'none' and temp < z.low - 1.5 and setpoint is not none and setpoint < temp + 1 }}"
 - variables:
     decision: >-
       {%- if unavailable -%}skip_unavailable

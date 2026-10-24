@@ -7,6 +7,10 @@ Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newe
 
 - Version kept in step with the phone app (the Security page's alarm colour). No change to this app.
 
+## 0.52.4
+
+- Clive's automatic heating is slower to act and aims 1°C cooler: downstairs 18 to 21°C and upstairs 15 to 19°C, with the heating target only raised once a room is more than 1.5°C below the bottom of its range, and lowered once it is 1°C above the top. Each thermostat now has its own switch in Settings (Downstairs heating, Upstairs heating): Controlled by Clive, or Manual so he leaves it alone. This replaces the single house-wide switch.
+
 ## 0.52.3
 
 - Clive's automatic heating now only adjusts the target temperature of a zone that is already heating, and never turns the heating on, off or to eco by himself. A new switch in Settings ("Clive adjusts the heating") turns his automatic adjusting off for the whole house.
