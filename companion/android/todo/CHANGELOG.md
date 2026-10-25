@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.52.9
+
+- No change to this app; version kept equal to the phone app (the watch swipe is smoother).
+
 ## 0.52.8
 
 - Each thermostat's card now has a line at the bottom saying who looks after it ("Clive controlled", "Clive controlled · paused until 12:24" or "Manual"). Tapping it opens that thermostat's settings: Clive controlled or Manual, the comfortable range (a half degree at a time, with what he waits for before acting), the pause with a button to end it now, and the last thing he did. The two thermostat switches are gone from Settings.
