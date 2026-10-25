@@ -19,6 +19,7 @@ import { openPopup } from './popup.js';
 export const KINDS = {
   ding: ['Doorbell', '#29b6f6', '#012'],
   motion: ['Motion', '#5c6bc0', '#fff'],
+  alarm: ['Alarm', '#e53935', '#fff'],
   linked: ['Linked', '#26a69a', '#fff'],
   live: ['Live view', '#78909c', '#fff'],
   interval: ['Snapshot', 'rgba(255,255,255,0.22)', '#fff'],
@@ -374,7 +375,7 @@ export function openCameraEvents(host, hass, base, { title = '', aspect = 16 / 9
     }
     stageMedia(box, el, aspect);
     const [label, colour] = KINDS[e.kind] || KINDS.motion;
-    const from = e.kind === 'linked' && e.source ? ` from ${e.source}` : '';
+    const from = (e.kind === 'linked' || e.kind === 'alarm') && e.source ? ` from ${e.source}` : '';
     const tag = stageTag(box, `${label}${from} · ${hm(e.ts * 1000)} ${dayName(e.ts * 1000).toLowerCase()}`, colour);
     if (e.clip) {
       // Start it here, inside the tap: iPhones only start a video (with sound)
@@ -478,7 +479,7 @@ export function openCameraEvents(host, hass, base, { title = '', aspect = 16 / 9
   };
 
   const renderChips = () => {
-    const opts = [['all', 'All'], ['ding', 'Doorbell'], ['motion', 'Motion'], ['linked', 'Linked'], ['live', 'Live view']].filter(
+    const opts = [['all', 'All'], ['ding', 'Doorbell'], ['motion', 'Motion'], ['alarm', 'Alarm'], ['linked', 'Linked'], ['live', 'Live view']].filter(
       ([k]) => k === 'all' || state.events.some((e) => e.kind === k),
     );
     chips.innerHTML = opts.map(([k, t]) => `<button class="ce-chip${state.filter === k ? ' on' : ''}" data-f="${k}">${t}</button>`).join('');
