@@ -367,7 +367,8 @@ minutes (changeable). It starts with what Ring did: Front Door motion and the do
 also record the Driveway for 30 s, in every mode.
 
 **Alarm recordings.** Whenever the alarm goes off (the panel goes to *triggered*), every
-camera records for 60 s whatever the links or the 2-minute rule say, and the clips show in
+camera records for as long as the alarm stays triggered plus 60 s after (at most 30 minutes),
+whatever the links or the 2-minute rule say, and the clips show in
 the events viewer under their own **Alarm** filter ("Alarm · from Church Drive Alarm").
 This needs each camera's live-stream switch (ring-mqtt, `switch.<camera>_live_stream`) and
 Ring Protect, like linked clips, and does not depend on a camera's motion detection being on.

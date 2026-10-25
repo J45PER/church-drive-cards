@@ -28,7 +28,8 @@ Links are kept per mode: disarmed, home (and night) and away
 once per `cooldown` seconds. These show in the events viewer as "linked".
 
 Alarm recordings: whenever an alarm panel goes to "triggered", every camera
-records for ALARM_SECS the same way, whatever the links or cooldown say. These
+records the same way for as long as an alarm stays triggered and ALARM_AFTER
+seconds after, whatever the links or cooldown say (at most ALARM_MAX). These
 show in the events viewer as "alarm" (their own filter chip).
 """
 
@@ -68,8 +69,8 @@ ON_STATES = ("on", "open", "detected", "home")
 PICTURE_DELAY = 8  # seconds: ring-mqtt's snapshot arrives a moment after the event
 PAIR_WINDOW = 240  # seconds between an event and its recording
 MAX_CLIP = 300 * 1024 * 1024
-ALARM_SECS = 60  # how long every camera records when the alarm triggers
-ALARM_AGAIN = 30  # seconds before another trigger records a camera again
+ALARM_AFTER = 60  # seconds every camera keeps recording after the alarm stops
+ALARM_MAX = 30 * 60  # the most one alarm recording runs for
 URL = "/api/church_drive/events"
 SAFE = re.compile(r"^[a-z0-9_]+$")
 SAFE_FILE = re.compile(r"^[0-9]{8}-[0-9]{6}_[a-z]+(_[0-9]+)?\.(jpg|mp4)$")
@@ -95,7 +96,7 @@ class CameraEvents:
         self._data: dict[str, Any] = {"settings": dict(DEFAULTS), "events": {}, "links": None}
         self._linked_at: dict[str, float] = {}
         self._alerted_at: dict[str, float] = {}
-        self._alarmed_at: dict[str, float] = {}
+        self._alarm_cams: set[str] = set()  # cameras recording for the alarm now
         self._unsubs: list = []
         self._tasks: set[asyncio.Task] = set()
         self._cams: list[str] = []
@@ -485,12 +486,14 @@ class CameraEvents:
     @callback
     def _alarm(self, trigger: str, source: str) -> None:
         """The alarm went off: every camera records, whatever the camera links say."""
-        now = time.time()
         for cam in self._cams:
-            if now - self._alarmed_at.get(cam, 0) < ALARM_AGAIN:
-                continue
-            self._alarmed_at[cam] = self._linked_at[cam] = now
-            self._spawn(self._async_record(cam, ALARM_SECS, trigger, source, "alarm"))
+            if cam in self._alarm_cams:
+                continue  # triggered again while still recording: the same recording carries on
+            self._alarm_cams.add(cam)
+            self._spawn(self._async_record(cam, ALARM_AFTER, trigger, source, "alarm"))
+
+    def _alarm_on(self) -> bool:
+        return any(s.state == "triggered" for s in self.hass.states.async_all("alarm_control_panel"))
 
     async def _async_record(self, cam: str, secs: int, trigger: str, source: str, kind: str = "linked") -> None:
         switch = f"switch.{cam}_live_stream"
@@ -505,8 +508,22 @@ class CameraEvents:
         self._save()
         try:
             await self.hass.services.async_call("switch", "turn_on", {"entity_id": switch}, blocking=True)
-            await asyncio.sleep(max(5, min(secs, 120)))
+            if kind == "alarm":
+                # For as long as an alarm is triggered, then `secs` more (restarting if it goes off again).
+                self._linked_at[cam] = time.time()
+                start, end = time.time(), None
+                while time.time() - start < ALARM_MAX:
+                    if self._alarm_on():
+                        end = None
+                    elif end is None:
+                        end = time.time() + secs
+                    elif time.time() >= end:
+                        break
+                    await asyncio.sleep(1)
+            else:
+                await asyncio.sleep(max(5, min(secs, 120)))
         finally:
+            self._alarm_cams.discard(cam)
             await self.hass.services.async_call("switch", "turn_off", {"entity_id": switch}, blocking=True)
 
     def links(self) -> dict[str, Any]:
