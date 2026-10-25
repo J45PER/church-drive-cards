@@ -1,7 +1,7 @@
 # Script script.clive_climate_zone: Clive looks after one heating zone: the automatic on and off. Run every 10 minutes for each zone by the automation "Clive: keep the climate comfortable", straight away by "Clive: spot a manual heating change" when somebody changes the thermostat, and at the end of a pause by "Clive: take over again when a pause ends". Not exposed to Assist (clive_climate_control is the one Clive uses). dry_run only reports what it would do. A copy of the live script.
 #
 # Clive only adjusts the target temperature of a zone that is already heating (mode heat, preset none); he never turns the heating on, off or to eco himself, so what a person has switched off stays off.
-# Comfort ranges (2026-10-24): downstairs 18 to 21, upstairs 15 to 19. He is slow to act: the room must be more than 1.5 degrees below the bottom of the range (downstairs below 16.5, upstairs below 13.5) and the target less than 1 degree above the room, and then the target is raised to the middle of the range. He lowers the target to the middle of the range only when the room is 1 degree or more above the top (downstairs 22, upstairs 20) and it is heating or the target is above the range. If cooling is ever added to this script it follows the same rule: nothing until 1 degree above the top of the range.
+# Comfort ranges are input_number.clive_climate_<zone>_low and _high (set in the app, a thermostat's settings sheet; started at downstairs 18 to 21, upstairs 15 to 19; the numbers in `zones` below are only the fallback). He is slow to act: the room must be more than 1.5 degrees below the bottom of the range (downstairs below 16.5, upstairs below 13.5) and the target less than 1 degree above the room, and then the target is raised to the middle of the range. He lowers the target to the middle of the range only when the room is 1 degree or more above the top (downstairs 22, upstairs 20) and it is heating or the target is above the range. If cooling is ever added to this script it follows the same rule: nothing until 1 degree above the top of the range.
 # At least 30 minutes between Clive's own changes. Only a raised target pushes a notification, at most one per zone every 2 hours (input_datetime.clive_climate_<zone>_notified); lowering is silent. Both are in the logbook. A pause, and the end of one, always tell people. Skipped while a timed run (clive_timed_control) is going on that zone and for 3 minutes after it.
 # Each zone has its own switch, input_boolean.clive_climate_<zone>_auto (Clive controlled when on, Manual when off, set in the app's Settings): with it off the script decides skip_disabled, spots no manual changes and starts no pauses.
 #
@@ -76,7 +76,7 @@ sequence:
         name: Upstairs
         room: upstairs
 - variables:
-    z: '{{ zones[zone] }}'
+    z: '{{ dict(zones[zone], low=states(''input_number.clive_climate_'' ~ zone ~ ''_low'') | float(zones[zone].low), high=states(''input_number.clive_climate_'' ~ zone ~ ''_high'') | float(zones[zone].high)) }}'
     dry: '{{ dry_run | default(false) | bool(false) }}'
     hand: '{{ by_hand | default(false) | bool(false) }}'
 - variables:

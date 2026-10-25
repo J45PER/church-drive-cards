@@ -348,7 +348,7 @@ private fun HomePage(
                 "Climate", Page.Climate.mdi, if (quality != null) qualityTone(quality) else climateTone(climate),
                 if (quality != null) "$quality/100 · ${qualityWord(quality)}" else "${temp(climate?.num("current_temperature"))} °C · ${climateWord(climate)}",
                 Page.Climate,
-            ) { ClimateCard(climate, call, quality = quality) }
+            ) { ClimateCard(climate, call, quality = quality, zone = zoneControl(entities, CLIMATE_ENTITY)) }
             "Lights" -> HomePanel("Lights", Page.Lighting.mdi, Tone.Amber, lightsSummary(lights.home, entities), Page.Lighting) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     lights.home.forEach { LightRoomCard(it, entities, areaNames, call) }
