@@ -71,6 +71,9 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.composed
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
@@ -414,6 +417,24 @@ fun assistantBottomPad(keyboard: Boolean): androidx.compose.ui.unit.Dp {
     val ime = if (keyboard) WindowInsets.ime.getBottom(d) else 0
     val bar = with(d) { 80.dp.roundToPx() } + nav
     return with(d) { maxOf(ime, bar).toDp() }
+}
+
+/**
+ * Leaves room at the bottom of whatever fills its parent so that its bottom edge sits where Clive's should: above the bottom bar, or above the
+ * keyboard when that is higher. It measures where the parent really ends on the screen instead of guessing how much of the keyboard the parent has
+ * already given up, which left the page showing through between Clive and the keyboard. Put it right after `fillMaxSize()`.
+ */
+fun Modifier.assistantBottomInset(keyboard: Boolean, extra: androidx.compose.ui.unit.Dp = 0.dp): Modifier = composed {
+    val d = androidx.compose.ui.platform.LocalDensity.current
+    val view = androidx.compose.ui.platform.LocalView.current
+    val ime = if (keyboard) WindowInsets.ime.getBottom(d) else 0
+    val bar = with(d) { 80.dp.roundToPx() } + WindowInsets.navigationBars.getBottom(d)
+    var bottomOnScreen by remember { androidx.compose.runtime.mutableIntStateOf(-1) }
+    val wanted = view.rootView.height - maxOf(ime, bar)
+    val pad = if (bottomOnScreen < 0) maxOf(ime, bar) else (bottomOnScreen - wanted).coerceAtLeast(0)
+    this
+        .onGloballyPositioned { bottomOnScreen = (it.positionInWindow().y + it.size.height).toInt() }
+        .padding(bottom = with(d) { pad.toDp() } + extra)
 }
 
 /**

@@ -104,7 +104,7 @@ fun cardBrand(card: AssistantCard): String? {
         "music" -> f.optString("app").takeIf { it.isNotBlank() }
         "car" -> f.optString("brand").ifBlank { f.optString("name").trim().substringBefore(' ') }.takeIf { it.isNotBlank() }
         "energy" -> f.optString("brand").takeIf { it.isNotBlank() }
-        "score", "scores", "fixture", "fixtures" -> f.optString("comp").trim().lowercase().let { c -> COMPETITION_LOGOS.entries.firstOrNull { c.contains(it.key) }?.value }
+        "score", "scores", "fixture", "fixtures" -> f.optString("comp").ifBlank { f.optString("title") }.trim().lowercase().let { c -> COMPETITION_LOGOS.entries.firstOrNull { c.contains(it.key) }?.value }
         else -> null
     }
 }
@@ -271,6 +271,7 @@ fun introDue(introducedEver: Boolean, told: Set<String>?, log: List<AssistFeatur
  * ever do they get the full introduction. Features also make up that introduction's "what I can do".
  */
 private val RAW_ASSIST_FEATURES = listOf(
+    AssistFeature("mdi:soccer", "Fixtures with every team", "", id = "fixtures-teams-keyboard", detail = "A fix: a league's games now always show the clubs and the competition's logo, and {name} sits right above the keyboard when you type to him.", kind = AssistantChange.Fix),
     AssistFeature("mdi:thermostat-auto", "Heating, thermostat by thermostat", "", id = "heating-per-zone", detail = "{name} is now slower to touch the heating and aims 1\u00B0C cooler. Each thermostat has its own switch in Settings, Controlled by {name} or Manual, in place of the single switch.", kind = AssistantChange.Change),
     AssistFeature("mdi:thermostat-auto", "Gentler heating", "", id = "heating-target-only", detail = "{name} now only changes the target temperature of heating that is already on, and never switches it on or off himself. There is a new switch in Settings to stop his automatic adjusting for the whole house.", kind = AssistantChange.Change),
     AssistFeature("mdi:card-text-outline", "Cards every time", "", id = "cards-reconnect", detail = "A fix: after the phone lost its line to the house for a moment, {name} could answer in words only. Cards now arrive every time, and the keyboard folds away as soon as you ask.", kind = AssistantChange.Fix),
