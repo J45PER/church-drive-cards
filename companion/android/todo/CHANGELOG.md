@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.52.7
+
+- Clive's cards now show the right crest for Europe's big clubs (Barcelona, Paris Saint-Germain, Bayern, Inter, Real Madrid and the like): they come from a fixed list instead of a name search that missed some and found another sport's club for others (Bayern's basketball team, "Intercity" for Inter).
+
 ## 0.52.6
 
 - Clive's league fixtures card could come up with dates and times but no teams or competition logo when he sent the games in a different shape: the house now accepts either shape, and the card also takes team names given as plain text and finds the competition's logo from its title. Clive no longer leaves a gap between himself and the keyboard (the page showed through above the keys): he now measures where the screen really ends instead of guessing.
