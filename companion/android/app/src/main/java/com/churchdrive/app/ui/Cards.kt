@@ -397,9 +397,11 @@ fun ClimateCard(
     outdoor: Double? = null,
     quick: List<QuickSetting>? = null,
     quality: Int? = null,
+    zone: ZoneControl? = null,
     below: (@Composable () -> Unit)? = null,
 ) {
     val tone = toneColors(climateTone(climate))
+    var sheetOpen by remember { mutableStateOf(false) }
     val enabled = climate?.available == true
     val target = climate?.num("temperature")
     val step = climate?.num("target_temp_step") ?: 0.5
@@ -481,6 +483,11 @@ fun ClimateCard(
             },
             tone, tone.onContainer, enabled, perRow = 5,
         )
+        // Who looks after this thermostat (the assistant or you), and a tap for its settings: only where the house has his switch for it.
+        if (zone != null) {
+            ZoneStatusLine(zone, tone) { sheetOpen = true }
+            if (sheetOpen) ThermostatSheet(zone.zone.replaceFirstChar { it.uppercase() }, zone, tone, call) { sheetOpen = false }
+        }
         below?.invoke()
     }
 }

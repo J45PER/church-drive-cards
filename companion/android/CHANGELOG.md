@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.52.8
+
+- Each thermostat's card now has a line at the bottom saying who looks after it ("Clive controlled", "Clive controlled · paused until 12:24" or "Manual"). Tapping it opens that thermostat's settings: Clive controlled or Manual, the comfortable range (a half degree at a time, with what he waits for before acting), the pause with a button to end it now, and the last thing he did. The two thermostat switches are gone from Settings.
+
 ## 0.52.7
 
 - Clive's cards now show the right crest for Europe's big clubs (Barcelona, Paris Saint-Germain, Bayern, Inter, Real Madrid and the like): they come from a fixed list instead of a name search that missed some and found another sport's club for others (Bayern's basketball team, "Intercity" for Inter).

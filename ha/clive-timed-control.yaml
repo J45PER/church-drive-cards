@@ -83,7 +83,7 @@ sequence:
         high: 20
         room: Hayley's bedroom
 - variables:
-    t: '{{ cfg[target] }}'
+    t: '{% set c = cfg[target] %}{{ dict(c, low=states(''input_number.clive_climate_'' ~ c.entity.split(''.'')[1] ~ ''_low'') | float(c.low), high=states(''input_number.clive_climate_'' ~ c.entity.split(''.'')[1] ~ ''_high'') | float(c.high)) if c.kind == ''heat'' else c }}'
     wanted: '{{ command | default(''start'', true) }}'
     secs: '{{ (minutes | default(0, true) | int(0)) * 60 }}'
     confirm_attempt: '{{ confirm_unneeded | default(false) | bool(false) }}'
