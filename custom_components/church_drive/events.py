@@ -26,6 +26,10 @@ Ring Protect). A live view someone watched (not a link) is kept as "live".
 Links are kept per mode: disarmed, home (and night) and away
 (and while the alarm is going off). Each camera records a linked clip at most
 once per `cooldown` seconds. These show in the events viewer as "linked".
+
+Alarm recordings: whenever an alarm panel goes to "triggered", every camera
+records for ALARM_SECS the same way, whatever the links or cooldown say. These
+show in the events viewer as "alarm" (their own filter chip).
 """
 
 from __future__ import annotations
@@ -64,6 +68,8 @@ ON_STATES = ("on", "open", "detected", "home")
 PICTURE_DELAY = 8  # seconds: ring-mqtt's snapshot arrives a moment after the event
 PAIR_WINDOW = 240  # seconds between an event and its recording
 MAX_CLIP = 300 * 1024 * 1024
+ALARM_SECS = 60  # how long every camera records when the alarm triggers
+ALARM_AGAIN = 30  # seconds before another trigger records a camera again
 URL = "/api/church_drive/events"
 SAFE = re.compile(r"^[a-z0-9_]+$")
 SAFE_FILE = re.compile(r"^[0-9]{8}-[0-9]{6}_[a-z]+(_[0-9]+)?\.(jpg|mp4)$")
@@ -89,6 +95,7 @@ class CameraEvents:
         self._data: dict[str, Any] = {"settings": dict(DEFAULTS), "events": {}, "links": None}
         self._linked_at: dict[str, float] = {}
         self._alerted_at: dict[str, float] = {}
+        self._alarmed_at: dict[str, float] = {}
         self._unsubs: list = []
         self._tasks: set[asyncio.Task] = set()
         self._cams: list[str] = []
@@ -207,6 +214,7 @@ class CameraEvents:
         return (
             (eid.startswith("event.") and eid.endswith(("_ding", "_motion")))
             or (eid.startswith("camera.") and eid.endswith("_live_view"))
+            or eid.startswith("alarm_control_panel.")
             or eid in self._triggers()
         )
 
@@ -215,6 +223,10 @@ class CameraEvents:
         eid = event.data.get("entity_id", "")
         old, new = event.data.get("old_state"), event.data.get("new_state")
         if new is None or old is None:
+            return
+        if eid.startswith("alarm_control_panel."):
+            if new.state == "triggered" and old.state != "triggered":
+                self._alarm(eid, new.name)
             return
         if eid in self._triggers() and self._fired(eid, old.state, new.state):
             self._link(eid)
@@ -299,9 +311,11 @@ class CameraEvents:
         category = act.attributes.get("category") if act is not None else None
         kind = {"ding": "ding", "on_demand": "linked", "live": "linked"}.get(category, "motion")
         ts = (created or dt_util.utcnow()).timestamp()
-        # The event this recording belongs to: same kind, close in time, no clip yet.
+        # The event this recording belongs to: same kind (a linked recording may be an alarm one), close in
+        # time, no clip yet.
+        kinds = ("linked", "alarm") if kind == "linked" else (kind,)
         entry = min(
-            (e for e in events if not e.get("mp4") and e["kind"] == kind and abs(e["ts"] - ts) < PAIR_WINDOW),
+            (e for e in events if not e.get("mp4") and e["kind"] in kinds and abs(e["ts"] - ts) < PAIR_WINDOW),
             key=lambda e: abs(e["ts"] - ts),
             default=None,
         )
@@ -468,14 +482,24 @@ class CameraEvents:
             self._linked_at[cam] = now
             self._spawn(self._async_record(cam, int(rule.get("secs") or 30), trigger, name))
 
-    async def _async_record(self, cam: str, secs: int, trigger: str, source: str) -> None:
+    @callback
+    def _alarm(self, trigger: str, source: str) -> None:
+        """The alarm went off: every camera records, whatever the camera links say."""
+        now = time.time()
+        for cam in self._cams:
+            if now - self._alarmed_at.get(cam, 0) < ALARM_AGAIN:
+                continue
+            self._alarmed_at[cam] = self._linked_at[cam] = now
+            self._spawn(self._async_record(cam, ALARM_SECS, trigger, source, "alarm"))
+
+    async def _async_record(self, cam: str, secs: int, trigger: str, source: str, kind: str = "linked") -> None:
         switch = f"switch.{cam}_live_stream"
         if self.hass.states.get(switch) is None:
             _LOGGER.debug("No live stream switch for %s", cam)
             return
         ts = time.time()
         self._list(cam).append(
-            {"id": f"{int(ts)}l", "ts": ts, "kind": "linked", "source": source, "trigger": trigger,
+            {"id": f"{int(ts)}{kind[0]}", "ts": ts, "kind": kind, "source": source, "trigger": trigger,
              "jpg": None, "mp4": None, "bytes": 0}
         )
         self._save()
