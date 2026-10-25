@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.52.9
+
+- Watch: swiping sideways between pages is smoother. The next page is already built when you start the swipe, and turning a page no longer rebuilds every face on the watch (only the glass behind them follows).
+
 ## 0.52.8
 
 - Each thermostat's card now has a line at the bottom saying who looks after it ("Clive controlled", "Clive controlled · paused until 12:24" or "Manual"). Tapping it opens that thermostat's settings: Clive controlled or Manual, the comfortable range (a half degree at a time, with what he waits for before acting), the pause with a button to end it now, and the last thing he did. The two thermostat switches are gone from Settings.

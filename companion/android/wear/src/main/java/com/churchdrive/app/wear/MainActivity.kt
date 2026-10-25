@@ -20,6 +20,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -140,20 +141,13 @@ private fun CompanionScreen(connected: Boolean, onExit: () -> Unit) {
             delay(120_000)
             awake = false
         }
-        LaunchedEffect(hState.currentPage, stack.size, nestedState.currentPage, vStates.values.sumOf { it.currentPage }) { lastUse = System.currentTimeMillis() }
-        KeepAwake(awake)
-
-        val currentFaces: List<Face>
-        val currentIndex: Int
-        if (nested != null) {
-            currentFaces = nestedFaces
-            currentIndex = nestedState.currentPage
-        } else {
-            val page = pages.getOrNull(hState.currentPage)
-            currentFaces = page?.second.orEmpty()
-            currentIndex = page?.let { vStates.getValue(it.first).currentPage } ?: 0
+        // Read inside a flow, not while composing, so turning a page does not recompose (and rebuild) every face on the watch.
+        LaunchedEffect(Unit) {
+            snapshotFlow { Triple(hState.currentPage, nestedState.currentPage, vStates.values.sumOf { it.currentPage }) }
+                .collect { lastUse = System.currentTimeMillis() }
         }
-        val spec = currentFaces.getOrNull(currentIndex)?.spec ?: RingSpec(bg = Color.Black, trackAlpha = 0.06f)
+        LaunchedEffect(stack.size) { lastUse = System.currentTimeMillis() }
+        KeepAwake(awake)
 
         fun back() {
             if (stack.isNotEmpty()) stack = stack.dropLast(1) else onExit()
@@ -169,17 +163,17 @@ private fun CompanionScreen(connected: Boolean, onExit: () -> Unit) {
                 }
             }
         }) {
-            Glass(spec)
+            PageGlass(hState, pages, vStates, nestedFaces, nestedState, nested != null)
             when {
                 !loaded -> Message(if (connected) "Loading…" else "Connecting…")
                 pages.isEmpty() -> Message("Nothing is set to show on the watch. Ask the manager to choose pages.")
                 nested != null -> SlideIn(stack) { FaceList(nestedFaces, nestedState) }
-                else -> HorizontalPager(state = hState, modifier = Modifier.fillMaxSize(), key = { pages[it].first.id }) { i ->
+                else -> HorizontalPager(state = hState, modifier = Modifier.fillMaxSize(), beyondViewportPageCount = 1, key = { pages[it].first.id }) { i ->
                     val (page, faces) = pages[i]
                     FaceList(faces, vStates.getValue(page))
                 }
             }
-            if (loaded && nested == null && pages.size > 1) PageDots(hState.currentPage, pages.size)
+            if (loaded && nested == null && pages.size > 1) PageDots(hState, pages.size)
             LoadingRing(visible = !live, label = if (connected) "Updating" else "Connecting")
             // The strip at the left edge: swiping in from it goes back a level, and from the first level leaves the app.
             Box(
@@ -197,6 +191,20 @@ private fun CompanionScreen(connected: Boolean, onExit: () -> Unit) {
             )
         }
     }
+}
+
+/**
+ * The glass behind the faces, following the face on show. It reads the pagers' pages here, so only it (not the whole screen) is
+ * redrawn when a page turns.
+ */
+@Composable
+private fun PageGlass(
+    hState: PagerState, pages: List<Pair<WatchPage, List<Face>>>, vStates: Map<WatchPage, PagerState>,
+    nestedFaces: List<Face>, nestedState: PagerState, inNested: Boolean,
+) {
+    val spec = if (inNested) nestedFaces.getOrNull(nestedState.currentPage)?.spec
+    else pages.getOrNull(hState.currentPage)?.let { (p, faces) -> faces.getOrNull(vStates.getValue(p).currentPage)?.spec }
+    Glass(spec ?: RingSpec(bg = Color.Black, trackAlpha = 0.06f))
 }
 
 /** Slides [content] in from the right when [key] changes (going in) and from the left (going back). */
@@ -243,8 +251,9 @@ private fun FaceList(faces: List<Face>, state: PagerState) {
 
 /** The page dots at the bottom of the glass. */
 @Composable
-private fun androidx.compose.foundation.layout.BoxScope.PageDots(current: Int, count: Int) {
+private fun androidx.compose.foundation.layout.BoxScope.PageDots(state: PagerState, count: Int) {
     val ui = LocalUi.current
+    val current = state.currentPage
     Row(Modifier.align(Alignment.BottomCenter).padding(bottom = ui.d(8f)), horizontalArrangement = Arrangement.spacedBy(ui.d(5f)), verticalAlignment = Alignment.CenterVertically) {
         for (i in 0 until count) {
             Box(Modifier.size(if (i == current) ui.d(14f) else ui.d(5f), ui.d(5f)).clip(CircleShape).background(Color.White.copy(alpha = if (i == current) 1f else 0.35f)))
