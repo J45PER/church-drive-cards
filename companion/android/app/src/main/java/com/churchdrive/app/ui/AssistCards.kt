@@ -46,7 +46,10 @@ import coil.imageLoader
 import kotlinx.coroutines.async
 import org.json.JSONObject
 
-private fun JSONObject.side(key: String): JSONObject = optJSONObject(key) ?: JSONObject()
+/** A team or player of a score or fixture: an object with a name and short name, or just the name as plain text (the card script may be given either). */
+private fun JSONObject.side(key: String): JSONObject = optJSONObject(key)
+    ?: optString(key).trim().takeIf { it.isNotEmpty() && it != "null" }?.let { JSONObject().put("name", it).put("short", it.take(3).uppercase()) }
+    ?: JSONObject()
 
 private fun JSONObject.number(key: String): Double? = optDouble(key).takeIf { !it.isNaN() }
 

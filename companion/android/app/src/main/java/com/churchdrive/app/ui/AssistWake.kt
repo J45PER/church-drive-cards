@@ -246,7 +246,7 @@ fun AssistantOverlay(onSettings: () -> Unit = {}) {
     }
     // Taps on him stay on him, not on the page underneath.
     androidx.compose.foundation.layout.Box(
-        androidx.compose.ui.Modifier.fillMaxSize().padding(bottom = assistantBottomPad(keyboard = true)).clickable(
+        androidx.compose.ui.Modifier.fillMaxSize().assistantBottomInset(keyboard = true).clickable(
             interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null,
         ) {},
     ) {
@@ -272,8 +272,7 @@ fun AssistantFab(modifier: Modifier = Modifier) {
     val model = j.model ?: return
     val listening = model.state == AssistState.Listening
     // 16 dp above the bottom bar at the right: the place Material's own floating button takes. Over the keyboard's top when he is open and it is up.
-    val pad = assistantBottomPad(keyboard = j.open)
-    Box(modifier.fillMaxSize().padding(end = 16.dp, bottom = pad + 16.dp), contentAlignment = Alignment.BottomEnd) {
+    Box(modifier.fillMaxSize().assistantBottomInset(keyboard = j.open, extra = 16.dp).padding(end = 16.dp), contentAlignment = Alignment.BottomEnd) {
         AssistantRound(if (j.open) "Talk" else "Open ${AssistantBrand.shown}", {
             when {
                 !j.open -> j.openFromButton()

@@ -1,4 +1,5 @@
 # Script script.clive_fixtures: The coming games of a league or competition, after Clive has searched the web for the real fixtures. Exposed to Assist. It puts the fixtures list card on the screen itself (through clive_show_card) and returns `say`: the exact words to speak. A copy of the live script.
+# 2026-10-25: also accepts the games wrapped as {games: [...]}, home/away as a name or {name, short}, and home_team/away_team, because Clive once sent the wrapped form and the script failed.
 alias: League fixtures
 description: Use this for ANY question about the games of a league or competition, such as the games this weekend, the fixtures, or who plays who in a league, for a day or a round. After you have searched the web for the real fixtures, call this with every game asked for, in date order. It shows the list on the screen by itself (each club with its badge, the date and the kick off time) and returns the words to say. Your whole reply must be exactly the text in "say", nothing before or after it, and do not call the card script as well. games is a list and each game has home and away (the club names), home_short and away_short (three letters), when (the date for the card, for example "Sat 24 Oct") and time (the kick off, for example "15:00"). title is the competition, for example "Championship". sport is football by default. Never invent a fixture or a time.
 fields:
@@ -24,15 +25,15 @@ mode: parallel
 max: 5
 sequence:
 - variables:
-    gl: '{%- set g = (games | from_json(default=[])) if games is string else games -%}{{- g if g is list else ([g] if g else []) -}}'
+    gl: '{%- set g = (games | from_json(default=[])) if games is string else games -%}{%- set g = g[''games''] if g is mapping and g[''games''] is defined else g -%}{{- g if g is list else ([g] if g else []) -}}'
 - variables:
     n: '{{ gl | length }}'
 - variables:
-    rows: '{%- set ns = namespace(l=[]) -%}{%- for g in gl -%}{%- set ns.l = ns.l + [{''home'': {''name'': g.home, ''short'': g.home_short | default(g.home[:3] | upper, true)}, ''away'': {''name'': g.away, ''short'': g.away_short | default(g.away[:3] | upper, true)}, ''when'': g.when | default(''''), ''time'': g.time | default('''')}] -%}{%- endfor -%} {{- ns.l -}}'
+    rows: '{%- set ns = namespace(l=[]) -%}{%- for g in gl -%}{%- set h = g.home if g.home is defined else (g.home_team if g.home_team is defined else '''') -%}{%- set a = g.away if g.away is defined else (g.away_team if g.away_team is defined else '''') -%}{%- set hn = (h.name if h is mapping else h) | string -%}{%- set an = (a.name if a is mapping else a) | string -%}{%- set hs = g.home_short if g.home_short is defined and g.home_short else (h.short if h is mapping and h.short is defined else hn[:3] | upper) -%}{%- set as = g.away_short if g.away_short is defined and g.away_short else (a.short if a is mapping and a.short is defined else an[:3] | upper) -%}{%- set ns.l = ns.l + [{''home'': {''name'': hn, ''short'': hs}, ''away'': {''name'': an, ''short'': as}, ''when'': g.when | default(g.date | default('''', true), true), ''time'': g.time | default(g.kickoff | default('''', true), true)}] -%}{%- endfor -%}{{- ns.l -}}'
 - variables:
     first: '{{ gl[0] if n > 0 else none }}'
 - variables:
-    say: '{%- if n == 0 -%}I couldn''t find any games to show.{%- else -%}The first game{{ ('' in the '' ~ title) if title | default('''') else '''' }} is {{ first.home }} against {{ first.away }}{{ ('' on '' ~ first.when) if first.when | default('''') else '''' }}{{ ('' at '' ~ first.time) if first.time | default('''') else '''' }}{{ ('', and there '' ~ (''is 1 more'' if n == 2 else ''are '' ~ (n - 1) ~ '' more'') ~ '' on the screen'') if n > 1 else '''' }}. Shall I tell you where to watch one?{%- endif -%}'
+    say: '{%- if n == 0 -%}I couldn''t find any games to show.{%- else -%}The first game{{ ('' in the '' ~ title) if title | default('''') else '''' }} is {{ rows[0].home.name }} against {{ rows[0].away.name }}{{ ('' on '' ~ rows[0].when) if rows[0].when else '''' }}{{ ('' at '' ~ rows[0].time) if rows[0].time else '''' }}{{ ('', and there '' ~ (''is 1 more'' if n == 2 else ''are '' ~ (n - 1) ~ '' more'') ~ '' on the screen'') if n > 1 else '''' }}. Shall I tell you where to watch one?{%- endif -%}'
     card: '{{ {''title'': title | default(''''), ''comp'': title | default(''''), ''sport'': sport | default(''''), ''rows'': rows} }}'
 - if:
   - condition: template
