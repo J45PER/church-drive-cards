@@ -143,6 +143,8 @@ export const ClimateZoneCardEditor = createFormEditor({
                   type: { label: 'Room type (sets the comfortable range)', selector: { select: { mode: 'dropdown', options: TYPE_OPTIONS } } },
                   low: { label: 'Comfortable from (optional, overrides the type)', selector: { number: { min: 0, max: 35, step: 0.5, mode: 'box', unit_of_measurement: '°' } } },
                   high: { label: 'Comfortable to (optional, overrides the type)', selector: { number: { min: 0, max: 40, step: 0.5, mode: 'box', unit_of_measurement: '°' } } },
+                  low_entity: { label: 'Comfortable from, follows this number (optional, e.g. Clive’s range)', selector: { entity: { domain: 'input_number' } } },
+                  high_entity: { label: 'Comfortable to, follows this number (optional)', selector: { entity: { domain: 'input_number' } } },
                   icon: { label: 'Icon (optional)', selector: { icon: {} } },
                   note: { label: 'Small text under the name (optional)', selector: { text: {} } },
                 },
@@ -245,11 +247,16 @@ export class ClimateZoneCard extends HTMLElement {
     const data = (this._hist && this._hist.data) || {};
     return (c.rooms || []).map((r) => {
       const ts = s(r.temperature), hs = s(r.humidity);
+      // A number helper (Clive's comfort range for the thermostat) wins over the type and the typed values.
+      const range = czRange(r), lo = kitNum(s(r.low_entity)), hi = kitNum(s(r.high_entity));
+      const low = lo != null ? lo : range.low, high = Math.max(hi != null ? hi : range.high, low + 0.5);
       return {
         name: r.name || (ts && ts.attributes.friendly_name) || r.temperature,
         icon: r.icon || (ts && ts.attributes.icon) || 'mdi:thermometer',
         note: r.note || '',
-        ...czRange(r),
+        ...range,
+        low,
+        high,
         t: kitNum(ts),
         h: kitNum(hs),
         tPts: data[r.temperature] || null,

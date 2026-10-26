@@ -213,6 +213,8 @@ rooms:
     temperature: sensor.downstairs_temperature
     humidity: sensor.downstairs_humidity
     icon: mdi:sofa
+    low_entity: input_number.clive_climate_downstairs_low   # optional: the range follows these numbers
+    high_entity: input_number.clive_climate_downstairs_high
   - name: Entrance
     temperature: sensor.entrance_sensor_temperature
 ```
@@ -237,7 +239,7 @@ All five have `demo: true` for the Design Presets page.
 
 **Pop-ups** open only where Home Assistant's pop-up adds controls the card lacks: the thermostat gauge, the fan gauge, and a blind that can go to a position. Readings (floor rooms, PM2.5, filters, carbon monoxide) don't open one.
 
-The **climate card** graph also shows the comfortable range and 40–60% humidity lines: pick a room type (`room_type`) or set `comfort_low`/`comfort_high`, `humidity_low`/`humidity_high`; `show_limits: false` hides them.
+The **climate card** graph also shows the comfortable range and 40–60% humidity lines: pick a room type (`room_type`) or set `comfort_low`/`comfort_high` (or `comfort_low_entity`/`comfort_high_entity`, number helpers such as Clive's `input_number.clive_climate_downstairs_low`/`_high`, which win and follow changes), `humidity_low`/`humidity_high`; `show_limits: false` hides them.
 
 **Graphs** (climate, climate zone and air purifier cards): press and hold, or hover with a mouse, to read a point in time (a line, dots and a label with the time and the real readings; drag to move). Jumpy sensors are smoothed (15-minute averages, then a gentle moving average, drawn as a curve); each editor has a *Smooth the graphs* switch.
 

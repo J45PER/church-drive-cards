@@ -1,6 +1,6 @@
-# Script script.clive_climate_control: Pause, resume or report on Clive's automatic heating. This is the one Clive uses ("resume the heating", "leave the heating alone for 3 hours", "why is the heating off?"), and the one a dashboard button or a Home Assistant notification button can call. Resume hands a zone straight back (the zone script does the rest and tells people); Pause stops Clive adjusting a zone until the time given. A copy of the live script.
+# Script script.clive_climate_control: Pause, resume or report on Clive's automatic heating, and do what a person asks of the thermostats (turn on, turn off, set a temperature). This is the one Clive uses ("resume the heating", "leave the heating alone for 3 hours", "why is the heating off?", "turn the heating on", "set the living room to 20"), and the one a dashboard button or a Home Assistant notification button can call. Resume hands a zone straight back (the zone script does the rest and tells people), but only while the alarm is not armed away; Pause stops Clive adjusting a zone until the time given. turn_on, turn_off and set_temperature only ever happen because a person asked in this conversation: Clive never turns the heating on by himself, and he only adjusts a target by himself while he is in charge. turn_on and set_temperature pause Clive on that zone like a change by hand. A copy of the live script.
 alias: Pause or resume Clive's heating
-description: 'Clive looks after the heating automatically: on when a room is cold, down or off when it is hot. When somebody changes the thermostat by hand he stops adjusting that zone for a while (2 hours unless set otherwise) and tells people when he will take over again. Use command resume when someone wants him back in charge now, pause with minutes when they want him to leave the heating alone (for example for 3 hours = 180), and status for what he is doing and why (it includes what he last did and any pause). Zone is all unless they name downstairs or upstairs. Say times as clock times.'
+description: 'Clive looks after the heating automatically: on when a room is cold, down or off when it is hot. When somebody changes the thermostat by hand he stops adjusting that zone for a while (2 hours unless set otherwise) and tells people when he will take over again. Use command resume when someone wants him back in charge now (it is refused while the alarm is set to away: the house is empty, so the heating is off; it only works once the alarm has been disarmed), pause with minutes when they want him to leave the heating alone (for example for 3 hours = 180), and status for what he is doing and why (it includes what he last did and any pause). When the heating is off, Clive is not able to turn it on himself: resuming only hands the adjusting back, so say so. Only when a person asks for it, use turn_on or turn_off, or set_temperature with temperature to change the target (set_temperature needs the heating to be on already). Zone is all unless they name downstairs or upstairs. Say times as clock times.'
 fields:
   command:
     name: Command
@@ -12,6 +12,9 @@ fields:
         - resume
         - pause
         - status
+        - turn_on
+        - turn_off
+        - set_temperature
   zone:
     name: Zone
     description: all (the default), downstairs or upstairs.
@@ -23,6 +26,17 @@ fields:
         - all
         - downstairs
         - upstairs
+  temperature:
+    name: Temperature
+    description: For set_temperature, and optionally turn_on. The target in degrees C.
+    required: false
+    selector:
+      number:
+        min: 10
+        max: 32
+        step: 0.5
+        mode: box
+        unit_of_measurement: °C
   minutes:
     name: Minutes
     description: For pause only. Leave out for the usual length.
@@ -44,6 +58,9 @@ sequence:
         note: input_text.clive_climate_downstairs_note
         expect: input_text.clive_climate_downstairs_expect
         resume: input_datetime.clive_climate_downstairs_resume
+        when: input_datetime.clive_climate_downstairs_when
+        low: input_number.clive_climate_downstairs_low
+        high: input_number.clive_climate_downstairs_high
         name: Downstairs
       upstairs:
         entity: climate.upstairs
@@ -51,14 +68,23 @@ sequence:
         note: input_text.clive_climate_upstairs_note
         expect: input_text.clive_climate_upstairs_expect
         resume: input_datetime.clive_climate_upstairs_resume
+        when: input_datetime.clive_climate_upstairs_when
+        low: input_number.clive_climate_upstairs_low
+        high: input_number.clive_climate_upstairs_high
         name: Upstairs
 - variables:
     zl: '{{ [''downstairs'', ''upstairs''] if (zone | default(''all'', true)) == ''all'' else [zone] }}'
+    alarm: "{{ states('alarm_control_panel.church_drive_alarm') }}"
     mins: '{{ minutes | int(0) if minutes is defined and minutes else states(''input_number.clive_climate_pause_minutes'') | float(120) | int }}'
 - variables:
     paused_now: >-
       {%- set ns = namespace(l=[]) -%}
       {%- for zn in zl -%}{%- if state_attr(cfg[zn].resume, 'timestamp') | float(0) > now().timestamp() -%}{%- set ns.l = ns.l + [zn] -%}{%- endif -%}{%- endfor -%}
+      {{- ns.l -}}
+- variables:
+    held_off: >-
+      {%- set ns = namespace(l=[]) -%}
+      {%- for zn in zl -%}{%- set e = states(cfg[zn].expect) -%}{%- set j = (e | from_json(default={})) if e not in ['', 'unknown', 'unavailable'] else {} -%}{%- if j.away is defined and j.away and is_state(cfg[zn].entity, 'off') -%}{%- set ns.l = ns.l + [zn] -%}{%- endif -%}{%- endfor -%}
       {{- ns.l -}}
 - choose:
   - conditions:
@@ -68,10 +94,11 @@ sequence:
     - variables:
         result:
           status: ok
+          alarm: '{{ alarm }}'
           zones: >-
             {%- set ns = namespace(l=[]) -%}
             {%- for zn in zl -%}{%- set c = cfg[zn] -%}{%- set rts = state_attr(c.resume, 'timestamp') | float(0) -%}
-            {%- set ns.l = ns.l + [ {'zone': zn, 'temperature': states(c.temp) | float(none), 'mode': states(c.entity), 'preset': state_attr(c.entity, 'preset_mode'), 'target': state_attr(c.entity, 'temperature'), 'clive': ('paused until ' ~ (rts | timestamp_custom('%H:%M'))) if rts > now().timestamp() else 'in charge', 'last_action': states(c.note)} ] -%}
+            {%- set ns.l = ns.l + [ {'zone': zn, 'temperature': states(c.temp) | float(none), 'mode': states(c.entity), 'preset': state_attr(c.entity, 'preset_mode'), 'target': state_attr(c.entity, 'temperature'), 'clive': ('paused until ' ~ (rts | timestamp_custom('%H:%M'))) if rts > now().timestamp() else 'in charge', 'last_action': states(c.note), 'note': 'The heating is off. Clive cannot turn it on himself; only a person can ask for it to be turned on.' if is_state(c.entity, 'off') else ''} ] -%}
             {%- endfor -%}
             {{- ns.l -}}
     - response_variable: result
@@ -82,14 +109,70 @@ sequence:
     sequence:
     - if:
       - condition: template
-        value_template: '{{ paused_now | length == 0 }}'
+        value_template: '{{ alarm == ''armed_away'' }}'
+      then:
+      - variables:
+          result:
+            status: not_allowed
+            message: The alarm is set to away, so nobody is home and the heating stays off. Clive can only take over again once the alarm has been disarmed. Nothing has changed.
+      - response_variable: result
+        stop: alarm away
+    - if:
+      - condition: template
+        value_template: '{{ paused_now | length == 0 and held_off | length == 0 }}'
       then:
       - variables:
           result:
             status: nothing_paused
-            message: Clive is already in charge of the heating, so nothing has changed.
+            message: >-
+              {%- set ns = namespace(off=false) -%}{%- for zn in zl -%}{%- if is_state(cfg[zn].entity, 'off') -%}{%- set ns.off = true -%}{%- endif -%}{%- endfor -%}
+              {%- if ns.off -%}
+              Clive is already in charge, but some of the heating is off, and he cannot turn it on himself. Only a person can ask for it to be turned on. Nothing has changed.
+              {%- else -%}Clive is already in charge of the heating, so nothing has changed.{%- endif -%}
       - response_variable: result
         stop: nothing paused
+    - repeat:
+        for_each: '{{ held_off }}'
+        sequence:
+        - variables:
+            c: '{{ cfg[repeat.item] }}'
+            j: '{{ states(c.expect) | from_json(default={}) }}'
+            back_to: '{{ j.prev if j.prev is defined and j.prev is number else ((states(c.low) | float(18)) + (states(c.high) | float(21))) / 2 }}'
+        - action: climate.set_hvac_mode
+          target:
+            entity_id: '{{ c.entity }}'
+          data:
+            hvac_mode: heat
+        - action: climate.set_preset_mode
+          target:
+            entity_id: '{{ c.entity }}'
+          data:
+            preset_mode: none
+        - action: climate.set_temperature
+          target:
+            entity_id: '{{ c.entity }}'
+          data:
+            temperature: '{{ back_to }}'
+        - action: input_datetime.set_datetime
+          target:
+            entity_id: '{{ c.when }}'
+          data:
+            datetime: '{{ now().strftime(''%Y-%m-%d %H:%M:%S'') }}'
+        - action: input_text.set_value
+          target:
+            entity_id: '{{ c.expect }}'
+          data:
+            value: '{{ {''m'': ''heat'', ''p'': ''none'', ''t'': back_to, ''hot'': false} | tojson }}'
+        - action: input_text.set_value
+          target:
+            entity_id: '{{ c.note }}'
+          data:
+            value: '{{ now().strftime(''%H:%M'') }}: {{ c.name }} heating turned back on to {{ back_to }}°C because a person asked Clive to take over again.'
+        - action: logbook.log
+          data:
+            name: Clive
+            message: '{{ c.name }} heating turned back on to {{ back_to }}°C at a person''s request.'
+            entity_id: '{{ c.entity }}'
     - repeat:
         for_each: '{{ paused_now }}'
         sequence:
@@ -104,10 +187,126 @@ sequence:
     - variables:
         result:
           status: resumed
-          zones: '{{ paused_now }}'
-          message: Clive is back in charge of the heating and will have checked the rooms straight away.
+          zones: '{{ (paused_now + held_off) | unique | list }}'
+          turned_back_on: '{{ held_off }}'
+          message: 'Clive is back in charge of the heating and will have checked the rooms straight away. Heating that a person turned off stays off: he cannot turn it on himself. Heating he turned off because the alarm was set to away has been turned back on.'
     - response_variable: result
       stop: resumed
+  - conditions:
+    - condition: template
+      value_template: '{{ command in [''turn_on'', ''turn_off'', ''set_temperature''] }}'
+    sequence:
+    - variables:
+        want: '{{ temperature | float(none) if temperature is defined and temperature is not none else none }}'
+        refused: >-
+          {%- set ns = namespace(l=[]) -%}
+          {%- if command == 'set_temperature' -%}
+          {%- for zn in zl -%}{%- if not is_state(cfg[zn].entity, 'heat') -%}{%- set ns.l = ns.l + [zn] -%}{%- endif -%}{%- endfor -%}
+          {%- endif -%}
+          {{- ns.l -}}
+    - if:
+      - condition: template
+        value_template: '{{ command == ''set_temperature'' and (want is none or want < 10 or want > 32) }}'
+      then:
+      - variables:
+          result:
+            status: not_done
+            message: A temperature between 10 and 32 degrees is needed. Ask what temperature they want.
+      - response_variable: result
+        stop: no temperature
+    - if:
+      - condition: template
+        value_template: '{{ refused | length > 0 }}'
+      then:
+      - variables:
+          result:
+            status: not_done
+            zones_off: '{{ refused }}'
+            message: The heating is off there, so the temperature was not changed. Ask whether they want it turned on first.
+      - response_variable: result
+        stop: heating off
+    - repeat:
+        for_each: '{{ zl }}'
+        sequence:
+        - variables:
+            c: '{{ cfg[repeat.item] }}'
+            mid: '{{ ((states(c.low) | float(18)) + (states(c.high) | float(21))) / 2 }}'
+            old_target: '{{ state_attr(c.entity, ''temperature'') | float(none) }}'
+            new_target: '{{ want if want is not none else (old_target if old_target is not none else mid) }}'
+        - choose:
+          - conditions:
+            - condition: template
+              value_template: '{{ command == ''turn_off'' }}'
+            sequence:
+            - action: climate.set_hvac_mode
+              target:
+                entity_id: '{{ c.entity }}'
+              data:
+                hvac_mode: 'off'
+          default:
+          - if:
+            - condition: template
+              value_template: '{{ command == ''turn_on'' }}'
+            then:
+            - action: climate.set_hvac_mode
+              target:
+                entity_id: '{{ c.entity }}'
+              data:
+                hvac_mode: heat
+            - action: climate.set_preset_mode
+              target:
+                entity_id: '{{ c.entity }}'
+              data:
+                preset_mode: none
+          - action: climate.set_temperature
+            target:
+              entity_id: '{{ c.entity }}'
+            data:
+              temperature: '{{ new_target }}'
+        - action: input_datetime.set_datetime
+          target:
+            entity_id: '{{ c.when }}'
+          data:
+            datetime: '{{ now().strftime(''%Y-%m-%d %H:%M:%S'') }}'
+        - action: input_text.set_value
+          target:
+            entity_id: '{{ c.expect }}'
+          data:
+            value: '{{ {''m'': ''off'' if command == ''turn_off'' else ''heat'', ''p'': ''none'', ''t'': none if command == ''turn_off'' else new_target, ''hot'': false} | tojson }}'
+        - action: input_text.set_value
+          target:
+            entity_id: '{{ c.note }}'
+          data:
+            value: >-
+              {{ now().strftime('%H:%M') }}: {{ c.name }} heating {% if command == 'turn_off' %}turned off{% elif command == 'turn_on' %}turned on to {{ new_target }}°C{% else %}set to {{ new_target }}°C{% endif %} because a person asked Clive.
+        - if:
+          - condition: template
+            value_template: '{{ command != ''turn_off'' }}'
+          then:
+          - action: input_datetime.set_datetime
+            target:
+              entity_id: '{{ c.resume }}'
+            data:
+              datetime: '{{ (now() + timedelta(minutes=mins)).strftime(''%Y-%m-%d %H:%M:%S'') }}'
+        - action: logbook.log
+          data:
+            name: Clive
+            message: '{{ c.name }} heating {{ command | replace(''_'', '' '') }} because a person asked{{ '' ('' ~ new_target ~ ''°C)'' if command != ''turn_off'' else '''' }}.'
+            entity_id: '{{ c.entity }}'
+    - variables:
+        result:
+          status: done
+          zones: '{{ zl }}'
+          command: '{{ command }}'
+          temperature: '{{ want }}'
+          until: '{{ (now() + timedelta(minutes=mins)).strftime(''%H:%M'') }}'
+          alarm: '{{ alarm }}'
+          message: >-
+            {%- if command == 'turn_off' -%}Turned off.
+            {%- else -%}Done. Clive will leave it alone until {{ (now() + timedelta(minutes=mins)).strftime('%H:%M') }} and then look after it again.{%- endif -%}
+            {%- if command == 'turn_on' and alarm == 'armed_away' %} The alarm is set to away, so the heating will be on until then even though nobody is home.{%- endif -%}
+    - response_variable: result
+      stop: done
   default:
   - repeat:
       for_each: '{{ zl }}'
