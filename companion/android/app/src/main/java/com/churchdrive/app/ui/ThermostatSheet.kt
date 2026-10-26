@@ -99,7 +99,7 @@ fun ZoneStatusLine(zone: ZoneControl, tone: ToneColors, onClick: () -> Unit) {
 
 /** One end of the comfortable range: its value between a minus and a plus, half a degree at a time. */
 @Composable
-private fun RangeRow(label: String, value: Double?, tone: ToneColors, onChange: (Double) -> Unit) {
+internal fun RangeRow(label: String, value: Double?, tone: ToneColors, onChange: (Double) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
         StepButton(Icons.Filled.Remove, "Lower $label", tone, value != null) { value?.let { onChange(it - 0.5) } }
@@ -160,6 +160,30 @@ fun ThermostatSheet(title: String, zone: ZoneControl, tone: ToneColors, call: Ca
                 }
             }
             zone.note?.let { Text("Last: ${it.state}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        }
+    }
+}
+
+/** The comfortable range of a room that has no thermostat of its own, as a sheet from the bottom: its two number helpers, half a degree at a time. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RoomRangeSheet(title: String, low: EntityState, high: EntityState, tone: ToneColors, call: CallService, onDismiss: () -> Unit) {
+    val lo = low.state.toDoubleOrNull()
+    val hi = high.state.toDoubleOrNull()
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Column {
+                Text(title, style = MaterialTheme.typography.titleLarge)
+                Text("Comfortable range", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Text("The room's graph and colours follow this range.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (lo != null && hi != null) {
+                RangeRow("Comfortable from", lo, tone) { v -> call("input_number", "set_value", low.entityId, data("value" to minOf(v, hi - 1.0))) }
+                RangeRow("Comfortable up to", hi, tone) { v -> call("input_number", "set_value", high.entityId, data("value" to maxOf(v, lo + 1.0))) }
+            }
         }
     }
 }

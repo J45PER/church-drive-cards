@@ -4,6 +4,12 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.53.0
+
+- **Climate ranges follow the numbers.** A thermostat's graph now shows the comfortable range the assistant uses (set in its Settings sheet), not the room type's, so a lowered living room shows 18 to 21 instead of 19 to 22. The Climate page's rooms can have their own range too: tap a room that has its range numbers (the entrance, the landings and the master bedroom) to change it.
+- **Blinds work again.** A blind that doesn't report where it is (an RF blind, state unknown) had its Open, Stop and Close greyed out; they now work, and the card says "Last: Open" after you use them.
+- The assistant's heating rules (off when the alarm is away, never on by himself, asks to take over when you disarm, turn on or off and set a temperature on request) are in the Clive log.
+
 ## 0.52.9
 
 - Watch: swiping sideways between pages is smoother. The next page is already built when you start the swipe, and turning a page no longer rebuilds every face on the watch (only the glass behind them follows).

@@ -14,6 +14,7 @@
 //   extra readings as small chips.
 // The card tints towards its colour while heating or cooling.
 
+import { zoneControl, zoneStatusText, openComfortSettings } from './comfort-settings.js';
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { stcColor } from './section-title-card.js';
@@ -366,16 +367,18 @@ export class ClimateCard extends HTMLElement {
         <div class="cc-dropdowns" style="display:flex; flex-direction:column; gap:6px;"></div>
         <div class="cc-quick ck-dim" style="display:flex; gap:6px;"></div>
         <div class="cc-chips" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
+        <button type="button" class="cc-clive" style="display:none; align-items:center; gap:10px; width:100%; min-height:48px; padding:10px 14px; border:none; border-radius:16px; cursor:pointer; background:rgba(127,127,127,0.14); color:var(--primary-text-color); font:inherit; font-size:0.95rem; text-align:left;"></button>
       </ha-card>`;
     const q = (sel) => this.querySelector(sel);
     this._els = {
       card: q('.cc-card'), title: q('.cc-title'), word: q('.cc-word'), gauge: q('.cc-gauge'), target: q('.cc-target'), targetLabel: q('.cc-target-label'),
       info: q('.cc-info'), room: q('.cc-room'), window: q('.cc-window'), history: q('.cc-history'), controls: q('.cc-controls'),
-      down: q('.cc-down'), up: q('.cc-up'), dropdowns: q('.cc-dropdowns'), quick: q('.cc-quick'), chips: q('.cc-chips'),
+      down: q('.cc-down'), up: q('.cc-up'), dropdowns: q('.cc-dropdowns'), quick: q('.cc-quick'), chips: q('.cc-chips'), clive: q('.cc-clive'),
     };
     this._els.down.addEventListener('click', () => this._step(-1));
     this._els.up.addEventListener('click', () => this._step(1));
     q('.cc-gauge-wrap').addEventListener('click', () => this._moreInfo(this.config.entity));
+    this._els.clive.addEventListener('click', () => this._openComfort());
     this._built = true;
   }
 
@@ -478,7 +481,39 @@ export class ClimateCard extends HTMLElement {
     this._drawDropdowns(st, v);
     this._drawQuick(st, v);
     this._drawChips();
+    this._drawClive();
     hydrateIcons(this);
+  }
+
+  // The line at the bottom of a thermostat Clive looks after: who is in charge, and a tap opens its settings.
+  _drawClive() {
+    const e = this._els.clive;
+    const zone = !this._demo && this._hass ? zoneControl(this._hass.states, this.config.entity) : null;
+    if (!zone) {
+      e.style.display = 'none';
+      if (this._pop) this._pop.close();
+      return;
+    }
+    const name = (this._hass.states['sensor.church_drive_assistant'] || {}).state;
+    const text = zoneStatusText(zone, name && !['unknown', 'unavailable'].includes(name) ? name : 'Clive');
+    const sig = JSON.stringify([text, zone.controlled]);
+    e.style.display = 'flex';
+    if (sig !== this._cliveSig) {
+      this._cliveSig = sig;
+      e.innerHTML = `${iconHtml(zone.controlled ? 'mdi:check-circle-outline' : 'mdi:hand-back-right-outline', { size: '20px' })}<span style="flex:1; min-width:0;"></span><span>Settings ›</span>`;
+      e.querySelector('span').textContent = text;
+    }
+    if (this._pop) this._pop.update(this._hass);
+  }
+
+  _openComfort() {
+    if (this._pop || !this._hass) return;
+    const st = this._state();
+    const pop = openComfortSettings(this, this._hass, { title: this.config.name || (st && st.attributes.friendly_name) || this.config.entity, climateId: this.config.entity });
+    this._pop = { update: pop.update, close: pop.close };
+    // Closing it any way (✕, the page behind, Back) lets the card open it again.
+    const d = this.querySelector('dialog.cd-pop');
+    if (d) new MutationObserver((_, ob) => { if (!d.isConnected) { this._pop = null; ob.disconnect(); } }).observe(this, { childList: true });
   }
 
   _humidity(a) {

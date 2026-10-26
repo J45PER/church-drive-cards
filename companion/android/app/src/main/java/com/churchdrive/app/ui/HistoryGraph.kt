@@ -308,7 +308,7 @@ fun ClimateGraph(
  * (the comfort band for the kind of room, the humidity limits, smoothed). [type] is the room's kind, such as "living" or "bedroom".
  */
 @Composable
-fun RoomGraph(tempId: String, humidityId: String?, type: String, ink: Color, lineColour: Color) {
+fun RoomGraph(tempId: String, humidityId: String?, type: String, ink: Color, lineColour: Color, low: Double? = null, high: Double? = null) {
     val load = LocalHistory.current
     var history by remember { mutableStateOf<Map<String, List<Pair<Long, String>>>>(emptyMap()) }
     LaunchedEffect(tempId, humidityId) {
@@ -321,6 +321,8 @@ fun RoomGraph(tempId: String, humidityId: String?, type: String, ink: Color, lin
     val hums = humidityId?.let { numericSeries(history[it]) }.orEmpty()
     if (temps.size < 2 && hums.size < 2) return
     val config = org.json.JSONObject().put("room_type", type).put("show_temperature_history", temps.size > 1).put("show_humidity_history", hums.size > 1)
+    low?.let { config.put("comfort_low", it) }
+    high?.let { config.put("comfort_high", it) }
     ClimateGraphBody(ClimateHistory(temps, hums, emptyList()), temps.lastOrNull()?.value, null, hums.lastOrNull()?.value, config, ink, lineColour)
 }
 

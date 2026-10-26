@@ -6,6 +6,7 @@
 // 24-hour graph shades the comfortable range, colours the temperature line by
 // the same scale, and draws humidity (purple) with dotted 40-60% limits.
 
+import { openComfortSettings } from './comfort-settings.js';
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
@@ -229,6 +230,7 @@ export class ClimateZoneCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    if (this._pop) this._pop.update(hass);
     this._render();
   }
 
@@ -253,6 +255,8 @@ export class ClimateZoneCard extends HTMLElement {
       return {
         name: r.name || (ts && ts.attributes.friendly_name) || r.temperature,
         icon: r.icon || (ts && ts.attributes.icon) || 'mdi:thermometer',
+        lowId: r.low_entity || '',
+        highId: r.high_entity || '',
         note: r.note || '',
         ...range,
         low,
@@ -354,7 +358,7 @@ export class ClimateZoneCard extends HTMLElement {
       });
     }
     kitHead(this, title, [t != null ? `${t.toFixed(1)}°` : '', h != null ? `${Math.round(h)}%` : ''].filter(Boolean).join(' · ') + (c.demo ? ' · demo' : ''), titleColour);
-    const sig = JSON.stringify([rooms.map((r) => [r.name, r.icon, r.note, r.t, r.h, r.low, r.high]), showGraphs, showHum, limits, this._hist && this._hist.at, c]);
+    const sig = JSON.stringify([rooms.map((r) => [r.name, r.icon, r.note, r.t, r.h, r.low, r.high, r.lowId]), showGraphs, showHum, limits, this._hist && this._hist.at, c]);
     if (sig === this._sig) return;
     this._sig = sig;
     const hours = Number(c.hours) || 24;
@@ -376,6 +380,7 @@ export class ClimateZoneCard extends HTMLElement {
               <div class="cz-name" style="font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
               <div class="cz-note ck-sub" style="font-size:0.72rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
             </div>
+            ${r.lowId && r.highId ? `<button type="button" class="cz-set" data-i="${i}" aria-label="Comfort range" title="Comfort range" style="flex:none; width:36px; height:36px; border:none; border-radius:50%; background:transparent; color:var(--secondary-text-color); cursor:pointer; display:flex; align-items:center; justify-content:center;">${iconHtml('mdi:tune-variant', { size: '20px' })}</button>` : ''}
             ${r.h != null ? `<span style="font-size:0.85rem; color:${humColour}; font-weight:${humWarn ? 700 : 400}; font-variant-numeric:tabular-nums;" title="${humWarn ? (r.h > hHigh ? 'Humid: mould risk' : 'Too dry') : 'Humidity'}">${Math.round(r.h * 10) / 10}%</span>` : ''}
             <b style="min-width:54px; text-align:right; font-size:1.15rem; font-variant-numeric:tabular-nums; color:${colour};">${r.t != null ? `${r.t.toFixed(1)}°` : '–'}</b>
           </div>
@@ -393,10 +398,21 @@ export class ClimateZoneCard extends HTMLElement {
       const r = rooms[Number(el.dataset.i)];
       el.querySelector('.cz-name').textContent = r.name;
       el.querySelector('.cz-note').textContent = [r.note || r.typeName, czWord(r.t, r.low, r.high)].filter(Boolean).join(' · ');
+      const set = el.querySelector('.cz-set');
+      if (set) set.addEventListener('click', () => this._openRange(r));
       const svg = el.querySelector('svg');
       if (svg && this._scrub[Number(el.dataset.i)]) kitScrub(svg, this._scrub[Number(el.dataset.i)]);
     });
     hydrateIcons(this);
+  }
+
+  // A room with its own range numbers: a sheet to change them, kept open and refreshed while Home Assistant answers.
+  _openRange(r) {
+    if (this._pop || !this._hass) return;
+    const pop = openComfortSettings(this, this._hass, { title: r.name, lowId: r.lowId, highId: r.highId });
+    this._pop = pop;
+    const d = this.querySelector('dialog.cd-pop');
+    if (d) new MutationObserver((_, ob) => { if (!d.isConnected) { this._pop = null; ob.disconnect(); } }).observe(this, { childList: true });
   }
 
   getCardSize() {

@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.53.0
+
+- Shared code changed (the assistant's feature log has a new entry about the heating and the alarm). Nothing else changes in this app.
+
 ## 0.52.9
 
 - No change to this app; version kept equal to the phone app (the watch swipe is smoother).
