@@ -36,8 +36,10 @@ import kotlin.math.roundToInt
 
 /** A thermostat from the dashboard's `custom:climate-card`: temperature, target, humidity, outside and its shortcuts. */
 @Composable
-fun ClimateRoomCard(config: JSONObject, entities: Map<String, EntityState>, call: CallService) {
-    val id = config.optString("entity")
+fun ClimateRoomCard(cardConfig: JSONObject, entities: Map<String, EntityState>, call: CallService) {
+    val id = cardConfig.optString("entity")
+    // The graph's band follows the live comfortable range (the assistant's numbers for this thermostat), not just the room type.
+    val config = withLiveRange(cardConfig, entities, zoneControl(entities, id))
     ClimateCard(
         entities[id],
         call,
@@ -70,8 +72,10 @@ fun OptionRow(options: List<String>, selected: String?, tone: ToneColors, enable
 
 /** The dashboard's `custom:climate-zone-card`: a floor's rooms, each with its temperature (coloured by comfort) and humidity. */
 @Composable
-fun ClimateZoneCard(config: JSONObject, entities: Map<String, EntityState>) {
+fun ClimateZoneCard(config: JSONObject, entities: Map<String, EntityState>, call: CallService) {
     val neutral = toneColors(Tone.Grey)
+    // A room that has its own range numbers (`low_entity` and `high_entity`) opens a sheet to change them.
+    var editing by remember { mutableStateOf<String?>(null) }
     val rooms = config.optJSONArray("rooms")
     // Tap the heading to open the floor out: each room's temperature (and humidity) over the last day.
     var open by remember { mutableStateOf(false) }
@@ -91,8 +95,17 @@ fun ClimateZoneCard(config: JSONObject, entities: Map<String, EntityState>) {
             val r = rooms?.optJSONObject(i) ?: continue
             val t = entities[r.optString("temperature")]?.state?.toDoubleOrNull()
             val h = r.optString("humidity").takeIf { it.isNotBlank() }?.let { entities[it]?.state?.toDoubleOrNull() }
-            val tone = toneColors(comfortTone(t, r.optString("type")))
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            val lowHelper = r.optString("low_entity").takeIf { it.isNotBlank() }?.let { entities[it] }?.takeIf { it.available }
+            val highHelper = r.optString("high_entity").takeIf { it.isNotBlank() }?.let { entities[it] }?.takeIf { it.available }
+            val low = lowHelper?.state?.toDoubleOrNull() ?: r.optDouble("low").takeIf { !it.isNaN() }
+            val high = highHelper?.state?.toDoubleOrNull() ?: r.optDouble("high").takeIf { !it.isNaN() }
+            val tone = toneColors(comfortTone(t, r.optString("type"), low, high))
+            val editable = lowHelper != null && highHelper != null
+            Row(
+                modifier = if (editable) Modifier.fillMaxWidth().clickable(onClickLabel = "Change the comfortable range") { editing = r.optString("name") } else Modifier,
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
                 ToneIconName(r.optString("icon"), Icons.Filled.Info, tone)
                 Column(modifier = Modifier.weight(1f)) {
                     Text(r.optString("name"), style = MaterialTheme.typography.titleMedium, maxLines = 1)
@@ -104,10 +117,14 @@ fun ClimateZoneCard(config: JSONObject, entities: Map<String, EntityState>) {
                     Text(if (t == null) "–" else "${temp(t)}°", style = MaterialTheme.typography.titleLarge, color = tone.accent)
                     if (h != null) Text("${h.roundToInt()}%", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                if (editable) HaIcon("mdi:tune-variant", Icons.Filled.Info, MaterialTheme.colorScheme.onSurfaceVariant, 20.dp)
+            }
+            if (editing == r.optString("name") && lowHelper != null && highHelper != null) {
+                RoomRangeSheet(r.optString("name"), lowHelper, highHelper, tone, call) { editing = null }
             }
             if (open) {
                 // The same graph as the thermostat cards: the comfort band for the room, the humidity limits, smoothed.
-                RoomGraph(r.optString("temperature"), r.optString("humidity").takeIf { it.isNotBlank() }, r.optString("type"), neutral.onContainer, tone.accent)
+                RoomGraph(r.optString("temperature"), r.optString("humidity").takeIf { it.isNotBlank() }, r.optString("type"), neutral.onContainer, tone.accent, low, high)
             }
         }
     }
@@ -274,16 +291,19 @@ fun CoverCard(config: JSONObject, entities: Map<String, EntityState>, call: Call
     val id = config.optString("entity")
     val cover = entities[id]
     val position = cover?.num("current_position")
-    val tone = toneColors(if (cover?.state == "closed" || cover?.available != true) Tone.Grey else Tone.Blue)
-    var slider by remember(position) { mutableStateOf((position ?: 0.0).toFloat()) }
-    val name = config.optString("name").ifBlank { cover?.friendlyName ?: id }
     val state = cover?.state
+    // A blind that only assumes its state (an RF one) reports "unknown", but still takes Open, Stop and Close: only a missing or unavailable one doesn't.
+    val enabled = cover != null && state != "unavailable"
+    val tone = toneColors(if (state == "closed" || state == "unknown" || !enabled) Tone.Grey else Tone.Blue)
+    var slider by remember(position) { mutableStateOf((position ?: 0.0).toFloat()) }
+    var last by remember { mutableStateOf<String?>(null) }
+    val name = config.optString("name").ifBlank { cover?.friendlyName ?: id }
     val word = when (state) {
         null -> "Loading…"
+        "unknown" -> last?.let { "Last: ${presetLabel(it)}" } ?: "Position unknown"
         "open", "closed" -> presetLabel(state) + (position?.let { " · ${it.roundToInt()}%" } ?: "")
         else -> presetLabel(state)
     }
-    val enabled = cover?.available == true
     EntityCard(tone.container, tone.onContainer, deviceEntity = id) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ToneIconName(config.optString("icon").ifBlank { "mdi:blinds" }, Icons.Filled.Info, tone)
@@ -303,9 +323,9 @@ fun CoverCard(config: JSONObject, entities: Map<String, EntityState>, call: Call
         }
         TileRow(
             listOf(
-                TileItem(IconMap.of("cover", "open", "mdi:arrow-up"), "Open", cover?.state == "open") { call("cover", "open_cover", id, data()) },
-                TileItem(IconMap.of("cover", "stop", "mdi:stop"), "Stop", false) { call("cover", "stop_cover", id, data()) },
-                TileItem(IconMap.of("cover", "close", "mdi:arrow-down"), "Close", cover?.state == "closed") { call("cover", "close_cover", id, data()) },
+                TileItem(IconMap.of("cover", "open", "mdi:arrow-up"), "Open", cover?.state == "open") { last = "open"; call("cover", "open_cover", id, data()) },
+                TileItem(IconMap.of("cover", "stop", "mdi:stop"), "Stop", false) { last = "stopped"; call("cover", "stop_cover", id, data()) },
+                TileItem(IconMap.of("cover", "close", "mdi:arrow-down"), "Close", cover?.state == "closed") { last = "closed"; call("cover", "close_cover", id, data()) },
             ),
             tone, tone.onContainer, enabled,
         )

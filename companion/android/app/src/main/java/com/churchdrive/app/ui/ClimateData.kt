@@ -31,10 +31,35 @@ val ROOM_TYPES: Map<String, RoomType> = mapOf(
 private val COMFORT = ROOM_TYPES.mapValues { it.value.low to it.value.high }
 
 
+/**
+ * A room's comfortable range: its own numbers where it has them ([low] and [high], from number helpers such as the assistant's range for
+ * a thermostat), else its room type's, else 16 to 21.
+ */
+fun comfortRange(type: String?, low: Double? = null, high: Double? = null): Pair<Double, Double> {
+    val (typeLow, typeHigh) = COMFORT[type.orEmpty()] ?: (16.0 to 21.0)
+    val lo = low ?: typeLow
+    return lo to maxOf(high ?: typeHigh, lo + 0.5)
+}
+
+/**
+ * The card's config with the live comfortable range in it (`comfort_low` and `comfort_high`): from the number helpers the card names
+ * (`comfort_low_entity`, `comfort_high_entity`), else the assistant's range for this thermostat, else left as the card has it.
+ */
+fun withLiveRange(config: JSONObject, entities: Map<String, EntityState>, zone: ZoneControl?): JSONObject {
+    fun live(key: String) = config.optString(key).takeIf { it.isNotBlank() }?.let { entities[it]?.state?.toDoubleOrNull() }
+    val lo = live("comfort_low_entity") ?: zone?.lowValue
+    val hi = live("comfort_high_entity") ?: zone?.highValue
+    if (lo == null && hi == null) return config
+    return JSONObject(config.toString()).also { c ->
+        lo?.let { c.put("comfort_low", it) }
+        hi?.let { c.put("comfort_high", it) }
+    }
+}
+
 /** Green in the comfortable range; cyan or blue when it's cold, amber or red when it's hot, by how far out. */
-fun comfortTone(temperature: Double?, type: String?): Tone {
+fun comfortTone(temperature: Double?, type: String?, low: Double? = null, high: Double? = null): Tone {
     if (temperature == null) return Tone.Grey
-    val (lo, hi) = COMFORT[type.orEmpty()] ?: (16.0 to 21.0)
+    val (lo, hi) = comfortRange(type, low, high)
     return when {
         temperature < lo -> if (lo - temperature > 3) Tone.Blue else Tone.Teal
         temperature > hi -> if (temperature - hi > 2.5) Tone.Red else Tone.Amber
