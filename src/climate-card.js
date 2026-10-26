@@ -178,6 +178,8 @@ export const ClimateCardEditor = createFormEditor({
           { name: 'room_type', selector: { select: { mode: 'dropdown', options: Object.entries(CZ_TYPES).map(([value, t]) => ({ value, label: `${t.name} (${t.low}–${t.high}°)` })) } } },
           { name: 'comfort_low', selector: { number: { min: 0, max: 35, step: 0.5, mode: 'box', unit_of_measurement: '°' } } },
           { name: 'comfort_high', selector: { number: { min: 0, max: 40, step: 0.5, mode: 'box', unit_of_measurement: '°' } } },
+          { name: 'comfort_low_entity', selector: { entity: { domain: 'input_number' } } },
+          { name: 'comfort_high_entity', selector: { entity: { domain: 'input_number' } } },
           { name: 'humidity_low', selector: { number: { min: 0, max: 100, mode: 'box', unit_of_measurement: '%' } } },
           { name: 'humidity_high', selector: { number: { min: 0, max: 100, mode: 'box', unit_of_measurement: '%' } } },
           toggle('show_controls'),
@@ -255,6 +257,8 @@ export const ClimateCardEditor = createFormEditor({
     room_type: 'Room type (sets the comfortable range)',
     comfort_low: 'Comfortable from (optional, overrides the type)',
     comfort_high: 'Comfortable to (optional, overrides the type)',
+    comfort_low_entity: 'Comfortable from follows this number (optional, e.g. Clive’s range; wins over the above)',
+    comfort_high_entity: 'Comfortable to follows this number (optional)',
     humidity_low: 'Comfortable humidity from (default 40%)',
     humidity_high: 'Comfortable humidity to (default 60%)',
     show_controls: '− and + buttons',
@@ -566,7 +570,7 @@ export class ClimateCard extends HTMLElement {
     box.style.display = 'block';
     if (!this._demo && Date.now() - this._historyAt > 10 * 60e3) this._loadHistory();
     const h = this._history;
-    const sig = JSON.stringify([showT, showH, this._historyAt, this._color, !!h, cfg.smooth_graphs, cfg.show_limits, cfg.room_type, cfg.comfort_low, cfg.comfort_high, cfg.humidity_low, cfg.humidity_high]);
+    const sig = JSON.stringify([showT, showH, this._historyAt, this._color, !!h, cfg.smooth_graphs, cfg.show_limits, cfg.room_type, cfg.comfort_low, cfg.comfort_high, ['comfort_low_entity', 'comfort_high_entity'].map((k) => this._hass && cfg[k] && this._hass.states[cfg[k]] && this._hass.states[cfg[k]].state), cfg.humidity_low, cfg.humidity_high]);
     if (sig === this._historySig) return;
     this._historySig = sig;
     if (!h) {
@@ -600,7 +604,10 @@ export class ClimateCard extends HTMLElement {
     const limits = cfg.show_limits !== false;
     const type = CZ_TYPES[cfg.room_type] || CZ_TYPES.living;
     const num = (k, d) => (cfg[k] != null && cfg[k] !== '' ? Number(cfg[k]) : d);
-    const cLow = num('comfort_low', type.low), cHigh = Math.max(num('comfort_high', type.high), cLow + 0.5);
+    const live = (k) => { const st = this._hass && cfg[k] && this._hass.states[cfg[k]]; const v = st ? parseFloat(st.state) : NaN; return Number.isFinite(v) ? v : null; };
+    const liveLow = live('comfort_low_entity'), liveHigh = live('comfort_high_entity');
+    const cLow = liveLow != null ? liveLow : num('comfort_low', type.low);
+    const cHigh = Math.max(liveHigh != null ? liveHigh : num('comfort_high', type.high), cLow + 0.5);
     const hLow = num('humidity_low', 40), hHigh = num('humidity_high', 60);
     let limitsSvg = '';
     if (hums.length > 1) {

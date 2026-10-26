@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **v0.69.0** (2026-10-26): the climate card and zone card ranges can follow number helpers (`comfort_low_entity`/`comfort_high_entity`, `low_entity`/`high_entity`), so the graph shows Clive's 18–21 instead of the room type's 19–22; Clive's heating rules in `ha/` (off when the alarm is away, no self turn-on, resume only once disarmed, turn on/off/set temperature on request, welcome-home Resume offer)
 - **app 0.48.0 + To-Do 0.48.0** (2026-10-23): Home page reminder when the heating was set by hand (with a Resume button); Resume Clive button on his notifications; his notifications carry his mark
 - **app 0.47.2 + To-Do 0.47.2** (2026-10-22): animated stop button while Clive listens; no listening after a typed question; real name spelling on cards
 - **app 0.47.1 + To-Do 0.47.1** (2026-10-22): Simple Icons brand logos (`si:` icons, the music card's service logo); about 35 on the watch
