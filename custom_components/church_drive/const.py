@@ -95,3 +95,7 @@ WS_ALARM_LIGHTS = "church_drive/alarm_lights"
 WS_ALARM_LIGHTS_SET = "church_drive/alarm_lights/set"
 WS_ALARM_LIGHTS_TEST = "church_drive/alarm_lights/test"
 WS_ALARM_LIGHTS_STOP = "church_drive/alarm_lights/stop"
+
+# Who did what in the house, for administrators (activity.py).
+WS_ACTIVITY = "church_drive/activity"
+EVENT_ACTIVITY = "church_drive_activity_changed"

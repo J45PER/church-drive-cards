@@ -307,6 +307,16 @@ lists the people and who's assigned to each kind (`assign`), for templates.
 
 What the lights do when an alarm goes off (see **Alarm lights** above): a Strobe / Constant / Off choice for each room and zone, the light sensors that decide day or night (with their live readings), how the strobes flash (Hue bridge or Home Assistant pulses, and the pulse length), how long the green and blue "all clear" colours last, an on/off switch, and a **lights-only test** with Stop. Only administrators can change it. Options: `title`, `color`, `demo`.
 
+### `activity-log-card`
+
+Administrators only: a log of what people and Clive did in the house, and when people came and went. Three kinds of line, each with a coloured mark:
+
+- **People**: what someone switched from the Church Drive app, a dashboard or Home Assistant (a light, the heating, a blind, the alarm, a scene, a script...). Only their own request is listed; what an automation or a script they ran did afterwards is not listed again. A slider drag is one line.
+- **Clive** (named from Church Drive's Assistant name setting): the changes his scripts made (`script.clive_*`, which includes his automations' heating changes), and who he did them for. A script that changes nothing (a lookup, a card on a screen) leaves no line.
+- **Coming and going**: a person arrived at or left home, or another zone.
+
+Filters: **Day** (today, yesterday, last 7 or 30 days, or pick dates), **Time** (morning 06-12, afternoon 12-18, evening 18-22, night 22-06, or pick times; a window applies to every day in the range and may run over midnight), **Show** (any mix of the three kinds) and **Who** (a person, which also matches what Clive did for them). New lines appear by themselves. The house keeps 30 days (`.storage/church_drive.activity`); it is read through `church_drive/activity`, which only administrators may call. Options: `title`, `color`, `demo`.
+
 ### `media-card`
 
 TVs and speakers, a row each (playing first) with play/pause or power; tap one for our
