@@ -5,6 +5,9 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.pm.ActivityInfo
+import android.content.res.Configuration
+import android.os.Handler
+import android.os.Looper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.fadeIn
@@ -169,11 +172,19 @@ internal fun CameraViewerC(
     }
     if (showEvents && eventsBase != null) CameraEventsViewer(name, eventsBase) { showEvents = false }
 
-    // Full screen turns the phone to landscape; leaving it (or closing) gives the screen back.
+    // Full screen turns the phone to landscape; leaving it (or closing) gives the screen back. With auto-rotate off,
+    // handing back to UNSPECIFIED leaves the screen stuck in landscape, so turn it to where it was first, then free it.
     DisposableEffect(full) {
         val act = context.findActivity()
+        val wasPortrait = act?.resources?.configuration?.orientation != Configuration.ORIENTATION_LANDSCAPE
+        val before = act?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         if (full) act?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        onDispose { if (full) act?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
+        onDispose {
+            if (full && act != null) {
+                act.requestedOrientation = if (wasPortrait) ActivityInfo.SCREEN_ORIENTATION_PORTRAIT else before
+                if (wasPortrait) Handler(Looper.getMainLooper()).postDelayed({ act.requestedOrientation = before }, 500)
+            }
+        }
     }
 
     // Expanded and full screen: a tap shows or hides the buttons, and they hide by themselves after 3 seconds.
