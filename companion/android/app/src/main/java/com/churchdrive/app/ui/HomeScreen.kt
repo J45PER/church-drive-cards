@@ -276,6 +276,7 @@ fun HomeScreen(
             DashboardPage(panels[key].orEmpty(), entities, registry, call)
         },
         experimentalContent = { ExperimentalPage(entities, registry, call) },
+        activityContent = { ActivityPage() },
     )
     }
 }

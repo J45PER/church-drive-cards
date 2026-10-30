@@ -9,7 +9,7 @@ import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { kitShell, kitHead, kitEsc } from './card-kit.js';
-import { DAYS, TIMES, KINDS, defaultFilters, buildQuery, toggleKind, groupByDay, lineParts, timeText, summary, dayText } from './activity-logic.js';
+import { DAYS, TIMES, KINDS, kindLabel, defaultFilters, buildQuery, toggleKind, groupByDay, lineParts, timeText, summary, dayText } from './activity-logic.js';
 
 const EVENT = 'church_drive_activity_changed';
 const PAGE = 100;
@@ -47,6 +47,7 @@ function alDemo() {
       { ts: t(8, 12), kind: 'presence', who: 'Ian', text: 'left home', icon: 'mdi:exit-run' },
       { ts: t(7, 58), kind: 'user', who: 'Jamie', text: 'armed (away) Alarm', icon: 'mdi:shield-home' },
       { ts: t(7, 41), kind: 'clive', who: '', text: 'turned off Downstairs', icon: 'mdi:thermostat', by: 'Hayley' },
+      { ts: t(7, 20), kind: 'clive_auto', who: '', text: 'turned on Downstairs', icon: 'mdi:thermostat', rule: 'take over again when a pause ends' },
       { ts: t(7, 5), kind: 'user', who: 'Hayley', text: 'turned on Kitchen at 60%', icon: 'mdi:lightbulb' },
       { ts: t(6, 30), kind: 'presence', who: 'Hayley', text: 'arrived home', icon: 'mdi:map-marker-account' },
     ],
@@ -176,7 +177,7 @@ export class ActivityLogCard extends HTMLElement {
     return `
       <div class="al-group"><span class="al-gh">Day</span>${this._chips('day', DAYS, (x) => f.day === x.id, colour)}${dates}</div>
       <div class="al-group"><span class="al-gh">Time</span>${this._chips('time', TIMES, (x) => f.time === x.id, colour)}${times}</div>
-      <div class="al-group"><span class="al-gh">Show</span>${this._chips('kind', KINDS, (x) => f.kinds.includes(x.id), colour, (x) => x.label || name)}</div>
+      <div class="al-group"><span class="al-gh">Show</span>${this._chips('kind', KINDS, (x) => f.kinds.includes(x.id), colour, (x) => kindLabel(x, name))}</div>
       ${people.length ? `<div class="al-group"><span class="al-gh">Who</span>${this._chips('who', people, (x) => f.who === x.id, colour)}</div>` : ''}`;
   }
 

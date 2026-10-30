@@ -4,8 +4,10 @@ Three kinds of line (the rules and wording are in activity_logic.py):
 
 - `user`: a person switched something from the Church Drive app, a dashboard or Home Assistant (a light, the heating, the alarm...).
   Only their own request counts; what an automation or a script they ran did afterwards is not listed again.
-- `clive`: something the assistant did. Every script of his that runs is followed (script.clive_*); the changes it makes (and the
-  scripts it starts) are listed with who he did it for. A script that changes nothing leaves no line.
+- `clive` / `clive_auto`: something the assistant did. Every script of his that runs is followed (script.clive_*); the changes it
+  makes (and the scripts it starts) are listed. `clive` = someone asked him (a conversation, or a person running his script), with who
+  he did it for; `clive_auto` = an automation ran his script (the heating rules...), with that automation's name. A script that
+  changes nothing leaves no line.
 - `presence`: a person arrived at or left a place (home, or another zone).
 
 Kept in .storage/church_drive.activity for 30 days.
@@ -35,6 +37,7 @@ from .activity_logic import (
     noted,
     presence_text,
     prune,
+    rule_name,
     select,
     who_list,
 )
@@ -53,7 +56,8 @@ class Activity:
         self._store: Store[list] = Store(hass, 1, STORE_KEY)
         self.entries: list[dict[str, Any]] = []
         self._unsubs: list[Any] = []
-        self._clive: dict[str, tuple[float, str]] = {}  # context id -> (until, who it is for)
+        self._clive: dict[str, tuple[float, str, str]] = {}  # context id -> (until, who it is for, the automation that ran it or "")
+        self._autos: dict[str, tuple[float, str]] = {}  # context id of an automation run -> (until, its name)
         self._scripts: dict[str, float] = {}  # context id of a person's own script run -> until
 
     # Home Assistant only accepts event filters marked as callbacks.
@@ -71,6 +75,7 @@ class Activity:
         self.entries = prune(clean(await self._store.async_load()), time.time())
         self._unsubs = [
             self.hass.bus.async_listen(EVENT_CALL_SERVICE, self._on_call),
+            self.hass.bus.async_listen("automation_triggered", self._on_automation),
             self.hass.bus.async_listen("script_started", self._on_script, event_filter=self._is_script_run),
             self.hass.bus.async_listen(EVENT_STATE_CHANGED, self._on_person, event_filter=self._is_person),
         ]
@@ -85,12 +90,19 @@ class Activity:
     # ---- listening ----------------------------------------------------
 
     def _forget_old(self, now: float) -> None:
-        for table in (self._clive, self._scripts):
+        for table in (self._clive, self._scripts, self._autos):
             for key in [k for k, v in table.items() if (v[0] if isinstance(v, tuple) else v) < now]:
                 del table[key]
 
     def _for_whom(self, context: Context) -> str:
         return self._first_name_for_user(context.user_id) if context.user_id else ""
+
+    @callback
+    def _on_automation(self, event: Event) -> None:
+        """An automation ran: a script it starts shares this context, so that script was started by the house, not asked for."""
+        now = time.time()
+        self._forget_old(now)
+        self._autos[event.context.id] = (now + RUN_S, rule_name(str(event.data.get("name") or event.data.get("entity_id") or "")))
 
     @callback
     def _on_script(self, event: Event) -> None:
@@ -101,9 +113,16 @@ class Activity:
         now = time.time()
         self._forget_old(now)
         ctx = event.context
-        # For whom: the person who asked him, or whoever the script it was started from was for.
-        for_whom = self._for_whom(ctx) or self._clive.get(ctx.parent_id or "", (0, ""))[1]
-        self._clive[ctx.id] = (now + RUN_S, for_whom)
+        # A script he started inherits from the one that started it; otherwise it is an automation's, or someone asked.
+        parent = self._clive.get(ctx.id) or self._clive.get(ctx.parent_id or "")
+        auto = self._autos.get(ctx.id) or self._autos.get(ctx.parent_id or "")
+        if parent:
+            who, rule = parent[1], parent[2]
+        elif auto and auto[0] >= now:
+            who, rule = "", auto[1] or "an automation"
+        else:
+            who, rule = self._for_whom(ctx), ""
+        self._clive[ctx.id] = (now + RUN_S, who, rule)
 
     @callback
     def _on_call(self, event: Event) -> None:
@@ -113,9 +132,9 @@ class Activity:
         now = time.time()
         followed = self._clive.get(ctx.id) or self._clive.get(ctx.parent_id or "")
         if followed and followed[0] >= now:
-            self._clive[ctx.id] = (now + RUN_S, followed[1])
+            self._clive[ctx.id] = (now + RUN_S, followed[1], followed[2])
             if domain not in ("script", "automation") and noted(domain, service):
-                self._record("clive", "", domain, service, data, by=followed[1])
+                self._record("clive_auto" if followed[2] else "clive", "", domain, service, data, by=followed[1], rule=followed[2])
             return
         if not ctx.user_id or ctx.parent_id:
             return  # an automation, a timer, the house itself: not a person asking
@@ -128,7 +147,7 @@ class Activity:
         if noted(domain, service):
             self._record("user", self._for_whom(ctx), domain, service, data, user_id=ctx.user_id)
 
-    def _record(self, kind: str, who: str, domain: str, service: str, data: dict[str, Any], by: str = "", user_id: str = "") -> None:
+    def _record(self, kind: str, who: str, domain: str, service: str, data: dict[str, Any], by: str = "", user_id: str = "", rule: str = "") -> None:
         ids = entities_in(data)
         names = {e: (st.name if (st := self.hass.states.get(e)) else "") for e in ids}
         if domain == "script" and service != "turn_on":
@@ -142,7 +161,7 @@ class Activity:
                 if area is not None:
                     areas.append(area.name)
         text = describe(domain, service, data, names, areas)
-        self._add(make_entry(time.time(), kind, who, text, icon_for(domain), ids[0] if len(ids) == 1 else "", by, user_id))
+        self._add(make_entry(time.time(), kind, who, text, icon_for(domain), ids[0] if len(ids) == 1 else "", by, user_id, rule))
 
     @callback
     def _on_person(self, event: Event) -> None:

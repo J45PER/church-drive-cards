@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { defaultFilters, rangeFor, windowFor, buildQuery, toggleKind, dayHeading, groupByDay, lineParts, parseDay, dayText, summary } from '../src/activity-logic.js';
+import { defaultFilters, rangeFor, windowFor, buildQuery, toggleKind, dayHeading, groupByDay, lineParts, kindLabel, KINDS, parseDay, dayText, summary } from '../src/activity-logic.js';
 
 // Tests run with TZ=Europe/London (npm test); Sat 24 Oct 2026 is still BST and Sun 25th is when the clocks go back.
 const NOW = new Date(2026, 9, 26, 15, 30); // Mon 26 Oct 2026, 15:30
@@ -69,9 +69,13 @@ test('lines are grouped under their day in order', () => {
   assert.deepEqual(g.map((x) => [x.heading, x.entries.length]), [['Today', 2], ['Yesterday', 1], ['Today', 1]]);
 });
 
-test('the assistant is named by the house and says who he did it for', () => {
-  assert.deepEqual(lineParts({ kind: 'clive', who: '', text: 'turned off Downstairs', by: 'Hayley' }, 'Gregg'), { who: 'Gregg', text: 'turned off Downstairs', note: 'for Hayley' });
-  assert.deepEqual(lineParts({ kind: 'clive', who: '', text: 'x' }), { who: 'Clive', text: 'x', note: '' });
+test('the assistant is named by the house; a line says who asked him, or which automation ran him', () => {
+  assert.deepEqual(lineParts({ kind: 'clive', who: '', text: 'turned off Downstairs', by: 'Hayley' }, 'Gregg'), { who: 'Gregg', text: 'turned off Downstairs', note: 'asked by Hayley' });
+  assert.deepEqual(lineParts({ kind: 'clive', who: '', text: 'x' }), { who: 'Clive', text: 'x', note: 'asked' });
+  assert.deepEqual(lineParts({ kind: 'clive_auto', who: '', text: 'x', rule: 'keep the climate comfortable' }), { who: 'Clive', text: 'x', note: 'automatic: keep the climate comfortable' });
+  assert.deepEqual(lineParts({ kind: 'clive_auto', who: '', text: 'x' }).note, 'automatic');
+  const label = (id, name) => kindLabel(KINDS.find((k) => k.id === id), name);
+  assert.deepEqual([label('clive', 'Gregg'), label('clive_auto'), label('user'), label('presence')], ['Gregg asked', 'Clive automatic', 'People', 'Coming and going']);
   assert.deepEqual(lineParts({ kind: 'user', who: '', text: 'x' }).who, 'Someone');
 });
 

@@ -18,11 +18,16 @@ export const TIMES = [
   { id: 'custom', label: 'Pick times' },
 ];
 
+// `clive` is what he did because someone asked him; `clive_auto` is what he did because an automation ran his script.
 export const KINDS = [
   { id: 'user', label: 'People', colour: '#42a5f5', icon: 'mdi:account' },
-  { id: 'clive', label: '', colour: '#ab47bc', icon: 'mdi:creation' }, // labelled with the assistant's name
+  { id: 'clive', label: 'asked', colour: '#ab47bc', icon: 'mdi:creation', assistant: true },
+  { id: 'clive_auto', label: 'automatic', colour: '#7e57c2', icon: 'mdi:robot', assistant: true },
   { id: 'presence', label: 'Coming and going', colour: '#26a69a', icon: 'mdi:map-marker-account' },
 ];
+
+// The chip's words: the assistant's kinds are named after him ("Clive asked", "Clive automatic").
+export const kindLabel = (kind, assistant = 'Clive') => (kind.assistant ? `${assistant} ${kind.label}` : kind.label);
 
 export const defaultFilters = () => ({ day: 'today', from: '', to: '', time: 'all', start: '', end: '', kinds: [], who: '' });
 
@@ -121,9 +126,11 @@ export function groupByDay(entries, now = new Date()) {
   return groups;
 }
 
-// Who did it and what, for a line: the assistant is named by the house, and says who he did it for.
+// Who did it and what, for a line: the assistant is named by the house, and the note says whether someone asked him (and who) or an
+// automation ran his script (and which).
 export function lineParts(entry, assistant = 'Clive') {
-  if (entry.kind === 'clive') return { who: assistant, text: entry.text, note: entry.by ? `for ${entry.by}` : '' };
+  if (entry.kind === 'clive') return { who: assistant, text: entry.text, note: entry.by ? `asked by ${entry.by}` : 'asked' };
+  if (entry.kind === 'clive_auto') return { who: assistant, text: entry.text, note: entry.rule ? `automatic: ${entry.rule}` : 'automatic' };
   return { who: entry.who || 'Someone', text: entry.text, note: '' };
 }
 

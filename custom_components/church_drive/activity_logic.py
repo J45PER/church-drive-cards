@@ -10,7 +10,10 @@ from __future__ import annotations
 from datetime import datetime, tzinfo
 from typing import Any, Iterable
 
-KINDS = ("user", "clive", "presence")
+KINDS = ("user", "clive", "clive_auto", "presence")
+# `clive`: the assistant did it because someone asked him (a conversation, or a person running his script). `clive_auto`: one of the
+# house's automations ran his script (the heating rules, a welcome home...), with nobody asking.
+CLIVE_KINDS = ("clive", "clive_auto")
 KEEP_DAYS = 30        # older entries are dropped
 KEEP_MAX = 4000       # and never more than this many, newest kept
 COALESCE_S = 8        # the same person doing the same thing to the same thing this soon after replaces it (a slider drag)
@@ -186,13 +189,23 @@ def presence_text(old: str | None, new: str | None) -> str:
     return f"left {old} for {new}"
 
 
-def make_entry(ts: float, kind: str, who: str, text: str, icon: str, entity: str = "", by: str = "", user_id: str = "") -> dict[str, Any]:
-    """One line of the log. [by] is who the assistant did it for; [user_id] is kept so a login with no person can be named later."""
+def rule_name(name: str) -> str:
+    """An automation's name without the assistant's prefix ("Clive: keep the climate comfortable" -> "keep the climate comfortable")."""
+    name = (name or "").strip()
+    head, sep, rest = name.partition(":")
+    return rest.strip() if sep and head.strip().lower() == CLIVE_PREFIX else name
+
+
+def make_entry(ts: float, kind: str, who: str, text: str, icon: str, entity: str = "", by: str = "", user_id: str = "", rule: str = "") -> dict[str, Any]:
+    """One line of the log. [by] is who the assistant did it for (kind `clive`); [rule] is the automation that ran him (kind `clive_auto`);
+    [user_id] is kept so a login with no person can be named later."""
     entry: dict[str, Any] = {"ts": round(float(ts), 3), "kind": kind, "who": who or "", "text": text, "icon": icon}
     if entity:
         entry["entity"] = entity
     if by:
         entry["by"] = by
+    if rule:
+        entry["rule"] = rule
     if user_id:
         entry["user_id"] = user_id
     return entry
@@ -204,7 +217,7 @@ def add(entries: list[dict[str, Any]], entry: dict[str, Any]) -> None:
         prev = entries[i]
         if entry["ts"] - prev["ts"] > COALESCE_S:
             break
-        if prev["kind"] == entry["kind"] and prev["who"] == entry["who"] and prev.get("entity") == entry.get("entity") and prev.get("entity") and prev.get("icon") == entry["icon"] and prev.get("by") == entry.get("by"):
+        if prev["kind"] == entry["kind"] and prev["who"] == entry["who"] and prev.get("entity") == entry.get("entity") and prev.get("entity") and prev.get("icon") == entry["icon"] and prev.get("by") == entry.get("by") and prev.get("rule") == entry.get("rule"):
             entries[i] = entry
             return
     entries.append(entry)
@@ -226,7 +239,7 @@ def clean(raw: Any) -> list[dict[str, Any]]:
             ts = float(e["ts"])
         except (KeyError, TypeError, ValueError):
             continue
-        out.append(make_entry(ts, e["kind"], str(e.get("who") or ""), e["text"], str(e.get("icon") or "mdi:home"), str(e.get("entity") or ""), str(e.get("by") or ""), str(e.get("user_id") or "")))
+        out.append(make_entry(ts, e["kind"], str(e.get("who") or ""), e["text"], str(e.get("icon") or "mdi:home"), str(e.get("entity") or ""), str(e.get("by") or ""), str(e.get("user_id") or ""), str(e.get("rule") or "")))
     out.sort(key=lambda e: e["ts"])
     return out
 
@@ -288,5 +301,5 @@ def select(
 
 def who_list(entries: Iterable[dict[str, Any]]) -> list[str]:
     """Everyone named in the log (as the person or who the assistant acted for), A to Z."""
-    names = {e["who"] for e in entries if e["who"] and e["kind"] != "clive"} | {e["by"] for e in entries if e.get("by")}
+    names = {e["who"] for e in entries if e["who"] and e["kind"] not in CLIVE_KINDS} | {e["by"] for e in entries if e.get("by")}
     return sorted(names, key=str.lower)

@@ -34,6 +34,7 @@ import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.BatteryChargingFull
 import androidx.compose.material.icons.outlined.Checklist
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Notifications
@@ -103,6 +104,8 @@ fun AccountOverlay(
     managerContent: @Composable (PanelSpec) -> Unit = {},
     /** The Experimental page: things being tried out before they replace what is there. */
     experimentalContent: @Composable () -> Unit = {},
+    /** The Activity log page (administrators): what people and the assistant did, and who came and went. */
+    activityContent: @Composable () -> Unit = {},
 ) {
     // The last page shown, so a page keeps its words while it slides away.
     var shown by remember { mutableStateOf("account") }
@@ -137,6 +140,7 @@ fun AccountOverlay(
                     }
                     "manager" -> ManagerHub(managerPages, { onPanel("account") }, onPanel)
                     "experimental" -> AdminPage("Experimental", { onPanel("account") }) { experimentalContent() }
+                    "activity" -> AdminPage("Activity log", { onPanel("account") }) { activityContent() }
                     else -> if (which.startsWith("manager:")) {
                         managerPages.firstOrNull { it.title == which.removePrefix("manager:") }?.let { p ->
                             AdminPage(p.title, { onPanel("manager") }) { managerContent(p) }
@@ -248,6 +252,10 @@ private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Pa
         // The Manager (administrators): one button here, and a page of its sections.
         if (managerPages.isNotEmpty()) {
             PanelCard { PanelRow(Icons.Outlined.Settings, "Manager", "${managerPages.size} sections: people, cameras, reminders and more", onClick = { onOpen("manager") }) }
+        }
+        // The activity log (administrators): what people and the assistant did, and who came and went.
+        if (isAdmin) {
+            PanelCard { PanelRow(Icons.Outlined.History, "Activity log", "What people and the assistant did, and who came and went", onClick = { onOpen("activity") }) }
         }
         // Experimental (kept in the code, not shown): add its row back here when there is something to try out.
         PanelCard {

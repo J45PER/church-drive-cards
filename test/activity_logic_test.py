@@ -140,6 +140,7 @@ class SelectTest(unittest.TestCase):
             entry(at(26, 7, 30), who="Hayley", text="turned on Kitchen"),
             entry(at(26, 22, 45), kind="presence", who="Jamie", text="arrived home"),
             entry(at(27, 2, 10), kind="clive", who="", text="turned off Downstairs", by="Hayley"),
+            entry(at(27, 3, 0), kind="clive_auto", who="", text="turned on Downstairs", rule="take over again when a pause ends"),
             entry(at(27, 9, 0), who="Jamie", text="armed (away) Alarm"),
             entry(at(28, 18, 0), kind="presence", who="Ian", text="left home"),
         ]
@@ -149,12 +150,12 @@ class SelectTest(unittest.TestCase):
 
     def test_newest_first_and_total(self):
         r = al.select(self.log, tz=LONDON)
-        self.assertEqual(r["total"], 5)
+        self.assertEqual(r["total"], 6)
         self.assertEqual(r["entries"][0]["text"], "left home")
         self.assertEqual(r["entries"][-1]["text"], "turned on Kitchen")
 
     def test_days(self):
-        self.assertEqual(self.texts(since=at(27, 0), until=at(28, 0)), ["armed (away) Alarm", "turned off Downstairs"])
+        self.assertEqual(self.texts(since=at(27, 0), until=at(28, 0)), ["armed (away) Alarm", "turned on Downstairs", "turned off Downstairs"])
         self.assertEqual(self.texts(since=at(28, 0)), ["left home"])
 
     def test_until_is_exclusive(self):
@@ -162,12 +163,14 @@ class SelectTest(unittest.TestCase):
 
     def test_kinds(self):
         self.assertEqual(self.texts(kinds=["presence"]), ["left home", "arrived home"])
-        self.assertEqual(self.texts(kinds=["clive"]), ["turned off Downstairs"])
-        self.assertEqual(len(self.texts(kinds=["nonsense"])), 5)  # unknown kinds mean "no choice made"
-        self.assertEqual(len(self.texts(kinds=[])), 5)
+        self.assertEqual(self.texts(kinds=["clive"]), ["turned off Downstairs"])  # asked of him
+        self.assertEqual(self.texts(kinds=["clive_auto"]), ["turned on Downstairs"])  # run by an automation
+        self.assertEqual(self.texts(kinds=["clive", "clive_auto"]), ["turned on Downstairs", "turned off Downstairs"])
+        self.assertEqual(len(self.texts(kinds=["nonsense"])), 6)  # unknown kinds mean "no choice made"
+        self.assertEqual(len(self.texts(kinds=[])), 6)
 
     def test_who_matches_the_person_or_who_the_assistant_did_it_for(self):
-        self.assertEqual(self.texts(who="hayley"), ["turned off Downstairs", "turned on Kitchen"])
+        self.assertEqual(self.texts(who="hayley"), ["turned off Downstairs", "turned on Kitchen"])  # not what an automation did
         self.assertEqual(self.texts(who="Ian"), ["left home"])
 
     def test_time_of_day_window(self):
@@ -176,14 +179,14 @@ class SelectTest(unittest.TestCase):
         self.assertEqual(self.texts(start="07:00", end="07:30"), [])  # end exclusive
 
     def test_a_window_over_midnight(self):
-        self.assertEqual(self.texts(start="22:00", end="06:00"), ["turned off Downstairs", "arrived home"])
+        self.assertEqual(self.texts(start="22:00", end="06:00"), ["turned on Downstairs", "turned off Downstairs", "arrived home"])
 
     def test_open_ended_windows(self):
         self.assertEqual(self.texts(start="18:00"), ["left home", "arrived home"])
-        self.assertEqual(self.texts(end="03:00"), ["turned off Downstairs"])
+        self.assertEqual(self.texts(end="03:00"), ["turned off Downstairs"])  # end is exclusive
 
     def test_bad_times_are_ignored(self):
-        self.assertEqual(len(self.texts(start="soon", end="25:99")), 5)
+        self.assertEqual(len(self.texts(start="soon", end="25:99")), 6)
 
     def test_window_uses_the_houses_clock_across_the_clock_change(self):
         # 2026-10-25 01:30 GMT is 02:30 BST-less; the same wall time either side of the change is the same window.
@@ -207,6 +210,30 @@ class SelectTest(unittest.TestCase):
         self.assertEqual(al.who_list(self.log), ["Hayley", "Ian", "Jamie"])
 
 
+class AutoOrAskedTest(unittest.TestCase):
+    def test_rule_names_lose_the_assistants_prefix(self):
+        self.assertEqual(al.rule_name("Clive: keep the climate comfortable"), "keep the climate comfortable")
+        self.assertEqual(al.rule_name("clive : take over again"), "take over again")
+        self.assertEqual(al.rule_name("Security alerts: night"), "Security alerts: night")
+        self.assertEqual(al.rule_name(""), "")
+
+    def test_the_rule_is_kept_and_survives_storage(self):
+        e = al.make_entry(5, "clive_auto", "", "turned off Downstairs", "mdi:thermostat", rule="keep the climate comfortable")
+        self.assertEqual(al.clean([e]), [e])
+        self.assertNotIn("rule", al.make_entry(5, "clive", "", "x", "mdi:home", by="Hayley"))
+
+    def test_asked_and_automatic_are_not_merged(self):
+        log = []
+        al.add(log, al.make_entry(1000, "clive", "", "x", "mdi:thermostat", entity="climate.a", by="Hayley"))
+        al.add(log, al.make_entry(1001, "clive_auto", "", "x", "mdi:thermostat", entity="climate.a", rule="r"))
+        al.add(log, al.make_entry(1002, "clive_auto", "", "y", "mdi:thermostat", entity="climate.a", rule="other"))
+        self.assertEqual(len(log), 3)
+
+    def test_the_people_list_has_who_he_did_things_for_but_never_the_assistant(self):
+        log = [al.make_entry(1, "clive", "", "x", "i", by="Ian"), al.make_entry(2, "clive_auto", "", "y", "i", rule="r")]
+        self.assertEqual(al.who_list(log), ["Ian"])
+
+
 class WiringTest(unittest.TestCase):
     # activity.py needs Home Assistant, so it can't be imported here; these check what broke before elsewhere.
     def test_event_filters_are_marked_callbacks(self):
@@ -223,6 +250,10 @@ class WiringTest(unittest.TestCase):
         start = INIT.index("activity = Activity(")
         self.assertIn("try:", INIT[max(0, start - 200):start])
         self.assertRegex(INIT[start:start + 500], r"except Exception")
+
+    def test_the_automations_runs_are_followed_to_tell_automatic_from_asked(self):
+        self.assertIn('"automation_triggered"', SRC)
+        self.assertIn('"clive_auto" if followed[2] else "clive"', SRC)
 
     def test_user_logins_are_never_sent_out(self):
         self.assertIn('if k != "user_id"', SRC)
