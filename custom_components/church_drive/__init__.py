@@ -16,6 +16,8 @@
   of notification (set in Manager); church_drive.notify to send one; and
   sensor.church_drive_people for automations and the cards. Each person's
   places (their names for the zones they go to) are set in Manager.
+- Activity log (activity.py): for administrators, what people and the assistant did in the house and who came and went,
+  kept for 30 days, read through `church_drive/activity` with filters for day, time of day, kind and person.
 - Camera events (events.py): a picture and the recording of every Ring
   doorbell press and motion, kept for a few days, for the cards' events
   viewer.
@@ -101,6 +103,7 @@ from .const import (
     WS_ALARM_LIGHTS,
     WS_ALARM_LIGHTS_SET,
     WS_ALARM_LIGHTS_STOP,
+    WS_ACTIVITY,
     WS_ALARM_LIGHTS_TEST,
     WS_REMINDER_SET,
     WS_REMINDERS,
@@ -135,6 +138,8 @@ from .inbox import Inbox
 from .shopping import Shopping
 from .shopping_logic import STATUSES
 from .fcm import Fcm
+from .activity import Activity
+from .activity_logic import KINDS as ACTIVITY_KINDS, MAX_LIMIT as ACTIVITY_MAX_LIMIT
 from .alarm_actor import AlarmActor
 from .notice_actions import NoticeActions
 from .notice_samples import sample_for
@@ -1147,6 +1152,34 @@ async def ws_maps_search(hass: HomeAssistant, connection: websocket_api.ActiveCo
     connection.send_result(msg["id"], places)
 
 
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_ACTIVITY,
+        vol.Optional("since"): vol.Coerce(float),
+        vol.Optional("until"): vol.Coerce(float),
+        vol.Optional("kinds"): [vol.In(ACTIVITY_KINDS)],
+        vol.Optional("who"): cv.string,
+        vol.Optional("start"): cv.string,
+        vol.Optional("end"): cv.string,
+        vol.Optional("limit"): vol.All(vol.Coerce(int), vol.Range(min=1, max=ACTIVITY_MAX_LIMIT)),
+        vol.Optional("offset"): vol.All(vol.Coerce(int), vol.Range(min=0)),
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_activity(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """What people and the assistant did in the house, and who came and went (administrators only).
+
+    Filters: `since`/`until` (times), `kinds` (user, clive, presence), `who` (a first name), and `start`/`end` ("HH:MM", a window
+    in every day of the range; it may run over midnight)."""
+    activity = hass.data.get(DOMAIN, {}).get("activity")
+    if activity is None:
+        connection.send_error(msg["id"], "not_ready", "The activity log isn't running")
+        return
+    filters = {k: v for k, v in msg.items() if k not in ("id", "type")}
+    connection.send_result(msg["id"], await activity.async_query(**filters))
+
+
 @websocket_api.websocket_command({vol.Required("type"): WS_ASSIST_INFO})
 @websocket_api.async_response
 async def ws_assist_info(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
@@ -1188,7 +1221,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             ws_people_places, ws_people_cars, ws_people_access, ws_people_tracking, ws_people_settings, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_camera_alert_set, ws_maps, ws_maps_search, ws_assist_info,
             ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss, ws_reminders, ws_reminder_set,
             ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_import,
-            ws_alarm_lights, ws_alarm_lights_set, ws_alarm_lights_test, ws_alarm_lights_stop,
+            ws_alarm_lights, ws_alarm_lights_set, ws_alarm_lights_test, ws_alarm_lights_stop, ws_activity,
         ):
             websocket_api.async_register_command(hass, command)
     # The version in the URL makes browsers fetch the new bundle after an
@@ -1253,6 +1286,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             entry.async_on_unload(alarm_actor.async_stop)
         except Exception:  # noqa: BLE001
             _LOGGER.exception("The alarm's 'who' record couldn't start; notifications still work")
+        # Its own guard: the activity log must never stop notifications from starting.
+        try:
+            activity = Activity(hass, first_name_for_user, lambda: assistant_name(hass))
+            await activity.async_start()
+            entry.async_on_unload(activity.async_stop)
+            data["activity"] = activity
+        except Exception:  # noqa: BLE001
+            _LOGGER.exception("The activity log couldn't start; notifications still work")
+            data["activity"] = None
         # Google push for the Church Drive app (only when its key file is in the config folder).
         fcm = Fcm(hass)
         await fcm.async_start()
