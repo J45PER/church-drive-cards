@@ -307,19 +307,16 @@ lists the people and who's assigned to each kind (`assign`), for templates.
 
 What the lights do when an alarm goes off (see **Alarm lights** above): a Strobe / Constant / Off choice for each room and zone, the light sensors that decide day or night (with their live readings), how the strobes flash (Hue bridge or Home Assistant pulses, and the pulse length), how long the green and blue "all clear" colours last, an on/off switch, and a **lights-only test** with Stop. Only administrators can change it. Options: `title`, `color`, `demo`.
 
-### `activity-log-card`
+### Activity log (Android app, administrators)
 
-Administrators only: a log of what people and Clive did in the house, and when people came and went. Three kinds of line, each with a coloured mark:
+An **Activity log** row in the Android app's side panel (administrators only) opens a log of what people and Clive did in the house, and when people came and went. There is no dashboard card for it. Four kinds of line:
 
-- **People**: what someone switched from the Church Drive app, a dashboard or Home Assistant (a light, the heating, a blind, the alarm, a scene, a script...). Only their own request is listed; what an automation or a script they ran did afterwards is not listed again. A slider drag is one line.
+- **People**: what someone switched from the app, a dashboard or Home Assistant (a light, the heating, a blind, the alarm, a scene, a script...). Only their own request is listed; what an automation or a script they ran did afterwards is not listed again. A slider drag is one line.
 - **Clive asked** (named from Church Drive's Assistant name setting): changes his scripts (`script.clive_*`) made because someone asked him, by voice or text or by running his script, with who asked ("asked by Hayley"; just "asked" when a device had nobody signed in).
-- **Clive automatic**: changes his scripts made because one of the house's automations ran them (the heating rules, taking over when a pause ends), with that automation's name ("automatic: keep the climate comfortable"). Which is which comes from the automation's run: a script started inside it counts as automatic, anything else as asked.
-- A script of his that changes nothing (a lookup, a card on a screen) leaves no line either way.
+- **Clive automatic**: changes his scripts made because one of the house's automations ran them (the heating rules, taking over when a pause ends), with that automation's name. Which is which comes from the automation's run: a script started inside it counts as automatic, anything else as asked.
 - **Coming and going**: a person arrived at or left home, or another zone.
 
-The Android app has the same log as an **Activity log** row in its side panel (administrators only), with day, time-of-day, kind and person filters (no date picker there: use the dashboard card for an exact range).
-
-Filters: **Day** (today, yesterday, last 7 or 30 days, or pick dates), **Time** (morning 06-12, afternoon 12-18, evening 18-22, night 22-06, or pick times; a window applies to every day in the range and may run over midnight), **Show** (any mix of the four kinds) and **Who** (a person, which also matches what Clive did for them). New lines appear by themselves. The house keeps 30 days (`.storage/church_drive.activity`); it is read through `church_drive/activity`, which only administrators may call. Options: `title`, `color`, `demo`.
+A script of his that changes nothing (a lookup, a card on a screen) leaves no line. Filters: **Day** (today, yesterday, 7 or 30 days), **Time** (morning 06-12, afternoon 12-18, evening 18-22, night 22-06), **Show** (any mix of the four kinds) and **Who** (a person, which also matches what Clive did when they asked). New lines appear by themselves. The integration keeps 30 days (`.storage/church_drive.activity`) and serves them through `church_drive/activity`, which only administrators may call (it also takes `start`/`end` times and `since`/`until` for other clients).
 
 ### `media-card`
 
