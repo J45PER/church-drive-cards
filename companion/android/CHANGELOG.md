@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.53.1
+
+- **Leaving a landscape camera no longer locks the app sideways.** Closing full screen on a camera (or the camera itself) turns the screen back to portrait even with auto-rotate off, then lets it rotate normally again; before, the app stayed in landscape until you closed and reopened it.
+
 ## 0.53.0
 
 - **Climate ranges follow the numbers.** A thermostat's graph now shows the comfortable range the assistant uses (set in its Settings sheet), not the room type's, so a lowered living room shows 18 to 21 instead of 19 to 22. The Climate page's rooms can have their own range too: tap a room that has its range numbers (the entrance, the landings and the master bedroom) to change it.
