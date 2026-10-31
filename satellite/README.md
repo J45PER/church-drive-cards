@@ -10,7 +10,7 @@ A voice satellite for **Clive** on the Waveshare ESP32-P4-WIFI6-Touch-LCD-3.4C (
 | The screen, run in ESPHome's desktop simulator (real LVGL rendering) | Yes: all four designs, the glow, the dock and mark, cards, quick settings, menu, pairing QR (see `tools/sim_shots.sh`) |
 | Flashed to a real board | **No.** Touch address, chip revision, audio levels, the glow's frame rate and the mark's animation speed are untested |
 | Home Assistant automations (`ha/`) | Written, templates syntax-checked, **not installed or run** |
-| Pairing (QR, Bluetooth, adopting the device) | Proposal only: [`docs/SATELLITE-PAIRING.md`](../docs/SATELLITE-PAIRING.md) |
+| Pairing (QR, Bluetooth, adopting the device) | Written in the firmware (`improv_ble`, first-boot pair screen, Reset pairing) and the app (Add tab), **not tried on a board**: [`docs/SATELLITE-PAIRING.md`](../docs/SATELLITE-PAIRING.md) |
 | Companion app | `companion/android/satellites/`: lists and configures satellites; pairing not built |
 
 ## What it does
@@ -25,7 +25,7 @@ A voice satellite for **Clive** on the Waveshare ESP32-P4-WIFI6-Touch-LCD-3.4C (
 | Quick settings | Swipe down from the top edge: volume, brightness, mic, spoken answers, follow-up listening, night, clean screen, and a Settings button. |
 | Settings menu, pairing | Settings > Pair or reset shows a QR code and a six digit code for the companion app. |
 
-Settings that Home Assistant and the app can change are ESPHome entities: **Design**, **Glance 1 to 3**, **Backlight day / night**, **Night starts / ends (hour)**, and the switches **Microphone**, **Spoken answers**, **Follow-up listening**, **Night mode**.
+Settings that Home Assistant and the app can change are ESPHome entities: **Design**, **Glance 1 to 3**, **Backlight day / night**, **Night starts / ends (hour)**, the switches **Microphone**, **Spoken answers**, **Follow-up listening**, **Night mode**, a **Volume** number, the buttons **Restart**, **Identify** and **Clean screen**, and diagnostics (**Wi-Fi signal**, **Uptime**, **IP address**, **Wi-Fi network**, **ESPHome version**). The companion app shows and drives all of them.
 
 ## Files
 
@@ -42,15 +42,16 @@ Settings that Home Assistant and the app can change are ESPHome entities: **Desi
 | `ha/clive-satellite-info.yaml` | Pushes the weather, who is home, the rate, the car, the alarm and the heating to the screen. |
 | `ha/clive-satellite-show.yaml` | Sends Clive's cards to the screen while it is the device being spoken to. |
 | `ha/clive-satellite-answer.yaml` | Passes a tapped Yes or No to Clive. |
+| `ha/clive-satellite-health.yaml` | Notifies when a satellite has been offline for 10 minutes or its Wi-Fi has been weak for 15. |
 | `design/` | The HTML mockups the firmware was built from (`flows.html`, `idle-layouts.html`, `clive-round-ui.html`). |
 
 ## Setup
 
 1. Install ESPHome (the Home Assistant add-on or `pip install esphome`).
-2. Copy `secrets.example.yaml` to `secrets.yaml` and fill it in (`secrets.yaml` is git-ignored). Make the API key with `python3 -c "import secrets,base64;print(base64.b64encode(secrets.token_bytes(32)).decode())"`.
+2. Copy `secrets.example.yaml` to `secrets.yaml` and fill in the API key (`secrets.yaml` is git-ignored). The Wi-Fi is not in it: the companion app sends it when you pair. Make the API key with `python3 -c "import secrets,base64;print(base64.b64encode(secrets.token_bytes(32)).decode())"`.
 3. First flash over the board's **USB-C UART** port: `esphome run clive-round.yaml`. Later updates go over the air.
-4. Home Assistant finds it as a new ESPHome device. Adopt it, give it an **area**, and in Settings > Voice assistants set its pipeline to the Claude one.
-5. Install the three automations in `ha/`. They use this house's entity ids (`weather.forecast_home`, the four `person.*`, the Octopus rate, the Astra's battery, the alarm, `climate.downstairs`). Change `assist_satellite.clive_round_screen` in `clive-satellite-show.yaml` to the entity your device created.
+4. Open the Church Drive Satellites app, **Add**, scan the QR code on the satellite's screen, and give it the Wi-Fi and the API key. The app sends the Wi-Fi over Bluetooth and adds the satellite to Home Assistant. Then give it a room in the app and, in Settings > Voice assistants, set its pipeline to the Claude one. (Without the app: add it in Home Assistant by hand under Settings > Devices > ESPHome, after giving it Wi-Fi from a `wifi:` block in the config.)
+5. Install the automations in `ha/` (show, answer, info, and optionally health). They use this house's entity ids (`weather.forecast_home`, the four `person.*`, the Octopus rate, the Astra's battery, the alarm, `climate.downstairs`). Change `assist_satellite.clive_round_screen` in `clive-satellite-show.yaml` to the entity your device created.
 
 ## Changing the screen
 

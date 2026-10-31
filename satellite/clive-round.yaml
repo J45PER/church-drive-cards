@@ -34,6 +34,14 @@ esphome:
       - switch.turn_on: speaker_amp
       - script.execute: apply_backlight
       - micro_wake_word.start:
+      # With no Wi-Fi yet (a new or reset satellite) the pair screen opens by itself, so the QR code is the first thing on the glass.
+      - delay: 20s
+      - if:
+          condition:
+            not:
+              wifi.connected:
+          then:
+            - lambda: clive::show_pair();
 
 esp32:
   board: esp32-p4-evboard
@@ -122,14 +130,28 @@ api:
 ota:
   - platform: esphome
 
+# No Wi-Fi is built in: the companion app sends it over Bluetooth (improv_ble below, see docs/SATELLITE-PAIRING.md), and the device remembers it.
+# For bench work you can add `ssid` and `password` here (from secrets.yaml); a built-in network is tried first.
 wifi:
-  ssid: !secret wifi_ssid
-  password: !secret wifi_password
-  fast_connect: true
   ap:
     ssid: "${friendly_name} setup"
 
 captive_portal:
+
+# Bluetooth goes through the ESP32-C6 as well. The Wi-Fi hand-over only works while the pair screen is showing (Settings > Pair or reset,
+# or by itself when there is no Wi-Fi yet), so the authorizer is the pair screen.
+esp32_ble:
+  io_capability: none
+
+improv_ble:
+  authorizer: pair_authorized
+  authorized_duration: 2min
+
+binary_sensor:
+  - platform: template
+    id: pair_authorized
+    internal: true
+    lambda: 'return clive::pairing_open();'
 
 # The P4 has no Wi-Fi of its own: the ESP32-C6 on the board provides it over SDIO.
 esp32_hosted:
@@ -335,9 +357,9 @@ script:
           condition:
             lambda: 'return which == 0;'
           then:
-            - speaker.volume_set:
-                id: board_speaker
-                volume: !lambda 'return value / 100.0f;'
+            - number.set:
+                id: speaker_volume
+                value: !lambda 'return value;'
           else:
             - lambda: |-
                 id(backlight_day).publish_state(value < 8 ? 8 : value);
@@ -408,6 +430,50 @@ number:
     optimistic: true
     entity_category: config
 
+  - platform: template
+    name: "Volume"
+    id: speaker_volume
+    min_value: 0
+    max_value: 100
+    step: 5
+    initial_value: 70
+    restore_value: true
+    optimistic: true
+    entity_category: config
+    unit_of_measurement: "%"
+    on_value:
+      - speaker.volume_set:
+          id: board_speaker
+          volume: !lambda 'return x / 100.0f;'
+
+# Buttons for the companion app (and Home Assistant): each is one tap, no state.
+button:
+  - platform: factory_reset
+    name: "Reset pairing"       # Forgets the Wi-Fi so the satellite can be paired again. Its settings reset too.
+    entity_category: config
+  - platform: restart
+    name: "Restart"
+    entity_category: config
+  - platform: template
+    name: "Identify"            # Pulses the screen so you can tell which satellite this is.
+    entity_category: diagnostic
+    on_press:
+      - repeat:
+          count: 3
+          then:
+            - light.turn_on: {id: backlight, brightness: 100%}
+            - delay: 250ms
+            - light.turn_on: {id: backlight, brightness: 5%}
+            - delay: 250ms
+      - script.execute: apply_backlight
+  - platform: template
+    name: "Clean screen"        # Ignores the touch for 30 seconds so the glass can be wiped.
+    entity_category: config
+    on_press:
+      - lvgl.pause:
+      - delay: 30s
+      - lvgl.resume:
+
 # ---------------------------------------------------------------- screen
 
 output:
@@ -450,3 +516,19 @@ sensor:
   - platform: wifi_signal
     name: Wi-Fi signal
     update_interval: 60s
+  - platform: uptime
+    name: Uptime
+    entity_category: diagnostic
+    update_interval: 60s
+
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: IP address
+      entity_category: diagnostic
+    ssid:
+      name: Wi-Fi network
+      entity_category: diagnostic
+  - platform: version
+    name: ESPHome version
+    entity_category: diagnostic

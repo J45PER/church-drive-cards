@@ -81,6 +81,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    // Scans the QR code on a satellite with Google's own scanner screen (no camera permission needed in this app).
+    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
 }
