@@ -1,18 +1,18 @@
 name: Upload to Google Play
 
-# Upload the bundles of a version that already has a GitHub release to Google Play's internal testing: for when the automatic upload
+# Upload the bundles of a version that already has a GitHub release (v<version>) to Google Play's internal testing: for when the automatic upload
 # in "Companion Android" failed or was skipped (it runs once, the first time a build has a version). Run it from the Actions tab.
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to upload, for example 0.48.3 (its android-v and todo-v releases must exist)"
+        description: "Version to upload, for example 0.80.0 (its v<version> release must exist and hold the bundles)"
         required: true
       apps:
         description: "Which apps"
         type: choice
         default: all
-        options: [all, phone-and-watch, todo]
+        options: [all, phone-and-watch, todo, satellites]
 
 permissions:
   contents: read
@@ -27,21 +27,22 @@ jobs:
       - uses: actions/checkout@v4
       - name: Get the bundles and release notes
         run: |
-          mkdir -p aabs play-notes-main play-notes-todo
-          if [ "${{ inputs.apps }}" != "todo" ]; then
-            gh release download "android-v${VERSION}" --pattern '*.aab' --dir aabs
-            notes=$(awk -v v="$VERSION" '$0 ~ "^## "v"( |$)" {on=1; next} /^## / {on=0} on' companion/android/CHANGELOG.md)
-            printf '%s' "${notes:-Version ${VERSION}.}" | sed 's/^- //' | head -c 480 > play-notes-main/whatsnew-en-GB
-          fi
-          if [ "${{ inputs.apps }}" != "phone-and-watch" ]; then
-            gh release download "todo-v${VERSION}" --pattern '*.aab' --dir aabs
-            notes=$(awk -v v="$VERSION" '$0 ~ "^## "v"( |$)" {on=1; next} /^## / {on=0} on' companion/android/todo/CHANGELOG.md)
-            printf '%s' "${notes:-Version ${VERSION}.}" | sed 's/^- //' | head -c 480 > play-notes-todo/whatsnew-en-GB
-          fi
+          # Everything for a version is on one release, v<version> (docs/VERSIONING.md).
+          mkdir -p aabs play-notes-main play-notes-todo play-notes-satellites
+          gh release download "v${VERSION}" --pattern '*.aab' --dir aabs
+          notes_for() { awk -v v="$VERSION" '$0 ~ "^## "v"( |$)" {on=1; next} /^## / {on=0} on' "$1" | { cat; echo; } ; }
+          for pair in "main:companion/android/CHANGELOG.md" "todo:companion/android/todo/CHANGELOG.md" "satellites:companion/android/satellites/CHANGELOG.md"; do
+            dir="play-notes-${pair%%:*}"; notes=$(notes_for "${pair#*:}")
+            printf '%s' "${notes:-Version ${VERSION}.}" | sed 's/^- //' | head -c 480 > "$dir/whatsnew-en-GB"
+          done
           ls -l aabs
-          echo "PHONE=$(ls aabs/church-drive-manager-[0-9]*.aab 2>/dev/null | head -1)" >> "$GITHUB_ENV"
-          echo "WEAR=$(ls aabs/church-drive-manager-wear-*.aab 2>/dev/null | head -1)" >> "$GITHUB_ENV"
-          echo "TODO=$(ls aabs/church-drive-todo-*.aab 2>/dev/null | head -1)" >> "$GITHUB_ENV"
+          want() { [ "${{ inputs.apps }}" = "all" ] || [ "${{ inputs.apps }}" = "$1" ]; }
+          if want phone-and-watch; then
+            echo "PHONE=$(ls aabs/church-drive-manager-[0-9]*.aab 2>/dev/null | head -1)" >> "$GITHUB_ENV"
+            echo "WEAR=$(ls aabs/church-drive-manager-wear-*.aab 2>/dev/null | head -1)" >> "$GITHUB_ENV"
+          fi
+          if want todo; then echo "TODO=$(ls aabs/church-drive-todo-*.aab 2>/dev/null | head -1)" >> "$GITHUB_ENV"; fi
+          if want satellites; then echo "SATELLITES=$(ls aabs/church-drive-satellites-*.aab 2>/dev/null | head -1)" >> "$GITHUB_ENV"; fi
       - name: Phone app (internal testing)
         if: ${{ env.PHONE != '' }}
         uses: r0adkll/upload-google-play@v1.1.3
@@ -72,3 +73,13 @@ jobs:
           track: internal
           status: completed
           whatsNewDirectory: play-notes-todo
+      - name: Church Drive Satellites (internal testing)
+        if: ${{ !cancelled() && env.SATELLITES != '' }}
+        uses: r0adkll/upload-google-play@v1.1.3
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.churchdrive.satellites
+          releaseFiles: ${{ env.SATELLITES }}
+          track: internal
+          status: completed
+          whatsNewDirectory: play-notes-satellites

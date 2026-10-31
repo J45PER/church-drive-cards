@@ -1,3 +1,4 @@
+# Variables in one block render one at a time, and Home Assistant stores keys sorted alphabetically, so a key never reads another in its own block: each dependent one is its own `variables` step.
 # Script script.clive_climate_control: Pause, resume or report on Clive's automatic heating, and do what a person asks of the thermostats (turn on, turn off, set a temperature). This is the one Clive uses ("resume the heating", "leave the heating alone for 3 hours", "why is the heating off?", "turn the heating on", "set the living room to 20"), and the one a dashboard button or a Home Assistant notification button can call. Resume hands a zone straight back (the zone script does the rest and tells people), but only while the alarm is not armed away; Pause stops Clive adjusting a zone until the time given. turn_on, turn_off and set_temperature only ever happen because a person asked in this conversation: Clive never turns the heating on by himself, and he only adjusts a target by himself while he is in charge. turn_on and set_temperature pause Clive on that zone like a change by hand. A copy of the live script.
 alias: Pause or resume Clive's heating
 description: 'Clive looks after the heating automatically: on when a room is cold, down or off when it is hot. When somebody changes the thermostat by hand he stops adjusting that zone for a while (2 hours unless set otherwise) and tells people when he will take over again. Use command resume when someone wants him back in charge now (it is refused while the alarm is set to away: the house is empty, so the heating is off; it only works once the alarm has been disarmed), pause with minutes when they want him to leave the heating alone (for example for 3 hours = 180), and status for what he is doing and why (it includes what he last did and any pause). When the heating is off, Clive is not able to turn it on himself: resuming only hands the adjusting back, so say so. Only when a person asks for it, use turn_on or turn_off, or set_temperature with temperature to change the target (set_temperature needs the heating to be on already). Zone is all unless they name downstairs or upstairs. Say times as clock times.'
@@ -84,7 +85,7 @@ sequence:
 - variables:
     held_off: >-
       {%- set ns = namespace(l=[]) -%}
-      {%- for zn in zl -%}{%- set e = states(cfg[zn].expect) -%}{%- set j = (e | from_json(default={})) if e not in ['', 'unknown', 'unavailable'] else {} -%}{%- if j.away is defined and j.away and is_state(cfg[zn].entity, 'off') -%}{%- set ns.l = ns.l + [zn] -%}{%- endif -%}{%- endfor -%}
+      {%- for zn in zl -%}{%- set e = states(cfg[zn].expect) -%}{%- set j = (e | from_json(default={})) if e not in ['', 'unknown', 'unavailable'] else {} -%}{%- if j.away is defined and j.away and (is_state(cfg[zn].entity, 'heat') and state_attr(cfg[zn].entity, 'preset_mode') == 'eco') -%}{%- set ns.l = ns.l + [zn] -%}{%- endif -%}{%- endfor -%}
       {{- ns.l -}}
 - choose:
   - conditions:
@@ -136,19 +137,33 @@ sequence:
         sequence:
         - variables:
             c: '{{ cfg[repeat.item] }}'
+        - variables:
             j: '{{ states(c.expect) | from_json(default={}) }}'
-            back_to: '{{ j.prev if j.prev is defined and j.prev is number else ((states(c.low) | float(18)) + (states(c.high) | float(21))) / 2 }}'
-        - action: climate.set_hvac_mode
-          target:
-            entity_id: '{{ c.entity }}'
-          data:
-            hvac_mode: heat
-        - action: climate.set_preset_mode
-          target:
-            entity_id: '{{ c.entity }}'
-          data:
-            preset_mode: none
+        - variables:
+            back_to: '{{ j.prev if j.prev is defined and j.prev is number and j.prev >= (states(c.low) | float(18)) - 1.5 else ((states(c.low) | float(18)) + (states(c.high) | float(21))) / 2 }}'
+        # The Nest refuses "eco off" when eco is already off, so each step only runs when it is needed and none of them stops the rest.
+        - if:
+          - condition: template
+            value_template: "{{ not is_state(c.entity, 'heat') }}"
+          then:
+          - action: climate.set_hvac_mode
+            continue_on_error: true
+            target:
+              entity_id: '{{ c.entity }}'
+            data:
+              hvac_mode: heat
+        - if:
+          - condition: template
+            value_template: "{{ state_attr(c.entity, 'preset_mode') not in ['none', None] }}"
+          then:
+          - action: climate.set_preset_mode
+            continue_on_error: true
+            target:
+              entity_id: '{{ c.entity }}'
+            data:
+              preset_mode: none
         - action: climate.set_temperature
+          continue_on_error: true
           target:
             entity_id: '{{ c.entity }}'
           data:
@@ -189,7 +204,7 @@ sequence:
           status: resumed
           zones: '{{ (paused_now + held_off) | unique | list }}'
           turned_back_on: '{{ held_off }}'
-          message: 'Clive is back in charge of the heating and will have checked the rooms straight away. Heating that a person turned off stays off: he cannot turn it on himself. Heating he turned off because the alarm was set to away has been turned back on.'
+          message: 'Clive is back in charge of the heating and will have checked the rooms straight away. Heating that a person turned off stays off: he cannot turn it on himself. Heating he put on Eco because nobody was home is back to normal.'
     - response_variable: result
       stop: resumed
   - conditions:
@@ -230,8 +245,10 @@ sequence:
         sequence:
         - variables:
             c: '{{ cfg[repeat.item] }}'
+        - variables:
             mid: '{{ ((states(c.low) | float(18)) + (states(c.high) | float(21))) / 2 }}'
             old_target: '{{ state_attr(c.entity, ''temperature'') | float(none) }}'
+        - variables:
             new_target: '{{ want if want is not none else (old_target if old_target is not none else mid) }}'
         - choose:
           - conditions:
@@ -248,17 +265,28 @@ sequence:
             - condition: template
               value_template: '{{ command == ''turn_on'' }}'
             then:
-            - action: climate.set_hvac_mode
-              target:
-                entity_id: '{{ c.entity }}'
-              data:
-                hvac_mode: heat
-            - action: climate.set_preset_mode
-              target:
-                entity_id: '{{ c.entity }}'
-              data:
-                preset_mode: none
+            - if:
+              - condition: template
+                value_template: "{{ not is_state(c.entity, 'heat') }}"
+              then:
+              - action: climate.set_hvac_mode
+                continue_on_error: true
+                target:
+                  entity_id: '{{ c.entity }}'
+                data:
+                  hvac_mode: heat
+            - if:
+              - condition: template
+                value_template: "{{ state_attr(c.entity, 'preset_mode') not in ['none', None] }}"
+              then:
+              - action: climate.set_preset_mode
+                continue_on_error: true
+                target:
+                  entity_id: '{{ c.entity }}'
+                data:
+                  preset_mode: none
           - action: climate.set_temperature
+            continue_on_error: true
             target:
               entity_id: '{{ c.entity }}'
             data:

@@ -1,9 +1,9 @@
 name: Release
 
 # Publishes a GitHub release (tag vX.Y.Z) whenever main carries a package.json
-# version that hasn't been released yet. To release: bump "version" in
-# package.json, run `npm run build` (it syncs the integration manifest) and
-# merge. HACS offers each release of the Church Drive integration as an update
+# version that hasn't been released yet. To release: run
+# `node tools/versions.mjs set <x.y.z>` (it sets every app's version too and
+# rebuilds, so the manifest follows) and merge. See docs/VERSIONING.md. HACS offers each release of the Church Drive integration as an update
 # in Home Assistant; the cards bundle ships inside custom_components/.
 
 on:
@@ -26,7 +26,9 @@ jobs:
         run: |
           tag="v$(node -p "require('./package.json').version")"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          if gh release view "$tag" >/dev/null 2>&1; then
+          # The release holds everything for this version (the apps' files are added to it by the Companion Android workflow, which may get
+          # there first), so "released" means it has the cards bundle, not just that it exists.
+          if gh release view "$tag" --json assets --jq '.assets[].name' 2>/dev/null | grep -qx 'church-drive-cards.js'; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
             echo "$tag is already released; nothing to do."
           else
@@ -47,4 +49,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.version.outputs.tag }}
-        run: gh release create "$TAG" custom_components/church_drive/frontend/church-drive-cards.js --target "$GITHUB_SHA" --title "$TAG" --generate-notes
+        run: |
+          file=custom_components/church_drive/frontend/church-drive-cards.js
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$file" --clobber
+          else
+            # If an app job makes the release between the check and the create, add the file to theirs.
+            gh release create "$TAG" "$file" --target "$GITHUB_SHA" --title "$TAG" --generate-notes || gh release upload "$TAG" "$file" --clobber
+          fi

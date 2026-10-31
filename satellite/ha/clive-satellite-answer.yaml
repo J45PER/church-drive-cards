@@ -1,0 +1,19 @@
+# Automation: the Yes and No pills on a satellite card that asked a question (for example "Fast charge at 34p per kWh?").
+#
+# The satellite fires the event esphome.clive_round_answer with answer yes or no. This hands it to Clive as if it had been said,
+# so his own script still enforces the rules (the charger script only accepts a yes between 5 seconds and 5 minutes after it asked).
+#
+# CHECK: this sends the word to the Claude conversation agent without the satellite's conversation id, so Clive may not remember
+# the question. If he does not, the next step is `assist_satellite.start_conversation` or passing the pipeline's conversation id
+# (the satellite's Assist entity). Untested.
+alias: Clive satellite - answer
+description: Passes a tapped Yes or No on the round satellite to Clive.
+mode: single
+triggers:
+  - trigger: event
+    event_type: esphome.clive_round_answer
+actions:
+  - action: conversation.process
+    data:
+      agent_id: conversation.claude_conversation
+      text: "{{ trigger.event.data.answer }}"

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The system splash is just this background (white in light mode); the branded screen then fades in over it. -->
+    <color name="splash_background">#FFFFFF</color>
+</resources>

@@ -1,0 +1,28 @@
+# Stands in for the hardware in the simulators (sim.yaml, sim_previews.yaml): the screen's requests are only logged here.
+script:
+  - id: ui_hook_talk
+    then:
+      - logger.log: "talk"
+  - id: ui_hook_answer
+    parameters:
+      accepted: bool
+    then:
+      - logger.log:
+          format: "answer accepted=%d"
+          args: ['accepted']
+  - id: ui_hook_tile
+    parameters:
+      key: int
+      checked: bool
+    then:
+      - logger.log:
+          format: "tile %d = %d"
+          args: ['key', 'checked']
+  - id: ui_hook_slider
+    parameters:
+      which: int
+      value: float
+    then:
+      - logger.log:
+          format: "slider %d = %.0f"
+          args: ['which', 'value']

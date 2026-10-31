@@ -1,0 +1,596 @@
+<title>Clive Satellite Flows</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Roboto:wght@300;400;500;700&display=swap">
+<style>
+/* Layout concept: the round screen on a stage you can drag and tap; every state in a strip, starting with talking to him; then the companion app and pairing.
+   Clive style on the glass and in the app: dark glass, plain white icons, colour only from the glow, outlined pills, green switches.
+   Page tokens follow the viewer's theme; the glass and the app mockups are always the dark Clive look. Type on the glass: Roboto, as on Android. */
+:root {
+  --bg: #F3F5F8; --fg: #12171F; --muted: #5B6676; --line: #D6DBE3; --surface: #FFFFFF; --accent: #3F51B5; --accent-fg: #FFFFFF; --chip: #E8EBF4;
+  --f-ui: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif; --f-dev: Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --g-soft: #E8EAFF; --g-heard: #D5D8F6; --g-dim: #9096B0; --g-faint: #5A6078; --g-on: #4FD08A; --g-err: #FFB4AB; --g-line: rgba(220,224,255,.5);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #0E1018; --fg: #E8EAF2; --muted: #9AA1B5; --line: #272B3A; --surface: #151824; --accent: #9FA8DA; --accent-fg: #0E1018; --chip: #1D2130; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #0E1018; --fg: #E8EAF2; --muted: #9AA1B5; --line: #272B3A; --surface: #151824; --accent: #9FA8DA; --accent-fg: #0E1018; --chip: #1D2130; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-ui); font-size: 16px; line-height: 1.5; margin: 0; padding-block: 28px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 32px; }
+h1 { font-size: clamp(1.6rem, 4vw, 2.2rem); line-height: 1.15; margin: 0 0 8px; text-wrap: balance; font-weight: 600; }
+h2 { font-size: 1.1rem; margin: 0 0 8px; font-weight: 600; }
+h3 { font-size: 1rem; margin: 0 0 4px; font-weight: 600; }
+p { margin: 0 0 10px; }
+code { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: .88em; background: var(--chip); padding: 1px 5px; border-radius: 5px; }
+.lead { color: var(--muted); max-width: 68ch; }
+.muted { color: var(--muted); }
+.kicker { font-size: .78rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 8px; }
+.main { display: grid; grid-template-columns: minmax(0, 540px) minmax(0, 1fr); gap: 32px; align-items: start; }
+@media (max-width: 820px) { .main { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- the glass ---------- */
+.bezel { width: 100%; padding: 3.2%; border-radius: 50%; background: linear-gradient(145deg, #2A2F3C, #0B0C12); box-shadow: 0 18px 50px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.06); }
+.screen { --u: calc(100cqw / 280); position: relative; width: 100%; aspect-ratio: 1; border-radius: 50%; overflow: hidden; container-type: size; background: #000; color: #fff; font-family: var(--f-dev); user-select: none; touch-action: none; }
+.screen canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.screen .ui, .screen .shade { position: absolute; inset: 0; }
+.screen .ui > *, .screen .shade > * { position: absolute; }
+.screen .lays, .screen .lay { position: absolute; inset: 0; }
+.screen .lay > * { position: absolute; }
+.lay { transition: opacity .5s ease; }
+.lay.in { animation: lin .5s ease backwards; }
+.lay.out { opacity: 0; pointer-events: none; }
+.lay.dim { opacity: .9; --g-dim: #D2D6EA; --g-faint: #B4B9D2; --g-soft: #F2F3FF; }
+@keyframes lin { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }
+.dock, .mk { transition: opacity .35s; }
+.c { text-align: center; white-space: nowrap; line-height: 1; transform: translate(-50%, -50%); text-shadow: 0 .5cqw 3cqw rgba(0,0,0,.65); }
+.t { text-align: center; text-shadow: 0 .5cqw 3cqw rgba(0,0,0,.65); line-height: 1.2; }
+.clamp { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+.fit { overflow: hidden; display: flex; justify-content: center; align-items: flex-start; }
+.fit.mid { align-items: center; }
+.fitin { display: flex; flex-direction: column; align-items: center; width: 100%; transform-origin: top center; }
+.fit.mid .fitin { transform-origin: center center; }
+.fitin > * { flex: none; }
+.rw { display: flex; align-items: center; justify-content: center; transform: translate(-50%, -50%); white-space: nowrap; }
+.cmp { display: grid; justify-items: center; gap: calc(var(--u) * 3); transform: translate(-50%, -50%); }
+.ic { display: inline-block; flex: none; }
+.ic svg, .mk svg, .big svg { display: block; width: 100%; height: 100%; }
+.mk svg { overflow: visible; }
+.mk, .big { transform: translate(-50%, -50%); pointer-events: none; }
+.dock { left: 0; right: 0; background: rgba(0,0,0,.42); border-top: calc(var(--u) * 1) solid rgba(255,255,255,.08); cursor: pointer; }
+.pill { border-radius: 50cqw; border: calc(var(--u) * 1) solid var(--g-line); background: rgba(8,9,20,.35); color: #EEF0FF; display: flex; align-items: center; justify-content: space-between; cursor: pointer; font-size: calc(var(--u) * 12); }
+.pill span.l { padding-left: calc(var(--u) * 14); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pill .ic { margin-right: calc(var(--u) * 10); opacity: .85; }
+.pill.mid { justify-content: center; }
+.pill.hi { background: rgba(255,255,255,.2); border-color: rgba(255,255,255,.75); font-weight: 700; }
+.shade { background: #0E101A; will-change: transform; }
+.tile { border-radius: 50%; display: grid; place-items: center; cursor: pointer; transform: translate(-50%, -50%); border: calc(var(--u) * 1) solid rgba(220,224,255,.28); background: rgba(8,9,20,.5); }
+.tile.on { background: rgba(255,255,255,.2); border-color: rgba(255,255,255,.7); }
+.tile .ic { opacity: .55; } .tile.on .ic { opacity: 1; }
+.trk { height: calc(var(--u) * 6); border-radius: 50cqw; background: rgba(255,255,255,.14); }
+.trk i { display: block; height: 100%; border-radius: 50cqw; background: rgba(255,255,255,.92); }
+.grabber { border-radius: 50cqw; background: rgba(255,255,255,.35); transform: translate(-50%, -50%); }
+
+/* ---------- stage, strip, panel ---------- */
+.caption { font-size: .9rem; color: var(--muted); margin-top: 10px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
+.thumb { border: 2px solid transparent; background: none; padding: 4px; border-radius: 16px; cursor: pointer; display: grid; gap: 6px; justify-items: center; color: var(--fg); font: inherit; font-size: .82rem; text-align: center; }
+.thumb:hover { background: var(--surface); }
+.thumb:focus-visible, .btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.thumb[aria-pressed="true"] { border-color: var(--accent); background: var(--surface); }
+.thumb .screen { pointer-events: none; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; display: grid; gap: 14px; }
+.btns { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn { font: inherit; font-weight: 600; background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 10px; padding: 9px 16px; cursor: pointer; }
+.btn.ghost { background: transparent; color: var(--fg); border: 1px solid var(--line); }
+.say { display: grid; gap: 6px; min-height: 60px; align-content: start; }
+.say p { margin: 0; padding: 8px 12px; border-radius: 12px; max-width: 94%; font-size: .93rem; }
+.say .you { background: var(--bg); border: 1px solid var(--line); justify-self: end; }
+.say .clive { background: var(--chip); border: 1px solid var(--line); }
+.src { font-size: .85rem; color: var(--muted); }
+.diff { border-left: 3px solid #E37400; padding: 2px 0 2px 12px; font-size: .92rem; }
+.groups { display: grid; gap: 22px; }
+
+/* ---------- the companion app, in the main app's style: Material 3 with Material You colours, tones, 28dp entity cards ---------- */
+.phones { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
+.ph { width: 310px; background: #1C1B1F; border: 8px solid #0B0B0D; border-radius: 38px; overflow: hidden; color: #E6E1E5; font-family: Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 14px; line-height: 20px; position: relative; box-shadow: 0 14px 34px rgba(0,0,0,.28); }
+.ph * { box-sizing: border-box; }
+.ph .pg, .ph .sp, .ph .ec, .ph .tr { grid-template-columns: minmax(0, 1fr); }
+.ph .pg > *, .ph .sp > *, .ph .ec > *, .ph .tr > * { min-width: 0; }
+.ph .mr > * { min-width: 0; }
+.ph .tb { padding: 12px 16px 10px; }
+.ph .top { display: flex; align-items: center; justify-content: space-between; height: 40px; }
+.ph .ttl { font-size: 24px; line-height: 32px; margin-top: 4px; }
+.ph .av { width: 36px; height: 36px; border-radius: 50%; background: #4F378B; color: #EADDFF; display: grid; place-items: center; font-size: 16px; }
+.ph .pg { padding: 8px 16px 18px; display: grid; gap: 24px; }
+.ph .sp { display: grid; gap: 12px; }
+.ph .sph { display: flex; align-items: center; gap: 12px; padding: 0 4px; }
+.ph .spt { flex: 1; font-size: 22px; line-height: 28px; }
+.ph .sps { font-size: 14px; }
+.ph .ti { border-radius: 50%; display: grid; place-items: center; flex: none; }
+.ph .mi { display: inline-block; flex: none; } .ph .mi svg { width: 100%; height: 100%; display: block; }
+.ph .ec { border-radius: 28px; padding: 20px; display: grid; gap: 16px; }
+.ph .tr { display: grid; gap: 8px; }
+.ph .trr { display: flex; gap: 8px; }
+.ph .tl { flex: 1; min-width: 0; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; background: rgba(230,225,229,.10); color: #E6E1E5; cursor: pointer; }
+.ph .tl.on { background: var(--acc); color: #202124; }
+.ph .dt { flex: 1; min-width: 0; border-radius: 18px; padding: 8px 3px; display: grid; justify-items: center; gap: 6px; font-size: 11px; line-height: 14px; cursor: pointer; background: rgba(230,225,229,.10); }
+.ph .dt.on { background: var(--acc); color: #202124; }
+.ph .dt .pvm { width: 100%; max-width: 46px; }
+.ph .mr { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ph .sub { color: #CAC4D0; font-size: 12px; line-height: 16px; }
+.ph .pl { border-radius: 50px; padding: 3px 10px; font-size: 12px; line-height: 16px; font-weight: 500; white-space: nowrap; }
+.ph .fb { border-radius: 50px; height: 48px; display: grid; place-items: center; font-weight: 500; background: var(--acc); color: #202124; }
+.ph .tt { text-align: center; color: #D0BCFF; font-weight: 500; }
+.ph .m3sw { width: 52px; height: 32px; border-radius: 16px; border: 2px solid #938F99; background: #36343B; position: relative; flex: none; }
+.ph .m3sw::after { content: ''; position: absolute; top: 6px; left: 6px; width: 16px; height: 16px; border-radius: 50%; background: #938F99; }
+.ph .m3sw.on { background: #D0BCFF; border-color: #D0BCFF; } .ph .m3sw.on::after { background: #381E72; width: 24px; height: 24px; top: 2px; left: 22px; }
+.ph .sl { height: 4px; border-radius: 2px; background: #49454F; position: relative; flex: 1; }
+.ph .sl i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; background: #D0BCFF; }
+.ph .sl b { position: absolute; top: -6px; width: 16px; height: 16px; border-radius: 50%; background: #D0BCFF; margin-left: -8px; }
+.ph .pvw { display: grid; justify-items: center; }
+.ph .pv { width: 176px; }
+.ph .nb { display: flex; justify-content: space-around; align-items: center; height: 80px; background: #211F26; }
+.ph .nbi { display: grid; justify-items: center; gap: 4px; font-size: 11px; line-height: 14px; color: #CAC4D0; }
+.ph .nbi .ind { width: 64px; height: 32px; border-radius: 16px; display: grid; place-items: center; }
+.ph .nbi.on { color: #E6E1E5; } .ph .nbi.on .ind { background: #4A4458; }
+.ph .cam { height: 250px; border-radius: 28px; background: radial-gradient(circle at 40% 35%, #3A3F4D, #14161D 70%); position: relative; display: grid; place-items: center; overflow: hidden; }
+.ph .cam .fr { width: 150px; height: 150px; border: 3px solid #D0BCFF; border-radius: 18px; position: relative; }
+.ph .cam .qr { position: absolute; width: 100px; height: 100px; left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(-5deg); }
+.ph .cam .qr svg { width: 100%; height: 100%; display: block; }
+.designs { display: flex; flex-wrap: wrap; gap: 8px; }
+.designs button { font: inherit; font-size: .9rem; font-weight: 600; border: 1px solid var(--line); background: transparent; color: var(--fg); border-radius: 50px; padding: 5px 14px; cursor: pointer; }
+.designs button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.designs button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.dblurb { font-size: .88rem; color: var(--muted); margin-top: 6px; }
+
+/* ---------- pairing text ---------- */
+.tiers { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
+.tier { border: 1px solid var(--line); background: var(--surface); border-radius: 14px; padding: 14px 16px; display: grid; gap: 6px; align-content: start; }
+.tier p { margin: 0; font-size: .92rem; }
+.tier .tag { font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.tw { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+th, td { text-align: left; padding: 7px 10px 7px 0; border-top: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; border-top: 0; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Clive satellite flows</h1>
+    <p class="lead">The round screen in the Clive style: dark glass, plain white icons, colour from the glow only, and Clive himself in a dock at the bottom that stays put on every screen except settings. Nothing he says is written on the screen. While he listens, thinks or gives a simple spoken answer the glow is the background and it keeps the clock and glances; it only changes to a card when the answer needs a graphic; then it fades back. Only resting idle is black. Pick one of the four designs at the top right and the whole flow follows it. Start with talking to him, then the things he does, then quick settings and setting up. Drag down from the top of the screen for quick settings. Example values throughout.</p>
+  </header>
+
+  <div class="main">
+    <section aria-label="Preview">
+      <div class="bezel"><div class="screen" id="stage"></div></div>
+      <div class="caption"><span id="cap-name"></span><span id="cap-hint">Drag down from the top edge for quick settings</span></div>
+    </section>
+    <aside class="panel" aria-label="About this state">
+      <div class="btns"><button class="btn" id="play" type="button">Play this</button><button class="btn ghost" id="qs" type="button">Quick settings</button></div>
+      <div><div class="kicker">Design (one of four, the whole flow follows it)</div><div class="designs" id="designs" role="group" aria-label="Design"></div><div class="dblurb" id="dblurb"></div></div>
+      <div><div class="kicker" id="k-state"></div><p id="what"></p></div>
+      <div><div class="kicker">Spoken aloud, not written on screen</div><div class="say" id="say" aria-live="polite"></div></div>
+      <div class="src" id="src"></div>
+      <div class="diff" id="diff"></div>
+    </aside>
+  </div>
+
+  <section class="groups" aria-label="All states">
+    <div><div class="kicker">Resting</div><div class="strip" id="s-idle"></div></div>
+    <div><div class="kicker">Talking to him</div><div class="strip" id="s-talk"></div></div>
+    <div><div class="kicker">Doing things: actions and how they answer</div><div class="strip" id="s-act"></div></div>
+    <div><div class="kicker">Quick settings and menus (no dock)</div><div class="strip" id="s-set"></div></div>
+    <div><div class="kicker">Setting up</div><div class="strip" id="s-pair"></div></div>
+  </section>
+
+  <section aria-label="Companion app">
+    <h2>The companion app (the third app)</h2>
+    <p class="muted" style="max-width:72ch">One app that adds, names and configures every satellite: the round one, other displays, and the ones with no display. It is drawn in the main app's style: Material 3 with the phone's own colours, section headers with a tone icon, tinted entity cards, tiles for choices and the same bottom bar. Three screens: the list, setting one up (with a live preview of each design and its flow), and scanning to add one. Tap the states and designs.</p>
+    <div class="phones" id="phones"></div>
+  </section>
+
+  <section aria-label="Pairing">
+    <h2>Pairing: three kinds of device, one method</h2>
+    <p class="muted" style="max-width:72ch">A satellite does not need a display to be paired. The one thing every device needs is a way to prove you are standing next to it (a button) and a way to answer (a speaker or a light). The QR code can be on the screen, on a sticker, or both.</p>
+    <div class="tiers">
+      <div class="tier"><span class="tag">Touch display</span><h3>The round screen, and others</h3><p>Shows the QR code itself under Settings > Pair or reset, and by itself on first boot. The code is single-use and runs out after 10 minutes. Scan it, the app does the rest.</p></div>
+      <div class="tier"><span class="tag">Small display, no touch</span><h3>Black and white, 128 × 64</h3><p>Shows a small QR code and a 6 digit code. One button starts pairing. Scan, or type the six digits if the camera cannot read it.</p></div>
+      <div class="tier"><span class="tag">No display</span><h3>Speaker or light only</h3><p>A QR sticker on the underside and the box. Hold the button for 3 seconds: it chimes and the light pulses, and the app asks you to press the button when it chimes again.</p></div>
+    </div>
+    <div style="height:14px"></div>
+    <div class="tw"><table>
+      <thead><tr><th>How it works for all three</th><th>With</th></tr></thead>
+      <tbody>
+        <tr><td>1. A device that has never been set up advertises over Bluetooth and, as a fallback, opens its own Wi-Fi hotspot.</td><td>ESPHome <code>improv_ble</code> and <code>captive_portal</code></td></tr>
+        <tr><td>2. The app scans the QR code (it holds the device’s id and a one-time token, never its permanent key), connects over Bluetooth and sends the home Wi-Fi.</td><td>The companion app</td></tr>
+        <tr><td>3. The device joins Wi-Fi. The app gives it a name, a room and a fresh encryption key, and tells Home Assistant to adopt it.</td><td>The Church Drive integration</td></tr>
+        <tr><td>4. The device chimes or shows a tick, and the screen comes up on its idle layout.</td><td>The device</td></tr>
+      </tbody>
+    </table></div>
+    <p class="muted" style="margin-top:12px;max-width:72ch">Proposal only. ESPHome has the Bluetooth and hotspot parts and a QR drawing component. The app side, the one-time token and the adoption step are not built or tested.</p>
+  </section>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var ICONS = {"volume-high": "M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z", "brightness-6": "M12,18V6A6,6 0 0,1 18,12A6,6 0 0,1 12,18M20,15.31L23.31,12L20,8.69V4H15.31L12,0.69L8.69,4H4V8.69L0.69,12L4,15.31V20H8.69L12,23.31L15.31,20H20V15.31Z", "microphone": "M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z", "microphone-off": "M19,11C19,12.19 18.66,13.3 18.1,14.28L16.87,13.05C17.14,12.43 17.3,11.74 17.3,11H19M15,11.16L9,5.18V5A3,3 0 0,1 12,2A3,3 0 0,1 15,5V11L15,11.16M4.27,3L21,19.73L19.73,21L15.54,16.81C14.77,17.27 13.91,17.58 13,17.72V21H11V17.72C7.72,17.23 5,14.41 5,11H6.7C6.7,14 9.24,16.1 12,16.1C12.81,16.1 13.6,15.91 14.31,15.58L12.65,13.92L12,14A3,3 0 0,1 9,11V10.28L3,4.27L4.27,3Z", "account-voice": "M9,5A4,4 0 0,1 13,9A4,4 0 0,1 9,13A4,4 0 0,1 5,9A4,4 0 0,1 9,5M9,15C11.67,15 17,16.34 17,19V21H1V19C1,16.34 6.33,15 9,15M16.76,5.36C18.78,7.56 18.78,10.61 16.76,12.63L15.08,10.94C15.92,9.76 15.92,8.23 15.08,7.05L16.76,5.36M20.07,2C24,6.05 23.97,12.11 20.07,16L18.44,14.37C21.21,11.19 21.21,6.65 18.44,3.63L20.07,2Z", "message-reply-text": "M18,8H6V6H18V8M18,11H6V9H18V11M18,14H6V12H18V14M22,4A2,2 0 0,0 20,2H4A2,2 0 0,0 2,4V16A2,2 0 0,0 4,18H18L22,22V4Z", "weather-night": "M17.75,4.09L15.22,6.03L16.13,9.09L13.5,7.28L10.87,9.09L11.78,6.03L9.25,4.09L12.44,4L13.5,1L14.56,4L17.75,4.09M21.25,11L19.61,12.25L20.2,14.23L18.5,13.06L16.8,14.23L17.39,12.25L15.75,11L17.81,10.95L18.5,9L19.19,10.95L21.25,11M18.97,15.95C19.8,15.87 20.69,17.05 20.16,17.8C19.84,18.25 19.5,18.67 19.08,19.07C15.17,23 8.84,23 4.94,19.07C1.03,15.17 1.03,8.83 4.94,4.93C5.34,4.53 5.76,4.17 6.21,3.85C6.96,3.32 8.14,4.21 8.06,5.04C7.79,7.9 8.75,10.87 10.95,13.06C13.14,15.26 16.1,16.22 18.97,15.95M17.33,17.97C14.5,17.81 11.7,16.64 9.53,14.5C7.36,12.31 6.2,9.5 6.04,6.68C3.23,9.82 3.34,14.64 6.35,17.66C9.37,20.67 14.19,20.78 17.33,17.97Z", "spray-bottle": "M16.72 10.43C14.68 8.39 14.5 4.66 14.5 4H13V6H9V4H7C7 2.9 7.9 2 9 2H16V3C16 3.08 16.04 7.63 17.78 9.37L16.72 10.43M17 2V4H18V2H17M15 12C13 10 13 7 13 7H9V9C9 10 9 10 8 11S7 13 7 13V20C7 21.1 7.9 22 9 22H13C14.1 22 15 21.1 15 20V12Z", "wifi": "M12,21L15.6,16.2C14.6,15.45 13.35,15 12,15C10.65,15 9.4,15.45 8.4,16.2L12,21M12,3C7.95,3 4.21,4.34 1.2,6.6L3,9C5.5,7.12 8.62,6 12,6C15.38,6 18.5,7.12 21,9L22.8,6.6C19.79,4.34 16.05,3 12,3M12,9C9.3,9 6.81,9.89 4.8,11.4L6.6,13.8C8.1,12.67 9.97,12 12,12C14.03,12 15.9,12.67 17.4,13.8L19.2,11.4C17.19,9.89 14.7,9 12,9Z", "cog": "M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.67 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z", "chevron-right": "M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z", "chevron-down": "M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z", "qrcode": "M3,11H5V13H3V11M11,5H13V9H11V5M9,11H13V15H11V13H9V11M15,11H17V13H19V11H21V13H19V15H21V19H19V21H17V19H13V21H11V17H15V15H17V13H15V11M19,19V15H17V19H19M15,3H21V9H15V3M17,5V7H19V5H17M3,3H9V9H3V3M5,5V7H7V5H5M3,15H9V21H3V15M5,17V19H7V17H5Z", "qrcode-scan": "M4,4H10V10H4V4M20,4V10H14V4H20M14,15H16V13H14V11H16V13H18V11H20V13H18V15H20V18H18V20H16V18H13V20H11V16H14V15M16,15V18H18V15H16M4,20V14H10V20H4M6,6V8H8V6H6M16,6V8H18V6H16M6,16V18H8V16H6M4,11H6V13H4V11M9,11H13V15H11V13H9V11M11,6H13V10H11V6M2,2V6H0V2A2,2 0 0,1 2,0H6V2H2M22,0A2,2 0 0,1 24,2V6H22V2H18V0H22M2,18V22H6V24H2A2,2 0 0,1 0,22V18H2M22,22V18H24V22A2,2 0 0,1 22,24H18V22H22Z", "lightbulb": "M12,2A7,7 0 0,0 5,9C5,11.38 6.19,13.47 8,14.74V17A1,1 0 0,0 9,18H15A1,1 0 0,0 16,17V14.74C17.81,13.47 19,11.38 19,9A7,7 0 0,0 12,2M9,21A1,1 0 0,0 10,22H14A1,1 0 0,0 15,21V20H9V21Z", "lightbulb-off": "M12,2C9.76,2 7.78,3.05 6.5,4.68L16.31,14.5C17.94,13.21 19,11.24 19,9A7,7 0 0,0 12,2M3.28,4L2,5.27L5.04,8.3C5,8.53 5,8.76 5,9C5,11.38 6.19,13.47 8,14.74V17A1,1 0 0,0 9,18H14.73L18.73,22L20,20.72L3.28,4M9,20V21A1,1 0 0,0 10,22H14A1,1 0 0,0 15,21V20H9Z", "radiator": "M7.95,3L6.53,5.19L7.95,7.4H7.94L5.95,10.5L4.22,9.6L5.64,7.39L4.22,5.19L6.22,2.09L7.95,3M13.95,2.89L12.53,5.1L13.95,7.3L13.94,7.31L11.95,10.4L10.22,9.5L11.64,7.3L10.22,5.1L12.22,2L13.95,2.89M20,2.89L18.56,5.1L20,7.3V7.31L18,10.4L16.25,9.5L17.67,7.3L16.25,5.1L18.25,2L20,2.89M2,22V14A2,2 0 0,1 4,12H20A2,2 0 0,1 22,14V22H20V20H4V22H2M6,14A1,1 0 0,0 5,15V17A1,1 0 0,0 6,18A1,1 0 0,0 7,17V15A1,1 0 0,0 6,14M10,14A1,1 0 0,0 9,15V17A1,1 0 0,0 10,18A1,1 0 0,0 11,17V15A1,1 0 0,0 10,14M14,14A1,1 0 0,0 13,15V17A1,1 0 0,0 14,18A1,1 0 0,0 15,17V15A1,1 0 0,0 14,14M18,14A1,1 0 0,0 17,15V17A1,1 0 0,0 18,18A1,1 0 0,0 19,17V15A1,1 0 0,0 18,14Z", "shield-check": "M10,17L6,13L7.41,11.59L10,14.17L16.59,7.58L18,9M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1Z", "shield-off": "M1,4.27L2.28,3L20.5,21.22L19.23,22.5L17,20.25C15.57,21.57 13.87,22.54 12,23C6.84,21.74 3,16.55 3,11V6.27L1,4.27M12,1L21,5V11C21,13.28 20.35,15.5 19.23,17.41L5.65,3.82L12,1Z", "close": "M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z", "check": "M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z", "close-circle": "M12,2C17.53,2 22,6.47 22,12C22,17.53 17.53,22 12,22C6.47,22 2,17.53 2,12C2,6.47 6.47,2 12,2M15.59,7L12,10.59L8.41,7L7,8.41L10.59,12L7,15.59L8.41,17L12,13.41L15.59,17L17,15.59L13.41,12L17,8.41L15.59,7Z", "car-electric": "M18.92 2C18.72 1.42 18.16 1 17.5 1H6.5C5.84 1 5.29 1.42 5.08 2L3 8V16C3 16.55 3.45 17 4 17H5C5.55 17 6 16.55 6 16V15H18V16C18 16.55 18.45 17 19 17H20C20.55 17 21 16.55 21 16V8L18.92 2M6.5 12C5.67 12 5 11.33 5 10.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12M17.5 12C16.67 12 16 11.33 16 10.5S16.67 9 17.5 9 19 9.67 19 10.5 18.33 12 17.5 12M5 7L6.5 2.5H17.5L19 7H5M7 20H11V18L17 21H13V23L7 20Z", "lightning-bolt": "M11 15H6L13 1V9H18L11 23V15Z", "account-multiple": "M16 17V19H2V17S2 13 9 13 16 17 16 17M12.5 7.5A3.5 3.5 0 1 0 9 11A3.5 3.5 0 0 0 12.5 7.5M15.94 13A5.32 5.32 0 0 1 18 17V19H22V17S22 13.37 15.94 13M15 4A3.39 3.39 0 0 0 13.07 4.59A5 5 0 0 1 13.07 10.41A3.39 3.39 0 0 0 15 11A3.5 3.5 0 0 0 15 4Z", "weather-cloudy": "M6,19A5,5 0 0,1 1,14A5,5 0 0,1 6,9C7,6.65 9.3,5 12,5C15.43,5 18.24,7.66 18.5,11.03L19,11A4,4 0 0,1 23,15A4,4 0 0,1 19,19H6M19,13H17V12A5,5 0 0,0 12,7C9.5,7 7.45,8.82 7.06,11.19C6.73,11.07 6.37,11 6,11A3,3 0 0,0 3,14A3,3 0 0,0 6,17H19A2,2 0 0,0 21,15A2,2 0 0,0 19,13Z", "weather-partly-cloudy": "M12.74,5.47C15.1,6.5 16.35,9.03 15.92,11.46C17.19,12.56 18,14.19 18,16V16.17C18.31,16.06 18.65,16 19,16A3,3 0 0,1 22,19A3,3 0 0,1 19,22H6A4,4 0 0,1 2,18A4,4 0 0,1 6,14H6.27C5,12.45 4.6,10.24 5.5,8.26C6.72,5.5 9.97,4.24 12.74,5.47M11.93,7.3C10.16,6.5 8.09,7.31 7.31,9.07C6.85,10.09 6.93,11.22 7.41,12.13C8.5,10.83 10.16,10 12,10C12.7,10 13.38,10.12 14,10.34C13.94,9.06 13.18,7.86 11.93,7.3M13.55,3.64C13,3.4 12.45,3.23 11.88,3.12L14.37,1.82L15.27,4.71C14.76,4.29 14.19,3.93 13.55,3.64M6.09,4.44C5.6,4.79 5.17,5.19 4.8,5.63L4.91,2.82L7.87,3.5C7.25,3.71 6.65,4.03 6.09,4.44M18,9.71C17.91,9.12 17.78,8.55 17.59,8L19.97,9.5L17.92,11.73C18.03,11.08 18.05,10.4 18,9.71M3.04,11.3C3.11,11.9 3.24,12.47 3.43,13L1.06,11.5L3.1,9.28C3,9.93 2.97,10.61 3.04,11.3M19,18H16V16A4,4 0 0,0 12,12A4,4 0 0,0 8,16H6A2,2 0 0,0 4,18A2,2 0 0,0 6,20H19A1,1 0 0,0 20,19A1,1 0 0,0 19,18Z", "weather-sunny": "M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,2L14.39,5.42C13.65,5.15 12.84,5 12,5C11.16,5 10.35,5.15 9.61,5.42L12,2M3.34,7L7.5,6.65C6.9,7.16 6.36,7.78 5.94,8.5C5.5,9.24 5.25,10 5.11,10.79L3.34,7M3.36,17L5.12,13.23C5.26,14 5.53,14.78 5.95,15.5C6.37,16.24 6.91,16.86 7.5,17.37L3.36,17M20.65,7L18.88,10.79C18.74,10 18.47,9.23 18.05,8.5C17.63,7.78 17.1,7.15 16.5,6.64L20.65,7M20.64,17L16.5,17.36C17.09,16.85 17.62,16.22 18.04,15.5C18.46,14.77 18.73,14 18.87,13.21L20.64,17M12,22L9.59,18.56C10.33,18.83 11.14,19 12,19C12.82,19 13.63,18.83 14.37,18.56L12,22Z", "weather-rainy": "M6,14.03A1,1 0 0,1 7,15.03C7,15.58 6.55,16.03 6,16.03C3.24,16.03 1,13.79 1,11.03C1,8.27 3.24,6.03 6,6.03C7,3.68 9.3,2.03 12,2.03C15.43,2.03 18.24,4.69 18.5,8.06L19,8.03A4,4 0 0,1 23,12.03C23,14.23 21.21,16.03 19,16.03H18C17.45,16.03 17,15.58 17,15.03C17,14.47 17.45,14.03 18,14.03H19A2,2 0 0,0 21,12.03A2,2 0 0,0 19,10.03H17V9.03C17,6.27 14.76,4.03 12,4.03C9.5,4.03 7.45,5.84 7.06,8.21C6.73,8.09 6.37,8.03 6,8.03A3,3 0 0,0 3,11.03A3,3 0 0,0 6,14.03M12,14.15C12.18,14.39 12.37,14.66 12.56,14.94C13,15.56 14,17.03 14,18C14,19.11 13.1,20 12,20A2,2 0 0,1 10,18C10,17.03 11,15.56 11.44,14.94C11.63,14.66 11.82,14.4 12,14.15M12,11.03L11.5,11.59C11.5,11.59 10.65,12.55 9.79,13.81C8.93,15.06 8,16.56 8,18A4,4 0 0,0 12,22A4,4 0 0,0 16,18C16,16.56 15.07,15.06 14.21,13.81C13.35,12.55 12.5,11.59 12.5,11.59", "thermometer": "M15 13V5A3 3 0 0 0 9 5V13A5 5 0 1 0 15 13M12 4A1 1 0 0 1 13 5V8H11V5A1 1 0 0 1 12 4Z", "home": "M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z", "home-outline": "M12 5.69L17 10.19V18H15V12H9V18H7V10.19L12 5.69M12 3L2 12H5V20H11V14H13V20H19V12H22", "monitor": "M21,16H3V4H21M21,2H3C1.89,2 1,2.89 1,4V16A2,2 0 0,0 3,18H10V20H8V22H16V20H14V18H21A2,2 0 0,0 23,16V4C23,2.89 22.1,2 21,2Z", "theme-light-dark": "M7.5,2C5.71,3.15 4.5,5.18 4.5,7.5C4.5,9.82 5.71,11.85 7.53,13C4.46,13 2,10.54 2,7.5A5.5,5.5 0 0,1 7.5,2M19.07,3.5L20.5,4.93L4.93,20.5L3.5,19.07L19.07,3.5M12.89,5.93L11.41,5L9.97,6L10.39,4.3L9,3.24L10.75,3.12L11.33,1.47L12,3.1L13.73,3.13L12.38,4.26L12.89,5.93M9.59,9.54L8.43,8.81L7.31,9.59L7.65,8.27L6.56,7.44L7.92,7.35L8.37,6.06L8.88,7.33L10.24,7.36L9.19,8.23L9.59,9.54M19,13.5A5.5,5.5 0 0,1 13.5,19C12.28,19 11.15,18.6 10.24,17.93L17.93,10.24C18.6,11.15 19,12.28 19,13.5M14.6,20.08L17.37,18.93L17.13,22.28L14.6,20.08M18.93,17.38L20.08,14.61L22.28,17.15L18.93,17.38M20.08,12.42L18.94,9.64L22.28,9.88L20.08,12.42M9.63,18.93L12.4,20.08L9.87,22.27L9.63,18.93Z", "air-filter": "M19,18.31V20A2,2 0 0,1 17,22H7A2,2 0 0,1 5,20V16.3C4.54,16.12 3.95,16 3,16A1,1 0 0,1 2,15A1,1 0 0,1 3,14C3.82,14 4.47,14.08 5,14.21V12.3C4.54,12.12 3.95,12 3,12A1,1 0 0,1 2,11A1,1 0 0,1 3,10C3.82,10 4.47,10.08 5,10.21V8.3C4.54,8.12 3.95,8 3,8A1,1 0 0,1 2,7A1,1 0 0,1 3,6C3.82,6 4.47,6.08 5,6.21V4A2,2 0 0,1 7,2H17A2,2 0 0,1 19,4V6.16C20.78,6.47 21.54,7.13 21.71,7.29C22.1,7.68 22.1,8.32 21.71,8.71C21.32,9.1 20.8,9.09 20.29,8.71V8.71C20.29,8.71 19.25,8 17,8C15.74,8 14.91,8.41 13.95,8.9C12.91,9.41 11.74,10 10,10C9.64,10 9.31,10 9,9.96V7.95C9.3,8 9.63,8 10,8C11.26,8 12.09,7.59 13.05,7.11C14.09,6.59 15.27,6 17,6V4H7V20H17V18C18.5,18 18.97,18.29 19,18.31M17,10C15.27,10 14.09,10.59 13.05,11.11C12.09,11.59 11.26,12 10,12C9.63,12 9.3,12 9,11.95V13.96C9.31,14 9.64,14 10,14C11.74,14 12.91,13.41 13.95,12.9C14.91,12.42 15.74,12 17,12C19.25,12 20.29,12.71 20.29,12.71V12.71C20.8,13.1 21.32,13.1 21.71,12.71C22.1,12.32 22.1,11.69 21.71,11.29C21.5,11.08 20.25,10 17,10M17,14C15.27,14 14.09,14.59 13.05,15.11C12.09,15.59 11.26,16 10,16C9.63,16 9.3,16 9,15.95V17.96C9.31,18 9.64,18 10,18C11.74,18 12.91,17.41 13.95,16.9C14.91,16.42 15.74,16 17,16C19.25,16 20.29,16.71 20.29,16.71V16.71C20.8,17.1 21.32,17.1 21.71,16.71C22.1,16.32 22.1,15.69 21.71,15.29C21.5,15.08 20.25,14 17,14Z", "bluetooth": "M14.88,16.29L13,18.17V14.41M13,5.83L14.88,7.71L13,9.58M17.71,7.71L12,2H11V9.58L6.41,5L5,6.41L10.59,12L5,17.58L6.41,19L11,14.41V22H12L17.71,16.29L13.41,12L17.71,7.71Z", "music-note": "M12 3V13.55C11.41 13.21 10.73 13 10 13C7.79 13 6 14.79 6 17S7.79 21 10 21 14 19.21 14 17V7H18V3H12Z", "soccer": "M16.93 17.12L16.13 15.76L17.59 11.39L19 10.92L20 11.67C20 11.7 20 11.75 20 11.81C20 11.88 20.03 11.94 20.03 12C20.03 13.97 19.37 15.71 18.06 17.21L16.93 17.12M9.75 15L8.38 10.97L12 8.43L15.62 10.97L14.25 15H9.75M12 20.03C11.12 20.03 10.29 19.89 9.5 19.61L8.81 18.1L9.47 17H14.58L15.19 18.1L14.5 19.61C13.71 19.89 12.88 20.03 12 20.03M5.94 17.21C5.41 16.59 4.95 15.76 4.56 14.75C4.17 13.73 3.97 12.81 3.97 12C3.97 11.94 4 11.88 4 11.81C4 11.75 4 11.7 4 11.67L5 10.92L6.41 11.39L7.87 15.76L7.07 17.12L5.94 17.21M11 5.29V6.69L7 9.46L5.66 9.04L5.24 7.68C5.68 7 6.33 6.32 7.19 5.66S8.87 4.57 9.65 4.35L11 5.29M14.35 4.35C15.13 4.57 15.95 5 16.81 5.66C17.67 6.32 18.32 7 18.76 7.68L18.34 9.04L17 9.47L13 6.7V5.29L14.35 4.35M4.93 4.93C3 6.89 2 9.25 2 12S3 17.11 4.93 19.07 9.25 22 12 22 17.11 21 19.07 19.07 22 14.75 22 12 21 6.89 19.07 4.93 14.75 2 12 2 6.89 3 4.93 4.93Z", "tune": "M3,17V19H9V17H3M3,5V7H13V5H3M13,21V19H21V17H13V15H11V21H13M7,9V11H3V13H7V15H9V9H7M21,13V11H11V13H21M15,9H17V7H21V5H17V3H15V9Z", "camera": "M4,4H7L9,2H15L17,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4A2,2 0 0,1 2,18V6A2,2 0 0,1 4,4M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7M12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9Z", "message-text": "M20,2H4A2,2 0 0,0 2,4V22L6,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2M6,9H18V11H6M14,14H6V12H14M18,8H6V6H18", "palette-outline": "M12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2C17.5,2 22,6 22,11A6,6 0 0,1 16,17H14.2C13.9,17 13.7,17.2 13.7,17.5C13.7,17.6 13.8,17.7 13.8,17.8C14.2,18.3 14.4,18.9 14.4,19.5C14.5,20.9 13.4,22 12,22M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C12.3,20 12.5,19.8 12.5,19.5C12.5,19.3 12.4,19.2 12.4,19.1C12,18.6 11.8,18.1 11.8,17.5C11.8,16.1 12.9,15 14.3,15H16A4,4 0 0,0 20,11C20,7.1 16.4,4 12,4M6.5,10C7.3,10 8,10.7 8,11.5C8,12.3 7.3,13 6.5,13C5.7,13 5,12.3 5,11.5C5,10.7 5.7,10 6.5,10M9.5,6C10.3,6 11,6.7 11,7.5C11,8.3 10.3,9 9.5,9C8.7,9 8,8.3 8,7.5C8,6.7 8.7,6 9.5,6M14.5,6C15.3,6 16,6.7 16,7.5C16,8.3 15.3,9 14.5,9C13.7,9 13,8.3 13,7.5C13,6.7 13.7,6 14.5,6M17.5,10C18.3,10 19,10.7 19,11.5C19,12.3 18.3,13 17.5,13C16.7,13 16,12.3 16,11.5C16,10.7 16.7,10 17.5,10Z", "arrow-left": "M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z", "plus": "M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z", "speaker": "M12,12A3,3 0 0,0 9,15A3,3 0 0,0 12,18A3,3 0 0,0 15,15A3,3 0 0,0 12,12M12,20A5,5 0 0,1 7,15A5,5 0 0,1 12,10A5,5 0 0,1 17,15A5,5 0 0,1 12,20M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8C10.89,8 10,7.1 10,6C10,4.89 10.89,4 12,4M17,2H7C5.89,2 5,2.89 5,4V20A2,2 0 0,0 7,22H17A2,2 0 0,0 19,20V4C19,2.89 18.1,2 17,2Z", "tablet": "M19,18H5V6H19M21,4H3C1.89,4 1,4.89 1,6V18A2,2 0 0,0 3,20H21A2,2 0 0,0 23,18V6C23,4.89 22.1,4 21,4Z", "monitor-speaker": "M3 2C1.9 2 1 2.9 1 4V16C1 17.1 1.9 18 3 18H10V20H8V22H12V16H3V4H21V7H23V4C23 2.9 22.1 2 21 2H3M21 9H16C14.9 9 14 9.9 14 11V20C14 21.1 14.9 22 16 22H21C22.1 22 23 21.1 23 20V11C23 9.9 22.1 9 21 9M18.5 10.5C19.3 10.5 20 11.2 20 12S19.3 13.5 18.5 13.5 17 12.8 17 12 17.7 10.5 18.5 10.5M18.5 20.5C16.8 20.5 15.5 19.2 15.5 17.5C15.5 15.9 16.8 14.5 18.4 14.5H18.5C20.2 14.5 21.5 15.8 21.5 17.5S20.2 20.5 18.5 20.5M18.5 16C17.7 16 17 16.7 17 17.5S17.7 19 18.5 19 20 18.3 20 17.5 19.3 16 18.5 16Z", "check-circle": "M12 2C6.5 2 2 6.5 2 12S6.5 22 12 22 22 17.5 22 12 17.5 2 12 2M10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z", "dots-vertical": "M12,16A2,2 0 0,1 14,18A2,2 0 0,1 12,20A2,2 0 0,1 10,18A2,2 0 0,1 12,16M12,10A2,2 0 0,1 14,12A2,2 0 0,1 12,14A2,2 0 0,1 10,12A2,2 0 0,1 12,10M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8A2,2 0 0,1 10,6A2,2 0 0,1 12,4Z"};
+  var TAU = Math.PI * 2;
+  var REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var PAL = {
+    Base: ['#5C6BC0', '#AB47BC', '#4FD08A'], Clear: ['#1565C0', '#42A5F5', '#81D4FA'], Rain: ['#37474F', '#5C7C99', '#78909C'], Sport: ['#6CABDD', '#1C2C5B', '#A5CDEB']
+  };
+  function rgb(h) { h = h.replace('#', ''); return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; }
+  function approach(c, t, dt, tau) { return c + (t - c) * (1 - Math.exp(-dt / tau)); }
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function wave(p) { return (Math.cos(p * TAU) + 1) / 2; }
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+  function U(n) { return 'calc(var(--u) * ' + n + ')'; }
+  function P(x, y) { return 'left:' + U(x) + ';top:' + U(y); }
+  function at(x, y, w, h) { return P(x, y) + (w != null ? ';width:' + U(w) : '') + (h != null ? ';height:' + U(h) : ''); }
+  /* Icons on the glass are always plain white (the watch draws them with Color.White). */
+  function ico(name, size, extra) { return '<span class="ic" style="width:' + U(size) + ';height:' + U(size) + (extra ? ';' + extra : '') + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#fff" d="' + (ICONS[name] || '') + '"/></svg></span>'; }
+  function T(x, y, size, weight, color, text, extra) { return '<div class="c" style="' + P(x, y) + ';font-size:' + U(size) + ';font-weight:' + weight + ';color:' + color + (extra ? ';' + extra : '') + '">' + text + '</div>'; }
+  function TW(x, y, w, size, weight, color, text, extra) { return '<div class="t clamp" style="' + at(x, y, w) + ';font-size:' + U(size) + ';font-weight:' + weight + ';color:' + color + ';' + (extra || '') + '">' + esc(text) + '</div>'; }
+  var SOFT = 'var(--g-soft)', DIM = 'var(--g-dim)', FAINT = 'var(--g-faint)';
+
+  function qrSvg(n, seed, fg, bg) {
+    var s = seed, rnd = function () { s = (s * 1664525 + 1013904223) % 4294967296; return s / 4294967296; }, r = '';
+    function fin(x, y) { return x < 7 && y < 7 || x > n - 8 && y < 7 || x < 7 && y > n - 8; }
+    function finOn(x, y) { var lx = x > n - 8 ? x - (n - 7) : x, ly = y > n - 8 ? y - (n - 7) : y; var ring = lx === 0 || lx === 6 || ly === 0 || ly === 6, core = lx >= 2 && lx <= 4 && ly >= 2 && ly <= 4; return ring || core; }
+    for (var y = 0; y < n; y++) for (var x = 0; x < n; x++) { var on = fin(x, y) ? finOn(x, y) : rnd() > 0.52; if (on) r += '<rect x="' + x + '" y="' + y + '" width="1.02" height="1.02"/>'; }
+    return '<svg viewBox="-2 -2 ' + (n + 4) + ' ' + (n + 4) + '" aria-hidden="true"><rect x="-2" y="-2" width="' + (n + 4) + '" height="' + (n + 4) + '" fill="' + bg + '"/><g fill="' + fg + '">' + r + '</g></svg>';
+  }
+
+  /* ---- the mark (core/.../AssistantMark.kt) ---- */
+  var SH = 11.3;
+  var POSES = { idle: [[62, 62, 76, 76, 30, -SH, SH], [62, 62, 76, 76, 30, SH, -SH]], think: [[62, 62, 76, 76, 30, -SH, SH], [62, 62, 76, 76, 30, SH, -SH]], listen: [[70, 70, 60, 60, 18, 0, 0], [100, 100, 0, 0, 0, 0, 0]], speak: [[64, 52, 30, 96, 15, 0, 0], [106, 52, 30, 96, 15, 0, 0]] };
+  var PERIOD = { idle: 4, listen: 1.4, think: 1.2, speak: 0.7 };
+  function newMark() { return { w: { idle: 1, listen: 0, think: 0, speak: 0 }, a: POSES.idle[0].slice(), b: POSES.idle[1].slice(), ph: { idle: 0, listen: 0, think: 0, speak: 0 }, lv: 0 }; }
+  function rr(l, t, r, b, rad) { rad = Math.max(0, Math.min(rad, (r - l) / 2, (b - t) / 2)); return 'M' + (l + rad) + ',' + t + 'H' + (r - rad) + 'A' + rad + ',' + rad + ' 0 0 1 ' + r + ',' + (t + rad) + 'V' + (b - rad) + 'A' + rad + ',' + rad + ' 0 0 1 ' + (r - rad) + ',' + b + 'H' + (l + rad) + 'A' + rad + ',' + rad + ' 0 0 1 ' + l + ',' + (b - rad) + 'V' + (t + rad) + 'A' + rad + ',' + rad + ' 0 0 1 ' + (l + rad) + ',' + t + 'Z'; }
+  function stepMark(m, pose, dt, level) {
+    var k; for (k in m.w) m.w[k] = approach(m.w[k], k === pose ? 1 : 0, dt, 0.17);
+    var tg = POSES[pose]; for (var i = 0; i < 7; i++) { m.a[i] = approach(m.a[i], tg[0][i], dt, 0.2); m.b[i] = approach(m.b[i], tg[1][i], dt, 0.2); }
+    for (k in m.ph) m.ph[k] = (m.ph[k] + (REDUCED ? 0 : dt) / PERIOD[k]) % 1;
+    m.lv = approach(m.lv, clamp(level, 0, 1), dt, 0.08);
+    var together = 1 - m.w.idle * 0.55 * (1 - wave(m.ph.idle)), trade = Math.cos(m.ph.think * TAU), bars = Math.cos(m.ph.speak * TAU);
+    var sa = 1 + m.w.think * (0.025 + 0.175 * trade), sb = 1 + m.w.think * (0.025 - 0.175 * trade), ba = 1 + m.w.speak * (-0.25 + 0.25 * bars), bb = 1 + m.w.speak * (-0.25 - 0.25 * bars);
+    var stop = 1 + m.w.listen * (0.07 * (1 - wave(m.ph.listen)) + 0.16 * m.lv);
+    function shape(s, sx, sy) { var cx = 100 + s[5] * together + (s[0] + s[2] / 2 - 100), cy = 100 + s[6] * together + (s[1] + s[3] / 2 - 100); return rr(cx - s[2] * sx / 2, cy - s[3] * sy / 2, cx + s[2] * sx / 2, cy + s[3] * sy / 2, s[4] * Math.min(sx, sy)); }
+    var d = shape(m.a, sa * stop, sa * ba * stop); if (m.b[2] > 0.5) d += shape(m.b, sb, sb * bb); return d;
+  }
+  var MARK_SVG = '<svg viewBox="0 0 200 200" aria-hidden="true"><path fill="#fff" fill-rule="evenodd" d=""/></svg>';
+
+  /* ---- the dock: Clive stays here on every screen except settings ---- */
+  var DOCK_Y = 208, MARK_Y = 245, MARK_SIZE = 32;
+  function dockHTML() { return '<div class="dock" data-go="talk" role="button" tabindex="-1" aria-label="Talk to Clive" style="' + P(0, DOCK_Y) + ';height:' + U(280 - DOCK_Y) + '"></div>'; }
+
+  /* ---- what is drawn ---- */
+  var DESIGNS = [
+    { id: 'glance', name: 'Glance', blurb: 'The time, a date line with the outside and inside temperature, and three glances you choose.' },
+    { id: 'clock', name: 'Clock', blurb: 'A big thin clock with the outside temperature above it. The least lit.' },
+    { id: 'weather', name: 'Weather', blurb: 'The outside temperature first, big, with the time and date under it.' },
+    { id: 'ring', name: 'Ring', blurb: 'The time inside two thin rings that fill with the minute and the hour.' }
+  ];
+  /* The resting layer of each design. The outside temperature is always the weather feed's. */
+  function idleHTML(design) {
+    var grab = '<div class="grabber" style="' + P(140, 9) + ';width:' + U(26) + ';height:' + U(3) + ';opacity:.5;background:#2E3246"></div>';
+    var dot = '<span style="color:' + FAINT + '"> \u00b7 </span>', hm = '<span data-hm>14:35</span>', ds = '<span data-dates>Sat 31 Oct</span>';
+    if (design === 'clock') {
+      return grab + '<div class="rw" style="' + P(140, 52) + ';gap:' + U(6) + '">' + ico('weather-cloudy', 16) + '<span style="font-size:' + U(14) + ';color:' + SOFT + '">12\u00b0</span></div>' +
+        T(140, 104, 72, 300, '#fff', hm, 'letter-spacing:' + U(-2)) + T(140, 152, 12, 400, DIM, ds);
+    }
+    if (design === 'weather') {
+      return grab + '<div class="rw" style="' + P(140, 74) + ';gap:' + U(10) + '">' + ico('weather-cloudy', 44) + '<span style="font-size:' + U(64) + ';font-weight:300;letter-spacing:' + U(-2) + '">12\u00b0</span></div>' +
+        T(140, 118, 14, 500, SOFT, 'Cloudy') + T(140, 136, 11, 400, DIM, 'H 14\u00b0 \u00b7 L 8\u00b0') + T(140, 174, 22, 300, '#fff', hm + '<span style="color:' + FAINT + ';font-size:' + U(12) + '"> \u00b7 </span><span style="font-size:' + U(12) + ';color:' + DIM + '">' + 'Sat 31 Oct</span>', '');
+    }
+    if (design === 'ring') {
+      function arc(r, w, frac, col, track, key) { var C = 2 * Math.PI * r; return '<svg viewBox="0 0 280 280" aria-hidden="true" style="position:absolute;inset:0;width:100%;height:100%"><circle cx="140" cy="140" r="' + r + '" fill="none" stroke="' + track + '" stroke-width="' + w + '"/><circle cx="140" cy="140" r="' + r + '" fill="none" stroke="' + col + '" stroke-width="' + w + '" stroke-linecap="round" stroke-dasharray="' + (C * frac) + ' ' + C + '" transform="rotate(-90 140 140)" data-arc="' + key + '" data-c="' + C + '"/></svg>'; }
+      return arc(134, 2, 0.4, 'rgba(255,255,255,.85)', 'rgba(255,255,255,.12)', 'sec') + arc(124, 1.4, 0.58, 'rgba(255,255,255,.5)', 'rgba(255,255,255,.07)', 'hour') +
+        T(140, 98, 52, 300, '#fff', hm) + T(140, 136, 11, 400, DIM, ds + dot + '<span style="color:' + SOFT + '">12\u00b0</span>');
+    }
+    function cmp(x, icon, big, small) { return '<div class="cmp" style="' + P(x, 168) + '">' + ico(icon, 18) + '<span style="font-size:' + U(14) + ';font-weight:500;line-height:1">' + big + '</span><span style="font-size:' + U(9) + ';color:' + DIM + ';line-height:1">' + small + '</span></div>'; }
+    return grab + T(140, 68, 44, 300, '#fff', hm) +
+      '<div class="c" style="' + P(140, 102) + ';font-size:' + U(10.5) + ';color:' + DIM + '">' + ds + dot + '<span style="color:' + SOFT + '">12\u00b0 out</span>' + dot + '<span style="color:' + SOFT + '">19\u00b0 in</span></div>' +
+      cmp(90, 'account-multiple', '2 of 4', 'home') + cmp(140, 'lightning-bolt', '24p', 'per kWh') + cmp(190, 'car-electric', '80%', 'car');
+  }
+  var Q = { mic: true, voice: true, follow: true, night: false, clean: false };
+  function shadeHTML(q) {
+    function tile(x, y, icon, label, on, key, bad) { return '<div class="tile' + (on ? ' on' : '') + '" data-q="' + key + '" role="switch" tabindex="-1" aria-checked="' + on + '" style="' + P(x, y) + ';width:' + U(38) + ';height:' + U(38) + '">' + ico(icon, 20) + '</div>' + T(x, y + 26, 9, 400, bad ? 'var(--g-err)' : DIM, label); }
+    function slider(y, icon, frac) { return ico(icon, 15, 'position:absolute;left:' + U(58) + ';top:' + U(y - 7.5)) + '<div class="trk" style="position:absolute;left:' + U(80) + ';top:' + U(y - 3) + ';width:' + U(140) + '"><i style="width:' + (frac * 100) + '%"></i></div>'; }
+    return '<div class="grabber" style="' + P(140, 12) + ';width:' + U(28) + ';height:' + U(4) + '"></div>' + slider(44, 'volume-high', 0.6) + slider(72, 'brightness-6', 0.4) +
+      tile(86, 122, q.mic ? 'microphone' : 'microphone-off', q.mic ? 'Mic' : 'Mic off', q.mic, 'mic', !q.mic) + tile(140, 122, 'account-voice', 'Spoken', q.voice, 'voice') + tile(194, 122, 'message-reply-text', 'Follow-up', q.follow, 'follow') +
+      tile(86, 176, 'weather-night', 'Night', q.night, 'night') + tile(140, 176, 'spray-bottle', 'Clean', q.clean, 'clean') + tile(194, 176, 'wifi', 'Home Wi-Fi', true, 'wifi') +
+      '<div class="pill mid" data-go="menu" role="button" tabindex="-1" style="' + at(92, 232, 96, 26) + ';position:absolute"><span style="display:flex;gap:' + U(6) + ';align-items:center">' + ico('cog', 14) + 'Settings</span></div>' +
+      '<div class="grabber" style="' + P(140, 270) + ';width:' + U(26) + ';height:' + U(3) + ';opacity:.6"></div>';
+  }
+  function menuHTML() {
+    var items = ['Name and room', 'Voice and volume', 'Idle screen', 'Wi-Fi and network', 'Pair or reset'], h = TW(30, 24, 220, 16, 700, '#fff', 'Settings');
+    items.forEach(function (t, i) { h += '<div class="pill" data-pill="' + i + '" role="button" tabindex="-1" style="' + at(44, 50 + i * 34, 192, 30) + '"><span class="l">' + t + '</span>' + ico('chevron-right', 14) + '</div>'; });
+    return h + '<div class="tile" data-go="idle" role="button" tabindex="-1" style="' + P(140, 250) + ';width:' + U(26) + ';height:' + U(26) + '">' + ico('chevron-down', 16) + '</div>';
+  }
+  function pairHTML() {
+    return TW(30, 20, 220, 14, 700, '#fff', 'Set up this satellite') +
+      '<div style="' + at(86, 44, 108, 108) + ';border-radius:' + U(8) + ';overflow:hidden;background:#F4F5FA">' + qrSvg(25, 11, '#101218', '#F4F5FA') + '</div>' +
+      TW(36, 162, 208, 12, 500, '#fff', 'Scan with the Church Drive Satellites app') + TW(36, 192, 208, 10, 400, DIM, 'Kitchen · clive-round · code 482 913') + TW(36, 212, 208, 9.5, 400, FAINT, 'The code runs out in 10 minutes (illustrative, not a real code)') +
+      '<div class="tile" data-go="idle" role="button" tabindex="-1" style="' + P(140, 250) + ';width:' + U(26) + ';height:' + U(26) + '">' + ico('close', 15) + '</div>';
+  }
+  /* The figures of a card (watch layout, white text; colour comes from the glow). Icons are plain white. */
+  var CS = 1.2; /* the satellite is read from a distance, so figures are drawn larger than on the watch */
+  function cardBlock(c) {
+    function line(sz, wt, col, tx, mt) { return '<div class="t clamp" style="position:static;width:100%;font-size:' + U(sz * CS) + ';font-weight:' + wt + ';color:' + col + ';-webkit-line-clamp:2;' + (mt ? 'margin-top:' + U(mt) : '') + '">' + esc(tx) + '</div>'; }
+    var h = '';
+    if (c.kind === 'weather') {
+      h += line(11, 400, 'rgba(232,234,255,.85)', c.location);
+      h += '<div style="display:flex;align-items:flex-start;justify-content:center"><div class="t" style="position:static;font-size:' + U(40 * CS) + ';font-weight:700">' + c.temp + '</div><div class="t" style="position:static;font-size:' + U(20 * CS) + ';font-weight:500;margin-top:' + U(4) + '">°</div></div>';
+      h += line(12, 400, SOFT, c.desc) + line(11, 400, 'rgba(232,234,255,.85)', 'H ' + c.high + '° · L ' + c.low + '°');
+      h += '<div style="display:flex;gap:' + U(10) + ';margin-top:' + U(4) + '">' + c.hourly.map(function (x) { return '<div style="text-align:center"><div class="t" style="position:static;font-size:' + U(10 * CS) + ';color:rgba(232,234,255,.8)">' + x[0] + '</div><div class="t" style="position:static;font-size:' + U(12 * CS) + ';font-weight:500">' + x[1] + '°</div></div>'; }).join('') + '</div>';
+    } else if (c.kind === 'score') {
+      h += '<div style="display:flex;align-items:center;gap:' + U(10) + '"><div class="t" style="position:static;width:' + U(40 * CS) + ';font-size:' + U(13 * CS) + ';font-weight:700">' + c.home + '</div><div class="t" style="position:static;font-size:' + U(34 * CS) + ';font-weight:700;white-space:nowrap">' + c.hs + ' – ' + c.as + '</div><div class="t" style="position:static;width:' + U(40 * CS) + ';font-size:' + U(13 * CS) + ';font-weight:700">' + c.away + '</div></div>';
+      h += line(13, 500, '#fff', c.status, 4) + line(11, 400, 'rgba(232,234,255,.85)', c.scorers);
+    } else if (c.kind === 'ask') {
+      h += line(14, 500, '#fff', c.name, 2) + (c.detail ? line(11, 400, SOFT, c.detail, 2) : '');
+    } else {
+      if (c.big) h += line(30, 700, '#fff', c.big);
+      if (c.name) h += line(15, 500, '#fff', c.name);
+      if (c.title) h += line(15, 500, '#fff', c.title);
+      if (c.sub || c.detail) h += line(12, 400, SOFT, c.sub || c.detail);
+      (c.rows || []).slice(0, 3).forEach(function (r) { h += line(11, 400, 'rgba(232,234,255,.9)', r[0] + (r[1] ? ' · ' + r[1] : '')); });
+      if (c.percent != null) h += '<div style="width:' + U(140) + ';height:' + U(6) + ';border-radius:50cqw;background:rgba(255,255,255,.14);margin-top:' + U(7) + '"><div style="width:' + c.percent + '%;height:100%;border-radius:50cqw;background:rgba(255,255,255,.92)"></div></div>';
+    }
+    return h;
+  }
+
+  var DESIGN = 'glance';
+  function cardLayerHTML(c) {
+    var ask = c.kind === 'ask', hasIcon = !!c.icon, top = hasIcon ? 88 : 48, hgt = ask ? 72 : (hasIcon ? 116 : 156), h = '';
+    if (hasIcon) h += '<div class="big" style="' + P(140, 60) + ';width:' + U(46) + ';height:' + U(46) + '">' + ico(c.icon, 46) + '</div>';
+    h += '<div class="fit" data-fit style="' + at(36, top, 208, hgt) + '"><div class="fitin">' + cardBlock(c) + '</div></div>';
+    if (ask) h += '<div class="pill mid hi" data-go="charge" role="button" tabindex="-1" style="' + at(48, 166, 88, 30) + '">Yes, charge</div><div class="pill mid" data-go="idle" role="button" tabindex="-1" style="' + at(144, 166, 72, 30) + '">No</div>';
+    return h;
+  }
+  function Glass(host, cfg, interactive) {
+    this.host = host; this.interactive = interactive; this.mark = newMark(); this.key = null; this.design = (cfg && cfg.design) || DESIGN;
+    this.v = { alpha: 0, speed: 0.6, ca: rgb(PAL.Base[0]), cb: rgb(PAL.Base[1]), cc: rgb(PAL.Base[2]), ph: 0, pulse: 0, level: 0.3, pull: 0 };
+    this.q = JSON.parse(JSON.stringify(Q)); this.drag = null;
+    host.innerHTML = '<canvas></canvas><div class="ui"><div class="lays"></div>' + dockHTML() + '<div class="mk" style="' + P(140, MARK_Y) + ';width:' + U(MARK_SIZE * 200 / 104) + ';height:' + U(MARK_SIZE * 200 / 104) + '">' + MARK_SVG + '</div></div><div class="shade"></div>';
+    this.canvas = host.querySelector('canvas'); this.ui = host.querySelector('.ui'); this.lays = host.querySelector('.lays'); this.dockEl = host.querySelector('.dock');
+    this.mkEl = host.querySelector('.mk'); this.mkPath = this.mkEl.querySelector('path'); this.shade = host.querySelector('.shade');
+    this.set(cfg, true); if (interactive) this.wire();
+  }
+  /* What is on screen, in layers that cross-fade:
+     idle layer  = the clock, date line and glances (stays through listening, thinking and a spoken-only answer, a little dimmer)
+     card layer  = a card, only when the answer needs a graphic (the glow comes up behind it)
+     menu / pair = settings screens (no dock) */
+  Glass.prototype.set = function (cfg, snap) {
+    this.cfg = cfg; var view = cfg.view || 'idle', st = cfg.state || 'idle', c = cfg.card, self = this;
+    this.pullTarget = cfg.pull || 0; if (snap) this.v.pull = this.pullTarget;
+    this.showCard = !!(view === 'talk' && st === 'speak' && c);
+    this.docked = view === 'idle' || view === 'talk';
+    var key = view === 'menu' ? 'menu' : view === 'pair' ? 'pair' : this.showCard ? 'card:' + c.kind + '|' + (c.name || c.big || c.temp || c.home || c.title || '') : 'idle:' + this.design;
+    if (key !== this.key) {
+      var lay = document.createElement('div'); lay.className = 'lay' + (snap || !this.key ? '' : ' in'); lay.dataset.key = key;
+      lay.innerHTML = key === 'menu' ? menuHTML() : key === 'pair' ? pairHTML() : key.indexOf('idle') === 0 ? idleHTML(this.design) : cardLayerHTML(c);
+      Array.prototype.forEach.call(this.lays.children, function (o) { if (!o.classList.contains('out')) { o.classList.add('out'); setTimeout(function () { if (o.parentNode) o.remove(); }, 540); } });
+      this.lays.appendChild(lay); this.key = key;
+    }
+    var idleLay = this.lays.querySelector('.lay[data-key^="idle"]:not(.out)'); if (idleLay) idleLay.classList.toggle('dim', view === 'talk' && !this.showCard);
+    this.dockEl.style.opacity = this.docked ? 1 : 0; this.dockEl.style.pointerEvents = this.docked ? 'auto' : 'none';
+    this.shade.innerHTML = shadeHTML(this.q);
+    var pal = (this.showCard && c.palette) || PAL.Base; if (typeof pal === 'string') pal = PAL[pal]; this.tc = pal.map(rgb); this.paletteName = this.showCard && c.palette ? 'From the card' : 'Base';
+    this.fit();
+  };
+  Glass.prototype.redesign = function (d) { this.design = d; this.lays.innerHTML = ''; this.key = null; this.set(this.cfg, true); };
+  Glass.prototype.fit = function () {
+    Array.prototype.forEach.call(this.lays.querySelectorAll('[data-fit]'), function (box) {
+      var inner = box.firstChild; inner.style.transform = 'none'; var s = box.clientHeight / Math.max(1, inner.scrollHeight); if (s < 1) inner.style.transform = 'scale(' + s + ')';
+    });
+  };
+  Glass.prototype.wire = function () {
+    var self = this, el = this.host;
+    el.addEventListener('click', function (e) {
+      if (self.suppress) { self.suppress = false; return; }
+      var q = e.target.closest('[data-q]'); if (q) { var k = q.dataset.q; if (k !== 'wifi') { self.q[k] = !self.q[k]; self.shade.innerHTML = shadeHTML(self.q); } return; }
+      var g = e.target.closest('[data-go]'); if (g && self.onGo) { self.onGo(g.dataset.go); return; }
+      var p = e.target.closest('[data-pill]'); if (p && self.onPill) self.onPill(+p.dataset.pill);
+    });
+    el.addEventListener('pointerdown', function (e) {
+      var r = el.getBoundingClientRect(), y = (e.clientY - r.top) / r.height, view = self.cfg.view || 'idle';
+      if ((view === 'idle' && y < 0.22 && self.v.pull < 0.1) || self.v.pull > 0.5) self.drag = { y0: e.clientY, p0: self.v.pull, h: r.height, moved: false };
+    });
+    window.addEventListener('pointermove', function (e) {
+      if (!self.drag) return; var dy = e.clientY - self.drag.y0;
+      if (Math.abs(dy) > 6) { self.drag.moved = true; self.v.pull = clamp(self.drag.p0 + dy / (self.drag.h * 0.8), 0, 1); self.pullTarget = self.v.pull; }
+    });
+    window.addEventListener('pointerup', function () { if (!self.drag) return; if (self.drag.moved) { self.suppress = true; self.pullTarget = self.v.pull > 0.5 ? 1 : 0; } self.drag = null; });
+  };
+  var INT = { idle: [0.72, 0.6], listen: [1, 1.6], think: [0.92, 4.2], speak: [0.95, 2.4] };
+  Glass.prototype.frame = function (dt, now) {
+    var cfg = this.cfg, v = this.v, view = cfg.view || 'idle', st = cfg.state || 'idle';
+    var glowOn = view === 'talk' && st !== 'idle', it = INT[st] || INT.idle;
+    v.alpha = approach(v.alpha, glowOn ? it[0] : 0, dt, 0.17); v.speed = approach(v.speed, it[1], dt, 0.2);
+    for (var j = 0; j < 3; j++) { var key = ['ca', 'cb', 'cc'][j], tg = this.tc[j] || this.tc[0]; v[key] = v[key].map(function (x, i) { return approach(x, tg[i], dt, 0.47); }); }
+    if (!REDUCED) { v.ph += dt * 360 / 16 * v.speed; v.pulse += dt; }
+    var lvT = 0.3 + 0.35 * (Math.sin(now / 380) * 0.5 + 0.5) + 0.25 * (Math.sin(now / 130) * 0.5 + 0.5); v.level = approach(v.level, lvT, dt, 0.1);
+    if (!this.drag) v.pull = approach(v.pull, this.pullTarget, dt, 0.1);
+    this.shade.style.transform = 'translateY(' + ((v.pull - 1) * 100) + '%)'; this.shade.style.visibility = v.pull < 0.002 ? 'hidden' : 'visible';
+    this.draw();
+    var pose = st === 'listen' ? 'listen' : st === 'think' ? 'think' : st === 'speak' ? 'speak' : 'idle';
+    this.mkPath.setAttribute('d', stepMark(this.mark, pose, dt, st === 'listen' ? v.level : 0));
+    this.mkEl.style.opacity = this.docked ? (view === 'idle' ? 0.9 : 1) : 0;
+  };
+  Glass.prototype.draw = function () {
+    var c = this.canvas, dpr = Math.min(window.devicePixelRatio || 1, 2), W = Math.round(c.clientWidth * dpr), H = Math.round(c.clientHeight * dpr); if (!W) return; if (c.width !== W) { c.width = W; c.height = H; }
+    var g = c.getContext('2d'), m = Math.min(W, H), cx = W / 2, cy = H / 2, v = this.v, st = this.cfg.state || 'idle';
+    g.fillStyle = '#000'; g.fillRect(0, 0, W, H); if (v.alpha < 0.005) return;
+    var extra = st === 'listen' ? (v.level - 0.25) * 0.25 : st === 'speak' ? Math.sin(v.pulse * 9) * 0.07 : 0, a = clamp(v.alpha + extra, 0, 1);
+    function blob(col, ang, rf) { var r = ang * Math.PI / 180, x = cx + m * rf * Math.cos(r), y = cy + m * rf * Math.sin(r), R = m * 0.62, s = Math.round(col[0]) + ',' + Math.round(col[1]) + ',' + Math.round(col[2]); var gr = g.createRadialGradient(x, y, 0, x, y, R); gr.addColorStop(0, 'rgba(' + s + ',' + a + ')'); gr.addColorStop(1, 'rgba(' + s + ',0)'); g.fillStyle = gr; g.beginPath(); g.arc(x, y, R, 0, TAU); g.fill(); }
+    blob(v.ca, v.ph + 210, 0.28); blob(v.cb, -v.ph * 1.3 + 330, 0.28); blob(v.cc, v.ph * 0.8 + 90, 0.30);
+    var vg = g.createRadialGradient(cx, cy, 0, cx, cy, m * 0.55); vg.addColorStop(0.45, 'rgba(5,6,14,0)'); vg.addColorStop(1, 'rgba(5,6,14,0.7)'); g.fillStyle = vg; g.beginPath(); g.arc(cx, cy, m * 0.55, 0, TAU); g.fill();
+  };
+
+  /* ---------------- the states ---------------- */
+  function talk(id, name, group, heard, say, card, what, src, diff) {
+    return { id: id, name: name, group: group, play: true, heard: heard, cfg: { view: 'talk', state: 'speak', heard: heard, card: card, answer: say }, say: [['you', heard], ['clive', say]], what: what, src: src || '', diff: diff || '' };
+  }
+  var WEATHER = { kind: 'weather', icon: 'weather-cloudy', palette: 'Rain', location: 'Church Drive', temp: 12, desc: 'Cloudy', high: 14, low: 8, hourly: [['15', 12], ['16', 11], ['17', 10], ['18', 9]] };
+  var S = [
+    { id: 'idle', name: 'Resting', group: 'idle', cfg: { view: 'idle' }, what: 'The resting screen of the chosen design, with Clive in his dock at the bottom. Black ground, no glow: only the resting screen is black. Drag down from the top edge for quick settings, tap the dock to talk.',
+      say: [], src: 'The outside temperature is always the weather feed’s, with no setting. The backlight dims on a schedule.', diff: 'The inside temperature (Glance design) needs a chosen room sensor sent to the device.' },
+    { id: 'listen', name: 'Listening', group: 'talk', play: true, cfg: { view: 'talk', state: 'listen' }, what: 'The glow comes up as the background because he is doing something. The clock, date line and glances stay on top, a little dimmer, and the dock changes: the mark becomes the stop button and pulses with your voice.',
+      say: [['you', 'What’s the weather like']], src: 'Glow 1.0 + (level − 0.25) × 0.25, 1.6×. Mark: stop pose. Idle layer at 90%, with the small grey text lightened so it reads over the glow.', diff: 'No words are shown while he listens: the display is too small to read them.' },
+    { id: 'think', name: 'Thinking', group: 'talk', cfg: { view: 'talk', state: 'think' }, what: 'The glow turns 4.2× faster behind the clock and glances while the two squircles trade size in the dock.',
+      say: [['you', 'What’s the weather like?']], src: 'Glow 0.92, 4.2×. Mark: thinking, 1.2 s trade.' },
+    talk('answer', 'Spoken answer', 'talk', 'What’s the capital of France?', 'Paris is the capital of France. Do you want to know more?', null, 'A simple answer is only spoken. The glow pulses behind the time and glances (a little dimmer) and the dock’s equaliser bars move while he talks. The same goes for chat, thanks and plain confirmations.', 'Glow 0.95 ± sin(t×9)×0.07, 2.4×. Mark: speaking, 0.7 s bars.', 'The satellite ignores the <code>answer</code> card: simple answers are spoken only.'),
+    talk('weather', 'Weather card', 'talk', 'What’s the weather like?', 'It’s 12 degrees and cloudy near Church Drive. Shall I go through the forecast for later?', WEATHER, 'Needs a graphic, so the clock and glances fade out as the glow comes up and the card fades in. A white weather icon over the figures, the Rain palette (cloudy). He gives the answer aloud. The dock stays. After about 25 seconds it fades back to the clock.', 'Layout from <code>CliveCards.kt</code>, drawn about 20% larger. Palette Rain since only sunny and partly cloudy are Clear.', 'The draft <code>show_card</code> action does not pass the hours yet.'),
+    talk('score', 'Score card', 'talk', 'Did City win last night?', 'Manchester City beat AEK Athens 5 to 1 in the Champions League last night. Would you like the scorers?', { kind: 'score', icon: 'soccer', palette: 'Sport', home: 'MCI', away: 'AEK', hs: 5, as: 1, status: 'Full time', scorers: 'Haaland 2, Foden, Silva, Doku' }, 'The Sport palette, a white football and the score big between the club letters. He says who won and offers the scorers aloud.', 'Score 34 bold, status 13, scorers 11.', 'No badge lookup on the satellite yet, so the three letters show.'),
+    talk('energy', 'Energy card', 'talk', 'How much is electricity right now?', 'It’s 24.5p per kWh and cheap at the moment. Would you like to know when it’s cheaper?', { kind: 'energy', icon: 'lightning-bolt', palette: 'Base', big: '24.5p', sub: 'per kWh, now', rows: [['Using now', '1.2 kW'], ['Cheaper at 23:30', '7p'], ['Spent today', '£2.14']] }, 'The shared layout: a big figure, a line, up to three rows. No pill (the watch does not draw one).', 'Big 30 bold, sub 12, rows 11.'),
+    talk('people', 'Who is home', 'talk', 'Who’s home?', 'Jamie and Hayley are home. Shall I tell you where the others are?', { kind: 'people', icon: 'account-multiple', palette: 'Base', big: '2 home', sub: 'Jamie and Hayley', rows: [['Diane', 'Out'], ['Ian', 'Out']] }, 'The people card with the shared layout. Diane is spelt Diane on screen; only the voice says Die Ann.', 'The watch has no people card; this uses the shared layout.', 'A layout choice for the satellite.'),
+    talk('light', 'Light on', 'act', 'Turn the living room lights on to sixty percent', 'Living room lights are on at 60%. Cosy.', { kind: 'done', icon: 'lightbulb', name: 'Living room lights', detail: 'On at 60%', percent: 60, palette: ['#FFB74D', '#8A4B08', '#FFE0B2'] }, 'He did it, so the card says what changed and by how much. A plain white bulb, a white brightness bar, and the glow turns the colour of the light, so the colour is in the glow and not in the icon.', 'The app’s <code>done</code> card content. A card’s <code>palette</code> field already carries colours.', 'The apps tint the icon in a coloured circle on the phone. The satellite does not: white icon, colour from the glow.'),
+    talk('off', 'Lights off', 'act', 'Turn the hallway lights off', 'Lights are off. Sleep well.', null, 'A plain confirmation is only spoken, so nothing changes on screen. The card appears only when there is something to see: a level, a time left, a state, a question or a failure.', 'The commonest action. Which confirmations deserve a card is for you to say.'),
+    talk('heat', 'Timed heating', 'act', 'Put the downstairs heating on for two hours', 'Downstairs heating is on until 16:42.', { kind: 'done', icon: 'radiator', name: 'Downstairs heating', detail: 'On until 16:42', percent: 85, palette: ['#E8590C', '#FFAB70', '#4A2A14'] }, 'He says when it will finish, not how long. The bar is the time left and drains while it runs.', 'The timed run from <code>clive_timed_control</code>.', 'The heat card is not built yet.'),
+    { id: 'ask', name: 'Asks first', group: 'act', play: true, heard: 'Charge the car now', cfg: { view: 'talk', state: 'speak', heard: 'Charge the car now', card: { kind: 'ask', icon: 'lightning-bolt', palette: ['#E37400', '#FDD663', '#4A3A12'], name: 'Fast charge at 34p per kWh?', detail: 'That is an expensive rate' }, answer: '' },
+      say: [['you', 'Charge the car now'], ['clive', 'That’s an expensive rate at 34p a kWh. Shall I charge now anyway?']], what: 'Before anything costly he asks and waits for a clear yes. Tap Yes or No, or say it. The glow goes amber while a question is open. The pills are the Clive outlined pills; Yes is the brighter one.',
+      src: 'The charger script asks first and only accepts a yes between 5 seconds and 5 minutes after (<code>clive-zappi-charge.yaml</code>).', diff: 'Tap buttons are new: the apps answer by voice or text.' },
+    { id: 'charge', name: 'Charging', group: 'act', hidden: true, heard: 'Yes', cfg: { view: 'talk', state: 'speak', heard: 'Yes', card: { kind: 'done', icon: 'car-electric', name: 'Car charger', detail: 'Fast charge, now', palette: ['#1A73E8', '#8AB4F8', '#1C3358'] }, answer: 'Charging now at 34p.' }, say: [['you', 'Yes'], ['clive', 'Charging now at 34p.']], what: 'What happens after Yes.', src: '', diff: '' },
+    talk('alarm', 'Alarm set', 'act', 'Set the alarm to away', 'Alarm is set to away. Have a good day.', { kind: 'done', icon: 'shield-check', name: 'Alarm', detail: 'Set to Away', palette: ['#B3261E', '#F28B82', '#4D1F1C'] }, 'He can arm it. Away takes the app’s red for away, in the glow.', 'He can arm it (<code>clive_arm_alarm</code>).'),
+    talk('refuse', 'Can’t do that', 'act', 'Turn the alarm off', 'That has to be done at the keypad or in the Ring app.', { kind: 'done', icon: 'shield-off', name: 'I can’t disarm it', detail: 'Use the keypad or the Ring app', palette: ['#E37400', '#FDD663', '#4A3A12'] }, 'Things he may never do (disarm the alarm, sirens, TVs) are refused plainly, with where to do it instead. Amber glow, white icon.', 'The prompt and <code>ha/clive.md</code>.'),
+    talk('fail', 'Didn’t work', 'act', 'Start the vacuum', 'I couldn’t reach the vacuum. Want me to try again?', { kind: 'done', icon: 'close', name: 'Vacuum', detail: 'Couldn’t reach it', palette: ['#B3261E', '#F28B82', '#4D1F1C'] }, 'He only says something is done after the tool result shows it worked. When it does not, the glow goes red, the icon is a white cross, and he offers to try again.', 'The <code>done</code> card with <code>ok: false</code>.'),
+    { id: 'qs', name: 'Quick settings', group: 'set', cfg: { view: 'idle', pull: 1 }, what: 'Pulled down from the top and covering the dock. Volume and brightness sliders, six switches (outlined circles, brighter when on, white icons), and a Settings button. Swipe up or drag the handle to close. The switches work here.',
+      say: [], src: 'The watch’s four settings plus mic, night and clean screen for a wall device.', diff: 'Clean screen locks touch for 30 seconds so it can be wiped. Mic off must also cut the wake word.' },
+    { id: 'menu', name: 'Settings menu', group: 'set', cfg: { view: 'menu' }, what: 'The full settings menu. No dock here. The pill style of the watch’s Prompts face. Most is set from the companion app, so these are the few things that must work on the device itself.',
+      say: [], src: 'Pills 192×30 at x 44, as the watch’s prompt pills.', diff: 'Wi-Fi and network and Pair or reset must work with no phone around.' },
+    { id: 'pair', name: 'Pairing screen', group: 'pair', cfg: { view: 'pair' }, what: 'Settings > Pair or reset shows this: a QR code, the name, a 6 digit code to type if the camera cannot read it, and how long it lasts. The white tile is the only bright area, and only while pairing. No dock.',
+      say: [], src: 'ESPHome has a <code>qr_code</code> component. The code here is illustrative, not a real one.', diff: 'A device that has never been set up shows this by itself on first boot.' }
+  ];
+  var byId = {}; S.forEach(function (s) { byId[s.id] = s; });
+
+  var stage = new Glass(document.getElementById('stage'), S[0].cfg, true);
+  var cur = 'idle', timer = null, thumbs = [stage];
+  var strips = { idle: document.getElementById('s-idle'), talk: document.getElementById('s-talk'), act: document.getElementById('s-act'), set: document.getElementById('s-set'), pair: document.getElementById('s-pair') };
+  S.forEach(function (s) {
+    if (s.hidden) return;
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'thumb'; b.dataset.id = s.id; b.setAttribute('aria-pressed', 'false');
+    var bz = document.createElement('div'); bz.className = 'bezel'; bz.style.padding = '3%'; var sc = document.createElement('div'); sc.className = 'screen'; bz.appendChild(sc);
+    b.appendChild(bz); var l = document.createElement('span'); l.textContent = s.name; b.appendChild(l); strips[s.group].appendChild(b); thumbs.push(new Glass(sc, s.cfg, false));
+    b.addEventListener('click', function () { stopPlay(); show(s.id); });
+  });
+  function show(id, over) {
+    cur = id; var s = byId[id]; stage.set(over || s.cfg, false);
+    document.getElementById('cap-name').textContent = s.name; document.getElementById('k-state').textContent = s.name; document.getElementById('what').textContent = s.what;
+    document.getElementById('src').innerHTML = s.src ? '<b>From.</b> ' + s.src : '';
+    var d = document.getElementById('diff'); d.hidden = !s.diff; d.innerHTML = s.diff ? '<b>New for the satellite.</b> ' + s.diff : '';
+    var say = document.getElementById('say'); say.innerHTML = ''; say.parentNode.hidden = !s.say.length; s.say.forEach(function (m) { var p = document.createElement('p'); p.className = m[0]; p.textContent = m[1]; say.appendChild(p); });
+    Array.prototype.forEach.call(document.querySelectorAll('.thumb'), function (b) { b.setAttribute('aria-pressed', String(b.dataset.id === id)); });
+    document.getElementById('play').hidden = !s.play; document.getElementById('qs').hidden = !(id === 'idle' || id === 'qs');
+    document.getElementById('cap-hint').style.visibility = (id === 'idle' || id === 'qs') ? 'visible' : 'hidden';
+  }
+  stage.onGo = function (g) {
+    stopPlay();
+    if (g === 'talk') { show('listen'); return; }
+    show(g);
+  };
+  stage.onPill = function (i) { stopPlay(); if (i === 4) show('pair'); };
+  document.getElementById('qs').addEventListener('click', function () { if (cur !== 'idle') show('idle'); stage.pullTarget = stage.pullTarget > 0.5 ? 0 : 1; });
+  function stopPlay() { if (timer) { clearTimeout(timer); timer = null; } document.getElementById('play').textContent = 'Play this'; }
+  document.getElementById('play').addEventListener('click', function () {
+    if (timer) { stopPlay(); return; } var s = byId[cur]; if (!s.play) return; this.textContent = 'Stop';
+    var heard = s.heard || (s.cfg && s.cfg.heard) || '';
+    var seq = s.cfg.state === 'listen' ? [[{ view: 'idle' }, 1200], [s.cfg, 3500], [{ view: 'idle' }, 800]] :
+      [[{ view: 'idle' }, 1300], [{ view: 'talk', state: 'listen', live: heard }, 2300], [{ view: 'talk', state: 'think', heard: heard }, 1700], [s.cfg, s.cfg.card ? 6500 : 4200], [{ view: 'idle' }, 1000]], i = 0;
+    (function step() { stage.set(seq[i][0], false); var d = seq[i][1]; i++; timer = setTimeout(i >= seq.length ? function () { stopPlay(); show(cur); } : step, d); })();
+  });
+
+  /* ---- the companion app, in the main app's style (Material 3, tones, 28dp entity cards, 48dp tiles) ---- */
+  var TONE = { indigo: ['#262B4A', '#9FA8DA'], green: ['#1B3A28', '#81C995'], teal: ['#0F3A40', '#4DD0E1'], blue: ['#1C3358', '#8AB4F8'], amber: ['#4A3A12', '#FDD663'], grey: ['#303134', '#9AA0A6'] };
+  function hexA(h, a) { var c = rgb(h); return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')'; }
+  function mi(name, size, color) { return '<span class="mi" style="width:' + size + 'px;height:' + size + 'px"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="' + color + '" d="' + (ICONS[name] || '') + '"/></svg></span>'; }
+  function tIcon(name, tone, size) { size = size || 36; var t = TONE[tone]; return '<span class="ti" style="width:' + size + 'px;height:' + size + 'px;background:' + hexA(t[1], 0.18) + '">' + mi(name, Math.round(size * 0.55), t[1]) + '</span>'; }
+  function section(title, icon, tone, summary, body) { return '<div class="sp"><div class="sph">' + tIcon(icon, tone) + '<span class="spt">' + title + '</span>' + (summary ? '<span class="sps" style="color:' + TONE[tone][1] + '">' + summary + '</span>' : '') + '</div>' + body + '</div>'; }
+  function ecard(tone, body) { return '<div class="ec" style="background:' + (tone ? TONE[tone][0] : '#211F26') + '">' + body + '</div>'; }
+  function pill(text, tone) { var a = TONE[tone][1]; return '<span class="pl" style="color:' + a + ';background:' + hexA(a, 0.18) + '">' + text + '</span>'; }
+  function tileRow(items, tone, attr) { var a = TONE[tone][1]; return '<div class="trr" style="--acc:' + a + '">' + items.map(function (it) { return '<div class="tl' + (it.on ? ' on' : '') + '" ' + (attr ? attr + '="' + it.key + '"' : '') + ' role="button" tabindex="0">' + (it.icon ? mi(it.icon, 20, it.on ? '#202124' : '#E6E1E5') : '') + it.label + '</div>'; }).join('') + '</div>'; }
+  function avatar() { return '<span class="av">I</span>'; }
+  function topbar(title, back) { return '<div class="tb"><div class="top">' + (back ? mi('arrow-left', 24, '#E6E1E5') : '<span></span>') + avatar() + '</div><div class="ttl">' + title + '</div></div>'; }
+  function navbar(on) { var items = [['monitor-speaker', 'Satellites'], ['qrcode-scan', 'Add'], ['cog', 'Settings']]; return '<div class="nb">' + items.map(function (it, i) { return '<div class="nbi' + (i === on ? ' on' : '') + '"><span class="ind">' + mi(it[0], 24, i === on ? '#E8DEF8' : '#CAC4D0') + '</span>' + it[1] + '</div>'; }).join('') + '</div>'; }
+  function mrow(left, right) { return '<div class="mr"><span>' + left + '</span>' + right + '</div>'; }
+  function slider(frac) { return '<div class="sl"><i style="width:' + (frac * 100) + '%"></i><b style="left:' + (frac * 100) + '%"></b></div>'; }
+
+  var APP = { state: 'rest' }, minis = [], bigPreview = null;
+  function previewCfg() { return APP.state === 'rest' ? { view: 'idle' } : APP.state === 'talk' ? { view: 'talk', state: 'listen' } : { view: 'talk', state: 'speak', card: WEATHER }; }
+  function phoneHTML() {
+    var A = TONE.indigo[1], dTiles = DESIGNS.map(function (d) { return '<div class="dt' + (d.id === DESIGN ? ' on' : '') + '" data-design="' + d.id + '" role="button" tabindex="0"><div class="pvm" data-mini="' + d.id + '"></div>' + d.name + '</div>'; }).join('');
+    var dsg = DESIGNS.filter(function (d) { return d.id === DESIGN; })[0];
+    var list = topbar('Satellites') + '<div class="pg">' + section('Home', 'home-outline', 'indigo', '3 online',
+      ecard(null, [['monitor', 'Kitchen', 'Round 3.4″ display'], ['tablet', 'Hall', 'Wall display 7″'], ['speaker', 'Bedroom', 'No display, speaker only']].map(function (r) {
+        return '<div class="mr"><span style="display:flex;gap:12px;align-items:center">' + tIcon(r[0], 'indigo', 40) + '<span><div style="font-size:16px;line-height:24px">' + r[1] + '</div><div class="sub">' + r[2] + '</div></span></span>' + pill('Online', 'green') + '</div>'; }).join('')) +
+      '<div class="fb" style="--acc:#9FA8DA">Add a satellite</div>') + '</div>' + navbar(0);
+    var detail = topbar('Kitchen', true) + '<div class="pg">' +
+      section('Design', 'palette-outline', 'indigo', dsg.name, ecard('indigo',
+        '<div class="pvw"><div class="pv" id="bigpv"></div></div>' +
+        '<div class="tr"><div class="sub" style="padding-left:2px">Preview the flow</div>' + tileRow([{ key: 'rest', label: 'Resting', on: APP.state === 'rest' }, { key: 'talk', label: 'Talking', on: APP.state === 'talk' }, { key: 'card', label: 'Card', on: APP.state === 'card' }], 'indigo', 'data-pstate') + '</div>' +
+        '<div class="trr" style="--acc:' + A + ';gap:8px">' + dTiles + '</div><div class="sub">' + dsg.blurb + ' Every screen follows the design: resting, listening, thinking, speaking and cards.</div>')) +
+      section('Temperatures', 'thermometer', 'amber', 'From the house', ecard(null,
+        mrow('Outside, from the weather feed', pill('Always on', 'green')) + mrow('Inside', '<span class="sub">Kitchen thermostat</span>') + '<div class="sub">The outside temperature is always the weather feed’s. The inside one shows in the Glance design only.</div>')) +
+      (DESIGN === 'glance' ? section('Glances', 'tune', 'teal', '3 of 3', ecard(null,
+        mrow('1', pill('Who’s home', 'teal')) + mrow('2', pill('Electricity now', 'teal')) + mrow('3', pill('Car charge', 'teal')) +
+        '<div class="sub">Swap any for</div>' + tileRow([{ icon: 'weather-cloudy', label: 'Forecast' }, { icon: 'shield-check', label: 'Alarm' }], 'teal') + tileRow([{ icon: 'radiator', label: 'Heating' }, { icon: 'air-filter', label: 'Air quality' }], 'teal'))) : '') +
+      section('Backlight', 'theme-light-dark', 'blue', 'Dims at 22:00', ecard(null, mrow('Day', '<span class="sub">100%</span>') + slider(1) + mrow('Night from 22:00', '<span class="sub">12%</span>') + slider(0.12) + mrow('Dim the screen at night', '<span class="m3sw on"></span>'))) +
+      '<div class="fb" style="--acc:#9FA8DA">Show on the satellite</div></div>';
+    var add = topbar('Add a satellite', true) + '<div class="pg"><div class="cam"><div class="fr"></div><div class="qr">' + qrSvg(25, 7, '#101218', '#F4F5FA') + '</div></div>' +
+      section('Found one', 'check-circle', 'green', '', ecard('green', mrow('<span><div style="font-size:16px;line-height:24px">Clive satellite</div><div class="sub">Round 3.4″ display · clive-round</div></span>', mi('check-circle', 24, TONE.green[1])))) +
+      '<div class="fb" style="--acc:#9FA8DA">Set it up</div><div class="tt">Can’t scan? Enter the 6 digit code</div></div>' + navbar(1);
+    return [['Satellites', list], ['Kitchen satellite', detail], ['Add a satellite', add]].map(function (x) { return '<div class="ph" aria-label="' + x[0] + '">' + x[1] + '</div>'; }).join('');
+  }
+  function mountPreviews() {
+    var host = document.getElementById('phones');
+    Array.prototype.forEach.call(host.querySelectorAll('[data-mini]'), function (el) {
+      var sc = document.createElement('div'); sc.className = 'bezel'; sc.style.padding = '3%'; var inner = document.createElement('div'); inner.className = 'screen'; sc.appendChild(inner); el.appendChild(sc);
+      var g = new Glass(inner, { view: 'idle', design: el.dataset.mini }, false); g.fixed = true; minis.push(g); thumbs.push(g);
+    });
+    var big = host.querySelector('#bigpv'); if (big) { var bz = document.createElement('div'); bz.className = 'bezel'; var sc2 = document.createElement('div'); sc2.className = 'screen'; bz.appendChild(sc2); big.appendChild(bz); bigPreview = new Glass(sc2, previewCfg(), false); thumbs.push(bigPreview); }
+  }
+  function renderPhones() {
+    thumbs = thumbs.filter(function (g) { return minis.indexOf(g) < 0 && g !== bigPreview; }); minis = []; bigPreview = null;
+    document.getElementById('phones').innerHTML = phoneHTML(); mountPreviews();
+  }
+  document.getElementById('phones').addEventListener('click', function (e) {
+    var d = e.target.closest('[data-design]'); if (d) { setDesign(d.dataset.design); return; }
+    var st = e.target.closest('[data-pstate]'); if (st) { APP.state = st.dataset.pstate; renderPhones(); }
+  });
+
+  /* ---- the design switcher: one choice drives the stage, every thumbnail and the app preview ---- */
+  function setDesign(id) {
+    DESIGN = id;
+    thumbs.forEach(function (g) { if (!g.fixed) g.redesign(id); });
+    Array.prototype.forEach.call(document.querySelectorAll('#designs button'), function (b) { b.setAttribute('aria-pressed', String(b.dataset.id === id)); });
+    var d = DESIGNS.filter(function (x) { return x.id === id; })[0]; document.getElementById('dblurb').textContent = d.blurb;
+    renderPhones();
+  }
+  DESIGNS.forEach(function (d) {
+    var b = document.createElement('button'); b.type = 'button'; b.dataset.id = d.id; b.textContent = d.name; b.setAttribute('aria-pressed', String(d.id === DESIGN)); b.addEventListener('click', function () { setDesign(d.id); });
+    document.getElementById('designs').appendChild(b);
+  });
+  document.getElementById('dblurb').textContent = DESIGNS[0].blurb;
+
+  var last = 0;
+  function loop(ts) {
+    var dt = last ? Math.min((ts - last) / 1000, 0.1) : 0.016; last = ts;
+    thumbs.forEach(function (g) { g.frame(dt, ts); });
+    var t = new Date(), hh = ('0' + t.getHours()).slice(-2), mm = ('0' + t.getMinutes()).slice(-2), ds = t.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/,/g, '');
+    var sec = t.getSeconds() + t.getMilliseconds() / 1000;
+    document.querySelectorAll('[data-arc="sec"]').forEach(function (e) { var C = +e.dataset.c; e.setAttribute('stroke-dasharray', (C * sec / 60) + ' ' + C); });
+    document.querySelectorAll('[data-arc="hour"]').forEach(function (e) { var C = +e.dataset.c; e.setAttribute('stroke-dasharray', (C * (((t.getHours() % 12) * 60 + t.getMinutes()) / 720)) + ' ' + C); });
+    document.querySelectorAll('[data-hm]').forEach(function (e) { e.textContent = hh + ':' + mm; }); document.querySelectorAll('[data-dates]').forEach(function (e) { e.textContent = ds; });
+    requestAnimationFrame(loop);
+  }
+  renderPhones();
+  show('idle');
+  window.addEventListener('resize', function () { thumbs.forEach(function (g) { g.fit(); }); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { thumbs.forEach(function (g) { g.fit(); }); });
+  requestAnimationFrame(loop);
+})();
+</script>

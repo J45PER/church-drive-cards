@@ -24,6 +24,9 @@
     data:
       zone: '{{ trigger.id }}'
       by_hand: true
+      who: >-
+        {%- set uid = trigger.to_state.context.user_id -%}
+        {%- if uid -%}{{ states.person | selectattr('attributes.user_id', 'eq', uid) | map(attribute='name') | list | first | default('someone signed in to Home Assistant') }}{%- endif -%}
 - alias: 'Clive: take over again when a pause ends'
   description: At the time a pause ends (input_datetime.clive_climate_<zone>_resume) Clive takes over the zone again and tells people.
   mode: queued
@@ -40,24 +43,41 @@
     data:
       zone: '{{ trigger.id }}'
 - alias: 'Clive: offer to take over the heating when the alarm is disarmed'
-  description: When the alarm goes from away to disarmed and Clive had turned a zone's heating off because it was set to away, he asks (a push notification with a Resume Clive button) whether to turn it back on and take over again. He never turns it on by himself; Resume Clive does it, because a person asked. Armed home changes nothing.
-  mode: single
+  description: When somebody comes home (or the alarm goes from away to disarmed) and Clive had put a heating zone on Eco because nobody was home, he takes it straight off Eco, back to the target it had, and tells people. Only Eco is undone, and turning the heating on or off stays a person's job. If the alarm is still set to away the resume is refused and nothing changes until it is disarmed.
+  mode: queued
+  max: 4
   triggers:
   - trigger: state
     entity_id: alarm_control_panel.church_drive_alarm
     from: armed_away
     to: disarmed
+  - trigger: state
+    entity_id:
+    - person.jamie
+    - person.hayley
+    - person.diane
+    - person.ian
+    to: home
   conditions:
   - condition: template
     value_template: >-
       {%- set ns = namespace(n=0) -%}
-      {%- for zn in ['downstairs', 'upstairs'] -%}{%- set e = states('input_text.clive_climate_' ~ zn ~ '_expect') -%}{%- set j = (e | from_json(default={})) if e not in ['', 'unknown', 'unavailable'] else {} -%}{%- if j.away is defined and j.away and is_state('climate.' ~ zn, 'off') -%}{%- set ns.n = ns.n + 1 -%}{%- endif -%}{%- endfor -%}
+      {%- for zn in ['downstairs', 'upstairs'] -%}{%- set e = states('input_text.clive_climate_' ~ zn ~ '_expect') -%}{%- set j = (e | from_json(default={})) if e not in ['', 'unknown', 'unavailable'] else {} -%}{%- if j.away is defined and j.away and is_state('climate.' ~ zn, 'heat') and state_attr('climate.' ~ zn, 'preset_mode') == 'eco' -%}{%- set ns.n = ns.n + 1 -%}{%- endif -%}{%- endfor -%}
       {{ ns.n > 0 }}
   actions:
-  - action: church_drive.notify
+  - action: script.clive_climate_control
     data:
-      kind: clive_actions
-      title: 🌡️ Welcome home
-      message: Clive turned the heating off while the alarm was set to away. Shall he turn it back on and look after it again?
-      tag: church-drive-clive-paused-welcome
-      link: /dashboard-mobile/climate
+      command: resume
+      zone: all
+    response_variable: r
+  - if:
+    - condition: template
+      value_template: "{{ r is mapping and r.status == 'resumed' and (r.turned_back_on | length) > 0 }}"
+    then:
+    - action: church_drive.notify
+      data:
+        kind: clive_actions
+        title: 🌡️ Welcome home
+        message: Clive took the heating off Eco and is looking after it again.
+        tag: church-drive-clive-home
+        link: /dashboard-mobile/climate

@@ -78,7 +78,7 @@ fun AssistantPauseCard(entities: Map<String, EntityState>, call: CallService) {
     EntityCard(blue.container, blue.onContainer) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text("Heating set by hand", style = MaterialTheme.typography.titleMedium)
+                Text("Heating changed", style = MaterialTheme.typography.titleMedium)
                 pauses.forEach { Text(pauseLine(it, now), style = MaterialTheme.typography.bodySmall) }
                 Text("$name is not adjusting ${if (pauses.size == 1) "it" else "them"} until then.", style = MaterialTheme.typography.bodySmall)
             }
