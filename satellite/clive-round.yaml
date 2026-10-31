@@ -1,0 +1,446 @@
+# Clive on the round screen: a voice satellite for the Waveshare ESP32-P4-WIFI6-Touch-LCD-3.4C
+# (sold by The Pi Hut as "ESP32-P4 3.4" Round Touch Display Dev Board (800x800)", Waveshare SKU 31523).
+#
+# What it does: listens for the wake word, sends the speech to Home Assistant's Assist (which is Clive,
+# the Claude conversation agent), speaks the answer through the onboard speaker, and draws Clive's cards
+# (weather, scores, "done" and so on) on the round screen. See satellite/README.md for setup.
+#
+# Pins come from Waveshare's own Arduino examples and schematic
+# (github.com/waveshareteam/ESP32-P4-WIFI6-Touch-LCD-XC): I2C 7/8, I2S 13/12/10/9/11, speaker amp 53,
+# LCD reset 27, backlight 26 (PWM) and 33 (enable), touch reset 23, Wi-Fi co-processor on SDIO 14-19/54.
+# The touch interrupt pin is not given in the vendor sources, so it is left out and the address is 0x5D.
+#
+# STATUS: draft. It passes `esphome config`. It has NOT been flashed to a real board yet, so the
+# audio levels, touch address and screen layout are untested. Things to check first are marked CHECK.
+
+substitutions:
+  name: clive-round
+  friendly_name: Clive (round screen)
+  # The Assist satellite entity this device creates in Home Assistant, used by the show-card automation.
+  # Put the device in an area in Home Assistant and Clive can be told which room he is in.
+  wake_model: hey_jarvis       # The apps already strip "Jarvis" from a sentence. A custom "Clive" model can replace it.
+  card_seconds: "25"           # How long a card stays up before the clock comes back.
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  on_boot:
+    priority: -100
+    then:
+      - switch.turn_on: lcd_backlight_enable
+      - switch.turn_on: speaker_amp
+      - light.turn_on:
+          id: backlight
+          brightness: 70%
+      - micro_wake_word.start:
+      - lvgl.page.show: page_clock
+
+esp32:
+  board: esp32-p4-evboard
+  # The chip has 32MB, but ESPHome only allows over-the-air updates up to 16MB without an experimental flag.
+  # 16MB is plenty for this.
+  flash_size: 16MB
+  variant: esp32p4
+  # CHECK: the board's chip is an ESP32-P4NRW32 (silicon v3.x per Waveshare's README). If it will not boot
+  # or the log complains about the chip revision, set engineering_sample: true here.
+  framework:
+    type: esp-idf
+
+psram:
+  mode: hex
+  speed: 200MHz
+
+esp_ldo:
+  - channel: 3
+    voltage: 2.5V
+
+logger:
+
+api:
+  encryption:
+    key: !secret clive_round_api_key
+  actions:
+    # Called by the automation in satellite/ha/clive-satellite-show.yaml with the fields of the card Clive
+    # sent (the same ones the Church Drive phone and watch apps draw: big, title, sub, foot, rows).
+    - action: show_card
+      variables:
+        kind: string
+        big: string
+        title: string
+        sub: string
+        foot: string
+        rows: string[]
+      then:
+        - lvgl.label.update:
+            id: card_title
+            text: !lambda return title.c_str();
+        - lvgl.label.update:
+            id: card_big
+            text: !lambda return big.c_str();
+        - lvgl.label.update:
+            id: card_sub
+            text: !lambda return sub.c_str();
+        - lvgl.label.update:
+            id: card_rows
+            text: !lambda |-
+              static std::string out;
+              out.clear();
+              for (size_t i = 0; i < rows.size() && i < 5; i++) {
+                if (i) out += "\n";
+                out += rows[i];
+              }
+              return out.c_str();
+        - lvgl.label.update:
+            id: card_foot
+            text: !lambda return foot.c_str();
+        - lambda: id(card_visible) = true;
+        - lvgl.page.show: page_card
+        - script.execute: hide_card
+    - action: show_clock
+      then:
+        - lambda: id(card_visible) = false;
+        - lvgl.page.show: page_clock
+
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  fast_connect: true
+
+# The P4 has no Wi-Fi of its own: the ESP32-C6 on the board provides it over SDIO.
+esp32_hosted:
+  variant: ESP32C6
+  active_high: true
+  clk_pin: GPIO18
+  cmd_pin: GPIO19
+  d0_pin: GPIO14
+  d1_pin: GPIO15
+  d2_pin: GPIO16
+  d3_pin: GPIO17
+  reset_pin: GPIO54
+  slot: 1
+
+time:
+  - platform: homeassistant
+    id: ha_time
+
+i2c:
+  sda: GPIO7
+  scl: GPIO8
+  scan: true
+
+# ---------------------------------------------------------------- audio
+
+switch:
+  - platform: gpio
+    id: speaker_amp            # The speaker amplifier is on when GPIO53 is high.
+    pin: GPIO53
+    restore_mode: ALWAYS_ON
+  - platform: gpio
+    id: lcd_backlight_enable
+    pin: GPIO33
+    restore_mode: ALWAYS_ON
+
+audio_dac:
+  - platform: es8311
+    id: es8311_dac
+    address: 0x18
+
+audio_adc:
+  - platform: es7210
+    id: es7210_adc
+    address: 0x40
+    # CHECK: the onboard microphones feed the ES7210. If the level is too low or too high, change mic_gain.
+    mic_gain: 24db
+
+i2s_audio:
+  - id: i2s_main
+    i2s_lrclk_pin: GPIO10
+    i2s_bclk_pin: GPIO12
+    i2s_mclk_pin: GPIO13
+
+microphone:
+  - platform: i2s_audio
+    id: board_mic
+    i2s_audio_id: i2s_main
+    i2s_din_pin: GPIO11
+    adc_type: external
+    pdm: false
+    sample_rate: 16000
+    bits_per_sample: 16bit
+    channel: left
+
+speaker:
+  - platform: i2s_audio
+    id: board_speaker
+    i2s_audio_id: i2s_main
+    i2s_dout_pin: GPIO9
+    dac_type: external
+    audio_dac: es8311_dac
+    sample_rate: 16000
+    bits_per_sample: 16bit
+    channel: mono
+    buffer_duration: 100ms
+
+micro_wake_word:
+  id: mww
+  microphone: board_mic
+  models:
+    - model: ${wake_model}
+  on_wake_word_detected:
+    - voice_assistant.start:
+        wake_word: !lambda return wake_word;
+
+voice_assistant:
+  id: va
+  microphone: board_mic
+  speaker: board_speaker
+  noise_suppression_level: 2
+  auto_gain: 31dBFS
+  volume_multiplier: 2.0
+  on_listening:
+    - lvgl.page.show: page_listening
+  on_stt_vad_end:
+    - lvgl.page.show: page_thinking
+  on_tts_start:
+    - lvgl.label.update:
+        id: reply_text
+        text: !lambda return x.c_str();
+    - lvgl.page.show: page_reply
+  on_end:
+    # The answer has been spoken. Keep a card on the screen if one arrived, otherwise go back to the clock.
+    - delay: 100ms
+    - wait_until:
+        not:
+          speaker.is_playing: board_speaker
+    - if:
+        condition:
+          lambda: return !id(card_visible);
+        then:
+          - lvgl.page.show: page_clock
+    - micro_wake_word.start:
+  on_error:
+    - lvgl.label.update:
+        id: reply_text
+        text: !lambda return message.c_str();
+    - lvgl.page.show: page_reply
+    - delay: 4s
+    - lvgl.page.show: page_clock
+    - micro_wake_word.start:
+  on_idle:
+    - micro_wake_word.start:
+
+# ---------------------------------------------------------------- cards from Clive
+
+globals:
+  - id: card_visible
+    type: bool
+    initial_value: "false"
+
+script:
+  - id: hide_card
+    mode: restart
+    then:
+      - delay: ${card_seconds}s
+      - lambda: id(card_visible) = false;
+      - lvgl.page.show: page_clock
+
+# ---------------------------------------------------------------- screen
+
+output:
+  - platform: ledc
+    id: backlight_pwm
+    pin: GPIO26
+    frequency: 1220Hz
+
+light:
+  - platform: monochromatic
+    id: backlight
+    name: Screen brightness
+    output: backlight_pwm
+    restore_mode: ALWAYS_ON
+
+display:
+  - platform: mipi_dsi
+    id: round_display
+    model: WAVESHARE-ESP32-P4-WIFI6-TOUCH-LCD-3.4C
+    reset_pin: GPIO27
+    auto_clear_enabled: false
+
+touchscreen:
+  - platform: gt911
+    id: round_touch
+    display: round_display
+    reset_pin: GPIO23
+    # CHECK: no interrupt pin is given, so the chip may answer on 0x14 instead. If the log shows
+    # "touch not found", change this to 0x14.
+    address: 0x5D
+    on_touch:
+      - if:
+          condition:
+            lambda: return !id(va).is_running();
+          then:
+            # A tap while idle starts listening, like pressing a button. A tap on a card puts the clock back.
+            - if:
+                condition:
+                  lambda: return id(card_visible);
+                then:
+                  - lambda: id(card_visible) = false;
+                  - lvgl.page.show: page_clock
+                else:
+                  - micro_wake_word.stop:
+                  - voice_assistant.start:
+
+lvgl:
+  displays:
+    - round_display
+  touchscreens:
+    - round_touch
+  bg_color: 0x000000
+  style_definitions:
+    - id: big_text
+      text_font: montserrat_48
+      text_color: 0xFFFFFF
+  pages:
+    - id: page_clock
+      bg_color: 0x000000
+      widgets:
+        - label:
+            id: clock_time
+            align: CENTER
+            y: -30
+            text_font: montserrat_48
+            text_color: 0xFFFFFF
+            text: "--:--"
+        - label:
+            id: clock_date
+            align: CENTER
+            y: 50
+            text_font: montserrat_28
+            text_color: 0x9AA0A6
+            text: ""
+        - label:
+            align: BOTTOM_MID
+            y: -120
+            text_font: montserrat_20
+            text_color: 0x5F6368
+            text: "Say Jarvis, or tap"
+
+    - id: page_listening
+      bg_color: 0x0B3D91
+      widgets:
+        - label:
+            align: CENTER
+            text_font: montserrat_48
+            text_color: 0xFFFFFF
+            text: "Listening"
+
+    - id: page_thinking
+      bg_color: 0x2A2A2A
+      widgets:
+        - spinner:
+            align: CENTER
+            width: 220
+            height: 220
+            spin_time: 1500ms
+            arc_length: 90deg
+        - label:
+            align: BOTTOM_MID
+            y: -130
+            text_font: montserrat_28
+            text_color: 0x9AA0A6
+            text: "One moment"
+
+    - id: page_reply
+      bg_color: 0x0B3D91
+      widgets:
+        - label:
+            id: reply_text
+            align: CENTER
+            width: 520            # Inside the circle, so nothing is cut off by the round edge.
+            text_align: CENTER
+            long_mode: WRAP
+            text_font: montserrat_28
+            text_color: 0xFFFFFF
+            text: ""
+
+    - id: page_card
+      bg_color: 0x101418
+      widgets:
+        - label:
+            id: card_title
+            align: TOP_MID
+            y: 120
+            width: 480
+            text_align: CENTER
+            long_mode: DOT
+            text_font: montserrat_28
+            text_color: 0x9AA0A6
+            text: ""
+        - label:
+            id: card_big
+            align: CENTER
+            y: -70
+            width: 520
+            text_align: CENTER
+            long_mode: DOT
+            text_font: montserrat_48
+            text_color: 0xFFFFFF
+            text: ""
+        - label:
+            id: card_sub
+            align: CENTER
+            y: 5
+            width: 520
+            text_align: CENTER
+            long_mode: DOT
+            text_font: montserrat_28
+            text_color: 0xE8EAED
+            text: ""
+        - label:
+            id: card_rows
+            align: CENTER
+            y: 120
+            width: 480
+            text_align: CENTER
+            long_mode: DOT
+            text_font: montserrat_20
+            text_color: 0xBDC1C6
+            text: ""
+        - label:
+            id: card_foot
+            align: BOTTOM_MID
+            y: -100
+            width: 420
+            text_align: CENTER
+            long_mode: DOT
+            text_font: montserrat_20
+            text_color: 0x5F6368
+            text: ""
+
+interval:
+  - interval: 5s
+    then:
+      - lvgl.label.update:
+          id: clock_time
+          text: !lambda |-
+            static char b[8];
+            auto t = id(ha_time).now();
+            if (!t.is_valid()) return "--:--";
+            snprintf(b, sizeof(b), "%02d:%02d", t.hour, t.minute);
+            return b;
+      - lvgl.label.update:
+          id: clock_date
+          text: !lambda |-
+            auto t = id(ha_time).now();
+            if (!t.is_valid()) return "";
+            static std::string d;
+            d = t.strftime("%A %e %B");
+            return d.c_str();
+
+sensor:
+  - platform: wifi_signal
+    name: Wi-Fi signal
+    update_interval: 60s

@@ -2,3 +2,8 @@ node_modules/
 __pycache__/
 *.pyc
 companion/android/app/google-services.json
+
+# ESPHome satellite: real secrets and build output stay out of git
+satellite/secrets.yaml
+satellite/.esphome/
+satellite/build/

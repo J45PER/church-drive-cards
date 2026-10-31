@@ -169,7 +169,7 @@ When a picture or web page would genuinely help (what something looks like, a re
 
 Cards: the full, current prompt (with a mandatory card paragraph, and the order of speaking and calling scripts that Home Assistant needs) is in [clive-prompt.md](clive-prompt.md). Use that, not a paragraph added to an old prompt.
 
-Screens are decided case by case: the Church Drive Android app listens for `church_drive_assistant_show` and shows it to the person it is for. A satellite with a display needs its own listener that filters on the event's `context.user_id` or its own device; satellites without one need nothing.
+Screens are decided case by case: the Church Drive Android app listens for `church_drive_assistant_show` and shows it to the person it is for. A satellite with a display needs its own listener that filters on the event's `context.user_id` or its own device; satellites without one need nothing. The first one, the round-screen ESP32-P4 satellite, is in [`satellite/`](../satellite/README.md): `satellite/ha/clive-satellite-show.yaml` forwards the event to it while it is the device being spoken to (its Assist satellite entity is listening, thinking or answering), since a wall device has nobody signed in.
 
 ## The assistant's name (one setting)
 

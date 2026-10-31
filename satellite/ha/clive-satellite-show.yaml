@@ -1,0 +1,60 @@
+# Automation: draw Clive's cards on the round satellite screen.
+#
+# Clive's scripts (clive_show_card and the scripts built on it) fire the event church_drive_assistant_show with a
+# `card`. The phone and watch apps pick it up for the person who asked. A satellite has nobody signed in, so this
+# automation sends the card to the satellite instead, but only while that satellite is the one being talked to
+# (its Assist satellite entity is listening, thinking or answering). Cards for a question asked on a phone are not
+# sent to the wall.
+#
+# Edit the two entities below for your device:
+#   assist_satellite.clive_round_screen  The Assist satellite entity ESPHome creates (Settings > Devices > Clive (round screen)).
+#   The action esphome.clive_round_show_card is named after the ESPHome node (`name: clive-round` in clive-round.yaml).
+#
+# Weather cards carry symbol, temp, desc and location instead of big/title/sub, so those are mapped here.
+alias: Clive satellite - show card
+description: Sends Clive's cards to the round satellite screen while it is the device being spoken to.
+mode: queued
+max: 5
+triggers:
+  - trigger: event
+    event_type: church_drive_assistant_show
+conditions:
+  - condition: template
+    value_template: "{{ trigger.event.data.card is defined and trigger.event.data.card is mapping }}"
+  - condition: state
+    entity_id: assist_satellite.clive_round_screen
+    state:
+      - listening
+      - processing
+      - responding
+actions:
+  - variables:
+      c: "{{ trigger.event.data.card }}"
+  - action: esphome.clive_round_show_card
+    data:
+      kind: "{{ c.kind | default('') }}"
+      big: >-
+        {{ c.big if c.big is defined
+           else (c.temp | string ~ '°') if c.temp is defined
+           else '' }}
+      title: >-
+        {{ c.title if c.title is defined
+           else c.location if c.location is defined
+           else c.brand if c.brand is defined
+           else '' }}
+      sub: >-
+        {{ c.sub if c.sub is defined
+           else c.desc if c.desc is defined
+           else '' }}
+      foot: "{{ c.foot | default('') }}"
+      # The screen is round, so it draws at most five short lines: "name  value".
+      rows: >-
+        {% set ns = namespace(l=[]) %}
+        {% for r in (c.rows | default([]))[:5] %}
+          {% if r is mapping %}
+            {% set ns.l = ns.l + [((r.name | default('')) ~ '  ' ~ (r.value | default(''))) | trim] %}
+          {% else %}
+            {% set ns.l = ns.l + [r | string] %}
+          {% endif %}
+        {% endfor %}
+        {{ ns.l | to_json }}
