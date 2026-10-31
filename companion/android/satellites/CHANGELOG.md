@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.84.0
+
+- Version moves with the shared number. No other change.
+
 ## 0.83.0
 
 - Version moves with the shared number. No other change.

@@ -348,9 +348,11 @@ companion-app phones' batteries. New people appear by themselves.
 One camera, one card each (several sit side by side in a panel). The tile shows the
 newer of ring-mqtt's snapshot and the Ring integration's recording frame, with why and
 how long ago it was taken ("Doorbell · 4 min"). An orange badge means the picture is
-older than `refresh_after` (default 60 min). While someone's looking, the card then
-presses the camera's Take Snapshot button, at most once per `refresh_after` for everyone,
-so battery cameras last. A battery icon shows below 25%. Tap for a pop-up with live
+older than `refresh_after` (default 60 min). The card never asks for a new snapshot itself:
+the Church Drive integration presses each camera's Take Snapshot button on a timer (every 60 min for a
+camera on mains power, 180 for one with a battery, counted from the camera's last picture, event or
+button press, so a busy camera is never asked; `snapshot_minutes` and `snapshot_battery_minutes` in
+`church_drive/camera/settings`, 0 = never), so opening a dashboard or the app wakes no cameras. A battery icon shows below 25%. Tap for a pop-up with live
 video, Events (the events viewer), Snapshot and the light in the camera's area (or
 `light`). With `talk_stream` (a go2rtc stream with two-way audio) it also has
 Talk. The snapshot, button, battery and events are found from the camera's name

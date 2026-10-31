@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.84.0
+
+- **Camera pictures are refreshed by Home Assistant, not by opening the app.** The camera cards no longer press each camera's Take Snapshot button when you open the page (that woke battery cameras and, with several cameras, put five "pressed Take Snapshot" lines in the Activity log under your name). Church Drive in Home Assistant now asks each camera itself: every 60 minutes for a camera on mains power and 180 for one with a battery, counted from the camera's last picture, event (motion or ring) or button press, so a busy camera is never asked. The orange "old" badge stays, and the pop-up's **New snapshot** button still works. Needs Church Drive 0.84.0 or later in Home Assistant.
+- **Activity log:** a camera's Take Snapshot button is never listed, and Clive's heating presets read naturally ("set Downstairs to no preset", "set Downstairs to Eco").
+
 ## 0.83.0
 
 - **Activity log: "overruled" instead of every device change.** The general lines for devices turning on or off outside Home Assistant (0.54.3) were too many, so they are gone. The log now lists only when something **Clive set** (the heating target or mode, a light, a switch or a fan) is **changed again from outside the app**: the thermostat's own dial or app, a wall switch, a remote or a schedule in the device. Each line names the device, what changed and when he had set it. Pick **Overruled Clive** in the Actions list to see just those. Needs Church Drive 0.83.0 or later in Home Assistant.

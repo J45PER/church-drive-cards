@@ -56,11 +56,12 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
+from .snapshot_logic import CHECK_MINUTES, interval_s, newest, snapshot_due
 
 _LOGGER = logging.getLogger(__name__)
 
 STORE_VERSION = 1
-DEFAULTS = {"keep_days": 5, "max_gb": 3.0, "dir": None, "cooldown": 120, "alert_cooldown": 300}
+DEFAULTS = {"keep_days": 5, "max_gb": 3.0, "dir": None, "cooldown": 120, "alert_cooldown": 300, "snapshot_minutes": 60, "snapshot_battery_minutes": 180}
 MODES = ("disarmed", "home", "away")
 ALARM_MODE = {"disarmed": "disarmed", "armed_home": "home", "armed_night": "home", "armed_vacation": "away",
               "armed_away": "away", "armed_custom_bypass": "home", "arming": "disarmed", "pending": "away",
@@ -96,6 +97,7 @@ class CameraEvents:
         self._data: dict[str, Any] = {"settings": dict(DEFAULTS), "events": {}, "links": None}
         self._linked_at: dict[str, float] = {}
         self._alerted_at: dict[str, float] = {}
+        self._snapshot_asked: dict[str, float] = {}  # camera base -> when this house last asked it for a snapshot
         self._alarm_cams: set[str] = set()  # cameras recording for the alarm now
         self._unsubs: list = []
         self._tasks: set[asyncio.Task] = set()
@@ -151,6 +153,7 @@ class CameraEvents:
             self._save()
         self._unsubs.append(self.hass.bus.async_listen(EVENT_STATE_CHANGED, self._on_state, self._wanted))
         self._unsubs.append(async_track_time_interval(self.hass, self._tidy, timedelta(hours=1)))
+        self._unsubs.append(async_track_time_interval(self.hass, self._async_snapshots, timedelta(minutes=CHECK_MINUTES)))
         self.hass.async_create_task(self._tidy())
 
     @callback
@@ -175,9 +178,14 @@ class CameraEvents:
         return {**self._data["settings"], "folder": str(self._root())}
 
     async def async_set_settings(
-        self, keep_days: int | None, max_gb: float | None, folder: str | None, cooldown: int | None = None
+        self, keep_days: int | None, max_gb: float | None, folder: str | None, cooldown: int | None = None,
+        snapshot_minutes: int | None = None, snapshot_battery_minutes: int | None = None,
     ) -> None:
         s = self._data["settings"]
+        if snapshot_minutes is not None:
+            s["snapshot_minutes"] = max(0, int(snapshot_minutes))
+        if snapshot_battery_minutes is not None:
+            s["snapshot_battery_minutes"] = max(0, int(snapshot_battery_minutes))
         if cooldown is not None:
             s["cooldown"] = max(30, int(cooldown))
         if keep_days is not None:
@@ -189,6 +197,44 @@ class CameraEvents:
             await self.hass.async_add_executor_job(self._root().mkdir, 0o755, True, True)
         self._save()
         await self._tidy()
+
+    # ---- snapshots ----------------------------------------------------
+
+    def _known_at(self, base: str) -> float:
+        """When the newest thing about a camera happened: its snapshot or recording picture, its last activity (a motion or a ring), the
+        last time its Take Snapshot button was pressed (by anyone)."""
+        states = self.hass.states
+        times: list[float | None] = []
+        snap = states.get(f"camera.{base}_snapshot")
+        if snap is not None:
+            stamp = snap.attributes.get("timestamp")
+            try:
+                times.append(float(stamp) if stamp else snap.last_changed.timestamp())
+            except (TypeError, ValueError):
+                times.append(snap.last_changed.timestamp())
+        for entity_id in (f"sensor.{base}_last_activity", f"button.{base}_take_snapshot"):
+            state = states.get(entity_id)
+            moment = _when(state.state) if state is not None else None
+            times.append(moment.timestamp() if moment else None)
+        return newest(times)
+
+    async def _async_snapshots(self, _now: Any = None) -> None:
+        """Ask each camera for a new snapshot when its newest picture or event is old (the apps and cards no longer do this when somebody looks)."""
+        s = self._data["settings"]
+        now = time.time()
+        for base in self._cams:
+            button = self.hass.states.get(f"button.{base}_take_snapshot")
+            if button is None:
+                continue
+            battery = self.hass.states.get(f"sensor.{base}_battery") is not None
+            interval = interval_s(battery, s.get("snapshot_minutes"), s.get("snapshot_battery_minutes"))
+            if not snapshot_due(now, self._known_at(base), self._snapshot_asked.get(base, 0), interval, button.state != "unavailable"):
+                continue
+            self._snapshot_asked[base] = now
+            try:
+                await self.hass.services.async_call("button", "press", {"entity_id": button.entity_id}, blocking=False)
+            except Exception:  # noqa: BLE001 - one camera not answering must not stop the others
+                _LOGGER.debug("Couldn't ask %s for a snapshot", base, exc_info=True)
 
     # ---- which cameras ------------------------------------------------
 
