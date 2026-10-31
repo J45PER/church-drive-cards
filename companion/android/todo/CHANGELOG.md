@@ -7,6 +7,10 @@ Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newe
 
 - One version number for every Church Drive app and the Home Assistant integration from here (`node tools/versions.mjs`, docs/VERSIONING.md). To-Do moves from 0.54.4 to 0.80.0 with no other change.
 
+## 0.54.5
+
+- No change to this app; version kept equal to the phone app.
+
 ## 0.54.4
 
 - No change to this app; version kept equal to the phone app.

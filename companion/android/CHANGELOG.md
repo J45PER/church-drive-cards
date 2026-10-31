@@ -9,6 +9,10 @@ with the APK, so there is a record of what shipped. Newest first.
 - One version number for every Church Drive app and the Home Assistant integration from here (`node tools/versions.mjs`, docs/VERSIONING.md). The phone app and the watch app move from 0.54.4 to 0.80.0 with no other change.
 - `core` now lets the new Church Drive Satellites app take this app's sign-in, like To-Do does.
 
+## 0.54.5
+
+- The assistant takes the heating off Eco by himself when somebody comes home (the Clive log said he would ask).
+
 ## 0.54.4
 
 - The assistant's away rule now puts the heating on Eco instead of turning it off (Home Assistant side, noted here for the Clive log).
