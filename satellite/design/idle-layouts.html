@@ -1,0 +1,180 @@
+<title>Clive Idle Layouts</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Roboto:wght@100;300;400;500;700&display=swap">
+<style>
+/* Layout concept: eight round screens side by side, all on the same black ground with the same small mark low on the glass, so only the layout differs.
+   Page tokens follow the viewer's theme; the screens are always black. Type on the glass is Roboto (as on Android), Figtree for the page. */
+:root {
+  --bg: #F3F5F8; --fg: #12171F; --muted: #5B6676; --line: #D6DBE3; --surface: #FFFFFF; --accent: #3F51B5; --chip: #E8EBF4;
+  --f-ui: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif; --f-dev: Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --bl: 1;
+  /* on the glass: the apps' soft text colours */
+  --g-soft: #E8EAFF; --g-dim: #9096B0; --g-faint: #5A6078;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #0E1018; --fg: #E8EAF2; --muted: #9AA1B5; --line: #272B3A; --surface: #151824; --accent: #9FA8DA; --chip: #1D2130; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #0E1018; --fg: #E8EAF2; --muted: #9AA1B5; --line: #272B3A; --surface: #151824; --accent: #9FA8DA; --chip: #1D2130; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-ui); font-size: 16px; line-height: 1.5; margin: 0; padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 28px; }
+h1 { font-size: clamp(1.6rem, 4vw, 2.2rem); line-height: 1.15; margin: 0 0 8px; text-wrap: balance; font-weight: 600; }
+h2 { font-size: 1.05rem; margin: 0 0 6px; font-weight: 600; }
+p { margin: 0 0 10px; }
+code { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: .88em; background: var(--chip); padding: 1px 5px; border-radius: 5px; }
+.lead { color: var(--muted); max-width: 68ch; }
+.muted { color: var(--muted); }
+.bar { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; }
+.bar label { display: flex; gap: 10px; align-items: center; font-size: .92rem; }
+.bar input[type=range] { width: 180px; accent-color: var(--accent); }
+.bar output { min-width: 3ch; font-variant-numeric: tabular-nums; color: var(--muted); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 26px 22px; }
+.card { display: grid; gap: 10px; align-content: start; }
+.card h2 { display: flex; gap: 10px; align-items: baseline; }
+.card h2 span { font-family: var(--f-ui); font-size: .8rem; font-weight: 600; background: var(--chip); color: var(--muted); border-radius: 6px; padding: 1px 8px; }
+.card p { font-size: .9rem; color: var(--muted); margin: 0; }
+.card .from { font-size: .8rem; }
+.bezel { width: 100%; padding: 3%; border-radius: 50%; background: linear-gradient(145deg, #2A2F3C, #0B0C12); box-shadow: 0 14px 36px rgba(0,0,0,.3), inset 0 0 0 1px rgba(255,255,255,.06); }
+
+/* ---------- the glass ---------- */
+.screen { --u: calc(100cqw / 280); position: relative; width: 100%; aspect-ratio: 1; border-radius: 50%; overflow: hidden; container-type: size; background: #000; color: #fff; font-family: var(--f-dev); user-select: none; filter: brightness(var(--bl)); }
+.screen > * { position: absolute; }
+.c { text-align: center; white-space: nowrap; line-height: 1; transform: translate(-50%, -50%); }
+.row { display: flex; align-items: center; justify-content: center; transform: translate(-50%, -50%); white-space: nowrap; }
+.ic { display: inline-block; flex: none; }
+.ic svg { display: block; width: 100%; height: 100%; }
+.mk { transform: translate(-50%, -50%); pointer-events: none; }
+.mk svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.ring { inset: 0; width: 100%; height: 100%; }
+.cmp { display: grid; justify-items: center; gap: calc(var(--u) * 3); transform: translate(-50%, -50%); }
+.tick { background: rgba(255,255,255,.18); width: calc(var(--u) * 1); }
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+.note { border-top: 2px solid var(--line); padding-top: 10px; font-size: .93rem; }
+.note p { margin: 0 0 8px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Clive idle layouts</h1>
+    <p class="lead">Eight ways to lay out the resting screen on a black ground, with Clive's mark small in the lower part of the glass. Only the layout changes between them: same ground, same mark, same colours from the apps. Example weather, home and energy values. Tell me which letters you like and which parts to combine.</p>
+  </header>
+
+  <div class="bar">
+    <label for="bl">Backlight <input id="bl" type="range" min="8" max="100" value="100"><output id="blo">100%</output></label>
+    <span class="muted">Drag it down to see how each layout holds up when the screen is dimmed overnight.</span>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <section aria-label="Notes" class="notes">
+    <div class="note"><h2>Black does not save power on this panel</h2><p>The 3.4" display is an IPS LCD with a backlight, not OLED, so a black picture still lights the whole panel. What saves it is the backlight: dim it, and turn it off after a while with the touch or the wake word bringing it back. The layouts above show how little needs to be lit.</p></div>
+    <div class="note"><h2>Keep the lit area small and still</h2><p>Thin numerals, few shapes, no full-width bars. If a layout stays on all night, move it a pixel or two every minute so no edge sits in one place.</p></div>
+    <div class="note"><h2>Where the mark sits</h2><p>Low on the glass, about a fifth of the way up from the bottom, so it reads as the thing you talk to and stays out of the way of the clock. It keeps its slow idle drift from the apps (the two squircles sliding together and apart every 4 seconds).</p></div>
+  </section>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var ICONS = {"weather-cloudy": "M6,19A5,5 0 0,1 1,14A5,5 0 0,1 6,9C7,6.65 9.3,5 12,5C15.43,5 18.24,7.66 18.5,11.03L19,11A4,4 0 0,1 23,15A4,4 0 0,1 19,19H6M19,13H17V12A5,5 0 0,0 12,7C9.5,7 7.45,8.82 7.06,11.19C6.73,11.07 6.37,11 6,11A3,3 0 0,0 3,14A3,3 0 0,0 6,17H19A2,2 0 0,0 21,15A2,2 0 0,0 19,13Z", "weather-partly-cloudy": "M12.74,5.47C15.1,6.5 16.35,9.03 15.92,11.46C17.19,12.56 18,14.19 18,16V16.17C18.31,16.06 18.65,16 19,16A3,3 0 0,1 22,19A3,3 0 0,1 19,22H6A4,4 0 0,1 2,18A4,4 0 0,1 6,14H6.27C5,12.45 4.6,10.24 5.5,8.26C6.72,5.5 9.97,4.24 12.74,5.47M11.93,7.3C10.16,6.5 8.09,7.31 7.31,9.07C6.85,10.09 6.93,11.22 7.41,12.13C8.5,10.83 10.16,10 12,10C12.7,10 13.38,10.12 14,10.34C13.94,9.06 13.18,7.86 11.93,7.3M13.55,3.64C13,3.4 12.45,3.23 11.88,3.12L14.37,1.82L15.27,4.71C14.76,4.29 14.19,3.93 13.55,3.64M6.09,4.44C5.6,4.79 5.17,5.19 4.8,5.63L4.91,2.82L7.87,3.5C7.25,3.71 6.65,4.03 6.09,4.44M18,9.71C17.91,9.12 17.78,8.55 17.59,8L19.97,9.5L17.92,11.73C18.03,11.08 18.05,10.4 18,9.71M3.04,11.3C3.11,11.9 3.24,12.47 3.43,13L1.06,11.5L3.1,9.28C3,9.93 2.97,10.61 3.04,11.3M19,18H16V16A4,4 0 0,0 12,12A4,4 0 0,0 8,16H6A2,2 0 0,0 4,18A2,2 0 0,0 6,20H19A1,1 0 0,0 20,19A1,1 0 0,0 19,18Z", "weather-sunny": "M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,2L14.39,5.42C13.65,5.15 12.84,5 12,5C11.16,5 10.35,5.15 9.61,5.42L12,2M3.34,7L7.5,6.65C6.9,7.16 6.36,7.78 5.94,8.5C5.5,9.24 5.25,10 5.11,10.79L3.34,7M3.36,17L5.12,13.23C5.26,14 5.53,14.78 5.95,15.5C6.37,16.24 6.91,16.86 7.5,17.37L3.36,17M20.65,7L18.88,10.79C18.74,10 18.47,9.23 18.05,8.5C17.63,7.78 17.1,7.15 16.5,6.64L20.65,7M20.64,17L16.5,17.36C17.09,16.85 17.62,16.22 18.04,15.5C18.46,14.77 18.73,14 18.87,13.21L20.64,17M12,22L9.59,18.56C10.33,18.83 11.14,19 12,19C12.82,19 13.63,18.83 14.37,18.56L12,22Z", "weather-rainy": "M6,14.03A1,1 0 0,1 7,15.03C7,15.58 6.55,16.03 6,16.03C3.24,16.03 1,13.79 1,11.03C1,8.27 3.24,6.03 6,6.03C7,3.68 9.3,2.03 12,2.03C15.43,2.03 18.24,4.69 18.5,8.06L19,8.03A4,4 0 0,1 23,12.03C23,14.23 21.21,16.03 19,16.03H18C17.45,16.03 17,15.58 17,15.03C17,14.47 17.45,14.03 18,14.03H19A2,2 0 0,0 21,12.03A2,2 0 0,0 19,10.03H17V9.03C17,6.27 14.76,4.03 12,4.03C9.5,4.03 7.45,5.84 7.06,8.21C6.73,8.09 6.37,8.03 6,8.03A3,3 0 0,0 3,11.03A3,3 0 0,0 6,14.03M12,14.15C12.18,14.39 12.37,14.66 12.56,14.94C13,15.56 14,17.03 14,18C14,19.11 13.1,20 12,20A2,2 0 0,1 10,18C10,17.03 11,15.56 11.44,14.94C11.63,14.66 11.82,14.4 12,14.15M12,11.03L11.5,11.59C11.5,11.59 10.65,12.55 9.79,13.81C8.93,15.06 8,16.56 8,18A4,4 0 0,0 12,22A4,4 0 0,0 16,18C16,16.56 15.07,15.06 14.21,13.81C13.35,12.55 12.5,11.59 12.5,11.59", "account-multiple": "M16 17V19H2V17S2 13 9 13 16 17 16 17M12.5 7.5A3.5 3.5 0 1 0 9 11A3.5 3.5 0 0 0 12.5 7.5M15.94 13A5.32 5.32 0 0 1 18 17V19H22V17S22 13.37 15.94 13M15 4A3.39 3.39 0 0 0 13.07 4.59A5 5 0 0 1 13.07 10.41A3.39 3.39 0 0 0 15 11A3.5 3.5 0 0 0 15 4Z", "lightning-bolt": "M11 15H6L13 1V9H18L11 23V15Z", "car-electric": "M18.92 2C18.72 1.42 18.16 1 17.5 1H6.5C5.84 1 5.29 1.42 5.08 2L3 8V16C3 16.55 3.45 17 4 17H5C5.55 17 6 16.55 6 16V15H18V16C18 16.55 18.45 17 19 17H20C20.55 17 21 16.55 21 16V8L18.92 2M6.5 12C5.67 12 5 11.33 5 10.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12M17.5 12C16.67 12 16 11.33 16 10.5S16.67 9 17.5 9 19 9.67 19 10.5 18.33 12 17.5 12M5 7L6.5 2.5H17.5L19 7H5M7 20H11V18L17 21H13V23L7 20Z", "shield-check": "M10,17L6,13L7.41,11.59L10,14.17L16.59,7.58L18,9M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1Z", "home": "M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z", "thermometer": "M15 13V5A3 3 0 0 0 9 5V13A5 5 0 1 0 15 13M12 4A1 1 0 0 1 13 5V8H11V5A1 1 0 0 1 12 4Z", "calendar-clock": "M15,13H16.5V15.82L18.94,17.23L18.19,18.53L15,16.69V13M19,8H5V19H9.67C9.24,18.09 9,17.07 9,16A7,7 0 0,1 16,9C17.07,9 18.09,9.24 19,9.67V8M5,21C3.89,21 3,20.1 3,19V5C3,3.89 3.89,3 5,3H6V1H8V3H16V1H18V3H19A2,2 0 0,1 21,5V11.1C22.24,12.36 23,14.09 23,16A7,7 0 0,1 16,23C14.09,23 12.36,22.24 11.1,21H5M16,11.15A4.85,4.85 0 0,0 11.15,16C11.15,18.68 13.32,20.85 16,20.85A4.85,4.85 0 0,0 20.85,16C20.85,13.32 18.68,11.15 16,11.15Z"};
+  var TAU = Math.PI * 2;
+  var REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function wave(p) { return (Math.cos(p * TAU) + 1) / 2; }
+  function U(n) { return 'calc(var(--u) * ' + n + ')'; }
+  function P(x, y) { return 'left:' + U(x) + ';top:' + U(y); }
+  function ico(name, size, color, extra) {
+    return '<span class="ic" style="width:' + U(size) + ';height:' + U(size) + (extra ? ';' + extra : '') + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="' + (color || '#fff') + '" d="' + (ICONS[name] || '') + '"/></svg></span>';
+  }
+  function T(x, y, size, weight, color, text, extra) {
+    return '<div class="c" style="' + P(x, y) + ';font-size:' + U(size) + ';font-weight:' + weight + ';color:' + color + (extra ? ';' + extra : '') + '">' + text + '</div>';
+  }
+  /* Clive's mark, low on the glass. Same drawing as the apps (core/.../AssistantMark.kt), idle pose only. */
+  function mark(opacity, size) {
+    size = size || 30; var box = size * 200 / 104;
+    return '<div class="mk" data-mark style="' + P(140, 238) + ';width:' + U(box) + ';height:' + U(box) + ';opacity:' + (opacity == null ? 0.9 : opacity) + '"><svg viewBox="0 0 200 200" aria-hidden="true"><path fill="#fff" fill-rule="evenodd" d=""/></svg></div>';
+  }
+  function rr(l, t, r, b, rad) {
+    rad = Math.max(0, Math.min(rad, (r - l) / 2, (b - t) / 2));
+    return 'M' + (l + rad) + ',' + t + 'H' + (r - rad) + 'A' + rad + ',' + rad + ' 0 0 1 ' + r + ',' + (t + rad) + 'V' + (b - rad) + 'A' + rad + ',' + rad + ' 0 0 1 ' + (r - rad) + ',' + b + 'H' + (l + rad) + 'A' + rad + ',' + rad + ' 0 0 1 ' + l + ',' + (b - rad) + 'V' + (t + rad) + 'A' + rad + ',' + rad + ' 0 0 1 ' + (l + rad) + ',' + t + 'Z';
+  }
+  function markPath(phase) {
+    var together = 1 - 0.55 * (1 - wave(phase)), s = 11.3 * together, h = 38, rad = 30;
+    return rr(100 - s - h, 100 + s - h, 100 - s + h, 100 + s + h, rad) + rr(100 + s - h, 100 - s - h, 100 + s + h, 100 - s + h, rad);
+  }
+  /* A ring of progress round the edge, as an SVG arc. */
+  function arc(r, width, frac, color, track, dataKey) {
+    var C = 2 * Math.PI * r;
+    return '<svg class="ring" viewBox="0 0 280 280" aria-hidden="true" style="position:absolute;inset:0"><circle cx="140" cy="140" r="' + r + '" fill="none" stroke="' + track + '" stroke-width="' + width + '"/>' +
+      '<circle cx="140" cy="140" r="' + r + '" fill="none" stroke="' + color + '" stroke-width="' + width + '" stroke-linecap="round" stroke-dasharray="' + (C * frac) + ' ' + C + '" transform="rotate(-90 140 140)" data-arc="' + (dataKey || '') + '" data-c="' + C + '"/></svg>';
+  }
+
+  var HM = '<span data-hm>14:35</span>', DATE_LONG = '<span data-date>Saturday 31 October</span>', DATE_SHORT = '<span data-dates>Sat 31 Oct</span>';
+  var SOFT = 'var(--g-soft)', DIM = 'var(--g-dim)', FAINT = 'var(--g-faint)';
+
+  var L = [
+    { id: 'A', name: 'Big thin clock', from: 'Echo Spot (2024)', what: 'The clock is the whole screen: very large, very thin numerals, with the weather as one small line above. The least that can be lit.',
+      html: function () {
+        return '<div class="row" style="' + P(140, 66) + ';gap:' + U(6) + '">' + ico('weather-cloudy', 16, '#9FB4C7') + '<span style="font-size:' + U(14) + ';color:#9FB4C7;font-weight:400">12°</span></div>' +
+          T(140, 124, 76, 100, '#fff', HM, 'letter-spacing:' + U(-2)) + T(140, 178, 12, 400, DIM, DATE_LONG) + mark(0.9); } },
+    { id: 'B', name: 'Weather and time', from: 'Echo Spot (2017), the round TFT sample', what: 'Weather first: a symbol and temperature across the top, the time in the middle, the date under it. More to read at a glance, a little more lit.',
+      html: function () {
+        return '<div class="row" style="' + P(140, 52) + ';gap:' + U(8) + '">' + ico('weather-cloudy', 30, '#C9D3E0') + '<span style="font-size:' + U(34) + ';font-weight:300">12°</span></div>' +
+          T(140, 82, 9, 500, DIM, 'CLOUDY', 'letter-spacing:' + U(1.6)) + T(140, 128, 54, 300, '#fff', HM) + T(140, 170, 13, 400, SOFT, DATE_SHORT) + mark(0.9); } },
+    { id: 'C', name: 'Ring clock', from: 'Round watch faces', what: 'A thin ring round the edge fills as the minute goes by, and a second, fainter ring fills with the hour. The time sits quietly inside.',
+      html: function () {
+        return arc(134, 2, 0.4, 'rgba(255,255,255,.85)', 'rgba(255,255,255,.10)', 'sec') + arc(125, 1.4, 0.58, '#7C8CE0', 'rgba(255,255,255,.06)', 'hour') +
+          T(140, 116, 52, 300, '#fff', HM) + T(140, 158, 12, 400, DIM, DATE_LONG) + mark(0.9); } },
+    { id: 'D', name: 'Stacked digits', from: 'The SquareLine watch face', what: 'Hours over minutes, huge and stacked, filling the circle the way a watch face does. The date is one small line.',
+      html: function () {
+        return T(140, 76, 78, 300, '#fff', '<span data-h>14</span>') + T(140, 142, 78, 300, '#9FA8DA', '<span data-m>35</span>') + T(140, 188, 11, 400, DIM, DATE_SHORT, 'letter-spacing:' + U(1)) + mark(0.9); } },
+    { id: 'E', name: 'Three glances', from: 'Watch complications', what: 'The time and date, then three things the house can tell you at a glance: who is home, what electricity costs now, and the car. Each one an icon and a figure.',
+      html: function () {
+        function cmp(x, icon, col, big, small) { return '<div class="cmp" style="' + P(x, 168) + '">' + ico(icon, 18, col) + '<span style="font-size:' + U(14) + ';font-weight:500;line-height:1">' + big + '</span><span style="font-size:' + U(9) + ';color:' + DIM + ';line-height:1">' + small + '</span></div>'; }
+        return T(140, 70, 44, 300, '#fff', HM) + T(140, 104, 11, 400, DIM, DATE_SHORT) +
+          cmp(90, 'account-multiple', '#81C995', '2 of 4', 'home') + cmp(140, 'lightning-bolt', '#FDD663', '24p', 'per kWh') + cmp(190, 'car-electric', '#8AB4F8', '80%', 'car') + mark(0.85); } },
+    { id: 'F', name: 'Weather-led', from: 'The round TFT sample', what: 'The temperature is the big thing, with the symbol, the conditions and today’s high and low. The time drops to a small line. For a screen people read the weather from first.',
+      html: function () {
+        return '<div class="row" style="' + P(140, 78) + ';gap:' + U(10) + '">' + ico('weather-cloudy', 42, '#C9D3E0') + '<span style="font-size:' + U(70) + ';font-weight:300;letter-spacing:' + U(-2) + '">12°</span></div>' +
+          T(140, 122, 13, 500, SOFT, 'Cloudy') + T(140, 142, 11, 400, DIM, 'H 14° · L 8°') + T(140, 180, 22, 300, '#fff', HM) + mark(0.9); } },
+    { id: 'G', name: 'Three days', from: 'The round TFT sample', what: 'Time at the top, then the next three days in a row of symbols and temperatures, like the weather band on the sample screen.',
+      html: function () {
+        function day(x, d, icon, col, hi, lo) { return '<div class="cmp" style="' + P(x, 148) + '"><span style="font-size:' + U(9) + ';color:' + DIM + ';letter-spacing:' + U(1) + ';line-height:1">' + d + '</span>' + ico(icon, 22, col) + '<span style="font-size:' + U(12) + ';font-weight:500;line-height:1">' + hi + '°</span><span style="font-size:' + U(10) + ';color:' + DIM + ';line-height:1">' + lo + '°</span></div>'; }
+        return T(140, 64, 40, 300, '#fff', HM) + T(140, 94, 11, 400, DIM, DATE_SHORT) +
+          day(92, 'SUN', 'weather-rainy', '#78909C', 11, 7) + day(140, 'MON', 'weather-partly-cloudy', '#FFB547', 13, 6) + day(188, 'TUE', 'weather-sunny', '#FFB547', 15, 7) + mark(0.85); } },
+    { id: 'H', name: 'Night', from: 'Echo Spot alarm clock', what: 'For overnight: one dim line of numerals, no date, and the mark nearly out. Almost nothing lit. This is the layout to switch to when the room is dark.',
+      html: function () { return T(140, 120, 40, 300, '#6B7390', HM) + mark(0.3, 26); } }
+  ];
+
+  var grid = document.getElementById('grid'), screens = [];
+  L.forEach(function (l) {
+    var c = document.createElement('div'); c.className = 'card';
+    c.innerHTML = '<div class="bezel"><div class="screen" role="img" aria-label="' + l.name + ' layout">' + l.html() + '</div></div><h2><span>' + l.id + '</span>' + l.name + '</h2><p>' + l.what + '</p><p class="from">Takes from: ' + l.from + '</p>';
+    grid.appendChild(c); screens.push(c);
+  });
+
+  document.getElementById('bl').addEventListener('input', function (e) {
+    var v = +e.target.value; document.documentElement.style.setProperty('--bl', v / 100); document.getElementById('blo').textContent = v + '%';
+  });
+
+  function clock() {
+    var t = new Date(), hh = ('0' + t.getHours()).slice(-2), mm = ('0' + t.getMinutes()).slice(-2), sec = t.getSeconds() + t.getMilliseconds() / 1000;
+    var long = t.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }), short = t.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/,/g, '');
+    document.querySelectorAll('[data-hm]').forEach(function (e) { e.textContent = hh + ':' + mm; });
+    document.querySelectorAll('[data-h]').forEach(function (e) { e.textContent = hh; });
+    document.querySelectorAll('[data-m]').forEach(function (e) { e.textContent = mm; });
+    document.querySelectorAll('[data-date]').forEach(function (e) { e.textContent = long; });
+    document.querySelectorAll('[data-dates]').forEach(function (e) { e.textContent = short; });
+    document.querySelectorAll('[data-arc="sec"]').forEach(function (e) { var C = +e.dataset.c; e.setAttribute('stroke-dasharray', (C * sec / 60) + ' ' + C); });
+    document.querySelectorAll('[data-arc="hour"]').forEach(function (e) { var C = +e.dataset.c; e.setAttribute('stroke-dasharray', (C * (((t.getHours() % 12) * 60 + t.getMinutes()) / 720)) + ' ' + C); });
+  }
+  function loop(ts) {
+    var phase = REDUCED ? 0 : (ts / 1000 / 4) % 1, d = markPath(phase);
+    document.querySelectorAll('[data-mark] path').forEach(function (p) { p.setAttribute('d', d); });
+    clock(); requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>

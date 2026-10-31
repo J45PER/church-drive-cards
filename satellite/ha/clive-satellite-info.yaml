@@ -1,0 +1,58 @@
+# Automation: keeps the round satellite's resting screen up to date.
+#
+# The satellite shows the outside temperature (always the weather feed's), the inside one, today's high and low, and three
+# glances. Home Assistant works the figures out and pushes them with the device's `update_info` action (see
+# satellite/clive-round.yaml). Entity ids are this house's; the action is named after the ESPHome node (`name: clive-round`).
+#
+# Glances not on screen cost nothing: the satellite shows whichever three the app chose and ignores the rest.
+alias: Clive satellite - info
+description: Pushes the weather, who is home, the electricity rate, the car, the alarm and the heating to the round satellite.
+mode: restart
+triggers:
+  - trigger: state
+    entity_id:
+      - weather.forecast_home
+      - person.diane
+      - person.hayley
+      - person.ian
+      - person.jamie
+      - sensor.octopus_energy_electricity_24l3478610_1160001231179_current_rate
+      - sensor.amz_2927_vauxhall_astra_battery
+      - alarm_control_panel.church_drive_alarm
+      - climate.downstairs
+      - climate.upstairs
+  - trigger: time_pattern
+    minutes: "/10"
+  - trigger: homeassistant
+    event: start
+  # The satellite just came back online (the Wi-Fi signal sensor has a state again).
+  - trigger: state
+    entity_id: sensor.clive_round_screen_wi_fi_signal
+    from: unavailable
+actions:
+  - action: weather.get_forecasts
+    continue_on_error: true
+    data:
+      type: daily
+    target:
+      entity_id: weather.forecast_home
+    response_variable: fc
+  - variables:
+      day: "{{ (fc['weather.forecast_home'].forecast[0]) if (fc is defined and fc and fc['weather.forecast_home'].forecast) else {} }}"
+      alarm: "{{ states('alarm_control_panel.church_drive_alarm') }}"
+      heating: "{{ [states.climate.downstairs, states.climate.upstairs] | selectattr('state', 'eq', 'heat') | list }}"
+  - action: esphome.clive_round_update_info
+    data:
+      outside: "{{ state_attr('weather.forecast_home', 'temperature') | float(0) | round(0) | int }}°"
+      cond: "{{ states('weather.forecast_home') }}"
+      high: "{{ day.temperature | float(0) | round(0) | int if day else '–' }}°"
+      low: "{{ day.templow | float(0) | round(0) | int if (day and day.templow is defined) else '–' }}°"
+      inside: "{{ state_attr('climate.downstairs', 'current_temperature') | float(0) | round(0) | int }}°"
+      g_home: "{{ states.person | selectattr('state', 'eq', 'home') | list | count }} of {{ states.person | list | count }}"
+      g_energy: "{{ (states('sensor.octopus_energy_electricity_24l3478610_1160001231179_current_rate') | float(0) * 100) | round(0) | int }}p"
+      g_car: "{{ states('sensor.amz_2927_vauxhall_astra_battery') | int(0) }}%"
+      g_alarm: >-
+        {{ {'disarmed': 'Off', 'armed_home': 'Home', 'armed_away': 'Away', 'armed_night': 'Night', 'arming': 'Setting', 'pending': 'Entry', 'triggered': 'ALERT'}.get(alarm, alarm | title) }}
+      g_heat: >-
+        {{ (state_attr('climate.downstairs', 'current_temperature') | float(0) | round(0) | int ~ '°') if heating else 'Off' }}
+      g_air: "–"

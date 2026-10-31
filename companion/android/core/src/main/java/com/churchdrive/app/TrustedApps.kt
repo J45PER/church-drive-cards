@@ -17,7 +17,7 @@ object HouseAddress {
  * ones Play uses are in Play Console under App integrity.
  */
 object TrustedApps {
-    val PACKAGES = setOf("com.churchdrive.manager", "com.churchdrive.todo")
+    val PACKAGES = setOf("com.churchdrive.manager", "com.churchdrive.todo", "com.churchdrive.satellites")
 
     /** SHA-256 fingerprints (hex, any case, colons optional) of the signing certificates Play uses for the apps above. Add each app's. */
     val CERTS: Set<String> = setOf(

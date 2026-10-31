@@ -1,9 +1,9 @@
 name: Release
 
 # Publishes a GitHub release (tag vX.Y.Z) whenever main carries a package.json
-# version that hasn't been released yet. To release: bump "version" in
-# package.json, run `npm run build` (it syncs the integration manifest) and
-# merge. HACS offers each release of the Church Drive integration as an update
+# version that hasn't been released yet. To release: run
+# `node tools/versions.mjs set <x.y.z>` (it sets every app's version too and
+# rebuilds, so the manifest follows) and merge. See docs/VERSIONING.md. HACS offers each release of the Church Drive integration as an update
 # in Home Assistant; the cards bundle ships inside custom_components/.
 
 on:

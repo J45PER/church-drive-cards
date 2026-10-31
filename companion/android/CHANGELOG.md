@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.80.0
+
+- One version number for every Church Drive app and the Home Assistant integration from here (`node tools/versions.mjs`, docs/VERSIONING.md). The phone app and the watch app move from 0.54.4 to 0.80.0 with no other change.
+- `core` now lets the new Church Drive Satellites app take this app's sign-in, like To-Do does.
+
 ## 0.54.5
 
 - The assistant takes the heating off Eco by himself when somebody comes home (the Clive log said he would ask).
