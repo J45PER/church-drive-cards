@@ -43,8 +43,9 @@
     data:
       zone: '{{ trigger.id }}'
 - alias: 'Clive: offer to take over the heating when the alarm is disarmed'
-  description: When the alarm goes from away to disarmed, or somebody comes home to an empty house, and Clive had put a zone's heating on Eco because nobody was home, he asks (a push notification with a Resume Clive button) whether to take it off Eco and take over again. He never turns the heating on or off by himself; Resume Clive does it, because a person asked. Armed home changes nothing.
-  mode: single
+  description: When somebody comes home (or the alarm goes from away to disarmed) and Clive had put a heating zone on Eco because nobody was home, he takes it straight off Eco, back to the target it had, and tells people. Only Eco is undone, and turning the heating on or off stays a person's job. If the alarm is still set to away the resume is refused and nothing changes until it is disarmed.
+  mode: queued
+  max: 4
   triggers:
   - trigger: state
     entity_id: alarm_control_panel.church_drive_alarm
@@ -61,13 +62,22 @@
   - condition: template
     value_template: >-
       {%- set ns = namespace(n=0) -%}
-      {%- for zn in ['downstairs', 'upstairs'] -%}{%- set e = states('input_text.clive_climate_' ~ zn ~ '_expect') -%}{%- set j = (e | from_json(default={})) if e not in ['', 'unknown', 'unavailable'] else {} -%}{%- if j.away is defined and j.away and (is_state('climate.' ~ zn, 'off') or state_attr('climate.' ~ zn, 'preset_mode') == 'eco') -%}{%- set ns.n = ns.n + 1 -%}{%- endif -%}{%- endfor -%}
+      {%- for zn in ['downstairs', 'upstairs'] -%}{%- set e = states('input_text.clive_climate_' ~ zn ~ '_expect') -%}{%- set j = (e | from_json(default={})) if e not in ['', 'unknown', 'unavailable'] else {} -%}{%- if j.away is defined and j.away and is_state('climate.' ~ zn, 'heat') and state_attr('climate.' ~ zn, 'preset_mode') == 'eco' -%}{%- set ns.n = ns.n + 1 -%}{%- endif -%}{%- endfor -%}
       {{ ns.n > 0 }}
   actions:
-  - action: church_drive.notify
+  - action: script.clive_climate_control
     data:
-      kind: clive_actions
-      title: 🌡️ Welcome home
-      message: Clive put the heating on Eco while nobody was home. Shall he take it off Eco and look after it again?
-      tag: church-drive-clive-paused-welcome
-      link: /dashboard-mobile/climate
+      command: resume
+      zone: all
+    response_variable: r
+  - if:
+    - condition: template
+      value_template: "{{ r is mapping and r.status == 'resumed' and (r.turned_back_on | length) > 0 }}"
+    then:
+    - action: church_drive.notify
+      data:
+        kind: clive_actions
+        title: 🌡️ Welcome home
+        message: Clive took the heating off Eco and is looking after it again.
+        tag: church-drive-clive-home
+        link: /dashboard-mobile/climate

@@ -85,7 +85,7 @@ sequence:
 - variables:
     held_off: >-
       {%- set ns = namespace(l=[]) -%}
-      {%- for zn in zl -%}{%- set e = states(cfg[zn].expect) -%}{%- set j = (e | from_json(default={})) if e not in ['', 'unknown', 'unavailable'] else {} -%}{%- if j.away is defined and j.away and (is_state(cfg[zn].entity, 'off') or state_attr(cfg[zn].entity, 'preset_mode') == 'eco') -%}{%- set ns.l = ns.l + [zn] -%}{%- endif -%}{%- endfor -%}
+      {%- for zn in zl -%}{%- set e = states(cfg[zn].expect) -%}{%- set j = (e | from_json(default={})) if e not in ['', 'unknown', 'unavailable'] else {} -%}{%- if j.away is defined and j.away and (is_state(cfg[zn].entity, 'heat') and state_attr(cfg[zn].entity, 'preset_mode') == 'eco') -%}{%- set ns.l = ns.l + [zn] -%}{%- endif -%}{%- endfor -%}
       {{- ns.l -}}
 - choose:
   - conditions:
@@ -140,18 +140,30 @@ sequence:
         - variables:
             j: '{{ states(c.expect) | from_json(default={}) }}'
         - variables:
-            back_to: '{{ j.prev if j.prev is defined and j.prev is number else ((states(c.low) | float(18)) + (states(c.high) | float(21))) / 2 }}'
-        - action: climate.set_hvac_mode
-          target:
-            entity_id: '{{ c.entity }}'
-          data:
-            hvac_mode: heat
-        - action: climate.set_preset_mode
-          target:
-            entity_id: '{{ c.entity }}'
-          data:
-            preset_mode: none
+            back_to: '{{ j.prev if j.prev is defined and j.prev is number and j.prev >= (states(c.low) | float(18)) - 1.5 else ((states(c.low) | float(18)) + (states(c.high) | float(21))) / 2 }}'
+        # The Nest refuses "eco off" when eco is already off, so each step only runs when it is needed and none of them stops the rest.
+        - if:
+          - condition: template
+            value_template: "{{ not is_state(c.entity, 'heat') }}"
+          then:
+          - action: climate.set_hvac_mode
+            continue_on_error: true
+            target:
+              entity_id: '{{ c.entity }}'
+            data:
+              hvac_mode: heat
+        - if:
+          - condition: template
+            value_template: "{{ state_attr(c.entity, 'preset_mode') not in ['none', None] }}"
+          then:
+          - action: climate.set_preset_mode
+            continue_on_error: true
+            target:
+              entity_id: '{{ c.entity }}'
+            data:
+              preset_mode: none
         - action: climate.set_temperature
+          continue_on_error: true
           target:
             entity_id: '{{ c.entity }}'
           data:
@@ -253,17 +265,28 @@ sequence:
             - condition: template
               value_template: '{{ command == ''turn_on'' }}'
             then:
-            - action: climate.set_hvac_mode
-              target:
-                entity_id: '{{ c.entity }}'
-              data:
-                hvac_mode: heat
-            - action: climate.set_preset_mode
-              target:
-                entity_id: '{{ c.entity }}'
-              data:
-                preset_mode: none
+            - if:
+              - condition: template
+                value_template: "{{ not is_state(c.entity, 'heat') }}"
+              then:
+              - action: climate.set_hvac_mode
+                continue_on_error: true
+                target:
+                  entity_id: '{{ c.entity }}'
+                data:
+                  hvac_mode: heat
+            - if:
+              - condition: template
+                value_template: "{{ state_attr(c.entity, 'preset_mode') not in ['none', None] }}"
+              then:
+              - action: climate.set_preset_mode
+                continue_on_error: true
+                target:
+                  entity_id: '{{ c.entity }}'
+                data:
+                  preset_mode: none
           - action: climate.set_temperature
+            continue_on_error: true
             target:
               entity_id: '{{ c.entity }}'
             data:
