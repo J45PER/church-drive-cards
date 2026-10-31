@@ -33,6 +33,7 @@ import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.roundToInt
 
 // The assistant looks after each thermostat on its own (Home Assistant: the "Clive: keep the climate comfortable" automation and its scripts). Each
 // thermostat has its own switch (Controlled by him, or Manual), its comfortable range (two numbers), and the time he is paused until after somebody changes
@@ -47,12 +48,15 @@ class ZoneControl(
     val high: EntityState?,
     val resume: EntityState?,
     val note: EntityState?,
+    /** How long the assistant leaves a thermostat alone after somebody changes it (one number for the whole house), or null when the house has none. */
+    val pause: EntityState? = null,
 ) {
     /** "downstairs" for climate.downstairs. */
     val zone: String get() = climateId.removePrefix("climate.")
     val controlled: Boolean get() = auto.state == "on"
     val lowValue: Double? get() = low?.state?.toDoubleOrNull()
     val highValue: Double? get() = high?.state?.toDoubleOrNull()
+    val pauseMinutes: Double? get() = pause?.state?.toDoubleOrNull()
 
     /** When the pause ends (epoch milliseconds), or null when he is not paused at [nowMs]. A time in the past, or the year 2000 ("no pause"), is none. */
     fun pausedUntilMs(nowMs: Long): Long? =
@@ -69,8 +73,27 @@ fun zoneControl(entities: Map<String, EntityState>, climateId: String): ZoneCont
         entities["input_number.clive_climate_${zone}_high"]?.takeIf { it.available },
         entities["input_datetime.clive_climate_${zone}_resume"],
         entities["input_text.clive_climate_${zone}_note"]?.takeIf { it.available && it.state.isNotBlank() },
+        entities[PAUSE_MINUTES_ENTITY]?.takeIf { it.available },
     )
 }
+
+/** The number holding how long (in minutes) the assistant leaves a thermostat alone after somebody changes it. */
+const val PAUSE_MINUTES_ENTITY = "input_number.clive_climate_pause_minutes"
+
+/** 30 as "30 min", 60 as "1 h", 90 as "1 h 30 min". */
+fun pauseText(minutes: Double?): String {
+    if (minutes == null) return "–"
+    val m = minutes.roundToInt()
+    return when {
+        m < 60 -> "$m min"
+        m % 60 == 0 -> "${m / 60} h"
+        else -> "${m / 60} h ${m % 60} min"
+    }
+}
+
+/** The pause after one press of plus ([direction] 1) or minus (-1): a step at a time, kept between the helper's own limits. */
+fun stepPause(current: Double, direction: Int, min: Double = 15.0, max: Double = 720.0, step: Double = 15.0): Double =
+    (current + direction * step).coerceIn(min, max)
 
 private fun clock(ms: Long): String = HomeTime.format(ms, "HH:mm")
 
@@ -97,15 +120,21 @@ fun ZoneStatusLine(zone: ZoneControl, tone: ToneColors, onClick: () -> Unit) {
     }
 }
 
+/** A setting with a minus and a plus either side of its value. */
+@Composable
+internal fun StepRow(label: String, shown: String, tone: ToneColors, enabled: Boolean, valueWidth: androidx.compose.ui.unit.Dp = 56.dp, onMinus: () -> Unit, onPlus: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        StepButton(Icons.Filled.Remove, "Lower $label", tone, enabled, onMinus)
+        Text(shown, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center, modifier = Modifier.width(valueWidth))
+        StepButton(Icons.Filled.Add, "Raise $label", tone, enabled, onPlus)
+    }
+}
+
 /** One end of the comfortable range: its value between a minus and a plus, half a degree at a time. */
 @Composable
 internal fun RangeRow(label: String, value: Double?, tone: ToneColors, onChange: (Double) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        StepButton(Icons.Filled.Remove, "Lower $label", tone, value != null) { value?.let { onChange(it - 0.5) } }
-        Text("${temp(value)}°", style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center, modifier = Modifier.width(56.dp))
-        StepButton(Icons.Filled.Add, "Raise $label", tone, value != null) { value?.let { onChange(it + 0.5) } }
-    }
+    StepRow(label, "${temp(value)}°", tone, value != null, onMinus = { value?.let { onChange(it - 0.5) } }, onPlus = { value?.let { onChange(it + 0.5) } })
 }
 
 /**
@@ -146,6 +175,19 @@ fun ThermostatSheet(title: String, zone: ZoneControl, tone: ToneColors, call: Ca
             if (lo != null && hi != null) {
                 RangeRow("Comfortable from", lo, tone) { v -> zone.low?.let { call("input_number", "set_value", it.entityId, data("value" to minOf(v, hi - 1.0))) } }
                 RangeRow("Comfortable up to", hi, tone) { v -> zone.high?.let { call("input_number", "set_value", it.entityId, data("value" to maxOf(v, lo + 1.0))) } }
+            }
+            zone.pause?.let { helper ->
+                val minutes = zone.pauseMinutes
+                val lowest = helper.num("min") ?: 15.0
+                val highest = helper.num("max") ?: 720.0
+                val step = helper.num("step") ?: 15.0
+                StepRow("Pause after a change", pauseText(minutes), tone, minutes != null, valueWidth = 84.dp,
+                    onMinus = { minutes?.let { call("input_number", "set_value", helper.entityId, data("value" to stepPause(it, -1, lowest, highest, step))) } },
+                    onPlus = { minutes?.let { call("input_number", "set_value", helper.entityId, data("value" to stepPause(it, 1, lowest, highest, step))) } })
+                Text(
+                    "How long $name leaves a thermostat alone after somebody changes it at the dial, in the Nest app or here. Both thermostats use it.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             zone.pausedUntilMs(now)?.let { until ->
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
