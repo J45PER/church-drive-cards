@@ -24,6 +24,7 @@ import kotlinx.coroutines.withContext
 class SatelliteModel(app: Application) : AndroidViewModel(app) {
     private val session = Session(app)
     private val client = HaClient(viewModelScope)
+    private val settings = SatelliteSettings(app)
 
     var signedIn by mutableStateOf(session.signedIn)
         private set
@@ -50,11 +51,24 @@ class SatelliteModel(app: Application) : AndroidViewModel(app) {
         private set
 
     /** The slug of the satellite whose page is open, or null for the list. */
-    var openSlug by mutableStateOf<String?>(null)
+    var openSlug by mutableStateOf<String?>(if (settings.rememberSatellite) settings.lastSatellite else null)
     var previewState by mutableStateOf(PreviewState.Resting)
     /** A design tapped but not yet confirmed by the house, so the preview follows the finger at once. */
     var pendingDesign by mutableStateOf<SatDesign?>(null)
         private set
+
+    /** Settings > Open on the satellite I left. */
+    var rememberSatellite by mutableStateOf(settings.rememberSatellite)
+        private set
+
+    fun changeRememberSatellite(on: Boolean) {
+        rememberSatellite = on
+        settings.rememberSatellite = on
+        settings.lastSatellite = if (on) openSlug else null
+    }
+
+    /** Called as pages change, so the last one looked at can be reopened. */
+    fun noteOpen(slug: String?) { if (rememberSatellite) settings.lastSatellite = slug }
 
     val open: Satellite? get() = satellites.firstOrNull { it.slug == openSlug }
 

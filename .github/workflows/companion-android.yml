@@ -143,23 +143,20 @@ jobs:
           # The app looks for updates through the public releases API, which cannot see a draft: make sure this one is published.
           gh release edit companion-android-latest --draft=false --prerelease
           gh release view companion-android-latest --json isDraft,isPrerelease,tagName
-          # Each version keeps its own release, made the first time a build has that version: a permanent record of what shipped.
-          if ! gh release view "android-v${version}" >/dev/null 2>&1; then
+          # One release per version for everything, `v<version>` (release.yml makes it for the Home Assistant integration): this app's files are
+          # added to it, once, the first time a build has that version (a permanent record of what shipped). The files carry the version and
+          # build number, so a download or a Play upload says which build it is (the "latest" release keeps the plain names).
+          for f in church-drive.apk church-drive-wear.apk church-drive-manager.aab church-drive-manager-wear.aab; do
+            cp "$f" "${f%.*}-${version}-b${GITHUB_RUN_NUMBER}.${f##*.}"
+          done
+          new=$(tools/publish-release-assets.sh "$version" "church-drive-manager-${version}-" \
+            "church-drive-${version}-b${GITHUB_RUN_NUMBER}.apk" "church-drive-wear-${version}-b${GITHUB_RUN_NUMBER}.apk" \
+            "church-drive-manager-${version}-b${GITHUB_RUN_NUMBER}.aab" "church-drive-manager-wear-${version}-b${GITHUB_RUN_NUMBER}.aab")
+          if [ "$new" = "new=true" ]; then
             notes=$(awk -v v="$version" '$0 ~ "^## "v"( |$)" {on=1; next} /^## / {on=0} on' companion/android/CHANGELOG.md)
-            # The files of a version's own release carry the version and build number, so a download or a Play upload says which build it is
-            # (the "latest" release keeps the plain names: the app's update check downloads church-drive.apk from there).
-            for f in church-drive.apk church-drive-wear.apk church-drive-manager.aab church-drive-manager-wear.aab; do
-              cp "$f" "${f%.*}-${version}-b${GITHUB_RUN_NUMBER}.${f##*.}"
-            done
             echo "new=true" >> "$GITHUB_OUTPUT"
             mkdir -p play-notes-main
             printf '%s' "${notes:-Version ${version}.}" | sed 's/^- //' | head -c 480 > play-notes-main/whatsnew-en-GB
-            gh release create "android-v${version}" \
-              "church-drive-${version}-b${GITHUB_RUN_NUMBER}.apk" "church-drive-wear-${version}-b${GITHUB_RUN_NUMBER}.apk" \
-              "church-drive-manager-${version}-b${GITHUB_RUN_NUMBER}.aab" "church-drive-manager-wear-${version}-b${GITHUB_RUN_NUMBER}.aab" \
-              --target "$GITHUB_SHA" \
-              --title "Church Drive Android ${version}" \
-              --notes "${notes:-Version ${version}.} (Build ${GITHUB_RUN_NUMBER}, commit ${GITHUB_SHA::7}.)"
           fi
       - name: Publish Church Drive To-Do
         id: publish_todo
@@ -177,18 +174,19 @@ jobs:
             --title "Church Drive To-Do ${version} (test build ${GITHUB_RUN_NUMBER})" \
             --notes "Latest test build of Church Drive To-Do, version ${version}, build ${GITHUB_RUN_NUMBER}, from the ${GITHUB_REF_NAME} branch (commit ${GITHUB_SHA::7}). Download church-drive-todo.apk on an Android phone and install it."
           gh release edit todo-latest --draft=false --prerelease --latest=false
-          if ! gh release view "todo-v${version}" >/dev/null 2>&1; then
+          # One release per version for everything, `v<version>` (release.yml makes it for the Home Assistant integration): this app's files are
+          # added to it, once, the first time a build has that version (a permanent record of what shipped). The files carry the version and
+          # build number, so a download or a Play upload says which build it is (the "latest" release keeps the plain names).
+          for f in church-drive-todo.apk church-drive-todo.aab; do
+            cp "$f" "${f%.*}-${version}-b${GITHUB_RUN_NUMBER}.${f##*.}"
+          done
+          new=$(tools/publish-release-assets.sh "$version" "church-drive-todo-${version}-" \
+            "church-drive-todo-${version}-b${GITHUB_RUN_NUMBER}.apk" "church-drive-todo-${version}-b${GITHUB_RUN_NUMBER}.aab")
+          if [ "$new" = "new=true" ]; then
             notes=$(awk -v v="$version" '$0 ~ "^## "v"( |$)" {on=1; next} /^## / {on=0} on' companion/android/todo/CHANGELOG.md)
-            for f in church-drive-todo.apk church-drive-todo.aab; do
-              cp "$f" "${f%.*}-${version}-b${GITHUB_RUN_NUMBER}.${f##*.}"
-            done
             echo "new=true" >> "$GITHUB_OUTPUT"
             mkdir -p play-notes-todo
             printf '%s' "${notes:-Version ${version}.}" | sed 's/^- //' | head -c 480 > play-notes-todo/whatsnew-en-GB
-            gh release create "todo-v${version}" "church-drive-todo-${version}-b${GITHUB_RUN_NUMBER}.apk" "church-drive-todo-${version}-b${GITHUB_RUN_NUMBER}.aab" --latest=false \
-              --target "$GITHUB_SHA" \
-              --title "Church Drive To-Do ${version}" \
-              --notes "${notes:-Version ${version}.} (Build ${GITHUB_RUN_NUMBER}, commit ${GITHUB_SHA::7}.)"
           fi
       - name: Publish Church Drive Satellites
         id: publish_satellites
@@ -206,18 +204,19 @@ jobs:
             --title "Church Drive Satellites ${version} (test build ${GITHUB_RUN_NUMBER})" \
             --notes "Latest test build of Church Drive Satellites, version ${version}, build ${GITHUB_RUN_NUMBER}, from the ${GITHUB_REF_NAME} branch (commit ${GITHUB_SHA::7}). Download church-drive-satellites.apk on an Android phone and install it."
           gh release edit satellites-latest --draft=false --prerelease --latest=false
-          if ! gh release view "satellites-v${version}" >/dev/null 2>&1; then
+          # One release per version for everything, `v<version>` (release.yml makes it for the Home Assistant integration): this app's files are
+          # added to it, once, the first time a build has that version (a permanent record of what shipped). The files carry the version and
+          # build number, so a download or a Play upload says which build it is (the "latest" release keeps the plain names).
+          for f in church-drive-satellites.apk church-drive-satellites.aab; do
+            cp "$f" "${f%.*}-${version}-b${GITHUB_RUN_NUMBER}.${f##*.}"
+          done
+          new=$(tools/publish-release-assets.sh "$version" "church-drive-satellites-${version}-" \
+            "church-drive-satellites-${version}-b${GITHUB_RUN_NUMBER}.apk" "church-drive-satellites-${version}-b${GITHUB_RUN_NUMBER}.aab")
+          if [ "$new" = "new=true" ]; then
             notes=$(awk -v v="$version" '$0 ~ "^## "v"( |$)" {on=1; next} /^## / {on=0} on' companion/android/satellites/CHANGELOG.md)
-            for f in church-drive-satellites.apk church-drive-satellites.aab; do
-              cp "$f" "${f%.*}-${version}-b${GITHUB_RUN_NUMBER}.${f##*.}"
-            done
             echo "new=true" >> "$GITHUB_OUTPUT"
             mkdir -p play-notes-satellites
             printf '%s' "${notes:-Version ${version}.}" | sed 's/^- //' | head -c 480 > play-notes-satellites/whatsnew-en-GB
-            gh release create "satellites-v${version}" "church-drive-satellites-${version}-b${GITHUB_RUN_NUMBER}.apk" "church-drive-satellites-${version}-b${GITHUB_RUN_NUMBER}.aab" --latest=false \
-              --target "$GITHUB_SHA" \
-              --title "Church Drive Satellites ${version}" \
-              --notes "${notes:-Version ${version}.} (Build ${GITHUB_RUN_NUMBER}, commit ${GITHUB_SHA::7}.)"
           fi
       # Each new version goes to Google Play's internal testing track, once, the first time a build has that version. Promoting it to
       # production stays a button in Play Console. The phone app and the watch app are one listing (one package name, two form factors) but
