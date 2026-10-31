@@ -28,6 +28,20 @@ import androidx.compose.material.icons.filled.Speaker
 import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Monitor
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.RecordVoiceOver
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -174,8 +188,13 @@ fun SatellitesApp(vm: SatelliteModel) {
 private fun ListPage(vm: SatelliteModel, onPerson: () -> Unit) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(vm.notice) {
+        vm.notice?.let { snackbar.showSnackbar(it); vm.notice = null }
+    }
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             MediumTopAppBar(title = { Text(if (tab == 0) "Satellites" else "Add a satellite") }, actions = { PersonButton(vm.personName, onPerson) }, scrollBehavior = scroll)
         },
@@ -187,7 +206,7 @@ private fun ListPage(vm: SatelliteModel, onPerson: () -> Unit) {
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
-            if (tab == 0) SatelliteList(vm) else AddPage()
+            if (tab == 0) SatelliteList(vm) else AddPage(vm)
         }
     }
 }
@@ -202,7 +221,7 @@ private fun SatelliteList(vm: SatelliteModel) {
             EntityCard(null) { ink, soft ->
                 Text(if (vm.connected) "No satellites yet" else "Connecting to the house…", style = MaterialTheme.typography.titleMedium, color = ink)
                 Text(
-                    "A satellite appears here once it has been added to Home Assistant (as an ESPHome device). Each one is found by its Design setting.",
+                    "A satellite appears here once it has been added to Home Assistant. Use the Add tab to pair a new one.",
                     style = MaterialTheme.typography.bodyMedium, color = soft,
                 )
             }
@@ -219,9 +238,13 @@ private fun SatelliteList(vm: SatelliteModel) {
                         }
                         Column(Modifier.weight(1f)) {
                             Text(s.name, style = MaterialTheme.typography.titleMedium, color = ink, maxLines = 1)
-                            Text(s.design?.let { "${it.label} design" } ?: "Round 3.4″ display", style = MaterialTheme.typography.bodySmall, color = soft)
+                            Text(
+                                if (!s.hasScreen) "No screen" else s.design?.let { "${it.label} design" } ?: "Round 3.4″ display",
+                                style = MaterialTheme.typography.bodySmall, color = soft,
+                            )
                         }
-                        if (s.online) Pill("Online", Tone.Green) else Pill("Offline", Tone.Grey)
+                        val warning = s.warning()
+                        if (warning != null) Pill(warning, if (s.online) Tone.Amber else Tone.Red) else Pill("Online", Tone.Green)
                     }
                 }
             }
@@ -230,20 +253,98 @@ private fun SatelliteList(vm: SatelliteModel) {
 }
 
 @Composable
-private fun AddPage() {
+private fun AddPage(vm: SatelliteModel) {
+    val context = LocalContext.current
+    // Bluetooth is needed to send the Wi-Fi: on Android 12 and later its own permissions, before that location.
+    val needed = if (android.os.Build.VERSION.SDK_INT >= 31) arrayOf(android.Manifest.permission.BLUETOOTH_SCAN, android.Manifest.permission.BLUETOOTH_CONNECT)
+    else arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION)
+    var granted by remember { mutableStateOf(needed.all { androidx.core.content.ContextCompat.checkSelfPermission(context, it) == android.content.pm.PackageManager.PERMISSION_GRANTED }) }
+    val askPermission = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()) { result ->
+        granted = result.values.all { it }
+    }
+    var scanError by remember { mutableStateOf<String?>(null) }
+    var typedName by remember { mutableStateOf("") }
+    var typedCode by remember { mutableStateOf("") }
+
+    fun scan() {
+        scanError = null
+        val options = com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions.Builder()
+            .setBarcodeFormats(com.google.mlkit.vision.barcode.common.Barcode.FORMAT_QR_CODE).build()
+        com.google.mlkit.vision.codescanner.GmsBarcodeScanning.getClient(context, options).startScan()
+            .addOnSuccessListener { code ->
+                val parsed = PairCode.parse(code.rawValue)
+                if (parsed == null) scanError = "That isn't a satellite's pairing code." else vm.pairScanned(parsed)
+            }
+            .addOnFailureListener { scanError = "The scanner couldn't start: ${it.message ?: "try again"}." }
+    }
+
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SectionHeader("Add a satellite", Icons.Filled.QrCodeScanner, Tone.Teal)
-        EntityCard(Tone.Teal) { ink, soft ->
-            Text("Scanning is coming", style = MaterialTheme.typography.titleMedium, color = ink)
-            Text(
-                "The plan is to scan the QR code on the satellite's screen or its sticker, send it the home Wi-Fi over Bluetooth, and name it. That is not built yet.",
-                style = MaterialTheme.typography.bodyMedium, color = soft,
-            )
-            Text(
-                "For now: add the device in Home Assistant (Settings > Devices > ESPHome). It shows up on the Satellites tab as soon as it connects.",
-                style = MaterialTheme.typography.bodyMedium, color = soft,
-            )
+        when (val step = vm.pairStep) {
+            is SatelliteModel.PairStep.Idle -> EntityCard(Tone.Teal) { ink, soft ->
+                Text("1. On the satellite, open Settings > Pair or reset. A new one shows the code by itself.", color = ink, style = MaterialTheme.typography.bodyLarge)
+                Text("2. Scan the QR code on its screen (or its sticker, if it has no screen).", color = ink, style = MaterialTheme.typography.bodyLarge)
+                Text("3. Give it the home Wi-Fi. It joins and is added to Home Assistant for you.", color = ink, style = MaterialTheme.typography.bodyLarge)
+                if (!granted) {
+                    Tile("Allow Bluetooth to continue", false, Tone.Teal, ink, Modifier.fillMaxWidth()) { askPermission.launch(needed) }
+                    Text("Bluetooth is how the Wi-Fi is sent to the satellite. Nothing else uses it.", style = MaterialTheme.typography.bodySmall, color = soft)
+                } else {
+                    Tile("Scan the QR code", true, Tone.Teal, ink, Modifier.fillMaxWidth()) { scan() }
+                }
+                scanError?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error) }
+            }
+            is SatelliteModel.PairStep.Scanned -> PairForm(vm, step.code)
+            is SatelliteModel.PairStep.Working -> EntityCard(Tone.Teal) { ink, soft ->
+                androidx.compose.material3.CircularProgressIndicator()
+                Text(step.message, color = ink, style = MaterialTheme.typography.titleMedium)
+                Text("Keep the phone next to the satellite and its code showing. This takes up to a couple of minutes.", style = MaterialTheme.typography.bodySmall, color = soft)
+            }
+            is SatelliteModel.PairStep.Done -> EntityCard(Tone.Green) { ink, soft ->
+                Text("The satellite is added", color = ink, style = MaterialTheme.typography.titleMedium)
+                step.note?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = soft) }
+                if (step.slug != null) Tile("Set it up", true, Tone.Green, ink, Modifier.fillMaxWidth()) { vm.pairReset(); vm.openSlug = step.slug }
+                Tile("Done", false, Tone.Green, ink, Modifier.fillMaxWidth()) { vm.pairReset() }
+            }
+            is SatelliteModel.PairStep.Failed -> EntityCard(Tone.Red) { ink, soft ->
+                Text("That didn't work", color = ink, style = MaterialTheme.typography.titleMedium)
+                Text(step.message, style = MaterialTheme.typography.bodyMedium, color = soft)
+                Tile("Try again", true, Tone.Red, ink, Modifier.fillMaxWidth()) { vm.pairReset() }
+            }
         }
+        if (vm.pairStep is SatelliteModel.PairStep.Idle) {
+            EntityCard(null) { ink, soft ->
+                Text("Can't scan?", color = ink, style = MaterialTheme.typography.titleMedium)
+                Text("Type the name and the six digits shown under the QR code.", style = MaterialTheme.typography.bodySmall, color = soft)
+                OutlinedTextField(typedName, { typedName = it.trim() }, singleLine = true, label = { Text("Name, for example clive-round") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(typedCode, { typedCode = it.filter(Char::isDigit).take(6) }, singleLine = true, label = { Text("Code") }, modifier = Modifier.fillMaxWidth())
+                Tile("Continue", false, Tone.Teal, ink, Modifier.fillMaxWidth()) {
+                    if (typedName.isNotBlank() && typedCode.length == 6) vm.pairScanned(PairCode(typedName, typedCode))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PairForm(vm: SatelliteModel, code: PairCode) {
+    var ssid by remember { mutableStateOf(vm.wifiName) }
+    var password by remember { mutableStateOf("") }
+    var key by remember { mutableStateOf(vm.apiKey) }
+    EntityCard(Tone.Teal) { ink, soft ->
+        Text("Found ${code.device}", color = ink, style = MaterialTheme.typography.titleMedium)
+        Text("Check the code on its screen says ${code.spaced}.", style = MaterialTheme.typography.bodyMedium, color = soft)
+        OutlinedTextField(ssid, { ssid = it }, singleLine = true, label = { Text("Home Wi-Fi name") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(
+            password, { password = it }, singleLine = true, label = { Text("Wi-Fi password") }, modifier = Modifier.fillMaxWidth(),
+            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+        )
+        OutlinedTextField(
+            key, { key = it }, singleLine = true, label = { Text("Satellite API key") }, modifier = Modifier.fillMaxWidth(),
+            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+        )
+        Text("The API key is the clive_round_api_key in satellite/secrets.yaml that the satellites were built with. It is kept on this phone so the next one is quicker. The Wi-Fi password is not kept.", style = MaterialTheme.typography.bodySmall, color = soft)
+        Tile("Pair", true, Tone.Teal, ink, Modifier.fillMaxWidth()) { if (ssid.isNotBlank() && key.isNotBlank()) vm.pair(code, ssid, password, key) }
+        Tile("Cancel", false, Tone.Teal, ink, Modifier.fillMaxWidth()) { vm.pairReset() }
     }
 }
 
@@ -253,8 +354,14 @@ private fun AddPage() {
 @Composable
 private fun DetailPage(vm: SatelliteModel, sat: Satellite, onPerson: () -> Unit) {
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(sat.slug) { vm.loadRoom(sat) }
+    LaunchedEffect(vm.notice) {
+        vm.notice?.let { snackbar.showSnackbar(it); vm.notice = null }
+    }
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             MediumTopAppBar(
                 title = { Text(sat.name, maxLines = 1) },
@@ -269,11 +376,20 @@ private fun DetailPage(vm: SatelliteModel, sat: Satellite, onPerson: () -> Unit)
                 Text("Offline", style = MaterialTheme.typography.titleMedium, color = ink)
                 Text("Home Assistant can't reach this satellite, so changes will wait until it is back.", style = MaterialTheme.typography.bodyMedium, color = soft)
             }
-            DesignSection(vm, sat)
-            TemperatureSection(sat)
-            if ((vm.pendingDesign ?: sat.design) == SatDesign.Glance) GlanceSection(vm, sat)
-            BacklightSection(vm, sat)
+            if (sat.hasScreen) {
+                DesignSection(vm, sat)
+                TemperatureSection(sat)
+                if ((vm.pendingDesign ?: sat.design) == SatDesign.Glance) GlanceSection(vm, sat)
+                BacklightSection(vm, sat)
+            }
+            SoundSection(vm, sat)
+            VoiceSection(vm, sat)
             SwitchSection(vm, sat)
+            PresetsSection(vm, sat)
+            StatusSection(sat)
+            UpdateSection(vm, sat)
+            NameRoomSection(vm, sat)
+            ActionsSection(vm, sat)
         }
     }
 }
@@ -383,5 +499,245 @@ private fun SwitchSection(vm: SatelliteModel, sat: Satellite) {
                 }
             }
         }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------------- status, sound, name, actions
+
+@Composable
+private fun FactRow(label: String, value: String, ink: Color, soft: Color) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+        Text(label, color = ink, style = MaterialTheme.typography.bodyLarge)
+        Text(value, color = soft, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.End, modifier = Modifier.weight(1f).padding(start = 16.dp))
+    }
+}
+
+/** "31 Oct, 20:43" for a timestamp Home Assistant sent, or null if it can't be read. */
+private fun whenText(iso: String?): String? = iso?.let {
+    runCatching {
+        java.time.OffsetDateTime.parse(it).atZoneSameInstant(java.time.ZoneId.systemDefault())
+            .format(java.time.format.DateTimeFormatter.ofPattern("d MMM, HH:mm"))
+    }.getOrNull()
+}
+
+@Composable
+private fun StatusSection(sat: Satellite) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionHeader("Status", Icons.Filled.Info, Tone.Green, if (sat.online) "Online" else "Offline")
+        EntityCard(null) { ink, soft ->
+            val dbm = sat.signal?.toIntOrNull()
+            FactRow("Wi-Fi", dbm?.let { "${signalWords(it)} ($it dBm)" } ?: "–", ink, soft)
+            sat.network?.let { FactRow("Network", it, ink, soft) }
+            FactRow("Address", sat.ip ?: "–", ink, soft)
+            FactRow("Firmware", sat.firmware?.let { "ESPHome $it" } ?: "–", ink, soft)
+            FactRow("Running for", sat.uptimeSeconds?.let(::formatUptime) ?: "–", ink, soft)
+            if (!sat.online) whenText(sat.lastChanged)?.let { FactRow("Went offline", it, ink, soft) }
+        }
+    }
+}
+
+@Composable
+private fun UpdateSection(vm: SatelliteModel, sat: Satellite) {
+    val update = sat.update ?: return
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionHeader("Firmware", Icons.Filled.SystemUpdate, Tone.Orange, if (update.available) "Update ready" else "Up to date")
+        EntityCard(if (update.available) Tone.Orange else null) { ink, soft ->
+            Text(
+                if (update.available) "Version ${update.latest ?: "newer"} is ready. This one has ${update.installed ?: "an older version"}." else "Running ${update.installed ?: "the latest firmware"}.",
+                color = ink, style = MaterialTheme.typography.bodyLarge,
+            )
+            if (update.available) {
+                Tile(if (update.installing) "Installing…" else "Install the update", false, Tone.Orange, ink, Modifier.fillMaxWidth()) { if (!update.installing) vm.installUpdate(sat) }
+                Text("The satellite restarts when it finishes, which takes a minute or two.", style = MaterialTheme.typography.bodySmall, color = soft)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SoundSection(vm: SatelliteModel, sat: Satellite) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionHeader("Sound", Icons.Filled.VolumeUp, Tone.Coral, sat.volume?.let { "${it.toInt()}%" })
+        EntityCard(null) { ink, soft ->
+            SliderRow("Speaker volume", sat.volume, 0f..100f, "%", ink, soft) { vm.setNumber(sat, "volume", it) }
+            if (sat.canSpeak) {
+                Tile("Say hello", false, Tone.Coral, ink, Modifier.fillMaxWidth()) { vm.sayHello(sat) }
+                Text("Makes this satellite say a short line, to hear the volume and to tell which one it is.", style = MaterialTheme.typography.bodySmall, color = soft)
+            }
+        }
+    }
+}
+
+@Composable
+private fun NameRoomSection(vm: SatelliteModel, sat: Satellite) {
+    var renaming by remember { mutableStateOf(false) }
+    var menu by remember { mutableStateOf(false) }
+    val room = vm.roomOf[sat.slug]
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionHeader("Name and room", Icons.Filled.LocationOn, Tone.Teal)
+        EntityCard(null) { ink, soft ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(sat.name, color = ink, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f), maxLines = 1)
+                Pill("Rename", Tone.Teal) { renaming = true }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("Room", color = ink, style = MaterialTheme.typography.bodyLarge)
+                Box {
+                    Pill(vm.areas.firstOrNull { it.first == room }?.second ?: "No room", Tone.Teal) { menu = true }
+                    DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        DropdownMenuItem(text = { Text("No room") }, onClick = { menu = false; vm.setRoom(sat, null) })
+                        vm.areas.forEach { (id, name) -> DropdownMenuItem(text = { Text(name) }, onClick = { menu = false; vm.setRoom(sat, id) }) }
+                    }
+                }
+            }
+            Text("The room is how Clive will know which TV or lights \"here\" means. Both need a Home Assistant administrator.", style = MaterialTheme.typography.bodySmall, color = soft)
+        }
+    }
+    if (renaming) {
+        var text by remember { mutableStateOf(sat.name) }
+        AlertDialog(
+            onDismissRequest = { renaming = false },
+            title = { Text("Rename satellite") },
+            text = { OutlinedTextField(text, { text = it }, singleLine = true, label = { Text("Name") }) },
+            confirmButton = { TextButton(enabled = text.isNotBlank(), onClick = { renaming = false; vm.rename(sat, text) }) { Text("Rename") } },
+            dismissButton = { TextButton(onClick = { renaming = false }) { Text("Cancel") } },
+        )
+    }
+}
+
+@Composable
+private fun ActionsSection(vm: SatelliteModel, sat: Satellite) {
+    var confirmRestart by remember { mutableStateOf(false) }
+    var confirmRemove by remember { mutableStateOf(false) }
+    var confirmReset by remember { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionHeader("Actions", Icons.Filled.RestartAlt, Tone.Red)
+        EntityCard(null) { ink, soft ->
+            if ("identify" in sat.buttons) {
+                Tile("Flash the screen", false, Tone.Blue, ink, Modifier.fillMaxWidth()) { vm.press(sat, "identify") }
+            }
+            if ("clean_screen" in sat.buttons) {
+                Tile("Clean screen (30 seconds)", false, Tone.Blue, ink, Modifier.fillMaxWidth()) { vm.press(sat, "clean_screen") }
+            }
+            if ("restart" in sat.buttons) {
+                Tile("Restart", false, Tone.Red, ink, Modifier.fillMaxWidth()) { confirmRestart = true }
+            }
+            if ("reset_pairing" in sat.buttons) {
+                Tile("Reset pairing (forget the Wi-Fi)", false, Tone.Red, ink, Modifier.fillMaxWidth()) { confirmReset = true }
+            }
+            Tile("Remove from Home Assistant", false, Tone.Red, ink, Modifier.fillMaxWidth()) { confirmRemove = true }
+            if ("clean_screen" in sat.buttons) Text("Clean screen ignores touches for 30 seconds so the glass can be wiped.", style = MaterialTheme.typography.bodySmall, color = soft)
+        }
+    }
+    if (confirmRemove) {
+        AlertDialog(
+            onDismissRequest = { confirmRemove = false },
+            title = { Text("Remove ${sat.name}?") },
+            text = { Text("It disappears from Home Assistant and this list. The satellite itself isn't wiped: to use it again, reset its pairing and add it again.") },
+            confirmButton = { TextButton(onClick = { confirmRemove = false; vm.remove(sat) }) { Text("Remove") } },
+            dismissButton = { TextButton(onClick = { confirmRemove = false }) { Text("Cancel") } },
+        )
+    }
+    if (confirmReset) {
+        AlertDialog(
+            onDismissRequest = { confirmReset = false },
+            title = { Text("Reset ${sat.name}'s pairing?") },
+            text = { Text("It forgets the Wi-Fi and its own settings, then restarts showing a pairing code. Add it again with the Add tab.") },
+            confirmButton = { TextButton(onClick = { confirmReset = false; vm.press(sat, "reset_pairing") }) { Text("Reset") } },
+            dismissButton = { TextButton(onClick = { confirmReset = false }) { Text("Cancel") } },
+        )
+    }
+    if (confirmRestart) {
+        AlertDialog(
+            onDismissRequest = { confirmRestart = false },
+            title = { Text("Restart ${sat.name}?") },
+            text = { Text("It stops listening for about a minute while it starts again.") },
+            confirmButton = { TextButton(onClick = { confirmRestart = false; vm.press(sat, "restart") }) { Text("Restart") } },
+            dismissButton = { TextButton(onClick = { confirmRestart = false }) { Text("Cancel") } },
+        )
+    }
+}
+
+// ---------------------------------------------------------------------------------------------------- voice, presets, copying
+
+@Composable
+private fun VoiceSection(vm: SatelliteModel, sat: Satellite) {
+    if (sat.voice.isEmpty()) return
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionHeader("Voice", Icons.Filled.RecordVoiceOver, Tone.Indigo)
+        EntityCard(null) { ink, soft ->
+            sat.voice.forEach { v ->
+                var menu by remember { mutableStateOf(false) }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text(v.label, color = ink, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                    Box {
+                        Pill(v.state.ifBlank { "Choose" }, Tone.Indigo) { menu = true }
+                        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                            v.options.forEach { o -> DropdownMenuItem(text = { Text(o) }, onClick = { menu = false; vm.chooseVoice(v, o) }) }
+                        }
+                    }
+                }
+            }
+            Text("The assistant decides who answers and in which language. These are Home Assistant's own settings for this satellite.", style = MaterialTheme.typography.bodySmall, color = soft)
+        }
+    }
+}
+
+/** A list of satellites to tick, in a dialog. */
+@Composable
+private fun PickSatellites(title: String, confirm: String, choices: List<Satellite>, onDone: (List<Satellite>) -> Unit, onDismiss: () -> Unit) {
+    var picked by remember { mutableStateOf(choices.map { it.slug }.toSet()) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column {
+                choices.forEach { c ->
+                    Row(Modifier.fillMaxWidth().clickable { picked = if (c.slug in picked) picked - c.slug else picked + c.slug }, verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = c.slug in picked, onCheckedChange = { picked = if (it) picked + c.slug else picked - c.slug })
+                        Text(c.name)
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(enabled = picked.isNotEmpty(), onClick = { onDone(choices.filter { it.slug in picked }) }) { Text(confirm) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+@Composable
+private fun PresetsSection(vm: SatelliteModel, sat: Satellite) {
+    var naming by remember { mutableStateOf(false) }
+    var copying by remember { mutableStateOf(false) }
+    var applying by remember { mutableStateOf<Preset?>(null) }
+    val others = vm.satellites.filter { it.slug != sat.slug }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionHeader("Presets and copying", Icons.Filled.ContentCopy, Tone.Orange, if (vm.presets.isEmpty()) null else "${vm.presets.size} saved")
+        EntityCard(null) { ink, soft ->
+            Tile("Save these settings as a preset", false, Tone.Orange, ink, Modifier.fillMaxWidth()) { naming = true }
+            if (others.isNotEmpty()) Tile("Copy these settings to other satellites", false, Tone.Orange, ink, Modifier.fillMaxWidth()) { copying = true }
+            vm.presets.forEach { p ->
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(p.name, color = ink, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f), maxLines = 1)
+                    Pill("Apply", Tone.Orange) { applying = p }
+                    Pill("Delete", Tone.Grey) { vm.deletePreset(p.name) }
+                }
+            }
+            Text("A preset holds the design, glances, backlight, night hours, volume and the spoken-answers and follow-up switches. Parts a satellite doesn't have are skipped.", style = MaterialTheme.typography.bodySmall, color = soft)
+        }
+    }
+    if (naming) {
+        var text by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { naming = false },
+            title = { Text("Name the preset") },
+            text = { OutlinedTextField(text, { text = it }, singleLine = true, label = { Text("For example: Bedroom, dim") }) },
+            confirmButton = { TextButton(enabled = text.isNotBlank(), onClick = { naming = false; vm.savePreset(text, sat) }) { Text("Save") } },
+            dismissButton = { TextButton(onClick = { naming = false }) { Text("Cancel") } },
+        )
+    }
+    if (copying) PickSatellites("Copy ${sat.name}'s settings to", "Copy", others, { copying = false; vm.copySettings(sat, it) }, { copying = false })
+    applying?.let { preset ->
+        PickSatellites("Apply \"${preset.name}\" to", "Apply", vm.satellites, { applying = null; vm.applyPreset(preset, it) }, { applying = null })
     }
 }

@@ -1,6 +1,8 @@
 # Satellite pairing and the companion app (proposal)
 
-Status: **proposal, not built**. The ESPHome parts named here exist (checked against ESPHome 2026.10.1): `improv_ble`, `improv_serial`, `captive_portal`, `qr_code`. The app, the one-time token and the adoption step are not written or tested.
+Status: **written, not tried on a real satellite.** The firmware (`satellite/clive-round.yaml`) has `esp32_ble` + `improv_ble`, opens the pair screen by itself when there is no Wi-Fi, accepts Wi-Fi over Bluetooth only while that screen shows, and has a Reset pairing button. The app's Add tab scans the QR, sends the Wi-Fi over Bluetooth (Improv GATT client in `ImprovBle.kt`), adds the device through Home Assistant's ESPHome configuration flow (`AddToHouse.kt`) and opens it.
+
+How it differs from the proposal below: the QR code's six digits are only for the person to check against the screen (there is no per-device secret); the API encryption key is the one every satellite is built with, typed into the app once and kept on the phone, rather than a fresh key per device; and satellites without a screen (a sticker QR, no button yet) are listed and configurable but their pairing hardware is not designed.
 
 ## The plan
 

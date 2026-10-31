@@ -298,9 +298,14 @@ inline void open_menu() {
   shade_open = false;
   hide(w.menu, false);
 }
+// Pairing is open while the pair screen is up (and for 2 minutes at most). The Wi-Fi hand-over over Bluetooth (improv_ble) only accepts a
+// phone while this is true, so someone near the house cannot change the Wi-Fi of a satellite whose screen is not showing the code.
+inline uint32_t pair_until = 0;
+inline bool pairing_open() { return pair_until != 0 && (int32_t) (pair_until - esphome::millis()) > 0; }
 inline void close_menu() {
   hide(w.menu, true);
   hide(w.pair, true);
+  pair_until = 0;
 }
 inline void show_pair() {
   // A single-use token, shown as a QR code and as six digits. The companion app scans it (docs/SATELLITE-PAIRING.md).
@@ -312,6 +317,7 @@ inline void show_pair() {
   text(w.pair_code, device_name + " · code " + spaced);
   hide(w.menu, true);
   hide(w.pair, false);
+  pair_until = esphome::millis() + 120000u;
 }
 inline void on_menu(int i) {
   if (i == 4) show_pair();
