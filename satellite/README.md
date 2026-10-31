@@ -51,6 +51,10 @@ These are the guesses I could not test without the board:
 - **Screen layout** was laid out for the circle (text kept inside about 520 px of the centre) but never seen. Expect to nudge `y` offsets and fonts.
 - **Weather and list cards** are shown as a title, one big line, a sub line and up to five rows. The phone and watch apps draw richer layouts (icons, club badges, hourly strip). Those are not drawn here yet.
 
+## Design
+
+The look follows the watch app's Talk face scaled to 800 px, written up in [`docs/CLIVE-STYLE.md`](../docs/CLIVE-STYLE.md). `design/clive-round-ui.html` is an interactive mockup of every state (open it in a browser). The firmware in `clive-round.yaml` is still the simpler first draft (flat colour pages); the glow, the animated mark and the card layouts in the mockup are what it should grow into.
+
 ## Not done yet
 
 - **Which room.** Clive's TV and PC control is held back until a room-aware tool exists (`ha/clive.md`). The satellite's area is the input for that, but the tool is not built. It is the next step and does not depend on this device working first.
