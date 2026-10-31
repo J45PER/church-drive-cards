@@ -9,6 +9,10 @@ Three kinds of line (the rules and wording are in activity_logic.py):
   he did it for; `clive_auto` = an automation ran his script (the heating rules...), with that automation's name. A script that
   changes nothing leaves no line.
 - `presence`: a person arrived at or left a place (home, or another zone).
+- `outside`: a light, switch, fan, humidifier or thermostat turned on or off with nothing in Home Assistant asking: its own app, a wall
+  switch, a remote or a schedule in the device. A change counts as Home Assistant's own when its context belongs to a service call (from
+  anyone: a person, an automation, a script, the assistant, Church Drive itself), or follows such a call in the same kind of device a
+  moment later (a Hue room's lights follow the room); coming back from unavailable never counts. A room and its lights are listed once.
 
 Kept in .storage/church_drive.activity for 30 days.
 """
@@ -21,10 +25,15 @@ from typing import Any, Callable
 from homeassistant.const import EVENT_CALL_SERVICE, EVENT_STATE_CHANGED
 from homeassistant.core import Context, Event, HomeAssistant, callback
 from homeassistant.helpers import area_registry as ar
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .activity_logic import (
+    OUTSIDE_DOMAINS,
+    OUTSIDE_DUPLICATE_S,
+    OUTSIDE_PROPAGATE_S,
+    OUTSIDE_SETTLE_S,
     add,
     clean,
     clive_is_quiet,
@@ -35,6 +44,8 @@ from .activity_logic import (
     is_clive,
     make_entry,
     noted,
+    outside_related,
+    outside_text,
     presence_text,
     prune,
     rule_name,
@@ -59,6 +70,10 @@ class Activity:
         self._clive: dict[str, tuple[float, str, str]] = {}  # context id -> (until, who it is for, the automation that ran it or "")
         self._autos: dict[str, tuple[float, str]] = {}  # context id of an automation run -> (until, its name)
         self._scripts: dict[str, float] = {}  # context id of a person's own script run -> until
+        self._called: dict[str, float] = {}  # context id of any service call -> until: a change with one of these is Home Assistant's own
+        self._last_call: dict[str, float] = {}  # domain -> when something last asked for it
+        self._recent_outside: list[tuple[float, str, set[str]]] = []
+        self._started = time.time()
 
     # Home Assistant only accepts event filters marked as callbacks.
     @staticmethod
@@ -71,6 +86,11 @@ class Activity:
     def _is_script_run(data: Any) -> bool:
         return str(data.get("entity_id", "")).startswith("script.")
 
+    @staticmethod
+    @callback
+    def _is_device(data: Any) -> bool:
+        return str(data.get("entity_id", "")).partition(".")[0] in OUTSIDE_DOMAINS
+
     async def async_start(self) -> None:
         self.entries = prune(clean(await self._store.async_load()), time.time())
         self._unsubs = [
@@ -78,6 +98,7 @@ class Activity:
             self.hass.bus.async_listen("automation_triggered", self._on_automation),
             self.hass.bus.async_listen("script_started", self._on_script, event_filter=self._is_script_run),
             self.hass.bus.async_listen(EVENT_STATE_CHANGED, self._on_person, event_filter=self._is_person),
+            self.hass.bus.async_listen(EVENT_STATE_CHANGED, self._on_device, event_filter=self._is_device),
         ]
 
     @callback
@@ -90,7 +111,7 @@ class Activity:
     # ---- listening ----------------------------------------------------
 
     def _forget_old(self, now: float) -> None:
-        for table in (self._clive, self._scripts, self._autos):
+        for table in (self._clive, self._scripts, self._autos, self._called):
             for key in [k for k, v in table.items() if (v[0] if isinstance(v, tuple) else v) < now]:
                 del table[key]
 
@@ -130,6 +151,11 @@ class Activity:
         data = event.data.get("service_data") or {}
         ctx = event.context
         now = time.time()
+        # Every request counts here, whoever made it: what follows from it is Home Assistant's doing, not a device acting alone.
+        self._called[ctx.id] = now + 60
+        self._last_call[domain] = now
+        if len(self._called) > 300:
+            self._forget_old(now)
         followed = self._clive.get(ctx.id) or self._clive.get(ctx.parent_id or "")
         if followed and followed[0] >= now:
             self._clive[ctx.id] = (now + RUN_S, followed[1], followed[2])
@@ -172,6 +198,31 @@ class Activity:
         if not text:
             return
         self._add(make_entry(time.time(), "presence", first_name(new.name), text, "mdi:map-marker-account" if new.state != "not_home" else "mdi:exit-run", new.entity_id))
+
+    @callback
+    def _on_device(self, event: Event) -> None:
+        """A device turned on or off: listed when nothing in Home Assistant asked for it (its own app, a switch, a remote)."""
+        ctx = event.context
+        if ctx.user_id or ctx.parent_id:
+            return
+        old, new = event.data.get("old_state"), event.data.get("new_state")
+        if old is None or new is None:
+            return
+        text = outside_text(new.domain, old.state, new.state)
+        now = time.time()
+        if not text or now - self._started < OUTSIDE_SETTLE_S:
+            return
+        if self._called.get(ctx.id, 0) >= now or now - self._last_call.get(new.domain, 0) < OUTSIDE_PROPAGATE_S:
+            return
+        registry = er.async_get(self.hass).async_get(new.entity_id)
+        if registry is not None and (registry.entity_category or registry.hidden_by):
+            return  # a device's settings (a child lock...), or something hidden
+        members = set(_as_list(new.attributes.get("entity_id")))
+        self._recent_outside = [r for r in self._recent_outside if now - r[0] < OUTSIDE_DUPLICATE_S]
+        if any(outside_related(new.entity_id, members, r[1], r[2]) for r in self._recent_outside):
+            return
+        self._recent_outside.append((now, new.entity_id, members))
+        self._add(make_entry(now, "outside", new.name, text, icon_for(new.domain), new.entity_id))
 
     def _add(self, entry: dict[str, Any]) -> None:
         add(self.entries, entry)
