@@ -42,10 +42,10 @@ code { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: .88em;
 .lay { transition: opacity .5s ease; }
 .lay.in { animation: lin .5s ease backwards; }
 .lay.out { opacity: 0; pointer-events: none; }
-.lay.dim { opacity: .5; }
+.lay.dim { opacity: .9; --g-dim: #D2D6EA; --g-faint: #B4B9D2; --g-soft: #F2F3FF; }
 @keyframes lin { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }
 .dock, .mk { transition: opacity .35s; }
-.c { text-align: center; white-space: nowrap; line-height: 1; transform: translate(-50%, -50%); }
+.c { text-align: center; white-space: nowrap; line-height: 1; transform: translate(-50%, -50%); text-shadow: 0 .5cqw 3cqw rgba(0,0,0,.65); }
 .t { text-align: center; text-shadow: 0 .5cqw 3cqw rgba(0,0,0,.65); line-height: 1.2; }
 .clamp { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
 .fit { overflow: hidden; display: flex; justify-content: center; align-items: flex-start; }
@@ -137,7 +137,7 @@ th { color: var(--muted); font-weight: 600; border-top: 0; }
 <div class="wrap">
   <header>
     <h1>Clive satellite flows</h1>
-    <p class="lead">The round screen in the Clive style: dark glass, plain white icons, colour from the glow only, and Clive himself in a dock at the bottom that stays put on every screen except settings. Nothing he says is written on the screen. While he listens, thinks or gives a simple spoken answer it stays on the clock and glances, and it only changes to a card, with the glow coming up behind it, when the answer needs a graphic; then it fades back. Start with talking to him, then the things he does, then quick settings and setting up. Drag down from the top of the screen for quick settings. Example values throughout.</p>
+    <p class="lead">The round screen in the Clive style: dark glass, plain white icons, colour from the glow only, and Clive himself in a dock at the bottom that stays put on every screen except settings. Nothing he says is written on the screen. While he listens, thinks or gives a simple spoken answer the glow is the background and it keeps the clock and glances; it only changes to a card when the answer needs a graphic; then it fades back. Only resting idle is black. Start with talking to him, then the things he does, then quick settings and setting up. Drag down from the top of the screen for quick settings. Example values throughout.</p>
   </header>
 
   <div class="main">
@@ -364,7 +364,7 @@ th { color: var(--muted); font-weight: 600; border-top: 0; }
   var INT = { idle: [0.72, 0.6], listen: [1, 1.6], think: [0.92, 4.2], speak: [0.95, 2.4] };
   Glass.prototype.frame = function (dt, now) {
     var cfg = this.cfg, v = this.v, view = cfg.view || 'idle', st = cfg.state || 'idle';
-    var glowOn = this.showCard, it = INT[st] || INT.idle;
+    var glowOn = view === 'talk' && st !== 'idle', it = INT[st] || INT.idle;
     v.alpha = approach(v.alpha, glowOn ? it[0] : 0, dt, 0.17); v.speed = approach(v.speed, it[1], dt, 0.2);
     for (var j = 0; j < 3; j++) { var key = ['ca', 'cb', 'cc'][j], tg = this.tc[j] || this.tc[0]; v[key] = v[key].map(function (x, i) { return approach(x, tg[i], dt, 0.47); }); }
     if (!REDUCED) { v.ph += dt * 360 / 16 * v.speed; v.pulse += dt; }
@@ -392,13 +392,13 @@ th { color: var(--muted); font-weight: 600; border-top: 0; }
   }
   var WEATHER = { kind: 'weather', icon: 'weather-cloudy', palette: 'Rain', location: 'Church Drive', temp: 12, desc: 'Cloudy', high: 14, low: 8, hourly: [['15', 12], ['16', 11], ['17', 10], ['18', 9]] };
   var S = [
-    { id: 'idle', name: 'Idle (E)', group: 'idle', cfg: { view: 'idle' }, what: 'Layout E: time, a date line with the date and the temperatures outside and inside, three glances, and Clive in his dock at the bottom. Black ground. Drag down from the top edge for quick settings, tap the dock to talk.',
+    { id: 'idle', name: 'Idle (E)', group: 'idle', cfg: { view: 'idle' }, what: 'Layout E: time, a date line with the date and the temperatures outside and inside, three glances, and Clive in his dock at the bottom. Black ground, no glow: only the resting screen is black. Drag down from the top edge for quick settings, tap the dock to talk.',
       say: [], src: 'Date line 10.5, glances 14 over 9, all icons plain white. The forecast icon is a glance option. The backlight dims on a schedule.', diff: 'Outside and inside temperatures need the house’s weather and a chosen room sensor sent to the device.' },
-    { id: 'listen', name: 'Listening', group: 'talk', play: true, cfg: { view: 'talk', state: 'listen' }, what: 'Nothing takes over the screen. The clock, date line and glances stay, a little dimmer, and only the dock changes: the mark becomes the stop button and pulses with your voice.',
-      say: [['you', 'What’s the weather like']], src: 'Mark: stop pose, swelling up to 16% with the voice level. Idle layer at 50%.', diff: 'No words are shown while he listens: the display is too small to read them.' },
-    { id: 'think', name: 'Thinking', group: 'talk', cfg: { view: 'talk', state: 'think' }, what: 'The same: the clock and glances stay and the two squircles trade size in the dock while he works it out.',
-      say: [['you', 'What’s the weather like?']], src: 'Mark: thinking, 1.2 s trade.' },
-    talk('answer', 'Spoken answer', 'talk', 'What’s the capital of France?', 'Paris is the capital of France. Do you want to know more?', null, 'A simple answer is only spoken. The screen keeps the time and glances (a little dimmer) and the dock’s equaliser bars move while he talks. The same goes for chat, thanks and plain confirmations.', 'Mark: speaking, 0.7 s bars. No glow.', 'The satellite ignores the <code>answer</code> card: simple answers are spoken only.'),
+    { id: 'listen', name: 'Listening', group: 'talk', play: true, cfg: { view: 'talk', state: 'listen' }, what: 'The glow comes up as the background because he is doing something. The clock, date line and glances stay on top, a little dimmer, and the dock changes: the mark becomes the stop button and pulses with your voice.',
+      say: [['you', 'What’s the weather like']], src: 'Glow 1.0 + (level − 0.25) × 0.25, 1.6×. Mark: stop pose. Idle layer at 90%, with the small grey text lightened so it reads over the glow.', diff: 'No words are shown while he listens: the display is too small to read them.' },
+    { id: 'think', name: 'Thinking', group: 'talk', cfg: { view: 'talk', state: 'think' }, what: 'The glow turns 4.2× faster behind the clock and glances while the two squircles trade size in the dock.',
+      say: [['you', 'What’s the weather like?']], src: 'Glow 0.92, 4.2×. Mark: thinking, 1.2 s trade.' },
+    talk('answer', 'Spoken answer', 'talk', 'What’s the capital of France?', 'Paris is the capital of France. Do you want to know more?', null, 'A simple answer is only spoken. The glow pulses behind the time and glances (a little dimmer) and the dock’s equaliser bars move while he talks. The same goes for chat, thanks and plain confirmations.', 'Glow 0.95 ± sin(t×9)×0.07, 2.4×. Mark: speaking, 0.7 s bars.', 'The satellite ignores the <code>answer</code> card: simple answers are spoken only.'),
     talk('weather', 'Weather card', 'talk', 'What’s the weather like?', 'It’s 12 degrees and cloudy near Church Drive. Shall I go through the forecast for later?', WEATHER, 'Needs a graphic, so the clock and glances fade out as the glow comes up and the card fades in. A white weather icon over the figures, the Rain palette (cloudy). He gives the answer aloud. The dock stays. After about 25 seconds it fades back to the clock.', 'Layout from <code>CliveCards.kt</code>, drawn about 20% larger. Palette Rain since only sunny and partly cloudy are Clear.', 'The draft <code>show_card</code> action does not pass the hours yet.'),
     talk('score', 'Score card', 'talk', 'Did City win last night?', 'Manchester City beat AEK Athens 5 to 1 in the Champions League last night. Would you like the scorers?', { kind: 'score', icon: 'soccer', palette: 'Sport', home: 'MCI', away: 'AEK', hs: 5, as: 1, status: 'Full time', scorers: 'Haaland 2, Foden, Silva, Doku' }, 'The Sport palette, a white football and the score big between the club letters. He says who won and offers the scorers aloud.', 'Score 34 bold, status 13, scorers 11.', 'No badge lookup on the satellite yet, so the three letters show.'),
     talk('energy', 'Energy card', 'talk', 'How much is electricity right now?', 'It’s 24.5p per kWh and cheap at the moment. Would you like to know when it’s cheaper?', { kind: 'energy', icon: 'lightning-bolt', palette: 'Base', big: '24.5p', sub: 'per kWh, now', rows: [['Using now', '1.2 kW'], ['Cheaper at 23:30', '7p'], ['Spent today', '£2.14']] }, 'The shared layout: a big figure, a line, up to three rows. No pill (the watch does not draw one).', 'Big 30 bold, sub 12, rows 11.'),
