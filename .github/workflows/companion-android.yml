@@ -64,14 +64,24 @@ jobs:
           name: church-drive-satellites-debug-apk
           path: companion/android/satellites/build/outputs/apk/debug/*.apk
       # Google Play app bundles (signed with the upload key): phone app, watch app (same listing, Wear OS form factor), To Do and Satellites.
+      # Gradle's own names are all alike (app-release.aab...), so they are renamed here to what the releases use: church-drive-<app>-<version>-b<build>.aab.
+      - name: Name the app bundles
+        working-directory: .
+        run: |
+          mkdir -p bundles
+          b="b${GITHUB_RUN_NUMBER}"
+          main=$(sed -n 's/^version=//p' companion/android/version.properties)
+          todo=$(sed -n 's/^version=//p' companion/android/todo/version.properties)
+          sat=$(sed -n 's/^version=//p' companion/android/satellites/version.properties)
+          cp "$(ls companion/android/app/build/outputs/bundle/release/*.aab)" "bundles/church-drive-manager-${main}-${b}.aab"
+          cp "$(ls companion/android/wear/build/outputs/bundle/release/*.aab)" "bundles/church-drive-manager-wear-${main}-${b}.aab"
+          cp "$(ls companion/android/todo/build/outputs/bundle/release/*.aab)" "bundles/church-drive-todo-${todo}-${b}.aab"
+          cp "$(ls companion/android/satellites/build/outputs/bundle/release/*.aab)" "bundles/church-drive-satellites-${sat}-${b}.aab"
+          ls -l bundles
       - uses: actions/upload-artifact@v4
         with:
           name: church-drive-play-bundles
-          path: |
-            companion/android/app/build/outputs/bundle/release/*.aab
-            companion/android/wear/build/outputs/bundle/release/*.aab
-            companion/android/todo/build/outputs/bundle/release/*.aab
-            companion/android/satellites/build/outputs/bundle/release/*.aab
+          path: bundles/*.aab
       # The phone app (with the watch app) and Church Drive To-Do have separate versions and separate releases, so a change to one does not
       # show up as a release of the other. Work out which a push touched: anything in `core` or the build files is both's.
       - name: Which apps changed
