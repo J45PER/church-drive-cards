@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.82.0
+
+- Signs in automatically through the Church Drive app (0.82.0 or later) now that its Play signing certificate is trusted.
+
 ## 0.81.0
 
 - Account side panel like the other apps: tap the initial or swipe left for Open Church Drive, Settings, About and Sign out.

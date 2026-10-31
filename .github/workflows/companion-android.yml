@@ -252,11 +252,8 @@ jobs:
           track: internal
           status: completed
           whatsNewDirectory: play-notes-todo
-      # The first upload of a brand-new app has to be made by hand in Play Console (the app must exist there first), so until that is done
-      # this step is allowed to fail without turning the build red. Once the app is in Play, a failure here is a real one: remove the line.
       - name: Upload Church Drive Satellites to Google Play (internal testing)
         if: ${{ !cancelled() && github.event_name == 'push' && steps.publish_satellites.outputs.new == 'true' && env.HAS_PLAY == 'true' }}
-        continue-on-error: true
         uses: r0adkll/upload-google-play@v1.1.3
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}

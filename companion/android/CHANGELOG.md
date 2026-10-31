@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.82.0
+
+- Shares its sign-in with the Play-signed Church Drive Satellites app (its signing certificate is added to the trusted list), so Satellites signs in automatically.
+
 ## 0.81.0
 
 - Version moves with the shared number. No other change to the phone and watch apps.
