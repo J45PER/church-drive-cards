@@ -39,7 +39,7 @@ jobs:
       - name: Build and test
         run: |
           set +e
-          ./gradlew testDebugUnitTest assembleDebug :app:bundleRelease :wear:bundleRelease :todo:bundleRelease --console=plain 2>&1 | tee ../build.log
+          ./gradlew testDebugUnitTest assembleDebug :app:bundleRelease :wear:bundleRelease :todo:bundleRelease :satellites:bundleRelease --console=plain 2>&1 | tee ../build.log
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
             msg=$(grep -E "^e: |error:|FAILED|What went wrong|Execution failed|Could not resolve|AAPT|Manifest merger" -A2 ../build.log | head -80 | cut -c1-300 | sed ':a;N;$!ba;s/\n/%0A/g')
@@ -59,7 +59,11 @@ jobs:
         with:
           name: church-drive-todo-debug-apk
           path: companion/android/todo/build/outputs/apk/debug/*.apk
-      # Google Play app bundles (signed with the upload key): phone app, watch app (same listing, Wear OS form factor) and To Do.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: church-drive-satellites-debug-apk
+          path: companion/android/satellites/build/outputs/apk/debug/*.apk
+      # Google Play app bundles (signed with the upload key): phone app, watch app (same listing, Wear OS form factor), To Do and Satellites.
       - uses: actions/upload-artifact@v4
         with:
           name: church-drive-play-bundles
@@ -67,6 +71,7 @@ jobs:
             companion/android/app/build/outputs/bundle/release/*.aab
             companion/android/wear/build/outputs/bundle/release/*.aab
             companion/android/todo/build/outputs/bundle/release/*.aab
+            companion/android/satellites/build/outputs/bundle/release/*.aab
       # The phone app (with the watch app) and Church Drive To-Do have separate versions and separate releases, so a change to one does not
       # show up as a release of the other. Work out which a push touched: anything in `core` or the build files is both's.
       - name: Which apps changed

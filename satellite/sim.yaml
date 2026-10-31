@@ -1,0 +1,69 @@
+# Clive's round-screen UI in ESPHome's host simulator (SDL window), for checking layouts without the board.
+#   esphome compile sim.yaml && .esphome/build/clive-sim/.pioenvs/clive-sim/program
+# Headless screenshots: see tools/sim_shots.sh.
+esphome:
+  name: clive-sim
+  on_boot:
+    priority: -100
+    then:
+      - script.execute: ui_bind
+      - script.execute: sim_demo
+
+host:
+
+logger:
+  level: INFO
+
+time:
+  - platform: host
+    id: clock_time
+
+display:
+  - platform: sdl
+    id: disp
+    dimensions:
+      width: 800
+      height: 800
+
+packages:
+  ui: !include ui.yaml
+  hooks: !include sim_hooks.yaml
+
+script:
+  # A scripted tour for screenshots: tools/sim_shots.sh takes one at each pause.
+  - id: sim_demo
+    then:
+      - delay: 2s
+      - script.execute: {id: ui_update_info, outside: "12°", cond: "cloudy", high: "14°", low: "8°", inside: "19°", g_home: "2 of 4", g_energy: "24p", g_car: "80%", g_alarm: "Home", g_heat: "19°", g_air: "Good"}
+      - delay: 1s
+      - lambda: clive::set_design(0);
+      - delay: 3s
+      - lambda: clive::set_design(1);
+      - delay: 3s
+      - lambda: clive::set_design(2);
+      - delay: 3s
+      - lambda: clive::set_design(3);
+      - delay: 3s
+      - lambda: 'clive::set_design(0);'
+      - script.execute: {id: ui_set_state, state: 1}
+      - delay: 3s
+      - script.execute: {id: ui_set_state, state: 2}
+      - delay: 3s
+      - script.execute: {id: ui_set_state, state: 3}
+      - delay: 3s
+      - script.execute: {id: ui_show_card, icon: "weather-cloudy", big: "12°", title: "Church Drive", sub: "Cloudy", r1: "H 14° · L 8°", r2: "15 12°  16 11°  17 10°  18 9°", r3: "", percent: -1, ask: false, pal: "37474F,5C7C99,78909C", seconds: 25}
+      - delay: 3s
+      - script.execute: {id: ui_show_card, icon: "lightbulb", big: "", title: "Living room lights", sub: "On at 60%", r1: "", r2: "", r3: "", percent: 60, ask: false, pal: "FFB74D,8A4B08,FFE0B2", seconds: 25}
+      - delay: 3s
+      - script.execute: {id: ui_show_card, icon: "lightning-bolt", big: "", title: "Fast charge at 34p per kWh?", sub: "That is an expensive rate", r1: "", r2: "", r3: "", percent: -1, ask: true, pal: "E37400,FDD663,4A3A12", seconds: 25}
+      - delay: 3s
+      - script.execute: ui_hide_card
+      - script.execute: {id: ui_set_state, state: 0}
+      - delay: 2s
+      - lambda: clive::shade_open = true;
+      - delay: 3s
+      - lambda: 'clive::shade_open = false; clive::open_menu();'
+      - delay: 3s
+      - lambda: 'clive::on_menu(4);'
+      - delay: 3s
+

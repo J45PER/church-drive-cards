@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Same as before (the framework's Material theme), with the splash colours: white, or the app's own dark colour at night. -->
+    <style name="Theme.ChurchDriveSatellites" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/splash_background</item>
+    </style>
+</resources>

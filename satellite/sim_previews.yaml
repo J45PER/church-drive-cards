@@ -1,0 +1,74 @@
+# Renders the app's design previews: each design resting, with Clive listening, and with a weather card. tools/sim_previews.sh runs it.
+esphome:
+  name: clive-sim-previews
+  on_boot:
+    priority: -100
+    then:
+      - script.execute: ui_bind
+      - script.execute: preview_tour
+
+host:
+
+logger:
+  level: INFO
+
+time:
+  - platform: host
+    id: clock_time
+
+display:
+  - platform: sdl
+    id: disp
+    dimensions:
+      width: 800
+      height: 800
+
+packages:
+  ui: !include ui.yaml
+  hooks: !include sim_hooks.yaml
+
+script:
+  - id: preview_tour
+    then:
+      - delay: 1s
+      - script.execute: {id: ui_update_info, outside: "12°", cond: "cloudy", high: "14°", low: "8°", inside: "19°", g_home: "2 of 4", g_energy: "24p", g_car: "80%", g_alarm: "Home", g_heat: "19°", g_air: "Good"}
+      - lambda: 'clive::set_design(0);'
+      - delay: 3s
+      - script.execute: {id: ui_set_state, state: 1}
+      - delay: 3s
+      - script.execute: {id: ui_show_card, icon: "weather-cloudy", big: "12°", title: "Church Drive", sub: "Cloudy", r1: "H 14° · L 8°", r2: "15 12°  16 11°  17 10°  18 9°", r3: "", percent: -1, ask: false, pal: "37474F,5C7C99,78909C", seconds: 25}
+      - script.execute: {id: ui_set_state, state: 3}
+      - delay: 3s
+      - script.execute: ui_hide_card
+      - script.execute: {id: ui_set_state, state: 0}
+      - delay: 0.5s
+      - lambda: 'clive::set_design(1);'
+      - delay: 3s
+      - script.execute: {id: ui_set_state, state: 1}
+      - delay: 3s
+      - script.execute: {id: ui_show_card, icon: "weather-cloudy", big: "12°", title: "Church Drive", sub: "Cloudy", r1: "H 14° · L 8°", r2: "15 12°  16 11°  17 10°  18 9°", r3: "", percent: -1, ask: false, pal: "37474F,5C7C99,78909C", seconds: 25}
+      - script.execute: {id: ui_set_state, state: 3}
+      - delay: 3s
+      - script.execute: ui_hide_card
+      - script.execute: {id: ui_set_state, state: 0}
+      - delay: 0.5s
+      - lambda: 'clive::set_design(2);'
+      - delay: 3s
+      - script.execute: {id: ui_set_state, state: 1}
+      - delay: 3s
+      - script.execute: {id: ui_show_card, icon: "weather-cloudy", big: "12°", title: "Church Drive", sub: "Cloudy", r1: "H 14° · L 8°", r2: "15 12°  16 11°  17 10°  18 9°", r3: "", percent: -1, ask: false, pal: "37474F,5C7C99,78909C", seconds: 25}
+      - script.execute: {id: ui_set_state, state: 3}
+      - delay: 3s
+      - script.execute: ui_hide_card
+      - script.execute: {id: ui_set_state, state: 0}
+      - delay: 0.5s
+      - lambda: 'clive::set_design(3);'
+      - delay: 3s
+      - script.execute: {id: ui_set_state, state: 1}
+      - delay: 3s
+      - script.execute: {id: ui_show_card, icon: "weather-cloudy", big: "12°", title: "Church Drive", sub: "Cloudy", r1: "H 14° · L 8°", r2: "15 12°  16 11°  17 10°  18 9°", r3: "", percent: -1, ask: false, pal: "37474F,5C7C99,78909C", seconds: 25}
+      - script.execute: {id: ui_set_state, state: 3}
+      - delay: 3s
+      - script.execute: ui_hide_card
+      - script.execute: {id: ui_set_state, state: 0}
+      - delay: 0.5s

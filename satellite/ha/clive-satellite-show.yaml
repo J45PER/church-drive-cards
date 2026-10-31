@@ -1,0 +1,122 @@
+# Automation: draws Clive's cards on the round satellite screen, when an answer needs a graphic.
+#
+# Clive's scripts (clive_show_card and the scripts built on it) fire the event church_drive_assistant_show with a `card`.
+# The phone and watch apps pick it up for the person who asked. A satellite has nobody signed in, so this automation sends the
+# card to the satellite instead, but only while that satellite is the one being talked to (its Assist satellite entity is
+# listening, thinking or answering).
+#
+# The satellite shows only what needs a graphic and speaks the rest (docs/CLIVE-STYLE.md):
+#   - `answer` cards are ignored: a plain answer is only spoken.
+#   - a plain confirmation (a `done` card with a tick, no bar and no failure) is ignored: "Lights are off" is only spoken.
+#   - everything else is drawn: weather, scores, fixtures, energy, a level (a light at 60%), a time left, a state, a question, a failure.
+#
+# Edit the entity below for your device: assist_satellite.clive_round_screen is the Assist satellite ESPHome creates
+# (Settings > Devices > Clive (round screen)). The action esphome.clive_round_show_card follows the ESPHome node name.
+alias: Clive satellite - show card
+description: Sends Clive's cards to the round satellite while it is the device being spoken to.
+mode: queued
+max: 5
+triggers:
+  - trigger: event
+    event_type: church_drive_assistant_show
+conditions:
+  - condition: template
+    value_template: "{{ trigger.event.data.card is defined and trigger.event.data.card is mapping }}"
+  - condition: state
+    entity_id: assist_satellite.clive_round_screen
+    state:
+      - listening
+      - processing
+      - responding
+  - condition: template
+    # Not these: a plain answer, and a plain "done" tick.
+    value_template: >-
+      {% set c = trigger.event.data.card %}
+      {{ c.kind not in ['answer']
+         and not (c.kind == 'done' and c.ok is not defined and c.percent is not defined and (c.icon | default('') | replace('mdi:', '')) in ['', 'check']) }}
+actions:
+  - variables:
+      c: "{{ trigger.event.data.card }}"
+      kind: "{{ c.kind }}"
+      f: "{{ c }}"
+      icons:
+        weather: weather-cloudy
+        score: soccer
+        scores: soccer
+        fixture: soccer
+        fixtures: soccer
+        music: music-note
+        people: account-multiple
+        done: check
+        energy: lightning-bolt
+        secure: shield-check
+        doors: message-text
+        tasks: message-text
+        devices: message-text
+        lights: lightbulb
+        heat: thermometer
+        shop: message-text
+        event: message-text
+        reminder: message-text
+        media: music-note
+        ask: lightning-bolt
+      weather_icons:
+        sunny: weather-sunny
+        clear-night: weather-night
+        partlycloudy: weather-partly-cloudy
+        rainy: weather-rainy
+        pouring: weather-rainy
+        snowy: weather-snowy
+        lightning: weather-lightning
+        lightning-rainy: weather-lightning
+        fog: weather-fog
+        windy: weather-windy
+      weather_palettes:
+        sunny: 1565C0,42A5F5,81D4FA
+        partlycloudy: 1565C0,42A5F5,81D4FA
+        clear-night: 0D1B4A,283593,5C6BC0
+        snowy: 90A4AE,B3E5FC,E1F5FE
+        lightning: 37474F,6A1B9A,5C6BC0
+        lightning-rainy: 37474F,6A1B9A,5C6BC0
+  - variables:
+      icon: >-
+        {% if f.icon is defined and f.icon %}{{ f.icon | replace('mdi:', '') }}
+        {% elif kind == 'weather' %}{{ weather_icons.get(f.symbol | default(''), 'weather-cloudy') }}
+        {% else %}{{ icons.get(kind, 'message-text') }}{% endif %}
+      palette: >-
+        {% if f.palette is defined and f.palette %}{{ f.palette | map('replace', '#', '') | join(',') }}
+        {% elif kind == 'weather' %}{{ weather_palettes.get(f.symbol | default(''), '37474F,5C7C99,78909C') }}
+        {% elif kind in ['score', 'scores', 'fixture', 'fixtures'] %}6CABDD,1C2C5B,A5CDEB
+        {% elif f.colour is defined and f.colour %}{% set h = f.colour | replace('#', '') %}{{ h }},{{ h }},{{ h }}
+        {% elif f.ok is defined and not f.ok %}B3261E,F28B82,4D1F1C
+        {% endif %}
+  - action: esphome.clive_round_show_card
+    data:
+      icon: "{{ icon | trim }}"
+      big: >-
+        {% if kind == 'weather' %}{{ f.temp | float(0) | round(0) | int }}°
+        {% elif kind == 'score' %}{{ f.home_score }} – {{ f.away_score }}
+        {% elif f.big is defined %}{{ f.big }}{% endif %}
+      title: >-
+        {% if kind == 'weather' %}{{ f.location | default('') }}
+        {% elif kind == 'score' %}{{ (f.home.short | default(f.home.name | default(''))) }} v {{ (f.away.short | default(f.away.name | default(''))) }}
+        {% elif f.name is defined %}{{ f.name }}
+        {% elif f.title is defined %}{{ f.title }}{% endif %}
+      sub: >-
+        {% if kind == 'weather' %}{{ f.desc | default('') }}
+        {% elif kind == 'score' %}{{ f.status | default('') }}
+        {% elif f.sub is defined %}{{ f.sub }}
+        {% elif f.detail is defined %}{{ f.detail }}{% endif %}
+      r1: >-
+        {% if kind == 'weather' %}H {{ f.high | float(0) | round(0) | int }}° · L {{ f.low | float(0) | round(0) | int }}°
+        {% elif kind == 'score' %}{{ f.scorers | default('') }}
+        {% elif f.rows is defined and f.rows | count > 0 %}{{ f.rows[0].name }}{% if f.rows[0].value %} · {{ f.rows[0].value }}{% endif %}{% endif %}
+      r2: >-
+        {% if kind == 'weather' and f.hourly is defined %}{% for h in f.hourly[:4] %}{{ h.t[:2] }} {{ h.temp | float(0) | round(0) | int }}°{% if not loop.last %}  {% endif %}{% endfor %}
+        {% elif f.rows is defined and f.rows | count > 1 %}{{ f.rows[1].name }}{% if f.rows[1].value %} · {{ f.rows[1].value }}{% endif %}{% endif %}
+      r3: >-
+        {% if kind != 'weather' and f.rows is defined and f.rows | count > 2 %}{{ f.rows[2].name }}{% if f.rows[2].value %} · {{ f.rows[2].value }}{% endif %}{% endif %}
+      percent: "{{ f.percent | int(-1) if f.percent is defined else -1 }}"
+      ask: "{{ kind == 'ask' }}"
+      pal: "{{ palette | trim }}"
+      seconds: "{{ 6 if kind == 'done' else 25 }}"
