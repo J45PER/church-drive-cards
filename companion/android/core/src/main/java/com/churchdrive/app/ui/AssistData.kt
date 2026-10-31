@@ -271,6 +271,7 @@ fun introDue(introducedEver: Boolean, told: Set<String>?, log: List<AssistFeatur
  * ever do they get the full introduction. Features also make up that introduction's "what I can do".
  */
 private val RAW_ASSIST_FEATURES = listOf(
+    AssistFeature("mdi:weather-partly-cloudy", "Weather for tomorrow", "What's the weather like tomorrow?", id = "weather-other-days", detail = "{name} now shows a card for tomorrow's weather, or any day up to five days ahead, and answers a little quicker after you stop speaking.", kind = AssistantChange.Change),
     AssistFeature("mdi:home-thermometer-outline", "Heating and the alarm", "", id = "heating-alarm-rules", detail = "{name} turns the heating off when the alarm is set to away, and never turns it on himself. When you disarm, he asks whether to turn it back on and take over again. Ask him to turn the heating on or off or set a temperature and he will, and then leave it alone for a while.", kind = AssistantChange.Change),
     AssistFeature("mdi:thermostat-auto", "Thermostat settings", "", id = "thermostat-sheet", detail = "Tap the line at the bottom of a thermostat's card to choose whether {name} looks after it, set its comfortable range, and end a pause early.", kind = AssistantChange.Change),
     AssistFeature("mdi:shield-star-outline", "Big-club crests", "", id = "big-club-crests", detail = "A fix: Barcelona, Paris Saint-Germain, Bayern, Inter and the other big European clubs now show their own crest on {name}'s cards.", kind = AssistantChange.Fix),

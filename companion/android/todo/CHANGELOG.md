@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.54.1
+
+- Asking Clive about tomorrow's weather (or the day after, up to five days) now shows that day's card, with its high, low and hours, instead of only speaking. Today's weather card also shows today's high and low (after midnight it was showing yesterday's). Listening: the phone now asks its own noise suppression to quieten a television or a fan behind your voice, and Clive decides you have finished speaking after 0.9 seconds of quiet instead of 1.2, so he moves from listening to thinking sooner.
+
 ## 0.54.0
 
 - No change to this app; version kept equal to the phone app (the new Activity log for administrators).

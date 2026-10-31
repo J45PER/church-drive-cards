@@ -28,7 +28,7 @@ import org.json.JSONObject
  * is shown and spoken in the voice of the house's pipeline. Must be made, used and released on the main thread.
  */
 /** How long the house waits in silence before it decides you have finished speaking (its own default is 0.7 s; every second here is a second added to every answer). */
-private const val SILENCE_SECONDS = 1.2
+private const val SILENCE_SECONDS = 0.9
 
 class AssistModel(private val context: Context, private val api: HaApi, private val base: String) {
     var state by mutableStateOf(AssistState.Idle)
