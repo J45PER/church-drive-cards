@@ -7,3 +7,5 @@ companion/android/app/google-services.json
 satellite/secrets.yaml
 satellite/.esphome/
 satellite/build/
+satellite/_dev.yaml
+satellite/sim-shots/

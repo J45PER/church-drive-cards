@@ -59,6 +59,10 @@ jobs:
         with:
           name: church-drive-todo-debug-apk
           path: companion/android/todo/build/outputs/apk/debug/*.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: church-drive-satellites-debug-apk
+          path: companion/android/satellites/build/outputs/apk/debug/*.apk
       # Google Play app bundles (signed with the upload key): phone app, watch app (same listing, Wear OS form factor) and To Do.
       - uses: actions/upload-artifact@v4
         with:
