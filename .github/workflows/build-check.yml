@@ -21,6 +21,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - name: Every version agrees
+        run: node tools/versions.mjs
       - run: npm run build
       - name: Committed bundle matches fresh build
         run: |

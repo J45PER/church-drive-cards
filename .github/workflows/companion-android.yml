@@ -77,6 +77,20 @@ jobs:
           cp "$(ls companion/android/wear/build/outputs/bundle/release/*.aab)" "bundles/church-drive-manager-wear-${main}-${b}.aab"
           cp "$(ls companion/android/todo/build/outputs/bundle/release/*.aab)" "bundles/church-drive-todo-${todo}-${b}.aab"
           cp "$(ls companion/android/satellites/build/outputs/bundle/release/*.aab)" "bundles/church-drive-satellites-${sat}-${b}.aab"
+          # Google Play reads the package name from inside the bundle, not from its file name: say what each app is, and stop if the
+          # Satellites bundle (or its APK, which has the same application id) is not com.churchdrive.satellites.
+          aapt2=$(ls "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/build-tools/*/aapt2 2>/dev/null | sort -V | tail -1)
+          if [ -n "$aapt2" ]; then
+            for pair in "app:com.churchdrive.manager" "todo:com.churchdrive.todo" "satellites:com.churchdrive.satellites"; do
+              mod=${pair%%:*}; want=${pair##*:}
+              apk=$(ls companion/android/$mod/build/outputs/apk/debug/*.apk | head -1)
+              got=$("$aapt2" dump packagename "$apk")
+              echo "$mod: $got"
+              if [ "$got" != "$want" ]; then echo "::error::$mod has package $got, expected $want"; exit 1; fi
+            done
+          else
+            echo "aapt2 not found: package names not checked"
+          fi
           ls -l bundles
       - uses: actions/upload-artifact@v4
         with:
