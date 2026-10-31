@@ -6,7 +6,7 @@ Status: **proposal, not built**. The ESPHome parts named here exist (checked aga
 
 A third app, the **satellite companion app**, adds, names and configures every satellite: the round one, other displays, and ones with no display. Mockups are in `satellite/design/flows.html`.
 
-Things it sets per satellite: name and room (a Home Assistant area), the idle layout (A to H in `satellite/design/idle-layouts.html`, E chosen first), whether the date line shows the outside and inside temperature, the three glance slots (who is home, electricity, car, alarm, heating, air quality, or the forecast icon), the backlight schedule (day and night, night using layout H), and a "show on the satellite" test.
+Things it sets per satellite: name and room (a Home Assistant area), the **design** (one of four complete flows: Glance, Clock, Weather, Ring, each previewed live in the app), the three glance slots for the Glance design (who is home, electricity, car, alarm, heating, air quality, or the forecast icon), the room whose temperature is shown inside (Glance only), the backlight schedule, and a "show on the satellite" test. The outside temperature is always the weather feed's and has no setting.
 
 ## Pairing
 
@@ -24,7 +24,7 @@ Common mechanics:
 2. The app scans the QR. The QR holds the device id and a **one-time token** that expires after 10 minutes. It never holds the permanent encryption key.
 3. The app connects over Bluetooth and sends the home Wi-Fi.
 4. The device joins Wi-Fi. The app gives it a name, a room and a **fresh API encryption key**, and tells the Church Drive integration to adopt it in Home Assistant.
-5. The device chimes or shows a tick and comes up on its idle layout.
+5. The device chimes or shows a tick and comes up on its design's resting screen.
 
 A sticker is the baseline because it works for every device. An on-screen QR is a convenience for ones that have a display, and has the advantage that it can be a fresh code each time.
 
