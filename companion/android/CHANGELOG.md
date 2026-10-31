@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.54.1
+
+- **Activity log filters are drop-down lists.** Dates (today, yesterday, last 7 days, last 30 days, all dates, or **pick a range** with an exact start and end date and time), Actions (**all actions**, people, the assistant's asked or automatic changes, or both, coming and going), Time of day and Who. A range has its own times, so the time-of-day list is hidden while it is used.
+- **Says why it is empty.** If Home Assistant is running a Church Drive older than 0.71.0 (which has no activity log, so nothing is recorded), the page now says to update it in HACS and restart, instead of looking blank. An empty log explains that actions are recorded only from when 0.71.0 started running.
+
 ## 0.54.0
 
 - **Activity log (administrators).** A new row in the account panel (the side panel) opens a page of what people and the assistant did in the house and who came and went: a person's own switching from the app or a dashboard, what the assistant did, and arrivals and departures. The assistant's lines say whether someone **asked** him (and who) or an **automation** ran his script (and which). Filter by day (today, yesterday, 7 or 30 days), time of day (morning, afternoon, evening, night), kind and person; new lines appear by themselves. Needs Church Drive 0.71.0 or later in Home Assistant.
