@@ -9,10 +9,12 @@ Three kinds of line (the rules and wording are in activity_logic.py):
   he did it for; `clive_auto` = an automation ran his script (the heating rules...), with that automation's name. A script that
   changes nothing leaves no line.
 - `presence`: a person arrived at or left a place (home, or another zone).
-- `outside`: a light, switch, fan, humidifier or thermostat turned on or off with nothing in Home Assistant asking: its own app, a wall
-  switch, a remote or a schedule in the device. A change counts as Home Assistant's own when its context belongs to a service call (from
-  anyone: a person, an automation, a script, the assistant, Church Drive itself), or follows such a call in the same kind of device a
-  moment later (a Hue room's lights follow the room); coming back from unavailable never counts. A room and its lights are listed once.
+- `overruled`: something the assistant set (a thermostat's mode or target, a light, switch or fan on or off) was changed again from
+  outside the Church Drive app within 6 hours, with nothing in Home Assistant asking: the thermostat's own dial or app, a wall switch,
+  a remote, a schedule in the device. A change counts as Home Assistant's own when its context belongs to a service call (from anyone:
+  a person, an automation, a script, the assistant, Church Drive itself), or follows such a call in the same kind of device a moment
+  later (a Hue room's lights follow the room). A device going back to what he set, or through unavailable, never counts. Devices he
+  hasn't touched are not listed, whatever changes them. One line per override: it is not listed again until he sets the device again.
 
 Kept in .storage/church_drive.activity for 30 days.
 """
@@ -25,29 +27,30 @@ from typing import Any, Callable
 from homeassistant.const import EVENT_CALL_SERVICE, EVENT_STATE_CHANGED
 from homeassistant.core import Context, Event, HomeAssistant, callback
 from homeassistant.helpers import area_registry as ar
-from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .activity_logic import (
-    OUTSIDE_DOMAINS,
-    OUTSIDE_DUPLICATE_S,
-    OUTSIDE_PROPAGATE_S,
-    OUTSIDE_SETTLE_S,
+    OVERRULE_S,
+    WATCH_DOMAINS,
+    WATCH_DUPLICATE_S,
+    WATCH_PROPAGATE_S,
+    WATCH_SETTLE_S,
     add,
     clean,
     clive_is_quiet,
     describe,
     entities_in,
+    expected_from_call,
     first_name,
     icon_for,
     is_clive,
     make_entry,
     noted,
-    outside_related,
-    outside_text,
+    overrule_text,
     presence_text,
     prune,
+    related,
     rule_name,
     select,
     who_list,
@@ -72,7 +75,8 @@ class Activity:
         self._scripts: dict[str, float] = {}  # context id of a person's own script run -> until
         self._called: dict[str, float] = {}  # context id of any service call -> until: a change with one of these is Home Assistant's own
         self._last_call: dict[str, float] = {}  # domain -> when something last asked for it
-        self._recent_outside: list[tuple[float, str, set[str]]] = []
+        self._clive_set: dict[str, tuple[float, dict[str, Any]]] = {}  # entity -> (when he last set it, what he set: state, target)
+        self._recent_overrules: list[tuple[float, str, set[str]]] = []
         self._started = time.time()
 
     # Home Assistant only accepts event filters marked as callbacks.
@@ -89,7 +93,7 @@ class Activity:
     @staticmethod
     @callback
     def _is_device(data: Any) -> bool:
-        return str(data.get("entity_id", "")).partition(".")[0] in OUTSIDE_DOMAINS
+        return str(data.get("entity_id", "")).partition(".")[0] in WATCH_DOMAINS
 
     async def async_start(self) -> None:
         self.entries = prune(clean(await self._store.async_load()), time.time())
@@ -159,9 +163,15 @@ class Activity:
         followed = self._clive.get(ctx.id) or self._clive.get(ctx.parent_id or "")
         if followed and followed[0] >= now:
             self._clive[ctx.id] = (now + RUN_S, followed[1], followed[2])
-            if domain not in ("script", "automation") and noted(domain, service):
-                self._record("clive_auto" if followed[2] else "clive", "", domain, service, data, by=followed[1], rule=followed[2])
+            if domain not in ("script", "automation"):
+                self._remember_clive_set(now, domain, service, data)
+                if noted(domain, service):
+                    self._record("clive_auto" if followed[2] else "clive", "", domain, service, data, by=followed[1], rule=followed[2])
             return
+        if domain in WATCH_DOMAINS:
+            # Someone or something else has set these devices since: they are no longer his to be overruled.
+            for entity_id in entities_in(data):
+                self._clive_set.pop(entity_id, None)
         if not ctx.user_id or ctx.parent_id:
             return  # an automation, a timer, the house itself: not a person asking
         if self._scripts.get(ctx.id, 0) >= now:
@@ -199,30 +209,42 @@ class Activity:
             return
         self._add(make_entry(time.time(), "presence", first_name(new.name), text, "mdi:map-marker-account" if new.state != "not_home" else "mdi:exit-run", new.entity_id))
 
+    def _remember_clive_set(self, now: float, domain: str, service: str, data: dict[str, Any]) -> None:
+        """He asked for these devices to be like this: a later change away from it, from outside, is an override."""
+        expected = expected_from_call(domain, service, data)
+        if not expected:
+            return
+        if len(self._clive_set) > 200:
+            self._clive_set = {k: v for k, v in self._clive_set.items() if now - v[0] <= OVERRULE_S}
+        for entity_id in entities_in(data):
+            before = self._clive_set.get(entity_id, (0, {}))[1]
+            self._clive_set[entity_id] = (now, {**before, **expected})
+
     @callback
     def _on_device(self, event: Event) -> None:
-        """A device turned on or off: listed when nothing in Home Assistant asked for it (its own app, a switch, a remote)."""
+        """A device changed: listed when it overrules what the assistant set, from outside Home Assistant (its own dial, app or a switch)."""
         ctx = event.context
         if ctx.user_id or ctx.parent_id:
             return
         old, new = event.data.get("old_state"), event.data.get("new_state")
         if old is None or new is None:
             return
-        text = outside_text(new.domain, old.state, new.state)
+        touched = self._clive_set.get(new.entity_id)
         now = time.time()
-        if not text or now - self._started < OUTSIDE_SETTLE_S:
+        if touched is None or now - touched[0] > OVERRULE_S or now - self._started < WATCH_SETTLE_S:
             return
-        if self._called.get(ctx.id, 0) >= now or now - self._last_call.get(new.domain, 0) < OUTSIDE_PROPAGATE_S:
+        if self._called.get(ctx.id, 0) >= now or now - self._last_call.get(new.domain, 0) < WATCH_PROPAGATE_S:
             return
-        registry = er.async_get(self.hass).async_get(new.entity_id)
-        if registry is not None and (registry.entity_category or registry.hidden_by):
-            return  # a device's settings (a child lock...), or something hidden
+        text = overrule_text(new.domain, old.state, old.attributes, new.state, new.attributes, touched[1])
+        if not text:
+            return
         members = set(_as_list(new.attributes.get("entity_id")))
-        self._recent_outside = [r for r in self._recent_outside if now - r[0] < OUTSIDE_DUPLICATE_S]
-        if any(outside_related(new.entity_id, members, r[1], r[2]) for r in self._recent_outside):
+        self._recent_overrules = [r for r in self._recent_overrules if now - r[0] < WATCH_DUPLICATE_S]
+        if any(related(new.entity_id, members, r[1], r[2]) for r in self._recent_overrules):
             return
-        self._recent_outside.append((now, new.entity_id, members))
-        self._add(make_entry(now, "outside", new.name, text, icon_for(new.domain), new.entity_id))
+        self._recent_overrules.append((now, new.entity_id, members))
+        del self._clive_set[new.entity_id]  # one line per override
+        self._add(make_entry(now, "overruled", new.name, text, icon_for(new.domain), new.entity_id, clive_ts=touched[0]))
 
     def _add(self, entry: dict[str, Any]) -> None:
         add(self.entries, entry)

@@ -123,7 +123,7 @@ class ActivityDataTest {
         assertEquals(listOf("clive"), kinds(ActivityAction.Asked))
         assertEquals(listOf("clive_auto"), kinds(ActivityAction.Automatic))
         assertEquals(listOf("presence"), kinds(ActivityAction.Presence))
-        assertEquals(listOf("outside"), kinds(ActivityAction.Outside))
+        assertEquals(listOf("overruled"), kinds(ActivityAction.Overruled))
     }
 
     @Test
@@ -135,15 +135,18 @@ class ActivityDataTest {
             .put("entries", JSONArray()
                 .put(JSONObject().put("ts", 1000.5).put("kind", "clive").put("who", "").put("text", "turned off Downstairs").put("by", "Hayley").put("icon", "mdi:thermostat"))
                 .put(JSONObject().put("ts", 900).put("kind", "clive_auto").put("who", "").put("text", "turned on Downstairs").put("rule", "keep the climate comfortable"))
+                .put(JSONObject().put("ts", 850).put("kind", "overruled").put("who", "Downstairs").put("text", "turned off").put("clive_ts", 700.5))
                 .put(JSONObject().put("ts", 800).put("kind", "user").put("who", "Jamie"))) // no text: dropped
         val r = parseActivity(answer)!!
         assertEquals(7, r.total)
         assertEquals("Gregg", r.assistant)
         assertEquals(listOf("Hayley", "Jamie"), r.people)
-        assertEquals(2, r.lines.size)
+        assertEquals(3, r.lines.size)
+        assertEquals(700_500L, r.lines[2].clive)
         assertEquals(1_000_500L, r.lines[0].ts)
         assertEquals("Hayley", r.lines[0].by)
         assertEquals("keep the climate comfortable", r.lines[1].rule)
+        assertNull(r.lines[1].clive)
         assertNull(parseActivity(null))
         assertNull(parseActivity(JSONObject()))
         assertEquals("Clive", parseActivity(JSONObject().put("entries", JSONArray()))!!.assistant)
@@ -161,15 +164,18 @@ class ActivityDataTest {
         assertEquals("automatic", activityNote(line(1, "clive_auto")))
         assertNull(activityNote(line(1)))
         assertNull(activityNote(line(1, "presence")))
-        // A device acting by itself is named by the device, and the note says it was outside Home Assistant.
-        assertEquals("Kitchen", activityWho(line(1, "outside", who = "Kitchen"), "Gregg"))
-        assertTrue(activityNote(line(1, "outside", who = "Kitchen"))!!.startsWith("outside Home Assistant"))
+        // An override is named by the device that was changed, and says who it overruled and when he had set it.
+        assertEquals("Downstairs", activityWho(line(1, "overruled", who = "Downstairs"), "Gregg"))
+        assertEquals("overruled Gregg from outside the app", activityNote(line(1, "overruled", who = "Downstairs"), "Gregg"))
+        val set = ms(at(2026, 10, 26, 18, 2))
+        val withTime = line(1, "overruled", who = "Downstairs").copy(clive = set)
+        assertEquals("overruled Gregg from outside the app (set at ${com.churchdrive.app.ui.eventClock(set)})", activityNote(withTime, "Gregg"))
     }
 
     @Test
     fun theActionListNamesTheAssistant() {
         assertEquals(
-            listOf("All actions", "People", "Gregg (all)", "Gregg: asked", "Gregg: automatic", "Coming and going", "Devices (own app or switch)"),
+            listOf("All actions", "People", "Gregg (all)", "Gregg: asked", "Gregg: automatic", "Coming and going", "Overruled Gregg"),
             ActivityAction.entries.map { activityActionLabel(it, "Gregg") },
         )
     }

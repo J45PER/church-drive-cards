@@ -23,11 +23,12 @@ enum class ActivityTime(val label: String, val start: String?, val end: String?)
 
 /**
  * Which kinds of line: `user` (a person), `clive` (the assistant, because someone asked), `clive_auto` (the assistant, run by an automation),
- * `presence` (arrived or left), `outside` (a device turned itself on or off: its own app, a switch or a remote). [kinds] empty is everything.
+ * `presence` (arrived or left), `overruled` (something the assistant set was changed from outside the app: the thermostat's own dial or app, a
+ * switch or a remote). [kinds] empty is everything.
  */
 enum class ActivityAction(val kinds: List<String>) {
     All(emptyList()), People(listOf("user")), Assistant(listOf("clive", "clive_auto")), Asked(listOf("clive")), Automatic(listOf("clive_auto")), Presence(listOf("presence")),
-    Outside(listOf("outside")),
+    Overruled(listOf("overruled")),
 }
 
 /** What is being asked for. [who] is a first name (null = everyone). [from] and [to] (milliseconds) are the range for [ActivityDay.Custom]. */
@@ -85,8 +86,11 @@ fun activityQuery(filters: ActivityFilters, nowMs: Long, zone: ZoneId = ZoneId.s
 fun activityStamp(ms: Long, zone: ZoneId = ZoneId.systemDefault()): String =
     DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm", Locale.UK).withZone(zone).format(Instant.ofEpochMilli(ms))
 
-/** One line of the log. [by] is who he did it for (kind `clive`); [rule] is the automation that ran him (kind `clive_auto`). */
-data class ActivityLine(val ts: Long, val kind: String, val who: String, val text: String, val icon: String?, val by: String?, val rule: String?)
+/**
+ * One line of the log. [by] is who he did it for (kind `clive`); [rule] is the automation that ran him (kind `clive_auto`); for kind `overruled`,
+ * [who] is the device and [clive] is when he set it (milliseconds).
+ */
+data class ActivityLine(val ts: Long, val kind: String, val who: String, val text: String, val icon: String?, val by: String?, val rule: String?, val clive: Long? = null)
 
 /** An answer from the house: the lines (newest first), how many matched in all, who is named in the log, and what the assistant is called. */
 data class ActivityResult(val lines: List<ActivityLine>, val total: Int, val people: List<String>, val assistant: String)
@@ -97,7 +101,8 @@ fun parseActivity(result: Any?): ActivityResult? {
     val lines = (0 until list.length()).mapNotNull { i ->
         val e = list.optJSONObject(i) ?: return@mapNotNull null
         val text = e.text("text") ?: return@mapNotNull null
-        ActivityLine((e.optDouble("ts", 0.0) * 1000).toLong(), e.text("kind") ?: "user", e.optString("who", ""), text, e.text("icon"), e.text("by"), e.text("rule"))
+        ActivityLine((e.optDouble("ts", 0.0) * 1000).toLong(), e.text("kind") ?: "user", e.optString("who", ""), text, e.text("icon"), e.text("by"), e.text("rule"),
+            e.optDouble("clive_ts", 0.0).takeIf { it > 0 }?.let { (it * 1000).toLong() })
     }
     val people = o.optJSONArray("people")?.let { a -> (0 until a.length()).map { a.optString(it) }.filter { it.isNotBlank() } } ?: emptyList()
     return ActivityResult(lines, o.optInt("total", lines.size), people, o.text("assistant") ?: "Clive")
@@ -105,14 +110,14 @@ fun parseActivity(result: Any?): ActivityResult? {
 
 fun activityIsAssistant(kind: String): Boolean = kind == "clive" || kind == "clive_auto"
 
-/** Who did it: the person, the assistant by his name, or (for a device acting by itself) the device. */
+/** Who did it: the person, the assistant by his name, or (for an override) the device that was changed. */
 fun activityWho(line: ActivityLine, assistant: String): String = if (activityIsAssistant(line.kind)) assistant else line.who.ifBlank { "Someone" }
 
-/** Whether someone asked him or an automation ran him (and who or which), or that a device acted by itself; null for people and comings and goings. */
-fun activityNote(line: ActivityLine): String? = when (line.kind) {
+/** Whether someone asked him or an automation ran him (and who or which), or that a device overruled him; null for people and comings and goings. */
+fun activityNote(line: ActivityLine, assistant: String = "the assistant"): String? = when (line.kind) {
     "clive" -> line.by?.let { "asked by $it" } ?: "asked"
     "clive_auto" -> line.rule?.let { "automatic: $it" } ?: "automatic"
-    "outside" -> "outside Home Assistant: the device's own app, a switch or a remote"
+    "overruled" -> "overruled $assistant from outside the app" + (line.clive?.let { " (set at ${eventClock(it)})" } ?: "")
     else -> null
 }
 
@@ -124,7 +129,7 @@ fun activityActionLabel(action: ActivityAction, assistant: String): String = whe
     ActivityAction.Asked -> "$assistant: asked"
     ActivityAction.Automatic -> "$assistant: automatic"
     ActivityAction.Presence -> "Coming and going"
-    ActivityAction.Outside -> "Devices (own app or switch)"
+    ActivityAction.Overruled -> "Overruled $assistant"
 }
 
 /** The lines under their day ("Today", "Yesterday", "Monday 21 Sep"), keeping the newest-first order. */

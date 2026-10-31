@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.83.0
+
+- Version moves with the shared number. No other change.
+
 ## 0.82.0
 
 - Pairing (Phase 3): the Add tab scans the QR code on a satellite's screen or sticker (or takes its name and six digits by hand), sends it the home Wi-Fi over Bluetooth (Improv), adds it to Home Assistant's ESPHome integration, waits for it to appear and opens it to set up. Remove from Home Assistant and Reset pairing are under Actions. Not yet tried on a real satellite.
