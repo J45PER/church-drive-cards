@@ -609,6 +609,10 @@ fun ChargerCard(entities: Map<String, EntityState>, call: CallService) {
             if (session != null) {
                 Text("${temp(session)} kWh this session", style = MaterialTheme.typography.bodyMedium)
             }
+            // The Octopus rate right now, as on the dashboard's charger card ("7.9p rate").
+            Octopus.current(Octopus.allRates(entities), System.currentTimeMillis())?.let {
+                Text("${Octopus.pence(it.pence)}p rate now", style = MaterialTheme.typography.bodyMedium)
+            }
         }
         val teal = toneColors(Tone.Teal)
         if (mode?.available == true) {
@@ -634,6 +638,17 @@ fun ChargerCard(entities: Map<String, EntityState>, call: CallService) {
                     teal, tone.onContainer, true,
                 )
                 Text(smartText(sm, Octopus.allRates(entities), System.currentTimeMillis()), style = MaterialTheme.typography.bodySmall)
+            }
+            // Which car is plugged in (Primary: the one on the Octopus app; Additional: any other), as on the dashboard's charger card.
+            carRoleChoice(entities)?.let { c ->
+                TileRow(
+                    listOf(
+                        TileItem("mdi:car-electric", CAR_ROLE_PRIMARY, c.role == CAR_ROLE_PRIMARY) { chooseCarRole(call, CAR_ROLE_PRIMARY, c.confirmed) },
+                        TileItem("mdi:car", CAR_ROLE_ADDITIONAL, c.role == CAR_ROLE_ADDITIONAL) { chooseCarRole(call, CAR_ROLE_ADDITIONAL, c.confirmed) },
+                    ),
+                    teal, tone.onContainer, true,
+                )
+                Text("Car plugged in · " + carRoleText(c), style = MaterialTheme.typography.bodySmall)
             }
         }
         TileRow(

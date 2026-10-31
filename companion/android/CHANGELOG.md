@@ -4,6 +4,12 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.86.0
+
+- **"Which car is plugged in?"** replaces "Confirm car to charge tonight": the Home page card and the notification now have **Primary** (the car on the Octopus app, today the ID.5: charges in the 23:30 to 05:30 cheap window and whenever Octopus schedules it), **Additional** (any other car: cheap window only) and **No**. The old Yes button still works and counts as Primary. Needs the Home Assistant changes described in `ha/zappi-octopus-intelligent.md`.
+- **The car charger card has the dashboard card's choice of car.** While a car is plugged in, Primary / Additional shows under Smart charge (picking one on a car nobody has answered for also confirms it), and the card says the Octopus rate now.
+- **The Car card lists the ID.5.** Its battery % and Octopus's charging plan ("Octopus charging until 05:30", "Next Octopus charge 02:30 to 04:30") come from the Octopus integration; it shows as plugged in and charging when it is the Primary car on the Zappi. Octopus gives no range or place for it.
+
 ## 0.85.0
 
 - **Camera pictures are refreshed by Home Assistant, not by opening the app.** The camera cards no longer press each camera's Take Snapshot button when you open the page (that woke battery cameras and, with several cameras, put five "pressed Take Snapshot" lines in the Activity log under your name). Church Drive in Home Assistant now asks each camera itself: every 60 minutes for a camera on mains power and 180 for one with a battery, counted from the camera's last picture, event (motion or ring) or button press, so a busy camera is never asked. The orange "old" badge stays, and the pop-up's **New snapshot** button still works. Needs Church Drive 0.85.0 or later in Home Assistant.

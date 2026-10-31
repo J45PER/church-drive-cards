@@ -26,7 +26,11 @@ Charging always uses **Fast**; Eco and Eco+ are not used by smart charge. The ga
 - `Church Drive: Zappi smart charge`: "cheap" is now the gate above instead of comparing rates; also re-checks when the off-peak or dispatching sensors or the car role change. `Zappi smart charge ready by` and `max price` are no longer used (left in place).
 - `Church Drive: Zappi safety net` (entity id still ends `_00_40`): runs at 23:40 and 10 minutes into a dispatch for the Primary car.
 
+## App and cards (0.55.0)
+- The phone app has the same choice as the dashboard: the Home page "Which car is plugged in?" card (Primary / Additional / No) and the notification buttons, and the charger card shows Primary / Additional under Smart charge plus the Octopus rate now. In the app it is two tiles, not a drop-down, to follow the app's look-and-feel rules (`companion/android/UI-STANDARDS.md`).
+- The Car card (dashboard and app) lists the ID.5 from the Octopus Intelligent device: battery %, "Octopus charging until ..." or "Next Octopus charge ... to ...". Octopus gives no plug, range or place, so it shows as plugged in and charging when the Zappi is and the role is Primary. Range and location need a VW integration (the card already supports `vag_connect`, `volkswagencarnet` and `volkswagen_we_connect_id` if one is added).
+
 ## Still to do
-- The Church Drive app (Android) still shows Yes / No on its Home card; its Yes counts as Primary. Adding Primary / Additional there is a separate change (`companion/android/.../CarConfirm.kt`).
-- The compact Charging card does not show the car dropdown yet; the full card does.
+- The compact Charging card does not show the car choice yet; the full card does.
 - Watch whether Octopus really holds the ID.5 off outside its slots before considering "always on" for the Primary car.
+- The Zappi reverted Fast to Stopped within seconds on 31 Oct 2026 while locked; see the session notes. The cause is on the charger or myenergi side.

@@ -51,11 +51,14 @@ fun carBatteryColour(level: Double?, ok: Color): Color = when {
     else -> ok
 }
 
-/** The integrations that make cars (Vauxhall and Peugeot through Stellantis, the VW group). */
-val CAR_PLATFORMS = setOf("stellantis_vehicles", "vag_connect", "volkswagencarnet", "volkswagen_we_connect_id")
+/**
+ * The integrations that make cars (Vauxhall and Peugeot through Stellantis, the VW group), and Octopus: its Intelligent device is a car it
+ * controls (the ID.5). That gives the battery % and its charging plan but not the plug, range or place; see [octopusCarState].
+ */
+val CAR_PLATFORMS = setOf("stellantis_vehicles", "vag_connect", "volkswagencarnet", "volkswagen_we_connect_id", "octopus_energy")
 
 /** The entities of one car that the card reads, by their ids ("" when the car hasn't got one). */
-data class CarEntities(val battery: String, val range: String, val fuel: String, val fuelRange: String, val plugged: String, val charging: String, val end: String, val tracker: String, val wake: String = "")
+data class CarEntities(val battery: String, val range: String, val fuel: String, val fuelRange: String, val plugged: String, val charging: String, val end: String, val tracker: String, val wake: String = "", val dispatch: String = "")
 
 fun carEntities(ids: List<String>, entities: Map<String, EntityState>): CarEntities {
     fun pick(domain: String, match: Regex, skip: Regex? = null) =
@@ -74,7 +77,34 @@ fun carEntities(ids: List<String>, entities: Map<String, EntityState>): CarEntit
         end = pick("sensor", Regex("charging_end|charge_end|charging_time_left|remaining_charging")),
         tracker = pick("device_tracker", Regex(".")),
         wake = pick("button", Regex("wake_?up$")),
+        dispatch = pick("binary_sensor", Regex("intelligent_dispatching$")),
     )
+}
+
+/** What a car made by Octopus's Intelligent device can say: whether it is plugged in and charging, and Octopus's plan for it. */
+data class OctopusCar(val plugged: Boolean, val charging: Boolean, val plan: String)
+
+/**
+ * Octopus gives that car no plug or charging sensor, so it is plugged in and charging when the Zappi is and this car is the Primary one
+ * on it ([ZAPPI_CAR_ROLE]); its plan is the current or next dispatch. Null for a car that is not made by Octopus.
+ */
+fun octopusCarState(e: CarEntities, entities: Map<String, EntityState>, zone: ZoneId = ZoneId.systemDefault()): OctopusCar? {
+    val disp = entities[e.dispatch]?.takeIf { it.available } ?: return null
+    val onCharger = entities[ZAPPI_CAR_ROLE]?.takeIf { it.available }?.state == CAR_ROLE_PRIMARY
+    val plug = entities[ZAPPI_PLUG]?.takeIf { it.available }?.state
+    val plugged = onCharger && plug != null && !plug.contains("disconnected", ignoreCase = true)
+    val power = entities[ZAPPI_POWER]?.state?.toDoubleOrNull() ?: 0.0
+    val charging = plugged && (power > 100 || plug?.startsWith("charging", ignoreCase = true) == true)
+    fun at(key: String): String? = disp.str(key)?.let { parseMillis(it) }?.let { HomeTime.format(it, "HH:mm", zone) }
+    val currentEnd = at("current_end")
+    val nextStart = at("next_start")
+    val nextEnd = at("next_end")
+    val plan = when {
+        disp.state == "on" && currentEnd != null -> "Octopus charging until $currentEnd"
+        nextStart != null && nextEnd != null -> "Next Octopus charge $nextStart to $nextEnd"
+        else -> ""
+    }
+    return OctopusCar(plugged, charging, plan)
 }
 
 data class CarRow(
@@ -146,12 +176,14 @@ fun carRows(config: JSONObject, entities: Map<String, EntityState>, registry: Re
                 tracker.state == "not_home" -> "Away"
                 else -> tracker.state
             }
-            val charging = entities[e.charging]?.state == "on"
+            val octopus = octopusCarState(e, entities, zone)
+            val charging = octopus?.charging ?: (entities[e.charging]?.state == "on")
             val end = entities[e.end]
-            val endText = if (charging && end != null && end.available && end.state.isNotBlank()) chargeEndText(end.state, end.str("unit_of_measurement"), zone) else ""
+            val endText = (if (charging && end != null && end.available && end.state.isNotBlank()) chargeEndText(end.state, end.str("unit_of_measurement"), zone) else "")
+                .ifEmpty { octopus?.plan.orEmpty() }
             CarRow(
                 device, name, entities[e.battery]?.state?.toDoubleOrNull(), reading(entities[e.range]), entities[e.fuel]?.state?.toDoubleOrNull(),
-                reading(entities[e.fuelRange]), entities[e.plugged]?.state == "on", charging, endText, where, owned,
+                reading(entities[e.fuelRange]), octopus?.plugged ?: (entities[e.plugged]?.state == "on"), charging, endText, where, owned,
                 carAsOf(entities[e.battery]), e.wake.takeIf { entities[it]?.state != "unavailable" }.orEmpty(),
             )
         }
