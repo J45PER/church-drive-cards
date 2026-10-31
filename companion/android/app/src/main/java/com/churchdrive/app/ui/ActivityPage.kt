@@ -193,7 +193,7 @@ private fun ActivityRow(line: ActivityLine, assistant: String) {
         "clive" -> MaterialTheme.colorScheme.tertiary
         "clive_auto" -> MaterialTheme.colorScheme.secondary
         "presence" -> toneColors(Tone.Green).accent
-        "outside" -> toneColors(Tone.Amber).accent
+        "overruled" -> toneColors(Tone.Amber).accent
         else -> MaterialTheme.colorScheme.primary
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
@@ -207,7 +207,7 @@ private fun ActivityRow(line: ActivityLine, assistant: String) {
                 append(" ")
                 append(line.text)
             }, style = MaterialTheme.typography.bodyMedium)
-            activityNote(line)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            activityNote(line, assistant)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
     }
 }

@@ -234,45 +234,78 @@ class AutoOrAskedTest(unittest.TestCase):
         self.assertEqual(al.who_list(log), ["Ian"])
 
 
-class OutsideTest(unittest.TestCase):
-    def test_on_and_off_are_noticed(self):
-        self.assertEqual(al.outside_text("light", "off", "on"), "turned on")
-        self.assertEqual(al.outside_text("light", "on", "off"), "turned off")
-        self.assertEqual(al.outside_text("switch", "on", "off"), "turned off")
-        self.assertEqual(al.outside_text("fan", "off", "on"), "turned on")
+class OverruledTest(unittest.TestCase):
+    def text(self, domain, old, new, expected, old_attrs=None, new_attrs=None):
+        return al.overrule_text(domain, old, old_attrs or {}, new, new_attrs or {}, expected)
 
-    def test_a_thermostat_is_on_in_any_mode_but_off(self):
-        self.assertEqual(al.outside_text("climate", "off", "heat"), "turned on")
-        self.assertEqual(al.outside_text("climate", "heat", "off"), "turned off")
-        self.assertEqual(al.outside_text("climate", "heat", "cool"), "")
+    def test_what_a_request_leaves_behind(self):
+        self.assertEqual(al.expected_from_call("light", "turn_on", {"brightness_pct": 40}), {"state": "on"})
+        self.assertEqual(al.expected_from_call("switch", "turn_off", {}), {"state": "off"})
+        self.assertEqual(al.expected_from_call("climate", "set_temperature", {"temperature": "19.5"}), {"temperature": 19.5})
+        self.assertEqual(al.expected_from_call("climate", "set_temperature", {"temperature": 21, "hvac_mode": "heat"}), {"temperature": 21.0, "state": "heat"})
+        self.assertEqual(al.expected_from_call("climate", "set_hvac_mode", {"hvac_mode": "off"}), {"state": "off"})
+        self.assertEqual(al.expected_from_call("climate", "turn_off", {}), {"state": "off"})
+        self.assertEqual(al.expected_from_call("light", "toggle", {}), {})
+        self.assertEqual(al.expected_from_call("cover", "open_cover", {}), {})
+        self.assertEqual(al.expected_from_call("climate", "set_temperature", {"temperature": "warm"}), {})
 
-    def test_coming_back_from_unavailable_is_not_a_change(self):
-        for old, new in [("unavailable", "on"), ("on", "unavailable"), ("unknown", "off"), (None, "on"), ("on", "on"), ("", "off")]:
-            self.assertEqual(al.outside_text("light", old, new), "", (old, new))
+    def test_a_light_or_plug_turned_away_from_what_he_set(self):
+        self.assertEqual(self.text("light", "on", "off", {"state": "on"}), "turned off")
+        self.assertEqual(self.text("switch", "off", "on", {"state": "off"}), "turned on")
+        self.assertEqual(self.text("fan", "on", "off", {"state": "on"}), "turned off")
+
+    def test_a_device_going_to_what_he_set_is_not_an_override(self):
+        # a cloud device echoing his request a moment later
+        self.assertEqual(self.text("light", "off", "on", {"state": "on"}), "")
+        self.assertEqual(self.text("climate", "heat", "off", {"state": "off"}), "")
+
+    def test_the_thermostats_target_and_mode(self):
+        self.assertEqual(self.text("climate", "heat", "heat", {"temperature": 18.0}, {"temperature": 18}, {"temperature": 22}), "target changed from 18° to 22°")
+        self.assertEqual(self.text("climate", "heat", "heat", {"temperature": 18.0}, {"temperature": 17.5}, {"temperature": 18}), "")  # echo of his own
+        self.assertEqual(self.text("climate", "heat", "off", {"temperature": 18.0}), "turned off")
+        self.assertEqual(self.text("climate", "off", "heat", {"state": "off"}), "turned on (heat)")
+        self.assertEqual(self.text("climate", "heat", "cool", {}), "changed from heat to cool")
+        self.assertEqual(self.text("climate", "heat", "off", {"state": "heat", "temperature": 20.0}, {"temperature": 20}, {"temperature": 16}), "turned off; target changed from 20° to 16°")
+
+    def test_nothing_changed_that_matters(self):
+        # temperature readings and the like change all the time; only the mode and the target do
+        self.assertEqual(self.text("climate", "heat", "heat", {"state": "heat"}, {"temperature": 20, "current_temperature": 18}, {"temperature": 20, "current_temperature": 19}), "")
+        self.assertEqual(self.text("climate", "heat", "heat", {}, {"temperature": 20}, {}), "")  # no target any more is not a change
+        self.assertEqual(self.text("light", "on", "on", {"state": "on"}), "")
+
+    def test_coming_back_from_unavailable_is_not_an_override(self):
+        for old, new in [("unavailable", "on"), ("on", "unavailable"), ("unknown", "off"), (None, "on"), ("", "off")]:
+            self.assertEqual(self.text("light", old, new, {"state": "on"}), "", (old, new))
 
     def test_only_watched_kinds_of_device(self):
-        self.assertEqual(al.outside_text("sensor", "off", "on"), "")
-        self.assertEqual(al.outside_text("cover", "open", "closed"), "")
-        self.assertEqual(al.outside_text("lock", "locked", "unlocked"), "")
+        self.assertEqual(self.text("sensor", "off", "on", {"state": "on"}), "")
+        self.assertEqual(self.text("cover", "open", "closed", {"state": "open"}), "")
+        self.assertEqual(self.text("lock", "locked", "unlocked", {}), "")
 
     def test_a_room_and_its_light_are_one_device(self):
         room, light = "light.hayley_s_landing", "light.hayley_s_landing_main"
-        self.assertTrue(al.outside_related(room, {light, "light.other"}, light, set()))
-        self.assertTrue(al.outside_related(light, set(), room, {light}))
-        self.assertFalse(al.outside_related(room, {light}, "light.kitchen", set()))
-        self.assertFalse(al.outside_related("light.a", set(), "light.b", set()))
+        self.assertTrue(al.related(room, {light, "light.other"}, light, set()))
+        self.assertTrue(al.related(light, set(), room, {light}))
+        self.assertFalse(al.related(room, {light}, "light.kitchen", set()))
+        self.assertFalse(al.related("light.a", set(), "light.b", set()))
 
-    def test_a_line_names_the_device_and_is_not_a_person(self):
-        e = al.make_entry(5, "outside", "Kitchen", "turned off", "mdi:lightbulb", "light.kitchen")
+    def test_a_line_names_the_device_and_when_he_set_it(self):
+        e = al.make_entry(100, "overruled", "Downstairs", "target changed from 18° to 22°", "mdi:thermostat", "climate.downstairs", clive_ts=40.5)
+        self.assertEqual(e["clive_ts"], 40.5)
         self.assertEqual(al.clean([e]), [e])
+        self.assertNotIn("clive_ts", al.make_entry(100, "user", "Jamie", "x", "i"))
         self.assertEqual(al.who_list([e, al.make_entry(6, "user", "Jamie", "x", "i")]), ["Jamie"])
-        self.assertEqual(al.select([e], kinds=["outside"])["total"], 1)
-        self.assertEqual(al.select([e], kinds=["user"])["total"], 0)
+        self.assertEqual(al.select([e], kinds=["overruled"])["total"], 1)
+        self.assertEqual(al.select([e], kinds=["clive"])["total"], 0)
 
-    def test_a_device_toggling_is_one_line(self):
+    def test_the_earlier_outside_lines_are_dropped_when_the_log_loads(self):
+        old = {"ts": 5, "kind": "outside", "who": "Kitchen", "text": "turned off", "icon": "mdi:lightbulb"}
+        self.assertEqual(al.clean([old]), [])
+
+    def test_a_device_changing_twice_quickly_is_one_line(self):
         log = []
         for i, text in enumerate(("turned on", "turned off", "turned on")):
-            al.add(log, al.make_entry(1000 + i, "outside", "Plug", text, "mdi:toggle-switch", "switch.plug"))
+            al.add(log, al.make_entry(1000 + i, "overruled", "Plug", text, "mdi:toggle-switch", "switch.plug"))
         self.assertEqual([e["text"] for e in log], ["turned on"])
 
 
@@ -297,15 +330,18 @@ class WiringTest(unittest.TestCase):
         self.assertIn('"automation_triggered"', SRC)
         self.assertIn('"clive_auto" if followed[2] else "clive"', SRC)
 
-    def test_outside_changes_wait_for_home_assistants_own_requests(self):
+    def test_overrides_wait_for_home_assistants_own_requests_and_only_follow_what_he_set(self):
         body = SRC[SRC.index("def _on_device"):SRC.index("    def _add(")]
         # a person, an automation's child context, a request's own context, and a request in the same kind of device a moment ago all rule it out
-        for needle in ("ctx.user_id or ctx.parent_id", "self._called.get(ctx.id", "self._last_call.get(new.domain", "outside_related(", "entity_category"):
+        for needle in ("ctx.user_id or ctx.parent_id", "self._called.get(ctx.id", "self._last_call.get(new.domain", "related(", "self._clive_set.get(new.entity_id)", "OVERRULE_S"):
             self.assertIn(needle, body)
         self.assertRegex(SRC, r"@staticmethod\n    @callback\n    def _is_device")
         # every service call is noted before any filter, so nothing a request caused can look like a device acting alone
         call = SRC[SRC.index("def _on_call"):SRC.index("followed = ")]
         self.assertIn("self._called[ctx.id]", call)
+        # what he sets is remembered; what anyone else sets afterwards is no longer his
+        self.assertIn("self._remember_clive_set(", SRC)
+        self.assertIn("self._clive_set.pop(entity_id", SRC)
 
     def test_user_logins_are_never_sent_out(self):
         self.assertIn('if k != "user_id"', SRC)

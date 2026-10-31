@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.82.0
+
+- Version moves with the shared number. No other change.
+
 ## 0.81.0
 
 - Account side panel like the other apps: tap the initial or swipe left for Open Church Drive, Settings, About and Sign out.

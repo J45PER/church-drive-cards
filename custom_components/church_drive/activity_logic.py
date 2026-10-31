@@ -10,12 +10,13 @@ from __future__ import annotations
 from datetime import datetime, tzinfo
 from typing import Any, Iterable
 
-KINDS = ("user", "clive", "clive_auto", "presence", "outside")
+KINDS = ("user", "clive", "clive_auto", "presence", "overruled")
 # `clive`: the assistant did it because someone asked him (a conversation, or a person running his script). `clive_auto`: one of the
 # house's automations ran his script (the heating rules, a welcome home...), with nobody asking.
 CLIVE_KINDS = ("clive", "clive_auto")
-# `outside`: a device turned itself on or off with nothing in Home Assistant asking: its own app (Hue, a smart plug's), a wall switch,
-# a remote or a schedule in the device. Home Assistant can't say which of those it was.
+# `overruled`: something the assistant set (the heating target, a light on or off) was changed from outside the Church Drive app, with
+# nothing in Home Assistant asking: the thermostat's own dial or app, the light's own app, a wall switch, a remote or a schedule in the
+# device. Home Assistant can't say which of those it was. Only what he set recently counts; general device changes are not listed.
 KEEP_DAYS = 30        # older entries are dropped
 KEEP_MAX = 4000       # and never more than this many, newest kept
 COALESCE_S = 8        # the same person doing the same thing to the same thing this soon after replaces it (a slider drag)
@@ -31,11 +32,12 @@ CLIVE_QUIET = {
     "energy_now", "doors", "devices_attention", "home_safety_check", "house_secure", "house_climate", "air_quality", "my_tasks",
 }
 
-# What is watched for changes made outside Home Assistant: light, switch, fan and humidifier (on/off) and climate (off or not).
-OUTSIDE_DOMAINS = ("light", "switch", "fan", "humidifier", "climate")
-OUTSIDE_SETTLE_S = 90     # after Church Drive starts: Home Assistant is still catching up with its devices
-OUTSIDE_PROPAGATE_S = 6   # a device or room that follows a command from Home Assistant (a Hue room's lights) changes by itself just after it
-OUTSIDE_DUPLICATE_S = 5   # a room and its lights, or a group and its members, are one change, not several
+# What is watched for being overruled: light, switch, fan and humidifier (on or off) and climate (its mode and target temperature).
+WATCH_DOMAINS = ("light", "switch", "fan", "humidifier", "climate")
+WATCH_SETTLE_S = 90     # after Church Drive starts: Home Assistant is still catching up with its devices
+WATCH_PROPAGATE_S = 6   # a device or room that follows a command from Home Assistant (a Hue room's lights) changes by itself just after it
+WATCH_DUPLICATE_S = 5   # a room and its lights, or a group and its members, are one change, not several
+OVERRULE_S = 6 * 3600   # a change only overrules the assistant if he set that device this recently
 
 # What a person's own switching is noted for: domain -> the services that count (None = all of that domain's).
 NOTED: dict[str, set[str] | None] = {
@@ -204,25 +206,67 @@ def rule_name(name: str) -> str:
     return rest.strip() if sep and head.strip().lower() == CLIVE_PREFIX else name
 
 
-def outside_text(domain: str, old: str | None, new: str | None) -> str:
-    """"turned on" or "turned off" for a device's state change; "" for anything else (coming back from unavailable, a new mode, an attribute)."""
+def _float(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def expected_from_call(domain: str, service: str, data: dict[str, Any] | None) -> dict[str, Any]:
+    """What a request leaves a device as: {"state": "on"|"off"|a thermostat mode, "temperature": the target}. Only what the call says."""
+    data = data or {}
+    out: dict[str, Any] = {}
+    if domain not in WATCH_DOMAINS:
+        return out
+    if service == "turn_on" and domain != "climate":
+        out["state"] = "on"
+    elif service == "turn_off":
+        out["state"] = "off"
+    elif domain == "climate":
+        if service == "set_hvac_mode" and data.get("hvac_mode"):
+            out["state"] = str(data["hvac_mode"])
+        if service == "set_temperature":
+            if _float(data.get("temperature")) is not None:
+                out["temperature"] = _float(data["temperature"])
+            if data.get("hvac_mode"):
+                out["state"] = str(data["hvac_mode"])
+    return out
+
+
+def _deg(value: float) -> str:
+    return f"{value:g}°"
+
+
+def overrule_text(domain: str, old: str | None, old_attrs: dict[str, Any] | None, new: str | None, new_attrs: dict[str, Any] | None, expected: dict[str, Any]) -> str:
+    """How a device was changed away from what the assistant set ("turned off", "target changed from 18° to 21°"); "" when it was not
+    changed, was only changed to what he set (a device echoing his request later), or went through unavailable."""
     unknown = {None, "", "unknown", "unavailable"}
-    if domain not in OUTSIDE_DOMAINS or old in unknown or new in unknown or old == new:
+    if domain not in WATCH_DOMAINS or old in unknown or new in unknown:
         return ""
-    was, now = (old != "off", new != "off") if domain == "climate" else (old == "on", new == "on")
-    if was == now:
-        return ""
-    return "turned on" if now else "turned off"
+    old_attrs, new_attrs = old_attrs or {}, new_attrs or {}
+    parts = []
+    if domain == "climate":
+        if old != new and expected.get("state") != new:
+            parts.append("turned off" if new == "off" else f"turned on ({new.replace('_', ' ')})" if old == "off" else f"changed from {old.replace('_', ' ')} to {new.replace('_', ' ')}")
+        before, after, wanted = _float(old_attrs.get("temperature")), _float(new_attrs.get("temperature")), expected.get("temperature")
+        if before is not None and after is not None and before != after and not (wanted is not None and abs(after - wanted) < 0.05):
+            parts.append(f"target changed from {_deg(before)} to {_deg(after)}")
+    else:
+        was, now = old == "on", new == "on"
+        if was != now and expected.get("state") != ("on" if now else "off"):
+            parts.append("turned on" if now else "turned off")
+    return "; ".join(parts)
 
 
-def outside_related(a: str, a_members: Iterable[str], b: str, b_members: Iterable[str]) -> bool:
+def related(a: str, a_members: Iterable[str], b: str, b_members: Iterable[str]) -> bool:
     """Whether two entities are the same device seen twice: one is a group that lists the other (a Hue room and its light)."""
     return a in set(b_members) or b in set(a_members)
 
 
-def make_entry(ts: float, kind: str, who: str, text: str, icon: str, entity: str = "", by: str = "", user_id: str = "", rule: str = "") -> dict[str, Any]:
+def make_entry(ts: float, kind: str, who: str, text: str, icon: str, entity: str = "", by: str = "", user_id: str = "", rule: str = "", clive_ts: float = 0) -> dict[str, Any]:
     """One line of the log. [by] is who the assistant did it for (kind `clive`); [rule] is the automation that ran him (kind `clive_auto`);
-    [user_id] is kept so a login with no person can be named later."""
+    [user_id] is kept so a login with no person can be named later. For kind `overruled`, [who] is the device and [clive_ts] when he set it."""
     entry: dict[str, Any] = {"ts": round(float(ts), 3), "kind": kind, "who": who or "", "text": text, "icon": icon}
     if entity:
         entry["entity"] = entity
@@ -230,6 +274,8 @@ def make_entry(ts: float, kind: str, who: str, text: str, icon: str, entity: str
         entry["by"] = by
     if rule:
         entry["rule"] = rule
+    if clive_ts:
+        entry["clive_ts"] = round(float(clive_ts), 3)
     if user_id:
         entry["user_id"] = user_id
     return entry
@@ -263,7 +309,7 @@ def clean(raw: Any) -> list[dict[str, Any]]:
             ts = float(e["ts"])
         except (KeyError, TypeError, ValueError):
             continue
-        out.append(make_entry(ts, e["kind"], str(e.get("who") or ""), e["text"], str(e.get("icon") or "mdi:home"), str(e.get("entity") or ""), str(e.get("by") or ""), str(e.get("user_id") or ""), str(e.get("rule") or "")))
+        out.append(make_entry(ts, e["kind"], str(e.get("who") or ""), e["text"], str(e.get("icon") or "mdi:home"), str(e.get("entity") or ""), str(e.get("by") or ""), str(e.get("user_id") or ""), str(e.get("rule") or ""), _float(e.get("clive_ts")) or 0))
     out.sort(key=lambda e: e["ts"])
     return out
 
