@@ -72,7 +72,7 @@ fun zoneControl(entities: Map<String, EntityState>, climateId: String): ZoneCont
     )
 }
 
-private fun clock(ms: Long): String = SimpleDateFormat("HH:mm", Locale.UK).format(Date(ms))
+private fun clock(ms: Long): String = HomeTime.format(ms, "HH:mm")
 
 /** "Clive controlled", "Clive controlled · paused until 12:24" or "Manual". */
 fun zoneStatusText(zone: ZoneControl, name: String, nowMs: Long): String {

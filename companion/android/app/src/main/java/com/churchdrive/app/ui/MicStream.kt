@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import android.media.audiofx.NoiseSuppressor
 import kotlin.math.sqrt
 
 /**
@@ -12,6 +13,7 @@ import kotlin.math.sqrt
  */
 class MicStream(private val onChunk: (ByteArray, Int) -> Unit, private val onLevel: (Float) -> Unit = {}) {
     private var record: AudioRecord? = null
+    private var suppressor: NoiseSuppressor? = null
     private var thread: Thread? = null
     @Volatile private var running = false
 
@@ -30,6 +32,9 @@ class MicStream(private val onChunk: (ByteArray, Int) -> Unit, private val onLev
             return false
         }
         record = r
+        // The phone's own noise suppression, where it has one: a television or a fan behind the voice keeps the house's silence detector
+        // thinking you are still speaking (a slow answer) and ends up in what it hears.
+        if (NoiseSuppressor.isAvailable()) suppressor = runCatching { NoiseSuppressor.create(r.audioSessionId)?.also { it.enabled = true } }.getOrNull()
         running = true
         r.startRecording()
         thread = Thread {
@@ -50,6 +55,8 @@ class MicStream(private val onChunk: (ByteArray, Int) -> Unit, private val onLev
     fun stop() {
         running = false
         thread = null
+        runCatching { suppressor?.release() }
+        suppressor = null
         record?.let { runCatching { it.stop() }; runCatching { it.release() } }
         record = null
     }
