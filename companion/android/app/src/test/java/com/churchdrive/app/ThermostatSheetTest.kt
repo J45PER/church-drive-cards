@@ -2,6 +2,8 @@ package com.churchdrive.app
 
 import com.churchdrive.app.ha.EntityState
 import com.churchdrive.app.ui.comfortRange
+import com.churchdrive.app.ui.pauseText
+import com.churchdrive.app.ui.stepPause
 import com.churchdrive.app.ui.comfortTone
 import com.churchdrive.app.ui.Tone
 import com.churchdrive.app.ui.withLiveRange
@@ -90,5 +92,30 @@ class ThermostatSheetTest {
         val live = withLiveRange(card, entities, zoneControl(entities, "climate.downstairs"))
         assertEquals(17.5, live.getDouble("comfort_low"), 0.0)
         assertEquals(21.0, live.getDouble("comfort_high"), 0.0)
+    }
+
+    @Test
+    fun theUsualPauseIsReadAsWords() {
+        assertEquals("15 min", pauseText(15.0))
+        assertEquals("30 min", pauseText(30.0))
+        assertEquals("1 h", pauseText(60.0))
+        assertEquals("1 h 30 min", pauseText(90.0))
+        assertEquals("2 h", pauseText(120.0))
+        assertEquals("–", pauseText(null))
+    }
+
+    @Test
+    fun thePauseStepsByAQuarterOfAnHourWithinTheHelpersLimits() {
+        assertEquals(45.0, stepPause(30.0, 1), 0.0)
+        assertEquals(15.0, stepPause(30.0, -1), 0.0)
+        assertEquals(15.0, stepPause(15.0, -1), 0.0)
+        assertEquals(720.0, stepPause(720.0, 1), 0.0)
+    }
+
+    @Test
+    fun theThermostatKnowsTheHousesPauseNumber() {
+        val entities = house("on") + ("input_number.clive_climate_pause_minutes" to e("input_number.clive_climate_pause_minutes", "30.0"))
+        assertEquals(30.0, zoneControl(entities, "climate.downstairs")!!.pauseMinutes!!, 0.0)
+        assertNull(zoneControl(house("on"), "climate.downstairs")!!.pauseMinutes)
     }
 }

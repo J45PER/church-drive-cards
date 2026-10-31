@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { zoneControl, zoneStatusText, stepRange } from '../src/comfort-settings.js';
+import { zoneControl, zoneStatusText, stepRange, pauseText, stepPause } from '../src/comfort-settings.js';
 
 const states = (extra = {}) => ({
   'input_boolean.clive_climate_downstairs_auto': { entity_id: 'input_boolean.clive_climate_downstairs_auto', state: 'on' },
@@ -46,4 +46,23 @@ test('the range ends move by half a degree and keep a degree apart', () => {
   assert.equal(stepRange('low', 20, 21, 0.5), 20);
   assert.equal(stepRange('high', 21, 18, -0.5), 20.5);
   assert.equal(stepRange('high', 19, 18, -0.5), 19);
+});
+
+test('the pause is read as words and steps by a quarter of an hour within the helper limits', () => {
+  assert.equal(pauseText(30), '30 min');
+  assert.equal(pauseText(60), '1 h');
+  assert.equal(pauseText(90), '1 h 30 min');
+  assert.equal(pauseText(null), '–');
+  assert.equal(stepPause(30, 1), 45);
+  assert.equal(stepPause(30, -1), 15);
+  assert.equal(stepPause(15, -1), 15);
+  assert.equal(stepPause(720, 1), 720);
+});
+
+test('a thermostat reports the house pause and its limits when the helper exists', () => {
+  const withPause = states({ 'input_number.clive_climate_pause_minutes': { state: '30.0', attributes: { min: 15, max: 720, step: 15 } } });
+  const z = zoneControl(withPause, 'climate.downstairs');
+  assert.equal(z.pauseMin, 30);
+  assert.deepEqual(z.pauseLimits, { min: 15, max: 720, step: 15 });
+  assert.equal(zoneControl(states(), 'climate.downstairs').pauseMin, null);
 });
