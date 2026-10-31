@@ -193,6 +193,7 @@ private fun ActivityRow(line: ActivityLine, assistant: String) {
         "clive" -> MaterialTheme.colorScheme.tertiary
         "clive_auto" -> MaterialTheme.colorScheme.secondary
         "presence" -> toneColors(Tone.Green).accent
+        "outside" -> toneColors(Tone.Amber).accent
         else -> MaterialTheme.colorScheme.primary
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {

@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.54.3
+
+- **Activity log shows devices turned on or off outside Home Assistant.** When a light, switch, fan, humidifier or thermostat turns on or off with nothing in Home Assistant asking (its own app, a wall switch, a remote, a schedule in the device), it is listed under the device's name, marked "outside Home Assistant". Pick **Devices (own app or switch)** in the Actions list to see just those. Home Assistant can't tell an app from a switch, so they share one label. Needs Church Drive 0.72.0 or later in Home Assistant.
+
 ## 0.54.2
 
 - Asking Clive about tomorrow's weather (or the day after, up to five days) now shows that day's card, with its high, low and hours, instead of only speaking. Today's weather card also shows today's high and low (after midnight it was showing yesterday's). Listening: the phone now asks its own noise suppression to quieten a television or a fan behind your voice, and Clive decides you have finished speaking after 0.9 seconds of quiet instead of 1.2, so he moves from listening to thinking sooner.

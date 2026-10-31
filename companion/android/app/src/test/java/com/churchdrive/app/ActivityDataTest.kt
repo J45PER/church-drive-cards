@@ -123,6 +123,7 @@ class ActivityDataTest {
         assertEquals(listOf("clive"), kinds(ActivityAction.Asked))
         assertEquals(listOf("clive_auto"), kinds(ActivityAction.Automatic))
         assertEquals(listOf("presence"), kinds(ActivityAction.Presence))
+        assertEquals(listOf("outside"), kinds(ActivityAction.Outside))
     }
 
     @Test
@@ -160,12 +161,15 @@ class ActivityDataTest {
         assertEquals("automatic", activityNote(line(1, "clive_auto")))
         assertNull(activityNote(line(1)))
         assertNull(activityNote(line(1, "presence")))
+        // A device acting by itself is named by the device, and the note says it was outside Home Assistant.
+        assertEquals("Kitchen", activityWho(line(1, "outside", who = "Kitchen"), "Gregg"))
+        assertTrue(activityNote(line(1, "outside", who = "Kitchen"))!!.startsWith("outside Home Assistant"))
     }
 
     @Test
     fun theActionListNamesTheAssistant() {
         assertEquals(
-            listOf("All actions", "People", "Gregg (all)", "Gregg: asked", "Gregg: automatic", "Coming and going"),
+            listOf("All actions", "People", "Gregg (all)", "Gregg: asked", "Gregg: automatic", "Coming and going", "Devices (own app or switch)"),
             ActivityAction.entries.map { activityActionLabel(it, "Gregg") },
         )
     }

@@ -10,10 +10,12 @@ from __future__ import annotations
 from datetime import datetime, tzinfo
 from typing import Any, Iterable
 
-KINDS = ("user", "clive", "clive_auto", "presence")
+KINDS = ("user", "clive", "clive_auto", "presence", "outside")
 # `clive`: the assistant did it because someone asked him (a conversation, or a person running his script). `clive_auto`: one of the
 # house's automations ran his script (the heating rules, a welcome home...), with nobody asking.
 CLIVE_KINDS = ("clive", "clive_auto")
+# `outside`: a device turned itself on or off with nothing in Home Assistant asking: its own app (Hue, a smart plug's), a wall switch,
+# a remote or a schedule in the device. Home Assistant can't say which of those it was.
 KEEP_DAYS = 30        # older entries are dropped
 KEEP_MAX = 4000       # and never more than this many, newest kept
 COALESCE_S = 8        # the same person doing the same thing to the same thing this soon after replaces it (a slider drag)
@@ -28,6 +30,12 @@ CLIVE_QUIET = {
     "answer", "show", "show_card", "scores", "fixture", "fixtures", "zappi_info", "car_status", "media_status", "who_is_home",
     "energy_now", "doors", "devices_attention", "home_safety_check", "house_secure", "house_climate", "air_quality", "my_tasks",
 }
+
+# What is watched for changes made outside Home Assistant: light, switch, fan and humidifier (on/off) and climate (off or not).
+OUTSIDE_DOMAINS = ("light", "switch", "fan", "humidifier", "climate")
+OUTSIDE_SETTLE_S = 90     # after Church Drive starts: Home Assistant is still catching up with its devices
+OUTSIDE_PROPAGATE_S = 6   # a device or room that follows a command from Home Assistant (a Hue room's lights) changes by itself just after it
+OUTSIDE_DUPLICATE_S = 5   # a room and its lights, or a group and its members, are one change, not several
 
 # What a person's own switching is noted for: domain -> the services that count (None = all of that domain's).
 NOTED: dict[str, set[str] | None] = {
@@ -196,6 +204,22 @@ def rule_name(name: str) -> str:
     return rest.strip() if sep and head.strip().lower() == CLIVE_PREFIX else name
 
 
+def outside_text(domain: str, old: str | None, new: str | None) -> str:
+    """"turned on" or "turned off" for a device's state change; "" for anything else (coming back from unavailable, a new mode, an attribute)."""
+    unknown = {None, "", "unknown", "unavailable"}
+    if domain not in OUTSIDE_DOMAINS or old in unknown or new in unknown or old == new:
+        return ""
+    was, now = (old != "off", new != "off") if domain == "climate" else (old == "on", new == "on")
+    if was == now:
+        return ""
+    return "turned on" if now else "turned off"
+
+
+def outside_related(a: str, a_members: Iterable[str], b: str, b_members: Iterable[str]) -> bool:
+    """Whether two entities are the same device seen twice: one is a group that lists the other (a Hue room and its light)."""
+    return a in set(b_members) or b in set(a_members)
+
+
 def make_entry(ts: float, kind: str, who: str, text: str, icon: str, entity: str = "", by: str = "", user_id: str = "", rule: str = "") -> dict[str, Any]:
     """One line of the log. [by] is who the assistant did it for (kind `clive`); [rule] is the automation that ran him (kind `clive_auto`);
     [user_id] is kept so a login with no person can be named later."""
@@ -300,6 +324,6 @@ def select(
 
 
 def who_list(entries: Iterable[dict[str, Any]]) -> list[str]:
-    """Everyone named in the log (as the person or who the assistant acted for), A to Z."""
-    names = {e["who"] for e in entries if e["who"] and e["kind"] not in CLIVE_KINDS} | {e["by"] for e in entries if e.get("by")}
+    """Everyone named in the log (as the person or who the assistant acted for), A to Z. Devices are not people."""
+    names = {e["who"] for e in entries if e["who"] and e["kind"] in ("user", "presence")} | {e["by"] for e in entries if e.get("by")}
     return sorted(names, key=str.lower)

@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.54.3
+
+- No change to this app; version kept equal to the phone app (Activity log: devices changed outside Home Assistant).
+
 ## 0.54.2
 
 - Shared code now shows times in both the device's and the home's time zone when they differ (no change in the To-Do app itself).

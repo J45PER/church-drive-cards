@@ -234,6 +234,48 @@ class AutoOrAskedTest(unittest.TestCase):
         self.assertEqual(al.who_list(log), ["Ian"])
 
 
+class OutsideTest(unittest.TestCase):
+    def test_on_and_off_are_noticed(self):
+        self.assertEqual(al.outside_text("light", "off", "on"), "turned on")
+        self.assertEqual(al.outside_text("light", "on", "off"), "turned off")
+        self.assertEqual(al.outside_text("switch", "on", "off"), "turned off")
+        self.assertEqual(al.outside_text("fan", "off", "on"), "turned on")
+
+    def test_a_thermostat_is_on_in_any_mode_but_off(self):
+        self.assertEqual(al.outside_text("climate", "off", "heat"), "turned on")
+        self.assertEqual(al.outside_text("climate", "heat", "off"), "turned off")
+        self.assertEqual(al.outside_text("climate", "heat", "cool"), "")
+
+    def test_coming_back_from_unavailable_is_not_a_change(self):
+        for old, new in [("unavailable", "on"), ("on", "unavailable"), ("unknown", "off"), (None, "on"), ("on", "on"), ("", "off")]:
+            self.assertEqual(al.outside_text("light", old, new), "", (old, new))
+
+    def test_only_watched_kinds_of_device(self):
+        self.assertEqual(al.outside_text("sensor", "off", "on"), "")
+        self.assertEqual(al.outside_text("cover", "open", "closed"), "")
+        self.assertEqual(al.outside_text("lock", "locked", "unlocked"), "")
+
+    def test_a_room_and_its_light_are_one_device(self):
+        room, light = "light.hayley_s_landing", "light.hayley_s_landing_main"
+        self.assertTrue(al.outside_related(room, {light, "light.other"}, light, set()))
+        self.assertTrue(al.outside_related(light, set(), room, {light}))
+        self.assertFalse(al.outside_related(room, {light}, "light.kitchen", set()))
+        self.assertFalse(al.outside_related("light.a", set(), "light.b", set()))
+
+    def test_a_line_names_the_device_and_is_not_a_person(self):
+        e = al.make_entry(5, "outside", "Kitchen", "turned off", "mdi:lightbulb", "light.kitchen")
+        self.assertEqual(al.clean([e]), [e])
+        self.assertEqual(al.who_list([e, al.make_entry(6, "user", "Jamie", "x", "i")]), ["Jamie"])
+        self.assertEqual(al.select([e], kinds=["outside"])["total"], 1)
+        self.assertEqual(al.select([e], kinds=["user"])["total"], 0)
+
+    def test_a_device_toggling_is_one_line(self):
+        log = []
+        for i, text in enumerate(("turned on", "turned off", "turned on")):
+            al.add(log, al.make_entry(1000 + i, "outside", "Plug", text, "mdi:toggle-switch", "switch.plug"))
+        self.assertEqual([e["text"] for e in log], ["turned on"])
+
+
 class WiringTest(unittest.TestCase):
     # activity.py needs Home Assistant, so it can't be imported here; these check what broke before elsewhere.
     def test_event_filters_are_marked_callbacks(self):
@@ -254,6 +296,16 @@ class WiringTest(unittest.TestCase):
     def test_the_automations_runs_are_followed_to_tell_automatic_from_asked(self):
         self.assertIn('"automation_triggered"', SRC)
         self.assertIn('"clive_auto" if followed[2] else "clive"', SRC)
+
+    def test_outside_changes_wait_for_home_assistants_own_requests(self):
+        body = SRC[SRC.index("def _on_device"):SRC.index("    def _add(")]
+        # a person, an automation's child context, a request's own context, and a request in the same kind of device a moment ago all rule it out
+        for needle in ("ctx.user_id or ctx.parent_id", "self._called.get(ctx.id", "self._last_call.get(new.domain", "outside_related(", "entity_category"):
+            self.assertIn(needle, body)
+        self.assertRegex(SRC, r"@staticmethod\n    @callback\n    def _is_device")
+        # every service call is noted before any filter, so nothing a request caused can look like a device acting alone
+        call = SRC[SRC.index("def _on_call"):SRC.index("followed = ")]
+        self.assertIn("self._called[ctx.id]", call)
 
     def test_user_logins_are_never_sent_out(self):
         self.assertIn('if k != "user_id"', SRC)

@@ -23,10 +23,11 @@ enum class ActivityTime(val label: String, val start: String?, val end: String?)
 
 /**
  * Which kinds of line: `user` (a person), `clive` (the assistant, because someone asked), `clive_auto` (the assistant, run by an automation),
- * `presence` (arrived or left). [kinds] empty is everything.
+ * `presence` (arrived or left), `outside` (a device turned itself on or off: its own app, a switch or a remote). [kinds] empty is everything.
  */
 enum class ActivityAction(val kinds: List<String>) {
     All(emptyList()), People(listOf("user")), Assistant(listOf("clive", "clive_auto")), Asked(listOf("clive")), Automatic(listOf("clive_auto")), Presence(listOf("presence")),
+    Outside(listOf("outside")),
 }
 
 /** What is being asked for. [who] is a first name (null = everyone). [from] and [to] (milliseconds) are the range for [ActivityDay.Custom]. */
@@ -104,13 +105,14 @@ fun parseActivity(result: Any?): ActivityResult? {
 
 fun activityIsAssistant(kind: String): Boolean = kind == "clive" || kind == "clive_auto"
 
-/** Who did it: the person, or the assistant by his name. */
+/** Who did it: the person, the assistant by his name, or (for a device acting by itself) the device. */
 fun activityWho(line: ActivityLine, assistant: String): String = if (activityIsAssistant(line.kind)) assistant else line.who.ifBlank { "Someone" }
 
-/** Whether someone asked him or an automation ran him, and who or which; null for people and comings and goings. */
+/** Whether someone asked him or an automation ran him (and who or which), or that a device acted by itself; null for people and comings and goings. */
 fun activityNote(line: ActivityLine): String? = when (line.kind) {
     "clive" -> line.by?.let { "asked by $it" } ?: "asked"
     "clive_auto" -> line.rule?.let { "automatic: $it" } ?: "automatic"
+    "outside" -> "outside Home Assistant: the device's own app, a switch or a remote"
     else -> null
 }
 
@@ -122,6 +124,7 @@ fun activityActionLabel(action: ActivityAction, assistant: String): String = whe
     ActivityAction.Asked -> "$assistant: asked"
     ActivityAction.Automatic -> "$assistant: automatic"
     ActivityAction.Presence -> "Coming and going"
+    ActivityAction.Outside -> "Devices (own app or switch)"
 }
 
 /** The lines under their day ("Today", "Yesterday", "Monday 21 Sep"), keeping the newest-first order. */
