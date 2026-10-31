@@ -287,6 +287,82 @@ class SatelliteModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---- Pairing: scan, send the Wi-Fi over Bluetooth, add to Home Assistant, wait for it to appear ----
+
+    sealed interface PairStep {
+        data object Idle : PairStep
+        data class Scanned(val code: PairCode) : PairStep
+        data class Working(val message: String) : PairStep
+        data class Done(val slug: String?, val note: String?) : PairStep
+        data class Failed(val message: String) : PairStep
+    }
+
+    var pairStep by mutableStateOf<PairStep>(PairStep.Idle)
+        private set
+    var wifiName by mutableStateOf(settings.wifiName)
+    var apiKey by mutableStateOf(settings.apiKey)
+
+    fun pairScanned(code: PairCode) { pairStep = PairStep.Scanned(code) }
+    fun pairReset() { pairStep = PairStep.Idle }
+
+    fun pair(code: PairCode, ssid: String, password: String, key: String) {
+        settings.wifiName = ssid.trim()
+        settings.apiKey = key.trim()
+        wifiName = ssid.trim()
+        apiKey = key.trim()
+        val known = satellites.map { it.slug }.toSet()
+        viewModelScope.launch(Dispatchers.IO) {
+            fun say(m: String) { pairStep = PairStep.Working(m) }
+            say("Starting…")
+            val ble = withContext(Dispatchers.Main) { ImprovBle(getApplication()) }
+            val sent = ble.provision(code.device, ssid.trim(), password, ::say)
+            if (sent.error != null) { pairStep = PairStep.Failed(sent.error); return@launch }
+
+            say("Adding ${code.device} to Home Assistant…")
+            val url = session.url
+            var added = AddOutcome("Not signed in.")
+            // The satellite needs a little time to join the Wi-Fi and announce itself, so the first tries may not find it.
+            for (attempt in 1..6) {
+                val token = session.freshToken()
+                if (url == null || token == null) break
+                added = AddToHouse.add(url, token, "${code.device}.local", key.trim())
+                if (added.error == null) break
+                if (!(added.error!!.contains("find") || added.error!!.contains("reach"))) break
+                delay(8_000)
+            }
+            if (added.error != null) { pairStep = PairStep.Failed(added.error!!); return@launch }
+
+            say("Waiting for it to appear…")
+            var slug: String? = null
+            for (i in 1..30) {
+                slug = satellites.firstOrNull { it.slug !in known }?.slug
+                if (slug != null) break
+                delay(2_000)
+            }
+            pairStep = PairStep.Done(
+                slug,
+                if (added.alreadyThere) "Home Assistant already had it. Its Wi-Fi is updated." else if (slug == null) "Added. It will show on the list when it has finished starting." else null,
+            )
+        }
+    }
+
+    /** Removes the satellite from Home Assistant (its ESPHome entry), and from the list. */
+    fun remove(sat: Satellite) {
+        client.request("config/entity_registry/get", org.json.JSONObject().put("entity_id", sat.select("design").takeIf { sat.hasScreen } ?: "switch.${sat.slug}_follow_up_listening")) { res ->
+            val entry = (res as? org.json.JSONObject)?.optString("config_entry_id").orEmpty()
+            val url = session.url
+            if (entry.isBlank() || url == null) { notice = "Home Assistant wouldn't say how this satellite was added."; return@request }
+            viewModelScope.launch(Dispatchers.IO) {
+                val token = session.freshToken()
+                val ok = token != null && AddToHouse.remove(url, token, entry)
+                withContext(Dispatchers.Main) {
+                    if (ok) { notice = "${sat.name} was removed from Home Assistant."; openSlug = null }
+                    else notice = "Home Assistant refused. Removing a device needs an administrator."
+                }
+            }
+        }
+    }
+
     fun chooseVoice(setting: VoiceSetting, option: String) =
         client.callService("select", "select_option", setting.entity, data("option" to option))
 

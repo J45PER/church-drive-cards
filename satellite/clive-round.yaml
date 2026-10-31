@@ -34,6 +34,14 @@ esphome:
       - switch.turn_on: speaker_amp
       - script.execute: apply_backlight
       - micro_wake_word.start:
+      # With no Wi-Fi yet (a new or reset satellite) the pair screen opens by itself, so the QR code is the first thing on the glass.
+      - delay: 20s
+      - if:
+          condition:
+            not:
+              wifi.connected:
+          then:
+            - lambda: clive::show_pair();
 
 esp32:
   board: esp32-p4-evboard
@@ -122,14 +130,28 @@ api:
 ota:
   - platform: esphome
 
+# No Wi-Fi is built in: the companion app sends it over Bluetooth (improv_ble below, see docs/SATELLITE-PAIRING.md), and the device remembers it.
+# For bench work you can add `ssid` and `password` here (from secrets.yaml); a built-in network is tried first.
 wifi:
-  ssid: !secret wifi_ssid
-  password: !secret wifi_password
-  fast_connect: true
   ap:
     ssid: "${friendly_name} setup"
 
 captive_portal:
+
+# Bluetooth goes through the ESP32-C6 as well. The Wi-Fi hand-over only works while the pair screen is showing (Settings > Pair or reset,
+# or by itself when there is no Wi-Fi yet), so the authorizer is the pair screen.
+esp32_ble:
+  io_capability: none
+
+improv_ble:
+  authorizer: pair_authorized
+  authorized_duration: 2min
+
+binary_sensor:
+  - platform: template
+    id: pair_authorized
+    internal: true
+    lambda: 'return clive::pairing_open();'
 
 # The P4 has no Wi-Fi of its own: the ESP32-C6 on the board provides it over SDIO.
 esp32_hosted:
@@ -426,6 +448,9 @@ number:
 
 # Buttons for the companion app (and Home Assistant): each is one tap, no state.
 button:
+  - platform: factory_reset
+    name: "Reset pairing"       # Forgets the Wi-Fi so the satellite can be paired again. Its settings reset too.
+    entity_category: config
   - platform: restart
     name: "Restart"
     entity_category: config

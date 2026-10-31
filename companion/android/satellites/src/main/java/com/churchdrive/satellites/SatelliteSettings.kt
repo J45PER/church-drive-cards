@@ -14,4 +14,14 @@ class SatelliteSettings(context: Context) {
     var lastSatellite: String?
         get() = prefs.getString("last_satellite", null)
         set(v) = prefs.edit().putString("last_satellite", v).apply()
+
+    /** The home Wi-Fi's name, remembered so pairing the next satellite is quicker. The password is never kept. */
+    var wifiName: String
+        get() = prefs.getString("wifi_name", "") ?: ""
+        set(v) = prefs.edit().putString("wifi_name", v).apply()
+
+    /** The ESPHome API encryption key every satellite was built with (satellite/secrets.yaml), kept on this phone to add new ones. */
+    var apiKey: String
+        get() = prefs.getString("api_key", "") ?: ""
+        set(v) = prefs.edit().putString("api_key", v).apply()
 }

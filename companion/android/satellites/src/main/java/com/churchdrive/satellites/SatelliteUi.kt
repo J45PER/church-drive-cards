@@ -188,8 +188,13 @@ fun SatellitesApp(vm: SatelliteModel) {
 private fun ListPage(vm: SatelliteModel, onPerson: () -> Unit) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(vm.notice) {
+        vm.notice?.let { snackbar.showSnackbar(it); vm.notice = null }
+    }
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             MediumTopAppBar(title = { Text(if (tab == 0) "Satellites" else "Add a satellite") }, actions = { PersonButton(vm.personName, onPerson) }, scrollBehavior = scroll)
         },
@@ -201,7 +206,7 @@ private fun ListPage(vm: SatelliteModel, onPerson: () -> Unit) {
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
-            if (tab == 0) SatelliteList(vm) else AddPage()
+            if (tab == 0) SatelliteList(vm) else AddPage(vm)
         }
     }
 }
@@ -216,7 +221,7 @@ private fun SatelliteList(vm: SatelliteModel) {
             EntityCard(null) { ink, soft ->
                 Text(if (vm.connected) "No satellites yet" else "Connecting to the house…", style = MaterialTheme.typography.titleMedium, color = ink)
                 Text(
-                    "A satellite appears here once it has been added to Home Assistant (as an ESPHome device). Each one is found by its Design setting.",
+                    "A satellite appears here once it has been added to Home Assistant. Use the Add tab to pair a new one.",
                     style = MaterialTheme.typography.bodyMedium, color = soft,
                 )
             }
@@ -248,20 +253,98 @@ private fun SatelliteList(vm: SatelliteModel) {
 }
 
 @Composable
-private fun AddPage() {
+private fun AddPage(vm: SatelliteModel) {
+    val context = LocalContext.current
+    // Bluetooth is needed to send the Wi-Fi: on Android 12 and later its own permissions, before that location.
+    val needed = if (android.os.Build.VERSION.SDK_INT >= 31) arrayOf(android.Manifest.permission.BLUETOOTH_SCAN, android.Manifest.permission.BLUETOOTH_CONNECT)
+    else arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION)
+    var granted by remember { mutableStateOf(needed.all { androidx.core.content.ContextCompat.checkSelfPermission(context, it) == android.content.pm.PackageManager.PERMISSION_GRANTED }) }
+    val askPermission = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()) { result ->
+        granted = result.values.all { it }
+    }
+    var scanError by remember { mutableStateOf<String?>(null) }
+    var typedName by remember { mutableStateOf("") }
+    var typedCode by remember { mutableStateOf("") }
+
+    fun scan() {
+        scanError = null
+        val options = com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions.Builder()
+            .setBarcodeFormats(com.google.mlkit.vision.barcode.common.Barcode.FORMAT_QR_CODE).build()
+        com.google.mlkit.vision.codescanner.GmsBarcodeScanning.getClient(context, options).startScan()
+            .addOnSuccessListener { code ->
+                val parsed = PairCode.parse(code.rawValue)
+                if (parsed == null) scanError = "That isn't a satellite's pairing code." else vm.pairScanned(parsed)
+            }
+            .addOnFailureListener { scanError = "The scanner couldn't start: ${it.message ?: "try again"}." }
+    }
+
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SectionHeader("Add a satellite", Icons.Filled.QrCodeScanner, Tone.Teal)
-        EntityCard(Tone.Teal) { ink, soft ->
-            Text("Scanning is coming", style = MaterialTheme.typography.titleMedium, color = ink)
-            Text(
-                "The plan is to scan the QR code on the satellite's screen or its sticker, send it the home Wi-Fi over Bluetooth, and name it. That is not built yet.",
-                style = MaterialTheme.typography.bodyMedium, color = soft,
-            )
-            Text(
-                "For now: add the device in Home Assistant (Settings > Devices > ESPHome). It shows up on the Satellites tab as soon as it connects.",
-                style = MaterialTheme.typography.bodyMedium, color = soft,
-            )
+        when (val step = vm.pairStep) {
+            is SatelliteModel.PairStep.Idle -> EntityCard(Tone.Teal) { ink, soft ->
+                Text("1. On the satellite, open Settings > Pair or reset. A new one shows the code by itself.", color = ink, style = MaterialTheme.typography.bodyLarge)
+                Text("2. Scan the QR code on its screen (or its sticker, if it has no screen).", color = ink, style = MaterialTheme.typography.bodyLarge)
+                Text("3. Give it the home Wi-Fi. It joins and is added to Home Assistant for you.", color = ink, style = MaterialTheme.typography.bodyLarge)
+                if (!granted) {
+                    Tile("Allow Bluetooth to continue", false, Tone.Teal, ink, Modifier.fillMaxWidth()) { askPermission.launch(needed) }
+                    Text("Bluetooth is how the Wi-Fi is sent to the satellite. Nothing else uses it.", style = MaterialTheme.typography.bodySmall, color = soft)
+                } else {
+                    Tile("Scan the QR code", true, Tone.Teal, ink, Modifier.fillMaxWidth()) { scan() }
+                }
+                scanError?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error) }
+            }
+            is SatelliteModel.PairStep.Scanned -> PairForm(vm, step.code)
+            is SatelliteModel.PairStep.Working -> EntityCard(Tone.Teal) { ink, soft ->
+                androidx.compose.material3.CircularProgressIndicator()
+                Text(step.message, color = ink, style = MaterialTheme.typography.titleMedium)
+                Text("Keep the phone next to the satellite and its code showing. This takes up to a couple of minutes.", style = MaterialTheme.typography.bodySmall, color = soft)
+            }
+            is SatelliteModel.PairStep.Done -> EntityCard(Tone.Green) { ink, soft ->
+                Text("The satellite is added", color = ink, style = MaterialTheme.typography.titleMedium)
+                step.note?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = soft) }
+                if (step.slug != null) Tile("Set it up", true, Tone.Green, ink, Modifier.fillMaxWidth()) { vm.pairReset(); vm.openSlug = step.slug }
+                Tile("Done", false, Tone.Green, ink, Modifier.fillMaxWidth()) { vm.pairReset() }
+            }
+            is SatelliteModel.PairStep.Failed -> EntityCard(Tone.Red) { ink, soft ->
+                Text("That didn't work", color = ink, style = MaterialTheme.typography.titleMedium)
+                Text(step.message, style = MaterialTheme.typography.bodyMedium, color = soft)
+                Tile("Try again", true, Tone.Red, ink, Modifier.fillMaxWidth()) { vm.pairReset() }
+            }
         }
+        if (vm.pairStep is SatelliteModel.PairStep.Idle) {
+            EntityCard(null) { ink, soft ->
+                Text("Can't scan?", color = ink, style = MaterialTheme.typography.titleMedium)
+                Text("Type the name and the six digits shown under the QR code.", style = MaterialTheme.typography.bodySmall, color = soft)
+                OutlinedTextField(typedName, { typedName = it.trim() }, singleLine = true, label = { Text("Name, for example clive-round") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(typedCode, { typedCode = it.filter(Char::isDigit).take(6) }, singleLine = true, label = { Text("Code") }, modifier = Modifier.fillMaxWidth())
+                Tile("Continue", false, Tone.Teal, ink, Modifier.fillMaxWidth()) {
+                    if (typedName.isNotBlank() && typedCode.length == 6) vm.pairScanned(PairCode(typedName, typedCode))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PairForm(vm: SatelliteModel, code: PairCode) {
+    var ssid by remember { mutableStateOf(vm.wifiName) }
+    var password by remember { mutableStateOf("") }
+    var key by remember { mutableStateOf(vm.apiKey) }
+    EntityCard(Tone.Teal) { ink, soft ->
+        Text("Found ${code.device}", color = ink, style = MaterialTheme.typography.titleMedium)
+        Text("Check the code on its screen says ${code.spaced}.", style = MaterialTheme.typography.bodyMedium, color = soft)
+        OutlinedTextField(ssid, { ssid = it }, singleLine = true, label = { Text("Home Wi-Fi name") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(
+            password, { password = it }, singleLine = true, label = { Text("Wi-Fi password") }, modifier = Modifier.fillMaxWidth(),
+            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+        )
+        OutlinedTextField(
+            key, { key = it }, singleLine = true, label = { Text("Satellite API key") }, modifier = Modifier.fillMaxWidth(),
+            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+        )
+        Text("The API key is the clive_round_api_key in satellite/secrets.yaml that the satellites were built with. It is kept on this phone so the next one is quicker. The Wi-Fi password is not kept.", style = MaterialTheme.typography.bodySmall, color = soft)
+        Tile("Pair", true, Tone.Teal, ink, Modifier.fillMaxWidth()) { if (ssid.isNotBlank() && key.isNotBlank()) vm.pair(code, ssid, password, key) }
+        Tile("Cancel", false, Tone.Teal, ink, Modifier.fillMaxWidth()) { vm.pairReset() }
     }
 }
 
@@ -524,8 +607,9 @@ private fun NameRoomSection(vm: SatelliteModel, sat: Satellite) {
 
 @Composable
 private fun ActionsSection(vm: SatelliteModel, sat: Satellite) {
-    if (sat.buttons.isEmpty()) return
     var confirmRestart by remember { mutableStateOf(false) }
+    var confirmRemove by remember { mutableStateOf(false) }
+    var confirmReset by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SectionHeader("Actions", Icons.Filled.RestartAlt, Tone.Red)
         EntityCard(null) { ink, soft ->
@@ -538,8 +622,30 @@ private fun ActionsSection(vm: SatelliteModel, sat: Satellite) {
             if ("restart" in sat.buttons) {
                 Tile("Restart", false, Tone.Red, ink, Modifier.fillMaxWidth()) { confirmRestart = true }
             }
-            Text("Clean screen ignores touches for 30 seconds so the glass can be wiped.", style = MaterialTheme.typography.bodySmall, color = soft)
+            if ("reset_pairing" in sat.buttons) {
+                Tile("Reset pairing (forget the Wi-Fi)", false, Tone.Red, ink, Modifier.fillMaxWidth()) { confirmReset = true }
+            }
+            Tile("Remove from Home Assistant", false, Tone.Red, ink, Modifier.fillMaxWidth()) { confirmRemove = true }
+            if ("clean_screen" in sat.buttons) Text("Clean screen ignores touches for 30 seconds so the glass can be wiped.", style = MaterialTheme.typography.bodySmall, color = soft)
         }
+    }
+    if (confirmRemove) {
+        AlertDialog(
+            onDismissRequest = { confirmRemove = false },
+            title = { Text("Remove ${sat.name}?") },
+            text = { Text("It disappears from Home Assistant and this list. The satellite itself isn't wiped: to use it again, reset its pairing and add it again.") },
+            confirmButton = { TextButton(onClick = { confirmRemove = false; vm.remove(sat) }) { Text("Remove") } },
+            dismissButton = { TextButton(onClick = { confirmRemove = false }) { Text("Cancel") } },
+        )
+    }
+    if (confirmReset) {
+        AlertDialog(
+            onDismissRequest = { confirmReset = false },
+            title = { Text("Reset ${sat.name}'s pairing?") },
+            text = { Text("It forgets the Wi-Fi and its own settings, then restarts showing a pairing code. Add it again with the Add tab.") },
+            confirmButton = { TextButton(onClick = { confirmReset = false; vm.press(sat, "reset_pairing") }) { Text("Reset") } },
+            dismissButton = { TextButton(onClick = { confirmReset = false }) { Text("Cancel") } },
+        )
     }
     if (confirmRestart) {
         AlertDialog(
