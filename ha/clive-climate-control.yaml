@@ -141,6 +141,18 @@ sequence:
             j: '{{ states(c.expect) | from_json(default={}) }}'
         - variables:
             back_to: '{{ j.prev if j.prev is defined and j.prev is number and j.prev >= (states(c.low) | float(18)) - 1.5 else ((states(c.low) | float(18)) + (states(c.high) | float(21))) / 2 }}'
+        # Recorded BEFORE the thermostat is touched: a change made by a signed-in user (the app's Resume button, Clive in chat) looks like a person
+        # at the dial to "Clive: spot a manual heating change", which would pause him for two hours straight after he was handed the heating.
+        - action: input_datetime.set_datetime
+          target:
+            entity_id: '{{ c.when }}'
+          data:
+            datetime: '{{ now().strftime(''%Y-%m-%d %H:%M:%S'') }}'
+        - action: input_text.set_value
+          target:
+            entity_id: '{{ c.expect }}'
+          data:
+            value: '{{ {''m'': ''heat'', ''p'': ''none'', ''t'': back_to, ''hot'': false} | tojson }}'
         # The Nest refuses "eco off" when eco is already off, so each step only runs when it is needed and none of them stops the rest.
         - if:
           - condition: template
@@ -168,16 +180,6 @@ sequence:
             entity_id: '{{ c.entity }}'
           data:
             temperature: '{{ back_to }}'
-        - action: input_datetime.set_datetime
-          target:
-            entity_id: '{{ c.when }}'
-          data:
-            datetime: '{{ now().strftime(''%Y-%m-%d %H:%M:%S'') }}'
-        - action: input_text.set_value
-          target:
-            entity_id: '{{ c.expect }}'
-          data:
-            value: '{{ {''m'': ''heat'', ''p'': ''none'', ''t'': back_to, ''hot'': false} | tojson }}'
         - action: input_text.set_value
           target:
             entity_id: '{{ c.note }}'
@@ -250,6 +252,17 @@ sequence:
             old_target: '{{ state_attr(c.entity, ''temperature'') | float(none) }}'
         - variables:
             new_target: '{{ want if want is not none else (old_target if old_target is not none else mid) }}'
+        # Recorded before the thermostat is touched (see the resume step above).
+        - action: input_datetime.set_datetime
+          target:
+            entity_id: '{{ c.when }}'
+          data:
+            datetime: '{{ now().strftime(''%Y-%m-%d %H:%M:%S'') }}'
+        - action: input_text.set_value
+          target:
+            entity_id: '{{ c.expect }}'
+          data:
+            value: '{{ {''m'': ''off'' if command == ''turn_off'' else ''heat'', ''p'': ''none'', ''t'': none if command == ''turn_off'' else new_target, ''hot'': false} | tojson }}'
         - choose:
           - conditions:
             - condition: template
@@ -291,16 +304,6 @@ sequence:
               entity_id: '{{ c.entity }}'
             data:
               temperature: '{{ new_target }}'
-        - action: input_datetime.set_datetime
-          target:
-            entity_id: '{{ c.when }}'
-          data:
-            datetime: '{{ now().strftime(''%Y-%m-%d %H:%M:%S'') }}'
-        - action: input_text.set_value
-          target:
-            entity_id: '{{ c.expect }}'
-          data:
-            value: '{{ {''m'': ''off'' if command == ''turn_off'' else ''heat'', ''p'': ''none'', ''t'': none if command == ''turn_off'' else new_target, ''hot'': false} | tojson }}'
         - action: input_text.set_value
           target:
             entity_id: '{{ c.note }}'
