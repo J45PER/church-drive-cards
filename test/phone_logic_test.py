@@ -20,3 +20,11 @@ def test():
 
 test()
 print("OK")
+
+def test_location():
+    f = m.location_trackers
+    assert f(["device_tracker.ha", "device_tracker.router"], ["device_tracker.cd"], ["device_tracker.ha"]) == ["device_tracker.router", "device_tracker.cd"]
+    assert f(["device_tracker.ha"], [], ["device_tracker.ha"]) == ["device_tracker.ha"], "no app tracker: leave as is"
+    assert f(["device_tracker.cd"], ["device_tracker.cd"], ["device_tracker.ha"]) == ["device_tracker.cd"]
+
+test_location()

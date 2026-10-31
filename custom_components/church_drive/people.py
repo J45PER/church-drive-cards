@@ -46,7 +46,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util, location, slugify
 
 from .notice_log import NoticeLog
-from .phone_logic import leftover_entries
+from .phone_logic import OWN_APP_IDS, leftover_entries, location_trackers
 from .kinds import ARRIVALS, JOB_KINDS, KINDS, arrival_kind
 from .notice_actions_logic import actions_for, is_app_only_link, is_phone_action, tap_link_for
 from .notice_samples import sample_for
@@ -128,8 +128,37 @@ class People:
             except Exception as err:  # noqa: BLE001 - one failing mustn't stop the rest
                 _LOGGER.warning("Couldn't remove old phone registration %s: %s", entry_id, err)
 
+    async def _async_own_app_locates(self, _now: Any = None) -> None:
+        """Who's home or away comes from the Church Drive app on a phone, never from the Home Assistant app on it."""
+        from homeassistant.components.person import DOMAIN as PERSON
+
+        coll = self.hass.data.get(PERSON, (None, None))[1]
+        if coll is None:
+            return
+        ent_reg = er.async_get(self.hass)
+        own: dict[str, list[str]] = {}
+        other: list[str] = []
+        for entry in self.hass.config_entries.async_entries("mobile_app"):
+            trackers = [e.entity_id for e in er.async_entries_for_config_entry(ent_reg, entry.entry_id) if e.domain == "device_tracker"]
+            if entry.data.get("app_id") in OWN_APP_IDS:
+                own.setdefault(entry.data.get("user_id") or "", []).extend(trackers)
+            else:
+                other.extend(trackers)
+        for item in list(coll.async_items()):
+            current = item.get("device_trackers") or []
+            wanted = location_trackers(current, own.get(item.get("user_id") or "", []), other)
+            if wanted != current:
+                _LOGGER.info("%s: now located by the Church Drive app only (%s)", item.get("name"), wanted)
+                try:
+                    await coll.async_update_item(item["id"], {"device_trackers": wanted})
+                except Exception as err:  # noqa: BLE001
+                    _LOGGER.warning("Couldn't update the location phones of %s: %s", item.get("name"), err)
+        self._changed()
+
     async def _async_ready(self) -> None:
         await self._async_remove_leftover_phones()
+        await self._async_own_app_locates()
+        self._unsubs.append(async_track_time_interval(self.hass, self._async_own_app_locates, timedelta(hours=1)))
         self._unsubs.append(async_track_time_interval(self.hass, self._async_remove_leftover_phones, timedelta(hours=1)))
         if not self._data.get("seeded"):
             self._seed()
@@ -411,6 +440,9 @@ class People:
         if item is None:
             raise ValueError(f"{person} isn't a person made in the app")
         trackers = [t for t in item.get("device_trackers") or [] if t != tracker]
+        if on and any(p["tracker"] == tracker and not p["own_app"] for p in next((x["phones"] for x in self.people() if x["entity_id"] == person), [])) \
+                and any(p["own_app"] for x in self.people() if x["entity_id"] == person for p in x["phones"]):
+            raise ValueError("Where someone is comes from the Church Drive app, not the Home Assistant app")
         if on:
             trackers.append(tracker)
         await coll.async_update_item(item["id"], {"device_trackers": trackers})

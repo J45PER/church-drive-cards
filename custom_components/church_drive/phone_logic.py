@@ -28,3 +28,14 @@ def leftover_entries(entries: Iterable[dict[str, Any]]) -> list[str]:
     for ids in groups.values():
         out.extend(sorted(ids)[:-1])
     return sorted(out)
+
+
+def location_trackers(current: Iterable[str], own: Iterable[str], other_app: Iterable[str]) -> list[str]:
+    """A person's trackers once only the Church Drive app says where they are. `current` is what the person has now, `own`
+    the Church Drive app's trackers signed in as them, `other_app` every tracker of the Home Assistant app. A person with
+    no Church Drive app tracker is left as they are (they would have no location at all); other kinds of tracker (a
+    router, say) are kept."""
+    current, own, other = list(current), list(own), set(other_app)
+    if not own:
+        return current
+    return [t for t in current if t not in other] + [t for t in own if t not in current]
