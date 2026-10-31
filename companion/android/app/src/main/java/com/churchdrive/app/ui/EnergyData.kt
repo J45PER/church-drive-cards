@@ -67,7 +67,7 @@ object Octopus {
     }
 
     fun clock(ms: Long): String =
-        Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))
+        HomeTime.format(ms, "HH:mm")
 
     /** "Cheap now 7.5p · until 05:30", "Peak 24.6p · cheap from 02:00", or "No rates yet". */
     fun rateLine(rates: List<Rate>, now: Long): String {

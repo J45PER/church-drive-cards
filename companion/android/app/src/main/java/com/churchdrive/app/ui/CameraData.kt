@@ -80,7 +80,7 @@ fun cameraAge(ms: Long, now: Long, zone: ZoneId = ZoneId.systemDefault()): Strin
         s < 60 -> "just now"
         s < 3600 -> "${s / 60} min"
         s < 86400 -> "${s / 3600} h"
-        else -> DateTimeFormatter.ofPattern("EEE HH:mm", Locale.UK).withZone(zone).format(Instant.ofEpochMilli(ms))
+        else -> HomeTime.format(ms, "EEE HH:mm", zone)
     }
 }
 

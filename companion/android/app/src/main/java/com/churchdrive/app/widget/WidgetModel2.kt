@@ -3,6 +3,7 @@ package com.churchdrive.app.widget
 import com.churchdrive.app.ha.EntityState
 import com.churchdrive.app.ui.ALARM_ENTITY
 import com.churchdrive.app.ui.CLIMATE_ENTITY
+import com.churchdrive.app.ui.HomeTime
 import com.churchdrive.app.ui.alarmIconName
 import com.churchdrive.app.ui.alarmTone
 import com.churchdrive.app.ui.CLIMATE_QUALITY_ENTITY
@@ -86,8 +87,8 @@ fun lastActivity(base: String, entities: Map<String, EntityState>, now: Long = S
     }
     val time = Instant.ofEpochMilli(at).atZone(zone)
     val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
-    val when_ = if (time.toLocalDate() == today) time.format(DateTimeFormatter.ofPattern("HH:mm"))
-    else time.format(DateTimeFormatter.ofPattern("EEE HH:mm", Locale.UK))
+    val when_ = if (time.toLocalDate() == today) HomeTime.format(at, "HH:mm", zone)
+    else HomeTime.format(at, "EEE HH:mm", zone)
     val recent = now - at < 5 * 60_000L
     return "$kind · $when_" to if (kind == "Doorbell" && recent) Tone.Blue else Tone.Green
 }

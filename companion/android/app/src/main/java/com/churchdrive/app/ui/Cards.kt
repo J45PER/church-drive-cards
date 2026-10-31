@@ -187,11 +187,8 @@ fun alarmLabel(state: String?): String = when (state) {
     else -> ALARM_STATES[state]?.label ?: state.replaceFirstChar { it.uppercase() }
 }
 
-private val ALARM_TIME = java.time.format.DateTimeFormatter.ofPattern("dd MMM, HH:mm", java.util.Locale.UK)
-    .withZone(java.time.ZoneId.systemDefault())
-
 private fun alarmTime(iso: String?): String? =
-    runCatching { ALARM_TIME.format(java.time.Instant.parse(iso)) }.getOrNull()
+    runCatching { HomeTime.format(java.time.Instant.parse(iso).toEpochMilli(), "dd MMM, HH:mm") }.getOrNull()
 
 /** The sensor the integration keeps with who really changed the alarm (Ring only knows its own account). */
 const val ALARM_ACTOR_ENTITY = "sensor.church_drive_alarm_actor"

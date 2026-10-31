@@ -8,6 +8,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Context
+import com.churchdrive.app.ui.HomeTime
 import android.content.Intent
 import android.graphics.Bitmap
 import android.content.pm.ServiceInfo
@@ -168,7 +169,12 @@ class HouseService : Service() {
     companion object {
         /** Shows a notification from the house, as the person chose (Account > Settings > Notification styles), else as the house asked. */
         fun postNotice(context: Context, event: JSONObject, dedupe: Boolean = true) {
-            val push = MobileApp.parsePush(event) ?: return
+            val parsed = MobileApp.parsePush(event) ?: return
+            // Times in a notice are the house's: shown as this phone's time (with the home's after it) when the phone is in another zone.
+            // The home's zone is remembered, since a notice can arrive before the app has connected.
+            val zones = context.getSharedPreferences("home_time", Context.MODE_PRIVATE)
+            HomeTime.zoneId?.let { zones.edit().putString("zone", it).apply() } ?: run { HomeTime.zoneId = zones.getString("zone", null) }
+            val push = parsed.copy(title = HomeTime.textBoth(parsed.title), message = HomeTime.textBoth(parsed.message))
             // One the phone has already shown (it arrived live, then again as a catch-up) isn't shown twice.
             if (dedupe && push.seq > 0 && push.seq <= NoticeSeen.last(context)) return
             NoticeSeen.save(context, push.seq)
