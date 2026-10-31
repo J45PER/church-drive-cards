@@ -43,6 +43,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -56,6 +57,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -133,9 +136,10 @@ private fun RoundPreview(design: SatDesign, state: PreviewState, size: Int) {
 }
 
 @Composable
-private fun PersonButton(name: String?) {
+private fun PersonButton(name: String?, onClick: () -> Unit) {
     Box(
-        Modifier.padding(horizontal = 6.dp).size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
+        Modifier.padding(horizontal = 6.dp).size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer)
+            .clickable(onClickLabel = "Account and settings", onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Text(name?.trim()?.firstOrNull()?.uppercase() ?: "?", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
@@ -147,19 +151,33 @@ private fun PersonButton(name: String?) {
 @Composable
 fun SatellitesApp(vm: SatelliteModel) {
     val open = vm.open
-    BackHandler(enabled = vm.openSlug != null) { vm.openSlug = null }
-    if (open == null) ListPage(vm) else DetailPage(vm, open)
+    var panel by rememberSaveable { mutableStateOf<String?>(null) }
+    BackHandler(enabled = vm.openSlug != null && panel == null) { vm.openSlug = null }
+    LaunchedEffect(vm.openSlug) { vm.noteOpen(vm.openSlug) }
+    // Swiping left anywhere that doesn't scroll sideways opens the account panel, as in the main app, as well as the person's button.
+    Box(
+        Modifier.fillMaxSize().pointerInput(panel) {
+            var swiped = 0f
+            detectHorizontalDragGestures(
+                onDragStart = { swiped = 0f },
+                onDragEnd = { if (swiped < -120f && panel == null) panel = "account" },
+            ) { _, delta -> swiped += delta }
+        },
+    ) {
+        if (open == null) ListPage(vm) { panel = "account" } else DetailPage(vm, open) { panel = "account" }
+        SatellitePanel(panel, { panel = it }, vm)
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ListPage(vm: SatelliteModel) {
+private fun ListPage(vm: SatelliteModel, onPerson: () -> Unit) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         topBar = {
-            MediumTopAppBar(title = { Text(if (tab == 0) "Satellites" else "Add a satellite") }, actions = { PersonButton(vm.personName) }, scrollBehavior = scroll)
+            MediumTopAppBar(title = { Text(if (tab == 0) "Satellites" else "Add a satellite") }, actions = { PersonButton(vm.personName, onPerson) }, scrollBehavior = scroll)
         },
         bottomBar = {
             NavigationBar {
@@ -233,7 +251,7 @@ private fun AddPage() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DetailPage(vm: SatelliteModel, sat: Satellite) {
+private fun DetailPage(vm: SatelliteModel, sat: Satellite, onPerson: () -> Unit) {
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
@@ -241,7 +259,7 @@ private fun DetailPage(vm: SatelliteModel, sat: Satellite) {
             MediumTopAppBar(
                 title = { Text(sat.name, maxLines = 1) },
                 navigationIcon = { IconButton(onClick = { vm.openSlug = null }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
-                actions = { PersonButton(vm.personName) },
+                actions = { PersonButton(vm.personName, onPerson) },
                 scrollBehavior = scroll,
             )
         },

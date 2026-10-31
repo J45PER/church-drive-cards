@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.81.0
+
+- Version moves with the shared number. No other change to the phone and watch apps.
+
 ## 0.80.0
 
 - One version number for every Church Drive app and the Home Assistant integration from here (`node tools/versions.mjs`, docs/VERSIONING.md). The phone app and the watch app move from 0.54.4 to 0.80.0 with no other change.
