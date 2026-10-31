@@ -107,7 +107,7 @@ fun carUpdatedText(at: Long, now: Long, zone: ZoneId = ZoneId.systemDefault()): 
         mins < 1440 -> "${mins / 60}h ago"
         else -> "${mins / 1440}d ago"
     }
-    return "Car last reported " + DateTimeFormatter.ofPattern(if (today) "HH:mm" else "EEE HH:mm", java.util.Locale.UK).format(t) + " · " + ago
+    return "Car last reported " + HomeTime.format(at, if (today) "HH:mm" else "EEE HH:mm", zone) + " · " + ago
 }
 
 private fun reading(e: EntityState?): String =
@@ -116,7 +116,7 @@ private fun reading(e: EntityState?): String =
 /** "Full by 06:30" when the end is a time, else "45 min left". */
 fun chargeEndText(state: String, unit: String?, zone: ZoneId = ZoneId.systemDefault()): String {
     val at = parseMillis(state)
-    return if (at != null) "Full by " + DateTimeFormatter.ofPattern("HH:mm").format(Instant.ofEpochMilli(at).atZone(zone))
+    return if (at != null) "Full by " + HomeTime.format(at, "HH:mm", zone)
     else "$state${unit?.let { " $it" }.orEmpty()} left"
 }
 

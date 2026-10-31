@@ -43,7 +43,7 @@ fun numericSeries(history: List<Pair<Long, String>>?): List<Reading> =
 fun valueAt(series: List<Reading>, time: Long): Double? = series.lastOrNull { it.time <= time }?.value
 
 fun clockOf(ms: Long): String =
-    Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))
+    HomeTime.format(ms, "HH:mm")
 
 /** What happened around a time on a zone's strip, as words ("Motion · Door open"), or "Quiet". [window] is how far either side counts. */
 fun happenedAt(tracks: List<ZoneTrack>, time: Long, window: Long): String {

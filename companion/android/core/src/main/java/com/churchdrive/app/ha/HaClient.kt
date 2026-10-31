@@ -187,6 +187,7 @@ class HaClient(private val scope: CoroutineScope) {
 
     private inner class Listener(private val closed: kotlinx.coroutines.CompletableDeferred<Unit>) : WebSocketListener() {
         private var getStatesId = -1
+        private var configId = -1
         private var userId = -1
 
         override fun onMessage(webSocket: WebSocket, text: String) {
@@ -217,6 +218,9 @@ class HaClient(private val scope: CoroutineScope) {
                     webSocket.send(JSONObject().put("id", userId).put("type", "auth/current_user").toString())
                     getStatesId = id()
                     webSocket.send(JSONObject().put("id", getStatesId).put("type", "get_states").toString())
+                    // The home's time zone, so times can be shown in the home's time as well as the device's when the two differ.
+                    configId = id()
+                    webSocket.send(JSONObject().put("id", configId).put("type", "get_config").toString())
                 }
                 "auth_invalid" -> {
                     _connection.value = ConnectionState.AuthFailed
@@ -233,6 +237,7 @@ class HaClient(private val scope: CoroutineScope) {
                             _entities.value = parseStates(msg.getJSONArray("result"))
                             _statesLoaded.value = true
                         }
+                        configId -> com.churchdrive.app.ui.HomeTime.zoneId = msg.optJSONObject("result")?.optString("time_zone")?.takeIf { it.isNotBlank() }
                         userId -> {
                             val me = msg.optJSONObject("result")
                             _userName.value = me?.optString("name")?.takeIf { it.isNotBlank() }

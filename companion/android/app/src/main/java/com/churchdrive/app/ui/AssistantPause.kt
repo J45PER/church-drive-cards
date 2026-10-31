@@ -55,7 +55,7 @@ fun pauseLeftText(resumeAtMs: Long, nowMs: Long): String {
 
 /** "Downstairs: takes over again at 16:42 (in 1 h 20 min)". */
 fun pauseLine(p: AssistantPause, nowMs: Long, zone: TimeZone = TimeZone.getDefault()): String {
-    val clock = SimpleDateFormat("HH:mm", Locale.UK).apply { timeZone = zone }.format(Date(p.resumeAtMs))
+    val clock = HomeTime.format(p.resumeAtMs, "HH:mm", zone.toZoneId())
     return "${p.zone}: takes over again at $clock (in ${pauseLeftText(p.resumeAtMs, nowMs)})"
 }
 

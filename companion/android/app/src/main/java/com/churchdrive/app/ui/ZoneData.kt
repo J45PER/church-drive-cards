@@ -119,7 +119,7 @@ fun spansOf(id: String, series: List<Pair<Long, String>>, from: Long, now: Long)
 
 /** "14:05" for a time in ms. */
 fun clockMs(ms: Long, zone: ZoneId = ZoneId.systemDefault()): String =
-    DateTimeFormatter.ofPattern("HH:mm", Locale.UK).withZone(zone).format(Instant.ofEpochMilli(ms))
+    HomeTime.format(ms, "HH:mm", zone)
 
 /** "14:05" today, "yesterday 14:05", else "Mon 14:05". */
 fun whenMs(ms: Long, now: Long, zone: ZoneId = ZoneId.systemDefault()): String {

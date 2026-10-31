@@ -343,6 +343,7 @@ fun AssistantCardView(card: AssistantCard, modifier: Modifier = Modifier, morph:
                             val h = hours.optJSONObject(i) ?: continue
                             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 Text(h.optString("t"), style = MaterialTheme.typography.labelSmall, color = soft)
+                                h.optString("t_home").takeIf { it.isNotBlank() }?.let { Text("($it)", style = MaterialTheme.typography.labelSmall, color = soft) }
                                 HaIcon(weatherIconName(h.optString("symbol")), Icons.Filled.Info, ink, 20.dp)
                                 Text(h.number("temp")?.let { "${Math.round(it)}°" } ?: "–", style = MaterialTheme.typography.labelLarge, color = ink)
                             }

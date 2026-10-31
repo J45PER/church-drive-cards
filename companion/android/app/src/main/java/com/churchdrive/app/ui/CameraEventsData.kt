@@ -60,7 +60,7 @@ fun eventDay(ms: Long, now: Long, zone: ZoneId = ZoneId.systemDefault()): String
 
 /** "21:40". */
 fun eventClock(ms: Long, zone: ZoneId = ZoneId.systemDefault()): String =
-    DateTimeFormatter.ofPattern("HH:mm", Locale.UK).withZone(zone).format(Instant.ofEpochMilli(ms))
+    HomeTime.format(ms, "HH:mm", zone)
 
 /** The kinds of event there are, as the labels shown on the filter chips (Doorbell and Motion first). */
 fun eventFilters(events: List<CameraEvent>): List<String> {

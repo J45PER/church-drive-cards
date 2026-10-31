@@ -4,6 +4,12 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.54.2
+
+- Asking Clive about tomorrow's weather (or the day after, up to five days) now shows that day's card, with its high, low and hours, instead of only speaking. Today's weather card also shows today's high and low (after midnight it was showing yesterday's). Listening: the phone now asks its own noise suppression to quieten a television or a fan behind your voice, and Clive decides you have finished speaking after 0.9 seconds of quiet instead of 1.2, so he moves from listening to thinking sooner.
+- Time zones everywhere: when the phone is not in the home's time zone, every time in the app (cards, graphs, camera events, car, alarm, widgets, notifications and the hours on Clive's cards) shows the phone's time with the home's after it, "14:05 (12:05 home)". In the same zone it shows one time, as before.
+- Time zones: the phone now tells the house which time zone it is in. When it is not the home's, Clive gives the time where you are as well as the home time ("It's 14:05 here, which is 12:05 at home"), says which times are home times, and treats "here" as where you are. Between midnight and 03:30 (your time) when you say tomorrow, he first asks whether you mean today or tomorrow, naming both days, in case you have not been to bed yet.
+
 ## 0.54.1
 
 - **Activity log filters are drop-down lists.** Dates (today, yesterday, last 7 days, last 30 days, all dates, or **pick a range** with an exact start and end date and time), Actions (**all actions**, people, the assistant's asked or automatic changes, or both, coming and going), Time of day and Who. A range has its own times, so the time-of-day list is hidden while it is used.

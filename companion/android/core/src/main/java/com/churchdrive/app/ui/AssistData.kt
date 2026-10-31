@@ -125,6 +125,9 @@ fun cardRows(fields: JSONObject): List<CardRow> {
 fun httpsOnly(url: String?): String? = url?.trim()?.takeIf { it.startsWith("https://") }
 
 /** The card in an event's data, made safe (any address that is not https is dropped), or null when there isn't a drawable one. */
+/** The fields of a card that can hold a clock time written in the home's time. */
+private val CLOCK_KEYS = setOf("time", "until", "detail", "foot", "sub")
+
 fun parseAssistantCard(card: JSONObject?): AssistantCard? {
     val kind = card?.optString("kind")?.lowercase().orEmpty()
     if (card == null || kind !in ASSISTANT_CARD_KINDS) return null
@@ -138,6 +141,9 @@ fun parseAssistantCard(card: JSONObject?): AssistantCard? {
                 v is org.json.JSONArray -> out.put(k, org.json.JSONArray().also { a -> for (i in 0 until v.length()) a.put(v.opt(i).let { e -> if (e is JSONObject) clean(e) else e }) })
                 v is String && (k.endsWith("_url") || k == "badge" || k == "image") -> httpsOnly(v)?.let { out.put(k, it) }
                 // Names written the way the voice says them ("Die Ann") are shown as they are really spelt.
+                // The house's own cards write clock times in the home's time: shown as this device's time with the home's after it when they differ.
+                v is String && k == "t" -> HomeTime.toDevice(v).let { local -> if (local != null) { out.put(k, local); out.put("t_home", v) } else out.put(k, v) }
+                v is String && k in CLOCK_KEYS -> out.put(k, HomeTime.textBoth(forDisplay(v)))
                 v is String -> out.put(k, forDisplay(v))
                 v != null && v != JSONObject.NULL -> out.put(k, v)
             }
@@ -271,6 +277,8 @@ fun introDue(introducedEver: Boolean, told: Set<String>?, log: List<AssistFeatur
  * ever do they get the full introduction. Features also make up that introduction's "what I can do".
  */
 private val RAW_ASSIST_FEATURES = listOf(
+    AssistFeature("mdi:map-clock", "Time zones and late nights", "", id = "time-zones-late-nights", detail = "Away from home, {name} gives the time where you are as well as the home time. And after midnight, when you say tomorrow, he checks whether you mean today or tomorrow.", kind = AssistantChange.Change),
+    AssistFeature("mdi:weather-partly-cloudy", "Weather for tomorrow", "What's the weather like tomorrow?", id = "weather-other-days", detail = "{name} now shows a card for tomorrow's weather, or any day up to five days ahead, and answers a little quicker after you stop speaking.", kind = AssistantChange.Change),
     AssistFeature("mdi:home-thermometer-outline", "Heating and the alarm", "", id = "heating-alarm-rules", detail = "{name} turns the heating off when the alarm is set to away, and never turns it on himself. When you disarm, he asks whether to turn it back on and take over again. Ask him to turn the heating on or off or set a temperature and he will, and then leave it alone for a while.", kind = AssistantChange.Change),
     AssistFeature("mdi:thermostat-auto", "Thermostat settings", "", id = "thermostat-sheet", detail = "Tap the line at the bottom of a thermostat's card to choose whether {name} looks after it, set its comfortable range, and end a pause early.", kind = AssistantChange.Change),
     AssistFeature("mdi:shield-star-outline", "Big-club crests", "", id = "big-club-crests", detail = "A fix: Barcelona, Paris Saint-Germain, Bayern, Inter and the other big European clubs now show their own crest on {name}'s cards.", kind = AssistantChange.Fix),
