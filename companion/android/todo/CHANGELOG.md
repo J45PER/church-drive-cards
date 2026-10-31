@@ -6,6 +6,7 @@ Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newe
 ## 0.54.1
 
 - Asking Clive about tomorrow's weather (or the day after, up to five days) now shows that day's card, with its high, low and hours, instead of only speaking. Today's weather card also shows today's high and low (after midnight it was showing yesterday's). Listening: the phone now asks its own noise suppression to quieten a television or a fan behind your voice, and Clive decides you have finished speaking after 0.9 seconds of quiet instead of 1.2, so he moves from listening to thinking sooner.
+- Time zones: the phone now tells the house which time zone it is in. When it is not the home's, Clive gives the time where you are as well as the home time ("It's 14:05 here, which is 12:05 at home"), says which times are home times, and treats "here" as where you are. Between midnight and 03:30 (your time) when you say tomorrow, he first asks whether you mean today or tomorrow, naming both days, in case you have not been to bed yet.
 
 ## 0.54.0
 

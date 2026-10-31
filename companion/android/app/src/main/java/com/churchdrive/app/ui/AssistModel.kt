@@ -105,6 +105,9 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
 
     /** This person's Home Assistant user id, to know which pictures are theirs. */
     private var userId: String? = null
+
+    /** This person's name in Home Assistant (to find their own time zone helper there). */
+    private var personName: String? = null
     private var showSubscription = -1
 
     /** A picture or link Clive asked to show, waiting for his written answer (it is sent just before it). */
@@ -114,7 +117,14 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     private fun watchShow(fresh: Boolean = false) {
         // The house drops every subscription when the line to it drops (the phone slept, the network changed), so a run starts it afresh.
         if (showSubscription >= 0) { if (!fresh) return; api.close(showSubscription); showSubscription = -1 }
-        if (userId == null) api.request("auth/current_user", JSONObject()) { r -> userId = (r as? JSONObject)?.optString("id")?.takeIf { it.isNotBlank() } }
+        if (userId == null) api.request("auth/current_user", JSONObject()) { r ->
+            val me = r as? JSONObject
+            userId = me?.optString("id")?.takeIf { it.isNotBlank() }
+            personName = me?.optString("name")?.takeIf { it.isNotBlank() }
+            main.post { TimeZoneSync.sync(api, personName) }
+        }
+        // Tells the house which time zone this phone is in (only when it has changed), so the assistant can give the time here as well as at home.
+        TimeZoneSync.sync(api, personName)
         showSubscription = api.subscribe("subscribe_events", JSONObject().put("event_type", ASSISTANT_SHOW_EVENT)) { ev ->
             main.post {
                 val show = parseAssistantShow(ev, userId) ?: return@post
