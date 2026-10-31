@@ -1,0 +1,54 @@
+# Automation: tells you when a voice satellite has been offline for a while or has a weak Wi-Fi signal.
+#
+# The Satellites app shows both on its list as well, but only while it is open; this one reaches you when it is not. It uses a
+# persistent notification (the bell in Home Assistant), which the Home Assistant app on your phone can also show. Change the action to
+# notify.mobile_app_<your phone> if you want a push instead.
+#
+# A satellite is recognised by its "Follow-up listening" switch, so nothing here changes when you add one.
+alias: Clive satellite - health
+description: Notifies when a satellite is offline for 10 minutes or its Wi-Fi is weak for 15.
+mode: queued
+max: 10
+triggers:
+  - trigger: template
+    id: offline
+    value_template: >-
+      {{ states.switch | selectattr('entity_id', 'search', '_follow_up_listening$')
+         | selectattr('state', 'eq', 'unavailable') | list | count > 0 }}
+    for: "00:10:00"
+  - trigger: template
+    id: weak
+    value_template: >-
+      {% set ns = namespace(n=0) %}
+      {% for s in states.sensor if s.entity_id.endswith('_wi_fi_signal') and s.state | is_number and s.state | float < -78 %}
+        {% set ns.n = ns.n + 1 %}
+      {% endfor %}
+      {{ ns.n > 0 }}
+    for: "00:15:00"
+actions:
+  - variables:
+      offline_names: >-
+        {{ states.switch | selectattr('entity_id', 'search', '_follow_up_listening$')
+           | selectattr('state', 'eq', 'unavailable')
+           | map(attribute='name') | map('replace', ' Follow-up listening', '') | join(', ') }}
+      weak_names: >-
+        {% set ns = namespace(names=[]) %}
+        {% for s in states.sensor if s.entity_id.endswith('_wi_fi_signal') and s.state | is_number and s.state | float < -78 %}
+          {% set ns.names = ns.names + [s.name | replace(' Wi-Fi signal', '')] %}
+        {% endfor %}
+        {{ ns.names | join(', ') }}
+  - choose:
+      - conditions: "{{ trigger.id == 'offline' and offline_names | length > 0 }}"
+        sequence:
+          - action: persistent_notification.create
+            data:
+              notification_id: clive_satellite_offline
+              title: "A satellite is offline"
+              message: "{{ offline_names }} has been offline for 10 minutes. Check its power and Wi-Fi."
+      - conditions: "{{ trigger.id == 'weak' and weak_names | length > 0 }}"
+        sequence:
+          - action: persistent_notification.create
+            data:
+              notification_id: clive_satellite_weak_wifi
+              title: "A satellite has a weak Wi-Fi signal"
+              message: "{{ weak_names }} has had a weak Wi-Fi signal for 15 minutes. It may hear you less well and answer slowly."

@@ -25,6 +25,7 @@ class SatelliteModel(app: Application) : AndroidViewModel(app) {
     private val session = Session(app)
     private val client = HaClient(viewModelScope)
     private val settings = SatelliteSettings(app)
+    private val presetStore = SatellitePresets(app)
 
     var signedIn by mutableStateOf(session.signedIn)
         private set
@@ -284,6 +285,50 @@ class SatelliteModel(app: Application) : AndroidViewModel(app) {
             if (res == null) notice = "Home Assistant refused the change. Renaming needs an administrator."
             else notice = "Renamed. The entity ids stay the same, so nothing else changes."
         }
+    }
+
+    fun chooseVoice(setting: VoiceSetting, option: String) =
+        client.callService("select", "select_option", setting.entity, data("option" to option))
+
+    // ---- Presets, and one satellite's settings on others ----
+
+    var presets by mutableStateOf(presetStore.all())
+        private set
+
+    fun savePreset(name: String, from: Satellite) {
+        if (name.isBlank()) return
+        presets = presetStore.save(Preset(name.trim(), SatSettings.of(from)))
+        notice = "Saved \"${name.trim()}\"."
+    }
+
+    fun deletePreset(name: String) {
+        presets = presetStore.delete(name)
+    }
+
+    /** Applies settings to a satellite, only the parts it has (a satellite without a screen ignores the design and backlight). */
+    fun apply(settings: SatSettings, to: Satellite) {
+        if (to.hasScreen) {
+            settings.design?.let { client.callService("select", "select_option", to.select("design"), data("option" to it.label)) }
+            settings.glances.forEachIndexed { i, g -> if (g.isNotBlank() && to.glances.getOrNull(i) != null) chooseGlance(to, i, g) }
+            settings.backlightDay?.let { setNumber(to, "backlight_day", it) }
+            settings.backlightNight?.let { setNumber(to, "backlight_night", it) }
+            settings.nightStart?.let { setNumber(to, "night_starts_hour", it.toFloat()) }
+            settings.nightEnd?.let { setNumber(to, "night_ends_hour", it.toFloat()) }
+        }
+        settings.volume?.let { if (to.volume != null) setNumber(to, "volume", it) }
+        settings.spokenAnswers?.let { setSwitch(to, "spoken_answers", it) }
+        settings.followUp?.let { setSwitch(to, "follow_up_listening", it) }
+    }
+
+    fun applyPreset(preset: Preset, targets: List<Satellite>) {
+        targets.forEach { apply(preset.settings, it) }
+        notice = "Applied \"${preset.name}\" to ${targets.size} satellite${if (targets.size == 1) "" else "s"}."
+    }
+
+    fun copySettings(from: Satellite, targets: List<Satellite>) {
+        val settings = SatSettings.of(from)
+        targets.forEach { apply(settings, it) }
+        notice = "Copied ${from.name}'s settings to ${targets.size} satellite${if (targets.size == 1) "" else "s"}."
     }
 
     fun setSwitch(sat: Satellite, suffix: String, on: Boolean) =

@@ -34,7 +34,10 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -230,9 +233,13 @@ private fun SatelliteList(vm: SatelliteModel) {
                         }
                         Column(Modifier.weight(1f)) {
                             Text(s.name, style = MaterialTheme.typography.titleMedium, color = ink, maxLines = 1)
-                            Text(s.design?.let { "${it.label} design" } ?: "Round 3.4″ display", style = MaterialTheme.typography.bodySmall, color = soft)
+                            Text(
+                                if (!s.hasScreen) "No screen" else s.design?.let { "${it.label} design" } ?: "Round 3.4″ display",
+                                style = MaterialTheme.typography.bodySmall, color = soft,
+                            )
                         }
-                        if (s.online) Pill("Online", Tone.Green) else Pill("Offline", Tone.Grey)
+                        val warning = s.warning()
+                        if (warning != null) Pill(warning, if (s.online) Tone.Amber else Tone.Red) else Pill("Online", Tone.Green)
                     }
                 }
             }
@@ -286,12 +293,16 @@ private fun DetailPage(vm: SatelliteModel, sat: Satellite, onPerson: () -> Unit)
                 Text("Offline", style = MaterialTheme.typography.titleMedium, color = ink)
                 Text("Home Assistant can't reach this satellite, so changes will wait until it is back.", style = MaterialTheme.typography.bodyMedium, color = soft)
             }
-            DesignSection(vm, sat)
-            TemperatureSection(sat)
-            if ((vm.pendingDesign ?: sat.design) == SatDesign.Glance) GlanceSection(vm, sat)
-            BacklightSection(vm, sat)
+            if (sat.hasScreen) {
+                DesignSection(vm, sat)
+                TemperatureSection(sat)
+                if ((vm.pendingDesign ?: sat.design) == SatDesign.Glance) GlanceSection(vm, sat)
+                BacklightSection(vm, sat)
+            }
             SoundSection(vm, sat)
+            VoiceSection(vm, sat)
             SwitchSection(vm, sat)
+            PresetsSection(vm, sat)
             StatusSection(sat)
             UpdateSection(vm, sat)
             NameRoomSection(vm, sat)
@@ -538,5 +549,89 @@ private fun ActionsSection(vm: SatelliteModel, sat: Satellite) {
             confirmButton = { TextButton(onClick = { confirmRestart = false; vm.press(sat, "restart") }) { Text("Restart") } },
             dismissButton = { TextButton(onClick = { confirmRestart = false }) { Text("Cancel") } },
         )
+    }
+}
+
+// ---------------------------------------------------------------------------------------------------- voice, presets, copying
+
+@Composable
+private fun VoiceSection(vm: SatelliteModel, sat: Satellite) {
+    if (sat.voice.isEmpty()) return
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionHeader("Voice", Icons.Filled.RecordVoiceOver, Tone.Indigo)
+        EntityCard(null) { ink, soft ->
+            sat.voice.forEach { v ->
+                var menu by remember { mutableStateOf(false) }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text(v.label, color = ink, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                    Box {
+                        Pill(v.state.ifBlank { "Choose" }, Tone.Indigo) { menu = true }
+                        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                            v.options.forEach { o -> DropdownMenuItem(text = { Text(o) }, onClick = { menu = false; vm.chooseVoice(v, o) }) }
+                        }
+                    }
+                }
+            }
+            Text("The assistant decides who answers and in which language. These are Home Assistant's own settings for this satellite.", style = MaterialTheme.typography.bodySmall, color = soft)
+        }
+    }
+}
+
+/** A list of satellites to tick, in a dialog. */
+@Composable
+private fun PickSatellites(title: String, confirm: String, choices: List<Satellite>, onDone: (List<Satellite>) -> Unit, onDismiss: () -> Unit) {
+    var picked by remember { mutableStateOf(choices.map { it.slug }.toSet()) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column {
+                choices.forEach { c ->
+                    Row(Modifier.fillMaxWidth().clickable { picked = if (c.slug in picked) picked - c.slug else picked + c.slug }, verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = c.slug in picked, onCheckedChange = { picked = if (it) picked + c.slug else picked - c.slug })
+                        Text(c.name)
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(enabled = picked.isNotEmpty(), onClick = { onDone(choices.filter { it.slug in picked }) }) { Text(confirm) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+@Composable
+private fun PresetsSection(vm: SatelliteModel, sat: Satellite) {
+    var naming by remember { mutableStateOf(false) }
+    var copying by remember { mutableStateOf(false) }
+    var applying by remember { mutableStateOf<Preset?>(null) }
+    val others = vm.satellites.filter { it.slug != sat.slug }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionHeader("Presets and copying", Icons.Filled.ContentCopy, Tone.Orange, if (vm.presets.isEmpty()) null else "${vm.presets.size} saved")
+        EntityCard(null) { ink, soft ->
+            Tile("Save these settings as a preset", false, Tone.Orange, ink, Modifier.fillMaxWidth()) { naming = true }
+            if (others.isNotEmpty()) Tile("Copy these settings to other satellites", false, Tone.Orange, ink, Modifier.fillMaxWidth()) { copying = true }
+            vm.presets.forEach { p ->
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(p.name, color = ink, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f), maxLines = 1)
+                    Pill("Apply", Tone.Orange) { applying = p }
+                    Pill("Delete", Tone.Grey) { vm.deletePreset(p.name) }
+                }
+            }
+            Text("A preset holds the design, glances, backlight, night hours, volume and the spoken-answers and follow-up switches. Parts a satellite doesn't have are skipped.", style = MaterialTheme.typography.bodySmall, color = soft)
+        }
+    }
+    if (naming) {
+        var text by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { naming = false },
+            title = { Text("Name the preset") },
+            text = { OutlinedTextField(text, { text = it }, singleLine = true, label = { Text("For example: Bedroom, dim") }) },
+            confirmButton = { TextButton(enabled = text.isNotBlank(), onClick = { naming = false; vm.savePreset(text, sat) }) { Text("Save") } },
+            dismissButton = { TextButton(onClick = { naming = false }) { Text("Cancel") } },
+        )
+    }
+    if (copying) PickSatellites("Copy ${sat.name}'s settings to", "Copy", others, { copying = false; vm.copySettings(sat, it) }, { copying = false })
+    applying?.let { preset ->
+        PickSatellites("Apply \"${preset.name}\" to", "Apply", vm.satellites, { applying = null; vm.applyPreset(preset, it) }, { applying = null })
     }
 }

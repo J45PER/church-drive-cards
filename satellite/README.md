@@ -42,6 +42,7 @@ Settings that Home Assistant and the app can change are ESPHome entities: **Desi
 | `ha/clive-satellite-info.yaml` | Pushes the weather, who is home, the rate, the car, the alarm and the heating to the screen. |
 | `ha/clive-satellite-show.yaml` | Sends Clive's cards to the screen while it is the device being spoken to. |
 | `ha/clive-satellite-answer.yaml` | Passes a tapped Yes or No to Clive. |
+| `ha/clive-satellite-health.yaml` | Notifies when a satellite has been offline for 10 minutes or its Wi-Fi has been weak for 15. |
 | `design/` | The HTML mockups the firmware was built from (`flows.html`, `idle-layouts.html`, `clive-round-ui.html`). |
 
 ## Setup
@@ -50,7 +51,7 @@ Settings that Home Assistant and the app can change are ESPHome entities: **Desi
 2. Copy `secrets.example.yaml` to `secrets.yaml` and fill it in (`secrets.yaml` is git-ignored). Make the API key with `python3 -c "import secrets,base64;print(base64.b64encode(secrets.token_bytes(32)).decode())"`.
 3. First flash over the board's **USB-C UART** port: `esphome run clive-round.yaml`. Later updates go over the air.
 4. Home Assistant finds it as a new ESPHome device. Adopt it, give it an **area**, and in Settings > Voice assistants set its pipeline to the Claude one.
-5. Install the three automations in `ha/`. They use this house's entity ids (`weather.forecast_home`, the four `person.*`, the Octopus rate, the Astra's battery, the alarm, `climate.downstairs`). Change `assist_satellite.clive_round_screen` in `clive-satellite-show.yaml` to the entity your device created.
+5. Install the automations in `ha/` (show, answer, info, and optionally health). They use this house's entity ids (`weather.forecast_home`, the four `person.*`, the Octopus rate, the Astra's battery, the alarm, `climate.downstairs`). Change `assist_satellite.clive_round_screen` in `clive-satellite-show.yaml` to the entity your device created.
 
 ## Changing the screen
 

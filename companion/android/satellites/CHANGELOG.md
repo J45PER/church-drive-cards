@@ -2,6 +2,7 @@
 
 ## 0.82.0
 
+- Whole-house management (Phase 2): presets (save a satellite's design, glances, backlight, night hours, volume and switches under a name; apply to any satellites), copying one satellite's settings to others, a Voice section with Home Assistant's own assistant, wake-word and finished-speaking choices, and warnings on the list ("Weak Wi-Fi", "Offline for 30 min"). A satellite with no screen is listed too, without the design, glance and backlight sections. `satellite/ha/clive-satellite-health.yaml` sends a Home Assistant notification when one is offline or weak for a while.
 - Day-to-day control (Phase 1): a Status card (Wi-Fi in words and dBm, network, address, firmware, running time, when it went offline), a Sound section (speaker volume and "Say hello"), Name and room (rename, move to a room), Actions (flash the screen, clean screen, restart with a confirmation) and a Firmware card with Install when Home Assistant offers an update. Each shows only what the satellite has, so older firmware still works. Renaming and rooms need a Home Assistant administrator.
 - Signs in automatically through the Church Drive app (0.82.0 or later) now that its Play signing certificate is trusted.
 

@@ -111,4 +111,59 @@ class SatelliteDataTest {
         assertEquals("Fair", signalWords(-70))
         assertEquals("Weak", signalWords(-85))
     }
+
+    @Test fun aSatelliteWithoutAScreenIsFoundAsAnAssistSatellite() {
+        val found = findSatellites(house(
+            state("assist_satellite.kitchen_box", "idle", "friendly_name" to "Kitchen box"),
+            state("switch.kitchen_box_follow_up_listening", "on"),
+            state("number.kitchen_box_volume", "50"),
+            // An Assist satellite that is not ours (no follow-up switch) is not listed.
+            state("assist_satellite.phone", "idle", "friendly_name" to "Phone"),
+        ))
+        assertEquals(listOf("clive_round_screen", "kitchen_box"), found.map { it.slug })
+        val box = found.last()
+        assertEquals("Kitchen box", box.name)
+        assertEquals(false, box.hasScreen)
+        assertNull(box.design)
+        assertEquals(50f, box.volume!!, 0f)
+        assertTrue(box.online)
+    }
+
+    @Test fun readsTheVoiceSettings() {
+        val s = findSatellites(house(
+            state("select.clive_round_screen_assistant", "Clive", "options" to JSONArray(listOf("Preferred", "Clive", "Plain"))),
+            state("select.clive_round_screen_finished_speaking_detection", "default", "options" to JSONArray(listOf("aggressive", "default", "relaxed"))),
+        )).single()
+        assertEquals(listOf("Assistant", "Finished speaking"), s.voice.map { it.label })
+        assertEquals(listOf("Preferred", "Clive", "Plain"), s.voice[0].options)
+    }
+
+    @Test fun warnsAboutAWeakSignalAndLongOffline() {
+        val weak = findSatellites(house(state("sensor.clive_round_screen_wi_fi_signal", "-80"))).single()
+        assertEquals("Weak Wi-Fi", weak.warning())
+        assertNull(findSatellites(house()).single().warning())
+        val offline = findSatellites(house(
+            EntityState("select.clive_round_screen_design", "unavailable", JSONObject().put("options", designOptions).put("friendly_name", "Clive (round screen) Design"), "2026-10-31T10:00:00+00:00"),
+        )).single()
+        val now = java.time.OffsetDateTime.parse("2026-10-31T10:30:00+00:00").toInstant().toEpochMilli()
+        assertEquals("Offline for 30 min", offline.warning(now))
+        assertEquals("Offline", offline.warning(java.time.OffsetDateTime.parse("2026-10-31T10:05:00+00:00").toInstant().toEpochMilli()))
+    }
+
+    @Test fun settingsSurviveJson() {
+        val a = SatSettings(SatDesign.Ring, listOf("Alarm", "Heating", "Forecast"), 80f, 10f, 21, 7, 40f, true, false)
+        assertEquals(a, SatSettings.fromJson(a.toJson()))
+        val b = SatSettings(volume = 30f)
+        assertEquals(b, SatSettings.fromJson(b.toJson()))
+        assertNull(SatSettings.fromJson(b.toJson()).design)
+    }
+
+    @Test fun aSatelliteMakesASettingsSnapshot() {
+        val s = findSatellites(house(state("switch.clive_round_screen_spoken_answers", "on"))).single()
+        val snap = SatSettings.of(s)
+        assertEquals(SatDesign.Weather, snap.design)
+        assertEquals(listOf("Who's home", "Electricity", "Forecast"), snap.glances)
+        assertEquals(true, snap.spokenAnswers)
+        assertEquals(22, snap.nightStart)
+    }
 }
