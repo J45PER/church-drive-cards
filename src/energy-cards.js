@@ -509,7 +509,7 @@ export class EvChargerCard extends HTMLElement {
 
   _data() {
     const c = this.config;
-    if (c.demo) return { found: true, mode: 'Eco+', options: ['Fast', 'Eco', 'Eco+', 'Stopped'], power: 7100, session: 18.4, status: 'Charging', plug: 'Connected', locked: false, smart: { on: true, phase: 'Waiting', later: true } };
+    if (c.demo) return { found: true, mode: 'Eco+', options: ['Fast', 'Eco', 'Eco+', 'Stopped'], power: 7100, session: 18.4, status: 'Charging', plug: 'Connected', locked: false, smart: { on: true, phase: 'Waiting', later: true }, car: { role: 'Primary', confirmed: true } };
     const e = evFind(this._hass, c);
     const s = (id) => id && this._hass.states[id];
     if (!s(e.mode) && !s(e.power) && !s(e.status)) return { found: false };
@@ -517,9 +517,13 @@ export class EvChargerCard extends HTMLElement {
     if (power != null && s(e.power).attributes.unit_of_measurement === 'kW') power *= 1000;
     const smartOn = s('input_boolean.zappi_smart_charge');
     const smartPhase = s('input_select.zappi_smart_charge_state');
+    // Which car is on the charger (Primary = the one on the Octopus app, Additional = any other); set from the plug-in question.
+    const carRole = s('input_select.zappi_car_role');
+    const carOk = s('input_boolean.zappi_car_confirmed');
     return {
       found: true,
       e,
+      car: carRole ? { role: carRole.state, confirmed: carOk ? carOk.state === 'on' : true } : null,
       smart: smartOn ? { on: smartOn.state === 'on', phase: smartPhase ? smartPhase.state : null, later: !!s('script.zappi_charge_later') } : null,
       mode: s(e.mode) ? s(e.mode).state : null,
       options: s(e.mode) ? s(e.mode).attributes.options || [] : [],
@@ -575,6 +579,10 @@ export class EvChargerCard extends HTMLElement {
         .ev-act.live { background:color-mix(in srgb, ${EV_TEAL} 32%, transparent); color:${EV_TEAL}; opacity:1; }
         .ev-act.stopping { background:rgba(127,127,127,.2); color:var(--secondary-text-color); opacity:1; }
         .ev-act.smart { justify-content:flex-start; text-align:left; min-height:52px; }
+        .ev-act.car { justify-content:flex-start; text-align:left; min-height:52px; cursor:default; }
+        .ev-act.car .ev-st { flex:1; display:flex; flex-direction:column; gap:1px; min-width:0; }
+        .ev-act.car .ev-st small { font-weight:400; font-size:.72rem; color:var(--secondary-text-color); white-space:normal; line-height:1.25; }
+        .ev-sel { flex:none; font:inherit; font-size:.85rem; font-weight:600; color:var(--primary-text-color); background:rgba(127,127,127,.18); border:none; border-radius:10px; min-height:36px; padding:4px 8px; }
         .ev-act.smart .ev-st { flex:1; display:flex; flex-direction:column; gap:1px; min-width:0; }
         .ev-act.smart .ev-st small { font-weight:400; font-size:.72rem; color:var(--secondary-text-color); white-space:normal; line-height:1.25; }
         .ev-sw { flex:none; width:38px; height:22px; border-radius:999px; background:rgba(127,127,127,.45); position:relative; transition:background .15s; }
@@ -593,6 +601,10 @@ export class EvChargerCard extends HTMLElement {
         const b = ev.target.closest('[data-act]');
         if (b && !b.disabled) this._override(b.dataset.act);
         if (ev.target.closest('[data-smart]')) this._override('smart');
+      });
+      this._acts.addEventListener('change', (ev) => {
+        const sel = ev.target.closest('[data-car]');
+        if (sel && sel.value) this._setCar(sel.value);
       });
       this._built = true;
     }
@@ -654,7 +666,13 @@ export class EvChargerCard extends HTMLElement {
     const smart = sm && d.found && !d.unavailable
       ? `<button type="button" class="ev-act smart" data-smart role="switch" aria-checked="${sm.on}" aria-label="Smart charge">${iconHtml('mdi:clock-fast', { size: '20px' })}<span class="ev-st">Smart charge<small>${kitEsc(this._smartText(d))}</small></span><span class="ev-sw${sm.on ? ' on' : ''}"></span></button>`
       : '';
-    const all = html + smart;
+    // Which car is plugged in: only while one is. A car nobody has answered for shows "Which car?" and picking one confirms it.
+    const plugged = !a || !a.none;
+    const cr = d.car;
+    const car = cr && plugged && d.found && !d.unavailable
+      ? `<label class="ev-act car">${iconHtml('mdi:car-electric', { size: '20px' })}<span class="ev-st">Car plugged in<small>${kitEsc(cr.role === 'Primary' ? 'Primary: also charges when Octopus schedules it' : cr.role === 'Additional' ? 'Additional: charges 23:30 to 05:30 only' : 'Not answered yet, so it will not charge')}</small></span><select class="ev-sel" data-car aria-label="Car plugged in">${cr.role === 'Unknown' || !cr.confirmed ? `<option value=""${cr.role === 'Unknown' ? ' selected' : ''} disabled>Which car?</option>` : ''}<option value="Primary"${cr.role === 'Primary' ? ' selected' : ''}>Primary</option><option value="Additional"${cr.role === 'Additional' ? ' selected' : ''}>Additional</option></select></label>`
+      : '';
+    const all = html + smart + car;
     if (all !== this._actsHtml) {
       this._actsHtml = all;
       this._acts.innerHTML = all;
@@ -723,6 +741,16 @@ export class EvChargerCard extends HTMLElement {
   _pick(mode) {
     if (mode === 'Fast' && this._ask('fast')) return;
     this._setMode(mode);
+  }
+
+  // Set which car is plugged in. An unanswered car is confirmed by the choice (same as the notification buttons);
+  // a confirmed one only changes its role, so a charge someone took over by hand carries on.
+  _setCar(role) {
+    if (this.config.demo || (role !== 'Primary' && role !== 'Additional')) return;
+    const d = this._data();
+    if (!d.car) return;
+    if (d.car.confirmed) this._hass.callService('input_select', 'select_option', { option: role }, { entity_id: 'input_select.zappi_car_role' }).catch(() => {});
+    else this._hass.callService('script', 'zappi_car_yes', { role }).catch(() => {});
   }
 
   _override(act) {
