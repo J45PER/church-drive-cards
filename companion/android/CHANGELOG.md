@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.84.0
+
+- **Pause after a change.** A thermostat's settings sheet has a new row, Pause after a change, to set how long the assistant leaves a thermostat alone after somebody changes it (15 minutes to 12 hours, a quarter of an hour at a time; both thermostats use it). It is now 30 minutes instead of 2 hours. Needs Church Drive 0.84.0 or later for the web sheet; the number already exists in Home Assistant.
+
 ## 0.83.0
 
 - **Activity log: "overruled" instead of every device change.** The general lines for devices turning on or off outside Home Assistant (0.54.3) were too many, so they are gone. The log now lists only when something **Clive set** (the heating target or mode, a light, a switch or a fan) is **changed again from outside the app**: the thermostat's own dial or app, a wall switch, a remote or a schedule in the device. Each line names the device, what changed and when he had set it. Pick **Overruled Clive** in the Actions list to see just those. Needs Church Drive 0.83.0 or later in Home Assistant.

@@ -7,6 +7,7 @@
 import { openPopup } from './popup.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 
+export const PAUSE_ID = 'input_number.clive_climate_pause_minutes';
 const STEP = 0.5;
 const GAP = 1;
 const num = (st) => {
@@ -22,12 +23,17 @@ export function zoneControl(states, climateId) {
   const ids = { low: `input_number.clive_climate_${zone}_low`, high: `input_number.clive_climate_${zone}_high` };
   const resume = states[`input_datetime.clive_climate_${zone}_resume`];
   const note = states[`input_text.clive_climate_${zone}_note`];
+  const pause = states[PAUSE_ID];
+  const pauseAttr = (k, d) => (pause && pause.attributes && Number.isFinite(Number(pause.attributes[k])) ? Number(pause.attributes[k]) : d);
   return {
     zone,
     climateId,
     autoId: auto.entity_id || `input_boolean.clive_climate_${zone}_auto`,
     lowId: ids.low,
     highId: ids.high,
+    // How long Clive leaves a thermostat alone after somebody changes it: one number for the whole house, with the helper's own limits.
+    pauseMin: num(pause),
+    pauseLimits: { min: pauseAttr('min', 15), max: pauseAttr('max', 720), step: pauseAttr('step', 15) },
     controlled: auto.state === 'on',
     low: num(states[ids.low]),
     high: num(states[ids.high]),
@@ -49,6 +55,18 @@ export function zoneStatusText(zone, name, nowMs = Date.now()) {
 export function stepRange(end, value, other, delta) {
   const v = Math.round((value + delta) * 2) / 2;
   return end === 'low' ? Math.min(v, other - GAP) : Math.max(v, other + GAP);
+}
+
+// 30 as "30 min", 60 as "1 h", 90 as "1 h 30 min".
+export function pauseText(minutes) {
+  if (minutes == null || !Number.isFinite(minutes)) return '–';
+  const m = Math.round(minutes);
+  return m < 60 ? `${m} min` : m % 60 === 0 ? `${m / 60} h` : `${Math.floor(m / 60)} h ${m % 60} min`;
+}
+
+// The pause after a press of plus (direction 1) or minus (-1): a step at a time, within the helper's limits.
+export function stepPause(current, direction, limits = { min: 15, max: 720, step: 15 }) {
+  return Math.min(limits.max, Math.max(limits.min, current + direction * limits.step));
 }
 
 const assistantName = (hass) => {
@@ -98,6 +116,14 @@ export function openComfortSettings(host, hass, spec) {
     } else {
       parts.push(`<div style="color:var(--secondary-text-color);">The range numbers aren’t available yet.</div>`);
     }
+    if (zone && zone.pauseMin != null) {
+      parts.push(`<div style="display:flex; align-items:center; gap:10px;">
+        <span style="flex:1;">Pause after a change</span>
+        <button type="button" data-pause="-1" aria-label="Shorter pause" style="${BTN} width:44px; height:44px; font-size:22px;">−</button>
+        <b style="min-width:84px; text-align:center; font-size:1.05rem; font-variant-numeric:tabular-nums;">${pauseText(zone.pauseMin)}</b>
+        <button type="button" data-pause="1" aria-label="Longer pause" style="${BTN} width:44px; height:44px; font-size:22px;">+</button></div>
+        <div style="font-size:0.8rem; color:var(--secondary-text-color);">How long ${name} leaves a thermostat alone after somebody changes it at the dial, in the Nest app or here. Both thermostats use it.</div>`);
+    }
     if (zone && zone.pausedUntil) {
       parts.push(`<div style="display:flex; flex-direction:column; gap:8px;">
         <b>Paused until ${clock(zone.pausedUntil)}</b>
@@ -115,6 +141,12 @@ export function openComfortSettings(host, hass, spec) {
         if (cur == null || other == null) return;
         const value = end === 'low' ? stepRange('low', cur, other, STEP * Number(dir)) : stepRange('high', other, cur, STEP * Number(dir));
         call('input_number', 'set_value', { entity_id: end === 'low' ? lowId : highId, value });
+      }),
+    );
+    root.querySelectorAll('[data-pause]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const z = zoneControl(h.states, spec.climateId);
+        if (z && z.pauseMin != null) call('input_number', 'set_value', { entity_id: PAUSE_ID, value: stepPause(z.pauseMin, Number(b.dataset.pause), z.pauseLimits) });
       }),
     );
     const resume = root.querySelector('[data-resume]');
