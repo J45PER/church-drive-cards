@@ -161,6 +161,13 @@ What is different because it is a fixed device, not a wrist:
 - **Faces move by swipe or tap** on the rail dots (there is no crown).
 - It has **no phone beside it**, so the Prompts and Settings faces must work on their own. Settings would need a brightness control and volume, which the watch does not have.
 
+**Decisions so far** (mockups in `satellite/design/`):
+- **Idle** is a black ground with the mark small and low on the glass (about y 238, size 30 in watch units), and no glow. Layout **E**: time, then a date line carrying the date and the outside and inside temperatures ("Sat 31 Oct · 12° out · 19° in"), then three configurable glances (who is home, electricity, car by default). The forecast icon is one of the glance options, not fixed. The backlight dims on a schedule and night uses the minimal layout H. See `idle-layouts.html`.
+- **Waking**: the mark glides from the bottom to the centre, the glow fades in, and the watch's Talk face takes over.
+- **Actions** answer with the app's `done` card: an icon in a tinted circle, name, detail, and an optional percent bar in the light's own colour. A failure is red with a cross. Anything costly asks first with Yes and No pills and amber glow. Things he may never do (disarm the alarm, sirens, TVs) are refused plainly in amber with where to do it instead. See `flows.html`.
+- **Quick settings**: drag down from the top edge. Volume and brightness sliders, six switches (mic, spoken answers, follow-up listening, night, clean screen, Wi-Fi) and a Settings button. The settings menu uses the watch's prompt pills.
+- **Pairing and setup** are in `docs/SATELLITE-PAIRING.md`.
+
 Open questions for building it in LVGL (ESPHome):
 - The glow is three radial gradients and a vignette. LVGL's gradient support varies by version, so the options are pre-rendered glow images rotated slowly, or a small canvas drawn per frame. Needs testing on the board for frame rate.
 - The mark is a two-shape even-odd path morphing between poses. In LVGL this is likely a set of pre-rendered frames or an animated canvas.

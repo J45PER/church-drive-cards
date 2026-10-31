@@ -53,7 +53,7 @@ These are the guesses I could not test without the board:
 
 ## Design
 
-The look follows the watch app's Talk face scaled to 800 px, written up in [`docs/CLIVE-STYLE.md`](../docs/CLIVE-STYLE.md). `design/clive-round-ui.html` is an interactive mockup of every state (open it in a browser). The firmware in `clive-round.yaml` is still the simpler first draft (flat colour pages); the glow, the animated mark and the card layouts in the mockup are what it should grow into.
+The look follows the watch app's Talk face scaled to 800 px, written up in [`docs/CLIVE-STYLE.md`](../docs/CLIVE-STYLE.md). `design/clive-round-ui.html` is an interactive mockup of every state, `design/idle-layouts.html` has eight idle layouts (E chosen), and `design/flows.html` covers the idle screen, quick settings, actions and pairing. Open them in a browser. Pairing and the companion app are proposed in [`docs/SATELLITE-PAIRING.md`](../docs/SATELLITE-PAIRING.md). The firmware in `clive-round.yaml` is still the simpler first draft (flat colour pages); the glow, the animated mark and the card layouts in the mockup are what it should grow into.
 
 ## Not done yet
 
