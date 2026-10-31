@@ -46,6 +46,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util, location, slugify
 
 from .notice_log import NoticeLog
+from .phone_logic import leftover_entries
 from .kinds import ARRIVALS, JOB_KINDS, KINDS, arrival_kind
 from .notice_actions_logic import actions_for, is_app_only_link, is_phone_action, tap_link_for
 from .notice_samples import sample_for
@@ -113,7 +114,23 @@ class People:
         self._unsub_started = None  # a fired listen_once is gone already
         await self._async_ready()
 
+    async def _async_remove_leftover_phones(self, _now: Any = None) -> None:
+        """Takes away the Church Drive app's old registrations of a phone (the app only uses its newest)."""
+        entries = self.hass.config_entries.async_entries("mobile_app")
+        gone = leftover_entries(
+            {"entry_id": c.entry_id, "app_id": c.data.get("app_id"), "user_id": c.data.get("user_id"), "device_name": c.data.get("device_name")}
+            for c in entries
+        )
+        for entry_id in gone:
+            _LOGGER.info("Removing an old registration of the Church Drive app (%s): the phone has a newer one", entry_id)
+            try:
+                await self.hass.config_entries.async_remove(entry_id)
+            except Exception as err:  # noqa: BLE001 - one failing mustn't stop the rest
+                _LOGGER.warning("Couldn't remove old phone registration %s: %s", entry_id, err)
+
     async def _async_ready(self) -> None:
+        await self._async_remove_leftover_phones()
+        self._unsubs.append(async_track_time_interval(self.hass, self._async_remove_leftover_phones, timedelta(hours=1)))
         if not self._data.get("seeded"):
             self._seed()
         self._fill_defaults()
@@ -239,6 +256,8 @@ class People:
                     service = f"mobile_app_{slugify(device.name or '')}"
                 if service not in notify:
                     continue
+                if any(p["service"] == service for p in phones):
+                    continue  # leftover registrations share one notify name: list (and send to) the phone once
                 seen = self._seen(tracker)
                 config = self.hass.config_entries.async_get_entry(entry.config_entry_id) if entry.config_entry_id else None
                 phones.append(
