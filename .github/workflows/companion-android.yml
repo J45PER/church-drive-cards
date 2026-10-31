@@ -85,17 +85,19 @@ jobs:
           else
             files=$(git diff --name-only "$before" "$GITHUB_SHA")
           fi
-          main=false; todo=false
+          main=false; todo=false; sat=false
           while read -r f; do
             case "$f" in
               companion/android/todo/*) todo=true ;;
-              companion/android/*) main=true; case "$f" in companion/android/core/*|companion/android/*.kts|companion/android/gradle*|companion/android/gradle/*) todo=true ;; esac ;;
-              .github/workflows/companion-android.yml) main=true; todo=true ;;
+              companion/android/satellites/*) sat=true ;;
+              companion/android/*) main=true; case "$f" in companion/android/core/*|companion/android/*.kts|companion/android/gradle*|companion/android/gradle/*) todo=true; sat=true ;; esac ;;
+              .github/workflows/companion-android.yml) main=true; todo=true; sat=true ;;
             esac
           done <<< "$files"
           echo "main=$main" >> "$GITHUB_OUTPUT"
           echo "todo=$todo" >> "$GITHUB_OUTPUT"
-          echo "Phone and watch apps changed: $main. To-Do app changed: $todo."
+          echo "sat=$sat" >> "$GITHUB_OUTPUT"
+          echo "Phone and watch apps changed: $main. To-Do app changed: $todo. Satellites app changed: $sat."
       - name: Publish the phone and watch apps
         id: publish_main
         if: github.event_name == 'push' && steps.changed.outputs.main == 'true'
@@ -164,6 +166,35 @@ jobs:
               --title "Church Drive To-Do ${version}" \
               --notes "${notes:-Version ${version}.} (Build ${GITHUB_RUN_NUMBER}, commit ${GITHUB_SHA::7}.)"
           fi
+      - name: Publish Church Drive Satellites
+        id: publish_satellites
+        if: github.event_name == 'push' && steps.changed.outputs.sat == 'true'
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(sed -n 's/^version=//p' companion/android/satellites/version.properties)
+          cp "$(ls companion/android/satellites/build/outputs/apk/debug/*.apk)" church-drive-satellites.apk
+          cp "$(ls companion/android/satellites/build/outputs/bundle/release/*.aab)" church-drive-satellites.aab
+          gh release delete satellites-latest --yes --cleanup-tag || true
+          gh release create satellites-latest church-drive-satellites.apk \
+            --prerelease --latest=false --target "$GITHUB_SHA" \
+            --title "Church Drive Satellites ${version} (test build ${GITHUB_RUN_NUMBER})" \
+            --notes "Latest test build of Church Drive Satellites, version ${version}, build ${GITHUB_RUN_NUMBER}, from the ${GITHUB_REF_NAME} branch (commit ${GITHUB_SHA::7}). Download church-drive-satellites.apk on an Android phone and install it."
+          gh release edit satellites-latest --draft=false --prerelease --latest=false
+          if ! gh release view "satellites-v${version}" >/dev/null 2>&1; then
+            notes=$(awk -v v="$version" '$0 ~ "^## "v"( |$)" {on=1; next} /^## / {on=0} on' companion/android/satellites/CHANGELOG.md)
+            for f in church-drive-satellites.apk church-drive-satellites.aab; do
+              cp "$f" "${f%.*}-${version}-b${GITHUB_RUN_NUMBER}.${f##*.}"
+            done
+            echo "new=true" >> "$GITHUB_OUTPUT"
+            mkdir -p play-notes-satellites
+            printf '%s' "${notes:-Version ${version}.}" | sed 's/^- //' | head -c 480 > play-notes-satellites/whatsnew-en-GB
+            gh release create "satellites-v${version}" "church-drive-satellites-${version}-b${GITHUB_RUN_NUMBER}.apk" "church-drive-satellites-${version}-b${GITHUB_RUN_NUMBER}.aab" --latest=false \
+              --target "$GITHUB_SHA" \
+              --title "Church Drive Satellites ${version}" \
+              --notes "${notes:-Version ${version}.} (Build ${GITHUB_RUN_NUMBER}, commit ${GITHUB_SHA::7}.)"
+          fi
       # Each new version goes to Google Play's internal testing track, once, the first time a build has that version. Promoting it to
       # production stays a button in Play Console. The phone app and the watch app are one listing (one package name, two form factors) but
       # Play keeps them on separate tracks: the phone bundle on `internal`, the Wear OS bundle on `wear:internal` (it is refused on the phone
@@ -198,3 +229,16 @@ jobs:
           track: internal
           status: completed
           whatsNewDirectory: play-notes-todo
+      # The first upload of a brand-new app has to be made by hand in Play Console (the app must exist there first), so until that is done
+      # this step is allowed to fail without turning the build red. Once the app is in Play, a failure here is a real one: remove the line.
+      - name: Upload Church Drive Satellites to Google Play (internal testing)
+        if: ${{ !cancelled() && github.event_name == 'push' && steps.publish_satellites.outputs.new == 'true' && env.HAS_PLAY == 'true' }}
+        continue-on-error: true
+        uses: r0adkll/upload-google-play@v1.1.3
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.churchdrive.satellites
+          releaseFiles: church-drive-satellites.aab
+          track: internal
+          status: completed
+          whatsNewDirectory: play-notes-satellites
