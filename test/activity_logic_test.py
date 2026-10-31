@@ -57,6 +57,26 @@ class DescribeTest(unittest.TestCase):
         self.assertEqual(al.describe("script", "goodnight", {"entity_id": ["script.goodnight"]}, {"script.goodnight": "Goodnight"}), "ran Goodnight")
 
 
+class SnapshotButtonTest(unittest.TestCase):
+    def test_a_camera_refreshing_its_picture_is_not_worth_a_line(self):
+        self.assertFalse(al.worth_a_line("button", "press", ["button.front_door_take_snapshot"]))
+        self.assertFalse(al.worth_a_line("button", "press", ["button.front_door_take_snapshot", "button.garden_take_snapshot"]))
+
+    def test_other_buttons_and_mixed_calls_still_are(self):
+        self.assertTrue(al.worth_a_line("button", "press", ["button.zappi_boost"]))
+        self.assertTrue(al.worth_a_line("button", "press", ["button.front_door_take_snapshot", "button.zappi_boost"]))
+        self.assertTrue(al.worth_a_line("light", "turn_on", ["light.kitchen"]))
+        self.assertFalse(al.worth_a_line("sensor", "x", []))
+
+
+class PresetWordingTest(unittest.TestCase):
+    def test_the_thermostats_presets_read_naturally(self):
+        d = lambda mode: al.describe("climate", "set_preset_mode", {"entity_id": "climate.downstairs", "preset_mode": mode}, {"climate.downstairs": "Downstairs"})
+        self.assertEqual(d("none"), "set Downstairs to no preset")
+        self.assertEqual(d("eco"), "set Downstairs to Eco")
+        self.assertEqual(d("away_mode"), "set Downstairs to Away mode")
+
+
 class WhatIsNotedTest(unittest.TestCase):
     def test_noted(self):
         self.assertTrue(al.noted("light", "turn_on"))

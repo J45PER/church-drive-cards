@@ -1014,6 +1014,8 @@ def ws_camera_events(hass: HomeAssistant, connection: websocket_api.ActiveConnec
         vol.Optional("max_gb"): vol.All(vol.Coerce(float), vol.Range(min=0.5, max=10000)),
         vol.Optional("folder"): cv.string,
         vol.Optional("cooldown"): vol.All(vol.Coerce(int), vol.Range(min=30, max=3600)),
+        vol.Optional("snapshot_minutes"): vol.All(vol.Coerce(int), vol.Range(min=0, max=1440)),
+        vol.Optional("snapshot_battery_minutes"): vol.All(vol.Coerce(int), vol.Range(min=0, max=1440)),
     }
 )
 @websocket_api.require_admin
@@ -1026,7 +1028,10 @@ async def ws_camera_settings(
     if events is None:
         connection.send_error(msg["id"], "not_ready", "Camera events aren't running")
         return
-    await events.async_set_settings(msg.get("keep_days"), msg.get("max_gb"), msg.get("folder"), msg.get("cooldown"))
+    await events.async_set_settings(
+        msg.get("keep_days"), msg.get("max_gb"), msg.get("folder"), msg.get("cooldown"),
+        msg.get("snapshot_minutes"), msg.get("snapshot_battery_minutes"),
+    )
     connection.send_result(msg["id"], events.settings())
 
 

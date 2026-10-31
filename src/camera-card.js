@@ -6,10 +6,11 @@
 // Ring cameras have two pictures: the Ring integration's (a frame from the
 // last recording, often hours old) and ring-mqtt's snapshot (taken on motion,
 // a ring, or when asked). The card shows whichever is newer. When a picture
-// is older than `refresh_after` minutes and someone is looking, it presses
-// the camera's "Take Snapshot" button, but only once per `refresh_after` for
-// everyone: the button remembers when it was last pressed, so battery
-// cameras aren't woken over and over.
+// is older than `refresh_after` minutes its badge turns orange. The card
+// never asks the camera for a new picture by itself: the Church Drive
+// integration does that on a timer (counted from the camera's last picture
+// or event), so looking at a dashboard wakes no cameras. The pop-up's
+// Snapshot button still asks on request.
 //
 // The other entities are found from the camera's name: camera.front_door_live_view
 // → camera.front_door_snapshot, button.front_door_take_snapshot,
@@ -24,8 +25,7 @@ import { KINDS, STAGE_CSS, stageMedia, stageTag, liveElement, openCameraEvents, 
 
 const OLD = ['#ffa726', '#221'];
 
-// When each camera last asked for a snapshot from this browser, so two cards
-// for one camera don't both ask.
+// When each camera was last asked for a snapshot from this browser (the pop-up's Snapshot button), for "updating…".
 const asked = new Map();
 
 const CAM_CSS = `${STAGE_CSS}
@@ -108,14 +108,14 @@ export const CameraCardEditor = createFormEditor({
     entity: 'Camera',
     name: 'Name (optional)',
     light: 'Light by the camera (optional)',
-    refresh_after: 'Ask for a new snapshot when the picture is older than',
+    refresh_after: 'Show the picture as old (orange badge) when it is older than',
     talk_stream: 'Two-way audio stream (optional, go2rtc stream name)',
     demo: 'Show a pretend camera (for Design Presets)',
   },
   helpers: {
     entity: "Its snapshot, Take Snapshot button, battery and doorbell/motion events are found from the camera's name.",
     light: 'Empty: the one light in the same area, if there is exactly one.',
-    refresh_after: 'Default 60. Only while someone is looking, and at most once per this time for everyone, so battery cameras last.',
+    refresh_after: 'Default 60. This only colours the badge: Home Assistant asks the camera for new pictures itself.',
     talk_stream: 'A go2rtc stream with two-way audio (e.g. front_door). Adds a Talk button to the pop-up.',
   },
 });
@@ -210,21 +210,14 @@ export class CameraCard extends HTMLElement {
     if (!timer) this._maybeRefresh();
   }
 
-  // A new snapshot when the picture is old and someone is looking, at most
-  // once per refresh_after for everyone (the button's state is when it was
-  // last pressed, from any device).
+  // A new snapshot, only when asked for (the pop-up's Snapshot button). The integration refreshes old pictures on its own.
   _maybeRefresh(force = false) {
     const c = this.config;
     const h = this._hass;
-    if (!h || c.demo || !this._f || !this._f.button) return;
-    if (!force && (!this._seen || document.visibilityState === 'hidden')) return;
-    const refresh = (Number(c.refresh_after) || 60) * 60000;
+    if (!force || !h || c.demo || !this._f || !this._f.button) return;
     const now = Date.now();
-    const pic = this._pic;
-    if (!force && pic && pic.ms && now - pic.ms < refresh) return;
     const last = Math.max(Date.parse(h.states[this._f.button].state) || 0, asked.get(c.entity) || 0);
-    if (!force && now - last < refresh) return;
-    if (force && now - last < 20000) return;
+    if (now - last < 20000) return;
     asked.set(c.entity, now);
     h.callService('button', 'press', { entity_id: this._f.button }).catch(() => {});
     this._render(true);
