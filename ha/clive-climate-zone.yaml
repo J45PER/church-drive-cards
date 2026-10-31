@@ -3,6 +3,8 @@
 # Clive only adjusts the target temperature of a zone that is already heating (mode heat, preset none), and only while he is in charge (not paused, zone switch on). He never turns the heating on or to eco himself, so what a person has switched off stays off. The one thing he does by himself is turn it OFF when the alarm is armed away (nobody home, decision away_off): not within a pause (a person set it) or a timed run, otherwise whatever the cooldown. A person asking for on/off/temperature goes through clive_climate_control.
 # Comfort ranges are input_number.clive_climate_<zone>_low and _high (set in the app, a thermostat's settings sheet; started at downstairs 18 to 21, upstairs 15 to 19; the numbers in `zones` below are only the fallback). He is slow to act: the room must be more than 1.5 degrees below the bottom of the range (downstairs below 16.5, upstairs below 13.5) and the target less than 1 degree above the room, and then the target is raised to the middle of the range. He lowers the target to the middle of the range only when the room is 1 degree or more above the top (downstairs 22, upstairs 20) and it is heating or the target is above the range. If cooling is ever added to this script it follows the same rule: nothing until 1 degree above the top of the range.
 # At least 30 minutes between Clive's own changes. Only a raised target pushes a notification, at most one per zone every 2 hours (input_datetime.clive_climate_<zone>_notified); lowering is silent. Both are in the logbook. A pause, and the end of one, always tell people. Skipped while a timed run (clive_timed_control) is going on that zone and for 3 minutes after it.
+# Away: the alarm armed away, or every person out for 30 minutes (none unknown or unavailable): he turns an on zone off (decision away_off), the Nest's Home/Away Assist done by Clive (turn the Nest's own off). When somebody comes back, "Clive: offer to take over the heating when somebody is back" asks whether to turn it on again.
+# Who changed it: a change made through Home Assistant by a signed-in person is named (the `who` field, from the automation); one from the thermostat's side (the dial, the Nest or Google Home app, the Nest's own schedule or Home/Away Assist) cannot be told apart by Home Assistant and says so.
 # Each zone has its own switch, input_boolean.clive_climate_<zone>_auto (Clive controlled when on, Manual when off, set in the app's Settings): with it off the script decides skip_disabled, spots no manual changes and starts no pauses.
 #
 # A change made by somebody else pauses Clive on that zone: one reported by_hand (a change to the mode, preset or target that did not come from a Home Assistant script or automation) more than 3 minutes after Clive's own last action (a Nest takes up to a minute to echo and moves its own target when it leaves eco), or, found by the 10 minute check, a mode or preset that is not what Clive last set (or the target after a "lower"). The pause lasts input_number.clive_climate_pause_minutes. input_datetime.clive_climate_<zone>_resume holds when he takes over again; in the past (and not 2000) means a pause has just ended. While paused he does nothing.
@@ -25,6 +27,12 @@ fields:
     required: false
     selector:
       boolean: {}
+  who:
+    name: Changed by
+    description: The person's name when the change was made through Home Assistant by a signed-in person (the app, a dashboard or voice). Left out for a change that came from the thermostat's side.
+    required: false
+    selector:
+      text: {}
   dry_run:
     name: Only report
     description: Change nothing, say what would be done.
@@ -100,7 +108,19 @@ sequence:
     timed: '{{ timer_state != ''idle'' or timer_age < 3 }}'
     resume_due: '{{ resume_at > 946684801 and resume_at <= now().timestamp() }}'
     paused: '{{ resume_at > now().timestamp() }}'
-    away: "{{ is_state('alarm_control_panel.church_drive_alarm', 'armed_away') }}"
+    alarm_away: "{{ is_state('alarm_control_panel.church_drive_alarm', 'armed_away') }}"
+    nobody_home: >-
+      {%- set p = states.person | list -%}
+      {{ p | length > 0 and (p | selectattr('state', 'in', ['home', 'unknown', 'unavailable']) | list | length == 0) and ((now() - (p | map(attribute='last_changed') | max)).total_seconds() >= 1800) }}
+    who_name: '{{ who | default('''', true) | string | trim }}'
+- variables:
+    away: '{{ alarm_away or nobody_home }}'
+    away_reason: "{{ 'the alarm is set to away' if alarm_away else 'everyone has been out for 30 minutes' }}"
+    by_text: >-
+      {%- if who_name != '' -%}by {{ who_name }}
+      {%- elif hand -%}at the thermostat or by the Nest (its dial, the Nest or Google Home app, or its own schedule)
+      {%- else -%}away from what Clive last set
+      {%- endif -%}
 - variables:
     exp_eff: '{{ {} if resume_due else exp }}'
     when_age_eff: '{{ 9999 if resume_due else when_age }}'
@@ -139,6 +159,7 @@ sequence:
       paused_until: '{{ (resume_at | timestamp_custom(''%H:%M'')) if paused else none }}'
       pause_just_ended: '{{ resume_due }}'
       last_action: '{{ states(z.note) }}'
+      away: '{{ away }}'
 - if:
   - condition: template
     value_template: '{{ dry }}'
@@ -208,18 +229,18 @@ sequence:
       target:
         entity_id: '{{ z.note }}'
       data:
-        value: '{{ now().strftime(''%H:%M'') }}: Turned {{ z.name }} heating off because the alarm is set to away. It stays off until somebody asks Clive to take over again.'
+        value: '{{ now().strftime(''%H:%M'') }}: Turned {{ z.name }} heating off because {{ away_reason }}. It stays off until somebody asks Clive to take over again.'
     - action: church_drive.notify
       data:
         kind: clive_actions
         title: 🌡️ {{ z.name }} heating turned off
-        message: 'The alarm is set to away, so nobody needs the heating. Clive turned the {{ z.name }} heating off. It stays off until somebody asks Clive to take over again.'
+        message: 'Nobody is home ({{ away_reason }}), so Clive turned the {{ z.name }} heating off. It stays off until somebody asks him to take over again.'
         tag: church-drive-clive-away-{{ zone }}
         link: /dashboard-mobile/climate
     - action: logbook.log
       data:
         name: Clive
-        message: '{{ z.name }} heating turned off: the alarm is set to away.'
+        message: '{{ z.name }} heating turned off: {{ away_reason }}.'
         entity_id: '{{ z.entity }}'
   - conditions:
     - condition: template
@@ -252,25 +273,25 @@ sequence:
       target:
         entity_id: '{{ z.note }}'
       data:
-        value: '{{ now().strftime(''%H:%M'') }}: {{ z.name }} was set by hand ({{ shown }}). Paused until {{ resume_at_text }}.'
+        value: '{{ now().strftime(''%H:%M'') }}: {{ z.name }} was changed {{ by_text }} ({{ shown }}). Paused until {{ resume_at_text }}.'
     - action: persistent_notification.create
       data:
         notification_id: clive-climate-{{ zone }}
-        title: 🌡️ {{ z.name }} heating set by hand
+        title: 🌡️ {{ z.name }} heating changed
         message: >-
-          {{ z.name }} heating was changed to {{ shown }}. Clive has stopped adjusting it and will take over again at {{ resume_at_text }}
+          {{ z.name }} heating was changed {{ by_text }} to {{ shown }}. Clive has stopped adjusting it and will take over again at {{ resume_at_text }}
           ({{ pause_min | int }} minutes). To hand it back sooner, tell Clive "resume the heating" or run the script "Pause or resume Clive's heating".
     - action: church_drive.notify
       data:
         kind: clive_actions
-        title: 🌡️ {{ z.name }} heating set by hand
-        message: '{{ z.name }} heating was changed to {{ shown }}. Clive has stopped adjusting it and will take over again at {{ resume_at_text }} ({{ pause_min | int }} minutes).'
+        title: 🌡️ {{ z.name }} heating changed
+        message: '{{ z.name }} heating was changed {{ by_text }} to {{ shown }}. Clive has stopped adjusting it and will take over again at {{ resume_at_text }} ({{ pause_min | int }} minutes).'
         tag: church-drive-clive-paused-{{ zone }}
         link: /dashboard-mobile/climate
     - action: logbook.log
       data:
         name: Clive
-        message: '{{ z.name }} heating was set by hand ({{ shown }}), so Clive is paused until {{ resume_at_text }}.'
+        message: '{{ z.name }} heating was changed {{ by_text }} ({{ shown }}), so Clive is paused until {{ resume_at_text }}.'
         entity_id: '{{ z.entity }}'
   - conditions:
     - condition: template
