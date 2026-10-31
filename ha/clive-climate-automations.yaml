@@ -43,7 +43,7 @@
     data:
       zone: '{{ trigger.id }}'
 - alias: 'Clive: offer to take over the heating when the alarm is disarmed'
-  description: When the alarm goes from away to disarmed, or somebody comes home to an empty house, and Clive had turned a zone's heating off because nobody was home, he asks (a push notification with a Resume Clive button) whether to turn it back on and take over again. He never turns it on by himself; Resume Clive does it, because a person asked. Armed home changes nothing.
+  description: When the alarm goes from away to disarmed, or somebody comes home to an empty house, and Clive had put a zone's heating on Eco because nobody was home, he asks (a push notification with a Resume Clive button) whether to take it off Eco and take over again. He never turns the heating on or off by himself; Resume Clive does it, because a person asked. Armed home changes nothing.
   mode: single
   triggers:
   - trigger: state
@@ -61,13 +61,13 @@
   - condition: template
     value_template: >-
       {%- set ns = namespace(n=0) -%}
-      {%- for zn in ['downstairs', 'upstairs'] -%}{%- set e = states('input_text.clive_climate_' ~ zn ~ '_expect') -%}{%- set j = (e | from_json(default={})) if e not in ['', 'unknown', 'unavailable'] else {} -%}{%- if j.away is defined and j.away and is_state('climate.' ~ zn, 'off') -%}{%- set ns.n = ns.n + 1 -%}{%- endif -%}{%- endfor -%}
+      {%- for zn in ['downstairs', 'upstairs'] -%}{%- set e = states('input_text.clive_climate_' ~ zn ~ '_expect') -%}{%- set j = (e | from_json(default={})) if e not in ['', 'unknown', 'unavailable'] else {} -%}{%- if j.away is defined and j.away and (is_state('climate.' ~ zn, 'off') or state_attr('climate.' ~ zn, 'preset_mode') == 'eco') -%}{%- set ns.n = ns.n + 1 -%}{%- endif -%}{%- endfor -%}
       {{ ns.n > 0 }}
   actions:
   - action: church_drive.notify
     data:
       kind: clive_actions
       title: 🌡️ Welcome home
-      message: Clive turned the heating off while nobody was home. Shall he turn it back on and look after it again?
+      message: Clive put the heating on Eco while nobody was home. Shall he take it off Eco and look after it again?
       tag: church-drive-clive-paused-welcome
       link: /dashboard-mobile/climate

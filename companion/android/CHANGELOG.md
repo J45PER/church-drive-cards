@@ -6,6 +6,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 ## 0.54.4
 
+- The assistant's away rule now puts the heating on Eco instead of turning it off (Home Assistant side, noted here for the Clive log).
 - The Home page reminder when Clive has paused on a thermostat says "Heating changed" instead of "Heating set by hand": the change may have come from the Nest's own schedule or away handling rather than a person.
 
 ## 0.54.3
