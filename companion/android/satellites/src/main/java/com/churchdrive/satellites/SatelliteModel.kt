@@ -231,6 +231,61 @@ class SatelliteModel(app: Application) : AndroidViewModel(app) {
     fun setNumber(sat: Satellite, suffix: String, value: Float) =
         client.callService("number", "set_value", sat.number(suffix), data("value" to value.toDouble()))
 
+    /** Presses one of the satellite's buttons (restart, identify, clean_screen). */
+    fun press(sat: Satellite, suffix: String) = client.callService("button", "press", sat.button(suffix))
+
+    /** Makes the satellite say a short line, to hear it and to find out which one it is. */
+    fun sayHello(sat: Satellite) =
+        client.callService("assist_satellite", "announce", "assist_satellite.${sat.slug}", data("message" to "Hello, this is ${sat.name}. Can you hear me?", "preannounce" to false))
+
+    fun installUpdate(sat: Satellite) {
+        val u = sat.update ?: return
+        client.callService("update", "install", u.entity)
+    }
+
+    /** A short line to show the person after something that may be refused, such as renaming without administrator rights. */
+    var notice by mutableStateOf<String?>(null)
+
+    /** The rooms (areas) in the house, by id and name, and which one each satellite is in; loaded when a satellite is opened. */
+    var areas by mutableStateOf<List<Pair<String, String>>>(emptyList())
+        private set
+    var roomOf by mutableStateOf<Map<String, String?>>(emptyMap())
+        private set
+    private val deviceOf = mutableMapOf<String, String>()
+
+    /** Finds the satellite's device and area in Home Assistant's registries (they need an administrator). */
+    fun loadRoom(sat: Satellite) {
+        client.request("config/area_registry/list") { res ->
+            val arr = res as? org.json.JSONArray ?: return@request
+            areas = (0 until arr.length()).map { arr.getJSONObject(it) }.map { it.optString("area_id") to it.optString("name") }.sortedBy { it.second.lowercase() }
+        }
+        client.request("config/entity_registry/get", org.json.JSONObject().put("entity_id", sat.select("design"))) { res ->
+            val device = (res as? org.json.JSONObject)?.optString("device_id").orEmpty().ifBlank { return@request }
+            deviceOf[sat.slug] = device
+            client.request("config/device_registry/list") { list ->
+                val arr = list as? org.json.JSONArray ?: return@request
+                val dev = (0 until arr.length()).map { arr.getJSONObject(it) }.firstOrNull { it.optString("id") == device } ?: return@request
+                roomOf = roomOf + (sat.slug to dev.optString("area_id").ifBlank { null })
+            }
+        }
+    }
+
+    fun setRoom(sat: Satellite, areaId: String?) {
+        val device = deviceOf[sat.slug] ?: run { notice = "Home Assistant wouldn't say which device this is."; return }
+        client.request("config/device_registry/update", org.json.JSONObject().put("device_id", device).put("area_id", areaId ?: org.json.JSONObject.NULL)) { res ->
+            if (res == null) notice = "Home Assistant refused the change. Moving a satellite to a room needs an administrator."
+            else roomOf = roomOf + (sat.slug to areaId)
+        }
+    }
+
+    fun rename(sat: Satellite, name: String) {
+        val device = deviceOf[sat.slug] ?: run { notice = "Home Assistant wouldn't say which device this is."; return }
+        client.request("config/device_registry/update", org.json.JSONObject().put("device_id", device).put("name_by_user", name.trim())) { res ->
+            if (res == null) notice = "Home Assistant refused the change. Renaming needs an administrator."
+            else notice = "Renamed. The entity ids stay the same, so nothing else changes."
+        }
+    }
+
     fun setSwitch(sat: Satellite, suffix: String, on: Boolean) =
         client.callService("switch", if (on) "turn_on" else "turn_off", sat.switch(suffix))
 }

@@ -2,6 +2,7 @@
 
 ## 0.82.0
 
+- Day-to-day control (Phase 1): a Status card (Wi-Fi in words and dBm, network, address, firmware, running time, when it went offline), a Sound section (speaker volume and "Say hello"), Name and room (rename, move to a room), Actions (flash the screen, clean screen, restart with a confirmation) and a Firmware card with Install when Home Assistant offers an update. Each shows only what the satellite has, so older firmware still works. Renaming and rooms need a Home Assistant administrator.
 - Signs in automatically through the Church Drive app (0.82.0 or later) now that its Play signing certificate is trusted.
 
 ## 0.81.0

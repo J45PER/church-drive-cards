@@ -68,4 +68,47 @@ class SatelliteDataTest {
     @Test fun noSatellitesWhenNoneHaveTheFourDesigns() {
         assertEquals(0, findSatellites(house().filterKeys { it != "select.clive_round_screen_design" }).size)
     }
+
+    @Test fun readsStatusVolumeButtonsAndTheUpdate() {
+        val s = findSatellites(house(
+            state("number.clive_round_screen_volume", "65"),
+            state("sensor.clive_round_screen_uptime", "93784.0"),
+            state("sensor.clive_round_screen_ip_address", "192.168.1.50"),
+            state("sensor.clive_round_screen_wi_fi_network", "Church"),
+            state("sensor.clive_round_screen_esphome_version", "2026.10.1"),
+            state("button.clive_round_screen_restart", "unknown"),
+            state("button.clive_round_screen_identify", "unknown"),
+            state("assist_satellite.clive_round_screen", "idle"),
+            state("update.clive_round_screen_firmware", "on", "installed_version" to "2026.10.1", "latest_version" to "2026.11.0", "in_progress" to false),
+        )).single()
+        assertEquals(65f, s.volume!!, 0f)
+        assertEquals(93784L, s.uptimeSeconds)
+        assertEquals("192.168.1.50", s.ip)
+        assertEquals("Church", s.network)
+        assertEquals("2026.10.1", s.firmware)
+        assertEquals(setOf("restart", "identify"), s.buttons)
+        assertTrue(s.canSpeak)
+        val u = s.update!!
+        assertEquals("update.clive_round_screen_firmware", u.entity)
+        assertEquals("2026.11.0", u.latest)
+        assertTrue(u.available)
+    }
+
+    @Test fun olderFirmwareHasNoExtras() {
+        val s = findSatellites(house()).single()
+        assertNull(s.volume)
+        assertNull(s.update)
+        assertTrue(s.buttons.isEmpty())
+        assertEquals(false, s.canSpeak)
+    }
+
+    @Test fun formatsUptimeAndSignal() {
+        assertEquals("1 d 2 h", formatUptime(93784))
+        assertEquals("3 h 5 min", formatUptime(11_100))
+        assertEquals("8 min", formatUptime(500))
+        assertEquals("Excellent", signalWords(-48))
+        assertEquals("Good", signalWords(-60))
+        assertEquals("Fair", signalWords(-70))
+        assertEquals("Weak", signalWords(-85))
+    }
 }

@@ -28,6 +28,17 @@ import androidx.compose.material.icons.filled.Speaker
 import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Monitor
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -253,8 +264,14 @@ private fun AddPage() {
 @Composable
 private fun DetailPage(vm: SatelliteModel, sat: Satellite, onPerson: () -> Unit) {
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(sat.slug) { vm.loadRoom(sat) }
+    LaunchedEffect(vm.notice) {
+        vm.notice?.let { snackbar.showSnackbar(it); vm.notice = null }
+    }
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             MediumTopAppBar(
                 title = { Text(sat.name, maxLines = 1) },
@@ -273,7 +290,12 @@ private fun DetailPage(vm: SatelliteModel, sat: Satellite, onPerson: () -> Unit)
             TemperatureSection(sat)
             if ((vm.pendingDesign ?: sat.design) == SatDesign.Glance) GlanceSection(vm, sat)
             BacklightSection(vm, sat)
+            SoundSection(vm, sat)
             SwitchSection(vm, sat)
+            StatusSection(sat)
+            UpdateSection(vm, sat)
+            NameRoomSection(vm, sat)
+            ActionsSection(vm, sat)
         }
     }
 }
@@ -383,5 +405,138 @@ private fun SwitchSection(vm: SatelliteModel, sat: Satellite) {
                 }
             }
         }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------------- status, sound, name, actions
+
+@Composable
+private fun FactRow(label: String, value: String, ink: Color, soft: Color) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+        Text(label, color = ink, style = MaterialTheme.typography.bodyLarge)
+        Text(value, color = soft, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.End, modifier = Modifier.weight(1f).padding(start = 16.dp))
+    }
+}
+
+/** "31 Oct, 20:43" for a timestamp Home Assistant sent, or null if it can't be read. */
+private fun whenText(iso: String?): String? = iso?.let {
+    runCatching {
+        java.time.OffsetDateTime.parse(it).atZoneSameInstant(java.time.ZoneId.systemDefault())
+            .format(java.time.format.DateTimeFormatter.ofPattern("d MMM, HH:mm"))
+    }.getOrNull()
+}
+
+@Composable
+private fun StatusSection(sat: Satellite) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionHeader("Status", Icons.Filled.Info, Tone.Green, if (sat.online) "Online" else "Offline")
+        EntityCard(null) { ink, soft ->
+            val dbm = sat.signal?.toIntOrNull()
+            FactRow("Wi-Fi", dbm?.let { "${signalWords(it)} ($it dBm)" } ?: "–", ink, soft)
+            sat.network?.let { FactRow("Network", it, ink, soft) }
+            FactRow("Address", sat.ip ?: "–", ink, soft)
+            FactRow("Firmware", sat.firmware?.let { "ESPHome $it" } ?: "–", ink, soft)
+            FactRow("Running for", sat.uptimeSeconds?.let(::formatUptime) ?: "–", ink, soft)
+            if (!sat.online) whenText(sat.lastChanged)?.let { FactRow("Went offline", it, ink, soft) }
+        }
+    }
+}
+
+@Composable
+private fun UpdateSection(vm: SatelliteModel, sat: Satellite) {
+    val update = sat.update ?: return
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionHeader("Firmware", Icons.Filled.SystemUpdate, Tone.Orange, if (update.available) "Update ready" else "Up to date")
+        EntityCard(if (update.available) Tone.Orange else null) { ink, soft ->
+            Text(
+                if (update.available) "Version ${update.latest ?: "newer"} is ready. This one has ${update.installed ?: "an older version"}." else "Running ${update.installed ?: "the latest firmware"}.",
+                color = ink, style = MaterialTheme.typography.bodyLarge,
+            )
+            if (update.available) {
+                Tile(if (update.installing) "Installing…" else "Install the update", false, Tone.Orange, ink, Modifier.fillMaxWidth()) { if (!update.installing) vm.installUpdate(sat) }
+                Text("The satellite restarts when it finishes, which takes a minute or two.", style = MaterialTheme.typography.bodySmall, color = soft)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SoundSection(vm: SatelliteModel, sat: Satellite) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionHeader("Sound", Icons.Filled.VolumeUp, Tone.Coral, sat.volume?.let { "${it.toInt()}%" })
+        EntityCard(null) { ink, soft ->
+            SliderRow("Speaker volume", sat.volume, 0f..100f, "%", ink, soft) { vm.setNumber(sat, "volume", it) }
+            if (sat.canSpeak) {
+                Tile("Say hello", false, Tone.Coral, ink, Modifier.fillMaxWidth()) { vm.sayHello(sat) }
+                Text("Makes this satellite say a short line, to hear the volume and to tell which one it is.", style = MaterialTheme.typography.bodySmall, color = soft)
+            }
+        }
+    }
+}
+
+@Composable
+private fun NameRoomSection(vm: SatelliteModel, sat: Satellite) {
+    var renaming by remember { mutableStateOf(false) }
+    var menu by remember { mutableStateOf(false) }
+    val room = vm.roomOf[sat.slug]
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionHeader("Name and room", Icons.Filled.LocationOn, Tone.Teal)
+        EntityCard(null) { ink, soft ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(sat.name, color = ink, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f), maxLines = 1)
+                Pill("Rename", Tone.Teal) { renaming = true }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("Room", color = ink, style = MaterialTheme.typography.bodyLarge)
+                Box {
+                    Pill(vm.areas.firstOrNull { it.first == room }?.second ?: "No room", Tone.Teal) { menu = true }
+                    DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        DropdownMenuItem(text = { Text("No room") }, onClick = { menu = false; vm.setRoom(sat, null) })
+                        vm.areas.forEach { (id, name) -> DropdownMenuItem(text = { Text(name) }, onClick = { menu = false; vm.setRoom(sat, id) }) }
+                    }
+                }
+            }
+            Text("The room is how Clive will know which TV or lights \"here\" means. Both need a Home Assistant administrator.", style = MaterialTheme.typography.bodySmall, color = soft)
+        }
+    }
+    if (renaming) {
+        var text by remember { mutableStateOf(sat.name) }
+        AlertDialog(
+            onDismissRequest = { renaming = false },
+            title = { Text("Rename satellite") },
+            text = { OutlinedTextField(text, { text = it }, singleLine = true, label = { Text("Name") }) },
+            confirmButton = { TextButton(enabled = text.isNotBlank(), onClick = { renaming = false; vm.rename(sat, text) }) { Text("Rename") } },
+            dismissButton = { TextButton(onClick = { renaming = false }) { Text("Cancel") } },
+        )
+    }
+}
+
+@Composable
+private fun ActionsSection(vm: SatelliteModel, sat: Satellite) {
+    if (sat.buttons.isEmpty()) return
+    var confirmRestart by remember { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionHeader("Actions", Icons.Filled.RestartAlt, Tone.Red)
+        EntityCard(null) { ink, soft ->
+            if ("identify" in sat.buttons) {
+                Tile("Flash the screen", false, Tone.Blue, ink, Modifier.fillMaxWidth()) { vm.press(sat, "identify") }
+            }
+            if ("clean_screen" in sat.buttons) {
+                Tile("Clean screen (30 seconds)", false, Tone.Blue, ink, Modifier.fillMaxWidth()) { vm.press(sat, "clean_screen") }
+            }
+            if ("restart" in sat.buttons) {
+                Tile("Restart", false, Tone.Red, ink, Modifier.fillMaxWidth()) { confirmRestart = true }
+            }
+            Text("Clean screen ignores touches for 30 seconds so the glass can be wiped.", style = MaterialTheme.typography.bodySmall, color = soft)
+        }
+    }
+    if (confirmRestart) {
+        AlertDialog(
+            onDismissRequest = { confirmRestart = false },
+            title = { Text("Restart ${sat.name}?") },
+            text = { Text("It stops listening for about a minute while it starts again.") },
+            confirmButton = { TextButton(onClick = { confirmRestart = false; vm.press(sat, "restart") }) { Text("Restart") } },
+            dismissButton = { TextButton(onClick = { confirmRestart = false }) { Text("Cancel") } },
+        )
     }
 }

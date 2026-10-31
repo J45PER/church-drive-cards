@@ -28,6 +28,29 @@ enum class PreviewState(val label: String, val key: String) {
 /** What a glance slot can show (the satellite's Glance 1 to 3 options). */
 val GLANCE_OPTIONS = listOf("Who's home", "Electricity", "Car charge", "Alarm", "Heating", "Air quality", "Forecast")
 
+/** A firmware update offered for a satellite: [entity] is the `update.` entity to install it with. */
+data class SatUpdate(val entity: String, val installed: String?, val latest: String?, val available: Boolean, val installing: Boolean)
+
+/** "3 d 4 h", "5 h 12 min", "8 min": how long it has been up, for the status card. */
+fun formatUptime(seconds: Long): String {
+    val d = seconds / 86_400
+    val h = seconds % 86_400 / 3_600
+    val m = seconds % 3_600 / 60
+    return when {
+        d > 0 -> "$d d $h h"
+        h > 0 -> "$h h $m min"
+        else -> "$m min"
+    }
+}
+
+/** What Wi-Fi level in dBm means, in words, for the status card. */
+fun signalWords(dbm: Int): String = when {
+    dbm >= -55 -> "Excellent"
+    dbm >= -67 -> "Good"
+    dbm >= -75 -> "Fair"
+    else -> "Weak"
+}
+
 /** One voice satellite as Home Assistant shows it: its settings are entities that share a prefix. */
 data class Satellite(
     /** The entity id prefix, for example `clive_round_screen` (the part between the domain and `_design`). */
@@ -45,7 +68,23 @@ data class Satellite(
     val nightMode: Boolean?,
     val online: Boolean,
     val signal: String?,
+    val volume: Float? = null,
+    /** Seconds since it started, from its Uptime sensor. */
+    val uptimeSeconds: Long? = null,
+    val ip: String? = null,
+    val network: String? = null,
+    /** The ESPHome version it runs. */
+    val firmware: String? = null,
+    /** When it last changed between online and offline, as Home Assistant sends it. */
+    val lastChanged: String? = null,
+    /** The firmware update Home Assistant offers for it, if the ESPHome builder is installed. */
+    val update: SatUpdate? = null,
+    /** Which of the one-tap buttons the firmware has (older firmware lacks them). */
+    val buttons: Set<String> = emptySet(),
+    /** Whether Home Assistant has an Assist satellite for it, so it can be made to speak. */
+    val canSpeak: Boolean = false,
 ) {
+    fun button(suffix: String) = "button.${slug}_$suffix"
     fun select(suffix: String) = "select.${slug}_$suffix"
     fun number(suffix: String) = "number.${slug}_$suffix"
     fun switch(suffix: String) = "switch.${slug}_$suffix"
@@ -81,6 +120,23 @@ fun findSatellites(entities: Map<String, EntityState>): List<Satellite> {
                 nightMode = on("night_mode"),
                 online = d.available,
                 signal = e("sensor", "wi_fi_signal")?.state?.takeIf { it != "unavailable" && it != "unknown" },
+                volume = num("volume"),
+                uptimeSeconds = e("sensor", "uptime")?.takeIf { it.available }?.state?.toDoubleOrNull()?.toLong(),
+                ip = e("sensor", "ip_address")?.takeIf { it.available }?.state,
+                network = e("sensor", "wi_fi_network")?.takeIf { it.available }?.state,
+                firmware = e("sensor", "esphome_version")?.takeIf { it.available }?.state,
+                lastChanged = d.lastChanged,
+                update = (entities["update.${slug}_firmware"] ?: entities["update.${slug}"])?.let { u ->
+                    SatUpdate(
+                        entity = u.entityId,
+                        installed = u.attributes.optString("installed_version").ifBlank { null },
+                        latest = u.attributes.optString("latest_version").ifBlank { null },
+                        available = u.state == "on",
+                        installing = u.attributes.optBoolean("in_progress", false),
+                    )
+                },
+                buttons = listOf("restart", "identify", "clean_screen").filter { entities.containsKey("button.${slug}_$it") }.toSet(),
+                canSpeak = entities.containsKey("assist_satellite.$slug"),
             )
         }
         .sortedBy { it.name.lowercase() }

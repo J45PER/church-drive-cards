@@ -25,7 +25,7 @@ A voice satellite for **Clive** on the Waveshare ESP32-P4-WIFI6-Touch-LCD-3.4C (
 | Quick settings | Swipe down from the top edge: volume, brightness, mic, spoken answers, follow-up listening, night, clean screen, and a Settings button. |
 | Settings menu, pairing | Settings > Pair or reset shows a QR code and a six digit code for the companion app. |
 
-Settings that Home Assistant and the app can change are ESPHome entities: **Design**, **Glance 1 to 3**, **Backlight day / night**, **Night starts / ends (hour)**, and the switches **Microphone**, **Spoken answers**, **Follow-up listening**, **Night mode**.
+Settings that Home Assistant and the app can change are ESPHome entities: **Design**, **Glance 1 to 3**, **Backlight day / night**, **Night starts / ends (hour)**, the switches **Microphone**, **Spoken answers**, **Follow-up listening**, **Night mode**, a **Volume** number, the buttons **Restart**, **Identify** and **Clean screen**, and diagnostics (**Wi-Fi signal**, **Uptime**, **IP address**, **Wi-Fi network**, **ESPHome version**). The companion app shows and drives all of them.
 
 ## Files
 
