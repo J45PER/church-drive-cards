@@ -1,0 +1,144 @@
+<title>Settings Cog Ideas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: the Church Drive icons board's. Six ideas for a settings cog in the Clive / Church Drive style, each large, at row size, and as the badge on the satellite icon. */
+:root {
+  --bar-bg: #e9ebef; --bar-fg: #14181f; --bar-soft: #5b6472;
+  --stage-bg: #ffffff; --stage-fg: #000000; --stage-soft: #5f6672; --stage-line: #e0e3e8;
+  --ui: "Instrument Sans", system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, monospace;
+  --pick: #1e8e3e;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bar-bg: #1a1f27; --bar-fg: #eef1f5; --bar-soft: #9aa4b2; color-scheme: dark; } }
+:root[data-theme="dark"] { --bar-bg: #1a1f27; --bar-fg: #eef1f5; --bar-soft: #9aa4b2; color-scheme: dark; }
+:root[data-page="dark"] { --stage-bg: #000000; --stage-fg: #ffffff; --stage-soft: #9aa0aa; --stage-line: #262a31; --pick: #4fd08a; }
+* { box-sizing: border-box; }
+body { background: var(--bar-bg); color: var(--bar-fg); font-family: var(--ui); margin: 0; line-height: 1.4; }
+.top { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; max-width: 1100px; margin: 0 auto;
+  padding-block: 20px 16px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.top h1 { font-size: 1.3rem; margin: 0; letter-spacing: -0.01em; }
+.top p { margin: 2px 0 0; color: var(--bar-soft); font-size: .86rem; max-width: 62ch; }
+.seg { display: inline-flex; background: color-mix(in srgb, var(--bar-soft) 25%, transparent); border-radius: 999px; padding: 3px; gap: 2px; }
+.seg button { font: inherit; font-size: .88rem; border: 0; background: none; color: var(--bar-soft); padding: 7px 18px; border-radius: 999px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--bar-fg); color: var(--bar-bg); }
+.seg button:focus-visible { outline: 2px solid var(--bar-fg); outline-offset: 2px; }
+.stage { background: var(--stage-bg); color: var(--stage-fg); min-height: 70vh; padding-block: 24px 56px; }
+.in { max-width: 1100px; margin: 0 auto; display: grid; gap: 22px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.note { color: var(--stage-soft); font-size: .86rem; max-width: 76ch; margin: 0; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 16px; }
+.card { border: 1px solid var(--stage-line); border-radius: 22px; padding: 16px; display: grid; gap: 14px; align-content: start; min-width: 0; }
+.card.picked { border-color: var(--pick); box-shadow: 0 0 0 2px var(--pick); }
+.card h3 { margin: 0; font-size: 1rem; font-weight: 600; }
+.card h3 span { font-family: var(--mono); font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: var(--stage-soft); font-weight: 500; margin-left: 8px; }
+.why { margin: 0; color: var(--stage-soft); font-size: .82rem; }
+.show { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.big { width: 104px; height: 104px; border: 1px solid var(--stage-line); border-radius: 22px; display: grid; place-items: center; padding: 14px; color: var(--stage-fg); }
+.big svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.ctx { display: grid; gap: 8px; }
+.row { display: flex; align-items: center; gap: 10px; font-size: .9rem; font-weight: 600; }
+.row svg { display: block; }
+.sm { color: var(--stage-fg); }
+.pickbtn { justify-self: start; font: inherit; font-size: .86rem; font-weight: 500; border: 1px solid var(--stage-line); background: none; color: var(--stage-fg); border-radius: 999px; padding: 7px 16px; cursor: pointer; }
+.pickbtn:focus-visible { outline: 2px solid var(--stage-fg); outline-offset: 2px; }
+.picked .pickbtn { background: var(--pick); border-color: var(--pick); color: var(--stage-bg); }
+</style>
+
+<div class="top">
+  <div><h1>Settings cog ideas</h1><p>Six cogs that belong with Clive and the house, instead of the Material one. Each is one flat shape with the hub cut out, drawn on the same rounded-square grammar as the logos.</p></div>
+  <div class="seg" role="group" aria-label="Page"><button type="button" id="pl" aria-pressed="true">Light</button><button type="button" id="pd" aria-pressed="false">Dark</button></div>
+</div>
+<div class="stage"><div class="in">
+  <p class="note">The Material cog is at the top for comparison. Each card shows the cog large, at the size of an account-panel row (28 px) and a small one (20 px), and as the badge on the satellite icon, which is where it would be used for "Each satellite's own settings".</p>
+  <div class="grid" id="grid"></div>
+</div></div>
+
+<script>
+(function () {
+  var CLIVE = "M103.3,50.7L119.3,50.7C135.87,50.7 149.3,64.13 149.3,80.7L149.3,96.7C149.3,110.98 139.32,122.93 125.96,125.96C122.93,139.32 110.98,149.3 96.7,149.3L80.7,149.3C64.13,149.3 50.7,135.87 50.7,119.3L50.7,103.3C50.7,89.02 60.68,77.07 74.04,74.04C77.07,60.68 89.02,50.7 103.3,50.7ZM80.7,73.3C78.41,73.3 76.18,73.56 74.04,74.04C73.56,76.18 73.3,78.41 73.3,80.7L73.3,96.7C73.3,113.27 86.73,126.7 103.3,126.7L119.3,126.7C121.59,126.7 123.82,126.44 125.96,125.96C126.44,123.82 126.7,121.59 126.7,119.3L126.7,103.3C126.7,86.73 113.27,73.3 96.7,73.3Z";
+  function f(v) { return (Math.round(v * 100) / 100).toString(); }
+  function P(p) { return f(p[0]) + ',' + f(p[1]); }
+  function rr(x, y, w, h, r) {
+    r = Math.max(0, Math.min(r, w / 2, h / 2));
+    return 'M' + f(x + r) + ',' + f(y) + ' H' + f(x + w - r) + ' A' + f(r) + ',' + f(r) + ' 0 0 1 ' + f(x + w) + ',' + f(y + r) + ' V' + f(y + h - r) +
+      ' A' + f(r) + ',' + f(r) + ' 0 0 1 ' + f(x + w - r) + ',' + f(y + h) + ' H' + f(x + r) + ' A' + f(r) + ',' + f(r) + ' 0 0 1 ' + f(x) + ',' + f(y + h - r) +
+      ' V' + f(y + r) + ' A' + f(r) + ',' + f(r) + ' 0 0 1 ' + f(x + r) + ',' + f(y) + 'Z';
+  }
+  function circ(cx, cy, r) { return 'M' + f(cx - r) + ',' + f(cy) + ' a' + f(r) + ',' + f(r) + ' 0 1,0 ' + f(2 * r) + ',0 a' + f(r) + ',' + f(r) + ' 0 1,0 ' + f(-2 * r) + ',0Z'; }
+  function rot(x, y, cx, cy, deg) { var a = deg * Math.PI / 180, c = Math.cos(a), s = Math.sin(a); return [cx + x * c - y * s, cy + x * s + y * c]; }
+  function rrR(cx, cy, w, h, r, deg) {
+    var a = w / 2, b = h / 2, q = function (x, y) { return P(rot(x, y, cx, cy, deg)); };
+    return 'M' + q(-a + r, -b) + ' L' + q(a - r, -b) + ' A' + r + ',' + r + ' 0 0 1 ' + q(a, -b + r) + ' L' + q(a, b - r) + ' A' + r + ',' + r + ' 0 0 1 ' + q(a - r, b) +
+      ' L' + q(-a + r, b) + ' A' + r + ',' + r + ' 0 0 1 ' + q(-a, b - r) + ' L' + q(-a, -b + r) + ' A' + r + ',' + r + ' 0 0 1 ' + q(-a + r, -b) + 'Z';
+  }
+  function rpoly(pts) {
+    var n = pts.length, d = '';
+    for (var i = 0; i < n; i++) {
+      var p = pts[i], a = pts[(i + n - 1) % n], b = pts[(i + 1) % n], r = p[2] || 0;
+      var toward = function (q) { var dx = q[0] - p[0], dy = q[1] - p[1], len = Math.hypot(dx, dy), k = Math.min(r, len / 2) / len; return [p[0] + dx * k, p[1] + dy * k]; };
+      var s0 = toward(a), e0 = toward(b);
+      d += (i === 0 ? 'M' : 'L') + f(s0[0]) + ',' + f(s0[1]) + (r ? ' Q' + f(p[0]) + ',' + f(p[1]) + ' ' + f(e0[0]) + ',' + f(e0[1]) + ' ' : ' ');
+    }
+    return d + 'Z';
+  }
+  // a gear outline: n teeth, root radius rin, tip radius rout, tooth width as a fraction of the pitch, tip narrowing, corner rounding
+  function gear(n, rin, rout, wf, narrow, rad, offsetDeg) {
+    var pts = [], pitch = 360 / n, w = pitch * wf / 2;
+    for (var i = 0; i < n; i++) {
+      var a = i * pitch + (offsetDeg || 0);
+      [[a - w, rin], [a - w * narrow, rout], [a + w * narrow, rout], [a + w, rin]].forEach(function (q) { var p = rot(0, -q[1], 100, 100, q[0]); pts.push([p[0], p[1], rad]); });
+    }
+    return rpoly(pts);
+  }
+
+  var COGS = [
+    { id: 'A', name: 'Two squares', why: 'Clive\'s own idea: two rounded squares, one turned an eighth of a turn, together making eight points. The hub is cut out.', rule: 'nonzero',
+      d: rrR(100, 100, 120, 120, 20, 0) + ' ' + rrR(100, 100, 120, 120, 20, 45) + ' ' + circ(100, 100, 26) + ' ' + circ(100, 100, 26) },
+    { id: 'B', name: 'Soft gear', why: 'A plain eight-tooth gear with every corner rounded as far as Clive\'s squares are, and a round hub.',
+      d: gear(8, 58, 86, 0.5, 0.62, 12) + ' ' + circ(100, 100, 26) },
+    { id: 'C', name: 'Squircle dial', why: 'One big rounded square with four notches and a hub: a control knob rather than a gear.',
+      d: rr(34, 34, 132, 132, 44) + ' ' + circ(100, 100, 24) + ' ' + rr(88, 46, 24, 20, 8) + ' ' + rr(88, 134, 24, 20, 8) + ' ' + rr(46, 88, 20, 24, 8) + ' ' + rr(134, 88, 20, 24, 8) },
+    { id: 'D', name: 'Scallop', why: 'Ten soft round bumps: a gear that is all curves, so it sits easily next to the round satellite.',
+      d: gear(10, 62, 84, 0.62, 0.8, 22) + ' ' + circ(100, 100, 24) },
+    { id: 'E', name: 'Sliders', why: 'Not a cog at all: three rounded bars with a knob on each, for "settings" drawn in the rounded-square way.',
+      d: rr(28, 40, 144, 30, 15) + ' ' + circ(70, 55, 9) + ' ' + rr(28, 85, 144, 30, 15) + ' ' + circ(130, 100, 9) + ' ' + rr(28, 130, 144, 30, 15) + ' ' + circ(88, 145, 9) },
+    { id: 'F', name: 'Cross gear', why: 'A fat rounded cross with four big teeth and a hub: the cog reduced to Clive\'s squares.',
+      d: rpoly([[78, 26, 16], [122, 26, 16], [122, 78, 10], [174, 78, 16], [174, 122, 16], [122, 122, 10], [122, 174, 16], [78, 174, 16], [78, 122, 10], [26, 122, 16], [26, 78, 16], [78, 78, 10]]) + ' ' + circ(100, 100, 22) }
+  ];
+  var MATERIAL = 'M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z';
+
+  var uid = 0, picked = null;
+  try { picked = localStorage.getItem('satCogPick'); } catch (e) {}
+  function svg(c) { return '<svg viewBox="0 0 200 200" aria-hidden="true"><path fill="currentColor" fill-rule="' + (c.rule || 'evenodd') + '" d="' + c.d + '"/></svg>'; }
+  function sized(c, px) { return '<svg width="' + px + '" height="' + px + '" viewBox="0 0 200 200" aria-hidden="true"><path fill="currentColor" fill-rule="' + (c.rule || 'evenodd') + '" d="' + c.d + '"/></svg>'; }
+  // the satellite icon (idea F2) with a badge: the speaker with Clive's logo cut out, a gap round the badge, and the badge a solid disc with the glyph cut out of it
+  function badged(c) {
+    var id = 'bg' + (++uid), s = 0.36, t = 'translate(' + f(150 - 100 * s) + ' ' + f(150 - 100 * s) + ') scale(' + s + ')', sc = 0.56;
+    return '<svg width="56" height="56" viewBox="0 0 200 200" aria-hidden="true"><defs><mask id="' + id + '" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="200">' +
+      '<path d="' + rr(30, 12, 108, 156, 44) + ' ' + rr(52, 36, 64, 12, 6) + '" fill="#fff" fill-rule="evenodd"/>' +
+      '<path d="' + CLIVE + '" transform="translate(' + f(84 - 100 * sc) + ' ' + f(104 - 100 * sc) + ') scale(' + sc + ')" fill="#000" fill-rule="evenodd"/>' +
+      '<circle cx="146" cy="146" r="50" fill="#000"/><circle cx="146" cy="146" r="40" fill="#fff"/>' +
+      '<path d="' + c.d + '" transform="' + t + '" fill="#000" fill-rule="' + (c.rule || 'evenodd') + '"/></mask></defs><rect width="200" height="200" fill="currentColor" mask="url(#' + id + ')"/></svg>';
+  }
+  function matSvg(px) { return '<svg width="' + px + '" height="' + px + '" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="' + MATERIAL + '"/></svg>'; }
+  function render() {
+    var cards = '<article class="card"><h3>Material cog<span>today</span></h3><p class="why">What the app and the other apps use now.</p><div class="show"><div class="big">' + matSvg(70) + '</div><div class="ctx"><div class="row sm">' + matSvg(28) + ' Settings</div><div class="row sm">' + matSvg(20) + ' small</div></div></div></article>';
+    cards += COGS.map(function (c) {
+      return '<article class="card' + (picked === c.id ? ' picked' : '') + '"><h3>' + c.name + '<span>Idea ' + c.id + '</span></h3><p class="why">' + c.why + '</p>' +
+        '<div class="show"><div class="big">' + svg(c) + '</div><div class="ctx"><div class="row sm">' + sized(c, 28) + ' Settings</div><div class="row sm">' + sized(c, 20) + ' small</div><div class="row sm">' + badged(c) + ' On the satellite icon</div></div></div>' +
+        '<button class="pickbtn" type="button" data-id="' + c.id + '">' + (picked === c.id ? 'Picked' : 'Pick this one') + '</button></article>';
+    }).join('');
+    document.getElementById('grid').innerHTML = cards;
+  }
+  render();
+  document.getElementById('grid').addEventListener('click', function (e) {
+    var b = e.target.closest('.pickbtn'); if (!b) return;
+    picked = picked === b.dataset.id ? null : b.dataset.id;
+    try { if (picked) localStorage.setItem('satCogPick', picked); else localStorage.removeItem('satCogPick'); } catch (x) {}
+    render();
+  });
+  var pl = document.getElementById('pl'), pd = document.getElementById('pd');
+  function page(dark) { document.documentElement.setAttribute('data-page', dark ? 'dark' : 'light'); pl.setAttribute('aria-pressed', String(!dark)); pd.setAttribute('aria-pressed', String(dark)); }
+  pl.addEventListener('click', function () { page(false); });
+  pd.addEventListener('click', function () { page(true); });
+})();
+</script>
