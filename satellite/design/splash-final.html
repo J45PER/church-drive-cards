@@ -84,10 +84,10 @@ h2 { font-size:.8rem; font-family:var(--mono); letter-spacing:.1em; text-transfo
   });
   var LOOP = 5600, T0 = 500, DUR = 1100;
   function draw(o, p) {
-    var app = o.app.id, u = clamp((p - T0) / DUR), ease = inout(u), box = CAM[app];
+    var app = o.app.id, dur = app === 'house' ? 1400 : DUR, u = clamp((p - T0) / dur), ease = inout(u), box = CAM[app];
     o.svg.setAttribute('viewBox', [0, 1, 2, 3].map(function (i) { return f(lerp(START[i], box[i], ease)); }).join(' '));
     o.m.setAttribute('d', ring(R.cA, R[app].A, ease) + ' ' + ring(R.cB, R[app].B, ease));
-    var x = (p - (T0 + DUR)) / 1000;
+    var x = (p - (T0 + dur)) / 1000;
     var fade = p > 5600 ? clamp(1 - (p - 5600) / 250) : (p < 250 ? clamp(p / 250) : 1);
     o.phone.style.opacity = fade;
     if (app === 'sat') o.xs.forEach(function (e, i) { var t = out(clamp((x - .12 - i * .28) / .35)); e.setAttribute('transform', 'translate(81.3 118.7) scale(' + f(lerp(.82, 1, t)) + ') translate(-81.3 -118.7)'); e.setAttribute('opacity', f(clamp(t * 1.6))); });
@@ -112,7 +112,7 @@ h2 { font-size:.8rem; font-family:var(--mono); letter-spacing:.1em; text-transfo
       a.textContent = 'Clive'; b.textContent = sub; b.style.marginLeft = '.28em'; a.style.display = 'inline-block'; b.style.display = 'inline-block';
       var t2 = ease; a.style.opacity = 1; a.style.transform = 'none';
       b.style.opacity = f(t2); b.style.transform = 'translateX(' + f((1 - t2) * 14) + 'px)'; b.style.marginTop = '0'; b.style.fontSize = '1em';
-      b.style.maxWidth = (t2 * 12) + 'em'; b.style.overflow = 'hidden'; b.style.verticalAlign = 'bottom';
+      if (!o.bw) { b.style.maxWidth = 'none'; o.bw = b.scrollWidth + 4; } b.style.maxWidth = (t2 * o.bw) + 'px'; b.style.overflow = 'hidden'; b.style.verticalAlign = 'bottom';
     }
   }
   function tick(ms) { var p = ms % LOOP; cells.forEach(function (o) { draw(o, p); }); requestAnimationFrame(tick); }

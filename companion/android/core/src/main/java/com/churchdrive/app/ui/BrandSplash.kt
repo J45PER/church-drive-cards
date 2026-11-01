@@ -79,16 +79,16 @@ fun BrandSplash(name: String, @DrawableRes mark: Int, holdMillis: Long = 1300) {
  * change at the same moment ([SPLASH_MORPH_DELAY_MS], [SPLASH_MORPH_MS]).
  */
 @Composable
-fun BrandSplash(kind: LogoKind, sub: String, holdMillis: Long = 3200) {
-    BrandSplash(title = { ink -> CliveTitle(sub, ink) }, holdMillis = holdMillis) { dark -> LogoMorph(kind, dark) }
+fun BrandSplash(kind: LogoKind, sub: String, holdMillis: Long = 3500) {
+    BrandSplash(title = { ink -> CliveTitle(sub, ink, morphMillis(kind)) }, holdMillis = holdMillis) { dark -> LogoMorph(kind, dark) }
 }
 
 @Composable
-private fun CliveTitle(sub: String, ink: Color) {
+private fun CliveTitle(sub: String, ink: Color, morphMs: Long) {
     val p = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
         delay(SPLASH_MORPH_DELAY_MS)
-        p.animateTo(1f, tween(SPLASH_MORPH_MS.toInt(), easing = CubicBezierEasing(0.65f, 0f, 0.35f, 1f)))
+        p.animateTo(1f, tween(morphMs.toInt(), easing = CubicBezierEasing(0.65f, 0f, 0.35f, 1f)))
     }
     // "Clive" in Bold and the app's name in Regular, the same size and colour (24sp, so "Clive Satellite Manager" still fits one line on a small phone).
     Row(verticalAlignment = Alignment.Bottom) {

@@ -33,6 +33,9 @@ import kotlinx.coroutines.launch
 const val SPLASH_MORPH_DELAY_MS = 350L
 const val SPLASH_MORPH_MS = 1100L
 
+/** The house changes the most, so its change is slower; the words use the same time as their logo so the two finish together. */
+fun morphMillis(kind: LogoKind): Long = if (kind == LogoKind.Church) 1400L else SPLASH_MORPH_MS
+
 /** Which app's logo the splash turns the assistant into. */
 enum class LogoKind { Church, Todo, Satellites }
 
@@ -100,7 +103,7 @@ fun LogoMorph(kind: LogoKind, dark: Boolean, modifier: Modifier = Modifier, heig
     LaunchedEffect(animate) {
         if (animate) {
             delay(SPLASH_MORPH_DELAY_MS)
-            morph.animateTo(1f, tween(SPLASH_MORPH_MS.toInt(), easing = InOut))
+            morph.animateTo(1f, tween(morphMillis(kind).toInt(), easing = InOut))
             extra.animateTo(1f, tween(1250, easing = LinearEasing))
         }
     }
