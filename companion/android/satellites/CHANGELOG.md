@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.88.0
+
+- Version moves with the shared number. No other change.
+
 ## 0.87.0
 
 No app changes. The Home Assistant integration now removes a phone's old duplicate Church Drive app registrations, locates people from this app only and sends notices only to this app.

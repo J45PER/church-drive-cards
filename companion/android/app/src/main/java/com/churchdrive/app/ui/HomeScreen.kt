@@ -368,7 +368,10 @@ private fun HomePage(
                         spec.cards.forEach { CardView(it, entities, registry, call) }
                     }
                 } else if (title == "Car charging") HomePanel("Car charging", "mdi:ev-station", Tone.Teal, entities[ZAPPI_MODE]?.state ?: "", null) {
-                    ChargerCard(entities, call)
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        ChargerCard(entities, call)
+                        OctopusPlanCard(entities)
+                    }
                 }
             }
         }

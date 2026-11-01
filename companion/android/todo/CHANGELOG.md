@@ -3,6 +3,11 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.88.0
+
+- The Clive button is the main app's (shared in core).
+- No other change to this app; version moves with the shared number (the Octopus charging plan is its own card; Boost removed from the charger card).
+
 ## 0.87.0
 
 No app changes. The Home Assistant integration now removes a phone's old duplicate Church Drive app registrations, locates people from this app only and sends notices only to this app.
