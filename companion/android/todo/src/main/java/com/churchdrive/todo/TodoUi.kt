@@ -64,6 +64,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.churchdrive.app.ui.AssistantBrand
 import com.churchdrive.app.ui.HouseTask
+import com.churchdrive.app.ui.PersonButton
 import com.churchdrive.app.ui.TodoItem
 import com.churchdrive.app.ui.ToneColors
 import com.churchdrive.app.ui.houseTask
@@ -117,17 +118,7 @@ fun TodoApp(vm: TodoModel) {
                 title = { Text(tab.title) },
                 actions = {
                     // A round button with the person's initial opens the account panel, as in the main app.
-                    Box(
-                        Modifier.padding(horizontal = 6.dp).size(44.dp).clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer)
-                            .clickable(onClickLabel = "Account and settings") { panel = "account" },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            vm.personName?.trim()?.firstOrNull()?.uppercase() ?: "?",
-                            style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
-                    }
+                    PersonButton(vm.personName) { panel = "account" }
                 },
                 scrollBehavior = scroll,
             )
