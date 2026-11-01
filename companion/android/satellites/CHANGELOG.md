@@ -1,8 +1,12 @@
 # Church Drive Satellites: changelog
 
-## 0.88.0
+## 0.89.0
 
 - New app icon, themed icon and splash: Clive's mark with its top-right square turned into a circle and three ripples going out of it, every gap as thick as the ripples. On the splash only the ripples move: they appear one after another. Designed in `satellite/design/app-icons.html`. The mark is also on the sign-in screen and the empty list.
+
+## 0.88.0
+
+- Version moves with the shared number. No other change.
 
 ## 0.87.0
 
