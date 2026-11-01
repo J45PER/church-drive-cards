@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.87.0
+
+- **Octopus's charging plan is its own card.** It now sits under the Cars and the charger instead of inside the charger card (the next planned charges for the car Octopus controls, "Now:" for one in progress), on the Home page and the Energy page. It needs the dashboard's Car charging panel to list the new Octopus charging plan card (Home Assistant side, `custom:octopus-plan-card`); until then the Home page shows it under the charger by itself.
+- **The Boost (Octopus) switch is gone from the charger card.** Boost is billed at the standard rate, and Charge Cap stops the car before that rate anyway.
+
 ## 0.86.0
 
 - **"Which car is plugged in?"** replaces "Confirm car to charge tonight": the Home page card and the notification now have **Primary** (the car on the Octopus app, today the ID.5: charges in the 23:30 to 05:30 cheap window and whenever Octopus schedules it), **Additional** (any other car: cheap window only) and **No**. The old Yes button still works and counts as Primary. Needs the Home Assistant changes described in `ha/zappi-octopus-intelligent.md`.

@@ -639,13 +639,6 @@ fun ChargerCard(entities: Map<String, EntityState>, call: CallService) {
                 )
                 Text(smartText(sm, Octopus.allRates(entities), System.currentTimeMillis()), style = MaterialTheme.typography.bodySmall)
             }
-            // Octopus's charging plan for the car it controls, as on the dashboard's charger card (and so on the Energy page too).
-            octopusPlan(entities, System.currentTimeMillis())?.let { plan ->
-                val now = System.currentTimeMillis()
-                Text("Octopus charging plan", style = MaterialTheme.typography.titleSmall)
-                if (plan.slots.isEmpty()) Text("Nothing planned yet", style = MaterialTheme.typography.bodySmall)
-                else plan.slots.take(4).forEach { Text(planLine(it, now), style = MaterialTheme.typography.bodySmall) }
-            }
             // Which car is plugged in (Primary: the one on the Octopus app; Additional: any other), as on the dashboard's charger card.
             carRoleChoice(entities)?.let { c ->
                 TileRow(
@@ -656,16 +649,6 @@ fun ChargerCard(entities: Map<String, EntityState>, call: CallService) {
                     teal, tone.onContainer, true,
                 )
                 Text("Car plugged in · " + carRoleText(c), style = MaterialTheme.typography.bodySmall)
-            }
-            // Octopus's Boost, for the Primary car: charge now, at the standard rate (the text says so).
-            boostSwitch(entities)?.let { b ->
-                TileRow(
-                    listOf(TileItem("mdi:rocket-launch", "Boost (Octopus)", b.on) {
-                        call("switch", if (b.on) "turn_off" else "turn_on", b.entityId, data())
-                    }),
-                    teal, tone.onContainer, true,
-                )
-                Text(boostText(b), style = MaterialTheme.typography.bodySmall)
             }
         }
         TileRow(
