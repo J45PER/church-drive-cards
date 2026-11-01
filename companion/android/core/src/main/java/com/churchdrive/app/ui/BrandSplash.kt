@@ -47,6 +47,18 @@ private val SplashFont = FontFamily(Font(R.font.instrument_sans_semibold, FontWe
  */
 @Composable
 fun BrandSplash(name: String, @DrawableRes mark: Int, holdMillis: Long = 1300) {
+    BrandSplash(name, holdMillis) { dark ->
+        Image(
+            painterResource(mark), contentDescription = null, modifier = Modifier.height(104.dp),
+            // All white in dark mode (the tint keeps the shape and drops the colours).
+            colorFilter = if (dark) ColorFilter.tint(Color.White) else null,
+        )
+    }
+}
+
+/** The same screen with a mark the app draws itself (for a mark that moves): [mark] is told whether the screen is dark. */
+@Composable
+fun BrandSplash(name: String, holdMillis: Long = 1300, mark: @Composable (dark: Boolean) -> Unit) {
     var show by rememberSaveable { mutableStateOf(true) }
     LaunchedEffect(Unit) {
         kotlinx.coroutines.delay(holdMillis)
@@ -59,11 +71,7 @@ fun BrandSplash(name: String, @DrawableRes mark: Int, holdMillis: Long = 1300) {
     AnimatedVisibility(visible = show, exit = fadeOut(tween(350))) {
         Box(Modifier.fillMaxSize().background(bg).clickable(enabled = true, onClick = { show = false })) {
             Column(Modifier.align(Alignment.Center).wrapContentSize().padding(bottom = 40.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Image(
-                    painterResource(mark), contentDescription = null, modifier = Modifier.height(104.dp),
-                    // All white in dark mode (the tint keeps the shape and drops the colours).
-                    colorFilter = if (dark) ColorFilter.tint(Color.White) else null,
-                )
+                mark(dark)
                 Spacer(Modifier.height(22.dp))
                 Text(name, color = ink, fontFamily = SplashFont, fontWeight = FontWeight.SemiBold, fontSize = 34.sp)
             }

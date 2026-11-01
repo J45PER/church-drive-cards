@@ -44,7 +44,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
-            com.churchdrive.app.ui.BrandSplash("Satellites", R.drawable.ic_brand_satellites)
+            com.churchdrive.app.ui.BrandSplash("Satellites") { dark -> SatelliteMark(dark) }
         }
     }
 

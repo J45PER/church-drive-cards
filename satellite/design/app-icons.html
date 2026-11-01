@@ -56,7 +56,7 @@ body { background: var(--bar-bg); color: var(--bar-fg); font-family: var(--ui); 
   <div class="seg" role="group" aria-label="Page"><button type="button" id="pl" aria-pressed="true">Light icons</button><button type="button" id="pd" aria-pressed="false">Dark icons</button></div>
 </div>
 <div class="stage"><div class="in">
-  <p class="note">The movement is for the app only (its splash and its own screens). The circle and the square drift in and out over four seconds, as Clive's idle mark does, and the ripples appear one after another. Nothing here changes Clive's mark or the animations on the satellites. Tell me what to change, or press "Pick" to choose it.</p>
+  <p class="note">The movement is for the app only (its splash and its own screens). Only the ripples move: they appear one after another and then clear. The circle and the square stay still. Nothing here changes Clive's mark or the animations on the satellites. Tell me what to change, or press "Pick" to choose it.</p>
   <div id="opts"></div>
 </div></div>
 
@@ -113,8 +113,8 @@ body { background: var(--bar-bg); color: var(--bar-fg); font-family: var(--ui); 
   }
   function steps(t) { var p = (t / 2600) % 1; return t === 0 ? 3 : (p < 0.15 ? 0 : p < 0.35 ? 1 : p < 0.55 ? 2 : p < 0.9 ? 3 : 0); }
   var OPTIONS = [
-    { id: "B", name: "Bolder ripples, even spacing", why: "The circle's radius is 36. The first ripple starts 11 beyond it, each ripple is 11 thick, and the gap between ripples is 11 too: one measure all the way out. The ripples appear one after another.",
-      frame: function (t) { return rippleMark(sx(t), 70, 130, 36, 47, 11, 11, -88, -2, steps(t)); } }
+    { id: "B", name: "Bolder ripples, even spacing", why: "The circle's radius is 36. The first ripple starts 11 beyond it, each ripple is 11 thick, and the gap between ripples is 11 too: one measure all the way out. The ripples appear one after another; nothing else moves.",
+      frame: function (t) { return rippleMark(SH, 70, 130, 36, 47, 11, 11, -88, -2, steps(t)); } }
   ];
 
 
