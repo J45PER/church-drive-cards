@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.94.1
+
+- Fixed the crash when opening the settings sidebar: the new cog icons' drawing data was too long for Android to read, so it is now simplified (same look).
+
 ## 0.94.0
 
 - The app is now called **Clive Tasks**. Its splash reads "Clive" large, and "Tasks" slides in beside it as the logo changes.

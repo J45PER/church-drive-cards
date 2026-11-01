@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.94.1
+
+- Fixed the crash when opening the settings sidebar: the new cog icons' drawing data was too long for Android to read, so it is now simplified (same look).
+
 ## 0.94.0
 
 - The app is now called **Clive Satellite Manager**. Its splash reads "Clive" large, and "Satellite Manager" slides in beside it as the logo changes.
