@@ -6,7 +6,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 ## 0.95.6
 
-- Clive's microphone: the capsule is 72 tall instead of 64, so it reaches closer to the bar. Same in the Ready pose of his mark (phone and watch) and in the mic icon on the settings rows and the top bar.
+- Clive's microphone: the capsule is 72 tall instead of 64, so it reaches closer to the bar. Same in the Ready pose of his mark (phone and watch) and in the mic icon on the settings rows and the top bar. Every other microphone is now Clive's too (the camera's talk button, the "turn on the wake word" tiles with a bubble, the watch), and the satellite mic badge has the longer capsule.
 
 ## 0.95.5
 

@@ -45,6 +45,7 @@
    "M80,67 A20,20 0 0 1 120,67 L120,99 A20,20 0 0 1 80,99 Z",
    "M74,137 L126,137 A8,8 0 0 1 134,145 A8,8 0 0 1 126,153 L74,153 A8,8 0 0 1 66,145 A8,8 0 0 1 74,137 Z"
   ],
-  "scale": 1.3
+  "scale": 1.3,
+  "also": "Every microphone in the apps is this one: cd:mic / cd:mic-off (slash) / cd:mic-message (smaller, beside a chat bubble with three dots) in CdIcons.kt, reached through the alias from mdi:microphone, mdi:microphone-off and mdi:microphone-message, and built into the Home Assistant cards (src/icons.js, CLIVE_ICONS). The satellite mic badge (sat_device_mic) has the same capsule, 36 tall at badge scale."
  }
 }

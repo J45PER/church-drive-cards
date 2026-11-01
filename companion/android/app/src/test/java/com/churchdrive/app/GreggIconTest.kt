@@ -69,6 +69,13 @@ class GreggIconTest {
         assertFalse(CdIcons.icons.isEmpty())
     }
 
+    @Test fun everyMicrophoneIsClives() {
+        assertEquals("cd:mic", CdIcons.alias("mdi:microphone"))
+        assertEquals("cd:mic-off", CdIcons.alias("mdi:microphone-off"))
+        assertEquals("cd:mic-message", CdIcons.alias("mdi:microphone-message"))
+        for (name in listOf("mic", "mic-off", "mic-message")) assertTrue(name, CdIcons.icons[name]?.all { it.d.startsWith("M") } == true)
+    }
+
     @Test fun aCardCarriesTheVacuumStateAndBattery() {
         assertEquals(GreggState.Cleaning, greggStateFor("cleaning", 80.0))
         assertEquals(GreggState.Charging, greggStateFor("docked", 80.0))

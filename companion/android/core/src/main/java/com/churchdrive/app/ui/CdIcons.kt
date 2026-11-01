@@ -116,6 +116,17 @@ object CdIcons {
         "water-high" to listOf(
             Shape("M 97.75 8.21 C 93.29 14.93 89.87 19.69 80.83 31.83 C 69.87 46.55 65.7 52.3 60.88 59.33 C 44.17 83.72 36.55 101.89 36.06 118.5 C 35.8 127.09 37.11 136.21 39.69 143.9 C 48.26 169.39 71.96 184.66 101.83 183.94 C 121.91 183.46 138.67 176 149.96 162.5 C 158.13 152.73 162.83 140.15 163.83 125.36 C 164.98 108.26 159.6 91.71 145.52 69.08 C 140.21 60.54 134.42 52.34 120.82 34.08 C 110.63 20.41 106.2 14.24 102.12 8.04 C 101.02 6.37 100.07 5 100 5 C 99.94 5 98.93 6.44 97.75 8.21", 1.0000f, 1.00f),
         ),
+        // Clive's microphone: his mark's Ready pose, a capsule 72 tall over a flat bar, drawn 1.3x. The off version has a slash; the message version
+        // is the same mic, smaller, beside a chat bubble (squared tail corner, three dots cut out). Used for every microphone, see [alias].
+        "mic" to listOf(
+            Shape("M80,67 A20,20 0 0 1 120,67 L120,99 A20,20 0 0 1 80,99 Z M74,137 L126,137 A8,8 0 0 1 134,145 A8,8 0 0 1 126,153 L74,153 A8,8 0 0 1 66,145 A8,8 0 0 1 74,137 Z", 1.3f, 1.00f),
+        ),
+        "mic-off" to listOf(
+            Shape("M80,67 A20,20 0 0 1 120,67 L120,99 A20,20 0 0 1 80,99 Z M74,137 L126,137 A8,8 0 0 1 134,145 A8,8 0 0 1 126,153 L74,153 A8,8 0 0 1 66,145 A8,8 0 0 1 74,137 Z M57.3,55.7 L66.7,48.3 L144.7,146.3 L135.3,153.7 Z", 1.3f, 1.00f),
+        ),
+        "mic-message" to listOf(
+            Shape("M60,70 A18,18 0 0 1 96,70 L96,99 A18,18 0 0 1 60,99 Z M54,127 L102,127 A7,7 0 0 1 109,134 A7,7 0 0 1 102,141 L54,141 A7,7 0 0 1 47,134 A7,7 0 0 1 54,127 Z M124,20 H160 A20,20 0 0 1 180,40 V60 A20,20 0 0 1 160,80 H104 V40 A20,20 0 0 1 124,20 Z M116,50 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0 Z M136,50 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0 Z M156,50 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0 Z", 1.0f, 1.00f),
+        ),
     )
 
     /** Names the dashboards already use for Gregg's parts, and Home Assistant's houses, drawn with the house's own icons instead. */
@@ -125,6 +136,10 @@ object CdIcons {
         // Home Assistant's houses: the house's own house instead (solid for home, outlined for out and away).
         "mdi:home", "mdi:home-variant", "mdi:home-circle" -> "cd:home"
         "mdi:home-outline", "mdi:home-variant-outline", "mdi:home-export-outline", "mdi:home-import-outline", "mdi:home-account", "mdi:home-map-marker" -> "cd:home-away"
+        // Every microphone is Clive's: the plain one, the crossed-out one and the one with a chat bubble.
+        "mdi:microphone", "mdi:microphone-outline", "mdi:microphone-variant" -> "cd:mic"
+        "mdi:microphone-off", "mdi:microphone-variant-off" -> "cd:mic-off"
+        "mdi:microphone-message" -> "cd:mic-message"
         else -> icon
     }
 }
