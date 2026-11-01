@@ -81,6 +81,35 @@ fun carEntities(ids: List<String>, entities: Map<String, EntityState>): CarEntit
     )
 }
 
+/** One planned charge of Octopus's plan for the car it controls: when, how much (kWh, always positive), and SMART or BOOST. */
+data class PlanSlot(val start: Long, val end: Long, val kwh: Double, val source: String)
+
+/** Octopus's plan: the planned dispatches that have not finished, oldest first, and whether one is on now. */
+data class OctopusPlan(val slots: List<PlanSlot>, val active: Boolean)
+
+private val DISPATCHING = Regex("binary_sensor\\.octopus_energy_.*_intelligent_dispatching")
+
+/** Octopus's charging plan (the dispatching sensor's `planned_dispatches`), or null when the house has no Octopus Intelligent device. */
+fun octopusPlan(entities: Map<String, EntityState>, now: Long): OctopusPlan? {
+    val e = entities.values.firstOrNull { it.available && DISPATCHING.matches(it.entityId) } ?: return null
+    val list = e.attributes?.optJSONArray("planned_dispatches") ?: JSONArray()
+    val slots = (0 until list.length()).mapNotNull { i ->
+        val o = list.optJSONObject(i) ?: return@mapNotNull null
+        val start = parseMillis(o.optString("start")) ?: return@mapNotNull null
+        val end = parseMillis(o.optString("end")) ?: return@mapNotNull null
+        if (end <= now) return@mapNotNull null
+        PlanSlot(start, end, Math.abs(o.optDouble("charge_in_kwh", 0.0)), o.optString("source").uppercase())
+    }.sortedBy { it.start }
+    return OctopusPlan(slots, e.state == "on")
+}
+
+/** One line of the plan: "Now: 23:51 to 04:02 · 32.5 kWh · Boost", or "02:30 to 04:30 · 15.6 kWh · Smart". */
+fun planLine(slot: PlanSlot, now: Long, zone: ZoneId = ZoneId.systemDefault()): String {
+    val kwh = if (slot.kwh > 0) " · " + "%.1f".format(java.util.Locale.UK, slot.kwh) + " kWh" else ""
+    val kind = if (slot.source == "BOOST") "Boost" else "Smart"
+    return (if (slot.start <= now) "Now: " else "") + HomeTime.format(slot.start, "HH:mm", zone) + " to " + HomeTime.format(slot.end, "HH:mm", zone) + kwh + " · " + kind
+}
+
 /** What a car made by Octopus's Intelligent device can say: whether it is plugged in and charging, and Octopus's plan for it. */
 data class OctopusCar(val plugged: Boolean, val charging: Boolean, val plan: String)
 

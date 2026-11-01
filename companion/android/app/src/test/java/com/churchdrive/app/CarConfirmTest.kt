@@ -7,12 +7,15 @@ import com.churchdrive.app.ui.BoostSwitch
 import com.churchdrive.app.ui.CarEntities
 import com.churchdrive.app.ui.CarRoleChoice
 import com.churchdrive.app.ui.OctopusCar
+import com.churchdrive.app.ui.PlanSlot
 import com.churchdrive.app.ui.boostSwitch
 import com.churchdrive.app.ui.boostText
 import com.churchdrive.app.ui.carNeedsConfirm
 import com.churchdrive.app.ui.carRoleChoice
 import com.churchdrive.app.ui.carRoleText
 import com.churchdrive.app.ui.octopusCarState
+import com.churchdrive.app.ui.octopusPlan
+import com.churchdrive.app.ui.planLine
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -113,6 +116,42 @@ class CarConfirmTest {
     @Test fun boostSaysItIsAtTheStandardRate() {
         assertEquals("Charge now, at the standard rate, not the cheap rate", boostText(BoostSwitch(boostId, false)))
         assertEquals("On: Octopus is charging now, at the standard rate", boostText(BoostSwitch(boostId, true)))
+    }
+
+    private fun slot(start: String, end: String, kwh: Double, source: String) =
+        JSONObject().put("start", start).put("end", end).put("charge_in_kwh", kwh).put("source", source)
+
+    private fun planEntity(state: String, vararg slots: JSONObject): Map<String, EntityState> {
+        val id = "binary_sensor.octopus_energy_x_intelligent_dispatching"
+        val list = org.json.JSONArray().also { a -> slots.forEach { a.put(it) } }
+        return mapOf(id to EntityState(id, state, JSONObject().put("planned_dispatches", list), "2026-11-01T00:00:00+00:00"))
+    }
+
+    private val now = java.time.Instant.parse("2026-11-01T00:30:00Z").toEpochMilli()
+
+    @Test fun thePlanListsUnfinishedDispatchesOldestFirstWithPositiveKwh() {
+        val plan = octopusPlan(
+            planEntity(
+                "on",
+                slot("2026-11-01T02:30:00+00:00", "2026-11-01T04:30:00+00:00", -15.556, "SMART"),
+                slot("2026-10-31T23:00:00+00:00", "2026-10-31T23:30:00+00:00", -3.889, "SMART"),
+                slot("2026-11-01T00:00:00+00:00", "2026-11-01T01:00:00+00:00", -2.0, "BOOST"),
+            ),
+            now,
+        )!!
+        assertTrue(plan.active)
+        assertEquals(listOf("BOOST" to 2.0, "SMART" to 15.556), plan.slots.map { it.source to it.kwh })
+    }
+
+    @Test fun aPlanLineSaysNowTheTimesTheKwhAndSmartOrBoost() {
+        val boost = PlanSlot(now - 30 * 60_000, now + 30 * 60_000, 2.0, "BOOST")
+        assertEquals("Now: 00:00 to 01:00 · 2.0 kWh · Boost", planLine(boost, now, ZoneOffset.UTC))
+        assertEquals("02:30 to 04:30 · Smart", planLine(PlanSlot(now + 2 * 3_600_000, now + 4 * 3_600_000, 0.0, "SMART"), now, ZoneOffset.UTC))
+    }
+
+    @Test fun noOctopusDeviceMeansNoPlan() {
+        assertNull(octopusPlan(house("EV Connected", "on", "Manual"), now))
+        assertEquals(emptyList<PlanSlot>(), octopusPlan(planEntity("off"), now)!!.slots)
     }
 
     @Test fun aCarNotMadeByOctopusIsLeftAlone() {

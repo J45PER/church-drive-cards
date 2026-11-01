@@ -34,3 +34,32 @@ test('a car that is not made by Octopus is left alone', () => {
   assert.equal(octopusCar(hass(), { dispatch: '' }), null);
   assert.equal(octopusCar(hass(), {}), null);
 });
+
+import { octopusPlan, planLine } from '../src/car-octopus.js';
+
+const NOW = Date.parse('2026-11-01T00:30:00+00:00');
+const planHass = (attrs, state = 'off') => ({ states: { 'binary_sensor.octopus_energy_x_intelligent_dispatching': { state, attributes: attrs } } });
+
+test('the plan lists unfinished dispatches, oldest first, with positive kWh', () => {
+  const h = planHass({
+    planned_dispatches: [
+      { start: '2026-11-01T02:30:00+00:00', end: '2026-11-01T04:30:00+00:00', charge_in_kwh: -15.556, source: 'SMART' },
+      { start: '2026-10-31T23:00:00+00:00', end: '2026-10-31T23:30:00+00:00', charge_in_kwh: -3.889, source: 'SMART' },
+      { start: '2026-11-01T00:00:00+00:00', end: '2026-11-01T01:00:00+00:00', charge_in_kwh: -2, source: 'BOOST' },
+    ],
+  }, 'on');
+  const p = octopusPlan(h, NOW);
+  assert.equal(p.active, true);
+  assert.deepEqual(p.slots.map((x) => [x.source, x.kwh]), [['BOOST', 2], ['SMART', 15.556]]);
+});
+
+test('a plan line says now, the times, the kWh and Smart or Boost', () => {
+  const x = { start: Date.parse('2026-11-01T00:00:00+00:00'), end: Date.parse('2026-11-01T01:00:00+00:00'), kwh: 2, source: 'BOOST' };
+  assert.equal(planLine(x, NOW), 'Now: 00:00 to 01:00 · 2.0 kWh · Boost');
+  assert.equal(planLine({ ...x, start: NOW + 3600e3, end: NOW + 7200e3, kwh: 0, source: 'SMART' }, NOW), '01:30 to 02:30 · Smart');
+});
+
+test('no Octopus device means no plan; no dispatches means an empty one', () => {
+  assert.equal(octopusPlan({ states: {} }, NOW), null);
+  assert.deepEqual(octopusPlan(planHass({}), NOW), { slots: [], active: false });
+});

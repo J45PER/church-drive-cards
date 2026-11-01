@@ -23,6 +23,7 @@
 // the normal rate offers "Charge at 00:30" or "Charge now". Right after Stop
 // it says "Stopping…" until the charger's readings catch up.
 
+import { octopusPlan, planLine } from './car-octopus.js';
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
@@ -509,7 +510,7 @@ export class EvChargerCard extends HTMLElement {
 
   _data() {
     const c = this.config;
-    if (c.demo) return { found: true, mode: 'Eco+', options: ['Fast', 'Eco', 'Eco+', 'Stopped'], power: 7100, session: 18.4, status: 'Charging', plug: 'Connected', locked: false, smart: { on: true, phase: 'Waiting', later: true }, car: { role: 'Primary', confirmed: true }, boost: { id: 'switch.demo_boost', on: false } };
+    if (c.demo) return { found: true, mode: 'Eco+', options: ['Fast', 'Eco', 'Eco+', 'Stopped'], power: 7100, session: 18.4, status: 'Charging', plug: 'Connected', locked: false, smart: { on: true, phase: 'Waiting', later: true }, car: { role: 'Primary', confirmed: true }, boost: { id: 'switch.demo_boost', on: false }, plan: { active: false, slots: [{ start: Date.now() + 2 * 3600e3, end: Date.now() + 4 * 3600e3, kwh: 15.6, source: 'SMART' }] } };
     const e = evFind(this._hass, c);
     const s = (id) => id && this._hass.states[id];
     if (!s(e.mode) && !s(e.power) && !s(e.status)) return { found: false };
@@ -526,6 +527,7 @@ export class EvChargerCard extends HTMLElement {
     return {
       found: true,
       e,
+      plan: octopusPlan(this._hass),
       boost: boostSt && !['unavailable', 'unknown'].includes(boostSt.state) ? { id: boostId, on: boostSt.state === 'on' } : null,
       car: carRole ? { role: carRole.state, confirmed: carOk ? carOk.state === 'on' : true } : null,
       smart: smartOn ? { on: smartOn.state === 'on', phase: smartPhase ? smartPhase.state : null, later: !!s('script.zappi_charge_later') } : null,
@@ -583,6 +585,10 @@ export class EvChargerCard extends HTMLElement {
         .ev-act.live { background:color-mix(in srgb, ${EV_TEAL} 32%, transparent); color:${EV_TEAL}; opacity:1; }
         .ev-act.stopping { background:rgba(127,127,127,.2); color:var(--secondary-text-color); opacity:1; }
         .ev-act.smart { justify-content:flex-start; text-align:left; min-height:52px; }
+        .ev-plan { border-radius:12px; background:rgba(127,127,127,.12); padding:10px 12px; display:flex; flex-direction:column; gap:3px; }
+        .ev-plan b { font-size:.85rem; font-weight:600; }
+        .ev-plan span { font-size:.78rem; color:var(--secondary-text-color); font-variant-numeric:tabular-nums; }
+        .ev-plan span.now { color:${EV_TEAL}; font-weight:600; }
         .ev-act.car { justify-content:flex-start; text-align:left; min-height:52px; cursor:default; }
         .ev-act.car .ev-st { flex:1; display:flex; flex-direction:column; gap:1px; min-width:0; }
         .ev-act.car .ev-st small { font-weight:400; font-size:.72rem; color:var(--secondary-text-color); white-space:normal; line-height:1.25; }
@@ -681,7 +687,15 @@ export class EvChargerCard extends HTMLElement {
     const bst = d.boost && cr && cr.role === 'Primary' && plugged && d.found && !d.unavailable
       ? `<button type="button" class="ev-act smart" data-boost role="switch" aria-checked="${d.boost.on}" aria-label="Boost charge">${iconHtml('mdi:rocket-launch', { size: '20px' })}<span class="ev-st">Boost (Octopus)<small>${d.boost.on ? 'On: Octopus is charging now, at the standard rate' : 'Charge now, at the standard rate, not the cheap rate'}</small></span><span class="ev-sw${d.boost.on ? ' on' : ''}"></span></button>`
       : '';
-    const all = html + smart + car + bst;
+    // Octopus's charging plan for the car it controls (also on the Energy page, which shows this same card).
+    const pl = d.plan && d.found && !d.unavailable
+      ? `<div class="ev-plan"><b>Octopus charging plan</b>${
+          d.plan.slots.length
+            ? d.plan.slots.slice(0, 4).map((x) => `<span${x.start <= Date.now() ? ' class="now"' : ''}>${kitEsc(planLine(x))}</span>`).join('')
+            : '<span>Nothing planned yet</span>'
+        }</div>`
+      : '';
+    const all = html + smart + pl + car + bst;
     if (all !== this._actsHtml) {
       this._actsHtml = all;
       this._acts.innerHTML = all;
