@@ -1,5 +1,8 @@
 package com.churchdrive.app.ui
 
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.graphics.drawscope.scale
+
 /**
  * The house's own icon set, used as `cd:` names wherever an icon name is accepted (HaIcon). Drawn on a 200-unit grid with the even-odd
  * rule: a disc with its glyph cut out and a ring round it, or (for the buttons) the bare glyph. Made on the icon board; see HANDOFF.
@@ -136,12 +139,12 @@ fun CdIcon(iconName: String?, tint: androidx.compose.ui.graphics.Color, size: an
     val paths = androidx.compose.runtime.remember(cd) {
         cd.map { runCatching { androidx.compose.ui.graphics.vector.PathParser().parsePathString(it.d).toPath().apply { fillType = androidx.compose.ui.graphics.PathFillType.EvenOdd } }.getOrNull() }
     }
-    androidx.compose.foundation.Canvas(modifier.then(androidx.compose.ui.Modifier.size(size))) {
+    androidx.compose.foundation.Canvas(modifier.size(size)) {
         val s = this.size.minDimension / 200f
-        androidx.compose.ui.graphics.drawscope.scale(s, s, pivot = androidx.compose.ui.geometry.Offset.Zero) {
+        scale(s, s, pivot = androidx.compose.ui.geometry.Offset.Zero) {
             cd.forEachIndexed { i, shape ->
                 val path = paths[i] ?: return@forEachIndexed
-                if (shape.scale != 1f) androidx.compose.ui.graphics.drawscope.scale(shape.scale, pivot = androidx.compose.ui.geometry.Offset(100f, 100f)) { drawPath(path, color = tint, alpha = shape.alpha) }
+                if (shape.scale != 1f) scale(shape.scale, pivot = androidx.compose.ui.geometry.Offset(100f, 100f)) { drawPath(path, color = tint, alpha = shape.alpha) }
                 else drawPath(path, color = tint, alpha = shape.alpha)
             }
         }
