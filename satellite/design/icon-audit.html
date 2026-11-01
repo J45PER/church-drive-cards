@@ -130,6 +130,7 @@ h2 { font-size: .8rem; font-family: var(--mono); letter-spacing: .1em; text-tran
   }
   function ic(name, px) {
     if (name === 'device') return device(px);
+    if (name === 'device+plus') return device(px, { d: 'M100,52 V148 M52,100 H148', stroke: 18, scale: 0.36 });
     if (name === 'cd:home') return '<svg width="' + px + '" height="' + px + '" viewBox="0 0 200 200" aria-hidden="true"><path fill="currentColor" d="' + CDHOME + '"/></svg>';
     return '<svg width="' + px + '" height="' + px + '" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="' + MDI[name] + '"/></svg>';
   }
@@ -149,7 +150,7 @@ h2 { font-size: .8rem; font-family: var(--mono); letter-spacing: .1em; text-tran
     swap('bare', 'close', '', 'Close', 'account panel', 'close', 'Cancel and Not available (ShoppingScreen.kt), the same shape') + '</div></section>';
   out += '<section><h2>List</h2><p class="lead">The Home header takes the house\'s own icon from the Church Drive icons board.</p><div class="grid">' +
     swap('head', 'cd:home', 'indigo', 'Home', 'list header', 'home', 'the house icon on the Church Drive icons board') +
-    swap('head', 'plus', 'teal', 'Add a satellite', 'Add tab header', 'qr code scanner', 'Add in the shopping lists') +
+    swap('head', 'device+plus', 'teal', 'Add a satellite', 'Add tab header', 'qr code scanner', 'new: the satellite icon with a + in a circle, like #25 and #26') +
     swap('row', 'device', 'indigo', 'A satellite', 'each row of the list', 'monitor', 'new: the satellite device icon, idea F2') + '</div></section>';
   out += '<section><h2>A satellite\'s page, section headers</h2><p class="lead">Same tinted circles and colours. No section changed colour; only the glyph inside.</p><div class="grid">' +
     swap('head', 'palette', 'indigo', 'Design', 'section', 'palette', 'the colour tab in the light settings (LightSettings.kt)') +
