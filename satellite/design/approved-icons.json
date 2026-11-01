@@ -14,5 +14,20 @@
  },
  "app_icon": {
   "source": "companion/android/satellites/src/main/res/drawable/ic_launcher_foreground.xml (the circle, a square and three ripples)"
+ },
+ "audit_decisions_2026-11-01": {
+  "1-10": "approved as on the audit sheet",
+  "11": "mdi tune-variant with filled knobs (11A)",
+  "12": "keep mdi brightness-6",
+  "13": "satellite icon + volume-high badge (13B)",
+  "14": "satellite icon + Clive's mic pose as the badge (14D with 14B)",
+  "15": "satellite icon, as is",
+  "16": "Wi-Fi strengths: wifi-strength-4/3/2/1 and wifi-strength-off-outline (excellent, good, fair, weak, offline)",
+  "17": "satellite icon + the mdi 'update' arrow without its clock hands (17B)",
+  "18": "satellite icon + map-marker badge (18A)",
+  "19": "satellite icon + gesture-tap badge (19B)",
+  "20": "satellite icon + content-copy badge for the section (20C); plain content-copy where the action is copying",
+  "21-28": "approved",
+  "29": "mdi shield-key (29C)"
  }
 }
