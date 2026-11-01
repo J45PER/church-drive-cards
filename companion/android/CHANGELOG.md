@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.87.0
+
+No app changes. The Home Assistant integration now removes a phone's old duplicate Church Drive app registrations, locates people from this app only and sends notices only to this app.
+
 ## 0.86.0
 
 - **"Which car is plugged in?"** replaces "Confirm car to charge tonight": the Home page card and the notification now have **Primary** (the car on the Octopus app, today the ID.5: charges in the 23:30 to 05:30 cheap window and whenever Octopus schedules it), **Additional** (any other car: cheap window only) and **No**. The old Yes button still works and counts as Primary. Needs the Home Assistant changes described in `ha/zappi-octopus-intelligent.md`.
