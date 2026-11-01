@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.95.3
+
+No app changes.
+
 ## 0.95.2
 
 - The To-Do logo drawable (used for the To-do rows in Settings) is simplified so it loads safely.
