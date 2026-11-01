@@ -29,6 +29,10 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+/** When the logo starts to change and how long it takes; the splash's words use the same times so they move together. */
+const val SPLASH_MORPH_DELAY_MS = 350L
+const val SPLASH_MORPH_MS = 1100L
+
 /** Which app's logo the splash turns the assistant into. */
 enum class LogoKind { Church, Todo, Satellites }
 
@@ -95,8 +99,8 @@ fun LogoMorph(kind: LogoKind, dark: Boolean, modifier: Modifier = Modifier, heig
     val extra = remember { Animatable(if (animate) 0f else 1f) }
     LaunchedEffect(animate) {
         if (animate) {
-            delay(350)
-            morph.animateTo(1f, tween(1100, easing = InOut))
+            delay(SPLASH_MORPH_DELAY_MS)
+            morph.animateTo(1f, tween(SPLASH_MORPH_MS.toInt(), easing = InOut))
             extra.animateTo(1f, tween(1250, easing = LinearEasing))
         }
     }

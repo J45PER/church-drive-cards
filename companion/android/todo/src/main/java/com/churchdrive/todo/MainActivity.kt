@@ -65,7 +65,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
-            com.churchdrive.app.ui.BrandSplash("To Do", holdMillis = 3200) { dark -> com.churchdrive.app.ui.LogoMorph(com.churchdrive.app.ui.LogoKind.Todo, dark) }
+            com.churchdrive.app.ui.BrandSplash(com.churchdrive.app.ui.LogoKind.Todo, "Tasks")
         }
     }
 
