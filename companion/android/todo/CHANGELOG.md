@@ -7,6 +7,8 @@ Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newe
 
 - The Notifications row uses Clive's own chat icon instead of the Material bell.
 
+No app changes.
+
 ## 0.95.2
 
 - The To-Do logo drawable is simplified so it loads safely.

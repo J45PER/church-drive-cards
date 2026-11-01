@@ -4,6 +4,8 @@
 
 - No change to this app.
 
+- If the app crashes, the next time it opens it shows what went wrong on a plain screen (with Copy and Try again), so a crash on launch can be read and sent instead of just seen as the app closing.
+
 ## 0.95.2
 
 - Fix the app crashing: the satellite icons with a badge (and the To-Do logo) had path data of 10 to 19 thousand characters, too long for Android to read back safely, so opening a satellite could crash the app, and it then reopened on that satellite. They are redrawn from the same shapes in under 4 thousand characters.
