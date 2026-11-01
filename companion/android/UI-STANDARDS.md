@@ -36,6 +36,14 @@ The mechanical ones are checked by `UiStandardsTest` (it fails the build); the r
 10. **Run the checks**: CI runs `testDebugUnitTest`, including `UiStandardsTest`. If a check fails, change the
     code, not the check. Change a check only on purpose, and say why in the commit message.
 
+## Shared across the apps (phone, To-Do, Satellites)
+
+- **Clive's button is one component**: `AssistantRound` and `AssistOrb` in `core/.../ui/AssistantOrb.kt` (the coloured cloud on a circle the
+  colour of the bottom bar, white mark over it, 58 dp, with the outline and shadow). Every app uses it; never draw another Clive button, glyph
+  circle or orb. The phone app picks the palette (`assistPalette()`); apps with no such setting pass `AssistClassicPalette`.
+- **Anything a second app needs goes in `core`**, not copied. The Satellites app still has its own private copies of `EntityCard`,
+  `SectionHeader`, `Pill` and `Tile`; they are the next things to move into `core` when they change.
+
 ## What `UiStandardsTest` checks
 
 - `tileRowSizes` never leaves a gap and never makes the last row the longest.

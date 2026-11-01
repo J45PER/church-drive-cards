@@ -6,7 +6,7 @@ import android.speech.RecognizerIntent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,6 +31,7 @@ import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -44,20 +45,26 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import com.churchdrive.app.ui.AssistClassicPalette
+import com.churchdrive.app.ui.AssistOrb
+import com.churchdrive.app.ui.AssistState
 import com.churchdrive.app.ui.AssistantBrand
 import com.churchdrive.app.ui.AssistantGlyph
 import com.churchdrive.app.ui.AssistantGlyphPose
+import com.churchdrive.app.ui.AssistantRound
 
-/** The round Clive button of the To-Do app: opens [AssistantSheet]. */
+/**
+ * The round Clive button of the To-Do app: the main app's own (his coloured cloud on a circle the colour of the bottom bar, with his
+ * white mark over it), so he looks the same in both. Opens [AssistantSheet].
+ */
 @Composable
 fun AssistantButton(onClick: () -> Unit) {
-    Box(
-        Modifier.size(56.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer)
-            .clickable(onClickLabel = "${AssistantBrand.shown} To Do", onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) { AssistantGlyph(AssistantGlyphPose.Idle, MaterialTheme.colorScheme.onPrimaryContainer, 30.dp) }
+    AssistantRound("${AssistantBrand.shown} To Do", onClick, AssistClassicPalette) {
+        AssistantGlyph(AssistantGlyphPose.Idle, Color.White, 30.dp)
+    }
 }
 
 /**
@@ -92,8 +99,14 @@ fun AssistantSheet(vm: TodoModel, onClose: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
-                    AssistantGlyph(AssistantGlyphPose.Idle, MaterialTheme.colorScheme.onPrimaryContainer, 26.dp)
+                // The same cloud and white mark as the button, smaller.
+                Box(
+                    Modifier.size(44.dp).clip(CircleShape).background(NavigationBarDefaults.containerColor)
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    AssistOrb(AssistState.Idle, 0f, 24.dp, AssistClassicPalette)
+                    AssistantGlyph(AssistantGlyphPose.Idle, Color.White, 22.dp)
                 }
                 Column {
                     Text("${AssistantBrand.shown} To Do", style = MaterialTheme.typography.titleMedium)
