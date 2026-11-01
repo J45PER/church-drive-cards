@@ -1,0 +1,128 @@
+<title>Satellites Icon Audit</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Icons&family=Material+Icons+Outlined&display=block">
+<style>
+/* Layout: every icon the Satellites app uses today, in numbered rows grouped by where it appears, drawn as the app draws it (tone circle, 20 dp icon), so each can be called out by number. */
+:root {
+  --bar-bg: #e9ebef; --bar-fg: #14181f; --bar-soft: #5b6472;
+  --stage-bg: #ffffff; --stage-fg: #14181f; --stage-soft: #5f6672; --stage-line: #e0e3e8; --card: #f6f7f9;
+  --ui: "Instrument Sans", system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, monospace;
+  --indigo:#5C6BC0; --teal:#00838F; --amber:#E37400; --blue:#1A73E8; --purple:#9334E6; --green:#1E8E3E; --orange:#E8590C; --coral:#F2705C; --red:#D93025; --grey:#5F6368;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bar-bg: #1a1f27; --bar-fg: #eef1f5; --bar-soft: #9aa4b2; color-scheme: dark; } }
+:root[data-theme="dark"] { --bar-bg: #1a1f27; --bar-fg: #eef1f5; --bar-soft: #9aa4b2; color-scheme: dark; }
+:root[data-page="dark"] { --stage-bg: #0b0f11; --stage-fg: #eef1f5; --stage-soft: #9aa4b2; --stage-line: #262b30; --card: #151a1e;
+  --indigo:#9FA8DA; --teal:#4DD0E1; --amber:#FDD663; --blue:#8AB4F8; --purple:#C58AF9; --green:#81C995; --orange:#FFAB70; --coral:#FF9C8A; --red:#F28B82; --grey:#9AA0A6; }
+* { box-sizing: border-box; }
+body { background: var(--bar-bg); color: var(--bar-fg); font-family: var(--ui); margin: 0; line-height: 1.4; }
+.top { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; justify-content: space-between; max-width: 1100px; margin: 0 auto;
+  padding-block: 20px 16px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.top h1 { font-size: 1.3rem; margin: 0; letter-spacing: -0.01em; }
+.top p { margin: 2px 0 0; color: var(--bar-soft); font-size: .86rem; max-width: 64ch; }
+.seg { display: inline-flex; background: color-mix(in srgb, var(--bar-soft) 25%, transparent); border-radius: 999px; padding: 3px; gap: 2px; }
+.seg button { font: inherit; font-size: .88rem; border: 0; background: none; color: var(--bar-soft); padding: 7px 18px; border-radius: 999px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--bar-fg); color: var(--bar-bg); }
+.seg button:focus-visible { outline: 2px solid var(--bar-fg); outline-offset: 2px; }
+.stage { background: var(--stage-bg); color: var(--stage-fg); min-height: 70vh; padding-block: 24px 56px; }
+.in { max-width: 1100px; margin: 0 auto; display: grid; gap: 30px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h2 { font-size: .8rem; font-family: var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--stage-soft); margin: 0 0 4px; font-weight: 500; }
+.lead { margin: 0 0 12px; color: var(--stage-soft); font-size: .86rem; max-width: 80ch; }
+.lead b { color: var(--stage-fg); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 12px; }
+.it { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; align-items: center; background: var(--card); border: 1px solid var(--stage-line); border-radius: 18px; padding: 12px 14px; min-width: 0; }
+.n { font-family: var(--mono); font-size: .72rem; color: var(--stage-soft); grid-column: 1 / -1; }
+.n b { color: var(--stage-fg); font-weight: 600; }
+.disc { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+.disc.l { width: 40px; height: 40px; }
+.mi { font-family: "Material Icons"; font-style: normal; font-weight: normal; font-size: 20px; line-height: 1; letter-spacing: normal; text-transform: none; white-space: nowrap; font-feature-settings: "liga"; -webkit-font-feature-settings: "liga"; -webkit-font-smoothing: antialiased; }
+.mi.o { font-family: "Material Icons Outlined"; }
+.mi.p { font-size: 22px; }
+.mi.big { font-size: 28px; }
+.lbl { min-width: 0; }
+.lbl b { display: block; font-weight: 600; font-size: .95rem; }
+.lbl span { color: var(--stage-soft); font-size: .78rem; }
+.bare { color: var(--stage-fg); }
+.row { display: flex; flex-wrap: wrap; gap: 18px 22px; align-items: flex-end; }
+.fig { display: grid; gap: 6px; justify-items: center; font-size: .78rem; color: var(--stage-soft); text-align: center; }
+.fig .art { display: grid; place-items: center; }
+.mask { overflow: hidden; box-shadow: 0 0 0 1px var(--stage-line), 0 4px 12px rgba(0,0,0,.25); }
+.mask svg, .art svg { display: block; width: 100%; height: 100%; }
+.splash { width: 130px; aspect-ratio: 9 / 14; border: 1px solid var(--stage-line); border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: #fff; color: #1e2a3a; font-weight: 600; font-size: .8rem; }
+.splash.d { background: #0b0f11; color: #fff; }
+.splash svg { width: 56px; height: 56px; }
+.themed { background: #d8e2ff; display: grid; place-items: center; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="top">
+  <div><h1>Satellites icon audit</h1><p>Every icon in the Satellites app as it is today, numbered, drawn the way the app draws it. Call them out by number.</p></div>
+  <div class="seg" role="group" aria-label="Page"><button type="button" id="pl" aria-pressed="true">Light</button><button type="button" id="pd" aria-pressed="false">Dark</button></div>
+</div>
+<div class="stage"><div class="in" id="in"></div></div>
+
+<script>
+(function () {
+  var MAIN = "M50.7,103.3 H66.7 A30,30 0 0 1 96.7,133.3 V149.3 A30,30 0 0 1 66.7,179.3 H50.7 A30,30 0 0 1 20.7,149.3 V133.3 A30,30 0 0 1 50.7,103.3Z M45.3,118.7 a36,36 0 1,0 72,0 a36,36 0 1,0 -72,0Z";
+  var ARCS = ["M89.37,61.26 A58,58 0 0,1 138.74,110.63 A5.5,5.5 0 0 1 127.84,112.16 A47,47 0 0,0 87.84,72.16 A5.5,5.5 0 0 1 89.37,61.26Z", "M89.98,39.17 A80,80 0 0,1 160.83,110.02 A5.5,5.5 0 0 1 149.89,111.21 A69,69 0 0,0 88.79,50.11 A5.5,5.5 0 0 1 89.98,39.17Z", "M90.66,17.13 A102,102 0 0,1 182.87,109.34 A5.5,5.5 0 0 1 171.92,110.35 A91,91 0 0,0 89.65,28.08 A5.5,5.5 0 0 1 90.66,17.13Z"];
+  var ALL = MAIN + ' ' + ARCS.join(' ');
+  var n = 0;
+  function num() { n += 1; return '<span class="n"><b>#' + n + '</b></span>'; }
+  function mi(name, cls) { return '<span class="mi ' + (cls || '') + '" aria-hidden="true">' + name + '</span>'; }
+  function tint(tone) { return 'background:color-mix(in srgb,var(--' + tone + ') 18%,transparent);color:var(--' + tone + ')'; }
+  function head(icon, tone, title, where) {
+    return '<div class="it">' + num() + '<span class="disc" style="' + tint(tone) + '">' + mi(icon) + '</span><div class="lbl"><b>' + title + '</b><span>' + where + ' &middot; ' + icon.replace(/_/g, ' ') + '</span></div></div>';
+  }
+  function rowIcon(icon, tone, title, where) {
+    return '<div class="it">' + num() + '<span class="disc l" style="' + tint(tone) + '">' + mi(icon, 'p') + '</span><div class="lbl"><b>' + title + '</b><span>' + where + ' &middot; ' + icon.replace(/_/g, ' ') + '</span></div></div>';
+  }
+  function bare(icon, title, where, outlined) {
+    return '<div class="it">' + num() + '<span class="bare">' + mi(icon, 'big' + (outlined ? ' o' : '')) + '</span><div class="lbl"><b>' + title + '</b><span>' + where + ' &middot; ' + icon.replace(/_/g, ' ') + (outlined ? ' (outlined)' : '') + '</span></div></div>';
+  }
+  function glowSvg(scale, gid) {
+    return '<svg viewBox="0 0 108 108" aria-hidden="true"><defs>' +
+      '<radialGradient id="a' + gid + '" gradientUnits="userSpaceOnUse" cx="150" cy="70" r="88"><stop offset="0" stop-color="#AB47BC"/><stop offset="1" stop-color="#AB47BC" stop-opacity="0"/></radialGradient>' +
+      '<radialGradient id="b' + gid + '" gradientUnits="userSpaceOnUse" cx="70" cy="170" r="110"><stop offset="0" stop-color="#4FD08A"/><stop offset="1" stop-color="#4FD08A" stop-opacity="0"/></radialGradient>' +
+      '<radialGradient id="c' + gid + '" gradientUnits="userSpaceOnUse" cx="40" cy="40" r="130"><stop offset="0" stop-color="#5C6BC0"/><stop offset="1" stop-color="#5C6BC0" stop-opacity="0"/></radialGradient>' +
+      '<radialGradient id="h' + gid + '" gradientUnits="userSpaceOnUse" cx="100" cy="100" r="60"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>' +
+      '<mask id="m' + gid + '" maskUnits="userSpaceOnUse" x="-20" y="-20" width="240" height="240"><path fill="#fff" fill-rule="evenodd" d="' + ALL + '"/></mask></defs>' +
+      '<rect width="108" height="108" fill="#fff"/><g transform="translate(' + (54 - 102 * scale) + ' ' + (54 - 98 * scale) + ') scale(' + scale + ')"><g mask="url(#m' + gid + ')">' +
+      '<rect x="-20" y="-20" width="240" height="240" fill="#6A5BC2"/><rect x="-20" y="-20" width="240" height="240" fill="url(#a' + gid + ')"/><rect x="-20" y="-20" width="240" height="240" fill="url(#b' + gid + ')"/>' +
+      '<rect x="-20" y="-20" width="240" height="240" fill="url(#c' + gid + ')"/><rect x="-20" y="-20" width="240" height="240" fill="url(#h' + gid + ')"/></g></g></svg>';
+  }
+  function monoSvg(fill, scale) { return '<svg viewBox="0 0 108 108" aria-hidden="true"><g transform="translate(' + (54 - 102 * scale) + ' ' + (54 - 98 * scale) + ') scale(' + scale + ')"><path fill="' + fill + '" fill-rule="evenodd" d="' + ALL + '"/></g></svg>'; }
+  function markSvg(fill) { return '<svg viewBox="21 17 162 162" aria-hidden="true"><path fill="' + fill + '" fill-rule="evenodd" d="' + ALL + '"/></svg>'; }
+  function fig(art, label) { return '<div class="fig">' + art + label + '</div>'; }
+
+  var out = '';
+  n += 1;
+  out += '<section><h2>App icon and splash</h2><p class="lead"><b>#' + n + '</b> The launcher icon (0.93.0, smaller in its circle), the themed icon Android 13 and later can use, the splash, and the same mark on the sign-in screen and the empty list.</p><div class="row">' +
+    fig('<div class="mask" style="width:92px;height:92px;border-radius:50%">' + glowSvg(0.3, 1) + '</div>', 'Launcher, circle') +
+    fig('<div class="mask" style="width:92px;height:92px;border-radius:30%">' + glowSvg(0.3, 2) + '</div>', 'Launcher, squircle') +
+    fig('<div class="mask themed" style="width:92px;height:92px;border-radius:50%">' + monoSvg('#1b3a8a', 0.3) + '</div>', 'Themed icon') +
+    fig('<div class="splash"><div style="width:56px;height:56px">' + glowSvg(0.3, 3).replace('<rect width="108" height="108" fill="#fff"/>', '') + '</div><span>Satellites</span></div>', 'Splash, light') +
+    fig('<div class="splash d">' + markSvg('#fff') + '<span>Satellites</span></div>', 'Splash, dark') +
+    '</div></section>';
+  out += '<section><h2>Bottom bar and top bar</h2><p class="lead">The two tabs and the buttons on the bars.</p><div class="grid">' +
+    bare('speaker', 'Satellites', 'bottom bar, first tab') + bare('qr_code_scanner', 'Add', 'bottom bar, second tab') +
+    bare('arrow_back', 'Back', 'satellite page and panel pages') + bare('close', 'Close', 'account panel') + '</div></section>';
+  out += '<section><h2>List</h2><p class="lead">The header over the list, the Add tab\'s header and a satellite\'s row.</p><div class="grid">' +
+    head('home', 'indigo', 'Home', 'list header') + head('qr_code_scanner', 'teal', 'Add a satellite', 'Add tab header') +
+    rowIcon('monitor', 'indigo', 'A satellite', 'each row of the list') + '</div></section>';
+  out += '<section><h2>A satellite\'s page, section headers</h2><p class="lead">Each is a tinted circle in the section\'s colour with the icon in that colour, as the main app draws its headers.</p><div class="grid">' +
+    head('palette', 'indigo', 'Design', 'section') + head('thermostat', 'amber', 'Temperatures', 'section') + head('tune', 'teal', 'Glances', 'section') +
+    head('brightness_6', 'blue', 'Backlight', 'section') + head('volume_up', 'coral', 'Sound', 'section') + head('record_voice_over', 'indigo', 'Voice', 'section') +
+    head('speaker', 'purple', 'On the satellite', 'section') + head('info', 'green', 'Status', 'section') + head('system_update', 'orange', 'Firmware', 'section') +
+    head('location_on', 'teal', 'Name and room', 'section') + head('restart_alt', 'red', 'Actions', 'section') + head('content_copy', 'orange', 'Presets and copying', 'section') + '</div></section>';
+  out += '<section><h2>Account panel (tap your initial)</h2><p class="lead">The side panel and its Settings and About pages. These are Material outlined icons, as in the other apps.</p><div class="grid">' +
+    bare('home', 'Open Church Drive', 'account page', true) + bare('settings', 'Settings', 'account page row', true) + bare('info', 'About', 'account page row', true) + bare('logout', 'Sign out', 'account page', true) +
+    bare('visibility', 'Open on the satellite I left', 'Settings page', true) + bare('settings', 'Each satellite\'s own settings', 'Settings page', true) +
+    bare('info', 'Church Drive Satellites, version', 'About page', true) + bare('system_update', 'Updates', 'About page', true) + bare('fingerprint', 'Signing certificate', 'About page', true) + '</div></section>';
+  out += '<section><p class="lead">Everything else in the app is text only: the tiles, pills and buttons (Say hello, Flash the screen, Restart, Install the update and so on) carry no icon.</p></section>';
+  document.getElementById('in').innerHTML = out;
+  var pl = document.getElementById('pl'), pd = document.getElementById('pd');
+  function page(dark) { document.documentElement.setAttribute('data-page', dark ? 'dark' : 'light'); pl.setAttribute('aria-pressed', String(!dark)); pd.setAttribute('aria-pressed', String(dark)); }
+  pl.addEventListener('click', function () { page(false); });
+  pd.addEventListener('click', function () { page(true); });
+})();
+</script>
