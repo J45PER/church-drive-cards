@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.95.2
+
+- The To-Do logo drawable is simplified so it loads safely.
+
 ## 0.95.1
 
 - Clive's own microphone replaces Material's on the button that speaks to him. The House tab and its jobs use the house's own house, and the Cleaning tab shows Gregg.
