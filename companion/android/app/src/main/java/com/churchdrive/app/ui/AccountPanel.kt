@@ -260,7 +260,7 @@ private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Pa
         }
         // Experimental (kept in the code, not shown): add its row back here when there is something to try out.
         PanelCard {
-            PanelRow(Icons.Outlined.Settings, "Settings", onClick = { onOpen("settings") }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_cog_outline), contentDescription = null) })
+            PanelRow(Icons.Outlined.Settings, "Settings", onClick = { onOpen("settings") })
             PanelRow(Icons.Outlined.Info, "About", onClick = { onOpen("about") })
         }
         PanelCard { PanelRow(Icons.AutoMirrored.Outlined.Logout, "Sign out", onClick = onSignOut) }

@@ -162,7 +162,7 @@ private fun AccountPage(vm: SatelliteModel, onClose: () -> Unit, onOpen: (String
         }
         PanelCard { PanelRow(Icons.Outlined.Home, "Open Church Drive", "The main app: lights, alarm, cameras and the rest", onClick = { ChurchDriveLink.open(context) }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_church_drive), contentDescription = null) }) }
         PanelCard {
-            PanelRow(Icons.Outlined.Settings, "Settings", onClick = { onOpen("settings") }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_cog_outline), contentDescription = null) })
+            PanelRow(Icons.Outlined.Settings, "Settings", onClick = { onOpen("settings") })
             PanelRow(Icons.Outlined.Info, "About", onClick = { onOpen("about") })
         }
         // A sign-in taken from the Church Drive app is that app's to end; signing out there signs this one out too.
