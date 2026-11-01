@@ -1,13 +1,18 @@
 package com.churchdrive.satellites
 
 /**
- * What a satellite's QR code says: `clive://pair?d=<device name>&t=<six digit code>` (satellite/clive_ui.h `show_pair`, and the
- * sticker on a satellite without a screen). The code is only there for the person to check against the one on the screen: it is never the
- * encryption key.
+ * What a satellite's QR code says. Two kinds:
+ *  - a screen: `clive://pair?d=<device name>&t=<six digit code>`. The code is only there for the person to check against the one on the screen;
+ *    it is never the encryption key.
+ *  - a sticker: `clive://pair?id=RND1-000123-4&d=<device name>&k=<its own API key>` (satellite/tools/make_device.py). There is no screen to check
+ *    against, so the person checks the ID on the sticker, and the satellite's own key is in the code, so there is no shared key to type.
  */
-data class PairCode(val device: String, val code: String) {
-    /** "482 913", as the screen shows it. */
+data class PairCode(val device: String, val code: String, val id: DeviceId? = null, val key: String? = null) {
+    /** "482 913", as the screen shows it. Empty for a sticker. */
     val spaced: String get() = if (code.length == 6) "${code.take(3)} ${code.drop(3)}" else code
+
+    /** What the person checks against the satellite: the six digits on its screen, or the ID on its sticker. */
+    val shown: String get() = if (code.isNotEmpty()) spaced else id?.text ?: device
 
     companion object {
         fun parse(text: String?): PairCode? {
@@ -17,9 +22,13 @@ data class PairCode(val device: String, val code: String) {
                 val i = part.indexOf('=')
                 if (i <= 0) null else part.substring(0, i) to java.net.URLDecoder.decode(part.substring(i + 1), "UTF-8")
             }.toMap()
-            val device = query["d"]?.takeIf { it.isNotBlank() } ?: return null
-            val code = query["t"]?.takeIf { it.length in 4..8 && it.all(Char::isDigit) } ?: return null
-            return PairCode(device, code)
+            val id = query["id"]?.let { DeviceId.parse(it) ?: return null }
+            val device = (query["d"] ?: id?.deviceName)?.takeIf { it.isNotBlank() } ?: return null
+            val key = query["k"]?.takeIf { it.length in 40..48 }
+            val code = query["t"]?.takeIf { it.length in 4..8 && it.all(Char::isDigit) }
+            // A sticker has no screen code but carries its key; a screen has a code and no key.
+            if (code == null && (key == null || id == null)) return null
+            return PairCode(device, code ?: "", id, key)
         }
     }
 }
