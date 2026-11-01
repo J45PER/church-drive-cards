@@ -68,6 +68,8 @@ android {
         buildConfig = true
         compose = true
     }
+    // The launch test starts the real activity on the JVM (Robolectric), with the app's resources and manifest.
+    testOptions { unitTests.isIncludeAndroidResources = true }
 }
 
 dependencies {
@@ -89,5 +91,7 @@ dependencies {
     implementation("androidx.camera:camera-view:$camerax")
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("androidx.test:core:1.6.1")
     testImplementation("org.json:json:20240303")
 }
