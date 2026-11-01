@@ -22,7 +22,27 @@
       "mcp__Church_Drive_Home_Assistant__ha_config_set_script",
       "mcp__Church_Drive_Home_Assistant__ha_config_set_automation",
       "mcp__Church_Drive_Home_Assistant__ha_config_set_helper",
-      "mcp__Church_Drive_Home_Assistant__ha_set_entity"
+      "mcp__Church_Drive_Home_Assistant__ha_set_entity",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git fetch:*)",
+      "Bash(git push:*)",
+      "Bash(node tools/versions.mjs:*)",
+      "Bash(node build.mjs:*)",
+      "Bash(npm test:*)",
+      "Bash(npm run build:*)",
+      "mcp__github__create_pull_request",
+      "mcp__github__update_pull_request",
+      "mcp__github__pull_request_read",
+      "mcp__github__merge_pull_request",
+      "mcp__github__get_job_logs",
+      "mcp__github__actions_get",
+      "mcp__github__actions_list",
+      "mcp__github__get_check_run",
+      "mcp__claude-code-remote__subscribe_pr_activity"
     ]
   }
 }
