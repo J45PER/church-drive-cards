@@ -3,9 +3,13 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
-## 0.92.0
+## 0.93.0
 
 No app changes.
+
+## 0.92.0
+
+Shared code change only: the connection to the house (in `core`) asks the house whether Google push can reach the phone. No visible change in this app.
 
 ## 0.91.0
 

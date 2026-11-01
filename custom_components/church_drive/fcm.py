@@ -10,9 +10,12 @@ from typing import Any
 
 from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.storage import Store
 
-from .fcm_logic import KEY_FILE, SCOPE, build_message, clean_service, endpoint, token_is_dead, valid_token_event
+from .fcm_logic import KEY_FILE, SCOPE, build_message, clean_service, endpoint, push_services, token_is_dead, valid_token_event
+
+from .people import SIGNAL_PEOPLE
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -31,6 +34,9 @@ class Fcm:
     @property
     def configured(self) -> bool:
         return self._creds is not None
+
+    def services(self) -> list[str]:
+        return push_services(self._tokens, self.configured)
 
     def token_for(self, service: str) -> str | None:
         return self._tokens.get(service) if self.configured else None
@@ -72,6 +78,7 @@ class Fcm:
             self._tokens[service] = token
             await self._store.async_save(self._tokens)
             _LOGGER.info("Google push token saved for %s", service)
+            async_dispatcher_send(self.hass, SIGNAL_PEOPLE)  # so the phones list the app reads is up to date
 
     def _access_token(self) -> str:
         from google.auth.transport.requests import Request
@@ -96,6 +103,7 @@ class Fcm:
                 if token_is_dead(resp.status, body):
                     self._tokens.pop(service, None)
                     await self._store.async_save(self._tokens)
+                    async_dispatcher_send(self.hass, SIGNAL_PEOPLE)
                     _LOGGER.info("Google push token for %s is no longer valid; it will register again", service)
                 else:
                     _LOGGER.warning("Google push to %s failed: %s %s", service, resp.status, body[:200])

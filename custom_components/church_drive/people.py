@@ -670,6 +670,10 @@ class People:
             ]
         return chosen
 
+    def push_services(self) -> list[str]:
+        """The phones Google push can reach (the app reads this to know whether it can stop its own connection)."""
+        return self.fcm.services() if self.fcm is not None else []
+
     def person_for_user(self, user_id: str | None) -> str:
         """The person entity linked to a Home Assistant login, or "" when there is none."""
         if not user_id:

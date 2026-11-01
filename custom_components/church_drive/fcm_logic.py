@@ -44,3 +44,8 @@ def valid_token_event(service: Any, token: Any) -> bool:
         isinstance(service, str) and service.startswith("mobile_app_") and service.replace("_", "").isalnum()
         and isinstance(token, str) and 20 <= len(token) <= 4096 and " " not in token
     )
+
+
+def push_services(tokens: dict, configured: bool) -> list[str]:
+    """The phones the house can reach through Google (the app asks for this before it stops its own connection)."""
+    return sorted(tokens) if configured else []
