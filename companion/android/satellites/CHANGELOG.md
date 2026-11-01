@@ -1,8 +1,12 @@
 # Church Drive Satellites: changelog
 
-## 0.95.4
+## 0.95.5
 
 - No change to this app.
+
+## 0.95.4
+
+- Fix the app crashing the moment it opened (since 0.95.0): the new "is this person an administrator" setting was created after the line that first set it, so starting the app failed every time. It is created first now. The crash screen added in 0.95.3 also no longer starts the app's main part behind it, which is why it never showed.
 
 ## 0.95.3
 
