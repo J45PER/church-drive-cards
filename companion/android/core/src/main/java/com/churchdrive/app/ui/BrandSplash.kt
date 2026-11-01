@@ -48,7 +48,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.churchdrive.core.R
 
-private val SplashFont = FontFamily(Font(R.font.instrument_sans_semibold, FontWeight.SemiBold))
+/** Instrument Sans in its four weights (Regular, Medium, SemiBold, Bold), the Clive apps' own typeface for splash screens and wordmark text. */
+val BrandFont = FontFamily(
+    Font(R.font.instrument_sans_regular, FontWeight.Normal),
+    Font(R.font.instrument_sans_medium, FontWeight.Medium),
+    Font(R.font.instrument_sans_semibold, FontWeight.SemiBold),
+    Font(R.font.instrument_sans_bold, FontWeight.Bold),
+)
+private val SplashFont = BrandFont
 
 /**
  * The branded screen shown for a moment when an app starts, after the system's own (blank) splash: the app's mark, its name, and
