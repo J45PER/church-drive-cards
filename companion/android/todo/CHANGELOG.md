@@ -3,9 +3,11 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
-## 0.95.3
+## 0.95.4
 
 - The Notifications row uses Clive's own chat icon instead of the Material bell.
+
+## 0.95.3
 
 No app changes.
 

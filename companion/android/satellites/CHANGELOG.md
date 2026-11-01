@@ -1,8 +1,10 @@
 # Church Drive Satellites: changelog
 
-## 0.95.3
+## 0.95.4
 
 - No change to this app.
+
+## 0.95.3
 
 - If the app crashes, the next time it opens it shows what went wrong on a plain screen (with Copy and Try again), so a crash on launch can be read and sent instead of just seen as the app closing.
 
