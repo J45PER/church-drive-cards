@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **v0.94.3 + app 0.94.3 + To-Do 0.94.3 + Satellites 0.94.3** (2026-11-01): Clive's own microphone replaces Material's on every row and button about him, Google push shows the Google G, and the sidebar's To-do row uses the To-Do logo.
 - **v0.94.2 + app 0.94.2 + To-Do 0.94.2 + Satellites 0.94.2** (2026-11-01): the To-Do splash clip is solid again with a clean gap cut round it, instead of two-toned where it overlapped the board.
 - **v0.94.1 + app 0.94.1 + To-Do 0.94.1 + Satellites 0.94.1** (2026-11-01): fixes the crash when opening the settings sidebar in every app: the new cog icons were too long for Android to read, so they are simplified (same look).
 - **v0.94.0 + app 0.94.0 + To-Do 0.94.0 + Satellites 0.94.0** (2026-11-01): the new approved icons are in the apps: the Satellites app uses the satellite speaker icon (with a badge for each job), signal-strength Wi-Fi bars and the Material Design set, the Settings cog is the new rounded one everywhere, and the account panels show the Church Drive, To-Do and Satellites logos in one colour. The splash screens now start on Clive's logo and change shape into each app's logo. The apps are renamed Clive Home Manager, Clive Tasks and Clive Satellite Manager. Design sheets in `satellite/design/`.

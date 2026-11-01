@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.94.3
+
+- Settings: Clive's own microphone (the capsule over a bar his mark turns into) replaces Material's on his four rows and on the small "listening" mark in the top bar. Google push shows the Google G in its colours. The sidebar's To-do row uses the To-Do logo.
+
 ## 0.94.2
 
 - No change to this app; the To-Do splash was fixed.

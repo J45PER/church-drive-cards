@@ -23,7 +23,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -127,7 +126,7 @@ fun AssistantSheet(vm: TodoModel, onClose: () -> Unit) {
                     placeholder = { Text("Add milk, tick off bins…") },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                     keyboardActions = KeyboardActions(onSend = { send(text) }),
-                    trailingIcon = { IconButton(onClick = { listen() }) { Icon(Icons.Filled.Mic, contentDescription = "Speak") } },
+                    trailingIcon = { IconButton(onClick = { listen() }) { Icon(androidx.compose.ui.res.painterResource(com.churchdrive.core.R.drawable.cd_clive_mic), contentDescription = "Speak") } },
                 )
                 FilledIconButton(onClick = { send(text) }, enabled = text.isNotBlank()) { Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send") }
             }

@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.94.3
+
+- No change to this app; the icons in the phone and To-Do apps were updated.
+
 ## 0.94.2
 
 - No change to this app; the To-Do splash was fixed.

@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.94.3
+
+- Clive's own microphone replaces Material's on the button that speaks to him.
+
 ## 0.94.2
 
 - Fixed the To-Do splash: the clip is solid white again, with a clean gap cut round it, instead of half hollow where it overlaps the board.
