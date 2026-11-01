@@ -438,7 +438,7 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                 PanelRow(
                     Icons.Outlined.Notifications, "Google push",
                     "$pushStatus. Tap to try again.",
-                    leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_google_g), contentDescription = null, tint = androidx.compose.ui.graphics.Color.Unspecified) },
+                    leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_google_g), contentDescription = null) },
                     onClick = { com.churchdrive.app.house.GooglePush.register(context) },
                 )
             }

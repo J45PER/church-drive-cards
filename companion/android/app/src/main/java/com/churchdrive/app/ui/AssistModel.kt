@@ -405,6 +405,9 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
 
     private fun onFailed(e: AssistEvent.Failed) {
         note("error ${e.code}")
+        // The house stops a wake-word run every so often when nothing was said; that is only a quiet restart, so he stays "waiting"
+        // (the settings row and the top bar's microphone would otherwise flicker for the moment between the two runs).
+        val quietRestart = (e.code == "wake-word-timeout" || e.code == "timeout") && wakeEnabled && state == AssistState.Waiting
         stopVoiceRun()
         when {
             e.code == "wake-word-timeout" || e.code == "timeout" -> Unit // nothing was said for a while: just listen again
@@ -416,7 +419,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
             }
             else -> notice = "The house answered, but couldn't speak it."
         }
-        if (state != AssistState.Speaking) state = AssistState.Idle
+        if (state != AssistState.Speaking && !quietRestart) state = AssistState.Idle
         resumeWake()
     }
 

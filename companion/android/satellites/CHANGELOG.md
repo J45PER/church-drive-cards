@@ -1,5 +1,13 @@
 # Church Drive Satellites: changelog
 
+## 0.95.3
+
+- No change to this app.
+
+## 0.95.2
+
+- Fix the app crashing: the satellite icons with a badge (and the To-Do logo) had path data of 10 to 19 thousand characters, too long for Android to read back safely, so opening a satellite could crash the app, and it then reopened on that satellite. They are redrawn from the same shapes in under 4 thousand characters.
+
 ## 0.95.1
 
 - No change to this app; the icons in the phone and To-Do apps were updated.
