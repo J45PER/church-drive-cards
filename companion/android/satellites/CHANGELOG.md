@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.91.0
+
+- The launcher icon (and the themed icon) is smaller inside its circle, so the outer ripple is no longer cut off at the edge on round icon masks.
+
 ## 0.90.0
 
 - The sign-in page (with the new mark above it), the cards, section headings, pills, tiles and the round initial button now come from the shared code in `core` (the same as To-Do uses) instead of private copies. They look the same.
