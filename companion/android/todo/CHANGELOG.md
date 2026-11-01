@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.95.6
+
+- Clive's microphone has a longer capsule (72 tall, was 64), in his mark and on the speak button.
+
 ## 0.95.5
 
 - The Notifications row uses Clive's own chat icon instead of the Material bell.

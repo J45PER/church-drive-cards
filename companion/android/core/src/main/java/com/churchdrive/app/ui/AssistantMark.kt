@@ -60,7 +60,8 @@ private val REST_B = Sq(62f, 62f, 76f, 76f, 30f, SHIFT, -SHIFT)
 
 private fun poseOf(p: AssistantGlyphPose): Pair<Sq, Sq> = when (p) {
     AssistantGlyphPose.Idle, AssistantGlyphPose.Thinking -> REST_A to REST_B
-    AssistantGlyphPose.Ready -> Sq(80f, 40f, 40f, 64f, 20f) to Sq(66f, 130f, 68f, 16f, 8f)
+    // The microphone: a capsule 72 tall (approved on the icon board 2026-11-01) over a flat bar.
+    AssistantGlyphPose.Ready -> Sq(80f, 40f, 40f, 72f, 20f) to Sq(66f, 130f, 68f, 16f, 8f)
     // The stop button: one rounded square (the second shape shrinks away to nothing).
     AssistantGlyphPose.Listening -> Sq(70f, 70f, 60f, 60f, 18f) to Sq(100f, 100f, 0f, 0f, 0f)
     AssistantGlyphPose.Speaking -> Sq(64f, 52f, 30f, 96f, 15f) to Sq(106f, 52f, 30f, 96f, 15f)
