@@ -27,6 +27,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.churchdrive.app.ui.ChurchDriveTheme
+import com.churchdrive.app.ui.SignInForm
 
 /** Church Drive Satellites: the house's voice satellites, each with its design, glances and backlight. */
 class MainActivity : ComponentActivity() {
@@ -38,7 +39,13 @@ class MainActivity : ComponentActivity() {
             ChurchDriveTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     if (!vm.signedIn) {
-                        Column(modifier = Modifier.statusBarsPadding().padding(horizontal = 16.dp)) { SignIn(vm) }
+                        SignInForm(
+                            title = "Church Drive Satellites",
+                            blurb = "Sign in with your Home Assistant login. If the Church Drive app is on this phone and signed in, this app uses its sign-in.",
+                            busy = vm.busy, needCode = vm.needCode, error = vm.loginError, changeAddress = false,
+                            onLogin = vm::login, onCode = vm::submitCode,
+                            header = { SatelliteMark(androidx.compose.foundation.isSystemInDarkTheme(), height = 88.dp) },
+                        )
                     } else {
                         SatellitesApp(vm)
                     }
@@ -51,33 +58,5 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         vm.onForeground()
-    }
-}
-
-@Composable
-private fun SignIn(vm: SatelliteModel) {
-    var url by rememberSaveable { mutableStateOf(com.churchdrive.app.HouseAddress.CLOUD_URL) }
-    var user by rememberSaveable { mutableStateOf("") }
-    var password by rememberSaveable { mutableStateOf("") }
-    var code by rememberSaveable { mutableStateOf("") }
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 32.dp)) {
-        SatelliteMark(androidx.compose.foundation.isSystemInDarkTheme(), height = 88.dp)
-        Text("Church Drive Satellites", style = MaterialTheme.typography.headlineSmall)
-        Text("Sign in with your Home Assistant login. If the Church Drive app is on this phone and signed in, this app uses its sign-in.")
-        if (!vm.needCode) {
-            OutlinedTextField(user, { user = it }, label = { Text("Username") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(
-                password, { password = it }, label = { Text("Password") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            )
-            Button(onClick = { vm.login(url, user, password) }, enabled = !vm.busy && url.isNotBlank() && user.isNotBlank() && password.isNotEmpty()) { Text(if (vm.busy) "Signing in…" else "Sign in") }
-        } else {
-            OutlinedTextField(
-                code, { code = it }, label = { Text("Two-step code") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-            )
-            Button(onClick = { vm.submitCode(code) }, enabled = !vm.busy && code.isNotBlank()) { Text(if (vm.busy) "Checking…" else "Continue") }
-        }
-        vm.loginError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
     }
 }

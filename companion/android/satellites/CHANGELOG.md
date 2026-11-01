@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.90.0
+
+- The sign-in page (with the new mark above it), the cards, section headings, pills, tiles and the round initial button now come from the shared code in `core` (the same as To-Do uses) instead of private copies. They look the same.
+
 ## 0.89.0
 
 - New app icon, themed icon and splash: Clive's mark with its top-right square turned into a circle and three ripples going out of it, every gap as thick as the ripples. On the splash only the ripples move: they appear one after another. Designed in `satellite/design/app-icons.html`. The mark is also on the sign-in screen and the empty list.

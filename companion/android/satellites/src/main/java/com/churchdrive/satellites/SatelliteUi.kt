@@ -79,62 +79,19 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.churchdrive.app.ui.PersonButton
 import com.churchdrive.app.ui.Tone
+import com.churchdrive.app.ui.ToneCard
+import com.churchdrive.app.ui.TonePill
+import com.churchdrive.app.ui.ToneSectionHeader
+import com.churchdrive.app.ui.ToneTallTileShape
+import com.churchdrive.app.ui.ToneTile
+import com.churchdrive.app.ui.ToneTileShape
 import com.churchdrive.app.ui.toneColors
 
 // The look is the main app's (companion/android/UI-STANDARDS.md): Material 3 in the phone's own colours, a medium top bar with the
 // person's initial, section headers with a tone icon in a tinted circle, 28dp entity cards tinted by tone, 48dp tiles with the chosen
 // one filled in the tone's strong colour, pills, and the bottom bar.
-
-private val CardShape = RoundedCornerShape(28.dp)
-private val TileShape = RoundedCornerShape(12.dp)
-private val TallTileShape = RoundedCornerShape(18.dp)
-
-/** A section's heading: its tone icon in a tinted circle, the title, and a short summary at the right. */
-@Composable
-private fun SectionHeader(title: String, icon: ImageVector, tone: Tone, summary: String? = null) {
-    val colors = toneColors(tone)
-    Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Box(Modifier.size(36.dp).background(colors.accent.copy(alpha = 0.18f), CircleShape), contentAlignment = Alignment.Center) {
-            Icon(icon, null, tint = colors.accent, modifier = Modifier.size(20.dp))
-        }
-        Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-        if (!summary.isNullOrBlank()) Text(summary, style = MaterialTheme.typography.bodyMedium, color = colors.accent)
-    }
-}
-
-/** The shared card: rounded 28dp, tinted in a tone (or the neutral surface), 20dp inside, 16dp between things. */
-@Composable
-private fun EntityCard(tone: Tone?, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, body: @Composable ColumnScope.(ink: Color, soft: Color) -> Unit) {
-    val colors = tone?.let { toneColors(it) }
-    val container = colors?.container ?: MaterialTheme.colorScheme.surfaceContainer
-    val ink = colors?.onContainer ?: MaterialTheme.colorScheme.onSurface
-    val soft = ink.copy(alpha = 0.75f)
-    Column(
-        modifier.fillMaxWidth().clip(CardShape).background(container).let { if (onClick != null) it.clickable(onClick = onClick) else it }.padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) { body(ink, soft) }
-}
-
-@Composable
-private fun Pill(text: String, tone: Tone, onClick: (() -> Unit)? = null) {
-    val accent = toneColors(tone).accent
-    Text(
-        text, color = accent, style = MaterialTheme.typography.labelMedium, maxLines = 1,
-        modifier = Modifier.clip(CircleShape).background(accent.copy(alpha = 0.18f)).let { if (onClick != null) it.clickable(onClick = onClick) else it }
-            .padding(horizontal = 10.dp, vertical = 3.dp),
-    )
-}
-
-/** A choice tile: 48dp high, the chosen one filled in the tone's strong colour (as the main app's tile rows). */
-@Composable
-private fun Tile(label: String, selected: Boolean, tone: Tone, ink: Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val colors = toneColors(tone)
-    Box(
-        modifier.height(48.dp).clip(TileShape).background(if (selected) colors.accent else ink.copy(alpha = 0.10f)).clickable(onClickLabel = label, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) { Text(label, color = if (selected) colors.onAccent else ink, fontSize = 13.sp, maxLines = 1) }
-}
 
 @Composable
 private fun previewRes(design: SatDesign, state: PreviewState): Int {
@@ -147,17 +104,6 @@ private fun RoundPreview(design: SatDesign, state: PreviewState, size: Int) {
     val id = previewRes(design, state)
     if (id != 0) Image(painterResource(id), "${design.label} design, ${state.label.lowercase()}", Modifier.size(size.dp).clip(CircleShape), contentScale = ContentScale.Crop)
     else Box(Modifier.size(size.dp).clip(CircleShape).background(Color.Black))
-}
-
-@Composable
-private fun PersonButton(name: String?, onClick: () -> Unit) {
-    Box(
-        Modifier.padding(horizontal = 6.dp).size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer)
-            .clickable(onClickLabel = "Account and settings", onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(name?.trim()?.firstOrNull()?.uppercase() ?: "?", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
-    }
 }
 
 // ---------------------------------------------------------------------------------------------------- the app
@@ -216,9 +162,9 @@ private fun SatelliteList(vm: SatelliteModel) {
     val sats = vm.satellites
     val online = sats.count { it.online }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionHeader("Home", Icons.Filled.Home, Tone.Indigo, if (sats.isEmpty()) null else "$online online")
+        ToneSectionHeader("Home", Icons.Filled.Home, Tone.Indigo, if (sats.isEmpty()) null else "$online online")
         if (sats.isEmpty()) {
-            EntityCard(null) { ink, soft ->
+            ToneCard(null) { ink, soft ->
                 SatelliteMark(androidx.compose.foundation.isSystemInDarkTheme(), height = 64.dp, animate = false)
                 Text(if (vm.connected) "No satellites yet" else "Connecting to the house…", style = MaterialTheme.typography.titleMedium, color = ink)
                 Text(
@@ -227,10 +173,10 @@ private fun SatelliteList(vm: SatelliteModel) {
                 )
             }
         } else {
-            EntityCard(null) { ink, soft ->
+            ToneCard(null) { ink, soft ->
                 sats.forEach { s ->
                     Row(
-                        Modifier.fillMaxWidth().clip(TileShape).clickable { vm.openSlug = s.slug },
+                        Modifier.fillMaxWidth().clip(ToneTileShape).clickable { vm.openSlug = s.slug },
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         val tone = toneColors(Tone.Indigo)
@@ -245,7 +191,7 @@ private fun SatelliteList(vm: SatelliteModel) {
                             )
                         }
                         val warning = s.warning()
-                        if (warning != null) Pill(warning, if (s.online) Tone.Amber else Tone.Red) else Pill("Online", Tone.Green)
+                        if (warning != null) TonePill(warning, if (s.online) Tone.Amber else Tone.Red) else TonePill("Online", Tone.Green)
                     }
                 }
             }
@@ -280,45 +226,45 @@ private fun AddPage(vm: SatelliteModel) {
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionHeader("Add a satellite", Icons.Filled.QrCodeScanner, Tone.Teal)
+        ToneSectionHeader("Add a satellite", Icons.Filled.QrCodeScanner, Tone.Teal)
         when (val step = vm.pairStep) {
-            is SatelliteModel.PairStep.Idle -> EntityCard(Tone.Teal) { ink, soft ->
+            is SatelliteModel.PairStep.Idle -> ToneCard(Tone.Teal) { ink, soft ->
                 Text("1. On the satellite, open Settings > Pair or reset. A new one shows the code by itself.", color = ink, style = MaterialTheme.typography.bodyLarge)
                 Text("2. Scan the QR code on its screen (or its sticker, if it has no screen).", color = ink, style = MaterialTheme.typography.bodyLarge)
                 Text("3. Give it the home Wi-Fi. It joins and is added to Home Assistant for you.", color = ink, style = MaterialTheme.typography.bodyLarge)
                 if (!granted) {
-                    Tile("Allow Bluetooth to continue", false, Tone.Teal, ink, Modifier.fillMaxWidth()) { askPermission.launch(needed) }
+                    ToneTile("Allow Bluetooth to continue", false, Tone.Teal, ink, Modifier.fillMaxWidth()) { askPermission.launch(needed) }
                     Text("Bluetooth is how the Wi-Fi is sent to the satellite. Nothing else uses it.", style = MaterialTheme.typography.bodySmall, color = soft)
                 } else {
-                    Tile("Scan the QR code", true, Tone.Teal, ink, Modifier.fillMaxWidth()) { scan() }
+                    ToneTile("Scan the QR code", true, Tone.Teal, ink, Modifier.fillMaxWidth()) { scan() }
                 }
                 scanError?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error) }
             }
             is SatelliteModel.PairStep.Scanned -> PairForm(vm, step.code)
-            is SatelliteModel.PairStep.Working -> EntityCard(Tone.Teal) { ink, soft ->
+            is SatelliteModel.PairStep.Working -> ToneCard(Tone.Teal) { ink, soft ->
                 androidx.compose.material3.CircularProgressIndicator()
                 Text(step.message, color = ink, style = MaterialTheme.typography.titleMedium)
                 Text("Keep the phone next to the satellite and its code showing. This takes up to a couple of minutes.", style = MaterialTheme.typography.bodySmall, color = soft)
             }
-            is SatelliteModel.PairStep.Done -> EntityCard(Tone.Green) { ink, soft ->
+            is SatelliteModel.PairStep.Done -> ToneCard(Tone.Green) { ink, soft ->
                 Text("The satellite is added", color = ink, style = MaterialTheme.typography.titleMedium)
                 step.note?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = soft) }
-                if (step.slug != null) Tile("Set it up", true, Tone.Green, ink, Modifier.fillMaxWidth()) { vm.pairReset(); vm.openSlug = step.slug }
-                Tile("Done", false, Tone.Green, ink, Modifier.fillMaxWidth()) { vm.pairReset() }
+                if (step.slug != null) ToneTile("Set it up", true, Tone.Green, ink, Modifier.fillMaxWidth()) { vm.pairReset(); vm.openSlug = step.slug }
+                ToneTile("Done", false, Tone.Green, ink, Modifier.fillMaxWidth()) { vm.pairReset() }
             }
-            is SatelliteModel.PairStep.Failed -> EntityCard(Tone.Red) { ink, soft ->
+            is SatelliteModel.PairStep.Failed -> ToneCard(Tone.Red) { ink, soft ->
                 Text("That didn't work", color = ink, style = MaterialTheme.typography.titleMedium)
                 Text(step.message, style = MaterialTheme.typography.bodyMedium, color = soft)
-                Tile("Try again", true, Tone.Red, ink, Modifier.fillMaxWidth()) { vm.pairReset() }
+                ToneTile("Try again", true, Tone.Red, ink, Modifier.fillMaxWidth()) { vm.pairReset() }
             }
         }
         if (vm.pairStep is SatelliteModel.PairStep.Idle) {
-            EntityCard(null) { ink, soft ->
+            ToneCard(null) { ink, soft ->
                 Text("Can't scan?", color = ink, style = MaterialTheme.typography.titleMedium)
                 Text("Type the name and the six digits shown under the QR code.", style = MaterialTheme.typography.bodySmall, color = soft)
                 OutlinedTextField(typedName, { typedName = it.trim() }, singleLine = true, label = { Text("Name, for example clive-round") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(typedCode, { typedCode = it.filter(Char::isDigit).take(6) }, singleLine = true, label = { Text("Code") }, modifier = Modifier.fillMaxWidth())
-                Tile("Continue", false, Tone.Teal, ink, Modifier.fillMaxWidth()) {
+                ToneTile("Continue", false, Tone.Teal, ink, Modifier.fillMaxWidth()) {
                     if (typedName.isNotBlank() && typedCode.length == 6) vm.pairScanned(PairCode(typedName, typedCode))
                 }
             }
@@ -331,7 +277,7 @@ private fun PairForm(vm: SatelliteModel, code: PairCode) {
     var ssid by remember { mutableStateOf(vm.wifiName) }
     var password by remember { mutableStateOf("") }
     var key by remember { mutableStateOf(vm.apiKey) }
-    EntityCard(Tone.Teal) { ink, soft ->
+    ToneCard(Tone.Teal) { ink, soft ->
         Text("Found ${code.device}", color = ink, style = MaterialTheme.typography.titleMedium)
         Text("Check the code on its screen says ${code.spaced}.", style = MaterialTheme.typography.bodyMedium, color = soft)
         OutlinedTextField(ssid, { ssid = it }, singleLine = true, label = { Text("Home Wi-Fi name") }, modifier = Modifier.fillMaxWidth())
@@ -344,8 +290,8 @@ private fun PairForm(vm: SatelliteModel, code: PairCode) {
             visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
         )
         Text("The API key is the clive_round_api_key in satellite/secrets.yaml that the satellites were built with. It is kept on this phone so the next one is quicker. The Wi-Fi password is not kept.", style = MaterialTheme.typography.bodySmall, color = soft)
-        Tile("Pair", true, Tone.Teal, ink, Modifier.fillMaxWidth()) { if (ssid.isNotBlank() && key.isNotBlank()) vm.pair(code, ssid, password, key) }
-        Tile("Cancel", false, Tone.Teal, ink, Modifier.fillMaxWidth()) { vm.pairReset() }
+        ToneTile("Pair", true, Tone.Teal, ink, Modifier.fillMaxWidth()) { if (ssid.isNotBlank() && key.isNotBlank()) vm.pair(code, ssid, password, key) }
+        ToneTile("Cancel", false, Tone.Teal, ink, Modifier.fillMaxWidth()) { vm.pairReset() }
     }
 }
 
@@ -373,7 +319,7 @@ private fun DetailPage(vm: SatelliteModel, sat: Satellite, onPerson: () -> Unit)
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
-            if (!sat.online) EntityCard(Tone.Amber) { ink, soft ->
+            if (!sat.online) ToneCard(Tone.Amber) { ink, soft ->
                 Text("Offline", style = MaterialTheme.typography.titleMedium, color = ink)
                 Text("Home Assistant can't reach this satellite, so changes will wait until it is back.", style = MaterialTheme.typography.bodyMedium, color = soft)
             }
@@ -399,19 +345,19 @@ private fun DetailPage(vm: SatelliteModel, sat: Satellite, onPerson: () -> Unit)
 private fun DesignSection(vm: SatelliteModel, sat: Satellite) {
     val current = vm.pendingDesign ?: sat.design ?: SatDesign.Glance
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionHeader("Design", Icons.Filled.Palette, Tone.Indigo, current.label)
-        EntityCard(Tone.Indigo) { ink, soft ->
+        ToneSectionHeader("Design", Icons.Filled.Palette, Tone.Indigo, current.label)
+        ToneCard(Tone.Indigo) { ink, soft ->
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { RoundPreview(current, vm.previewState, 176) }
             Text("Preview the flow", style = MaterialTheme.typography.bodySmall, color = soft)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PreviewState.entries.forEach { st -> Tile(st.label, vm.previewState == st, Tone.Indigo, ink, Modifier.weight(1f)) { vm.previewState = st } }
+                PreviewState.entries.forEach { st -> ToneTile(st.label, vm.previewState == st, Tone.Indigo, ink, Modifier.weight(1f)) { vm.previewState = st } }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 val accent = toneColors(Tone.Indigo)
                 SatDesign.entries.forEach { d ->
                     val selected = d == current
                     Column(
-                        Modifier.weight(1f).clip(TallTileShape).background(if (selected) accent.accent else ink.copy(alpha = 0.10f)).clickable(onClickLabel = d.label) { vm.chooseDesign(sat, d) }.padding(vertical = 8.dp, horizontal = 3.dp),
+                        Modifier.weight(1f).clip(ToneTallTileShape).background(if (selected) accent.accent else ink.copy(alpha = 0.10f)).clickable(onClickLabel = d.label) { vm.chooseDesign(sat, d) }.padding(vertical = 8.dp, horizontal = 3.dp),
                         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         RoundPreview(d, PreviewState.Resting, 46)
@@ -427,11 +373,11 @@ private fun DesignSection(vm: SatelliteModel, sat: Satellite) {
 @Composable
 private fun TemperatureSection(sat: Satellite) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionHeader("Temperatures", Icons.Filled.Thermostat, Tone.Amber, "From the house")
-        EntityCard(null) { ink, soft ->
+        ToneSectionHeader("Temperatures", Icons.Filled.Thermostat, Tone.Amber, "From the house")
+        ToneCard(null) { ink, soft ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("Outside, from the weather feed", color = ink, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                Pill("Always on", Tone.Green)
+                TonePill("Always on", Tone.Green)
             }
             Text("The outside temperature is always the weather feed's, with no setting. The inside one shows in the Glance design only.", style = MaterialTheme.typography.bodySmall, color = soft)
         }
@@ -441,14 +387,14 @@ private fun TemperatureSection(sat: Satellite) {
 @Composable
 private fun GlanceSection(vm: SatelliteModel, sat: Satellite) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionHeader("Glances", Icons.Filled.Tune, Tone.Teal, "3 of 3")
-        EntityCard(null) { ink, soft ->
+        ToneSectionHeader("Glances", Icons.Filled.Tune, Tone.Teal, "3 of 3")
+        ToneCard(null) { ink, soft ->
             (0..2).forEach { slot ->
                 var menu by remember { mutableStateOf(false) }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("Glance ${slot + 1}", color = ink, style = MaterialTheme.typography.bodyLarge)
                     Box {
-                        Pill(sat.glances.getOrNull(slot)?.ifBlank { null } ?: "Choose", Tone.Teal) { menu = true }
+                        TonePill(sat.glances.getOrNull(slot)?.ifBlank { null } ?: "Choose", Tone.Teal) { menu = true }
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                             GLANCE_OPTIONS.forEach { option -> DropdownMenuItem(text = { Text(option) }, onClick = { menu = false; vm.chooseGlance(sat, slot, option) }) }
                         }
@@ -475,8 +421,8 @@ private fun SliderRow(label: String, value: Float?, range: ClosedFloatingPointRa
 @Composable
 private fun BacklightSection(vm: SatelliteModel, sat: Satellite) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionHeader("Backlight", Icons.Filled.Brightness6, Tone.Blue, if (sat.nightStart != null) "Dims at ${"%02d".format(sat.nightStart)}:00" else null)
-        EntityCard(null) { ink, soft ->
+        ToneSectionHeader("Backlight", Icons.Filled.Brightness6, Tone.Blue, if (sat.nightStart != null) "Dims at ${"%02d".format(sat.nightStart)}:00" else null)
+        ToneCard(null) { ink, soft ->
             SliderRow("Day", sat.backlightDay, 8f..100f, "%", ink, soft) { vm.setNumber(sat, "backlight_day", it) }
             SliderRow("Night", sat.backlightNight, 1f..100f, "%", ink, soft) { vm.setNumber(sat, "backlight_night", it) }
             SliderRow("Night starts at", sat.nightStart?.toFloat(), 0f..23f, ":00", ink, soft) { vm.setNumber(sat, "night_starts_hour", it) }
@@ -488,8 +434,8 @@ private fun BacklightSection(vm: SatelliteModel, sat: Satellite) {
 @Composable
 private fun SwitchSection(vm: SatelliteModel, sat: Satellite) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionHeader("On the satellite", Icons.Filled.Speaker, Tone.Purple, sat.signal?.let { "Wi-Fi $it dBm" })
-        EntityCard(null) { ink, _ ->
+        ToneSectionHeader("On the satellite", Icons.Filled.Speaker, Tone.Purple, sat.signal?.let { "Wi-Fi $it dBm" })
+        ToneCard(null) { ink, _ ->
             listOf(
                 Triple("Microphone", sat.microphone, "microphone"), Triple("Spoken answers", sat.spokenAnswers, "spoken_answers"),
                 Triple("Follow-up listening", sat.followUp, "follow_up_listening"), Triple("Night mode", sat.nightMode, "night_mode"),
@@ -524,8 +470,8 @@ private fun whenText(iso: String?): String? = iso?.let {
 @Composable
 private fun StatusSection(sat: Satellite) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionHeader("Status", Icons.Filled.Info, Tone.Green, if (sat.online) "Online" else "Offline")
-        EntityCard(null) { ink, soft ->
+        ToneSectionHeader("Status", Icons.Filled.Info, Tone.Green, if (sat.online) "Online" else "Offline")
+        ToneCard(null) { ink, soft ->
             val dbm = sat.signal?.toIntOrNull()
             FactRow("Wi-Fi", dbm?.let { "${signalWords(it)} ($it dBm)" } ?: "–", ink, soft)
             sat.network?.let { FactRow("Network", it, ink, soft) }
@@ -541,14 +487,14 @@ private fun StatusSection(sat: Satellite) {
 private fun UpdateSection(vm: SatelliteModel, sat: Satellite) {
     val update = sat.update ?: return
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionHeader("Firmware", Icons.Filled.SystemUpdate, Tone.Orange, if (update.available) "Update ready" else "Up to date")
-        EntityCard(if (update.available) Tone.Orange else null) { ink, soft ->
+        ToneSectionHeader("Firmware", Icons.Filled.SystemUpdate, Tone.Orange, if (update.available) "Update ready" else "Up to date")
+        ToneCard(if (update.available) Tone.Orange else null) { ink, soft ->
             Text(
                 if (update.available) "Version ${update.latest ?: "newer"} is ready. This one has ${update.installed ?: "an older version"}." else "Running ${update.installed ?: "the latest firmware"}.",
                 color = ink, style = MaterialTheme.typography.bodyLarge,
             )
             if (update.available) {
-                Tile(if (update.installing) "Installing…" else "Install the update", false, Tone.Orange, ink, Modifier.fillMaxWidth()) { if (!update.installing) vm.installUpdate(sat) }
+                ToneTile(if (update.installing) "Installing…" else "Install the update", false, Tone.Orange, ink, Modifier.fillMaxWidth()) { if (!update.installing) vm.installUpdate(sat) }
                 Text("The satellite restarts when it finishes, which takes a minute or two.", style = MaterialTheme.typography.bodySmall, color = soft)
             }
         }
@@ -558,11 +504,11 @@ private fun UpdateSection(vm: SatelliteModel, sat: Satellite) {
 @Composable
 private fun SoundSection(vm: SatelliteModel, sat: Satellite) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionHeader("Sound", Icons.Filled.VolumeUp, Tone.Coral, sat.volume?.let { "${it.toInt()}%" })
-        EntityCard(null) { ink, soft ->
+        ToneSectionHeader("Sound", Icons.Filled.VolumeUp, Tone.Coral, sat.volume?.let { "${it.toInt()}%" })
+        ToneCard(null) { ink, soft ->
             SliderRow("Speaker volume", sat.volume, 0f..100f, "%", ink, soft) { vm.setNumber(sat, "volume", it) }
             if (sat.canSpeak) {
-                Tile("Say hello", false, Tone.Coral, ink, Modifier.fillMaxWidth()) { vm.sayHello(sat) }
+                ToneTile("Say hello", false, Tone.Coral, ink, Modifier.fillMaxWidth()) { vm.sayHello(sat) }
                 Text("Makes this satellite say a short line, to hear the volume and to tell which one it is.", style = MaterialTheme.typography.bodySmall, color = soft)
             }
         }
@@ -575,16 +521,16 @@ private fun NameRoomSection(vm: SatelliteModel, sat: Satellite) {
     var menu by remember { mutableStateOf(false) }
     val room = vm.roomOf[sat.slug]
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionHeader("Name and room", Icons.Filled.LocationOn, Tone.Teal)
-        EntityCard(null) { ink, soft ->
+        ToneSectionHeader("Name and room", Icons.Filled.LocationOn, Tone.Teal)
+        ToneCard(null) { ink, soft ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(sat.name, color = ink, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f), maxLines = 1)
-                Pill("Rename", Tone.Teal) { renaming = true }
+                TonePill("Rename", Tone.Teal) { renaming = true }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("Room", color = ink, style = MaterialTheme.typography.bodyLarge)
                 Box {
-                    Pill(vm.areas.firstOrNull { it.first == room }?.second ?: "No room", Tone.Teal) { menu = true }
+                    TonePill(vm.areas.firstOrNull { it.first == room }?.second ?: "No room", Tone.Teal) { menu = true }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                         DropdownMenuItem(text = { Text("No room") }, onClick = { menu = false; vm.setRoom(sat, null) })
                         vm.areas.forEach { (id, name) -> DropdownMenuItem(text = { Text(name) }, onClick = { menu = false; vm.setRoom(sat, id) }) }
@@ -612,21 +558,21 @@ private fun ActionsSection(vm: SatelliteModel, sat: Satellite) {
     var confirmRemove by remember { mutableStateOf(false) }
     var confirmReset by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionHeader("Actions", Icons.Filled.RestartAlt, Tone.Red)
-        EntityCard(null) { ink, soft ->
+        ToneSectionHeader("Actions", Icons.Filled.RestartAlt, Tone.Red)
+        ToneCard(null) { ink, soft ->
             if ("identify" in sat.buttons) {
-                Tile("Flash the screen", false, Tone.Blue, ink, Modifier.fillMaxWidth()) { vm.press(sat, "identify") }
+                ToneTile("Flash the screen", false, Tone.Blue, ink, Modifier.fillMaxWidth()) { vm.press(sat, "identify") }
             }
             if ("clean_screen" in sat.buttons) {
-                Tile("Clean screen (30 seconds)", false, Tone.Blue, ink, Modifier.fillMaxWidth()) { vm.press(sat, "clean_screen") }
+                ToneTile("Clean screen (30 seconds)", false, Tone.Blue, ink, Modifier.fillMaxWidth()) { vm.press(sat, "clean_screen") }
             }
             if ("restart" in sat.buttons) {
-                Tile("Restart", false, Tone.Red, ink, Modifier.fillMaxWidth()) { confirmRestart = true }
+                ToneTile("Restart", false, Tone.Red, ink, Modifier.fillMaxWidth()) { confirmRestart = true }
             }
             if ("reset_pairing" in sat.buttons) {
-                Tile("Reset pairing (forget the Wi-Fi)", false, Tone.Red, ink, Modifier.fillMaxWidth()) { confirmReset = true }
+                ToneTile("Reset pairing (forget the Wi-Fi)", false, Tone.Red, ink, Modifier.fillMaxWidth()) { confirmReset = true }
             }
-            Tile("Remove from Home Assistant", false, Tone.Red, ink, Modifier.fillMaxWidth()) { confirmRemove = true }
+            ToneTile("Remove from Home Assistant", false, Tone.Red, ink, Modifier.fillMaxWidth()) { confirmRemove = true }
             if ("clean_screen" in sat.buttons) Text("Clean screen ignores touches for 30 seconds so the glass can be wiped.", style = MaterialTheme.typography.bodySmall, color = soft)
         }
     }
@@ -665,14 +611,14 @@ private fun ActionsSection(vm: SatelliteModel, sat: Satellite) {
 private fun VoiceSection(vm: SatelliteModel, sat: Satellite) {
     if (sat.voice.isEmpty()) return
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionHeader("Voice", Icons.Filled.RecordVoiceOver, Tone.Indigo)
-        EntityCard(null) { ink, soft ->
+        ToneSectionHeader("Voice", Icons.Filled.RecordVoiceOver, Tone.Indigo)
+        ToneCard(null) { ink, soft ->
             sat.voice.forEach { v ->
                 var menu by remember { mutableStateOf(false) }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text(v.label, color = ink, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                     Box {
-                        Pill(v.state.ifBlank { "Choose" }, Tone.Indigo) { menu = true }
+                        TonePill(v.state.ifBlank { "Choose" }, Tone.Indigo) { menu = true }
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                             v.options.forEach { o -> DropdownMenuItem(text = { Text(o) }, onClick = { menu = false; vm.chooseVoice(v, o) }) }
                         }
@@ -713,15 +659,15 @@ private fun PresetsSection(vm: SatelliteModel, sat: Satellite) {
     var applying by remember { mutableStateOf<Preset?>(null) }
     val others = vm.satellites.filter { it.slug != sat.slug }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionHeader("Presets and copying", Icons.Filled.ContentCopy, Tone.Orange, if (vm.presets.isEmpty()) null else "${vm.presets.size} saved")
-        EntityCard(null) { ink, soft ->
-            Tile("Save these settings as a preset", false, Tone.Orange, ink, Modifier.fillMaxWidth()) { naming = true }
-            if (others.isNotEmpty()) Tile("Copy these settings to other satellites", false, Tone.Orange, ink, Modifier.fillMaxWidth()) { copying = true }
+        ToneSectionHeader("Presets and copying", Icons.Filled.ContentCopy, Tone.Orange, if (vm.presets.isEmpty()) null else "${vm.presets.size} saved")
+        ToneCard(null) { ink, soft ->
+            ToneTile("Save these settings as a preset", false, Tone.Orange, ink, Modifier.fillMaxWidth()) { naming = true }
+            if (others.isNotEmpty()) ToneTile("Copy these settings to other satellites", false, Tone.Orange, ink, Modifier.fillMaxWidth()) { copying = true }
             vm.presets.forEach { p ->
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(p.name, color = ink, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f), maxLines = 1)
-                    Pill("Apply", Tone.Orange) { applying = p }
-                    Pill("Delete", Tone.Grey) { vm.deletePreset(p.name) }
+                    TonePill("Apply", Tone.Orange) { applying = p }
+                    TonePill("Delete", Tone.Grey) { vm.deletePreset(p.name) }
                 }
             }
             Text("A preset holds the design, glances, backlight, night hours, volume and the spoken-answers and follow-up switches. Parts a satellite doesn't have are skipped.", style = MaterialTheme.typography.bodySmall, color = soft)

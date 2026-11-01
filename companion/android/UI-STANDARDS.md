@@ -41,8 +41,9 @@ The mechanical ones are checked by `UiStandardsTest` (it fails the build); the r
 - **Clive's button is one component**: `AssistantRound` and `AssistOrb` in `core/.../ui/AssistantOrb.kt` (the coloured cloud on a circle the
   colour of the bottom bar, white mark over it, 58 dp, with the outline and shadow). Every app uses it; never draw another Clive button, glyph
   circle or orb. The phone app picks the palette (`assistPalette()`); apps with no such setting pass `AssistClassicPalette`.
-- **Anything a second app needs goes in `core`**, not copied. The Satellites app still has its own private copies of `EntityCard`,
-  `SectionHeader`, `Pill` and `Tile`; they are the next things to move into `core` when they change.
+- **Anything a second app needs goes in `core`**, not copied. The small apps (To-Do, Satellites) share `ToneKit.kt` (`ToneCard`, `ToneSectionHeader`,
+  `TonePill`, `ToneTile`, `PersonButton`) and `SignInForm.kt`; use those, don't make private copies. (The phone app keeps its richer
+  `EntityCard` and tile rows in `ui/Cards.kt` and `ui/UiKit.kt`.)
 
 ## What `UiStandardsTest` checks
 
