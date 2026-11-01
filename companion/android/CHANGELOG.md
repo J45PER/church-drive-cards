@@ -8,6 +8,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 - **"Which car is plugged in?"** replaces "Confirm car to charge tonight": the Home page card and the notification now have **Primary** (the car on the Octopus app, today the ID.5: charges in the 23:30 to 05:30 cheap window and whenever Octopus schedules it), **Additional** (any other car: cheap window only) and **No**. The old Yes button still works and counts as Primary. Needs the Home Assistant changes described in `ha/zappi-octopus-intelligent.md`.
 - **The car charger card has the dashboard card's choice of car.** While a car is plugged in, Primary / Additional shows under Smart charge (picking one on a car nobody has answered for also confirms it), and the card says the Octopus rate now.
+- **Boost (Octopus) on the charger card.** For the Primary car while it is plugged in, a Boost tile turns Octopus's bump charge on or off. Boost charges now, but Octopus bills it at the standard rate, not the cheap one, and the card says so.
 - **The Car card lists the ID.5.** Its battery % and Octopus's charging plan ("Octopus charging until 05:30", "Next Octopus charge 02:30 to 04:30") come from the Octopus integration; it shows as plugged in and charging when it is the Primary car on the Zappi. Octopus gives no range or place for it.
 
 ## 0.85.0

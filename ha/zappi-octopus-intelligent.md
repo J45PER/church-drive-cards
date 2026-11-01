@@ -30,6 +30,8 @@ Charging always uses **Fast**; Eco and Eco+ are not used by smart charge. The ga
 - The phone app has the same choice as the dashboard: the Home page "Which car is plugged in?" card (Primary / Additional / No) and the notification buttons, and the charger card shows Primary / Additional under Smart charge plus the Octopus rate now. In the app it is two tiles, not a drop-down, to follow the app's look-and-feel rules (`companion/android/UI-STANDARDS.md`).
 - The Car card (dashboard and app) lists the ID.5 from the Octopus Intelligent device: battery %, "Octopus charging until ..." or "Next Octopus charge ... to ...". Octopus gives no plug, range or place, so it shows as plugged in and charging when the Zappi is and the role is Primary. Range and location need a VW integration (the card already supports `vag_connect`, `volkswagencarnet` and `volkswagen_we_connect_id` if one is added).
 
+- **Boost (Octopus)** is on the charger card (dashboard and app) for the Primary car while plugged in: it switches `switch.octopus_energy_..._intelligent_bump_charge`. Octopus's FAQ says a Boost charge is billed at the standard rate even during 23:30 to 05:30 ("the car rate flips back to this rate (even if it happens at 2:00 AM ...)"), and Octopus swaps its smart plan for a BOOST dispatch while it is on, so the card says so. The FAQ does not say that Boost, or charging another car (the Astra), stops later smart charging; that is untested.
+
 ## Still to do
 - The compact Charging card does not show the car choice yet; the full card does.
 - Watch whether Octopus really holds the ID.5 off outside its slots before considering "always on" for the Primary car.

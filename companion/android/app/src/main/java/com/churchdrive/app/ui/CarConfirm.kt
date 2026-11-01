@@ -59,6 +59,24 @@ fun carRoleText(c: CarRoleChoice): String = when {
     else -> "Not answered yet, so it will not charge"
 }
 
+/** Octopus's Boost ("bump charge") switch for the car it controls, and whether it is on. */
+data class BoostSwitch(val entityId: String, val on: Boolean)
+
+private val BOOST_SWITCH = Regex("switch\\.octopus_energy_.*_intelligent_bump_charge")
+
+/**
+ * The Boost tile: only for the Primary car while it is plugged in (Octopus controls no other car), and only when the house has Octopus's
+ * Boost switch. Boost charges now, billed at the standard rate rather than the cheap one, so the card says so.
+ */
+fun boostSwitch(entities: Map<String, EntityState>): BoostSwitch? {
+    if (carRoleChoice(entities)?.role != CAR_ROLE_PRIMARY) return null
+    val e = entities.values.firstOrNull { it.available && BOOST_SWITCH.matches(it.entityId) } ?: return null
+    return BoostSwitch(e.entityId, e.state == "on")
+}
+
+fun boostText(b: BoostSwitch): String =
+    if (b.on) "On: Octopus is charging now, at the standard rate" else "Charge now, at the standard rate, not the cheap rate"
+
 /**
  * Choose which car is plugged in. A car nobody has answered for is confirmed by the choice (the Yes script, with the role); one that is
  * already confirmed only changes its role, so a charge somebody took over by hand carries on.

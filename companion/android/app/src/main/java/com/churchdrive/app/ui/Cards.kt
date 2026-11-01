@@ -650,6 +650,16 @@ fun ChargerCard(entities: Map<String, EntityState>, call: CallService) {
                 )
                 Text("Car plugged in · " + carRoleText(c), style = MaterialTheme.typography.bodySmall)
             }
+            // Octopus's Boost, for the Primary car: charge now, at the standard rate (the text says so).
+            boostSwitch(entities)?.let { b ->
+                TileRow(
+                    listOf(TileItem("mdi:rocket-launch", "Boost (Octopus)", b.on) {
+                        call("switch", if (b.on) "turn_off" else "turn_on", b.entityId, data())
+                    }),
+                    teal, tone.onContainer, true,
+                )
+                Text(boostText(b), style = MaterialTheme.typography.bodySmall)
+            }
         }
         TileRow(
             chargerModes(mode?.options().orEmpty()).map { m ->

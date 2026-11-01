@@ -3,9 +3,12 @@ package com.churchdrive.app
 import com.churchdrive.app.ha.EntityState
 import com.churchdrive.app.ha.parseNoticeButton
 import com.churchdrive.app.ha.NoticeButton
+import com.churchdrive.app.ui.BoostSwitch
 import com.churchdrive.app.ui.CarEntities
 import com.churchdrive.app.ui.CarRoleChoice
 import com.churchdrive.app.ui.OctopusCar
+import com.churchdrive.app.ui.boostSwitch
+import com.churchdrive.app.ui.boostText
 import com.churchdrive.app.ui.carNeedsConfirm
 import com.churchdrive.app.ui.carRoleChoice
 import com.churchdrive.app.ui.carRoleText
@@ -91,6 +94,25 @@ class CarConfirmTest {
             e("sensor.zappi_plug_status", "EV Disconnected"), e(role, "Primary"),
         )
         assertEquals(OctopusCar(false, false, "Next Octopus charge 02:30 to 04:30"), octopusCarState(noCar, waiting, ZoneOffset.UTC))
+    }
+
+    private val boostId = "switch.octopus_energy_00000000_0002_4000_8020_00000012e6f1_intelligent_bump_charge"
+
+    @Test fun boostShowsOnlyForThePrimaryCarWhilePluggedIn() {
+        val primary = house("EV Connected", "on", "Manual") + e(role, "Primary") + e(boostId, "off")
+        assertEquals(BoostSwitch(boostId, false), boostSwitch(primary))
+        assertEquals(BoostSwitch(boostId, true), boostSwitch(primary + e(boostId, "on")))
+        // The Additional car is not controlled by Octopus, so there is nothing to boost.
+        assertNull(boostSwitch(primary + e(role, "Additional")))
+        // Nothing plugged in, or a house without Octopus's Boost switch.
+        assertNull(boostSwitch(house("EV Disconnected", "on", "Idle") + e(role, "Primary") + e(boostId, "off")))
+        assertNull(boostSwitch(house("EV Connected", "on", "Manual") + e(role, "Primary")))
+        assertNull(boostSwitch(primary + e(boostId, "unavailable")))
+    }
+
+    @Test fun boostSaysItIsAtTheStandardRate() {
+        assertEquals("Charge now, at the standard rate, not the cheap rate", boostText(BoostSwitch(boostId, false)))
+        assertEquals("On: Octopus is charging now, at the standard rate", boostText(BoostSwitch(boostId, true)))
     }
 
     @Test fun aCarNotMadeByOctopusIsLeftAlone() {
