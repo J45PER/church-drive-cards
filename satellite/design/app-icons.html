@@ -52,11 +52,11 @@ body { background: var(--bar-bg); color: var(--bar-fg); font-family: var(--ui); 
 </style>
 
 <div class="top">
-  <div><h1>Satellites app icons</h1><p>Eight icons in the same family as the house and the clipboard: one object, Clive's rounded square tucked in and cut out where they overlap. The one-colour mark sits on the page; the app icon fills it with Clive's glow on white.</p></div>
+  <div><h1>Satellites app icons</h1><p>Eight icons that start from Clive's own mark, two rounded squares with the overlap cut out, and add one thing to it. The one-colour mark sits on the page; the app icon fills it with Clive's glow on white, as the house and the clipboard are.</p></div>
   <div class="seg" role="group" aria-label="Page"><button type="button" id="pl" aria-pressed="true">Light icons</button><button type="button" id="pd" aria-pressed="false">Dark icons</button></div>
 </div>
 <div class="stage"><div class="in">
-  <p class="note">The movement is for the app only (its splash and its own screens). The block drifts in and out of the object over four seconds, as Clive's idle mark does, and each object makes one small movement of its own. Nothing here changes Clive's mark or the animations on the satellites. Press "Pick" on one, or tell me two to combine.</p>
+  <p class="note">The movement is for the app only (its splash and its own screens). The two squares drift in and out over four seconds, as Clive's idle mark does, and each added part makes one small movement of its own. Nothing here changes Clive's mark or the animations on the satellites. Press "Pick" on one, or tell me two to combine.</p>
   <div id="opts"></div>
 </div></div>
 
@@ -95,35 +95,42 @@ body { background: var(--bar-bg); color: var(--bar-fg); font-family: var(--ui); 
   // The drift, as in the app's idle pose: in and out along the diagonal, once every four seconds.
   function drift(t) { var k = 0.45 + 0.55 * wave((t / 4000) % 1); return [SH * k, -SH * k]; }
 
+  // Every option starts from Clive's own mark: two rounded squares running bottom-left to top-right with the overlap cut out. S is how far they sit from the centre.
+  function sx(t) { return SH * (0.45 + 0.55 * wave((t / 4000) % 1)); }
+  function mark(cx, cy, w, r, S) { return rr(cx - S - w / 2, cy + S - w / 2, w, w, r) + ' ' + rr(cx + S - w / 2, cy - S - w / 2, w, w, r); }
+  function ring(cx, cy, rx, ry, th, deg) {
+    var o = function (a, b) { return P(rot(a, b, cx, cy, deg)); };
+    function ell(x, y) { return 'M' + o(-x, 0) + ' A' + x + ',' + y + ' ' + deg + ' 1 0 ' + o(x, 0) + ' A' + x + ',' + y + ' ' + deg + ' 1 0 ' + o(-x, 0) + 'Z'; }
+    return ell(rx, ry) + ' ' + ell(rx - th, ry - th);
+  }
+
   // The eight options. frame(t) gives one path for t ms after the start; t = 0 is the still version.
   var OPTIONS = [
-    { id: "A", name: "Round screen", why: "The device itself: a round display with its dock cut into the bottom. In the app it listens: the dock bar widens and narrows.",
-      frame: function (t) { var d = drift(t), bar = 52 + 14 * wave((t / 2400) % 1);
-        return circ(92, 110, 62) + ' ' + rr(92 - bar / 2, 148, bar, 12, 6) + ' ' + block(104, 22, d[0], d[1]); } },
-    { id: "B", name: "Smart speaker", why: "A speaker with a round face on a base. The mic dot breathes.",
-      frame: function (t) { var d = drift(t), m = 8 + 3 * wave((t / 3000) % 1);
-        return circ(92, 94, 54) + ' ' + circ(92, 94, m) + ' ' + rr(58, 154, 68, 16, 8) + ' ' + block(104, 22, d[0], d[1]); } },
-    { id: "C", name: "Puck", why: "A low round speaker seen from the side, with a light ring across it. The ring slides side to side.",
-      frame: function (t) { var d = drift(t), s = 8 * Math.sin((t / 3000) * TAU);
-        return rr(24, 94, 132, 62, 30) + ' ' + rr(54 + s, 118, 72, 12, 6) + ' ' + block(104, 26, d[0], d[1]); } },
-    { id: "D", name: "Display", why: "A screen on a stand. The inside of the screen opens and closes a little, like waking.",
-      frame: function (t) { var d = drift(t), g = 3 * wave((t / 3000) % 1);
-        return rr(24, 46, 132, 96, 20) + ' ' + rr(38 - g, 60 - g, 104 + 2 * g, 68 + 2 * g, 10) + ' ' + rr(78, 144, 28, 14, 3) + ' ' + rr(52, 158, 80, 12, 6) + ' ' + block(108, 20, d[0], d[1]); } },
-    { id: "E", name: "Satellite", why: "A satellite with two panels, the literal one. It rocks slowly on its axis.",
-      frame: function (t) { var d = drift(t), a = -45 + 8 * Math.sin((t / 5000) * TAU), c = [88, 112];
-        function at(dist, w, h, r) { var p = rot(dist, 0, c[0], c[1], a); return rrR(p[0], p[1], w, h, r, a); }
-        var ant = rot(0, -36, c[0], c[1], a);
-        return at(0, 46, 46, 12) + ' ' + at(-50, 36, 58, 8) + ' ' + at(50, 36, 58, 8) + ' ' + circ(ant[0], ant[1], 6) + ' ' + block(108, 20, d[0], d[1]); } },
-    { id: "F", name: "Dish", why: "A dish with its feed arm. It sweeps slowly from side to side.",
-      frame: function (t) { var d = drift(t), a = -35 + 14 * Math.sin((t / 5000) * TAU), c = [84, 116];
-        var tip = rot(0, -52, c[0], c[1], a);
-        return bowl(c[0], c[1], 54, a) + ' ' + rrR((c[0] + tip[0]) / 2, (c[1] + tip[1]) / 2, 8, 52, 4, a) + ' ' + circ(tip[0], tip[1], 11) + ' ' + rr(66, 160, 36, 12, 6) + ' ' + block(108, 20, d[0], d[1]); } },
-    { id: "G", name: "Signal", why: "A dot and two arcs: the voice reaching out. The arcs ripple outward one after the other.",
-      frame: function (t) { var d = drift(t), p = (t / 2000) % 1, n = t === 0 ? 2 : (p < 0.2 ? 0 : p < 0.5 ? 1 : 2), c = [58, 142];
-        return circ(c[0], c[1], 16) + (n >= 1 ? ' ' + arc(c[0], c[1], 36, 50, -88, -2) : '') + (n >= 2 ? ' ' + arc(c[0], c[1], 66, 80, -88, -2) : '') + ' ' + block(86, 24, d[0], d[1]); } },
-    { id: "H", name: "Speaker", why: "A speaker from the front: a big cone and a small tweeter. The cone pulses as it speaks.",
-      frame: function (t) { var d = drift(t), r = 30 + 5 * wave((t / 1400) % 1);
-        return rr(36, 30, 112, 140, 30) + ' ' + circ(92, 116, r) + ' ' + circ(92, 116, 12) + ' ' + circ(92, 66, 9) + ' ' + block(108, 14, d[0], d[1]); } }
+    { id: "A", name: "Round screen", why: "Clive's mark with one of its squares made round: the satellite's round display and Clive's block, overlapping. The circle breathes.",
+      frame: function (t) { var S = sx(t), r = 40 + 2.5 * wave((t / 3000) % 1);
+        return circ(100 - S, 100 + S, r) + ' ' + rr(100 + S - 38, 100 - S - 38, 76, 76, 30); } },
+    { id: "B", name: "Third square", why: "The mark with a small third square at its top-right corner: Clive and a satellite beside him. The small one drifts in and out.",
+      frame: function (t) { var S = sx(t), q = wave((t / 4000) % 1);
+        return mark(88, 112, 70, 27, S) + ' ' + rr(150 - 7 * (1 - q) - 22, 48 + 7 * (1 - q) - 22, 44, 44, 17); } },
+    { id: "C", name: "Ripple", why: "The mark with two arcs spreading out of its top-right square: the voice going out. The arcs ripple outward in turn.",
+      frame: function (t) { var S = sx(t), p = (t / 2400) % 1, n = t === 0 ? 2 : (p < 0.2 ? 0 : p < 0.55 ? 1 : 2), c = [86 + S, 114 - S];
+        return mark(86, 114, 64, 25, S) + (n >= 1 ? ' ' + arc(c[0], c[1], 54, 65, -86, -4) : '') + (n >= 2 ? ' ' + arc(c[0], c[1], 77, 88, -86, -4) : ''); } },
+    { id: "D", name: "Orbit", why: "A smaller mark with a thin orbit around it and a small satellite travelling the orbit.",
+      frame: function (t) { var S = sx(t) * 0.8, a = ((t / 6000) % 1) * TAU, c = [100, 100], rx = 90, ry = 36, deg = -35;
+        var dot = rot((rx - 4) * Math.cos(a), (ry - 4) * Math.sin(a), c[0], c[1], deg);
+        return mark(100, 100, 58, 23, S) + ' ' + ring(c[0], c[1], rx, ry, 8, deg) + ' ' + circ(dot[0], dot[1], 10); } },
+    { id: "E", name: "Dock", why: "The mark with the satellite's dock under it: a bar, as at the bottom of its screen. The bar widens as it listens.",
+      frame: function (t) { var S = sx(t), bar = 70 + 18 * wave((t / 2400) % 1);
+        return mark(100, 86, 70, 27, S) + ' ' + rr(100 - bar / 2, 158, bar, 14, 7); } },
+    { id: "F", name: "Chain", why: "Three squares along the same diagonal instead of two: Clive and his satellites. They breathe in and out together.",
+      frame: function (t) { var k = 0.45 + 0.55 * wave((t / 4000) % 1), d = 30 + 12 * k;
+        return rr(100 - d - 29, 100 + d - 29, 58, 58, 23) + ' ' + rr(71, 71, 58, 58, 23) + ' ' + rr(100 + d - 29, 100 - d - 29, 58, 58, 23); } },
+    { id: "G", name: "Antenna", why: "The mark with a short antenna on its top-right square. The tip pulses, as a satellite does when it hears you.",
+      frame: function (t) { var S = sx(t), top = 114 - S - 35, x = 96 + S, pulse = 11 + 2.5 * wave((t / 1600) % 1);
+        return mark(96, 114, 70, 27, S) + ' ' + rr(x - 4, top - 30, 8, 31, 4) + ' ' + circ(x, top - 34, pulse); } },
+    { id: "H", name: "Pad", why: "The mark standing on a flat ring: the satellite on its shelf, or in its dock. The ring ripples outward.",
+      frame: function (t) { var S = sx(t), q = wave((t / 3000) % 1);
+        return mark(100, 84, 70, 27, S) + ' ' + ring(100, 166, 62 + 8 * q, 14 + 2 * q, 7, 0); } }
   ];
 
   var uid = 0;
