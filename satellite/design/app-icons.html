@@ -52,11 +52,11 @@ body { background: var(--bar-bg); color: var(--bar-fg); font-family: var(--ui); 
 </style>
 
 <div class="top">
-  <div><h1>Satellites app icons</h1><p>Three versions of one idea: Clive's own mark with its top-right square turned into a circle and three ripples going out of it. The one-colour mark sits on the page; the app icon fills it with Clive's glow on white, as the house and the clipboard are.</p></div>
+  <div><h1>Satellites app icons</h1><p>Clive's own mark with its top-right square turned into a circle and three bold ripples going out of it, every gap the same as the ripples are thick. The one-colour mark sits on the page; the app icon fills it with Clive's glow on white, as the house and the clipboard are.</p></div>
   <div class="seg" role="group" aria-label="Page"><button type="button" id="pl" aria-pressed="true">Light icons</button><button type="button" id="pd" aria-pressed="false">Dark icons</button></div>
 </div>
 <div class="stage"><div class="in">
-  <p class="note">The movement is for the app only (its splash and its own screens). The circle and the square drift in and out over four seconds, as Clive's idle mark does, and the ripples appear one after another. Nothing here changes Clive's mark or the animations on the satellites. Press "Pick" on one, or tell me two to combine.</p>
+  <p class="note">The movement is for the app only (its splash and its own screens). The circle and the square drift in and out over four seconds, as Clive's idle mark does, and the ripples appear one after another. Nothing here changes Clive's mark or the animations on the satellites. Tell me what to change, or press "Pick" to choose it.</p>
   <div id="opts"></div>
 </div></div>
 
@@ -113,13 +113,10 @@ body { background: var(--bar-bg); color: var(--bar-fg); font-family: var(--ui); 
   }
   function steps(t) { var p = (t / 2600) % 1; return t === 0 ? 3 : (p < 0.15 ? 0 : p < 0.35 ? 1 : p < 0.55 ? 2 : p < 0.9 ? 3 : 0); }
   var OPTIONS = [
-    { id: "A", name: "Three ripples", why: "The mark's top-right square is a circle, and three ripples leave it on the same centre, the same thickness and the same gap. The ripples appear one after another.",
-      frame: function (t) { return rippleMark(sx(t), 76, 124, 40, 54, 9, 7, -86, -4, steps(t)); } },
-    { id: "B", name: "Bolder ripples", why: "The same, with the ripples as thick as the ring on the icon board (11) and the circle a little smaller, so they hold up at home-screen size.",
-      frame: function (t) { return rippleMark(sx(t), 74, 126, 36, 50, 11, 7, -88, -2, steps(t)); } },
-    { id: "C", name: "Short ripples", why: "The same, with shorter arcs that stay on the mark's diagonal, so the icon is narrower and sits more evenly in a circle.",
-      frame: function (t) { return rippleMark(sx(t), 82, 118, 40, 54, 9, 7, -76, -14, steps(t)); } }
+    { id: "B", name: "Bolder ripples, even spacing", why: "The circle's radius is 36. The first ripple starts 11 beyond it, each ripple is 11 thick, and the gap between ripples is 11 too: one measure all the way out. The ripples appear one after another.",
+      frame: function (t) { return rippleMark(sx(t), 70, 130, 36, 47, 11, 11, -88, -2, steps(t)); } }
   ];
+
 
   var uid = 0;
   function mono(d) { return '<svg viewBox="0 0 200 200" aria-hidden="true"><path class="g" fill="currentColor" fill-rule="evenodd" d="' + d + '"/></svg>'; }
