@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.94.0
+
+- The account panel's Settings row uses the new rounded cog, and the To-do rows ("Open To-do in Church Drive To-Do", "Get Church Drive To Do") use the To-Do logo in one colour.
+
 ## 0.93.0
 
 No app changes.

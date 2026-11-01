@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.94.0
+
+- The account panel's "Open Church Drive" row uses the Church Drive logo (one colour) and Settings uses the new rounded cog.
+
 ## 0.93.0
 
 No app changes.

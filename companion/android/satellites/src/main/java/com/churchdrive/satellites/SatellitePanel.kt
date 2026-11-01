@@ -23,9 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Logout
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Fingerprint
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Info
@@ -52,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -110,11 +109,11 @@ private fun PanelCard(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun PanelRow(icon: ImageVector, text: String, supporting: String? = null, onClick: (() -> Unit)? = null, trailing: (@Composable () -> Unit)? = null) {
+private fun PanelRow(icon: ImageVector, text: String, supporting: String? = null, onClick: (() -> Unit)? = null, leading: (@Composable () -> Unit)? = null, trailing: (@Composable () -> Unit)? = null) {
     ListItem(
         headlineContent = { Text(text) },
         supportingContent = supporting?.let { { Text(it) } },
-        leadingContent = { Icon(icon, contentDescription = null) },
+        leadingContent = leading ?: { Icon(icon, contentDescription = null) },
         trailingContent = trailing,
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         modifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier,
@@ -124,7 +123,7 @@ private fun PanelRow(icon: ImageVector, text: String, supporting: String? = null
 @Composable
 private fun PanelTitle(title: String, onBack: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
+        IconButton(onClick = onBack) { Icon(painterResource(R.drawable.mdi_arrow_left), contentDescription = "Back") }
         Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 4.dp))
     }
 }
@@ -142,7 +141,7 @@ private fun AccountPage(vm: SatelliteModel, onClose: () -> Unit, onOpen: (String
     val context = LocalContext.current
     PageColumn {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            IconButton(onClick = onClose) { Icon(Icons.Filled.Close, contentDescription = "Close") }
+            IconButton(onClick = onClose) { Icon(painterResource(R.drawable.mdi_close), contentDescription = "Close") }
         }
         PanelCard {
             Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -161,9 +160,9 @@ private fun AccountPage(vm: SatelliteModel, onClose: () -> Unit, onOpen: (String
                 }
             }
         }
-        PanelCard { PanelRow(Icons.Outlined.Home, "Open Church Drive", "The main app: lights, alarm, cameras and the rest", onClick = { ChurchDriveLink.open(context) }) }
+        PanelCard { PanelRow(Icons.Outlined.Home, "Open Church Drive", "The main app: lights, alarm, cameras and the rest", onClick = { ChurchDriveLink.open(context) }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_church_drive), contentDescription = null) }) }
         PanelCard {
-            PanelRow(Icons.Outlined.Settings, "Settings", onClick = { onOpen("settings") })
+            PanelRow(Icons.Outlined.Settings, "Settings", onClick = { onOpen("settings") }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_cog_outline), contentDescription = null) })
             PanelRow(Icons.Outlined.Info, "About", onClick = { onOpen("about") })
         }
         // A sign-in taken from the Church Drive app is that app's to end; signing out there signs this one out too.
@@ -182,6 +181,7 @@ private fun SettingsPage(vm: SatelliteModel, onBack: () -> Unit) {
             PanelRow(
                 Icons.Outlined.Visibility, "Open on the satellite I left",
                 "When this is off, the app always opens on the list of satellites.",
+                leading = { Icon(painterResource(R.drawable.sat_device_history), contentDescription = null) },
                 trailing = { Switch(checked = vm.rememberSatellite, onCheckedChange = { vm.changeRememberSatellite(it) }) },
             )
         }
@@ -189,6 +189,7 @@ private fun SettingsPage(vm: SatelliteModel, onBack: () -> Unit) {
             PanelRow(
                 Icons.Outlined.Settings, "Each satellite's own settings",
                 "Design, glances, backlight and the switches are on the satellite's page: tap it in the list.",
+                leading = { Icon(painterResource(R.drawable.sat_device_cog), contentDescription = null) },
             )
         }
     }
@@ -205,7 +206,7 @@ private fun AboutPage(onBack: () -> Unit) {
     PageColumn {
         PanelTitle("About", onBack)
         PanelCard {
-            PanelRow(Icons.Outlined.Info, "Church Drive Satellites", "Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.BUILD}) · ${BuildConfig.COMMIT}")
+            PanelRow(Icons.Outlined.Info, "Church Drive Satellites", "Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.BUILD}) · ${BuildConfig.COMMIT}", leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_satellites), contentDescription = null) })
             PanelRow(
                 Icons.Outlined.SystemUpdate, "Updates",
                 if (BuildConfig.PLAY) "Google Play keeps this app up to date. Tap to open its Play page" else "A test build: newer ones are on GitHub, under the satellites-latest release",
@@ -213,12 +214,13 @@ private fun AboutPage(onBack: () -> Unit) {
             )
         }
         PanelCard {
-            if (certs.isEmpty()) PanelRow(Icons.Outlined.Fingerprint, "Signing certificate (SHA-256)", "Not available")
+            if (certs.isEmpty()) PanelRow(Icons.Outlined.Fingerprint, "Signing certificate (SHA-256)", "Not available", leading = { Icon(painterResource(R.drawable.mdi_shield_key), contentDescription = null) })
             certs.forEach { c ->
                 PanelRow(
                     Icons.Outlined.Fingerprint, "Signing certificate (SHA-256)",
                     if (copied) "Copied" else "$c\nTap to copy. The Church Drive app needs this to share its sign-in with this app.",
                     onClick = { clipboard.setText(AnnotatedString(c)); copied = true },
+                    leading = { Icon(painterResource(R.drawable.mdi_shield_key), contentDescription = null) }
                 )
             }
         }

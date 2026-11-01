@@ -18,24 +18,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Brightness6
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material.icons.filled.Speaker
-import androidx.compose.material.icons.filled.Thermostat
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.Monitor
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.RestartAlt
-import androidx.compose.material.icons.filled.SystemUpdate
-import androidx.compose.material.icons.filled.VolumeUp
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.OutlinedTextField
@@ -146,8 +128,8 @@ private fun ListPage(vm: SatelliteModel, onPerson: () -> Unit) {
         },
         bottomBar = {
             NavigationBar {
-                NavigationBarItem(selected = tab == 0, onClick = { tab = 0 }, icon = { Icon(Icons.Filled.Speaker, null) }, label = { Text("Satellites", fontSize = 11.sp) })
-                NavigationBarItem(selected = tab == 1, onClick = { tab = 1 }, icon = { Icon(Icons.Filled.QrCodeScanner, null) }, label = { Text("Add", fontSize = 11.sp) })
+                NavigationBarItem(selected = tab == 0, onClick = { tab = 0 }, icon = { Icon(painterResource(R.drawable.sat_device), null) }, label = { Text("Satellites", fontSize = 11.sp) })
+                NavigationBarItem(selected = tab == 1, onClick = { tab = 1 }, icon = { Icon(painterResource(R.drawable.mdi_plus), null) }, label = { Text("Add", fontSize = 11.sp) })
             }
         },
     ) { padding ->
@@ -162,7 +144,7 @@ private fun SatelliteList(vm: SatelliteModel) {
     val sats = vm.satellites
     val online = sats.count { it.online }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ToneSectionHeader("Home", Icons.Filled.Home, Tone.Indigo, if (sats.isEmpty()) null else "$online online")
+        ToneSectionHeader("Home", painterResource(com.churchdrive.core.R.drawable.cd_house), Tone.Indigo, if (sats.isEmpty()) null else "$online online")
         if (sats.isEmpty()) {
             ToneCard(null) { ink, soft ->
                 SatelliteMark(androidx.compose.foundation.isSystemInDarkTheme(), height = 64.dp, animate = false)
@@ -181,7 +163,7 @@ private fun SatelliteList(vm: SatelliteModel) {
                     ) {
                         val tone = toneColors(Tone.Indigo)
                         Box(Modifier.size(40.dp).background(tone.accent.copy(alpha = 0.18f), CircleShape), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Filled.Monitor, null, tint = tone.accent, modifier = Modifier.size(22.dp))
+                            Icon(painterResource(R.drawable.sat_device), null, tint = tone.accent, modifier = Modifier.size(22.dp))
                         }
                         Column(Modifier.weight(1f)) {
                             Text(s.name, style = MaterialTheme.typography.titleMedium, color = ink, maxLines = 1)
@@ -226,7 +208,7 @@ private fun AddPage(vm: SatelliteModel) {
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ToneSectionHeader("Add a satellite", Icons.Filled.QrCodeScanner, Tone.Teal)
+        ToneSectionHeader("Add a satellite", painterResource(R.drawable.sat_device_plus), Tone.Teal)
         when (val step = vm.pairStep) {
             is SatelliteModel.PairStep.Idle -> ToneCard(Tone.Teal) { ink, soft ->
                 Text("1. On the satellite, open Settings > Pair or reset. A new one shows the code by itself.", color = ink, style = MaterialTheme.typography.bodyLarge)
@@ -312,7 +294,7 @@ private fun DetailPage(vm: SatelliteModel, sat: Satellite, onPerson: () -> Unit)
         topBar = {
             MediumTopAppBar(
                 title = { Text(sat.name, maxLines = 1) },
-                navigationIcon = { IconButton(onClick = { vm.openSlug = null }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
+                navigationIcon = { IconButton(onClick = { vm.openSlug = null }) { Icon(painterResource(R.drawable.mdi_arrow_left), "Back") } },
                 actions = { PersonButton(vm.personName, onPerson) },
                 scrollBehavior = scroll,
             )
@@ -345,7 +327,7 @@ private fun DetailPage(vm: SatelliteModel, sat: Satellite, onPerson: () -> Unit)
 private fun DesignSection(vm: SatelliteModel, sat: Satellite) {
     val current = vm.pendingDesign ?: sat.design ?: SatDesign.Glance
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ToneSectionHeader("Design", Icons.Filled.Palette, Tone.Indigo, current.label)
+        ToneSectionHeader("Design", painterResource(R.drawable.mdi_palette), Tone.Indigo, current.label)
         ToneCard(Tone.Indigo) { ink, soft ->
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { RoundPreview(current, vm.previewState, 176) }
             Text("Preview the flow", style = MaterialTheme.typography.bodySmall, color = soft)
@@ -373,7 +355,7 @@ private fun DesignSection(vm: SatelliteModel, sat: Satellite) {
 @Composable
 private fun TemperatureSection(sat: Satellite) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ToneSectionHeader("Temperatures", Icons.Filled.Thermostat, Tone.Amber, "From the house")
+        ToneSectionHeader("Temperatures", painterResource(R.drawable.mdi_thermometer), Tone.Amber, "From the house")
         ToneCard(null) { ink, soft ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("Outside, from the weather feed", color = ink, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
@@ -387,7 +369,7 @@ private fun TemperatureSection(sat: Satellite) {
 @Composable
 private fun GlanceSection(vm: SatelliteModel, sat: Satellite) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ToneSectionHeader("Glances", Icons.Filled.Tune, Tone.Teal, "3 of 3")
+        ToneSectionHeader("Glances", painterResource(R.drawable.mdi_tune), Tone.Teal, "3 of 3")
         ToneCard(null) { ink, soft ->
             (0..2).forEach { slot ->
                 var menu by remember { mutableStateOf(false) }
@@ -421,7 +403,7 @@ private fun SliderRow(label: String, value: Float?, range: ClosedFloatingPointRa
 @Composable
 private fun BacklightSection(vm: SatelliteModel, sat: Satellite) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ToneSectionHeader("Backlight", Icons.Filled.Brightness6, Tone.Blue, if (sat.nightStart != null) "Dims at ${"%02d".format(sat.nightStart)}:00" else null)
+        ToneSectionHeader("Backlight", painterResource(R.drawable.mdi_brightness), Tone.Blue, if (sat.nightStart != null) "Dims at ${"%02d".format(sat.nightStart)}:00" else null)
         ToneCard(null) { ink, soft ->
             SliderRow("Day", sat.backlightDay, 8f..100f, "%", ink, soft) { vm.setNumber(sat, "backlight_day", it) }
             SliderRow("Night", sat.backlightNight, 1f..100f, "%", ink, soft) { vm.setNumber(sat, "backlight_night", it) }
@@ -434,7 +416,7 @@ private fun BacklightSection(vm: SatelliteModel, sat: Satellite) {
 @Composable
 private fun SwitchSection(vm: SatelliteModel, sat: Satellite) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ToneSectionHeader("On the satellite", Icons.Filled.Speaker, Tone.Purple, sat.signal?.let { "Wi-Fi $it dBm" })
+        ToneSectionHeader("On the satellite", painterResource(R.drawable.sat_device), Tone.Purple, sat.signal?.let { "Wi-Fi $it dBm" })
         ToneCard(null) { ink, _ ->
             listOf(
                 Triple("Microphone", sat.microphone, "microphone"), Triple("Spoken answers", sat.spokenAnswers, "spoken_answers"),
@@ -470,7 +452,7 @@ private fun whenText(iso: String?): String? = iso?.let {
 @Composable
 private fun StatusSection(sat: Satellite) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ToneSectionHeader("Status", Icons.Filled.Info, Tone.Green, if (sat.online) "Online" else "Offline")
+        ToneSectionHeader("Status", painterResource(wifiIcon(sat)), Tone.Green, if (sat.online) "Online" else "Offline")
         ToneCard(null) { ink, soft ->
             val dbm = sat.signal?.toIntOrNull()
             FactRow("Wi-Fi", dbm?.let { "${signalWords(it)} ($it dBm)" } ?: "–", ink, soft)
@@ -487,7 +469,7 @@ private fun StatusSection(sat: Satellite) {
 private fun UpdateSection(vm: SatelliteModel, sat: Satellite) {
     val update = sat.update ?: return
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ToneSectionHeader("Firmware", Icons.Filled.SystemUpdate, Tone.Orange, if (update.available) "Update ready" else "Up to date")
+        ToneSectionHeader("Firmware", painterResource(R.drawable.sat_device_update), Tone.Orange, if (update.available) "Update ready" else "Up to date")
         ToneCard(if (update.available) Tone.Orange else null) { ink, soft ->
             Text(
                 if (update.available) "Version ${update.latest ?: "newer"} is ready. This one has ${update.installed ?: "an older version"}." else "Running ${update.installed ?: "the latest firmware"}.",
@@ -504,7 +486,7 @@ private fun UpdateSection(vm: SatelliteModel, sat: Satellite) {
 @Composable
 private fun SoundSection(vm: SatelliteModel, sat: Satellite) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ToneSectionHeader("Sound", Icons.Filled.VolumeUp, Tone.Coral, sat.volume?.let { "${it.toInt()}%" })
+        ToneSectionHeader("Sound", painterResource(R.drawable.sat_device_volume), Tone.Coral, sat.volume?.let { "${it.toInt()}%" })
         ToneCard(null) { ink, soft ->
             SliderRow("Speaker volume", sat.volume, 0f..100f, "%", ink, soft) { vm.setNumber(sat, "volume", it) }
             if (sat.canSpeak) {
@@ -521,7 +503,7 @@ private fun NameRoomSection(vm: SatelliteModel, sat: Satellite) {
     var menu by remember { mutableStateOf(false) }
     val room = vm.roomOf[sat.slug]
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ToneSectionHeader("Name and room", Icons.Filled.LocationOn, Tone.Teal)
+        ToneSectionHeader("Name and room", painterResource(R.drawable.sat_device_pin), Tone.Teal)
         ToneCard(null) { ink, soft ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(sat.name, color = ink, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f), maxLines = 1)
@@ -558,7 +540,7 @@ private fun ActionsSection(vm: SatelliteModel, sat: Satellite) {
     var confirmRemove by remember { mutableStateOf(false) }
     var confirmReset by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ToneSectionHeader("Actions", Icons.Filled.RestartAlt, Tone.Red)
+        ToneSectionHeader("Actions", painterResource(R.drawable.sat_device_tap), Tone.Red)
         ToneCard(null) { ink, soft ->
             if ("identify" in sat.buttons) {
                 ToneTile("Flash the screen", false, Tone.Blue, ink, Modifier.fillMaxWidth()) { vm.press(sat, "identify") }
@@ -611,7 +593,7 @@ private fun ActionsSection(vm: SatelliteModel, sat: Satellite) {
 private fun VoiceSection(vm: SatelliteModel, sat: Satellite) {
     if (sat.voice.isEmpty()) return
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ToneSectionHeader("Voice", Icons.Filled.RecordVoiceOver, Tone.Indigo)
+        ToneSectionHeader("Voice", painterResource(R.drawable.sat_device_mic), Tone.Indigo)
         ToneCard(null) { ink, soft ->
             sat.voice.forEach { v ->
                 var menu by remember { mutableStateOf(false) }
@@ -659,7 +641,7 @@ private fun PresetsSection(vm: SatelliteModel, sat: Satellite) {
     var applying by remember { mutableStateOf<Preset?>(null) }
     val others = vm.satellites.filter { it.slug != sat.slug }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ToneSectionHeader("Presets and copying", Icons.Filled.ContentCopy, Tone.Orange, if (vm.presets.isEmpty()) null else "${vm.presets.size} saved")
+        ToneSectionHeader("Presets and copying", painterResource(R.drawable.sat_device_copy), Tone.Orange, if (vm.presets.isEmpty()) null else "${vm.presets.size} saved")
         ToneCard(null) { ink, soft ->
             ToneTile("Save these settings as a preset", false, Tone.Orange, ink, Modifier.fillMaxWidth()) { naming = true }
             if (others.isNotEmpty()) ToneTile("Copy these settings to other satellites", false, Tone.Orange, ink, Modifier.fillMaxWidth()) { copying = true }
@@ -686,5 +668,17 @@ private fun PresetsSection(vm: SatelliteModel, sat: Satellite) {
     if (copying) PickSatellites("Copy ${sat.name}'s settings to", "Copy", others, { copying = false; vm.copySettings(sat, it) }, { copying = false })
     applying?.let { preset ->
         PickSatellites("Apply \"${preset.name}\" to", "Apply", vm.satellites, { applying = null; vm.applyPreset(preset, it) }, { applying = null })
+    }
+}
+
+/** The Status icon follows the signal: four bars down to one, or crossed out when the satellite is offline or has no reading. */
+private fun wifiIcon(sat: Satellite): Int {
+    val dbm = sat.signal?.toIntOrNull()
+    return when {
+        !sat.online || dbm == null -> R.drawable.mdi_wifi_off
+        dbm >= -55 -> R.drawable.mdi_wifi_4
+        dbm >= -67 -> R.drawable.mdi_wifi_3
+        dbm >= -75 -> R.drawable.mdi_wifi_2
+        else -> R.drawable.mdi_wifi_1
     }
 }

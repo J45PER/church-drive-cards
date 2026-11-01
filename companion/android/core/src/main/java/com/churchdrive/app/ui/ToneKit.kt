@@ -21,7 +21,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -45,6 +47,23 @@ fun ToneSectionHeader(title: String, icon: ImageVector, tone: Tone, summary: Str
         if (!summary.isNullOrBlank()) Text(summary, style = MaterialTheme.typography.bodyMedium, color = colors.accent)
     }
 }
+
+/** The same heading with a drawn icon (the satellite, a logo, a Material Design icon) in place of a built-in one. */
+@Composable
+fun ToneSectionHeader(title: String, icon: Painter, tone: Tone, summary: String? = null) {
+    val colors = toneColors(tone)
+    Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Box(Modifier.size(36.dp).background(colors.accent.copy(alpha = 0.18f), CircleShape), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = colors.accent, modifier = Modifier.size(20.dp))
+        }
+        Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+        if (!summary.isNullOrBlank()) Text(summary, style = MaterialTheme.typography.bodyMedium, color = colors.accent)
+    }
+}
+
+/** An icon from the shared Church Drive set (core's drawables), for a row's leading slot. */
+@Composable
+fun CdIcon(id: Int, modifier: Modifier = Modifier) = Icon(painterResource(id), contentDescription = null, modifier = modifier)
 
 /** The shared card: rounded 28dp, tinted in a tone (or the neutral surface), 20dp inside, 16dp between things. */
 @Composable

@@ -61,6 +61,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.churchdrive.app.BuildConfig
@@ -259,7 +260,7 @@ private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Pa
         }
         // Experimental (kept in the code, not shown): add its row back here when there is something to try out.
         PanelCard {
-            PanelRow(Icons.Outlined.Settings, "Settings", onClick = { onOpen("settings") })
+            PanelRow(Icons.Outlined.Settings, "Settings", onClick = { onOpen("settings") }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_cog_outline), contentDescription = null) })
             PanelRow(Icons.Outlined.Info, "About", onClick = { onOpen("about") })
         }
         PanelCard { PanelRow(Icons.AutoMirrored.Outlined.Logout, "Sign out", onClick = onSignOut) }
@@ -336,7 +337,7 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                 Icons.Outlined.Checklist, "Open To-do in Church Drive To-Do",
                 if (openApp) "To-do, and the tasks on Home, open the To-Do app. Turn off to use the To-do page in this app instead."
                 else "To-do and the tasks on Home open the To-do page in this app. Turn on to open the To-Do app.",
-                leading = { androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(com.churchdrive.app.R.drawable.ic_todo_mark), contentDescription = null, modifier = Modifier.size(24.dp)) },
+                leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_todo), contentDescription = null) },
                 trailing = { Switch(checked = openApp, onCheckedChange = { on -> openApp = on; com.churchdrive.app.TodoLink.setPreferApp(context, on) }) },
             )
         }
@@ -345,7 +346,7 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                 Icons.Outlined.Checklist, "Get Church Drive To Do",
                 "The separate to-do app. Once it is installed, To-do and the tasks on Home open it.",
                 onClick = { com.churchdrive.app.TodoLink.openStore(context) },
-                leading = { androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(com.churchdrive.app.R.drawable.ic_todo_mark), contentDescription = null, modifier = Modifier.size(24.dp)) },
+                leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_todo), contentDescription = null) },
             )
         }
         PanelCard {
