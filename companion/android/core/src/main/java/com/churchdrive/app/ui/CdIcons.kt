@@ -1,5 +1,8 @@
 package com.churchdrive.app.ui
 
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.graphics.drawscope.scale
+
 /**
  * The house's own icon set, used as `cd:` names wherever an icon name is accepted (HaIcon). Drawn on a 200-unit grid with the even-odd
  * rule: a disc with its glyph cut out and a ring round it, or (for the buttons) the bare glyph. Made on the icon board; see HANDOFF.
@@ -124,4 +127,27 @@ object CdIcons {
         "mdi:home-outline", "mdi:home-variant-outline", "mdi:home-export-outline", "mdi:home-import-outline", "mdi:home-account", "mdi:home-map-marker" -> "cd:home-away"
         else -> icon
     }
+}
+
+/**
+ * Draws one of the house's own icons (a `cd:` name, or a name [CdIcons.alias] turns into one) in one colour. Returns false and draws nothing
+ * when the name is not one of ours, so callers can fall back to their own icon. Shared by the phone app, the To-Do app and the watch.
+ */
+@androidx.compose.runtime.Composable
+fun CdIcon(iconName: String?, tint: androidx.compose.ui.graphics.Color, size: androidx.compose.ui.unit.Dp, modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier): Boolean {
+    val cd = CdIcons.alias(iconName)?.takeIf { it.startsWith("cd:") }?.removePrefix("cd:")?.let { CdIcons.icons[it] } ?: return false
+    val paths = androidx.compose.runtime.remember(cd) {
+        cd.map { runCatching { androidx.compose.ui.graphics.vector.PathParser().parsePathString(it.d).toPath().apply { fillType = androidx.compose.ui.graphics.PathFillType.EvenOdd } }.getOrNull() }
+    }
+    androidx.compose.foundation.Canvas(modifier.size(size)) {
+        val s = this.size.minDimension / 200f
+        scale(s, s, pivot = androidx.compose.ui.geometry.Offset.Zero) {
+            cd.forEachIndexed { i, shape ->
+                val path = paths[i] ?: return@forEachIndexed
+                if (shape.scale != 1f) scale(shape.scale, pivot = androidx.compose.ui.geometry.Offset(100f, 100f)) { drawPath(path, color = tint, alpha = shape.alpha) }
+                else drawPath(path, color = tint, alpha = shape.alpha)
+            }
+        }
+    }
+    return true
 }

@@ -26,7 +26,7 @@ import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.HomeWork
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.BadgedBox
@@ -79,7 +79,18 @@ private fun TodoTab.icon(): ImageVector = when (this) {
     TodoTab.Mine -> Icons.Filled.Person
     TodoTab.Shared -> Icons.Filled.Groups
     TodoTab.Cleaning -> Icons.Filled.CleaningServices
-    TodoTab.House -> Icons.Filled.HomeWork
+    TodoTab.House -> Icons.Filled.Home
+}
+
+/** A tab's icon: the house's own house for House and Gregg for Cleaning, Material's for the others. */
+@Composable
+private fun TabIcon(tab: TodoTab) {
+    when (tab) {
+        TodoTab.House -> Icon(androidx.compose.ui.res.painterResource(com.churchdrive.core.R.drawable.cd_house), contentDescription = null)
+        // Gregg, the robot vacuum, as on the phone's Cleaning page.
+        TodoTab.Cleaning -> com.churchdrive.app.ui.CdIcon("cd:vac", androidx.compose.material3.LocalContentColor.current, 24.dp)
+        else -> Icon(tab.icon(), contentDescription = null)
+    }
 }
 
 /**
@@ -132,7 +143,7 @@ fun TodoApp(vm: TodoModel) {
                         selected = t == tab,
                         onClick = { vm.openTab(t) },
                         icon = {
-                            BadgedBox(badge = { if (open > 0) Badge { Text(open.toString()) } }) { Icon(t.icon(), contentDescription = null) }
+                            BadgedBox(badge = { if (open > 0) Badge { Text(open.toString()) } }) { TabIcon(t) }
                         },
                         label = { Text(t.label, fontSize = 11.sp, maxLines = 1) },
                     )
@@ -267,7 +278,7 @@ private fun TaskRow(item: TodoItem, tone: ToneColors, onEdit: () -> Unit, onTick
 private fun HouseRow(item: TodoItem, task: HouseTask, tone: ToneColors, onOpen: () -> Unit) {
     // Tap a job to go to the part of the house it is about: the device's page in the Church Drive app, or Home Assistant.
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth().clickable(onClickLabel = "Open the device") { onOpen() }.padding(vertical = 4.dp)) {
-        Icon(Icons.Filled.HomeWork, contentDescription = null, tint = tone.accent)
+        Icon(androidx.compose.ui.res.painterResource(com.churchdrive.core.R.drawable.cd_house), contentDescription = null, tint = tone.accent)
         Column(Modifier.weight(1f)) {
             Text(item.summary, style = MaterialTheme.typography.bodyLarge)
             val sub = listOf(task.kind, task.detail).filter { it.isNotBlank() }.joinToString(" · ")

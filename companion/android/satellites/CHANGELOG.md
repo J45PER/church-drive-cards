@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.95.1
+
+- No change to this app; the icons in the phone and To-Do apps were updated.
+
 ## 0.95.0
 
 - A scanner of the app's own replaces Google's: the camera is dimmed and shows clearly only through the overlap of two squares in Clive's glow colours (the cut in Clive's logo). When a code is read the frame turns teal and a card confirms it (the six digits, or the ID on a sticker) to check against the satellite. The app now asks for the camera.

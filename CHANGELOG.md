@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **v0.95.1 + app 0.95.1 + To-Do 0.95.1 + Satellites 0.95.1** (2026-11-01): Clive's own microphone replaces Material's on every row and button about him, Google push shows the Google G, the sidebar's To-do row uses the To-Do logo, the Manager row uses the solid cog, the camera clip play/pause use the house's own, the To-Do app's House tab uses the house's house and its Cleaning tab Gregg, and the watch shows the house's house.
 - **v0.95.0 + app 0.95.0 + To-Do 0.95.0 + Satellites 0.95.0** (2026-11-01): Satellites has its own Clive-styled QR scanner (the camera shows through the overlap of two squares), satellites get a permanent ID (`RND1-000123-4`: model, generation, number, check character) and their own API key from `satellite/tools/make_device.py`, which also makes the 14 x 60 mm sticker; only administrators can add a satellite.
 - **v0.94.2 + app 0.94.2 + To-Do 0.94.2 + Satellites 0.94.2** (2026-11-01): the To-Do splash clip is solid again with a clean gap cut round it, instead of two-toned where it overlapped the board.
 - **v0.94.1 + app 0.94.1 + To-Do 0.94.1 + Satellites 0.94.1** (2026-11-01): fixes the crash when opening the settings sidebar in every app: the new cog icons were too long for Android to read, so they are simplified (same look).

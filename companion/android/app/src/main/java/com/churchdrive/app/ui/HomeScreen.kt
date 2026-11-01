@@ -22,7 +22,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -152,7 +151,7 @@ fun HomeScreen(
                     // Listening for the wake word: a small green microphone, so you can see it is on.
                     if (AssistWakeStatus.waiting) {
                         Box(Modifier.padding(horizontal = 4.dp), contentAlignment = Alignment.Center) {
-                            HaIcon("mdi:microphone", Icons.Filled.Mic, assistPalette().third, 20.dp)
+                            Icon(androidx.compose.ui.res.painterResource(com.churchdrive.core.R.drawable.cd_clive_mic), contentDescription = "Listening", tint = assistPalette().third, modifier = Modifier.size(20.dp))
                         }
                     }
                     // A round button with the person's initial: easy to see and to hit.

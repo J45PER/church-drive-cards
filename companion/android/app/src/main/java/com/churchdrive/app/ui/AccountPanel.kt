@@ -37,6 +37,7 @@ import androidx.compose.material.icons.outlined.Checklist
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SystemUpdate
@@ -49,7 +50,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -240,6 +240,7 @@ private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Pa
                 Icons.Outlined.Checklist, "To-do",
                 if (todoOpensApp) "Opens Church Drive To-Do" else "Lists, cleaning and house jobs",
                 onClick = onTodo,
+                leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_todo), contentDescription = null) },
             )
         }
         // Device Health, for everyone: batteries, filters and devices that stopped answering.
@@ -252,7 +253,7 @@ private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Pa
         }
         // The Manager (administrators): one button here, and a page of its sections.
         if (managerPages.isNotEmpty()) {
-            PanelCard { PanelRow(Icons.Outlined.Settings, "Manager", "${managerPages.size} sections: people, cameras, reminders and more", onClick = { onOpen("manager") }) }
+            PanelCard { PanelRow(Icons.Outlined.Settings, "Manager", "${managerPages.size} sections: people, cameras, reminders and more", onClick = { onOpen("manager") }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_cog_solid), contentDescription = null) }) }
         }
         // The activity log (administrators): what people and the assistant did, and who came and went.
         if (isAdmin) {
@@ -372,6 +373,7 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
             PanelRow(
                 Icons.Outlined.Mic, "Use phone theme colours for ${AssistantBrand.shown}",
                 "${AssistantBrand.shown} normally keeps his original indigo, purple and green. Turn this on to give him your phone's theme colours instead.",
+                leading = CliveMic,
                 trailing = { Switch(checked = AssistColourSetting.phoneTheme, onCheckedChange = { on -> AssistColourSetting.set(context, on) }) },
             )
             val micAsk = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -385,6 +387,7 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                     AssistWakeSetting.enabled -> "On, but not listening yet" + (if (AssistWakeStatus.log.isEmpty()) "" else " (last: ${AssistWakeStatus.log.takeLast(4).joinToString(", ")})")
                     else -> "While the app is open, say your assistant's wake word (the one set on the house's Assist) to open him hands-free. Once he is open he always listens for it, whatever this says. The microphone is only used while the app is on screen."
                 },
+                leading = CliveMic,
                 trailing = {
                     Switch(checked = AssistWakeSetting.enabled, onCheckedChange = { on ->
                         message = null
@@ -397,11 +400,13 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
             if (AssistWakeStatus.timing.isNotEmpty()) PanelRow(
                 Icons.Outlined.Mic, "How long ${AssistantBrand.shown} took",
                 "Last answer: ${AssistWakeStatus.timing}. Thinking is the house working out the reply; voice made is the spoken version being prepared.",
+                leading = CliveMic,
             )
             PanelRow(
                 Icons.Outlined.Mic, "Open ${AssistantBrand.shown} ready to type",
                 if (AssistStartSetting.typing) "${AssistantBrand.shown} opens quietly, not listening, with the typing box ready. Tap the microphone to talk."
                 else "${AssistantBrand.shown} starts listening as soon as he opens. Turn this on and he waits for you to type or tap the microphone.",
+                leading = CliveMic,
                 trailing = { Switch(checked = AssistStartSetting.typing, onCheckedChange = { on -> AssistStartSetting.set(context, on) }) },
             )
             PanelRow(
@@ -433,6 +438,7 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                 PanelRow(
                     Icons.Outlined.Notifications, "Google push",
                     "$pushStatus. Tap to try again.",
+                    leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_google_g), contentDescription = null, tint = androidx.compose.ui.graphics.Color.Unspecified) },
                     onClick = { com.churchdrive.app.house.GooglePush.register(context) },
                 )
             }
@@ -453,6 +459,9 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
         }
     }
 }
+
+/** Clive's own microphone (his open-and-waiting mark) in place of Material's, for every row about him. */
+private val CliveMic: @Composable () -> Unit = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_clive_mic), contentDescription = null) }
 
 @Composable
 private fun AboutPage(settings: AccountSettings, updateAvailable: Boolean, isAdmin: Boolean, onBack: () -> Unit) {

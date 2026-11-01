@@ -147,7 +147,7 @@ private fun EventThumb(event: CameraEvent, baseUrl: String, selected: Boolean, o
         event.picture?.let { AsyncImage(model = baseUrl + it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
         if (event.clip != null) {
             Box(modifier = Modifier.align(Alignment.Center).clip(RoundedCornerShape(999.dp)).background(Color.Black.copy(alpha = 0.5f)).padding(6.dp)) {
-                Icon(Icons.Filled.PlayArrow, contentDescription = "Has a clip", tint = Color.White)
+                HaIcon("cd:play", Icons.Filled.PlayArrow, Color.White, 24.dp)
             }
         }
         Row(
@@ -349,7 +349,7 @@ private fun ClipPlayer(url: String) {
                 if (player.playbackState == Player.STATE_ENDED) player.seekTo(0)
                 if (player.isPlaying) player.pause() else player.play()
             }) {
-                Icon(if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow, contentDescription = if (playing) "Pause" else "Play", tint = Color.White)
+                HaIcon(if (playing) "cd:pause" else "cd:play", if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow, Color.White, 24.dp)
             }
             Slider(
                 value = progress,
