@@ -756,15 +756,15 @@ class People:
         for p in self.recipients(None if test else kind, only):
             seq = self.notice_log.next_seq(int(dt_util.utcnow().timestamp() * 1000))
             text = message + (f"\n{admin_message}" if admin_message and p["admin"] else "")
-            # The Church Drive app goes first. A phone that hears it there doesn't also get the Home Assistant app's
-            # copy (the same person's phone of the same model); if the app isn't connected, that copy is sent as before.
+            # The Church Drive app goes first. Once it has the notice, the person's Home Assistant app copies (on any of their
+            # devices) are not sent; if the app can't be reached, they are sent as before.
             on = sorted((ph for ph in p["phones"] if ph["on"]), key=lambda ph: not ph.get("own_app"))
             covered: set[str] = set()
             missed: dict[str, Any] | None = None
             elsewhere = False
             for phone in on:
-                if not phone.get("own_app") and phone.get("model") and phone["model"] in covered:
-                    continue
+                if not phone.get("own_app") and covered:
+                    continue  # the Church Drive app has it: the Home Assistant app on any of their devices is only a fallback
                 data: dict[str, Any] = {"group": kind or "church-drive"}
                 if tag:
                     data["tag"] = tag
@@ -794,8 +794,7 @@ class People:
                         phone["service"], {"title": title, "message": text, "data": data}
                     ):
                         phones += 1
-                        if phone.get("model"):
-                            covered.add(phone["model"])
+                        covered.add(phone["service"])
                         continue
                     await self.hass.services.async_call(
                         "notify", phone["service"], {"title": title, "message": text, "data": data},
@@ -803,8 +802,7 @@ class People:
                     )
                     phones += 1
                     if phone.get("own_app"):
-                        if phone.get("model"):
-                            covered.add(phone["model"])
+                        covered.add(phone["service"])
                     else:
                         elsewhere = True
                 except Exception as err:  # noqa: BLE001 - one phone failing mustn't stop the rest
