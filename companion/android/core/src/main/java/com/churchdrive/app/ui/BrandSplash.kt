@@ -2,6 +2,8 @@ package com.churchdrive.app.ui
 
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
@@ -24,12 +26,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.FirstBaseline
+import androidx.compose.ui.layout.LastBaseline
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Constraints
+import kotlinx.coroutines.delay
+import kotlin.math.roundToInt
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -38,7 +48,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.churchdrive.core.R
 
-private val SplashFont = FontFamily(Font(R.font.instrument_sans_semibold, FontWeight.SemiBold))
+/** Instrument Sans in its four weights (Regular, Medium, SemiBold, Bold), the Clive apps' own typeface for splash screens and wordmark text. */
+val BrandFont = FontFamily(
+    Font(R.font.instrument_sans_regular, FontWeight.Normal),
+    Font(R.font.instrument_sans_medium, FontWeight.Medium),
+    Font(R.font.instrument_sans_semibold, FontWeight.SemiBold),
+    Font(R.font.instrument_sans_bold, FontWeight.Bold),
+)
+private val SplashFont = BrandFont
 
 /**
  * The branded screen shown for a moment when an app starts, after the system's own (blank) splash: the app's mark, its name, and
@@ -56,9 +73,49 @@ fun BrandSplash(name: String, @DrawableRes mark: Int, holdMillis: Long = 1300) {
     }
 }
 
+/**
+ * The splash for the Clive apps: the logo changes from Clive's into the app's own (see [LogoMorph]) while the word "Clive" moves left and the
+ * app's name ([sub], for example "Home Manager") slides in beside it, so the screen ends reading "Clive Home Manager". The word and the logo
+ * change at the same moment ([SPLASH_MORPH_DELAY_MS], [SPLASH_MORPH_MS]).
+ */
+@Composable
+fun BrandSplash(kind: LogoKind, sub: String, holdMillis: Long = 3500) {
+    BrandSplash(title = { ink -> CliveTitle(sub, ink, morphMillis(kind)) }, holdMillis = holdMillis) { dark -> LogoMorph(kind, dark) }
+}
+
+@Composable
+private fun CliveTitle(sub: String, ink: Color, morphMs: Long) {
+    val p = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        delay(SPLASH_MORPH_DELAY_MS)
+        p.animateTo(1f, tween(morphMs.toInt(), easing = CubicBezierEasing(0.65f, 0f, 0.35f, 1f)))
+    }
+    // "Clive" in Bold and the app's name in Regular, the same size and colour (24sp, so "Clive Satellite Manager" still fits one line on a small phone).
+    Row(verticalAlignment = Alignment.Bottom) {
+        Text("Clive", color = ink, fontFamily = SplashFont, fontWeight = FontWeight.Bold, fontSize = 24.sp, maxLines = 1, softWrap = false, modifier = Modifier.alignByBaseline())
+        // The name takes up more room as it arrives, so "Clive" slides left to make way; it also fades in and travels in from the right.
+        Text(
+            sub, color = ink, fontFamily = SplashFont, fontWeight = FontWeight.Normal, fontSize = 24.sp, maxLines = 1, softWrap = false,
+            modifier = Modifier
+                .alignByBaseline()
+                .layout { m, c ->
+                    val pl = m.measure(c.copy(maxWidth = Constraints.Infinity))
+                    layout((pl.width * p.value).roundToInt(), pl.height, mapOf(FirstBaseline to pl[FirstBaseline], LastBaseline to pl[LastBaseline])) { pl.place(0, 0) }
+                }
+                .padding(start = 7.dp)
+                .graphicsLayer { alpha = p.value; translationX = (1f - p.value) * 24.dp.toPx(); clip = false },
+        )
+    }
+}
+
 /** The same screen with a mark the app draws itself (for a mark that moves): [mark] is told whether the screen is dark. */
 @Composable
 fun BrandSplash(name: String, holdMillis: Long = 1300, mark: @Composable (dark: Boolean) -> Unit) {
+    BrandSplash(title = { ink -> Text(name, color = ink, fontFamily = SplashFont, fontWeight = FontWeight.SemiBold, fontSize = 34.sp) }, holdMillis = holdMillis, mark = mark)
+}
+
+@Composable
+private fun BrandSplash(title: @Composable (ink: Color) -> Unit, holdMillis: Long, mark: @Composable (dark: Boolean) -> Unit) {
     var show by rememberSaveable { mutableStateOf(true) }
     LaunchedEffect(Unit) {
         kotlinx.coroutines.delay(holdMillis)
@@ -73,7 +130,7 @@ fun BrandSplash(name: String, holdMillis: Long = 1300, mark: @Composable (dark: 
             Column(Modifier.align(Alignment.Center).wrapContentSize().padding(bottom = 40.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 mark(dark)
                 Spacer(Modifier.height(22.dp))
-                Text(name, color = ink, fontFamily = SplashFont, fontWeight = FontWeight.SemiBold, fontSize = 34.sp)
+                title(ink)
             }
             Column(Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 48.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("Powered by", color = quiet, fontSize = 15.sp, fontFamily = SplashFont)

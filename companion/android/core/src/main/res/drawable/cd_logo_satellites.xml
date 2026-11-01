@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from the approved icon artwork in satellite/design/approved-icons.json and icon-audit.html; do not redraw. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="162" android:viewportHeight="162">
+    <group android:translateX="-21" android:translateY="-17">
+    <path android:fillColor="#FF000000" android:fillType="evenOdd" android:pathData="M50.7,103.3 H66.7 A30,30 0 0 1 96.7,133.3 V149.3 A30,30 0 0 1 66.7,179.3 H50.7 A30,30 0 0 1 20.7,149.3 V133.3 A30,30 0 0 1 50.7,103.3Z M45.3,118.7 a36,36 0 1,0 72,0 a36,36 0 1,0 -72,0Z M89.37,61.26 A58,58 0 0,1 138.74,110.63 A5.5,5.5 0 0 1 127.84,112.16 A47,47 0 0,0 87.84,72.16 A5.5,5.5 0 0 1 89.37,61.26Z M89.98,39.17 A80,80 0 0,1 160.83,110.02 A5.5,5.5 0 0 1 149.89,111.21 A69,69 0 0,0 88.79,50.11 A5.5,5.5 0 0 1 89.98,39.17Z M90.66,17.13 A102,102 0 0,1 182.87,109.34 A5.5,5.5 0 0 1 171.92,110.35 A91,91 0 0,0 89.65,28.08 A5.5,5.5 0 0 1 90.66,17.13Z"/>
+    </group>
+</vector>

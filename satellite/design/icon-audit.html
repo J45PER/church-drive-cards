@@ -1,0 +1,223 @@
+<title>Satellites Icon Audit</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Icons&family=Material+Icons+Outlined&display=block">
+<style>
+/* Layout: every icon the Satellites app uses today, in numbered rows grouped by where it appears, drawn as the app draws it (tone circle, 20 dp icon), so each can be called out by number. */
+:root {
+  --bar-bg: #e9ebef; --bar-fg: #14181f; --bar-soft: #5b6472;
+  --stage-bg: #ffffff; --stage-fg: #14181f; --stage-soft: #5f6672; --stage-line: #e0e3e8; --card: #f6f7f9;
+  --ui: "Instrument Sans", system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, monospace;
+  --indigo:#5C6BC0; --teal:#00838F; --amber:#E37400; --blue:#1A73E8; --purple:#9334E6; --green:#1E8E3E; --orange:#E8590C; --coral:#F2705C; --red:#D93025; --grey:#5F6368;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bar-bg: #1a1f27; --bar-fg: #eef1f5; --bar-soft: #9aa4b2; color-scheme: dark; } }
+:root[data-theme="dark"] { --bar-bg: #1a1f27; --bar-fg: #eef1f5; --bar-soft: #9aa4b2; color-scheme: dark; }
+:root[data-page="dark"] { --stage-bg: #0b0f11; --stage-fg: #eef1f5; --stage-soft: #9aa4b2; --stage-line: #262b30; --card: #151a1e;
+  --indigo:#9FA8DA; --teal:#4DD0E1; --amber:#FDD663; --blue:#8AB4F8; --purple:#C58AF9; --green:#81C995; --orange:#FFAB70; --coral:#FF9C8A; --red:#F28B82; --grey:#9AA0A6; }
+* { box-sizing: border-box; }
+body { background: var(--bar-bg); color: var(--bar-fg); font-family: var(--ui); margin: 0; line-height: 1.4; }
+.top { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; justify-content: space-between; max-width: 1100px; margin: 0 auto;
+  padding-block: 20px 16px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.top h1 { font-size: 1.3rem; margin: 0; letter-spacing: -0.01em; }
+.top p { margin: 2px 0 0; color: var(--bar-soft); font-size: .86rem; max-width: 64ch; }
+.seg { display: inline-flex; background: color-mix(in srgb, var(--bar-soft) 25%, transparent); border-radius: 999px; padding: 3px; gap: 2px; }
+.seg button { font: inherit; font-size: .88rem; border: 0; background: none; color: var(--bar-soft); padding: 7px 18px; border-radius: 999px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--bar-fg); color: var(--bar-bg); }
+.seg button:focus-visible { outline: 2px solid var(--bar-fg); outline-offset: 2px; }
+.stage { background: var(--stage-bg); color: var(--stage-fg); min-height: 70vh; padding-block: 24px 56px; }
+.in { max-width: 1100px; margin: 0 auto; display: grid; gap: 30px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h2 { font-size: .8rem; font-family: var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--stage-soft); margin: 0 0 4px; font-weight: 500; }
+.lead { margin: 0 0 12px; color: var(--stage-soft); font-size: .86rem; max-width: 80ch; }
+.lead b { color: var(--stage-fg); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 12px; }
+.it { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; align-items: center; background: var(--card); border: 1px solid var(--stage-line); border-radius: 18px; padding: 12px 14px; min-width: 0; }
+.n { font-family: var(--mono); font-size: .72rem; color: var(--stage-soft); grid-column: 1 / -1; }
+.n b { color: var(--stage-fg); font-weight: 600; }
+.disc { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+.disc.l { width: 40px; height: 40px; }
+.mi { font-family: "Material Icons"; font-style: normal; font-weight: normal; font-size: 20px; line-height: 1; letter-spacing: normal; text-transform: none; white-space: nowrap; font-feature-settings: "liga"; -webkit-font-feature-settings: "liga"; -webkit-font-smoothing: antialiased; }
+.mi.o { font-family: "Material Icons Outlined"; }
+.mi.p { font-size: 22px; }
+.mi.big { font-size: 28px; }
+.lbl { min-width: 0; }
+.lbl b { display: block; font-weight: 600; font-size: .95rem; }
+.lbl span { color: var(--stage-soft); font-size: .78rem; }
+.bare { color: var(--stage-fg); }
+.row { display: flex; flex-wrap: wrap; gap: 18px 22px; align-items: flex-end; }
+.sz { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px 22px; align-items: flex-end; color: var(--stage-fg); padding-top: 2px; }
+.szi { display: grid; gap: 3px; justify-items: center; }
+.szi i { font-style: normal; font-size: .62rem; color: var(--stage-soft); }
+.fig { display: grid; gap: 6px; justify-items: center; font-size: .78rem; color: var(--stage-soft); text-align: center; }
+.fig .art { display: grid; place-items: center; }
+.mask { overflow: hidden; box-shadow: 0 0 0 1px var(--stage-line), 0 4px 12px rgba(0,0,0,.25); }
+.mask svg, .art svg { display: block; width: 100%; height: 100%; }
+.splash { width: 130px; aspect-ratio: 9 / 14; border: 1px solid var(--stage-line); border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: #fff; color: #1e2a3a; font-weight: 600; font-size: .8rem; }
+.splash.d { background: #0b0f11; color: #fff; }
+.splash svg { width: 56px; height: 56px; }
+.from { grid-column: 1 / -1; font-size: .74rem; color: var(--stage-soft); line-height: 1.5; }
+.from s { opacity: .8; }
+.from code { font-family: var(--mono); font-size: .72rem; color: var(--stage-fg); }
+.themed { background: #d8e2ff; display: grid; place-items: center; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="top">
+  <div><h1>Satellites icon audit</h1><p>Every icon in the Satellites app, numbered. The ones with a match in the main apps use it. The satellite itself (tab, row, and the "On the satellite" header) now has its own icon, idea F2.</p></div>
+  <div class="seg" role="group" aria-label="Page"><button type="button" id="pl" aria-pressed="true">Light</button><button type="button" id="pd" aria-pressed="false">Dark</button></div>
+</div>
+<div class="stage"><div class="in" id="in"></div></div>
+
+<script>
+(function () {
+  var MAIN = "M50.7,103.3 H66.7 A30,30 0 0 1 96.7,133.3 V149.3 A30,30 0 0 1 66.7,179.3 H50.7 A30,30 0 0 1 20.7,149.3 V133.3 A30,30 0 0 1 50.7,103.3Z M45.3,118.7 a36,36 0 1,0 72,0 a36,36 0 1,0 -72,0Z";
+  var ARCS = ["M89.37,61.26 A58,58 0 0,1 138.74,110.63 A5.5,5.5 0 0 1 127.84,112.16 A47,47 0 0,0 87.84,72.16 A5.5,5.5 0 0 1 89.37,61.26Z", "M89.98,39.17 A80,80 0 0,1 160.83,110.02 A5.5,5.5 0 0 1 149.89,111.21 A69,69 0 0,0 88.79,50.11 A5.5,5.5 0 0 1 89.98,39.17Z", "M90.66,17.13 A102,102 0 0,1 182.87,109.34 A5.5,5.5 0 0 1 171.92,110.35 A91,91 0 0,0 89.65,28.08 A5.5,5.5 0 0 1 90.66,17.13Z"];
+  var ALL = MAIN + ' ' + ARCS.join(' ');
+  var n = 0;
+  function num() { n += 1; return '<span class="n"><b>#' + n + '</b></span>'; }
+  function mi(name, cls) { return '<span class="mi ' + (cls || '') + '" aria-hidden="true">' + name + '</span>'; }
+  function tint(tone) { return 'background:color-mix(in srgb,var(--' + tone + ') 18%,transparent);color:var(--' + tone + ')'; }
+  function head(icon, tone, title, where) {
+    return '<div class="it">' + num() + '<span class="disc" style="' + tint(tone) + '">' + mi(icon) + '</span><div class="lbl"><b>' + title + '</b><span>' + where + ' &middot; ' + icon.replace(/_/g, ' ') + '</span></div></div>';
+  }
+  function rowIcon(icon, tone, title, where) {
+    return '<div class="it">' + num() + '<span class="disc l" style="' + tint(tone) + '">' + mi(icon, 'p') + '</span><div class="lbl"><b>' + title + '</b><span>' + where + ' &middot; ' + icon.replace(/_/g, ' ') + '</span></div></div>';
+  }
+  function bare(icon, title, where, outlined) {
+    return '<div class="it">' + num() + '<span class="bare">' + mi(icon, 'big' + (outlined ? ' o' : '')) + '</span><div class="lbl"><b>' + title + '</b><span>' + where + ' &middot; ' + icon.replace(/_/g, ' ') + (outlined ? ' (outlined)' : '') + '</span></div></div>';
+  }
+  function glowSvg(scale, gid) {
+    return '<svg viewBox="0 0 108 108" aria-hidden="true"><defs>' +
+      '<radialGradient id="a' + gid + '" gradientUnits="userSpaceOnUse" cx="150" cy="70" r="88"><stop offset="0" stop-color="#AB47BC"/><stop offset="1" stop-color="#AB47BC" stop-opacity="0"/></radialGradient>' +
+      '<radialGradient id="b' + gid + '" gradientUnits="userSpaceOnUse" cx="70" cy="170" r="110"><stop offset="0" stop-color="#4FD08A"/><stop offset="1" stop-color="#4FD08A" stop-opacity="0"/></radialGradient>' +
+      '<radialGradient id="c' + gid + '" gradientUnits="userSpaceOnUse" cx="40" cy="40" r="130"><stop offset="0" stop-color="#5C6BC0"/><stop offset="1" stop-color="#5C6BC0" stop-opacity="0"/></radialGradient>' +
+      '<radialGradient id="h' + gid + '" gradientUnits="userSpaceOnUse" cx="100" cy="100" r="60"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>' +
+      '<mask id="m' + gid + '" maskUnits="userSpaceOnUse" x="-20" y="-20" width="240" height="240"><path fill="#fff" fill-rule="evenodd" d="' + ALL + '"/></mask></defs>' +
+      '<rect width="108" height="108" fill="#fff"/><g transform="translate(' + (54 - 102 * scale) + ' ' + (54 - 98 * scale) + ') scale(' + scale + ')"><g mask="url(#m' + gid + ')">' +
+      '<rect x="-20" y="-20" width="240" height="240" fill="#6A5BC2"/><rect x="-20" y="-20" width="240" height="240" fill="url(#a' + gid + ')"/><rect x="-20" y="-20" width="240" height="240" fill="url(#b' + gid + ')"/>' +
+      '<rect x="-20" y="-20" width="240" height="240" fill="url(#c' + gid + ')"/><rect x="-20" y="-20" width="240" height="240" fill="url(#h' + gid + ')"/></g></g></svg>';
+  }
+  function monoSvg(fill, scale) { return '<svg viewBox="0 0 108 108" aria-hidden="true"><g transform="translate(' + (54 - 102 * scale) + ' ' + (54 - 98 * scale) + ') scale(' + scale + ')"><path fill="' + fill + '" fill-rule="evenodd" d="' + ALL + '"/></g></svg>'; }
+  function markSvg(fill) { return '<svg viewBox="21 17 162 162" aria-hidden="true"><path fill="' + fill + '" fill-rule="evenodd" d="' + ALL + '"/></svg>'; }
+  function fig(art, label) { return '<div class="fig">' + art + label + '</div>'; }
+
+  var out = '';
+  n += 1;
+  out += '<section><h2>App icon and splash</h2><p class="lead"><b>#' + n + '</b> The launcher icon (0.93.0, smaller in its circle), the themed icon Android 13 and later can use, the splash, and the same mark on the sign-in screen and the empty list.</p><div class="row">' +
+    fig('<div class="mask" style="width:92px;height:92px;border-radius:50%">' + glowSvg(0.3, 1) + '</div>', 'Launcher, circle') +
+    fig('<div class="mask" style="width:92px;height:92px;border-radius:30%">' + glowSvg(0.3, 2) + '</div>', 'Launcher, squircle') +
+    fig('<div class="mask themed" style="width:92px;height:92px;border-radius:50%">' + monoSvg('#1b3a8a', 0.3) + '</div>', 'Themed icon') +
+    fig('<div class="splash"><div style="width:56px;height:56px">' + glowSvg(0.3, 3).replace('<rect width="108" height="108" fill="#fff"/>', '') + '</div><span>Satellites</span></div>', 'Splash, light') +
+    fig('<div class="splash d">' + markSvg('#fff') + '<span>Satellites</span></div>', 'Splash, dark') +
+    '</div></section>';
+  // ---- icons the main apps already use: the Material Design icon set (mdi:), drawn 24 x 24, and the house's own cd:home
+  var MDI = {"tune-filled": "M8 13C6.14 13 4.59 14.28 4.14 16H2V18H4.14C4.59 19.72 6.14 21 8 21S11.41 19.72 11.86 18H22V16H11.86C11.41 14.28 9.86 13 8 13M19.86 6C19.41 4.28 17.86 3 16 3S12.59 4.28 12.14 6H2V8H12.14C12.59 9.72 14.14 11 16 11S19.41 9.72 19.86 8H22V6H19.86", "speaker": "M12,12A3,3 0 0,0 9,15A3,3 0 0,0 12,18A3,3 0 0,0 15,15A3,3 0 0,0 12,12M12,20A5,5 0 0,1 7,15A5,5 0 0,1 12,10A5,5 0 0,1 17,15A5,5 0 0,1 12,20M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8C10.89,8 10,7.1 10,6C10,4.89 10.89,4 12,4M17,2H7C5.89,2 5,2.89 5,4V20A2,2 0 0,0 7,22H17A2,2 0 0,0 19,20V4C19,2.89 18.1,2 17,2Z", "plus": "M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z", "arrow-left": "M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z", "close": "M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z", "palette": "M17.5,12A1.5,1.5 0 0,1 16,10.5A1.5,1.5 0 0,1 17.5,9A1.5,1.5 0 0,1 19,10.5A1.5,1.5 0 0,1 17.5,12M14.5,8A1.5,1.5 0 0,1 13,6.5A1.5,1.5 0 0,1 14.5,5A1.5,1.5 0 0,1 16,6.5A1.5,1.5 0 0,1 14.5,8M9.5,8A1.5,1.5 0 0,1 8,6.5A1.5,1.5 0 0,1 9.5,5A1.5,1.5 0 0,1 11,6.5A1.5,1.5 0 0,1 9.5,8M6.5,12A1.5,1.5 0 0,1 5,10.5A1.5,1.5 0 0,1 6.5,9A1.5,1.5 0 0,1 8,10.5A1.5,1.5 0 0,1 6.5,12M12,3A9,9 0 0,0 3,12A9,9 0 0,0 12,21A1.5,1.5 0 0,0 13.5,19.5C13.5,19.11 13.35,18.76 13.11,18.5C12.88,18.23 12.73,17.88 12.73,17.5A1.5,1.5 0 0,1 14.23,16H16A5,5 0 0,0 21,11C21,6.58 16.97,3 12,3Z", "thermometer": "M15 13V5A3 3 0 0 0 9 5V13A5 5 0 1 0 15 13M12 4A1 1 0 0 1 13 5V8H11V5A1 1 0 0 1 12 4Z", "tune-variant": "M8 13C6.14 13 4.59 14.28 4.14 16H2V18H4.14C4.59 19.72 6.14 21 8 21S11.41 19.72 11.86 18H22V16H11.86C11.41 14.28 9.86 13 8 13M8 19C6.9 19 6 18.1 6 17C6 15.9 6.9 15 8 15S10 15.9 10 17C10 18.1 9.1 19 8 19M19.86 6C19.41 4.28 17.86 3 16 3S12.59 4.28 12.14 6H2V8H12.14C12.59 9.72 14.14 11 16 11S19.41 9.72 19.86 8H22V6H19.86M16 9C14.9 9 14 8.1 14 7C14 5.9 14.9 5 16 5S18 5.9 18 7C18 8.1 17.1 9 16 9Z", "brightness-6": "M12,18V6A6,6 0 0,1 18,12A6,6 0 0,1 12,18M20,15.31L23.31,12L20,8.69V4H15.31L12,0.69L8.69,4H4V8.69L0.69,12L4,15.31V20H8.69L12,23.31L15.31,20H20V15.31Z", "volume-high": "M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z", "account-voice": "M9,5A4,4 0 0,1 13,9A4,4 0 0,1 9,13A4,4 0 0,1 5,9A4,4 0 0,1 9,5M9,15C11.67,15 17,16.34 17,19V21H1V19C1,16.34 6.33,15 9,15M16.76,5.36C18.78,7.56 18.78,10.61 16.76,12.63L15.08,10.94C15.92,9.76 15.92,8.23 15.08,7.05L16.76,5.36M20.07,2C24,6.05 23.97,12.11 20.07,16L18.44,14.37C21.21,11.19 21.21,6.65 18.44,3.63L20.07,2Z", "cog-outline": "M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M10,22C9.75,22 9.54,21.82 9.5,21.58L9.13,18.93C8.5,18.68 7.96,18.34 7.44,17.94L4.95,18.95C4.73,19.03 4.46,18.95 4.34,18.73L2.34,15.27C2.21,15.05 2.27,14.78 2.46,14.63L4.57,12.97L4.5,12L4.57,11L2.46,9.37C2.27,9.22 2.21,8.95 2.34,8.73L4.34,5.27C4.46,5.05 4.73,4.96 4.95,5.05L7.44,6.05C7.96,5.66 8.5,5.32 9.13,5.07L9.5,2.42C9.54,2.18 9.75,2 10,2H14C14.25,2 14.46,2.18 14.5,2.42L14.87,5.07C15.5,5.32 16.04,5.66 16.56,6.05L19.05,5.05C19.27,4.96 19.54,5.05 19.66,5.27L21.66,8.73C21.79,8.95 21.73,9.22 21.54,9.37L19.43,11L19.5,12L19.43,13L21.54,14.63C21.73,14.78 21.79,15.05 21.66,15.27L19.66,18.73C19.54,18.95 19.27,19.04 19.05,18.95L16.56,17.95C16.04,18.34 15.5,18.68 14.87,18.93L14.5,21.58C14.46,21.82 14.25,22 14,22H10M11.25,4L10.88,6.61C9.68,6.86 8.62,7.5 7.85,8.39L5.44,7.35L4.69,8.65L6.8,10.2C6.4,11.37 6.4,12.64 6.8,13.8L4.68,15.36L5.43,16.66L7.86,15.62C8.63,16.5 9.68,17.14 10.87,17.38L11.24,20H12.76L13.13,17.39C14.32,17.14 15.37,16.5 16.14,15.62L18.57,16.66L19.32,15.36L17.2,13.81C17.6,12.64 17.6,11.37 17.2,10.2L19.31,8.65L18.56,7.35L16.15,8.39C15.38,7.5 14.32,6.86 13.12,6.62L12.75,4H11.25Z", "wifi-strength-4": "M12,3C7.79,3 3.7,4.41 0.38,7C4.41,12.06 7.89,16.37 12,21.5C16.08,16.42 20.24,11.24 23.65,7C20.32,4.41 16.22,3 12,3Z", "update": "M21,10.12H14.22L16.96,7.3C14.23,4.6 9.81,4.5 7.08,7.2C4.35,9.91 4.35,14.28 7.08,17C9.81,19.7 14.23,19.7 16.96,17C18.32,15.65 19,14.08 19,12.1H21C21,14.08 20.12,16.65 18.36,18.39C14.85,21.87 9.15,21.87 5.64,18.39C2.14,14.92 2.11,9.28 5.62,5.81C9.13,2.34 14.76,2.34 18.27,5.81L21,3V10.12M12.5,8V12.25L16,14.33L15.28,15.54L11,13V8H12.5Z", "map-marker-outline": "M12,6.5A2.5,2.5 0 0,1 14.5,9A2.5,2.5 0 0,1 12,11.5A2.5,2.5 0 0,1 9.5,9A2.5,2.5 0 0,1 12,6.5M12,2A7,7 0 0,1 19,9C19,14.25 12,22 12,22C12,22 5,14.25 5,9A7,7 0 0,1 12,2M12,4A5,5 0 0,0 7,9C7,10 7,12 12,18.71C17,12 17,10 17,9A5,5 0 0,0 12,4Z", "power": "M16.56,5.44L15.11,6.89C16.84,7.94 18,9.83 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12C6,9.83 7.16,7.94 8.88,6.88L7.44,5.44C5.36,6.88 4,9.28 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12C20,9.28 18.64,6.88 16.56,5.44M13,3H11V13H13", "content-save-outline": "M17 3H5C3.89 3 3 3.9 3 5V19C3 20.1 3.89 21 5 21H19C20.1 21 21 20.1 21 19V7L17 3M19 19H5V5H16.17L19 7.83V19M12 12C10.34 12 9 13.34 9 15S10.34 18 12 18 15 16.66 15 15 13.66 12 12 12M6 6H15V10H6V6Z"};
+  var MDI2 = {"volume-high": "M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z", "map-marker": "M12,11.5A2.5,2.5 0 0,1 9.5,9A2.5,2.5 0 0,1 12,6.5A2.5,2.5 0 0,1 14.5,9A2.5,2.5 0 0,1 12,11.5M12,2A7,7 0 0,0 5,9C5,14.25 12,22 12,22C12,22 19,14.25 19,9A7,7 0 0,0 12,2Z", "gesture-tap": "M10,9A1,1 0 0,1 11,8A1,1 0 0,1 12,9V13.47L13.21,13.6L18.15,15.79C18.68,16.03 19,16.56 19,17.14V21.5C18.97,22.32 18.32,22.97 17.5,23H11C10.62,23 10.26,22.85 10,22.57L5.1,18.37L5.84,17.6C6.03,17.39 6.3,17.28 6.58,17.28H6.8L10,19V9M11,5A4,4 0 0,1 15,9C15,10.5 14.2,11.77 13,12.46V11.24C13.61,10.69 14,9.89 14,9A3,3 0 0,0 11,6A3,3 0 0,0 8,9C8,9.89 8.39,10.69 9,11.24V12.46C7.8,11.77 7,10.5 7,9A4,4 0 0,1 11,5Z", "content-copy": "M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z", "shield-key": "M12,8A1,1 0 0,1 13,9A1,1 0 0,1 12,10A1,1 0 0,1 11,9A1,1 0 0,1 12,8M21,11C21,16.55 17.16,21.74 12,23C6.84,21.74 3,16.55 3,11V5L12,1L21,5V11M12,6A3,3 0 0,0 9,9C9,10.31 9.83,11.42 11,11.83V18H13V16H15V14H13V11.83C14.17,11.42 15,10.31 15,9A3,3 0 0,0 12,6Z", "wifi-strength-1": "M12,3C7.79,3 3.7,4.41 0.38,7C4.41,12.06 7.89,16.37 12,21.5C16.08,16.42 20.24,11.24 23.65,7C20.32,4.41 16.22,3 12,3M12,5C15.07,5 18.09,5.86 20.71,7.45L15.61,13.81C14.5,13.28 13.25,13 12,13C10.75,13 9.5,13.28 8.39,13.8L3.27,7.44C5.91,5.85 8.93,5 12,5Z", "wifi-strength-2": "M12,3C7.79,3 3.7,4.41 0.38,7C4.41,12.06 7.89,16.37 12,21.5C16.08,16.42 20.24,11.24 23.65,7C20.32,4.41 16.22,3 12,3M12,5C15.07,5 18.09,5.86 20.71,7.45L17.5,11.43C16.26,10.74 14.37,10 12,10C9.62,10 7.74,10.75 6.5,11.43L3.27,7.44C5.91,5.85 8.93,5 12,5Z", "wifi-strength-3": "M12,3C7.79,3 3.7,4.41 0.38,7C4.41,12.06 7.89,16.37 12,21.5C16.08,16.42 20.24,11.24 23.65,7C20.32,4.41 16.22,3 12,3M12,5C15.07,5 18.09,5.86 20.71,7.45L18.77,9.88C17.26,9 14.88,8 12,8C9,8 6.68,9 5.21,9.84L3.27,7.44C5.91,5.85 8.93,5 12,5Z", "wifi-strength-4": "M12,3C7.79,3 3.7,4.41 0.38,7C4.41,12.06 7.89,16.37 12,21.5C16.08,16.42 20.24,11.24 23.65,7C20.32,4.41 16.22,3 12,3Z", "wifi-strength-off-outline": "M3.27,1.44L2,2.72L4.05,4.77C2.75,5.37 1.5,6.11 0.38,7C4.2,11.8 8.14,16.67 12,21.5L15.91,16.63L19.23,19.95L20.5,18.68C14.87,13.04 3.27,1.44 3.27,1.44M12,3C10.6,3 9.21,3.17 7.86,3.5L9.56,5.19C10.37,5.07 11.18,5 12,5C15.07,5 18.09,5.86 20.71,7.45L16.76,12.38L18.18,13.8C20.08,11.43 22,9 23.65,7C20.32,4.41 16.22,3 12,3M5.57,6.29L14.5,15.21L12,18.3L3.27,7.44C4,7 4.78,6.61 5.57,6.29Z", "update-arrow": "M21,10.12H14.22L16.96,7.3C14.23,4.6 9.81,4.5 7.08,7.2C4.35,9.91 4.35,14.28 7.08,17C9.81,19.7 14.23,19.7 16.96,17C18.32,15.65 19,14.08 19,12.1H21C21,14.08 20.12,16.65 18.36,18.39C14.85,21.87 9.15,21.87 5.64,18.39C2.14,14.92 2.11,9.28 5.62,5.81C9.13,2.34 14.76,2.34 18.27,5.81L21,3V10.12"}; for (var k2 in MDI2) MDI[k2] = MDI2[k2];
+  var MICPOSE = 'M100,40 H100 A20,20 0 0 1 120,60 V84 A20,20 0 0 1 100,104 H100 A20,20 0 0 1 80,84 V60 A20,20 0 0 1 100,40Z M74,130 H126 A8,8 0 0 1 134,138 V138 A8,8 0 0 1 126,146 H74 A8,8 0 0 1 66,138 V138 A8,8 0 0 1 74,130Z';
+  var CDHOME = "M87.53,39.68 Q100,28.02 112.47,39.68 L163.17,87.12 Q175.64,98.78 175.64,115.86 L175.64,154.9 Q175.64,171.98 158.56,171.98 L121.96,171.98 Q119.52,171.98 119.52,169.54 L119.52,126.84 Q119.52,113.42 106.1,113.42 L93.9,113.42 Q80.48,113.42 80.48,126.84 L80.48,169.54 Q80.48,171.98 78.04,171.98 L41.44,171.98 Q24.36,171.98 24.36,154.9 L24.36,115.86 Q24.36,98.78 36.83,87.12 Z";
+  // the satellite device icon (idea F2): a tall speaker with its light ring across the top, with Clive's own logo path (branding/clive.svg, scaled and moved, not redrawn) cut out of its face
+  var CLIVE = "M103.3,50.7L119.3,50.7C135.87,50.7 149.3,64.13 149.3,80.7L149.3,96.7C149.3,110.98 139.32,122.93 125.96,125.96C122.93,139.32 110.98,149.3 96.7,149.3L80.7,149.3C64.13,149.3 50.7,135.87 50.7,119.3L50.7,103.3C50.7,89.02 60.68,77.07 74.04,74.04C77.07,60.68 89.02,50.7 103.3,50.7ZM80.7,73.3C78.41,73.3 76.18,73.56 74.04,74.04C73.56,76.18 73.3,78.41 73.3,80.7L73.3,96.7C73.3,113.27 86.73,126.7 103.3,126.7L119.3,126.7C121.59,126.7 123.82,126.44 125.96,125.96C126.44,123.82 126.7,121.59 126.7,119.3L126.7,103.3C126.7,86.73 113.27,73.3 96.7,73.3Z";
+  var devUid = 0;
+  function rrp(x, y, w, h, r) { return 'M' + (x + r) + ',' + y + ' H' + (x + w - r) + ' A' + r + ',' + r + ' 0 0 1 ' + (x + w) + ',' + (y + r) + ' V' + (y + h - r) + ' A' + r + ',' + r + ' 0 0 1 ' + (x + w - r) + ',' + (y + h) + ' H' + (x + r) + ' A' + r + ',' + r + ' 0 0 1 ' + x + ',' + (y + h - r) + ' V' + (y + r) + ' A' + r + ',' + r + ' 0 0 1 ' + (x + r) + ',' + y + 'Z'; }
+  // optional badge: { d, rule, scale, stroke } a glyph cut out of a solid disc at the bottom right, with a gap round it
+  function device(px, badge) {
+    var id = 'dv' + (++devUid), sc = 0.56, bx = badge ? -16 : 0, by = badge ? -10 : 0;
+    var t = 'translate(' + (100 + bx - 100 * sc) + ' ' + (114 + by - 100 * sc) + ') scale(' + sc + ')';
+    var glyph = '';
+    if (badge) {
+      var gs = badge.scale || 0.36, bxs = (badge.box || 200) / 2, gt = 'translate(' + (146 - bxs * gs) + ' ' + (146 - bxs * gs) + ') scale(' + gs + ')';
+      glyph = '<circle cx="146" cy="146" r="50" fill="#000"/><circle cx="146" cy="146" r="40" fill="#fff"/>' +
+        (badge.stroke ? '<path d="' + badge.d + '" transform="' + gt + '" fill="none" stroke="#000" stroke-width="' + badge.stroke + '" stroke-linecap="round" stroke-linejoin="round"/>'
+                      : '<path d="' + badge.d + '" transform="' + gt + '" fill="#000" fill-rule="' + (badge.rule || 'evenodd') + '"/>');
+    }
+    return '<svg width="' + px + '" height="' + px + '" viewBox="0 0 200 200" aria-hidden="true"><defs><mask id="' + id + '" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="200">' +
+      '<path d="' + rrp(46 + bx, 22 + by, 108, 156, 44) + ' ' + rrp(68 + bx, 46 + by, 64, 12, 6) + '" fill="#fff" fill-rule="evenodd"/><path d="' + CLIVE + '" transform="' + t + '" fill="#000" fill-rule="evenodd"/>' + glyph + '</mask></defs>' +
+      '<rect width="200" height="200" fill="currentColor" mask="url(#' + id + ')"/></svg>';
+  }
+  function ic(name, px) {
+    if (name === 'device') return device(px);
+    if (name.indexOf('device+') === 0 && name !== 'device+plus') { var key = name.slice(7); return device(px, key === 'mic-clive' ? { d: MICPOSE, box: 200, scale: 0.5, rule: 'evenodd' } : { d: MDI[key], box: 24, scale: 2.0, rule: 'nonzero' }); }
+    if (name === 'device+plus') return device(px, { d: 'M100,52 V148 M52,100 H148', stroke: 18, scale: 0.36 });
+    if (name === 'cd:home') return '<svg width="' + px + '" height="' + px + '" viewBox="0 0 200 200" aria-hidden="true"><path fill="currentColor" d="' + CDHOME + '"/></svg>';
+    return '<svg width="' + px + '" height="' + px + '" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="' + MDI[name] + '"/></svg>';
+  }
+
+  // #16: the Status icon follows the signal, so it is shown at every strength
+  function strengthsItem() {
+    var rows = [['Excellent', 'wifi-strength-4', 'green'], ['Good', 'wifi-strength-3', 'green'], ['Fair', 'wifi-strength-2', 'amber'], ['Weak', 'wifi-strength-1', 'red'], ['Offline', 'wifi-strength-off-outline', 'grey']];
+    return '<div class="it" style="grid-column: 1 / -1">' + num() + '<div class="lbl"><b>Status</b><span>section &middot; the icon follows the Wi-Fi signal (was info)</span></div><div class="row" style="grid-column:1/-1;gap:18px">' +
+      rows.map(function (r) { return '<div class="fig"><span class="disc" style="' + tint(r[2]) + '">' + ic(r[1], 20) + '</span>' + r[0] + '</div>'; }).join('') + '</div><div class="sz" style="gap:10px 30px">' + rows.map(function (r) { return '<span class="szi" style="grid-auto-flow:column;gap:8px;align-items:end">' + [20, 28, 40].map(function (px) { return ic(r[1], px); }).join('') + '</span>'; }).join('') + '</div>' +
+      '<div class="from">the signal bars the main app\'s cameras use (CameraData.kt signalIconName): excellent above -55 dBm, good, fair, weak below -75, offline when it can\'t be reached (16)</div></div>';
+  }
+  // #20: the satellite icon with a copy badge for the section, and the plain copy icon where copying is the action
+  function presetsItem() {
+    return '<div class="it">' + num() + '<div class="row" style="gap:14px"><span class="disc" style="' + tint('orange') + '">' + ic('device+content-copy', 20) + '</span><span class="bare">' + ic('content-copy', 24) + '</span></div><div class="lbl"><b>Presets and copying</b><span>section</span></div>' +
+      '<div class="sz" style="gap:10px 26px">' + sizesRow('device+content-copy').replace('class="sz"', 'class="sz" style="padding:0"') + sizesRow('content-copy', [20, 28, 40]) + '</div>' +
+      '<div class="from"><s>was content copy</s> &rarr; the satellite icon with a copy badge for the section header (20C); the plain copy icon (<code>content-copy</code>) where the action is just copying, such as the "Copy these settings" tile if it gets an icon</div></div>';
+  }
+  // one row: the icon the app would now draw, and underneath what it is today and where the main app already uses the new one
+  function sizesRow(name, list) { return '<div class="sz">' + (list || [20, 28, 40, 64]).map(function (px) { return '<span class="szi">' + ic(name, px) + '<i>' + px + '</i></span>'; }).join('') + '</div>'; }
+  function swap(kind, mdiName, tone, title, where, was, from) {
+    var art;
+    if (kind === 'head') art = '<span class="disc" style="' + tint(tone) + '">' + ic(mdiName, 20) + '</span>';
+    else if (kind === 'row') art = '<span class="disc l" style="' + tint(tone) + '">' + ic(mdiName, 22) + '</span>';
+    else art = '<span class="bare">' + ic(mdiName, 28) + '</span>';
+    return '<div class="it">' + num() + art + '<div class="lbl"><b>' + title + '</b><span>' + where + '</span></div>' + (kind === 'bare' ? '' : sizesRow(mdiName)) +
+      '<div class="from">' + (was ? '<s>was ' + was + '</s> &rarr; ' : '') + '<code>' + mdiName + '</code> &middot; ' + from + '</div></div>';
+  }
+  out += '<section><h2>Bottom bar and top bar</h2><p class="lead">Swapped to the icons the main app already uses for the same things.</p><div class="grid">' +
+    swap('bare', 'device', '', 'Satellites', 'bottom bar, first tab', 'speaker', 'new: the satellite device icon, idea F2') +
+    swap('bare', 'plus', '', 'Add', 'bottom bar, second tab', 'qr code scanner', 'Add in the shopping lists (ShoppingScreen.kt)') +
+    swap('bare', 'arrow-left', '', 'Back', 'satellite page and panel pages', 'arrow back', 'the shopping list and media pad Back') +
+    swap('bare', 'close', '', 'Close', 'account panel', 'close', 'Cancel and Not available (ShoppingScreen.kt), the same shape') + '</div></section>';
+  out += '<section><h2>List</h2><p class="lead">The Home header takes the house\'s own icon from the Church Drive icons board.</p><div class="grid">' +
+    swap('head', 'cd:home', 'indigo', 'Home', 'list header', 'home', 'the house icon on the Church Drive icons board') +
+    swap('head', 'device+plus', 'teal', 'Add a satellite', 'Add tab header', 'qr code scanner', 'new: the satellite icon with a + in a circle, like #25 and #26') +
+    swap('row', 'device', 'indigo', 'A satellite', 'each row of the list', 'monitor', 'new: the satellite device icon, idea F2') + '</div></section>';
+  out += '<section><h2>A satellite\'s page, section headers</h2><p class="lead">Same tinted circles and colours. No section changed colour; only the glyph inside.</p><div class="grid">' +
+    swap('head', 'palette', 'indigo', 'Design', 'section', 'palette', 'the colour tab in the light settings (LightSettings.kt)') +
+    swap('head', 'thermometer', 'amber', 'Temperatures', 'section', 'thermostat', 'the temperature in Clive\'s weather card (AssistCards.kt)') +
+    swap('head', 'tune-filled', 'teal', 'Glances', 'section', 'tune', 'tune-variant with the knobs filled in (the Cleaning settings section and the climate card use it with rings)') +
+    swap('head', 'brightness-6', 'blue', 'Backlight', 'section', 'brightness 6', 'the brightness tiles in the light settings (LightSettings.kt)') +
+    swap('head', 'device+volume-high', 'coral', 'Sound', 'section', 'volume up', 'new: the satellite icon with a volume badge (13B)') +
+    swap('head', 'device+mic-clive', 'indigo', 'Voice', 'section', 'record voice over', 'new: the satellite icon with Clive\'s own mic pose as the badge (14D with 14B)') +
+    swap('head', 'device', 'purple', 'On the satellite', 'section', 'speaker', 'new: the satellite device icon, idea F2 (or cog-outline, the Settings sections, if you want this header to stay generic)') +
+    strengthsItem() +
+    swap('head', 'device+update-arrow', 'orange', 'Firmware', 'section', 'system update', 'new: the satellite icon with the Updates arrow as the badge, without its clock face (17B)') +
+    swap('head', 'device+map-marker', 'teal', 'Name and room', 'section', 'location on', 'new: the satellite icon with a pin badge (18A)') +
+    swap('head', 'device+gesture-tap', 'red', 'Actions', 'section', 'restart alt', 'new: the satellite icon with a finger-tap badge (19B)') +
+    presetsItem() + '</div></section>';
+  // Church Drive's own logo (branding/church-drive.svg: the house with Clive's block cut into its roof, in the glow), glyph only, at the row-icon size
+  var CD_INNER = "<defs><radialGradient id=\"shob0\" gradientUnits=\"userSpaceOnUse\" cx=\"144.48000000000002\" cy=\"81.4\" r=\"79.2\"><stop offset=\"0\" stop-color=\"#AB47BC\"/><stop offset=\"1\" stop-color=\"#AB47BC\" stop-opacity=\"0\"/></radialGradient><radialGradient id=\"shob1\" gradientUnits=\"userSpaceOnUse\" cx=\"62.4\" cy=\"168.20000000000002\" r=\"100.8\"><stop offset=\"0\" stop-color=\"#4FD08A\"/><stop offset=\"1\" stop-color=\"#4FD08A\" stop-opacity=\"0\"/></radialGradient><radialGradient id=\"shob2\" gradientUnits=\"userSpaceOnUse\" cx=\"26.4\" cy=\"60.32\" r=\"115.2\"><stop offset=\"0\" stop-color=\"#5C6BC0\"/><stop offset=\"1\" stop-color=\"#5C6BC0\" stop-opacity=\"0\"/></radialGradient><radialGradient id=\"shog\" gradientUnits=\"userSpaceOnUse\" cx=\"91.2\" cy=\"93.80000000000001\" r=\"40.32000000000001\"><stop offset=\"0\" stop-color=\"#FFFFFF\" stop-opacity=\"0.35\"/><stop offset=\"1\" stop-color=\"#FFFFFF\" stop-opacity=\"0\"/></radialGradient><mask id=\"shom\" maskUnits=\"userSpaceOnUse\" x=\"-8.0\" y=\"18.0\" width=\"184.0\" height=\"164.0\"><path d=\"M63.78,53.56C70.59,47.19 77.41,47.19 84.22,53.56L92.03,60.86C92.62,48.14 103.13,38 116,38L132,38C145.25,38 156,48.75 156,62L156,78C156,90.94 145.75,101.5 132.93,101.98C134.98,106.21 136,110.88 136,116L136,148C136,157.33 131.33,162 122,162L26,162C21.33,162 17.83,160.83 15.5,158.5C13.17,156.17 12,152.67 12,148L12,116C12,106.67 15.41,98.81 22.22,92.44ZM132.93,101.98C131.24,98.5 128.86,95.32 125.78,92.44L92.03,60.86C92.01,61.24 92,61.62 92,62L92,78C92,91.25 102.75,102 116,102L132,102C132.31,102 132.62,101.99 132.93,101.98Z\" fill=\"#fff\" fill-rule=\"evenodd\"/></mask></defs><g transform=\"translate(112.822 85.550) scale(1.70450)\"><g mask=\"url(#shom)\"><rect x=\"-8.0\" y=\"18.0\" width=\"184.0\" height=\"164.0\" fill=\"#6A5BC2\"/><rect x=\"-8.0\" y=\"18.0\" width=\"184.0\" height=\"164.0\" fill=\"url(#shob0)\"/><rect x=\"-8.0\" y=\"18.0\" width=\"184.0\" height=\"164.0\" fill=\"url(#shob1)\"/><rect x=\"-8.0\" y=\"18.0\" width=\"184.0\" height=\"164.0\" fill=\"url(#shob2)\"/><rect x=\"-8.0\" y=\"18.0\" width=\"184.0\" height=\"164.0\" fill=\"url(#shog)\"/></g></g>";
+  var logoUid = 0;
+  var HOUSE_D = "M63.78,53.56C70.59,47.19 77.41,47.19 84.22,53.56L92.03,60.86C92.62,48.14 103.13,38 116,38L132,38C145.25,38 156,48.75 156,62L156,78C156,90.94 145.75,101.5 132.93,101.98C134.98,106.21 136,110.88 136,116L136,148C136,157.33 131.33,162 122,162L26,162C21.33,162 17.83,160.83 15.5,158.5C13.17,156.17 12,152.67 12,148L12,116C12,106.67 15.41,98.81 22.22,92.44ZM132.93,101.98C131.24,98.5 128.86,95.32 125.78,92.44L92.03,60.86C92.01,61.24 92,61.62 92,62L92,78C92,91.25 102.75,102 116,102L132,102C132.31,102 132.62,101.99 132.93,101.98Z";
+  function logoCD1(px) { return '<svg width="' + (px * 1.15) + '" height="' + px + '" viewBox="8 34 152 132" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="' + HOUSE_D + '"/></svg>'; }
+  function logoSat1(px) { return '<svg width="' + px + '" height="' + px + '" viewBox="21 17 162 162" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="' + ALL + '"/></svg>'; }
+  function logoCD(px) { var u = 'c' + (++logoUid) + '_'; return '<svg width="' + (px * 1.1) + '" height="' + px + '" viewBox="128 138 256 236" aria-hidden="true">' + CD_INNER.replace(/id="(sho[a-z0-9]+)"/g, 'id="' + u + '$1"').replace(/url\(#(sho[a-z0-9]+)\)/g, 'url(#' + u + '$1)').replace(/mask="url\(#(sho[a-z0-9]+)\)"/g, 'mask="url(#' + u + '$1)"') + '</svg>'; }
+  function logoSat(px) { return glowSvg(0.62, 'p' + (++logoUid)).replace('<rect width="108" height="108" fill="#fff"/>', '').replace('<svg ', '<svg width="' + px + '" height="' + px + '" '); }
+  function panelRow(art, title, where, was, from) {
+    return '<div class="it">' + num() + '<span class="bare">' + art + '</span><div class="lbl"><b>' + title + '</b><span>' + where + '</span></div>' +
+      '<div class="from">' + (was ? '<s>was ' + was + '</s> &rarr; ' : '') + from + '</div></div>';
+  }
+  var COG_OUT = 'M19.1,120.6 L17.3,122.8 L16.2,125.5 L15.9,128.5 L16.5,131.3 L17.2,133.0 L30.1,155.1 L31.4,156.8 L32.9,158.2 L34.6,159.2 L36.5,159.8 L38.6,160.1 L40.6,159.9 L42.5,159.4 L58.4,153.1 L59.3,152.9 L60.4,153.0 L68.2,157.9 L73.6,160.7 L74.6,161.7 L75.0,162.8 L77.4,179.4 L77.8,181.2 L79.2,183.9 L80.5,185.3 L82.0,186.4 L84.6,187.6 L87.3,188.0 L112.7,188.0 L115.6,187.6 L118.0,186.4 L119.6,185.2 L120.9,183.7 L122.1,181.3 L122.6,179.4 L125.0,162.8 L125.4,161.7 L125.9,161.0 L132.8,157.3 L139.0,153.3 L140.4,152.9 L141.6,153.1 L158.6,159.7 L160.6,160.1 L162.5,160.0 L165.5,159.1 L167.9,157.5 L169.4,155.9 L182.8,133.0 L183.8,130.3 L184.1,127.5 L183.6,124.7 L182.3,122.1 L180.3,120.0 L166.9,109.6 L166.0,108.5 L165.7,107.1 L166.1,99.4 L165.7,92.6 L166.0,91.5 L166.7,90.6 L180.2,80.0 L182.2,78.0 L183.2,76.2 L184.0,73.6 L184.1,71.5 L183.6,68.9 L182.8,67.0 L169.9,44.8 L168.0,42.6 L165.5,40.9 L162.5,40.0 L160.6,39.9 L158.6,40.3 L141.6,46.9 L140.4,47.1 L139.0,46.7 L132.8,42.7 L125.9,39.0 L125.4,38.3 L125.0,37.2 L122.6,20.6 L122.2,18.8 L121.4,17.1 L120.3,15.5 L118.9,14.2 L117.3,13.1 L115.4,12.4 L112.7,12.0 L87.3,12.0 L84.4,12.4 L82.0,13.6 L80.5,14.7 L79.1,16.3 L78.2,17.9 L77.4,20.6 L75.0,37.5 L74.5,38.5 L73.6,39.3 L68.4,41.9 L61.0,46.7 L59.9,47.1 L58.4,46.9 L42.4,40.6 L39.6,39.9 L36.5,40.2 L34.5,40.9 L32.0,42.6 L30.1,44.9 L16.8,67.9 L16.0,70.6 L15.9,72.6 L16.2,74.5 L16.8,76.3 L17.8,78.0 L19.0,79.3 L33.1,90.4 L33.9,91.3 L34.3,92.6 L33.9,99.9 L34.2,107.7 L33.9,108.7 L33.1,109.6Z M53.3,83.5 L37.8,71.3 L37.0,69.8 L36.9,68.9 L37.2,67.8 L40.8,61.7 L41.7,60.8 L42.8,60.3 L44.3,60.4 L53.3,64.1 L62.4,67.4 L72.1,60.2 L75.9,57.8 L81.4,55.0 L90.5,51.2 L93.4,31.9 L93.8,30.9 L94.3,30.2 L95.3,29.6 L96.4,29.4 L103.6,29.4 L105.0,29.7 L106.0,30.6 L106.5,31.7 L109.1,51.2 L118.7,55.0 L123.2,57.3 L126.8,59.6 L137.2,67.4 L155.4,60.1 L156.5,59.9 L157.9,60.2 L158.8,60.9 L162.7,67.6 L163.1,68.4 L163.1,69.5 L162.9,70.3 L162.2,71.3 L146.7,83.5 L148.2,95.4 L148.3,100.0 L148.2,104.6 L146.7,116.5 L162.2,128.7 L163.0,130.2 L163.1,131.1 L162.8,132.2 L159.0,138.5 L158.1,139.3 L156.6,139.7 L155.5,139.5 L146.7,135.9 L137.6,132.6 L127.9,139.8 L124.1,142.2 L118.6,145.0 L109.5,148.8 L106.6,168.1 L106.2,169.1 L105.7,169.8 L104.7,170.4 L103.6,170.6 L96.4,170.6 L95.0,170.3 L94.1,169.6 L93.5,168.3 L90.9,148.8 L81.3,145.0 L76.8,142.7 L73.3,140.5 L62.4,132.6 L44.6,139.9 L43.5,140.1 L42.1,139.8 L41.2,139.1 L37.3,132.4 L36.9,131.6 L36.9,130.5 L37.3,129.4 L37.8,128.7 L53.3,116.5 L51.8,104.6 L51.7,100.0 L51.8,95.4Z M104.8,65.2 L100.0,64.9 L95.2,65.2 L90.7,66.1 L86.3,67.6 L82.3,69.7 L78.5,72.2 L75.2,75.2 L72.2,78.5 L69.7,82.3 L67.6,86.3 L66.1,90.7 L65.2,95.2 L64.9,100.0 L65.2,104.8 L66.1,109.3 L67.6,113.7 L69.7,117.7 L72.2,121.5 L75.2,124.8 L78.5,127.8 L82.3,130.3 L86.3,132.4 L90.7,133.9 L95.2,134.8 L100.0,135.1 L104.8,134.8 L109.3,133.9 L113.7,132.4 L117.7,130.3 L121.5,127.8 L124.8,124.8 L127.8,121.5 L130.3,117.7 L132.4,113.7 L133.9,109.3 L134.8,104.8 L135.1,100.0 L134.8,95.2 L133.9,90.7 L132.4,86.3 L130.3,82.3 L127.8,78.5 L124.8,75.2 L121.5,72.2 L117.7,69.7 L113.7,67.6 L109.3,66.1Z M100.0,117.8 L97.7,117.6 L95.4,117.1 L93.2,116.3 L91.2,115.3 L87.6,112.4 L84.7,108.8 L83.7,106.8 L82.9,104.6 L82.4,102.3 L82.2,100.0 L82.4,97.7 L82.9,95.4 L83.7,93.2 L84.7,91.2 L87.6,87.6 L91.2,84.7 L93.2,83.7 L95.4,82.9 L97.7,82.4 L100.0,82.2 L102.3,82.4 L104.6,82.9 L106.8,83.7 L108.8,84.7 L112.4,87.6 L115.3,91.2 L116.3,93.2 L117.1,95.4 L117.6,97.7 L117.8,100.0 L117.6,102.3 L117.1,104.6 L116.3,106.8 L115.3,108.8 L112.4,112.4 L108.8,115.3 L106.8,116.3 L104.6,117.1 L102.3,117.6Z';
+  function cogOutline(px) { return '<svg width="' + px + '" height="' + px + '" viewBox="0 0 200 200" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="' + COG_OUT + '"/></svg>'; }
+  var o = function (name) { return mi(name, 'big o'); };
+  out += '<section><h2>Account panel (tap your initial)</h2><p class="lead">The side panel and its Settings and About pages. The rows that stand for an app use that app\'s own logo; the rows about a satellite use the satellite icon; the rest keep the Material outlined icons the main app\'s panel uses.</p><div class="grid">' +
+    panelRow(logoCD1(26), 'Open Church Drive', 'account page', 'home (outlined)', 'the Church Drive app logo, one colour (the house with Clive\'s block cut into the roof)') +
+    panelRow(cogOutline(28), 'Settings', 'account page row', 'settings (outlined)', 'the new Settings cog, outline: the six-spoke Material cog with the outer spokes rounded (R2)') +
+    panelRow(o('info'), 'About', 'account page row', '', 'unchanged, as in the main app and To-Do') +
+    panelRow(o('logout'), 'Sign out', 'account page', '', 'unchanged, as in the main app and To-Do') +
+    panelRow(device(34, { d: 'M44,100 A56,56 0 1 0 62,58 M62,58 L40,56 M62,58 L64,80 M100,66 V100 L124,114', stroke: 16, scale: 0.4 }), 'Open on the satellite I left', 'Settings page', 'visibility (outlined)', 'the satellite icon with a history arrow: back to the one you left') +
+    panelRow(device(34, { d: 'M19.7,120.0 L17.7,122.1 L16.4,124.7 L16.0,126.4 L15.9,128.3 L16.4,131.1 L17.2,133.0 L30.1,155.1 L31.4,156.8 L32.9,158.2 L34.6,159.2 L36.5,159.8 L38.6,160.1 L40.6,159.9 L42.5,159.4 L58.4,153.1 L59.2,152.9 L60.4,153.0 L67.2,157.4 L73.6,160.6 L74.6,161.7 L75.0,162.8 L77.4,179.4 L77.8,181.2 L79.2,183.9 L80.5,185.3 L82.0,186.4 L84.6,187.6 L87.3,188.0 L112.7,188.0 L115.6,187.6 L118.0,186.4 L119.6,185.2 L120.9,183.7 L122.1,181.3 L122.6,179.4 L125.0,162.8 L125.2,162.0 L125.9,161.0 L132.1,157.7 L139.0,153.2 L140.4,152.9 L141.6,153.1 L158.6,159.7 L160.6,160.1 L162.5,160.0 L165.5,159.1 L167.9,157.5 L169.4,155.9 L182.8,133.0 L183.8,130.3 L184.1,127.5 L183.6,124.7 L182.3,122.1 L180.3,120.0 L167.0,109.7 L166.1,108.5 L165.9,107.4 L166.1,100.0 L165.9,92.6 L166.1,91.5 L166.8,90.5 L180.2,80.0 L182.2,78.0 L183.2,76.2 L184.0,73.6 L184.1,71.5 L183.6,68.9 L182.8,67.0 L169.9,44.8 L168.0,42.6 L165.5,40.9 L162.5,40.0 L160.6,39.9 L158.6,40.3 L141.6,46.9 L140.5,47.1 L139.0,46.7 L132.9,42.7 L125.9,39.0 L125.2,38.1 L125.0,37.2 L122.6,20.6 L122.2,18.8 L121.4,17.1 L120.3,15.5 L118.9,14.2 L117.3,13.1 L115.4,12.4 L112.7,12.0 L87.3,12.0 L84.4,12.4 L82.0,13.6 L80.5,14.7 L79.1,16.3 L78.2,17.9 L77.4,20.6 L75.0,37.5 L74.5,38.6 L73.6,39.4 L67.9,42.3 L61.0,46.8 L59.9,47.1 L58.4,46.9 L42.4,40.6 L39.6,39.9 L36.5,40.2 L34.5,40.9 L32.0,42.6 L30.1,44.9 L16.8,67.9 L16.0,70.6 L15.9,72.6 L16.2,74.5 L16.8,76.3 L17.8,78.0 L19.0,79.3 L33.0,90.3 L33.8,91.2 L34.1,92.6 L33.9,100.0 L34.1,107.7 L33.8,108.8 L33.0,109.7Z M78.2,122.0 L74.2,117.2 L71.3,112.0 L69.6,106.3 L69.0,100.1 L69.6,93.9 L71.3,88.2 L74.1,83.0 L78.0,78.2 L82.8,74.2 L88.0,71.3 L93.7,69.6 L99.9,69.0 L106.1,69.6 L111.8,71.3 L117.0,74.1 L121.8,78.0 L125.8,82.8 L128.7,88.0 L130.4,93.7 L131.0,99.9 L130.4,106.1 L128.7,111.8 L125.9,117.0 L122.0,121.8 L117.2,125.8 L112.0,128.7 L106.3,130.4 L100.1,131.0 L93.9,130.4 L88.2,128.7 L83.0,125.9Z', rule: 'evenodd', scale: 0.32 }), 'Each satellite\'s own settings', 'Settings page', 'settings (outlined)', 'the satellite icon with a cog on it: the solid Material cog, six spokes, with the outer spokes rounded (R2, see the cog board), smaller in its circle') +
+    panelRow(logoSat1(26), 'Church Drive Satellites, version', 'About page', 'info (outlined)', 'the Satellites app logo, one colour') +
+    panelRow(o('system_update'), 'Updates', 'About page', '', 'unchanged, as in the main app') +
+    panelRow(ic('shield-key', 28), 'Signing certificate', 'About page', 'fingerprint (outlined)', 'shield with a key (29C)') +
+    '</div></section>';
+  out += '<section><h2>The other apps</h2><p class="lead">The same change is needed in the other apps\' panels, so that every app\'s rows for another app use that app\'s own logo: To-Do\'s "Open Church Drive" and the Satellites row above use the Church Drive logo; the main app\'s "Open To-do in Church Drive To-Do" and "Get Church Drive To Do" rows (now the checklist icon) would use the To-Do logo; the About row in each app would use its own logo. Not changed yet.</p></section>';
+  out += '<section><p class="lead">Everything else in the app is text only: the tiles, pills and buttons (Say hello, Flash the screen, Restart, Install the update and so on) carry no icon.</p></section>';
+  document.getElementById('in').innerHTML = out;
+  var pl = document.getElementById('pl'), pd = document.getElementById('pd');
+  function page(dark) { document.documentElement.setAttribute('data-page', dark ? 'dark' : 'light'); pl.setAttribute('aria-pressed', String(!dark)); pd.setAttribute('aria-pressed', String(dark)); }
+  pl.addEventListener('click', function () { page(false); });
+  pd.addEventListener('click', function () { page(true); });
+})();
+</script>

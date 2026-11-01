@@ -3,6 +3,12 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.94.0
+
+- The app is now called **Clive Tasks**. Its splash reads "Clive" large, and "Tasks" slides in beside it as the logo changes.
+- The splash screen starts on Clive's idle logo, whose two squares become the clipboard's edges, then the clip grows in and the tick lines are drawn. Plays once.
+- The account panel's "Open Church Drive" row uses the Church Drive logo (one colour) and Settings uses the new rounded cog.
+
 ## 0.93.0
 
 No app changes.

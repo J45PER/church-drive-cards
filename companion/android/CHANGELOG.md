@@ -4,6 +4,13 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.94.0
+
+- The app now carries Instrument Sans in all four weights (Regular, Medium, SemiBold, Bold), for splash screens and wordmark text.
+- The app is now called **Clive Home Manager** (the app name on the phone and the watch). Its splash reads "Clive" large, and "Home Manager" slides in beside it as the logo changes. The house changes slowest, and the words always finish with their logo.
+- The splash screen starts on Clive's idle logo, which changes shape into the Church Drive logo (the two squares become the house and its window), then stays. Plays once.
+- The account panel's Settings row uses the new rounded cog, and the To-do rows ("Open To-do in Church Drive To-Do", "Get Church Drive To Do") use the To-Do logo in one colour.
+
 ## 0.93.0
 
 No app changes.
