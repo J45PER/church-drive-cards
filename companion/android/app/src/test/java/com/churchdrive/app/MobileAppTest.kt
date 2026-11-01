@@ -70,4 +70,18 @@ class MobileAppTest {
         assertEquals("Name-CDA", data.getString("device_name"))
         assertEquals("0.28.0 (5)", data.getString("app_version"))
     }
+
+    @Test fun askingTheHouseWhetherGooglePushReachesAPhone() {
+        // The house lists phones by the service name without "notify.", so the question must too.
+        val template = MobileApp.pushReachableBody("notify.mobile_app_x_cda").getJSONObject("data").getJSONObject("reachable").getString("template")
+        assertTrue(template.contains("'mobile_app_x_cda' in"))
+        assertTrue(!template.contains("notify."))
+        assertEquals("render_template", MobileApp.pushReachableBody("a").getString("type"))
+        assertTrue(MobileApp.parseReachable("""{"reachable": "True"}"""))
+        assertTrue(MobileApp.parseReachable("""{"reachable": true}"""))
+        assertTrue(!MobileApp.parseReachable("""{"reachable": "False"}"""))
+        assertTrue(!MobileApp.parseReachable("{}"))
+        assertTrue(!MobileApp.parseReachable(null))
+        assertTrue(!MobileApp.parseReachable("not json"))
+    }
 }

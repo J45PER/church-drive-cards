@@ -90,15 +90,28 @@ object GooglePush {
                 return@thread
             }
             val result = MobileApp.post(url, webhook, MobileApp.fcmTokenBody(MobileApp.notifyService(name), token))
-            // With the token at the house, notifications come through Google and the app's own connection (and its notice) stops.
-            if (result == com.churchdrive.app.ha.WebhookResult.Ok && !session.googlePush) {
-                session.googlePush = true
-                House.syncNotifications(context)
+            // The house took the message, but it only keeps the token for a phone it knows by that name and only uses it with a Google
+            // key: ask it. Only once it says it can reach this phone through Google does the app's own connection (and its notice) stop.
+            var reachable = false
+            if (result == com.churchdrive.app.ha.WebhookResult.Ok) {
+                val service = MobileApp.notifyService(name)
+                for (attempt in 1..3) {
+                    Thread.sleep(2_000)
+                    reachable = MobileApp.parseReachable(MobileApp.ask(url, webhook, MobileApp.pushReachableBody(service)))
+                    if (reachable) break
+                }
+                if (reachable != session.googlePush) {
+                    session.googlePush = reachable
+                    House.syncNotifications(context)
+                }
             }
             setStatus(
                 context,
                 when (result) {
-                    com.churchdrive.app.ha.WebhookResult.Ok -> { tokenStep = "received and sent to the house"; "Play services: $play · Install ID: $install · Token: $tokenStep" }
+                    com.churchdrive.app.ha.WebhookResult.Ok -> {
+                        tokenStep = if (reachable) "received and the house can use it" else "sent, but the house can't use it yet: the app keeps its own connection"
+                        "Play services: $play · Install ID: $install · Token: $tokenStep"
+                    }
                     com.churchdrive.app.ha.WebhookResult.Gone -> "The house no longer knows this phone"
                     com.churchdrive.app.ha.WebhookResult.Failed -> "Got a token, but couldn't reach the house"
                 },
