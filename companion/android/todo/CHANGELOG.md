@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.94.2
+
+- Fixed the To-Do splash: the clip is solid white again, with a clean gap cut round it, instead of half hollow where it overlaps the board.
+
 ## 0.94.1
 
 - Fixed the crash when opening the settings sidebar: the new cog icons' drawing data was too long for Android to read, so it is now simplified (same look).

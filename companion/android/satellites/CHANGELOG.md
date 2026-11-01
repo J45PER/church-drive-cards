@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.94.2
+
+- No change to this app; the To-Do splash was fixed.
+
 ## 0.94.1
 
 - Fixed the crash when opening the settings sidebar: the new cog icons' drawing data was too long for Android to read, so it is now simplified (same look).
