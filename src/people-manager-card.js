@@ -369,7 +369,7 @@ export class PeopleManagerCard extends HTMLElement {
       .join('');
     const hours = (this._data && this._data.stale_hours) || 6;
     const warn = p.stale
-      ? `<div class="pm-warn"><b>${kitEsc(p.first)}'s location is ${kitEsc(ageText(p.located).replace(/ ago$/, ''))} old.</b> The phone didn't answer when asked for a new one. On ${kitEsc(p.first)}'s phone, in the Home Assistant app's settings, turn on Background location; then in the phone's settings give the app location "Allow all the time" and battery "Unrestricted".</div>`
+      ? `<div class="pm-warn"><b>${kitEsc(p.first)}'s location is ${kitEsc(ageText(p.located).replace(/ ago$/, ''))} old.</b> The phone didn't answer when asked for a new one. On ${kitEsc(p.first)}'s phone, in the Church Drive app, turn on Share my location; then in the phone's settings give the Church Drive app location "Allow all the time" and battery "Unrestricted".</div>`
       : '';
     return this._sec(
       'mdi:cellphone',
