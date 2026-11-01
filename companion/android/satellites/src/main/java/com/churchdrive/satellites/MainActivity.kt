@@ -34,6 +34,7 @@ import com.churchdrive.app.ui.SignInForm
 /** Church Drive Satellites: the house's voice satellites, each with its design, glances and backlight. */
 class MainActivity : ComponentActivity() {
     private val vm: SatelliteModel by viewModels()
+    private var showingCrash = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         CrashNote.install(this)
@@ -41,6 +42,7 @@ class MainActivity : ComponentActivity() {
         // If the app crashed last time, say what happened on a plain screen before starting anything that could crash again.
         val crash = CrashNote.take(this)
         if (crash != null) {
+            showingCrash = true
             setContent { CrashScreen(crash) { recreate() } }
             return
         }
@@ -66,7 +68,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        vm.onForeground()
+        // Not while the crash screen is up: starting the model is what may have crashed.
+        if (!showingCrash) vm.onForeground()
     }
 }
 

@@ -10,3 +10,4 @@ satellite/build/
 satellite/_dev.yaml
 satellite/sim-shots/
 satellite/devices/
+companion/android/local.properties

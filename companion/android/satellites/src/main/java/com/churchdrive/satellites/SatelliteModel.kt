@@ -27,6 +27,9 @@ class SatelliteModel(app: Application) : AndroidViewModel(app) {
     private val settings = SatelliteSettings(app)
     private val presetStore = SatellitePresets(app)
 
+    /** Adding a satellite changes Home Assistant's devices, so it is for administrators only. */
+    var isAdmin by mutableStateOf(false)
+        private set
     var signedIn by mutableStateOf(session.signedIn)
         private set
     var connected by mutableStateOf(false)
@@ -299,9 +302,6 @@ class SatelliteModel(app: Application) : AndroidViewModel(app) {
     }
 
     var pairStep by mutableStateOf<PairStep>(PairStep.Idle)
-        private set
-    /** Adding a satellite changes Home Assistant's devices, so it is for administrators only. */
-    var isAdmin by mutableStateOf(false)
         private set
     var wifiName by mutableStateOf(settings.wifiName)
     var apiKey by mutableStateOf(settings.apiKey)
