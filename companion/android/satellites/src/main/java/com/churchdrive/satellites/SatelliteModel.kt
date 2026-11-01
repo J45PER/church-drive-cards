@@ -85,6 +85,7 @@ class SatelliteModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             client.entities.collect { states -> satellites = findSatellites(states) }
         }
+        viewModelScope.launch { client.isAdmin.collect { isAdmin = it } }
         viewModelScope.launch {
             var failures = 0
             client.connection.collect { state ->
@@ -299,6 +300,9 @@ class SatelliteModel(app: Application) : AndroidViewModel(app) {
 
     var pairStep by mutableStateOf<PairStep>(PairStep.Idle)
         private set
+    /** Adding a satellite changes Home Assistant's devices, so it is for administrators only. */
+    var isAdmin by mutableStateOf(false)
+        private set
     var wifiName by mutableStateOf(settings.wifiName)
     var apiKey by mutableStateOf(settings.apiKey)
 
@@ -307,9 +311,10 @@ class SatelliteModel(app: Application) : AndroidViewModel(app) {
 
     fun pair(code: PairCode, ssid: String, password: String, key: String) {
         settings.wifiName = ssid.trim()
-        settings.apiKey = key.trim()
         wifiName = ssid.trim()
-        apiKey = key.trim()
+        // A sticker carries the satellite's own key, which is used for it alone; only a key typed in is the shared one kept for next time.
+        val useKey = code.key ?: key.trim()
+        if (code.key == null) { settings.apiKey = key.trim(); apiKey = key.trim() }
         val known = satellites.map { it.slug }.toSet()
         viewModelScope.launch(Dispatchers.IO) {
             fun say(m: String) { pairStep = PairStep.Working(m) }
@@ -325,7 +330,7 @@ class SatelliteModel(app: Application) : AndroidViewModel(app) {
             for (attempt in 1..6) {
                 val token = session.freshToken()
                 if (url == null || token == null) break
-                added = AddToHouse.add(url, token, "${code.device}.local", key.trim())
+                added = AddToHouse.add(url, token, "${code.device}.local", useKey)
                 if (added.error == null) break
                 if (!(added.error!!.contains("find") || added.error!!.contains("reach"))) break
                 delay(8_000)

@@ -185,8 +185,10 @@ private fun SatelliteList(vm: SatelliteModel) {
 private fun AddPage(vm: SatelliteModel) {
     val context = LocalContext.current
     // Bluetooth is needed to send the Wi-Fi: on Android 12 and later its own permissions, before that location.
-    val needed = if (android.os.Build.VERSION.SDK_INT >= 31) arrayOf(android.Manifest.permission.BLUETOOTH_SCAN, android.Manifest.permission.BLUETOOTH_CONNECT)
+    val btNeeded = if (android.os.Build.VERSION.SDK_INT >= 31) arrayOf(android.Manifest.permission.BLUETOOTH_SCAN, android.Manifest.permission.BLUETOOTH_CONNECT)
     else arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION)
+    // The camera reads the QR code, in the app's own scanner screen.
+    val needed = btNeeded + android.Manifest.permission.CAMERA
     var granted by remember { mutableStateOf(needed.all { androidx.core.content.ContextCompat.checkSelfPermission(context, it) == android.content.pm.PackageManager.PERMISSION_GRANTED }) }
     val askPermission = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()) { result ->
         granted = result.values.all { it }
@@ -195,28 +197,26 @@ private fun AddPage(vm: SatelliteModel) {
     var typedName by remember { mutableStateOf("") }
     var typedCode by remember { mutableStateOf("") }
 
-    fun scan() {
-        scanError = null
-        val options = com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions.Builder()
-            .setBarcodeFormats(com.google.mlkit.vision.barcode.common.Barcode.FORMAT_QR_CODE).build()
-        com.google.mlkit.vision.codescanner.GmsBarcodeScanning.getClient(context, options).startScan()
-            .addOnSuccessListener { code ->
-                val parsed = PairCode.parse(code.rawValue)
-                if (parsed == null) scanError = "That isn't a satellite's pairing code." else vm.pairScanned(parsed)
-            }
-            .addOnFailureListener { scanError = "The scanner couldn't start: ${it.message ?: "try again"}." }
-    }
+    var scanning by remember { mutableStateOf(false) }
+    fun scan() { scanError = null; scanning = true }
+    if (scanning) CliveScanner(
+        onResult = { scanning = false; vm.pairScanned(it) },
+        onClose = { scanning = false },
+    )
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ToneSectionHeader("Add a satellite", painterResource(R.drawable.sat_device_plus), Tone.Teal)
         when (val step = vm.pairStep) {
-            is SatelliteModel.PairStep.Idle -> ToneCard(Tone.Teal) { ink, soft ->
+            is SatelliteModel.PairStep.Idle -> if (!vm.isAdmin) ToneCard(Tone.Amber) { ink, soft ->
+                Text("Only an administrator can add a satellite", color = ink, style = MaterialTheme.typography.titleMedium)
+                Text("Adding one changes the house's devices in Home Assistant. Sign in as an administrator to add a satellite.", style = MaterialTheme.typography.bodyMedium, color = soft)
+            } else ToneCard(Tone.Teal) { ink, soft ->
                 Text("1. On the satellite, open Settings > Pair or reset. A new one shows the code by itself.", color = ink, style = MaterialTheme.typography.bodyLarge)
-                Text("2. Scan the QR code on its screen (or its sticker, if it has no screen).", color = ink, style = MaterialTheme.typography.bodyLarge)
+                Text("2. Scan the QR code on its screen, or on its sticker if it has no screen.", color = ink, style = MaterialTheme.typography.bodyLarge)
                 Text("3. Give it the home Wi-Fi. It joins and is added to Home Assistant for you.", color = ink, style = MaterialTheme.typography.bodyLarge)
                 if (!granted) {
-                    ToneTile("Allow Bluetooth to continue", false, Tone.Teal, ink, Modifier.fillMaxWidth()) { askPermission.launch(needed) }
-                    Text("Bluetooth is how the Wi-Fi is sent to the satellite. Nothing else uses it.", style = MaterialTheme.typography.bodySmall, color = soft)
+                    ToneTile("Allow Bluetooth and the camera to continue", false, Tone.Teal, ink, Modifier.fillMaxWidth()) { askPermission.launch(needed) }
+                    Text("Bluetooth is how the Wi-Fi is sent to the satellite, and the camera reads its QR code. Nothing else uses either.", style = MaterialTheme.typography.bodySmall, color = soft)
                 } else {
                     ToneTile("Scan the QR code", true, Tone.Teal, ink, Modifier.fillMaxWidth()) { scan() }
                 }
@@ -240,14 +240,15 @@ private fun AddPage(vm: SatelliteModel) {
                 ToneTile("Try again", true, Tone.Red, ink, Modifier.fillMaxWidth()) { vm.pairReset() }
             }
         }
-        if (vm.pairStep is SatelliteModel.PairStep.Idle) {
+        if (vm.pairStep is SatelliteModel.PairStep.Idle && vm.isAdmin) {
             ToneCard(null) { ink, soft ->
                 Text("Can't scan?", color = ink, style = MaterialTheme.typography.titleMedium)
-                Text("Type the name and the six digits shown under the QR code.", style = MaterialTheme.typography.bodySmall, color = soft)
-                OutlinedTextField(typedName, { typedName = it.trim() }, singleLine = true, label = { Text("Name, for example clive-round") }, modifier = Modifier.fillMaxWidth())
+                Text("Type the name (or the ID on its sticker) and the six digits shown under the QR code.", style = MaterialTheme.typography.bodySmall, color = soft)
+                OutlinedTextField(typedName, { typedName = it.trim() }, singleLine = true, label = { Text("Name or ID, for example clive-round or RND1-000123-4") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(typedCode, { typedCode = it.filter(Char::isDigit).take(6) }, singleLine = true, label = { Text("Code") }, modifier = Modifier.fillMaxWidth())
                 ToneTile("Continue", false, Tone.Teal, ink, Modifier.fillMaxWidth()) {
-                    if (typedName.isNotBlank() && typedCode.length == 6) vm.pairScanned(PairCode(typedName, typedCode))
+                    val typedId = DeviceId.parse(typedName)
+                    if (typedName.isNotBlank() && typedCode.length == 6) vm.pairScanned(PairCode(typedId?.deviceName ?: typedName, typedCode, typedId))
                 }
             }
         }
@@ -260,19 +261,23 @@ private fun PairForm(vm: SatelliteModel, code: PairCode) {
     var password by remember { mutableStateOf("") }
     var key by remember { mutableStateOf(vm.apiKey) }
     ToneCard(Tone.Teal) { ink, soft ->
-        Text("Found ${code.device}", color = ink, style = MaterialTheme.typography.titleMedium)
-        Text("Check the code on its screen says ${code.spaced}.", style = MaterialTheme.typography.bodyMedium, color = soft)
+        Text("Found ${code.id?.text ?: code.device}", color = ink, style = MaterialTheme.typography.titleMedium)
+        Text(if (code.code.isNotEmpty()) "Check the code on its screen says ${code.spaced}." else "Check the sticker says ${code.shown}.", style = MaterialTheme.typography.bodyMedium, color = soft)
         OutlinedTextField(ssid, { ssid = it }, singleLine = true, label = { Text("Home Wi-Fi name") }, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(
             password, { password = it }, singleLine = true, label = { Text("Wi-Fi password") }, modifier = Modifier.fillMaxWidth(),
             visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
         )
-        OutlinedTextField(
-            key, { key = it }, singleLine = true, label = { Text("Satellite API key") }, modifier = Modifier.fillMaxWidth(),
-            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
-        )
-        Text("The API key is the clive_round_api_key in satellite/secrets.yaml that the satellites were built with. It is kept on this phone so the next one is quicker. The Wi-Fi password is not kept.", style = MaterialTheme.typography.bodySmall, color = soft)
-        ToneTile("Pair", true, Tone.Teal, ink, Modifier.fillMaxWidth()) { if (ssid.isNotBlank() && key.isNotBlank()) vm.pair(code, ssid, password, key) }
+        if (code.key == null) {
+            OutlinedTextField(
+                key, { key = it }, singleLine = true, label = { Text("Satellite API key") }, modifier = Modifier.fillMaxWidth(),
+                visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+            )
+            Text("The API key is the clive_round_api_key in satellite/secrets.yaml that the satellites were built with. It is kept on this phone so the next one is quicker. The Wi-Fi password is not kept.", style = MaterialTheme.typography.bodySmall, color = soft)
+        } else {
+            Text("This satellite's own key was in its QR code, so there is nothing to type but the Wi-Fi. The Wi-Fi password is not kept.", style = MaterialTheme.typography.bodySmall, color = soft)
+        }
+        ToneTile("Pair", true, Tone.Teal, ink, Modifier.fillMaxWidth()) { if (ssid.isNotBlank() && (code.key != null || key.isNotBlank())) vm.pair(code, ssid, password, key) }
         ToneTile("Cancel", false, Tone.Teal, ink, Modifier.fillMaxWidth()) { vm.pairReset() }
     }
 }

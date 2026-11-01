@@ -17,6 +17,7 @@ substitutions:
   name: clive-round
   friendly_name: Clive (round screen)
   wake_model: hey_jarvis       # The apps already strip "Jarvis" from a sentence. A custom "Clive" model can replace it.
+  api_key: !secret clive_round_api_key   # a device made by tools/make_device.py sets its own key here instead of this shared one
 
 packages:
   ui: !include ui.yaml
@@ -65,7 +66,7 @@ logger:
 
 api:
   encryption:
-    key: !secret clive_round_api_key
+    key: ${api_key}
   actions:
     # Called by satellite/ha/clive-satellite-info.yaml: the numbers the resting screen shows.
     - action: update_info

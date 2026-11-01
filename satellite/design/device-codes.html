@@ -1,0 +1,59 @@
+<title>Clive Device Codes</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root { --bg:#fff; --fg:#14181f; --soft:#5f6672; --line:#e0e3e8; --card:#f5f6f8; --ui:"Instrument Sans",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#0f1317; --fg:#eef1f5; --soft:#9aa4b2; --line:#262b33; --card:#171c22; color-scheme:dark; } }
+:root[data-theme="dark"] { --bg:#0f1317; --fg:#eef1f5; --soft:#9aa4b2; --line:#262b33; --card:#171c22; color-scheme:dark; }
+* { box-sizing:border-box; }
+body { background:var(--bg); color:var(--fg); font-family:var(--ui); margin:0; line-height:1.45; }
+.wrap { max-width:980px; margin:0 auto; padding:24px max(16px,env(safe-area-inset-left,0px)) 56px; }
+h1 { font-size:1.35rem; margin:0 0 4px; letter-spacing:-.01em; } .lead { color:var(--soft); font-size:.9rem; max-width:74ch; margin:0 0 22px; }
+.opt { border:1px solid var(--line); border-radius:22px; padding:18px 20px; margin-bottom:16px; display:grid; gap:12px; }
+.opt h2 { font-size:.8rem; font-family:var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--soft); margin:0; font-weight:500; }
+.row { display:flex; flex-wrap:wrap; gap:18px 26px; align-items:center; }
+.label { width:420px; max-width:100%; aspect-ratio:60/14; background:#fff; color:#111; border-radius:6px; border:1px solid #cfd3d9; display:flex; align-items:center; gap:3.4%; padding:0 3%; flex:none; }
+.label svg { height:84%; aspect-ratio:1; flex:none; } .label .t { display:grid; gap:2px; min-width:0; } .label .id { font-family:var(--mono); font-weight:700; font-size:clamp(13px,3.4vw,21px); letter-spacing:.03em; white-space:nowrap; } .label .nm { font-size:clamp(9px,2vw,12px); color:#444; white-space:nowrap; }
+.pros { color:var(--soft); font-size:.85rem; max-width:48ch; } .pros b { color:var(--fg); }
+.tbl { width:100%; border-collapse:collapse; font-size:.82rem; margin-top:6px; } .tbl td, .tbl th { text-align:left; padding:6px 10px; border-bottom:1px solid var(--line); } .tbl th { color:var(--soft); font-weight:500; }
+.note { background:var(--card); border-radius:16px; padding:14px 16px; font-size:.86rem; color:var(--soft); margin:18px 0; } .note b { color:var(--fg); }
+code { font-family:var(--mono); }
+</style>
+<div class="wrap">
+<h1>Clive device codes</h1>
+<p class="lead">Every satellite gets one permanent code, printed on its sticker and shown in the app. It is the ID you read out or type if the QR code won't scan, what the satellite calls itself over Bluetooth while pairing, and what tells two identical boxes apart in the list. It is not the six digits on a screen: those change each time and only check that you are looking at the right device. The labels are drawn at your 14 × 60 mm size, with a made-up QR code.</p>
+<div id="opts"></div>
+<div class="note"><b>What the code is used for.</b> The QR code carries it, so scanning needs no typing. The satellite uses it as its Bluetooth name (<code>clive-7k3q</code>) and its network name, and the app shows it under the satellite's name until you rename it. Each satellite also gets its own secret key at flash time, which is never printed in readable form: it is only inside the QR code.</div>
+<table class="tbl" id="tbl"></table>
+</div>
+<script>
+(function () {
+  var seed = 11; function rnd() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
+  function qr() {
+    var n = 21, m = 100 / n, d = '';
+    function fin(ox, oy) { d += 'M' + ox * m + ',' + oy * m + 'h' + 7 * m + 'v' + 7 * m + 'h' + (-7 * m) + 'zM' + (ox + 1) * m + ',' + (oy + 1) * m + 'v' + 5 * m + 'h' + 5 * m + 'v' + (-5 * m) + 'zM' + (ox + 2) * m + ',' + (oy + 2) * m + 'h' + 3 * m + 'v' + 3 * m + 'h' + (-3 * m) + 'z'; }
+    fin(0, 0); fin(14, 0); fin(0, 14);
+    for (var i = 0; i < n; i++) for (var j = 0; j < n; j++) { var inF = (i < 8 && j < 8) || (i > 12 && j < 8) || (i < 8 && j > 12); if (!inF && rnd() > .5) d += 'M' + i * m + ',' + j * m + 'h' + m + 'v' + m + 'h' + (-m) + 'z'; }
+    return '<svg viewBox="0 0 100 100" aria-hidden="true"><path d="' + d + '" fill="#111" fill-rule="evenodd"/></svg>';
+  }
+  var OPTS = [
+    { h: 'A. Short code', ids: ['CLV-7K3Q', 'CLV-M92X'], name: 'Clive satellite', say: 'Three letters for Clive, then four characters from a set with no look-alikes (no 0, O, 1, I or L).',
+      pros: '<b>Short to type and to fit on a small sticker.</b> About a million combinations. Fine for a house or a few hundred devices; add characters later if it grows.', len: '8', typing: 'Easy', aloud: 'OK', room: '1 million' },
+    { h: 'B. Short code with a check character', ids: ['CLV-7K3Q-8', 'CLV-M92X-D'], name: 'Clive satellite', say: 'The same, with one extra character worked out from the others.',
+      pros: '<b>The app can tell a typing mistake from a real code</b> and say "check the last character" instead of "not found". Costs two characters of sticker.', len: '10', typing: 'Easy, and checked', aloud: 'OK', room: '1 million' },
+    { h: 'C. Model and number', ids: ['RND-000123', 'RND-000124'], name: 'Round screen', say: 'A model letter code and a running number from a list kept at flash time.',
+      pros: '<b>Reads like a product.</b> Easiest to keep stock of and to sell. But guessable: the next device is the next number, so it cannot be the secret, only a name.', len: '10', typing: 'Easy', aloud: 'Good', room: 'unlimited' },
+    { h: 'D. Words', ids: ['amber-otter-42', 'plum-river-07'], name: 'Clive satellite', say: 'Two friendly words and two digits, chosen at random.',
+      pros: '<b>Easy to say across a room</b> and to remember for the length of pairing. Long for a 14 mm label and slow to type on a phone.', len: '12 to 16', typing: 'Slower', aloud: 'Best', room: 'millions' },
+    { h: 'E. Model, room and number', ids: ['RND-LIV-03', 'RND-KIT-01'], name: 'Clive satellite', say: 'Model code, a three letter room, and a number.',
+      pros: '<b>Meaningful at a glance.</b> But the room has to be known at flash time, so it only suits purpose-built devices for a known place, such as your parents\' house.', len: '10', typing: 'Easy', aloud: 'Good', room: 'few hundred' }
+  ];
+  var host = document.getElementById('opts'), tb = '<tr><th>Option</th><th>Length</th><th>Typing</th><th>Said aloud</th><th>How many</th></tr>';
+  OPTS.forEach(function (o) {
+    var labels = o.ids.map(function (id) { return '<div class="label">' + qr() + '<div class="t"><span class="id">' + id + '</span><span class="nm">' + o.name + '</span></div></div>'; }).join('');
+    host.insertAdjacentHTML('beforeend', '<div class="opt"><h2>' + o.h + '</h2><div class="row">' + labels + '</div><div class="pros">' + o.say + '<br>' + o.pros + '</div></div>');
+    tb += '<tr><td>' + o.h.split('.')[0] + '</td><td>' + o.len + '</td><td>' + o.typing + '</td><td>' + o.aloud + '</td><td>' + o.room + '</td></tr>';
+  });
+  document.getElementById('tbl').innerHTML = tb;
+})();
+</script>
