@@ -69,7 +69,13 @@ android {
         compose = true
     }
     // The launch test starts the real activity on the JVM (Robolectric), with the app's resources and manifest.
-    testOptions { unitTests.isIncludeAndroidResources = true }
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            // Where Robolectric's Android jar is kept when it can't be downloaded (a local run only; CI downloads it).
+            all { t -> System.getenv("ROBOLECTRIC_DIR")?.let { t.systemProperty("robolectric.dependency.dir", it); t.systemProperty("robolectric.offline", "true") } }
+        }
+    }
 }
 
 dependencies {
