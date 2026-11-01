@@ -4,9 +4,13 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
-## 0.91.0
+## 0.92.0
 
 No app changes.
+
+## 0.91.0
+
+No app changes. The People card's old-location warning now points to the Church Drive app (Share my location, then Allow all the time and Unrestricted battery) instead of the Home Assistant app.
 
 ## 0.90.0
 

@@ -2,7 +2,8 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
-- **v0.91.0 + app 0.91.0 + To-Do 0.91.0 + Satellites 0.91.0** (2026-11-01): the Satellites launcher icon is smaller inside its circle, so the ripples are no longer cut off at the edge.
+- **v0.92.0 + app 0.92.0 + To-Do 0.92.0 + Satellites 0.92.0** (2026-11-01): the Satellites launcher icon is smaller inside its circle, so the ripples are no longer cut off at the edge.
+- **v0.91.0 + app 0.91.0 + To-Do 0.91.0 + Satellites 0.91.0** (2026-11-01): the People card's "location is old" warning now tells you to fix the Church Drive app (Share my location, Allow all the time, Unrestricted battery) instead of the Home Assistant app, since location comes only from the Church Drive app
 - **v0.90.0 + app 0.90.0 + To-Do 0.90.0 + Satellites 0.90.0** (2026-11-01): the smaller apps look like the main app. The To-Do app's Clive button is the main app's (his coloured cloud on a circle the colour of the bottom bar, shared in core); To-Do and Satellites share one sign-in page and one set of card, heading, pill, tile and initial-button pieces in `core` instead of each keeping its own copy. No change to the Home Assistant integration.
 - **v0.89.0 + app 0.89.0 + To-Do 0.89.0 + Satellites 0.89.0** (2026-11-01): the Satellites app has its own icon and splash: Clive's mark with its top-right square as a circle and three ripples going out of it (the ripples appear one after another on the splash). Includes a plain version for Android's themed icons.
 - **v0.88.0 + app 0.88.0 + To-Do 0.88.0 + Satellites 0.88.0** (2026-11-01): Octopus's charging plan is its own card (`octopus-plan-card`, in the dashboard and the app) instead of sitting inside the charger card, and the Boost (Octopus) switch is removed from the charger card (Charge Cap makes it pointless)

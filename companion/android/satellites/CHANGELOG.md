@@ -1,8 +1,12 @@
 # Church Drive Satellites: changelog
 
-## 0.91.0
+## 0.92.0
 
 - The launcher icon (and the themed icon) is smaller inside its circle, so the outer ripple is no longer cut off at the edge on round icon masks.
+
+## 0.91.0
+
+No app changes. The People card's old-location warning now points to the Church Drive app (Share my location, then Allow all the time and Unrestricted battery) instead of the Home Assistant app.
 
 ## 0.90.0
 
