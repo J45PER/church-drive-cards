@@ -20,10 +20,10 @@ body { background:var(--bar-bg); color:var(--bar-fg); font-family:var(--ui); mar
 .card p { margin:0; color:var(--stage-soft); font-size:.8rem; }
 .lock { display:flex; align-items:center; gap:14px; }
 .lock svg { width:38px; height:38px; flex:none; color:var(--stage-fg); }
-.t { display:flex; align-items:baseline; gap:.3em; white-space:nowrap; min-width:0; font-size:34px; line-height:1.1; }
+.t { display:flex; align-items:baseline; gap:.3em; white-space:nowrap; min-width:0; font-size:24px; line-height:1.1; }
 @media (max-width:720px) { .in { grid-template-columns:minmax(0,1fr); } }
 </style>
-<div class="top"><div><h1>Clive type combinations</h1><p>Instrument Sans now has all four weights in the apps: Regular, Medium, SemiBold and Bold. Every pairing of the four weights, with "Clive" the heavier one. Both words are the same size and colour, so only the weight changes. Shown on all three apps.</p></div>
+<div class="top"><div><h1>Clive type: Bold and Regular</h1><p>Clive in Bold, the app's name in Regular, the same size. Now the capitals: the name in capitals, or both words, with and without a little extra spacing.</p></div>
 <div class="seg" role="group" aria-label="Page"><button type="button" id="pl" aria-pressed="true">Light</button><button type="button" id="pd" aria-pressed="false">Dark</button></div></div>
 <div class="stage"><div class="in" id="in"></div></div>
 <script>
@@ -43,18 +43,17 @@ body { background:var(--bar-bg); color:var(--bar-fg); font-family:var(--ui); mar
   }
   // Clive: weight, size; app name: weight, size, opacity, letter spacing, case
   var COMBOS = [
-    { n: '1. Bold and Regular', c: 700, s: 400, note: 'The biggest step: Clive at its heaviest, the name at its lightest.' },
-    { n: '2. Bold and Medium', c: 700, s: 500, note: 'Clive Bold, the name a step firmer than Regular.' },
-    { n: '3. Bold and SemiBold', c: 700, s: 600, note: 'The two closest together at the top of the range.' },
-    { n: '4. SemiBold and Regular', c: 600, s: 400, note: 'Clive as it is now, with the name lightened.' },
-    { n: '5. SemiBold and Medium', c: 600, s: 500, note: 'A gentler step all round.' },
-    { n: '6. Medium and Regular', c: 500, s: 400, note: 'The lightest pairing: little difference, calm.' }
+    { n: '1. Each word capitalised', note: "As it is now: Clive, then the name with a capital on each word.", cap: 0, spc: 0 },
+    { n: '2. Name in capitals', note: "Clive as a word, the app's name in all capitals. Same size, so the capitals read a little bolder.", cap: 1, spc: 0 },
+    { n: '3. Name in capitals, spaced', note: "The same, with the capitals spaced out slightly, the way capitals usually want to be.", cap: 1, spc: .06 },
+    { n: '4. All capitals', note: "CLIVE and the name both in capitals.", cap: 2, spc: 0 },
+    { n: '5. All capitals, spaced', note: "Both in capitals, lightly spaced.", cap: 2, spc: .06 }
   ];
   var host = document.getElementById('in');
   COMBOS.forEach(function (c) {
     var h = '<div class="card"><h2>' + c.n + '</h2><p>' + c.note + '</p>';
     APPS.forEach(function (a) {
-      h += '<div class="lock">' + logo(a.id) + '<div class="t"><span style="font-weight:' + c.c + '">Clive</span><span style="font-weight:' + c.s + '">' + a.sub + '</span></div></div>';
+      h += '<div class="lock">' + logo(a.id) + '<div class="t"><span style="font-weight:700;letter-spacing:' + c.spc + 'em;' + (c.cap === 2 ? 'text-transform:uppercase;' : '') + '">Clive</span><span style="font-weight:400;letter-spacing:' + c.spc + 'em;' + (c.cap ? 'text-transform:uppercase;' : '') + '">' + a.sub + '</span></div></div>';
     });
     host.insertAdjacentHTML('beforeend', h + '</div>');
   });
