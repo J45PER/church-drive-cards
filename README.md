@@ -202,7 +202,7 @@ show_humidity_history: true
 
 One floor or zone, with a block per room or sensor. Each room has a **type** that sets its comfortable range (living room 19–22°, bedroom 16–20°, office 19–22°, hall/landing 16–21°, bathroom 20–24°, kitchen 17–21°; guessed from the name if not set, and overridable per room). The temperature is coloured on a smooth scale around that range: teal to green to lime inside it, cyan to deep blue below, amber to deep red above, and ice-white with a "Freezing: pipes at risk" warning at 0° and below. Humidity stays purple, paler when dry and deeper above 60%.
 
-A room can follow two number helpers for its range (`low_entity` and `high_entity`, such as Clive's `input_number.clive_climate_downstairs_low` and `_high`, or helpers made just for the room): the graph, colours and legend follow them, and a tune button on the room opens a sheet to change them. On the **climate card**, a thermostat that Clive looks after (it has an `input_boolean.clive_climate_<zone>_auto`) shows a "Clive controlled" / "Manual" line at the bottom, and tapping it opens the thermostat's settings: who looks after it, the comfortable range, and the pause with a Resume button.
+A room can follow two number helpers for its range (`low_entity` and `high_entity`, such as Clive's `input_number.clive_climate_downstairs_low` and `_high`, or helpers made just for the room): the graph, colours and legend follow them, and a tune button on the room opens a sheet to change them. On the **climate card**, a thermostat that Clive looks after (it has an `input_boolean.clive_climate_<zone>_auto`) shows a "Clive controlled" / "Manual" line at the bottom, and tapping it opens the thermostat's settings: who looks after it, the comfortable range, how long Clive pauses after somebody changes a thermostat (one setting for the whole house, 30 minutes by default), and the current pause with a Resume button.
 
 Each room's 24-hour graph shades its comfortable range, colours the temperature line by the same scale and draws humidity with dotted 40–60% limits (changeable per card). The card title takes the colour of the room furthest outside its range.
 
@@ -348,9 +348,11 @@ companion-app phones' batteries. New people appear by themselves.
 One camera, one card each (several sit side by side in a panel). The tile shows the
 newer of ring-mqtt's snapshot and the Ring integration's recording frame, with why and
 how long ago it was taken ("Doorbell · 4 min"). An orange badge means the picture is
-older than `refresh_after` (default 60 min). While someone's looking, the card then
-presses the camera's Take Snapshot button, at most once per `refresh_after` for everyone,
-so battery cameras last. A battery icon shows below 25%. Tap for a pop-up with live
+older than `refresh_after` (default 60 min). The card never asks for a new snapshot itself:
+the Church Drive integration presses each camera's Take Snapshot button on a timer (every 60 min for a
+camera on mains power, 180 for one with a battery, counted from the camera's last picture, event or
+button press, so a busy camera is never asked; `snapshot_minutes` and `snapshot_battery_minutes` in
+`church_drive/camera/settings`, 0 = never), so opening a dashboard or the app wakes no cameras. A battery icon shows below 25%. Tap for a pop-up with live
 video, Events (the events viewer), Snapshot and the light in the camera's area (or
 `light`). With `talk_stream` (a go2rtc stream with two-way audio) it also has
 Talk. The snapshot, button, battery and events are found from the camera's name

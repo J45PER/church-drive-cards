@@ -13,9 +13,12 @@
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
+import { octopusCar } from './car-octopus.js';
 import { KIT_COLOR, kitShell, kitHead, kitNum, kitEsc, kitMoreInfo, kitCompact, kitCompactable } from './card-kit.js';
 
-export const CAR_PLATFORMS = ['stellantis_vehicles', 'vag_connect', 'volkswagencarnet', 'volkswagen_we_connect_id'];
+// Octopus's Intelligent device (a car it controls, such as the ID.5) is a car too: it gives the battery % and its charging plan,
+// but not the plug, range or place, so those come from the Zappi when this car is the Primary one on it (see car-octopus.js).
+export const CAR_PLATFORMS = ['stellantis_vehicles', 'vag_connect', 'volkswagencarnet', 'volkswagen_we_connect_id', 'octopus_energy'];
 const CAR_TEAL = '#00b8d4';
 
 // Every car: { device, name, ids } (one per device with a battery %).
@@ -76,6 +79,7 @@ export function carEntities(hass, ids) {
     end: pick('sensor', /charging_end|charge_end|charging_time_left|remaining_charging/),
     tracker: pick('device_tracker', /./),
     wake: pick('button', /wake_?up$/),
+    dispatch: pick('binary_sensor', /intelligent_dispatching$/),
   };
 }
 
@@ -165,19 +169,21 @@ export class CarCard extends HTMLElement {
       const t = st(e.tracker);
       const where = !t || ['unknown', 'unavailable'].includes(t.state) ? '' : t.state === 'home' ? 'Home' : t.state === 'not_home' ? 'Away' : t.state;
       const end = st(e.end);
-      const charging = !!(st(e.charging) && st(e.charging).state === 'on');
+      const oct = octopusCar(hass, e);
+      const charging = oct ? oct.charging : !!(st(e.charging) && st(e.charging).state === 'on');
       let endText = '';
       if (charging && end && !['unknown', 'unavailable', ''].includes(end.state)) {
         const when = new Date(end.state);
         endText = isNaN(when) ? `${end.state}${end.attributes.unit_of_measurement ? ` ${end.attributes.unit_of_measurement}` : ''} left` : `Full by ${when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}`;
       }
+      if (!endText && oct) endText = oct.plan;
       return {
         name: x.name,
         battery: kitNum(st(e.battery)),
         range: miles(e.range),
         fuel: kitNum(st(e.fuel)),
         fuelRange: miles(e.fuelRange),
-        plugged: !!(st(e.plugged) && st(e.plugged).state === 'on'),
+        plugged: oct ? oct.plugged : !!(st(e.plugged) && st(e.plugged).state === 'on'),
         charging,
         end: endText,
         where,

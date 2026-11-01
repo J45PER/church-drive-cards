@@ -97,6 +97,14 @@ def noted(domain: str, service: str) -> bool:
     return services is None or service in services
 
 
+def worth_a_line(domain: str, service: str, entity_ids: Iterable[str]) -> bool:
+    """noted(), and not a camera's Take Snapshot button: pictures are refreshed on a timer, not by anyone wanting a line in the log."""
+    ids = list(entity_ids)
+    if domain == "button" and ids and all(e.endswith("_take_snapshot") for e in ids):
+        return False
+    return noted(domain, service)
+
+
 def icon_for(domain: str) -> str:
     return _ICONS.get(domain, "mdi:home")
 
@@ -154,7 +162,8 @@ def describe(domain: str, service: str, data: dict[str, Any] | None, names: dict
         text += f" to {str(data['hvac_mode']).replace('_', ' ')}"
     elif service in ("set_preset_mode", "set_fan_mode"):
         mode = data.get("preset_mode") or data.get("fan_mode")
-        text += f" to {str(mode).replace('_', ' ')}" if mode else ""
+        mode = "no preset" if str(mode).lower() == "none" else str(mode).replace("_", " ").capitalize() if mode else ""
+        text += f" to {mode}" if mode else ""
     elif service == "set_cover_position" and data.get("position") is not None:
         text += f" to {_num(data['position'])}%"
     elif service == "set_humidity" and data.get("humidity") is not None:

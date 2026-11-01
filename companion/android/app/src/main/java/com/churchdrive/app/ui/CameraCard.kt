@@ -63,7 +63,6 @@ import org.json.JSONObject
 val LocalBaseUrl = compositionLocalOf { "" }
 
 /** When each camera last had a snapshot asked for from here, so the app doesn't ask again straight away. */
-private val askedAt = mutableMapOf<String, Long>()
 
 internal fun chipColours(kind: String, old: Boolean): Pair<Color, Color> = when {
     old -> Color(0xFFFFA726) to Color(0xFF222211)
@@ -76,9 +75,9 @@ internal fun chipColours(kind: String, old: Boolean): Pair<Color, Color> = when 
 
 /**
  * One camera: its freshest picture with its name and why and how long ago it was taken ("Doorbell · 4 min").
- * An orange chip means the picture is older than `refresh_after` minutes (default 60); then, as on the
- * dashboard, the camera's Take Snapshot button is pressed, at most once per that time for everyone. Tap for
- * live video.
+ * An orange chip means the picture is older than `refresh_after` minutes (default 60). The card never asks the
+ * camera for a new picture itself: Home Assistant does that on a timer (Church Drive's camera events), counted
+ * from the camera's last picture or event, so opening the app wakes no cameras. Tap for live video.
  */
 @Composable
 fun CameraCard(config: JSONObject, entities: Map<String, EntityState>, registry: Registry, call: CallService) {
@@ -102,22 +101,9 @@ fun CameraCard(config: JSONObject, entities: Map<String, EntityState>, registry:
     }
     val old = picture == null || picture.ms == 0L || now - picture.ms > refreshMs
 
-    // An old picture on a camera with a Take Snapshot button: ask for a new one, once per refresh time for everyone.
-    LaunchedEffect(picture?.ms, found.button) {
-        val button = found.button ?: return@LaunchedEffect
-        if (!old) return@LaunchedEffect
-        val last = maxOf(parseMillis(entities[button]?.state) ?: 0L, askedAt[entityId] ?: 0L)
-        if (System.currentTimeMillis() - last >= refreshMs) {
-            askedAt[entityId] = System.currentTimeMillis()
-            call("button", "press", button, data())
-        }
-    }
-
-    val waiting = (askedAt[entityId] ?: 0L).let { it > 0 && now - it < 120_000 && (picture == null || picture.ms < it) }
-    val (chipBg, chipInk) = chipColours(picture?.kind ?: "interval", old || waiting)
+    val (chipBg, chipInk) = chipColours(picture?.kind ?: "interval", old)
     val chip = when {
         picture == null || picture.ms == 0L -> "No picture yet"
-        waiting -> "${cameraAge(picture.ms, now)} · updating…"
         else -> "${cameraKindLabel(picture.kind)} · ${cameraAge(picture.ms, now)}"
     }
     val battery = found.battery?.let { entities[it]?.state?.toDoubleOrNull() }

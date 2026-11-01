@@ -3,6 +3,22 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.87.0
+
+No app changes. The Home Assistant integration now removes a phone's old duplicate Church Drive app registrations, locates people from this app only and sends notices only to this app.
+
+## 0.86.0
+
+- No change to this app; version moves with the shared number (Which car is plugged in: Primary / Additional; the ID.5 on the Car card). A `core` change: the notification buttons Primary and Additional.
+
+## 0.85.0
+
+- Version moves with the shared number. No other change.
+
+## 0.84.0
+
+- No change to this app; version kept equal to the others (the assistant's feature log has a new entry about the shorter pause).
+
 ## 0.83.0
 
 - Version moves with the shared number. No other change.

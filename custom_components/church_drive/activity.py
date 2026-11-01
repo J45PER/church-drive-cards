@@ -46,7 +46,7 @@ from .activity_logic import (
     icon_for,
     is_clive,
     make_entry,
-    noted,
+    worth_a_line,
     overrule_text,
     presence_text,
     prune,
@@ -165,7 +165,7 @@ class Activity:
             self._clive[ctx.id] = (now + RUN_S, followed[1], followed[2])
             if domain not in ("script", "automation"):
                 self._remember_clive_set(now, domain, service, data)
-                if noted(domain, service):
+                if worth_a_line(domain, service, entities_in(data)):
                     self._record("clive_auto" if followed[2] else "clive", "", domain, service, data, by=followed[1], rule=followed[2])
             return
         if domain in WATCH_DOMAINS:
@@ -180,7 +180,7 @@ class Activity:
             if is_clive(f"script.{service}") or any(is_clive(e) for e in entities_in(data)):
                 return  # the assistant's script, listed under him when it starts
             self._scripts[ctx.id] = now + RUN_S
-        if noted(domain, service):
+        if worth_a_line(domain, service, entities_in(data)):
             self._record("user", self._for_whom(ctx), domain, service, data, user_id=ctx.user_id)
 
     def _record(self, kind: str, who: str, domain: str, service: str, data: dict[str, Any], by: str = "", user_id: str = "", rule: str = "") -> None:
