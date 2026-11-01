@@ -25,3 +25,9 @@ def test():
 
 test()
 print("OK")
+
+def test_push_services():
+    assert m.push_services({"mobile_app_b": "t", "mobile_app_a": "t"}, True) == ["mobile_app_a", "mobile_app_b"]
+    assert m.push_services({"mobile_app_a": "t"}, False) == [], "no key file: Google can't reach anyone"
+
+test_push_services()

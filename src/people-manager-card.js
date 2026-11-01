@@ -359,9 +359,10 @@ export class PeopleManagerCard extends HTMLElement {
   _phones(p, admin) {
     const rows = groupPhones(p.phones)
       .map(({ main: ph, also }) => {
-        const sub = [ph.model, also ? 'with the Church Drive app' : '', ph.tracks ? (ph.seen ? `location ${ageText(ph.seen)}` : 'no location yet') : ''].filter(Boolean).join(' · ');
+        const sub = [ph.model, also ? (also.on ? 'with the Church Drive app' : 'Church Drive app: alerts are off') : '', ph.tracks ? (ph.seen ? `location ${ageText(ph.seen)}` : 'no location yet') : ''].filter(Boolean).join(' · ');
         const services = [ph.service, also && also.service].filter(Boolean).join(',');
-        const alertsOn = ph.on || !!(also && also.on);
+        // With the Church Drive app on the phone, its alerts are the ones that count (the Home Assistant app's copy is only for someone without it).
+        const alertsOn = also ? also.on : ph.on;
         return `<div class="pm-row pm-phone"><span>${kitEsc(ph.name)}${sub ? `<small>${kitEsc(sub)}</small>` : ''}</span>
           <span class="pm-mini">Alerts${this._sw(alertsOn, `data-act="phone" data-service="${kitEsc(services)}"`, `Alerts to ${ph.name}`, !admin)}</span>
           ${ph.tracker ? `<span class="pm-mini">Location${this._sw(ph.tracks, `data-act="track" data-tracker="${kitEsc(ph.tracker)}"`, `${ph.name} shows where ${p.first} is`, !admin)}</span>` : ''}</div>`;
@@ -578,7 +579,8 @@ export class PeopleManagerCard extends HTMLElement {
       // One row can be two registrations (the Home Assistant app and the Church Drive app on the same phone): both follow the switch.
       const services = String(b.dataset.service || '').split(',').filter(Boolean);
       const phones = (p.phones || []).filter((x) => services.includes(x.service));
-      const on = !phones.some((x) => x.on);
+      const own = phones.find((x) => x.own_app) || phones[0];
+      const on = !(own && own.on);
       phones.forEach((x) => { x.on = on; });
       for (const service of services) await this._send({ type: 'church_drive/people/phone', person: p.entity_id, service, on });
       return null;

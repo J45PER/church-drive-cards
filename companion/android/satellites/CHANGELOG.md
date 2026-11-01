@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.92.0
+
+Shared code change only: the connection to the house (in `core`) asks the house whether Google push can reach the phone. No visible change in this app.
+
 ## 0.91.0
 
 No app changes. The People card's old-location warning now points to the Church Drive app (Share my location, then Allow all the time and Unrestricted battery) instead of the Home Assistant app.

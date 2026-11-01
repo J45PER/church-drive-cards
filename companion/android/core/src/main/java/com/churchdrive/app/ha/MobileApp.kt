@@ -146,6 +146,25 @@ object MobileApp {
             .put("data", JSONObject().put("event_type", "church_drive_fcm_token")
                 .put("event_data", JSONObject().put("service", service).put("token", token)))
 
+    /** The webhook message that asks the house whether Google push can reach this phone (Church Drive lists those phones on its people sensor). */
+    fun pushReachableBody(service: String): JSONObject =
+        JSONObject().put("type", "render_template")
+            .put("data", JSONObject().put("reachable", JSONObject().put("template", "{{ '${service.removePrefix("notify.")}' in (state_attr('sensor.church_drive_people', 'push') or []) }}")))
+
+    /** Whether the house's answer to [pushReachableBody] says yes. A house that is older, or has no Google key, says no. */
+    fun parseReachable(answer: String?): Boolean = runCatching {
+        JSONObject(answer.orEmpty()).opt("reachable")?.toString().equals("true", ignoreCase = true)
+    }.getOrDefault(false)
+
+    /** Sends a webhook message and gives the house's answer, or null (offline, refused). Blocking. */
+    fun ask(baseUrl: String, webhookId: String, body: JSONObject): String? = runCatching {
+        val request = Request.Builder()
+            .url(baseUrl.trim().trimEnd('/') + "/api/webhook/$webhookId")
+            .post(body.toString().toRequestBody(json))
+            .build()
+        http.newCall(request).execute().use { r -> if (r.isSuccessful) r.body?.string() else null }
+    }.getOrNull()
+
     /** The name of the notify service for a phone, as Home Assistant makes it: `notify.mobile_app_<name>`. */
     fun notifyService(deviceName: String): String =
         "notify.mobile_app_" + deviceName.lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_')
