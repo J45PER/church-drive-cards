@@ -46,6 +46,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util, location, slugify
 
 from .notice_log import NoticeLog
+from .phone_logic import OWN_APP_IDS, leftover_entries, location_trackers
 from .kinds import ARRIVALS, JOB_KINDS, KINDS, arrival_kind
 from .notice_actions_logic import actions_for, is_app_only_link, is_phone_action, tap_link_for
 from .notice_samples import sample_for
@@ -113,7 +114,52 @@ class People:
         self._unsub_started = None  # a fired listen_once is gone already
         await self._async_ready()
 
+    async def _async_remove_leftover_phones(self, _now: Any = None) -> None:
+        """Takes away the Church Drive app's old registrations of a phone (the app only uses its newest)."""
+        entries = self.hass.config_entries.async_entries("mobile_app")
+        gone = leftover_entries(
+            {"entry_id": c.entry_id, "app_id": c.data.get("app_id"), "user_id": c.data.get("user_id"), "device_name": c.data.get("device_name")}
+            for c in entries
+        )
+        for entry_id in gone:
+            _LOGGER.info("Removing an old registration of the Church Drive app (%s): the phone has a newer one", entry_id)
+            try:
+                await self.hass.config_entries.async_remove(entry_id)
+            except Exception as err:  # noqa: BLE001 - one failing mustn't stop the rest
+                _LOGGER.warning("Couldn't remove old phone registration %s: %s", entry_id, err)
+
+    async def _async_own_app_locates(self, _now: Any = None) -> None:
+        """Who's home or away comes from the Church Drive app on a phone, never from the Home Assistant app on it."""
+        from homeassistant.components.person import DOMAIN as PERSON
+
+        coll = self.hass.data.get(PERSON, (None, None))[1]
+        if coll is None:
+            return
+        ent_reg = er.async_get(self.hass)
+        own: dict[str, list[str]] = {}
+        other: list[str] = []
+        for entry in self.hass.config_entries.async_entries("mobile_app"):
+            trackers = [e.entity_id for e in er.async_entries_for_config_entry(ent_reg, entry.entry_id) if e.domain == "device_tracker"]
+            if entry.data.get("app_id") in OWN_APP_IDS:
+                own.setdefault(entry.data.get("user_id") or "", []).extend(trackers)
+            else:
+                other.extend(trackers)
+        for item in list(coll.async_items()):
+            current = item.get("device_trackers") or []
+            wanted = location_trackers(current, own.get(item.get("user_id") or "", []), other)
+            if wanted != current:
+                _LOGGER.info("%s: now located by the Church Drive app only (%s)", item.get("name"), wanted)
+                try:
+                    await coll.async_update_item(item["id"], {"device_trackers": wanted})
+                except Exception as err:  # noqa: BLE001
+                    _LOGGER.warning("Couldn't update the location phones of %s: %s", item.get("name"), err)
+        self._changed()
+
     async def _async_ready(self) -> None:
+        await self._async_remove_leftover_phones()
+        await self._async_own_app_locates()
+        self._unsubs.append(async_track_time_interval(self.hass, self._async_own_app_locates, timedelta(hours=1)))
+        self._unsubs.append(async_track_time_interval(self.hass, self._async_remove_leftover_phones, timedelta(hours=1)))
         if not self._data.get("seeded"):
             self._seed()
         self._fill_defaults()
@@ -239,6 +285,8 @@ class People:
                     service = f"mobile_app_{slugify(device.name or '')}"
                 if service not in notify:
                     continue
+                if any(p["service"] == service for p in phones):
+                    continue  # leftover registrations share one notify name: list (and send to) the phone once
                 seen = self._seen(tracker)
                 config = self.hass.config_entries.async_get_entry(entry.config_entry_id) if entry.config_entry_id else None
                 phones.append(
@@ -392,6 +440,9 @@ class People:
         if item is None:
             raise ValueError(f"{person} isn't a person made in the app")
         trackers = [t for t in item.get("device_trackers") or [] if t != tracker]
+        if on and any(p["tracker"] == tracker and not p["own_app"] for p in next((x["phones"] for x in self.people() if x["entity_id"] == person), [])) \
+                and any(p["own_app"] for x in self.people() if x["entity_id"] == person for p in x["phones"]):
+            raise ValueError("Where someone is comes from the Church Drive app, not the Home Assistant app")
         if on:
             trackers.append(tracker)
         await coll.async_update_item(item["id"], {"device_trackers": trackers})
@@ -705,15 +756,17 @@ class People:
         for p in self.recipients(None if test else kind, only):
             seq = self.notice_log.next_seq(int(dt_util.utcnow().timestamp() * 1000))
             text = message + (f"\n{admin_message}" if admin_message and p["admin"] else "")
-            # The Church Drive app goes first. A phone that hears it there doesn't also get the Home Assistant app's
-            # copy (the same person's phone of the same model); if the app isn't connected, that copy is sent as before.
+            # The Church Drive app goes first. Once it has the notice, the person's Home Assistant app copies (on any of their
+            # devices) are not sent; if the app can't be reached, they are sent as before.
             on = sorted((ph for ph in p["phones"] if ph["on"]), key=lambda ph: not ph.get("own_app"))
+            # Everyone has the Church Drive app: it is the only place notices go. A person without it still gets the Home Assistant app's.
+            on = [ph for ph in on if ph.get("own_app")] or on
             covered: set[str] = set()
             missed: dict[str, Any] | None = None
             elsewhere = False
             for phone in on:
-                if not phone.get("own_app") and phone.get("model") and phone["model"] in covered:
-                    continue
+                if not phone.get("own_app") and covered:
+                    continue  # the Church Drive app has it: the Home Assistant app on any of their devices is only a fallback
                 data: dict[str, Any] = {"group": kind or "church-drive"}
                 if tag:
                     data["tag"] = tag
@@ -743,8 +796,7 @@ class People:
                         phone["service"], {"title": title, "message": text, "data": data}
                     ):
                         phones += 1
-                        if phone.get("model"):
-                            covered.add(phone["model"])
+                        covered.add(phone["service"])
                         continue
                     await self.hass.services.async_call(
                         "notify", phone["service"], {"title": title, "message": text, "data": data},
@@ -752,8 +804,7 @@ class People:
                     )
                     phones += 1
                     if phone.get("own_app"):
-                        if phone.get("model"):
-                            covered.add(phone["model"])
+                        covered.add(phone["service"])
                     else:
                         elsewhere = True
                 except Exception as err:  # noqa: BLE001 - one phone failing mustn't stop the rest
