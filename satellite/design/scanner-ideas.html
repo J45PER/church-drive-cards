@@ -1,0 +1,97 @@
+<title>Clive QR Scanner Ideas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root { --bar-bg:#e9ebef; --bar-fg:#14181f; --bar-soft:#5b6472; --ui:"Instrument Sans",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bar-bg:#1a1f27; --bar-fg:#eef1f5; --bar-soft:#9aa4b2; color-scheme:dark; } }
+:root[data-theme="dark"] { --bar-bg:#1a1f27; --bar-fg:#eef1f5; --bar-soft:#9aa4b2; color-scheme:dark; }
+* { box-sizing:border-box; }
+body { background:var(--bar-bg); color:var(--bar-fg); font-family:var(--ui); margin:0; line-height:1.4; }
+.top { padding:20px max(16px,env(safe-area-inset-left,0px)) 8px; max-width:1100px; margin:0 auto; }
+.top h1 { font-size:1.3rem; margin:0; letter-spacing:-.01em; } .top p { margin:2px 0 0; color:var(--bar-soft); font-size:.86rem; max-width:76ch; }
+.in { max-width:1100px; margin:0 auto; padding:16px max(16px,env(safe-area-inset-left,0px)) 56px; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
+.cell { display:grid; gap:10px; justify-items:center; align-content:start; }
+.phone { width:100%; max-width:240px; aspect-ratio:9/18.5; border-radius:26px; overflow:hidden; position:relative; background:#0b0d10; border:1px solid color-mix(in srgb,var(--bar-soft) 40%,transparent); }
+.phone svg { position:absolute; inset:0; width:100%; height:100%; display:block; }
+.cl { font-size:.88rem; text-align:center; } .cl b { display:block; } .cl small { display:block; color:var(--bar-soft); font-size:.76rem; max-width:30ch; margin:2px auto 0; }
+@media (max-width:900px) { .in { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:480px) { .in { grid-template-columns:minmax(0,1fr); } }
+</style>
+<div class="top"><h1>Clive QR scanner ideas</h1><p>The Add tab opens Google's own scanner today. These replace it with a Clive screen: a camera view with a frame to line the code up in, the hint underneath, and "Type the code instead" always in reach. Each loops through searching, then finding the code. The camera picture here is made up.</p></div>
+<div class="in" id="in"></div>
+<script>
+(function () {
+  var W = 260, H = 535, CX = 130, CY = 214, TEAL = '#2FB5A5', reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function f(v) { return (Math.round(v * 100) / 100).toString(); }
+  function clamp(v) { return Math.max(0, Math.min(1, v)); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function out(t) { return 1 - Math.pow(1 - clamp(t), 3); }
+  function rr(x, y, w, h, r) { r = Math.min(r, w / 2, h / 2); return 'M' + f(x + r) + ',' + f(y) + ' H' + f(x + w - r) + ' A' + f(r) + ',' + f(r) + ' 0 0 1 ' + f(x + w) + ',' + f(y + r) + ' V' + f(y + h - r) + ' A' + f(r) + ',' + f(r) + ' 0 0 1 ' + f(x + w - r) + ',' + f(y + h) + ' H' + f(x + r) + ' A' + f(r) + ',' + f(r) + ' 0 0 1 ' + f(x) + ',' + f(y + h - r) + ' V' + f(y + r) + ' A' + f(r) + ',' + f(r) + ' 0 0 1 ' + f(x + r) + ',' + f(y) + 'Z'; }
+  // a made-up camera picture with a QR sticker on it
+  var seed = 7; function rnd() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
+  function qr(x, y, s) {
+    var n = 21, m = s / n, d = '';
+    function fin(ox, oy) { d += rr(x + ox * m, y + oy * m, 7 * m, 7 * m, 1) + rr(x + (ox + 1) * m, y + (oy + 1) * m, 5 * m, 5 * m, 1) + rr(x + (ox + 2) * m, y + (oy + 2) * m, 3 * m, 3 * m, 0.5); }
+    fin(0, 0); fin(14, 0); fin(0, 14);
+    for (var i = 0; i < n; i++) for (var j = 0; j < n; j++) { var inF = (i < 8 && j < 8) || (i > 12 && j < 8) || (i < 8 && j > 12); if (!inF && rnd() > .52) d += 'M' + f(x + i * m) + ',' + f(y + j * m) + 'h' + f(m) + 'v' + f(m) + 'h' + f(-m) + 'z'; }
+    return '<path d="' + d + '" fill="#111" fill-rule="evenodd"/>';
+  }
+  var CAM = '<defs><linearGradient id="cg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2a2f36"/><stop offset="1" stop-color="#14171b"/></linearGradient></defs><rect width="' + W + '" height="' + H + '" fill="url(#cg)"/>' +
+    '<rect x="' + (CX - 62) + '" y="' + (CY - 62) + '" width="124" height="124" rx="14" fill="#e9e6df" transform="rotate(-4 ' + CX + ' ' + CY + ')"/><g transform="rotate(-4 ' + CX + ' ' + CY + ')">' + qr(CX - 52, CY - 52, 104) + '</g>';
+  function top(title) {
+    return '<circle cx="30" cy="42" r="17" fill="#fff" fill-opacity=".16"/><path d="M23,35 L37,49 M37,35 L23,49" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>' +
+      '<text x="' + CX + '" y="48" text-anchor="middle" fill="#fff" font-family="Instrument Sans" font-weight="600" font-size="16">' + title + '</text>';
+  }
+  function bottom(msg, found) {
+    return '<rect x="14" y="396" width="232" height="120" rx="26" fill="#14181f" fill-opacity=".92"/>' +
+      '<text x="' + CX + '" y="428" text-anchor="middle" fill="#fff" font-family="Instrument Sans" font-weight="600" font-size="15">' + msg + '</text>' +
+      '<text x="' + CX + '" y="448" text-anchor="middle" fill="#fff" fill-opacity=".62" font-family="Instrument Sans" font-size="11.5">' + (found ? 'Checking the six digits with the screen' : 'on its screen, or the sticker underneath') + '</text>' +
+      '<rect x="30" y="464" width="200" height="38" rx="12" fill="#fff" fill-opacity=".14"/><text x="' + CX + '" y="488" text-anchor="middle" fill="#fff" font-family="Instrument Sans" font-weight="500" font-size="13">Type the code instead</text>';
+  }
+  function dim(cut) { return '<path d="M0,0 H' + W + ' V' + H + ' H0Z ' + cut + '" fill="#000" fill-opacity=".62" fill-rule="evenodd"/>'; }
+  function tick(cx, cy, s, a, col) { return '<circle cx="' + cx + '" cy="' + cy + '" r="' + f(s * a) + '" fill="' + col + '"/><path d="M' + f(cx - s * .38) + ',' + f(cy + s * .02) + ' L' + f(cx - s * .1) + ',' + f(cy + s * .3) + ' L' + f(cx + s * .42) + ',' + f(cy - s * .3) + '" stroke="#fff" stroke-width="' + f(s * .16) + '" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="' + f(a) + '"/>'; }
+  // t: seconds into a 6 second loop; found from 3.2 s
+  var OPTS = [
+    { n: 'A. Squircle frame', d: "One rounded frame in Clive's squircle shape. It breathes while it looks, then closes to the code and turns teal with a tick.",
+      draw: function (t, found) {
+        var s = lerp(176, 150, found), br = reduce ? 0 : Math.sin(t * 2.2) * 3 * (1 - found), z = s + br, x = CX - z / 2, y = CY - z / 2;
+        return dim(rr(x, y, z, z, z * .27)) + '<path d="' + rr(x, y, z, z, z * .27) + '" fill="none" stroke="' + (found > .3 ? TEAL : '#fff') + '" stroke-width="3"/>' + (found > .05 ? tick(CX, CY, 24, out(found * 1.6), TEAL) : '');
+      } },
+    { n: "B. Clive's two squares", d: "The frame is Clive's logo: two overlapping squircles. They drift as Clive does while idle, then slide together when the code is found.",
+      draw: function (t, found) {
+        var s = 126, off = lerp(26, 0, out(found)) + (reduce ? 0 : Math.sin(t * 2) * 3 * (1 - found)), r = s * .395;
+        var a = rr(CX - s / 2 - off, CY - s / 2 + off, s, s, r), b = rr(CX - s / 2 + off, CY - s / 2 - off, s, s, r), col = found > .3 ? TEAL : '#fff';
+        return dim(a + ' ' + b) + '<path d="' + a + '" fill="none" stroke="' + col + '" stroke-width="3"/><path d="' + b + '" fill="none" stroke="' + col + '" stroke-width="3"/>' + (found > .35 ? tick(CX, CY, 20, out((found - .35) * 2), TEAL) : '');
+      } },
+    { n: 'C. Ripples', d: "A round window with the satellite's three ripples going out while it looks. On a find the ripples stop and the circle closes on the code.",
+      draw: function (t, found) {
+        var r = lerp(92, 78, out(found)), col = found > .3 ? TEAL : '#fff', g = '';
+        for (var i = 0; i < 3; i++) { var p = reduce ? .3 + i * .2 : ((t * .45 + i / 3) % 1), rad = r + 8 + p * 36 * (1 - found), op = (1 - p) * .85 * (1 - found); g += '<circle cx="' + CX + '" cy="' + CY + '" r="' + f(rad) + '" fill="none" stroke="' + col + '" stroke-width="3" stroke-opacity="' + f(op) + '"/>'; }
+        return dim('M' + (CX - r) + ',' + CY + ' a' + r + ',' + r + ' 0 1,0 ' + (2 * r) + ',0 a' + r + ',' + r + ' 0 1,0 ' + (-2 * r) + ',0Z') + g + '<circle cx="' + CX + '" cy="' + CY + '" r="' + f(r) + '" fill="none" stroke="' + col + '" stroke-width="3"/>' + (found > .1 ? tick(CX, CY, 24, out(found * 1.4), TEAL) : '');
+      } },
+    { n: 'D. Corners', d: "Only four soft corners, in the Add tab's teal. A slow sweep runs between them; on a find they close in and light up.",
+      draw: function (t, found) {
+        var s = lerp(180, 156, out(found)), x = CX - s / 2, y = CY - s / 2, L = 38, rad = 22, col = found > .2 ? TEAL : '#fff', sw = 4;
+        function c(px, py, sx, sy) { return '<path d="M' + f(px) + ',' + f(py + sy * L) + ' V' + f(py + sy * rad) + ' Q' + f(px) + ',' + f(py) + ' ' + f(px + sx * rad) + ',' + f(py) + ' H' + f(px + sx * L) + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="round"/>'; }
+        var sweep = reduce ? 0 : (0.5 + 0.5 * Math.sin(t * 2.4)) * (1 - found), sy2 = y + 10 + sweep * (s - 20);
+        return '<rect width="' + W + '" height="' + H + '" fill="#000" fill-opacity="' + f(.34 + .2 * found) + '"/>' + c(x, y, 1, 1) + c(x + s, y, -1, 1) + c(x, y + s, 1, -1) + c(x + s, y + s, -1, -1) +
+          '<rect x="' + f(x + 14) + '" y="' + f(sy2) + '" width="' + f(s - 28) + '" height="3" rx="1.5" fill="' + TEAL + '" fill-opacity="' + f(.85 * (1 - found)) + '"/>' + (found > .2 ? tick(CX, CY, 22, out((found - .2) * 1.6), TEAL) : '');
+      } }
+  ];
+  var host = document.getElementById('in'), cells = [];
+  OPTS.forEach(function (o) {
+    var c = document.createElement('div'); c.className = 'cell';
+    c.innerHTML = '<div class="phone"><svg viewBox="0 0 ' + W + ' ' + H + '" aria-hidden="true"></svg></div><div class="cl"><b>' + o.n + '</b><small>' + o.d + '</small></div>';
+    host.appendChild(c); cells.push({ o: o, svg: c.querySelector('svg') });
+  });
+  function frame(ms) {
+    var t = (ms / 1000) % 6, found = t < 3.2 ? 0 : clamp((t - 3.2) / 0.7); if (t > 5.6) found = clamp(1 - (t - 5.6) / 0.4);
+    cells.forEach(function (c) {
+      var msg = found > 0.5 ? 'Found it' : 'Point at the satellite\'s QR code';
+      c.svg.innerHTML = CAM + c.o.draw(t, found) + top('Add a satellite') + bottom(msg, found > .5);
+    });
+    requestAnimationFrame(frame);
+  }
+  if (reduce) { var t0 = 4.2; cells.forEach(function (c) { c.svg.innerHTML = CAM + c.o.draw(t0, 1) + top('Add a satellite') + bottom('Found it', true); }); } else requestAnimationFrame(frame);
+})();
+</script>

@@ -4,6 +4,14 @@ Status: **written, not tried on a real satellite.** The firmware (`satellite/cli
 
 How it differs from the proposal below: the QR code's six digits are only for the person to check against the screen (there is no per-device secret); the API encryption key is the one every satellite is built with, typed into the app once and kept on the phone, rather than a fresh key per device; and satellites without a screen (a sticker QR, no button yet) are listed and configurable but their pairing hardware is not designed.
 
+## IDs, stickers and keys (0.95.0)
+
+Every satellite has one permanent ID printed on its sticker, for example `RND1-000123-4`: a model code (RND round screen, SPK speaker with no screen, DSP small display), the hardware generation (1 to 9), a six digit running number for that model and generation, and a check character (Luhn mod 32 over Crockford base 32, no I, L, O or U) so the app can tell a typing mistake from a code that doesn't exist. The same ID gives the device's name on Bluetooth, the network and in Home Assistant: `clive-rnd1-000123`.
+
+`python3 satellite/tools/make_device.py --model RND --gen 1 --room "Living room"` makes a new one: it takes the next free number from `satellite/devices/registry.csv` (git-ignored, because it holds every device's key: back it up), creates the satellite's own API key, writes `satellite/devices/<id>/<id>.yaml` to compile and flash, and draws the sticker for a 14 x 60 mm label (a Phomemo D30). The sticker's QR code is `clive://pair?id=...&k=<its own key>` (`&d=<name>` is optional), so the app adds it with its own key and nothing shared is typed. A satellite built straight from `clive-round.yaml` still uses the shared `clive_round_api_key`, for development.
+
+Only a Home Assistant administrator can add a satellite.
+
 ## The plan
 
 A third app, the **satellite companion app**, adds, names and configures every satellite: the round one, other displays, and ones with no display. Mockups are in `satellite/design/flows.html`.

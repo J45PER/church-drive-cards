@@ -1,8 +1,15 @@
 # Church Drive Satellites: changelog
 
-## 0.94.3
+## 0.95.1
 
 - No change to this app; the icons in the phone and To-Do apps were updated.
+
+## 0.95.0
+
+- A scanner of the app's own replaces Google's: the camera is dimmed and shows clearly only through the overlap of two squares in Clive's glow colours (the cut in Clive's logo). When a code is read the frame turns teal and a card confirms it (the six digits, or the ID on a sticker) to check against the satellite. The app now asks for the camera.
+- Satellites have a permanent ID, `RND1-000123-4`: a model (RND round screen, SPK speaker, DSP small display), the hardware generation, a running number and a check character, so a typing mistake is told from a code that doesn't exist. You can type the ID instead of the name when you can't scan.
+- A sticker QR code carries the satellite's own API key, so nothing shared is typed to add it; the shared key is only asked for with a screen QR code that has none.
+- Only an administrator can add a satellite; other people are told so on the Add tab.
 
 ## 0.94.2
 
