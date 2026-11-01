@@ -90,18 +90,19 @@ private fun CliveTitle(sub: String, ink: Color) {
         delay(SPLASH_MORPH_DELAY_MS)
         p.animateTo(1f, tween(SPLASH_MORPH_MS.toInt(), easing = CubicBezierEasing(0.65f, 0f, 0.35f, 1f)))
     }
+    // "Clive" in Bold and the app's name in Regular, the same size and colour (24sp, so "Clive Satellite Manager" still fits one line on a small phone).
     Row(verticalAlignment = Alignment.Bottom) {
-        Text("Clive", color = ink, fontFamily = SplashFont, fontWeight = FontWeight.SemiBold, fontSize = 42.sp, modifier = Modifier.alignByBaseline())
+        Text("Clive", color = ink, fontFamily = SplashFont, fontWeight = FontWeight.Bold, fontSize = 24.sp, maxLines = 1, softWrap = false, modifier = Modifier.alignByBaseline())
         // The name takes up more room as it arrives, so "Clive" slides left to make way; it also fades in and travels in from the right.
         Text(
-            sub, color = ink.copy(alpha = 0.8f), fontFamily = SplashFont, fontWeight = FontWeight.SemiBold, fontSize = 19.sp, maxLines = 1, softWrap = false,
+            sub, color = ink, fontFamily = SplashFont, fontWeight = FontWeight.Normal, fontSize = 24.sp, maxLines = 1, softWrap = false,
             modifier = Modifier
                 .alignByBaseline()
-                .padding(start = 8.dp)
                 .layout { m, c ->
                     val pl = m.measure(c.copy(maxWidth = Constraints.Infinity))
                     layout((pl.width * p.value).roundToInt(), pl.height, mapOf(FirstBaseline to pl[FirstBaseline], LastBaseline to pl[LastBaseline])) { pl.place(0, 0) }
                 }
+                .padding(start = 7.dp)
                 .graphicsLayer { alpha = p.value; translationX = (1f - p.value) * 24.dp.toPx(); clip = false },
         )
     }
