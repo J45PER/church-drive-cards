@@ -759,6 +759,8 @@ class People:
             # The Church Drive app goes first. Once it has the notice, the person's Home Assistant app copies (on any of their
             # devices) are not sent; if the app can't be reached, they are sent as before.
             on = sorted((ph for ph in p["phones"] if ph["on"]), key=lambda ph: not ph.get("own_app"))
+            # Everyone has the Church Drive app: it is the only place notices go. A person without it still gets the Home Assistant app's.
+            on = [ph for ph in on if ph.get("own_app")] or on
             covered: set[str] = set()
             missed: dict[str, Any] | None = None
             elsewhere = False
