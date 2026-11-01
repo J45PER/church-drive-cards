@@ -61,6 +61,7 @@ private fun SignIn(vm: SatelliteModel) {
     var password by rememberSaveable { mutableStateOf("") }
     var code by rememberSaveable { mutableStateOf("") }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 32.dp)) {
+        SatelliteMark(androidx.compose.foundation.isSystemInDarkTheme(), height = 88.dp)
         Text("Church Drive Satellites", style = MaterialTheme.typography.headlineSmall)
         Text("Sign in with your Home Assistant login. If the Church Drive app is on this phone and signed in, this app uses its sign-in.")
         if (!vm.needCode) {
