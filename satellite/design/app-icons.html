@@ -1,0 +1,182 @@
+<title>Satellites App Icons</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: the Brand Icon Board's, a light page and a dark page switched at the top. Each option is a row: the one-colour mark (still and moving), the glow app icon (circle and squircle), and the splash. */
+:root {
+  --bar-bg: #e9ebef; --bar-fg: #14181f; --bar-soft: #5b6472;
+  --stage-bg: #ffffff; --stage-fg: #000000; --stage-soft: #5f6672; --stage-line: #e0e3e8;
+  --ui: "Instrument Sans", system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, monospace;
+  --pick: #1e8e3e;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bar-bg: #1a1f27; --bar-fg: #eef1f5; --bar-soft: #9aa4b2; color-scheme: dark; } }
+:root[data-theme="dark"] { --bar-bg: #1a1f27; --bar-fg: #eef1f5; --bar-soft: #9aa4b2; color-scheme: dark; }
+:root[data-page="dark"] { --stage-bg: #000000; --stage-fg: #ffffff; --stage-soft: #9aa0aa; --stage-line: #262a31; --pick: #4fd08a; }
+* { box-sizing: border-box; }
+body { background: var(--bar-bg); color: var(--bar-fg); font-family: var(--ui); margin: 0; line-height: 1.4; }
+.top { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; justify-content: space-between; max-width: 1100px; margin: 0 auto;
+  padding-block: 20px 16px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.top h1 { font-size: 1.3rem; margin: 0; letter-spacing: -0.01em; }
+.top p { margin: 2px 0 0; color: var(--bar-soft); font-size: .86rem; max-width: 70ch; }
+.seg { display: inline-flex; background: color-mix(in srgb, var(--bar-soft) 25%, transparent); border-radius: 999px; padding: 3px; gap: 2px; }
+.seg button { font: inherit; font-size: .88rem; border: 0; background: none; color: var(--bar-soft); padding: 7px 18px; border-radius: 999px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--bar-fg); color: var(--bar-bg); }
+.seg button:focus-visible { outline: 2px solid var(--bar-fg); outline-offset: 2px; }
+.stage { background: var(--stage-bg); color: var(--stage-fg); min-height: 70vh; padding-block: 28px 56px; }
+.in { max-width: 1100px; margin: 0 auto; display: grid; gap: 30px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.note { color: var(--stage-soft); font-size: .86rem; max-width: 72ch; margin: 0; }
+#opts { display: grid; gap: 30px; }
+.opt { display: grid; gap: 12px; padding-top: 22px; border-top: 1px solid var(--stage-line); }
+.opt.picked { border-top: 3px solid var(--pick); }
+.oh { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+.oh h2 { font-size: 1.05rem; margin: 0; font-weight: 600; }
+.oh .tag { font-family: var(--mono); font-size: .74rem; letter-spacing: .1em; text-transform: uppercase; color: var(--stage-soft); }
+.why { margin: 0; color: var(--stage-soft); font-size: .88rem; max-width: 66ch; }
+.cells { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
+.cell { display: grid; gap: 8px; justify-items: center; align-content: start; min-width: 0; }
+.box { width: 100%; max-width: 150px; aspect-ratio: 1; border: 1px solid var(--stage-line); border-radius: 22px; display: grid; place-items: center; padding: 10%; color: var(--stage-fg); }
+.box svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.mask { width: 100%; max-width: 150px; aspect-ratio: 1; overflow: hidden; box-shadow: 0 0 0 1px var(--stage-line), 0 4px 12px rgba(0,0,0,.25); }
+.mask svg { display: block; width: 100%; height: 100%; }
+.mask.c { border-radius: 50%; }
+.mask.s { border-radius: 30%; }
+.splash { width: 100%; max-width: 150px; aspect-ratio: 150 / 150; border: 1px solid var(--stage-line); border-radius: 22px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--stage-fg); background: var(--stage-bg); }
+.splash svg { width: 50%; display: block; overflow: visible; }
+.splash b { font-size: .8rem; font-weight: 600; }
+.cl { font-size: .8rem; text-align: center; color: var(--stage-soft); }
+.pickbtn { justify-self: start; font: inherit; font-size: .86rem; font-weight: 500; border: 1px solid var(--stage-line); background: none; color: var(--stage-fg); border-radius: 999px; padding: 7px 16px; cursor: pointer; }
+.pickbtn:focus-visible { outline: 2px solid var(--stage-fg); outline-offset: 2px; }
+.picked .pickbtn { background: var(--pick); border-color: var(--pick); color: var(--stage-bg); }
+@media (max-width: 760px) { .cells { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 480px) { .cells { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+</style>
+
+<div class="top">
+  <div><h1>Satellites app icons</h1><p>Clive's own mark with its top-right square turned into a circle and three bold ripples going out of it, every gap the same as the ripples are thick. The one-colour mark sits on the page; the app icon fills it with Clive's glow on white, as the house and the clipboard are.</p></div>
+  <div class="seg" role="group" aria-label="Page"><button type="button" id="pl" aria-pressed="true">Light icons</button><button type="button" id="pd" aria-pressed="false">Dark icons</button></div>
+</div>
+<div class="stage"><div class="in">
+  <p class="note">The movement is for the app only (its splash and its own screens). Only the ripples move: they appear one after another and then clear. The circle and the square stay still. Nothing here changes Clive's mark or the animations on the satellites. Tell me what to change, or press "Pick" to choose it.</p>
+  <div id="opts"></div>
+</div></div>
+
+<script>
+(function () {
+  var SH = 11.3, TAU = Math.PI * 2;
+  function f(v) { return (Math.round(v * 100) / 100).toString(); }
+  function wave(p) { return (Math.cos(p * TAU) + 1) / 2; }
+  // Shapes are path pieces in a 200 unit box. They are drawn together in one even-odd path, so every overlap becomes a hole.
+  function rr(x, y, w, h, r) {
+    r = Math.max(0, Math.min(r, w / 2, h / 2));
+    return 'M' + f(x + r) + ',' + f(y) + ' H' + f(x + w - r) + ' A' + f(r) + ',' + f(r) + ' 0 0 1 ' + f(x + w) + ',' + f(y + r) + ' V' + f(y + h - r) +
+      ' A' + f(r) + ',' + f(r) + ' 0 0 1 ' + f(x + w - r) + ',' + f(y + h) + ' H' + f(x + r) + ' A' + f(r) + ',' + f(r) + ' 0 0 1 ' + f(x) + ',' + f(y + h - r) +
+      ' V' + f(y + r) + ' A' + f(r) + ',' + f(r) + ' 0 0 1 ' + f(x + r) + ',' + f(y) + 'Z';
+  }
+  function circ(cx, cy, r) { r = Math.max(0.01, r); return 'M' + f(cx - r) + ',' + f(cy) + ' a' + f(r) + ',' + f(r) + ' 0 1,0 ' + f(2 * r) + ',0 a' + f(r) + ',' + f(r) + ' 0 1,0 ' + f(-2 * r) + ',0Z'; }
+  function rot(x, y, cx, cy, deg) { var a = deg * Math.PI / 180, c = Math.cos(a), s = Math.sin(a); return [cx + x * c - y * s, cy + x * s + y * c]; }
+  function P(p) { return f(p[0]) + ',' + f(p[1]); }
+  // a rounded rectangle turned by deg about its own centre
+  function rrR(cx, cy, w, h, r, deg) {
+    var a = w / 2, b = h / 2, q = function (x, y) { return P(rot(x, y, cx, cy, deg)); };
+    return 'M' + q(-a + r, -b) + ' L' + q(a - r, -b) + ' A' + r + ',' + r + ' 0 0 1 ' + q(a, -b + r) + ' L' + q(a, b - r) + ' A' + r + ',' + r + ' 0 0 1 ' + q(a - r, b) +
+      ' L' + q(-a + r, b) + ' A' + r + ',' + r + ' 0 0 1 ' + q(-a, b - r) + ' L' + q(-a, -b + r) + ' A' + r + ',' + r + ' 0 0 1 ' + q(-a + r, -b) + 'Z';
+  }
+  // a half disc (a bowl), flat edge on top, turned by deg about (cx, cy)
+  function bowl(cx, cy, R, deg) { return 'M' + P(rot(-R, 0, cx, cy, deg)) + ' A' + R + ',' + R + ' 0 0 0 ' + P(rot(R, 0, cx, cy, deg)) + 'Z'; }
+  function pt(cx, cy, r, a) { var x = a * Math.PI / 180; return [cx + r * Math.cos(x), cy + r * Math.sin(x)]; }
+  // a rounded-ended arc of a ring from angle a0 to a1 (0 = three o'clock, clockwise)
+  function arc(cx, cy, r1, r2, a0, a1) {
+    var cr = (r2 - r1) / 2, rm = (r1 + r2) / 2, off = Math.min(cr / rm * 180 / Math.PI, Math.abs(a1 - a0) / 2 - 0.5), b0 = a0 + off, b1 = a1 - off;
+    var o0 = pt(cx, cy, r2, b0), o1 = pt(cx, cy, r2, b1), i1 = pt(cx, cy, r1, b1), i0 = pt(cx, cy, r1, b0), big = Math.abs(b1 - b0) > 180 ? 1 : 0;
+    return 'M' + P(o0) + ' A' + r2 + ',' + r2 + ' 0 ' + big + ',1 ' + P(o1) + ' A' + f(cr) + ',' + f(cr) + ' 0 0 1 ' + P(i1) + ' A' + r1 + ',' + r1 + ' 0 ' + big + ',0 ' + P(i0) + ' A' + f(cr) + ',' + f(cr) + ' 0 0 1 ' + P(o0) + 'Z';
+  }
+  // Clive's block: a 76 square with corner 30, the shape in his mark. It drifts by (dx, dy).
+  function block(x, y, dx, dy) { return rr(x + dx, y + dy, 76, 76, 30); }
+  // The drift, as in the app's idle pose: in and out along the diagonal, once every four seconds.
+  function drift(t) { var k = 0.45 + 0.55 * wave((t / 4000) % 1); return [SH * k, -SH * k]; }
+
+  // Every option starts from Clive's own mark: two rounded squares running bottom-left to top-right with the overlap cut out. S is how far they sit from the centre.
+  function sx(t) { return SH * (0.45 + 0.55 * wave((t / 4000) % 1)); }
+  function mark(cx, cy, w, r, S) { return rr(cx - S - w / 2, cy + S - w / 2, w, w, r) + ' ' + rr(cx + S - w / 2, cy - S - w / 2, w, w, r); }
+  function ring(cx, cy, rx, ry, th, deg) {
+    var o = function (a, b) { return P(rot(a, b, cx, cy, deg)); };
+    function ell(x, y) { return 'M' + o(-x, 0) + ' A' + x + ',' + y + ' ' + deg + ' 1 0 ' + o(x, 0) + ' A' + x + ',' + y + ' ' + deg + ' 1 0 ' + o(-x, 0) + 'Z'; }
+    return ell(rx, ry) + ' ' + ell(rx - th, ry - th);
+  }
+
+  // Clive's mark with its top-right square made a circle, and three ripples going out of that circle, all on the circle's own centre, equally spaced and equally thick.
+  // The ripples appear one after another, then clear: the same rhythm as a voice going out.
+  function rippleMark(S, mx, my, cr, r0, th, gap, a0, a1, n) {
+    var cx = mx + S, cy = my - S, d = rr(mx - S - 38, my + S - 38, 76, 76, 30) + ' ' + circ(cx, cy, cr);
+    for (var i = 0; i < n; i++) d += ' ' + arc(cx, cy, r0 + i * (th + gap), r0 + i * (th + gap) + th, a0, a1);
+    return d;
+  }
+  function steps(t) { var p = (t / 2600) % 1; return t === 0 ? 3 : (p < 0.15 ? 0 : p < 0.35 ? 1 : p < 0.55 ? 2 : p < 0.9 ? 3 : 0); }
+  var OPTIONS = [
+    { id: "B", name: "Bolder ripples, even spacing", why: "The circle's radius is 36. The first ripple starts 11 beyond it, each ripple is 11 thick, and the gap between ripples is 11 too: one measure all the way out. The ripples appear one after another; nothing else moves.",
+      frame: function (t) { return rippleMark(SH, 70, 130, 36, 47, 11, 11, -88, -2, steps(t)); } }
+  ];
+
+
+  var uid = 0;
+  function mono(d) { return '<svg viewBox="0 0 200 200" aria-hidden="true"><path class="g" fill="currentColor" fill-rule="evenodd" d="' + d + '"/></svg>'; }
+  // The app icon: the same shape filled with Clive's glow (the three blobs on the lilac base) on white, as the house and the clipboard are.
+  function glow(d, scale) {
+    var n = ++uid;
+    return '<svg viewBox="0 0 108 108" aria-hidden="true"><defs>' +
+      '<radialGradient id="a' + n + '" gradientUnits="userSpaceOnUse" cx="150" cy="70" r="88"><stop offset="0" stop-color="#AB47BC"/><stop offset="1" stop-color="#AB47BC" stop-opacity="0"/></radialGradient>' +
+      '<radialGradient id="b' + n + '" gradientUnits="userSpaceOnUse" cx="70" cy="170" r="110"><stop offset="0" stop-color="#4FD08A"/><stop offset="1" stop-color="#4FD08A" stop-opacity="0"/></radialGradient>' +
+      '<radialGradient id="c' + n + '" gradientUnits="userSpaceOnUse" cx="40" cy="40" r="130"><stop offset="0" stop-color="#5C6BC0"/><stop offset="1" stop-color="#5C6BC0" stop-opacity="0"/></radialGradient>' +
+      '<radialGradient id="h' + n + '" gradientUnits="userSpaceOnUse" cx="100" cy="100" r="60"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>' +
+      '<mask id="m' + n + '" maskUnits="userSpaceOnUse" x="-20" y="-20" width="240" height="240"><path fill="#fff" fill-rule="evenodd" d="' + d + '"/></mask></defs>' +
+      '<rect width="108" height="108" fill="#fff"/><g transform="translate(' + f(54 - 100 * scale) + ' ' + f(54 - 100 * scale) + ') scale(' + scale + ')"><g mask="url(#m' + n + ')">' +
+      '<rect x="-20" y="-20" width="240" height="240" fill="#6A5BC2"/><rect x="-20" y="-20" width="240" height="240" fill="url(#a' + n + ')"/><rect x="-20" y="-20" width="240" height="240" fill="url(#b' + n + ')"/>' +
+      '<rect x="-20" y="-20" width="240" height="240" fill="url(#c' + n + ')"/><rect x="-20" y="-20" width="240" height="240" fill="url(#h' + n + ')"/></g></g></svg>';
+  }
+  var picked = null;
+  try { picked = localStorage.getItem("satIconBoard"); } catch (e) {}
+  var host = document.getElementById("opts");
+  OPTIONS.forEach(function (o) {
+    var d0 = o.frame(0), el = document.createElement("section");
+    el.className = "opt"; el.id = "opt-" + o.id;
+    el.innerHTML =
+      '<div class="oh"><h2>' + o.name + '</h2><span class="tag">Option ' + o.id + '</span></div><p class="why">' + o.why + '</p>' +
+      '<div class="cells">' +
+        '<div class="cell"><div class="box">' + mono(d0) + '</div><div class="cl">One colour</div></div>' +
+        '<div class="cell"><div class="box anim" data-opt="' + o.id + '">' + mono(d0) + '</div><div class="cl">Moving, in the app</div></div>' +
+        '<div class="cell"><div class="mask c">' + glow(d0, 0.37) + '</div><div class="cl">App icon, round</div></div>' +
+        '<div class="cell"><div class="mask s">' + glow(d0, 0.37) + '</div><div class="cl">App icon, squircle</div></div>' +
+        '<div class="cell"><div class="splash anim" data-opt="' + o.id + '">' + mono(d0) + '<b>Satellites</b></div><div class="cl">Splash</div></div>' +
+      '</div><button class="pickbtn" type="button" data-id="' + o.id + '">Pick this one</button>';
+    host.appendChild(el);
+  });
+  function paintPick() {
+    OPTIONS.forEach(function (o) {
+      var el = document.getElementById("opt-" + o.id), on = picked === o.id;
+      el.classList.toggle("picked", on);
+      el.querySelector(".pickbtn").textContent = on ? "Picked" : "Pick this one";
+    });
+  }
+  host.addEventListener("click", function (e) {
+    var b = e.target.closest(".pickbtn"); if (!b) return;
+    picked = picked === b.dataset.id ? null : b.dataset.id;
+    try { if (picked) localStorage.setItem("satIconBoard", picked); else localStorage.removeItem("satIconBoard"); } catch (x) {}
+    paintPick();
+  });
+  paintPick();
+
+  var byId = {}; OPTIONS.forEach(function (o) { byId[o.id] = o; });
+  var movers = [].slice.call(document.querySelectorAll(".anim")).map(function (n) { return { opt: byId[n.getAttribute("data-opt")], path: n.querySelector("path.g") }; });
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function tick(ms) { movers.forEach(function (m) { m.path.setAttribute("d", m.opt.frame(ms || 1)); }); requestAnimationFrame(tick); }
+  if (!reduce) requestAnimationFrame(tick);
+
+  var pl = document.getElementById("pl"), pd = document.getElementById("pd");
+  function page(dark) {
+    document.documentElement.setAttribute("data-page", dark ? "dark" : "light");
+    pl.setAttribute("aria-pressed", String(!dark)); pd.setAttribute("aria-pressed", String(dark));
+  }
+  pl.addEventListener("click", function () { page(false); });
+  pd.addEventListener("click", function () { page(true); });
+})();
+</script>

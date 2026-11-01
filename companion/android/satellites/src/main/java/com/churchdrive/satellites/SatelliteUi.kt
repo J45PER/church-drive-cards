@@ -219,6 +219,7 @@ private fun SatelliteList(vm: SatelliteModel) {
         SectionHeader("Home", Icons.Filled.Home, Tone.Indigo, if (sats.isEmpty()) null else "$online online")
         if (sats.isEmpty()) {
             EntityCard(null) { ink, soft ->
+                SatelliteMark(androidx.compose.foundation.isSystemInDarkTheme(), height = 64.dp, animate = false)
                 Text(if (vm.connected) "No satellites yet" else "Connecting to the house…", style = MaterialTheme.typography.titleMedium, color = ink)
                 Text(
                     "A satellite appears here once it has been added to Home Assistant. Use the Add tab to pair a new one.",
