@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.96.0
+
+- Adding a satellite with no screen: the steps and the "isn't accepting Wi-Fi" message now say to hold its button for 3 seconds until it chimes (the firmware side is `satellite/pairing_button.yaml`).
+
 ## 0.95.5
 
 - No change to this app.

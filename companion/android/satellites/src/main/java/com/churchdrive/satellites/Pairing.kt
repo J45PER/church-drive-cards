@@ -51,7 +51,7 @@ object Improv {
         0x01 -> "The satellite didn't understand the message. Try again."
         0x02 -> "The satellite doesn't know that request. Its firmware may be too old."
         0x03 -> "The satellite couldn't join that Wi-Fi. Check the name and password, and that the signal reaches it."
-        0x04 -> "The satellite isn't accepting Wi-Fi right now. Open Settings > Pair or reset on it, so the code is showing."
+        0x04 -> "The satellite isn't accepting Wi-Fi right now. Open Settings > Pair or reset on it so the code is showing, or hold its button for 3 seconds until it chimes if it has no screen."
         else -> "The satellite reported an error ($code)."
     }
 

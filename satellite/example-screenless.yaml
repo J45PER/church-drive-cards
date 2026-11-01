@@ -1,0 +1,39 @@
+# The smallest satellite with no screen, to check pairing_button.yaml (esphome config example-screenless.yaml). A real device adds its
+# microphone, speaker and wake word, and its chime and light in pairing_started.
+substitutions:
+  name: clive-spk1-000001
+  friendly_name: Clive (speaker)
+  api_key: !secret clive_round_api_key
+  pair_button_pin: GPIO4
+
+packages:
+  pairing: !include pairing_button.yaml
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+logger:
+
+api:
+  encryption:
+    key: ${api_key}
+
+ota:
+  - platform: esphome
+
+wifi:
+  ap:
+    ssid: "${friendly_name} setup"
+
+captive_portal:
+
+script:
+  - id: !extend pairing_started
+    then:
+      - logger.log: "chime and pulse the light here"

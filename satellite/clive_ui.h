@@ -150,7 +150,19 @@ inline void update_info_labels() {
   }
 }
 
-inline void update_time(int hour, int minute, int second, const char *date_short, const char *date_ring) {
+// Home Assistant can't be reached: after a minute with no connection the date line says so (the clock stays), until it is back.
+inline bool house_offline = false;
+inline uint32_t house_seen = 0;   // millis() when Home Assistant was last connected
+inline void house_tick(bool connected) {
+  const uint32_t now = esphome::millis();
+  if (connected) { house_seen = now; house_offline = false; }
+  else house_offline = (now - house_seen) > 60000u;
+}
+constexpr const char *OFFLINE_LINE = "can't reach the house";
+
+inline void update_time(int hour, int minute, int second, const char *date_short_in, const char *date_ring_in) {
+  const char *date_short = house_offline ? OFFLINE_LINE : date_short_in;
+  const char *date_ring = house_offline ? OFFLINE_LINE : date_ring_in;
   char hm[8];
   std::snprintf(hm, sizeof hm, "%02d:%02d", hour, minute);
   for (int i = 0; i < 4; i++) text(w.time_label[i], hm);
@@ -158,7 +170,7 @@ inline void update_time(int hour, int minute, int second, const char *date_short
   text(w.glance_date, date_short);
   text(w.date_label[CLOCK], date_short);
   text(w.weather_small_date, std::string(" · ") + date_short);
-  text(w.ring_date, std::string(date_ring) + " · " + info.outside);
+  text(w.ring_date, house_offline ? std::string(date_ring) : std::string(date_ring) + " · " + info.outside);
   if (w.ring_sec) lv_arc_set_value(w.ring_sec, second);
   if (w.ring_hour) lv_arc_set_value(w.ring_hour, ((hour % 12) * 60 + minute));
 }

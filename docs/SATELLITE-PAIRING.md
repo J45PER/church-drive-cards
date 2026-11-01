@@ -12,6 +12,10 @@ Every satellite has one permanent ID printed on its sticker, for example `RND1-0
 
 Only a Home Assistant administrator can add a satellite.
 
+**Satellites with no screen** include the ESPHome package `satellite/pairing_button.yaml` (see `satellite/example-screenless.yaml`, which passes `esphome config`). Holding the button for 3 seconds opens a two minute window in which Bluetooth accepts the home Wi-Fi; a satellite that has no Wi-Fi yet opens the window by itself 20 seconds after it starts. The device's own file adds its chime and light to the `pairing_started` script. The window and the button are not tried on a board yet. The app tells the person to hold the button, scans the sticker (the QR carries the device's own key) and sends the Wi-Fi as it does for a screen.
+
+**Home Assistant out of reach:** the round satellite replaces the date on its resting screen with "can't reach the house" after a minute without a connection, and puts the date back when it returns. The clock stays.
+
 ## The plan
 
 A third app, the **satellite companion app**, adds, names and configures every satellite: the round one, other displays, and ones with no display. Mockups are in `satellite/design/flows.html`.
