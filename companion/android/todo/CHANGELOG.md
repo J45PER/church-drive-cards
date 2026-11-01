@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.91.0
+
+No app changes. The People card's old-location warning now points to the Church Drive app (Share my location, then Allow all the time and Unrestricted battery) instead of the Home Assistant app.
+
 ## 0.90.0
 
 - The sign-in page and the round initial button are the shared ones (the same code as Satellites). No other change; the Clive button already matches the main app's (0.88.0).

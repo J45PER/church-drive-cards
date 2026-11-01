@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.91.0
+
+No app changes. The People card's old-location warning now points to the Church Drive app (Share my location, then Allow all the time and Unrestricted battery) instead of the Home Assistant app.
+
 ## 0.90.0
 
 - The sign-in page (with the new mark above it), the cards, section headings, pills, tiles and the round initial button now come from the shared code in `core` (the same as To-Do uses) instead of private copies. They look the same.
