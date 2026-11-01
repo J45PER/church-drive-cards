@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.94.1
+
+- Fixed the crash when opening the settings sidebar: the new cog icons' drawing data was too long for Android to read, so it is now simplified (same look).
+
 ## 0.94.0
 
 - The app now carries Instrument Sans in all four weights (Regular, Medium, SemiBold, Bold), for splash screens and wordmark text.
