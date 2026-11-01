@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -34,7 +36,14 @@ class MainActivity : ComponentActivity() {
     private val vm: SatelliteModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        CrashNote.install(this)
         super.onCreate(savedInstanceState)
+        // If the app crashed last time, say what happened on a plain screen before starting anything that could crash again.
+        val crash = CrashNote.take(this)
+        if (crash != null) {
+            setContent { CrashScreen(crash) { recreate() } }
+            return
+        }
         setContent {
             ChurchDriveTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
@@ -60,3 +69,29 @@ class MainActivity : ComponentActivity() {
         vm.onForeground()
     }
 }
+
+/** What the last crash was, to read out or copy, with a way to try the app again. */
+@Composable
+private fun CrashScreen(text: String, tryAgain: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    MaterialTheme {
+        Surface(modifier = Modifier.fillMaxSize()) {
+            Column(Modifier.statusBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("The app stopped last time", style = MaterialTheme.typography.titleLarge)
+                Text("This is what it says. Send a screenshot of it, or copy it.", style = MaterialTheme.typography.bodyMedium)
+                androidx.compose.foundation.layout.Box(Modifier.weight(1f).fillMaxWidth()) {
+                    androidx.compose.foundation.text.selection.SelectionContainer {
+                        Text(text, style = MaterialTheme.typography.bodySmall, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                            modifier = Modifier.verticalScroll(rememberScrollState()))
+                    }
+                }
+                Button(onClick = {
+                    val cm = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                    cm.setPrimaryClip(android.content.ClipData.newPlainText("Crash", text))
+                }, modifier = Modifier.fillMaxWidth()) { Text("Copy") }
+                Button(onClick = tryAgain, modifier = Modifier.fillMaxWidth()) { Text("Try the app again") }
+            }
+        }
+    }
+}
+
