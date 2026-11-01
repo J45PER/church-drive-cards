@@ -253,7 +253,7 @@ private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Pa
         }
         // The Manager (administrators): one button here, and a page of its sections.
         if (managerPages.isNotEmpty()) {
-            PanelCard { PanelRow(Icons.Outlined.Settings, "Manager", "${managerPages.size} sections: people, cameras, reminders and more", onClick = { onOpen("manager") }) }
+            PanelCard { PanelRow(Icons.Outlined.Settings, "Manager", "${managerPages.size} sections: people, cameras, reminders and more", onClick = { onOpen("manager") }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_cog_solid), contentDescription = null) }) }
         }
         // The activity log (administrators): what people and the assistant did, and who came and went.
         if (isAdmin) {
