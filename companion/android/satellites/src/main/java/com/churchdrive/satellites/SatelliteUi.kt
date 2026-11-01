@@ -211,7 +211,7 @@ private fun AddPage(vm: SatelliteModel) {
                 Text("Only an administrator can add a satellite", color = ink, style = MaterialTheme.typography.titleMedium)
                 Text("Adding one changes the house's devices in Home Assistant. Sign in as an administrator to add a satellite.", style = MaterialTheme.typography.bodyMedium, color = soft)
             } else ToneCard(Tone.Teal) { ink, soft ->
-                Text("1. On the satellite, open Settings > Pair or reset. A new one shows the code by itself.", color = ink, style = MaterialTheme.typography.bodyLarge)
+                Text("1. On a satellite with a screen, open Settings > Pair or reset (a new one shows the code by itself). On one without a screen, hold its button for 3 seconds until it chimes.", color = ink, style = MaterialTheme.typography.bodyLarge)
                 Text("2. Scan the QR code on its screen, or on its sticker if it has no screen.", color = ink, style = MaterialTheme.typography.bodyLarge)
                 Text("3. Give it the home Wi-Fi. It joins and is added to Home Assistant for you.", color = ink, style = MaterialTheme.typography.bodyLarge)
                 if (!granted) {
@@ -262,7 +262,7 @@ private fun PairForm(vm: SatelliteModel, code: PairCode) {
     var key by remember { mutableStateOf(vm.apiKey) }
     ToneCard(Tone.Teal) { ink, soft ->
         Text("Found ${code.id?.text ?: code.device}", color = ink, style = MaterialTheme.typography.titleMedium)
-        Text(if (code.code.isNotEmpty()) "Check the code on its screen says ${code.spaced}." else "Check the sticker says ${code.shown}.", style = MaterialTheme.typography.bodyMedium, color = soft)
+        Text(if (code.code.isNotEmpty()) "Check the code on its screen says ${code.spaced}." else "Check the sticker says ${code.shown}. If the satellite has no screen, hold its button for 3 seconds until it chimes, then tap Pair.", style = MaterialTheme.typography.bodyMedium, color = soft)
         OutlinedTextField(ssid, { ssid = it }, singleLine = true, label = { Text("Home Wi-Fi name") }, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(
             password, { password = it }, singleLine = true, label = { Text("Wi-Fi password") }, modifier = Modifier.fillMaxWidth(),

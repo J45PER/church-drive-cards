@@ -382,6 +382,10 @@ interval:
   - interval: 60s
     then:
       - script.execute: apply_backlight
+  # After a minute without Home Assistant the resting screen's date line says "can't reach the house" (clive_ui.h house_tick).
+  - interval: 5s
+    then:
+      - lambda: clive::house_tick(api::global_api_server->is_connected());
 
 number:
   - platform: template

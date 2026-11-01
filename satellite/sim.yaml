@@ -66,4 +66,12 @@ script:
       - delay: 3s
       - lambda: 'clive::on_menu(4);'
       - delay: 3s
-
+      # Home Assistant gone: the date line says so, on each design (the clock stays).
+      - lambda: 'clive::close_menu(); clive::house_offline = true; clive::set_design(0);'
+      - delay: 3s
+      - lambda: clive::set_design(1);
+      - delay: 3s
+      - lambda: clive::set_design(2);
+      - delay: 3s
+      - lambda: clive::set_design(3);
+      - delay: 3s

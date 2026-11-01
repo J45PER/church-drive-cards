@@ -1,0 +1,81 @@
+# Pairing for a satellite with no screen (docs/SATELLITE-PAIRING.md). Include it as a package in the device's file:
+#
+#   substitutions:
+#     pair_button_pin: GPIO4          # the button, wired to ground
+#   packages:
+#     pairing: !include pairing_button.yaml
+#
+# Holding the button for 3 seconds opens a two minute pairing window: only then does Bluetooth accept the home Wi-Fi from the companion
+# app (the button press is the proof that someone is standing next to it). A satellite that has no Wi-Fi yet opens the window by itself
+# 20 seconds after it starts, so a new one needs no button press. The device's own file makes it chime and pulse its light by adding to
+# the pairing_started script:
+#
+#   script:
+#     - id: !extend pairing_started
+#       then:
+#         - light.turn_on: ...
+#         - rtttl.play: "chime:d=8,o=6,b=200:c,e,g"
+#
+# Needs: the device's own file has wifi: without credentials (the app sends them), api: with its key, and a button on pair_button_pin.
+
+substitutions:
+  pair_button_pin: GPIO4
+
+esp32_ble:
+  io_capability: none
+
+improv_ble:
+  authorizer: pair_authorized
+  authorized_duration: 2min
+
+globals:
+  - id: pair_open_until
+    type: uint32_t
+    initial_value: '0'
+
+binary_sensor:
+  - platform: gpio
+    id: pair_button
+    internal: true
+    pin:
+      number: ${pair_button_pin}
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    filters:
+      - delayed_on: 30ms
+    on_click:
+      min_length: 3s
+      max_length: 12s
+      then:
+        - lambda: id(pair_open_until) = millis() + 120000u;
+        - script.execute: pairing_started
+  - platform: template
+    id: pair_authorized
+    internal: true
+    lambda: 'return id(pair_open_until) != 0 && (int32_t) (id(pair_open_until) - millis()) > 0;'
+
+# The device's own file adds its chime and light to this (see above); it only logs by itself.
+script:
+  - id: pairing_started
+    then:
+      - logger.log: "Pairing open for two minutes"
+
+esphome:
+  on_boot:
+    priority: -100
+    then:
+      - delay: 20s
+      - if:
+          condition:
+            not:
+              wifi.connected:
+          then:
+            - lambda: id(pair_open_until) = millis() + 120000u;
+            - script.execute: pairing_started
+
+button:
+  - platform: factory_reset
+    name: "Reset pairing"       # Forgets the Wi-Fi so the satellite can be paired again.
+    entity_category: config
