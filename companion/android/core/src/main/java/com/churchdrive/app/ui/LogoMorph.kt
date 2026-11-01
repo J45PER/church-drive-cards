@@ -13,6 +13,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
@@ -21,6 +22,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.vector.PathParser
@@ -51,6 +53,9 @@ private val Purple = Color(0xFFAB47BC)
 private val Green = Color(0xFF4FD08A)
 private val Indigo = Color(0xFF5C6BC0)
 
+/** The width of the cut round the To Do clip, in the 200 unit frame. */
+private const val CLIP_GAP = 6f
+
 private const val SAT_CIRCLE_X = 81.3f
 private const val SAT_CIRCLE_Y = 118.7f
 private val Ripples = listOf(
@@ -76,15 +81,21 @@ private fun addRing(p: Path, a: FloatArray, b: FloatArray, t: Float) {
     p.close()
 }
 
-private fun addScaledRing(p: Path, a: FloatArray, s: Float) {
+/** The ring [a] scaled by [s] about its middle; with [gap] the outline is pushed out by that many units (scaled by [s] too), for the cut around the clip. */
+private fun addScaledRing(p: Path, a: FloatArray, s: Float, gap: Float = 0f) {
     var cx = 0f
     var cy = 0f
     val n = a.size / 2
     for (i in 0 until n) { cx += a[2 * i]; cy += a[2 * i + 1] }
     cx /= n; cy /= n
+    var w = 0f
+    var h = 0f
+    for (i in 0 until n) { w = maxOf(w, Math.abs(a[2 * i] - cx)); h = maxOf(h, Math.abs(a[2 * i + 1] - cy)) }
+    val sx = s * (1f + gap / w)
+    val sy = s * (1f + gap / h)
     for (i in 0 until n) {
-        val x = cx + (a[2 * i] - cx) * s
-        val y = cy + (a[2 * i + 1] - cy) * s
+        val x = cx + (a[2 * i] - cx) * sx
+        val y = cy + (a[2 * i + 1] - cy) * sy
         if (i == 0) p.moveTo(x, y) else p.lineTo(x, y)
     }
     p.close()
@@ -145,11 +156,17 @@ fun LogoMorph(kind: LogoKind, dark: Boolean, modifier: Modifier = Modifier, heig
                 val main = Path().apply { fillType = PathFillType.EvenOdd }
                 addRing(main, LogoRings.assistantA, to.first, t)
                 addRing(main, LogoRings.assistantB, to.second, t)
-                if (kind == LogoKind.Todo) {
-                    val g = easeOut((x - 0.05f) / 0.5f)
-                    if (g > 0.001f) addScaledRing(main, LogoRings.todoClip, g)
-                }
-                paint(main, 1f)
+                // The clip is solid, with a gap cut round it where it sits over the board (as in the logo itself), not part of the board's
+                // even-odd fill, which would leave it half hollow where the two shapes cross.
+                val g = if (kind == LogoKind.Todo) easeOut((x - 0.05f) / 0.5f) else 0f
+                if (g > 0.001f) {
+                    val gap = Path().apply { fillType = PathFillType.NonZero }
+                    addScaledRing(gap, LogoRings.todoClip, g, CLIP_GAP)
+                    clipPath(gap, ClipOp.Difference) { paint(main, 1f) }
+                    val clip = Path().apply { fillType = PathFillType.NonZero }
+                    addScaledRing(clip, LogoRings.todoClip, g)
+                    paint(clip, 1f)
+                } else paint(main, 1f)
                 when (kind) {
                     LogoKind.Satellites -> ripples.forEachIndexed { i, p ->
                         val a = easeOut((x - 0.12f - i * 0.28f) / 0.35f)
