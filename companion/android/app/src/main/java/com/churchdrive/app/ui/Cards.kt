@@ -609,6 +609,10 @@ fun ChargerCard(entities: Map<String, EntityState>, call: CallService) {
             if (session != null) {
                 Text("${temp(session)} kWh this session", style = MaterialTheme.typography.bodyMedium)
             }
+            // The Octopus rate right now, as on the dashboard's charger card ("7.9p rate").
+            Octopus.current(Octopus.allRates(entities), System.currentTimeMillis())?.let {
+                Text("${Octopus.pence(it.pence)}p rate now", style = MaterialTheme.typography.bodyMedium)
+            }
         }
         val teal = toneColors(Tone.Teal)
         if (mode?.available == true) {
@@ -634,6 +638,34 @@ fun ChargerCard(entities: Map<String, EntityState>, call: CallService) {
                     teal, tone.onContainer, true,
                 )
                 Text(smartText(sm, Octopus.allRates(entities), System.currentTimeMillis()), style = MaterialTheme.typography.bodySmall)
+            }
+            // Octopus's charging plan for the car it controls, as on the dashboard's charger card (and so on the Energy page too).
+            octopusPlan(entities, System.currentTimeMillis())?.let { plan ->
+                val now = System.currentTimeMillis()
+                Text("Octopus charging plan", style = MaterialTheme.typography.titleSmall)
+                if (plan.slots.isEmpty()) Text("Nothing planned yet", style = MaterialTheme.typography.bodySmall)
+                else plan.slots.take(4).forEach { Text(planLine(it, now), style = MaterialTheme.typography.bodySmall) }
+            }
+            // Which car is plugged in (Primary: the one on the Octopus app; Additional: any other), as on the dashboard's charger card.
+            carRoleChoice(entities)?.let { c ->
+                TileRow(
+                    listOf(
+                        TileItem("mdi:car-electric", CAR_ROLE_PRIMARY, c.role == CAR_ROLE_PRIMARY) { chooseCarRole(call, CAR_ROLE_PRIMARY, c.confirmed) },
+                        TileItem("mdi:car", CAR_ROLE_ADDITIONAL, c.role == CAR_ROLE_ADDITIONAL) { chooseCarRole(call, CAR_ROLE_ADDITIONAL, c.confirmed) },
+                    ),
+                    teal, tone.onContainer, true,
+                )
+                Text("Car plugged in · " + carRoleText(c), style = MaterialTheme.typography.bodySmall)
+            }
+            // Octopus's Boost, for the Primary car: charge now, at the standard rate (the text says so).
+            boostSwitch(entities)?.let { b ->
+                TileRow(
+                    listOf(TileItem("mdi:rocket-launch", "Boost (Octopus)", b.on) {
+                        call("switch", if (b.on) "turn_off" else "turn_on", b.entityId, data())
+                    }),
+                    teal, tone.onContainer, true,
+                )
+                Text(boostText(b), style = MaterialTheme.typography.bodySmall)
             }
         }
         TileRow(

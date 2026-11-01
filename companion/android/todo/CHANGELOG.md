@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.86.0
+
+- No change to this app; version moves with the shared number (Which car is plugged in: Primary / Additional; the ID.5 on the Car card). A `core` change: the notification buttons Primary and Additional.
+
 ## 0.85.0
 
 - Version moves with the shared number. No other change.
