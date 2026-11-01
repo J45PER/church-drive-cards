@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.93.0
+
+No app changes.
+
 ## 0.92.0
 
 - The app only stops its own connection (and its "connected" notice) once the house says it can reach this phone through Google push. Before, it stopped as soon as the house accepted the phone's Google token, so a house that couldn't use the token (no Google key, or the phone's name changed and Home Assistant hadn't restarted yet) left the phone with no notifications at all. If the house can't use it, the app keeps its own connection, and Settings > Google push says so. Needs Church Drive 0.92.0 in Home Assistant.

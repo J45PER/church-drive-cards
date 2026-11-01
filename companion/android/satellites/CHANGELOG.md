@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.93.0
+
+- The launcher icon (and the themed icon) is smaller inside its circle, so the outer ripple is no longer cut off at the edge on round icon masks.
+
 ## 0.92.0
 
 Shared code change only: the connection to the house (in `core`) asks the house whether Google push can reach the phone. No visible change in this app.
