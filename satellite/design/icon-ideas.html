@@ -2,7 +2,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: the Brand Icon Board's, a light and a dark page and a style switch. Each idea is a card: where it is used, the glyph large, small, and as the app's section header draws it (a tinted circle in the tone's colour). */
+/* Layout: the Church Drive icons board's own: a light and a dark page, a heading and a one-line rule for each group, then a row of icons in 150 px boxes. */
 :root {
   --bar-bg: #e9ebef; --bar-fg: #14181f; --bar-soft: #5b6472;
   --stage-bg: #ffffff; --stage-fg: #000000; --stage-soft: #5f6672; --stage-line: #e0e3e8;
@@ -13,57 +13,54 @@
 :root[data-page="dark"] { --stage-bg: #000000; --stage-fg: #ffffff; --stage-soft: #9aa0aa; --stage-line: #262a31; }
 * { box-sizing: border-box; }
 body { background: var(--bar-bg); color: var(--bar-fg); font-family: var(--ui); margin: 0; line-height: 1.4; }
-.top { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; max-width: 1100px; margin: 0 auto;
+.top { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; justify-content: space-between; max-width: 1100px; margin: 0 auto;
   padding-block: 20px 16px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 .top h1 { font-size: 1.3rem; margin: 0; letter-spacing: -0.01em; }
-.top p { margin: 2px 0 0; color: var(--bar-soft); font-size: .86rem; max-width: 62ch; }
-.ctl { display: flex; flex-wrap: wrap; gap: 8px; }
+.top p { margin: 2px 0 0; color: var(--bar-soft); font-size: .86rem; max-width: 64ch; }
 .seg { display: inline-flex; background: color-mix(in srgb, var(--bar-soft) 25%, transparent); border-radius: 999px; padding: 3px; gap: 2px; }
-.seg button { font: inherit; font-size: .86rem; border: 0; background: none; color: var(--bar-soft); padding: 7px 14px; border-radius: 999px; cursor: pointer; }
+.seg button { font: inherit; font-size: .88rem; border: 0; background: none; color: var(--bar-soft); padding: 7px 18px; border-radius: 999px; cursor: pointer; }
 .seg button[aria-pressed="true"] { background: var(--bar-fg); color: var(--bar-bg); }
 .seg button:focus-visible { outline: 2px solid var(--bar-fg); outline-offset: 2px; }
 .stage { background: var(--stage-bg); color: var(--stage-fg); min-height: 70vh; padding-block: 24px 56px; }
-.in { max-width: 1100px; margin: 0 auto; display: grid; gap: 26px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-.note { color: var(--stage-soft); font-size: .86rem; max-width: 74ch; margin: 0; }
-h2 { font-size: .8rem; font-family: var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--stage-soft); margin: 0 0 12px; font-weight: 500; }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 16px; }
-.card { border: 1px solid var(--stage-line); border-radius: 20px; padding: 16px; display: grid; gap: 12px; align-content: start; min-width: 0; }
-.card h3 { margin: 0; font-size: 1rem; font-weight: 600; }
-.card .use { margin: 0; color: var(--stage-soft); font-size: .8rem; }
-.row { display: flex; align-items: center; gap: 14px; }
-.big { width: 84px; height: 84px; display: grid; place-items: center; color: var(--stage-fg); }
-.big svg { width: 100%; height: 100%; display: block; overflow: visible; }
-.sm { width: 28px; height: 28px; color: var(--stage-fg); }
-.sm.t { width: 20px; height: 20px; }
-.sm svg { width: 100%; height: 100%; display: block; overflow: visible; }
-.hdr { display: flex; align-items: center; gap: 10px; }
-.disc { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; flex: none; }
-.disc svg { width: 22px; height: 22px; display: block; overflow: visible; }
-.hdr b { font-size: 1rem; font-weight: 600; }
-.today { font-family: var(--mono); font-size: .7rem; color: var(--stage-soft); }
+.in { max-width: 1100px; margin: 0 auto; display: grid; gap: 30px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.sec { display: grid; gap: 10px; }
+.sec .lead { margin: 0; font-size: .86rem; color: var(--stage-soft); max-width: 90ch; }
+.sec .lead b { color: var(--stage-fg); font-weight: 600; }
+.row { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 150px)); gap: 14px; }
+.cell { display: grid; gap: 6px; justify-items: center; align-content: start; min-width: 0; }
+.icon { width: 150px; max-width: 100%; aspect-ratio: 1; border: 1px solid var(--stage-line); border-radius: 22px; display: grid; place-items: center; padding: 8%; color: var(--stage-fg); }
+.icon.bare { padding: 22%; }
+.icon svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.cl { font-size: .88rem; font-weight: 600; text-align: center; }
+.cl small { display: block; font-weight: 400; color: var(--stage-soft); font-size: .74rem; }
+.note { color: var(--stage-soft); font-size: .86rem; max-width: 76ch; margin: 0; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 
 <div class="top">
-  <div><h1>Satellites in-app icons</h1><p>Idea board for the icons inside the Satellites app: the bottom bar, the section headers and the list. Three ways to draw each, switched at the top.</p></div>
-  <div class="ctl">
-    <div class="seg" role="group" aria-label="Style" id="styles">
-      <button type="button" data-s="solid" aria-pressed="true">Solid</button>
-      <button type="button" data-s="block" aria-pressed="false">Solid + Clive's block</button>
-      <button type="button" data-s="line" aria-pressed="false">Line</button>
-    </div>
-    <div class="seg" role="group" aria-label="Page"><button type="button" id="pl" aria-pressed="true">Light</button><button type="button" id="pd" aria-pressed="false">Dark</button></div>
-  </div>
+  <div><h1>Satellites in-app icons</h1><p>Following the Church Drive icons board: bare glyphs for buttons, a disc with the glyph cut out and a ring for statuses, and one-colour levels. Only what the board doesn't already have.</p></div>
+  <div class="seg" role="group" aria-label="Page"><button type="button" id="pl" aria-pressed="true">Light icons</button><button type="button" id="pd" aria-pressed="false">Dark icons</button></div>
 </div>
 <div class="stage"><div class="in">
-  <p class="note"><b>Solid</b> is the house and the clipboard's way: one flat shape with the details cut out of it. <b>Solid + Clive's block</b> tucks a small rounded square into a corner and cuts it out where they overlap, the same trick as the app icons, so the icons read as one family. <b>Line</b> draws the same shapes as outlines with round ends. Each card shows the glyph large, at 28 and 20 px (home-screen and header sizes), and in the tinted circle the section headers use, in that section's colour. The small grey name is the Material icon the app uses today.</p>
-  <section><h2>Bottom bar and list</h2><div class="grid" id="g-nav"></div></section>
-  <section><h2>Satellite page, section headers</h2><div class="grid" id="g-sec"></div></section>
-  <section><h2>Satellite states</h2><div class="grid" id="g-state"></div></section>
+
+  <section class="sec"><p class="lead"><b>Already on the board, used as they are.</b> Home (the house) for the list header, and Needs help (the exclamation in its ring) for an error. Nothing to draw. The page and the bottom bar can also use the bare Play, Pause and Stop where a button needs them.</p>
+    <div class="row" id="r-reuse"></div></section>
+
+  <section class="sec"><p class="lead"><b>Satellite status.</b> The status icon for the list and the top of a satellite's page, animated as Gregg's are: a disc with the glyph cut out, a ring 11 thick with a gap of 22 that never changes size and only runs, fills, chases or reverses. Idle, Listening, Thinking, Speaking, Updating, Offline, Muted, Weak Wi-Fi.</p>
+    <div class="row" id="r-status"></div></section>
+
+  <section class="sec"><p class="lead"><b>Levels.</b> Bare line glyphs with round ends, 12 thick, as heavy as the suction levels: Volume in three steps and Brightness in three steps.</p>
+    <div class="row" id="r-levels"></div></section>
+
+  <section class="sec"><p class="lead"><b>Buttons.</b> Bare glyphs for the satellite page's actions. Line, round ends, 12 thick.</p>
+    <div class="row" id="r-buttons"></div></section>
+
+  <p class="note">The section headers (Design, Temperatures, Glances, Backlight, Sound, Voice, On the satellite, Firmware, Name and room, Presets) stay with the app's own Material icons in their tinted circles, as the main app's headers do, so they are not drawn here. Tell me any you want drawn, and I'll add them in the same way.</p>
 </div></div>
 
 <script>
 (function () {
+  var TAU = Math.PI * 2;
   function f(v) { return (Math.round(v * 100) / 100).toString(); }
   function rr(x, y, w, h, r) {
     r = Math.max(0, Math.min(r, w / 2, h / 2));
@@ -71,7 +68,7 @@ h2 { font-size: .8rem; font-family: var(--mono); letter-spacing: .1em; text-tran
       ' A' + f(r) + ',' + f(r) + ' 0 0 1 ' + f(x + w - r) + ',' + f(y + h) + ' H' + f(x + r) + ' A' + f(r) + ',' + f(r) + ' 0 0 1 ' + f(x) + ',' + f(y + h - r) +
       ' V' + f(y + r) + ' A' + f(r) + ',' + f(r) + ' 0 0 1 ' + f(x + r) + ',' + f(y) + 'Z';
   }
-  function circ(cx, cy, r) { return 'M' + f(cx - r) + ',' + f(cy) + ' a' + f(r) + ',' + f(r) + ' 0 1,0 ' + f(2 * r) + ',0 a' + f(r) + ',' + f(r) + ' 0 1,0 ' + f(-2 * r) + ',0Z'; }
+  function circ(cx, cy, r) { r = Math.max(0.01, r); return 'M' + f(cx - r) + ',' + f(cy) + ' a' + f(r) + ',' + f(r) + ' 0 1,0 ' + f(2 * r) + ',0 a' + f(r) + ',' + f(r) + ' 0 1,0 ' + f(-2 * r) + ',0Z'; }
   function rot(x, y, cx, cy, deg) { var a = deg * Math.PI / 180, c = Math.cos(a), s = Math.sin(a); return [cx + x * c - y * s, cy + x * s + y * c]; }
   function P(p) { return f(p[0]) + ',' + f(p[1]); }
   function rrR(cx, cy, w, h, r, deg) {
@@ -80,12 +77,12 @@ h2 { font-size: .8rem; font-family: var(--mono); letter-spacing: .1em; text-tran
       ' L' + q(-a + r, b) + ' A' + r + ',' + r + ' 0 0 1 ' + q(-a, b - r) + ' L' + q(-a, -b + r) + ' A' + r + ',' + r + ' 0 0 1 ' + q(-a + r, -b) + 'Z';
   }
   function pt(cx, cy, r, a) { var x = a * Math.PI / 180; return [cx + r * Math.cos(x), cy + r * Math.sin(x)]; }
-  function arc(cx, cy, r1, r2, a0, a1) {
+  // a rounded-ended arc of the ring from angle a0 to a1 (0 = three o'clock, clockwise)
+  function rband(cx, cy, r1, r2, a0, a1) {
     var cr = (r2 - r1) / 2, rm = (r1 + r2) / 2, off = Math.min(cr / rm * 180 / Math.PI, Math.abs(a1 - a0) / 2 - 0.5), b0 = a0 + off, b1 = a1 - off;
     var o0 = pt(cx, cy, r2, b0), o1 = pt(cx, cy, r2, b1), i1 = pt(cx, cy, r1, b1), i0 = pt(cx, cy, r1, b0), big = Math.abs(b1 - b0) > 180 ? 1 : 0;
     return 'M' + P(o0) + ' A' + r2 + ',' + r2 + ' 0 ' + big + ',1 ' + P(o1) + ' A' + f(cr) + ',' + f(cr) + ' 0 0 1 ' + P(i1) + ' A' + r1 + ',' + r1 + ' 0 ' + big + ',0 ' + P(i0) + ' A' + f(cr) + ',' + f(cr) + ' 0 0 1 ' + P(o0) + 'Z';
   }
-  // a polygon with rounded corners; each point is [x, y, radius]
   function rpoly(pts) {
     var n = pts.length, d = '';
     for (var i = 0; i < n; i++) {
@@ -96,73 +93,87 @@ h2 { font-size: .8rem; font-family: var(--mono); letter-spacing: .1em; text-tran
     }
     return d + 'Z';
   }
-  var HOUSE = "M63.78,53.56C70.59,47.19 77.41,47.19 84.22,53.56L92.03,60.86C92.62,48.14 103.13,38 116,38L132,38C145.25,38 156,48.75 156,62L156,78C156,90.94 145.75,101.5 132.93,101.98C134.98,106.21 136,110.88 136,116L136,148C136,157.33 131.33,162 122,162L26,162C21.33,162 17.83,160.83 15.5,158.5C13.17,156.17 12,152.67 12,148L12,116C12,106.67 15.41,98.81 22.22,92.44ZM132.93,101.98C131.24,98.5 128.86,95.32 125.78,92.44L92.03,60.86C92.01,61.24 92,61.62 92,62L92,78C92,91.25 102.75,102 116,102L132,102C132.31,102 132.62,101.99 132.93,101.98Z";
+  function wave(p) { return (Math.cos(p * TAU) + 1) / 2; }
 
-  // Each glyph is drawn in a 200 unit box, safe area 24 to 176.
-  var screen = function () { return circ(100, 100, 62) + ' ' + rr(72, 142, 56, 12, 6); };
+  // ---- the board's own ring rules: a disc drawn at 46 and scaled to 57, a ring 79 to 90 that never changes size
+  var R1 = 79, R2 = 90, SCALE = 57 / 46;
+  function full() { return circ(100, 100, R2) + ' ' + circ(100, 100, R1); }
+  function ringParts(n, gap, rotate) { var span = 360 / n, d = []; for (var i = 0; i < n; i++) d.push(rband(100, 100, R1, R2, rotate + i * span, rotate + i * span + span - gap)); return d.join(' '); }
+  function progress(sweep, o) { return [{ d: full(), o: 0.22 }, { d: sweep > 8 ? rband(100, 100, R1, R2, -90, -90 + sweep) : '', o: o == null ? 1 : o }]; }
+  function chase(n, t) { var items = [], span = 360 / n; for (var i = 0; i < n; i++) { var d = ((i / n - t) % 1 + 1) % 1; items.push({ d: rband(100, 100, R1, R2, i * span, i * span + span - 12), o: 0.18 + 0.82 * Math.pow(1 - d, 2) }); } return items; }
+
+  // ---- glyphs cut out of the disc (drawn at disc radius 46)
   var G = {
-    list:     { name: "Satellites", use: "Bottom bar, first tab", today: "Speaker", tone: "#5C6BC0", d: screen },
-    add:      { name: "Add", use: "Bottom bar, second tab; Add a satellite header", today: "QrCodeScanner", tone: "#009688",
-                d: function () { return rpoly([[84, 34, 12], [116, 34, 12], [116, 84, 4], [166, 84, 12], [166, 116, 12], [116, 116, 4], [116, 166, 12], [84, 166, 12], [84, 116, 4], [34, 116, 12], [34, 84, 12], [84, 84, 4]]); } },
-    home:     { name: "Home", use: "List header", today: "Home", tone: "#5C6BC0", d: function () { return HOUSE; } },
-    sat:      { name: "A satellite", use: "Each row of the list", today: "Monitor", tone: "#5C6BC0", d: screen },
-    design:   { name: "Design", use: "Design section", today: "Palette", tone: "#5C6BC0",
-                d: function () { return rr(34, 34, 62, 62, 18) + ' ' + rr(104, 34, 62, 62, 18) + ' ' + rr(34, 104, 62, 62, 18) + ' ' + rr(104, 104, 62, 62, 18) + ' ' + circ(135, 135, 14); } },
-    temps:    { name: "Temperatures", use: "Temperatures section", today: "Thermostat", tone: "#F9A825",
-                d: function () { return rr(82, 26, 36, 84, 18) + ' ' + rr(93, 52, 14, 58, 7) + ' ' + circ(100, 146, 34) + ' ' + circ(100, 146, 14); } },
-    glances:  { name: "Glances", use: "Glances section", today: "Tune", tone: "#009688",
-                d: function () { return rr(26, 62, 44, 76, 14) + ' ' + rr(78, 62, 44, 76, 14) + ' ' + rr(130, 62, 44, 76, 14) + ' ' + circ(48, 92, 9) + ' ' + circ(100, 92, 9) + ' ' + circ(152, 92, 9); } },
-    backlight:{ name: "Backlight", use: "Backlight section", today: "Brightness6", tone: "#1A73E8",
-                d: function () { var d = circ(100, 100, 32); for (var i = 0; i < 8; i++) { var p = rot(0, -68, 100, 100, i * 45); d += ' ' + rrR(p[0], p[1], 12, 26, 6, i * 45); } return d; } },
-    sound:    { name: "Sound", use: "Sound section", today: "VolumeUp", tone: "#F4511E",
-                d: function () { return rpoly([[30, 78, 8], [70, 78, 4], [112, 40, 8], [112, 160, 8], [70, 122, 4], [30, 122, 8]]) + ' ' + arc(112, 100, 32, 44, -42, 42) + ' ' + arc(112, 100, 56, 68, -46, 46); } },
-    voice:    { name: "Voice", use: "Voice section", today: "RecordVoiceOver", tone: "#5C6BC0",
-                d: function () { return rr(26, 34, 148, 108, 38) + ' ' + rr(68, 78, 14, 26, 7) + ' ' + rr(93, 64, 14, 54, 7) + ' ' + rr(118, 78, 14, 26, 7) + ' ' + rpoly([[62, 140, 0], [62, 172, 6], [98, 140, 0]]); } },
-    switches: { name: "On the satellite", use: "Switches section", today: "Speaker", tone: "#8E24AA",
-                d: function () { return rr(28, 38, 144, 50, 25) + ' ' + circ(146, 63, 17) + ' ' + rr(28, 112, 144, 50, 25) + ' ' + circ(54, 137, 17); } },
-    status:   { name: "Status", use: "Status section", today: "Info", tone: "#1E8E3E",
-                d: function () { return circ(100, 150, 15) + ' ' + arc(100, 150, 38, 50, -136, -44) + ' ' + arc(100, 150, 68, 80, -136, -44) + ' ' + arc(100, 150, 98, 110, -136, -44); } },
-    firmware: { name: "Firmware", use: "Firmware section", today: "SystemUpdate", tone: "#EF6C00",
-                d: function () { return rr(44, 44, 112, 112, 24) + ' ' + rpoly([[100, 64, 4], [138, 104, 4], [114, 104, 0], [114, 138, 4], [86, 138, 4], [86, 104, 0], [62, 104, 4]]); } },
-    room:     { name: "Name and room", use: "Name and room section", today: "LocationOn", tone: "#009688",
-                d: function () { return rr(52, 28, 96, 144, 20) + ' ' + rr(66, 42, 68, 116, 10) + ' ' + circ(120, 102, 9); } },
-    actions:  { name: "Actions", use: "Actions section", today: "RestartAlt", tone: "#D93025",
-                d: function () { return rpoly([[116, 24, 8], [48, 114, 8], [92, 114, 4], [78, 176, 8], [152, 80, 8], [108, 80, 4]]); } },
-    presets:  { name: "Presets and copying", use: "Presets section", today: "ContentCopy", tone: "#EF6C00",
-                d: function () { return rr(34, 58, 90, 108, 24) + ' ' + rr(76, 34, 90, 108, 24); } },
-    offline:  { name: "Offline", use: "List pill and status", today: "(none)", tone: "#D93025",
-                d: function () { return screen() + ' ' + rrR(100, 100, 12, 168, 6, 45); } },
-    puck:     { name: "No screen", use: "List row for a satellite with no screen", today: "(none)", tone: "#8E24AA",
-                d: function () { return rr(22, 90, 156, 70, 35) + ' ' + rr(58, 116, 84, 14, 7); } },
-    weak:     { name: "Weak Wi-Fi", use: "List warning", today: "(none)", tone: "#F9A825",
-                d: function () { return circ(100, 150, 15) + ' ' + arc(100, 150, 38, 50, -136, -44); } }
+    screen:  function () { return circ(100, 94, 25) + ' ' + rr(81, 128, 38, 8, 4); },
+    mic:     function () { return rr(88, 64, 24, 42, 12) + ' ' + rr(76, 114, 48, 8, 4); },
+    dots:    function (t) { var r = 7; return circ(76, 100, r + 2 * wave((t / 900) % 1)) + ' ' + circ(100, 100, r + 2 * wave(((t / 900) + 0.33) % 1)) + ' ' + circ(124, 100, r + 2 * wave(((t / 900) + 0.66) % 1)); },
+    bars:    function (t) { var a = 1 - 0.25 + 0.25 * Math.cos(((t / 700) % 1) * TAU), b = 1 - 0.25 - 0.25 * Math.cos(((t / 700) % 1) * TAU); return rr(78, 100 - 30 * a, 15, 60 * a, 7.5) + ' ' + rr(107, 100 - 30 * b, 15, 60 * b, 7.5); },
+    arrow:   function () { return rpoly([[100, 66, 4], [126, 96, 4], [109, 96, 0], [109, 132, 4], [91, 132, 4], [91, 96, 0], [74, 96, 4]]); },
+    slash:   function () { return rrR(100, 100, 8, 84, 4, 45); },
+    wifi:    function () { return circ(100, 124, 7) + ' ' + rband(100, 124, 17, 25, -135, -45); },
+    bang:    function () { return rr(92, 72, 16, 34, 8) + ' ' + circ(100, 122, 8.5); }
   };
-  var BLOCK = rr(120, 14, 56, 56, 22);       // Clive's block, small, tucked into the top-right corner
+  function disc(glyph) { return '<g transform="translate(100 100) scale(' + f(SCALE) + ') translate(-100 -100)"><path d="' + circ(100, 100, 46) + ' ' + glyph + '" fill-rule="evenodd" fill="currentColor"/></g>'; }
+  function layers(list) { return list.map(function (l) { return l.d ? '<path d="' + l.d + '" fill-rule="evenodd" fill="currentColor"' + (l.o != null && l.o < 1 ? ' opacity="' + f(l.o) + '"' : '') + '/>' : ''; }).join(''); }
+  function status(glyphFn, ringFn) { return function (t) { return disc(glyphFn(t)) + layers(ringFn(t)); }; }
 
-  function svg(key, style, size) {
-    var g = G[key], d = g.d(), attrs;
-    if (style === 'block') d += ' ' + BLOCK;
-    if (style === 'line') attrs = 'fill="none" stroke="currentColor" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"';
-    else attrs = 'fill="currentColor" fill-rule="evenodd"';
-    var shift = key === 'home' ? ' transform="translate(16 0)"' : '';
-    return '<svg viewBox="0 0 200 200" aria-hidden="true"><path ' + attrs + shift + ' d="' + d + '"/></svg>';
-  }
+  var STATUS = [
+    { id: 'idle', name: 'Idle', sub: 'ring still', draw: status(function () { return G.screen(); }, function () { return [{ d: full() }]; }) },
+    { id: 'listening', name: 'Listening', sub: 'ring runs', draw: status(function () { return G.mic(); }, function (t) { return [{ d: ringParts(3, 24, (t / 4000) * 360) }]; }) },
+    { id: 'thinking', name: 'Thinking', sub: 'ring chases', draw: status(function (t) { return G.dots(t); }, function (t) { return chase(12, (t / 1800) % 1); }) },
+    { id: 'speaking', name: 'Speaking', sub: 'ring reverses', draw: status(function (t) { return G.bars(t); }, function (t) { return [{ d: ringParts(2, 90, -(t / 4000) * 360) }]; }) },
+    { id: 'updating', name: 'Updating', sub: 'ring fills', draw: status(function () { return G.arrow(); }, function (t) { var p = (t / 3200) % 1; return progress(340 * Math.min(1, p / 0.8), p > 0.9 ? 1 - (p - 0.9) / 0.1 : 1); }) },
+    { id: 'offline', name: 'Offline', sub: 'ring dim', draw: status(function () { return G.screen() + ' ' + G.slash(); }, function () { return [{ d: full(), o: 0.28 }]; }) },
+    { id: 'muted', name: 'Muted', sub: 'ring still', draw: status(function () { return G.mic() + ' ' + G.slash(); }, function () { return [{ d: full() }]; }) },
+    { id: 'weak', name: 'Weak Wi-Fi', sub: 'ring blinks', draw: status(function () { return G.wifi(); }, function (t) { return [{ d: full(), o: wave((t / 1600) % 1) > 0.5 ? 1 : 0.35 }]; }) }
+  ];
 
-  var style = 'solid';
-  function render() {
-    [['g-nav', ['list', 'add', 'home', 'sat']], ['g-sec', ['design', 'temps', 'glances', 'backlight', 'sound', 'voice', 'switches', 'status', 'firmware', 'room', 'actions', 'presets']], ['g-state', ['offline', 'puck', 'weak']]].forEach(function (grp) {
-      document.getElementById(grp[0]).innerHTML = grp[1].map(function (k) {
-        var g = G[k];
-        return '<article class="card"><div><h3>' + g.name + '</h3><p class="use">' + g.use + '</p></div>' +
-          '<div class="row"><div class="big">' + svg(k, style) + '</div><div class="sm">' + svg(k, style) + '</div><div class="sm t">' + svg(k, style) + '</div></div>' +
-          '<div class="hdr"><span class="disc" style="background:' + g.tone + '2e;color:' + g.tone + '">' + svg(k, style) + '</span><b>' + g.name + '</b></div>' +
-          '<span class="today">today: ' + g.today + '</span></article>';
-      }).join('');
-    });
+  // ---- bare line glyphs
+  function line(d) { return '<g fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"><path d="' + d + '"/></g>'; }
+  function speakerLevel(n) {
+    var d = rpoly([[36, 80, 10], [72, 80, 4], [112, 44, 10], [112, 156, 10], [72, 120, 4], [36, 120, 10]]);
+    var arcs = ''; [0, 1, 2].slice(0, n).forEach(function (i) { var r = 28 + i * 24, a = pt(112, 100, r, -40), b = pt(112, 100, r, 40); arcs += ' M' + P(a) + ' A' + r + ',' + r + ' 0 0 1 ' + P(b); });
+    return line(d + arcs);
   }
-  render();
-  var segs = [].slice.call(document.querySelectorAll('#styles button'));
-  segs.forEach(function (b) { b.addEventListener('click', function () { style = b.getAttribute('data-s'); segs.forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); }); render(); }); });
+  function sunLevel(rays) {
+    var d = circ(100, 100, 30);
+    for (var i = 0; i < rays; i++) { var a = pt(100, 100, 52, i * 360 / rays - 90), b = pt(100, 100, 72, i * 360 / rays - 90); d += ' M' + P(a) + ' L' + P(b); }
+    return line(d);
+  }
+  var LEVELS = [
+    { name: 'Quiet', sub: 'one arc', svg: function () { return speakerLevel(1); } },
+    { name: 'Medium', sub: 'two arcs', svg: function () { return speakerLevel(2); } },
+    { name: 'Loud', sub: 'three arcs', svg: function () { return speakerLevel(3); } },
+    { name: 'Dim', sub: 'four rays', svg: function () { return sunLevel(4); } },
+    { name: 'Medium', sub: 'six rays', svg: function () { return sunLevel(6); } },
+    { name: 'Bright', sub: 'eight rays', svg: function () { return sunLevel(8); } }
+  ];
+  var BUTTONS = [
+    { name: 'Say hello', sub: 'speak a line', svg: function () { return line(rpoly([[34, 74, 8], [64, 74, 4], [100, 40, 8], [100, 160, 8], [64, 126, 4], [34, 126, 8]]) + ' M126 78 Q142 100 126 122 M146 62 Q174 100 146 138'); } },
+    { name: 'Flash the screen', sub: 'find it', svg: function () { var d = circ(100, 100, 40); [[0, -62, 0, -80], [0, 62, 0, 80], [-62, 0, -80, 0], [62, 0, 80, 0], [44, -44, 57, -57], [-44, -44, -57, -57], [44, 44, 57, 57], [-44, 44, -57, 57]].forEach(function (s) { d += ' M' + f(100 + s[0]) + ',' + f(100 + s[1]) + ' L' + f(100 + s[2]) + ',' + f(100 + s[3]); }); return line(d); } },
+    { name: 'Clean screen', sub: 'sparkle', svg: function () { return line(circ(100, 100, 64) + ' M100 64 Q104 96 136 100 Q104 104 100 136 Q96 104 64 100 Q96 96 100 64Z'); } },
+    { name: 'Restart', sub: 'start again', svg: function () { var a = pt(100, 100, 56, -55), b = pt(100, 100, 56, -125), m = -125 + 90, h = function (deg) { var q = pt(0, 0, 30, deg); return ' M' + P(b) + ' L' + f(b[0] + q[0]) + ',' + f(b[1] + q[1]); }; return line('M' + P(a) + ' A56,56 0 1 1 ' + P(b) + h(m + 180 - 38) + h(m + 180 + 38)); } },
+    { name: 'Add', sub: 'new satellite', svg: function () { return line('M100 40 V160 M40 100 H160'); } },
+    { name: 'Copy settings', sub: 'to others', svg: function () { return line(rr(38, 62, 88, 100, 22) + ' ' + rr(74, 38, 88, 100, 22)); } }
+  ];
+
+  // Home (the house) as the board draws it, for the "already there" row
+  var HOME = "M87.53,39.68 Q100,28.02 112.47,39.68 L163.17,87.12 Q175.64,98.78 175.64,115.86 L175.64,154.9 Q175.64,171.98 158.56,171.98 L121.96,171.98 Q119.52,171.98 119.52,169.54 L119.52,126.84 Q119.52,113.42 106.1,113.42 L93.9,113.42 Q80.48,113.42 80.48,126.84 L80.48,169.54 Q80.48,171.98 78.04,171.98 L41.44,171.98 Q24.36,171.98 24.36,154.9 L24.36,115.86 Q24.36,98.78 36.83,87.12 Z";
+  function cell(inner, name, sub, bare) { return '<div class="cell"><div class="icon' + (bare ? ' bare' : '') + '"><svg viewBox="0 0 200 200" aria-hidden="true">' + inner + '</svg></div><div class="cl">' + name + (sub ? '<small>' + sub + '</small>' : '') + '</div></div>'; }
+
+  document.getElementById('r-reuse').innerHTML =
+    cell('<path d="' + HOME + '" fill="currentColor"/>', 'Home', 'cd:home, as it is', true) +
+    cell(disc(G.bang()) + '<path d="' + full() + '" fill-rule="evenodd" fill="currentColor"/>', 'Needs help', 'as it is');
+  var animated = [];
+  document.getElementById('r-status').innerHTML = STATUS.map(function (s) { return cell(s.draw(0), s.name, s.sub); }).join('');
+  var statusSvgs = [].slice.call(document.querySelectorAll('#r-status svg'));
+  document.getElementById('r-levels').innerHTML = LEVELS.map(function (l) { return cell(l.svg(), l.name, l.sub, true); }).join('');
+  document.getElementById('r-buttons').innerHTML = BUTTONS.map(function (b) { return cell(b.svg(), b.name, b.sub, true); }).join('');
+
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function tick(ms) { statusSvgs.forEach(function (svg, i) { svg.innerHTML = STATUS[i].draw(ms); }); requestAnimationFrame(tick); }
+  if (!reduce) requestAnimationFrame(tick);
+
   var pl = document.getElementById('pl'), pd = document.getElementById('pd');
   function page(dark) { document.documentElement.setAttribute('data-page', dark ? 'dark' : 'light'); pl.setAttribute('aria-pressed', String(!dark)); pd.setAttribute('aria-pressed', String(dark)); }
   pl.addEventListener('click', function () { page(false); });
