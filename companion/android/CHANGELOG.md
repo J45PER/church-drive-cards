@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.88.0
+
+- No change to the phone and watch apps. The shared splash screen can now show an app's own animated mark (used by Satellites).
+
 ## 0.87.0
 
 No app changes. The Home Assistant integration now removes a phone's old duplicate Church Drive app registrations, locates people from this app only and sends notices only to this app.

@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.88.0
+
+- New app icon, themed icon and splash: Clive's mark with its top-right square turned into a circle and three ripples going out of it, every gap as thick as the ripples. On the splash only the ripples move: they appear one after another. Designed in `satellite/design/app-icons.html`.
+
 ## 0.87.0
 
 No app changes. The Home Assistant integration now removes a phone's old duplicate Church Drive app registrations, locates people from this app only and sends notices only to this app.

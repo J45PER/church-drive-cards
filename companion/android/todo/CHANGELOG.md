@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.88.0
+
+- No change. The shared splash screen can now show an app's own animated mark (used by Satellites).
+
 ## 0.87.0
 
 No app changes. The Home Assistant integration now removes a phone's old duplicate Church Drive app registrations, locates people from this app only and sends notices only to this app.
