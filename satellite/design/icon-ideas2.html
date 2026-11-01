@@ -1,0 +1,175 @@
+<title>Satellites Icon Ideas Round Two</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: every icon the Satellites app uses today, in numbered rows grouped by where it appears, drawn as the app draws it (tone circle, 20 dp icon), so each can be called out by number. */
+:root {
+  --bar-bg: #e9ebef; --bar-fg: #14181f; --bar-soft: #5b6472;
+  --stage-bg: #ffffff; --stage-fg: #14181f; --stage-soft: #5f6672; --stage-line: #e0e3e8; --card: #f6f7f9;
+  --ui: "Instrument Sans", system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, monospace;
+  --indigo:#5C6BC0; --teal:#00838F; --amber:#E37400; --blue:#1A73E8; --purple:#9334E6; --green:#1E8E3E; --orange:#E8590C; --coral:#F2705C; --red:#D93025; --grey:#5F6368;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bar-bg: #1a1f27; --bar-fg: #eef1f5; --bar-soft: #9aa4b2; color-scheme: dark; } }
+:root[data-theme="dark"] { --bar-bg: #1a1f27; --bar-fg: #eef1f5; --bar-soft: #9aa4b2; color-scheme: dark; }
+:root[data-page="dark"] { --stage-bg: #0b0f11; --stage-fg: #eef1f5; --stage-soft: #9aa4b2; --stage-line: #262b30; --card: #151a1e;
+  --indigo:#9FA8DA; --teal:#4DD0E1; --amber:#FDD663; --blue:#8AB4F8; --purple:#C58AF9; --green:#81C995; --orange:#FFAB70; --coral:#FF9C8A; --red:#F28B82; --grey:#9AA0A6; }
+* { box-sizing: border-box; }
+body { background: var(--bar-bg); color: var(--bar-fg); font-family: var(--ui); margin: 0; line-height: 1.4; }
+.top { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; justify-content: space-between; max-width: 1100px; margin: 0 auto;
+  padding-block: 20px 16px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.top h1 { font-size: 1.3rem; margin: 0; letter-spacing: -0.01em; }
+.top p { margin: 2px 0 0; color: var(--bar-soft); font-size: .86rem; max-width: 64ch; }
+.seg { display: inline-flex; background: color-mix(in srgb, var(--bar-soft) 25%, transparent); border-radius: 999px; padding: 3px; gap: 2px; }
+.seg button { font: inherit; font-size: .88rem; border: 0; background: none; color: var(--bar-soft); padding: 7px 18px; border-radius: 999px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--bar-fg); color: var(--bar-bg); }
+.seg button:focus-visible { outline: 2px solid var(--bar-fg); outline-offset: 2px; }
+.stage { background: var(--stage-bg); color: var(--stage-fg); min-height: 70vh; padding-block: 24px 56px; }
+.in { max-width: 1100px; margin: 0 auto; display: grid; gap: 30px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h2 { font-size: .8rem; font-family: var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--stage-soft); margin: 0 0 4px; font-weight: 500; }
+.lead { margin: 0 0 12px; color: var(--stage-soft); font-size: .86rem; max-width: 80ch; }
+.lead b { color: var(--stage-fg); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 12px; }
+.opt { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; align-items: center; background: var(--card); border: 1px solid var(--stage-line); border-radius: 18px; padding: 12px 14px; min-width: 0; }
+.n { font-family: var(--mono); font-size: .72rem; color: var(--stage-soft); grid-column: 1 / -1; }
+.n b { color: var(--stage-fg); font-weight: 600; }
+.disc { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+.disc.l { width: 40px; height: 40px; }
+.mi { font-family: "Material Icons"; font-style: normal; font-weight: normal; font-size: 20px; line-height: 1; letter-spacing: normal; text-transform: none; white-space: nowrap; font-feature-settings: "liga"; -webkit-font-feature-settings: "liga"; -webkit-font-smoothing: antialiased; }
+.mi.o { font-family: "Material Icons Outlined"; }
+.mi.p { font-size: 22px; }
+.mi.big { font-size: 28px; }
+.lbl { min-width: 0; }
+.lbl b { display: block; font-weight: 600; font-size: .95rem; }
+.lbl span { color: var(--stage-soft); font-size: .78rem; }
+.bare { color: var(--stage-fg); }
+.row { display: flex; flex-wrap: wrap; gap: 18px 22px; align-items: flex-end; }
+.fig { display: grid; gap: 6px; justify-items: center; font-size: .78rem; color: var(--stage-soft); text-align: center; }
+.fig .art { display: grid; place-items: center; }
+.mask { overflow: hidden; box-shadow: 0 0 0 1px var(--stage-line), 0 4px 12px rgba(0,0,0,.25); }
+.mask svg, .art svg { display: block; width: 100%; height: 100%; }
+.splash { width: 130px; aspect-ratio: 9 / 14; border: 1px solid var(--stage-line); border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: #fff; color: #1e2a3a; font-weight: 600; font-size: .8rem; }
+.splash.d { background: #0b0f11; color: #fff; }
+.splash svg { width: 56px; height: 56px; }
+.from { grid-column: 1 / -1; font-size: .74rem; color: var(--stage-soft); line-height: 1.5; }
+.from s { opacity: .8; }
+.from code { font-family: var(--mono); font-size: .72rem; color: var(--stage-fg); }
+.themed { background: #d8e2ff; display: grid; place-items: center; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+<style>
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); gap: 12px; }
+.cd { background: var(--card); border: 1px solid var(--stage-line); border-radius: 18px; padding: 12px 14px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.cd.cur { border-style: dashed; }
+.cd h3 { margin: 0; font-size: .95rem; font-weight: 600; }
+.cd h3 span { font-family: var(--mono); font-size: .7rem; color: var(--stage-soft); letter-spacing: .08em; margin-right: 6px; font-weight: 500; }
+.cd p { margin: 0; color: var(--stage-soft); font-size: .76rem; line-height: 1.4; }
+.ex { display: flex; align-items: center; gap: 12px; color: var(--stage-fg); }
+.ex .big { display: grid; place-items: center; }
+.sec h2 { margin-bottom: 4px; }
+</style>
+<div class="top">
+  <div><h1>Satellites icons, round two</h1><p>Ideas for #11 to #20 and #29, following your notes. #1 to #10 and #21 to #28 are settled and not shown. Dashed cards are what is there now.</p></div>
+  <div class="seg" role="group" aria-label="Page"><button type="button" id="pl" aria-pressed="true">Light</button><button type="button" id="pd" aria-pressed="false">Dark</button></div>
+</div>
+<div class="stage"><div class="in" id="in"></div></div>
+<script>
+(function () {
+  var M = {"tune-variant": "M8 13C6.14 13 4.59 14.28 4.14 16H2V18H4.14C4.59 19.72 6.14 21 8 21S11.41 19.72 11.86 18H22V16H11.86C11.41 14.28 9.86 13 8 13M8 19C6.9 19 6 18.1 6 17C6 15.9 6.9 15 8 15S10 15.9 10 17C10 18.1 9.1 19 8 19M19.86 6C19.41 4.28 17.86 3 16 3S12.59 4.28 12.14 6H2V8H12.14C12.59 9.72 14.14 11 16 11S19.41 9.72 19.86 8H22V6H19.86M16 9C14.9 9 14 8.1 14 7C14 5.9 14.9 5 16 5S18 5.9 18 7C18 8.1 17.1 9 16 9Z", "wifi-strength-1": "M12,3C7.79,3 3.7,4.41 0.38,7C4.41,12.06 7.89,16.37 12,21.5C16.08,16.42 20.24,11.24 23.65,7C20.32,4.41 16.22,3 12,3M12,5C15.07,5 18.09,5.86 20.71,7.45L15.61,13.81C14.5,13.28 13.25,13 12,13C10.75,13 9.5,13.28 8.39,13.8L3.27,7.44C5.91,5.85 8.93,5 12,5Z", "wifi-strength-2": "M12,3C7.79,3 3.7,4.41 0.38,7C4.41,12.06 7.89,16.37 12,21.5C16.08,16.42 20.24,11.24 23.65,7C20.32,4.41 16.22,3 12,3M12,5C15.07,5 18.09,5.86 20.71,7.45L17.5,11.43C16.26,10.74 14.37,10 12,10C9.62,10 7.74,10.75 6.5,11.43L3.27,7.44C5.91,5.85 8.93,5 12,5Z", "wifi-strength-3": "M12,3C7.79,3 3.7,4.41 0.38,7C4.41,12.06 7.89,16.37 12,21.5C16.08,16.42 20.24,11.24 23.65,7C20.32,4.41 16.22,3 12,3M12,5C15.07,5 18.09,5.86 20.71,7.45L18.77,9.88C17.26,9 14.88,8 12,8C9,8 6.68,9 5.21,9.84L3.27,7.44C5.91,5.85 8.93,5 12,5Z", "wifi-strength-4": "M12,3C7.79,3 3.7,4.41 0.38,7C4.41,12.06 7.89,16.37 12,21.5C16.08,16.42 20.24,11.24 23.65,7C20.32,4.41 16.22,3 12,3Z", "wifi-strength-off-outline": "M3.27,1.44L2,2.72L4.05,4.77C2.75,5.37 1.5,6.11 0.38,7C4.2,11.8 8.14,16.67 12,21.5L15.91,16.63L19.23,19.95L20.5,18.68C14.87,13.04 3.27,1.44 3.27,1.44M12,3C10.6,3 9.21,3.17 7.86,3.5L9.56,5.19C10.37,5.07 11.18,5 12,5C15.07,5 18.09,5.86 20.71,7.45L16.76,12.38L18.18,13.8C20.08,11.43 22,9 23.65,7C20.32,4.41 16.22,3 12,3M5.57,6.29L14.5,15.21L12,18.3L3.27,7.44C4,7 4.78,6.61 5.57,6.29Z", "brightness-6": "M12,18V6A6,6 0 0,1 18,12A6,6 0 0,1 12,18M20,15.31L23.31,12L20,8.69V4H15.31L12,0.69L8.69,4H4V8.69L0.69,12L4,15.31V20H8.69L12,23.31L15.31,20H20V15.31Z", "brightness-7": "M12,8A4,4 0 0,0 8,12A4,4 0 0,0 12,16A4,4 0 0,0 16,12A4,4 0 0,0 12,8M12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6A6,6 0 0,1 18,12A6,6 0 0,1 12,18M20,8.69V4H15.31L12,0.69L8.69,4H4V8.69L0.69,12L4,15.31V20H8.69L12,23.31L15.31,20H20V15.31L23.31,12L20,8.69Z", "white-balance-sunny": "M3.55 19.09L4.96 20.5L6.76 18.71L5.34 17.29M12 6C8.69 6 6 8.69 6 12S8.69 18 12 18 18 15.31 18 12C18 8.68 15.31 6 12 6M20 13H23V11H20M17.24 18.71L19.04 20.5L20.45 19.09L18.66 17.29M20.45 5L19.04 3.6L17.24 5.39L18.66 6.81M13 1H11V4H13M6.76 5.39L4.96 3.6L3.55 5L5.34 6.81L6.76 5.39M1 13H4V11H1M13 20H11V23H13", "theme-light-dark": "M7.5,2C5.71,3.15 4.5,5.18 4.5,7.5C4.5,9.82 5.71,11.85 7.53,13C4.46,13 2,10.54 2,7.5A5.5,5.5 0 0,1 7.5,2M19.07,3.5L20.5,4.93L4.93,20.5L3.5,19.07L19.07,3.5M12.89,5.93L11.41,5L9.97,6L10.39,4.3L9,3.24L10.75,3.12L11.33,1.47L12,3.1L13.73,3.13L12.38,4.26L12.89,5.93M9.59,9.54L8.43,8.81L7.31,9.59L7.65,8.27L6.56,7.44L7.92,7.35L8.37,6.06L8.88,7.33L10.24,7.36L9.19,8.23L9.59,9.54M19,13.5A5.5,5.5 0 0,1 13.5,19C12.28,19 11.15,18.6 10.24,17.93L17.93,10.24C18.6,11.15 19,12.28 19,13.5M14.6,20.08L17.37,18.93L17.13,22.28L14.6,20.08M18.93,17.38L20.08,14.61L22.28,17.15L18.93,17.38M20.08,12.42L18.94,9.64L22.28,9.88L20.08,12.42M9.63,18.93L12.4,20.08L9.87,22.27L9.63,18.93Z", "volume-high": "M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z", "volume-medium": "M5,9V15H9L14,20V4L9,9M18.5,12C18.5,10.23 17.5,8.71 16,7.97V16C17.5,15.29 18.5,13.76 18.5,12Z", "speaker-wireless": "M20.07,19.07L18.66,17.66C20.11,16.22 21,14.21 21,12C21,9.78 20.11,7.78 18.66,6.34L20.07,4.93C21.88,6.74 23,9.24 23,12C23,14.76 21.88,17.26 20.07,19.07M17.24,16.24L15.83,14.83C16.55,14.11 17,13.11 17,12C17,10.89 16.55,9.89 15.83,9.17L17.24,7.76C18.33,8.85 19,10.35 19,12C19,13.65 18.33,15.15 17.24,16.24M4,3H12A2,2 0 0,1 14,5V19A2,2 0 0,1 12,21H4A2,2 0 0,1 2,19V5A2,2 0 0,1 4,3M8,5A2,2 0 0,0 6,7A2,2 0 0,0 8,9A2,2 0 0,0 10,7A2,2 0 0,0 8,5M8,11A4,4 0 0,0 4,15A4,4 0 0,0 8,19A4,4 0 0,0 12,15A4,4 0 0,0 8,11M8,13A2,2 0 0,1 10,15A2,2 0 0,1 8,17A2,2 0 0,1 6,15A2,2 0 0,1 8,13Z", "microphone": "M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z", "account-voice": "M9,5A4,4 0 0,1 13,9A4,4 0 0,1 9,13A4,4 0 0,1 5,9A4,4 0 0,1 9,5M9,15C11.67,15 17,16.34 17,19V21H1V19C1,16.34 6.33,15 9,15M16.76,5.36C18.78,7.56 18.78,10.61 16.76,12.63L15.08,10.94C15.92,9.76 15.92,8.23 15.08,7.05L16.76,5.36M20.07,2C24,6.05 23.97,12.11 20.07,16L18.44,14.37C21.21,11.19 21.21,6.65 18.44,3.63L20.07,2Z", "chip": "M6,4H18V5H21V7H18V9H21V11H18V13H21V15H18V17H21V19H18V20H6V19H3V17H6V15H3V13H6V11H3V9H6V7H3V5H6V4M11,15V18H12V15H11M13,15V18H14V15H13M15,15V18H16V15H15Z", "update": "M21,10.12H14.22L16.96,7.3C14.23,4.6 9.81,4.5 7.08,7.2C4.35,9.91 4.35,14.28 7.08,17C9.81,19.7 14.23,19.7 16.96,17C18.32,15.65 19,14.08 19,12.1H21C21,14.08 20.12,16.65 18.36,18.39C14.85,21.87 9.15,21.87 5.64,18.39C2.14,14.92 2.11,9.28 5.62,5.81C9.13,2.34 14.76,2.34 18.27,5.81L21,3V10.12M12.5,8V12.25L16,14.33L15.28,15.54L11,13V8H12.5Z", "arrow-up-bold": "M15,20H9V12H4.16L12,4.16L19.84,12H15V20Z", "sync": "M12,18A6,6 0 0,1 6,12C6,11 6.25,10.03 6.7,9.2L5.24,7.74C4.46,8.97 4,10.43 4,12A8,8 0 0,0 12,20V23L16,19L12,15M12,4V1L8,5L12,9V6A6,6 0 0,1 18,12C18,13 17.75,13.97 17.3,14.8L18.76,16.26C19.54,15.03 20,13.57 20,12A8,8 0 0,0 12,4Z", "tag": "M5.5,7A1.5,1.5 0 0,1 4,5.5A1.5,1.5 0 0,1 5.5,4A1.5,1.5 0 0,1 7,5.5A1.5,1.5 0 0,1 5.5,7M21.41,11.58L12.41,2.58C12.05,2.22 11.55,2 11,2H4C2.89,2 2,2.89 2,4V11C2,11.55 2.22,12.05 2.59,12.41L11.58,21.41C11.95,21.77 12.45,22 13,22C13.55,22 14.05,21.77 14.41,21.41L21.41,14.41C21.78,14.05 22,13.55 22,13C22,12.44 21.77,11.94 21.41,11.58Z", "pencil": "M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z", "door": "M8,3C6.89,3 6,3.89 6,5V21H18V5C18,3.89 17.11,3 16,3H8M8,5H16V19H8V5M13,11V13H15V11H13Z", "map-marker": "M12,11.5A2.5,2.5 0 0,1 9.5,9A2.5,2.5 0 0,1 12,6.5A2.5,2.5 0 0,1 14.5,9A2.5,2.5 0 0,1 12,11.5M12,2A7,7 0 0,0 5,9C5,14.25 12,22 12,22C12,22 19,14.25 19,9A7,7 0 0,0 12,2Z", "home-map-marker": "M12,3L2,12H5V20H19V12H22L12,3M12,7.7C14.1,7.7 15.8,9.4 15.8,11.5C15.8,14.5 12,18 12,18C12,18 8.2,14.5 8.2,11.5C8.2,9.4 9.9,7.7 12,7.7M12,10A1.5,1.5 0 0,0 10.5,11.5A1.5,1.5 0 0,0 12,13A1.5,1.5 0 0,0 13.5,11.5A1.5,1.5 0 0,0 12,10Z", "gesture-tap": "M10,9A1,1 0 0,1 11,8A1,1 0 0,1 12,9V13.47L13.21,13.6L18.15,15.79C18.68,16.03 19,16.56 19,17.14V21.5C18.97,22.32 18.32,22.97 17.5,23H11C10.62,23 10.26,22.85 10,22.57L5.1,18.37L5.84,17.6C6.03,17.39 6.3,17.28 6.58,17.28H6.8L10,19V9M11,5A4,4 0 0,1 15,9C15,10.5 14.2,11.77 13,12.46V11.24C13.61,10.69 14,9.89 14,9A3,3 0 0,0 11,6A3,3 0 0,0 8,9C8,9.89 8.39,10.69 9,11.24V12.46C7.8,11.77 7,10.5 7,9A4,4 0 0,1 11,5Z", "lightning-bolt": "M11 15H6L13 1V9H18L11 23V15Z", "wrench": "M22.7,19L13.6,9.9C14.5,7.6 14,4.9 12.1,3C10.1,1 7.1,0.6 4.7,1.7L9,6L6,9L1.6,4.7C0.4,7.1 0.9,10.1 2.9,12.1C4.8,14 7.5,14.5 9.8,13.6L18.9,22.7C19.3,23.1 19.9,23.1 20.3,22.7L22.6,20.4C23.1,20 23.1,19.3 22.7,19Z", "play": "M8,5.14V19.14L19,12.14L8,5.14Z", "flash": "M7,2V13H10V22L17,10H13L17,2H7Z", "power": "M16.56,5.44L15.11,6.89C16.84,7.94 18,9.83 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12C6,9.83 7.16,7.94 8.88,6.88L7.44,5.44C5.36,6.88 4,9.28 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12C20,9.28 18.64,6.88 16.56,5.44M13,3H11V13H13", "content-copy": "M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z", "bookmark-multiple": "M15,5A2,2 0 0,1 17,7V23L10,20L3,23V7C3,5.89 3.9,5 5,5H15M9,1H19A2,2 0 0,1 21,3V19L19,18.13V3H7A2,2 0 0,1 9,1Z", "layers-triple": "M12 0L3 7L4.63 8.27L12 14L19.36 8.27L21 7L12 0M19.37 10.73L12 16.47L4.62 10.74L3 12L12 19L21 12L19.37 10.73M19.37 15.73L12 21.47L4.62 15.74L3 17L12 24L21 17L19.37 15.73Z", "content-save-cog": "M21 11.7V7L17 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H11.7C11.4 20.3 11.2 19.6 11.1 18.8C9.9 18.4 9 17.3 9 16C9 14.3 10.3 13 12 13C12.3 13 12.6 13.1 12.9 13.2C14.2 11.8 16 11 18 11C19.1 11 20.1 11.2 21 11.7M15 9H5V5H15V9M21.7 18.6V17.6L22.8 16.8C22.9 16.7 23 16.6 22.9 16.5L21.9 14.8C21.9 14.7 21.7 14.7 21.6 14.7L20.4 15.2C20.1 15 19.8 14.8 19.5 14.7L19.3 13.4C19.3 13.3 19.2 13.2 19.1 13.2H17.1C16.9 13.2 16.8 13.3 16.8 13.4L16.6 14.7C16.3 14.9 16.1 15 15.8 15.2L14.6 14.7C14.5 14.7 14.4 14.7 14.3 14.8L13.3 16.5C13.3 16.6 13.3 16.7 13.4 16.8L14.5 17.6V18.6L13.4 19.4C13.3 19.5 13.2 19.6 13.3 19.7L14.3 21.4C14.4 21.5 14.5 21.5 14.6 21.5L15.8 21C16 21.2 16.3 21.4 16.6 21.5L16.8 22.8C16.9 22.9 17 23 17.1 23H19.1C19.2 23 19.3 22.9 19.3 22.8L19.5 21.5C19.8 21.3 20 21.2 20.3 21L21.5 21.4C21.6 21.4 21.7 21.4 21.8 21.3L22.8 19.6C22.9 19.5 22.9 19.4 22.8 19.4L21.7 18.6M18 19.5C17.2 19.5 16.5 18.8 16.5 18S17.2 16.5 18 16.5 19.5 17.2 19.5 18 18.8 19.5 18 19.5Z", "star": "M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z", "certificate": "M4,3C2.89,3 2,3.89 2,5V15A2,2 0 0,0 4,17H12V22L15,19L18,22V17H20A2,2 0 0,0 22,15V8L22,6V5A2,2 0 0,0 20,3H16V3H4M12,5L15,7L18,5V8.5L21,10L18,11.5V15L15,13L12,15V11.5L9,10L12,8.5V5M4,5H9V7H4V5M4,9H7V11H4V9M4,13H9V15H4V13Z", "seal": "M20.39,19.37L16.38,18L15,22L11.92,16L9,22L7.62,18L3.61,19.37L6.53,13.37C5.57,12.17 5,10.65 5,9A7,7 0 0,1 12,2A7,7 0 0,1 19,9C19,10.65 18.43,12.17 17.47,13.37L20.39,19.37M7,9L9.69,10.34L9.5,13.34L12,11.68L14.5,13.33L14.33,10.34L17,9L14.32,7.65L14.5,4.67L12,6.31L9.5,4.65L9.67,7.66L7,9Z", "shield-key": "M12,8A1,1 0 0,1 13,9A1,1 0 0,1 12,10A1,1 0 0,1 11,9A1,1 0 0,1 12,8M21,11C21,16.55 17.16,21.74 12,23C6.84,21.74 3,16.55 3,11V5L12,1L21,5V11M12,6A3,3 0 0,0 9,9C9,10.31 9.83,11.42 11,11.83V18H13V16H15V14H13V11.83C14.17,11.42 15,10.31 15,9A3,3 0 0,0 12,6Z", "key": "M7 14C5.9 14 5 13.1 5 12S5.9 10 7 10 9 10.9 9 12 8.1 14 7 14M12.6 10C11.8 7.7 9.6 6 7 6C3.7 6 1 8.7 1 12S3.7 18 7 18C9.6 18 11.8 16.3 12.6 14H16V18H20V14H23V10H12.6Z", "file-certificate": "M14 2H7A2 2 0 0 0 5 4V18A2 2 0 0 0 7 20H10V23L12 22L14 23V20H17A2 2 0 0 0 19 18V7M14 15V17L12 16L10 17V15L8 14L10 13V11L12 12L14 11V13L16 14M13 8V3.5L17.5 8Z", "check-decagram": "M23,12L20.56,9.22L20.9,5.54L17.29,4.72L15.4,1.54L12,3L8.6,1.54L6.71,4.72L3.1,5.53L3.44,9.21L1,12L3.44,14.78L3.1,18.47L6.71,19.29L8.6,22.47L12,21L15.4,22.46L17.29,19.28L20.9,18.46L20.56,14.78L23,12M10,17L6,13L7.41,11.59L10,14.17L16.59,7.58L18,9L10,17Z", "signature": "M22,22H2V20H22V22M2.26,16.83L5.09,14L2.26,11.17L3.67,9.76L6.5,12.59L9.33,9.76L10.74,11.17L7.91,14L10.74,16.83L9.33,18.24L6.5,15.41L3.67,18.24L2.26,16.83Z", "download": "M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z", "tune-filled": "M8 13C6.14 13 4.59 14.28 4.14 16H2V18H4.14C4.59 19.72 6.14 21 8 21S11.41 19.72 11.86 18H22V16H11.86C11.41 14.28 9.86 13 8 13M19.86 6C19.41 4.28 17.86 3 16 3S12.59 4.28 12.14 6H2V8H12.14C12.59 9.72 14.14 11 16 11S19.41 9.72 19.86 8H22V6H19.86", "information-outline": "M11,9H13V7H11M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,17H13V11H11V17Z"};
+  var CLIVE = "M103.3,50.7L119.3,50.7C135.87,50.7 149.3,64.13 149.3,80.7L149.3,96.7C149.3,110.98 139.32,122.93 125.96,125.96C122.93,139.32 110.98,149.3 96.7,149.3L80.7,149.3C64.13,149.3 50.7,135.87 50.7,119.3L50.7,103.3C50.7,89.02 60.68,77.07 74.04,74.04C77.07,60.68 89.02,50.7 103.3,50.7ZM80.7,73.3C78.41,73.3 76.18,73.56 74.04,74.04C73.56,76.18 73.3,78.41 73.3,80.7L73.3,96.7C73.3,113.27 86.73,126.7 103.3,126.7L119.3,126.7C121.59,126.7 123.82,126.44 125.96,125.96C126.44,123.82 126.7,121.59 126.7,119.3L126.7,103.3C126.7,86.73 113.27,73.3 96.7,73.3Z";
+  function f(v) { return (Math.round(v * 100) / 100).toString(); }
+  function rrp(x, y, w, h, r) { return 'M' + (x + r) + ',' + y + ' H' + (x + w - r) + ' A' + r + ',' + r + ' 0 0 1 ' + (x + w) + ',' + (y + r) + ' V' + (y + h - r) + ' A' + r + ',' + r + ' 0 0 1 ' + (x + w - r) + ',' + (y + h) + ' H' + (x + r) + ' A' + r + ',' + r + ' 0 0 1 ' + x + ',' + (y + h - r) + ' V' + (y + r) + ' A' + r + ',' + r + ' 0 0 1 ' + (x + r) + ',' + y + 'Z'; }
+  var uid = 0;
+  // the approved satellite icon (F2); an optional badge is a glyph cut out of a solid disc at the bottom right, with a gap round it
+  function device(px, badge) {
+    var id = 'dv' + (++uid), sc = 0.56, bx = badge ? -16 : 0, by = badge ? -10 : 0;
+    var t = 'translate(' + (100 + bx - 100 * sc) + ' ' + (114 + by - 100 * sc) + ') scale(' + sc + ')', glyph = '';
+    if (badge) {
+      var box = badge.box || 200, gs = badge.scale, gt = 'translate(' + (146 - box / 2 * gs) + ' ' + (146 - box / 2 * gs) + ') scale(' + gs + ')';
+      glyph = '<circle cx="146" cy="146" r="50" fill="#000"/><circle cx="146" cy="146" r="40" fill="#fff"/>' +
+        '<path d="' + badge.d + '" transform="' + gt + '" fill="#000" fill-rule="' + (badge.rule || 'evenodd') + '"/>';
+    }
+    return '<svg width="' + px + '" height="' + px + '" viewBox="0 0 200 200" aria-hidden="true"><defs><mask id="' + id + '" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="200">' +
+      '<path d="' + rrp(46 + bx, 22 + by, 108, 156, 44) + ' ' + rrp(68 + bx, 46 + by, 64, 12, 6) + '" fill="#fff" fill-rule="evenodd"/><path d="' + CLIVE + '" transform="' + t + '" fill="#000" fill-rule="evenodd"/>' + glyph + '</mask></defs>' +
+      '<rect width="200" height="200" fill="currentColor" mask="url(#' + id + ')"/></svg>';
+  }
+  function mdi(name, px) { return '<svg width="' + px + '" height="' + px + '" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="' + M[name] + '"/></svg>'; }
+  function p200(d, px, vb) { return '<svg width="' + px + '" height="' + px + '" viewBox="' + (vb || '0 0 200 200') + '" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="' + d + '"/></svg>'; }
+  function badge(name, scale) { return { d: M[name], box: 24, scale: scale || 2.0, rule: 'nonzero' }; }
+  function dev(name, scale) { return function (px) { return device(px, badge(name, scale)); }; }
+  function m1(name) { return function (px) { return mdi(name, px); }; }
+  function plain(px) { return device(px); }
+  var SPEAK = rrp(64, 52, 30, 96, 15) + ' ' + rrp(106, 52, 30, 96, 15);   // Clive's speaking pose, as in the Brand Icon Board
+  var MIC = rrp(80, 40, 40, 64, 20) + ' ' + rrp(66, 130, 68, 16, 8);       // Clive's mic pose
+  function tint(tone) { return 'background:color-mix(in srgb,var(--' + tone + ') 18%,transparent);color:var(--' + tone + ')'; }
+  function card(label, name, why, draw, tone, cur) {
+    return '<div class="cd' + (cur ? ' cur' : '') + '"><h3><span>' + label + '</span>' + name + '</h3><div class="ex"><div class="big">' + draw(72) + '</div>' +
+      (tone ? '<span class="disc" style="' + tint(tone) + '">' + draw(20) + '</span>' : '') + '<div>' + draw(34) + '</div></div><p>' + why + '</p></div>';
+  }
+  function section(title, lead, cards) { return '<section class="sec"><h2>' + title + '</h2><p class="lead">' + lead + '</p><div class="cards">' + cards.join('') + '</div></section>'; }
+  var out = '';
+  out += section('#11 Glances', 'The same tune icon with the knobs filled in.', [
+    card('11 now', 'Tune', 'The knobs are rings today.', m1('tune-variant'), 'teal', true),
+    card('11A', 'Tune, filled', 'Solid knobs on the two lines.', m1('tune-filled'), 'teal')]);
+  out += section('#12 Backlight and #13 Sound', 'You said these are okay. Here is what else could stand in.', [
+    card('12 now', 'Brightness', 'brightness-6, the light settings\' brightness tiles.', m1('brightness-6'), 'blue', true),
+    card('12A', 'Sun', 'brightness-7: the plain sun with rays.', m1('brightness-7'), 'blue'),
+    card('12B', 'Day and night', 'theme-light-dark: the dim-at-night setting is half of what this section is.', m1('theme-light-dark'), 'blue'),
+    card('12C', 'Sunny', 'white-balance-sunny, as the light settings use for White.', m1('white-balance-sunny'), 'blue'),
+    card('13 now', 'Volume', 'volume-high.', m1('volume-high'), 'coral', true),
+    card('13A', 'Medium', 'volume-medium, a softer picture of a speaker volume.', m1('volume-medium'), 'coral'),
+    card('13B', 'Satellite with sound', 'The satellite icon with a volume badge.', dev('volume-high'), 'coral'),
+    card('13C', 'Wireless speaker', 'speaker-wireless: a speaker with waves.', m1('speaker-wireless'), 'coral')]);
+  out += section('#14 Voice', 'Rethought around Clive\'s own poses and the satellite.', [
+    card('14 now', 'Account voice', 'account-voice: a person with sound waves.', m1('account-voice'), 'indigo', true),
+    card('14A', 'Clive speaking', 'Clive\'s two speaking bars, exactly as in his speaking pose.', function (px) { return p200(SPEAK, px, '54 42 92 116'); }, 'indigo'),
+    card('14B', 'Clive listening', 'Clive\'s mic pose, exactly as in the app.', function (px) { return p200(MIC, px, '56 30 88 128'); }, 'indigo'),
+    card('14C', 'Microphone', 'microphone, the one the assistant screens use.', m1('microphone'), 'indigo'),
+    card('14D', 'Satellite with a mic', 'The satellite icon with a microphone badge: this section is about how it hears.', dev('microphone'), 'indigo')]);
+  out += section('#16 Status, signal strengths', 'The icon follows the Wi-Fi signal: the same bars the main app\'s cameras use.', [
+    card('16A', 'Excellent', 'wifi-strength-4 (stronger than -55 dBm).', m1('wifi-strength-4'), 'green'),
+    card('16B', 'Good', 'wifi-strength-3.', m1('wifi-strength-3'), 'green'),
+    card('16C', 'Fair', 'wifi-strength-2.', m1('wifi-strength-2'), 'amber'),
+    card('16D', 'Weak', 'wifi-strength-1 (weaker than -75 dBm).', m1('wifi-strength-1'), 'red'),
+    card('16E', 'Offline', 'wifi-strength-off-outline.', m1('wifi-strength-off-outline'), 'grey')]);
+  out += section('#17 Firmware', 'Ideas besides the update arrow.', [
+    card('17 now', 'Update', 'mdi update, Updates in the main app.', m1('update'), 'orange', true),
+    card('17A', 'Chip', 'chip: the software that runs on the board.', m1('chip'), 'orange'),
+    card('17B', 'Satellite with an arrow', 'The satellite icon with an up arrow badge.', dev('arrow-up-bold'), 'orange'),
+    card('17C', 'Download', 'download: a new version coming.', m1('download'), 'orange'),
+    card('17D', 'Sync', 'sync: the update running.', m1('sync'), 'orange')]);
+  out += section('#18 Name and room', 'On the satellite icon, with a badge for what is being set.', [
+    card('18 now', 'Location', 'location on.', m1('map-marker'), 'teal', true),
+    card('18A', 'Pin', 'The satellite icon with a map pin: which room it is in.', dev('map-marker'), 'teal'),
+    card('18B', 'Pencil', 'With a pencil: renaming it.', dev('pencil'), 'teal'),
+    card('18C', 'Tag', 'With a label: its name.', dev('tag'), 'teal'),
+    card('18D', 'Room', 'With a house and pin: its room in the house.', dev('home-map-marker'), 'teal'),
+    card('18E', 'Door', 'With a door: the room.', dev('door'), 'teal')]);
+  out += section('#19 Actions', 'Flash the screen, clean it, restart it, reset its pairing, remove it.', [
+    card('19 now', 'Power', 'power.', m1('power'), 'red', true),
+    card('19A', 'Satellite with a bolt', 'The satellite icon with a lightning bolt: do something now.', dev('lightning-bolt'), 'red'),
+    card('19B', 'Satellite with a tap', 'With a finger tap: press a button on it.', dev('gesture-tap'), 'red'),
+    card('19C', 'Spanner', 'wrench: look after it.', m1('wrench'), 'red'),
+    card('19D', 'Satellite with a play button', 'With a play triangle: run an action.', dev('play'), 'red')]);
+  out += section('#20 Presets and copying', 'Saving a satellite\'s settings as a set and putting them on others.', [
+    card('20 now', 'Copy', 'content-copy.', m1('content-copy'), 'orange', true),
+    card('20A', 'Bookmarks', 'bookmark-multiple: saved sets.', m1('bookmark-multiple'), 'orange'),
+    card('20B', 'Layers', 'layers-triple: a set stacked on another.', m1('layers-triple'), 'orange'),
+    card('20C', 'Satellite with a copy', 'The satellite icon with a copy badge: copy to other satellites.', dev('content-copy'), 'orange'),
+    card('20D', 'Save with a cog', 'content-save-cog: saved settings.', m1('content-save-cog'), 'orange'),
+    card('20E', 'Star', 'star: favourite sets.', m1('star'), 'orange')]);
+  out += section('#29 Signing certificate', 'The About page row that shows the key the app was signed with. It is a record that this app is the real one, so ideas lean on certificates, seals and keys.', [
+    card('29 now', 'Info', 'The info icon, as the main app shows it.', m1('information-outline'), null, true),
+    card('29A', 'Certificate', 'certificate: a document with a ribbon.', m1('certificate'), null),
+    card('29B', 'Seal', 'seal: a stamp of approval.', m1('seal'), null),
+    card('29C', 'Shield with a key', 'shield-key: protection and the key.', m1('shield-key'), null),
+    card('29D', 'Key', 'key: the signing key itself.', m1('key'), null),
+    card('29E', 'Checked badge', 'check-decagram: verified.', m1('check-decagram'), null),
+    card('29F', 'Signature', 'signature: signed by.', m1('signature'), null),
+    card('29G', 'Satellite with a seal', 'The satellite icon with a seal badge.', dev('seal'), null)]);
+  document.getElementById('in').innerHTML = out;
+  var pl = document.getElementById('pl'), pd = document.getElementById('pd');
+  function page(dark) { document.documentElement.setAttribute('data-page', dark ? 'dark' : 'light'); pl.setAttribute('aria-pressed', String(!dark)); pd.setAttribute('aria-pressed', String(dark)); }
+  pl.addEventListener('click', function () { page(false); });
+  pd.addEventListener('click', function () { page(true); });
+})();
+</script>
