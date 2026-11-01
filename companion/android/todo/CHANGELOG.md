@@ -5,6 +5,7 @@ Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newe
 
 ## 0.94.0
 
+- The splash screen starts on Clive's idle logo, whose two squares become the clipboard's edges, then the clip grows in and the tick lines are drawn. Plays once.
 - The account panel's "Open Church Drive" row uses the Church Drive logo (one colour) and Settings uses the new rounded cog.
 
 ## 0.93.0

@@ -6,6 +6,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 ## 0.94.0
 
+- The splash screen starts on Clive's idle logo, which changes shape into the Church Drive logo (the two squares become the house and its window), then stays. Plays once.
 - The account panel's Settings row uses the new rounded cog, and the To-do rows ("Open To-do in Church Drive To-Do", "Get Church Drive To Do") use the To-Do logo in one colour.
 
 ## 0.93.0

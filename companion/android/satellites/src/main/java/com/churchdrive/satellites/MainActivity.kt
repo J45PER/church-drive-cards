@@ -51,7 +51,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
-            com.churchdrive.app.ui.BrandSplash("Satellites") { dark -> SatelliteMark(dark) }
+            com.churchdrive.app.ui.BrandSplash("Satellites", holdMillis = 3200) { dark -> com.churchdrive.app.ui.LogoMorph(com.churchdrive.app.ui.LogoKind.Satellites, dark) }
         }
     }
 

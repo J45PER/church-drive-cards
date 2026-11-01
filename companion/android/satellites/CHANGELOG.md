@@ -2,6 +2,7 @@
 
 ## 0.94.0
 
+- The splash screen starts on Clive's idle logo; the squares slide to the bottom left, the top-right one turns into the circle and the ripples go out. Plays once, then stays.
 - New icons throughout, from the approved icon sheet: the satellite speaker icon for the Satellites tab and list, with a small badge for what each section does (plus, sound, Clive's mic, update, pin, tap, copy, cog, history); Material Design icons for design, temperatures, glances, backlight, back, close and the signing certificate.
 - The Status icon follows the Wi-Fi signal (four bars down to one, crossed out when offline).
 - Account panel: Open Church Drive shows the Church Drive logo, About shows the Satellites logo, and Settings uses the new rounded cog.
