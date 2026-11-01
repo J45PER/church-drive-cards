@@ -1,0 +1,231 @@
+<title>Clive Icons</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a light page and a dark page, switched at the top. Each page holds Church Drive, Clive (all five poses on one row, static then animated) and To Do. */
+:root {
+  --bar-bg: #e9ebef; --bar-fg: #14181f; --bar-soft: #5b6472; --stage-bg: #ffffff; --stage-fg: #000000; --stage-soft: #5f6672; --stage-line: #e0e3e8;
+  --ui: "Instrument Sans", system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bar-bg: #1a1f27; --bar-fg: #eef1f5; --bar-soft: #9aa4b2; color-scheme: dark; } }
+:root[data-theme="dark"] { --bar-bg: #1a1f27; --bar-fg: #eef1f5; --bar-soft: #9aa4b2; color-scheme: dark; }
+:root[data-page="dark"] { --stage-bg: #000000; --stage-fg: #ffffff; --stage-soft: #9aa0aa; --stage-line: #262a31; }
+* { box-sizing: border-box; }
+body { background: var(--bar-bg); color: var(--bar-fg); font-family: var(--ui); margin: 0; line-height: 1.4; }
+.top { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; justify-content: space-between;
+  padding-block: 20px 16px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); max-width: 1100px; margin: 0 auto; }
+.top h1 { font-size: 1.3rem; margin: 0; letter-spacing: -0.01em; }
+.top p { margin: 2px 0 0; color: var(--bar-soft); font-size: .86rem; }
+.seg { display: inline-flex; background: var(--bar-soft); background: color-mix(in srgb, var(--bar-soft) 25%, transparent); border-radius: 999px; padding: 3px; gap: 2px; }
+.seg button { font: inherit; font-size: .88rem; border: 0; background: none; color: var(--bar-soft); padding: 7px 18px; border-radius: 999px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--bar-fg); color: var(--bar-bg); }
+.seg button:focus-visible { outline: 2px solid var(--bar-fg); outline-offset: 2px; }
+.stage { background: var(--stage-bg); color: var(--stage-fg); min-height: 70vh; padding-block: 28px 56px; }
+.in { max-width: 1100px; margin: 0 auto; display: grid; gap: 34px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h2 { font-size: .8rem; font-family: var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--stage-soft); margin: 0 0 12px; font-weight: 500; }
+.rowlabel { font-size: .8rem; color: var(--stage-soft); margin: 0 0 8px; }
+.row { display: grid; gap: 14px; }
+.row.clive { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.row.one { grid-template-columns: minmax(0, 150px); }
+.row.sat { grid-template-columns: repeat(2, minmax(0, 150px)); }
+.cell { display: grid; gap: 8px; justify-items: center; min-width: 0; }
+.icon { width: 100%; max-width: 150px; aspect-ratio: 1; border: 1px solid var(--stage-line); border-radius: 22px; display: grid; place-items: center; padding: 22%; color: var(--stage-fg); }
+.icon svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.cl { font-size: .85rem; text-align: center; }
+.cl small { display: block; color: var(--stage-soft); font-size: .74rem; }
+.note { color: var(--stage-soft); font-size: .86rem; max-width: 66ch; margin: 0; }
+.row.splash { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.row.splash .icon { padding: 24px; max-width: 170px; }
+.m { transform-box: fill-box; transform-origin: center; }
+@media (max-width: 560px) { .row.splash { grid-template-columns: minmax(0, 1fr); } .row.clive { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (prefers-reduced-motion: reduce) {  }
+</style>
+<div class="top">
+  <div><h1>Clive Icons</h1><p>Clive's five poses, the app logos, and the splash screens that turn Clive into each app's logo. One colour, on a light page and a dark page.</p></div>
+  <div class="seg" role="group" aria-label="Page"><button type="button" id="pl" aria-pressed="true">Light icons</button><button type="button" id="pd" aria-pressed="false">Dark icons</button></div>
+</div>
+<div class="stage"><div class="in">
+  <section>
+    <h2>Clive</h2>
+    <p class="rowlabel">Static</p>
+    <div class="row clive" id="clive-static"></div>
+    <p class="rowlabel" style="margin-top:20px">Animated, as in the app</p>
+    <div class="row clive" id="clive-anim"></div>
+  </section>
+  <section>
+    <h2>Splash screens</h2>
+    <p class="note" style="margin-bottom:14px">Each app opens on Clive's idle logo, which then changes shape into that app's own logo and settles. Church Drive's and To Do's logos grow out of Clive's two squares; in Satellites one square becomes the circle and the ripples go out. The loop is only here to look at: in the app it plays once, then the app appears.</p>
+    <div class="row splash" id="splashes"></div>
+  </section>
+  <section>
+    <h2>Church Drive</h2>
+    <div class="row one" id="house"></div>
+  </section>
+  <section>
+    <h2>To Do</h2>
+    <div class="row one" id="todo"></div>
+    <p class="note" style="margin-top:12px">Clive's movements are the ones already in the app. The house and the clipboard stay still once they are on screen.</p>
+  </section>
+  <section>
+    <h2>Satellites</h2>
+    <div class="row sat"><div class="cell"><div class="icon" id="sat-static"></div><div class="cl">Still</div></div><div class="cell"><div class="icon" id="sat-anim"></div><div class="cl">Splash<small>the ripples appear in turn</small></div></div></div>
+    <p class="note" style="margin-top:12px">Clive's mark with its top-right square as a circle and three ripples going out of it, each as thick as the gap between them. Only the ripples move, and only in the app.</p>
+  </section>
+</div></div>
+<script>
+(function () {
+  var HOUSE = "M63.78,53.56C70.59,47.19 77.41,47.19 84.22,53.56L92.03,60.86C92.62,48.14 103.13,38 116,38L132,38C145.25,38 156,48.75 156,62L156,78C156,90.94 145.75,101.5 132.93,101.98C134.98,106.21 136,110.88 136,116L136,148C136,157.33 131.33,162 122,162L26,162C21.33,162 17.83,160.83 15.5,158.5C13.17,156.17 12,152.67 12,148L12,116C12,106.67 15.41,98.81 22.22,92.44ZM132.93,101.98C131.24,98.5 128.86,95.32 125.78,92.44L92.03,60.86C92.01,61.24 92,61.62 92,62L92,78C92,91.25 102.75,102 116,102L132,102C132.31,102 132.62,101.99 132.93,101.98Z";
+  var TODO = "<path d=\"M126,38C141.46,38 154,50.54 154,66L154,122C154,134.45 145.88,145 134.64,148.64C131,159.88 120.45,168 108,168L72,168C56.54,168 44,155.46 44,140L44,84C44,72.43 51.02,62.49 61.04,58.23C61.15,60.04 61.53,61.79 62.12,63.43C62.04,64.28 62,65.13 62,66L62,122C62,137.46 74.54,150 90,150L126,150C129.02,150 131.92,149.52 134.64,148.64C135.52,145.92 136,143.02 136,140L136,84C136,72.43 128.98,62.49 118.96,58.23C118.99,57.82 119,57.41 119,57C119,46.51 110.49,38 100,38ZM80,44L100,44C107.18,44 113,49.82 113,57C113,64.18 107.18,70 100,70L80,70C72.82,70 67,64.18 67,57C67,49.82 72.82,44 80,44Z\" fill=\"currentColor\" fill-rule=\"evenodd\"/><path d=\"M75.52,96 L80.56,101.04 L89.2,90.24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M96,96 H118\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M75.52,122 L80.56,127.04 L89.2,116.24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M96,122 H118\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>";
+  var SH = 11.3, TAU = Math.PI * 2;
+  function f(v) { return (Math.round(v * 100) / 100).toString(); }
+  function rr(x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    return 'M' + f(x + r) + ',' + f(y) + ' H' + f(x + w - r) + ' A' + f(r) + ',' + f(r) + ' 0 0 1 ' + f(x + w) + ',' + f(y + r) + ' V' + f(y + h - r) +
+      ' A' + f(r) + ',' + f(r) + ' 0 0 1 ' + f(x + w - r) + ',' + f(y + h) + ' H' + f(x + r) + ' A' + f(r) + ',' + f(r) + ' 0 0 1 ' + f(x) + ',' + f(y + h - r) +
+      ' V' + f(y + r) + ' A' + f(r) + ',' + f(r) + ' 0 0 1 ' + f(x + r) + ',' + f(y) + 'Z';
+  }
+  // A shape as the app draws it: its box, shifted by dx/dy, scaled about its own centre by sx/sy.
+  function sq(s, sx, sy) {
+    var cx = s.x + (s.dx || 0) + s.w / 2, cy = s.y + (s.dy || 0) + s.h / 2, w = s.w * sx, h = s.h * sy;
+    return rr(cx - w / 2, cy - h / 2, w, h, s.r * Math.min(sx, sy));
+  }
+  var P = {
+    idle:     [{ x: 62, y: 62, w: 76, h: 76, r: 30, dx: -SH, dy: SH }, { x: 62, y: 62, w: 76, h: 76, r: 30, dx: SH, dy: -SH }],
+    mic:      [{ x: 80, y: 40, w: 40, h: 64, r: 20 }, { x: 66, y: 130, w: 68, h: 16, r: 8 }],
+    stop:     [{ x: 70, y: 70, w: 60, h: 60, r: 18 }],
+    thinking: [{ x: 62, y: 62, w: 76, h: 76, r: 30, dx: -SH, dy: SH }, { x: 62, y: 62, w: 76, h: 76, r: 30, dx: SH, dy: -SH }],
+    speaking: [{ x: 64, y: 52, w: 30, h: 96, r: 15 }, { x: 106, y: 52, w: 30, h: 96, r: 15 }]
+  };
+  var NAMES = [['idle', 'Idle', 'shut'], ['mic', 'Mic', 'ready'], ['stop', 'Stop', 'listening'], ['thinking', 'Thinking', 'trading size'], ['speaking', 'Speaking', 'two bars']];
+  var PERIOD = { idle: 4000, mic: 3000, stop: 1400, thinking: 1200, speaking: 700 };
+  function wave(p) { return (Math.cos(p * TAU) + 1) / 2; }
+  // The same maths as the app's glyph (level 0): idle slides the squircles together, mic breathes, stop pulses, thinking trades size, speaking trades bar height.
+  function frame(pose, ms) {
+    var p = (ms % PERIOD[pose]) / PERIOD[pose], s = P[pose];
+    var together = pose === 'idle' ? 1 - 0.55 * (1 - wave(p)) : 1;
+    var a = { x: s[0].x, y: s[0].y, w: s[0].w, h: s[0].h, r: s[0].r, dx: (s[0].dx || 0) * together, dy: (s[0].dy || 0) * together };
+    var b = s[1] ? { x: s[1].x, y: s[1].y, w: s[1].w, h: s[1].h, r: s[1].r, dx: (s[1].dx || 0) * together, dy: (s[1].dy || 0) * together } : null;
+    var trade = Math.cos(p * TAU), bars = Math.cos(p * TAU);
+    var sizeA = pose === 'thinking' ? 1 + 0.025 + 0.175 * trade : 1, sizeB = pose === 'thinking' ? 1 + 0.025 - 0.175 * trade : 1;
+    var barA = pose === 'speaking' ? 1 - 0.25 + 0.25 * bars : 1, barB = pose === 'speaking' ? 1 - 0.25 - 0.25 * bars : 1;
+    var breathe = pose === 'mic' ? 1 + 0.05 * (1 - wave(p)) : 1, stop = pose === 'stop' ? 1 + 0.07 * (1 - wave(p)) : 1;
+    var d = sq(a, sizeA * stop, sizeA * barA * breathe * stop);
+    if (b) d += ' ' + sq(b, sizeB, sizeB * barB);
+    return d;
+  }
+  function still(pose) { var s = P[pose], d = sq(s[0], 1, 1); if (s[1]) d += ' ' + sq(s[1], 1, 1); if (pose === 'thinking') d = sq(s[0], 1.2, 1.2) + ' ' + sq(s[1], .8, .8); if (pose === 'speaking') d = sq(s[0], 1, 1) + ' ' + sq(s[1], 1, .5); return d; }
+  function cl(svg) { return '<svg viewBox="0 0 200 200" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="' + svg + '"/></svg>'; }
+  var stat = '', anim = '';
+  NAMES.forEach(function (n) {
+    var label = '<div class="cl">' + n[1] + '<small>' + n[2] + '</small></div>';
+    stat += '<div class="cell"><div class="icon">' + cl(still(n[0])) + '</div>' + label + '</div>';
+    anim += '<div class="cell"><div class="icon" data-pose="' + n[0] + '">' + cl(frame(n[0], 0)) + '</div>' + label + '</div>';
+  });
+  document.getElementById('clive-static').innerHTML = stat;
+  document.getElementById('clive-anim').innerHTML = anim;
+  var houseSvg = '<svg viewBox="0 0 144 124" aria-hidden="true"><g class="m"><path transform="translate(-12 -38)" fill="currentColor" fill-rule="evenodd" d="' + HOUSE + '"/></g></svg>';
+  var todoSvg = '<svg viewBox="24 18 150 170" aria-hidden="true"><g class="m">' + TODO + '</g></svg>';
+  function one(id, svg) { document.getElementById(id).innerHTML = '<div class="cell"><div class="icon">' + svg + '</div></div>'; }
+  one('house', houseSvg);
+  one('todo', todoSvg);
+
+  // Satellites: the mark (a square and a circle, overlap cut out) and three ripples. Drawn in a box of 21 17 162 162.
+  var SAT_MAIN = "M50.7,103.3 H66.7 A30,30 0 0 1 96.7,133.3 V149.3 A30,30 0 0 1 66.7,179.3 H50.7 A30,30 0 0 1 20.7,149.3 V133.3 A30,30 0 0 1 50.7,103.3Z M45.3,118.7 a36,36 0 1,0 72,0 a36,36 0 1,0 -72,0Z";
+  var SAT_ARCS = ["M89.37,61.26 A58,58 0 0,1 138.74,110.63 A5.5,5.5 0 0 1 127.84,112.16 A47,47 0 0,0 87.84,72.16 A5.5,5.5 0 0 1 89.37,61.26Z", "M89.98,39.17 A80,80 0 0,1 160.83,110.02 A5.5,5.5 0 0 1 149.89,111.21 A69,69 0 0,0 88.79,50.11 A5.5,5.5 0 0 1 89.98,39.17Z", "M90.66,17.13 A102,102 0 0,1 182.87,109.34 A5.5,5.5 0 0 1 171.92,110.35 A91,91 0 0,0 89.65,28.08 A5.5,5.5 0 0 1 90.66,17.13Z"];
+  function satSvg(n) { return '<svg viewBox="21 17 162 162" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="' + SAT_MAIN + ' ' + SAT_ARCS.slice(0, n).join(' ') + '"/></svg>'; }
+  document.getElementById('sat-static').innerHTML = satSvg(3);
+  var satAnim = document.getElementById('sat-anim');
+  satAnim.innerHTML = satSvg(3);
+  var satPath = satAnim.querySelector('path');
+  function satTick(ms) {
+    var p = (ms % 2600) / 2600, n = p < 0.15 ? 0 : p < 0.35 ? 1 : p < 0.55 ? 2 : p < 0.9 ? 3 : 0;
+    satPath.setAttribute('d', SAT_MAIN + ' ' + SAT_ARCS.slice(0, n).join(' '));
+    requestAnimationFrame(satTick);
+  }
+  if (!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) requestAnimationFrame(satTick);
+  // animate Clive
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var targets = [].slice.call(document.querySelectorAll('#clive-anim .icon'));
+  var paths = targets.map(function (t) { return t.querySelector('path'); });
+  function tick(ms) {
+    for (var i = 0; i < targets.length; i++) paths[i].setAttribute('d', frame(targets[i].getAttribute('data-pose'), ms));
+    requestAnimationFrame(tick);
+  }
+  if (!reduce) requestAnimationFrame(tick);
+
+  // ---- Splash screens: Clive's idle logo turns into each app's logo.
+  var RINGS = {"clive":[[[103.3,50.7],[105.3,50.7],[107.3,50.7],[109.3,50.7],[111.3,50.7],[113.3,50.7],[115.3,50.7],[117.3,50.7],[119.3,50.7],[121.3,50.8],[123.3,51.0],[125.3,51.3],[127.2,51.8],[129.1,52.3],[131.0,53.1],[132.8,53.9],[134.5,54.9],[136.2,55.9],[137.8,57.1],[139.4,58.4],[140.8,59.8],[142.1,61.3],[143.4,62.8],[144.5,64.5],[145.6,66.2],[146.5,68.0],[147.2,69.8],[147.9,71.7],[148.4,73.6],[148.8,75.6],[149.1,77.6],[149.3,79.6],[149.3,81.6],[149.3,83.6],[149.3,85.6],[149.3,87.6],[149.3,89.6],[149.3,91.6],[149.3,93.6],[149.3,95.5],[149.3,97.5],[149.2,99.5],[148.9,101.5],[148.5,103.5],[148.0,105.4],[147.4,107.3],[146.6,109.2],[145.7,110.9],[144.7,112.7],[143.6,114.3],[142.3,115.9],[141.0,117.4],[139.6,118.8],[138.1,120.1],[136.5,121.3],[134.8,122.4],[133.0,123.4],[131.2,124.2],[129.4,125.0],[127.5,125.6],[125.9,126.4],[125.3,128.3],[124.7,130.2],[123.9,132.0],[123.0,133.8],[121.9,135.5],[120.8,137.2],[119.6,138.7],[118.2,140.2],[116.8,141.6],[115.2,142.9],[113.6,144.1],[111.9,145.1],[110.2,146.1],[108.4,146.9],[106.5,147.6],[104.6,148.2],[102.7,148.7],[100.7,149.0],[98.7,149.2],[96.7,149.3],[94.7,149.3],[92.7,149.3],[90.7,149.3],[88.7,149.3],[86.7,149.3],[84.7,149.3],[82.7,149.3],[80.7,149.3],[78.7,149.2],[76.7,149.0],[74.7,148.7],[72.8,148.2],[70.9,147.7],[69.0,146.9],[67.2,146.1],[65.5,145.1],[63.8,144.1],[62.2,142.9],[60.6,141.6],[59.2,140.2],[57.9,138.7],[56.6,137.2],[55.5,135.5],[54.4,133.8],[53.5,132.0],[52.8,130.2],[52.1,128.3],[51.6,126.4],[51.2,124.4],[50.9,122.4],[50.7,120.4],[50.7,118.4],[50.7,116.4],[50.7,114.4],[50.7,112.4],[50.7,110.4],[50.7,108.4],[50.7,106.4],[50.7,104.5],[50.7,102.5],[50.8,100.5],[51.1,98.5],[51.5,96.5],[52.0,94.6],[52.6,92.7],[53.4,90.8],[54.3,89.1],[55.3,87.3],[56.4,85.7],[57.7,84.1],[59.0,82.6],[60.4,81.2],[61.9,79.9],[63.5,78.7],[65.2,77.6],[67.0,76.6],[68.8,75.8],[70.6,75.0],[72.5,74.4],[74.1,73.6],[74.7,71.7],[75.3,69.8],[76.1,68.0],[77.0,66.2],[78.1,64.5],[79.2,62.8],[80.4,61.3],[81.8,59.8],[83.2,58.4],[84.8,57.1],[86.4,55.9],[88.1,54.9],[89.8,53.9],[91.6,53.1],[93.5,52.4],[95.4,51.8],[97.3,51.3],[99.3,51.0],[101.3,50.8]],[[96.7,73.3],[97.9,73.3],[99.0,73.4],[100.2,73.5],[101.3,73.7],[102.4,73.9],[103.6,74.1],[104.7,74.4],[105.8,74.7],[106.9,75.1],[108.0,75.5],[109.0,76.0],[110.1,76.5],[111.1,77.0],[112.1,77.6],[113.1,78.2],[114.1,78.8],[115.0,79.5],[115.9,80.3],[116.8,81.0],[117.6,81.8],[118.4,82.6],[119.2,83.5],[119.9,84.4],[120.7,85.3],[121.3,86.2],[122.0,87.2],[122.6,88.1],[123.1,89.2],[123.7,90.2],[124.2,91.2],[124.6,92.3],[125.0,93.4],[125.4,94.5],[125.7,95.6],[126.0,96.7],[126.2,97.9],[126.4,99.0],[126.5,100.1],[126.6,101.3],[126.7,102.5],[126.7,103.6],[126.7,104.8],[126.7,105.9],[126.7,107.1],[126.7,108.2],[126.7,109.4],[126.7,110.6],[126.7,111.7],[126.7,112.9],[126.7,114.0],[126.7,115.2],[126.7,116.3],[126.7,117.5],[126.7,118.6],[126.7,119.8],[126.7,121.0],[126.6,122.1],[126.4,123.3],[126.3,124.4],[126.0,125.5],[125.2,126.1],[124.1,126.3],[123.0,126.5],[121.8,126.6],[120.7,126.7],[119.5,126.7],[118.3,126.7],[117.2,126.7],[116.0,126.7],[114.9,126.7],[113.7,126.7],[112.6,126.7],[111.4,126.7],[110.2,126.7],[109.1,126.7],[107.9,126.7],[106.8,126.7],[105.6,126.7],[104.5,126.7],[103.3,126.7],[102.1,126.7],[101.0,126.6],[99.8,126.5],[98.7,126.3],[97.6,126.1],[96.4,125.9],[95.3,125.6],[94.2,125.3],[93.1,124.9],[92.0,124.5],[91.0,124.0],[89.9,123.5],[88.9,123.0],[87.9,122.4],[86.9,121.8],[85.9,121.2],[85.0,120.5],[84.1,119.7],[83.2,119.0],[82.4,118.2],[81.6,117.4],[80.8,116.5],[80.1,115.6],[79.3,114.7],[78.7,113.8],[78.0,112.8],[77.4,111.9],[76.9,110.8],[76.3,109.8],[75.8,108.8],[75.4,107.7],[75.0,106.6],[74.6,105.5],[74.3,104.4],[74.0,103.3],[73.8,102.1],[73.6,101.0],[73.5,99.9],[73.4,98.7],[73.3,97.5],[73.3,96.4],[73.3,95.2],[73.3,94.1],[73.3,92.9],[73.3,91.8],[73.3,90.6],[73.3,89.4],[73.3,88.3],[73.3,87.1],[73.3,86.0],[73.3,84.8],[73.3,83.7],[73.3,82.5],[73.3,81.4],[73.3,80.2],[73.3,79.0],[73.4,77.9],[73.6,76.7],[73.7,75.6],[74.0,74.5],[74.8,73.9],[75.9,73.7],[77.0,73.5],[78.2,73.4],[79.3,73.3],[80.5,73.3],[81.7,73.3],[82.8,73.3],[84.0,73.3],[85.1,73.3],[86.3,73.3],[87.4,73.3],[88.6,73.3],[89.8,73.3],[90.9,73.3],[92.1,73.3],[93.2,73.3],[94.4,73.3],[95.5,73.3]]],"house":[[[95.1,50.2],[96.8,47.7],[98.7,45.4],[100.9,43.4],[103.3,41.6],[106.0,40.2],[108.8,39.1],[111.7,38.4],[114.7,38.0],[117.7,38.0],[120.7,38.0],[123.7,38.0],[126.7,38.0],[129.7,38.0],[132.7,38.0],[135.7,38.3],[138.6,38.9],[141.4,39.9],[144.1,41.3],[146.6,42.9],[148.8,44.9],[150.8,47.1],[152.5,49.6],[153.9,52.3],[155.0,55.1],[155.7,58.0],[156.0,61.0],[156.0,64.0],[156.0,67.0],[156.0,70.0],[156.0,73.0],[156.0,76.0],[156.0,79.0],[155.7,82.0],[155.0,84.9],[153.9,87.7],[152.6,90.4],[150.9,92.8],[148.9,95.1],[146.6,97.0],[144.1,98.7],[141.4,100.1],[138.6,101.1],[135.7,101.7],[133.0,102.2],[134.2,105.0],[135.0,107.8],[135.6,110.8],[135.9,113.8],[136.0,116.7],[136.0,119.8],[136.0,122.8],[136.0,125.8],[136.0,128.8],[136.0,131.8],[136.0,134.8],[136.0,137.8],[136.0,140.8],[136.0,143.8],[136.0,146.8],[135.9,149.8],[135.5,152.7],[134.5,155.6],[132.9,158.1],[130.6,160.0],[127.9,161.2],[125.0,161.8],[122.0,162.0],[119.0,162.0],[116.0,162.0],[113.0,162.0],[110.0,162.0],[107.0,162.0],[104.0,162.0],[101.0,162.0],[98.0,162.0],[95.0,162.0],[91.9,162.0],[88.9,162.0],[85.9,162.0],[82.9,162.0],[79.9,162.0],[76.9,162.0],[73.9,162.0],[70.9,162.0],[67.9,162.0],[64.9,162.0],[61.9,162.0],[58.9,162.0],[55.9,162.0],[52.9,162.0],[49.9,162.0],[46.9,162.0],[43.9,162.0],[40.9,162.0],[37.9,162.0],[34.9,162.0],[31.9,162.0],[28.9,162.0],[25.9,162.0],[22.9,161.8],[20.0,161.2],[17.3,159.9],[15.0,158.0],[13.4,155.5],[12.5,152.6],[12.1,149.7],[12.0,146.7],[12.0,143.7],[12.0,140.7],[12.0,137.7],[12.0,134.6],[12.0,131.6],[12.0,128.6],[12.0,125.6],[12.0,122.6],[12.0,119.6],[12.0,116.6],[12.1,113.6],[12.4,110.7],[13.0,107.7],[13.9,104.9],[15.0,102.1],[16.5,99.5],[18.1,97.0],[20.0,94.7],[22.1,92.5],[24.3,90.5],[26.5,88.4],[28.7,86.4],[30.9,84.3],[33.1,82.3],[35.3,80.2],[37.5,78.2],[39.7,76.1],[41.9,74.1],[44.1,72.0],[46.2,70.0],[48.4,67.9],[50.6,65.9],[52.8,63.8],[55.0,61.8],[57.2,59.7],[59.4,57.7],[61.6,55.6],[63.8,53.6],[66.1,51.6],[68.7,50.1],[71.5,49.1],[74.4,48.8],[77.4,49.3],[80.1,50.5],[82.6,52.2],[84.9,54.2],[87.1,56.2],[89.3,58.3],[91.5,60.3],[92.2,58.7],[92.8,55.7],[93.8,52.9]],[[101.3,69.5],[101.9,70.1],[102.5,70.7],[103.1,71.2],[103.7,71.8],[104.3,72.3],[104.9,72.9],[105.5,73.4],[106.1,74.0],[106.7,74.5],[107.2,75.1],[107.8,75.7],[108.4,76.2],[109.0,76.8],[109.6,77.3],[110.2,77.9],[110.8,78.4],[111.4,79.0],[112.0,79.5],[112.6,80.1],[113.2,80.7],[113.8,81.2],[114.4,81.8],[115.0,82.3],[115.6,82.9],[116.1,83.4],[116.7,84.0],[117.3,84.5],[117.9,85.1],[118.5,85.6],[119.1,86.2],[119.7,86.8],[120.3,87.3],[120.9,87.9],[121.5,88.4],[122.1,89.0],[122.7,89.5],[123.3,90.1],[123.9,90.6],[124.5,91.2],[125.0,91.8],[125.6,92.3],[126.2,92.9],[126.8,93.4],[127.4,94.0],[127.9,94.6],[128.5,95.2],[129.0,95.8],[129.5,96.5],[130.0,97.1],[130.5,97.8],[130.9,98.5],[131.4,99.1],[131.8,99.8],[132.2,100.5],[132.6,101.3],[132.9,102.0],[132.1,102.0],[131.3,102.0],[130.5,102.0],[129.7,102.0],[128.9,102.0],[128.1,102.0],[127.2,102.0],[126.4,102.0],[125.6,102.0],[124.8,102.0],[124.0,102.0],[123.2,102.0],[122.4,102.0],[121.6,102.0],[120.7,102.0],[119.9,102.0],[119.1,102.0],[118.3,102.0],[117.5,102.0],[116.7,102.0],[115.9,102.0],[115.1,102.0],[114.2,101.9],[113.4,101.9],[112.6,101.8],[111.8,101.6],[111.0,101.5],[110.2,101.3],[109.5,101.1],[108.7,100.8],[107.9,100.6],[107.2,100.3],[106.4,100.0],[105.7,99.7],[104.9,99.3],[104.2,98.9],[103.5,98.5],[102.8,98.1],[102.2,97.6],[101.5,97.1],[100.9,96.6],[100.2,96.1],[99.6,95.5],[99.1,95.0],[98.5,94.4],[97.9,93.8],[97.4,93.2],[96.9,92.5],[96.4,91.9],[96.0,91.2],[95.5,90.5],[95.1,89.8],[94.7,89.1],[94.4,88.4],[94.0,87.7],[93.7,86.9],[93.4,86.2],[93.2,85.4],[92.9,84.6],[92.7,83.8],[92.5,83.0],[92.4,82.2],[92.2,81.4],[92.2,80.6],[92.1,79.8],[92.0,79.0],[92.0,78.2],[92.0,77.4],[92.0,76.6],[92.0,75.8],[92.0,74.9],[92.0,74.1],[92.0,73.3],[92.0,72.5],[92.0,71.7],[92.0,70.9],[92.0,70.1],[92.0,69.3],[92.0,68.4],[92.0,67.6],[92.0,66.8],[92.0,66.0],[92.0,65.2],[92.0,64.4],[92.0,63.6],[92.0,62.8],[92.0,62.0],[92.0,61.1],[92.4,61.2],[93.0,61.8],[93.6,62.3],[94.2,62.9],[94.8,63.4],[95.4,64.0],[96.0,64.6],[96.6,65.1],[97.2,65.7],[97.8,66.2],[98.4,66.8],[98.9,67.3],[99.5,67.9],[100.1,68.4],[100.7,69.0]]],"todo":[[[136.0,115.4],[136.0,111.4],[136.0,107.3],[136.0,103.3],[136.0,99.2],[136.0,95.2],[136.0,91.2],[136.0,87.1],[136.0,83.1],[135.6,79.1],[134.6,75.1],[133.0,71.4],[130.9,68.0],[128.4,64.8],[125.4,62.1],[122.1,59.8],[119.0,57.7],[118.7,53.7],[117.6,49.8],[115.7,46.3],[113.1,43.2],[109.8,40.8],[106.2,39.0],[102.3,38.1],[101.8,38.0],[105.8,38.0],[109.8,38.0],[113.9,38.0],[117.9,38.0],[122.0,38.0],[126.0,38.0],[130.0,38.3],[134.0,39.2],[137.7,40.6],[141.3,42.5],[144.5,45.0],[147.3,47.9],[149.7,51.1],[151.6,54.7],[153.0,58.5],[153.8,62.4],[154.0,66.5],[154.0,70.5],[154.0,74.5],[154.0,78.6],[154.0,82.6],[154.0,86.7],[154.0,90.7],[154.0,94.7],[154.0,98.8],[154.0,102.8],[154.0,106.9],[154.0,110.9],[154.0,114.9],[154.0,119.0],[154.0,123.0],[153.5,127.0],[152.5,130.9],[151.0,134.7],[148.9,138.1],[146.3,141.2],[143.4,144.0],[140.0,146.2],[136.4,148.0],[133.9,150.7],[132.1,154.3],[129.8,157.6],[127.0,160.5],[123.9,163.1],[120.4,165.1],[116.7,166.6],[112.7,167.6],[108.7,168.0],[104.7,168.0],[100.6,168.0],[96.6,168.0],[92.6,168.0],[88.5,168.0],[84.5,168.0],[80.4,168.0],[76.4,168.0],[72.4,168.0],[68.3,167.8],[64.4,166.9],[60.6,165.6],[57.0,163.7],[53.8,161.3],[50.9,158.4],[48.5,155.2],[46.6,151.7],[45.1,147.9],[44.3,143.9],[44.0,139.9],[44.0,135.9],[44.0,131.8],[44.0,127.8],[44.0,123.8],[44.0,119.7],[44.0,115.7],[44.0,111.6],[44.0,107.6],[44.0,103.6],[44.0,99.5],[44.0,95.5],[44.0,91.4],[44.0,87.4],[44.0,83.4],[44.4,79.3],[45.3,75.4],[46.9,71.7],[48.9,68.2],[51.4,65.0],[54.3,62.3],[57.7,60.0],[61.1,58.5],[61.8,62.4],[62.0,66.4],[62.0,70.5],[62.0,74.5],[62.0,78.5],[62.0,82.6],[62.0,86.6],[62.0,90.7],[62.0,94.7],[62.0,98.7],[62.0,102.8],[62.0,106.8],[62.0,110.8],[62.0,114.9],[62.0,118.9],[62.0,123.0],[62.5,127.0],[63.5,130.9],[65.0,134.6],[67.1,138.1],[69.6,141.2],[72.6,143.9],[75.9,146.2],[79.6,148.0],[83.4,149.2],[87.4,149.9],[91.4,150.0],[95.5,150.0],[99.5,150.0],[103.5,150.0],[107.6,150.0],[111.6,150.0],[115.7,150.0],[119.7,150.0],[123.7,150.0],[127.8,149.9],[131.8,149.4],[135.0,147.6],[135.8,143.7],[136.0,139.6],[136.0,135.6],[136.0,131.5],[136.0,127.5],[136.0,123.5],[136.0,119.4]],[[89.1,44.0],[89.9,44.0],[90.6,44.0],[91.4,44.0],[92.2,44.0],[92.9,44.0],[93.7,44.0],[94.4,44.0],[95.2,44.0],[96.0,44.0],[96.7,44.0],[97.5,44.0],[98.3,44.0],[99.0,44.0],[99.8,44.0],[100.5,44.0],[101.3,44.1],[102.0,44.2],[102.8,44.3],[103.5,44.5],[104.3,44.7],[105.0,45.0],[105.7,45.3],[106.3,45.7],[107.0,46.0],[107.6,46.5],[108.2,46.9],[108.8,47.4],[109.3,48.0],[109.8,48.5],[110.3,49.1],[110.8,49.7],[111.2,50.4],[111.5,51.0],[111.9,51.7],[112.2,52.4],[112.4,53.1],[112.6,53.9],[112.8,54.6],[112.9,55.4],[113.0,56.1],[113.0,56.9],[113.0,57.6],[112.9,58.4],[112.8,59.2],[112.7,59.9],[112.5,60.6],[112.2,61.4],[112.0,62.1],[111.7,62.8],[111.3,63.4],[110.9,64.1],[110.5,64.7],[110.0,65.3],[109.5,65.9],[109.0,66.4],[108.4,66.9],[107.8,67.4],[107.2,67.8],[106.5,68.2],[105.9,68.6],[105.2,68.9],[104.5,69.2],[103.7,69.4],[103.0,69.6],[102.3,69.8],[101.5,69.9],[100.8,70.0],[100.0,70.0],[99.2,70.0],[98.5,70.0],[97.7,70.0],[97.0,70.0],[96.2,70.0],[95.4,70.0],[94.7,70.0],[93.9,70.0],[93.2,70.0],[92.4,70.0],[91.6,70.0],[90.9,70.0],[90.1,70.0],[89.4,70.0],[88.6,70.0],[87.8,70.0],[87.1,70.0],[86.3,70.0],[85.6,70.0],[84.8,70.0],[84.0,70.0],[83.3,70.0],[82.5,70.0],[81.7,70.0],[81.0,70.0],[80.2,70.0],[79.5,70.0],[78.7,69.9],[78.0,69.8],[77.2,69.7],[76.5,69.5],[75.7,69.3],[75.0,69.0],[74.3,68.7],[73.7,68.3],[73.0,68.0],[72.4,67.5],[71.8,67.1],[71.2,66.6],[70.7,66.0],[70.2,65.5],[69.7,64.9],[69.2,64.3],[68.8,63.6],[68.5,63.0],[68.1,62.3],[67.8,61.6],[67.6,60.9],[67.4,60.1],[67.2,59.4],[67.1,58.6],[67.0,57.9],[67.0,57.1],[67.0,56.4],[67.1,55.6],[67.2,54.8],[67.3,54.1],[67.5,53.4],[67.8,52.6],[68.0,51.9],[68.3,51.2],[68.7,50.6],[69.1,49.9],[69.5,49.3],[70.0,48.7],[70.5,48.1],[71.0,47.6],[71.6,47.1],[72.2,46.6],[72.8,46.2],[73.5,45.8],[74.1,45.4],[74.8,45.1],[75.5,44.8],[76.3,44.6],[77.0,44.4],[77.7,44.2],[78.5,44.1],[79.2,44.0],[80.0,44.0],[80.8,44.0],[81.5,44.0],[82.3,44.0],[83.0,44.0],[83.8,44.0],[84.6,44.0],[85.3,44.0],[86.1,44.0],[86.8,44.0],[87.6,44.0],[88.4,44.0]]]};
+  var CHECKS = ["M75.52,96 L80.56,101.04 L89.2,90.24", "M96,96 H118", "M75.52,122 L80.56,127.04 L89.2,116.24", "M96,122 H118"];
+  function ease(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+  function clamp(v) { return Math.max(0, Math.min(1, v)); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function ringPath(a, b, t) {
+    var d = '';
+    for (var i = 0; i < a.length; i++) d += (i ? 'L' : 'M') + f(lerp(a[i][0], b[i][0], t)) + ',' + f(lerp(a[i][1], b[i][1], t));
+    return d + 'Z';
+  }
+  function morphPath(to, t) { var d = ''; for (var k = 0; k < to.length; k++) d += ringPath(RINGS.clive[k], to[k], t) + ' '; return d; }
+  var START = [42, 42, 116, 116];
+  function boxAt(end, t) { return [lerp(START[0], end[0], t), lerp(START[1], end[1], t), lerp(START[2], end[2], t), lerp(START[3], end[3], t)].map(f).join(' '); }
+  // loop: hold Clive, change into the logo, hold the logo, change back
+  var LOOP = 6400;
+  function phase(ms) { var p = ms % LOOP; return p < 900 ? 0 : p < 2300 ? ease((p - 900) / 1400) : p < 4700 ? 1 : p < 5800 ? 1 - ease((p - 4700) / 1100) : 0; }
+  var CAMS = { house: [8, 24, 152, 152], todo: [14, 18, 170, 170], sat: [21, 17, 162, 162] };
+  var splashes = [
+    { id: 'sp-house', name: 'Church Drive', note: 'Clive\'s squares become the house and its window', box: CAMS.house, to: RINGS.house },
+    { id: 'sp-todo', name: 'To Do', note: 'and the clipboard, with its ticks', box: CAMS.todo, to: RINGS.todo },
+    { id: 'sp-sat', name: 'Satellites', note: 'one square turns round and the ripples go out', box: CAMS.sat }
+  ];
+  var sh = '';
+  splashes.forEach(function (sp) {
+    sh += '<div class="cell"><div class="icon" id="' + sp.id + '"><svg viewBox="42 42 116 116" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d=""/><g fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" class="ck"></g></svg></div><div class="cl">' + sp.name + '<small>' + sp.note + '</small></div></div>';
+  });
+  document.getElementById('splashes').innerHTML = sh;
+  var CLIVE_A = { x: 50.7, y: 73.3, w: 76, h: 76, r: 30 }, CLIVE_B = { x: 73.3, y: 50.7, w: 76, h: 76, r: 30 };
+  var SAT_A = { x: 20.7, y: 103.3, w: 76, h: 76, r: 30 }, SAT_B = { x: 45.3, y: 82.7, w: 72, h: 72, r: 36 };
+  function mix(a, b, t) { return { x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t), w: lerp(a.w, b.w, t), h: lerp(a.h, b.h, t), r: lerp(a.r, b.r, t) }; }
+  function rrs(s) { return rr(s.x, s.y, s.w, s.h, s.r); }
+  var els = splashes.map(function (sp) { var e = document.getElementById(sp.id); return { sp: sp, svg: e.querySelector('svg'), path: e.querySelector('path'), ck: e.querySelector('.ck') }; });
+  function splashTick(ms) {
+    var t = phase(ms), pp = (ms % LOOP);
+    els.forEach(function (o) {
+      o.svg.setAttribute('viewBox', boxAt(o.sp.box, t));
+      if (o.sp.to) {
+        o.path.setAttribute('d', morphPath(o.sp.to, t));
+        if (o.sp.id === 'sp-todo') {
+          var on = clamp((t - 0.7) / 0.3);
+          o.ck.innerHTML = CHECKS.map(function (c) { return '<path d="' + c + '" opacity="' + f(on) + '"/>'; }).join('');
+        }
+      } else {
+        // Satellites: the two squares slide down-left, the second becomes a circle, then the ripples go out in turn
+        var a = mix(CLIVE_A, SAT_A, t), b = mix(CLIVE_B, SAT_B, t);
+        var d = rrs(a) + ' ' + rrs(b);
+        var r = 0;
+        if (t >= 1 || (pp >= 4700 && pp < 5800)) r = 3; 
+        var k = pp < 2300 ? 0 : pp < 2750 ? 1 : pp < 3200 ? 2 : pp < 4700 ? 3 : (t > 0 ? 3 : 0);
+        if (pp >= 4700) k = t > 0.35 ? 3 : 0;
+        d += ' ' + SAT_ARCS.slice(0, k).join(' ');
+        o.path.setAttribute('d', d);
+      }
+    });
+    requestAnimationFrame(splashTick);
+  }
+  if (reduce) {
+    els.forEach(function (o) {
+      o.svg.setAttribute('viewBox', o.sp.box.join(' '));
+      o.path.setAttribute('d', o.sp.to ? morphPath(o.sp.to, 1) : (rrs(SAT_A) + ' ' + rrs(SAT_B) + ' ' + SAT_ARCS.join(' ')));
+      if (o.sp.id === 'sp-todo') o.ck.innerHTML = CHECKS.map(function (c) { return '<path d="' + c + '"/>'; }).join('');
+    });
+  } else requestAnimationFrame(splashTick);
+  // light and dark pages
+  var pl = document.getElementById('pl'), pd = document.getElementById('pd');
+  function page(dark) {
+    document.documentElement.setAttribute('data-page', dark ? 'dark' : 'light');
+    pl.setAttribute('aria-pressed', String(!dark)); pd.setAttribute('aria-pressed', String(dark));
+  }
+  pl.addEventListener('click', function () { page(false); });
+  pd.addEventListener('click', function () { page(true); });
+})();
+</script>
+

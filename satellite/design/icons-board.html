@@ -228,12 +228,29 @@ body{background:var(--bar-bg);color:var(--bar-fg);font-family:var(--ui);margin:0
     var t = 'translate(' + (100 + bx - 100 * sc) + ' ' + (114 + by - 100 * sc) + ') scale(' + sc + ')';
     return '<svg viewBox="0 0 200 200" aria-hidden="true"><defs><mask id="' + id + '" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="200"><path d="' + rrp(46 + bx, 22 + by, 108, 156, 44) + ' ' + rrp(68 + bx, 46 + by, 64, 12, 6) + '" fill="#fff" fill-rule="evenodd"/><path d="' + CLIVE + '" transform="' + t + '" fill="#000" fill-rule="evenodd"/>' + glyph + '</mask></defs><rect width="200" height="200" fill="currentColor" mask="url(#' + id + ')"/></svg>';
   }
+  // Clive's five poses, still, as in the app (the same shapes as the Clive Icons board)
+  var CP = {
+    idle: [[62, 62, 76, 76, 30, -11.3, 11.3], [62, 62, 76, 76, 30, 11.3, -11.3]],
+    mic: [[80, 40, 40, 64, 20, 0, 0], [66, 130, 68, 16, 8, 0, 0]],
+    stop: [[70, 70, 60, 60, 18, 0, 0]],
+    thinking: [[62, 62, 76, 76, 30, -11.3, 11.3, 1.2], [62, 62, 76, 76, 30, 11.3, -11.3, .8]],
+    speaking: [[64, 52, 30, 96, 15, 0, 0], [106, 52, 30, 48, 15, 0, 0]]
+  };
+  function drawClive(k) {
+    var d = CP[k].map(function (a) {
+      var sc = a[7] || 1, w = a[2] * sc, h = a[3] * sc, cx = a[0] + a[5] + a[2] / 2, cy = a[1] + a[6] + a[3] / 2;
+      return rrp(cx - w / 2, cy - h / 2, w, h, a[4] * sc);
+    }).join(' ');
+    if (k === 'speaking') d = rrp(64, 52, 30, 96, 15) + ' ' + rrp(106, 100 - 24 + 0, 30, 48, 15);
+    return '<svg viewBox="0 0 200 200" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="' + d + '"/></svg>';
+  }
   var NONEW = { mop: 1, wash: 1, find: 1, idle: 1, docked: 1, cleaning: 1, paused: 1, returning: 1, error: 1 };
   var NOOLD = { vac: 1 };
   var OLDMAP = { idle: 'idle', docked: 'docked', cleaning: 'cleaning', paused: 'paused', returning: 'returning', error: 'error', vac: 'vac', mop: 'mop', both: 'both', empty: 'empty', wash: 'wash', dry: 'dry', find: 'find', filter: 'filter', roller: 'roller', side: 'side', cloth: 'cloth', sensor: 'sensor', tray: 'tray' };
   var PERIOD = { idle: 1800, docked: 2200, cleaning: 1800, paused: 1800, returning: 1800, error: 1200, empty_a: 1800, empty_b: 1800, empty_c: 1800, dry_a: 1400, dry_b: 3600, dry_c: 2200, vac: 1800, empty: 2000, wash: 2200, dry: 2400, find: 1800 };
   var STILLT = { idle: 0, docked: 0.6, cleaning: 0.04, paused: 0, returning: 0.08, error: 0, empty_a: 0.45, empty_b: 0.4, empty_c: 0.5, dry_a: 0.05, dry_b: 0.05, dry_c: 0.1, empty: 0, wash: 0.55, dry: 0.05, find: 0.3, vac: 0.04 };
   var SECTIONS = [
+    ['Clive', 'Clive\'s five poses, still: idle, mic, stop, thinking and speaking. They move in the app; the Clive Icons board shows them animated, and the splash screens.', [['c:idle', 'Idle'], ['c:mic', 'Mic'], ['c:stop', 'Stop'], ['c:thinking', 'Thinking'], ['c:speaking', 'Speaking']]],
     ['Buttons', 'Bare glyphs, no disc or ring.', [['s:play', 'Play'], ['s:pause', 'Pause'], ['s:stop', 'Stop'], ['s:home', 'Home / Dock'], ['s:home-away', 'Home (away)']]],
     ['Settings', 'The settings cog: the six-spoke Material cog with its outer spokes rounded (R2), solid and outline. Used in the account panel and as the badge on the satellite icon.', [['s:settings', 'Settings'], ['s:settings-outline', 'Settings (outline)']]],
     ['Satellites app', 'The satellite icon (a tall speaker with its light ring and Clive\'s own logo cut out) and the icons built on it: a badge cut out of a solid disc at the bottom right. The rounded Settings cog above is the cog badge. Black and white, as they appear in the app.', [['v:plain', 'Satellite'], ['v:plus', 'Add a satellite'], ['v:history', 'Open the one I left'], ['v:cog', 'Satellite settings'], ['v:volume', 'Sound'], ['v:mic', 'Voice (Clive\'s mic)'], ['v:update', 'Firmware'], ['v:pin', 'Name and room'], ['v:tap', 'Actions'], ['v:copy', 'Presets and copying'], ['m:content-copy', 'Copy']]],
@@ -253,6 +270,7 @@ body{background:var(--bar-bg);color:var(--bar-fg);font-family:var(--ui);margin:0
     s[2].forEach(function (n) {
       var id = n[0], anim = n[2], hasOld = OLDMAP[id];
       if (id.indexOf('o:') === 0) { id.slice(2).split('|').forEach(function (k) { html += '<div class="pairc"><div class="pr"><div class="cell"><div class="icon">' + drawOwn(k) + '</div></div></div><div class="cl2"><b>' + k + '</b></div></div>'; }); return; }
+      if (id.indexOf('c:') === 0) { html += '<div class="pairc"><div class="pr"><div class="cell"><div class="icon">' + drawClive(id.slice(2)) + '</div></div></div><div class="cl2"><b>' + n[1] + '</b></div></div>'; return; }
       if (id.indexOf('v:') === 0) { html += '<div class="pairc"><div class="pr"><div class="cell"><div class="icon">' + drawDev(id.slice(2)) + '</div></div></div><div class="cl2"><b>' + n[1] + '</b></div></div>'; return; }
       if (id.indexOf('s:') === 0 || id.indexOf('m:') === 0) { html += '<div class="pairc"><div class="pr"><div class="cell"><div class="icon">' + (id.charAt(0) === 's' ? drawShape(id.slice(2)) : drawMdi(id.slice(2))) + '</div></div></div><div class="cl2"><b>' + n[1] + '</b></div></div>'; return; }
       html += '<div class="pairc"><div class="pr">';
