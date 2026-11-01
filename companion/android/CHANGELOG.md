@@ -6,7 +6,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 ## 0.94.3
 
-- Settings: Clive's own microphone (the capsule over a bar his mark turns into) replaces Material's on his four rows and on the small "listening" mark in the top bar. Google push shows the Google G in its colours. The sidebar's To-do row uses the To-Do logo. The Manager row uses the solid cog, and the camera clip play and pause buttons use the house's own play and pause.
+- Settings: Clive's own microphone (the capsule over a bar his mark turns into) replaces Material's on his four rows and on the small "listening" mark in the top bar. Google push shows the Google G in its colours. The sidebar's To-do row uses the To-Do logo. The Manager row uses the solid cog, and the camera clip play and pause buttons use the house's own play and pause. The house's own icons (`CdIcons`) moved into the shared module so the other apps can draw them; the watch now shows the house's house wherever it showed Material's home.
 
 ## 0.94.2
 

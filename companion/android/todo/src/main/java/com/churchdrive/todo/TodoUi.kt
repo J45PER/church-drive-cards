@@ -82,11 +82,15 @@ private fun TodoTab.icon(): ImageVector = when (this) {
     TodoTab.House -> Icons.Filled.Home
 }
 
-/** A tab's icon: the House tab uses the house's own house, the others Material's. */
+/** A tab's icon: the house's own house for House and Gregg for Cleaning, Material's for the others. */
 @Composable
 private fun TabIcon(tab: TodoTab) {
-    if (tab == TodoTab.House) Icon(androidx.compose.ui.res.painterResource(com.churchdrive.core.R.drawable.cd_house), contentDescription = null)
-    else Icon(tab.icon(), contentDescription = null)
+    when (tab) {
+        TodoTab.House -> Icon(androidx.compose.ui.res.painterResource(com.churchdrive.core.R.drawable.cd_house), contentDescription = null)
+        // Gregg, the robot vacuum, as on the phone's Cleaning page.
+        TodoTab.Cleaning -> com.churchdrive.app.ui.CdIcon("cd:vac", androidx.compose.material3.LocalContentColor.current, 24.dp)
+        else -> Icon(tab.icon(), contentDescription = null)
+    }
 }
 
 /**

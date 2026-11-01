@@ -5,7 +5,7 @@ Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newe
 
 ## 0.94.3
 
-- Clive's own microphone replaces Material's on the button that speaks to him. The House tab and its jobs use the house's own house.
+- Clive's own microphone replaces Material's on the button that speaks to him. The House tab and its jobs use the house's own house, and the Cleaning tab shows Gregg.
 
 ## 0.94.2
 

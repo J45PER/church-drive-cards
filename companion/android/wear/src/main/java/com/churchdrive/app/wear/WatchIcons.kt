@@ -146,6 +146,8 @@ private fun pathFor(name: String): Path? = parsed.getOrPut(name) {
 /** A Material Design icon by name without the "mdi:" (for example "shield-home"). Draws nothing for a name it doesn't have. */
 @Composable
 fun WIcon(name: String, tint: Color, size: Dp, modifier: Modifier = Modifier) {
+    // The house's own icon where there is one (the house for home), the same ones the phone shows.
+    if (com.churchdrive.app.ui.CdIcon("mdi:$name", tint, size, modifier)) return
     val path = pathFor(name)
     Canvas(modifier.size(size)) {
         if (path != null) {

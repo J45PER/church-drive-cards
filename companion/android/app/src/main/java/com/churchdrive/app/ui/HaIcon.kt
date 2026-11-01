@@ -26,21 +26,7 @@ import com.churchdrive.app.ha.IconPack
 fun HaIcon(iconName: String?, fallback: ImageVector, tint: Color, size: Dp, modifier: Modifier = Modifier) {
     // `cd:` icons are the house's own set (CdIcons); a few Hue-pack names the dashboards use are drawn with them instead.
     val icon = CdIcons.alias(iconName)
-    val cd = icon?.takeIf { it.startsWith("cd:") }?.removePrefix("cd:")?.let { CdIcons.icons[it] }
-    if (cd != null) {
-        val paths = remember(cd) { cd.map { runCatching { PathParser().parsePathString(it.d).toPath().apply { fillType = PathFillType.EvenOdd } }.getOrNull() } }
-        Canvas(modifier.size(size)) {
-            val s = this.size.minDimension / 200f
-            scale(s, s, pivot = Offset.Zero) {
-                cd.forEachIndexed { i, shape ->
-                    val path = paths[i] ?: return@forEachIndexed
-                    if (shape.scale != 1f) scale(shape.scale, pivot = Offset(100f, 100f)) { drawPath(path, color = tint, alpha = shape.alpha) }
-                    else drawPath(path, color = tint, alpha = shape.alpha)
-                }
-            }
-        }
-        return
-    }
+    if (CdIcon(icon, tint, size, modifier)) return
     val name = icon?.takeIf { it.startsWith("phu:") }?.removePrefix("phu:")
     val pack = IconPack.text
     val all = MdiAll.paths
