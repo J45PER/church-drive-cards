@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.95.5
+
+- Fixed the wake-word row in Settings (and the small microphone in the top bar) flicking between "Listening" and "On, but not listening yet (last: ...)": the house's quiet timeouts are now restarted without leaving the waiting state. The Google G on Google push is one colour like the other icons. Notifications and Notification styles use Clive's own chat icon (his two squircles with a tail) instead of the Material bell, and his microphone is drawn 30% larger.
+
 ## 0.95.4
 
 No app changes.

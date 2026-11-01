@@ -354,6 +354,7 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
             PanelRow(
                 Icons.Outlined.Notifications, "Notifications",
                 "Messages from the house, such as the doorbell or an alarm, come to this phone.",
+                leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_clive_chat), contentDescription = null) },
                 trailing = {
                     Switch(checked = settings.notifyOn, onCheckedChange = { on ->
                         message = null
@@ -367,6 +368,7 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
             PanelRow(
                 Icons.Outlined.Notifications, "Notification styles",
                 "Choose which notifications you get, and whether each one pops up, is quiet or is off on this phone.",
+                leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_clive_chat), contentDescription = null) },
                 onClick = { showStyles = true },
             )
             if (showStyles) NoticeStylesPage(isAdmin) { showStyles = false }
@@ -438,7 +440,7 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                 PanelRow(
                     Icons.Outlined.Notifications, "Google push",
                     "$pushStatus. Tap to try again.",
-                    leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_google_g), contentDescription = null, tint = androidx.compose.ui.graphics.Color.Unspecified) },
+                    leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_google_g), contentDescription = null) },
                     onClick = { com.churchdrive.app.house.GooglePush.register(context) },
                 )
             }

@@ -191,6 +191,7 @@ private fun SettingsPage(vm: TodoModel, onBack: () -> Unit) {
                 // Reminders, the doorbell and alarms are all delivered to the phone by the Church Drive app (including Google push), once; this
                 // app never posts its own, so there is nothing to switch on or off here and no second copy to arrive.
                 "Task reminders and alerts from the house come through the Church Drive app, which also sets up Google push. Tap to open it and choose what you get.",
+                leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_clive_chat), contentDescription = null) },
                 onClick = { openChurchDrive(context) },
             )
         }

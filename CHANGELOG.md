@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **v0.95.5 + app 0.95.5 + To-Do 0.95.5 + Satellites 0.95.5** (2026-11-01): the wake-word row and the top bar's microphone no longer flicker between listening and not listening, the Google G is one colour like the other icons, and Notifications uses Clive's own chat icon (two squircles with a tail) instead of the Material bell.
 - **v0.95.4 + app 0.95.4 + To-Do 0.95.4 + Satellites 0.95.4** (2026-11-01): fixes the Satellites app crashing on launch since 0.95.0 (a setting was created after the line that first set it).
 - **v0.95.3 + app 0.95.3 + To-Do 0.95.3 + Satellites 0.95.3** (2026-11-01): the Satellites app shows the error of a crash the next time it opens, to find a crash on launch.
 - **v0.95.2 + app 0.95.2 + To-Do 0.95.2 + Satellites 0.95.2** (2026-11-01): fixes the Satellites app crashing when a satellite is opened: its badged satellite icons were too long for Android to load safely (the same cause as the 0.94.1 cog fix); they are simplified.
