@@ -31,6 +31,7 @@ body { background: var(--bar-bg); color: var(--bar-fg); font-family: var(--ui); 
 .card.picked { border-color: var(--pick); box-shadow: 0 0 0 2px var(--pick); }
 .card h3 { margin: 0; font-size: 1rem; font-weight: 600; }
 .card h3 span { font-family: var(--mono); font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: var(--stage-soft); font-weight: 500; margin-left: 8px; }
+.note code { font-family: var(--mono); font-size: .8rem; }
 .why { margin: 0; color: var(--stage-soft); font-size: .82rem; }
 .show { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
 .big { width: 104px; height: 104px; border: 1px solid var(--stage-line); border-radius: 22px; display: grid; place-items: center; padding: 14px; color: var(--stage-fg); }
@@ -50,7 +51,7 @@ body { background: var(--bar-bg); color: var(--bar-fg); font-family: var(--ui); 
 </style>
 
 <div class="top">
-  <div><h1>Satellite device icons</h1><p>Six ideas for the icon that stands for a satellite or smart speaker, drawn in the Church Drive way: one flat shape, the details cut out of it, Clive's rounded square tucked in as an option.</p></div>
+  <div><h1>Satellite device icons</h1><p>Idea F, Clive in a speaker, done properly: Clive's own logo path from the brand files, scaled evenly and never redrawn, cut out of the speaker.</p></div>
   <div class="ctl">
     <div class="seg" role="group" aria-label="Style" id="styles">
       <button type="button" data-s="plain" aria-pressed="true">Plain</button>
@@ -60,12 +61,13 @@ body { background: var(--bar-bg); color: var(--bar-fg); font-family: var(--ui); 
   </div>
 </div>
 <div class="stage"><div class="in">
-  <p class="note">The shapes come from your sheet: the tall cylinder, the low puck, the dome, the speaker with waves, and our own round screen. Each is one solid shape with a light, a dock or a speaker grille cut out of it. "With Clive's block" tucks a small rounded square into the top-right corner and cuts it out where they overlap, as on the house and the clipboard. Each card shows the icon large, as the bottom-bar tab (26 px), as a satellite's row (the circle in the list) and as the "On the satellite" header.</p>
+  <p class="note">The first card is Clive's logo exactly as it is in <code>branding/clive.svg</code>. In every other card that same path is used as it is, only scaled evenly (the number under each is the scale), and cut out of the speaker, so the squares keep their size, their corners and their spacing. Last time I rebuilt the mark from two squares of my own, which is why it looked wrong. "With Clive's block" adds a small rounded square in the top-right corner, as on the house and the clipboard. Each card shows the icon large, as the bottom-bar tab, as a satellite's row and as the "On the satellite" header.</p>
   <div class="grid" id="grid"></div>
 </div></div>
 
 <script>
 (function () {
+  var CLIVE = "M103.3,50.7L119.3,50.7C135.87,50.7 149.3,64.13 149.3,80.7L149.3,96.7C149.3,110.98 139.32,122.93 125.96,125.96C122.93,139.32 110.98,149.3 96.7,149.3L80.7,149.3C64.13,149.3 50.7,135.87 50.7,119.3L50.7,103.3C50.7,89.02 60.68,77.07 74.04,74.04C77.07,60.68 89.02,50.7 103.3,50.7ZM80.7,73.3C78.41,73.3 76.18,73.56 74.04,74.04C73.56,76.18 73.3,78.41 73.3,80.7L73.3,96.7C73.3,113.27 86.73,126.7 103.3,126.7L119.3,126.7C121.59,126.7 123.82,126.44 125.96,125.96C126.44,123.82 126.7,121.59 126.7,119.3L126.7,103.3C126.7,86.73 113.27,73.3 96.7,73.3Z";   // branding/clive.svg, verbatim: two rounded squares 76 wide, corner 30, the overlap cut out, in a 200 unit box
   function f(v) { return (Math.round(v * 100) / 100).toString(); }
   function rr(x, y, w, h, r) {
     r = Math.max(0, Math.min(r, w / 2, h / 2));
@@ -73,50 +75,48 @@ body { background: var(--bar-bg); color: var(--bar-fg); font-family: var(--ui); 
       ' A' + f(r) + ',' + f(r) + ' 0 0 1 ' + f(x + w - r) + ',' + f(y + h) + ' H' + f(x + r) + ' A' + f(r) + ',' + f(r) + ' 0 0 1 ' + f(x) + ',' + f(y + h - r) +
       ' V' + f(y + r) + ' A' + f(r) + ',' + f(r) + ' 0 0 1 ' + f(x + r) + ',' + f(y) + 'Z';
   }
-  function circ(cx, cy, r) { return 'M' + f(cx - r) + ',' + f(cy) + ' a' + f(r) + ',' + f(r) + ' 0 1,0 ' + f(2 * r) + ',0 a' + f(r) + ',' + f(r) + ' 0 1,0 ' + f(-2 * r) + ',0Z'; }
-  function pt(cx, cy, r, a) { var x = a * Math.PI / 180; return [cx + r * Math.cos(x), cy + r * Math.sin(x)]; }
-  function P(p) { return f(p[0]) + ',' + f(p[1]); }
-  function arc(cx, cy, r1, r2, a0, a1) {
-    var cr = (r2 - r1) / 2, rm = (r1 + r2) / 2, off = Math.min(cr / rm * 180 / Math.PI, Math.abs(a1 - a0) / 2 - 0.5), b0 = a0 + off, b1 = a1 - off;
-    var o0 = pt(cx, cy, r2, b0), o1 = pt(cx, cy, r2, b1), i1 = pt(cx, cy, r1, b1), i0 = pt(cx, cy, r1, b0), big = Math.abs(b1 - b0) > 180 ? 1 : 0;
-    return 'M' + P(o0) + ' A' + r2 + ',' + r2 + ' 0 ' + big + ',1 ' + P(o1) + ' A' + f(cr) + ',' + f(cr) + ' 0 0 1 ' + P(i1) + ' A' + r1 + ',' + r1 + ' 0 ' + big + ',0 ' + P(i0) + ' A' + f(cr) + ',' + f(cr) + ' 0 0 1 ' + P(o0) + 'Z';
-  }
-  // Clive's block, small, tucked into a corner
   function block(x, y) { return rr(x, y, 54, 54, 21); }
 
+  // mark: where its centre goes and how big (scale 1 is the logo at its own size, 98.6 wide)
   var IDEAS = [
-    { id: 'A', name: 'Tall speaker', why: 'The tall cylinder of a smart speaker, with its light ring cut across the top.',
-      body: rr(60, 30, 80, 144, 32) + ' ' + rr(76, 54, 48, 12, 6), block: block(112, 14) },
-    { id: 'B', name: 'Puck', why: 'The low round speaker: a wide pill with its light bar cut through the middle.',
-      body: rr(22, 88, 156, 80, 40) + ' ' + rr(54, 114, 92, 14, 7), block: block(118, 44) },
-    { id: 'C', name: 'Round screen', why: 'Our own satellite: the round display with its dock cut into the bottom.',
-      body: circ(98, 106, 68) + ' ' + rr(68, 152, 60, 12, 6), block: block(122, 20) },
-    { id: 'D', name: 'Speaker with waves', why: 'A tall speaker with two ripples going out of it, like the app icon.',
-      body: rr(30, 40, 74, 136, 30) + ' ' + rr(44, 62, 46, 12, 6) + ' ' + arc(112, 110, 22, 34, -44, 44) + ' ' + arc(112, 110, 46, 58, -44, 44), block: block(122, 12) },
-    { id: 'E', name: 'Dome', why: 'The small dome of a mini speaker, with three lights cut into its face and a flat foot.',
-      body: 'M26,150 A74,74 0 0 1 174,150 Z ' + circ(72, 122, 8) + ' ' + circ(100, 122, 8) + ' ' + circ(128, 122, 8) + ' ' + rr(40, 158, 120, 16, 8), block: block(120, 36) },
-    { id: 'F', name: 'Clive in a speaker', why: 'A tall speaker with Clive\'s own mark cut out of its face.',
-      body: rr(44, 26, 112, 148, 42) + ' ' + rr(68, 92, 44, 44, 17) + ' ' + rr(88, 66, 44, 44, 17), block: block(124, 10) }
+    { id: 'F1', name: 'Centred', why: 'A tall speaker with the mark in the middle of its face.',
+      body: rr(46, 22, 108, 156, 44), mark: { x: 100, y: 100, s: 0.64 }, block: block(120, 8) },
+    { id: 'F2', name: 'With a light ring', why: 'The tall speaker with its light ring across the top and the mark below it.',
+      body: rr(46, 22, 108, 156, 44) + ' ' + rr(68, 46, 64, 12, 6), mark: { x: 100, y: 114, s: 0.56 }, block: block(120, 8) },
+    { id: 'F3', name: 'Wide', why: 'A wider, rounder speaker with a bigger mark, closer to the app icon\'s proportions.',
+      body: rr(28, 36, 144, 128, 52), mark: { x: 100, y: 100, s: 0.74 }, block: block(124, 14) },
+    { id: 'F4', name: 'With a dock', why: 'The tall speaker with the mark and, under it, the satellite\'s dock bar.',
+      body: rr(46, 22, 108, 156, 44) + ' ' + rr(76, 140, 48, 10, 5), mark: { x: 100, y: 92, s: 0.56 }, block: block(120, 8) }
   ];
 
-  var style = 'plain', picked = null;
-  try { picked = localStorage.getItem('satDevicePick'); } catch (e) {}
-  function svg(i) { return '<svg viewBox="0 0 200 200" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="' + i.body + (style === 'block' ? ' ' + i.block : '') + '"/></svg>'; }
+  var uid = 0, style = 'plain', picked = null;
+  try { picked = localStorage.getItem('satDevicePickF'); } catch (e) {}
+  // the speaker is a solid mask; Clive's own path, scaled and moved but not redrawn, is cut out of it
+  function svg(i) {
+    var n = ++uid, m = i.mark, t = 'translate(' + f(m.x - 100 * m.s) + ' ' + f(m.y - 100 * m.s) + ') scale(' + m.s + ')';
+    var body = i.body + (style === 'block' ? ' ' + i.block : '');
+    return '<svg viewBox="0 0 200 200" aria-hidden="true"><defs><mask id="k' + n + '" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="200">' +
+      '<path d="' + body + '" fill="#fff" fill-rule="evenodd"/><path d="' + CLIVE + '" transform="' + t + '" fill="#000" fill-rule="evenodd"/></mask></defs>' +
+      '<rect width="200" height="200" fill="currentColor" mask="url(#k' + n + ')"/></svg>';
+  }
+  function ref() { return '<svg viewBox="30.7 30.7 138.6 138.6" aria-hidden="true"><path d="' + CLIVE + '" fill="currentColor" fill-rule="evenodd"/></svg>'; }
   function render() {
-    document.getElementById('grid').innerHTML = IDEAS.map(function (i) {
+    var cards = '<article class="card"><h3>Clive\'s logo<span>reference</span></h3><p class="why">The mark as it is in the brand files, drawn here from the same path, untouched.</p><div class="show"><div class="big">' + ref() + '</div><div class="ctx"><div class="tab" style="max-width:150px">Scale 1. Squares 76 wide, corners 30, overlap cut.</div></div></div></article>';
+    cards += IDEAS.map(function (i) {
       return '<article class="card' + (picked === i.id ? ' picked' : '') + '"><h3>' + i.name + '<span>Idea ' + i.id + '</span></h3><p class="why">' + i.why + '</p>' +
         '<div class="show"><div class="big">' + svg(i) + '</div><div class="ctx">' +
-          '<div class="tab">' + svg(i) + ' Satellites (tab)</div>' +
+          '<div class="tab">' + svg(i) + ' Satellites (tab) &middot; scale ' + i.mark.s + '</div>' +
           '<div class="hd"><span class="disc r">' + svg(i) + '</span> A satellite</div>' +
           '<div class="hd"><span class="disc h">' + svg(i) + '</span> On the satellite</div>' +
         '</div></div><button class="pickbtn" type="button" data-id="' + i.id + '">' + (picked === i.id ? 'Picked' : 'Pick this one') + '</button></article>';
     }).join('');
+    document.getElementById('grid').innerHTML = cards;
   }
   render();
   document.getElementById('grid').addEventListener('click', function (e) {
     var b = e.target.closest('.pickbtn'); if (!b) return;
     picked = picked === b.dataset.id ? null : b.dataset.id;
-    try { if (picked) localStorage.setItem('satDevicePick', picked); else localStorage.removeItem('satDevicePick'); } catch (x) {}
+    try { if (picked) localStorage.setItem('satDevicePickF', picked); else localStorage.removeItem('satDevicePickF'); } catch (x) {}
     render();
   });
   var segs = [].slice.call(document.querySelectorAll('#styles button'));
