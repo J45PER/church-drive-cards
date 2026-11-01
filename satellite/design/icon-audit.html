@@ -44,6 +44,9 @@ h2 { font-size: .8rem; font-family: var(--mono); letter-spacing: .1em; text-tran
 .lbl span { color: var(--stage-soft); font-size: .78rem; }
 .bare { color: var(--stage-fg); }
 .row { display: flex; flex-wrap: wrap; gap: 18px 22px; align-items: flex-end; }
+.sz { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px 22px; align-items: flex-end; color: var(--stage-fg); padding-top: 2px; }
+.szi { display: grid; gap: 3px; justify-items: center; }
+.szi i { font-style: normal; font-size: .62rem; color: var(--stage-soft); }
 .fig { display: grid; gap: 6px; justify-items: center; font-size: .78rem; color: var(--stage-soft); text-align: center; }
 .fig .art { display: grid; place-items: center; }
 .mask { overflow: hidden; box-shadow: 0 0 0 1px var(--stage-line), 0 4px 12px rgba(0,0,0,.25); }
@@ -121,7 +124,7 @@ h2 { font-size: .8rem; font-family: var(--mono); letter-spacing: .1em; text-tran
     var t = 'translate(' + (100 + bx - 100 * sc) + ' ' + (114 + by - 100 * sc) + ') scale(' + sc + ')';
     var glyph = '';
     if (badge) {
-      var gs = badge.scale || 0.36, gt = 'translate(' + (146 - 100 * gs) + ' ' + (146 - 100 * gs) + ') scale(' + gs + ')';
+      var gs = badge.scale || 0.36, bxs = (badge.box || 200) / 2, gt = 'translate(' + (146 - bxs * gs) + ' ' + (146 - bxs * gs) + ') scale(' + gs + ')';
       glyph = '<circle cx="146" cy="146" r="50" fill="#000"/><circle cx="146" cy="146" r="40" fill="#fff"/>' +
         (badge.stroke ? '<path d="' + badge.d + '" transform="' + gt + '" fill="none" stroke="#000" stroke-width="' + badge.stroke + '" stroke-linecap="round" stroke-linejoin="round"/>'
                       : '<path d="' + badge.d + '" transform="' + gt + '" fill="#000" fill-rule="' + (badge.rule || 'evenodd') + '"/>');
@@ -132,7 +135,7 @@ h2 { font-size: .8rem; font-family: var(--mono); letter-spacing: .1em; text-tran
   }
   function ic(name, px) {
     if (name === 'device') return device(px);
-    if (name.indexOf('device+') === 0 && name !== 'device+plus') { var key = name.slice(7); return device(px, key === 'mic-clive' ? { d: MICPOSE, box: 200, scale: 0.34, rule: 'evenodd' } : { d: MDI[key], box: 24, scale: 2.0, rule: 'nonzero' }); }
+    if (name.indexOf('device+') === 0 && name !== 'device+plus') { var key = name.slice(7); return device(px, key === 'mic-clive' ? { d: MICPOSE, box: 200, scale: 0.5, rule: 'evenodd' } : { d: MDI[key], box: 24, scale: 2.0, rule: 'nonzero' }); }
     if (name === 'device+plus') return device(px, { d: 'M100,52 V148 M52,100 H148', stroke: 18, scale: 0.36 });
     if (name === 'cd:home') return '<svg width="' + px + '" height="' + px + '" viewBox="0 0 200 200" aria-hidden="true"><path fill="currentColor" d="' + CDHOME + '"/></svg>';
     return '<svg width="' + px + '" height="' + px + '" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="' + MDI[name] + '"/></svg>';
@@ -142,21 +145,23 @@ h2 { font-size: .8rem; font-family: var(--mono); letter-spacing: .1em; text-tran
   function strengthsItem() {
     var rows = [['Excellent', 'wifi-strength-4', 'green'], ['Good', 'wifi-strength-3', 'green'], ['Fair', 'wifi-strength-2', 'amber'], ['Weak', 'wifi-strength-1', 'red'], ['Offline', 'wifi-strength-off-outline', 'grey']];
     return '<div class="it" style="grid-column: 1 / -1">' + num() + '<div class="lbl"><b>Status</b><span>section &middot; the icon follows the Wi-Fi signal (was info)</span></div><div class="row" style="grid-column:1/-1;gap:18px">' +
-      rows.map(function (r) { return '<div class="fig"><span class="disc" style="' + tint(r[2]) + '">' + ic(r[1], 20) + '</span>' + r[0] + '</div>'; }).join('') + '</div>' +
+      rows.map(function (r) { return '<div class="fig"><span class="disc" style="' + tint(r[2]) + '">' + ic(r[1], 20) + '</span>' + r[0] + '</div>'; }).join('') + '</div><div class="sz" style="gap:10px 30px">' + rows.map(function (r) { return '<span class="szi" style="grid-auto-flow:column;gap:8px;align-items:end">' + [20, 28, 40].map(function (px) { return ic(r[1], px); }).join('') + '</span>'; }).join('') + '</div>' +
       '<div class="from">the signal bars the main app\'s cameras use (CameraData.kt signalIconName): excellent above -55 dBm, good, fair, weak below -75, offline when it can\'t be reached (16)</div></div>';
   }
   // #20: the satellite icon with a copy badge for the section, and the plain copy icon where copying is the action
   function presetsItem() {
     return '<div class="it">' + num() + '<div class="row" style="gap:14px"><span class="disc" style="' + tint('orange') + '">' + ic('device+content-copy', 20) + '</span><span class="bare">' + ic('content-copy', 24) + '</span></div><div class="lbl"><b>Presets and copying</b><span>section</span></div>' +
+      '<div class="sz" style="gap:10px 26px">' + sizesRow('device+content-copy').replace('class="sz"', 'class="sz" style="padding:0"') + sizesRow('content-copy', [20, 28, 40]) + '</div>' +
       '<div class="from"><s>was content copy</s> &rarr; the satellite icon with a copy badge for the section header (20C); the plain copy icon (<code>content-copy</code>) where the action is just copying, such as the "Copy these settings" tile if it gets an icon</div></div>';
   }
   // one row: the icon the app would now draw, and underneath what it is today and where the main app already uses the new one
+  function sizesRow(name, list) { return '<div class="sz">' + (list || [20, 28, 40, 64]).map(function (px) { return '<span class="szi">' + ic(name, px) + '<i>' + px + '</i></span>'; }).join('') + '</div>'; }
   function swap(kind, mdiName, tone, title, where, was, from) {
     var art;
     if (kind === 'head') art = '<span class="disc" style="' + tint(tone) + '">' + ic(mdiName, 20) + '</span>';
     else if (kind === 'row') art = '<span class="disc l" style="' + tint(tone) + '">' + ic(mdiName, 22) + '</span>';
     else art = '<span class="bare">' + ic(mdiName, 28) + '</span>';
-    return '<div class="it">' + num() + art + '<div class="lbl"><b>' + title + '</b><span>' + where + '</span></div>' +
+    return '<div class="it">' + num() + art + '<div class="lbl"><b>' + title + '</b><span>' + where + '</span></div>' + (kind === 'bare' ? '' : sizesRow(mdiName)) +
       '<div class="from">' + (was ? '<s>was ' + was + '</s> &rarr; ' : '') + '<code>' + mdiName + '</code> &middot; ' + from + '</div></div>';
   }
   out += '<section><h2>Bottom bar and top bar</h2><p class="lead">Swapped to the icons the main app already uses for the same things.</p><div class="grid">' +
