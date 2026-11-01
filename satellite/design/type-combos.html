@@ -20,10 +20,10 @@ body { background:var(--bar-bg); color:var(--bar-fg); font-family:var(--ui); mar
 .card p { margin:0; color:var(--stage-soft); font-size:.8rem; }
 .lock { display:flex; align-items:center; gap:14px; }
 .lock svg { width:38px; height:38px; flex:none; color:var(--stage-fg); }
-.t { display:flex; align-items:baseline; gap:8px; white-space:nowrap; min-width:0; }
+.t { display:flex; align-items:baseline; gap:.3em; white-space:nowrap; min-width:0; font-size:34px; line-height:1.1; }
 @media (max-width:720px) { .in { grid-template-columns:minmax(0,1fr); } }
 </style>
-<div class="top"><div><h1>Clive type combinations</h1><p>Instrument Sans now has all four weights in the apps: Regular, Medium, SemiBold and Bold. Eight ways to set "Clive" and the app's name together, shown on all three apps. The numbers are the font sizes and weights in the splash.</p></div>
+<div class="top"><div><h1>Clive type combinations</h1><p>Instrument Sans now has all four weights in the apps: Regular, Medium, SemiBold and Bold. Every pairing of the four weights, with "Clive" the heavier one. Both words are the same size and colour, so only the weight changes. Shown on all three apps.</p></div>
 <div class="seg" role="group" aria-label="Page"><button type="button" id="pl" aria-pressed="true">Light</button><button type="button" id="pd" aria-pressed="false">Dark</button></div></div>
 <div class="stage"><div class="in" id="in"></div></div>
 <script>
@@ -43,20 +43,18 @@ body { background:var(--bar-bg); color:var(--bar-fg); font-family:var(--ui); mar
   }
   // Clive: weight, size; app name: weight, size, opacity, letter spacing, case
   var COMBOS = [
-    { n: '1. Bold and Regular', c: [700, 42], s: [400, 19, .85, 0, 0], note: 'Clive in Bold, the name in plain Regular: the biggest step between them.' },
-    { n: '2. Bold and Medium', c: [700, 42], s: [500, 19, .85, 0, 0], note: 'The same, with the name a touch firmer.' },
-    { n: '3. Bold, smaller name', c: [700, 44], s: [400, 16, .85, 0, 0], note: 'The name is reduced further; Clive leads.' },
-    { n: '4. SemiBold and Regular', c: [600, 42], s: [400, 19, .85, 0, 0], note: 'Clive as it is now, with the name lightened to Regular.' },
-    { n: '5. Bold, closer in size', c: [700, 36], s: [500, 24, .8, 0, 0], note: 'The two read as one phrase: Clive Bold, the name Medium and nearly as big.' },
-    { n: '6. Bold and SemiBold', c: [700, 42], s: [600, 19, .75, 0, 0], note: 'The name keeps its weight but fades back.' },
-    { n: '7. Bold, spaced name', c: [700, 46], s: [400, 15, .8, .02, 0], note: 'A small, lightly spaced name, like a caption.' },
-    { n: '8. Bold, capitals', c: [700, 42], s: [500, 12, .8, .14, 1], note: 'The name in small capitals with wide spacing, like a logo lock-up.' }
+    { n: '1. Bold and Regular', c: 700, s: 400, note: 'The biggest step: Clive at its heaviest, the name at its lightest.' },
+    { n: '2. Bold and Medium', c: 700, s: 500, note: 'Clive Bold, the name a step firmer than Regular.' },
+    { n: '3. Bold and SemiBold', c: 700, s: 600, note: 'The two closest together at the top of the range.' },
+    { n: '4. SemiBold and Regular', c: 600, s: 400, note: 'Clive as it is now, with the name lightened.' },
+    { n: '5. SemiBold and Medium', c: 600, s: 500, note: 'A gentler step all round.' },
+    { n: '6. Medium and Regular', c: 500, s: 400, note: 'The lightest pairing: little difference, calm.' }
   ];
   var host = document.getElementById('in');
   COMBOS.forEach(function (c) {
     var h = '<div class="card"><h2>' + c.n + '</h2><p>' + c.note + '</p>';
     APPS.forEach(function (a) {
-      h += '<div class="lock">' + logo(a.id) + '<div class="t"><span style="font-weight:' + c.c[0] + ';font-size:' + c.c[1] + 'px;line-height:1">Clive</span><span style="font-weight:' + c.s[0] + ';font-size:' + c.s[1] + 'px;opacity:' + c.s[2] + ';letter-spacing:' + c.s[3] + 'em;' + (c.s[4] ? 'text-transform:uppercase;' : '') + '">' + a.sub + '</span></div></div>';
+      h += '<div class="lock">' + logo(a.id) + '<div class="t"><span style="font-weight:' + c.c + '">Clive</span><span style="font-weight:' + c.s + '">' + a.sub + '</span></div></div>';
     });
     host.insertAdjacentHTML('beforeend', h + '</div>');
   });
