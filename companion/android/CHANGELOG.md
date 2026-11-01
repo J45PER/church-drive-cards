@@ -6,7 +6,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 ## 0.95.3
 
-- Fixed the wake-word row in Settings (and the small microphone in the top bar) flicking between "Listening" and "On, but not listening yet (last: ...)": the house's quiet timeouts are now restarted without leaving the waiting state. The Google G on Google push is one colour like the other icons.
+- Fixed the wake-word row in Settings (and the small microphone in the top bar) flicking between "Listening" and "On, but not listening yet (last: ...)": the house's quiet timeouts are now restarted without leaving the waiting state. The Google G on Google push is one colour like the other icons. Notifications and Notification styles use Clive's own chat icon (his two squircles with a tail) instead of the Material bell, and his microphone is drawn 30% larger.
 
 ## 0.95.2
 

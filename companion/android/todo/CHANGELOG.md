@@ -5,7 +5,7 @@ Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newe
 
 ## 0.95.3
 
-- No change to this app.
+- The Notifications row uses Clive's own chat icon instead of the Material bell.
 
 ## 0.95.2
 

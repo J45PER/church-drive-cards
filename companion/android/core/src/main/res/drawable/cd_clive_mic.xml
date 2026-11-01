@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Clive's microphone: the capsule over a flat bar that his white mark turns into when he is open and waiting (AssistantGlyphPose.Ready), same shapes, 200 unit box, centred and scaled up a little to sit like a Material icon. -->
+<!-- Clive's microphone: the capsule over a flat bar that his white mark turns into when he is open and waiting (AssistantGlyphPose.Ready), same shapes, 200 unit box, centred and scaled up 30% so it carries the same weight as Material's icons. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="200" android:viewportHeight="200">
-    <group android:scaleX="1.15" android:scaleY="1.15" android:pivotX="100" android:pivotY="100">
+    <group android:scaleX="1.3" android:scaleY="1.3" android:pivotX="100" android:pivotY="100">
         <path android:fillColor="#FF000000" android:pathData="M80,67 A20,20 0 0 1 120,67 L120,91 A20,20 0 0 1 80,91 Z"/>
         <path android:fillColor="#FF000000" android:pathData="M74,137 L126,137 A8,8 0 0 1 134,145 A8,8 0 0 1 126,153 L74,153 A8,8 0 0 1 66,145 A8,8 0 0 1 74,137 Z"/>
     </group>

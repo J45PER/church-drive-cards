@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Clive's notifications icon: his two squircles as a chat, the front one with a squared tail corner, the overlap cut out (even-odd). Approved on the icon board 2026-11-01 (clive_chat in satellite/design/approved-icons.json). 200 unit box. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="200" android:viewportHeight="200">
+    <group android:scaleX="1.05" android:scaleY="1.05" android:translateX="-5.25" android:translateY="0.1">
+        <path android:fillColor="#FF000000" android:fillType="evenOdd" android:pathData="M66,73 H102 A30,30 0 0 1 132,103 V119 A30,30 0 0 1 102,149 H36 V103 A30,30 0 0 1 66,73 Z M98,51 H134 A30,30 0 0 1 164,81 V97 A30,30 0 0 1 134,127 H98 A30,30 0 0 1 68,97 V81 A30,30 0 0 1 98,51 Z"/>
+    </group>
+</vector>
