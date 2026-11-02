@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -94,7 +93,7 @@ private fun LightSettingsBody(light: EntityState, entities: Map<String, EntitySt
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Box(Modifier.size(52.dp).clip(CircleShape).background(tint.copy(alpha = 0.25f)), contentAlignment = Alignment.Center) {
-            HaIcon(light.str("icon"), Icons.Filled.Lightbulb, tint, 28.dp)
+            HaIcon(light.str("icon"), CdVectors.Bulb, tint, 28.dp)
         }
         Text(
             when {
@@ -290,7 +289,7 @@ private fun MemberRow(light: EntityState, call: CallService, tone: ToneColors, o
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Box(Modifier.size(40.dp).clip(CircleShape).background(tint.copy(alpha = 0.2f)), contentAlignment = Alignment.Center) {
-            HaIcon(light.str("icon"), Icons.Filled.Lightbulb, tint, 22.dp)
+            HaIcon(light.str("icon"), CdVectors.Bulb, tint, 22.dp)
         }
         Column(Modifier.weight(1f)) {
             Text(light.friendlyName, style = MaterialTheme.typography.bodyLarge, maxLines = 1)

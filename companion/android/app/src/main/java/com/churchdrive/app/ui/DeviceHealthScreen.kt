@@ -18,8 +18,6 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -84,7 +82,7 @@ fun DeviceHealthOverlay(
 @Composable
 private fun HealthHeader(title: String, subtitle: String?, onBack: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
+        IconButton(onClick = onBack) { Icon(CdVectors.Back, contentDescription = "Back") }
         Column(Modifier.padding(start = 4.dp)) {
             Text(title, style = MaterialTheme.typography.titleLarge, maxLines = 1)
             subtitle?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -146,7 +144,7 @@ private fun HealthRow(item: DeviceHealthItem, onClick: () -> Unit) {
     val tone = toneColors(item.level.tone())
     EntityCard(tone.container, tone.onContainer, Modifier.clickable(onClick = onClick)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ToneIconName(item.icon(), Icons.Filled.Info, tone, 36)
+            ToneIconName(item.icon(), CdVectors.Info, tone, 36)
             Column(Modifier.weight(1f)) {
                 Text(item.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
                 listOfNotNull(item.area, item.problem()).joinToString(" · ").takeIf { it.isNotBlank() }
@@ -172,7 +170,7 @@ private fun DevicePage(item: DeviceHealthItem, onBack: () -> Unit) {
             item.filter?.let { HealthReading("Filter", it, item.filterLevel ?: HealthLevel.Ok) }
             if (item.battery == null && item.filter == null) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ToneIconName(item.icon(), Icons.Filled.Info, tone)
+                    ToneIconName(item.icon(), CdVectors.Info, tone)
                     Text(item.problem() ?: "No battery or filter to report", style = MaterialTheme.typography.titleMedium)
                 }
             } else {

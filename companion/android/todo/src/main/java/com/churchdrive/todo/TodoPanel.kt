@@ -1,5 +1,7 @@
 package com.churchdrive.todo
 
+import com.churchdrive.app.ui.CdVectors
+
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -26,16 +28,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.outlined.Logout
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.outlined.Checklist
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.SystemUpdate
-import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -130,7 +122,7 @@ private fun PanelRow(icon: ImageVector, text: String, supporting: String? = null
 @Composable
 private fun PanelTitle(title: String, onBack: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
+        IconButton(onClick = onBack) { Icon(CdVectors.Back, contentDescription = "Back") }
         Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 4.dp))
     }
 }
@@ -148,7 +140,7 @@ private fun AccountPage(vm: TodoModel, onClose: () -> Unit, onOpen: (String) -> 
     val context = LocalContext.current
     PageColumn {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            IconButton(onClick = onClose) { Icon(Icons.Filled.Close, contentDescription = "Close") }
+            IconButton(onClick = onClose) { Icon(CdVectors.Close, contentDescription = "Close") }
         }
         PanelCard {
             Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -167,15 +159,15 @@ private fun AccountPage(vm: TodoModel, onClose: () -> Unit, onOpen: (String) -> 
                 }
             }
         }
-        PanelCard { PanelRow(Icons.Outlined.Home, "Open Church Drive", "The main app: lights, alarm, cameras and the rest", onClick = { openChurchDrive(context) }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_church_drive), contentDescription = null) }) }
+        PanelCard { PanelRow(CdVectors.Home, "Open Church Drive", "The main app: lights, alarm, cameras and the rest", onClick = { openChurchDrive(context) }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_church_drive), contentDescription = null) }) }
         PanelCard {
-            PanelRow(Icons.Outlined.Settings, "Settings", onClick = { onOpen("settings") }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_cog_outline), contentDescription = null) })
-            PanelRow(Icons.Outlined.Info, "About", onClick = { onOpen("about") })
+            PanelRow(CdVectors.Cog, "Settings", onClick = { onOpen("settings") }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_cog_outline), contentDescription = null) })
+            PanelRow(CdVectors.Info, "About", onClick = { onOpen("about") })
         }
         // A sign-in taken from the Church Drive app is that app's to end; signing out there signs this one out too.
         PanelCard {
-            if (vm.borrowed) PanelRow(Icons.AutoMirrored.Outlined.Logout, "Sign out", "This app uses the Church Drive app's sign-in. Sign out there and it signs out here too.")
-            else PanelRow(Icons.AutoMirrored.Outlined.Logout, "Sign out", onClick = { onClose(); vm.signOut() })
+            if (vm.borrowed) PanelRow(CdVectors.SignOut, "Sign out", "This app uses the Church Drive app's sign-in. Sign out there and it signs out here too.")
+            else PanelRow(CdVectors.SignOut, "Sign out", onClick = { onClose(); vm.signOut() })
         }
     }
 }
@@ -187,7 +179,7 @@ private fun SettingsPage(vm: TodoModel, onBack: () -> Unit) {
         PanelTitle("Settings", onBack)
         PanelCard {
             PanelRow(
-                Icons.Outlined.Notifications, "Notifications",
+                CdVectors.Chat, "Notifications",
                 // Reminders, the doorbell and alarms are all delivered to the phone by the Church Drive app (including Google push), once; this
                 // app never posts its own, so there is nothing to switch on or off here and no second copy to arrive.
                 "Task reminders and alerts from the house come through the Church Drive app, which also sets up Google push. Tap to open it and choose what you get.",
@@ -197,12 +189,12 @@ private fun SettingsPage(vm: TodoModel, onBack: () -> Unit) {
         }
         PanelCard {
             PanelRow(
-                Icons.Outlined.Checklist, "Show finished tasks",
+                CdVectors.Todo, "Show finished tasks",
                 "Keep each list's Done section open, instead of folded away until you ask for it.",
                 trailing = { Switch(checked = vm.showDone, onCheckedChange = { vm.changeShowDone(it) }) },
             )
             PanelRow(
-                Icons.Outlined.Visibility, "Open on the page I left",
+                CdVectors.Eye, "Open on the page I left",
                 "When this is off, the app always opens on My to-do.",
                 trailing = { Switch(checked = vm.rememberPage, onCheckedChange = { vm.changeRememberPage(it) }) },
             )
@@ -218,9 +210,9 @@ private fun AboutPage(vm: TodoModel, onBack: () -> Unit) {
     PageColumn {
         PanelTitle("About", onBack)
         PanelCard {
-            PanelRow(Icons.Outlined.Info, "Church Drive To-Do", "Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.BUILD}) · ${BuildConfig.COMMIT}")
+            PanelRow(CdVectors.Info, "Church Drive To-Do", "Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.BUILD}) · ${BuildConfig.COMMIT}")
             PanelRow(
-                Icons.Outlined.SystemUpdate, "Check for updates",
+                CdVectors.SystemUpdate, "Check for updates",
                 when {
                     BuildConfig.PLAY -> "Google Play keeps this app up to date. Tap to open its Play page"
                     status == "checking" -> "Checking…"

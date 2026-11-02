@@ -1,3 +1,4 @@
+import { CLIVE_COMMON } from './clive-common.js';
 // Icons that don't depend on <ha-icon> for custom packs.
 //
 // Custom icon packs (e.g. `phu:` from Custom Brand Icons) register themselves
@@ -45,6 +46,8 @@ const CLIVE_ICONS = {
   'mdi:microphone-off': { path: MIC + ' M57.3,55.7 L66.7,48.3 L144.7,146.3 L135.3,153.7 Z', viewBox: CLIVE_MIC_BOX, evenodd: true },
   'mdi:microphone-variant-off': { path: MIC + ' M57.3,55.7 L66.7,48.3 L144.7,146.3 L135.3,153.7 Z', viewBox: CLIVE_MIC_BOX, evenodd: true },
   'mdi:microphone-message': { path: 'M60,70 A18,18 0 0 1 96,70 L96,99 A18,18 0 0 1 60,99 Z M54,127 L102,127 A7,7 0 0 1 109,134 A7,7 0 0 1 102,141 L54,141 A7,7 0 0 1 47,134 A7,7 0 0 1 54,127 Z M124,20 H160 A20,20 0 0 1 180,40 V60 A20,20 0 0 1 160,80 H104 V40 A20,20 0 0 1 124,20 Z M116,50 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0 Z M136,50 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0 Z M156,50 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0 Z', viewBox: '0 0 200 200', evenodd: true },
+  // The signed-off common set (icon audit #1 to #26): plus, close, chevrons, eye, pin, battery, shields, bulbs, scenes, bolt and more.
+  ...CLIVE_COMMON,
 };
 
 function escapeAttr(text) {

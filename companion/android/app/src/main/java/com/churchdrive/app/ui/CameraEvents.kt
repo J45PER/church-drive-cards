@@ -15,7 +15,6 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.requiredSize
-import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
 import androidx.compose.runtime.mutableFloatStateOf
@@ -35,8 +34,6 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -91,7 +88,7 @@ fun CameraEventsViewer(name: String, base: String, onClose: () -> Unit) {
             Column(modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("$name events", color = Color.White, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f).padding(start = 8.dp))
-                    IconButton(onClick = close) { Icon(Icons.Filled.Close, contentDescription = "Close", tint = Color.White) }
+                    IconButton(onClick = close) { Icon(CdVectors.Close, contentDescription = "Close", tint = Color.White) }
                 }
                 playing?.let { EventPlayer(it, baseUrl) }
                 val all = events
@@ -147,7 +144,7 @@ private fun EventThumb(event: CameraEvent, baseUrl: String, selected: Boolean, o
         event.picture?.let { AsyncImage(model = baseUrl + it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
         if (event.clip != null) {
             Box(modifier = Modifier.align(Alignment.Center).clip(RoundedCornerShape(999.dp)).background(Color.Black.copy(alpha = 0.5f)).padding(6.dp)) {
-                HaIcon("cd:play", Icons.Filled.PlayArrow, Color.White, 24.dp)
+                HaIcon("cd:play", CdVectors.Play, Color.White, 24.dp)
             }
         }
         Row(
@@ -349,7 +346,7 @@ private fun ClipPlayer(url: String) {
                 if (player.playbackState == Player.STATE_ENDED) player.seekTo(0)
                 if (player.isPlaying) player.pause() else player.play()
             }) {
-                HaIcon(if (playing) "cd:pause" else "cd:play", if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow, Color.White, 24.dp)
+                HaIcon(if (playing) "cd:pause" else "cd:play", if (playing) CdVectors.Pause else CdVectors.Play, Color.White, 24.dp)
             }
             Slider(
                 value = progress,

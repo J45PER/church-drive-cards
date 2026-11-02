@@ -12,15 +12,15 @@ object CdIcons {
     /** One shape: its path data, how much it is scaled about the centre (the disc glyphs are drawn at 46 and scaled to 57) and its opacity. */
     class Shape(val d: String, val scale: Float, val alpha: Float)
 
-    val icons: Map<String, List<Shape>> = mapOf(
+    private val base: Map<String, List<Shape>> = mapOf(
         "play" to listOf(
-            Shape("M71.91,49.91 Q58,42 58,58 L58,142 Q58,158 71.91,150.09 L146.09,107.91 Q160,100 146.09,92.09 Z", 1.4500f, 1.00f),
+            Shape("M71.91,49.91 Q58,42 58,58 L58,142 Q58,158 71.91,150.09 L146.09,107.91 Q160,100 146.09,92.09 Z", 1.4230f, 1.00f),
         ),
         "pause" to listOf(
-            Shape("M67,42 H75 A15,15 0 0 1 90,57 V143 A15,15 0 0 1 75,158 H67 A15,15 0 0 1 52,143 V57 A15,15 0 0 1 67,42Z M125,42 H133 A15,15 0 0 1 148,57 V143 A15,15 0 0 1 133,158 H125 A15,15 0 0 1 110,143 V57 A15,15 0 0 1 125,42Z", 1.4500f, 1.00f),
+            Shape("M67,42 H75 A15,15 0 0 1 90,57 V143 A15,15 0 0 1 75,158 H67 A15,15 0 0 1 52,143 V57 A15,15 0 0 1 67,42Z M125,42 H133 A15,15 0 0 1 148,57 V143 A15,15 0 0 1 133,158 H125 A15,15 0 0 1 110,143 V57 A15,15 0 0 1 125,42Z", 1.2930f, 1.00f),
         ),
         "stop" to listOf(
-            Shape("M68,44 H132 A24,24 0 0 1 156,68 V132 A24,24 0 0 1 132,156 H68 A24,24 0 0 1 44,132 V68 A24,24 0 0 1 68,44Z", 1.4500f, 1.00f),
+            Shape("M68,44 H132 A24,24 0 0 1 156,68 V132 A24,24 0 0 1 132,156 H68 A24,24 0 0 1 44,132 V68 A24,24 0 0 1 68,44Z", 1.3390f, 1.00f),
         ),
         "home" to listOf(
             Shape("M87.53,39.68 Q100,28.02 112.47,39.68 L163.17,87.12 Q175.64,98.78 175.64,115.86 L175.64,154.9 Q175.64,171.98 158.56,171.98 L121.96,171.98 Q119.52,171.98 119.52,169.54 L119.52,126.84 Q119.52,113.42 106.1,113.42 L93.9,113.42 Q80.48,113.42 80.48,126.84 L80.48,169.54 Q80.48,171.98 78.04,171.98 L41.44,171.98 Q24.36,171.98 24.36,154.9 L24.36,115.86 Q24.36,98.78 36.83,87.12 Z", 1.0000f, 1.00f),
@@ -129,11 +129,14 @@ object CdIcons {
         ),
     )
 
+    /** Every icon: the house's own ones above, and the common set from the signed-off icon audit (CdCommon, generated). */
+    val icons: Map<String, List<Shape>> = base + CdCommon.icons
+
     /** Names the dashboards already use for Gregg's parts, and Home Assistant's houses, drawn with the house's own icons instead. */
-    fun alias(icon: String?): String? = when (icon) {
+    fun alias(icon: String?): String? = CdCommon.alias(icon) ?: when (icon) {
         "phu:vac_mbrush" -> "cd:roller"
         "phu:vac_sbrush" -> "cd:side"
-        // Home Assistant's houses: the house's own house instead (solid for home, outlined for out and away).
+        // Home Assistant's houses: the house's own house instead (solid for home, outlined for out and away). home-outline is the plain house (CdCommon).
         "mdi:home", "mdi:home-variant", "mdi:home-circle" -> "cd:home"
         "mdi:home-outline", "mdi:home-variant-outline", "mdi:home-export-outline", "mdi:home-import-outline", "mdi:home-account", "mdi:home-map-marker" -> "cd:home-away"
         // Every microphone is Clive's: the plain one, the crossed-out one and the one with a chat bubble.

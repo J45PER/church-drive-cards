@@ -18,16 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AcUnit
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.Brightness4
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Lightbulb
-import androidx.compose.material.icons.filled.Nightlight
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Spa
-import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
@@ -203,13 +193,13 @@ private val SCENE_COLOURS = mapOf(
 ).mapValues { (_, v) -> v.map { Color(it) } }
 
 private fun sceneIcon(key: String): ImageVector = when (key) {
-    "bright" -> Icons.Filled.WbSunny
-    "cool_bright" -> Icons.Filled.AcUnit
-    "dimmed" -> Icons.Filled.Brightness4
-    "relax" -> Icons.Filled.Spa
-    "nightlight" -> Icons.Filled.Nightlight
-    "energise" -> Icons.Filled.Bolt
-    else -> Icons.Filled.Palette
+    "bright" -> CdVectors.Sun
+    "cool_bright" -> CdVectors.Sun
+    "dimmed" -> CdVectors.SunHalf
+    "relax" -> CdVectors.Flower
+    "nightlight" -> CdVectors.Moon
+    "energise" -> CdVectors.Bolt
+    else -> CdVectors.Palette
 }
 
 /** A room's title: the card's own name, else its area's name in Home Assistant, else the group light's name. */
@@ -231,7 +221,7 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
             if (expandable) {
                 IconButton(onClick = { expanded = !expanded }) {
                     Icon(
-                        if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                        if (expanded) CdVectors.ChevronUp else CdVectors.ChevronDown,
                         contentDescription = if (expanded) "Collapse" else "Expand",
                     )
                 }
@@ -406,7 +396,7 @@ fun LightPill(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             HaIcon(
-                light?.str("icon"), Icons.Filled.Lightbulb,
+                light?.str("icon"), CdVectors.Bulb,
                 tint = if (on) tint else tone.onContainer.copy(alpha = 0.55f),
                 size = 26.dp,
             )
@@ -445,7 +435,7 @@ object LightHoldHint {
 fun LightingPage(layout: LightLayout, entities: Map<String, EntityState>, areaNames: Map<String, String>, call: CallService) {
     layout.floors.forEach { (floor, rooms) ->
         SectionPanel(
-            floor, icon = Icons.Filled.Lightbulb, tone = Tone.Amber,
+            floor, icon = CdVectors.Bulb, tone = Tone.Amber,
             summary = lightsSummary(rooms, entities),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {

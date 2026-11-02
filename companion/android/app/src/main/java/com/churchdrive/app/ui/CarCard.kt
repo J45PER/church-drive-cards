@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -276,7 +275,7 @@ fun CarCard(config: JSONObject, entities: Map<String, EntityState>, registry: Re
                         val amber = toneColors(Tone.Amber)
                         val asking = (asked[car.wake] ?: 0L) > now - 3 * 60_000L
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            HaIcon("mdi:clock-alert-outline", Icons.Filled.Info, amber.accent, 16.dp)
+                            HaIcon("mdi:clock-alert-outline", CdVectors.Info, amber.accent, 16.dp)
                             Text(carUpdatedText(car.asOf!!, now), color = amber.accent, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                             if (car.wake.isNotEmpty()) Box(Modifier.width(150.dp)) {
                                 TileRow(
@@ -308,5 +307,5 @@ fun BrandOrIcon(brand: String?, icon: String, tint: Color, size: androidx.compos
         key != null && OwnLogos.paths?.containsKey(key) == true -> "ol:$key"
         else -> icon
     }
-    HaIcon(name, Icons.Filled.Info, tint, size)
+    HaIcon(name, CdVectors.Info, tint, size)
 }

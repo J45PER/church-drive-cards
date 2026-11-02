@@ -1,5 +1,10 @@
 # Church Drive Satellites: changelog
 
+## 0.96.0
+
+- The signed-off icon audit (#1 to #26) is built in. Everywhere the apps drew a Material icon for one of these, they now draw the house's own: add, minus, close, back, the chevrons, info, sign out and in, check for updates, the eye (and its crossed-out form), the location pin, history, the whole battery (every 10%, charging, low, unknown), the shield family for the alarm (home, away, night, disarmed, arming, triggered, signing key), the padlock and key, the lightbulb (on, off, lit, group), the lightning bolt, the light scenes (sun, half sun, flower, moon, palette), the settings cog, the notifications chat, the House, the To-Do logo and the play, pause and stop controls at one size. Any Home Assistant icon name that means one of these (for example `mdi:lightbulb`, `mdi:battery-60`, `mdi:shield-home`, `mdi:map-marker`) is drawn the same way, so the dashboards and cards match. Lights with their own icon from the Hue pack keep it.
+- The satellite badges (add, settings, voice, location, updates, history), the widgets and the Satellites app's own buttons use the new shapes too.
+
 ## 0.95.6
 
 - No change to this app.

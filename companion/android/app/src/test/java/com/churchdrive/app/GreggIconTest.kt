@@ -2,6 +2,7 @@ package com.churchdrive.app
 
 import com.churchdrive.app.ha.EntityState
 import com.churchdrive.app.ui.CdIcons
+import com.churchdrive.app.ui.CdVectors
 import com.churchdrive.app.ui.GreggState
 import com.churchdrive.app.ui.greggEntityIcon
 import com.churchdrive.app.ui.greggState
@@ -63,7 +64,10 @@ class GreggIconTest {
         // Home Assistant's houses are drawn with the house's own house: solid for home, outlined for out and away.
         assertEquals("cd:home", CdIcons.alias("mdi:home"))
         assertEquals("cd:home-away", CdIcons.alias("mdi:home-export-outline"))
-        assertEquals("mdi:lightbulb", CdIcons.alias("mdi:lightbulb"))
+        // The plain house is the solid house; the bulb is Clive's (signed-off audit #24); names that are not ours pass through untouched.
+        assertEquals("cd:home", CdIcons.alias("mdi:home-outline"))
+        assertEquals("cd:bulb", CdIcons.alias("mdi:lightbulb"))
+        assertEquals("mdi:thermostat", CdIcons.alias("mdi:thermostat"))
         assertTrue(CdIcons.icons.containsKey("home-away"))
         assertNull(CdIcons.alias(null))
         assertFalse(CdIcons.icons.isEmpty())
@@ -74,6 +78,25 @@ class GreggIconTest {
         assertEquals("cd:mic-off", CdIcons.alias("mdi:microphone-off"))
         assertEquals("cd:mic-message", CdIcons.alias("mdi:microphone-message"))
         for (name in listOf("mic", "mic-off", "mic-message")) assertTrue(name, CdIcons.icons[name]?.all { it.d.startsWith("M") } == true)
+    }
+
+    @Test fun theSignedOffCommonSetIsDrawnWithTheHousesOwn() {
+        val names = listOf("plus", "minus", "close", "arrow-left", "chevron-down", "chevron-up", "chevron-left", "chevron-right", "information-outline", "logout", "login", "update",
+            "eye", "eye-off", "map-marker", "history", "battery", "battery-outline", "battery-40", "battery-charging-60", "battery-alert", "battery-unknown", "shield-home", "shield-lock",
+            "shield-moon", "shield-off-outline", "shield-sync", "shield-alert", "shield-key", "lightbulb", "lightbulb-outline", "lightbulb-on", "lightbulb-off-outline", "lightbulb-group",
+            "lightning-bolt", "lightning-bolt-outline", "flash", "white-balance-sunny", "flower", "palette", "cog", "cog-outline", "bell-outline", "format-list-checks",
+            "clipboard-text-clock-outline", "play", "pause", "stop", "stop-circle-outline", "home-alert-outline")
+        for (n in names) {
+            val to = CdIcons.alias("mdi:$n")
+            assertTrue("$n -> $to", to != null && to.startsWith("cd:"))
+            val shapes = CdIcons.icons[to!!.removePrefix("cd:")]
+            assertTrue("$n has no shape", !shapes.isNullOrEmpty())
+            assertTrue("$n is not a path", shapes!!.all { it.d.startsWith("M") })
+        }
+        // The alarm that sounds is not a notification (audit #45), so the ringing bell is left alone for now.
+        assertEquals("mdi:bell-ring", CdIcons.alias("mdi:bell-ring"))
+        for (v in listOf(CdVectors.Plus, CdVectors.Minus, CdVectors.Close, CdVectors.Back, CdVectors.Info, CdVectors.SignOut, CdVectors.Eye, CdVectors.Pin, CdVectors.Bolt))
+            assertEquals(200f, v.viewportWidth, 0f)
     }
 
     @Test fun aCardCarriesTheVacuumStateAndBattery() {

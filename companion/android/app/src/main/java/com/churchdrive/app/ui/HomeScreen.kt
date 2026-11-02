@@ -22,12 +22,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.EvStation
 import androidx.compose.material.icons.filled.Lightbulb
-import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material3.Card
@@ -408,7 +404,7 @@ fun SectionPanel(
         ) {
             if (iconSlot != null) iconSlot(colors)
             else if (iconName == GREGG_IDLE_ICON) GreggIcon(GreggState.Idle, colors.accent, 36.dp)
-            else if (iconName != null) ToneIconName(iconName, icon ?: Icons.Filled.Security, colors, size = 36)
+            else if (iconName != null) ToneIconName(iconName, icon ?: CdVectors.ShieldOutline, colors, size = 36)
             else if (icon != null) ToneIcon(icon, colors, size = 36)
             Text(
                 title,
@@ -419,9 +415,9 @@ fun SectionPanel(
                 Text(summary, style = MaterialTheme.typography.bodyMedium, color = colors.accent)
             }
             if (onClick != null) {
-                Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(CdVectors.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             } else if (collapsible) {
-                Icon(if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(if (open) CdVectors.ChevronUp else CdVectors.ChevronDown, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         androidx.compose.animation.AnimatedVisibility(visible = open || !collapsible) {
