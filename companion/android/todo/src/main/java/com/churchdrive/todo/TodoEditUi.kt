@@ -1,5 +1,7 @@
 package com.churchdrive.todo
 
+import com.churchdrive.app.ui.CdVectors
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -15,7 +17,6 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -111,7 +112,7 @@ fun TodoEditDialog(item: TodoItem, first: String?, onSave: (Map<String, Any?>) -
                     AssistChip(
                         onClick = { picking = true },
                         label = { Text("Pick a date") },
-                        leadingIcon = { Icon(Icons.Filled.CalendarMonth, contentDescription = null) },
+                        leadingIcon = { Icon(CdVectors.Calendar, contentDescription = null) },
                     )
                 }
                 if (shown != null) {

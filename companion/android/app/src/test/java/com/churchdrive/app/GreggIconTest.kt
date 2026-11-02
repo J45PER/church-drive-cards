@@ -67,7 +67,7 @@ class GreggIconTest {
         // The plain house is the solid house; the bulb is Clive's (signed-off audit #24); names that are not ours pass through untouched.
         assertEquals("cd:home", CdIcons.alias("mdi:home-outline"))
         assertEquals("cd:bulb", CdIcons.alias("mdi:lightbulb"))
-        assertEquals("mdi:thermostat", CdIcons.alias("mdi:thermostat"))
+        assertEquals("mdi:mushroom", CdIcons.alias("mdi:mushroom"))
         assertTrue(CdIcons.icons.containsKey("home-away"))
         assertNull(CdIcons.alias(null))
         assertFalse(CdIcons.icons.isEmpty())
@@ -85,7 +85,7 @@ class GreggIconTest {
             "eye", "eye-off", "map-marker", "history", "battery", "battery-outline", "battery-40", "battery-charging-60", "battery-alert", "battery-unknown", "shield-home", "shield-lock",
             "shield-moon", "shield-off-outline", "shield-sync", "shield-alert", "shield-key", "lightbulb", "lightbulb-outline", "lightbulb-on", "lightbulb-off-outline", "lightbulb-group",
             "lightning-bolt", "lightning-bolt-outline", "flash", "white-balance-sunny", "flower", "palette", "cog", "cog-outline", "bell-outline", "format-list-checks",
-            "clipboard-text-clock-outline", "play", "pause", "stop", "stop-circle-outline", "home-alert-outline")
+            "clipboard-text-clock-outline", "thermostat", "thermostat-auto", "thermometer", "leaf", "home-thermometer", "broom", "robot-vacuum", "server-network", "cellphone", "router-network", "monitor", "account", "account-group", "account-cog", "cart", "cart-outline", "cart-check", "calendar-month", "calendar-today", "calendar-check", "calendar-clock", "calendar-remove-outline", "calendar-arrow-right", "send", "volume-low", "volume-medium", "volume-mute", "speaker", "wifi-strength-1", "wifi-strength-4", "wifi-strength-off", "wifi-strength-outline", "wifi-strength-alert-outline", "weather-sunny", "weather-night", "weather-partly-cloudy", "weather-night-partly-cloudy", "weather-cloudy", "weather-rainy", "weather-pouring", "weather-snowy", "weather-snowy-rainy", "weather-lightning", "weather-lightning-rainy", "weather-hail", "weather-fog", "weather-windy", "weather-sunny-alert", "weather-sunset", "play", "pause", "stop", "stop-circle-outline", "home-alert-outline")
         for (n in names) {
             val to = CdIcons.alias("mdi:$n")
             assertTrue("$n -> $to", to != null && to.startsWith("cd:"))
@@ -95,7 +95,7 @@ class GreggIconTest {
         }
         // The alarm that sounds is not a notification (audit #45), so the ringing bell is left alone for now.
         assertEquals("mdi:bell-ring", CdIcons.alias("mdi:bell-ring"))
-        for (v in listOf(CdVectors.Plus, CdVectors.Minus, CdVectors.Close, CdVectors.Back, CdVectors.Info, CdVectors.SignOut, CdVectors.Eye, CdVectors.Pin, CdVectors.Bolt))
+        for (v in listOf(CdVectors.Plus, CdVectors.Minus, CdVectors.Close, CdVectors.Back, CdVectors.Info, CdVectors.SignOut, CdVectors.Eye, CdVectors.Pin, CdVectors.Bolt, CdVectors.Gregg, CdVectors.Thermostat, CdVectors.Cart, CdVectors.Send, CdVectors.Person, CdVectors.Group, CdVectors.DeviceServer, CdVectors.Calendar))
             assertEquals(200f, v.viewportWidth, 0f)
     }
 

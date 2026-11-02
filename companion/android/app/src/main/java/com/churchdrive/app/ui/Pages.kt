@@ -1,9 +1,6 @@
 package com.churchdrive.app.ui
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CleaningServices
-import androidx.compose.material.icons.outlined.Dns
-import androidx.compose.material.icons.outlined.Thermostat
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
@@ -43,18 +40,18 @@ enum class Page(
         ),
     ),
     Climate(
-        "Climate", "mdi:leaf", Icons.Outlined.Thermostat,
+        "Climate", "mdi:leaf", CdVectors.Thermostat,
         listOf("Heating", "Climate", "Cooling", "Air Quality", "Windows & Doors").map { Section(it) },
     ),
     Cleaning(
-        "Cleaning", "mdi:robot-vacuum", Icons.Outlined.CleaningServices,
+        "Cleaning", "mdi:robot-vacuum", CdVectors.Gregg,
         listOf(Section("Cleaning")),
     ),
     Todo(
         "To-do", "mdi:format-list-checks", CdVectors.Todo,
         listOf("From the house", "My to-do", "Shopping", "Shared", "Cleaning").map { Section(it) },
     ),
-    Devices("Devices", "mdi:server-network", Icons.Outlined.Dns, emptyList(), adminOnly = true),
+    Devices("Devices", "mdi:server-network", CdVectors.DeviceServer, emptyList(), adminOnly = true),
     Energy("Energy", "mdi:lightning-bolt", CdVectors.Bolt, emptyList(), adminOnly = true),
 }
 
