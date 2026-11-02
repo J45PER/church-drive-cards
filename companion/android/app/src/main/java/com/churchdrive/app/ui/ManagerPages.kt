@@ -7,9 +7,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -269,7 +266,7 @@ fun PeoplePage(entities: Map<String, EntityState>, registry: Registry) {
                                 Text(entities[zone]?.friendlyName ?: zone, style = MaterialTheme.typography.bodyMedium)
                                 OutlinedTextField(name, { v -> editing = draft.toMutableList().also { it[i] = zone to v } }, singleLine = true, label = { Text("Called") }, modifier = Modifier.fillMaxWidth())
                             }
-                            IconButton(onClick = { editing = draft.toMutableList().also { it.removeAt(i) } }) { Icon(Icons.Filled.Remove, contentDescription = "Take this place out") }
+                            IconButton(onClick = { editing = draft.toMutableList().also { it.removeAt(i) } }) { Icon(CdVectors.Minus, contentDescription = "Take this place out") }
                         }
                     }
                     val free = zones.filter { z -> draft.none { it.first == z.entityId } }
@@ -346,7 +343,7 @@ fun LocationsPage(entities: Map<String, EntityState>) {
         zones.forEach { z ->
             val tone = toneColors(if (z.home) Tone.Green else Tone.Teal)
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                ToneIconName(if (z.home) "mdi:home" else "mdi:map-marker-outline", Icons.Filled.Info, tone, 36)
+                ToneIconName(if (z.home) "mdi:home" else "mdi:map-marker-outline", CdVectors.Info, tone, 36)
                 Column(Modifier.weight(1f)) {
                     Text(z.name, style = MaterialTheme.typography.bodyLarge)
                     Text(listOfNotNull(z.radius?.let { "$it m across" }, if (z.people.isEmpty()) null else z.people.joinToString(", ")).joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -388,9 +385,9 @@ fun CameraLinksPage(entities: Map<String, EntityState>) {
                 }, tone, perRow = 2)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Records for", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                    IconButton(onClick = { view.send("church_drive/camera/links/set", JSONObject().put("mode", mode).put("trigger", link.trigger).put("cams", JSONArray(link.cams)).put("secs", (link.secs - 5).coerceAtLeast(5))) }) { Icon(Icons.Filled.Remove, contentDescription = "Shorter") }
+                    IconButton(onClick = { view.send("church_drive/camera/links/set", JSONObject().put("mode", mode).put("trigger", link.trigger).put("cams", JSONArray(link.cams)).put("secs", (link.secs - 5).coerceAtLeast(5))) }) { Icon(CdVectors.Minus, contentDescription = "Shorter") }
                     Text("${link.secs} s", style = MaterialTheme.typography.bodyLarge)
-                    IconButton(onClick = { view.send("church_drive/camera/links/set", JSONObject().put("mode", mode).put("trigger", link.trigger).put("cams", JSONArray(link.cams)).put("secs", (link.secs + 5).coerceAtMost(120))) }) { Icon(Icons.Filled.Add, contentDescription = "Longer") }
+                    IconButton(onClick = { view.send("church_drive/camera/links/set", JSONObject().put("mode", mode).put("trigger", link.trigger).put("cams", JSONArray(link.cams)).put("secs", (link.secs + 5).coerceAtMost(120))) }) { Icon(CdVectors.Plus, contentDescription = "Longer") }
                 }
                 Choices(listOf(TileItem("mdi:delete-outline", "Take out of ${modeLabel(mode)}", false) {
                     view.send("church_drive/camera/links/set", JSONObject().put("mode", mode).put("trigger", link.trigger))
@@ -415,9 +412,9 @@ fun CameraLinksPage(entities: Map<String, EntityState>) {
                     Text("Wait between recordings", style = MaterialTheme.typography.bodyLarge)
                     Text("A camera won't record again for this long", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                IconButton(onClick = { view.send("church_drive/camera/settings", data("cooldown" to (cooldown - 30).coerceAtLeast(30))) }) { Icon(Icons.Filled.Remove, contentDescription = "Shorter") }
+                IconButton(onClick = { view.send("church_drive/camera/settings", data("cooldown" to (cooldown - 30).coerceAtLeast(30))) }) { Icon(CdVectors.Minus, contentDescription = "Shorter") }
                 Text("$cooldown s", style = MaterialTheme.typography.bodyLarge)
-                IconButton(onClick = { view.send("church_drive/camera/settings", data("cooldown" to (cooldown + 30).coerceAtMost(3600))) }) { Icon(Icons.Filled.Add, contentDescription = "Longer") }
+                IconButton(onClick = { view.send("church_drive/camera/settings", data("cooldown" to (cooldown + 30).coerceAtMost(3600))) }) { Icon(CdVectors.Plus, contentDescription = "Longer") }
             }
         }
     }
@@ -446,7 +443,7 @@ fun IconStylesPage() {
                     val isOpen = open == group to key
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            ToneIconName(icon, Icons.Filled.Info, tone, 36)
+                            ToneIconName(icon, CdVectors.Info, tone, 36)
                             Column(Modifier.weight(1f)) {
                                 Text(presetLabel(key), style = MaterialTheme.typography.bodyLarge)
                                 Text(icon, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

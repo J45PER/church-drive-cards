@@ -32,15 +32,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -276,7 +273,7 @@ fun AlarmCard(alarm: EntityState?, call: CallService, entityId: String = ALARM_E
                     val sweep = if (inDelay) 360f * (remaining.toFloat() / total).coerceIn(0f, 1f) else 360f
                     drawArc(ring, -90f, sweep, false, Offset(inset, inset), arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
                 }
-                HaIcon(ALARM_STATES[state]?.icon ?: "mdi:shield-outline", Icons.Filled.Security, ring, 30.dp)
+                HaIcon(ALARM_STATES[state]?.icon ?: "mdi:shield-outline", CdVectors.ShieldOutline, ring, 30.dp)
             }
             Column(modifier = Modifier.weight(1f)) {
                 if (line1.isNotEmpty()) Text(line1, style = MaterialTheme.typography.titleMedium)
@@ -301,7 +298,7 @@ fun AlarmCard(alarm: EntityState?, call: CallService, entityId: String = ALARM_E
         people.forEach { p ->
             val (word, _) = presencePill(p.state, p.place, p.zone)
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                HaIcon(if (p.state == "home") "cd:home" else "cd:home-away", Icons.Filled.Security, ring, 20.dp)
+                HaIcon(if (p.state == "home") "cd:home" else "cd:home-away", CdVectors.ShieldOutline, ring, 20.dp)
                 Text(p.name, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = content, maxLines = 1)
                 Text(word, style = MaterialTheme.typography.bodyMedium, color = content.copy(alpha = 0.8f), maxLines = 1)
             }
@@ -335,7 +332,7 @@ private fun ModeTile(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        HaIcon(icon, Icons.Filled.Security, ink, 24.dp)
+        HaIcon(icon, CdVectors.ShieldOutline, ink, 24.dp)
         CentredText(label, ink, 12.sp, Modifier.padding(top = 4.dp), lineHeight = 14.sp)
     }
 }
@@ -444,8 +441,8 @@ fun ClimateCard(
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StepButton(Icons.Filled.Remove, "Lower", tone, enabled && climate?.state != "off") { nudge(-step) }
-                StepButton(Icons.Filled.Add, "Raise", tone, enabled && climate?.state != "off") { nudge(step) }
+                StepButton(CdVectors.Minus, "Lower", tone, enabled && climate?.state != "off") { nudge(-step) }
+                StepButton(CdVectors.Plus, "Raise", tone, enabled && climate?.state != "off") { nudge(step) }
             }
         }
         val extra = listOfNotNull(

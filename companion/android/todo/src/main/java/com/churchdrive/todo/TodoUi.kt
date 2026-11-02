@@ -1,5 +1,7 @@
 package com.churchdrive.todo
 
+import com.churchdrive.app.ui.CdVectors
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,13 +22,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CleaningServices
-import androidx.compose.material.icons.filled.Checklist
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.BadgedBox
@@ -79,7 +76,7 @@ private fun TodoTab.icon(): ImageVector = when (this) {
     TodoTab.Mine -> Icons.Filled.Person
     TodoTab.Shared -> Icons.Filled.Groups
     TodoTab.Cleaning -> Icons.Filled.CleaningServices
-    TodoTab.House -> Icons.Filled.Home
+    TodoTab.House -> CdVectors.Home
 }
 
 /** A tab's icon: the house's own house for House and Gregg for Cleaning, Material's for the others. */
@@ -219,7 +216,7 @@ private fun TaskCard(vm: TodoModel, tab: TodoTab) {
             if (finished.isNotEmpty() && tab != TodoTab.House) {
                 Row(Modifier.fillMaxWidth().clickable { showDone = !showDone }, verticalAlignment = Alignment.CenterVertically) {
                     Text("Done (${finished.size})", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                    Icon(if (showDone) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, contentDescription = null)
+                    Icon(if (showDone) CdVectors.ChevronUp else CdVectors.ChevronDown, contentDescription = null)
                 }
                 if (showDone) finished.forEach { item ->
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -242,7 +239,7 @@ private fun TaskCard(vm: TodoModel, tab: TodoTab) {
                     onClick = { vm.add(tab, text); text = "" },
                     enabled = text.isNotBlank(),
                     colors = IconButtonDefaults.filledIconButtonColors(containerColor = tone.accent, contentColor = tone.onAccent),
-                ) { Icon(Icons.Filled.Add, contentDescription = "Add") }
+                ) { Icon(CdVectors.Plus, contentDescription = "Add") }
             }
         }
     }
@@ -258,7 +255,7 @@ private fun TaskRow(item: TodoItem, tone: ToneColors, onEdit: () -> Unit, onTick
         if (list.isNotEmpty()) {
             // A shopping or steps list has no tick of its own: it is finished by finishing its items, in the main Church Drive app.
             Box(Modifier.padding(12.dp)) {
-                Icon(if (isStepsTask(item.description)) Icons.Filled.Checklist else Icons.Filled.ShoppingCart, contentDescription = null, tint = tone.accent)
+                Icon(if (isStepsTask(item.description)) CdVectors.Todo else Icons.Filled.ShoppingCart, contentDescription = null, tint = tone.accent)
             }
         } else {
             Checkbox(checked = false, onCheckedChange = { onTick() }, colors = checks(tone))

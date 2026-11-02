@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Generated from the approved icon artwork in satellite/design/approved-icons.json and icon-audit.html; do not redraw. -->
-<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
-    <path android:fillColor="#FF000000" android:fillType="nonZero" android:pathData="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="200" android:viewportHeight="200">
+    <path android:fillColor="#FF000000" android:fillType="evenOdd" android:pathData="M26.9,156.2 L26.0,157.6 L25.4,159.0 L25.0,161.4 L25.2,163.0 L25.6,164.5 L26.9,166.6 L32.8,172.6 L34.7,174.0 L37.0,174.8 L38.6,175.0 L41.0,174.6 L42.4,174.0 L44.4,172.6 L100.0,117.0 L156.2,173.1 L157.6,174.0 L159.0,174.6 L161.4,175.0 L163.0,174.8 L164.5,174.4 L166.6,173.1 L173.1,166.6 L174.4,164.5 L174.8,163.0 L175.0,160.6 L174.4,158.3 L173.6,156.9 L172.6,155.6 L117.0,100.0 L173.1,43.8 L174.4,41.7 L174.8,40.2 L175.0,38.6 L174.8,37.0 L174.4,35.5 L173.1,33.4 L166.6,26.9 L164.5,25.6 L162.2,25.0 L160.6,25.0 L158.3,25.6 L156.9,26.4 L155.6,27.4 L100.0,83.0 L43.8,26.9 L41.7,25.6 L40.2,25.2 L38.6,25.0 L37.0,25.2 L35.5,25.6 L33.4,26.9 L26.9,33.4 L25.6,35.5 L25.0,37.8 L25.0,39.4 L25.4,41.0 L26.4,43.1 L27.4,44.4 L83.0,100.0 Z"/>
 </vector>

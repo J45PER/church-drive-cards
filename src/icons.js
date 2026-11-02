@@ -1,3 +1,4 @@
+import { CLIVE_COMMON } from './clive-common.js';
 // Icons that don't depend on <ha-icon> for custom packs.
 //
 // Custom icon packs (e.g. `phu:` from Custom Brand Icons) register themselves
@@ -28,8 +29,26 @@ function isCustom(icon) {
 
 function svg(def, size) {
   const d = (def.path || '').replace(/"/g, '&quot;');
-  return `<svg viewBox="${def.viewBox || '0 0 24 24'}" width="${size}" height="${size}" style="display:block; fill:currentColor;"><path d="${d}"></path></svg>`;
+  const rule = def.evenodd ? ' fill-rule="evenodd"' : '';
+  return `<svg viewBox="${def.viewBox || '0 0 24 24'}" width="${size}" height="${size}" style="display:block; fill:currentColor;"><path${rule} d="${d}"></path></svg>`;
 }
+
+
+// Clive's own icons, built in so Home Assistant draws them without an icon pack. They are the same shapes as the phone app's (CdIcons.kt):
+// his microphone is the Ready pose of his mark, a capsule 72 tall over a flat bar, and is used for every microphone. The viewBox is cropped
+// to 1/1.3 of the 200 unit box, which draws it 1.3x like the app.
+const CLIVE_MIC_BOX = '23.08 23.08 153.85 153.85';
+const MIC = 'M80,67 A20,20 0 0 1 120,67 L120,99 A20,20 0 0 1 80,99 Z M74,137 L126,137 A8,8 0 0 1 134,145 A8,8 0 0 1 126,153 L74,153 A8,8 0 0 1 66,145 A8,8 0 0 1 74,137 Z';
+const CLIVE_ICONS = {
+  'mdi:microphone': { path: MIC, viewBox: CLIVE_MIC_BOX, evenodd: true },
+  'mdi:microphone-outline': { path: MIC, viewBox: CLIVE_MIC_BOX, evenodd: true },
+  'mdi:microphone-variant': { path: MIC, viewBox: CLIVE_MIC_BOX, evenodd: true },
+  'mdi:microphone-off': { path: MIC + ' M57.3,55.7 L66.7,48.3 L144.7,146.3 L135.3,153.7 Z', viewBox: CLIVE_MIC_BOX, evenodd: true },
+  'mdi:microphone-variant-off': { path: MIC + ' M57.3,55.7 L66.7,48.3 L144.7,146.3 L135.3,153.7 Z', viewBox: CLIVE_MIC_BOX, evenodd: true },
+  'mdi:microphone-message': { path: 'M60,70 A18,18 0 0 1 96,70 L96,99 A18,18 0 0 1 60,99 Z M54,127 L102,127 A7,7 0 0 1 109,134 A7,7 0 0 1 102,141 L54,141 A7,7 0 0 1 47,134 A7,7 0 0 1 54,127 Z M124,20 H160 A20,20 0 0 1 180,40 V60 A20,20 0 0 1 160,80 H104 V40 A20,20 0 0 1 124,20 Z M116,50 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0 Z M136,50 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0 Z M156,50 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0 Z', viewBox: '0 0 200 200', evenodd: true },
+  // The signed-off common set (icon audit #1 to #26): plus, close, chevrons, eye, pin, battery, shields, bulbs, scenes, bolt and more.
+  ...CLIVE_COMMON,
+};
 
 function escapeAttr(text) {
   return String(text).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
@@ -43,6 +62,10 @@ export function iconHtml(icon, { size = '24px', style = '', cls = '' } = {}) {
   const pic = /^brand:/.test(icon || '') ? `https://brands.home-assistant.io/_/${encodeURIComponent(icon.slice(6))}/icon.png` : /^(https?:)?\/\//.test(icon || '') || /^\/[^/]/.test(icon || '') ? icon : null;
   if (pic) {
     return `<img class="${cls}" src="${escapeAttr(pic)}" alt="" onerror="this.style.visibility='hidden'" style="width:${size}; height:${size}; object-fit:contain; border-radius:6px; ${style}">`;
+  }
+  const own = CLIVE_ICONS[icon];
+  if (own) {
+    return `<span class="${cls}" style="display:inline-flex; width:${size}; height:${size}; ${style}">${svg(own, '100%')}</span>`;
   }
   if (!isCustom(icon)) {
     return `<ha-icon class="${cls}" icon="${escapeAttr(icon)}" style="--mdc-icon-size:${size}; ${style}"></ha-icon>`;

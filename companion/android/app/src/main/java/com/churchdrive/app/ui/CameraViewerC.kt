@@ -28,8 +28,6 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -240,7 +238,7 @@ internal fun CameraViewerC(
                 if (!full) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(name, color = Color.White, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f).padding(start = 8.dp))
-                        IconButton(onClick = close) { Icon(Icons.Filled.Close, contentDescription = "Close", tint = Color.White) }
+                        IconButton(onClick = close) { Icon(CdVectors.Close, contentDescription = "Close", tint = Color.White) }
                     }
                 }
                 val fill = full || expanded
@@ -287,13 +285,13 @@ internal fun CameraViewerC(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                                 ) {
-                                    HaIcon(batteryIconName(battery), Icons.Filled.Info, if (battery < 15) Color(0xFFEF5350) else if (battery < 30) Color(0xFFFFA726) else Color.White, 18.dp)
+                                    HaIcon(batteryIconName(battery), CdVectors.Info, if (battery < 15) Color(0xFFEF5350) else if (battery < 30) Color(0xFFFFA726) else Color.White, 18.dp)
                                     Text("${battery.toInt()}%", color = Color.White, fontSize = 12.sp)
                                 }
                             }
                             if (found.signal != null) {
                                 Box(modifier = Modifier.clip(CircleShape).background(Color.Black.copy(alpha = 0.55f)).padding(6.dp)) {
-                                    HaIcon(signalIconName(bars), Icons.Filled.Info, if (bars in 0..1) Color(0xFFEF5350) else if (bars == 2) Color(0xFFFFA726) else Color.White, 18.dp)
+                                    HaIcon(signalIconName(bars), CdVectors.Info, if (bars in 0..1) Color(0xFFEF5350) else if (bars == 2) Color(0xFFFFA726) else Color.White, 18.dp)
                                 }
                             }
                         }
@@ -321,7 +319,7 @@ internal fun CameraViewerC(
                                     actions.forEach { (icon, label, run) ->
                                         DropdownMenuItem(
                                             text = { Text(label) },
-                                            leadingIcon = { HaIcon(icon, Icons.Filled.Info, MaterialTheme.colorScheme.onSurface, 20.dp) },
+                                            leadingIcon = { HaIcon(icon, CdVectors.Info, MaterialTheme.colorScheme.onSurface, 20.dp) },
                                             onClick = { menuOpen = false; run() },
                                         )
                                     }
@@ -397,7 +395,7 @@ private fun CallRow(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            HaIcon("mdi:phone", Icons.Filled.Info, Color.White, 22.dp)
+            HaIcon("mdi:phone", CdVectors.Info, Color.White, 22.dp)
             Text("  Answer", color = Color.White, fontSize = 16.sp)
         }
         return
@@ -424,7 +422,7 @@ private fun CircleButton(icon: String, tint: Color, background: Color, size: Int
         Box(
             modifier = Modifier.size(size.dp).clip(CircleShape).background(background).clickable(onClick = onClick),
             contentAlignment = Alignment.Center,
-        ) { HaIcon(icon, Icons.Filled.Info, tint, 22.dp) }
+        ) { HaIcon(icon, CdVectors.Info, tint, 22.dp) }
         if (label != null) Text(label, color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
     }
 }
@@ -435,7 +433,7 @@ private fun OverlayButton(icon: String, onClick: () -> Unit) {
     Box(
         modifier = Modifier.size(34.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.55f)).clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
-    ) { HaIcon(icon, Icons.Filled.Info, Color.White, 20.dp) }
+    ) { HaIcon(icon, CdVectors.Info, Color.White, 20.dp) }
 }
 
 /** Fades [content] in and out. Not an extension of a layout scope, so it can be called from inside any Box, Row or Column. */

@@ -48,7 +48,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -197,7 +196,7 @@ private fun RoundIcon(icon: String, label: String, glow: Boolean, onClick: () ->
                 .clickable(onClickLabel = label) { onClick() },
             contentAlignment = Alignment.Center,
         ) {
-            HaIcon(icon, Icons.Filled.Info, scheme.onSurface, size.value.dp / 2)
+            HaIcon(icon, CdVectors.Info, scheme.onSurface, size.value.dp / 2)
         }
     }
 }
@@ -331,17 +330,17 @@ fun RowScope.AssistantBarItems(model: AssistModel, ui: AssistantTyping, onClose:
     val keyboardUp = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
     NavigationBarItem(
         selected = false, onClick = onClose,
-        icon = { HaIcon("mdi:close", Icons.Filled.Info, scheme.onSurfaceVariant, 24.dp) },
+        icon = { HaIcon("mdi:close", CdVectors.Info, scheme.onSurfaceVariant, 24.dp) },
         label = { Text("Close", fontSize = 11.sp, maxLines = 1) },
     )
     NavigationBarItem(
         selected = false, enabled = chatting, onClick = { ui.typed = ""; model.newChat() },
-        icon = { HaIcon("mdi:chat-plus-outline", Icons.Filled.Info, scheme.onSurfaceVariant.copy(alpha = if (chatting) 1f else 0.4f), 24.dp) },
+        icon = { HaIcon("mdi:chat-plus-outline", CdVectors.Info, scheme.onSurfaceVariant.copy(alpha = if (chatting) 1f else 0.4f), 24.dp) },
         label = { Text("New chat", fontSize = 11.sp, maxLines = 1) },
     )
     NavigationBarItem(
         selected = keyboardUp, onClick = { ui.showKeyboard() },
-        icon = { HaIcon("mdi:keyboard-outline", Icons.Filled.Info, if (keyboardUp) scheme.onSecondaryContainer else scheme.onSurfaceVariant, 24.dp) },
+        icon = { HaIcon("mdi:keyboard-outline", CdVectors.Info, if (keyboardUp) scheme.onSecondaryContainer else scheme.onSurfaceVariant, 24.dp) },
         label = { Text("Type", fontSize = 11.sp, maxLines = 1) },
     )
     NavigationBarItem(
@@ -350,12 +349,12 @@ fun RowScope.AssistantBarItems(model: AssistModel, ui: AssistantTyping, onClose:
             AssistVoiceSetting.set(context, !AssistVoiceSetting.on)
             if (!AssistVoiceSetting.on) model.stopSpeaking()
         },
-        icon = { HaIcon(if (AssistVoiceSetting.on) "mdi:volume-high" else "mdi:volume-off", Icons.Filled.Info, scheme.onSurfaceVariant, 24.dp) },
+        icon = { HaIcon(if (AssistVoiceSetting.on) "mdi:volume-high" else "mdi:volume-off", CdVectors.Info, scheme.onSurfaceVariant, 24.dp) },
         label = { Text(if (AssistVoiceSetting.on) "Voice" else "Muted", fontSize = 11.sp, maxLines = 1) },
     )
     NavigationBarItem(
         selected = false, onClick = onSettings,
-        icon = { HaIcon("mdi:cog-outline", Icons.Filled.Info, scheme.onSurfaceVariant, 24.dp) },
+        icon = { HaIcon("mdi:cog-outline", CdVectors.Info, scheme.onSurfaceVariant, 24.dp) },
         label = { Text("Settings", fontSize = 11.sp, maxLines = 1) },
     )
 }
@@ -659,7 +658,7 @@ fun AssistIntro(kind: IntroKind, features: List<AssistFeature>, person: String, 
             features.forEach { f ->
                 EntityCard(tone.container, tone.onContainer) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        HaIcon(f.icon, Icons.Filled.Info, tone.accent, 28.dp)
+                        HaIcon(f.icon, CdVectors.Info, tone.accent, 28.dp)
                         Column {
                             Text(f.title, style = MaterialTheme.typography.titleMedium)
                             val line = if (f.example.isNotBlank()) "Say: ${f.example}" else f.detail

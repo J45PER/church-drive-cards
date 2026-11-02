@@ -4,6 +4,15 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.96.0
+
+- The signed-off icon audit (#1 to #26) is built in. Everywhere the apps drew a Material icon for one of these, they now draw the house's own: add, minus, close, back, the chevrons, info, sign out and in, check for updates, the eye (and its crossed-out form), the location pin, history, the whole battery (every 10%, charging, low, unknown), the shield family for the alarm (home, away, night, disarmed, arming, triggered, signing key), the padlock and key, the lightbulb (on, off, lit, group), the lightning bolt, the light scenes (sun, half sun, flower, moon, palette), the settings cog, the notifications chat, the House, the To-Do logo and the play, pause and stop controls at one size. Any Home Assistant icon name that means one of these (for example `mdi:lightbulb`, `mdi:battery-60`, `mdi:shield-home`, `mdi:map-marker`) is drawn the same way, so the dashboards and cards match. Lights with their own icon from the Hue pack keep it.
+- The satellite badges (add, settings, voice, location, updates, history), the widgets and the Satellites app's own buttons use the new shapes too.
+
+## 0.95.6
+
+- Clive's microphone: the capsule is 72 tall instead of 64, so it reaches closer to the bar. Same in the Ready pose of his mark (phone and watch) and in the mic icon on the settings rows and the top bar. Every other microphone is now Clive's too (the camera's talk button, the "turn on the wake word" tiles with a bubble, the watch), and the satellite mic badge has the longer capsule.
+
 ## 0.95.5
 
 - Fixed the wake-word row in Settings (and the small microphone in the top bar) flicking between "Listening" and "On, but not listening yet (last: ...)": the house's quiet timeouts are now restarted without leaving the waiting state. The Google G on Google push is one colour like the other icons. Notifications and Notification styles use Clive's own chat icon (his two squircles with a tail) instead of the Material bell, and his microphone is drawn 30% larger.

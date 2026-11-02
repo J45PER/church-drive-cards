@@ -19,7 +19,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -125,7 +124,7 @@ fun ServiceLogo(name: String, tint: Color, size: Dp) {
     val context = androidx.compose.ui.platform.LocalContext.current
     androidx.compose.runtime.LaunchedEffect(Unit) { SimpleIcons.load(context) }
     val has = SimpleIcons.paths?.containsKey(SimpleIcons.slugFor(name)) == true
-    HaIcon(if (has) "si:$name" else "mdi:music-note", Icons.Filled.Info, tint, size)
+    HaIcon(if (has) "si:$name" else "mdi:music-note", CdVectors.Info, tint, size)
 }
 
 /** A club badge: its crest, with the club's three letters behind it for while it loads or when there is none. */
@@ -251,7 +250,7 @@ fun AssistantCardView(card: AssistantCard, modifier: Modifier = Modifier, morph:
                         val t = toneColors(tone)
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Box(Modifier.size(38.dp).clip(CircleShape).background(t.accent.copy(alpha = 0.25f)), contentAlignment = Alignment.Center) {
-                                HaIcon("mdi:thermometer", Icons.Filled.Info, t.accent, 22.dp)
+                                HaIcon("mdi:thermometer", CdVectors.Info, t.accent, 22.dp)
                             }
                             Column(Modifier.weight(1f)) {
                                 Text(r.optString("name"), style = MaterialTheme.typography.titleSmall, color = ink, maxLines = 1)
@@ -274,7 +273,7 @@ fun AssistantCardView(card: AssistantCard, modifier: Modifier = Modifier, morph:
                 val live = hexColour(given)
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(Modifier.size(32.dp).clip(CircleShape).background((live ?: t.accent).copy(alpha = 0.25f)), contentAlignment = Alignment.Center) {
-                        HaIcon(f.optString("icon").ifBlank { if (failed) "mdi:close" else "mdi:check" }, Icons.Filled.Info, live ?: t.accent, 20.dp)
+                        HaIcon(f.optString("icon").ifBlank { if (failed) "mdi:close" else "mdi:check" }, CdVectors.Info, live ?: t.accent, 20.dp)
                     }
                     Column(Modifier.weight(1f)) {
                         Text(f.optString("name"), style = MaterialTheme.typography.titleSmall, color = ink)
@@ -328,7 +327,7 @@ fun AssistantCardView(card: AssistantCard, modifier: Modifier = Modifier, morph:
             "weather" -> {
                 val place = f.optString("location")
                 if (place.isNotBlank()) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)) {
-                    HaIcon("mdi:map-marker", Icons.Filled.Info, soft, 14.dp)
+                    HaIcon("mdi:map-marker", CdVectors.Info, soft, 14.dp)
                     Text(place, style = MaterialTheme.typography.labelMedium, color = soft)
                 }
                 Text(f.number("temp")?.let { "${Math.round(it)}°" } ?: "–", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = ink)
@@ -344,7 +343,7 @@ fun AssistantCardView(card: AssistantCard, modifier: Modifier = Modifier, morph:
                             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 Text(h.optString("t"), style = MaterialTheme.typography.labelSmall, color = soft)
                                 h.optString("t_home").takeIf { it.isNotBlank() }?.let { Text("($it)", style = MaterialTheme.typography.labelSmall, color = soft) }
-                                HaIcon(weatherIconName(h.optString("symbol")), Icons.Filled.Info, ink, 20.dp)
+                                HaIcon(weatherIconName(h.optString("symbol")), CdVectors.Info, ink, 20.dp)
                                 Text(h.number("temp")?.let { "${Math.round(it)}°" } ?: "–", style = MaterialTheme.typography.labelLarge, color = ink)
                             }
                         }
@@ -415,7 +414,7 @@ fun CardIcon(card: AssistantCard, tint: Color, size: Dp) {
         key != null && OwnLogos.paths?.containsKey(key) == true -> "ol:$key"
         else -> cardIcon(card)
     }
-    HaIcon(icon, Icons.Filled.Info, tint, size)
+    HaIcon(icon, CdVectors.Info, tint, size)
 }
 
 /**
@@ -454,10 +453,10 @@ private fun ListCardBody(card: AssistantCard, ink: Color, soft: Color) {
             val t = toneColors(toneByName(r.tone) ?: Tone.Grey)
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 when (r.marker) {
-                    "ok" -> HaIcon("mdi:check-circle", Icons.Filled.Info, toneColors(Tone.Green).accent, 20.dp)
-                    "warn" -> HaIcon("mdi:alert-circle", Icons.Filled.Info, toneColors(Tone.Amber).accent, 20.dp)
-                    "todo" -> HaIcon("mdi:checkbox-blank-outline", Icons.Filled.Info, soft, 20.dp)
-                    "done" -> HaIcon("mdi:checkbox-marked", Icons.Filled.Info, toneColors(Tone.Green).accent, 20.dp)
+                    "ok" -> HaIcon("mdi:check-circle", CdVectors.Info, toneColors(Tone.Green).accent, 20.dp)
+                    "warn" -> HaIcon("mdi:alert-circle", CdVectors.Info, toneColors(Tone.Amber).accent, 20.dp)
+                    "todo" -> HaIcon("mdi:checkbox-blank-outline", CdVectors.Info, soft, 20.dp)
+                    "done" -> HaIcon("mdi:checkbox-marked", CdVectors.Info, toneColors(Tone.Green).accent, 20.dp)
                     "dot" -> Box(Modifier.size(10.dp).clip(CircleShape).background(t.accent))
                 }
                 Column(Modifier.weight(1f)) {

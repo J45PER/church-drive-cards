@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.ListItem
@@ -129,7 +128,7 @@ fun NoticeStylesPage(isAdmin: Boolean, onBack: () -> Unit) {
                                 },
                             )
                         },
-                        leadingContent = { HaIcon(groupIcon(group), Icons.Filled.Notifications, if (gets) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, 24.dp) },
+                        leadingContent = { HaIcon(groupIcon(group), CdVectors.Chat, if (gets) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, 24.dp) },
                         trailingContent = {
                             if (me.isNotBlank()) {
                                 Switch(checked = gets, onCheckedChange = { on ->

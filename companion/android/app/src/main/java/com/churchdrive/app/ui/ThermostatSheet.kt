@@ -13,9 +13,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -114,7 +111,7 @@ fun ZoneStatusLine(zone: ZoneControl, tone: ToneColors, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        HaIcon(if (zone.controlled) "mdi:check-circle-outline" else "mdi:hand-back-right-outline", Icons.Filled.Info, tone.onContainer, 20.dp)
+        HaIcon(if (zone.controlled) "mdi:check-circle-outline" else "mdi:hand-back-right-outline", CdVectors.Info, tone.onContainer, 20.dp)
         Text(zoneStatusText(zone, name, System.currentTimeMillis()), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
         Text("Settings ›", style = MaterialTheme.typography.bodyMedium)
     }
@@ -125,9 +122,9 @@ fun ZoneStatusLine(zone: ZoneControl, tone: ToneColors, onClick: () -> Unit) {
 internal fun StepRow(label: String, shown: String, tone: ToneColors, enabled: Boolean, valueWidth: androidx.compose.ui.unit.Dp = 56.dp, onMinus: () -> Unit, onPlus: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        StepButton(Icons.Filled.Remove, "Lower $label", tone, enabled, onMinus)
+        StepButton(CdVectors.Minus, "Lower $label", tone, enabled, onMinus)
         Text(shown, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center, modifier = Modifier.width(valueWidth))
-        StepButton(Icons.Filled.Add, "Raise $label", tone, enabled, onPlus)
+        StepButton(CdVectors.Plus, "Raise $label", tone, enabled, onPlus)
     }
 }
 

@@ -14,8 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -197,7 +195,7 @@ fun CleaningPage(entities: Map<String, EntityState>, call: CallService) {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Box(Modifier.size(40.dp).background(colour.copy(alpha = 0.18f), CircleShape), contentAlignment = Alignment.Center) {
-                                    HaIcon(e?.str("icon")?.takeIf { it.isNotBlank() } ?: p.icon, Icons.Filled.Info, colour, 22.dp)
+                                    HaIcon(e?.str("icon")?.takeIf { it.isNotBlank() } ?: p.icon, CdVectors.Info, colour, 22.dp)
                                 }
                                 Column(Modifier.weight(1f)) {
                                     Text(p.name, style = MaterialTheme.typography.titleSmall, maxLines = 1)
@@ -266,9 +264,9 @@ private fun PickRow(label: String, options: List<String>, selected: String, icon
                     .padding(start = 12.dp, end = 6.dp, top = 8.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                iconFor(selected)?.let { HaIcon(it, Icons.Filled.Info, tone.accent, 22.dp) }
+                iconFor(selected)?.let { HaIcon(it, CdVectors.Info, tone.accent, 22.dp) }
                 Text(nice(selected), style = MaterialTheme.typography.titleSmall, color = tone.accent, maxLines = 1)
-                Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = tone.accent)
+                Icon(CdVectors.ChevronDown, contentDescription = null, tint = tone.accent)
             }
             DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
                 for (o in options) {
@@ -276,7 +274,7 @@ private fun PickRow(label: String, options: List<String>, selected: String, icon
                     val ink = if (o == selected) tone.accent else MaterialTheme.colorScheme.onSurface
                     DropdownMenuItem(
                         text = { Text(nice(o), color = ink) },
-                        leadingIcon = if (icon != null) { { HaIcon(icon, Icons.Filled.Info, ink, 22.dp) } } else null,
+                        leadingIcon = if (icon != null) { { HaIcon(icon, CdVectors.Info, ink, 22.dp) } } else null,
                         onClick = { open = false; onPick(o) },
                     )
                 }
