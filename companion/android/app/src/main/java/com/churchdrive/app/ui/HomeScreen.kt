@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.EvStation
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Thermostat
-import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu

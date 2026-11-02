@@ -53,4 +53,12 @@ object CdVectors {
     val Mic: ImageVector by lazy { build("mic") }
     val Play: ImageVector by lazy { build("play") }
     val Pause: ImageVector by lazy { build("pause") }
+    val Gregg: ImageVector by lazy { build("gregg") }
+    val Thermostat: ImageVector by lazy { build("thermostat") }
+    val Cart: ImageVector by lazy { build("cart") }
+    val Send: ImageVector by lazy { build("send") }
+    val Person: ImageVector by lazy { build("person") }
+    val Group: ImageVector by lazy { build("group") }
+    val DeviceServer: ImageVector by lazy { build("device-server") }
+    val Calendar: ImageVector by lazy { build("calendar") }
 }

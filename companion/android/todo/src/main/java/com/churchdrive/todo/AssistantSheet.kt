@@ -1,5 +1,7 @@
 package com.churchdrive.todo
 
+import com.churchdrive.app.ui.CdVectors
+
 import android.app.Activity
 import android.content.Intent
 import android.speech.RecognizerIntent
@@ -23,7 +25,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
@@ -128,7 +129,7 @@ fun AssistantSheet(vm: TodoModel, onClose: () -> Unit) {
                     keyboardActions = KeyboardActions(onSend = { send(text) }),
                     trailingIcon = { IconButton(onClick = { listen() }) { Icon(androidx.compose.ui.res.painterResource(com.churchdrive.core.R.drawable.cd_clive_mic), contentDescription = "Speak") } },
                 )
-                FilledIconButton(onClick = { send(text) }, enabled = text.isNotBlank()) { Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send") }
+                FilledIconButton(onClick = { send(text) }, enabled = text.isNotBlank()) { Icon(CdVectors.Send, contentDescription = "Send") }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 AssistChip(onClick = { text = "Add " }, label = { Text("Add…") })

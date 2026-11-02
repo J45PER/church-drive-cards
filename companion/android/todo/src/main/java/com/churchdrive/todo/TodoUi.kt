@@ -22,10 +22,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CleaningServices
-import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Checkbox
@@ -73,9 +69,9 @@ import com.churchdrive.app.ui.taskLine
 import com.churchdrive.app.ui.toneColors
 
 private fun TodoTab.icon(): ImageVector = when (this) {
-    TodoTab.Mine -> Icons.Filled.Person
-    TodoTab.Shared -> Icons.Filled.Groups
-    TodoTab.Cleaning -> Icons.Filled.CleaningServices
+    TodoTab.Mine -> CdVectors.Person
+    TodoTab.Shared -> CdVectors.Group
+    TodoTab.Cleaning -> CdVectors.Gregg
     TodoTab.House -> CdVectors.Home
 }
 
@@ -255,7 +251,7 @@ private fun TaskRow(item: TodoItem, tone: ToneColors, onEdit: () -> Unit, onTick
         if (list.isNotEmpty()) {
             // A shopping or steps list has no tick of its own: it is finished by finishing its items, in the main Church Drive app.
             Box(Modifier.padding(12.dp)) {
-                Icon(if (isStepsTask(item.description)) CdVectors.Todo else Icons.Filled.ShoppingCart, contentDescription = null, tint = tone.accent)
+                Icon(if (isStepsTask(item.description)) CdVectors.Todo else CdVectors.Cart, contentDescription = null, tint = tone.accent)
             }
         } else {
             Checkbox(checked = false, onCheckedChange = { onTick() }, colors = checks(tone))

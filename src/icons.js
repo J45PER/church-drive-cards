@@ -1,4 +1,4 @@
-import { CLIVE_COMMON } from './clive-common.js';
+import { CLIVE_COMMON, SHAPES } from './clive-common.js';
 // Icons that don't depend on <ha-icon> for custom packs.
 //
 // Custom icon packs (e.g. `phu:` from Custom Brand Icons) register themselves
@@ -49,6 +49,16 @@ const CLIVE_ICONS = {
   // The signed-off common set (icon audit #1 to #26): plus, close, chevrons, eye, pin, battery, shields, bulbs, scenes, bolt and more.
   ...CLIVE_COMMON,
 };
+
+// The house's own icons as a native icon set (cd:name): any card in Home Assistant, ours or not, can use `cd:weather-partly`, `cd:cart` and the rest,
+// the same way the Hue pack's `phu:` names work. Registered once, and never over a pack that already took the prefix.
+if (typeof window !== 'undefined') {
+  const getCd = (name) => Promise.resolve(SHAPES[name] ? { path: SHAPES[name].path, viewBox: SHAPES[name].viewBox } : { path: '', viewBox: '0 0 24 24' });
+  window.customIcons = window.customIcons || {};
+  if (!window.customIcons.cd) window.customIcons.cd = { getIcon: getCd, getIconList: () => Promise.resolve(Object.keys(SHAPES).map((name) => ({ name }))) };
+  window.customIconsets = window.customIconsets || {};
+  if (!window.customIconsets.cd) window.customIconsets.cd = getCd;
+}
 
 function escapeAttr(text) {
   return String(text).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
