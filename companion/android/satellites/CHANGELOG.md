@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.98.0
+
+- No change to the Satellites app; the version number moves with the other apps.
+
 ## 0.97.0
 
 - Every icon signed off in the icon audit up to #37 is now built in. New in this version: the climate set (thermometer, thermostat and its auto form with Clive's mark, the leaf, a house with a thermometer), Gregg's status icons rebuilt from the common house, !, bolt and pause bars (and the standard Gregg now replaces the plain robot on the Cleaning tab, the home panel and the watch), our own broom, the Devices icons by type (server or hub, phone or tablet, network, screen), people (a person, a group, an administrator), the shopping cart (empty and all bought), the calendar (today, done, a time, cancelled, moved on), the Send arrow, volume (low, medium, high, max, off and mute, with the speaker, subwoofer and the two smart speakers), the Wi-Fi cone (rounded, with empty and unknown) and the whole weather set.
