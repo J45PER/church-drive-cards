@@ -22,7 +22,6 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -221,7 +220,7 @@ fun SystemCard(entities: Map<String, EntityState>) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             SystemRows.rows(entities).forEach { row ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ToneIconName(row.icon, Icons.Filled.Info, toneColors(if (row.bad) Tone.Red else Tone.Green), 36)
+                    ToneIconName(row.icon, CdVectors.Info, toneColors(if (row.bad) Tone.Red else Tone.Green), 36)
                     Column(Modifier.weight(1f)) {
                         Text(row.name, style = MaterialTheme.typography.bodyLarge)
                         Text(row.sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

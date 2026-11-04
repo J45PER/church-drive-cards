@@ -17,8 +17,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -145,7 +143,7 @@ fun CameraCard(config: JSONObject, entities: Map<String, EntityState>, registry:
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    HaIcon("mdi:phone", Icons.Filled.Info, Color.White, 18.dp)
+                    HaIcon("mdi:phone", CdVectors.Info, Color.White, 18.dp)
                     Text("Answer", color = Color.White, fontSize = 13.sp)
                 }
             } else {
@@ -157,7 +155,7 @@ fun CameraCard(config: JSONObject, entities: Map<String, EntityState>, registry:
         if (battery != null && battery < 25) {
             Box(
                 modifier = Modifier.align(Alignment.TopEnd).padding(10.dp).clip(RoundedCornerShape(999.dp)).background(Color.Black.copy(alpha = 0.5f)).padding(6.dp),
-            ) { HaIcon("mdi:battery-alert", Icons.Filled.Info, Color(0xFFFFA726), 18.dp) }
+            ) { HaIcon("mdi:battery-alert", CdVectors.Info, Color(0xFFFFA726), 18.dp) }
         }
     }
 
@@ -230,7 +228,7 @@ internal fun CameraViewer(
                 if (!full) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(name, color = Color.White, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f).padding(start = 8.dp))
-                        IconButton(onClick = close) { Icon(Icons.Filled.Close, contentDescription = "Close", tint = Color.White) }
+                        IconButton(onClick = close) { Icon(CdVectors.Close, contentDescription = "Close", tint = Color.White) }
                     }
                 }
                 // One stage for both: pinch to zoom, drag to look around, double-tap to zoom in and out. Full screen just gives it all the room.
@@ -250,10 +248,10 @@ internal fun CameraViewer(
                         ) {
                             val canListen = mode == "webrtc" || mode == "hls"
                             if (canListen) IconButton(onClick = { muted = !muted }, modifier = Modifier.background(Color.Black.copy(alpha = 0.45f), CircleShape)) {
-                                HaIcon(if (muted) "mdi:volume-off" else "mdi:volume-high", Icons.Filled.Info, Color.White, 22.dp)
+                                HaIcon(if (muted) "mdi:volume-off" else "mdi:volume-high", CdVectors.Info, Color.White, 22.dp)
                             }
                             IconButton(onClick = { full = false }, modifier = Modifier.background(Color.Black.copy(alpha = 0.45f), CircleShape)) {
-                                HaIcon("mdi:fullscreen-exit", Icons.Filled.Info, Color.White, 22.dp)
+                                HaIcon("mdi:fullscreen-exit", CdVectors.Info, Color.White, 22.dp)
                             }
                         }
                     }

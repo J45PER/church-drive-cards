@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -36,7 +35,7 @@ fun FullPage(title: String, onBack: () -> Unit, content: @Composable ColumnScope
             Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
                 Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(modifier = Modifier.clickable(onClickLabel = "Back") { close() }.padding(12.dp)) {
-                        HaIcon("mdi:arrow-left", Icons.Filled.Info, MaterialTheme.colorScheme.onBackground, 24.dp)
+                        HaIcon("mdi:arrow-left", CdVectors.Info, MaterialTheme.colorScheme.onBackground, 24.dp)
                     }
                     Text(title, style = MaterialTheme.typography.titleLarge, maxLines = 1, modifier = Modifier.weight(1f))
                 }

@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -93,7 +92,7 @@ fun WatchSettingsPage(entities: Map<String, EntityState>) {
             val info = WATCH_PAGES.firstOrNull { it.id == id } ?: return@forEachIndexed
             EntityCard(neutral.container, neutral.onContainer) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ToneIconName(info.icon, Icons.Filled.Info, tone, 36)
+                    ToneIconName(info.icon, CdVectors.Info, tone, 36)
                     Column(Modifier.weight(1f)) {
                         Text(info.label, style = MaterialTheme.typography.titleMedium)
                         Text(info.what, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

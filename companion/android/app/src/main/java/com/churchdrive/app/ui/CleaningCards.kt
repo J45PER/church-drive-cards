@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,7 +30,7 @@ fun EntitiesCard(config: JSONObject, entities: Map<String, EntityState>) {
             val unit = entity?.str("unit_of_measurement")?.let { " $it" }.orEmpty()
             val value = if (entity == null) "–" else presetLabel(entity.state) + unit
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                ToneIconName(spec.optString("icon").ifBlank { entity?.str("icon") ?: "" }, Icons.Filled.Info, neutral, 36)
+                ToneIconName(spec.optString("icon").ifBlank { entity?.str("icon") ?: "" }, CdVectors.Info, neutral, 36)
                 Column(modifier = Modifier.weight(1f)) {
                     Text(name, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
                 }

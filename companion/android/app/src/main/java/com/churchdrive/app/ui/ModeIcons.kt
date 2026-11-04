@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateMapOf
@@ -56,7 +55,7 @@ fun IconChoice(
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {
-        HaIcon(icon, Icons.Filled.Info, (if (selected) tone.onAccent else content).copy(alpha = if (enabled) 1f else 0.4f), Ui.TileIcon)
+        HaIcon(icon, CdVectors.Info, (if (selected) tone.onAccent else content).copy(alpha = if (enabled) 1f else 0.4f), Ui.TileIcon)
     }
 }
 
@@ -116,12 +115,12 @@ private fun Tile(item: TileItem, tone: ToneColors, content: Color, enabled: Bool
     ) {
         if (column) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                HaIcon(item.icon, Icons.Filled.Info, ink, Ui.TileIcon)
+                HaIcon(item.icon, CdVectors.Info, ink, Ui.TileIcon)
                 if (item.showLabel) CentredText(item.label, ink, Ui.TileTextStacked, Modifier.padding(horizontal = 4.dp))
             }
         } else {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                HaIcon(item.icon, Icons.Filled.Info, ink, Ui.TileIcon)
+                HaIcon(item.icon, CdVectors.Info, ink, Ui.TileIcon)
                 if (item.showLabel) CentredText(item.label, ink, Ui.TileText, Modifier.padding(end = 2.dp))
             }
         }

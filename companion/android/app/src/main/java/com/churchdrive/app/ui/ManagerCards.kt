@@ -12,9 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -157,7 +154,7 @@ fun DeviceHealthCard(config: JSONObject, entities: Map<String, EntityState>, cal
             val tone = toneColors(if (d.ok) Tone.Green else Tone.Amber)
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ToneIconName(if (d.ok) "mdi:check-circle-outline" else "mdi:alert-circle-outline", Icons.Filled.Info, tone, 36)
+                    ToneIconName(if (d.ok) "mdi:check-circle-outline" else "mdi:alert-circle-outline", CdVectors.Info, tone, 36)
                     Column(Modifier.weight(1f)) {
                         Text(d.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
                         Text(listOf("Heard ${d.lastHeard}", d.usual).filter { it.isNotBlank() }.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -179,7 +176,7 @@ fun HeadingCard(config: JSONObject) {
     val text = config.optString("heading").ifBlank { config.optString("title") }
     if (text.isBlank()) return
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        config.optString("icon").takeIf { it.isNotBlank() }?.let { HaIcon(it, Icons.Filled.Info, MaterialTheme.colorScheme.primary, 22.dp) }
+        config.optString("icon").takeIf { it.isNotBlank() }?.let { HaIcon(it, CdVectors.Info, MaterialTheme.colorScheme.primary, 22.dp) }
         Text(text, style = MaterialTheme.typography.titleMedium)
     }
 }
@@ -261,9 +258,9 @@ private fun NumberInput(entity: EntityState, call: CallService) {
     val value = entity.state.toDoubleOrNull()
     fun set(v: Double) = call("input_number", "set_value", entity.entityId, data("value" to v.coerceIn(min, max)))
     Row(verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = { value?.let { set(it - step) } }) { Icon(Icons.Filled.Remove, contentDescription = "Less") }
+        IconButton(onClick = { value?.let { set(it - step) } }) { Icon(CdVectors.Minus, contentDescription = "Less") }
         Text(value?.let { if (it % 1.0 == 0.0) it.toInt().toString() else "%.1f".format(it) } ?: "–", style = MaterialTheme.typography.bodyLarge)
-        IconButton(onClick = { value?.let { set(it + step) } }) { Icon(Icons.Filled.Add, contentDescription = "More") }
+        IconButton(onClick = { value?.let { set(it + step) } }) { Icon(CdVectors.Plus, contentDescription = "More") }
     }
 }
 

@@ -1,5 +1,7 @@
 package com.churchdrive.satellites
 
+import com.churchdrive.app.ui.CdVectors
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -23,13 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.Fingerprint
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.SystemUpdate
-import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -160,15 +156,15 @@ private fun AccountPage(vm: SatelliteModel, onClose: () -> Unit, onOpen: (String
                 }
             }
         }
-        PanelCard { PanelRow(Icons.Outlined.Home, "Open Church Drive", "The main app: lights, alarm, cameras and the rest", onClick = { ChurchDriveLink.open(context) }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_church_drive), contentDescription = null) }) }
+        PanelCard { PanelRow(CdVectors.Home, "Open Church Drive", "The main app: lights, alarm, cameras and the rest", onClick = { ChurchDriveLink.open(context) }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_church_drive), contentDescription = null) }) }
         PanelCard {
-            PanelRow(Icons.Outlined.Settings, "Settings", onClick = { onOpen("settings") }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_cog_outline), contentDescription = null) })
-            PanelRow(Icons.Outlined.Info, "About", onClick = { onOpen("about") })
+            PanelRow(CdVectors.Cog, "Settings", onClick = { onOpen("settings") }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_cog_outline), contentDescription = null) })
+            PanelRow(CdVectors.Info, "About", onClick = { onOpen("about") })
         }
         // A sign-in taken from the Church Drive app is that app's to end; signing out there signs this one out too.
         PanelCard {
-            if (vm.borrowed) PanelRow(Icons.AutoMirrored.Outlined.Logout, "Sign out", "This app uses the Church Drive app's sign-in. Sign out there and it signs out here too.")
-            else PanelRow(Icons.AutoMirrored.Outlined.Logout, "Sign out", onClick = { onClose(); vm.signOut() })
+            if (vm.borrowed) PanelRow(CdVectors.SignOut, "Sign out", "This app uses the Church Drive app's sign-in. Sign out there and it signs out here too.")
+            else PanelRow(CdVectors.SignOut, "Sign out", onClick = { onClose(); vm.signOut() })
         }
     }
 }
@@ -179,7 +175,7 @@ private fun SettingsPage(vm: SatelliteModel, onBack: () -> Unit) {
         PanelTitle("Settings", onBack)
         PanelCard {
             PanelRow(
-                Icons.Outlined.Visibility, "Open on the satellite I left",
+                CdVectors.Eye, "Open on the satellite I left",
                 "When this is off, the app always opens on the list of satellites.",
                 leading = { Icon(painterResource(R.drawable.sat_device_history), contentDescription = null) },
                 trailing = { Switch(checked = vm.rememberSatellite, onCheckedChange = { vm.changeRememberSatellite(it) }) },
@@ -187,7 +183,7 @@ private fun SettingsPage(vm: SatelliteModel, onBack: () -> Unit) {
         }
         PanelCard {
             PanelRow(
-                Icons.Outlined.Settings, "Each satellite's own settings",
+                CdVectors.Cog, "Each satellite's own settings",
                 "Design, glances, backlight and the switches are on the satellite's page: tap it in the list.",
                 leading = { Icon(painterResource(R.drawable.sat_device_cog), contentDescription = null) },
             )
@@ -206,9 +202,9 @@ private fun AboutPage(onBack: () -> Unit) {
     PageColumn {
         PanelTitle("About", onBack)
         PanelCard {
-            PanelRow(Icons.Outlined.Info, "Church Drive Satellites", "Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.BUILD}) · ${BuildConfig.COMMIT}", leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_satellites), contentDescription = null) })
+            PanelRow(CdVectors.Info, "Church Drive Satellites", "Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.BUILD}) · ${BuildConfig.COMMIT}", leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_satellites), contentDescription = null) })
             PanelRow(
-                Icons.Outlined.SystemUpdate, "Updates",
+                CdVectors.SystemUpdate, "Updates",
                 if (BuildConfig.PLAY) "Google Play keeps this app up to date. Tap to open its Play page" else "A test build: newer ones are on GitHub, under the satellites-latest release",
                 onClick = if (BuildConfig.PLAY) ({ UpdateCheck.openPlayPage(context, context.packageName) }) else null,
             )

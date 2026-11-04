@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -112,7 +111,7 @@ fun ZoneCard(config: JSONObject, entities: Map<String, EntityState>, call: CallS
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                HaIcon("mdi:alert", Icons.Filled.Info, red.onAccent, 20.dp)
+                HaIcon("mdi:alert", CdVectors.Info, red.onAccent, 20.dp)
                 Text(view.warn, color = red.onAccent, style = MaterialTheme.typography.bodyMedium)
             }
         }
@@ -223,7 +222,7 @@ private fun BatteryRow(b: ZoneBattery, ink: Color) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         HaIcon(
             if (b.level == null) "mdi:battery-outline" else if (low) "mdi:battery-alert" else b.icon,
-            Icons.Filled.Info, colour, 17.dp,
+            CdVectors.Info, colour, 17.dp,
         )
         Text(b.name, style = MaterialTheme.typography.bodyMedium, color = colour, maxLines = 1, modifier = Modifier.weight(1f))
         Box(modifier = Modifier.width(56.dp).height(5.dp).clip(RoundedCornerShape(99.dp)).background(ink.copy(alpha = 0.2f))) {

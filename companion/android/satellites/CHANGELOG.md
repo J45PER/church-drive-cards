@@ -1,5 +1,20 @@
 # Church Drive Satellites: changelog
 
+## 0.97.0
+
+- Every icon signed off in the icon audit up to #37 is now built in. New in this version: the climate set (thermometer, thermostat and its auto form with Clive's mark, the leaf, a house with a thermometer), Gregg's status icons rebuilt from the common house, !, bolt and pause bars (and the standard Gregg now replaces the plain robot on the Cleaning tab, the home panel and the watch), our own broom, the Devices icons by type (server or hub, phone or tablet, network, screen), people (a person, a group, an administrator), the shopping cart (empty and all bought), the calendar (today, done, a time, cancelled, moved on), the Send arrow, volume (low, medium, high, max, off and mute, with the speaker, subwoofer and the two smart speakers), the Wi-Fi cone (rounded, with empty and unknown) and the whole weather set.
+- The satellite volume badge and the Satellites app's Wi-Fi icons use the new shapes. Where a screen used a Material icon for any of these (To-Do's Mine and Shared, shopping, date, Send, the Cleaning tab and the Devices page), it now draws the house's own, and so does any Home Assistant icon name that means the same thing (for example `mdi:weather-partly-cloudy`, `mdi:cart`, `mdi:account-group`, `mdi:wifi-strength-2`).
+- In Home Assistant the same shapes are an icon set of their own, `cd:` (for example `cd:weather-rainy`, `cd:cart`, `cd:thermostat`), so any dashboard card can use them.
+
+## 0.96.0
+
+- The signed-off icon audit (#1 to #26) is built in. Everywhere the apps drew a Material icon for one of these, they now draw the house's own: add, minus, close, back, the chevrons, info, sign out and in, check for updates, the eye (and its crossed-out form), the location pin, history, the whole battery (every 10%, charging, low, unknown), the shield family for the alarm (home, away, night, disarmed, arming, triggered, signing key), the padlock and key, the lightbulb (on, off, lit, group), the lightning bolt, the light scenes (sun, half sun, flower, moon, palette), the settings cog, the notifications chat, the House, the To-Do logo and the play, pause and stop controls at one size. Any Home Assistant icon name that means one of these (for example `mdi:lightbulb`, `mdi:battery-60`, `mdi:shield-home`, `mdi:map-marker`) is drawn the same way, so the dashboards and cards match. Lights with their own icon from the Hue pack keep it.
+- The satellite badges (add, settings, voice, location, updates, history), the widgets and the Satellites app's own buttons use the new shapes too.
+
+## 0.95.6
+
+- No change to this app.
+
 ## 0.95.5
 
 - No change to this app.

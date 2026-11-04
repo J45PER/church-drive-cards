@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -87,7 +86,7 @@ fun MediaCard(config: JSONObject, entities: Map<String, EntityState>, registry: 
             val on = p.state !in setOf("off", "unavailable", "unknown")
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(Modifier.weight(1f).clickable { open = p.entityId }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ToneIconName(mediaIcon(p), Icons.Filled.Info, tone, 38)
+                    ToneIconName(mediaIcon(p), CdVectors.Info, tone, 38)
                     Column(Modifier.weight(1f)) {
                         Text(p.friendlyName, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
                         Text(mediaLine(p), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
@@ -99,7 +98,7 @@ fun MediaCard(config: JSONObject, entities: Map<String, EntityState>, registry: 
                         if (playing) call("media_player", "media_play_pause", p.entityId, data())
                         else call("media_player", if (on) "turn_off" else "turn_on", p.entityId, data())
                     }) {
-                        HaIcon(if (playing) (if (p.state == "playing") "mdi:pause" else "mdi:play") else "mdi:power", Icons.Filled.Info, if (on) tone.accent else tone.onContainer, 24.dp)
+                        HaIcon(if (playing) (if (p.state == "playing") "mdi:pause" else "mdi:play") else "mdi:power", CdVectors.Info, if (on) tone.accent else tone.onContainer, 24.dp)
                     }
                 }
             }
@@ -117,23 +116,23 @@ private fun MediaRemote(player: EntityState, registry: Registry, tone: ToneColor
         Card(Modifier.padding(horizontal = 24.dp)) {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ToneIconName(mediaIcon(player), Icons.Filled.Info, tone, 44)
+                    ToneIconName(mediaIcon(player), CdVectors.Info, tone, 44)
                     Column(Modifier.weight(1f)) {
                         Text(player.friendlyName, style = MaterialTheme.typography.titleMedium)
                         Text(mediaLine(player), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    IconButton(onClick = close) { HaIcon("mdi:close", Icons.Filled.Info, MaterialTheme.colorScheme.onSurface, 22.dp) }
+                    IconButton(onClick = close) { HaIcon("mdi:close", CdVectors.Info, MaterialTheme.colorScheme.onSurface, 22.dp) }
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                    if (player.supports(Feature.TURN_ON) || player.supports(Feature.TURN_OFF)) IconButton(onClick = { call("media_player", if (on) "turn_off" else "turn_on", id, data()) }) { HaIcon("mdi:power", Icons.Filled.Info, if (on) tone.accent else MaterialTheme.colorScheme.onSurface, 26.dp) }
-                    if (player.supports(Feature.PREVIOUS)) IconButton(onClick = { call("media_player", "media_previous_track", id, data()) }) { HaIcon("mdi:skip-previous", Icons.Filled.Info, MaterialTheme.colorScheme.onSurface, 26.dp) }
-                    if (player.supports(Feature.PAUSE) || player.supports(Feature.PLAY)) IconButton(onClick = { call("media_player", "media_play_pause", id, data()) }) { HaIcon(if (player.state == "playing") "mdi:pause" else "mdi:play", Icons.Filled.Info, tone.accent, 34.dp) }
-                    if (player.supports(Feature.NEXT)) IconButton(onClick = { call("media_player", "media_next_track", id, data()) }) { HaIcon("mdi:skip-next", Icons.Filled.Info, MaterialTheme.colorScheme.onSurface, 26.dp) }
+                    if (player.supports(Feature.TURN_ON) || player.supports(Feature.TURN_OFF)) IconButton(onClick = { call("media_player", if (on) "turn_off" else "turn_on", id, data()) }) { HaIcon("mdi:power", CdVectors.Info, if (on) tone.accent else MaterialTheme.colorScheme.onSurface, 26.dp) }
+                    if (player.supports(Feature.PREVIOUS)) IconButton(onClick = { call("media_player", "media_previous_track", id, data()) }) { HaIcon("mdi:skip-previous", CdVectors.Info, MaterialTheme.colorScheme.onSurface, 26.dp) }
+                    if (player.supports(Feature.PAUSE) || player.supports(Feature.PLAY)) IconButton(onClick = { call("media_player", "media_play_pause", id, data()) }) { HaIcon(if (player.state == "playing") "mdi:pause" else "mdi:play", CdVectors.Info, tone.accent, 34.dp) }
+                    if (player.supports(Feature.NEXT)) IconButton(onClick = { call("media_player", "media_next_track", id, data()) }) { HaIcon("mdi:skip-next", CdVectors.Info, MaterialTheme.colorScheme.onSurface, 26.dp) }
                 }
                 if (player.supports(Feature.VOLUME_SET)) {
                     var volume by remember(id, player.num("volume_level")) { mutableStateOf((player.num("volume_level") ?: 0.0).toFloat()) }
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        HaIcon("mdi:volume-high", Icons.Filled.Info, MaterialTheme.colorScheme.onSurfaceVariant, 22.dp)
+                        HaIcon("mdi:volume-high", CdVectors.Info, MaterialTheme.colorScheme.onSurfaceVariant, 22.dp)
                         Slider(volume, { volume = it }, Modifier.weight(1f), onValueChangeFinished = { call("media_player", "volume_set", id, data("volume_level" to volume.toDouble())) })
                     }
                 }
@@ -164,5 +163,5 @@ private fun MediaRemote(player: EntityState, registry: Registry, tone: ToneColor
 
 @Composable
 private fun PadKey(key: String, icon: String, pad: Pad, player: String, call: CallService) {
-    IconButton(onClick = { padPress(pad, player, key, call) }) { HaIcon(icon, Icons.Filled.Info, MaterialTheme.colorScheme.onSurface, 28.dp) }
+    IconButton(onClick = { padPress(pad, player, key, call) }) { HaIcon(icon, CdVectors.Info, MaterialTheme.colorScheme.onSurface, 28.dp) }
 }

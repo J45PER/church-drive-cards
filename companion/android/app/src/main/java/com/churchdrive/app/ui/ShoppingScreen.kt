@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -107,7 +106,7 @@ fun ShoppingScreen(listId: String, onClose: () -> Unit) {
             Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
                 Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(modifier = Modifier.clickable { back() }.padding(12.dp)) {
-                        HaIcon("mdi:arrow-left", Icons.Filled.Info, MaterialTheme.colorScheme.onBackground, 24.dp)
+                        HaIcon("mdi:arrow-left", CdVectors.Info, MaterialTheme.colorScheme.onBackground, 24.dp)
                     }
                     Text(
                         if (editing) (if (list == null) (if (steps) "New steps list" else "New shopping list") else if (steps) "Edit steps" else "Edit list")
@@ -210,7 +209,7 @@ private fun ShoppingItemsView(list: ShoppingList, state: ShoppingState, tone: To
                     style = MaterialTheme.typography.bodyLarge, textDecoration = TextDecoration.LineThrough,
                     color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f),
                 )
-                HaIcon("mdi:undo", Icons.Filled.Info, MaterialTheme.colorScheme.onSurfaceVariant, 22.dp)
+                HaIcon("mdi:undo", CdVectors.Info, MaterialTheme.colorScheme.onSurfaceVariant, 22.dp)
             }
         }
     }
@@ -316,7 +315,7 @@ private fun ShoppingForm(existing: ShoppingList?, steps: Boolean, state: Shoppin
             }.padding(vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            HaIcon("mdi:map-marker-outline", Icons.Filled.Info, tone.accent, 24.dp)
+            HaIcon("mdi:map-marker-outline", CdVectors.Info, tone.accent, 24.dp)
             Column(modifier = Modifier.weight(1f)) {
                 Text(p.name, style = MaterialTheme.typography.bodyLarge)
                 Text(p.address, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -378,7 +377,7 @@ fun ShoppingCard(config: JSONObject) {
                     modifier = Modifier.fillMaxWidth().clickable { open = l.id }.padding(vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    HaIcon("mdi:cart-outline", Icons.Filled.Info, tone.accent, 26.dp)
+                    HaIcon("mdi:cart-outline", CdVectors.Info, tone.accent, 26.dp)
                     Column(modifier = Modifier.weight(1f)) {
                         Text(l.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
                         val sub = listOf(whenText(l.date.ifEmpty { null }), l.time.takeIf { l.date.isNotEmpty() }.orEmpty(), l.people.joinToString(", "), l.places.joinToString(", ") { it.name })

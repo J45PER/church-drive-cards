@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.FilledIconButton
@@ -90,7 +89,7 @@ fun TaskListCard(config: JSONObject, entities: Map<String, EntityState>, call: C
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (shoppingIdOf(item.description).isNotEmpty()) {
                     // A shopping list has no tick of its own: it is finished by finishing its items.
-                    Box(modifier = Modifier.padding(12.dp)) { HaIcon(if (isStepsTask(item.description)) "mdi:format-list-checks" else "mdi:cart-outline", Icons.Filled.Info, toneColors(if (isStepsTask(item.description)) Tone.Teal else Tone.Indigo).accent, 24.dp) }
+                    Box(modifier = Modifier.padding(12.dp)) { HaIcon(if (isStepsTask(item.description)) "mdi:format-list-checks" else "mdi:cart-outline", CdVectors.Info, toneColors(if (isStepsTask(item.description)) Tone.Teal else Tone.Indigo).accent, 24.dp) }
                 } else Checkbox(
                     checked = false,
                     onCheckedChange = {
@@ -99,7 +98,7 @@ fun TaskListCard(config: JSONObject, entities: Map<String, EntityState>, call: C
                     },
                     colors = CheckboxDefaults.colors(checkedColor = tone.accent, uncheckedColor = tone.accent),
                 )
-                if (showIcons) HaIcon(choreIcon(item.summary), Icons.Filled.Info, tone.accent, 22.dp)
+                if (showIcons) HaIcon(choreIcon(item.summary), CdVectors.Info, tone.accent, 22.dp)
                 Column(
                     modifier = Modifier.weight(1f).padding(start = if (showIcons) 8.dp else 0.dp).clickable {
                         // A shopping list's task opens the list page, not the task form.
@@ -122,7 +121,7 @@ fun TaskListCard(config: JSONObject, entities: Map<String, EntityState>, call: C
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text("Done (${finished.size})", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                HaIcon(if (showDone) "mdi:chevron-up" else "mdi:chevron-down", Icons.Filled.Info, tone.onContainer, 22.dp)
+                HaIcon(if (showDone) "mdi:chevron-up" else "mdi:chevron-down", CdVectors.Info, tone.onContainer, 22.dp)
             }
             if (showDone) finished.forEach { item ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -158,7 +157,7 @@ fun TaskListCard(config: JSONObject, entities: Map<String, EntityState>, call: C
                 },
                 enabled = text.isNotBlank(),
                 colors = IconButtonDefaults.filledIconButtonColors(containerColor = tone.accent, contentColor = tone.onAccent),
-            ) { HaIcon("mdi:plus", Icons.Filled.Info, tone.onAccent, 22.dp) }
+            ) { HaIcon("mdi:plus", CdVectors.Info, tone.onAccent, 22.dp) }
         }
         // A steps list is a checklist that shows in this list as one task; it is made here and worked through on its own page.
         TileRow(listOf(TileItem("mdi:format-list-checks", "New steps list", false) { shopping = NEW_STEPS }), tone, tone.onContainer)
@@ -185,7 +184,7 @@ fun HouseTasksCard(config: JSONObject, entities: Map<String, EntityState>) {
         }
         tasks.forEach { (item, task) ->
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                ToneIconName(task.icon, Icons.Filled.Info, tone)
+                ToneIconName(task.icon, CdVectors.Info, tone)
                 Column(modifier = Modifier.weight(1f)) {
                     Text(item.summary, style = MaterialTheme.typography.bodyLarge)
                     val sub = listOf(task.kind, task.detail, if (showAll) task.who else "").filter { it.isNotBlank() }.joinToString(" · ")

@@ -10,9 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -87,7 +84,7 @@ fun ClimateZoneCard(config: JSONObject, entities: Map<String, EntityState>, call
             Text(config.optString("title").ifBlank { "Rooms" }, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
             if (!open) Text("Graphs", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Icon(
-                if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, contentDescription = null,
+                if (open) CdVectors.ChevronUp else CdVectors.ChevronDown, contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -106,7 +103,7 @@ fun ClimateZoneCard(config: JSONObject, entities: Map<String, EntityState>, call
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                ToneIconName(r.optString("icon"), Icons.Filled.Info, tone)
+                ToneIconName(r.optString("icon"), CdVectors.Info, tone)
                 Column(modifier = Modifier.weight(1f)) {
                     Text(r.optString("name"), style = MaterialTheme.typography.titleMedium, maxLines = 1)
                     r.optString("note").takeIf { it.isNotBlank() }?.let {
@@ -117,7 +114,7 @@ fun ClimateZoneCard(config: JSONObject, entities: Map<String, EntityState>, call
                     Text(if (t == null) "–" else "${temp(t)}°", style = MaterialTheme.typography.titleLarge, color = tone.accent)
                     if (h != null) Text("${h.roundToInt()}%", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                if (editable) HaIcon("mdi:tune-variant", Icons.Filled.Info, MaterialTheme.colorScheme.onSurfaceVariant, 20.dp)
+                if (editable) HaIcon("mdi:tune-variant", CdVectors.Info, MaterialTheme.colorScheme.onSurfaceVariant, 20.dp)
             }
             if (editing == r.optString("name") && lowHelper != null && highHelper != null) {
                 RoomRangeSheet(r.optString("name"), lowHelper, highHelper, tone, call) { editing = null }
@@ -144,7 +141,7 @@ fun FanCard(config: JSONObject, entities: Map<String, EntityState>, call: CallSe
     val enabled = fan?.available == true
     EntityCard(tone.container, tone.onContainer, deviceEntity = id) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ToneIconName(config.optString("icon").ifBlank { "mdi:fan" }, Icons.Filled.Info, tone)
+            ToneIconName(config.optString("icon").ifBlank { "mdi:fan" }, CdVectors.Info, tone)
             Column(modifier = Modifier.weight(1f)) {
                 Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 1)
                 Text(if (!on) "Off" else preset?.let { presetLabel(it) } ?: "On", style = MaterialTheme.typography.bodyMedium)
@@ -202,7 +199,7 @@ fun AirPurifierCard(config: JSONObject, entities: Map<String, EntityState>, call
     val filters = config.optJSONArray("filters")
     EntityCard(tone.container, tone.onContainer, deviceEntity = id) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ToneIconName("mdi:air-purifier", Icons.Filled.Info, tone)
+            ToneIconName("mdi:air-purifier", CdVectors.Info, tone)
             Column(modifier = Modifier.weight(1f)) {
                 Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 1)
                 Text(if (!on) "Off" else preset?.let { presetLabel(it) } ?: "On", style = MaterialTheme.typography.bodyMedium)
@@ -260,7 +257,7 @@ fun CoAlarmCard(config: JSONObject, entities: Map<String, EntityState>, call: Ca
     val mute = config.optString("mute_entity").takeIf { it.isNotBlank() }
     EntityCard(tone.container, tone.onContainer, deviceEntity = config.optString("entity")) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ToneIconName("mdi:molecule-co", Icons.Filled.Info, tone)
+            ToneIconName("mdi:molecule-co", CdVectors.Info, tone)
             Column(modifier = Modifier.weight(1f)) {
                 Text("Carbon monoxide", style = MaterialTheme.typography.titleMedium)
                 Text(if (alarm) "ALARM" else "All clear", style = MaterialTheme.typography.bodyMedium, color = tone.accent)
@@ -306,7 +303,7 @@ fun CoverCard(config: JSONObject, entities: Map<String, EntityState>, call: Call
     }
     EntityCard(tone.container, tone.onContainer, deviceEntity = id) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ToneIconName(config.optString("icon").ifBlank { "mdi:blinds" }, Icons.Filled.Info, tone)
+            ToneIconName(config.optString("icon").ifBlank { "mdi:blinds" }, CdVectors.Info, tone)
             Column(modifier = Modifier.weight(1f)) {
                 Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 1)
                 Text(listOf(config.optString("subtitle"), word).filter { it.isNotBlank() }.joinToString(" · "), style = MaterialTheme.typography.bodyMedium)
@@ -353,7 +350,7 @@ fun ForecastHeader(config: JSONObject, entities: Map<String, EntityState>) {
     val upcoming = points.filter { it.timeMs >= System.currentTimeMillis() - 30 * 60_000L }.take(12)
     EntityCard(tone.container, tone.onContainer) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ToneIconName(weatherIcon(weather.state), Icons.Filled.Info, tone, 48)
+            ToneIconName(weatherIcon(weather.state), CdVectors.Info, tone, 48)
             Column(modifier = Modifier.weight(1f)) {
                 Text(weather.num("temperature")?.let { "${it.roundToInt()}°" } ?: "–", style = MaterialTheme.typography.headlineMedium)
                 Text(presetLabel(weather.state.replace('-', ' ')), style = MaterialTheme.typography.bodyMedium)
@@ -364,7 +361,7 @@ fun ForecastHeader(config: JSONObject, entities: Map<String, EntityState>) {
                 upcoming.forEach { p ->
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(44.dp)) {
                         Text(eventClock(p.timeMs).take(2), fontSize = 12.sp)
-                        HaIcon(weatherIcon(p.condition), Icons.Filled.Info, tone.accent, 24.dp, Modifier.padding(vertical = 4.dp))
+                        HaIcon(weatherIcon(p.condition), CdVectors.Info, tone.accent, 24.dp, Modifier.padding(vertical = 4.dp))
                         Text(p.temperature?.let { "${it.roundToInt()}°" } ?: "–", fontSize = 13.sp)
                     }
                 }

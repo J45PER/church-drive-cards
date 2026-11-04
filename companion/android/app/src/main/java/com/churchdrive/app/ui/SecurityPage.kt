@@ -10,10 +10,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -166,7 +162,7 @@ fun SafetyCard(config: JSONObject, entities: Map<String, EntityState>, registry:
                         .background(if (item.on) tone.accent else tone.accent.copy(alpha = 0.18f), RoundedCornerShape(12.dp)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    HaIcon(SAFETY_ICONS[item.kind] ?: "mdi:alarm-light", Icons.Filled.Security, if (item.on) tone.onAccent else tone.accent, 22.dp)
+                    HaIcon(SAFETY_ICONS[item.kind] ?: "mdi:alarm-light", CdVectors.ShieldOutline, if (item.on) tone.onAccent else tone.accent, 22.dp)
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(item.name, style = MaterialTheme.typography.titleMedium, maxLines = 1)
@@ -214,7 +210,7 @@ fun TileCard(config: JSONObject, entities: Map<String, EntityState>, call: CallS
     EntityCard(tone.container, tone.onContainer, deviceEntity = id) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             if (isVacuum) GreggIcon(greggState(entity, entities[VACUUM_BATTERY]), tone.accent, 44.dp, entities[VACUUM_BATTERY]?.state?.toDoubleOrNull())
-            else ToneIconName(greggEntityIcon(id) ?: config.optString("icon").ifBlank { entity?.str("icon") ?: "" }, Icons.Filled.Info, tone)
+            else ToneIconName(greggEntityIcon(id) ?: config.optString("icon").ifBlank { entity?.str("icon") ?: "" }, CdVectors.Info, tone)
             Column(modifier = Modifier.weight(1f)) {
                 Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 1)
                 Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 3)
@@ -227,8 +223,8 @@ fun TileCard(config: JSONObject, entities: Map<String, EntityState>, call: CallS
                     call("number", "set_value", id, data("value" to next))
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    StepButton(Icons.Filled.Remove, "Lower", tone, current != null) { nudge(-step) }
-                    StepButton(Icons.Filled.Add, "Raise", tone, current != null) { nudge(step) }
+                    StepButton(CdVectors.Minus, "Lower", tone, current != null) { nudge(-step) }
+                    StepButton(CdVectors.Plus, "Raise", tone, current != null) { nudge(step) }
                 }
             }
         }

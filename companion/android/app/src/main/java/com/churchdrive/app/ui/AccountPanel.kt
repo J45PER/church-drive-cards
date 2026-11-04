@@ -29,18 +29,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.outlined.Logout
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.outlined.BatteryChargingFull
-import androidx.compose.material.icons.outlined.Checklist
-import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.LocationOn
-import androidx.compose.material.icons.outlined.Mic
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -198,7 +186,7 @@ private fun PanelRow(icon: ImageVector, text: String, supporting: String? = null
 @Composable
 private fun PanelTitle(title: String, onBack: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
+        IconButton(onClick = onBack) { Icon(CdVectors.Back, contentDescription = "Back") }
         Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 4.dp))
     }
 }
@@ -210,7 +198,7 @@ private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Pa
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            IconButton(onClick = onClose) { Icon(Icons.Filled.Close, contentDescription = "Close") }
+            IconButton(onClick = onClose) { Icon(CdVectors.Close, contentDescription = "Close") }
         }
         PanelCard {
             Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -237,14 +225,14 @@ private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Pa
         // To-do, for everyone: it moved here from the bar along the bottom. Opens Church Drive To-Do where that is installed.
         PanelCard {
             PanelRow(
-                Icons.Outlined.Checklist, "To-do",
+                CdVectors.Todo, "To-do",
                 if (todoOpensApp) "Opens Church Drive To-Do" else "Lists, cleaning and house jobs",
                 onClick = onTodo,
                 leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_todo), contentDescription = null) },
             )
         }
         // Device Health, for everyone: batteries, filters and devices that stopped answering.
-        PanelCard { PanelRow(Icons.Outlined.BatteryChargingFull, "Device health", healthSummary.ifBlank { null }, onClick = onDeviceHealth) }
+        PanelCard { PanelRow(CdVectors.BatteryCharging, "Device health", healthSummary.ifBlank { null }, onClick = onDeviceHealth) }
         // Administrator-only pages (Energy, Devices).
         if (adminPages.isNotEmpty()) {
             PanelCard {
@@ -253,18 +241,18 @@ private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Pa
         }
         // The Manager (administrators): one button here, and a page of its sections.
         if (managerPages.isNotEmpty()) {
-            PanelCard { PanelRow(Icons.Outlined.Settings, "Manager", "${managerPages.size} sections: people, cameras, reminders and more", onClick = { onOpen("manager") }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_cog_solid), contentDescription = null) }) }
+            PanelCard { PanelRow(CdVectors.Cog, "Manager", "${managerPages.size} sections: people, cameras, reminders and more", onClick = { onOpen("manager") }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_cog_solid), contentDescription = null) }) }
         }
         // The activity log (administrators): what people and the assistant did, and who came and went.
         if (isAdmin) {
-            PanelCard { PanelRow(Icons.Outlined.History, "Activity log", "What people and the assistant did, and who came and went", onClick = { onOpen("activity") }) }
+            PanelCard { PanelRow(CdVectors.History, "Activity log", "What people and the assistant did, and who came and went", onClick = { onOpen("activity") }) }
         }
         // Experimental (kept in the code, not shown): add its row back here when there is something to try out.
         PanelCard {
-            PanelRow(Icons.Outlined.Settings, "Settings", onClick = { onOpen("settings") }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_cog_outline), contentDescription = null) })
-            PanelRow(Icons.Outlined.Info, "About", onClick = { onOpen("about") })
+            PanelRow(CdVectors.Cog, "Settings", onClick = { onOpen("settings") }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_cog_outline), contentDescription = null) })
+            PanelRow(CdVectors.Info, "About", onClick = { onOpen("about") })
         }
-        PanelCard { PanelRow(Icons.AutoMirrored.Outlined.Logout, "Sign out", onClick = onSignOut) }
+        PanelCard { PanelRow(CdVectors.SignOut, "Sign out", onClick = onSignOut) }
     }
 }
 
@@ -282,7 +270,7 @@ private fun ManagerHub(managerPages: List<PanelSpec>, onBack: () -> Unit, onOpen
                 ListItem(
                     headlineContent = { Text(p.title) },
                     supportingContent = summary?.takeIf { it.isNotBlank() }?.let { { Text(it) } },
-                    leadingContent = { HaIcon(p.icon, Icons.Outlined.Settings, MaterialTheme.colorScheme.onSurfaceVariant, 24.dp) },
+                    leadingContent = { HaIcon(p.icon, CdVectors.Cog, MaterialTheme.colorScheme.onSurfaceVariant, 24.dp) },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     modifier = Modifier.clickable { onOpen("manager:${p.title}") },
                 )
@@ -335,7 +323,7 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
         if (com.churchdrive.app.TodoLink.installed(context)) PanelCard {
             var openApp by remember { mutableStateOf(com.churchdrive.app.TodoLink.preferApp(context)) }
             PanelRow(
-                Icons.Outlined.Checklist, "Open To-do in Church Drive To-Do",
+                CdVectors.Todo, "Open To-do in Church Drive To-Do",
                 if (openApp) "To-do, and the tasks on Home, open the To-Do app. Turn off to use the To-do page in this app instead."
                 else "To-do and the tasks on Home open the To-do page in this app. Turn on to open the To-Do app.",
                 leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_todo), contentDescription = null) },
@@ -344,7 +332,7 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
         }
         else PanelCard {
             PanelRow(
-                Icons.Outlined.Checklist, "Get Church Drive To Do",
+                CdVectors.Todo, "Get Church Drive To Do",
                 "The separate to-do app. Once it is installed, To-do and the tasks on Home open it.",
                 onClick = { com.churchdrive.app.TodoLink.openStore(context) },
                 leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_todo), contentDescription = null) },
@@ -352,7 +340,7 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
         }
         PanelCard {
             PanelRow(
-                Icons.Outlined.Notifications, "Notifications",
+                CdVectors.Chat, "Notifications",
                 "Messages from the house, such as the doorbell or an alarm, come to this phone.",
                 leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_clive_chat), contentDescription = null) },
                 trailing = {
@@ -366,14 +354,14 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
             )
             var showStyles by remember { mutableStateOf(false) }
             PanelRow(
-                Icons.Outlined.Notifications, "Notification styles",
+                CdVectors.Chat, "Notification styles",
                 "Choose which notifications you get, and whether each one pops up, is quiet or is off on this phone.",
                 leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_clive_chat), contentDescription = null) },
                 onClick = { showStyles = true },
             )
             if (showStyles) NoticeStylesPage(isAdmin) { showStyles = false }
             PanelRow(
-                Icons.Outlined.Mic, "Use phone theme colours for ${AssistantBrand.shown}",
+                CdVectors.Mic, "Use phone theme colours for ${AssistantBrand.shown}",
                 "${AssistantBrand.shown} normally keeps his original indigo, purple and green. Turn this on to give him your phone's theme colours instead.",
                 leading = CliveMic,
                 trailing = { Switch(checked = AssistColourSetting.phoneTheme, onCheckedChange = { on -> AssistColourSetting.set(context, on) }) },
@@ -382,7 +370,7 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                 if (granted) AssistWakeSetting.set(context, true) else message = "The microphone is off for this app. Allow it in Android's settings to use the wake word."
             }
             PanelRow(
-                Icons.Outlined.Mic, "Open ${AssistantBrand.shown} with the wake word",
+                CdVectors.Mic, "Open ${AssistantBrand.shown} with the wake word",
                 when {
                     AssistWakeSetting.enabled && AssistWakeStatus.problem.isNotEmpty() -> "Not listening: ${AssistWakeStatus.problem}"
                     AssistWakeSetting.enabled && AssistWakeStatus.waiting -> "Listening for \u201C${AssistWakeStatus.phrase.ifBlank { "the wake word" }}\u201D while the app is open."
@@ -400,19 +388,19 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                 },
             )
             if (AssistWakeStatus.timing.isNotEmpty()) PanelRow(
-                Icons.Outlined.Mic, "How long ${AssistantBrand.shown} took",
+                CdVectors.Mic, "How long ${AssistantBrand.shown} took",
                 "Last answer: ${AssistWakeStatus.timing}. Thinking is the house working out the reply; voice made is the spoken version being prepared.",
                 leading = CliveMic,
             )
             PanelRow(
-                Icons.Outlined.Mic, "Open ${AssistantBrand.shown} ready to type",
+                CdVectors.Mic, "Open ${AssistantBrand.shown} ready to type",
                 if (AssistStartSetting.typing) "${AssistantBrand.shown} opens quietly, not listening, with the typing box ready. Tap the microphone to talk."
                 else "${AssistantBrand.shown} starts listening as soon as he opens. Turn this on and he waits for you to type or tap the microphone.",
                 leading = CliveMic,
                 trailing = { Switch(checked = AssistStartSetting.typing, onCheckedChange = { on -> AssistStartSetting.set(context, on) }) },
             )
             PanelRow(
-                Icons.Outlined.LocationOn, "Share my location",
+                CdVectors.Pin, "Share my location",
                 "So the house knows when you're home, at work or out. Reported when you move, with no notice on your screen.",
                 trailing = {
                     Switch(checked = settings.locationOn, onCheckedChange = { on ->
@@ -438,14 +426,14 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
                     }
                 }
                 PanelRow(
-                    Icons.Outlined.Notifications, "Google push",
+                    CdVectors.Chat, "Google push",
                     "$pushStatus. Tap to try again.",
                     leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_google_g), contentDescription = null) },
                     onClick = { com.churchdrive.app.house.GooglePush.register(context) },
                 )
             }
             PanelRow(
-                Icons.Outlined.BatteryChargingFull, "Keep it running",
+                CdVectors.BatteryCharging, "Keep it running",
                 "Set this app's battery use to Unrestricted so Android doesn't stop the connection.",
                 onClick = { context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) },
             )
@@ -454,7 +442,7 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
         if (isAdmin && settings.notifyService != null) {
             PanelCard {
                 PanelRow(
-                    Icons.Outlined.Info, "This phone in Home Assistant",
+                    CdVectors.Info, "This phone in Home Assistant",
                     "Send it a notification with ${settings.notifyService}",
                 )
             }
@@ -476,11 +464,11 @@ private fun AboutPage(settings: AccountSettings, updateAvailable: Boolean, isAdm
     ) {
         PanelTitle("About", onBack)
         PanelCard {
-            PanelRow(Icons.Outlined.Info, "Church Drive", "Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.BUILD}) · ${BuildConfig.COMMIT}")
+            PanelRow(CdVectors.Info, "Church Drive", "Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.BUILD}) · ${BuildConfig.COMMIT}")
             // For the allowed list in TrustedApps (the other Church Drive apps trust this app by this fingerprint): administrators only.
-            if (isAdmin) PanelRow(Icons.Outlined.Info, "Signing certificate (SHA-256)", com.churchdrive.app.TrustedApps.ownCerts(context).joinToString("\n").ifBlank { "Not available" })
+            if (isAdmin) PanelRow(CdVectors.Info, "Signing certificate (SHA-256)", com.churchdrive.app.TrustedApps.ownCerts(context).joinToString("\n").ifBlank { "Not available" })
             PanelRow(
-                Icons.Outlined.SystemUpdate, "Check for updates",
+                CdVectors.SystemUpdate, "Check for updates",
                 when {
                     BuildConfig.PLAY -> "Google Play keeps this app up to date. Tap to open its Play page"
                     status == "checking" -> "Checking…"
