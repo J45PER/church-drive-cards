@@ -40,6 +40,13 @@ Charging always uses **Fast**; Eco and Eco+ are not used by smart charge. The ga
 - **Unlock** is sent as `/cgi-jlock-<serial>-00000010` (no `Z` prefix, unlike the mode commands); it gets a 200 reply but the lock sensor stays on, so it proves nothing.
 - Debug logging for the myenergi integration (and `logger.set_level` for `pymyenergi`) shows these requests in the Home Assistant log; both reset on a restart.
 
+## Changes on 4 Nov 2026
+- **Why 3 Nov to 4 Nov charged only 1.4 kWh.** The Zappi reads Completed whenever the ID.5 is not asking for power, which with Octopus in control is most of the night. Smart charge treated that as a full car, set itself to Done and the mode to Stopped at 23:42, so the 02:00 and 04:40 dispatches found the Zappi stopped. Fixed in `Church Drive: Zappi smart charge`: the Primary car is never stopped by Completed (it stays on Fast until the gate shuts), and Done goes back to Waiting as soon as the gate is shut instead of waiting for a half-hour tick. Other cars still stop on Completed.
+- **The Astra alert for the ID.5.** The 'Car charged' alert named the car from whichever car's own app said it was plugged in (the Astra's said so all night, wherever it was). It now uses the role chosen at the Zappi (VW ID5 or Astra GSe), takes the ID.5's battery from Octopus, and for the ID.5 needs at least 1 kWh (the Zappi reads Completed between slots).
+- **Names.** Primary is shown as VW ID5 and Additional as Astra GSe in the notification buttons, the Home card, the charger card and the app. The stored values of `input_select.zappi_car_role` stay Primary and Additional so old app versions keep working.
+- **Remembers the last car.** `Church Drive: Zappi remembers the last car` keeps the last role chosen in `input_text.zappi_last_car_role`. On the next plug-in `Church Drive: car alerts` confirms that car at once (`script.zappi_car_yes` with `auto`) and the notification says "same car as last time" with a button for the other car; with nothing remembered it asks as before.
+- The Zappi accepted remote mode changes again after Hayley power-cycled it on 2 Nov.
+
 ## Still to do
 - The compact Charging card does not show the car choice yet; the full card does.
 - Watch whether Octopus really holds the ID.5 off outside its slots before considering "always on" for the Primary car.

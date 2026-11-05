@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.98.0
+
+- The two cars are called by name: the Zappi's car choice (notification buttons, the Home page question, the charger card's tiles) says VW ID5 and Astra GSe instead of Primary and Additional.
+- The house remembers the last car plugged in: plugging in the same car again confirms it straight away and says so, with a button for the other car; the question is asked only the first time.
+
 ## 0.97.0
 
 - Every icon signed off in the icon audit up to #37 is now built in. New in this version: the climate set (thermometer, thermostat and its auto form with Clive's mark, the leaf, a house with a thermometer), Gregg's status icons rebuilt from the common house, !, bolt and pause bars (and the standard Gregg now replaces the plain robot on the Cleaning tab, the home panel and the watch), our own broom, the Devices icons by type (server or hub, phone or tablet, network, screen), people (a person, a group, an administrator), the shopping cart (empty and all bought), the calendar (today, done, a time, cancelled, moved on), the Send arrow, volume (low, medium, high, max, off and mute, with the speaker, subwoofer and the two smart speakers), the Wi-Fi cone (rounded, with empty and unknown) and the whole weather set.

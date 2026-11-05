@@ -18,9 +18,9 @@ import org.json.JSONObject
 
 // "Which car is plugged in?": every time a car is plugged in (or unplugged and plugged in again) the house asks which car it is, and
 // nothing unlocks or starts it until someone answers (set up in Home Assistant: the "Church Drive: Zappi car confirmation" automation
-// and the two scripts below). Primary is the car on the Octopus app (today the ID.5): it charges in the cheap window and whenever
-// Octopus schedules it. Additional is any other car: it charges in the cheap window only. The same question comes as a notification
-// with Primary, Additional and No buttons; this is the Home page's copy of it, and the charger card has the same choice to change it.
+// and the two scripts below). Primary (shown as VW ID5) is the car on the Octopus app: it charges in the cheap window and whenever
+// Octopus schedules it. Additional (shown as Astra GSe) is any other car: it charges in the cheap window only. The same question comes as a notification
+// with VW ID5, Astra GSe and No buttons; this is the Home page's copy of it, and the charger card has the same choice to change it.
 
 const val ZAPPI_CONFIRMED = "input_boolean.zappi_car_confirmed"
 const val ZAPPI_CAR_ROLE = "input_select.zappi_car_role"
@@ -28,6 +28,9 @@ const val CAR_YES_SCRIPT = "script.zappi_car_yes"
 const val CAR_NO_SCRIPT = "script.zappi_car_no"
 const val CAR_ROLE_PRIMARY = "Primary"
 const val CAR_ROLE_ADDITIONAL = "Additional"
+// What people see for each role (the stored role names stay Primary and Additional).
+const val CAR_NAME_PRIMARY = "VW ID5"
+const val CAR_NAME_ADDITIONAL = "Astra GSe"
 
 /**
  * Whether to ask: a car is plugged in, nobody has answered for it, and smart charge is waiting on it. Never while it is already
@@ -53,8 +56,8 @@ fun carRoleChoice(entities: Map<String, EntityState>): CarRoleChoice? {
 
 /** What the role means, under the choice (the same words as the dashboard's charger card). */
 fun carRoleText(c: CarRoleChoice): String = when {
-    c.role == CAR_ROLE_PRIMARY -> "Primary: also charges when Octopus schedules it"
-    c.role == CAR_ROLE_ADDITIONAL -> "Additional: charges 23:30 to 05:30 only"
+    c.role == CAR_ROLE_PRIMARY -> "VW ID5: also charges when Octopus schedules it"
+    c.role == CAR_ROLE_ADDITIONAL -> "Astra GSe: charges 23:30 to 05:30 only"
     c.confirmed -> "Not set: charges 23:30 to 05:30 only"
     else -> "Not answered yet, so it will not charge"
 }
@@ -85,11 +88,11 @@ fun CarConfirmCard(entities: Map<String, EntityState>, call: CallService) {
             }
             TileRow(
                 listOf(
-                    TileItem("mdi:car-electric", CAR_ROLE_PRIMARY, true) {
+                    TileItem("mdi:car-electric", CAR_NAME_PRIMARY, true) {
                         answered = true
                         chooseCarRole(call, CAR_ROLE_PRIMARY, false)
                     },
-                    TileItem("mdi:car", CAR_ROLE_ADDITIONAL, true) {
+                    TileItem("mdi:car", CAR_NAME_ADDITIONAL, true) {
                         answered = true
                         chooseCarRole(call, CAR_ROLE_ADDITIONAL, false)
                     },
