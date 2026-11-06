@@ -24,6 +24,7 @@ SIGNAL_LIBRARY = "church_drive_library"
 # Device health: watched entities (options), the fix action, the update signal.
 CONF_HEALTH_ENTITIES = "health_entities"
 SERVICE_HEALTH_FIX = "health_fix"
+SERVICE_LOG_LOGO_REQUEST = "log_logo_request"
 SIGNAL_HEALTH = "church_drive_health"
 
 # People and notifications.

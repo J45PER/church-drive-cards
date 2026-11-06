@@ -23,6 +23,14 @@ apply_scene:
             - Relax
             - Rest
             - Nightlight
+log_logo_request:
+  fields:
+    competition:
+      selector:
+        text:
+    sport:
+      selector:
+        text:
 health_fix:
   fields:
     entity_id:

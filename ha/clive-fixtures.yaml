@@ -39,7 +39,12 @@ sequence:
   - condition: template
     value_template: '{{ n > 0 }}'
   then:
-  - action: script.clive_show_card
+  - action: church_drive.log_logo_request
+  continue_on_error: true
+  data:
+    competition: '{{ title | default('''') }}'
+    sport: '{{ sport | default('''') }}'
+- action: script.clive_show_card
     data:
       kind: fixtures
       data: '{{ card }}'

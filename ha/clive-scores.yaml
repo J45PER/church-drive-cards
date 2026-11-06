@@ -70,6 +70,11 @@ sequence:
       {%- else -%}
       {{ {'title': title | default(''), 'comp': title | default(''), 'sport': sport | default(''), 'rows': rows} }}
       {%- endif -%}
+- action: church_drive.log_logo_request
+  continue_on_error: true
+  data:
+    competition: '{{ title | default('''') }}'
+    sport: '{{ sport | default('''') }}'
 - action: script.clive_show_card
   data:
     kind: '{{ ''score'' if n == 1 else ''scores'' }}'
