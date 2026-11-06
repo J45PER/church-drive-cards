@@ -423,7 +423,6 @@ internal object CdCommon {
         "mdi:air-conditioner" -> "cd:air-conditioner"
         "mdi:fan-off" -> "cd:fan-unavailable"
         "mdi:coat-rack" -> "cd:room-entrance"
-         -> "cd:room-front"
         "mdi:bee-flower", "mdi:flower-tulip", "mdi:flower-outline" -> "cd:room-garden"
         "mdi:fridge", "mdi:silverware-fork-knife", "mdi:countertop-outline" -> "cd:room-kitchen"
         "mdi:sofa", "mdi:sofa-outline" -> "cd:room-living"
