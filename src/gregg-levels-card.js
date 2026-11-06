@@ -3,6 +3,7 @@
 // own level icon (the Eufy-style turbine and water drops) and the current one
 // lit. Tap a button to change the select. Home Assistant's own tile can only
 // show one fixed icon for a select, so this card draws the icon for each level.
+// It also has Gregg's own start, stop and dock buttons, in place of the tile's.
 
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
@@ -18,7 +19,16 @@ function ggDemo() {
   ];
 }
 
+function ggControlsHtml(state, color) {
+  const busy = state === 'cleaning';
+  const btn = (svc, icon, label, on) => `<button class="gg-opt${on ? ' gg-on' : ''}" data-svc="${svc}" aria-label="${label}">${iconHtml(icon, { size: '24px' })}<span>${label}</span></button>`;
+  return `<div class="gg-head" style="cursor:default"><span style="display:inline-flex; color:${color};">${iconHtml('cd:gregg', { size: '28px' })}</span>
+    <div><div class="gg-name">Gregg</div><div class="gg-state">${kitEsc(kitCap(state))}</div></div></div>
+    <div class="gg-opts">${btn('start', 'cd:play', busy ? 'Resume' : 'Start', busy)}${btn('stop', 'cd:stop', 'Stop', false)}${btn('return_to_base', 'cd:home', 'Dock', state === 'returning')}</div>`;
+}
+
 const GG_CSS = `
+  .gg-ctl { padding-bottom:12px; margin-bottom:2px; border-bottom:1px solid var(--divider-color, rgba(127,127,127,0.18)); }
   .gg-block + .gg-block { border-top:1px solid var(--divider-color, rgba(127,127,127,0.18)); padding-top:10px; margin-top:10px; }
   .gg-head { display:flex; align-items:center; gap:10px; margin-bottom:8px; cursor:pointer; }
   .gg-name { font-weight:600; font-size:0.95rem; }
@@ -34,10 +44,11 @@ export const GreggLevelsCardEditor = createFormEditor({
   schema: () => [
     { name: 'title', selector: { text: {} } },
     { name: 'entities', selector: { entity: { domain: 'select', multiple: true } } },
+    { name: 'vacuum', selector: { entity: { domain: 'vacuum' } } },
     { name: 'color', selector: { text: {} } },
     { name: 'demo', selector: { boolean: {} } },
   ],
-  labels: { title: 'Title (optional)', entities: "Selects (empty for Gregg's suction, cleaning intensity and mop intensity)", color: 'Colour (optional)', demo: 'Show pretend levels (for Design Presets)' },
+  labels: { title: 'Title (optional)', entities: "Selects (empty for Gregg's suction, cleaning intensity and mop intensity)", vacuum: 'Vacuum (empty for vacuum.gregg)', color: 'Colour (optional)', demo: 'Show pretend levels (for Design Presets)' },
 });
 
 export class GreggLevelsCard extends HTMLElement {
@@ -69,8 +80,13 @@ export class GreggLevelsCard extends HTMLElement {
     if (!this._hass && !this.config.demo) return;
     const c = this.config;
     if (!this._built) {
-      this.innerHTML = kitShell(`<div class="gg-list"></div>`, GG_CSS);
+      this.innerHTML = kitShell(`<div class="gg-ctl"></div><div class="gg-list"></div>`, GG_CSS);
       this._list = this.querySelector('.gg-list');
+      this._ctl = this.querySelector('.gg-ctl');
+      this._ctl.addEventListener('click', (ev) => {
+        const b = ev.target.closest('[data-svc]');
+        if (b && !c.demo) this._hass.callService('vacuum', b.dataset.svc, { entity_id: c.vacuum || 'vacuum.gregg' });
+      });
       this._list.addEventListener('click', (ev) => {
         const opt = ev.target.closest('[data-opt]');
         if (opt) {
@@ -88,6 +104,14 @@ export class GreggLevelsCard extends HTMLElement {
     if (c.title) {
       this.querySelector('.ck-title').textContent = c.title;
       this.querySelector('.ck-word').textContent = '';
+    }
+    const vid = c.vacuum || 'vacuum.gregg';
+    const vs = c.demo ? { state: 'docked' } : this._hass.states[vid];
+    const vsig = vs ? ggControlsHtml(vs.state, color) : '';
+    if (vsig !== this._vsig) {
+      this._vsig = vsig;
+      this._ctl.innerHTML = vsig;
+      hydrateIcons(this._ctl);
     }
     const items = this._items();
     const sig = JSON.stringify(items);

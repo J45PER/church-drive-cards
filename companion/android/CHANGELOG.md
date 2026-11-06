@@ -6,7 +6,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 ## 0.100.1
 
-- The update, calendar-clock and to-do clock icons use the same clock hands as every other clock, centred on the circle; the side brush, rolling brush and message-alert icons, and Home Assistant's own water, tune and message-alert names, are drawn from the house's set.
+- The update, calendar-clock and to-do clock icons use the same clock hands as every other clock, centred on the circle; the message-alert icon, and Home Assistant's own water, tune and message-alert names, are drawn from the house's set.
 
 ## 0.100.0
 
