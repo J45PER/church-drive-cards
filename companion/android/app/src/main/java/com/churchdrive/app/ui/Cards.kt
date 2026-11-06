@@ -639,8 +639,8 @@ fun ChargerCard(entities: Map<String, EntityState>, call: CallService) {
             carRoleChoice(entities)?.let { c ->
                 TileRow(
                     listOf(
-                        TileItem("mdi:car-electric", CAR_ROLE_PRIMARY, c.role == CAR_ROLE_PRIMARY) { chooseCarRole(call, CAR_ROLE_PRIMARY, c.confirmed) },
-                        TileItem("mdi:car", CAR_ROLE_ADDITIONAL, c.role == CAR_ROLE_ADDITIONAL) { chooseCarRole(call, CAR_ROLE_ADDITIONAL, c.confirmed) },
+                        TileItem("mdi:car-electric", CAR_NAME_PRIMARY, c.role == CAR_ROLE_PRIMARY) { chooseCarRole(call, CAR_ROLE_PRIMARY, c.confirmed) },
+                        TileItem("mdi:car", CAR_NAME_ADDITIONAL, c.role == CAR_ROLE_ADDITIONAL) { chooseCarRole(call, CAR_ROLE_ADDITIONAL, c.confirmed) },
                     ),
                     teal, tone.onContainer, true,
                 )

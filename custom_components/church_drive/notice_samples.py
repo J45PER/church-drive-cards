@@ -35,6 +35,7 @@ SAMPLES: dict[str, tuple[str, str, str]] = {
     "remote_access": ("☁️ Remote access down", "Home Assistant Cloud can't be reached.", ""),
     "left_on": ("💡 Everyone's out", "Everyone's out and the Kitchen lights are on.", ""),
     "device_stale": ("📡 A device is unresponsive", "Living Room Fan hasn't answered for 6 hours.", ""),
+    "app_update": ("⬆️ Update the Church Drive app", "A newer version (0.99.0) is ready. Open the app to update it: it keeps location and notifications working properly.", ""),
     "battery_report": ("🔋 Weekly battery report", "2 batteries are low: Front Door Sensor, Garden Sensor.", ""),
 }
 

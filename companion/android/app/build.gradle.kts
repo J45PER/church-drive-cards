@@ -109,6 +109,8 @@ dependencies {
     implementation("com.google.firebase:firebase-messaging")
     implementation("com.google.firebase:firebase-installations")
     implementation("com.google.android.gms:play-services-base:18.5.0")
+    // Google Play's own update prompt (in-app updates) for the build installed from Play.
+    implementation("com.google.android.play:app-update:2.1.0")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")

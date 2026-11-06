@@ -4,10 +4,20 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.99.0
+
+- The app checks that this phone allows what the house needs to know who is home and to reach you: notifications, location sharing, **precise** location, location **all the time** and unrestricted battery use. Android quietly stops a phone's location updating without them, which leaves the house showing someone as home long after they have left. Whatever is missing shows as a banner at the top of Home, and a question walks through each one in turn. It opens by itself once for each new version of the app, so it is part of updating; the banner stays until everything is allowed.
+- When a newer version is out, a question ("A new version is ready") opens by itself at most once a day as well as the banner at the top of Home. The build installed from Google Play asks Google Play for this, like other Play apps: Update runs Play's own update screen and the app restarts on the new version. A test build from GitHub downloads the APK as before.
+- The house sends a notification ("The Church Drive app has an update") to anyone whose app is older than the house's version: once, in the day, and again after three days if the app is still out of date. It can be switched off per person under System in Manager's Notifications table, and is on for everyone to begin with.
+- Home Wi-Fi helps decide who is home. The app learns which network is the home one by itself (a name seen three times, well apart, while GPS says the phone is inside the home zone), and a phone on it near home reports the house's own position instead of a wandering GPS fix. Joining the home Wi-Fi says "home" at once; leaving it asks for a fresh position straight away, so a departure is seen when it happens. This needs the location permission and Android's location switched on, because Android hides the network name otherwise.
+- A position less certain than 200 m is no longer reported (was 500 m). The house counts a position's uncertainty as room to be inside the home zone, so a coarse fix near home read as home.
+- The location and Wi-Fi requests are made again after the app is updated (an update ended them, so a phone could stop reporting until the app was next opened).
+- The app tells the house its version every time it changes (it used to say it only when it first registered), and reports the phone's set-up as a "Church Drive phone setup" sensor on the phone's device in Home Assistant, on when something is missing, with each setting as an attribute.
+
 ## 0.98.0
 
-- Every icon signed off in the icon audit from #38 to #56 is built in: fans and air (the fan with its power, 0, A and speed badges, the purifier and filter, the gauges), heating and cooling (fire, humidity, the air conditioner modes, the snowflake with its alert), power (our power symbol, the switches and a UK plug), the alarms (beacon, CO, smoke and heat alerts), the alert set (warning, ring and solid alerts and their not-available forms), the room and floor icons, doors, windows and a roller blind, cameras (bracket camera, snapshot, retake), cars (the car, the electric car, the EV squircle, the Type 2 plug), sports (the football and one generic trophy), televisions, and the small controls and markers (bin, pencil, search, full screen, previous and next, arrows, boxes, clocks, a keyboard, the globe, the pin with a person, and more). The badge circle on every badged icon is 30% bigger.
-- The Clive message bubble (two solid bubbles, the same footprint as his chat) and the single cloud come from the same set. Where a Home Assistant name means the same thing, the app and the cards now draw ours (for example mdi:fan, mdi:car, mdi:television, mdi:delete, mdi:blinds), so no Material icon is left for those. In Home Assistant they are available as `cd:` icons.
+- The two cars are called by name: the Zappi's car choice (notification buttons, the Home page question, the charger card's tiles) says VW ID5 and Astra GSe instead of Primary and Additional.
+- The house remembers the last car plugged in: plugging in the same car again confirms it straight away and says so, with a button for the other car; the question is asked only the first time.
 
 ## 0.97.0
 

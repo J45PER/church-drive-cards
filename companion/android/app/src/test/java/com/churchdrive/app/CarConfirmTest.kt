@@ -65,8 +65,8 @@ class CarConfirmTest {
     }
 
     @Test fun theChoiceSaysWhatTheRoleMeans() {
-        assertEquals("Primary: also charges when Octopus schedules it", carRoleText(CarRoleChoice("Primary", true)))
-        assertEquals("Additional: charges 23:30 to 05:30 only", carRoleText(CarRoleChoice("Additional", true)))
+        assertEquals("VW ID5: also charges when Octopus schedules it", carRoleText(CarRoleChoice("Primary", true)))
+        assertEquals("Astra GSe: charges 23:30 to 05:30 only", carRoleText(CarRoleChoice("Additional", true)))
         assertEquals("Not set: charges 23:30 to 05:30 only", carRoleText(CarRoleChoice("Unknown", true)))
         assertEquals("Not answered yet, so it will not charge", carRoleText(CarRoleChoice("Unknown", false)))
     }

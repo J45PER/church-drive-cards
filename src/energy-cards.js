@@ -670,7 +670,7 @@ export class EvChargerCard extends HTMLElement {
     const plugged = !a || !a.none;
     const cr = d.car;
     const car = cr && plugged && d.found && !d.unavailable
-      ? `<label class="ev-act car">${iconHtml('mdi:car-electric', { size: '20px' })}<span class="ev-st">Car plugged in<small>${kitEsc(cr.role === 'Primary' ? 'Primary: also charges when Octopus schedules it' : cr.role === 'Additional' ? 'Additional: charges 23:30 to 05:30 only' : 'Not answered yet, so it will not charge')}</small></span><select class="ev-sel" data-car aria-label="Car plugged in">${cr.role === 'Unknown' || !cr.confirmed ? `<option value=""${cr.role === 'Unknown' ? ' selected' : ''} disabled>Which car?</option>` : ''}<option value="Primary"${cr.role === 'Primary' ? ' selected' : ''}>Primary</option><option value="Additional"${cr.role === 'Additional' ? ' selected' : ''}>Additional</option></select></label>`
+      ? `<label class="ev-act car">${iconHtml('mdi:car-electric', { size: '20px' })}<span class="ev-st">Car plugged in<small>${kitEsc(cr.role === 'Primary' ? 'VW ID5: also charges when Octopus schedules it' : cr.role === 'Additional' ? 'Astra GSe: charges 23:30 to 05:30 only' : 'Not answered yet, so it will not charge')}</small></span><select class="ev-sel" data-car aria-label="Car plugged in">${cr.role === 'Unknown' || !cr.confirmed ? `<option value=""${cr.role === 'Unknown' ? ' selected' : ''} disabled>Which car?</option>` : ''}<option value="Primary"${cr.role === 'Primary' ? ' selected' : ''}>VW ID5</option><option value="Additional"${cr.role === 'Additional' ? ' selected' : ''}>Astra GSe</option></select></label>`
       : '';
     const all = html + smart + car;
     if (all !== this._actsHtml) {

@@ -1,10 +1,12 @@
 # Church Drive Satellites: changelog
 
+## 0.99.0
+
+- No change to the Satellites app; the version number moves with the other apps.
+
 ## 0.98.0
 
-- Every icon signed off in the icon audit from #38 to #56 is built in: fans and air (the fan with its power, 0, A and speed badges, the purifier and filter, the gauges), heating and cooling (fire, humidity, the air conditioner modes, the snowflake with its alert), power (our power symbol, the switches and a UK plug), the alarms (beacon, CO, smoke and heat alerts), the alert set (warning, ring and solid alerts and their not-available forms), the room and floor icons, doors, windows and a roller blind, cameras (bracket camera, snapshot, retake), cars (the car, the electric car, the EV squircle, the Type 2 plug), sports (the football and one generic trophy), televisions, and the small controls and markers (bin, pencil, search, full screen, previous and next, arrows, boxes, clocks, a keyboard, the globe, the pin with a person, and more). The badge circle on every badged icon is 30% bigger.
-- The Clive message bubble (two solid bubbles, the same footprint as his chat) and the single cloud come from the same set. Where a Home Assistant name means the same thing, the app and the cards now draw ours (for example mdi:fan, mdi:car, mdi:television, mdi:delete, mdi:blinds), so no Material icon is left for those. In Home Assistant they are available as `cd:` icons.
-- The Satellites app's own copies of add, back, close, palette, thermometer, brightness, sliders (Glances), copy and shield-key, and its satellite badges (add, settings, voice, location, tap, updates, sound, history, copy), now draw the shared set, with the badge circle 30% bigger.
+- No change to the Satellites app; the version number moves with the other apps.
 
 ## 0.97.0
 
