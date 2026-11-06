@@ -192,15 +192,21 @@ textarea { width:100%; min-height:110px; font-family:var(--mono); font-size:.72r
       if (disc) { ease = easeOf('back'); R = { arc: 0.15, spin: 0, d: 'pop', o: R.o || 'size', ease: 'back', k: R.k }; }
       if (solid) ease = easeOf('out');
       var VIA = 0.3, SOLID_END = 0.8, SQ = null;
+      var pre = [];
       if (solid) {
-        var bd = bbox(bs[0].pts), sz = 78, scx = (bd[0] + bd[2]) / 2, scy = (bd[1] + bd[3]) / 2;
-        SQ = shapeSet([{ d: sqp(scx - sz / 2, scy - sz / 2, scx + sz / 2, scy + sz / 2, 30 * sz / 76) }])[0];
+        /* Two squircles shrink into one squircle while the hole shrinks to a dot; the squircle becomes a circle; the circle grows to full size; then the inner icon appears. */
+        var bd = bbox(bs[0].pts), cx0 = (bd[0] + bd[2]) / 2, cy0 = (bd[1] + bd[3]) / 2, sz = 62, q = function (d) { return shapeSet([{ d: d }])[0]; },
+          sqr = q(sqp(cx0 - sz / 2, cy0 - sz / 2, cx0 + sz / 2, cy0 + sz / 2, 30 * sz / 76)), cir = q('M' + (cx0 - sz / 2) + ',' + cy0 + ' a' + sz / 2 + ',' + sz / 2 + ' 0 1,0 ' + sz + ',0 a' + sz / 2 + ',' + sz / 2 + ' 0 1,0 ' + (-sz) + ',0Z'),
+          U = as[0], O = as[1], a1 = alignTo(U.pts, sqr.pts, U.area * sqr.area < 0), a2 = alignTo(a1, cir.pts, area(a1) * cir.area < 0), a3 = alignTo(a2, bs[0].pts, area(a2) * bs[0].area < 0),
+          dot = U.pts.map(function () { return [cx0, cy0]; }), hole = alignTo(dot, bs[1].pts, false), inout2 = function (x) { return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; }, out2 = function (x) { return 1 - Math.pow(1 - x, 2); };
+        pre.push({ wp: [{ t: 0, pts: U.pts }, { t: 0.28, pts: a1 }, { t: 0.4, pts: a2 }, { t: 0.7, pts: a3 }], wpe: [inout2, inout2, inout2], a0: 1, a1: 1, t0: 0, t1: 0.7, pa: U.pts, pb: a3, bx: 0, by: 0, spin: 0, ease: easeOf('inout') });
+        pre.push({ wp: [{ t: 0, pts: O.pts }, { t: 0.28, pts: dot }, { t: 0.72, pts: dot }, { t: 1, pts: hole }], wpe: [inout2, inout2, out2], a0: 1, a1: 1, t0: 0, t1: 1, pa: O.pts, pb: hole, bx: 0, by: 0, spin: 0, ease: easeOf('inout') });
       }
       for (i = 2; i < bs.length; i++) order.push({ i: i, c: cen(bs[i].pts), a: Math.abs(bs[i].area) });
       var rank = {}, o = R.o || 'size';
       order.sort(function (p, q) { return o === 'ltr' ? p.c[0] - q.c[0] : o === 'rtl' ? q.c[0] - p.c[0] : o === 'ttb' ? p.c[1] - q.c[1] : o === 'btt' ? q.c[1] - p.c[1] : o === 'radial' ? dist(p.c, ctr) - dist(q.c, ctr) : q.a - p.a; });
       order.forEach(function (p, k) { rank[p.i] = k; });
-      for (i = 0; i < n; i++) {
+      for (i = solid ? 2 : 0; i < n; i++) {
         var ra = as[i], rb = bs[i], r;
         if (ra && rb) {
           var ca = cen(ra.pts), cb = cen(rb.pts), dx = cb[0] - ca[0], dy = cb[1] - ca[1], pb = alignTo(ra.pts, rb.pts, ra.area * rb.area < 0);
@@ -210,8 +216,8 @@ textarea { width:100%; min-height:110px; font-family:var(--mono); font-size:.72r
         } else if (rb) { // a part with nothing to grow from: arrives in the recipe's style
           var c = cen(rb.pts), st = R.d || 'pop', ax = c[0], ay = c[1], rk = rank[i] || 0;
           if (st === 'drop') ay = c[1] - 46; else if (st === 'rise') ay = c[1] + 46; else if (st === 'left') ax = c[0] - 56; else if (st === 'right') ax = c[0] + 56;
-          var t0 = solid ? Math.min(0.72, 0.52 + rk * 0.07) : disc ? Math.min(0.7, 0.5 + rk * 0.06) : Math.min(0.55, 0.28 + rk * 0.07);
-          r = { pa: rb.pts.map(function () { return [ax, ay]; }), pb: rb.pts, a0: rb.a, a1: rb.a, t0: t0, t1: Math.min(1, t0 + (solid ? 0.5 : 0.42)), ease: ease, bx: 0, by: 0, spin: st === 'spin' ? (R.ds || 180) : 0, cx: c[0], cy: c[1] };
+          var t0 = solid ? Math.min(0.82, 0.72 + rk * 0.05) : disc ? Math.min(0.7, 0.5 + rk * 0.06) : Math.min(0.55, 0.28 + rk * 0.07);
+          r = { pa: rb.pts.map(function () { return [ax, ay]; }), pb: rb.pts, a0: rb.a, a1: rb.a, t0: t0, t1: Math.min(1, t0 + (solid ? 0.22 : 0.42)), ease: ease, bx: 0, by: 0, spin: st === 'spin' ? (R.ds || 180) : 0, cx: c[0], cy: c[1] };
         } else { // a part that has nowhere to go: folds into the middle of the shape
           var ce = cen(ra.pts), tgt = bs[0] ? cen(bs[0].pts) : ce;
           r = { pa: ra.pts, pb: ra.pts.map(function () { return tgt; }), a0: ra.a, a1: 0, t0: 0.1, t1: 0.75, ease: easeOf('inout'), bx: 0, by: 0, spin: 0, cx: ce[0], cy: ce[1] };
@@ -219,12 +225,13 @@ textarea { width:100%; min-height:110px; font-family:var(--mono); font-size:.72r
         rings.push(r);
       }
       if (extraB) rings.push(extraB);
+      if (pre.length) rings = pre.concat(rings);
       return noCache ? rings : (tcache[key] = rings);
     }
     function run(rings, u) {
       var groups = {};
       rings.forEach(function (r) {
-        var pa = r.pa, pb = r.pb, x, e, bump; if (r.via) { if (u < r.via.t) { pb = r.via.pts; x = Math.max(0, Math.min(1, u / r.via.t)); } else { pa = r.via.pts; x = Math.max(0, Math.min(1, (u - r.via.t) / (r.t1 - r.via.t))); } e = (x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2); bump = 0; } else { x = Math.max(0, Math.min(1, (u - r.t0) / (r.t1 - r.t0))); e = r.ease(x); bump = 4 * x * (1 - x); }
+        var pa = r.pa, pb = r.pb, x, e, bump; if (r.wp) { var w = r.wp, k = 0; while (k < w.length - 2 && u >= w[k + 1].t) k++; pa = w[k].pts; pb = w[k + 1].pts; x = Math.max(0, Math.min(1, (u - w[k].t) / (w[k + 1].t - w[k].t))); e = r.wpe[k](x); bump = 0; } else if (r.via) { if (u < r.via.t) { pb = r.via.pts; x = Math.max(0, Math.min(1, u / r.via.t)); } else { pa = r.via.pts; x = Math.max(0, Math.min(1, (u - r.via.t) / (r.t1 - r.via.t))); } e = (x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2); bump = 0; } else { x = Math.max(0, Math.min(1, (u - r.t0) / (r.t1 - r.t0))); e = r.ease(x); bump = 4 * x * (1 - x); }
         var  ang = r.spin ? (1 - Math.max(0, Math.min(1, e))) * r.spin * Math.PI / 180 : 0, ca = Math.cos(ang), sa = Math.sin(ang), d = 'M', mx = 0, my = 0, i, px, py, pts = [];
         for (i = 0; i < N; i++) { px = pa[i][0] + (pb[i][0] - pa[i][0]) * e + r.bx * bump; py = pa[i][1] + (pb[i][1] - pa[i][1]) * e + r.by * bump; pts.push([px, py]); mx += px; my += py; }
         mx /= N; my /= N;
