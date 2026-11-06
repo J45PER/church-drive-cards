@@ -164,6 +164,7 @@ textarea { width:100%; min-height:110px; font-family:var(--mono); font-size:.72r
     var RDEF = { arc: 0.3, spin: -20, d: 'pop', o: 'size', ease: 'inout' };
     function easeOf(n) { return n === 'back' ? backOut : n === 'out' ? function (x) { return 1 - Math.pow(1 - x, 3); } : function (x) { return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; }; }
     function isCirc(r) { var b = bbox(r.pts), w = b[2] - b[0], h = b[3] - b[1]; return Math.abs(w - h) / Math.max(w, h) < 0.07 && Math.abs(r.area) / (Math.PI / 4 * w * h) > 0.93; }
+    function sqp(l, t, rr2, b, k) { return 'M' + (l + k) + ',' + t + ' H' + (rr2 - k) + ' A' + k + ',' + k + ' 0 0 1 ' + rr2 + ',' + (t + k) + ' V' + (b - k) + ' A' + k + ',' + k + ' 0 0 1 ' + (rr2 - k) + ',' + b + ' H' + (l + k) + ' A' + k + ',' + k + ' 0 0 1 ' + l + ',' + (b - k) + ' V' + (t + k) + ' A' + k + ',' + k + ' 0 0 1 ' + (l + k) + ',' + t + ' Z'; }
     function dist(a, b) { return Math.hypot(a[0] - b[0], a[1] - b[1]); }
     function bbox(p) { var x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; p.forEach(function (q) { x0 = Math.min(x0, q[0]); x1 = Math.max(x1, q[0]); y0 = Math.min(y0, q[1]); y1 = Math.max(y1, q[1]); }); return [x0, y0, x1, y1]; }
     function alignTo(pa, pbIn, flip) { var pb = flip ? pbIn.slice().reverse() : pbIn, best = 0, bd = 1e18; for (var s = 0; s < N; s++) { var d = 0; for (var k = 0; k < N; k += 3) { var a = pa[k], b = pb[(k + s) % N]; d += (a[0] - b[0]) * (a[0] - b[0]) + (a[1] - b[1]) * (a[1] - b[1]); } if (d < bd) { bd = d; best = s; } } var out = []; for (var j = 0; j < N; j++) out.push(pb[(j + best) % N]); return out; }
@@ -177,7 +178,14 @@ textarea { width:100%; min-height:110px; font-family:var(--mono); font-size:.72r
       var disc = as.length === 2 && bs.length >= 2 && isCirc(bs[0]), ringy = disc && isCirc(bs[1]) && dist(cen(bs[0].pts), cen(bs[1].pts)) < 4 && Math.abs(bs[1].area) < Math.abs(bs[0].area), solid = disc && !ringy;
       var extraB = null;
       if (disc) { ease = easeOf('back'); R = { arc: 0.15, spin: 0, d: 'pop', o: R.o || 'size', ease: 'back', k: R.k }; }
-      if (solid) { var cb0 = cen(as[1].pts); extraB = { sep: true, fade: [0.42, 0.68], pa: as[1].pts, pb: alignTo(as[1].pts, bs[0].pts, as[1].area * bs[0].area < 0), a0: as[1].a, a1: 0, t0: 0, t1: 0.55, ease: easeOf('inout'), bx: 0, by: 0, spin: 0, cx: cb0[0], cy: cb0[1] }; as = [as[0]]; n = Math.max(as.length, bs.length); }
+      var VIA = 0.3, SOLID_END = 0.62, SQ = null;
+      if (solid) {
+        var bd = bbox(bs[0].pts), sz = (bd[2] - bd[0]) * 0.92, scx = (bd[0] + bd[2]) / 2, scy = (bd[1] + bd[3]) / 2;
+        SQ = shapeSet([{ d: sqp(scx - sz / 2, scy - sz / 2, scx + sz / 2, scy + sz / 2, 30 * sz / 76) }])[0];
+        var cb0 = cen(as[1].pts), vB = alignTo(as[1].pts, SQ.pts, as[1].area * SQ.area < 0);
+        extraB = { sep: true, fade: [0.58, 0.68], pa: as[1].pts, via: { pts: vB, t: VIA }, pb: alignTo(vB, bs[0].pts, SQ.area * bs[0].area < 0), a0: as[1].a, a1: 0, t0: 0, t1: SOLID_END, ease: easeOf('inout'), bx: 0, by: 0, spin: 0, cx: cb0[0], cy: cb0[1] };
+        as = [as[0]]; n = Math.max(as.length, bs.length);
+      }
       for (i = solid ? 1 : 2; i < bs.length; i++) order.push({ i: i, c: cen(bs[i].pts), a: Math.abs(bs[i].area) });
       var rank = {}, o = R.o || 'size';
       order.sort(function (p, q) { return o === 'ltr' ? p.c[0] - q.c[0] : o === 'rtl' ? q.c[0] - p.c[0] : o === 'ttb' ? p.c[1] - q.c[1] : o === 'btt' ? q.c[1] - p.c[1] : o === 'radial' ? dist(p.c, ctr) - dist(q.c, ctr) : q.a - p.a; });
@@ -187,11 +195,12 @@ textarea { width:100%; min-height:110px; font-family:var(--mono); font-size:.72r
         if (ra && rb) {
           var ca = cen(ra.pts), cb = cen(rb.pts), dx = cb[0] - ca[0], dy = cb[1] - ca[1], pb = alignTo(ra.pts, rb.pts, ra.area * rb.area < 0);
           if (solid && i === 1) { pb = alignTo(ra.pts, bs[0].pts, ra.area * bs[0].area < 0); rb = { a: 0 }; }
-          r = { sep: solid && i === 1, fade: solid && i === 1 ? [0.42, 0.68] : null, pa: ra.pts, pb: pb, a0: ra.a, a1: rb.a, t0: 0, t1: solid ? 0.55 : (i < 2 ? 0.78 : 0.7), ease: i < 2 ? easeOf(R.ease === 'back' ? 'inout' : R.ease) : ease, bx: -dy * (R.arc || 0) * (i ? -1 : 1), by: dx * (R.arc || 0) * (i ? -1 : 1), spin: i < 2 ? (R.spin || 0) * (i ? -0.6 : 1) : 0, cx: ca[0], cy: ca[1] };
+          r = { sep: false, fade: null, pa: ra.pts, pb: pb, a0: ra.a, a1: rb.a, t0: 0, t1: solid ? SOLID_END : (i < 2 ? 0.78 : 0.7), ease: i < 2 ? easeOf(R.ease === 'back' ? 'inout' : R.ease) : ease, bx: -dy * (R.arc || 0) * (i ? -1 : 1), by: dx * (R.arc || 0) * (i ? -1 : 1), spin: i < 2 ? (R.spin || 0) * (i ? -0.6 : 1) : 0, cx: ca[0], cy: ca[1] };
+          if (solid && i === 0) { var vA = alignTo(ra.pts, SQ.pts, ra.area * SQ.area < 0); r.via = { pts: vA, t: VIA }; r.pb = alignTo(vA, rb.pts, SQ.area * rb.area < 0); r.ease = easeOf('inout'); r.bx = 0; r.by = 0; r.spin = 0; }
         } else if (rb) { // a part with nothing to grow from: arrives in the recipe's style
           var c = cen(rb.pts), st = R.d || 'pop', ax = c[0], ay = c[1], rk = rank[i] || 0;
           if (st === 'drop') ay = c[1] - 46; else if (st === 'rise') ay = c[1] + 46; else if (st === 'left') ax = c[0] - 56; else if (st === 'right') ax = c[0] + 56;
-          var t0 = disc ? Math.min(0.7, 0.5 + rk * 0.06) : Math.min(0.55, 0.28 + rk * 0.07);
+          var t0 = solid ? Math.min(0.78, SOLID_END + 0.02 + rk * 0.05) : disc ? Math.min(0.7, 0.5 + rk * 0.06) : Math.min(0.55, 0.28 + rk * 0.07);
           r = { pa: rb.pts.map(function () { return [ax, ay]; }), pb: rb.pts, a0: 0, a1: rb.a, t0: t0, t1: Math.min(1, t0 + 0.42), ease: ease, bx: 0, by: 0, spin: st === 'spin' ? (R.ds || 180) : 0, cx: c[0], cy: c[1] };
         } else { // a part that has nowhere to go: folds into the middle of the shape
           var ce = cen(ra.pts), tgt = bs[0] ? cen(bs[0].pts) : ce;
@@ -205,11 +214,12 @@ textarea { width:100%; min-height:110px; font-family:var(--mono); font-size:.72r
     function run(rings, u) {
       var groups = {};
       rings.forEach(function (r) {
-        var x = Math.max(0, Math.min(1, (u - r.t0) / (r.t1 - r.t0))), e = r.ease(x), bump = 4 * x * (1 - x), ang = r.spin ? (1 - Math.max(0, Math.min(1, e))) * r.spin * Math.PI / 180 : 0, ca = Math.cos(ang), sa = Math.sin(ang), d = 'M', mx = 0, my = 0, i, px, py, pts = [];
-        for (i = 0; i < N; i++) { px = r.pa[i][0] + (r.pb[i][0] - r.pa[i][0]) * e + r.bx * bump; py = r.pa[i][1] + (r.pb[i][1] - r.pa[i][1]) * e + r.by * bump; pts.push([px, py]); mx += px; my += py; }
+        var pa = r.pa, pb = r.pb, x, e, bump; if (r.via) { if (u < r.via.t) { pb = r.via.pts; x = Math.max(0, Math.min(1, u / r.via.t)); } else { pa = r.via.pts; x = Math.max(0, Math.min(1, (u - r.via.t) / (r.t1 - r.via.t))); } e = easeOf('inout')(x); bump = 0; } else { x = Math.max(0, Math.min(1, (u - r.t0) / (r.t1 - r.t0))); e = r.ease(x); bump = 4 * x * (1 - x); }
+        var  ang = r.spin ? (1 - Math.max(0, Math.min(1, e))) * r.spin * Math.PI / 180 : 0, ca = Math.cos(ang), sa = Math.sin(ang), d = 'M', mx = 0, my = 0, i, px, py, pts = [];
+        for (i = 0; i < N; i++) { px = pa[i][0] + (pb[i][0] - pa[i][0]) * e + r.bx * bump; py = pa[i][1] + (pb[i][1] - pa[i][1]) * e + r.by * bump; pts.push([px, py]); mx += px; my += py; }
         mx /= N; my /= N;
         for (i = 0; i < N; i++) { px = pts[i][0]; py = pts[i][1]; if (ang) { var qx = px - mx, qy = py - my; px = mx + qx * ca - qy * sa; py = my + qx * sa + qy * ca; } d += (i ? 'L' : '') + f2(px) + ',' + f2(py); }
-        d += 'Z'; var fe = r.fade ? Math.max(0, Math.min(1, (u - r.fade[0]) / (r.fade[1] - r.fade[0]))) : Math.max(0, Math.min(1, e)), op = Math.round(Math.max(0, Math.min(1, r.a0 + (r.a1 - r.a0) * fe)) * 20) / 20, gk = op + (r.sep && u > 0.3 ? 's' : ''); (groups[gk] = groups[gk] || []).push(d);
+        d += 'Z'; var fe = r.fade ? Math.max(0, Math.min(1, (u - r.fade[0]) / (r.fade[1] - r.fade[0]))) : Math.max(0, Math.min(1, e)), op = Math.round(Math.max(0, Math.min(1, r.a0 + (r.a1 - r.a0) * fe)) * 20) / 20, gk = op + (r.sep && u > 0.08 ? 's' : ''); (groups[gk] = groups[gk] || []).push(d);
       });
       return groups;
     }
