@@ -1,0 +1,84 @@
+# Church Drive: people alerts (automation.church_drive_people_alerts), as it is in Home Assistant since 0.99.0.
+# Needs the helper input_text.church_drive_people_announced (Settings > Devices & services > Helpers > Text, maximum 255).
+# An arrival or leaving is announced only if it still holds 90 seconds later; what was announced last is kept in the helper, so
+# nobody's arrival is lost when two changes come close together, and a quick out-and-back at the edge of the home zone says nothing.
+alias: "Church Drive: people alerts"
+description: >-
+  '<Name> gets home or leaves': when someone arrives home or leaves and it is still true 90 seconds later, the people ticked in
+  Manager's Notifications table are told (never the person themselves). 'Everyone's out and something's left on': once the house has
+  been empty for 10 minutes and everyone's location is known, a list of lights, TVs, speakers and fans still on.
+mode: queued
+max: 10
+triggers:
+  - trigger: state
+    entity_id: zone.home
+    attribute: persons
+    for: { seconds: 90 }
+    id: moved
+  - trigger: state
+    entity_id: zone.home
+    to: "0"
+    for: { minutes: 10 }
+    id: everyone_out
+conditions:
+  - condition: template
+    value_template: "{{ trigger.from_state is not none and trigger.from_state.state not in ['unavailable', 'unknown'] }}"
+    note: Not when zone.home comes back after a restart.
+actions:
+  - variables:
+      everyone: "{{ (state_attr('sensor.church_drive_people', 'people') or []) | map(attribute='first') | list }}"
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: moved
+        sequence:
+          # Two steps: a variables block renders its keys one at a time and Home Assistant stores them sorted by name, so a key that
+          # reads another must be in a later step.
+          - variables:
+              saved: "{{ states('input_text.church_drive_people_announced') }}"
+              after: "{{ state_attr('zone.home', 'persons') or [] }}"
+          - variables:
+              before: "{{ (saved | from_json(default=none)) if saved not in ['', 'unknown', 'unavailable'] else none }}"
+          - action: input_text.set_value
+            target: { entity_id: input_text.church_drive_people_announced }
+            data: { value: "{{ after | tojson }}" }
+            note: Kept first, so a run that is cut short never announces the same change twice.
+          - if:
+              - condition: template
+                value_template: "{{ before is none }}"
+            then:
+              - stop: "First run: remembered who is home, nothing to announce."
+          - variables:
+              changes: >-
+                {% set ns = namespace(l=[]) %}{% for p in after if p not in before %}{% set ns.l = ns.l + [{'person': p, 'home': true}] %}{% endfor %}{% for p in before if p not in after %}{% set ns.l = ns.l + [{'person': p, 'home': false}] %}{% endfor %}{{ ns.l }}
+          - repeat:
+              for_each: "{{ changes }}"
+              sequence:
+                - variables:
+                    who: "{{ (state_attr(repeat.item.person, 'friendly_name') or repeat.item.person) | regex_replace(' .*', '') }}"
+                - action: church_drive.notify
+                  continue_on_error: true
+                  data:
+                    kind: "arrivals:{{ repeat.item.person }}"
+                    people: "{{ everyone | reject('eq', who) | list }}"
+                    title: "{{ '🏠 ' ~ who ~ ' is home' if repeat.item.home else '👋 ' ~ who ~ ' left home' }}"
+                    message: "{{ who }} {{ 'got home' if repeat.item.home else 'left' }} at {{ now().strftime('%H:%M') }}."
+                    tag: "church-drive-arrival-{{ repeat.item.person | slugify }}"
+      - conditions:
+          - condition: trigger
+            id: everyone_out
+          - condition: template
+            value_template: "{% set p = states.person | list %}{{ p | count > 0 and p | selectattr('state', 'in', ['unknown', 'unavailable']) | list | count == 0 }}"
+            note: Only when everyone's location is known.
+        sequence:
+          - variables:
+              left_on: "{% set ns = namespace(l=[]) %}{% for s in states.light if s.state == 'on' and not (s.entity_id is search('backlight|display|indicator|status')) %}{% set ns.l = ns.l + [s.name] %}{% endfor %}{% for s in states.media_player if s.state in ['on', 'playing', 'paused'] %}{% set ns.l = ns.l + [s.name] %}{% endfor %}{% for s in states.fan if s.state == 'on' %}{% set ns.l = ns.l + [s.name] %}{% endfor %}{{ ns.l }}"
+          - condition: template
+            value_template: "{{ left_on | count > 0 }}"
+          - action: church_drive.notify
+            data:
+              kind: left_on
+              title: "💡 Everyone's out, {{ left_on | count }} thing{{ 's' if left_on | count != 1 else '' }} left on"
+              message: "{{ left_on[:8] | join(', ') }}{{ (' and ' ~ (left_on | count - 8) ~ ' more') if left_on | count > 8 else '' }}."
+              tag: church-drive-left-on
+              link: /dashboard-mobile/lighting

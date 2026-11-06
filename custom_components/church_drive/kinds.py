@@ -77,6 +77,8 @@ KINDS: list[dict[str, Any]] = [
      "needs": []},
     {"key": "battery_report", "group": "System", "name": "Weekly battery report", "default": "owner",
      "needs": [("platform", "battery_notes")]},
+    {"key": "app_update", "group": "System", "name": "The Church Drive app has an update", "note": "Sent to the person whose phone is out of date",
+     "default": "all", "needs": []},
     # People ("<name> gets home or leaves" kinds are added per person).
     {"key": "left_on", "group": "People", "name": "Everyone's out and something's left on", "default": "admins",
      "needs": []},

@@ -32,6 +32,29 @@ class MobileAppTest {
     }
 
     @Test
+    fun theSetupReportIsAProblemSensorThatIsOnWhenSomethingIsMissing() {
+        val ok = MobileApp.phoneSetupBody(emptyList(), linkedMapOf("notifications" to true), "0.99.0 (7)")
+        assertEquals("register_sensor", ok.getString("type"))
+        val d = ok.getJSONObject("data")
+        assertEquals("church_drive_phone_setup", d.getString("unique_id"))
+        assertEquals("binary_sensor", d.getString("type"))
+        assertEquals("problem", d.getString("device_class"))
+        assertFalse(d.getBoolean("state"))
+        assertTrue(d.getJSONObject("attributes").getBoolean("notifications"))
+        assertEquals("0.99.0 (7)", d.getJSONObject("attributes").getString("app_version"))
+
+        val bad = MobileApp.phoneSetupBody(listOf("battery", "always_location"), linkedMapOf("notifications" to true), "0.99.0 (7)").getJSONObject("data")
+        assertTrue(bad.getBoolean("state"))
+        assertEquals(2, bad.getJSONObject("attributes").getJSONArray("missing").length())
+        assertEquals("battery", bad.getJSONObject("attributes").getJSONArray("missing").getString(0))
+    }
+
+    @Test
+    fun theZonesAreAskedForByTheWebhooksOwnName() {
+        assertEquals("get_zones", MobileApp.getZonesBody().getString("type"))
+    }
+
+    @Test
     fun aNoticeTestAsksTheHouseForOneKindForOnePerson() {
         val e = MobileApp.noticeTestBody("doorbell", "Jamie").getJSONObject("data")
         assertEquals("church_drive_notice_test", e.getString("event_type"))

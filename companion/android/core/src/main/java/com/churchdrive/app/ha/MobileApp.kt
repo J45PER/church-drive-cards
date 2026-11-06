@@ -79,6 +79,9 @@ object MobileApp {
         return JSONObject().put("type", "update_location").put("data", data)
     }
 
+    /** The webhook message that asks the house for its zones (the answer is a list of zone states, among them `zone.home`). */
+    fun getZonesBody(): JSONObject = JSONObject().put("type", "get_zones")
+
     /** Sends a webhook message. The webhook id is its own key, so there's no token. Blocking. */
     fun post(baseUrl: String, webhookId: String, body: JSONObject): WebhookResult = runCatching {
         val request = Request.Builder()
@@ -175,6 +178,29 @@ object MobileApp {
      */
     fun cdaDeviceName(phoneName: String?, personName: String?, model: String): String =
         (phoneName?.trim()?.takeIf { it.isNotEmpty() } ?: deviceName(personName, model)) + "-CDA"
+
+    /**
+     * The webhook message that tells the house whether this phone is set up properly: one "problem" sensor on the phone's
+     * device, on when something is missing, with each setting and the list of what is missing as its attributes. Sending
+     * it again for a sensor that exists updates it, so it is the only message needed.
+     */
+    fun phoneSetupBody(missing: List<String>, settings: Map<String, Boolean>, appVersion: String): JSONObject {
+        val attributes = JSONObject()
+        for ((key, value) in settings) attributes.put(key, value)
+        attributes.put("missing", JSONArray(missing)).put("app_version", appVersion)
+        return JSONObject().put("type", "register_sensor").put(
+            "data",
+            JSONObject()
+                .put("unique_id", "church_drive_phone_setup")
+                .put("type", "binary_sensor")
+                .put("name", "Church Drive phone setup")
+                .put("device_class", "problem")
+                .put("entity_category", "diagnostic")
+                .put("icon", if (missing.isEmpty()) "mdi:cellphone-check" else "mdi:cellphone-alert")
+                .put("state", missing.isNotEmpty())
+                .put("attributes", attributes),
+        )
+    }
 
     /** The webhook message that renames this phone in Home Assistant (Home Assistant needs the version and name every time). */
     fun updateRegistrationBody(appVersion: String, deviceName: String, osVersion: String, manufacturer: String, model: String): JSONObject =

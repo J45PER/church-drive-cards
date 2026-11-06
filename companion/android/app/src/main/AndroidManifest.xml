@@ -11,6 +11,9 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Home Wi-Fi: knowing the phone is on it, and being told when it joins or leaves it. -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- To see whether Church Drive To-Do is installed (the To-do page opens it). -->
     <queries>
@@ -122,10 +125,14 @@
             android:name=".house.LocationReceiver"
             android:exported="false" />
         <receiver
+            android:name=".house.WifiReceiver"
+            android:exported="false" />
+        <receiver
             android:name=".house.BootReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
         <receiver

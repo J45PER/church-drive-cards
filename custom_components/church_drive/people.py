@@ -45,6 +45,7 @@ from homeassistant.helpers.event import async_call_later, async_track_time_inter
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util, location, slugify
 
+from .app_nudge_logic import oldest_running, should_nudge
 from .notice_log import NoticeLog
 from .phone_logic import OWN_APP_IDS, leftover_entries, location_trackers
 from .kinds import ARRIVALS, JOB_KINDS, KINDS, arrival_kind
@@ -155,11 +156,43 @@ class People:
                     _LOGGER.warning("Couldn't update the location phones of %s: %s", item.get("name"), err)
         self._changed()
 
+    async def _async_nudge_app_updates(self, _now: Any = None) -> None:
+        """Hourly: tell anyone whose Church Drive app is older than the house's version to update it (once per version,
+        again after a few days if they haven't, and only in the day). The apps and the integration share one version
+        number, so the integration's version is the newest app there is."""
+        from homeassistant.loader import async_get_integration
+
+        try:
+            newest = str((await async_get_integration(self.hass, "church_drive")).version)
+        except Exception as err:  # noqa: BLE001 - never stop the other checks for this
+            _LOGGER.debug("Couldn't read the house's version: %s", err)
+            return
+        now = dt_util.now()
+        sent = self._data.setdefault("nudged", {})
+        for p in self.people():
+            running = oldest_running(p["phones"], newest)  # the phone's app version as the house last heard it
+            if running is None or not should_nudge(running, newest, sent.get(p["entity_id"]), now, now.hour):
+                continue
+            # Recorded before sending: a failure then means one missed nudge, never a notice every hour.
+            sent[p["entity_id"]] = {"target": newest, "at": now.isoformat()}
+            await self._async_save()
+            try:
+                await self.async_notify(
+                    "app_update", [p["entity_id"]],
+                    "⬆️ Update the Church Drive app",
+                    f"A newer version ({newest}) is ready. "
+                    "Open the app to update it: it keeps location and notifications working properly.",
+                    tag="church-drive-app-update",
+                )
+            except Exception as err:  # noqa: BLE001
+                _LOGGER.warning("Couldn't tell %s to update the app: %s", p["first"], err)
+
     async def _async_ready(self) -> None:
         await self._async_remove_leftover_phones()
         await self._async_own_app_locates()
         self._unsubs.append(async_track_time_interval(self.hass, self._async_own_app_locates, timedelta(hours=1)))
         self._unsubs.append(async_track_time_interval(self.hass, self._async_remove_leftover_phones, timedelta(hours=1)))
+        self._unsubs.append(async_track_time_interval(self.hass, self._async_nudge_app_updates, timedelta(hours=1)))
         if not self._data.get("seeded"):
             self._seed()
         self._fill_defaults()
@@ -296,6 +329,7 @@ class People:
                         "name": ((device.name_by_user or device.name) if device else tracker).strip(),
                         "model": (device.model or "") if device else "",
                         "apple": bool(device and (device.manufacturer or "").lower().startswith("apple")),
+                        "version": str(config.data.get("app_version") or "") if config else "",
                         "on": service not in self._data["phones_off"].get(st.entity_id, []),
                         "tracker": tracker,
                         "tracks": tracker in tracking,

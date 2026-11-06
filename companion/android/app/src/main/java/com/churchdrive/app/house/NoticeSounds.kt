@@ -24,7 +24,7 @@ fun soundFamilyOf(kind: String?): SoundFamily = when (kind) {
     "power_down", "cheap_rate", "energy_cost", "car_plugged", "car_charging", "car_charged", "car_not_plugged" -> SoundFamily.Energy
     "todo_new", "todo_summary" -> SoundFamily.Todo
     "internet", "backup", "remote_access", "device_stale", "battery_report", "low_batteries", "devices_not_responding",
-    "tamper", "filters_due", "safety_alarms", "updates" -> SoundFamily.System
+    "tamper", "filters_due", "safety_alarms", "updates", "app_update" -> SoundFamily.System
     else -> SoundFamily.Default
 }
 

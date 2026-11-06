@@ -82,6 +82,10 @@ class UiStandardsTest {
             "NoticeStylesPage.kt" to mapOf("TextButton(" to 2),
             // The cheap-rate question's two choices ("Charge at 00:30", "Charge now") are dialog actions, not choices.
             "ChargePrompt.kt" to mapOf("TextButton(" to 2),
+            // The phone set-up question's "Allow" and "Not now", and the banner's "Fix", are dialog and banner actions, not choices.
+            "PhoneSetupPrompt.kt" to mapOf("TextButton(" to 3),
+            // The update question's "Update" and "Later" are dialog actions, not choices.
+            "UpdatePrompt.kt" to mapOf("TextButton(" to 2),
         )
         val names = listOf("Button(", "OutlinedButton(", "FilledTonalButton(", "TextButton(", "FilledIconButton(", "ChoiceButton(")
         for (file in uiFiles()) {

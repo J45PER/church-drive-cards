@@ -207,7 +207,8 @@ fun HomeScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(28.dp),
         ) {
-            if (updateAvailable) UpdateBanner()
+            UpdatePrompt(updateAvailable)
+            PhoneSetupPrompt(account)
             // Connecting and updating show as a pill at the top (LoadingPill), over what was remembered from last time.
             when (connection) {
                 ConnectionState.Connected -> Unit
@@ -440,19 +441,14 @@ fun NotBuiltCard() {
     }
 }
 
-/** A banner shown when a newer test build is out: tapping Update downloads it (Android then offers to install it). */
+/** A banner shown when a newer version is out: tapping Update runs [onUpdate] (the Play update on a Play install, else the download of the test build). */
 @Composable
-private fun UpdateBanner() {
-    val context = androidx.compose.ui.platform.LocalContext.current
+internal fun UpdateBanner(onUpdate: () -> Unit) {
     val tone = toneColors(Tone.Blue)
     EntityCard(tone.container, tone.onContainer) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("A newer version of the app is ready", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-            androidx.compose.material3.TextButton(onClick = {
-                context.startActivity(
-                    android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(com.churchdrive.app.UpdateCheck.APK_URL)),
-                )
-            }) { Text("Update") }
+            androidx.compose.material3.TextButton(onClick = onUpdate) { Text("Update") }
         }
     }
 }
