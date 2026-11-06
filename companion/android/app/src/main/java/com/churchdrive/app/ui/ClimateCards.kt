@@ -273,7 +273,7 @@ fun CoAlarmCard(config: JSONObject, entities: Map<String, EntityState>, call: Ca
         if (test != null || mute != null) {
             TileRow(
                 buildList {
-                    if (test != null) add(TileItem(IconMap.of("co", "test", "mdi:bell-ring"), "Test", false) { call("button", "press", test, data()) })
+                    if (test != null) add(TileItem(IconMap.of("co", "test", "cd:co-alert"), "Test", false) { call("button", "press", test, data()) })
                     if (mute != null) add(TileItem(IconMap.of("co", "mute", "mdi:volume-off"), "Mute", alarm) { call("button", "press", mute, data()) })
                 },
                 tone, tone.onContainer,

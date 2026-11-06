@@ -330,7 +330,7 @@ private fun ShoppingForm(existing: ShoppingList?, steps: Boolean, state: Shoppin
         if (!steps && state.missed.isNotEmpty()) {
             val n = state.missed.size
             TileRow(
-                listOf(TileItem("mdi:alert-circle-outline", "Add the $n not available last time", withMissed) { withMissed = !withMissed }),
+                listOf(TileItem("cd:alert-circle-off", "Add the $n not available last time", withMissed) { withMissed = !withMissed }),
                 tone, neutral.onContainer,
             )
             Text(state.missed.joinToString(", "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

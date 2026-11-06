@@ -47,7 +47,7 @@ private fun HealthLevel.tone(): Tone = when (this) {
 private fun DeviceHealthItem.icon(): String = when {
     offline -> "mdi:wifi-off"
     batteryLevel == HealthLevel.Bad || batteryLevel == HealthLevel.Warn -> "mdi:battery-alert"
-    staleReason != null -> "mdi:alert-circle-outline"
+    staleReason != null -> "cd:alert-circle-off"
     filterLevel == HealthLevel.Warn -> "mdi:air-filter"
     else -> "mdi:check-circle-outline"
 }
