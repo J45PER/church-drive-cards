@@ -139,29 +139,89 @@ textarea { width:100%; min-height:110px; font-family:var(--mono); font-size:.72r
       pairs.forEach(function (p) { var e = p.big ? u : backOut(Math.max(0, Math.min(1, (u - 0.35) / 0.65))), d = 'M'; for (var i = 0; i < N; i++) d += (i ? 'L' : '') + f2(p.pa[i][0] + (p.pb[i][0] - p.pa[i][0]) * e) + ',' + f2(p.pa[i][1] + (p.pb[i][1] - p.pa[i][1]) * e); d += 'Z'; var o = Math.round(Math.max(0, Math.min(1, p.a0 + (p.a1 - p.a0) * Math.min(1, e))) * 20) / 20; (groups[o] = groups[o] || []).push(d); });
       return groups;
     }
-    function joinD(groups) { var d = []; for (var o in groups) d.push(groups[o].join(' ')); return d.join(' '); }
-    function svgPaths(groups, fill) { var h = ''; for (var o in groups) { var op = parseFloat(o); h += '<path fill="' + (fill || 'currentColor') + '" fill-rule="evenodd"' + (op < 1 ? ' fill-opacity="' + op + '"' : '') + ' d="' + groups[o].join(' ') + '"/>'; } return h; }
+    function joinD(groups) { var d = []; for (var o in groups) if (Array.isArray(groups[o])) d.push(groups[o].join(' ')); return d.join(' '); }
+    function svgPaths(groups, fill) {
+      var h = '', cl = groups.__clip, id = 'mkc' + (++clipId), inClip = '';
+      for (var o in groups) { if (o === '__clip') continue; var cc = o.charAt(0) === 'c', op = parseFloat(cc ? o.slice(1) : o), p = '<path fill="' + (fill || 'currentColor') + '" fill-rule="evenodd"' + (op < 1 ? ' fill-opacity="' + op + '"' : '') + ' d="' + groups[o].join(' ') + '"/>'; if (cc && cl) inClip += p; else h += p; }
+      if (cl && inClip) h += '<clipPath id="' + id + '">' + (cl.r != null ? '<circle cx="' + cl.cx + '" cy="' + cl.cy + '" r="' + Math.max(0.01, cl.r) + '"/>' : '<rect x="' + cl.x + '" y="' + cl.y + '" width="' + Math.max(0.01, cl.w) + '" height="' + Math.max(0.01, cl.h) + '"/>') + '</clipPath><g clip-path="url(#' + id + ')">' + inClip + '</g>';
+      return h;
+    }
     /* ---- per-icon choreography ----
        arc: how far the two squircles swing on a curve instead of jumping straight (+/-, in fractions of the distance); spin: degrees the body turns as it settles;
        d: how the small parts arrive (pop from where they are, drop from above, rise from below, left/right slide in, spin in); ds: their spin; o: the order they arrive in; ease: back (overshoot), out or inout. */
-    var RECIPES = {
-      'thermostat': { arc: -0.45, spin: -70, d: 'spin', ds: -200, o: 'size', ease: 'back' }, 'radiator': { arc: 0.2, spin: 0, d: 'rise', o: 'ltr', ease: 'out' },
-      'fire': { arc: 0.1, spin: 0, d: 'rise', o: 'btt', ease: 'back' }, 'leaf': { flow: 'seed', arc: 0.5, spin: 40, d: 'pop', o: 'size', ease: 'back' },
-      'bulb': { flow: 'disc', arc: -0.3, spin: 0, d: 'rise', o: 'btt', ease: 'back' }, 'bulb-lit': { flow: 'disc', arc: -0.3, spin: 15, d: 'spin', ds: 90, o: 'radial', ease: 'back' }, 'bulb-off': { flow: 'disc', arc: 0.2, spin: 0, d: 'drop', o: 'ttb', ease: 'out' },
-      'palette': { flow: 'disc', arc: 0.4, spin: -30, d: 'pop', o: 'ltr', ease: 'back' }, 'blind-open': { arc: 0, spin: 0, d: 'drop', o: 'ttb', ease: 'out' }, 'blind-closed': { arc: 0, spin: 0, d: 'drop', o: 'ttb', ease: 'out' },
-      'fan': { flow: 'disc', body: 'hub', ds: -300, arc: 0, spin: 360, d: 'spin', o: 'radial', ease: 'out' }, 'air-purifier': { arc: 0.3, spin: 0, d: 'left', o: 'ttb', ease: 'out' }, 'air-filter': { arc: 0.2, spin: 0, d: 'right', o: 'ttb', ease: 'out' },
-      'shield-lock': { arc: 0, spin: 0, d: 'drop', o: 'size', ease: 'back' }, 'shield-alert': { arc: 0, spin: 0, d: 'drop', o: 'size', ease: 'back' }, 'shield-check': { arc: 0.15, spin: 0, d: 'pop', o: 'size', ease: 'back' },
-      'lock': { arc: 0, spin: 0, d: 'drop', o: 'ttb', ease: 'back' }, 'plug': { arc: -0.3, spin: 25, d: 'rise', o: 'ltr', ease: 'back' }, 'volume-high': { arc: 0, spin: 0, d: 'left', o: 'ltr', ease: 'out' },
-      'ev-plug': { flow: 'disc', arc: 0.4, spin: -25, d: 'pop', o: 'radial', ease: 'back' }, 'alert-circle': { arc: 0, spin: 0, d: 'drop', o: 'ttb', ease: 'back' }, 'alert-circle-solid': { arc: 0, spin: 0, d: 'drop', o: 'ttb', ease: 'back' },
-      'clock': { arc: 0.2, spin: -120, d: 'spin', ds: -360, o: 'size', ease: 'out' }, 'cart': { arc: 0, spin: 0, d: 'right', o: 'ltr', ease: 'out' }, 'cart-check': { arc: 0, spin: 0, d: 'right', o: 'ltr', ease: 'back' },
-      'close-circle': { arc: 0, spin: 90, d: 'spin', ds: 180, o: 'size', ease: 'back' }, 'check-circle-solid': { arc: 0.3, spin: 0, d: 'pop', o: 'size', ease: 'back' },
-      'weather-partly-cloudy': { arc: 0.5, spin: -30, d: 'rise', o: 'ltr', ease: 'out' }, 'football': { arc: 0, spin: 300, d: 'pop', o: 'radial', ease: 'out' },
-      'calendar-clock': { arc: 0.2, spin: 0, d: 'drop', o: 'ttb', ease: 'out' }, 'calendar-check': { arc: 0.2, spin: 0, d: 'drop', o: 'ttb', ease: 'back' },
-      'music-note': { arc: -0.5, spin: 35, d: 'rise', o: 'btt', ease: 'back' }, 'group': { arc: 0.5, spin: 0, d: 'pop', o: 'ltr', ease: 'back', swap: true }, 'car-ev': { flow: 'old', arc: 0, spin: 0, d: 'left', o: 'ltr', ease: 'out' },
-      'trophy': { flow: 'box' }, 'thermometer': { arc: -0.3, spin: 0, d: 'rise', o: 'btt', ease: 'back' }, 'bolt': { arc: 0.8, spin: -70, d: 'pop', o: 'size', ease: 'back' }, 'door': { arc: 0, spin: 0, d: 'right', o: 'size', ease: 'out' },
-      'television-play': { arc: 0.2, spin: 0, d: 'pop', o: 'size', ease: 'back' }, 'cd_clive_chat': { arc: -0.4, spin: 30, d: 'pop', o: 'size', ease: 'back' }, 'message': { arc: -0.4, spin: 30, d: 'pop', o: 'size', ease: 'back' },
-      'gregg': { arc: 0, spin: 360, d: 'spin', ds: -360, o: 'size', ease: 'out' }, 'blinds': { arc: 0, spin: 0, d: 'drop', o: 'ttb', ease: 'out' }, 'volume': { arc: 0, spin: 0, d: 'left', o: 'ltr', ease: 'out' }, 'light': { arc: -0.3, spin: 0, d: 'rise', o: 'btt', ease: 'back' }
-    };
+    var RECIPES = {"thermostat":{"arc":-0.45,"spin":-70,"d":"spin","ds":-200,"o":"size","ease":"back"},
+      "radiator":{"arc":0.2,"spin":0,"d":"rise","o":"rtl","ease":"out","flow":"chain","step":0.1,"em2":"down"},
+      "fire":{"arc":0.1,"spin":0,"d":"rise","o":"btt","ease":"back","flow":"disc"},
+      "leaf":{"flow":"seed","arc":0.5,"spin":40,"d":"pop","o":"size","ease":"back"},
+      "bulb":{"flow":"disc","arc":-0.3,"spin":0,"d":"rise","o":"btt","ease":"back"},
+      "bulb-lit":{"flow":"disc","arc":-0.3,"spin":15,"d":"spin","ds":90,"o":"radial","ease":"back"},
+      "bulb-off":{"flow":"disc","arc":0.2,"spin":0,"d":"drop","o":"ttb","ease":"out"},
+      "palette":{"flow":"disc","arc":0.4,"spin":-30,"d":"pop","o":"ltr","ease":"back"},
+      "blind-open":{"arc":0,"spin":0,"d":"drop","o":"ttb","ease":"out","flow":"box","em":"dropin","em2":"dropin"},
+      "blind-closed":{"arc":0,"spin":0,"d":"drop","o":"ttb","ease":"out","flow":"box","em":"dropin","em2":"dropin"},
+      "fan":{"flow":"disc","body":"hub","ds":-300,"arc":0,"spin":360,"d":"spin","o":"radial","ease":"out"},
+      "air-purifier":{"arc":0.3,"spin":0,"d":"left","o":"ttb","ease":"out"},
+      "air-filter":{"arc":0.2,"spin":0,"d":"right","o":"ttb","ease":"out","flow":"chain","em":"left","em2":"own","step":0.08},
+      "shield-lock":{"arc":0,"spin":0,"d":"drop","o":"size","ease":"back","flow":"direct"},
+      "shield-alert":{"arc":0,"spin":0,"d":"drop","o":"size","ease":"back","flow":"direct"},
+      "shield-check":{"arc":0.15,"spin":0,"d":"pop","o":"size","ease":"back","flow":"direct"},
+      "lock":{"arc":0,"spin":0,"d":"drop","o":"ttb","ease":"back","flow":"box","start":{"at":"bottom","shape":"box","f":0.55}},
+      "plug":{"arc":-0.3,"spin":25,"d":"rise","o":"ltr","ease":"back"},
+      "volume-high":{"arc":0,"spin":0,"d":"left","o":"ltr","ease":"out","flow":"direct","em":"left","em2":"left","step":0.1},
+      "ev-plug":{"flow":"disc","arc":0.4,"spin":-25,"d":"pop","o":"radial","ease":"back"},
+      "alert-circle":{"arc":0,"spin":0,"d":"drop","o":"ttb","ease":"back"},
+      "alert-circle-solid":{"arc":0,"spin":0,"d":"drop","o":"ttb","ease":"back"},
+      "clock":{"arc":0.2,"spin":-120,"d":"spin","ds":-360,"o":"size","ease":"out"},
+      "cart":{"arc":0,"spin":0,"d":"right","o":"ltr","ease":"out","flow":"wipe","wipe":"x+","em2":"down"},
+      "cart-check":{"arc":0,"spin":0,"d":"right","o":"ltr","ease":"back","flow":"wipe","wipe":"x+","em2":"down"},
+      "close-circle":{"arc":0,"spin":90,"d":"spin","ds":180,"o":"size","ease":"back"},
+      "check-circle-solid":{"arc":0.3,"spin":0,"d":"pop","o":"size","ease":"back"},
+      "weather-partly-cloudy":{"arc":0.5,"spin":-30,"d":"rise","o":"ltr","ease":"out","flow":"disc","em":"centre","em2":"centre"},
+      "football":{"arc":0,"spin":300,"d":"pop","o":"radial","ease":"out"},
+      "calendar-clock":{"arc":0.2,"spin":0,"d":"drop","o":"ttb","ease":"out"},
+      "calendar-check":{"arc":0.2,"spin":0,"d":"drop","o":"ttb","ease":"back"},
+      "music-note":{"arc":-0.5,"spin":35,"d":"rise","o":"btt","ease":"back","flow":"direct"},
+      "group":{"arc":0.5,"spin":0,"d":"pop","o":"ltr","ease":"back","swap":true,"flow":"old"},
+      "car-ev":{"flow":"old","arc":0,"spin":0,"d":"left","o":"ltr","ease":"out"},
+      "trophy":{"flow":"box"},
+      "thermometer":{"arc":-0.3,"spin":0,"d":"rise","o":"ttb","ease":"back","flow":"disc","start":{"at":"bottom","shape":"circle"},
+      "em2":"left","step":0.08},
+      "bolt":{"arc":0.8,"spin":-70,"d":"pop","o":"size","ease":"back","flow":"wipe","wipe":"y+"},
+      "door":{"arc":0,"spin":0,"d":"right","o":"size","ease":"out"},
+      "television-play":{"arc":0.2,"spin":0,"d":"pop","o":"size","ease":"back"},
+      "cd_clive_chat":{"arc":-0.4,"spin":30,"d":"pop","o":"size","ease":"back"},
+      "message":{"arc":-0.4,"spin":30,"d":"pop","o":"size","ease":"back","flow":"old"},
+      "gregg":{"arc":0,"spin":360,"d":"spin","ds":-360,"o":"size","ease":"out"},
+      "blinds":{"arc":0,"spin":0,"d":"drop","o":"ttb","ease":"out"},
+      "volume":{"arc":0,"spin":0,"d":"left","o":"ltr","ease":"out"},
+      "light":{"arc":-0.3,"spin":0,"d":"rise","o":"btt","ease":"back"},
+      "lock-open":{"flow":"box","start":{"at":"bottom","shape":"box","f":0.55}},
+      "shield-off":{"flow":"direct","em2":"dropin"},
+      "sun-half":{"flow":"disc","em":"centre","em2":"centre"},
+      "volume-low":{"flow":"direct","em":"left","em2":"left","o":"ltr","step":0.1},
+      "volume-medium":{"flow":"direct","em":"left","em2":"left","o":"ltr","step":0.1},
+      "spray-bottle":{"flow":"box","start":{"at":"bottom","shape":"box","f":0.45}},
+      "weather-rainy":{"flow":"disc","em":"down","em2":"down","o":"ltr","step":0.07},
+      "weather-pouring":{"flow":"disc","em":"down","em2":"down","o":"ltr","step":0.07},
+      "weather-hail":{"flow":"disc","em":"down","em2":"down","o":"ltr","step":0.07},
+      "weather-snowy":{"flow":"disc","em":"down","em2":"down","o":"ltr","step":0.07},
+      "weather-snowy-rainy":{"flow":"disc","em":"down","em2":"down","o":"ltr","step":0.07},
+      "weather-lightning":{"flow":"disc","em":"down","em2":"down","o":"ltr","step":0.07},
+      "weather-lightning-rainy":{"flow":"disc","em":"down","em2":"down","o":"ltr","step":0.07},
+      "weather-fog":{"flow":"disc","em":"left","em2":"left","o":"ttb","step":0.1},
+      "weather-night-partly-cloudy":{"flow":"disc","em":"centre","em2":"centre"},
+      "weather-cloudy":{"flow":"disc","em":"left","em2":"left"},
+      "wifi-4":{"flow":"wipe","wipe":"radial","origin":"bottom"},
+      "person-talking":{"flow":"box","em":"up","em2":"left","o":"ltr","step":0.1},
+      "clive-chat":{"flow":"old"},
+      "chevron":{"flow":"wipe","wipe":"x+"},
+      "close":{"flow":"wipe","wipe":"radial","origin":"centre"},
+      "moon":{"flow":"disc"},
+      "power":{"flow":"disc","em":"dropin","em2":"dropin"},
+      "mic-off":{"flow":"wipe","wipe":"x+"},
+      "snowflake":{"flow":"wipe","wipe":"radial","origin":"centre"},
+      "weather-windy":{"flow":"wipe","wipe":"x+"},
+      "back":{"flow":"wipe","wipe":"x-"}};
     var RDEF = { arc: 0.3, spin: -20, d: 'pop', o: 'size', ease: 'inout' };
     function easeOf(n) { return n === 'back' ? backOut : n === 'out' ? function (x) { return 1 - Math.pow(1 - x, 3); } : function (x) { return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; }; }
 
@@ -190,38 +250,68 @@ textarea { width:100%; min-height:110px; font-family:var(--mono); font-size:.72r
       var fill = Math.abs(r0.area) / (w * h), asp = w / h;
       return 'box';
     }
-    function flowTrack(U0, bs, kind, R) {
+    function ordCmp(o) { return function (p, q) { return o === 'ltr' ? p.c[0] - q.c[0] : o === 'rtl' ? q.c[0] - p.c[0] : o === 'ttb' ? p.c[1] - q.c[1] : o === 'btt' ? q.c[1] - p.c[1] : o === 'sizeAsc' ? p.a - q.a : q.a - p.a; }; }
+    function flowTrack(U0, bsIn, kind, R) {
       R = R || {};
-      if (R.body === 'hub') { var ob0 = bbox([].concat.apply([], bs.map(function (x) { return x.pts; }))), oc = [(ob0[0] + ob0[2]) / 2, (ob0[1] + ob0[3]) / 2], best = -1, bdst = 1e9; bs.forEach(function (x, ix) { if (isCirc(x)) { var dd = dist(cen(x.pts), oc); if (dd < bdst) { bdst = dd; best = ix; } } }); if (best > 0) bs = [bs[best]].concat(bs.filter(function (x, ix) { return ix !== best; })); }
+      var bs = bsIn.slice(), U = U0[0], O = U0[1], i, allP = [].concat.apply([], bs.map(function (x) { return x.pts; })), ob = bbox(allP), oc = [(ob[0] + ob[2]) / 2, (ob[1] + ob[3]) / 2];
+      function pick(fn) { var best = -1, bv = 1e18; bs.forEach(function (x, ix) { var v = fn(x); if (v < bv) { bv = v; best = ix; } }); if (best > 0) bs = [bs[best]].concat(bs.filter(function (x, ix) { return ix !== best; })); }
+      if (R.body === 'hub') pick(function (x) { return isCirc(x) ? dist(cen(x.pts), oc) : 1e9; });
+      else if (R.body === 'round') pick(function (x) { var b = bbox(x.pts), w = b[2] - b[0], h = b[3] - b[1]; return Math.abs(Math.abs(x.area) / (Math.PI / 4 * w * h) - 1) + Math.abs(w - h) / Math.max(w, h); });
+      else if (R.body === 'smallest') pick(function (x) { return Math.abs(x.area); });
+      var holeOf = function (x) { return bs.some(function (y) { return y !== x && Math.abs(y.area) > Math.abs(x.area) && inside(cen(x.pts), y.pts); }); };
+      var tops = bs.filter(function (x) { return !holeOf(x); });
+      if (kind === 'chain') { var tl = tops.map(function (x) { return { r: x, c: cen(x.pts), a: Math.abs(x.area) }; }).sort(ordCmp(R.o || 'ltr')); tops = tl.map(function (x) { return x.r; }); bs = tops.concat(bs.filter(function (x) { return tops.indexOf(x) < 0; })); }
       var b0 = bs[0], bd = bbox(b0.pts), w = bd[2] - bd[0], h = bd[3] - bd[1], cx0 = (bd[0] + bd[2]) / 2, cy0 = (bd[1] + bd[3]) / 2, sz = 62, solid = kind === 'solid',
-        q = function (d) { return shapeSet([{ d: d }])[0]; }, circ = function (dia) { return q('M' + (cx0 - dia / 2) + ',' + cy0 + ' a' + dia / 2 + ',' + dia / 2 + ' 0 1,0 ' + dia + ',0 a' + dia / 2 + ',' + dia / 2 + ' 0 1,0 ' + (-dia) + ',0Z'); },
-        rrect = function (wd, ht, rad) { return q(sqp(cx0 - wd / 2, cy0 - ht / 2, cx0 + wd / 2, cy0 + ht / 2, rad)); },
-        inout2 = function (x) { return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; }, U = U0[0], O = U0[1], sqr = rrect(sz, sz, 30 * sz / 76),
-        T = solid ? { s: 0.28, c: 0.4, f: 0.7, m: 0.7, d: 0.72 } : { s: 0.26, c: 0.36, f: 0.6, m: 0.78, d: 0.8 }, c0, c1 = null, k = sz / Math.max(w, h), rings = [], dot = U.pts.map(function () { return [cx0, cy0]; });
-      var ob = bbox([].concat.apply([], bs.map(function (x) { return x.pts; }))), ow = ob[2] - ob[0], oh = ob[3] - ob[1], part = w * h < 0.6 * ow * oh;
-      if (kind === 'box') { c0 = rrect(w * k, h * k, 0.2 * Math.min(w, h) * k); c1 = part ? rrect(ow, oh, 0.2 * Math.min(ow, oh)) : rrect(w, h, 0.2 * Math.min(w, h)); }
-      else if (kind === 'seed') { var seedPts = U.pts.map(function () { return [cx0, bd[3] - 2]; }); c0 = { pts: seedPts, area: 0 }; }
-      else { c0 = circ(sz); if (kind === 'disc') c1 = circ(2 * Math.sqrt(Math.abs(b0.area) / Math.PI)); }
-      var wp = [{ t: 0, pts: U.pts }], prev = U.pts, flip;
+        q = function (d) { return shapeSet([{ d: d }])[0]; },
+        circAt = function (x, y, dia) { return q('M' + (x - dia / 2) + ',' + y + ' a' + dia / 2 + ',' + dia / 2 + ' 0 1,0 ' + dia + ',0 a' + dia / 2 + ',' + dia / 2 + ' 0 1,0 ' + (-dia) + ',0Z'); },
+        rrAt = function (x, y, wd, ht, rad) { return q(sqp(x - wd / 2, y - ht / 2, x + wd / 2, y + ht / 2, rad)); },
+        inout2 = function (x) { return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; },
+        T = solid ? { s: 0.28, c: 0.4, f: 0.7, m: 0.7, d: 0.72 } : kind === 'direct' ? { s: 0.3, m: 0.72, d: 0.74 } : kind === 'chain' ? { s: 0.26, m: 0.5, d: 0.5 } : kind === 'wipe' ? { s: 0.26, m: 0.4, d: 0.8 } : { s: 0.26, c: 0.36, f: 0.6, m: 0.78, d: 0.8 },
+        rings = [], dotAt = function (x, y) { return U.pts.map(function () { return [x, y]; }); }, wp = [{ t: 0, pts: U.pts }], prev = U.pts;
       function add(t, ring) { var pts = alignTo(prev, ring.pts, area(prev) * ring.area < 0 && ring.area !== 0); wp.push({ t: t, pts: pts }); prev = pts; }
-      add(T.s, sqr); if (kind === 'seed') { wp.push({ t: T.c, pts: c0.pts }); prev = c0.pts; } else add(T.c, c0);
-      if (c1) add(T.f, c1);
-      var last = prev; wp.push({ t: T.m, pts: alignTo(last, b0.pts, kind === 'seed' ? false : area(last) * b0.area < 0) });
+      function addPts(t, pts) { wp.push({ t: t, pts: pts }); prev = pts; }
+      var st = R.start, pos = [cx0, cy0];
+      if (kind === 'wipe') {
+        var o2 = R.origin || (R.wipe === 'x+' ? 'left' : R.wipe === 'x-' ? 'right' : R.wipe === 'y+' ? 'top' : R.wipe === 'y-' ? 'bottom' : 'centre');
+        var P = o2 === 'left' ? [ob[0], oc[1]] : o2 === 'right' ? [ob[2], oc[1]] : o2 === 'top' ? [oc[0], ob[1]] : o2 === 'bottom' ? [oc[0], ob[3] - 6] : oc;
+        add(T.s, rrAt(oc[0], oc[1], sz, sz, 30 * sz / 76)); addPts(T.m, dotAt(P[0], P[1]));
+        rings.push({ wp: wp, wpe: [inout2, inout2], a0: 1, a1: 0, fade: [0.5, 0.62], t0: 0, t1: T.m, pa: U.pts, pb: wp[2].pts, bx: 0, by: 0, spin: 0, ease: easeOf('inout') });
+        rings.push({ wp: [{ t: 0, pts: O.pts }, { t: T.s, pts: dotAt(P[0], P[1]) }, { t: 1, pts: dotAt(P[0], P[1]) }], wpe: [inout2, inout2], a0: 1, a1: 0, fade: [0.4, 0.5], t0: 0, t1: 1, pa: O.pts, pb: dotAt(P[0], P[1]), bx: 0, by: 0, spin: 0, ease: easeOf('inout') });
+        var smallW = Math.abs(b0.area) * 0.12;
+        bs.forEach(function (x) { var c = cen(x.pts), isl = Math.abs(x.area) < smallW && !inside(c, b0.pts) && x !== b0; if (!isl) rings.push({ clip: true, pa: x.pts, pb: x.pts, a0: x.a, a1: x.a, t0: 0, t1: 1, ease: function () { return 1; }, bx: 0, by: 0, spin: 0 }); else { var bb2 = bbox(x.pts), an = anchorFor(R.em2 || R.em || 'down', c, bb2, [cx0, cy0]); rings.push({ pa: x.pts.map(function () { return an; }), pb: x.pts, a0: x.a, a1: x.a, t0: T.d, t1: 1, ease: popOut, bx: 0, by: 0, spin: 0 }); } });
+        rings.clipSpec = { kind: R.wipe || 'radial', p: P, bbox: ob, t0: T.m - 0.02, t1: 0.8 };
+        return rings;
+      }
+      var c0, c1 = null, k = sz / Math.max(w, h);
+      if (kind === 'box') {
+        if (st) { var sw = st.shape === 'circle' ? w : w, sh = st.shape === 'circle' ? w : h * (st.f || 0.5), py = bd[3] - sh / 2; pos = [cx0, py]; c1 = st.shape === 'circle' ? circAt(cx0, py, w) : rrAt(cx0, py, w, sh, 0.2 * Math.min(w, sh)); c0 = st.shape === 'circle' ? circAt(cx0, py, sz) : rrAt(cx0, py, sz, sz * sh / w > sz ? sz : sz * sh / w, 12); }
+        else { var ow = ob[2] - ob[0], oh = ob[3] - ob[1], part = w * h < 0.6 * ow * oh; c0 = rrAt(cx0, cy0, w * k, h * k, 0.2 * Math.min(w, h) * k); c1 = part ? rrAt(oc[0], oc[1], ow, oh, 0.2 * Math.min(ow, oh)) : rrAt(cx0, cy0, w, h, 0.2 * Math.min(w, h)); }
+      } else if (kind === 'seed') { c0 = { pts: dotAt(cx0, bd[3] - 2), area: 0 }; }
+      else if (kind !== 'direct' && kind !== 'chain') { c0 = circAt(cx0, cy0, sz); if (kind === 'disc') c1 = st ? circAt(cx0, bd[3] - w / 2, w) : circAt(cx0, cy0, 2 * Math.sqrt(Math.abs(b0.area) / Math.PI)); if (kind === 'disc' && st) pos = [cx0, bd[3] - w / 2]; }
+      if (kind === 'direct' || kind === 'chain') { add(T.s, rrAt(cx0, cy0, sz, sz, 30 * sz / 76)); }
+      else { add(T.s, rrAt(pos[0], pos[1], sz, sz, 30 * sz / 76)); if (kind === 'seed') addPts(T.c, c0.pts); else add(T.c, c0); if (c1) add(T.f, c1); }
+      addPts(T.m, alignTo(prev, b0.pts, kind === 'seed' ? false : area(prev) * b0.area < 0));
       var wpe = []; for (var j = 0; j < wp.length - 1; j++) wpe.push(inout2);
       rings.push({ wp: wp, wpe: wpe, a0: 1, a1: 1, t0: 0, t1: T.m, pa: U.pts, pb: wp[wp.length - 1].pts, bx: 0, by: 0, spin: 0, ease: easeOf('inout') });
-      var hole1 = bs[1] && inside(cen(bs[1].pts), b0.pts), hole = hole1 ? alignTo(dot, bs[1].pts, false) : dot;
-      rings.push({ wp: [{ t: 0, pts: O.pts }, { t: T.s, pts: dot }, { t: T.d, pts: dot }, { t: 1, pts: hole }], wpe: [inout2, inout2, popOut], a0: 1, a1: 1, t0: 0, t1: 1, pa: O.pts, pb: hole, bx: 0, by: 0, spin: 0, ease: easeOf('inout') });
-      for (var i = hole1 ? 2 : 1; i < bs.length; i++) {
-        var rb = bs[i], isl = !inside(cen(rb.pts), b0.pts);
-        rings.push({ sep: isl, sepAt: 0, pa: rb.pts.map(function () { return [cx0, cy0]; }), pb: rb.pts, a0: rb.a, a1: rb.a, t0: T.d, t1: 1, ease: popOut, bx: 0, by: 0, spin: R.ds || 0, pivot: R.ds ? [cx0, cy0] : null });
-      }
+      var hole1 = bs[1] && inside(cen(bs[1].pts), b0.pts) && kind !== 'chain', dc = dotAt(cx0, cy0), hole = hole1 ? alignTo(dc, bs[1].pts, false) : dc;
+      rings.push({ wp: [{ t: 0, pts: O.pts }, { t: T.s, pts: dc }, { t: T.d, pts: dc }, { t: 1, pts: hole }], wpe: [inout2, inout2, popOut], a0: 1, a1: 1, t0: 0, t1: 1, pa: O.pts, pb: hole, bx: 0, by: 0, spin: 0, ease: easeOf('inout') });
+      var rest = []; for (i = hole1 ? 2 : 1; i < bs.length; i++) { var rb = bs[i], c = cen(rb.pts), isH = holeOf(rb), isP = Math.abs(rb.area) >= Math.abs(b0.area) * 0.12; rest.push({ rb: rb, c: c, a: Math.abs(rb.area), hole: isH, piece: isP, bb: bbox(rb.pts) }); }
+      var isl = rest.filter(function (x) { return !x.hole; }).sort(ordCmp(R.o || 'ltr')), rank = {}; isl.forEach(function (x, ix) { rank[rest.indexOf(x)] = ix; });
+      var step = R.step != null ? R.step : 0, nI = Math.max(1, isl.length - 1), stepEff = Math.min(step, (1 - T.d - 0.3) / nI), prevC = [cx0, cy0];
+      rest.forEach(function (x, ri) {
+        var mode = x.hole ? 'centre' : kind === 'chain' && x.piece ? (R.em || 'prev') : (x.piece ? (R.em || 'centre') : (R.em2 || R.em || 'centre')), an;
+        if (mode === 'prev') { an = prevC; prevC = x.c; } else an = anchorFor(mode, x.c, x.bb, [cx0, cy0]);
+        var t0 = x.hole ? T.d : T.d + (rank[ri] || 0) * stepEff;
+        rings.push({ sep: !x.hole && !inside(x.c, b0.pts), sepAt: 0, pa: x.rb.pts.map(function () { return an; }), pb: x.rb.pts, a0: x.rb.a, a1: x.rb.a, t0: t0, t1: Math.min(1, t0 + (stepEff ? 0.3 : 1 - t0)), ease: popOut, bx: 0, by: 0, spin: R.ds || 0, pivot: R.ds ? [cx0, cy0] : null });
+      });
       return rings;
     }
+    function anchorFor(mode, c, b, centre) { return mode === 'down' ? [c[0], b[1]] : mode === 'up' ? [c[0], b[3]] : mode === 'left' ? [b[0], c[1]] : mode === 'right' ? [b[2], c[1]] : mode === 'dropin' ? [c[0], c[1] - 46] : mode === 'own' ? c : centre; }
     function track(A, B, R, noCache) {
       R = R || RDEF; var key = A.id + '>' + B.id + '>' + (R.k || ''); if (!noCache && tcache[key]) return tcache[key];
       var as = A.slice().sort(function (x, y) { return Math.abs(y.area) - Math.abs(x.area); }), bs = B.slice().sort(function (x, y) { return Math.abs(y.area) - Math.abs(x.area); }), n = Math.max(as.length, bs.length), rings = [], i;
       var fk = R.flow || autoFlow(bs);
-      if (A.uo && (fk === 'solid' || fk === 'box' || fk === 'disc' || fk === 'seed')) { var res = flowTrack(A.uo, bs, fk, R); return noCache ? res : (tcache[key] = res); }
+      if (A.uo && (fk === 'solid' || fk === 'box' || fk === 'disc' || fk === 'seed' || fk === 'direct' || fk === 'wipe' || fk === 'chain')) { var res = flowTrack(A.uo, bs, fk, R); return noCache ? res : (tcache[key] = res); }
       var discTry = bs.length >= 2 && isCirc(bs[0]) && A.uo; if (discTry) as = A.uo.slice();
       if (!discTry && as.length >= 2 && bs.length >= 2) { var d00 = dist(cen(as[0].pts), cen(bs[0].pts)) + dist(cen(as[1].pts), cen(bs[1].pts)), d01 = dist(cen(as[0].pts), cen(bs[1].pts)) + dist(cen(as[1].pts), cen(bs[0].pts)); if (d01 < d00 - 1e-6 || R.swap) as = [as[1], as[0]].concat(as.slice(2)); }
       var ease = easeOf(R.ease), ctr = [100, 100], order = [];
@@ -276,9 +366,17 @@ textarea { width:100%; min-height:110px; font-family:var(--mono); font-size:.72r
         for (i = 0; i < N; i++) { px = pa[i][0] + (pb[i][0] - pa[i][0]) * e + r.bx * bump; py = pa[i][1] + (pb[i][1] - pa[i][1]) * e + r.by * bump; pts.push([px, py]); mx += px; my += py; }
         mx /= N; my /= N;
         for (i = 0; i < N; i++) { px = pts[i][0]; py = pts[i][1]; if (ang) { var rx = r.pivot ? r.pivot[0] : mx, ry = r.pivot ? r.pivot[1] : my, qx = px - rx, qy = py - ry; px = rx + qx * ca - qy * sa; py = ry + qx * sa + qy * ca; } d += (i ? 'L' : '') + f2(px) + ',' + f2(py); }
-        d += 'Z'; var fe = r.fade ? Math.max(0, Math.min(1, (u - r.fade[0]) / (r.fade[1] - r.fade[0]))) : Math.max(0, Math.min(1, e)), op = Math.round(Math.max(0, Math.min(1, r.a0 + (r.a1 - r.a0) * fe)) * 20) / 20, gk = op + (r.sep && u > (r.sepAt == null ? 0.08 : r.sepAt) ? 's' : ''); (groups[gk] = groups[gk] || []).push(d);
+        d += 'Z'; var fe = r.fade ? Math.max(0, Math.min(1, (u - r.fade[0]) / (r.fade[1] - r.fade[0]))) : Math.max(0, Math.min(1, e)), op = Math.round(Math.max(0, Math.min(1, r.a0 + (r.a1 - r.a0) * fe)) * 20) / 20, gk = r.clip ? 'c' + op : op + (r.sep && u > (r.sepAt == null ? 0.08 : r.sepAt) ? 's' : ''); (groups[gk] = groups[gk] || []).push(d);
       });
+      if (rings.clipSpec) groups.__clip = clipGeom(rings.clipSpec, u);
       return groups;
+    }
+    var clipId = 0;
+    function clipGeom(cs, u) {
+      var e = Math.max(0, Math.min(1, (u - cs.t0) / (cs.t1 - cs.t0))); e = e < 0.5 ? 2 * e * e : 1 - Math.pow(-2 * e + 2, 2) / 2; var b = cs.bbox, pad = 6, W = b[2] - b[0] + 2 * pad, H = b[3] - b[1] + 2 * pad, k = cs.kind;
+      if (k === 'x+') return { x: b[0] - pad, y: b[1] - pad, w: W * e, h: H }; if (k === 'x-') return { x: b[2] + pad - W * e, y: b[1] - pad, w: W * e, h: H };
+      if (k === 'y+') return { x: b[0] - pad, y: b[1] - pad, w: W, h: H * e }; if (k === 'y-') return { x: b[0] - pad, y: b[3] + pad - H * e, w: W, h: H * e };
+      var R2 = Math.max(Math.hypot(cs.p[0] - b[0], cs.p[1] - b[1]), Math.hypot(cs.p[0] - b[2], cs.p[1] - b[1]), Math.hypot(cs.p[0] - b[0], cs.p[1] - b[3]), Math.hypot(cs.p[0] - b[2], cs.p[1] - b[3])) + pad; return { cx: cs.p[0], cy: cs.p[1], r: R2 * e };
     }
     return { withUO: withUO, shapeSet: shapeSet, pair: pair, blend: blend, joinD: joinD, svgPaths: svgPaths, sample: sample, track: track, run: run, recipes: RECIPES, recipeFor: function (k) { var r = RECIPES[k] || RDEF; r.k = k || 'def'; return r; } };
   })();
@@ -296,7 +394,8 @@ textarea { width:100%; min-height:110px; font-family:var(--mono); font-size:.72r
     if (fill < 0.45) return 'Open shapes';
     var asp = w / h; return asp < 0.85 ? 'Tall' : asp > 1.18 ? 'Wide' : 'Square-ish';
   }
-  names.forEach(function (n) { INFO[n] = { g: classify(n) }; });
+  var GROUP_FIX = { 'air-filter': 'Tall' };
+  names.forEach(function (n) { INFO[n] = { g: GROUP_FIX[n] || classify(n) }; });
   var GROUPS = ['All', 'Disc', 'Ring', 'Square-ish', 'Tall', 'Wide', 'Open shapes'], group = 'All', query = '', sel = names.indexOf('thermostat') >= 0 ? 'thermostat' : names[0];
   function recipe(n) { var base = MK.recipes[n] || { arc: 0.3, spin: -20, d: 'pop', o: 'size', ease: 'inout' }, r = {}, k; for (k in base) r[k] = base[k]; var e = EDIT[n]; if (e) for (k in e) r[k] = e[k]; r.k = n + '#' + rev; return r; }
   var frameCache = {};

@@ -106,8 +106,13 @@
       "o": "order small parts arrive: size, ltr, rtl, ttb, btt, radial",
       "ease": "back, out or inout",
       "swap": "swap which squircle becomes which body shape",
-      "flow": "which container the icon grows from: solid (circle), disc (circle, then into the shape), box (rounded rectangle, then into the shape), seed (grows from a point), old (the two squircles go straight to it)",
-      "body": "hub: the main shape is the small circle in the middle (fan)"
+      "flow": "container the icon grows from: solid, disc, box, seed, direct (squircle straight to the shape, for shields), wipe (drawn on from a point), chain (pieces appear one after another), old",
+      "body": "hub: the main shape is the small circle in the middle (fan)",
+      "start": "{at:bottom, shape:circle|box, f} start from a base at the bottom (lock, spray bottle, thermometer)",
+      "em": "where parts emerge from: centre, down, up, left, right, dropin, own, prev",
+      "em2": "the same for the small parts",
+      "step": "delay between parts, as a fraction of the morph",
+      "wipe": "x+, x-, y+, y-, radial"
     },
     "default": {
       "arc": 0.3,
@@ -129,15 +134,19 @@
         "arc": 0.2,
         "spin": 0,
         "d": "rise",
-        "o": "ltr",
-        "ease": "out"
+        "o": "rtl",
+        "ease": "out",
+        "flow": "chain",
+        "step": 0.1,
+        "em2": "down"
       },
       "fire": {
         "arc": 0.1,
         "spin": 0,
         "d": "rise",
         "o": "btt",
-        "ease": "back"
+        "ease": "back",
+        "flow": "disc"
       },
       "leaf": {
         "flow": "seed",
@@ -185,14 +194,20 @@
         "spin": 0,
         "d": "drop",
         "o": "ttb",
-        "ease": "out"
+        "ease": "out",
+        "flow": "box",
+        "em": "dropin",
+        "em2": "dropin"
       },
       "blind-closed": {
         "arc": 0,
         "spin": 0,
         "d": "drop",
         "o": "ttb",
-        "ease": "out"
+        "ease": "out",
+        "flow": "box",
+        "em": "dropin",
+        "em2": "dropin"
       },
       "fan": {
         "flow": "disc",
@@ -216,35 +231,48 @@
         "spin": 0,
         "d": "right",
         "o": "ttb",
-        "ease": "out"
+        "ease": "out",
+        "flow": "chain",
+        "em": "left",
+        "em2": "own",
+        "step": 0.08
       },
       "shield-lock": {
         "arc": 0,
         "spin": 0,
         "d": "drop",
         "o": "size",
-        "ease": "back"
+        "ease": "back",
+        "flow": "direct"
       },
       "shield-alert": {
         "arc": 0,
         "spin": 0,
         "d": "drop",
         "o": "size",
-        "ease": "back"
+        "ease": "back",
+        "flow": "direct"
       },
       "shield-check": {
         "arc": 0.15,
         "spin": 0,
         "d": "pop",
         "o": "size",
-        "ease": "back"
+        "ease": "back",
+        "flow": "direct"
       },
       "lock": {
         "arc": 0,
         "spin": 0,
         "d": "drop",
         "o": "ttb",
-        "ease": "back"
+        "ease": "back",
+        "flow": "box",
+        "start": {
+          "at": "bottom",
+          "shape": "box",
+          "f": 0.55
+        }
       },
       "plug": {
         "arc": -0.3,
@@ -258,7 +286,11 @@
         "spin": 0,
         "d": "left",
         "o": "ltr",
-        "ease": "out"
+        "ease": "out",
+        "flow": "direct",
+        "em": "left",
+        "em2": "left",
+        "step": 0.1
       },
       "ev-plug": {
         "flow": "disc",
@@ -295,14 +327,20 @@
         "spin": 0,
         "d": "right",
         "o": "ltr",
-        "ease": "out"
+        "ease": "out",
+        "flow": "wipe",
+        "wipe": "x+",
+        "em2": "down"
       },
       "cart-check": {
         "arc": 0,
         "spin": 0,
         "d": "right",
         "o": "ltr",
-        "ease": "back"
+        "ease": "back",
+        "flow": "wipe",
+        "wipe": "x+",
+        "em2": "down"
       },
       "close-circle": {
         "arc": 0,
@@ -324,7 +362,10 @@
         "spin": -30,
         "d": "rise",
         "o": "ltr",
-        "ease": "out"
+        "ease": "out",
+        "flow": "disc",
+        "em": "centre",
+        "em2": "centre"
       },
       "football": {
         "arc": 0,
@@ -352,7 +393,8 @@
         "spin": 35,
         "d": "rise",
         "o": "btt",
-        "ease": "back"
+        "ease": "back",
+        "flow": "direct"
       },
       "group": {
         "arc": 0.5,
@@ -360,7 +402,8 @@
         "d": "pop",
         "o": "ltr",
         "ease": "back",
-        "swap": true
+        "swap": true,
+        "flow": "old"
       },
       "car-ev": {
         "flow": "old",
@@ -377,15 +420,24 @@
         "arc": -0.3,
         "spin": 0,
         "d": "rise",
-        "o": "btt",
-        "ease": "back"
+        "o": "ttb",
+        "ease": "back",
+        "flow": "disc",
+        "start": {
+          "at": "bottom",
+          "shape": "circle"
+        },
+        "em2": "left",
+        "step": 0.08
       },
       "bolt": {
         "arc": 0.8,
         "spin": -70,
         "d": "pop",
         "o": "size",
-        "ease": "back"
+        "ease": "back",
+        "flow": "wipe",
+        "wipe": "y+"
       },
       "door": {
         "arc": 0,
@@ -413,7 +465,8 @@
         "spin": 30,
         "d": "pop",
         "o": "size",
-        "ease": "back"
+        "ease": "back",
+        "flow": "old"
       },
       "gregg": {
         "arc": 0,
@@ -443,11 +496,166 @@
         "d": "rise",
         "o": "btt",
         "ease": "back"
+      },
+      "lock-open": {
+        "flow": "box",
+        "start": {
+          "at": "bottom",
+          "shape": "box",
+          "f": 0.55
+        }
+      },
+      "shield-off": {
+        "flow": "direct",
+        "em2": "dropin"
+      },
+      "sun-half": {
+        "flow": "disc",
+        "em": "centre",
+        "em2": "centre"
+      },
+      "volume-low": {
+        "flow": "direct",
+        "em": "left",
+        "em2": "left",
+        "o": "ltr",
+        "step": 0.1
+      },
+      "volume-medium": {
+        "flow": "direct",
+        "em": "left",
+        "em2": "left",
+        "o": "ltr",
+        "step": 0.1
+      },
+      "spray-bottle": {
+        "flow": "box",
+        "start": {
+          "at": "bottom",
+          "shape": "box",
+          "f": 0.45
+        }
+      },
+      "weather-rainy": {
+        "flow": "disc",
+        "em": "down",
+        "em2": "down",
+        "o": "ltr",
+        "step": 0.07
+      },
+      "weather-pouring": {
+        "flow": "disc",
+        "em": "down",
+        "em2": "down",
+        "o": "ltr",
+        "step": 0.07
+      },
+      "weather-hail": {
+        "flow": "disc",
+        "em": "down",
+        "em2": "down",
+        "o": "ltr",
+        "step": 0.07
+      },
+      "weather-snowy": {
+        "flow": "disc",
+        "em": "down",
+        "em2": "down",
+        "o": "ltr",
+        "step": 0.07
+      },
+      "weather-snowy-rainy": {
+        "flow": "disc",
+        "em": "down",
+        "em2": "down",
+        "o": "ltr",
+        "step": 0.07
+      },
+      "weather-lightning": {
+        "flow": "disc",
+        "em": "down",
+        "em2": "down",
+        "o": "ltr",
+        "step": 0.07
+      },
+      "weather-lightning-rainy": {
+        "flow": "disc",
+        "em": "down",
+        "em2": "down",
+        "o": "ltr",
+        "step": 0.07
+      },
+      "weather-fog": {
+        "flow": "disc",
+        "em": "left",
+        "em2": "left",
+        "o": "ttb",
+        "step": 0.1
+      },
+      "weather-night-partly-cloudy": {
+        "flow": "disc",
+        "em": "centre",
+        "em2": "centre"
+      },
+      "weather-cloudy": {
+        "flow": "disc",
+        "em": "left",
+        "em2": "left"
+      },
+      "wifi-4": {
+        "flow": "wipe",
+        "wipe": "radial",
+        "origin": "bottom"
+      },
+      "person-talking": {
+        "flow": "box",
+        "em": "up",
+        "em2": "left",
+        "o": "ltr",
+        "step": 0.1
+      },
+      "clive-chat": {
+        "flow": "old"
+      },
+      "chevron": {
+        "flow": "wipe",
+        "wipe": "x+"
+      },
+      "close": {
+        "flow": "wipe",
+        "wipe": "radial",
+        "origin": "centre"
+      },
+      "moon": {
+        "flow": "disc"
+      },
+      "power": {
+        "flow": "disc",
+        "em": "dropin",
+        "em2": "dropin"
+      },
+      "mic-off": {
+        "flow": "wipe",
+        "wipe": "x+"
+      },
+      "snowflake": {
+        "flow": "wipe",
+        "wipe": "radial",
+        "origin": "centre"
+      },
+      "weather-windy": {
+        "flow": "wipe",
+        "wipe": "x+"
+      },
+      "back": {
+        "flow": "wipe",
+        "wipe": "x-"
       }
     },
     "special": {
       "cd_logo_todo": "splash morph: squircles into the logo, clip grows in, ticks drawn (satellite/design/splash-final.html)"
-    }
+    },
+    "status": "paused: work in progress, not used by the apps yet"
   },
   "kinds": {
     "heat": {
