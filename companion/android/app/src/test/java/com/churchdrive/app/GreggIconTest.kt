@@ -93,8 +93,9 @@ class GreggIconTest {
             assertTrue("$n has no shape", !shapes.isNullOrEmpty())
             assertTrue("$n is not a path", shapes!!.all { it.d.startsWith("M") })
         }
-        // The alarm that sounds is not a notification (audit #45), so the ringing bell is left alone for now.
-        assertEquals("mdi:bell-ring", CdIcons.alias("mdi:bell-ring"))
+        // A notice or reminder is the chat. The alarm that sounds is not a notification: the CO alarm's test button names cd:co-alert itself (audit #44).
+        assertEquals("cd:chat", CdIcons.alias("mdi:bell-ring"))
+        assertEquals("cd:co-alert", CdIcons.alias("cd:co-alert"))
         for (v in listOf(CdVectors.Plus, CdVectors.Minus, CdVectors.Close, CdVectors.Back, CdVectors.Info, CdVectors.SignOut, CdVectors.Eye, CdVectors.Pin, CdVectors.Bolt, CdVectors.Gregg, CdVectors.Thermostat, CdVectors.Cart, CdVectors.Send, CdVectors.Person, CdVectors.Group, CdVectors.DeviceServer, CdVectors.Calendar))
             assertEquals(200f, v.viewportWidth, 0f)
     }
