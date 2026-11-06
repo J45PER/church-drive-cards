@@ -97,10 +97,345 @@
   ]
  },
  "morph": {
-  "from": "AssistantGlyph Listening",
-  "note": "Every icon on a card arrives as a morph from Clive's mark (the stop square), and a card that changes (Gregg's state, a lock, a level) morphs from the icon before it.",
-  "ms": 900,
-  "ease": "inOutCubic"
+  "from": "two squircles (Clive's mark as his thinking leaves it)",
+  "note": "Every icon on a card arrives as a morph from Clive's two squircles, each with its own choreography (recipes), and a card that changes morphs from the icon before it. The To-Do logo uses the app splash morph.",
+  "ms": 1100,
+  "recipe_fields": {
+   "arc": "how far the squircles swing on a curve, as a fraction of the distance",
+   "spin": "degrees the body turns as it settles",
+   "d": "how small parts arrive: pop, drop, rise, left, right, spin",
+   "ds": "spin of small parts, degrees",
+   "o": "order small parts arrive: size, ltr, rtl, ttb, btt, radial",
+   "ease": "back, out or inout",
+   "swap": "swap which squircle becomes which body shape"
+  },
+  "default": {
+   "arc": 0.3,
+   "spin": -20,
+   "d": "pop",
+   "o": "size",
+   "ease": "inout"
+  },
+  "recipes": {
+   "thermostat": {
+    "arc": -0.45,
+    "spin": -70,
+    "d": "spin",
+    "ds": -200,
+    "o": "size",
+    "ease": "back"
+   },
+   "radiator": {
+    "arc": 0.2,
+    "spin": 0,
+    "d": "rise",
+    "o": "ltr",
+    "ease": "out"
+   },
+   "fire": {
+    "arc": 0.1,
+    "spin": 0,
+    "d": "rise",
+    "o": "btt",
+    "ease": "back"
+   },
+   "leaf": {
+    "arc": 0.5,
+    "spin": 40,
+    "d": "pop",
+    "o": "size",
+    "ease": "back"
+   },
+   "bulb": {
+    "arc": -0.3,
+    "spin": 0,
+    "d": "rise",
+    "o": "btt",
+    "ease": "back"
+   },
+   "bulb-lit": {
+    "arc": -0.3,
+    "spin": 15,
+    "d": "spin",
+    "ds": 90,
+    "o": "radial",
+    "ease": "back"
+   },
+   "bulb-off": {
+    "arc": 0.2,
+    "spin": 0,
+    "d": "drop",
+    "o": "ttb",
+    "ease": "out"
+   },
+   "palette": {
+    "arc": 0.4,
+    "spin": -30,
+    "d": "pop",
+    "o": "ltr",
+    "ease": "back"
+   },
+   "blind-open": {
+    "arc": 0,
+    "spin": 0,
+    "d": "drop",
+    "o": "ttb",
+    "ease": "out"
+   },
+   "blind-closed": {
+    "arc": 0,
+    "spin": 0,
+    "d": "drop",
+    "o": "ttb",
+    "ease": "out"
+   },
+   "fan": {
+    "arc": 0,
+    "spin": 360,
+    "d": "spin",
+    "ds": 360,
+    "o": "radial",
+    "ease": "out"
+   },
+   "air-purifier": {
+    "arc": 0.3,
+    "spin": 0,
+    "d": "left",
+    "o": "ttb",
+    "ease": "out"
+   },
+   "air-filter": {
+    "arc": 0.2,
+    "spin": 0,
+    "d": "right",
+    "o": "ttb",
+    "ease": "out"
+   },
+   "shield-lock": {
+    "arc": 0,
+    "spin": 0,
+    "d": "drop",
+    "o": "size",
+    "ease": "back"
+   },
+   "shield-alert": {
+    "arc": 0,
+    "spin": 0,
+    "d": "drop",
+    "o": "size",
+    "ease": "back"
+   },
+   "shield-check": {
+    "arc": 0.15,
+    "spin": 0,
+    "d": "pop",
+    "o": "size",
+    "ease": "back"
+   },
+   "lock": {
+    "arc": 0,
+    "spin": 0,
+    "d": "drop",
+    "o": "ttb",
+    "ease": "back"
+   },
+   "plug": {
+    "arc": -0.3,
+    "spin": 25,
+    "d": "rise",
+    "o": "ltr",
+    "ease": "back"
+   },
+   "volume-high": {
+    "arc": 0,
+    "spin": 0,
+    "d": "left",
+    "o": "ltr",
+    "ease": "out"
+   },
+   "ev-plug": {
+    "arc": 0.4,
+    "spin": -25,
+    "d": "pop",
+    "o": "radial",
+    "ease": "back"
+   },
+   "alert-circle": {
+    "arc": 0,
+    "spin": 0,
+    "d": "drop",
+    "o": "ttb",
+    "ease": "back"
+   },
+   "alert-circle-solid": {
+    "arc": 0,
+    "spin": 0,
+    "d": "drop",
+    "o": "ttb",
+    "ease": "back"
+   },
+   "clock": {
+    "arc": 0.2,
+    "spin": -120,
+    "d": "spin",
+    "ds": -360,
+    "o": "size",
+    "ease": "out"
+   },
+   "cart": {
+    "arc": 0,
+    "spin": 0,
+    "d": "right",
+    "o": "ltr",
+    "ease": "out"
+   },
+   "cart-check": {
+    "arc": 0,
+    "spin": 0,
+    "d": "right",
+    "o": "ltr",
+    "ease": "back"
+   },
+   "close-circle": {
+    "arc": 0,
+    "spin": 90,
+    "d": "spin",
+    "ds": 180,
+    "o": "size",
+    "ease": "back"
+   },
+   "check-circle-solid": {
+    "arc": 0.3,
+    "spin": 0,
+    "d": "pop",
+    "o": "size",
+    "ease": "back"
+   },
+   "weather-partly-cloudy": {
+    "arc": 0.5,
+    "spin": -30,
+    "d": "rise",
+    "o": "ltr",
+    "ease": "out"
+   },
+   "football": {
+    "arc": 0,
+    "spin": 300,
+    "d": "pop",
+    "o": "radial",
+    "ease": "out"
+   },
+   "calendar-clock": {
+    "arc": 0.2,
+    "spin": 0,
+    "d": "drop",
+    "o": "ttb",
+    "ease": "out"
+   },
+   "calendar-check": {
+    "arc": 0.2,
+    "spin": 0,
+    "d": "drop",
+    "o": "ttb",
+    "ease": "back"
+   },
+   "music-note": {
+    "arc": -0.5,
+    "spin": 35,
+    "d": "rise",
+    "o": "btt",
+    "ease": "back"
+   },
+   "group": {
+    "arc": 0.5,
+    "spin": 0,
+    "d": "pop",
+    "o": "ltr",
+    "ease": "back",
+    "swap": true
+   },
+   "car-ev": {
+    "arc": 0,
+    "spin": 0,
+    "d": "left",
+    "o": "ltr",
+    "ease": "out"
+   },
+   "thermometer": {
+    "arc": -0.3,
+    "spin": 0,
+    "d": "rise",
+    "o": "btt",
+    "ease": "back"
+   },
+   "bolt": {
+    "arc": 0.8,
+    "spin": -70,
+    "d": "pop",
+    "o": "size",
+    "ease": "back"
+   },
+   "door": {
+    "arc": 0,
+    "spin": 0,
+    "d": "right",
+    "o": "size",
+    "ease": "out"
+   },
+   "television-play": {
+    "arc": 0.2,
+    "spin": 0,
+    "d": "pop",
+    "o": "size",
+    "ease": "back"
+   },
+   "cd_clive_chat": {
+    "arc": -0.4,
+    "spin": 30,
+    "d": "pop",
+    "o": "size",
+    "ease": "back"
+   },
+   "message": {
+    "arc": -0.4,
+    "spin": 30,
+    "d": "pop",
+    "o": "size",
+    "ease": "back"
+   },
+   "gregg": {
+    "arc": 0,
+    "spin": 360,
+    "d": "spin",
+    "ds": -360,
+    "o": "size",
+    "ease": "out"
+   },
+   "blinds": {
+    "arc": 0,
+    "spin": 0,
+    "d": "drop",
+    "o": "ttb",
+    "ease": "out"
+   },
+   "volume": {
+    "arc": 0,
+    "spin": 0,
+    "d": "left",
+    "o": "ltr",
+    "ease": "out"
+   },
+   "light": {
+    "arc": -0.3,
+    "spin": 0,
+    "d": "rise",
+    "o": "btt",
+    "ease": "back"
+   }
+  },
+  "special": {
+   "cd_logo_todo": "splash morph: squircles into the logo, clip grows in, ticks drawn (satellite/design/splash-final.html)"
+  }
  },
  "kinds": {
   "heat": {
