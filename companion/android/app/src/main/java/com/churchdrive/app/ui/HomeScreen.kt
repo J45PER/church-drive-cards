@@ -207,7 +207,8 @@ fun HomeScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(28.dp),
         ) {
-            if (updateAvailable) UpdateBanner()
+            UpdatePrompt(updateAvailable)
+            PhoneSetupPrompt(account)
             // Connecting and updating show as a pill at the top (LoadingPill), over what was remembered from last time.
             when (connection) {
                 ConnectionState.Connected -> Unit
@@ -442,7 +443,7 @@ fun NotBuiltCard() {
 
 /** A banner shown when a newer test build is out: tapping Update downloads it (Android then offers to install it). */
 @Composable
-private fun UpdateBanner() {
+internal fun UpdateBanner() {
     val context = androidx.compose.ui.platform.LocalContext.current
     val tone = toneColors(Tone.Blue)
     EntityCard(tone.container, tone.onContainer) {

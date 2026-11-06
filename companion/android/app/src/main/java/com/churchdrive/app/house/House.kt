@@ -35,8 +35,14 @@ object House {
         val body = MobileApp.registrationBody(
             session.deviceId, name, "${BuildConfig.VERSION_NAME} (${BuildConfig.BUILD})", Build.VERSION.RELEASE, Build.MANUFACTURER, Build.MODEL,
         )
-        return MobileApp.register(url, token, body)?.also { session.saveWebhook(it, name) }
+        return MobileApp.register(url, token, body)?.also {
+            session.saveWebhook(it, name)
+            PhoneSetupStore(context).registeredVersion = appVersion()
+        }
     }
+
+    /** The version text the house is told: "0.98.0 (123)". The house compares the part before the bracket with its own. */
+    private fun appVersion() = "${BuildConfig.VERSION_NAME} (${BuildConfig.BUILD})"
 
     /**
      * The app's own connection to the house (and its small "connected" notice) is only for phones Google push doesn't reach:
@@ -59,13 +65,55 @@ object House {
     /** A phone registered under an older name is renamed in Home Assistant (at most every ten minutes until it works). Blocking. */
     private fun rename(context: Context, session: Session, webhook: String) {
         val name = desiredName(context, session)
-        if (session.deviceName == name) return
+        val store = PhoneSetupStore(context)
+        // The house keeps the version the phone registered with until it is told otherwise, so a new version tells it too.
+        if (session.deviceName == name && store.registeredVersion == appVersion()) return
         val now = System.currentTimeMillis()
         if (now - lastRename < 10 * 60_000L) return
         lastRename = now
         val url = session.url ?: return
-        val body = MobileApp.updateRegistrationBody("${BuildConfig.VERSION_NAME} (${BuildConfig.BUILD})", name, Build.VERSION.RELEASE, Build.MANUFACTURER, Build.MODEL)
-        if (MobileApp.post(url, webhook, body) == WebhookResult.Ok) session.saveWebhook(webhook, name)
+        val body = MobileApp.updateRegistrationBody(appVersion(), name, Build.VERSION.RELEASE, Build.MANUFACTURER, Build.MODEL)
+        if (MobileApp.post(url, webhook, body) == WebhookResult.Ok) {
+            session.saveWebhook(webhook, name)
+            store.registeredVersion = appVersion()
+        }
+    }
+
+    /** How often an unchanged set-up report is sent again (a changed one is sent at once). */
+    private const val REPORT_AGAIN_MS = 6 * 3_600_000L
+
+    /**
+     * Tells the house whether this phone allows what it needs (see [PhoneSetup]): a "Church Drive phone setup" problem sensor on
+     * the phone's device. Only for a phone that is already registered, so a person who has switched everything off is not
+     * registered by it. Also tells the house a new app version. Blocking.
+     */
+    fun reportSetup(context: Context) {
+        val session = Session(context)
+        if (!session.signedIn || session.webhookId == null) return
+        val url = session.url ?: return
+        val webhook = ensureRegistered(context) ?: return
+        val state = PhoneSetup.read(context, session.notifyOn, session.locationOn)
+        val missing = PhoneSetup.missing(state).map { it.key }
+        val body = MobileApp.phoneSetupBody(
+            missing,
+            linkedMapOf(
+                "notifications" to (state.notifyOn && state.canNotify),
+                "location_shared" to (state.locationOn && state.canLocate),
+                "precise_location" to state.precise,
+                "location_all_the_time" to state.always,
+                "battery_unrestricted" to state.batteryFree,
+            ),
+            appVersion(),
+        )
+        val store = PhoneSetupStore(context)
+        val text = body.toString()
+        val now = System.currentTimeMillis()
+        if (text == store.lastReport && now - store.lastReportAt < REPORT_AGAIN_MS) return
+        when (MobileApp.post(url, webhook, body)) {
+            WebhookResult.Ok -> { store.lastReport = text; store.lastReportAt = now }
+            WebhookResult.Gone -> session.clearWebhook()
+            WebhookResult.Failed -> Unit
+        }
     }
 
     /** Starts or stops everything from what the person has chosen. Called when the choices change, when the app opens and after a reboot. */
@@ -78,6 +126,7 @@ object House {
         syncLocation(context, on && session.locationOn)
         // A phone that isn't registered yet is registered now, in the background.
         if (on && (session.notifyOn || session.locationOn) && session.webhookId == null) thread { ensureRegistered(context) }
+        if (on && session.webhookId != null) thread { reportSetup(context) }
     }
 
     private fun locationIntent(context: Context): PendingIntent =

@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.99.0
+
+- No change to the Satellites app; the version number moves with the other apps.
+
 ## 0.98.0
 
 - No change to the Satellites app; the version number moves with the other apps.
