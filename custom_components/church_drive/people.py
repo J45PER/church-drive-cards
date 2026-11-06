@@ -73,6 +73,24 @@ OLD_SWITCHES = {
 OLD_PHONES_OFF = {"person.jamie": ["mobile_app_xitol_j45per_ipad", "mobile_app_xitol_j45per_pw4"]}
 
 
+def _person_collection(hass: HomeAssistant, domain: str) -> Any:
+    """The Person integration's storage collection, or None before it has loaded.
+
+    Home Assistant 2026.11 keeps a PersonData object in hass.data["person"]
+    (the collection is its storage_collection); earlier versions kept a
+    (yaml, storage) tuple, so the collection was the second item."""
+    data = hass.data.get(domain)
+    if data is None:
+        return None
+    coll = getattr(data, "storage_collection", None)
+    if coll is not None:
+        return coll
+    try:
+        return data[1]
+    except (TypeError, IndexError, KeyError):
+        return None
+
+
 def first_name(name: str) -> str:
     return (str(name or "").strip().split(" ") or [""])[0]
 
@@ -133,7 +151,7 @@ class People:
         """Who's home or away comes from the Church Drive app on a phone, never from the Home Assistant app on it."""
         from homeassistant.components.person import DOMAIN as PERSON
 
-        coll = self.hass.data.get(PERSON, (None, None))[1]
+        coll = _person_collection(self.hass, PERSON)
         if coll is None:
             return
         ent_reg = er.async_get(self.hass)
@@ -468,7 +486,9 @@ class People:
         trackers, as in Settings > People)."""
         from homeassistant.components.person import DOMAIN as PERSON
 
-        coll = self.hass.data[PERSON][1]
+        coll = _person_collection(self.hass, PERSON)
+        if coll is None:
+            raise ValueError("The Person integration isn't ready yet")
         entry = er.async_get(self.hass).async_get(person)
         item = next((i for i in coll.async_items() if entry is not None and i.get("id") == entry.unique_id), None)
         if item is None:
