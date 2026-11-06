@@ -29,7 +29,7 @@
     "done": { "fields": ["icon", "big", "name", "detail", "percent", "palette", "colour", "ok"], "layout": "icon, big figure, name, detail, optional bar" },
     "ask": { "fields": ["icon", "name", "detail", "palette"], "layout": "question with Yes / No" },
     "weather": { "icon": "by condition" }, "score": { "icon": "cd:football" }, "energy": { "icon": "cd:bolt" }, "people": { "icon": "cd:group" },
-    "car": { "icon": "cd:car-ev" }, "climate": { "icon": "cd:thermometer" }, "air": { "icon": "cd:air-filter" }
+    "tasks": { "icon": "cd_logo_todo", "note": "the Clive To-Do app logo" }, "car": { "icon": "cd:car-ev" }, "climate": { "icon": "cd:thermometer" }, "air": { "icon": "cd:air-filter" }
   },
   "icons": {
     "light": { "type": "swap", "from": "cd:bulb", "to": "cd:bulb-lit", "ms": 450 },

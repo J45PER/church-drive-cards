@@ -22,7 +22,7 @@ test('every served icon has path data and no placeholder boxes', () => {
 
 test('the icons the cards and animations name exist in the house set', () => {
   const names = new Set();
-  for (const k of Object.values(cards.kinds)) if (typeof k.icon === 'string' && k.icon.startsWith('cd:')) names.add(k.icon);
+  for (const k of Object.values(cards.kinds)) if (typeof k.icon === 'string' && k.icon.startsWith('cd')) names.add(k.icon);
   for (const a of Object.values(cards.icons)) for (const n of [a.from, a.to, a.icon, a.start, a.end, ...(a.icons || [])]) if (n) names.add(n);
   for (const s of Object.values(cards.gregg.states)) names.add(s.icon);
   for (const n of names) assert.ok(icons.icons[n], `${n} is in icons.json`);

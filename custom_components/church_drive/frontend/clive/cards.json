@@ -164,6 +164,10 @@
   "people": {
    "icon": "cd:group"
   },
+  "tasks": {
+   "icon": "cd_logo_todo",
+   "note": "the Clive To-Do app logo"
+  },
   "car": {
    "icon": "cd:car-ev"
   },
