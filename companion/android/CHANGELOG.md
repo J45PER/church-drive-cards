@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.100.1
+
+- The update, calendar-clock and to-do clock icons use the same clock hands as every other clock, centred on the circle; the side brush, rolling brush and message-alert icons, and Home Assistant's own water, tune and message-alert names, are drawn from the house's set.
+
 ## 0.100.0
 
 - The house's own Clive icons replace Material icons across the phone and watch apps, with larger badge circles, plus a sports-logo request log.

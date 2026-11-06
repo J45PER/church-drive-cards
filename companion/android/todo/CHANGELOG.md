@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.100.1
+
+- The to-do clock icon uses the common clock hands.
+
 ## 0.100.0
 
 - Clive icons throughout.
