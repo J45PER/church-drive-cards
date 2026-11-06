@@ -165,7 +165,7 @@ export class CoAlarmCard extends HTMLElement {
     ].join('');
 
     const buttons = c.show_buttons === false ? [] : [
-      ...(this._demo || c.test_entity ? [{ key: 'test', name: 'Hold to test', icon: iconFor('co', 'test', 'mdi:bell-ring'), color: KIT_COLOR.good, hold: true }] : []),
+      ...(this._demo || c.test_entity ? [{ key: 'test', name: 'Hold to test', icon: iconFor('co', 'test', 'cd:co-alert'), color: KIT_COLOR.good, hold: true }] : []),
       ...(this._demo || c.mute_entity ? [{ key: 'mute', name: 'Mute', icon: iconFor('co', 'mute', 'mdi:volume-off'), color: KIT_COLOR.off }] : []),
     ];
     kitTiles(this.querySelector('.co-buttons'), buttons, (t) => this._press(t.key));

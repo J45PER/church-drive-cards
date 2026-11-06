@@ -85,6 +85,7 @@ from .const import (
     WS_SHOPPING_UPDATE,
     SERVICE_APPLY_SCENE,
     SERVICE_HEALTH_FIX,
+    SERVICE_LOG_LOGO_REQUEST,
     EVENT_NOTICE_TEST,
     SERVICE_NOTIFY,
     SERVICE_SYNC_SCENES,
@@ -151,6 +152,7 @@ _LOGGER = logging.getLogger(__name__)
 FRONTEND_DIR = Path(__file__).parent / "frontend"
 PLATFORMS = [Platform.SELECT, Platform.SENSOR]
 
+LOG_LOGO_REQUEST_SCHEMA = vol.Schema({vol.Optional("competition", default=""): cv.string, vol.Optional("sport", default=""): cv.string})
 HEALTH_FIX_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
@@ -1480,6 +1482,30 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.services.async_register(DOMAIN, SERVICE_HEALTH_FIX, health_fix, schema=HEALTH_FIX_SCHEMA)
 
+    # The sports log: what Clive was asked about that had no stored logo or icon of its own, in church_drive_logo_requests.json
+    # in the Home Assistant config folder, so the missing ones can be added.
+    async def log_logo_request(call: ServiceCall) -> None:
+        import json as _json
+        from datetime import datetime as _dt
+
+        from .sports_log import LogoRequests
+
+        path = hass.config.path("church_drive_logo_requests.json")
+
+        def _update() -> None:
+            try:
+                with open(path, encoding="utf-8") as fh:
+                    log = LogoRequests({i["competition"].lower() + "|" + ("" if i["sport"] == "football" else i["sport"]): i for i in _json.load(fh)})
+            except (OSError, ValueError, KeyError, TypeError):
+                log = LogoRequests()
+            if log.record(call.data.get("competition"), call.data.get("sport"), _dt.now().replace(microsecond=0).isoformat()):
+                with open(path, "w", encoding="utf-8") as fh:
+                    _json.dump(log.as_list(), fh, indent=1)
+
+        await hass.async_add_executor_job(_update)
+
+    hass.services.async_register(DOMAIN, SERVICE_LOG_LOGO_REQUEST, log_logo_request, schema=LOG_LOGO_REQUEST_SCHEMA)
+
     async def sync_scenes(call: ServiceCall | None = None) -> ServiceResponse:
         return await async_sync(hass, entry.options.get(CONF_SCENE_GROUPS, []))
 
@@ -1516,6 +1542,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.services.async_remove(DOMAIN, SERVICE_SYNC_SCENES)
     hass.services.async_remove(DOMAIN, SERVICE_APPLY_SCENE)
     hass.services.async_remove(DOMAIN, SERVICE_HEALTH_FIX)
+    hass.services.async_remove(DOMAIN, SERVICE_LOG_LOGO_REQUEST)
     hass.services.async_remove(DOMAIN, SERVICE_NOTIFY)
     hass.services.async_remove(DOMAIN, SERVICE_ADD_TASKS)
     hass.services.async_remove(DOMAIN, SERVICE_SHOPPING_ADD)

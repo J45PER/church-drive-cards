@@ -77,7 +77,7 @@ DEFAULTS: dict[str, dict[str, str]] = {
         "close": "mdi:arrow-down",
     },
     "co": {
-        "test": "mdi:bell-ring",
+        "test": "cd:co-alert",
         "mute": "mdi:volume-off",
     },
 }
