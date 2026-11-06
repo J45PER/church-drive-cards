@@ -474,9 +474,14 @@ export class SectionPanelCard extends HTMLElement {
   // The panel's height without any stretch: its cards plus its padding.
   _naturalHeight() {
     const panel = this._panelEl;
-    const last = this._goEl && this._goEl.style.display !== 'none' ? this._goEl : this._grid;
-    const g = last && last.getBoundingClientRect();
-    return g && panel ? g.bottom + 12 - panel.getBoundingClientRect().top : this.getBoundingClientRect().height;
+    const grid = this._grid && this._grid.getBoundingClientRect();
+    if (!grid || !panel) return this.getBoundingClientRect().height;
+    // The Go-to button sits at the panel's bottom (margin-top:auto), so where
+    // it ends includes any stretch from the Auto Layout. Add its height to the
+    // cards' bottom instead; otherwise a stretched panel reads as already
+    // tall, the layout un-stretches it, and it flickers between the two.
+    const go = this._goEl && this._goEl.style.display !== 'none' ? this._goEl.getBoundingClientRect().height + 12 : 0;
+    return grid.bottom + go + 12 - panel.getBoundingClientRect().top;
   }
 
   // Whether every card is a picture (cameras): pictures fill the row, and
