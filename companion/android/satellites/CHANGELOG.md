@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.100.0
+
+- Satellite device icons redrawn in the Clive set.
+
 ## 0.99.0
 
 - No change to the Satellites app; the version number moves with the other apps.
