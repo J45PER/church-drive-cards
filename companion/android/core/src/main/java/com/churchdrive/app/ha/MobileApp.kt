@@ -79,6 +79,9 @@ object MobileApp {
         return JSONObject().put("type", "update_location").put("data", data)
     }
 
+    /** The webhook message that asks the house for its zones (the answer is a list of zone states, among them `zone.home`). */
+    fun getZonesBody(): JSONObject = JSONObject().put("type", "get_zones")
+
     /** Sends a webhook message. The webhook id is its own key, so there's no token. Blocking. */
     fun post(baseUrl: String, webhookId: String, body: JSONObject): WebhookResult = runCatching {
         val request = Request.Builder()

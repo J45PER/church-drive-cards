@@ -50,6 +50,11 @@ class MobileAppTest {
     }
 
     @Test
+    fun theZonesAreAskedForByTheWebhooksOwnName() {
+        assertEquals("get_zones", MobileApp.getZonesBody().getString("type"))
+    }
+
+    @Test
     fun aNoticeTestAsksTheHouseForOneKindForOnePerson() {
         val e = MobileApp.noticeTestBody("doorbell", "Jamie").getJSONObject("data")
         assertEquals("church_drive_notice_test", e.getString("event_type"))
