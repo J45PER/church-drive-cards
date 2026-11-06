@@ -146,19 +146,19 @@ textarea { width:100%; min-height:110px; font-family:var(--mono); font-size:.72r
        d: how the small parts arrive (pop from where they are, drop from above, rise from below, left/right slide in, spin in); ds: their spin; o: the order they arrive in; ease: back (overshoot), out or inout. */
     var RECIPES = {
       'thermostat': { arc: -0.45, spin: -70, d: 'spin', ds: -200, o: 'size', ease: 'back' }, 'radiator': { arc: 0.2, spin: 0, d: 'rise', o: 'ltr', ease: 'out' },
-      'fire': { arc: 0.1, spin: 0, d: 'rise', o: 'btt', ease: 'back' }, 'leaf': { arc: 0.5, spin: 40, d: 'pop', o: 'size', ease: 'back' },
-      'bulb': { arc: -0.3, spin: 0, d: 'rise', o: 'btt', ease: 'back' }, 'bulb-lit': { arc: -0.3, spin: 15, d: 'spin', ds: 90, o: 'radial', ease: 'back' }, 'bulb-off': { arc: 0.2, spin: 0, d: 'drop', o: 'ttb', ease: 'out' },
-      'palette': { arc: 0.4, spin: -30, d: 'pop', o: 'ltr', ease: 'back' }, 'blind-open': { arc: 0, spin: 0, d: 'drop', o: 'ttb', ease: 'out' }, 'blind-closed': { arc: 0, spin: 0, d: 'drop', o: 'ttb', ease: 'out' },
-      'fan': { arc: 0, spin: 360, d: 'spin', ds: 360, o: 'radial', ease: 'out' }, 'air-purifier': { arc: 0.3, spin: 0, d: 'left', o: 'ttb', ease: 'out' }, 'air-filter': { arc: 0.2, spin: 0, d: 'right', o: 'ttb', ease: 'out' },
+      'fire': { arc: 0.1, spin: 0, d: 'rise', o: 'btt', ease: 'back' }, 'leaf': { flow: 'seed', arc: 0.5, spin: 40, d: 'pop', o: 'size', ease: 'back' },
+      'bulb': { flow: 'disc', arc: -0.3, spin: 0, d: 'rise', o: 'btt', ease: 'back' }, 'bulb-lit': { flow: 'disc', arc: -0.3, spin: 15, d: 'spin', ds: 90, o: 'radial', ease: 'back' }, 'bulb-off': { flow: 'disc', arc: 0.2, spin: 0, d: 'drop', o: 'ttb', ease: 'out' },
+      'palette': { flow: 'disc', arc: 0.4, spin: -30, d: 'pop', o: 'ltr', ease: 'back' }, 'blind-open': { arc: 0, spin: 0, d: 'drop', o: 'ttb', ease: 'out' }, 'blind-closed': { arc: 0, spin: 0, d: 'drop', o: 'ttb', ease: 'out' },
+      'fan': { flow: 'disc', body: 'hub', ds: -300, arc: 0, spin: 360, d: 'spin', o: 'radial', ease: 'out' }, 'air-purifier': { arc: 0.3, spin: 0, d: 'left', o: 'ttb', ease: 'out' }, 'air-filter': { arc: 0.2, spin: 0, d: 'right', o: 'ttb', ease: 'out' },
       'shield-lock': { arc: 0, spin: 0, d: 'drop', o: 'size', ease: 'back' }, 'shield-alert': { arc: 0, spin: 0, d: 'drop', o: 'size', ease: 'back' }, 'shield-check': { arc: 0.15, spin: 0, d: 'pop', o: 'size', ease: 'back' },
       'lock': { arc: 0, spin: 0, d: 'drop', o: 'ttb', ease: 'back' }, 'plug': { arc: -0.3, spin: 25, d: 'rise', o: 'ltr', ease: 'back' }, 'volume-high': { arc: 0, spin: 0, d: 'left', o: 'ltr', ease: 'out' },
-      'ev-plug': { arc: 0.4, spin: -25, d: 'pop', o: 'radial', ease: 'back' }, 'alert-circle': { arc: 0, spin: 0, d: 'drop', o: 'ttb', ease: 'back' }, 'alert-circle-solid': { arc: 0, spin: 0, d: 'drop', o: 'ttb', ease: 'back' },
+      'ev-plug': { flow: 'disc', arc: 0.4, spin: -25, d: 'pop', o: 'radial', ease: 'back' }, 'alert-circle': { arc: 0, spin: 0, d: 'drop', o: 'ttb', ease: 'back' }, 'alert-circle-solid': { arc: 0, spin: 0, d: 'drop', o: 'ttb', ease: 'back' },
       'clock': { arc: 0.2, spin: -120, d: 'spin', ds: -360, o: 'size', ease: 'out' }, 'cart': { arc: 0, spin: 0, d: 'right', o: 'ltr', ease: 'out' }, 'cart-check': { arc: 0, spin: 0, d: 'right', o: 'ltr', ease: 'back' },
       'close-circle': { arc: 0, spin: 90, d: 'spin', ds: 180, o: 'size', ease: 'back' }, 'check-circle-solid': { arc: 0.3, spin: 0, d: 'pop', o: 'size', ease: 'back' },
       'weather-partly-cloudy': { arc: 0.5, spin: -30, d: 'rise', o: 'ltr', ease: 'out' }, 'football': { arc: 0, spin: 300, d: 'pop', o: 'radial', ease: 'out' },
       'calendar-clock': { arc: 0.2, spin: 0, d: 'drop', o: 'ttb', ease: 'out' }, 'calendar-check': { arc: 0.2, spin: 0, d: 'drop', o: 'ttb', ease: 'back' },
-      'music-note': { arc: -0.5, spin: 35, d: 'rise', o: 'btt', ease: 'back' }, 'group': { arc: 0.5, spin: 0, d: 'pop', o: 'ltr', ease: 'back', swap: true }, 'car-ev': { arc: 0, spin: 0, d: 'left', o: 'ltr', ease: 'out' },
-      'thermometer': { arc: -0.3, spin: 0, d: 'rise', o: 'btt', ease: 'back' }, 'bolt': { arc: 0.8, spin: -70, d: 'pop', o: 'size', ease: 'back' }, 'door': { arc: 0, spin: 0, d: 'right', o: 'size', ease: 'out' },
+      'music-note': { arc: -0.5, spin: 35, d: 'rise', o: 'btt', ease: 'back' }, 'group': { arc: 0.5, spin: 0, d: 'pop', o: 'ltr', ease: 'back', swap: true }, 'car-ev': { flow: 'old', arc: 0, spin: 0, d: 'left', o: 'ltr', ease: 'out' },
+      'trophy': { flow: 'box' }, 'thermometer': { arc: -0.3, spin: 0, d: 'rise', o: 'btt', ease: 'back' }, 'bolt': { arc: 0.8, spin: -70, d: 'pop', o: 'size', ease: 'back' }, 'door': { arc: 0, spin: 0, d: 'right', o: 'size', ease: 'out' },
       'television-play': { arc: 0.2, spin: 0, d: 'pop', o: 'size', ease: 'back' }, 'cd_clive_chat': { arc: -0.4, spin: 30, d: 'pop', o: 'size', ease: 'back' }, 'message': { arc: -0.4, spin: 30, d: 'pop', o: 'size', ease: 'back' },
       'gregg': { arc: 0, spin: 360, d: 'spin', ds: -360, o: 'size', ease: 'out' }, 'blinds': { arc: 0, spin: 0, d: 'drop', o: 'ttb', ease: 'out' }, 'volume': { arc: 0, spin: 0, d: 'left', o: 'ltr', ease: 'out' }, 'light': { arc: -0.3, spin: 0, d: 'rise', o: 'btt', ease: 'back' }
     };
@@ -176,15 +176,52 @@ textarea { width:100%; min-height:110px; font-family:var(--mono); font-size:.72r
       rings.uo = [{ pts: U, a: 1, area: area(U) }, { pts: O, a: 1, area: area(O) }]; rings.uo.id = ++uid; return rings;
     }
     function popOut(x) { var c1 = 1.1, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); }
-    function isCirc(r) { var b = bbox(r.pts), w = b[2] - b[0], h = b[3] - b[1]; return Math.abs(w - h) / Math.max(w, h) < 0.07 && Math.abs(r.area) / (Math.PI / 4 * w * h) > 0.93; }
+    function isCirc(r) { var b = bbox(r.pts), w = b[2] - b[0], h = b[3] - b[1]; return Math.abs(w - h) / Math.max(w, h) < 0.07 && Math.abs(Math.abs(r.area) / (Math.PI / 4 * w * h) - 1) < 0.07; }
     function sqp(l, t, rr2, b, k) { return 'M' + (l + k) + ',' + t + ' H' + (rr2 - k) + ' A' + k + ',' + k + ' 0 0 1 ' + rr2 + ',' + (t + k) + ' V' + (b - k) + ' A' + k + ',' + k + ' 0 0 1 ' + (rr2 - k) + ',' + b + ' H' + (l + k) + ' A' + k + ',' + k + ' 0 0 1 ' + l + ',' + (b - k) + ' V' + (t + k) + ' A' + k + ',' + k + ' 0 0 1 ' + (l + k) + ',' + t + ' Z'; }
     function dist(a, b) { return Math.hypot(a[0] - b[0], a[1] - b[1]); }
     function bbox(p) { var x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; p.forEach(function (q) { x0 = Math.min(x0, q[0]); x1 = Math.max(x1, q[0]); y0 = Math.min(y0, q[1]); y1 = Math.max(y1, q[1]); }); return [x0, y0, x1, y1]; }
     function alignTo(pa, pbIn, flip) { var pb = flip ? pbIn.slice().reverse() : pbIn, best = 0, bd = 1e18; for (var s = 0; s < N; s++) { var d = 0; for (var k = 0; k < N; k += 3) { var a = pa[k], b = pb[(k + s) % N]; d += (a[0] - b[0]) * (a[0] - b[0]) + (a[1] - b[1]) * (a[1] - b[1]); } if (d < bd) { bd = d; best = s; } } var out = []; for (var j = 0; j < N; j++) out.push(pb[(j + best) % N]); return out; }
     /* A track is every ring's start, end, timing and path. Matching rings (big to small) travel from where they are to where they go on a curve; rings with no partner arrive in the recipe's style. */
+
+    /* ---- flows: every icon starts the same way (two squircles shrink into one, the hole shrinks to a dot) and then goes to a container that suits it ---- */
+    function autoFlow(bs) {
+      var r0 = bs[0], b = bbox(r0.pts), w = b[2] - b[0], h = b[3] - b[1];
+      if (isCirc(r0)) { var r1 = bs[1]; return r1 && isCirc(r1) && dist(cen(r0.pts), cen(r1.pts)) < 4 && Math.abs(r1.area) < Math.abs(r0.area) ? 'ring' : 'solid'; }
+      var fill = Math.abs(r0.area) / (w * h), asp = w / h;
+      return 'box';
+    }
+    function flowTrack(U0, bs, kind, R) {
+      R = R || {};
+      if (R.body === 'hub') { var ob0 = bbox([].concat.apply([], bs.map(function (x) { return x.pts; }))), oc = [(ob0[0] + ob0[2]) / 2, (ob0[1] + ob0[3]) / 2], best = -1, bdst = 1e9; bs.forEach(function (x, ix) { if (isCirc(x)) { var dd = dist(cen(x.pts), oc); if (dd < bdst) { bdst = dd; best = ix; } } }); if (best > 0) bs = [bs[best]].concat(bs.filter(function (x, ix) { return ix !== best; })); }
+      var b0 = bs[0], bd = bbox(b0.pts), w = bd[2] - bd[0], h = bd[3] - bd[1], cx0 = (bd[0] + bd[2]) / 2, cy0 = (bd[1] + bd[3]) / 2, sz = 62, solid = kind === 'solid',
+        q = function (d) { return shapeSet([{ d: d }])[0]; }, circ = function (dia) { return q('M' + (cx0 - dia / 2) + ',' + cy0 + ' a' + dia / 2 + ',' + dia / 2 + ' 0 1,0 ' + dia + ',0 a' + dia / 2 + ',' + dia / 2 + ' 0 1,0 ' + (-dia) + ',0Z'); },
+        rrect = function (wd, ht, rad) { return q(sqp(cx0 - wd / 2, cy0 - ht / 2, cx0 + wd / 2, cy0 + ht / 2, rad)); },
+        inout2 = function (x) { return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; }, U = U0[0], O = U0[1], sqr = rrect(sz, sz, 30 * sz / 76),
+        T = solid ? { s: 0.28, c: 0.4, f: 0.7, m: 0.7, d: 0.72 } : { s: 0.26, c: 0.36, f: 0.6, m: 0.78, d: 0.8 }, c0, c1 = null, k = sz / Math.max(w, h), rings = [], dot = U.pts.map(function () { return [cx0, cy0]; });
+      var ob = bbox([].concat.apply([], bs.map(function (x) { return x.pts; }))), ow = ob[2] - ob[0], oh = ob[3] - ob[1], part = w * h < 0.6 * ow * oh;
+      if (kind === 'box') { c0 = rrect(w * k, h * k, 0.2 * Math.min(w, h) * k); c1 = part ? rrect(ow, oh, 0.2 * Math.min(ow, oh)) : rrect(w, h, 0.2 * Math.min(w, h)); }
+      else if (kind === 'seed') { var seedPts = U.pts.map(function () { return [cx0, bd[3] - 2]; }); c0 = { pts: seedPts, area: 0 }; }
+      else { c0 = circ(sz); if (kind === 'disc') c1 = circ(2 * Math.sqrt(Math.abs(b0.area) / Math.PI)); }
+      var wp = [{ t: 0, pts: U.pts }], prev = U.pts, flip;
+      function add(t, ring) { var pts = alignTo(prev, ring.pts, area(prev) * ring.area < 0 && ring.area !== 0); wp.push({ t: t, pts: pts }); prev = pts; }
+      add(T.s, sqr); if (kind === 'seed') { wp.push({ t: T.c, pts: c0.pts }); prev = c0.pts; } else add(T.c, c0);
+      if (c1) add(T.f, c1);
+      var last = prev; wp.push({ t: T.m, pts: alignTo(last, b0.pts, kind === 'seed' ? false : area(last) * b0.area < 0) });
+      var wpe = []; for (var j = 0; j < wp.length - 1; j++) wpe.push(inout2);
+      rings.push({ wp: wp, wpe: wpe, a0: 1, a1: 1, t0: 0, t1: T.m, pa: U.pts, pb: wp[wp.length - 1].pts, bx: 0, by: 0, spin: 0, ease: easeOf('inout') });
+      var hole1 = bs[1] && inside(cen(bs[1].pts), b0.pts), hole = hole1 ? alignTo(dot, bs[1].pts, false) : dot;
+      rings.push({ wp: [{ t: 0, pts: O.pts }, { t: T.s, pts: dot }, { t: T.d, pts: dot }, { t: 1, pts: hole }], wpe: [inout2, inout2, popOut], a0: 1, a1: 1, t0: 0, t1: 1, pa: O.pts, pb: hole, bx: 0, by: 0, spin: 0, ease: easeOf('inout') });
+      for (var i = hole1 ? 2 : 1; i < bs.length; i++) {
+        var rb = bs[i], isl = !inside(cen(rb.pts), b0.pts);
+        rings.push({ sep: isl, sepAt: 0, pa: rb.pts.map(function () { return [cx0, cy0]; }), pb: rb.pts, a0: rb.a, a1: rb.a, t0: T.d, t1: 1, ease: popOut, bx: 0, by: 0, spin: R.ds || 0, pivot: R.ds ? [cx0, cy0] : null });
+      }
+      return rings;
+    }
     function track(A, B, R, noCache) {
       R = R || RDEF; var key = A.id + '>' + B.id + '>' + (R.k || ''); if (!noCache && tcache[key]) return tcache[key];
       var as = A.slice().sort(function (x, y) { return Math.abs(y.area) - Math.abs(x.area); }), bs = B.slice().sort(function (x, y) { return Math.abs(y.area) - Math.abs(x.area); }), n = Math.max(as.length, bs.length), rings = [], i;
+      var fk = R.flow || autoFlow(bs);
+      if (A.uo && (fk === 'solid' || fk === 'box' || fk === 'disc' || fk === 'seed')) { var res = flowTrack(A.uo, bs, fk, R); return noCache ? res : (tcache[key] = res); }
       var discTry = bs.length >= 2 && isCirc(bs[0]) && A.uo; if (discTry) as = A.uo.slice();
       if (!discTry && as.length >= 2 && bs.length >= 2) { var d00 = dist(cen(as[0].pts), cen(bs[0].pts)) + dist(cen(as[1].pts), cen(bs[1].pts)), d01 = dist(cen(as[0].pts), cen(bs[1].pts)) + dist(cen(as[1].pts), cen(bs[0].pts)); if (d01 < d00 - 1e-6 || R.swap) as = [as[1], as[0]].concat(as.slice(2)); }
       var ease = easeOf(R.ease), ctr = [100, 100], order = [];
@@ -238,8 +275,8 @@ textarea { width:100%; min-height:110px; font-family:var(--mono); font-size:.72r
         var  ang = r.spin ? (1 - Math.max(0, Math.min(1, e))) * r.spin * Math.PI / 180 : 0, ca = Math.cos(ang), sa = Math.sin(ang), d = 'M', mx = 0, my = 0, i, px, py, pts = [];
         for (i = 0; i < N; i++) { px = pa[i][0] + (pb[i][0] - pa[i][0]) * e + r.bx * bump; py = pa[i][1] + (pb[i][1] - pa[i][1]) * e + r.by * bump; pts.push([px, py]); mx += px; my += py; }
         mx /= N; my /= N;
-        for (i = 0; i < N; i++) { px = pts[i][0]; py = pts[i][1]; if (ang) { var qx = px - mx, qy = py - my; px = mx + qx * ca - qy * sa; py = my + qx * sa + qy * ca; } d += (i ? 'L' : '') + f2(px) + ',' + f2(py); }
-        d += 'Z'; var fe = r.fade ? Math.max(0, Math.min(1, (u - r.fade[0]) / (r.fade[1] - r.fade[0]))) : Math.max(0, Math.min(1, e)), op = Math.round(Math.max(0, Math.min(1, r.a0 + (r.a1 - r.a0) * fe)) * 20) / 20, gk = op + (r.sep && u > 0.08 ? 's' : ''); (groups[gk] = groups[gk] || []).push(d);
+        for (i = 0; i < N; i++) { px = pts[i][0]; py = pts[i][1]; if (ang) { var rx = r.pivot ? r.pivot[0] : mx, ry = r.pivot ? r.pivot[1] : my, qx = px - rx, qy = py - ry; px = rx + qx * ca - qy * sa; py = ry + qx * sa + qy * ca; } d += (i ? 'L' : '') + f2(px) + ',' + f2(py); }
+        d += 'Z'; var fe = r.fade ? Math.max(0, Math.min(1, (u - r.fade[0]) / (r.fade[1] - r.fade[0]))) : Math.max(0, Math.min(1, e)), op = Math.round(Math.max(0, Math.min(1, r.a0 + (r.a1 - r.a0) * fe)) * 20) / 20, gk = op + (r.sep && u > (r.sepAt == null ? 0.08 : r.sepAt) ? 's' : ''); (groups[gk] = groups[gk] || []).push(d);
       });
       return groups;
     }
@@ -254,7 +291,7 @@ textarea { width:100%; min-height:110px; font-family:var(--mono); font-size:.72r
   function cen(p) { var x = 0, y = 0; p.forEach(function (q) { x += q[0]; y += q[1]; }); return [x / p.length, y / p.length]; }
   /* Base shape: what the icon's biggest piece is. */
   function classify(n) {
-    var rs = ringsOf(n).slice().sort(function (a, b) { return Math.abs(b.area) - Math.abs(a.area); }), r0 = rs[0], b = bb(r0.pts), w = b[2] - b[0], h = b[3] - b[1], fill = Math.abs(r0.area) / (w * h), circ = Math.abs(w - h) / Math.max(w, h) < 0.07 && fill / (Math.PI / 4) > 0.93;
+    var rs = ringsOf(n).slice().sort(function (a, b) { return Math.abs(b.area) - Math.abs(a.area); }), r0 = rs[0], b = bb(r0.pts), w = b[2] - b[0], h = b[3] - b[1], fill = Math.abs(r0.area) / (w * h), circ = Math.abs(w - h) / Math.max(w, h) < 0.07 && Math.abs(fill / (Math.PI / 4) - 1) < 0.07;
     if (circ) { var r1 = rs[1]; if (r1) { var b1 = bb(r1.pts), w1 = b1[2] - b1[0], h1 = b1[3] - b1[1], c0 = cen(r0.pts), c1 = cen(r1.pts); if (Math.abs(w1 - h1) / Math.max(w1, h1) < 0.07 && Math.hypot(c0[0] - c1[0], c0[1] - c1[1]) < 4 && Math.abs(r1.area) < Math.abs(r0.area)) return 'Ring'; } return 'Disc'; }
     if (fill < 0.45) return 'Open shapes';
     var asp = w / h; return asp < 0.85 ? 'Tall' : asp > 1.18 ? 'Wide' : 'Square-ish';

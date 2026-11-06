@@ -31,5 +31,5 @@ test('the icons the cards and animations name exist in the house set', () => {
 test('palettes are three hex colours and the morph recipes are valid', () => {
   for (const [name, p] of Object.entries(cards.palettes)) { assert.equal(p.length, 3, name); for (const c of p) assert.match(c, /^#[0-9A-Fa-f]{6}$/); }
   assert.ok(Object.keys(cards.morph.recipes).length > 30, 'every icon family has a morph recipe');
-  for (const [k, r] of Object.entries(cards.morph.recipes)) assert.ok(['pop', 'drop', 'rise', 'left', 'right', 'spin'].includes(r.d), `${k} has a known arrival`);
+  for (const [k, r] of Object.entries(cards.morph.recipes)) assert.ok(!r.d || ['pop', 'drop', 'rise', 'left', 'right', 'spin'].includes(r.d), `${k} has a known arrival`);
 });

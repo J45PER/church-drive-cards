@@ -96,7 +96,7 @@
   },
   "morph": {
     "from": "two squircles (Clive's mark as his thinking leaves it)",
-    "note": "Every icon on a card arrives as a morph from Clive's two squircles, each with its own choreography (recipes), and a card that changes morphs from the icon before it. The To-Do logo uses the app splash morph.",
+    "note": "Every icon starts the same way: Clive's two squircles shrink into one while the hole between them shrinks to a dot. Then it goes to a container that suits the icon (circle, or a rounded rectangle for tall and wide shapes), grows to size, and the inner icon grows in together as one piece. The To-Do logo uses the app splash morph.",
     "ms": 1100,
     "recipe_fields": {
       "arc": "how far the squircles swing on a curve, as a fraction of the distance",
@@ -105,7 +105,9 @@
       "ds": "spin of small parts, degrees",
       "o": "order small parts arrive: size, ltr, rtl, ttb, btt, radial",
       "ease": "back, out or inout",
-      "swap": "swap which squircle becomes which body shape"
+      "swap": "swap which squircle becomes which body shape",
+      "flow": "which container the icon grows from: solid (circle), disc (circle, then into the shape), box (rounded rectangle, then into the shape), seed (grows from a point), old (the two squircles go straight to it)",
+      "body": "hub: the main shape is the small circle in the middle (fan)"
     },
     "default": {
       "arc": 0.3,
@@ -138,6 +140,7 @@
         "ease": "back"
       },
       "leaf": {
+        "flow": "seed",
         "arc": 0.5,
         "spin": 40,
         "d": "pop",
@@ -145,6 +148,7 @@
         "ease": "back"
       },
       "bulb": {
+        "flow": "disc",
         "arc": -0.3,
         "spin": 0,
         "d": "rise",
@@ -152,6 +156,7 @@
         "ease": "back"
       },
       "bulb-lit": {
+        "flow": "disc",
         "arc": -0.3,
         "spin": 15,
         "d": "spin",
@@ -160,6 +165,7 @@
         "ease": "back"
       },
       "bulb-off": {
+        "flow": "disc",
         "arc": 0.2,
         "spin": 0,
         "d": "drop",
@@ -167,6 +173,7 @@
         "ease": "out"
       },
       "palette": {
+        "flow": "disc",
         "arc": 0.4,
         "spin": -30,
         "d": "pop",
@@ -188,10 +195,12 @@
         "ease": "out"
       },
       "fan": {
+        "flow": "disc",
+        "body": "hub",
+        "ds": -300,
         "arc": 0,
         "spin": 360,
         "d": "spin",
-        "ds": 360,
         "o": "radial",
         "ease": "out"
       },
@@ -252,6 +261,7 @@
         "ease": "out"
       },
       "ev-plug": {
+        "flow": "disc",
         "arc": 0.4,
         "spin": -25,
         "d": "pop",
@@ -353,11 +363,15 @@
         "swap": true
       },
       "car-ev": {
+        "flow": "old",
         "arc": 0,
         "spin": 0,
         "d": "left",
         "o": "ltr",
         "ease": "out"
+      },
+      "trophy": {
+        "flow": "box"
       },
       "thermometer": {
         "arc": -0.3,
