@@ -163,6 +163,17 @@ textarea { width:100%; min-height:110px; font-family:var(--mono); font-size:.72r
     };
     var RDEF = { arc: 0.3, spin: -20, d: 'pop', o: 'size', ease: 'inout' };
     function easeOf(n) { return n === 'back' ? backOut : n === 'out' ? function (x) { return 1 - Math.pow(1 - x, 3); } : function (x) { return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; }; }
+
+    /* Clive's mark as its two real parts: the outline of both squircles together (U) and the lens where they overlap (O), which is the dark hole in the mark. */
+    function inside(p, poly) { var c = false, i, j; for (i = 0, j = poly.length - 1; i < poly.length; j = i++) { var a = poly[i], b = poly[j]; if ((a[1] > p[1]) !== (b[1] > p[1]) && p[0] < (b[0] - a[0]) * (p[1] - a[1]) / (b[1] - a[1]) + a[0]) c = !c; } return c; }
+    function resample(pts) { var L = [0], i, n = pts.length; for (i = 1; i <= n; i++) L.push(L[i - 1] + Math.hypot(pts[i % n][0] - pts[i - 1][0], pts[i % n][1] - pts[i - 1][1])); var T = L[n], out = [], k = 1; for (i = 0; i < N; i++) { var d = T * i / N; while (k < n && L[k] < d) k++; var a = pts[(k - 1) % n], b = pts[k % n], seg = (L[k] - L[k - 1]) || 1, t = (d - L[k - 1]) / seg; out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]); } return out; }
+    function withUO(rings) {
+      var A = rings[0].pts, B = rings[1].pts, all = A.concat(B), c = cen(all), u = [], o = [];
+      A.forEach(function (p) { (inside(p, B) ? o : u).push(p); }); B.forEach(function (p) { (inside(p, A) ? o : u).push(p); });
+      function ord(P) { return P.slice().sort(function (p, q) { return Math.atan2(p[1] - c[1], p[0] - c[0]) - Math.atan2(q[1] - c[1], q[0] - c[0]); }); }
+      var U = resample(ord(u)), O = resample(ord(o));
+      rings.uo = [{ pts: U, a: 1, area: area(U) }, { pts: O, a: 1, area: area(O) }]; rings.uo.id = ++uid; return rings;
+    }
     function isCirc(r) { var b = bbox(r.pts), w = b[2] - b[0], h = b[3] - b[1]; return Math.abs(w - h) / Math.max(w, h) < 0.07 && Math.abs(r.area) / (Math.PI / 4 * w * h) > 0.93; }
     function sqp(l, t, rr2, b, k) { return 'M' + (l + k) + ',' + t + ' H' + (rr2 - k) + ' A' + k + ',' + k + ' 0 0 1 ' + rr2 + ',' + (t + k) + ' V' + (b - k) + ' A' + k + ',' + k + ' 0 0 1 ' + (rr2 - k) + ',' + b + ' H' + (l + k) + ' A' + k + ',' + k + ' 0 0 1 ' + l + ',' + (b - k) + ' V' + (t + k) + ' A' + k + ',' + k + ' 0 0 1 ' + (l + k) + ',' + t + ' Z'; }
     function dist(a, b) { return Math.hypot(a[0] - b[0], a[1] - b[1]); }
@@ -172,7 +183,8 @@ textarea { width:100%; min-height:110px; font-family:var(--mono); font-size:.72r
     function track(A, B, R, noCache) {
       R = R || RDEF; var key = A.id + '>' + B.id + '>' + (R.k || ''); if (!noCache && tcache[key]) return tcache[key];
       var as = A.slice().sort(function (x, y) { return Math.abs(y.area) - Math.abs(x.area); }), bs = B.slice().sort(function (x, y) { return Math.abs(y.area) - Math.abs(x.area); }), n = Math.max(as.length, bs.length), rings = [], i;
-      if (as.length >= 2 && bs.length >= 2) { var d00 = dist(cen(as[0].pts), cen(bs[0].pts)) + dist(cen(as[1].pts), cen(bs[1].pts)), d01 = dist(cen(as[0].pts), cen(bs[1].pts)) + dist(cen(as[1].pts), cen(bs[0].pts)); if (d01 < d00 - 1e-6 || R.swap) as = [as[1], as[0]].concat(as.slice(2)); }
+      var discTry = bs.length >= 2 && isCirc(bs[0]) && A.uo; if (discTry) as = A.uo.slice();
+      if (!discTry && as.length >= 2 && bs.length >= 2) { var d00 = dist(cen(as[0].pts), cen(bs[0].pts)) + dist(cen(as[1].pts), cen(bs[1].pts)), d01 = dist(cen(as[0].pts), cen(bs[1].pts)) + dist(cen(as[1].pts), cen(bs[0].pts)); if (d01 < d00 - 1e-6 || R.swap) as = [as[1], as[0]].concat(as.slice(2)); }
       var ease = easeOf(R.ease), ctr = [100, 100], order = [];
       /* Anything drawn in a circle: the two squircles come together into the circle (or become its ring), then the inner icon pops in. */
       var disc = as.length === 2 && bs.length >= 2 && isCirc(bs[0]), ringy = disc && isCirc(bs[1]) && dist(cen(bs[0].pts), cen(bs[1].pts)) < 4 && Math.abs(bs[1].area) < Math.abs(bs[0].area), solid = disc && !ringy;
@@ -183,11 +195,8 @@ textarea { width:100%; min-height:110px; font-family:var(--mono); font-size:.72r
       if (solid) {
         var bd = bbox(bs[0].pts), sz = 78, scx = (bd[0] + bd[2]) / 2, scy = (bd[1] + bd[3]) / 2;
         SQ = shapeSet([{ d: sqp(scx - sz / 2, scy - sz / 2, scx + sz / 2, scy + sz / 2, 30 * sz / 76) }])[0];
-        var cb0 = cen(as[1].pts), vB = alignTo(as[1].pts, SQ.pts, as[1].area * SQ.area < 0);
-        extraB = { sep: true, fade: [0.3, 0.38], pa: as[1].pts, via: { pts: vB, t: VIA }, pb: vB, a0: as[1].a, a1: 0, t0: 0, t1: 0.5, ease: easeOf('inout'), bx: 0, by: 0, spin: 0, cx: cb0[0], cy: cb0[1] };
-        as = [as[0]]; n = Math.max(as.length, bs.length);
       }
-      for (i = solid ? 1 : 2; i < bs.length; i++) order.push({ i: i, c: cen(bs[i].pts), a: Math.abs(bs[i].area) });
+      for (i = 2; i < bs.length; i++) order.push({ i: i, c: cen(bs[i].pts), a: Math.abs(bs[i].area) });
       var rank = {}, o = R.o || 'size';
       order.sort(function (p, q) { return o === 'ltr' ? p.c[0] - q.c[0] : o === 'rtl' ? q.c[0] - p.c[0] : o === 'ttb' ? p.c[1] - q.c[1] : o === 'btt' ? q.c[1] - p.c[1] : o === 'radial' ? dist(p.c, ctr) - dist(q.c, ctr) : q.a - p.a; });
       order.forEach(function (p, k) { rank[p.i] = k; });
@@ -195,8 +204,8 @@ textarea { width:100%; min-height:110px; font-family:var(--mono); font-size:.72r
         var ra = as[i], rb = bs[i], r;
         if (ra && rb) {
           var ca = cen(ra.pts), cb = cen(rb.pts), dx = cb[0] - ca[0], dy = cb[1] - ca[1], pb = alignTo(ra.pts, rb.pts, ra.area * rb.area < 0);
-          if (solid && i === 1) { pb = alignTo(ra.pts, bs[0].pts, ra.area * bs[0].area < 0); rb = { a: 0 }; }
           r = { sep: false, fade: null, pa: ra.pts, pb: pb, a0: ra.a, a1: rb.a, t0: 0, t1: solid ? SOLID_END : (i < 2 ? 0.78 : 0.7), ease: i < 2 ? easeOf(R.ease === 'back' ? 'inout' : R.ease) : ease, bx: -dy * (R.arc || 0) * (i ? -1 : 1), by: dx * (R.arc || 0) * (i ? -1 : 1), spin: i < 2 ? (R.spin || 0) * (i ? -0.6 : 1) : 0, cx: ca[0], cy: ca[1] };
+          if (solid && i === 1) { r.ease = easeOf('inout'); r.t1 = 0.72; r.bx = 0; r.by = 0; r.spin = 0; }
           if (solid && i === 0) { var vA = alignTo(ra.pts, SQ.pts, ra.area * SQ.area < 0); r.via = { pts: vA, t: VIA }; r.pb = alignTo(vA, rb.pts, SQ.area * rb.area < 0); r.ease = easeOf('inout'); r.bx = 0; r.by = 0; r.spin = 0; }
         } else if (rb) { // a part with nothing to grow from: arrives in the recipe's style
           var c = cen(rb.pts), st = R.d || 'pop', ax = c[0], ay = c[1], rk = rank[i] || 0;
@@ -224,10 +233,10 @@ textarea { width:100%; min-height:110px; font-family:var(--mono); font-size:.72r
       });
       return groups;
     }
-    return { shapeSet: shapeSet, pair: pair, blend: blend, joinD: joinD, svgPaths: svgPaths, sample: sample, track: track, run: run, recipes: RECIPES, recipeFor: function (k) { var r = RECIPES[k] || RDEF; r.k = k || 'def'; return r; } };
+    return { withUO: withUO, shapeSet: shapeSet, pair: pair, blend: blend, joinD: joinD, svgPaths: svgPaths, sample: sample, track: track, run: run, recipes: RECIPES, recipeFor: function (k) { var r = RECIPES[k] || RDEF; r.k = k || 'def'; return r; } };
   })();
   function sq(l, t, r, b, k) { return 'M' + (l + k) + ',' + t + ' H' + (r - k) + ' A' + k + ',' + k + ' 0 0 1 ' + r + ',' + (t + k) + ' V' + (b - k) + ' A' + k + ',' + k + ' 0 0 1 ' + (r - k) + ',' + b + ' H' + (l + k) + ' A' + k + ',' + k + ' 0 0 1 ' + l + ',' + (b - k) + ' V' + (t + k) + ' A' + k + ',' + k + ' 0 0 1 ' + (l + k) + ',' + t + ' Z'; }
-  var MARK = MK.shapeSet([{ d: sq(49.7, 72.3, 127.7, 150.3, 30.75) + ' ' + sq(72.3, 49.7, 150.3, 127.7, 30.75) }]);
+  var MARK = MK.withUO(MK.shapeSet([{ d: sq(49.7, 72.3, 127.7, 150.3, 30.75) + ' ' + sq(72.3, 49.7, 150.3, 127.7, 30.75) }]));
   var names = Object.keys(ICONS).sort(), RINGS = {}, INFO = {}, EDIT = {}, rev = 0;
   var SAVED = JSON.parse(JSON.stringify(MK.recipes));
   function ringsOf(n) { return RINGS[n] || (RINGS[n] = MK.shapeSet(ICONS[n].map(function (d) { return { d: d, a: 1 }; }))); }
