@@ -178,12 +178,13 @@ textarea { width:100%; min-height:110px; font-family:var(--mono); font-size:.72r
       var disc = as.length === 2 && bs.length >= 2 && isCirc(bs[0]), ringy = disc && isCirc(bs[1]) && dist(cen(bs[0].pts), cen(bs[1].pts)) < 4 && Math.abs(bs[1].area) < Math.abs(bs[0].area), solid = disc && !ringy;
       var extraB = null;
       if (disc) { ease = easeOf('back'); R = { arc: 0.15, spin: 0, d: 'pop', o: R.o || 'size', ease: 'back', k: R.k }; }
+      if (solid) ease = easeOf('out');
       var VIA = 0.3, SOLID_END = 0.8, SQ = null;
       if (solid) {
         var bd = bbox(bs[0].pts), sz = 78, scx = (bd[0] + bd[2]) / 2, scy = (bd[1] + bd[3]) / 2;
         SQ = shapeSet([{ d: sqp(scx - sz / 2, scy - sz / 2, scx + sz / 2, scy + sz / 2, 30 * sz / 76) }])[0];
         var cb0 = cen(as[1].pts), vB = alignTo(as[1].pts, SQ.pts, as[1].area * SQ.area < 0);
-        extraB = { sep: true, fade: [0.77, 0.84], pa: as[1].pts, via: { pts: vB, t: VIA }, pb: alignTo(vB, bs[0].pts, SQ.area * bs[0].area < 0), a0: as[1].a, a1: 0, t0: 0, t1: SOLID_END, ease: easeOf('inout'), bx: 0, by: 0, spin: 0, cx: cb0[0], cy: cb0[1] };
+        extraB = { sep: true, fade: [0.3, 0.38], pa: as[1].pts, via: { pts: vB, t: VIA }, pb: vB, a0: as[1].a, a1: 0, t0: 0, t1: 0.5, ease: easeOf('inout'), bx: 0, by: 0, spin: 0, cx: cb0[0], cy: cb0[1] };
         as = [as[0]]; n = Math.max(as.length, bs.length);
       }
       for (i = solid ? 1 : 2; i < bs.length; i++) order.push({ i: i, c: cen(bs[i].pts), a: Math.abs(bs[i].area) });
@@ -200,8 +201,8 @@ textarea { width:100%; min-height:110px; font-family:var(--mono); font-size:.72r
         } else if (rb) { // a part with nothing to grow from: arrives in the recipe's style
           var c = cen(rb.pts), st = R.d || 'pop', ax = c[0], ay = c[1], rk = rank[i] || 0;
           if (st === 'drop') ay = c[1] - 46; else if (st === 'rise') ay = c[1] + 46; else if (st === 'left') ax = c[0] - 56; else if (st === 'right') ax = c[0] + 56;
-          var t0 = solid ? Math.min(0.88, SOLID_END + 0.02 + rk * 0.05) : disc ? Math.min(0.7, 0.5 + rk * 0.06) : Math.min(0.55, 0.28 + rk * 0.07);
-          r = { pa: rb.pts.map(function () { return [ax, ay]; }), pb: rb.pts, a0: 0, a1: rb.a, t0: t0, t1: Math.min(1, t0 + 0.42), ease: ease, bx: 0, by: 0, spin: st === 'spin' ? (R.ds || 180) : 0, cx: c[0], cy: c[1] };
+          var t0 = solid ? Math.min(0.72, 0.52 + rk * 0.07) : disc ? Math.min(0.7, 0.5 + rk * 0.06) : Math.min(0.55, 0.28 + rk * 0.07);
+          r = { pa: rb.pts.map(function () { return [ax, ay]; }), pb: rb.pts, a0: rb.a, a1: rb.a, t0: t0, t1: Math.min(1, t0 + (solid ? 0.5 : 0.42)), ease: ease, bx: 0, by: 0, spin: st === 'spin' ? (R.ds || 180) : 0, cx: c[0], cy: c[1] };
         } else { // a part that has nowhere to go: folds into the middle of the shape
           var ce = cen(ra.pts), tgt = bs[0] ? cen(bs[0].pts) : ce;
           r = { pa: ra.pts, pb: ra.pts.map(function () { return tgt; }), a0: ra.a, a1: 0, t0: 0.1, t1: 0.75, ease: easeOf('inout'), bx: 0, by: 0, spin: 0, cx: ce[0], cy: ce[1] };
