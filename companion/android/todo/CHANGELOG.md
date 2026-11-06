@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.101.0
+
+- No change in this app. Icons and cards are now also available as files from Home Assistant (docs/CLIVE-ASSETS.md); the app does not read them yet.
+
 ## 0.100.0
 
 - Clive icons throughout.

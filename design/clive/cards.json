@@ -1,0 +1,63 @@
+{
+  "$comment": "Clive's card layouts, palettes and animations as data. Edit here, run `node tools/export-clive-assets.mjs`, and Home Assistant serves the result at /church_drive/clive/cards.json. A new KIND of card still needs code in the apps; everything else (icons, palettes, which icon a card shows, its fields, its animation) is data.",
+  "palettes": {
+    "Base": ["#5C6BC0", "#AB47BC", "#4FD08A"],
+    "Clear": ["#1565C0", "#42A5F5", "#81D4FA"],
+    "Rain": ["#37474F", "#5C7C99", "#78909C"],
+    "Night": ["#0D1B4A", "#283593", "#5C6BC0"],
+    "Snow": ["#90A4AE", "#B3E5FC", "#E1F5FE"],
+    "Storm": ["#37474F", "#6A1B9A", "#5C6BC0"],
+    "Sport": ["#6CABDD", "#1C2C5B", "#A5CDEB"],
+    "Heat": ["#E65100", "#FF8A4C", "#FFB74D"],
+    "Warm": ["#FF8F00", "#FFB74D", "#AB47BC"],
+    "Alert": ["#37474F", "#C62828", "#EF9A9A"]
+  },
+  "tones": {
+    "green": ["#1B3A28", "#81C995"], "blue": ["#1C3358", "#8AB4F8"], "red": ["#4D1F1C", "#F28B82"],
+    "purple": ["#3A2552", "#C58AF9"], "amber": ["#4A3A12", "#FDD663"], "orange": ["#4A2A14", "#FFAB70"],
+    "teal": ["#0F3A40", "#4DD0E1"], "indigo": ["#262B4A", "#9FA8DA"], "grey": ["#303134", "#9AA0A6"], "coral": ["#4D2620", "#FF9C8A"]
+  },
+  "morph": {
+    "from": "AssistantGlyph Listening",
+    "note": "Every icon on a card arrives as a morph from Clive's mark (the stop square), and a card that changes (Gregg's state, a lock, a level) morphs from the icon before it.",
+    "ms": 900,
+    "ease": "inOutCubic"
+  },
+  "kinds": {
+    "heat": { "fields": ["now", "target", "name", "detail"], "icon": "cd:thermostat", "palette": "Heat", "animate": ["chevrons"], "layout": "now, double chevron, target" },
+    "heat2": { "fields": ["name", "detail", "rows[name,now,target]"], "icon": "cd:thermostat", "palette": "Heat", "animate": ["chevrons"], "layout": "one row per thermostat" },
+    "done": { "fields": ["icon", "big", "name", "detail", "percent", "palette", "colour", "ok"], "layout": "icon, big figure, name, detail, optional bar" },
+    "ask": { "fields": ["icon", "name", "detail", "palette"], "layout": "question with Yes / No" },
+    "weather": { "icon": "by condition" }, "score": { "icon": "cd:football" }, "energy": { "icon": "cd:bolt" }, "people": { "icon": "cd:group" },
+    "car": { "icon": "cd:car-ev" }, "climate": { "icon": "cd:thermometer" }, "air": { "icon": "cd:air-filter" }
+  },
+  "icons": {
+    "light": { "type": "swap", "from": "cd:bulb", "to": "cd:bulb-lit", "ms": 450 },
+    "lock": { "type": "swap", "from": "cd:lock-open", "to": "cd:lock", "ms": 650 },
+    "volume": { "type": "cycle", "icons": ["cd:volume-low", "cd:volume-medium", "cd:volume-high"], "ms": 480 },
+    "fan": { "type": "spin", "icon": "cd:fan", "ms": 1100 },
+    "blinds-open": { "type": "extend", "start": "cd:blind-open", "end": "cd:blind-closed", "note": "the slab extends under the rail" },
+    "blinds-close": { "type": "extend", "start": "cd:blind-closed", "end": "cd:blind-open" }
+  },
+  "gregg": {
+    "icon": "GreggIcon",
+    "states": {
+      "cleaning": { "icon": "GreggIcon Cleaning", "motion": "ring turns", "palette": ["#1A73E8", "#8AB4F8", "#1C3358"] },
+      "paused": { "icon": "GreggIcon Paused", "motion": "still, pause bars", "palette": ["#E37400", "#FDD663", "#4A3A12"] },
+      "returning": { "icon": "GreggIcon Returning", "motion": "ring runs backwards", "palette": ["#1A73E8", "#8AB4F8", "#1C3358"] },
+      "charging": { "icon": "GreggIcon Charging", "motion": "ring fills", "palette": ["#2E7D32", "#81C995", "#1B3A28"] },
+      "charged": { "icon": "GreggIcon Charged", "motion": "still, closed ring", "palette": ["#2E7D32", "#81C995", "#1B3A28"] },
+      "error": { "icon": "GreggIcon Error", "motion": "blinks", "palette": ["#B3261E", "#F28B82", "#4D1F1C"] },
+      "idle": { "icon": "GreggIcon Idle", "motion": "still", "palette": ["#E37400", "#FDD663", "#4A3A12"] }
+    },
+    "actions": { "start": "cleaning", "pause": "paused", "resume": "cleaning", "stop": "idle", "return_to_base": "returning", "locate": "find", "empty": "empty" }
+  },
+  "icon_sources": {
+    "cd": "House set, served in icons.json (design/clive/house-icons.json is its source)",
+    "phu": "Hue-style pack from HACS (Custom Brand Icons); read from the pack Home Assistant serves, never copied. Used until the same icon is drawn in the house set.",
+    "hue": "Our own Hue icons, being drawn (listed under pending in icons.json)",
+    "ring": "Our own Ring icons, being drawn (listed under pending in icons.json)",
+    "si": "Simple Icons brand logos, by name",
+    "ol": "Our own logos where Simple Icons has none"
+  }
+}

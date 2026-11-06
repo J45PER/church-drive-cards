@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.101.0
+
+- No change in this app. Icons and cards are now also available as files from Home Assistant (docs/CLIVE-ASSETS.md); the app does not read them yet.
+
 ## 0.100.0
 
 - The house's own Clive icons replace Material icons across the phone and watch apps, with larger badge circles, plus a sports-logo request log.
