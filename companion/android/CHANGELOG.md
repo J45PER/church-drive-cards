@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.104.2
+
+- **One list of colour names.** A dashboard card's `color` is a name from `docs/CLIVE-COLOURS.md`; Home Assistant's own colour names (`deep-orange`, `blue-grey`, `pink`…) mean the same palette name in the app as on the dashboards (they used to differ). New `neutral` name.
+
 ## 0.104.1
 
 - **No more "clear_notification" notifications.** A notice whose message is `clear_notification` is Home Assistant's order to remove the notification with that tag, so the app cancels it and shows nothing (it showed the word itself, usually after Home Assistant restarted).

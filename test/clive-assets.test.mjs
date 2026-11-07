@@ -64,3 +64,22 @@ test('a card colour can be a palette name, and Cleaning (Gregg) is the bright bl
   assert.match(css, /--gregg-color: #4c8dff;/);
   assert.match(css, /--car-color: #5be0b3;/);
 });
+
+test('the list of colour names is one list: aliases point at real names and the apps know every name', async () => {
+  const { readFileSync } = await import('node:fs');
+  const ec = cards.entity_colours;
+  for (const [alias, key] of Object.entries(ec.aliases.names)) assert.ok(ec.types[key], `${alias} -> ${key} is a palette name`);
+  const kt = readFileSync('companion/android/core/src/main/java/com/churchdrive/app/ui/StateColors.kt', 'utf8');
+  const body = kt.slice(kt.indexOf('fun toneForKey'), kt.indexOf('fun toneFromColour'));
+  for (const key of Object.keys(ec.types)) assert.ok(body.includes(`"${key}" ->`), `toneForKey knows ${key}`);
+  for (const k of ['ok', 'warn', 'bad']) assert.ok(body.includes(`"${k}" ->`), `toneForKey knows ${k}`);
+  const md = readFileSync('docs/CLIVE-COLOURS.md', 'utf8');
+  for (const key of Object.keys(ec.types)) assert.ok(md.includes(`\`${key}\``), `the names document lists ${key}`);
+});
+
+test('the dashboard theme defines a variable for every palette name and every Home Assistant alias', async () => {
+  const { cliveThemeCss } = await import('../src/clive-theme.js');
+  const css = cliveThemeCss();
+  for (const key of Object.keys(cards.entity_colours.types)) assert.ok(css.includes(`--${key}-color:`), `--${key}-color`);
+  for (const alias of Object.keys(cards.entity_colours.aliases.names)) assert.ok(css.includes(`--${alias}-color:`), `--${alias}-color`);
+});

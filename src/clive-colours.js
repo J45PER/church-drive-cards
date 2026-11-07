@@ -42,6 +42,7 @@ export const CLIVE = {
   person_hayley: ["#d568b5","#432841","#ba64cc","#eab4da","#5c2f54"],
   person_ian: ["#5a87cc","#233047","#6c78db","#acc3e6","#293c5e"],
   person_diane: ["#8f62d9","#31274a","#8e60e3","#c7b0ec","#3f2d63"],
+  neutral: ["#9aa4b2","#202733","#9aa4b2","#eef1f5","#28303c"],
 };
 export const CLIVE_NEUTRAL = {
   "light": {
@@ -65,6 +66,8 @@ export const CLIVE_NEUTRAL = {
     "on_primary": "#0b0e13"
   }
 };
+
+export const CLIVE_ALIASES = {"green":"ok","light-green":"plugs","lime":"plugs","red":"bad","amber":"warn","orange":"warn","yellow":"lights","deep-orange":"heating","light-blue":"cooling","blue":"alarm_home","cyan":"air","teal":"air","indigo":"tasks","purple":"doors","deep-purple":"alarm","pink":"media","brown":"blinds","blue-grey":"rain","grey":"neutral","gray":"neutral","disabled":"neutral","coral":"shopping","salmon":"shopping"};
 
 /** One slot of a set, e.g. clive('lights') is the colour, clive('lights', 'dark') its ground. */
 export function clive(key, slot = 'colour') {

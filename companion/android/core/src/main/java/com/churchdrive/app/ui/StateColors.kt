@@ -151,6 +151,7 @@ fun toneForKey(key: String): Tone? = when (key) {
     "snow" -> Tone.Snow
     "storm" -> Tone.Storm
     "sport" -> Tone.Sport
+    "neutral" -> Tone.Grey
     "todo_mine" -> Tone.TodoMine
     "todo_shared" -> Tone.TodoShared
     "todo_cleaning" -> Tone.TodoCleaning
@@ -171,18 +172,8 @@ fun toneFromColour(colour: String?): Tone? {
     val v = colour?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: return null
     // A palette name (`lights`, `gregg`, `alarm_home`, `ok`…): the house's own colour for that kind of thing.
     toneForKey(v)?.let { return it }
-    when (v) {
-        "green", "light-green", "lime" -> return Tone.Green
-        "blue", "light-blue" -> return Tone.Blue
-        "red" -> return Tone.Red
-        "orange", "amber", "yellow" -> return Tone.Amber
-        "deep-orange" -> return Tone.Orange
-        "purple", "deep-purple", "pink" -> return Tone.Purple
-        "indigo" -> return Tone.Indigo
-        "teal", "cyan" -> return Tone.Teal
-        "coral", "salmon" -> return Tone.Coral
-        "grey", "gray", "blue-grey", "brown", "disabled" -> return Tone.Grey
-    }
+    // A Home Assistant colour name ("green", "deep-orange"): the palette name it stands for (CliveColours.aliases, docs/CLIVE-COLOURS.md).
+    CliveColours.aliases[v]?.let { toneForKey(it) }?.let { return it }
     // The house tasks' own colour on the dashboard (its hue is too near red to tell apart by hue).
     if (v == "#f2705c") return Tone.Coral
     val hex = v.removePrefix("#")
