@@ -19,17 +19,23 @@ object DashboardLights {
         val views = config.optJSONArray("views") ?: return LightLayout.Fallback
         var home: List<LightRoom>? = null
         var floors: List<Pair<String, List<LightRoom>>>? = null
+        val looks = mutableMapOf<String, FloorLook>()
         for (i in 0 until views.length()) {
             val view = views.optJSONObject(i) ?: continue
             when (view.optString("path")) {
                 "home" -> home = panels(view).firstOrNull { it.optString("title").equals("Lights", ignoreCase = true) }
                     ?.let { rooms(it, views) }
-                "lighting" -> floors = panels(view).map { it.optString("title") to rooms(it, views) }.filter { it.second.isNotEmpty() }
+                "lighting" -> {
+                    val all = panels(view)
+                    floors = all.map { it.optString("title") to rooms(it, views) }.filter { it.second.isNotEmpty() }
+                    all.forEach { looks[it.optString("title")] = FloorLook(it.optString("icon").takeIf { s -> s.isNotBlank() }, it.optString("color").takeIf { s -> s.isNotBlank() }) }
+                }
             }
         }
         return LightLayout(
             home = home?.takeIf { it.isNotEmpty() } ?: LightLayout.Fallback.home,
             floors = floors?.takeIf { it.isNotEmpty() } ?: LightLayout.Fallback.floors,
+            looks = looks,
         )
     }
 

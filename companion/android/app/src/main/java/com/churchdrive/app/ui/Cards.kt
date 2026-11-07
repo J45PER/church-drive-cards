@@ -573,7 +573,7 @@ fun ChargerCard(entities: Map<String, EntityState>, call: CallService) {
     val over = chargerOverrides(entities)
     // Stop was picked but the charger's readings haven't caught up yet (they refresh about once a minute).
     val stopping = mode?.state == "Stopped" && over.charging
-    val tone = toneColors(if (charging) Tone.Teal else Tone.Grey)
+    val tone = toneColors(if (charging) Tone.Car else Tone.Grey)
     val session = entities[ZAPPI_SESSION]?.state?.toDoubleOrNull()
     val status = when {
         mode == null -> "Loading…"
@@ -610,7 +610,7 @@ fun ChargerCard(entities: Map<String, EntityState>, call: CallService) {
                 Text("${Octopus.pence(it.pence)}p rate now", style = MaterialTheme.typography.bodyMedium)
             }
         }
-        val teal = toneColors(Tone.Teal)
+        val teal = toneColors(Tone.Car)
         if (mode?.available == true) {
             // Always shown: a button and a status. Grey with no car, teal while charging, tappable when it can start.
             when {

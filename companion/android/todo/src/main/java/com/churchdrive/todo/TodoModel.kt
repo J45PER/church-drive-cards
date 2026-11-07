@@ -41,10 +41,10 @@ import org.json.JSONObject
 
 /** The pages of the app, as on the main app's To-do page: the person's own list, the shared one, cleaning and the house's jobs. */
 enum class TodoTab(val label: String, val title: String, val tone: Tone, val canAdd: Boolean) {
-    Mine("My to-do", "My to-do", Tone.Purple, true),
-    Shared("Shared", "Shared", Tone.Blue, true),
-    Cleaning("Cleaning", "Cleaning", Tone.Teal, true),
-    House("House", "From the house", Tone.Coral, false),
+    Mine("My to-do", "My to-do", Tone.TodoMine, true),
+    Shared("Shared", "Shared", Tone.TodoShared, true),
+    Cleaning("Cleaning", "Cleaning", Tone.TodoCleaning, true),
+    House("House", "From the house", Tone.TodoHouse, false),
 }
 
 const val SHARED_LIST = "todo.priorities_everyone"

@@ -74,6 +74,14 @@ class MobileAppTest {
     }
 
     @Test
+    fun clearNotificationIsAnOrderNotWords() {
+        val clear = MobileApp.parsePush(JSONObject("""{"message":"clear_notification","data":{"tag":"church-drive-health"}}"""))!!
+        assertEquals(true, MobileApp.isClearCommand(clear))
+        assertEquals("church-drive-health", clear.tag)
+        assertEquals(false, MobileApp.isClearCommand(MobileApp.parsePush(JSONObject("""{"message":"Someone is at the door"}"""))!!))
+    }
+
+    @Test
     fun theNotifyServiceNameFollowsHomeAssistant() {
         assertEquals("notify.mobile_app_jamie_pixel_10_pro_xl", MobileApp.notifyService("Jamie Pixel 10 Pro XL"))
         assertEquals("Jamie Pixel 10", MobileApp.deviceName(" Jamie Phillips ", "Pixel 10"))

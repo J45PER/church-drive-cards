@@ -8,14 +8,15 @@
 // By default the card shows the signed-in person's (including ones shared
 // with others) plus everyone's; `show: all` lists them all with names.
 
+import { clive } from './clive-colours.js';
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { KIT_COLOR, kitShell, kitHead } from './card-kit.js';
 
 export const HOUSE_TASKS_LIST = 'todo.priorities_automatic';
-// Their colour: coral, so they stand apart from the person's own to-dos (purple, #8a86ff), shopping (indigo) and overdue (red).
-export const HOUSE_TASKS_COLOR = '#f2705c';
+// Their colour: the To-do from the house palette, so they stand apart from the person's own to-dos, shopping and overdue (red).
+export const HOUSE_TASKS_COLOR = clive('todo_house');
 
 // Kind, detail, who and icon from an automatic item's description.
 export function houseTask(item) {
@@ -70,7 +71,7 @@ export const HouseTasksCardEditor = createFormEditor({
     demo: 'Show pretend tasks (for Design Presets)',
   },
   helpers: {
-    color: `Default ${HOUSE_TASKS_COLOR} (coral). Any CSS colour.`,
+    color: `Default ${HOUSE_TASKS_COLOR} (the To-do from the house palette). Any CSS colour.`,
     entity: `Defaults to ${HOUSE_TASKS_LIST}. Who gets each kind of task is set in Manager → Automatic to-dos.`,
   },
 });

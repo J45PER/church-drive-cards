@@ -4,6 +4,13 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.104.1
+
+- **No more "clear_notification" notifications.** A notice whose message is `clear_notification` is Home Assistant's order to remove the notification with that tag, so the app cancels it and shows nothing (it showed the word itself, usually after Home Assistant restarted).
+- **Colours.** Cleaning (Gregg) is the bright blue and the car the mint. A dashboard card's `color` can be a palette name (`lights`, `gregg`, `alarm_home`…); the pages and nav bar are coloured by kind of thing, and the generic blue is the alarm's Armed Home blue.
+- **To-do types and people** have palettes of their own (My to-do, Shared, Cleaning, From the house, Shopping; Jamie, Hayley, Ian, Diane). The house tasks card, the Home highlights and the shopping page use them, and the EV charger card is the car's colour.
+- **Lighting page** shows each floor's icon from the dashboard (`cd:floor-0`, `cd:room-garden`…) and its colour, not a bulb on every floor.
+
 ## 0.104.0
 
 - **The house's own colours.** Material You is gone: the app's colours are Clive's palette (neutral backgrounds, text and an indigo accent; entity colours from `cards.json`), not the phone's wallpaper or Google's. Lights are yellow, heating orange, electricity and gas Octopus pink and violet, the car blue, security indigo, media pink, Gregg mint, shopping coral; green, amber and red keep their fixed meaning. The watch's weather, sport and air-quality colours, the car and climate rings, and the widgets follow. Written without an Android SDK, so CI is its first compile.

@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.104.1
+
+- No change to this app; version kept equal to the others.
+
 ## 0.104.0
 
 - **Update notice.** A banner and a once-a-day question when a newer version is out (a Play install uses Google Play's update screen; a test build asks GitHub). The house's own colours replace Material You (see the phone app).

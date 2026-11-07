@@ -32,7 +32,7 @@ const CC_HISTORY_HOURS = 24;
 const CC_MODES = {
   off: { name: 'Off', icon: 'mdi:power', color: '#9aa4b2', colors: ['#5d636e', '#3a3f48'] },
   heat: { name: 'Heat', icon: 'mdi:fire', color: '#ff8a4c', colors: ['#ff9a4d', '#e2531d'] },
-  cool: { name: 'Cool', icon: 'mdi:snowflake', color: '#4c8dff', colors: ['#63b3ff', '#1f6fd1'] },
+  cool: { name: 'Cool', icon: 'mdi:snowflake', color: '#6cc8ff', colors: ['#63b3ff', '#1f6fd1'] },
   heat_cool: { name: 'Heat/Cool', icon: 'mdi:sun-snowflake-variant', color: '#f0b13a', colors: ['#ff8a4c', '#3f8fe0'] },
   auto: { name: 'Auto', icon: 'mdi:thermostat-auto', color: '#d2a8ff', colors: ['#d2a8ff', '#6a4fb3'] },
   dry: { name: 'Dry', icon: 'mdi:water-percent', color: '#f0b13a', colors: ['#e3c35a', '#a8841b'] },
@@ -58,7 +58,7 @@ function ccQuickIcon(q, look) {
   if (q.hvac_mode && CC_MODES[q.hvac_mode]) return ccModeIcon(q.hvac_mode);
   return look.icon;
 }
-const CC_COLOR = { heating: '#ff8a4c', cooling: '#4c8dff', drying: '#f0b13a', fan: '#3fd0cf', eco: '#55c47c', off: '#9aa4b2' };
+const CC_COLOR = { heating: '#ff8a4c', cooling: '#6cc8ff', drying: '#f0b13a', fan: '#3fd0cf', eco: '#55c47c', off: '#9aa4b2' };
 
 // Rows and whether a new card shows them.
 const CC_ROWS = {

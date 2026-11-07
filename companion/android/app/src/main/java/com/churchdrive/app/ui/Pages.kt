@@ -58,13 +58,13 @@ enum class Page(
 /** The nav bar's colour for a page, as on the dashboard: the Security page follows the alarm. */
 fun pageTone(page: Page, alarmState: String?): Tone = when (page) {
     Page.Home -> Tone.Blue
-    Page.Lighting -> Tone.Amber
+    Page.Lighting -> Tone.Lights
     Page.Security -> alarmTone(alarmState)
-    Page.Climate -> Tone.Orange
-    Page.Cleaning -> Tone.Blue
-    Page.Todo -> Tone.Purple
-    Page.Devices -> Tone.Green
-    Page.Energy -> Tone.Indigo
+    Page.Climate -> Tone.Heating
+    Page.Cleaning -> Tone.Gregg
+    Page.Todo -> Tone.Tasks
+    Page.Devices -> Tone.Media
+    Page.Energy -> Tone.Energy
 }
 
 enum class SectionKind { Alarm, NotBuilt }

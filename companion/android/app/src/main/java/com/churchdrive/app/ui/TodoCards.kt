@@ -174,7 +174,7 @@ fun HouseTasksCard(config: JSONObject, entities: Map<String, EntityState>) {
     val first = me?.trim()?.substringBefore(' ')
     val listId = config.optString("entity").ifBlank { "todo.priorities_automatic" }
     val showAll = config.optString("show") == "all"
-    val tone = toneColors(Tone.Coral)
+    val tone = toneColors(Tone.TodoHouse)
     val items = rememberTodoItems(listId, entities)
     EntityCard(tone.container, tone.onContainer) {
         val tasks = items.orEmpty().filter { !it.done }.map { it to houseTask(it) }.filter { showAll || houseTaskFor(it.second, first) }

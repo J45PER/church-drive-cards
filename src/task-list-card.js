@@ -9,6 +9,7 @@
 // same words: it reminds people when a task comes due, and when a repeating
 // task is ticked off it's due again at its next time.
 
+import { clive } from './clive-colours.js';
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
@@ -149,7 +150,7 @@ export const TaskListCardEditor = createFormEditor({
   },
   helpers: {
     entity: 'Any to-do list. A task\'s repeat and who it reminds are kept in its description, and "Church Drive: repeating tasks" sends the reminders and brings repeating tasks back.',
-    color: 'Default purple (#8a86ff).',
+    color: 'Default: the My to-do palette.',
     own: 'Each person sees their own "Priorities <first name>" list (made for everyone automatically), so one card serves everyone.',
     assign: '"Just the signed-in person" swaps the list of people for a simple "Remind me" choice.',
   },
@@ -208,7 +209,7 @@ export class TaskListCard extends HTMLElement {
   }
 
   _colour() {
-    return this.config.color || '#8a86ff';
+    return this.config.color || clive('todo_mine');
   }
 
   _watch() {

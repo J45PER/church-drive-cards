@@ -27,6 +27,7 @@ enum class Tone {
     Lights, Blinds, Plugs, Gregg, Heating, Cooling, Air, Energy, Gas, Car, Alarm, Doors,
     AlarmHome, AlarmAway, AlarmOff, ArmingHome, ArmingAway,
     Media, People, Tasks, Shopping, Calendar, Sunny, Night, Rain, Snow, Storm, Sport,
+    TodoMine, TodoShared, TodoCleaning, TodoHouse, TodoShopping, PersonJamie, PersonHayley, PersonIan, PersonDiane,
 }
 
 data class ToneColors(
@@ -45,7 +46,7 @@ fun toneSet(tone: Tone): EntityColours? = when (tone) {
     Tone.Green -> CliveColours.Ok
     Tone.Red -> CliveColours.Bad
     Tone.Amber -> CliveColours.Warn
-    Tone.Blue -> CliveColours.Car
+    Tone.Blue -> CliveColours.AlarmHome
     Tone.Purple -> CliveColours.Doors
     Tone.Orange, Tone.Heating -> CliveColours.Heating
     Tone.Teal, Tone.Air -> CliveColours.Air
@@ -76,6 +77,15 @@ fun toneSet(tone: Tone): EntityColours? = when (tone) {
     Tone.Snow -> CliveColours.Snow
     Tone.Storm -> CliveColours.Storm
     Tone.Sport -> CliveColours.Sport
+    Tone.TodoMine -> CliveColours.TodoMine
+    Tone.TodoShared -> CliveColours.TodoShared
+    Tone.TodoCleaning -> CliveColours.TodoCleaning
+    Tone.TodoHouse -> CliveColours.TodoHouse
+    Tone.TodoShopping -> CliveColours.TodoShopping
+    Tone.PersonJamie -> CliveColours.PersonJamie
+    Tone.PersonHayley -> CliveColours.PersonHayley
+    Tone.PersonIan -> CliveColours.PersonIan
+    Tone.PersonDiane -> CliveColours.PersonDiane
 }
 
 /**
@@ -108,12 +118,59 @@ fun alarmTone(state: String?): Tone = when (state) {
     else -> Tone.Grey
 }
 
+/** The tone for a name from the palette (design/clive/cards.json), as a dashboard card's `color` can give it; null for any other name. */
+fun toneForKey(key: String): Tone? = when (key) {
+    "ok" -> Tone.Green
+    "warn" -> Tone.Amber
+    "bad" -> Tone.Red
+    "lights" -> Tone.Lights
+    "blinds" -> Tone.Blinds
+    "plugs" -> Tone.Plugs
+    "gregg" -> Tone.Gregg
+    "heating" -> Tone.Heating
+    "cooling" -> Tone.Cooling
+    "air" -> Tone.Air
+    "energy" -> Tone.Energy
+    "gas" -> Tone.Gas
+    "car" -> Tone.Car
+    "alarm" -> Tone.Alarm
+    "doors" -> Tone.Doors
+    "alarm_home" -> Tone.AlarmHome
+    "alarm_away" -> Tone.AlarmAway
+    "alarm_off" -> Tone.AlarmOff
+    "arming_home" -> Tone.ArmingHome
+    "arming_away" -> Tone.ArmingAway
+    "media" -> Tone.Media
+    "people" -> Tone.People
+    "tasks" -> Tone.Tasks
+    "shopping" -> Tone.Shopping
+    "calendar" -> Tone.Calendar
+    "sunny" -> Tone.Sunny
+    "night" -> Tone.Night
+    "rain" -> Tone.Rain
+    "snow" -> Tone.Snow
+    "storm" -> Tone.Storm
+    "sport" -> Tone.Sport
+    "todo_mine" -> Tone.TodoMine
+    "todo_shared" -> Tone.TodoShared
+    "todo_cleaning" -> Tone.TodoCleaning
+    "todo_house" -> Tone.TodoHouse
+    "todo_shopping" -> Tone.TodoShopping
+    "person_jamie" -> Tone.PersonJamie
+    "person_hayley" -> Tone.PersonHayley
+    "person_ian" -> Tone.PersonIan
+    "person_diane" -> Tone.PersonDiane
+    else -> null
+}
+
 /**
  * A tone for a Home Assistant colour: a colour name as the dashboards use it ("green", "deep-orange"), or a
  * hex colour (matched by its hue). Null when it isn't a colour, so the caller can use its own.
  */
 fun toneFromColour(colour: String?): Tone? {
     val v = colour?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: return null
+    // A palette name (`lights`, `gregg`, `alarm_home`, `ok`…): the house's own colour for that kind of thing.
+    toneForKey(v)?.let { return it }
     when (v) {
         "green", "light-green", "lime" -> return Tone.Green
         "blue", "light-blue" -> return Tone.Blue
