@@ -119,11 +119,12 @@ fun readableOn(c: Color, toward: Color, on: Color, min: Float = 4.5f): Color {
 }
 
 /**
- * Dark: the set's Dark ground with its Colour for text and the strong colour (lifted towards its Light where it would be too dim to read). Light: a soft tint of its Light over white, with its
+ * Dark: the set's Dark ground with its Light for text and icons, and its Colour for the strong colour (lifted towards its Light where it would be too dim to read). Light: a soft tint of its Light over white, with its
  * Deep for text and its Colour as the strong one; text on the strong colour is the set's Dark either way.
  */
 private fun colorsOf(set: EntityColours, dark: Boolean): ToneColors =
-    if (dark) readableOn(set.colour, set.light, set.dark).let { text -> ToneColors(set.dark, text, text, set.dark) }
+    // Text and icons are the set's Light on its dark ground (not its colour), so every card reads the same; the colour is for the strong parts (selected tiles, gauges, lines).
+    if (dark) readableOn(set.colour, set.light, set.dark).let { strong -> ToneColors(set.dark, set.light, strong, set.dark) }
     else ToneColors(lerp(Color.White, set.light, 0.38f), set.deep, set.colour, set.dark)
 
 private fun neutralColors(dark: Boolean): ToneColors =

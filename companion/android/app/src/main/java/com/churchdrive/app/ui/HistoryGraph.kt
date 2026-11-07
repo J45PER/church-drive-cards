@@ -161,6 +161,8 @@ class GraphLayer(
     val bandColour: Color = Color.Unspecified,
     /** Dotted lines (humidity limits). */
     val guides: List<Double> = emptyList(),
+    /** Colours the line by its value (a blended vertical gradient over this graph's scale), as the dashboard's air quality graph does: value to colour, low to high. Null: all [colour]. */
+    val scale: List<Pair<Double, Color>>? = null,
     /** The target, as a dashed line across. */
     val target: Double? = null,
 )
@@ -225,6 +227,13 @@ fun LineGraph(layers: List<GraphLayer>, from: Long, now: Long, smooth: Boolean, 
                 }
                 val xy = layer.points.map { Offset(x(it.time), y(it.value)) }
                 val line = curvePath(xy, smooth)
+                val brush = layer.scale?.takeIf { it.isNotEmpty() }?.let { sc ->
+                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                        colorStops = Array(21) { k -> (k / 20f) to blendScale(layer.hi - (layer.hi - layer.lo) * k / 20.0, sc) },
+                        startY = pad,
+                        endY = h - pad,
+                    )
+                }
                 if (layer.fill) {
                     val area = Path().apply {
                         addPath(line)
@@ -232,9 +241,10 @@ fun LineGraph(layers: List<GraphLayer>, from: Long, now: Long, smooth: Boolean, 
                         lineTo(xy.first().x, h)
                         close()
                     }
-                    drawPath(area, layer.colour.copy(alpha = 0.16f))
+                    if (brush != null) drawPath(area, brush, alpha = 0.16f) else drawPath(area, layer.colour.copy(alpha = 0.16f))
                 }
-                drawPath(line, layer.colour, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+                if (brush != null) drawPath(line, brush, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+                else drawPath(line, layer.colour, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
                 layer.target?.let { t ->
                     drawLine(layer.colour, Offset(0f, y(t)), Offset(w, y(t)), 1.5.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 4.dp.toPx())))
                 }
@@ -252,6 +262,19 @@ fun LineGraph(layers: List<GraphLayer>, from: Long, now: Long, smooth: Boolean, 
             }
         }
     }
+}
+
+/** The colour for [v] on a scale of value-to-colour anchors, blended between the two either side. */
+fun blendScale(v: Double, anchors: List<Pair<Double, Color>>): Color {
+    if (v <= anchors.first().first) return anchors.first().second
+    for (i in 1 until anchors.size) {
+        val (b, cb) = anchors[i]
+        if (v <= b) {
+            val (a, ca) = anchors[i - 1]
+            return androidx.compose.ui.graphics.lerp(ca, cb, ((v - a) / (b - a)).toFloat().coerceIn(0f, 1f))
+        }
+    }
+    return anchors.last().second
 }
 
 private const val GRAPH_HOURS = 24
@@ -384,7 +407,7 @@ private fun ClimateGraphBody(h: ClimateHistory, currentTemp: Double?, target: Do
 
 /** A graph of one sensor's numeric history, smoothed (such as the air purifier's PM2.5, in the colour of its reading). */
 @Composable
-fun SensorGraph(id: String, hours: Int, unit: String, colour: Color, ink: Color, smooth: Boolean = true) {
+fun SensorGraph(id: String, hours: Int, unit: String, colour: Color, ink: Color, smooth: Boolean = true, scale: List<Pair<Double, Color>>? = null) {
     val load = LocalHistory.current
     var history by remember { mutableStateOf<Map<String, List<Pair<Long, String>>>>(emptyMap()) }
     LaunchedEffect(id, hours) {
@@ -401,7 +424,7 @@ fun SensorGraph(id: String, hours: Int, unit: String, colour: Color, ink: Color,
     val lo = series.minOf { it.value } - 1
     val hi = series.maxOf { it.value } + 1
     LineGraph(
-        listOf(GraphLayer(series, colour, lo, hi, { "${it.roundToInt()}$unit" }, fill = true)),
+        listOf(GraphLayer(series, colour, lo, hi, { "${it.roundToInt()}$unit" }, fill = true, scale = scale)),
         from, now, smooth, ink, listOf("last $hours h" to ink.copy(alpha = 0.7f)),
     )
 }

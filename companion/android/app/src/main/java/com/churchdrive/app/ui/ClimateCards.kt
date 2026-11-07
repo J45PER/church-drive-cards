@@ -218,7 +218,16 @@ fun AirPurifierCard(config: JSONObject, entities: Map<String, EntityState>, call
             }
         }
         if (config.optBoolean("show_graph", true) && config.optString("pm25_entity").isNotBlank()) {
-            SensorGraph(config.optString("pm25_entity"), 24, " µg/m³", tone.accent, tone.onContainer, config.optBoolean("smooth_graphs", true))
+            SensorGraph(
+                config.optString("pm25_entity"), 24, " µg/m³", tone.accent, tone.onContainer, config.optBoolean("smooth_graphs", true),
+                // Coloured by value, as on the dashboard: each band's colour in the middle of its band, blending into the next.
+                scale = listOf(
+                    21.0 to toneColors(Tone.QualityGood).accent,
+                    55.0 to toneColors(Tone.QualityFair).accent,
+                    95.0 to toneColors(Tone.QualityPoor).accent,
+                    135.0 to toneColors(Tone.Red).accent,
+                ),
+            )
         }
         if (allergen != null) Text("Allergen index ${allergen.roundToInt()}", style = MaterialTheme.typography.bodyMedium)
         TileRow(

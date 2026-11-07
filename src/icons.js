@@ -64,6 +64,9 @@ function escapeAttr(text) {
   return String(text).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
 }
 
+// Material names the house set draws under a different name (the ones the purifier, fan and climate cards use).
+const MDI_TO_HOUSE = { autorenew: 'sync', 'power-sleep': 'weather-night', 'weather-windy-variant': 'weather-windy', 'thermostat-auto': 'thermostat-auto' };
+
 // HTML for an icon. `style` is applied to the outer element; `size` is a CSS
 // length (e.g. "24px" or "40cqw").
 export function iconHtml(icon, { size = '24px', style = '', cls = '' } = {}) {
@@ -75,7 +78,7 @@ export function iconHtml(icon, { size = '24px', style = '', cls = '' } = {}) {
   }
   // An mdi icon the house set has under the same name (cog, fan, fire, lock…) is drawn with the house's own.
   const sameName = /^mdi:(.+)$/.exec(icon || '');
-  const house = sameName && SHAPES[sameName[1]];
+  const house = sameName && SHAPES[MDI_TO_HOUSE[sameName[1]] || sameName[1]];
   const own = CLIVE_ICONS[icon] || (house && { path: house.path, viewBox: house.viewBox, evenodd: house.evenodd });
   if (own) {
     return `<span class="${cls}" style="display:inline-flex; width:${size}; height:${size}; ${style}">${svg(own, '100%')}</span>`;
