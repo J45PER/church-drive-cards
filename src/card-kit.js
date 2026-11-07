@@ -766,8 +766,10 @@ export function kitConfigEntities(hass, conf, out = new Set(), depth = 0) {
   return out;
 }
 
-// A card to hide: everything it names is someone else's.
+// A card to hide: it is for administrators only (`admin_only: true` on the card) and this person is not one, or everything it names is
+// someone else's. A panel whose cards are all hidden goes too.
 export function kitCardDenied(hass, conf) {
+  if (conf && conf.admin_only && !(hass && hass.user && hass.user.is_admin)) return true;
   if (!accessOf(hass)) return false;
   const ids = [...kitConfigEntities(hass, conf)];
   return ids.length > 0 && ids.every((id) => !kitCanUse(hass, id));
