@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.105.1
+
+- Built-in colours updated (see the phone app); the update banner is neutral.
+
 ## 0.105.0
 
 - Live colours (see the phone app).

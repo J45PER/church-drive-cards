@@ -114,7 +114,7 @@ fun PhoneSetupPrompt(settings: AccountSettings) {
     }
 
     if (missing.isEmpty()) return
-    val tone = toneColors(Tone.Amber)
+    val tone = toneColors(Tone.Grey)
     Box {
         EntityCard(tone.container, tone.onContainer) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {

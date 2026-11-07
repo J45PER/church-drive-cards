@@ -79,7 +79,7 @@ fun UpdateNotice(play: Boolean, githubAvailable: Boolean, apkUrl: String, appNam
             runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(apkUrl)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
         }
     }
-    val tone = toneColors(Tone.Blue)
+    val tone = toneColors(Tone.Grey)
     Box(modifier) {
         Surface(
             shape = RoundedCornerShape(28.dp), color = tone.container, contentColor = tone.onContainer,

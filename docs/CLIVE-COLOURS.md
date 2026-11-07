@@ -11,7 +11,7 @@ Each name has five colours: Colour (the thing's own), Dark (the ground), Accent 
 | Name | Meaning | Colour | Dark | Accent | Light | Deep |
 |---|---|---|---|---|---|---|
 | `lights` | Lights | `#FFC857` | `#4E4128` | `#D5A190` | `#FFE4AB` | `#6E572D` |
-| `blinds` | Blinds and windows | `#8FA9C4` | `#313945` | `#8E8DD6` | `#C7D4E2` | `#3F4A5A` |
+| `blinds` | Blinds and windows | `#5FA9C4` | `#253945` | `#6F8DD6` | `#AFD4E2` | `#2B4A5A` |
 | `plugs` | Plugs and switches | `#A8E05F` | `#38482A` | `#9EB095` | `#D4F0AF` | `#496230` |
 | `gregg` | Gregg (the vacuum) | `#4C8DFF` | `#203254` | `#637BFC` | `#A6C6FF` | `#233F73` |
 
@@ -19,7 +19,7 @@ Each name has five colours: Colour (the thing's own), Dark (the ground), Accent 
 
 | Name | Meaning | Colour | Dark | Accent | Light | Deep |
 |---|---|---|---|---|---|---|
-| `heating` | Heating | `#FF8A4C` | `#4E3126` | `#D57989` | `#FFC4A6` | `#6E3D28` |
+| `heating` | Heating | `#FF6C2C` | `#4E291D` | `#D56675` | `#FFB696` | `#6E311B` |
 | `cooling` | Cooling and AC | `#6CC8FF` | `#284154` | `#77A1FC` | `#B6E4FF` | `#305773` |
 | `air` | Air and fans | `#3FD0CF` | `#1C4348` | `#5AA6DD` | `#9FE8E7` | `#1D5B5F` |
 
@@ -29,7 +29,7 @@ Each name has five colours: Colour (the thing's own), Dark (the ground), Accent 
 |---|---|---|---|---|---|---|
 | `energy` | Electricity | `#F050F8` | `#4A2252` | `#CC54F7` | `#F8A8FC` | `#682570` |
 | `gas` | Gas | `#7B61FF` | `#2C2754` | `#815FFC` | `#BDB0FF` | `#372C73` |
-| `car` | Car and charger | `#5BE0B3` | `#244840` | `#6CB0CB` | `#ADF0D9` | `#296253` |
+| `car` | Car and charger | `#00C6F9` | `#0C4153` | `#32A0F8` | `#80E3FC` | `#035771` |
 
 ## Security
 
@@ -42,10 +42,10 @@ Each name has five colours: Colour (the thing's own), Dark (the ground), Accent 
 
 | Name | Meaning | Colour | Dark | Accent | Light | Deep |
 |---|---|---|---|---|---|---|
-| `alarm_home` | Alarm: Armed Home | `#4DA3FF` | `#203854` | `#6389FC` | `#A6D1FF` | `#234873` |
+| `alarm_home` | Alarm: Armed Home | `#2E62FF` | `#182754` | `#4F60FC` | `#97B1FF` | `#162D73` |
 | `alarm_away` | Alarm: Armed Away | `#F4736C` | `#4B2B2E` | `#CE6B9E` | `#FAB9B6` | `#693435` |
-| `alarm_off` | Alarm: Disarmed | `#55C47C` | `#224032` | `#689FA8` | `#AAE2BE` | `#27563C` |
-| `arming_home` | Alarm: Arming Home | `#FFAA1F` | `#4E3A1A` | `#4DA3FF` | `#FFD48F` | `#6E4B15` |
+| `alarm_off` | Alarm: Disarmed | `#36E67C` | `#1A4932` | `#55B4A8` | `#9BF3BE` | `#1A643C` |
+| `arming_home` | Alarm: Arming Home | `#FFAA1F` | `#4E3A1A` | `#2E62FF` | `#FFD48F` | `#6E4B15` |
 | `arming_away` | Alarm: Arming Away | `#FF8533` | `#4E301F` | `#F4736C` | `#FFC299` | `#6E3B1E` |
 
 ## Media and people
@@ -53,7 +53,7 @@ Each name has five colours: Colour (the thing's own), Dark (the ground), Accent 
 | Name | Meaning | Colour | Dark | Accent | Light | Deep |
 |---|---|---|---|---|---|---|
 | `media` | Media and music | `#FF6F91` | `#4E2A37` | `#D568B5` | `#FFB7C8` | `#6E3245` |
-| `people` | People and presence | `#55C47C` | `#224032` | `#689FA8` | `#AAE2BE` | `#27563C` |
+| `people` | People and presence | `#00AE7C` | `#0C3B32` | `#3290A8` | `#80D7BE` | `#034D3C` |
 
 ## Lists and time
 
@@ -61,19 +61,19 @@ Each name has five colours: Colour (the thing's own), Dark (the ground), Accent 
 |---|---|---|---|---|---|---|
 | `tasks` | To-do and lists (My to-do) | `#A5B4FC` | `#373C53` | `#9C94FA` | `#D2DAFE` | `#484F72` |
 | `shopping` | Shopping (and shopping lists) | `#FF9C8A` | `#4E3636` | `#D585B1` | `#FFCEC4` | `#6E4542` |
-| `calendar` | Calendar and events | `#D9A441` | `#443823` | `#BD8A82` | `#ECD2A0` | `#5E4823` |
-| `todo_shared` | Shared to-do | `#8FA9C4` | `#313945` | `#8E8DD6` | `#C7D4E2` | `#3F4A5A` |
+| `calendar` | Calendar and events | `#D9A4D4` | `#443849` | `#BD8AE0` | `#ECD2EA` | `#5E4861` |
+| `todo_shared` | Shared to-do | `#2FB2D8` | `#183C4A` | `#5093E3` | `#97D8EC` | `#174E63` |
 | `todo_house` | To-do from the house | `#7E6DB5` | `#2D2A41` | `#8367CC` | `#BEB6DA` | `#383154` |
 
 ## Weather and sport
 
 | Name | Meaning | Colour | Dark | Accent | Light | Deep |
 |---|---|---|---|---|---|---|
-| `sunny` | Weather: sunny | `#FFD27A` | `#4E4431` | `#D5A8A7` | `#FFE8BC` | `#6E5C3B` |
+| `sunny` | Weather: sunny | `#FFE552` | `#4E4927` | `#D5B48D` | `#FFF2A9` | `#6E642B` |
 | `night` | Weather: night | `#5C6BC0` | `#242944` | `#6D66D3` | `#AEB5E0` | `#2A3059` |
 | `rain` | Weather: rain and cloud | `#8FA6B8` | `#313842` | `#8E8BCE` | `#C7D2DC` | `#3F4955` |
 | `snow` | Weather: snow | `#BFE8FF` | `#3E4A54` | `#ACB6FC` | `#DFF4FF` | `#536573` |
-| `storm` | Weather: storm | `#8E7CC3` | `#312E44` | `#8D70D5` | `#C6BEE1` | `#3F385A` |
+| `storm` | Weather: storm | `#8E88C1` | `#313144` | `#8D78D4` | `#C7C4E0` | `#3F3D59` |
 | `sport` | Sport | `#6CABDD` | `#283A4B` | `#778FE6` | `#B6D5EE` | `#304B65` |
 
 ## Status
@@ -81,14 +81,14 @@ Each name has five colours: Colour (the thing's own), Dark (the ground), Accent 
 | Name | Meaning | Colour | Dark | Accent | Light | Deep |
 |---|---|---|---|---|---|---|
 | `ok` | OK | `#55C47C` | `#224032` | `#689FA8` | `#AAE2BE` | `#27563C` |
-| `warn` | Needs attention | `#F0B13A` | `#4A3B21` | `#CC927E` | `#F8D89C` | `#684E20` |
-| `bad` | Wrong | `#FF6B6B` | `#4E292E` | `#D5669D` | `#FFB5B5` | `#6E3035` |
+| `warn` | Needs attention | `#F0863A` | `#4A3021` | `#CC777E` | `#F8C39D` | `#683C20` |
+| `bad` | Wrong | `#FF4B56` | `#4E2128` | `#D55190` | `#FFA5AB` | `#6E232C` |
 
 ## People
 
 | Name | Meaning | Colour | Dark | Accent | Light | Deep |
 |---|---|---|---|---|---|---|
-| `person_jamie` | Jamie | `#0087A8` | `#0C303D` | `#3278C4` | `#80C3D4` | `#033C4F` |
+| `person_jamie` | Jamie | `#0087A8` | `#0C303D` | `#CFFF00` | `#80C3D4` | `#033C4F` |
 | `person_hayley` | Hayley | `#D568B5` | `#432841` | `#BA64CC` | `#EAB4DA` | `#5C2F54` |
 | `person_ian` | Ian | `#5A87CC` | `#233047` | `#6C78DB` | `#ACC3E6` | `#293C5E` |
 | `person_diane` | Diane | `#8F62D9` | `#31274A` | `#8E60E3` | `#C7B0EC` | `#3F2D63` |
