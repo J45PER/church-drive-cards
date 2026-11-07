@@ -143,7 +143,8 @@ object CdIcons {
         "mdi:microphone", "mdi:microphone-outline", "mdi:microphone-variant" -> "cd:mic"
         "mdi:microphone-off", "mdi:microphone-variant-off" -> "cd:mic-off"
         "mdi:microphone-message" -> "cd:mic-message"
-        else -> icon
+        // Any other mdi icon the house set has under the same name (cog, fan, fire, lock…) is drawn with the house's own.
+        else -> icon?.takeIf { it.startsWith("mdi:") }?.removePrefix("mdi:")?.takeIf { icons.containsKey(it) }?.let { "cd:$it" } ?: icon
     }
 }
 

@@ -174,7 +174,7 @@ private fun CompanionScreen(connected: Boolean, onExit: () -> Unit) {
                 }
             }
             if (loaded && nested == null && pages.size > 1) PageDots(hState, pages.size)
-            LoadingRing(visible = !live, label = if (connected) "Updating" else "Connecting")
+            LoadingRing(visible = !live, label = if (connected) "Syncing" else "Connecting")
             // The strip at the left edge: swiping in from it goes back a level, and from the first level leaves the app.
             Box(
                 Modifier.align(Alignment.CenterStart).width(ui.d(26f)).fillMaxHeight().pointerInput(stack.size) {

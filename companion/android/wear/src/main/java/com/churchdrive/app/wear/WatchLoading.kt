@@ -43,7 +43,7 @@ private const val ARC_SWEEP = 120f
  * so the remembered page can be used meanwhile, and it fades away when the live answer is in.
  */
 @Composable
-fun BoxScope.LoadingRing(visible: Boolean, label: String = "Updating") {
+fun BoxScope.LoadingRing(visible: Boolean, label: String = "Syncing") {
     val alpha by animateFloatAsState(if (visible) 1f else 0f, tween(350), label = "loading")
     if (alpha <= 0.01f) return
     val ui = LocalUi.current

@@ -118,3 +118,9 @@ test('the card glow: a card can turn it on or off, the mobile dashboard has it b
   assert.equal(kitGlowOn({ _config: {} }), false);
   assert.equal(kitGlowOn({ _config: { glow: true } }), true);
 });
+
+test('an mdi icon the house set has under the same name is drawn with the house icon', async () => {
+  const { iconHtml } = await import('../src/icons.js');
+  assert.match(iconHtml('mdi:cog'), /<svg/);
+  assert.match(iconHtml('mdi:definitely-not-an-icon-name'), /<ha-icon/);
+});
