@@ -6,6 +6,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 ## 0.110.0
 
+- The Doors & Motion card says "Door closed" or "Door open 4 min", with one status under the title instead of two.
 - The air purifier card keeps the button you pressed highlighted until the purifier confirms the change (up to half a minute) instead of jumping back.
 
 ## 0.109.0

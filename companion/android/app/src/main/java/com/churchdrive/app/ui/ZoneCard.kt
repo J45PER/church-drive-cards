@@ -117,16 +117,16 @@ fun ZoneCard(config: JSONObject, entities: Map<String, EntityState>, call: CallS
         }
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(cfg.name, style = MaterialTheme.typography.titleLarge, maxLines = 1)
-            Text(view.word, style = MaterialTheme.typography.titleMedium, color = tone.accent, maxLines = 1, modifier = Modifier.weight(1f))
         }
+        // One status, under the title.
+        ZoneChip(view)
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Strip(view.tracks, now, cfg.hours, cfg.ticks, ink, Modifier.weight(1f), scrub) { scrub = it }
-                ZoneChip(view)
             }
             val from = now - cfg.hours * 3_600_000L
             val span = cfg.hours * 3_600_000L
-            Row(modifier = Modifier.fillMaxWidth().padding(end = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 listOf(0.0, 0.25, 0.5, 0.75).forEach { f ->
                     Text(clockMs(from + (f * span).toLong()), fontSize = 10.sp, color = ink.copy(alpha = 0.6f))
                 }
@@ -157,12 +157,12 @@ private fun ZoneChip(view: ZoneView) {
     val (bg, fg) = when {
         view.level == ZoneLevel.Motion ->
             (if (view.chip == "Doorbell") kindColour(ZoneKind.Ring) else toneColors(Tone.Indigo).accent) to Color.White
-        view.level == ZoneLevel.Ok && view.chip == "Closed" -> green.accent.copy(alpha = 0.22f) to green.accent
+        view.level == ZoneLevel.Ok && view.word == "Door closed" -> green.accent.copy(alpha = 0.22f) to green.accent
         view.level == ZoneLevel.Ok || view.level == ZoneLevel.Off -> Color.Gray.copy(alpha = 0.22f) to Color.Gray
         else -> tone.accent.copy(alpha = 0.22f) to tone.accent
     }
     Box(modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(bg).padding(horizontal = 10.dp, vertical = 3.dp)) {
-        Text(view.chip, color = fg, fontSize = 11.sp, maxLines = 1)
+        Text(view.word, color = fg, fontSize = 13.sp, maxLines = 1)
     }
 }
 

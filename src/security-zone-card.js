@@ -74,8 +74,8 @@ function szDemo(config) {
       ['door', ticks([612, 396, 258, 64, ...(kind === 'open' ? [] : [])]).concat(kind === 'open' ? [[now - 4 * m, now]] : [])],
       ['ring', ticks([397])],
     ],
-    word: { quiet: 'Closed', motion: 'Motion just now', open: 'Open 4 min', tamper: 'Tamper' }[kind],
-    chip: { quiet: 'Closed', motion: 'Motion', open: 'Open', tamper: 'Tampered' }[kind],
+    word: { quiet: 'Door closed', motion: 'Motion just now', open: 'Door open 4 min', tamper: 'Tamper' }[kind],
+    chip: { quiet: 'Door closed', motion: 'Motion', open: 'Open', tamper: 'Tampered' }[kind],
     level: { quiet: 'ok', motion: 'motion', open: 'open', tamper: 'tamper' }[kind],
     warn: kind === 'tamper' ? `Door sensor tampered with at ${clock(now - 3 * m)}` : '',
     last: kind === 'open' ? `Open since ${clock(now - 4 * m)} · motion ${clock(now - 62 * m)}` : `Closed since ${clock(now - 64 * m)} · motion ${clock(now - (kind === 'motion' ? 0 : 62) * m)} · rang ${clock(now - 397 * m)}`,
@@ -251,12 +251,12 @@ export class SecurityZoneCard extends HTMLElement {
     const ids = [c.door_entity, ...(c.motion_entities || []), c.doorbell_entity].filter(Boolean);
     const unavailable = ids.length && ids.every((id) => !s(id) || s(id).state === 'unavailable');
 
-    let level = 'ok', word = door ? 'Closed' : 'Quiet', chip = door ? 'Closed' : 'Quiet', warn = '';
+    let level = 'ok', word = door ? 'Door closed' : 'Quiet', chip = door ? 'Door closed' : 'Quiet', warn = '';
     if (moving) [level, word, chip] = ['motion', 'Motion just now', 'Motion'];
     if (ringing) [level, word, chip] = ['motion', 'Doorbell just now', 'Doorbell'];
     if (open) {
       const mins = Math.max(0, Math.round((now - Date.parse(door.last_changed)) / 60e3));
-      [level, word, chip] = [armed ? 'tamper' : 'open', armed ? 'Open while armed' : mins < 1 ? 'Just opened' : `Open ${mins} min`, 'Open'];
+      [level, word, chip] = [armed ? 'tamper' : 'open', armed ? 'Door open while armed' : mins < 1 ? 'Door just opened' : `Door open ${mins} min`, 'Open'];
     }
     if (tampered.length) {
       level = 'tamper';
@@ -287,13 +287,13 @@ export class SecurityZoneCard extends HTMLElement {
     if (!this._built) {
       this.innerHTML = kitShell(
         `
+        <div class="sz-status" style="display:flex;"><span class="ck-chip sz-chip" style="font-size:0.8rem; padding:2px 10px;"></span></div>
         <div class="sz-warn" style="display:none; align-items:center; gap:8px; padding:8px 10px; border-radius:10px; background:${KIT_COLOR.bad}; color:#fff; font-weight:600; font-size:0.85rem;"></div>
         <div style="display:flex; flex-direction:column; gap:4px;">
           <div style="display:flex; align-items:center; gap:8px;">
             <div class="sz-strip"></div>
-            <span class="ck-chip sz-chip"></span>
           </div>
-          <div class="sz-axis ck-sub" style="display:flex; justify-content:space-between; font-size:0.66rem; font-variant-numeric:tabular-nums; margin-right:var(--sz-chip-w, 0px);"></div>
+          <div class="sz-axis ck-sub" style="display:flex; justify-content:space-between; font-size:0.66rem; font-variant-numeric:tabular-nums;"></div>
         </div>
         <div class="sz-last ck-sub" style="font-size:0.76rem;"></div>
         <div class="sz-bats" style="display:flex; flex-direction:column; gap:3px;"></div>
@@ -328,7 +328,8 @@ export class SecurityZoneCard extends HTMLElement {
     const d = this._data();
     const colour = { tamper: KIT_COLOR.bad, open: KIT_COLOR.fair, off: KIT_COLOR.off }[d.level] || SZ_COLOR.zone;
     const tint = { tamper: 18, open: 10 }[d.level] || 0;
-    this._word = d.word + (this._demo ? ' · demo' : '');
+    // One status, in the chip below the title; the head's word slot is only for the readout while scrubbing the timeline.
+    this._word = this._demo ? 'demo' : '';
     if (!this._scrubbing) kitHead(this, c.name || 'Zone', this._word, colour, tint);
     else kitHead(this, c.name || 'Zone', this.querySelector('.ck-word').textContent, colour, tint);
 
@@ -337,8 +338,8 @@ export class SecurityZoneCard extends HTMLElement {
     if (d.warn) warn.innerHTML = `${iconHtml('mdi:alert', { size: '20px' })}<span>${kitEsc(d.warn)}</span>`;
 
     const chip = this.querySelector('.sz-chip');
-    const chipCol = d.level === 'motion' ? (d.chip === 'Doorbell' ? SZ_COLOR.ring : SZ_COLOR.zone) : d.level === 'ok' && d.chip === 'Closed' ? KIT_COLOR.good : d.level === 'ok' || d.level === 'off' ? null : colour;
-    chip.textContent = d.chip;
+    const chipCol = d.level === 'motion' ? (d.chip === 'Doorbell' ? SZ_COLOR.ring : SZ_COLOR.zone) : d.level === 'ok' && d.word === 'Door closed' ? KIT_COLOR.good : d.level === 'ok' || d.level === 'off' ? null : colour;
+    chip.textContent = d.word;
     chip.style.color = d.level === 'motion' ? '#fff' : chipCol || 'var(--secondary-text-color)';
     chip.style.background = d.level === 'motion' ? chipCol : chipCol ? `color-mix(in srgb, ${chipCol} 22%, transparent)` : 'rgba(127,127,127,.2)';
 
@@ -417,8 +418,6 @@ export class SecurityZoneCard extends HTMLElement {
       });
     }
     this._stripEl.innerHTML = `${html}<span class="sz-cursor"></span>`;
-    const chip = this.querySelector('.sz-chip');
-    this.querySelector('.sz-axis').style.setProperty('--sz-chip-w', `${(chip.offsetWidth || 0) + 8}px`);
     this.querySelector('.sz-axis').innerHTML = [0, 0.25, 0.5, 0.75].map((f) => `<span>${clock(from + f * span)}</span>`).join('') + '<span>now</span>';
   }
 
