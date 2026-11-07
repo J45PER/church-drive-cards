@@ -904,11 +904,11 @@
         "name": "Gregg (the vacuum)",
         "group": "Home",
         "colours": [
-          "#5BE0B3",
-          "#244840",
-          "#6CB0CB",
-          "#ADF0D9",
-          "#296253"
+          "#4C8DFF",
+          "#203254",
+          "#637BFC",
+          "#A6C6FF",
+          "#233F73"
         ]
       },
       "heating": {
@@ -970,11 +970,11 @@
         "name": "Car and charger",
         "group": "Energy and car",
         "colours": [
-          "#4C8DFF",
-          "#203254",
-          "#637BFC",
-          "#A6C6FF",
-          "#233F73"
+          "#5BE0B3",
+          "#244840",
+          "#6CB0CB",
+          "#ADF0D9",
+          "#296253"
         ]
       },
       "alarm": {
@@ -1264,9 +1264,9 @@
         "#FFB7C8"
       ],
       "car": [
-        "#4C8DFF",
-        "#637BFC",
-        "#A6C6FF"
+        "#5BE0B3",
+        "#6CB0CB",
+        "#ADF0D9"
       ],
       "climate": [
         "#FF8A4C",
@@ -1274,9 +1274,9 @@
         "#FFC4A6"
       ],
       "gregg": [
-        "#5BE0B3",
-        "#6CB0CB",
-        "#ADF0D9"
+        "#4C8DFF",
+        "#637BFC",
+        "#A6C6FF"
       ],
       "air": [
         "#3FD0CF",

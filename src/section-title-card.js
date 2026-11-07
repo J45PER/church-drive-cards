@@ -7,6 +7,7 @@ import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { kitNavigate } from './card-kit.js';
 import { SUFFIX, LABEL } from './suffix.js';
+import { clive } from './clive-colours.js';
 
 // A colour as HA's colour picker gives it ("green", "deep-orange") or any CSS
 // colour ("#55c47c").
@@ -19,7 +20,7 @@ const STC_FALLBACK = {
 export function stcColor(color) {
   if (!color) return 'var(--primary-text-color)';
   if (/^(#|rgb|hsl|var\()/.test(color)) return color;
-  return `var(--${color}-color, ${STC_FALLBACK[color] || color})`;
+  return `var(--${color}-color, ${STC_FALLBACK[color] || clive(color) || color})`;
 }
 
 // Last result of each template, kept in memory and on the device, so a card

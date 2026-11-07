@@ -90,7 +90,7 @@ fun CleaningPage(entities: Map<String, EntityState>, call: CallService) {
     val vac = entities[VACUUM_ENTITY]
     val battery = entities[VACUUM_BATTERY]
     val tone = toneColors(vacuumTone(vac))
-    val blue = toneColors(Tone.Blue)
+    val blue = toneColors(Tone.Gregg)
     val red = toneColors(Tone.Red)
     val green = toneColors(Tone.Green)
     val yellow = toneColors(Tone.Amber)

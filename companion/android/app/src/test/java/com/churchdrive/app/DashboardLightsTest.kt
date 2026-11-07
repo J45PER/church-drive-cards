@@ -2,6 +2,9 @@ package com.churchdrive.app
 
 import com.churchdrive.app.ui.DashboardLights
 import com.churchdrive.app.ui.LightLayout
+import com.churchdrive.app.ui.FloorLook
+import com.churchdrive.app.ui.Tone
+import com.churchdrive.app.ui.toneFromColour
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -68,6 +71,15 @@ class DashboardLightsTest {
         val garden = floors[0].second[0]
         assertEquals("The garden", garden.title)
         assertEquals(1, garden.scenes.size)
+    }
+
+    @Test
+    fun aFloorKeepsTheIconAndColourTheDashboardGivesIt() {
+        val cfg = JSONObject("""{"views":[{"path":"lighting","sections":[{"cards":[{"type":"custom:section-panel-card","title":"Ground Floor","icon":"cd:floor-0","color":"lights","cards":[{"type":"custom:light-control-card","area":"kitchen","entities":[{"entity":"light.kitchen"}]}]}]}]}]}""")
+        val layout = DashboardLights.parse(cfg)
+        assertEquals(FloorLook("cd:floor-0", "lights"), layout.looks["Ground Floor"])
+        assertEquals(Tone.Lights, toneFromColour("lights"))
+        assertEquals(Tone.Gregg, toneFromColour("gregg"))
     }
 
     @Test

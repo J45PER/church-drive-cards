@@ -4,7 +4,7 @@
 import { CLIVE } from './clive-colours.js';
 
 const NAMED = {
-  red: 'bad', pink: 'media', purple: 'doors', 'deep-purple': 'alarm', indigo: 'tasks', blue: 'car', 'light-blue': 'cooling',
+  red: 'bad', pink: 'media', purple: 'doors', 'deep-purple': 'alarm', indigo: 'tasks', blue: 'alarm_home', 'light-blue': 'cooling',
   cyan: 'air', teal: 'air', green: 'ok', 'light-green': 'plugs', lime: 'plugs', yellow: 'lights', amber: 'warn', orange: 'warn',
   'deep-orange': 'heating', brown: 'blinds', 'blue-grey': 'rain',
 };
@@ -18,7 +18,7 @@ export function cliveThemeCss() {
     'success-color': hex('ok'),
     'warning-color': hex('warn'),
     'error-color': hex('bad'),
-    'info-color': hex('car'),
+    'info-color': hex('alarm_home'),
     'state-active-color': hex('alarm'),
     'state-error-color': hex('bad'),
     'state-warning-color': hex('warn'),
@@ -35,6 +35,8 @@ export function cliveThemeCss() {
     'state-alarm_triggered-color': hex('bad'),
   };
   for (const [name, key] of Object.entries(NAMED)) v[`${name}-color`] = hex(key);
+  // A card's `color` may also be a palette name (lights, gregg, alarm_home…): `var(--lights-color)` is the house's own.
+  for (const key of Object.keys(CLIVE)) v[`${key}-color`] = hex(key);
   const lines = Object.entries(v).map(([k, c]) => `  --${k}: ${c};` + (/^(primary|accent)-color$/.test(k) ? ` --rgb-${k}: ${rgb(c)};` : ''));
   return `:root, html, body {\n${lines.join('\n')}\n}`;
 }

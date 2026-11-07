@@ -169,7 +169,15 @@ private val FALLBACK_FLOORS: List<Pair<String, List<LightRoom>>> = listOf(
 )
 
 /** The rooms on the Home page, and the floors of rooms on the Lighting page. */
-data class LightLayout(val home: List<LightRoom>, val floors: List<Pair<String, List<LightRoom>>>) {
+/** A floor panel's own icon (`cd:floor-0`) and colour (a palette name or an HA colour) as the dashboard sets them; either may be blank. */
+data class FloorLook(val icon: String?, val color: String?)
+
+data class LightLayout(
+    val home: List<LightRoom>,
+    val floors: List<Pair<String, List<LightRoom>>>,
+    /** Each floor's look by its title, from the dashboard; a floor with none is drawn with the bulb in the lights colour. */
+    val looks: Map<String, FloorLook> = emptyMap(),
+) {
     companion object {
         val Fallback = LightLayout(FALLBACK_HOME_ROOMS, FALLBACK_FLOORS)
     }
@@ -434,8 +442,12 @@ object LightHoldHint {
 @Composable
 fun LightingPage(layout: LightLayout, entities: Map<String, EntityState>, areaNames: Map<String, String>, call: CallService) {
     layout.floors.forEach { (floor, rooms) ->
+        val look = layout.looks[floor]
         SectionPanel(
-            floor, icon = CdVectors.Bulb, tone = Tone.Lights,
+            floor,
+            icon = if (look?.icon.isNullOrBlank()) CdVectors.Bulb else null,
+            iconName = look?.icon?.takeIf { it.isNotBlank() },
+            tone = toneFromColour(look?.color) ?: Tone.Lights,
             summary = lightsSummary(rooms, entities),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -456,4 +468,4 @@ fun allRoomsByFloor(layout: LightLayout): List<Pair<String, List<LightRoom>>> {
 }
 
 /** A colour that stands for a scene on a button: its own first colour, else a neutral blue. */
-fun sceneSwatch(key: String): Color = SCENE_COLOURS[key]?.firstOrNull() ?: CliveColours.Car.colour
+fun sceneSwatch(key: String): Color = SCENE_COLOURS[key]?.firstOrNull() ?: CliveColours.AlarmHome.colour

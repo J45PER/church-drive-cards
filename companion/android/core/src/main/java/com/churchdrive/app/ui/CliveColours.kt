@@ -18,7 +18,7 @@ object CliveColours {
     /** Plugs and switches. */
     val Plugs = EntityColours(Color(0xFFA8E05F), Color(0xFF38482A), Color(0xFF9EB095), Color(0xFFD4F0AF), Color(0xFF496230))
     /** Gregg (the vacuum). */
-    val Gregg = EntityColours(Color(0xFF5BE0B3), Color(0xFF244840), Color(0xFF6CB0CB), Color(0xFFADF0D9), Color(0xFF296253))
+    val Gregg = EntityColours(Color(0xFF4C8DFF), Color(0xFF203254), Color(0xFF637BFC), Color(0xFFA6C6FF), Color(0xFF233F73))
     /** Heating. */
     val Heating = EntityColours(Color(0xFFFF8A4C), Color(0xFF4E3126), Color(0xFFD57989), Color(0xFFFFC4A6), Color(0xFF6E3D28))
     /** Cooling and AC. */
@@ -30,7 +30,7 @@ object CliveColours {
     /** Gas. */
     val Gas = EntityColours(Color(0xFF7B61FF), Color(0xFF2C2754), Color(0xFF815FFC), Color(0xFFBDB0FF), Color(0xFF372C73))
     /** Car and charger. */
-    val Car = EntityColours(Color(0xFF4C8DFF), Color(0xFF203254), Color(0xFF637BFC), Color(0xFFA6C6FF), Color(0xFF233F73))
+    val Car = EntityColours(Color(0xFF5BE0B3), Color(0xFF244840), Color(0xFF6CB0CB), Color(0xFFADF0D9), Color(0xFF296253))
     /** Alarm and security. */
     val Alarm = EntityColours(Color(0xFF8A86FF), Color(0xFF303054), Color(0xFF8A77FC), Color(0xFFC4C2FF), Color(0xFF3D3C73))
     /** Doors and locks. */

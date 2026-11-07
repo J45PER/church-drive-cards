@@ -56,3 +56,11 @@ test('the dashboard theme sets the named colours and the status colours from the
   assert.match(css, /--error-color: #ff6b6b;/);
   assert.match(css, /--rgb-primary-color: \d+, \d+, \d+;/);
 });
+
+test('a card colour can be a palette name, and Cleaning (Gregg) is the bright blue while the car is the mint', async () => {
+  const { cliveThemeCss } = await import('../src/clive-theme.js');
+  const css = cliveThemeCss();
+  assert.match(css, /--lights-color: #ffc857;/);
+  assert.match(css, /--gregg-color: #4c8dff;/);
+  assert.match(css, /--car-color: #5be0b3;/);
+});
