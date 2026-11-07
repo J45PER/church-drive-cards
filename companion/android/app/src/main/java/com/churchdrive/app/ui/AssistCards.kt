@@ -80,7 +80,7 @@ fun personPill(state: String): Pair<String, Tone> = when (state.trim().lowercase
 fun climatePill(state: String): Pair<String, Tone> = when (state.trim().lowercase()) {
     "heating", "idle", "heat" -> state.trim().replaceFirstChar { it.uppercase() } to Tone.Orange
     "eco" -> "Eco" to Tone.Green
-    "cooling", "cool" -> "Cooling" to Tone.Blue
+    "cooling", "cool" -> "Cooling" to Tone.Cooling
     "off", "" -> "Off" to Tone.Grey
     else -> state.trim() to Tone.Teal
 }
@@ -353,7 +353,7 @@ fun AssistantCardView(card: AssistantCard, modifier: Modifier = Modifier, morph:
             "gregg" -> {
                 val level = f.number("battery")
                 val state = greggStateFor(f.optString("state"), level)
-                val tone = toneColors(if (state == GreggState.Error) Tone.Red else Tone.Blue)
+                val tone = toneColors(if (state == GreggState.Error) Tone.Red else Tone.Gregg)
                 Text(f.optString("name").ifBlank { "Gregg" }, style = MaterialTheme.typography.titleMedium, color = ink)
                 Text(state.word(), color = tone.accent, style = MaterialTheme.typography.labelMedium, maxLines = 1, modifier = Modifier.background(tone.accent.copy(alpha = 0.18f), CircleShape).padding(horizontal = 10.dp, vertical = 3.dp))
                 val line = listOfNotNull(level?.let { "Battery ${Math.round(it)}%" }, f.number("area")?.let { "${Math.round(it)} m² last clean" }, f.number("minutes")?.let { "${Math.round(it)} min" })

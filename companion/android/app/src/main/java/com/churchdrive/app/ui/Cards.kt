@@ -344,7 +344,7 @@ const val CLIMATE_ENTITY = "climate.downstairs"
 fun climateTone(c: EntityState?): Tone = when {
     c == null || c.state == "off" || !c.available -> Tone.Grey
     c.str("preset_mode") == "eco" -> Tone.Green
-    c.str("hvac_action") == "cooling" -> Tone.Blue
+    c.str("hvac_action") == "cooling" -> Tone.Cooling
     else -> Tone.Orange
 }
 
@@ -502,10 +502,10 @@ const val VACUUM_BATTERY = "sensor.gregg_battery"
 
 fun vacuumTone(v: EntityState?): Tone = when (v?.state) {
     "error" -> Tone.Red
-    "cleaning" -> Tone.Blue
-    "returning" -> Tone.Blue
+    "cleaning" -> Tone.Gregg
+    "returning" -> Tone.Gregg
     null, "unavailable", "unknown" -> Tone.Grey
-    else -> Tone.Blue
+    else -> Tone.Gregg
 }
 
 fun vacuumSummary(v: EntityState?, battery: EntityState?): String {

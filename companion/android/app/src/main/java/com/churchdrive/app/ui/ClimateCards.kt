@@ -346,7 +346,7 @@ fun ForecastHeader(config: JSONObject, entities: Map<String, EntityState>) {
         onDispose { if (subscription >= 0) api?.close(subscription) }
     }
     val weather = entities[entityId] ?: return
-    val tone = toneColors(Tone.Blue)
+    val tone = toneColors(Tone.Sunny)
     val upcoming = points.filter { it.timeMs >= System.currentTimeMillis() - 30 * 60_000L }.take(12)
     EntityCard(tone.container, tone.onContainer) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
