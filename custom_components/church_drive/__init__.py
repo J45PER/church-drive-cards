@@ -61,6 +61,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 from .alarm_lights import AlarmLights
 from .alarm_lights_logic import KINDS as ALARM_LIGHT_TESTS, METHODS as ALARM_LIGHT_METHODS, RULES as ALARM_LIGHT_RULES, WHEN as ALARM_LIGHT_WHEN
 from .apply import async_apply
+from .purifier_schedule import PurifierSchedule
 from .const import (
     CONF_ASSISTANT_NAME,
     DEFAULT_ASSISTANT_NAME,
@@ -106,6 +107,8 @@ from .const import (
     WS_ALARM_LIGHTS_STOP,
     WS_ACTIVITY,
     WS_ALARM_LIGHTS_TEST,
+    WS_PURIFIER_SCHEDULE,
+    WS_PURIFIER_SCHEDULE_SET,
     WS_REMINDER_SET,
     WS_REMINDERS,
     WS_LIBRARY,
@@ -906,6 +909,48 @@ async def ws_reminder_set(hass: HomeAssistant, connection: websocket_api.ActiveC
     connection.send_result(msg["id"], {"reminder": kept})
 
 
+def _purifier_schedule(hass: HomeAssistant) -> PurifierSchedule | None:
+    return hass.data.get(DOMAIN, {}).get("purifier_schedule")
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_PURIFIER_SCHEDULE})
+@callback
+def ws_purifier_schedule(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """The purifier's schedules (days, Auto and Sleep times, each with its "Mon-Fri Auto: 07:00-23:30" text), whether they run, and what's next."""
+    sched = _purifier_schedule(hass)
+    if sched is None:
+        connection.send_error(msg["id"], "not_ready", "The purifier schedule isn't running")
+        return
+    connection.send_result(msg["id"], sched.status())
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_PURIFIER_SCHEDULE_SET,
+        vol.Optional("enabled"): bool,
+        vol.Optional("entity"): cv.entity_id,
+        vol.Optional("schedules"): [
+            {
+                vol.Optional("id"): cv.string,
+                vol.Required("days"): [vol.All(vol.Coerce(int), vol.Range(min=0, max=6))],
+                vol.Required("auto"): cv.string,
+                vol.Required("sleep"): cv.string,
+            }
+        ],
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_purifier_schedule_set(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Change the purifier schedules (only what's sent changes; a schedule list replaces the old one)."""
+    sched = _purifier_schedule(hass)
+    if sched is None:
+        connection.send_error(msg["id"], "not_ready", "The purifier schedule isn't running")
+        return
+    change = {k: v for k, v in msg.items() if k not in ("id", "type")}
+    connection.send_result(msg["id"], await sched.async_set(change))
+
+
 def _alarm_lights(hass: HomeAssistant) -> AlarmLights | None:
     return hass.data.get(DOMAIN, {}).get("alarm_lights")
 
@@ -1229,6 +1274,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss, ws_reminders, ws_reminder_set,
             ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_import,
             ws_alarm_lights, ws_alarm_lights_set, ws_alarm_lights_test, ws_alarm_lights_stop, ws_activity,
+            ws_purifier_schedule, ws_purifier_schedule_set,
         ):
             websocket_api.async_register_command(hass, command)
     # The version in the URL makes browsers fetch the new bundle after an
@@ -1375,6 +1421,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception:  # noqa: BLE001
         _LOGGER.exception("Alarm lights couldn't start; everything else still works")
         data["alarm_lights"] = None
+
+    # The purifier schedule mustn't stop anything else loading either.
+    purifier_schedule = PurifierSchedule(hass)
+    try:
+        await purifier_schedule.async_start()
+        entry.async_on_unload(purifier_schedule.async_stop)
+        data["purifier_schedule"] = purifier_schedule
+    except Exception:  # noqa: BLE001
+        _LOGGER.exception("The purifier schedule couldn't start; everything else still works")
+        data["purifier_schedule"] = None
 
     async def shopping_add(call: ServiceCall) -> ServiceResponse:
         shop = data.get("shopping")

@@ -96,6 +96,8 @@ WS_ALARM_LIGHTS = "church_drive/alarm_lights"
 WS_ALARM_LIGHTS_SET = "church_drive/alarm_lights/set"
 WS_ALARM_LIGHTS_TEST = "church_drive/alarm_lights/test"
 WS_ALARM_LIGHTS_STOP = "church_drive/alarm_lights/stop"
+WS_PURIFIER_SCHEDULE = "church_drive/purifier_schedule"
+WS_PURIFIER_SCHEDULE_SET = "church_drive/purifier_schedule/set"
 
 # Who did what in the house, for administrators (activity.py).
 WS_ACTIVITY = "church_drive/activity"
