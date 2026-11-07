@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.109.0
+
+- The loading pill says Syncing. If the house's first answer is lost the app asks again every ten seconds (and reconnects after three tries) instead of sitting logged in with nothing showing. The Cleaning page and any Material icon the house set has under the same name use the house's own icons.
+
 ## 0.108.0
 
 - No app change in this version (dashboard cards only); the version is kept equal across the apps.
