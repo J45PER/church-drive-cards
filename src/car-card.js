@@ -248,7 +248,7 @@ export class CarCard extends HTMLElement {
       });
       this._built = true;
     }
-    kitHead(this, c.title || 'Cars', word + (c.demo ? ' · demo' : ''), CAR_TEAL);
+    kitHead(this, c.title || 'Cars', word + (c.demo ? ' · demo' : ''), CAR_TEAL, 14);
     // The minute too, so "Car last reported 20:41" appears once the figures pass 20 minutes old.
     const sig = JSON.stringify([cars, this._asking, Math.floor(Date.now() / 60000)]);
     if (sig === this._sig) return;

@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.113.2
+
+- No change to this app (dashboard cards only); version kept equal.
+
 ## 0.113.1
 
 - No change to this app; version kept equal.
