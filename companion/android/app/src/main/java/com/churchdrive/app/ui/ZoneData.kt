@@ -174,7 +174,7 @@ fun zoneView(
     val unavailable = sensors.isNotEmpty() && sensors.all { st(it) == null || st(it)?.state == "unavailable" }
 
     var level = ZoneLevel.Ok
-    var word = if (door != null) "Closed" else "Quiet"
+    var word = if (door != null) "Door closed" else "Quiet"
     var chip = word
     var warn = ""
     if (moving) { level = ZoneLevel.Motion; word = "Motion just now"; chip = "Motion" }
@@ -182,7 +182,7 @@ fun zoneView(
     if (open && door != null) {
         val mins = max(0L, ((now - (parseMillis(door.lastChanged) ?: now)) / 60_000.0).roundToInt().toLong())
         level = if (armed) ZoneLevel.Tamper else ZoneLevel.Open
-        word = if (armed) "Open while armed" else if (mins < 1) "Just opened" else "Open $mins min"
+        word = if (armed) "Door open while armed" else if (mins < 1) "Door just opened" else "Door open $mins min"
         chip = "Open"
     }
     if (tampered.isNotEmpty()) {

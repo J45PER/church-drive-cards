@@ -45,6 +45,15 @@ function lccKelvinColor(k) {
 }
 
 
+// A room (a group of lights) shows the colour of its main lights, not of its Ambience: the group reports the colour of whichever member changed
+// last, and the Ambience strip is often a colour while the room itself is white.
+function lccGroupColor(hass, st, entityId) {
+  const main = lccMembersOf(hass, entityId)
+    .map((id) => hass.states[id])
+    .filter((m) => m && m.state === 'on' && !lccIsGroupLike(m) && !/ambien/i.test(`${m.entity_id} ${(m.attributes && m.attributes.friendly_name) || ''}`));
+  return main.length ? lccLightColor(main[0]) : lccLightColor(st);
+}
+
 function lccLightColor(st) {
   if (!st || st.state !== 'on') return '#f0b13a';
   const a = st.attributes || {};
@@ -652,7 +661,7 @@ export class LightControlCard extends HTMLElement {
     const on = st && st.state === 'on';
     const dimmable =
       st && st.attributes.supported_color_modes && st.attributes.supported_color_modes.some((m) => m !== 'onoff');
-    const color = lccLightColor(st);
+    const color = isGroupLike ? lccGroupColor(this._hass, st, entityId) : lccLightColor(st);
     const icon = iconOverride || lccLightIcon(this._hass, st, isGroupLike);
     // State shown in words on the right, so on/off is never a guess.
     const stateText = !st || st.state === 'unavailable' ? 'Unavailable' : !on ? 'Off' : dimmable && st.attributes.brightness ? `${Math.round((st.attributes.brightness / 255) * 100)}%` : 'On';

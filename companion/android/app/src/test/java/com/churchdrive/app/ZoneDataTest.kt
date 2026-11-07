@@ -59,8 +59,8 @@ class ZoneDataTest {
         val history = mapOf("binary_sensor.motion" to listOf(ago(300) to "on", ago(298) to "off", ago(62) to "on", ago(61) to "off"))
         val v = zoneView(entrance, e, history, now, london)
         assertEquals(ZoneLevel.Ok, v.level)
-        assertEquals("Closed", v.word)
-        assertEquals("Closed", v.chip)
+        assertEquals("Door closed", v.word)
+        assertEquals("Door closed", v.chip)
         assertEquals("Closed since 14:56 · motion 14:58", v.last)
     }
 
@@ -84,14 +84,14 @@ class ZoneDataTest {
         )
         val v = zoneView(entrance, open, emptyMap(), now, london)
         assertEquals(ZoneLevel.Open, v.level)
-        assertEquals("Open 4 min", v.word)
+        assertEquals("Door open 4 min", v.word)
         assertEquals("Open", v.chip)
         assertEquals("Open since 15:56", v.last)
 
         val armed = open + ("alarm_control_panel.a" to state("alarm_control_panel.a", "armed_away"))
         val w = zoneView(entrance, armed, emptyMap(), now, london)
         assertEquals(ZoneLevel.Tamper, w.level)
-        assertEquals("Open while armed", w.word)
+        assertEquals("Door open while armed", w.word)
     }
 
     @Test
