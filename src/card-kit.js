@@ -23,13 +23,13 @@ export const KIT_CARD_BG = 'var(--cd-card-bg, var(--card-background-color))';
 
 export const KIT_COLOR = {
   off: '#9aa4b2',
-  good: clive('ok'),
-  fair: clive('warn'),
-  poor: clive('heating'),
+  good: clive('quality_good'),
+  fair: clive('quality_fair'),
+  poor: clive('quality_poor'),
   bad: clive('bad'),
   fan: clive('air'),
   sleep: clive('alarm'),
-  humidity: clive('doors'),
+  humidity: clive('humidity'),
   blind: clive('blinds'),
   cold: clive('cooling'),
   cool: clive('air'),
@@ -49,6 +49,14 @@ export const KIT_HEALTH_CSS = `.ck-stale .ck-row, .ck-stale .ck-dim { opacity:.5
 .ck-health button { flex:none; border:none; border-radius:10px; padding:7px 10px; font:inherit; font-size:0.8rem; font-weight:600; background:#f0b13a; color:#2a1700; cursor:pointer; }`;
 
 // The card shell: ha-card, shared styles, the title row, then `body`.
+/** The CSS of the Clive glow, for any card whose ha-card has the class `ck-glow` toggled by kitGlow(). The card must be `position:relative; overflow:hidden; isolation:isolate`. */
+export const KIT_GLOW_CSS = `.ck-glow::before, .ck-glow::after { content:''; position:absolute; z-index:-1; width:85%; aspect-ratio:1; border-radius:50%; filter:blur(26px); opacity:.30; pointer-events:none; }
+.ck-glow::before { background:radial-gradient(circle, var(--ck-g1, transparent), transparent 68%); left:-22%; top:-55%; animation:ckGlowA 14s ease-in-out infinite alternate; }
+.ck-glow::after { background:radial-gradient(circle, var(--ck-g2, transparent), transparent 68%); right:-26%; bottom:-65%; animation:ckGlowB 17s ease-in-out infinite alternate; }
+@keyframes ckGlowA { to { transform:translate(45%,30%) scale(1.15); } }
+@keyframes ckGlowB { to { transform:translate(-50%,-25%) scale(1.2); } }
+@media (prefers-reduced-motion: reduce) { .ck-glow::before, .ck-glow::after { animation:none; } }`;
+
 export function kitShell(body, extraCss = '') {
   return `
     <ha-card class="ck-card" style="border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; padding:16px; background:${KIT_CARD_BG}; -webkit-backdrop-filter:var(--cd-card-filter, none); backdrop-filter:var(--cd-card-filter, none); transition:background-color .6s ease; display:flex; flex-direction:column; gap:12px;">
@@ -56,13 +64,7 @@ export function kitShell(body, extraCss = '') {
         /* Narrow cards (e.g. five side by side): a smaller title, and the
            status word drops to its own line instead of cutting the title. */
         .ck-card { container-type:inline-size; position:relative; overflow:hidden; isolation:isolate; }
-        /* The Clive glow: two soft blobs of the card's colour drifting behind the content (as on the watch and satellite). On only where a dashboard asks for it. */
-        .ck-card.ck-glow::before, .ck-card.ck-glow::after { content:''; position:absolute; z-index:-1; width:85%; aspect-ratio:1; border-radius:50%; filter:blur(26px); opacity:.30; pointer-events:none; }
-        .ck-card.ck-glow::before { background:radial-gradient(circle, var(--ck-g1, transparent), transparent 68%); left:-22%; top:-55%; animation:ckGlowA 14s ease-in-out infinite alternate; }
-        .ck-card.ck-glow::after { background:radial-gradient(circle, var(--ck-g2, transparent), transparent 68%); right:-26%; bottom:-65%; animation:ckGlowB 17s ease-in-out infinite alternate; }
-        @keyframes ckGlowA { to { transform:translate(45%,30%) scale(1.15); } }
-        @keyframes ckGlowB { to { transform:translate(-50%,-25%) scale(1.2); } }
-        @media (prefers-reduced-motion: reduce) { .ck-card.ck-glow::before, .ck-card.ck-glow::after { animation:none; } }
+        ${KIT_GLOW_CSS}
         @container (max-width: 260px) { .ck-title { font-size:1.25rem !important; } .ck-word { text-align:left !important; } }
         .ck-row { display:flex; gap:6px; }
         .ck-q { position:relative; overflow:hidden; container-type:inline-size; flex:1 1 0; min-width:0; height:48px; border:none; border-radius:12px; padding:0 6px; cursor:pointer;
@@ -120,6 +122,11 @@ export function kitHead(root, title, word, color, tint = 0) {
   t.style.color = color;
   w.textContent = word;
   card.style.backgroundColor = tint ? `color-mix(in srgb, ${color} ${tint}%, ${KIT_CARD_BG})` : KIT_CARD_BG;
+  kitGlow(root, card, color);
+}
+
+/** Turns the glow on `card` (an ha-card with class ck-glow styles) to `color`, or off where the dashboard does not want it or the card is grey. */
+export function kitGlow(root, card, color) {
   const glow = kitGlowOn(root) && color && color !== KIT_COLOR.off && !/^var\(--neutral-color/.test(String(color));
   card.classList.toggle('ck-glow', !!glow);
   if (glow) {

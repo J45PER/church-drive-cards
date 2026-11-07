@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.108.0
+
+- No app change in this version (dashboard cards only); the version is kept equal across the apps.
+
 ## 0.107.0
 
 - The Clive glow behind every entity card: two soft blobs of the card's colour turning slowly, as on the watch and satellite. Grey cards (off, unavailable) have none.
