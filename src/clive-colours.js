@@ -46,11 +46,11 @@ export const CLIVE = {
   quality_fair: ["#f7d15c","#493e1d","#ef8a61","#f7e8ba","#6c5a23"],
   quality_poor: ["#ff7b72","#49201d","#ef619a","#f7beba","#6c2823"],
   partly_cloudy: ["#f2d58a","#473c1f","#ef8561","#f7e6ba","#6a5725"],
-  cloudy: ["#a9b5c6","#2e3238","#6961ef","#d1d7e1","#3f4650"],
-  fog: ["#b3bfcb","#2e3338","#6166ef","#d2d9e0","#3f474f"],
+  cloudy: ["#a9b5c6","#2e3238","#c3cedd","#d1d7e1","#3f4650"],
+  fog: ["#b3bfcb","#2e3338","#cbd5e0","#d2d9e0","#3f474f"],
   wind: ["#8fd6c8","#273f3a","#61c9ef","#c7ebe4","#345b53"],
   hail: ["#9cc8e8","#233643","#6171ef","#c1ddf1","#2d4c62"],
-  unavailable: ["#6e7886","#303336","#6861ef","#d5d8dd","#43474c"],
+  unavailable: ["#6e7886","#303336","#8a94a2","#d5d8dd","#43474c"],
 };
 export const CLIVE_NEUTRAL = {
   "light": {

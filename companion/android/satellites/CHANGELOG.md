@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.107.0
+
+- The card glow (see the phone app).
+
 ## 0.106.0
 
 - The new colours (see the phone app).

@@ -108,3 +108,13 @@ test('cards moved onto the palette have no colour of their own: every colour is 
     assert.deepEqual(code.match(/#[0-9a-fA-F]{6}\b/g) || [], [], `${f} has a hard-coded colour`);
   }
 });
+
+test('the card glow: a card can turn it on or off, the mobile dashboard has it by default', async () => {
+  const { kitGlowOn } = await import('../src/card-kit.js');
+  globalThis.location = { pathname: '/dashboard-mobile/home' };
+  assert.equal(kitGlowOn({ config: {} }), true);
+  assert.equal(kitGlowOn({ config: { glow: false } }), false);
+  globalThis.location = { pathname: '/dashboard-living-room/panel' };
+  assert.equal(kitGlowOn({ _config: {} }), false);
+  assert.equal(kitGlowOn({ _config: { glow: true } }), true);
+});

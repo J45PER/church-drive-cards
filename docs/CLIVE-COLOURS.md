@@ -81,8 +81,8 @@ Each name has five colours: Colour (the thing's own), Dark (the ground), Accent 
 | `storm` | Weather: storm | `#7D73D6` | `#282541` | `#B361EF` | `#C8C4EE` | `#35305F` |
 | `sport` | Sport | `#6CABDD` | `#233543` | `#616EEF` | `#C1DBF1` | `#2D4A62` |
 | `partly_cloudy` | Weather: partly cloudy | `#F2D58A` | `#473C1F` | `#EF8561` | `#F7E6BA` | `#6A5725` |
-| `cloudy` | Weather: cloudy | `#A9B5C6` | `#2E3238` | `#6961EF` | `#D1D7E1` | `#3F4650` |
-| `fog` | Weather: fog | `#B3BFCB` | `#2E3338` | `#6166EF` | `#D2D9E0` | `#3F474F` |
+| `cloudy` | Weather: cloudy | `#A9B5C6` | `#2E3238` | `#C3CEDD` | `#D1D7E1` | `#3F4650` |
+| `fog` | Weather: fog | `#B3BFCB` | `#2E3338` | `#CBD5E0` | `#D2D9E0` | `#3F474F` |
 | `wind` | Weather: wind | `#8FD6C8` | `#273F3A` | `#61C9EF` | `#C7EBE4` | `#345B53` |
 | `hail` | Weather: hail | `#9CC8E8` | `#233643` | `#6171EF` | `#C1DDF1` | `#2D4C62` |
 
@@ -108,7 +108,7 @@ Each name has five colours: Colour (the thing's own), Dark (the ground), Accent 
 | Name | Meaning | Colour | Dark | Accent | Light | Deep |
 |---|---|---|---|---|---|---|
 | `neutral` | Neutral (not an entity) | `#9AA4B2` | `#202733` | `#9AA4B2` | `#EEF1F5` | `#28303C` |
-| `unavailable` | Unavailable | `#6E7886` | `#303336` | `#6861EF` | `#D5D8DD` | `#43474C` |
+| `unavailable` | Unavailable | `#6E7886` | `#303336` | `#8A94A2` | `#D5D8DD` | `#43474C` |
 
 ## Changing a colour
 

@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.107.0
+
+- The Clive glow behind every entity card: two soft blobs of the card's colour turning slowly, as on the watch and satellite. Grey cards (off, unavailable) have none.
+
 ## 0.106.0
 
 - The new colours (phase 1 of the colour overhaul): brighter pastel palettes, new names for eco, humidity, air quality (Good, Fair, Poor), partly cloudy, cloudy, fog, wind, hail and unavailable. The weather card keeps a neutral ground and its icons take the colour of the condition; the humidity graph uses the Humidity purple.
