@@ -1,6 +1,7 @@
 package com.churchdrive.app.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
@@ -66,6 +67,8 @@ fun HomeScreen(
     userName: String?,
     isAdmin: Boolean,
     statesLoaded: Boolean,
+    /** The app is checking its connection after being away: shows the same pill as syncing. */
+    refreshing: Boolean = false,
     updateAvailable: Boolean,
     account: AccountSettings,
     lights: LightLayout,
@@ -221,6 +224,7 @@ fun HomeScreen(
                 else -> Unit
             }
 
+            androidx.compose.runtime.CompositionLocalProvider(LocalIsAdmin provides isAdmin) {
             if (page == Page.Home) {
                 HomePage(lights, areaNames, panels["home"].orEmpty(), entities, registry, call, onOpen = { if (it == Page.Todo) openTodo() else page = it }, onOpenTask = openTask)
             } else if (page == Page.Lighting) {
@@ -242,6 +246,7 @@ fun HomeScreen(
                 }
                 DashboardPage(panels[key].orEmpty().let { list -> if (page == Page.Cleaning) list.map { it.copy(icon = GREGG_IDLE_ICON) } else list }, entities, registry, call)
             }
+            }
             // Room to scroll the last card clear of Clive's button.
             Spacer(Modifier.height(72.dp))
         }
@@ -249,7 +254,7 @@ fun HomeScreen(
     // Clive, over the page, and his round button over him: one button, the same one shut or open.
     AssistantOverlay(onSettings = { panel = "settings" })
     AssistantFab()
-    LoadingPill(visible = connection != ConnectionState.AuthFailed && (connection != ConnectionState.Connected || !statesLoaded), connecting = connection != ConnectionState.Connected)
+    LoadingPill(visible = connection != ConnectionState.AuthFailed && (connection != ConnectionState.Connected || !statesLoaded || refreshing), connecting = connection != ConnectionState.Connected)
     if (openCamera != null && statesLoaded) CameraViewerFor(openCamera, entities, registry, call, onCameraClosed, answer = openCameraAnswer)
     AccountOverlay(
         panel, { panel = it }, userName, isAdmin, account, updateAvailable, onSignOut,
@@ -422,8 +427,9 @@ fun SectionPanel(
                 Icon(if (open) CdVectors.ChevronUp else CdVectors.ChevronDown, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        androidx.compose.animation.AnimatedVisibility(visible = open || !collapsible) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { content() }
+        // Folding minimises the cards (each shrinks to a short strip) rather than hiding them.
+        androidx.compose.runtime.CompositionLocalProvider(LocalCompactCards provides (collapsible && !open)) {
+            Column(Modifier.animateContentSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) { content() }
         }
     }
 }

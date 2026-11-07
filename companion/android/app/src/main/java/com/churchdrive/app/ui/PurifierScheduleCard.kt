@@ -69,7 +69,7 @@ fun PurifierScheduleCard(config: JSONObject) {
                 s.next != null -> "Next: ${s.next}"
                 else -> ""
             }
-            if (word.isNotEmpty()) Text(word, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (word.isNotEmpty()) Text(word, style = MaterialTheme.typography.bodyMedium, color = neutral.onContainer.copy(alpha = 0.8f))
         }
         if (s == null) {
             if (missing) Text("Update Church Drive in Home Assistant to use the purifier schedule.", style = MaterialTheme.typography.bodyMedium)

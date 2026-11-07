@@ -37,6 +37,9 @@ class HaClient(private val scope: CoroutineScope) {
 
     private val _userName = MutableStateFlow<String?>(null)
     val userName: StateFlow<String?> = _userName
+    private val _refreshing = MutableStateFlow(false)
+    /** True while [refreshUser] waits for an answer (the app checking its line after being away). */
+    val refreshing: StateFlow<Boolean> = _refreshing
 
     /** Whether the signed-in person is a Home Assistant administrator (`auth/current_user`). */
     private val _isAdmin = MutableStateFlow(false)
@@ -157,6 +160,28 @@ class HaClient(private val scope: CoroutineScope) {
         if (!ws.send(msg.toString())) pending.remove(id)?.invoke(null)
     }
 
+    /** Shows the name remembered from last time until the live one arrives, so the account button is not a "?". */
+    fun seedUserName(name: String?) {
+        if (_userName.value == null && !name.isNullOrBlank()) _userName.value = name
+    }
+
+    /**
+     * Asks who is signed in (which also proves the line is alive) and keeps the name and admin flag.
+     * [onResult] is false when nothing answered: the connection looks open but is dead, so the caller should connect again.
+     */
+    fun refreshUser(onResult: (Boolean) -> Unit = {}) {
+        _refreshing.value = true
+        request("auth/current_user", timeoutMs = 5_000L) { result ->
+            _refreshing.value = false
+            val me = result as? JSONObject
+            if (me != null) {
+                me.optString("name").takeIf { it.isNotBlank() }?.let { _userName.value = it }
+                _isAdmin.value = me.optBoolean("is_admin", false)
+            }
+            onResult(me != null)
+        }
+    }
+
     /** Shows what was known last time until the live states arrive (and only until then). */
     fun seed(states: Map<String, EntityState>) {
         if (!_statesLoaded.value && _entities.value.isEmpty()) _entities.value = states
@@ -270,7 +295,7 @@ class HaClient(private val scope: CoroutineScope) {
                         configId -> com.churchdrive.app.ui.HomeTime.zoneId = msg.optJSONObject("result")?.optString("time_zone")?.takeIf { it.isNotBlank() }
                         userId -> {
                             val me = msg.optJSONObject("result")
-                            _userName.value = me?.optString("name")?.takeIf { it.isNotBlank() }
+                            me?.optString("name")?.takeIf { it.isNotBlank() }?.let { _userName.value = it }
                             _isAdmin.value = me?.optBoolean("is_admin", false) ?: false
                             // Home Assistant lets only administrators subscribe to this event; everyone else would be refused (and it is logged as an error).
                             if (_isAdmin.value) webSocket.send(
