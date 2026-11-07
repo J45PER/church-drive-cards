@@ -23,9 +23,9 @@ Decisions in this document were made with Jamie in the chat that wrote it. The e
 | Hosting | Firebase Hosting, free plan. No Cloud Functions (they need Blaze). |
 | Website | Its own thing, bigger than the admin panel: all colour management, the designer pages, and the admin features. |
 | Android app | A 4th app, **Clive Admin**, id `com.churchdrive.admin`, module `admin`. Not every feature: the key admin features only. |
-| Moves out of the main app | **Manager** and **Energy** (both admin-only) leave the main app's sidebar and go into Clive Admin. |
+| Moves out of the main app | **Manager**, **Energy** and **Device Health** (all admin-only) leave the main app's sidebar and go into Clive Admin. |
 | Colour palettes in the app | **View only.** Editing is on the website. |
-| Designer pages | A lot of them move onto the website (section 6). |
+| Designer pages | A lot of them move onto the website as **editor pages** (section 6). An editor page does not change anything live: it sends a proposal to Claude, who checks it and applies it. Every applied change keeps a past version for rollback. |
 | Branding | Clive Admin needs its own logo and animated splash (section 7). |
 
 ---
@@ -76,8 +76,8 @@ Apps and dashboards    <--(as today)-------------------------   Home Assistant
 
 Existing: WebSocket `church_drive/colours`, `church_drive/colours/set` (admin), service `church_drive.set_palette`, event `church_drive_colours_changed`, `sensor.church_drive_colours` (state is a revision number), `church_drive/icons`.
 
-To add (all admin-only, each bumps the revision, each mirrors to Firestore):
-`church_drive/cards` and `/cards/set`, `church_drive/icons/set`, `church_drive/layouts` and `/layouts/set`, and a small `church_drive/manager/whoami` that returns the HA user's admin flag and name.
+To add (all admin-only, each applied change bumps the revision and mirrors to Firestore):
+`church_drive/cards` and `/cards/set`, `church_drive/icons/set`, `church_drive/layouts` and `/layouts/set`, `church_drive/manager/whoami` (the HA user's admin flag and name), and for the editor pages `church_drive/manager/propose`, `/proposals` (list, with status), `/resolve` (applied or declined, with a reason) and `/versions` (past versions, restore).
 
 ### Setting up the Firebase side (Jamie, no secrets in chat)
 
@@ -110,12 +110,13 @@ Static site, no build step (ES modules, Firebase from the CDN only for Firestore
 Native Android, module `admin`, application id `com.churchdrive.admin`, display name **Clive Admin**. In-app text takes the house's assistant name from the house like the other apps; **no code identifiers are named after the assistant** (`companion/android/CLAUDE.md`), so the module, package and classes are `admin` / `Admin*`.
 
 **Contents (first version):**
+- **Device Health** (moved out of the main app, the admin-only `devices` page).
 - **Manager** (moved out of the main app): the sections now behind Account, Manager in the main app (people, cameras, reminders, notifications, Who's home, device health and so on). Today: `ManagerHub` in `AccountPanel.kt`, `ManagerPages.kt`, `ManagerCards.kt`, and the cached `manager` config in `AppViewModel`.
 - **Energy** (moved out of the main app): `Page.Energy` in `Pages.kt` and `EnergyCards.kt`, `EnergyData.kt`, `EnergyWeek.kt`.
 - **Colour palettes: view only.** Shows the palettes and which card uses which. No editing.
 - Sign-in as section 2.
 
-**Removed from the main app:** the Energy page and the Manager entry. The main app keeps a link that opens Clive Admin (or the Play listing if not installed). Notice kinds such as Energy and car stay in the main app, because they are notifications, not pages.
+**Removed from the main app:** the Energy page, the Device Health page and the Manager entry. The main app keeps a link that opens Clive Admin (or the Play listing if not installed). Notice kinds such as Energy and car stay in the main app, because they are notifications, not pages.
 
 **Shared code:** anything both apps use stays in `core` (sign-in, HA connection, the card kit). Move shared pieces to `core` rather than copying them. Follow `UI-STANDARDS.md` for every screen.
 
@@ -129,7 +130,15 @@ Native Android, module `admin`, application id `com.churchdrive.admin`, display 
 
 Candidates, from `satellite/design/` and `design/clive/`: `icons-board.html`, `icon-audit.html`, `clive-icons.html`, `icon-ideas*.html`, `icon-cog.html`, `icon-device.html`, `app-icons.html`, `app-names.html`, `brand-logos.html`, `type-combos.html`, `splash-*.html`, `idle-layouts.html`, `device-codes.html`, `flows.html`, `scanner-*.html`, `design/clive/icon-morphs.html`, and the two private review boards (Clive Card Review `https://claude.ai/artifact/F6Ycp5g3rY2f2GDXLTYvw3`, Clive Card Designs `https://claude.ai/artifact/PRGC4nVwuMzWvWiwZQpf2G`).
 
-Not decided: which of these become live editors (reading and writing the data in section 3) and which stay as static reference pages. Decide page by page; start with the colour and card pages because they drive the live data.
+**Decided: they are editor pages, with a check step and version history.**
+
+1. **Edit:** an admin changes a palette, card pick, icon or layout on the page and sees a preview.
+2. **Propose:** Save sends a *proposal* to Home Assistant (`church_drive/manager/propose`, admin-only), stored with who, when, what changed and an optional note. Nothing goes live.
+3. **Check and apply:** Claude reads the open proposals (through Home Assistant), checks them (a colour that makes text unreadable, an icon that does not exist, a layout that breaks the shared kit), applies them to the repo and Home Assistant as needed, and marks each *applied* or *declined* with a reason, shown back on the page.
+4. **Versions:** every applied change stores the full previous version (`church_drive/manager/versions`, mirrored read-only to Firestore as `history/<kind>/<revision>`). The website lists past versions with a diff and a **Restore** button; a restore is itself a proposal, so it is checked and applied the same way, except that an admin may mark one **urgent** to apply straight away.
+5. Pages with nothing to apply (pure reference boards, such as the icon audit) stay static.
+
+Start with the colour and card pages because they drive the live data.
 
 ## 7. Branding for Clive Admin
 
@@ -150,7 +159,7 @@ Not decided: which of these become live editors (reading and writing the data in
 Tick these off as they are done.
 
 - [x] Firebase web app registered; config block received.
-- [ ] Jamie: Firestore (Production, `europe-west2`) and Hosting turned on; `clive-ha-writer` key on HA; `cors_allowed_origins` set and HA restarted (section 3 and 2).
+- [ ] Jamie: the steps in `docs/MANAGER-SETUP.md` (Firestore (Production, `europe-west2`) and Hosting turned on; `clive-ha-writer` key on HA; `cors_allowed_origins` set and HA restarted).
 - [ ] Integration: the admin calls and the Firestore mirror, with tests (`test/*_logic_test.py` style).
 - [ ] `firestore.rules`, `firebase.json`, Hosting deploy workflow.
 - [ ] Website: HA sign-in, then Colours, then Cards, Icons, Layouts, then the designer pages.
@@ -172,6 +181,4 @@ Tick these off as they are done.
 - Indoor camera icon on the app's Security page: the dashboard sets `phu:ring-stick-up-cam`; the app does not show it. It belongs with icon sync.
 - Per-card redesigns not done: EV and charging backgrounds, the cards not built on the shared kit, purifier button label sizing.
 - To-Do and Satellites screens show none of the new style on any element (Jamie): ask which app version they show.
-- Is **Device Health** (admin-only, "devices" page in the main app) also moving to Clive Admin? Not decided; it stays in the main app until Jamie says.
-- Whether the website's designer pages are live editors or static reference (section 6).
 - 0.113.0 (room colour from the ceiling light, Security mode, shared update banner) is on PR #361; this document came from that branch.
