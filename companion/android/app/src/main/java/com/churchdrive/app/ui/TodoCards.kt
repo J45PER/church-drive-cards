@@ -62,7 +62,7 @@ fun TaskListCard(config: JSONObject, entities: Map<String, EntityState>, call: C
     val me = LocalUserName.current
     val configured = config.optString("entity")
     val listId = if (configured == "mine") myTodoList(me).orEmpty() else configured
-    val tone = toneColors(toneFromColour(config.optString("color")) ?: Tone.Purple)
+    val tone = toneColors(toneFromColour(config.optString("color")) ?: Tone.Tasks)
     val showIcons = config.optBoolean("icons", false)
     val items = rememberTodoItems(listId, entities)
     var ticked by remember(listId) { mutableStateOf(setOf<String>()) }
@@ -201,7 +201,7 @@ fun TodoSummaryHeader(entities: Map<String, EntityState>) {
     val me = LocalUserName.current
     val lists = listOfNotNull(myTodoList(me), "todo.priorities_everyone", "todo.cleaning", "todo.priorities_automatic")
     val count = lists.sumOf { entities[it]?.state?.toIntOrNull() ?: 0 }
-    val tone = toneColors(if (count == 0) Tone.Green else Tone.Purple)
+    val tone = toneColors(if (count == 0) Tone.Green else Tone.Tasks)
     EntityCard(tone.container, tone.onContainer) {
         Text(if (count == 0) "All done" else "$count to do", style = MaterialTheme.typography.headlineMedium)
         Text(

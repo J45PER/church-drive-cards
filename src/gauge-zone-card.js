@@ -172,8 +172,8 @@ export class GaugeZoneCard extends HTMLElement {
       } else {
         colorState = val >= alertAt ? 'red' : val >= warnAt ? 'orange' : 'green';
       }
-      const color = { red: 'var(--error-color, #db4437)', orange: 'var(--warning-color, #ff9800)', green: 'var(--success-color, #43a047)' }[colorState];
-      const unavailableColor = '#9e9e9e';
+      const color = { red: 'var(--error-color, #ff6b6b)', orange: 'var(--warning-color, #f0b13a)', green: 'var(--success-color, #55c47c)' }[colorState];
+      const unavailableColor = '#9aa4b2';
 
       let iconColor;
       if (!e.available) {

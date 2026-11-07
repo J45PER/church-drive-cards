@@ -35,7 +35,7 @@ const NC_CSS = `
   .nc-table td { padding:6px 2px; border-top:1px solid var(--divider-color, rgba(127,127,127,0.18)); text-align:center; vertical-align:middle; }
   .nc-name { font-weight:500; line-height:1.25; }
   .nc-note { display:block; font-size:0.72rem; color:var(--secondary-text-color); }
-  .nc-crit { display:inline-flex; align-items:center; margin-left:4px; color:#ef5350; vertical-align:-2px; }
+  .nc-crit { display:inline-flex; align-items:center; margin-left:4px; color:#ff6b6b; vertical-align:-2px; }
   .nc-tick { width:26px; height:26px; padding:0; border:none; border-radius:8px; background:rgba(127,127,127,0.18); color:transparent; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
   .nc-tick[aria-pressed="true"] { color:#fff; }
   .nc-tick.nc-all { border-radius:50%; }
@@ -51,7 +51,7 @@ const NC_CSS = `
   .nc-chip { border:none; border-radius:999px; padding:6px 11px; font:inherit; font-size:0.8rem; font-weight:600; cursor:pointer; background:rgba(127,127,127,0.18); color:var(--primary-text-color); display:inline-flex; align-items:center; gap:5px; }
   .nc-chip[aria-pressed="true"] { color:#fff; }
   .nc-chip:disabled { cursor:default; }
-  .nc-msg { font-size:0.8rem; color:#ffa726; }
+  .nc-msg { font-size:0.8rem; color:#f0b13a; }
 `;
 
 // Pretend data for Design Presets.
@@ -92,7 +92,7 @@ export const NotificationsCardEditor = createFormEditor({
   },
   helpers: {
     show: 'People are picked up from Home Assistant (Settings > People), and their phones from the companion app.',
-    color: 'Default purple (#7e57c2).',
+    color: 'Default purple (#8a86ff).',
   },
 });
 
@@ -129,7 +129,7 @@ export class NotificationsCard extends HTMLElement {
   }
 
   _colour() {
-    return this.config.color || '#7e57c2';
+    return this.config.color || '#8a86ff';
   }
 
   _canEdit() {

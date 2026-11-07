@@ -245,7 +245,7 @@ export class NavBarCard extends HTMLElement {
           .nb.nb-icons .nb-it, .nb.nb-icons .nb-it.nb-on { min-width:var(--nb-sz, 42px); width:var(--nb-sz, 42px); height:var(--nb-sz, 42px); border-radius:50%; padding:0; }
           .nb.nb-icons .nb-it.nb-on .nb-dot, .nb.nb-icons .nb-dot { left:calc(var(--nb-sz, 42px) - 14px); right:auto; }
           .nb-it:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
-          .nb-dot { position:absolute; left:28px; top:6px; width:8px; height:8px; border-radius:50%; background:#ff9800; box-shadow:0 0 0 2px var(--card-background-color, #1f2128); }
+          .nb-dot { position:absolute; left:28px; top:6px; width:8px; height:8px; border-radius:50%; background:#f0b13a; box-shadow:0 0 0 2px var(--card-background-color, #1f2128); }
           .nb-it.nb-on .nb-dot { left:auto; right:6px; }
           .nb-top { pointer-events:auto; position:relative; flex:none; width:58px; height:58px; padding:0; border:none; border-radius:50%; cursor:pointer; -webkit-tap-highlight-color:transparent; }
           ${kitAcrylicCss('.nb')}

@@ -50,8 +50,8 @@ function czRange(r) {
 function czStops(low, high) {
   const mid = (low + high) / 2;
   const list = [
-    [0.01, '#1a3f9e'], [low - 6, '#1e5fd6'], [low - 3, '#42a5f5'], [low - 1, '#26c6da'], [low, '#26a69a'],
-    [mid, '#66bb6a'], [high, '#c0ca33'], [high + 1, '#ffca28'], [high + 2.5, '#ffa726'], [high + 4, '#ef5350'], [high + 6, '#b71c1c'],
+    [0.01, '#1a3f9e'], [low - 6, '#1e5fd6'], [low - 3, '#6cc8ff'], [low - 1, '#3fd0cf'], [low, '#3fd0cf'],
+    [mid, '#55c47c'], [high, '#c0ca33'], [high + 1, '#ffd27a'], [high + 2.5, '#f0b13a'], [high + 4, '#ff6b6b'], [high + 6, '#b71c1c'],
   ];
   return list.filter((s, i) => i === 0 || s[0] > list[i - 1][0]);
 }

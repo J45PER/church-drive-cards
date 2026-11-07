@@ -35,11 +35,11 @@ export function batteryIcon(pct) {
 }
 
 export function batteryColour(pct) {
-  return !isFinite(pct) ? '#fff' : pct < 15 ? '#ef5350' : pct < 30 ? '#ffa726' : '#fff';
+  return !isFinite(pct) ? '#fff' : pct < 15 ? '#ff6b6b' : pct < 30 ? '#f0b13a' : '#fff';
 }
 
 export function signalColour(bars) {
-  return bars < 0 ? '#fff' : bars <= 1 ? '#ef5350' : bars === 2 ? '#ffa726' : '#fff';
+  return bars < 0 ? '#fff' : bars <= 1 ? '#ff6b6b' : bars === 2 ? '#f0b13a' : '#fff';
 }
 
 // Ringing: the doorbell's binary sensor is on, or its ding event fired within

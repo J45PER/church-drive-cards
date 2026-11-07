@@ -16,7 +16,7 @@ import com.churchdrive.app.ui.Tone
 /** The Zappi's modes in the dashboard's order, with their icons. */
 private val MODES = listOf("Stopped" to ("Stop" to "stop-circle-outline"), "Eco" to ("Eco" to "leaf"), "Eco+" to ("Eco+" to "solar-power"), "Fast" to ("Fast" to "flash"))
 
-private val MODE_COLOURS = mapOf("Stopped" to Color(0xFF9AA0A6), "Eco" to Color(0xFF81C995), "Eco+" to Color(0xFF4DD0E1), "Fast" to Color(0xFFFDD663))
+private val MODE_COLOURS = mapOf("Stopped" to Color(0xFF9AA0A6), "Eco" to com.churchdrive.app.ui.CliveColours.Ok.colour, "Eco+" to com.churchdrive.app.ui.CliveColours.Air.colour, "Fast" to com.churchdrive.app.ui.CliveColours.Energy.colour)
 
 /** What the charger page knows: the Zappi, and which car (if any) can be said to be on it. */
 class Charger(val entities: Map<String, EntityState>, val cars: List<WatchCar>) {

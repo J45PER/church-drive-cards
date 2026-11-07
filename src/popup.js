@@ -2,7 +2,7 @@
 // Size aware: on a phone (up to 600px wide) it's a sheet that slides up from
 // the bottom with a grab bar; on a tablet or PC it's a window in the middle.
 //
-//   const pop = openPopup(card, { title: 'New task', icon: 'mdi:plus', color: '#7e57c2', content: el, onClose });
+//   const pop = openPopup(card, { title: 'New task', icon: 'mdi:plus', color: '#8a86ff', content: el, onClose });
 //   pop.body       the scrolling area `content` was put in
 //   pop.setTitle() change the heading
 //   pop.close()    close it (onClose runs once, however it was closed); a promise

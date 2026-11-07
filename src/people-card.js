@@ -79,17 +79,17 @@ export class PeopleCard extends HTMLElement {
   }
 
   _pill(state, place, zone) {
-    if (state === 'home') return ['Home', '#4caf50'];
-    if (place && zone) return [placeText(place, zone), '#26a69a']; // a named zone, e.g. At work · Ashfield School
-    if (state === 'not_home') return ['Away', '#9aa0ad'];
-    if (state === 'unknown' || state === 'unavailable') return ['Unknown', '#ffa726'];
-    return [state, '#26a69a']; // a named zone, e.g. Work
+    if (state === 'home') return ['Home', '#55c47c'];
+    if (place && zone) return [placeText(place, zone), '#3fd0cf']; // a named zone, e.g. At work · Ashfield School
+    if (state === 'not_home') return ['Away', '#9aa4b2'];
+    if (state === 'unknown' || state === 'unavailable') return ['Unknown', '#f0b13a'];
+    return [state, '#3fd0cf']; // a named zone, e.g. Work
   }
 
   _render() {
     if (!this._hass && !this.config.demo) return;
     const c = this.config;
-    const colour = c.color || '#26a69a';
+    const colour = c.color || '#3fd0cf';
     if (!this._built) {
       this.innerHTML = kitShell(`<div class="pc-list"></div>`, PC_CSS);
       this._list = this.querySelector('.pc-list');

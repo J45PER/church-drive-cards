@@ -33,8 +33,8 @@ const EXP_CSS = `${STAGE_CSS}
   .cc-top-row .cc-chip { flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; }
   .cc-tr { flex:none; display:flex; gap:6px; }
   .cc-ov .cc-name { flex:1 1 auto; }
-  .cc-answer { flex:none; border:none; cursor:pointer; font:inherit; font-size:0.8rem; font-weight:800; border-radius:999px; padding:6px 12px; background:#2e9d4f; color:#fff; display:flex; align-items:center; gap:6px; animation:cc-ring 1s ease-in-out infinite; }
-  .cc-tile.ringing { outline:2px solid #2e9d4f; outline-offset:-2px; }
+  .cc-answer { flex:none; border:none; cursor:pointer; font:inherit; font-size:0.8rem; font-weight:800; border-radius:999px; padding:6px 12px; background:#55c47c; color:#fff; display:flex; align-items:center; gap:6px; animation:cc-ring 1s ease-in-out infinite; }
+  .cc-tile.ringing { outline:2px solid #55c47c; outline-offset:-2px; }
   @keyframes cc-ring { 50% { box-shadow:0 0 0 6px rgba(46,157,79,0.35); } }
   @media (prefers-reduced-motion: reduce) { .cc-answer { animation:none; } }
 
@@ -63,7 +63,7 @@ const EXP_CSS = `${STAGE_CSS}
   .cc-pop-media .cc-circles .lab { color:#fff; }
   .cc-pop-media .cc-circles { gap:12px; }
   .cc-timer { text-align:center; font-size:0.85rem; font-variant-numeric:tabular-nums; color:var(--secondary-text-color); padding:10px 0 8px; }
-  .cc-answer-big { width:100%; border:none; border-radius:999px; padding:12px; background:#2e9d4f; color:#fff; font:inherit; font-size:1rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; animation:cc-ring 1s ease-in-out infinite; }
+  .cc-answer-big { width:100%; border:none; border-radius:999px; padding:12px; background:#55c47c; color:#fff; font:inherit; font-size:1rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; animation:cc-ring 1s ease-in-out infinite; }
   .cc-menu { display:flex; flex-direction:column; gap:2px; background:rgba(20,22,24,0.94); border-radius:12px; padding:6px; }
   .cc-menu button { display:flex; gap:8px; align-items:center; background:none; border:none; color:#fff; font:inherit; font-size:0.8rem; padding:8px 12px; cursor:pointer; }
   .cc-menu[hidden] { display:none; }
@@ -163,7 +163,7 @@ export class CameraExperimentalCard extends CameraCard {
     this._pop = openPopup(this, {
       title: this._name(),
       icon: this._f && this._f.ding ? 'mdi:doorbell-video' : 'mdi:cctv',
-      color: '#78909c',
+      color: '#8fa6b8',
       content,
       onClose: () => {
         // Stop the live video (and the microphone) as soon as it's closed.
@@ -354,7 +354,7 @@ export class CameraExperimentalCard extends CameraCard {
     this._el = el;
     // A 16:9 box, covering it: a tall picture is cropped and can be dragged up and down.
     stageMedia(box, el, this._aspect(), { mute: false });
-    const tag = stageTag(box, noMic ? '● No microphone (needs https)' : '● Connecting…', noMic ? '#c62828' : '#616875');
+    const tag = stageTag(box, noMic ? '● No microphone (needs https)' : '● Connecting…', noMic ? '#ff6b6b' : '#616875');
     const live = this._talking ? '● LIVE · talking' : '● LIVE';
     let tries = 0;
     const check = () => {
@@ -362,7 +362,7 @@ export class CameraExperimentalCard extends CameraCard {
       const v = findVideo(el.shadowRoot || el);
       if (v && v.localName === 'video' && !v.paused && v.readyState >= 2) {
         if (!noMic) tag.textContent = live;
-        tag.style.background = noMic ? '#c62828' : '#e53935';
+        tag.style.background = noMic ? '#ff6b6b' : '#ff6b6b';
         this._applySound();
       } else if (viaGo2rtc && tries++ > 24) {
         // The go2rtc stream isn't there (not set up, or not reachable): carry on with Home Assistant's own live view, listen-only.
@@ -430,7 +430,7 @@ export class CameraExperimentalCard extends CameraCard {
     if (f.light) items.push([lightOn ? 'mdi:lightbulb-on' : 'mdi:lightbulb-outline', `${lightName} ${lightOn ? 'on' : 'off'}`, 'light', lightOn]);
     if (f.button) items.push(['mdi:camera', 'Snapshot', 'snap']);
     if (cameraBase(h, c.entity)) items.push(['mdi:history', 'Events', 'events']);
-    const bar = items.map(([i, t, a, on]) => `<button class="cc-btn${a === 'events' ? ' main' : ''}" data-act="${a}" style="${on ? 'background:color-mix(in srgb, #ffb300 30%, transparent);' : ''}">${iconHtml(i, { size: '22px' })}${kitEsc(t)}</button>`).join('');
+    const bar = items.map(([i, t, a, on]) => `<button class="cc-btn${a === 'events' ? ' main' : ''}" data-act="${a}" style="${on ? 'background:color-mix(in srgb, #f0b13a 30%, transparent);' : ''}">${iconHtml(i, { size: '22px' })}${kitEsc(t)}</button>`).join('');
     const barBox = p.querySelector('.cc-btns');
     if (barBox.dataset.sig !== bar) {
       barBox.dataset.sig = bar;

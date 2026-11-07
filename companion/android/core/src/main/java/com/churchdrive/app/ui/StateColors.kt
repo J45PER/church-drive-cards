@@ -3,12 +3,13 @@ package com.churchdrive.app.ui
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 
 /**
- * Meaning-carrying colours for entities, matching what the Home Assistant cards use
- * (disarmed green, armed home blue, armed away red, heating orange and so on) but in
- * Google's own palette, with a light and a dark variant. They stay fixed rather than
- * following the wallpaper, so green always means "fine" and red always means "look".
+ * The house's own colours for entities (Clive's palette: five colours per kind of thing, from design/clive/cards.json through
+ * CliveColours.kt), with a light and a dark variant. Nothing follows the phone's wallpaper or Google's palette: green always
+ * means "fine", amber "needs attention" and red "wrong", and each kind of thing keeps its own colour everywhere (lights yellow,
+ * heating orange, Octopus pink and violet for electricity and gas, and so on).
  */
 /** The colour of the dashboard panel a card sits in: a card with no colour of its own takes it, as on the dashboard. */
 val LocalPanelTone = androidx.compose.runtime.compositionLocalOf<Tone?> { null }
@@ -17,7 +18,16 @@ val LocalPanelTone = androidx.compose.runtime.compositionLocalOf<Tone?> { null }
 @androidx.compose.runtime.Composable
 fun panelNeutral(): ToneColors = toneColors(LocalPanelTone.current ?: Tone.Grey)
 
-enum class Tone { Green, Blue, Red, Purple, Amber, Orange, Teal, Indigo, Grey, Coral }
+/**
+ * A kind of colour. The first ten are the general ones the screens have always asked for; each now takes the palette set that
+ * means the same ([toneSet]). The rest are the palette's own kinds of thing, for cards that are about that thing.
+ */
+enum class Tone {
+    Green, Blue, Red, Purple, Amber, Orange, Teal, Indigo, Grey, Coral,
+    Lights, Blinds, Plugs, Gregg, Heating, Cooling, Air, Energy, Gas, Car, Alarm, Doors,
+    AlarmHome, AlarmAway, AlarmOff, ArmingHome, ArmingAway,
+    Media, People, Tasks, Shopping, Calendar, Sunny, Night, Rain, Snow, Storm, Sport,
+}
 
 data class ToneColors(
     /** Card background. */
@@ -30,53 +40,71 @@ data class ToneColors(
     val onAccent: Color,
 )
 
-private fun light(container: Long, onContainer: Long, accent: Long) =
-    ToneColors(Color(container), Color(onContainer), Color(accent), Color.White)
+/** The palette set a tone uses; null for Grey, which is the neutral colours. */
+fun toneSet(tone: Tone): EntityColours? = when (tone) {
+    Tone.Green -> CliveColours.Ok
+    Tone.Red -> CliveColours.Bad
+    Tone.Amber -> CliveColours.Warn
+    Tone.Blue -> CliveColours.Car
+    Tone.Purple -> CliveColours.Doors
+    Tone.Orange, Tone.Heating -> CliveColours.Heating
+    Tone.Teal, Tone.Air -> CliveColours.Air
+    Tone.Indigo, Tone.Tasks -> CliveColours.Tasks
+    Tone.Coral, Tone.Shopping -> CliveColours.Shopping
+    Tone.Grey -> null
+    Tone.Lights -> CliveColours.Lights
+    Tone.Blinds -> CliveColours.Blinds
+    Tone.Plugs -> CliveColours.Plugs
+    Tone.Gregg -> CliveColours.Gregg
+    Tone.Cooling -> CliveColours.Cooling
+    Tone.Energy -> CliveColours.Energy
+    Tone.Gas -> CliveColours.Gas
+    Tone.Car -> CliveColours.Car
+    Tone.Alarm -> CliveColours.Alarm
+    Tone.Doors -> CliveColours.Doors
+    Tone.AlarmHome -> CliveColours.AlarmHome
+    Tone.AlarmAway -> CliveColours.AlarmAway
+    Tone.AlarmOff -> CliveColours.AlarmOff
+    Tone.ArmingHome -> CliveColours.ArmingHome
+    Tone.ArmingAway -> CliveColours.ArmingAway
+    Tone.Media -> CliveColours.Media
+    Tone.People -> CliveColours.People
+    Tone.Calendar -> CliveColours.Calendar
+    Tone.Sunny -> CliveColours.Sunny
+    Tone.Night -> CliveColours.Night
+    Tone.Rain -> CliveColours.Rain
+    Tone.Snow -> CliveColours.Snow
+    Tone.Storm -> CliveColours.Storm
+    Tone.Sport -> CliveColours.Sport
+}
 
-private fun dark(container: Long, onContainer: Long, accent: Long) =
-    ToneColors(Color(container), Color(onContainer), Color(accent), Color(0xFF202124))
+/**
+ * Dark: the set's Dark ground with its Colour for text and the strong colour. Light: a soft tint of its Light over white, with its
+ * Deep for text and its Colour as the strong one; text on the strong colour is the set's Dark either way.
+ */
+private fun colorsOf(set: EntityColours, dark: Boolean): ToneColors =
+    if (dark) ToneColors(set.dark, set.colour, set.colour, set.dark)
+    else ToneColors(lerp(Color.White, set.light, 0.38f), set.deep, set.colour, set.dark)
 
-private val lightTones = mapOf(
-    Tone.Green to light(0xFFE6F4EA, 0xFF0D652D, 0xFF1E8E3E),
-    Tone.Blue to light(0xFFE8F0FE, 0xFF174EA6, 0xFF1A73E8),
-    Tone.Red to light(0xFFFCE8E6, 0xFFA50E0E, 0xFFD93025),
-    Tone.Purple to light(0xFFF3E8FD, 0xFF681DA8, 0xFF9334E6),
-    Tone.Amber to light(0xFFFEF7E0, 0xFF7A4F01, 0xFFE37400),
-    Tone.Orange to light(0xFFFEEFE3, 0xFF8C3A00, 0xFFE8590C),
-    Tone.Teal to light(0xFFE0F7FA, 0xFF006064, 0xFF00838F),
-    Tone.Indigo to light(0xFFE8EAF6, 0xFF283593, 0xFF5C6BC0),
-    Tone.Grey to light(0xFFF1F3F4, 0xFF3C4043, 0xFF5F6368),
-    // The house's own tasks: a salmon coral, pinker than Orange and softer than Red (which means overdue).
-    Tone.Coral to light(0xFFFFE9E4, 0xFF8C2D19, 0xFFF2705C),
-)
-
-private val darkTones = mapOf(
-    Tone.Green to dark(0xFF1B3A28, 0xFF81C995, 0xFF81C995),
-    Tone.Blue to dark(0xFF1C3358, 0xFF8AB4F8, 0xFF8AB4F8),
-    Tone.Red to dark(0xFF4D1F1C, 0xFFF28B82, 0xFFF28B82),
-    Tone.Purple to dark(0xFF3A2552, 0xFFC58AF9, 0xFFC58AF9),
-    Tone.Amber to dark(0xFF4A3A12, 0xFFFDD663, 0xFFFDD663),
-    Tone.Orange to dark(0xFF4A2A14, 0xFFFFAB70, 0xFFFFAB70),
-    Tone.Teal to dark(0xFF0F3A40, 0xFF4DD0E1, 0xFF4DD0E1),
-    Tone.Indigo to dark(0xFF262B4A, 0xFF9FA8DA, 0xFF9FA8DA),
-    Tone.Grey to dark(0xFF303134, 0xFFBDC1C6, 0xFF9AA0A6),
-    Tone.Coral to dark(0xFF4D2620, 0xFFFF9C8A, 0xFFFF9C8A),
-)
+private fun neutralColors(dark: Boolean): ToneColors =
+    if (dark) CliveColours.NeutralDark.let { ToneColors(it.surface2, it.text, it.soft, it.background) }
+    else CliveColours.NeutralLight.let { ToneColors(it.surface2, it.text, it.soft, it.surface) }
 
 @Composable
 fun toneColors(tone: Tone): ToneColors = toneColorsFor(tone, isSystemInDarkTheme())
 
 /** The same colours without Compose, for places that draw themselves (the home-screen widgets). */
-fun toneColorsFor(tone: Tone, dark: Boolean): ToneColors = (if (dark) darkTones else lightTones).getValue(tone)
+fun toneColorsFor(tone: Tone, dark: Boolean): ToneColors = toneSet(tone)?.let { colorsOf(it, dark) } ?: neutralColors(dark)
 
 /** The alarm card's colours, as on the dashboard. */
 fun alarmTone(state: String?): Tone = when (state) {
-    "disarmed" -> Tone.Green
-    "armed_home" -> Tone.Blue
-    "armed_away", "triggered" -> Tone.Red
-    "armed_night" -> Tone.Purple
-    "arming" -> Tone.Amber
-    "pending" -> Tone.Orange
+    "disarmed" -> Tone.AlarmOff
+    "armed_home" -> Tone.AlarmHome
+    "armed_away" -> Tone.AlarmAway
+    "triggered" -> Tone.Red
+    "armed_night" -> Tone.Alarm
+    "arming" -> Tone.ArmingHome
+    "pending" -> Tone.ArmingAway
     else -> Tone.Grey
 }
 

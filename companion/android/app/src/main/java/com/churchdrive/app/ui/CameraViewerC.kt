@@ -269,7 +269,7 @@ internal fun CameraViewerC(
                     Row(
                         modifier = Modifier.align(Alignment.TopStart).padding(8.dp).then(if (full) Modifier.statusBarsPadding() else Modifier),
                     ) {
-                        Box(modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(if (live) Color(0xFFE53935) else Color(0xFF616875)).padding(horizontal = 7.dp, vertical = 3.dp)) {
+                        Box(modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(if (live) CliveColours.Bad.colour else Color(0xFF616875)).padding(horizontal = 7.dp, vertical = 3.dp)) {
                             Text(if (!live) "● Connecting…" else if (talking && canTalk) "● LIVE · talking" else "● LIVE", color = Color.White, fontSize = 11.sp, maxLines = 1)
                         }
                     }
@@ -285,13 +285,13 @@ internal fun CameraViewerC(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                                 ) {
-                                    HaIcon(batteryIconName(battery), CdVectors.Info, if (battery < 15) Color(0xFFEF5350) else if (battery < 30) Color(0xFFFFA726) else Color.White, 18.dp)
+                                    HaIcon(batteryIconName(battery), CdVectors.Info, if (battery < 15) CliveColours.Bad.colour else if (battery < 30) CliveColours.Warn.colour else Color.White, 18.dp)
                                     Text("${battery.toInt()}%", color = Color.White, fontSize = 12.sp)
                                 }
                             }
                             if (found.signal != null) {
                                 Box(modifier = Modifier.clip(CircleShape).background(Color.Black.copy(alpha = 0.55f)).padding(6.dp)) {
-                                    HaIcon(signalIconName(bars), CdVectors.Info, if (bars in 0..1) Color(0xFFEF5350) else if (bars == 2) Color(0xFFFFA726) else Color.White, 18.dp)
+                                    HaIcon(signalIconName(bars), CdVectors.Info, if (bars in 0..1) CliveColours.Bad.colour else if (bars == 2) CliveColours.Warn.colour else Color.White, 18.dp)
                                 }
                             }
                         }
@@ -342,19 +342,19 @@ internal fun CameraViewerC(
                     if (go2rtcFailed) {
                         Text(
                             "No two-way audio: go2rtc stream \"${talkStream ?: eventsBase}\" didn't connect ($go2rtcWhy). Listening through Home Assistant.",
-                            color = Color(0xFFFFA726), fontSize = 12.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp),
+                            color = CliveColours.Warn.colour, fontSize = 12.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp),
                         )
                     }
                     if (talkRefused) {
                         Text(
                             "This camera didn't take audio from the phone, so Talk can't work through Home Assistant's connection to it.",
-                            color = Color(0xFFFFA726), fontSize = 12.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp),
+                            color = CliveColours.Warn.colour, fontSize = 12.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp),
                         )
                     }
                     if (micDenied) {
                         Text(
                             "The microphone is off for this app. Allow it in Android's settings to talk.",
-                            color = Color(0xFFFFA726), fontSize = 12.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp),
+                            color = CliveColours.Warn.colour, fontSize = 12.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp),
                         )
                     }
                 }
@@ -391,7 +391,7 @@ private fun CallRow(
 ) {
     if (ringing && labels) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).clip(RoundedCornerShape(999.dp)).background(Color(0xFF2E9D4F)).clickable(onClick = onAnswer).padding(vertical = 14.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).clip(RoundedCornerShape(999.dp)).background(CliveColours.Ok.colour).clickable(onClick = onAnswer).padding(vertical = 14.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -401,7 +401,7 @@ private fun CallRow(
         return
     }
     Row(horizontalArrangement = Arrangement.spacedBy(if (labels) 22.dp else 12.dp), verticalAlignment = Alignment.Top) {
-        CircleButton("mdi:phone-hangup", Color.White, Color(0xFFD93025), 46, if (labels) "Hang up" else null, onHang)
+        CircleButton("mdi:phone-hangup", Color.White, CliveColours.Bad.colour, 46, if (labels) "Hang up" else null, onHang)
         if (canTalk) {
             CircleButton(
                 if (talking) "mdi:microphone" else "mdi:microphone-off",

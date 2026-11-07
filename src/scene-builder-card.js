@@ -13,7 +13,7 @@ import { loadUniversalScenes } from './universal-scenes.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { KIT_CARD_BG } from './card-kit.js';
 
-const BLANK = { name: '', kind: 'colour', kelvin: 2700, brightness: 80, colors: ['#ff7b39', '#7b2cbf'], dynamic: true, speed: 0.63, icon: '' };
+const BLANK = { name: '', kind: 'colour', kelvin: 2700, brightness: 80, colors: ['#ff8a4c', '#7b2cbf'], dynamic: true, speed: 0.63, icon: '' };
 
 function kelvinHex(k) {
   // Rough colour temperature to sRGB, for the preview swatch.

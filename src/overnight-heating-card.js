@@ -11,7 +11,7 @@ import { SUFFIX, LABEL } from './suffix.js';
 import { kitShell, kitHead, kitEsc } from './card-kit.js';
 import { OVERNIGHT_MODE_ID, OVERNIGHT_START_ID, OVERNIGHT_END_ID, OVERNIGHT_MODES, hm, inWindow, describeOvernight, modeOf } from './overnight-logic.js';
 
-const OH_COLOR = { Off: '#8b919c', Eco: '#4caf50', Smart: '#7986cb' };
+const OH_COLOR = { Off: '#9aa4b2', Eco: '#55c47c', Smart: '#8a86ff' };
 
 const OH_CSS = `
   .oh-modes { display:flex; gap:6px; }

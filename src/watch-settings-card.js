@@ -37,7 +37,7 @@ const WS_CSS = `
   .wc-chip[aria-pressed="true"] { color:#fff; }
   .wc-chip:disabled { cursor:default; }
   .wc-sw:focus-visible, .wc-mv:focus-visible, .wc-chip:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
-  .wc-msg { font-size:0.8rem; color:#ffa726; }
+  .wc-msg { font-size:0.8rem; color:#f0b13a; }
 `;
 
 function wcDemo() {
@@ -62,7 +62,7 @@ export const WatchSettingsCardEditor = createFormEditor({
     { name: 'demo', selector: { boolean: {} } },
   ],
   labels: { title: 'Title (optional)', color: 'Colour', demo: 'Show pretend devices (for Design Presets; changes are switched off)' },
-  helpers: { color: 'Default blue (#5c6bc0).' },
+  helpers: { color: 'Default blue (#8a86ff).' },
 });
 
 export class WatchSettingsCard extends HTMLElement {
@@ -128,7 +128,7 @@ export class WatchSettingsCard extends HTMLElement {
   }
 
   _colour() {
-    return this.config.color || '#5c6bc0';
+    return this.config.color || '#8a86ff';
   }
 
   _canEdit() {

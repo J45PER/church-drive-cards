@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.104.0
+
+- **The house's own colours.** Material You is gone: the app's colours are Clive's palette (neutral backgrounds, text and an indigo accent; entity colours from `cards.json`), not the phone's wallpaper or Google's. Lights are yellow, heating orange, electricity and gas Octopus pink and violet, the car blue, security indigo, media pink, Gregg mint, shopping coral; green, amber and red keep their fixed meaning. The watch's weather, sport and air-quality colours, the car and climate rings, and the widgets follow. Written without an Android SDK, so CI is its first compile.
+- The shared update banner and daily question moved to `core` (Google Play's update screen is there too).
+
 ## 0.103.0
 
 - **Purifier schedule.** The Climate page can show a Purifier schedule card under the air purifier: one line per schedule (for example `Mon-Fri Auto: 07:00-23:30`) and the next change. Administrators tap Edit to change the days (Mon to Sun), the Auto and Sleep times, add or remove a schedule, and switch the schedule on or off; nothing changes until Save. An on/off row in a settings list is now a switch. Needs Church Drive 0.103.0 or later in Home Assistant.

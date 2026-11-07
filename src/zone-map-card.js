@@ -22,8 +22,8 @@ import { kitEsc } from './card-kit.js';
 import { MAP_LAYERS, mapStyle, setMapStyle, googleTiles, useGoogle } from './map-style.js';
 
 const ATTR = 'Imagery &copy; Esri, Maxar, Earthstar Geographics &middot; Search &copy; OpenStreetMap';
-const HOME = '#4caf50';
-const PALETTE = ['#26a69a', '#ffb300', '#ab47bc', '#42a5f5', '#ef5350', '#8d6e63'];
+const HOME = '#55c47c';
+const PALETTE = ['#3fd0cf', '#f0b13a', '#ab47bc', '#6cc8ff', '#ff6b6b', '#8fa9c4'];
 
 const ZM_CSS = `
   ${LEAFLET_CSS}
@@ -35,32 +35,32 @@ const ZM_CSS = `
   .zm-search { position:absolute; z-index:500; top:10px; left:10px; right:150px; }
   .zm-search input { width:100%; box-sizing:border-box; height:38px; border-radius:12px; border:none; padding:0 12px 0 34px; font:inherit; font-size:0.85rem;
     background:rgba(31,33,40,0.92); color:#eee; outline:none; }
-  .zm-search .zm-glass { position:absolute; left:10px; top:10px; color:#9aa0ad; }
+  .zm-search .zm-glass { position:absolute; left:10px; top:10px; color:#9aa4b2; }
   .zm-results { margin-top:4px; border-radius:12px; overflow:hidden; background:rgba(31,33,40,0.96); }
   .zm-results button { display:block; width:100%; text-align:left; border:none; background:transparent; color:#eee; font:inherit; font-size:0.8rem; padding:8px 12px; cursor:pointer; }
   .zm-results button:hover { background:rgba(255,255,255,0.08); }
   .zm-layers { position:absolute; z-index:500; top:10px; right:10px; display:flex; border-radius:12px; overflow:hidden; }
   .zm-layers button, .zm-zoom button, .zm-add { border:none; cursor:pointer; font:inherit; font-size:0.78rem; font-weight:700; color:#eee; background:rgba(31,33,40,0.92); }
   .zm-layers button { padding:10px 11px; }
-  .zm-layers button.on { background:#26a69a; color:#fff; }
+  .zm-layers button.on { background:#3fd0cf; color:#fff; }
   .zm-zoom { position:absolute; z-index:500; right:10px; bottom:24px; display:flex; flex-direction:column; gap:6px; }
   .zm-zoom button { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; }
-  .zm-add { position:absolute; z-index:500; left:10px; bottom:24px; border-radius:12px; padding:10px 14px; background:#26a69a; color:#fff; }
-  .zm-add.on { background:#ffb300; color:#221; }
+  .zm-add { position:absolute; z-index:500; left:10px; bottom:24px; border-radius:12px; padding:10px 14px; background:#3fd0cf; color:#fff; }
+  .zm-add.on { background:#f0b13a; color:#221; }
   .zm-tag { background:rgba(0,0,0,0.65); color:#fff; border:none; border-radius:8px; box-shadow:none; font-weight:800; font-size:11px; padding:2px 7px; }
   .zm-tag::before { display:none; }
-  .zm-handle { width:14px !important; height:14px !important; margin:-7px 0 0 -7px !important; border-radius:50%; background:#fff; border:2px solid #26a69a; box-sizing:border-box; cursor:ew-resize; }
-  .zm-mover { width:22px !important; height:22px !important; margin:-11px 0 0 -11px !important; border-radius:50%; background:rgba(255,255,255,0.9); border:2px solid #26a69a; box-sizing:border-box; cursor:move; }
+  .zm-handle { width:14px !important; height:14px !important; margin:-7px 0 0 -7px !important; border-radius:50%; background:#fff; border:2px solid #3fd0cf; box-sizing:border-box; cursor:ew-resize; }
+  .zm-mover { width:22px !important; height:22px !important; margin:-11px 0 0 -11px !important; border-radius:50%; background:rgba(255,255,255,0.9); border:2px solid #3fd0cf; box-sizing:border-box; cursor:move; }
   .zm-edit { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:10px; padding:10px; border-radius:14px; background:rgba(127,127,127,0.1); font-size:0.85rem; }
   .zm-edit input { flex:1 1 160px; min-width:0; height:36px; box-sizing:border-box; border-radius:10px; border:1px solid var(--divider-color, rgba(127,127,127,0.3));
     background:var(--secondary-background-color, rgba(127,127,127,0.12)); color:var(--primary-text-color); font:inherit; padding:0 10px; }
   .zm-size { color:var(--secondary-text-color); white-space:nowrap; }
   .zm-btn { border:none; cursor:pointer; font:inherit; font-size:0.82rem; font-weight:700; border-radius:999px; padding:8px 14px; background:rgba(127,127,127,0.16); color:var(--primary-text-color); }
-  .zm-btn.save { background:#26a69a; color:#fff; }
-  .zm-btn.del { background:rgba(229,57,53,0.18); color:#ef9a9a; }
-  .zm-pin { width:30px !important; height:40px !important; margin:-38px 0 0 -15px !important; background:none; border:none; color:#ea4335; filter:drop-shadow(0 2px 3px rgba(0,0,0,0.5)); cursor:pointer; }
+  .zm-btn.save { background:#3fd0cf; color:#fff; }
+  .zm-btn.del { background:rgba(229,57,53,0.18); color:#ffb5b5; }
+  .zm-pin { width:30px !important; height:40px !important; margin:-38px 0 0 -15px !important; background:none; border:none; color:#ff6b6b; filter:drop-shadow(0 2px 3px rgba(0,0,0,0.5)); cursor:pointer; }
   .zm-pin svg { width:30px; height:40px; display:block; }
-  .zm-results small { display:block; color:#9aa0ad; font-size:0.72rem; margin-top:1px; }
+  .zm-results small { display:block; color:#9aa4b2; font-size:0.72rem; margin-top:1px; }
   .zm-hint { margin-top:8px; font-size:0.75rem; color:var(--secondary-text-color); }
 `;
 

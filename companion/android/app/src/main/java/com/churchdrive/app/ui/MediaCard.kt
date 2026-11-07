@@ -77,7 +77,7 @@ fun padPress(pad: Pad, player: String, key: String, call: CallService) {
 @Composable
 fun MediaCard(config: JSONObject, entities: Map<String, EntityState>, registry: Registry, call: CallService) {
     val players = mediaPlayers(config, entities)
-    val tone = toneColors(toneFromColour(config.optString("color")) ?: Tone.Purple)
+    val tone = toneColors(toneFromColour(config.optString("color")) ?: Tone.Media)
     var open by remember { mutableStateOf<String?>(null) }
     EntityCard(tone.container, tone.onContainer) {
         config.optString("title").takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.titleMedium) }

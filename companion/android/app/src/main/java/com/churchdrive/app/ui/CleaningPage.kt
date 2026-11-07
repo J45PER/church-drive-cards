@@ -106,7 +106,7 @@ fun CleaningPage(entities: Map<String, EntityState>, call: CallService) {
     fun pick(id: String, option: String) = call("select", "select_option", id, data("option" to option))
 
     // ---- Gregg: what he is doing
-    SectionPanel("Gregg", tone = Tone.Blue, summary = vacuumSummary(vac, battery), iconSlot = { GreggIcon(GreggState.Idle, it.accent, 36.dp) }) {
+    SectionPanel("Gregg", tone = Tone.Gregg, summary = vacuumSummary(vac, battery), iconSlot = { GreggIcon(GreggState.Idle, it.accent, 36.dp) }) {
         EntityCard(tone.container, tone.onContainer, deviceEntity = VACUUM_ENTITY) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 GreggIcon(state, tone.accent, 72.dp, pct)
@@ -145,7 +145,7 @@ fun CleaningPage(entities: Map<String, EntityState>, call: CallService) {
         "Mop intensity" to "select.gregg_mop_intensity",
     ).filter { (_, id) -> entities[id]?.options()?.isNotEmpty() == true }
     if (settings.isNotEmpty()) {
-        SectionPanel("Cleaning settings", iconName = "mdi:tune-variant", tone = Tone.Blue) {
+        SectionPanel("Cleaning settings", iconName = "mdi:tune-variant", tone = Tone.Gregg) {
             EntityCard(blue.container, blue.onContainer) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     for ((label, id) in settings) {
@@ -163,7 +163,7 @@ fun CleaningPage(entities: Map<String, EntityState>, call: CallService) {
     if (dockButtons.any { entities[it] != null } || find != null) {
         val status = entities["sensor.gregg_dock_status"]?.state?.takeIf { it != "unknown" && it != "unavailable" }.orEmpty()
         val doing = status.lowercase()
-        SectionPanel("Dock", iconName = "cd:home", tone = Tone.Blue, summary = status.ifBlank { null }) {
+        SectionPanel("Dock", iconName = "cd:home", tone = Tone.Gregg, summary = status.ifBlank { null }) {
             EntityCard(blue.container, blue.onContainer) {
                 val drying = doing.contains("dry") && entities["button.gregg_stop_dry_mop"] != null
                 val tiles = buildList {
@@ -182,7 +182,7 @@ fun CleaningPage(entities: Map<String, EntityState>, call: CallService) {
     // ---- Parts that wear out: a bar for the life left, blue turning to red
     val parts = CLEANING_PARTS.filter { entities[it.sensor] != null }
     if (parts.isNotEmpty()) {
-        SectionPanel("Parts", iconName = "mdi:wrench-outline", tone = Tone.Blue, summary = "Time left") {
+        SectionPanel("Parts", iconName = "mdi:wrench-outline", tone = Tone.Gregg, summary = "Time left") {
             EntityCard(blue.container, blue.onContainer) {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     for (p in parts) {
@@ -224,7 +224,7 @@ fun CleaningPage(entities: Map<String, EntityState>, call: CallService) {
     // ---- Switches
     val switches = CLEANING_SWITCHES.filter { entities[it.second]?.available == true }
     if (switches.isNotEmpty()) {
-        SectionPanel("Settings", iconName = "mdi:cog-outline", tone = Tone.Blue) {
+        SectionPanel("Settings", iconName = "mdi:cog-outline", tone = Tone.Gregg) {
             EntityCard(blue.container, blue.onContainer) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     for ((label, id) in switches) {

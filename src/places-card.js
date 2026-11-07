@@ -40,7 +40,7 @@ const PL_CSS = `
   .pl-acts { display:flex; justify-content:flex-end; gap:8px; margin-top:10px; }
   .pl-btn { border:none; cursor:pointer; font:inherit; font-size:0.82rem; font-weight:600; border-radius:999px; padding:7px 14px; display:flex; align-items:center; gap:6px;
     background:rgba(127,127,127,0.16); color:var(--primary-text-color); }
-  .pl-save { background:#26a69a; color:#fff; }
+  .pl-save { background:#3fd0cf; color:#fff; }
 `;
 
 // "At work · Ashfield School", "Gym · PureGym", "Ashfield School", "Home", "Away".
@@ -182,14 +182,14 @@ export class PlacesCard extends HTMLElement {
         if (admin) rows += `<div class="pl-acts"><button class="pl-btn" data-act="edit">${iconHtml('mdi:pencil', { size: '16px' })}Edit</button></div>`;
       }
       return `<div class="pl-person" data-person="${kitEsc(p.entity_id)}">${kitShell(
-        `<div class="pl-row"><div class="pl-ico" style="color:#4caf50;">${iconHtml('mdi:home', { size: '18px' })}</div><div class="pl-fixed">Home<small>Automatic</small></div></div>${rows}`,
+        `<div class="pl-row"><div class="pl-ico" style="color:#55c47c;">${iconHtml('mdi:home', { size: '18px' })}</div><div class="pl-fixed">Home<small>Automatic</small></div></div>${rows}`,
       )}</div>`;
     });
     this._grid.innerHTML = datalist + (people.length ? cards.join('') : '<div class="pl-none">Loading people…</div>');
     // Each person's card heading: their name and where they are now.
     this._grid.querySelectorAll('[data-person]').forEach((el) => {
       const p = people.find((x) => x.entity_id === el.dataset.person);
-      kitHead(el, p.first || p.name, placeText(p.place, p.zone), /^home$/i.test(p.place) ? '#4caf50' : '#26a69a');
+      kitHead(el, p.first || p.name, placeText(p.place, p.zone), /^home$/i.test(p.place) ? '#55c47c' : '#3fd0cf');
     });
     if (admin && people.length) {
       this._grid.insertAdjacentHTML('beforeend', `<div class="pl-foot" style="grid-column:1/-1;">Places are Home Assistant's zones. <a data-act="zones">Make or rename zones</a> in Settings › Areas, labels &amp; zones.</div>`);

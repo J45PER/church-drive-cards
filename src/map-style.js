@@ -198,7 +198,7 @@ function addSwitch(m, Lf) {
         const now = mapStyle() === 'street' ? 'street' : 'satellite';
         box.querySelectorAll('button').forEach((b) => {
           const on = b.dataset.style === now;
-          b.style.background = on ? '#26a69a' : 'rgba(31,33,40,0.92)';
+          b.style.background = on ? '#3fd0cf' : 'rgba(31,33,40,0.92)';
           b.style.color = '#fff';
         });
       };

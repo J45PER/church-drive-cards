@@ -13,6 +13,10 @@ object UpdateCheck {
     const val TODO_RELEASE_API = "https://api.github.com/repos/J45PER/church-drive-cards/releases/tags/todo-latest"
     const val TODO_APK_URL = "https://github.com/J45PER/church-drive-cards/releases/download/todo-latest/church-drive-todo.apk"
 
+    /** Church Drive Satellites has its own releases too. */
+    const val SATELLITES_RELEASE_API = "https://api.github.com/repos/J45PER/church-drive-cards/releases/tags/satellites-latest"
+    const val SATELLITES_APK_URL = "https://github.com/J45PER/church-drive-cards/releases/download/satellites-latest/church-drive-satellites.apk"
+
     /** Opens this app's Google Play page (the Play app if there is one, else the website): where a Play install gets its updates. */
     fun openPlayPage(context: android.content.Context, packageName: String) {
         val market = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("market://details?id=$packageName"))
