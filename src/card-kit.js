@@ -55,7 +55,14 @@ export function kitShell(body, extraCss = '') {
       <style>
         /* Narrow cards (e.g. five side by side): a smaller title, and the
            status word drops to its own line instead of cutting the title. */
-        .ck-card { container-type:inline-size; }
+        .ck-card { container-type:inline-size; position:relative; overflow:hidden; isolation:isolate; }
+        /* The Clive glow: two soft blobs of the card's colour drifting behind the content (as on the watch and satellite). On only where a dashboard asks for it. */
+        .ck-card.ck-glow::before, .ck-card.ck-glow::after { content:''; position:absolute; z-index:-1; width:85%; aspect-ratio:1; border-radius:50%; filter:blur(26px); opacity:.30; pointer-events:none; }
+        .ck-card.ck-glow::before { background:radial-gradient(circle, var(--ck-g1, transparent), transparent 68%); left:-22%; top:-55%; animation:ckGlowA 14s ease-in-out infinite alternate; }
+        .ck-card.ck-glow::after { background:radial-gradient(circle, var(--ck-g2, transparent), transparent 68%); right:-26%; bottom:-65%; animation:ckGlowB 17s ease-in-out infinite alternate; }
+        @keyframes ckGlowA { to { transform:translate(45%,30%) scale(1.15); } }
+        @keyframes ckGlowB { to { transform:translate(-50%,-25%) scale(1.2); } }
+        @media (prefers-reduced-motion: reduce) { .ck-card.ck-glow::before, .ck-card.ck-glow::after { animation:none; } }
         @container (max-width: 260px) { .ck-title { font-size:1.25rem !important; } .ck-word { text-align:left !important; } }
         .ck-row { display:flex; gap:6px; }
         .ck-q { position:relative; overflow:hidden; container-type:inline-size; flex:1 1 0; min-width:0; height:48px; border:none; border-radius:12px; padding:0 6px; cursor:pointer;
@@ -113,6 +120,19 @@ export function kitHead(root, title, word, color, tint = 0) {
   t.style.color = color;
   w.textContent = word;
   card.style.backgroundColor = tint ? `color-mix(in srgb, ${color} ${tint}%, ${KIT_CARD_BG})` : KIT_CARD_BG;
+  const glow = kitGlowOn(root) && color && color !== KIT_COLOR.off && !/^var\(--neutral-color/.test(String(color));
+  card.classList.toggle('ck-glow', !!glow);
+  if (glow) {
+    card.style.setProperty('--ck-g1', color);
+    card.style.setProperty('--ck-g2', `color-mix(in srgb, ${color} 55%, #fff)`);
+  }
+}
+
+/** Does this card get the moving glow? A card's own `glow: true/false` wins; otherwise only the mobile dashboard has it (the wall and room dashboards keep the style of their room). */
+export function kitGlowOn(root) {
+  const cfg = (root && (root._config || root.config)) || {};
+  if (typeof cfg.glow === 'boolean') return cfg.glow;
+  try { return /^\/dashboard-mobile(\/|$)/.test(location.pathname); } catch (e) { return false; }
 }
 
 // A 270° arc filled to `p` (0..1) with a label in the middle.

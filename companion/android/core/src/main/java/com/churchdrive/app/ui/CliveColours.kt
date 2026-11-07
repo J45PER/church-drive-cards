@@ -100,15 +100,15 @@ object CliveColours {
     /** Weather: partly cloudy. */
     val PartlyCloudy = EntityColours(Color(0xFFF2D58A), Color(0xFF473C1F), Color(0xFFEF8561), Color(0xFFF7E6BA), Color(0xFF6A5725))
     /** Weather: cloudy. */
-    val Cloudy = EntityColours(Color(0xFFA9B5C6), Color(0xFF2E3238), Color(0xFF6961EF), Color(0xFFD1D7E1), Color(0xFF3F4650))
+    val Cloudy = EntityColours(Color(0xFFA9B5C6), Color(0xFF2E3238), Color(0xFFC3CEDD), Color(0xFFD1D7E1), Color(0xFF3F4650))
     /** Weather: fog. */
-    val Fog = EntityColours(Color(0xFFB3BFCB), Color(0xFF2E3338), Color(0xFF6166EF), Color(0xFFD2D9E0), Color(0xFF3F474F))
+    val Fog = EntityColours(Color(0xFFB3BFCB), Color(0xFF2E3338), Color(0xFFCBD5E0), Color(0xFFD2D9E0), Color(0xFF3F474F))
     /** Weather: wind. */
     val Wind = EntityColours(Color(0xFF8FD6C8), Color(0xFF273F3A), Color(0xFF61C9EF), Color(0xFFC7EBE4), Color(0xFF345B53))
     /** Weather: hail. */
     val Hail = EntityColours(Color(0xFF9CC8E8), Color(0xFF233643), Color(0xFF6171EF), Color(0xFFC1DDF1), Color(0xFF2D4C62))
     /** Unavailable. */
-    val Unavailable = EntityColours(Color(0xFF6E7886), Color(0xFF303336), Color(0xFF6861EF), Color(0xFFD5D8DD), Color(0xFF43474C))
+    val Unavailable = EntityColours(Color(0xFF6E7886), Color(0xFF303336), Color(0xFF8A94A2), Color(0xFFD5D8DD), Color(0xFF43474C))
 
     val NeutralLight = NeutralColours(Color(0xFFF3F4F6), Color(0xFFFFFFFF), Color(0xFFECEEF2), Color(0xFFD9DDE4), Color(0xFF14181F), Color(0xFF5B6472), Color(0xFF4F46C8), Color(0xFFFFFFFF))
     val NeutralDark = NeutralColours(Color(0xFF0B0E13), Color(0xFF171C24), Color(0xFF202733), Color(0xFF28303C), Color(0xFFEEF1F5), Color(0xFF9AA4B2), Color(0xFFA9B4FF), Color(0xFF0B0E13))
