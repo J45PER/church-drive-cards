@@ -119,8 +119,15 @@ export function kitHead(root, title, word, color, tint = 0) {
   const w = root.querySelector('.ck-word');
   const card = root.querySelector('.ck-card');
   t.textContent = title;
-  t.style.color = color;
+  // The title is white; the colour is for the status pill (and bars, buttons and graphs).
+  t.style.color = 'var(--primary-text-color)';
   w.textContent = word;
+  if (word) {
+    w.style.cssText += `; flex:0 0 auto; margin-left:auto; padding:2px 10px; border-radius:999px; font-weight:600; font-size:0.78rem; color:${color}; background:color-mix(in srgb, ${color} 22%, transparent);`;
+  } else {
+    w.style.background = 'none';
+    w.style.padding = '0';
+  }
   card.style.backgroundColor = tint ? `color-mix(in srgb, ${color} ${tint}%, ${KIT_CARD_BG})` : KIT_CARD_BG;
   kitGlow(root, card, color);
 }

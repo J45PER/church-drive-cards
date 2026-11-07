@@ -109,6 +109,15 @@ fun EntityCard(
     }
 }
 
+/** A status as a pill: the card's strong colour on a faint wash of itself. Every card's status goes in one (the rest of the text is white). */
+@Composable
+fun StatusPill(text: String, tone: ToneColors, modifier: Modifier = Modifier) {
+    androidx.compose.material3.Text(
+        text, color = tone.accent, style = androidx.compose.material3.MaterialTheme.typography.labelMedium, maxLines = 1,
+        modifier = modifier.background(tone.accent.copy(alpha = 0.18f), androidx.compose.foundation.shape.CircleShape).padding(horizontal = 10.dp, vertical = 3.dp),
+    )
+}
+
 /** A glow colour for a card ground: the ground's hue, bright and clear, turned [shift] degrees. A grey ground (off, unavailable) has none. */
 fun glowColour(ground: Color, shift: Float): Color? {
     val hsv = FloatArray(3)

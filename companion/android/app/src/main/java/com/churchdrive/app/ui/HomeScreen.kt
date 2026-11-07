@@ -412,7 +412,7 @@ fun SectionPanel(
                 modifier = Modifier.weight(1f),
             )
             if (!summary.isNullOrBlank()) {
-                Text(summary, style = MaterialTheme.typography.bodyMedium, color = colors.accent)
+                StatusPill(summary, colors)
             }
             if (onClick != null) {
                 Icon(CdVectors.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
