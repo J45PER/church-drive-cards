@@ -102,12 +102,12 @@ fun TodoHighlights(entities: Map<String, EntityState>, call: CallService, onOpen
     val items = todoHighlights(lists, first).filter { it.uid !in ticked }
     val shown = items.take(3)
     val extra = items.size - shown.size
-    val purple = toneColors(Tone.Purple)
+    val purple = toneColors(Tone.TodoMine)
     val red = toneColors(Tone.Red)
     val green = toneColors(Tone.Green)
-    val indigo = toneColors(Tone.Indigo)
+    val indigo = toneColors(Tone.TodoShopping)
     val teal = toneColors(Tone.Teal)
-    val coral = toneColors(Tone.Coral)
+    val coral = toneColors(Tone.TodoHouse)
     EntityCard(purple.container, purple.onContainer) {
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {

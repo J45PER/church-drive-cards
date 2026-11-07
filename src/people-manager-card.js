@@ -14,6 +14,7 @@ import { createFormEditor } from './form-editor.js';
 import { groupPhones } from './phone-groups.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
+import { clive } from './clive-colours.js';
 import { kitEsc, kitNavigate } from './card-kit.js';
 import { placeText } from './places-card.js';
 import { carDevices, carEntities } from './car-card.js';
@@ -189,6 +190,10 @@ export class PeopleManagerCard extends HTMLElement {
   }
 
   _colour(p) {
+    // Each person has a palette of their own (person_jamie, person_hayley…), found by their first name or entity id.
+    const first = String(p.name || p.entity_id.replace(/^person\./, '')).trim().split(/\s+/)[0].toLowerCase().replace(/[^a-z]/g, '');
+    const own = clive(`person_${first}`) || clive(`person_${p.entity_id.replace(/^person\./, '').split('_')[0]}`);
+    if (own) return own;
     const all = (this._data && this._data.people) || [];
     return COLOURS[Math.max(0, all.findIndex((x) => x.entity_id === p.entity_id)) % COLOURS.length];
   }

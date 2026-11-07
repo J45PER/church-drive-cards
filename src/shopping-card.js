@@ -8,6 +8,7 @@
 // for, its date and the places it will be bought at. Back (the arrow, Escape, or the phone's back) closes it.
 // Items that weren't available are offered again the next time a list is made.
 
+import { clive } from './clive-colours.js';
 import * as L from 'leaflet/dist/leaflet-src.esm.js';
 import LEAFLET_CSS from 'leaflet/dist/leaflet.css';
 import { MAP_LAYERS, mapStyle, googleTiles } from './map-style.js';
@@ -20,7 +21,7 @@ import { checkStale } from './stale.js';
 
 export { shoppingIdOf };
 
-const COLOUR = '#8a86ff';
+const COLOUR = clive('todo_shopping');
 
 // ---- the lists, shared by every card and the full page -----------------------------------------------------
 

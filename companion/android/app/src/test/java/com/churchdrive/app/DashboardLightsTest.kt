@@ -80,6 +80,8 @@ class DashboardLightsTest {
         assertEquals(FloorLook("cd:floor-0", "lights"), layout.looks["Ground Floor"])
         assertEquals(Tone.Lights, toneFromColour("lights"))
         assertEquals(Tone.Gregg, toneFromColour("gregg"))
+        assertEquals(Tone.TodoHouse, toneFromColour("todo_house"))
+        assertEquals(Tone.PersonJamie, toneFromColour("person_jamie"))
     }
 
     @Test

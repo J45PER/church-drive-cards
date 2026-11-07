@@ -9,7 +9,7 @@ Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newe
 
 ## 0.104.0
 
-- **Update notice.** A newer version shows a banner at the top and a question that opens by itself once a day, as in the main app; a Play install uses Google Play's own update screen (before, only test builds from GitHub got a banner). The house's own colours replace Material You (see the phone app).
+- **Update notice.** A newer version shows a banner at the top and a question that opens by itself once a day, as in the main app; a Play install uses Google Play's own update screen (before, only test builds from GitHub got a banner). The house's own colours replace Material You (see the phone app), and each tab (My to-do, Shared, Cleaning, From the house) has a palette of its own.
 
 ## 0.103.0
 

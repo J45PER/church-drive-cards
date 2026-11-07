@@ -36,7 +36,7 @@ import { weekStatIds, buildWeek, dayCheapShare, lagNote, balance } from './energ
 export const OCTO_PINK = clive('energy');
 // Octopus's violet, for gas.
 export const OCTO_VIOLET = clive('gas');
-const EV_TEAL = clive('air');
+const EV_TEAL = clive('car'); // the charger belongs with the car
 const CHEAP = KIT_COLOR.good;
 const PEAK = KIT_COLOR.poor;
 
