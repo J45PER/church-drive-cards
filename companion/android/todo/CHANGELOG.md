@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.112.0
+
+- The task card has the same glow as the phone app's cards.
+
 ## 0.111.2
 
 - Unselected buttons are a faint wash, not an outline (see the phone app).

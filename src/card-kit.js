@@ -64,13 +64,14 @@ export function kitShell(body, extraCss = '') {
         /* Narrow cards (e.g. five side by side): a smaller title, and the
            status word drops to its own line instead of cutting the title. */
         .ck-card { container-type:inline-size; position:relative; overflow:hidden; isolation:isolate; }
-        ${KIT_GLOW_CSS}
         @container (max-width: 260px) { .ck-title { font-size:1.25rem !important; } .ck-word { text-align:left !important; } }
         .ck-row { display:flex; gap:6px; }
         .ck-q { position:relative; overflow:hidden; container-type:inline-size; flex:1 1 0; min-width:0; height:48px; border:none; border-radius:12px; padding:0 6px; cursor:pointer;
           background:rgba(127,127,127,0.14); color:var(--primary-text-color); font:inherit; font-size:13px; font-weight:600;
           display:flex; align-items:center; justify-content:center; gap:6px; transition:background-color .2s, color .2s; }
-        .ck-q.ck-col { flex-direction:column; gap:2px; height:56px; font-size:11px; }
+        /* A tile with its label under the icon grows to fit a long label (it wraps) instead of cutting it off or drawing it over the icon. */
+        .ck-q.ck-col { flex-direction:column; gap:2px; height:auto; min-height:56px; padding:6px 4px; font-size:11px; line-height:1.15; }
+        .ck-q.ck-col span { white-space:normal; overflow-wrap:anywhere; text-align:center; overflow:visible; text-overflow:clip; }
         .ck-q.ck-on { color:#fff; }
         .ck-q:disabled { opacity:.4; cursor:default; }
         .ck-q span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
@@ -129,10 +130,9 @@ export function kitHead(root, title, word, color, tint = 0) {
     w.style.padding = '0';
   }
   card.style.backgroundColor = tint ? `color-mix(in srgb, ${color} ${tint}%, ${KIT_CARD_BG})` : KIT_CARD_BG;
-  kitGlow(root, card, color);
 }
 
-/** Turns the glow on `card` (an ha-card with class ck-glow styles) to `color`, or off where the dashboard does not want it or the card is grey. */
+/** Turns the glow on `card` (the element with the ck-glow styles) to `color`, or off where the dashboard does not want it or the colour is grey. Section panels use it; the cards inside them sit on acrylic and have no glow of their own. */
 export function kitGlow(root, card, color) {
   const glow = kitGlowOn(root) && color && color !== KIT_COLOR.off && !/^var\(--neutral-color/.test(String(color));
   card.classList.toggle('ck-glow', !!glow);

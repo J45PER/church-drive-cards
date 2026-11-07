@@ -66,6 +66,7 @@ import com.churchdrive.app.ui.houseTaskPage
 import com.churchdrive.app.ui.isStepsTask
 import com.churchdrive.app.ui.shoppingIdOf
 import com.churchdrive.app.ui.taskLine
+import com.churchdrive.app.ui.glowBehind
 import com.churchdrive.app.ui.toneColors
 
 private fun TodoTab.icon(): ImageVector = when (this) {
@@ -185,7 +186,7 @@ private fun TaskCard(vm: TodoModel, tab: TodoTab) {
         )
     }
     Surface(shape = RoundedCornerShape(28.dp), color = tone.container, contentColor = tone.onContainer, modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(modifier = Modifier.glowBehind(tone.container).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (vm.listId(tab) == null) {
                 Text("Your list isn't ready yet.", style = MaterialTheme.typography.bodyMedium)
                 return@Column

@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.112.0
+
+- Temperature colour-coded again; Lower and Raise are two wide buttons above the modes; the to-do highlights card has light text and icons; the EV charger card is always the car's colour and the Octopus plan the electricity colour; a blind keeps the blinds colour; Gregg's settings no longer list washing the mop by itself or the child lock; the card glow is shared with the To-Do and Satellites apps.
+
 ## 0.111.2
 
 - Buttons that are not selected are a faint wash of the text colour like the tiles, not an outline (the alarm modes, Gregg's controls and the choice buttons).
