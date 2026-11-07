@@ -582,10 +582,11 @@ export class KitPending {
   set(want) {
     this.want = want;
     clearTimeout(this.timer);
+    // Slow cloud devices (the air purifier) can take longer than eight seconds to say they changed; keep showing the choice for thirty.
     this.timer = setTimeout(() => {
       this.want = null;
       this.owner._render();
-    }, 8000);
+    }, 30000);
   }
 
   apply(st) {

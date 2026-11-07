@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.110.0
+
+- The air purifier card keeps the button you pressed highlighted until the purifier confirms the change (up to half a minute) instead of jumping back.
+
 ## 0.109.0
 
 - The loading pill says Syncing. If the house's first answer is lost the app asks again every ten seconds (and reconnects after three tries) instead of sitting logged in with nothing showing. The Cleaning page and any Material icon the house set has under the same name use the house's own icons.

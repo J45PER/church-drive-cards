@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.110.0
+
+- No change to this app; version kept equal.
+
 ## 0.109.0
 
 - The Syncing wording, the states retry and the house icons (see the phone app).

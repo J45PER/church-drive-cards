@@ -197,12 +197,18 @@ fun AirPurifierCard(config: JSONObject, entities: Map<String, EntityState>, call
     val preset = fan?.str("preset_mode")
     val enabled = fan?.available == true
     val filters = config.optJSONArray("filters")
+    // What was just pressed is shown at once and kept until the purifier says it has changed (a slow cloud device can take half a minute), so the highlighted button does not jump back.
+    var wanted by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+    androidx.compose.runtime.LaunchedEffect(wanted) { if (wanted != null) { kotlinx.coroutines.delay(30_000); wanted = null } }
+    androidx.compose.runtime.LaunchedEffect(on, preset) { if (wanted != null && ((wanted == "__off" && !on) || (on && preset == wanted))) wanted = null }
+    val shownOn = when (wanted) { null -> on; "__off" -> false; else -> true }
+    val shownPreset = if (wanted != null && wanted != "__off") wanted else preset
     EntityCard(tone.container, tone.onContainer, deviceEntity = id) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ToneIconName("mdi:air-purifier", CdVectors.Info, tone)
             Column(modifier = Modifier.weight(1f)) {
                 Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 1)
-                Text(if (!on) "Off" else preset?.let { presetLabel(it) } ?: "On", style = MaterialTheme.typography.bodyMedium)
+                Text(if (!shownOn) "Off" else shownPreset?.let { presetLabel(it) } ?: "On", style = MaterialTheme.typography.bodyMedium)
             }
             if (pm != null) {
                 Column(horizontalAlignment = Alignment.End) {
@@ -217,10 +223,10 @@ fun AirPurifierCard(config: JSONObject, entities: Map<String, EntityState>, call
         if (allergen != null) Text("Allergen index ${allergen.roundToInt()}", style = MaterialTheme.typography.bodyMedium)
         TileRow(
             buildList {
-                add(TileItem(IconMap.of("purifier", "off", "mdi:power"), "Off", !on) { call("fan", "turn_off", id, data()) })
-                if (presets.isEmpty()) add(TileItem("mdi:air-purifier", "On", on) { call("fan", "turn_on", id, data()) })
+                add(TileItem(IconMap.of("purifier", "off", "mdi:power"), "Off", !shownOn) { wanted = "__off"; call("fan", "turn_off", id, data()) })
+                if (presets.isEmpty()) add(TileItem("mdi:air-purifier", "On", shownOn) { wanted = null; call("fan", "turn_on", id, data()) })
                 presets.forEach { p ->
-                    add(TileItem(purifierModeIcon(p), presetLabel(p), on && preset == p) { call("fan", "set_preset_mode", id, data("preset_mode" to p)) })
+                    add(TileItem(purifierModeIcon(p), presetLabel(p), shownOn && shownPreset == p) { wanted = p; call("fan", "set_preset_mode", id, data("preset_mode" to p)) })
                 }
             },
             tone, tone.onContainer, enabled, perRow = 4, column = true,
