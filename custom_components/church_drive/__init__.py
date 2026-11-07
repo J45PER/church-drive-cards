@@ -87,6 +87,10 @@ from .const import (
     SERVICE_APPLY_SCENE,
     SERVICE_HEALTH_FIX,
     SERVICE_LOG_LOGO_REQUEST,
+    SERVICE_SET_PALETTE,
+    WS_COLOURS,
+    WS_COLOURS_SET,
+    EVENT_COLOURS,
     EVENT_NOTICE_TEST,
     SERVICE_NOTIFY,
     SERVICE_SYNC_SCENES,
@@ -137,6 +141,7 @@ from .health import DeviceHealth
 from .hue import async_sync
 from .library import Library, normalise
 from .icons import Icons
+from .colours import ColourSettings
 from .watch import WatchSettings
 from .inbox import Inbox
 from .shopping import Shopping
@@ -155,6 +160,9 @@ _LOGGER = logging.getLogger(__name__)
 FRONTEND_DIR = Path(__file__).parent / "frontend"
 PLATFORMS = [Platform.SELECT, Platform.SENSOR]
 
+SET_PALETTE_SCHEMA = vol.Schema(
+    {vol.Required("key"): cv.slug, vol.Optional("name"): cv.string, vol.Optional("colours"): vol.All(cv.ensure_list, [cv.string])}
+)
 LOG_LOGO_REQUEST_SCHEMA = vol.Schema({vol.Optional("competition", default=""): cv.string, vol.Optional("sport", default=""): cv.string})
 HEALTH_FIX_SCHEMA = vol.Schema(
     {
@@ -416,6 +424,31 @@ async def ws_watch_set(hass: HomeAssistant, connection: websocket_api.ActiveConn
         return
     kept = await watch.async_set(msg["config"])
     hass.bus.async_fire(EVENT_WATCH)
+    connection.send_result(msg["id"], kept)
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_COLOURS})
+@callback
+def ws_colours(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Send the palettes (shipped colours with the owner's changes) to the apps, the watch and the dashboards."""
+    colours = hass.data.get(DOMAIN, {}).get("colours")
+    if colours is None:
+        connection.send_error(msg["id"], "not_ready", "The colours aren't running")
+        return
+    connection.send_result(msg["id"], colours.config)
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_COLOURS_SET, vol.Required("palettes"): dict})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_colours_set(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Keep new palette changes (administrators only) and tell everything that shows them."""
+    colours = hass.data.get(DOMAIN, {}).get("colours")
+    if colours is None:
+        connection.send_error(msg["id"], "not_ready", "The colours aren't running")
+        return
+    kept = await colours.async_set(msg["palettes"])
+    hass.bus.async_fire(EVENT_COLOURS)
     connection.send_result(msg["id"], kept)
 
 
@@ -1269,7 +1302,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             [StaticPathConfig(URL_BASE, str(FRONTEND_DIR), cache_headers=False)]
         )
         for command in (
-            ws_library, ws_icons, ws_icon_set, ws_watch, ws_watch_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_mine, ws_notices_missed, ws_people_phone,
+            ws_library, ws_icons, ws_icon_set, ws_watch, ws_watch_set, ws_colours, ws_colours_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_mine, ws_notices_missed, ws_people_phone,
             ws_people_places, ws_people_cars, ws_people_access, ws_people_tracking, ws_people_settings, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_camera_alert_set, ws_maps, ws_maps_search, ws_assist_info,
             ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss, ws_reminders, ws_reminder_set,
             ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_import,
@@ -1305,6 +1338,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         data["watch"] = watch
     except Exception:  # noqa: BLE001
         _LOGGER.exception("The watch settings couldn't load; the watch shows every page")
+
+    # The colour palettes are optional too: without them everything uses the colours it ships with.
+    colours = ColourSettings(hass, str(FRONTEND_DIR / "clive" / "cards.json"))
+    try:
+        await colours.async_load()
+        data["colours"] = colours
+    except Exception:  # noqa: BLE001
+        _LOGGER.exception("The colour palettes couldn't load; everything uses its shipped colours")
 
     # Device health must never stop the cards and scenes from loading.
     health = DeviceHealth(hass, entry.options.get(CONF_HEALTH_ENTITIES, []))
@@ -1562,6 +1603,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.services.async_register(DOMAIN, SERVICE_LOG_LOGO_REQUEST, log_logo_request, schema=LOG_LOGO_REQUEST_SCHEMA)
 
+    # Change or add one colour palette (administrators, and automations): the apps and dashboards pick it up at once.
+    async def set_palette(call: ServiceCall) -> None:
+        from homeassistant.exceptions import Unauthorized
+
+        if call.context.user_id:
+            user = await hass.auth.async_get_user(call.context.user_id)
+            if user is None or not user.is_admin:
+                raise Unauthorized(context=call.context)
+        store = hass.data.get(DOMAIN, {}).get("colours")
+        if store is None:
+            return
+        await store.async_set_one(call.data["key"], call.data.get("name"), call.data.get("colours"))
+        hass.bus.async_fire(EVENT_COLOURS)
+
+    hass.services.async_register(DOMAIN, SERVICE_SET_PALETTE, set_palette, schema=SET_PALETTE_SCHEMA)
+
     async def sync_scenes(call: ServiceCall | None = None) -> ServiceResponse:
         return await async_sync(hass, entry.options.get(CONF_SCENE_GROUPS, []))
 
@@ -1599,6 +1656,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.services.async_remove(DOMAIN, SERVICE_APPLY_SCENE)
     hass.services.async_remove(DOMAIN, SERVICE_HEALTH_FIX)
     hass.services.async_remove(DOMAIN, SERVICE_LOG_LOGO_REQUEST)
+    hass.services.async_remove(DOMAIN, SERVICE_SET_PALETTE)
     hass.services.async_remove(DOMAIN, SERVICE_NOTIFY)
     hass.services.async_remove(DOMAIN, SERVICE_ADD_TASKS)
     hass.services.async_remove(DOMAIN, SERVICE_SHOPPING_ADD)

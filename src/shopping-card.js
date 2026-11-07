@@ -21,7 +21,7 @@ import { checkStale } from './stale.js';
 
 export { shoppingIdOf };
 
-const COLOUR = clive('todo_shopping');
+const COLOUR = clive('shopping');
 
 // ---- the lists, shared by every card and the full page -----------------------------------------------------
 

@@ -25,6 +25,7 @@ SIGNAL_LIBRARY = "church_drive_library"
 CONF_HEALTH_ENTITIES = "health_entities"
 SERVICE_HEALTH_FIX = "health_fix"
 SERVICE_LOG_LOGO_REQUEST = "log_logo_request"
+SERVICE_SET_PALETTE = "set_palette"
 SIGNAL_HEALTH = "church_drive_health"
 
 # People and notifications.
@@ -45,6 +46,11 @@ WS_PEOPLE_SETTINGS = "church_drive/people/settings"
 WS_ICONS = "church_drive/icons"
 WS_ICON_SET = "church_drive/icons/set"
 EVENT_ICONS = "church_drive_icons_changed"
+
+# Clive's colour palettes (colours.py): read by the apps, the watch, the satellites and the dashboards, changed by an administrator.
+WS_COLOURS = "church_drive/colours"
+WS_COLOURS_SET = "church_drive/colours/set"
+EVENT_COLOURS = "church_drive_colours_changed"
 
 # The watch companion's pages and items (watch.py): read by the watch app, set in the Manager dashboard's Watch panel.
 WS_WATCH = "church_drive/watch"

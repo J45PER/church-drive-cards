@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.105.0
+
+- Live colours (see the phone app).
+
 ## 0.104.3
 
 - Readable colours in the dark (see the phone app).

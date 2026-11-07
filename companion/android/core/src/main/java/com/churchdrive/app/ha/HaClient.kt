@@ -65,6 +65,10 @@ class HaClient(private val scope: CoroutineScope) {
         private set
     private var job: Job? = null
     private var nextId = 1
+
+    /** The colours sensor's revision last read, so the palettes are fetched again only when Home Assistant says they changed. */
+    @Volatile
+    private var colourRevision: String? = null
     private var url = ""
     private var token = ""
 
@@ -203,6 +207,7 @@ class HaClient(private val scope: CoroutineScope) {
                     pending.clear()
                     lost.forEach { it(null) }
                     subscriptions.clear()
+                    colourRevision = null
                     _statesLoaded.value = false
                     _connection.value = ConnectionState.Connected
                     if (light) return
@@ -236,6 +241,7 @@ class HaClient(private val scope: CoroutineScope) {
                         getStatesId -> {
                             _entities.value = parseStates(msg.getJSONArray("result"))
                             _statesLoaded.value = true
+                            noteColours(_entities.value[COLOURS_ENTITY]?.state)
                         }
                         configId -> com.churchdrive.app.ui.HomeTime.zoneId = msg.optJSONObject("result")?.optString("time_zone")?.takeIf { it.isNotBlank() }
                         userId -> {
@@ -268,6 +274,15 @@ class HaClient(private val scope: CoroutineScope) {
         }
     }
 
+    /** The palettes changed in Home Assistant (or this is the first look): fetch them and show them now. Every person gets this, not only administrators. */
+    private fun noteColours(revision: String?) {
+        if (revision.isNullOrBlank() || revision == "unknown" || revision == "unavailable" || revision == colourRevision) return
+        colourRevision = revision
+        request("church_drive/colours") { result ->
+            (result as? JSONObject)?.optJSONObject("palettes")?.let { com.churchdrive.app.ui.LiveColours.apply(it) }
+        }
+    }
+
     private fun applyEvent(event: JSONObject) {
         // A dashboard was saved, or an icon was changed in the Icon Styles card: read them again.
         if (event.optString("event_type") == "lovelace_updated" || event.optString("event_type") == "church_drive_icons_changed") {
@@ -277,12 +292,16 @@ class HaClient(private val scope: CoroutineScope) {
         val data = event.optJSONObject("data") ?: return
         val entityId = data.optString("entity_id")
         val new = data.optJSONObject("new_state")
+        if (entityId == COLOURS_ENTITY) noteColours(new?.optString("state"))
         _entities.update { current ->
             if (new == null) current - entityId else current + (entityId to EntityState.fromJson(new))
         }
     }
 
     companion object {
+        /** The sensor whose state is the palettes' revision (colours.py). */
+        const val COLOURS_ENTITY = "sensor.church_drive_colours"
+
         fun websocketUrl(base: String): String {
             val trimmed = base.trim().trimEnd('/')
             val ws = when {

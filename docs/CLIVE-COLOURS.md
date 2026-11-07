@@ -59,9 +59,11 @@ Each name has five colours: Colour (the thing's own), Dark (the ground), Accent 
 
 | Name | Meaning | Colour | Dark | Accent | Light | Deep |
 |---|---|---|---|---|---|---|
-| `tasks` | To-do and lists | `#A5B4FC` | `#373C53` | `#9C94FA` | `#D2DAFE` | `#484F72` |
-| `shopping` | Shopping | `#FF9C8A` | `#4E3636` | `#D585B1` | `#FFCEC4` | `#6E4542` |
+| `tasks` | To-do and lists (My to-do) | `#A5B4FC` | `#373C53` | `#9C94FA` | `#D2DAFE` | `#484F72` |
+| `shopping` | Shopping (and shopping lists) | `#FF9C8A` | `#4E3636` | `#D585B1` | `#FFCEC4` | `#6E4542` |
 | `calendar` | Calendar and events | `#D9A441` | `#443823` | `#BD8A82` | `#ECD2A0` | `#5E4823` |
+| `todo_shared` | Shared to-do | `#8FA9C4` | `#313945` | `#8E8DD6` | `#C7D4E2` | `#3F4A5A` |
+| `todo_house` | To-do from the house | `#7E6DB5` | `#2D2A41` | `#8367CC` | `#BEB6DA` | `#383154` |
 
 ## Weather and sport
 
@@ -82,15 +84,6 @@ Each name has five colours: Colour (the thing's own), Dark (the ground), Accent 
 | `warn` | Needs attention | `#F0B13A` | `#4A3B21` | `#CC927E` | `#F8D89C` | `#684E20` |
 | `bad` | Wrong | `#FF6B6B` | `#4E292E` | `#D5669D` | `#FFB5B5` | `#6E3035` |
 
-## To-do types
-
-| Name | Meaning | Colour | Dark | Accent | Light | Deep |
-|---|---|---|---|---|---|---|
-| `todo_mine` | My to-do | `#A5B4FC` | `#373C53` | `#9C94FA` | `#D2DAFE` | `#484F72` |
-| `todo_shared` | Shared to-do | `#8FA9C4` | `#313945` | `#8E8DD6` | `#C7D4E2` | `#3F4A5A` |
-| `todo_house` | To-do from the house | `#7E6DB5` | `#2D2A41` | `#8367CC` | `#BEB6DA` | `#383154` |
-| `todo_shopping` | Shopping lists | `#FF9C8A` | `#4E3636` | `#D585B1` | `#FFCEC4` | `#6E4542` |
-
 ## People
 
 | Name | Meaning | Colour | Dark | Accent | Light | Deep |
@@ -105,6 +98,10 @@ Each name has five colours: Colour (the thing's own), Dark (the ground), Accent 
 | Name | Meaning | Colour | Dark | Accent | Light | Deep |
 |---|---|---|---|---|---|---|
 | `neutral` | Neutral (not an entity) | `#9AA4B2` | `#202733` | `#9AA4B2` | `#EEF1F5` | `#28303C` |
+
+## Changing a colour
+
+The palettes live in Home Assistant (the Church Drive integration keeps them; the colours below are what it ships). A change made there reaches the apps and the dashboards straight away, with no app update: `church_drive.set_palette` (key, name, five colours; administrators) or the `church_drive/colours/set` command. The apps and dashboards read `church_drive/colours` and follow the revision on `sensor.church_drive_colours`; the glow of the Clive cards on the phone, watch and satellite comes from the same sensor through `script.clive_show_card`. A colour a card names directly in code (a hex in a card's own style) is not a palette colour and only changes with a release.
 
 ## Home Assistant colour names
 
@@ -136,6 +133,8 @@ Names a dashboard card or the app may still be given from Home Assistant's own c
 | `coral` | `shopping` |
 | `salmon` | `shopping` |
 | `todo_cleaning` | `gregg` |
+| `todo_mine` | `tasks` |
+| `todo_shopping` | `shopping` |
 
 ## Status
 

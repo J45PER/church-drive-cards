@@ -85,7 +85,7 @@ private const val NOT_READY = "Couldn't read the shopping lists. The house may n
 fun ShoppingScreen(listId: String, onClose: () -> Unit) {
     val api = LocalHaApi.current
     val model = rememberShoppingModel()
-    val tone = toneColors(Tone.TodoShopping)
+    val tone = toneColors(Tone.Shopping)
     var id by remember(listId) { mutableStateOf(listId) }
     var editing by remember(listId) { mutableStateOf(listId == "new" || listId == NEW_STEPS) }
     var message by remember { mutableStateOf("") }
@@ -361,7 +361,7 @@ private fun ShoppingForm(existing: ShoppingList?, steps: Boolean, state: Shoppin
 @Composable
 fun ShoppingCard(config: JSONObject) {
     val model = rememberShoppingModel()
-    val tone = toneColors(Tone.TodoShopping)
+    val tone = toneColors(Tone.Shopping)
     var open by remember { mutableStateOf<String?>(null) }
     open?.let { ShoppingScreen(it) { open = null } }
     EntityCard(tone.container, tone.onContainer) {

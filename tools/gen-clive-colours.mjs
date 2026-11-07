@@ -33,7 +33,7 @@ for (const [k, v] of Object.entries(ec.types)) {
 const neutral = (n) => `NeutralColours(${['background', 'surface', 'surface2', 'line', 'text', 'soft', 'primary', 'on_primary'].map((s) => `Color(${argb(ec.neutral[n][s])})`).join(', ')})`;
 kt.push('', `    val NeutralLight = ${neutral('light')}`, `    val NeutralDark = ${neutral('dark')}`, '', '    /** Every set by its key in cards.json. */', '    val byKey: Map<String, EntityColours> = mapOf(');
 for (const k of Object.keys(ec.types)) kt.push(`        "${k}" to ${pascal(k)},`);
-kt.push('    )', '', '    /** Home Assistant colour names and the palette name each one means (cards.json, entity_colours.aliases). */', '    val aliases: Map<String, String> = mapOf(');
+kt.push('    )', '', '    /** The key of each set (by identity), for LiveColours.resolve. */', '    val keyOf: Map<EntityColours, String> = byKey.entries.associate { (k, v) -> v to k }', '', '    /** Home Assistant colour names and the palette name each one means (cards.json, entity_colours.aliases). */', '    val aliases: Map<String, String> = mapOf(');
 for (const [a, k] of Object.entries(ec.aliases.names)) kt.push(`        "${a}" to "${k}",`);
 kt.push('    )', '}', '');
 
@@ -65,6 +65,7 @@ for (const g of groups) {
   for (const [k, t] of Object.entries(ec.types)) if (t.group === g) md.push(`| \`${k}\` | ${t.name} | ${t.colours.map((c) => `\`${c}\``).join(' | ')} |`);
   md.push('');
 }
+md.push('## Changing a colour', '', 'The palettes live in Home Assistant (the Church Drive integration keeps them; the colours below are what it ships). A change made there reaches the apps and the dashboards straight away, with no app update: `church_drive.set_palette` (key, name, five colours; administrators) or the `church_drive/colours/set` command. The apps and dashboards read `church_drive/colours` and follow the revision on `sensor.church_drive_colours`; the glow of the Clive cards on the phone, watch and satellite comes from the same sensor through `script.clive_show_card`. A colour a card names directly in code (a hex in a card\'s own style) is not a palette colour and only changes with a release.', '');
 md.push('## Home Assistant colour names', '', ec.aliases.note, '', '| HA name | Means |', '|---|---|', ...Object.entries(ec.aliases.names).map(([a, k]) => `| \`${a}\` | \`${k}\` |`), '',
   '## Status', '', 'Status keeps its fixed meaning everywhere: `ok` is fine, `warn` needs attention, `bad` is wrong. A card for any entity turns to these when something is wrong, then goes back to its own name.', '');
 const files = {
