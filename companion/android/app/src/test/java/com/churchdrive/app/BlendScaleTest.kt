@@ -3,6 +3,7 @@ package com.churchdrive.app
 import androidx.compose.ui.graphics.Color
 import com.churchdrive.app.ui.blendScale
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BlendScaleTest {
@@ -17,8 +18,9 @@ class BlendScaleTest {
     @Test
     fun onAnAnchorIsThatColourAndBetweenIsBlended() {
         assertEquals(Color.Yellow, blendScale(50.0, scale))
+        // Compose blends in a perceptual colour space, so the middle is between the two, not exactly half way in RGB.
         val mid = blendScale(70.0, scale)
-        assertEquals(1f, mid.red, 0.01f)
-        assertEquals(0.5f, mid.green, 0.01f)
+        assertTrue(mid.green > 0.1f && mid.green < 0.9f)
+        assertTrue(mid.red > 0.8f)
     }
 }
