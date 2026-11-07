@@ -858,5 +858,455 @@
   "ring": "Our own Ring icons, being drawn (listed under pending in icons.json)",
   "si": "Simple Icons brand logos, by name",
   "ol": "Our own logos where Simple Icons has none"
+ },
+ "entity_colours": {
+  "note": "Five colours per entity type, agreed on the Clive Entity Colours board (7 Nov 2026). Glow = Colour, Accent, Light as the three blobs on the Dark ground with a Deep edge. Status keeps its fixed meaning (green fine, amber needs attention, red wrong) and takes over a card when something is wrong. Electricity and Gas use Octopus pink and violet.",
+  "slots": [
+   "colour",
+   "dark",
+   "accent",
+   "light",
+   "deep"
+  ],
+  "types": {
+   "lights": {
+    "name": "Lights",
+    "group": "Home",
+    "colours": [
+     "#FFC857",
+     "#4E4128",
+     "#D5A190",
+     "#FFE4AB",
+     "#6E572D"
+    ]
+   },
+   "blinds": {
+    "name": "Blinds and windows",
+    "group": "Home",
+    "colours": [
+     "#8FA9C4",
+     "#313945",
+     "#8E8DD6",
+     "#C7D4E2",
+     "#3F4A5A"
+    ]
+   },
+   "plugs": {
+    "name": "Plugs and switches",
+    "group": "Home",
+    "colours": [
+     "#A8E05F",
+     "#38482A",
+     "#9EB095",
+     "#D4F0AF",
+     "#496230"
+    ]
+   },
+   "gregg": {
+    "name": "Gregg (the vacuum)",
+    "group": "Home",
+    "colours": [
+     "#5BE0B3",
+     "#244840",
+     "#6CB0CB",
+     "#ADF0D9",
+     "#296253"
+    ]
+   },
+   "heating": {
+    "name": "Heating",
+    "group": "Climate",
+    "colours": [
+     "#FF8A4C",
+     "#4E3126",
+     "#D57989",
+     "#FFC4A6",
+     "#6E3D28"
+    ]
+   },
+   "cooling": {
+    "name": "Cooling and AC",
+    "group": "Climate",
+    "colours": [
+     "#6CC8FF",
+     "#284154",
+     "#77A1FC",
+     "#B6E4FF",
+     "#305773"
+    ]
+   },
+   "air": {
+    "name": "Air and fans",
+    "group": "Climate",
+    "colours": [
+     "#3FD0CF",
+     "#1C4348",
+     "#5AA6DD",
+     "#9FE8E7",
+     "#1D5B5F"
+    ]
+   },
+   "energy": {
+    "name": "Electricity",
+    "group": "Energy and car",
+    "colours": [
+     "#F050F8",
+     "#4A2252",
+     "#CC54F7",
+     "#F8A8FC",
+     "#682570"
+    ]
+   },
+   "gas": {
+    "name": "Gas",
+    "group": "Energy and car",
+    "colours": [
+     "#7B61FF",
+     "#2C2754",
+     "#815FFC",
+     "#BDB0FF",
+     "#372C73"
+    ]
+   },
+   "car": {
+    "name": "Car and charger",
+    "group": "Energy and car",
+    "colours": [
+     "#4C8DFF",
+     "#203254",
+     "#637BFC",
+     "#A6C6FF",
+     "#233F73"
+    ]
+   },
+   "alarm": {
+    "name": "Alarm and security",
+    "group": "Security",
+    "colours": [
+     "#8A86FF",
+     "#303054",
+     "#8A77FC",
+     "#C4C2FF",
+     "#3D3C73"
+    ]
+   },
+   "doors": {
+    "name": "Doors and locks",
+    "group": "Security",
+    "colours": [
+     "#D2A8FF",
+     "#423954",
+     "#B88DFC",
+     "#E8D4FF",
+     "#5B4A73"
+    ]
+   },
+   "alarm_home": {
+    "name": "Alarm: Armed Home",
+    "group": "Alarm states",
+    "colours": [
+     "#4DA3FF",
+     "#203854",
+     "#6389FC",
+     "#A6D1FF",
+     "#234873"
+    ]
+   },
+   "alarm_away": {
+    "name": "Alarm: Armed Away",
+    "group": "Alarm states",
+    "colours": [
+     "#F4736C",
+     "#4B2B2E",
+     "#CE6B9E",
+     "#FAB9B6",
+     "#693435"
+    ]
+   },
+   "alarm_off": {
+    "name": "Alarm: Disarmed",
+    "group": "Alarm states",
+    "colours": [
+     "#55C47C",
+     "#224032",
+     "#689FA8",
+     "#AAE2BE",
+     "#27563C"
+    ]
+   },
+   "arming_home": {
+    "name": "Alarm: Arming Home",
+    "group": "Alarm states",
+    "colours": [
+     "#FFAA1F",
+     "#4E3A1A",
+     "#4DA3FF",
+     "#FFD48F",
+     "#6E4B15"
+    ]
+   },
+   "arming_away": {
+    "name": "Alarm: Arming Away",
+    "group": "Alarm states",
+    "colours": [
+     "#FF8533",
+     "#4E301F",
+     "#F4736C",
+     "#FFC299",
+     "#6E3B1E"
+    ]
+   },
+   "media": {
+    "name": "Media and music",
+    "group": "Media and people",
+    "colours": [
+     "#FF6F91",
+     "#4E2A37",
+     "#D568B5",
+     "#FFB7C8",
+     "#6E3245"
+    ]
+   },
+   "people": {
+    "name": "People and presence",
+    "group": "Media and people",
+    "colours": [
+     "#55C47C",
+     "#224032",
+     "#689FA8",
+     "#AAE2BE",
+     "#27563C"
+    ]
+   },
+   "tasks": {
+    "name": "To-do and lists",
+    "group": "Lists and time",
+    "colours": [
+     "#A5B4FC",
+     "#373C53",
+     "#9C94FA",
+     "#D2DAFE",
+     "#484F72"
+    ]
+   },
+   "shopping": {
+    "name": "Shopping",
+    "group": "Lists and time",
+    "colours": [
+     "#FF9C8A",
+     "#4E3636",
+     "#D585B1",
+     "#FFCEC4",
+     "#6E4542"
+    ]
+   },
+   "calendar": {
+    "name": "Calendar and events",
+    "group": "Lists and time",
+    "colours": [
+     "#D9A441",
+     "#443823",
+     "#BD8A82",
+     "#ECD2A0",
+     "#5E4823"
+    ]
+   },
+   "sunny": {
+    "name": "Weather: sunny",
+    "group": "Weather and sport",
+    "colours": [
+     "#FFD27A",
+     "#4E4431",
+     "#D5A8A7",
+     "#FFE8BC",
+     "#6E5C3B"
+    ]
+   },
+   "night": {
+    "name": "Weather: night",
+    "group": "Weather and sport",
+    "colours": [
+     "#5C6BC0",
+     "#242944",
+     "#6D66D3",
+     "#AEB5E0",
+     "#2A3059"
+    ]
+   },
+   "rain": {
+    "name": "Weather: rain and cloud",
+    "group": "Weather and sport",
+    "colours": [
+     "#8FA6B8",
+     "#313842",
+     "#8E8BCE",
+     "#C7D2DC",
+     "#3F4955"
+    ]
+   },
+   "snow": {
+    "name": "Weather: snow",
+    "group": "Weather and sport",
+    "colours": [
+     "#BFE8FF",
+     "#3E4A54",
+     "#ACB6FC",
+     "#DFF4FF",
+     "#536573"
+    ]
+   },
+   "storm": {
+    "name": "Weather: storm",
+    "group": "Weather and sport",
+    "colours": [
+     "#8E7CC3",
+     "#312E44",
+     "#8D70D5",
+     "#C6BEE1",
+     "#3F385A"
+    ]
+   },
+   "sport": {
+    "name": "Sport",
+    "group": "Weather and sport",
+    "colours": [
+     "#6CABDD",
+     "#283A4B",
+     "#778FE6",
+     "#B6D5EE",
+     "#304B65"
+    ]
+   },
+   "ok": {
+    "name": "OK",
+    "group": "Status",
+    "colours": [
+     "#55C47C",
+     "#224032",
+     "#689FA8",
+     "#AAE2BE",
+     "#27563C"
+    ]
+   },
+   "warn": {
+    "name": "Needs attention",
+    "group": "Status",
+    "colours": [
+     "#F0B13A",
+     "#4A3B21",
+     "#CC927E",
+     "#F8D89C",
+     "#684E20"
+    ]
+   },
+   "bad": {
+    "name": "Wrong",
+    "group": "Status",
+    "colours": [
+     "#FF6B6B",
+     "#4E292E",
+     "#D5669D",
+     "#FFB5B5",
+     "#6E3035"
+    ]
+   }
+  },
+  "alarm_states": [
+   "alarm_home",
+   "alarm_away",
+   "alarm_off",
+   "arming_home",
+   "arming_away"
+  ]
+ },
+ "kind_palettes": {
+  "note": "The glow palette (Colour, Accent, Light) Home Assistant adds to a card of each kind when the card does not send its own. Applied in ha/clive-show-card.yaml.",
+  "kinds": {
+   "energy": [
+    "#F050F8",
+    "#CC54F7",
+    "#F8A8FC"
+   ],
+   "people": [
+    "#55C47C",
+    "#689FA8",
+    "#AAE2BE"
+   ],
+   "music": [
+    "#FF6F91",
+    "#D568B5",
+    "#FFB7C8"
+   ],
+   "media": [
+    "#FF6F91",
+    "#D568B5",
+    "#FFB7C8"
+   ],
+   "car": [
+    "#4C8DFF",
+    "#637BFC",
+    "#A6C6FF"
+   ],
+   "climate": [
+    "#FF8A4C",
+    "#D57989",
+    "#FFC4A6"
+   ],
+   "gregg": [
+    "#5BE0B3",
+    "#6CB0CB",
+    "#ADF0D9"
+   ],
+   "air": [
+    "#3FD0CF",
+    "#5AA6DD",
+    "#9FE8E7"
+   ],
+   "secure": [
+    "#8A86FF",
+    "#8A77FC",
+    "#C4C2FF"
+   ],
+   "doors": [
+    "#D2A8FF",
+    "#B88DFC",
+    "#E8D4FF"
+   ],
+   "tasks": [
+    "#A5B4FC",
+    "#9C94FA",
+    "#D2DAFE"
+   ],
+   "devices": [
+    "#F0B13A",
+    "#CC927E",
+    "#F8D89C"
+   ],
+   "lights": [
+    "#FFC857",
+    "#D5A190",
+    "#FFE4AB"
+   ],
+   "heat": [
+    "#FF8A4C",
+    "#D57989",
+    "#FFC4A6"
+   ],
+   "shop": [
+    "#FF9C8A",
+    "#D585B1",
+    "#FFCEC4"
+   ],
+   "event": [
+    "#D9A441",
+    "#BD8A82",
+    "#ECD2A0"
+   ],
+   "reminder": [
+    "#D9A441",
+    "#BD8A82",
+    "#ECD2A0"
+   ]
+  }
  }
 }

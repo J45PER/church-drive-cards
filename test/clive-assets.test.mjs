@@ -33,3 +33,13 @@ test('palettes are three hex colours and the morph recipes are valid', () => {
   assert.ok(Object.keys(cards.morph.recipes).length > 30, 'every icon family has a morph recipe');
   for (const [k, r] of Object.entries(cards.morph.recipes)) assert.ok(!r.d || ['pop', 'drop', 'rise', 'left', 'right', 'spin'].includes(r.d), `${k} has a known arrival`);
 });
+
+test('every entity type has five hex colours and every kind palette is three', () => {
+  const ec = cards.entity_colours;
+  assert.ok(Object.keys(ec.types).length >= 30);
+  for (const [k, v] of Object.entries(ec.types)) { assert.equal(v.colours.length, 5, k); for (const c of v.colours) assert.match(c, /^#[0-9A-Fa-f]{6}$/, k); }
+  for (const k of ec.alarm_states) assert.ok(ec.types[k], k);
+  assert.equal(ec.types.energy.colours[0].toLowerCase(), '#f050f8', 'electricity is Octopus pink');
+  assert.equal(ec.types.gas.colours[0].toLowerCase(), '#7b61ff', 'gas is Octopus violet');
+  for (const [kind, p] of Object.entries(cards.kind_palettes.kinds)) { assert.equal(p.length, 3, kind); for (const c of p) assert.match(c, /^#[0-9A-Fa-f]{6}$/, kind); }
+});
