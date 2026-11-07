@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.111.2
+
+- Buttons that are not selected are a faint wash of the text colour like the tiles, not an outline (the alarm modes, Gregg's controls and the choice buttons).
+
 ## 0.111.1
 
 - Text on the dark cards is white, with colour kept for status pills, selected buttons, gauges and lines, and for temperatures, alarm status and section titles. Gregg's state and each section's summary are pills like the car's.

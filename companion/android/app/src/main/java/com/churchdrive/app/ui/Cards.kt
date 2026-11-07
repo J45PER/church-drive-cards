@@ -197,25 +197,16 @@ fun ChoiceButton(
     enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
-    val padding = PaddingValues(horizontal = 4.dp)
-    if (selected) {
-        Button(
-            onClick = onClick,
-            enabled = enabled,
-            modifier = modifier,
-            contentPadding = padding,
-            colors = ButtonDefaults.buttonColors(containerColor = tone.accent, contentColor = tone.onAccent),
-        ) { Text(label, maxLines = 1) }
-    } else {
-        OutlinedButton(
-            onClick = onClick,
-            enabled = enabled,
-            modifier = modifier,
-            contentPadding = padding,
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = content),
-            border = BorderStroke(1.dp, content.copy(alpha = 0.4f)),
-        ) { Text(label, maxLines = 1) }
-    }
+    // The selected one is filled in the strong colour; the others are a faint wash of the text colour, like the tiles, not an outline.
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier,
+        contentPadding = PaddingValues(horizontal = 4.dp),
+        colors = if (selected) ButtonDefaults.buttonColors(containerColor = tone.accent, contentColor = tone.onAccent)
+        else ButtonDefaults.buttonColors(containerColor = content.copy(alpha = 0.10f), contentColor = content, disabledContainerColor = content.copy(alpha = 0.05f), disabledContentColor = content.copy(alpha = 0.4f)),
+        elevation = if (selected) ButtonDefaults.buttonElevation() else null,
+    ) { Text(label, maxLines = 1) }
 }
 
 // ---- Alarm ----
@@ -386,7 +377,7 @@ private fun ModeTile(
             .clip(shape)
             .then(
                 if (selected) Modifier.background(tone.accent)
-                else Modifier.border(1.dp, content.copy(alpha = 0.4f), shape),
+                else Modifier.background(content.copy(alpha = 0.10f)),
             )
             .clickable(enabled = enabled, onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
