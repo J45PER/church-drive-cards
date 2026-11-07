@@ -73,7 +73,10 @@ export function iconHtml(icon, { size = '24px', style = '', cls = '' } = {}) {
   if (pic) {
     return `<img class="${cls}" src="${escapeAttr(pic)}" alt="" onerror="this.style.visibility='hidden'" style="width:${size}; height:${size}; object-fit:contain; border-radius:6px; ${style}">`;
   }
-  const own = CLIVE_ICONS[icon];
+  // An mdi icon the house set has under the same name (cog, fan, fire, lock…) is drawn with the house's own.
+  const sameName = /^mdi:(.+)$/.exec(icon || '');
+  const house = sameName && SHAPES[sameName[1]];
+  const own = CLIVE_ICONS[icon] || (house && { path: house.path, viewBox: house.viewBox, evenodd: house.evenodd });
   if (own) {
     return `<span class="${cls}" style="display:inline-flex; width:${size}; height:${size}; ${style}">${svg(own, '100%')}</span>`;
   }

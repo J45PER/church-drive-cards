@@ -145,7 +145,7 @@ fun CleaningPage(entities: Map<String, EntityState>, call: CallService) {
         "Mop intensity" to "select.gregg_mop_intensity",
     ).filter { (_, id) -> entities[id]?.options()?.isNotEmpty() == true }
     if (settings.isNotEmpty()) {
-        SectionPanel("Cleaning settings", iconName = "mdi:tune-variant", tone = Tone.Gregg) {
+        SectionPanel("Cleaning settings", iconName = "cd:sliders", tone = Tone.Gregg) {
             EntityCard(blue.container, blue.onContainer) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     for ((label, id) in settings) {
@@ -182,7 +182,7 @@ fun CleaningPage(entities: Map<String, EntityState>, call: CallService) {
     // ---- Parts that wear out: a bar for the life left, blue turning to red
     val parts = CLEANING_PARTS.filter { entities[it.sensor] != null }
     if (parts.isNotEmpty()) {
-        SectionPanel("Parts", iconName = "mdi:wrench-outline", tone = Tone.Gregg, summary = "Time left") {
+        SectionPanel("Parts", iconName = "cd:broom", tone = Tone.Gregg, summary = "Time left") {
             EntityCard(blue.container, blue.onContainer) {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     for (p in parts) {
@@ -224,7 +224,7 @@ fun CleaningPage(entities: Map<String, EntityState>, call: CallService) {
     // ---- Switches
     val switches = CLEANING_SWITCHES.filter { entities[it.second]?.available == true }
     if (switches.isNotEmpty()) {
-        SectionPanel("Settings", iconName = "mdi:cog-outline", tone = Tone.Gregg) {
+        SectionPanel("Settings", iconName = "cd:cog", tone = Tone.Gregg) {
             EntityCard(blue.container, blue.onContainer) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     for ((label, id) in switches) {

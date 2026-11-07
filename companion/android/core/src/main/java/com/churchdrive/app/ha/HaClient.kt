@@ -78,6 +78,30 @@ class HaClient(private val scope: CoroutineScope) {
     @Synchronized
     private fun id() = nextId++
 
+    /** The id of the latest get_states ask, so its answer is told from the others. */
+    @Volatile private var getStatesId = -1
+
+    /**
+     * The house's states are asked for once when the line opens; if that answer never comes (or comes back as an error) the app would sit
+     * "connected" with nothing to show. Ask again every ten seconds, and after three silent tries drop the line so it reconnects fresh.
+     */
+    private fun watchStates(webSocket: WebSocket) {
+        scope.launch {
+            var tries = 0
+            while (authed && socket === webSocket && !_statesLoaded.value) {
+                delay(10_000)
+                if (_statesLoaded.value || !authed || socket !== webSocket) break
+                tries++
+                if (tries >= 3) {
+                    webSocket.close(4000, "no states")
+                    break
+                }
+                getStatesId = id()
+                webSocket.send(JSONObject().put("id", getStatesId).put("type", "get_states").toString())
+            }
+        }
+    }
+
     fun connect(baseUrl: String, accessToken: String, light: Boolean = false) {
         url = baseUrl
         token = accessToken
@@ -190,7 +214,6 @@ class HaClient(private val scope: CoroutineScope) {
     }
 
     private inner class Listener(private val closed: kotlinx.coroutines.CompletableDeferred<Unit>) : WebSocketListener() {
-        private var getStatesId = -1
         private var configId = -1
         private var userId = -1
 
@@ -223,6 +246,7 @@ class HaClient(private val scope: CoroutineScope) {
                     webSocket.send(JSONObject().put("id", userId).put("type", "auth/current_user").toString())
                     getStatesId = id()
                     webSocket.send(JSONObject().put("id", getStatesId).put("type", "get_states").toString())
+                    watchStates(webSocket)
                     // The home's time zone, so times can be shown in the home's time as well as the device's when the two differ.
                     configId = id()
                     webSocket.send(JSONObject().put("id", configId).put("type", "get_config").toString())

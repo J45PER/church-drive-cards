@@ -23,7 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 /**
- * A pill under the title while the house is being read: "Updating" (or "Connecting") with Clive's mark drifting beside it. What the app
+ * A pill under the title while the house is being read: "Syncing" (or "Connecting") with Clive's mark drifting beside it. What the app
  * remembered from last time stays on screen underneath, and the pill goes as soon as the live answer is in. It takes no tap unless [onTap] is
  * given (then a tap cancels what it is waiting for).
  */
@@ -38,7 +38,7 @@ fun LoadingPill(visible: Boolean, connecting: Boolean, label: String? = null, on
             ) {
                 Row(Modifier.padding(start = 10.dp, end = 16.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     AssistantGlyph(AssistantGlyphPose.Idle, MaterialTheme.colorScheme.onSurface, 22.dp)
-                    Text(label ?: if (connecting) "Connecting" else "Updating", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface)
+                    Text(label ?: if (connecting) "Connecting" else "Syncing", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface)
                 }
             }
         }
