@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.103.0
+
+- **Purifier schedule.** The Climate page can show a Purifier schedule card under the air purifier: one line per schedule (for example `Mon-Fri Auto: 07:00-23:30`) and the next change. Administrators tap Edit to change the days (Mon to Sun), the Auto and Sleep times, add or remove a schedule, and switch the schedule on or off; nothing changes until Save. An on/off row in a settings list is now a switch. Needs Church Drive 0.103.0 or later in Home Assistant.
+
 ## 0.102.0
 
 - **Overnight heating.** On the Climate page, administrators see a new Overnight heating panel: Off, Eco or Smart for the whole house between two times (midnight to 6am to begin with, moved half an hour at a time). Smart leaves the heating to the assistant; Eco puts it on Eco and Off turns it off, and the assistant puts it back in the morning. Nobody else sees the panel. A card the dashboard marks `admin_only` is now hidden from everyone but administrators, and a panel with only such cards is hidden. Needs Church Drive 0.102.0 or later in Home Assistant.

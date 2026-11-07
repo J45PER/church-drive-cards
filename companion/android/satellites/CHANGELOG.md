@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.103.0
+
+- No change to this app; version kept equal to the others.
+
 ## 0.102.0
 
 - No change to this app; version kept equal to the others.
