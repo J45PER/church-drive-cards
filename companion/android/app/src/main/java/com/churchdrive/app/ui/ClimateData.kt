@@ -76,10 +76,9 @@ fun pmWord(pm: Double?): String = when {
 }
 
 fun pmTone(pm: Double?): Tone = when {
-    pm == null || pm <= 35 -> Tone.Green
-    pm <= 75 -> Tone.Amber
-    pm <= 115 -> Tone.Orange
-    else -> Tone.Red
+    pm == null || pm <= 35 -> Tone.QualityGood
+    pm <= 75 -> Tone.QualityFair
+    else -> Tone.QualityPoor
 }
 
 /** The mdi icon for a Home Assistant weather condition. */
@@ -100,6 +99,21 @@ fun weatherIcon(condition: String?): String = when (condition) {
     "windy" -> "mdi:weather-windy"
     "windy-variant" -> "mdi:weather-windy-variant"
     else -> "mdi:weather-partly-cloudy"
+}
+
+/** The palette for a Home Assistant weather condition: the icon takes it, the card ground stays neutral. */
+fun weatherTone(condition: String?): Tone = when (condition) {
+    "sunny" -> Tone.Sunny
+    "clear-night" -> Tone.Night
+    "partlycloudy" -> Tone.PartlyCloudy
+    "cloudy" -> Tone.Cloudy
+    "fog" -> Tone.Fog
+    "hail" -> Tone.Hail
+    "rainy", "pouring" -> Tone.Rain
+    "lightning", "lightning-rainy", "exceptional" -> Tone.Storm
+    "snowy", "snowy-rainy" -> Tone.Snow
+    "windy", "windy-variant" -> Tone.Wind
+    else -> Tone.Cloudy
 }
 
 /** One step of a forecast. */

@@ -51,9 +51,9 @@ class PagesLogicTest {
         assertEquals("Fair", pmWord(50.0))
         assertEquals("Poor", pmWord(100.0))
         assertEquals("Very poor", pmWord(200.0))
-        assertEquals(Tone.Green, pmTone(null))
-        assertEquals(Tone.Amber, pmTone(50.0))
-        assertEquals(Tone.Red, pmTone(200.0))
+        assertEquals(Tone.QualityGood, pmTone(null))
+        assertEquals(Tone.QualityFair, pmTone(50.0))
+        assertEquals(Tone.QualityPoor, pmTone(200.0))
     }
 
     @Test

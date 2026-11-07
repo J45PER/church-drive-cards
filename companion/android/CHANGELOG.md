@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.106.0
+
+- The new colours (phase 1 of the colour overhaul): brighter pastel palettes, new names for eco, humidity, air quality (Good, Fair, Poor), partly cloudy, cloudy, fog, wind, hail and unavailable. The weather card keeps a neutral ground and its icons take the colour of the condition; the humidity graph uses the Humidity purple.
+
 ## 0.105.1
 
 - The built-in colours match the ones set on the review page (they were already live from Home Assistant). The update banner and the phone set-up banner use the neutral colours.

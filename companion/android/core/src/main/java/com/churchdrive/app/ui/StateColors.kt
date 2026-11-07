@@ -29,6 +29,7 @@ enum class Tone {
     AlarmHome, AlarmAway, AlarmOff, ArmingHome, ArmingAway,
     Media, People, Tasks, Shopping, Calendar, Sunny, Night, Rain, Snow, Storm, Sport,
     TodoShared, TodoHouse, PersonJamie, PersonHayley, PersonIan, PersonDiane,
+    Eco, Humidity, QualityGood, QualityFair, QualityPoor, PartlyCloudy, Cloudy, Fog, Wind, Hail, Unavailable,
 }
 
 data class ToneColors(
@@ -84,6 +85,17 @@ fun toneSet(tone: Tone): EntityColours? = when (tone) {
     Tone.PersonHayley -> CliveColours.PersonHayley
     Tone.PersonIan -> CliveColours.PersonIan
     Tone.PersonDiane -> CliveColours.PersonDiane
+    Tone.Eco -> CliveColours.Eco
+    Tone.Humidity -> CliveColours.Humidity
+    Tone.QualityGood -> CliveColours.QualityGood
+    Tone.QualityFair -> CliveColours.QualityFair
+    Tone.QualityPoor -> CliveColours.QualityPoor
+    Tone.PartlyCloudy -> CliveColours.PartlyCloudy
+    Tone.Cloudy -> CliveColours.Cloudy
+    Tone.Fog -> CliveColours.Fog
+    Tone.Wind -> CliveColours.Wind
+    Tone.Hail -> CliveColours.Hail
+    Tone.Unavailable -> CliveColours.Unavailable
 }
 
 /** WCAG contrast ratio of two colours (1 to 21). */
@@ -176,6 +188,17 @@ fun toneForKey(key: String): Tone? = when (key) {
     "person_hayley" -> Tone.PersonHayley
     "person_ian" -> Tone.PersonIan
     "person_diane" -> Tone.PersonDiane
+    "eco" -> Tone.Eco
+    "humidity" -> Tone.Humidity
+    "quality_good" -> Tone.QualityGood
+    "quality_fair" -> Tone.QualityFair
+    "quality_poor" -> Tone.QualityPoor
+    "partly_cloudy" -> Tone.PartlyCloudy
+    "cloudy" -> Tone.Cloudy
+    "fog" -> Tone.Fog
+    "wind" -> Tone.Wind
+    "hail" -> Tone.Hail
+    "unavailable" -> Tone.Unavailable
     else -> null
 }
 
