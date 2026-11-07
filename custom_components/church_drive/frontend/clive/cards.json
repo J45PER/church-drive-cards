@@ -1,6 +1,6 @@
 {
  "version": 1,
- "app": "0.113.2",
+ "app": "0.114.0",
  "$comment": "Clive's card layouts, palettes and animations as data. Edit here, run `node tools/export-clive-assets.mjs`, and Home Assistant serves the result at /church_drive/clive/cards.json. A new KIND of card still needs code in the apps; everything else (icons, palettes, which icon a card shows, its fields, its animation) is data.",
  "palettes": {
   "Base": [
