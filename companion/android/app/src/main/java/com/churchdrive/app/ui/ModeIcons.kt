@@ -49,8 +49,7 @@ fun IconChoice(
         modifier = modifier
             .height(Ui.TileHeight)
             .clip(shape)
-            .background(if (selected) tone.accent else Color.Transparent, shape)
-            .border(1.dp, if (selected) tone.accent else content.copy(alpha = 0.4f), shape)
+            .background(if (selected) tone.accent else content.copy(alpha = 0.10f), shape)
             .clickable(enabled = enabled, onClickLabel = description, onClick = onClick)
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
