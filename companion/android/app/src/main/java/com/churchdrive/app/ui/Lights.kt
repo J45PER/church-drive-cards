@@ -225,7 +225,8 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
 
     EntityCard(tone.container, tone.onContainer, deviceEntity = room.head) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            LightPill(head, room.head, roomTitle(room, head, areaNames), tone, call, Modifier.weight(1f), entities, tintFrom = room.rows.map { it.entity })
+            // The room takes its colour from its ceiling light when that has one; otherwise it keeps the Lights colour (not the Ambience strip's).
+            LightPill(head, room.head, roomTitle(room, head, areaNames), tone, call, Modifier.weight(1f), entities, tintFrom = room.rows.filter { it.entity.contains("ceiling", true) || (it.name ?: "").contains("ceiling", true) }.map { it.entity })
             if (expandable) {
                 IconButton(onClick = { expanded = !expanded }) {
                     Icon(
@@ -320,6 +321,10 @@ private fun brightnessPct(light: EntityState?): Int =
 
 private val COLOUR_MODES = setOf("hs", "rgb", "rgbw", "rgbww", "xy")
 
+private const val SECURITY_ACTIVE = "input_boolean.clive_away_lights_active"
+private val SECURITY_LABELS = setOf("away_security_light", "away_tv_simulation")
+private fun securityLabelled(registry: com.churchdrive.app.ha.Registry, id: String) = registry.labelsOf(id).any { it in SECURITY_LABELS }
+
 /**
  * The dashboard's combined control: a pill filled to the light's brightness and tinted with its live
  * colour. Tap to switch it on or off; drag across it to set brightness (lights that can't dim just switch).
@@ -345,15 +350,22 @@ fun LightPill(
     val pct = if (on) brightnessPct(light) else 0
     var drag by remember(pct) { mutableStateOf<Float?>(null) }
     var widthPx by remember { mutableIntStateOf(1) }
-    val shown = drag ?: (pct / 100f)
+    val dragged = drag ?: (pct / 100f)
     val rgb = if (tintFrom != null && entities != null) {
         tintFrom.firstNotNullOfOrNull { id -> entities[id]?.takeIf { it.state == "on" && it.str("color_mode") in COLOUR_MODES }?.rgb() }
     } else light?.rgb()
-    val tint = if (on && rgb != null) Color(rgb[0], rgb[1], rgb[2]) else tone.accent
+    // Away "security mode": the lights Clive keeps on (or flickers like a television) while the house is empty are labelled, and show a steady full bar in the
+    // Armed Home blue with the words Security mode, not every colour they pass through.
+    val registry = LocalRegistry.current
+    val security = on && entities?.get(SECURITY_ACTIVE)?.state == "on" &&
+        (securityLabelled(registry, entityId) || light?.list("entity_id").orEmpty().any { securityLabelled(registry, it) })
+    val tint = if (security) toneColors(Tone.AlarmHome).accent else if (on && rgb != null) Color(rgb[0], rgb[1], rgb[2]) else tone.accent
+    val shown = if (security) 1f else dragged
     val shape = RoundedCornerShape(20.dp)
     val status = when {
         light == null -> "Loading…"
         !light.available -> "Unavailable"
+        security -> "Security mode"
         drag != null -> "${(shown * 100).roundToInt()}%"
         !on -> "Off"
         dimmable -> "$pct%"

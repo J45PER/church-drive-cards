@@ -1,5 +1,13 @@
 # Church Drive Satellites: changelog
 
+## 0.113.1
+
+- No change to this app; version kept equal.
+
+## 0.113.0
+
+- The update banner is the main app's: a blue card with the glow.
+
 ## 0.112.0
 
 - Cards have the same glow as the phone app's cards.

@@ -3,6 +3,14 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.113.1
+
+- The main app's look: coloured page title, each task on a faint wash with light icons and text, a washed add-a-task field.
+
+## 0.113.0
+
+- The update banner is the main app's: a blue card with the glow.
+
 ## 0.112.0
 
 - The task card has the same glow as the phone app's cards.

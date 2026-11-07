@@ -14,7 +14,11 @@ class Registry(
     private val deviceArea: Map<String, String> = emptyMap(),
     private val entityPlatform: Map<String, String> = emptyMap(),
     private val hidden: Set<String> = emptySet(),
+    private val labels: Map<String, Set<String>> = emptyMap(),
 ) {
+    /** The labels set on an entity in Home Assistant (their ids, such as `away_security_light`). */
+    fun labelsOf(entityId: String): Set<String> = labels[entityId].orEmpty()
+
     private val byDevice: Map<String, List<String>> =
         entityDevice.entries.groupBy({ it.value }, { it.key })
 
@@ -59,6 +63,7 @@ class Registry(
             val entityArea = mutableMapOf<String, String>()
             val platform = mutableMapOf<String, String>()
             val hiddenIds = mutableSetOf<String>()
+            val labelMap = mutableMapOf<String, Set<String>>()
             for (i in 0 until (list?.length() ?: 0)) {
                 val e = list?.optJSONObject(i) ?: continue
                 val id = e.text("ei")
@@ -68,6 +73,8 @@ class Registry(
                 if (id != null && area != null) entityArea[id] = area
                 e.text("pl")?.let { if (id != null) platform[id] = it }
                 if (id != null && e.optBoolean("hb")) hiddenIds += id
+                val lb = e.optJSONArray("lb")
+                if (id != null && lb != null && lb.length() > 0) labelMap[id] = (0 until lb.length()).mapNotNull { lb.optString(it).takeIf { l -> l.isNotBlank() } }.toSet()
             }
             val names = mutableMapOf<String, String>()
             val deviceArea = mutableMapOf<String, String>()
@@ -80,7 +87,7 @@ class Registry(
                 val area = o.text("area_id")
                 if (area != null && id != null) deviceArea[id] = area
             }
-            return Registry(entityDevice, names, entityArea, deviceArea, platform, hiddenIds)
+            return Registry(entityDevice, names, entityArea, deviceArea, platform, hiddenIds, labelMap)
         }
     }
 }
