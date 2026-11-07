@@ -20,9 +20,9 @@ import { SUFFIX, LABEL } from './suffix.js';
 import { kitEsc } from './card-kit.js';
 
 const MODES = [
-  ['disarmed', 'Disarmed', 'mdi:shield-off-outline', '#4caf50'],
-  ['home', 'Home', 'mdi:shield-home', '#42a5f5'],
-  ['away', 'Away', 'mdi:shield-lock', '#ef5350'],
+  ['disarmed', 'Disarmed', 'mdi:shield-off-outline', '#55c47c'],
+  ['home', 'Home', 'mdi:shield-home', '#6cc8ff'],
+  ['away', 'Away', 'mdi:shield-lock', '#ff6b6b'],
 ];
 const SECS = [10, 20, 30, 45, 60];
 const COOLDOWNS = [[60, '1 min'], [120, '2 min'], [300, '5 min'], [600, '10 min']];
@@ -44,8 +44,8 @@ const CL_CSS = `
   .cl-nm b { display:block; font-size:0.86rem; font-weight:600; }
   .cl-nm small { color:var(--secondary-text-color); font-size:0.72rem; }
   .cl-tk { width:22px; height:22px; border-radius:6px; border:none; cursor:pointer; background:rgba(127,127,127,0.28); color:#fff; display:inline-flex; align-items:center; justify-content:center; padding:0; }
-  .cl-tk.on { background:#26a69a; }
-  .cl-tk.self { background:color-mix(in srgb, #26a69a 35%, transparent); cursor:default; }
+  .cl-tk.on { background:#3fd0cf; }
+  .cl-tk.self { background:color-mix(in srgb, #3fd0cf 35%, transparent); cursor:default; }
   .cl-tk[disabled]:not(.self) { cursor:default; opacity:.7; }
   .cl-secs, .cl-add, .cl-cool { height:30px; border-radius:8px; border:1px solid var(--divider-color, rgba(127,127,127,0.3)); background:var(--secondary-background-color, rgba(127,127,127,0.12));
     color:var(--primary-text-color); font:inherit; font-size:0.8rem; padding:0 6px; }
@@ -59,7 +59,7 @@ const CL_CSS = `
   .cl-chips { display:flex; flex-wrap:wrap; gap:6px; }
   .cl-chip { border:none; cursor:pointer; font:inherit; font-size:0.82rem; font-weight:600; border-radius:999px; padding:6px 12px 6px 8px; display:inline-flex; align-items:center; gap:5px;
     background:rgba(127,127,127,0.16); color:var(--primary-text-color); }
-  .cl-chip.on { background:#26a69a; color:#fff; }
+  .cl-chip.on { background:#3fd0cf; color:#fff; }
   .cl-chip[disabled] { cursor:default; }
   .cl-note { margin-top:10px; font-size:0.75rem; color:var(--secondary-text-color); line-height:1.4; }
 `;

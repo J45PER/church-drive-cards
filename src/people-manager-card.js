@@ -20,9 +20,9 @@ import { carDevices, carEntities } from './car-card.js';
 
 const PEOPLE_SENSOR = 'sensor.church_drive_people';
 const SUGGEST = ['Work', 'School', 'College', 'Gym', 'Family', 'Friends', 'Shops'];
-const TEAL = '#26a69a';
-const PURPLE = '#7e57c2';
-const COLOURS = ['#26a69a', '#7e57c2', '#ef6c00', '#5c6bc0', '#d81b60', '#00897b', '#6d4c41'];
+const TEAL = '#3fd0cf';
+const PURPLE = '#8a86ff';
+const COLOURS = ['#3fd0cf', '#8a86ff', '#ef6c00', '#8a86ff', '#d81b60', '#00897b', '#6d4c41'];
 const TODO_GROUPS = ['To-dos', 'House jobs'];
 // Devices worth limiting: ones with something to control or watch.
 const DEVICE_DOMAINS = ['light', 'switch', 'cover', 'fan', 'climate', 'media_player', 'lock', 'camera', 'vacuum', 'humidifier', 'water_heater', 'remote', 'siren', 'valve', 'lawn_mower'];
@@ -71,7 +71,7 @@ const PM_CSS = `
   .pm-group > button small { margin-left:auto; font-weight:400; color:var(--secondary-text-color); }
   .pm-kinds { padding:0 12px 8px; }
   .pm-bar { height:6px; border-radius:3px; background:rgba(127,127,127,.2); overflow:hidden; margin-top:5px; }
-  .pm-bar i { display:block; height:100%; border-radius:3px; background:#00b8d4; }
+  .pm-bar i { display:block; height:100%; border-radius:3px; background:#3fd0cf; }
   .pm-edit select, .pm-edit input { min-width:0; box-sizing:border-box; height:36px; border-radius:10px; border:1px solid var(--divider-color, rgba(127,127,127,0.3));
     background:var(--secondary-background-color, rgba(127,127,127,0.12)); color:var(--primary-text-color); font:inherit; font-size:0.85rem; padding:0 8px; }
   .pm-edit select { flex:1.3 1 0; } .pm-edit input { flex:1 1 0; }
@@ -79,7 +79,7 @@ const PM_CSS = `
   .pm-acts { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
   .pm-err { font-size:0.8rem; color:#ffab91; }
   .pm-warn { font-size:0.8rem; line-height:1.45; border-radius:12px; padding:10px 12px; background:rgba(255,171,64,.14); color:var(--primary-text-color); }
-  .pm-warn b { color:#ffb74d; }
+  .pm-warn b { color:#f0b13a; }
   .pm-phone { flex-wrap:wrap; }
   .pm-mini { display:flex; align-items:center; gap:6px; font-size:0.74rem; color:var(--secondary-text-color); }
   .pm-hours { width:64px; height:32px; box-sizing:border-box; border-radius:10px; border:1px solid var(--divider-color, rgba(127,127,127,0.3));
@@ -394,7 +394,7 @@ export class PeopleManagerCard extends HTMLElement {
       .join('');
     return this._sec(
       'mdi:car-outline',
-      '#00b8d4',
+      '#3fd0cf',
       'Cars',
       'Their Car card and car alerts',
       (rows || '<div class="pm-note">No cars yet. Add a car with its own integration (Stellantis Vehicles, VW Group Connect) and it appears here.</div>') +

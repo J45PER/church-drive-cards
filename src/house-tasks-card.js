@@ -14,7 +14,7 @@ import { SUFFIX, LABEL } from './suffix.js';
 import { KIT_COLOR, kitShell, kitHead } from './card-kit.js';
 
 export const HOUSE_TASKS_LIST = 'todo.priorities_automatic';
-// Their colour: coral, so they stand apart from the person's own to-dos (purple, #7e57c2), shopping (indigo) and overdue (red).
+// Their colour: coral, so they stand apart from the person's own to-dos (purple, #8a86ff), shopping (indigo) and overdue (red).
 export const HOUSE_TASKS_COLOR = '#f2705c';
 
 // Kind, detail, who and icon from an automatic item's description.

@@ -47,12 +47,12 @@ class GlowPalette(val a: Color, val b: Color, val c: Color) {
     companion object {
         /** Clive's own: indigo, purple and green. */
         val Base = GlowPalette(Color(0xFF5C6BC0), Color(0xFFAB47BC), Color(0xFF4FD08A))
-        val Clear = GlowPalette(Color(0xFF1565C0), Color(0xFF42A5F5), Color(0xFF81D4FA))
-        val Rain = GlowPalette(Color(0xFF37474F), Color(0xFF5C7C99), Color(0xFF78909C))
-        val Night = GlowPalette(Color(0xFF0D1B4A), Color(0xFF283593), Color(0xFF5C6BC0))
-        val Snow = GlowPalette(Color(0xFF90A4AE), Color(0xFFB3E5FC), Color(0xFFE1F5FE))
-        val Storm = GlowPalette(Color(0xFF37474F), Color(0xFF6A1B9A), Color(0xFF5C6BC0))
-        val Sport = GlowPalette(Color(0xFF6CABDD), Color(0xFF1C2C5B), Color(0xFFA5CDEB))
+        val Clear = GlowPalette(com.churchdrive.app.ui.CliveColours.Sunny.colour, com.churchdrive.app.ui.CliveColours.Sunny.accent, com.churchdrive.app.ui.CliveColours.Sunny.light)
+        val Rain = GlowPalette(com.churchdrive.app.ui.CliveColours.Rain.colour, com.churchdrive.app.ui.CliveColours.Rain.accent, com.churchdrive.app.ui.CliveColours.Rain.light)
+        val Night = GlowPalette(com.churchdrive.app.ui.CliveColours.Night.colour, com.churchdrive.app.ui.CliveColours.Night.accent, com.churchdrive.app.ui.CliveColours.Night.light)
+        val Snow = GlowPalette(com.churchdrive.app.ui.CliveColours.Snow.colour, com.churchdrive.app.ui.CliveColours.Snow.accent, com.churchdrive.app.ui.CliveColours.Snow.light)
+        val Storm = GlowPalette(com.churchdrive.app.ui.CliveColours.Storm.colour, com.churchdrive.app.ui.CliveColours.Storm.accent, com.churchdrive.app.ui.CliveColours.Storm.light)
+        val Sport = GlowPalette(com.churchdrive.app.ui.CliveColours.Sport.colour, com.churchdrive.app.ui.CliveColours.Sport.accent, com.churchdrive.app.ui.CliveColours.Sport.light)
 
         /** Up to three "#rrggbb" colours from a card's `palette`, or null. */
         fun from(hex: List<String>): GlowPalette? {

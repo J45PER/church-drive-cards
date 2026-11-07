@@ -26,26 +26,26 @@ import { quickPlan } from './climate-quick.js';
 
 const CC_MAX_QUICK = 5;
 const CC_RING = 84;
-const CC_HUMIDITY = '#b388ff';
+const CC_HUMIDITY = '#d2a8ff';
 const CC_HISTORY_HOURS = 24;
 
 const CC_MODES = {
-  off: { name: 'Off', icon: 'mdi:power', color: '#8b919c', colors: ['#5d636e', '#3a3f48'] },
-  heat: { name: 'Heat', icon: 'mdi:fire', color: '#ff7a2f', colors: ['#ff9a4d', '#e2531d'] },
-  cool: { name: 'Cool', icon: 'mdi:snowflake', color: '#3aa0ff', colors: ['#63b3ff', '#1f6fd1'] },
-  heat_cool: { name: 'Heat/Cool', icon: 'mdi:sun-snowflake-variant', color: '#ffa94d', colors: ['#ffb36b', '#3f8fe0'] },
-  auto: { name: 'Auto', icon: 'mdi:thermostat-auto', color: '#a594de', colors: ['#a594de', '#6a4fb3'] },
-  dry: { name: 'Dry', icon: 'mdi:water-percent', color: '#d4a72c', colors: ['#e3c35a', '#a8841b'] },
-  fan_only: { name: 'Fan', icon: 'mdi:fan', color: '#26c6da', colors: ['#4dd8e8', '#12879a'] },
+  off: { name: 'Off', icon: 'mdi:power', color: '#9aa4b2', colors: ['#5d636e', '#3a3f48'] },
+  heat: { name: 'Heat', icon: 'mdi:fire', color: '#ff8a4c', colors: ['#ff9a4d', '#e2531d'] },
+  cool: { name: 'Cool', icon: 'mdi:snowflake', color: '#4c8dff', colors: ['#63b3ff', '#1f6fd1'] },
+  heat_cool: { name: 'Heat/Cool', icon: 'mdi:sun-snowflake-variant', color: '#f0b13a', colors: ['#ff8a4c', '#3f8fe0'] },
+  auto: { name: 'Auto', icon: 'mdi:thermostat-auto', color: '#d2a8ff', colors: ['#d2a8ff', '#6a4fb3'] },
+  dry: { name: 'Dry', icon: 'mdi:water-percent', color: '#f0b13a', colors: ['#e3c35a', '#a8841b'] },
+  fan_only: { name: 'Fan', icon: 'mdi:fan', color: '#3fd0cf', colors: ['#4dd8e8', '#12879a'] },
 };
 const CC_PRESETS = {
-  none: { name: 'None', icon: 'mdi:circle-off-outline', color: '#8b919c' },
-  eco: { name: 'Eco', icon: 'mdi:leaf', color: '#4caf50', colors: ['#6fcf73', '#2e7d32'] },
-  boost: { name: 'Boost', icon: 'mdi:rocket-launch', color: '#e53935', colors: ['#ff7b7b', '#c62828'] },
-  away: { name: 'Away', icon: 'mdi:home-export-outline', color: '#90a4ae', colors: ['#90a4ae', '#546e7a'] },
-  sleep: { name: 'Sleep', icon: 'mdi:power-sleep', color: '#7e6fd6', colors: ['#8a7de0', '#3b2f86'] },
-  comfort: { name: 'Comfort', icon: 'mdi:sofa', color: '#ffa94d', colors: ['#ffb36b', '#d9731f'] },
-  home: { name: 'Home', icon: 'mdi:home', color: '#64b5f6', colors: ['#7fb3d5', '#3b6e99'] },
+  none: { name: 'None', icon: 'mdi:circle-off-outline', color: '#9aa4b2' },
+  eco: { name: 'Eco', icon: 'mdi:leaf', color: '#55c47c', colors: ['#6fcf73', '#2e7d32'] },
+  boost: { name: 'Boost', icon: 'mdi:rocket-launch', color: '#ff6b6b', colors: ['#ff7b7b', '#ff6b6b'] },
+  away: { name: 'Away', icon: 'mdi:home-export-outline', color: '#9aa4b2', colors: ['#9aa4b2', '#546e7a'] },
+  sleep: { name: 'Sleep', icon: 'mdi:power-sleep', color: '#8a86ff', colors: ['#8a7de0', '#3b2f86'] },
+  comfort: { name: 'Comfort', icon: 'mdi:sofa', color: '#f0b13a', colors: ['#ff8a4c', '#d9731f'] },
+  home: { name: 'Home', icon: 'mdi:home', color: '#6cc8ff', colors: ['#7fb3d5', '#3b6e99'] },
 };
 
 // The icons for modes and presets: Home Assistant's choice (icon-library.js), else the built-in one.
@@ -58,7 +58,7 @@ function ccQuickIcon(q, look) {
   if (q.hvac_mode && CC_MODES[q.hvac_mode]) return ccModeIcon(q.hvac_mode);
   return look.icon;
 }
-const CC_COLOR = { heating: '#ff7a2f', cooling: '#3aa0ff', drying: '#d4a72c', fan: '#26c6da', eco: '#4caf50', off: '#8b919c' };
+const CC_COLOR = { heating: '#ff8a4c', cooling: '#4c8dff', drying: '#f0b13a', fan: '#3fd0cf', eco: '#55c47c', off: '#9aa4b2' };
 
 // Rows and whether a new card shows them.
 const CC_ROWS = {
@@ -401,7 +401,7 @@ export class ClimateCard extends HTMLElement {
     if (v.action === 'cooling') return { word: presetWord || 'Cooling', color: CC_COLOR.cooling, tint: 14 };
     if (v.action === 'drying') return { word: presetWord || 'Drying', color: CC_COLOR.drying, tint: 8 };
     if (v.action === 'fan') return { word: presetWord || 'Fan', color: CC_COLOR.fan, tint: 8 };
-    return { word: presetWord || 'Idle', color: (CC_MODES[v.mode] || {}).color || '#a594de', tint: 0 };
+    return { word: presetWord || 'Idle', color: (CC_MODES[v.mode] || {}).color || '#d2a8ff', tint: 0 };
   }
 
   // One row: name, room temperature, what it's doing, and the quick settings
@@ -471,7 +471,7 @@ export class ClimateCard extends HTMLElement {
     e.window.style.display = open ? 'flex' : 'none';
     if (open) {
       const verb = v.action === 'cooling' ? 'cooling' : 'heating';
-      e.window.innerHTML = `<span class="cc-chip" style="background:color-mix(in srgb, #ffb300 22%, transparent); color:#ffd54f;">${iconHtml('mdi:window-open-variant', { size: '18px' })}${esc(win.attributes.friendly_name || 'Window')} open${off ? '' : ` · ${verb} wasted`}</span>`;
+      e.window.innerHTML = `<span class="cc-chip" style="background:color-mix(in srgb, #f0b13a 22%, transparent); color:#ffc857;">${iconHtml('mdi:window-open-variant', { size: '18px' })}${esc(win.attributes.friendly_name || 'Window')} open${off ? '' : ` · ${verb} wasted`}</span>`;
     }
 
     e.controls.style.display = row(cfg, 'show_controls') ? 'flex' : 'none';
@@ -667,8 +667,8 @@ export class ClimateCard extends HTMLElement {
       const lo = Math.min(...vals, ...targets, ...band) - 0.5, hi = Math.max(...vals, ...targets, ...band) + 0.5;
       const p = pathOf(temps, lo, hi);
       if (limits) {
-        limitsSvg = `<rect x="0" y="${p.y(cHigh).toFixed(1)}" width="${W}" height="${(p.y(cLow) - p.y(cHigh)).toFixed(1)}" fill="#66bb6a" fill-opacity="0.12"></rect>` +
-          [cLow, cHigh].map((val) => `<line x1="0" x2="${W}" y1="${p.y(val).toFixed(1)}" y2="${p.y(val).toFixed(1)}" stroke="#66bb6a" stroke-opacity="0.55" stroke-dasharray="4 3" vector-effect="non-scaling-stroke"></line>`).join('') +
+        limitsSvg = `<rect x="0" y="${p.y(cHigh).toFixed(1)}" width="${W}" height="${(p.y(cLow) - p.y(cHigh)).toFixed(1)}" fill="#55c47c" fill-opacity="0.12"></rect>` +
+          [cLow, cHigh].map((val) => `<line x1="0" x2="${W}" y1="${p.y(val).toFixed(1)}" y2="${p.y(val).toFixed(1)}" stroke="#55c47c" stroke-opacity="0.55" stroke-dasharray="4 3" vector-effect="non-scaling-stroke"></line>`).join('') +
           limitsSvg;
       }
       scrub.unshift({ pts: temps, raw: tRaw, linear: smooth, lo, hi, color: this._color, format: (val) => `${val.toFixed(1)}° room` });
@@ -681,7 +681,7 @@ export class ClimateCard extends HTMLElement {
       }
       svg = `<path d="${p.d} L${W},${H} L0,${H} Z" fill="${this._color}" fill-opacity="0.16"></path>` + svg +
         `<path d="${p.d}" fill="none" stroke="${this._color}" stroke-width="2" vector-effect="non-scaling-stroke"></path>${tgt}`;
-      legend.unshift(limits ? `<span style="color:#66bb6a">▭ ${type.name} ${cLow}–${cHigh}°</span>` : `<span style="color:${this._color}">● Temperature ${Math.min(...vals).toFixed(1)}–${Math.max(...vals).toFixed(1)}°</span>`);
+      legend.unshift(limits ? `<span style="color:#55c47c">▭ ${type.name} ${cLow}–${cHigh}°</span>` : `<span style="color:${this._color}">● Temperature ${Math.min(...vals).toFixed(1)}–${Math.max(...vals).toFixed(1)}°</span>`);
     }
     if (!legend.length) {
       box.innerHTML = `<div style="height:74px; display:flex; align-items:center; justify-content:center; font-size:0.8rem; color:var(--secondary-text-color);">No history yet</div>`;

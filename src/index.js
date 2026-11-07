@@ -39,8 +39,10 @@ import { registerOctopusPlanCard } from './octopus-plan-card.js';
 import { registerPeopleManagerCard } from './people-manager-card.js';
 import { registerIconStylesCard } from './icon-styles-card.js';
 import { installMapStyle } from './map-style.js';
+import { installCliveTheme } from './clive-theme.js';
 import { SUFFIX } from './suffix.js';
 
+installCliveTheme();
 registerGaugeZoneCard();
 registerAlarmPanelCard();
 registerLightControlCard();
@@ -84,4 +86,4 @@ registerMirrorCard();
 // Satellite (or street) maps everywhere in Home Assistant.
 installMapStyle();
 
-console.info(`%c CHURCH-DRIVE-CARDS${SUFFIX ? ' BETA' : ''} %c loaded `, 'color: white; background: #2196f3; font-weight: 700;', 'color: #2196f3; background: transparent;');
+console.info(`%c CHURCH-DRIVE-CARDS${SUFFIX ? ' BETA' : ''} %c loaded `, 'color: white; background: #4c8dff; font-weight: 700;', 'color: #4c8dff; background: transparent;');

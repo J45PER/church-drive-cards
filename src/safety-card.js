@@ -12,8 +12,8 @@ import { kitShell, kitHead, kitEsc } from './card-kit.js';
 
 const CLASSES = ['smoke', 'heat', 'carbon_monoxide'];
 const ICON = { smoke: 'mdi:smoke-detector-variant', heat: 'mdi:fire', carbon_monoxide: 'mdi:molecule-co' };
-const RED = '#e53935';
-const GREEN = '#4caf50';
+const RED = '#ff6b6b';
+const GREEN = '#55c47c';
 
 const SF_CSS = `
   .sf-row { display:flex; align-items:center; gap:10px; padding:7px 2px; cursor:pointer; }
@@ -132,7 +132,7 @@ export class SafetyCard extends HTMLElement {
     this._list.innerHTML = items.length
       ? items
           .map((i) => {
-            const col = i.on ? RED : i.unavailable ? '#9aa0ad' : GREEN;
+            const col = i.on ? RED : i.unavailable ? '#9aa4b2' : GREEN;
             const bits = i.on
               ? [`ALARM since ${hm(i.since)}`]
               : [i.unavailable ? 'Not responding' : 'All clear', i.battery != null ? `battery ${i.battery}%` : '', i.report && day(i.report) ? `checked in ${day(i.report)}` : ''];

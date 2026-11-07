@@ -103,7 +103,7 @@ class Face(val id: String, val spec: RingSpec, val content: @Composable () -> Un
 
 /** The air-quality gradient: green through amber and orange to red, the same colours as the dashboard's PM2.5 bands. */
 private val GRADIENT = listOf(
-    0f to Color(0xFF4CAF50), 0.2f to Color(0xFF4CAF50), 0.37f to Color(0xFFFFA726), 0.63f to Color(0xFFFF7043), 0.87f to Color(0xFFE53935), 1f to Color(0xFFE53935),
+    0f to com.churchdrive.app.ui.CliveColours.Ok.colour, 0.2f to com.churchdrive.app.ui.CliveColours.Ok.colour, 0.37f to com.churchdrive.app.ui.CliveColours.Warn.colour, 0.63f to com.churchdrive.app.ui.CliveColours.Heating.colour, 0.87f to com.churchdrive.app.ui.CliveColours.Bad.colour, 1f to com.churchdrive.app.ui.CliveColours.Bad.colour,
 )
 
 fun gradientColour(f: Float): Color {

@@ -26,16 +26,17 @@
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
+import { clive } from './clive-colours.js';
 import { KIT_COLOR, kitShell, kitHead, kitTiles, kitNum, kitCap, kitEsc, kitCompact, kitCompactable } from './card-kit.js';
 import { iconFor, watchIcons } from './icon-library.js';
 import { openPopup } from './popup.js';
 import { weekStatIds, buildWeek, dayCheapShare, lagNote, balance } from './energy-week.js';
 
 // Octopus's own pink, and the charger's teal.
-export const OCTO_PINK = '#f050f8';
+export const OCTO_PINK = clive('energy');
 // Octopus's violet, for gas.
-export const OCTO_VIOLET = '#7b61ff';
-const EV_TEAL = '#00b8d4';
+export const OCTO_VIOLET = clive('gas');
+const EV_TEAL = clive('air');
 const CHEAP = KIT_COLOR.good;
 const PEAK = KIT_COLOR.poor;
 
@@ -321,7 +322,7 @@ export class OctopusCard extends HTMLElement {
         </div>
         ${share != null ? `<div class="oc-meter"><i style="width:${share}%; background:${CHEAP};"></i><i style="width:${100 - share}%; background:${PEAK};"></i></div>
         <div class="ck-sub"><b style="color:${CHEAP};">${share}%</b> of that day's electricity was used at the cheap rate.</div>` : ''}
-        ${note ? `<div class="ck-sub" style="color:#ffa726;">${kitEsc(note)}</div>` : ''}`,
+        ${note ? `<div class="ck-sub" style="color:#f0b13a;">${kitEsc(note)}</div>` : ''}`,
     };
   }
 

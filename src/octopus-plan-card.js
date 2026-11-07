@@ -6,7 +6,7 @@ import { SUFFIX, LABEL } from './suffix.js';
 import { KIT_COLOR, kitShell, kitHead, kitEsc, kitCompact, kitCompactable } from './card-kit.js';
 import { octopusPlan, planLine } from './car-octopus.js';
 
-const PLAN_TEAL = '#00b8d4';
+const PLAN_TEAL = '#3fd0cf';
 
 function demoPlan() {
   const now = Date.now();

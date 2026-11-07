@@ -18,8 +18,8 @@ import com.churchdrive.app.ui.Tone
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private val HEAT = Color(0xFFFFAB70)
-private val COOL = Color(0xFF8AB4F8)
+private val HEAT = com.churchdrive.app.ui.CliveColours.Heating.colour
+private val COOL = com.churchdrive.app.ui.CliveColours.Cooling.colour
 private val IDLE = Color(0xFF9AA0A6)
 
 /** The climate page: every thermostat, air con, fan and air purifier the house has, one face each (an air con has a second for its fan speeds). */

@@ -117,8 +117,23 @@ class SatelliteModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** A newer test build of this app is out (not asked more than every ten minutes; a Play install is told by Google Play instead). */
+    var updateAvailable by mutableStateOf(false)
+        private set
+    private var lastUpdateCheck = 0L
+
+    private fun checkForUpdate() {
+        if (BuildConfig.PLAY) return
+        lastUpdateCheck = System.currentTimeMillis()
+        viewModelScope.launch(Dispatchers.IO) {
+            val newer = com.churchdrive.app.UpdateCheck.check(okhttp3.OkHttpClient(), BuildConfig.BUILD.toIntOrNull() ?: 0, com.churchdrive.app.UpdateCheck.SATELLITES_RELEASE_API)
+            withContext(Dispatchers.Main) { updateAvailable = newer }
+        }
+    }
+
     /** The app came to the front: pick up the Church Drive app's sign-in, and connect again if the line has gone. */
     fun onForeground() {
+        if (com.churchdrive.app.UpdateCheck.due(System.currentTimeMillis(), lastUpdateCheck)) checkForUpdate()
         importSignIn()
         if (signedIn && !connected) connect()
     }

@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.103.0
+
+- **The house's own colours.** Material You is gone: the app's colours are Clive's palette (neutral backgrounds, text and an indigo accent; entity colours from `cards.json`), not the phone's wallpaper or Google's. Lights are yellow, heating orange, electricity and gas Octopus pink and violet, the car blue, security indigo, media pink, Gregg mint, shopping coral; green, amber and red keep their fixed meaning. The watch's weather, sport and air-quality colours, the car and climate rings, and the widgets follow. Written without an Android SDK, so CI is its first compile.
+- The shared update banner and daily question moved to `core` (Google Play's update screen is there too).
+
 ## 0.102.0
 
 - **Overnight heating.** On the Climate page, administrators see a new Overnight heating panel: Off, Eco or Smart for the whole house between two times (midnight to 6am to begin with, moved half an hour at a time). Smart leaves the heating to the assistant; Eco puts it on Eco and Off turns it off, and the assistant puts it back in the morning. Nobody else sees the panel. A card the dashboard marks `admin_only` is now hidden from everyone but administrators, and a panel with only such cards is hidden. Needs Church Drive 0.102.0 or later in Home Assistant.

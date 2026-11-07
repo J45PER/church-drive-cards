@@ -18,10 +18,10 @@ import { openPopup } from './popup.js';
 
 export const KINDS = {
   ding: ['Doorbell', '#29b6f6', '#012'],
-  motion: ['Motion', '#5c6bc0', '#fff'],
-  alarm: ['Alarm', '#e53935', '#fff'],
-  linked: ['Linked', '#26a69a', '#fff'],
-  live: ['Live view', '#78909c', '#fff'],
+  motion: ['Motion', '#8a86ff', '#fff'],
+  alarm: ['Alarm', '#ff6b6b', '#fff'],
+  linked: ['Linked', '#3fd0cf', '#fff'],
+  live: ['Live view', '#8fa6b8', '#fff'],
   interval: ['Snapshot', 'rgba(255,255,255,0.22)', '#fff'],
   'on-demand': ['Snapshot', 'rgba(255,255,255,0.22)', '#fff'],
 };
@@ -39,9 +39,9 @@ export const STAGE_CSS = `
   .cc-btns { display:flex; gap:10px; margin:14px 0 6px; }
   .cc-btn { flex:1 1 0; min-width:0; border:none; border-radius:14px; padding:10px 4px; cursor:pointer; font:inherit; font-size:0.78rem; font-weight:700;
     background:rgba(127,127,127,0.16); color:var(--primary-text-color); display:flex; flex-direction:column; align-items:center; gap:4px; }
-  .cc-btn.main { background:#5c6bc0; color:#fff; }
-  .cc-btn.talk { background:#43a047; color:#fff; }
-  .cc-btn.talk.on { background:#e53935; }
+  .cc-btn.main { background:#8a86ff; color:#fff; }
+  .cc-btn.talk { background:#55c47c; color:#fff; }
+  .cc-btn.talk.on { background:#ff6b6b; }
   .cc-btn[disabled] { opacity:.5; cursor:default; }
 `;
 
@@ -53,8 +53,8 @@ const EV_CSS = `
     display:flex; align-items:center; justify-content:center; padding:0; }
   .ce-time { flex:none; font-size:0.75rem; font-variant-numeric:tabular-nums; color:var(--secondary-text-color); min-width:30px; text-align:center; }
   .ce-seek { flex:1; min-width:0; height:28px; margin:0; background:transparent; -webkit-appearance:none; appearance:none; cursor:pointer; --p:0%; }
-  .ce-seek::-webkit-slider-runnable-track { height:6px; border-radius:3px; background:linear-gradient(90deg, #5c6bc0 var(--p), rgba(127,127,127,0.3) var(--p)); }
-  .ce-seek::-moz-range-track { height:6px; border-radius:3px; background:linear-gradient(90deg, #5c6bc0 var(--p), rgba(127,127,127,0.3) var(--p)); }
+  .ce-seek::-webkit-slider-runnable-track { height:6px; border-radius:3px; background:linear-gradient(90deg, #8a86ff var(--p), rgba(127,127,127,0.3) var(--p)); }
+  .ce-seek::-moz-range-track { height:6px; border-radius:3px; background:linear-gradient(90deg, #8a86ff var(--p), rgba(127,127,127,0.3) var(--p)); }
   .ce-seek::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; margin-top:-6px; border-radius:50%; background:#fff; border:none; box-shadow:0 1px 3px rgba(0,0,0,0.5); }
   .ce-seek::-moz-range-thumb { width:18px; height:18px; border-radius:50%; background:#fff; border:none; }
   .cc-pop-media:fullscreen { aspect-ratio:auto; border-radius:0; width:100vw; height:100vh; }
@@ -340,7 +340,7 @@ export function openCameraEvents(host, hass, base, { title = '', aspect = 16 / 9
   const pop = openPopup(host, {
     title: `${name} · events`,
     icon: 'mdi:history',
-    color: '#5c6bc0',
+    color: '#8a86ff',
     content,
     onClose: () => {
       box.innerHTML = ''; // stop any video
@@ -401,7 +401,7 @@ export function openCameraEvents(host, hass, base, { title = '', aspect = 16 / 9
       controls(el, e);
       el.addEventListener('error', () => {
         tag.textContent = `Couldn't play this clip${el.error ? ` (${['', 'stopped', 'network', 'decode', 'format not supported'][el.error.code] || el.error.code})` : ''}`;
-        tag.style.background = '#c62828';
+        tag.style.background = '#ff6b6b';
       });
     }
   };

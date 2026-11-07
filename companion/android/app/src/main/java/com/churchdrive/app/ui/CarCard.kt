@@ -45,8 +45,8 @@ import java.time.format.DateTimeFormatter
 /** The car battery's colour, the dashboard's rule: red under 20%, orange under 40%, else [ok] (the Car card's teal); grey when unknown. */
 fun carBatteryColour(level: Double?, ok: Color): Color = when {
     level == null -> Color.Gray
-    level < 20 -> Color(0xFFEF5350)
-    level < 40 -> Color(0xFFFFA726)
+    level < 20 -> CliveColours.Bad.colour
+    level < 40 -> CliveColours.Warn.colour
     else -> ok
 }
 
@@ -234,7 +234,7 @@ fun CarCard(config: JSONObject, entities: Map<String, EntityState>, registry: Re
     var asked by remember { mutableStateOf(mapOf<String, Long>()) }
     if (rows.isEmpty()) return
     val charging = rows.count { it.charging }
-    val tone = toneColors(Tone.Teal)
+    val tone = toneColors(Tone.Car)
     EntityCard(tone.container, tone.onContainer) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             config.optString("title").takeIf { it.isNotBlank() }?.let {

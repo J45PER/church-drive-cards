@@ -109,7 +109,7 @@ const TL_CSS = `
   .tl-time input { flex:1; }
   .tl-buttons { display:flex; flex-wrap:wrap; gap:8px; }
   .tl-buttons button { border:none; border-radius:10px; padding:9px 14px; font:inherit; font-size:0.85rem; font-weight:600; cursor:pointer; }
-  .tl-msg { font-size:0.8rem; color:#ffa726; min-height:1em; }
+  .tl-msg { font-size:0.8rem; color:#f0b13a; min-height:1em; }
 `;
 
 export const TaskListCardEditor = createFormEditor({
@@ -149,7 +149,7 @@ export const TaskListCardEditor = createFormEditor({
   },
   helpers: {
     entity: 'Any to-do list. A task\'s repeat and who it reminds are kept in its description, and "Church Drive: repeating tasks" sends the reminders and brings repeating tasks back.',
-    color: 'Default purple (#7e57c2).',
+    color: 'Default purple (#8a86ff).',
     own: 'Each person sees their own "Priorities <first name>" list (made for everyone automatically), so one card serves everyone.',
     assign: '"Just the signed-in person" swaps the list of people for a simple "Remind me" choice.',
   },
@@ -208,7 +208,7 @@ export class TaskListCard extends HTMLElement {
   }
 
   _colour() {
-    return this.config.color || '#7e57c2';
+    return this.config.color || '#8a86ff';
   }
 
   _watch() {
@@ -394,7 +394,7 @@ export class TaskListCard extends HTMLElement {
       .sort((a, b) => rank(a.t) - rank(b.t) || a.n - b.n);
     const done = all.filter((t) => t.status === 'completed' && !(parseTask(t.description).repeat || {}).type);
     const late = open.filter(({ t }) => t.due && whenText(t.due).includes('overdue')).length;
-    if (c.title) kitHead(this, c.title, missing ? 'Not set up' : late ? `${late} overdue` : open.length ? `${open.length} to do` : 'All done', late ? '#e53935' : colour);
+    if (c.title) kitHead(this, c.title, missing ? 'Not set up' : late ? `${late} overdue` : open.length ? `${open.length} to do` : 'All done', late ? '#ff6b6b' : colour);
     this._addBtn.style.background = `color-mix(in srgb, ${colour} 22%, transparent)`;
     this._addBtn.style.color = `color-mix(in srgb, ${colour} 45%, white)`;
     this._addBtn.innerHTML = `${iconHtml('mdi:plus', { size: '18px' })}Add a task`;
@@ -416,15 +416,15 @@ export class TaskListCard extends HTMLElement {
       const who = !p.repeat ? '' : mine ? 'reminds you' : p.who === 'everyone' ? 'reminds everyone' : Array.isArray(p.who) ? `reminds ${p.who.join(', ')}` : '';
       const place = this._placeName(this._placeOf(t.uid));
       const sub = [p.repeat && p.repeat.type !== 'once' ? describeRepeat(p.repeat) : '', who, place ? `at ${place}` : '', shoppingIdOf(t.description) ? shoppingNote(t.description) : p.notes].filter(Boolean).join(' · ');
-      const ring = isDone ? '#4caf50' : over ? '#e53935' : colour;
+      const ring = isDone ? '#55c47c' : over ? '#ff6b6b' : colour;
       return `<div class="tl-row">
-        ${shoppingIdOf(t.description) ? `<span class="tl-tick" style="border:none; color:${isDone ? ring : '#5c6bc0'}; cursor:default;" aria-hidden="true">${iconHtml(isStepsTask(t.description) ? (isDone ? 'mdi:check-circle-outline' : 'mdi:format-list-checks') : isDone ? 'mdi:cart-check' : 'mdi:cart-outline', { size: '22px' })}</span>` : `<button type="button" class="tl-tick" data-tick="${kitEsc(t.uid)}" data-to="${isDone ? 'needs_action' : 'completed'}" aria-label="${isDone ? 'Not done' : 'Done'}: ${kitEsc(t.summary)}" style="border-color:${ring}; ${isDone ? `background:${ring};` : ''}">${isDone ? iconHtml('mdi:check', { size: '15px' }) : ''}</button>`}
-        ${c.icons ? iconHtml(choreIcon(t.summary), { size: '20px', style: `color:${over ? '#e53935' : colour}; flex:none;` }) : ''}
+        ${shoppingIdOf(t.description) ? `<span class="tl-tick" style="border:none; color:${isDone ? ring : '#8a86ff'}; cursor:default;" aria-hidden="true">${iconHtml(isStepsTask(t.description) ? (isDone ? 'mdi:check-circle-outline' : 'mdi:format-list-checks') : isDone ? 'mdi:cart-check' : 'mdi:cart-outline', { size: '22px' })}</span>` : `<button type="button" class="tl-tick" data-tick="${kitEsc(t.uid)}" data-to="${isDone ? 'needs_action' : 'completed'}" aria-label="${isDone ? 'Not done' : 'Done'}: ${kitEsc(t.summary)}" style="border-color:${ring}; ${isDone ? `background:${ring};` : ''}">${isDone ? iconHtml('mdi:check', { size: '15px' }) : ''}</button>`}
+        ${c.icons ? iconHtml(choreIcon(t.summary), { size: '20px', style: `color:${over ? '#ff6b6b' : colour}; flex:none;` }) : ''}
         <div class="tl-body" data-uid="${kitEsc(t.uid)}" role="button" tabindex="0" aria-label="Change ${kitEsc(t.summary)}">
           <div class="tl-name" style="${isDone ? 'text-decoration:line-through; color:var(--secondary-text-color);' : ''}">${kitEsc(t.summary)}</div>
           ${sub ? `<div class="ck-sub" style="font-size:0.74rem; line-height:1.35;">${kitEsc(sub)}</div>` : ''}
         </div>
-        ${when ? `<span class="tl-when" style="color:${over ? '#e53935' : 'var(--secondary-text-color)'};">${kitEsc(when)}</span>` : ''}
+        ${when ? `<span class="tl-when" style="color:${over ? '#ff6b6b' : 'var(--secondary-text-color)'};">${kitEsc(when)}</span>` : ''}
       </div>`;
     };
     if (missing) this._list.innerHTML = `<div class="ck-sub" style="line-height:1.5;">There's no ${kitEsc(this._entity() || 'to-do')} list yet.</div>`;
@@ -575,7 +575,7 @@ export class TaskListCard extends HTMLElement {
       <div class="tl-buttons">
         <button type="button" class="tl-save" style="${on} color:#fff;">${e.uid ? 'Save' : 'Add task'}</button>
         <button type="button" class="tl-cancel" style="background:rgba(127,127,127,0.18); color:var(--primary-text-color);">Cancel</button>
-        ${e.uid ? `<button type="button" class="tl-delete" style="margin-left:auto; background:color-mix(in srgb, #e53935 20%, transparent); color:#ef9a9a;">Delete</button>` : ''}
+        ${e.uid ? `<button type="button" class="tl-delete" style="margin-left:auto; background:color-mix(in srgb, #ff6b6b 20%, transparent); color:#ffb5b5;">Delete</button>` : ''}
       </div>`;
     const f = this._form;
     const bind = (sel, ev, fn) => f.querySelectorAll(sel).forEach((el) => el.addEventListener(ev, () => fn(el)));

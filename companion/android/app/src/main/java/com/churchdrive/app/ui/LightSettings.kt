@@ -79,7 +79,7 @@ fun LightSettings(entityId: String, title: String?, entities: Map<String, Entity
 
 @Composable
 private fun LightSettingsBody(light: EntityState, entities: Map<String, EntityState>, call: CallService, openMember: (String) -> Unit) {
-    val tone = toneColors(Tone.Amber)
+    val tone = toneColors(Tone.Lights)
     val grey = toneColors(Tone.Grey)
     val on = light.state == "on"
     val members = light.lightMembers()
@@ -201,7 +201,7 @@ private fun WhiteControls(light: EntityState, call: CallService, tone: ToneColor
 @Composable
 private fun BrightnessBar(light: EntityState, call: CallService) {
     val pct = brightnessOf(light)
-    val tint = tintOf(light, Color(0xFFE8B34A))
+    val tint = tintOf(light, CliveColours.Lights.colour)
     BarSlider(
         "Brightness", "${if (light.state == "on") pct else 0}%", if (light.state == "on") pct / 100f else 0f,
         Brush.horizontalGradient(listOf(tint.copy(alpha = 0.35f), tint.copy(alpha = 0.8f))), thumbOnly = false,

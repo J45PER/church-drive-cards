@@ -211,7 +211,7 @@ private fun roomTitle(room: LightRoom, head: EntityState?, areaNames: Map<String
 fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames: Map<String, String>, call: CallService) {
     val head = entities[room.head]
     val on = head?.state == "on"
-    val tone = toneColors(if (on) Tone.Amber else Tone.Grey)
+    val tone = toneColors(if (on) Tone.Lights else Tone.Grey)
     var expanded by rememberSaveable(room.head) { mutableStateOf(false) }
     val expandable = room.rows.isNotEmpty() || room.scenes.isNotEmpty()
 
@@ -435,7 +435,7 @@ object LightHoldHint {
 fun LightingPage(layout: LightLayout, entities: Map<String, EntityState>, areaNames: Map<String, String>, call: CallService) {
     layout.floors.forEach { (floor, rooms) ->
         SectionPanel(
-            floor, icon = CdVectors.Bulb, tone = Tone.Amber,
+            floor, icon = CdVectors.Bulb, tone = Tone.Lights,
             summary = lightsSummary(rooms, entities),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -456,4 +456,4 @@ fun allRoomsByFloor(layout: LightLayout): List<Pair<String, List<LightRoom>>> {
 }
 
 /** A colour that stands for a scene on a button: its own first colour, else a neutral blue. */
-fun sceneSwatch(key: String): Color = SCENE_COLOURS[key]?.firstOrNull() ?: Color(0xFF8AB4F8)
+fun sceneSwatch(key: String): Color = SCENE_COLOURS[key]?.firstOrNull() ?: CliveColours.Car.colour

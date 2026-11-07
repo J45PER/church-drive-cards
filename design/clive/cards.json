@@ -1215,7 +1215,30 @@
       "alarm_off",
       "arming_home",
       "arming_away"
-    ]
+    ],
+    "neutral": {
+      "note": "Colours for everything that is not an entity: backgrounds, surfaces, text, lines and the app's own accent (Clive's indigo). Taken from the Clive Entity Colours board's own page colours. Used by the phone apps' theme and the dashboard cards.",
+      "light": {
+        "background": "#F3F4F6",
+        "surface": "#FFFFFF",
+        "surface2": "#ECEEF2",
+        "line": "#D9DDE4",
+        "text": "#14181F",
+        "soft": "#5B6472",
+        "primary": "#4F46C8",
+        "on_primary": "#FFFFFF"
+      },
+      "dark": {
+        "background": "#0B0E13",
+        "surface": "#171C24",
+        "surface2": "#202733",
+        "line": "#28303C",
+        "text": "#EEF1F5",
+        "soft": "#9AA4B2",
+        "primary": "#A9B4FF",
+        "on_primary": "#0B0E13"
+      }
+    }
   },
   "kind_palettes": {
     "note": "The glow palette (Colour, Accent, Light) Home Assistant adds to a card of each kind when the card does not send its own. Applied in ha/clive-show-card.yaml.",

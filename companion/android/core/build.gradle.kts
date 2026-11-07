@@ -35,5 +35,9 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     api("androidx.security:security-crypto:1.1.0-alpha06")
     api("com.squareup.okhttp3:okhttp:4.12.0")
+    // The update notice every app shows (UpdateNotice.kt), and Google Play's own update screen for Play installs (PlayUpdate.kt).
+    implementation("androidx.activity:activity-compose:1.9.3")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
+    implementation("com.google.android.play:app-update:2.1.0")
     api("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 }
