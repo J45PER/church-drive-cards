@@ -7,6 +7,7 @@ with the APK, so there is a record of what shipped. Newest first.
 ## 0.104.3
 
 - **Readable colours.** In dark mode, text and the strong colour of a palette set that was too dim for its ground are lifted just enough to reach 4.5:1 (`readableOn`); sets that already read are unchanged. This fixes the washed-out to-do pills on Home and the zone cards. The light row on a zone card (Front light) no longer takes the zone's purple for its text over the light's colour.
+- **Gregg and Cleaning are one palette.** The Cleaning to-do list used a copy of Gregg's blue; it uses `gregg` now (the name `todo_cleaning` still works and means `gregg`).
 
 ## 0.104.2
 

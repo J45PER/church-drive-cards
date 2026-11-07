@@ -28,7 +28,7 @@ enum class Tone {
     Lights, Blinds, Plugs, Gregg, Heating, Cooling, Air, Energy, Gas, Car, Alarm, Doors,
     AlarmHome, AlarmAway, AlarmOff, ArmingHome, ArmingAway,
     Media, People, Tasks, Shopping, Calendar, Sunny, Night, Rain, Snow, Storm, Sport,
-    TodoMine, TodoShared, TodoCleaning, TodoHouse, TodoShopping, PersonJamie, PersonHayley, PersonIan, PersonDiane,
+    TodoMine, TodoShared, TodoHouse, TodoShopping, PersonJamie, PersonHayley, PersonIan, PersonDiane,
 }
 
 data class ToneColors(
@@ -80,7 +80,6 @@ fun toneSet(tone: Tone): EntityColours? = when (tone) {
     Tone.Sport -> CliveColours.Sport
     Tone.TodoMine -> CliveColours.TodoMine
     Tone.TodoShared -> CliveColours.TodoShared
-    Tone.TodoCleaning -> CliveColours.TodoCleaning
     Tone.TodoHouse -> CliveColours.TodoHouse
     Tone.TodoShopping -> CliveColours.TodoShopping
     Tone.PersonJamie -> CliveColours.PersonJamie
@@ -175,7 +174,6 @@ fun toneForKey(key: String): Tone? = when (key) {
     "neutral" -> Tone.Grey
     "todo_mine" -> Tone.TodoMine
     "todo_shared" -> Tone.TodoShared
-    "todo_cleaning" -> Tone.TodoCleaning
     "todo_house" -> Tone.TodoHouse
     "todo_shopping" -> Tone.TodoShopping
     "person_jamie" -> Tone.PersonJamie

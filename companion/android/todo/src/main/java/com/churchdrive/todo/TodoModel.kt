@@ -43,7 +43,7 @@ import org.json.JSONObject
 enum class TodoTab(val label: String, val title: String, val tone: Tone, val canAdd: Boolean) {
     Mine("My to-do", "My to-do", Tone.TodoMine, true),
     Shared("Shared", "Shared", Tone.TodoShared, true),
-    Cleaning("Cleaning", "Cleaning", Tone.TodoCleaning, true),
+    Cleaning("Cleaning", "Cleaning", Tone.Gregg, true),
     House("House", "From the house", Tone.TodoHouse, false),
 }
 
