@@ -350,7 +350,7 @@ fun LightPill(
     val pct = if (on) brightnessPct(light) else 0
     var drag by remember(pct) { mutableStateOf<Float?>(null) }
     var widthPx by remember { mutableIntStateOf(1) }
-    val shown = if (security) 1f else drag ?: (pct / 100f)
+    val dragged = drag ?: (pct / 100f)
     val rgb = if (tintFrom != null && entities != null) {
         tintFrom.firstNotNullOfOrNull { id -> entities[id]?.takeIf { it.state == "on" && it.str("color_mode") in COLOUR_MODES }?.rgb() }
     } else light?.rgb()
@@ -360,6 +360,7 @@ fun LightPill(
     val security = on && entities?.get(SECURITY_ACTIVE)?.state == "on" &&
         (securityLabelled(registry, entityId) || light?.list("entity_id").orEmpty().any { securityLabelled(registry, it) })
     val tint = if (security) toneColors(Tone.AlarmHome).accent else if (on && rgb != null) Color(rgb[0], rgb[1], rgb[2]) else tone.accent
+    val shown = if (security) 1f else dragged
     val shape = RoundedCornerShape(20.dp)
     val status = when {
         light == null -> "Loading…"
