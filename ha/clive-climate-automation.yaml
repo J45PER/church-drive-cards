@@ -5,6 +5,10 @@ mode: single
 triggers:
 - trigger: time_pattern
   minutes: /10
+- trigger: time
+  at: input_datetime.clive_overnight_start
+- trigger: time
+  at: input_datetime.clive_overnight_end
 actions:
 - action: script.clive_climate_zone
   data:
