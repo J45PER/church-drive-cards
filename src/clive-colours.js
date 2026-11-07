@@ -33,10 +33,8 @@ export const CLIVE = {
   ok: ["#55c47c","#224032","#689fa8","#aae2be","#27563c"],
   warn: ["#f0b13a","#4a3b21","#cc927e","#f8d89c","#684e20"],
   bad: ["#ff6b6b","#4e292e","#d5669d","#ffb5b5","#6e3035"],
-  todo_mine: ["#a5b4fc","#373c53","#9c94fa","#d2dafe","#484f72"],
   todo_shared: ["#8fa9c4","#313945","#8e8dd6","#c7d4e2","#3f4a5a"],
   todo_house: ["#7e6db5","#2d2a41","#8367cc","#beb6da","#383154"],
-  todo_shopping: ["#ff9c8a","#4e3636","#d585b1","#ffcec4","#6e4542"],
   person_jamie: ["#0087a8","#0c303d","#3278c4","#80c3d4","#033c4f"],
   person_hayley: ["#d568b5","#432841","#ba64cc","#eab4da","#5c2f54"],
   person_ian: ["#5a87cc","#233047","#6c78db","#acc3e6","#293c5e"],
@@ -66,7 +64,7 @@ export const CLIVE_NEUTRAL = {
   }
 };
 
-export const CLIVE_ALIASES = {"green":"ok","light-green":"plugs","lime":"plugs","red":"bad","amber":"warn","orange":"warn","yellow":"lights","deep-orange":"heating","light-blue":"cooling","blue":"alarm_home","cyan":"air","teal":"air","indigo":"tasks","purple":"doors","deep-purple":"alarm","pink":"media","brown":"blinds","blue-grey":"rain","grey":"neutral","gray":"neutral","disabled":"neutral","coral":"shopping","salmon":"shopping","todo_cleaning":"gregg"};
+export const CLIVE_ALIASES = {"green":"ok","light-green":"plugs","lime":"plugs","red":"bad","amber":"warn","orange":"warn","yellow":"lights","deep-orange":"heating","light-blue":"cooling","blue":"alarm_home","cyan":"air","teal":"air","indigo":"tasks","purple":"doors","deep-purple":"alarm","pink":"media","brown":"blinds","blue-grey":"rain","grey":"neutral","gray":"neutral","disabled":"neutral","coral":"shopping","salmon":"shopping","todo_cleaning":"gregg","todo_mine":"tasks","todo_shopping":"shopping"};
 
 /** One slot of a set, e.g. clive('lights') is the colour, clive('lights', 'dark') its ground. */
 export function clive(key, slot = 'colour') {

@@ -1,6 +1,6 @@
 {
  "version": 1,
- "app": "0.104.3",
+ "app": "0.105.0",
  "$comment": "Clive's card layouts, palettes and animations as data. Edit here, run `node tools/export-clive-assets.mjs`, and Home Assistant serves the result at /church_drive/clive/cards.json. A new KIND of card still needs code in the apps; everything else (icons, palettes, which icon a card shows, its fields, its animation) is data.",
  "palettes": {
   "Base": [
@@ -1079,7 +1079,7 @@
     ]
    },
    "tasks": {
-    "name": "To-do and lists",
+    "name": "To-do and lists (My to-do)",
     "group": "Lists and time",
     "colours": [
      "#A5B4FC",
@@ -1090,7 +1090,7 @@
     ]
    },
    "shopping": {
-    "name": "Shopping",
+    "name": "Shopping (and shopping lists)",
     "group": "Lists and time",
     "colours": [
      "#FF9C8A",
@@ -1210,20 +1210,9 @@
      "#6E3035"
     ]
    },
-   "todo_mine": {
-    "name": "My to-do",
-    "group": "To-do types",
-    "colours": [
-     "#A5B4FC",
-     "#373C53",
-     "#9C94FA",
-     "#D2DAFE",
-     "#484F72"
-    ]
-   },
    "todo_shared": {
     "name": "Shared to-do",
-    "group": "To-do types",
+    "group": "Lists and time",
     "colours": [
      "#8FA9C4",
      "#313945",
@@ -1234,24 +1223,13 @@
    },
    "todo_house": {
     "name": "To-do from the house",
-    "group": "To-do types",
+    "group": "Lists and time",
     "colours": [
      "#7E6DB5",
      "#2D2A41",
      "#8367CC",
      "#BEB6DA",
      "#383154"
-    ]
-   },
-   "todo_shopping": {
-    "name": "Shopping lists",
-    "group": "To-do types",
-    "colours": [
-     "#FF9C8A",
-     "#4E3636",
-     "#D585B1",
-     "#FFCEC4",
-     "#6E4542"
     ]
    },
    "person_jamie": {
@@ -1366,7 +1344,9 @@
     "disabled": "neutral",
     "coral": "shopping",
     "salmon": "shopping",
-    "todo_cleaning": "gregg"
+    "todo_cleaning": "gregg",
+    "todo_mine": "tasks",
+    "todo_shopping": "shopping"
    }
   }
  },

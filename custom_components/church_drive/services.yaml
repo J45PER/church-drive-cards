@@ -23,6 +23,21 @@ apply_scene:
             - Relax
             - Rest
             - Nightlight
+set_palette:
+  fields:
+    key:
+      required: true
+      example: lights
+      selector:
+        text:
+    name:
+      selector:
+        text:
+    colours:
+      required: true
+      example: '["#FFC857", "#4E4128", "#D5A190", "#FFE4AB", "#6E572D"]'
+      selector:
+        object:
 log_logo_request:
   fields:
     competition:

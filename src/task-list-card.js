@@ -209,7 +209,7 @@ export class TaskListCard extends HTMLElement {
   }
 
   _colour() {
-    return this.config.color || clive('todo_mine');
+    return this.config.color || clive('tasks');
   }
 
   _watch() {

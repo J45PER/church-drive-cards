@@ -49,9 +49,9 @@ object CliveColours {
     val Media = EntityColours(Color(0xFFFF6F91), Color(0xFF4E2A37), Color(0xFFD568B5), Color(0xFFFFB7C8), Color(0xFF6E3245))
     /** People and presence. */
     val People = EntityColours(Color(0xFF55C47C), Color(0xFF224032), Color(0xFF689FA8), Color(0xFFAAE2BE), Color(0xFF27563C))
-    /** To-do and lists. */
+    /** To-do and lists (My to-do). */
     val Tasks = EntityColours(Color(0xFFA5B4FC), Color(0xFF373C53), Color(0xFF9C94FA), Color(0xFFD2DAFE), Color(0xFF484F72))
-    /** Shopping. */
+    /** Shopping (and shopping lists). */
     val Shopping = EntityColours(Color(0xFFFF9C8A), Color(0xFF4E3636), Color(0xFFD585B1), Color(0xFFFFCEC4), Color(0xFF6E4542))
     /** Calendar and events. */
     val Calendar = EntityColours(Color(0xFFD9A441), Color(0xFF443823), Color(0xFFBD8A82), Color(0xFFECD2A0), Color(0xFF5E4823))
@@ -73,14 +73,10 @@ object CliveColours {
     val Warn = EntityColours(Color(0xFFF0B13A), Color(0xFF4A3B21), Color(0xFFCC927E), Color(0xFFF8D89C), Color(0xFF684E20))
     /** Wrong. */
     val Bad = EntityColours(Color(0xFFFF6B6B), Color(0xFF4E292E), Color(0xFFD5669D), Color(0xFFFFB5B5), Color(0xFF6E3035))
-    /** My to-do. */
-    val TodoMine = EntityColours(Color(0xFFA5B4FC), Color(0xFF373C53), Color(0xFF9C94FA), Color(0xFFD2DAFE), Color(0xFF484F72))
     /** Shared to-do. */
     val TodoShared = EntityColours(Color(0xFF8FA9C4), Color(0xFF313945), Color(0xFF8E8DD6), Color(0xFFC7D4E2), Color(0xFF3F4A5A))
     /** To-do from the house. */
     val TodoHouse = EntityColours(Color(0xFF7E6DB5), Color(0xFF2D2A41), Color(0xFF8367CC), Color(0xFFBEB6DA), Color(0xFF383154))
-    /** Shopping lists. */
-    val TodoShopping = EntityColours(Color(0xFFFF9C8A), Color(0xFF4E3636), Color(0xFFD585B1), Color(0xFFFFCEC4), Color(0xFF6E4542))
     /** Jamie. */
     val PersonJamie = EntityColours(Color(0xFF0087A8), Color(0xFF0C303D), Color(0xFF3278C4), Color(0xFF80C3D4), Color(0xFF033C4F))
     /** Hayley. */
@@ -128,16 +124,17 @@ object CliveColours {
         "ok" to Ok,
         "warn" to Warn,
         "bad" to Bad,
-        "todo_mine" to TodoMine,
         "todo_shared" to TodoShared,
         "todo_house" to TodoHouse,
-        "todo_shopping" to TodoShopping,
         "person_jamie" to PersonJamie,
         "person_hayley" to PersonHayley,
         "person_ian" to PersonIan,
         "person_diane" to PersonDiane,
         "neutral" to Neutral,
     )
+
+    /** The key of each set (by identity), for LiveColours.resolve. */
+    val keyOf: Map<EntityColours, String> = byKey.entries.associate { (k, v) -> v to k }
 
     /** Home Assistant colour names and the palette name each one means (cards.json, entity_colours.aliases). */
     val aliases: Map<String, String> = mapOf(
@@ -165,5 +162,7 @@ object CliveColours {
         "coral" to "shopping",
         "salmon" to "shopping",
         "todo_cleaning" to "gregg",
+        "todo_mine" to "tasks",
+        "todo_shopping" to "shopping",
     )
 }

@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.105.0
+
+- **Live colours.** The app fetches the palettes from Home Assistant (`church_drive/colours`) when it connects and whenever `sensor.church_drive_colours` changes, uses them at once and keeps the last ones on the phone; a palette changed in Home Assistant needs no app update. Palettes it does not know by name show on the dashboards and in the app after a release. Colours named directly in code (a few hard references to a palette's Colour) still change only with a release.
+- Tasks and My to-do are one palette, and Shopping and Shopping lists.
+
 ## 0.104.3
 
 - **Readable colours.** In dark mode, text and the strong colour of a palette set that was too dim for its ground are lifted just enough to reach 4.5:1 (`readableOn`); sets that already read are unchanged. This fixes the washed-out to-do pills on Home and the zone cards. The light row on a zone card (Front light) no longer takes the zone's purple for its text over the light's colour.

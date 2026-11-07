@@ -83,3 +83,20 @@ test('the dashboard theme defines a variable for every palette name and every Ho
   for (const key of Object.keys(cards.entity_colours.types)) assert.ok(css.includes(`--${key}-color:`), `--${key}-color`);
   for (const alias of Object.keys(cards.entity_colours.aliases.names)) assert.ok(css.includes(`--${alias}-color:`), `--${alias}-color`);
 });
+
+test('live palettes from Home Assistant replace the shipped ones and add their variables', async () => {
+  const { applyLive, cliveThemeCss } = await import('../src/clive-theme.js');
+  const { CLIVE } = await import('../src/clive-colours.js');
+  const before = CLIVE.lights.slice();
+  try {
+    applyLive({ lights: { colours: ['#112233', '#223344', '#334455', '#445566', '#556677'] }, mine: { colours: ['#AABBCC', '#223344', '#334455', '#445566', '#556677'] }, broken: { colours: ['nope'] }, 'Bad Key': { colours: before } });
+    const css = cliveThemeCss();
+    assert.match(css, /--lights-color: #112233;/);
+    assert.match(css, /--mine-color: #aabbcc;/);
+    assert.ok(!css.includes('--broken-color'));
+    assert.ok(!css.includes('--Bad Key-color'));
+  } finally {
+    CLIVE.lights = before;
+    delete CLIVE.mine;
+  }
+});

@@ -28,7 +28,7 @@ enum class Tone {
     Lights, Blinds, Plugs, Gregg, Heating, Cooling, Air, Energy, Gas, Car, Alarm, Doors,
     AlarmHome, AlarmAway, AlarmOff, ArmingHome, ArmingAway,
     Media, People, Tasks, Shopping, Calendar, Sunny, Night, Rain, Snow, Storm, Sport,
-    TodoMine, TodoShared, TodoHouse, TodoShopping, PersonJamie, PersonHayley, PersonIan, PersonDiane,
+    TodoShared, TodoHouse, PersonJamie, PersonHayley, PersonIan, PersonDiane,
 }
 
 data class ToneColors(
@@ -78,10 +78,8 @@ fun toneSet(tone: Tone): EntityColours? = when (tone) {
     Tone.Snow -> CliveColours.Snow
     Tone.Storm -> CliveColours.Storm
     Tone.Sport -> CliveColours.Sport
-    Tone.TodoMine -> CliveColours.TodoMine
     Tone.TodoShared -> CliveColours.TodoShared
     Tone.TodoHouse -> CliveColours.TodoHouse
-    Tone.TodoShopping -> CliveColours.TodoShopping
     Tone.PersonJamie -> CliveColours.PersonJamie
     Tone.PersonHayley -> CliveColours.PersonHayley
     Tone.PersonIan -> CliveColours.PersonIan
@@ -124,7 +122,7 @@ private fun neutralColors(dark: Boolean): ToneColors =
 fun toneColors(tone: Tone): ToneColors = toneColorsFor(tone, isSystemInDarkTheme())
 
 /** The same colours without Compose, for places that draw themselves (the home-screen widgets). */
-fun toneColorsFor(tone: Tone, dark: Boolean): ToneColors = toneSet(tone)?.let { colorsOf(it, dark) } ?: neutralColors(dark)
+fun toneColorsFor(tone: Tone, dark: Boolean): ToneColors = toneSet(tone)?.let { colorsOf(LiveColours.resolve(it), dark) } ?: neutralColors(dark)
 
 /** The alarm card's colours, as on the dashboard. */
 fun alarmTone(state: String?): Tone = when (state) {
@@ -172,10 +170,8 @@ fun toneForKey(key: String): Tone? = when (key) {
     "storm" -> Tone.Storm
     "sport" -> Tone.Sport
     "neutral" -> Tone.Grey
-    "todo_mine" -> Tone.TodoMine
     "todo_shared" -> Tone.TodoShared
     "todo_house" -> Tone.TodoHouse
-    "todo_shopping" -> Tone.TodoShopping
     "person_jamie" -> Tone.PersonJamie
     "person_hayley" -> Tone.PersonHayley
     "person_ian" -> Tone.PersonIan

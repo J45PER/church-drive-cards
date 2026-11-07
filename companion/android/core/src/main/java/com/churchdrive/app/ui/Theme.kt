@@ -16,6 +16,9 @@ import androidx.compose.ui.graphics.lerp
  */
 @Composable
 fun ChurchDriveTheme(content: @Composable () -> Unit) {
+    // The palettes Home Assistant last sent, ready before the first screen is drawn.
+    val context = androidx.compose.ui.platform.LocalContext.current
+    androidx.compose.runtime.remember { LiveColours.load(context) }
     MaterialTheme(colorScheme = if (isSystemInDarkTheme()) cliveDarkScheme else cliveLightScheme, content = content)
 }
 

@@ -36,11 +36,54 @@ export function cliveThemeCss() {
   return `:root, html, body {\n${lines.join('\n')}\n}`;
 }
 
-/** Adds the colours to the page once; a theme chosen later in HA still wins over nothing but these variables, so call again if it changes. */
+/** Palettes from Home Assistant ({key: {colours: [five hex]}}) replace the shipped ones, and a palette added there gets its variable too. */
+export function applyLive(palettes) {
+  if (!palettes || typeof palettes !== 'object') return;
+  for (const [key, p] of Object.entries(palettes)) {
+    if (/^[a-z][a-z0-9_]{0,39}$/.test(key) && p && Array.isArray(p.colours) && p.colours.length === 5 && p.colours.every((c) => /^#[0-9a-f]{6}$/i.test(c))) {
+      CLIVE[key] = p.colours.map((c) => c.toLowerCase());
+    }
+  }
+}
+
+const CACHE_KEY = 'cd-clive-palettes';
+
+function paint() {
+  if (typeof document === 'undefined') return;
+  let style = document.getElementById('cd-clive-colours');
+  if (!style) {
+    style = document.createElement('style');
+    style.id = 'cd-clive-colours';
+    document.head.appendChild(style);
+  }
+  style.textContent = cliveThemeCss();
+}
+
+/** Adds the colours to the page, then asks Home Assistant for the live palettes and follows its changes (no release needed for a colour). */
 export function installCliveTheme() {
   if (typeof document === 'undefined' || document.getElementById('cd-clive-colours')) return;
-  const style = document.createElement('style');
-  style.id = 'cd-clive-colours';
-  style.textContent = cliveThemeCss();
-  document.head.appendChild(style);
+  try {
+    applyLive(JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'));
+  } catch (err) {
+    /* storage blocked or bad data: the shipped colours */
+  }
+  paint();
+  let tries = 0;
+  const find = setInterval(() => {
+    const ha = document.querySelector('home-assistant');
+    const hass = ha && ha.hass;
+    if (!hass || !hass.callWS) {
+      if (++tries > 90) clearInterval(find);
+      return;
+    }
+    clearInterval(find);
+    const load = () => hass.callWS({ type: 'church_drive/colours' }).then((r) => {
+      if (!r || !r.palettes) return;
+      applyLive(r.palettes);
+      paint();
+      try { localStorage.setItem(CACHE_KEY, JSON.stringify(r.palettes)); } catch (err) { /* storage blocked */ }
+    }).catch(() => {});
+    load();
+    if (hass.connection && hass.connection.subscribeEvents) hass.connection.subscribeEvents(load, 'church_drive_colours_changed').catch(() => {});
+  }, 1000);
 }
