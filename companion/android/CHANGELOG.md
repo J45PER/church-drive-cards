@@ -7,6 +7,9 @@ with the APK, so there is a record of what shipped. Newest first.
 ## 0.113.2
 
 - No change to this app (dashboard cards only); version kept equal.
+- The account button no longer shows a "?" now and then: the name remembered from last time is used until the live one arrives, and a name that never arrived is asked for again.
+- Opening the app after it has been away checks that the connection is still alive (it can look connected when the phone dropped it) and connects afresh if not, so it refreshes without closing and reopening.
+- Climate card: the "Home climate 94/100" line is now above the − and + buttons, not below.
 
 ## 0.113.1
 

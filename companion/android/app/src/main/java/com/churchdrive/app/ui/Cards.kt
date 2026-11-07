@@ -449,17 +449,17 @@ fun ClimateCard(
                 )
             }
         }
-        // Lower and Raise are two wide buttons above the modes, the size of the mode tiles.
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Ui.TileGap)) {
-            StepBar(CdVectors.Minus, "Lower", tone, enabled && climate?.state != "off", Modifier.weight(1f)) { nudge(-step) }
-            StepBar(CdVectors.Plus, "Raise", tone, enabled && climate?.state != "off", Modifier.weight(1f)) { nudge(step) }
-        }
         val extra = listOfNotNull(
             quality?.let { "Home climate $it/100 · ${qualityWord(it)}" },
             humidity?.state?.toDoubleOrNull()?.let { "Humidity ${temp(it)}%" },
             outdoor?.let { "Outside ${temp(it)}°" },
         ).joinToString(" · ")
         if (extra.isNotEmpty()) Text(extra, style = MaterialTheme.typography.bodyMedium)
+        // Lower and Raise are two wide buttons above the modes, the size of the mode tiles.
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Ui.TileGap)) {
+            StepBar(CdVectors.Minus, "Lower", tone, enabled && climate?.state != "off", Modifier.weight(1f)) { nudge(-step) }
+            StepBar(CdVectors.Plus, "Raise", tone, enabled && climate?.state != "off", Modifier.weight(1f)) { nudge(step) }
+        }
         TileRow(
             (quick ?: DEFAULT_QUICK).map { q ->
                 val selected = when {

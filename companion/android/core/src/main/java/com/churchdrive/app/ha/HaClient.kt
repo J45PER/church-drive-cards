@@ -157,6 +157,26 @@ class HaClient(private val scope: CoroutineScope) {
         if (!ws.send(msg.toString())) pending.remove(id)?.invoke(null)
     }
 
+    /** Shows the name remembered from last time until the live one arrives, so the account button is not a "?". */
+    fun seedUserName(name: String?) {
+        if (_userName.value == null && !name.isNullOrBlank()) _userName.value = name
+    }
+
+    /**
+     * Asks who is signed in (which also proves the line is alive) and keeps the name and admin flag.
+     * [onResult] is false when nothing answered: the connection looks open but is dead, so the caller should connect again.
+     */
+    fun refreshUser(onResult: (Boolean) -> Unit = {}) {
+        request("auth/current_user", timeoutMs = 5_000L) { result ->
+            val me = result as? JSONObject
+            if (me != null) {
+                me.optString("name").takeIf { it.isNotBlank() }?.let { _userName.value = it }
+                _isAdmin.value = me.optBoolean("is_admin", false)
+            }
+            onResult(me != null)
+        }
+    }
+
     /** Shows what was known last time until the live states arrive (and only until then). */
     fun seed(states: Map<String, EntityState>) {
         if (!_statesLoaded.value && _entities.value.isEmpty()) _entities.value = states
@@ -270,7 +290,7 @@ class HaClient(private val scope: CoroutineScope) {
                         configId -> com.churchdrive.app.ui.HomeTime.zoneId = msg.optJSONObject("result")?.optString("time_zone")?.takeIf { it.isNotBlank() }
                         userId -> {
                             val me = msg.optJSONObject("result")
-                            _userName.value = me?.optString("name")?.takeIf { it.isNotBlank() }
+                            me?.optString("name")?.takeIf { it.isNotBlank() }?.let { _userName.value = it }
                             _isAdmin.value = me?.optBoolean("is_admin", false) ?: false
                             // Home Assistant lets only administrators subscribe to this event; everyone else would be refused (and it is logged as an error).
                             if (_isAdmin.value) webSocket.send(
