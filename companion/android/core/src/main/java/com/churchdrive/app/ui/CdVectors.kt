@@ -25,6 +25,7 @@ object CdVectors {
         return b.build()
     }
     val Plus: ImageVector by lazy { build("plus") }
+    val Fingerprint: ImageVector by lazy { build("fingerprint") }
     val Minus: ImageVector by lazy { build("minus") }
     val Close: ImageVector by lazy { build("close") }
     val Back: ImageVector by lazy { build("back") }
