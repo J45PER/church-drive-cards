@@ -97,6 +97,12 @@ object MobileApp {
         }
     }.getOrElse { WebhookResult.Failed }
 
+    /**
+     * Home Assistant's way of taking a notification away: a notice whose message is `clear_notification` and whose tag names the one to
+     * remove. It is an order, not words, so it is never shown; the tag (if any) says which notification to cancel.
+     */
+    fun isClearCommand(push: Push): Boolean = push.message.trim() == "clear_notification"
+
     /** A notification from the push channel's event, or null if it has no words. */
     fun parsePush(event: JSONObject): Push? {
         val message = event.text("message") ?: return null

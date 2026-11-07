@@ -178,6 +178,11 @@ class HouseService : Service() {
             // One the phone has already shown (it arrived live, then again as a catch-up) isn't shown twice.
             if (dedupe && push.seq > 0 && push.seq <= NoticeSeen.last(context)) return
             NoticeSeen.save(context, push.seq)
+            // "clear_notification" is Home Assistant's order to take a notification away (by its tag), not something to show.
+            if (MobileApp.isClearCommand(parsed)) {
+                parsed.tag?.let { tag -> runCatching { NotificationManagerCompat.from(context).cancel(tag, tag.hashCode()) } }
+                return
+            }
             if (!Permissions.canNotify(context)) return
             val style = NoticeStyles.styleFor(context, push)
             if (style == NoticeStyle.Off) return
