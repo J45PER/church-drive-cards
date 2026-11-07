@@ -57,10 +57,10 @@ const APC_STATES = {
   disarmed: { label: 'Disarmed', icon: 'mdi:shield-off-outline', color: '#55C47C' },
   armed_home: { label: 'Armed Home', icon: 'mdi:shield-home', color: '#4DA3FF' },
   armed_away: { label: 'Armed Away', icon: 'mdi:shield-lock', color: '#F4736C' },
-  armed_night: { label: 'Armed Night', icon: 'mdi:shield-moon', color: '#7e57c2' },
-  arming: { label: 'Arming', icon: 'mdi:shield-sync', color: '#ff9800' },
-  pending: { label: 'Entry Delay', icon: 'mdi:shield-sync', color: '#ff5722' },
-  triggered: { label: 'Triggered!', icon: 'mdi:shield-alert', color: 'var(--error-color, #db4437)' },
+  armed_night: { label: 'Armed Night', icon: 'mdi:shield-moon', color: '#8a86ff' },
+  arming: { label: 'Arming', icon: 'mdi:shield-sync', color: '#f0b13a' },
+  pending: { label: 'Entry Delay', icon: 'mdi:shield-sync', color: '#ff8a4c' },
+  triggered: { label: 'Triggered!', icon: 'mdi:shield-alert', color: 'var(--error-color, #ff6b6b)' },
 };
 const APC_MODE_NAMES = { armed_home: 'Home', armed_away: 'Away', armed_night: 'Night' };
 const APC_RING_R = 38; // an 84px ring, the same size as the other cards' dials
@@ -159,7 +159,7 @@ export class AlarmPanelCard extends HTMLElement {
     if (this._compact) return kitCompact(this, this._compactSpec(st));
     if (!this._built) this._build();
 
-    const info = APC_STATES[st.state] || { label: st.state, icon: 'mdi:shield-outline', color: '#9e9e9e' };
+    const info = APC_STATES[st.state] || { label: st.state, icon: 'mdi:shield-outline', color: '#9aa4b2' };
     const inDelay = st.state === 'arming' || st.state === 'pending';
     const target = APC_MODE_NAMES[st.attributes.targetState];
     this._color = info.color;
@@ -203,7 +203,7 @@ export class AlarmPanelCard extends HTMLElement {
   // buttons as icons.
   _compactSpec(st) {
     const a = st.attributes;
-    const info = APC_STATES[st.state] || { label: st.state, icon: 'mdi:shield-outline', color: '#9e9e9e' };
+    const info = APC_STATES[st.state] || { label: st.state, icon: 'mdi:shield-outline', color: '#9aa4b2' };
     const target = APC_MODE_NAMES[a.targetState];
     const inDelay = st.state === 'arming' || st.state === 'pending';
     const secs = st.state === 'pending' ? a.entrySecondsLeft || 0 : st.state === 'arming' ? a.exitSecondsLeft || 0 : 0;

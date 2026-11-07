@@ -63,11 +63,11 @@ val LocalBaseUrl = compositionLocalOf { "" }
 /** When each camera last had a snapshot asked for from here, so the app doesn't ask again straight away. */
 
 internal fun chipColours(kind: String, old: Boolean): Pair<Color, Color> = when {
-    old -> Color(0xFFFFA726) to Color(0xFF222211)
-    kind == "ding" -> Color(0xFF29B6F6) to Color(0xFF001122)
-    kind == "motion" -> Color(0xFF5C6BC0) to Color.White
-    kind == "linked" -> Color(0xFF26A69A) to Color.White
-    kind == "live" -> Color(0xFF78909C) to Color.White
+    old -> CliveColours.Warn.colour to Color(0xFF222211)
+    kind == "ding" -> CliveColours.Cooling.colour to Color(0xFF001122)
+    kind == "motion" -> CliveColours.Alarm.colour to Color.White
+    kind == "linked" -> CliveColours.Air.colour to Color.White
+    kind == "live" -> CliveColours.Rain.colour to Color.White
     else -> Color.White.copy(alpha = 0.22f) to Color.White
 }
 
@@ -118,7 +118,7 @@ fun CameraCard(config: JSONObject, entities: Map<String, EntityState>, registry:
             .aspectRatio(16f / 9f)
             .clip(RoundedCornerShape(24.dp))
             .background(Brush.linearGradient(listOf(Color(0xFF5D6B7D), Color(0xFF2F3946), Color(0xFF46503C))))
-            .then(if (ringing) Modifier.border(BorderStroke(2.dp, Color(0xFF2E9D4F)), RoundedCornerShape(24.dp)) else Modifier)
+            .then(if (ringing) Modifier.border(BorderStroke(2.dp, CliveColours.Ok.colour), RoundedCornerShape(24.dp)) else Modifier)
             .clickable { viewing = true },
     ) {
         if (picture != null) {
@@ -137,7 +137,7 @@ fun CameraCard(config: JSONObject, entities: Map<String, EntityState>, registry:
             Text(name, color = Color.White, style = MaterialTheme.typography.titleMedium, maxLines = 1, modifier = Modifier.weight(1f))
             if (ringing) {
                 Row(
-                    modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(Color(0xFF2E9D4F))
+                    modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(CliveColours.Ok.colour)
                         .clickable { answerOnOpen = true; answeredAt = System.currentTimeMillis(); viewing = true }
                         .padding(horizontal = 12.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -155,7 +155,7 @@ fun CameraCard(config: JSONObject, entities: Map<String, EntityState>, registry:
         if (battery != null && battery < 25) {
             Box(
                 modifier = Modifier.align(Alignment.TopEnd).padding(10.dp).clip(RoundedCornerShape(999.dp)).background(Color.Black.copy(alpha = 0.5f)).padding(6.dp),
-            ) { HaIcon("mdi:battery-alert", CdVectors.Info, Color(0xFFFFA726), 18.dp) }
+            ) { HaIcon("mdi:battery-alert", CdVectors.Info, CliveColours.Warn.colour, 18.dp) }
         }
     }
 

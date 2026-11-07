@@ -19,7 +19,7 @@ import { KIT_COLOR, kitShell, kitHead, kitNum, kitEsc, kitMoreInfo, kitCompact, 
 // Octopus's Intelligent device (a car it controls, such as the ID.5) is a car too: it gives the battery % and its charging plan,
 // but not the plug, range or place, so those come from the Zappi when this car is the Primary one on it (see car-octopus.js).
 export const CAR_PLATFORMS = ['stellantis_vehicles', 'vag_connect', 'volkswagencarnet', 'volkswagen_we_connect_id', 'octopus_energy'];
-const CAR_TEAL = '#00b8d4';
+const CAR_TEAL = '#3fd0cf';
 
 // Every car: { device, name, ids } (one per device with a battery %).
 export function carDevices(hass) {
@@ -230,7 +230,7 @@ export class CarCard extends HTMLElement {
         .cc-bar { height:8px; border-radius:4px; background:rgba(127,127,127,.2); overflow:hidden; }
         .cc-bar i { display:block; height:100%; border-radius:4px; transition:width .4s; }
         .cc-sub { font-size:.75rem; color:var(--secondary-text-color); display:flex; flex-wrap:wrap; gap:4px 12px; }
-        .cc-old { align-items:center; color:#ffb74d; }
+        .cc-old { align-items:center; color:#f0b13a; }
         .cc-old span { display:inline-flex; align-items:center; gap:4px; }
         .cc-wake { border:none; cursor:pointer; font:inherit; font-size:.75rem; font-weight:600; border-radius:999px; padding:4px 11px; background:rgba(127,127,127,.18); color:var(--primary-text-color); }
         .cc-wake:disabled { opacity:.6; cursor:default; }`);
@@ -252,12 +252,12 @@ export class CarCard extends HTMLElement {
     const sig = JSON.stringify([cars, this._asking, Math.floor(Date.now() / 60000)]);
     if (sig === this._sig) return;
     this._sig = sig;
-    const barCol = (p) => (p == null ? KIT_COLOR.off : p < 20 ? '#ef5350' : p < 40 ? '#ffa726' : CAR_TEAL);
+    const barCol = (p) => (p == null ? KIT_COLOR.off : p < 20 ? '#ff6b6b' : p < 40 ? '#f0b13a' : CAR_TEAL);
     this._list.innerHTML = empty
       ? `<div class="ck-sub">No cars to show here. Cars come from their own integrations, and are given to people in Manager › People.</div>`
       : cars
           .map((x) => {
-            const tag = x.charging ? ['Charging', CAR_TEAL] : x.plugged ? ['Plugged in', '#42a5f5'] : x.where ? [x.where, 'var(--secondary-text-color)'] : null;
+            const tag = x.charging ? ['Charging', CAR_TEAL] : x.plugged ? ['Plugged in', '#6cc8ff'] : x.where ? [x.where, 'var(--secondary-text-color)'] : null;
             const sub = [x.range ? `${x.range} electric` : '', x.fuel != null ? `Fuel ${Math.round(x.fuel)}%${x.fuelRange ? ` · ${x.fuelRange}` : ''}` : '', x.end].filter(Boolean);
             // Old figures (only matters while it's plugged in and should be changing).
             const old = (x.plugged || x.charging) && x.asOf && Date.now() - x.asOf > STALE_MS;

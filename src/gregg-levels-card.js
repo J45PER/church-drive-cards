@@ -36,7 +36,7 @@ const GG_CSS = `
   .gg-opts { display:flex; gap:6px; flex-wrap:wrap; }
   .gg-opt { flex:1 1 0; min-width:56px; display:flex; flex-direction:column; align-items:center; gap:4px; padding:8px 4px; border:none; border-radius:12px; cursor:pointer;
     background:rgba(127,127,127,0.14); color:var(--primary-text-color); font:inherit; font-size:11px; font-weight:600; }
-  .gg-opt.gg-on { background:var(--gg-color, #2196f3); color:#fff; }
+  .gg-opt.gg-on { background:var(--gg-color, #4c8dff); color:#fff; }
   .gg-opt:disabled { opacity:.4; cursor:default; }
 `;
 
@@ -98,7 +98,7 @@ export class GreggLevelsCard extends HTMLElement {
       });
       this._built = true;
     }
-    const color = c.color || '#2196f3';
+    const color = c.color || '#4c8dff';
     this.querySelector('.ck-card').style.setProperty('--gg-color', color);
     this.querySelector('.ck-headrow').style.display = c.title ? '' : 'none';
     if (c.title) {

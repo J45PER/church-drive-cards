@@ -9,12 +9,12 @@ import { kitNavigate } from './card-kit.js';
 import { SUFFIX, LABEL } from './suffix.js';
 
 // A colour as HA's colour picker gives it ("green", "deep-orange") or any CSS
-// colour ("#43a047").
+// colour ("#55c47c").
 const STC_FALLBACK = {
-  red: '#f44336', pink: '#e91e63', purple: '#926bc7', 'deep-purple': '#6e41ab', indigo: '#3f51b5',
-  blue: '#2196f3', 'light-blue': '#03a9f4', cyan: '#00bcd4', teal: '#009688', green: '#4caf50',
-  'light-green': '#8bc34a', lime: '#cddc39', yellow: '#ffeb3b', amber: '#ffc107', orange: '#ff9800',
-  'deep-orange': '#ff5722', brown: '#795548', grey: '#9e9e9e', 'blue-grey': '#607d8b',
+  red: '#ff6b6b', pink: '#e91e63', purple: '#926bc7', 'deep-purple': '#6e41ab', indigo: '#3f51b5',
+  blue: '#4c8dff', 'light-blue': '#03a9f4', cyan: '#00bcd4', teal: '#009688', green: '#55c47c',
+  'light-green': '#8bc34a', lime: '#cddc39', yellow: '#ffeb3b', amber: '#f0b13a', orange: '#f0b13a',
+  'deep-orange': '#ff8a4c', brown: '#795548', grey: '#9aa4b2', 'blue-grey': '#607d8b',
 };
 export function stcColor(color) {
   if (!color) return 'var(--primary-text-color)';

@@ -40,23 +40,23 @@ function lccHsToRgb(h, s) {
 function lccKelvinColor(k) {
   if (k <= 2600) return '#ff9a3c';
   if (k <= 3400) return '#ffb45c';
-  if (k <= 4800) return '#ffd08a';
+  if (k <= 4800) return '#f8d89c';
   return '#8fc3ff';
 }
 
 
 function lccLightColor(st) {
-  if (!st || st.state !== 'on') return '#ffc107';
+  if (!st || st.state !== 'on') return '#f0b13a';
   const a = st.attributes || {};
   // White light (colour-temperature mode, or a colour so pale it reads as
   // white): use a clear warm/cool colour for its temperature, not near-white.
   const paleColour = a.hs_color && a.hs_color[1] < 15;
   if ((a.color_mode === 'color_temp' || paleColour) && a.color_temp_kelvin) return lccKelvinColor(a.color_temp_kelvin);
-  if (paleColour) return '#ffd08a';
+  if (paleColour) return '#f8d89c';
   if (a.hs_color) return lccHsToRgb(a.hs_color[0], a.hs_color[1]);
   if (a.rgb_color) return `rgb(${a.rgb_color[0]},${a.rgb_color[1]},${a.rgb_color[2]})`;
   if (a.color_temp_kelvin) return lccKelvinColor(a.color_temp_kelvin);
-  return '#ffc107';
+  return '#f0b13a';
 }
 
 // Icon priority: the entity registry icon set in HA's UI (e.g. custom Hue

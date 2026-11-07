@@ -75,8 +75,8 @@ private fun RateStrip(rates: List<Rate>, now: Long, accent: Color, cheap: Color,
 }
 
 /** The two fuels' colours, the same as the Energy page's electricity and gas sections on the dashboard. */
-private val ElectricityColour = Color(0xFFF050F8)
-private val GasColour = Color(0xFF7B61FF)
+private val ElectricityColour = CliveColours.Energy.colour
+private val GasColour = CliveColours.Gas.colour
 
 /**
  * The last seven finished days, read from the long-term statistics the Octopus integration keeps in Home Assistant (so days Octopus

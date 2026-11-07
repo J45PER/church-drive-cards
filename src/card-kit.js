@@ -5,6 +5,7 @@
 // 24-hour graphs read from Home Assistant's history.
 
 import { iconHtml, hydrateIcons } from './icons.js';
+import { clive } from './clive-colours.js';
 
 // Acrylic ("Deep frost"): a mostly solid dark tint over a heavy blur of
 // whatever's behind, a faint highlight at the top and fine grain, with no
@@ -21,20 +22,20 @@ export const kitAcrylicCss = (sel) => `
 export const KIT_CARD_BG = 'var(--cd-card-bg, var(--card-background-color))';
 
 export const KIT_COLOR = {
-  off: '#8b919c',
-  good: '#4caf50',
-  fair: '#ffa726',
-  poor: '#ff7043',
-  bad: '#e53935',
-  fan: '#26c6da',
-  sleep: '#7e6fd6',
-  humidity: '#b388ff',
-  blind: '#a1887f',
-  cold: '#42a5f5',
-  cool: '#26c6da',
-  comfy: '#66bb6a',
-  warm: '#ffa726',
-  hot: '#ef5350',
+  off: '#9aa4b2',
+  good: clive('ok'),
+  fair: clive('warn'),
+  poor: clive('heating'),
+  bad: clive('bad'),
+  fan: clive('air'),
+  sleep: clive('alarm'),
+  humidity: clive('doors'),
+  blind: clive('blinds'),
+  cold: clive('cooling'),
+  cool: clive('air'),
+  comfy: clive('ok'),
+  warm: clive('warn'),
+  hot: clive('bad'),
 };
 
 export const kitEsc = (text) =>
@@ -43,9 +44,9 @@ export const kitCap = (text) => String(text || '').replace(/_/g, ' ').replace(/^
 export const kitNum = (st) => (st && st.state !== '' && !isNaN(Number(st.state)) ? Number(st.state) : null);
 
 export const KIT_HEALTH_CSS = `.ck-stale .ck-row, .ck-stale .ck-dim { opacity:.55; }
-.ck-health { display:none; align-items:center; gap:10px; padding:9px 11px; border-radius:12px; background:color-mix(in srgb, #ffa726 18%, transparent); color:#ffd08a; font-size:0.85rem; }
+.ck-health { display:none; align-items:center; gap:10px; padding:9px 11px; border-radius:12px; background:color-mix(in srgb, #f0b13a 18%, transparent); color:#f8d89c; font-size:0.85rem; }
 .ck-health small { display:block; color:var(--secondary-text-color); font-size:0.74rem; }
-.ck-health button { flex:none; border:none; border-radius:10px; padding:7px 10px; font:inherit; font-size:0.8rem; font-weight:600; background:#ffa726; color:#2a1700; cursor:pointer; }`;
+.ck-health button { flex:none; border:none; border-radius:10px; padding:7px 10px; font:inherit; font-size:0.8rem; font-weight:600; background:#f0b13a; color:#2a1700; cursor:pointer; }`;
 
 // The card shell: ha-card, shared styles, the title row, then `body`.
 export function kitShell(body, extraCss = '') {

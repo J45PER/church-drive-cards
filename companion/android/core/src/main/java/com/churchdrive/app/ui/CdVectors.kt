@@ -36,7 +36,6 @@ object CdVectors {
     val SystemUpdate: ImageVector by lazy { build("system-update") }
     val Eye: ImageVector by lazy { build("eye") }
     val Pin: ImageVector by lazy { build("pin") }
-    val Key: ImageVector by lazy { build("key") }
     val History: ImageVector by lazy { build("history") }
     val BatteryCharging: ImageVector by lazy { build("battery-charging") }
     val ShieldOutline: ImageVector by lazy { build("shield-outline") }

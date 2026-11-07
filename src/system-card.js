@@ -12,9 +12,9 @@ import { iconHtml, hydrateIcons } from './icons.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { kitShell, kitHead, kitEsc } from './card-kit.js';
 
-const GOOD = '#4caf50';
-const WARN = '#ffa726';
-const BAD = '#e53935';
+const GOOD = '#55c47c';
+const WARN = '#f0b13a';
+const BAD = '#ff6b6b';
 
 const SC_CSS = `
   .sc-row { display:flex; align-items:center; gap:10px; padding:7px 2px; }
@@ -179,7 +179,7 @@ export class SystemCard extends HTMLElement {
       this._built = true;
     }
     this.querySelector('.ck-headrow').style.display = c.title ? '' : 'none';
-    if (c.title) kitHead(this, c.title, '', '#4caf50');
+    if (c.title) kitHead(this, c.title, '', '#55c47c');
     const rows = this._rows();
     const sig = JSON.stringify(rows);
     if (sig === this._sig) return;

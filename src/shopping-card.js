@@ -20,7 +20,7 @@ import { checkStale } from './stale.js';
 
 export { shoppingIdOf };
 
-const COLOUR = '#5c6bc0';
+const COLOUR = '#8a86ff';
 
 // ---- the lists, shared by every card and the full page -----------------------------------------------------
 
@@ -77,7 +77,7 @@ const CSS = `
   .sh-main { flex:1; min-width:0; }
   .sh-name { font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .sh-when { flex:none; font-size:0.78rem; font-weight:600; white-space:nowrap; color:var(--secondary-text-color); }
-  .sh-missed { font-size:0.8rem; color:#ffa726; }
+  .sh-missed { font-size:0.8rem; color:#f0b13a; }
   .sh-add { border:none; border-radius:12px; padding:9px 14px; font:inherit; font-size:0.85rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; background:color-mix(in srgb, ${COLOUR} 22%, transparent); color:color-mix(in srgb, ${COLOUR} 45%, white); }
   .sh-row :focus-visible, .sh-add:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
 `;
@@ -202,12 +202,12 @@ const PAGE_CSS = `
   .shp-name { flex:1; min-width:0; font-size:0.95rem; word-break:break-word; }
   .shp-row.off .shp-name { text-decoration:line-through; color:var(--secondary-text-color); }
   .shp-tick { flex:none; width:24px; height:24px; padding:0; border-radius:50%; border:2px solid ${COLOUR}; background:transparent; color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; }
-  .shp-tick.bought { background:#4caf50; border-color:#4caf50; }
-  .shp-tick.na { background:#8d6e63; border-color:#8d6e63; }
+  .shp-tick.bought { background:#55c47c; border-color:#55c47c; }
+  .shp-tick.na { background:#8fa9c4; border-color:#8fa9c4; }
   .shp-chip { flex:none; border:none; border-radius:12px; padding:7px 10px; font:inherit; font-size:0.78rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:4px; background:rgba(127,127,127,0.18); color:var(--primary-text-color); }
   .shp-btn { border:none; border-radius:12px; padding:9px 14px; font:inherit; font-size:0.85rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; background:rgba(127,127,127,0.18); color:var(--primary-text-color); }
   .shp-btn.go { background:color-mix(in srgb, ${COLOUR} 22%, transparent); color:color-mix(in srgb, ${COLOUR} 45%, white); }
-  .shp-btn.danger { background:color-mix(in srgb, #e53935 22%, transparent); color:color-mix(in srgb, #e53935 45%, white); }
+  .shp-btn.danger { background:color-mix(in srgb, #ff6b6b 22%, transparent); color:color-mix(in srgb, #ff6b6b 45%, white); }
   .shp-link { border:none; background:none; padding:4px 2px; font:inherit; font-size:0.8rem; color:var(--secondary-text-color); text-decoration:underline; cursor:pointer; align-self:flex-start; }
   .shp-add { display:flex; gap:8px; }
   .shp input, .shp textarea { font:inherit; font-size:0.92rem; color:var(--primary-text-color); background:rgba(127,127,127,0.1); border:1px solid var(--divider-color, rgba(127,127,127,0.3)); border-radius:10px; padding:8px 10px; min-width:0; color-scheme:dark light; }
@@ -219,7 +219,7 @@ const PAGE_CSS = `
   .shp-pick { border:none; border-radius:999px; padding:7px 12px; font:inherit; font-size:0.82rem; font-weight:600; cursor:pointer; background:rgba(127,127,127,0.18); color:var(--primary-text-color); }
   .shp-pick[aria-pressed="true"] { background:${COLOUR}; color:#fff; }
   .shp-banner { padding:10px 12px; border-radius:12px; background:color-mix(in srgb, ${COLOUR} 22%, transparent); font-size:0.88rem; }
-  .shp-warn { color:#ffa726; font-size:0.8rem; min-height:1em; }
+  .shp-warn { color:#f0b13a; font-size:0.8rem; min-height:1em; }
   .shp-actions { display:flex; flex-wrap:wrap; gap:8px; }
   .shp :focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
 `;
@@ -421,7 +421,7 @@ class ShoppingPage {
       all.push([p.lat, p.lon]);
     });
     f.results.forEach((p, n) => {
-      const m = L.marker([p.lat, p.lon], { icon: pin('#ea4335'), zIndexOffset: 500 }).addTo(this._pins);
+      const m = L.marker([p.lat, p.lon], { icon: pin('#ff6b6b'), zIndexOffset: 500 }).addTo(this._pins);
       m.bindPopup(`<div class="shp-pop"><b>${kitEsc(p.name)}</b>${kitEsc(p.address)}<br><button type="button" class="shp-btn go" data-addplace="${n}">Use this place</button></div>`);
       all.push([p.lat, p.lon]);
     });

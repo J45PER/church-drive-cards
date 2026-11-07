@@ -14,12 +14,12 @@ import { KIT_COLOR, kitShell, kitHead, kitTiles, kitNum, kitEsc, KitHistory, kit
 import { openCameraEvents, cameraBase } from './camera-events.js';
 
 export const SZ_COLOR = {
-  zone: '#5c6bc0',
-  motion: '#7986cb',
+  zone: '#8a86ff',
+  motion: '#8a86ff',
   door: KIT_COLOR.fair,
   ring: '#f06292',
   tamper: KIT_COLOR.bad,
-  light: '#ffd54f',
+  light: '#ffc857',
 };
 const SZ_WORD = { motion: 'Motion', door: 'Door open', ring: 'Doorbell', tamper: 'Tamper', light: 'Light on' };
 const SZ_BATTERIES = [1, 2, 3, 4];

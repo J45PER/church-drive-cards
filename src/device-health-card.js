@@ -121,7 +121,7 @@ export class DeviceHealthCard extends HTMLElement {
           </div>
           ${ok ? '' : `<div class="dh-fixes ck-sub" style="font-size:0.74rem; padding-left:32px;"></div>
           <div style="display:flex; gap:6px; padding-left:32px;">
-            <button class="dh-fix" type="button" style="border:none; border-radius:10px; padding:7px 10px; font:inherit; font-size:0.8rem; font-weight:600; background:#ffa726; color:#2a1700; cursor:pointer;">Fix now</button>
+            <button class="dh-fix" type="button" style="border:none; border-radius:10px; padding:7px 10px; font:inherit; font-size:0.8rem; font-weight:600; background:#f0b13a; color:#2a1700; cursor:pointer;">Fix now</button>
           </div>`}
         </div>`;
       })

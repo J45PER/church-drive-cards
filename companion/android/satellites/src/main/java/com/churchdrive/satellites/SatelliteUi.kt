@@ -134,6 +134,7 @@ private fun ListPage(vm: SatelliteModel, onPerson: () -> Unit) {
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
+            com.churchdrive.app.ui.UpdateNotice(BuildConfig.PLAY, vm.updateAvailable, com.churchdrive.app.UpdateCheck.SATELLITES_APK_URL, "Church Drive Satellites")
             if (tab == 0) SatelliteList(vm) else AddPage(vm)
         }
     }

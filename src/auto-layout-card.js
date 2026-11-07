@@ -706,7 +706,7 @@ export class AutoLayoutCard extends HTMLElement {
     const extra = rows.length - shown.length;
     const row = (r) => {
       if (!r) return '<div style="height:26px;"></div>';
-      const c = r.kind === 'todo' ? (r.overdue ? '#e53935' : r.shop ? '#5c6bc0' : r.auto ? HOUSE_TASKS_COLOR : r.colour || '#7e57c2') : r.colour;
+      const c = r.kind === 'todo' ? (r.overdue ? '#ff6b6b' : r.shop ? '#8a86ff' : r.auto ? HOUSE_TASKS_COLOR : r.colour || '#8a86ff') : r.colour;
       const icon = r.icon;
       const tick =
         r.kind === 'todo' && !r.auto && !r.shop
@@ -719,7 +719,7 @@ export class AutoLayoutCard extends HTMLElement {
         icon ? iconHtml(icon, { size: '16px', style: `color:${c}; flex:none;` }) : ''
       }<span style="flex:1; min-width:0; font-size:0.8rem; font-weight:${r.kind === 'line' ? 500 : 600}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${text}</span>${tick}</div>`;
     };
-    const sideC = todo && todo.colour ? todo.colour : '#7e57c2';
+    const sideC = todo && todo.colour ? todo.colour : '#8a86ff';
     const sideText = `color-mix(in srgb, ${sideC} 45%, white)`;
     const side =
       todo && this.config.priorities_page
@@ -797,7 +797,7 @@ export class AutoLayoutCard extends HTMLElement {
         text: v.text || '',
         html: true,
         icon: (alert && l.alert_icon) || l.icon,
-        colour: stcColor((alert && (l.alert_color || '#ffa726')) || l.color || 'primary'),
+        colour: stcColor((alert && (l.alert_color || '#f0b13a')) || l.color || 'primary'),
         link: l.panel || '',
       };
     });
@@ -838,7 +838,7 @@ export class AutoLayoutCard extends HTMLElement {
     const now = Date.now();
     const list = type === 'hourly' ? all.filter((f) => new Date(f.datetime).getTime() > now - 3600000).filter((f, i) => i % 2 === 0).slice(0, 7) : all.slice(0, 6);
     if (!list.length) return `<div style="flex:1; display:flex; align-items:center; justify-content:center; font-size:0.8rem; color:var(--secondary-text-color);">${st ? 'Loading the forecast…' : `No weather entity ${esc(this.config.forecast_entity || '')}`}</div>`;
-    const colourOf = (c) => (/rain|pour|hail|snow|sleet/.test(c) ? '#64b5f6' : /sunny|clear-day/.test(c) ? '#ffca28' : /lightning/.test(c) ? '#ffa726' : '#b0bec5');
+    const colourOf = (c) => (/rain|pour|hail|snow|sleet/.test(c) ? '#6cc8ff' : /sunny|clear-day/.test(c) ? '#ffd27a' : /lightning/.test(c) ? '#f0b13a' : '#b0bec5');
     const today = new Date().toDateString();
     const cols = list.map((f, i) => {
       const d = new Date(f.datetime);
@@ -852,7 +852,7 @@ export class AutoLayoutCard extends HTMLElement {
         <span style="font-size:0.68rem; color:var(--secondary-text-color); white-space:nowrap;">${esc(label)}</span>
         ${iconHtml(icon, { size: '22px', style: `color:${colourOf(cond)};` })}
         <span style="font-size:0.78rem; font-weight:700; white-space:nowrap;">${deg(f.temperature)}${lo}</span>
-        <span style="font-size:0.66rem; color:#64b5f6; height:1em; white-space:nowrap;">${rain}</span>
+        <span style="font-size:0.66rem; color:#6cc8ff; height:1em; white-space:nowrap;">${rain}</span>
       </div>`;
     });
     return `<div data-line="${esc(this.config.forecast_panel || '')}" role="button" style="flex:1; min-width:0; display:flex; gap:2px; cursor:${this.config.forecast_panel ? 'pointer' : 'default'};">${cols.join('')}</div>`;
@@ -960,14 +960,14 @@ export class AutoLayoutCard extends HTMLElement {
     const link = this.config.priorities_page || '';
     return [
       due.length
-        ? { kind: 'line', html: true, text: `<b>${due.length} due today</b> · ${esc(names(due))}`, icon: 'mdi:calendar-today', colour: '#7e57c2', link }
-        : { kind: 'line', html: true, text: 'Nothing due today', icon: 'mdi:calendar-check', colour: '#7e57c2', link },
+        ? { kind: 'line', html: true, text: `<b>${due.length} due today</b> · ${esc(names(due))}`, icon: 'mdi:calendar-today', colour: '#8a86ff', link }
+        : { kind: 'line', html: true, text: 'Nothing due today', icon: 'mdi:calendar-check', colour: '#8a86ff', link },
       late.length
-        ? { kind: 'line', html: true, text: `<b>${late.length} overdue</b> · ${esc(late[0].summary)} (${days} day${days === 1 ? '' : 's'})${late.length > 1 ? ` +${late.length - 1}` : ''}`, icon: 'mdi:alert-circle-outline', colour: '#e53935', link }
-        : { kind: 'line', html: true, text: 'Nothing overdue', icon: 'mdi:check-circle-outline', colour: '#4caf50', link },
+        ? { kind: 'line', html: true, text: `<b>${late.length} overdue</b> · ${esc(late[0].summary)} (${days} day${days === 1 ? '' : 's'})${late.length > 1 ? ` +${late.length - 1}` : ''}`, icon: 'mdi:alert-circle-outline', colour: '#ff6b6b', link }
+        : { kind: 'line', html: true, text: 'Nothing overdue', icon: 'mdi:check-circle-outline', colour: '#55c47c', link },
       house.length
         ? { kind: 'line', html: true, text: `<b>${house.length} from the house</b> · ${esc(names(house))}`, icon: 'mdi:home-alert-outline', colour: HOUSE_TASKS_COLOR, link }
-        : { kind: 'line', html: true, text: 'Nothing from the house', icon: 'mdi:home-heart', colour: '#4caf50', link },
+        : { kind: 'line', html: true, text: 'Nothing from the house', icon: 'mdi:home-heart', colour: '#55c47c', link },
     ];
   }
 
@@ -975,7 +975,7 @@ export class AutoLayoutCard extends HTMLElement {
   // first, each with when it's due.
   _listView() {
     const list = this.config.header_list;
-    const colour = this.config.list_color || '#2196f3';
+    const colour = this.config.list_color || '#4c8dff';
     const now = new Date();
     const day = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
     const when = (due) => {
@@ -1009,8 +1009,8 @@ export class AutoLayoutCard extends HTMLElement {
     const uid = tick.dataset.done;
     const list = tick.dataset.list;
     if (!uid || !list) return;
-    tick.style.background = '#4caf50';
-    tick.style.borderColor = '#4caf50';
+    tick.style.background = '#55c47c';
+    tick.style.borderColor = '#55c47c';
     this._hass.callService('todo', 'update_item', { item: uid, status: 'completed' }, { entity_id: list }).catch(() => {});
   }
 

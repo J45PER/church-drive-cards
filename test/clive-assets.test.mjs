@@ -43,3 +43,16 @@ test('every entity type has five hex colours and every kind palette is three', (
   assert.equal(ec.types.gas.colours[0].toLowerCase(), '#7b61ff', 'gas is Octopus violet');
   for (const [kind, p] of Object.entries(cards.kind_palettes.kinds)) { assert.equal(p.length, 3, kind); for (const c of p) assert.match(c, /^#[0-9A-Fa-f]{6}$/, kind); }
 });
+
+test('the generated colour files are up to date with cards.json', async () => {
+  const { execFileSync } = await import('node:child_process');
+  execFileSync('node', ['tools/gen-clive-colours.mjs', '--check'], { stdio: 'pipe' });
+});
+
+test('the dashboard theme sets the named colours and the status colours from the palette', async () => {
+  const { cliveThemeCss } = await import('../src/clive-theme.js');
+  const css = cliveThemeCss();
+  assert.match(css, /--green-color: #55c47c;/);
+  assert.match(css, /--error-color: #ff6b6b;/);
+  assert.match(css, /--rgb-primary-color: \d+, \d+, \d+;/);
+});

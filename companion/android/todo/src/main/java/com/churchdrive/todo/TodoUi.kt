@@ -148,7 +148,7 @@ fun TodoApp(vm: TodoModel) {
             modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            if (vm.updateAvailable) UpdateBanner { panel = "about" }
+            com.churchdrive.app.ui.UpdateNotice(BuildConfig.PLAY, vm.updateAvailable, com.churchdrive.app.UpdateCheck.TODO_APK_URL, "Church Drive To-Do")
             if (!vm.connected) Text("Connecting to the house…", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             TaskCard(vm, tab)
             Spacer(Modifier.height(16.dp))
@@ -157,15 +157,6 @@ fun TodoApp(vm: TodoModel) {
     TodoPanel(panel, { panel = it }, vm)
     if (assistantOpen) AssistantSheet(vm) { assistantOpen = false }
     }
-}
-
-/** A newer build is ready: taps through to About, where it can be downloaded. */
-@Composable
-private fun UpdateBanner(onOpen: () -> Unit) {
-    Surface(
-        shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.tertiaryContainer, contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onOpen),
-    ) { Text("A newer version of Church Drive To-Do is ready. Tap to get it.", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(12.dp)) }
 }
 
 /** A page's card, in the page's colour like the main app's task cards. */

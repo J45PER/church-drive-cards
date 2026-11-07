@@ -1,6 +1,7 @@
 package com.churchdrive.app
 
 import androidx.compose.ui.graphics.Color
+import com.churchdrive.app.ui.CliveColours
 import com.churchdrive.app.ui.Tone
 import com.churchdrive.app.ui.cardBrand
 import com.churchdrive.app.ui.cardIcon
@@ -37,9 +38,9 @@ class AssistCardsTest {
     }
 
     @Test fun carBatteryFollowsTheDashboardBands() {
-        assertEquals(Color(0xFFEF5350), carBatteryColour(19.0, ok))
-        assertEquals(Color(0xFFFFA726), carBatteryColour(20.0, ok))
-        assertEquals(Color(0xFFFFA726), carBatteryColour(39.0, ok))
+        assertEquals(CliveColours.Bad.colour, carBatteryColour(19.0, ok))
+        assertEquals(CliveColours.Warn.colour, carBatteryColour(20.0, ok))
+        assertEquals(CliveColours.Warn.colour, carBatteryColour(39.0, ok))
         assertEquals(ok, carBatteryColour(40.0, ok))
         assertEquals(Color.Gray, carBatteryColour(null, ok))
     }

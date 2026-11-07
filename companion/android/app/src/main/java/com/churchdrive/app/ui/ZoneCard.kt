@@ -47,18 +47,18 @@ import java.time.ZoneId
 val LocalHistory = compositionLocalOf<(List<String>, Int, (Map<String, List<Pair<Long, String>>>) -> Unit) -> Unit> { { _, _, done -> done(emptyMap()) } }
 
 private fun kindColour(kind: ZoneKind): Color = when (kind) {
-    ZoneKind.Motion -> Color(0xFF7986CB)
-    ZoneKind.Door -> Color(0xFFFFA726)
-    ZoneKind.Ring -> Color(0xFFF06292)
-    ZoneKind.Tamper -> Color(0xFFE53935)
-    ZoneKind.Light -> Color(0xFFFFD54F)
+    ZoneKind.Motion -> CliveColours.Alarm.colour
+    ZoneKind.Door -> CliveColours.Doors.colour
+    ZoneKind.Ring -> CliveColours.Media.colour
+    ZoneKind.Tamper -> CliveColours.Bad.colour
+    ZoneKind.Light -> CliveColours.Lights.colour
 }
 
 private fun levelTone(level: ZoneLevel): Tone = when (level) {
     ZoneLevel.Tamper -> Tone.Red
     ZoneLevel.Open -> Tone.Amber
     ZoneLevel.Off -> Tone.Grey
-    else -> Tone.Indigo
+    else -> Tone.Alarm
 }
 
 /**
@@ -145,7 +145,7 @@ fun ZoneCard(config: JSONObject, entities: Map<String, EntityState>, call: CallS
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) { view.bats.forEach { BatteryRow(it, ink) } }
         }
         cfg.light?.let { id ->
-            LightPill(entities[id], id, view.light?.first, toneColors(if (view.light?.second == true) Tone.Amber else Tone.Grey), call, entities = entities)
+            LightPill(entities[id], id, view.light?.first, toneColors(if (view.light?.second == true) Tone.Lights else Tone.Grey), call, entities = entities)
         }
     }
 }
@@ -218,7 +218,7 @@ private fun Strip(tracks: List<ZoneTrack>, now: Long, hours: Int, ticks: Boolean
 @Composable
 private fun BatteryRow(b: ZoneBattery, ink: Color) {
     val low = b.level != null && b.level < LOW_BATTERY
-    val colour = if (low) Color(0xFFFFA726) else ink.copy(alpha = 0.8f)
+    val colour = if (low) CliveColours.Warn.colour else ink.copy(alpha = 0.8f)
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         HaIcon(
             if (b.level == null) "mdi:battery-outline" else if (low) "mdi:battery-alert" else b.icon,
@@ -231,7 +231,7 @@ private fun BatteryRow(b: ZoneBattery, ink: Color) {
                     .fillMaxWidth(((b.level ?: 0.0) / 100.0).coerceIn(0.0, 1.0).toFloat())
                     .height(5.dp)
                     .clip(RoundedCornerShape(99.dp))
-                    .background(if (low) Color(0xFFFFA726) else Color(0xFF4CAF50)),
+                    .background(if (low) CliveColours.Warn.colour else CliveColours.Ok.colour),
             )
         }
         Text(

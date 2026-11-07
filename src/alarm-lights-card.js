@@ -78,10 +78,10 @@ const AL_CSS = `
   .al-btns { display:grid; grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); gap:6px; }
   .al-btn { border:none; border-radius:12px; padding:9px 8px; font:inherit; font-size:0.82rem; font-weight:600; cursor:pointer; background:rgba(127,127,127,0.18); color:var(--primary-text-color); display:flex; align-items:center; justify-content:center; gap:6px; }
   .al-btn:disabled { opacity:.45; cursor:default; }
-  .al-stop { background:#e53935; color:#fff; }
+  .al-stop { background:#ff6b6b; color:#fff; }
   .al-btn:focus-visible, .al-chip:focus-visible, .al-seg button:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
-  .al-msg { font-size:0.8rem; color:#ffa726; }
-  .al-on { background:#e53935; color:#fff; padding:8px 10px; border-radius:10px; font-weight:700; font-size:0.85rem; }
+  .al-msg { font-size:0.8rem; color:#f0b13a; }
+  .al-on { background:#ff6b6b; color:#fff; padding:8px 10px; border-radius:10px; font-weight:700; font-size:0.85rem; }
 `;
 
 function alDemo() {
@@ -113,7 +113,7 @@ export const AlarmLightsCardEditor = createFormEditor({
     demo: 'Show pretend lights (for Design Presets; changes are switched off)',
   },
   helpers: {
-    color: 'Default red (#e53935).',
+    color: 'Default red (#ff6b6b).',
   },
 });
 
@@ -171,7 +171,7 @@ export class AlarmLightsCard extends HTMLElement {
   }
 
   _colour() {
-    return this.config.color || '#e53935';
+    return this.config.color || '#ff6b6b';
   }
 
   _canEdit() {
@@ -403,7 +403,7 @@ export class AlarmLightsCard extends HTMLElement {
     this._els.showall.style.background = this._all ? colour : '';
     const seg = (l, role, label) => {
       const on = (role === 'strobe' && c.strobe.includes(l.id)) || (role === 'constant' && c.constant.includes(l.id)) || (role === 'none' && !chosen.has(l.id));
-      const bg = role === 'strobe' ? '#e53935' : role === 'constant' ? '#fbc02d' : '#5d6170';
+      const bg = role === 'strobe' ? '#ff6b6b' : role === 'constant' ? '#fbc02d' : '#5d6170';
       return `<button type="button" data-light="${kitEsc(l.id)}" data-role="${role}" aria-pressed="${on}" ${edit ? '' : 'disabled'} style="${on ? `background:${bg};${role === 'constant' ? 'color:#2a1700;' : ''}` : ''}">${label}</button>`;
     };
     this._els.list.innerHTML =

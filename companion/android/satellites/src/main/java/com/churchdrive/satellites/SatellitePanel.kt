@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Fingerprint
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -209,10 +210,10 @@ private fun AboutPage(onBack: () -> Unit) {
             )
         }
         PanelCard {
-            if (certs.isEmpty()) PanelRow(CdVectors.Key, "Signing certificate (SHA-256)", "Not available", leading = { Icon(painterResource(R.drawable.mdi_shield_key), contentDescription = null) })
+            if (certs.isEmpty()) PanelRow(Icons.Outlined.Fingerprint, "Signing certificate (SHA-256)", "Not available", leading = { Icon(painterResource(R.drawable.mdi_shield_key), contentDescription = null) })
             certs.forEach { c ->
                 PanelRow(
-                    CdVectors.Key, "Signing certificate (SHA-256)",
+                    Icons.Outlined.Fingerprint, "Signing certificate (SHA-256)",
                     if (copied) "Copied" else "$c\nTap to copy. The Church Drive app needs this to share its sign-in with this app.",
                     onClick = { clipboard.setText(AnnotatedString(c)); copied = true },
                     leading = { Icon(painterResource(R.drawable.mdi_shield_key), contentDescription = null) }
