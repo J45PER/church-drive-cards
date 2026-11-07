@@ -4,6 +4,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 
 /**
  * The house's own colours for entities (Clive's palette: five colours per kind of thing, from design/clive/cards.json through
@@ -27,7 +28,7 @@ enum class Tone {
     Lights, Blinds, Plugs, Gregg, Heating, Cooling, Air, Energy, Gas, Car, Alarm, Doors,
     AlarmHome, AlarmAway, AlarmOff, ArmingHome, ArmingAway,
     Media, People, Tasks, Shopping, Calendar, Sunny, Night, Rain, Snow, Storm, Sport,
-    TodoMine, TodoShared, TodoCleaning, TodoHouse, TodoShopping, PersonJamie, PersonHayley, PersonIan, PersonDiane,
+    TodoMine, TodoShared, TodoHouse, TodoShopping, PersonJamie, PersonHayley, PersonIan, PersonDiane,
 }
 
 data class ToneColors(
@@ -79,7 +80,6 @@ fun toneSet(tone: Tone): EntityColours? = when (tone) {
     Tone.Sport -> CliveColours.Sport
     Tone.TodoMine -> CliveColours.TodoMine
     Tone.TodoShared -> CliveColours.TodoShared
-    Tone.TodoCleaning -> CliveColours.TodoCleaning
     Tone.TodoHouse -> CliveColours.TodoHouse
     Tone.TodoShopping -> CliveColours.TodoShopping
     Tone.PersonJamie -> CliveColours.PersonJamie
@@ -88,12 +88,32 @@ fun toneSet(tone: Tone): EntityColours? = when (tone) {
     Tone.PersonDiane -> CliveColours.PersonDiane
 }
 
+/** WCAG contrast ratio of two colours (1 to 21). */
+fun contrastRatio(a: Color, b: Color): Float {
+    val l1 = a.luminance()
+    val l2 = b.luminance()
+    return (maxOf(l1, l2) + 0.05f) / (minOf(l1, l2) + 0.05f)
+}
+
 /**
- * Dark: the set's Dark ground with its Colour for text and the strong colour. Light: a soft tint of its Light over white, with its
+ * [c] as it is when it already reads on [on] (at least [min]:1), else moved towards [toward] just far enough to read. Palette colours
+ * keep their own look wherever they are legible; only the too-dark ones are lifted.
+ */
+fun readableOn(c: Color, toward: Color, on: Color, min: Float = 4.5f): Color {
+    if (contrastRatio(c, on) >= min) return c
+    for (i in 1..20) {
+        val m = lerp(c, toward, i / 20f)
+        if (contrastRatio(m, on) >= min) return m
+    }
+    return toward
+}
+
+/**
+ * Dark: the set's Dark ground with its Colour for text and the strong colour (lifted towards its Light where it would be too dim to read). Light: a soft tint of its Light over white, with its
  * Deep for text and its Colour as the strong one; text on the strong colour is the set's Dark either way.
  */
 private fun colorsOf(set: EntityColours, dark: Boolean): ToneColors =
-    if (dark) ToneColors(set.dark, set.colour, set.colour, set.dark)
+    if (dark) readableOn(set.colour, set.light, set.dark).let { text -> ToneColors(set.dark, text, text, set.dark) }
     else ToneColors(lerp(Color.White, set.light, 0.38f), set.deep, set.colour, set.dark)
 
 private fun neutralColors(dark: Boolean): ToneColors =
@@ -154,7 +174,6 @@ fun toneForKey(key: String): Tone? = when (key) {
     "neutral" -> Tone.Grey
     "todo_mine" -> Tone.TodoMine
     "todo_shared" -> Tone.TodoShared
-    "todo_cleaning" -> Tone.TodoCleaning
     "todo_house" -> Tone.TodoHouse
     "todo_shopping" -> Tone.TodoShopping
     "person_jamie" -> Tone.PersonJamie

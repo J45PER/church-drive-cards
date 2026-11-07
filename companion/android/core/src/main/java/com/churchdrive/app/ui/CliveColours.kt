@@ -77,8 +77,6 @@ object CliveColours {
     val TodoMine = EntityColours(Color(0xFFA5B4FC), Color(0xFF373C53), Color(0xFF9C94FA), Color(0xFFD2DAFE), Color(0xFF484F72))
     /** Shared to-do. */
     val TodoShared = EntityColours(Color(0xFF8FA9C4), Color(0xFF313945), Color(0xFF8E8DD6), Color(0xFFC7D4E2), Color(0xFF3F4A5A))
-    /** Cleaning to-do. */
-    val TodoCleaning = EntityColours(Color(0xFF4C8DFF), Color(0xFF203254), Color(0xFF637BFC), Color(0xFFA6C6FF), Color(0xFF233F73))
     /** To-do from the house. */
     val TodoHouse = EntityColours(Color(0xFF7E6DB5), Color(0xFF2D2A41), Color(0xFF8367CC), Color(0xFFBEB6DA), Color(0xFF383154))
     /** Shopping lists. */
@@ -132,7 +130,6 @@ object CliveColours {
         "bad" to Bad,
         "todo_mine" to TodoMine,
         "todo_shared" to TodoShared,
-        "todo_cleaning" to TodoCleaning,
         "todo_house" to TodoHouse,
         "todo_shopping" to TodoShopping,
         "person_jamie" to PersonJamie,
@@ -167,5 +164,6 @@ object CliveColours {
         "disabled" to "neutral",
         "coral" to "shopping",
         "salmon" to "shopping",
+        "todo_cleaning" to "gregg",
     )
 }

@@ -88,7 +88,6 @@ Each name has five colours: Colour (the thing's own), Dark (the ground), Accent 
 |---|---|---|---|---|---|---|
 | `todo_mine` | My to-do | `#A5B4FC` | `#373C53` | `#9C94FA` | `#D2DAFE` | `#484F72` |
 | `todo_shared` | Shared to-do | `#8FA9C4` | `#313945` | `#8E8DD6` | `#C7D4E2` | `#3F4A5A` |
-| `todo_cleaning` | Cleaning to-do | `#4C8DFF` | `#203254` | `#637BFC` | `#A6C6FF` | `#233F73` |
 | `todo_house` | To-do from the house | `#7E6DB5` | `#2D2A41` | `#8367CC` | `#BEB6DA` | `#383154` |
 | `todo_shopping` | Shopping lists | `#FF9C8A` | `#4E3636` | `#D585B1` | `#FFCEC4` | `#6E4542` |
 
@@ -136,6 +135,7 @@ Names a dashboard card or the app may still be given from Home Assistant's own c
 | `disabled` | `neutral` |
 | `coral` | `shopping` |
 | `salmon` | `shopping` |
+| `todo_cleaning` | `gregg` |
 
 ## Status
 

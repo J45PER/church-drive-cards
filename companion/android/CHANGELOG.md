@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.104.3
+
+- **Readable colours.** In dark mode, text and the strong colour of a palette set that was too dim for its ground are lifted just enough to reach 4.5:1 (`readableOn`); sets that already read are unchanged. This fixes the washed-out to-do pills on Home and the zone cards. The light row on a zone card (Front light) no longer takes the zone's purple for its text over the light's colour.
+- **Gregg and Cleaning are one palette.** The Cleaning to-do list used a copy of Gregg's blue; it uses `gregg` now (the name `todo_cleaning` still works and means `gregg`).
+
 ## 0.104.2
 
 - **One list of colour names.** A dashboard card's `color` is a name from `docs/CLIVE-COLOURS.md`; Home Assistant's own colour names (`deep-orange`, `blue-grey`, `pink`…) mean the same palette name in the app as on the dashboards (they used to differ). New `neutral` name.

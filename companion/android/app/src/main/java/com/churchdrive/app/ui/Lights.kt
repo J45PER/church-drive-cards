@@ -413,8 +413,10 @@ fun LightPill(
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
+                // Its own text colour: the card it sits in (a zone's purple, say) is not readable over the light's colour.
+                color = MaterialTheme.colorScheme.onSurface,
             )
-            Text(status, style = MaterialTheme.typography.bodyMedium)
+            Text(status, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
         }
     }
     if (settings && entities != null) LightSettings(entityId, name, entities, call) { settings = false }

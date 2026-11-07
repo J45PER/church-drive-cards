@@ -1230,17 +1230,6 @@
           "#3F4A5A"
         ]
       },
-      "todo_cleaning": {
-        "name": "Cleaning to-do",
-        "group": "To-do types",
-        "colours": [
-          "#4C8DFF",
-          "#203254",
-          "#637BFC",
-          "#A6C6FF",
-          "#233F73"
-        ]
-      },
       "todo_house": {
         "name": "To-do from the house",
         "group": "To-do types",
@@ -1374,7 +1363,8 @@
         "gray": "neutral",
         "disabled": "neutral",
         "coral": "shopping",
-        "salmon": "shopping"
+        "salmon": "shopping",
+        "todo_cleaning": "gregg"
       }
     }
   },
