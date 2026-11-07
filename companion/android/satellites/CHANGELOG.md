@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.111.2
+
+- Unselected buttons are a faint wash, not an outline (see the phone app).
+
 ## 0.111.1
 
 - No change to this app (a dashboard light card change); version kept equal.
