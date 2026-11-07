@@ -409,6 +409,8 @@ fun SectionPanel(
             Text(
                 title,
                 style = MaterialTheme.typography.titleLarge,
+                // A section's title sits on the page background, not on a card, so it takes the section's colour.
+                color = colors.accent,
                 modifier = Modifier.weight(1f),
             )
             if (!summary.isNullOrBlank()) {

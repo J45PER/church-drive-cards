@@ -6,7 +6,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 ## 0.111.1
 
-- Text on the dark cards is white, with colour kept for status pills, selected buttons, gauges and lines, and for temperatures and alarm status. Gregg's state and each section's summary are pills like the car's.
+- Text on the dark cards is white, with colour kept for status pills, selected buttons, gauges and lines, and for temperatures, alarm status and section titles. Gregg's state and each section's summary are pills like the car's.
 - The card glow loops without a jump: its second blob used to snap back at the end of each turn.
 
 ## 0.111.0

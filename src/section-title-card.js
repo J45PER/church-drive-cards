@@ -180,7 +180,7 @@ export class SectionTitleCard extends HTMLElement {
     this.innerHTML = `
       <div style="display:flex; align-items:center; gap:10px; padding:2px 4px 2px 4px; min-height:40px;">
         ${c.icon ? iconHtml(c.icon, { size: '26px', style: `color:${color}; flex:none; transition:color .6s ease;`, cls: 'stc-icon' }) : ''}
-        <div class="stc-title" style="flex:1; min-width:0; font-size:1.6rem; font-weight:500; line-height:1.2; color:var(--primary-text-color); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
+        <div class="stc-title" style="flex:1; min-width:0; font-size:1.6rem; font-weight:500; line-height:1.2; color:${color}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
         <div class="stc-summary" style="flex:none; max-width:55%; font-size:0.9rem; color:var(--secondary-text-color); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:right;"></div>
         ${c.link && !c.collapsible ? iconHtml('mdi:chevron-right', { size: '22px', style: 'flex:none; margin-left:-4px; color:var(--secondary-text-color);' }) : ''}
         ${c.collapsible ? `<button class="stc-tog" type="button" aria-label="Show less" aria-expanded="true" style="--stc-c:${color};"></button>` : ''}
@@ -250,6 +250,8 @@ export class SectionTitleCard extends HTMLElement {
       this._liveColor = color || null;
       const css = stcColor(this._liveColor || this.config.color);
       if (this._iconEl) stcSetInstantly(this._iconEl, 'color', css, !this._colorShown);
+      const ttl = this.querySelector('.stc-title');
+      if (ttl) stcSetInstantly(ttl, 'color', css, !this._colorShown);
       if (this._tog) this._tog.style.setProperty('--stc-c', css);
       this._colorShown = true;
       this.dispatchEvent(new CustomEvent('stc-color', { detail: css, bubbles: true }));
