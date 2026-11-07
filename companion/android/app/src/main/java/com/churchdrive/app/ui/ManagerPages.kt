@@ -365,7 +365,7 @@ fun CameraLinksPage(entities: Map<String, EntityState>) {
         val modes = d.optJSONArray("modes")?.let { a -> (0 until a.length()).map { a.optString(it) } } ?: listOf("disarmed", "home", "away")
         val current = d.optString("mode")
         var mode by remember { mutableStateOf(current.takeIf { it in modes } ?: modes.first()) }
-        val tone = toneColors(Tone.Blue)
+        val tone = toneColors(Tone.Alarm)
         val neutral = toneColors(Tone.Grey)
         EntityCard(neutral.container, neutral.onContainer) {
             Text("Alarm mode", style = MaterialTheme.typography.titleMedium)

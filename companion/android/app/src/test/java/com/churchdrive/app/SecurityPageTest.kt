@@ -57,8 +57,8 @@ class SecurityPageTest {
     @Test
     fun colourNamesAndHexMapToTones() {
         assertEquals(Tone.Green, toneFromColour("green"))
-        assertEquals(Tone.Orange, toneFromColour("deep-orange"))
-        assertEquals(Tone.Grey, toneFromColour("blue-grey"))
+        assertEquals(Tone.Heating, toneFromColour("deep-orange"))
+        assertEquals(Tone.Rain, toneFromColour("blue-grey"))
         assertEquals(Tone.Red, toneFromColour("#e53935"))
         assertEquals(Tone.Green, toneFromColour("#4caf50"))
         assertEquals(Tone.Amber, toneFromColour("#ffa726"))

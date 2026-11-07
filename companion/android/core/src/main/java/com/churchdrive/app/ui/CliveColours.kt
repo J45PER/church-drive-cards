@@ -91,6 +91,8 @@ object CliveColours {
     val PersonIan = EntityColours(Color(0xFF5A87CC), Color(0xFF233047), Color(0xFF6C78DB), Color(0xFFACC3E6), Color(0xFF293C5E))
     /** Diane. */
     val PersonDiane = EntityColours(Color(0xFF8F62D9), Color(0xFF31274A), Color(0xFF8E60E3), Color(0xFFC7B0EC), Color(0xFF3F2D63))
+    /** Neutral (not an entity). */
+    val Neutral = EntityColours(Color(0xFF9AA4B2), Color(0xFF202733), Color(0xFF9AA4B2), Color(0xFFEEF1F5), Color(0xFF28303C))
 
     val NeutralLight = NeutralColours(Color(0xFFF3F4F6), Color(0xFFFFFFFF), Color(0xFFECEEF2), Color(0xFFD9DDE4), Color(0xFF14181F), Color(0xFF5B6472), Color(0xFF4F46C8), Color(0xFFFFFFFF))
     val NeutralDark = NeutralColours(Color(0xFF0B0E13), Color(0xFF171C24), Color(0xFF202733), Color(0xFF28303C), Color(0xFFEEF1F5), Color(0xFF9AA4B2), Color(0xFFA9B4FF), Color(0xFF0B0E13))
@@ -137,5 +139,33 @@ object CliveColours {
         "person_hayley" to PersonHayley,
         "person_ian" to PersonIan,
         "person_diane" to PersonDiane,
+        "neutral" to Neutral,
+    )
+
+    /** Home Assistant colour names and the palette name each one means (cards.json, entity_colours.aliases). */
+    val aliases: Map<String, String> = mapOf(
+        "green" to "ok",
+        "light-green" to "plugs",
+        "lime" to "plugs",
+        "red" to "bad",
+        "amber" to "warn",
+        "orange" to "warn",
+        "yellow" to "lights",
+        "deep-orange" to "heating",
+        "light-blue" to "cooling",
+        "blue" to "alarm_home",
+        "cyan" to "air",
+        "teal" to "air",
+        "indigo" to "tasks",
+        "purple" to "doors",
+        "deep-purple" to "alarm",
+        "pink" to "media",
+        "brown" to "blinds",
+        "blue-grey" to "rain",
+        "grey" to "neutral",
+        "gray" to "neutral",
+        "disabled" to "neutral",
+        "coral" to "shopping",
+        "salmon" to "shopping",
     )
 }

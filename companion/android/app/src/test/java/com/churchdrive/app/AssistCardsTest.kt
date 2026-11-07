@@ -26,7 +26,7 @@ class AssistCardsTest {
         assertEquals("Heating" to Tone.Orange, climatePill("heating"))
         assertEquals("Idle" to Tone.Orange, climatePill("idle"))
         assertEquals("Eco" to Tone.Green, climatePill("Eco"))
-        assertEquals("Cooling" to Tone.Blue, climatePill("cooling"))
+        assertEquals("Cooling" to Tone.Cooling, climatePill("cooling"))
         assertEquals("Off" to Tone.Grey, climatePill("off"))
         assertEquals("Off" to Tone.Grey, climatePill(""))
     }

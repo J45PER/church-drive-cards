@@ -1306,6 +1306,17 @@
           "#C7B0EC",
           "#3F2D63"
         ]
+      },
+      "neutral": {
+        "name": "Neutral (not an entity)",
+        "group": "Other",
+        "colours": [
+          "#9AA4B2",
+          "#202733",
+          "#9AA4B2",
+          "#EEF1F5",
+          "#28303C"
+        ]
       }
     },
     "alarm_states": [
@@ -1336,6 +1347,34 @@
         "soft": "#9AA4B2",
         "primary": "#A9B4FF",
         "on_primary": "#0B0E13"
+      }
+    },
+    "aliases": {
+      "note": "Names a dashboard card or the app may still be given from Home Assistant's own colour picker, and the palette name each one means. New config should use the palette names (the keys of types).",
+      "names": {
+        "green": "ok",
+        "light-green": "plugs",
+        "lime": "plugs",
+        "red": "bad",
+        "amber": "warn",
+        "orange": "warn",
+        "yellow": "lights",
+        "deep-orange": "heating",
+        "light-blue": "cooling",
+        "blue": "alarm_home",
+        "cyan": "air",
+        "teal": "air",
+        "indigo": "tasks",
+        "purple": "doors",
+        "deep-purple": "alarm",
+        "pink": "media",
+        "brown": "blinds",
+        "blue-grey": "rain",
+        "grey": "neutral",
+        "gray": "neutral",
+        "disabled": "neutral",
+        "coral": "shopping",
+        "salmon": "shopping"
       }
     }
   },
