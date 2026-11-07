@@ -73,7 +73,7 @@ fun ToneCard(tone: Tone?, modifier: Modifier = Modifier, onClick: (() -> Unit)? 
     val ink = colors?.onContainer ?: MaterialTheme.colorScheme.onSurface
     val soft = ink.copy(alpha = 0.75f)
     Column(
-        modifier.fillMaxWidth().clip(ToneCardShape).background(container).let { if (onClick != null) it.clickable(onClick = onClick) else it }.padding(20.dp),
+        modifier.fillMaxWidth().clip(ToneCardShape).background(container).let { m -> if (tone != null) m.glowBehind(container) else m }.let { if (onClick != null) it.clickable(onClick = onClick) else it }.padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) { body(ink, soft) }
 }

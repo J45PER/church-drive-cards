@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.112.0
+
+- Cards have the same glow as the phone app's cards.
+
 ## 0.111.2
 
 - Unselected buttons are a faint wash, not an outline (see the phone app).

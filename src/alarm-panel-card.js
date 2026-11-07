@@ -5,7 +5,7 @@ import { createFormEditor } from './form-editor.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { alarmWho } from './alarm-actor.js';
 import { cvar } from './clive-colours.js';
-import { kitCompact, kitCompactable, KIT_CARD_BG, KIT_GLOW_CSS, kitGlow } from './card-kit.js';
+import { kitCompact, kitCompactable, KIT_CARD_BG } from './card-kit.js';
 
 const APC_STATE_OPTIONS = [
   { value: 'disarmed', label: 'Disarmed' },
@@ -113,7 +113,6 @@ export class AlarmPanelCard extends HTMLElement {
     this.innerHTML = `
       <ha-card class="apc-card" style="position:relative; isolation:isolate; overflow:hidden; border:none; box-shadow:0 3px 10px rgba(0,0,0,0.45); border-radius:16px; padding:16px; background:${KIT_CARD_BG}; -webkit-backdrop-filter:var(--cd-card-filter, none); backdrop-filter:var(--cd-card-filter, none); transition:background-color .8s ease;">
         <style>
-          ${KIT_GLOW_CSS}
           .apc-btn { position:relative; overflow:hidden; flex:1 1 0; min-width:0; height:56px; border:none; border-radius:12px; cursor:pointer;
             display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:0 4px;
             background:rgba(127,127,127,0.14); color:var(--primary-text-color); font:inherit; font-size:11px; font-weight:600; }
@@ -323,7 +322,6 @@ export class AlarmPanelCard extends HTMLElement {
     this._card.style.backgroundColor = tint
       ? `color-mix(in srgb, ${this._color} ${tint}%, ${KIT_CARD_BG})`
       : KIT_CARD_BG;
-    kitGlow(this, this._card, this._color);
   }
 
   // Same size in every state: title, ring row and buttons.

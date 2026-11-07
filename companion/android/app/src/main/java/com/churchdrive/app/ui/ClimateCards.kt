@@ -306,7 +306,7 @@ fun CoverCard(config: JSONObject, entities: Map<String, EntityState>, call: Call
     val state = cover?.state
     // A blind that only assumes its state (an RF one) reports "unknown", but still takes Open, Stop and Close: only a missing or unavailable one doesn't.
     val enabled = cover != null && state != "unavailable"
-    val tone = toneColors(if (state == "closed" || state == "unknown" || !enabled) Tone.Grey else Tone.Blue)
+    val tone = toneColors(Tone.Blinds) // a blind does not report its state, so it keeps its colour rather than going grey
     var slider by remember(position) { mutableStateOf((position ?: 0.0).toFloat()) }
     var last by remember { mutableStateOf<String?>(null) }
     val name = config.optString("name").ifBlank { cover?.friendlyName ?: id }

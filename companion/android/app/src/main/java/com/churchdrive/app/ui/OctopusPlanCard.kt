@@ -16,7 +16,7 @@ fun OctopusPlanCard(entities: Map<String, EntityState>) {
     val now = System.currentTimeMillis()
     val plan = octopusPlan(entities, now) ?: return
     val first = plan.slots.firstOrNull()
-    val tone = toneColors(if (first != null && first.start <= now) Tone.Energy else Tone.Grey)
+    val tone = toneColors(Tone.Energy)
     EntityCard(tone.container, tone.onContainer) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Octopus charging plan", style = MaterialTheme.typography.titleMedium)

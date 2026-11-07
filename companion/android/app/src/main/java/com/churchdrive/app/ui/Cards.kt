@@ -1,6 +1,8 @@
 package com.churchdrive.app.ui
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.ui.geometry.center
 import androidx.compose.ui.graphics.toArgb
@@ -116,52 +118,6 @@ fun StatusPill(text: String, tone: ToneColors, modifier: Modifier = Modifier) {
         text, color = tone.accent, style = androidx.compose.material3.MaterialTheme.typography.labelMedium, maxLines = 1,
         modifier = modifier.background(tone.accent.copy(alpha = 0.18f), androidx.compose.foundation.shape.CircleShape).padding(horizontal = 10.dp, vertical = 3.dp),
     )
-}
-
-/** A glow colour for a card ground: the ground's hue, bright and clear, turned [shift] degrees. A grey ground (off, unavailable) has none. */
-fun glowColour(ground: Color, shift: Float): Color? {
-    val hsv = FloatArray(3)
-    android.graphics.Color.colorToHSV(ground.toArgb(), hsv)
-    if (hsv[1] < 0.18f) return null
-    hsv[0] = (hsv[0] + shift + 360f) % 360f
-    hsv[1] = hsv[1].coerceIn(0.55f, 0.9f)
-    hsv[2] = 0.9f
-    return Color(android.graphics.Color.HSVToColor(hsv))
-}
-
-/** The Clive glow behind a card, as on the watch and satellite: two soft blobs of the card's colour turning slowly. Quiet (alpha 0.30) so text stays readable. */
-@Composable
-fun Modifier.glowBehind(ground: Color): Modifier {
-    val a = remember(ground) { glowColour(ground, 0f) }
-    val b = remember(ground) { glowColour(ground, 28f) }
-    if (a == null || b == null) return this
-    val transition = androidx.compose.animation.core.rememberInfiniteTransition(label = "glow")
-    val phase by transition.animateFloat(
-        // The second blob turns 1.3 times as fast the other way, so the angle runs 3600 degrees (ten turns for the first, thirteen for the second):
-        // both end where they began and the loop has no jump. The pace is Clive's, one turn in 16 seconds.
-        initialValue = 0f,
-        targetValue = 3600f,
-        animationSpec = androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(160_000, easing = androidx.compose.animation.core.LinearEasing)),
-        label = "glowPhase",
-    )
-    return this.drawBehind {
-        val w = size.width
-        val r = maxOf(size.width, size.height) * 0.62f
-        fun blob(color: Color, deg: Float) {
-            val rad = Math.toRadians(deg.toDouble())
-            val c = androidx.compose.ui.geometry.Offset(
-                size.center.x + (Math.cos(rad) * 0.28 * w).toFloat(),
-                size.center.y + (Math.sin(rad) * 0.28 * size.height).toFloat(),
-            )
-            drawCircle(
-                brush = androidx.compose.ui.graphics.Brush.radialGradient(listOf(color.copy(alpha = 0.30f), Color.Transparent), center = c, radius = r),
-                radius = r,
-                center = c,
-            )
-        }
-        blob(a, phase + 210f)
-        blob(b, -phase * 1.3f + 330f)
-    }
 }
 
 /** An icon in a tinted circle, as used at the start of a card or section header. */
@@ -482,6 +438,7 @@ fun ClimateCard(
                 Text(
                     "${temp(climate?.num("current_temperature"))}°",
                     style = MaterialTheme.typography.displayMedium,
+                    color = tone.accent,
                 )
                 Text(
                     buildString {
@@ -491,10 +448,11 @@ fun ClimateCard(
                     style = MaterialTheme.typography.titleMedium,
                 )
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StepButton(CdVectors.Minus, "Lower", tone, enabled && climate?.state != "off") { nudge(-step) }
-                StepButton(CdVectors.Plus, "Raise", tone, enabled && climate?.state != "off") { nudge(step) }
-            }
+        }
+        // Lower and Raise are two wide buttons above the modes, the size of the mode tiles.
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Ui.TileGap)) {
+            StepBar(CdVectors.Minus, "Lower", tone, enabled && climate?.state != "off", Modifier.weight(1f)) { nudge(-step) }
+            StepBar(CdVectors.Plus, "Raise", tone, enabled && climate?.state != "off", Modifier.weight(1f)) { nudge(step) }
         }
         val extra = listOfNotNull(
             quality?.let { "Home climate $it/100 · ${qualityWord(it)}" },
@@ -545,6 +503,22 @@ fun StepButton(icon: ImageVector, description: String, tone: ToneColors, enabled
         modifier = Modifier.size(52.dp),
         colors = IconButtonDefaults.filledIconButtonColors(containerColor = tone.accent, contentColor = tone.onAccent),
     ) { Icon(icon, contentDescription = description) }
+}
+
+/** A wide Lower or Raise button, the height and wash of a mode tile. */
+@Composable
+fun StepBar(icon: ImageVector, description: String, tone: ToneColors, enabled: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Box(
+        modifier = modifier
+            .height(Ui.TileHeight)
+            .clip(Ui.TileShape)
+            .background(tone.onContainer.copy(alpha = 0.10f), Ui.TileShape)
+            .clickable(enabled = enabled, onClickLabel = description, onClick = onClick)
+            .semantics { contentDescription = description },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, contentDescription = null, tint = tone.onContainer.copy(alpha = if (enabled) 1f else 0.4f))
+    }
 }
 
 // ---- Vacuum ----
@@ -625,7 +599,7 @@ fun ChargerCard(entities: Map<String, EntityState>, call: CallService) {
     val over = chargerOverrides(entities)
     // Stop was picked but the charger's readings haven't caught up yet (they refresh about once a minute).
     val stopping = mode?.state == "Stopped" && over.charging
-    val tone = toneColors(if (charging) Tone.Car else Tone.Grey)
+    val tone = toneColors(Tone.Car)
     val session = entities[ZAPPI_SESSION]?.state?.toDoubleOrNull()
     val status = when {
         mode == null -> "Loading…"

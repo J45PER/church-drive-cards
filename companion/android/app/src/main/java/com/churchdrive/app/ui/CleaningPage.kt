@@ -37,12 +37,10 @@ import com.churchdrive.app.ha.CallService
 import com.churchdrive.app.ha.EntityState
 import com.churchdrive.app.ha.data
 
-/** Gregg's switches shown under Settings: label, entity. */
+/** Gregg's switches shown under Settings: label, entity. (Washing the mop by itself and the child lock are left out: not wanted here.) */
 private val CLEANING_SWITCHES = listOf(
     "Empty the dust bin by itself" to "switch.gregg_auto_empty",
-    "Wash the mop by itself" to "switch.gregg_auto_wash",
     "Do not disturb" to "switch.gregg_do_not_disturb",
-    "Child lock" to "switch.gregg_child_lock",
 )
 
 /**

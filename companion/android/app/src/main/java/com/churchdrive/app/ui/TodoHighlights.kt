@@ -127,8 +127,8 @@ fun TodoHighlights(entities: Map<String, EntityState>, call: CallService, onOpen
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                HaIcon("mdi:format-list-checks", CdVectors.Info, purple.accent, 22.dp)
-                Text(if (extra > 0) "+$extra more" else "To-do", color = purple.accent, style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                HaIcon("mdi:format-list-checks", CdVectors.Info, purple.onContainer, 22.dp)
+                Text(if (extra > 0) "+$extra more" else "To-do", color = purple.onContainer, style = MaterialTheme.typography.labelMedium, maxLines = 1)
             }
         }
     }
@@ -142,8 +142,8 @@ private fun HighlightPill(text: String, icon: String, tone: ToneColors, onTick: 
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        HaIcon(icon, CdVectors.Info, tone.accent, 16.dp)
-        Text(text, Modifier.weight(1f), color = tone.accent, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        HaIcon(icon, CdVectors.Info, tone.onContainer, 16.dp)
+        Text(text, Modifier.weight(1f), color = tone.onContainer, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (onTick != null) Box(
             Modifier.size(22.dp).border(2.dp, tone.accent.copy(alpha = 0.7f), CircleShape).clickable { onTick() },
             contentAlignment = Alignment.Center,
