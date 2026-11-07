@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.111.1
+
+- No change to this app (a dashboard light card change); version kept equal.
+
 ## 0.111.0
 
 - Light text and icons on the dark cards (see the phone app).

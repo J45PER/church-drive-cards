@@ -7,6 +7,7 @@ import { SUFFIX, LABEL } from './suffix.js';
 import { KIT_COLOR, kitCompact, kitCompactable, KIT_CARD_BG, kitCanUse } from './card-kit.js';
 import { sceneBackground, sceneIcon, scenePalette, loadSceneStyles, onSceneStylesChanged } from './scene-style.js';
 import { DemoHome } from './demo-home.js';
+import { SECURITY_ACTIVE, SECURITY_COLOR, isSecurityRow, watchValue } from './security-mode.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import {
   UNIVERSAL_PREFIX,
@@ -661,12 +662,13 @@ export class LightControlCard extends HTMLElement {
     const on = st && st.state === 'on';
     const dimmable =
       st && st.attributes.supported_color_modes && st.attributes.supported_color_modes.some((m) => m !== 'onoff');
-    const color = isGroupLike ? lccGroupColor(this._hass, st, entityId) : lccLightColor(st);
+    const color = isSecurityRow(this._hass, entityId) && st && st.state === 'on' ? SECURITY_COLOR : isGroupLike ? lccGroupColor(this._hass, st, entityId) : lccLightColor(st);
     const icon = iconOverride || lccLightIcon(this._hass, st, isGroupLike);
     // State shown in words on the right, so on/off is never a guess.
-    const stateText = !st || st.state === 'unavailable' ? 'Unavailable' : !on ? 'Off' : dimmable && st.attributes.brightness ? `${Math.round((st.attributes.brightness / 255) * 100)}%` : 'On';
+    const security = !!st && on && isSecurityRow(this._hass, entityId);
+    const stateText = !st || st.state === 'unavailable' ? 'Unavailable' : !on ? 'Off' : security ? 'Security mode' : dimmable && st.attributes.brightness ? `${Math.round((st.attributes.brightness / 255) * 100)}%` : 'On';
     const brightnessPct = st && st.attributes.brightness ? Math.round((st.attributes.brightness / 255) * 100) : 0;
-    const fillPct = on ? (dimmable ? Math.max(brightnessPct, 4) : 100) : 0;
+    const fillPct = on ? (security ? 100 : dimmable ? Math.max(brightnessPct, 4) : 100) : 0;
 
     // Tint the fill: blend the light's colour into the card's own background at
     // ~30% strength rather than a literal fill, so white/bright lights never
@@ -1003,12 +1005,13 @@ export class LightControlCard extends HTMLElement {
       const st = head && hass.states[head];
       const area = cfg.area && hass.areas && hass.areas[cfg.area];
       const on = !!st && st.state === 'on';
-      const pct = on && st.attributes.brightness != null ? Math.round((st.attributes.brightness / 255) * 100) : null;
+      const security = on && isSecurityRow(hass, head);
+      const pct = on && !security && st.attributes.brightness != null ? Math.round((st.attributes.brightness / 255) * 100) : null;
       const members = st && Array.isArray(st.attributes.entity_id) ? st.attributes.entity_id.filter((id) => hass.states[id] && hass.states[id].state === 'on').length : 0;
       return kitCompact(this, {
         name: cfg.name || (headRow && headRow.name) || (area && area.name) || (st && st.attributes.friendly_name) || head || 'Lights',
         color: !st || st.state === 'unavailable' ? KIT_COLOR.off : on ? KIT_COLOR.warm : KIT_COLOR.off,
-        value: pct != null ? `${pct}%` : '',
+        value: security ? 'Security mode' : pct != null ? `${pct}%` : '',
         status: !st ? '' : st.state === 'unavailable' ? 'Unavailable' : on ? (members ? `${members} on` : 'On') : 'Off',
         buttons: st ? [{ key: 'power', icon: 'mdi:power', title: on ? 'Turn off' : 'Turn on', on, color: KIT_COLOR.warm }] : [],
         onButton: () => this._toggle(head),
@@ -1110,6 +1113,7 @@ export class LightControlCard extends HTMLElement {
     this._cardLightIds = relevantEntityIds;
     const scenes = this._resolveScenes(hass, mode, headIds, memberIds);
     const watchIds = [
+      SECURITY_ACTIVE,
       ...relevantEntityIds,
       ...scenes.filter((s) => !s.universal).map((s) => s.entity),
       ...scenes.flatMap((s) => s.targetLights || []),
@@ -1121,7 +1125,7 @@ export class LightControlCard extends HTMLElement {
     // Skip the rebuild when none of this card's lights changed (hass is
     // re-set on every state change anywhere in the house), and never rebuild
     // mid-drag — replay the latest hass once the gesture ends instead.
-    const snapshot = watchIds.map((id) => hass.states[id]);
+    const snapshot = watchIds.map((id) => watchValue(hass, id));
     if (
       this._lastIds &&
       this._lastIds.join() === watchIds.join() &&
