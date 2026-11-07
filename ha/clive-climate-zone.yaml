@@ -5,6 +5,7 @@
 # At least 30 minutes between Clive's own changes. Only a raised target pushes a notification, at most one per zone every 2 hours (input_datetime.clive_climate_<zone>_notified); lowering is silent. Both are in the logbook. A pause, and the end of one, always tell people. Skipped while a timed run (clive_timed_control) is going on that zone and for 3 minutes after it.
 # Away: the alarm armed away, or every person out for 30 minutes (none unknown or unavailable): he puts a heating zone on Eco (decision away_eco: preset eco, the zone stays in heat mode; one that is off is left off), the Nest's Home/Away Assist done by Clive (turn the Nest's own off). Off and on are only ever a person's job (the app, or asking Clive). When somebody comes back, "Clive: offer to take over the heating when somebody is back" asks whether to turn it on again.
 # Who changed it: a change made through Home Assistant by a signed-in person is named (the `who` field, from the automation); one from the thermostat's side (the dial, the Nest or Google Home app, the Nest's own schedule or Home/Away Assist) cannot be told apart by Home Assistant and says so.
+# Overnight (2026-11-07): a house-wide setting, input_select.clive_overnight_mode (Smart, Eco or Off) between input_datetime.clive_overnight_start and _end (midnight to 6am to begin with), set by an administrator on the Climate page. Smart changes nothing. Eco and Off stop Clive adjusting the heating overnight and put a heating zone on Eco (night_eco, preset eco) or turn it off (night_off); `night: true` and `prev` (the old target) are kept in _expect. When the window ends, or the setting is changed back to Smart, night_end takes the zone back to normal at its old target (the middle of the range if the old one was lower than the bottom less 1.5), or night_end_away leaves it on Eco when nobody is home. Somebody changing a thermostat in the night pauses Clive until the window ends (pause_until_ts), so he does not undo it. A zone on Manual (its auto switch off) is left alone, as is one in a timed run or paused. No push notifications: the note and the logbook say what he did.
 # Each zone has its own switch, input_boolean.clive_climate_<zone>_auto (Clive controlled when on, Manual when off, set in the app's Settings): with it off the script decides skip_disabled, spots no manual changes and starts no pauses.
 #
 # A change made by somebody else pauses Clive on that zone: one reported by_hand (a change to the mode, preset or target that did not come from a Home Assistant script or automation) more than 3 minutes after Clive's own last action (a Nest takes up to a minute to echo and moves its own target when it leaves eco), or, found by the 10 minute check, a mode or preset that is not what Clive last set (or the target after a "lower"). The pause lasts input_number.clive_climate_pause_minutes. input_datetime.clive_climate_<zone>_resume holds when he takes over again; in the past (and not 2000) means a pause has just ended. While paused he does nothing.
@@ -122,6 +123,20 @@ sequence:
       {%- else -%}away from what Clive last set
       {%- endif -%}
 - variables:
+    ov_mode: "{{ states('input_select.clive_overnight_mode') if states('input_select.clive_overnight_mode') in ['Off', 'Eco', 'Smart'] else 'Smart' }}"
+    ov_start: "{{ states('input_datetime.clive_overnight_start')[:5] if has_value('input_datetime.clive_overnight_start') else '00:00' }}"
+    ov_end: "{{ states('input_datetime.clive_overnight_end')[:5] if has_value('input_datetime.clive_overnight_end') else '06:00' }}"
+    now_hm: "{{ now().strftime('%H:%M') }}"
+- variables:
+    ov_window: "{{ ov_start != ov_end and ((ov_start <= now_hm < ov_end) if ov_start < ov_end else (now_hm >= ov_start or now_hm < ov_end)) }}"
+    night_end_ts: "{% set t = today_at(ov_end) %}{{ ((t + timedelta(days=1)) if t <= now() else t).timestamp() }}"
+    exp_night: '{{ exp.night is defined and exp.night }}'
+    prev_target: '{{ exp.prev if exp.prev is defined and exp.prev is number else setpoint }}'
+- variables:
+    overnight: "{{ ov_mode in ['Eco', 'Off'] and ov_window }}"
+- variables:
+    pause_until_ts: '{{ night_end_ts if overnight else now().timestamp() + pause_min * 60 }}'
+- variables:
     exp_eff: '{{ {} if resume_due else exp }}'
     when_age_eff: '{{ 9999 if resume_due else when_age }}'
 - variables:
@@ -139,13 +154,19 @@ sequence:
       {%- elif timed -%}skip_timed_run
       {%- elif paused -%}skip_paused
       {%- elif manual -%}pause
+      {%- elif exp_night and not overnight and away -%}night_end_away
+      {%- elif exp_night and not overnight -%}night_end
+      {%- elif overnight and ov_mode == 'Off' and mode == 'heat' -%}night_off
+      {%- elif overnight and ov_mode == 'Eco' and ((mode == 'heat' and preset != 'eco') or (mode == 'off' and exp_night)) -%}night_eco
+      {%- elif overnight -%}skip_overnight
       {%- elif away and mode == 'heat' and preset != 'eco' -%}away_eco
       {%- elif when_age_eff < 30 -%}skip_cooldown
       {%- elif needs_heat -%}heat_on
       {%- elif tier != 'none' and mode == 'heat' and preset == 'none' and setpoint is not none and setpoint > mid and (hvac_action == 'heating' or setpoint > z.high) -%}lower
       {%- else -%}ok
       {%- endif -%}
-    resume_at_text: '{{ (now().timestamp() + pause_min * 60) | timestamp_custom(''%H:%M'') }}'
+    resume_at_text: '{{ pause_until_ts | timestamp_custom(''%H:%M'') }}'
+    pause_len: '{{ ((pause_until_ts - now().timestamp()) / 60) | round(0) | int }}'
 - variables:
     report:
       zone: '{{ zone }}'
@@ -160,6 +181,7 @@ sequence:
       pause_just_ended: '{{ resume_due }}'
       last_action: '{{ states(z.note) }}'
       away: '{{ away }}'
+      overnight: '{{ overnight }}'
 - if:
   - condition: template
     value_template: '{{ dry }}'
@@ -244,6 +266,149 @@ sequence:
         entity_id: '{{ z.entity }}'
   - conditions:
     - condition: template
+      value_template: '{{ decision in [''night_eco'', ''night_off''] }}'
+    sequence:
+    # Recorded before the thermostat is touched, as everywhere in this script.
+    - action: input_datetime.set_datetime
+      target:
+        entity_id: '{{ z.when }}'
+      data:
+        datetime: '{{ now().strftime(''%Y-%m-%d %H:%M:%S'') }}'
+    - action: input_text.set_value
+      target:
+        entity_id: '{{ z.expect }}'
+      data:
+        value: '{{ {''m'': ''off'' if decision == ''night_off'' else ''heat'', ''p'': ''none'' if decision == ''night_off'' else ''eco'', ''t'': none, ''hot'': false, ''night'': true, ''prev'': prev_target} | tojson }}'
+    - action: input_text.set_value
+      target:
+        entity_id: '{{ z.note }}'
+      data:
+        value: '{{ now().strftime(''%H:%M'') }}: {{ z.name }} heating {{ ''turned off'' if decision == ''night_off'' else ''put on Eco'' }} for the night ({{ ov_start }} to {{ ov_end }}).'
+    - if:
+      - condition: template
+        value_template: '{{ decision == ''night_off'' }}'
+      then:
+      - action: climate.set_hvac_mode
+        continue_on_error: true
+        target:
+          entity_id: '{{ z.entity }}'
+        data:
+          hvac_mode: 'off'
+      else:
+      - if:
+        - condition: template
+          value_template: '{{ mode == ''off'' }}'
+        then:
+        - action: climate.set_hvac_mode
+          continue_on_error: true
+          target:
+            entity_id: '{{ z.entity }}'
+          data:
+            hvac_mode: heat
+      - action: climate.set_preset_mode
+        continue_on_error: true
+        target:
+          entity_id: '{{ z.entity }}'
+        data:
+          preset_mode: eco
+    - action: logbook.log
+      data:
+        name: Clive
+        message: '{{ z.name }} heating {{ ''turned off'' if decision == ''night_off'' else ''put on Eco'' }} for the night.'
+        entity_id: '{{ z.entity }}'
+  - conditions:
+    - condition: template
+      value_template: '{{ decision == ''night_end_away'' }}'
+    sequence:
+    - action: input_datetime.set_datetime
+      target:
+        entity_id: '{{ z.when }}'
+      data:
+        datetime: '{{ now().strftime(''%Y-%m-%d %H:%M:%S'') }}'
+    - action: input_text.set_value
+      target:
+        entity_id: '{{ z.expect }}'
+      data:
+        value: '{{ {''m'': ''heat'', ''p'': ''eco'', ''t'': none, ''hot'': false, ''away'': true, ''prev'': prev_target} | tojson }}'
+    - action: input_text.set_value
+      target:
+        entity_id: '{{ z.note }}'
+      data:
+        value: '{{ now().strftime(''%H:%M'') }}: The night is over, but nobody is home ({{ away_reason }}), so {{ z.name }} heating stays on Eco.'
+    - if:
+      - condition: template
+        value_template: '{{ mode == ''off'' }}'
+      then:
+      - action: climate.set_hvac_mode
+        continue_on_error: true
+        target:
+          entity_id: '{{ z.entity }}'
+        data:
+          hvac_mode: heat
+    - if:
+      - condition: template
+        value_template: '{{ preset != ''eco'' }}'
+      then:
+      - action: climate.set_preset_mode
+        continue_on_error: true
+        target:
+          entity_id: '{{ z.entity }}'
+        data:
+          preset_mode: eco
+  - conditions:
+    - condition: template
+      value_template: '{{ decision == ''night_end'' }}'
+    sequence:
+    - variables:
+        back_to: '{{ prev_target if prev_target is number and prev_target >= z.low - 1.5 else mid }}'
+    - action: input_datetime.set_datetime
+      target:
+        entity_id: '{{ z.when }}'
+      data:
+        datetime: '{{ now().strftime(''%Y-%m-%d %H:%M:%S'') }}'
+    - action: input_text.set_value
+      target:
+        entity_id: '{{ z.expect }}'
+      data:
+        value: '{{ {''m'': ''heat'', ''p'': ''none'', ''t'': back_to, ''hot'': false} | tojson }}'
+    - action: input_text.set_value
+      target:
+        entity_id: '{{ z.note }}'
+      data:
+        value: '{{ now().strftime(''%H:%M'') }}: The night is over, so {{ z.name }} heating is back to normal at {{ back_to }}°C.'
+    - if:
+      - condition: template
+        value_template: '{{ mode == ''off'' }}'
+      then:
+      - action: climate.set_hvac_mode
+        continue_on_error: true
+        target:
+          entity_id: '{{ z.entity }}'
+        data:
+          hvac_mode: heat
+    - if:
+      - condition: template
+        value_template: '{{ preset == ''eco'' }}'
+      then:
+      - action: climate.set_preset_mode
+        continue_on_error: true
+        target:
+          entity_id: '{{ z.entity }}'
+        data:
+          preset_mode: none
+    - action: climate.set_temperature
+      continue_on_error: true
+      target:
+        entity_id: '{{ z.entity }}'
+      data:
+        temperature: '{{ back_to }}'
+    - action: logbook.log
+      data:
+        name: Clive
+        message: '{{ z.name }} heating is back to normal after the night ({{ back_to }}°C).'
+        entity_id: '{{ z.entity }}'
+  - conditions:
+    - condition: template
       value_template: '{{ decision == ''pause'' }}'
     sequence:
     - variables:
@@ -253,7 +418,7 @@ sequence:
           {%- elif setpoint is not none -%}heat to {{ setpoint }}°C
           {%- else -%}heat
           {%- endif -%}
-        until: '{{ (now() + timedelta(minutes=pause_min)).strftime(''%Y-%m-%d %H:%M:%S'') }}'
+        until: '{{ pause_until_ts | timestamp_custom(''%Y-%m-%d %H:%M:%S'') }}'
     - action: input_datetime.set_datetime
       target:
         entity_id: '{{ z.resume }}'
@@ -280,12 +445,12 @@ sequence:
         title: 🌡️ {{ z.name }} heating changed
         message: >-
           {{ z.name }} heating was changed {{ by_text }} to {{ shown }}. Clive has stopped adjusting it and will take over again at {{ resume_at_text }}
-          ({{ pause_min | int }} minutes). To hand it back sooner, tell Clive "resume the heating" or run the script "Pause or resume Clive's heating".
+          ({{ pause_len }} minutes). To hand it back sooner, tell Clive "resume the heating" or run the script "Pause or resume Clive's heating".
     - action: church_drive.notify
       data:
         kind: clive_actions
         title: 🌡️ {{ z.name }} heating changed
-        message: '{{ z.name }} heating was changed {{ by_text }} to {{ shown }}. Clive has stopped adjusting it and will take over again at {{ resume_at_text }} ({{ pause_min | int }} minutes).'
+        message: '{{ z.name }} heating was changed {{ by_text }} to {{ shown }}. Clive has stopped adjusting it and will take over again at {{ resume_at_text }} ({{ pause_len }} minutes).'
         tag: church-drive-clive-paused-{{ zone }}
         link: /dashboard-mobile/climate
     - action: logbook.log
@@ -364,6 +529,6 @@ sequence:
         message: '{{ z.name }} heating: {{ did }} (room {{ temp }}°C).'
         entity_id: '{{ z.entity }}'
 - variables:
-    report: '{{ dict(report, decision=decision, acted=decision in [''pause'', ''away_eco'', ''heat_on'', ''lower''] or (resume_due and not auto_off)) }}'
+    report: '{{ dict(report, decision=decision, acted=decision in [''pause'', ''away_eco'', ''night_eco'', ''night_off'', ''night_end'', ''night_end_away'', ''heat_on'', ''lower''] or (resume_due and not auto_off)) }}'
 - response_variable: report
   stop: done

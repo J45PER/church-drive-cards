@@ -99,6 +99,7 @@ fun CardView(card: CardSpec, entities: Map<String, EntityState>, registry: Regis
         "custom:security-zone-card" -> ZoneCard(card.config, entities, call)
         "custom:climate-card" -> ClimateRoomCard(card.config, entities, call)
         "custom:climate-zone-card" -> ClimateZoneCard(card.config, entities, call)
+        "custom:overnight-heating-card" -> OvernightHeatingCard(entities, call)
         "custom:fan-card" -> FanCard(card.config, entities, call)
         "custom:air-purifier-card" -> AirPurifierCard(card.config, entities, call)
         "custom:purifier-schedule-card" -> PurifierScheduleCard(card.config)

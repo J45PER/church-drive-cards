@@ -221,6 +221,19 @@ rooms:
     temperature: sensor.entrance_sensor_temperature
 ```
 
+### `overnight-heating-card` (the Overnight heating panel on the Climate page)
+
+**For administrators only.** One setting for the whole house: what the heating does at night to save energy, and between which times (midnight to 6am to begin with, changed on the card). **Smart** leaves it to Clive, as in the day. **Eco** puts the heating on Eco for the night and **Off** turns it off; either way Clive stops adjusting it overnight, and in the morning he takes it back to normal. A thermostat set to Manual, or one that somebody changes in the night, is left alone until the morning. The mode and the times are Home Assistant helpers (`input_select.clive_overnight_mode`, `input_datetime.clive_overnight_start` and `_end`); Clive's zone script does the work (see `ha/clive.md`). The card has an `admin_only: true` option, and so does any card: a card marked `admin_only` is hidden from everyone but administrators, on the dashboard and in the phone app, and a panel whose cards are all hidden goes too. The phone app has the same panel (Settings are in `OvernightHeating.kt`).
+
+```yaml
+type: custom:section-panel-card
+title: Overnight heating
+icon: mdi:weather-night
+cards:
+  - type: custom:overnight-heating-card
+    admin_only: true
+```
+
 ### `fan-card`
 
 A fan with a speed gauge, then two rows of tiles: Off and the speeds (1, 2, 3…), then the other presets (Natural, Sleep…) and Oscillate. Tiles are grey until selected, like the alarm card. Speeds come from presets named `speed_1`… (Philips) or from the fan's percentage steps. Each row can be switched off.

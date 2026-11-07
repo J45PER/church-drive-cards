@@ -277,6 +277,7 @@ fun introDue(introducedEver: Boolean, told: Set<String>?, log: List<AssistFeatur
  * ever do they get the full introduction. Features also make up that introduction's "what I can do".
  */
 private val RAW_ASSIST_FEATURES = listOf(
+    AssistFeature("mdi:weather-night", "Overnight heating", "", id = "overnight-heating", detail = "Administrators can now choose what the heating does at night: Smart leaves it to {name}, Eco puts it on Eco and Off turns it off, between times you set (midnight to 6am to begin with). It is on the Climate page. In the morning {name} puts the heating back.", kind = AssistantChange.Change),
     AssistFeature("mdi:timer-pause-outline", "A shorter pause", "", id = "pause-after-change", detail = "After somebody changes a thermostat, {name} now leaves it alone for 30 minutes instead of 2 hours. You can change that in a thermostat's settings, under Pause after a change.", kind = AssistantChange.Change),
     AssistFeature("mdi:map-clock", "Time zones and late nights", "", id = "time-zones-late-nights", detail = "Away from home, {name} gives the time where you are as well as the home time. And after midnight, when you say tomorrow, he checks whether you mean today or tomorrow.", kind = AssistantChange.Change),
     AssistFeature("mdi:weather-partly-cloudy", "Weather for tomorrow", "What's the weather like tomorrow?", id = "weather-other-days", detail = "{name} now shows a card for tomorrow's weather, or any day up to five days ahead, and answers a little quicker after you stop speaking.", kind = AssistantChange.Change),

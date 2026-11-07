@@ -1,4 +1,5 @@
 # Variables in one block render one at a time, and Home Assistant stores keys sorted alphabetically, so a key never reads another in its own block: each dependent one is its own `variables` step.
+# Overnight (2026-11-07): the house's overnight setting (input_select.clive_overnight_mode and the two times; see clive-climate-zone.yaml) is read here too: a turn_on, set_temperature or pause asked for in the night holds until the morning, resume takes a zone Clive turned off or put on Eco for the night back to normal, and status reports the setting.
 # Script script.clive_climate_control: Pause, resume or report on Clive's automatic heating, and do what a person asks of the thermostats (turn on, turn off, set a temperature). This is the one Clive uses ("resume the heating", "leave the heating alone for 3 hours", "why is the heating off?", "turn the heating on", "set the living room to 20"), and the one a dashboard button or a Home Assistant notification button can call. Resume hands a zone straight back (the zone script does the rest and tells people), but only while the alarm is not armed away; Pause stops Clive adjusting a zone until the time given. turn_on, turn_off and set_temperature only ever happen because a person asked in this conversation: Clive never turns the heating on by himself, and he only adjusts a target by himself while he is in charge. turn_on and set_temperature pause Clive on that zone like a change by hand. A copy of the live script.
 alias: Pause or resume Clive's heating
 description: 'Clive looks after the heating automatically: on when a room is cold, down or off when it is hot. When somebody changes the thermostat by hand he stops adjusting that zone for a while (2 hours unless set otherwise) and tells people when he will take over again. Use command resume when someone wants him back in charge now (it is refused while the alarm is set to away: the house is empty, so the heating is off; it only works once the alarm has been disarmed), pause with minutes when they want him to leave the heating alone (for example for 3 hours = 180), and status for what he is doing and why (it includes what he last did and any pause). When the heating is off, Clive is not able to turn it on himself: resuming only hands the adjusting back, so say so. Only when a person asks for it, use turn_on or turn_off, or set_temperature with temperature to change the target (set_temperature needs the heating to be on already). Zone is all unless they name downstairs or upstairs. Say times as clock times.'
@@ -78,6 +79,20 @@ sequence:
     alarm: "{{ states('alarm_control_panel.church_drive_alarm') }}"
     mins: '{{ minutes | int(0) if minutes is defined and minutes else states(''input_number.clive_climate_pause_minutes'') | float(120) | int }}'
 - variables:
+    ov_mode: "{{ states('input_select.clive_overnight_mode') if states('input_select.clive_overnight_mode') in ['Off', 'Eco', 'Smart'] else 'Smart' }}"
+    ov_start: "{{ states('input_datetime.clive_overnight_start')[:5] if has_value('input_datetime.clive_overnight_start') else '00:00' }}"
+    ov_end: "{{ states('input_datetime.clive_overnight_end')[:5] if has_value('input_datetime.clive_overnight_end') else '06:00' }}"
+    now_hm: "{{ now().strftime('%H:%M') }}"
+- variables:
+    ov_window: "{{ ov_start != ov_end and ((ov_start <= now_hm < ov_end) if ov_start < ov_end else (now_hm >= ov_start or now_hm < ov_end)) }}"
+    night_end_ts: "{% set t = today_at(ov_end) %}{{ ((t + timedelta(days=1)) if t <= now() else t).timestamp() }}"
+- variables:
+    overnight: "{{ ov_mode in ['Eco', 'Off'] and ov_window }}"
+- variables:
+    # A change a person asks for in the night (turn on, set a temperature, pause) holds until the morning, not just for the usual pause.
+    mins: '{{ (((night_end_ts - now().timestamp()) / 60) | round(0) | int) if (overnight and not (minutes is defined and minutes)) else mins }}'
+    ov_text: "{{ ov_mode ~ ' from ' ~ ov_start ~ ' to ' ~ ov_end ~ (' (on now)' if overnight else '') }}"
+- variables:
     paused_now: >-
       {%- set ns = namespace(l=[]) -%}
       {%- for zn in zl -%}{%- if state_attr(cfg[zn].resume, 'timestamp') | float(0) > now().timestamp() -%}{%- set ns.l = ns.l + [zn] -%}{%- endif -%}{%- endfor -%}
@@ -85,7 +100,14 @@ sequence:
 - variables:
     held_off: >-
       {%- set ns = namespace(l=[]) -%}
-      {%- for zn in zl -%}{%- set e = states(cfg[zn].expect) -%}{%- set j = (e | from_json(default={})) if e not in ['', 'unknown', 'unavailable'] else {} -%}{%- if j.away is defined and j.away and (is_state(cfg[zn].entity, 'heat') and state_attr(cfg[zn].entity, 'preset_mode') == 'eco') -%}{%- set ns.l = ns.l + [zn] -%}{%- endif -%}{%- endfor -%}
+      {%- for zn in zl -%}
+      {%- set e = states(cfg[zn].expect) -%}
+      {%- set j = (e | from_json(default={})) if e not in ['', 'unknown', 'unavailable'] else {} -%}
+      {%- set eco = is_state(cfg[zn].entity, 'heat') and state_attr(cfg[zn].entity, 'preset_mode') == 'eco' -%}
+      {%- set away = j.away is defined and j.away and eco -%}
+      {%- set night = j.night is defined and j.night and (eco or is_state(cfg[zn].entity, 'off')) -%}
+      {%- if away or night -%}{%- set ns.l = ns.l + [zn] -%}{%- endif -%}
+      {%- endfor -%}
       {{- ns.l -}}
 - choose:
   - conditions:
@@ -96,6 +118,7 @@ sequence:
         result:
           status: ok
           alarm: '{{ alarm }}'
+          overnight: '{{ ov_text }}'
           zones: >-
             {%- set ns = namespace(l=[]) -%}
             {%- for zn in zl -%}{%- set c = cfg[zn] -%}{%- set rts = state_attr(c.resume, 'timestamp') | float(0) -%}
@@ -153,6 +176,15 @@ sequence:
             entity_id: '{{ c.expect }}'
           data:
             value: '{{ {''m'': ''heat'', ''p'': ''none'', ''t'': back_to, ''hot'': false} | tojson }}'
+        - if:
+          - condition: template
+            value_template: '{{ j.night is defined and j.night and overnight }}'
+          then:
+          - action: input_datetime.set_datetime
+            target:
+              entity_id: '{{ c.resume }}'
+            data:
+              datetime: '{{ night_end_ts | timestamp_custom(''%Y-%m-%d %H:%M:%S'') }}'
         # The Nest refuses "eco off" when eco is already off, so each step only runs when it is needed and none of them stops the rest.
         - if:
           - condition: template
