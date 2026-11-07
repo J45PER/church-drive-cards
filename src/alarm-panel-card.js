@@ -50,13 +50,13 @@ export const AlarmPanelCardEditor = createFormEditor({
   },
 });
 
-// Status colours: Disarmed green, Armed Home blue, Armed Away red, Armed Night
+// Status colours (the house set, design/clive/cards.json): Disarmed green, Armed Home blue, Armed Away red, Armed Night
 // purple. Exit delay (arming) amber; entry delay (pending, someone's come in
 // while armed, the urgent one) deep orange.
 const APC_STATES = {
-  disarmed: { label: 'Disarmed', icon: 'mdi:shield-off-outline', color: 'var(--success-color, #43a047)' },
-  armed_home: { label: 'Armed Home', icon: 'mdi:shield-home', color: '#2196f3' },
-  armed_away: { label: 'Armed Away', icon: 'mdi:shield-lock', color: 'var(--error-color, #db4437)' },
+  disarmed: { label: 'Disarmed', icon: 'mdi:shield-off-outline', color: '#55C47C' },
+  armed_home: { label: 'Armed Home', icon: 'mdi:shield-home', color: '#4DA3FF' },
+  armed_away: { label: 'Armed Away', icon: 'mdi:shield-lock', color: '#F4736C' },
   armed_night: { label: 'Armed Night', icon: 'mdi:shield-moon', color: '#7e57c2' },
   arming: { label: 'Arming', icon: 'mdi:shield-sync', color: '#ff9800' },
   pending: { label: 'Entry Delay', icon: 'mdi:shield-sync', color: '#ff5722' },

@@ -1,0 +1,1312 @@
+{
+ "version": 1,
+ "app": "0.101.0",
+ "$comment": "Clive's card layouts, palettes and animations as data. Edit here, run `node tools/export-clive-assets.mjs`, and Home Assistant serves the result at /church_drive/clive/cards.json. A new KIND of card still needs code in the apps; everything else (icons, palettes, which icon a card shows, its fields, its animation) is data.",
+ "palettes": {
+  "Base": [
+   "#5C6BC0",
+   "#AB47BC",
+   "#4FD08A"
+  ],
+  "Clear": [
+   "#1565C0",
+   "#42A5F5",
+   "#81D4FA"
+  ],
+  "Rain": [
+   "#37474F",
+   "#5C7C99",
+   "#78909C"
+  ],
+  "Night": [
+   "#0D1B4A",
+   "#283593",
+   "#5C6BC0"
+  ],
+  "Snow": [
+   "#90A4AE",
+   "#B3E5FC",
+   "#E1F5FE"
+  ],
+  "Storm": [
+   "#37474F",
+   "#6A1B9A",
+   "#5C6BC0"
+  ],
+  "Sport": [
+   "#6CABDD",
+   "#1C2C5B",
+   "#A5CDEB"
+  ],
+  "Heat": [
+   "#E65100",
+   "#FF8A4C",
+   "#FFB74D"
+  ],
+  "Warm": [
+   "#FF8F00",
+   "#FFB74D",
+   "#AB47BC"
+  ],
+  "Alert": [
+   "#37474F",
+   "#C62828",
+   "#EF9A9A"
+  ]
+ },
+ "tones": {
+  "green": [
+   "#1B3A28",
+   "#81C995"
+  ],
+  "blue": [
+   "#1C3358",
+   "#8AB4F8"
+  ],
+  "red": [
+   "#4D1F1C",
+   "#F28B82"
+  ],
+  "purple": [
+   "#3A2552",
+   "#C58AF9"
+  ],
+  "amber": [
+   "#4A3A12",
+   "#FDD663"
+  ],
+  "orange": [
+   "#4A2A14",
+   "#FFAB70"
+  ],
+  "teal": [
+   "#0F3A40",
+   "#4DD0E1"
+  ],
+  "indigo": [
+   "#262B4A",
+   "#9FA8DA"
+  ],
+  "grey": [
+   "#303134",
+   "#9AA0A6"
+  ],
+  "coral": [
+   "#4D2620",
+   "#FF9C8A"
+  ]
+ },
+ "morph": {
+  "from": "two squircles (Clive's mark as his thinking leaves it)",
+  "note": "Every icon starts the same way: Clive's two squircles shrink into one while the hole between them shrinks to a dot. Then it goes to a container that suits the icon (circle, or a rounded rectangle for tall and wide shapes), grows to size, and the inner icon grows in together as one piece. The To-Do logo uses the app splash morph.",
+  "ms": 1100,
+  "recipe_fields": {
+   "arc": "how far the squircles swing on a curve, as a fraction of the distance",
+   "spin": "degrees the body turns as it settles",
+   "d": "how small parts arrive: pop, drop, rise, left, right, spin",
+   "ds": "spin of small parts, degrees",
+   "o": "order small parts arrive: size, ltr, rtl, ttb, btt, radial",
+   "ease": "back, out or inout",
+   "swap": "swap which squircle becomes which body shape",
+   "flow": "container the icon grows from: solid, disc, box, seed, direct (squircle straight to the shape, for shields), wipe (drawn on from a point), chain (pieces appear one after another), old",
+   "body": "hub: the main shape is the small circle in the middle (fan)",
+   "start": "{at:bottom, shape:circle|box, f} start from a base at the bottom (lock, spray bottle, thermometer)",
+   "em": "where parts emerge from: centre, down, up, left, right, dropin, own, prev",
+   "em2": "the same for the small parts",
+   "step": "delay between parts, as a fraction of the morph",
+   "wipe": "x+, x-, y+, y-, radial"
+  },
+  "default": {
+   "arc": 0.3,
+   "spin": -20,
+   "d": "pop",
+   "o": "size",
+   "ease": "inout"
+  },
+  "recipes": {
+   "thermostat": {
+    "arc": -0.45,
+    "spin": -70,
+    "d": "spin",
+    "ds": -200,
+    "o": "size",
+    "ease": "back"
+   },
+   "radiator": {
+    "arc": 0.2,
+    "spin": 0,
+    "d": "rise",
+    "o": "rtl",
+    "ease": "out",
+    "flow": "chain",
+    "step": 0.1,
+    "em2": "down"
+   },
+   "fire": {
+    "arc": 0.1,
+    "spin": 0,
+    "d": "rise",
+    "o": "btt",
+    "ease": "back",
+    "flow": "disc"
+   },
+   "leaf": {
+    "flow": "seed",
+    "arc": 0.5,
+    "spin": 40,
+    "d": "pop",
+    "o": "size",
+    "ease": "back"
+   },
+   "bulb": {
+    "flow": "disc",
+    "arc": -0.3,
+    "spin": 0,
+    "d": "rise",
+    "o": "btt",
+    "ease": "back"
+   },
+   "bulb-lit": {
+    "flow": "disc",
+    "arc": -0.3,
+    "spin": 15,
+    "d": "spin",
+    "ds": 90,
+    "o": "radial",
+    "ease": "back"
+   },
+   "bulb-off": {
+    "flow": "disc",
+    "arc": 0.2,
+    "spin": 0,
+    "d": "drop",
+    "o": "ttb",
+    "ease": "out"
+   },
+   "palette": {
+    "flow": "disc",
+    "arc": 0.4,
+    "spin": -30,
+    "d": "pop",
+    "o": "ltr",
+    "ease": "back"
+   },
+   "blind-open": {
+    "arc": 0,
+    "spin": 0,
+    "d": "drop",
+    "o": "ttb",
+    "ease": "out",
+    "flow": "box",
+    "em": "dropin",
+    "em2": "dropin"
+   },
+   "blind-closed": {
+    "arc": 0,
+    "spin": 0,
+    "d": "drop",
+    "o": "ttb",
+    "ease": "out",
+    "flow": "box",
+    "em": "dropin",
+    "em2": "dropin"
+   },
+   "fan": {
+    "flow": "disc",
+    "body": "hub",
+    "ds": -300,
+    "arc": 0,
+    "spin": 360,
+    "d": "spin",
+    "o": "radial",
+    "ease": "out"
+   },
+   "air-purifier": {
+    "arc": 0.3,
+    "spin": 0,
+    "d": "left",
+    "o": "ttb",
+    "ease": "out"
+   },
+   "air-filter": {
+    "arc": 0.2,
+    "spin": 0,
+    "d": "right",
+    "o": "ttb",
+    "ease": "out",
+    "flow": "chain",
+    "em": "left",
+    "em2": "own",
+    "step": 0.08
+   },
+   "shield-lock": {
+    "arc": 0,
+    "spin": 0,
+    "d": "drop",
+    "o": "size",
+    "ease": "back",
+    "flow": "direct"
+   },
+   "shield-alert": {
+    "arc": 0,
+    "spin": 0,
+    "d": "drop",
+    "o": "size",
+    "ease": "back",
+    "flow": "direct"
+   },
+   "shield-check": {
+    "arc": 0.15,
+    "spin": 0,
+    "d": "pop",
+    "o": "size",
+    "ease": "back",
+    "flow": "direct"
+   },
+   "lock": {
+    "arc": 0,
+    "spin": 0,
+    "d": "drop",
+    "o": "ttb",
+    "ease": "back",
+    "flow": "box",
+    "start": {
+     "at": "bottom",
+     "shape": "box",
+     "f": 0.55
+    }
+   },
+   "plug": {
+    "arc": -0.3,
+    "spin": 25,
+    "d": "rise",
+    "o": "ltr",
+    "ease": "back"
+   },
+   "volume-high": {
+    "arc": 0,
+    "spin": 0,
+    "d": "left",
+    "o": "ltr",
+    "ease": "out",
+    "flow": "direct",
+    "em": "left",
+    "em2": "left",
+    "step": 0.1
+   },
+   "ev-plug": {
+    "flow": "disc",
+    "arc": 0.4,
+    "spin": -25,
+    "d": "pop",
+    "o": "radial",
+    "ease": "back"
+   },
+   "alert-circle": {
+    "arc": 0,
+    "spin": 0,
+    "d": "drop",
+    "o": "ttb",
+    "ease": "back"
+   },
+   "alert-circle-solid": {
+    "arc": 0,
+    "spin": 0,
+    "d": "drop",
+    "o": "ttb",
+    "ease": "back"
+   },
+   "clock": {
+    "arc": 0.2,
+    "spin": -120,
+    "d": "spin",
+    "ds": -360,
+    "o": "size",
+    "ease": "out"
+   },
+   "cart": {
+    "arc": 0,
+    "spin": 0,
+    "d": "right",
+    "o": "ltr",
+    "ease": "out",
+    "flow": "wipe",
+    "wipe": "x+",
+    "em2": "down"
+   },
+   "cart-check": {
+    "arc": 0,
+    "spin": 0,
+    "d": "right",
+    "o": "ltr",
+    "ease": "back",
+    "flow": "wipe",
+    "wipe": "x+",
+    "em2": "down"
+   },
+   "close-circle": {
+    "arc": 0,
+    "spin": 90,
+    "d": "spin",
+    "ds": 180,
+    "o": "size",
+    "ease": "back"
+   },
+   "check-circle-solid": {
+    "arc": 0.3,
+    "spin": 0,
+    "d": "pop",
+    "o": "size",
+    "ease": "back"
+   },
+   "weather-partly-cloudy": {
+    "arc": 0.5,
+    "spin": -30,
+    "d": "rise",
+    "o": "ltr",
+    "ease": "out",
+    "flow": "disc",
+    "em": "centre",
+    "em2": "centre"
+   },
+   "football": {
+    "arc": 0,
+    "spin": 300,
+    "d": "pop",
+    "o": "radial",
+    "ease": "out"
+   },
+   "calendar-clock": {
+    "arc": 0.2,
+    "spin": 0,
+    "d": "drop",
+    "o": "ttb",
+    "ease": "out"
+   },
+   "calendar-check": {
+    "arc": 0.2,
+    "spin": 0,
+    "d": "drop",
+    "o": "ttb",
+    "ease": "back"
+   },
+   "music-note": {
+    "arc": -0.5,
+    "spin": 35,
+    "d": "rise",
+    "o": "btt",
+    "ease": "back",
+    "flow": "direct"
+   },
+   "group": {
+    "arc": 0.5,
+    "spin": 0,
+    "d": "pop",
+    "o": "ltr",
+    "ease": "back",
+    "swap": true,
+    "flow": "old"
+   },
+   "car-ev": {
+    "flow": "old",
+    "arc": 0,
+    "spin": 0,
+    "d": "left",
+    "o": "ltr",
+    "ease": "out"
+   },
+   "trophy": {
+    "flow": "box"
+   },
+   "thermometer": {
+    "arc": -0.3,
+    "spin": 0,
+    "d": "rise",
+    "o": "ttb",
+    "ease": "back",
+    "flow": "disc",
+    "start": {
+     "at": "bottom",
+     "shape": "circle"
+    },
+    "em2": "left",
+    "step": 0.08
+   },
+   "bolt": {
+    "arc": 0.8,
+    "spin": -70,
+    "d": "pop",
+    "o": "size",
+    "ease": "back",
+    "flow": "wipe",
+    "wipe": "y+"
+   },
+   "door": {
+    "arc": 0,
+    "spin": 0,
+    "d": "right",
+    "o": "size",
+    "ease": "out"
+   },
+   "television-play": {
+    "arc": 0.2,
+    "spin": 0,
+    "d": "pop",
+    "o": "size",
+    "ease": "back"
+   },
+   "cd_clive_chat": {
+    "arc": -0.4,
+    "spin": 30,
+    "d": "pop",
+    "o": "size",
+    "ease": "back"
+   },
+   "message": {
+    "arc": -0.4,
+    "spin": 30,
+    "d": "pop",
+    "o": "size",
+    "ease": "back",
+    "flow": "old"
+   },
+   "gregg": {
+    "arc": 0,
+    "spin": 360,
+    "d": "spin",
+    "ds": -360,
+    "o": "size",
+    "ease": "out"
+   },
+   "blinds": {
+    "arc": 0,
+    "spin": 0,
+    "d": "drop",
+    "o": "ttb",
+    "ease": "out"
+   },
+   "volume": {
+    "arc": 0,
+    "spin": 0,
+    "d": "left",
+    "o": "ltr",
+    "ease": "out"
+   },
+   "light": {
+    "arc": -0.3,
+    "spin": 0,
+    "d": "rise",
+    "o": "btt",
+    "ease": "back"
+   },
+   "lock-open": {
+    "flow": "box",
+    "start": {
+     "at": "bottom",
+     "shape": "box",
+     "f": 0.55
+    }
+   },
+   "shield-off": {
+    "flow": "direct",
+    "em2": "dropin"
+   },
+   "sun-half": {
+    "flow": "disc",
+    "em": "centre",
+    "em2": "centre"
+   },
+   "volume-low": {
+    "flow": "direct",
+    "em": "left",
+    "em2": "left",
+    "o": "ltr",
+    "step": 0.1
+   },
+   "volume-medium": {
+    "flow": "direct",
+    "em": "left",
+    "em2": "left",
+    "o": "ltr",
+    "step": 0.1
+   },
+   "spray-bottle": {
+    "flow": "box",
+    "start": {
+     "at": "bottom",
+     "shape": "box",
+     "f": 0.45
+    }
+   },
+   "weather-rainy": {
+    "flow": "disc",
+    "em": "down",
+    "em2": "down",
+    "o": "ltr",
+    "step": 0.07
+   },
+   "weather-pouring": {
+    "flow": "disc",
+    "em": "down",
+    "em2": "down",
+    "o": "ltr",
+    "step": 0.07
+   },
+   "weather-hail": {
+    "flow": "disc",
+    "em": "down",
+    "em2": "down",
+    "o": "ltr",
+    "step": 0.07
+   },
+   "weather-snowy": {
+    "flow": "disc",
+    "em": "down",
+    "em2": "down",
+    "o": "ltr",
+    "step": 0.07
+   },
+   "weather-snowy-rainy": {
+    "flow": "disc",
+    "em": "down",
+    "em2": "down",
+    "o": "ltr",
+    "step": 0.07
+   },
+   "weather-lightning": {
+    "flow": "disc",
+    "em": "down",
+    "em2": "down",
+    "o": "ltr",
+    "step": 0.07
+   },
+   "weather-lightning-rainy": {
+    "flow": "disc",
+    "em": "down",
+    "em2": "down",
+    "o": "ltr",
+    "step": 0.07
+   },
+   "weather-fog": {
+    "flow": "disc",
+    "em": "left",
+    "em2": "left",
+    "o": "ttb",
+    "step": 0.1
+   },
+   "weather-night-partly-cloudy": {
+    "flow": "disc",
+    "em": "centre",
+    "em2": "centre"
+   },
+   "weather-cloudy": {
+    "flow": "disc",
+    "em": "left",
+    "em2": "left"
+   },
+   "wifi-4": {
+    "flow": "wipe",
+    "wipe": "radial",
+    "origin": "bottom"
+   },
+   "person-talking": {
+    "flow": "box",
+    "em": "up",
+    "em2": "left",
+    "o": "ltr",
+    "step": 0.1
+   },
+   "clive-chat": {
+    "flow": "old"
+   },
+   "chevron": {
+    "flow": "wipe",
+    "wipe": "x+"
+   },
+   "close": {
+    "flow": "wipe",
+    "wipe": "radial",
+    "origin": "centre"
+   },
+   "moon": {
+    "flow": "disc"
+   },
+   "power": {
+    "flow": "disc",
+    "em": "dropin",
+    "em2": "dropin"
+   },
+   "mic-off": {
+    "flow": "wipe",
+    "wipe": "x+"
+   },
+   "snowflake": {
+    "flow": "wipe",
+    "wipe": "radial",
+    "origin": "centre"
+   },
+   "weather-windy": {
+    "flow": "wipe",
+    "wipe": "x+"
+   },
+   "back": {
+    "flow": "wipe",
+    "wipe": "x-"
+   }
+  },
+  "special": {
+   "cd_logo_todo": "splash morph: squircles into the logo, clip grows in, ticks drawn (satellite/design/splash-final.html)"
+  },
+  "status": "paused: work in progress, not used by the apps yet"
+ },
+ "kinds": {
+  "heat": {
+   "fields": [
+    "now",
+    "target",
+    "name",
+    "detail"
+   ],
+   "icon": "cd:thermostat",
+   "palette": "Heat",
+   "animate": [
+    "chevrons"
+   ],
+   "layout": "now, double chevron, target"
+  },
+  "heat2": {
+   "fields": [
+    "name",
+    "detail",
+    "rows[name,now,target]"
+   ],
+   "icon": "cd:thermostat",
+   "palette": "Heat",
+   "animate": [
+    "chevrons"
+   ],
+   "layout": "one row per thermostat"
+  },
+  "done": {
+   "fields": [
+    "icon",
+    "big",
+    "name",
+    "detail",
+    "percent",
+    "palette",
+    "colour",
+    "ok"
+   ],
+   "layout": "icon, big figure, name, detail, optional bar"
+  },
+  "ask": {
+   "fields": [
+    "icon",
+    "name",
+    "detail",
+    "palette"
+   ],
+   "layout": "question with Yes / No"
+  },
+  "weather": {
+   "icon": "by condition"
+  },
+  "score": {
+   "icon": "cd:football"
+  },
+  "energy": {
+   "icon": "cd:bolt"
+  },
+  "people": {
+   "icon": "cd:group"
+  },
+  "tasks": {
+   "icon": "cd_logo_todo",
+   "note": "the Clive To-Do app logo"
+  },
+  "car": {
+   "icon": "cd:car-ev"
+  },
+  "climate": {
+   "icon": "cd:thermometer"
+  },
+  "air": {
+   "icon": "cd:air-filter"
+  }
+ },
+ "icons": {
+  "light": {
+   "type": "swap",
+   "from": "cd:bulb",
+   "to": "cd:bulb-lit",
+   "ms": 450
+  },
+  "lock": {
+   "type": "swap",
+   "from": "cd:lock-open",
+   "to": "cd:lock",
+   "ms": 650
+  },
+  "volume": {
+   "type": "cycle",
+   "icons": [
+    "cd:volume-low",
+    "cd:volume-medium",
+    "cd:volume-high"
+   ],
+   "ms": 480
+  },
+  "fan": {
+   "type": "spin",
+   "icon": "cd:fan",
+   "ms": 1100
+  },
+  "blinds-open": {
+   "type": "extend",
+   "start": "cd:blind-open",
+   "end": "cd:blind-closed",
+   "note": "the slab extends under the rail"
+  },
+  "blinds-close": {
+   "type": "extend",
+   "start": "cd:blind-closed",
+   "end": "cd:blind-open"
+  }
+ },
+ "gregg": {
+  "icon": "GreggIcon",
+  "states": {
+   "cleaning": {
+    "icon": "GreggIcon Cleaning",
+    "motion": "ring turns",
+    "palette": [
+     "#1A73E8",
+     "#8AB4F8",
+     "#1C3358"
+    ]
+   },
+   "paused": {
+    "icon": "GreggIcon Paused",
+    "motion": "still, pause bars",
+    "palette": [
+     "#E37400",
+     "#FDD663",
+     "#4A3A12"
+    ]
+   },
+   "returning": {
+    "icon": "GreggIcon Returning",
+    "motion": "ring runs backwards",
+    "palette": [
+     "#1A73E8",
+     "#8AB4F8",
+     "#1C3358"
+    ]
+   },
+   "charging": {
+    "icon": "GreggIcon Charging",
+    "motion": "ring fills",
+    "palette": [
+     "#2E7D32",
+     "#81C995",
+     "#1B3A28"
+    ]
+   },
+   "charged": {
+    "icon": "GreggIcon Charged",
+    "motion": "still, closed ring",
+    "palette": [
+     "#2E7D32",
+     "#81C995",
+     "#1B3A28"
+    ]
+   },
+   "error": {
+    "icon": "GreggIcon Error",
+    "motion": "blinks",
+    "palette": [
+     "#B3261E",
+     "#F28B82",
+     "#4D1F1C"
+    ]
+   },
+   "idle": {
+    "icon": "GreggIcon Idle",
+    "motion": "still",
+    "palette": [
+     "#E37400",
+     "#FDD663",
+     "#4A3A12"
+    ]
+   }
+  },
+  "actions": {
+   "start": "cleaning",
+   "pause": "paused",
+   "resume": "cleaning",
+   "stop": "idle",
+   "return_to_base": "returning",
+   "locate": "find",
+   "empty": "empty"
+  }
+ },
+ "icon_sources": {
+  "cd": "House set, served in icons.json (design/clive/house-icons.json is its source)",
+  "phu": "Hue-style pack from HACS (Custom Brand Icons); read from the pack Home Assistant serves, never copied. Used until the same icon is drawn in the house set.",
+  "hue": "Our own Hue icons, being drawn (listed under pending in icons.json)",
+  "ring": "Our own Ring icons, being drawn (listed under pending in icons.json)",
+  "si": "Simple Icons brand logos, by name",
+  "ol": "Our own logos where Simple Icons has none"
+ },
+ "entity_colours": {
+  "note": "Five colours per entity type, agreed on the Clive Entity Colours board (7 Nov 2026). Glow = Colour, Accent, Light as the three blobs on the Dark ground with a Deep edge. Status keeps its fixed meaning (green fine, amber needs attention, red wrong) and takes over a card when something is wrong. Electricity and Gas use Octopus pink and violet.",
+  "slots": [
+   "colour",
+   "dark",
+   "accent",
+   "light",
+   "deep"
+  ],
+  "types": {
+   "lights": {
+    "name": "Lights",
+    "group": "Home",
+    "colours": [
+     "#FFC857",
+     "#4E4128",
+     "#D5A190",
+     "#FFE4AB",
+     "#6E572D"
+    ]
+   },
+   "blinds": {
+    "name": "Blinds and windows",
+    "group": "Home",
+    "colours": [
+     "#8FA9C4",
+     "#313945",
+     "#8E8DD6",
+     "#C7D4E2",
+     "#3F4A5A"
+    ]
+   },
+   "plugs": {
+    "name": "Plugs and switches",
+    "group": "Home",
+    "colours": [
+     "#A8E05F",
+     "#38482A",
+     "#9EB095",
+     "#D4F0AF",
+     "#496230"
+    ]
+   },
+   "gregg": {
+    "name": "Gregg (the vacuum)",
+    "group": "Home",
+    "colours": [
+     "#5BE0B3",
+     "#244840",
+     "#6CB0CB",
+     "#ADF0D9",
+     "#296253"
+    ]
+   },
+   "heating": {
+    "name": "Heating",
+    "group": "Climate",
+    "colours": [
+     "#FF8A4C",
+     "#4E3126",
+     "#D57989",
+     "#FFC4A6",
+     "#6E3D28"
+    ]
+   },
+   "cooling": {
+    "name": "Cooling and AC",
+    "group": "Climate",
+    "colours": [
+     "#6CC8FF",
+     "#284154",
+     "#77A1FC",
+     "#B6E4FF",
+     "#305773"
+    ]
+   },
+   "air": {
+    "name": "Air and fans",
+    "group": "Climate",
+    "colours": [
+     "#3FD0CF",
+     "#1C4348",
+     "#5AA6DD",
+     "#9FE8E7",
+     "#1D5B5F"
+    ]
+   },
+   "energy": {
+    "name": "Electricity",
+    "group": "Energy and car",
+    "colours": [
+     "#F050F8",
+     "#4A2252",
+     "#CC54F7",
+     "#F8A8FC",
+     "#682570"
+    ]
+   },
+   "gas": {
+    "name": "Gas",
+    "group": "Energy and car",
+    "colours": [
+     "#7B61FF",
+     "#2C2754",
+     "#815FFC",
+     "#BDB0FF",
+     "#372C73"
+    ]
+   },
+   "car": {
+    "name": "Car and charger",
+    "group": "Energy and car",
+    "colours": [
+     "#4C8DFF",
+     "#203254",
+     "#637BFC",
+     "#A6C6FF",
+     "#233F73"
+    ]
+   },
+   "alarm": {
+    "name": "Alarm and security",
+    "group": "Security",
+    "colours": [
+     "#8A86FF",
+     "#303054",
+     "#8A77FC",
+     "#C4C2FF",
+     "#3D3C73"
+    ]
+   },
+   "doors": {
+    "name": "Doors and locks",
+    "group": "Security",
+    "colours": [
+     "#D2A8FF",
+     "#423954",
+     "#B88DFC",
+     "#E8D4FF",
+     "#5B4A73"
+    ]
+   },
+   "alarm_home": {
+    "name": "Alarm: Armed Home",
+    "group": "Alarm states",
+    "colours": [
+     "#4DA3FF",
+     "#203854",
+     "#6389FC",
+     "#A6D1FF",
+     "#234873"
+    ]
+   },
+   "alarm_away": {
+    "name": "Alarm: Armed Away",
+    "group": "Alarm states",
+    "colours": [
+     "#F4736C",
+     "#4B2B2E",
+     "#CE6B9E",
+     "#FAB9B6",
+     "#693435"
+    ]
+   },
+   "alarm_off": {
+    "name": "Alarm: Disarmed",
+    "group": "Alarm states",
+    "colours": [
+     "#55C47C",
+     "#224032",
+     "#689FA8",
+     "#AAE2BE",
+     "#27563C"
+    ]
+   },
+   "arming_home": {
+    "name": "Alarm: Arming Home",
+    "group": "Alarm states",
+    "colours": [
+     "#FFAA1F",
+     "#4E3A1A",
+     "#4DA3FF",
+     "#FFD48F",
+     "#6E4B15"
+    ]
+   },
+   "arming_away": {
+    "name": "Alarm: Arming Away",
+    "group": "Alarm states",
+    "colours": [
+     "#FF8533",
+     "#4E301F",
+     "#F4736C",
+     "#FFC299",
+     "#6E3B1E"
+    ]
+   },
+   "media": {
+    "name": "Media and music",
+    "group": "Media and people",
+    "colours": [
+     "#FF6F91",
+     "#4E2A37",
+     "#D568B5",
+     "#FFB7C8",
+     "#6E3245"
+    ]
+   },
+   "people": {
+    "name": "People and presence",
+    "group": "Media and people",
+    "colours": [
+     "#55C47C",
+     "#224032",
+     "#689FA8",
+     "#AAE2BE",
+     "#27563C"
+    ]
+   },
+   "tasks": {
+    "name": "To-do and lists",
+    "group": "Lists and time",
+    "colours": [
+     "#A5B4FC",
+     "#373C53",
+     "#9C94FA",
+     "#D2DAFE",
+     "#484F72"
+    ]
+   },
+   "shopping": {
+    "name": "Shopping",
+    "group": "Lists and time",
+    "colours": [
+     "#FF9C8A",
+     "#4E3636",
+     "#D585B1",
+     "#FFCEC4",
+     "#6E4542"
+    ]
+   },
+   "calendar": {
+    "name": "Calendar and events",
+    "group": "Lists and time",
+    "colours": [
+     "#D9A441",
+     "#443823",
+     "#BD8A82",
+     "#ECD2A0",
+     "#5E4823"
+    ]
+   },
+   "sunny": {
+    "name": "Weather: sunny",
+    "group": "Weather and sport",
+    "colours": [
+     "#FFD27A",
+     "#4E4431",
+     "#D5A8A7",
+     "#FFE8BC",
+     "#6E5C3B"
+    ]
+   },
+   "night": {
+    "name": "Weather: night",
+    "group": "Weather and sport",
+    "colours": [
+     "#5C6BC0",
+     "#242944",
+     "#6D66D3",
+     "#AEB5E0",
+     "#2A3059"
+    ]
+   },
+   "rain": {
+    "name": "Weather: rain and cloud",
+    "group": "Weather and sport",
+    "colours": [
+     "#8FA6B8",
+     "#313842",
+     "#8E8BCE",
+     "#C7D2DC",
+     "#3F4955"
+    ]
+   },
+   "snow": {
+    "name": "Weather: snow",
+    "group": "Weather and sport",
+    "colours": [
+     "#BFE8FF",
+     "#3E4A54",
+     "#ACB6FC",
+     "#DFF4FF",
+     "#536573"
+    ]
+   },
+   "storm": {
+    "name": "Weather: storm",
+    "group": "Weather and sport",
+    "colours": [
+     "#8E7CC3",
+     "#312E44",
+     "#8D70D5",
+     "#C6BEE1",
+     "#3F385A"
+    ]
+   },
+   "sport": {
+    "name": "Sport",
+    "group": "Weather and sport",
+    "colours": [
+     "#6CABDD",
+     "#283A4B",
+     "#778FE6",
+     "#B6D5EE",
+     "#304B65"
+    ]
+   },
+   "ok": {
+    "name": "OK",
+    "group": "Status",
+    "colours": [
+     "#55C47C",
+     "#224032",
+     "#689FA8",
+     "#AAE2BE",
+     "#27563C"
+    ]
+   },
+   "warn": {
+    "name": "Needs attention",
+    "group": "Status",
+    "colours": [
+     "#F0B13A",
+     "#4A3B21",
+     "#CC927E",
+     "#F8D89C",
+     "#684E20"
+    ]
+   },
+   "bad": {
+    "name": "Wrong",
+    "group": "Status",
+    "colours": [
+     "#FF6B6B",
+     "#4E292E",
+     "#D5669D",
+     "#FFB5B5",
+     "#6E3035"
+    ]
+   }
+  },
+  "alarm_states": [
+   "alarm_home",
+   "alarm_away",
+   "alarm_off",
+   "arming_home",
+   "arming_away"
+  ]
+ },
+ "kind_palettes": {
+  "note": "The glow palette (Colour, Accent, Light) Home Assistant adds to a card of each kind when the card does not send its own. Applied in ha/clive-show-card.yaml.",
+  "kinds": {
+   "energy": [
+    "#F050F8",
+    "#CC54F7",
+    "#F8A8FC"
+   ],
+   "people": [
+    "#55C47C",
+    "#689FA8",
+    "#AAE2BE"
+   ],
+   "music": [
+    "#FF6F91",
+    "#D568B5",
+    "#FFB7C8"
+   ],
+   "media": [
+    "#FF6F91",
+    "#D568B5",
+    "#FFB7C8"
+   ],
+   "car": [
+    "#4C8DFF",
+    "#637BFC",
+    "#A6C6FF"
+   ],
+   "climate": [
+    "#FF8A4C",
+    "#D57989",
+    "#FFC4A6"
+   ],
+   "gregg": [
+    "#5BE0B3",
+    "#6CB0CB",
+    "#ADF0D9"
+   ],
+   "air": [
+    "#3FD0CF",
+    "#5AA6DD",
+    "#9FE8E7"
+   ],
+   "secure": [
+    "#8A86FF",
+    "#8A77FC",
+    "#C4C2FF"
+   ],
+   "doors": [
+    "#D2A8FF",
+    "#B88DFC",
+    "#E8D4FF"
+   ],
+   "tasks": [
+    "#A5B4FC",
+    "#9C94FA",
+    "#D2DAFE"
+   ],
+   "devices": [
+    "#F0B13A",
+    "#CC927E",
+    "#F8D89C"
+   ],
+   "lights": [
+    "#FFC857",
+    "#D5A190",
+    "#FFE4AB"
+   ],
+   "heat": [
+    "#FF8A4C",
+    "#D57989",
+    "#FFC4A6"
+   ],
+   "shop": [
+    "#FF9C8A",
+    "#D585B1",
+    "#FFCEC4"
+   ],
+   "event": [
+    "#D9A441",
+    "#BD8A82",
+    "#ECD2A0"
+   ],
+   "reminder": [
+    "#D9A441",
+    "#BD8A82",
+    "#ECD2A0"
+   ]
+  }
+ }
+}

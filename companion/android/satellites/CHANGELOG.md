@@ -1,5 +1,8 @@
 # Church Drive Satellites: changelog
 
+## 0.101.0
+
+- No change in this app. Icons and cards are now also available as files from Home Assistant (docs/CLIVE-ASSETS.md); the app does not read them yet.
 ## 0.100.1
 
 - No change to the Satellites app; version kept in step.
