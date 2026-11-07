@@ -7,6 +7,7 @@ import { SUFFIX, LABEL } from './suffix.js';
 import { KIT_COLOR, kitCompact, kitCompactable, KIT_CARD_BG, kitCanUse } from './card-kit.js';
 import { sceneBackground, sceneIcon, scenePalette, loadSceneStyles, onSceneStylesChanged } from './scene-style.js';
 import { DemoHome } from './demo-home.js';
+import { cvar } from './clive-colours.js';
 import { SECURITY_ACTIVE, SECURITY_COLOR, isSecurityRow, watchValue } from './security-mode.js';
 import { iconHtml, hydrateIcons } from './icons.js';
 import {
@@ -46,13 +47,13 @@ function lccKelvinColor(k) {
 }
 
 
-// A room (a group of lights) shows the colour of its main lights, not of its Ambience: the group reports the colour of whichever member changed
-// last, and the Ambience strip is often a colour while the room itself is white.
+// A room (a group of lights) shows the colour of its ceiling light when that is on (it has a colour of its own when someone sets one); otherwise the
+// house's Lights colour. The group itself reports the colour of whichever member changed last, which is how the Ambience strip's colour got on the room.
 function lccGroupColor(hass, st, entityId) {
-  const main = lccMembersOf(hass, entityId)
+  const ceiling = lccMembersOf(hass, entityId)
     .map((id) => hass.states[id])
-    .filter((m) => m && m.state === 'on' && !lccIsGroupLike(m) && !/ambien/i.test(`${m.entity_id} ${(m.attributes && m.attributes.friendly_name) || ''}`));
-  return main.length ? lccLightColor(main[0]) : lccLightColor(st);
+    .find((m) => m && m.state === 'on' && !lccIsGroupLike(m) && /ceiling/i.test(`${m.entity_id} ${(m.attributes && m.attributes.friendly_name) || ''}`));
+  return ceiling ? lccLightColor(ceiling) : cvar('lights');
 }
 
 function lccLightColor(st) {

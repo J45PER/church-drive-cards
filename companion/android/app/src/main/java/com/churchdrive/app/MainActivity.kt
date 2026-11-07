@@ -179,6 +179,7 @@ class MainActivity : ComponentActivity() {
                             LocalHaApi provides vm.haApi,
                             LocalUserName provides userName,
                             com.churchdrive.app.ui.LocalAreaNames provides areaNames,
+                            com.churchdrive.app.ui.LocalRegistry provides registry,
                             com.churchdrive.app.ui.LocalCanRetrySignIn provides vm.canRetrySignIn,
                         ) {
                             if (signedIn) {
