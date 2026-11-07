@@ -14,13 +14,13 @@ object CliveColours {
     /** Lights. */
     val Lights = EntityColours(Color(0xFFFFC857), Color(0xFF4E4128), Color(0xFFD5A190), Color(0xFFFFE4AB), Color(0xFF6E572D))
     /** Blinds and windows. */
-    val Blinds = EntityColours(Color(0xFF8FA9C4), Color(0xFF313945), Color(0xFF8E8DD6), Color(0xFFC7D4E2), Color(0xFF3F4A5A))
+    val Blinds = EntityColours(Color(0xFF5FA9C4), Color(0xFF253945), Color(0xFF6F8DD6), Color(0xFFAFD4E2), Color(0xFF2B4A5A))
     /** Plugs and switches. */
     val Plugs = EntityColours(Color(0xFFA8E05F), Color(0xFF38482A), Color(0xFF9EB095), Color(0xFFD4F0AF), Color(0xFF496230))
     /** Gregg (the vacuum). */
     val Gregg = EntityColours(Color(0xFF4C8DFF), Color(0xFF203254), Color(0xFF637BFC), Color(0xFFA6C6FF), Color(0xFF233F73))
     /** Heating. */
-    val Heating = EntityColours(Color(0xFFFF8A4C), Color(0xFF4E3126), Color(0xFFD57989), Color(0xFFFFC4A6), Color(0xFF6E3D28))
+    val Heating = EntityColours(Color(0xFFFF6C2C), Color(0xFF4E291D), Color(0xFFD56675), Color(0xFFFFB696), Color(0xFF6E311B))
     /** Cooling and AC. */
     val Cooling = EntityColours(Color(0xFF6CC8FF), Color(0xFF284154), Color(0xFF77A1FC), Color(0xFFB6E4FF), Color(0xFF305773))
     /** Air and fans. */
@@ -30,33 +30,33 @@ object CliveColours {
     /** Gas. */
     val Gas = EntityColours(Color(0xFF7B61FF), Color(0xFF2C2754), Color(0xFF815FFC), Color(0xFFBDB0FF), Color(0xFF372C73))
     /** Car and charger. */
-    val Car = EntityColours(Color(0xFF5BE0B3), Color(0xFF244840), Color(0xFF6CB0CB), Color(0xFFADF0D9), Color(0xFF296253))
+    val Car = EntityColours(Color(0xFF00C6F9), Color(0xFF0C4153), Color(0xFF32A0F8), Color(0xFF80E3FC), Color(0xFF035771))
     /** Alarm and security. */
     val Alarm = EntityColours(Color(0xFF8A86FF), Color(0xFF303054), Color(0xFF8A77FC), Color(0xFFC4C2FF), Color(0xFF3D3C73))
     /** Doors and locks. */
     val Doors = EntityColours(Color(0xFFD2A8FF), Color(0xFF423954), Color(0xFFB88DFC), Color(0xFFE8D4FF), Color(0xFF5B4A73))
     /** Alarm: Armed Home. */
-    val AlarmHome = EntityColours(Color(0xFF4DA3FF), Color(0xFF203854), Color(0xFF6389FC), Color(0xFFA6D1FF), Color(0xFF234873))
+    val AlarmHome = EntityColours(Color(0xFF2E62FF), Color(0xFF182754), Color(0xFF4F60FC), Color(0xFF97B1FF), Color(0xFF162D73))
     /** Alarm: Armed Away. */
     val AlarmAway = EntityColours(Color(0xFFF4736C), Color(0xFF4B2B2E), Color(0xFFCE6B9E), Color(0xFFFAB9B6), Color(0xFF693435))
     /** Alarm: Disarmed. */
-    val AlarmOff = EntityColours(Color(0xFF55C47C), Color(0xFF224032), Color(0xFF689FA8), Color(0xFFAAE2BE), Color(0xFF27563C))
+    val AlarmOff = EntityColours(Color(0xFF36E67C), Color(0xFF1A4932), Color(0xFF55B4A8), Color(0xFF9BF3BE), Color(0xFF1A643C))
     /** Alarm: Arming Home. */
-    val ArmingHome = EntityColours(Color(0xFFFFAA1F), Color(0xFF4E3A1A), Color(0xFF4DA3FF), Color(0xFFFFD48F), Color(0xFF6E4B15))
+    val ArmingHome = EntityColours(Color(0xFFFFAA1F), Color(0xFF4E3A1A), Color(0xFF2E62FF), Color(0xFFFFD48F), Color(0xFF6E4B15))
     /** Alarm: Arming Away. */
     val ArmingAway = EntityColours(Color(0xFFFF8533), Color(0xFF4E301F), Color(0xFFF4736C), Color(0xFFFFC299), Color(0xFF6E3B1E))
     /** Media and music. */
     val Media = EntityColours(Color(0xFFFF6F91), Color(0xFF4E2A37), Color(0xFFD568B5), Color(0xFFFFB7C8), Color(0xFF6E3245))
     /** People and presence. */
-    val People = EntityColours(Color(0xFF55C47C), Color(0xFF224032), Color(0xFF689FA8), Color(0xFFAAE2BE), Color(0xFF27563C))
+    val People = EntityColours(Color(0xFF00AE7C), Color(0xFF0C3B32), Color(0xFF3290A8), Color(0xFF80D7BE), Color(0xFF034D3C))
     /** To-do and lists (My to-do). */
     val Tasks = EntityColours(Color(0xFFA5B4FC), Color(0xFF373C53), Color(0xFF9C94FA), Color(0xFFD2DAFE), Color(0xFF484F72))
     /** Shopping (and shopping lists). */
     val Shopping = EntityColours(Color(0xFFFF9C8A), Color(0xFF4E3636), Color(0xFFD585B1), Color(0xFFFFCEC4), Color(0xFF6E4542))
     /** Calendar and events. */
-    val Calendar = EntityColours(Color(0xFFD9A441), Color(0xFF443823), Color(0xFFBD8A82), Color(0xFFECD2A0), Color(0xFF5E4823))
+    val Calendar = EntityColours(Color(0xFFD9A4D4), Color(0xFF443849), Color(0xFFBD8AE0), Color(0xFFECD2EA), Color(0xFF5E4861))
     /** Weather: sunny. */
-    val Sunny = EntityColours(Color(0xFFFFD27A), Color(0xFF4E4431), Color(0xFFD5A8A7), Color(0xFFFFE8BC), Color(0xFF6E5C3B))
+    val Sunny = EntityColours(Color(0xFFFFE552), Color(0xFF4E4927), Color(0xFFD5B48D), Color(0xFFFFF2A9), Color(0xFF6E642B))
     /** Weather: night. */
     val Night = EntityColours(Color(0xFF5C6BC0), Color(0xFF242944), Color(0xFF6D66D3), Color(0xFFAEB5E0), Color(0xFF2A3059))
     /** Weather: rain and cloud. */
@@ -64,21 +64,21 @@ object CliveColours {
     /** Weather: snow. */
     val Snow = EntityColours(Color(0xFFBFE8FF), Color(0xFF3E4A54), Color(0xFFACB6FC), Color(0xFFDFF4FF), Color(0xFF536573))
     /** Weather: storm. */
-    val Storm = EntityColours(Color(0xFF8E7CC3), Color(0xFF312E44), Color(0xFF8D70D5), Color(0xFFC6BEE1), Color(0xFF3F385A))
+    val Storm = EntityColours(Color(0xFF8E88C1), Color(0xFF313144), Color(0xFF8D78D4), Color(0xFFC7C4E0), Color(0xFF3F3D59))
     /** Sport. */
     val Sport = EntityColours(Color(0xFF6CABDD), Color(0xFF283A4B), Color(0xFF778FE6), Color(0xFFB6D5EE), Color(0xFF304B65))
     /** OK. */
     val Ok = EntityColours(Color(0xFF55C47C), Color(0xFF224032), Color(0xFF689FA8), Color(0xFFAAE2BE), Color(0xFF27563C))
     /** Needs attention. */
-    val Warn = EntityColours(Color(0xFFF0B13A), Color(0xFF4A3B21), Color(0xFFCC927E), Color(0xFFF8D89C), Color(0xFF684E20))
+    val Warn = EntityColours(Color(0xFFF0863A), Color(0xFF4A3021), Color(0xFFCC777E), Color(0xFFF8C39D), Color(0xFF683C20))
     /** Wrong. */
-    val Bad = EntityColours(Color(0xFFFF6B6B), Color(0xFF4E292E), Color(0xFFD5669D), Color(0xFFFFB5B5), Color(0xFF6E3035))
+    val Bad = EntityColours(Color(0xFFFF4B56), Color(0xFF4E2128), Color(0xFFD55190), Color(0xFFFFA5AB), Color(0xFF6E232C))
     /** Shared to-do. */
-    val TodoShared = EntityColours(Color(0xFF8FA9C4), Color(0xFF313945), Color(0xFF8E8DD6), Color(0xFFC7D4E2), Color(0xFF3F4A5A))
+    val TodoShared = EntityColours(Color(0xFF2FB2D8), Color(0xFF183C4A), Color(0xFF5093E3), Color(0xFF97D8EC), Color(0xFF174E63))
     /** To-do from the house. */
     val TodoHouse = EntityColours(Color(0xFF7E6DB5), Color(0xFF2D2A41), Color(0xFF8367CC), Color(0xFFBEB6DA), Color(0xFF383154))
     /** Jamie. */
-    val PersonJamie = EntityColours(Color(0xFF0087A8), Color(0xFF0C303D), Color(0xFF3278C4), Color(0xFF80C3D4), Color(0xFF033C4F))
+    val PersonJamie = EntityColours(Color(0xFF0087A8), Color(0xFF0C303D), Color(0xFFCFFF00), Color(0xFF80C3D4), Color(0xFF033C4F))
     /** Hayley. */
     val PersonHayley = EntityColours(Color(0xFFD568B5), Color(0xFF432841), Color(0xFFBA64CC), Color(0xFFEAB4DA), Color(0xFF5C2F54))
     /** Ian. */

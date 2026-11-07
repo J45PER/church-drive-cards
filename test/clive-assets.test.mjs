@@ -52,17 +52,17 @@ test('the generated colour files are up to date with cards.json', async () => {
 test('the dashboard theme sets the named colours and the status colours from the palette', async () => {
   const { cliveThemeCss } = await import('../src/clive-theme.js');
   const css = cliveThemeCss();
-  assert.match(css, /--green-color: #55c47c;/);
-  assert.match(css, /--error-color: #ff6b6b;/);
+  assert.ok(css.includes(`--green-color: ${cards.entity_colours.types.ok.colours[0].toLowerCase()};`));
+  assert.ok(css.includes(`--error-color: ${cards.entity_colours.types.bad.colours[0].toLowerCase()};`));
   assert.match(css, /--rgb-primary-color: \d+, \d+, \d+;/);
 });
 
-test('a card colour can be a palette name, and Cleaning (Gregg) is the bright blue while the car is the mint', async () => {
+test('a card colour can be a palette name: each name has its own variable', async () => {
   const { cliveThemeCss } = await import('../src/clive-theme.js');
   const css = cliveThemeCss();
-  assert.match(css, /--lights-color: #ffc857;/);
-  assert.match(css, /--gregg-color: #4c8dff;/);
-  assert.match(css, /--car-color: #5be0b3;/);
+  assert.ok(css.includes(`--lights-color: ${cards.entity_colours.types.lights.colours[0].toLowerCase()};`));
+  assert.ok(css.includes(`--gregg-color: ${cards.entity_colours.types.gregg.colours[0].toLowerCase()};`));
+  assert.ok(css.includes(`--car-color: ${cards.entity_colours.types.car.colours[0].toLowerCase()};`));
 });
 
 test('the list of colour names is one list: aliases point at real names and the apps know every name', async () => {

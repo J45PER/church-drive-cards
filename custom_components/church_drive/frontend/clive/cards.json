@@ -1,6 +1,6 @@
 {
  "version": 1,
- "app": "0.105.0",
+ "app": "0.105.1",
  "$comment": "Clive's card layouts, palettes and animations as data. Edit here, run `node tools/export-clive-assets.mjs`, and Home Assistant serves the result at /church_drive/clive/cards.json. A new KIND of card still needs code in the apps; everything else (icons, palettes, which icon a card shows, its fields, its animation) is data.",
  "palettes": {
   "Base": [
@@ -884,11 +884,11 @@
     "name": "Blinds and windows",
     "group": "Home",
     "colours": [
-     "#8FA9C4",
-     "#313945",
-     "#8E8DD6",
-     "#C7D4E2",
-     "#3F4A5A"
+     "#5FA9C4",
+     "#253945",
+     "#6F8DD6",
+     "#AFD4E2",
+     "#2B4A5A"
     ]
    },
    "plugs": {
@@ -917,11 +917,11 @@
     "name": "Heating",
     "group": "Climate",
     "colours": [
-     "#FF8A4C",
-     "#4E3126",
-     "#D57989",
-     "#FFC4A6",
-     "#6E3D28"
+     "#FF6C2C",
+     "#4E291D",
+     "#D56675",
+     "#FFB696",
+     "#6E311B"
     ]
    },
    "cooling": {
@@ -972,11 +972,11 @@
     "name": "Car and charger",
     "group": "Energy and car",
     "colours": [
-     "#5BE0B3",
-     "#244840",
-     "#6CB0CB",
-     "#ADF0D9",
-     "#296253"
+     "#00C6F9",
+     "#0C4153",
+     "#32A0F8",
+     "#80E3FC",
+     "#035771"
     ]
    },
    "alarm": {
@@ -1005,11 +1005,11 @@
     "name": "Alarm: Armed Home",
     "group": "Alarm states",
     "colours": [
-     "#4DA3FF",
-     "#203854",
-     "#6389FC",
-     "#A6D1FF",
-     "#234873"
+     "#2E62FF",
+     "#182754",
+     "#4F60FC",
+     "#97B1FF",
+     "#162D73"
     ]
    },
    "alarm_away": {
@@ -1027,11 +1027,11 @@
     "name": "Alarm: Disarmed",
     "group": "Alarm states",
     "colours": [
-     "#55C47C",
-     "#224032",
-     "#689FA8",
-     "#AAE2BE",
-     "#27563C"
+     "#36E67C",
+     "#1A4932",
+     "#55B4A8",
+     "#9BF3BE",
+     "#1A643C"
     ]
    },
    "arming_home": {
@@ -1040,7 +1040,7 @@
     "colours": [
      "#FFAA1F",
      "#4E3A1A",
-     "#4DA3FF",
+     "#2E62FF",
      "#FFD48F",
      "#6E4B15"
     ]
@@ -1071,11 +1071,11 @@
     "name": "People and presence",
     "group": "Media and people",
     "colours": [
-     "#55C47C",
-     "#224032",
-     "#689FA8",
-     "#AAE2BE",
-     "#27563C"
+     "#00AE7C",
+     "#0C3B32",
+     "#3290A8",
+     "#80D7BE",
+     "#034D3C"
     ]
    },
    "tasks": {
@@ -1104,22 +1104,22 @@
     "name": "Calendar and events",
     "group": "Lists and time",
     "colours": [
-     "#D9A441",
-     "#443823",
-     "#BD8A82",
-     "#ECD2A0",
-     "#5E4823"
+     "#D9A4D4",
+     "#443849",
+     "#BD8AE0",
+     "#ECD2EA",
+     "#5E4861"
     ]
    },
    "sunny": {
     "name": "Weather: sunny",
     "group": "Weather and sport",
     "colours": [
-     "#FFD27A",
-     "#4E4431",
-     "#D5A8A7",
-     "#FFE8BC",
-     "#6E5C3B"
+     "#FFE552",
+     "#4E4927",
+     "#D5B48D",
+     "#FFF2A9",
+     "#6E642B"
     ]
    },
    "night": {
@@ -1159,11 +1159,11 @@
     "name": "Weather: storm",
     "group": "Weather and sport",
     "colours": [
-     "#8E7CC3",
-     "#312E44",
-     "#8D70D5",
-     "#C6BEE1",
-     "#3F385A"
+     "#8E88C1",
+     "#313144",
+     "#8D78D4",
+     "#C7C4E0",
+     "#3F3D59"
     ]
    },
    "sport": {
@@ -1192,33 +1192,33 @@
     "name": "Needs attention",
     "group": "Status",
     "colours": [
-     "#F0B13A",
-     "#4A3B21",
-     "#CC927E",
-     "#F8D89C",
-     "#684E20"
+     "#F0863A",
+     "#4A3021",
+     "#CC777E",
+     "#F8C39D",
+     "#683C20"
     ]
    },
    "bad": {
     "name": "Wrong",
     "group": "Status",
     "colours": [
-     "#FF6B6B",
-     "#4E292E",
-     "#D5669D",
-     "#FFB5B5",
-     "#6E3035"
+     "#FF4B56",
+     "#4E2128",
+     "#D55190",
+     "#FFA5AB",
+     "#6E232C"
     ]
    },
    "todo_shared": {
     "name": "Shared to-do",
     "group": "Lists and time",
     "colours": [
-     "#8FA9C4",
-     "#313945",
-     "#8E8DD6",
-     "#C7D4E2",
-     "#3F4A5A"
+     "#2FB2D8",
+     "#183C4A",
+     "#5093E3",
+     "#97D8EC",
+     "#174E63"
     ]
    },
    "todo_house": {
@@ -1238,7 +1238,7 @@
     "colours": [
      "#0087A8",
      "#0C303D",
-     "#3278C4",
+     "#CFFF00",
      "#80C3D4",
      "#033C4F"
     ]

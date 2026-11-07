@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.105.1
+
+- The built-in colours match the ones set on the review page (they were already live from Home Assistant). The update banner and the phone set-up banner use the neutral colours.
+
 ## 0.105.0
 
 - **Live colours.** The app fetches the palettes from Home Assistant (`church_drive/colours`) when it connects and whenever `sensor.church_drive_colours` changes, uses them at once and keeps the last ones on the phone; a palette changed in Home Assistant needs no app update. Palettes it does not know by name show on the dashboards and in the app after a release. Colours named directly in code (a few hard references to a palette's Colour) still change only with a release.
