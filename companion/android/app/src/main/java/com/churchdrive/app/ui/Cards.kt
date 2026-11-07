@@ -109,6 +109,15 @@ fun EntityCard(
     }
 }
 
+/** A status as a pill: the card's strong colour on a faint wash of itself. Every card's status goes in one (the rest of the text is white). */
+@Composable
+fun StatusPill(text: String, tone: ToneColors, modifier: Modifier = Modifier) {
+    androidx.compose.material3.Text(
+        text, color = tone.accent, style = androidx.compose.material3.MaterialTheme.typography.labelMedium, maxLines = 1,
+        modifier = modifier.background(tone.accent.copy(alpha = 0.18f), androidx.compose.foundation.shape.CircleShape).padding(horizontal = 10.dp, vertical = 3.dp),
+    )
+}
+
 /** A glow colour for a card ground: the ground's hue, bright and clear, turned [shift] degrees. A grey ground (off, unavailable) has none. */
 fun glowColour(ground: Color, shift: Float): Color? {
     val hsv = FloatArray(3)
@@ -128,9 +137,11 @@ fun Modifier.glowBehind(ground: Color): Modifier {
     if (a == null || b == null) return this
     val transition = androidx.compose.animation.core.rememberInfiniteTransition(label = "glow")
     val phase by transition.animateFloat(
+        // The second blob turns 1.3 times as fast the other way, so the angle runs 3600 degrees (ten turns for the first, thirteen for the second):
+        // both end where they began and the loop has no jump. The pace is Clive's, one turn in 16 seconds.
         initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(18000, easing = androidx.compose.animation.core.LinearEasing)),
+        targetValue = 3600f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(160_000, easing = androidx.compose.animation.core.LinearEasing)),
         label = "glowPhase",
     )
     return this.drawBehind {

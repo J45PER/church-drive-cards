@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.111.1
+
+- Text on the dark cards is white, with colour kept for status pills, selected buttons, gauges and lines, and for temperatures, alarm status and section titles. Gregg's state and each section's summary are pills like the car's.
+- The card glow loops without a jump: its second blob used to snap back at the end of each turn.
+
 ## 0.111.0
 
 - The air purifier graph is coloured by value (green, yellow, orange, red along the PM2.5 bands) like the dashboard's. On the dark cards, text and icons use the palette's light colour rather than each card's own colour; the colour stays on selected buttons, gauges and lines.

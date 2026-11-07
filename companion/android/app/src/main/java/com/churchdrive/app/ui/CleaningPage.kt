@@ -111,7 +111,7 @@ fun CleaningPage(entities: Map<String, EntityState>, call: CallService) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 GreggIcon(state, tone.accent, 72.dp, pct)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(state.word(), style = MaterialTheme.typography.headlineSmall)
+                    StatusPill(state.word(), tone)
                     val area = entities["sensor.gregg_cleaning_area"]?.state?.toDoubleOrNull()
                     val minutes = entities["sensor.gregg_cleaning_time"]?.state?.toDoubleOrNull()
                     val last = listOfNotNull(area?.let { "${Math.round(it)} m²" }, minutes?.let { "${Math.round(it)} min" }).joinToString(" · ")
@@ -120,7 +120,7 @@ fun CleaningPage(entities: Map<String, EntityState>, call: CallService) {
                         Text(it, style = MaterialTheme.typography.bodyMedium, color = red.accent)
                     }
                 }
-                Text(pct?.let { "${Math.round(it)}%" } ?: "–", style = MaterialTheme.typography.headlineMedium, color = tone.accent)
+                Text(pct?.let { "${Math.round(it)}%" } ?: "–", style = MaterialTheme.typography.headlineMedium)
             }
             HealthBar(((pct ?: 0.0) / 100.0).coerceIn(0.0, 1.0).toFloat(), tone.accent)
             IconRow(
@@ -265,7 +265,7 @@ private fun PickRow(label: String, options: List<String>, selected: String, icon
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 iconFor(selected)?.let { HaIcon(it, CdVectors.Info, tone.accent, 22.dp) }
-                Text(nice(selected), style = MaterialTheme.typography.titleSmall, color = tone.accent, maxLines = 1)
+                Text(nice(selected), style = MaterialTheme.typography.titleSmall, maxLines = 1)
                 Icon(CdVectors.ChevronDown, contentDescription = null, tint = tone.accent)
             }
             DropdownMenu(expanded = open, onDismissRequest = { open = false }) {

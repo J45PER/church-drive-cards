@@ -212,7 +212,7 @@ fun AirPurifierCard(config: JSONObject, entities: Map<String, EntityState>, call
             }
             if (pm != null) {
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("${pm.roundToInt()}", style = MaterialTheme.typography.headlineMedium, color = tone.accent)
+                    Text("${pm.roundToInt()}", style = MaterialTheme.typography.headlineMedium)
                     Text("PM2.5 · ${pmWord(pm)}", style = MaterialTheme.typography.bodySmall)
                 }
             }

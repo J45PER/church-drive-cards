@@ -103,7 +103,7 @@ test('live palettes from Home Assistant replace the shipped ones and add their v
 
 test('cards moved onto the palette have no colour of their own: every colour is a palette name', async () => {
   const { readFileSync } = await import('node:fs');
-  for (const f of ['climate-card.js', 'alarm-panel-card.js']) {
+  for (const f of ['climate-card.js', 'alarm-panel-card.js', 'security-mode.js']) {
     const code = readFileSync(`src/${f}`, 'utf8').split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
     assert.deepEqual(code.match(/#[0-9a-fA-F]{6}\b/g) || [], [], `${f} has a hard-coded colour`);
   }
