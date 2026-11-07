@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.114.0
+
+- Folding a section now minimises its cards to short strips instead of hiding them.
+- The purifier schedule's Edit button shows on every page it appears on (it only showed on Security), and its "Next:" line is easier to read.
+
 ## 0.113.2
 
 - No change to this app (dashboard cards only); version kept equal.

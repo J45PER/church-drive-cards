@@ -24,6 +24,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.Canvas
@@ -81,6 +82,9 @@ import kotlin.math.roundToInt
 private val CardShape = RoundedCornerShape(28.dp)
 
 /** The shared look of every entity card: a rounded card tinted in the entity's tone. */
+/** True while the section a card is in is folded: the card shows only its top, as a short strip. */
+val LocalCompactCards = androidx.compose.runtime.compositionLocalOf { false }
+
 @Composable
 fun EntityCard(
     container: Color,
@@ -92,6 +96,7 @@ fun EntityCard(
 ) {
     val openDevice = LocalOpenDevice.current
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val compact = LocalCompactCards.current
     Card(
         modifier = modifier.fillMaxWidth().then(
             if (deviceEntity == null) Modifier
@@ -106,7 +111,13 @@ fun EntityCard(
         colors = CardDefaults.cardColors(containerColor = container, contentColor = content),
     ) {
         Box(modifier = Modifier.glowBehind(container)) {
-            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) { body() }
+            // A minimised card (its section folded): just its top, as a short strip that can't be pressed.
+            val shrink = if (compact) {
+                Modifier.heightIn(max = 84.dp).clip(androidx.compose.ui.graphics.RectangleShape).pointerInput(Unit) {
+                    awaitPointerEventScope { while (true) awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial).changes.forEach { it.consume() } }
+                }
+            } else Modifier
+            Column(modifier = Modifier.then(shrink).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) { body() }
         }
     }
 }

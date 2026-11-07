@@ -1,6 +1,7 @@
 package com.churchdrive.app.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
@@ -223,6 +224,7 @@ fun HomeScreen(
                 else -> Unit
             }
 
+            androidx.compose.runtime.CompositionLocalProvider(LocalIsAdmin provides isAdmin) {
             if (page == Page.Home) {
                 HomePage(lights, areaNames, panels["home"].orEmpty(), entities, registry, call, onOpen = { if (it == Page.Todo) openTodo() else page = it }, onOpenTask = openTask)
             } else if (page == Page.Lighting) {
@@ -243,6 +245,7 @@ fun HomeScreen(
                     else -> "todo"
                 }
                 DashboardPage(panels[key].orEmpty().let { list -> if (page == Page.Cleaning) list.map { it.copy(icon = GREGG_IDLE_ICON) } else list }, entities, registry, call)
+            }
             }
             // Room to scroll the last card clear of Clive's button.
             Spacer(Modifier.height(72.dp))
@@ -424,8 +427,9 @@ fun SectionPanel(
                 Icon(if (open) CdVectors.ChevronUp else CdVectors.ChevronDown, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        androidx.compose.animation.AnimatedVisibility(visible = open || !collapsible) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { content() }
+        // Folding minimises the cards (each shrinks to a short strip) rather than hiding them.
+        androidx.compose.runtime.CompositionLocalProvider(LocalCompactCards provides (collapsible && !open)) {
+            Column(Modifier.animateContentSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) { content() }
         }
     }
 }
