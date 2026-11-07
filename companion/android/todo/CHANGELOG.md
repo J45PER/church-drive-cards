@@ -6,6 +6,9 @@ Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newe
 ## 0.101.0
 
 - No change in this app. Icons and cards are now also available as files from Home Assistant (docs/CLIVE-ASSETS.md); the app does not read them yet.
+## 0.100.1
+
+- The to-do clock icon uses the common clock hands.
 
 ## 0.100.0
 
