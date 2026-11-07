@@ -10,18 +10,23 @@ Each name has five colours: Colour (the thing's own), Dark (the ground), Accent 
 
 | Name | Meaning | Colour | Dark | Accent | Light | Deep |
 |---|---|---|---|---|---|---|
-| `lights` | Lights | `#FFC857` | `#4E4128` | `#D5A190` | `#FFE4AB` | `#6E572D` |
-| `blinds` | Blinds and windows | `#5FA9C4` | `#253945` | `#6F8DD6` | `#AFD4E2` | `#2B4A5A` |
-| `plugs` | Plugs and switches | `#A8E05F` | `#38482A` | `#9EB095` | `#D4F0AF` | `#496230` |
-| `gregg` | Gregg (the vacuum) | `#4C8DFF` | `#203254` | `#637BFC` | `#A6C6FF` | `#233F73` |
+| `lights` | Lights | `#F2C464` | `#493A1D` | `#EF7E61` | `#F7E3BA` | `#6C5423` |
+| `blinds` | Blinds and windows | `#71BBD6` | `#253A41` | `#6187EF` | `#C4E3EE` | `#30525F` |
+| `plugs` | Plugs and switches | `#ABE165` | `#354422` | `#6FEF61` | `#DCF3BF` | `#4B642A` |
+| `gregg` | Gregg (the vacuum) | `#5991F2` | `#1D2D49` | `#7061EF` | `#BAD0F7` | `#233D6C` |
 
 ## Climate
 
 | Name | Meaning | Colour | Dark | Accent | Light | Deep |
 |---|---|---|---|---|---|---|
-| `heating` | Heating | `#FF6C2C` | `#4E291D` | `#D56675` | `#FFB696` | `#6E311B` |
-| `cooling` | Cooling and AC | `#6CC8FF` | `#284154` | `#77A1FC` | `#B6E4FF` | `#305773` |
-| `air` | Air and fans | `#3FD0CF` | `#1C4348` | `#5AA6DD` | `#9FE8E7` | `#1D5B5F` |
+| `heating` | Heating | `#F18555` | `#492A1D` | `#EF6178` | `#F7CDBA` | `#6C3923` |
+| `cooling` | Cooling and AC | `#77C5F4` | `#1D3849` | `#6178EF` | `#BAE0F7` | `#23516C` |
+| `air` | Air and fans | `#6CDBDA` | `#244242` | `#61AEEF` | `#C2F0F0` | `#2D6161` |
+| `eco` | Eco (climate) | `#7BDC9A` | `#24422E` | `#61EFD1` | `#C3EFD1` | `#2F603E` |
+| `humidity` | Humidity | `#B79CF2` | `#2C1F47` | `#D061EF` | `#CEBBF6` | `#3B2768` |
+| `quality_good` | Air quality: good | `#6FE3A0` | `#224430` | `#61EFE0` | `#BFF3D5` | `#2B6443` |
+| `quality_fair` | Air quality: fair | `#F7D15C` | `#493E1D` | `#EF8A61` | `#F7E8BA` | `#6C5A23` |
+| `quality_poor` | Air quality: poor | `#FF7B72` | `#49201D` | `#EF619A` | `#F7BEBA` | `#6C2823` |
 
 ## Energy and car
 
@@ -29,39 +34,39 @@ Each name has five colours: Colour (the thing's own), Dark (the ground), Accent 
 |---|---|---|---|---|---|---|
 | `energy` | Electricity | `#F050F8` | `#4A2252` | `#CC54F7` | `#F8A8FC` | `#682570` |
 | `gas` | Gas | `#7B61FF` | `#2C2754` | `#815FFC` | `#BDB0FF` | `#372C73` |
-| `car` | Car and charger | `#00C6F9` | `#0C4153` | `#32A0F8` | `#80E3FC` | `#035771` |
+| `car` | Car and charger | `#55D1F1` | `#1D4049` | `#6190EF` | `#BAEBF7` | `#235D6C` |
 
 ## Security
 
 | Name | Meaning | Colour | Dark | Accent | Light | Deep |
 |---|---|---|---|---|---|---|
-| `alarm` | Alarm and security | `#8A86FF` | `#303054` | `#8A77FC` | `#C4C2FF` | `#3D3C73` |
-| `doors` | Doors and locks | `#D2A8FF` | `#423954` | `#B88DFC` | `#E8D4FF` | `#5B4A73` |
+| `alarm` | Alarm and security | `#8884F5` | `#1F1D49` | `#A861EF` | `#BCBAF7` | `#25236C` |
+| `doors` | Doors and locks | `#BB84F5` | `#321D49` | `#E861EF` | `#D8BAF7` | `#46236C` |
 
 ## Alarm states
 
 | Name | Meaning | Colour | Dark | Accent | Light | Deep |
 |---|---|---|---|---|---|---|
-| `alarm_home` | Alarm: Armed Home | `#2E62FF` | `#182754` | `#4F60FC` | `#97B1FF` | `#162D73` |
-| `alarm_away` | Alarm: Armed Away | `#F4736C` | `#4B2B2E` | `#CE6B9E` | `#FAB9B6` | `#693435` |
-| `alarm_off` | Alarm: Disarmed | `#36E67C` | `#1A4932` | `#55B4A8` | `#9BF3BE` | `#1A643C` |
-| `arming_home` | Alarm: Arming Home | `#FFAA1F` | `#4E3A1A` | `#2E62FF` | `#FFD48F` | `#6E4B15` |
-| `arming_away` | Alarm: Arming Away | `#FF8533` | `#4E301F` | `#F4736C` | `#FFC299` | `#6E3B1E` |
+| `alarm_home` | Alarm: Armed Home | `#557CF1` | `#1D2849` | `#5E6CED` | `#BAC9F7` | `#23356C` |
+| `alarm_away` | Alarm: Armed Away | `#F3746D` | `#49201D` | `#CF6DA0` | `#F7BDBA` | `#6C2723` |
+| `alarm_off` | Alarm: Disarmed | `#5CEB95` | `#1F472F` | `#6ECFC2` | `#BBF7D3` | `#266941` |
+| `arming_home` | Alarm: Arming Home | `#F1B655` | `#49381D` | `#5177EC` | `#F7E0BA` | `#6C5023` |
+| `arming_away` | Alarm: Arming Away | `#F19455` | `#492F1D` | `#EF7771` | `#F7D3BA` | `#6C4023` |
 
 ## Media and people
 
 | Name | Meaning | Colour | Dark | Accent | Light | Deep |
 |---|---|---|---|---|---|---|
-| `media` | Media and music | `#FF6F91` | `#4E2A37` | `#D568B5` | `#FFB7C8` | `#6E3245` |
-| `people` | People and presence | `#00AE7C` | `#0C3B32` | `#3290A8` | `#80D7BE` | `#034D3C` |
+| `media` | Media and music | `#F47A97` | `#491D28` | `#EF61C5` | `#F7BAC9` | `#6C2334` |
+| `people` | People and presence | `#55F1C4` | `#1D493C` | `#61D6EF` | `#BAF7E6` | `#236C57` |
 
 ## Lists and time
 
 | Name | Meaning | Colour | Dark | Accent | Light | Deep |
 |---|---|---|---|---|---|---|
-| `tasks` | To-do and lists (My to-do) | `#A5B4FC` | `#373C53` | `#9C94FA` | `#D2DAFE` | `#484F72` |
-| `shopping` | Shopping (and shopping lists) | `#FF9C8A` | `#4E3636` | `#D585B1` | `#FFCEC4` | `#6E4542` |
-| `calendar` | Calendar and events | `#D9A4D4` | `#443849` | `#BD8AE0` | `#ECD2EA` | `#5E4861` |
+| `tasks` | To-do and lists (My to-do) | `#8498F5` | `#1D2549` | `#8B61EF` | `#BAC5F7` | `#23306C` |
+| `shopping` | Shopping (and shopping lists) | `#F59684` | `#49241D` | `#EF618E` | `#F7C4BA` | `#6C2E23` |
+| `calendar` | Calendar and events | `#E198DA` | `#41253E` | `#BA61EF` | `#EEC4EA` | `#5F305B` |
 | `todo_shared` | Shared to-do | `#2FB2D8` | `#183C4A` | `#5093E3` | `#97D8EC` | `#174E63` |
 | `todo_house` | To-do from the house | `#7E6DB5` | `#2D2A41` | `#8367CC` | `#BEB6DA` | `#383154` |
 
@@ -69,20 +74,25 @@ Each name has five colours: Colour (the thing's own), Dark (the ground), Accent 
 
 | Name | Meaning | Colour | Dark | Accent | Light | Deep |
 |---|---|---|---|---|---|---|
-| `sunny` | Weather: sunny | `#FFE552` | `#4E4927` | `#D5B48D` | `#FFF2A9` | `#6E642B` |
-| `night` | Weather: night | `#5C6BC0` | `#242944` | `#6D66D3` | `#AEB5E0` | `#2A3059` |
-| `rain` | Weather: rain and cloud | `#8FA6B8` | `#313842` | `#8E8BCE` | `#C7D2DC` | `#3F4955` |
-| `snow` | Weather: snow | `#BFE8FF` | `#3E4A54` | `#ACB6FC` | `#DFF4FF` | `#536573` |
-| `storm` | Weather: storm | `#8E88C1` | `#313144` | `#8D78D4` | `#C7C4E0` | `#3F3D59` |
-| `sport` | Sport | `#6CABDD` | `#283A4B` | `#778FE6` | `#B6D5EE` | `#304B65` |
+| `sunny` | Weather: sunny | `#F2DC5F` | `#49421D` | `#EF9861` | `#F7EEBA` | `#6C6123` |
+| `night` | Weather: night | `#7180D6` | `#252941` | `#8E61EF` | `#C4CAEE` | `#30375F` |
+| `rain` | Weather: rain and cloud | `#71AAD6` | `#253541` | `#616FEF` | `#C4DBEE` | `#304A5F` |
+| `snow` | Weather: snow | `#84CDF5` | `#1D3949` | `#617AEF` | `#BAE1F7` | `#23526C` |
+| `storm` | Weather: storm | `#7D73D6` | `#282541` | `#B361EF` | `#C8C4EE` | `#35305F` |
+| `sport` | Sport | `#6CABDD` | `#233543` | `#616EEF` | `#C1DBF1` | `#2D4A62` |
+| `partly_cloudy` | Weather: partly cloudy | `#F2D58A` | `#473C1F` | `#EF8561` | `#F7E6BA` | `#6A5725` |
+| `cloudy` | Weather: cloudy | `#A9B5C6` | `#2E3238` | `#6961EF` | `#D1D7E1` | `#3F4650` |
+| `fog` | Weather: fog | `#B3BFCB` | `#2E3338` | `#6166EF` | `#D2D9E0` | `#3F474F` |
+| `wind` | Weather: wind | `#8FD6C8` | `#273F3A` | `#61C9EF` | `#C7EBE4` | `#345B53` |
+| `hail` | Weather: hail | `#9CC8E8` | `#233643` | `#6171EF` | `#C1DDF1` | `#2D4C62` |
 
 ## Status
 
 | Name | Meaning | Colour | Dark | Accent | Light | Deep |
 |---|---|---|---|---|---|---|
-| `ok` | OK | `#55C47C` | `#224032` | `#689FA8` | `#AAE2BE` | `#27563C` |
-| `warn` | Needs attention | `#F0863A` | `#4A3021` | `#CC777E` | `#F8C39D` | `#683C20` |
-| `bad` | Wrong | `#FF4B56` | `#4E2128` | `#D55190` | `#FFA5AB` | `#6E232C` |
+| `ok` | OK | `#71D694` | `#25412F` | `#61EFD6` | `#C4EED2` | `#305F40` |
+| `warn` | Needs attention | `#F19655` | `#492F1D` | `#EF6168` | `#F7D4BA` | `#6C4123` |
+| `bad` | Wrong | `#F25962` | `#491D20` | `#EF61AC` | `#F7BABE` | `#6C2327` |
 
 ## People
 
@@ -98,6 +108,7 @@ Each name has five colours: Colour (the thing's own), Dark (the ground), Accent 
 | Name | Meaning | Colour | Dark | Accent | Light | Deep |
 |---|---|---|---|---|---|---|
 | `neutral` | Neutral (not an entity) | `#9AA4B2` | `#202733` | `#9AA4B2` | `#EEF1F5` | `#28303C` |
+| `unavailable` | Unavailable | `#6E7886` | `#303336` | `#6861EF` | `#D5D8DD` | `#43474C` |
 
 ## Changing a colour
 

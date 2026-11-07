@@ -346,9 +346,10 @@ fun ForecastHeader(config: JSONObject, entities: Map<String, EntityState>) {
         onDispose { if (subscription >= 0) api?.close(subscription) }
     }
     val weather = entities[entityId] ?: return
-    val tone = toneColors(Tone.Sunny)
+    val ground = toneColors(Tone.Grey)
+    val tone = toneColors(weatherTone(weather.state))
     val upcoming = points.filter { it.timeMs >= System.currentTimeMillis() - 30 * 60_000L }.take(12)
-    EntityCard(tone.container, tone.onContainer) {
+    EntityCard(ground.container, ground.onContainer) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ToneIconName(weatherIcon(weather.state), CdVectors.Info, tone, 48)
             Column(modifier = Modifier.weight(1f)) {
@@ -361,7 +362,7 @@ fun ForecastHeader(config: JSONObject, entities: Map<String, EntityState>) {
                 upcoming.forEach { p ->
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(44.dp)) {
                         Text(eventClock(p.timeMs).take(2), fontSize = 12.sp)
-                        HaIcon(weatherIcon(p.condition), CdVectors.Info, tone.accent, 24.dp, Modifier.padding(vertical = 4.dp))
+                        HaIcon(weatherIcon(p.condition), CdVectors.Info, toneColors(weatherTone(p.condition)).accent, 24.dp, Modifier.padding(vertical = 4.dp))
                         Text(p.temperature?.let { "${it.roundToInt()}°" } ?: "–", fontSize = 13.sp)
                     }
                 }

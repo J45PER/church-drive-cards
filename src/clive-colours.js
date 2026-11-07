@@ -2,37 +2,37 @@
 // Five colours per kind of thing: [colour, dark, accent, light, deep]; the neutral colours are for everything that is not an entity.
 export const CLIVE_SLOTS = ["colour","dark","accent","light","deep"];
 export const CLIVE = {
-  lights: ["#ffc857","#4e4128","#d5a190","#ffe4ab","#6e572d"],
-  blinds: ["#5fa9c4","#253945","#6f8dd6","#afd4e2","#2b4a5a"],
-  plugs: ["#a8e05f","#38482a","#9eb095","#d4f0af","#496230"],
-  gregg: ["#4c8dff","#203254","#637bfc","#a6c6ff","#233f73"],
-  heating: ["#ff6c2c","#4e291d","#d56675","#ffb696","#6e311b"],
-  cooling: ["#6cc8ff","#284154","#77a1fc","#b6e4ff","#305773"],
-  air: ["#3fd0cf","#1c4348","#5aa6dd","#9fe8e7","#1d5b5f"],
+  lights: ["#f2c464","#493a1d","#ef7e61","#f7e3ba","#6c5423"],
+  blinds: ["#71bbd6","#253a41","#6187ef","#c4e3ee","#30525f"],
+  plugs: ["#abe165","#354422","#6fef61","#dcf3bf","#4b642a"],
+  gregg: ["#5991f2","#1d2d49","#7061ef","#bad0f7","#233d6c"],
+  heating: ["#f18555","#492a1d","#ef6178","#f7cdba","#6c3923"],
+  cooling: ["#77c5f4","#1d3849","#6178ef","#bae0f7","#23516c"],
+  air: ["#6cdbda","#244242","#61aeef","#c2f0f0","#2d6161"],
   energy: ["#f050f8","#4a2252","#cc54f7","#f8a8fc","#682570"],
   gas: ["#7b61ff","#2c2754","#815ffc","#bdb0ff","#372c73"],
-  car: ["#00c6f9","#0c4153","#32a0f8","#80e3fc","#035771"],
-  alarm: ["#8a86ff","#303054","#8a77fc","#c4c2ff","#3d3c73"],
-  doors: ["#d2a8ff","#423954","#b88dfc","#e8d4ff","#5b4a73"],
-  alarm_home: ["#2e62ff","#182754","#4f60fc","#97b1ff","#162d73"],
-  alarm_away: ["#f4736c","#4b2b2e","#ce6b9e","#fab9b6","#693435"],
-  alarm_off: ["#36e67c","#1a4932","#55b4a8","#9bf3be","#1a643c"],
-  arming_home: ["#ffaa1f","#4e3a1a","#2e62ff","#ffd48f","#6e4b15"],
-  arming_away: ["#ff8533","#4e301f","#f4736c","#ffc299","#6e3b1e"],
-  media: ["#ff6f91","#4e2a37","#d568b5","#ffb7c8","#6e3245"],
-  people: ["#00ae7c","#0c3b32","#3290a8","#80d7be","#034d3c"],
-  tasks: ["#a5b4fc","#373c53","#9c94fa","#d2dafe","#484f72"],
-  shopping: ["#ff9c8a","#4e3636","#d585b1","#ffcec4","#6e4542"],
-  calendar: ["#d9a4d4","#443849","#bd8ae0","#ecd2ea","#5e4861"],
-  sunny: ["#ffe552","#4e4927","#d5b48d","#fff2a9","#6e642b"],
-  night: ["#5c6bc0","#242944","#6d66d3","#aeb5e0","#2a3059"],
-  rain: ["#8fa6b8","#313842","#8e8bce","#c7d2dc","#3f4955"],
-  snow: ["#bfe8ff","#3e4a54","#acb6fc","#dff4ff","#536573"],
-  storm: ["#8e88c1","#313144","#8d78d4","#c7c4e0","#3f3d59"],
-  sport: ["#6cabdd","#283a4b","#778fe6","#b6d5ee","#304b65"],
-  ok: ["#55c47c","#224032","#689fa8","#aae2be","#27563c"],
-  warn: ["#f0863a","#4a3021","#cc777e","#f8c39d","#683c20"],
-  bad: ["#ff4b56","#4e2128","#d55190","#ffa5ab","#6e232c"],
+  car: ["#55d1f1","#1d4049","#6190ef","#baebf7","#235d6c"],
+  alarm: ["#8884f5","#1f1d49","#a861ef","#bcbaf7","#25236c"],
+  doors: ["#bb84f5","#321d49","#e861ef","#d8baf7","#46236c"],
+  alarm_home: ["#557cf1","#1d2849","#5e6ced","#bac9f7","#23356c"],
+  alarm_away: ["#f3746d","#49201d","#cf6da0","#f7bdba","#6c2723"],
+  alarm_off: ["#5ceb95","#1f472f","#6ecfc2","#bbf7d3","#266941"],
+  arming_home: ["#f1b655","#49381d","#5177ec","#f7e0ba","#6c5023"],
+  arming_away: ["#f19455","#492f1d","#ef7771","#f7d3ba","#6c4023"],
+  media: ["#f47a97","#491d28","#ef61c5","#f7bac9","#6c2334"],
+  people: ["#55f1c4","#1d493c","#61d6ef","#baf7e6","#236c57"],
+  tasks: ["#8498f5","#1d2549","#8b61ef","#bac5f7","#23306c"],
+  shopping: ["#f59684","#49241d","#ef618e","#f7c4ba","#6c2e23"],
+  calendar: ["#e198da","#41253e","#ba61ef","#eec4ea","#5f305b"],
+  sunny: ["#f2dc5f","#49421d","#ef9861","#f7eeba","#6c6123"],
+  night: ["#7180d6","#252941","#8e61ef","#c4caee","#30375f"],
+  rain: ["#71aad6","#253541","#616fef","#c4dbee","#304a5f"],
+  snow: ["#84cdf5","#1d3949","#617aef","#bae1f7","#23526c"],
+  storm: ["#7d73d6","#282541","#b361ef","#c8c4ee","#35305f"],
+  sport: ["#6cabdd","#233543","#616eef","#c1dbf1","#2d4a62"],
+  ok: ["#71d694","#25412f","#61efd6","#c4eed2","#305f40"],
+  warn: ["#f19655","#492f1d","#ef6168","#f7d4ba","#6c4123"],
+  bad: ["#f25962","#491d20","#ef61ac","#f7babe","#6c2327"],
   todo_shared: ["#2fb2d8","#183c4a","#5093e3","#97d8ec","#174e63"],
   todo_house: ["#7e6db5","#2d2a41","#8367cc","#beb6da","#383154"],
   person_jamie: ["#0087a8","#0c303d","#cfff00","#80c3d4","#033c4f"],
@@ -40,6 +40,17 @@ export const CLIVE = {
   person_ian: ["#5a87cc","#233047","#6c78db","#acc3e6","#293c5e"],
   person_diane: ["#8f62d9","#31274a","#8e60e3","#c7b0ec","#3f2d63"],
   neutral: ["#9aa4b2","#202733","#9aa4b2","#eef1f5","#28303c"],
+  eco: ["#7bdc9a","#24422e","#61efd1","#c3efd1","#2f603e"],
+  humidity: ["#b79cf2","#2c1f47","#d061ef","#cebbf6","#3b2768"],
+  quality_good: ["#6fe3a0","#224430","#61efe0","#bff3d5","#2b6443"],
+  quality_fair: ["#f7d15c","#493e1d","#ef8a61","#f7e8ba","#6c5a23"],
+  quality_poor: ["#ff7b72","#49201d","#ef619a","#f7beba","#6c2823"],
+  partly_cloudy: ["#f2d58a","#473c1f","#ef8561","#f7e6ba","#6a5725"],
+  cloudy: ["#a9b5c6","#2e3238","#6961ef","#d1d7e1","#3f4650"],
+  fog: ["#b3bfcb","#2e3338","#6166ef","#d2d9e0","#3f474f"],
+  wind: ["#8fd6c8","#273f3a","#61c9ef","#c7ebe4","#345b53"],
+  hail: ["#9cc8e8","#233643","#6171ef","#c1ddf1","#2d4c62"],
+  unavailable: ["#6e7886","#303336","#6861ef","#d5d8dd","#43474c"],
 };
 export const CLIVE_NEUTRAL = {
   "light": {
@@ -65,6 +76,12 @@ export const CLIVE_NEUTRAL = {
 };
 
 export const CLIVE_ALIASES = {"green":"ok","light-green":"plugs","lime":"plugs","red":"bad","amber":"warn","orange":"warn","yellow":"lights","deep-orange":"heating","light-blue":"cooling","blue":"alarm_home","cyan":"air","teal":"air","indigo":"tasks","purple":"doors","deep-purple":"alarm","pink":"media","brown":"blinds","blue-grey":"rain","grey":"neutral","gray":"neutral","disabled":"neutral","coral":"shopping","salmon":"shopping","todo_cleaning":"gregg","todo_mine":"tasks","todo_shopping":"shopping"};
+
+/** A set's colour as a CSS value that follows the live palette: var(--lights-color, #hex). Use it for a card colour so a changed palette shows without a new build. */
+export function cvar(key) {
+  const c = clive(key);
+  return c ? `var(--${key}-color, ${c})` : undefined;
+}
 
 /** One slot of a set, e.g. clive('lights') is the colour, clive('lights', 'dark') its ground. */
 export function clive(key, slot = 'colour') {

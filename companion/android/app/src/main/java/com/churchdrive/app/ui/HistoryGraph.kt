@@ -341,7 +341,7 @@ private fun ClimateGraphBody(h: ClimateHistory, currentTemp: Double?, target: Do
     val cHigh = maxOf(cfg("comfort_high", type.high), cLow + 0.5)
     val hLow = cfg("humidity_low", 40.0)
     val hHigh = cfg("humidity_high", 60.0)
-    val purple = toneColors(Tone.Purple).accent
+    val purple = toneColors(Tone.Humidity).accent
     val green = toneColors(Tone.Green).accent
 
     val layers = mutableListOf<GraphLayer>()
