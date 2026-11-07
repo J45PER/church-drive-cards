@@ -6,7 +6,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 ## 0.111.1
 
-- No change to this app (a dashboard light card change); version kept equal.
+- The card glow loops without a jump: its second blob used to snap back at the end of each turn.
 
 ## 0.111.0
 

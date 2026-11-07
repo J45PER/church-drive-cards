@@ -128,9 +128,11 @@ fun Modifier.glowBehind(ground: Color): Modifier {
     if (a == null || b == null) return this
     val transition = androidx.compose.animation.core.rememberInfiniteTransition(label = "glow")
     val phase by transition.animateFloat(
+        // The second blob turns 1.3 times as fast the other way, so the angle runs 3600 degrees (ten turns for the first, thirteen for the second):
+        // both end where they began and the loop has no jump. The pace is Clive's, one turn in 16 seconds.
         initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(18000, easing = androidx.compose.animation.core.LinearEasing)),
+        targetValue = 3600f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(160_000, easing = androidx.compose.animation.core.LinearEasing)),
         label = "glowPhase",
     )
     return this.drawBehind {
