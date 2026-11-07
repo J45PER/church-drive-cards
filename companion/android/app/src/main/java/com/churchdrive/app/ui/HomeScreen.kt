@@ -66,6 +66,8 @@ fun HomeScreen(
     userName: String?,
     isAdmin: Boolean,
     statesLoaded: Boolean,
+    /** The app is checking its connection after being away: shows the same pill as syncing. */
+    refreshing: Boolean = false,
     updateAvailable: Boolean,
     account: AccountSettings,
     lights: LightLayout,
@@ -249,7 +251,7 @@ fun HomeScreen(
     // Clive, over the page, and his round button over him: one button, the same one shut or open.
     AssistantOverlay(onSettings = { panel = "settings" })
     AssistantFab()
-    LoadingPill(visible = connection != ConnectionState.AuthFailed && (connection != ConnectionState.Connected || !statesLoaded), connecting = connection != ConnectionState.Connected)
+    LoadingPill(visible = connection != ConnectionState.AuthFailed && (connection != ConnectionState.Connected || !statesLoaded || refreshing), connecting = connection != ConnectionState.Connected)
     if (openCamera != null && statesLoaded) CameraViewerFor(openCamera, entities, registry, call, onCameraClosed, answer = openCameraAnswer)
     AccountOverlay(
         panel, { panel = it }, userName, isAdmin, account, updateAvailable, onSignOut,

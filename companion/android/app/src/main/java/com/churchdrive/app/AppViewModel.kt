@@ -31,6 +31,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val connection: StateFlow<ConnectionState> = client.connection
     val entities: StateFlow<Map<String, EntityState>> = client.entities
     val userName: StateFlow<String?> = client.userName
+    val refreshing: StateFlow<Boolean> = client.refreshing
     val isAdmin: StateFlow<Boolean> = client.isAdmin
     val statesLoaded: StateFlow<Boolean> = client.statesLoaded
 

@@ -37,6 +37,9 @@ class HaClient(private val scope: CoroutineScope) {
 
     private val _userName = MutableStateFlow<String?>(null)
     val userName: StateFlow<String?> = _userName
+    private val _refreshing = MutableStateFlow(false)
+    /** True while [refreshUser] waits for an answer (the app checking its line after being away). */
+    val refreshing: StateFlow<Boolean> = _refreshing
 
     /** Whether the signed-in person is a Home Assistant administrator (`auth/current_user`). */
     private val _isAdmin = MutableStateFlow(false)
@@ -167,7 +170,9 @@ class HaClient(private val scope: CoroutineScope) {
      * [onResult] is false when nothing answered: the connection looks open but is dead, so the caller should connect again.
      */
     fun refreshUser(onResult: (Boolean) -> Unit = {}) {
+        _refreshing.value = true
         request("auth/current_user", timeoutMs = 5_000L) { result ->
+            _refreshing.value = false
             val me = result as? JSONObject
             if (me != null) {
                 me.optString("name").takeIf { it.isNotBlank() }?.let { _userName.value = it }
