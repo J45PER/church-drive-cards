@@ -120,7 +120,7 @@ fun TodoApp(vm: TodoModel) {
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         topBar = {
             MediumTopAppBar(
-                title = { Text(tab.title) },
+                title = { Text(tab.title, color = toneColors(tab.tone).accent) },
                 actions = {
                     // A round button with the person's initial opens the account panel, as in the main app.
                     PersonButton(vm.personName) { panel = "account" }
@@ -217,9 +217,17 @@ private fun TaskCard(vm: TodoModel, tab: TodoTab) {
                 }
             }
             if (tab.canAdd) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
+                androidx.compose.material3.TextField(
                     value = text, onValueChange = { text = it }, placeholder = { Text("Add a task") }, singleLine = true,
                     modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = androidx.compose.material3.TextFieldDefaults.colors(
+                        focusedContainerColor = tone.onContainer.copy(alpha = 0.12f), unfocusedContainerColor = tone.onContainer.copy(alpha = 0.08f),
+                        focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent, unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                        focusedTextColor = tone.onContainer, unfocusedTextColor = tone.onContainer,
+                        focusedPlaceholderColor = tone.onContainer.copy(alpha = 0.6f), unfocusedPlaceholderColor = tone.onContainer.copy(alpha = 0.6f),
+                        cursorColor = tone.accent,
+                    ),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { vm.add(tab, text); text = "" }),
                 )
@@ -234,16 +242,20 @@ private fun TaskCard(vm: TodoModel, tab: TodoTab) {
 }
 
 @Composable
-private fun checks(tone: ToneColors) = CheckboxDefaults.colors(checkedColor = tone.accent, uncheckedColor = tone.accent)
+private fun checks(tone: ToneColors) = CheckboxDefaults.colors(checkedColor = tone.accent, uncheckedColor = tone.onContainer.copy(alpha = 0.7f))
 
 @Composable
 private fun TaskRow(item: TodoItem, tone: ToneColors, onEdit: () -> Unit, onTick: () -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+    // Each task sits on a faint wash of the text colour, like the main app's to-do items; icons and text are light.
+    Row(
+        Modifier.fillMaxWidth().background(tone.onContainer.copy(alpha = 0.08f), RoundedCornerShape(16.dp)).padding(end = 12.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
         val list = shoppingIdOf(item.description)
         if (list.isNotEmpty()) {
             // A shopping or steps list has no tick of its own: it is finished by finishing its items, in the main Church Drive app.
             Box(Modifier.padding(12.dp)) {
-                Icon(if (isStepsTask(item.description)) CdVectors.Todo else CdVectors.Cart, contentDescription = null, tint = tone.accent)
+                Icon(if (isStepsTask(item.description)) CdVectors.Todo else CdVectors.Cart, contentDescription = null, tint = tone.onContainer)
             }
         } else {
             Checkbox(checked = false, onCheckedChange = { onTick() }, colors = checks(tone))
@@ -263,7 +275,7 @@ private fun TaskRow(item: TodoItem, tone: ToneColors, onEdit: () -> Unit, onTick
 private fun HouseRow(item: TodoItem, task: HouseTask, tone: ToneColors, onOpen: () -> Unit) {
     // Tap a job to go to the part of the house it is about: the device's page in the Church Drive app, or Home Assistant.
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth().clickable(onClickLabel = "Open the device") { onOpen() }.padding(vertical = 4.dp)) {
-        Icon(androidx.compose.ui.res.painterResource(com.churchdrive.core.R.drawable.cd_house), contentDescription = null, tint = tone.accent)
+        Icon(androidx.compose.ui.res.painterResource(com.churchdrive.core.R.drawable.cd_house), contentDescription = null, tint = tone.onContainer)
         Column(Modifier.weight(1f)) {
             Text(item.summary, style = MaterialTheme.typography.bodyLarge)
             val sub = listOf(task.kind, task.detail).filter { it.isNotBlank() }.joinToString(" · ")

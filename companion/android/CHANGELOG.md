@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.113.1
+
+- An icon that is not in the app's copy of the icon pack makes it fetch the pack again (at most every half hour), so icons added since the last download show up.
+
 ## 0.113.0
 
 - A room shows its ceiling light's colour, else the Lights colour (not the Ambience strip's). The away security-mode lights show a steady Armed Home blue bar with "Security mode" instead of flickering through colours.
