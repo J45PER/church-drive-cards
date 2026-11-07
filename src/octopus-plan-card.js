@@ -2,11 +2,12 @@
 // kWh and whether each is Smart or Boost, and "Now:" for one in progress. It has its own card so it can sit under the Cars and the
 // charger, on the Home and Energy pages. It hides itself when the house has no Octopus Intelligent device.
 
+import { clive } from './clive-colours.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { KIT_COLOR, kitShell, kitHead, kitEsc, kitCompact, kitCompactable } from './card-kit.js';
 import { octopusPlan, planLine } from './car-octopus.js';
 
-const PLAN_TEAL = '#3fd0cf';
+const PLAN_TEAL = 'var(--car-color, ' + clive('car') + ')';
 
 function demoPlan() {
   const now = Date.now();
