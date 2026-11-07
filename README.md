@@ -229,6 +229,12 @@ A fan with a speed gauge, then two rows of tiles: Off and the speeds (1, 2, 3…
 
 An air purifier: a PM2.5 gauge in air-quality colours (good ≤35, fair ≤75, poor ≤115, very poor above: the Chinese standard Philips purifiers use, changeable per card), the allergen index, a 24-hour PM2.5 graph, mode tiles and filter life bars ("Clean soon" / "Replace soon" under 25%). Every extra can be switched off. Picking the purifier finds its PM2.5, allergen and filter sensors from the same entity name prefix. The 24-hour PM2.5 graph is coloured by level, blending from green through amber and orange to red as the air gets worse, using the card's air-quality bands.
 
+### `purifier-schedule-card` (the air purifier's Auto and Sleep times)
+
+When the purifier goes to Auto and when it goes to Sleep, for as many sets of days as you like. Each schedule is shown on one line, e.g. `Mon-Fri Auto: 07:00-23:30` (Auto from 07:00, Sleep from 23:30, Monday to Friday) and `Sat & Sun Auto: 09:00-23:59`, with the next change in the title. The card can't change anything by itself: **Edit** (administrators) opens the editor with a chip for each day, the two times, **Add schedule**, a remove button, a **Schedule on** switch and Save / Cancel, so a stray tap on the dashboard does nothing. The Android app has the same card (`custom:purifier-schedule-card`).
+
+The integration runs the schedules (`purifier_schedule.py`, rules in `purifier_schedule_logic.py`): every minute it sends the change that is due with `fan.set_preset_mode`, then checks the purifier really changed mode and tries again (up to five times, a minute apart) if it didn't. A change missed while Home Assistant was off (up to 30 minutes ago) is sent when it starts. A purifier that is switched off is left off; a day no schedule covers is left alone; if two schedules want different modes in the same minute, Auto wins. Settings are in `.storage/church_drive.purifier_schedule` and are read with `church_drive/purifier_schedule` and set (administrators) with `church_drive/purifier_schedule/set`. The purifier defaults to `fan.hayleys_bedroom_air_purifier`; `entity` in the set message changes it.
+
 ### `co-alarm-card`
 
 A carbon monoxide alarm (e.g. X-Sense): the CO reading on a gauge, status, battery and last report, with **Hold to test** (a 1.5-second press, as it sounds the real alarm) and Mute. The card turns red with a warning when CO is found. Picking the CO reading sensor fills in the alarm's other entities.
