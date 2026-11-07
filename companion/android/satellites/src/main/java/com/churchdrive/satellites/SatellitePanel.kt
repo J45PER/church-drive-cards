@@ -209,10 +209,10 @@ private fun AboutPage(onBack: () -> Unit) {
             )
         }
         PanelCard {
-            if (certs.isEmpty()) PanelRow(CdVectors.Fingerprint, "Signing certificate (SHA-256)", "Not available", leading = { Icon(painterResource(R.drawable.mdi_shield_key), contentDescription = null) })
+            if (certs.isEmpty()) PanelRow(CdVectors.Key, "Signing certificate (SHA-256)", "Not available", leading = { Icon(painterResource(R.drawable.mdi_shield_key), contentDescription = null) })
             certs.forEach { c ->
                 PanelRow(
-                    CdVectors.Fingerprint, "Signing certificate (SHA-256)",
+                    CdVectors.Key, "Signing certificate (SHA-256)",
                     if (copied) "Copied" else "$c\nTap to copy. The Church Drive app needs this to share its sign-in with this app.",
                     onClick = { clipboard.setText(AnnotatedString(c)); copied = true },
                     leading = { Icon(painterResource(R.drawable.mdi_shield_key), contentDescription = null) }
