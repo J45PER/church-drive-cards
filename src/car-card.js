@@ -12,6 +12,7 @@
 
 import { createFormEditor } from './form-editor.js';
 import { iconHtml, hydrateIcons } from './icons.js';
+import { clive } from './clive-colours.js';
 import { SUFFIX, LABEL } from './suffix.js';
 import { octopusCar } from './car-octopus.js';
 import { KIT_COLOR, kitShell, kitHead, kitNum, kitEsc, kitMoreInfo, kitCompact, kitCompactable } from './card-kit.js';
@@ -19,7 +20,7 @@ import { KIT_COLOR, kitShell, kitHead, kitNum, kitEsc, kitMoreInfo, kitCompact, 
 // Octopus's Intelligent device (a car it controls, such as the ID.5) is a car too: it gives the battery % and its charging plan,
 // but not the plug, range or place, so those come from the Zappi when this car is the Primary one on it (see car-octopus.js).
 export const CAR_PLATFORMS = ['stellantis_vehicles', 'vag_connect', 'volkswagencarnet', 'volkswagen_we_connect_id', 'octopus_energy'];
-const CAR_TEAL = '#3fd0cf';
+const CAR_TEAL = 'var(--car-color, ' + clive('car') + ')'; // follows the live Car palette
 
 // Every car: { device, name, ids } (one per device with a battery %).
 export function carDevices(hass) {
