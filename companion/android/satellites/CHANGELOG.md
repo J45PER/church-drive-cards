@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.108.0
+
+- No change to this app; version kept equal.
+
 ## 0.107.0
 
 - The card glow (see the phone app).
