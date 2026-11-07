@@ -7,7 +7,7 @@ import { SUFFIX, LABEL } from './suffix.js';
 import { KIT_COLOR, kitShell, kitHead, kitEsc, kitCompact, kitCompactable } from './card-kit.js';
 import { octopusPlan, planLine } from './car-octopus.js';
 
-const PLAN_TEAL = 'var(--car-color, ' + clive('car') + ')';
+const PLAN_TEAL = 'var(--energy-color, ' + clive('energy') + ')'; // the Octopus plan is electricity, so it takes the electricity colour
 
 function demoPlan() {
   const now = Date.now();
@@ -65,7 +65,7 @@ export class OctopusPlanCard extends HTMLElement {
       this._list = this.querySelector('.op-list');
       this._built = true;
     }
-    kitHead(this, c.title || 'Octopus charging plan', word + (c.demo ? ' · demo' : ''), PLAN_TEAL);
+    kitHead(this, c.title || 'Octopus charging plan', word + (c.demo ? ' · demo' : ''), PLAN_TEAL, 18);
     // The minute too, so "Now:" appears when a charge begins.
     const sig = JSON.stringify([plan, Math.floor(now / 60000)]);
     if (sig === this._sig) return;
