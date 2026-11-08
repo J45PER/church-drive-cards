@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.background
@@ -184,51 +185,62 @@ private val SAFETY_ICONS = mapOf(
 fun SafetyCard(config: JSONObject, entities: Map<String, EntityState>, registry: Registry) {
     val chosen = config.optJSONArray("entities")?.let { a -> (0 until a.length()).mapNotNull { a.optString(it).takeIf { s -> s.isNotBlank() } } }.orEmpty()
     val items = safetyItems(entities, registry, chosen)
-    val neutral = panelNeutral()
-    if (LocalCompactCards.current) {
-        val sounding = items.filter { it.on }
-        val red = toneColors(Tone.Red)
-        CompactStrip(
-            if (sounding.isEmpty()) neutral else red, "Smoke, heat and CO", null,
-            if (sounding.isEmpty()) (if (items.isEmpty()) "No alarms found" else "All clear") else "ALARM: " + sounding.joinToString(", ") { it.name },
-            container = if (sounding.isEmpty()) neutral.container else red.container, content = if (sounding.isEmpty()) neutral.onContainer else red.onContainer, dense = true,
-        )
+    // Green while everything is clear, red while one is sounding.
+    val sounding = items.filter { it.on }
+    val cardTone = toneColors(if (sounding.isNotEmpty()) Tone.Red else Tone.Green)
+    val ink = cardTone.onContainer
+    val fold = rememberFold("grid-fold|safety")
+    @Composable fun itemTone(item: SafetyItem) = toneColors(if (item.on) Tone.Red else if (item.unavailable) Tone.Grey else Tone.Green)
+    if (items.isEmpty()) {
+        GridCard(cardTone.container, ink, 2.5f, "Smoke & CO Alarms") {
+            Text("No smoke, heat or CO alarms found.", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.at(0.5f, 1f, 7f, 1f))
+        }
         return
     }
-    EntityCard(neutral.container, neutral.onContainer) {
-        if (items.isEmpty()) {
-            Text("No smoke, heat or CO alarms found.", style = MaterialTheme.typography.bodyMedium)
+    if (fold.value) {
+        // Folded: the icons on one row in their status colour, each with its name and battery under it.
+        val lines = items.chunked(5)
+        GridCard(cardTone.container, ink, 1f + 1.75f * lines.size + 0.25f, "Smoke & CO Alarms", fold = fold) {
+            lines.forEachIndexed { r, line ->
+                line.forEachIndexed { c, item ->
+                    val tone = itemTone(item)
+                    Column(Modifier.at(0.5f + c * 1.4f, 0.9f + r * 1.75f, 1.4f, 1.75f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Box(Modifier.size(26.dp).background(if (item.on) tone.accent else tone.accent.copy(alpha = 0.18f), RoundedCornerShape(30)), contentAlignment = Alignment.Center) {
+                            HaIcon(SAFETY_ICONS[item.kind] ?: "mdi:alarm-light", CdVectors.ShieldOutline, if (item.on) tone.onAccent else tone.accent, 18.dp)
+                        }
+                        Text(item.name.substringBefore(' '), style = MaterialTheme.typography.bodySmall, color = ink, maxLines = 1)
+                        item.battery?.let { Text("$it%", style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.9f), maxLines = 1) }
+                    }
+                }
+            }
         }
-        items.forEach { item ->
-            val tone = toneColors(if (item.on) Tone.Red else if (item.unavailable) Tone.Grey else Tone.Green)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(if (item.on) tone.accent else tone.accent.copy(alpha = 0.18f), RoundedCornerShape(12.dp)),
-                    contentAlignment = Alignment.Center,
-                ) {
+        return
+    }
+    GridCard(cardTone.container, ink, 1.5f * items.size + 1.5f, "Smoke & CO Alarms", fold = fold) {
+        items.forEachIndexed { k, item ->
+            val tone = itemTone(item)
+            val y = 1f + 1.5f * k
+            val word = if (item.on) "Alarm" else if (item.unavailable) "Not responding" else "All clear"
+            Row(Modifier.at(0.5f, y, 7f, 1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(cell * 0.35f)) {
+                // A squircle, not a circle, behind a safety device's icon.
+                Box(Modifier.size(cell * 0.9f).background(if (item.on) tone.accent else tone.accent.copy(alpha = 0.18f), RoundedCornerShape(30)), contentAlignment = Alignment.Center) {
                     HaIcon(SAFETY_ICONS[item.kind] ?: "mdi:alarm-light", CdVectors.ShieldOutline, if (item.on) tone.onAccent else tone.accent, 22.dp)
                 }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(item.name, style = MaterialTheme.typography.titleMedium, maxLines = 1)
-                    Text(
-                        safetySubtitle(item),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (item.on) tone.accent else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                Column(Modifier.weight(1f)) {
+                    Text(item.name, style = MaterialTheme.typography.bodyLarge, color = ink, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    item.battery?.let { b ->
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            HaIcon(if (b < 30) "mdi:battery-alert" else "mdi:battery-70", CdVectors.Info, ink, 16.dp)
+                            Text("$b%", style = MaterialTheme.typography.bodySmall, color = ink)
+                            LevelBar(b / 100f, batteryFade(b / 100f), ink, Modifier.width(cell * 1.5f), 5.dp)
+                        }
+                    }
                 }
-                item.ppm?.let {
-                    Text(
-                        "${if (it % 1.0 == 0.0) it.toInt().toString() else it.toString()} ppm",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = if (item.on) tone.accent else MaterialTheme.colorScheme.onSurface,
-                    )
-                }
+                val pill = @Composable { StatusPill(word, tone) }
+                if (item.ppm != null) Column(horizontalAlignment = Alignment.End) {
+                    Text("${if (item.ppm % 1.0 == 0.0) item.ppm.toInt().toString() else item.ppm.toString()} ppm", style = MaterialTheme.typography.headlineMedium, color = ink)
+                    pill()
+                } else pill()
             }
         }
     }

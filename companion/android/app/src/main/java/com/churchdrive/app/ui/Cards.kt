@@ -24,6 +24,9 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Spacer
@@ -432,61 +435,85 @@ fun AlarmCard(alarm: EntityState?, call: CallService, entityId: String = ALARM_E
     // During a delay the mode being armed is lit; otherwise the current state.
     val activeKey = if (inDelay || triggered) alarm?.str("targetState") else state
 
-    if (LocalCompactCards.current) {
-        CompactStrip(
-            tone, title, null, line1, enabled = enabled, container = container, content = content, accent = if (triggered) content else tone.accent, detail = line2, dense = true, titleStyle = MaterialTheme.typography.headlineSmall,
-            buttons = buildList {
-                add(StripButton("mdi:shield-off-outline", "Disarm", activeKey == "disarmed", "Disarm") { send("alarm_disarm") })
-                if (features and 1 != 0) add(StripButton("mdi:shield-home", "Home", activeKey == "armed_home", "Arm Home") { send("alarm_arm_home") })
-                if (features and 2 != 0) add(StripButton("mdi:shield-lock", "Away", activeKey == "armed_away", "Arm Away") { send("alarm_arm_away") })
-                if (features and 4 != 0) add(StripButton("mdi:shield-moon", "Night", activeKey == "armed_night", "Arm Night") { send("alarm_arm_night") })
-            },
-        )
+    // The mode buttons the alarm supports, in order.
+    class Mode(val key: String, val label: String, val icon: String, val service: String)
+    val modes = buildList {
+        add(Mode("disarmed", "Disarm", "mdi:shield-off-outline", "alarm_disarm"))
+        if (features and 1 != 0) add(Mode("armed_home", "Home", "mdi:shield-home", "alarm_arm_home"))
+        if (features and 2 != 0) add(Mode("armed_away", "Away", "mdi:shield-lock", "alarm_arm_away"))
+        if (features and 4 != 0) add(Mode("armed_night", "Night", "mdi:shield-moon", "alarm_arm_night"))
+    }
+    val fold = rememberFold("grid-fold|$entityId")
+    val ink = if (triggered) tone.onAccent else content
+    val shield = ALARM_STATES[state]?.icon ?: "mdi:shield-outline"
+    val titleText = "Home Security"
+    @Composable
+    fun androidx.compose.foundation.layout.BoxScope.Ring(sizeCells: Float, cell: androidx.compose.ui.unit.Dp, iconDp: androidx.compose.ui.unit.Dp) {
+        Canvas(Modifier.size(cell * sizeCells)) {
+            val stroke = 5.dp.toPx() * sizeCells / 1.5f
+            val inset = stroke / 2
+            val arcSize = Size(size.width - stroke, size.height - stroke)
+            drawArc(ring.copy(alpha = 0.2f), 0f, 360f, false, Offset(inset, inset), arcSize, style = Stroke(stroke))
+            val sweep = if (inDelay) 360f * (remaining.toFloat() / total).coerceIn(0f, 1f) else 360f
+            drawArc(ring, -90f, sweep, false, Offset(inset, inset), arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
+        }
+        HaIcon(shield, CdVectors.ShieldOutline, ring, iconDp)
+    }
+    if (fold.value) {
+        // Folded: two and a half rows. One band on the middle of row 2: a one cell ring, who and when over two lines from the line between
+        // columns B and C, and the modes as small buttons centred on the column lines at the right.
+        GridCard(container, content, 2.5f, titleText, deviceEntity = entityId, fold = fold) {
+            Box(Modifier.atCentre(1f, 1.5f, 1f, 1f), contentAlignment = Alignment.Center) { Ring(1f, cell, 20.dp) }
+            val firstBtn = 8f - modes.size
+            Column(Modifier.at(2f, 0.9f, firstBtn - 2f - 0.5f, 1.2f), verticalArrangement = Arrangement.Center) {
+                val one = line1.ifEmpty { alarmLabel(state) }
+                Text(one, style = MaterialTheme.typography.bodyMedium, color = ink, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                val two = if (inDelay) "${remaining}s" else line2
+                if (two.isNotEmpty()) Text(two, style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            }
+            modes.forEachIndexed { i, m ->
+                SmallModeButton(m.icon, activeKey == m.key, tone, ink, triggered, Modifier.atCentre(firstBtn + i, 1.5f, 0.8f, 0.8f), enabled, m.label) { send(m.service) }
+            }
+        }
         return
     }
-    EntityCard(container, content) {
-        Text(title, style = MaterialTheme.typography.headlineSmall, color = if (triggered) content else tone.accent)
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(64.dp)) {
-                Canvas(Modifier.size(64.dp)) {
-                    val stroke = 5.dp.toPx()
-                    val inset = stroke / 2
-                    val arcSize = Size(size.width - stroke, size.height - stroke)
-                    drawArc(ring.copy(alpha = 0.2f), 0f, 360f, false, Offset(inset, inset), arcSize, style = Stroke(stroke))
-                    val sweep = if (inDelay) 360f * (remaining.toFloat() / total).coerceIn(0f, 1f) else 360f
-                    drawArc(ring, -90f, sweep, false, Offset(inset, inset), arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
-                }
-                HaIcon(ALARM_STATES[state]?.icon ?: "mdi:shield-outline", CdVectors.ShieldOutline, ring, 30.dp)
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                if (line1.isNotEmpty()) Text(line1, style = MaterialTheme.typography.titleMedium)
-                if (line2.isNotEmpty()) Text(line2, style = MaterialTheme.typography.bodyMedium)
-            }
-            if (inDelay) Text("${remaining}s", style = MaterialTheme.typography.headlineMedium, color = ring)
+    val rows = 5f + if (people.isEmpty()) 0f else 0.5f + people.size
+    GridCard(container, content, rows, titleText, deviceEntity = entityId, fold = fold) {
+        // The ring: 1.5 cells across, from the half line of column A, centred on the line between rows 2 and 3.
+        Box(Modifier.atCentre(1.25f, 2f, 1.5f, 1.5f), contentAlignment = Alignment.Center) { Ring(1.5f, cell, 30.dp) }
+        // Who and when from the centre of column C, centred on the same line.
+        Column(Modifier.at(2.5f, 1f, if (inDelay) 3f else 5f, 2f), verticalArrangement = Arrangement.Center) {
+            if (line1.isNotEmpty()) Text(line1, style = MaterialTheme.typography.titleMedium, color = ink)
+            if (line2.isNotEmpty()) Text(line2, style = MaterialTheme.typography.bodyMedium, color = ink)
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            val m = Modifier.weight(1f)
-            ModeTile("Disarm", "mdi:shield-off-outline", activeKey == "disarmed", tone, content, m, enabled) { send("alarm_disarm") }
-            if (features and 1 != 0) {
-                ModeTile("Home", "mdi:shield-home", activeKey == "armed_home", tone, content, m, enabled) { send("alarm_arm_home") }
-            }
-            if (features and 2 != 0) {
-                ModeTile("Away", "mdi:shield-lock", activeKey == "armed_away", tone, content, m, enabled) { send("alarm_arm_away") }
-            }
-            if (features and 4 != 0) {
-                ModeTile("Night", "mdi:shield-moon", activeKey == "armed_night", tone, content, m, enabled) { send("alarm_arm_night") }
-            }
+        if (inDelay) Text("${remaining}s", style = MaterialTheme.typography.headlineMedium, color = ring, modifier = Modifier.at(5.5f, 1.5f, 2f, 1f).wrapContentSize(Alignment.CenterEnd))
+        // The modes: 2 cells wide each (three modes), or 1.5 wide where there is a Night mode, 1.5 tall, base on the middle of row 5.
+        val w = if (modes.size > 3) 1.5f else 2f
+        val gap = if (modes.size > 3) 1f / 3f else 0.5f
+        modes.forEachIndexed { i, m ->
+            ModeTile(m.label, m.icon, activeKey == m.key, tone, content, Modifier.at(0.5f + i * (w + gap), 3f, w, 1.5f), enabled, triggered, Modifier.fillMaxSize()) { send(m.service) }
         }
         // Who's home, one line each (administrators only: the page passes nobody for anyone else).
-        people.forEach { p ->
+        people.forEachIndexed { i, p ->
             val (word, _) = presencePill(p.state, p.place, p.zone)
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.at(0.5f, 4.5f + 0.5f + i, 7f, 1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 HaIcon(if (p.state == "home") "cd:home" else "cd:home-away", CdVectors.ShieldOutline, ring, 20.dp)
-                Text(p.name, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = content, maxLines = 1)
-                Text(word, style = MaterialTheme.typography.bodyMedium, color = content.copy(alpha = 0.8f), maxLines = 1)
+                Text(p.name, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = ink, maxLines = 1)
+                Text(word, style = MaterialTheme.typography.bodyMedium, color = ink.copy(alpha = 0.8f), maxLines = 1)
             }
         }
     }
+}
+
+/** A small icon button on a folded grid card: 0.8 of a cell, the current mode filled in the card's strong colour. */
+@Composable
+fun SmallModeButton(icon: String, selected: Boolean, tone: ToneColors, ink: Color, triggered: Boolean, modifier: Modifier, enabled: Boolean, description: String, onClick: () -> Unit) {
+    val bg = when { selected && triggered -> tone.onAccent; selected -> tone.accent; triggered -> Color.White.copy(alpha = 0.30f); else -> ink.copy(alpha = 0.10f) }
+    val fg = when { selected && triggered -> Color.White; selected -> tone.onAccent; else -> ink }
+    Box(
+        modifier.clip(RoundedCornerShape(12.dp)).background(bg).clickable(enabled = enabled, onClickLabel = description, onClick = onClick).semantics { contentDescription = description },
+        contentAlignment = Alignment.Center,
+    ) { HaIcon(icon, CdVectors.ShieldOutline, fg, 20.dp) }
 }
 
 /** A mode button: the dashboard's icon over the label; the current mode is filled in the state colour. */
@@ -499,24 +526,23 @@ private fun ModeTile(
     content: Color,
     modifier: Modifier,
     enabled: Boolean,
+    triggered: Boolean = false,
+    inner: Modifier = Modifier.height(Ui.TallTileHeight),
     onClick: () -> Unit,
 ) {
     val shape = RoundedCornerShape(18.dp)
-    val ink = if (selected) tone.onAccent else content
-    Column(
-        modifier = modifier
-            .height(Ui.TallTileHeight)
-            .clip(shape)
-            .then(
-                if (selected) Modifier.background(tone.accent)
-                else Modifier.background(content.copy(alpha = 0.10f)),
-            )
-            .clickable(enabled = enabled, onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        HaIcon(icon, CdVectors.ShieldOutline, ink, 24.dp)
-        CentredText(label, ink, 12.sp, Modifier.padding(top = 4.dp), lineHeight = 14.sp)
+    // On a triggered card (fully tinted in the strong colour) the buttons use a light wash, and the current mode a dark fill, so they read.
+    val bg = when { selected && triggered -> tone.onAccent; selected -> tone.accent; triggered -> Color.White.copy(alpha = 0.30f); else -> content.copy(alpha = 0.10f) }
+    val ink = when { selected && triggered -> Color.White; selected -> tone.onAccent; else -> content }
+    Box(modifier.clip(shape).background(bg).clickable(enabled = enabled, onClick = onClick)) {
+        Column(
+            modifier = inner,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            HaIcon(icon, CdVectors.ShieldOutline, ink, 24.dp)
+            CentredText(label, ink, 12.sp, Modifier.padding(top = 4.dp), lineHeight = 14.sp)
+        }
     }
 }
 
@@ -629,62 +655,93 @@ fun ClimateCard(
             }
         }
     }
-    if (LocalCompactCards.current) {
-        CompactStrip(
-            tone, climate?.friendlyName ?: "Thermostat", "${temp(climate?.num("current_temperature"))}°",
-            buildString {
-                append(climateWord(climate))
-                if (climate != null && climate.state != "off") append(" · ${temp(pending)}°")
-            },
-            buttons = (quick ?: DEFAULT_QUICK).map { q -> StripButton(quickSettingIcon(q), null, isSelected(q), q.name) { applyQuick(q) } },
-            enabled = enabled,
-            valueStyle = MaterialTheme.typography.headlineLarge,
-            detail = listOfNotNull(
-                quality?.let { "Home climate $it/100 · ${qualityWord(it)}" },
-                humidity?.state?.toDoubleOrNull()?.let { "Humidity ${temp(it)}%" },
-                outdoor?.let { "Outside ${temp(it)}°" },
-            ).joinToString(" · "),
-        )
-        return
+    val cur = climate?.num("current_temperature")
+    val off = climate == null || climate.state == "off"
+    val title = zone?.zone?.replaceFirstChar { it.uppercase() } ?: climate?.friendlyName ?: "Thermostat"
+    val fold = rememberFold("grid-fold|$id")
+    val items = (quick ?: DEFAULT_QUICK).map { q -> TileItem(quickSettingIcon(q), q.name, isSelected(q)) { applyQuick(q) } }
+    val lo = climate?.num("min_temp") ?: 5.0
+    val hi = climate?.num("max_temp") ?: 30.0
+    val ink = tone.onContainer
+    @Composable
+    fun GridScope.Dial(cx: Float, cy: Float, ringCells: Float) {
+        Box(Modifier.atCentre(cx, cy, ringCells + 0.5f, ringCells + 0.5f), contentAlignment = Alignment.Center) {
+            Canvas(Modifier.fillMaxSize()) {
+                val ringPx = cell.toPx() * ringCells
+                val stroke = 5.dp.toPx() * ringCells / 1.5f
+                val r = (ringPx - stroke) / 2f
+                val c = center
+                val sc = ringPx / 64f
+                val tl = Offset(c.x - r, c.y - r)
+                val sz = Size(2 * r, 2 * r)
+                val start = 135f
+                val sweep = 270f
+                drawArc(ink.copy(alpha = 0.18f), start, sweep, false, tl, sz, style = Stroke(stroke))
+                if (!off && pending != null && cur != null) {
+                    val ft = ((pending!! - lo) / (hi - lo)).coerceIn(0.0, 1.0).toFloat()
+                    val fc = ((cur - lo) / (hi - lo)).coerceIn(0.0, 1.0).toFloat()
+                    val a = minOf(ft, fc); val b = maxOf(ft, fc)
+                    drawArc(tone.accent.copy(alpha = 0.4f), start, sweep * a, false, tl, sz, style = Stroke(stroke, cap = StrokeCap.Round))
+                    drawArc(tone.accent, start + sweep * a, sweep * (b - a), false, tl, sz, style = Stroke(stroke, cap = StrokeCap.Round))
+                    fun pt(f: Float, rad: Float): Offset {
+                        val ang = Math.toRadians((start + sweep * f).toDouble())
+                        return Offset(c.x + rad * Math.cos(ang).toFloat(), c.y + rad * Math.sin(ang).toFloat())
+                    }
+                    // The line is the target, the white dot is the temperature now; both may reach past the ring.
+                    drawLine(tone.accent, pt(ft, 25f * sc), pt(ft, 37f * sc), strokeWidth = 3.5f * sc)
+                    drawCircle(Color.White, 4.2f * sc, pt(fc, r))
+                }
+            }
+            Text(if (off) "Off" else temp(pending) + "°", style = MaterialTheme.typography.titleMedium, color = ink)
+        }
     }
-    EntityCard(tone.container, tone.onContainer) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    "${temp(climate?.num("current_temperature"))}°",
-                    style = MaterialTheme.typography.displayMedium,
-                    color = tone.accent,
-                )
-                Text(
-                    buildString {
-                        append(climateWord(climate))
-                        if (climate != null && climate.state != "off") append(if (eco) " · Eco target ${temp(pending)}° (tap to heat)" else " · target ${temp(pending)}°")
-                    },
-                    style = MaterialTheme.typography.titleMedium,
-                )
+    if (fold.value) {
+        GridCard(tone.container, ink, 2.5f, title, deviceEntity = climate?.entityId, fold = fold) {
+            Dial(1f, 1.5f, 1f)
+            val firstBtn = 8f - items.size
+            Column(Modifier.at(2f, 0.9f, firstBtn - 2f - 0.5f, 1.2f), verticalArrangement = Arrangement.Center) {
+                Text("${temp(cur)}° room", style = MaterialTheme.typography.bodyMedium, color = ink, maxLines = 1)
+                Text(climateWord(climate), style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f), maxLines = 1)
+            }
+            (quick ?: DEFAULT_QUICK).forEachIndexed { i, q ->
+                SmallModeButton(quickSettingIcon(q), isSelected(q), tone, ink, false, Modifier.atCentre(firstBtn + i, 1.5f, 0.8f, 0.8f), enabled, q.name) { applyQuick(q) }
             }
         }
-        val extra = listOfNotNull(
-            quality?.let { "Home climate $it/100 · ${qualityWord(it)}" },
-            humidity?.state?.toDoubleOrNull()?.let { "Humidity ${temp(it)}%" },
-            outdoor?.let { "Outside ${temp(it)}°" },
-        ).joinToString(" · ")
-        if (extra.isNotEmpty()) Text(extra, style = MaterialTheme.typography.bodyMedium)
-        // Lower and Raise are two wide buttons above the modes, the size of the mode tiles.
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Ui.TileGap)) {
-            StepBar(CdVectors.Minus, "Lower", tone, enabled && climate?.state != "off", Modifier.weight(1f)) { nudge(-step) }
-            StepBar(CdVectors.Plus, "Raise", tone, enabled && climate?.state != "off", Modifier.weight(1f)) { nudge(step) }
+        return
+    }
+    // The zone line and the graph below the buttons are drawn when the page gives them.
+    var end = 6f
+    val zoneY = if (zone != null) { val y = end + 0.5f; end = y + 1f; y } else 0f
+    val belowY = if (below != null) { val y = end + 0.5f; end = y + 1.5f; y } else 0f
+    GridCard(tone.container, ink, end + 0.5f, title, deviceEntity = climate?.entityId, fold = fold) {
+        // The dial: the ring is the size and place of the alarm's ring.
+        Dial(1.25f, 2f, 1.5f)
+        // Humidity and the outside temperature from the centre of column C, the room's temperature on the right.
+        Column(Modifier.at(2.5f, 1f, 3f, 2f), verticalArrangement = Arrangement.Center) {
+            humidity?.state?.toDoubleOrNull()?.let {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    HaIcon("mdi:water-percent", CdVectors.Info, ink, 20.dp); Text("${temp(it)}%", style = MaterialTheme.typography.bodyMedium, color = ink)
+                }
+            }
+            outdoor?.let {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    HaIcon("mdi:weather-partly-cloudy", CdVectors.Info, ink, 20.dp); Text("Outside ${temp(it)}°", style = MaterialTheme.typography.bodyMedium, color = ink)
+                }
+            }
         }
-        TileRow(
-            (quick ?: DEFAULT_QUICK).map { q -> TileItem(quickSettingIcon(q), q.name, isSelected(q)) { applyQuick(q) } },
-            tone, tone.onContainer, enabled, perRow = 5,
-        )
-        // Who looks after this thermostat (the assistant or you), and a tap for its settings: only where the house has his switch for it.
+        Column(Modifier.at(5.5f, 1f, 2f, 2f), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.End) {
+            Text("${temp(cur)}°", style = MaterialTheme.typography.headlineMedium, color = ink)
+            Text("room", style = MaterialTheme.typography.bodyMedium, color = ink.copy(alpha = 0.8f))
+        }
+        // Lower and Raise: 3.25 cells wide, a cell tall, starting on the line between rows 3 and 4.
+        GridButton(TileItem("mdi:minus", "Lower", false, false) { nudge(-step) }, tone, ink, enabled && !off, false, Modifier.at(0.5f, 3f, 3.25f, 1f))
+        GridButton(TileItem("mdi:plus", "Raise", false, false) { nudge(step) }, tone, ink, enabled && !off, false, Modifier.at(4.25f, 3f, 3.25f, 1f))
+        GridTiles(items, 4.5f, 1.5f, tone, ink, enabled, stacked = true)
         if (zone != null) {
-            ZoneStatusLine(zone, tone) { sheetOpen = true }
+            Box(Modifier.at(0.5f, zoneY, 7f, 1f)) { ZoneStatusLine(zone, tone) { sheetOpen = true } }
             if (sheetOpen) ThermostatSheet(zone.zone.replaceFirstChar { it.uppercase() }, zone, tone, call) { sheetOpen = false }
         }
-        below?.invoke()
+        if (below != null) Box(Modifier.at(0.5f, belowY, 7f, 1.5f)) { below() }
     }
 }
 
@@ -734,27 +791,47 @@ fun vacuumSummary(v: EntityState?, battery: EntityState?): String {
 }
 
 @Composable
-fun VacuumCard(vacuum: EntityState?, battery: EntityState?, call: CallService) {
+fun VacuumCard(vacuum: EntityState?, battery: EntityState?, call: CallService, detail: String? = null, error: String? = null) {
     val tone = toneColors(vacuumTone(vacuum))
     val enabled = vacuum?.available == true
     val cleaning = vacuum?.state == "cleaning"
-    EntityCard(tone.container, tone.onContainer, deviceEntity = vacuum?.entityId) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            GreggIcon(greggState(vacuum, battery), tone.accent, 44.dp, battery?.state?.toDoubleOrNull())
-            Column(modifier = Modifier.weight(1f)) {
-                Text(vacuum?.friendlyName ?: "Vacuum", style = MaterialTheme.typography.titleMedium)
-                Text(vacuumSummary(vacuum, battery), style = MaterialTheme.typography.bodyMedium)
+    val ink = tone.onContainer
+    val pct = battery?.state?.toDoubleOrNull()
+    val word = vacuum?.state?.replaceFirstChar { it.uppercase() } ?: "Loading…"
+    val fold = rememberFold("grid-fold|${vacuum?.entityId ?: VACUUM_ENTITY}")
+    // Start, Stop (the same as Pause) and Home.
+    val buttons = listOf(
+        TileItem("cd:play", if (cleaning) "Pause" else if (vacuum?.state == "paused") "Resume" else "Start", cleaning, false) {
+            call("vacuum", if (cleaning) "pause" else "start", VACUUM_ENTITY, data())
+        },
+        TileItem("cd:stop", "Stop", vacuum?.state == "idle", false) { call("vacuum", "stop", VACUUM_ENTITY, data()) },
+        TileItem("cd:home", "Dock", vacuum?.state == "returning" || vacuum?.state == "docked", false) { call("vacuum", "return_to_base", VACUUM_ENTITY, data()) },
+    )
+    val name = vacuum?.friendlyName ?: "Vacuum"
+    if (fold.value) {
+        GridCard(tone.container, ink, 2.5f, name, deviceEntity = vacuum?.entityId, fold = fold) {
+            Box(Modifier.atCentre(1f, 1.5f, 1.2f, 1.2f), contentAlignment = Alignment.Center) { GreggIcon(greggState(vacuum, battery), tone.accent, cell * 1.112f, pct) }
+            Column(Modifier.at(2f, 0.9f, 2.5f, 1.2f), verticalArrangement = Arrangement.Center) {
+                Text(word, style = MaterialTheme.typography.bodyMedium, color = ink, maxLines = 1)
+                if (pct != null) Text("${pct.toInt()}%", style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f), maxLines = 1)
+            }
+            buttons.forEachIndexed { i, b ->
+                SmallModeButton(b.icon, b.selected, tone, ink, false, Modifier.atCentre(5f + i, 1.5f, 0.8f, 0.8f), enabled, b.label, b.onClick)
             }
         }
-        IconRow(
-            listOf(
-                IconItem(if (cleaning) "cd:pause" else "cd:play", if (cleaning) "Pause" else if (vacuum?.state == "paused") "Resume" else "Start", true) {
-                    call("vacuum", if (cleaning) "pause" else "start", VACUUM_ENTITY, data())
-                },
-                IconItem("cd:home", "Dock", false) { call("vacuum", "return_to_base", VACUUM_ENTITY, data()) },
-            ),
-            tone, tone.onContainer, enabled,
-        )
+        return
+    }
+    GridCard(tone.container, ink, 5f, name, deviceEntity = vacuum?.entityId, fold = fold) {
+        // The icon takes the place and size of the alarm's ring.
+        Box(Modifier.atCentre(1.25f, 2f, 1.7f, 1.7f), contentAlignment = Alignment.Center) { GreggIcon(greggState(vacuum, battery), tone.accent, cell * 1.668f, pct) }
+        Column(Modifier.at(2.5f, 1f, 5f, 2f), verticalArrangement = Arrangement.Center) {
+            Text(word, style = MaterialTheme.typography.titleMedium, color = ink)
+            if (pct != null) Text("${pct.toInt()}% battery", style = MaterialTheme.typography.bodyMedium, color = ink)
+            if (!detail.isNullOrBlank()) Text(detail, style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f))
+            if (!error.isNullOrBlank()) Text(error, style = MaterialTheme.typography.bodySmall, color = toneColors(Tone.Red).accent)
+        }
+        if (pct != null) LevelBar((pct / 100.0).toFloat(), levelFade((pct / 100.0).toFloat()), ink, Modifier.at(0.5f, 3f, 7f, 0.25f).wrapContentHeight(Alignment.CenterVertically))
+        buttons.forEachIndexed { i, b -> GridButton(b, tone, ink, enabled, false, Modifier.at(0.5f + i * 2.5f, 3.5f, 2f, 1f)) }
     }
 }
 
@@ -818,79 +895,74 @@ fun ChargerCard(entities: Map<String, EntityState>, call: CallService) {
             onCancel = { ask = null },
         )
     }
-    if (LocalCompactCards.current) {
-        CompactStrip(
-            tone, "Car charger", if (charging) "${"%.1f".format(power / 1000)} kW" else null, status,
-            enabled = mode?.available == true,
-            detail = listOfNotNull(
-                session?.let { "${temp(it)} kWh this session" },
-                Octopus.current(Octopus.allRates(entities), System.currentTimeMillis())?.let { "${Octopus.pence(it.pence)}p rate now" },
-            ).joinToString(" · "),
-            buttons = chargerModes(mode?.options().orEmpty()).map { m ->
-                StripButton(m.icon, m.name, mode?.state == m.key, m.name) {
-                    val q = if (m.key == "Fast") chargeAsk(entities, System.currentTimeMillis()) else null
-                    if (q != null) { askFor = "fast"; ask = q } else call("select", "select_option", ZAPPI_MODE, data("option" to m.key))
-                }
-            },
-        )
+    val modeItems = chargerModes(mode?.options().orEmpty()).map { m ->
+        TileItem(m.icon, m.name, mode?.state == m.key) {
+            val q = if (m.key == "Fast") chargeAsk(entities, System.currentTimeMillis()) else null
+            if (q != null) { askFor = "fast"; ask = q } else call("select", "select_option", ZAPPI_MODE, data("option" to m.key))
+        }
+    }
+    val ink = tone.onContainer
+    val fold = rememberFold("grid-fold|charger")
+    val rate = Octopus.current(Octopus.allRates(entities), System.currentTimeMillis())?.let { "${Octopus.pence(it.pence)}p rate now" }
+    if (fold.value) {
+        GridCard(tone.container, ink, 2.5f, "Car Charger", fold = fold) {
+            val first = 8f - modeItems.size
+            Column(Modifier.at(0.5f, 0.9f, first - 0.5f - 0.5f, 1.2f), verticalArrangement = Arrangement.Center) {
+                Text(status, style = MaterialTheme.typography.bodyMedium, color = ink, maxLines = 1)
+                if (rate != null) Text(rate, style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f), maxLines = 1)
+            }
+            modeItems.forEachIndexed { i, m ->
+                SmallModeButton(m.icon, m.selected, tone, ink, false, Modifier.atCentre(first + i, 1.5f, 0.8f, 0.8f), mode?.available == true, m.label, m.onClick)
+            }
+        }
         return
     }
-    EntityCard(tone.container, tone.onContainer) {
-        Column {
-            Text(status, style = MaterialTheme.typography.titleLarge)
-            if (session != null) {
-                Text("${temp(session)} kWh this session", style = MaterialTheme.typography.bodyMedium)
-            }
-            // The Octopus rate right now, as on the dashboard's charger card ("7.9p rate").
-            Octopus.current(Octopus.allRates(entities), System.currentTimeMillis())?.let {
-                Text("${Octopus.pence(it.pence)}p rate now", style = MaterialTheme.typography.bodyMedium)
-            }
+    val teal = toneColors(Tone.Car)
+    val grey = toneColors(Tone.Grey)
+    val sm = if (mode?.available == true) smartCharge(entities) else null
+    val roleChoice = if (mode?.available == true) carRoleChoice(entities) else null
+    // Down the card: the details (to line 3.5), the car choice, the charge buttons, the modes.
+    var y = 3.5f
+    val carsY = if (roleChoice != null) { val v = y; y += 1.5f; v } else 0f
+    val barY = if (mode?.available == true) { val v = y; y += 1.5f; v } else 0f
+    val modesY = y
+    GridCard(tone.container, ink, modesY + 1.5f + 0.5f, "Car Charger", fold = fold) {
+        Column(Modifier.at(0.5f, 1.25f, 5f, 2.25f)) {
+            Text(status, style = MaterialTheme.typography.titleMedium, color = ink)
+            if (session != null) Text("${temp(session)} kWh this session", style = MaterialTheme.typography.bodyMedium, color = ink.copy(alpha = 0.8f))
+            if (rate != null) Text(rate, style = MaterialTheme.typography.bodyMedium, color = ink.copy(alpha = 0.8f))
+            if (sm != null) Text(smartText(sm, Octopus.allRates(entities), System.currentTimeMillis()), style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f), maxLines = 1)
         }
-        val teal = toneColors(Tone.Car)
+        if (power > 0) Text("${"%.1f".format(power / 1000)} kW", style = MaterialTheme.typography.headlineMedium, color = ink, modifier = Modifier.at(5.5f, 1.25f, 2f, 1f).wrapContentSize(Alignment.CenterEnd))
+        if (roleChoice != null) {
+            val c = roleChoice
+            GridButton(TileItem("mdi:car-electric", CAR_NAME_PRIMARY, c.role == CAR_ROLE_PRIMARY) { chooseCarRole(call, CAR_ROLE_PRIMARY, c.confirmed) }, teal, ink, true, false, Modifier.at(0.5f, carsY, 3.25f, 1f))
+            GridButton(TileItem("mdi:car", CAR_NAME_ADDITIONAL, c.role == CAR_ROLE_ADDITIONAL) { chooseCarRole(call, CAR_ROLE_ADDITIONAL, c.confirmed) }, teal, ink, true, false, Modifier.at(4.25f, carsY, 3.25f, 1f))
+        }
         if (mode?.available == true) {
             // Always shown: a button and a status. Grey with no car, teal while charging, tappable when it can start.
-            when {
-                stopping -> TileRow(listOf(TileItem("mdi:stop-circle-outline", "Stopping…", true) {}), toneColors(Tone.Grey), tone.onContainer, false)
-                over.charging -> TileRow(listOf(TileItem("mdi:lightning-bolt", "Charging", true) {}), teal, teal.accent, false)
-                over.show -> TileRow(
-                    listOf(TileItem("mdi:lightning-bolt", if (pending == "charge") "Starting…" else "Start charge", true) {
+            val main: Triple<TileItem, ToneColors, Pair<Color, Boolean>> = when {
+                stopping -> Triple(TileItem("mdi:stop-circle-outline", "Stopping…", true) {}, grey, ink to false)
+                over.charging -> Triple(TileItem("mdi:lightning-bolt", "Charging", true) {}, teal, teal.accent to false)
+                over.show -> Triple(
+                    TileItem("mdi:lightning-bolt", if (pending == "charge") "Starting…" else "Start charge", true) {
                         val q = chargeAsk(entities, System.currentTimeMillis())
                         if (q != null) { askFor = "charge"; ask = q } else { pending = "charge"; chargeNow(entities, call) }
-                    }),
-                    teal, tone.onContainer, pending != "charge",
+                    },
+                    teal, ink to (pending != "charge"),
                 )
-                else -> TileRow(listOf(TileItem("mdi:ev-plug-type2", "No car connected", false) {}), toneColors(Tone.Grey), tone.onContainer, false)
+                else -> Triple(TileItem("mdi:ev-plug-type2", "No car connected", false) {}, grey, ink to false)
             }
-            // Smart charge: the cheapest Octopus rate, by itself. Only when the house has it set up.
-            smartCharge(entities)?.let { sm ->
-                TileRow(
-                    listOf(TileItem("mdi:clock-fast", "Smart charge", sm.on) {
-                        call("input_boolean", if (sm.on) "turn_off" else "turn_on", SMART_ENABLED, data())
-                    }),
-                    teal, tone.onContainer, true,
-                )
-                Text(smartText(sm, Octopus.allRates(entities), System.currentTimeMillis()), style = MaterialTheme.typography.bodySmall)
-            }
-            // Which car is plugged in (Primary: the one on the Octopus app; Additional: any other), as on the dashboard's charger card.
-            carRoleChoice(entities)?.let { c ->
-                TileRow(
-                    listOf(
-                        TileItem("mdi:car-electric", CAR_NAME_PRIMARY, c.role == CAR_ROLE_PRIMARY) { chooseCarRole(call, CAR_ROLE_PRIMARY, c.confirmed) },
-                        TileItem("mdi:car", CAR_NAME_ADDITIONAL, c.role == CAR_ROLE_ADDITIONAL) { chooseCarRole(call, CAR_ROLE_ADDITIONAL, c.confirmed) },
-                    ),
-                    teal, tone.onContainer, true,
-                )
-                Text("Car plugged in · " + carRoleText(c), style = MaterialTheme.typography.bodySmall)
+            val barW = if (sm != null) 3.25f else 7f
+            GridButton(main.first, main.second, main.third.first, main.third.second, false, Modifier.at(0.5f, barY, barW, 1f))
+            if (sm != null) {
+                GridButton(TileItem("mdi:clock-fast", "Smart charge", sm.on) { call("input_boolean", if (sm.on) "turn_off" else "turn_on", SMART_ENABLED, data()) }, teal, ink, true, false, Modifier.at(4.25f, barY, 3.25f, 1f))
             }
         }
-        TileRow(
-            chargerModes(mode?.options().orEmpty()).map { m ->
-                TileItem(m.icon, m.name, mode?.state == m.key) {
-                    val q = if (m.key == "Fast") chargeAsk(entities, System.currentTimeMillis()) else null
-                    if (q != null) { askFor = "fast"; ask = q } else call("select", "select_option", ZAPPI_MODE, data("option" to m.key))
-                }
-            },
-            teal, tone.onContainer, mode?.available == true,
-        )
+        modeItems.forEachIndexed { i, m ->
+            val w = 1.5f; val gap = 1f / 3f
+            if (modeItems.size == 4) GridButton(m, teal, ink, mode?.available == true, true, Modifier.at(0.5f + i * (w + gap), modesY, w, 1.5f))
+        }
+        if (modeItems.size != 4) GridTiles(modeItems, modesY, 1.5f, teal, ink, mode?.available == true, stacked = true)
     }
 }

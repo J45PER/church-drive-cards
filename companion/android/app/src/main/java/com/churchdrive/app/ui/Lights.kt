@@ -220,57 +220,50 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
     val head = entities[room.head]
     val on = head?.state == "on"
     val tone = toneColors(if (on) Tone.Lights else Tone.Grey)
-    var expanded by rememberSaveable(room.head) { mutableStateOf(false) }
     val expandable = room.rows.isNotEmpty() || room.scenes.isNotEmpty()
 
-    EntityCard(tone.container, tone.onContainer, deviceEntity = room.head) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            // The room takes its colour from its ceiling light when that has one; otherwise it keeps the Lights colour (not the Ambience strip's).
-            LightPill(head, room.head, roomTitle(room, head, areaNames), tone, call, Modifier.weight(1f), entities, tintFrom = room.rows.filter { it.entity.contains("ceiling", true) || (it.name ?: "").contains("ceiling", true) }.map { it.entity })
-            if (expandable) {
-                IconButton(onClick = { expanded = !expanded }) {
-                    Icon(
-                        if (expanded) CdVectors.ChevronUp else CdVectors.ChevronDown,
-                        contentDescription = if (expanded) "Collapse" else "Expand",
-                    )
-                }
+    // On the card grid: the room's pill is 1.5 rows tall, half a row down, with the arrow in column 8; opened, each light is a pill the same height two rows
+    // apart (a nested one starts half a cell further in), then the scenes in rows of up to three with a quarter cell between them (a short last row's tiles stretch).
+    val state = rememberSaveable(room.head) { mutableStateOf(true) }
+    val collapsed = state
+    val open = !collapsed.value && expandable
+    val hintContext = LocalContext.current
+    val showHint = opensSettings(head) && remember(room.head) { LightHoldHint.wants(hintContext, room.head) }
+    val lightsEnd = 2f + 2f * (if (open) room.rows.size else 0)
+    val sceneRows = if (open && room.scenes.isNotEmpty()) room.scenes.chunked(3) else emptyList()
+    val rows = when {
+        !open -> if (showHint) 3f else 2.5f
+        sceneRows.isEmpty() -> lightsEnd + 0.5f
+        else -> lightsEnd + 1f + 1.25f * sceneRows.size - 0.25f + 0.5f
+    }
+    GridCard(tone.container, tone.onContainer, rows, "", deviceEntity = room.head, fold = if (expandable) collapsed else null, arrowTop = 0.75f) {
+        LightPill(head, room.head, roomTitle(room, head, areaNames), tone, call, Modifier.at(0.5f, 0.5f, if (expandable) 6.5f else 7f, 1.5f), entities,
+            tintFrom = room.rows.filter { it.entity.contains("ceiling", true) || (it.name ?: "").contains("ceiling", true) }.map { it.entity }, pillHeight = cell * 1.5f)
+        if (!open && showHint) {
+            Text("Hold for colours", style = MaterialTheme.typography.labelSmall, modifier = Modifier.at(0.5f, 2.1f, 7f, 0.5f), color = tone.onContainer.copy(alpha = 0.7f))
+        }
+        if (open) {
+            room.rows.forEachIndexed { k, row ->
+                val x = 0.5f + 0.5f * row.level
+                LightPill(entities[row.entity], row.entity, row.name, tone, call, Modifier.at(x, 2.5f + 2f * k, 7.5f - x, 1.5f), entities, pillHeight = cell * 1.5f)
             }
-        }
-
-        val hintContext = LocalContext.current
-        if (opensSettings(head) && remember(room.head) { LightHoldHint.wants(hintContext, room.head) }) {
-            Text("Hold for colours", style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(start = 4.dp), color = tone.onContainer.copy(alpha = 0.7f))
-        }
-
-        AnimatedVisibility(visible = expanded) {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                room.rows.forEach { row ->
-                    LightPill(entities[row.entity], row.entity, row.name, tone, call, Modifier.padding(start = 16.dp * row.level), entities)
-                }
-                if (room.scenes.isNotEmpty()) {
-                    Text(
-                        "Scenes",
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.padding(start = 4.dp, top = 6.dp),
-                    )
-                    val active = room.scenes.filter {
-                        entities[it.selectEntity]?.state.equals(it.name, ignoreCase = true)
-                    }
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        room.scenes.chunked(4).forEach { rowScenes ->
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                rowScenes.forEach { scene ->
-                                    SceneTile(
-                                        scene,
-                                        active = scene in active,
-                                        dimmed = active.isNotEmpty() && scene !in active,
-                                        modifier = Modifier.weight(1f),
-                                    ) {
-                                        if (scene.haScene != null) call("scene", "turn_on", scene.haScene, data())
-                                        else call("church_drive", "apply_scene", scene.target, data("scene" to scene.key))
-                                    }
-                                }
-                            }
+            if (sceneRows.isNotEmpty()) {
+                Text("Scenes", style = MaterialTheme.typography.labelLarge, modifier = Modifier.at(0.5f, lightsEnd + 0.25f, 3f, 0.5f))
+                val active = room.scenes.filter { entities[it.selectEntity]?.state.equals(it.name, ignoreCase = true) }
+                sceneRows.forEachIndexed { r, rowScenes ->
+                    val n = rowScenes.size
+                    val gap = 0.25f
+                    val w = (7f - gap * (n - 1)) / n
+                    rowScenes.forEachIndexed { c, scene ->
+                        SceneTile(
+                            scene,
+                            active = scene in active,
+                            dimmed = active.isNotEmpty() && scene !in active,
+                            modifier = Modifier.at(0.5f + c * (w + gap), lightsEnd + 1f + 1.25f * r, w, 1f),
+                            h = cell,
+                        ) {
+                            if (scene.haScene != null) call("scene", "turn_on", scene.haScene, data())
+                            else call("church_drive", "apply_scene", scene.target, data("scene" to scene.key))
                         }
                     }
                 }
@@ -281,7 +274,7 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
 
 /** A scene as a tile: its colours as a gradient, an icon and its name; the playing scene has a ring. */
 @Composable
-private fun SceneTile(scene: LightScene, active: Boolean, dimmed: Boolean, modifier: Modifier, onClick: () -> Unit) {
+private fun SceneTile(scene: LightScene, active: Boolean, dimmed: Boolean, modifier: Modifier, h: androidx.compose.ui.unit.Dp = Ui.TallTileHeight, onClick: () -> Unit) {
     val looks = LocalSceneLooks.current
     // The look set on the dashboards, then the scene's own colours; then a built-in look, then one worked out
     // from a white scene's colour temperature; and last, a colour made from its name so tiles aren't all alike.
@@ -294,7 +287,7 @@ private fun SceneTile(scene: LightScene, active: Boolean, dimmed: Boolean, modif
     val shape = RoundedCornerShape(18.dp)
     Box(
         modifier = modifier
-            .height(Ui.TallTileHeight)
+            .height(h)
             .alpha(if (dimmed) 0.55f else 1f)
             .clip(shape)
             .background(Brush.linearGradient(colours))
@@ -341,6 +334,7 @@ fun LightPill(
     entities: Map<String, EntityState>? = null,
     /** For a room: its lights. The room's own colour is the group's last one, which lingers after a room turns to plain white or has only switches on, so the pill takes the colour of a light that is on and showing one, else the theme. */
     tintFrom: List<String>? = null,
+    pillHeight: androidx.compose.ui.unit.Dp = Ui.TallTileHeight,
 ) {
     val on = light?.state == "on"
     val haptic = LocalHapticFeedback.current
@@ -361,7 +355,7 @@ fun LightPill(
         (securityLabelled(registry, entityId) || light?.list("entity_id").orEmpty().any { securityLabelled(registry, it) })
     val tint = if (security) toneColors(Tone.AlarmHome).accent else if (on && rgb != null) Color(rgb[0], rgb[1], rgb[2]) else tone.accent
     val shown = if (security) 1f else dragged
-    val shape = RoundedCornerShape(20.dp)
+    val shape = RoundedCornerShape(18.dp)
     val status = when {
         light == null -> "Loading…"
         !light.available -> "Unavailable"
@@ -377,7 +371,7 @@ fun LightPill(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(Ui.TallTileHeight)
+            .height(pillHeight)
             .clip(shape)
             .background(tone.onContainer.copy(alpha = 0.10f))
             .onSizeChanged { widthPx = it.width.coerceAtLeast(1) }

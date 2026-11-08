@@ -4,6 +4,18 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.122.0
+
+- Every card now follows the layout agreed on the card review page: an 8 column grid, so a card is a whole or half number of rows tall, with the title on the first row (each word capitalised, in the card's text colour) and the expand and collapse arrow in the right hand column. Buttons, text, rings and bars sit on the grid's lines, all boxes share the same rounded corners, and cards have a folded version again (two and a half rows, with small buttons). Colours and the background animation are unchanged.
+- Done so far: Home Security (state shown by colour and mode, ring, 2 cell mode buttons), the thermostat (a dial with the target inside, the room temperature, humidity and outside, Lower and Raise, the modes), Gregg (the same card on Home and the Cleaning page: Start, Stop and Home, and a battery bar that fades from blue to red), the lights rooms and their scenes (all the same width, at most three to a row), the cars (a state pill: Home, Away, Charging, Plugged in), the car charger and the Octopus charging plan, smoke and CO alarms, the security zone, the rooms, fan, air purifier, carbon monoxide, blind, purifier schedule and overnight heating, and the Cleaning page's settings, dock, parts and switches.
+- The camera, the to-do and shopping cards, the widgets and the Clive screens are as before and follow in later versions.
+
+## 0.122.0
+
+- Every card now follows the layout agreed on the card review page: an 8 column grid, so a card is a whole or half number of rows tall, with the title on the first row (each word capitalised, in the card's text colour) and the expand and collapse arrow in the right hand column. Buttons, text, rings and bars sit on the grid's lines, all boxes share the same rounded corners, and cards have a folded version again (two and a half rows, with small buttons). Colours and the background animation are unchanged.
+- Done so far: Home Security (state shown by colour and mode, ring, 2 cell mode buttons), the thermostat (a dial with the target inside, the room temperature, humidity and outside, Lower and Raise, the modes), Gregg (the same card on Home and the Cleaning page: Start, Stop and Home, and a battery bar that fades from blue to red), the lights rooms and their scenes (all the same width, at most three to a row), the cars (a state pill: Home, Away, Charging, Plugged in), the car charger and the Octopus charging plan, smoke and CO alarms, the security zone, the rooms, fan, air purifier, carbon monoxide, blind, purifier schedule and overnight heating, and the Cleaning page's settings, dock, parts and switches.
+- The camera, the to-do and shopping cards, the widgets and the Clive screens are as before and follow in later versions.
+
 ## 0.121.1
 
 - Reverts 0.121.0: the app is as it was in 0.120.0. Section titles are back to 22 regular and the unused blank card layout (`AppCard`) is removed. Instrument Sans stays as the typeface. The card layout work continues on the card review page, with no app changes for now.
