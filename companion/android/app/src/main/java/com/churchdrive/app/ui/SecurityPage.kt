@@ -190,7 +190,7 @@ fun SafetyCard(config: JSONObject, entities: Map<String, EntityState>, registry:
     val cardTone = toneColors(if (sounding.isNotEmpty()) Tone.Red else Tone.Green)
     val ink = cardTone.onContainer
     val fold = rememberFold("grid-fold|safety")
-    fun itemTone(item: SafetyItem) = toneColors(if (item.on) Tone.Red else if (item.unavailable) Tone.Grey else Tone.Green)
+    @Composable fun itemTone(item: SafetyItem) = toneColors(if (item.on) Tone.Red else if (item.unavailable) Tone.Grey else Tone.Green)
     if (items.isEmpty()) {
         GridCard(cardTone.container, ink, 2.5f, "Smoke & CO Alarms") {
             Text("No smoke, heat or CO alarms found.", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.at(0.5f, 1f, 7f, 1f))
