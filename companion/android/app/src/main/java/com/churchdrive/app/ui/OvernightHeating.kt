@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -94,53 +96,59 @@ fun OvernightHeatingCard(entities: Map<String, EntityState>, call: CallService) 
     var draft by remember { mutableStateOf<OvernightDraft?>(null) }
     val ready = modeEntity != null && start != null && end != null
     val active = ready && mode != "Smart" && inOvernightWindow(start, end, nowHm())
-    if (LocalCompactCards.current) {
-        CompactStrip(
-            tone, "Overnight heating", null,
-            if (!ready) "Needs its settings in Home Assistant" else if (active) "$mode now" else mode,
-            detail = if (ready) "From $start until $end" else null, dense = true,
-        )
+    val ink = tone.onContainer
+    val fold = rememberFold("grid-fold|overnight")
+    if (modeEntity == null || start == null || end == null) {
+        GridCard(tone.container, ink, 3f, "Overnight Heating") {
+            Text("Overnight heating needs its settings in Home Assistant.", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.at(0.5f, 1f, 7f, 1.5f))
+        }
         return
     }
-    EntityCard(tone.container, tone.onContainer) {
-        if (modeEntity == null || start == null || end == null) {
-            Text("Overnight heating needs its settings in Home Assistant.", style = MaterialTheme.typography.bodyMedium)
-            return@EntityCard
+    val d = draft
+    if (d == null && fold.value) {
+        GridCard(tone.container, ink, 2.5f, "Overnight Heating", fold = fold) {
+            FoldBand(0.5f, 7f, ink, if (active) "$mode now" else mode, "From $start until $end", listOf(TileItem("mdi:pencil", "Edit", false) { draft = OvernightDraft(mode, start, end) }), tone, true)
         }
-        val d = draft
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("Overnight heating", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-            Text(if (d != null) "Editing" else if (active) "$mode now" else mode, style = MaterialTheme.typography.bodyMedium)
-            FoldGutter()
+        return
+    }
+    if (d == null) {
+        GridCard(tone.container, ink, 6.5f, "Overnight Heating", fold = fold) {
+            Column(Modifier.at(0.5f, 1f, 7f, 3.75f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                StatusPill(if (active) "$mode now" else mode, tone)
+                Text(describeOvernight(mode, start, end, name), style = MaterialTheme.typography.bodyMedium, color = ink.copy(alpha = 0.9f))
+                Text("From $start until $end", style = MaterialTheme.typography.bodyLarge, color = ink)
+                Text(
+                    "Thermostats set to Manual are left alone. Somebody changing a thermostat in the night keeps it until the morning.",
+                    style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f),
+                )
+            }
+            GridTiles(listOf(TileItem("mdi:pencil", "Edit", false) { draft = OvernightDraft(mode, start, end) }), 5f, 1f, tone, ink, true, stacked = false)
         }
-        if (d == null) {
-            Text(describeOvernight(mode, start, end, name), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text("From $start until $end", style = MaterialTheme.typography.bodyLarge)
-            Text(
-                "Thermostats set to Manual are left alone. Somebody changing a thermostat in the night keeps it until the morning.",
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            TileRow(listOf(TileItem("mdi:pencil", "Edit", false) { draft = OvernightDraft(mode, start, end) }), tone, tone.onContainer, perRow = 1)
-            return@EntityCard
-        }
-        TileRow(
+        return
+    }
+    // Editing: no fold arrow, the card stays open until Save or Cancel.
+    GridCard(tone.container, ink, 9f, "Overnight Heating") {
+        GridTiles(
             listOf(
                 TileItem(IconMap.of("climate_mode", "off", "mdi:power"), "Off", d.mode == "Off") { draft = d.copy(mode = "Off") },
                 TileItem(IconMap.of("climate_preset", "eco", "mdi:leaf"), "Eco", d.mode == "Eco") { draft = d.copy(mode = "Eco") },
                 TileItem("mdi:thermostat-auto", "Smart", d.mode == "Smart") { draft = d.copy(mode = "Smart") },
             ),
-            tone, tone.onContainer, perRow = 3,
+            1.5f, 1.5f, tone, ink, true, stacked = true,
         )
-        Text(describeOvernight(d.mode, d.start, d.end, name), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            StepRow("From", d.start, tone, true, valueWidth = 84.dp,
-                onMinus = { stepTime(d.start, -1)?.let { draft = d.copy(start = it) } },
-                onPlus = { stepTime(d.start, 1)?.let { draft = d.copy(start = it) } })
-            StepRow("Until", d.end, tone, true, valueWidth = 84.dp,
-                onMinus = { stepTime(d.end, -1)?.let { draft = d.copy(end = it) } },
-                onPlus = { stepTime(d.end, 1)?.let { draft = d.copy(end = it) } })
+        Text(describeOvernight(d.mode, d.start, d.end, name), style = MaterialTheme.typography.bodyMedium, color = ink.copy(alpha = 0.85f), modifier = Modifier.at(0.5f, 3.5f, 7f, 1f))
+        @Composable
+        fun stepper(y: Float, label: String, value: String, onMinus: () -> Unit, onPlus: () -> Unit) {
+            Row(Modifier.at(0.5f, y, 7f, 1f), verticalAlignment = Alignment.CenterVertically) {
+                Text(label, style = MaterialTheme.typography.bodyLarge, color = ink, modifier = Modifier.weight(1f))
+                GridButton(TileItem("mdi:minus", "Earlier", false, false) { onMinus() }, tone, ink, true, false, Modifier.size(cell))
+                Text(value, style = MaterialTheme.typography.titleMedium, color = ink, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.width(cell * 2f))
+                GridButton(TileItem("mdi:plus", "Later", false, false) { onPlus() }, tone, ink, true, false, Modifier.size(cell))
+            }
         }
-        TileRow(
+        stepper(4.5f, "From", d.start, { stepTime(d.start, -1)?.let { draft = d.copy(start = it) } }, { stepTime(d.start, 1)?.let { draft = d.copy(start = it) } })
+        stepper(6f, "Until", d.end, { stepTime(d.end, -1)?.let { draft = d.copy(end = it) } }, { stepTime(d.end, 1)?.let { draft = d.copy(end = it) } })
+        GridTiles(
             listOf(
                 TileItem("mdi:close", "Cancel", false) { draft = null },
                 TileItem("mdi:check", "Save", false) {
@@ -150,7 +158,7 @@ fun OvernightHeatingCard(entities: Map<String, EntityState>, call: CallService) 
                     draft = null
                 },
             ),
-            tone, tone.onContainer,
+            7.5f, 1f, tone, ink, true, stacked = false,
         )
     }
 }
