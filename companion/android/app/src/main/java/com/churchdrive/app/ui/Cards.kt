@@ -791,7 +791,7 @@ fun vacuumSummary(v: EntityState?, battery: EntityState?): String {
 }
 
 @Composable
-fun VacuumCard(vacuum: EntityState?, battery: EntityState?, call: CallService) {
+fun VacuumCard(vacuum: EntityState?, battery: EntityState?, call: CallService, detail: String? = null, error: String? = null) {
     val tone = toneColors(vacuumTone(vacuum))
     val enabled = vacuum?.available == true
     val cleaning = vacuum?.state == "cleaning"
@@ -827,6 +827,8 @@ fun VacuumCard(vacuum: EntityState?, battery: EntityState?, call: CallService) {
         Column(Modifier.at(2.5f, 1f, 5f, 2f), verticalArrangement = Arrangement.Center) {
             Text(word, style = MaterialTheme.typography.titleMedium, color = ink)
             if (pct != null) Text("${pct.toInt()}% battery", style = MaterialTheme.typography.bodyMedium, color = ink)
+            if (!detail.isNullOrBlank()) Text(detail, style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f))
+            if (!error.isNullOrBlank()) Text(error, style = MaterialTheme.typography.bodySmall, color = toneColors(Tone.Red).accent)
         }
         if (pct != null) LevelBar((pct / 100.0).toFloat(), levelFade((pct / 100.0).toFloat()), ink, Modifier.at(0.5f, 3f, 7f, 0.25f).wrapContentHeight(Alignment.CenterVertically))
         buttons.forEachIndexed { i, b -> GridButton(b, tone, ink, enabled, false, Modifier.at(0.5f + i * 2.5f, 3.5f, 2f, 1f)) }
