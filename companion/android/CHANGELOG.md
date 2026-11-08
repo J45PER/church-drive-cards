@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.121.0
+
+- A blank common layout for cards (`AppCard`), the base the card types will be built on: a title row in the size of the alarm card's title, with the expand and collapse button in the top right corner, then the body. Folded, the title row stays put and a card shows just its summary. Nothing uses it yet, so no card changes.
+- Section titles (the headings above groups of cards, in all three apps) are a step bigger and bolder, so they read above the card titles: 28 SemiBold instead of 22 regular.
+
 ## 0.120.0
 
 - Every text in the app is now Instrument Sans, Clive's own typeface (it was the phone's system font, with Instrument Sans only on the splash screen). It is set once, as the theme's typography, so every card, page and panel follows, with the same sizes and weights as before. The letter shapes are a little different, so check that nothing is cut off.
