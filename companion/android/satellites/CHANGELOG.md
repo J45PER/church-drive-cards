@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.120.0
+
+- Every text is now Instrument Sans, Clive's own typeface, as in the main app.
+
 ## 0.119.0
 
 - No change to this app; version kept equal.

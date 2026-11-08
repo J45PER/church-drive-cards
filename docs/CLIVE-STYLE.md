@@ -25,7 +25,7 @@ Order of authority for look and feel: the user's own words, then this guide and 
 | Toggle on / off | `#4FD08A` / `#47FFFFFF` | `AssistantActivity.kt` |
 | Text shadow | `#A6000000`, offset (0, 2), blur 12, on every line over the glow | `AssistantActivity.kt` (`SHADOW`) |
 
-Type on the watch is the system font, bold for figures and titles, semibold for secondary lines. There is no custom typeface in the apps.
+Type on the watch is the system font, bold for figures and titles, semibold for secondary lines. In the phone, To-Do and Satellites apps every text is Instrument Sans (`BrandFont`), set once as the theme's typography (`BrandTypography` in `core/.../Theme.kt`); the watch is the only place left on the system font.
 
 ## 3. The glow
 
