@@ -1,5 +1,10 @@
 package com.churchdrive.app.ui
 
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -74,22 +79,17 @@ fun ClimateZoneCard(config: JSONObject, entities: Map<String, EntityState>, call
     // A room that has its own range numbers (`low_entity` and `high_entity`) opens a sheet to change them.
     var editing by remember { mutableStateOf<String?>(null) }
     val rooms = config.optJSONArray("rooms")
-    // Tap the heading to open the floor out: each room's temperature (and humidity) over the last day.
-    var open by remember { mutableStateOf(false) }
-    EntityCard(neutral.container, neutral.onContainer) {
-        Row(
-            modifier = Modifier.fillMaxWidth().clickable(onClickLabel = if (open) "Hide graphs" else "Show graphs") { open = !open },
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(config.optString("title").ifBlank { "Rooms" }, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-            if (!open) Text("Graphs", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Icon(
-                if (open) CdVectors.ChevronUp else CdVectors.ChevronDown, contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        for (i in 0 until (rooms?.length() ?: 0)) {
+    // The arrow in column 8 opens the floor out: each room's temperature (and humidity) over the last day under it. Folded by default.
+    val title = config.optString("title").ifBlank { "Rooms" }
+    val fold = androidx.compose.runtime.saveable.rememberSaveable("rooms|$title") { mutableStateOf(true) }
+    val open = !fold.value
+    val count = rooms?.length() ?: 0
+    val pitch = if (open) 3f else 1.5f
+    val ink = neutral.onContainer
+    GridCard(neutral.container, ink, 1f + pitch * count, title, fold = fold) {
+        for (i in 0 until count) {
             val r = rooms?.optJSONObject(i) ?: continue
+            val y = 1f + pitch * i
             val t = entities[r.optString("temperature")]?.state?.toDoubleOrNull()
             val h = r.optString("humidity").takeIf { it.isNotBlank() }?.let { entities[it]?.state?.toDoubleOrNull() }
             val lowHelper = r.optString("low_entity").takeIf { it.isNotBlank() }?.let { entities[it] }?.takeIf { it.available }
@@ -99,29 +99,30 @@ fun ClimateZoneCard(config: JSONObject, entities: Map<String, EntityState>, call
             val tone = toneColors(comfortTone(t, r.optString("type"), low, high))
             val editable = lowHelper != null && highHelper != null
             Row(
-                modifier = if (editable) Modifier.fillMaxWidth().clickable(onClickLabel = "Change the comfortable range") { editing = r.optString("name") } else Modifier,
+                modifier = Modifier.at(0.5f, y, 7f, 1f).then(if (editable) Modifier.clickable(onClickLabel = "Change the comfortable range") { editing = r.optString("name") } else Modifier),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(cell * 0.35f),
             ) {
-                ToneIconName(r.optString("icon"), CdVectors.Info, tone)
+                ToneIconName(r.optString("icon"), CdVectors.Info, tone, 40)
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(r.optString("name"), style = MaterialTheme.typography.titleMedium, maxLines = 1)
+                    Text(r.optString("name"), style = MaterialTheme.typography.bodyLarge, color = ink, maxLines = 1)
                     r.optString("note").takeIf { it.isNotBlank() }?.let {
-                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                        Text(it, style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f), maxLines = 1)
                     }
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text(if (t == null) "–" else "${temp(t)}°", style = MaterialTheme.typography.titleLarge, color = tone.accent)
-                    if (h != null) Text("${h.roundToInt()}%", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(if (t == null) "–" else "${temp(t)}°", style = MaterialTheme.typography.headlineMedium, color = tone.accent)
+                    if (h != null) Text("${h.roundToInt()}% humidity", style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f))
                 }
-                if (editable) HaIcon("mdi:tune-variant", CdVectors.Info, MaterialTheme.colorScheme.onSurfaceVariant, 20.dp)
             }
             if (editing == r.optString("name") && lowHelper != null && highHelper != null) {
                 RoomRangeSheet(r.optString("name"), lowHelper, highHelper, tone, call) { editing = null }
             }
             if (open) {
                 // The same graph as the thermostat cards: the comfort band for the room, the humidity limits, smoothed.
-                RoomGraph(r.optString("temperature"), r.optString("humidity").takeIf { it.isNotBlank() }, r.optString("type"), neutral.onContainer, tone.accent, low, high)
+                Box(Modifier.at(0.5f, y + 1.5f, 7f, 1f).clip(RoundedCornerShape(18.dp))) {
+                    RoomGraph(r.optString("temperature"), r.optString("humidity").takeIf { it.isNotBlank() }, r.optString("type"), ink, tone.accent, low, high)
+                }
             }
         }
     }
@@ -139,68 +140,48 @@ fun FanCard(config: JSONObject, entities: Map<String, EntityState>, call: CallSe
     val presets = fan?.list("preset_modes").orEmpty()
     val preset = fan?.str("preset_mode")
     val enabled = fan?.available == true
-    if (LocalCompactCards.current) {
-        // Off and the speeds only (the modes and Oscillate need the full card).
-        val speeds = fanSpeeds(fan)
-        val percentage = fan?.num("percentage") ?: 0.0
-        val current = if (on) speeds.firstOrNull { sp -> if (sp.preset != null) sp.preset == preset else Math.abs(percentage - (sp.percentage ?: 0)) < 5 } else null
-        CompactStrip(
-            tone, name, room?.let { "${temp(it)}°" }, if (!on) "Off" else preset?.let { presetLabel(it) } ?: "On", enabled = enabled,
-            dense = true, valueStyle = MaterialTheme.typography.titleLarge,
-            buttons = buildList {
-                add(StripButton(IconMap.of("fan", "off", "mdi:power"), "Off", !on, "Off") { call("fan", "turn_off", id, data()) })
-                speeds.forEachIndexed { i, sp ->
-                    add(StripButton(fanSpeedIcon(i, speeds.size), "${sp.n}", current === sp, "Speed ${sp.n}") {
-                        if (sp.preset != null) call("fan", "set_preset_mode", id, data("preset_mode" to sp.preset))
-                        else call("fan", "set_percentage", id, data("percentage" to (sp.percentage ?: 0)))
-                    })
-                }
-            },
-        )
+    val speeds = fanSpeeds(fan)
+    val percentage = fan?.num("percentage") ?: 0.0
+    val current = if (on) speeds.firstOrNull { sp -> if (sp.preset != null) sp.preset == preset else Math.abs(percentage - (sp.percentage ?: 0)) < 5 } else null
+    val others = presets.filter { speedNumber(it) == null }
+    val canOscillate = fan?.str("oscillating") != null || ((fan?.num("supported_features")?.toInt() ?: 0) and 2) == 2
+    // Icons first: the fan with its speed number, and the fan crossed out for Off, no words.
+    val speedItems = buildList {
+        add(TileItem("mdi:fan-off", "Off", !on, false) { call("fan", "turn_off", id, data()) })
+        speeds.forEachIndexed { i, sp ->
+            add(TileItem(if (speeds.size <= 3) "mdi:fan-speed-${sp.n}" else fanSpeedIcon(i, speeds.size), "Speed ${sp.n}", current === sp, false) {
+                if (sp.preset != null) call("fan", "set_preset_mode", id, data("preset_mode" to sp.preset))
+                else call("fan", "set_percentage", id, data("percentage" to (sp.percentage ?: 0)))
+            })
+        }
+    }
+    val second = buildList {
+        if (config.optBoolean("show_presets", true)) {
+            others.forEach { p -> add(TileItem(fanPresetIcon(p), presetLabel(p), on && preset == p) { call("fan", "set_preset_mode", id, data("preset_mode" to p)) }) }
+        }
+        if (config.optBoolean("show_oscillate", true) && canOscillate) {
+            val oscillating = fan?.attributes?.optBoolean("oscillating", false) == true
+            add(TileItem(IconMap.of("fan", "oscillate", "mdi:arrow-oscillating"), "Oscillate", on && oscillating) { call("fan", "oscillate", id, data("oscillating" to !oscillating)) })
+        }
+    }
+    val showSpeeds = config.optBoolean("show_speeds", true)
+    val status = if (!on) "Off" else preset?.let { presetLabel(it) } ?: "On"
+    val fold = rememberFold("grid-fold|$id")
+    val ink = tone.onContainer
+    if (fold.value) {
+        GridCard(tone.container, ink, 2.5f, name, deviceEntity = id, fold = fold) {
+            val first = 8f - speedItems.size
+            FoldBand(0.5f, first, ink, listOfNotNull(status, room?.let { "${temp(it)}°" }).joinToString(" · "), null, if (showSpeeds) speedItems else emptyList(), tone, enabled)
+        }
         return
     }
-    EntityCard(tone.container, tone.onContainer, deviceEntity = id) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ToneIconName(config.optString("icon").ifBlank { "mdi:fan" }, CdVectors.Info, tone)
-            Column(modifier = Modifier.weight(1f)) {
-                Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 1)
-                Text(if (!on) "Off" else preset?.let { presetLabel(it) } ?: "On", style = MaterialTheme.typography.bodyMedium)
-            }
-            if (room != null) Text("${temp(room)}°", style = MaterialTheme.typography.titleLarge)
-            FoldGutter()
-        }
-        val speeds = fanSpeeds(fan)
-        val percentage = fan?.num("percentage") ?: 0.0
-        val current = if (on) speeds.firstOrNull { sp -> if (sp.preset != null) sp.preset == preset else Math.abs(percentage - (sp.percentage ?: 0)) < 5 } else null
-        val others = presets.filter { speedNumber(it) == null }
-        val canOscillate = fan?.str("oscillating") != null || ((fan?.num("supported_features")?.toInt() ?: 0) and 2) == 2
-        // Row one: Off and the speeds. Row two: the other modes and Oscillate. As on the dashboard.
-        if (config.optBoolean("show_speeds", true)) {
-            TileRow(
-                buildList {
-                    add(TileItem(IconMap.of("fan", "off", "mdi:power"), "Off", !on) { call("fan", "turn_off", id, data()) })
-                    speeds.forEachIndexed { i, sp ->
-                        add(TileItem(fanSpeedIcon(i, speeds.size), "${sp.n}", current === sp) {
-                            if (sp.preset != null) call("fan", "set_preset_mode", id, data("preset_mode" to sp.preset))
-                            else call("fan", "set_percentage", id, data("percentage" to (sp.percentage ?: 0)))
-                        })
-                    }
-                },
-                tone, tone.onContainer, enabled, perRow = 4,
-            )
-        }
-        val second = buildList {
-            if (config.optBoolean("show_presets", true)) {
-                others.forEach { p -> add(TileItem(fanPresetIcon(p), presetLabel(p), on && preset == p) { call("fan", "set_preset_mode", id, data("preset_mode" to p)) }) }
-            }
-            if (config.optBoolean("show_oscillate", true) && canOscillate) {
-                val oscillating = fan?.attributes?.optBoolean("oscillating", false) == true
-                add(TileItem(IconMap.of("fan", "oscillate", "mdi:arrow-oscillating"), "Oscillate", on && oscillating) {
-                    call("fan", "oscillate", id, data("oscillating" to !oscillating))
-                })
-            }
-        }
-        TileRow(second, tone, tone.onContainer, enabled, perRow = 4)
+    var y = 3f
+    val speedsY = if (showSpeeds) { val v = y; y += 2f; v } else 0f
+    val secondY = if (second.isNotEmpty()) { val v = y; y += 2f; v } else 0f
+    GridCard(tone.container, ink, y, name, deviceEntity = id, fold = fold) {
+        RingHead(config.optString("icon").ifBlank { "mdi:fan" }, if (on && speeds.isNotEmpty() && current != null) (speeds.indexOf(current) + 1f) / speeds.size else if (on) 1f else 0f, tone.accent, ink, status, "", room?.let { "${temp(it)}°" })
+        if (showSpeeds) GridTiles(speedItems, speedsY, 1.5f, tone, ink, enabled, stacked = true)
+        if (second.isNotEmpty()) GridTiles(second, secondY, 1.5f, tone, ink, enabled, stacked = true)
     }
 }
 
@@ -224,41 +205,36 @@ fun AirPurifierCard(config: JSONObject, entities: Map<String, EntityState>, call
     androidx.compose.runtime.LaunchedEffect(on, preset) { if (wanted != null && ((wanted == "__off" && !on) || (on && preset == wanted))) wanted = null }
     val shownOn = when (wanted) { null -> on; "__off" -> false; else -> true }
     val shownPreset = if (wanted != null && wanted != "__off") wanted else preset
-    if (LocalCompactCards.current) {
-        CompactStrip(
-            tone, name, pm?.let { "${it.roundToInt()}" },
-            listOfNotNull(if (!shownOn) "Off" else shownPreset?.let { presetLabel(it) } ?: "On", pm?.let { "PM2.5 ${pmWord(it)}" }).joinToString(" · "),
-            enabled = enabled,
-            valueStyle = MaterialTheme.typography.headlineMedium,
-            levels = (0 until (filters?.length() ?: 0)).mapNotNull { i ->
-                val f = filters?.optJSONObject(i) ?: return@mapNotNull null
-                val left = entities[f.optString("entity")]?.state?.toDoubleOrNull() ?: return@mapNotNull null
-                CompactLevel(f.optString("name").ifBlank { "Filter" }, "${left.roundToInt()}% left", (left / 100.0).toFloat(), if (left < 10) toneColors(Tone.Red).accent else tone.accent)
-            },
-            buttons = buildList {
-                add(StripButton(IconMap.of("purifier", "off", "mdi:power"), "Off", !shownOn, "Off") { wanted = "__off"; call("fan", "turn_off", id, data()) })
-                if (presets.isEmpty()) add(StripButton("mdi:air-purifier", "On", shownOn, "On") { wanted = null; call("fan", "turn_on", id, data()) })
-                presets.forEach { p -> add(StripButton(purifierModeIcon(p), presetLabel(p), shownOn && shownPreset == p, presetLabel(p)) { wanted = p; call("fan", "set_preset_mode", id, data("preset_mode" to p)) }) }
-            },
-        )
+    val modeItems = buildList {
+        add(TileItem(IconMap.of("purifier", "off", "mdi:power"), "Off", !shownOn) { wanted = "__off"; call("fan", "turn_off", id, data()) })
+        if (presets.isEmpty()) add(TileItem("mdi:air-purifier", "On", shownOn) { wanted = null; call("fan", "turn_on", id, data()) })
+        presets.forEach { p -> add(TileItem(purifierModeIcon(p), presetLabel(p), shownOn && shownPreset == p) { wanted = p; call("fan", "set_preset_mode", id, data("preset_mode" to p)) }) }
+    }
+    val filterRows = (0 until (filters?.length() ?: 0)).mapNotNull { i ->
+        val f = filters?.optJSONObject(i) ?: return@mapNotNull null
+        val left = entities[f.optString("entity")]?.state?.toDoubleOrNull() ?: return@mapNotNull null
+        Triple(f.optString("name").ifBlank { "Filter" }, left, if (left < 10) toneColors(Tone.Red).accent else tone.accent)
+    }
+    val status = if (!shownOn) "Off" else shownPreset?.let { presetLabel(it) } ?: "On"
+    val ink = tone.onContainer
+    val fold = rememberFold("grid-fold|$id")
+    if (fold.value) {
+        GridCard(tone.container, ink, 2.5f, name, deviceEntity = id, fold = fold) {
+            val buttons = modeItems.take(4)
+            FoldBand(0.5f, 8f - buttons.size, ink, listOfNotNull(status, pm?.let { "PM2.5 ${it.roundToInt()}" }).joinToString(" · "),
+                listOfNotNull(pm?.let { pmWord(it) }, filterRows.firstOrNull()?.let { "filters ${it.second.roundToInt()}%" }).joinToString(" · "), buttons, tone, enabled)
+        }
         return
     }
-    EntityCard(tone.container, tone.onContainer, deviceEntity = id) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ToneIconName("mdi:air-purifier", CdVectors.Info, tone)
-            Column(modifier = Modifier.weight(1f)) {
-                Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 1)
-                Text(if (!shownOn) "Off" else shownPreset?.let { presetLabel(it) } ?: "On", style = MaterialTheme.typography.bodyMedium)
-            }
-            if (pm != null) {
-                Column(horizontalAlignment = Alignment.End) {
-                    Text("${pm.roundToInt()}", style = MaterialTheme.typography.headlineMedium)
-                    Text("PM2.5 · ${pmWord(pm)}", style = MaterialTheme.typography.bodySmall)
-                }
-            }
-            FoldGutter()
-        }
-        if (config.optBoolean("show_graph", true) && config.optString("pm25_entity").isNotBlank()) {
+    val showGraph = config.optBoolean("show_graph", true) && config.optString("pm25_entity").isNotBlank()
+    var y = 3f
+    val graphY = if (showGraph) { val v = y; y += 2f; v } else 0f
+    val modesY = y; y += 2f
+    val filtersY = y
+    val total = filtersY + filterRows.size * 1f + 0.5f + (if (filterRows.isEmpty()) -0.5f else 0f)
+    GridCard(tone.container, ink, total, name, deviceEntity = id, fold = fold) {
+        RingHead("mdi:air-purifier", if (pm == null) 1f else (1f - (pm.toFloat() / 135f)).coerceIn(0.1f, 1f), tone.accent, ink, status, listOfNotNull(pm?.let { "PM2.5 · ${pmWord(it)}" }, allergen?.let { "Allergen ${it.roundToInt()}" }).joinToString(" · "), pm?.let { "${it.roundToInt()}" })
+        if (showGraph) Box(Modifier.at(0.5f, graphY, 7f, 1.5f).clip(RoundedCornerShape(18.dp))) {
             SensorGraph(
                 config.optString("pm25_entity"), 24, " µg/m³", tone.accent, tone.onContainer, config.optBoolean("smooth_graphs", true),
                 // Coloured by value, as on the dashboard: each band's colour in the middle of its band, blending into the next.
@@ -270,30 +246,12 @@ fun AirPurifierCard(config: JSONObject, entities: Map<String, EntityState>, call
                 ),
             )
         }
-        if (allergen != null) Text("Allergen index ${allergen.roundToInt()}", style = MaterialTheme.typography.bodyMedium)
-        TileRow(
-            buildList {
-                add(TileItem(IconMap.of("purifier", "off", "mdi:power"), "Off", !shownOn) { wanted = "__off"; call("fan", "turn_off", id, data()) })
-                if (presets.isEmpty()) add(TileItem("mdi:air-purifier", "On", shownOn) { wanted = null; call("fan", "turn_on", id, data()) })
-                presets.forEach { p ->
-                    add(TileItem(purifierModeIcon(p), presetLabel(p), shownOn && shownPreset == p) { wanted = p; call("fan", "set_preset_mode", id, data("preset_mode" to p)) })
-                }
-            },
-            tone, tone.onContainer, enabled, perRow = 4, column = true,
-        )
-        for (i in 0 until (filters?.length() ?: 0)) {
-            val f = filters?.optJSONObject(i) ?: continue
-            val left = entities[f.optString("entity")]?.state?.toDoubleOrNull() ?: continue
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Row {
-                    Text(f.optString("name").ifBlank { "Filter" }, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                    Text("${left.roundToInt()}% left", style = MaterialTheme.typography.bodyMedium)
-                }
-                LinearProgressIndicator(
-                    progress = { (left / 100.0).toFloat().coerceIn(0f, 1f) },
-                    modifier = Modifier.fillMaxWidth(),
-                    color = if (left < 10) toneColors(Tone.Red).accent else tone.accent,
-                )
+        GridTiles(modeItems, modesY, 1.5f, tone, ink, enabled, stacked = true)
+        filterRows.forEachIndexed { k, (fname, left, _) ->
+            Row(Modifier.at(0.5f, filtersY + k, 7f, 1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(fname, style = MaterialTheme.typography.bodyMedium, color = ink, maxLines = 1, modifier = Modifier.weight(1f))
+                LevelBar((left / 100.0).toFloat(), batteryFade((left / 100.0).toFloat()), ink, Modifier.width(cell * 1.75f), 5.dp)
+                Text("${left.roundToInt()}% left", style = MaterialTheme.typography.bodyMedium, color = ink, maxLines = 1, modifier = Modifier.width(cell * 1.5f), textAlign = androidx.compose.ui.text.style.TextAlign.End)
             }
         }
     }
@@ -311,42 +269,30 @@ fun CoAlarmCard(config: JSONObject, entities: Map<String, EntityState>, call: Ca
     val report = entity("report_entity")?.state
     val test = config.optString("test_entity").takeIf { it.isNotBlank() }
     val mute = config.optString("mute_entity").takeIf { it.isNotBlank() }
-    if (LocalCompactCards.current) {
-        // Just the reading and the verdict; Mute appears only while it is sounding.
-        CompactStrip(
-            tone, "Carbon monoxide", if (reading == null) null else "${reading.roundToInt()} ppm", if (alarm) "ALARM" else "All clear",
-            detail = listOfNotNull(status?.let { presetLabel(it) }, shortDayOf(report)?.let { "checked in $it" }).joinToString(" · "),
-            valueStyle = MaterialTheme.typography.headlineMedium,
-            levels = listOfNotNull(battery?.let { CompactLevel("Battery", "${it.roundToInt()}%", (it / 100.0).toFloat(), if (it < 20) toneColors(Tone.Red).accent else tone.accent) }),
-            buttons = if (alarm && mute != null) listOf(StripButton(IconMap.of("co", "mute", "mdi:volume-off"), "Mute", true, "Mute") { call("button", "press", mute, data()) }) else emptyList(),
-        )
+    val facts = listOfNotNull(
+        status?.let { presetLabel(it) },
+        battery?.let { "battery ${it.roundToInt()}%" },
+        shortDayOf(report)?.let { "checked in $it" },
+    ).joinToString(" · ")
+    val ink = tone.onContainer
+    val fold = rememberFold("grid-fold|co|${config.optString("entity")}")
+    val buttons = buildList {
+        if (test != null) add(TileItem(IconMap.of("co", "test", "cd:co-alert"), "Test", false) { call("button", "press", test, data()) })
+        if (mute != null) add(TileItem(IconMap.of("co", "mute", "mdi:volume-off"), "Mute", alarm) { call("button", "press", mute, data()) })
+    }
+    if (fold.value) {
+        GridCard(tone.container, ink, 2.5f, "Carbon Monoxide", deviceEntity = config.optString("entity"), fold = fold) {
+            FoldBand(0.5f, 8f - buttons.size, ink, (if (alarm) "ALARM" else "All clear") + (reading?.let { " · ${it.roundToInt()} ppm" } ?: ""), battery?.let { "Battery ${it.roundToInt()}%" }, buttons, tone, true)
+        }
         return
     }
-    EntityCard(tone.container, tone.onContainer, deviceEntity = config.optString("entity")) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ToneIconName("mdi:molecule-co", CdVectors.Info, tone)
-            Column(modifier = Modifier.weight(1f)) {
-                Text("Carbon monoxide", style = MaterialTheme.typography.titleMedium)
-                Text(if (alarm) "ALARM" else "All clear", style = MaterialTheme.typography.bodyMedium, color = tone.accent)
-            }
-            Text(if (reading == null) "–" else "${reading.roundToInt()} ppm", style = MaterialTheme.typography.headlineMedium)
-            FoldGutter()
+    GridCard(tone.container, ink, if (buttons.isEmpty()) 3.5f else 4.5f, "Carbon Monoxide", deviceEntity = config.optString("entity"), fold = fold) {
+        Column(Modifier.at(0.5f, 1f, 5f, 2f)) {
+            StatusPill(if (alarm) "ALARM" else "All clear", tone)
+            if (facts.isNotEmpty()) Text(facts, style = MaterialTheme.typography.bodyMedium, color = ink.copy(alpha = 0.85f), modifier = Modifier.padding(top = 6.dp))
         }
-        val facts = listOfNotNull(
-            status?.let { presetLabel(it) },
-            battery?.let { "battery ${it.roundToInt()}%" },
-            shortDayOf(report)?.let { "checked in $it" },
-        ).joinToString(" · ")
-        if (facts.isNotEmpty()) Text(facts, style = MaterialTheme.typography.bodyMedium)
-        if (test != null || mute != null) {
-            TileRow(
-                buildList {
-                    if (test != null) add(TileItem(IconMap.of("co", "test", "cd:co-alert"), "Test", false) { call("button", "press", test, data()) })
-                    if (mute != null) add(TileItem(IconMap.of("co", "mute", "mdi:volume-off"), "Mute", alarm) { call("button", "press", mute, data()) })
-                },
-                tone, tone.onContainer,
-            )
-        }
+        Text(if (reading == null) "–" else "${reading.roundToInt()} ppm", style = MaterialTheme.typography.headlineMedium, color = ink, modifier = Modifier.at(5f, 1.5f, 2.5f, 1f).wrapContentSize(Alignment.CenterEnd))
+        if (buttons.isNotEmpty()) GridTiles(buttons, 3f, 1f, tone, ink, true, stacked = false)
     }
 }
 
@@ -360,7 +306,7 @@ fun CoverCard(config: JSONObject, entities: Map<String, EntityState>, call: Call
     // A blind that only assumes its state (an RF one) reports "unknown", but still takes Open, Stop and Close: only a missing or unavailable one doesn't.
     val enabled = cover != null && state != "unavailable"
     val tone = toneColors(Tone.Blinds) // a blind does not report its state, so it keeps its colour rather than going grey
-    var slider by remember(position) { mutableStateOf((position ?: 0.0).toFloat()) }
+    var slider0 by remember(position) { mutableStateOf((position ?: 0.0).toFloat()) }
     var last by remember { mutableStateOf<String?>(null) }
     val name = config.optString("name").ifBlank { cover?.friendlyName ?: id }
     val word = when (state) {
@@ -369,42 +315,33 @@ fun CoverCard(config: JSONObject, entities: Map<String, EntityState>, call: Call
         "open", "closed" -> presetLabel(state) + (position?.let { " · ${it.roundToInt()}%" } ?: "")
         else -> presetLabel(state)
     }
-    if (LocalCompactCards.current) {
-        CompactStrip(
-            tone, name, null, listOf(config.optString("subtitle"), word).filter { it.isNotBlank() }.joinToString(" · "), enabled = enabled, dense = true,
-            buttons = listOf(
-                StripButton(IconMap.of("cover", "open", "mdi:arrow-up"), "Open", cover?.state == "open", "Open") { last = "open"; call("cover", "open_cover", id, data()) },
-                StripButton(IconMap.of("cover", "stop", "mdi:stop"), "Stop", false, "Stop") { last = "stopped"; call("cover", "stop_cover", id, data()) },
-                StripButton(IconMap.of("cover", "close", "mdi:arrow-down"), "Close", cover?.state == "closed", "Close") { last = "closed"; call("cover", "close_cover", id, data()) },
-            ),
-        )
+    val ink = tone.onContainer
+    val fold = rememberFold("grid-fold|$id")
+    val info = listOf(config.optString("subtitle"), word).filter { it.isNotBlank() }.joinToString(" · ")
+    val items = listOf(
+        TileItem(IconMap.of("cover", "open", "mdi:arrow-up"), "Open", cover?.state == "open") { last = "open"; call("cover", "open_cover", id, data()) },
+        TileItem(IconMap.of("cover", "stop", "mdi:stop"), "Stop", false) { last = "stopped"; call("cover", "stop_cover", id, data()) },
+        TileItem(IconMap.of("cover", "close", "mdi:arrow-down"), "Close", cover?.state == "closed") { last = "closed"; call("cover", "close_cover", id, data()) },
+    )
+    if (fold.value) {
+        GridCard(tone.container, ink, 2.5f, name, deviceEntity = id, fold = fold) { FoldBand(0.5f, 5f, ink, word, config.optString("subtitle").ifBlank { null }, items, tone, enabled) }
         return
     }
-    EntityCard(tone.container, tone.onContainer, deviceEntity = id) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ToneIconName(config.optString("icon").ifBlank { "mdi:blinds" }, CdVectors.Info, tone)
-            Column(modifier = Modifier.weight(1f)) {
-                Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 1)
-                Text(listOf(config.optString("subtitle"), word).filter { it.isNotBlank() }.joinToString(" · "), style = MaterialTheme.typography.bodyMedium)
-            }
-        }
+    val slider = position != null
+    val tilesY = if (slider) 3.5f else 2.5f
+    GridCard(tone.container, ink, tilesY + 2f, name, deviceEntity = id, fold = fold) {
+        Text(info, style = MaterialTheme.typography.bodyMedium, color = ink, modifier = Modifier.at(0.5f, 1f, 7f, 1f).wrapContentHeight(Alignment.CenterVertically))
         if (position != null) {
             Slider(
-                value = slider,
-                onValueChange = { slider = it },
-                onValueChangeFinished = { call("cover", "set_cover_position", id, data("position" to slider.roundToInt())) },
+                value = slider0,
+                onValueChange = { slider0 = it },
+                onValueChangeFinished = { call("cover", "set_cover_position", id, data("position" to slider0.roundToInt())) },
                 valueRange = 0f..100f,
                 enabled = enabled,
+                modifier = Modifier.at(0.5f, 2.25f, 7f, 1f),
             )
         }
-        TileRow(
-            listOf(
-                TileItem(IconMap.of("cover", "open", "mdi:arrow-up"), "Open", cover?.state == "open") { last = "open"; call("cover", "open_cover", id, data()) },
-                TileItem(IconMap.of("cover", "stop", "mdi:stop"), "Stop", false) { last = "stopped"; call("cover", "stop_cover", id, data()) },
-                TileItem(IconMap.of("cover", "close", "mdi:arrow-down"), "Close", cover?.state == "closed") { last = "closed"; call("cover", "close_cover", id, data()) },
-            ),
-            tone, tone.onContainer, enabled,
-        )
+        GridTiles(items, tilesY, 1.5f, tone, ink, enabled, stacked = true)
     }
 }
 
