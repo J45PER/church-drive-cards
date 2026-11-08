@@ -50,8 +50,17 @@ fun PanelView(panel: PanelSpec, entities: Map<String, EntityState>, registry: Re
         alarmTone(entities[panel.cards.first { it.type.removeSuffix("-beta") == "custom:alarm-panel-card" }.config.optString("entity").ifBlank { ALARM_ENTITY }]?.state)
     } else null
     DashboardPanel(panel, toneOverride = alarm) {
+        // Folded, a stack of cameras shows its first picture (full size) with a note, not every feed as a strip.
+        val folded = LocalCompactCards.current
+        val isCamera = { c: CardSpec -> c.type.removeSuffix("-beta") == "custom:camera-card" }
+        val firstCamera = cards.firstOrNull(isCamera)
+        val hidden = if (folded) cards.count { isCamera(it) && it !== firstCamera } else 0
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            cards.forEach { CardView(it, entities, registry, call) }
+            cards.forEach { if (!(folded && isCamera(it) && it !== firstCamera)) CardView(it, entities, registry, call) }
+            if (hidden > 0) androidx.compose.material3.Text(
+                "+$hidden more ${if (hidden == 1) "camera" else "cameras"}", style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

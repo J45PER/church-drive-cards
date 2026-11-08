@@ -59,6 +59,17 @@ fun PurifierScheduleCard(config: JSONObject) {
 
     val neutral = panelNeutral()
     val s = state
+    if (LocalCompactCards.current) {
+        // Key info only: when it next changes. Editing needs the full card.
+        val word = when {
+            s == null -> if (missing) "" else "Loading…"
+            !s.enabled -> "Schedule off"
+            s.next != null -> "Next: ${s.next}"
+            else -> ""
+        }
+        CompactStrip(neutral, config.optString("title").ifBlank { "Purifier schedule" }, null, word)
+        return
+    }
     EntityCard(neutral.container, neutral.onContainer) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(config.optString("title").ifBlank { "Purifier schedule" }, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
