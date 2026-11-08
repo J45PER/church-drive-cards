@@ -445,7 +445,7 @@ fun AlarmCard(alarm: EntityState?, call: CallService, entityId: String = ALARM_E
         return
     }
     EntityCard(container, content) {
-        Text(title, style = CardTitleStyle, color = if (triggered) content else tone.accent)
+        Text(title, style = MaterialTheme.typography.headlineSmall, color = if (triggered) content else tone.accent)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.size(64.dp)) {
                 Canvas(Modifier.size(64.dp)) {

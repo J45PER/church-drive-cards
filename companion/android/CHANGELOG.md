@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.121.1
+
+- Reverts 0.121.0: the app is as it was in 0.120.0. Section titles are back to 22 regular and the unused blank card layout (`AppCard`) is removed. Instrument Sans stays as the typeface. The card layout work continues on the card review page, with no app changes for now.
+
 ## 0.121.0
 
 - A blank common layout for cards (`AppCard`), the base the card types will be built on: a title row in the size of the alarm card's title, with the expand and collapse button in the top right corner, then the body. Folded, the title row stays put and a card shows just its summary. Nothing uses it yet, so no card changes.

@@ -43,7 +43,7 @@ fun ToneSectionHeader(title: String, icon: ImageVector, tone: Tone, summary: Str
         Box(Modifier.size(36.dp).background(colors.accent.copy(alpha = 0.18f), CircleShape), contentAlignment = Alignment.Center) {
             Icon(icon, null, tint = colors.accent, modifier = Modifier.size(20.dp))
         }
-        Text(title, style = SectionTitleStyle, modifier = Modifier.weight(1f))
+        Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
         if (!summary.isNullOrBlank()) Text(summary, style = MaterialTheme.typography.bodyMedium, color = colors.accent)
     }
 }
@@ -56,7 +56,7 @@ fun ToneSectionHeader(title: String, icon: Painter, tone: Tone, summary: String?
         Box(Modifier.size(36.dp).background(colors.accent.copy(alpha = 0.18f), CircleShape), contentAlignment = Alignment.Center) {
             Icon(icon, null, tint = colors.accent, modifier = Modifier.size(20.dp))
         }
-        Text(title, style = SectionTitleStyle, modifier = Modifier.weight(1f))
+        Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
         if (!summary.isNullOrBlank()) Text(summary, style = MaterialTheme.typography.bodyMedium, color = colors.accent)
     }
 }

@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **v0.121.1 + apps 0.121.1** (2026-11-08): reverts 0.121.0 so the apps are as in 0.120.0 (section titles back to 22 regular, the unused `AppCard` removed); Instrument Sans stays.
 - **v0.121.0 + apps 0.121.0** (2026-11-08): in the apps, the blank common card layout (`AppCard`: a title row in the alarm card's title size with the expand and collapse button in the top right corner), which card types will be built on, and bigger, bolder section titles (28 SemiBold).
 - **v0.120.0 + apps 0.120.0** (2026-11-08): the phone, To-Do and Satellites apps use Instrument Sans, Clive's own typeface, for every text (it was the system font), set once as the theme's typography.
 - **v0.119.0 + apps 0.119.0** (2026-11-08): in the app, card folding is switched off for now (every card is full size, no chevron) while the folded look and the card title areas are revised.
