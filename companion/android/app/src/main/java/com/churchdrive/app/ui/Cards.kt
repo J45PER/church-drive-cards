@@ -120,6 +120,9 @@ fun EntityCard(
     }
 }
 
+/** Whether cards can be folded at all. Off for now: the folded look is being revised. */
+private val FOLDING_ON = false
+
 /** Whether a card is folded, and how to fold or unfold it: provided by [CollapsibleCard] around the card it holds. */
 class CardFold(val collapsed: Boolean, val toggle: () -> Unit)
 val LocalCardFold = androidx.compose.runtime.compositionLocalOf<CardFold?> { null }
@@ -130,6 +133,11 @@ val LocalCardFold = androidx.compose.runtime.compositionLocalOf<CardFold?> { nul
  */
 @Composable
 fun CollapsibleCard(key: String, ownStrip: Boolean, plainTitle: String = "", plainStatus: String = "", content: @Composable () -> Unit) {
+    // Folding is switched off while the folded look is revised: every card is drawn full size, as before.
+    if (!FOLDING_ON) {
+        content()
+        return
+    }
     var collapsed by rememberSaveable(key) { mutableStateOf(false) }
     val fold = CardFold(collapsed) { collapsed = !collapsed }
     CompositionLocalProvider(LocalCompactCards provides collapsed, LocalCardFold provides fold) {
