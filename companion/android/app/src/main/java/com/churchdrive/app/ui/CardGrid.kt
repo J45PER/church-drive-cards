@@ -3,6 +3,7 @@ package com.churchdrive.app.ui
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,6 +32,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /**
  * The card grid agreed on the card review page: a card is 8 equal columns wide with square cells, so its height is a number of rows
@@ -119,3 +121,70 @@ fun GridCard(
 
 private fun Modifier.androidxLongPress(onLongPress: () -> Unit): Modifier =
     this.then(Modifier.pointerInput(Unit) { detectTapGestures(onLongPress = { onLongPress() }) })
+
+/** One button on the grid: icon and label (side by side, or stacked when [stacked]), filled in the strong colour when selected. Corners 18 dp, as every agreed button. */
+@Composable
+fun GridButton(item: TileItem, tone: ToneColors, content: Color, enabled: Boolean, stacked: Boolean, modifier: Modifier) {
+    val ink = (if (item.selected) tone.onAccent else content).copy(alpha = if (enabled) 1f else 0.4f)
+    val shape = RoundedCornerShape(18.dp)
+    Box(
+        modifier.clip(shape).background(if (item.selected) tone.accent else content.copy(alpha = 0.10f), shape)
+            .clickable(enabled = enabled, onClickLabel = item.label, onClick = item.onClick).semantics { contentDescription = item.label },
+        contentAlignment = Alignment.Center,
+    ) {
+        if (stacked) {
+            androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center) {
+                HaIcon(item.icon, CdVectors.Info, ink, 24.dp)
+                if (item.showLabel) CentredText(item.label, ink, 12.sp, Modifier.padding(top = 4.dp), lineHeight = 14.sp)
+            }
+        } else {
+            androidx.compose.foundation.layout.Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                HaIcon(item.icon, CdVectors.Info, ink, Ui.TileIcon)
+                if (item.showLabel) CentredText(item.label, ink, Ui.TileText, Modifier.padding(end = 2.dp))
+            }
+        }
+    }
+}
+
+/**
+ * A row of buttons on the grid at row line [y], [h] cells tall: three are 2 cells wide with half a cell between, four are 1.5 wide with a third
+ * between, two are 3.25 wide, one fills the width; any other number shares the width with a quarter cell between.
+ */
+@Composable
+fun GridScope.GridTiles(items: List<TileItem>, y: Float, h: Float, tone: ToneColors, content: Color, enabled: Boolean, stacked: Boolean = h > 1.2f) {
+    val n = items.size
+    if (n == 0) return
+    val (w, gap) = when (n) {
+        1 -> 7f to 0f
+        2 -> 3.25f to 0.5f
+        3 -> 2f to 0.5f
+        4 -> 1.5f to (1f / 3f)
+        else -> ((7f - 0.25f * (n - 1)) / n) to 0.25f
+    }
+    items.forEachIndexed { i, it -> GridButton(it, tone, content, enabled, stacked, Modifier.at(0.5f + i * (w + gap), y, w, h)) }
+}
+
+/** The level bar's colour as it empties: blue when full, then green, yellow, amber, red. One colour for the whole fill. */
+fun levelFade(f: Float): Color {
+    val stops = listOf(0f to Color(0xFFE5534B), 0.25f to Color(0xFFE8A33B), 0.5f to Color(0xFFE6C93A), 0.75f to Color(0xFF4CC38A), 1f to Color(0xFF5B8CFF))
+    val x = f.coerceIn(0f, 1f)
+    for (i in 0 until stops.size - 1) {
+        val (f0, c0) = stops[i]; val (f1, c1) = stops[i + 1]
+        if (x <= f1) return androidx.compose.ui.graphics.lerp(c0, c1, (x - f0) / (f1 - f0))
+    }
+    return stops.last().second
+}
+
+/** A battery's bar colour: green when full, then yellow, amber and red as it empties. */
+fun batteryFade(f: Float): Color {
+    val x = f.coerceIn(0f, 1f)
+    return if (x >= 0.75f) Color(0xFF4CC38A) else levelFade(x)
+}
+
+/** A thin level bar (8 dp), [fraction] of its track filled in [colour]. */
+@Composable
+fun LevelBar(fraction: Float, colour: Color, ink: Color, modifier: Modifier = Modifier, thickness: Dp = 8.dp) {
+    Box(modifier.height(thickness).background(ink.copy(alpha = 0.25f), RoundedCornerShape(thickness / 2))) {
+        Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).height(thickness).background(colour, RoundedCornerShape(thickness / 2)))
+    }
+}
