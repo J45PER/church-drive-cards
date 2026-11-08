@@ -263,7 +263,9 @@ fun CarCard(config: JSONObject, entities: Map<String, EntityState>, registry: Re
     }
     // Open: a block per car, 2.5 rows apart (a car with out of date figures has another row for its refresh), its icon circle one cell across with its centre on a line.
     val stale = rows.map { carStale(it, now) }
-    val pitch = stale.map { if (it) 3.5f else 2.5f }
+    // Each car: 1.5 for its name, figure and bar, half a cell for the range line, half a cell (a cell with a Refresh button) for old figures, and half a cell between cars.
+    fun hasSub(c: CarRow) = c.range.isNotBlank() || c.fuel != null || c.end.isNotBlank()
+    val pitch = rows.mapIndexed { i, c -> 1.5f + (if (hasSub(c)) 0.5f else 0f) + (if (stale[i]) (if (c.wake.isNotEmpty()) 1f else 0.5f) else 0f) + 0.5f }
     GridCard(tone.container, ink, 1f + pitch.sum(), title, fold = fold) {
         var top = 1f
         rows.forEachIndexed { i, car ->
@@ -294,7 +296,8 @@ fun CarCard(config: JSONObject, entities: Map<String, EntityState>, registry: Re
             if (stale[i]) {
                 val amber = toneColors(Tone.Amber)
                 val asking = (asked[car.wake] ?: 0L) > now - 3 * 60_000L
-                Row(Modifier.at(0.5f, y + 2.0f, 7f, 1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                val staleY = y + 1.5f + (if (sub.isNotEmpty()) 0.5f else 0f)
+                Row(Modifier.at(0.5f, staleY, if (car.wake.isNotEmpty()) 3.5f else 7f, if (car.wake.isNotEmpty()) 1f else 0.5f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     HaIcon("mdi:clock-alert-outline", CdVectors.Info, amber.accent, 16.dp)
                     Text(carUpdatedText(car.asOf!!, now), color = amber.accent, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                 }
@@ -304,7 +307,7 @@ fun CarCard(config: JSONObject, entities: Map<String, EntityState>, registry: Re
                         now = System.currentTimeMillis()
                         call("button", "press", car.wake, data())
                     },
-                    tone, ink, !asking, false, Modifier.at(4.25f, y + 2.0f, 3.25f, 1f),
+                    tone, ink, !asking, false, Modifier.at(4.25f, staleY, 3.25f, 1f),
                 )
             }
         }

@@ -221,7 +221,7 @@ fun SafetyCard(config: JSONObject, entities: Map<String, EntityState>, registry:
             val tone = itemTone(item)
             val y = 1f + 1.5f * k
             val word = if (item.on) "Alarm" else if (item.unavailable) "Not responding" else "All clear"
-            Row(Modifier.at(0.5f, y, 7f, 1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(cell * 0.35f)) {
+            Row(Modifier.at(0.5f, y, 7f, if (item.ppm != null) 1.5f else 1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(cell * 0.35f)) {
                 // A squircle, not a circle, behind a safety device's icon.
                 Box(Modifier.size(cell * 0.9f).background(if (item.on) tone.accent else tone.accent.copy(alpha = 0.18f), RoundedCornerShape(30)), contentAlignment = Alignment.Center) {
                     HaIcon(SAFETY_ICONS[item.kind] ?: "mdi:alarm-light", CdVectors.ShieldOutline, if (item.on) tone.onAccent else tone.accent, 22.dp)

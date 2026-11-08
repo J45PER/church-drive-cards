@@ -4,6 +4,16 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.124.0
+
+- The thermostat on the Home screen shows the humidity and the outside temperature, as it does on the Climate page.
+- The cars card is tighter: the range line, the "last reported" line and the next car follow each other closely, with no big gaps.
+- Who's home on the alarm card has its names closer together.
+- The Carbon Monoxide alarm's "All clear" pill is no longer cut off.
+- The room graphs and the thermostat graph are multi-coloured again, as on the dashboard: the line is blue or teal when cool, green in the comfortable range, then amber and red as it gets warm. The graphs fill their boxes.
+- The air purifier has less space between its graph and its buttons, and its two filter lines are closer together.
+- A card remembers whether you folded it, however you move between pages, for as long as the app is open.
+
 ## 0.123.0
 
 - The camera card is on the card grid: the picture is 8 by 4.5 cells, and the name and the status chip sit on the footer's grid lines (the name's baseline on the line between rows 4 and 5, the chip half a cell tall), with the same corners as the other cards.
