@@ -61,6 +61,9 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.animation.animateContentSize
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -115,6 +118,38 @@ fun EntityCard(
     }
 }
 
+/** Whether a card is folded, and how to fold or unfold it: provided by [CollapsibleCard] around the card it holds. */
+class CardFold(val collapsed: Boolean, val toggle: () -> Unit)
+val LocalCardFold = androidx.compose.runtime.compositionLocalOf<CardFold?> { null }
+
+/**
+ * Lets one card fold down to a strip and back (its own chevron, remembered by [key] while the app is open). A card that draws
+ * its own strip when [LocalCompactCards] is on passes [ownStrip]; for any other, [plainTitle] and [plainStatus] make a plain one.
+ */
+@Composable
+fun CollapsibleCard(key: String, ownStrip: Boolean, plainTitle: String = "", plainStatus: String = "", content: @Composable () -> Unit) {
+    var collapsed by rememberSaveable(key) { mutableStateOf(false) }
+    val fold = CardFold(collapsed) { collapsed = !collapsed }
+    CompositionLocalProvider(LocalCompactCards provides collapsed, LocalCardFold provides fold) {
+        Box(Modifier.fillMaxWidth().animateContentSize()) {
+            if (collapsed && !ownStrip) {
+                CompactStrip(panelNeutral(), plainTitle, null, plainStatus)
+            } else {
+                content()
+                if (!collapsed) {
+                    // matchParentSize: a card that draws nothing keeps no stray button.
+                    Box(Modifier.matchParentSize(), contentAlignment = Alignment.TopEnd) {
+                        Box(
+                            modifier = Modifier.size(36.dp).clip(CircleShape).clickable(onClickLabel = "Collapse", onClick = fold.toggle).semantics { contentDescription = "Collapse" },
+                            contentAlignment = Alignment.Center,
+                        ) { Icon(CdVectors.ChevronUp, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), modifier = Modifier.size(20.dp)) }
+                    }
+                }
+            }
+        }
+    }
+}
+
 /** One small button on a [CompactStrip]: an icon, or a short label (a fan speed's number). */
 class StripButton(val icon: String?, val label: String?, val on: Boolean, val description: String, val onClick: () -> Unit)
 
@@ -134,6 +169,7 @@ fun CompactStrip(
     content: Color = tone.onContainer,
     accent: Color = tone.accent,
 ) {
+    val fold = LocalCardFold.current
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = CardShape,
@@ -141,7 +177,9 @@ fun CompactStrip(
     ) {
         Box(modifier = Modifier.glowBehind(container)) {
             Row(
-                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+                modifier = Modifier.fillMaxWidth()
+                    .then(if (fold != null) Modifier.clickable(onClickLabel = "Expand", onClick = fold.toggle) else Modifier)
+                    .heightIn(min = 52.dp).padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
@@ -164,6 +202,7 @@ fun CompactStrip(
                         else CentredText(b.label.orEmpty(), ink, Ui.TileText)
                     }
                 }
+                if (fold != null) Icon(CdVectors.ChevronDown, contentDescription = null, tint = content.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
             }
         }
     }
@@ -626,18 +665,6 @@ fun VacuumCard(vacuum: EntityState?, battery: EntityState?, call: CallService) {
     val tone = toneColors(vacuumTone(vacuum))
     val enabled = vacuum?.available == true
     val cleaning = vacuum?.state == "cleaning"
-    if (LocalCompactCards.current) {
-        CompactStrip(
-            tone, vacuum?.friendlyName ?: "Vacuum", null, vacuumSummary(vacuum, battery), enabled = enabled,
-            buttons = listOf(
-                StripButton(if (cleaning) "cd:pause" else "cd:play", null, true, if (cleaning) "Pause" else if (vacuum?.state == "paused") "Resume" else "Start") {
-                    call("vacuum", if (cleaning) "pause" else "start", VACUUM_ENTITY, data())
-                },
-                StripButton("cd:home", null, false, "Dock") { call("vacuum", "return_to_base", VACUUM_ENTITY, data()) },
-            ),
-        )
-        return
-    }
     EntityCard(tone.container, tone.onContainer, deviceEntity = vacuum?.entityId) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             GreggIcon(greggState(vacuum, battery), tone.accent, 44.dp, battery?.state?.toDoubleOrNull())

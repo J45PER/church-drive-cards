@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **v0.116.0 + apps 0.116.0** (2026-11-08): in the app, folding is per card (a chevron on each card) instead of per section; cameras, lights, the room and zone thermostats, Gregg, the Octopus plan and plain tiles do not fold.
 - **v0.115.0 + apps 0.115.0** (2026-11-08): in the app, a folded section shows each card as a one-row strip (name, key figure, status and a few small buttons, or text only) instead of a clipped card; a folded stack of cameras shows the first camera at full size with "+N more cameras"; light rooms are unchanged.
 - **v0.114.0 + apps 0.114.0** (2026-11-07): in the app, folding a section minimises its cards to short strips instead of hiding them; the purifier schedule's Edit button shows wherever the card is (it only showed on Security) and its "Next:" line is easier to read; the account button no longer shows a "?", and reopening the app checks its connection (with the Syncing pill) and reconnects if it was dropped; the climate score sits above the − and + buttons.
 - **v0.113.2 + apps 0.113.2** (2026-11-07): on the dashboards the EV charger card always has the car's colour wash, the Octopus charging plan card has the electricity colour (it was using the car's), and the Cars card has a lighter car wash.

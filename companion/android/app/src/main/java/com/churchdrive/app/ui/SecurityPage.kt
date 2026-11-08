@@ -69,7 +69,6 @@ fun DashboardPanel(panel: PanelSpec, toneOverride: Tone? = null, content: @Compo
         iconName = panel.icon,
         tone = tone,
         summary = summary,
-        collapsible = panel.title.isNotBlank(),
         content = { androidx.compose.runtime.CompositionLocalProvider(LocalPanelTone provides tone) { content() } },
     )
 }
@@ -80,9 +79,48 @@ fun SecurityPage(panels: List<PanelSpec>, entities: Map<String, EntityState>, re
     panels.ifEmpty { FALLBACK_SECURITY }.forEach { PanelView(it, entities, registry, call) }
 }
 
-/** One dashboard card, as a native card, by its type. */
+/** Cards that draw their own folded strip (see [CompactStrip]). */
+private val OWN_STRIP = setOf(
+    "custom:alarm-panel-card", "custom:fan-card", "custom:air-purifier-card", "custom:purifier-schedule-card", "custom:co-alarm-card",
+    "custom:cover-card", "custom:ev-charger-card", "custom:people-card", "custom:device-health-card", "custom:security-zone-card",
+    "custom:car-card", "custom:safety-card",
+)
+
+/**
+ * Cards that do not fold: pictures (cameras), lights and the room and zone thermostats (they already open and close), headings and
+ * stacks, small cards (plain tiles, the Octopus plan, Gregg) and the manager pages.
+ */
+private val NO_FOLD = setOf(
+    "heading", "markdown", "vertical-stack", "tile", "custom:camera-card", "custom:camera-links-card", "custom:light-control-card",
+    "custom:climate-card", "custom:climate-zone-card", "custom:octopus-plan-card", "custom:people-manager-card", "custom:zone-map-card",
+    "custom:notifications-card", "custom:icon-styles-card", "custom:watch-settings-card",
+)
+
+private val PLAIN_TITLES = mapOf(
+    "entities" to "Settings", "todo-list" to "To-do", "custom:task-list-card" to "Tasks", "custom:shopping-card" to "Shopping",
+    "custom:house-tasks-card" to "House tasks", "custom:octopus-card" to "Octopus", "custom:system-card" to "System",
+    "custom:media-card" to "Media", "custom:overnight-heating-card" to "Overnight heating", "custom:auto-entities" to "Lists",
+)
+
+/** One dashboard card, as a native card, by its type, which the person can fold down to a strip. */
 @Composable
 fun CardView(card: CardSpec, entities: Map<String, EntityState>, registry: Registry, call: CallService) {
+    val type = card.type.removeSuffix("-beta")
+    if (card.type.startsWith("header:") || type in NO_FOLD) {
+        CardContent(card, entities, registry, call)
+        return
+    }
+    val c = card.config
+    val entity = c.optString("entity").ifBlank { if (type == "custom:alarm-panel-card") ALARM_ENTITY else "" }
+    val title = listOf("name", "title", "heading").map { c.optString(it) }.firstOrNull { it.isNotBlank() }
+        ?: entities[entity]?.friendlyName ?: PLAIN_TITLES[type] ?: "Card"
+    CollapsibleCard("$type|${entity.ifBlank { title }}", type in OWN_STRIP, title, entities[entity]?.state?.let { presetLabel(it) }.orEmpty()) {
+        CardContent(card, entities, registry, call)
+    }
+}
+
+@Composable
+private fun CardContent(card: CardSpec, entities: Map<String, EntityState>, registry: Registry, call: CallService) {
     // A page's header information that the app has moved into a panel (the weather in Climate).
     if (card.type.startsWith("header:")) {
         HeaderView(card, entities, call)
@@ -147,6 +185,16 @@ fun SafetyCard(config: JSONObject, entities: Map<String, EntityState>, registry:
     val chosen = config.optJSONArray("entities")?.let { a -> (0 until a.length()).mapNotNull { a.optString(it).takeIf { s -> s.isNotBlank() } } }.orEmpty()
     val items = safetyItems(entities, registry, chosen)
     val neutral = panelNeutral()
+    if (LocalCompactCards.current) {
+        val sounding = items.filter { it.on }
+        val red = toneColors(Tone.Red)
+        CompactStrip(
+            if (sounding.isEmpty()) neutral else red, "Smoke, heat and CO", null,
+            if (sounding.isEmpty()) (if (items.isEmpty()) "No alarms found" else "All clear") else "ALARM: " + sounding.joinToString(", ") { it.name },
+            container = if (sounding.isEmpty()) neutral.container else red.container, content = if (sounding.isEmpty()) neutral.onContainer else red.onContainer,
+        )
+        return
+    }
     EntityCard(neutral.container, neutral.onContainer) {
         if (items.isEmpty()) {
             Text("No smoke, heat or CO alarms found.", style = MaterialTheme.typography.bodyMedium)

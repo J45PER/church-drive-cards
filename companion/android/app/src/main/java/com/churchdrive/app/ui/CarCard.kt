@@ -235,6 +235,10 @@ fun CarCard(config: JSONObject, entities: Map<String, EntityState>, registry: Re
     if (rows.isEmpty()) return
     val charging = rows.count { it.charging }
     val tone = toneColors(Tone.Car)
+    if (LocalCompactCards.current) {
+        CompactStrip(tone, config.optString("title").ifBlank { "Car" }, null, rows.joinToString(" · ") { c -> c.name + (c.battery?.let { " ${Math.round(it)}%" } ?: "") + if (c.charging) " (charging)" else "" })
+        return
+    }
     EntityCard(tone.container, tone.onContainer) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             config.optString("title").takeIf { it.isNotBlank() }?.let {

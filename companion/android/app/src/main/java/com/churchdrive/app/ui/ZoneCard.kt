@@ -94,6 +94,14 @@ fun ZoneCard(config: JSONObject, entities: Map<String, EntityState>, call: CallS
     val tinted = view.level == ZoneLevel.Open || view.level == ZoneLevel.Tamper
     val container = if (tinted) tone.container else neutral.container
     val ink = if (tinted) tone.onContainer else neutral.onContainer
+    if (LocalCompactCards.current) {
+        val low = view.bats.filter { b -> b.level != null && b.level < LOW_BATTERY }
+        CompactStrip(
+            if (tinted) tone else neutral, cfg.name, null, (listOf(view.word) + low.map { b -> "${b.name} ${Math.round(b.level ?: 0.0)}%" }).joinToString(" · "),
+            container = container, content = ink, accent = if (tinted) tone.accent else toneColors(Tone.Indigo).accent,
+        )
+        return
+    }
 
     // Tapping the card opens that camera's events, when the zone has a camera.
     val eventsBase = cameraBaseName(entities, cfg.camera, cfg.doorbell, cfg.motion.firstOrNull(), cfg.door, cfg.name)

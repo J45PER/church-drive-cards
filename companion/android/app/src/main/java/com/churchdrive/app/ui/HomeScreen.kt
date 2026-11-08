@@ -342,14 +342,14 @@ private fun HomePage(
     titles.forEach { title ->
         when (title) {
             "Security" -> HomePanel("Security", alarmIconName(alarm?.state), alarmTone(alarm?.state), alarmLabel(alarm?.state), Page.Security) {
-                AlarmCard(alarm, call, actor = entities[ALARM_ACTOR_ENTITY])
+                CollapsibleCard("custom:alarm-panel-card|$ALARM_ENTITY", true) { AlarmCard(alarm, call, actor = entities[ALARM_ACTOR_ENTITY]) }
             }
             // The home's climate quality score (a sensor made in Home Assistant) leads the Climate panel, as on the dashboard.
             "Climate" -> HomePanel(
                 "Climate", Page.Climate.mdi, if (quality != null) qualityTone(quality) else climateTone(climate),
                 if (quality != null) "$quality/100 · ${qualityWord(quality)}" else "${temp(climate?.num("current_temperature"))} °C · ${climateWord(climate)}",
                 Page.Climate,
-            ) { ClimateCard(climate, call, quality = quality, zone = zoneControl(entities, CLIMATE_ENTITY)) }
+            ) { CollapsibleCard("home-climate", true) { ClimateCard(climate, call, quality = quality, zone = zoneControl(entities, CLIMATE_ENTITY)) } }
             "Lights" -> HomePanel("Lights", Page.Lighting.mdi, Tone.Amber, lightsSummary(lights.home, entities), Page.Lighting) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     lights.home.forEach { LightRoomCard(it, entities, areaNames, call) }
@@ -369,7 +369,7 @@ private fun HomePage(
                     }
                 } else if (title == "Car charging") HomePanel("Car charging", "mdi:ev-station", Tone.Teal, entities[ZAPPI_MODE]?.state ?: "", null) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        ChargerCard(entities, call)
+                        CollapsibleCard("custom:ev-charger-card|", true) { ChargerCard(entities, call) }
                         OctopusPlanCard(entities)
                     }
                 }
