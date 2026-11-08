@@ -97,8 +97,11 @@ fun ZoneCard(config: JSONObject, entities: Map<String, EntityState>, call: CallS
     if (LocalCompactCards.current) {
         val low = view.bats.filter { b -> b.level != null && b.level < LOW_BATTERY }
         CompactStrip(
-            if (tinted) tone else neutral, cfg.name, null, (listOf(view.word) + low.map { b -> "${b.name} ${Math.round(b.level ?: 0.0)}%" }).joinToString(" · "),
+            if (tinted) tone else neutral, cfg.name, null, view.word,
             container = container, content = ink, accent = if (tinted) tone.accent else toneColors(Tone.Indigo).accent,
+            detail = view.bats.filter { it.level != null }.joinToString(" · ") { b -> "${b.name} ${Math.round(b.level ?: 0.0)}%" }.ifBlank { null },
+            bar = view.bats.mapNotNull { it.level }.minOrNull()?.let { (it / 100.0).toFloat() },
+            barColour = if (low.isNotEmpty()) toneColors(Tone.Amber).accent else toneColors(Tone.Green).accent,
         )
         return
     }

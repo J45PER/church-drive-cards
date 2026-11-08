@@ -236,7 +236,21 @@ fun CarCard(config: JSONObject, entities: Map<String, EntityState>, registry: Re
     val charging = rows.count { it.charging }
     val tone = toneColors(Tone.Car)
     if (LocalCompactCards.current) {
-        CompactStrip(tone, config.optString("title").ifBlank { "Car" }, null, rows.joinToString(" · ") { c -> c.name + (c.battery?.let { " ${Math.round(it)}%" } ?: "") + if (c.charging) " (charging)" else "" })
+        CompactStrip(tone, config.optString("title").ifBlank { "Car" }, null, "") {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                rows.forEach { car ->
+                    val barColour = carBatteryColour(car.battery, tone.accent)
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(car.name, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+                            Text(if (car.charging) "Charging" else if (car.plugged) "Plugged in" else car.where, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                            Text(car.battery?.let { "${Math.round(it)}%" } ?: "–", style = MaterialTheme.typography.titleMedium, color = barColour)
+                        }
+                        CompactBar(((car.battery ?: 0.0) / 100.0).coerceIn(0.0, 1.0).toFloat(), barColour, tone.onContainer)
+                    }
+                }
+            }
+        }
         return
     }
     EntityCard(tone.container, tone.onContainer) {
