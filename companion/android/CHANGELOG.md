@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.120.0
+
+- Every text in the app is now Instrument Sans, Clive's own typeface (it was the phone's system font, with Instrument Sans only on the splash screen). It is set once, as the theme's typography, so every card, page and panel follows, with the same sizes and weights as before. The letter shapes are a little different, so check that nothing is cut off.
+
 ## 0.119.0
 
 - Card folding is switched off for now, while the folded look and the card title areas are revised. Every card is full size again, with no fold chevron. The Overnight heating Edit, Save and Cancel, and the Cleaning page changes, stay.
