@@ -72,6 +72,8 @@ fun GridCard(
     deviceEntity: String? = null,
     titleColor: Color = content,
     fold: androidx.compose.runtime.MutableState<Boolean>? = null,
+    /** Where the fold arrow's cell starts, in cells from the top (0 for the title row). */
+    arrowTop: Float = 0f,
     body: @Composable GridScope.() -> Unit,
 ) {
     val openDevice = LocalOpenDevice.current
@@ -101,7 +103,7 @@ fun GridCard(
                     if (fold != null) {
                         val folded = fold.value
                         Box(
-                            Modifier.offset(cell * 7f, 0.dp).size(cell).clip(RoundedCornerShape(50))
+                            Modifier.offset(cell * 7f, cell * arrowTop).size(cell).clip(RoundedCornerShape(50))
                                 .clickable(onClickLabel = if (folded) "Expand" else "Collapse") { fold.value = !folded }
                                 .semantics { contentDescription = if (folded) "Expand" else "Collapse" },
                             contentAlignment = Alignment.Center,
