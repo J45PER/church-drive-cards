@@ -359,7 +359,7 @@ private fun HomePage(
                 "Cleaning", Page.Cleaning.mdi, vacuumTone(vacuum), vacuumSummary(vacuum, entities[VACUUM_BATTERY]), Page.Cleaning,
                 iconSlot = { colors -> GreggIcon(GreggState.Idle, colors.accent, 40.dp) },
             ) {
-                VacuumCard(vacuum, entities[VACUUM_BATTERY], call)
+                VacuumCard(vacuum, entities[VACUUM_BATTERY], call, entities)
             }
             else -> {
                 val spec = byTitle[title]

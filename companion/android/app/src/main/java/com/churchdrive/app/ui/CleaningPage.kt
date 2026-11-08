@@ -114,12 +114,8 @@ fun CleaningPage(entities: Map<String, EntityState>, call: CallService) {
 
     // ---- Gregg: everything about him in one section, as separate cards: what he is doing, his settings, the dock, parts and switches
     SectionPanel("Gregg", tone = Tone.Gregg, summary = vacuumSummary(vac, battery), iconSlot = { GreggIcon(GreggState.Idle, it.accent, 36.dp) }) {
-        // The same card as on the Home screen, with the last clean and any error under the battery.
-        val area = entities["sensor.gregg_cleaning_area"]?.state?.toDoubleOrNull()
-        val minutes = entities["sensor.gregg_cleaning_time"]?.state?.toDoubleOrNull()
-        val last = listOfNotNull(area?.let { "${Math.round(it)} m²" }, minutes?.let { "${Math.round(it)} min" }).joinToString(" · ")
-        val err = entities["sensor.gregg_error_message"]?.state?.takeIf { it.isNotBlank() && it != "unknown" && it != "unavailable" && it != "None" }
-        VacuumCard(vac, battery, call, detail = if (last.isNotBlank()) "Last clean $last" else null, error = err)
+        // The same card as on the Home screen.
+        VacuumCard(vac, battery, call, entities)
 
     // ---- Cleaning settings: one drop-down for each
     val settings = listOf(

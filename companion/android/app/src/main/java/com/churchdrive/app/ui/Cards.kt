@@ -712,7 +712,7 @@ fun ClimateCard(
     // The zone line and the graph below the buttons are drawn when the page gives them.
     var end = 6f
     val zoneY = if (zone != null) { val y = end + 0.5f; end = y + 1f; y } else 0f
-    val belowY = if (below != null) { val y = end + 0.5f; end = y + 1.5f; y } else 0f
+    val belowY = if (below != null) { val y = end + 0.5f; end = y + 2f; y } else 0f
     GridCard(tone.container, ink, end + 0.5f, title, deviceEntity = climate?.entityId, fold = fold) {
         // The dial: the ring is the size and place of the alarm's ring.
         Dial(1.25f, 2f, 1.5f)
@@ -741,7 +741,7 @@ fun ClimateCard(
             Box(Modifier.at(0.5f, zoneY, 7f, 1f)) { ZoneStatusLine(zone, tone) { sheetOpen = true } }
             if (sheetOpen) ThermostatSheet(zone.zone.replaceFirstChar { it.uppercase() }, zone, tone, call) { sheetOpen = false }
         }
-        if (below != null) Box(Modifier.at(0.5f, belowY, 7f, 1.5f)) { below() }
+        if (below != null) Box(Modifier.at(0.5f, belowY, 7f, 2f)) { below() }
     }
 }
 
@@ -791,7 +791,12 @@ fun vacuumSummary(v: EntityState?, battery: EntityState?): String {
 }
 
 @Composable
-fun VacuumCard(vacuum: EntityState?, battery: EntityState?, call: CallService, detail: String? = null, error: String? = null) {
+fun VacuumCard(vacuum: EntityState?, battery: EntityState?, call: CallService, entities: Map<String, EntityState> = emptyMap()) {
+    val area = entities["sensor.gregg_cleaning_area"]?.state?.toDoubleOrNull()
+    val minutes = entities["sensor.gregg_cleaning_time"]?.state?.toDoubleOrNull()
+    val lastClean = listOfNotNull(area?.let { "${Math.round(it)} m²" }, minutes?.let { "${Math.round(it)} min" }).joinToString(" · ")
+    val detail = if (lastClean.isNotBlank()) "Last clean $lastClean" else null
+    val error = entities["sensor.gregg_error_message"]?.state?.takeIf { it.isNotBlank() && it != "unknown" && it != "unavailable" && it != "None" }
     val tone = toneColors(vacuumTone(vacuum))
     val enabled = vacuum?.available == true
     val cleaning = vacuum?.state == "cleaning"
