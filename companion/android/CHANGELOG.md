@@ -8,6 +8,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 - Folding is now per card, not per section. Each card has a small chevron at its top right that folds it to a one-row strip; tap the strip to open it again. Sections no longer fold.
 - A strip shows the name, a key figure, a short status and, where it helps, small buttons: alarm modes, thermostat modes, fan (Off and speeds 1, 2, 3), air purifier modes, blind. Who's home, device health, security zones, cars and smoke and CO alarms show text only, and any other card folds to its name.
+- The Cleaning page has a Cleaning tasks section (the cleaning to-do list) above Gregg, and everything about Gregg (what he is doing, his settings, the dock, parts and switches) is one section, with each still its own card.
 - Not folded: cameras (they keep the full picture), lights, the room and zone thermostats (they already open and close), Gregg, the Octopus plan, plain tiles, headings and the manager pages.
 
 ## 0.115.0
