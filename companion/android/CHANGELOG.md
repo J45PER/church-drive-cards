@@ -4,6 +4,12 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.117.0
+
+- A folded card is now a smaller card, about as tall as Gregg's on Home, not a single line: the name with its key figure, a status line, a detail line, and the card's main buttons as tiles. The fold chevron stays in the same top-right corner open or folded, so it no longer moves.
+- Folded cards keep their key info: the car's battery bar for each car, the door and sensor batteries on a security zone, the carbon monoxide battery, the purifier's filters, the thermostat's climate score and humidity, the alarm's who and when, the schedule's lines, and who is where.
+- The car charger keeps its charge modes as buttons when folded, with the session total and rate.
+
 ## 0.116.0
 
 - Folding is now per card, not per section. Each card has a small chevron at its top right that folds it to a one-row strip; tap the strip to open it again. Sections no longer fold.

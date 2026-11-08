@@ -121,7 +121,10 @@ fun PeopleStatusCard(entities: Map<String, EntityState>, registry: Registry) {
     val neutral = panelNeutral()
     if (LocalCompactCards.current) {
         val home = rows.count { it.state == "home" }
-        CompactStrip(neutral, "Who's home", null, if (rows.isEmpty()) "Nobody set up" else "$home home · ${rows.size - home} away")
+        CompactStrip(
+            neutral, "Who's home", null, if (rows.isEmpty()) "Nobody set up" else "$home home · ${rows.size - home} away",
+            detail = rows.joinToString(" · ") { p -> p.name.trim().substringBefore(' ') + " " + presencePill(p.state, p.place, p.zone).first.lowercase() },
+        )
         return
     }
     EntityCard(neutral.container, neutral.onContainer) {

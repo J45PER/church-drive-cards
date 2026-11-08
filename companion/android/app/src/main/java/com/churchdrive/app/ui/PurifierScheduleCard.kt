@@ -67,7 +67,10 @@ fun PurifierScheduleCard(config: JSONObject) {
             s.next != null -> "Next: ${s.next}"
             else -> ""
         }
-        CompactStrip(neutral, config.optString("title").ifBlank { "Purifier schedule" }, null, word)
+        CompactStrip(
+            neutral, config.optString("title").ifBlank { "Purifier schedule" }, null, word,
+            detail = s?.schedules?.take(2)?.joinToString(" · ") { purifierSummary(it) },
+        )
         return
     }
     EntityCard(neutral.container, neutral.onContainer) {

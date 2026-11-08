@@ -132,18 +132,19 @@ fun CollapsibleCard(key: String, ownStrip: Boolean, plainTitle: String = "", pla
     val fold = CardFold(collapsed) { collapsed = !collapsed }
     CompositionLocalProvider(LocalCompactCards provides collapsed, LocalCardFold provides fold) {
         Box(Modifier.fillMaxWidth().animateContentSize()) {
-            if (collapsed && !ownStrip) {
-                CompactStrip(panelNeutral(), plainTitle, null, plainStatus)
-            } else {
-                content()
-                if (!collapsed) {
-                    // matchParentSize: a card that draws nothing keeps no stray button.
-                    Box(Modifier.matchParentSize(), contentAlignment = Alignment.TopEnd) {
-                        Box(
-                            modifier = Modifier.size(36.dp).clip(CircleShape).clickable(onClickLabel = "Collapse", onClick = fold.toggle).semantics { contentDescription = "Collapse" },
-                            contentAlignment = Alignment.Center,
-                        ) { Icon(CdVectors.ChevronUp, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), modifier = Modifier.size(20.dp)) }
-                    }
+            if (collapsed && !ownStrip) CompactStrip(panelNeutral(), plainTitle, null, plainStatus) else content()
+            // The same corner, the same size, open or folded, so it does not move. matchParentSize: a card that draws nothing keeps no stray button.
+            Box(Modifier.matchParentSize(), contentAlignment = Alignment.TopEnd) {
+                Box(
+                    modifier = Modifier.padding(top = 2.dp, end = 2.dp).size(32.dp).clip(CircleShape)
+                        .clickable(onClickLabel = if (collapsed) "Expand" else "Collapse", onClick = fold.toggle)
+                        .semantics { contentDescription = if (collapsed) "Expand" else "Collapse" },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        if (collapsed) CdVectors.ChevronDown else CdVectors.ChevronUp, contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), modifier = Modifier.size(18.dp),
+                    )
                 }
             }
         }
@@ -154,8 +155,9 @@ fun CollapsibleCard(key: String, ownStrip: Boolean, plainTitle: String = "", pla
 class StripButton(val icon: String?, val label: String?, val on: Boolean, val description: String, val onClick: () -> Unit)
 
 /**
- * A card folded down (its section is folded): the name in the card's colour, a key figure, a short status and a few small
- * buttons, in one row, as the dashboard's compact cards. Each card chooses what to keep; many keep no buttons at all.
+ * A card folded down: a smaller card, about as tall as Gregg's on Home. The name in the card's colour with a key figure, a status
+ * line and a smaller detail line, a thin bar where there is a level to show (a battery), and the card's main buttons as a row of tiles.
+ * Tapping it opens the card again (the chevron is [CollapsibleCard]'s, in the same corner as when open).
  */
 @Composable
 fun CompactStrip(
@@ -168,6 +170,10 @@ fun CompactStrip(
     container: Color = tone.container,
     content: Color = tone.onContainer,
     accent: Color = tone.accent,
+    detail: String? = null,
+    bar: Float? = null,
+    barColour: Color = accent,
+    body: (@Composable () -> Unit)? = null,
 ) {
     val fold = LocalCardFold.current
     Card(
@@ -176,35 +182,34 @@ fun CompactStrip(
         colors = CardDefaults.cardColors(containerColor = container, contentColor = content),
     ) {
         Box(modifier = Modifier.glowBehind(container)) {
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth()
                     .then(if (fold != null) Modifier.clickable(onClickLabel = "Expand", onClick = fold.toggle) else Modifier)
-                    .heightIn(min = 52.dp).padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    .padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Text(name, style = MaterialTheme.typography.titleSmall, color = accent, maxLines = 1, modifier = Modifier.weight(1f, fill = false))
-                if (!value.isNullOrBlank()) Text(value, style = MaterialTheme.typography.titleSmall, maxLines = 1)
-                Text(
-                    status, style = MaterialTheme.typography.bodySmall, color = content.copy(alpha = 0.85f), maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
-                )
-                buttons.forEach { b ->
-                    val ink = if (b.on) tone.onAccent else content
-                    Box(
-                        modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))
-                            .background(if (b.on) accent else content.copy(alpha = 0.10f))
-                            .clickable(enabled = enabled, onClickLabel = b.description, onClick = b.onClick)
-                            .semantics { contentDescription = b.description },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        if (b.icon != null) HaIcon(b.icon, CdVectors.Info, ink, 20.dp)
-                        else CentredText(b.label.orEmpty(), ink, Ui.TileText)
-                    }
+                // The end padding keeps the name clear of the chevron in the corner.
+                Row(Modifier.fillMaxWidth().padding(end = 32.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(name, style = MaterialTheme.typography.titleMedium, color = accent, maxLines = 1, modifier = Modifier.weight(1f))
+                    if (!value.isNullOrBlank()) Text(value, style = MaterialTheme.typography.titleMedium, maxLines = 1)
                 }
-                if (fold != null) Icon(CdVectors.ChevronDown, contentDescription = null, tint = content.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+                if (status.isNotBlank()) Text(status, style = MaterialTheme.typography.bodyMedium, color = content.copy(alpha = 0.9f), maxLines = 2)
+                if (!detail.isNullOrBlank()) Text(detail, style = MaterialTheme.typography.bodySmall, color = content.copy(alpha = 0.75f), maxLines = 2)
+                if (bar != null) CompactBar(bar, barColour, content)
+                body?.invoke()
+                if (buttons.isNotEmpty()) {
+                    TileRow(buttons.map { b -> TileItem(b.icon ?: "mdi:numeric", b.label ?: b.description, b.on) { b.onClick() } }, tone, content, enabled)
+                }
             }
         }
+    }
+}
+
+/** A thin level bar (a battery): [fraction] of the track filled in [colour]. */
+@Composable
+fun CompactBar(fraction: Float, colour: Color, ink: Color) {
+    Box(Modifier.fillMaxWidth().height(6.dp).background(ink.copy(alpha = 0.18f), RoundedCornerShape(3.dp))) {
+        Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).height(6.dp).background(colour, RoundedCornerShape(3.dp)))
     }
 }
 
@@ -367,12 +372,12 @@ fun AlarmCard(alarm: EntityState?, call: CallService, entityId: String = ALARM_E
 
     if (LocalCompactCards.current) {
         CompactStrip(
-            tone, title, null, line1, enabled = enabled, container = container, content = content, accent = if (triggered) content else tone.accent,
+            tone, title, null, line1, enabled = enabled, container = container, content = content, accent = if (triggered) content else tone.accent, detail = line2,
             buttons = buildList {
-                add(StripButton("mdi:shield-off-outline", null, activeKey == "disarmed", "Disarm") { send("alarm_disarm") })
-                if (features and 1 != 0) add(StripButton("mdi:shield-home", null, activeKey == "armed_home", "Arm Home") { send("alarm_arm_home") })
-                if (features and 2 != 0) add(StripButton("mdi:shield-lock", null, activeKey == "armed_away", "Arm Away") { send("alarm_arm_away") })
-                if (features and 4 != 0) add(StripButton("mdi:shield-moon", null, activeKey == "armed_night", "Arm Night") { send("alarm_arm_night") })
+                add(StripButton("mdi:shield-off-outline", "Disarm", activeKey == "disarmed", "Disarm") { send("alarm_disarm") })
+                if (features and 1 != 0) add(StripButton("mdi:shield-home", "Home", activeKey == "armed_home", "Arm Home") { send("alarm_arm_home") })
+                if (features and 2 != 0) add(StripButton("mdi:shield-lock", "Away", activeKey == "armed_away", "Arm Away") { send("alarm_arm_away") })
+                if (features and 4 != 0) add(StripButton("mdi:shield-moon", "Night", activeKey == "armed_night", "Arm Night") { send("alarm_arm_night") })
             },
         )
         return
@@ -571,6 +576,11 @@ fun ClimateCard(
             },
             buttons = (quick ?: DEFAULT_QUICK).map { q -> StripButton(quickSettingIcon(q), null, isSelected(q), q.name) { applyQuick(q) } },
             enabled = enabled,
+            detail = listOfNotNull(
+                quality?.let { "Home climate $it/100 · ${qualityWord(it)}" },
+                humidity?.state?.toDoubleOrNull()?.let { "Humidity ${temp(it)}%" },
+                outdoor?.let { "Outside ${temp(it)}°" },
+            ).joinToString(" · "),
         )
         return
     }
@@ -746,7 +756,20 @@ fun ChargerCard(entities: Map<String, EntityState>, call: CallService) {
         )
     }
     if (LocalCompactCards.current) {
-        CompactStrip(tone, "Car charger", if (charging) "${"%.1f".format(power / 1000)} kW" else null, status)
+        CompactStrip(
+            tone, "Car charger", if (charging) "${"%.1f".format(power / 1000)} kW" else null, status,
+            enabled = mode?.available == true,
+            detail = listOfNotNull(
+                session?.let { "${temp(it)} kWh this session" },
+                Octopus.current(Octopus.allRates(entities), System.currentTimeMillis())?.let { "${Octopus.pence(it.pence)}p rate now" },
+            ).joinToString(" · "),
+            buttons = chargerModes(mode?.options().orEmpty()).map { m ->
+                StripButton(m.icon, m.name, mode?.state == m.key, m.name) {
+                    val q = if (m.key == "Fast") chargeAsk(entities, System.currentTimeMillis()) else null
+                    if (q != null) { askFor = "fast"; ask = q } else call("select", "select_option", ZAPPI_MODE, data("option" to m.key))
+                }
+            },
+        )
         return
     }
     EntityCard(tone.container, tone.onContainer) {
