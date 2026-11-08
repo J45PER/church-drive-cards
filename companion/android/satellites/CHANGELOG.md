@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.121.1
+
+- Reverts 0.121.0: section titles are back to 22 regular, as in 0.120.0.
+
 ## 0.121.0
 
 - Section titles are a step bigger and bolder, as in the main app.

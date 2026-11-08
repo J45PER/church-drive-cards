@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.121.1
+
+- Reverts 0.121.0: section titles are back to 22 regular, as in 0.120.0.
+
 ## 0.121.0
 
 - Section titles are a step bigger and bolder, as in the main app.

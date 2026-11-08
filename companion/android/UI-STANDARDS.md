@@ -36,14 +36,6 @@ The mechanical ones are checked by `UiStandardsTest` (it fails the build); the r
 10. **Run the checks**: CI runs `testDebugUnitTest`, including `UiStandardsTest`. If a check fails, change the
     code, not the check. Change a check only on purpose, and say why in the commit message.
 
-## Card types are built on `AppCard`
-
-`ui/AppCard.kt` is the blank common layout every card type is built on: a title row (the title in `CardTitleStyle`, the size of the
-alarm card's title, 24/32, with the expand and collapse button at the right end, in the card's top right corner), then the body.
-Folded, the title row stays put and `summary` (the one thing worth keeping on show) replaces the body. A card that cannot fold passes
-no `onExpandedChange` and gets no button. Hold the state with `rememberCardExpanded`. A section's title is `SectionTitleStyle`
-(28/36 SemiBold), a step bigger than a card's title and bolder. Typeface: Instrument Sans (`BrandTypography`).
-
 ## Shared across the apps (phone, To-Do, Satellites)
 
 - **Clive's button is one component**: `AssistantRound` and `AssistOrb` in `core/.../ui/AssistantOrb.kt` (the coloured cloud on a circle the
