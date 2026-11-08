@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.122.0
+
+- No change to this app: the card layout work in the phone app is in the shared version.
+
 ## 0.121.1
 
 - Reverts 0.121.0: section titles are back to 22 regular, as in 0.120.0.
