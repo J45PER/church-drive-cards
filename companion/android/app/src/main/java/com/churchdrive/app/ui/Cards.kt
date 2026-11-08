@@ -24,6 +24,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Spacer
@@ -432,61 +434,85 @@ fun AlarmCard(alarm: EntityState?, call: CallService, entityId: String = ALARM_E
     // During a delay the mode being armed is lit; otherwise the current state.
     val activeKey = if (inDelay || triggered) alarm?.str("targetState") else state
 
-    if (LocalCompactCards.current) {
-        CompactStrip(
-            tone, title, null, line1, enabled = enabled, container = container, content = content, accent = if (triggered) content else tone.accent, detail = line2, dense = true, titleStyle = MaterialTheme.typography.headlineSmall,
-            buttons = buildList {
-                add(StripButton("mdi:shield-off-outline", "Disarm", activeKey == "disarmed", "Disarm") { send("alarm_disarm") })
-                if (features and 1 != 0) add(StripButton("mdi:shield-home", "Home", activeKey == "armed_home", "Arm Home") { send("alarm_arm_home") })
-                if (features and 2 != 0) add(StripButton("mdi:shield-lock", "Away", activeKey == "armed_away", "Arm Away") { send("alarm_arm_away") })
-                if (features and 4 != 0) add(StripButton("mdi:shield-moon", "Night", activeKey == "armed_night", "Arm Night") { send("alarm_arm_night") })
-            },
-        )
+    // The mode buttons the alarm supports, in order.
+    class Mode(val key: String, val label: String, val icon: String, val service: String)
+    val modes = buildList {
+        add(Mode("disarmed", "Disarm", "mdi:shield-off-outline", "alarm_disarm"))
+        if (features and 1 != 0) add(Mode("armed_home", "Home", "mdi:shield-home", "alarm_arm_home"))
+        if (features and 2 != 0) add(Mode("armed_away", "Away", "mdi:shield-lock", "alarm_arm_away"))
+        if (features and 4 != 0) add(Mode("armed_night", "Night", "mdi:shield-moon", "alarm_arm_night"))
+    }
+    val fold = rememberFold("grid-fold|$entityId")
+    val ink = if (triggered) tone.onAccent else content
+    val shield = ALARM_STATES[state]?.icon ?: "mdi:shield-outline"
+    val titleText = "Home Security"
+    @Composable
+    fun androidx.compose.foundation.layout.BoxScope.Ring(sizeCells: Float, cell: androidx.compose.ui.unit.Dp, iconDp: androidx.compose.ui.unit.Dp) {
+        Canvas(Modifier.size(cell * sizeCells)) {
+            val stroke = 5.dp.toPx() * sizeCells / 1.5f
+            val inset = stroke / 2
+            val arcSize = Size(size.width - stroke, size.height - stroke)
+            drawArc(ring.copy(alpha = 0.2f), 0f, 360f, false, Offset(inset, inset), arcSize, style = Stroke(stroke))
+            val sweep = if (inDelay) 360f * (remaining.toFloat() / total).coerceIn(0f, 1f) else 360f
+            drawArc(ring, -90f, sweep, false, Offset(inset, inset), arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
+        }
+        HaIcon(shield, CdVectors.ShieldOutline, ring, iconDp)
+    }
+    if (fold.value) {
+        // Folded: two and a half rows. One band on the middle of row 2: a one cell ring, who and when over two lines from the line between
+        // columns B and C, and the modes as small buttons centred on the column lines at the right.
+        GridCard(container, content, 2.5f, titleText, deviceEntity = entityId, fold = fold) {
+            Box(Modifier.atCentre(1f, 1.5f, 1f, 1f), contentAlignment = Alignment.Center) { Ring(1f, cell, 20.dp) }
+            val firstBtn = 8f - modes.size
+            Column(Modifier.at(2f, 0.9f, firstBtn - 2f - 0.5f, 1.2f), verticalArrangement = Arrangement.Center) {
+                val one = line1.ifEmpty { alarmLabel(state) }
+                Text(one, style = MaterialTheme.typography.bodyMedium, color = ink, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                val two = if (inDelay) "${remaining}s" else line2
+                if (two.isNotEmpty()) Text(two, style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            }
+            modes.forEachIndexed { i, m ->
+                SmallModeButton(m.icon, activeKey == m.key, tone, ink, triggered, Modifier.atCentre(firstBtn + i, 1.5f, 0.8f, 0.8f), enabled, m.label) { send(m.service) }
+            }
+        }
         return
     }
-    EntityCard(container, content) {
-        Text(title, style = MaterialTheme.typography.headlineSmall, color = if (triggered) content else tone.accent)
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(64.dp)) {
-                Canvas(Modifier.size(64.dp)) {
-                    val stroke = 5.dp.toPx()
-                    val inset = stroke / 2
-                    val arcSize = Size(size.width - stroke, size.height - stroke)
-                    drawArc(ring.copy(alpha = 0.2f), 0f, 360f, false, Offset(inset, inset), arcSize, style = Stroke(stroke))
-                    val sweep = if (inDelay) 360f * (remaining.toFloat() / total).coerceIn(0f, 1f) else 360f
-                    drawArc(ring, -90f, sweep, false, Offset(inset, inset), arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
-                }
-                HaIcon(ALARM_STATES[state]?.icon ?: "mdi:shield-outline", CdVectors.ShieldOutline, ring, 30.dp)
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                if (line1.isNotEmpty()) Text(line1, style = MaterialTheme.typography.titleMedium)
-                if (line2.isNotEmpty()) Text(line2, style = MaterialTheme.typography.bodyMedium)
-            }
-            if (inDelay) Text("${remaining}s", style = MaterialTheme.typography.headlineMedium, color = ring)
+    val rows = 5f + if (people.isEmpty()) 0f else 0.5f + people.size
+    GridCard(container, content, rows, titleText, deviceEntity = entityId, fold = fold) {
+        // The ring: 1.5 cells across, from the half line of column A, centred on the line between rows 2 and 3.
+        Box(Modifier.atCentre(1.25f, 2f, 1.5f, 1.5f), contentAlignment = Alignment.Center) { Ring(1.5f, cell, 30.dp) }
+        // Who and when from the centre of column C, centred on the same line.
+        Column(Modifier.at(2.5f, 1f, if (inDelay) 3f else 5f, 2f), verticalArrangement = Arrangement.Center) {
+            if (line1.isNotEmpty()) Text(line1, style = MaterialTheme.typography.titleMedium, color = ink)
+            if (line2.isNotEmpty()) Text(line2, style = MaterialTheme.typography.bodyMedium, color = ink)
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            val m = Modifier.weight(1f)
-            ModeTile("Disarm", "mdi:shield-off-outline", activeKey == "disarmed", tone, content, m, enabled) { send("alarm_disarm") }
-            if (features and 1 != 0) {
-                ModeTile("Home", "mdi:shield-home", activeKey == "armed_home", tone, content, m, enabled) { send("alarm_arm_home") }
-            }
-            if (features and 2 != 0) {
-                ModeTile("Away", "mdi:shield-lock", activeKey == "armed_away", tone, content, m, enabled) { send("alarm_arm_away") }
-            }
-            if (features and 4 != 0) {
-                ModeTile("Night", "mdi:shield-moon", activeKey == "armed_night", tone, content, m, enabled) { send("alarm_arm_night") }
-            }
+        if (inDelay) Text("${remaining}s", style = MaterialTheme.typography.headlineMedium, color = ring, modifier = Modifier.at(5.5f, 1.5f, 2f, 1f).wrapContentSize(Alignment.CenterEnd))
+        // The modes: 2 cells wide each (three modes), or 1.5 wide where there is a Night mode, 1.5 tall, base on the middle of row 5.
+        val w = if (modes.size > 3) 1.5f else 2f
+        val gap = if (modes.size > 3) 1f / 3f else 0.5f
+        modes.forEachIndexed { i, m ->
+            ModeTile(m.label, m.icon, activeKey == m.key, tone, content, Modifier.at(0.5f + i * (w + gap), 3f, w, 1.5f), enabled, triggered, Modifier.fillMaxSize()) { send(m.service) }
         }
         // Who's home, one line each (administrators only: the page passes nobody for anyone else).
-        people.forEach { p ->
+        people.forEachIndexed { i, p ->
             val (word, _) = presencePill(p.state, p.place, p.zone)
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.at(0.5f, 4.5f + 0.5f + i, 7f, 1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 HaIcon(if (p.state == "home") "cd:home" else "cd:home-away", CdVectors.ShieldOutline, ring, 20.dp)
-                Text(p.name, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = content, maxLines = 1)
-                Text(word, style = MaterialTheme.typography.bodyMedium, color = content.copy(alpha = 0.8f), maxLines = 1)
+                Text(p.name, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = ink, maxLines = 1)
+                Text(word, style = MaterialTheme.typography.bodyMedium, color = ink.copy(alpha = 0.8f), maxLines = 1)
             }
         }
     }
+}
+
+/** A small icon button on a folded grid card: 0.8 of a cell, the current mode filled in the card's strong colour. */
+@Composable
+fun SmallModeButton(icon: String, selected: Boolean, tone: ToneColors, ink: Color, triggered: Boolean, modifier: Modifier, enabled: Boolean, description: String, onClick: () -> Unit) {
+    val bg = when { selected && triggered -> tone.onAccent; selected -> tone.accent; triggered -> Color.White.copy(alpha = 0.30f); else -> ink.copy(alpha = 0.10f) }
+    val fg = when { selected && triggered -> Color.White; selected -> tone.onAccent; else -> ink }
+    Box(
+        modifier.clip(RoundedCornerShape(12.dp)).background(bg).clickable(enabled = enabled, onClickLabel = description, onClick = onClick).semantics { contentDescription = description },
+        contentAlignment = Alignment.Center,
+    ) { HaIcon(icon, CdVectors.ShieldOutline, fg, 20.dp) }
 }
 
 /** A mode button: the dashboard's icon over the label; the current mode is filled in the state colour. */
@@ -499,24 +525,23 @@ private fun ModeTile(
     content: Color,
     modifier: Modifier,
     enabled: Boolean,
+    triggered: Boolean = false,
+    inner: Modifier = Modifier.height(Ui.TallTileHeight),
     onClick: () -> Unit,
 ) {
     val shape = RoundedCornerShape(18.dp)
-    val ink = if (selected) tone.onAccent else content
-    Column(
-        modifier = modifier
-            .height(Ui.TallTileHeight)
-            .clip(shape)
-            .then(
-                if (selected) Modifier.background(tone.accent)
-                else Modifier.background(content.copy(alpha = 0.10f)),
-            )
-            .clickable(enabled = enabled, onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        HaIcon(icon, CdVectors.ShieldOutline, ink, 24.dp)
-        CentredText(label, ink, 12.sp, Modifier.padding(top = 4.dp), lineHeight = 14.sp)
+    // On a triggered card (fully tinted in the strong colour) the buttons use a light wash, and the current mode a dark fill, so they read.
+    val bg = when { selected && triggered -> tone.onAccent; selected -> tone.accent; triggered -> Color.White.copy(alpha = 0.30f); else -> content.copy(alpha = 0.10f) }
+    val ink = when { selected && triggered -> Color.White; selected -> tone.onAccent; else -> content }
+    Box(modifier.clip(shape).background(bg).clickable(enabled = enabled, onClick = onClick)) {
+        Column(
+            modifier = inner,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            HaIcon(icon, CdVectors.ShieldOutline, ink, 24.dp)
+            CentredText(label, ink, 12.sp, Modifier.padding(top = 4.dp), lineHeight = 14.sp)
+        }
     }
 }
 
