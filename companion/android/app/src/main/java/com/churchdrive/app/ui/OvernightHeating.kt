@@ -7,6 +7,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -71,7 +75,13 @@ fun describeOvernight(mode: String, start: String?, end: String?, name: String):
 
 private fun nowHm(): String = Calendar.getInstance().let { "%02d:%02d".format(it.get(Calendar.HOUR_OF_DAY), it.get(Calendar.MINUTE)) }
 
-/** The dashboard's `custom:overnight-heating-card`. Nothing is drawn for anyone but an administrator. */
+/** What is being edited: the mode and the two times. Null while the card is only showing them. */
+private data class OvernightDraft(val mode: String, val start: String, val end: String)
+
+/**
+ * The dashboard's `custom:overnight-heating-card`. Nothing is drawn for anyone but an administrator. As on the purifier schedule, nothing
+ * changes from the normal view: Edit opens the mode and the two times with Save and Cancel, so a stray tap can't alter the heating.
+ */
 @Composable
 fun OvernightHeatingCard(entities: Map<String, EntityState>, call: CallService) {
     if (!LocalIsAdmin.current) return
@@ -81,36 +91,66 @@ fun OvernightHeatingCard(entities: Map<String, EntityState>, call: CallService) 
     val end = hmOf(entities[OVERNIGHT_END_ENTITY]?.takeIf { it.available }?.state)
     val mode = overnightModeOf(modeEntity?.state)
     val tone = toneColors(when (mode) { "Eco" -> Tone.Green; "Off" -> Tone.Grey; else -> Tone.Indigo })
+    var draft by remember { mutableStateOf<OvernightDraft?>(null) }
+    val ready = modeEntity != null && start != null && end != null
+    val active = ready && mode != "Smart" && inOvernightWindow(start, end, nowHm())
+    if (LocalCompactCards.current) {
+        CompactStrip(
+            tone, "Overnight heating", null,
+            if (!ready) "Needs its settings in Home Assistant" else if (active) "$mode now" else mode,
+            detail = if (ready) "From $start until $end" else null, dense = true,
+        )
+        return
+    }
     EntityCard(tone.container, tone.onContainer) {
         if (modeEntity == null || start == null || end == null) {
             Text("Overnight heating needs its settings in Home Assistant.", style = MaterialTheme.typography.bodyMedium)
             return@EntityCard
         }
-        val active = mode != "Smart" && inOvernightWindow(start, end, nowHm())
+        val d = draft
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("Overnight heating", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-            Text(if (active) "$mode now" else mode, style = MaterialTheme.typography.bodyMedium)
+            Text(if (d != null) "Editing" else if (active) "$mode now" else mode, style = MaterialTheme.typography.bodyMedium)
+            FoldGutter()
+        }
+        if (d == null) {
+            Text(describeOvernight(mode, start, end, name), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("From $start until $end", style = MaterialTheme.typography.bodyLarge)
+            Text(
+                "Thermostats set to Manual are left alone. Somebody changing a thermostat in the night keeps it until the morning.",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            TileRow(listOf(TileItem("mdi:pencil", "Edit", false) { draft = OvernightDraft(mode, start, end) }), tone, tone.onContainer, perRow = 1)
+            return@EntityCard
         }
         TileRow(
             listOf(
-                TileItem(IconMap.of("climate_mode", "off", "mdi:power"), "Off", mode == "Off") { call("input_select", "select_option", OVERNIGHT_MODE_ENTITY, data("option" to "Off")) },
-                TileItem(IconMap.of("climate_preset", "eco", "mdi:leaf"), "Eco", mode == "Eco") { call("input_select", "select_option", OVERNIGHT_MODE_ENTITY, data("option" to "Eco")) },
-                TileItem("mdi:thermostat-auto", "Smart", mode == "Smart") { call("input_select", "select_option", OVERNIGHT_MODE_ENTITY, data("option" to "Smart")) },
+                TileItem(IconMap.of("climate_mode", "off", "mdi:power"), "Off", d.mode == "Off") { draft = d.copy(mode = "Off") },
+                TileItem(IconMap.of("climate_preset", "eco", "mdi:leaf"), "Eco", d.mode == "Eco") { draft = d.copy(mode = "Eco") },
+                TileItem("mdi:thermostat-auto", "Smart", d.mode == "Smart") { draft = d.copy(mode = "Smart") },
             ),
             tone, tone.onContainer, perRow = 3,
         )
-        Text(describeOvernight(mode, start, end, name), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(describeOvernight(d.mode, d.start, d.end, name), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            StepRow("From", start, tone, true, valueWidth = 84.dp,
-                onMinus = { stepTime(start, -1)?.let { call("input_datetime", "set_datetime", OVERNIGHT_START_ENTITY, data("time" to "$it:00")) } },
-                onPlus = { stepTime(start, 1)?.let { call("input_datetime", "set_datetime", OVERNIGHT_START_ENTITY, data("time" to "$it:00")) } })
-            StepRow("Until", end, tone, true, valueWidth = 84.dp,
-                onMinus = { stepTime(end, -1)?.let { call("input_datetime", "set_datetime", OVERNIGHT_END_ENTITY, data("time" to "$it:00")) } },
-                onPlus = { stepTime(end, 1)?.let { call("input_datetime", "set_datetime", OVERNIGHT_END_ENTITY, data("time" to "$it:00")) } })
+            StepRow("From", d.start, tone, true, valueWidth = 84.dp,
+                onMinus = { stepTime(d.start, -1)?.let { draft = d.copy(start = it) } },
+                onPlus = { stepTime(d.start, 1)?.let { draft = d.copy(start = it) } })
+            StepRow("Until", d.end, tone, true, valueWidth = 84.dp,
+                onMinus = { stepTime(d.end, -1)?.let { draft = d.copy(end = it) } },
+                onPlus = { stepTime(d.end, 1)?.let { draft = d.copy(end = it) } })
         }
-        Text(
-            "Thermostats set to Manual are left alone. Somebody changing a thermostat in the night keeps it until the morning.",
-            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        TileRow(
+            listOf(
+                TileItem("mdi:close", "Cancel", false) { draft = null },
+                TileItem("mdi:check", "Save", false) {
+                    if (d.mode != mode) call("input_select", "select_option", OVERNIGHT_MODE_ENTITY, data("option" to d.mode))
+                    if (d.start != start) call("input_datetime", "set_datetime", OVERNIGHT_START_ENTITY, data("time" to "${d.start}:00"))
+                    if (d.end != end) call("input_datetime", "set_datetime", OVERNIGHT_END_ENTITY, data("time" to "${d.end}:00"))
+                    draft = null
+                },
+            ),
+            tone, tone.onContainer,
         )
     }
 }

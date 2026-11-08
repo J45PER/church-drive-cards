@@ -83,7 +83,7 @@ fun SecurityPage(panels: List<PanelSpec>, entities: Map<String, EntityState>, re
 private val OWN_STRIP = setOf(
     "custom:alarm-panel-card", "custom:fan-card", "custom:air-purifier-card", "custom:purifier-schedule-card", "custom:co-alarm-card",
     "custom:cover-card", "custom:ev-charger-card", "custom:people-card", "custom:device-health-card", "custom:security-zone-card",
-    "custom:car-card", "custom:safety-card",
+    "custom:car-card", "custom:safety-card", "custom:overnight-heating-card",
 )
 
 /**
@@ -191,7 +191,7 @@ fun SafetyCard(config: JSONObject, entities: Map<String, EntityState>, registry:
         CompactStrip(
             if (sounding.isEmpty()) neutral else red, "Smoke, heat and CO", null,
             if (sounding.isEmpty()) (if (items.isEmpty()) "No alarms found" else "All clear") else "ALARM: " + sounding.joinToString(", ") { it.name },
-            container = if (sounding.isEmpty()) neutral.container else red.container, content = if (sounding.isEmpty()) neutral.onContainer else red.onContainer,
+            container = if (sounding.isEmpty()) neutral.container else red.container, content = if (sounding.isEmpty()) neutral.onContainer else red.onContainer, dense = true,
         )
         return
     }

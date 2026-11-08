@@ -69,7 +69,7 @@ fun PurifierScheduleCard(config: JSONObject) {
         }
         CompactStrip(
             neutral, config.optString("title").ifBlank { "Purifier schedule" }, null, word,
-            detail = s?.schedules?.take(2)?.joinToString(" · ") { purifierSummary(it) },
+            detail = s?.schedules?.take(2)?.joinToString(" · ") { purifierSummary(it) }, dense = true,
         )
         return
     }

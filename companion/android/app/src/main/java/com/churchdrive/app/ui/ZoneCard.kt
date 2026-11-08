@@ -99,9 +99,11 @@ fun ZoneCard(config: JSONObject, entities: Map<String, EntityState>, call: CallS
         CompactStrip(
             if (tinted) tone else neutral, cfg.name, null, view.word,
             container = container, content = ink, accent = if (tinted) tone.accent else toneColors(Tone.Indigo).accent,
-            detail = view.bats.filter { it.level != null }.joinToString(" · ") { b -> "${b.name} ${Math.round(b.level ?: 0.0)}%" }.ifBlank { null },
-            bar = view.bats.mapNotNull { it.level }.minOrNull()?.let { (it / 100.0).toFloat() },
-            barColour = if (low.isNotEmpty()) toneColors(Tone.Amber).accent else toneColors(Tone.Green).accent,
+            titleStyle = MaterialTheme.typography.titleLarge,
+            levels = view.bats.mapNotNull { b ->
+                val pct = b.level ?: return@mapNotNull null
+                CompactLevel(b.name, "${Math.round(pct)}%", (pct / 100.0).toFloat(), if (pct < LOW_BATTERY) toneColors(Tone.Amber).accent else toneColors(Tone.Green).accent)
+            },
         )
         return
     }

@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **v0.118.0 + apps 0.118.0** (2026-11-08): in the app, the fold chevron sits in the header row and does not move; folded cards keep their title size and show every level bar; simple cards fold to one row; Overnight heating folds to its mode and times and has Edit, Save and Cancel like the purifier schedule.
 - **v0.117.0 + apps 0.117.0** (2026-11-08): in the app, a folded card is a smaller card (about Gregg's height) with its key info and main buttons instead of one line, and the fold chevron stays in the same corner; the car charger keeps its modes when folded.
 - **v0.116.0 + apps 0.116.0** (2026-11-08): in the app, folding is per card (a chevron on each card) instead of per section; cameras, lights, the room and zone thermostats, Gregg, the Octopus plan and plain tiles do not fold. The Cleaning page has a Cleaning tasks section above Gregg, and Gregg is one section of separate cards.
 - **v0.115.0 + apps 0.115.0** (2026-11-08): in the app, a folded section shows each card as a one-row strip (name, key figure, status and a few small buttons, or text only) instead of a clipped card; a folded stack of cameras shows the first camera at full size with "+N more cameras"; light rooms are unchanged.

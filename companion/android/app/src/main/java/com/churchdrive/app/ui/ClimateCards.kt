@@ -146,6 +146,7 @@ fun FanCard(config: JSONObject, entities: Map<String, EntityState>, call: CallSe
         val current = if (on) speeds.firstOrNull { sp -> if (sp.preset != null) sp.preset == preset else Math.abs(percentage - (sp.percentage ?: 0)) < 5 } else null
         CompactStrip(
             tone, name, room?.let { "${temp(it)}°" }, if (!on) "Off" else preset?.let { presetLabel(it) } ?: "On", enabled = enabled,
+            dense = true, valueStyle = MaterialTheme.typography.titleLarge,
             buttons = buildList {
                 add(StripButton(IconMap.of("fan", "off", "mdi:power"), "Off", !on, "Off") { call("fan", "turn_off", id, data()) })
                 speeds.forEachIndexed { i, sp ->
@@ -166,6 +167,7 @@ fun FanCard(config: JSONObject, entities: Map<String, EntityState>, call: CallSe
                 Text(if (!on) "Off" else preset?.let { presetLabel(it) } ?: "On", style = MaterialTheme.typography.bodyMedium)
             }
             if (room != null) Text("${temp(room)}°", style = MaterialTheme.typography.titleLarge)
+            FoldGutter()
         }
         val speeds = fanSpeeds(fan)
         val percentage = fan?.num("percentage") ?: 0.0
@@ -227,11 +229,12 @@ fun AirPurifierCard(config: JSONObject, entities: Map<String, EntityState>, call
             tone, name, pm?.let { "${it.roundToInt()}" },
             listOfNotNull(if (!shownOn) "Off" else shownPreset?.let { presetLabel(it) } ?: "On", pm?.let { "PM2.5 ${pmWord(it)}" }).joinToString(" · "),
             enabled = enabled,
-            detail = (0 until (filters?.length() ?: 0)).mapNotNull { i ->
+            valueStyle = MaterialTheme.typography.headlineMedium,
+            levels = (0 until (filters?.length() ?: 0)).mapNotNull { i ->
                 val f = filters?.optJSONObject(i) ?: return@mapNotNull null
                 val left = entities[f.optString("entity")]?.state?.toDoubleOrNull() ?: return@mapNotNull null
-                f.optString("name").ifBlank { "Filter" } + " ${left.roundToInt()}%"
-            }.joinToString(" · "),
+                CompactLevel(f.optString("name").ifBlank { "Filter" }, "${left.roundToInt()}% left", (left / 100.0).toFloat(), if (left < 10) toneColors(Tone.Red).accent else tone.accent)
+            },
             buttons = buildList {
                 add(StripButton(IconMap.of("purifier", "off", "mdi:power"), "Off", !shownOn, "Off") { wanted = "__off"; call("fan", "turn_off", id, data()) })
                 if (presets.isEmpty()) add(StripButton("mdi:air-purifier", "On", shownOn, "On") { wanted = null; call("fan", "turn_on", id, data()) })
@@ -253,6 +256,7 @@ fun AirPurifierCard(config: JSONObject, entities: Map<String, EntityState>, call
                     Text("PM2.5 · ${pmWord(pm)}", style = MaterialTheme.typography.bodySmall)
                 }
             }
+            FoldGutter()
         }
         if (config.optBoolean("show_graph", true) && config.optString("pm25_entity").isNotBlank()) {
             SensorGraph(
@@ -311,8 +315,9 @@ fun CoAlarmCard(config: JSONObject, entities: Map<String, EntityState>, call: Ca
         // Just the reading and the verdict; Mute appears only while it is sounding.
         CompactStrip(
             tone, "Carbon monoxide", if (reading == null) null else "${reading.roundToInt()} ppm", if (alarm) "ALARM" else "All clear",
-            detail = listOfNotNull(status?.let { presetLabel(it) }, battery?.let { "battery ${it.roundToInt()}%" }, shortDayOf(report)?.let { "checked in $it" }).joinToString(" · "),
-            bar = battery?.let { (it / 100.0).toFloat() }, barColour = if ((battery ?: 100.0) < 20) toneColors(Tone.Red).accent else tone.accent,
+            detail = listOfNotNull(status?.let { presetLabel(it) }, shortDayOf(report)?.let { "checked in $it" }).joinToString(" · "),
+            valueStyle = MaterialTheme.typography.headlineMedium,
+            levels = listOfNotNull(battery?.let { CompactLevel("Battery", "${it.roundToInt()}%", (it / 100.0).toFloat(), if (it < 20) toneColors(Tone.Red).accent else tone.accent) }),
             buttons = if (alarm && mute != null) listOf(StripButton(IconMap.of("co", "mute", "mdi:volume-off"), "Mute", true, "Mute") { call("button", "press", mute, data()) }) else emptyList(),
         )
         return
@@ -325,6 +330,7 @@ fun CoAlarmCard(config: JSONObject, entities: Map<String, EntityState>, call: Ca
                 Text(if (alarm) "ALARM" else "All clear", style = MaterialTheme.typography.bodyMedium, color = tone.accent)
             }
             Text(if (reading == null) "–" else "${reading.roundToInt()} ppm", style = MaterialTheme.typography.headlineMedium)
+            FoldGutter()
         }
         val facts = listOfNotNull(
             status?.let { presetLabel(it) },
@@ -365,7 +371,7 @@ fun CoverCard(config: JSONObject, entities: Map<String, EntityState>, call: Call
     }
     if (LocalCompactCards.current) {
         CompactStrip(
-            tone, name, null, listOf(config.optString("subtitle"), word).filter { it.isNotBlank() }.joinToString(" · "), enabled = enabled,
+            tone, name, null, listOf(config.optString("subtitle"), word).filter { it.isNotBlank() }.joinToString(" · "), enabled = enabled, dense = true,
             buttons = listOf(
                 StripButton(IconMap.of("cover", "open", "mdi:arrow-up"), "Open", cover?.state == "open", "Open") { last = "open"; call("cover", "open_cover", id, data()) },
                 StripButton(IconMap.of("cover", "stop", "mdi:stop"), "Stop", false, "Stop") { last = "stopped"; call("cover", "stop_cover", id, data()) },

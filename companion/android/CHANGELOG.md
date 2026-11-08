@@ -4,6 +4,13 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.118.0
+
+- The fold chevron is now in the header row at the right, where the graph cards on Climate have theirs, and stays there when folded. Values at the end of a first row (the fan's temperature, the purifier's PM2.5, the CO reading) make room for it.
+- Folded cards keep their title size. A folded card shows every level bar it has: both purifier filters, each battery on a security zone, the CO battery.
+- Simple cards fold to one row (alarm, fan with Off and 1, 2, 3, blinds, who's home, device health, the purifier schedule, smoke alarms, Overnight heating); richer ones (thermostat, purifier, CO, zones, cars, the charger) fold to a small card.
+- Overnight heating folds to its mode and times instead of nothing. Like the purifier schedule it now shows the mode and times with an Edit button, and Edit opens the mode and the times with Save and Cancel.
+
 ## 0.117.0
 
 - A folded card is now a smaller card, about as tall as Gregg's on Home, not a single line: the name with its key figure, a status line, a detail line, and the card's main buttons as tiles. The fold chevron stays in the same top-right corner open or folded, so it no longer moves.
