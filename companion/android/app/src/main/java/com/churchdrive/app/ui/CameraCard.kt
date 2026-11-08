@@ -1,5 +1,9 @@
 package com.churchdrive.app.ui
 
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.paddingFromBaseline
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
 import androidx.annotation.OptIn
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -116,39 +120,41 @@ fun CameraCard(config: JSONObject, entities: Map<String, EntityState>, registry:
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(16f / 9f)
-            .clip(RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(28.dp))
             .background(Brush.linearGradient(listOf(Color(0xFF5D6B7D), Color(0xFF2F3946), Color(0xFF46503C))))
-            .then(if (ringing) Modifier.border(BorderStroke(2.dp, CliveColours.Ok.colour), RoundedCornerShape(24.dp)) else Modifier)
+            .then(if (ringing) Modifier.border(BorderStroke(2.dp, CliveColours.Ok.colour), RoundedCornerShape(28.dp)) else Modifier)
             .clickable { viewing = true },
     ) {
         if (picture != null) {
             val url = base + picture.url + (if ('?' in picture.url) "&" else "?") + "t=${picture.ms}"
             AsyncImage(model = url, contentDescription = name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
         }
-        Row(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.72f))))
-                .padding(start = 14.dp, end = 14.dp, top = 28.dp, bottom = 12.dp),
-            verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(name, color = Color.White, style = MaterialTheme.typography.titleMedium, maxLines = 1, modifier = Modifier.weight(1f))
-            if (ringing) {
-                Row(
-                    modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(CliveColours.Ok.colour)
-                        .clickable { answerOnOpen = true; answeredAt = System.currentTimeMillis(); viewing = true }
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    HaIcon("mdi:phone", CdVectors.Info, Color.White, 18.dp)
-                    Text("Answer", color = Color.White, fontSize = 13.sp)
-                }
-            } else {
-                Box(modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(chipBg).padding(horizontal = 10.dp, vertical = 3.dp)) {
-                    Text(chip, color = chipInk, fontSize = 11.sp, maxLines = 1)
+        // The footer on the card grid (the picture is 8 by 4.5 cells): the name and the chip are half a cell tall, from the middle of row 4 to the line between rows 4 and 5,
+        // the name's baseline on that line, half a cell in from each side.
+        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+            val cell = maxWidth / 8f
+            Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(cell * 2f).background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.72f)))))
+            Row(
+                modifier = Modifier.offset(x = cell * 0.5f, y = cell * 3.5f).width(cell * 7f).height(cell * 0.5f),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(name, color = Color.White, style = MaterialTheme.typography.titleMedium, maxLines = 1, modifier = Modifier.weight(1f).paddingFromBaseline(top = cell * 0.5f))
+                if (ringing) {
+                    Row(
+                        modifier = Modifier.height(cell * 0.5f).clip(RoundedCornerShape(999.dp)).background(CliveColours.Ok.colour)
+                            .clickable { answerOnOpen = true; answeredAt = System.currentTimeMillis(); viewing = true }
+                            .padding(horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        HaIcon("mdi:phone", CdVectors.Info, Color.White, 18.dp)
+                        Text("Answer", color = Color.White, fontSize = 13.sp)
+                    }
+                } else {
+                    Box(modifier = Modifier.height(cell * 0.5f).clip(RoundedCornerShape(999.dp)).background(chipBg).padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
+                        Text(chip, color = chipInk, fontSize = 11.sp, maxLines = 1)
+                    }
                 }
             }
         }

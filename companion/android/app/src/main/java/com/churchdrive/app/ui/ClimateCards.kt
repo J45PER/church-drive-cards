@@ -84,7 +84,7 @@ fun ClimateZoneCard(config: JSONObject, entities: Map<String, EntityState>, call
     val fold = androidx.compose.runtime.saveable.rememberSaveable("rooms|$title") { mutableStateOf(true) }
     val open = !fold.value
     val count = rooms?.length() ?: 0
-    val pitch = if (open) 3f else 1.5f
+    val pitch = if (open) 4f else 1.5f
     val ink = neutral.onContainer
     GridCard(neutral.container, ink, 1f + pitch * count, title, fold = fold) {
         for (i in 0 until count) {
@@ -120,7 +120,7 @@ fun ClimateZoneCard(config: JSONObject, entities: Map<String, EntityState>, call
             }
             if (open) {
                 // The same graph as the thermostat cards: the comfort band for the room, the humidity limits, smoothed.
-                Box(Modifier.at(0.5f, y + 1.5f, 7f, 1f).clip(RoundedCornerShape(18.dp))) {
+                Box(Modifier.at(0.5f, y + 1.5f, 7f, 2f).clip(RoundedCornerShape(18.dp))) {
                     RoomGraph(r.optString("temperature"), r.optString("humidity").takeIf { it.isNotBlank() }, r.optString("type"), ink, tone.accent, low, high)
                 }
             }
@@ -228,13 +228,13 @@ fun AirPurifierCard(config: JSONObject, entities: Map<String, EntityState>, call
     }
     val showGraph = config.optBoolean("show_graph", true) && config.optString("pm25_entity").isNotBlank()
     var y = 3f
-    val graphY = if (showGraph) { val v = y; y += 2f; v } else 0f
+    val graphY = if (showGraph) { val v = y; y += 2.5f; v } else 0f
     val modesY = y; y += 2f
     val filtersY = y
     val total = filtersY + filterRows.size * 1f + 0.5f + (if (filterRows.isEmpty()) -0.5f else 0f)
     GridCard(tone.container, ink, total, name, deviceEntity = id, fold = fold) {
         RingHead("mdi:air-purifier", if (pm == null) 1f else (1f - (pm.toFloat() / 135f)).coerceIn(0.1f, 1f), tone.accent, ink, status, listOfNotNull(pm?.let { "PM2.5 · ${pmWord(it)}" }, allergen?.let { "Allergen ${it.roundToInt()}" }).joinToString(" · "), pm?.let { "${it.roundToInt()}" })
-        if (showGraph) Box(Modifier.at(0.5f, graphY, 7f, 1.5f).clip(RoundedCornerShape(18.dp))) {
+        if (showGraph) Box(Modifier.at(0.5f, graphY, 7f, 2f).clip(RoundedCornerShape(18.dp))) {
             SensorGraph(
                 config.optString("pm25_entity"), 24, " µg/m³", tone.accent, tone.onContainer, config.optBoolean("smooth_graphs", true),
                 // Coloured by value, as on the dashboard: each band's colour in the middle of its band, blending into the next.

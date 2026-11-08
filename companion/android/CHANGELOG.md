@@ -4,6 +4,13 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.123.0
+
+- The camera card is on the card grid: the picture is 8 by 4.5 cells, and the name and the status chip sit on the footer's grid lines (the name's baseline on the line between rows 4 and 5, the chip half a cell tall), with the same corners as the other cards.
+- Gregg is the same card on the Home screen as on the Cleaning page, including the last clean and any error.
+- The graphs in the cards (the rooms, the air purifier and the thermostat's) are taller: two cells, with the rooms spaced to fit.
+- The to-do, shopping and other task cards are unchanged for now.
+
 ## 0.122.0
 
 - Every card now follows the layout agreed on the card review page: an 8 column grid, so a card is a whole or half number of rows tall, with the title on the first row (each word capitalised, in the card's text colour) and the expand and collapse arrow in the right hand column. Buttons, text, rings and bars sit on the grid's lines, all boxes share the same rounded corners, and cards have a folded version again (two and a half rows, with small buttons). Colours and the background animation are unchanged.
