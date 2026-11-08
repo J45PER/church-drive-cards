@@ -96,7 +96,6 @@ fun EntityCard(
 ) {
     val openDevice = LocalOpenDevice.current
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
-    val compact = LocalCompactCards.current
     Card(
         modifier = modifier.fillMaxWidth().then(
             if (deviceEntity == null) Modifier
@@ -111,13 +110,61 @@ fun EntityCard(
         colors = CardDefaults.cardColors(containerColor = container, contentColor = content),
     ) {
         Box(modifier = Modifier.glowBehind(container)) {
-            // A minimised card (its section folded): just its top, as a short strip that can't be pressed.
-            val shrink = if (compact) {
-                Modifier.heightIn(max = 84.dp).clip(androidx.compose.ui.graphics.RectangleShape).pointerInput(Unit) {
-                    awaitPointerEventScope { while (true) awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial).changes.forEach { it.consume() } }
+            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) { body() }
+        }
+    }
+}
+
+/** One small button on a [CompactStrip]: an icon, or a short label (a fan speed's number). */
+class StripButton(val icon: String?, val label: String?, val on: Boolean, val description: String, val onClick: () -> Unit)
+
+/**
+ * A card folded down (its section is folded): the name in the card's colour, a key figure, a short status and a few small
+ * buttons, in one row, as the dashboard's compact cards. Each card chooses what to keep; many keep no buttons at all.
+ */
+@Composable
+fun CompactStrip(
+    tone: ToneColors,
+    name: String,
+    value: String? = null,
+    status: String = "",
+    buttons: List<StripButton> = emptyList(),
+    enabled: Boolean = true,
+    container: Color = tone.container,
+    content: Color = tone.onContainer,
+    accent: Color = tone.accent,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = CardShape,
+        colors = CardDefaults.cardColors(containerColor = container, contentColor = content),
+    ) {
+        Box(modifier = Modifier.glowBehind(container)) {
+            Row(
+                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text(name, style = MaterialTheme.typography.titleSmall, color = accent, maxLines = 1, modifier = Modifier.weight(1f, fill = false))
+                if (!value.isNullOrBlank()) Text(value, style = MaterialTheme.typography.titleSmall, maxLines = 1)
+                Text(
+                    status, style = MaterialTheme.typography.bodySmall, color = content.copy(alpha = 0.85f), maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+                )
+                buttons.forEach { b ->
+                    val ink = if (b.on) tone.onAccent else content
+                    Box(
+                        modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))
+                            .background(if (b.on) accent else content.copy(alpha = 0.10f))
+                            .clickable(enabled = enabled, onClickLabel = b.description, onClick = b.onClick)
+                            .semantics { contentDescription = b.description },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (b.icon != null) HaIcon(b.icon, CdVectors.Info, ink, 20.dp)
+                        else CentredText(b.label.orEmpty(), ink, Ui.TileText)
+                    }
                 }
-            } else Modifier
-            Column(modifier = Modifier.then(shrink).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) { body() }
+            }
         }
     }
 }
@@ -279,6 +326,18 @@ fun AlarmCard(alarm: EntityState?, call: CallService, entityId: String = ALARM_E
     // During a delay the mode being armed is lit; otherwise the current state.
     val activeKey = if (inDelay || triggered) alarm?.str("targetState") else state
 
+    if (LocalCompactCards.current) {
+        CompactStrip(
+            tone, title, null, line1, enabled = enabled, container = container, content = content, accent = if (triggered) content else tone.accent,
+            buttons = buildList {
+                add(StripButton("mdi:shield-off-outline", null, activeKey == "disarmed", "Disarm") { send("alarm_disarm") })
+                if (features and 1 != 0) add(StripButton("mdi:shield-home", null, activeKey == "armed_home", "Arm Home") { send("alarm_arm_home") })
+                if (features and 2 != 0) add(StripButton("mdi:shield-lock", null, activeKey == "armed_away", "Arm Away") { send("alarm_arm_away") })
+                if (features and 4 != 0) add(StripButton("mdi:shield-moon", null, activeKey == "armed_night", "Arm Night") { send("alarm_arm_night") })
+            },
+        )
+        return
+    }
     EntityCard(container, content) {
         Text(title, style = MaterialTheme.typography.headlineSmall, color = if (triggered) content else tone.accent)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -443,6 +502,39 @@ fun ClimateCard(
             call("climate", "set_temperature", id, data("temperature" to next))
         }
     }
+    fun isSelected(q: QuickSetting) = when {
+        q.hvacMode != null -> climate?.state == q.hvacMode && (q.hvacMode == "off" || !eco)
+        q.presetMode != null -> climate?.str("preset_mode") == q.presetMode && climate?.state != "off"
+        else -> false
+    }
+    fun applyQuick(q: QuickSetting) {
+        val steps = quickSteps(climate, q)
+        scope.launch {
+            steps.forEachIndexed { i, step ->
+                // A preset waits for the thermostat to come on (up to five seconds).
+                if (i > 0 && step.service == "set_preset_mode") {
+                    var waited = 0
+                    while (latest?.state == "off" && waited < 5_000) {
+                        delay(250)
+                        waited += 250
+                    }
+                }
+                call("climate", step.service, id, data(step.key to step.value))
+            }
+        }
+    }
+    if (LocalCompactCards.current) {
+        CompactStrip(
+            tone, climate?.friendlyName ?: "Thermostat", "${temp(climate?.num("current_temperature"))}°",
+            buildString {
+                append(climateWord(climate))
+                if (climate != null && climate.state != "off") append(" · ${temp(pending)}°")
+            },
+            buttons = (quick ?: DEFAULT_QUICK).map { q -> StripButton(quickSettingIcon(q), null, isSelected(q), q.name) { applyQuick(q) } },
+            enabled = enabled,
+        )
+        return
+    }
     EntityCard(tone.container, tone.onContainer) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
@@ -472,29 +564,7 @@ fun ClimateCard(
             StepBar(CdVectors.Plus, "Raise", tone, enabled && climate?.state != "off", Modifier.weight(1f)) { nudge(step) }
         }
         TileRow(
-            (quick ?: DEFAULT_QUICK).map { q ->
-                val selected = when {
-                    q.hvacMode != null -> climate?.state == q.hvacMode && (q.hvacMode == "off" || !eco)
-                    q.presetMode != null -> climate?.str("preset_mode") == q.presetMode && climate?.state != "off"
-                    else -> false
-                }
-                TileItem(quickSettingIcon(q), q.name, selected) {
-                    val steps = quickSteps(climate, q)
-                    scope.launch {
-                        steps.forEachIndexed { i, step ->
-                            // A preset waits for the thermostat to come on (up to five seconds).
-                            if (i > 0 && step.service == "set_preset_mode") {
-                                var waited = 0
-                                while (latest?.state == "off" && waited < 5_000) {
-                                    delay(250)
-                                    waited += 250
-                                }
-                            }
-                            call("climate", step.service, id, data(step.key to step.value))
-                        }
-                    }
-                }
-            },
+            (quick ?: DEFAULT_QUICK).map { q -> TileItem(quickSettingIcon(q), q.name, isSelected(q)) { applyQuick(q) } },
             tone, tone.onContainer, enabled, perRow = 5,
         )
         // Who looks after this thermostat (the assistant or you), and a tap for its settings: only where the house has his switch for it.
@@ -556,6 +626,18 @@ fun VacuumCard(vacuum: EntityState?, battery: EntityState?, call: CallService) {
     val tone = toneColors(vacuumTone(vacuum))
     val enabled = vacuum?.available == true
     val cleaning = vacuum?.state == "cleaning"
+    if (LocalCompactCards.current) {
+        CompactStrip(
+            tone, vacuum?.friendlyName ?: "Vacuum", null, vacuumSummary(vacuum, battery), enabled = enabled,
+            buttons = listOf(
+                StripButton(if (cleaning) "cd:pause" else "cd:play", null, true, if (cleaning) "Pause" else if (vacuum?.state == "paused") "Resume" else "Start") {
+                    call("vacuum", if (cleaning) "pause" else "start", VACUUM_ENTITY, data())
+                },
+                StripButton("cd:home", null, false, "Dock") { call("vacuum", "return_to_base", VACUUM_ENTITY, data()) },
+            ),
+        )
+        return
+    }
     EntityCard(tone.container, tone.onContainer, deviceEntity = vacuum?.entityId) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             GreggIcon(greggState(vacuum, battery), tone.accent, 44.dp, battery?.state?.toDoubleOrNull())
@@ -635,6 +717,10 @@ fun ChargerCard(entities: Map<String, EntityState>, call: CallService) {
             },
             onCancel = { ask = null },
         )
+    }
+    if (LocalCompactCards.current) {
+        CompactStrip(tone, "Car charger", if (charging) "${"%.1f".format(power / 1000)} kW" else null, status)
+        return
     }
     EntityCard(tone.container, tone.onContainer) {
         Column {

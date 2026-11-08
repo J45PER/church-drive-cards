@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.115.0
+
+- Folding a section now shows each card as a one-row strip, as the dashboard's compact cards do: the name in the card's colour, a key figure, a short status and, where it helps, small buttons. Alarm (modes), thermostat (Off, Heat, Eco), fan (Off and speeds 1, 2, 3), air purifier (modes), blind (Open, Stop, Close) and Gregg (Start, Dock) keep buttons; carbon monoxide (Mute only while sounding), the purifier schedule, the Octopus plan and the car charger show text only. The graphs, sliders and extra rows are left out until the section is opened.
+- A folded stack of cameras shows its first camera at full size with "+N more cameras", not every feed. Light rooms keep their own expand and collapse.
+
 ## 0.114.0
 
 - Folding a section now minimises its cards to short strips instead of hiding them.

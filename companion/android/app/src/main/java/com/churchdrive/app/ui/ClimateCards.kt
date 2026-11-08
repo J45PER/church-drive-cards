@@ -139,6 +139,25 @@ fun FanCard(config: JSONObject, entities: Map<String, EntityState>, call: CallSe
     val presets = fan?.list("preset_modes").orEmpty()
     val preset = fan?.str("preset_mode")
     val enabled = fan?.available == true
+    if (LocalCompactCards.current) {
+        // Off and the speeds only (the modes and Oscillate need the full card).
+        val speeds = fanSpeeds(fan)
+        val percentage = fan?.num("percentage") ?: 0.0
+        val current = if (on) speeds.firstOrNull { sp -> if (sp.preset != null) sp.preset == preset else Math.abs(percentage - (sp.percentage ?: 0)) < 5 } else null
+        CompactStrip(
+            tone, name, room?.let { "${temp(it)}°" }, if (!on) "Off" else preset?.let { presetLabel(it) } ?: "On", enabled = enabled,
+            buttons = buildList {
+                add(StripButton(IconMap.of("fan", "off", "mdi:power"), null, !on, "Off") { call("fan", "turn_off", id, data()) })
+                speeds.forEach { sp ->
+                    add(StripButton(null, "${sp.n}", current === sp, "Speed ${sp.n}") {
+                        if (sp.preset != null) call("fan", "set_preset_mode", id, data("preset_mode" to sp.preset))
+                        else call("fan", "set_percentage", id, data("percentage" to (sp.percentage ?: 0)))
+                    })
+                }
+            },
+        )
+        return
+    }
     EntityCard(tone.container, tone.onContainer, deviceEntity = id) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ToneIconName(config.optString("icon").ifBlank { "mdi:fan" }, CdVectors.Info, tone)
@@ -203,6 +222,19 @@ fun AirPurifierCard(config: JSONObject, entities: Map<String, EntityState>, call
     androidx.compose.runtime.LaunchedEffect(on, preset) { if (wanted != null && ((wanted == "__off" && !on) || (on && preset == wanted))) wanted = null }
     val shownOn = when (wanted) { null -> on; "__off" -> false; else -> true }
     val shownPreset = if (wanted != null && wanted != "__off") wanted else preset
+    if (LocalCompactCards.current) {
+        CompactStrip(
+            tone, name, pm?.let { "${it.roundToInt()}" },
+            listOfNotNull(if (!shownOn) "Off" else shownPreset?.let { presetLabel(it) } ?: "On", pm?.let { pmWord(it) }).joinToString(" · "),
+            enabled = enabled,
+            buttons = buildList {
+                add(StripButton(IconMap.of("purifier", "off", "mdi:power"), null, !shownOn, "Off") { wanted = "__off"; call("fan", "turn_off", id, data()) })
+                if (presets.isEmpty()) add(StripButton("mdi:air-purifier", null, shownOn, "On") { wanted = null; call("fan", "turn_on", id, data()) })
+                presets.forEach { p -> add(StripButton(purifierModeIcon(p), null, shownOn && shownPreset == p, presetLabel(p)) { wanted = p; call("fan", "set_preset_mode", id, data("preset_mode" to p)) }) }
+            },
+        )
+        return
+    }
     EntityCard(tone.container, tone.onContainer, deviceEntity = id) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ToneIconName("mdi:air-purifier", CdVectors.Info, tone)
@@ -270,6 +302,14 @@ fun CoAlarmCard(config: JSONObject, entities: Map<String, EntityState>, call: Ca
     val report = entity("report_entity")?.state
     val test = config.optString("test_entity").takeIf { it.isNotBlank() }
     val mute = config.optString("mute_entity").takeIf { it.isNotBlank() }
+    if (LocalCompactCards.current) {
+        // Just the reading and the verdict; Mute appears only while it is sounding.
+        CompactStrip(
+            tone, "Carbon monoxide", if (reading == null) null else "${reading.roundToInt()} ppm", if (alarm) "ALARM" else "All clear",
+            buttons = if (alarm && mute != null) listOf(StripButton(IconMap.of("co", "mute", "mdi:volume-off"), null, true, "Mute") { call("button", "press", mute, data()) }) else emptyList(),
+        )
+        return
+    }
     EntityCard(tone.container, tone.onContainer, deviceEntity = config.optString("entity")) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ToneIconName("mdi:molecule-co", CdVectors.Info, tone)
@@ -315,6 +355,17 @@ fun CoverCard(config: JSONObject, entities: Map<String, EntityState>, call: Call
         "unknown" -> last?.let { "Last: ${presetLabel(it)}" } ?: "Position unknown"
         "open", "closed" -> presetLabel(state) + (position?.let { " · ${it.roundToInt()}%" } ?: "")
         else -> presetLabel(state)
+    }
+    if (LocalCompactCards.current) {
+        CompactStrip(
+            tone, name, null, listOf(config.optString("subtitle"), word).filter { it.isNotBlank() }.joinToString(" · "), enabled = enabled,
+            buttons = listOf(
+                StripButton(IconMap.of("cover", "open", "mdi:arrow-up"), null, cover?.state == "open", "Open") { last = "open"; call("cover", "open_cover", id, data()) },
+                StripButton(IconMap.of("cover", "stop", "mdi:stop"), null, false, "Stop") { last = "stopped"; call("cover", "stop_cover", id, data()) },
+                StripButton(IconMap.of("cover", "close", "mdi:arrow-down"), null, cover?.state == "closed", "Close") { last = "closed"; call("cover", "close_cover", id, data()) },
+            ),
+        )
+        return
     }
     EntityCard(tone.container, tone.onContainer, deviceEntity = id) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
