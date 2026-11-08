@@ -123,7 +123,7 @@ fun PeopleStatusCard(entities: Map<String, EntityState>, registry: Registry) {
         val home = rows.count { it.state == "home" }
         CompactStrip(
             neutral, "Who's home", null, if (rows.isEmpty()) "Nobody set up" else "$home home · ${rows.size - home} away",
-            detail = rows.joinToString(" · ") { p -> p.name.trim().substringBefore(' ') + " " + presencePill(p.state, p.place, p.zone).first.lowercase() },
+            detail = rows.joinToString(" · ") { p -> p.name.trim().substringBefore(' ') + " " + presencePill(p.state, p.place, p.zone).first.lowercase() }, dense = true,
         )
         return
     }
@@ -162,7 +162,7 @@ fun DeviceHealthCard(config: JSONObject, entities: Map<String, EntityState>, cal
         CompactStrip(
             if (bad.isEmpty()) neutral else amber, config.optString("title").ifBlank { "Device health" }, null,
             when { devices.isEmpty() -> "None watched yet"; bad.isEmpty() -> "All responding"; else -> bad.joinToString(", ") { it.name } },
-            container = if (bad.isEmpty()) neutral.container else amber.container, content = if (bad.isEmpty()) neutral.onContainer else amber.onContainer,
+            container = if (bad.isEmpty()) neutral.container else amber.container, content = if (bad.isEmpty()) neutral.onContainer else amber.onContainer, dense = true,
         )
         return
     }

@@ -25,6 +25,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.Canvas
@@ -132,11 +134,11 @@ fun CollapsibleCard(key: String, ownStrip: Boolean, plainTitle: String = "", pla
     val fold = CardFold(collapsed) { collapsed = !collapsed }
     CompositionLocalProvider(LocalCompactCards provides collapsed, LocalCardFold provides fold) {
         Box(Modifier.fillMaxWidth().animateContentSize()) {
-            if (collapsed && !ownStrip) CompactStrip(panelNeutral(), plainTitle, null, plainStatus) else content()
+            if (collapsed && !ownStrip) CompactStrip(panelNeutral(), plainTitle, null, plainStatus, dense = true) else content()
             // The same corner, the same size, open or folded, so it does not move. matchParentSize: a card that draws nothing keeps no stray button.
             Box(Modifier.matchParentSize(), contentAlignment = Alignment.TopEnd) {
                 Box(
-                    modifier = Modifier.padding(top = 2.dp, end = 2.dp).size(32.dp).clip(CircleShape)
+                    modifier = Modifier.padding(top = 22.dp, end = 16.dp).size(32.dp).clip(CircleShape)
                         .clickable(onClickLabel = if (collapsed) "Expand" else "Collapse", onClick = fold.toggle)
                         .semantics { contentDescription = if (collapsed) "Expand" else "Collapse" },
                     contentAlignment = Alignment.Center,
@@ -154,10 +156,19 @@ fun CollapsibleCard(key: String, ownStrip: Boolean, plainTitle: String = "", pla
 /** One small button on a [CompactStrip]: an icon, or a short label (a fan speed's number). */
 class StripButton(val icon: String?, val label: String?, val on: Boolean, val description: String, val onClick: () -> Unit)
 
+/** One level on a folded card (a battery, a filter): its label, a short text on the right, and how full it is. */
+class CompactLevel(val label: String, val text: String, val fraction: Float, val colour: Color)
+
+/** Room for the fold chevron at the end of a card's first row, so a value there is not under it. Nothing where the card cannot fold. */
+@Composable
+fun FoldGutter() {
+    if (LocalCardFold.current != null) Spacer(Modifier.width(36.dp))
+}
+
 /**
- * A card folded down: a smaller card, about as tall as Gregg's on Home. The name in the card's colour with a key figure, a status
- * line and a smaller detail line, a thin bar where there is a level to show (a battery), and the card's main buttons as a row of tiles.
- * Tapping it opens the card again (the chevron is [CollapsibleCard]'s, in the same corner as when open).
+ * A card folded down. Either a smaller card, about as tall as Gregg's on Home (name and key figure, status, detail, a bar for each level,
+ * and the card's main buttons as tiles), or, with [dense], one row of name, status and small buttons. Titles keep their open size
+ * ([titleStyle], [valueStyle]). Tapping it opens the card again; the chevron is [CollapsibleCard]'s, in the same place open or folded.
  */
 @Composable
 fun CompactStrip(
@@ -171,34 +182,77 @@ fun CompactStrip(
     content: Color = tone.onContainer,
     accent: Color = tone.accent,
     detail: String? = null,
-    bar: Float? = null,
-    barColour: Color = accent,
+    levels: List<CompactLevel> = emptyList(),
+    dense: Boolean = false,
+    titleStyle: androidx.compose.ui.text.TextStyle? = null,
+    valueStyle: androidx.compose.ui.text.TextStyle? = null,
     body: (@Composable () -> Unit)? = null,
 ) {
     val fold = LocalCardFold.current
+    val title = titleStyle ?: MaterialTheme.typography.titleMedium
+    val figure = valueStyle ?: MaterialTheme.typography.titleMedium
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = CardShape,
         colors = CardDefaults.cardColors(containerColor = container, contentColor = content),
     ) {
         Box(modifier = Modifier.glowBehind(container)) {
-            Column(
-                modifier = Modifier.fillMaxWidth()
-                    .then(if (fold != null) Modifier.clickable(onClickLabel = "Expand", onClick = fold.toggle) else Modifier)
-                    .padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                // The end padding keeps the name clear of the chevron in the corner.
-                Row(Modifier.fillMaxWidth().padding(end = 32.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(name, style = MaterialTheme.typography.titleMedium, color = accent, maxLines = 1, modifier = Modifier.weight(1f))
-                    if (!value.isNullOrBlank()) Text(value, style = MaterialTheme.typography.titleMedium, maxLines = 1)
+            val tap = if (fold != null) Modifier.clickable(onClickLabel = "Expand", onClick = fold.toggle) else Modifier
+            if (dense) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().then(tap).padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 18.dp).heightIn(min = 40.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(name, style = title, color = accent, maxLines = 1, modifier = Modifier.weight(1f, fill = false))
+                            if (!value.isNullOrBlank()) Text(value, style = figure, maxLines = 1)
+                        }
+                        if (status.isNotBlank()) Text(status, style = MaterialTheme.typography.bodyMedium, color = content.copy(alpha = 0.9f), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        if (!detail.isNullOrBlank()) Text(detail, style = MaterialTheme.typography.bodySmall, color = content.copy(alpha = 0.75f), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    }
+                    buttons.forEach { b ->
+                        val ink = if (b.on) tone.onAccent else content
+                        Box(
+                            modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))
+                                .background(if (b.on) accent else content.copy(alpha = 0.10f))
+                                .clickable(enabled = enabled, onClickLabel = b.description, onClick = b.onClick)
+                                .semantics { contentDescription = b.description },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            val numeric = b.label != null && b.label.length <= 2 && b.label.all { it.isDigit() }
+                            if (numeric) CentredText(b.label.orEmpty(), ink, Ui.TileText)
+                            else HaIcon(b.icon ?: "mdi:numeric", CdVectors.Info, ink, 20.dp)
+                        }
+                    }
+                    if (fold != null) Spacer(Modifier.width(28.dp))
                 }
-                if (status.isNotBlank()) Text(status, style = MaterialTheme.typography.bodyMedium, color = content.copy(alpha = 0.9f), maxLines = 2)
-                if (!detail.isNullOrBlank()) Text(detail, style = MaterialTheme.typography.bodySmall, color = content.copy(alpha = 0.75f), maxLines = 2)
-                if (bar != null) CompactBar(bar, barColour, content)
-                body?.invoke()
-                if (buttons.isNotEmpty()) {
-                    TileRow(buttons.map { b -> TileItem(b.icon ?: "mdi:numeric", b.label ?: b.description, b.on) { b.onClick() } }, tone, content, enabled)
+            } else {
+                Column(
+                    modifier = Modifier.fillMaxWidth().then(tap).padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 18.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Row(Modifier.fillMaxWidth().heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(name, style = title, color = accent, maxLines = 1, modifier = Modifier.weight(1f))
+                        if (!value.isNullOrBlank()) Text(value, style = figure, maxLines = 1)
+                        if (fold != null) Spacer(Modifier.width(26.dp))
+                    }
+                    if (status.isNotBlank()) Text(status, style = MaterialTheme.typography.bodyMedium, color = content.copy(alpha = 0.9f), maxLines = 2)
+                    if (!detail.isNullOrBlank()) Text(detail, style = MaterialTheme.typography.bodySmall, color = content.copy(alpha = 0.75f), maxLines = 2)
+                    levels.forEach { l ->
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(Modifier.fillMaxWidth()) {
+                                Text(l.label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f), maxLines = 1)
+                                Text(l.text, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+                            }
+                            CompactBar(l.fraction, l.colour, content)
+                        }
+                    }
+                    body?.invoke()
+                    if (buttons.isNotEmpty()) {
+                        TileRow(buttons.map { b -> TileItem(b.icon ?: "mdi:numeric", b.label ?: b.description, b.on) { b.onClick() } }, tone, content, enabled)
+                    }
                 }
             }
         }
@@ -372,7 +426,7 @@ fun AlarmCard(alarm: EntityState?, call: CallService, entityId: String = ALARM_E
 
     if (LocalCompactCards.current) {
         CompactStrip(
-            tone, title, null, line1, enabled = enabled, container = container, content = content, accent = if (triggered) content else tone.accent, detail = line2,
+            tone, title, null, line1, enabled = enabled, container = container, content = content, accent = if (triggered) content else tone.accent, detail = line2, dense = true, titleStyle = MaterialTheme.typography.headlineSmall,
             buttons = buildList {
                 add(StripButton("mdi:shield-off-outline", "Disarm", activeKey == "disarmed", "Disarm") { send("alarm_disarm") })
                 if (features and 1 != 0) add(StripButton("mdi:shield-home", "Home", activeKey == "armed_home", "Arm Home") { send("alarm_arm_home") })
@@ -576,6 +630,7 @@ fun ClimateCard(
             },
             buttons = (quick ?: DEFAULT_QUICK).map { q -> StripButton(quickSettingIcon(q), null, isSelected(q), q.name) { applyQuick(q) } },
             enabled = enabled,
+            valueStyle = MaterialTheme.typography.headlineLarge,
             detail = listOfNotNull(
                 quality?.let { "Home climate $it/100 · ${qualityWord(it)}" },
                 humidity?.state?.toDoubleOrNull()?.let { "Humidity ${temp(it)}%" },
