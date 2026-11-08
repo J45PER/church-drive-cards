@@ -81,7 +81,7 @@ fun partColour(fraction: Float, blue: Color, green: Color, yellow: Color, red: C
  * The Cleaning page, drawn by the app from Gregg's own entities so every part of it looks the same, all in the cleaning blue: one card at the
  * top for what he is doing (his status icon, the battery, the last clean and the buttons), then his cleaning settings (drop-downs, the mode,
  * suction and water with the house's icons), the dock's four actions, the parts that wear out (a bar for the life left in each, fading from blue through green and yellow to red
- * as they near the end) and his switches. Each group is a panel with its title, as on the other pages.
+ * as they near the end) and his switches. The cleaning tasks come first, then everything about Gregg in one section whose cards each have their title.
  */
 @Composable
 fun CleaningPage(entities: Map<String, EntityState>, call: CallService) {
@@ -103,7 +103,14 @@ fun CleaningPage(entities: Map<String, EntityState>, call: CallService) {
     fun press(id: String) = call("button", "press", id, data())
     fun pick(id: String, option: String) = call("select", "select_option", id, data("option" to option))
 
-    // ---- Gregg: what he is doing
+    // ---- Cleaning tasks: the cleaning to-do list, above Gregg
+    if (entities["todo.cleaning"] != null) {
+        SectionPanel("Cleaning tasks", iconName = "cd:broom", tone = Tone.Gregg) {
+            TaskListCard(org.json.JSONObject().put("entity", "todo.cleaning"), entities, call)
+        }
+    }
+
+    // ---- Gregg: everything about him in one section, as separate cards: what he is doing, his settings, the dock, parts and switches
     SectionPanel("Gregg", tone = Tone.Gregg, summary = vacuumSummary(vac, battery), iconSlot = { GreggIcon(GreggState.Idle, it.accent, 36.dp) }) {
         EntityCard(tone.container, tone.onContainer, deviceEntity = VACUUM_ENTITY) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -132,7 +139,6 @@ fun CleaningPage(entities: Map<String, EntityState>, call: CallService) {
                 tone, tone.onContainer, enabled,
             )
         }
-    }
 
     // ---- Cleaning settings: one drop-down for each
     val settings = listOf(
@@ -143,13 +149,12 @@ fun CleaningPage(entities: Map<String, EntityState>, call: CallService) {
         "Mop intensity" to "select.gregg_mop_intensity",
     ).filter { (_, id) -> entities[id]?.options()?.isNotEmpty() == true }
     if (settings.isNotEmpty()) {
-        SectionPanel("Cleaning settings", iconName = "cd:sliders", tone = Tone.Gregg) {
-            EntityCard(blue.container, blue.onContainer) {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    for ((label, id) in settings) {
-                        val e = entities.getValue(id)
-                        PickRow(label, e.options(), e.state, { o -> greggLevelIcon(id, o) }, blue, e.available) { pick(id, it) }
-                    }
+        EntityCard(blue.container, blue.onContainer) {
+            CardTitle("Cleaning settings", null, blue)
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                for ((label, id) in settings) {
+                    val e = entities.getValue(id)
+                    PickRow(label, e.options(), e.state, { o -> greggLevelIcon(id, o) }, blue, e.available) { pick(id, it) }
                 }
             }
         }
@@ -161,8 +166,9 @@ fun CleaningPage(entities: Map<String, EntityState>, call: CallService) {
     if (dockButtons.any { entities[it] != null } || find != null) {
         val status = entities["sensor.gregg_dock_status"]?.state?.takeIf { it != "unknown" && it != "unavailable" }.orEmpty()
         val doing = status.lowercase()
-        SectionPanel("Dock", iconName = "cd:home", tone = Tone.Gregg, summary = status.ifBlank { null }) {
+        run {
             EntityCard(blue.container, blue.onContainer) {
+                CardTitle("Dock", status.ifBlank { null }, blue)
                 val drying = doing.contains("dry") && entities["button.gregg_stop_dry_mop"] != null
                 val tiles = buildList {
                     if (entities["button.gregg_empty_dust_bin"] != null) add(TileItem("cd:empty", "Empty dust bin", doing.contains("empty") || doing.contains("dust")) { press("button.gregg_empty_dust_bin") })
@@ -180,8 +186,9 @@ fun CleaningPage(entities: Map<String, EntityState>, call: CallService) {
     // ---- Parts that wear out: a bar for the life left, blue turning to red
     val parts = CLEANING_PARTS.filter { entities[it.sensor] != null }
     if (parts.isNotEmpty()) {
-        SectionPanel("Parts", iconName = "cd:broom", tone = Tone.Gregg, summary = "Time left") {
+        run {
             EntityCard(blue.container, blue.onContainer) {
+                CardTitle("Parts", "Time left", blue)
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     for (p in parts) {
                         val e = entities[p.sensor]
@@ -222,8 +229,9 @@ fun CleaningPage(entities: Map<String, EntityState>, call: CallService) {
     // ---- Switches
     val switches = CLEANING_SWITCHES.filter { entities[it.second]?.available == true }
     if (switches.isNotEmpty()) {
-        SectionPanel("Settings", iconName = "cd:cog", tone = Tone.Gregg) {
+        run {
             EntityCard(blue.container, blue.onContainer) {
+                CardTitle("Settings", null, blue)
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     for ((label, id) in switches) {
                         val on = entities[id]?.state == "on"
@@ -238,6 +246,16 @@ fun CleaningPage(entities: Map<String, EntityState>, call: CallService) {
                 }
             }
         }
+    }
+    }
+}
+
+/** A card's heading inside the Gregg section: its title and, on the right, a short status. */
+@Composable
+private fun CardTitle(title: String, summary: String?, tone: ToneColors) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, maxLines = 1)
+        if (!summary.isNullOrBlank()) StatusPill(summary, tone)
     }
 }
 

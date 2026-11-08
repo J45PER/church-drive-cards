@@ -17,10 +17,6 @@ fun OctopusPlanCard(entities: Map<String, EntityState>) {
     val plan = octopusPlan(entities, now) ?: return
     val first = plan.slots.firstOrNull()
     val tone = toneColors(Tone.Energy)
-    if (LocalCompactCards.current) {
-        CompactStrip(tone, "Octopus plan", null, first?.let { planLine(it, now) } ?: "Nothing planned")
-        return
-    }
     EntityCard(tone.container, tone.onContainer) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Octopus charging plan", style = MaterialTheme.typography.titleMedium)

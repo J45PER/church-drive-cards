@@ -119,6 +119,11 @@ fun plainMarkdown(text: String): String = text.replace("**", "").replace("__", "
 fun PeopleStatusCard(entities: Map<String, EntityState>, registry: Registry) {
     val rows = peopleRows(entities, registry)
     val neutral = panelNeutral()
+    if (LocalCompactCards.current) {
+        val home = rows.count { it.state == "home" }
+        CompactStrip(neutral, "Who's home", null, if (rows.isEmpty()) "Nobody set up" else "$home home · ${rows.size - home} away")
+        return
+    }
     EntityCard(neutral.container, neutral.onContainer) {
         if (rows.isEmpty()) Text("No people set up yet.", style = MaterialTheme.typography.bodyMedium)
         rows.forEach { p ->
@@ -148,6 +153,16 @@ fun DeviceHealthCard(config: JSONObject, entities: Map<String, EntityState>, cal
     val showOk = if (config.has("show_ok")) config.optBoolean("show_ok", true) else true
     val shown = devices.filter { showOk || !it.ok }
     val neutral = panelNeutral()
+    if (LocalCompactCards.current) {
+        val bad = devices.filter { !it.ok }
+        val amber = toneColors(Tone.Amber)
+        CompactStrip(
+            if (bad.isEmpty()) neutral else amber, config.optString("title").ifBlank { "Device health" }, null,
+            when { devices.isEmpty() -> "None watched yet"; bad.isEmpty() -> "All responding"; else -> bad.joinToString(", ") { it.name } },
+            container = if (bad.isEmpty()) neutral.container else amber.container, content = if (bad.isEmpty()) neutral.onContainer else amber.onContainer,
+        )
+        return
+    }
     EntityCard(neutral.container, neutral.onContainer) {
         config.optString("title").takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.titleMedium) }
         if (shown.isEmpty()) Text(if (devices.isEmpty()) "No devices are being watched yet." else "Every device is responding.", style = MaterialTheme.typography.bodyMedium)
