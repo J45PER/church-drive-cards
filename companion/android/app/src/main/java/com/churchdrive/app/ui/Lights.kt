@@ -224,7 +224,7 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
 
     // On the card grid: the room's pill is 1.5 rows tall, half a row down, with the arrow in column 8; opened, each light is a pill the same height two rows
     // apart (a nested one starts half a cell further in), then the scenes in rows of up to three with a quarter cell between them (a short last row's tiles stretch).
-    val state = rememberSaveable(room.head) { mutableStateOf(true) }
+    val state = rememberFold("lights|${room.head}", true)
     val collapsed = state
     val open = !collapsed.value && expandable
     val hintContext = LocalContext.current

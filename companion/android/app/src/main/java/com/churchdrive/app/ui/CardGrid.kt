@@ -54,9 +54,14 @@ class GridScope(val cell: Dp) {
 /** Each word of a title starts with a capital letter. */
 fun gridTitle(title: String): String = title.split(" ").joinToString(" ") { w -> w.replaceFirstChar { it.uppercase() } }
 
-/** Whether a grid card is folded, kept by [key] while the app is open. */
+/** Every card's folded state, kept by key for as long as the app is open, so a card stays as it was left when you go to another page and back. */
+object FoldStore {
+    val states = mutableMapOf<String, androidx.compose.runtime.MutableState<Boolean>>()
+}
+
+/** Whether a grid card is folded, kept by [key] while the app is open (by default open, or folded when [folded] is true the first time). */
 @Composable
-fun rememberFold(key: String): androidx.compose.runtime.MutableState<Boolean> = rememberSaveable(key) { mutableStateOf(false) }
+fun rememberFold(key: String, folded: Boolean = false): androidx.compose.runtime.MutableState<Boolean> = androidx.compose.runtime.remember(key) { FoldStore.states.getOrPut(key) { mutableStateOf(folded) } }
 
 /**
  * A card on the grid. [rows] is its height in rows. The title sits on row 1 with the top of its lowercase letters on the middle of the

@@ -477,7 +477,7 @@ fun AlarmCard(alarm: EntityState?, call: CallService, entityId: String = ALARM_E
         }
         return
     }
-    val rows = 5f + if (people.isEmpty()) 0f else 0.5f + people.size
+    val rows = 5f + if (people.isEmpty()) 0f else Math.ceil((0.5f + 0.75f * people.size) * 2.0).toFloat() / 2f
     GridCard(container, content, rows, titleText, deviceEntity = entityId, fold = fold) {
         // The ring: 1.5 cells across, from the half line of column A, centred on the line between rows 2 and 3.
         Box(Modifier.atCentre(1.25f, 2f, 1.5f, 1.5f), contentAlignment = Alignment.Center) { Ring(1.5f, cell, 30.dp) }
@@ -496,7 +496,7 @@ fun AlarmCard(alarm: EntityState?, call: CallService, entityId: String = ALARM_E
         // Who's home, one line each (administrators only: the page passes nobody for anyone else).
         people.forEachIndexed { i, p ->
             val (word, _) = presencePill(p.state, p.place, p.zone)
-            Row(Modifier.at(0.5f, 4.5f + 0.5f + i, 7f, 1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.at(0.5f, 5f + 0.75f * i, 7f, 0.75f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 HaIcon(if (p.state == "home") "cd:home" else "cd:home-away", CdVectors.ShieldOutline, ring, 20.dp)
                 Text(p.name, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = ink, maxLines = 1)
                 Text(word, style = MaterialTheme.typography.bodyMedium, color = ink.copy(alpha = 0.8f), maxLines = 1)
@@ -598,6 +598,7 @@ fun ClimateCard(
     id: String = CLIMATE_ENTITY,
     humidity: EntityState? = null,
     outdoor: Double? = null,
+    humidityPct: Double? = null,
     quick: List<QuickSetting>? = null,
     quality: Int? = null,
     zone: ZoneControl? = null,
@@ -718,7 +719,7 @@ fun ClimateCard(
         Dial(1.25f, 2f, 1.5f)
         // Humidity and the outside temperature from the centre of column C, the room's temperature on the right.
         Column(Modifier.at(2.5f, 1f, 3f, 2f), verticalArrangement = Arrangement.Center) {
-            humidity?.state?.toDoubleOrNull()?.let {
+            (humidity?.state?.toDoubleOrNull() ?: humidityPct)?.let {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     HaIcon("mdi:water-percent", CdVectors.Info, ink, 20.dp); Text("${temp(it)}%", style = MaterialTheme.typography.bodyMedium, color = ink)
                 }
@@ -741,7 +742,7 @@ fun ClimateCard(
             Box(Modifier.at(0.5f, zoneY, 7f, 1f)) { ZoneStatusLine(zone, tone) { sheetOpen = true } }
             if (sheetOpen) ThermostatSheet(zone.zone.replaceFirstChar { it.uppercase() }, zone, tone, call) { sheetOpen = false }
         }
-        if (below != null) Box(Modifier.at(0.5f, belowY, 7f, 2f)) { below() }
+        if (below != null) Box(Modifier.at(0.5f, belowY, 7f, 2f)) { androidx.compose.runtime.CompositionLocalProvider(LocalGraphFill provides true) { below() } }
     }
 }
 

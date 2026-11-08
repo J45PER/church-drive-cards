@@ -81,7 +81,7 @@ fun ClimateZoneCard(config: JSONObject, entities: Map<String, EntityState>, call
     val rooms = config.optJSONArray("rooms")
     // The arrow in column 8 opens the floor out: each room's temperature (and humidity) over the last day under it. Folded by default.
     val title = config.optString("title").ifBlank { "Rooms" }
-    val fold = androidx.compose.runtime.saveable.rememberSaveable("rooms|$title") { mutableStateOf(true) }
+    val fold = rememberFold("rooms|$title", true)
     val open = !fold.value
     val count = rooms?.length() ?: 0
     val pitch = if (open) 4f else 1.5f
@@ -121,7 +121,9 @@ fun ClimateZoneCard(config: JSONObject, entities: Map<String, EntityState>, call
             if (open) {
                 // The same graph as the thermostat cards: the comfort band for the room, the humidity limits, smoothed.
                 Box(Modifier.at(0.5f, y + 1.5f, 7f, 2f).clip(RoundedCornerShape(18.dp))) {
-                    RoomGraph(r.optString("temperature"), r.optString("humidity").takeIf { it.isNotBlank() }, r.optString("type"), ink, tone.accent, low, high)
+                    androidx.compose.runtime.CompositionLocalProvider(LocalGraphFill provides true) {
+                        RoomGraph(r.optString("temperature"), r.optString("humidity").takeIf { it.isNotBlank() }, r.optString("type"), ink, tone.accent, low, high)
+                    }
                 }
             }
         }
@@ -231,11 +233,11 @@ fun AirPurifierCard(config: JSONObject, entities: Map<String, EntityState>, call
     val graphY = if (showGraph) { val v = y; y += 2.5f; v } else 0f
     val modesY = y; y += 2f
     val filtersY = y
-    val total = filtersY + filterRows.size * 1f + 0.5f + (if (filterRows.isEmpty()) -0.5f else 0f)
+    val total = if (filterRows.isEmpty()) filtersY else Math.ceil(((filtersY + filterRows.size * 0.75f + 0.5f) * 2f).toDouble()).toFloat() / 2f
     GridCard(tone.container, ink, total, name, deviceEntity = id, fold = fold) {
         RingHead("mdi:air-purifier", if (pm == null) 1f else (1f - (pm.toFloat() / 135f)).coerceIn(0.1f, 1f), tone.accent, ink, status, listOfNotNull(pm?.let { "PM2.5 · ${pmWord(it)}" }, allergen?.let { "Allergen ${it.roundToInt()}" }).joinToString(" · "), pm?.let { "${it.roundToInt()}" })
         if (showGraph) Box(Modifier.at(0.5f, graphY, 7f, 2f).clip(RoundedCornerShape(18.dp))) {
-            SensorGraph(
+            androidx.compose.runtime.CompositionLocalProvider(LocalGraphFill provides true) { SensorGraph(
                 config.optString("pm25_entity"), 24, " µg/m³", tone.accent, tone.onContainer, config.optBoolean("smooth_graphs", true),
                 // Coloured by value, as on the dashboard: each band's colour in the middle of its band, blending into the next.
                 scale = listOf(
@@ -244,11 +246,11 @@ fun AirPurifierCard(config: JSONObject, entities: Map<String, EntityState>, call
                     95.0 to toneColors(Tone.QualityPoor).accent,
                     135.0 to toneColors(Tone.Red).accent,
                 ),
-            )
+            ) }
         }
         GridTiles(modeItems, modesY, 1.5f, tone, ink, enabled, stacked = true)
         filterRows.forEachIndexed { k, (fname, left, _) ->
-            Row(Modifier.at(0.5f, filtersY + k, 7f, 1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.at(0.5f, filtersY + 0.75f * k, 7f, 0.75f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(fname, style = MaterialTheme.typography.bodyMedium, color = ink, maxLines = 1, modifier = Modifier.weight(1f))
                 LevelBar((left / 100.0).toFloat(), batteryFade((left / 100.0).toFloat()), ink, Modifier.width(cell * 1.75f), 5.dp)
                 Text("${left.roundToInt()}% left", style = MaterialTheme.typography.bodyMedium, color = ink, maxLines = 1, modifier = Modifier.width(cell * 1.5f), textAlign = androidx.compose.ui.text.style.TextAlign.End)

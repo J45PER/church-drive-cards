@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.124.0
+
+- No change to this app: the card fixes in the phone app are in the shared version.
+
 ## 0.123.0
 
 - No change to this app: the card layout work in the phone app is in the shared version.

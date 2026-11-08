@@ -1,5 +1,6 @@
 package com.churchdrive.app.ui
 
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Column
@@ -148,6 +149,9 @@ fun climateHistory(result: Any?, climate: String, humiditySensor: String?): Clim
     return ClimateHistory(temps.sortedBy { it.time }, hums.sortedBy { it.time }, targets.sortedBy { it.time })
 }
 
+/** True inside a card's grid box: the graph then fills the box's height instead of drawing at its own. */
+val LocalGraphFill = androidx.compose.runtime.compositionLocalOf { false }
+
 /** One line of a graph, on its own scale ([lo] to [hi]), with what to draw around it. */
 class GraphLayer(
     val points: List<Reading>,
@@ -196,12 +200,13 @@ private fun curvePath(xy: List<Offset>, curve: Boolean): Path {
  */
 @Composable
 fun LineGraph(layers: List<GraphLayer>, from: Long, now: Long, smooth: Boolean, ink: Color, legend: List<Pair<String, Color>>) {
+    val fill = LocalGraphFill.current
     val drawn = layers.filter { it.points.size >= 2 }
     if (drawn.isEmpty()) return
     var scrub by remember { mutableStateOf<Float?>(null) }
-    Column {
+    Column(if (fill) Modifier.fillMaxSize() else Modifier) {
         Canvas(
-            Modifier.fillMaxWidth().height(62.dp).pointerInput(drawn.size) {
+            Modifier.fillMaxWidth().then(if (fill) Modifier.weight(1f) else Modifier.height(62.dp)).pointerInput(drawn.size) {
                 detectHorizontalDragGestures(
                     onDragStart = { scrub = (it.x / size.width).coerceIn(0f, 1f) },
                     onDragEnd = { scrub = null },
@@ -393,6 +398,15 @@ private fun ClimateGraphBody(h: ClimateHistory, currentTemp: Double?, target: Do
             GraphLayer(
                 temps, lineColour, lo, hi, { "%.1f° room".format(it) }, fill = true,
                 band = if (limits) cLow to cHigh else null, bandColour = green, target = target,
+                // The line takes the colour of the temperature as the dashboard's does: blue and teal when cool, green in the comfortable range, amber then red when warm.
+                scale = listOf(
+                    cLow - 3 to toneColors(Tone.Blue).accent,
+                    cLow to toneColors(Tone.Teal).accent,
+                    cLow + (cHigh - cLow) * 0.35 to green,
+                    cHigh - (cHigh - cLow) * 0.1 to green,
+                    cHigh + 0.5 to toneColors(Tone.Amber).accent,
+                    cHigh + 2.5 to toneColors(Tone.Red).accent,
+                ),
             ),
         )
         legend.add(
