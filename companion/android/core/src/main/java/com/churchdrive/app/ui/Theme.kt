@@ -5,6 +5,7 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -35,6 +36,17 @@ val BrandTypography: Typography = Typography().let { t ->
         labelLarge = t.labelLarge.brand(), labelMedium = t.labelMedium.brand(), labelSmall = t.labelSmall.brand(),
     )
 }
+
+/**
+ * A section's title (the heading above a group of cards): one step bigger than a card's title ([CardTitleStyle]) and bolder, so a section
+ * reads above the cards in it. Instrument Sans SemiBold, 28/36.
+ */
+val SectionTitleStyle: TextStyle
+    @Composable get() = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.SemiBold)
+
+/** A card's title, in the title row of every card ([AppCard]): the size the alarm card's title has always had (24/32, regular). */
+val CardTitleStyle: TextStyle
+    @Composable get() = MaterialTheme.typography.headlineSmall
 
 private fun tint(c: Color, over: Color, by: Float) = lerp(over, c, by)
 

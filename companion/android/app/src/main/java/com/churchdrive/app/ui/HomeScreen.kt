@@ -413,7 +413,7 @@ fun SectionPanel(
             else if (icon != null) ToneIcon(icon, colors, size = 36)
             Text(
                 title,
-                style = MaterialTheme.typography.titleLarge,
+                style = SectionTitleStyle,
                 // A section's title sits on the page background, not on a card, so it takes the section's colour.
                 color = colors.accent,
                 modifier = Modifier.weight(1f),
