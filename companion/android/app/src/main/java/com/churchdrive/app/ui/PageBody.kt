@@ -39,7 +39,8 @@ fun DashboardPage(panels: List<PanelSpec>, entities: Map<String, EntityState>, r
 fun PanelView(panel: PanelSpec, entities: Map<String, EntityState>, registry: Registry, call: CallService) {
     val header = panel.cards.firstOrNull()?.takeIf { panel.title.isBlank() && it.type.startsWith("header:") }
     if (header != null) {
-        HeaderView(header, entities, call)
+        // A page's header (the weather, the lines of what is happening) takes the whole width above the columns of cards.
+        androidx.compose.foundation.layout.Box(Modifier.fullSpan()) { HeaderView(header, entities, call) }
         return
     }
     // A card marked `admin_only` is for administrators; a panel left with none of its cards is not shown to anyone else.

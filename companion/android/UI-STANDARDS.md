@@ -4,6 +4,13 @@ The user app should look like one app. These rules are what keeps a fan, an air 
 from looking like three different people built them. **Read this before changing or adding any card, page or button.**
 The mechanical ones are checked by `UiStandardsTest` (it fails the build); the rest are a checklist.
 
+## Screen sizes
+
+The app fits the screen (`AdaptiveLayout.kt`): a rail down the side from 600dp wide, the slim title bar under 480dp tall, and a page's
+sections and cards in as many columns as fit (each 320 to 520dp wide, so a card keeps its grid proportions). Don't write a width for a
+card or a page: a card fills the column it is given (`GridCard` already stops at 520dp). A page's header goes in a `Modifier.fullSpan()` box
+so it takes the whole width above the columns. Look at a change on a phone upright, on its side and on a tablet before calling it done.
+
 ## Before every change or addition
 
 1. **Look at the dashboard first.** Open the matching card's source in `src/*.js` (or the Lovelace config) and copy

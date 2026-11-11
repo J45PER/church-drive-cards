@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.127.0
+
+- No change to this app: the phone app now fits phones on their side and tablets, in the shared version.
+
 ## 0.126.0
 
 - The first version of Clive Admin, the app for the house's administrators.
