@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.141.0
+
+- No change you will notice (the Home Assistant integration's price notifications now start off for everyone except Jame).
+
 ## 0.140.0
 
 - No change you will notice (the Manager website has a new layout and pages).

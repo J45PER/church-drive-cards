@@ -196,6 +196,7 @@ class People:
         if not self._data.get("seeded"):
             self._seed()
         self._fill_defaults()
+        self._energy_off_by_default()
         await self._async_save()
         await self._async_make_lists()
         self._seed_seen()
@@ -291,6 +292,7 @@ class People:
     async def _async_person_changed(self) -> None:
         await self._async_users()
         self._fill_defaults()
+        self._energy_off_by_default()
         await self._async_save()
         await self._async_make_lists()
         self._changed()
@@ -619,6 +621,8 @@ class People:
         people = self.people()
         if default == "admins":
             return {"all": False, "people": [p["entity_id"] for p in people if p["admin"]]}
+        if default == "jame":
+            return {"all": False, "people": [p["entity_id"] for p in people if p["first"].lower() == "jame"]}
         if default == "owner":
             return {"all": False, "people": [p["entity_id"] for p in people if p["user_id"] == self._owner]}
         return {"all": False, "people": []}
@@ -629,6 +633,18 @@ class People:
         for kind in self._catalogue():
             if kind["key"] not in assign:
                 assign[kind["key"]] = self._default(kind)
+
+    @callback
+    def _energy_off_by_default(self) -> None:
+        """Once: the price notifications (cheap rate, yesterday's cost) used to start on for everyone; now they
+        start on for Jame only. Existing houses are moved over once (anything ticked afterwards in Manager is
+        left alone). Power-down sessions are not about price, so they are left as they were."""
+        if self._data.get("energy_off_default"):
+            return
+        for kind in self._catalogue():
+            if kind["key"] in ("cheap_rate", "energy_cost"):
+                self._data["assign"][kind["key"]] = self._default(kind)
+        self._data["energy_off_default"] = True
 
     @callback
     def _seed(self) -> None:

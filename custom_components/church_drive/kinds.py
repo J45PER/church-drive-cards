@@ -2,7 +2,7 @@
 
 Each kind says where it shows in Manager (group), who starts assigned when it
 first appears (`default`: "all" = everyone, including people added later;
-"admins"; or "none"), and what it needs to exist (`needs`). A kind whose
+"admins"; "jame" = just Jame (off for everyone else); or "none"), and what it needs to exist (`needs`). A kind whose
 devices aren't set up yet (e.g. the Zappi) is listed as waiting and becomes
 assignable by itself once they appear.
 
@@ -54,9 +54,9 @@ KINDS: list[dict[str, Any]] = [
     # Energy.
     {"key": "power_down", "group": "Energy", "name": "Octopus power-down session", "default": "all",
      "needs": [("platform", "octopus_energy")]},
-    {"key": "cheap_rate", "group": "Energy", "name": "Cheap rate started", "default": "all",
+    {"key": "cheap_rate", "group": "Energy", "name": "Cheap rate started", "default": "jame",
      "needs": [("platform", "octopus_energy")]},
-    {"key": "energy_cost", "group": "Energy", "name": "Yesterday's energy cost", "admin_only": True, "default": "admins",
+    {"key": "energy_cost", "group": "Energy", "name": "Yesterday's energy cost", "admin_only": True, "default": "jame",
      "needs": [("platform", "octopus_energy")]},
     # Car (the Zappi).
     {"key": "car_plugged", "group": "Car", "name": "Car plugged in", "default": "admins", "needs": [("platform", "myenergi")]},
