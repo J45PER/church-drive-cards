@@ -12,8 +12,12 @@ import com.churchdrive.app.SharedLookup
 import com.churchdrive.app.freshToken
 import com.churchdrive.app.ha.ConnectionState
 import com.churchdrive.app.ha.HaAuth
+import com.churchdrive.app.ha.EntityState
 import com.churchdrive.app.ha.HaClient
 import com.churchdrive.app.ha.LoginStep
+import com.churchdrive.app.ha.Registry
+import com.churchdrive.app.ha.asApi
+import com.churchdrive.app.ui.HaApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -26,6 +30,17 @@ import kotlinx.coroutines.withContext
 class AdminModel(app: Application) : AndroidViewModel(app) {
     private val session = Session(app)
     private val client = HaClient(viewModelScope)
+
+    /** Plain access to Home Assistant's commands, for the pages that fetch their own data (the activity log). */
+    val api: HaApi = client.asApi()
+
+    /** What the house knows right now: every entity, the device registry and the area names (Device Health, Energy and the rest read these). */
+    var entities by mutableStateOf<Map<String, EntityState>>(emptyMap())
+        private set
+    var registry by mutableStateOf(Registry.Empty)
+        private set
+    var areaNames by mutableStateOf<Map<String, String>>(emptyMap())
+        private set
 
     var signedIn by mutableStateOf(session.signedIn)
         private set
@@ -70,11 +85,15 @@ class AdminModel(app: Application) : AndroidViewModel(app) {
             }
         }
         viewModelScope.launch { client.isAdmin.collect { isAdmin = it } }
+        viewModelScope.launch { client.entities.collect { entities = it } }
         viewModelScope.launch {
             var failures = 0
             client.connection.collect { state ->
                 connected = state == ConnectionState.Connected
-                if (connected) failures = 0
+                if (connected) {
+                    failures = 0
+                    loadHouse()
+                }
                 // Not given up on at once: Home Assistant may be restarting. A pasted token that is refused is just wrong.
                 if (state == ConnectionState.AuthFailed && signedIn) {
                     if (session.refreshToken == null) {
@@ -88,6 +107,30 @@ class AdminModel(app: Application) : AndroidViewModel(app) {
             }
         }
         if (signedIn) connect()
+    }
+
+    private var entityRegistry: Any? = null
+    private var deviceRegistry: Any? = null
+
+    /** Asks the house for its areas and its device registry (which entities belong to which device), as the phone app does when it connects. */
+    private fun loadHouse() {
+        client.request("config/area_registry/list") { result ->
+            val list = result as? org.json.JSONArray ?: return@request
+            val names = (0 until list.length()).mapNotNull { list.optJSONObject(it) }
+                .filter { it.has("area_id") && it.has("name") }
+                .associate { it.getString("area_id") to it.getString("name") }
+            viewModelScope.launch(Dispatchers.Main) { areaNames = names }
+        }
+        client.request("config/entity_registry/list_for_display") { result ->
+            entityRegistry = result
+            val parsed = Registry.parse(entityRegistry, deviceRegistry)
+            viewModelScope.launch(Dispatchers.Main) { registry = parsed }
+        }
+        client.request("config/device_registry/list") { result ->
+            deviceRegistry = result
+            val parsed = Registry.parse(entityRegistry, deviceRegistry)
+            viewModelScope.launch(Dispatchers.Main) { registry = parsed }
+        }
     }
 
     private fun connect() {

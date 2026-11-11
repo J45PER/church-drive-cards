@@ -12,11 +12,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.NavigationBar
@@ -26,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -34,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
@@ -41,7 +46,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.churchdrive.app.UpdateCheck
 import com.churchdrive.app.ui.CdVectors
+import com.churchdrive.app.ui.ActivityPage
+import com.churchdrive.app.ha.EntityState
 import com.churchdrive.app.ui.CliveColours
+import com.churchdrive.app.ui.LocalPanelTone
+import com.churchdrive.app.ui.OctopusCard
+import com.churchdrive.app.ui.DeviceHealthOverlay
+import com.churchdrive.app.ui.LocalHaApi
+import com.churchdrive.app.ui.deviceHealthList
+import com.churchdrive.app.ui.deviceHealthSummary
 import com.churchdrive.app.ui.LiveColours
 import com.churchdrive.app.ui.PersonButton
 import com.churchdrive.app.ui.Tone
@@ -49,6 +62,7 @@ import com.churchdrive.app.ui.ToneCard
 import com.churchdrive.app.ui.ToneCardShape
 import com.churchdrive.app.ui.ToneSectionHeader
 import com.churchdrive.app.ui.glowBehind
+import org.json.JSONObject
 
 /**
  * The signed-in app, laid out like the other Church Drive apps: a title bar with the person's button, the pages in a bar along the bottom,
@@ -67,25 +81,31 @@ fun AdminApp(vm: AdminModel) {
             ) { _, delta -> swiped += delta }
         },
     ) {
-        AdminPages(vm) { panel = "account" }
+        androidx.compose.runtime.CompositionLocalProvider(LocalHaApi provides vm.api) {
+            AdminPages(vm) { panel = "account" }
+        }
         AdminPanel(panel, { panel = it }, vm)
     }
 }
 
 private const val HOME = 0
-private const val COLOURS = 1
+private const val ACTIVITY = 1
+private const val COLOURS = 2
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AdminPages(vm: AdminModel, onPerson: () -> Unit) {
     var tab by rememberSaveable { mutableIntStateOf(HOME) }
+    // A section that fills the screen (Device Health), opened from Home; back returns to Home.
+    var section by rememberSaveable { mutableStateOf<String?>(null) }
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-    BackHandler(enabled = tab != HOME) { tab = HOME }
+    BackHandler(enabled = tab != HOME && section == null) { tab = HOME }
+    Box(Modifier.fillMaxSize()) {
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         topBar = {
             MediumTopAppBar(
-                title = { Text(if (tab == HOME) "Clive Admin" else "Colour palettes") },
+                title = { Text(when (tab) { HOME -> "Clive Admin"; ACTIVITY -> "Activity log"; else -> "Colour palettes" }) },
                 actions = { PersonButton(vm.personName, onPerson) },
                 scrollBehavior = scroll,
             )
@@ -95,6 +115,10 @@ private fun AdminPages(vm: AdminModel, onPerson: () -> Unit) {
                 NavigationBarItem(
                     selected = tab == HOME, onClick = { tab = HOME },
                     icon = { Icon(CdVectors.Home, null) }, label = { Text("Home", fontSize = 11.sp) },
+                )
+                NavigationBarItem(
+                    selected = tab == ACTIVITY, onClick = { tab = ACTIVITY },
+                    icon = { Icon(CdVectors.History, null) }, label = { Text("Activity", fontSize = 11.sp) },
                 )
                 NavigationBarItem(
                     selected = tab == COLOURS, onClick = { tab = COLOURS },
@@ -115,10 +139,54 @@ private fun AdminPages(vm: AdminModel, onPerson: () -> Unit) {
                     "${vm.personName ?: "This account"} is not an administrator in Home Assistant, so Clive Admin has nothing to show. Sign in with an administrator's login.",
                 )
                 tab == COLOURS -> ColoursPage()
-                else -> HomePage { tab = it }
+                tab == ACTIVITY -> ActivityPage()
+                else -> HomePage(vm, open = { tab = it }, openSection = { section = it })
             }
         }
     }
+    if (section == HEALTH) DeviceHealthOverlay(null, vm.entities, vm.registry, vm.areaNames) { section = null }
+    if (section == ENERGY) AdminSection("Energy", { section = null }) { EnergyPage(vm.entities) }
+    }
+}
+
+/** A page that fills the screen over the tabs, with a back arrow: the same look as the pages of the phone app's account panel. */
+@Composable
+private fun AdminSection(title: String, onBack: () -> Unit, content: @Composable () -> Unit) {
+    BackHandler(onBack = onBack)
+    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        Column(
+            Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+        ) {
+            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onBack) { Icon(CdVectors.Back, contentDescription = "Back") }
+                Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 4.dp))
+            }
+            content()
+        }
+    }
+}
+
+/**
+ * Energy (the same Octopus cards as the phone app's Energy page, each in the colour of its kind): electricity with today's rates, the last
+ * seven days, gas and Octoplus points.
+ */
+@Composable
+private fun EnergyPage(entities: Map<String, EntityState>) {
+    @Composable
+    fun Block(title: String, icon: ImageVector, tone: Tone, show: String) {
+        androidx.compose.runtime.CompositionLocalProvider(LocalPanelTone provides tone) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                ToneSectionHeader(title, icon, tone)
+                OctopusCard(JSONObject().put("show", show), entities)
+            }
+        }
+    }
+    Block("Electricity", CdVectors.Bolt, Tone.Energy, "")
+    Block("Cheap times today", CdVectors.Bolt, Tone.Energy, "cheap")
+    Block("Last 7 days", CdVectors.History, Tone.Energy, "week")
+    Block("Gas", CdVectors.Bolt, Tone.Gas, "gas")
+    Block("Octoplus", CdVectors.Bolt, Tone.Energy, "octoplus")
 }
 
 /** A message in a card, in the tone that says how much it matters. */
@@ -130,8 +198,22 @@ private fun Notice(tone: Tone, title: String, body: String) {
     }
 }
 
+private const val HEALTH = "health"
+private const val ENERGY = "energy"
+
 @Composable
-private fun HomePage(open: (Int) -> Unit) {
+private fun HomePage(vm: AdminModel, open: (Int) -> Unit, openSection: (String) -> Unit) {
+    val health = remember(vm.entities, vm.registry, vm.areaNames) { deviceHealthList(vm.entities, vm.registry, vm.areaNames) }
+    ToneSectionHeader("Device health", CdVectors.BatteryCharging, Tone.Teal, deviceHealthSummary(health))
+    ToneCard(Tone.Teal, onClick = { openSection(HEALTH) }) { ink, soft ->
+        Text("Batteries, filters and devices that stopped answering", style = MaterialTheme.typography.titleMedium, color = ink)
+        Text("The ones that need attention come first.", style = MaterialTheme.typography.bodyMedium, color = soft)
+    }
+    ToneSectionHeader("Energy", CdVectors.Bolt, Tone.Energy)
+    ToneCard(Tone.Energy, onClick = { openSection(ENERGY) }) { ink, soft ->
+        Text("Electricity, gas and the last seven days", style = MaterialTheme.typography.titleMedium, color = ink)
+        Text("Rates, what you've used so far and the cheap times.", style = MaterialTheme.typography.bodyMedium, color = soft)
+    }
     val palettes = CliveColours.byKey.size
     ToneSectionHeader("Colour palettes", painterResource(R.drawable.mdi_palette), Tone.Indigo, "$palettes palettes")
     ToneCard(Tone.Indigo, onClick = { open(COLOURS) }) { ink, soft ->

@@ -8,8 +8,10 @@ with the APK, so there is a record of what shipped. Newest first.
 
 - The launcher icons are sized and centred to match each other: the solid shapes (house, Clive Admin's shield, To-Do's clipboard) are a little smaller, and each mark is centred on its visual weight rather than its bounding box, so the house and Satellites no longer sit low and Admin no longer looks oversized next to the thin-lined Satellites mark. The icon on the watch is unchanged.
 
-## 0.126.0
+## 0.130.0
 
+- New for administrators: an **Open Clive Admin** button in the account panel, under To-do. It opens Clive Admin, or its Google Play page if it is not installed yet.
+- The Activity log, Device health, Energy and the icon drawing now live in the shared code that Clive Admin uses too, so the two apps show the same pages. Nothing changes in how they look here.
 - On a phone on its side, the page keeps clear of the camera hole or notch, so it no longer sits over buttons and text.
 - Wide screens: the groups of cards are shared between the columns in order so the columns end at about the same height, instead of one long and one short. Cards fill their column again (the 0.125.0 width cap is removed, as the columns already set the width).
 

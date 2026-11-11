@@ -102,7 +102,7 @@ class UiStandardsTest {
 
     // ---- Icons are real
 
-    private fun realIcons() = JSONObject(File("src/main/assets/mdi-icons.json").readText())
+    private fun realIcons() = JSONObject(File("../core/src/main/assets/mdi-icons.json").readText())
 
     @Test
     fun everyIconNamedInTheCodeIsARealMaterialDesignIcon() {
