@@ -61,11 +61,6 @@ import com.churchdrive.app.ha.data
 import kotlinx.coroutines.delay
 import org.json.JSONObject
 
-/** Home Assistant's address, for pictures and video (they're fetched with a token in the link). Set in MainActivity. */
-val LocalBaseUrl = compositionLocalOf { "" }
-
-/** When each camera last had a snapshot asked for from here, so the app doesn't ask again straight away. */
-
 internal fun chipColours(kind: String, old: Boolean): Pair<Color, Color> = when {
     old -> CliveColours.Warn.colour to Color(0xFF222211)
     kind == "ding" -> CliveColours.Cooling.colour to Color(0xFF001122)

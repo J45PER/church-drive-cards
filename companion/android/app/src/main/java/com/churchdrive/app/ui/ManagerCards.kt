@@ -79,11 +79,6 @@ fun peopleLists(entities: Map<String, EntityState>): List<Pair<String, String>> 
     }
 }
 
-/** Plain text of a markdown line: the stars and backticks of bold, italic and code taken out. */
-fun plainMarkdown(text: String): String = text.replace("**", "").replace("__", "").replace("`", "").replace(Regex("(?<!\\w)[*_](\\S.*?\\S|\\S)[*_](?!\\w)"), "$1")
-
-// ---------------------------------------------------------------------------------------------- Cards
-
 /** The Who's home card: each person, where they are, their phones and the phones' batteries. */
 @Composable
 fun PeopleStatusCard(entities: Map<String, EntityState>, registry: Registry) {
@@ -159,26 +154,6 @@ fun DeviceHealthCard(config: JSONObject, entities: Map<String, EntityState>, cal
     }
 }
 
-/** A subtitle-style heading card. */
-@Composable
-fun HeadingCard(config: JSONObject) {
-    val text = config.optString("heading").ifBlank { config.optString("title") }
-    if (text.isBlank()) return
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        config.optString("icon").takeIf { it.isNotBlank() }?.let { HaIcon(it, CdVectors.Info, MaterialTheme.colorScheme.primary, 22.dp) }
-        Text(text, style = MaterialTheme.typography.titleMedium)
-    }
-}
-
-/** A markdown card as plain text. */
-@Composable
-fun MarkdownCard(config: JSONObject) {
-    val neutral = panelNeutral()
-    EntityCard(neutral.container, neutral.onContainer) {
-        Text(plainMarkdown(config.optString("content")), style = MaterialTheme.typography.bodyMedium)
-    }
-}
-
 /** A vertical stack: its cards one under another. */
 @Composable
 fun StackCard(config: JSONObject, entities: Map<String, EntityState>, registry: Registry, call: CallService) {
@@ -199,72 +174,3 @@ fun PeopleListsCard(entities: Map<String, EntityState>, call: CallService) {
     }
 }
 
-/** A plain list of entities where an input (a choice, a time, a number) can be changed in place; other rows just show their value. */
-@Composable
-fun SettingsEntitiesCard(config: JSONObject, entities: Map<String, EntityState>, call: CallService) {
-    val neutral = panelNeutral()
-    val rows = config.optJSONArray("entities")
-    EntityCard(neutral.container, neutral.onContainer) {
-        config.optString("title").takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.titleMedium) }
-        for (i in 0 until (rows?.length() ?: 0)) {
-            val raw = rows?.opt(i)
-            val spec = raw as? JSONObject ?: JSONObject().put("entity", raw?.toString().orEmpty())
-            val id = spec.optString("entity")
-            val entity = entities[id]
-            val name = spec.optString("name").ifBlank { entity?.friendlyName ?: id }
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                when (id.substringBefore('.')) {
-                    "input_select" -> if (entity != null) SelectInput(entity, call)
-                    "input_number" -> if (entity != null) NumberInput(entity, call)
-                    "input_datetime" -> if (entity != null) TimeInput(entity, call)
-                    "input_boolean" -> if (entity != null) {
-                        val on = entity.state == "on"
-                        Switch(checked = on, enabled = entity.available, onCheckedChange = { call("input_boolean", if (on) "turn_off" else "turn_on", entity.entityId, data()) })
-                    }
-                    else -> Text(entity?.let { presetLabel(it.state) + (it.str("unit_of_measurement")?.let { u -> " $u" } ?: "") } ?: "–", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SelectInput(entity: EntityState, call: CallService) {
-    var open by remember { mutableStateOf(false) }
-    Box {
-        Text(entity.state, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.clip(CircleShape).clickable { open = true }.padding(horizontal = 12.dp, vertical = 6.dp))
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            entity.options().forEach { o ->
-                DropdownMenuItem(text = { Text(o) }, onClick = { open = false; call("input_select", "select_option", entity.entityId, data("option" to o)) })
-            }
-        }
-    }
-}
-
-@Composable
-private fun NumberInput(entity: EntityState, call: CallService) {
-    val step = entity.num("step") ?: 1.0
-    val min = entity.num("min") ?: Double.NEGATIVE_INFINITY
-    val max = entity.num("max") ?: Double.POSITIVE_INFINITY
-    val value = entity.state.toDoubleOrNull()
-    fun set(v: Double) = call("input_number", "set_value", entity.entityId, data("value" to v.coerceIn(min, max)))
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = { value?.let { set(it - step) } }) { Icon(CdVectors.Minus, contentDescription = "Less") }
-        Text(value?.let { if (it % 1.0 == 0.0) it.toInt().toString() else "%.1f".format(it) } ?: "–", style = MaterialTheme.typography.bodyLarge)
-        IconButton(onClick = { value?.let { set(it + step) } }) { Icon(CdVectors.Plus, contentDescription = "More") }
-    }
-}
-
-@Composable
-private fun TimeInput(entity: EntityState, call: CallService) {
-    val context = LocalContext.current
-    val time = entity.state.take(5)
-    Text(time, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyLarge,
-        modifier = Modifier.clip(CircleShape).clickable {
-            val hour = time.substringBefore(':').toIntOrNull() ?: 0
-            val minute = time.substringAfter(':', "0").toIntOrNull() ?: 0
-            TimePickerDialog(context, { _, h, m -> call("input_datetime", "set_datetime", entity.entityId, data("time" to "%02d:%02d:00".format(h, m))) }, hour, minute, true).show()
-        }.padding(horizontal = 12.dp, vertical = 6.dp))
-}

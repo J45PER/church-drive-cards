@@ -4,6 +4,7 @@
 
 - The bottom bar is now Home, Health, Energy and Activity, so Device health and Energy are one tap away; Home keeps a card for each.
 - Colour palettes moved to the side panel (swipe left, or the person's button), under Open Church Drive.
+- Manager, in the side panel: the Manager's sections as the house's Manager dashboard lists them. Notifications, Locations, Camera links, Icons, the To-do settings and the house jobs are in Clive Admin now; People, Who's home, Device health list, Alarm lights, Watch and the automatic to-dos say they are still in the Church Drive app and open it. Nothing is removed from the Church Drive app yet.
 
 ## 0.131.0
 

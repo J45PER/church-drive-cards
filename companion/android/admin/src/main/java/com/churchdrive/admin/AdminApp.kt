@@ -81,7 +81,7 @@ fun AdminApp(vm: AdminModel) {
             ) { _, delta -> swiped += delta }
         },
     ) {
-        androidx.compose.runtime.CompositionLocalProvider(LocalHaApi provides vm.api) {
+        androidx.compose.runtime.CompositionLocalProvider(LocalHaApi provides vm.api, com.churchdrive.app.ui.LocalBaseUrl provides vm.baseUrl) {
             AdminPages(vm) { panel = "account" }
         }
         AdminPanel(panel, { panel = it }, vm)

@@ -42,6 +42,16 @@ class AdminModel(app: Application) : AndroidViewModel(app) {
     var areaNames by mutableStateOf<Map<String, String>>(emptyMap())
         private set
 
+    /** Switches, numbers and the like the Manager's settings cards change: a service call to the house. */
+    val call: com.churchdrive.app.ha.CallService = { domain, service, entityId, data -> client.callService(domain, service, entityId, data) }
+
+    /** The house's address, for the cards that load pictures from it. */
+    val baseUrl: String get() = session.url.orEmpty()
+
+    /** The Manager's sections, read from the house's Manager dashboard (people, locations, notifications and the rest). */
+    var managerSections by mutableStateOf<List<ManagerSection>>(emptyList())
+        private set
+
     var signedIn by mutableStateOf(session.signedIn)
         private set
     var connected by mutableStateOf(false)
@@ -120,6 +130,10 @@ class AdminModel(app: Application) : AndroidViewModel(app) {
                 .filter { it.has("area_id") && it.has("name") }
                 .associate { it.getString("area_id") to it.getString("name") }
             viewModelScope.launch(Dispatchers.Main) { areaNames = names }
+        }
+        client.request("lovelace/config", org.json.JSONObject().put("url_path", "dashboard-manager")) { result ->
+            val sections = (result as? org.json.JSONObject)?.let { ManagerSections.parse(it) } ?: return@request
+            viewModelScope.launch(Dispatchers.Main) { managerSections = sections }
         }
         client.request("config/entity_registry/list_for_display") { result ->
             entityRegistry = result
