@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.136.0
+
+- Manager: Who's home, Watch settings and the Device health list are in Clive Admin now. The sections it still cannot draw (People, Alarm lights, the automatic to-dos) say they are on the Manager website and tapping opens it.
+
 ## 0.135.0
 
 - The "A newer version of Clive Admin is ready" banner (with its Update button) now shows on every page, as in the other apps; it was missing on the Health tab.

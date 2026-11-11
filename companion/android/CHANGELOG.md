@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.136.0
+
+- No change you will notice (the Who's home, Watch settings and Device health cards moved to the shared module so Clive Admin can show them).
+
 ## 0.135.0
 
 - Pull down on any page to refresh the connection. The pill at the top of the page shows it: "Pull to refresh", "Release to refresh", "Updating" and then "Up to date". The pill now also says "No connection" when Home Assistant can't be reached for a few seconds (tap it to try again), and "Home Assistant restarting" while Home Assistant restarts and its items load back in.

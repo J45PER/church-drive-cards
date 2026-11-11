@@ -192,9 +192,10 @@ private fun LightsContent(rooms: List<com.churchdrive.app.ui.LightRoom>, data: W
                 Spacer(GlanceModifier.height(12.dp))
                 if (withScenes && room.scenes.isNotEmpty()) {
                     val tiles = room.scenes.map { s ->
-                        val action = if (s.haScene != null) Triple("scene", "turn_on", s.haScene) else Triple("church_drive", "apply_scene", s.target)
+                        val haScene = s.haScene
+                        val action = if (haScene != null) Triple("scene", "turn_on", haScene) else Triple("church_drive", "apply_scene", s.target)
                         SceneTile(
-                            WidgetTile("mdi:lightbulb-group", s.name, false, action.first, action.second, action.third, if (s.haScene != null) "{}" else JSONObject().put("scene", s.key).toString()),
+                            WidgetTile("mdi:lightbulb-group", s.name, false, action.first, action.second, action.third, if (haScene != null) "{}" else JSONObject().put("scene", s.key).toString()),
                             com.churchdrive.app.ui.sceneSwatch(s.key),
                         )
                     }

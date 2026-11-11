@@ -52,137 +52,6 @@ import com.churchdrive.app.ha.EntityState
 import com.churchdrive.app.ha.data
 import kotlin.math.roundToInt
 
-private val SCENE_NAMES = mapOf(
-    "bright" to "Bright", "dimmed" to "Dimmed", "relax" to "Relax", "nightlight" to "Nightlight",
-    "cool_bright" to "Cool bright", "energise" to "Energise", "cyber_fidelity" to "Cyber fidelity",
-    "lake_placid" to "Lake Placid", "emerald_isle" to "Emerald isle", "soho" to "Soho",
-    "phantom" to "Phantom", "city_blue" to "City Blue", "dreamy_dusk" to "Dreamy dusk",
-    "spellbound" to "Spellbound",
-)
-
-/**
- * A scene tile: a Church Drive scene [key] played on [target], or (when [haScene] is set) a Home Assistant
- * scene entity. [label] is a name the card gives it.
- */
-data class LightScene(val key: String, val target: String, val label: String? = null, val haScene: String? = null) {
-    val name: String get() = label ?: SCENE_NAMES[key] ?: key.replace('_', ' ').replaceFirstChar { it.uppercase() }
-
-    /** The scene select entity Church Drive keeps for a Hue room or zone, e.g. select.kitchen_scene. */
-    val selectEntity: String get() = "select.${target.removePrefix("light.")}_scene"
-}
-
-/** A zone or light under a room. [level] is how far it is indented (1 = directly under the room). */
-data class LightRowSpec(val entity: String, val name: String? = null, val level: Int = 1)
-
-/**
- * A room card: its group light on top, the zones and lights under it, and its scenes. [title] is the
- * card's own name for it, or null to use the area's name, then the group light's name.
- */
-data class LightRoom(
-    val title: String?,
-    val area: String?,
-    val head: String,
-    val rows: List<LightRowSpec>,
-    val scenes: List<LightScene>,
-)
-
-private fun room(title: String, head: String, rowIds: List<String>, scenes: List<LightScene>) =
-    LightRoom(title, null, head, rowIds.map { LightRowSpec(it) }, scenes)
-
-private fun scenes(vararg specs: String, room: String): List<LightScene> =
-    specs.map { spec ->
-        val (key, target) = spec.split("@").let { it[0] to (it.getOrNull(1) ?: room) }
-        LightScene(key, target)
-    }
-
-private val WHITE = arrayOf("bright", "dimmed", "relax", "nightlight")
-
-/** What the app shows until (or unless) it can read the dashboard: copied from the dashboard when the app was built. */
-private val FALLBACK_HOME_ROOMS = listOf(
-    room(
-        "Kitchen", "light.kitchen", listOf("light.kitchen_spotlights", "light.kitchen_ambience"),
-        scenes(*WHITE, "cool_bright", "energise", "soho@light.kitchen_ambience", "emerald_isle", room = "light.kitchen"),
-    ),
-    room(
-        "Living room", "light.living_room",
-        listOf("light.living_room_centris", "light.tv_lightstrip", "light.tv_table_lamp", "light.living_room_lamp"),
-        scenes(
-            *WHITE, "cool_bright", "soho@light.living_room_ambience", "cyber_fidelity@light.living_room_ambience",
-            room = "light.living_room",
-        ),
-    ),
-    room(
-        "Middle floor", "light.middle_floor", emptyList(),
-        scenes(*WHITE, room = "light.middle_floor"),
-    ),
-)
-
-private fun plain(title: String, head: String) = room(title, head, emptyList(), scenes(*WHITE, room = head))
-
-private val FALLBACK_FLOORS: List<Pair<String, List<LightRoom>>> = listOf(
-    "Ground Floor" to listOf(
-        room(
-            "Kitchen", "light.kitchen", listOf("light.kitchen_spotlights", "light.kitchen_ambience"),
-            scenes(*WHITE, "cool_bright", "cyber_fidelity", "lake_placid", "emerald_isle", room = "light.kitchen"),
-        ),
-        room(
-            "Living room", "light.living_room",
-            listOf("light.living_room_table_lights", "light.living_room_ambience", "light.living_room_centris", "light.tv_lightstrip"),
-            scenes(
-                *WHITE, "soho@light.living_room_ambience", "phantom@light.living_room_ambience",
-                "cyber_fidelity@light.living_room_ambience", room = "light.living_room",
-            ),
-        ),
-        plain("Entrance", "light.entrance"),
-    ),
-    "Middle Floor" to listOf(
-        plain("Middle floor", "light.middle_floor"),
-        plain("Second bedroom", "light.second_bedroom"),
-        plain("Spare bedroom", "light.spare_bedroom"),
-    ),
-    "Top Floor" to listOf(
-        room(
-            "Hayley's landing", "light.hayley_s_landing_main", listOf("light.hayley_s_landing_ambience"),
-            scenes("cyber_fidelity@light.hayley_s_landing_ambience", room = "light.hayley_s_landing_main"),
-        ),
-        plain("Office", "light.office"),
-        room(
-            "Hayley's bedroom", "light.hayleys_bedroom", listOf("light.hayley_s_bedroom_main", "light.hayley_s_bedroom_ambiance"),
-            scenes(
-                "bright", "cool_bright", "dimmed@light.hayley_s_bedroom_main", "nightlight", "city_blue",
-                "dreamy_dusk@light.hayley_s_bedroom_ambiance", "soho@light.hayley_s_bedroom_ambiance",
-                "spellbound@light.hayley_s_bedroom_ambiance", room = "light.hayleys_bedroom",
-            ),
-        ),
-        plain("Hayley's en suite", "light.hayley_s_en_suite"),
-    ),
-    "Garden" to listOf(
-        room(
-            "Garden", "light.garden", listOf("light.patio_light_strip", "light.outside"),
-            scenes(
-                *WHITE, "cool_bright", "cyber_fidelity@light.patio_ambience", "emerald_isle", "city_blue",
-                room = "light.garden",
-            ),
-        ),
-    ),
-    "Front Garden" to listOf(plain("Front garden", "light.front")),
-)
-
-/** The rooms on the Home page, and the floors of rooms on the Lighting page. */
-/** A floor panel's own icon (`cd:floor-0`) and colour (a palette name or an HA colour) as the dashboard sets them; either may be blank. */
-data class FloorLook(val icon: String?, val color: String?)
-
-data class LightLayout(
-    val home: List<LightRoom>,
-    val floors: List<Pair<String, List<LightRoom>>>,
-    /** Each floor's look by its title, from the dashboard; a floor with none is drawn with the bulb in the lights colour. */
-    val looks: Map<String, FloorLook> = emptyMap(),
-) {
-    companion object {
-        val Fallback = LightLayout(FALLBACK_HOME_ROOMS, FALLBACK_FLOORS)
-    }
-}
-
 fun roomsOn(rooms: List<LightRoom>, entities: Map<String, EntityState>) = rooms.count { entities[it.head]?.state == "on" }
 
 fun lightsSummary(rooms: List<LightRoom>, entities: Map<String, EntityState>): String {
@@ -262,7 +131,8 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
                             modifier = Modifier.at(0.5f + c * (w + gap), lightsEnd + 1f + 1.25f * r, w, 1f),
                             h = cell,
                         ) {
-                            if (scene.haScene != null) call("scene", "turn_on", scene.haScene, data())
+                            val haScene = scene.haScene
+                            if (haScene != null) call("scene", "turn_on", haScene, data())
                             else call("church_drive", "apply_scene", scene.target, data("scene" to scene.key))
                         }
                     }

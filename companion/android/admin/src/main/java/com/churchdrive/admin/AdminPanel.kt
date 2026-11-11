@@ -99,7 +99,7 @@ fun AdminPanel(panel: String?, onPanel: (String?) -> Unit, vm: AdminModel) {
                             vm.managerSections.firstOrNull { it.title == which.removePrefix("manager:") }?.let { section ->
                                 PageColumn {
                                     PanelTitle(section.title, { onPanel("manager") })
-                                    ManagerSectionContent(section, vm.entities, vm.call)
+                                    ManagerSectionContent(section, vm.entities, vm.registry, vm.call)
                                 }
                             }
                         } else AccountPage(vm, onClose = { onPanel(null) }, onOpen = onPanel)
@@ -206,7 +206,7 @@ private fun ManagerHub(sections: List<ManagerSection>, onOpen: (String) -> Unit)
         sections.forEach { section ->
             ListItem(
                 headlineContent = { Text(section.title) },
-                supportingContent = if (ManagerSections.builtHere(section)) null else ({ Text("Still in the Church Drive app") }),
+                supportingContent = if (ManagerSections.builtHere(section)) null else ({ Text("On the Manager website for now") }),
                 leadingContent = { com.churchdrive.app.ui.HaIcon(section.icon, CdVectors.Cog, MaterialTheme.colorScheme.onSurfaceVariant, 24.dp) },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 modifier = Modifier.clickable { onOpen(section.title) },
