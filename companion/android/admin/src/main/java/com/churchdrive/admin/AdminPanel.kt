@@ -53,6 +53,7 @@ import com.churchdrive.app.UpdateCheck
 import com.churchdrive.app.ui.CdVectors
 import com.churchdrive.app.ui.LogoKind
 import com.churchdrive.app.ui.LogoMorph
+import com.churchdrive.app.ui.DeviceHealthTab
 
 private val PanelShape = RoundedCornerShape(28.dp)
 
@@ -67,7 +68,7 @@ fun AdminPanel(panel: String?, onPanel: (String?) -> Unit, vm: AdminModel) {
     // The last page shown, so a page keeps its words while it slides away.
     var shown by remember { mutableStateOf("account") }
     if (panel != null) shown = panel
-    BackHandler(enabled = panel != null) { onPanel(when { panel == "account" -> null; panel?.startsWith("manager:") == true -> "manager"; else -> "account" }) }
+    BackHandler(enabled = panel != null) { onPanel(if (panel == "account") null else "account") }
     AnimatedVisibility(
         visible = panel != null,
         enter = slideInHorizontally(initialOffsetX = { it }),
@@ -77,7 +78,7 @@ fun AdminPanel(panel: String?, onPanel: (String?) -> Unit, vm: AdminModel) {
             AnimatedContent(
                 targetState = shown,
                 transitionSpec = {
-                    val deeper = targetState != "account" && !(targetState == "manager" && initialState.startsWith("manager:"))
+                    val deeper = targetState != "account"
                     val move = if (deeper) slideInHorizontally { it } togetherWith slideOutHorizontally { -it / 4 }
                     else slideInHorizontally { -it / 4 } togetherWith slideOutHorizontally { it }
                     move.apply { targetContentZIndex = if (deeper) 1f else -1f }
@@ -87,22 +88,22 @@ fun AdminPanel(panel: String?, onPanel: (String?) -> Unit, vm: AdminModel) {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     when (which) {
                         "about" -> AboutPage { onPanel("account") }
-                        "manager" -> PageColumn {
-                            PanelTitle("Manager", { onPanel("account") })
-                            ManagerHub(ManagerSections.forAdmin(vm.managerSections)) { onPanel("manager:$it") }
+                        "health" -> Column(Modifier.fillMaxSize().safeDrawingPadding()) {
+                            // Device health scrolls itself (its devices open pages in place), so it is not put in the scrolling page column.
+                            Box(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) { PanelTitle("Device health", { onPanel("account") }) }
+                            Box(Modifier.weight(1f).fillMaxWidth()) { DeviceHealthTab(vm.entities, vm.registry, vm.areaNames) }
                         }
                         "colours" -> PageColumn {
                             PanelTitle("Colour palettes", { onPanel("account") })
                             ColoursPage()
                         }
-                        else -> if (which.startsWith("manager:")) {
-                            vm.managerSections.firstOrNull { it.title == which.removePrefix("manager:") }?.let { section ->
-                                PageColumn {
-                                    PanelTitle(section.title, { onPanel("manager") })
-                                    ManagerSectionContent(section, vm.entities, vm.registry, vm.call)
-                                }
-                            }
-                        } else AccountPage(vm, onClose = { onPanel(null) }, onOpen = onPanel)
+                        "watch", "notifications" -> PageColumn {
+                            PanelTitle(if (which == "watch") "Watch" else "Notifications", { onPanel("account") })
+                            val section = ManagerSections.forPage(vm.managerSections, which)
+                            if (section == null) com.churchdrive.app.ui.LoadingNote("Loading this page from Home Assistant…")
+                            else ManagerSectionContent(section, vm.entities, vm.registry, vm.call)
+                        }
+                        else -> AccountPage(vm, onClose = { onPanel(null) }, onOpen = onPanel)
                     }
                 }
             }
@@ -178,10 +179,18 @@ private fun AccountPage(vm: AdminModel, onClose: () -> Unit, onOpen: (String) ->
                 leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_church_drive), contentDescription = null) },
             )
         }
-        if (ManagerSections.forAdmin(vm.managerSections).isNotEmpty()) PanelCard {
+        PanelCard {
             PanelRow(
-                CdVectors.Cog, "Manager", "${ManagerSections.forAdmin(vm.managerSections).size} sections: notifications, cameras, the watch and more",
-                onClick = { onOpen("manager") }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_cog_solid), contentDescription = null) },
+                CdVectors.BatteryCharging, "Device health", "Batteries, filters and devices that stopped answering",
+                onClick = { onOpen("health") },
+            )
+            if (ManagerSections.forPage(vm.managerSections, "notifications") != null) PanelRow(
+                CdVectors.Info, "Notifications", "Who gets each alert and house job, and when a house job is made",
+                onClick = { onOpen("notifications") }, leading = { com.churchdrive.app.ui.HaIcon("mdi:bell-ring-outline", CdVectors.Info, MaterialTheme.colorScheme.onSurfaceVariant, 24.dp) },
+            )
+            if (ManagerSections.forPage(vm.managerSections, "watch") != null) PanelRow(
+                CdVectors.Info, "Watch", "Pages and items on the watch",
+                onClick = { onOpen("watch") }, leading = { com.churchdrive.app.ui.HaIcon("mdi:watch", CdVectors.Info, MaterialTheme.colorScheme.onSurfaceVariant, 24.dp) },
             )
         }
         PanelCard {
@@ -195,22 +204,6 @@ private fun AccountPage(vm: AdminModel, onClose: () -> Unit, onOpen: (String) ->
         PanelCard {
             if (vm.borrowed) PanelRow(CdVectors.SignOut, "Sign out", "This app uses the Church Drive app's sign-in. Sign out there and it signs out here too.")
             else PanelRow(CdVectors.SignOut, "Sign out", onClick = { onClose(); vm.signOut() })
-        }
-    }
-}
-
-/** The Manager's sections as a page of rows; each opens its own page. A section Clive Admin cannot draw yet says it is still in the Church Drive app. */
-@Composable
-private fun ManagerHub(sections: List<ManagerSection>, onOpen: (String) -> Unit) {
-    PanelCard {
-        sections.forEach { section ->
-            ListItem(
-                headlineContent = { Text(section.title) },
-                supportingContent = if (ManagerSections.builtHere(section)) null else ({ Text("On the Manager website for now") }),
-                leadingContent = { com.churchdrive.app.ui.HaIcon(section.icon, CdVectors.Cog, MaterialTheme.colorScheme.onSurfaceVariant, 24.dp) },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                modifier = Modifier.clickable { onOpen(section.title) },
-            )
         }
     }
 }

@@ -361,7 +361,7 @@ class TodoModel(app: Application) : AndroidViewModel(app) {
         val all = listId(tab)?.let { loaded[it] } ?: return null
         if (tab != TodoTab.House) return all
         val first = personName?.trim()?.substringBefore(' ')
-        return all.filter { houseTaskFor(houseTask(it), first) }
+        return sortedHouseTasks(all.map { it to houseTask(it) }.filter { houseTaskFor(it.second, first) }).map { it.first }
     }
 
     /** How many tasks are still open on a page (for the badge on its button). */

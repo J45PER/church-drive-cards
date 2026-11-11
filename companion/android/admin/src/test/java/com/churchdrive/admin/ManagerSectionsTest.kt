@@ -42,4 +42,30 @@ class ManagerSectionsTest {
     @Test fun anEmptyDashboardHasNoSections() {
         assertTrue(ManagerSections.parse(JSONObject("{}")).isEmpty())
     }
+
+    @Test fun watchNotificationsAndHealthHaveTheirOwnPagesAndTheRestIsTheManagerPage() {
+        fun section(title: String, type: String) = ManagerSection(title, null, null, listOf(ManagerCard(type, JSONObject())))
+        val all = listOf(
+            section("Who's home", "custom:people-card"), section("Device Health", "custom:device-health-card"),
+            section("Notifications", "custom:notifications-card"), section("Alarm lights", "custom:alarm-lights-card"),
+            section("Watch", "custom:watch-settings-card"), section("Camera links", "custom:camera-links-card"),
+            section("Automatic to-dos", "todo-list"),
+        )
+        assertEquals(listOf("Who's home", "Automatic to-dos"), ManagerSections.forManagerPage(all).map { it.title })
+        assertEquals("Watch", ManagerSections.forPage(all, "watch")?.title)
+        assertEquals("Notifications", ManagerSections.forPage(all, "notifications")?.title)
+        assertEquals("Device Health", ManagerSections.forPage(all, "health")?.title)
+        assertFalse(ManagerSections.forAdmin(all).any { it.title == "Alarm lights" || it.title == "Camera links" })
+    }
+
+    @Test fun aHeadingAboveAnEntitiesListBecomesItsTitle() {
+        val cards = listOf(
+            ManagerCard("heading", JSONObject("""{"heading":"When to make a house job"}""")),
+            ManagerCard("entities", JSONObject("""{"entities":[]}""")),
+            ManagerCard("markdown", JSONObject()),
+        )
+        val out = ManagerSections.pageCards(cards)
+        assertEquals(listOf("entities", "markdown"), out.map { it.type })
+        assertEquals("When to make a house job", out[0].config.optString("heading"))
+    }
 }

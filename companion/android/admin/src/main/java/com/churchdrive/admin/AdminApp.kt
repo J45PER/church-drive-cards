@@ -52,7 +52,6 @@ import com.churchdrive.app.ha.EntityState
 import com.churchdrive.app.ui.CliveColours
 import com.churchdrive.app.ui.LocalPanelTone
 import com.churchdrive.app.ui.OctopusCard
-import com.churchdrive.app.ui.DeviceHealthTab
 import com.churchdrive.app.ui.LocalHaApi
 import com.churchdrive.app.ui.deviceHealthList
 import com.churchdrive.app.ui.deviceHealthSummary
@@ -86,21 +85,21 @@ fun AdminApp(vm: AdminModel) {
         androidx.compose.runtime.CompositionLocalProvider(LocalHaApi provides vm.api, com.churchdrive.app.ui.LocalBaseUrl provides vm.baseUrl,
             com.churchdrive.app.ui.LocalTemplates provides vm.templates, com.churchdrive.app.ui.LocalUserName provides vm.personName,
             com.churchdrive.app.ui.LocalIsAdmin provides vm.isAdmin, com.churchdrive.app.ui.LocalAreaNames provides vm.areaNames) {
-            AdminPages(vm) { panel = "account" }
+            AdminPages(vm, onPerson = { panel = "account" }, onPanel = { panel = it })
         }
         AdminPanel(panel, { panel = it }, vm)
     }
 }
 
 private const val HOME = 0
-private const val HEALTH = 1
+private const val MANAGER = 1
 private const val ENERGY = 2
 private const val ACTIVITY = 3
 private const val DEVICES = 4
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AdminPages(vm: AdminModel, onPerson: () -> Unit) {
+private fun AdminPages(vm: AdminModel, onPerson: () -> Unit, onPanel: (String) -> Unit) {
     var tab by rememberSaveable { mutableIntStateOf(HOME) }
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     BackHandler(enabled = tab != HOME) { tab = HOME }
@@ -112,7 +111,7 @@ private fun AdminPages(vm: AdminModel, onPerson: () -> Unit) {
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         topBar = {
             MediumTopAppBar(
-                title = { Text(when (tab) { HOME -> "Clive Admin"; HEALTH -> "Device health"; ENERGY -> "Energy"; DEVICES -> "Devices"; else -> "Activity log" }) },
+                title = { Text(when (tab) { HOME -> "Clive Admin"; MANAGER -> "Manager"; ENERGY -> "Energy"; DEVICES -> "Devices"; else -> "Activity log" }) },
                 actions = { PersonButton(vm.personName, onPerson) },
                 scrollBehavior = scroll,
             )
@@ -124,8 +123,8 @@ private fun AdminPages(vm: AdminModel, onPerson: () -> Unit) {
                     icon = { Icon(CdVectors.Home, null) }, label = { Text("Home", fontSize = 11.sp) },
                 )
                 NavigationBarItem(
-                    selected = tab == HEALTH, onClick = { tab = HEALTH },
-                    icon = { Icon(CdVectors.BatteryCharging, null) }, label = { Text("Health", fontSize = 11.sp) },
+                    selected = tab == MANAGER, onClick = { tab = MANAGER },
+                    icon = { Icon(CdVectors.Cog, null) }, label = { Text("Manager", fontSize = 11.sp) },
                 )
                 NavigationBarItem(
                     selected = tab == ENERGY, onClick = { tab = ENERGY },
@@ -142,15 +141,7 @@ private fun AdminPages(vm: AdminModel, onPerson: () -> Unit) {
             }
         },
     ) { padding ->
-        val ready = vm.connected && vm.userKnown && vm.isAdmin
-        // Device health scrolls itself (its devices open pages in place), so it sits in the room under the title bar, not in the scrolling column.
-        if (ready && tab == HEALTH) {
-            // The update banner is on every tab, as in the other apps, so it sits above the list here.
-            Column(Modifier.fillMaxSize().padding(padding)) {
-                com.churchdrive.app.ui.UpdateNotice(BuildConfig.PLAY, vm.updateAvailable, UpdateCheck.ADMIN_APK_URL, "Clive Admin", Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-                Box(Modifier.weight(1f).fillMaxWidth()) { DeviceHealthTab(vm.entities, vm.registry, vm.areaNames) }
-            }
-        } else Column(
+        Column(
             Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(28.dp),
         ) {
@@ -162,10 +153,11 @@ private fun AdminPages(vm: AdminModel, onPerson: () -> Unit) {
                     Tone.Red, "Administrators only",
                     "${vm.personName ?: "This account"} is not an administrator in Home Assistant, so Clive Admin has nothing to show. Sign in with an administrator's login.",
                 )
+                tab == MANAGER -> ManagerPage(ManagerSections.forManagerPage(vm.managerSections), vm.entities, vm.registry, vm.call)
                 tab == ENERGY -> EnergyPage(vm)
                 tab == DEVICES -> DevicesPage(vm)
                 tab == ACTIVITY -> ActivityPage()
-                else -> HomePage(vm, open = { tab = it })
+                else -> HomePage(vm, open = { tab = it }, openPanel = onPanel)
             }
         }
     }
@@ -256,12 +248,17 @@ private fun Notice(tone: Tone, title: String, body: String) {
 }
 
 @Composable
-private fun HomePage(vm: AdminModel, open: (Int) -> Unit) {
+private fun HomePage(vm: AdminModel, open: (Int) -> Unit, openPanel: (String) -> Unit) {
     val health = remember(vm.entities, vm.registry, vm.areaNames) { deviceHealthList(vm.entities, vm.registry, vm.areaNames) }
     ToneSectionHeader("Device health", CdVectors.BatteryCharging, Tone.Teal, deviceHealthSummary(health))
-    ToneCard(Tone.Teal, onClick = { open(HEALTH) }) { ink, soft ->
+    ToneCard(Tone.Teal, onClick = { openPanel("health") }) { ink, soft ->
         Text("Batteries, filters and devices that stopped answering", style = MaterialTheme.typography.titleMedium, color = ink)
         Text("The ones that need attention come first.", style = MaterialTheme.typography.bodyMedium, color = soft)
+    }
+    ToneSectionHeader("Manager", CdVectors.Cog, Tone.Grey)
+    ToneCard(Tone.Grey, onClick = { open(MANAGER) }) { ink, soft ->
+        Text("To-do settings, who's home and the automatic to-dos", style = MaterialTheme.typography.titleMedium, color = ink)
+        Text("Notifications, the watch and device health are in the side panel.", style = MaterialTheme.typography.bodyMedium, color = soft)
     }
     ToneSectionHeader("Energy", CdVectors.Bolt, Tone.Energy)
     ToneCard(Tone.Energy, onClick = { open(ENERGY) }) { ink, soft ->
