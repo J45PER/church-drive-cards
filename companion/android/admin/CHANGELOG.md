@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.141.0
+
+- No change you will notice (the Home Assistant integration's price notifications now start off for everyone except Jame).
+
 ## 0.140.0
 
 - No change you will notice (the Manager website has a new layout and pages).
