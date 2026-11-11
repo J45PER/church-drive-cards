@@ -79,14 +79,11 @@ fun UpdateNotice(play: Boolean, githubAvailable: Boolean, apkUrl: String, appNam
             runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(apkUrl)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
         }
     }
-    val tone = toneColors(Tone.Grey)
+    // The same banner as the main app's: a blue card with the glow, the message and an Update button.
     Box(modifier) {
-        Surface(
-            shape = RoundedCornerShape(28.dp), color = tone.container, contentColor = tone.onContainer,
-            modifier = Modifier.fillMaxWidth().clickable(onClick = update),
-        ) {
-            Row(Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("A newer version of $appName is ready", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+        ToneCard(Tone.Blue, onClick = update) { ink, _ ->
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("A newer version of $appName is ready", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge, color = ink)
                 TextButton(onClick = update) { Text("Update") }
             }
         }

@@ -23,6 +23,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.ui.text.style.TextOverflow
 import com.churchdrive.app.ha.CallService
 import com.churchdrive.app.ha.data
 import kotlinx.coroutines.delay
@@ -235,66 +238,81 @@ fun CarCard(config: JSONObject, entities: Map<String, EntityState>, registry: Re
     if (rows.isEmpty()) return
     val charging = rows.count { it.charging }
     val tone = toneColors(Tone.Car)
-    EntityCard(tone.container, tone.onContainer) {
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            config.optString("title").takeIf { it.isNotBlank() }?.let {
-                Text(it, style = MaterialTheme.typography.titleMedium)
-            }
-            rows.forEach { car ->
-                val barColour = carBatteryColour(car.battery, tone.accent)
-                val tag = when {
-                    car.charging -> "Charging"
-                    car.plugged -> "Plugged in"
-                    else -> car.where
-                }
-                val sub = listOfNotNull(
-                    car.range.takeIf { it.isNotBlank() }?.let { "$it electric" },
-                    car.fuel?.let { "Fuel ${Math.round(it)}%" + car.fuelRange.takeIf { r -> r.isNotBlank() }?.let { r -> " · $r" }.orEmpty() },
-                    car.end.takeIf { it.isNotBlank() },
-                )
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        // The make's logo (Vauxhall, Tesla...) when it is known, else a car.
-                        Box(Modifier.size(36.dp).background(tone.accent.copy(alpha = 0.18f), CircleShape), contentAlignment = Alignment.Center) {
-                            BrandOrIcon(car.name.trim().substringBefore(' '), if (car.charging) "mdi:car-electric" else "mdi:car", tone.accent, 22.dp)
+    val title = config.optString("title").ifBlank { "Cars" }
+    val fold = rememberFold("grid-fold|cars|$title")
+    val ink = tone.onContainer
+    fun fraction(b: Double?) = ((b ?: 0.0) / 100.0).coerceIn(0.0, 1.0).toFloat()
+    if (fold.value) {
+        // Folded: each car's name and charge side by side (two to a row) with its bar under, from row 2.
+        val lines = rows.chunked(2)
+        GridCard(tone.container, ink, maxOf(2.5f, 1.5f + lines.size * 1f), title, fold = fold) {
+            lines.forEachIndexed { r, pair ->
+                pair.forEachIndexed { c, car ->
+                    val colour = batteryFade(fraction(car.battery))
+                    Column(Modifier.at(0.5f + c * 3.75f, 1.1f + r * 1f, 3.25f, 1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(car.name, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(car.battery?.let { "${Math.round(it)}%" } ?: "–", style = MaterialTheme.typography.bodyMedium, color = ink)
                         }
-                        Column(Modifier.weight(1f)) {
-                            Text(car.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
-                            if (tag.isNotBlank()) Text(
-                                tag, color = tone.accent, style = MaterialTheme.typography.labelMedium, maxLines = 1,
-                                modifier = Modifier.padding(top = 2.dp).background(tone.accent.copy(alpha = 0.18f), CircleShape).padding(horizontal = 8.dp, vertical = 2.dp),
-                            )
-                        }
-                        Text(car.battery?.let { "${Math.round(it)}%" } ?: "–", color = barColour, style = MaterialTheme.typography.headlineMedium)
-                    }
-                    Box(Modifier.fillMaxWidth().height(8.dp).background(Color.Gray.copy(alpha = 0.25f), RoundedCornerShape(4.dp))) {
-                        Box(Modifier.fillMaxWidth(((car.battery ?: 0.0) / 100.0).coerceIn(0.0, 1.0).toFloat()).fillMaxHeight().background(barColour, RoundedCornerShape(4.dp)))
-                    }
-                    if (sub.isNotEmpty()) Text(sub.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (carStale(car, now)) {
-                        val amber = toneColors(Tone.Amber)
-                        val asking = (asked[car.wake] ?: 0L) > now - 3 * 60_000L
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            HaIcon("mdi:clock-alert-outline", CdVectors.Info, amber.accent, 16.dp)
-                            Text(carUpdatedText(car.asOf!!, now), color = amber.accent, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-                            if (car.wake.isNotEmpty()) Box(Modifier.width(150.dp)) {
-                                TileRow(
-                                    listOf(TileItem("mdi:refresh", if (asking) "Asking the car…" else "Refresh", false) {
-                                        asked = asked + (car.wake to System.currentTimeMillis())
-                                        now = System.currentTimeMillis()
-                                        call("button", "press", car.wake, data())
-                                    }),
-                                    tone, tone.onContainer, !asking,
-                                )
-                            }
-                        }
+                        LevelBar(fraction(car.battery), colour, ink, Modifier.fillMaxWidth(), 6.dp)
                     }
                 }
             }
         }
+        return
+    }
+    // Open: a block per car, 2.5 rows apart (a car with out of date figures has another row for its refresh), its icon circle one cell across with its centre on a line.
+    val stale = rows.map { carStale(it, now) }
+    // Each car: 1.5 for its name, figure and bar, half a cell for the range line, half a cell (a cell with a Refresh button) for old figures, and half a cell between cars.
+    fun hasSub(c: CarRow) = c.range.isNotBlank() || c.fuel != null || c.end.isNotBlank()
+    val pitch = rows.mapIndexed { i, c -> 1.5f + (if (hasSub(c)) 0.5f else 0f) + (if (stale[i]) (if (c.wake.isNotEmpty()) 1f else 0.5f) else 0f) + 0.5f }
+    GridCard(tone.container, ink, 1f + pitch.sum(), title, fold = fold) {
+        var top = 1f
+        rows.forEachIndexed { i, car ->
+            val y = top
+            top += pitch[i]
+            val barColour = batteryFade(fraction(car.battery))
+            val tag = when {
+                car.charging -> "Charging" to Tone.Cooling
+                car.plugged -> "Plugged in" to Tone.Indigo
+                car.where.equals("home", true) -> car.where to Tone.Green
+                else -> car.where to Tone.Grey
+            }
+            val sub = listOfNotNull(
+                car.range.takeIf { it.isNotBlank() }?.let { "$it electric" },
+                car.fuel?.let { "Fuel ${Math.round(it)}%" + car.fuelRange.takeIf { r -> r.isNotBlank() }?.let { r -> " · $r" }.orEmpty() },
+                car.end.takeIf { it.isNotBlank() },
+            )
+            Box(Modifier.atCentre(1f, y + 0.5f, 1f, 1f).background(tone.accent.copy(alpha = 0.18f), CircleShape), contentAlignment = Alignment.Center) {
+                BrandOrIcon(car.name.trim().substringBefore(' '), if (car.charging) "mdi:car-electric" else "mdi:car", tone.accent, 22.dp)
+            }
+            Column(Modifier.at(2f, y, 4f, 1f), verticalArrangement = Arrangement.Center) {
+                Text(car.name, style = MaterialTheme.typography.titleMedium, color = ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (tag.first.isNotBlank()) StatusPill(tag.first, toneColors(tag.second))
+            }
+            Text(car.battery?.let { "${Math.round(it)}%" } ?: "–", color = barColour, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.at(5.5f, y, 2f, 1f).wrapContentSize(Alignment.CenterEnd))
+            LevelBar(fraction(car.battery), barColour, ink, Modifier.at(0.5f, y + 1.1f, 7f, 0.25f).wrapContentHeight(Alignment.CenterVertically))
+            if (sub.isNotEmpty()) Text(sub.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f), modifier = Modifier.at(0.5f, y + 1.45f, 7f, 0.5f))
+            if (stale[i]) {
+                val amber = toneColors(Tone.Amber)
+                val asking = (asked[car.wake] ?: 0L) > now - 3 * 60_000L
+                val staleY = y + 1.5f + (if (sub.isNotEmpty()) 0.5f else 0f)
+                Row(Modifier.at(0.5f, staleY, if (car.wake.isNotEmpty()) 3.5f else 7f, if (car.wake.isNotEmpty()) 1f else 0.5f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    HaIcon("mdi:clock-alert-outline", CdVectors.Info, amber.accent, 16.dp)
+                    Text(carUpdatedText(car.asOf!!, now), color = amber.accent, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                }
+                if (car.wake.isNotEmpty()) GridButton(
+                    TileItem("mdi:refresh", if (asking) "Asking the car…" else "Refresh", false) {
+                        asked = asked + (car.wake to System.currentTimeMillis())
+                        now = System.currentTimeMillis()
+                        call("button", "press", car.wake, data())
+                    },
+                    tone, ink, !asking, false, Modifier.at(4.25f, staleY, 3.25f, 1f),
+                )
+            }
+        }
     }
 }
-
 
 /** A brand's one-colour logo (Simple Icons, or our own set) when it is known by [brand], else the plain [icon]. */
 @Composable

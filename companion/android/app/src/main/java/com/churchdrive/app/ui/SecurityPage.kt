@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.background
@@ -69,7 +70,6 @@ fun DashboardPanel(panel: PanelSpec, toneOverride: Tone? = null, content: @Compo
         iconName = panel.icon,
         tone = tone,
         summary = summary,
-        collapsible = panel.title.isNotBlank(),
         content = { androidx.compose.runtime.CompositionLocalProvider(LocalPanelTone provides tone) { content() } },
     )
 }
@@ -80,9 +80,48 @@ fun SecurityPage(panels: List<PanelSpec>, entities: Map<String, EntityState>, re
     panels.ifEmpty { FALLBACK_SECURITY }.forEach { PanelView(it, entities, registry, call) }
 }
 
-/** One dashboard card, as a native card, by its type. */
+/** Cards that draw their own folded strip (see [CompactStrip]). */
+private val OWN_STRIP = setOf(
+    "custom:alarm-panel-card", "custom:fan-card", "custom:air-purifier-card", "custom:purifier-schedule-card", "custom:co-alarm-card",
+    "custom:cover-card", "custom:ev-charger-card", "custom:people-card", "custom:device-health-card", "custom:security-zone-card",
+    "custom:car-card", "custom:safety-card", "custom:overnight-heating-card",
+)
+
+/**
+ * Cards that do not fold: pictures (cameras), lights and the room and zone thermostats (they already open and close), headings and
+ * stacks, small cards (plain tiles, the Octopus plan, Gregg) and the manager pages.
+ */
+private val NO_FOLD = setOf(
+    "heading", "markdown", "vertical-stack", "tile", "custom:camera-card", "custom:camera-links-card", "custom:light-control-card",
+    "custom:climate-card", "custom:climate-zone-card", "custom:octopus-plan-card", "custom:people-manager-card", "custom:zone-map-card",
+    "custom:notifications-card", "custom:icon-styles-card", "custom:watch-settings-card",
+)
+
+private val PLAIN_TITLES = mapOf(
+    "entities" to "Settings", "todo-list" to "To-do", "custom:task-list-card" to "Tasks", "custom:shopping-card" to "Shopping",
+    "custom:house-tasks-card" to "House tasks", "custom:octopus-card" to "Octopus", "custom:system-card" to "System",
+    "custom:media-card" to "Media", "custom:overnight-heating-card" to "Overnight heating", "custom:auto-entities" to "Lists",
+)
+
+/** One dashboard card, as a native card, by its type, which the person can fold down to a strip. */
 @Composable
 fun CardView(card: CardSpec, entities: Map<String, EntityState>, registry: Registry, call: CallService) {
+    val type = card.type.removeSuffix("-beta")
+    if (card.type.startsWith("header:") || type in NO_FOLD) {
+        CardContent(card, entities, registry, call)
+        return
+    }
+    val c = card.config
+    val entity = c.optString("entity").ifBlank { if (type == "custom:alarm-panel-card") ALARM_ENTITY else "" }
+    val title = listOf("name", "title", "heading").map { c.optString(it) }.firstOrNull { it.isNotBlank() }
+        ?: entities[entity]?.friendlyName ?: PLAIN_TITLES[type] ?: "Card"
+    CollapsibleCard("$type|${entity.ifBlank { title }}", type in OWN_STRIP, title, entities[entity]?.state?.let { presetLabel(it) }.orEmpty()) {
+        CardContent(card, entities, registry, call)
+    }
+}
+
+@Composable
+private fun CardContent(card: CardSpec, entities: Map<String, EntityState>, registry: Registry, call: CallService) {
     // A page's header information that the app has moved into a panel (the weather in Climate).
     if (card.type.startsWith("header:")) {
         HeaderView(card, entities, call)
@@ -146,41 +185,62 @@ private val SAFETY_ICONS = mapOf(
 fun SafetyCard(config: JSONObject, entities: Map<String, EntityState>, registry: Registry) {
     val chosen = config.optJSONArray("entities")?.let { a -> (0 until a.length()).mapNotNull { a.optString(it).takeIf { s -> s.isNotBlank() } } }.orEmpty()
     val items = safetyItems(entities, registry, chosen)
-    val neutral = panelNeutral()
-    EntityCard(neutral.container, neutral.onContainer) {
-        if (items.isEmpty()) {
-            Text("No smoke, heat or CO alarms found.", style = MaterialTheme.typography.bodyMedium)
+    // Green while everything is clear, red while one is sounding.
+    val sounding = items.filter { it.on }
+    val cardTone = toneColors(if (sounding.isNotEmpty()) Tone.Red else Tone.Green)
+    val ink = cardTone.onContainer
+    val fold = rememberFold("grid-fold|safety")
+    @Composable fun itemTone(item: SafetyItem) = toneColors(if (item.on) Tone.Red else if (item.unavailable) Tone.Grey else Tone.Green)
+    if (items.isEmpty()) {
+        GridCard(cardTone.container, ink, 2.5f, "Smoke & CO Alarms") {
+            Text("No smoke, heat or CO alarms found.", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.at(0.5f, 1f, 7f, 1f))
         }
-        items.forEach { item ->
-            val tone = toneColors(if (item.on) Tone.Red else if (item.unavailable) Tone.Grey else Tone.Green)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(if (item.on) tone.accent else tone.accent.copy(alpha = 0.18f), RoundedCornerShape(12.dp)),
-                    contentAlignment = Alignment.Center,
-                ) {
+        return
+    }
+    if (fold.value) {
+        // Folded: the icons on one row in their status colour, each with its name and battery under it.
+        val lines = items.chunked(5)
+        GridCard(cardTone.container, ink, 1f + 1.75f * lines.size + 0.25f, "Smoke & CO Alarms", fold = fold) {
+            lines.forEachIndexed { r, line ->
+                line.forEachIndexed { c, item ->
+                    val tone = itemTone(item)
+                    Column(Modifier.at(0.5f + c * 1.4f, 0.9f + r * 1.75f, 1.4f, 1.75f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Box(Modifier.size(26.dp).background(if (item.on) tone.accent else tone.accent.copy(alpha = 0.18f), RoundedCornerShape(30)), contentAlignment = Alignment.Center) {
+                            HaIcon(SAFETY_ICONS[item.kind] ?: "mdi:alarm-light", CdVectors.ShieldOutline, if (item.on) tone.onAccent else tone.accent, 18.dp)
+                        }
+                        Text(item.name.substringBefore(' '), style = MaterialTheme.typography.bodySmall, color = ink, maxLines = 1)
+                        item.battery?.let { Text("$it%", style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.9f), maxLines = 1) }
+                    }
+                }
+            }
+        }
+        return
+    }
+    GridCard(cardTone.container, ink, 1.5f * items.size + 1.5f, "Smoke & CO Alarms", fold = fold) {
+        items.forEachIndexed { k, item ->
+            val tone = itemTone(item)
+            val y = 1f + 1.5f * k
+            val word = if (item.on) "Alarm" else if (item.unavailable) "Not responding" else "All clear"
+            Row(Modifier.at(0.5f, y, 7f, if (item.ppm != null) 1.5f else 1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(cell * 0.35f)) {
+                // A squircle, not a circle, behind a safety device's icon.
+                Box(Modifier.size(cell * 0.9f).background(if (item.on) tone.accent else tone.accent.copy(alpha = 0.18f), RoundedCornerShape(30)), contentAlignment = Alignment.Center) {
                     HaIcon(SAFETY_ICONS[item.kind] ?: "mdi:alarm-light", CdVectors.ShieldOutline, if (item.on) tone.onAccent else tone.accent, 22.dp)
                 }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(item.name, style = MaterialTheme.typography.titleMedium, maxLines = 1)
-                    Text(
-                        safetySubtitle(item),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (item.on) tone.accent else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                Column(Modifier.weight(1f)) {
+                    Text(item.name, style = MaterialTheme.typography.bodyLarge, color = ink, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    item.battery?.let { b ->
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            HaIcon(if (b < 30) "mdi:battery-alert" else "mdi:battery-70", CdVectors.Info, ink, 16.dp)
+                            Text("$b%", style = MaterialTheme.typography.bodySmall, color = ink)
+                            LevelBar(b / 100f, batteryFade(b / 100f), ink, Modifier.width(cell * 1.5f), 5.dp)
+                        }
+                    }
                 }
-                item.ppm?.let {
-                    Text(
-                        "${if (it % 1.0 == 0.0) it.toInt().toString() else it.toString()} ppm",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = if (item.on) tone.accent else MaterialTheme.colorScheme.onSurface,
-                    )
-                }
+                val pill = @Composable { StatusPill(word, tone) }
+                if (item.ppm != null) Column(horizontalAlignment = Alignment.End) {
+                    Text("${if (item.ppm % 1.0 == 0.0) item.ppm.toInt().toString() else item.ppm.toString()} ppm", style = MaterialTheme.typography.headlineMedium, color = ink)
+                    pill()
+                } else pill()
             }
         }
     }

@@ -21,6 +21,7 @@ object IconPack {
     private const val FILE = "custom-brand-icons.js"
     private const val PATH = "/hacsfiles/custom-brand-icons/custom-brand-icons.js"
     private const val MAX_AGE_MS = 7L * 24 * 60 * 60 * 1000
+    private const val REFRESH_MISSING_MS = 30L * 60 * 1000
 
     /** The whole pack once loaded; read by icons so they redraw when it arrives. */
     var text: String? by mutableStateOf(null)
@@ -35,7 +36,13 @@ object IconPack {
      */
     fun prepare() = Unit
 
+    private class Source(val scope: CoroutineScope, val dir: File, val baseUrl: String, val token: String)
+
+    private var source: Source? = null
+    private var lastRefreshAt = 0L
+
     fun load(scope: CoroutineScope, dir: File, baseUrl: String, token: String) {
+        source = Source(scope, dir, baseUrl, token)
         if (text != null) return
         scope.launch(Dispatchers.IO) {
             val cached = File(dir, FILE)
@@ -62,7 +69,27 @@ object IconPack {
     /** An icon's viewBox size and SVG path data, or null when it isn't in the pack. */
     fun find(name: String): Pair<Float, String>? {
         val t = text ?: return null
-        return parse(t, name)
+        val found = parse(t, name)
+        if (found == null) refreshForMissing()
+        return found
+    }
+
+    /**
+     * The pack is kept on the phone for a week, so an icon added to it since (an updated pack on Home Assistant) is missing and its place stays blank
+     * or falls back. When an icon is asked for and not found, fetch the pack again (at most once every half hour) and redraw if it has changed.
+     */
+    private fun refreshForMissing() {
+        val src = source ?: return
+        val now = System.currentTimeMillis()
+        if (now - lastRefreshAt < REFRESH_MISSING_MS) return
+        lastRefreshAt = now
+        src.scope.launch(Dispatchers.IO) {
+            val fresh = runCatching { download(src.baseUrl, src.token) }.getOrNull()
+            if (fresh != null && fresh.contains("var icons") && fresh != text) {
+                runCatching { File(src.dir, FILE).writeText(fresh) }
+                withContext(Dispatchers.Main) { text = fresh }
+            }
+        }
     }
 
     /** `"name":[0,0,24,24,"path…"]`: pulled out of the pack text without parsing all of it. */

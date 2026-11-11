@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -81,7 +83,7 @@ fun partColour(fraction: Float, blue: Color, green: Color, yellow: Color, red: C
  * The Cleaning page, drawn by the app from Gregg's own entities so every part of it looks the same, all in the cleaning blue: one card at the
  * top for what he is doing (his status icon, the battery, the last clean and the buttons), then his cleaning settings (drop-downs, the mode,
  * suction and water with the house's icons), the dock's four actions, the parts that wear out (a bar for the life left in each, fading from blue through green and yellow to red
- * as they near the end) and his switches. Each group is a panel with its title, as on the other pages.
+ * as they near the end) and his switches. The cleaning tasks come first, then everything about Gregg in one section whose cards each have their title.
  */
 @Composable
 fun CleaningPage(entities: Map<String, EntityState>, call: CallService) {
@@ -103,36 +105,17 @@ fun CleaningPage(entities: Map<String, EntityState>, call: CallService) {
     fun press(id: String) = call("button", "press", id, data())
     fun pick(id: String, option: String) = call("select", "select_option", id, data("option" to option))
 
-    // ---- Gregg: what he is doing
-    SectionPanel("Gregg", tone = Tone.Gregg, summary = vacuumSummary(vac, battery), iconSlot = { GreggIcon(GreggState.Idle, it.accent, 36.dp) }) {
-        EntityCard(tone.container, tone.onContainer, deviceEntity = VACUUM_ENTITY) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                GreggIcon(state, tone.accent, 72.dp, pct)
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    StatusPill(state.word(), tone)
-                    val area = entities["sensor.gregg_cleaning_area"]?.state?.toDoubleOrNull()
-                    val minutes = entities["sensor.gregg_cleaning_time"]?.state?.toDoubleOrNull()
-                    val last = listOfNotNull(area?.let { "${Math.round(it)} m²" }, minutes?.let { "${Math.round(it)} min" }).joinToString(" · ")
-                    if (last.isNotBlank()) Text("Last clean $last", style = MaterialTheme.typography.bodyMedium, color = tone.onContainer.copy(alpha = 0.8f))
-                    entities["sensor.gregg_error_message"]?.state?.takeIf { it.isNotBlank() && it != "unknown" && it != "unavailable" && it != "None" }?.let {
-                        Text(it, style = MaterialTheme.typography.bodyMedium, color = red.accent)
-                    }
-                }
-                Text(pct?.let { "${Math.round(it)}%" } ?: "–", style = MaterialTheme.typography.headlineMedium)
-            }
-            HealthBar(((pct ?: 0.0) / 100.0).coerceIn(0.0, 1.0).toFloat(), tone.accent)
-            IconRow(
-                listOf(
-                    IconItem(if (cleaning) "cd:pause" else "cd:play", if (cleaning) "Pause" else if (vac?.state == "paused") "Resume" else "Start", true) {
-                        call("vacuum", if (cleaning) "pause" else "start", VACUUM_ENTITY, data())
-                    },
-                    IconItem("cd:stop", "Stop", false) { call("vacuum", "stop", VACUUM_ENTITY, data()) },
-                    IconItem("cd:home", "Dock", false) { call("vacuum", "return_to_base", VACUUM_ENTITY, data()) },
-                ),
-                tone, tone.onContainer, enabled,
-            )
+    // ---- Cleaning tasks: the cleaning to-do list, above Gregg
+    if (entities["todo.cleaning"] != null) {
+        SectionPanel("Cleaning tasks", iconName = "cd:broom", tone = Tone.Gregg) {
+            TaskListCard(org.json.JSONObject().put("entity", "todo.cleaning"), entities, call)
         }
     }
+
+    // ---- Gregg: everything about him in one section, as separate cards: what he is doing, his settings, the dock, parts and switches
+    SectionPanel("Gregg", tone = Tone.Gregg, summary = vacuumSummary(vac, battery), iconSlot = { GreggIcon(GreggState.Idle, it.accent, 36.dp) }) {
+        // The same card as on the Home screen.
+        VacuumCard(vac, battery, call, entities)
 
     // ---- Cleaning settings: one drop-down for each
     val settings = listOf(
@@ -143,14 +126,10 @@ fun CleaningPage(entities: Map<String, EntityState>, call: CallService) {
         "Mop intensity" to "select.gregg_mop_intensity",
     ).filter { (_, id) -> entities[id]?.options()?.isNotEmpty() == true }
     if (settings.isNotEmpty()) {
-        SectionPanel("Cleaning settings", iconName = "cd:sliders", tone = Tone.Gregg) {
-            EntityCard(blue.container, blue.onContainer) {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    for ((label, id) in settings) {
-                        val e = entities.getValue(id)
-                        PickRow(label, e.options(), e.state, { o -> greggLevelIcon(id, o) }, blue, e.available) { pick(id, it) }
-                    }
-                }
+        GridCard(blue.container, blue.onContainer, 1.25f * settings.size + 1.25f, "Cleaning Settings") {
+            settings.forEachIndexed { k, (label, id) ->
+                val e = entities.getValue(id)
+                PickRow(label, e.options(), e.state, { o -> greggLevelIcon(id, o) }, blue, e.available, Modifier.at(0.5f, 1f + 1.25f * k, 7f, 1f)) { pick(id, it) }
             }
         }
     }
@@ -161,18 +140,25 @@ fun CleaningPage(entities: Map<String, EntityState>, call: CallService) {
     if (dockButtons.any { entities[it] != null } || find != null) {
         val status = entities["sensor.gregg_dock_status"]?.state?.takeIf { it != "unknown" && it != "unavailable" }.orEmpty()
         val doing = status.lowercase()
-        SectionPanel("Dock", iconName = "cd:home", tone = Tone.Gregg, summary = status.ifBlank { null }) {
-            EntityCard(blue.container, blue.onContainer) {
-                val drying = doing.contains("dry") && entities["button.gregg_stop_dry_mop"] != null
-                val tiles = buildList {
-                    if (entities["button.gregg_empty_dust_bin"] != null) add(TileItem("cd:empty", "Empty dust bin", doing.contains("empty") || doing.contains("dust")) { press("button.gregg_empty_dust_bin") })
-                    if (entities["button.gregg_wash_mop"] != null) add(TileItem("cd:wash", "Wash mop", doing.contains("wash")) { press("button.gregg_wash_mop") })
-                    // While the mop is drying the same place stops it.
-                    if (drying) add(TileItem("cd:stop", "Stop drying", true) { press("button.gregg_stop_dry_mop") })
-                    else if (entities["button.gregg_dry_mop"] != null) add(TileItem("cd:dry", "Dry mop", false) { press("button.gregg_dry_mop") })
-                    if (find != null) add(TileItem("cd:find", "Find Gregg", find.state == "on") { call("switch", "toggle", find.entityId, data()) })
+        run {
+            val drying = doing.contains("dry") && entities["button.gregg_stop_dry_mop"] != null
+            val tiles = buildList {
+                if (entities["button.gregg_empty_dust_bin"] != null) add(TileItem("cd:empty", "Empty dust bin", doing.contains("empty") || doing.contains("dust")) { press("button.gregg_empty_dust_bin") })
+                if (entities["button.gregg_wash_mop"] != null) add(TileItem("cd:wash", "Wash mop", doing.contains("wash")) { press("button.gregg_wash_mop") })
+                // While the mop is drying the same place stops it.
+                if (drying) add(TileItem("cd:stop", "Stop drying", true) { press("button.gregg_stop_dry_mop") })
+                else if (entities["button.gregg_dry_mop"] != null) add(TileItem("cd:dry", "Dry mop", false) { press("button.gregg_dry_mop") })
+                if (find != null) add(TileItem("cd:find", "Find Gregg", find.state == "on") { call("switch", "toggle", find.entityId, data()) })
+            }
+            val lines = tiles.chunked(2)
+            GridCard(blue.container, blue.onContainer, 1f + 1.25f * lines.size + 0.25f, "Dock") {
+                if (status.isNotBlank()) Box(Modifier.at(4f, 0.25f, 3.5f, 0.5f), contentAlignment = Alignment.CenterEnd) { StatusPill(status, blue) }
+                lines.forEachIndexed { r, line ->
+                    line.forEachIndexed { c, t ->
+                        val w = if (line.size == 1) 7f else 3.25f
+                        GridButton(t, blue, blue.onContainer, true, false, Modifier.at(0.5f + c * 3.75f, 1f + 1.25f * r, w, 1f))
+                    }
                 }
-                TileRow(tiles, blue, blue.onContainer, true, perRow = 2)
             }
         }
     }
@@ -180,38 +166,37 @@ fun CleaningPage(entities: Map<String, EntityState>, call: CallService) {
     // ---- Parts that wear out: a bar for the life left, blue turning to red
     val parts = CLEANING_PARTS.filter { entities[it.sensor] != null }
     if (parts.isNotEmpty()) {
-        SectionPanel("Parts", iconName = "cd:broom", tone = Tone.Gregg, summary = "Time left") {
-            EntityCard(blue.container, blue.onContainer) {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    for (p in parts) {
-                        val e = entities[p.sensor]
-                        val leftText = e?.state?.takeIf { it != "unknown" && it != "unavailable" }
-                        val left = leftText?.toDoubleOrNull()
-                        val unit = e?.str("unit_of_measurement") ?: "h"
-                        val fraction = partLifeLeft(left, p.lifeHours)
-                        val colour = partColour(fraction, blue.accent, green.accent, yellow.accent, red.accent)
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Box(Modifier.size(40.dp).background(colour.copy(alpha = 0.18f), CircleShape), contentAlignment = Alignment.Center) {
-                                    HaIcon(e?.str("icon")?.takeIf { it.isNotBlank() } ?: p.icon, CdVectors.Info, colour, 22.dp)
-                                }
-                                Column(Modifier.weight(1f)) {
-                                    Text(p.name, style = MaterialTheme.typography.titleSmall, maxLines = 1)
-                                    Text(
-                                        left?.let { "${Math.round(it)} $unit left" } ?: "No reading", style = MaterialTheme.typography.bodySmall, color = colour, maxLines = 1,
-                                    )
-                                }
-                                if (entities[p.reset] != null) {
-                                    val sure = armed == p
-                                    val chip = if (sure) red.accent else blue.onContainer.copy(alpha = 0.8f)
-                                    Text(
-                                        if (sure) "Tap to reset" else "Reset", style = MaterialTheme.typography.labelLarge, color = chip,
-                                        modifier = Modifier.clip(CircleShape).background(chip.copy(alpha = 0.14f)).clickable { if (sure) { press(p.reset); armed = null } else armed = p }
-                                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                                    )
-                                }
+        run {
+            GridCard(blue.container, blue.onContainer, 1.5f * parts.size + 1.5f, "Parts") {
+                Box(Modifier.at(4f, 0.25f, 3.5f, 0.5f), contentAlignment = Alignment.CenterEnd) { StatusPill("Time left", blue) }
+                parts.forEachIndexed { k, p ->
+                    val e = entities[p.sensor]
+                    val leftText = e?.state?.takeIf { it != "unknown" && it != "unavailable" }
+                    val left = leftText?.toDoubleOrNull()
+                    val unit = e?.str("unit_of_measurement") ?: "h"
+                    val fraction = partLifeLeft(left, p.lifeHours)
+                    val colour = partColour(fraction, blue.accent, green.accent, yellow.accent, red.accent)
+                    val ink = blue.onContainer
+                    Row(Modifier.at(0.5f, 1f + 1.5f * k, 7f, 1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(cell * 0.35f)) {
+                        // A squircle behind each part's icon, its centre on a line.
+                        Box(Modifier.size(cell * 0.9f).background(colour.copy(alpha = 0.18f), RoundedCornerShape(30)), contentAlignment = Alignment.Center) {
+                            HaIcon(e?.str("icon")?.takeIf { it.isNotBlank() } ?: p.icon, CdVectors.Info, colour, 22.dp)
+                        }
+                        Column(Modifier.weight(1f)) {
+                            Text(p.name, style = MaterialTheme.typography.bodyLarge, color = ink, maxLines = 1)
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(left?.let { "${Math.round(it)} $unit left" } ?: "No reading", style = MaterialTheme.typography.bodySmall, color = ink, maxLines = 1)
+                                LevelBar(fraction, colour, ink, Modifier.width(cell * 1.5f), 5.dp)
                             }
-                            HealthBar(fraction, colour)
+                        }
+                        if (entities[p.reset] != null) {
+                            val sure = armed == p
+                            val chip = if (sure) red.accent else ink.copy(alpha = 0.8f)
+                            Text(
+                                if (sure) "Tap to reset" else "Reset", style = MaterialTheme.typography.labelLarge, color = chip,
+                                modifier = Modifier.clip(CircleShape).background(chip.copy(alpha = 0.14f)).clickable { if (sure) { press(p.reset); armed = null } else armed = p }
+                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                            )
                         }
                     }
                 }
@@ -222,22 +207,30 @@ fun CleaningPage(entities: Map<String, EntityState>, call: CallService) {
     // ---- Switches
     val switches = CLEANING_SWITCHES.filter { entities[it.second]?.available == true }
     if (switches.isNotEmpty()) {
-        SectionPanel("Settings", iconName = "cd:cog", tone = Tone.Gregg) {
-            EntityCard(blue.container, blue.onContainer) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    for ((label, id) in switches) {
-                        val on = entities[id]?.state == "on"
-                        Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-                            Switch(
-                                checked = on, onCheckedChange = { call("switch", if (it) "turn_on" else "turn_off", id, data()) },
-                                colors = SwitchDefaults.colors(checkedTrackColor = blue.accent, checkedThumbColor = blue.onAccent),
-                            )
-                        }
+        run {
+            GridCard(blue.container, blue.onContainer, 1.25f * switches.size + 1.25f, "Settings") {
+                switches.forEachIndexed { k, (label, id) ->
+                    val on = entities[id]?.state == "on"
+                    Row(Modifier.at(0.5f, 1f + 1.25f * k, 7f, 1f), verticalAlignment = Alignment.CenterVertically) {
+                        Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                        Switch(
+                            checked = on, onCheckedChange = { call("switch", if (it) "turn_on" else "turn_off", id, data()) },
+                            colors = SwitchDefaults.colors(checkedTrackColor = blue.accent, checkedThumbColor = blue.onAccent),
+                        )
                     }
                 }
             }
         }
+    }
+    }
+}
+
+/** A card's heading inside the Gregg section: its title and, on the right, a short status. */
+@Composable
+private fun CardTitle(title: String, summary: String?, tone: ToneColors) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, maxLines = 1)
+        if (!summary.isNullOrBlank()) StatusPill(summary, tone)
     }
 }
 
@@ -251,21 +244,21 @@ private fun HealthBar(fraction: Float, colour: Color) {
 
 /** A setting as a line: its name, and a drop-down showing the current choice (with its icon where there is one) that opens the others. */
 @Composable
-private fun PickRow(label: String, options: List<String>, selected: String, iconFor: (String) -> String?, tone: ToneColors, enabled: Boolean, onPick: (String) -> Unit) {
+private fun PickRow(label: String, options: List<String>, selected: String, iconFor: (String) -> String?, tone: ToneColors, enabled: Boolean, modifier: Modifier, onPick: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }
     val nice = { o: String -> presetLabel(o) }
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(label, Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, maxLines = 1)
-        Box {
-            Row(
-                Modifier.clip(RoundedCornerShape(14.dp)).background(tone.accent.copy(alpha = if (enabled) 0.18f else 0.08f)).clickable(enabled = enabled) { open = true }
-                    .padding(start = 12.dp, end = 6.dp, top = 8.dp, bottom = 8.dp),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                iconFor(selected)?.let { HaIcon(it, CdVectors.Info, tone.accent, 22.dp) }
-                Text(nice(selected), style = MaterialTheme.typography.titleSmall, maxLines = 1)
-                Icon(CdVectors.ChevronDown, contentDescription = null, tint = tone.accent)
-            }
+    Box(modifier) {
+        Row(
+            Modifier.fillMaxSize().clip(RoundedCornerShape(18.dp)).background(tone.onContainer.copy(alpha = if (enabled) 0.10f else 0.05f)).clickable(enabled = enabled) { open = true }
+                .padding(start = 14.dp, end = 8.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+            iconFor(selected)?.let { HaIcon(it, CdVectors.Info, tone.onContainer, 20.dp) }
+            Text(nice(selected), style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+            Icon(CdVectors.ChevronDown, contentDescription = null, tint = tone.onContainer)
+        }
+        run {
             DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
                 for (o in options) {
                     val icon = iconFor(o)

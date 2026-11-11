@@ -1,6 +1,7 @@
 package com.churchdrive.app.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
@@ -66,6 +67,8 @@ fun HomeScreen(
     userName: String?,
     isAdmin: Boolean,
     statesLoaded: Boolean,
+    /** The app is checking its connection after being away: shows the same pill as syncing. */
+    refreshing: Boolean = false,
     updateAvailable: Boolean,
     account: AccountSettings,
     lights: LightLayout,
@@ -221,6 +224,7 @@ fun HomeScreen(
                 else -> Unit
             }
 
+            androidx.compose.runtime.CompositionLocalProvider(LocalIsAdmin provides isAdmin) {
             if (page == Page.Home) {
                 HomePage(lights, areaNames, panels["home"].orEmpty(), entities, registry, call, onOpen = { if (it == Page.Todo) openTodo() else page = it }, onOpenTask = openTask)
             } else if (page == Page.Lighting) {
@@ -242,6 +246,7 @@ fun HomeScreen(
                 }
                 DashboardPage(panels[key].orEmpty().let { list -> if (page == Page.Cleaning) list.map { it.copy(icon = GREGG_IDLE_ICON) } else list }, entities, registry, call)
             }
+            }
             // Room to scroll the last card clear of Clive's button.
             Spacer(Modifier.height(72.dp))
         }
@@ -249,7 +254,7 @@ fun HomeScreen(
     // Clive, over the page, and his round button over him: one button, the same one shut or open.
     AssistantOverlay(onSettings = { panel = "settings" })
     AssistantFab()
-    LoadingPill(visible = connection != ConnectionState.AuthFailed && (connection != ConnectionState.Connected || !statesLoaded), connecting = connection != ConnectionState.Connected)
+    LoadingPill(visible = connection != ConnectionState.AuthFailed && (connection != ConnectionState.Connected || !statesLoaded || refreshing), connecting = connection != ConnectionState.Connected)
     if (openCamera != null && statesLoaded) CameraViewerFor(openCamera, entities, registry, call, onCameraClosed, answer = openCameraAnswer)
     AccountOverlay(
         panel, { panel = it }, userName, isAdmin, account, updateAvailable, onSignOut,
@@ -337,14 +342,14 @@ private fun HomePage(
     titles.forEach { title ->
         when (title) {
             "Security" -> HomePanel("Security", alarmIconName(alarm?.state), alarmTone(alarm?.state), alarmLabel(alarm?.state), Page.Security) {
-                AlarmCard(alarm, call, actor = entities[ALARM_ACTOR_ENTITY])
+                CollapsibleCard("custom:alarm-panel-card|$ALARM_ENTITY", true) { AlarmCard(alarm, call, actor = entities[ALARM_ACTOR_ENTITY]) }
             }
             // The home's climate quality score (a sensor made in Home Assistant) leads the Climate panel, as on the dashboard.
             "Climate" -> HomePanel(
                 "Climate", Page.Climate.mdi, if (quality != null) qualityTone(quality) else climateTone(climate),
                 if (quality != null) "$quality/100 · ${qualityWord(quality)}" else "${temp(climate?.num("current_temperature"))} °C · ${climateWord(climate)}",
                 Page.Climate,
-            ) { ClimateCard(climate, call, quality = quality, zone = zoneControl(entities, CLIMATE_ENTITY)) }
+            ) { CollapsibleCard("home-climate", true) { ClimateCard(climate, call, humidityPct = climate?.num("current_humidity"), outdoor = entities.values.firstOrNull { it.entityId.startsWith("weather.") }?.num("temperature"), quality = quality, zone = zoneControl(entities, CLIMATE_ENTITY)) } }
             "Lights" -> HomePanel("Lights", Page.Lighting.mdi, Tone.Amber, lightsSummary(lights.home, entities), Page.Lighting) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     lights.home.forEach { LightRoomCard(it, entities, areaNames, call) }
@@ -354,7 +359,7 @@ private fun HomePage(
                 "Cleaning", Page.Cleaning.mdi, vacuumTone(vacuum), vacuumSummary(vacuum, entities[VACUUM_BATTERY]), Page.Cleaning,
                 iconSlot = { colors -> GreggIcon(GreggState.Idle, colors.accent, 40.dp) },
             ) {
-                VacuumCard(vacuum, entities[VACUUM_BATTERY], call)
+                VacuumCard(vacuum, entities[VACUUM_BATTERY], call, entities)
             }
             else -> {
                 val spec = byTitle[title]
@@ -364,7 +369,7 @@ private fun HomePage(
                     }
                 } else if (title == "Car charging") HomePanel("Car charging", "mdi:ev-station", Tone.Teal, entities[ZAPPI_MODE]?.state ?: "", null) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        ChargerCard(entities, call)
+                        CollapsibleCard("custom:ev-charger-card|", true) { ChargerCard(entities, call) }
                         OctopusPlanCard(entities)
                     }
                 }
@@ -422,8 +427,9 @@ fun SectionPanel(
                 Icon(if (open) CdVectors.ChevronUp else CdVectors.ChevronDown, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        androidx.compose.animation.AnimatedVisibility(visible = open || !collapsible) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { content() }
+        // Folding minimises the cards (each shrinks to a short strip) rather than hiding them.
+        androidx.compose.runtime.CompositionLocalProvider(LocalCompactCards provides (collapsible && !open)) {
+            Column(Modifier.animateContentSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) { content() }
         }
     }
 }

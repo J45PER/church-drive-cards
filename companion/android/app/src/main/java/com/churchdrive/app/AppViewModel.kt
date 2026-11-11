@@ -31,6 +31,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val connection: StateFlow<ConnectionState> = client.connection
     val entities: StateFlow<Map<String, EntityState>> = client.entities
     val userName: StateFlow<String?> = client.userName
+    val refreshing: StateFlow<Boolean> = client.refreshing
     val isAdmin: StateFlow<Boolean> = client.isAdmin
     val statesLoaded: StateFlow<Boolean> = client.statesLoaded
 
@@ -265,6 +266,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             startSession()
             com.churchdrive.app.house.House.sync(appContext)
         }
+        client.seedUserName(session.personName)
         // The person's name, kept for naming this phone in Home Assistant.
         viewModelScope.launch { client.userName.collect { if (it != null) session.savePerson(it) } }
         // A username-and-password sign-in's access token lasts half an hour. If the connection is refused later
@@ -301,7 +303,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun onForeground() {
         // Each time the app comes to the front, not just when it starts afresh (spaced out: see UpdateCheck.MIN_GAP_MS).
         if (UpdateCheck.due(System.currentTimeMillis(), lastUpdateCheck)) checkForUpdate()
-        if (session.signedIn && client.connection.value != ConnectionState.Connected && System.currentTimeMillis() - lastStart > 5_000) startSession()
+        if (!session.signedIn) return
+        if (client.connection.value != ConnectionState.Connected) {
+            if (System.currentTimeMillis() - lastStart > 5_000) startSession()
+        } else {
+            // "Connected" can be a line the phone dropped while the app was away: ask something, and if nothing answers, connect afresh
+            // (which also loads the states and the name again). A second asked here also fills in a name that never arrived.
+            client.refreshUser { alive ->
+                if (!alive && session.signedIn && System.currentTimeMillis() - lastStart > 5_000) startSession()
+            }
+        }
     }
 
     private fun startSession() {

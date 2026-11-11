@@ -4,6 +4,98 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.124.0
+
+- The thermostat on the Home screen shows the humidity and the outside temperature, as it does on the Climate page.
+- The cars card is tighter: the range line, the "last reported" line and the next car follow each other closely, with no big gaps.
+- Who's home on the alarm card has its names closer together.
+- The Carbon Monoxide alarm's "All clear" pill is no longer cut off.
+- The room graphs and the thermostat graph are multi-coloured again, as on the dashboard: the line is blue or teal when cool, green in the comfortable range, then amber and red as it gets warm. The graphs fill their boxes.
+- The air purifier has less space between its graph and its buttons, and its two filter lines are closer together.
+- A card remembers whether you folded it, however you move between pages, for as long as the app is open.
+
+## 0.123.0
+
+- The camera card is on the card grid: the picture is 8 by 4.5 cells, and the name and the status chip sit on the footer's grid lines (the name's baseline on the line between rows 4 and 5, the chip half a cell tall), with the same corners as the other cards.
+- Gregg is the same card on the Home screen as on the Cleaning page, including the last clean and any error.
+- The graphs in the cards (the rooms, the air purifier and the thermostat's) are taller: two cells, with the rooms spaced to fit.
+- The to-do, shopping and other task cards are unchanged for now.
+
+## 0.122.0
+
+- Every card now follows the layout agreed on the card review page: an 8 column grid, so a card is a whole or half number of rows tall, with the title on the first row (each word capitalised, in the card's text colour) and the expand and collapse arrow in the right hand column. Buttons, text, rings and bars sit on the grid's lines, all boxes share the same rounded corners, and cards have a folded version again (two and a half rows, with small buttons). Colours and the background animation are unchanged.
+- Done so far: Home Security (state shown by colour and mode, ring, 2 cell mode buttons), the thermostat (a dial with the target inside, the room temperature, humidity and outside, Lower and Raise, the modes), Gregg (the same card on Home and the Cleaning page: Start, Stop and Home, and a battery bar that fades from blue to red), the lights rooms and their scenes (all the same width, at most three to a row), the cars (a state pill: Home, Away, Charging, Plugged in), the car charger and the Octopus charging plan, smoke and CO alarms, the security zone, the rooms, fan, air purifier, carbon monoxide, blind, purifier schedule and overnight heating, and the Cleaning page's settings, dock, parts and switches.
+- The camera, the to-do and shopping cards, the widgets and the Clive screens are as before and follow in later versions.
+
+## 0.122.0
+
+- Every card now follows the layout agreed on the card review page: an 8 column grid, so a card is a whole or half number of rows tall, with the title on the first row (each word capitalised, in the card's text colour) and the expand and collapse arrow in the right hand column. Buttons, text, rings and bars sit on the grid's lines, all boxes share the same rounded corners, and cards have a folded version again (two and a half rows, with small buttons). Colours and the background animation are unchanged.
+- Done so far: Home Security (state shown by colour and mode, ring, 2 cell mode buttons), the thermostat (a dial with the target inside, the room temperature, humidity and outside, Lower and Raise, the modes), Gregg (the same card on Home and the Cleaning page: Start, Stop and Home, and a battery bar that fades from blue to red), the lights rooms and their scenes (all the same width, at most three to a row), the cars (a state pill: Home, Away, Charging, Plugged in), the car charger and the Octopus charging plan, smoke and CO alarms, the security zone, the rooms, fan, air purifier, carbon monoxide, blind, purifier schedule and overnight heating, and the Cleaning page's settings, dock, parts and switches.
+- The camera, the to-do and shopping cards, the widgets and the Clive screens are as before and follow in later versions.
+
+## 0.121.1
+
+- Reverts 0.121.0: the app is as it was in 0.120.0. Section titles are back to 22 regular and the unused blank card layout (`AppCard`) is removed. Instrument Sans stays as the typeface. The card layout work continues on the card review page, with no app changes for now.
+
+## 0.121.0
+
+- A blank common layout for cards (`AppCard`), the base the card types will be built on: a title row in the size of the alarm card's title, with the expand and collapse button in the top right corner, then the body. Folded, the title row stays put and a card shows just its summary. Nothing uses it yet, so no card changes.
+- Section titles (the headings above groups of cards, in all three apps) are a step bigger and bolder, so they read above the card titles: 28 SemiBold instead of 22 regular.
+
+## 0.120.0
+
+- Every text in the app is now Instrument Sans, Clive's own typeface (it was the phone's system font, with Instrument Sans only on the splash screen). It is set once, as the theme's typography, so every card, page and panel follows, with the same sizes and weights as before. The letter shapes are a little different, so check that nothing is cut off.
+
+## 0.119.0
+
+- Card folding is switched off for now, while the folded look and the card title areas are revised. Every card is full size again, with no fold chevron. The Overnight heating Edit, Save and Cancel, and the Cleaning page changes, stay.
+
+## 0.118.0
+
+- The fold chevron is now in the header row at the right, where the graph cards on Climate have theirs, and stays there when folded. Values at the end of a first row (the fan's temperature, the purifier's PM2.5, the CO reading) make room for it.
+- Folded cards keep their title size. A folded card shows every level bar it has: both purifier filters, each battery on a security zone, the CO battery.
+- Simple cards fold to one row (alarm, fan with Off and 1, 2, 3, blinds, who's home, device health, the purifier schedule, smoke alarms, Overnight heating); richer ones (thermostat, purifier, CO, zones, cars, the charger) fold to a small card.
+- Overnight heating folds to its mode and times instead of nothing. Like the purifier schedule it now shows the mode and times with an Edit button, and Edit opens the mode and the times with Save and Cancel.
+
+## 0.117.0
+
+- A folded card is now a smaller card, about as tall as Gregg's on Home, not a single line: the name with its key figure, a status line, a detail line, and the card's main buttons as tiles. The fold chevron stays in the same top-right corner open or folded, so it no longer moves.
+- Folded cards keep their key info: the car's battery bar for each car, the door and sensor batteries on a security zone, the carbon monoxide battery, the purifier's filters, the thermostat's climate score and humidity, the alarm's who and when, the schedule's lines, and who is where.
+- The car charger keeps its charge modes as buttons when folded, with the session total and rate.
+
+## 0.116.0
+
+- Folding is now per card, not per section. Each card has a small chevron at its top right that folds it to a one-row strip; tap the strip to open it again. Sections no longer fold.
+- A strip shows the name, a key figure, a short status and, where it helps, small buttons: alarm modes, thermostat modes, fan (Off and speeds 1, 2, 3), air purifier modes, blind. Who's home, device health, security zones, cars and smoke and CO alarms show text only, and any other card folds to its name.
+- The Cleaning page has a Cleaning tasks section (the cleaning to-do list) above Gregg, and everything about Gregg (what he is doing, his settings, the dock, parts and switches) is one section, with each still its own card.
+- Not folded: cameras (they keep the full picture), lights, the room and zone thermostats (they already open and close), Gregg, the Octopus plan, plain tiles, headings and the manager pages.
+
+## 0.115.0
+
+- Folding a section now shows each card as a one-row strip, as the dashboard's compact cards do: the name in the card's colour, a key figure, a short status and, where it helps, small buttons. Alarm (modes), thermostat (Off, Heat, Eco), fan (Off and speeds 1, 2, 3), air purifier (modes), blind (Open, Stop, Close) and Gregg (Start, Dock) keep buttons; carbon monoxide (Mute only while sounding), the purifier schedule, the Octopus plan and the car charger show text only. The graphs, sliders and extra rows are left out until the section is opened.
+- A folded stack of cameras shows its first camera at full size with "+N more cameras", not every feed. Light rooms keep their own expand and collapse.
+
+## 0.114.0
+
+- Folding a section now minimises its cards to short strips instead of hiding them.
+- The purifier schedule's Edit button shows on every page it appears on (it only showed on Security), and its "Next:" line is easier to read.
+
+## 0.113.2
+
+- No change to this app (dashboard cards only); version kept equal.
+- The account button no longer shows a "?" now and then: the name remembered from last time is used until the live one arrives, and a name that never arrived is asked for again.
+- Opening the app after it has been away checks that the connection is still alive (it can look connected when the phone dropped it) and connects afresh if not, so it refreshes without closing and reopening.
+- While the app checks its connection after being away, the same pill as "Syncing" shows at the top (it says "Syncing").
+- Climate card: the "Home climate 94/100" line is now above the − and + buttons, not below.
+
+## 0.113.1
+
+- An icon that is not in the app's copy of the icon pack makes it fetch the pack again (at most every half hour), so icons added since the last download show up.
+
+## 0.113.0
+
+- A room shows its ceiling light's colour, else the Lights colour (not the Ambience strip's). The away security-mode lights show a steady Armed Home blue bar with "Security mode" instead of flickering through colours.
+
 ## 0.112.0
 
 - Temperature colour-coded again; Lower and Raise are two wide buttons above the modes; the to-do highlights card has light text and icons; the EV charger card is always the car's colour and the Octopus plan the electricity colour; a blind keeps the blinds colour; Gregg's settings no longer list washing the mop by itself or the child lock; the card glow is shared with the To-Do and Satellites apps.

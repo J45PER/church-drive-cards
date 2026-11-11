@@ -3,6 +3,8 @@ package com.churchdrive.app.ui
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -19,7 +21,19 @@ fun ChurchDriveTheme(content: @Composable () -> Unit) {
     // The palettes Home Assistant last sent, ready before the first screen is drawn.
     val context = androidx.compose.ui.platform.LocalContext.current
     androidx.compose.runtime.remember { LiveColours.load(context) }
-    MaterialTheme(colorScheme = if (isSystemInDarkTheme()) cliveDarkScheme else cliveLightScheme, content = content)
+    MaterialTheme(colorScheme = if (isSystemInDarkTheme()) cliveDarkScheme else cliveLightScheme, typography = BrandTypography, content = content)
+}
+
+/** Material's own type scale (sizes, line heights, weights) set in Instrument Sans ([BrandFont]), the Clive typeface, so every text in the apps uses it. */
+val BrandTypography: Typography = Typography().let { t ->
+    fun TextStyle.brand() = copy(fontFamily = BrandFont)
+    Typography(
+        displayLarge = t.displayLarge.brand(), displayMedium = t.displayMedium.brand(), displaySmall = t.displaySmall.brand(),
+        headlineLarge = t.headlineLarge.brand(), headlineMedium = t.headlineMedium.brand(), headlineSmall = t.headlineSmall.brand(),
+        titleLarge = t.titleLarge.brand(), titleMedium = t.titleMedium.brand(), titleSmall = t.titleSmall.brand(),
+        bodyLarge = t.bodyLarge.brand(), bodyMedium = t.bodyMedium.brand(), bodySmall = t.bodySmall.brand(),
+        labelLarge = t.labelLarge.brand(), labelMedium = t.labelMedium.brand(), labelSmall = t.labelSmall.brand(),
+    )
 }
 
 private fun tint(c: Color, over: Color, by: Float) = lerp(over, c, by)

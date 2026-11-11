@@ -94,58 +94,70 @@ fun ZoneCard(config: JSONObject, entities: Map<String, EntityState>, call: CallS
     val tinted = view.level == ZoneLevel.Open || view.level == ZoneLevel.Tamper
     val container = if (tinted) tone.container else neutral.container
     val ink = if (tinted) tone.onContainer else neutral.onContainer
-
     // Tapping the card opens that camera's events, when the zone has a camera.
     val eventsBase = cameraBaseName(entities, cfg.camera, cfg.doorbell, cfg.motion.firstOrNull(), cfg.door, cfg.name)
     var showEvents by remember { mutableStateOf(false) }
     if (showEvents && eventsBase != null) CameraEventsViewer(cfg.name, eventsBase) { showEvents = false }
     var scrub by remember { mutableStateOf<Float?>(null) }
-    EntityCard(
-        container, ink,
-        if (eventsBase != null) Modifier.clickable { showEvents = true } else Modifier,
-    ) {
+    val fold = rememberFold("grid-fold|zone|${cfg.name}")
+    val cardMod = if (eventsBase != null) Modifier.clickable { showEvents = true } else Modifier
+    if (fold.value) {
+        // Folded: the status and last event on one line, and the first two batteries as small bars on the right.
+        GridCard(container, ink, 2.5f, cfg.name, cardMod, fold = fold) {
+            Column(Modifier.at(0.5f, 0.9f, 4.5f, 1.2f), verticalArrangement = Arrangement.Center) {
+                ZoneChip(view)
+                if (cfg.showLast && view.last.isNotEmpty()) Text(view.last, style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f), maxLines = 1)
+            }
+            view.bats.take(2).forEachIndexed { k, b ->
+                val pct = (b.level ?: 0.0).toFloat() / 100f
+                Row(Modifier.at(5.25f, 1.05f + 0.45f * k, 2.5f, 0.45f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(b.name.substringBefore(' '), style = MaterialTheme.typography.bodySmall, color = ink, maxLines = 1, modifier = Modifier.width(cell * 0.9f))
+                    LevelBar(pct, batteryFade(pct), ink, Modifier.weight(1f), 5.dp)
+                    Text(b.level?.let { "${it.toInt()}%" } ?: "–", style = MaterialTheme.typography.bodySmall, color = ink, modifier = Modifier.width(cell * 0.9f), textAlign = androidx.compose.ui.text.style.TextAlign.End)
+                }
+            }
+        }
+        return
+    }
+    // Open: a warning banner (when there is one) then the status, the strip a cell tall with its times, the batteries a cell apart centred on lines, the light.
+    val o = if (view.warn.isNotEmpty()) 1.5f else 0f
+    var c = 3.5f + o
+    val batStart = c
+    c += view.bats.size
+    val lightY = c
+    val rows = (if (cfg.light != null) c + 1.5f else c) + 0.5f
+    GridCard(container, ink, rows, cfg.name, cardMod, fold = fold) {
         if (view.warn.isNotEmpty()) {
             val red = toneColors(Tone.Red)
             Row(
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(red.accent).padding(horizontal = 12.dp, vertical = 8.dp),
+                modifier = Modifier.at(0.5f, 1f, 7f, 1f).clip(RoundedCornerShape(18.dp)).background(red.accent).padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 HaIcon("mdi:alert", CdVectors.Info, red.onAccent, 20.dp)
-                Text(view.warn, color = red.onAccent, style = MaterialTheme.typography.bodyMedium)
+                Text(view.warn, color = red.onAccent, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
             }
         }
-        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(cfg.name, style = MaterialTheme.typography.titleLarge, maxLines = 1)
+        Row(Modifier.at(0.5f, 1f + o, 7f, 1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            ZoneChip(view)
+            if (cfg.showLast && view.last.isNotEmpty()) Text(view.last, style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f), maxLines = 1)
         }
-        // One status, under the title.
-        ZoneChip(view)
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Strip(view.tracks, now, cfg.hours, cfg.ticks, ink, Modifier.weight(1f), scrub) { scrub = it }
-            }
-            val from = now - cfg.hours * 3_600_000L
-            val span = cfg.hours * 3_600_000L
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                listOf(0.0, 0.25, 0.5, 0.75).forEach { f ->
-                    Text(clockMs(from + (f * span).toLong()), fontSize = 10.sp, color = ink.copy(alpha = 0.6f))
-                }
+        Strip(view.tracks, now, cfg.hours, cfg.ticks, ink, Modifier.at(0.5f, 2f + o, 7f, 1f), scrub) { scrub = it }
+        val from = now - cfg.hours * 3_600_000L
+        val span = cfg.hours * 3_600_000L
+        Row(Modifier.at(0.5f, 3f + o, 7f, 0.5f), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            val f0 = scrub
+            if (f0 != null) {
+                val t = from + (span * f0).toLong()
+                Text(clockMs(t) + " · " + happenedAt(view.tracks, t, span / 48), style = MaterialTheme.typography.bodySmall, color = ink)
+            } else {
+                listOf(0.0, 0.25, 0.5, 0.75).forEach { f -> Text(clockMs(from + (f * span).toLong()), fontSize = 10.sp, color = ink.copy(alpha = 0.6f)) }
                 Text("now", fontSize = 10.sp, color = ink.copy(alpha = 0.6f))
             }
-            // Dragging along the strip says what happened at that moment.
-            scrub?.let { f ->
-                val t = from + (span * f).toLong()
-                Text(clockMs(t) + " · " + happenedAt(view.tracks, t, span / 48), style = MaterialTheme.typography.bodySmall, color = ink)
-            }
         }
-        if (cfg.showLast && view.last.isNotEmpty()) {
-            Text(view.last, style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.75f))
-        }
-        if (view.bats.isNotEmpty()) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) { view.bats.forEach { BatteryRow(it, ink) } }
-        }
+        view.bats.forEachIndexed { k, b -> Box(Modifier.at(0.5f, batStart + k, 7f, 1f), contentAlignment = Alignment.CenterStart) { BatteryRow(b, ink) } }
         cfg.light?.let { id ->
-            LightPill(entities[id], id, view.light?.first, toneColors(if (view.light?.second == true) Tone.Lights else Tone.Grey), call, entities = entities)
+            LightPill(entities[id], id, view.light?.first, toneColors(if (view.light?.second == true) Tone.Lights else Tone.Grey), call, Modifier.at(0.5f, lightY, 7f, 1.5f), entities, pillHeight = cell * 1.5f)
         }
     }
 }
@@ -218,7 +230,8 @@ private fun Strip(tracks: List<ZoneTrack>, now: Long, hours: Int, ticks: Boolean
 @Composable
 private fun BatteryRow(b: ZoneBattery, ink: Color) {
     val low = b.level != null && b.level < LOW_BATTERY
-    val colour = if (low) CliveColours.Warn.colour else ink.copy(alpha = 0.8f)
+    // The icon and the text are the card's own light or dark; only the bar changes colour.
+    val colour = ink
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         HaIcon(
             if (b.level == null) "mdi:battery-outline" else if (low) "mdi:battery-alert" else b.icon,
@@ -231,13 +244,13 @@ private fun BatteryRow(b: ZoneBattery, ink: Color) {
                     .fillMaxWidth(((b.level ?: 0.0) / 100.0).coerceIn(0.0, 1.0).toFloat())
                     .height(5.dp)
                     .clip(RoundedCornerShape(99.dp))
-                    .background(if (low) CliveColours.Warn.colour else CliveColours.Ok.colour),
+                    .background(batteryFade(((b.level ?: 0.0) / 100.0).coerceIn(0.0, 1.0).toFloat())),
             )
         }
         Text(
             b.level?.let { "${it.toInt()}%" } ?: "–",
             style = MaterialTheme.typography.bodyMedium,
-            color = if (low) colour else ink,
+            color = ink,
             modifier = Modifier.width(40.dp),
         )
     }

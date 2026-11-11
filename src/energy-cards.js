@@ -609,7 +609,8 @@ export class EvChargerCard extends HTMLElement {
       });
       this._built = true;
     }
-    kitHead(this, c.name || 'Car charger', word + (c.demo ? ' · demo' : ''), col === KIT_COLOR.off ? EV_TEAL : col);
+    // Always the car's colour wash (the charger belongs with the car), whether or not it is charging.
+    kitHead(this, c.name || 'Car charger', word + (c.demo ? ' · demo' : ''), EV_TEAL, 18);
     const rate = this._rate();
     const sig = JSON.stringify([d, rate, stopping, d.smart ? this._smartText(d) : '']);
     if (sig !== this._sig) {

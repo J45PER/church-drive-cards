@@ -158,6 +158,7 @@ class MainActivity : ComponentActivity() {
                         val userName by vm.userName.collectAsStateWithLifecycle()
                         val isAdmin by vm.isAdmin.collectAsStateWithLifecycle()
                         val statesLoaded by vm.statesLoaded.collectAsStateWithLifecycle()
+                        val refreshing by vm.refreshing.collectAsStateWithLifecycle()
                         val updateAvailable by vm.updateAvailable.collectAsStateWithLifecycle()
                         val notifyOn by vm.notifyOn.collectAsStateWithLifecycle()
                         val locationOn by vm.locationOn.collectAsStateWithLifecycle()
@@ -179,6 +180,7 @@ class MainActivity : ComponentActivity() {
                             LocalHaApi provides vm.haApi,
                             LocalUserName provides userName,
                             com.churchdrive.app.ui.LocalAreaNames provides areaNames,
+                            com.churchdrive.app.ui.LocalRegistry provides registry,
                             com.churchdrive.app.ui.LocalCanRetrySignIn provides vm.canRetrySignIn,
                         ) {
                             if (signedIn) {
@@ -188,6 +190,7 @@ class MainActivity : ComponentActivity() {
                                     userName = userName,
                                     isAdmin = isAdmin,
                                     statesLoaded = statesLoaded,
+                                    refreshing = refreshing,
                                     updateAvailable = updateAvailable,
                                     account = AccountSettings(
                                         notifyOn = notifyOn,
