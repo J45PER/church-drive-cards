@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.136.0
+
+- The status pill and its colour cloud now widen and narrow together: the cloud used to jump to the final width at once, so it shrank before the pill did.
+
 ## 0.135.0
 
 - Satellites has the same status pill as the Church Drive app at the top of the page: "Connecting", "Updating", "No connection" (tap to try again) and "Home Assistant restarting". Pull down on any page to refresh the connection. The pill at the top of the page shows it: "Pull to refresh", "Release to refresh", "Updating" and then "Up to date". 

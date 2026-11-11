@@ -99,7 +99,7 @@ export function houseAddress() { return (session || store.read(KEY) || {}).ha ||
 
 /**
  * Home Assistant's WebSocket: [call] sends one command and resolves with its result (rejects with the error Home Assistant gave),
- * [onEvent] gets every event of a subscription, and [onClose] hears when the line drops.
+ * [onEvent] gets every event of a subscription, and [onClose] hears when the line drops (with the WebSocket close code: 1001, 1012 and 1013 are Home Assistant restarting).
  */
 export class HaSocket {
   constructor() { this.id = 0; this.waiting = new Map(); this.events = new Map(); this.onClose = () => {}; }
@@ -112,7 +112,7 @@ export class HaSocket {
       this.ws = ws;
       ws.onerror = () => reject(new Error('Could not reach Home Assistant'));
       let up = false;
-      ws.onclose = () => { this.waiting.forEach((w) => w.reject(new Error('The line to Home Assistant dropped'))); this.waiting.clear(); if (up) this.onClose(); };
+      ws.onclose = (ev) => { this.waiting.forEach((w) => w.reject(new Error('The line to Home Assistant dropped'))); this.waiting.clear(); if (up) this.onClose(ev.code); };
       ws.onmessage = (e) => {
         const m = JSON.parse(e.data);
         if (m.type === 'auth_required') ws.send(JSON.stringify({ type: 'auth', access_token: token }));

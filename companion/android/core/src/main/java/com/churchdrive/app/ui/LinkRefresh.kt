@@ -1,15 +1,16 @@
 package com.churchdrive.app.ui
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.unit.Constraints
+import kotlin.math.roundToInt
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.height
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.scaleIn
-import androidx.compose.animation.shrinkHorizontally
-import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -197,6 +198,10 @@ fun StatusPill(face: PillFace, pull: Float = 0f, onTap: (() -> Unit)? = null, pa
     val expanded = visible && settled && shown != PillFace.Pull
     val markColour by androidx.compose.animation.animateColorAsState(if (expanded) ink else Color.White, tween(300), label = "mark")
     val cloudAlpha by androidx.compose.animation.core.animateFloatAsState(if (expanded) 0.5f else 0.95f, tween(300), label = "cloud")
+    // The pill's width is one animated value: how much of the words is showing (0 is the circle). The pill, its edge and the cloud all follow
+    // it frame by frame, so the cloud can never get ahead of the pill (measuring inside animateContentSize gave the cloud the final width at once).
+    val reveal by androidx.compose.animation.core.animateFloatAsState(if (expanded) 1f else 0f, tween(if (expanded) 320 else 220), label = "reveal")
+    val wordsAlpha by androidx.compose.animation.core.animateFloatAsState(if (expanded) 1f else 0f, if (expanded) tween(320, delayMillis = 80) else tween(120), label = "words")
     var width by remember { mutableStateOf(0) }
     val density = androidx.compose.ui.platform.LocalDensity.current
     val travel = with(density) { 36.dp.toPx() }
@@ -215,7 +220,8 @@ fun StatusPill(face: PillFace, pull: Float = 0f, onTap: (() -> Unit)? = null, pa
             shape = shape, color = container, contentColor = ink,
             border = BorderStroke(1.dp, scheme.outlineVariant), shadowElevation = 6.dp,
         ) {
-            Box(Modifier.height(PILL_SIZE).animateContentSize(tween(320)).onSizeChanged { width = it.width }, contentAlignment = Alignment.CenterStart) {
+            // This box is as wide as the pill is right now, because its only wide child is the words, cut to [reveal] of their width.
+            Box(Modifier.height(PILL_SIZE).onSizeChanged { width = it.width }, contentAlignment = Alignment.CenterStart) {
                 // Clive's cloud, stretched to fill the pill and kept inside its edge.
                 Box(Modifier.matchParentSize().clip(shape), contentAlignment = Alignment.Center) {
                     Box(Modifier.graphicsLayer { scaleX = (width / cloudBox * 1.25f).coerceAtLeast(1f); alpha = cloudAlpha }) {
@@ -228,10 +234,14 @@ fun StatusPill(face: PillFace, pull: Float = 0f, onTap: (() -> Unit)? = null, pa
                             PillIcon(f, markColour, pull)
                         }
                     }
-                    AnimatedVisibility(
-                        visible = expanded,
-                        enter = expandHorizontally(tween(320)) + fadeIn(tween(320, delayMillis = 80)),
-                        exit = shrinkHorizontally(tween(220)) + fadeOut(tween(120)),
+                    Box(
+                        Modifier
+                            .clipToBounds()
+                            .layout { measurable, constraints ->
+                                val placeable = measurable.measure(constraints.copy(minWidth = 0, maxWidth = Constraints.Infinity))
+                                layout((placeable.width * reveal).roundToInt(), placeable.height) { placeable.placeRelative(0, 0) }
+                            }
+                            .graphicsLayer { alpha = wordsAlpha },
                     ) {
                         AnimatedContent(shown, transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) }, label = "words") { f ->
                             Text(f.label, Modifier.padding(end = 18.dp), style = MaterialTheme.typography.labelLarge, color = ink, maxLines = 1, softWrap = false)

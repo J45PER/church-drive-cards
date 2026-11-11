@@ -154,6 +154,16 @@ Start with the colour and card pages because they drive the live data.
 - **Sign-in:** `HaAuth.kt` (login flow, tokens, refresh) in `core`.
 - **Design decisions made:** moving-glow style C everywhere; the glow runs on the mobile dashboard by default (a card's `glow: true/false` overrides); section cards carry the glow and the cards inside sit on dark acrylic; text is white on dark cards with colour kept for status pills, selected buttons, temperatures, alarm status and section titles; Off and Unavailable use the neutral set.
 
+## 8a. The status banner (website)
+
+`web/manager/status.js` is the website's large version of the pill the apps show at the top of their pages (reference: `design/clive/link-pill.html`; app: `core/.../LinkRefresh.kt`). It starts as Clive's round button, widens into a banner 120 px tall and 464 px wide, and keeps the colour cloud drifting behind it. It sits fixed under the header, so it also shows on the "Connecting" and retry screens.
+
+- **Faces:** Connecting, Updating, No connection (after 6 s down; Try now), Home Assistant restarting, and on a touch screen Pull to refresh, Release to refresh, Up to date. A pull reloads the current page; the browser's own pull-to-reload is switched off (`overscroll-behavior-y: contain`).
+- **What it says** is only what the site knows: the house's address, the page, the attempt and countdown, when the line was last up, Home Assistant's version and state (`get_config`) and how fast it answered (`auth/current_user`). The design page's item counts are sample data; the site does not read every state, so it never shows them.
+- **Restart** is told by the close code Home Assistant uses (1001, 1012, 1013; `HaSocket.onClose(code)`) or by `get_config` saying it is not `RUNNING` yet; it lasts until the page has loaded again, and five minutes at most.
+- **One width.** The pill and its cloud are drawn from the same width every frame, so the cloud never resizes ahead of or behind the pill. (The apps had this wrong in 0.135.0: the cloud measured the final width at once.)
+- Rules and words are tested in `test/manager-status.test.mjs`.
+
 ## 9. Build order
 
 Tick these off as they are done.

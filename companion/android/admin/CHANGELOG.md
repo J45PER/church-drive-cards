@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.136.0
+
+- The status pill and its colour cloud now widen and narrow together: the cloud used to jump to the final width at once, so it shrank before the pill did.
+
 ## 0.135.0
 
 - The "A newer version of Clive Admin is ready" banner (with its Update button) now shows on every page, as in the other apps; it was missing on the Health tab.
