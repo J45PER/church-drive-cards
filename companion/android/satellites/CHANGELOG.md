@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.140.0
+
+- No change you will notice (the Manager website has a new layout and pages).
+
 ## 0.139.0
 
 - The status pill and its colour cloud now widen and narrow together: the cloud used to jump to the final width at once, so it shrank before the pill did.
