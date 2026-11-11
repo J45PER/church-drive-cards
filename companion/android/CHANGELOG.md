@@ -7,6 +7,7 @@ with the APK, so there is a record of what shipped. Newest first.
 ## 0.129.0
 
 - Clive Admin from Google Play can use this app's sign-in: its signing certificate is on the trusted list. Update this app first, then Clive Admin.
+- The splash can turn Clive into Clive Admin's logo (the house's shield with Clive's mark in it), which Clive Admin uses.
 
 ## 0.128.0
 

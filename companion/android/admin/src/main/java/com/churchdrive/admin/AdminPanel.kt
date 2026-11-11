@@ -7,7 +7,6 @@ import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -52,6 +51,8 @@ import androidx.compose.ui.unit.dp
 import com.churchdrive.app.TrustedApps
 import com.churchdrive.app.UpdateCheck
 import com.churchdrive.app.ui.CdVectors
+import com.churchdrive.app.ui.LogoKind
+import com.churchdrive.app.ui.LogoMorph
 
 private val PanelShape = RoundedCornerShape(28.dp)
 
@@ -184,7 +185,7 @@ private fun AboutPage(onBack: () -> Unit) {
         PanelCard {
             PanelRow(
                 CdVectors.Info, "Clive Admin", "Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.BUILD}) · ${BuildConfig.COMMIT}",
-                leading = { Image(painterResource(R.drawable.admin_mark), contentDescription = null, modifier = Modifier.size(28.dp)) },
+                leading = { LogoMorph(LogoKind.Admin, androidx.compose.foundation.isSystemInDarkTheme(), height = 32.dp, animate = false) },
             )
             PanelRow(
                 CdVectors.SystemUpdate, "Updates",

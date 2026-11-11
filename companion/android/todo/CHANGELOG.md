@@ -5,7 +5,7 @@ Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newe
 
 ## 0.129.0
 
-- No change to this app: the trusted list of Church Drive apps has Clive Admin's Play certificate, in the shared version.
+- No change to this app: the trusted list of Church Drive apps has Clive Admin's Play certificate, and the splash code has Clive Admin's logo, in the shared version.
 
 ## 0.128.0
 

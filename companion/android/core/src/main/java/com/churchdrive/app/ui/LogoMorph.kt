@@ -39,7 +39,7 @@ const val SPLASH_MORPH_MS = 1100L
 fun morphMillis(kind: LogoKind): Long = if (kind == LogoKind.Church) 1400L else SPLASH_MORPH_MS
 
 /** Which app's logo the splash turns the assistant into. */
-enum class LogoKind { Church, Todo, Satellites }
+enum class LogoKind { Church, Todo, Satellites, Admin }
 
 private class Glow(val purple: Triple<Float, Float, Float>, val green: Triple<Float, Float, Float>, val indigo: Triple<Float, Float, Float>, val white: Triple<Float, Float, Float>)
 
@@ -125,13 +125,13 @@ fun LogoMorph(kind: LogoKind, dark: Boolean, modifier: Modifier = Modifier, heig
     Canvas(modifier.height(height).aspectRatio(1f)) {
         val t = morph.value
         val x = extra.value * 1.25f // seconds since the shapes settled
-        val end = when (kind) { LogoKind.Church -> floatArrayOf(8f, 24f, 152f); LogoKind.Todo -> floatArrayOf(14f, 18f, 170f); LogoKind.Satellites -> floatArrayOf(21f, 17f, 162f) }
+        val end = when (kind) { LogoKind.Church -> floatArrayOf(8f, 24f, 152f); LogoKind.Todo -> floatArrayOf(14f, 18f, 170f); LogoKind.Satellites -> floatArrayOf(21f, 17f, 162f); LogoKind.Admin -> floatArrayOf(20f, 20f, 160f) }
         val camT = t.coerceIn(0f, 1f)
         val bx = lerp(42f, end[0], camT)
         val by = lerp(42f, end[1], camT)
         val bs = lerp(116f, end[2], camT)
-        val to = when (kind) { LogoKind.Church -> LogoRings.houseA to LogoRings.houseB; LogoKind.Todo -> LogoRings.todoA to LogoRings.todoB; LogoKind.Satellites -> LogoRings.satA to LogoRings.satB }
-        val glowEnd = when (kind) { LogoKind.Church -> HouseGlow; LogoKind.Todo -> TodoGlow; LogoKind.Satellites -> SatGlow }
+        val to = when (kind) { LogoKind.Church -> LogoRings.houseA to LogoRings.houseB; LogoKind.Todo -> LogoRings.todoA to LogoRings.todoB; LogoKind.Satellites -> LogoRings.satA to LogoRings.satB; LogoKind.Admin -> LogoRings.adminA to LogoRings.adminB }
+        val glowEnd = when (kind) { LogoKind.Church -> HouseGlow; LogoKind.Todo -> TodoGlow; LogoKind.Satellites -> SatGlow; LogoKind.Admin -> SatGlow }
         fun glow(g: (Glow) -> Triple<Float, Float, Float>) = lerp(g(SatGlow), g(glowEnd), camT)
         val purple = glow { it.purple }
         val green = glow { it.green }
@@ -156,6 +156,12 @@ fun LogoMorph(kind: LogoKind, dark: Boolean, modifier: Modifier = Modifier, heig
                 val main = Path().apply { fillType = PathFillType.EvenOdd }
                 addRing(main, LogoRings.assistantA, to.first, t)
                 addRing(main, LogoRings.assistantB, to.second, t)
+                // Admin: the shield is the first square and the cut-out is the second; then Clive's other small square pops into the cut-out (the
+                // two overlap, so where they cross the shield is solid again, as in Clive's own mark).
+                if (kind == LogoKind.Admin) {
+                    val pop = spring((x - 0.17f) / 0.5f)
+                    if (pop > 0.002f) addRingAbout(main, LogoRings.adminC, pop, 100f, 93f)
+                }
                 // The clip is solid, with a gap cut round it where it sits over the board (as in the logo itself), not part of the board's
                 // even-odd fill, which would leave it half hollow where the two shapes cross.
                 val g = if (kind == LogoKind.Todo) easeOut((x - 0.05f) / 0.5f) else 0f
@@ -183,14 +189,27 @@ fun LogoMorph(kind: LogoKind, dark: Boolean, modifier: Modifier = Modifier, heig
                             }
                         }
                     }
-                    LogoKind.Church -> Unit
+                    LogoKind.Church, LogoKind.Admin -> Unit
                 }
             }
         }
     }
 }
 
+/** Overshoots a little and settles: 0 before the start, 1 at the end. */
+private fun spring(t: Float): Float { val c = t.coerceIn(0f, 1f); val k = c - 1f; return 1f + 2.9f * k * k * k + 1.9f * k * k }
+
+/** The ring [a] scaled by [s] about ([cx], [cy]) rather than about its own middle. */
+private fun addRingAbout(p: Path, a: FloatArray, s: Float, cx: Float, cy: Float) {
+    for (i in 0 until a.size / 2) {
+        val x = cx + (a[2 * i] - cx) * s
+        val y = cy + (a[2 * i + 1] - cy) * s
+        if (i == 0) p.moveTo(x, y) else p.lineTo(x, y)
+    }
+    p.close()
+}
+
 private fun easeOut(t: Float): Float { val c = t.coerceIn(0f, 1f); val k = 1f - c; return 1f - k * k * k }
 
 /** The canvas height that puts each logo at about the size the apps' still marks had on the splash. */
-fun defaultHeight(kind: LogoKind): Dp = when (kind) { LogoKind.Church -> 118.dp; LogoKind.Todo -> 136.dp; LogoKind.Satellites -> 84.dp }
+fun defaultHeight(kind: LogoKind): Dp = when (kind) { LogoKind.Church -> 118.dp; LogoKind.Todo -> 136.dp; LogoKind.Satellites -> 84.dp; LogoKind.Admin -> 112.dp }
