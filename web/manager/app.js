@@ -2,20 +2,12 @@
 // site reads them over its WebSocket and (next) sends changes back for Clive to check and apply.
 import { DEFAULT_HA, HaSocket, cleanAddress, finishSignIn, houseAddress, signOut, signedIn, startSignIn } from './ha.js';
 import { glowStyle, inkOn } from './glow.js';
+import { fillIcons, icon, loadIcons } from './icons.js';
 import { LOGO_PATH, LOGO_VIEWBOX } from './logo.js';
 import { ACTIONS, BAD, DAYS, OK, TIMES, WARN, activityNote, activityProblem, activityQuery, activityWho, actionLabel, ago, buildRegistry, clock, dayLabel, deviceHealthList, energySnapshot, healthSummary, parseActivity } from './pages/logic.js';
 
 const root = document.getElementById('root');
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const ICONS = {
-  home: 'M12 3 2 12h3v8h5v-6h4v6h5v-8h3z',
-  health: 'M12 21.35 10.55 20C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54z',
-  energy: 'M11 21h-1l1-7H7.5c-.58 0-.57-.32-.38-.66.19-.34.05-.08.07-.12C8.48 10.94 10.42 7.54 13 3h1l-1 7h3.5c.49 0 .56.33.47.51l-.07.15C12.96 17.55 11 21 11 21z',
-  activity: 'M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6a7 7 0 1 1 2.05 4.95l-1.42 1.42A9 9 0 1 0 13 3zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8z',
-  palette: 'M12 3a9 9 0 0 0 0 18c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1.1.9-2 2-2h2.4A4.6 4.6 0 0 0 22 11.8C22 7 17.5 3 12 3zM6.5 12a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3-4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3 4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z',
-};
-const icon = (name) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${ICONS[name]}"/></svg>`;
-
 /** The Clive Admin mark: the house's shield with Clive cut out, in the logo's glow (a single white shape on a dark page). */
 function mark(size = 88) {
   const id = `g${Math.random().toString(36).slice(2, 8)}`;
@@ -43,11 +35,11 @@ function showSignIn(message) {
 // ---- The pages ----
 
 const PAGES = [
-  { id: 'home', title: 'Clive Manager', label: 'Home', icon: 'home', render: renderHome },
-  { id: 'colours', title: 'Colour palettes', label: 'Colours', icon: 'palette', render: renderColours },
-  { id: 'health', title: 'Device health', label: 'Health', icon: 'health', render: renderHealth },
-  { id: 'energy', title: 'Energy', label: 'Energy', icon: 'energy', render: renderEnergy },
-  { id: 'activity', title: 'Activity log', label: 'Activity', icon: 'activity', render: renderActivity },
+  { id: 'home', title: 'Clive Manager', label: 'Home', icon: 'cd:home', render: renderHome },
+  { id: 'colours', title: 'Colour palettes', label: 'Colours', icon: 'cd:palette', render: renderColours },
+  { id: 'health', title: 'Device health', label: 'Health', icon: 'cd:device-health', render: renderHealth },
+  { id: 'energy', title: 'Energy', label: 'Energy', icon: 'cd:bolt', render: renderEnergy },
+  { id: 'activity', title: 'Activity log', label: 'Activity', icon: 'cd:history', render: renderActivity },
 ];
 
 function renderHome(el, ctx) {
@@ -68,7 +60,7 @@ async function renderColours(el, ctx) {
   let data, shipped = {};
   try { data = await ctx.ha.call('church_drive/colours'); } catch (e) { el.innerHTML = `<p class="err" role="alert">Could not read the palettes: ${esc(e.message)}</p>`; return; }
   // The shipped colours (a static file Home Assistant serves) tell which palettes have been changed; without them nothing is marked.
-  try { const r = await fetch(`${houseAddress()}/church_drive/clive/cards.json`); shipped = (await r.json()).entity_colours?.types || {}; } catch { shipped = {}; }
+  for (const url of ['clive/cards.json', `${houseAddress()}/church_drive/clive/cards.json`]) { try { const r = await fetch(url); if (r.ok) { shipped = (await r.json()).entity_colours?.types || {}; break; } } catch { /* try the next place */ } }
   const palettes = Object.entries(data.palettes || {});
   const groups = new Map();
   palettes.forEach(([key, p]) => { const g = p.group || 'Other'; if (!groups.has(g)) groups.set(g, []); groups.get(g).push([key, p]); });
@@ -108,9 +100,9 @@ async function renderHealth(el, ctx) {
     const [list, reg] = await Promise.all([ctx.ha.call('get_states'), houseRegistry(ctx.ha)]);
     items = deviceHealthList(Object.fromEntries(list.map((e) => [e.entity_id, e])), reg);
   } catch (e) { el.innerHTML = `<p class="err" role="alert">Could not read the devices: ${esc(e.message)}</p>`; return; }
-  const row = (d) => `<article class="card" style="${glowStyle(TONE[d.level])}"><div class="row"><h3 class="title" style="margin:0">${esc(d.name)}</h3>${d.area ? `<span class="tag">${esc(d.area)}</span>` : ''}</div>
+  const row = (d) => `<article class="card compact" style="${glowStyle(TONE[d.level])}"><div class="row"><h3 class="title" style="margin:0">${esc(d.name)}</h3>${d.area ? `<span class="tag">${esc(d.area)}</span>` : ''}</div>
     <p class="sub">${esc(d.summary)}</p>${d.heard ? `<p class="sub">Last heard ${esc(ago(d.heard))}</p>` : ''}</article>`;
-  el.innerHTML = `<div class="stack"><p class="note">${esc(healthSummary(items))}.</p>${items.length ? `<div class="grid">${items.map(row).join('')}</div>` : ''}</div>`;
+  el.innerHTML = `<div class="stack"><p class="note">${esc(healthSummary(items))}.</p>${items.length ? `<div class="grid tight">${items.map(row).join('')}</div>` : ''}</div>`;
 }
 
 async function renderEnergy(el, ctx) {
@@ -162,7 +154,7 @@ async function renderActivity(el, ctx) {
     if (!r.lines.length && shown === 0) { out.innerHTML = '<p class="note">Nothing matches.</p>'; return; }
     out.insertAdjacentHTML('beforeend', [...groups].map(([day, lines]) => `<section class="stack" style="gap:8px"><div class="head"><h2>${esc(day)}</h2></div>${lines.map((l) => {
       const note = activityNote(l, r.assistant);
-      return `<article class="card line" style="${glowStyle(l.kind === 'overruled' ? '#6B1E24' : l.kind.startsWith('clive') ? '#2C2A6B' : '#1E3A4B')}"><span class="when">${esc(clock(l.ts))}</span><div><p class="title" style="margin:0;font-size:1.05rem"><b>${esc(activityWho(l, r.assistant))}</b> ${esc(l.text)}</p>${note ? `<p class="sub">${esc(note)}</p>` : ''}</div></article>`;
+      return `<article class="card line compact" style="${glowStyle(l.kind === 'overruled' ? '#6B1E24' : l.kind.startsWith('clive') ? '#2C2A6B' : '#1E3A4B')}"><span class="when">${esc(clock(l.ts))}</span><div><p class="title" style="margin:0"><b>${esc(activityWho(l, r.assistant))}</b> ${esc(l.text)}</p>${note ? `<p class="sub">${esc(note)}</p>` : ''}</div></article>`;
     }).join('')}</section>`).join(''));
     if (shown < r.total) {
       out.insertAdjacentHTML('beforeend', `<button class="btn quiet more" type="button">Show more (${shown} of ${r.total})</button>`);
@@ -190,11 +182,20 @@ function go(id) { location.hash = id === 'home' ? '' : id; }
 function currentPage() { return PAGES.find((p) => p.id === location.hash.slice(1)) || PAGES[0]; }
 
 function showShell(user) {
-  root.innerHTML = `<div class="shell"><header class="bar"><h1 id="title"></h1><button class="person" type="button" id="who" title="Signed in as ${esc(user.name)}. Click to sign out." aria-label="Signed in as ${esc(user.name)}. Sign out.">${esc((user.name || '?').trim().charAt(0).toUpperCase())}</button></header>
+  root.innerHTML = `<div class="shell"><header class="bar"><h1 id="title"></h1><div class="menu-wrap"><button class="person" type="button" id="who" aria-haspopup="true" aria-expanded="false" aria-label="Account: ${esc(user.name)}">${esc((user.name || '?').trim().charAt(0).toUpperCase())}</button>
+      <div class="menu" id="menu" hidden role="menu"><p class="menu-name">${esc(user.name || 'Signed in')}</p><p class="sub">Administrator</p>
+        <button class="btn quiet" type="button" id="signout" role="menuitem">${icon('cd:sign-out', 20)} Sign out</button></div></div></header>
+    <div class="banner" id="banner" hidden role="status"></div>
     <nav class="nav" aria-label="Pages">${PAGES.map((p) => `<button type="button" data-page="${p.id}"><span class="pill">${icon(p.icon)}</span>${esc(p.label)}</button>`).join('')}</nav>
     <main id="page" tabindex="-1"></main></div>`;
   root.querySelectorAll('[data-page]').forEach((b) => b.addEventListener('click', () => go(b.dataset.page)));
-  document.getElementById('who').addEventListener('click', () => { ctx?.ha.close(); signOut(); showSignIn(); });
+  const who = document.getElementById('who'), menu = document.getElementById('menu');
+  const toggle = (open) => { menu.hidden = !open; who.setAttribute('aria-expanded', String(open)); };
+  who.addEventListener('click', (e) => { e.stopPropagation(); toggle(menu.hidden); });
+  document.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target)) toggle(false); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') toggle(false); });
+  document.getElementById('signout').addEventListener('click', () => { ctx?.ha.close(); ctx = null; signOut(); showSignIn(); });
+  fillIcons(root);
   show();
 }
 
@@ -209,6 +210,37 @@ window.addEventListener('hashchange', () => { if (ctx) show(); });
 
 // ---- Start ----
 
+/** Opens the line to Home Assistant and learns who is on it. Throws with `fatal` when the sign-in itself is no good. */
+async function connect() {
+  const ha = new HaSocket();
+  await ha.connect();
+  let user;
+  try { user = await ha.call('auth/current_user'); } catch { ha.close(); throw new Error('Home Assistant did not say who you are'); }
+  return { ha, user };
+}
+
+function showRetry(message) {
+  root.innerHTML = `<div class="center"><div class="panel">${mark()}<h1>Clive Manager</h1><p class="note">${esc(message)} You are still signed in.</p>
+    <button class="btn" type="button" id="retry">Try again</button><button class="btn quiet" type="button" id="out">Sign out</button></div></div>`;
+  document.getElementById('retry').addEventListener('click', start);
+  document.getElementById('out').addEventListener('click', () => { signOut(); showSignIn(); });
+}
+
+/** The line dropped (the screen slept, the network changed): keep the page, say so, and reconnect quietly, trying again until it works. */
+function keepConnected() {
+  ctx.ha.onClose = async () => {
+    const banner = document.getElementById('banner'); if (banner) { banner.textContent = 'Reconnecting to the house…'; banner.hidden = false; }
+    for (let wait = 1000; ; wait = Math.min(wait * 2, 15000)) {
+      await new Promise((r) => setTimeout(r, wait));
+      if (!signedIn()) return;
+      try {
+        const next = await connect(); ctx = { ...ctx, ha: next.ha }; keepConnected();
+        if (banner) banner.hidden = true; show(); return;
+      } catch (e) { if (e.fatal) { ctx = null; return showSignIn(e.message); } }
+    }
+  };
+}
+
 async function start() {
   const params = new URLSearchParams(location.search);
   if (params.has('code') || params.has('state')) {
@@ -217,17 +249,17 @@ async function start() {
     if (problem) return showSignIn(problem);
   }
   if (!signedIn()) return showSignIn();
+  loadIcons(houseAddress());
   root.innerHTML = '<div class="center"><p class="note">Connecting to the house…</p></div>';
-  const ha = new HaSocket();
-  try { await ha.connect(); } catch (e) { signOut(); return showSignIn(e.message); }
-  let user;
-  try { user = await ha.call('auth/current_user'); } catch { signOut(); return showSignIn('Home Assistant did not say who you are. Sign in again.'); }
+  let link;
+  try { link = await connect(); } catch (e) { return e.fatal ? showSignIn(e.message) : showRetry(`${e.message}.`); }
+  const { ha, user } = link;
   if (!user.is_admin) {
     ha.close(); signOut();
     return showSignIn(`${user.name || 'That account'} is not an administrator in Home Assistant, so the Manager has nothing to show. Sign in with an administrator's login.`);
   }
   ctx = { ha, user };
-  ha.onClose = () => { ctx = null; showSignIn('The line to Home Assistant dropped. Sign in again to reconnect.'); };
+  keepConnected();
   showShell(user);
 }
 start();

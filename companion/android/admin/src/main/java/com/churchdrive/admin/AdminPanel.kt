@@ -87,6 +87,10 @@ fun AdminPanel(panel: String?, onPanel: (String?) -> Unit, vm: AdminModel) {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     when (which) {
                         "about" -> AboutPage { onPanel("account") }
+                        "colours" -> PageColumn {
+                            PanelTitle("Colour palettes", { onPanel("account") })
+                            ColoursPage()
+                        }
                         else -> AccountPage(vm, onClose = { onPanel(null) }, onOpen = onPanel)
                     }
                 }
@@ -161,6 +165,12 @@ private fun AccountPage(vm: AdminModel, onClose: () -> Unit, onOpen: (String) ->
                 CdVectors.Home, "Open Church Drive", "The main app: lights, alarm, cameras and the rest",
                 onClick = { ChurchDriveLink.open(context) },
                 leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_church_drive), contentDescription = null) },
+            )
+        }
+        PanelCard {
+            PanelRow(
+                CdVectors.Info, "Colour palettes", "Every palette as the house has it. View only: change them on the website",
+                onClick = { onOpen("colours") }, leading = { Icon(painterResource(R.drawable.mdi_palette), contentDescription = null) },
             )
         }
         PanelCard { PanelRow(CdVectors.Info, "About", onClick = { onOpen("about") }) }

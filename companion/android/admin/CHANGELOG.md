@@ -1,5 +1,10 @@
 # Clive Admin: changelog
 
+## 0.132.0
+
+- The bottom bar is now Home, Health, Energy and Activity, so Device health and Energy are one tap away; Home keeps a card for each.
+- Colour palettes moved to the side panel (swipe left, or the person's button), under Open Church Drive.
+
 ## 0.131.0
 
 - The launcher icon's shield is smaller and centred, so it no longer looks oversized next to the other Clive apps.

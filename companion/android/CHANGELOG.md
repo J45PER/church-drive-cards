@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.132.0
+
+- No change to this app (Device health gains a tab version in shared code, used by Clive Admin).
+
 ## 0.131.0
 
 - The launcher icons are sized and centred to match each other: the solid shapes (house, Clive Admin's shield, To-Do's clipboard) are a little smaller, and each mark is centred on its visual weight rather than its bounding box, so the house and Satellites no longer sit low and Admin no longer looks oversized next to the thin-lined Satellites mark. The icon on the watch is unchanged.

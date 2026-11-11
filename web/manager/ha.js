@@ -76,20 +76,23 @@ export async function finishSignIn(params) {
   return null;
 }
 
-/** A current access token (refreshed when it is nearly out of date), or null when there is no sign-in to refresh. */
+/** A current access token (refreshed when it is nearly out of date). Null when there is no sign-in; throws (with `fatal` when the sign-in has really ended) when it cannot be refreshed. */
 export async function accessToken() {
   const saved = store.read(KEY);
   if (!session && saved) session = { ha: saved.ha, refresh: saved.refresh, access: null, expires: 0 };
   if (!session) return null;
   if (session.access && session.expires - Date.now() > 60_000) return session.access;
   if (!session.refresh) return null;
-  try {
-    const res = await fetch(`${session.ha}/auth/token`, { method: 'POST', body: tokenForm(siteId(), { refresh: session.refresh }) });
-    const tokens = parseTokens(await res.json());
-    if (!tokens) { signOut(); return null; }
-    session = { ...session, access: tokens.access, expires: tokens.expires };
-    return session.access;
-  } catch { return null; }
+  let res;
+  try { res = await fetch(`${session.ha}/auth/token`, { method: 'POST', body: tokenForm(siteId(), { refresh: session.refresh }) }); }
+  catch { throw new Error('Could not reach Home Assistant'); } // a dropped connection is not a sign-out: the sign-in is kept
+  // Only Home Assistant saying the refresh token is no good ends the sign-in.
+  if (res.status === 400 || res.status === 401 || res.status === 403) { signOut(); throw Object.assign(new Error('Your Home Assistant sign-in has ended. Sign in again.'), { fatal: true }); }
+  if (!res.ok) throw new Error(`Home Assistant answered ${res.status}`);
+  const tokens = parseTokens(await res.json().catch(() => null));
+  if (!tokens) throw new Error('Home Assistant gave no sign-in token');
+  session = { ...session, access: tokens.access, expires: tokens.expires };
+  return session.access;
 }
 
 export function houseAddress() { return (session || store.read(KEY) || {}).ha || DEFAULT_HA; }
@@ -108,12 +111,13 @@ export class HaSocket {
       const ws = new WebSocket(socketUrl(houseAddress()));
       this.ws = ws;
       ws.onerror = () => reject(new Error('Could not reach Home Assistant'));
-      ws.onclose = () => { this.waiting.forEach((w) => w.reject(new Error('The line to Home Assistant dropped'))); this.waiting.clear(); this.onClose(); };
+      let up = false;
+      ws.onclose = () => { this.waiting.forEach((w) => w.reject(new Error('The line to Home Assistant dropped'))); this.waiting.clear(); if (up) this.onClose(); };
       ws.onmessage = (e) => {
         const m = JSON.parse(e.data);
         if (m.type === 'auth_required') ws.send(JSON.stringify({ type: 'auth', access_token: token }));
-        else if (m.type === 'auth_ok') { ws.onmessage = (ev) => this.#message(JSON.parse(ev.data)); resolve(); }
-        else if (m.type === 'auth_invalid') reject(new Error('Home Assistant refused the sign-in'));
+        else if (m.type === 'auth_ok') { up = true; ws.onmessage = (ev) => this.#message(JSON.parse(ev.data)); resolve(); }
+        else if (m.type === 'auth_invalid') reject(Object.assign(new Error('Home Assistant refused the sign-in'), { fatal: true }));
       };
     });
   }
