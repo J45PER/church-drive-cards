@@ -2,7 +2,8 @@
 
 ## 0.127.0
 
-- No change to this app: the phone app now fits phones on their side and tablets, in the shared version.
+- An About page: the version and build, where updates come from, and this app's signing certificate (SHA-256) with a Copy button, so it can be added to the trusted list for the Church Drive app's shared sign-in.
+- The phone app now fits phones on their side and tablets, in the shared version.
 
 ## 0.126.0
 

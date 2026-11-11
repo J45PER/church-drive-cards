@@ -12,6 +12,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontFamily
+import com.churchdrive.app.TrustedApps
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -44,12 +54,14 @@ fun AdminApp(vm: AdminModel) {
             !vm.connected || !vm.userKnown -> Message("Connecting to the house…", "If this stays, check the phone can reach Home Assistant.")
             !vm.isAdmin -> NotAdmin(vm)
             page == COLOURS -> ColoursPage { page = null }
+            page == ABOUT -> AboutPage { page = null }
             else -> HomePage(vm) { page = it }
         }
     }
 }
 
 private const val COLOURS = "colours"
+private const val ABOUT = "about"
 
 @Composable
 private fun Message(title: String, body: String) {
@@ -78,6 +90,7 @@ private fun HomePage(vm: AdminModel, open: (String) -> Unit) {
         Text("Clive Admin", style = MaterialTheme.typography.headlineSmall)
         Text("Signed in as ${vm.personName ?: "an administrator"}.", style = MaterialTheme.typography.bodyMedium)
         PageRow("Colour palettes", "See every palette as the house has it now. Changing them is done on the website.") { open(COLOURS) }
+        PageRow("About", "Version, updates and this app's signing certificate.") { open(ABOUT) }
         if (vm.borrowed) {
             Text("Signed in through the Church Drive app: sign out there.", style = MaterialTheme.typography.bodySmall)
         } else {
@@ -143,3 +156,52 @@ private fun PaletteRow(key: String) {
 /** "alarm_home" shown as "Alarm home". */
 internal fun paletteName(key: String): String =
     key.split('_').joinToString(" ").replaceFirstChar { it.uppercase() }
+
+/** Version, updates and the key this installed copy is signed with. */
+@Composable
+private fun AboutPage(back: () -> Unit) {
+    val context = LocalContext.current
+    val clipboard = LocalClipboardManager.current
+    var copied by remember { mutableStateOf(false) }
+    // The key this installed copy is signed with. On the Google Play version that is Play's own key, which the Church Drive app has to be told
+    // about before it will share its sign-in (TrustedApps.CERTS), so it is shown here to be copied.
+    val certs = remember { TrustedApps.ownCerts(context) }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = back) { Text("Back") }
+            Text("About", style = MaterialTheme.typography.titleLarge)
+        }
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Clive Admin", style = MaterialTheme.typography.titleMedium)
+                Text("Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.BUILD}) · ${BuildConfig.COMMIT}", style = MaterialTheme.typography.bodyMedium)
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Updates", style = MaterialTheme.typography.titleMedium)
+                if (BuildConfig.PLAY) {
+                    Text("Google Play keeps this app up to date.", style = MaterialTheme.typography.bodyMedium)
+                    TextButton(onClick = { UpdateCheck.openPlayPage(context, context.packageName) }) { Text("Open its Play page") }
+                } else {
+                    Text("A test build: newer ones are on GitHub, under the admin-latest release.", style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Signing certificate (SHA-256)", style = MaterialTheme.typography.titleMedium)
+                if (certs.isEmpty()) {
+                    Text("Not available", style = MaterialTheme.typography.bodyMedium)
+                } else {
+                    SelectionContainer {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            certs.forEach { Text(it, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace) }
+                        }
+                    }
+                    Button(onClick = { clipboard.setText(AnnotatedString(certs.joinToString("\n"))); copied = true }) { Text(if (copied) "Copied" else "Copy") }
+                }
+                Text(
+                    "The Church Drive app shares its sign-in only with apps whose certificate it has been told about. Send this one to be added.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+    }
+}
