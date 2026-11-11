@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -396,6 +397,22 @@ fun MarkdownCard(config: JSONObject) {
     }
 }
 
+/** A number with what it counts, so a setting reads "30 %", "24 hours" or "60 mins": the unit is the helper's own, spelled out when short. */
+fun numberWithUnit(value: Double, unit: String?): String {
+    val n = if (value % 1.0 == 0.0) value.toInt().toString() else "%.1f".format(value)
+    val u = unit?.trim().orEmpty()
+    if (u.isEmpty()) return n
+    val one = value == 1.0
+    val word = when (u.lowercase()) {
+        "s", "sec", "secs" -> if (one) "sec" else "secs"
+        "min", "mins" -> if (one) "min" else "mins"
+        "h", "hr", "hrs" -> if (one) "hour" else "hours"
+        "d" -> if (one) "day" else "days"
+        else -> u
+    }
+    return "$n $word"
+}
+
 @Composable
 fun NumberInput(entity: EntityState, call: CallService) {
     val step = entity.num("step") ?: 1.0
@@ -405,7 +422,11 @@ fun NumberInput(entity: EntityState, call: CallService) {
     fun set(v: Double) = call("input_number", "set_value", entity.entityId, data("value" to v.coerceIn(min, max)))
     Row(verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = { value?.let { set(it - step) } }) { Icon(CdVectors.Minus, contentDescription = "Less") }
-        Text(value?.let { if (it % 1.0 == 0.0) it.toInt().toString() else "%.1f".format(it) } ?: "–", style = MaterialTheme.typography.bodyLarge)
+        Text(
+            value?.let { numberWithUnit(it, entity.str("unit_of_measurement")) } ?: "–",
+            style = MaterialTheme.typography.bodyLarge, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier = Modifier.widthIn(min = 72.dp),
+        )
         IconButton(onClick = { value?.let { set(it + step) } }) { Icon(CdVectors.Plus, contentDescription = "More") }
     }
 }
@@ -484,17 +505,21 @@ fun HouseTasksCard(config: JSONObject, entities: Map<String, EntityState>) {
     val tone = toneColors(Tone.TodoHouse)
     val items = rememberTodoItems(listId, entities)
     EntityCard(tone.container, tone.onContainer) {
-        val tasks = items.orEmpty().filter { !it.done }.map { it to houseTask(it) }.filter { showAll || houseTaskFor(it.second, first) }
+        val tasks = sortedHouseTasks(items.orEmpty().filter { !it.done }.map { it to houseTask(it) }.filter { showAll || houseTaskFor(it.second, first) })
         when {
             items == null -> Text("Loading…", style = MaterialTheme.typography.bodyMedium)
             tasks.isEmpty() -> Text("Nothing from the house right now.", style = MaterialTheme.typography.bodyMedium)
         }
-        tasks.forEach { (item, task) ->
+        tasks.forEachIndexed { i, (item, task) ->
+            // With everyone's jobs shown, each person's (and Everyone's) come under their own name.
+            if (showAll && (i == 0 || tasks[i - 1].second.who != task.who)) {
+                Text(task.who, style = MaterialTheme.typography.labelLarge, color = tone.onContainer.copy(alpha = 0.75f))
+            }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 ToneIconName(task.icon, CdVectors.Info, tone)
                 Column(modifier = Modifier.weight(1f)) {
                     Text(item.summary, style = MaterialTheme.typography.bodyLarge)
-                    val sub = listOf(task.kind, task.detail, if (showAll) task.who else "").filter { it.isNotBlank() }.joinToString(" · ")
+                    val sub = listOf(task.kind, task.detail).filter { it.isNotBlank() }.joinToString(" · ")
                     if (sub.isNotEmpty()) Text(sub, style = MaterialTheme.typography.bodySmall, color = tone.onContainer.copy(alpha = 0.75f))
                 }
             }

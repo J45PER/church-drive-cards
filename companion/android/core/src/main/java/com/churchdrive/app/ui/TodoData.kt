@@ -104,6 +104,27 @@ fun houseTask(item: TodoItem): HouseTask {
     return HouseTask(kind, rest.drop(1).joinToString(" · "), who, icon)
 }
 
+/** How urgent a kind of house job is, lowest first: safety alarms, then devices that stopped answering, batteries, the vacuum, filters and parts, updates. */
+fun houseTaskRank(kind: String): Int = when {
+    Regex("safety|smoke|alarm", RegexOption.IGNORE_CASE).containsMatchIn(kind) -> 0
+    Regex("respond|device", RegexOption.IGNORE_CASE).containsMatchIn(kind) -> 1
+    Regex("batter", RegexOption.IGNORE_CASE).containsMatchIn(kind) -> 2
+    Regex("vacuum", RegexOption.IGNORE_CASE).containsMatchIn(kind) -> 3
+    Regex("filter|part", RegexOption.IGNORE_CASE).containsMatchIn(kind) -> 4
+    Regex("update", RegexOption.IGNORE_CASE).containsMatchIn(kind) -> 5
+    else -> 6
+}
+
+/**
+ * The house's jobs in a steady order: grouped by who they are for (Everyone first, then people by name), then by [houseTaskRank], then by
+ * their words, so the list does not shuffle each time it is refreshed.
+ */
+fun sortedHouseTasks(tasks: List<Pair<TodoItem, HouseTask>>): List<Pair<TodoItem, HouseTask>> =
+    tasks.sortedWith(compareBy(
+        { if (it.second.who.equals("Everyone", true)) "" else it.second.who.lowercase() },
+        { houseTaskRank(it.second.kind) }, { it.first.summary.lowercase() },
+    ))
+
 /** What the apps send each other to open a particular task: the to-do list (entity id) and the task's uid. */
 object TodoDeepLink {
     const val EXTRA_LIST = "todo_list"

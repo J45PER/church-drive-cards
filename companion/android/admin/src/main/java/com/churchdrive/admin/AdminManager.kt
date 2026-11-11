@@ -79,18 +79,85 @@ object ManagerSections {
     /** Whether Clive Admin can draw every card of [section] itself (the others are opened in the Church Drive app for now). */
     fun builtHere(section: ManagerSection): Boolean = section.cards.all { it.type in BUILT }
 
-    /** Sections left out of Clive Admin on purpose (decided with Jamie): People stays on the website, and Locations and Icons are not needed in the app for now. */
-    private val LEFT_OUT = setOf("custom:zone-map-card", "custom:icon-styles-card", "custom:people-manager-card")
+    /** Sections left out of Clive Admin on purpose (decided with Jamie): Locations and Icons are not needed in the app for now. */
+    private val LEFT_OUT = setOf(
+        "custom:zone-map-card", "custom:icon-styles-card",
+        // Alarm lights are on the Manager website and in Home Assistant only, not in the apps.
+        "custom:alarm-lights-card",
+    )
 
     /** The sections Clive Admin lists: all but those left out on purpose. */
     fun forAdmin(sections: List<ManagerSection>): List<ManagerSection> = sections.filter { s -> s.cards.isEmpty() || s.cards.any { it.type !in LEFT_OUT } }
+
+    /** The sections that have a page of their own in the side panel, so they are not on the Manager page. */
+    private val OWN_PAGE = mapOf(
+        "custom:device-health-card" to "health",
+        "custom:watch-settings-card" to "watch",
+        "custom:notifications-card" to "notifications",
+        "custom:camera-links-card" to "cameras",
+        "custom:people-manager-card" to "people",
+    )
+
+    /** Which side-panel page (`health`, `watch`, `notifications`, `cameras` or `people`) a section lives on, or null when it is on the Manager page. */
+    fun ownPage(section: ManagerSection): String? = section.cards.firstNotNullOfOrNull { OWN_PAGE[it.type] }
+
+    /** The sections on the Manager page: all of them but those with a page of their own. */
+    fun forManagerPage(sections: List<ManagerSection>): List<ManagerSection> = forAdmin(sections).filter { ownPage(it) == null }
+
+    /** The section a side-panel page ([ownPage]) shows, or null while the dashboard has not been read. */
+    fun forPage(sections: List<ManagerSection>, page: String): ManagerSection? = sections.firstOrNull { ownPage(it) == page }
+
+    /**
+     * A section's cards as the page draws them: a heading directly above an entities list becomes that card's own title.
+     */
+    fun pageCards(cards: List<ManagerCard>): List<ManagerCard> {
+        val out = mutableListOf<ManagerCard>()
+        var i = 0
+        while (i < cards.size) {
+            val c = cards[i]
+            val next = cards.getOrNull(i + 1)
+            if (c.type == "heading" && next != null && next.type == "entities") {
+                val merged = JSONObject(next.config.toString()).put("title", c.config.optString("heading"))
+                out += ManagerCard("entities", merged)
+                i += 2
+            } else {
+                out += c
+                i++
+            }
+        }
+        return out
+    }
 
     /** The card types Clive Admin draws itself. */
     val BUILT = setOf(
         "custom:notifications-card", "custom:zone-map-card", "custom:camera-links-card", "custom:icon-styles-card",
         "heading", "markdown", "entities", "custom:house-tasks-card",
-        "custom:people-card", "custom:watch-settings-card", "custom:device-health-card",
+        "custom:people-card", "custom:watch-settings-card", "custom:device-health-card", "custom:people-manager-card",
     )
+}
+
+/** The Manager page: every section that has no page of its own, each in a panel that folds away. */
+@Composable
+fun ManagerPage(sections: List<ManagerSection>, entities: Map<String, EntityState>, registry: Registry, call: CallService) {
+    if (sections.isEmpty()) {
+        com.churchdrive.app.ui.LoadingNote("Loading this page from Home Assistant…")
+        return
+    }
+    sections.forEach { section ->
+        val tone = toneFromColour(section.color) ?: Tone.Grey
+        com.churchdrive.app.ui.SectionPanel(
+            section.title, iconName = section.icon, tone = tone,
+            summary = com.churchdrive.app.ui.rememberTemplate(section.summary), collapsible = true,
+        ) {
+            androidx.compose.runtime.CompositionLocalProvider(com.churchdrive.app.ui.LocalPanelTone provides tone) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ManagerSections.pageCards(section.cards).forEach { card ->
+                        ManagerCardView(card, entities, registry, call)
+                    }
+                }
+            }
+        }
+    }
 }
 
 /** A section's cards. A card Clive Admin does not draw yet says so and points to the Church Drive app, which has it. */
@@ -104,11 +171,14 @@ fun ManagerSectionContent(section: ManagerSection, entities: Map<String, EntityS
 }
 
 @Composable
-private fun ManagerCardView(card: ManagerCard, entities: Map<String, EntityState>, registry: Registry, call: CallService) {
+internal fun ManagerCardView(card: ManagerCard, entities: Map<String, EntityState>, registry: Registry, call: CallService) {
     when (card.type) {
         "custom:notifications-card" -> NotificationsPage(entities)
         "custom:zone-map-card" -> LocationsPage(entities)
         "custom:camera-links-card" -> CameraLinksPage(entities)
+        "custom:people-manager-card" -> com.churchdrive.app.ui.PeoplePage(entities, registry)
+        // The people's own to-do lists (ticking tasks off) are in the To-Do app; Clive Admin shows the jobs the house made ("From the house").
+        "custom:auto-entities", "todo-list" -> Unit
         "custom:icon-styles-card" -> IconStylesPage()
         "heading" -> HeadingCard(card.config)
         "markdown" -> MarkdownCard(card.config)

@@ -9,6 +9,8 @@ import com.churchdrive.app.ui.choreIcon
 import com.churchdrive.app.ui.comfortTone
 import com.churchdrive.app.ui.houseTask
 import com.churchdrive.app.ui.houseTaskFor
+import com.churchdrive.app.ui.numberWithUnit
+import com.churchdrive.app.ui.sortedHouseTasks
 import com.churchdrive.app.ui.list
 import com.churchdrive.app.ui.myTodoList
 import com.churchdrive.app.ui.parseForecast
@@ -162,6 +164,30 @@ class PagesLogicTest {
         val everyone = houseTask(TodoItem("b", "Filter", false, null, "Automatic · Filters due · 8% left"))
         assertEquals("Everyone", everyone.who)
         assertTrue(houseTaskFor(everyone, null))
+    }
+
+    @Test
+    fun theHouseJobsAreGroupedByPersonThenSortedByUrgencyThenName() {
+        fun job(name: String, kind: String, who: String) = TodoItem(name, name, false, null, "Automatic · $kind · for $who").let { it to houseTask(it) }
+        val sorted = sortedHouseTasks(listOf(
+            job("Update Home Assistant", "Updates", "Everyone"), job("Charge Keypad", "Low batteries", "Jamie"), job("Replace Hall alarm", "Safety alarms", "Jamie"),
+            job("Replace Gregg's filter", "Filters and parts", "Everyone"), job("Replace battery: Dial", "Low batteries", "Everyone"),
+            job("Check Doorbell", "Devices not responding", "Hayley"), job("Charge Camera", "Low batteries", "Jamie"),
+        )).map { it.first.summary }
+        assertEquals(listOf(
+            "Replace battery: Dial", "Replace Gregg's filter", "Update Home Assistant",
+            "Check Doorbell",
+            "Replace Hall alarm", "Charge Camera", "Charge Keypad",
+        ), sorted)
+    }
+
+    @Test
+    fun aSettingsNumberSaysWhatItCounts() {
+        assertEquals("30 %", numberWithUnit(30.0, "%"))
+        assertEquals("24 hours", numberWithUnit(24.0, "h"))
+        assertEquals("1 hour", numberWithUnit(1.0, "h"))
+        assertEquals("60 mins", numberWithUnit(60.0, "min"))
+        assertEquals("2.5", numberWithUnit(2.5, null))
     }
 
     @Test

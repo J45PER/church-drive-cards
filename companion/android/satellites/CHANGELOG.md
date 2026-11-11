@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.147.0
+
+- No change you will notice (shared code for the other apps changed).
+
 ## 0.146.0
 
 - No change you will notice (the Manager website's header got its shield back).
