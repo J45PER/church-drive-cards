@@ -4,12 +4,6 @@ import com.churchdrive.app.ha.EntityState
 import org.json.JSONObject
 import java.time.OffsetDateTime
 
-/** A list attribute such as `preset_modes`, as text. */
-fun EntityState.list(key: String): List<String> {
-    val a = attributes.optJSONArray(key) ?: return emptyList()
-    return (0 until a.length()).filter { !a.isNull(it) }.map { a.optString(it) }.filter { it.isNotBlank() }
-}
-
 /** A room type with its comfortable range in °C (the dashboard's Climate Zone card types). */
 data class RoomType(val name: String, val low: Double, val high: Double)
 

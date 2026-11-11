@@ -197,3 +197,19 @@ import { readFileSync } from 'node:fs';
 test("the site's copy of the watch rules is the dashboard card's own file", () => {
   assert.equal(readFileSync(new URL('../web/manager/pages/watch-logic.js', import.meta.url), 'utf8'), readFileSync(new URL('../src/watch-logic.js', import.meta.url), 'utf8'));
 });
+
+import { mediaLine, mediaPlayers, supports, systemRows } from '../web/manager/pages/devices.js';
+
+test('media players list what is playing first, say what is on, and systems say what is wrong', () => {
+  const m = (id, state, a = {}) => ({ entity_id: id, state, attributes: { friendly_name: id.split('.')[1], ...a } });
+  const st = Object.fromEntries([m('media_player.b_tv', 'off'), m('media_player.a_speaker', 'playing', { media_title: 'Song', app_name: 'Spotify', supported_features: 4 | 16 }), m('media_player.c', 'unavailable')].map((e) => [e.entity_id, e]));
+  assert.deepEqual(mediaPlayers(st).map((p) => p.entity_id), ['media_player.a_speaker', 'media_player.b_tv', 'media_player.c']);
+  assert.equal(mediaLine(st['media_player.a_speaker']), 'Song · Spotify'); assert.equal(mediaLine(st['media_player.b_tv']), 'Off'); assert.equal(mediaLine(st['media_player.c']), 'Unavailable');
+  assert.equal(supports(st['media_player.a_speaker'], 4), true); assert.equal(supports(st['media_player.b_tv'], 4), false);
+  const now = Date.parse('2026-11-11T12:00:00Z');
+  const sys = Object.fromEntries([{ entity_id: 'binary_sensor.eero_wan_status', state: 'off', attributes: { device_class: 'connectivity' } }, { entity_id: 'sensor.backup_last_successful_automatic_backup', state: '2026-11-01T01:00:00Z', attributes: {} },
+    { entity_id: 'update.core', state: 'on', attributes: { title: 'Home Assistant Core' } }].map((e) => [e.entity_id, e]));
+  const rows = systemRows(sys, now);
+  assert.deepEqual(rows.map((r) => [r.name, r.bad]), [['Internet', true], ['Backups', true], ['Updates', false]]);
+  assert.equal(rows[2].sub, 'Home Assistant Core'); assert.equal(rows[2].pill, '1');
+});

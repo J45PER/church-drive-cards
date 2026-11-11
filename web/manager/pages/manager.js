@@ -19,7 +19,6 @@ export function managerSections(config) {
 }
 export const builtHere = (s) => s.cards.every((c) => BUILT.has(c.type));
 
-const TONE = { people: '#1E4A6B', alarm: '#6B1E24', ok: '#1F5C3A', warn: '#6A4B12', tasks: '#2C2A6B', neutral: '#2B3340' };
 
 async function loadSections(ctx) {
   const config = await ctx.ha.call('lovelace/config', { url_path: 'dashboard-manager' });
@@ -34,7 +33,7 @@ export async function renderManager(el, ctx, helpers) {
   try { sections = await loadSections(ctx); } catch (e) { el.replaceChildren(h('p', { class: 'err', role: 'alert' }, `Could not read the Manager: ${e.message}`)); return; }
   el.replaceChildren(h('div', { class: 'stack' },
     h('p', { class: 'note' }, 'The same sections as the Manager in the Church Drive app and in Clive Admin. Changes here are made straight away, as they are there.'),
-    h('div', { class: 'grid' }, sections.map((s) => h('button', { type: 'button', class: 'card', style: helpers.glowStyle(TONE[s.color] || TONE.neutral), onclick: () => helpers.go(`manager/${encodeURIComponent(s.title)}`) },
+    h('div', { class: 'grid' }, sections.map((s) => h('button', { type: 'button', class: 'card', style: helpers.glowStyle(s.color || 'neutral'), onclick: () => helpers.go(`manager/${encodeURIComponent(s.title)}`) },
       h('p', { class: 'title' }, s.title), h('p', { class: 'sub' }, builtHere(s) ? 'Open' : 'Not on the site yet: use the Church Drive app'))))));
 }
 

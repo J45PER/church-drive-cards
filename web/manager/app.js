@@ -1,7 +1,8 @@
 // Clive Manager: sign in with the Home Assistant login (administrators only), then the pages. Home Assistant is where the settings live; this
 // site reads them over its WebSocket and (next) sends changes back for Clive to check and apply.
 import { DEFAULT_HA, HaSocket, cleanAddress, finishSignIn, houseAddress, signOut, signedIn, startSignIn } from './ha.js';
-import { glowStyle, inkOn } from './glow.js';
+import { glowStyle, inkOn, setTones } from './glow.js';
+import { loadStyle, panel } from './kit.js';
 import { attachPull, createStatus } from './status.js';
 import { TICK_MS, dueOnReturn, duePeriodic, editing, idle } from './freshness.js';
 import { fillIcons, icon, loadIcons } from './icons.js';
@@ -9,9 +10,12 @@ import { renderChanges } from './pages/changes.js';
 import { readVersions, summary as versionSummary } from './pages/versions.js';
 import { openPaletteEditor } from './pages/palette-editor.js';
 import { renderCards, renderIcons, renderLayouts } from './pages/design.js';
+import { renderDevices } from './pages/devices.js';
 import { renderManager, renderManagerSection } from './pages/manager.js';
 import { LOGO_PATH, LOGO_VIEWBOX } from './logo.js';
-import { PALETTE_PARTS, paletteWarnings, slugOk, ACTIONS, BAD, DAYS, OK, TIMES, WARN, activityNote, activityProblem, activityQuery, activityWho, actionLabel, ago, buildRegistry, clock, dayLabel, deviceHealthList, energySnapshot, healthSummary, parseActivity } from './pages/logic.js';
+import { cleanup } from './kit.js';
+import { renderEnergyPage } from './pages/energy.js';
+import { PALETTE_PARTS, paletteWarnings, slugOk, ACTIONS, BAD, DAYS, OK, TIMES, WARN, activityNote, activityProblem, activityQuery, activityWho, actionLabel, ago, buildRegistry, clock, dayLabel, deviceHealthList, healthSummary, parseActivity } from './pages/logic.js';
 
 const root = document.getElementById('root');
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -49,19 +53,21 @@ const PAGES = [
   { id: 'changes', title: 'Changes', label: 'Changes', icon: 'cd:checklist', render: (el, c) => renderChanges(el, c, { glowStyle }) },
   { id: 'manager', title: 'Manager', label: 'Manager', icon: 'cd:sliders', render: (el, c, arg) => (arg ? renderManagerSection(el, c, { glowStyle, go }, decodeURIComponent(arg)) : renderManager(el, c, { glowStyle, go })) },
   { id: 'health', title: 'Device health', label: 'Health', icon: 'cd:device-health', render: renderHealth, live: true },
-  { id: 'energy', title: 'Energy', label: 'Energy', icon: 'cd:bolt', render: renderEnergy, live: true },
+  { id: 'devices', title: 'Devices', label: 'Devices', icon: 'cd:television-play', render: renderDevices },
+  { id: 'energy', title: 'Energy', label: 'Energy', icon: 'cd:bolt', render: (el, c) => renderEnergyPage(el, c), live: true },
   { id: 'activity', title: 'Activity log', label: 'Activity', icon: 'cd:history', render: renderActivity, live: true },
 ];
 
 function renderHome(el, ctx) {
   el.innerHTML = `<div class="stack">
     <section class="stack" style="gap:12px"><div class="head"><h2>Colour palettes</h2></div>
-      <button class="card" type="button" data-go="colours" style="${glowStyle('#2C2A6B')}"><p class="title">Every palette as the house has it now</p>
+      <button class="card" type="button" data-go="colours" style="${glowStyle('tasks')}"><p class="title">Every palette as the house has it now</p>
       <p class="sub">The five colours of each palette, the ones changed from the shipped set marked. Changes are sent for Clive to check, then applied everywhere.</p></button></section>
     <section class="stack" style="gap:12px"><div class="head"><h2>The house</h2></div><div class="grid">
-      <button class="card" type="button" data-go="health" style="${glowStyle('#1F5C3A')}"><p class="title">Device health</p><p class="sub">Batteries, filters and devices that stop responding</p></button>
-      <button class="card" type="button" data-go="energy" style="${glowStyle('#6A4B12')}"><p class="title">Energy</p><p class="sub">Octopus rates, cheap times, today and yesterday</p></button>
-      <button class="card" type="button" data-go="activity" style="${glowStyle('#1E4A6B')}"><p class="title">Activity log</p><p class="sub">What people and the assistant did, and when</p></button></div></section>
+      <button class="card" type="button" data-go="health" style="${glowStyle('ok')}"><p class="title">Device health</p><p class="sub">Batteries, filters and devices that stop responding</p></button>
+      <button class="card" type="button" data-go="devices" style="${glowStyle('media')}"><p class="title">Devices</p><p class="sub">TVs, speakers, and how the house's systems are</p></button>
+      <button class="card" type="button" data-go="energy" style="${glowStyle('energy')}"><p class="title">Energy</p><p class="sub">Octopus rates, cheap times, today and yesterday</p></button>
+      <button class="card" type="button" data-go="activity" style="${glowStyle('people')}"><p class="title">Activity log</p><p class="sub">What people and the assistant did, and when</p></button></div></section>
     <section class="stack" style="gap:12px" id="versions"><div class="head"><h2>Versions</h2><button class="btn quiet" type="button" id="versions-refresh">Check again</button></div>
       <article class="card plain" id="versions-card"><p class="sub">Reading the versions…</p></article></section>
     <p class="note">More pages arrive here as they are built: cards, icons and layouts.</p></div>`;
@@ -123,7 +129,7 @@ async function renderDesign(el, ctx, arg) {
 
 // ---- Device health, Energy, Activity ----
 
-const TONE = { [OK]: '#1F5C3A', [WARN]: '#6A4B12', [BAD]: '#6B1E24' };
+const TONE = { [OK]: 'ok', [WARN]: 'warn', [BAD]: 'bad' };
 async function houseRegistry(ha) {
   const [entityReg, deviceReg, areaReg] = await Promise.all([ha.call('config/entity_registry/list_for_display'), ha.call('config/device_registry/list'), ha.call('config/area_registry/list')]);
   return buildRegistry(entityReg, deviceReg, areaReg);
@@ -138,30 +144,10 @@ async function renderHealth(el, ctx) {
   } catch (e) { el.innerHTML = `<p class="err" role="alert">Could not read the devices: ${esc(e.message)}</p>`; return; }
   const row = (d) => `<article class="card compact" style="${glowStyle(TONE[d.level])}"><div class="row"><h3 class="title" style="margin:0">${esc(d.name)}</h3>${d.area ? `<span class="tag">${esc(d.area)}</span>` : ''}</div>
     <p class="sub">${esc(d.summary)}</p>${d.heard ? `<p class="sub">Last heard ${esc(ago(d.heard))}</p>` : ''}</article>`;
-  el.innerHTML = `<div class="stack"><p class="note">${esc(healthSummary(items))}.</p>${items.length ? `<div class="grid tight">${items.map(row).join('')}</div>` : ''}</div>`;
-}
-
-async function renderEnergy(el, ctx) {
-  el.innerHTML = '<p class="note">Reading the energy figures from the house…</p>';
-  let e;
-  try { const list = await ctx.ha.call('get_states'); e = energySnapshot(Object.fromEntries(list.map((s) => [s.entity_id, s]))); }
-  catch (err) { el.innerHTML = `<p class="err" role="alert">Could not read the energy figures: ${esc(err.message)}</p>`; return; }
-  const p = (n) => (n == null ? '—' : `${n.toFixed(1)}p`), pound = (n) => (n == null ? '—' : `£${n.toFixed(2)}`);
-  const card = (title, big, sub, tone) => `<article class="card" style="${glowStyle(tone)}"><p class="sub">${esc(title)}</p><p class="big">${esc(big)}</p><p class="sub">${esc(sub)}</p></article>`;
-  const cheap = e.cheapUntil ? `Cheap until ${clock(e.cheapUntil)}` : e.offPeak ? 'Off-peak now' : e.cheapest != null ? `Cheapest today ${p(e.cheapest)}` : '';
-  let chart = '';
-  if (e.rates.length) {
-    const max = Math.max(...e.rates.map((r) => r.pence), 1); const now = Date.now();
-    chart = `<article class="card" style="${glowStyle('#2C2A6B')}"><p class="sub">Rates per kWh, half hour by half hour</p><svg class="bars" viewBox="0 0 ${e.rates.length * 8} 100" preserveAspectRatio="none" role="img" aria-label="Electricity rates">${
-      e.rates.map((r, i) => `<rect x="${i * 8 + 1}" width="6" y="${100 - (r.pence / max) * 96}" height="${(r.pence / max) * 96}" rx="2" fill="${r.start <= now && now < r.end ? '#fff' : r.pence <= e.cheapest + 0.01 ? '#4FD08A' : '#8C9CFF'}"/>`).join('')}</svg>
-      <p class="sub">Today and tomorrow, once Octopus has published it. White is now; green is the cheapest.</p></article>`;
-  }
-  el.innerHTML = `<div class="stack"><div class="grid">
-    ${card('Electricity now', p(e.rate), [cheap, e.demand != null ? `${Math.round(e.demand)} W` : ''].filter(Boolean).join(' · '), '#6A4B12')}
-    ${card('Electricity today', pound(e.today), e.todayKwh != null ? `${e.todayKwh.toFixed(1)} kWh` : '', '#6A4B12')}
-    ${card('Electricity yesterday', pound(e.yesterday), e.yesterdayKwh != null ? `${e.yesterdayKwh.toFixed(1)} kWh` : '', '#6A4B12')}
-    ${e.gasRate != null || e.gasToday != null ? card('Gas', pound(e.gasToday), `Yesterday ${pound(e.gasYesterday)}${e.gasRate != null ? ` · ${p(e.gasRate)}/kWh` : ''}`, '#1F5C3A') : ''}
-    ${e.points != null ? card('Octoplus points', String(Math.round(e.points)), '', '#1E4A6B') : ''}</div>${chart}</div>`;
+  const worst = items.some((d) => d.level === BAD) ? 'bad' : items.some((d) => d.level === WARN) ? 'warn' : 'ok';
+  const box = panel(ctx, { title: 'Device health', icon: 'cd:device-health', color: worst, summary: healthSummary(items) });
+  box.querySelector('.panel-body').innerHTML = items.length ? `<div class="grid tight">${items.map(row).join('')}</div>` : '<p class="note">Everything is reporting in.</p>';
+  el.replaceChildren(box); fillIcons(el);
 }
 
 const activityState = { day: 'today', time: 'all', action: 'all', who: '' };
@@ -188,9 +174,9 @@ async function renderActivity(el, ctx) {
     r.lines.forEach((l) => { const k = dayLabel(l.ts); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(l); });
     out.querySelector('.more')?.remove();
     if (!r.lines.length && shown === 0) { out.innerHTML = '<p class="note">Nothing matches.</p>'; return; }
-    out.insertAdjacentHTML('beforeend', [...groups].map(([day, lines]) => `<section class="stack" style="gap:8px"><div class="head"><h2>${esc(day)}</h2></div>${lines.map((l) => {
+    out.insertAdjacentHTML('beforeend', [...groups].map(([day, lines]) => `<section class="stack" style="gap:8px"><div class="head"><h2 class="day-head">${esc(day)}</h2></div>${lines.map((l) => {
       const note = activityNote(l, r.assistant);
-      return `<article class="card line compact" style="${glowStyle(l.kind === 'overruled' ? '#6B1E24' : l.kind.startsWith('clive') ? '#2C2A6B' : '#1E3A4B')}"><span class="when">${esc(clock(l.ts))}</span><div><p class="title" style="margin:0"><b>${esc(activityWho(l, r.assistant))}</b> ${esc(l.text)}</p>${note ? `<p class="sub">${esc(note)}</p>` : ''}</div></article>`;
+      return `<article class="card line compact" style="${glowStyle(l.kind === 'overruled' ? 'bad' : l.kind.startsWith('clive') ? 'tasks' : 'neutral')}"><span class="when">${esc(clock(l.ts))}</span><div><p class="title" style="margin:0"><b>${esc(activityWho(l, r.assistant))}</b> ${esc(l.text)}</p>${note ? `<p class="sub">${esc(note)}</p>` : ''}</div></article>`;
     }).join('')}</section>`).join(''));
     if (shown < r.total) {
       out.insertAdjacentHTML('beforeend', `<button class="btn quiet more" type="button">Show more (${shown} of ${r.total})</button>`);
@@ -243,6 +229,7 @@ function show() {
   root.querySelectorAll('[data-page]').forEach((b) => (b.dataset.page === page.id ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current')));
   const arg = location.hash.slice(1).split('/').slice(1).join('/');
   if (arg && page.id === 'manager') document.getElementById('title').textContent = decodeURIComponent(arg);
+  cleanup(ctx);
   return page.render(document.getElementById('page'), ctx, arg);
 }
 window.addEventListener('hashchange', () => { if (ctx) show(); });
@@ -374,6 +361,7 @@ async function start() {
     return showSignIn(`${user.name || 'That account'} is not an administrator in Home Assistant, so the Manager has nothing to show. Sign in with an administrator's login.`);
   }
   ctx = { ha, user, house: houseAddress() };
+  try { await loadStyle(ctx); setTones(ctx.style.colours); } catch { /* the pages fall back to the neutral palette */ }
   keepConnected();
   online = true;
   status.connected(link.facts);

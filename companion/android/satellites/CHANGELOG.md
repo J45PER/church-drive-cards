@@ -1,6 +1,6 @@
 # Church Drive Satellites: changelog
 
-## 0.136.0
+## 0.139.0
 
 - The status pill and its colour cloud now widen and narrow together: the cloud used to jump to the final width at once, so it shrank before the pill did.
 - The status pill closes by running its opening backwards: the words go, it narrows back into the circle, then the circle shrinks, rises and fades away.
@@ -8,6 +8,18 @@
 - The status pill uses the house's own icons from the Clive set (cd:wifi-off, cd:update-arrow, cd:check) and Clive's mark, not drawn shapes or Material ones.
 - The apps read the whole house again by themselves so nothing stays stale: coming back after a minute or more away (with the Updating pill), and every five minutes while open (quietly: the pill only shows if it found something that had gone stale).
 - Pulling down no longer fights the page's collapsing title bar: the title bar opens first, and the pull only starts once it is fully open.
+
+## 0.138.0
+
+- No change you will notice (the Manager website was restyled to match the apps).
+
+## 0.137.0
+
+- No change (shared code gained the TVs and speakers card, used by Clive Admin).
+
+## 0.136.0
+
+- No change (shared code gained the Manager's Who's home, Watch settings and Device health cards, used by Clive Admin).
 
 ## 0.135.0
 

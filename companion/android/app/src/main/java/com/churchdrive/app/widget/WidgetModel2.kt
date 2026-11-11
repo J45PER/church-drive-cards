@@ -405,8 +405,8 @@ object SceneButtons {
         allRooms(layout).forEach { room ->
             val roomName = WidgetModel.roomName(room, emptyMap(), entities)
             room.scenes.forEach { s ->
-                val tile = if (s.haScene != null) WidgetTile("mdi:lightbulb-group", s.name, false, "scene", "turn_on", s.haScene)
-                else WidgetTile("mdi:lightbulb-group", s.name, false, "church_drive", "apply_scene", s.target, JSONObject().put("scene", s.key).toString())
+                val tile = s.haScene?.let { WidgetTile("mdi:lightbulb-group", s.name, false, "scene", "turn_on", it) }
+                    ?: WidgetTile("mdi:lightbulb-group", s.name, false, "church_drive", "apply_scene", s.target, JSONObject().put("scene", s.key).toString())
                 add(SceneButton("room:${room.head}:${s.key}", roomName, "$roomName · ${s.name}", s.key, tile.copy(label = s.name)))
             }
         }

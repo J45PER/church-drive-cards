@@ -30,8 +30,16 @@ export function glowColour(ground, shift) {
   return hsvToHex((h + shift + 360) % 360, Math.min(0.9, Math.max(0.55, s)), 0.9);
 }
 
+let tones = null;
+/** Gives the glow the house's palettes: [lookup] turns a palette key or HA colour name into [Colour, Dark, Accent, Light, Deep]. */
+export function setTones(lookup) { tones = lookup; }
+
 /** CSS custom properties for a card on [ground]: its two glow colours (or none, so the card stays plain). */
 export function glowStyle(ground) {
+  if (ground && !String(ground).startsWith('#') && tones) {
+    const [c, d, a] = tones(ground);
+    return ground === 'neutral' || ground === 'unavailable' ? `--ground:${d};` : `--ground:${d};--ga:${c};--gb:${a};`;
+  }
   const a = glowColour(ground, 0), b = glowColour(ground, 28);
   return a && b ? `--ground:${ground};--ga:${a};--gb:${b};` : `--ground:${ground};`;
 }

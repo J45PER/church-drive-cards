@@ -64,14 +64,6 @@ fun ClimateRoomCard(cardConfig: JSONObject, entities: Map<String, EntityState>, 
     )
 }
 
-/** A row of choices that scrolls sideways when there are many. */
-@Composable
-fun OptionRow(options: List<String>, selected: String?, tone: ToneColors, enabled: Boolean = true, onPick: (String) -> Unit) {
-    Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        options.forEach { o -> ChoiceButton(presetLabel(o), selected == o, tone, tone.onContainer, Modifier, enabled) { onPick(o) } }
-    }
-}
-
 /** The dashboard's `custom:climate-zone-card`: a floor's rooms, each with its temperature (coloured by comfort) and humidity. */
 @Composable
 fun ClimateZoneCard(config: JSONObject, entities: Map<String, EntityState>, call: CallService) {

@@ -1,6 +1,6 @@
 # Clive Admin: changelog
 
-## 0.136.0
+## 0.139.0
 
 - The status pill and its colour cloud now widen and narrow together: the cloud used to jump to the final width at once, so it shrank before the pill did.
 - The status pill closes by running its opening backwards: the words go, it narrows back into the circle, then the circle shrinks, rises and fades away.
@@ -8,6 +8,19 @@
 - The status pill uses the house's own icons from the Clive set (cd:wifi-off, cd:update-arrow, cd:check) and Clive's mark, not drawn shapes or Material ones.
 - The apps read the whole house again by themselves so nothing stays stale: coming back after a minute or more away (with the Updating pill), and every five minutes while open (quietly: the pill only shows if it found something that had gone stale).
 - Pulling down no longer fights the page's collapsing title bar: the title bar opens first, and the pull only starts once it is fully open.
+
+## 0.138.0
+
+- No change you will notice (the Manager website was restyled to match the apps).
+
+## 0.137.0
+
+- Devices: a new page on the bottom bar (and a card on Home) with the TVs and speakers (power, play and pause, volume, the remote) and how the house's systems are (internet, remote access, backups, updates), as in the Church Drive app.
+- The Manager no longer lists People, Locations or Icons: People stays on the Manager website, and Locations and Icons are not needed in the app for now.
+
+## 0.136.0
+
+- Manager: Who's home, Watch settings and the Device health list are in Clive Admin now. The sections it still cannot draw (People, Alarm lights, the automatic to-dos) say they are on the Manager website and tapping opens it.
 
 ## 0.135.0
 
