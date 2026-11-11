@@ -1,5 +1,6 @@
 package com.churchdrive.app.ui
 
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
@@ -61,7 +62,13 @@ object FoldStore {
 
 /** Whether a grid card is folded, kept by [key] while the app is open (by default open, or folded when [folded] is true the first time). */
 @Composable
-fun rememberFold(key: String, folded: Boolean = false): androidx.compose.runtime.MutableState<Boolean> = androidx.compose.runtime.remember(key) { FoldStore.states.getOrPut(key) { mutableStateOf(folded) } }
+fun rememberFold(key: String, folded: Boolean = false): androidx.compose.runtime.MutableState<Boolean> {
+    // Also kept on the phone, so it is still as you left it after the app has been closed.
+    val prefs = androidx.compose.ui.platform.LocalContext.current.getSharedPreferences("church_drive_folds", android.content.Context.MODE_PRIVATE)
+    val state = androidx.compose.runtime.remember(key) { FoldStore.states.getOrPut(key) { mutableStateOf(prefs.getBoolean(key, folded)) } }
+    androidx.compose.runtime.LaunchedEffect(key, state.value) { prefs.edit().putBoolean(key, state.value).apply() }
+    return state
+}
 
 /**
  * A card on the grid. [rows] is its height in rows. The title sits on row 1 with the top of its lowercase letters on the middle of the
@@ -83,8 +90,10 @@ fun GridCard(
 ) {
     val openDevice = LocalOpenDevice.current
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    // On a tablet or a phone on its side the card keeps a phone's width, centred, so the grid keeps its proportions.
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
     Card(
-        modifier = modifier.fillMaxWidth().then(
+        modifier = modifier.widthIn(max = 520.dp).fillMaxWidth().then(
             if (deviceEntity == null) Modifier
             else Modifier.androidxLongPress {
                 haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
@@ -123,6 +132,7 @@ fun GridCard(
                 }
             }
         }
+    }
     }
 }
 
@@ -217,7 +227,7 @@ fun GridRing(sizeCells: Float, cell: Dp, fraction: Float, ring: Color, content: 
  */
 @Composable
 fun GridScope.RingHead(icon: String, fraction: Float, accent: Color, ink: Color, line1: String, line2: String, fig: String? = null, figSub: String? = null) {
-    Box(Modifier.atCentre(1.25f, 2f, 1.5f, 1.5f), contentAlignment = Alignment.Center) { GridRing(1.5f, cell, fraction, accent) { HaIcon(icon, CdVectors.Info, accent, 30.dp) } }
+    Box(Modifier.atCentre(1.25f, 2f, 1.5f, 1.5f), contentAlignment = Alignment.Center) { GridRing(1.5f, cell, fraction, accent) { HaIcon(icon, CdVectors.Info, accent, 38.dp) } }
     androidx.compose.foundation.layout.Column(Modifier.at(2.5f, 1f, if (fig != null) 3f else 5f, 2f), verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center) {
         Text(line1, style = MaterialTheme.typography.titleMedium, color = ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (line2.isNotBlank()) Text(line2, style = MaterialTheme.typography.bodyMedium, color = ink.copy(alpha = 0.85f), maxLines = 2)

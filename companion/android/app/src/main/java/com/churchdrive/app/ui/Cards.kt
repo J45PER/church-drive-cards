@@ -463,7 +463,7 @@ fun AlarmCard(alarm: EntityState?, call: CallService, entityId: String = ALARM_E
         // Folded: two and a half rows. One band on the middle of row 2: a one cell ring, who and when over two lines from the line between
         // columns B and C, and the modes as small buttons centred on the column lines at the right.
         GridCard(container, content, 2.5f, titleText, deviceEntity = entityId, fold = fold) {
-            Box(Modifier.atCentre(1f, 1.5f, 1f, 1f), contentAlignment = Alignment.Center) { Ring(1f, cell, 20.dp) }
+            Box(Modifier.atCentre(1f, 1.5f, 1f, 1f), contentAlignment = Alignment.Center) { Ring(1f, cell, 26.dp) }
             val firstBtn = 8f - modes.size
             Column(Modifier.at(2f, 0.9f, firstBtn - 2f - 0.5f, 1.2f), verticalArrangement = Arrangement.Center) {
                 val one = line1.ifEmpty { alarmLabel(state) }
@@ -480,7 +480,7 @@ fun AlarmCard(alarm: EntityState?, call: CallService, entityId: String = ALARM_E
     val rows = 5f + if (people.isEmpty()) 0f else Math.ceil((0.5f + 0.75f * people.size) * 2.0).toFloat() / 2f
     GridCard(container, content, rows, titleText, deviceEntity = entityId, fold = fold) {
         // The ring: 1.5 cells across, from the half line of column A, centred on the line between rows 2 and 3.
-        Box(Modifier.atCentre(1.25f, 2f, 1.5f, 1.5f), contentAlignment = Alignment.Center) { Ring(1.5f, cell, 30.dp) }
+        Box(Modifier.atCentre(1.25f, 2f, 1.5f, 1.5f), contentAlignment = Alignment.Center) { Ring(1.5f, cell, 40.dp) }
         // Who and when from the centre of column C, centred on the same line.
         Column(Modifier.at(2.5f, 1f, if (inDelay) 3f else 5f, 2f), verticalArrangement = Arrangement.Center) {
             if (line1.isNotEmpty()) Text(line1, style = MaterialTheme.typography.titleMedium, color = ink)

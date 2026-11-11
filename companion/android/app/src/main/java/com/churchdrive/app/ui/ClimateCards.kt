@@ -120,7 +120,7 @@ fun ClimateZoneCard(config: JSONObject, entities: Map<String, EntityState>, call
             }
             if (open) {
                 // The same graph as the thermostat cards: the comfort band for the room, the humidity limits, smoothed.
-                Box(Modifier.at(0.5f, y + 1.5f, 7f, 2f).clip(RoundedCornerShape(18.dp))) {
+                Box(Modifier.at(0.5f, y + 1.5f, 7f, 2f)) {
                     androidx.compose.runtime.CompositionLocalProvider(LocalGraphFill provides true) {
                         RoomGraph(r.optString("temperature"), r.optString("humidity").takeIf { it.isNotBlank() }, r.optString("type"), ink, tone.accent, low, high)
                     }
@@ -149,7 +149,7 @@ fun FanCard(config: JSONObject, entities: Map<String, EntityState>, call: CallSe
     val canOscillate = fan?.str("oscillating") != null || ((fan?.num("supported_features")?.toInt() ?: 0) and 2) == 2
     // Icons first: the fan with its speed number, and the fan crossed out for Off, no words.
     val speedItems = buildList {
-        add(TileItem("mdi:fan-off", "Off", !on, false) { call("fan", "turn_off", id, data()) })
+        add(TileItem(IconMap.of("fan", "off", "mdi:power"), "Off", !on, false) { call("fan", "turn_off", id, data()) })
         speeds.forEachIndexed { i, sp ->
             add(TileItem(if (speeds.size <= 3) "mdi:fan-speed-${sp.n}" else fanSpeedIcon(i, speeds.size), "Speed ${sp.n}", current === sp, false) {
                 if (sp.preset != null) call("fan", "set_preset_mode", id, data("preset_mode" to sp.preset))
@@ -236,7 +236,7 @@ fun AirPurifierCard(config: JSONObject, entities: Map<String, EntityState>, call
     val total = if (filterRows.isEmpty()) filtersY else Math.ceil(((filtersY + filterRows.size * 0.75f + 0.5f) * 2f).toDouble()).toFloat() / 2f
     GridCard(tone.container, ink, total, name, deviceEntity = id, fold = fold) {
         RingHead("mdi:air-purifier", if (pm == null) 1f else (1f - (pm.toFloat() / 135f)).coerceIn(0.1f, 1f), tone.accent, ink, status, listOfNotNull(pm?.let { "PM2.5 · ${pmWord(it)}" }, allergen?.let { "Allergen ${it.roundToInt()}" }).joinToString(" · "), pm?.let { "${it.roundToInt()}" })
-        if (showGraph) Box(Modifier.at(0.5f, graphY, 7f, 2f).clip(RoundedCornerShape(18.dp))) {
+        if (showGraph) Box(Modifier.at(0.5f, graphY, 7f, 2f)) {
             androidx.compose.runtime.CompositionLocalProvider(LocalGraphFill provides true) { SensorGraph(
                 config.optString("pm25_entity"), 24, " µg/m³", tone.accent, tone.onContainer, config.optBoolean("smooth_graphs", true),
                 // Coloured by value, as on the dashboard: each band's colour in the middle of its band, blending into the next.
