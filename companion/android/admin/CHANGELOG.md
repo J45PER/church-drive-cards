@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.143.0
+
+- No change you will notice (notification defaults in the Home Assistant integration).
+
 ## 0.142.0
 
 - No change you will notice (Home Assistant 2026.11 fixes in the integration and cards).

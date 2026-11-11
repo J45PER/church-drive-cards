@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.143.0
+
+- No change you will notice (notification defaults in the Home Assistant integration).
+
 ## 0.142.0
 
 - No change you will notice (Home Assistant 2026.11 fixes in the integration and cards).

@@ -656,15 +656,22 @@ class People:
 
     @callback
     def _energy_off_by_default(self) -> None:
-        """Once: the price notifications (cheap rate, yesterday's cost) used to start on for everyone; now they
-        start on for Jame only. Existing houses are moved over once (anything ticked afterwards in Manager is
-        left alone). Power-down sessions are not about price, so they are left as they were."""
-        if self._data.get("energy_off_default"):
-            return
-        for kind in self._catalogue():
-            if kind["key"] in ("cheap_rate", "energy_cost"):
-                self._data["assign"][kind["key"]] = self._default(kind)
-        self._data["energy_off_default"] = True
+        """Once: yesterday's energy cost used to start on for administrators; now it starts on for Jame only.
+        Existing houses are moved over once (anything ticked afterwards in Manager is left alone). Cheap rate and
+        power-down sessions are left as they were."""
+        if not self._data.get("energy_off_default"):
+            for kind in self._catalogue():
+                if kind["key"] == "energy_cost":
+                    self._data["assign"][kind["key"]] = self._default(kind)
+            self._data["energy_off_default"] = True
+        # 0.141.0 and 0.142.0 also moved "Cheap rate started" to Jame only; put it back to everyone, once, unless
+        # someone has chosen otherwise since (it is only changed while it is still exactly that default).
+        if not self._data.get("cheap_rate_back_on"):
+            jame = self._default({"default": "jame"})
+            current = self._data["assign"].get("cheap_rate") or {}
+            if not current.get("all") and sorted(current.get("people", [])) == sorted(jame["people"]):
+                self._data["assign"]["cheap_rate"] = {"all": True, "people": []}
+            self._data["cheap_rate_back_on"] = True
 
     @callback
     def _seed(self) -> None:
