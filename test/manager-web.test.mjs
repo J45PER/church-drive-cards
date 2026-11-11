@@ -159,3 +159,17 @@ test('a change is described in a line', () => {
   assert.match(describe({ mode: 'replace', palettes: {} }), /past version/);
   assert.match(describe({ mode: 'reset', keys: ['a'] }), /Put back a/);
 });
+
+import { compareVersions, parseVersion, summary as versionSummary, testBuilds, versionRows } from '../web/manager/pages/versions.js';
+
+test('versions compare as numbers, and the rows say who is behind or ahead of the website', () => {
+  assert.deepEqual(parseVersion('v0.133.0'), [0, 133, 0]); assert.equal(parseVersion('nothing'), null);
+  assert.equal(compareVersions('0.99.0', '0.133.0'), -1); assert.equal(compareVersions('0.133.0', '0.133.0'), 0); assert.equal(compareVersions('1.0.0', '0.133.9'), 1);
+  const builds = testBuilds([{ tag_name: 'admin-latest', name: 'Clive Admin 0.132.0 (test build 880)' }, { tag_name: 'todo-latest', name: 'Church Drive To-Do 0.133.0 (test build 12)' }]);
+  assert.deepEqual(builds[3], { name: 'Clive Admin app', version: '0.132.0', build: '880' }); assert.equal(builds[0].version, null);
+  const rows = versionRows({ site: '0.133.0', integration: '0.133.0', release: '0.133.0', builds });
+  assert.deepEqual(rows.map((r) => r.status), ['same', 'same', 'same', 'unknown', 'same', 'unknown', 'behind']);
+  assert.match(versionSummary(rows).text, /Clive Admin app is behind \(0\.132\.0\)/);
+  const same = versionRows({ site: '0.133.0', integration: '0.133.0', release: '0.133.0', builds: builds.map((b) => ({ ...b, version: '0.133.0' })) });
+  assert.deepEqual(versionSummary(same), { tone: 'ok', text: 'Everything is on 0.133.0.' });
+});

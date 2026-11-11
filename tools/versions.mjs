@@ -18,12 +18,15 @@ const PROPS = [
   ['Clive Admin app', 'companion/android/admin/version.properties'],
 ];
 const MANIFEST = 'custom_components/church_drive/manifest.json';
+// The Clive Manager website shows its own version on its Home page (so it can be compared with the apps and Home Assistant).
+const SITE = 'web/manager/version.json';
 const SEMVER = /^\d+\.\d+\.\d+$/;
 
 const propVersion = (file) => (readFileSync(file, 'utf8').match(/^version=(.*)$/m) || [])[1]?.trim();
 const found = () => [
   ['Home Assistant integration (package.json)', JSON.parse(readFileSync('package.json', 'utf8')).version],
   ['Integration manifest', JSON.parse(readFileSync(MANIFEST, 'utf8')).version],
+  ['Clive Manager website (version.json)', JSON.parse(readFileSync(SITE, 'utf8')).version],
   ...PROPS.map(([name, file]) => [name, propVersion(file)]),
 ];
 
@@ -36,6 +39,7 @@ if (cmd === 'set') {
   const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
   pkg.version = arg;
   writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+  writeFileSync(SITE, JSON.stringify({ version: arg }) + '\n');
   for (const [, file] of PROPS) {
     writeFileSync(file, readFileSync(file, 'utf8').replace(/^version=.*$/m, `version=${arg}`));
   }

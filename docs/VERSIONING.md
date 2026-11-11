@@ -5,7 +5,7 @@ The Home Assistant integration and its cards bundle, the phone app (and the watc
 ## Changing it
 
 ```bash
-node tools/versions.mjs            # shows every version and fails if they differ (CI runs this)
+node tools/versions.mjs            # shows every version (including the website's web/manager/version.json) and fails if they differ (CI runs this)
 node tools/versions.mjs set 0.81.0 # sets them all, then rebuilds the bundles so the manifest and cards bundle follow
 ```
 
