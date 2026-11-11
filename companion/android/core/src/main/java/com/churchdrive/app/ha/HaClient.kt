@@ -39,6 +39,14 @@ class HaClient(private val scope: CoroutineScope) {
     private val _userName = MutableStateFlow<String?>(null)
     val userName: StateFlow<String?> = _userName
     private val _refreshing = MutableStateFlow(false)
+
+    /** When every state was last read in full (the line's first answer, or a refresh), in milliseconds; 0 until then and while a new line loads. */
+    @Volatile var lastSyncAt = 0L
+        private set
+
+    /** Whether the last [refreshStates] found anything different from what the live events had left, which is a sign something went stale. */
+    @Volatile var lastRefreshChanged = false
+        private set
     private val _restarting = MutableStateFlow(false)
 
     /**
@@ -160,6 +168,7 @@ class HaClient(private val scope: CoroutineScope) {
         _userName.value = null
         _isAdmin.value = false
         _statesLoaded.value = false
+        lastSyncAt = 0L
         _restarting.value = false
     }
 
@@ -210,17 +219,27 @@ class HaClient(private val scope: CoroutineScope) {
      * Pull down to refresh: asks for every state again (which also proves the line is alive).
      * [onDone] is false when nothing answered, so the caller should connect afresh.
      */
-    fun refreshStates(onDone: (Boolean) -> Unit = {}) {
+    fun refreshStates(quiet: Boolean = false, onDone: (Boolean) -> Unit = {}) {
         if (light) { refreshUser(onDone); return }
         if (!authed) { onDone(false); return }
-        _refreshing.value = true
+        // A quiet read (the five-minute check) shows no pill unless it finds that something had gone stale.
+        if (!quiet) _refreshing.value = true
         request("get_states", timeoutMs = 8_000L) { result ->
-            _refreshing.value = false
             val states = result as? JSONArray
+            var changed = false
             if (states != null) {
-                _entities.value = parseStates(states)
+                val fresh = parseStates(states)
+                changed = statesDiffer(_entities.value, fresh)
+                _entities.value = fresh
                 _statesLoaded.value = true
+                lastSyncAt = System.currentTimeMillis()
             }
+            lastRefreshChanged = changed
+            if (quiet && changed) {
+                // It found something stale and put it right: show the pill for a moment so that can be seen.
+                _refreshing.value = true
+                scope.launch { delay(900L); _refreshing.value = false }
+            } else _refreshing.value = false
             onDone(states != null)
         }
     }
@@ -299,6 +318,7 @@ class HaClient(private val scope: CoroutineScope) {
                     lost.forEach { it(null) }
                     subscriptions.clear()
                     colourRevision = null
+                    lastSyncAt = 0L
                     _statesLoaded.value = false
                     _connection.value = ConnectionState.Connected
                     if (light) return
@@ -333,6 +353,7 @@ class HaClient(private val scope: CoroutineScope) {
                         getStatesId -> {
                             _entities.value = parseStates(msg.getJSONArray("result"))
                             _statesLoaded.value = true
+                            lastSyncAt = System.currentTimeMillis()
                             _restarting.value = false
                             noteColours(_entities.value[COLOURS_ENTITY]?.state)
                         }

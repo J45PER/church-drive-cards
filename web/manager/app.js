@@ -3,6 +3,7 @@
 import { DEFAULT_HA, HaSocket, cleanAddress, finishSignIn, houseAddress, signOut, signedIn, startSignIn } from './ha.js';
 import { glowStyle, inkOn } from './glow.js';
 import { attachPull, createStatus } from './status.js';
+import { TICK_MS, dueOnReturn, duePeriodic, editing, idle } from './freshness.js';
 import { fillIcons, icon, loadIcons } from './icons.js';
 import { renderChanges } from './pages/changes.js';
 import { readVersions, summary as versionSummary } from './pages/versions.js';
@@ -39,16 +40,17 @@ function showSignIn(message) {
 }
 
 // ---- The pages ----
+// A page marked `live` only shows things, so it is read again by itself now and then (see freshness.js); the editors are never redrawn under someone.
 
 const PAGES = [
-  { id: 'home', title: 'Clive Manager', label: 'Home', icon: 'cd:home', render: renderHome },
+  { id: 'home', title: 'Clive Manager', label: 'Home', icon: 'cd:home', render: renderHome, live: true },
   { id: 'colours', title: 'Colour palettes', label: 'Colours', icon: 'cd:palette', render: renderColours },
   { id: 'design', title: 'Design', label: 'Design', icon: 'cd:view-dashboard', render: renderDesign },
   { id: 'changes', title: 'Changes', label: 'Changes', icon: 'cd:checklist', render: (el, c) => renderChanges(el, c, { glowStyle }) },
   { id: 'manager', title: 'Manager', label: 'Manager', icon: 'cd:sliders', render: (el, c, arg) => (arg ? renderManagerSection(el, c, { glowStyle, go }, decodeURIComponent(arg)) : renderManager(el, c, { glowStyle, go })) },
-  { id: 'health', title: 'Device health', label: 'Health', icon: 'cd:device-health', render: renderHealth },
-  { id: 'energy', title: 'Energy', label: 'Energy', icon: 'cd:bolt', render: renderEnergy },
-  { id: 'activity', title: 'Activity log', label: 'Activity', icon: 'cd:history', render: renderActivity },
+  { id: 'health', title: 'Device health', label: 'Health', icon: 'cd:device-health', render: renderHealth, live: true },
+  { id: 'energy', title: 'Energy', label: 'Energy', icon: 'cd:bolt', render: renderEnergy, live: true },
+  { id: 'activity', title: 'Activity log', label: 'Activity', icon: 'cd:history', render: renderActivity, live: true },
 ];
 
 function renderHome(el, ctx) {
@@ -235,6 +237,7 @@ function showShell(user) {
 /** Draws the current page; gives back the page's own promise when it has one (so the status banner can say Updating until it is in). */
 function show() {
   const page = currentPage();
+  loadedAt = Date.now();
   document.getElementById('title').textContent = page.title;
   document.title = page.id === 'home' ? 'Clive Manager' : `${page.title} · Clive Manager`;
   root.querySelectorAll('[data-page]').forEach((b) => (b.dataset.page === page.id ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current')));
@@ -288,14 +291,34 @@ async function reloadPage() {
   status.loaded();
 }
 
+let loadedAt = Date.now(), hiddenAt = 0, lastTouched = Date.now(), busy = false;
+
 /** Pull down (or Try now while offline): reload the current page, or hurry the reconnect. */
 async function refreshNow() {
   if (!ctx) return;
   if (!online) { retryNow(); return; }
+  if (busy) return;
+  busy = true;
   status.refreshing();
   try { await show(); } catch { /* the page shows its own error */ }
   status.refreshed();
+  busy = false;
 }
+
+/** Reads a page that only shows things again, with the Updating pill, keeping the scroll place; never under someone typing or with a dialog open. */
+async function autoRefresh() {
+  if (!ctx || !online || busy || document.hidden || !currentPage().live || editing()) return;
+  const y = scrollY;
+  await refreshNow();
+  scrollTo(0, y);
+}
+for (const ev of ['pointerdown', 'keydown', 'scroll', 'touchstart']) addEventListener(ev, () => { lastTouched = Date.now(); }, { passive: true });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { hiddenAt = Date.now(); return; }
+  const away = hiddenAt; hiddenAt = 0;
+  if (dueOnReturn(Date.now(), away)) autoRefresh();
+});
+setInterval(() => { const now = Date.now(); if (duePeriodic(now, loadedAt) && idle(now, lastTouched)) autoRefresh(); }, TICK_MS);
 
 /** Home Assistant is up but still starting its integrations: say so until it is running, then load the page. */
 async function waitForRunning() {

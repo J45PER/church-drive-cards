@@ -107,6 +107,12 @@ class MainActivity : ComponentActivity() {
         showInbox = true
     }
 
+    override fun onStop() {
+        super.onStop()
+        // When it went away, so coming back after a minute or more reads the house again.
+        vm.onBackground()
+    }
+
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         setIntent(intent)

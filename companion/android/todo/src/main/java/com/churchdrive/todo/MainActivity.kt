@@ -88,4 +88,10 @@ class MainActivity : ComponentActivity() {
         super.onStart()
         vm.onForeground()
     }
+
+    override fun onStop() {
+        super.onStop()
+        // When it went away, so coming back after a minute or more reads the house again.
+        vm.onBackground()
+    }
 }

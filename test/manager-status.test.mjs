@@ -92,3 +92,29 @@ test('the easing is Material\'s, and a spring settles without overshooting', () 
   const b = new Anim(0); b.set(10, { dur: 200 }, 0);
   assert.equal(b.get(0), 0); assert.equal(b.get(200), 10); assert.equal(b.get(999), 10);
 });
+
+import { AWAY_MS, IDLE_MS, LIVE_EVERY_MS, dueOnReturn, duePeriodic, editing, idle } from '../web/manager/freshness.js';
+
+test('back to the tab after a minute away reads the page again', () => {
+  assert.equal(dueOnReturn(500_000, 0), false);                       // was never hidden
+  assert.equal(dueOnReturn(500_000, 500_000 - AWAY_MS + 1), false);
+  assert.equal(dueOnReturn(500_000, 500_000 - AWAY_MS), true);
+});
+
+test('an open page is read again every five minutes, and only when left alone', () => {
+  assert.equal(duePeriodic(1_000_000, 1_000_000 - LIVE_EVERY_MS + 1), false);
+  assert.equal(duePeriodic(1_000_000, 1_000_000 - LIVE_EVERY_MS), true);
+  assert.equal(duePeriodic(1_000_000, 0), false);
+  assert.equal(idle(100_000, 100_000 - IDLE_MS + 1), false);
+  assert.equal(idle(100_000, 100_000 - IDLE_MS), true);
+});
+
+test('a field with focus or an open dialog is never redrawn under someone', () => {
+  const doc = (tag, dialog) => ({ activeElement: tag ? { tagName: tag } : null, querySelector: () => (dialog ? {} : null) });
+  assert.equal(editing(doc('INPUT')), true);
+  assert.equal(editing(doc('SELECT')), true);
+  assert.equal(editing(doc('TEXTAREA')), true);
+  assert.equal(editing(doc('BODY')), false);
+  assert.equal(editing(doc(null, true)), true);
+  assert.equal(editing(doc(null, false)), false);
+});
