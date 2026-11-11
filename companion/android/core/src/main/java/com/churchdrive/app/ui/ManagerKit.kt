@@ -24,6 +24,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -582,3 +584,5 @@ fun TileRow(items: List<TileItem>, tone: ToneColors, content: Color, enabled: Bo
 fun presetLabel(value: String): String = value.replace('_', ' ').trim().replaceFirstChar { it.uppercase() }
 
 /** The comfortable range of a room by its type, in °C, as on the dashboard's Climate panel. */
+
+private fun JSONArray?.objects(): List<JSONObject> = (0 until (this?.length() ?: 0)).mapNotNull { this?.optJSONObject(it) }
