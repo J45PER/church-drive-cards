@@ -31,6 +31,14 @@ class ManagerSectionsTest {
         assertFalse(ManagerSections.builtHere(ManagerSection("People", null, null, listOf(ManagerCard("custom:people-manager-card", JSONObject())))))
     }
 
+    @Test fun leavesOutPeopleLocationsAndIconsOnPurpose() {
+        val keep = ManagerSection("Notifications", null, null, listOf(ManagerCard("custom:notifications-card", JSONObject())))
+        val people = ManagerSection("People", null, null, listOf(ManagerCard("custom:people-manager-card", JSONObject())))
+        val locations = ManagerSection("Locations", null, null, listOf(ManagerCard("custom:zone-map-card", JSONObject())))
+        val icons = ManagerSection("Icons", null, null, listOf(ManagerCard("custom:icon-styles-card", JSONObject())))
+        assertEquals(listOf("Notifications"), ManagerSections.forAdmin(listOf(people, keep, locations, icons)).map { it.title })
+    }
+
     @Test fun anEmptyDashboardHasNoSections() {
         assertTrue(ManagerSections.parse(JSONObject("{}")).isEmpty())
     }

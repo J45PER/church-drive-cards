@@ -154,6 +154,13 @@ Start with the colour and card pages because they drive the live data.
 - **Sign-in:** `HaAuth.kt` (login flow, tokens, refresh) in `core`.
 - **Design decisions made:** moving-glow style C everywhere; the glow runs on the mobile dashboard by default (a card's `glow: true/false` overrides); section cards carry the glow and the cards inside sit on dark acrylic; text is white on dark cards with colour kept for status pills, selected buttons, temperatures, alarm status and section titles; Off and Unavailable use the neutral set.
 
+## 8b. Decisions on what lives where (Jamie, 2026-11-11)
+
+- **People** stays web-only. **Locations** and **Icons** (mode icons) are not needed in Clive Admin for now (the phone app and the website keep them).
+- **Devices** (TVs and speakers, devices and services) goes in Clive Admin and on the website (0.137.0).
+- **Alarm lights** is web-only (the phone app never had it). **Watch settings** is in all three.
+- Still to decide: when Manager, Energy and Device health leave the phone app; whether the website's Energy page should match the app's; whether the Firestore mirror is still wanted.
+
 ## 9. Build order
 
 Tick these off as they are done.

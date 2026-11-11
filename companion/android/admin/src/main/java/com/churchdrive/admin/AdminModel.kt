@@ -54,6 +54,10 @@ class AdminModel(app: Application) : AndroidViewModel(app) {
     var energyHeader by mutableStateOf<org.json.JSONObject?>(null)
         private set
 
+    /** The Devices page as the house's dashboard lays it out (TVs and speakers, devices and services); null until read. */
+    var devicesPanels by mutableStateOf<List<ManagerSection>?>(null)
+        private set
+
     /** The house's address, for the cards that load pictures from it. */
     val baseUrl: String get() = session.url.orEmpty()
 
@@ -154,10 +158,13 @@ class AdminModel(app: Application) : AndroidViewModel(app) {
         client.request("lovelace/config", org.json.JSONObject().put("url_path", "dashboard-mobile")) { result ->
             val config = result as? org.json.JSONObject ?: return@request
             val views = config.optJSONArray("views") ?: return@request
-            val view = (0 until views.length()).mapNotNull { views.optJSONObject(it) }.firstOrNull { it.optString("path") == "energy" } ?: return@request
-            val panels = ManagerSections.parse(org.json.JSONObject().put("views", org.json.JSONArray().put(view)))
-            val header = ManagerSections.header(view)
-            viewModelScope.launch(Dispatchers.Main) { energyPanels = panels; energyHeader = header }
+            fun panelsOf(path: String) = (0 until views.length()).mapNotNull { views.optJSONObject(it) }.firstOrNull { it.optString("path") == path }
+            val energy = panelsOf("energy")
+            val devices = panelsOf("devices")
+            val energyParsed = energy?.let { ManagerSections.parse(org.json.JSONObject().put("views", org.json.JSONArray().put(it))) }
+            val header = energy?.let { ManagerSections.header(it) }
+            val devicesParsed = devices?.let { ManagerSections.parse(org.json.JSONObject().put("views", org.json.JSONArray().put(it))) }
+            viewModelScope.launch(Dispatchers.Main) { if (energyParsed != null) { energyPanels = energyParsed; energyHeader = header }; if (devicesParsed != null) devicesPanels = devicesParsed }
         }
         client.request("lovelace/config", org.json.JSONObject().put("url_path", "dashboard-manager")) { result ->
             val sections = (result as? org.json.JSONObject)?.let { ManagerSections.parse(it) } ?: return@request

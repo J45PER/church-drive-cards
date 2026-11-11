@@ -89,7 +89,7 @@ fun AdminPanel(panel: String?, onPanel: (String?) -> Unit, vm: AdminModel) {
                         "about" -> AboutPage { onPanel("account") }
                         "manager" -> PageColumn {
                             PanelTitle("Manager", { onPanel("account") })
-                            ManagerHub(vm.managerSections) { onPanel("manager:$it") }
+                            ManagerHub(ManagerSections.forAdmin(vm.managerSections)) { onPanel("manager:$it") }
                         }
                         "colours" -> PageColumn {
                             PanelTitle("Colour palettes", { onPanel("account") })
@@ -178,9 +178,9 @@ private fun AccountPage(vm: AdminModel, onClose: () -> Unit, onOpen: (String) ->
                 leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_church_drive), contentDescription = null) },
             )
         }
-        if (vm.managerSections.isNotEmpty()) PanelCard {
+        if (ManagerSections.forAdmin(vm.managerSections).isNotEmpty()) PanelCard {
             PanelRow(
-                CdVectors.Cog, "Manager", "${vm.managerSections.size} sections: people, cameras, notifications and more",
+                CdVectors.Cog, "Manager", "${ManagerSections.forAdmin(vm.managerSections).size} sections: notifications, cameras, the watch and more",
                 onClick = { onOpen("manager") }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_cog_solid), contentDescription = null) },
             )
         }

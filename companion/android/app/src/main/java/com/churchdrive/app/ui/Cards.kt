@@ -132,31 +132,6 @@ fun FoldGutter() {
     if (LocalCardFold.current != null) Spacer(Modifier.width(36.dp))
 }
 
-/** One of a row of mutually exclusive choices; the current one is filled in the tone's strong colour. */
-@Composable
-fun ChoiceButton(
-    label: String,
-    selected: Boolean,
-    tone: ToneColors,
-    content: Color,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    onClick: () -> Unit,
-) {
-    // The selected one is filled in the strong colour; the others are a faint wash of the text colour, like the tiles, not an outline.
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier,
-        contentPadding = PaddingValues(horizontal = 4.dp),
-        colors = if (selected) ButtonDefaults.buttonColors(containerColor = tone.accent, contentColor = tone.onAccent)
-        else ButtonDefaults.buttonColors(containerColor = content.copy(alpha = 0.10f), contentColor = content, disabledContainerColor = content.copy(alpha = 0.05f), disabledContentColor = content.copy(alpha = 0.4f)),
-        elevation = if (selected) ButtonDefaults.buttonElevation() else null,
-    ) { Text(label, maxLines = 1) }
-}
-
-// ---- Alarm ----
-
 const val ALARM_ENTITY = "alarm_control_panel.church_drive_alarm"
 
 private data class AlarmInfo(val label: String, val icon: String)

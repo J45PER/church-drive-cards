@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.137.0
+
+- No change (shared code gained the TVs and speakers card, used by Clive Admin).
+
 ## 0.136.0
 
 - No change (shared code gained the Manager's Who's home, Watch settings and Device health cards, used by Clive Admin).
