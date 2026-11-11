@@ -231,6 +231,18 @@ private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Pa
                 leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_todo), contentDescription = null) },
             )
         }
+        // Clive Admin, for administrators: the separate app for Manager, Energy, Device Health and the colours (opens its Play page until it is installed).
+        if (isAdmin) {
+            val context = androidx.compose.ui.platform.LocalContext.current
+            PanelCard {
+                PanelRow(
+                    CdVectors.Cog, "Open Clive Admin",
+                    if (com.churchdrive.app.AdminLink.installed(context)) "Manager, energy, device health and the colours" else "Get the app for Manager, energy, device health and the colours",
+                    onClick = { com.churchdrive.app.AdminLink.openOrStore(context) },
+                    leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_admin), contentDescription = null) },
+                )
+            }
+        }
         // Device Health, for everyone: batteries, filters and devices that stopped answering.
         PanelCard { PanelRow(CdVectors.BatteryCharging, "Device health", healthSummary.ifBlank { null }, onClick = onDeviceHealth) }
         // Administrator-only pages (Energy, Devices).

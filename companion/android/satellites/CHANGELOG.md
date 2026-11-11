@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.130.0
+
+- No change to this app: Clive Admin's new pages and the phone app's Open Clive Admin button are in the shared version.
+
 ## 0.129.0
 
 - No change to this app: the trusted list of Church Drive apps has Clive Admin's Play certificate, and the splash code has Clive Admin's logo, in the shared version.

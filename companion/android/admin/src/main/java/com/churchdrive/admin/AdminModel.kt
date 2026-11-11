@@ -12,8 +12,12 @@ import com.churchdrive.app.SharedLookup
 import com.churchdrive.app.freshToken
 import com.churchdrive.app.ha.ConnectionState
 import com.churchdrive.app.ha.HaAuth
+import com.churchdrive.app.ha.EntityState
 import com.churchdrive.app.ha.HaClient
 import com.churchdrive.app.ha.LoginStep
+import com.churchdrive.app.ha.Registry
+import com.churchdrive.app.ha.asApi
+import com.churchdrive.app.ui.HaApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -26,6 +30,17 @@ import kotlinx.coroutines.withContext
 class AdminModel(app: Application) : AndroidViewModel(app) {
     private val session = Session(app)
     private val client = HaClient(viewModelScope)
+
+    /** Plain access to Home Assistant's commands, for the pages that fetch their own data (the activity log). */
+    val api: HaApi = client.asApi()
+
+    /** What the house knows right now: every entity, the device registry and the area names (Device Health, Energy and the rest read these). */
+    var entities by mutableStateOf<Map<String, EntityState>>(emptyMap())
+        private set
+    var registry by mutableStateOf(Registry.Empty)
+        private set
+    var areaNames by mutableStateOf<Map<String, String>>(emptyMap())
+        private set
 
     var signedIn by mutableStateOf(session.signedIn)
         private set
@@ -70,6 +85,9 @@ class AdminModel(app: Application) : AndroidViewModel(app) {
             }
         }
         viewModelScope.launch { client.isAdmin.collect { isAdmin = it } }
+        viewModelScope.launch { client.entities.collect { entities = it } }
+        viewModelScope.launch { client.registry.collect { registry = it } }
+        viewModelScope.launch { client.areaNames.collect { areaNames = it } }
         viewModelScope.launch {
             var failures = 0
             client.connection.collect { state ->

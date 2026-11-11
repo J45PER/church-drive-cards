@@ -43,13 +43,6 @@ fun cameraFind(entities: Map<String, EntityState>, entity: String, snapshot: Str
     )
 }
 
-/** An ISO 8601 time (with `Z` or an offset like `+00:00`) as epoch milliseconds, or null. */
-fun parseMillis(iso: String?): Long? {
-    if (iso.isNullOrBlank()) return null
-    return runCatching { Instant.parse(iso).toEpochMilli() }.getOrNull()
-        ?: runCatching { OffsetDateTime.parse(iso).toInstant().toEpochMilli() }.getOrNull()
-}
-
 /**
  * The newer of the camera's two pictures: ring-mqtt's snapshot (taken on motion, a ring or on request) and the
  * Ring integration's frame from the last recording. Null if the camera has neither.

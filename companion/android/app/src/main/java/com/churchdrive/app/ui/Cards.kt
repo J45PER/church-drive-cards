@@ -89,40 +89,6 @@ import kotlin.math.roundToInt
 
 private val CardShape = RoundedCornerShape(28.dp)
 
-/** The shared look of every entity card: a rounded card tinted in the entity's tone. */
-/** True while the section a card is in is folded: the card shows only its top, as a short strip. */
-val LocalCompactCards = androidx.compose.runtime.compositionLocalOf { false }
-
-@Composable
-fun EntityCard(
-    container: Color,
-    content: Color,
-    modifier: Modifier = Modifier,
-    /** An entity of the device this card shows: pressing and holding the card opens that device's health page. */
-    deviceEntity: String? = null,
-    body: @Composable () -> Unit,
-) {
-    val openDevice = LocalOpenDevice.current
-    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
-    Card(
-        modifier = modifier.fillMaxWidth().then(
-            if (deviceEntity == null) Modifier
-            else Modifier.pointerInput(deviceEntity) {
-                detectTapGestures(onLongPress = {
-                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                    openDevice(deviceEntity)
-                })
-            },
-        ),
-        shape = CardShape,
-        colors = CardDefaults.cardColors(containerColor = container, contentColor = content),
-    ) {
-        Box(modifier = Modifier.glowBehind(container)) {
-            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) { body() }
-        }
-    }
-}
-
 /** Whether cards can be folded at all. Off for now: the folded look is being revised. */
 private val FOLDING_ON = false
 
@@ -295,17 +261,6 @@ fun ToneIcon(icon: ImageVector, tone: ToneColors, size: Int = 40) {
         contentAlignment = Alignment.Center,
     ) {
         Icon(icon, contentDescription = null, tint = tone.accent, modifier = Modifier.size((size * 0.55f).dp))
-    }
-}
-
-/** An icon drawn from its name (`mdi:` or `phu:`) in a tinted circle; [fallback] shows when the name isn't known. */
-@Composable
-fun ToneIconName(name: String?, fallback: ImageVector, tone: ToneColors, size: Int = 40) {
-    Box(
-        modifier = Modifier.size(size.dp).background(tone.accent.copy(alpha = 0.18f), CircleShape),
-        contentAlignment = Alignment.Center,
-    ) {
-        HaIcon(name, fallback, tone.accent, (size * 0.55f).dp)
     }
 }
 

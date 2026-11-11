@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.130.0
+
+- New for administrators: an **Open Clive Admin** button in the account panel, under To-do. It opens Clive Admin, or its Google Play page if it is not installed yet.
+- The Activity log, Device health, Energy and the icon drawing now live in the shared code that Clive Admin uses too, so the two apps show the same pages. Nothing changes in how they look here.
+
 ## 0.129.0
 
 - Clive Admin from Google Play can use this app's sign-in: its signing certificate is on the trusted list. Update this app first, then Clive Admin.

@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.130.0
+
+- No change to this app: Clive Admin's new pages and the phone app's Open Clive Admin button are in the shared version.
+
 ## 0.129.0
 
 - No change to this app: the trusted list of Church Drive apps has Clive Admin's Play certificate, and the splash code has Clive Admin's logo, in the shared version.
