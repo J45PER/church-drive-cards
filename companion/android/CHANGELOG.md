@@ -4,10 +4,19 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
-## 0.125.0
+## 0.126.0
 
 - No change to this app: Clive Admin, a new app for administrators, is in the shared version. Manager, Energy and Device Health stay here for now.
 - The phone app lets Clive Admin use its sign-in, as To-Do and Satellites do.
+
+## 0.125.0
+
+- Tablets and landscape: cards keep a phone's width (at most 520 dp) and sit centred, so the grid keeps its proportions instead of stretching.
+- The fan's Off button is the power icon again.
+- Light cards are smaller: the pills are one cell tall. A light only switches if the touch lasts a moment, so a finger landing to stop a scroll no longer turns one on.
+- Cards remember whether they were folded after the app is closed, not only while it is open.
+- The shield (and the icons in the other rings) is bigger inside its ring.
+- The room and air purifier graphs are no longer clipped by rounded corners, so their text is not cut off.
 
 ## 0.124.0
 

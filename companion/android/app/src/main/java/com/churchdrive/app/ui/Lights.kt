@@ -229,23 +229,23 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
     val open = !collapsed.value && expandable
     val hintContext = LocalContext.current
     val showHint = opensSettings(head) && remember(room.head) { LightHoldHint.wants(hintContext, room.head) }
-    val lightsEnd = 2f + 2f * (if (open) room.rows.size else 0)
+    val lightsEnd = 2f + 1.5f * (if (open) room.rows.size else 0)
     val sceneRows = if (open && room.scenes.isNotEmpty()) room.scenes.chunked(3) else emptyList()
     val rows = when {
-        !open -> if (showHint) 3f else 2.5f
+        !open -> if (showHint) 2.5f else 2f
         sceneRows.isEmpty() -> lightsEnd + 0.5f
         else -> lightsEnd + 1f + 1.25f * sceneRows.size - 0.25f + 0.5f
     }
-    GridCard(tone.container, tone.onContainer, rows, "", deviceEntity = room.head, fold = if (expandable) collapsed else null, arrowTop = 0.75f) {
-        LightPill(head, room.head, roomTitle(room, head, areaNames), tone, call, Modifier.at(0.5f, 0.5f, if (expandable) 6.5f else 7f, 1.5f), entities,
-            tintFrom = room.rows.filter { it.entity.contains("ceiling", true) || (it.name ?: "").contains("ceiling", true) }.map { it.entity }, pillHeight = cell * 1.5f)
+    GridCard(tone.container, tone.onContainer, rows, "", deviceEntity = room.head, fold = if (expandable) collapsed else null, arrowTop = 0.5f) {
+        LightPill(head, room.head, roomTitle(room, head, areaNames), tone, call, Modifier.at(0.5f, 0.5f, if (expandable) 6.5f else 7f, 1f), entities,
+            tintFrom = room.rows.filter { it.entity.contains("ceiling", true) || (it.name ?: "").contains("ceiling", true) }.map { it.entity }, pillHeight = cell)
         if (!open && showHint) {
-            Text("Hold for colours", style = MaterialTheme.typography.labelSmall, modifier = Modifier.at(0.5f, 2.1f, 7f, 0.5f), color = tone.onContainer.copy(alpha = 0.7f))
+            Text("Hold for colours", style = MaterialTheme.typography.labelSmall, modifier = Modifier.at(0.5f, 1.55f, 7f, 0.5f), color = tone.onContainer.copy(alpha = 0.7f))
         }
         if (open) {
             room.rows.forEachIndexed { k, row ->
                 val x = 0.5f + 0.5f * row.level
-                LightPill(entities[row.entity], row.entity, row.name, tone, call, Modifier.at(x, 2.5f + 2f * k, 7.5f - x, 1.5f), entities, pillHeight = cell * 1.5f)
+                LightPill(entities[row.entity], row.entity, row.name, tone, call, Modifier.at(x, 2f + 1.5f * k, 7.5f - x, 1f), entities, pillHeight = cell)
             }
             if (sceneRows.isNotEmpty()) {
                 Text("Scenes", style = MaterialTheme.typography.labelLarge, modifier = Modifier.at(0.5f, lightsEnd + 0.25f, 3f, 0.5f))
@@ -344,6 +344,7 @@ fun LightPill(
     val pct = if (on) brightnessPct(light) else 0
     var drag by remember(pct) { mutableStateOf<Float?>(null) }
     var widthPx by remember { mutableIntStateOf(1) }
+    var pressedAt by remember { mutableStateOf(0L) }
     val dragged = drag ?: (pct / 100f)
     val rgb = if (tintFrom != null && entities != null) {
         tintFrom.firstNotNullOfOrNull { id -> entities[id]?.takeIf { it.state == "on" && it.str("color_mode") in COLOUR_MODES }?.rgb() }
@@ -377,6 +378,7 @@ fun LightPill(
             .onSizeChanged { widthPx = it.width.coerceAtLeast(1) }
             .pointerInput(entityId, light?.available, on) {
                 detectTapGestures(
+                    onPress = { pressedAt = System.currentTimeMillis(); tryAwaitRelease() },
                     // Press and hold opens the light's full-screen settings, when there is more to set than on and off.
                     onLongPress = {
                         if (entities != null && opensSettings(light)) {
@@ -385,7 +387,7 @@ fun LightPill(
                             settings = true
                         }
                     },
-                    onTap = { if (light?.available == true) call("light", if (on) "turn_off" else "turn_on", entityId, data()) },
+                    onTap = { if (light?.available == true && System.currentTimeMillis() - pressedAt >= 120L) call("light", if (on) "turn_off" else "turn_on", entityId, data()) },
                 )
             }
             .pointerInput(entityId, dimmable) {
