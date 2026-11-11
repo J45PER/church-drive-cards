@@ -74,5 +74,55 @@ class Items(unittest.TestCase):
         self.assertEqual((item["status"], len(item["note"]), item["resolved_at"]), ("pending", pl.MAX_NOTE, None))
 
 
+
+class CardsIconsLayouts(unittest.TestCase):
+    def test_cards_need_valid_ids_and_a_palette_or_note(self):
+        out = pl.normalise_change("cards", {"cards": {"octopus-gas": {"palette": "gas", "comment": "  purple  "}}})
+        self.assertEqual(out, {"cards": {"octopus-gas": {"palette": "gas", "comment": "purple"}}})
+        for bad in ({"cards": {}}, {"cards": {"Bad Id": {"palette": "gas"}}}, {"cards": {"x": {}}}, {"cards": {"x": {"palette": "Bad Key"}}}, "junk"):
+            with self.assertRaises(ValueError):
+                pl.normalise_change("cards", bad)
+
+    def test_a_card_pick_is_checked_against_the_palettes_that_exist(self):
+        change = pl.normalise_change("cards", {"cards": {"fan": {"palette": "airr"}}})
+        self.assertEqual(len(pl.check_change("cards", change, {"air", "gas"})), 1)
+        self.assertEqual(pl.check_change("cards", change, {"airr"}), [])
+
+    def test_an_icon_change_names_a_panel_and_a_valid_icon(self):
+        out = pl.normalise_change("icons", {"dashboard": "dashboard-mobile", "view": "energy", "panel": " Octopus Gas ", "icon": "cd:bolt", "before": "phu:octopusenergy"})
+        self.assertEqual((out["panel"], out["icon"], out["before"]), ("Octopus Gas", "cd:bolt", "phu:octopusenergy"))
+        for bad in ({"dashboard": "d", "view": "v", "panel": "p", "icon": "bolt"}, {"dashboard": "D x", "view": "v", "panel": "p", "icon": "cd:bolt"}, {"dashboard": "d", "view": "v", "panel": "", "icon": "cd:bolt"}):
+            with self.assertRaises(ValueError):
+                pl.normalise_change("icons", bad)
+
+    def test_icons_prefer_the_houses_own_set(self):
+        mdi = pl.normalise_change("icons", {"dashboard": "d", "view": "v", "panel": "p", "icon": "mdi:fan"})
+        self.assertIn("cd:", pl.check_change("icons", mdi)[0])
+        unknown = pl.normalise_change("icons", {"dashboard": "d", "view": "v", "panel": "p", "icon": "cd:nope"})
+        self.assertIn("not in the house", pl.check_change("icons", unknown, icon_names={"cd:bolt"})[0])
+        self.assertEqual(pl.check_change("icons", pl.normalise_change("icons", {"dashboard": "d", "view": "v", "panel": "p", "icon": "cd:bolt"}), icon_names={"cd:bolt"}), [])
+
+    def test_a_layout_lists_each_panel_once_and_hides_only_listed_ones(self):
+        out = pl.normalise_change("layouts", {"dashboard": "d", "view": "energy", "order": ["A", "B", "C"], "hidden": ["C"], "before": {"order": ["B", "A", "C"], "hidden": []}})
+        self.assertEqual((out["order"], out["hidden"], out["before"]["order"]), (["A", "B", "C"], ["C"], ["B", "A", "C"]))
+        for bad in ({"order": ["A", "A"]}, {"order": ["A"], "hidden": ["Z"]}, {"order": []}):
+            with self.assertRaises(ValueError):
+                pl.normalise_change("layouts", {"dashboard": "d", "view": "v", **bad})
+        hide_all = pl.normalise_change("layouts", {"dashboard": "d", "view": "v", "order": ["A"], "hidden": ["A"]})
+        self.assertIn("empty", pl.check_change("layouts", hide_all)[0])
+
+    def test_a_version_remembers_what_was_replaced_and_restoring_puts_it_back(self):
+        item = {"change": pl.normalise_change("layouts", {"dashboard": "d", "view": "v", "order": ["A", "B"], "hidden": [], "before": {"order": ["B", "A"], "hidden": ["B"]}})}
+        data = pl.version_data_for("layouts", item, {})
+        self.assertEqual(pl.restore_change("layouts", data), {"dashboard": "d", "view": "v", "order": ["B", "A"], "hidden": ["B"]})
+        icon = {"change": pl.normalise_change("icons", {"dashboard": "d", "view": "v", "panel": "P", "icon": "cd:bolt", "before": "cd:gift"})}
+        self.assertEqual(pl.restore_change("icons", pl.version_data_for("icons", icon, {}))["icon"], "cd:gift")
+        cards = {"change": pl.normalise_change("cards", {"cards": {"fan": {"palette": "air"}, "gas": {"comment": "x"}}})}
+        data = pl.version_data_for("cards", cards, {"fan": {"palette": "heating"}})
+        self.assertEqual(pl.restore_change("cards", data), {"cards": {"fan": {"palette": "heating"}}})
+        with self.assertRaises(ValueError):
+            pl.restore_change("icons", {"dashboard": "d", "view": "v", "panel": "P", "icon": None})
+
+
 if __name__ == "__main__":
     unittest.main()

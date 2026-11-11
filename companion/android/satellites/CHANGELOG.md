@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.134.0
+
+- No change (this release adds the cards, icons and layouts editors to the Manager website and Home Assistant).
+
 ## 0.133.0
 
 - No change (shared code gained the Energy page's cards and the Octopus logo, used by the phone app and Clive Admin).
