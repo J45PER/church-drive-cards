@@ -41,6 +41,7 @@ decline_proposal:
       example: The text on it would be too faint to read
       selector:
         text:
+sync_firestore:
 set_palette:
   fields:
     key:

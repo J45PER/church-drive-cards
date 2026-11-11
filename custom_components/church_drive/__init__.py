@@ -53,7 +53,7 @@ from homeassistant.core import (
     SupportsResponse,
     callback,
 )
-from homeassistant.exceptions import ServiceValidationError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.dispatcher import async_dispatcher_send
@@ -90,6 +90,7 @@ from .const import (
     SERVICE_SET_PALETTE,
     SERVICE_APPLY_PROPOSAL,
     SERVICE_DECLINE_PROPOSAL,
+    SERVICE_SYNC_FIRESTORE,
     WS_MANAGER_WHOAMI,
     WS_MANAGER_PROPOSE,
     WS_MANAGER_PROPOSALS,
@@ -150,6 +151,7 @@ from .hue import async_sync
 from .library import Library, normalise
 from .icons import Icons
 from .colours import ColourSettings
+from .mirror import Mirror
 from .proposals import Proposals
 from .watch import WatchSettings
 from .inbox import Inbox
@@ -1490,6 +1492,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception:  # noqa: BLE001
         _LOGGER.exception("The Manager proposals couldn't load; the website's editors are off")
 
+    # The Firestore copy of the design data (only when its key file is in the config folder); Home Assistant stays the source of truth.
+    mirror = Mirror(hass, data, _version())
+    try:
+        await mirror.async_start()
+        entry.async_on_unload(mirror.async_stop)
+        data["mirror"] = mirror
+    except Exception:  # noqa: BLE001
+        _LOGGER.exception("The Firestore mirror couldn't start; Home Assistant serves the design data itself")
+
     # Device health must never stop the cards and scenes from loading.
     health = DeviceHealth(hass, entry.options.get(CONF_HEALTH_ENTITIES, []))
     try:
@@ -1788,6 +1799,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if proposals is not None:
             await proposals.async_resolve(call.data["id"], "declined", call.data.get("reason"), by)
 
+    async def sync_firestore(call: ServiceCall) -> None:
+        mirror = data.get("mirror")
+        if mirror is None or not mirror.configured:
+            raise HomeAssistantError("The Firestore mirror is off: there is no key at church_drive/firebase-writer.json in the config folder")
+        await mirror.async_sync(force=True)
+        if mirror.last_error:
+            raise HomeAssistantError(f"Firestore did not take it: {mirror.last_error}")
+
+    hass.services.async_register(DOMAIN, SERVICE_SYNC_FIRESTORE, sync_firestore)
     hass.services.async_register(DOMAIN, SERVICE_APPLY_PROPOSAL, apply_proposal, schema=vol.Schema({vol.Required("id"): cv.string}))
     hass.services.async_register(DOMAIN, SERVICE_DECLINE_PROPOSAL, decline_proposal, schema=vol.Schema({vol.Required("id"): cv.string, vol.Optional("reason"): cv.string}))
 
@@ -1831,6 +1851,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.services.async_remove(DOMAIN, SERVICE_SET_PALETTE)
     hass.services.async_remove(DOMAIN, SERVICE_APPLY_PROPOSAL)
     hass.services.async_remove(DOMAIN, SERVICE_DECLINE_PROPOSAL)
+    hass.services.async_remove(DOMAIN, SERVICE_SYNC_FIRESTORE)
     hass.services.async_remove(DOMAIN, SERVICE_NOTIFY)
     hass.services.async_remove(DOMAIN, SERVICE_ADD_TASKS)
     hass.services.async_remove(DOMAIN, SERVICE_SHOPPING_ADD)

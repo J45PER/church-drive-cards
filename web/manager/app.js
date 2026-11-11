@@ -14,7 +14,10 @@ import { renderDevices } from './pages/devices.js';
 import { renderManager, renderManagerSection } from './pages/manager.js';
 import { LOGO_PATH, LOGO_VIEWBOX } from './logo.js';
 import { cleanup } from './kit.js';
+import { h } from './pages/dom.js';
 import { renderEnergyPage } from './pages/energy.js';
+import { renderIconLibrary } from './pages/icon-library.js';
+import { renderBoards } from './pages/boards.js';
 import { PALETTE_PARTS, paletteWarnings, slugOk, ACTIONS, BAD, DAYS, OK, TIMES, WARN, activityNote, activityProblem, activityQuery, activityWho, actionLabel, ago, buildRegistry, clock, dayLabel, deviceHealthList, healthSummary, parseActivity } from './pages/logic.js';
 
 const root = document.getElementById('root');
@@ -48,29 +51,39 @@ function showSignIn(message) {
 
 const PAGES = [
   { id: 'home', title: 'Clive Manager', label: 'Home', icon: 'cd:home', render: renderHome, live: true },
-  { id: 'colours', title: 'Colour palettes', label: 'Colours', icon: 'cd:palette', render: renderColours },
-  { id: 'design', title: 'Design', label: 'Design', icon: 'cd:view-dashboard', render: renderDesign },
-  { id: 'changes', title: 'Changes', label: 'Changes', icon: 'cd:checklist', render: (el, c) => renderChanges(el, c, { glowStyle }) },
-  { id: 'manager', title: 'Manager', label: 'Manager', icon: 'cd:sliders', render: (el, c, arg) => (arg ? renderManagerSection(el, c, { glowStyle, go }, decodeURIComponent(arg)) : renderManager(el, c, { glowStyle, go })) },
-  { id: 'health', title: 'Device health', label: 'Health', icon: 'cd:device-health', render: renderHealth, live: true },
-  { id: 'devices', title: 'Devices', label: 'Devices', icon: 'cd:television-play', render: renderDevices },
-  { id: 'energy', title: 'Energy', label: 'Energy', icon: 'cd:bolt', render: (el, c) => renderEnergyPage(el, c), live: true },
-  { id: 'activity', title: 'Activity log', label: 'Activity', icon: 'cd:history', render: renderActivity, live: true },
+  { id: 'energy', title: 'Energy', label: 'Energy', icon: 'cd:bolt', group: 'The house', render: (el, c) => renderEnergyPage(el, c) },
+  { id: 'devices', title: 'Devices', label: 'Devices', icon: 'cd:television-play', group: 'The house', render: renderDevices },
+  { id: 'health', title: 'Device health', label: 'Health', icon: 'cd:device-health', group: 'The house', render: renderHealth, live: true },
+  { id: 'activity', title: 'Activity log', label: 'Activity', icon: 'cd:history', group: 'The house', render: renderActivity },
+  { id: 'colours', title: 'Colour palettes', label: 'Colours', icon: 'cd:palette', group: 'Design', render: renderColours },
+  { id: 'design', title: 'Design', label: 'Cards, icons and layouts', icon: 'cd:view-dashboard', group: 'Design', render: renderDesign },
+  { id: 'iconlib', title: 'Icon library', label: 'Icon library', icon: 'cd:bulb-group', group: 'Design', render: (el, c) => renderIconLibrary(el, c) },
+  { id: 'boards', title: 'Idea boards', label: 'Idea boards', icon: 'cd:image-text', group: 'Design', render: (el, c, arg) => renderBoards(el, c, arg) },
+  { id: 'manager', title: 'Manager', label: 'Settings', icon: 'cd:sliders', group: 'Manage', render: (el, c, arg) => (arg ? renderManagerSection(el, c, { glowStyle, go }, decodeURIComponent(arg)) : renderManager(el, c, { glowStyle, go })) },
+  { id: 'changes', title: 'Changes', label: 'Changes', icon: 'cd:checklist', group: 'Manage', render: (el, c) => renderChanges(el, c, { glowStyle }) },
 ];
+const GROUPS = ['The house', 'Design', 'Manage'];
+
+const HOME_CARDS = {
+  energy: ['energy', 'Octopus rates, cheap times, the week, the car charger'], devices: ['media', 'TVs, speakers, and how the house\'s systems are'],
+  health: ['ok', 'Batteries, filters and devices that stop responding'], activity: ['people', 'What people and the assistant did, and when'],
+  colours: ['tasks', 'Every palette as the house has it now, with the changes marked'], design: ['people', 'The palette each card uses, dashboard icons, panel order'],
+  iconlib: ['media', 'Every icon the house draws, searchable'], boards: ['gregg', 'The idea boards: logos, icons, splash screens, layouts and names'],
+  manager: ['warn', 'People, notifications, camera links, alarm lights and more'], changes: ['tasks', 'What is waiting for Clive to check, and what was applied'],
+};
+const HOME_ICONS = { 'The house': 'cd:home', Design: 'cd:palette', Manage: 'cd:sliders' };
 
 function renderHome(el, ctx) {
-  el.innerHTML = `<div class="stack">
-    <section class="stack" style="gap:12px"><div class="head"><h2>Colour palettes</h2></div>
-      <button class="card" type="button" data-go="colours" style="${glowStyle('tasks')}"><p class="title">Every palette as the house has it now</p>
-      <p class="sub">The five colours of each palette, the ones changed from the shipped set marked. Changes are sent for Clive to check, then applied everywhere.</p></button></section>
-    <section class="stack" style="gap:12px"><div class="head"><h2>The house</h2></div><div class="grid">
-      <button class="card" type="button" data-go="health" style="${glowStyle('ok')}"><p class="title">Device health</p><p class="sub">Batteries, filters and devices that stop responding</p></button>
-      <button class="card" type="button" data-go="devices" style="${glowStyle('media')}"><p class="title">Devices</p><p class="sub">TVs, speakers, and how the house's systems are</p></button>
-      <button class="card" type="button" data-go="energy" style="${glowStyle('energy')}"><p class="title">Energy</p><p class="sub">Octopus rates, cheap times, today and yesterday</p></button>
-      <button class="card" type="button" data-go="activity" style="${glowStyle('people')}"><p class="title">Activity log</p><p class="sub">What people and the assistant did, and when</p></button></div></section>
-    <section class="stack" style="gap:12px" id="versions"><div class="head"><h2>Versions</h2><button class="btn quiet" type="button" id="versions-refresh">Check again</button></div>
-      <article class="card plain" id="versions-card"><p class="sub">Reading the versions…</p></article></section>
-    <p class="note">More pages arrive here as they are built: cards, icons and layouts.</p></div>`;
+  const hello = `${new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'}, ${(ctx.user?.name || '').split(' ')[0] || 'there'}`;
+  const group = (g) => panel(ctx, { title: g, icon: HOME_ICONS[g], color: g === 'Design' ? 'tasks' : g === 'Manage' ? 'warn' : 'ok' },
+    ...PAGES.filter((p) => p.group === g).map((p) => { const [tone, line] = HOME_CARDS[p.id] || ['neutral', '']; const card = h('a', { class: 'card home-card', href: `#${p.id}`, style: glowStyle(tone) }, h('p', { class: 'title' }, p.title === 'Manager' ? 'Settings' : p.title), h('p', { class: 'sub' }, line)); return card; }));
+  el.replaceChildren(h('div', { class: 'stack' }, h('section', { class: 'hero' }, h('p', { class: 'hero-hello' }, hello), h('p', { class: 'sub' }, 'Everything the house shares with its apps, in one place: how it is doing, how it looks, and what to change.')),
+    ...GROUPS.map(group)));
+  const rest = document.createElement('div'); rest.className = 'stack';
+  rest.innerHTML = `<section class="stack" style="gap:12px" id="versions"><div class="head"><h2>Versions</h2><button class="btn quiet" type="button" id="versions-refresh">Check again</button></div>
+      <article class="card plain" id="versions-card"><p class="sub">Reading the versions…</p></article></section>`;
+  el.firstChild.append(rest);
+  fillIcons(el);
   const drawVersions = async () => {
     const card = el.querySelector('#versions-card'); card.innerHTML = '<p class="sub">Reading the versions…</p>';
     let rows; try { rows = await readVersions(ctx); } catch (e) { card.innerHTML = `<p class="err">Could not read the versions: ${esc(e.message)}</p>`; return; }
@@ -80,7 +93,6 @@ function renderHome(el, ctx) {
       <p class="sub">What each phone has installed is kept by the phone and Google Play; the app rows show the newest published test build.</p>`;
   };
   el.querySelector('#versions-refresh').addEventListener('click', drawVersions); drawVersions();
-  el.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => go(b.dataset.go)));
 }
 
 async function renderColours(el, ctx) {
@@ -204,17 +216,35 @@ function go(id) { location.hash = id === 'home' ? '' : id; }
 function currentPage() { return PAGES.find((p) => p.id === location.hash.slice(1).split('/')[0]) || PAGES[0]; }
 
 function showShell(user) {
-  root.innerHTML = `<div class="shell"><header class="bar"><h1 id="title"></h1><div class="menu-wrap"><button class="person" type="button" id="who" aria-haspopup="true" aria-expanded="false" aria-label="Account: ${esc(user.name)}">${esc((user.name || '?').trim().charAt(0).toUpperCase())}</button>
-      <div class="menu" id="menu" hidden role="menu"><p class="menu-name">${esc(user.name || 'Signed in')}</p><p class="sub">Administrator</p>
-        <button class="btn quiet" type="button" id="signout" role="menuitem">${icon('cd:sign-out', 20)} Sign out</button></div></div></header>
-    <nav class="nav" aria-label="Pages">${PAGES.map((p) => `<button type="button" data-page="${p.id}"><span class="pill">${icon(p.icon)}</span>${esc(p.label)}</button>`).join('')}</nav>
-    <main id="page" tabindex="-1"></main></div>`;
-  root.querySelectorAll('[data-page]').forEach((b) => b.addEventListener('click', () => go(b.dataset.page)));
-  const who = document.getElementById('who'), menu = document.getElementById('menu');
+  const link = (p, cls = '') => `<a class="${cls}" href="#${p.id === 'home' ? '' : p.id}" data-page="${p.id}">${icon(p.icon, 20)}<span>${esc(p.label)}</span></a>`;
+  const home = PAGES[0];
+  const top = `${link(home)}${GROUPS.map((g) => `<div class="drop"><button type="button" class="drop-btn" data-group="${esc(g)}" aria-haspopup="true" aria-expanded="false">${esc(g)}<svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><path d="M5 7.5l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <div class="drop-list" hidden>${PAGES.filter((p) => p.group === g).map((p) => link(p)).join('')}</div></div>`).join('')}`;
+  const drawer = `${link(home)}${GROUPS.map((g) => `<p class="drawer-head">${esc(g)}</p>${PAGES.filter((p) => p.group === g).map((p) => link(p)).join('')}`).join('')}`;
+  root.innerHTML = `<div class="shell"><header class="site"><div class="site-in">
+      <a class="brand" href="#" aria-label="Clive Manager, home">${mark(36)}<span class="brand-text"><b>Clive</b> Manager</span></a>
+      <nav class="topnav" aria-label="Pages">${top}</nav>
+      <div class="menu-wrap"><button class="person" type="button" id="who" aria-haspopup="true" aria-expanded="false" aria-label="Account: ${esc(user.name)}">${esc((user.name || '?').trim().slice(0, 1).toUpperCase())}</button>
+        <div class="menu" id="menu" hidden role="menu"><p class="menu-name">${esc(user.name || 'Signed in')}</p><p class="sub">Administrator</p>
+          <button class="btn quiet" type="button" id="signout" role="menuitem">${icon('cd:sign-out', 20)} Sign out</button></div></div>
+      <button class="burger" type="button" id="burger" aria-label="Menu" aria-expanded="false" aria-controls="drawer"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg></button>
+    </div><nav class="drawer" id="drawer" aria-label="Pages" hidden>${drawer}</nav></header>
+    <main><h1 id="title" class="page-title"></h1><div id="page" tabindex="-1"></div></main>
+    <footer class="foot"><span>Clive Manager</span><span>Church Drive</span></footer></div>`;
+  const who = document.getElementById('who'), menu = document.getElementById('menu'), burger = document.getElementById('burger'), dr = document.getElementById('drawer');
+  const drops = [...root.querySelectorAll('.drop')];
+  const closeDrops = (except) => drops.forEach((d) => { if (d !== except) { d.querySelector('.drop-list').hidden = true; d.querySelector('.drop-btn').setAttribute('aria-expanded', 'false'); } });
   const toggle = (open) => { menu.hidden = !open; who.setAttribute('aria-expanded', String(open)); };
-  who.addEventListener('click', (e) => { e.stopPropagation(); toggle(menu.hidden); });
-  document.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target)) toggle(false); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') toggle(false); });
+  const toggleDrawer = (open) => { dr.hidden = !open; burger.setAttribute('aria-expanded', String(open)); document.body.classList.toggle('drawer-open', open); };
+  drops.forEach((d) => d.querySelector('.drop-btn').addEventListener('click', (e) => {
+    e.stopPropagation(); const list = d.querySelector('.drop-list'), open = list.hidden; closeDrops(d); toggle(false);
+    list.hidden = !open; e.currentTarget.setAttribute('aria-expanded', String(open));
+  }));
+  who.addEventListener('click', (e) => { e.stopPropagation(); closeDrops(); toggle(menu.hidden); });
+  burger.addEventListener('click', (e) => { e.stopPropagation(); toggle(false); toggleDrawer(dr.hidden); });
+  root.querySelectorAll('a[data-page]').forEach((l) => l.addEventListener('click', () => { closeDrops(); toggleDrawer(false); }));
+  document.addEventListener('click', (e) => { closeDrops(); if (!menu.hidden && !menu.contains(e.target)) toggle(false); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeDrops(); toggle(false); toggleDrawer(false); } });
   document.getElementById('signout').addEventListener('click', () => { ctx?.ha.close(); ctx = null; status.hide(); signOut(); showSignIn(); });
   fillIcons(root);
   return show();
@@ -226,7 +256,10 @@ function show() {
   loadedAt = Date.now();
   document.getElementById('title').textContent = page.title;
   document.title = page.id === 'home' ? 'Clive Manager' : `${page.title} · Clive Manager`;
-  root.querySelectorAll('[data-page]').forEach((b) => (b.dataset.page === page.id ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current')));
+  root.querySelectorAll('a[data-page]').forEach((b) => (b.dataset.page === page.id ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current')));
+  root.querySelectorAll('.drop').forEach((d) => d.classList.toggle('on', !!page.group && d.querySelector('.drop-btn').dataset.group === page.group));
+  document.body.classList.remove('drawer-open');
+  document.body.classList.toggle('on-home', page.id === 'home');
   const arg = location.hash.slice(1).split('/').slice(1).join('/');
   if (arg && page.id === 'manager') document.getElementById('title').textContent = decodeURIComponent(arg);
   cleanup(ctx);

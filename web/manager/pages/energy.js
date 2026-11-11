@@ -4,6 +4,7 @@ import { h } from './dom.js';
 import { energySnapshot, clock } from './logic.js';
 import { renderHouseView } from './house-view.js';
 import { fact, toneCard } from '../kit.js';
+import { carsCard, chargerCard, planCard, weekCard } from './energy-more.js';
 
 const p = (n, d = 1) => (n == null ? '—' : `${n.toFixed(d)}p`);
 const pound = (n) => (n == null ? '—' : `£${n.toFixed(2)}`);
@@ -18,7 +19,7 @@ function strip(e) {
 }
 
 /** One card of an Octopus panel, from the figures the house already has. */
-function octopusCard(ctx, show, e, tone) {
+function octopusCard(ctx, show, e, tone, states) {
   if (show === 'electricity') {
     const cheap = e.cheapUntil ? `Cheap until ${clock(e.cheapUntil)}` : e.offPeak ? 'Off-peak now' : e.cheapest != null ? `Cheapest today ${p(e.cheapest)}` : '';
     return toneCard(ctx, tone, h('p', { class: 'sub' }, 'Right now'), h('p', { class: 'big' }, p(e.rate)), h('p', { class: 'sub' }, [cheap, e.demand != null ? `${Math.round(e.demand)} W` : ''].filter(Boolean).join(' · ')),
@@ -26,7 +27,7 @@ function octopusCard(ctx, show, e, tone) {
   }
   if (show === 'gas') return toneCard(ctx, tone, h('p', { class: 'sub' }, 'Rate'), h('p', { class: 'big' }, e.gasRate != null ? `${p(e.gasRate, 2)} per kWh` : '—'), fact('Today', pound(e.gasToday)), fact('Yesterday', pound(e.gasYesterday)));
   if (show === 'octoplus') return toneCard(ctx, tone, h('p', { class: 'sub' }, 'Octoplus points'), h('p', { class: 'big' }, e.points != null ? String(Math.round(e.points)) : '—'));
-  if (show === 'week') return toneCard(ctx, tone, h('p', { class: 'sub' }, 'Electricity and gas over the last seven days'), h('p', { class: 'sub' }, 'The day-by-day figures are in the apps; the total is in the heading.'));
+  if (show === 'week') return weekCard(ctx, tone, states);
   return null;
 }
 
@@ -34,7 +35,9 @@ function octopusCard(ctx, show, e, tone) {
 const noted = (ctx, tone, text) => toneCard(ctx, tone, h('p', { class: 'sub' }, text));
 
 const KINDS = {
-  'custom:octopus-card': (ctx, k, states, tone) => octopusCard(ctx, k.show, energySnapshot(states), tone),
-  'custom:car-card': (ctx, k, states, tone) => noted(ctx, tone, 'Your cars and their charge are in the Church Drive and Clive Admin apps.'),
+  'custom:octopus-card': (ctx, k, states, tone) => octopusCard(ctx, k.show, energySnapshot(states), tone, states),
+  'custom:car-card': (ctx, k, states, tone) => carsCard(ctx, tone, states),
+  'custom:ev-charger-card': (ctx, k, states, tone) => chargerCard(ctx, tone, states),
+  'custom:octopus-plan-card': (ctx, k, states, tone) => planCard(ctx, tone, states),
 };
 export const renderEnergyPage = (el, ctx) => renderHouseView(el, ctx, { path: 'energy', what: 'energy', kinds: KINDS });

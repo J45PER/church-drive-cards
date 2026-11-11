@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.140.0
+
+- No change you will notice (the Manager website has a new layout and pages).
+
 ## 0.139.0
 
 - The status pill and its colour cloud now widen and narrow together: the cloud used to jump to the final width at once, so it shrank before the pill did.

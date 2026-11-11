@@ -61,6 +61,7 @@ WS_MANAGER_VERSIONS = "church_drive/manager/versions"
 WS_MANAGER_DESIGN = "church_drive/manager/design"
 SERVICE_APPLY_PROPOSAL = "apply_proposal"
 SERVICE_DECLINE_PROPOSAL = "decline_proposal"
+SERVICE_SYNC_FIRESTORE = "sync_firestore"
 
 # The watch companion's pages and items (watch.py): read by the watch app, set in the Manager dashboard's Watch panel.
 WS_WATCH = "church_drive/watch"
