@@ -244,7 +244,7 @@ fun HomeScreen(
         }
         com.churchdrive.app.ui.LinkRefresh(
             com.churchdrive.app.ha.LinkStatus(connection, statesLoaded, refreshing, restarting), onRefresh,
-            Modifier.weight(1f).fillMaxHeight(),
+            Modifier.weight(1f).fillMaxHeight(), assistPalette(),
         ) {
         Column(
             modifier = Modifier

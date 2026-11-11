@@ -1,6 +1,13 @@
 package com.churchdrive.app.ui
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.height
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearEasing
@@ -82,11 +89,12 @@ private const val PULL_FULL = 1f
  * Wraps a page's scrolling content with pull-down-to-refresh and the status pill that every Church Drive app shows at its top:
  * Connecting, Updating, No connection and Home Assistant restarting. Pulling shows the same pill ("Pull to refresh", "Release to
  * refresh"), which turns into "Updating" while [onRefresh] runs and "Up to date" when it is done, so the pull and the line's own
- * states are one thing to look at. Tapping No connection or Restarting tries again.
+ * states are one thing to look at. Tapping No connection or Restarting tries again. [palette] is Clive's three colours (the phone app passes
+ * its own; the other apps use the original indigo, purple and green).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LinkRefresh(link: LinkStatus, onRefresh: () -> Unit, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+fun LinkRefresh(link: LinkStatus, onRefresh: () -> Unit, modifier: Modifier = Modifier, palette: AssistPalette = AssistClassicPalette, content: @Composable () -> Unit) {
     val current by rememberUpdatedState(link)
     // How long the line has been down, so a blip stays "Connecting" and only a real outage says "No connection".
     var offlineFor by remember { mutableStateOf(0L) }
@@ -139,47 +147,91 @@ fun LinkRefresh(link: LinkStatus, onRefresh: () -> Unit, modifier: Modifier = Mo
                 face = face,
                 pull = if (face == PillFace.Pull || face == PillFace.Release) pull else 0f,
                 onTap = if (face == PillFace.NoConnection || face == PillFace.Restarting) onRefresh else null,
+                palette = palette,
             )
         }
     }
 }
 
-/** The pill itself. [pull] (0 to 1.3) slides it down and turns its mark while it is being pulled. A tap runs [onTap] when it is given. */
+/** The pill's height, which is also the width of the circle it starts as. */
+private val PILL_SIZE = 40.dp
+
+/**
+ * The pill itself. It starts as Clive's round button (his colour cloud with the white mark over it), then widens into the pill with its
+ * words; the cloud keeps drifting behind the whole pill. While being pulled it stays a circle until it is far enough to release, then widens.
+ * [pull] (0 to 1.3) slides it down and turns its mark. A tap runs [onTap] when it is given. [palette] is Clive's three colours.
+ */
 @Composable
-fun StatusPill(face: PillFace, pull: Float = 0f, onTap: (() -> Unit)? = null) {
+fun StatusPill(face: PillFace, pull: Float = 0f, onTap: (() -> Unit)? = null, palette: AssistPalette = AssistClassicPalette) {
     val scheme = MaterialTheme.colorScheme
-    val (container, ink) = when (face) {
+    val visible = face != PillFace.Hidden
+    // The face kept while the pill slides away, so it does not go blank on the way out.
+    val shownState = remember { mutableStateOf(face) }
+    if (visible) shownState.value = face
+    val shown = shownState.value
+    val (container, ink) = when (shown) {
         PillFace.NoConnection -> scheme.errorContainer to scheme.onErrorContainer
         PillFace.Restarting -> scheme.tertiaryContainer to scheme.onTertiaryContainer
         else -> scheme.surfaceContainerHigh to scheme.onSurface
     }
+    // The cloud takes the face's colour: red for no connection, amber for a restart, Clive's own otherwise.
+    val cloud = when (shown) {
+        PillFace.NoConnection -> AssistPalette(scheme.error, scheme.error, scheme.errorContainer)
+        PillFace.Restarting -> AssistPalette(scheme.tertiary, scheme.tertiary, scheme.secondary)
+        else -> palette
+    }
+    // A moment as a circle first, then the words; a pull stays a circle until "Release".
+    var settled by remember { mutableStateOf(false) }
+    LaunchedEffect(visible) {
+        settled = false
+        if (visible) {
+            delay(380L)
+            settled = true
+        }
+    }
+    val expanded = visible && settled && shown != PillFace.Pull
+    val markColour by androidx.compose.animation.animateColorAsState(if (expanded) ink else Color.White, tween(300), label = "mark")
+    val cloudAlpha by androidx.compose.animation.core.animateFloatAsState(if (expanded) 0.5f else 0.95f, tween(300), label = "cloud")
+    var width by remember { mutableStateOf(0) }
     val density = androidx.compose.ui.platform.LocalDensity.current
     val travel = with(density) { 36.dp.toPx() }
+    val cloudBox = with(density) { PILL_SIZE.toPx() }
+    val shape = RoundedCornerShape(50)
     AnimatedVisibility(
-        visible = face != PillFace.Hidden,
-        enter = fadeIn() + slideInVertically { -it },
-        exit = fadeOut() + slideOutVertically { -it },
+        visible = visible,
+        enter = fadeIn(tween(200)) + scaleIn(tween(300), initialScale = 0.4f) + slideInVertically { -it },
+        exit = fadeOut(tween(200)) + scaleOut(tween(250), targetScale = 0.6f) + slideOutVertically { -it },
     ) {
         Surface(
             modifier = Modifier
                 .graphicsLayer { if (pull > 0f) translationY = (pull.coerceAtMost(1.3f) - 1f) * travel }
                 .semantics { liveRegion = LiveRegionMode.Polite }
                 .let { if (onTap != null) it.clickable(onClickLabel = "Try again", onClick = onTap) else it },
-            shape = RoundedCornerShape(50), color = container, contentColor = ink,
-            border = BorderStroke(1.dp, scheme.outlineVariant), shadowElevation = 4.dp,
+            shape = shape, color = container, contentColor = ink,
+            border = BorderStroke(1.dp, scheme.outlineVariant), shadowElevation = 6.dp,
         ) {
-            AnimatedContent(
-                targetState = face,
-                transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
-                modifier = Modifier.animateContentSize(),
-                label = "pill",
-            ) { f ->
-                Row(
-                    Modifier.padding(start = 10.dp, end = 16.dp, top = 6.dp, bottom = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    PillIcon(f, ink, pull)
-                    Text(f.label, style = MaterialTheme.typography.labelLarge, color = ink)
+            Box(Modifier.height(PILL_SIZE).animateContentSize(tween(320)).onSizeChanged { width = it.width }, contentAlignment = Alignment.CenterStart) {
+                // Clive's cloud, stretched to fill the pill and kept inside its edge.
+                Box(Modifier.matchParentSize().clip(shape), contentAlignment = Alignment.Center) {
+                    Box(Modifier.graphicsLayer { scaleX = (width / cloudBox * 1.25f).coerceAtLeast(1f); alpha = cloudAlpha }) {
+                        AssistOrb(AssistState.Idle, 0f, 32.dp, cloud)
+                    }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(PILL_SIZE), contentAlignment = Alignment.Center) {
+                        AnimatedContent(shown, transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) }, label = "icon") { f ->
+                            PillIcon(f, markColour, pull)
+                        }
+                    }
+                    AnimatedVisibility(
+                        visible = expanded,
+                        enter = expandHorizontally(tween(320)) + fadeIn(tween(320, delayMillis = 80)),
+                        exit = shrinkHorizontally(tween(220)) + fadeOut(tween(120)),
+                    ) {
+                        AnimatedContent(shown, transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) }, label = "words") { f ->
+                            Text(f.label, Modifier.padding(end = 18.dp), style = MaterialTheme.typography.labelLarge, color = ink, maxLines = 1, softWrap = false)
+                        }
+                    }
                 }
             }
         }

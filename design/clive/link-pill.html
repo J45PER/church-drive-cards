@@ -31,11 +31,25 @@ h1 { font-size:clamp(1.5rem,4vw,2rem); margin:0 0 6px; letter-spacing:-.02em; li
 .card u { display:block; height:8px; width:60%; border-radius:6px; background:currentColor; opacity:.14; margin-top:10px; text-decoration:none; }
 .nav { position:absolute; left:0; right:0; bottom:0; height:56px; background:var(--pill); display:flex; justify-content:space-around; align-items:center; }
 .nav s { width:28px; height:28px; border-radius:9px; background:var(--soft); opacity:.35; }
-.pill { position:absolute; left:50%; top:8px; transform:translate(-50%,-70px); opacity:0; display:flex; align-items:center; gap:8px; padding:6px 16px 6px 10px; border-radius:999px;
-  background:var(--pill); color:var(--pillfg); border:1px solid var(--line); box-shadow:0 3px 10px #0003; font-size:.88rem; font-weight:600; white-space:nowrap; cursor:default;
-  transition:transform .35s cubic-bezier(.2,.8,.2,1), opacity .25s, background .25s, color .25s; }
-.pill.show { transform:translate(-50%,0); opacity:1; }
-.pill.err { background:var(--err); color:var(--errfg); cursor:pointer; } .pill.warn { background:var(--warn); color:var(--warnfg); cursor:pointer; }
+.pill { position:absolute; left:50%; top:8px; height:40px; width:40px; transform:translate(-50%,-70px) scale(.4); opacity:0; display:flex; align-items:center; border-radius:999px; overflow:hidden;
+  background:var(--pill); color:#fff; border:1px solid var(--line); box-shadow:0 4px 12px #0004; font-size:.88rem; font-weight:600; white-space:nowrap; cursor:default;
+  transition:transform .4s cubic-bezier(.2,.8,.2,1), opacity .25s, background .25s, color .3s, width .4s cubic-bezier(.2,.8,.2,1); }
+.pill.show { transform:translate(-50%,0) scale(1); opacity:1; }
+.pill.open { width:var(--w,190px); color:var(--pillfg); }
+.pill.err { background:var(--err); } .pill.warn { background:var(--warn); }
+.pill.err.open { color:var(--errfg); } .pill.warn.open { color:var(--warnfg); }
+.pill.err, .pill.warn { cursor:pointer; }
+.orb { position:absolute; inset:0; opacity:.95; transition:opacity .3s; pointer-events:none; filter:blur(7px); }
+.pill.open .orb { opacity:.5; }
+.orb i { position:absolute; width:46px; height:46px; border-radius:50%; mix-blend-mode:screen; background:var(--c); }
+.orb .o1 { --c:#5c6bc0; left:-6px; top:-8px; animation:o1 5s ease-in-out infinite alternate; }
+.orb .o2 { --c:#ab47bc; left:30%; top:-2px; width:56px; animation:o2 6.5s ease-in-out infinite alternate; }
+.orb .o3 { --c:#4fd08a; right:-8px; top:-4px; animation:o3 5.5s ease-in-out infinite alternate; }
+.pill.err .orb i { --c:#e5584a; } .pill.warn .orb i { --c:#e0a21b; }
+@keyframes o1 { to { transform:translate(14px,8px); } } @keyframes o2 { to { transform:translate(-18px,10px); } } @keyframes o3 { to { transform:translate(-14px,6px); } }
+.slot { position:relative; width:38px; height:38px; flex:none; display:grid; place-items:center; }
+.lbl { position:relative; max-width:0; opacity:0; overflow:hidden; padding-right:0; transition:max-width .4s cubic-bezier(.2,.8,.2,1), opacity .25s .1s, padding .4s; }
+.pill.open .lbl { max-width:220px; opacity:1; padding-right:18px; }
 .ico { width:22px; height:22px; position:relative; display:grid; place-items:center; }
 .ico > * { grid-area:1/1; transition:opacity .2s; opacity:0; }
 .ico[data-i="mark"] .mark, .ico[data-i="bars"] .bars, .ico[data-i="spin"] .spin, .ico[data-i="tick"] .tick { opacity:1; }
@@ -50,19 +64,19 @@ h1 { font-size:clamp(1.5rem,4vw,2rem); margin:0 0 6px; letter-spacing:-.02em; li
 .ctl { display:flex; gap:8px; margin-top:12px; justify-content:center; }
 .btn { border:1px solid var(--line); background:var(--panel); color:var(--fg); padding:7px 15px; border-radius:999px; cursor:pointer; font:inherit; font-size:.88rem; }
 .btn:focus-visible { outline:2px solid var(--acc); outline-offset:2px; }
-@media (prefers-reduced-motion: reduce) { .mark .a, .mark .b, .bars { animation:none; } }
+@media (prefers-reduced-motion: reduce) { .mark .a, .mark .b, .bars, .orb i { animation:none; } }
 </style></head><body>
 <main>
  <div>
   <div class="phone" id="phone" aria-label="Phone preview">
    <div class="bar">Home</div>
    <div class="body"><div class="cards" id="cards"><div class="card">Lights<u></u><u style="width:40%"></u></div><div class="card">Climate<u></u><u style="width:50%"></u></div><div class="card">Security<u></u><u style="width:35%"></u></div><div class="card">Energy<u></u></div></div>
-    <div class="pill" id="pill" role="status" aria-live="polite"><span class="ico" id="ico" data-i="mark">
+    <div class="pill" id="pill" role="status" aria-live="polite"><div class="orb"><i class="o1"></i><i class="o2"></i><i class="o3"></i></div><span class="slot"><span class="ico" id="ico" data-i="mark">
      <svg class="mark" viewBox="0 0 22 22"><rect class="a" x="2" y="2" width="11" height="11" rx="4"/><rect class="b" x="9" y="9" width="11" height="11" rx="4"/></svg>
      <svg class="bars" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M5 19V14M11 19V10M17 19V5"/><path d="M2 2L20 20" stroke-width="2.6"/></svg>
      <span class="spin"></span>
      <svg class="tick" id="tick" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12L9.5 17L18 6"/></svg>
-    </span><span id="txt">Connecting</span></div>
+    </span></span><span class="lbl" id="txt">Connecting</span></div>
    </div>
    <div class="nav"><s></s><s></s><s></s><s></s></div>
   </div>
@@ -88,15 +102,25 @@ const faces = {
   pull: { t:'Pull to refresh', i:'mark' }, release: { t:'Release to refresh', i:'mark' },
   done: { t:'Up to date', i:'tick' }, off: { t:'No connection', i:'bars', cls:'err' }, restart: { t:'Home Assistant restarting', i:'spin', cls:'warn' },
 };
+let openT = 0, prev = 'hidden';
 function face(name, pullY) {
   const f = faces[name];
-  if (!f) { pill.classList.remove('show'); pill.style.transform = ''; return; }
+  clearTimeout(openT);
+  if (!f) { pill.classList.remove('show', 'open'); pill.style.transform = ''; prev = 'hidden'; return; }
   txt.textContent = f.t; ico.dataset.i = f.i; ico.classList.toggle('turn', !!f.turn);
-  pill.className = 'pill show' + (f.cls ? ' ' + f.cls : '');
+  const wasHidden = prev === 'hidden';
+  pill.className = 'pill show' + (f.cls ? ' ' + f.cls : '') + (pill.classList.contains('open') ? ' open' : '');
+  // Width the label needs, so the pill closes round it.
+  pill.style.setProperty('--w', (38 + 18 + txt.scrollWidth + 2) + 'px');
   tick.classList.remove('draw'); if (f.i === 'tick') { void tick.getBoundingClientRect(); tick.classList.add('draw'); }
   pill.style.transform = pullY != null ? `translate(-50%, ${pullY}px)` : '';
   pill.style.transition = pullY != null ? 'none' : '';
   ico.style.transform = name === 'pull' ? `rotate(${(pullY + 36) * 3}deg)` : name === 'release' ? 'rotate(180deg)' : '';
+  // A circle first (Clive's button), then it widens into the pill. A pull stays a circle until Release.
+  if (name === 'pull') pill.classList.remove('open');
+  else if (wasHidden) openT = setTimeout(() => pill.classList.add('open'), 380);
+  else pill.classList.add('open');
+  prev = name;
 }
 const at = (ms, fn) => { const my = token; timers.push(setTimeout(() => { if (my === token) fn(); }, ms)); };
 const pullTo = (y) => { cards.style.transform = `translateY(${Math.max(0, y + 36) * .6}px)`; };
