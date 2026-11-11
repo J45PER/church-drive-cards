@@ -32,6 +32,16 @@ class SatelliteModel(app: Application) : AndroidViewModel(app) {
         private set
     var signedIn by mutableStateOf(session.signedIn)
         private set
+    /** The line's state, for the status pill at the top of the page. */
+    val link get() = client.link
+
+    /** Pull down to refresh: asks the house for everything again, or connects afresh when the line has gone quiet. */
+    fun refresh() {
+        if (!signedIn) return
+        if (!connected) { connect(); return }
+        client.refreshStates { alive -> if (!alive) connect() }
+    }
+
     var connected by mutableStateOf(false)
         private set
     /** Signed in through the Church Drive app: signing out is done there. */

@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.134.0
+
+- Clive Admin has the same status pill as the Church Drive app at the top of the page: "Connecting", "Updating", "No connection" (tap to try again) and "Home Assistant restarting". Pull down on any page to refresh the connection. The pill at the top of the page shows it: "Pull to refresh", "Release to refresh", "Updating" and then "Up to date". 
+
 ## 0.133.0
 
 - The Energy page is the same as the Church Drive app's: the header lines (cheap or peak now, live use, today so far), then Octopus Electricity, Octopus Gas, Last 7 days, Car charging and Octoplus in that order, each with its icon, colour and summary, read from the house's dashboard.

@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Status Pill Mockup</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root { --bg:#f3f4f6; --panel:#fff; --fg:#14181f; --soft:#5b6472; --line:#d9dde4; --acc:#4f46c8; --accfg:#fff;
+  --pill:#e9ebf1; --pillfg:#14181f; --err:#fbdcd8; --errfg:#7a1d12; --warn:#f6e3b8; --warnfg:#5c3d00; --screen:#fbfbfd; --card:#e6e9ff;
+  --ui:"Instrument Sans",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace; color-scheme:light; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#0b0e13; --panel:#171c24; --fg:#eef1f5; --soft:#9aa4b2; --line:#28303c; --acc:#a9b4ff; --accfg:#0b0e13;
+  --pill:#2a303b; --pillfg:#eef1f5; --err:#5a2019; --errfg:#ffdad5; --warn:#4d3a10; --warnfg:#fbe3aa; --screen:#10141b; --card:#232a4a; color-scheme:dark; } }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font-family:var(--ui); line-height:1.4; padding:24px 16px 64px; }
+main { max-width:980px; margin:0 auto; display:grid; grid-template-columns:minmax(0,340px) minmax(0,1fr); gap:28px; align-items:start; }
+@media (max-width:760px) { main { grid-template-columns:minmax(0,1fr); } }
+h1 { font-size:clamp(1.5rem,4vw,2rem); margin:0 0 6px; letter-spacing:-.02em; line-height:1.1; }
+.lede { color:var(--soft); margin:0 0 18px; }
+.label { font-family:var(--mono); font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--soft); margin:18px 0 6px; }
+.seqs { display:grid; gap:8px; }
+.seq { text-align:left; border:1px solid var(--line); background:var(--panel); color:var(--fg); border-radius:14px; padding:10px 14px; cursor:pointer; font:inherit; }
+.seq b { display:block; } .seq span { color:var(--soft); font-size:.84rem; }
+.seq[aria-pressed="true"] { border-color:var(--acc); box-shadow:0 0 0 2px var(--acc) inset; }
+.seq:focus-visible { outline:2px solid var(--acc); outline-offset:2px; }
+.steps { font-family:var(--mono); font-size:.78rem; color:var(--soft); display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.steps i { font-style:normal; border:1px solid var(--line); border-radius:999px; padding:2px 9px; }
+.steps i.on { background:var(--fg); color:var(--bg); border-color:var(--fg); }
+.phone { width:300px; height:560px; margin:0 auto; border-radius:36px; background:var(--screen); border:8px solid #1b1f27; position:relative; overflow:hidden; box-shadow:0 18px 40px #0003; }
+.bar { height:92px; padding:46px 18px 0; font-size:1.55rem; font-weight:600; }
+.body { position:absolute; inset:92px 0 56px; overflow:hidden; }
+.cards { padding:10px 14px; display:grid; gap:12px; transition:transform .35s cubic-bezier(.2,.8,.2,1); }
+.card { height:88px; border-radius:22px; background:var(--card); padding:14px; font-size:.9rem; color:var(--fg); }
+.card u { display:block; height:8px; width:60%; border-radius:6px; background:currentColor; opacity:.14; margin-top:10px; text-decoration:none; }
+.nav { position:absolute; left:0; right:0; bottom:0; height:56px; background:var(--pill); display:flex; justify-content:space-around; align-items:center; }
+.nav s { width:28px; height:28px; border-radius:9px; background:var(--soft); opacity:.35; }
+.pill { position:absolute; left:50%; top:8px; transform:translate(-50%,-70px); opacity:0; display:flex; align-items:center; gap:8px; padding:6px 16px 6px 10px; border-radius:999px;
+  background:var(--pill); color:var(--pillfg); border:1px solid var(--line); box-shadow:0 3px 10px #0003; font-size:.88rem; font-weight:600; white-space:nowrap; cursor:default;
+  transition:transform .35s cubic-bezier(.2,.8,.2,1), opacity .25s, background .25s, color .25s; }
+.pill.show { transform:translate(-50%,0); opacity:1; }
+.pill.err { background:var(--err); color:var(--errfg); cursor:pointer; } .pill.warn { background:var(--warn); color:var(--warnfg); cursor:pointer; }
+.ico { width:22px; height:22px; position:relative; display:grid; place-items:center; }
+.ico > * { grid-area:1/1; transition:opacity .2s; opacity:0; }
+.ico[data-i="mark"] .mark, .ico[data-i="bars"] .bars, .ico[data-i="spin"] .spin, .ico[data-i="tick"] .tick { opacity:1; }
+.mark { width:22px; height:22px; } .mark rect { transform-box:fill-box; transform-origin:center; fill:currentColor; }
+.mark .a { animation:driftA 2.4s ease-in-out infinite alternate; } .mark .b { animation:driftB 2.4s ease-in-out infinite alternate; }
+@keyframes driftA { to { transform:translate(2px,2px); } } @keyframes driftB { to { transform:translate(-2px,-2px); } }
+.ico.turn .mark { animation:turn 1.1s linear infinite; } @keyframes turn { to { transform:rotate(360deg); } }
+.bars { width:22px; height:22px; animation:breathe 1.8s ease-in-out infinite; } @keyframes breathe { 50% { opacity:.4; } }
+.spin { width:18px; height:18px; border-radius:50%; border:2px solid currentColor; border-right-color:transparent; animation:turn .9s linear infinite; }
+.tick path { stroke-dasharray:30; stroke-dashoffset:30; } .tick.draw path { animation:draw .38s ease-out forwards; } @keyframes draw { to { stroke-dashoffset:0; } }
+.note { color:var(--soft); font-size:.88rem; margin-top:14px; max-width:60ch; }
+.ctl { display:flex; gap:8px; margin-top:12px; justify-content:center; }
+.btn { border:1px solid var(--line); background:var(--panel); color:var(--fg); padding:7px 15px; border-radius:999px; cursor:pointer; font:inherit; font-size:.88rem; }
+.btn:focus-visible { outline:2px solid var(--acc); outline-offset:2px; }
+@media (prefers-reduced-motion: reduce) { .mark .a, .mark .b, .bars { animation:none; } }
+</style></head><body>
+<main>
+ <div>
+  <div class="phone" id="phone" aria-label="Phone preview">
+   <div class="bar">Home</div>
+   <div class="body"><div class="cards" id="cards"><div class="card">Lights<u></u><u style="width:40%"></u></div><div class="card">Climate<u></u><u style="width:50%"></u></div><div class="card">Security<u></u><u style="width:35%"></u></div><div class="card">Energy<u></u></div></div>
+    <div class="pill" id="pill" role="status" aria-live="polite"><span class="ico" id="ico" data-i="mark">
+     <svg class="mark" viewBox="0 0 22 22"><rect class="a" x="2" y="2" width="11" height="11" rx="4"/><rect class="b" x="9" y="9" width="11" height="11" rx="4"/></svg>
+     <svg class="bars" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M5 19V14M11 19V10M17 19V5"/><path d="M2 2L20 20" stroke-width="2.6"/></svg>
+     <span class="spin"></span>
+     <svg class="tick" id="tick" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12L9.5 17L18 6"/></svg>
+    </span><span id="txt">Connecting</span></div>
+   </div>
+   <div class="nav"><s></s><s></s><s></s><s></s></div>
+  </div>
+  <div class="ctl"><button class="btn" id="replay">Replay</button><button class="btn" id="tap" hidden>Tap the pill</button></div>
+ </div>
+ <div>
+  <h1>Status pill</h1>
+  <p class="lede">One pill at the top of every Church Drive app (phone, To-Do, Satellites, Clive Admin). Pulling down on a page, the app opening, a dropped line and a Home Assistant restart all use it, so there is one thing to look at.</p>
+  <div class="label">Sequences</div>
+  <div class="seqs" id="seqs"></div>
+  <div class="label">Where it is now</div>
+  <div class="steps" id="steps"></div>
+  <p class="note" id="note"></p>
+ </div>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const pill = $('#pill'), txt = $('#txt'), ico = $('#ico'), cards = $('#cards'), tick = $('#tick');
+let timers = [], token = 0;
+const faces = {
+  hidden: null,
+  connecting: { t:'Connecting', i:'mark' }, updating: { t:'Updating', i:'mark', turn:true },
+  pull: { t:'Pull to refresh', i:'mark' }, release: { t:'Release to refresh', i:'mark' },
+  done: { t:'Up to date', i:'tick' }, off: { t:'No connection', i:'bars', cls:'err' }, restart: { t:'Home Assistant restarting', i:'spin', cls:'warn' },
+};
+function face(name, pullY) {
+  const f = faces[name];
+  if (!f) { pill.classList.remove('show'); pill.style.transform = ''; return; }
+  txt.textContent = f.t; ico.dataset.i = f.i; ico.classList.toggle('turn', !!f.turn);
+  pill.className = 'pill show' + (f.cls ? ' ' + f.cls : '');
+  tick.classList.remove('draw'); if (f.i === 'tick') { void tick.getBoundingClientRect(); tick.classList.add('draw'); }
+  pill.style.transform = pullY != null ? `translate(-50%, ${pullY}px)` : '';
+  pill.style.transition = pullY != null ? 'none' : '';
+  ico.style.transform = name === 'pull' ? `rotate(${(pullY + 36) * 3}deg)` : name === 'release' ? 'rotate(180deg)' : '';
+}
+const at = (ms, fn) => { const my = token; timers.push(setTimeout(() => { if (my === token) fn(); }, ms)); };
+const pullTo = (y) => { cards.style.transform = `translateY(${Math.max(0, y + 36) * .6}px)`; };
+const SEQ = [
+ { id:'pull', title:'Pull down to refresh', sub:'Drag, release, update, done', note:'The pill slides down as you drag and Clive’s mark turns with your finger. Past the line it says Release; let go and it becomes Updating while the app asks the house for everything again. A tick draws, then it slides away. Even an instant answer shows Updating for about a second, so you can see it worked.',
+   steps:['Pull','Release','Updating','Up to date'],
+   run(){ let y=-60; face('pull',y); pill.classList.add('show');
+     [[0,-52],[250,-40],[500,-26],[750,-12],[1000,-4],[1200,0]].forEach(([ms,v],i)=>at(ms,()=>{ pullTo(v); face(v>=-4?'release':'pull',v); mark(v>=-4?1:0); }));
+     at(2000,()=>{ pull0(); pill.style.transition=''; pill.style.transform=''; face('updating'); mark(2); });
+     at(3300,()=>{ face('done'); mark(3); }); at(4900,()=>{ face('hidden'); mark(-1); }); } },
+ { id:'open', title:'Opening the app', sub:'Connecting, then Updating', note:'The app shows what it remembered from last time straight away, with Connecting while the line opens and Updating while Home Assistant sends every state. Then the pill goes by itself.',
+   steps:['Connecting','Updating'], run(){ face('connecting'); mark(0); at(2200,()=>{ face('updating'); mark(1); }); at(4200,()=>{ face('hidden'); mark(-1); }); } },
+ { id:'off', title:'Connection lost', sub:'Blip stays Connecting; a real outage says No connection', note:'A short drop only says Connecting, so a normal blip does not look like a fault. After six seconds (shortened here) it changes to No connection (red, signal bars breathing) and keeps trying in the background. Tap it, or pull down, to try now. When the line is back it says Updating, then clears.',
+   steps:['Connecting','No connection','Connecting','Updating'], run(){ face('connecting'); mark(0); at(2000,()=>{ face('off'); mark(1); $('#tap').hidden=false; }); at(6500,()=>{ $('#tap').hidden=true; face('connecting'); mark(2); }); at(8000,()=>{ face('updating'); mark(3); }); at(9800,()=>{ face('hidden'); mark(-1); }); } },
+ { id:'restart', title:'Home Assistant restarts', sub:'Restarting until the items are back', note:'When Home Assistant closes the line to restart, the pill says so (amber, not red: it is expected). It stays while the app reconnects and the entities load, and clears once they are all back. If it never comes back within five minutes it becomes No connection.',
+   steps:['Restarting','Back, loading','Done'], run(){ face('restart'); mark(0); at(3500,()=>{ face('restart'); txt.textContent='Home Assistant restarting'; mark(1); }); at(6000,()=>{ face('done'); mark(2); }); at(7600,()=>{ face('hidden'); mark(-1); }); } },
+];
+function pull0(){ cards.style.transform=''; }
+function mark(n){ document.querySelectorAll('#steps i').forEach((e,i)=>e.classList.toggle('on', i===n)); }
+let cur = SEQ[0];
+function play(){ token++; timers.forEach(clearTimeout); timers=[]; $('#tap').hidden=true; pull0(); ico.style.transform=''; pill.style.transition=''; pill.style.transform=''; face('hidden'); setTimeout(()=>cur.run(), 350); }
+function pick(s){ cur=s; document.querySelectorAll('.seq').forEach(b=>b.setAttribute('aria-pressed', b.dataset.id===s.id)); $('#note').textContent=s.note;
+  $('#steps').innerHTML=s.steps.map(x=>`<i>${x}</i>`).join(''); play(); }
+$('#seqs').innerHTML = SEQ.map(s=>`<button class="seq" data-id="${s.id}" aria-pressed="false"><b>${s.title}</b><span>${s.sub}</span></button>`).join('');
+document.querySelectorAll('.seq').forEach(b=>b.onclick=()=>pick(SEQ.find(s=>s.id===b.dataset.id)));
+$('#replay').onclick=play;
+$('#tap').onclick=()=>{ if (cur.id==='off') { token++; timers.forEach(clearTimeout); timers=[]; $('#tap').hidden=true; face('connecting'); mark(2); at(1500,()=>{ face('updating'); mark(3); }); at(3300,()=>{ face('hidden'); mark(-1); }); } };
+pick(SEQ[0]);
+</script></body></html>
