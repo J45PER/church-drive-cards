@@ -27,6 +27,7 @@ import com.churchdrive.app.ui.Tone
 import com.churchdrive.app.ui.ask
 import com.churchdrive.app.ui.houseTask
 import com.churchdrive.app.ui.houseTaskFor
+import com.churchdrive.app.ui.sortedHouseTasks
 import com.churchdrive.app.ui.matchOpenTask
 import com.churchdrive.app.ui.myTodoList
 import com.churchdrive.app.ui.parseAssistantTodo
