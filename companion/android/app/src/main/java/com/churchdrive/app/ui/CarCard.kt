@@ -53,6 +53,3 @@ fun carBatteryColour(level: Double?, ok: Color): Color = when {
     else -> ok
 }
 
-private fun reading(e: EntityState?): String =
-    e?.state?.toDoubleOrNull()?.let { "${Math.round(it)} ${e.str("unit_of_measurement").orEmpty()}".trim() }.orEmpty()
-

@@ -94,24 +94,3 @@ fun GreggState.word(): String = when (this) {
 private const val RING_THICKNESS = 11f
 private const val RING_RADIUS = 84.5f   // the middle of the ring: 79 to 90, a gap of twice its thickness to the disc
 
-private fun DrawScope.ring(tint: Color, alpha: Float = 1f) {
-    drawCircle(tint, radius = RING_RADIUS, center = Offset(100f, 100f), alpha = alpha, style = Stroke(RING_THICKNESS))
-}
-
-/** The ring in [count] parts with a gap of [gap] degrees between them, turned by [rotation] (round ends are drawn by the stroke's caps, so the arcs are shortened to match). */
-private fun DrawScope.parts(tint: Color, count: Int, gap: Float, rotation: Float) {
-    val span = 360f / count
-    for (i in 0 until count) arcs(tint, rotation + i * span, span - gap)
-}
-
-private fun DrawScope.arcs(tint: Color, start: Float, sweep: Float) {
-    val cap = Math.toDegrees((RING_THICKNESS / 2f / RING_RADIUS).toDouble()).toFloat()
-    val s = sweep - 2 * cap
-    if (s <= 0f) return
-    drawArc(
-        tint, startAngle = start + cap, sweepAngle = s, useCenter = false,
-        topLeft = Offset(100f - RING_RADIUS, 100f - RING_RADIUS), size = Size(RING_RADIUS * 2, RING_RADIUS * 2),
-        style = Stroke(RING_THICKNESS, cap = StrokeCap.Round),
-    )
-}
-

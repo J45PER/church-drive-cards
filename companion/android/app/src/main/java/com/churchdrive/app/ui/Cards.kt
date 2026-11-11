@@ -498,8 +498,6 @@ fun snapToStep(v: Double, step: Double, min: Double, max: Double): Double {
     return (Math.round(snapped.coerceIn(min, max) * 10) / 10.0)
 }
 
-fun temp(v: Double?): String = if (v == null) "–" else "%.1f".format(v).removeSuffix(".0")
-
 /** A shortcut button on a thermostat card: a heating mode or a preset. */
 data class QuickSetting(val name: String, val hvacMode: String?, val presetMode: String?)
 

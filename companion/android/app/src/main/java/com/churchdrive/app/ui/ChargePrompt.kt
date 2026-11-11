@@ -17,12 +17,6 @@ import com.churchdrive.app.ha.data
 // the cheapest Octopus rate by itself. The charger card has its switch, and pressing Start charge (or Fast) at the normal rate
 // with the cheap rate coming up asks first: charge at the cheap rate, or now.
 
-/** "6 h 12 m", "45 min". */
-fun inText(ms: Long): String {
-    val m = (ms.coerceAtLeast(0) + 30_000) / 60_000
-    return if (m < 60) "$m min" else "${m / 60} h" + if (m % 60 != 0L) " ${m % 60} m" else ""
-}
-
 /**
  * Opened from the charger widget's Start charge (which can't show a question): asks if it should, else just charges, then
  * calls [onClose]. Waits for the house's states to arrive first.

@@ -1,5 +1,9 @@
 package com.churchdrive.app.ui
 
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import android.content.Context
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearEasing
@@ -1139,3 +1143,35 @@ fun styledLine(html: String): AnnotatedString = buildAnnotatedString {
         }
     }
 }
+
+/** "6 h 12 m", "45 min". */
+fun inText(ms: Long): String {
+    val m = (ms.coerceAtLeast(0) + 30_000) / 60_000
+    return if (m < 60) "$m min" else "${m / 60} h" + if (m % 60 != 0L) " ${m % 60} m" else ""
+}
+
+fun reading(e: EntityState?): String =
+    e?.state?.toDoubleOrNull()?.let { "${Math.round(it)} ${e.str("unit_of_measurement").orEmpty()}".trim() }.orEmpty()
+
+fun DrawScope.ring(tint: Color, alpha: Float = 1f) {
+    drawCircle(tint, radius = RING_RADIUS, center = Offset(100f, 100f), alpha = alpha, style = Stroke(RING_THICKNESS))
+}
+
+/** The ring in [count] parts with a gap of [gap] degrees between them, turned by [rotation] (round ends are drawn by the stroke's caps, so the arcs are shortened to match). */
+private fun DrawScope.parts(tint: Color, count: Int, gap: Float, rotation: Float) {
+    val span = 360f / count
+    for (i in 0 until count) arcs(tint, rotation + i * span, span - gap)
+}
+
+fun DrawScope.arcs(tint: Color, start: Float, sweep: Float) {
+    val cap = Math.toDegrees((RING_THICKNESS / 2f / RING_RADIUS).toDouble()).toFloat()
+    val s = sweep - 2 * cap
+    if (s <= 0f) return
+    drawArc(
+        tint, startAngle = start + cap, sweepAngle = s, useCenter = false,
+        topLeft = Offset(100f - RING_RADIUS, 100f - RING_RADIUS), size = Size(RING_RADIUS * 2, RING_RADIUS * 2),
+        style = Stroke(RING_THICKNESS, cap = StrokeCap.Round),
+    )
+}
+
+fun temp(v: Double?): String = if (v == null) "–" else "%.1f".format(v).removeSuffix(".0")
