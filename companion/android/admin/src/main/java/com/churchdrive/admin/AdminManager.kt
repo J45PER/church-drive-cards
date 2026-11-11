@@ -108,8 +108,7 @@ object ManagerSections {
     fun forPage(sections: List<ManagerSection>, page: String): ManagerSection? = sections.firstOrNull { ownPage(it) == page }
 
     /**
-     * A section's cards as the page draws them: a heading directly above an entities list becomes that card's own title (so each list folds
-     * under its own name instead of every one being called "Settings").
+     * A section's cards as the page draws them: a heading directly above an entities list becomes that card's own title.
      */
     fun pageCards(cards: List<ManagerCard>): List<ManagerCard> {
         val out = mutableListOf<ManagerCard>()
@@ -118,7 +117,7 @@ object ManagerSections {
             val c = cards[i]
             val next = cards.getOrNull(i + 1)
             if (c.type == "heading" && next != null && next.type == "entities") {
-                val merged = JSONObject(next.config.toString()).put("heading", c.config.optString("heading")).put("icon", c.config.optString("icon"))
+                val merged = JSONObject(next.config.toString()).put("title", c.config.optString("heading"))
                 out += ManagerCard("entities", merged)
                 i += 2
             } else {
@@ -133,11 +132,11 @@ object ManagerSections {
     val BUILT = setOf(
         "custom:notifications-card", "custom:zone-map-card", "custom:camera-links-card", "custom:icon-styles-card",
         "heading", "markdown", "entities", "custom:house-tasks-card",
-        "custom:people-card", "custom:watch-settings-card", "custom:device-health-card", "custom:auto-entities", "todo-list", "custom:people-manager-card",
+        "custom:people-card", "custom:watch-settings-card", "custom:device-health-card", "custom:people-manager-card",
     )
 }
 
-/** The Manager page: every section that has no page of its own, each in a panel that folds away, with its cards folding inside it. */
+/** The Manager page: every section that has no page of its own, each in a panel that folds away. */
 @Composable
 fun ManagerPage(sections: List<ManagerSection>, entities: Map<String, EntityState>, registry: Registry, call: CallService) {
     if (sections.isEmpty()) {
@@ -153,17 +152,13 @@ fun ManagerPage(sections: List<ManagerSection>, entities: Map<String, EntityStat
             androidx.compose.runtime.CompositionLocalProvider(com.churchdrive.app.ui.LocalPanelTone provides tone) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     ManagerSections.pageCards(section.cards).forEach { card ->
-                        if (card.type in BUILT_AS_CARDVIEW) com.churchdrive.app.ui.CardView(com.churchdrive.app.ui.CardSpec(card.type, card.config), entities, registry, call)
-                        else ManagerCardView(card, entities, registry, call)
+                        ManagerCardView(card, entities, registry, call)
                     }
                 }
             }
         }
     }
 }
-
-/** Cards the main app's own card view draws (and folds), so the Manager page shows them the same way. */
-private val BUILT_AS_CARDVIEW = setOf("entities", "custom:house-tasks-card", "custom:people-card", "custom:auto-entities", "todo-list")
 
 /** A section's cards. A card Clive Admin does not draw yet says so and points to the Church Drive app, which has it. */
 @Composable
@@ -182,6 +177,8 @@ internal fun ManagerCardView(card: ManagerCard, entities: Map<String, EntityStat
         "custom:zone-map-card" -> LocationsPage(entities)
         "custom:camera-links-card" -> CameraLinksPage(entities)
         "custom:people-manager-card" -> com.churchdrive.app.ui.PeoplePage(entities, registry)
+        // The people's own to-do lists (ticking tasks off) are in the To-Do app; Clive Admin shows the jobs the house made ("From the house").
+        "custom:auto-entities", "todo-list" -> Unit
         "custom:icon-styles-card" -> IconStylesPage()
         "heading" -> HeadingCard(card.config)
         "markdown" -> MarkdownCard(card.config)

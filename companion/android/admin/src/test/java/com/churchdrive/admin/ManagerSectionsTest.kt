@@ -67,6 +67,6 @@ class ManagerSectionsTest {
         )
         val out = ManagerSections.pageCards(cards)
         assertEquals(listOf("entities", "markdown"), out.map { it.type })
-        assertEquals("When to make a house job", out[0].config.optString("heading"))
+        assertEquals("When to make a house job", out[0].config.optString("title"))
     }
 }
