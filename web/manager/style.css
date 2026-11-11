@@ -367,3 +367,9 @@ details.fold[open] > summary.head::before { content: '▾'; }
 .fold + .fold { margin-top: 4px; }
 .card.tone .ref-type, .card.tone .ref-art { color: #fff; }
 .ref-tile .sub { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+
+/* The Manager shield beside the wordmark (the capsule's icon is the same shield). */
+.brand .mark { flex: none; }
+.brand .mark-base { fill: #6A5BC2; }
+:root[data-theme="dark"] .brand .mark-base { fill: #B3A9F2; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .brand .mark-base { fill: #B3A9F2; } }

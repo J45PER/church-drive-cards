@@ -230,7 +230,11 @@ function showShell(user) {
       <div class="drop-list" hidden>${PAGES.filter((p) => p.group === g).map((p) => link(p)).join('')}</div></div>`).join('')}`;
   const drawer = `${link(home)}${GROUPS.map((g) => `<p class="drawer-head">${esc(g)}</p>${PAGES.filter((p) => p.group === g).map((p) => link(p)).join('')}`).join('')}`;
   root.innerHTML = `<div class="shell"><header class="site"><div class="site-in">
-      <a class="brand" href="#" aria-label="Clive Manager, home"><span class="brand-text"><b>Clive</b> Manager</span></a>
+      <a class="brand" href="#" aria-label="Clive Manager, home"><svg class="mark" viewBox="${LOGO_VIEWBOX}" aria-hidden="true"><defs>
+        <radialGradient id="bk-p" gradientUnits="userSpaceOnUse" cx="150" cy="70" r="88"><stop offset="0" stop-color="#AB47BC"/><stop offset="1" stop-color="#AB47BC" stop-opacity="0"/></radialGradient>
+        <radialGradient id="bk-g" gradientUnits="userSpaceOnUse" cx="70" cy="170" r="110"><stop offset="0" stop-color="#4FD08A"/><stop offset="1" stop-color="#4FD08A" stop-opacity="0"/></radialGradient>
+        <radialGradient id="bk-i" gradientUnits="userSpaceOnUse" cx="40" cy="40" r="130"><stop offset="0" stop-color="#5C6BC0"/><stop offset="1" stop-color="#5C6BC0" stop-opacity="0"/></radialGradient></defs>
+        <path class="mark-base" fill-rule="evenodd" d="${LOGO_PATH}"/><path fill="url(#bk-p)" fill-rule="evenodd" d="${LOGO_PATH}"/><path fill="url(#bk-g)" fill-rule="evenodd" d="${LOGO_PATH}"/><path fill="url(#bk-i)" fill-rule="evenodd" d="${LOGO_PATH}"/></svg><span class="brand-text"><b>Clive</b> Manager</span></a>
       <nav class="topnav" aria-label="Pages">${top}</nav>
       ${capsuleHtml(user.name)}
       <button class="theme-btn" type="button" id="theme"></button>
