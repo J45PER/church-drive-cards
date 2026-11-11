@@ -91,6 +91,3 @@ fun GreggState.word(): String = when (this) {
     GreggState.Error -> "Needs help"
 }
 
-private const val RING_THICKNESS = 11f
-private const val RING_RADIUS = 84.5f   // the middle of the ring: 79 to 90, a gap of twice its thickness to the disc
-

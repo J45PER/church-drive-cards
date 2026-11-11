@@ -1175,3 +1175,6 @@ fun DrawScope.arcs(tint: Color, start: Float, sweep: Float) {
 }
 
 fun temp(v: Double?): String = if (v == null) "–" else "%.1f".format(v).removeSuffix(".0")
+
+const val RING_THICKNESS = 11f
+const val RING_RADIUS = 84.5f   // the middle of the ring: 79 to 90, a gap of twice its thickness to the disc
