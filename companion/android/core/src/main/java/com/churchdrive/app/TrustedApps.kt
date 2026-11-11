@@ -27,8 +27,8 @@ object TrustedApps {
         "ee:66:d8:57:1a:d5:49:ae:9a:2d:eb:5e:72:fc:6d:57:9f:15:c5:07:79:99:ba:c6:1a:6e:1f:fd:90:8e:10:6e",
         // Church Drive Satellites (com.churchdrive.satellites)
         "5d:91:c9:37:8d:0e:3d:11:5c:e2:6e:23:17:c7:0c:7b:62:38:75:1e:74:58:b0:cd:6e:8d:4a:1a:fa:98:2d:a3",
-        // Clive Admin (com.churchdrive.admin): add its Play signing fingerprint here once Play has it (Play Console, App integrity). GitHub builds
-        // share the debug key, so they need nothing here.
+        // Clive Admin (com.churchdrive.admin), from its About page on the Play version. GitHub builds share the debug key, so they need nothing here.
+        "97:c1:29:4a:d6:b3:bb:31:6c:ff:51:8b:e4:f7:c8:ef:ce:18:c9:1a:c8:a9:39:af:6f:a9:c2:60:5c:c5:78:04",
     )
 
     private fun normal(hex: String) = hex.replace(":", "").lowercase()

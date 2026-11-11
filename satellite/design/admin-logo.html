@@ -1,0 +1,165 @@
+<title>Clive Admin Logo Ideas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root { --bar-bg:#e9ebef; --bar-fg:#14181f; --bar-soft:#5b6472; --stage-bg:#fff; --stage-fg:#000; --stage-soft:#5f6672; --stage-line:#e0e3e8; --icon-bg:#fff; --ui:"Instrument Sans",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bar-bg:#1a1f27; --bar-fg:#eef1f5; --bar-soft:#9aa4b2; color-scheme:dark; } }
+:root[data-theme="dark"] { --bar-bg:#1a1f27; --bar-fg:#eef1f5; --bar-soft:#9aa4b2; color-scheme:dark; }
+:root[data-page="dark"] { --stage-bg:#0B0F11; --stage-fg:#fff; --stage-soft:#9aa0aa; --stage-line:#262a31; --icon-bg:#0B0F11; }
+* { box-sizing:border-box; }
+body { background:var(--bar-bg); color:var(--bar-fg); font-family:var(--ui); margin:0; line-height:1.4; }
+.top { display:flex; flex-wrap:wrap; gap:10px 20px; align-items:center; justify-content:space-between; padding-block:20px 16px; padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px)); }
+.top h1 { font-size:1.3rem; margin:0; letter-spacing:-.01em; }
+.top p { margin:2px 0 0; color:var(--bar-soft); font-size:.86rem; max-width:74ch; }
+.seg { display:inline-flex; background:color-mix(in srgb,var(--bar-soft) 25%,transparent); border-radius:999px; padding:3px; gap:2px; }
+.seg button { font:inherit; font-size:.88rem; border:0; background:none; color:var(--bar-soft); padding:7px 18px; border-radius:999px; cursor:pointer; }
+.seg button[aria-pressed="true"] { background:var(--bar-fg); color:var(--bar-bg); }
+.stage { background:var(--stage-bg); color:var(--stage-fg); padding-block:28px 56px; }
+.in { max-width:1100px; margin:0 auto; display:grid; gap:44px; padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px)); }
+h2 { font-size:1.05rem; margin:0 0 2px; font-weight:600; }
+.note { color:var(--stage-soft); font-size:.86rem; max-width:74ch; margin:0 0 14px; }
+.row { display:flex; flex-wrap:wrap; gap:16px 22px; align-items:flex-end; }
+.cell { display:grid; gap:8px; justify-items:center; align-content:end; min-width:0; }
+.cl { font-size:.74rem; color:var(--stage-soft); text-align:center; }
+.mark { width:150px; height:150px; border:1px solid var(--stage-line); border-radius:22px; display:grid; place-items:center; padding:12px; }
+.icon { width:104px; height:104px; border:1px solid var(--stage-line); background:var(--icon-bg); border-radius:24px; display:grid; place-items:center; padding:12px; }
+.sm { display:flex; gap:14px; align-items:center; height:104px; }
+svg { display:block; overflow:visible; }
+.mark svg, .icon svg { width:100%; height:100%; }
+.splash { width:260px; height:230px; border:1px solid var(--stage-line); border-radius:22px; display:grid; align-content:center; justify-items:center; gap:10px; background:var(--stage-bg); position:relative; }
+.splash .lg { width:122px; height:122px; }
+.splash .t { font-weight:600; font-size:34px; letter-spacing:-.01em; line-height:1; opacity:0; }
+.splash .s { font-size:15px; color:var(--stage-soft); opacity:0; margin-top:-4px; }
+.splash button { position:absolute; right:10px; bottom:8px; font:inherit; font-size:.72rem; border:1px solid var(--stage-line); background:none; color:var(--stage-soft); border-radius:999px; padding:3px 11px; cursor:pointer; }
+.house { display:flex; flex-wrap:wrap; gap:14px 22px; }
+.house .cell svg { width:84px; height:84px; }
+</style>
+<div class="top"><div><h1>Clive Admin: the shield, with different middles</h1><p>The shield is the house's own (the Church Drive shield from the icon set, not a new drawing). Clive's two squares turn into it: the first becomes the shield, the second becomes the cut-out in its middle, then the rest of the middle plays in. Seven middles to compare, each as the mark, an app icon, small sizes and its splash. Loops repeat here; in the app each plays once and stops.</p></div>
+<div class="seg" role="group" aria-label="Page"><button type="button" id="pl" aria-pressed="true">Light icons</button><button type="button" id="pd" aria-pressed="false">Dark icons</button></div></div>
+<div class="stage"><div class="in" id="in"></div></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<radialGradient id="gP" gradientUnits="userSpaceOnUse" cx="150" cy="70" r="88"><stop offset="0" stop-color="#AB47BC"/><stop offset="1" stop-color="#AB47BC" stop-opacity="0"/></radialGradient>
+<radialGradient id="gG" gradientUnits="userSpaceOnUse" cx="70" cy="170" r="110"><stop offset="0" stop-color="#4FD08A"/><stop offset="1" stop-color="#4FD08A" stop-opacity="0"/></radialGradient>
+<radialGradient id="gI" gradientUnits="userSpaceOnUse" cx="40" cy="40" r="130"><stop offset="0" stop-color="#5C6BC0"/><stop offset="1" stop-color="#5C6BC0" stop-opacity="0"/></radialGradient>
+<radialGradient id="gW" gradientUnits="userSpaceOnUse" cx="100" cy="100" r="60"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+</defs></svg>
+<script>
+(function () {
+  var R = {"cA":[[80.7,73.3],[82.3,73.3],[83.9,73.3],[85.4,73.3],[87.0,73.3],[88.6,73.3],[90.2,73.3],[91.7,73.3],[93.3,73.3],[94.9,73.3],[96.5,73.3],[98.1,73.3],[99.6,73.5],[101.2,73.7],[102.7,73.9],[104.3,74.3],[105.8,74.7],[107.3,75.2],[108.7,75.8],[110.2,76.5],[111.6,77.2],[112.9,78.1],[114.2,79.0],[115.5,79.9],[116.7,80.9],[117.8,82.0],[118.9,83.2],[119.9,84.4],[120.9,85.6],[121.8,86.9],[122.6,88.2],[123.4,89.6],[124.1,91.1],[124.7,92.5],[125.2,94.0],[125.7,95.5],[126.0,97.0],[126.3,98.6],[126.5,100.2],[126.6,101.7],[126.7,103.3],[126.7,104.9],[126.7,106.5],[126.7,108.0],[126.7,109.6],[126.7,111.2],[126.7,112.8],[126.7,114.3],[126.7,115.9],[126.7,117.5],[126.7,119.1],[126.7,120.7],[126.5,122.2],[126.3,123.8],[126.1,125.3],[125.7,126.9],[125.3,128.4],[124.8,129.9],[124.2,131.3],[123.5,132.8],[122.8,134.2],[121.9,135.5],[121.0,136.8],[120.1,138.1],[119.1,139.3],[118.0,140.4],[116.8,141.5],[115.6,142.5],[114.4,143.5],[113.1,144.4],[111.8,145.2],[110.4,146.0],[108.9,146.7],[107.5,147.3],[106.0,147.8],[104.5,148.3],[103.0,148.6],[101.4,148.9],[99.8,149.1],[98.3,149.2],[96.7,149.3],[95.1,149.3],[93.5,149.3],[92.0,149.3],[90.4,149.3],[88.8,149.3],[87.2,149.3],[85.7,149.3],[84.1,149.3],[82.5,149.3],[80.9,149.3],[79.3,149.3],[77.8,149.1],[76.2,148.9],[74.7,148.7],[73.1,148.3],[71.6,147.9],[70.1,147.4],[68.7,146.8],[67.2,146.1],[65.8,145.4],[64.5,144.5],[63.2,143.6],[61.9,142.7],[60.7,141.7],[59.6,140.6],[58.5,139.4],[57.5,138.2],[56.5,137.0],[55.6,135.7],[54.8,134.4],[54.0,133.0],[53.3,131.5],[52.7,130.1],[52.2,128.6],[51.7,127.1],[51.4,125.6],[51.1,124.0],[50.9,122.4],[50.8,120.9],[50.7,119.3],[50.7,117.7],[50.7,116.1],[50.7,114.6],[50.7,113.0],[50.7,111.4],[50.7,109.8],[50.7,108.3],[50.7,106.7],[50.7,105.1],[50.7,103.5],[50.7,101.9],[50.9,100.4],[51.1,98.8],[51.3,97.3],[51.7,95.7],[52.1,94.2],[52.6,92.7],[53.2,91.3],[53.9,89.8],[54.6,88.4],[55.5,87.1],[56.4,85.8],[57.3,84.5],[58.3,83.3],[59.4,82.2],[60.6,81.1],[61.8,80.1],[63.0,79.1],[64.3,78.2],[65.6,77.4],[67.0,76.6],[68.5,75.9],[69.9,75.3],[71.4,74.8],[72.9,74.3],[74.4,74.0],[76.0,73.7],[77.6,73.5],[79.1,73.4]],"cB":[[103.3,50.7],[104.9,50.7],[106.5,50.7],[108.0,50.7],[109.6,50.7],[111.2,50.7],[112.8,50.7],[114.3,50.7],[115.9,50.7],[117.5,50.7],[119.1,50.7],[120.7,50.7],[122.2,50.9],[123.8,51.1],[125.3,51.3],[126.9,51.7],[128.4,52.1],[129.9,52.6],[131.3,53.2],[132.8,53.9],[134.2,54.6],[135.5,55.5],[136.8,56.4],[138.1,57.3],[139.3,58.3],[140.4,59.4],[141.5,60.6],[142.5,61.8],[143.5,63.0],[144.4,64.3],[145.2,65.6],[146.0,67.0],[146.7,68.5],[147.3,69.9],[147.8,71.4],[148.3,72.9],[148.6,74.4],[148.9,76.0],[149.1,77.6],[149.2,79.1],[149.3,80.7],[149.3,82.3],[149.3,83.9],[149.3,85.4],[149.3,87.0],[149.3,88.6],[149.3,90.2],[149.3,91.7],[149.3,93.3],[149.3,94.9],[149.3,96.5],[149.3,98.1],[149.1,99.6],[148.9,101.2],[148.7,102.7],[148.3,104.3],[147.9,105.8],[147.4,107.3],[146.8,108.7],[146.1,110.2],[145.4,111.6],[144.5,112.9],[143.6,114.2],[142.7,115.5],[141.7,116.7],[140.6,117.8],[139.4,118.9],[138.2,119.9],[137.0,120.9],[135.7,121.8],[134.4,122.6],[133.0,123.4],[131.5,124.1],[130.1,124.7],[128.6,125.2],[127.1,125.7],[125.6,126.0],[124.0,126.3],[122.4,126.5],[120.9,126.6],[119.3,126.7],[117.7,126.7],[116.1,126.7],[114.6,126.7],[113.0,126.7],[111.4,126.7],[109.8,126.7],[108.3,126.7],[106.7,126.7],[105.1,126.7],[103.5,126.7],[101.9,126.7],[100.4,126.5],[98.8,126.3],[97.3,126.1],[95.7,125.7],[94.2,125.3],[92.7,124.8],[91.3,124.2],[89.8,123.5],[88.4,122.8],[87.1,121.9],[85.8,121.0],[84.5,120.1],[83.3,119.1],[82.2,118.0],[81.1,116.8],[80.1,115.6],[79.1,114.4],[78.2,113.1],[77.4,111.8],[76.6,110.4],[75.9,108.9],[75.3,107.5],[74.8,106.0],[74.3,104.5],[74.0,103.0],[73.7,101.4],[73.5,99.8],[73.4,98.3],[73.3,96.7],[73.3,95.1],[73.3,93.5],[73.3,92.0],[73.3,90.4],[73.3,88.8],[73.3,87.2],[73.3,85.7],[73.3,84.1],[73.3,82.5],[73.3,80.9],[73.3,79.3],[73.5,77.8],[73.7,76.2],[73.9,74.7],[74.3,73.1],[74.7,71.6],[75.2,70.1],[75.8,68.7],[76.5,67.2],[77.2,65.8],[78.1,64.5],[79.0,63.2],[79.9,61.9],[80.9,60.7],[82.0,59.6],[83.2,58.5],[84.4,57.5],[85.6,56.5],[86.9,55.6],[88.2,54.8],[89.6,54.0],[91.1,53.3],[92.5,52.7],[94.0,52.2],[95.5,51.7],[97.0,51.4],[98.6,51.1],[100.2,50.9],[101.7,50.8]]};
+  var SHIELDS = {"cd:shield":"<path fill-rule='evenodd' d='M44.6,49.1 L41.9,50.8 L39.8,53.2 L38.8,55.1 L38.1,58.1 L38.0,99.8 L38.1,104.4 L38.5,108.9 L39.1,113.4 L40.2,118.3 L41.4,122.5 L44.1,129.8 L45.9,133.6 L48.3,137.8 L50.6,141.3 L55.3,147.4 L58.6,150.9 L64.4,156.3 L68.1,159.3 L74.9,163.8 L79.2,166.3 L87.2,170.3 L95.4,173.5 L98.8,174.4 L101.2,174.4 L104.2,173.6 L109.0,171.9 L116.9,168.4 L121.3,166.1 L128.3,161.8 L135.6,156.3 L141.4,150.9 L144.7,147.4 L149.4,141.3 L151.7,137.8 L154.1,133.6 L157.2,126.5 L158.8,121.8 L160.0,117.7 L161.4,109.6 L161.9,104.4 L162.0,59.2 L161.8,57.1 L161.2,55.1 L159.6,52.3 L157.2,50.2 L155.4,49.1 L104.4,26.9 L102.2,26.2 L100.0,26.0 L97.8,26.2 L95.6,26.9 Z'/>","cd:shield-outline":"<path fill-rule='evenodd' d='M43.7,49.6 L41.1,51.5 L39.8,53.2 L38.8,55.1 L38.1,58.1 L38.0,99.8 L38.2,105.0 L38.6,109.6 L39.3,114.0 L40.2,118.3 L41.4,122.5 L44.1,129.8 L45.9,133.6 L48.3,137.8 L52.7,144.1 L55.7,147.9 L58.6,150.9 L64.4,156.3 L68.1,159.3 L74.9,163.8 L79.2,166.3 L87.2,170.3 L95.4,173.5 L98.8,174.4 L101.2,174.4 L104.2,173.6 L112.8,170.3 L117.3,168.2 L124.7,164.1 L128.8,161.5 L135.2,156.6 L138.4,153.8 L141.9,150.5 L147.0,144.6 L149.8,140.8 L153.8,134.2 L155.9,129.8 L157.5,125.9 L159.8,118.3 L160.7,114.0 L161.5,108.9 L162.0,100.2 L162.0,59.2 L161.8,57.1 L161.2,55.1 L160.2,53.2 L158.9,51.5 L157.2,50.2 L155.4,49.1 L104.4,26.9 L102.2,26.2 L100.0,26.0 L97.8,26.2 L95.6,26.9 Z M54.0,62.5 L100.0,42.5 L146.0,62.5 L145.9,103.7 L145.6,107.5 L144.4,114.1 L142.4,120.6 L141.1,123.6 L138.2,129.2 L134.5,134.7 L130.2,139.5 L127.7,141.9 L122.4,146.4 L116.5,150.4 L109.9,153.9 L106.5,155.6 L100.0,158.1 L93.5,155.6 L89.9,153.9 L86.6,152.1 L80.5,148.4 L74.7,144.1 L72.2,141.8 L67.6,137.2 L63.5,131.9 L60.3,126.5 L58.9,123.6 L56.5,117.4 L54.9,110.8 L54.1,103.8 L54.0,99.7 Z'/>","cd:shield-check":"<path fill-rule='evenodd' d='M43.7,49.6 L41.1,51.5 L39.8,53.2 L38.8,55.1 L38.1,58.1 L38.0,99.8 L38.2,105.0 L38.6,109.6 L39.3,114.0 L40.2,118.3 L41.4,122.5 L44.1,129.8 L45.9,133.6 L48.3,137.8 L52.7,144.1 L55.7,147.9 L58.6,150.9 L64.4,156.3 L68.1,159.3 L74.9,163.8 L79.2,166.3 L87.2,170.3 L95.4,173.5 L98.8,174.4 L101.2,174.4 L104.2,173.6 L112.8,170.3 L117.3,168.2 L124.7,164.1 L128.8,161.5 L135.2,156.6 L138.4,153.8 L141.9,150.5 L147.0,144.6 L149.8,140.8 L153.8,134.2 L155.9,129.8 L157.5,125.9 L159.8,118.3 L160.7,114.0 L161.5,108.9 L162.0,100.2 L162.0,59.2 L161.8,57.1 L161.2,55.1 L160.2,53.2 L158.9,51.5 L157.2,50.2 L155.4,49.1 L104.4,26.9 L102.2,26.2 L100.0,26.0 L97.8,26.2 L95.6,26.9 Z M59.3,104.3 L58.3,102.8 L58.0,101.5 L58.1,100.2 L58.8,98.5 L62.4,94.8 L63.5,94.0 L65.2,93.5 L66.9,93.7 L67.8,94.0 L68.8,94.8 L85.2,111.1 L131.9,64.5 L132.6,64.1 L133.9,63.8 L135.3,63.9 L136.5,64.3 L137.6,65.1 L140.7,68.2 L141.7,69.6 L142.0,70.9 L141.9,72.3 L141.5,73.5 L140.7,74.6 L88.4,126.9 L86.9,127.9 L85.6,128.2 L84.7,128.2 L83.4,127.9 L82.3,127.2 Z'/>","cd:shield-key":"<path fill-rule='evenodd' d='M43.7,49.6 L41.1,51.5 L39.8,53.2 L38.8,55.1 L38.1,58.1 L38.0,99.8 L38.2,105.0 L38.6,109.6 L39.3,114.0 L40.2,118.3 L41.4,122.5 L44.1,129.8 L45.9,133.6 L48.3,137.8 L52.7,144.1 L55.7,147.9 L58.6,150.9 L64.4,156.3 L68.1,159.3 L74.9,163.8 L79.2,166.3 L87.2,170.3 L95.4,173.5 L98.8,174.4 L101.2,174.4 L104.2,173.6 L112.8,170.3 L117.3,168.2 L124.7,164.1 L128.8,161.5 L135.2,156.6 L138.4,153.8 L141.9,150.5 L147.0,144.6 L149.8,140.8 L153.8,134.2 L155.9,129.8 L157.5,125.9 L159.8,118.3 L160.7,114.0 L161.5,108.9 L162.0,100.2 L162.0,59.2 L161.8,57.1 L161.2,55.1 L160.2,53.2 L158.9,51.5 L157.2,50.2 L155.4,49.1 L104.4,26.9 L102.2,26.2 L100.0,26.0 L97.8,26.2 L95.6,26.9 Z M92.8,99.6 L89.7,98.4 L87.5,97.2 L85.4,95.9 L83.5,94.4 L81.7,92.7 L80.1,90.8 L78.7,88.8 L77.5,86.6 L76.6,84.4 L75.8,82.0 L75.3,79.6 L75.0,77.2 L75.0,74.7 L75.2,72.3 L75.6,69.9 L76.3,67.5 L77.2,65.2 L78.3,63.0 L79.6,61.0 L81.2,59.0 L82.9,57.3 L84.8,55.7 L86.8,54.3 L88.9,53.1 L91.2,52.1 L93.5,51.4 L95.9,50.8 L98.4,50.6 L100.8,50.5 L103.3,50.7 L105.7,51.2 L108.1,51.8 L111.1,53.1 L114.6,55.2 L117.7,57.8 L119.9,60.3 L122.1,63.7 L123.4,66.7 L124.4,69.9 L125.0,73.9 L124.9,78.0 L124.2,82.0 L122.8,85.9 L121.7,88.1 L120.4,90.1 L117.7,93.3 L114.6,95.9 L111.1,98.0 L107.2,99.6 L107.2,118.5 L117.9,118.5 L118.7,118.8 L119.4,119.4 L119.9,120.1 L120.3,121.2 L120.2,131.6 L119.8,132.7 L118.7,133.6 L117.6,134.0 L115.5,134.0 L115.5,146.8 L115.3,147.7 L114.8,148.4 L113.7,149.3 L112.5,149.5 L95.5,149.5 L94.7,149.3 L93.9,148.8 L93.1,147.7 L92.8,146.5 Z M101.1,86.2 L103.1,85.8 L105.1,85.0 L106.8,83.8 L108.3,82.4 L109.5,80.6 L110.3,78.7 L110.7,76.6 L110.7,74.5 L110.3,72.4 L109.5,70.5 L108.3,68.7 L106.8,67.2 L105.1,66.1 L103.1,65.3 L101.1,64.9 L98.9,64.9 L96.9,65.3 L94.9,66.1 L93.2,67.2 L91.7,68.7 L90.5,70.5 L89.7,72.4 L89.3,74.5 L89.3,76.6 L89.7,78.7 L90.5,80.6 L91.7,82.4 L93.2,83.8 L94.9,85.0 L96.9,85.8 L98.9,86.2 Z'/>","cd:shield-lock":"<path fill-rule='evenodd' d='M43.7,49.6 L41.1,51.5 L39.8,53.2 L38.8,55.1 L38.1,58.1 L38.0,99.8 L38.2,105.0 L38.6,109.6 L39.3,114.0 L40.2,118.3 L41.4,122.5 L44.1,129.8 L45.9,133.6 L48.3,137.8 L52.7,144.1 L55.7,147.9 L58.6,150.9 L64.4,156.3 L68.1,159.3 L74.9,163.8 L79.2,166.3 L87.2,170.3 L95.4,173.5 L98.8,174.4 L101.2,174.4 L104.2,173.6 L112.8,170.3 L117.3,168.2 L124.7,164.1 L128.8,161.5 L135.2,156.6 L138.4,153.8 L141.9,150.5 L147.0,144.6 L149.8,140.8 L153.8,134.2 L155.9,129.8 L157.5,125.9 L159.8,118.3 L160.7,114.0 L161.5,108.9 L162.0,100.2 L162.0,59.2 L161.8,57.1 L161.2,55.1 L160.2,53.2 L158.9,51.5 L157.2,50.2 L155.4,49.1 L104.4,26.9 L102.2,26.2 L100.0,26.0 L97.8,26.2 L95.6,26.9 Z M126.4,90.5 L128.6,91.5 L129.9,92.4 L132.2,94.7 L133.5,96.7 L134.1,98.2 L134.7,101.4 L134.6,127.3 L134.1,129.6 L133.1,131.8 L131.7,133.8 L129.9,135.5 L128.6,136.3 L126.4,137.3 L123.2,138.0 L76.8,138.0 L73.6,137.3 L71.4,136.3 L69.5,134.9 L67.8,133.2 L66.2,130.4 L65.5,128.1 L65.3,126.5 L65.3,102.2 L65.5,99.8 L66.5,96.7 L68.3,94.0 L70.8,91.9 L73.1,90.7 L73.1,80.3 L73.6,76.0 L74.7,71.9 L76.6,67.6 L79.1,64.1 L83.2,59.9 L86.7,57.5 L91.0,55.6 L95.5,54.4 L99.8,54.0 L104.5,54.4 L109.0,55.6 L113.3,57.5 L116.8,59.9 L120.9,64.1 L123.4,67.6 L125.3,71.9 L126.4,76.0 L126.9,80.3 L126.9,90.7 Z M86.8,78.5 L86.6,81.2 L86.6,89.8 L113.4,89.8 L113.4,81.2 L113.2,78.5 L112.6,76.3 L111.6,74.2 L110.3,72.3 L108.6,70.6 L106.7,69.3 L104.6,68.3 L102.3,67.7 L100.0,67.5 L97.7,67.7 L95.4,68.3 L93.3,69.3 L91.4,70.6 L89.7,72.3 L88.4,74.2 L87.4,76.3 Z'/>","cd:shield-home":"<path fill-rule='evenodd' d='M41.9,50.8 L39.8,53.2 L38.8,55.1 L38.1,58.1 L38.0,99.8 L38.1,104.4 L39.1,113.4 L40.2,118.3 L41.4,122.5 L44.1,129.8 L45.9,133.6 L48.3,137.8 L50.6,141.3 L55.3,147.4 L58.6,150.9 L64.4,156.3 L68.1,159.3 L74.9,163.8 L79.2,166.3 L87.2,170.3 L95.4,173.5 L98.8,174.4 L101.2,174.4 L104.2,173.6 L109.0,171.9 L116.9,168.4 L121.3,166.1 L128.3,161.8 L135.6,156.3 L141.4,150.9 L144.7,147.4 L149.4,141.3 L151.7,137.8 L154.1,133.6 L157.2,126.5 L160.0,117.7 L161.4,109.6 L161.9,104.4 L162.0,59.2 L161.8,57.1 L161.2,55.1 L159.6,52.3 L157.2,50.2 L155.4,49.1 L104.4,26.9 L102.2,26.2 L100.0,26.0 L97.8,26.2 L95.6,26.9 L44.6,49.1 Z M94.2,59.6 L95.4,58.7 L97.6,57.7 L100.0,57.3 L102.4,57.7 L104.6,58.7 L105.8,59.6 L135.4,87.1 L137.5,89.4 L139.3,91.8 L140.6,94.4 L141.6,97.2 L142.3,101.7 L142.3,125.1 L142.1,128.0 L141.3,130.4 L140.0,132.3 L138.1,133.6 L135.7,134.4 L132.8,134.7 L112.3,134.7 L111.3,134.3 L110.9,133.3 L110.9,109.4 L110.5,106.1 L109.6,104.4 L108.4,103.1 L107.6,102.7 L105.7,102.1 L103.4,101.9 L96.6,101.9 L94.3,102.1 L92.4,102.7 L91.6,103.1 L90.4,104.4 L89.9,105.2 L89.3,107.1 L89.1,109.4 L89.1,133.3 L88.9,134.1 L88.6,134.4 L87.7,134.7 L65.7,134.6 L64.3,134.4 L61.9,133.6 L60.0,132.3 L59.3,131.4 L58.2,129.3 L57.7,126.6 L57.7,101.7 L58.4,97.2 L60.0,93.1 L62.5,89.4 L64.6,87.1 Z'/>"};
+  var NS = 'http://www.w3.org/2000/svg';
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var query = new URLSearchParams(location.search), FREEZE = query.has('t') ? parseFloat(query.get('t')) : null;
+  function f(v) { return (Math.round(v * 100) / 100).toString(); }
+  function clamp(v) { return Math.max(0, Math.min(1, v)); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function inout(t) { return t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+  function out(t) { t = clamp(t); return 1 - Math.pow(1 - t, 3); }
+  function spring(t) { t = clamp(t); var c1 = 1.9, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); }
+  function ring(a, b, t) { var d = ''; for (var i = 0; i < a.length; i++) d += (i ? 'L' : 'M') + f(lerp(a[i][0], b[i][0], t)) + ',' + f(lerp(a[i][1], b[i][1], t)); return d + 'Z'; }
+  function rr(x, y, w, h, r) { r = Math.min(r, w / 2, h / 2); return 'M' + (x + r) + ',' + y + ' H' + (x + w - r) + ' A' + r + ',' + r + ' 0 0 1 ' + (x + w) + ',' + (y + r) + ' V' + (y + h - r) + ' A' + r + ',' + r + ' 0 0 1 ' + (x + w - r) + ',' + (y + h) + ' H' + (x + r) + ' A' + r + ',' + r + ' 0 0 1 ' + x + ',' + (y + h - r) + ' V' + (y + r) + ' A' + r + ',' + r + ' 0 0 1 ' + (x + r) + ',' + y + 'Z'; }
+  function circ(cx, cy, r) { return 'M' + cx + ',' + (cy - r) + ' A' + r + ',' + r + ' 0 1 1 ' + cx + ',' + (cy + r) + ' A' + r + ',' + r + ' 0 1 1 ' + cx + ',' + (cy - r) + 'Z'; }
+  var probe = document.createElementNS(NS, 'svg'); probe.setAttribute('width', 0); probe.setAttribute('height', 0); probe.style.position = 'absolute'; document.body.appendChild(probe);
+  // n points evenly by length round a path string, in its own direction.
+  function sample(d, n) { var p = document.createElementNS(NS, 'path'); p.setAttribute('d', d); probe.appendChild(p); var L = p.getTotalLength(), a = []; for (var i = 0; i < n; i++) { var q = p.getPointAtLength(L * i / n); a.push([q.x, q.y]); } probe.removeChild(p); return a; }
+  function area(a) { var s = 0; for (var i = 0; i < a.length; i++) { var q = a[(i + 1) % a.length]; s += a[i][0] * q[1] - q[0] * a[i][1]; } return s; }
+  // The same way round as the assistant's squares, starting at the top left, so one can turn into the other without a twist.
+  function orient(a) { if ((area(a) > 0) !== (area(R.cA) > 0)) a = a.slice().reverse(); var k = 0, best = 1e9; a.forEach(function (p, i) { var v = p[0] * .5 + p[1]; if (v < best) { best = v; k = i; } }); return a.slice(k).concat(a.slice(0, k)); }
+  function bbox(a) { var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; a.forEach(function (p) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }); return [x0, y0, x1, y1]; }
+  function move(a, fn) { return a.map(function (p) { return fn(p[0], p[1]); }); }
+  function poly(a) { return 'M' + a.map(function (p) { return f(p[0]) + ',' + f(p[1]); }).join('L') + 'Z'; }
+  // A contour moved by a scale, a turn and a shift about its own centre.
+  function place(a, c, tf) { if (!tf) return a; var s = tf.s || [1, 1], r = (tf.r || 0) * Math.PI / 180, t = tf.t || [0, 0], co = Math.cos(r), si = Math.sin(r); return a.map(function (p) { var x = (p[0] - c[0]) * s[0], y = (p[1] - c[1]) * s[1]; return [c[0] + x * co - y * si + t[0], c[1] + x * si + y * co + t[1]]; }); }
+
+  // The house's own shield (cd:shield): its outline points, turned the right way round and given 160 evenly spaced points.
+  var shieldD = /d='([^']*)'/.exec(SHIELDS['cd:shield'])[1];
+  var SHIELD = orient(sample(shieldD, 160));
+
+  var CX = 100, CY = 93; // the middle of the shield's wide part
+  // A middle is a list of contours cut out of the shield (even-odd, so a contour inside another is solid again), each with the point it grows from.
+  function C(d, n, c) { var a = sample(d, n || 240); return { pts: a, c: c || (function () { var b = bbox(a); return [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2]; })() }; }
+  function turnTo(a, deg, k, tx, ty) { var r = deg * Math.PI / 180, co = Math.cos(r), si = Math.sin(r); return move(a, function (x, y) { return [tx + k * (x * co - y * si), ty + k * (x * si + y * co)]; }); }
+  var MIDDLES = [
+    { id: 'tick', name: 'A. Tick', note: 'Checked and in order: the house\'s own "shield, check" idea. The plainest, and the best at 20px.',
+      cs: function () { return [C('M64,96 L76,84 L92,100 L126,64 L138,76 L92,124Z')]; },
+      anim: function (x, i) { return { s: [1, 1].map(function () { return 1; }) }; }, pop: function (x, i) { return spring((x - .05) / .5); } },
+    { id: 'key', name: 'B. Key', note: 'Admin holds the keys: the key turns in as it grows. Echoes the house\'s "shield, key".',
+      cs: function () { var out1 = turnTo(sample('M16.97,-6 H62 V13 H56 V6 H52 V16 H44 V6 H16.97 A18,18 0 1 1 16.97,-6Z', 260), -45, 1.12, 84, 112), isl = turnTo(sample(circ(0, 0, 7), 60), -45, 1.12, 84, 112); return [{ pts: out1, c: [84, 112] }, { pts: isl, c: [84, 112] }]; },
+      anim: function (x, i) { var u = out((x - .05) / .7); return { s: [u, u], r: (1 - u) * -80 }; } },
+    { id: 'house', name: 'C. House', note: 'The house\'s admin: the Church Drive house in the middle. Ties it to the main app.',
+      cs: function () { return [C('M100,62 L140,96 H128 V134 H108 V112 H92 V134 H72 V96 H60Z')]; },
+      anim: function (x, i) { var u = out((x - .05) / .6); return { s: [lerp(.5, 1, u), lerp(.5, 1, u)], t: [0, (1 - u) * 16] }; } },
+    { id: 'clive', name: 'D. Clive', note: 'Clive himself: his two squares end up small in the shield. The tidiest story, and the shield carries on from the splash.',
+      cs: function () { var k = .6, cx = 100, cy = CY; function sc(a) { return move(a, function (x, y) { return [cx + (x - 100) * k, cy + (y - 100) * k]; }); } var b = sc(R.cB), a = sc(R.cA); return [{ pts: b, c: [cx, cy] }, { pts: a, c: [cx, cy] }]; },
+      anim: function (x, i) { var u = spring((x - .05 - i * .12) / .5); return { s: [u, u] }; } },
+    { id: 'cog', name: 'E. Cog', note: 'The manager: a small gear that turns one tooth. Busy at 20px.',
+      cs: function () { var a = [], n = 8; for (var i = 0; i < 200; i++) { var th = (-105 + i * 360 / 200) * Math.PI / 180, rad = 30 + 6.5 * Math.tanh(2.6 * Math.cos(n * th)) / Math.tanh(2.6); a.push([CX + rad * Math.cos(th), CY + rad * Math.sin(th)]); } return [{ pts: a, c: [CX, CY] }, { pts: sample(circ(CX, CY, 12), 60), c: [CX, CY] }]; },
+      anim: function (x, i) { return { r: 45 * out((x - .15) / 1.1) }; } },
+    { id: 'tune', name: 'F. Sliders', note: 'Colours and settings: three tracks with their knobs, sliding in. The "design tool" middle.',
+      cs: function () { var ys = [70, 94, 118], kx = [110, 82, 116], r = []; ys.forEach(function (y, i) { r.push(C(rr(60, y - 8, 80, 16, 8), 120, [60, y])); r.push(C(circ(kx[i], y, 5), 40, [60, y])); }); return r; },
+      anim: function (x, i) { var u = out((x - .05 - Math.floor(i / 2) * .18) / .5); return { s: [Math.max(.001, u), 1] }; } },
+    { id: 'lock', name: 'G. Lock', note: 'Locked down: a padlock. The house\'s "shield, lock" is the same idea.',
+      cs: function () { function up(a) { return move(a, function (x, y) { return [x, y - 6]; }); } return [C('M82,96 V80 A18,18 0 0 1 118,80 V96 A10,10 0 0 1 128,106 V130 A10,10 0 0 1 118,140 H82 A10,10 0 0 1 72,130 V106 A10,10 0 0 1 82,96Z'), C('M92,96 V80 A8,8 0 0 1 108,80 V96Z'), C(circ(100,116,7), 60)].map(function (c) { return { pts: up(c.pts), c: [100, 101] }; }); },
+      anim: function (x, i) { var u = spring((x - .05) / .5); return { s: [u, u] }; } }
+  ];
+  var END = [20, 20, 160, 160], START = [42, 42, 116, 116];
+  var BASE = '#6A5BC2', LOOP = 5200, T0 = 500, DUR = 1100;
+  MIDDLES.forEach(function (m) {
+    m.contours = m.cs();
+    m.A = SHIELD;
+    // The first contour is the one the second square turns into: 160 points, the same way round.
+    m.B = orient(sample(poly(m.contours[0].pts), 160));
+  });
+  function frames(m, x) { // each contour moved for x seconds after the shapes settle
+    return m.contours.map(function (c, i) {
+      var tf = m.anim(x, i);
+      if (m.pop && i > 0) { var u = m.pop(x, i); tf = { s: [u, u] }; }
+      if (i === 0 && !m.keepFirst) tf = { r: tf.r || 0 };
+      return place(c.pts, c.c, tf);
+    });
+  }
+  function layers(dark) { return dark ? [{ fill: '#fff' }] : [{ fill: BASE }, { fill: 'url(#gP)' }, { fill: 'url(#gG)' }, { fill: 'url(#gI)' }, { fill: 'url(#gW)' }]; }
+  function make(host, m, dark) {
+    var svg = document.createElementNS(NS, 'svg'); svg.setAttribute('viewBox', END.join(' ')); svg.setAttribute('aria-hidden', 'true');
+    var els = layers(dark).map(function (l) { var e = document.createElementNS(NS, 'path'); e.setAttribute('fill', l.fill); e.setAttribute('fill-rule', 'evenodd'); svg.appendChild(e); return e; });
+    host.appendChild(svg); return { svg: svg, els: els, m: m };
+  }
+  function draw(o, p) {
+    var m = o.m, u = clamp((p - T0) / DUR), e = inout(u), x = Math.max(0, (p - (T0 + DUR)) / 1000), settled = u >= 1;
+    o.svg.setAttribute('viewBox', [0, 1, 2, 3].map(function (i) { return f(lerp(START[i], END[i], e)); }).join(' '));
+    var fr = settled ? frames(m, x) : null;
+    // While turning, the second square becomes the first cut-out (160 points each); once settled the cut-out is drawn as it is.
+    var d = ring(R.cA, m.A, e) + (settled ? poly(fr[0]) : ring(R.cB, m.B, e));
+    if (settled) for (var i = 1; i < fr.length; i++) { var c = fr[i], b = bbox(c); if (b[2] - b[0] > .3 || b[3] - b[1] > .3) d += poly(c); }
+    o.els.forEach(function (el) { el.setAttribute('d', d); });
+    if (o.title) { var t = clamp((p - 350) / 900); o.title.style.opacity = f(out(t)); o.title.style.transform = 'translateY(' + f((1 - out(t)) * 8) + 'px)'; var s = clamp((p - 900) / 700); o.sub.style.opacity = f(out(s)); o.sub.style.transform = 'translateY(' + f((1 - out(s)) * 8) + 'px)'; }
+  }
+  var cells = [];
+  function build() {
+    var dark = document.documentElement.getAttribute('data-page') === 'dark';
+    var host = document.getElementById('in'); host.innerHTML = ''; cells = [];
+    // The house's own shields, as drawn in the icon set, for comparison.
+    var sec0 = document.createElement('section'); sec0.innerHTML = '<h2>The house\'s own shields</h2><p class="note">From the Church Drive icon set (cd:shield and its variants). The logo uses the first, solid one; the others show how the house already cuts a symbol out of it.</p>'; var h = document.createElement('div'); h.className = 'house';
+    [['cd:shield', 'Shield'], ['cd:shield-check', 'Check'], ['cd:shield-key', 'Key'], ['cd:shield-lock', 'Lock'], ['cd:shield-home', 'Home'], ['cd:shield-outline', 'Outline']].forEach(function (k) {
+      var c = document.createElement('div'); c.className = 'cell'; c.innerHTML = '<svg viewBox="0 0 200 200" fill="currentColor" aria-hidden="true">' + SHIELDS[k[0]] + '</svg><div class="cl">' + k[1] + '</div>'; h.appendChild(c);
+    });
+    sec0.appendChild(h); host.appendChild(sec0);
+    MIDDLES.forEach(function (m) {
+      var sec = document.createElement('section'); sec.innerHTML = '<h2>' + m.name + '</h2><p class="note">' + m.note + '</p>'; var row = document.createElement('div'); row.className = 'row'; sec.appendChild(row); host.appendChild(sec);
+      function cell(cls, label) { var c = document.createElement('div'); c.className = 'cell'; var b = document.createElement('div'); b.className = cls; c.appendChild(b); var l = document.createElement('div'); l.className = 'cl'; l.textContent = label; c.appendChild(l); row.appendChild(c); return b; }
+      [['mark', 'The mark'], ['icon', 'App icon']].forEach(function (k) { var o = make(cell(k[0], k[1]), m, dark); o.still = true; cells.push(o); });
+      var sm = cell('sm', '32 and 20 px'); [32, 20].forEach(function (px) { var hh = document.createElement('div'); hh.style.width = px + 'px'; hh.style.height = px + 'px'; sm.appendChild(hh); var o = make(hh, m, dark); o.still = true; cells.push(o); });
+      var sp = document.createElement('div'); sp.className = 'cell'; sp.innerHTML = '<div class="splash"><div class="lg"></div><div class="t">Clive</div><div class="s">Admin</div><button type="button">Replay</button></div><div class="cl">The splash, playing</div>'; row.appendChild(sp);
+      var o2 = make(sp.querySelector('.lg'), m, dark); o2.title = sp.querySelector('.t'); o2.sub = sp.querySelector('.s'); o2.start = performance.now(); o2.loop = true; cells.push(o2);
+      sp.querySelector('button').addEventListener('click', function () { o2.start = performance.now(); });
+    });
+    cells.forEach(function (o) { if (o.still) draw(o, 99999); });
+  }
+  function tick(ms) { cells.forEach(function (o) { if (o.loop) draw(o, FREEZE !== null ? FREEZE : (reduce ? 4200 : (ms - o.start) % LOOP)); }); if (FREEZE === null) requestAnimationFrame(tick); }
+  var pl = document.getElementById('pl'), pd = document.getElementById('pd');
+  function page(dark) { document.documentElement.setAttribute('data-page', dark ? 'dark' : 'light'); pl.setAttribute('aria-pressed', String(!dark)); pd.setAttribute('aria-pressed', String(dark)); build(); }
+  pl.addEventListener('click', function () { page(false); }); pd.addEventListener('click', function () { page(true); });
+  if (query.get('page') === 'dark') document.documentElement.setAttribute('data-page', 'dark');
+  build(); requestAnimationFrame(tick);
+})();
+</script>

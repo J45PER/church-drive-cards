@@ -1,5 +1,10 @@
 # Clive Admin: changelog
 
+## 0.129.0
+
+- The Google Play version uses the Church Drive app's sign-in when it is on the phone and signed in (the phone app now trusts this app's Play signing certificate), so it no longer asks to sign in.
+- Its own logo and splash: the house's shield with Clive's mark cut out of its middle. On the splash Clive's two squares turn into the shield and its cut-out, then the second square pops in. The launcher icon, the sign-in screen and About use it too.
+
 ## 0.128.0
 
 - The first version of Clive Admin, the app for the house's administrators.

@@ -4,7 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,10 +20,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.churchdrive.app.ui.BrandSplash
 import com.churchdrive.app.ui.ChurchDriveTheme
+import com.churchdrive.app.ui.LogoKind
+import com.churchdrive.app.ui.LogoMorph
 import com.churchdrive.app.ui.SignInForm
 
 /** Clive Admin: the administrators' app. Sign in with the Home Assistant login, then the admin pages. */
@@ -51,14 +51,14 @@ class MainActivity : ComponentActivity() {
                             blurb = "Sign in with your Home Assistant login. If the Church Drive app is on this phone and signed in, this app uses its sign-in. Only administrators can use it.",
                             busy = vm.busy, needCode = vm.needCode, error = vm.loginError, changeAddress = false,
                             onLogin = vm::login, onCode = vm::submitCode,
-                            header = { Image(painterResource(R.drawable.admin_mark), contentDescription = null, modifier = Modifier.height(88.dp)) },
+                            header = { LogoMorph(LogoKind.Admin, androidx.compose.foundation.isSystemInDarkTheme(), height = 96.dp, animate = false) },
                         )
                     } else {
                         AdminApp(vm)
                     }
                 }
             }
-            BrandSplash("Clive Admin", R.drawable.admin_mark)
+            BrandSplash(LogoKind.Admin, "Admin")
         }
     }
 
