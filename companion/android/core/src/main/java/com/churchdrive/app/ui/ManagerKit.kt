@@ -510,12 +510,16 @@ fun HouseTasksCard(config: JSONObject, entities: Map<String, EntityState>) {
             items == null -> Text("Loading…", style = MaterialTheme.typography.bodyMedium)
             tasks.isEmpty() -> Text("Nothing from the house right now.", style = MaterialTheme.typography.bodyMedium)
         }
-        tasks.forEach { (item, task) ->
+        tasks.forEachIndexed { i, (item, task) ->
+            // With everyone's jobs shown, each person's (and Everyone's) come under their own name.
+            if (showAll && (i == 0 || tasks[i - 1].second.who != task.who)) {
+                Text(task.who, style = MaterialTheme.typography.labelLarge, color = tone.onContainer.copy(alpha = 0.75f))
+            }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 ToneIconName(task.icon, CdVectors.Info, tone)
                 Column(modifier = Modifier.weight(1f)) {
                     Text(item.summary, style = MaterialTheme.typography.bodyLarge)
-                    val sub = listOf(task.kind, task.detail, if (showAll) task.who else "").filter { it.isNotBlank() }.joinToString(" · ")
+                    val sub = listOf(task.kind, task.detail).filter { it.isNotBlank() }.joinToString(" · ")
                     if (sub.isNotEmpty()) Text(sub, style = MaterialTheme.typography.bodySmall, color = tone.onContainer.copy(alpha = 0.75f))
                 }
             }

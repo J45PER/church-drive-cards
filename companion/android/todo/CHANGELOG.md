@@ -5,7 +5,7 @@ Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newe
 
 ## 0.147.0
 
-- The house jobs list is sorted by how urgent they are (safety alarms first, updates last) instead of in the order they were made.
+- The house jobs list is sorted by person (Everyone first), then by how urgent they are (safety alarms first, updates last) instead of in the order they were made.
 
 ## 0.146.0
 

@@ -115,9 +115,15 @@ fun houseTaskRank(kind: String): Int = when {
     else -> 6
 }
 
-/** The house's jobs in a steady order: by [houseTaskRank], then by their words, so the list does not shuffle each time it is refreshed. */
+/**
+ * The house's jobs in a steady order: grouped by who they are for (Everyone first, then people by name), then by [houseTaskRank], then by
+ * their words, so the list does not shuffle each time it is refreshed.
+ */
 fun sortedHouseTasks(tasks: List<Pair<TodoItem, HouseTask>>): List<Pair<TodoItem, HouseTask>> =
-    tasks.sortedWith(compareBy({ houseTaskRank(it.second.kind) }, { it.first.summary.lowercase() }))
+    tasks.sortedWith(compareBy(
+        { if (it.second.who.equals("Everyone", true)) "" else it.second.who.lowercase() },
+        { houseTaskRank(it.second.kind) }, { it.first.summary.lowercase() },
+    ))
 
 /** What the apps send each other to open a particular task: the to-do list (entity id) and the task's uid. */
 object TodoDeepLink {

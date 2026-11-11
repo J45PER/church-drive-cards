@@ -167,16 +167,17 @@ class PagesLogicTest {
     }
 
     @Test
-    fun theHouseJobsAreSortedByHowUrgentTheyAreThenByName() {
-        fun job(name: String, kind: String) = TodoItem(name, name, false, null, "Automatic · $kind · for Everyone").let { it to houseTask(it) }
+    fun theHouseJobsAreGroupedByPersonThenSortedByUrgencyThenName() {
+        fun job(name: String, kind: String, who: String) = TodoItem(name, name, false, null, "Automatic · $kind · for $who").let { it to houseTask(it) }
         val sorted = sortedHouseTasks(listOf(
-            job("Update Home Assistant", "Updates"), job("Replace Gregg's filter", "Filters and parts"), job("Replace battery: Hue Dial", "Low batteries"),
-            job("Check Ring Doorbell (not responding)", "Devices not responding"), job("Replace Hall alarm (end of life)", "Safety alarms"),
-            job("Charge Ring Keypad", "Low batteries"),
+            job("Update Home Assistant", "Updates", "Everyone"), job("Charge Keypad", "Low batteries", "Jamie"), job("Replace Hall alarm", "Safety alarms", "Jamie"),
+            job("Replace Gregg's filter", "Filters and parts", "Everyone"), job("Replace battery: Dial", "Low batteries", "Everyone"),
+            job("Check Doorbell", "Devices not responding", "Hayley"), job("Charge Camera", "Low batteries", "Jamie"),
         )).map { it.first.summary }
         assertEquals(listOf(
-            "Replace Hall alarm (end of life)", "Check Ring Doorbell (not responding)", "Charge Ring Keypad", "Replace battery: Hue Dial",
-            "Replace Gregg's filter", "Update Home Assistant",
+            "Replace battery: Dial", "Replace Gregg's filter", "Update Home Assistant",
+            "Check Doorbell",
+            "Replace Hall alarm", "Charge Camera", "Charge Keypad",
         ), sorted)
     }
 

@@ -6,7 +6,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 ## 0.147.0
 
-- Settings numbers (such as in the Manager) now say what they count (30 %, 24 hours, 60 mins), and the house's automatic to-dos are sorted by how urgent they are.
+- Settings numbers (such as in the Manager) now say what they count (30 %, 24 hours, 60 mins), and the house's automatic to-dos are sorted by person (Everyone first), then by how urgent they are.
 
 ## 0.146.0
 

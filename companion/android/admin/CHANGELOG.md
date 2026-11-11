@@ -6,7 +6,7 @@
 - Device health, Notifications and Watch moved to the side panel, each as its own page (the Home page's Device health card opens it).
 - Camera links and People are their own pages in the side panel. Alarm lights is not in the app: it stays on the Manager website and in Home Assistant.
 - "When to make a house job" and other settings numbers now say what they count: 30 %, 24 hours, 60 mins.
-- The automatic to-dos ("From the house") are sorted: safety alarms, devices not responding, batteries, the vacuum, filters and parts, then updates.
+- The automatic to-dos ("From the house") are sorted: Everyone's first, then each person's under their own name, each by urgency (safety alarms, devices not responding, batteries, the vacuum, filters and parts, then updates).
 
 ## 0.146.0
 
