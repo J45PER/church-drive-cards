@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Status Pill In The Header</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root { --s-bg:#F3F5F9; --s-bar:#E7EAF0; --s-card:#FFFFFF; --s-ink:#14181F; --s-soft:#5B6472; --s-line:#DDE1E8; --s-primary:#5B54C9;
+  --bg:#F3F4F6; --panel:#FFFFFF; --fg:#14181F; --soft:#5B6472; --line:#D9DDE4; --acc:#4F46C8;
+  --ui:"Instrument Sans",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace; color-scheme:light; }
+:root[data-theme="dark"] { --bg:#0B0E13; --panel:#171C24; --fg:#EEF1F5; --soft:#9AA4B2; --line:#28303C; --acc:#A9B4FF; color-scheme:dark; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font-family:var(--ui); line-height:1.4; padding:24px max(16px,env(safe-area-inset-right,0px)) 72px max(16px,env(safe-area-inset-left,0px)); }
+main { max-width:1240px; margin:0 auto; display:grid; gap:26px; }
+h1 { font-size:clamp(1.6rem,4vw,2.2rem); margin:0 0 6px; letter-spacing:-.02em; line-height:1.1; }
+h2 { font-size:1.2rem; margin:0 0 4px; letter-spacing:-.01em; }
+.lede, .note { color:var(--soft); margin:0; max-width:78ch; } .note { font-size:.92rem; }
+.label { font-family:var(--mono); font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--soft); margin:0 0 8px; }
+button { font:inherit; color:inherit; }
+.bar2 { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.seq { text-align:left; border:1px solid var(--line); background:var(--panel); color:var(--fg); border-radius:14px; padding:8px 14px; cursor:pointer; }
+.seq b { display:block; font-size:.92rem; } .seq span { color:var(--soft); font-size:.8rem; }
+.seq[aria-pressed="true"] { border-color:var(--acc); box-shadow:0 0 0 2px var(--acc) inset; }
+.btn { border:1px solid var(--line); background:var(--panel); color:var(--fg); padding:7px 15px; border-radius:999px; cursor:pointer; font-size:.88rem; }
+.seg { display:inline-flex; border-radius:999px; overflow:hidden; border:1px solid var(--line); } .seg button { border:0; background:var(--panel); padding:7px 14px; cursor:pointer; font-size:.86rem; } .seg button + button { border-left:1px solid var(--line); }
+.seg button[aria-pressed="true"] { background:var(--fg); color:var(--bg); }
+:is(.btn,.seq,.seg button,input):focus-visible { outline:2px solid var(--acc); outline-offset:2px; }
+.opt { background:var(--panel); border-radius:22px; padding:18px; display:grid; gap:12px; min-width:0; }
+.row2 { display:flex; flex-wrap:wrap; gap:18px; align-items:flex-start; }
+.col.d { flex:1 1 640px; min-width:0; } .col.p { flex:0 0 360px; max-width:100%; }
+.hwrap { position:relative; border:1px solid var(--s-line); border-radius:16px; overflow:hidden; background:var(--s-bg); color:var(--s-ink); }
+.hwrap.narrow { max-width:360px; }
+.hdr { background:var(--s-bar); border-bottom:1px solid var(--s-line); position:relative; z-index:5; }
+.site-in { display:flex; align-items:center; gap:14px; padding:10px 16px; }
+.brand { display:flex; align-items:center; gap:10px; color:var(--s-ink); font-size:1.2rem; letter-spacing:-.01em; margin-right:8px; text-decoration:none; }
+.brand b { font-weight:700; background:linear-gradient(100deg,#6A5BC2,#AB47BC 55%,#4FD08A); -webkit-background-clip:text; background-clip:text; color:transparent; } .brand-text { font-weight:500; white-space:nowrap; overflow:hidden; display:inline-block; }
+.hwrap.narrow .site-in { gap:8px; } .hwrap.narrow .brand { margin-right:0; min-width:0; }
+.topnav { display:flex; align-items:center; gap:2px; flex:1; min-width:0; overflow:hidden; -webkit-mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent); mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent); } .hwrap.narrow .topnav { display:none; }
+.topnav a { padding:8px 12px; border-radius:999px; color:var(--s-soft); font-size:.95rem; font-weight:500; white-space:nowrap; }
+.topnav a.on { color:var(--s-ink); background:color-mix(in srgb, var(--s-primary) 24%, transparent); }
+.hwrap.narrow .site-in .pslot { margin-left:auto; }
+.pslot { position:relative; width:0; height:40px; flex:none; margin-right:-4px; }
+.pslot { margin-left:-4px; }
+.menu-wrap { position:relative; z-index:6; } .hwrap:not(.narrow) .menu-wrap { margin-left:0; }
+.person { width:40px; height:40px; border-radius:50%; border:0; background:color-mix(in srgb, var(--s-primary) 28%, var(--s-bar)); color:var(--s-ink); font-size:1rem; font-weight:600; cursor:pointer; position:relative; z-index:6; }
+.burger { display:none; place-items:center; width:40px; height:40px; border:0; background:none; color:var(--s-ink); } .hwrap.narrow .burger { display:grid; }
+.menu { position:absolute; right:0; top:48px; min-width:200px; padding:14px; border-radius:20px; background:var(--s-card); box-shadow:0 8px 30px rgba(0,0,0,.25); display:grid; gap:6px; z-index:30; } .menu[hidden] { display:none; }
+.menu-name { margin:0; font-size:1.05rem; font-weight:500; } .menu .sub { margin:0 0 4px; color:var(--s-soft); font-size:.85rem; }
+.mrow { display:flex; align-items:center; gap:10px; border:0; background:none; padding:9px 8px; border-radius:12px; cursor:pointer; text-align:left; } .mrow:hover { background:color-mix(in srgb, var(--s-primary) 14%, transparent); }
+.sample { padding:16px; display:grid; grid-template-columns:repeat(2,1fr); gap:12px; min-height:215px; align-content:start; } .sample h3 { grid-column:1/-1; margin:0; font-size:1.5rem; font-weight:500; letter-spacing:-.02em; }
+.sc { height:70px; border-radius:22px; background:color-mix(in srgb, var(--s-primary) 16%, var(--s-card)); }
+.dcard { position:absolute; right:16px; top:62px; width:min(320px, calc(100% - 32px)); padding:14px 16px; border-radius:22px; border:1px solid; box-shadow:0 8px 24px rgba(0,0,0,.22); z-index:4; opacity:0; transform:translateY(-8px) scale(.98); pointer-events:none; transition:opacity .22s, transform .28s cubic-bezier(.2,.8,.2,1); transform-origin:top right; }
+.dcard.open { opacity:1; transform:none; pointer-events:auto; }
+.dt { font-size:1.15rem; font-weight:600; letter-spacing:-.01em; } .da, .db { font-size:.88rem; opacity:.85; } .db { opacity:.7; }
+.dbar { height:5px; border-radius:99px; overflow:hidden; margin-top:8px; } .dbar i { display:block; height:100%; border-radius:99px; }
+.dtry { margin-top:8px; background:transparent; border:1px solid; border-radius:99px; padding:4px 14px; font-weight:500; cursor:pointer; }
+/* The pill. */
+.pv { position:absolute; left:50%; top:0; overflow:hidden; display:flex; align-items:center; will-change:transform; }
+.pv .ring { position:absolute; inset:0; border-radius:999px; pointer-events:none; box-sizing:border-box; }
+.pv canvas { position:absolute; inset:0; width:100%; height:100%; }
+.pv .slot { position:relative; flex:none; display:grid; place-items:center; }
+.pv .slot > div, .pv .lbl > span { grid-area:1/1; }
+.pv .lbl { position:relative; overflow:hidden; display:grid; white-space:nowrap; font-weight:500; flex:none; }
+.pv .lbl span { white-space:nowrap; }
+.pv.big .lbl { display:block; }
+.pv .bg { position:absolute; left:0; top:0; height:100%; flex-direction:column; justify-content:center; }
+.pv .bt { font-weight:600; letter-spacing:-.01em; white-space:nowrap; }
+.pv .ba { font-weight:400; opacity:.88; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pv .bb { opacity:.72; }
+.pv .track { border-radius:99px; overflow:hidden; } .pv .track i { display:block; height:100%; border-radius:99px; }
+.pv .try { display:none; align-self:flex-start; background:transparent; border-radius:99px; font:inherit; font-weight:500; cursor:pointer; }
+.ic { display:grid; place-items:center; } .ic svg { grid-area:1/1; overflow:visible; }
+
+.pvr { left:auto; right:0; }
+
+</style></head><body>
+<main>
+ <header><h1>Status pill in the header</h1>
+ <p class="lede">For the Manager website: no pull down. The pill lives in the navigation bar, to the left of the user button, and is a button you press. Three ways to do it, each at desktop and phone width, all driven by the same real animation and the same connection. Press the circles, use the menu in B, or pick a situation.</p></header>
+ <div><div class="label">Situation (all three react together)</div><div class="bar2" id="seqs"></div></div>
+ <div class="bar2"><button class="btn" id="play">Pause</button><button class="btn" id="replay">Replay</button>
+   <label style="display:flex;gap:8px;align-items:center;font-size:.86rem">Speed <input id="speed" type="range" min="0.1" max="3" step="0.1" value="1"><output id="speedv" style="font-family:var(--mono);font-size:.76rem;color:var(--soft)">1×</output></label>
+   <div class="seg" id="themeSeg"><button data-v="light" aria-pressed="false">Light</button><button data-v="dark" aria-pressed="false">Dark</button></div></div>
+ <div id="options" style="display:grid;gap:22px"></div>
+</main>
+<script>
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const TAU = Math.PI * 2;
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+
+/* ---------- easing and animation, as Compose does it ---------- */
+const bez = (x1, y1, x2, y2) => t => {
+  if (t <= 0) return 0; if (t >= 1) return 1;
+  let lo = 0, hi = 1, x;
+  for (let i = 0; i < 28; i++) { x = (lo + hi) / 2; const cx = 3*x1*(1-x)*(1-x)*x + 3*x2*(1-x)*x*x + x*x*x; if (cx < t) lo = x; else hi = x; }
+  const s = (lo + hi) / 2; return 3*y1*(1-s)*(1-s)*s + 3*y2*(1-s)*s*s + s*s*s;
+};
+const FOSE = bez(0.4, 0, 0.2, 1);                    // FastOutSlowInEasing, the default of tween()
+const triangle = (t, period) => { const q = (t / period) % 2; return q < 1 ? q : 2 - q; };  // RepeatMode.Reverse
+
+/** One animated value: set(target, spec) starts from wherever it is now. spec: {dur, delay?} (tween, standard easing) or {spring: omega} (critically damped). */
+class Anim {
+  constructor(v) { this.from = v; this.to = v; this.t0 = 0; this.spec = null; }
+  jump(v) { this.from = this.to = v; this.spec = null; }
+  set(to, spec, now) { if (to === this.to) return; this.from = this.get(now); this.to = to; this.t0 = now; this.spec = spec; }
+  get(now) {
+    const s = this.spec; if (!s) return this.to;
+    const t = now - this.t0 - (s.delay || 0); if (t <= 0) return this.from;
+    let p;
+    if (s.spring) { const w = s.spring, x = w * t / 1000; p = 1 - (1 + x) * Math.exp(-x); if (p > 0.9995) p = 1; }
+    else p = t >= s.dur ? 1 : FOSE(t / s.dur);
+    return this.from + (this.to - this.from) * p;
+  }
+}
+
+/* ---------- colours: the house's palettes (CliveColours.kt, Theme.kt, StateColors.kt) ---------- */
+const hex = h => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+const rgb = (c, a = 1) => `rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+const mix = (a, b, t) => { a = typeof a === 'string' ? hex(a) : a; b = typeof b === 'string' ? hex(b) : b; return a.map((v, i) => v + (b[i] - v) * t); };
+const NEUTRAL = {
+  light: { bg:'#F3F4F6', surface:'#FFFFFF', surface2:'#ECEEF2', line:'#D9DDE4', text:'#14181F', soft:'#5B6472', primary:'#4F46C8' },
+  dark:  { bg:'#0B0E13', surface:'#171C24', surface2:'#202733', line:'#28303C', text:'#EEF1F5', soft:'#9AA4B2', primary:'#A9B4FF' },
+};
+const SETS = {
+  red:   { colour:'#F25962', dark:'#491D20', accent:'#EF61AC', light:'#F7BABE', deep:'#6C2327' },
+  amber: { colour:'#F19655', dark:'#492F1D', accent:'#EF6168', light:'#F7D4BA', deep:'#6C4123' },
+  tasks: { colour:'#8498F5', dark:'#1D2549', accent:'#8B61EF', light:'#BAC5F7', deep:'#23306C' },
+};
+/** toneColors(): a card's container and text colour. Light: a soft tint over white with the set's Deep for text; dark: the set's Dark with white text. */
+const toneColors = (set, dark) => dark ? { container: hex(set.dark), on: hex(NEUTRAL.dark.text) } : { container: mix('#FFFFFF', set.light, 0.38), on: hex(set.deep) };
+const CLASSIC = [hex('#5C6BC0'), hex('#AB47BC'), hex('#4FD08A')];
+function theme(dark, pal) {
+  const n = NEUTRAL[dark ? 'dark' : 'light'];
+  const phone = [hex(n.primary), hex(dark ? SETS.tasks.colour : SETS.tasks.accent), hex(n.soft)];   // primary, tertiary, secondary
+  const red = toneColors(SETS.red, dark), amber = toneColors(SETS.amber, dark);
+  return {
+    n, dark,
+    normal: { bg: hex(n.surface2), ink: hex(n.text), line: hex(n.line), cloud: pal === 'phone' ? phone : CLASSIC },
+    noconn: { bg: red.container, ink: red.on, line: hex(n.line), cloud: [hex(SETS.red.colour), hex(SETS.red.accent), hex(SETS.red.colour)] },
+    restart: { bg: amber.container, ink: amber.on, line: hex(n.line), cloud: [hex(SETS.amber.colour), hex(SETS.amber.accent), hex(SETS.amber.colour)] },
+  };
+}
+
+/* ---------- faces ---------- */
+const FACES = {
+  hidden: { label: '' },
+  rest: { label: '', icon: 'mark', tone: 'normal' },
+  connecting: { label: 'Connecting', icon: 'mark', tone: 'normal' },
+  updating: { label: 'Updating', icon: 'mark', tone: 'normal' },
+  pull: { label: 'Pull to refresh', icon: 'mark', tone: 'normal' },
+  release: { label: 'Release to refresh', icon: 'mark', tone: 'normal' },
+  done: { label: 'Up to date', icon: 'tick', tone: 'normal' },
+  noconn: { label: 'No connection', icon: 'bars', tone: 'noconn' },
+  restart: { label: 'Home Assistant restarting', icon: 'ring', tone: 'restart' },
+};
+const PILL = 40, ICON_SLOT = 40, LABEL_PAD = 18, LABEL_SP = 14;
+/** The pill, and the large version for the website: 3 times as tall (120 dp) and about twice as wide (464 dp); same circle, same animation, more to say. */
+const DIM_PILL = { H: 40, SLOT: 40, K: 1, ORB: 32, BODY: 0, WIDEN: 320, SHRINK: 320 };
+const DIM_BIG = { H: 120, SLOT: 120, K: 3, ORB: 96, BODY: 344, WIDEN: 400, SHRINK: 400 };
+
+const measure = document.createElement('canvas').getContext('2d');
+const SHORT = { restart: 'Restarting' };
+const labelOf = (f, short) => (short && SHORT[f]) || FACES[f].label;
+const textW = (f, short) => { measure.font = '500 14px "Instrument Sans", system-ui, sans-serif'; const s = labelOf(f, short); return measure.measureText(s).width + s.length * 0.1; };
+
+/* ---------- Clive's mark: AssistantGlyph, Idle pose ---------- */
+function rr(x, y, w, h, r) {
+  return `M${x + r} ${y}H${x + w - r}A${r} ${r} 0 0 1 ${x + w} ${y + r}V${y + h - r}A${r} ${r} 0 0 1 ${x + w - r} ${y + h}H${x + r}A${r} ${r} 0 0 1 ${x} ${y + h - r}V${y + r}A${r} ${r} 0 0 1 ${x + r} ${y}Z`;
+}
+function markPath(now) {
+  const wave = p => (Math.cos(p * TAU) + 1) / 2;                       // 1 at the start, 0 half way
+  const together = 1 - 0.55 * (1 - wave((now % 4000) / 4000));         // the squircles slide together and apart, 4 s
+  const SH = 11.3;
+  return rr(62 - SH * together, 62 + SH * together, 76, 76, 30) + rr(62 + SH * together, 62 - SH * together, 76, 76, 30);
+}
+
+/* ---------- Clive's cloud: AssistOrb, Idle state ---------- */
+function drawCloud(ctx, now, colours, pxPerDp, wDp, hDp, sx, ORB = 32) {
+  const phase = ((now % 9000) / 9000) * TAU;
+  const breathe = -1 + 2 * FOSE(triangle(now, 4500));
+  const small = ORB < 80, group = 1 + 0.05 * breathe;
+  const u = ORB / 120 * group, drift = 11 * u, spread = small ? 1.5 : 1;   // "small": the orb is under 80 dp
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  ctx.setTransform(pxPerDp * sx, 0, 0, pxPerDp, wDp * pxPerDp / 2, hDp * pxPerDp / 2);
+  ctx.globalCompositeOperation = 'screen';
+  const cloud = (col, dx, dy, disc, a, b) => {
+    const ax = dx * u * spread + Math.cos(phase * a) * drift, ay = dy * u * spread + Math.sin(phase * b) * drift;
+    let radius = disc * u; const outer = radius + 26 * u; if (small) radius *= 0.9;
+    const g = ctx.createRadialGradient(ax, ay, 0, ax, ay, outer);
+    g.addColorStop(0, rgb(col, 1));
+    g.addColorStop(clamp(Math.max(radius - 26 * u, 0) / outer, 0, 1), rgb(col, 1));
+    g.addColorStop(clamp(radius / outer, 0, 1), rgb(col, 0.5));
+    g.addColorStop(1, rgb(col, 0));
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(ax, ay, outer, 0, TAU); ctx.fill();
+  };
+  cloud(colours[0], -13, -1, 42, 1, 2);
+  cloud(colours[1], 15.5, -13.5, 39.5, 2, 1);
+  cloud(colours[2], -3, 15, 37, 1, 1);
+}
+
+/* ---------- the pill: StatusPill + PillIcon ---------- */
+const SVGNS = 'http://www.w3.org/2000/svg';
+const svg = (tag, attrs, parent) => { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent && parent.appendChild(e); return e; };
+
+/** The Clive set's icons the faces use (the house's own, copied from design/clive/house-icons.json: cd:wifi-off, cd:update-arrow, cd:check; never a Material one). */
+const CD_PATHS = {"cd:wifi-off": "M141.0,108.5 L172.0,69.8 L172.7,68.1 L172.8,66.2 L172.1,64.4 L171.1,63.3 L166.6,60.2 L160.9,56.7 L155.1,53.6 L149.1,50.7 L139.5,47.0 L133.1,45.0 L126.8,43.4 L120.2,42.1 L113.5,41.1 L103.2,40.4 L96.6,40.4 L89.9,40.8 L83.2,41.5 L78.6,42.3 Z M163.5,178.9 L165.3,179.6 L166.5,179.6 L167.6,179.2 L168.6,178.6 L174.4,173.1 L175.3,171.8 L175.6,170.7 L175.5,169.1 L174.8,167.7 L37.1,21.6 L35.8,20.7 L34.3,20.3 L33.1,20.5 L31.7,21.2 L25.1,27.5 L24.4,29.3 L24.6,31.3 L25.4,32.6 L45.1,53.4 L36.2,58.4 L28.9,63.3 L27.9,64.4 L27.2,66.2 L27.2,67.6 L27.7,69.4 L95.9,154.7 L97.5,156.0 L99.4,156.6 L101.4,156.4 L103.1,155.5 L120.8,133.7 Z", "cd:update-arrow": "M25.0,99.7 L25.2,104.5 L25.6,109.2 L26.4,113.9 L27.4,118.6 L28.8,123.2 L30.5,127.7 L32.4,132.1 L34.7,136.4 L37.3,140.6 L40.2,144.6 L43.7,148.9 L47.2,152.6 L50.6,155.7 L54.5,158.9 L58.6,161.8 L63.2,164.6 L67.5,166.9 L72.0,168.8 L76.5,170.5 L81.2,171.8 L85.9,172.8 L90.7,173.6 L95.4,174.0 L100.2,174.2 L105.0,174.0 L109.8,173.5 L114.5,172.8 L119.2,171.7 L123.8,170.3 L128.4,168.6 L132.8,166.7 L136.8,164.6 L141.0,162.1 L145.1,159.2 L149.0,156.1 L153.1,152.3 L156.4,148.7 L159.7,144.7 L162.7,140.3 L166.4,133.9 L168.6,129.1 L171.1,122.4 L173.1,115.5 L174.4,108.8 L174.8,103.6 L174.3,101.3 L173.7,100.1 L172.9,99.0 L171.8,98.1 L170.6,97.5 L169.3,97.0 L167.8,96.9 L158.8,97.0 L156.6,97.7 L154.8,99.0 L153.6,100.5 L153.0,102.2 L152.2,109.0 L151.5,112.4 L150.7,115.6 L149.0,120.3 L146.8,124.8 L145.2,127.6 L143.2,130.3 L141.1,133.0 L138.8,135.6 L134.8,139.4 L132.1,141.6 L129.3,143.6 L126.1,145.5 L123.0,147.1 L120.1,148.4 L116.9,149.5 L113.4,150.6 L107.0,151.8 L103.4,152.1 L96.9,152.1 L93.3,151.8 L90.0,151.3 L86.8,150.6 L83.6,149.6 L80.4,148.5 L77.0,147.0 L74.0,145.4 L71.2,143.7 L68.1,141.5 L65.4,139.3 L62.9,137.0 L60.3,134.2 L58.1,131.5 L56.0,128.6 L54.3,125.8 L52.7,122.9 L51.2,119.5 L50.0,116.3 L49.1,113.1 L48.4,110.0 L47.8,106.7 L47.5,103.4 L47.4,100.0 L47.5,96.7 L47.8,93.4 L48.4,89.8 L49.1,86.6 L50.1,83.4 L51.3,80.2 L52.7,77.1 L54.2,74.3 L56.0,71.3 L58.0,68.5 L60.3,65.7 L62.9,62.9 L65.5,60.5 L68.4,58.2 L71.2,56.3 L74.2,54.5 L77.1,53.0 L80.1,51.7 L83.4,50.6 L86.8,49.6 L90.2,48.9 L96.6,48.2 L100.2,48.1 L106.7,48.6 L110.3,49.2 L113.6,50.0 L116.9,51.0 L119.9,52.1 L123.2,53.6 L126.3,55.3 L129.2,57.1 L131.9,59.0 L134.0,60.8 L134.3,62.0 L134.2,62.6 L133.8,63.2 L122.0,75.3 L121.2,76.4 L120.6,77.6 L120.0,79.9 L120.1,81.2 L120.4,82.5 L121.0,83.7 L121.8,84.8 L123.6,86.3 L125.3,87.0 L127.1,87.2 L168.0,87.2 L169.3,87.1 L170.6,86.7 L172.3,85.7 L173.6,84.4 L174.6,82.5 L175.0,80.7 L175.0,36.9 L174.8,35.5 L174.4,34.2 L173.8,33.0 L172.9,31.9 L171.8,31.1 L170.6,30.4 L169.3,30.0 L167.9,29.9 L166.6,30.1 L165.3,30.5 L164.1,31.1 L163.0,32.0 L151.3,44.1 L150.6,44.5 L149.8,44.6 L148.7,44.2 L144.4,40.8 L140.4,37.9 L136.5,35.6 L132.2,33.3 L127.8,31.3 L123.2,29.7 L118.2,28.2 L113.5,27.1 L108.8,26.4 L104.1,26.0 L99.8,25.8 L95.0,26.0 L90.3,26.4 L85.5,27.2 L80.5,28.3 L75.9,29.7 L71.3,31.3 L66.9,33.3 L63.0,35.4 L58.8,37.9 L54.7,40.8 L50.8,43.9 L47.0,47.4 L43.5,51.1 L40.3,54.9 L37.4,59.0 L34.8,63.1 L32.5,67.4 L30.3,72.3 L28.7,76.8 L27.3,81.4 L26.3,86.0 L25.6,90.7 L25.2,95.0 Z", "cd:check": "M67.7,155.2 L69.0,156.2 L70.4,156.9 L72.7,157.5 L74.3,157.5 L75.9,157.2 L77.3,156.6 L78.7,155.7 L173.1,61.2 L174.4,59.2 L175.0,56.8 L175.0,55.2 L174.4,52.9 L173.1,50.9 L166.6,44.3 L164.5,43.1 L163.0,42.6 L161.4,42.4 L159.0,42.8 L157.6,43.4 L156.2,44.3 L73.5,127.0 L44.4,97.9 L42.4,96.4 L41.0,95.8 L38.6,95.5 L36.2,95.8 L34.7,96.4 L32.8,97.9 L26.9,103.9 L26.0,105.2 L25.4,106.7 L25.0,109.1 L25.2,110.7 L25.6,112.2 L26.9,114.2 Z"};
+const CD_ICON = { bars: 'cd:wifi-off', ring: 'cd:update-arrow', tick: 'cd:check' }, CD_SIZE = 28;
+class IconLayer {
+  constructor(parent) {
+    this.root = document.createElement('div'); this.root.className = 'ic'; parent.appendChild(this.root);
+    this.mark = svg('svg', { viewBox: '48 48 104 104' }, this.root); this.markPath = svg('path', { 'fill-rule': 'evenodd', fill: 'currentColor' }, this.mark);
+    this.cd = {};
+    for (const [kind, name] of Object.entries(CD_ICON)) {
+      const el = svg('svg', { viewBox: '0 0 200 200' }, this.root); svg('path', { 'fill-rule': 'evenodd', fill: 'currentColor', d: CD_PATHS[name] }, el); this.cd[kind] = el;
+    }
+  }
+  draw(face, now, dp, ctx) {
+    const f = FACES[face]; if (!f || !f.icon) { this.root.style.display = 'none'; return; }
+    this.root.style.display = 'grid';
+    this.mark.style.display = f.icon === 'mark' ? 'block' : 'none';
+    for (const k in this.cd) this.cd[k].style.display = k === f.icon ? 'block' : 'none';
+    this.root.style.transform = '';
+    if (f.icon === 'mark') {
+      const size = 22 * (ctx.k || 1) * dp; this.mark.style.width = this.mark.style.height = size + 'px';
+      this.markPath.setAttribute('d', markPath(now));
+      // turns with the finger while pulling and has made half a turn by Release; the mark looks the same upside down, so every other face
+      // draws it upright with no jump, and only its own drift moves (no spinning once the pill is loaded)
+      this.root.style.transform = `rotate(${face === 'pull' ? ctx.pull * 180 : face === 'release' ? 180 : 0}deg)`;
+      return;
+    }
+    const el = this.cd[f.icon], size = CD_SIZE * (ctx.k || 1) * dp;
+    el.style.width = el.style.height = size + 'px'; el.style.opacity = '1'; el.style.clipPath = '';
+    if (f.icon === 'bars') el.style.opacity = String(0.35 + 0.65 * FOSE(triangle(now, 900)));                                  // crossed Wi-Fi, breathing: still trying
+    else if (f.icon === 'ring') this.root.style.transform = `rotate(${(now % 1100) / 1100 * 360}deg)`;                         // circular arrow, one turn every 1.1 s
+    else el.style.clipPath = `inset(0 ${(1 - FOSE(clamp((now - ctx.tickT) / 380, 0, 1))) * 100}% 0 0)`;                       // tick wiped in from the left over 380 ms
+  }
+}
+
+/** The words of the large version: a title, two lines of detail, and a progress bar or a button when there is one. */
+class BigLayer {
+  constructor(parent, onTry) {
+    this.root = document.createElement('div'); this.root.className = 'bg'; parent.appendChild(this.root);
+    this.t = document.createElement('div'); this.t.className = 'bt';
+    this.a = document.createElement('div'); this.a.className = 'ba';
+    this.b = document.createElement('div'); this.b.className = 'ba bb';
+    this.track = document.createElement('div'); this.track.className = 'track'; this.fill = document.createElement('i'); this.track.appendChild(this.fill);
+    this.btn = document.createElement('button'); this.btn.className = 'try'; this.btn.type = 'button'; this.btn.textContent = 'Try now'; this.btn.onclick = e => { e.stopPropagation(); onTry && onTry(); };
+    this.root.append(this.t, this.a, this.b, this.track, this.btn);
+  }
+  set(face, info, tone, w, dp, now) {
+    const r = this.root.style;
+    if (!face || w < 0.001) { r.display = 'none'; return; }
+    r.display = 'flex'; r.opacity = w; r.width = (DIM_BIG.BODY - 24) * dp + 'px'; r.color = rgb(tone.ink); r.gap = dp * 3 + 'px';
+    const x = bigText(face, info);
+    if (this.t.textContent !== x.t) this.t.textContent = x.t;
+    if (this.a.textContent !== x.a) this.a.textContent = x.a;
+    if (this.b.textContent !== x.b) this.b.textContent = x.b;
+    this.t.style.fontSize = 22 * dp + 'px'; this.t.style.lineHeight = 26 * dp + 'px';
+    for (const e of [this.a, this.b]) { e.style.fontSize = 13.5 * dp + 'px'; e.style.lineHeight = 19 * dp + 'px'; }
+    const hasBar = x.bar !== null && x.bar !== undefined;
+    this.track.style.display = hasBar ? 'block' : 'none'; this.track.style.height = 5 * dp + 'px'; this.track.style.marginTop = 5 * dp + 'px';
+    this.track.style.background = rgb(tone.ink, 0.16);
+    this.fill.style.background = rgb(tone.ink, 0.78);
+    if (x.bar === 'indeterminate') { const q = (now % 1500) / 1500, wd = 0.34; this.fill.style.width = wd * 100 + '%'; this.fill.style.marginLeft = (-wd + q * (1 + wd)) * 100 + '%'; }
+    else if (hasBar) { this.fill.style.width = clamp(x.bar, 0, 1) * 100 + '%'; this.fill.style.marginLeft = '0'; }
+    this.btn.style.display = x.btn ? 'block' : 'none'; this.btn.textContent = x.btn || '';
+    this.btn.style.fontSize = 13 * dp + 'px'; this.btn.style.height = 26 * dp + 'px'; this.btn.style.padding = `0 ${14 * dp}px`; this.btn.style.marginTop = 4 * dp + 'px';
+    this.btn.style.border = `${dp}px solid ${rgb(tone.ink, 0.45)}`; this.btn.style.color = rgb(tone.ink);
+  }
+}
+const HOST = 'home.church-drive.example', HA_VERSION = '2025.11.1', LATENCY = 38;
+function bigText(face, i) {
+  const n = v => Math.round(v).toLocaleString('en-GB');
+  switch (face) {
+    case 'connecting': return { t: 'Connecting', a: `Reaching ${HOST}`, b: `Attempt ${Math.max(1, i.attempt)}${i.retryIn > 0 ? ` · next try in ${Math.ceil(i.retryIn / 1000)} s` : ''}`, bar: 'indeterminate' };
+    case 'updating': return { t: 'Updating', a: 'Asking the house for every item', b: `${n(i.loaded)} of ${n(i.total)} items`, bar: i.total ? i.loaded / i.total : 0 };
+    case 'pull': return { t: 'Pull to refresh', a: `Last updated ${i.updatedLabel} · ${i.ago}`, b: 'Keep pulling to update', bar: null };
+    case 'release': return { t: 'Release to refresh', a: `Last updated ${i.updatedLabel} · ${i.ago}`, b: `Let go to update ${n(i.total)} items`, bar: null };
+    case 'done': return { t: 'Up to date', a: `${n(i.total)} items · updated ${i.updatedLabel}`, b: `Home Assistant ${HA_VERSION} · ${LATENCY} ms`, bar: null };
+    case 'noconn': return { t: 'No connection', a: `Can\u2019t reach the house · last up at ${i.lostLabel}`, b: i.retryIn > 0 ? `Trying again in ${Math.ceil(i.retryIn / 1000)} s · attempt ${Math.max(1, i.attempt)}` : `Trying again now · attempt ${Math.max(1, i.attempt)}`, bar: null, btn: 'Try now' };
+    case 'restart': return { t: 'Home Assistant restarting', a: `Said it was restarting at ${i.restartLabel} · ${i.elapsed}`, b: i.connected ? `${n(i.loaded)} of ${n(i.total)} items back` : 'Waiting for it to come back', bar: i.connected ? (i.total ? i.loaded / i.total : 0) : 'indeterminate' };
+  }
+  return { t: '', a: '', b: '', bar: null };
+}
+
+class PillView {
+  /** host: the element to centre the pill in (at its top). opts.static: no slide or pull shift (specimens). */
+  constructor(host, opts = {}) {
+    this.opts = opts; this.D = opts.big ? DIM_BIG : DIM_PILL; this.info = {};
+    this.el = document.createElement('div'); this.el.className = 'pv' + (opts.big ? ' big' : '') + (opts.right ? ' pvr' : ''); host.appendChild(this.el);
+    this.cv = document.createElement('canvas'); this.el.appendChild(this.cv); this.ctx2 = this.cv.getContext('2d');
+    this.slot = document.createElement('div'); this.slot.className = 'slot'; this.el.appendChild(this.slot);
+    this.icons = [new IconLayer(this.slot), new IconLayer(this.slot)];
+    this.lbl = document.createElement('div'); this.lbl.className = 'lbl'; this.el.appendChild(this.lbl);
+    this.ring = document.createElement('div'); this.ring.className = 'ring'; this.el.appendChild(this.ring);
+    this.txt = [document.createElement('span'), document.createElement('span')]; if (!opts.big) this.txt.forEach(t => this.lbl.appendChild(t));
+    if (opts.big) this.bigs = [new BigLayer(this.lbl, opts.onTry), new BigLayer(this.lbl, opts.onTry)];
+    this.a = { alpha: new Anim(0), scale: new Anim(0.4), slide: new Anim(-1), labelW: new Anim(0), labelA: new Anim(0), markP: new Anim(0), cloudA: new Anim(0.95), settle: new Anim(0) };
+    this.visible = false; this.boxVis = false; this.hideAt = 0; this.growing = false; this.settled = false; this.settleAt = 0; this.shown = 'connecting'; this.prev = null; this.changeT = -1e9; this.tickT = 0; this.expanded = false;
+  }
+  reset() { this.visible = false; this.boxVis = false; this.hideAt = 0; this.growing = false; this.settled = false; for (const k in this.a) this.a[k].jump({ alpha: 0, scale: 0.4, slide: -1, labelW: 0, labelA: 0, markP: 0, cloudA: 0.95, settle: 0 }[k]); this.prev = null; }
+  /** One frame. face: a FACES key; pull: finger fraction while pulling (else 0); th: theme(); dp: scale; now: virtual ms. */
+  frame(now, face, pull, th, dp, force) {
+    const A = this.a, vis = face !== 'hidden', D = this.D;
+    // the face kept while closing; a change on screen crossfades
+    if (vis && face !== this.shown) {
+      if (A.alpha.get(now) > 0.02 && this.boxVis) { this.prev = this.shown; this.changeT = now; } else { this.prev = null; }
+      this.shown = face; if (face === 'done') this.tickT = now;
+    }
+    if (vis !== this.visible) {
+      this.visible = vis; this.settled = false;
+      if (vis) { this.settleAt = now + 380; this.hideAt = 0; if (face === 'done') this.tickT = now; }
+      else this.hideAt = now + (A.labelW.get(now) > 1 ? D.SHRINK : 0);          // closing: the pill goes back into a circle first
+    }
+    if (this.visible && !this.settled && now >= this.settleAt) this.settled = true;
+    // The box is on screen from having something to say until the pill is a circle again, so closing is the opening backwards.
+    const wantBox = this.visible || now < this.hideAt;
+    if (wantBox !== this.boxVis) {
+      this.boxVis = wantBox;
+      if (wantBox) {
+        if (A.alpha.get(now) < 0.01) {
+          if (pull > 0 && !this.opts.static) { this.growing = true; A.alpha.jump(1); A.scale.jump(1); A.slide.jump(0); }   // a finger brings it in: it grows with the pull
+          else { this.growing = false; A.alpha.jump(0); A.scale.jump(0.4); A.slide.jump(-1); }
+        }
+        if (!this.growing) { A.alpha.set(1, { dur: 200 }, now); A.scale.set(1, { dur: 300 }, now); A.slide.set(0, { spring: Math.sqrt(400) }, now); }   // spring: StiffnessMediumLow
+      } else {
+        this.growing = false;
+        A.alpha.set(0, { dur: 200, delay: 100 }, now); A.scale.set(0.4, { dur: 300 }, now); A.slide.set(-1, { spring: Math.sqrt(400) }, now);
+      }
+    }
+    if (pull <= 0) this.growing = false;
+    let expanded = this.visible && this.settled && this.shown !== 'pull' && this.shown !== 'rest';
+    if (force && force.expanded !== undefined) expanded = this.visible && this.settled && force.expanded;
+    this.expanded = expanded;
+    const f = FACES[this.shown], tone = th[f.tone || 'normal'];
+    A.labelW.set(expanded ? (D.BODY || textW(this.shown, this.opts.short) + LABEL_PAD) : 0, { dur: expanded ? D.WIDEN : D.SHRINK }, now);
+    A.labelA.set(expanded ? 1 : 0, expanded ? { dur: 320, delay: 80 } : { dur: 120 }, now);
+    A.markP.set(expanded ? 1 : 0, { dur: 300 }, now);
+    A.cloudA.set(expanded ? 0.5 : 0.95, { dur: 300 }, now);
+    A.settle.set(this.shown === 'release' ? 180 : 0, { dur: 250 }, now);
+
+    const widthDp = D.SLOT + A.labelW.get(now), pullShift = (!this.opts.static && pull > 0) ? (Math.min(pull, 1.3) - 1) * 36 * D.K : 0;
+    const slide = this.opts.static ? 0 : A.slide.get(now) * D.H;
+    const el = this.el.style, px = v => v * dp + 'px';
+    el.width = px(widthDp); el.height = px(D.H); el.borderRadius = '999px';
+    // Growing into the circle as the finger pulls: from 30% size and clear, to full by half way to Release.
+    let sc = A.scale.get(now), al = A.alpha.get(now);
+    if (this.growing && pull > 0) { sc = 0.3 + 0.7 * FOSE(clamp(pull / 0.5, 0, 1)); al = clamp(pull / 0.3, 0, 1); }
+    this.ring.style.border = `${dp}px solid ${rgb(tone.line)}`;
+    el.background = rgb(tone.bg); el.opacity = al;
+    el.boxShadow = `0 ${dp * 3}px ${dp * 7}px rgba(0,0,0,${th.dark ? 0.5 : 0.22}), 0 0 ${dp * 2}px rgba(0,0,0,${th.dark ? 0.4 : 0.16})`;
+    if (this.opts.right) {
+      // anchored at its right edge beside the user button and growing leftwards; with `tuck` it slides out sideways from behind the button (and back in)
+      const tuck = this.opts.tuck || 0, x = tuck ? -slide * tuck / D.H : 0, y = tuck ? 0 : slide;
+      el.transformOrigin = `${(widthDp - D.H / 2) * dp}px 50%`;
+      el.transform = `translate(${x * dp}px, ${y * dp}px) scale(${sc})`;
+    } else el.transform = `translate(-50%, ${(slide + pullShift) * dp}px) scale(${sc})`;
+    // the cloud, stretched over the pill and kept inside its edge
+    const cw = Math.max(1, Math.round(widthDp * dp * devicePixelRatio)), ch = Math.round(D.H * dp * devicePixelRatio);
+    if (this.cv.width !== cw || this.cv.height !== ch) { this.cv.width = cw; this.cv.height = ch; }
+    drawCloud(this.ctx2, now, tone.cloud, dp * devicePixelRatio, widthDp, D.H, Math.max(1, widthDp / D.H * 1.25), D.ORB);
+    this.cv.style.opacity = A.cloudA.get(now);
+    // icon and words
+    this.slot.style.width = this.slot.style.height = px(D.SLOT);
+    const mk = mix('#FFFFFF', tone.ink, A.markP.get(now)), settle = A.settle.get(now);
+    const ctx = { pull, settle, tickT: this.tickT, k: D.K };
+    const inT = FOSE(clamp((now - this.changeT) / 180, 0, 1)), outT = 1 - FOSE(clamp((now - this.changeT) / 120, 0, 1));
+    const layers = [[this.shown, inT], [this.prev, this.prev ? outT : 0]];
+    layers.forEach(([fc, w], i) => {
+      const ic = this.icons[i], tx = this.txt[i];
+      ic.root.style.opacity = fc ? w : 0; ic.root.style.color = rgb(mk);
+      if (fc && w > 0.001) ic.draw(fc, now, dp, ctx); else ic.root.style.display = 'none';
+      if (this.bigs) this.bigs[i].set(fc, this.info, tone, w, dp, now);
+      else { tx.textContent = fc ? labelOf(fc, this.opts.short) : ''; tx.style.opacity = fc ? w : 0; tx.style.color = rgb(tone.ink); }
+    });
+    this.lbl.style.width = px(A.labelW.get(now)); this.lbl.style.height = px(D.H); this.lbl.style.opacity = A.labelA.get(now);
+    if (!this.bigs) { this.lbl.style.fontSize = px(LABEL_SP); this.lbl.style.letterSpacing = px(0.1); this.lbl.style.alignContent = 'center'; this.txt.forEach(t => { t.style.display = 'block'; t.style.lineHeight = px(20); }); }
+    return { face: this.shown, expanded };
+  }
+}
+
+/* ---------- the rules: pillKind and LinkRefresh, as in Kotlin ---------- */
+const NO_CONNECTION_AFTER_MS = 6000;
+function pillKind(s, offlineFor) {
+  if (s.connection === 'AuthFailed') return 'none';
+  if (s.restarting && (s.connection !== 'Connected' || !s.statesLoaded)) return 'restarting';
+  if (s.connection !== 'Connected') return offlineFor >= NO_CONNECTION_AFTER_MS ? 'noconnection' : 'connecting';
+  if (!s.statesLoaded || s.refreshing) return 'updating';
+  return 'none';
+}
+const faceOf = k => ({ none: 'hidden', connecting: 'connecting', updating: 'updating', noconnection: 'noconn', restarting: 'restart' }[k]);
+
+const wall = ms => { const t = Math.floor(12 * 3600 + 4 * 60 + ms / 1000), q = v => String(v).padStart(2, '0'); return `${q(Math.floor(t / 3600) % 24)}:${q(Math.floor(t / 60) % 60)}:${q(((t % 60) + 60) % 60)}`; };
+const dur = ms => { const t = Math.max(0, Math.floor(ms / 1000)); return t < 60 ? `${t} s` : `${Math.floor(t / 60)} min ${t % 60} s`; };
+
+class Link {
+  constructor() { this.reset(0); }
+  reset(now, preset = {}) {
+    const { since, attempt, retryIn, ...rest } = preset;
+    this.link = Object.assign({ connection: 'Connected', statesLoaded: true, refreshing: false, restarting: false }, rest);
+    this.since = since !== undefined ? now + since : now;                    // when `connected` last changed (the LaunchedEffect(connected) timer)
+    // What the large version adds: how many tries, when the next is, what the house last told us, and how far the items have come.
+    this.attempt = attempt !== undefined ? attempt : (this.link.connection === 'Connecting' ? 1 : 0);
+    this.retryAt = retryIn ? now + retryIn : 0;
+    this.lostAt = since !== undefined ? now + since : now;
+    this.updatedAt = now - 42000; this.restartedAt = 0; this.loadStart = now; this.loadDur = 1700; this.total = 1240;
+    this.answerAt = 0; this.afterConnect = 0; this.loadAt = 0;
+    this.phase = 0; this.phaseT = 0;
+    this.pullA = new Anim(0); this.fingerFrac = null;                         // the PullToRefreshState
+    this.pendingAnswer = null;
+  }
+  set(now, patch) {
+    const prev = this.link.connection, wasUp = prev === 'Connected', wasRestarting = this.link.restarting;
+    const { retryIn, loadMs, ...rest } = patch;
+    Object.assign(this.link, rest);
+    const isUp = this.link.connection === 'Connected';
+    if (wasUp !== isUp) this.since = now;
+    if (wasUp && !isUp) this.lostAt = now;
+    if (rest.connection === 'Connecting' && prev !== 'Connecting') this.attempt++;
+    if (isUp) this.attempt = 0;
+    if (retryIn !== undefined) this.retryAt = now + retryIn;
+    if (rest.connection === 'Connecting' || isUp) this.retryAt = 0;
+    if (loadMs !== undefined) { this.loadStart = now; this.loadDur = loadMs; }
+    if (rest.restarting === true && !wasRestarting) this.restartedAt = now;
+    if (rest.statesLoaded === true || rest.refreshing === false) this.updatedAt = now;
+    if (rest.refreshing === true) { this.loadStart = now; this.loadDur = 650; }
+  }
+  /** What the large version says besides its title. */
+  info(now) {
+    const L = this.link, up = L.connection === 'Connected', loading = up && (!L.statesLoaded || L.refreshing);
+    const loaded = !up ? 0 : loading ? Math.floor(this.total * 0.985 * FOSE(clamp((now - this.loadStart) / this.loadDur, 0, 1))) : this.total;
+    return { attempt: this.attempt, retryIn: this.retryAt ? Math.max(0, this.retryAt - now) : 0, total: this.total, loaded, connected: up,
+      updatedLabel: wall(this.updatedAt), ago: dur(now - this.updatedAt) + ' ago', lostLabel: wall(this.lostAt), restartLabel: wall(this.restartedAt), elapsed: dur(now - this.restartedAt) };
+  }
+  offlineFor(now) { return this.link.connection === 'Connected' ? 0 : Math.floor((now - this.since) / 1000) * 1000; }
+  /** The app's refresh(): ask for the states again, or connect afresh. */
+  onAppRefresh(now) {
+    if (this.link.connection !== 'Connected') { this.set(now, { connection: 'Connecting' }); this.afterConnect = now + 2500; return; }
+    this.set(now, { refreshing: true }); this.answerAt = now + 650;
+  }
+  /** The finger: raw is how far it has dragged in dp. Material halves it, and the threshold is 80 dp. */
+  drag(now, rawDp) { this.fingerFrac = rawDp * 0.5 / 80; this.pullA.jump(this.fingerFrac); }
+  release(now) {
+    const frac = this.fingerFrac; this.fingerFrac = null;
+    if (frac > 1 && this.phase === 0) { this.phase = 1; this.phaseT = now; this.onAppRefresh(now); this.pullA.jump(frac); this.pullA.set(1, { spring: Math.sqrt(1500) }, now); }
+    else this.pullA.set(0, { spring: Math.sqrt(1500) }, now);
+  }
+  tap(now) { this.onAppRefresh(now); }
+  /** The button: refresh by hand (when the line is up and nothing is running), or hurry a reconnect when it is down. */
+  press(now) { if (this.link.connection !== 'Connected') { this.onAppRefresh(now); return; } if (this.phase === 0) { this.phase = 1; this.phaseT = now; this.onAppRefresh(now); } }
+  update(now) {
+    if (this.answerAt && now >= this.answerAt) { this.answerAt = 0; this.set(now, { refreshing: false }); }
+    if (this.afterConnect && now >= this.afterConnect) { this.afterConnect = 0; this.set(now, { connection: 'Connected', statesLoaded: false, loadMs: 1100 }); this.loadAt = now + 1100; }
+    if (this.loadAt && now >= this.loadAt) { this.loadAt = 0; this.set(now, { statesLoaded: true, restarting: false }); }
+    // LaunchedEffect(phase)
+    if (this.phase === 1 && now - this.phaseT >= 900) {
+      const l = this.link, waiting = l.refreshing || l.connection !== 'Connected' || !l.statesLoaded;
+      if (!waiting || now - this.phaseT >= 900 + 12000) { this.phase = l.connection === 'Connected' ? 2 : 0; this.phaseT = now; }
+    } else if (this.phase === 2 && now - this.phaseT >= 1300) { this.phase = 0; this.phaseT = now; }
+    // when a refresh is over the pull goes home
+    if (this.phase !== 1 && this.fingerFrac === null && this.pullA.to !== 0) this.pullA.set(0, { spring: Math.sqrt(1500) }, now);
+  }
+  /** What the pill shows: the face and, while pulling, how far. */
+  face(now) {
+    const kind = pillKind(this.link, this.offlineFor(now)), pull = this.fingerFrac !== null ? this.fingerFrac : this.pullA.get(now);
+    let face;
+    if (this.phase === 2) face = 'done';
+    else if (this.phase === 1) face = (kind === 'none' || kind === 'updating') ? 'updating' : faceOf(kind);
+    else if (pull > 0.0005 && kind !== 'restarting') face = pull >= 1 ? 'release' : 'pull';
+    else face = faceOf(kind);
+    return { face, pull: (face === 'pull' || face === 'release') ? pull : 0, kind, rawPull: pull };
+  }
+}
+
+/* ---------- sequences: only the world changes (the line, the house, the finger); the pill follows by the rules above ---------- */
+const DRAG = (from, to, dur) => ({ drag: true, from, to, dur });
+const SEQS = [
+  { id: 'pull', title: 'Pull down to refresh', sub: 'Circle, release, update, done', len: 7600,
+    note: 'The finger drags down; the pill (a circle, Clive’s mark turning with it) slides after it. Past the 80 dp line it widens to "Release to refresh". Let go and it becomes Updating while the app asks the house for every state again. It holds for at least 0.9 s so it can be seen, draws a tick for "Up to date", then slides away.',
+    start: {}, events: [[600, 'finger', [0, 175, 1300]], [2300, 'release']] },
+  { id: 'early', title: 'Pull, let go early', sub: 'Does nothing, springs back', len: 4600,
+    note: 'Let go before the line and nothing is refreshed: the circle slides back up the way it came. Nothing is shown that was not asked for.',
+    start: {}, events: [[600, 'finger', [0, 120, 900]], [2100, 'release']] },
+  { id: 'open', title: 'Opening the app', sub: 'Connecting, then Updating', len: 6200,
+    note: 'What the app remembered is on screen at once. The pill appears as a circle, widens to Connecting while the line opens, changes to Updating while the house sends every state, and goes when they are all in.',
+    start: { connection: 'Connecting', statesLoaded: false }, events: [[1700, 'set', { connection: 'Connected', loadMs: 1700 }], [3400, 'set', { statesLoaded: true }]] },
+  { id: 'lost', title: 'Connection lost', sub: 'A blip says Connecting; six seconds says No connection', len: 17500,
+    note: 'The line drops. The app retries with a growing wait (1 s, 2 s, 4 s), flipping between Disconnected and Connecting, so for the first six seconds the pill just says Connecting. After six seconds down it turns red: No connection. When the line is back it says Updating while the states load, then goes.',
+    start: {}, events: [[800, 'set', { connection: 'Disconnected', retryIn: 1000 }], [1800, 'set', { connection: 'Connecting' }], [2800, 'set', { connection: 'Disconnected', retryIn: 2000 }], [4800, 'set', { connection: 'Connecting' }], [5800, 'set', { connection: 'Disconnected', retryIn: 6000 }], [11800, 'set', { connection: 'Connecting' }], [13000, 'set', { connection: 'Connected', statesLoaded: false, loadMs: 1800 }], [14800, 'set', { statesLoaded: true }]] },
+  { id: 'offpull', title: 'Pull while offline', sub: 'The pull and the line are one pill', len: 10500,
+    note: 'Already down for a while, so the pill says No connection. Pulling still works: it turns to Release, and letting go makes the app connect afresh. The pill stays No connection (red) until the line is back, then Updating, then the tick.',
+    start: { connection: 'Disconnected', since: -7200, attempt: 4, retryIn: 3000 }, events: [[1200, 'finger', [0, 175, 1300]], [3000, 'release']] },
+  { id: 'restart', title: 'Home Assistant restarts', sub: 'Restarting until the items are back', len: 12000,
+    note: 'Home Assistant closes the line itself (code 1001), so the app knows this is a restart, not a fault: amber, "Home Assistant restarting". It stays through the reconnect attempts and while the entities load back in, and goes only when they are all there. (If it never comes back within five minutes it turns into No connection.)',
+    start: {}, events: [[900, 'set', { connection: 'Disconnected', restarting: true, retryIn: 1000 }], [1900, 'set', { connection: 'Connecting' }], [2900, 'set', { connection: 'Disconnected', retryIn: 2000 }], [4900, 'set', { connection: 'Connecting' }], [6500, 'set', { connection: 'Connected', statesLoaded: false, loadMs: 2200 }], [8700, 'set', { statesLoaded: true, restarting: false }]] },
+];
+
+
+const CD_PATHS_SAFE = CD_PATHS;
+/* ====================== the mock-up: the pill in the site's header ====================== */
+const SITE = {
+  light: { bg:'#F3F5F9', bar:'#E7EAF0', card:'#FFFFFF', ink:'#14181F', soft:'#5B6472', line:'#DDE1E8', primary:'#5B54C9' },
+  dark:  { bg:'#0B0F11', bar:'#171B22', card:'#1B2027', ink:'#EEF1F5', soft:'#9AA4B2', line:'#262A31', primary:'#AEB6FF' },
+};
+const SITE_HOST = 'home.church-drive.example', PAGE = 'Device health', HA_VER = '2025.11.1', LAT = 38;
+const state = { dark: document.documentElement.dataset.theme ? document.documentElement.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches, speed: 1, paused: false, scene: null };
+const model = new Link();
+let clock = 0, sceneStart = 0, evIdx = 0;
+
+function thm() {
+  const t = theme(state.dark, 'classic'), n = SITE[state.dark ? 'dark' : 'light'];
+  t.normal.bg = hex(n.card); t.normal.ink = hex(n.ink); t.normal.line = hex(n.line);     // the pill is the card colour so it stands out from the bar
+  return t;
+}
+function applySite() {
+  const n = SITE[state.dark ? 'dark' : 'light'], r = document.documentElement;
+  document.documentElement.dataset.theme = state.dark ? 'dark' : 'light';
+  for (const k in n) r.style.setProperty('--s-' + k, n[k]);
+}
+
+/** What the card says (the site's own words: only what it knows). */
+function siteText(face, i) {
+  const retry = i.retryIn > 0 ? `${Math.ceil(i.retryIn / 1000)} s` : '';
+  switch (face) {
+    case 'connecting': return { t: 'Connecting', a: `Reaching ${SITE_HOST}`, b: `Attempt ${Math.max(1, i.attempt)}${retry ? ` · next try in ${retry}` : ''}`, bar: true };
+    case 'updating': return { t: 'Updating', a: `Reloading ${PAGE}`, b: `Home Assistant ${HA_VER}`, bar: true };
+    case 'done': return { t: 'Up to date', a: `${PAGE} updated ${i.updatedLabel}`, b: `Home Assistant ${HA_VER} · ${LAT} ms` };
+    case 'noconn': return { t: 'No connection', a: `Can’t reach the house · last up at ${i.lostLabel}`, b: retry ? `Trying again in ${retry} · attempt ${Math.max(1, i.attempt)}` : `Trying again now · attempt ${Math.max(1, i.attempt)}`, btn: 'Try now' };
+    case 'restart': return { t: 'Home Assistant restarting', a: `Said it was restarting at ${i.restartLabel} · ${i.elapsed}`, b: i.connected ? `Loading ${PAGE}` : 'Waiting for it to come back', bar: true };
+  }
+  return null;
+}
+
+const OPTIONS = [
+  { id: 'A', name: 'A · A quiet circle you press', how: 'Clive’s circle always sits beside your user button. Press it to refresh: it grows leftwards into the pill (Updating, then Up to date) and folds back into the circle. Problems open it by themselves, in red or amber.' },
+  { id: 'B', name: 'B · Tucks out of the user button', how: 'Nothing shows at rest. Refresh is in the user menu. Pressing it (or any problem) slides the circle out from behind the user button, it widens into the pill, and when it is done it folds up and tucks back in.' },
+  { id: 'C', name: 'C · The circle, with a details card', how: 'Like A, and while the pill is open a small card hangs under the bar with the detail (what it is reaching, attempts, last up, Home Assistant’s version). The card is the large banner, kept for the website.' },
+];
+const NAV = ['Home', 'Colours', 'Design ▾', 'Manager ▾', 'Health', 'Energy', 'Activity'];
+const BRAND_PATH = markPath(1000);
+
+const insts = [];
+function build(opt, narrow) {
+  const wrap = document.createElement('div'); wrap.className = 'hwrap' + (narrow ? ' narrow' : '');
+  wrap.innerHTML = `<div class="hdr"><div class="site-in">
+      <a class="brand"><svg viewBox="48 48 104 104" width="32" height="32" aria-hidden="true"><defs><linearGradient id="g${opt}${narrow ? 'n' : 'd'}" x1="0" x2="1"><stop offset="0" stop-color="#6A5BC2"/><stop offset=".55" stop-color="#AB47BC"/><stop offset="1" stop-color="#4FD08A"/></linearGradient></defs><path d="${BRAND_PATH}" fill-rule="evenodd" fill="url(#g${opt}${narrow ? 'n' : 'd'})"/></svg><span class="brand-text"><b>Clive</b> Manager</span></a>
+      <nav class="topnav">${NAV.map((n, i) => `<a class="${i === 4 ? 'on' : ''}">${n}</a>`).join('')}</nav>
+      <div class="pslot"></div>
+      <div class="menu-wrap"><button class="person" type="button" aria-label="Account">J</button>
+        <div class="menu" hidden><p class="menu-name">Jamie</p><p class="sub">Administrator</p>${opt === 'B' ? '<button class="mrow refresh" type="button"><svg viewBox="0 0 200 200" width="20" height="20" fill="currentColor"><path fill-rule="evenodd" d="' + CD_PATHS['cd:update-arrow'] + '"/></svg> Refresh</button>' : ''}<button class="mrow" type="button">Sign out</button></div></div>
+      <button class="burger" type="button" aria-label="Menu"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    </div></div>
+    <div class="sample"><h3>${PAGE}</h3><div class="sc"></div><div class="sc"></div></div>
+    <div class="dcard" aria-live="polite"><div class="dt"></div><div class="da"></div><div class="db"></div><div class="dbar"><i></i></div><button class="dtry" type="button">Try now</button></div>`;
+  const slot = wrap.querySelector('.pslot');
+  const pv = new PillView(slot, { right: true, short: narrow, tuck: opt === 'B' ? 50 : 0, horizontal: opt === 'B' });
+  const inst = { opt, narrow, wrap, pv, brandText: wrap.querySelector('.brand-text'), card: wrap.querySelector('.dcard'), menu: wrap.querySelector('.menu'), person: wrap.querySelector('.person') };
+  // the button: the pill element itself
+  pv.el.addEventListener('click', () => { const f = inst.face; if (f === 'noconn' || f === 'restart') model.tap(clock); else model.press(clock); });
+  pv.el.style.cursor = 'pointer'; pv.el.setAttribute('role', 'button'); pv.el.setAttribute('aria-label', 'Refresh');
+  inst.person.addEventListener('click', (e) => { e.stopPropagation(); if (opt === 'B') inst.menu.hidden = !inst.menu.hidden; });
+  const r = wrap.querySelector('.refresh'); if (r) r.addEventListener('click', () => { inst.menu.hidden = true; model.press(clock); });
+  wrap.querySelector('.dtry').addEventListener('click', () => model.tap(clock));
+  insts.push(inst); return wrap;
+}
+const host = document.getElementById('options');
+OPTIONS.forEach((o) => {
+  const sec = document.createElement('section'); sec.className = 'opt';
+  sec.innerHTML = `<h2>${o.name}</h2><p class="note">${o.how}</p><div class="row2"><div class="col d"></div><div class="col p"></div></div>`;
+  sec.querySelector('.d').appendChild(build(o.id, false)); sec.querySelector('.p').appendChild(build(o.id, true));
+  host.appendChild(sec);
+});
+document.addEventListener('click', () => insts.forEach((i) => { if (i.menu) i.menu.hidden = true; }));
+
+const EV = (id) => SEQS.find((s) => s.id === id).events;
+const SCENES = [
+  { id: 'press', title: 'Press to refresh', sub: 'The circle opens, updates, folds away', len: 6200, start: {}, events: [[900, 'press']] },
+  { id: 'lost', title: 'Connection lost', sub: 'Connecting, then No connection, then back', len: 17500, start: {}, events: EV('lost') },
+  { id: 'restart', title: 'Home Assistant restarts', sub: 'Amber until the house is back', len: 12000, start: {}, events: EV('restart') },
+  { id: 'open', title: 'Opening the page', sub: 'Connecting, then Updating', len: 6200, start: { connection: 'Connecting', statesLoaded: false }, events: EV('open') },
+];
+function startScene(s) {
+  state.scene = s; evIdx = 0; sceneStart = clock; insts.forEach((i) => i.pv.reset()); model.reset(clock, s.start);
+  document.querySelectorAll('.seq').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.id === s.id)));
+}
+document.getElementById('seqs').innerHTML = SCENES.map((s) => `<button class="seq" data-id="${s.id}" aria-pressed="false"><b>${s.title}</b><span>${s.sub}</span></button>`).join('');
+document.querySelectorAll('.seq').forEach((b) => b.onclick = () => startScene(SCENES.find((s) => s.id === b.dataset.id)));
+document.getElementById('replay').onclick = () => startScene(state.scene);
+document.getElementById('play').onclick = (e) => { state.paused = !state.paused; e.target.textContent = state.paused ? 'Play' : 'Pause'; };
+document.getElementById('speed').oninput = (e) => { state.speed = +e.target.value; document.getElementById('speedv').textContent = state.speed + '×'; };
+document.querySelectorAll('#themeSeg button').forEach((b) => b.onclick = () => { state.dark = b.dataset.v === 'dark'; document.querySelectorAll('#themeSeg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); applySite(); });
+document.querySelectorAll('#themeSeg button').forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.v === 'dark') === state.dark)));
+
+function frameAll() {
+  const th = thm(), info = model.info(clock), base = model.face(clock).face;
+  insts.forEach((i) => {
+    // A and C keep the circle at rest; B has nothing until there is something to show
+    const face = base === 'hidden' ? (i.opt === 'B' ? 'hidden' : 'rest') : base;
+    i.face = face;
+    i.pv.frame(clock, face, 0, th, 1, null);
+    // The pill takes its own room in the bar (the navigation gives way to it) instead of sitting on top of it.
+    const w = i.pv.boxVis || i.pv.a.alpha.get(clock) > 0.02 ? i.pv.el.getBoundingClientRect().width : 0;
+    i.wrap.querySelector('.pslot').style.width = Math.round(w) + 'px';
+    if (i.narrow) { const room = Math.max(0, 118 - (w - 40)); i.brandText.style.maxWidth = room + 'px'; i.brandText.style.opacity = String(clamp(room / 60, 0, 1)); }
+    if (i.opt === 'C') {
+      const t = siteText(face, info), open = !!t && i.pv.expanded;
+      i.card.classList.toggle('open', open);
+      if (t) {
+        const tone = th[(FACES[face] || FACES.connecting).tone], c = i.card;
+        c.style.background = rgb(tone.bg); c.style.color = rgb(tone.ink); c.style.borderColor = rgb(tone.line);
+        c.querySelector('.dt').textContent = t.t; c.querySelector('.da').textContent = t.a; c.querySelector('.db').textContent = t.b;
+        const bar = c.querySelector('.dbar'); bar.style.display = t.bar ? 'block' : 'none'; bar.style.background = rgb(tone.ink, 0.16);
+        const fill = bar.firstChild, q = (clock % 1500) / 1500; fill.style.background = rgb(tone.ink, 0.78); fill.style.width = '34%'; fill.style.marginLeft = (-0.34 + q * 1.34) * 100 + '%';
+        const tr = c.querySelector('.dtry'); tr.style.display = t.btn ? 'inline-block' : 'none'; tr.style.color = rgb(tone.ink); tr.style.borderColor = rgb(tone.ink, 0.45);
+      }
+    }
+  });
+}
+function tickAll(dt) {
+  if (!state.paused) clock += dt * state.speed;
+  const t = clock - sceneStart, s = state.scene;
+  while (evIdx < s.events.length && t >= s.events[evIdx][0]) {
+    const [, kind, arg] = s.events[evIdx++];
+    if (kind === 'set') model.set(clock, arg); else if (kind === 'press') model.press(clock);
+  }
+  model.update(clock); frameAll();
+  if (t > s.len + 1500) startScene(s);
+}
+function advance(ms) { const was = state.paused, sp = state.speed; state.paused = false; state.speed = 1; for (let i = 0; i < ms / 16; i++) tickAll(16); state.paused = was; state.speed = sp; }
+applySite(); startScene(SCENES[0]);
+let last = performance.now();
+(document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(() => requestAnimationFrame(function loop(now) { const dt = Math.min(64, now - last); last = now; tickAll(dt); requestAnimationFrame(loop); }));
+window.__site = { advance, startScene, SCENES, model, state, insts, get clock() { return clock; } };
+
+</script></body></html>
