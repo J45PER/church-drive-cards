@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.131.0
+
+- The launcher icon's shield is smaller and centred, so it no longer looks oversized next to the other Clive apps.
+
 ## 0.130.0
 
 - Activity log: what people and the assistant did, and who came and went, as in the phone app (it is in both apps).
