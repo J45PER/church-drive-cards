@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.138.0
+
+- No change you will notice (the Manager website was restyled to match the apps).
+
 ## 0.137.0
 
 - Devices: a new page on the bottom bar (and a card on Home) with the TVs and speakers (power, play and pause, volume, the remote) and how the house's systems are (internet, remote access, backups, updates), as in the Church Drive app.

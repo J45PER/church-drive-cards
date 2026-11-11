@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.138.0
+
+- No change you will notice (the Manager website was restyled to match the apps).
+
 ## 0.137.0
 
 - No change (shared code gained the TVs and speakers card, used by Clive Admin).

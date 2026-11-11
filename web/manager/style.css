@@ -160,3 +160,30 @@ a.btn { display: inline-block; text-decoration: none; margin-top: 8px; }
 .dots-inline { display: inline-flex; gap: 3px; vertical-align: middle; }
 .dots-inline i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .num { width: 90px !important; min-width: 0 !important; }
+
+/* House style: section panels and tone cards, as in the apps. */
+.house-panel { display: grid; gap: 12px; }
+.panel-head { display: flex; align-items: center; gap: 12px; padding: 0 4px; }
+.panel-head h2 { margin: 0; flex: 1; font-size: 1.35rem; font-weight: 500; color: var(--accent); }
+.panel-ico { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: var(--accent); background: color-mix(in srgb, var(--accent) 22%, transparent); flex: none; }
+.pill-summary { font-size: .8rem; font-weight: 600; padding: 4px 12px; border-radius: 999px; color: var(--accent); background: color-mix(in srgb, var(--accent) 20%, transparent); white-space: nowrap; }
+.panel-body { display: grid; gap: 12px; }
+.card.tone { --ink-on: #fff; color: #fff; }
+.card.tone .sub { color: color-mix(in srgb, #fff 72%, transparent); }
+.fact { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; padding: 4px 0; }
+.fact span:first-child { color: color-mix(in srgb, #fff 72%, transparent); }
+.fact b { font-size: 1.25rem; font-weight: 600; }
+.strip { display: flex; align-items: flex-end; gap: 2px; height: 56px; margin-top: 8px; }
+.strip i { flex: 1; border-radius: 3px; background: color-mix(in srgb, #fff 30%, transparent); }
+.strip i.cheap { background: var(--accent); }
+.strip i.now { background: #fff; }
+.lines { display: grid; gap: 8px; }
+.line-row { display: flex; align-items: center; gap: 12px; }
+.line-row .panel-ico { width: 32px; height: 32px; }
+.header-lines { display: grid; gap: 8px; }
+.card.tone .row-title { color: #fff; margin: 0; }
+.card.tone .chip { color: #fff; border-color: color-mix(in srgb, #fff 45%, transparent); background: transparent; }
+.card.tone .chip[aria-pressed="true"] { background: color-mix(in srgb, #fff 24%, transparent); }
+.card.tone .tag { color: #fff; }
+.card.tone .kind { display: grid; gap: 6px; padding: 6px 0; }
+.day-head { color: var(--primary); font-weight: 500; }

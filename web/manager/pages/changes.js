@@ -22,7 +22,7 @@ export async function renderChanges(el, ctx, { glowStyle }) {
         .then((all) => all.flat().sort((a, b) => b.at - a.at))]); }
   catch (e) { el.innerHTML = `<p class="err" role="alert">Could not read the changes: ${esc(e.code === 'unknown_command' ? 'Home Assistant is running an older Church Drive without proposals. Update Church Drive in HACS, then restart Home Assistant.' : e.message)}</p>`; return; }
   const waiting = items.filter((i) => i.status === 'pending'), done = items.filter((i) => i.status !== 'pending');
-  const line = (i) => `<article class="card compact" style="${glowStyle(i.status === 'applied' ? '#1F5C3A' : i.status === 'declined' ? '#6B1E24' : '#2C2A6B')}">
+  const line = (i) => `<article class="card compact" style="${glowStyle(i.status === 'applied' ? 'ok' : i.status === 'declined' ? 'bad' : 'tasks')}">
     <div class="row"><h3 class="title" style="margin:0;flex:1">${esc(describe(i.change, i.kind))}</h3><span class="tag">${esc(i.status === 'pending' ? 'Waiting' : i.status === 'applied' ? 'Applied' : 'Declined')}</span></div>
     <p class="sub">${esc(i.by)} · ${esc(when(i.at))}${i.note ? ` · “${esc(i.note)}”` : ''}</p>
     ${(i.checks || []).map((c) => `<p class="sub">⚠ ${esc(c)}</p>`).join('')}
