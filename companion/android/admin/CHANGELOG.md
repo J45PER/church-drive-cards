@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.129.0
+
+- The Google Play version uses the Church Drive app's sign-in when it is on the phone and signed in (the phone app now trusts this app's Play signing certificate), so it no longer asks to sign in.
+
 ## 0.128.0
 
 - The first version of Clive Admin, the app for the house's administrators.
