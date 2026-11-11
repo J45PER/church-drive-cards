@@ -79,9 +79,9 @@ object ManagerSections {
     /** Whether Clive Admin can draw every card of [section] itself (the others are opened in the Church Drive app for now). */
     fun builtHere(section: ManagerSection): Boolean = section.cards.all { it.type in BUILT }
 
-    /** Sections left out of Clive Admin on purpose (decided with Jamie): People stays on the website, and Locations and Icons are not needed in the app for now. */
+    /** Sections left out of Clive Admin on purpose (decided with Jamie): Locations and Icons are not needed in the app for now. */
     private val LEFT_OUT = setOf(
-        "custom:zone-map-card", "custom:icon-styles-card", "custom:people-manager-card",
+        "custom:zone-map-card", "custom:icon-styles-card",
         // Alarm lights are on the Manager website and in Home Assistant only, not in the apps.
         "custom:alarm-lights-card",
     )
@@ -95,9 +95,10 @@ object ManagerSections {
         "custom:watch-settings-card" to "watch",
         "custom:notifications-card" to "notifications",
         "custom:camera-links-card" to "cameras",
+        "custom:people-manager-card" to "people",
     )
 
-    /** Which side-panel page (`health`, `watch`, `notifications` or `cameras`) a section lives on, or null when it is on the Manager page. */
+    /** Which side-panel page (`health`, `watch`, `notifications`, `cameras` or `people`) a section lives on, or null when it is on the Manager page. */
     fun ownPage(section: ManagerSection): String? = section.cards.firstNotNullOfOrNull { OWN_PAGE[it.type] }
 
     /** The sections on the Manager page: all of them but those with a page of their own. */
@@ -132,7 +133,7 @@ object ManagerSections {
     val BUILT = setOf(
         "custom:notifications-card", "custom:zone-map-card", "custom:camera-links-card", "custom:icon-styles-card",
         "heading", "markdown", "entities", "custom:house-tasks-card",
-        "custom:people-card", "custom:watch-settings-card", "custom:device-health-card", "custom:auto-entities", "todo-list",
+        "custom:people-card", "custom:watch-settings-card", "custom:device-health-card", "custom:auto-entities", "todo-list", "custom:people-manager-card",
     )
 }
 
@@ -180,6 +181,7 @@ internal fun ManagerCardView(card: ManagerCard, entities: Map<String, EntityStat
         "custom:notifications-card" -> NotificationsPage(entities)
         "custom:zone-map-card" -> LocationsPage(entities)
         "custom:camera-links-card" -> CameraLinksPage(entities)
+        "custom:people-manager-card" -> com.churchdrive.app.ui.PeoplePage(entities, registry)
         "custom:icon-styles-card" -> IconStylesPage()
         "heading" -> HeadingCard(card.config)
         "markdown" -> MarkdownCard(card.config)
