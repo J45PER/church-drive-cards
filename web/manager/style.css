@@ -76,3 +76,10 @@ button.card { width: 100%; text-align: left; border: 0; cursor: pointer; }
 .btn.quiet { background: color-mix(in srgb, var(--ink) 10%, transparent); color: var(--ink); }
 .err { color: var(--danger); }
 details summary { cursor: pointer; color: var(--soft); font-size: .9rem; }
+
+.big { margin: 4px 0; font-size: 2.1rem; font-weight: 500; }
+.bars { width: 100%; height: 120px; margin-top: 10px; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; }
+.filters select { flex: 1 1 160px; padding: 10px 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; }
+.line { display: flex; gap: 14px; align-items: baseline; padding: 14px 18px; }
+.line .when { font-variant-numeric: tabular-nums; color: color-mix(in srgb, var(--ink-on, var(--ink)) 70%, transparent); }
