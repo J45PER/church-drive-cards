@@ -68,7 +68,7 @@ fun DeviceHealthOverlay(
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         val item = selected?.let { healthOfDevice(it, entities, registry, areaNames) }
         if (item != null) {
-            DevicePage(item) { if (startId == null) selected = null else onClose() }
+            DevicePage(item, onBack = { if (startId == null) selected = null else onClose() })
         } else {
             HealthList(deviceHealthList(entities, registry, areaNames), onClose) { selected = it.deviceId }
         }
