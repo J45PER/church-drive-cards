@@ -27,7 +27,8 @@ class ManagerSectionsTest {
         val sections = ManagerSections.parse(config)
         assertTrue(ManagerSections.builtHere(sections[0]))
         assertTrue(ManagerSections.builtHere(sections[1]))
-        assertFalse(ManagerSections.builtHere(sections[2]))
+        assertTrue(ManagerSections.builtHere(sections[2])) // the Watch is built in Clive Admin now
+        assertFalse(ManagerSections.builtHere(ManagerSection("People", null, null, listOf(ManagerCard("custom:people-manager-card", JSONObject())))))
     }
 
     @Test fun anEmptyDashboardHasNoSections() {
