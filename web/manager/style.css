@@ -38,8 +38,16 @@ main { grid-row: 2; padding: 20px max(16px, env(safe-area-inset-right, 0px)) 28p
 /* Cards: 28px corners, the tone as the ground, the glow behind, white text on dark grounds. */
 .card { position: relative; overflow: hidden; border-radius: 28px; padding: 20px; background: var(--ground, var(--card)); color: var(--ink-on, var(--ink)); isolation: isolate; }
 .card[style*="--ga"] { --ink-on: #fff; }
-.card[style*="--ga"]::before { content: ""; position: absolute; inset: -60%; z-index: -1; opacity: .30; background: radial-gradient(circle at 30% 50%, var(--ga) 0, transparent 42%), radial-gradient(circle at 72% 50%, var(--gb) 0, transparent 42%); animation: turn 16s linear infinite; }
-@keyframes turn { to { transform: rotate(360deg); } }
+/* The glow as Glow.kt draws it: two soft blobs of radius 0.62 of the card, orbiting 28% off centre (the second 1.3 times as fast the other way),
+   each fading from 30% of its colour to nothing. The angles are animated custom properties so the browser moves the blobs, not a rotated box. */
+@property --pa { syntax: "<angle>"; inherits: false; initial-value: 210deg; }
+@property --pb { syntax: "<angle>"; inherits: false; initial-value: 330deg; }
+.card { container-type: inline-size; }
+.card[style*="--ga"]::before { content: ""; position: absolute; inset: 0; z-index: -1; --ra: 62cqw; animation: orbit 160s linear infinite;
+  background:
+    radial-gradient(circle var(--ra) at calc(50% + cos(var(--pa)) * 28%) calc(50% + sin(var(--pa)) * 28%), color-mix(in srgb, var(--ga) 30%, transparent), transparent),
+    radial-gradient(circle var(--ra) at calc(50% + cos(var(--pb)) * 28%) calc(50% + sin(var(--pb)) * 28%), color-mix(in srgb, var(--gb) 30%, transparent), transparent); }
+@keyframes orbit { to { --pa: 3810deg; --pb: -4350deg; } }
 @media (prefers-reduced-motion: reduce) { .card::before { animation: none !important; } }
 button.card { width: 100%; text-align: left; border: 0; cursor: pointer; }
 .stack { display: grid; gap: 28px; }
@@ -68,3 +76,10 @@ button.card { width: 100%; text-align: left; border: 0; cursor: pointer; }
 .btn.quiet { background: color-mix(in srgb, var(--ink) 10%, transparent); color: var(--ink); }
 .err { color: var(--danger); }
 details summary { cursor: pointer; color: var(--soft); font-size: .9rem; }
+
+.big { margin: 4px 0; font-size: 2.1rem; font-weight: 500; }
+.bars { width: 100%; height: 120px; margin-top: 10px; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; }
+.filters select { flex: 1 1 160px; padding: 10px 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; }
+.line { display: flex; gap: 14px; align-items: baseline; padding: 14px 18px; }
+.line .when { font-variant-numeric: tabular-nums; color: color-mix(in srgb, var(--ink-on, var(--ink)) 70%, transparent); }
