@@ -79,7 +79,7 @@ input[type=range] { width:100%; accent-color:var(--acc); }
 .pv .bb { opacity:.72; }
 .pv .track { border-radius:99px; overflow:hidden; } .pv .track i { display:block; height:100%; border-radius:99px; }
 .pv .try { display:none; align-self:flex-start; background:transparent; border-radius:99px; font:inherit; font-weight:500; cursor:pointer; }
-.ic { display:grid; place-items:center; } .ic svg { grid-area:1/1; display:none; overflow:visible; }
+.ic { display:grid; place-items:center; } .ic svg { grid-area:1/1; overflow:visible; }
 
 .spec { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:14px; }
 .spec .cell { background:var(--panel); border-radius:18px; padding:14px; display:grid; gap:10px; }
@@ -267,52 +267,37 @@ function drawCloud(ctx, now, colours, pxPerDp, wDp, hDp, sx, ORB = 32) {
 const SVGNS = 'http://www.w3.org/2000/svg';
 const svg = (tag, attrs, parent) => { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent && parent.appendChild(e); return e; };
 
+/** The Clive set's icons the faces use (the house's own, copied from design/clive/house-icons.json: cd:wifi-off, cd:update-arrow, cd:check; never a Material one). */
+const CD_PATHS = {"cd:wifi-off": "M141.0,108.5 L172.0,69.8 L172.7,68.1 L172.8,66.2 L172.1,64.4 L171.1,63.3 L166.6,60.2 L160.9,56.7 L155.1,53.6 L149.1,50.7 L139.5,47.0 L133.1,45.0 L126.8,43.4 L120.2,42.1 L113.5,41.1 L103.2,40.4 L96.6,40.4 L89.9,40.8 L83.2,41.5 L78.6,42.3 Z M163.5,178.9 L165.3,179.6 L166.5,179.6 L167.6,179.2 L168.6,178.6 L174.4,173.1 L175.3,171.8 L175.6,170.7 L175.5,169.1 L174.8,167.7 L37.1,21.6 L35.8,20.7 L34.3,20.3 L33.1,20.5 L31.7,21.2 L25.1,27.5 L24.4,29.3 L24.6,31.3 L25.4,32.6 L45.1,53.4 L36.2,58.4 L28.9,63.3 L27.9,64.4 L27.2,66.2 L27.2,67.6 L27.7,69.4 L95.9,154.7 L97.5,156.0 L99.4,156.6 L101.4,156.4 L103.1,155.5 L120.8,133.7 Z", "cd:update-arrow": "M25.0,99.7 L25.2,104.5 L25.6,109.2 L26.4,113.9 L27.4,118.6 L28.8,123.2 L30.5,127.7 L32.4,132.1 L34.7,136.4 L37.3,140.6 L40.2,144.6 L43.7,148.9 L47.2,152.6 L50.6,155.7 L54.5,158.9 L58.6,161.8 L63.2,164.6 L67.5,166.9 L72.0,168.8 L76.5,170.5 L81.2,171.8 L85.9,172.8 L90.7,173.6 L95.4,174.0 L100.2,174.2 L105.0,174.0 L109.8,173.5 L114.5,172.8 L119.2,171.7 L123.8,170.3 L128.4,168.6 L132.8,166.7 L136.8,164.6 L141.0,162.1 L145.1,159.2 L149.0,156.1 L153.1,152.3 L156.4,148.7 L159.7,144.7 L162.7,140.3 L166.4,133.9 L168.6,129.1 L171.1,122.4 L173.1,115.5 L174.4,108.8 L174.8,103.6 L174.3,101.3 L173.7,100.1 L172.9,99.0 L171.8,98.1 L170.6,97.5 L169.3,97.0 L167.8,96.9 L158.8,97.0 L156.6,97.7 L154.8,99.0 L153.6,100.5 L153.0,102.2 L152.2,109.0 L151.5,112.4 L150.7,115.6 L149.0,120.3 L146.8,124.8 L145.2,127.6 L143.2,130.3 L141.1,133.0 L138.8,135.6 L134.8,139.4 L132.1,141.6 L129.3,143.6 L126.1,145.5 L123.0,147.1 L120.1,148.4 L116.9,149.5 L113.4,150.6 L107.0,151.8 L103.4,152.1 L96.9,152.1 L93.3,151.8 L90.0,151.3 L86.8,150.6 L83.6,149.6 L80.4,148.5 L77.0,147.0 L74.0,145.4 L71.2,143.7 L68.1,141.5 L65.4,139.3 L62.9,137.0 L60.3,134.2 L58.1,131.5 L56.0,128.6 L54.3,125.8 L52.7,122.9 L51.2,119.5 L50.0,116.3 L49.1,113.1 L48.4,110.0 L47.8,106.7 L47.5,103.4 L47.4,100.0 L47.5,96.7 L47.8,93.4 L48.4,89.8 L49.1,86.6 L50.1,83.4 L51.3,80.2 L52.7,77.1 L54.2,74.3 L56.0,71.3 L58.0,68.5 L60.3,65.7 L62.9,62.9 L65.5,60.5 L68.4,58.2 L71.2,56.3 L74.2,54.5 L77.1,53.0 L80.1,51.7 L83.4,50.6 L86.8,49.6 L90.2,48.9 L96.6,48.2 L100.2,48.1 L106.7,48.6 L110.3,49.2 L113.6,50.0 L116.9,51.0 L119.9,52.1 L123.2,53.6 L126.3,55.3 L129.2,57.1 L131.9,59.0 L134.0,60.8 L134.3,62.0 L134.2,62.6 L133.8,63.2 L122.0,75.3 L121.2,76.4 L120.6,77.6 L120.0,79.9 L120.1,81.2 L120.4,82.5 L121.0,83.7 L121.8,84.8 L123.6,86.3 L125.3,87.0 L127.1,87.2 L168.0,87.2 L169.3,87.1 L170.6,86.7 L172.3,85.7 L173.6,84.4 L174.6,82.5 L175.0,80.7 L175.0,36.9 L174.8,35.5 L174.4,34.2 L173.8,33.0 L172.9,31.9 L171.8,31.1 L170.6,30.4 L169.3,30.0 L167.9,29.9 L166.6,30.1 L165.3,30.5 L164.1,31.1 L163.0,32.0 L151.3,44.1 L150.6,44.5 L149.8,44.6 L148.7,44.2 L144.4,40.8 L140.4,37.9 L136.5,35.6 L132.2,33.3 L127.8,31.3 L123.2,29.7 L118.2,28.2 L113.5,27.1 L108.8,26.4 L104.1,26.0 L99.8,25.8 L95.0,26.0 L90.3,26.4 L85.5,27.2 L80.5,28.3 L75.9,29.7 L71.3,31.3 L66.9,33.3 L63.0,35.4 L58.8,37.9 L54.7,40.8 L50.8,43.9 L47.0,47.4 L43.5,51.1 L40.3,54.9 L37.4,59.0 L34.8,63.1 L32.5,67.4 L30.3,72.3 L28.7,76.8 L27.3,81.4 L26.3,86.0 L25.6,90.7 L25.2,95.0 Z", "cd:check": "M67.7,155.2 L69.0,156.2 L70.4,156.9 L72.7,157.5 L74.3,157.5 L75.9,157.2 L77.3,156.6 L78.7,155.7 L173.1,61.2 L174.4,59.2 L175.0,56.8 L175.0,55.2 L174.4,52.9 L173.1,50.9 L166.6,44.3 L164.5,43.1 L163.0,42.6 L161.4,42.4 L159.0,42.8 L157.6,43.4 L156.2,44.3 L73.5,127.0 L44.4,97.9 L42.4,96.4 L41.0,95.8 L38.6,95.5 L36.2,95.8 L34.7,96.4 L32.8,97.9 L26.9,103.9 L26.0,105.2 L25.4,106.7 L25.0,109.1 L25.2,110.7 L25.6,112.2 L26.9,114.2 Z"};
+const CD_ICON = { bars: 'cd:wifi-off', ring: 'cd:update-arrow', tick: 'cd:check' }, CD_SIZE = 28;
 class IconLayer {
   constructor(parent) {
     this.root = document.createElement('div'); this.root.className = 'ic'; parent.appendChild(this.root);
     this.mark = svg('svg', { viewBox: '48 48 104 104' }, this.root); this.markPath = svg('path', { 'fill-rule': 'evenodd', fill: 'currentColor' }, this.mark);
-    this.bars = svg('svg', { viewBox: '0 0 22 22' }, this.root);
-    this.barLines = svg('g', { stroke: 'currentColor', 'stroke-linecap': 'round', fill: 'none' }, this.bars);
-    this.barEls = [0, 1, 2].map(() => svg('line', {}, this.barLines));
-    this.slash = svg('line', { stroke: 'currentColor', 'stroke-linecap': 'round' }, this.bars);
-    this.ring = svg('svg', { viewBox: '0 0 20 20' }, this.root); this.ringArc = svg('path', { fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round' }, this.ring);
-    this.tick = svg('svg', { viewBox: '0 0 22 22' }, this.root);
-    this.t1 = svg('line', { stroke: 'currentColor', 'stroke-linecap': 'round', 'stroke-width': 2.64 }, this.tick);
-    this.t2 = svg('line', { stroke: 'currentColor', 'stroke-linecap': 'round', 'stroke-width': 2.64 }, this.tick);
+    this.cd = {};
+    for (const [kind, name] of Object.entries(CD_ICON)) {
+      const el = svg('svg', { viewBox: '0 0 200 200' }, this.root); svg('path', { 'fill-rule': 'evenodd', fill: 'currentColor', d: CD_PATHS[name] }, el); this.cd[kind] = el;
+    }
   }
   draw(face, now, dp, ctx) {
     const f = FACES[face]; if (!f || !f.icon) { this.root.style.display = 'none'; return; }
     this.root.style.display = 'grid';
-    for (const el of [this.mark, this.bars, this.ring, this.tick]) el.style.display = 'none';
-    const size = { mark: 22, bars: 22, ring: 20, tick: 22 }[f.icon] * (ctx.k || 1);
-    const el = { mark: this.mark, bars: this.bars, ring: this.ring, tick: this.tick }[f.icon];
-    el.style.display = 'block'; el.style.width = el.style.height = size * dp + 'px';
+    this.mark.style.display = f.icon === 'mark' ? 'block' : 'none';
+    for (const k in this.cd) this.cd[k].style.display = k === f.icon ? 'block' : 'none';
     this.root.style.transform = '';
     if (f.icon === 'mark') {
+      const size = 22 * (ctx.k || 1) * dp; this.mark.style.width = this.mark.style.height = size + 'px';
       this.markPath.setAttribute('d', markPath(now));
       // turns with the finger while pulling and has made half a turn by Release; the mark looks the same upside down, so every other face
       // draws it upright with no jump, and only its own drift moves (no spinning once the pill is loaded)
-      const rot = face === 'pull' ? ctx.pull * 180 : face === 'release' ? 180 : 0;
-      this.root.style.transform = `rotate(${rot}deg)`;
-    } else if (f.icon === 'bars') {
-      const pulse = 0.35 + 0.65 * FOSE(triangle(now, 900)), w = 22, h = 22, bar = w * 0.16;
-      [0.35, 0.6, 0.85].forEach((top, i) => { const x = w * (0.18 + i * 0.27), l = this.barEls[i];
-        l.setAttribute('x1', x); l.setAttribute('x2', x); l.setAttribute('y1', h * 0.9); l.setAttribute('y2', h * (1 - top) + h * 0.1); l.setAttribute('stroke-width', bar); });
-      this.barLines.setAttribute('opacity', pulse);
-      this.slash.setAttribute('x1', w * 0.08); this.slash.setAttribute('y1', h * 0.08); this.slash.setAttribute('x2', w * 0.92); this.slash.setAttribute('y2', h * 0.92); this.slash.setAttribute('stroke-width', bar * 0.9);
-    } else if (f.icon === 'ring') {
-      const turn = (now % 1100) / 1100 * 360, sweep = FOSE(triangle(now, 1400));
-      const start = (turn * 0.8 - 90 + 190 * sweep * 0.5) * Math.PI / 180, span = (90 + 190 * sweep) * Math.PI / 180, r = 9;
-      const p = a => [10 + r * Math.cos(a), 10 + r * Math.sin(a)], a0 = p(start), a1 = p(start + span);
-      this.ringArc.setAttribute('d', `M${a0[0]} ${a0[1]}A${r} ${r} 0 ${span > Math.PI ? 1 : 0} 1 ${a1[0]} ${a1[1]}`);
-    } else if (f.icon === 'tick') {
-      const draw = FOSE(clamp((now - ctx.tickT) / 380, 0, 1)), w = 22;
-      const a = [w * 0.2, w * 0.55], b = [w * 0.42, w * 0.76], c = [w * 0.82, w * 0.28];
-      const first = Math.min(draw * 2, 1), second = clamp((draw - 0.5) * 2, 0, 1);
-      this.t1.setAttribute('x1', a[0]); this.t1.setAttribute('y1', a[1]); this.t1.setAttribute('x2', a[0] + (b[0] - a[0]) * first); this.t1.setAttribute('y2', a[1] + (b[1] - a[1]) * first);
-      this.t2.setAttribute('x1', b[0]); this.t2.setAttribute('y1', b[1]); this.t2.setAttribute('x2', b[0] + (c[0] - b[0]) * second); this.t2.setAttribute('y2', b[1] + (c[1] - b[1]) * second);
-      this.t2.style.display = second > 0 ? '' : 'none';
+      this.root.style.transform = `rotate(${face === 'pull' ? ctx.pull * 180 : face === 'release' ? 180 : 0}deg)`;
+      return;
     }
+    const el = this.cd[f.icon], size = CD_SIZE * (ctx.k || 1) * dp;
+    el.style.width = el.style.height = size + 'px'; el.style.opacity = '1'; el.style.clipPath = '';
+    if (f.icon === 'bars') el.style.opacity = String(0.35 + 0.65 * FOSE(triangle(now, 900)));                                  // crossed Wi-Fi, breathing: still trying
+    else if (f.icon === 'ring') this.root.style.transform = `rotate(${(now % 1100) / 1100 * 360}deg)`;                         // circular arrow, one turn every 1.1 s
+    else el.style.clipPath = `inset(0 ${(1 - FOSE(clamp((now - ctx.tickT) / 380, 0, 1))) * 100}% 0 0)`;                       // tick wiped in from the left over 380 ms
   }
 }
 
@@ -707,9 +692,9 @@ $('#specTable').innerHTML = `<tr><th>What</th><th>Value</th><th>Why</th></tr>` +
   ['Mark', 'AssistantGlyph idle: two 76-unit squircles, radius 30, sliding along the diagonal, 4 s cycle, overlap cut out (even-odd). White as a circle, ink once widened (300 ms).', 'Pull: turns 0–180° with the finger (the only time it turns). Release: 180°, which looks the same upright. Every loaded face: the normal drift, no spin.'],
   ['Words', 'Instrument Sans 500, 14 dp, 0.1 dp tracking. Crossfade on change: new in 180 ms, old out 120 ms.', 'Pull to refresh · Release to refresh · Connecting · Updating · Up to date · No connection · Home Assistant restarting'],
   ['Colours', 'Normal: surface 2 with text colour. No connection: the house’s Red, restarting: its Amber (toneColors: light = 38% tint of Light over white with Deep text; dark = Dark with white text). Cloud takes the set’s colour and accent.', 'Same palettes as the cards, so they match the dashboard.'],
-  ['No connection icon', 'Three signal bars (22 dp box, bar width 16%) breathing between 35% and 100% over 0.9 s (reverse), with a slash through them.', ''],
+  ['No connection icon', 'The Clive set\u2019s cd:wifi-off (crossed Wi-Fi), 28 dp, breathing between 35% and 100% over 0.9 s (reverse).', 'The house\u2019s own icon, not a Material one.'],
   ['Restarting icon', '20 dp ring, 2 dp stroke, round caps; turns at 0.8 turn per 1.1 s while its arc grows and shrinks between 90° and 280° over 1.4 s (reverse).', ''],
-  ['Up to date icon', 'Tick draws itself over 380 ms: the short stroke in the first half, the long one in the second.', 'Shown 1.3 s.'],
+  ['Up to date icon', 'The Clive set\u2019s cd:check (tick), 28 dp, wiped in from the left over 380 ms so it still seems to draw itself.', 'Shown 1.3 s. The house\u2019s own icon, not a Material one.'],
   ['Pull', 'Finger drags are halved (Material). Fraction = pill travel ÷ 80 dp; fraction ≥ 1 = Release. The circle does not pop up: it grows with the finger, from 30% size and clear to full size and opaque by half way to Release (standard easing), while it slides down (min(fraction, 1.3) − 1) × 36 dp. Then Release widens it. Let go past 1 and it refreshes; before, it shrinks back as it springs home.', 'Only when the pill was not already on screen; if it is showing (say No connection) a pull leaves its size alone.'],
   ['Refresh', 'Updating for at least 0.9 s, then until the house has answered and the line is up (gives up after 12 s), then Up to date for 1.3 s.', ''],
   ['No connection after', '6 s down (counted in whole seconds). Before that: Connecting.', 'A blip is not worth a warning.'],

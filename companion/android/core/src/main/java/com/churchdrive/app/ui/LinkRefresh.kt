@@ -1,6 +1,9 @@
 package com.churchdrive.app.ui
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.animation.EnterTransition
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.ui.unit.Dp
@@ -289,10 +292,10 @@ private fun PillIcon(face: PillFace, ink: Color, pull: Float) {
     val spin = rememberInfiniteTransition(label = "spin")
     val turn by spin.animateFloat(0f, 360f, infiniteRepeatable(tween(1_100, easing = LinearEasing)), label = "turn")
     val pulse by spin.animateFloat(0.35f, 1f, infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "pulse")
-    // The mark turns with the finger while pulling and has made half a turn by Release. Upside down it looks the same, so every other face
-    // draws it the right way up with no jump, and only its own drifting (see AssistantGlyph) moves: no spinning once the pill is loaded.
-    val sweep by spin.animateFloat(0f, 1f, infiniteRepeatable(tween(1_400), RepeatMode.Reverse), label = "sweep")
+    // Every picture here is the house's own: Clive's mark, and the Clive set's icons (cd:wifi-off, cd:update-arrow, cd:check), never a Material one.
     when (face) {
+        // The mark turns with the finger while pulling and has made half a turn by Release. Upside down it looks the same, so every other face
+        // draws it the right way up with no jump, and only its own drifting (see AssistantGlyph) moves: no spinning once the pill is loaded.
         PillFace.Connecting, PillFace.Pull, PillFace.Release, PillFace.Updating ->
             Box(
                 Modifier.size(22.dp).graphicsLayer {
@@ -303,47 +306,22 @@ private fun PillIcon(face: PillFace, ink: Color, pull: Float) {
                     }
                 },
             ) { AssistantGlyph(AssistantGlyphPose.Idle, ink, 22.dp) }
-        PillFace.Restarting -> Canvas(Modifier.size(20.dp)) {
-            // A ring that turns while its arc grows and shrinks, 2 dp thick.
-            val stroke = 2.dp.toPx()
-            val inset = stroke / 2f
-            val arc = 90f + 190f * sweep
-            drawArc(
-                ink, startAngle = turn * 0.8f - 90f + (190f * sweep) * 0.5f, sweepAngle = arc, useCenter = false,
-                topLeft = Offset(inset, inset), size = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke),
-                style = Stroke(width = stroke, cap = StrokeCap.Round),
-            )
-        }
-        PillFace.NoConnection -> Canvas(Modifier.size(22.dp)) {
-            // Three signal bars with a line through them, breathing so it reads as "still trying".
-            val w = size.width
-            val h = size.height
-            val bar = w * 0.16f
-            listOf(0.35f, 0.6f, 0.85f).forEachIndexed { i, top ->
-                val x = w * (0.18f + i * 0.27f)
-                drawLine(ink.copy(alpha = pulse), Offset(x, h * 0.9f), Offset(x, h * (1f - top) + h * 0.1f), strokeWidth = bar, cap = StrokeCap.Round)
-            }
-            drawLine(ink, Offset(w * 0.08f, h * 0.08f), Offset(w * 0.92f, h * 0.92f), strokeWidth = bar * 0.9f, cap = StrokeCap.Round)
-        }
+        // A circular arrow turning once every 1.1 s: Home Assistant is starting again.
+        PillFace.Restarting -> CdIcon("cd:update-arrow", ink, PILL_ICON, Modifier.graphicsLayer { rotationZ = turn })
+        // The crossed Wi-Fi, breathing so it reads as "still trying".
+        PillFace.NoConnection -> CdIcon("cd:wifi-off", ink.copy(alpha = pulse), PILL_ICON)
         PillFace.Done -> {
-            // Starts at nothing and draws itself (animateFloatAsState would begin already at 1).
+            // Starts hidden and is wiped in from the left over 380 ms, so the tick still seems to draw itself (animateFloatAsState would begin already at 1).
             val drawn = remember { androidx.compose.animation.core.Animatable(0f) }
             LaunchedEffect(Unit) { drawn.animateTo(1f, tween(380)) }
-            val draw = drawn.value
-            Canvas(Modifier.size(22.dp)) {
-                val w = size.width
-                val h = size.height
-                val a = Offset(w * 0.2f, h * 0.55f)
-                val b = Offset(w * 0.42f, h * 0.76f)
-                val c = Offset(w * 0.82f, h * 0.28f)
-                val stroke = Stroke(width = w * 0.12f, cap = StrokeCap.Round)
-                // The tick draws itself: the short stroke first, then the long one.
-                val first = (draw * 2f).coerceAtMost(1f)
-                val second = ((draw - 0.5f) * 2f).coerceIn(0f, 1f)
-                drawLine(ink, a, Offset(a.x + (b.x - a.x) * first, a.y + (b.y - a.y) * first), strokeWidth = stroke.width, cap = stroke.cap)
-                if (second > 0f) drawLine(ink, b, Offset(b.x + (c.x - b.x) * second, b.y + (c.y - b.y) * second), strokeWidth = stroke.width, cap = stroke.cap)
-            }
+            CdIcon(
+                "cd:check", ink, PILL_ICON,
+                Modifier.drawWithContent { clipRect(right = size.width * FastOutSlowInEasing.transform(drawn.value)) { this@drawWithContent.drawContent() } },
+            )
         }
         PillFace.Hidden -> Unit
     }
 }
+
+/** The size of the Clive set's icons in the pill: their glyphs fill about three quarters of the box, which makes them weigh the same as the mark. */
+private val PILL_ICON = 28.dp

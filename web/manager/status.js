@@ -5,6 +5,8 @@
 //
 // The top half of this file is rules and words (no page needed, tested in test/manager-status.test.mjs); the bottom half draws.
 
+import { fillIcons, icon } from './icons.js';
+
 // ---- Rules (the same as pillKind and LinkRefresh in the apps) ----
 
 /** How long the line may be down before "Connecting" turns into "No connection" (a short blip is not worth a warning). */
@@ -166,50 +168,41 @@ const NS = 'http://www.w3.org/2000/svg';
 const svgEl = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
 const div = (cls, parent) => { const e = document.createElement('div'); e.className = cls; if (parent) parent.appendChild(e); return e; };
 
-/** The picture at the left: Clive's mark, an offline signal, a restart ring or a tick. */
+/** The Clive set's icons the faces use (the house's own, from the same file the apps read; never a Material one), and how big they are drawn. */
+const CD_ICON = { bars: 'cd:wifi-off', ring: 'cd:update-arrow', tick: 'cd:check' };
+const CD_SIZE = 28;
+
+/** The picture at the left: Clive's mark, or one of the Clive set's icons (crossed Wi-Fi, circular arrow, tick). */
 class IconLayer {
   constructor(parent) {
     this.root = div('st-ic', parent);
     this.mark = svgEl('svg', { viewBox: '48 48 104 104' }, this.root); this.markPath = svgEl('path', { 'fill-rule': 'evenodd', fill: 'currentColor' }, this.mark);
-    this.bars = svgEl('svg', { viewBox: '0 0 22 22' }, this.root);
-    this.barLines = svgEl('g', { stroke: 'currentColor', 'stroke-linecap': 'round', fill: 'none' }, this.bars);
-    this.barEls = [0, 1, 2].map(() => svgEl('line', {}, this.barLines));
-    this.slash = svgEl('line', { stroke: 'currentColor', 'stroke-linecap': 'round' }, this.bars);
-    this.ring = svgEl('svg', { viewBox: '0 0 20 20' }, this.root); this.arc = svgEl('path', { fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round' }, this.ring);
-    this.tick = svgEl('svg', { viewBox: '0 0 22 22' }, this.root);
-    this.t1 = svgEl('line', { stroke: 'currentColor', 'stroke-linecap': 'round', 'stroke-width': 2.64 }, this.tick);
-    this.t2 = svgEl('line', { stroke: 'currentColor', 'stroke-linecap': 'round', 'stroke-width': 2.64 }, this.tick);
+    // The set's icons arrive after the first paint (icons.js), so each starts as an empty box and fills itself when the set is in.
+    this.cd = {};
+    for (const [kind, name] of Object.entries(CD_ICON)) {
+      const box = div('st-cd', this.root); box.innerHTML = icon(name, CD_SIZE * K); fillIcons(box); this.cd[kind] = box;
+    }
   }
   draw(face, now, dp, ctx) {
     const f = FACES[face];
     if (!f) { this.root.style.display = 'none'; return; }
     this.root.style.display = 'grid';
-    const svgs = { mark: this.mark, bars: this.bars, ring: this.ring, tick: this.tick };
-    for (const k in svgs) svgs[k].style.display = k === f.icon ? 'block' : 'none';
-    const size = { mark: 22, bars: 22, ring: 20, tick: 22 }[f.icon] * K * dp;
-    svgs[f.icon].style.width = svgs[f.icon].style.height = `${size}px`;
+    this.mark.style.display = f.icon === 'mark' ? 'block' : 'none';
+    for (const k in this.cd) this.cd[k].style.display = k === f.icon ? 'grid' : 'none';
     this.root.style.transform = '';
     if (f.icon === 'mark') {
+      const size = 22 * K * dp; this.mark.style.width = this.mark.style.height = `${size}px`;
       this.markPath.setAttribute('d', markPath(ctx.still ? 0 : now));
       // Turns with the finger while pulling and has made half a turn by Release (upside down it looks the same); loaded faces only drift.
       this.root.style.transform = `rotate(${face === 'pull' ? ctx.pull * 180 : face === 'release' ? 180 : 0}deg)`;
-    } else if (f.icon === 'bars') {
-      const w = 22, h = 22, bar = w * 0.16, pulse = 0.35 + 0.65 * FOSE(triangle(ctx.still ? 0 : now, 900));
-      [0.35, 0.6, 0.85].forEach((top, n) => { const x = w * (0.18 + n * 0.27), l = this.barEls[n]; l.setAttribute('x1', x); l.setAttribute('x2', x); l.setAttribute('y1', h * 0.9); l.setAttribute('y2', h * (1 - top) + h * 0.1); l.setAttribute('stroke-width', bar); });
-      this.barLines.setAttribute('opacity', pulse);
-      this.slash.setAttribute('x1', w * 0.08); this.slash.setAttribute('y1', h * 0.08); this.slash.setAttribute('x2', w * 0.92); this.slash.setAttribute('y2', h * 0.92); this.slash.setAttribute('stroke-width', bar * 0.9);
-    } else if (f.icon === 'ring') {
-      const t = ctx.still ? 0 : now, turn = (t % 1100) / 1100 * 360, sweep = FOSE(triangle(t, 1400));
-      const start = (turn * 0.8 - 90 + 190 * sweep * 0.5) * Math.PI / 180, span = (90 + 190 * sweep) * Math.PI / 180, r = 9;
-      const at = (a) => [10 + r * Math.cos(a), 10 + r * Math.sin(a)], a0 = at(start), a1 = at(start + span);
-      this.arc.setAttribute('d', `M${a0[0]} ${a0[1]}A${r} ${r} 0 ${span > Math.PI ? 1 : 0} 1 ${a1[0]} ${a1[1]}`);
-    } else {
-      const draw = FOSE(clamp((now - ctx.tickT) / 380, 0, 1)), w = 22, a = [w * 0.2, w * 0.55], b = [w * 0.42, w * 0.76], c = [w * 0.82, w * 0.28];
-      const first = Math.min(draw * 2, 1), second = clamp((draw - 0.5) * 2, 0, 1);
-      this.t1.setAttribute('x1', a[0]); this.t1.setAttribute('y1', a[1]); this.t1.setAttribute('x2', a[0] + (b[0] - a[0]) * first); this.t1.setAttribute('y2', a[1] + (b[1] - a[1]) * first);
-      this.t2.setAttribute('x1', b[0]); this.t2.setAttribute('y1', b[1]); this.t2.setAttribute('x2', b[0] + (c[0] - b[0]) * second); this.t2.setAttribute('y2', b[1] + (c[1] - b[1]) * second);
-      this.t2.style.display = second > 0 ? '' : 'none';
+      return;
     }
+    const box = this.cd[f.icon], svg = box.firstChild, size = CD_SIZE * K * dp;
+    if (svg) { svg.style.width = svg.style.height = `${size}px`; if (!svg.firstChild) fillIcons(box); }
+    box.style.opacity = '1'; box.style.clipPath = ''; box.style.transform = '';
+    if (f.icon === 'bars') box.style.opacity = String(0.35 + 0.65 * FOSE(triangle(ctx.still ? 0 : now, 900)));          // breathing: still trying
+    else if (f.icon === 'ring') box.style.transform = `rotate(${(ctx.still ? 0 : now % 1100) / 1100 * 360}deg)`;        // one turn every 1.1 s
+    else box.style.clipPath = `inset(0 ${(1 - FOSE(clamp((now - ctx.tickT) / 380, 0, 1))) * 100}% 0 0)`;               // wiped in from the left over 380 ms
   }
 }
 

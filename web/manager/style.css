@@ -170,7 +170,9 @@ html { overscroll-behavior-y: contain; }
 .st-lbl { position: relative; flex: none; overflow: hidden; }
 .st-ring { position: absolute; inset: 0; border-radius: 999px; pointer-events: none; box-sizing: border-box; }
 .st-ic { display: grid; place-items: center; }
-.st-ic svg { grid-area: 1 / 1; display: none; overflow: visible; }
+.st-ic > * { grid-area: 1 / 1; }
+.st-ic svg { overflow: visible; }
+.st-cd { display: none; place-items: center; }
 .st-tx { position: absolute; left: 0; top: 0; height: 100%; flex-direction: column; justify-content: center; }
 .st-t { font-weight: 600; letter-spacing: -.01em; white-space: nowrap; }
 .st-a { font-weight: 400; opacity: .88; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
