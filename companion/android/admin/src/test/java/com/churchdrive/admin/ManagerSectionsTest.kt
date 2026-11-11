@@ -33,7 +33,7 @@ class ManagerSectionsTest {
 
     @Test fun leavesOutLocationsAndIconsOnPurposeButKeepsPeople() {
         val keep = ManagerSection("Notifications", null, null, listOf(ManagerCard("custom:notifications-card", JSONObject())))
-        val people = ManagerSection("Alarm lights", null, null, listOf(ManagerCard("custom:alarm-lights-card", JSONObject())))
+        val people = ManagerSection("People", null, null, listOf(ManagerCard("custom:people-manager-card", JSONObject())))
         val locations = ManagerSection("Locations", null, null, listOf(ManagerCard("custom:zone-map-card", JSONObject())))
         val icons = ManagerSection("Icons", null, null, listOf(ManagerCard("custom:icon-styles-card", JSONObject())))
         assertEquals(listOf("People", "Notifications"), ManagerSections.forAdmin(listOf(people, keep, locations, icons)).map { it.title })
