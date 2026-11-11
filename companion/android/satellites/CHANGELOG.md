@@ -1,8 +1,8 @@
 # Church Drive Satellites: changelog
 
-## 0.126.0
+## 0.130.0
 
-- No change to this app: the layout fixes in the phone app are in the shared version.
+- No change to this app: Clive Admin's new pages and the phone app's Open Clive Admin button are in the shared version.
 
 ## 0.129.0
 

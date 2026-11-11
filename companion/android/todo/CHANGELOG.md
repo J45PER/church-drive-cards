@@ -3,9 +3,9 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
-## 0.126.0
+## 0.130.0
 
-- No change to this app: the layout fixes in the phone app are in the shared version.
+- No change to this app: Clive Admin's new pages and the phone app's Open Clive Admin button are in the shared version.
 
 ## 0.129.0
 

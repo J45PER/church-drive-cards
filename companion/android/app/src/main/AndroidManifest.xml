@@ -18,6 +18,7 @@
     <!-- To see whether Church Drive To-Do is installed (the To-do page opens it). -->
     <queries>
         <package android:name="com.churchdrive.todo" />
+        <package android:name="com.churchdrive.admin" />
     </queries>
 
     <!-- Cleartext allowed because Home Assistant is often reached over plain http on the LAN. -->

@@ -1,0 +1,12 @@
+rules_version = '2';
+// Clive Manager's live design data (palettes, card picks, icons, layouts, history). Everyone may read it: it is colours and picks, nothing
+// secret. Nobody writes from a browser or an app: Home Assistant writes with its own service account, which ignores these rules, and only after it
+// has checked the person is an administrator.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{collection}/{document=**} {
+      allow read: if collection in ['palettes', 'cards', 'icons', 'layouts', 'history', 'meta'];
+      allow write: if false;
+    }
+  }
+}

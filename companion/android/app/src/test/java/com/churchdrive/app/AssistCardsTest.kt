@@ -72,7 +72,7 @@ class AssistCardsTest {
     }
 
     @Test fun theBrandLogoSetHasTheCommonServices() {
-        val set = JSONObject(File("src/main/assets/si-icons.json").readText())
+        val set = JSONObject(File("../core/src/main/assets/si-icons.json").readText())
         for (slug in listOf("spotify", "netflix", "youtube", "plex", "applemusic", "googlecast", "homeassistant")) {
             assertEquals(slug, true, set.optString(slug).isNotBlank())
         }
@@ -129,8 +129,8 @@ class AssistCardsTest {
     }
 
     @Test fun everyLogoNameTheCardsCanAskForHasALogo() {
-        val si = JSONObject(File("src/main/assets/si-icons.json").readText())
-        val own = JSONObject(File("src/main/assets/own-logos.json").readText())
+        val si = JSONObject(File("../core/src/main/assets/si-icons.json").readText())
+        val own = JSONObject(File("../core/src/main/assets/own-logos.json").readText())
         for (slug in listOf("primevideo", "bbciplayer", "amazonmusic", "landrover", "mercedes", "premierleague", "fifa", "vauxhall", "airplayvideo")) assertEquals(slug, true, si.optString(slug).isNotBlank())
         for (slug in listOf("championsleague", "europaleague", "conferenceleague", "facup", "eflleague", "carabaocup", "scottishpremiership", "nationsleague", "disneyplus", "cupra", "octopusenergy")) {
             assertEquals(slug, true, own.optString(slug).startsWith("M"))

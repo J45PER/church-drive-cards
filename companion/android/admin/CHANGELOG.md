@@ -1,5 +1,12 @@
 # Clive Admin: changelog
 
+## 0.130.0
+
+- Activity log: what people and the assistant did, and who came and went, as in the phone app (it is in both apps).
+- Device health: batteries, filters and devices that stopped answering, from a card on Home.
+- Energy: electricity and the cheap times, the last seven days, gas and Octoplus, from a card on Home.
+- Home now has a card for each; the bottom bar is Home, Activity and Colours.
+
 ## 0.129.0
 
 - The Google Play version uses the Church Drive app's sign-in when it is on the phone and signed in (the phone app now trusts this app's Play signing certificate), so it no longer asks to sign in.

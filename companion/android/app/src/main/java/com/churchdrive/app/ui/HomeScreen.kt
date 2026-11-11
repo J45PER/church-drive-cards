@@ -500,15 +500,6 @@ internal fun UpdateBanner(onUpdate: () -> Unit) {
     }
 }
 
-/** A line of what the app is waiting for, over a thin moving bar, so a page that is still filling in does not look broken. */
-@Composable
-fun LoadingNote(text: String) {
-    androidx.compose.foundation.layout.Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth())
-        Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-    }
-}
-
 /** The Experimental page: things being tried out before they replace what is there. Nothing is at the moment (the new camera live view is now the main one). */
 @Composable
 private fun ExperimentalPage(@Suppress("UNUSED_PARAMETER") entities: Map<String, EntityState>, @Suppress("UNUSED_PARAMETER") registry: Registry, @Suppress("UNUSED_PARAMETER") call: CallService) {

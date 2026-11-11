@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -34,9 +33,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.churchdrive.app.ha.EntityState
 import com.churchdrive.app.ha.Registry
-
-/** Opens a device's health page for an entity of that device (a long press on a card). Does nothing where the app hasn't set it. */
-val LocalOpenDevice = compositionLocalOf<(String) -> Unit> { {} }
 
 private fun HealthLevel.tone(): Tone = when (this) {
     HealthLevel.Ok -> Tone.Green

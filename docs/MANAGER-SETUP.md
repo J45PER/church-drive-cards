@@ -46,29 +46,38 @@ Authentication is not used: do not turn on Google sign-in.
 
 **B10.** Delete the downloaded copy from the laptop's Downloads folder (and empty the bin).
 
-## Part C: Letting the website talk to Home Assistant (about 5 minutes)
+## Part C: Letting the website talk to Home Assistant (done 2026-11-11)
 
-**C1.** In Home Assistant, open the **File editor** (or Studio Code Server) and open `configuration.yaml`.
+Newer Home Assistant keeps its web server settings in its own screen, not in `configuration.yaml` (a repair says "HTTP YAML configuration is ignored after migration" if the `http:` block is still there).
 
-**C2.** Look for a line starting `http:`.
-- If there is **no** `http:` section, add this at the bottom:
+**C1.** In Home Assistant, go to **Settings**, **System**, **Network**, and scroll to **HTTP server**.
 
-  ```yaml
-  http:
-    cors_allowed_origins:
-      - https://church-drive-smart-home.web.app
-  ```
+**C2.** Open **More options**. Under **CORS allowed origins**, tap **Add CORS allowed origins** and enter exactly `https://church-drive-smart-home.web.app`. Keep the existing `https://cast.home-assistant.io`.
 
-- If there **is** an `http:` section, add only the `cors_allowed_origins:` part (with the one address under it) inside it, keeping the existing lines such as `use_x_forwarded_for`.
+**C3.** Tap **Save**. It restarts Home Assistant and asks an administrator to confirm.
 
-**C3.** Save the file.
+**C4.** If `configuration.yaml` still has an `http:` block, delete it (it is ignored, and stops working in Home Assistant 2027.2.0).
 
-**C4.** Go to **Developer tools**, **YAML**, click **Check configuration**. It must say the configuration is valid. If it does not, tell Claude what it says and do not restart.
-
-**C5.** Restart Home Assistant (**Settings**, **System**, power icon, **Restart Home Assistant**).
-
-If you later give the site a custom address, it gets another line in the same list.
+If the site is later given a custom address, add that address to the same list.
 
 ## Part D: Tell Claude
 
 Say: "Parts A, B and C done." Claude can then check what it can from Home Assistant (that the key file is in place and the setting is loaded) and start the integration work. If a step does not look like this description (the console changes), tell Claude what you see on screen.
+
+## Part E: Letting GitHub publish the website (when you want it live)
+
+The site is in `web/manager`. Nothing publishes it until GitHub has a key, so it is safe to leave this for later.
+
+**E1.** In the Google Cloud console (project **Church Drive Smart Home**), go to **IAM and Admin**, then **Service accounts**, and create `clive-site-deployer` (display name `Clive Site Deployer`).
+
+**E2.** Give it these roles: **Firebase Hosting Admin**, **Firebase Rules Admin** and **Service Usage Consumer**. Click **Done**.
+
+**E3.** Open the account, **Keys** tab, **Add key**, **Create new key**, **JSON**. A file downloads.
+
+**E4.** In GitHub, open the `church-drive-cards` repository, then **Settings**, **Secrets and variables**, **Actions**, **New repository secret**. Name it `FIREBASE_SERVICE_ACCOUNT` and paste the whole contents of the file as the value. (This is the one place a key goes. Never paste it in chat.)
+
+**E5.** Delete the downloaded file from your device.
+
+**E6.** In GitHub, **Actions**, **Clive Manager site**, **Run workflow**. It publishes the site and the Firestore rules. If it complains about a permission, tell Claude what it says.
+
+The site is then at `https://church-drive-smart-home.web.app`, and every later change to `web/manager` publishes itself when it is merged.

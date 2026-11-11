@@ -47,20 +47,6 @@ fun cameraLight(entities: Map<String, EntityState>, registry: Registry, cameraId
     return entities.keys.filter { it.startsWith("light.") && registry.areaOf(it) == area }.singleOrNull()
 }
 
-/** "Today", "Yesterday" or "Monday 21 Sep". */
-fun eventDay(ms: Long, now: Long, zone: ZoneId = ZoneId.systemDefault()): String {
-    val day = Instant.ofEpochMilli(ms).atZone(zone).toLocalDate()
-    val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
-    return when (day) {
-        today -> "Today"
-        today.minusDays(1) -> "Yesterday"
-        else -> DateTimeFormatter.ofPattern("EEEE d MMM", Locale.UK).format(day)
-    }
-}
-
-/** "21:40". */
-fun eventClock(ms: Long, zone: ZoneId = ZoneId.systemDefault()): String =
-    HomeTime.format(ms, "HH:mm", zone)
 
 /** The kinds of event there are, as the labels shown on the filter chips (Doorbell and Motion first). */
 fun eventFilters(events: List<CameraEvent>): List<String> {
