@@ -2,7 +2,9 @@
 
 ## 0.127.0
 
-- An About page: the version and build, where updates come from, and this app's signing certificate (SHA-256) with a Copy button, so it can be added to the trusted list for the Church Drive app's shared sign-in.
+- Laid out like the other Church Drive apps: a title bar with the person's button, Home and Colours along the bottom, tinted cards with the Clive glow, and the account panel sliding in from the right (from the person's button or a swipe left) with Open Church Drive, About and Sign out.
+- Each palette is a card in its own colours, with its five colours named under it.
+- About (in the account panel): the version and build, where updates come from, and this app's signing certificate (SHA-256) with a Copy button, so it can be added to the trusted list for the Church Drive app's shared sign-in.
 - The phone app now fits phones on their side and tablets, in the shared version.
 
 ## 0.126.0
