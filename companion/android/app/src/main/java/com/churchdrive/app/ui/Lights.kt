@@ -131,7 +131,7 @@ fun LightRoomCard(room: LightRoom, entities: Map<String, EntityState>, areaNames
                             modifier = Modifier.at(0.5f + c * (w + gap), lightsEnd + 1f + 1.25f * r, w, 1f),
                             h = cell,
                         ) {
-                            if (scene.haScene != null) call("scene", "turn_on", scene.haScene, data())
+                            scene.haScene?.let { call("scene", "turn_on", it, data()) }
                             else call("church_drive", "apply_scene", scene.target, data("scene" to scene.key))
                         }
                     }
