@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.146.0
+
+- No change you will notice (the Manager website's header got its shield back).
+
 ## 0.145.0
 
 - No change you will notice (the Manager website got its status capsule and a light/dark button).
