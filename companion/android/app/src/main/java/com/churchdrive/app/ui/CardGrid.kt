@@ -90,10 +90,8 @@ fun GridCard(
 ) {
     val openDevice = LocalOpenDevice.current
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
-    // On a tablet or a phone on its side the card keeps a phone's width, centred, so the grid keeps its proportions.
-    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
     Card(
-        modifier = modifier.widthIn(max = 520.dp).fillMaxWidth().then(
+        modifier = modifier.fillMaxWidth().then(
             if (deviceEntity == null) Modifier
             else Modifier.androidxLongPress {
                 haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
@@ -132,7 +130,6 @@ fun GridCard(
                 }
             }
         }
-    }
     }
 }
 
