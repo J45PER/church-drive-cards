@@ -52,7 +52,7 @@ KINDS: list[dict[str, Any]] = [
     {"key": "clive_actions", "group": "House", "name": "Clive adjusted the house", "note": "Heating turned down, and put back", "default": "admins",
      "needs": [("domain", "climate")]},
     # Energy.
-    {"key": "power_down", "group": "Energy", "name": "Octopus power-down session", "default": "jame",
+    {"key": "power_down", "group": "Energy", "name": "Octopus power-down session", "default": "all",
      "needs": [("platform", "octopus_energy")]},
     {"key": "cheap_rate", "group": "Energy", "name": "Cheap rate started", "default": "jame",
      "needs": [("platform", "octopus_energy")]},

@@ -636,12 +636,13 @@ class People:
 
     @callback
     def _energy_off_by_default(self) -> None:
-        """Once: Energy notifications used to start on for everyone; now they start on for Jame only. Existing
-        houses are moved over once (anything ticked afterwards in Manager is left alone)."""
+        """Once: the price notifications (cheap rate, yesterday's cost) used to start on for everyone; now they
+        start on for Jame only. Existing houses are moved over once (anything ticked afterwards in Manager is
+        left alone). Power-down sessions are not about price, so they are left as they were."""
         if self._data.get("energy_off_default"):
             return
         for kind in self._catalogue():
-            if kind["group"] == "Energy":
+            if kind["key"] in ("cheap_rate", "energy_cost"):
                 self._data["assign"][kind["key"]] = self._default(kind)
         self._data["energy_off_default"] = True
 
