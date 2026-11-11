@@ -3,6 +3,7 @@
 import { DEFAULT_HA, HaSocket, cleanAddress, finishSignIn, houseAddress, signOut, signedIn, startSignIn } from './ha.js';
 import { glowStyle, inkOn } from './glow.js';
 import { fillIcons, icon, loadIcons } from './icons.js';
+import { renderManager, renderManagerSection } from './pages/manager.js';
 import { LOGO_PATH, LOGO_VIEWBOX } from './logo.js';
 import { ACTIONS, BAD, DAYS, OK, TIMES, WARN, activityNote, activityProblem, activityQuery, activityWho, actionLabel, ago, buildRegistry, clock, dayLabel, deviceHealthList, energySnapshot, healthSummary, parseActivity } from './pages/logic.js';
 
@@ -37,6 +38,7 @@ function showSignIn(message) {
 const PAGES = [
   { id: 'home', title: 'Clive Manager', label: 'Home', icon: 'cd:home', render: renderHome },
   { id: 'colours', title: 'Colour palettes', label: 'Colours', icon: 'cd:palette', render: renderColours },
+  { id: 'manager', title: 'Manager', label: 'Manager', icon: 'cd:sliders', render: (el, c, arg) => (arg ? renderManagerSection(el, c, { glowStyle, go }, decodeURIComponent(arg)) : renderManager(el, c, { glowStyle, go })) },
   { id: 'health', title: 'Device health', label: 'Health', icon: 'cd:device-health', render: renderHealth },
   { id: 'energy', title: 'Energy', label: 'Energy', icon: 'cd:bolt', render: renderEnergy },
   { id: 'activity', title: 'Activity log', label: 'Activity', icon: 'cd:history', render: renderActivity },
@@ -179,7 +181,7 @@ async function renderActivity(el, ctx) {
 let ctx = null;
 function go(id) { location.hash = id === 'home' ? '' : id; }
 
-function currentPage() { return PAGES.find((p) => p.id === location.hash.slice(1)) || PAGES[0]; }
+function currentPage() { return PAGES.find((p) => p.id === location.hash.slice(1).split('/')[0]) || PAGES[0]; }
 
 function showShell(user) {
   root.innerHTML = `<div class="shell"><header class="bar"><h1 id="title"></h1><div class="menu-wrap"><button class="person" type="button" id="who" aria-haspopup="true" aria-expanded="false" aria-label="Account: ${esc(user.name)}">${esc((user.name || '?').trim().charAt(0).toUpperCase())}</button>
@@ -204,7 +206,9 @@ function show() {
   document.getElementById('title').textContent = page.title;
   document.title = page.id === 'home' ? 'Clive Manager' : `${page.title} · Clive Manager`;
   root.querySelectorAll('[data-page]').forEach((b) => (b.dataset.page === page.id ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current')));
-  page.render(document.getElementById('page'), ctx);
+  const arg = location.hash.slice(1).split('/').slice(1).join('/');
+  if (arg && page.id === 'manager') document.getElementById('title').textContent = decodeURIComponent(arg);
+  page.render(document.getElementById('page'), ctx, arg);
 }
 window.addEventListener('hashchange', () => { if (ctx) show(); });
 
@@ -258,7 +262,7 @@ async function start() {
     ha.close(); signOut();
     return showSignIn(`${user.name || 'That account'} is not an administrator in Home Assistant, so the Manager has nothing to show. Sign in with an administrator's login.`);
   }
-  ctx = { ha, user };
+  ctx = { ha, user, house: houseAddress() };
   keepConnected();
   showShell(user);
 }
