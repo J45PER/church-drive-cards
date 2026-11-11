@@ -40,6 +40,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -145,14 +146,16 @@ fun TodoApp(vm: TodoModel) {
             }
         },
     ) { padding ->
+        val link by vm.link.collectAsState()
+        com.churchdrive.app.ui.LinkRefresh(link, vm::refresh, Modifier.fillMaxSize().padding(padding)) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             com.churchdrive.app.ui.UpdateNotice(BuildConfig.PLAY, vm.updateAvailable, com.churchdrive.app.UpdateCheck.TODO_APK_URL, "Church Drive To-Do")
-            if (!vm.connected) Text("Connecting to the house…", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             TaskCard(vm, tab)
             Spacer(Modifier.height(16.dp))
+        }
         }
     }
     TodoPanel(panel, { panel = it }, vm)

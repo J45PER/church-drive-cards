@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.135.0
+
+- To-Do has the same status pill as the Church Drive app at the top of the page: "Connecting", "Updating", "No connection" (tap to try again) and "Home Assistant restarting". Pull down on any page to refresh the connection. The pill at the top of the page shows it: "Pull to refresh", "Release to refresh", "Updating" and then "Up to date". 
+
 ## 0.134.0
 
 - No change (this release adds the cards, icons and layouts editors to the Manager website and Home Assistant).
