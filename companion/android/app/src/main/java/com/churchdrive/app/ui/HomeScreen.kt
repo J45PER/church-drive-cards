@@ -16,7 +16,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,6 +39,8 @@ import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -107,7 +111,10 @@ fun HomeScreen(
     // The account panel (null shut, "account", "settings", "about" or "todo"), which slides in from the right: declared above.
     // Asked for from outside (Clive alone, or the app opened on its settings).
     androidx.compose.runtime.LaunchedEffect(openPage) { if (openPage == "settings") panel = "settings" }
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    // A phone upright keeps the tall title bar and the bar at the bottom; on its side or on a tablet there is a rail down the side, and a
+    // short screen has the slim title bar (the tall one would fill it). The cards go in as many columns as fit (AdaptiveColumns).
+    val window = rememberAdaptiveWindow()
+    val scrollBehavior = if (window.short) TopAppBarDefaults.pinnedScrollBehavior() else TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val title = if (page == Page.Home) "Hello ${userName?.substringBefore(' ') ?: ""}".trim() else page.label
 
     // A task tapped on the Home page: a house job goes to the device (or place) it is about, a shopping or steps list to the in-app
@@ -127,25 +134,7 @@ fun HomeScreen(
         }
     }
 
-    // Swiping left anywhere that doesn't scroll sideways opens the account panel, as well as its button.
-    var swiped by remember { mutableStateOf(0f) }
-    Box(
-        Modifier.pointerInput(panel) {
-            if (panel == null) {
-                detectHorizontalDragGestures(
-                    onDragStart = { swiped = 0f },
-                    onDragEnd = { if (swiped < -120f) panel = "account" },
-                    onHorizontalDrag = { _, dx -> swiped += dx },
-                )
-            }
-        },
-    ) {
-    Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            MediumTopAppBar(
-                title = { Text(title) },
-                actions = {
+    val barActions: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = {
                     // Listening for the wake word: a small green microphone, so you can see it is on.
                     if (AssistWakeStatus.waiting) {
                         Box(Modifier.padding(horizontal = 4.dp), contentAlignment = Alignment.Center) {
@@ -164,14 +153,41 @@ fun HomeScreen(
                             style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
                     }
-                },
-                scrollBehavior = scrollBehavior,
-            )
+    }
+    // The dashboard's icons, in the phone's own (wallpaper) colours. The Security icon follows the alarm.
+    val alarmState = entities[ALARM_ENTITY]?.state
+    @Composable
+    fun navIcon(p: Page, selected: Boolean) {
+        val tint = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+        // Cleaning shows Gregg's resting icon, which never changes; the rest are the dashboard's icons.
+        if (p == Page.Cleaning) GreggIcon(GreggState.Idle, tint, 28.dp)
+        else HaIcon(if (p == Page.Security) alarmIconName(alarmState) else p.mdi, p.fallback, tint = tint, size = 24.dp)
+    }
+
+    // Swiping left anywhere that doesn't scroll sideways opens the account panel, as well as its button.
+    var swiped by remember { mutableStateOf(0f) }
+    Box(
+        Modifier.pointerInput(panel) {
+            if (panel == null) {
+                detectHorizontalDragGestures(
+                    onDragStart = { swiped = 0f },
+                    onDragEnd = { if (swiped < -120f) panel = "account" },
+                    onHorizontalDrag = { _, dx -> swiped += dx },
+                )
+            }
+        },
+    ) {
+    Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = {
+            if (window.short) TopAppBar(title = { Text(title) }, actions = barActions, scrollBehavior = scrollBehavior)
+            else MediumTopAppBar(title = { Text(title) }, actions = barActions, scrollBehavior = scrollBehavior)
         },
         bottomBar = {
-            // The dashboard's icons, in the phone's own (wallpaper) colours. The Security icon follows the alarm.
-            val alarmState = entities[ALARM_ENTITY]?.state
-            NavigationBar {
+            val ctl0 = LocalAssistant.current
+            val clive0 = ctl0?.open == true && ctl0?.model != null
+            // With the rail down the side the bottom bar is only there while Clive is open (his buttons take its place).
+            if (!window.rail || clive0) NavigationBar {
                 // The same bar: while Clive is open its buttons change into his (and back).
                 val assistantCtl = LocalAssistant.current
                 val assistantModel = assistantCtl?.model
@@ -186,12 +202,7 @@ fun HomeScreen(
                         NavigationBarItem(
                             selected = selected,
                             onClick = { page = p },
-                            icon = {
-                                val tint = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-                                // Cleaning shows Gregg's resting icon, which never changes; the rest are the dashboard's icons.
-                                if (p == Page.Cleaning) GreggIcon(GreggState.Idle, tint, 28.dp)
-                                else HaIcon(if (p == Page.Security) alarmIconName(alarmState) else p.mdi, p.fallback, tint = tint, size = 24.dp)
-                            },
+                            icon = { navIcon(p, selected) },
                             label = { Text(p.label, fontSize = 11.sp, maxLines = 1) },
                         )
                     }
@@ -202,10 +213,30 @@ fun HomeScreen(
             }
         },
     ) { padding ->
+        Row(Modifier.fillMaxSize().padding(padding)) {
+        if (window.rail) {
+            // The pages down the side (a phone on its side, a tablet). It scrolls, so all of them are reachable on a short screen.
+            Column(
+                Modifier.width(80.dp).fillMaxHeight().background(MaterialTheme.colorScheme.surfaceContainer)
+                    .verticalScroll(rememberScrollState()).padding(vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                pages.forEach { p ->
+                    val selected = p == page
+                    NavigationRailItem(
+                        selected = selected,
+                        onClick = { page = p },
+                        icon = { navIcon(p, selected) },
+                        label = { Text(p.label, fontSize = 11.sp, maxLines = 1) },
+                    )
+                }
+            }
+        }
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
+                .weight(1f)
+                .fillMaxHeight()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(28.dp),
@@ -225,6 +256,7 @@ fun HomeScreen(
             }
 
             androidx.compose.runtime.CompositionLocalProvider(LocalIsAdmin provides isAdmin) {
+            AdaptiveColumns {
             if (page == Page.Home) {
                 HomePage(lights, areaNames, panels["home"].orEmpty(), entities, registry, call, onOpen = { if (it == Page.Todo) openTodo() else page = it }, onOpenTask = openTask)
             } else if (page == Page.Lighting) {
@@ -247,8 +279,10 @@ fun HomeScreen(
                 DashboardPage(panels[key].orEmpty().let { list -> if (page == Page.Cleaning) list.map { it.copy(icon = GREGG_IDLE_ICON) } else list }, entities, registry, call)
             }
             }
+            }
             // Room to scroll the last card clear of Clive's button.
             Spacer(Modifier.height(72.dp))
+        }
         }
     }
     // Clive, over the page, and his round button over him: one button, the same one shut or open.

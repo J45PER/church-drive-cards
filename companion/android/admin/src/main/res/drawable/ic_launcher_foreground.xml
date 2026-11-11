@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Placeholder logo (a shield) until Clive Admin's own logo is chosen on a design board. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:fillColor="#FFFFFF" android:pathData="M54,30 L72,37 V54 C72,65 64,73 54,78 C44,73 36,65 36,54 V37 Z" />
+    <path android:fillColor="#2B2563" android:pathData="M48,54 L52.5,58.5 L61,48.5 L58.6,46.4 L52.2,54 L50.2,51.8 Z" />
+</vector>

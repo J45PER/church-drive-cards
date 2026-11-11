@@ -17,7 +17,7 @@ object HouseAddress {
  * ones Play uses are in Play Console under App integrity.
  */
 object TrustedApps {
-    val PACKAGES = setOf("com.churchdrive.manager", "com.churchdrive.todo", "com.churchdrive.satellites")
+    val PACKAGES = setOf("com.churchdrive.manager", "com.churchdrive.todo", "com.churchdrive.satellites", "com.churchdrive.admin")
 
     /** SHA-256 fingerprints (hex, any case, colons optional) of the signing certificates Play uses for the apps above. Add each app's. */
     val CERTS: Set<String> = setOf(
@@ -27,6 +27,8 @@ object TrustedApps {
         "ee:66:d8:57:1a:d5:49:ae:9a:2d:eb:5e:72:fc:6d:57:9f:15:c5:07:79:99:ba:c6:1a:6e:1f:fd:90:8e:10:6e",
         // Church Drive Satellites (com.churchdrive.satellites)
         "5d:91:c9:37:8d:0e:3d:11:5c:e2:6e:23:17:c7:0c:7b:62:38:75:1e:74:58:b0:cd:6e:8d:4a:1a:fa:98:2d:a3",
+        // Clive Admin (com.churchdrive.admin): add its Play signing fingerprint here once Play has it (Play Console, App integrity). GitHub builds
+        // share the debug key, so they need nothing here.
     )
 
     private fun normal(hex: String) = hex.replace(":", "").lowercase()
