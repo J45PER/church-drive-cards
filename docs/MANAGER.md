@@ -159,7 +159,9 @@ Start with the colour and card pages because they drive the live data.
 - **People** stays web-only. **Locations** and **Icons** (mode icons) are not needed in Clive Admin for now (the phone app and the website keep them).
 - **Devices** (TVs and speakers, devices and services) goes in Clive Admin and on the website (0.137.0).
 - **Alarm lights** is web-only (the phone app never had it). **Watch settings** is in all three.
-- Still to decide: when Manager, Energy and Device health leave the phone app; whether the website's Energy page should match the app's; whether the Firestore mirror is still wanted.
+- **When things leave the phone app:** Energy and Device health once Clive Admin's version is the same design and layout as the original; the Manager once its features have moved to whichever of Clive Admin or the website applies.
+- **House style:** everything on the Manager website matches the apps' style (section panels with an icon, a coloured title and a summary pill, tone cards in the palette colours). The website's Energy page therefore follows the dashboard's Energy panels like the apps.
+- **Firestore is wanted:** Home Assistant mirrors the design data (palettes, card picks, icons, layouts) and its history, and the same store holds backups of that history.
 
 ## 9. Build order
 
