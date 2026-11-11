@@ -9,7 +9,7 @@ export function loadIcons(fallbackBase = '') {
   if (set) return Promise.resolve(true);
   pending ||= (async () => {
     for (const url of ['clive/icons.json', fallbackBase && `${fallbackBase}/church_drive/clive/icons.json`].filter(Boolean)) {
-      try { const r = await fetch(url); if (r.ok) { set = (await r.json()).icons || {}; break; } } catch { /* try the next place */ }
+      try { const r = await fetch(url); if (r.ok) { const j = await r.json(); set = j.icons || {}; meta = { namespaces: j.namespaces || {}, pending: j.pending || [], count: j.count || Object.keys(set).length }; break; } } catch { /* try the next place */ }
     }
     const ok = !!set; set ||= {};
     const run = [...waiting]; waiting.clear(); run.forEach((fn) => fn());
@@ -29,6 +29,10 @@ export function fillIcons(root) {
   if (!set) { waiting.add(() => fillIcons(root)); return; }
   root.querySelectorAll('svg.ico').forEach((svg) => { if (!svg.firstChild) svg.innerHTML = set[svg.dataset.icon]?.p || ''; });
 }
+
+/** The whole set as the file has it: {icons, namespaces, pending, count} (empty until loaded). */
+let meta = {};
+export function iconLibrary() { return { icons: set || {}, ...meta }; }
 
 /** Every icon name in the set (once it has loaded), sorted. */
 export function iconNames() { return set ? Object.keys(set).filter((k) => k.startsWith('cd:')).sort() : []; }

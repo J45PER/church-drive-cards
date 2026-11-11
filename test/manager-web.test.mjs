@@ -213,3 +213,34 @@ test('media players list what is playing first, say what is on, and systems say 
   assert.deepEqual(rows.map((r) => [r.name, r.bad]), [['Internet', true], ['Backups', true], ['Updates', false]]);
   assert.equal(rows[2].sub, 'Home Assistant Core'); assert.equal(rows[2].pill, '1');
 });
+
+import { buildWeek, chargerStatus, findCars, planLine, planSlots, weekIds, weekStatIds } from '../web/manager/pages/energy-more.js';
+test('the week: statistic ids come from the rate sensors, days up to yesterday are summed and split', () => {
+  const states = { 'sensor.octopus_energy_electricity_24l_1_current_rate': {}, 'sensor.octopus_energy_gas_e6s_7_current_rate': {} };
+  const ids = weekIds(states);
+  assert.equal(ids.elecCost, 'octopus_energy:electricity_24l_1_previous_accumulative_cost');
+  assert.equal(ids.gasKwh, 'octopus_energy:gas_e6s_7_previous_accumulative_consumption_kwh');
+  assert.equal(weekStatIds(weekIds({})).length, 0);
+  const now = Date.parse('2026-11-11T12:00:00Z'), day = (n) => now - n * 86400000;
+  const r = { [ids.elecCost]: [{ start: day(2), change: 3 }, { start: day(1), change: 1 }], [ids.gasCost]: [{ start: day(1), change: 1 }] };
+  const w = buildWeek(r, ids, now);
+  assert.equal(w.days.length, 7);
+  assert.equal(w.cost, 5);
+  assert.equal(w.average, 2.5);
+  assert.deepEqual(w.balance, { elec: 80, gas: 20 });
+  assert.equal(w.latest.total, 2);
+  assert.equal(buildWeek({}, ids, now).latest, null);
+});
+test('the charger, the plan and the cars', () => {
+  const st = (id, state, attributes = {}) => [id, { entity_id: id, state, attributes }];
+  assert.equal(chargerStatus(Object.fromEntries([st('select.zappi_charge_mode', 'Eco'), st('sensor.zappi_charging_power', '7200')])), 'Charging · 7.2 kW');
+  assert.equal(chargerStatus(Object.fromEntries([st('select.zappi_charge_mode', 'Eco'), st('sensor.zappi_plug_status', 'Waiting for car')])), 'Waiting for car');
+  const now = Date.parse('2026-11-11T01:00:00Z');
+  const plan = planSlots(Object.fromEntries([st('binary_sensor.octopus_energy_x_intelligent_dispatching', 'on', { planned_dispatches: [{ start: '2026-11-11T02:30:00Z', end: '2026-11-11T04:30:00Z', charge_in_kwh: -15.6, source: 'smart' }, { start: '2026-11-10T01:00:00Z', end: '2026-11-10T02:00:00Z' }] })]), now);
+  assert.equal(plan.length, 1);
+  assert.match(planLine(plan[0], now), /to .* · 15\.6 kWh · Smart$/);
+  assert.equal(planSlots({}, now), null);
+  const cars = findCars(Object.fromEntries([st('sensor.id5_battery', '80', { device_class: 'battery', unit_of_measurement: '%', friendly_name: 'ID5 battery' }), st('sensor.id5_range', '210', { unit_of_measurement: 'mi' }),
+    st('sensor.phone_battery', '50', { device_class: 'battery', unit_of_measurement: '%' }), st('sensor.id5_12v_battery', '90', { device_class: 'battery', unit_of_measurement: '%' })]));
+  assert.deepEqual(cars.map((c) => [c.name, c.battery, c.range]), [['ID5', 80, 210]]);
+});

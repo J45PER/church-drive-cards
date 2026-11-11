@@ -12,3 +12,4 @@ satellite/sim-shots/
 satellite/devices/
 companion/android/local.properties
 web/manager/clive/
+web/manager/boards/
