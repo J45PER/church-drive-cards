@@ -173,3 +173,20 @@ test('versions compare as numbers, and the rows say who is behind or ahead of th
   const same = versionRows({ site: '0.133.0', integration: '0.133.0', release: '0.133.0', builds: builds.map((b) => ({ ...b, version: '0.133.0' })) });
   assert.deepEqual(versionSummary(same), { tone: 'ok', text: 'Everything is on 0.133.0.' });
 });
+
+import { CARDS, CARD_GROUPS } from '../web/manager/pages/cards-data.js';
+import { panelsOf } from '../web/manager/pages/design.js';
+
+test('every card in the list belongs to a known group and has a suggested palette', () => {
+  assert.ok(CARDS.length >= 60);
+  for (const c of CARDS) { assert.ok(CARD_GROUPS.includes(c.group), `${c.id}: ${c.group}`); assert.match(c.id, /^[a-z0-9][a-z0-9-]{0,39}$/); assert.match(c.suggested, /^[a-z][a-z0-9_]*$/); }
+  assert.equal(new Set(CARDS.map((c) => c.id)).size, CARDS.length);
+});
+
+test('a view gives its titled panels in order, and card, icon and layout changes are described', () => {
+  const view = { sections: [{ cards: [{ type: 'custom:auto-layout-card', cards: [{ type: 'custom:section-panel-card', title: 'Octopus Gas', icon: 'phu:octopusenergy', cards: [] }, { type: 'custom:section-panel-card', title: 'Octoplus', icon: 'cd:gift' }, { type: 'custom:section-panel-card', title: '' }] }] }] };
+  assert.deepEqual(panelsOf(view), [{ title: 'Octopus Gas', icon: 'phu:octopusenergy' }, { title: 'Octoplus', icon: 'cd:gift' }]);
+  assert.match(describe({ cards: { fan: {}, gas: {} } }, 'cards'), /^Card picks: fan, gas$/);
+  assert.match(describe({ dashboard: 'dashboard-mobile', view: 'energy', panel: 'Octopus Gas', icon: 'cd:bolt', before: 'phu:octopusenergy' }, 'icons'), /Octopus Gas .*phu:octopusenergy → cd:bolt/);
+  assert.match(describe({ dashboard: 'd', view: 'v', order: ['A'], hidden: ['B'] }, 'layouts'), /hiding B/);
+});

@@ -3,7 +3,7 @@
 import { canTick, kindGoesTo, kindGroups, linksOf, modeLabel, name, presenceWord, presetLabel, triggerChoices, validIconName, zoneRows } from './manager-logic.js';
 
 /** A small element builder, so text from the house is never put into the page as HTML. */
-function h(tag, attrs = {}, ...kids) {
+export function h(tag, attrs = {}, ...kids) {
   const e = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs || {})) {
     if (v == null || v === false) continue;
@@ -14,7 +14,7 @@ function h(tag, attrs = {}, ...kids) {
 }
 
 /** A row of choices: [label, on, onClick, disabled]. */
-const chips = (items, cls = '') => h('div', { class: `chips ${cls}` }, items.map(([label, on, click, off]) =>
+export const chips = (items, cls = '') => h('div', { class: `chips ${cls}` }, items.map(([label, on, click, off]) =>
   h('button', { type: 'button', class: 'chip', 'aria-pressed': String(!!on), disabled: off, onclick: click }, label)));
 const soft = (t) => h('p', { class: 'sub' }, t);
 

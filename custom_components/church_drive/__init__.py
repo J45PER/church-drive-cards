@@ -95,6 +95,7 @@ from .const import (
     WS_MANAGER_PROPOSALS,
     WS_MANAGER_RESOLVE,
     WS_MANAGER_VERSIONS,
+    WS_MANAGER_DESIGN,
     WS_COLOURS,
     WS_COLOURS_SET,
     EVENT_COLOURS,
@@ -469,6 +470,23 @@ def ws_manager_whoami(hass: HomeAssistant, connection: websocket_api.ActiveConne
     connection.send_result(msg["id"], {"name": connection.user.name, "admin": True, "pending": len(proposals.pending) if proposals else 0, "ready": proposals is not None})
 
 
+_ICON_NAMES: set[str] | None = None
+
+
+async def _icon_names(hass: HomeAssistant) -> set[str] | None:
+    """The names in the house's icon set (read once from the file Home Assistant serves), or None if it cannot be read."""
+    global _ICON_NAMES
+    if _ICON_NAMES is None:
+        def read() -> set[str] | None:
+            try:
+                return set(json.loads((FRONTEND_DIR / "clive" / "icons.json").read_text(encoding="utf-8"))["icons"])
+            except (OSError, ValueError, KeyError):
+                return None
+
+        _ICON_NAMES = await hass.async_add_executor_job(read)
+    return _ICON_NAMES
+
+
 def _proposals_or_error(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]):
     proposals = hass.data.get(DOMAIN, {}).get("proposals")
     if proposals is None:
@@ -494,9 +512,14 @@ async def ws_manager_propose(hass: HomeAssistant, connection: websocket_api.Acti
     if proposals is None:
         return
     try:
-        item = await proposals.async_propose(msg["kind"], msg.get("change"), msg.get("note"), connection.user.name, msg["urgent"], msg.get("restore"))
-        if msg["urgent"] and msg["kind"] == "palette":
-            colours = hass.data.get(DOMAIN, {}).get("colours")
+        colours = hass.data.get(DOMAIN, {}).get("colours")
+        palette_keys = set(colours.config["palettes"]) if colours is not None else None
+        item = await proposals.async_propose(
+            msg["kind"], msg.get("change"), msg.get("note"), connection.user.name, msg["urgent"], msg.get("restore"), palette_keys, await _icon_names(hass),
+        )
+        if msg["urgent"]:
+            if msg["kind"] not in ("palette", "cards"):
+                raise ValueError("Clive changes dashboards when checking, so an icon or layout cannot be applied at once: send it without urgent and ask Clive")
             if colours is None:
                 raise ValueError("The colours aren't running")
             item = await proposals.async_apply(item["id"], connection.user.name, colours)
@@ -529,6 +552,9 @@ async def ws_manager_resolve(hass: HomeAssistant, connection: websocket_api.Acti
         return
     try:
         if msg["outcome"] == "applied":
+            pending = proposals.get(msg["id"])
+            if pending is not None and pending["kind"] not in ("palette", "cards"):
+                raise ValueError("Clive makes this change on the dashboard when checking it, so it cannot be applied from here")
             colours = hass.data.get(DOMAIN, {}).get("colours")
             if colours is None:
                 raise ValueError("The colours aren't running")
@@ -551,6 +577,15 @@ def ws_manager_versions(hass: HomeAssistant, connection: websocket_api.ActiveCon
     if proposals is not None:
         connection.send_result(msg["id"], proposals.version_list(msg["kind"]))
 
+
+@websocket_api.websocket_command({vol.Required("type"): WS_MANAGER_DESIGN})
+@websocket_api.require_admin
+@callback
+def ws_manager_design(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """What the Manager has recorded as chosen: each card's palette and note."""
+    proposals = _proposals_or_error(hass, connection, msg)
+    if proposals is not None:
+        connection.send_result(msg["id"], {"cards": proposals.cards})
 
 @websocket_api.websocket_command({vol.Required("type"): WS_ICONS})
 @callback
@@ -1402,7 +1437,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             [StaticPathConfig(URL_BASE, str(FRONTEND_DIR), cache_headers=False)]
         )
         for command in (
-            ws_library, ws_icons, ws_icon_set, ws_watch, ws_watch_set, ws_colours, ws_colours_set, ws_manager_whoami, ws_manager_propose, ws_manager_proposals, ws_manager_resolve, ws_manager_versions, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_mine, ws_notices_missed, ws_people_phone,
+            ws_library, ws_icons, ws_icon_set, ws_watch, ws_watch_set, ws_colours, ws_colours_set, ws_manager_whoami, ws_manager_propose, ws_manager_proposals, ws_manager_resolve, ws_manager_versions, ws_manager_design, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_mine, ws_notices_missed, ws_people_phone,
             ws_people_places, ws_people_cars, ws_people_access, ws_people_tracking, ws_people_settings, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_camera_alert_set, ws_maps, ws_maps_search, ws_assist_info,
             ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss, ws_reminders, ws_reminder_set,
             ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_import,

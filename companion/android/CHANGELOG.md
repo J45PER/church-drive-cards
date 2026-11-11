@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.134.0
+
+- No change (this release adds the cards, icons and layouts editors to the Manager website and Home Assistant).
+
 ## 0.133.0
 
 - The Octopus Energy logo shows beside Octopus Electricity and Octopus Gas on the Energy page (it was blank).

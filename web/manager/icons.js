@@ -28,3 +28,6 @@ export function fillIcons(root) {
   if (!set) { waiting.add(() => fillIcons(root)); return; }
   root.querySelectorAll('svg.ico').forEach((svg) => { if (!svg.firstChild) svg.innerHTML = set[svg.dataset.icon]?.p || ''; });
 }
+
+/** Every icon name in the set (once it has loaded), sorted. */
+export function iconNames() { return set ? Object.keys(set).filter((k) => k.startsWith('cd:')).sort() : []; }

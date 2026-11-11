@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.134.0
+
+- No change (this release adds the cards, icons and layouts editors to the Manager website and Home Assistant).
+
 ## 0.133.0
 
 - The Energy page is the same as the Church Drive app's: the header lines (cheap or peak now, live use, today so far), then Octopus Electricity, Octopus Gas, Last 7 days, Car charging and Octoplus in that order, each with its icon, colour and summary, read from the house's dashboard.

@@ -58,6 +58,7 @@ WS_MANAGER_PROPOSE = "church_drive/manager/propose"
 WS_MANAGER_PROPOSALS = "church_drive/manager/proposals"
 WS_MANAGER_RESOLVE = "church_drive/manager/resolve"
 WS_MANAGER_VERSIONS = "church_drive/manager/versions"
+WS_MANAGER_DESIGN = "church_drive/manager/design"
 SERVICE_APPLY_PROPOSAL = "apply_proposal"
 SERVICE_DECLINE_PROPOSAL = "decline_proposal"
 

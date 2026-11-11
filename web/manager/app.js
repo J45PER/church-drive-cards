@@ -6,6 +6,7 @@ import { fillIcons, icon, loadIcons } from './icons.js';
 import { renderChanges } from './pages/changes.js';
 import { readVersions, summary as versionSummary } from './pages/versions.js';
 import { openPaletteEditor } from './pages/palette-editor.js';
+import { renderCards, renderIcons, renderLayouts } from './pages/design.js';
 import { renderManager, renderManagerSection } from './pages/manager.js';
 import { LOGO_PATH, LOGO_VIEWBOX } from './logo.js';
 import { PALETTE_PARTS, paletteWarnings, slugOk, ACTIONS, BAD, DAYS, OK, TIMES, WARN, activityNote, activityProblem, activityQuery, activityWho, actionLabel, ago, buildRegistry, clock, dayLabel, deviceHealthList, energySnapshot, healthSummary, parseActivity } from './pages/logic.js';
@@ -41,6 +42,7 @@ function showSignIn(message) {
 const PAGES = [
   { id: 'home', title: 'Clive Manager', label: 'Home', icon: 'cd:home', render: renderHome },
   { id: 'colours', title: 'Colour palettes', label: 'Colours', icon: 'cd:palette', render: renderColours },
+  { id: 'design', title: 'Design', label: 'Design', icon: 'cd:view-dashboard', render: renderDesign },
   { id: 'changes', title: 'Changes', label: 'Changes', icon: 'cd:checklist', render: (el, c) => renderChanges(el, c, { glowStyle }) },
   { id: 'manager', title: 'Manager', label: 'Manager', icon: 'cd:sliders', render: (el, c, arg) => (arg ? renderManagerSection(el, c, { glowStyle, go }, decodeURIComponent(arg)) : renderManager(el, c, { glowStyle, go })) },
   { id: 'health', title: 'Device health', label: 'Health', icon: 'cd:device-health', render: renderHealth },
@@ -105,6 +107,16 @@ async function renderColours(el, ctx) {
   });
 }
 
+
+// ---- Design: cards, icons and layouts ----
+
+const DESIGN_TABS = [['cards', 'Cards', renderCards], ['icons', 'Icons', renderIcons], ['layouts', 'Layouts', renderLayouts]];
+async function renderDesign(el, ctx, arg) {
+  const tab = DESIGN_TABS.find((t) => t[0] === arg) || DESIGN_TABS[0];
+  el.innerHTML = `<div class="stack"><nav class="tabs2" aria-label="Design">${DESIGN_TABS.map((t) => `<button type="button" data-tab="${t[0]}" ${t[0] === tab[0] ? 'aria-current="page"' : ''}>${t[1]}</button>`).join('')}</nav><div id="design-body"></div></div>`;
+  el.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => go(`design/${b.dataset.tab}`)));
+  await tab[2](el.querySelector('#design-body'), ctx);
+}
 
 // ---- Device health, Energy, Activity ----
 
