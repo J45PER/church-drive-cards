@@ -3,6 +3,8 @@
 import { DEFAULT_HA, HaSocket, cleanAddress, finishSignIn, houseAddress, signOut, signedIn, startSignIn } from './ha.js';
 import { glowStyle, inkOn, setTones } from './glow.js';
 import { loadStyle, panel } from './kit.js';
+import { attachPull, createStatus } from './status.js';
+import { TICK_MS, dueOnReturn, duePeriodic, editing, idle } from './freshness.js';
 import { fillIcons, icon, loadIcons } from './icons.js';
 import { renderChanges } from './pages/changes.js';
 import { readVersions, summary as versionSummary } from './pages/versions.js';
@@ -42,17 +44,18 @@ function showSignIn(message) {
 }
 
 // ---- The pages ----
+// A page marked `live` only shows things, so it is read again by itself now and then (see freshness.js); the editors are never redrawn under someone.
 
 const PAGES = [
-  { id: 'home', title: 'Clive Manager', label: 'Home', icon: 'cd:home', render: renderHome },
+  { id: 'home', title: 'Clive Manager', label: 'Home', icon: 'cd:home', render: renderHome, live: true },
   { id: 'colours', title: 'Colour palettes', label: 'Colours', icon: 'cd:palette', render: renderColours },
   { id: 'design', title: 'Design', label: 'Design', icon: 'cd:view-dashboard', render: renderDesign },
   { id: 'changes', title: 'Changes', label: 'Changes', icon: 'cd:checklist', render: (el, c) => renderChanges(el, c, { glowStyle }) },
   { id: 'manager', title: 'Manager', label: 'Manager', icon: 'cd:sliders', render: (el, c, arg) => (arg ? renderManagerSection(el, c, { glowStyle, go }, decodeURIComponent(arg)) : renderManager(el, c, { glowStyle, go })) },
-  { id: 'health', title: 'Device health', label: 'Health', icon: 'cd:device-health', render: renderHealth },
+  { id: 'health', title: 'Device health', label: 'Health', icon: 'cd:device-health', render: renderHealth, live: true },
   { id: 'devices', title: 'Devices', label: 'Devices', icon: 'cd:television-play', render: renderDevices },
-  { id: 'energy', title: 'Energy', label: 'Energy', icon: 'cd:bolt', render: (el, c) => renderEnergyPage(el, c) },
-  { id: 'activity', title: 'Activity log', label: 'Activity', icon: 'cd:history', render: renderActivity },
+  { id: 'energy', title: 'Energy', label: 'Energy', icon: 'cd:bolt', render: (el, c) => renderEnergyPage(el, c), live: true },
+  { id: 'activity', title: 'Activity log', label: 'Activity', icon: 'cd:history', render: renderActivity, live: true },
 ];
 
 function renderHome(el, ctx) {
@@ -204,7 +207,6 @@ function showShell(user) {
   root.innerHTML = `<div class="shell"><header class="bar"><h1 id="title"></h1><div class="menu-wrap"><button class="person" type="button" id="who" aria-haspopup="true" aria-expanded="false" aria-label="Account: ${esc(user.name)}">${esc((user.name || '?').trim().charAt(0).toUpperCase())}</button>
       <div class="menu" id="menu" hidden role="menu"><p class="menu-name">${esc(user.name || 'Signed in')}</p><p class="sub">Administrator</p>
         <button class="btn quiet" type="button" id="signout" role="menuitem">${icon('cd:sign-out', 20)} Sign out</button></div></div></header>
-    <div class="banner" id="banner" hidden role="status"></div>
     <nav class="nav" aria-label="Pages">${PAGES.map((p) => `<button type="button" data-page="${p.id}"><span class="pill">${icon(p.icon)}</span>${esc(p.label)}</button>`).join('')}</nav>
     <main id="page" tabindex="-1"></main></div>`;
   root.querySelectorAll('[data-page]').forEach((b) => b.addEventListener('click', () => go(b.dataset.page)));
@@ -213,20 +215,22 @@ function showShell(user) {
   who.addEventListener('click', (e) => { e.stopPropagation(); toggle(menu.hidden); });
   document.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target)) toggle(false); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') toggle(false); });
-  document.getElementById('signout').addEventListener('click', () => { ctx?.ha.close(); ctx = null; signOut(); showSignIn(); });
+  document.getElementById('signout').addEventListener('click', () => { ctx?.ha.close(); ctx = null; status.hide(); signOut(); showSignIn(); });
   fillIcons(root);
-  show();
+  return show();
 }
 
+/** Draws the current page; gives back the page's own promise when it has one (so the status banner can say Updating until it is in). */
 function show() {
   const page = currentPage();
+  loadedAt = Date.now();
   document.getElementById('title').textContent = page.title;
   document.title = page.id === 'home' ? 'Clive Manager' : `${page.title} · Clive Manager`;
   root.querySelectorAll('[data-page]').forEach((b) => (b.dataset.page === page.id ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current')));
   const arg = location.hash.slice(1).split('/').slice(1).join('/');
   if (arg && page.id === 'manager') document.getElementById('title').textContent = decodeURIComponent(arg);
   cleanup(ctx);
-  page.render(document.getElementById('page'), ctx, arg);
+  return page.render(document.getElementById('page'), ctx, arg);
 }
 window.addEventListener('hashchange', () => { if (ctx) show(); });
 
@@ -237,8 +241,12 @@ async function connect() {
   const ha = new HaSocket();
   await ha.connect();
   let user;
+  const t0 = performance.now();
   try { user = await ha.call('auth/current_user'); } catch { ha.close(); throw new Error('Home Assistant did not say who you are'); }
-  return { ha, user };
+  // What the status banner can say about the house: how fast it answered, its version, and whether it is up yet (RUNNING) or still starting.
+  const facts = { latency: Math.max(1, Math.round(performance.now() - t0)) };
+  try { const cfg = await ha.call('get_config'); facts.version = cfg.version; facts.state = cfg.state; } catch { /* the banner just says less */ }
+  return { ha, user, facts };
 }
 
 function showRetry(message) {
@@ -248,17 +256,88 @@ function showRetry(message) {
   document.getElementById('out').addEventListener('click', () => { signOut(); showSignIn(); });
 }
 
-/** The line dropped (the screen slept, the network changed): keep the page, say so, and reconnect quietly, trying again until it works. */
+// ---- The status banner (status.js): Connecting, Updating, No connection, Home Assistant restarting, and pull down to refresh ----
+
+let wakeUp = null;
+/** Waits [ms], or less when the person taps Try now. */
+const sleep = (ms) => new Promise((resolve) => { const t = setTimeout(resolve, ms); wakeUp = () => { clearTimeout(t); resolve(); }; });
+const retryNow = () => { if (wakeUp) wakeUp(); };
+let online = false;
+
+const status = createStatus({
+  host: () => { try { return new URL(houseAddress()).hostname; } catch { return 'the house'; } },
+  page: () => currentPage().title,
+  onTry: retryNow,
+});
+attachPull(status, () => refreshNow());
+
+/** Draws the page again and says so on the banner. */
+async function reloadPage() {
+  status.loading();
+  try { await show(); } catch { /* the page shows its own error */ }
+  status.loaded();
+}
+
+let loadedAt = Date.now(), hiddenAt = 0, lastTouched = Date.now(), busy = false;
+
+/** Pull down (or Try now while offline): reload the current page, or hurry the reconnect. */
+async function refreshNow() {
+  if (!ctx) return;
+  if (!online) { retryNow(); return; }
+  if (busy) return;
+  busy = true;
+  status.refreshing();
+  try { await show(); } catch { /* the page shows its own error */ }
+  status.refreshed();
+  busy = false;
+}
+
+/** Reads a page that only shows things again, with the Updating pill, keeping the scroll place; never under someone typing or with a dialog open. */
+async function autoRefresh() {
+  if (!ctx || !online || busy || document.hidden || !currentPage().live || editing()) return;
+  const y = scrollY;
+  await refreshNow();
+  scrollTo(0, y);
+}
+for (const ev of ['pointerdown', 'keydown', 'scroll', 'touchstart']) addEventListener(ev, () => { lastTouched = Date.now(); }, { passive: true });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { hiddenAt = Date.now(); return; }
+  const away = hiddenAt; hiddenAt = 0;
+  if (dueOnReturn(Date.now(), away)) autoRefresh();
+});
+setInterval(() => { const now = Date.now(); if (duePeriodic(now, loadedAt) && idle(now, lastTouched)) autoRefresh(); }, TICK_MS);
+
+/** Home Assistant is up but still starting its integrations: say so until it is running, then load the page. */
+async function waitForRunning() {
+  for (let i = 0; i < 100; i++) {
+    await new Promise((r) => setTimeout(r, 3000));
+    if (!ctx) return;
+    try { const cfg = await ctx.ha.call('get_config'); if (cfg.state === 'RUNNING') { status.connected({ version: cfg.version, state: cfg.state }); return; } } catch { return; }
+  }
+}
+
+/** The line is back: say what Home Assistant told us, wait for it to finish starting if it is, then draw the page again. */
+async function settle(facts) {
+  online = true;
+  status.connected(facts);
+  if (facts.state && facts.state !== 'RUNNING') { status.restarting(true); await waitForRunning(); }
+  await reloadPage();
+}
+
+/** The line dropped (the screen slept, the network changed, Home Assistant restarted): keep the page, say so, and reconnect quietly, trying again until it works. */
 function keepConnected() {
-  ctx.ha.onClose = async () => {
-    const banner = document.getElementById('banner'); if (banner) { banner.textContent = 'Reconnecting to the house…'; banner.hidden = false; }
-    for (let wait = 1000; ; wait = Math.min(wait * 2, 15000)) {
-      await new Promise((r) => setTimeout(r, wait));
-      if (!signedIn()) return;
+  ctx.ha.onClose = async (code) => {
+    online = false;
+    status.lost(code);
+    for (let attempt = 1, wait = 1000; ; attempt++, wait = Math.min(wait * 2, 15000)) {
+      status.waiting(attempt, wait);
+      await sleep(wait);
+      if (!signedIn()) { status.hide(); return; }
+      status.connecting(attempt);
       try {
         const next = await connect(); ctx = { ...ctx, ha: next.ha }; keepConnected();
-        if (banner) banner.hidden = true; show(); return;
-      } catch (e) { if (e.fatal) { ctx = null; return showSignIn(e.message); } }
+        await settle(next.facts); return;
+      } catch (e) { if (e.fatal) { ctx = null; status.hide(); return showSignIn(e.message); } }
     }
   };
 }
@@ -273,16 +352,20 @@ async function start() {
   if (!signedIn()) return showSignIn();
   loadIcons(houseAddress());
   root.innerHTML = '<div class="center"><p class="note">Connecting to the house…</p></div>';
+  status.connecting(1);
   let link;
-  try { link = await connect(); } catch (e) { return e.fatal ? showSignIn(e.message) : showRetry(`${e.message}.`); }
+  try { link = await connect(); } catch (e) { status.hide(); return e.fatal ? showSignIn(e.message) : showRetry(`${e.message}.`); }
   const { ha, user } = link;
   if (!user.is_admin) {
-    ha.close(); signOut();
+    ha.close(); status.hide(); signOut();
     return showSignIn(`${user.name || 'That account'} is not an administrator in Home Assistant, so the Manager has nothing to show. Sign in with an administrator's login.`);
   }
   ctx = { ha, user, house: houseAddress() };
   try { await loadStyle(ctx); setTones(ctx.style.colours); } catch { /* the pages fall back to the neutral palette */ }
   keepConnected();
-  showShell(user);
+  online = true;
+  status.connected(link.facts);
+  status.loading();
+  Promise.resolve(showShell(user)).catch(() => {}).then(() => status.loaded());
 }
 start();

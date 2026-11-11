@@ -34,6 +34,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val refreshing: StateFlow<Boolean> = client.refreshing
     val restarting: StateFlow<Boolean> = client.restarting
 
+    /** Reads the whole house again after a minute away and every five minutes while open, so anything that missed a live event does not stay stale. */
+    private val freshness = com.churchdrive.app.ha.FreshnessWatcher(viewModelScope, client, onDead = {
+        if (session.signedIn && System.currentTimeMillis() - lastStart > 5_000) startSession()
+    })
+    fun onBackground() = freshness.onBackground()
+
     /** Pull down to refresh: asks the house for everything again, or connects afresh when the line has gone quiet. */
     fun refresh() {
         if (!session.signedIn) return
@@ -314,10 +320,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun onForeground() {
         // Each time the app comes to the front, not just when it starts afresh (spaced out: see UpdateCheck.MIN_GAP_MS).
         if (UpdateCheck.due(System.currentTimeMillis(), lastUpdateCheck)) checkForUpdate()
+        // Away a minute or more: read the whole house again (which also proves the line is alive), with the Updating pill.
+        val reread = freshness.onForeground()
         if (!session.signedIn) return
         if (client.connection.value != ConnectionState.Connected) {
             if (System.currentTimeMillis() - lastStart > 5_000) startSession()
-        } else {
+        } else if (!reread) {
             // "Connected" can be a line the phone dropped while the app was away: ask something, and if nothing answers, connect afresh
             // (which also loads the states and the name again). A second asked here also fills in a name that never arrived.
             client.refreshUser { alive ->

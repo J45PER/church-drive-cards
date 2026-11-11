@@ -121,6 +121,9 @@ private fun ListPage(vm: SatelliteModel, onPerson: () -> Unit) {
     LaunchedEffect(vm.notice) {
         vm.notice?.let { snackbar.showSnackbar(it); vm.notice = null }
     }
+    val link by vm.link.collectAsState()
+    // The pull is outside the Scaffold so the collapsing title bar hears the drag first and can open before a pull starts.
+    com.churchdrive.app.ui.LinkRefresh(link, vm::refresh, Modifier.fillMaxSize()) {
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         snackbarHost = { SnackbarHost(snackbar) },
@@ -134,13 +137,11 @@ private fun ListPage(vm: SatelliteModel, onPerson: () -> Unit) {
             }
         },
     ) { padding ->
-        val link by vm.link.collectAsState()
-        com.churchdrive.app.ui.LinkRefresh(link, vm::refresh, Modifier.fillMaxSize().padding(padding)) {
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
+        Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
             com.churchdrive.app.ui.UpdateNotice(BuildConfig.PLAY, vm.updateAvailable, com.churchdrive.app.UpdateCheck.SATELLITES_APK_URL, "Church Drive Satellites")
             if (tab == 0) SatelliteList(vm) else AddPage(vm)
         }
-        }
+    }
     }
 }
 
@@ -298,6 +299,9 @@ private fun DetailPage(vm: SatelliteModel, sat: Satellite, onPerson: () -> Unit)
     LaunchedEffect(vm.notice) {
         vm.notice?.let { snackbar.showSnackbar(it); vm.notice = null }
     }
+    val link by vm.link.collectAsState()
+    // The pull is outside the Scaffold so the collapsing title bar hears the drag first and can open before a pull starts.
+    com.churchdrive.app.ui.LinkRefresh(link, vm::refresh, Modifier.fillMaxSize()) {
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         snackbarHost = { SnackbarHost(snackbar) },
@@ -310,9 +314,7 @@ private fun DetailPage(vm: SatelliteModel, sat: Satellite, onPerson: () -> Unit)
             )
         },
     ) { padding ->
-        val link by vm.link.collectAsState()
-        com.churchdrive.app.ui.LinkRefresh(link, vm::refresh, Modifier.fillMaxSize().padding(padding)) {
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
+        Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
             if (!sat.online) ToneCard(Tone.Amber) { ink, soft ->
                 Text("Offline", style = MaterialTheme.typography.titleMedium, color = ink)
                 Text("Home Assistant can't reach this satellite, so changes will wait until it is back.", style = MaterialTheme.typography.bodyMedium, color = soft)
@@ -332,7 +334,7 @@ private fun DetailPage(vm: SatelliteModel, sat: Satellite, onPerson: () -> Unit)
             NameRoomSection(vm, sat)
             ActionsSection(vm, sat)
         }
-        }
+    }
     }
 }
 

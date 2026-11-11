@@ -105,6 +105,9 @@ private fun AdminPages(vm: AdminModel, onPerson: () -> Unit) {
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     BackHandler(enabled = tab != HOME) { tab = HOME }
     Box(Modifier.fillMaxSize()) {
+    val link by vm.link.collectAsState()
+    // The pull is outside the Scaffold so the collapsing title bar hears the drag first and can open before a pull starts.
+    com.churchdrive.app.ui.LinkRefresh(link, vm::refresh, Modifier.fillMaxSize()) {
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         topBar = {
@@ -140,17 +143,15 @@ private fun AdminPages(vm: AdminModel, onPerson: () -> Unit) {
         },
     ) { padding ->
         val ready = vm.connected && vm.userKnown && vm.isAdmin
-        val link by vm.link.collectAsState()
-        com.churchdrive.app.ui.LinkRefresh(link, vm::refresh, Modifier.fillMaxSize().padding(padding)) {
         // Device health scrolls itself (its devices open pages in place), so it sits in the room under the title bar, not in the scrolling column.
         if (ready && tab == HEALTH) {
             // The update banner is on every tab, as in the other apps, so it sits above the list here.
-            Column(Modifier.fillMaxSize()) {
+            Column(Modifier.fillMaxSize().padding(padding)) {
                 com.churchdrive.app.ui.UpdateNotice(BuildConfig.PLAY, vm.updateAvailable, UpdateCheck.ADMIN_APK_URL, "Clive Admin", Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
                 Box(Modifier.weight(1f).fillMaxWidth()) { DeviceHealthTab(vm.entities, vm.registry, vm.areaNames) }
             }
         } else Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
+            Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(28.dp),
         ) {
             com.churchdrive.app.ui.UpdateNotice(BuildConfig.PLAY, vm.updateAvailable, UpdateCheck.ADMIN_APK_URL, "Clive Admin")
@@ -167,7 +168,7 @@ private fun AdminPages(vm: AdminModel, onPerson: () -> Unit) {
                 else -> HomePage(vm, open = { tab = it })
             }
         }
-        }
+    }
     }
     }
 }

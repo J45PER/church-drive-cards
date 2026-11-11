@@ -31,6 +31,14 @@ class AdminModel(app: Application) : AndroidViewModel(app) {
     private val session = Session(app)
     private val client = HaClient(viewModelScope)
 
+    /** Reads the whole house again after a minute away and every five minutes while open, so anything that missed a live event does not stay stale. */
+    private val freshness = com.churchdrive.app.ha.FreshnessWatcher(
+        viewModelScope, client,
+        onChecked = { visible, changed -> if (visible || changed) loadHouse() },
+        onDead = { if (signedIn) connect() },
+    )
+    fun onBackground() = freshness.onBackground()
+
     /** Plain access to Home Assistant's commands, for the pages that fetch their own data (the activity log). */
     val api: HaApi = client.asApi()
 
@@ -203,6 +211,7 @@ class AdminModel(app: Application) : AndroidViewModel(app) {
     fun onForeground() {
         if (com.churchdrive.app.UpdateCheck.due(System.currentTimeMillis(), lastUpdateCheck)) checkForUpdate()
         importSignIn()
+        freshness.onForeground()
         if (signedIn && !connected) connect()
     }
 

@@ -4,6 +4,15 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.139.0
+
+- The status pill and its colour cloud now widen and narrow together: the cloud used to jump to the final width at once, so it shrank before the pill did.
+- The status pill closes by running its opening backwards: the words go, it narrows back into the circle, then the circle shrinks, rises and fades away.
+- Pulling down grows the circle with your finger instead of popping up, and it widens into the pill at "Release to refresh".
+- The status pill uses the house's own icons from the Clive set (cd:wifi-off, cd:update-arrow, cd:check) and Clive's mark, not drawn shapes or Material ones.
+- The apps read the whole house again by themselves so nothing stays stale: coming back after a minute or more away (with the Updating pill), and every five minutes while open (quietly: the pill only shows if it found something that had gone stale).
+- Pulling down no longer fights the page's collapsing title bar: the title bar opens first, and the pull only starts once it is fully open.
+
 ## 0.138.0
 
 - No change you will notice (the Manager website was restyled to match the apps).

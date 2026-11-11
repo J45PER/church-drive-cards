@@ -67,6 +67,12 @@ class MainActivity : ComponentActivity() {
         // Not while the crash screen is up: starting the model is what may have crashed.
         if (!showingCrash) vm.onForeground()
     }
+
+    override fun onStop() {
+        super.onStop()
+        // When it went away, so coming back after a minute or more reads the house again.
+        if (!showingCrash) vm.onBackground()
+    }
 }
 
 /** What the last crash was, to read out or copy, with a way to try the app again. */

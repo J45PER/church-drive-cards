@@ -186,6 +186,10 @@ fun HomeScreen(
             }
         },
     ) {
+    // The pull is outside the Scaffold so the collapsing title bar hears the drag first and can open before a pull starts.
+    com.churchdrive.app.ui.LinkRefresh(
+        com.churchdrive.app.ha.LinkStatus(connection, statesLoaded, refreshing, restarting), onRefresh, Modifier.fillMaxSize(), assistPalette(),
+    ) {
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
@@ -242,13 +246,10 @@ fun HomeScreen(
                 }
             }
         }
-        com.churchdrive.app.ui.LinkRefresh(
-            com.churchdrive.app.ha.LinkStatus(connection, statesLoaded, refreshing, restarting), onRefresh,
-            Modifier.weight(1f).fillMaxHeight(), assistPalette(),
-        ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .weight(1f)
+                .fillMaxHeight()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(28.dp),
@@ -296,7 +297,7 @@ fun HomeScreen(
             Spacer(Modifier.height(72.dp))
         }
         }
-        }
+    }
     }
     // Clive, over the page, and his round button over him: one button, the same one shut or open.
     AssistantOverlay(onSettings = { panel = "settings" })

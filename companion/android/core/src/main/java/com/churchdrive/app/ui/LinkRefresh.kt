@@ -1,15 +1,22 @@
 package com.churchdrive.app.ui
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.unit.Constraints
+import kotlin.math.roundToInt
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.height
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.scaleIn
-import androidx.compose.animation.shrinkHorizontally
-import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -89,11 +96,13 @@ private const val PULL_FULL = 1f
  * Connecting, Updating, No connection and Home Assistant restarting. Pulling shows the same pill ("Pull to refresh", "Release to
  * refresh"), which turns into "Updating" while [onRefresh] runs and "Up to date" when it is done, so the pull and the line's own
  * states are one thing to look at. Tapping No connection or Restarting tries again. [palette] is Clive's three colours (the phone app passes
- * its own; the other apps use the original indigo, purple and green).
+ * its own; the other apps use the original indigo, purple and green). Put it OUTSIDE the Scaffold, never inside it: the page's collapsing title bar
+ * listens for scrolling from the Scaffold, and a pull inside would take the downward drag first, so the title could not expand. [pillTop] is how far
+ * below the status bar the pill sits (the collapsed title bar is 64 dp tall).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LinkRefresh(link: LinkStatus, onRefresh: () -> Unit, modifier: Modifier = Modifier, palette: AssistPalette = AssistClassicPalette, content: @Composable () -> Unit) {
+fun LinkRefresh(link: LinkStatus, onRefresh: () -> Unit, modifier: Modifier = Modifier, palette: AssistPalette = AssistClassicPalette, pillTop: Dp = 72.dp, content: @Composable () -> Unit) {
     val current by rememberUpdatedState(link)
     // How long the line has been down, so a blip stays "Connecting" and only a real outage says "No connection".
     var offlineFor by remember { mutableStateOf(0L) }
@@ -144,7 +153,7 @@ fun LinkRefresh(link: LinkStatus, onRefresh: () -> Unit, modifier: Modifier = Mo
         indicator = {},
     ) {
         content()
-        Box(Modifier.align(Alignment.TopCenter).padding(top = 8.dp)) {
+        Box(Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = pillTop)) {
             StatusPill(
                 face = face,
                 pull = if (face == PillFace.Pull || face == PillFace.Release) pull else 0f,
@@ -197,25 +206,55 @@ fun StatusPill(face: PillFace, pull: Float = 0f, onTap: (() -> Unit)? = null, pa
     val expanded = visible && settled && shown != PillFace.Pull
     val markColour by androidx.compose.animation.animateColorAsState(if (expanded) ink else Color.White, tween(300), label = "mark")
     val cloudAlpha by androidx.compose.animation.core.animateFloatAsState(if (expanded) 0.5f else 0.95f, tween(300), label = "cloud")
+    // The pill's width is one animated value: how much of the words is showing (0 is the circle). The pill, its edge and the cloud all follow
+    // it frame by frame, so the cloud can never get ahead of the pill (measuring inside animateContentSize gave the cloud the final width at once).
+    val reveal by androidx.compose.animation.core.animateFloatAsState(if (expanded) 1f else 0f, tween(320), label = "reveal")
+    val wordsAlpha by androidx.compose.animation.core.animateFloatAsState(if (expanded) 1f else 0f, if (expanded) tween(320, delayMillis = 80) else tween(120), label = "words")
+    // The pill is on screen from the moment there is something to say until it has gone back into a circle, so closing runs the opening backwards
+    // (words go, pill narrows to the circle, then the circle shrinks away) instead of everything leaving at once.
+    var showing by remember { mutableStateOf(false) }
+    // Brought in by a finger: the circle grows with the pull instead of popping up (the pill was not on screen when the pull began).
+    var growing by remember { mutableStateOf(false) }
+    LaunchedEffect(visible) {
+        if (visible) {
+            growing = pull > 0f && !showing
+            showing = true
+        } else {
+            if (reveal > 0.01f) delay(320L)
+            showing = false
+        }
+    }
+    LaunchedEffect(pull > 0f) { if (pull <= 0f) growing = false }
     var width by remember { mutableStateOf(0) }
     val density = androidx.compose.ui.platform.LocalDensity.current
     val travel = with(density) { 36.dp.toPx() }
     val cloudBox = with(density) { PILL_SIZE.toPx() }
     val shape = RoundedCornerShape(50)
     AnimatedVisibility(
-        visible = visible,
-        enter = fadeIn(tween(200)) + scaleIn(tween(300), initialScale = 0.4f) + slideInVertically { -it },
-        exit = fadeOut(tween(200)) + scaleOut(tween(250), targetScale = 0.6f) + slideOutVertically { -it },
+        visible = showing,
+        enter = if (growing) EnterTransition.None else fadeIn(tween(200)) + scaleIn(tween(300), initialScale = 0.4f) + slideInVertically { -it },
+        // The opening backwards: shrinks to 0.4, goes up and fades out at the end.
+        exit = fadeOut(tween(200, delayMillis = 100)) + scaleOut(tween(300), targetScale = 0.4f) + slideOutVertically { -it },
     ) {
         Surface(
             modifier = Modifier
-                .graphicsLayer { if (pull > 0f) translationY = (pull.coerceAtMost(1.3f) - 1f) * travel }
+                .graphicsLayer {
+                    if (pull > 0f) translationY = (pull.coerceAtMost(1.3f) - 1f) * travel
+                    // Growing into the circle as the finger pulls: from 30% size and clear, to full by half way to Release.
+                    if (growing && pull > 0f) {
+                        val e = androidx.compose.animation.core.FastOutSlowInEasing.transform((pull / 0.5f).coerceIn(0f, 1f))
+                        scaleX = 0.3f + 0.7f * e
+                        scaleY = scaleX
+                        alpha = (pull / 0.3f).coerceIn(0f, 1f)
+                    }
+                }
                 .semantics { liveRegion = LiveRegionMode.Polite }
                 .let { if (onTap != null) it.clickable(onClickLabel = "Try again", onClick = onTap) else it },
             shape = shape, color = container, contentColor = ink,
             border = BorderStroke(1.dp, scheme.outlineVariant), shadowElevation = 6.dp,
         ) {
-            Box(Modifier.height(PILL_SIZE).animateContentSize(tween(320)).onSizeChanged { width = it.width }, contentAlignment = Alignment.CenterStart) {
+            // This box is as wide as the pill is right now, because its only wide child is the words, cut to [reveal] of their width.
+            Box(Modifier.height(PILL_SIZE).onSizeChanged { width = it.width }, contentAlignment = Alignment.CenterStart) {
                 // Clive's cloud, stretched to fill the pill and kept inside its edge.
                 Box(Modifier.matchParentSize().clip(shape), contentAlignment = Alignment.Center) {
                     Box(Modifier.graphicsLayer { scaleX = (width / cloudBox * 1.25f).coerceAtLeast(1f); alpha = cloudAlpha }) {
@@ -228,10 +267,14 @@ fun StatusPill(face: PillFace, pull: Float = 0f, onTap: (() -> Unit)? = null, pa
                             PillIcon(f, markColour, pull)
                         }
                     }
-                    AnimatedVisibility(
-                        visible = expanded,
-                        enter = expandHorizontally(tween(320)) + fadeIn(tween(320, delayMillis = 80)),
-                        exit = shrinkHorizontally(tween(220)) + fadeOut(tween(120)),
+                    Box(
+                        Modifier
+                            .clipToBounds()
+                            .layout { measurable, constraints ->
+                                val placeable = measurable.measure(constraints.copy(minWidth = 0, maxWidth = Constraints.Infinity))
+                                layout((placeable.width * reveal).roundToInt(), placeable.height) { placeable.placeRelative(0, 0) }
+                            }
+                            .graphicsLayer { alpha = wordsAlpha },
                     ) {
                         AnimatedContent(shown, transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) }, label = "words") { f ->
                             Text(f.label, Modifier.padding(end = 18.dp), style = MaterialTheme.typography.labelLarge, color = ink, maxLines = 1, softWrap = false)
@@ -249,10 +292,10 @@ private fun PillIcon(face: PillFace, ink: Color, pull: Float) {
     val spin = rememberInfiniteTransition(label = "spin")
     val turn by spin.animateFloat(0f, 360f, infiniteRepeatable(tween(1_100, easing = LinearEasing)), label = "turn")
     val pulse by spin.animateFloat(0.35f, 1f, infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "pulse")
-    // The mark turns with the finger while pulling and has made half a turn by Release. Upside down it looks the same, so every other face
-    // draws it the right way up with no jump, and only its own drifting (see AssistantGlyph) moves: no spinning once the pill is loaded.
-    val sweep by spin.animateFloat(0f, 1f, infiniteRepeatable(tween(1_400), RepeatMode.Reverse), label = "sweep")
+    // Every picture here is the house's own: Clive's mark, and the Clive set's icons (cd:wifi-off, cd:update-arrow, cd:check), never a Material one.
     when (face) {
+        // The mark turns with the finger while pulling and has made half a turn by Release. Upside down it looks the same, so every other face
+        // draws it the right way up with no jump, and only its own drifting (see AssistantGlyph) moves: no spinning once the pill is loaded.
         PillFace.Connecting, PillFace.Pull, PillFace.Release, PillFace.Updating ->
             Box(
                 Modifier.size(22.dp).graphicsLayer {
@@ -263,47 +306,22 @@ private fun PillIcon(face: PillFace, ink: Color, pull: Float) {
                     }
                 },
             ) { AssistantGlyph(AssistantGlyphPose.Idle, ink, 22.dp) }
-        PillFace.Restarting -> Canvas(Modifier.size(20.dp)) {
-            // A ring that turns while its arc grows and shrinks, 2 dp thick.
-            val stroke = 2.dp.toPx()
-            val inset = stroke / 2f
-            val arc = 90f + 190f * sweep
-            drawArc(
-                ink, startAngle = turn * 0.8f - 90f + (190f * sweep) * 0.5f, sweepAngle = arc, useCenter = false,
-                topLeft = Offset(inset, inset), size = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke),
-                style = Stroke(width = stroke, cap = StrokeCap.Round),
-            )
-        }
-        PillFace.NoConnection -> Canvas(Modifier.size(22.dp)) {
-            // Three signal bars with a line through them, breathing so it reads as "still trying".
-            val w = size.width
-            val h = size.height
-            val bar = w * 0.16f
-            listOf(0.35f, 0.6f, 0.85f).forEachIndexed { i, top ->
-                val x = w * (0.18f + i * 0.27f)
-                drawLine(ink.copy(alpha = pulse), Offset(x, h * 0.9f), Offset(x, h * (1f - top) + h * 0.1f), strokeWidth = bar, cap = StrokeCap.Round)
-            }
-            drawLine(ink, Offset(w * 0.08f, h * 0.08f), Offset(w * 0.92f, h * 0.92f), strokeWidth = bar * 0.9f, cap = StrokeCap.Round)
-        }
+        // A circular arrow turning once every 1.1 s: Home Assistant is starting again.
+        PillFace.Restarting -> CdIcon("cd:update-arrow", ink, PILL_ICON, Modifier.graphicsLayer { rotationZ = turn })
+        // The crossed Wi-Fi, breathing so it reads as "still trying".
+        PillFace.NoConnection -> CdIcon("cd:wifi-off", ink.copy(alpha = pulse), PILL_ICON)
         PillFace.Done -> {
-            // Starts at nothing and draws itself (animateFloatAsState would begin already at 1).
+            // Starts hidden and is wiped in from the left over 380 ms, so the tick still seems to draw itself (animateFloatAsState would begin already at 1).
             val drawn = remember { androidx.compose.animation.core.Animatable(0f) }
             LaunchedEffect(Unit) { drawn.animateTo(1f, tween(380)) }
-            val draw = drawn.value
-            Canvas(Modifier.size(22.dp)) {
-                val w = size.width
-                val h = size.height
-                val a = Offset(w * 0.2f, h * 0.55f)
-                val b = Offset(w * 0.42f, h * 0.76f)
-                val c = Offset(w * 0.82f, h * 0.28f)
-                val stroke = Stroke(width = w * 0.12f, cap = StrokeCap.Round)
-                // The tick draws itself: the short stroke first, then the long one.
-                val first = (draw * 2f).coerceAtMost(1f)
-                val second = ((draw - 0.5f) * 2f).coerceIn(0f, 1f)
-                drawLine(ink, a, Offset(a.x + (b.x - a.x) * first, a.y + (b.y - a.y) * first), strokeWidth = stroke.width, cap = stroke.cap)
-                if (second > 0f) drawLine(ink, b, Offset(b.x + (c.x - b.x) * second, b.y + (c.y - b.y) * second), strokeWidth = stroke.width, cap = stroke.cap)
-            }
+            CdIcon(
+                "cd:check", ink, PILL_ICON,
+                Modifier.drawWithContent { clipRect(right = size.width * FastOutSlowInEasing.transform(drawn.value)) { this@drawWithContent.drawContent() } },
+            )
         }
         PillFace.Hidden -> Unit
     }
 }
+
+/** The size of the Clive set's icons in the pill: their glyphs fill about three quarters of the box, which makes them weigh the same as the mark. */
+private val PILL_ICON = 28.dp

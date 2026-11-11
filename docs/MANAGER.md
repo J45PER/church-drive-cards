@@ -154,6 +154,19 @@ Start with the colour and card pages because they drive the live data.
 - **Sign-in:** `HaAuth.kt` (login flow, tokens, refresh) in `core`.
 - **Design decisions made:** moving-glow style C everywhere; the glow runs on the mobile dashboard by default (a card's `glow: true/false` overrides); section cards carry the glow and the cards inside sit on dark acrylic; text is white on dark cards with colour kept for status pills, selected buttons, temperatures, alarm status and section titles; Off and Unavailable use the neutral set.
 
+## 8a. The status banner (website)
+
+`web/manager/status.js` is the website's large version of the pill the apps show at the top of their pages (reference: `design/clive/link-pill.html`; app: `core/.../LinkRefresh.kt`). It starts as Clive's round button, widens into a banner 120 px tall and 464 px wide, and keeps the colour cloud drifting behind it. It sits fixed under the header, so it also shows on the "Connecting" and retry screens.
+
+- **Faces:** Connecting, Updating, No connection (after 6 s down; Try now), Home Assistant restarting, and on a touch screen Pull to refresh, Release to refresh, Up to date. A pull reloads the current page; the browser's own pull-to-reload is switched off (`overscroll-behavior-y: contain`).
+- **What it says** is only what the site knows: the house's address, the page, the attempt and countdown, when the line was last up, Home Assistant's version and state (`get_config`) and how fast it answered (`auth/current_user`). The design page's item counts are sample data; the site does not read every state, so it never shows them.
+- **Restart** is told by the close code Home Assistant uses (1001, 1012, 1013; `HaSocket.onClose(code)`) or by `get_config` saying it is not `RUNNING` yet; it lasts until the page has loaded again, and five minutes at most.
+- **Opening and closing.** It appears as a circle and widens; closing runs that backwards (the banner narrows into the circle, then the circle shrinks, rises and fades). Pulling down grows the circle with the finger (from 30% size and clear, full by half way to Release) instead of popping it up; a pull that starts while the banner is already showing leaves its size alone. A touch that scrolls the page is never a pull.
+- **Icons.** Only the house's own: Clive's mark, and the Clive set's `cd:wifi-off` (No connection), `cd:update-arrow` (restarting) and `cd:check` (Up to date), read through `icons.js` like every other icon on the site. The tick is wiped in from the left over 380 ms instead of drawn stroke by stroke.
+- **Staying fresh.** `freshness.js`: back to the tab after a minute or more away, and every five minutes while a page is open, the page is read again with the Updating pill (then the Up to date tick), keeping the scroll place. Only pages marked `live` (Home, Health, Energy, Activity) are refreshed; the editors never are, and nothing is redrawn while a field has focus, a dialog is open, or the page was touched in the last ten seconds. The apps do the same (`Freshness.kt`): back after a minute away reads the whole house again with the pill; every five minutes it reads quietly and shows the pill only if it found something stale.
+- **One width.** The pill and its cloud are drawn from the same width every frame, so the cloud never resizes ahead of or behind the pill. (The apps had this wrong in 0.135.0: the cloud measured the final width at once.)
+- Rules and words are tested in `test/manager-status.test.mjs`.
+
 ## 8b. Decisions on what lives where (Jamie, 2026-11-11)
 
 - **People** stays web-only. **Locations** and **Icons** (mode icons) are not needed in Clive Admin for now (the phone app and the website keep them).
