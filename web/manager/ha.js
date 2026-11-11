@@ -110,14 +110,22 @@ export class HaSocket {
     await new Promise((resolve, reject) => {
       const ws = new WebSocket(socketUrl(houseAddress()));
       this.ws = ws;
-      ws.onerror = () => reject(new Error('Could not reach Home Assistant'));
+      // A line that closes before it is signed in, or never answers (a proxy that accepts and then says nothing), is a failed try to go again,
+      // not a wait without end: the reconnect loop only tries again once this has settled.
+      const timer = setTimeout(() => { try { ws.close(); } catch { /* already closed */ } reject(new Error('Home Assistant did not answer')); }, 15000);
+      const ok = () => { clearTimeout(timer); resolve(); };
+      const fail = (e) => { clearTimeout(timer); reject(e); };
+      ws.onerror = () => fail(new Error('Could not reach Home Assistant'));
       let up = false;
-      ws.onclose = (ev) => { this.waiting.forEach((w) => w.reject(new Error('The line to Home Assistant dropped'))); this.waiting.clear(); if (up) this.onClose(ev.code); };
+      ws.onclose = (ev) => {
+        this.waiting.forEach((w) => w.reject(new Error('The line to Home Assistant dropped'))); this.waiting.clear();
+        if (up) this.onClose(ev.code); else fail(new Error('Could not reach Home Assistant'));
+      };
       ws.onmessage = (e) => {
         const m = JSON.parse(e.data);
         if (m.type === 'auth_required') ws.send(JSON.stringify({ type: 'auth', access_token: token }));
-        else if (m.type === 'auth_ok') { up = true; ws.onmessage = (ev) => this.#message(JSON.parse(ev.data)); resolve(); }
-        else if (m.type === 'auth_invalid') reject(Object.assign(new Error('Home Assistant refused the sign-in'), { fatal: true }));
+        else if (m.type === 'auth_ok') { up = true; ws.onmessage = (ev) => this.#message(JSON.parse(ev.data)); ok(); }
+        else if (m.type === 'auth_invalid') fail(Object.assign(new Error('Home Assistant refused the sign-in'), { fatal: true }));
       };
     });
   }

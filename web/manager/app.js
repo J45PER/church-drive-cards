@@ -3,9 +3,13 @@
 import { DEFAULT_HA, HaSocket, cleanAddress, finishSignIn, houseAddress, signOut, signedIn, startSignIn } from './ha.js';
 import { glowStyle, inkOn, setTones } from './glow.js';
 import { loadStyle, panel } from './kit.js';
-import { attachPull, createStatus } from './status.js';
+import { createStatus } from './status.js';
+import { CapsuleView, capsuleHtml } from './capsule.js';
+import { initTheme, mountThemeButton } from './theme.js';
 import { TICK_MS, dueOnReturn, duePeriodic, editing, idle } from './freshness.js';
 import { fillIcons, icon, loadIcons } from './icons.js';
+
+initTheme();   // a light or dark chosen with the button, before anything is drawn
 import { renderChanges } from './pages/changes.js';
 import { readVersions, summary as versionSummary } from './pages/versions.js';
 import { openPaletteEditor } from './pages/palette-editor.js';
@@ -226,16 +230,17 @@ function showShell(user) {
       <div class="drop-list" hidden>${PAGES.filter((p) => p.group === g).map((p) => link(p)).join('')}</div></div>`).join('')}`;
   const drawer = `${link(home)}${GROUPS.map((g) => `<p class="drawer-head">${esc(g)}</p>${PAGES.filter((p) => p.group === g).map((p) => link(p)).join('')}`).join('')}`;
   root.innerHTML = `<div class="shell"><header class="site"><div class="site-in">
-      <a class="brand" href="#" aria-label="Clive Manager, home">${mark(36)}<span class="brand-text"><b>Clive</b> Manager</span></a>
+      <a class="brand" href="#" aria-label="Clive Manager, home"><span class="brand-text"><b>Clive</b> Manager</span></a>
       <nav class="topnav" aria-label="Pages">${top}</nav>
-      <div class="menu-wrap"><button class="person" type="button" id="who" aria-haspopup="true" aria-expanded="false" aria-label="Account: ${esc(user.name)}">${esc((user.name || '?').trim().slice(0, 1).toUpperCase())}</button>
-        <div class="menu" id="menu" hidden role="menu"><p class="menu-name">${esc(user.name || 'Signed in')}</p><p class="sub">Administrator</p>
-          <button class="btn quiet" type="button" id="signout" role="menuitem">${icon('cd:sign-out', 20)} Sign out</button></div></div>
+      ${capsuleHtml(user.name)}
+      <button class="theme-btn" type="button" id="theme"></button>
       <button class="burger" type="button" id="burger" aria-label="Menu" aria-expanded="false" aria-controls="drawer"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg></button>
     </div><nav class="drawer" id="drawer" aria-label="Pages" hidden>${drawer}</nav></header>
     <main><h1 id="title" class="page-title"></h1><div id="page" tabindex="-1"></div></main>
     <footer class="foot"><span>Clive Manager</span><span>Church Drive</span></footer></div>`;
   const who = document.getElementById('who'), menu = document.getElementById('menu'), burger = document.getElementById('burger'), dr = document.getElementById('drawer');
+  status.mount(new CapsuleView(root.querySelector('.cap'), pressManager));
+  mountThemeButton(document.getElementById('theme'));
   const drops = [...root.querySelectorAll('.drop')];
   const closeDrops = (except) => drops.forEach((d) => { if (d !== except) { d.querySelector('.drop-list').hidden = true; d.querySelector('.drop-btn').setAttribute('aria-expanded', 'false'); } });
   const toggle = (open) => { menu.hidden = !open; who.setAttribute('aria-expanded', String(open)); };
@@ -292,10 +297,10 @@ function showRetry(message) {
   document.getElementById('out').addEventListener('click', () => { signOut(); showSignIn(); });
 }
 
-// ---- The status banner (status.js): Connecting, Updating, No connection, Home Assistant restarting, and pull down to refresh ----
+// ---- The status capsule (status.js, capsule.js): Connecting, Updating, No connection, Home Assistant restarting, and press the Manager icon to refresh ----
 
 let wakeUp = null;
-/** Waits [ms], or less when the person taps Try now. */
+/** Waits [ms], or less when the person presses the Manager icon while it is offline. */
 const sleep = (ms) => new Promise((resolve) => { const t = setTimeout(resolve, ms); wakeUp = () => { clearTimeout(t); resolve(); }; });
 const retryNow = () => { if (wakeUp) wakeUp(); };
 let online = false;
@@ -303,9 +308,9 @@ let online = false;
 const status = createStatus({
   host: () => { try { return new URL(houseAddress()).hostname; } catch { return 'the house'; } },
   page: () => currentPage().title,
-  onTry: retryNow,
 });
-attachPull(status, () => refreshNow());
+/** The Manager icon: refresh this page, or try the line again now when it is down. */
+const pressManager = () => { if (!online) retryNow(); else refreshNow(); };
 
 /** Draws the page again and says so on the banner. */
 async function reloadPage() {
@@ -316,7 +321,7 @@ async function reloadPage() {
 
 let loadedAt = Date.now(), hiddenAt = 0, lastTouched = Date.now(), busy = false;
 
-/** Pull down (or Try now while offline): reload the current page, or hurry the reconnect. */
+/** Reload the current page (with the Updating capsule), or hurry the reconnect when the line is down. */
 async function refreshNow() {
   if (!ctx) return;
   if (!online) { retryNow(); return; }

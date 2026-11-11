@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.145.0
+
+- No change you will notice (the Manager website got its status capsule and a light/dark button).
+
 ## 0.144.0
 
 - No change you will notice (the Manager website was reworked).

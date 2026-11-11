@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Anim, FOSE, NO_CONNECTION_AFTER_MS, bigText, chooseFace, duration, faceOf, isRestartClose, pillKind, pullFraction, wallClock } from '../web/manager/status.js';
+import { Anim, FOSE, NO_CONNECTION_AFTER_MS, capsuleText, chooseFace, duration, faceOf, isRestartClose, pillKind, wallClock } from '../web/manager/status.js';
 
 const up = { connection: 'Connected', statesLoaded: true, refreshing: false, restarting: false };
 
@@ -30,20 +30,15 @@ test('Home Assistant restarting is told by its close code', () => {
   for (const code of [1000, 1006, 4000]) assert.equal(isRestartClose(code), false);
 });
 
-test('the pull: halved, 80 px, Release from 1', () => {
-  assert.equal(pullFraction(160), 1);
-  assert.equal(pullFraction(80), 0.5);
-  assert.equal(pullFraction(-30), 0);
-  assert.equal(chooseFace(up, 0, 0, 0.6), 'pull');
-  assert.equal(chooseFace(up, 0, 0, 1), 'release');
-  assert.equal(chooseFace({ ...up, connection: 'Disconnected', restarting: true }, 0, 0, 1.2), 'restart');
-});
-
-test('after a pull: Updating, then Up to date, and a line that is down stays as it is', () => {
-  assert.equal(chooseFace({ ...up, refreshing: true }, 0, 1, 0), 'updating');
-  assert.equal(chooseFace(up, 0, 1, 0), 'updating');
-  assert.equal(chooseFace(up, 0, 2, 0), 'done');
-  assert.equal(chooseFace({ ...up, connection: 'Disconnected' }, 7000, 1, 0), 'noconn');
+test('the face follows the line, and a refresh the person asked for shows Updating, then Up to date', () => {
+  assert.equal(chooseFace(up, 0, 0), 'hidden');
+  assert.equal(chooseFace({ ...up, connection: 'Connecting' }, 0, 0), 'connecting');
+  assert.equal(chooseFace({ ...up, connection: 'Disconnected' }, 7000, 0), 'noconn');
+  assert.equal(chooseFace({ ...up, connection: 'Disconnected', restarting: true }, 7000, 0), 'restart');
+  assert.equal(chooseFace({ ...up, refreshing: true }, 0, 1), 'updating');
+  assert.equal(chooseFace(up, 0, 1), 'updating');
+  assert.equal(chooseFace(up, 0, 2), 'done');
+  assert.equal(chooseFace({ ...up, connection: 'Disconnected' }, 7000, 1), 'noconn');       // a line that is down keeps saying so
   assert.equal(faceOf('none'), 'hidden');
 });
 
@@ -54,33 +49,30 @@ test('lengths of time and times of day are written plainly', () => {
   assert.equal(wallClock(new Date(2026, 10, 11, 12, 4, 11).getTime()), '12:04:11');
 });
 
-const info = { now: 1_000_000, host: 'home.example', page: 'Device health', attempt: 3, retryIn: 4000, lostAt: new Date(2026, 10, 11, 12, 1, 40).getTime(), restartedAt: 0, updatedAt: 1_000_000 - 42000, version: '2025.11.1', latency: 38, haState: 'RUNNING', connected: true };
+const info = { now: 1_000_000, host: 'home.example', page: 'Device health', attempt: 3, retryIn: 4000, lostAt: new Date(2026, 10, 11, 12, 1, 40).getTime(), restartedAt: 0, updatedAt: new Date(2026, 10, 11, 12, 4, 11).getTime(), version: '2025.11.1', latency: 38, haState: 'RUNNING', connected: true };
 
-test('each face says only what the site knows', () => {
-  assert.deepEqual(bigText('connecting', info), { t: 'Connecting', a: 'Reaching home.example', b: 'Attempt 3 · next try in 4 s', bar: 'indeterminate' });
-  assert.equal(bigText('updating', info).a, 'Reloading Device health');
-  assert.equal(bigText('updating', info).b, 'Home Assistant 2025.11.1');
-  assert.match(bigText('pull', info).a, /Device health · last updated .* \(42 s ago\)/);
-  assert.equal(bigText('release', info).b, 'Let go to reload Device health');
-  assert.equal(bigText('done', info).b, 'Home Assistant 2025.11.1 · 38 ms');
-  const off = bigText('noconn', info);
-  assert.equal(off.t, 'No connection'); assert.equal(off.btn, 'Try now'); assert.equal(off.b, 'Trying again in 4 s · attempt 3'); assert.match(off.a, /last up at 12:01:40/);
+test('each face says a title and a line of detail, only with what the site knows', () => {
+  assert.deepEqual(capsuleText('connecting', info), ['Connecting', 'Attempt 3 · next try in 4 s']);
+  assert.deepEqual(capsuleText('updating', info), ['Updating', 'Reloading Device health']);
+  assert.deepEqual(capsuleText('done', info), ['Up to date', 'Device health updated 12:04:11']);
+  assert.deepEqual(capsuleText('noconn', info), ['No connection', 'Last up 12:01:40 · retry in 4 s']);
 });
 
 test('restarting says whether Home Assistant is back, and starting up or loading', () => {
   const r = { ...info, restartedAt: info.now - 72000 };
-  assert.equal(bigText('restart', { ...r, connected: false }).b, 'Waiting for it to come back');
-  assert.equal(bigText('restart', { ...r, haState: 'NOT_RUNNING' }).b, 'Home Assistant is starting up');
-  assert.equal(bigText('restart', r).b, 'Loading Device health');
-  assert.match(bigText('restart', r).a, /· 1 min 12 s$/);
+  assert.deepEqual(capsuleText('restart', { ...r, connected: false }), ['Home Assistant restarting', `Said so at ${wallClock(r.restartedAt)} · 1 min 12 s`]);
+  assert.equal(capsuleText('restart', { ...r, haState: 'NOT_RUNNING' })[1], 'Starting up');
+  assert.equal(capsuleText('restart', r)[1], 'Loading Device health');
+  assert.equal(capsuleText('restart', r, true)[0], 'Restarting');                        // short, for a phone
 });
 
 test('a missing fact is left out, not invented', () => {
-  const bare = { ...info, version: '', latency: 0, lostAt: 0, updatedAt: 0, retryIn: 0 };
-  assert.equal(bigText('done', bare).b, 'Home Assistant is answering');
-  assert.equal(bigText('noconn', bare).a, 'Can’t reach the house');
-  assert.equal(bigText('noconn', bare).b, 'Trying again now · attempt 3');
-  assert.equal(bigText('connecting', bare).b, 'Attempt 3');
+  const bare = { ...info, lostAt: 0, updatedAt: 0, retryIn: 0, restartedAt: 0, connected: false };
+  assert.equal(capsuleText('connecting', bare)[1], 'Attempt 3 · reaching home.example');
+  assert.equal(capsuleText('done', bare)[1], 'Device health updated just now');
+  assert.equal(capsuleText('noconn', bare)[1], 'Can\u2019t reach the house · retrying');
+  assert.equal(capsuleText('restart', bare)[1], 'Said so');
+  assert.deepEqual(capsuleText('rest', info), ['', '']);
 });
 
 test('the easing is Material\'s, and a spring settles without overshooting', () => {
