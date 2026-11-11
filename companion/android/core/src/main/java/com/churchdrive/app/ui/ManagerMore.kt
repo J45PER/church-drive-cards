@@ -243,7 +243,7 @@ fun CompactStrip(
     val figure = valueStyle ?: MaterialTheme.typography.titleMedium
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = CardShape,
+        shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(containerColor = container, contentColor = content),
     ) {
         Box(modifier = Modifier.glowBehind(container)) {
@@ -697,3 +697,9 @@ fun scenes(vararg specs: String, room: String): List<LightScene> =
     }
 
 fun plain(title: String, head: String) = room(title, head, emptyList(), scenes(*WHITE, room = head))
+
+/** A list attribute such as `preset_modes`, as text. */
+fun EntityState.list(key: String): List<String> {
+    val a = attributes.optJSONArray(key) ?: return emptyList()
+    return (0 until a.length()).filter { !a.isNull(it) }.map { a.optString(it) }.filter { it.isNotBlank() }
+}
