@@ -139,7 +139,11 @@ private fun AdminPages(vm: AdminModel, onPerson: () -> Unit) {
         com.churchdrive.app.ui.LinkRefresh(link, vm::refresh, Modifier.fillMaxSize().padding(padding)) {
         // Device health scrolls itself (its devices open pages in place), so it sits in the room under the title bar, not in the scrolling column.
         if (ready && tab == HEALTH) {
-            Box(Modifier.fillMaxSize()) { DeviceHealthTab(vm.entities, vm.registry, vm.areaNames) }
+            // The update banner is on every tab, as in the other apps, so it sits above the list here.
+            Column(Modifier.fillMaxSize()) {
+                com.churchdrive.app.ui.UpdateNotice(BuildConfig.PLAY, vm.updateAvailable, UpdateCheck.ADMIN_APK_URL, "Clive Admin", Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                Box(Modifier.weight(1f).fillMaxWidth()) { DeviceHealthTab(vm.entities, vm.registry, vm.areaNames) }
+            }
         } else Column(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(28.dp),

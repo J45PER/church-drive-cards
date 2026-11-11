@@ -72,6 +72,13 @@ input[type=range] { width:100%; accent-color:var(--acc); }
 .pv .slot > div, .pv .lbl > span { grid-area:1/1; }
 .pv .lbl { position:relative; overflow:hidden; display:grid; white-space:nowrap; font-weight:500; flex:none; }
 .pv .lbl span { white-space:nowrap; }
+.pv.big .lbl { display:block; }
+.pv .bg { position:absolute; left:0; top:0; height:100%; flex-direction:column; justify-content:center; }
+.pv .bt { font-weight:600; letter-spacing:-.01em; white-space:nowrap; }
+.pv .ba { font-weight:400; opacity:.88; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pv .bb { opacity:.72; }
+.pv .track { border-radius:99px; overflow:hidden; } .pv .track i { display:block; height:100%; border-radius:99px; }
+.pv .try { display:none; align-self:flex-start; background:transparent; border-radius:99px; font:inherit; font-weight:500; cursor:pointer; }
 .ic { display:grid; place-items:center; } .ic svg { grid-area:1/1; display:none; overflow:visible; }
 
 .spec { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:14px; }
@@ -99,6 +106,7 @@ td code { font-family:var(--mono); font-size:.78rem; }
     <label class="row"><span>Speed</span><input id="speed" type="range" min="0.05" max="3" step="0.05" value="1"><output id="speedv">1×</output></label>
     <label class="row"><span>Size</span><input id="size" type="range" min="0.6" max="3" step="0.05" value="1"><output id="sizev">1×</output></label>
     <div class="row seg-row"><span>Stage</span><div class="seg" id="stageSeg"><button data-v="phone" aria-pressed="true">Phone</button><button data-v="dash" aria-pressed="false">Dashboard</button></div></div>
+    <div class="row seg-row"><span>Version</span><div class="seg" id="viewSeg"><button data-v="pill" aria-pressed="true">Pill</button><button data-v="big" aria-pressed="false">Large (web)</button></div></div>
     <div class="row seg-row"><span>Theme</span><div class="seg" id="themeSeg"><button data-v="light" aria-pressed="true">Light</button><button data-v="dark" aria-pressed="false">Dark</button></div></div>
     <div class="row seg-row"><span>Cloud</span><div class="seg" id="palSeg"><button data-v="classic" aria-pressed="true">Classic</button><button data-v="phone" aria-pressed="false">Phone theme</button></div></div>
    </div>
@@ -126,6 +134,12 @@ td code { font-family:var(--mono); font-size:.78rem; }
    <label style="display:flex; gap:10px; align-items:center; font-size:.86rem">Specimen size <input id="specSize" type="range" min="1" max="5" step="0.1" value="2" style="width:200px"><output id="specSizev" style="font-family:var(--mono); font-size:.76rem; color:var(--soft)">2×</output></label>
   </div>
   <div class="spec" id="spec"></div>
+ </section>
+
+ <section>
+  <h2>Large version for the website</h2>
+  <p class="note" style="margin-bottom:10px">Three times as tall and twice as wide as the pill (120 dp by 464 dp). Same circle, same widening, same cloud and mark, with room for the detail a website can show: tries, when the next one is, when the house last answered, how many items have come in. Shown at half the specimen size above.</p>
+  <div class="spec" id="specBig"></div>
  </section>
 
  <section>
@@ -207,6 +221,9 @@ const FACES = {
   restart: { label: 'Home Assistant restarting', icon: 'ring', tone: 'restart' },
 };
 const PILL = 40, ICON_SLOT = 40, LABEL_PAD = 18, LABEL_SP = 14;
+/** The pill, and the large version for the website: 3 times as tall (120 dp) and about twice as wide (464 dp); same circle, same animation, more to say. */
+const DIM_PILL = { H: 40, SLOT: 40, K: 1, ORB: 32, BODY: 0, WIDEN: 320, SHRINK: 220 };
+const DIM_BIG = { H: 120, SLOT: 120, K: 3, ORB: 96, BODY: 344, WIDEN: 400, SHRINK: 280 };
 
 const measure = document.createElement('canvas').getContext('2d');
 const textW = f => { measure.font = '500 14px "Instrument Sans", system-ui, sans-serif'; const s = FACES[f].label; return measure.measureText(s).width + s.length * 0.1; };
@@ -223,17 +240,17 @@ function markPath(now) {
 }
 
 /* ---------- Clive's cloud: AssistOrb, Idle state ---------- */
-function drawCloud(ctx, now, colours, pxPerDp, wDp, hDp, sx) {
+function drawCloud(ctx, now, colours, pxPerDp, wDp, hDp, sx, ORB = 32) {
   const phase = ((now % 9000) / 9000) * TAU;
   const breathe = -1 + 2 * FOSE(triangle(now, 4500));
-  const ORB = 32, group = 1 + 0.05 * breathe;
-  const u = ORB / 120 * group, drift = 11 * u, spread = 1.5;           // "small": the orb is under 80 dp
+  const small = ORB < 80, group = 1 + 0.05 * breathe;
+  const u = ORB / 120 * group, drift = 11 * u, spread = small ? 1.5 : 1;   // "small": the orb is under 80 dp
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   ctx.setTransform(pxPerDp * sx, 0, 0, pxPerDp, wDp * pxPerDp / 2, hDp * pxPerDp / 2);
   ctx.globalCompositeOperation = 'screen';
   const cloud = (col, dx, dy, disc, a, b) => {
     const ax = dx * u * spread + Math.cos(phase * a) * drift, ay = dy * u * spread + Math.sin(phase * b) * drift;
-    let radius = disc * u; const outer = radius + 26 * u; radius *= 0.9;
+    let radius = disc * u; const outer = radius + 26 * u; if (small) radius *= 0.9;
     const g = ctx.createRadialGradient(ax, ay, 0, ax, ay, outer);
     g.addColorStop(0, rgb(col, 1));
     g.addColorStop(clamp(Math.max(radius - 26 * u, 0) / outer, 0, 1), rgb(col, 1));
@@ -267,7 +284,7 @@ class IconLayer {
     const f = FACES[face]; if (!f || !f.icon) { this.root.style.display = 'none'; return; }
     this.root.style.display = 'grid';
     for (const el of [this.mark, this.bars, this.ring, this.tick]) el.style.display = 'none';
-    const size = { mark: 22, bars: 22, ring: 20, tick: 22 }[f.icon];
+    const size = { mark: 22, bars: 22, ring: 20, tick: 22 }[f.icon] * (ctx.k || 1);
     const el = { mark: this.mark, bars: this.bars, ring: this.ring, tick: this.tick }[f.icon];
     el.style.display = 'block'; el.style.width = el.style.height = size * dp + 'px';
     this.root.style.transform = '';
@@ -299,17 +316,65 @@ class IconLayer {
   }
 }
 
+/** The words of the large version: a title, two lines of detail, and a progress bar or a button when there is one. */
+class BigLayer {
+  constructor(parent, onTry) {
+    this.root = document.createElement('div'); this.root.className = 'bg'; parent.appendChild(this.root);
+    this.t = document.createElement('div'); this.t.className = 'bt';
+    this.a = document.createElement('div'); this.a.className = 'ba';
+    this.b = document.createElement('div'); this.b.className = 'ba bb';
+    this.track = document.createElement('div'); this.track.className = 'track'; this.fill = document.createElement('i'); this.track.appendChild(this.fill);
+    this.btn = document.createElement('button'); this.btn.className = 'try'; this.btn.type = 'button'; this.btn.textContent = 'Try now'; this.btn.onclick = e => { e.stopPropagation(); onTry && onTry(); };
+    this.root.append(this.t, this.a, this.b, this.track, this.btn);
+  }
+  set(face, info, tone, w, dp, now) {
+    const r = this.root.style;
+    if (!face || w < 0.001) { r.display = 'none'; return; }
+    r.display = 'flex'; r.opacity = w; r.width = (DIM_BIG.BODY - 24) * dp + 'px'; r.color = rgb(tone.ink); r.gap = dp * 3 + 'px';
+    const x = bigText(face, info);
+    if (this.t.textContent !== x.t) this.t.textContent = x.t;
+    if (this.a.textContent !== x.a) this.a.textContent = x.a;
+    if (this.b.textContent !== x.b) this.b.textContent = x.b;
+    this.t.style.fontSize = 22 * dp + 'px'; this.t.style.lineHeight = 26 * dp + 'px';
+    for (const e of [this.a, this.b]) { e.style.fontSize = 13.5 * dp + 'px'; e.style.lineHeight = 19 * dp + 'px'; }
+    const hasBar = x.bar !== null && x.bar !== undefined;
+    this.track.style.display = hasBar ? 'block' : 'none'; this.track.style.height = 5 * dp + 'px'; this.track.style.marginTop = 5 * dp + 'px';
+    this.track.style.background = rgb(tone.ink, 0.16);
+    this.fill.style.background = rgb(tone.ink, 0.78);
+    if (x.bar === 'indeterminate') { const q = (now % 1500) / 1500, wd = 0.34; this.fill.style.width = wd * 100 + '%'; this.fill.style.marginLeft = (-wd + q * (1 + wd)) * 100 + '%'; }
+    else if (hasBar) { this.fill.style.width = clamp(x.bar, 0, 1) * 100 + '%'; this.fill.style.marginLeft = '0'; }
+    this.btn.style.display = x.btn ? 'block' : 'none'; this.btn.textContent = x.btn || '';
+    this.btn.style.fontSize = 13 * dp + 'px'; this.btn.style.height = 26 * dp + 'px'; this.btn.style.padding = `0 ${14 * dp}px`; this.btn.style.marginTop = 4 * dp + 'px';
+    this.btn.style.border = `${dp}px solid ${rgb(tone.ink, 0.45)}`; this.btn.style.color = rgb(tone.ink);
+  }
+}
+const HOST = 'home.church-drive.example', HA_VERSION = '2025.11.1', LATENCY = 38;
+function bigText(face, i) {
+  const n = v => Math.round(v).toLocaleString('en-GB');
+  switch (face) {
+    case 'connecting': return { t: 'Connecting', a: `Reaching ${HOST}`, b: `Attempt ${Math.max(1, i.attempt)}${i.retryIn > 0 ? ` · next try in ${Math.ceil(i.retryIn / 1000)} s` : ''}`, bar: 'indeterminate' };
+    case 'updating': return { t: 'Updating', a: 'Asking the house for every item', b: `${n(i.loaded)} of ${n(i.total)} items`, bar: i.total ? i.loaded / i.total : 0 };
+    case 'pull': return { t: 'Pull to refresh', a: `Last updated ${i.updatedLabel} · ${i.ago}`, b: 'Keep pulling to update', bar: null };
+    case 'release': return { t: 'Release to refresh', a: `Last updated ${i.updatedLabel} · ${i.ago}`, b: `Let go to update ${n(i.total)} items`, bar: null };
+    case 'done': return { t: 'Up to date', a: `${n(i.total)} items · updated ${i.updatedLabel}`, b: `Home Assistant ${HA_VERSION} · ${LATENCY} ms`, bar: null };
+    case 'noconn': return { t: 'No connection', a: `Can\u2019t reach the house · last up at ${i.lostLabel}`, b: i.retryIn > 0 ? `Trying again in ${Math.ceil(i.retryIn / 1000)} s · attempt ${Math.max(1, i.attempt)}` : `Trying again now · attempt ${Math.max(1, i.attempt)}`, bar: null, btn: 'Try now' };
+    case 'restart': return { t: 'Home Assistant restarting', a: `Said it was restarting at ${i.restartLabel} · ${i.elapsed}`, b: i.connected ? `${n(i.loaded)} of ${n(i.total)} items back` : 'Waiting for it to come back', bar: i.connected ? (i.total ? i.loaded / i.total : 0) : 'indeterminate' };
+  }
+  return { t: '', a: '', b: '', bar: null };
+}
+
 class PillView {
   /** host: the element to centre the pill in (at its top). opts.static: no slide or pull shift (specimens). */
   constructor(host, opts = {}) {
-    this.opts = opts;
-    this.el = document.createElement('div'); this.el.className = 'pv'; host.appendChild(this.el);
+    this.opts = opts; this.D = opts.big ? DIM_BIG : DIM_PILL; this.info = {};
+    this.el = document.createElement('div'); this.el.className = 'pv' + (opts.big ? ' big' : ''); host.appendChild(this.el);
     this.cv = document.createElement('canvas'); this.el.appendChild(this.cv); this.ctx2 = this.cv.getContext('2d');
     this.slot = document.createElement('div'); this.slot.className = 'slot'; this.el.appendChild(this.slot);
     this.icons = [new IconLayer(this.slot), new IconLayer(this.slot)];
     this.lbl = document.createElement('div'); this.lbl.className = 'lbl'; this.el.appendChild(this.lbl);
     this.ring = document.createElement('div'); this.ring.className = 'ring'; this.el.appendChild(this.ring);
-    this.txt = [document.createElement('span'), document.createElement('span')]; this.txt.forEach(t => this.lbl.appendChild(t));
+    this.txt = [document.createElement('span'), document.createElement('span')]; if (!opts.big) this.txt.forEach(t => this.lbl.appendChild(t));
+    if (opts.big) this.bigs = [new BigLayer(this.lbl, opts.onTry), new BigLayer(this.lbl, opts.onTry)];
     this.a = { alpha: new Anim(0), scale: new Anim(0.4), slide: new Anim(-1), labelW: new Anim(0), labelA: new Anim(0), markP: new Anim(0), cloudA: new Anim(0.95), settle: new Anim(0) };
     this.visible = false; this.settled = false; this.settleAt = 0; this.shown = 'connecting'; this.prev = null; this.changeT = -1e9; this.tickT = 0; this.expanded = false;
   }
@@ -336,40 +401,41 @@ class PillView {
     if (force && force.expanded !== undefined) expanded = this.visible && this.settled && force.expanded;
     this.expanded = expanded;
     const f = FACES[this.shown], tone = th[f.tone || 'normal'];
-    A.labelW.set(expanded ? textW(this.shown) + LABEL_PAD : 0, { dur: expanded ? 320 : 220 }, now);
+    const D = this.D;
+    A.labelW.set(expanded ? (D.BODY || textW(this.shown) + LABEL_PAD) : 0, { dur: expanded ? D.WIDEN : D.SHRINK }, now);
     A.labelA.set(expanded ? 1 : 0, expanded ? { dur: 320, delay: 80 } : { dur: 120 }, now);
     A.markP.set(expanded ? 1 : 0, { dur: 300 }, now);
     A.cloudA.set(expanded ? 0.5 : 0.95, { dur: 300 }, now);
     A.settle.set(this.shown === 'release' ? 180 : 0, { dur: 250 }, now);
 
-    const widthDp = ICON_SLOT + A.labelW.get(now), pullShift = (!this.opts.static && pull > 0) ? (Math.min(pull, 1.3) - 1) * 36 : 0;
-    const slide = this.opts.static ? 0 : A.slide.get(now) * PILL;
+    const widthDp = D.SLOT + A.labelW.get(now), pullShift = (!this.opts.static && pull > 0) ? (Math.min(pull, 1.3) - 1) * 36 * D.K : 0;
+    const slide = this.opts.static ? 0 : A.slide.get(now) * D.H;
     const el = this.el.style, px = v => v * dp + 'px';
-    el.width = px(widthDp); el.height = px(PILL); el.borderRadius = '999px';
+    el.width = px(widthDp); el.height = px(D.H); el.borderRadius = '999px';
     this.ring.style.border = `${dp}px solid ${rgb(tone.line)}`;
     el.background = rgb(tone.bg); el.opacity = A.alpha.get(now);
     el.boxShadow = `0 ${dp * 3}px ${dp * 7}px rgba(0,0,0,${th.dark ? 0.5 : 0.22}), 0 0 ${dp * 2}px rgba(0,0,0,${th.dark ? 0.4 : 0.16})`;
     el.transform = `translate(-50%, ${(slide + pullShift) * dp}px) scale(${A.scale.get(now)})`;
     // the cloud, stretched over the pill and kept inside its edge
-    const cw = Math.max(1, Math.round(widthDp * dp * devicePixelRatio)), ch = Math.round(PILL * dp * devicePixelRatio);
+    const cw = Math.max(1, Math.round(widthDp * dp * devicePixelRatio)), ch = Math.round(D.H * dp * devicePixelRatio);
     if (this.cv.width !== cw || this.cv.height !== ch) { this.cv.width = cw; this.cv.height = ch; }
-    drawCloud(this.ctx2, now, tone.cloud, dp * devicePixelRatio, widthDp, PILL, Math.max(1, widthDp / PILL * 1.25));
+    drawCloud(this.ctx2, now, tone.cloud, dp * devicePixelRatio, widthDp, D.H, Math.max(1, widthDp / D.H * 1.25), D.ORB);
     this.cv.style.opacity = A.cloudA.get(now);
     // icon and words
-    this.slot.style.width = this.slot.style.height = px(ICON_SLOT);
+    this.slot.style.width = this.slot.style.height = px(D.SLOT);
     const mk = mix('#FFFFFF', tone.ink, A.markP.get(now)), settle = A.settle.get(now);
-    const ctx = { pull, settle, tickT: this.tickT };
+    const ctx = { pull, settle, tickT: this.tickT, k: D.K };
     const inT = FOSE(clamp((now - this.changeT) / 180, 0, 1)), outT = 1 - FOSE(clamp((now - this.changeT) / 120, 0, 1));
     const layers = [[this.shown, inT], [this.prev, this.prev ? outT : 0]];
     layers.forEach(([fc, w], i) => {
       const ic = this.icons[i], tx = this.txt[i];
       ic.root.style.opacity = fc ? w : 0; ic.root.style.color = rgb(mk);
       if (fc && w > 0.001) ic.draw(fc, now, dp, ctx); else ic.root.style.display = 'none';
-      tx.textContent = fc ? FACES[fc].label : ''; tx.style.opacity = fc ? w : 0; tx.style.color = rgb(tone.ink);
+      if (this.bigs) this.bigs[i].set(fc, this.info, tone, w, dp, now);
+      else { tx.textContent = fc ? FACES[fc].label : ''; tx.style.opacity = fc ? w : 0; tx.style.color = rgb(tone.ink); }
     });
-    this.lbl.style.width = px(A.labelW.get(now)); this.lbl.style.height = px(PILL); this.lbl.style.opacity = A.labelA.get(now);
-    this.lbl.style.fontSize = px(LABEL_SP); this.lbl.style.letterSpacing = px(0.1); this.lbl.style.alignContent = 'center';
-    this.lbl.style.paddingRight = '0'; this.txt.forEach(t => { t.style.display = 'block'; t.style.lineHeight = px(20); });
+    this.lbl.style.width = px(A.labelW.get(now)); this.lbl.style.height = px(D.H); this.lbl.style.opacity = A.labelA.get(now);
+    if (!this.bigs) { this.lbl.style.fontSize = px(LABEL_SP); this.lbl.style.letterSpacing = px(0.1); this.lbl.style.alignContent = 'center'; this.txt.forEach(t => { t.style.display = 'block'; t.style.lineHeight = px(20); }); }
     return { face: this.shown, expanded };
   }
 }
@@ -385,21 +451,47 @@ function pillKind(s, offlineFor) {
 }
 const faceOf = k => ({ none: 'hidden', connecting: 'connecting', updating: 'updating', noconnection: 'noconn', restarting: 'restart' }[k]);
 
+const wall = ms => { const t = Math.floor(12 * 3600 + 4 * 60 + ms / 1000), q = v => String(v).padStart(2, '0'); return `${q(Math.floor(t / 3600) % 24)}:${q(Math.floor(t / 60) % 60)}:${q(((t % 60) + 60) % 60)}`; };
+const dur = ms => { const t = Math.max(0, Math.floor(ms / 1000)); return t < 60 ? `${t} s` : `${Math.floor(t / 60)} min ${t % 60} s`; };
+
 class Link {
   constructor() { this.reset(0); }
   reset(now, preset = {}) {
-    this.link = Object.assign({ connection: 'Connected', statesLoaded: true, refreshing: false, restarting: false }, preset);
-    this.since = preset.since !== undefined ? now + preset.since : now;            // when `connected` last changed (the LaunchedEffect(connected) timer)
-    delete this.link.since;
+    const { since, attempt, retryIn, ...rest } = preset;
+    this.link = Object.assign({ connection: 'Connected', statesLoaded: true, refreshing: false, restarting: false }, rest);
+    this.since = since !== undefined ? now + since : now;                    // when `connected` last changed (the LaunchedEffect(connected) timer)
+    // What the large version adds: how many tries, when the next is, what the house last told us, and how far the items have come.
+    this.attempt = attempt !== undefined ? attempt : (this.link.connection === 'Connecting' ? 1 : 0);
+    this.retryAt = retryIn ? now + retryIn : 0;
+    this.lostAt = since !== undefined ? now + since : now;
+    this.updatedAt = now - 42000; this.restartedAt = 0; this.loadStart = now; this.loadDur = 1700; this.total = 1240;
+    this.answerAt = 0; this.afterConnect = 0; this.loadAt = 0;
     this.phase = 0; this.phaseT = 0;
     this.pullA = new Anim(0); this.fingerFrac = null;                         // the PullToRefreshState
     this.pendingAnswer = null;
   }
   set(now, patch) {
-    const was = this.link.connection === 'Connected';
-    Object.assign(this.link, patch);
-    const is = this.link.connection === 'Connected';
-    if (was !== is) this.since = now;
+    const prev = this.link.connection, wasUp = prev === 'Connected', wasRestarting = this.link.restarting;
+    const { retryIn, loadMs, ...rest } = patch;
+    Object.assign(this.link, rest);
+    const isUp = this.link.connection === 'Connected';
+    if (wasUp !== isUp) this.since = now;
+    if (wasUp && !isUp) this.lostAt = now;
+    if (rest.connection === 'Connecting' && prev !== 'Connecting') this.attempt++;
+    if (isUp) this.attempt = 0;
+    if (retryIn !== undefined) this.retryAt = now + retryIn;
+    if (rest.connection === 'Connecting' || isUp) this.retryAt = 0;
+    if (loadMs !== undefined) { this.loadStart = now; this.loadDur = loadMs; }
+    if (rest.restarting === true && !wasRestarting) this.restartedAt = now;
+    if (rest.statesLoaded === true || rest.refreshing === false) this.updatedAt = now;
+    if (rest.refreshing === true) { this.loadStart = now; this.loadDur = 650; }
+  }
+  /** What the large version says besides its title. */
+  info(now) {
+    const L = this.link, up = L.connection === 'Connected', loading = up && (!L.statesLoaded || L.refreshing);
+    const loaded = !up ? 0 : loading ? Math.floor(this.total * 0.985 * FOSE(clamp((now - this.loadStart) / this.loadDur, 0, 1))) : this.total;
+    return { attempt: this.attempt, retryIn: this.retryAt ? Math.max(0, this.retryAt - now) : 0, total: this.total, loaded, connected: up,
+      updatedLabel: wall(this.updatedAt), ago: dur(now - this.updatedAt) + ' ago', lostLabel: wall(this.lostAt), restartLabel: wall(this.restartedAt), elapsed: dur(now - this.restartedAt) };
   }
   offlineFor(now) { return this.link.connection === 'Connected' ? 0 : Math.floor((now - this.since) / 1000) * 1000; }
   /** The app's refresh(): ask for the states again, or connect afresh. */
@@ -417,7 +509,7 @@ class Link {
   tap(now) { this.onAppRefresh(now); }
   update(now) {
     if (this.answerAt && now >= this.answerAt) { this.answerAt = 0; this.set(now, { refreshing: false }); }
-    if (this.afterConnect && now >= this.afterConnect) { this.afterConnect = 0; this.set(now, { connection: 'Connected', statesLoaded: false }); this.loadAt = now + 1100; }
+    if (this.afterConnect && now >= this.afterConnect) { this.afterConnect = 0; this.set(now, { connection: 'Connected', statesLoaded: false, loadMs: 1100 }); this.loadAt = now + 1100; }
     if (this.loadAt && now >= this.loadAt) { this.loadAt = 0; this.set(now, { statesLoaded: true, restarting: false }); }
     // LaunchedEffect(phase)
     if (this.phase === 1 && now - this.phaseT >= 900) {
@@ -450,22 +542,22 @@ const SEQS = [
     start: {}, events: [[600, 'finger', [0, 120, 900]], [2100, 'release']] },
   { id: 'open', title: 'Opening the app', sub: 'Connecting, then Updating', len: 6200,
     note: 'What the app remembered is on screen at once. The pill appears as a circle, widens to Connecting while the line opens, changes to Updating while the house sends every state, and goes when they are all in.',
-    start: { connection: 'Connecting', statesLoaded: false }, events: [[1700, 'set', { connection: 'Connected' }], [3400, 'set', { statesLoaded: true }]] },
+    start: { connection: 'Connecting', statesLoaded: false }, events: [[1700, 'set', { connection: 'Connected', loadMs: 1700 }], [3400, 'set', { statesLoaded: true }]] },
   { id: 'lost', title: 'Connection lost', sub: 'A blip says Connecting; six seconds says No connection', len: 17500,
     note: 'The line drops. The app retries with a growing wait (1 s, 2 s, 4 s), flipping between Disconnected and Connecting, so for the first six seconds the pill just says Connecting. After six seconds down it turns red: No connection. When the line is back it says Updating while the states load, then goes.',
-    start: {}, events: [[800, 'set', { connection: 'Disconnected' }], [1800, 'set', { connection: 'Connecting' }], [2800, 'set', { connection: 'Disconnected' }], [4800, 'set', { connection: 'Connecting' }], [5800, 'set', { connection: 'Disconnected' }], [11800, 'set', { connection: 'Connecting' }], [13000, 'set', { connection: 'Connected', statesLoaded: false }], [14800, 'set', { statesLoaded: true }]] },
+    start: {}, events: [[800, 'set', { connection: 'Disconnected', retryIn: 1000 }], [1800, 'set', { connection: 'Connecting' }], [2800, 'set', { connection: 'Disconnected', retryIn: 2000 }], [4800, 'set', { connection: 'Connecting' }], [5800, 'set', { connection: 'Disconnected', retryIn: 6000 }], [11800, 'set', { connection: 'Connecting' }], [13000, 'set', { connection: 'Connected', statesLoaded: false, loadMs: 1800 }], [14800, 'set', { statesLoaded: true }]] },
   { id: 'offpull', title: 'Pull while offline', sub: 'The pull and the line are one pill', len: 10500,
     note: 'Already down for a while, so the pill says No connection. Pulling still works: it turns to Release, and letting go makes the app connect afresh. The pill stays No connection (red) until the line is back, then Updating, then the tick.',
-    start: { connection: 'Disconnected', since: -7200 }, events: [[1200, 'finger', [0, 175, 1300]], [3000, 'release']] },
+    start: { connection: 'Disconnected', since: -7200, attempt: 4, retryIn: 3000 }, events: [[1200, 'finger', [0, 175, 1300]], [3000, 'release']] },
   { id: 'restart', title: 'Home Assistant restarts', sub: 'Restarting until the items are back', len: 12000,
     note: 'Home Assistant closes the line itself (code 1001), so the app knows this is a restart, not a fault: amber, "Home Assistant restarting". It stays through the reconnect attempts and while the entities load back in, and goes only when they are all there. (If it never comes back within five minutes it turns into No connection.)',
-    start: {}, events: [[900, 'set', { connection: 'Disconnected', restarting: true }], [1900, 'set', { connection: 'Connecting' }], [2900, 'set', { connection: 'Disconnected' }], [4900, 'set', { connection: 'Connecting' }], [6500, 'set', { connection: 'Connected', statesLoaded: false }], [8700, 'set', { statesLoaded: true, restarting: false }]] },
+    start: {}, events: [[900, 'set', { connection: 'Disconnected', restarting: true, retryIn: 1000 }], [1900, 'set', { connection: 'Connecting' }], [2900, 'set', { connection: 'Disconnected', retryIn: 2000 }], [4900, 'set', { connection: 'Connecting' }], [6500, 'set', { connection: 'Connected', statesLoaded: false, loadMs: 2200 }], [8700, 'set', { statesLoaded: true, restarting: false }]] },
 ];
 
 /* ---------- the app ---------- */
-const state = { seq: SEQS[0], stage: 'phone', dark: matchMedia('(prefers-color-scheme: dark)').matches, pal: 'classic', speed: 1, size: 1, paused: false };
+const state = { seq: SEQS[0], view: 'pill', stage: 'phone', dark: matchMedia('(prefers-color-scheme: dark)').matches, pal: 'classic', speed: 1, size: 1, paused: false };
 const stageEl = $('#stage'), contentEl = $('#content'), slotEl = $('#slot'), fingerEl = $('#finger');
-const model = new Link(), pill = new PillView(slotEl);
+const model = new Link(), pill = new PillView(slotEl), banner = new PillView(slotEl, { big: true, onTry: () => model.tap(clock) });
 let clock = 0, seqStart = 0, evIdx = 0, fingerScript = null, userDrag = null;
 
 function thm() { return theme(state.dark, state.pal); }
@@ -487,7 +579,7 @@ function applyStage() {
 }
 function startSeq(s) {
   state.seq = s; evIdx = 0; fingerScript = null; userDrag = null; seqStart = clock;
-  pill.reset(); model.reset(clock, s.start);
+  pill.reset(); banner.reset(); model.reset(clock, s.start);
   document.querySelectorAll('.seq').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.id === s.id)));
   $('#seqTitle').textContent = s.title; $('#note').textContent = s.note; fingerEl.style.opacity = 0;
 }
@@ -496,7 +588,9 @@ document.querySelectorAll('.seq').forEach(b => b.onclick = () => startSeq(SEQS.f
 $('#replay').onclick = () => startSeq(state.seq);
 $('#play').onclick = e => { state.paused = !state.paused; e.target.textContent = state.paused ? 'Play' : 'Pause'; e.target.setAttribute('aria-pressed', String(state.paused)); };
 const seg = (id, key, cb) => { document.querySelectorAll(`#${id} button`).forEach(b => b.onclick = () => { document.querySelectorAll(`#${id} button`).forEach(x => x.setAttribute('aria-pressed', String(x === b))); cb(b.dataset.v); }); };
-seg('stageSeg', 'stage', v => { state.stage = v; if (v === 'dash') { $('#size').value = state.size = 1.15; } else { $('#size').value = state.size = 1; } $('#sizev').textContent = state.size.toFixed(2).replace(/\.?0+$/, '') + '×'; applyStage(); });
+const fitDash = () => Math.max(0.6, Math.min(1.5, Math.floor((($('#stagescroll').clientWidth - 40) / 1012) * 20) / 20));
+seg('stageSeg', 'stage', v => { state.stage = v; if (v === 'dash') { $('#size').value = state.size = fitDash(); } else { $('#size').value = state.size = 1; } $('#sizev').textContent = state.size.toFixed(2).replace(/\.?0+$/, '') + '×'; applyStage(); });
+seg('viewSeg', 'view', v => { state.view = v; if (v === 'big' && state.stage !== 'dash') document.querySelector('#stageSeg [data-v=dash]').click(); });
 seg('themeSeg', 'theme', v => { state.dark = v === 'dark'; applyStage(); rebuildSpec(); });
 seg('palSeg', 'pal', v => { state.pal = v; });
 $('#speed').oninput = e => { state.speed = +e.target.value; $('#speedv').textContent = state.speed + '×'; };
@@ -525,7 +619,10 @@ function tick(now, dt) {
   if (fingerScript) { const p = FOSE(clamp((t - fingerScript.t0) / fingerScript.dur, 0, 1)), raw = lerp(fingerScript.from, fingerScript.to, p); model.drag(clock, raw); showFinger(raw); }
   model.update(clock);
   const f = model.face(clock), th = thm();
-  const out = pill.frame(clock, f.face, f.pull, th, state.size, null);
+  const big = state.view === 'big', active = big ? banner : pill, other = big ? pill : banner;
+  active.info = model.info(clock);
+  const out = active.frame(clock, f.face, f.pull, th, state.size, null);
+  if (other.visible || other.a.alpha.get(clock) > 0.01) other.frame(clock, 'hidden', 0, th, state.size, null);
   lastFace = f.face; slotEl.style.cursor = (f.face === 'noconn' || f.face === 'restart') ? 'pointer' : '';
   $('#tl').style.width = clamp(t / s.len * 100, 0, 100) + '%';
   if (t > s.len + 1200 && !userDrag) startSeq(s);                        // loop
@@ -545,15 +642,22 @@ const SPECS = [
   { face: 'noconn', force: { expanded: true }, name: 'No connection', d: 'Down for six seconds. Red; tap to try again.' },
   { face: 'restart', force: { expanded: true }, name: 'Home Assistant restarting', d: 'Amber; until the items are all back.' },
 ];
-let specPills = [], specScale = 2;
+let specPills = [], specScale = 2, bigPills = [];
+const SPEC_INFO = { attempt: 3, retryIn: 4000, total: 1240, loaded: 812, connected: true, updatedLabel: '12:04:11', ago: '42 s ago', lostLabel: '12:01:40', restartLabel: '12:03:02', elapsed: '1 min 12 s' };
 function rebuildSpec() {
   const host = $('#spec'); host.innerHTML = ''; specPills = [];
+  const hostBig = $('#specBig'); hostBig.innerHTML = ''; bigPills = [];
   const n = NEUTRAL[state.dark ? 'dark' : 'light'];
   SPECS.forEach(s => {
     const cell = document.createElement('div'); cell.className = 'cell';
     cell.innerHTML = `<div class="well" style="background:${n.bg}"><div class="stage-mini"></div></div><b>${s.name}</b><span class="d">${s.d}</span>`;
     host.appendChild(cell);
     const mini = $('.stage-mini', cell); const pv = new PillView(mini, { static: true }); specPills.push({ pv, s, mini });
+    const cellB = document.createElement('div'); cellB.className = 'cell';
+    cellB.innerHTML = `<div class="well" style="background:${n.bg}"><div class="stage-mini"></div></div><b>${s.name}</b><span class="d">${s.d}</span>`;
+    hostBig.appendChild(cellB);
+    const miniB = $('.stage-mini', cellB); const pvB = new PillView(miniB, { static: true, big: true, onTry: () => {} });
+    pvB.info = Object.assign({}, SPEC_INFO, s.face === 'restart' ? { loaded: 312 } : {}); bigPills.push({ pv: pvB, s, mini: miniB });
   });
   sizeSpec();
 }
@@ -562,19 +666,25 @@ function sizeSpec() {
   const w = Math.ceil(widestDp() * specScale);
   $('#spec').style.gridTemplateColumns = `repeat(auto-fill, minmax(min(100%, ${w + 48}px), 1fr))`;
   specPills.forEach(({ mini }) => { mini.style.width = w + 'px'; mini.style.height = PILL * specScale + 12 + 'px'; });
+  const bs = specScale / 2, wb = Math.ceil((DIM_BIG.SLOT + DIM_BIG.BODY + 8) * bs);
+  $('#specBig').style.gridTemplateColumns = `repeat(auto-fill, minmax(min(100%, ${wb + 48}px), 1fr))`;
+  bigPills.forEach(({ mini }) => { mini.style.width = wb + 'px'; mini.style.height = DIM_BIG.H * bs + 12 + 'px'; });
 }
 $('#specSize').oninput = e => { specScale = +e.target.value; $('#specSizev').textContent = specScale + '×'; sizeSpec(); };
-$('#specReplay').onclick = () => specPills.forEach(p => p.pv.reset());
+$('#specReplay').onclick = () => specPills.concat(bigPills).forEach(p => p.pv.reset());
 function tickSpec() {
   const th = thm();
   specPills.forEach(({ pv, s, mini }) => {
     pv.frame(clock + 50000, s.face, s.pull || 0, th, specScale, s.force);   // a steady clock for the always-on motion; the entrance uses it too
   });
+  bigPills.forEach(({ pv, s }) => pv.frame(clock + 50000, s.face, s.pull || 0, th, specScale / 2, s.force));
 }
 
 /* ---------- the spec table ---------- */
 $('#specTable').innerHTML = `<tr><th>What</th><th>Value</th><th>Why</th></tr>` + [
   ['Size', 'Height 40 dp. Starts as a 40 dp circle. 22 dp icon in a 40 dp slot. 18 dp end padding after the words. 1 dp border (outline variant), 6 dp shadow.', 'The circle is Clive’s round button; the pill is that button, widened.'],
+  ['Large version', '120 dp tall (3 \u00d7 40) and 464 dp wide (120 dp circle + 344 dp body, about 2 \u00d7 the widest pill). Circle first, then widens 400 ms (closes 280 ms). Mark and icons 3 \u00d7 (66 dp), cloud orb 96 dp, same drift and colours. Body: title 22 dp / 600, two lines at 13.5 dp, then a 5 dp progress bar or a Try now button.', 'For the website dashboard. Everything else (entrance, exit, pull, timings, colours) is the same as the pill.'],
+  ['Large: what it says', 'Connecting: host, attempt, next try. Updating: items in, of the total. Pull: when it was last updated. Up to date: item count, time, Home Assistant version and latency. No connection: when the line was last up, countdown to the next try, Try now. Restarting: when Home Assistant said so, how long ago, items back.', 'The app has no room for these lines; the website has.'],
   ['Position', '8 dp below the top of the page’s content (under the title bar). Centred.', 'Same place in every app; on the website, under the page header.'],
   ['Enter', 'Fade 200 ms, scale from 0.4 over 300 ms (centre), slide down one pill height on a spring (stiffness 400, no bounce).', 'It arrives as the circle.'],
   ['Widen', 'Waits 380 ms as a circle, then widens 320 ms (standard easing); words fade in 320 ms after an 80 ms delay.', 'A pull skips the wait: stays a circle until "Release".'],
