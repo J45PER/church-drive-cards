@@ -82,8 +82,8 @@ object ManagerSections {
     /** Sections left out of Clive Admin on purpose (decided with Jamie): People stays on the website, and Locations and Icons are not needed in the app for now. */
     private val LEFT_OUT = setOf(
         "custom:zone-map-card", "custom:icon-styles-card", "custom:people-manager-card",
-        // Camera links and Alarm lights are on the Manager website and in Home Assistant only, not in the apps.
-        "custom:camera-links-card", "custom:alarm-lights-card",
+        // Alarm lights are on the Manager website and in Home Assistant only, not in the apps.
+        "custom:alarm-lights-card",
     )
 
     /** The sections Clive Admin lists: all but those left out on purpose. */
@@ -94,9 +94,10 @@ object ManagerSections {
         "custom:device-health-card" to "health",
         "custom:watch-settings-card" to "watch",
         "custom:notifications-card" to "notifications",
+        "custom:camera-links-card" to "cameras",
     )
 
-    /** Which side-panel page (`health`, `watch` or `notifications`) a section lives on, or null when it is on the Manager page. */
+    /** Which side-panel page (`health`, `watch`, `notifications` or `cameras`) a section lives on, or null when it is on the Manager page. */
     fun ownPage(section: ManagerSection): String? = section.cards.firstNotNullOfOrNull { OWN_PAGE[it.type] }
 
     /** The sections on the Manager page: all of them but those with a page of their own. */

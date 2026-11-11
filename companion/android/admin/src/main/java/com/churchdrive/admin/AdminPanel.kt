@@ -97,8 +97,8 @@ fun AdminPanel(panel: String?, onPanel: (String?) -> Unit, vm: AdminModel) {
                             PanelTitle("Colour palettes", { onPanel("account") })
                             ColoursPage()
                         }
-                        "watch", "notifications" -> PageColumn {
-                            PanelTitle(if (which == "watch") "Watch" else "Notifications", { onPanel("account") })
+                        "watch", "notifications", "cameras" -> PageColumn {
+                            PanelTitle(when (which) { "watch" -> "Watch"; "cameras" -> "Camera links"; else -> "Notifications" }, { onPanel("account") })
                             val section = ManagerSections.forPage(vm.managerSections, which)
                             if (section == null) com.churchdrive.app.ui.LoadingNote("Loading this page from Home Assistant…")
                             else ManagerSectionContent(section, vm.entities, vm.registry, vm.call)
@@ -187,6 +187,10 @@ private fun AccountPage(vm: AdminModel, onClose: () -> Unit, onOpen: (String) ->
             if (ManagerSections.forPage(vm.managerSections, "notifications") != null) PanelRow(
                 CdVectors.Info, "Notifications", "Who gets each alert and house job, and when a house job is made",
                 onClick = { onOpen("notifications") }, leading = { com.churchdrive.app.ui.HaIcon("mdi:bell-ring-outline", CdVectors.Info, MaterialTheme.colorScheme.onSurfaceVariant, 24.dp) },
+            )
+            if (ManagerSections.forPage(vm.managerSections, "cameras") != null) PanelRow(
+                CdVectors.Info, "Camera links", "Where each camera's links go, by alarm mode",
+                onClick = { onOpen("cameras") }, leading = { com.churchdrive.app.ui.HaIcon("mdi:link-variant", CdVectors.Info, MaterialTheme.colorScheme.onSurfaceVariant, 24.dp) },
             )
             if (ManagerSections.forPage(vm.managerSections, "watch") != null) PanelRow(
                 CdVectors.Info, "Watch", "Pages and items on the watch",

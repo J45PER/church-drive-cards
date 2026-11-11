@@ -52,10 +52,11 @@ class ManagerSectionsTest {
             section("Automatic to-dos", "todo-list"),
         )
         assertEquals(listOf("Who's home", "Automatic to-dos"), ManagerSections.forManagerPage(all).map { it.title })
+        assertEquals("Camera links", ManagerSections.forPage(all, "cameras")?.title)
         assertEquals("Watch", ManagerSections.forPage(all, "watch")?.title)
         assertEquals("Notifications", ManagerSections.forPage(all, "notifications")?.title)
         assertEquals("Device Health", ManagerSections.forPage(all, "health")?.title)
-        assertFalse(ManagerSections.forAdmin(all).any { it.title == "Alarm lights" || it.title == "Camera links" })
+        assertFalse(ManagerSections.forAdmin(all).any { it.title == "Alarm lights" })
     }
 
     @Test fun aHeadingAboveAnEntitiesListBecomesItsTitle() {

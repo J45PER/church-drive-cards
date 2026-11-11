@@ -4,7 +4,7 @@
 
 - Manager is now a page on the bottom bar, in place of Health. It shows every section in a panel that folds away, with its lists folding inside (To-do settings, Who's home, Automatic to-dos).
 - Device health, Notifications and Watch moved to the side panel, each as its own page (the Home page's Device health card opens it).
-- Alarm lights and Camera links are no longer in the app: they stay on the Manager website and in Home Assistant.
+- Camera links is its own page in the side panel. Alarm lights is not in the app: it stays on the Manager website and in Home Assistant.
 - "When to make a house job" and other settings numbers now say what they count: 30 %, 24 hours, 60 mins.
 - The automatic to-dos ("From the house") are sorted: safety alarms, devices not responding, batteries, the vacuum, filters and parts, then updates.
 
