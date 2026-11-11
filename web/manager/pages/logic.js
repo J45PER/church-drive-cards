@@ -172,3 +172,21 @@ export function activityProblem(code) {
   return code === 'unknown_command' ? "Home Assistant is running an older Church Drive that doesn't have the activity log yet. Update Church Drive in HACS, then restart Home Assistant."
     : code === 'unauthorized' ? 'Only administrators can see the activity log.' : "The activity log couldn't be read from the house. Check the connection, or that Church Drive is running in Home Assistant.";
 }
+
+// ---- Palette editing ----
+
+const lum = (hex) => { const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+/** WCAG contrast ratio of two #rrggbb colours. */
+export function contrast(a, b) { const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x); return (hi + 0.05) / (lo + 0.05); }
+export const HEX = /^#[0-9a-f]{6}$/i;
+export const PALETTE_PARTS = ['Colour', 'Dark', 'Accent', 'Light', 'Deep'];
+/** What is wrong with a palette's five colours (the same checks the house runs): empty when it is fine. */
+export function paletteWarnings(colours) {
+  const out = [];
+  if (!Array.isArray(colours) || colours.length !== 5 || !colours.every((c) => HEX.test(c))) return ['Every colour needs to be a full #rrggbb value.'];
+  const ratio = contrast('#FFFFFF', colours[1]);
+  if (ratio < 4.5) out.push(`White text on the Dark colour is hard to read (contrast ${ratio.toFixed(1)}, wants 4.5).`);
+  if (new Set(colours.map((c) => c.toLowerCase())).size < 5) out.push('Two of the five colours are the same.');
+  return out;
+}
+export const slugOk = (key) => /^[a-z][a-z0-9_]{0,39}$/.test(key);

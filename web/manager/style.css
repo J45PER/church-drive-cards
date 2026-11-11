@@ -121,3 +121,18 @@ details summary { cursor: pointer; color: var(--soft); font-size: .9rem; }
 .card.plain .row { display: flex; align-items: center; gap: 10px; }
 a.btn { display: inline-block; text-decoration: none; margin-top: 8px; }
 .field[aria-invalid="true"] { border-color: var(--danger); }
+
+/* The palette editor. */
+.editor { display: grid; gap: 10px; margin-top: 12px; padding: 14px; border-radius: 18px; background: color-mix(in srgb, #000 28%, transparent); color: #fff; }
+.editor .field { color: var(--ink); margin-top: 4px; }
+.editor .sub { color: color-mix(in srgb, #fff 80%, transparent); }
+.parts { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.part { display: grid; justify-items: center; gap: 4px; font-size: .75rem; }
+.part input[type=color] { width: 100%; height: 40px; border: 0; padding: 0; background: none; border-radius: 10px; cursor: pointer; }
+.part code { font-family: var(--mono); font-size: .62rem; opacity: .85; }
+.preview { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-radius: 20px; }
+.preview i { width: 22px; height: 22px; border-radius: 50%; border: 1px solid rgba(255,255,255,.35); }
+.preview b { flex: 1; font-weight: 500; }
+.warn { margin: 0; color: #FFD9A0; font-size: .85rem; min-height: 1.2em; }
+.editor .note { color: #fff; }
+.editor .btn.quiet { color: #fff; background: rgba(255,255,255,.18); }

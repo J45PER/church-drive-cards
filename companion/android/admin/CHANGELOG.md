@@ -1,5 +1,10 @@
 # Clive Admin: changelog
 
+## 0.133.0
+
+- The Energy page is the same as the Church Drive app's: the header lines (cheap or peak now, live use, today so far), then Octopus Electricity, Octopus Gas, Last 7 days, Car charging and Octoplus in that order, each with its icon, colour and summary, read from the house's dashboard.
+- The Octopus Energy logo shows beside Octopus Electricity and Octopus Gas.
+
 ## 0.132.0
 
 - The bottom bar is now Home, Health, Energy and Activity, so Device health and Energy are one tap away; Home keeps a card for each.

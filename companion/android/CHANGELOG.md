@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.133.0
+
+- The Octopus Energy logo shows beside Octopus Electricity and Octopus Gas on the Energy page (it was blank).
+- The Energy page no longer has a separate Cheap rate card: the same information is on the Octopus Electricity card.
+
 ## 0.132.0
 
 - No change to this app (Device health gains a tab version in shared code, used by Clive Admin).

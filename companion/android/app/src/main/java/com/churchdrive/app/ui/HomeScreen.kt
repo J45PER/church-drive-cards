@@ -417,62 +417,6 @@ private fun HomePage(
     }
 }
 
-/**
- * A titled group of cards, like the dashboard's section panel: a coloured icon, the title,
- * a live summary on the right, and a chevron when tapping the header opens the section's page.
- */
-@Composable
-fun SectionPanel(
-    title: String,
-    icon: ImageVector? = null,
-    iconName: String? = null,
-    tone: Tone = Tone.Grey,
-    summary: String? = null,
-    onClick: (() -> Unit)? = null,
-    /** Draws the header's icon itself (Gregg's status), in place of [iconName] and [icon]. */
-    iconSlot: (@Composable (ToneColors) -> Unit)? = null,
-    /** Tapping the heading folds the panel away and back (remembered for the title while the app is open). */
-    collapsible: Boolean = false,
-    content: @Composable () -> Unit,
-) {
-    val colors = toneColors(tone)
-    var open by androidx.compose.runtime.saveable.rememberSaveable(title) { mutableStateOf(true) }
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .let { if (onClick != null) it.clickable(onClick = onClick) else if (collapsible) it.clickable(onClickLabel = if (open) "Collapse $title" else "Expand $title") { open = !open } else it }
-                .padding(horizontal = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            if (iconSlot != null) iconSlot(colors)
-            else if (iconName == GREGG_IDLE_ICON) GreggIcon(GreggState.Idle, colors.accent, 36.dp)
-            else if (iconName != null) ToneIconName(iconName, icon ?: CdVectors.ShieldOutline, colors, size = 36)
-            else if (icon != null) ToneIcon(icon, colors, size = 36)
-            Text(
-                title,
-                style = MaterialTheme.typography.titleLarge,
-                // A section's title sits on the page background, not on a card, so it takes the section's colour.
-                color = colors.accent,
-                modifier = Modifier.weight(1f),
-            )
-            if (!summary.isNullOrBlank()) {
-                StatusPill(summary, colors)
-            }
-            if (onClick != null) {
-                Icon(CdVectors.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            } else if (collapsible) {
-                Icon(if (open) CdVectors.ChevronUp else CdVectors.ChevronDown, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-        // Folding minimises the cards (each shrinks to a short strip) rather than hiding them.
-        androidx.compose.runtime.CompositionLocalProvider(LocalCompactCards provides (collapsible && !open)) {
-            Column(Modifier.animateContentSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) { content() }
-        }
-    }
-}
-
 @Composable
 fun NotBuiltCard() {
     Card(

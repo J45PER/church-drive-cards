@@ -134,6 +134,8 @@ object CdIcons {
 
     /** Names the dashboards already use for Gregg's parts, and Home Assistant's houses, drawn with the house's own icons instead. */
     fun alias(icon: String?): String? = CdCommon.alias(icon) ?: when (icon) {
+        // Octopus Energy's logo is one of our own (OwnLogos); the dashboards call it by its Hue-pack name.
+        "phu:octopusenergy" -> "ol:octopusenergy"
         "phu:vac_mbrush" -> "cd:roller"
         "phu:vac_sbrush" -> "cd:side"
         // Home Assistant's houses: the house's own house instead (solid for home, outlined for out and away). home-outline is the plain house (CdCommon).

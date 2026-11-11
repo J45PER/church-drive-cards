@@ -62,6 +62,7 @@ import com.churchdrive.app.ui.ToneCard
 import com.churchdrive.app.ui.ToneCardShape
 import com.churchdrive.app.ui.ToneSectionHeader
 import com.churchdrive.app.ui.glowBehind
+import com.churchdrive.app.ui.toneFromColour
 import org.json.JSONObject
 
 /**
@@ -81,7 +82,9 @@ fun AdminApp(vm: AdminModel) {
             ) { _, delta -> swiped += delta }
         },
     ) {
-        androidx.compose.runtime.CompositionLocalProvider(LocalHaApi provides vm.api, com.churchdrive.app.ui.LocalBaseUrl provides vm.baseUrl) {
+        androidx.compose.runtime.CompositionLocalProvider(LocalHaApi provides vm.api, com.churchdrive.app.ui.LocalBaseUrl provides vm.baseUrl,
+            com.churchdrive.app.ui.LocalTemplates provides vm.templates, com.churchdrive.app.ui.LocalUserName provides vm.personName,
+            com.churchdrive.app.ui.LocalIsAdmin provides vm.isAdmin, com.churchdrive.app.ui.LocalAreaNames provides vm.areaNames) {
             AdminPages(vm) { panel = "account" }
         }
         AdminPanel(panel, { panel = it }, vm)
@@ -145,7 +148,7 @@ private fun AdminPages(vm: AdminModel, onPerson: () -> Unit) {
                     Tone.Red, "Administrators only",
                     "${vm.personName ?: "This account"} is not an administrator in Home Assistant, so Clive Admin has nothing to show. Sign in with an administrator's login.",
                 )
-                tab == ENERGY -> EnergyPage(vm.entities)
+                tab == ENERGY -> EnergyPage(vm)
                 tab == ACTIVITY -> ActivityPage()
                 else -> HomePage(vm, open = { tab = it })
             }
@@ -155,11 +158,50 @@ private fun AdminPages(vm: AdminModel, onPerson: () -> Unit) {
 }
 
 /**
- * Energy (the same Octopus cards as the phone app's Energy page, each in the colour of its kind): electricity with today's rates, the last
- * seven days, gas and Octoplus points.
+ * Energy, as the house's dashboard lays it out and as the Church Drive app shows it: the header lines, then each panel in order (Octopus
+ * Electricity, Gas, Last 7 days, Car charging, Octoplus, and whatever the dashboard has), each with its own icon, colour and summary.
+ * If the dashboard cannot be read, the Octopus cards alone.
  */
 @Composable
-private fun EnergyPage(entities: Map<String, EntityState>) {
+private fun EnergyPage(vm: AdminModel) {
+    val panels = vm.energyPanels
+    if (panels == null) {
+        EnergyFallback(vm.entities)
+        return
+    }
+    vm.energyHeader?.let { com.churchdrive.app.ui.HeaderLines(it) }
+    panels.forEach { panel -> EnergyPanelView(panel, vm) }
+}
+
+@Composable
+private fun EnergyPanelView(panel: ManagerSection, vm: AdminModel) {
+    val tone = toneFromColour(panel.color) ?: Tone.Grey
+    com.churchdrive.app.ui.SectionPanel(
+        panel.title, iconName = panel.icon, tone = tone,
+        summary = com.churchdrive.app.ui.rememberTemplate(panel.summary),
+    ) {
+        androidx.compose.runtime.CompositionLocalProvider(LocalPanelTone provides tone) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                panel.cards.forEach { EnergyCardView(it, vm) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EnergyCardView(card: ManagerCard, vm: AdminModel) {
+    when (card.type.removeSuffix("-beta")) {
+        "custom:octopus-card" -> OctopusCard(card.config, vm.entities)
+        "custom:car-card" -> com.churchdrive.app.ui.CarCard(card.config, vm.entities, vm.registry, vm.call)
+        "custom:ev-charger-card" -> com.churchdrive.app.ui.ChargerCard(vm.entities, vm.call)
+        "custom:octopus-plan-card" -> com.churchdrive.app.ui.OctopusPlanCard(vm.entities)
+        else -> Unit
+    }
+}
+
+/** The Octopus cards on their own, for when the dashboard cannot be read. */
+@Composable
+private fun EnergyFallback(entities: Map<String, EntityState>) {
     @Composable
     fun Block(title: String, icon: ImageVector, tone: Tone, show: String) {
         androidx.compose.runtime.CompositionLocalProvider(LocalPanelTone provides tone) {
@@ -169,10 +211,9 @@ private fun EnergyPage(entities: Map<String, EntityState>) {
             }
         }
     }
-    Block("Electricity", CdVectors.Bolt, Tone.Energy, "")
-    Block("Cheap times today", CdVectors.Bolt, Tone.Energy, "cheap")
+    Block("Octopus Electricity", CdVectors.Bolt, Tone.Energy, "electricity")
+    Block("Octopus Gas", CdVectors.Bolt, Tone.Gas, "gas")
     Block("Last 7 days", CdVectors.History, Tone.Energy, "week")
-    Block("Gas", CdVectors.Bolt, Tone.Gas, "gas")
     Block("Octoplus", CdVectors.Bolt, Tone.Energy, "octoplus")
 }
 

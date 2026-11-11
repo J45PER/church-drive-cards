@@ -72,31 +72,6 @@ fun IconRow(items: List<IconItem>, tone: ToneColors, content: Color, enabled: Bo
     }
 }
 
-/**
- * The icons the cards use for modes, in one place. The defaults below are the dashboard's own; [overrides] (keyed
- * `group.key`, such as `fan.sleep`) take over when Home Assistant supplies icons, so the app follows the dashboard.
- */
-object IconMap {
-    val overrides = mutableStateMapOf<String, String>()
-
-    fun of(group: String, key: String, default: String): String = overrides["$group.${key.lowercase()}"] ?: default
-
-    /** Takes Home Assistant's list (`church_drive/icons`: group, then mode, then icon). Without the integration, nothing changes. */
-    fun load(result: Any?) {
-        val icons = (result as? org.json.JSONObject)?.optJSONObject("icons") ?: return
-        val next = mutableMapOf<String, String>()
-        for (group in icons.keys()) {
-            val modes = icons.optJSONObject(group) ?: continue
-            for (key in modes.keys()) {
-                val icon = if (modes.isNull(key)) null else modes.optString(key).takeIf { it.isNotBlank() }
-                if (icon != null) next["$group.${key.lowercase()}"] = icon
-            }
-        }
-        overrides.clear()
-        overrides.putAll(next)
-    }
-}
-
 private val FAN_PRESET_ICONS = mapOf(
     "natural" to "mdi:weather-windy", "nature" to "mdi:weather-windy", "breeze" to "mdi:weather-windy",
     "sleep" to "mdi:power-sleep", "auto" to "mdi:fan-auto", "smart" to "mdi:fan-auto",
@@ -165,14 +140,3 @@ fun quickSettingIcon(q: QuickSetting): String = when {
     else -> "mdi:tune-variant"
 }
 
-/** One of the Zappi's modes: what it's called in Home Assistant, what the button says, and its icon. */
-data class ChargerMode(val key: String, val name: String, val icon: String)
-
-/** The Zappi's modes in the dashboard's order (Stop, Eco, Eco+, Fast), those the charger offers. */
-fun chargerModes(options: List<String>): List<ChargerMode> =
-    listOf(
-        ChargerMode("Stopped", "Stop", IconMap.of("charger", "Stopped", "mdi:stop-circle-outline")),
-        ChargerMode("Eco", "Eco", IconMap.of("charger", "Eco", "mdi:leaf")),
-        ChargerMode("Eco+", "Eco+", IconMap.of("charger", "Eco+", "mdi:solar-power")),
-        ChargerMode("Fast", "Fast", IconMap.of("charger", "Fast", "mdi:lightning-bolt")),
-    ).filter { options.isEmpty() || it.key in options }

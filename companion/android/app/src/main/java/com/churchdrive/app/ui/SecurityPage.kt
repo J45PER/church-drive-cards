@@ -26,27 +26,6 @@ import com.churchdrive.app.ha.Templates
 import com.churchdrive.app.ha.data
 import org.json.JSONObject
 
-/** Whether the signed-in person is an administrator: who's home is for them only. */
-val LocalIsAdmin = compositionLocalOf { false }
-
-/** The app's template watcher, set once in MainActivity. */
-val LocalTemplates = compositionLocalOf<Templates?> { null }
-
-/** HA's rendering of a template (kept up to date), or null until it arrives or if there's no template. */
-@Composable
-fun rememberTemplate(template: String?): String? {
-    val templates = LocalTemplates.current ?: return null
-    if (template.isNullOrBlank()) return null
-    // Templates may use the signed-in person's `my_list` and `my_name`, as the dashboard's do.
-    val me = LocalUserName.current
-    val full = if (Regex("\\bmy_(list|name)\\b").containsMatchIn(template)) {
-        "{% set my_name = '${me?.trim()?.substringBefore(' ').orEmpty().replace("'", "")}' %}" +
-            "{% set my_list = '${myTodoList(me).orEmpty()}' %}" + template
-    } else template
-    LaunchedEffect(full) { templates.watch(full) }
-    return templates.value(full)
-}
-
 /** What the page shows if the dashboard can't be read: the alarm, as on the dashboard's Security page. */
 val FALLBACK_SECURITY = listOf(
     PanelSpec(

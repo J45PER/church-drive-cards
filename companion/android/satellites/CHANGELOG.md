@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.133.0
+
+- No change (shared code gained the Energy page's cards and the Octopus logo, used by the phone app and Clive Admin).
+
 ## 0.132.0
 
 - No change (shared code gained a tab version of Device health, used by Clive Admin).

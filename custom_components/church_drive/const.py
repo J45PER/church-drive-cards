@@ -52,6 +52,15 @@ WS_COLOURS = "church_drive/colours"
 WS_COLOURS_SET = "church_drive/colours/set"
 EVENT_COLOURS = "church_drive_colours_changed"
 
+# The Manager website's proposals and version history (proposals.py): administrators only. Claude applies or declines through the services.
+WS_MANAGER_WHOAMI = "church_drive/manager/whoami"
+WS_MANAGER_PROPOSE = "church_drive/manager/propose"
+WS_MANAGER_PROPOSALS = "church_drive/manager/proposals"
+WS_MANAGER_RESOLVE = "church_drive/manager/resolve"
+WS_MANAGER_VERSIONS = "church_drive/manager/versions"
+SERVICE_APPLY_PROPOSAL = "apply_proposal"
+SERVICE_DECLINE_PROPOSAL = "decline_proposal"
+
 # The watch companion's pages and items (watch.py): read by the watch app, set in the Manager dashboard's Watch panel.
 WS_WATCH = "church_drive/watch"
 WS_WATCH_SET = "church_drive/watch/set"

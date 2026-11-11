@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.133.0
+
+- No change (shared code gained the Energy page's cards and the Octopus logo, used by the phone app and Clive Admin).
+
 ## 0.132.0
 
 - No change (shared code gained a tab version of Device health, used by Clive Admin).

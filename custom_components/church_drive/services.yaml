@@ -23,6 +23,24 @@ apply_scene:
             - Relax
             - Rest
             - Nightlight
+apply_proposal:
+  fields:
+    id:
+      required: true
+      example: 1a2b3c4d5e
+      selector:
+        text:
+decline_proposal:
+  fields:
+    id:
+      required: true
+      example: 1a2b3c4d5e
+      selector:
+        text:
+    reason:
+      example: The text on it would be too faint to read
+      selector:
+        text:
 set_palette:
   fields:
     key:

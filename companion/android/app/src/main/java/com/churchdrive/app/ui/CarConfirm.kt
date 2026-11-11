@@ -22,16 +22,7 @@ import org.json.JSONObject
 // Octopus schedules it. Additional (shown as Astra GSe) is any other car: it charges in the cheap window only. The same question comes as a notification
 // with VW ID5, Astra GSe and No buttons; this is the Home page's copy of it, and the charger card has the same choice to change it.
 
-const val ZAPPI_CONFIRMED = "input_boolean.zappi_car_confirmed"
-const val ZAPPI_CAR_ROLE = "input_select.zappi_car_role"
-const val CAR_YES_SCRIPT = "script.zappi_car_yes"
 const val CAR_NO_SCRIPT = "script.zappi_car_no"
-const val CAR_ROLE_PRIMARY = "Primary"
-const val CAR_ROLE_ADDITIONAL = "Additional"
-// What people see for each role (the stored role names stay Primary and Additional).
-const val CAR_NAME_PRIMARY = "VW ID5"
-const val CAR_NAME_ADDITIONAL = "Astra GSe"
-
 /**
  * Whether to ask: a car is plugged in, nobody has answered for it, and smart charge is waiting on it. Never while it is already
  * charging (a car someone started on purpose carries on), and not after No (smart charge then says Manual).
@@ -43,32 +34,12 @@ fun carNeedsConfirm(entities: Map<String, EntityState>): Boolean {
     return entities[SMART_STATE]?.takeIf { it.available }?.state == "Waiting"
 }
 
-/** Which car is on the charger: its role (Primary, Additional or Unknown) and whether somebody has confirmed it. */
-data class CarRoleChoice(val role: String, val confirmed: Boolean)
-
-/** The charger card's "Car plugged in" choice: only while a car is plugged in, and only when the house has the role helper. */
-fun carRoleChoice(entities: Map<String, EntityState>): CarRoleChoice? {
-    val role = entities[ZAPPI_CAR_ROLE]?.takeIf { it.available } ?: return null
-    if (!chargerOverrides(entities).show) return null
-    val confirmed = entities[ZAPPI_CONFIRMED]?.takeIf { it.available }?.state != "off"
-    return CarRoleChoice(role.state, confirmed)
-}
-
 /** What the role means, under the choice (the same words as the dashboard's charger card). */
 fun carRoleText(c: CarRoleChoice): String = when {
     c.role == CAR_ROLE_PRIMARY -> "VW ID5: also charges when Octopus schedules it"
     c.role == CAR_ROLE_ADDITIONAL -> "Astra GSe: charges 23:30 to 05:30 only"
     c.confirmed -> "Not set: charges 23:30 to 05:30 only"
     else -> "Not answered yet, so it will not charge"
-}
-
-/**
- * Choose which car is plugged in. A car nobody has answered for is confirmed by the choice (the Yes script, with the role); one that is
- * already confirmed only changes its role, so a charge somebody took over by hand carries on.
- */
-fun chooseCarRole(call: CallService, role: String, confirmed: Boolean) {
-    if (confirmed) call("input_select", "select_option", ZAPPI_CAR_ROLE, data("option" to role))
-    else call("script", "turn_on", CAR_YES_SCRIPT, data("variables" to JSONObject().put("role", role)))
 }
 
 /** The card on the Home page, above the panels and below the to-do highlights: nothing at all when there is nothing to ask. */
