@@ -5,6 +5,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
@@ -38,6 +39,28 @@ class HaClient(private val scope: CoroutineScope) {
     private val _userName = MutableStateFlow<String?>(null)
     val userName: StateFlow<String?> = _userName
     private val _refreshing = MutableStateFlow(false)
+    private val _restarting = MutableStateFlow(false)
+
+    /**
+     * True when Home Assistant has said it is restarting (it closed the line itself, or reported it is not running yet) and its
+     * states have not all come back. It clears itself when they do, and after five minutes in case they never do.
+     */
+    val restarting: StateFlow<Boolean> = _restarting
+
+    /** Everything the status pill is drawn from, in one value. */
+    val link: StateFlow<LinkStatus> = kotlinx.coroutines.flow.combine(_connection, _statesLoaded, _refreshing, _restarting) { c, s, r, x ->
+        LinkStatus(c, s, r, x)
+    }.stateIn(scope, kotlinx.coroutines.flow.SharingStarted.Eagerly, LinkStatus())
+
+    private fun noteRestarting() {
+        if (_restarting.value) return
+        _restarting.value = true
+        scope.launch {
+            delay(300_000L)
+            _restarting.value = false
+        }
+    }
+
     /** True while [refreshUser] waits for an answer (the app checking its line after being away). */
     val refreshing: StateFlow<Boolean> = _refreshing
 
@@ -137,6 +160,7 @@ class HaClient(private val scope: CoroutineScope) {
         _userName.value = null
         _isAdmin.value = false
         _statesLoaded.value = false
+        _restarting.value = false
     }
 
     /**
@@ -179,6 +203,25 @@ class HaClient(private val scope: CoroutineScope) {
                 _isAdmin.value = me.optBoolean("is_admin", false)
             }
             onResult(me != null)
+        }
+    }
+
+    /**
+     * Pull down to refresh: asks for every state again (which also proves the line is alive).
+     * [onDone] is false when nothing answered, so the caller should connect afresh.
+     */
+    fun refreshStates(onDone: (Boolean) -> Unit = {}) {
+        if (light) { refreshUser(onDone); return }
+        if (!authed) { onDone(false); return }
+        _refreshing.value = true
+        request("get_states", timeoutMs = 8_000L) { result ->
+            _refreshing.value = false
+            val states = result as? JSONArray
+            if (states != null) {
+                _entities.value = parseStates(states)
+                _statesLoaded.value = true
+            }
+            onDone(states != null)
         }
     }
 
@@ -290,9 +333,16 @@ class HaClient(private val scope: CoroutineScope) {
                         getStatesId -> {
                             _entities.value = parseStates(msg.getJSONArray("result"))
                             _statesLoaded.value = true
+                            _restarting.value = false
                             noteColours(_entities.value[COLOURS_ENTITY]?.state)
                         }
-                        configId -> com.churchdrive.app.ui.HomeTime.zoneId = msg.optJSONObject("result")?.optString("time_zone")?.takeIf { it.isNotBlank() }
+                        configId -> {
+                            val config = msg.optJSONObject("result")
+                            com.churchdrive.app.ui.HomeTime.zoneId = config?.optString("time_zone")?.takeIf { it.isNotBlank() }
+                            // Still starting up (its integrations are loading): the states that arrive now are not the whole house yet.
+                            val running = config?.optString("state", "RUNNING") ?: "RUNNING"
+                            if (running != "RUNNING") noteRestarting()
+                        }
                         userId -> {
                             val me = msg.optJSONObject("result")
                             me?.optString("name")?.takeIf { it.isNotBlank() }?.let { _userName.value = it }
@@ -310,6 +360,12 @@ class HaClient(private val scope: CoroutineScope) {
                     if (subscriber != null) subscriber(msg.getJSONObject("event")) else applyEvent(msg.getJSONObject("event"))
                 }
             }
+        }
+
+        override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+            // 1001 "going away" is what Home Assistant sends when it shuts down; 1012 and 1013 are a restart and "try again later".
+            if (authed && (code == 1001 || code == 1012 || code == 1013)) noteRestarting()
+            webSocket.close(code, null)
         }
 
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {

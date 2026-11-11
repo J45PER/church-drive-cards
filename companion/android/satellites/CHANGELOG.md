@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.135.0
+
+- Satellites has the same status pill as the Church Drive app at the top of the page: "Connecting", "Updating", "No connection" (tap to try again) and "Home Assistant restarting". Pull down on any page to refresh the connection. The pill at the top of the page shows it: "Pull to refresh", "Release to refresh", "Updating" and then "Up to date". 
+
 ## 0.134.0
 
 - No change (this release adds the cards, icons and layouts editors to the Manager website and Home Assistant).

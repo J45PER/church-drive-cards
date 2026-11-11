@@ -40,6 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -133,9 +134,12 @@ private fun ListPage(vm: SatelliteModel, onPerson: () -> Unit) {
             }
         },
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
+        val link by vm.link.collectAsState()
+        com.churchdrive.app.ui.LinkRefresh(link, vm::refresh, Modifier.fillMaxSize().padding(padding)) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
             com.churchdrive.app.ui.UpdateNotice(BuildConfig.PLAY, vm.updateAvailable, com.churchdrive.app.UpdateCheck.SATELLITES_APK_URL, "Church Drive Satellites")
             if (tab == 0) SatelliteList(vm) else AddPage(vm)
+        }
         }
     }
 }
@@ -306,7 +310,9 @@ private fun DetailPage(vm: SatelliteModel, sat: Satellite, onPerson: () -> Unit)
             )
         },
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
+        val link by vm.link.collectAsState()
+        com.churchdrive.app.ui.LinkRefresh(link, vm::refresh, Modifier.fillMaxSize().padding(padding)) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
             if (!sat.online) ToneCard(Tone.Amber) { ink, soft ->
                 Text("Offline", style = MaterialTheme.typography.titleMedium, color = ink)
                 Text("Home Assistant can't reach this satellite, so changes will wait until it is back.", style = MaterialTheme.typography.bodyMedium, color = soft)
@@ -325,6 +331,7 @@ private fun DetailPage(vm: SatelliteModel, sat: Satellite, onPerson: () -> Unit)
             UpdateSection(vm, sat)
             NameRoomSection(vm, sat)
             ActionsSection(vm, sat)
+        }
         }
     }
 }

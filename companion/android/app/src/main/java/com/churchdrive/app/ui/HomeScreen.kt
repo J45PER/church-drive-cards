@@ -78,6 +78,10 @@ fun HomeScreen(
     statesLoaded: Boolean,
     /** The app is checking its connection after being away: shows the same pill as syncing. */
     refreshing: Boolean = false,
+    /** Home Assistant has said it is restarting and its items are not all back yet: the pill says so. */
+    restarting: Boolean = false,
+    /** Pull down to refresh the connection. */
+    onRefresh: () -> Unit = {},
     updateAvailable: Boolean,
     account: AccountSettings,
     lights: LightLayout,
@@ -238,17 +242,20 @@ fun HomeScreen(
                 }
             }
         }
+        com.churchdrive.app.ui.LinkRefresh(
+            com.churchdrive.app.ha.LinkStatus(connection, statesLoaded, refreshing, restarting), onRefresh,
+            Modifier.weight(1f).fillMaxHeight(), assistPalette(),
+        ) {
         Column(
             modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight()
+                .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(28.dp),
         ) {
             UpdatePrompt(updateAvailable)
             PhoneSetupPrompt(account)
-            // Connecting and updating show as a pill at the top (LoadingPill), over what was remembered from last time.
+            // Connecting, updating, no connection and restarting show as a pill at the top (LinkRefresh), over what was remembered from last time.
             when (connection) {
                 ConnectionState.Connected -> Unit
                 ConnectionState.AuthFailed ->
@@ -289,11 +296,11 @@ fun HomeScreen(
             Spacer(Modifier.height(72.dp))
         }
         }
+        }
     }
     // Clive, over the page, and his round button over him: one button, the same one shut or open.
     AssistantOverlay(onSettings = { panel = "settings" })
     AssistantFab()
-    LoadingPill(visible = connection != ConnectionState.AuthFailed && (connection != ConnectionState.Connected || !statesLoaded || refreshing), connecting = connection != ConnectionState.Connected)
     if (openCamera != null && statesLoaded) CameraViewerFor(openCamera, entities, registry, call, onCameraClosed, answer = openCameraAnswer)
     AccountOverlay(
         panel, { panel = it }, userName, isAdmin, account, updateAvailable, onSignOut,

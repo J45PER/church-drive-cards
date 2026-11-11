@@ -32,6 +32,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val entities: StateFlow<Map<String, EntityState>> = client.entities
     val userName: StateFlow<String?> = client.userName
     val refreshing: StateFlow<Boolean> = client.refreshing
+    val restarting: StateFlow<Boolean> = client.restarting
+
+    /** Pull down to refresh: asks the house for everything again, or connects afresh when the line has gone quiet. */
+    fun refresh() {
+        if (!session.signedIn) return
+        if (client.connection.value != ConnectionState.Connected) {
+            startSession()
+        } else {
+            client.refreshStates { alive -> if (!alive && session.signedIn) startSession() }
+        }
+    }
     val isAdmin: StateFlow<Boolean> = client.isAdmin
     val statesLoaded: StateFlow<Boolean> = client.statesLoaded
 
