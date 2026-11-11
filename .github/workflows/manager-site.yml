@@ -1,0 +1,38 @@
+name: Clive Manager site
+
+# Publishes web/manager to Firebase Hosting (church-drive-smart-home.web.app) and the Firestore rules, whenever either changes on main.
+# Needs the repository secret FIREBASE_SERVICE_ACCOUNT (a service account with the Firebase Hosting Admin and Firebase Rules Admin roles);
+# without it the job still runs the site's checks and then stops without publishing.
+on:
+  push:
+    branches: [main]
+    paths: ["web/manager/**", "firebase.json", "firestore.rules", ".github/workflows/manager-site.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      HAS_FIREBASE: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: The site's checks
+        run: node --test test/manager-web.test.mjs
+      - name: Publish to Firebase
+        if: env.HAS_FIREBASE == 'true'
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          printf '%s' "$GOOGLE_APPLICATION_CREDENTIALS_JSON" > "$RUNNER_TEMP/firebase-key.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-key.json"
+          npx --yes firebase-tools@13.31.0 deploy --only hosting,firestore:rules --project church-drive-smart-home --non-interactive
+          rm -f "$RUNNER_TEMP/firebase-key.json"
+      - name: No key yet
+        if: env.HAS_FIREBASE != 'true'
+        run: echo "FIREBASE_SERVICE_ACCOUNT is not set, so nothing was published."
