@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.131.0
+
+- The launcher icon is a little smaller and centred on its visual weight, so it sits evenly beside the other Clive apps.
+
 ## 0.126.0
 
 - No change to this app: the layout fixes in the phone app are in the shared version.

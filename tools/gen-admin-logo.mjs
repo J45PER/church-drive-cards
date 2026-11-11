@@ -76,8 +76,9 @@ writeFileSync(RINGS, out);
 // The launcher icon: the final shapes (shield, then the two small squares, even-odd) in the 200 unit frame, scaled into the 108dp adaptive icon.
 const path = (a) => 'M' + a.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' L') + 'Z';
 const pathData = [shield, cutB, cutA].map(path).join(' ');
-const S = 0.405, T = 54 - 100 * S;
-const group = (inner) => `    <group android:scaleX="${S}" android:scaleY="${S}" android:translateX="${T.toFixed(3)}" android:translateY="${T.toFixed(3)}">\n${inner}    </group>\n`;
+// Optically sized and centred with the other launcher icons (the shield is solid, so it is smaller than its bounding box suggests); see CHANGELOG 0.131.0.
+const S = 0.31185, TX = 22.878, TY = 23.072;
+const group = (inner) => `    <group android:scaleX="${S}" android:scaleY="${S}" android:translateX="${TX.toFixed(3)}" android:translateY="${TY.toFixed(3)}">\n${inner}    </group>\n`;
 const glow = (cx, cy, r, c0, c1) => `            <aapt:attr name="android:fillColor">
                 <gradient android:type="radial" android:centerX="${cx}" android:centerY="${cy}" android:gradientRadius="${r}"><item android:offset="0" android:color="${c0}" /><item android:offset="1" android:color="${c1}" /></gradient>
             </aapt:attr>

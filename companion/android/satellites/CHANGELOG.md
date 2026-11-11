@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.131.0
+
+- The launcher icon is centred on its visual weight (the ripples had pulled it up and to the right) and sized to sit evenly beside the other Clive apps.
+
 ## 0.126.0
 
 - No change to this app: the layout fixes in the phone app are in the shared version.
