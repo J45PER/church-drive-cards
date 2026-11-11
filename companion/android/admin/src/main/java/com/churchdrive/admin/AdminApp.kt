@@ -96,6 +96,7 @@ private const val HOME = 0
 private const val HEALTH = 1
 private const val ENERGY = 2
 private const val ACTIVITY = 3
+private const val DEVICES = 4
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -108,7 +109,7 @@ private fun AdminPages(vm: AdminModel, onPerson: () -> Unit) {
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         topBar = {
             MediumTopAppBar(
-                title = { Text(when (tab) { HOME -> "Clive Admin"; HEALTH -> "Device health"; ENERGY -> "Energy"; else -> "Activity log" }) },
+                title = { Text(when (tab) { HOME -> "Clive Admin"; HEALTH -> "Device health"; ENERGY -> "Energy"; DEVICES -> "Devices"; else -> "Activity log" }) },
                 actions = { PersonButton(vm.personName, onPerson) },
                 scrollBehavior = scroll,
             )
@@ -126,6 +127,10 @@ private fun AdminPages(vm: AdminModel, onPerson: () -> Unit) {
                 NavigationBarItem(
                     selected = tab == ENERGY, onClick = { tab = ENERGY },
                     icon = { Icon(CdVectors.Bolt, null) }, label = { Text("Energy", fontSize = 11.sp) },
+                )
+                NavigationBarItem(
+                    selected = tab == DEVICES, onClick = { tab = DEVICES },
+                    icon = { Icon(CdVectors.DeviceServer, null) }, label = { Text("Devices", fontSize = 11.sp) },
                 )
                 NavigationBarItem(
                     selected = tab == ACTIVITY, onClick = { tab = ACTIVITY },
@@ -157,6 +162,7 @@ private fun AdminPages(vm: AdminModel, onPerson: () -> Unit) {
                     "${vm.personName ?: "This account"} is not an administrator in Home Assistant, so Clive Admin has nothing to show. Sign in with an administrator's login.",
                 )
                 tab == ENERGY -> EnergyPage(vm)
+                tab == DEVICES -> DevicesPage(vm)
                 tab == ACTIVITY -> ActivityPage()
                 else -> HomePage(vm, open = { tab = it })
             }
@@ -182,6 +188,17 @@ private fun EnergyPage(vm: AdminModel) {
     panels.forEach { panel -> EnergyPanelView(panel, vm) }
 }
 
+/** Devices, as the house's dashboard lays it out and as the Church Drive app shows it: the TVs and speakers, and the devices and services. */
+@Composable
+private fun DevicesPage(vm: AdminModel) {
+    val panels = vm.devicesPanels
+    if (panels == null) {
+        com.churchdrive.app.ui.LoadingNote("Loading this page from Home Assistant…")
+        return
+    }
+    panels.forEach { panel -> EnergyPanelView(panel, vm) }
+}
+
 @Composable
 private fun EnergyPanelView(panel: ManagerSection, vm: AdminModel) {
     val tone = toneFromColour(panel.color) ?: Tone.Grey
@@ -204,6 +221,8 @@ private fun EnergyCardView(card: ManagerCard, vm: AdminModel) {
         "custom:car-card" -> com.churchdrive.app.ui.CarCard(card.config, vm.entities, vm.registry, vm.call)
         "custom:ev-charger-card" -> com.churchdrive.app.ui.ChargerCard(vm.entities, vm.call)
         "custom:octopus-plan-card" -> com.churchdrive.app.ui.OctopusPlanCard(vm.entities)
+        "custom:media-card" -> com.churchdrive.app.ui.MediaCard(card.config, vm.entities, vm.registry, vm.call)
+        "custom:system-card" -> com.churchdrive.app.ui.SystemCard(vm.entities)
         else -> Unit
     }
 }
@@ -247,6 +266,11 @@ private fun HomePage(vm: AdminModel, open: (Int) -> Unit) {
     ToneCard(Tone.Energy, onClick = { open(ENERGY) }) { ink, soft ->
         Text("Electricity, gas and the last seven days", style = MaterialTheme.typography.titleMedium, color = ink)
         Text("Rates, what you've used so far and the cheap times.", style = MaterialTheme.typography.bodyMedium, color = soft)
+    }
+    ToneSectionHeader("Devices", CdVectors.DeviceServer, Tone.Media)
+    ToneCard(Tone.Media, onClick = { open(DEVICES) }) { ink, soft ->
+        Text("TVs, speakers, and how the house's systems are", style = MaterialTheme.typography.titleMedium, color = ink)
+        Text("Internet, remote access, backups and updates.", style = MaterialTheme.typography.bodyMedium, color = soft)
     }
     ToneSectionHeader("Activity log", CdVectors.History, Tone.Indigo)
     ToneCard(Tone.Indigo, onClick = { open(ACTIVITY) }) { ink, soft ->

@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.137.0
+
+- No change (shared code gained the TVs and speakers card, used by Clive Admin).
+
 ## 0.136.0
 
 - No change (shared code gained the Manager's Who's home, Watch settings and Device health cards, used by Clive Admin).

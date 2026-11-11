@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.137.0
+
+- No change you will notice (the TVs and speakers card moved to the shared module so Clive Admin can show it).
+
 ## 0.136.0
 
 - No change you will notice (the Who's home, Watch settings and Device health cards moved to the shared module so Clive Admin can show them).

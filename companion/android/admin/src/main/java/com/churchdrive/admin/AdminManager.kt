@@ -79,6 +79,12 @@ object ManagerSections {
     /** Whether Clive Admin can draw every card of [section] itself (the others are opened in the Church Drive app for now). */
     fun builtHere(section: ManagerSection): Boolean = section.cards.all { it.type in BUILT }
 
+    /** Sections left out of Clive Admin on purpose (decided with Jamie): People stays on the website, and Locations and Icons are not needed in the app for now. */
+    private val LEFT_OUT = setOf("custom:zone-map-card", "custom:icon-styles-card", "custom:people-manager-card")
+
+    /** The sections Clive Admin lists: all but those left out on purpose. */
+    fun forAdmin(sections: List<ManagerSection>): List<ManagerSection> = sections.filter { s -> s.cards.isEmpty() || s.cards.any { it.type !in LEFT_OUT } }
+
     /** The card types Clive Admin draws itself. */
     val BUILT = setOf(
         "custom:notifications-card", "custom:zone-map-card", "custom:camera-links-card", "custom:icon-styles-card",

@@ -1,5 +1,10 @@
 # Clive Admin: changelog
 
+## 0.137.0
+
+- Devices: a new page on the bottom bar (and a card on Home) with the TVs and speakers (power, play and pause, volume, the remote) and how the house's systems are (internet, remote access, backups, updates), as in the Church Drive app.
+- The Manager no longer lists People, Locations or Icons: People stays on the Manager website, and Locations and Icons are not needed in the app for now.
+
 ## 0.136.0
 
 - Manager: Who's home, Watch settings and the Device health list are in Clive Admin now. The sections it still cannot draw (People, Alarm lights, the automatic to-dos) say they are on the Manager website and tapping opens it.

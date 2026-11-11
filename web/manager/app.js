@@ -7,6 +7,7 @@ import { renderChanges } from './pages/changes.js';
 import { readVersions, summary as versionSummary } from './pages/versions.js';
 import { openPaletteEditor } from './pages/palette-editor.js';
 import { renderCards, renderIcons, renderLayouts } from './pages/design.js';
+import { renderDevices } from './pages/devices.js';
 import { renderManager, renderManagerSection } from './pages/manager.js';
 import { LOGO_PATH, LOGO_VIEWBOX } from './logo.js';
 import { PALETTE_PARTS, paletteWarnings, slugOk, ACTIONS, BAD, DAYS, OK, TIMES, WARN, activityNote, activityProblem, activityQuery, activityWho, actionLabel, ago, buildRegistry, clock, dayLabel, deviceHealthList, energySnapshot, healthSummary, parseActivity } from './pages/logic.js';
@@ -46,6 +47,7 @@ const PAGES = [
   { id: 'changes', title: 'Changes', label: 'Changes', icon: 'cd:checklist', render: (el, c) => renderChanges(el, c, { glowStyle }) },
   { id: 'manager', title: 'Manager', label: 'Manager', icon: 'cd:sliders', render: (el, c, arg) => (arg ? renderManagerSection(el, c, { glowStyle, go }, decodeURIComponent(arg)) : renderManager(el, c, { glowStyle, go })) },
   { id: 'health', title: 'Device health', label: 'Health', icon: 'cd:device-health', render: renderHealth },
+  { id: 'devices', title: 'Devices', label: 'Devices', icon: 'cd:television-play', render: renderDevices },
   { id: 'energy', title: 'Energy', label: 'Energy', icon: 'cd:bolt', render: renderEnergy },
   { id: 'activity', title: 'Activity log', label: 'Activity', icon: 'cd:history', render: renderActivity },
 ];
@@ -57,6 +59,7 @@ function renderHome(el, ctx) {
       <p class="sub">The five colours of each palette, the ones changed from the shipped set marked. Changes are sent for Clive to check, then applied everywhere.</p></button></section>
     <section class="stack" style="gap:12px"><div class="head"><h2>The house</h2></div><div class="grid">
       <button class="card" type="button" data-go="health" style="${glowStyle('#1F5C3A')}"><p class="title">Device health</p><p class="sub">Batteries, filters and devices that stop responding</p></button>
+      <button class="card" type="button" data-go="devices" style="${glowStyle('#3F2A6B')}"><p class="title">Devices</p><p class="sub">TVs, speakers, and how the house's systems are</p></button>
       <button class="card" type="button" data-go="energy" style="${glowStyle('#6A4B12')}"><p class="title">Energy</p><p class="sub">Octopus rates, cheap times, today and yesterday</p></button>
       <button class="card" type="button" data-go="activity" style="${glowStyle('#1E4A6B')}"><p class="title">Activity log</p><p class="sub">What people and the assistant did, and when</p></button></div></section>
     <section class="stack" style="gap:12px" id="versions"><div class="head"><h2>Versions</h2><button class="btn quiet" type="button" id="versions-refresh">Check again</button></div>
