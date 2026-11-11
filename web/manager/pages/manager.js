@@ -1,24 +1,12 @@
 // The Manager on the site: the sections of the house's Manager dashboard (People, Notifications, Camera links...), built on the integration's
 // `church_drive/*` commands the apps use. Home Assistant checks every change is by an administrator.
+import { alarmLights, watchSettings } from './alarm-watch.js';
 import { canTick, kindGoesTo, kindGroups, linksOf, modeLabel, name, presenceWord, presetLabel, triggerChoices, validIconName, zoneRows } from './manager-logic.js';
 
-/** A small element builder, so text from the house is never put into the page as HTML. */
-export function h(tag, attrs = {}, ...kids) {
-  const e = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs || {})) {
-    if (v == null || v === false) continue;
-    if (k === 'class') e.className = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'style') e.setAttribute('style', v); else e.setAttribute(k, v === true ? '' : v);
-  }
-  for (const kid of kids.flat(Infinity)) if (kid != null && kid !== false) e.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
-  return e;
-}
+import { chips, h, soft } from './dom.js';
+export { chips, h };
 
-/** A row of choices: [label, on, onClick, disabled]. */
-export const chips = (items, cls = '') => h('div', { class: `chips ${cls}` }, items.map(([label, on, click, off]) =>
-  h('button', { type: 'button', class: 'chip', 'aria-pressed': String(!!on), disabled: off, onclick: click }, label)));
-const soft = (t) => h('p', { class: 'sub' }, t);
-
-export const BUILT = new Set(['custom:notifications-card', 'custom:people-manager-card', 'custom:people-card', 'custom:zone-map-card', 'custom:camera-links-card',
+export const BUILT = new Set(['custom:alarm-lights-card', 'custom:watch-settings-card', 'custom:notifications-card', 'custom:people-manager-card', 'custom:people-card', 'custom:zone-map-card', 'custom:camera-links-card',
   'custom:icon-styles-card', 'entities', 'heading', 'markdown', 'custom:device-health-card']);
 
 /** The sections of the Manager dashboard: every Section Panel, with its cards (a stack's cards taken out of it). */
@@ -202,6 +190,9 @@ const CARDS = {
       return h('div', { class: 'row setting' }, h('span', { style: 'flex:1' }, label), control);
     })));
   },
+
+  'custom:alarm-lights-card': alarmLights,
+  'custom:watch-settings-card': watchSettings,
 
   heading: async (slot, ctx, card) => { slot.replaceChildren(h('h3', { class: 'head-sub' }, card.heading || card.title || '')); },
   markdown: async (slot, ctx, card) => { slot.replaceChildren(h('p', { class: 'note' }, String(card.content || '').replace(/\*\*|__|`/g, ''))); },
