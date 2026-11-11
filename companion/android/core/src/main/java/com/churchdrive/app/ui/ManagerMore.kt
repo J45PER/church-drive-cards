@@ -42,6 +42,16 @@ import com.churchdrive.app.ha.text
 import org.json.JSONArray
 import org.json.JSONObject
 
+val WHITE = arrayOf("bright", "dimmed", "relax", "nightlight")
+
+val SCENE_NAMES = mapOf(
+    "bright" to "Bright", "dimmed" to "Dimmed", "relax" to "Relax", "nightlight" to "Nightlight",
+    "cool_bright" to "Cool bright", "energise" to "Energise", "cyber_fidelity" to "Cyber fidelity",
+    "lake_placid" to "Lake Placid", "emerald_isle" to "Emerald isle", "soho" to "Soho",
+    "phantom" to "Phantom", "city_blue" to "City Blue", "dreamy_dusk" to "Dreamy dusk",
+    "spellbound" to "Spellbound",
+)
+
 val CLIVE_FLAGS = listOf("voice" to "Spoken answers", "follow" to "Follow-up listening", "visual" to "Visual answers", "buzz" to "Buzz on answer")
 
 val LIGHTS_TOP = listOf("floors" to "Floors", "rooms" to "Rooms", "zones" to "Zones")
@@ -676,16 +686,6 @@ data class LightScene(val key: String, val target: String, val label: String? = 
     /** The scene select entity Church Drive keeps for a Hue room or zone, e.g. select.kitchen_scene. */
     val selectEntity: String get() = "select.${target.removePrefix("light.")}_scene"
 }
-
-val SCENE_NAMES = mapOf(
-    "bright" to "Bright", "dimmed" to "Dimmed", "relax" to "Relax", "nightlight" to "Nightlight",
-    "cool_bright" to "Cool bright", "energise" to "Energise", "cyber_fidelity" to "Cyber fidelity",
-    "lake_placid" to "Lake Placid", "emerald_isle" to "Emerald isle", "soho" to "Soho",
-    "phantom" to "Phantom", "city_blue" to "City Blue", "dreamy_dusk" to "Dreamy dusk",
-    "spellbound" to "Spellbound",
-)
-
-val WHITE = arrayOf("bright", "dimmed", "relax", "nightlight")
 
 fun room(title: String, head: String, rowIds: List<String>, scenes: List<LightScene>) =
     LightRoom(title, null, head, rowIds.map { LightRowSpec(it) }, scenes)
