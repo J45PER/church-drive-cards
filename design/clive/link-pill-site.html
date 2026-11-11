@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Status Pill In The Header</title>
+<title>Status Capsule In The Header</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
 :root { --s-bg:#F3F5F9; --s-bar:#E7EAF0; --s-card:#FFFFFF; --s-ink:#14181F; --s-soft:#5B6472; --s-line:#DDE1E8; --s-primary:#5B54C9;
@@ -22,59 +22,47 @@ button { font:inherit; color:inherit; }
 .btn { border:1px solid var(--line); background:var(--panel); color:var(--fg); padding:7px 15px; border-radius:999px; cursor:pointer; font-size:.88rem; }
 .seg { display:inline-flex; border-radius:999px; overflow:hidden; border:1px solid var(--line); } .seg button { border:0; background:var(--panel); padding:7px 14px; cursor:pointer; font-size:.86rem; } .seg button + button { border-left:1px solid var(--line); }
 .seg button[aria-pressed="true"] { background:var(--fg); color:var(--bg); }
-:is(.btn,.seq,.seg button,input):focus-visible { outline:2px solid var(--acc); outline-offset:2px; }
+:is(.btn,.seq,.seg button,input,.mgr,.usr):focus-visible { outline:2px solid var(--acc); outline-offset:2px; }
 .opt { background:var(--panel); border-radius:22px; padding:18px; display:grid; gap:12px; min-width:0; }
 .row2 { display:flex; flex-wrap:wrap; gap:18px; align-items:flex-start; }
 .col.d { flex:1 1 640px; min-width:0; } .col.p { flex:0 0 360px; max-width:100%; }
-.hwrap { position:relative; border:1px solid var(--s-line); border-radius:16px; overflow:hidden; background:var(--s-bg); color:var(--s-ink); }
+.hwrap { position:relative; border:1px solid var(--s-line); border-radius:16px; background:var(--s-bg); color:var(--s-ink); }
 .hwrap.narrow { max-width:360px; }
-.hdr { background:var(--s-bar); border-bottom:1px solid var(--s-line); position:relative; z-index:5; }
-.site-in { display:flex; align-items:center; gap:14px; padding:10px 16px; }
-.brand { display:flex; align-items:center; gap:10px; color:var(--s-ink); font-size:1.2rem; letter-spacing:-.01em; margin-right:8px; text-decoration:none; }
-.brand b { font-weight:700; background:linear-gradient(100deg,#6A5BC2,#AB47BC 55%,#4FD08A); -webkit-background-clip:text; background-clip:text; color:transparent; } .brand-text { font-weight:500; white-space:nowrap; overflow:hidden; display:inline-block; }
-.hwrap.narrow .site-in { gap:8px; } .hwrap.narrow .brand { margin-right:0; min-width:0; }
+.hdr { background:var(--s-bar); border-bottom:1px solid var(--s-line); position:relative; z-index:5; border-radius:16px 16px 0 0; }
+.site-in { display:flex; align-items:center; gap:14px; padding:8px 16px; min-height:64px; }
+.hwrap.narrow .site-in { gap:8px; }
+.brand { flex:0 1 auto; min-width:0; overflow:hidden; color:var(--s-ink); font-size:1.2rem; letter-spacing:-.01em; text-decoration:none; margin-right:8px; }
+.hwrap.narrow .brand { flex:1 1 0; margin-right:0; }
+.brand b { font-weight:700; background:linear-gradient(100deg,#6A5BC2,#AB47BC 55%,#4FD08A); -webkit-background-clip:text; background-clip:text; color:transparent; } .brand-text { font-weight:500; white-space:nowrap; }
 .topnav { display:flex; align-items:center; gap:2px; flex:1; min-width:0; overflow:hidden; -webkit-mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent); mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent); } .hwrap.narrow .topnav { display:none; }
 .topnav a { padding:8px 12px; border-radius:999px; color:var(--s-soft); font-size:.95rem; font-weight:500; white-space:nowrap; }
 .topnav a.on { color:var(--s-ink); background:color-mix(in srgb, var(--s-primary) 24%, transparent); }
-.hwrap.narrow .site-in .pslot { margin-left:auto; }
-.pslot { position:relative; width:0; height:40px; flex:none; margin-right:-4px; }
-.pslot { margin-left:-4px; }
-.menu-wrap { position:relative; z-index:6; } .hwrap:not(.narrow) .menu-wrap { margin-left:0; }
-.person { width:40px; height:40px; border-radius:50%; border:0; background:color-mix(in srgb, var(--s-primary) 28%, var(--s-bar)); color:var(--s-ink); font-size:1rem; font-weight:600; cursor:pointer; position:relative; z-index:6; }
-.burger { display:none; place-items:center; width:40px; height:40px; border:0; background:none; color:var(--s-ink); } .hwrap.narrow .burger { display:grid; }
-.menu { position:absolute; right:0; top:48px; min-width:200px; padding:14px; border-radius:20px; background:var(--s-card); box-shadow:0 8px 30px rgba(0,0,0,.25); display:grid; gap:6px; z-index:30; } .menu[hidden] { display:none; }
+.burger { display:none; place-items:center; width:40px; height:40px; border:0; background:none; color:var(--s-ink); flex:none; } .hwrap.narrow .burger { display:grid; }
+.capslot { flex:none; position:relative; z-index:6; }
+.cap { position:relative; display:flex; align-items:center; height:48px; padding:3px; border:1px solid; border-radius:24px; }
+.capcloud { position:absolute; inset:0; width:100%; height:100%; border-radius:24px; pointer-events:none; }
+.mgr, .usr { position:relative; z-index:1; width:40px; height:40px; border-radius:50%; border:0; flex:none; cursor:pointer; display:grid; place-items:center; padding:0; }
+.usr { background:color-mix(in srgb, var(--s-primary) 28%, var(--s-bar)); color:var(--s-ink); font-size:1rem; font-weight:600; }
+.mgr { background:transparent; } .mgr:hover { background:color-mix(in srgb, var(--s-primary) 14%, transparent); }
+.mgr .shield { grid-area:1/1; width:30px; height:30px; transition:opacity .2s; }
+.mgr .ring { position:absolute; inset:0; width:40px; height:40px; pointer-events:none; }
+.mgr .badge { position:absolute; right:-2px; bottom:-2px; width:18px; height:18px; border-radius:50%; display:grid; place-items:center; opacity:0; border:2px solid var(--s-card); }
+.mgr .badge svg { width:11px; height:11px; }
+.info { position:relative; z-index:1; flex:none; overflow:hidden; height:42px; display:flex; align-items:center; }
+.info .in { padding:0 12px; white-space:nowrap; display:flex; flex-direction:column; justify-content:center; }
+.info .t { font-weight:500; font-size:14px; line-height:20px; letter-spacing:.1px; }
+.info .d { display:none; font-size:12px; line-height:15px; opacity:.8; }
+.v3 .info .t { font-weight:600; line-height:17px; } .v3 .info .d { display:block; }
+.pbar { display:none; position:absolute; left:12px; right:12px; bottom:2px; height:3px; border-radius:2px; overflow:hidden; background:rgba(128,128,128,.18); } .pbar i { display:block; height:100%; border-radius:2px; }
+.menu { position:absolute; right:0; top:56px; min-width:200px; padding:14px; border-radius:20px; background:var(--s-card); color:var(--s-ink); box-shadow:0 8px 30px rgba(0,0,0,.25); display:grid; gap:6px; z-index:30; } .menu[hidden] { display:none; }
 .menu-name { margin:0; font-size:1.05rem; font-weight:500; } .menu .sub { margin:0 0 4px; color:var(--s-soft); font-size:.85rem; }
 .mrow { display:flex; align-items:center; gap:10px; border:0; background:none; padding:9px 8px; border-radius:12px; cursor:pointer; text-align:left; } .mrow:hover { background:color-mix(in srgb, var(--s-primary) 14%, transparent); }
-.sample { padding:16px; display:grid; grid-template-columns:repeat(2,1fr); gap:12px; min-height:215px; align-content:start; } .sample h3 { grid-column:1/-1; margin:0; font-size:1.5rem; font-weight:500; letter-spacing:-.02em; }
+.sample { padding:16px; display:grid; grid-template-columns:repeat(2,1fr); gap:12px; min-height:150px; align-content:start; } .sample h3 { grid-column:1/-1; margin:0; font-size:1.5rem; font-weight:500; letter-spacing:-.02em; }
 .sc { height:70px; border-radius:22px; background:color-mix(in srgb, var(--s-primary) 16%, var(--s-card)); }
-.dcard { position:absolute; right:16px; top:62px; width:min(320px, calc(100% - 32px)); padding:14px 16px; border-radius:22px; border:1px solid; box-shadow:0 8px 24px rgba(0,0,0,.22); z-index:4; opacity:0; transform:translateY(-8px) scale(.98); pointer-events:none; transition:opacity .22s, transform .28s cubic-bezier(.2,.8,.2,1); transform-origin:top right; }
-.dcard.open { opacity:1; transform:none; pointer-events:auto; }
-.dt { font-size:1.15rem; font-weight:600; letter-spacing:-.01em; } .da, .db { font-size:.88rem; opacity:.85; } .db { opacity:.7; }
-.dbar { height:5px; border-radius:99px; overflow:hidden; margin-top:8px; } .dbar i { display:block; height:100%; border-radius:99px; }
-.dtry { margin-top:8px; background:transparent; border:1px solid; border-radius:99px; padding:4px 14px; font-weight:500; cursor:pointer; }
-/* The pill. */
-.pv { position:absolute; left:50%; top:0; overflow:hidden; display:flex; align-items:center; will-change:transform; }
-.pv .ring { position:absolute; inset:0; border-radius:999px; pointer-events:none; box-sizing:border-box; }
-.pv canvas { position:absolute; inset:0; width:100%; height:100%; }
-.pv .slot { position:relative; flex:none; display:grid; place-items:center; }
-.pv .slot > div, .pv .lbl > span { grid-area:1/1; }
-.pv .lbl { position:relative; overflow:hidden; display:grid; white-space:nowrap; font-weight:500; flex:none; }
-.pv .lbl span { white-space:nowrap; }
-.pv.big .lbl { display:block; }
-.pv .bg { position:absolute; left:0; top:0; height:100%; flex-direction:column; justify-content:center; }
-.pv .bt { font-weight:600; letter-spacing:-.01em; white-space:nowrap; }
-.pv .ba { font-weight:400; opacity:.88; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.pv .bb { opacity:.72; }
-.pv .track { border-radius:99px; overflow:hidden; } .pv .track i { display:block; height:100%; border-radius:99px; }
-.pv .try { display:none; align-self:flex-start; background:transparent; border-radius:99px; font:inherit; font-weight:500; cursor:pointer; }
-.ic { display:grid; place-items:center; } .ic svg { grid-area:1/1; overflow:visible; }
-
-.pvr { left:auto; right:0; }
-
 </style></head><body>
 <main>
- <header><h1>Status pill in the header</h1>
- <p class="lede">For the Manager website: no pull down. The pill lives in the navigation bar, to the left of the user button, and is a button you press. Three ways to do it, each at desktop and phone width, all driven by the same real animation and the same connection. Press the circles, use the menu in B, or pick a situation.</p></header>
+ <header><h1>Status capsule in the header</h1>
+ <p class="lede">For the Manager website. The Manager icon (the house shield, not Clive’s own logo) and your user icon sit together in one capsule at the right of the navigation bar. Press the Manager icon to refresh and the capsule widens to show the info; it folds back by itself. No pull down. Three ways to lay it out, each at desktop and phone width, all driven by the same real animation and connection.</p></header>
  <div><div class="label">Situation (all three react together)</div><div class="bar2" id="seqs"></div></div>
  <div class="bar2"><button class="btn" id="play">Pause</button><button class="btn" id="replay">Replay</button>
    <label style="display:flex;gap:8px;align-items:center;font-size:.86rem">Speed <input id="speed" type="range" min="0.1" max="3" step="0.1" value="1"><output id="speedv" style="font-family:var(--mono);font-size:.76rem;color:var(--soft)">1×</output></label>
@@ -351,7 +339,7 @@ class PillView {
     el.boxShadow = `0 ${dp * 3}px ${dp * 7}px rgba(0,0,0,${th.dark ? 0.5 : 0.22}), 0 0 ${dp * 2}px rgba(0,0,0,${th.dark ? 0.4 : 0.16})`;
     if (this.opts.right) {
       // anchored at its right edge beside the user button and growing leftwards; with `tuck` it slides out sideways from behind the button (and back in)
-      const tuck = this.opts.tuck || 0, x = tuck ? -slide * tuck / D.H : 0, y = tuck ? 0 : slide;
+      const tuck = this.opts.tuck || 0, x = tuck ? -slide * (D.H + tuck) / D.H : 0, y = tuck ? 0 : slide;
       el.transformOrigin = `${(widthDp - D.H / 2) * dp}px 50%`;
       el.transform = `translate(${x * dp}px, ${y * dp}px) scale(${sc})`;
     } else el.transform = `translate(-50%, ${(slide + pullShift) * dp}px) scale(${sc})`;
@@ -496,8 +484,8 @@ const SEQS = [
 ];
 
 
-const CD_PATHS_SAFE = CD_PATHS;
-/* ====================== the mock-up: the pill in the site's header ====================== */
+const LOGO_PATH = 'M44.6,49.1 L47.1,48.0 L49.6,46.9 L52.1,45.8 L54.6,44.7 L57.1,43.7 L59.6,42.6 L62.1,41.5 L64.6,40.4 L67.1,39.3 L69.6,38.2 L72.1,37.1 L74.6,36.0 L77.1,34.9 L79.6,33.9 L82.1,32.8 L84.6,31.7 L87.1,30.6 L89.6,29.5 L92.1,28.4 L94.6,27.3 L97.2,26.4 L99.9,26.0 L102.6,26.3 L105.2,27.2 L107.7,28.3 L110.2,29.4 L112.7,30.5 L115.2,31.6 L117.7,32.7 L120.2,33.8 L122.7,34.9 L125.2,35.9 L127.7,37.0 L130.2,38.1 L132.7,39.2 L135.2,40.3 L137.7,41.4 L140.2,42.5 L142.7,43.6 L145.2,44.7 L147.7,45.7 L150.2,46.8 L152.7,47.9 L155.2,49.0 L157.5,50.5 L159.6,52.3 L160.9,54.6 L161.8,57.2 L162.0,59.9 L162.0,62.6 L162.0,65.4 L162.0,68.1 L162.0,70.8 L162.0,73.6 L162.0,76.3 L162.0,79.0 L162.0,81.7 L161.9,84.5 L161.9,87.2 L161.9,89.9 L161.9,92.7 L161.9,95.4 L161.9,98.1 L161.9,100.8 L161.9,103.6 L161.7,106.3 L161.5,109.0 L161.0,111.7 L160.6,114.4 L160.1,117.1 L159.4,119.7 L158.6,122.3 L157.7,124.9 L156.8,127.5 L155.7,130.0 L154.6,132.5 L153.4,134.9 L152.0,137.3 L150.5,139.6 L149.0,141.8 L147.3,144.0 L145.7,146.1 L143.9,148.2 L142.0,150.2 L140.1,152.1 L138.1,154.0 L136.1,155.8 L134.0,157.5 L131.8,159.2 L129.6,160.8 L127.4,162.4 L125.0,163.8 L122.7,165.2 L120.4,166.6 L117.9,167.9 L115.5,169.0 L113.0,170.1 L110.5,171.2 L108.0,172.3 L105.4,173.2 L102.8,174.0 L100.1,174.4 L97.4,174.0 L94.8,173.3 L92.3,172.3 L89.7,171.3 L87.2,170.3 L84.7,169.1 L82.3,167.9 L79.9,166.6 L77.5,165.3 L75.1,163.9 L72.8,162.4 L70.6,160.9 L68.3,159.4 L66.2,157.7 L64.1,156.0 L62.1,154.1 L60.1,152.3 L58.1,150.4 L56.2,148.4 L54.5,146.3 L52.8,144.1 L51.1,142.0 L49.6,139.7 L48.1,137.5 L46.7,135.1 L45.5,132.7 L44.3,130.2 L43.3,127.7 L42.4,125.1 L41.4,122.5 L40.7,119.9 L40.0,117.3 L39.4,114.6 L38.9,111.9 L38.5,109.2 L38.3,106.5 L38.1,103.8 L38.0,101.1 L38.0,98.3 L38.0,95.6 L38.0,92.9 L38.0,90.2 L38.0,87.4 L38.0,84.7 L38.0,82.0 L38.0,79.2 L38.1,76.5 L38.1,73.8 L38.1,71.1 L38.1,68.3 L38.1,65.6 L38.1,62.9 L38.1,60.1 L38.3,57.4 L39.0,54.8 L40.4,52.5 L42.3,50.6Z M102.0,63.4 L102.9,63.4 L103.9,63.4 L104.8,63.4 L105.8,63.4 L106.7,63.4 L107.7,63.4 L108.6,63.4 L109.5,63.4 L110.5,63.4 L111.5,63.4 L112.4,63.4 L113.3,63.5 L114.3,63.7 L115.2,63.8 L116.1,64.0 L117.0,64.3 L117.9,64.6 L118.8,64.9 L119.7,65.3 L120.5,65.8 L121.3,66.3 L122.1,66.8 L122.9,67.4 L123.6,68.0 L124.2,68.6 L124.9,69.4 L125.5,70.1 L126.1,70.8 L126.6,71.6 L127.1,72.4 L127.6,73.2 L128.0,74.1 L128.4,74.9 L128.7,75.8 L129.0,76.7 L129.2,77.6 L129.3,78.6 L129.5,79.6 L129.5,80.5 L129.6,81.4 L129.6,82.4 L129.6,83.3 L129.6,84.2 L129.6,85.2 L129.6,86.2 L129.6,87.1 L129.6,88.0 L129.6,89.0 L129.6,89.9 L129.6,90.9 L129.6,91.9 L129.5,92.8 L129.3,93.7 L129.2,94.6 L129.0,95.6 L128.7,96.5 L128.4,97.4 L128.1,98.2 L127.7,99.1 L127.2,100.0 L126.7,100.7 L126.2,101.5 L125.6,102.3 L125.0,103.0 L124.4,103.7 L123.6,104.3 L122.9,104.9 L122.2,105.5 L121.4,106.1 L120.6,106.6 L119.8,107.0 L118.9,107.5 L118.1,107.8 L117.2,108.1 L116.3,108.4 L115.4,108.6 L114.4,108.8 L113.4,108.9 L112.5,109.0 L111.6,109.0 L110.6,109.0 L109.7,109.0 L108.8,109.0 L107.8,109.0 L106.8,109.0 L105.9,109.0 L105.0,109.0 L104.0,109.0 L103.1,109.0 L102.1,109.0 L101.1,109.0 L100.2,108.9 L99.3,108.8 L98.4,108.7 L97.4,108.4 L96.5,108.2 L95.6,107.9 L94.8,107.5 L93.9,107.1 L93.0,106.7 L92.3,106.1 L91.5,105.6 L90.7,105.1 L90.0,104.5 L89.3,103.8 L88.7,103.1 L88.1,102.4 L87.5,101.6 L86.9,100.9 L86.4,100.1 L86.0,99.2 L85.5,98.3 L85.2,97.5 L84.9,96.6 L84.6,95.7 L84.4,94.8 L84.2,93.8 L84.1,92.9 L84.0,92.0 L84.0,91.0 L84.0,90.1 L84.0,89.1 L84.0,88.2 L84.0,87.2 L84.0,86.3 L84.0,85.3 L84.0,84.4 L84.0,83.5 L84.0,82.5 L84.0,81.5 L84.0,80.6 L84.1,79.7 L84.2,78.7 L84.3,77.8 L84.6,76.9 L84.8,76.0 L85.1,75.1 L85.5,74.2 L85.9,73.3 L86.3,72.5 L86.9,71.7 L87.4,70.9 L87.9,70.1 L88.5,69.4 L89.2,68.8 L89.9,68.1 L90.6,67.5 L91.4,66.9 L92.1,66.4 L92.9,65.9 L93.8,65.4 L94.7,65.0 L95.5,64.6 L96.4,64.3 L97.3,64.0 L98.2,63.8 L99.2,63.7 L100.1,63.5 L101.0,63.5Z M88.4,77.0 L89.4,77.0 L90.3,77.0 L91.2,77.0 L92.2,77.0 L93.2,77.0 L94.1,77.0 L95.0,77.0 L96.0,77.0 L96.9,77.0 L97.9,77.0 L98.9,77.0 L99.8,77.1 L100.7,77.2 L101.6,77.3 L102.6,77.6 L103.5,77.8 L104.4,78.1 L105.2,78.5 L106.1,78.9 L107.0,79.3 L107.7,79.9 L108.5,80.4 L109.3,80.9 L110.0,81.5 L110.7,82.2 L111.3,82.9 L111.9,83.6 L112.5,84.4 L113.1,85.1 L113.6,85.9 L114.0,86.8 L114.5,87.7 L114.8,88.5 L115.1,89.4 L115.4,90.3 L115.6,91.2 L115.8,92.2 L115.9,93.1 L116.0,94.0 L116.0,95.0 L116.0,95.9 L116.0,96.9 L116.0,97.8 L116.0,98.8 L116.0,99.7 L116.0,100.7 L116.0,101.6 L116.0,102.5 L116.0,103.5 L116.0,104.5 L116.0,105.4 L115.9,106.3 L115.8,107.3 L115.7,108.2 L115.4,109.1 L115.2,110.0 L114.9,110.9 L114.5,111.8 L114.1,112.7 L113.7,113.5 L113.1,114.3 L112.6,115.1 L112.1,115.9 L111.5,116.6 L110.8,117.2 L110.1,117.9 L109.4,118.5 L108.6,119.1 L107.9,119.6 L107.1,120.1 L106.2,120.6 L105.3,121.0 L104.5,121.4 L103.6,121.7 L102.7,122.0 L101.8,122.2 L100.8,122.3 L99.9,122.5 L99.0,122.5 L98.0,122.6 L97.1,122.6 L96.1,122.6 L95.2,122.6 L94.2,122.6 L93.3,122.6 L92.3,122.6 L91.4,122.6 L90.5,122.6 L89.5,122.6 L88.5,122.6 L87.6,122.6 L86.7,122.5 L85.7,122.3 L84.8,122.2 L83.9,122.0 L83.0,121.7 L82.1,121.4 L81.2,121.1 L80.3,120.7 L79.5,120.2 L78.7,119.7 L77.9,119.2 L77.1,118.6 L76.4,118.0 L75.8,117.4 L75.1,116.6 L74.5,115.9 L73.9,115.2 L73.4,114.4 L72.9,113.6 L72.4,112.8 L72.0,111.9 L71.6,111.1 L71.3,110.2 L71.0,109.3 L70.8,108.4 L70.7,107.4 L70.5,106.4 L70.5,105.5 L70.4,104.6 L70.4,103.6 L70.4,102.7 L70.4,101.8 L70.4,100.8 L70.4,99.8 L70.4,98.9 L70.4,98.0 L70.4,97.0 L70.4,96.1 L70.4,95.1 L70.4,94.1 L70.5,93.2 L70.7,92.3 L70.8,91.4 L71.0,90.4 L71.3,89.5 L71.6,88.6 L71.9,87.8 L72.3,86.9 L72.8,86.0 L73.3,85.3 L73.8,84.5 L74.4,83.7 L75.0,83.0 L75.6,82.3 L76.4,81.7 L77.1,81.1 L77.8,80.5 L78.6,79.9 L79.4,79.4 L80.2,79.0 L81.1,78.5 L81.9,78.2 L82.8,77.9 L83.7,77.6 L84.6,77.4 L85.6,77.2 L86.6,77.1 L87.5,77.0Z', LOGO_VIEWBOX = '20 20 160 160';
+/* ====================== the mock-up: a capsule in the header holding the Manager icon and the user icon ====================== */
 const SITE = {
   light: { bg:'#F3F5F9', bar:'#E7EAF0', card:'#FFFFFF', ink:'#14181F', soft:'#5B6472', line:'#DDE1E8', primary:'#5B54C9' },
   dark:  { bg:'#0B0F11', bar:'#171B22', card:'#1B2027', ink:'#EEF1F5', soft:'#9AA4B2', line:'#262A31', primary:'#AEB6FF' },
@@ -509,7 +497,7 @@ let clock = 0, sceneStart = 0, evIdx = 0;
 
 function thm() {
   const t = theme(state.dark, 'classic'), n = SITE[state.dark ? 'dark' : 'light'];
-  t.normal.bg = hex(n.card); t.normal.ink = hex(n.ink); t.normal.line = hex(n.line);     // the pill is the card colour so it stands out from the bar
+  t.normal.bg = hex(n.card); t.normal.ink = hex(n.ink); t.normal.line = hex(n.line);
   return t;
 }
 function applySite() {
@@ -518,69 +506,157 @@ function applySite() {
   for (const k in n) r.style.setProperty('--s-' + k, n[k]);
 }
 
-/** What the card says (the site's own words: only what it knows). */
-function siteText(face, i) {
+/** One line for the one-line capsules, and a title with a detail line for the two-line one. Only what the site knows. */
+const ONE = { connecting: 'Connecting', updating: 'Updating', done: 'Up to date', noconn: 'No connection', restart: 'Home Assistant restarting' };
+const ONE_SHORT = { restart: 'Restarting' };
+function lines(face, i, short) {
   const retry = i.retryIn > 0 ? `${Math.ceil(i.retryIn / 1000)} s` : '';
   switch (face) {
-    case 'connecting': return { t: 'Connecting', a: `Reaching ${SITE_HOST}`, b: `Attempt ${Math.max(1, i.attempt)}${retry ? ` · next try in ${retry}` : ''}`, bar: true };
-    case 'updating': return { t: 'Updating', a: `Reloading ${PAGE}`, b: `Home Assistant ${HA_VER}`, bar: true };
-    case 'done': return { t: 'Up to date', a: `${PAGE} updated ${i.updatedLabel}`, b: `Home Assistant ${HA_VER} · ${LAT} ms` };
-    case 'noconn': return { t: 'No connection', a: `Can’t reach the house · last up at ${i.lostLabel}`, b: retry ? `Trying again in ${retry} · attempt ${Math.max(1, i.attempt)}` : `Trying again now · attempt ${Math.max(1, i.attempt)}`, btn: 'Try now' };
-    case 'restart': return { t: 'Home Assistant restarting', a: `Said it was restarting at ${i.restartLabel} · ${i.elapsed}`, b: i.connected ? `Loading ${PAGE}` : 'Waiting for it to come back', bar: true };
+    case 'connecting': return [short && ONE_SHORT.connecting || ONE.connecting, `Attempt ${Math.max(1, i.attempt)}${retry ? ` · next try in ${retry}` : ''}`];
+    case 'updating': return [ONE.updating, `Reloading ${PAGE}`];
+    case 'done': return [ONE.done, `${PAGE} updated ${i.updatedLabel}`];
+    case 'noconn': return [ONE.noconn, `Last up ${i.lostLabel}${retry ? ` · retry in ${retry}` : ' · retrying'}`];
+    case 'restart': return [short ? ONE_SHORT.restart : ONE.restart, `Said so at ${i.restartLabel} · ${i.elapsed}`];
   }
-  return null;
+  return ['', ''];
+}
+
+/** A colour that moves to a new colour over 300 ms. */
+class ColorAnim {
+  constructor(c) { this.from = c; this.to = c; this.t0 = 0; }
+  set(c, now) { if (c.join() === this.to.join()) return; this.from = this.get(now); this.to = c; this.t0 = now; }
+  get(now) { return mix(this.from, this.to, FOSE(clamp((now - this.t0) / 300, 0, 1))); }
+}
+
+const textCtx = document.createElement('canvas').getContext('2d');
+const tw = (s, font) => { textCtx.font = font; return textCtx.measureText(s).width; };
+const BRAND = { p: '#6A5BC2', a: '#AB47BC', b: '#4FD08A', c: '#5C6BC0' };
+const BADGE = { noconn: ['cd:wifi-off', '#D64550'], restart: ['cd:update-arrow', '#D9822B'], done: ['cd:check', '#2E9A55'] };
+
+let uid = 0;
+/** The capsule: [Manager icon] [info] [user icon]. variant 1: info between the two icons. 2: info first, icons together on the right. 3: two lines. */
+class CapsuleView {
+  constructor(host, o) {
+    this.o = o; const id = 'cap' + (uid++);
+    this.el = document.createElement('div'); this.el.className = 'cap v' + o.variant; host.appendChild(this.el);
+    this.cv = document.createElement('canvas'); this.cv.className = 'capcloud'; this.el.appendChild(this.cv); this.c2 = this.cv.getContext('2d');
+    this.mgr = document.createElement('button'); this.mgr.type = 'button'; this.mgr.className = 'mgr'; this.mgr.setAttribute('aria-label', 'Refresh Clive Manager');
+    this.mgr.innerHTML = `<svg class="shield" viewBox="${LOGO_VIEWBOX}" aria-hidden="true"><defs>
+      <radialGradient id="${id}p" gradientUnits="userSpaceOnUse" cx="150" cy="70" r="88"><stop offset="0" stop-color="${BRAND.a}"/><stop offset="1" stop-color="${BRAND.a}" stop-opacity="0"/></radialGradient>
+      <radialGradient id="${id}g" gradientUnits="userSpaceOnUse" cx="70" cy="170" r="110"><stop offset="0" stop-color="${BRAND.b}"/><stop offset="1" stop-color="${BRAND.b}" stop-opacity="0"/></radialGradient>
+      <radialGradient id="${id}i" gradientUnits="userSpaceOnUse" cx="40" cy="40" r="130"><stop offset="0" stop-color="${BRAND.c}"/><stop offset="1" stop-color="${BRAND.c}" stop-opacity="0"/></radialGradient></defs>
+      ${[BRAND.p, `url(#${id}p)`, `url(#${id}g)`, `url(#${id}i)`].map((f) => `<path fill="${f}" fill-rule="evenodd" d="${LOGO_PATH}"/>`).join('')}</svg>
+      <svg class="ring" viewBox="0 0 40 40" aria-hidden="true"><path fill="none" stroke-width="2.5" stroke-linecap="round"/></svg>
+      <span class="badge"><svg viewBox="0 0 200 200" fill="#fff" aria-hidden="true"><path fill-rule="evenodd" d=""/></svg></span>`;
+    this.info = document.createElement('div'); this.info.className = 'info';
+    this.info.innerHTML = '<div class="in"><div class="t"></div><div class="d"></div></div><div class="pbar"><i></i></div>';
+    this.usr = document.createElement('button'); this.usr.type = 'button'; this.usr.className = 'usr'; this.usr.textContent = 'J'; this.usr.setAttribute('aria-label', 'Account');
+    this.menu = document.createElement('div'); this.menu.className = 'menu'; this.menu.hidden = true;
+    this.menu.innerHTML = '<p class="menu-name">Jamie</p><p class="sub">Administrator</p><button class="mrow" type="button">Sign out</button>';
+    if (o.variant === 2) { this.el.append(this.info, this.mgr, this.usr); } else { this.el.append(this.mgr, this.info, this.usr); }
+    this.el.appendChild(this.menu);
+    this.A = { infoW: new Anim(0), infoA: new Anim(0), cloudA: new Anim(0.22), txt: new Anim(1), ringA: new Anim(0), badgeA: new Anim(0), done: new Anim(0) };
+    this.bg = new ColorAnim([255, 255, 255]); this.face = 'rest'; this.shown = 'rest'; this.tickT = 0; this.badge = ['cd:check', '#2E9A55'];
+    this.ringPath = this.mgr.querySelector('.ring path'); this.badgePath = this.mgr.querySelector('.badge path'); this.badgeEl = this.mgr.querySelector('.badge');
+    this.t = this.info.querySelector('.t'); this.d = this.info.querySelector('.d'); this.in = this.info.querySelector('.in'); this.pbar = this.info.querySelector('.pbar'); this.shield = this.mgr.querySelector('.shield');
+  }
+  frame(now, face, info, th) {
+    const A = this.A, o = this.o, exp = face !== 'rest';
+    if (face !== this.face) {
+      this.face = face;
+      if (face !== 'rest') { this.shown = face; A.txt.jump(0); A.txt.set(1, { dur: 180 }, now); if (BADGE[face]) { this.badge = BADGE[face]; this.badgePath.setAttribute('d', CD_PATHS[this.badge[0]]); this.badgeEl.style.background = this.badge[1]; A.badgeA.jump(0); } }
+      if (face === 'done') this.tickT = now;
+    }
+    const [title, detail] = lines(this.shown === 'rest' ? 'updating' : this.shown, info, o.short);
+    const two = o.variant === 3;
+    if (this.t.textContent !== title) this.t.textContent = title;
+    if (this.d.textContent !== detail) this.d.textContent = detail;
+    const w = tw(title, two ? '600 14px "Instrument Sans", sans-serif' : '500 14px "Instrument Sans", sans-serif');
+    const textW = two ? Math.max(w, tw(detail, '400 12px "Instrument Sans", sans-serif')) : w;
+    A.infoW.set(exp ? Math.ceil(textW) + 24 : 0, { dur: 320 }, now);
+    A.infoA.set(exp ? 1 : 0, exp ? { dur: 320, delay: 80 } : { dur: 120 }, now);
+    const tone = th[(this.shown === 'noconn' ? 'noconn' : this.shown === 'restart' ? 'restart' : 'normal')];
+    const problem = this.shown === 'noconn' || this.shown === 'restart';
+    this.bg.set(problem && exp ? tone.bg : th.normal.bg, now);
+    A.cloudA.set(exp ? 0.5 : 0.2, { dur: 300 }, now);
+    const iw = A.infoW.get(now), cs = this.el.style;
+    this.info.style.width = iw + 'px'; this.in.style.opacity = String(A.infoA.get(now) * A.txt.get(now));
+    const ink = problem && exp ? tone.ink : th.normal.ink;
+    this.el.style.color = rgb(ink); cs.background = rgb(this.bg.get(now)); cs.borderColor = rgb(th.normal.line);
+    // the Manager icon: its own ring shows work in progress; a badge says done or what is wrong
+    const working = exp && (face === 'connecting' || face === 'updating'), done = exp && face === 'done';
+    A.ringA.set(working || done ? 1 : 0, { dur: 200 }, now);
+    A.badgeA.set(exp && BADGE[face] ? 1 : 0, { dur: 260 }, now);
+    const ringA = A.ringA.get(now), bA = A.badgeA.get(now);
+    const ringCol = rgb(mix(hex(SITE[state.dark ? 'dark' : 'light'].primary), hex(BRAND.b), done ? FOSE(clamp((now - this.tickT) / 380, 0, 1)) : 0));
+    let d = '';
+    if (ringA > 0.01) {
+      const r = 17, c = 20;
+      if (done) { const p = FOSE(clamp((now - this.tickT) / 380, 0, 1)), sweep = Math.min(359.9, 360 * p); d = arc(c, r, -90, sweep); }
+      else { const sw = FOSE(triangle(now, 1400)), start = ((now % 1100) / 1100 * 360) * 0.8 - 90 + 95 * sw; d = arc(c, r, start, 90 + 190 * sw); }
+    }
+    this.ringPath.setAttribute('d', d); this.ringPath.setAttribute('stroke', ringCol); this.ringPath.style.opacity = String(ringA);
+    this.badgeEl.style.opacity = String(bA); this.badgeEl.style.transform = `scale(${0.4 + 0.6 * FOSE(bA)})`;
+    const bi = this.badgeEl.firstChild;
+    bi.style.transform = this.shown === 'restart' ? `rotate(${(now % 1100) / 1100 * 360}deg)` : ''; bi.style.opacity = this.shown === 'noconn' ? String(0.55 + 0.45 * FOSE(triangle(now, 900))) : '1';
+    this.shield.style.opacity = String(this.shown === 'noconn' && exp ? 0.55 : 1);
+    this.shield.style.transform = working ? `scale(${1 + 0.05 * FOSE(triangle(now, 1000))})` : '';
+    // a thin progress line along the bottom of the two-line capsule
+    this.pbar.style.display = two && exp && (face === 'updating' || face === 'connecting' || face === 'restart') ? 'block' : 'none';
+    const q = (now % 1500) / 1500; this.pbar.firstChild.style.width = '34%'; this.pbar.firstChild.style.marginLeft = ((-0.34 + q * 1.34) * 100) + '%'; this.pbar.firstChild.style.background = rgb(ink, 0.7);
+    // the cloud behind the capsule (the brand's three colours; red or amber for a problem)
+    const wDp = this.el.getBoundingClientRect().width || 90, hDp = 48, dpr = devicePixelRatio || 1, cw = Math.max(1, Math.round(wDp * dpr)), ch = Math.round(hDp * dpr);
+    if (this.cv.width !== cw || this.cv.height !== ch) { this.cv.width = cw; this.cv.height = ch; }
+    drawCloud(this.c2, now, problem && exp ? tone.cloud : th.normal.cloud, dpr, wDp, hDp, Math.max(1, wDp / hDp * 1.25), 38);
+    this.cv.style.opacity = String(A.cloudA.get(now));
+    return { w: wDp };
+  }
+}
+function arc(c, r, startDeg, sweepDeg) {
+  const a0 = startDeg * Math.PI / 180, a1 = (startDeg + sweepDeg) * Math.PI / 180;
+  const x0 = c + r * Math.cos(a0), y0 = c + r * Math.sin(a0), x1 = c + r * Math.cos(a1), y1 = c + r * Math.sin(a1);
+  return `M${x0} ${y0}A${r} ${r} 0 ${sweepDeg > 180 ? 1 : 0} 1 ${x1} ${y1}`;
 }
 
 const OPTIONS = [
-  { id: 'A', name: 'A · A quiet circle you press', how: 'Clive’s circle always sits beside your user button. Press it to refresh: it grows leftwards into the pill (Updating, then Up to date) and folds back into the circle. Problems open it by themselves, in red or amber.' },
-  { id: 'B', name: 'B · Tucks out of the user button', how: 'Nothing shows at rest. Refresh is in the user menu. Pressing it (or any problem) slides the circle out from behind the user button, it widens into the pill, and when it is done it folds up and tucks back in.' },
-  { id: 'C', name: 'C · The circle, with a details card', how: 'Like A, and while the pill is open a small card hangs under the bar with the detail (what it is reaching, attempts, last up, Home Assistant’s version). The card is the large banner, kept for the website.' },
+  { v: 1, name: '1 · The icons side by side, the info grows between them', how: 'The Manager icon and your user icon sit in one capsule. Press the Manager icon to refresh: the capsule widens and the words appear between the two icons, with a ring turning round the Manager icon while it works. Problems turn the capsule red or amber and put a badge on the Manager icon.' },
+  { v: 2, name: '2 · The info grows out to the left', how: 'The same capsule, but the two icons stay together at the right end and the words come out to their left, so the Manager icon moves left as it opens and the user icon never moves.' },
+  { v: 3, name: '3 · Two lines, with a progress line', how: 'Like 1, but the words are a title and a line of detail (what it is reloading, the attempt, when it was last up), with a thin progress line along the bottom of the capsule while it works.' },
 ];
 const NAV = ['Home', 'Colours', 'Design ▾', 'Manager ▾', 'Health', 'Energy', 'Activity'];
-const BRAND_PATH = markPath(1000);
-
 const insts = [];
 function build(opt, narrow) {
   const wrap = document.createElement('div'); wrap.className = 'hwrap' + (narrow ? ' narrow' : '');
   wrap.innerHTML = `<div class="hdr"><div class="site-in">
-      <a class="brand"><svg viewBox="48 48 104 104" width="32" height="32" aria-hidden="true"><defs><linearGradient id="g${opt}${narrow ? 'n' : 'd'}" x1="0" x2="1"><stop offset="0" stop-color="#6A5BC2"/><stop offset=".55" stop-color="#AB47BC"/><stop offset="1" stop-color="#4FD08A"/></linearGradient></defs><path d="${BRAND_PATH}" fill-rule="evenodd" fill="url(#g${opt}${narrow ? 'n' : 'd'})"/></svg><span class="brand-text"><b>Clive</b> Manager</span></a>
+      <a class="brand"><span class="brand-text"><b>Clive</b> Manager</span></a>
       <nav class="topnav">${NAV.map((n, i) => `<a class="${i === 4 ? 'on' : ''}">${n}</a>`).join('')}</nav>
-      <div class="pslot"></div>
-      <div class="menu-wrap"><button class="person" type="button" aria-label="Account">J</button>
-        <div class="menu" hidden><p class="menu-name">Jamie</p><p class="sub">Administrator</p>${opt === 'B' ? '<button class="mrow refresh" type="button"><svg viewBox="0 0 200 200" width="20" height="20" fill="currentColor"><path fill-rule="evenodd" d="' + CD_PATHS['cd:update-arrow'] + '"/></svg> Refresh</button>' : ''}<button class="mrow" type="button">Sign out</button></div></div>
+      <div class="capslot"></div>
       <button class="burger" type="button" aria-label="Menu"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
     </div></div>
-    <div class="sample"><h3>${PAGE}</h3><div class="sc"></div><div class="sc"></div></div>
-    <div class="dcard" aria-live="polite"><div class="dt"></div><div class="da"></div><div class="db"></div><div class="dbar"><i></i></div><button class="dtry" type="button">Try now</button></div>`;
-  const slot = wrap.querySelector('.pslot');
-  const pv = new PillView(slot, { right: true, short: narrow, tuck: opt === 'B' ? 50 : 0, horizontal: opt === 'B' });
-  const inst = { opt, narrow, wrap, pv, brandText: wrap.querySelector('.brand-text'), card: wrap.querySelector('.dcard'), menu: wrap.querySelector('.menu'), person: wrap.querySelector('.person') };
-  // the button: the pill element itself
-  pv.el.addEventListener('click', () => { const f = inst.face; if (f === 'noconn' || f === 'restart') model.tap(clock); else model.press(clock); });
-  pv.el.style.cursor = 'pointer'; pv.el.setAttribute('role', 'button'); pv.el.setAttribute('aria-label', 'Refresh');
-  inst.person.addEventListener('click', (e) => { e.stopPropagation(); if (opt === 'B') inst.menu.hidden = !inst.menu.hidden; });
-  const r = wrap.querySelector('.refresh'); if (r) r.addEventListener('click', () => { inst.menu.hidden = true; model.press(clock); });
-  wrap.querySelector('.dtry').addEventListener('click', () => model.tap(clock));
-  insts.push(inst); return wrap;
+    <div class="sample"><h3>${PAGE}</h3><div class="sc"></div><div class="sc"></div></div>`;
+  const cap = new CapsuleView(wrap.querySelector('.capslot'), { variant: opt.v, short: narrow });
+  cap.mgr.addEventListener('click', () => { const f = cap.face; if (f === 'noconn' || f === 'restart') model.tap(clock); else model.press(clock); });
+  cap.usr.addEventListener('click', (e) => { e.stopPropagation(); cap.menu.hidden = !cap.menu.hidden; });
+  const inst = { opt, narrow, wrap, cap }; insts.push(inst); return wrap;
 }
 const host = document.getElementById('options');
 OPTIONS.forEach((o) => {
   const sec = document.createElement('section'); sec.className = 'opt';
   sec.innerHTML = `<h2>${o.name}</h2><p class="note">${o.how}</p><div class="row2"><div class="col d"></div><div class="col p"></div></div>`;
-  sec.querySelector('.d').appendChild(build(o.id, false)); sec.querySelector('.p').appendChild(build(o.id, true));
+  sec.querySelector('.d').appendChild(build(o, false)); sec.querySelector('.p').appendChild(build(o, true));
   host.appendChild(sec);
 });
-document.addEventListener('click', () => insts.forEach((i) => { if (i.menu) i.menu.hidden = true; }));
+document.addEventListener('click', () => insts.forEach((i) => { i.cap.menu.hidden = true; }));
 
 const EV = (id) => SEQS.find((s) => s.id === id).events;
 const SCENES = [
-  { id: 'press', title: 'Press to refresh', sub: 'The circle opens, updates, folds away', len: 6200, start: {}, events: [[900, 'press']] },
+  { id: 'press', title: 'Press the Manager icon', sub: 'Opens, updates, folds away', len: 6200, start: {}, events: [[900, 'press']] },
   { id: 'lost', title: 'Connection lost', sub: 'Connecting, then No connection, then back', len: 17500, start: {}, events: EV('lost') },
   { id: 'restart', title: 'Home Assistant restarts', sub: 'Amber until the house is back', len: 12000, start: {}, events: EV('restart') },
   { id: 'open', title: 'Opening the page', sub: 'Connecting, then Updating', len: 6200, start: { connection: 'Connecting', statesLoaded: false }, events: EV('open') },
 ];
 function startScene(s) {
-  state.scene = s; evIdx = 0; sceneStart = clock; insts.forEach((i) => i.pv.reset()); model.reset(clock, s.start);
+  state.scene = s; evIdx = 0; sceneStart = clock; model.reset(clock, s.start);
   document.querySelectorAll('.seq').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.id === s.id)));
 }
 document.getElementById('seqs').innerHTML = SCENES.map((s) => `<button class="seq" data-id="${s.id}" aria-pressed="false"><b>${s.title}</b><span>${s.sub}</span></button>`).join('');
@@ -594,26 +670,9 @@ document.querySelectorAll('#themeSeg button').forEach((b) => b.setAttribute('ari
 function frameAll() {
   const th = thm(), info = model.info(clock), base = model.face(clock).face;
   insts.forEach((i) => {
-    // A and C keep the circle at rest; B has nothing until there is something to show
-    const face = base === 'hidden' ? (i.opt === 'B' ? 'hidden' : 'rest') : base;
-    i.face = face;
-    i.pv.frame(clock, face, 0, th, 1, null);
-    // The pill takes its own room in the bar (the navigation gives way to it) instead of sitting on top of it.
-    const w = i.pv.boxVis || i.pv.a.alpha.get(clock) > 0.02 ? i.pv.el.getBoundingClientRect().width : 0;
-    i.wrap.querySelector('.pslot').style.width = Math.round(w) + 'px';
-    if (i.narrow) { const room = Math.max(0, 118 - (w - 40)); i.brandText.style.maxWidth = room + 'px'; i.brandText.style.opacity = String(clamp(room / 60, 0, 1)); }
-    if (i.opt === 'C') {
-      const t = siteText(face, info), open = !!t && i.pv.expanded;
-      i.card.classList.toggle('open', open);
-      if (t) {
-        const tone = th[(FACES[face] || FACES.connecting).tone], c = i.card;
-        c.style.background = rgb(tone.bg); c.style.color = rgb(tone.ink); c.style.borderColor = rgb(tone.line);
-        c.querySelector('.dt').textContent = t.t; c.querySelector('.da').textContent = t.a; c.querySelector('.db').textContent = t.b;
-        const bar = c.querySelector('.dbar'); bar.style.display = t.bar ? 'block' : 'none'; bar.style.background = rgb(tone.ink, 0.16);
-        const fill = bar.firstChild, q = (clock % 1500) / 1500; fill.style.background = rgb(tone.ink, 0.78); fill.style.width = '34%'; fill.style.marginLeft = (-0.34 + q * 1.34) * 100 + '%';
-        const tr = c.querySelector('.dtry'); tr.style.display = t.btn ? 'inline-block' : 'none'; tr.style.color = rgb(tone.ink); tr.style.borderColor = rgb(tone.ink, 0.45);
-      }
-    }
+    const face = base === 'hidden' ? 'rest' : base;
+    const r = i.cap.frame(clock, face, info, th);
+    const brand = i.wrap.querySelector('.brand'); brand.style.opacity = i.narrow ? String(clamp((i.wrap.clientWidth - 16 * 2 - 40 - 8 * 2 - r.w - 60) / 60, 0, 1)) : '1';
   });
 }
 function tickAll(dt) {
