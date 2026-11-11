@@ -16,7 +16,7 @@ button { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
 /* The shell: Clive's own header (brand, top navigation, account) with a hamburger drawer on phones. */
-.shell { display: grid; grid-template-rows: auto 1fr auto; min-height: 100vh; min-height: 100dvh; }
+.shell { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr auto; min-height: 100vh; min-height: 100dvh; }
 .site { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bar) 92%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
 .site-in { display: flex; align-items: center; gap: 14px; max-width: 1180px; margin: 0 auto; padding: 10px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px)); }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); font-size: 1.2rem; letter-spacing: -.01em; margin-right: 8px; }
@@ -174,27 +174,6 @@ a.btn { display: inline-block; text-decoration: none; margin-top: 8px; }
 .dots-inline i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .num { width: 90px !important; min-width: 0 !important; }
 
-/* The status banner (status.js): Clive's round button that widens into a banner 120 px tall and 464 px wide when the line needs saying something about
-   (Connecting, Updating, No connection, Home Assistant restarting, and pulling down to refresh). Sizes are set by the script; this is the layout. */
-html { overscroll-behavior-y: contain; }
-#status { position: fixed; top: 76px; left: 50%; width: 0; height: 0; z-index: 30; pointer-events: none; }
-.st-pv { position: absolute; left: 50%; top: 0; overflow: hidden; display: flex; align-items: center; border-radius: 999px; opacity: 0; will-change: transform; }
-.st-pv canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-.st-slot { position: relative; flex: none; display: grid; place-items: center; }
-.st-slot > div { grid-area: 1 / 1; }
-.st-lbl { position: relative; flex: none; overflow: hidden; }
-.st-ring { position: absolute; inset: 0; border-radius: 999px; pointer-events: none; box-sizing: border-box; }
-.st-ic { display: grid; place-items: center; }
-.st-ic > * { grid-area: 1 / 1; }
-.st-ic svg { overflow: visible; }
-.st-cd { display: none; place-items: center; }
-.st-tx { position: absolute; left: 0; top: 0; height: 100%; flex-direction: column; justify-content: center; }
-.st-t { font-weight: 600; letter-spacing: -.01em; white-space: nowrap; }
-.st-a { font-weight: 400; opacity: .88; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.st-b { opacity: .72; }
-.st-track { border-radius: 99px; overflow: hidden; }
-.st-track i { display: block; height: 100%; border-radius: 99px; }
-.st-try { display: none; align-self: flex-start; background: transparent; border-radius: 99px; font: inherit; font-weight: 500; cursor: pointer; }
 
 /* House style: section panels and tone cards, as in the apps. */
 .house-panel { display: grid; gap: 12px; }
@@ -259,3 +238,38 @@ a.home-card .sub { color: color-mix(in srgb, #fff 78%, transparent); }
 .panel-body:has(> .home-card) { grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); }
 .brand .mark { width: 36px; height: 36px; }
 .page-title:empty, body.on-home .page-title { display: none; }
+
+/* The status capsule (capsule.js): the Manager icon and the person's icon in one capsule at the right of the bar. It widens to show two lines (a title and the
+   detail) while the line to Home Assistant is doing something, turns red or amber for a problem, and folds back when it is done. */
+.capslot { flex: none; margin-left: auto; position: relative; z-index: 6; }
+.cap { position: relative; display: flex; align-items: center; height: 48px; padding: 3px; border: 1px solid var(--line); border-radius: 24px; background: var(--card); }
+.cap .menu-wrap { margin-left: 0; position: relative; z-index: 1; }
+.cap .menu { top: 54px; }
+.capcloud { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 24px; pointer-events: none; }
+.mgr { position: relative; z-index: 1; width: 40px; height: 40px; border-radius: 50%; border: 0; padding: 0; background: transparent; cursor: pointer; display: grid; place-items: center; flex: none; }
+.mgr:hover { background: color-mix(in srgb, var(--primary) 14%, transparent); }
+.mgr .shield { grid-area: 1 / 1; position: relative; width: 30px; height: 30px; display: block; }
+.mgr .shield svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.mgr .sh-mono { opacity: 0; }
+.mgr .ring { position: absolute; inset: 0; width: 40px; height: 40px; pointer-events: none; }
+.mgr .badge { position: absolute; right: -2px; bottom: -2px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; opacity: 0; border: 2px solid var(--card); color: #fff; }
+.mgr .badge svg { width: 11px; height: 11px; fill: currentColor; }
+.info { position: relative; z-index: 1; flex: none; width: 0; overflow: hidden; height: 42px; display: flex; align-items: center; }
+.info .in { width: 100%; box-sizing: border-box; padding: 0 12px; white-space: nowrap; display: flex; flex-direction: column; justify-content: center; opacity: 0; }
+.info .t, .info .d { overflow: hidden; text-overflow: ellipsis; }
+.info .t { font-weight: 600; font-size: 14px; line-height: 17px; letter-spacing: .1px; }
+.info .d { font-size: 12px; line-height: 15px; opacity: .8; }
+.pbar { display: none; position: absolute; left: 12px; right: 12px; bottom: 2px; height: 3px; border-radius: 2px; overflow: hidden; background: rgba(128, 128, 128, .18); }
+.pbar i { display: block; height: 100%; border-radius: 2px; }
+.theme-btn { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: 0; background: none; color: var(--ink); cursor: pointer; flex: none; }
+.theme-btn:hover { background: color-mix(in srgb, var(--primary) 14%, transparent); }
+.theme-btn svg { fill: currentColor; }
+/* Crowded bars: the wordmark and the navigation give way to the capsule instead of pushing it off the edge. */
+.brand { min-width: 0; overflow: hidden; }
+.topnav > a, .topnav > .drop { min-width: 0; }
+.topnav a span { overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 899px) {
+  .site-in { gap: 8px; }
+  .brand { flex: 1 1 0; margin-right: 0; -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent); }
+}
+@media (prefers-reduced-motion: reduce) { .capcloud { display: none; } }
