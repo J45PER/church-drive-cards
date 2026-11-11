@@ -1,6 +1,9 @@
 package com.churchdrive.app.ui
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.draw.clipToBounds
@@ -90,11 +93,13 @@ private const val PULL_FULL = 1f
  * Connecting, Updating, No connection and Home Assistant restarting. Pulling shows the same pill ("Pull to refresh", "Release to
  * refresh"), which turns into "Updating" while [onRefresh] runs and "Up to date" when it is done, so the pull and the line's own
  * states are one thing to look at. Tapping No connection or Restarting tries again. [palette] is Clive's three colours (the phone app passes
- * its own; the other apps use the original indigo, purple and green).
+ * its own; the other apps use the original indigo, purple and green). Put it OUTSIDE the Scaffold, never inside it: the page's collapsing title bar
+ * listens for scrolling from the Scaffold, and a pull inside would take the downward drag first, so the title could not expand. [pillTop] is how far
+ * below the status bar the pill sits (the collapsed title bar is 64 dp tall).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LinkRefresh(link: LinkStatus, onRefresh: () -> Unit, modifier: Modifier = Modifier, palette: AssistPalette = AssistClassicPalette, content: @Composable () -> Unit) {
+fun LinkRefresh(link: LinkStatus, onRefresh: () -> Unit, modifier: Modifier = Modifier, palette: AssistPalette = AssistClassicPalette, pillTop: Dp = 72.dp, content: @Composable () -> Unit) {
     val current by rememberUpdatedState(link)
     // How long the line has been down, so a blip stays "Connecting" and only a real outage says "No connection".
     var offlineFor by remember { mutableStateOf(0L) }
@@ -145,7 +150,7 @@ fun LinkRefresh(link: LinkStatus, onRefresh: () -> Unit, modifier: Modifier = Mo
         indicator = {},
     ) {
         content()
-        Box(Modifier.align(Alignment.TopCenter).padding(top = 8.dp)) {
+        Box(Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = pillTop)) {
             StatusPill(
                 face = face,
                 pull = if (face == PillFace.Pull || face == PillFace.Release) pull else 0f,
@@ -200,21 +205,46 @@ fun StatusPill(face: PillFace, pull: Float = 0f, onTap: (() -> Unit)? = null, pa
     val cloudAlpha by androidx.compose.animation.core.animateFloatAsState(if (expanded) 0.5f else 0.95f, tween(300), label = "cloud")
     // The pill's width is one animated value: how much of the words is showing (0 is the circle). The pill, its edge and the cloud all follow
     // it frame by frame, so the cloud can never get ahead of the pill (measuring inside animateContentSize gave the cloud the final width at once).
-    val reveal by androidx.compose.animation.core.animateFloatAsState(if (expanded) 1f else 0f, tween(if (expanded) 320 else 220), label = "reveal")
+    val reveal by androidx.compose.animation.core.animateFloatAsState(if (expanded) 1f else 0f, tween(320), label = "reveal")
     val wordsAlpha by androidx.compose.animation.core.animateFloatAsState(if (expanded) 1f else 0f, if (expanded) tween(320, delayMillis = 80) else tween(120), label = "words")
+    // The pill is on screen from the moment there is something to say until it has gone back into a circle, so closing runs the opening backwards
+    // (words go, pill narrows to the circle, then the circle shrinks away) instead of everything leaving at once.
+    var showing by remember { mutableStateOf(false) }
+    // Brought in by a finger: the circle grows with the pull instead of popping up (the pill was not on screen when the pull began).
+    var growing by remember { mutableStateOf(false) }
+    LaunchedEffect(visible) {
+        if (visible) {
+            growing = pull > 0f && !showing
+            showing = true
+        } else {
+            if (reveal > 0.01f) delay(320L)
+            showing = false
+        }
+    }
+    LaunchedEffect(pull > 0f) { if (pull <= 0f) growing = false }
     var width by remember { mutableStateOf(0) }
     val density = androidx.compose.ui.platform.LocalDensity.current
     val travel = with(density) { 36.dp.toPx() }
     val cloudBox = with(density) { PILL_SIZE.toPx() }
     val shape = RoundedCornerShape(50)
     AnimatedVisibility(
-        visible = visible,
-        enter = fadeIn(tween(200)) + scaleIn(tween(300), initialScale = 0.4f) + slideInVertically { -it },
-        exit = fadeOut(tween(200)) + scaleOut(tween(250), targetScale = 0.6f) + slideOutVertically { -it },
+        visible = showing,
+        enter = if (growing) EnterTransition.None else fadeIn(tween(200)) + scaleIn(tween(300), initialScale = 0.4f) + slideInVertically { -it },
+        // The opening backwards: shrinks to 0.4, goes up and fades out at the end.
+        exit = fadeOut(tween(200, delayMillis = 100)) + scaleOut(tween(300), targetScale = 0.4f) + slideOutVertically { -it },
     ) {
         Surface(
             modifier = Modifier
-                .graphicsLayer { if (pull > 0f) translationY = (pull.coerceAtMost(1.3f) - 1f) * travel }
+                .graphicsLayer {
+                    if (pull > 0f) translationY = (pull.coerceAtMost(1.3f) - 1f) * travel
+                    // Growing into the circle as the finger pulls: from 30% size and clear, to full by half way to Release.
+                    if (growing && pull > 0f) {
+                        val e = androidx.compose.animation.core.FastOutSlowInEasing.transform((pull / 0.5f).coerceIn(0f, 1f))
+                        scaleX = 0.3f + 0.7f * e
+                        scaleY = scaleX
+                        alpha = (pull / 0.3f).coerceIn(0f, 1f)
+                    }
+                }
                 .semantics { liveRegion = LiveRegionMode.Polite }
                 .let { if (onTap != null) it.clickable(onClickLabel = "Try again", onClick = onTap) else it },
             shape = shape, color = container, contentColor = ink,

@@ -251,38 +251,54 @@ class Banner {
     this.texts = [new TextLayer(this.lbl, onTry), new TextLayer(this.lbl, onTry)];
     this.ring = div('st-ring', this.el);
     this.a = { alpha: new Anim(0), scale: new Anim(0.4), slide: new Anim(-1), labelW: new Anim(0), labelA: new Anim(0), markP: new Anim(0), cloudA: new Anim(0.95) };
-    this.visible = false; this.settled = false; this.settleAt = 0; this.shown = 'connecting'; this.prev = null; this.changeT = -1e9; this.tickT = 0;
+    this.visible = false; this.boxVis = false; this.hideAt = 0; this.growing = false; this.settled = false; this.settleAt = 0; this.shown = 'connecting'; this.prev = null; this.changeT = -1e9; this.tickT = 0;
   }
   /** Whether it can be left alone: gone, and not on its way in or out. */
-  get asleep() { return !this.visible && this.a.alpha.get(1e12) < 0.01; }
+  get asleep() { return !this.boxVis && this.a.alpha.get(1e12) < 0.01; }
   frame(now, face, pull, info, dp, still) {
     const A = this.a, vis = face !== 'hidden', th = themeNow();
     if (vis && face !== this.shown) {
-      this.prev = A.alpha.get(now) > 0.02 && this.visible ? this.shown : null; if (this.prev) this.changeT = now;
+      this.prev = A.alpha.get(now) > 0.02 && this.boxVis ? this.shown : null; if (this.prev) this.changeT = now;
       this.shown = face; if (face === 'done') this.tickT = now;
     }
     if (vis !== this.visible) {
-      this.visible = vis;
-      if (vis) {
-        if (A.alpha.get(now) < 0.01) { A.alpha.jump(0); A.scale.jump(0.4); A.slide.jump(-1); }
-        A.alpha.set(1, { dur: 200 }, now); A.scale.set(1, { dur: 300 }, now); A.slide.set(0, { spring: 20 }, now);
-        this.settled = false; this.settleAt = now + 380; if (face === 'done') this.tickT = now;
-      } else { A.alpha.set(0, { dur: 200 }, now); A.scale.set(0.6, { dur: 250 }, now); A.slide.set(-1, { spring: 20 }, now); this.settled = false; }
+      this.visible = vis; this.settled = false;
+      if (vis) { this.settleAt = now + 380; this.hideAt = 0; if (face === 'done') this.tickT = now; }
+      else this.hideAt = now + (A.labelW.get(now) > 1 ? 400 : 0);               // closing: the banner goes back into a circle first
     }
     if (this.visible && !this.settled && now >= this.settleAt) this.settled = true;
+    // On screen from having something to say until it is a circle again, so closing is the opening backwards.
+    const wantBox = this.visible || now < this.hideAt;
+    if (wantBox !== this.boxVis) {
+      this.boxVis = wantBox;
+      if (wantBox) {
+        if (A.alpha.get(now) < 0.01) {
+          if (pull > 0) { this.growing = true; A.alpha.jump(1); A.scale.jump(1); A.slide.jump(0); }   // a finger brings it in: it grows with the pull
+          else { this.growing = false; A.alpha.jump(0); A.scale.jump(0.4); A.slide.jump(-1); }
+        }
+        if (!this.growing) { A.alpha.set(1, { dur: 200 }, now); A.scale.set(1, { dur: 300 }, now); A.slide.set(0, { spring: 20 }, now); }
+      } else {
+        this.growing = false;
+        A.alpha.set(0, { dur: 200, delay: 100 }, now); A.scale.set(0.4, { dur: 300 }, now); A.slide.set(-1, { spring: 20 }, now);
+      }
+    }
+    if (pull <= 0) this.growing = false;
     const expanded = this.visible && this.settled && this.shown !== 'pull';
     const t = th[(FACES[this.shown] || FACES.connecting).tone];
-    A.labelW.set(expanded ? BODY : 0, { dur: expanded ? 400 : 280 }, now);
+    A.labelW.set(expanded ? BODY : 0, { dur: 400 }, now);
     A.labelA.set(expanded ? 1 : 0, expanded ? { dur: 320, delay: 80 } : { dur: 120 }, now);
     A.markP.set(expanded ? 1 : 0, { dur: 300 }, now);
     A.cloudA.set(expanded ? 0.5 : 0.95, { dur: 300 }, now);
 
     const wDp = SLOT + A.labelW.get(now), px = (v) => `${v * dp}px`, shift = pull > 0 ? (Math.min(pull, 1.3) - 1) * 36 * K : 0;
     const el = this.el.style;
-    el.width = px(wDp); el.height = px(H); el.background = rgb(t.bg); el.opacity = A.alpha.get(now);
+    let sc = A.scale.get(now), al = A.alpha.get(now);
+    // Growing into the circle as the finger pulls: from 30% size and clear, to full by half way to Release.
+    if (this.growing && pull > 0) { sc = 0.3 + 0.7 * FOSE(clamp(pull / 0.5, 0, 1)); al = clamp(pull / 0.3, 0, 1); }
+    el.width = px(wDp); el.height = px(H); el.background = rgb(t.bg); el.opacity = al;
     el.boxShadow = `0 ${3 * dp}px ${7 * dp}px rgba(0,0,0,${th.dark ? 0.5 : 0.22}), 0 0 ${2 * dp}px rgba(0,0,0,${th.dark ? 0.4 : 0.16})`;
-    el.transform = `translate(-50%, ${(A.slide.get(now) * H + shift) * dp}px) scale(${A.scale.get(now)})`;
-    el.pointerEvents = A.alpha.get(now) > 0.5 ? 'auto' : 'none';
+    el.transform = `translate(-50%, ${(A.slide.get(now) * H + shift) * dp}px) scale(${sc})`;
+    el.pointerEvents = al > 0.5 ? 'auto' : 'none';
     this.ring.style.border = `${dp}px solid ${rgb(t.line)}`;
     const dpr = globalThis.devicePixelRatio || 1, cw = Math.max(1, Math.round(wDp * dp * dpr)), ch = Math.round(H * dp * dpr);
     if (this.cv.width !== cw || this.cv.height !== ch) { this.cv.width = cw; this.cv.height = ch; }
@@ -397,7 +413,13 @@ export function createStatus(opts) {
 export function attachPull(status, onRefresh) {
   let y0 = null;
   addEventListener('touchstart', (e) => { y0 = scrollY <= 0 && e.touches.length === 1 ? e.touches[0].clientY : null; }, { passive: true });
-  addEventListener('touchmove', (e) => { if (y0 !== null) { const d = e.touches[0].clientY - y0; if (d > 0 && scrollY <= 0) status.pull(pullFraction(d)); else if (d <= 0) status.pull(0); } }, { passive: true });
+  addEventListener('touchmove', (e) => {
+    if (y0 === null) return;
+    // The page scrolled, so this touch is a scroll, not a pull: let go of it for good (scrolling back up to the top in the same touch must not pull).
+    if (scrollY > 0) { y0 = null; status.pull(0); status.release(); return; }
+    const d = e.touches[0].clientY - y0;
+    status.pull(d > 0 ? pullFraction(d) : 0);
+  }, { passive: true });
   const end = () => { if (y0 === null) return; y0 = null; if (status.release()) onRefresh(); };
   addEventListener('touchend', end); addEventListener('touchcancel', end);
 }

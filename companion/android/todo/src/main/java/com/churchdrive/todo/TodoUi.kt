@@ -117,6 +117,9 @@ fun TodoApp(vm: TodoModel) {
             }
         },
     ) {
+    val link by vm.link.collectAsState()
+    // The pull is outside the Scaffold so the collapsing title bar hears the drag first and can open before a pull starts.
+    com.churchdrive.app.ui.LinkRefresh(link, vm::refresh, Modifier.fillMaxSize()) {
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         topBar = {
@@ -146,17 +149,15 @@ fun TodoApp(vm: TodoModel) {
             }
         },
     ) { padding ->
-        val link by vm.link.collectAsState()
-        com.churchdrive.app.ui.LinkRefresh(link, vm::refresh, Modifier.fillMaxSize().padding(padding)) {
         Column(
-            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             com.churchdrive.app.ui.UpdateNotice(BuildConfig.PLAY, vm.updateAvailable, com.churchdrive.app.UpdateCheck.TODO_APK_URL, "Church Drive To-Do")
             TaskCard(vm, tab)
             Spacer(Modifier.height(16.dp))
         }
-        }
+    }
     }
     TodoPanel(panel, { panel = it }, vm)
     if (assistantOpen) AssistantSheet(vm) { assistantOpen = false }

@@ -222,8 +222,8 @@ const FACES = {
 };
 const PILL = 40, ICON_SLOT = 40, LABEL_PAD = 18, LABEL_SP = 14;
 /** The pill, and the large version for the website: 3 times as tall (120 dp) and about twice as wide (464 dp); same circle, same animation, more to say. */
-const DIM_PILL = { H: 40, SLOT: 40, K: 1, ORB: 32, BODY: 0, WIDEN: 320, SHRINK: 220 };
-const DIM_BIG = { H: 120, SLOT: 120, K: 3, ORB: 96, BODY: 344, WIDEN: 400, SHRINK: 280 };
+const DIM_PILL = { H: 40, SLOT: 40, K: 1, ORB: 32, BODY: 0, WIDEN: 320, SHRINK: 320 };
+const DIM_BIG = { H: 120, SLOT: 120, K: 3, ORB: 96, BODY: 344, WIDEN: 400, SHRINK: 400 };
 
 const measure = document.createElement('canvas').getContext('2d');
 const textW = f => { measure.font = '500 14px "Instrument Sans", system-ui, sans-serif'; const s = FACES[f].label; return measure.measureText(s).width + s.length * 0.1; };
@@ -376,32 +376,43 @@ class PillView {
     this.txt = [document.createElement('span'), document.createElement('span')]; if (!opts.big) this.txt.forEach(t => this.lbl.appendChild(t));
     if (opts.big) this.bigs = [new BigLayer(this.lbl, opts.onTry), new BigLayer(this.lbl, opts.onTry)];
     this.a = { alpha: new Anim(0), scale: new Anim(0.4), slide: new Anim(-1), labelW: new Anim(0), labelA: new Anim(0), markP: new Anim(0), cloudA: new Anim(0.95), settle: new Anim(0) };
-    this.visible = false; this.settled = false; this.settleAt = 0; this.shown = 'connecting'; this.prev = null; this.changeT = -1e9; this.tickT = 0; this.expanded = false;
+    this.visible = false; this.boxVis = false; this.hideAt = 0; this.growing = false; this.settled = false; this.settleAt = 0; this.shown = 'connecting'; this.prev = null; this.changeT = -1e9; this.tickT = 0; this.expanded = false;
   }
-  reset() { this.visible = false; this.settled = false; for (const k in this.a) this.a[k].jump({ alpha: 0, scale: 0.4, slide: -1, labelW: 0, labelA: 0, markP: 0, cloudA: 0.95, settle: 0 }[k]); this.prev = null; }
+  reset() { this.visible = false; this.boxVis = false; this.hideAt = 0; this.growing = false; this.settled = false; for (const k in this.a) this.a[k].jump({ alpha: 0, scale: 0.4, slide: -1, labelW: 0, labelA: 0, markP: 0, cloudA: 0.95, settle: 0 }[k]); this.prev = null; }
   /** One frame. face: a FACES key; pull: finger fraction while pulling (else 0); th: theme(); dp: scale; now: virtual ms. */
   frame(now, face, pull, th, dp, force) {
-    const A = this.a, vis = face !== 'hidden';
-    // the face kept while sliding out; a change on screen crossfades
+    const A = this.a, vis = face !== 'hidden', D = this.D;
+    // the face kept while closing; a change on screen crossfades
     if (vis && face !== this.shown) {
-      if (A.alpha.get(now) > 0.02 && this.visible) { this.prev = this.shown; this.changeT = now; } else { this.prev = null; }
+      if (A.alpha.get(now) > 0.02 && this.boxVis) { this.prev = this.shown; this.changeT = now; } else { this.prev = null; }
       this.shown = face; if (face === 'done') this.tickT = now;
     }
     if (vis !== this.visible) {
-      this.visible = vis;
-      if (vis) {
-        if (A.alpha.get(now) < 0.01) { A.alpha.jump(0); A.scale.jump(0.4); A.slide.jump(-1); }
-        A.alpha.set(1, { dur: 200 }, now); A.scale.set(1, { dur: 300 }, now); A.slide.set(0, { spring: Math.sqrt(400) }, now);   // spring: StiffnessMediumLow
-        this.settled = false; this.settleAt = now + 380;
-        if (face === 'done') this.tickT = now;
-      } else { A.alpha.set(0, { dur: 200 }, now); A.scale.set(0.6, { dur: 250 }, now); A.slide.set(-1, { spring: Math.sqrt(400) }, now); this.settled = false; }
+      this.visible = vis; this.settled = false;
+      if (vis) { this.settleAt = now + 380; this.hideAt = 0; if (face === 'done') this.tickT = now; }
+      else this.hideAt = now + (A.labelW.get(now) > 1 ? D.SHRINK : 0);          // closing: the pill goes back into a circle first
     }
     if (this.visible && !this.settled && now >= this.settleAt) this.settled = true;
+    // The box is on screen from having something to say until the pill is a circle again, so closing is the opening backwards.
+    const wantBox = this.visible || now < this.hideAt;
+    if (wantBox !== this.boxVis) {
+      this.boxVis = wantBox;
+      if (wantBox) {
+        if (A.alpha.get(now) < 0.01) {
+          if (pull > 0 && !this.opts.static) { this.growing = true; A.alpha.jump(1); A.scale.jump(1); A.slide.jump(0); }   // a finger brings it in: it grows with the pull
+          else { this.growing = false; A.alpha.jump(0); A.scale.jump(0.4); A.slide.jump(-1); }
+        }
+        if (!this.growing) { A.alpha.set(1, { dur: 200 }, now); A.scale.set(1, { dur: 300 }, now); A.slide.set(0, { spring: Math.sqrt(400) }, now); }   // spring: StiffnessMediumLow
+      } else {
+        this.growing = false;
+        A.alpha.set(0, { dur: 200, delay: 100 }, now); A.scale.set(0.4, { dur: 300 }, now); A.slide.set(-1, { spring: Math.sqrt(400) }, now);
+      }
+    }
+    if (pull <= 0) this.growing = false;
     let expanded = this.visible && this.settled && this.shown !== 'pull';
     if (force && force.expanded !== undefined) expanded = this.visible && this.settled && force.expanded;
     this.expanded = expanded;
     const f = FACES[this.shown], tone = th[f.tone || 'normal'];
-    const D = this.D;
     A.labelW.set(expanded ? (D.BODY || textW(this.shown) + LABEL_PAD) : 0, { dur: expanded ? D.WIDEN : D.SHRINK }, now);
     A.labelA.set(expanded ? 1 : 0, expanded ? { dur: 320, delay: 80 } : { dur: 120 }, now);
     A.markP.set(expanded ? 1 : 0, { dur: 300 }, now);
@@ -412,10 +423,13 @@ class PillView {
     const slide = this.opts.static ? 0 : A.slide.get(now) * D.H;
     const el = this.el.style, px = v => v * dp + 'px';
     el.width = px(widthDp); el.height = px(D.H); el.borderRadius = '999px';
+    // Growing into the circle as the finger pulls: from 30% size and clear, to full by half way to Release.
+    let sc = A.scale.get(now), al = A.alpha.get(now);
+    if (this.growing && pull > 0) { sc = 0.3 + 0.7 * FOSE(clamp(pull / 0.5, 0, 1)); al = clamp(pull / 0.3, 0, 1); }
     this.ring.style.border = `${dp}px solid ${rgb(tone.line)}`;
-    el.background = rgb(tone.bg); el.opacity = A.alpha.get(now);
+    el.background = rgb(tone.bg); el.opacity = al;
     el.boxShadow = `0 ${dp * 3}px ${dp * 7}px rgba(0,0,0,${th.dark ? 0.5 : 0.22}), 0 0 ${dp * 2}px rgba(0,0,0,${th.dark ? 0.4 : 0.16})`;
-    el.transform = `translate(-50%, ${(slide + pullShift) * dp}px) scale(${A.scale.get(now)})`;
+    el.transform = `translate(-50%, ${(slide + pullShift) * dp}px) scale(${sc})`;
     // the cloud, stretched over the pill and kept inside its edge
     const cw = Math.max(1, Math.round(widthDp * dp * devicePixelRatio)), ch = Math.round(D.H * dp * devicePixelRatio);
     if (this.cv.width !== cw || this.cv.height !== ch) { this.cv.width = cw; this.cv.height = ch; }
@@ -687,8 +701,8 @@ $('#specTable').innerHTML = `<tr><th>What</th><th>Value</th><th>Why</th></tr>` +
   ['Large: what it says', 'Connecting: host, attempt, next try. Updating: items in, of the total. Pull: when it was last updated. Up to date: item count, time, Home Assistant version and latency. No connection: when the line was last up, countdown to the next try, Try now. Restarting: when Home Assistant said so, how long ago, items back.', 'The app has no room for these lines; the website has. The website only says what it knows (address, page, tries, last up, Home Assistant\u2019s version and state, response time), so its Updating line names the page instead of counting items; the item counts here are sample data.'],
   ['Position', '8 dp below the top of the page’s content (under the title bar). Centred.', 'Same place in every app; on the website, under the page header.'],
   ['Enter', 'Fade 200 ms, scale from 0.4 over 300 ms (centre), slide down one pill height on a spring (stiffness 400, no bounce).', 'It arrives as the circle.'],
-  ['Widen', 'Waits 380 ms as a circle, then widens 320 ms (standard easing); words fade in 320 ms after an 80 ms delay.', 'A pull skips the wait: stays a circle until "Release".'],
-  ['Exit', 'Words shrink 220 ms and fade 120 ms; pill fades 200 ms, scales to 0.6 over 250 ms, slides up on the spring.', ''],
+  ['Widen', 'Waits 380 ms as a circle, then widens 320 ms (standard easing); words fade in 320 ms after an 80 ms delay.', 'A pull skips the wait: stays a circle until "Release", then widens.'],
+  ['Exit', 'The opening backwards. The words fade (120 ms) and the pill narrows back into the circle over 320 ms (400 ms for the large version); then the circle shrinks to 0.4 over 300 ms, slides up on the spring and fades out over the last 200 ms.', 'It never leaves as a pill.'],
   ['Cloud', 'Clive’s three clouds on a 9 s drift, a 4.5 s breathe (±5%). Orb 32 dp, stretched across the pill (width/40 × 1.25). Opacity 0.95 as a circle, 0.5 once widened (300 ms). Clip to the pill.', 'AssistOrb, idle. Classic palette: #5C6BC0, #AB47BC, #4FD08A; the phone app passes its own.'],
   ['Mark', 'AssistantGlyph idle: two 76-unit squircles, radius 30, sliding along the diagonal, 4 s cycle, overlap cut out (even-odd). White as a circle, ink once widened (300 ms).', 'Pull: turns 0–180° with the finger (the only time it turns). Release: 180°, which looks the same upright. Every loaded face: the normal drift, no spin.'],
   ['Words', 'Instrument Sans 500, 14 dp, 0.1 dp tracking. Crossfade on change: new in 180 ms, old out 120 ms.', 'Pull to refresh · Release to refresh · Connecting · Updating · Up to date · No connection · Home Assistant restarting'],
@@ -696,7 +710,7 @@ $('#specTable').innerHTML = `<tr><th>What</th><th>Value</th><th>Why</th></tr>` +
   ['No connection icon', 'Three signal bars (22 dp box, bar width 16%) breathing between 35% and 100% over 0.9 s (reverse), with a slash through them.', ''],
   ['Restarting icon', '20 dp ring, 2 dp stroke, round caps; turns at 0.8 turn per 1.1 s while its arc grows and shrinks between 90° and 280° over 1.4 s (reverse).', ''],
   ['Up to date icon', 'Tick draws itself over 380 ms: the short stroke in the first half, the long one in the second.', 'Shown 1.3 s.'],
-  ['Pull', 'Finger drags are halved (Material). Fraction = pill travel ÷ 80 dp; fraction ≥ 1 = Release. Pill shifts (min(fraction, 1.3) − 1) × 36 dp. Let go past 1 and it refreshes; before, it springs home.', ''],
+  ['Pull', 'Finger drags are halved (Material). Fraction = pill travel ÷ 80 dp; fraction ≥ 1 = Release. The circle does not pop up: it grows with the finger, from 30% size and clear to full size and opaque by half way to Release (standard easing), while it slides down (min(fraction, 1.3) − 1) × 36 dp. Then Release widens it. Let go past 1 and it refreshes; before, it shrinks back as it springs home.', 'Only when the pill was not already on screen; if it is showing (say No connection) a pull leaves its size alone.'],
   ['Refresh', 'Updating for at least 0.9 s, then until the house has answered and the line is up (gives up after 12 s), then Up to date for 1.3 s.', ''],
   ['No connection after', '6 s down (counted in whole seconds). Before that: Connecting.', 'A blip is not worth a warning.'],
   ['Restarting', 'Starts when Home Assistant closes the line (1001, 1012, 1013) or reports it is not running. Ends when the states are all in, or after 5 minutes.', 'Beats No connection while it lasts.'],
