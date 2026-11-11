@@ -40,7 +40,7 @@ export function openPaletteEditor(host, ctx, { key, palette, onDone }) {
     form.querySelector('button[type=submit]').disabled = true; msg.textContent = 'Sending…';
     try {
       const sent = await ctx.ha.call('church_drive/manager/propose', { kind: 'palette', change: { mode: 'set', palettes: { [newKey]: item } }, note: form.note.value.trim() || null, urgent: form.urgent.checked });
-      msg.textContent = sent.status === 'applied' ? 'Applied.' : `Sent for checking${sent.checks?.length ? ` (the check noted: ${sent.checks.join(' ')})` : ''}. You can follow it on the Changes page.`;
+      msg.textContent = sent.status === 'applied' ? 'Applied.' : `Sent for checking${sent.checks?.length ? ` (the check noted: ${sent.checks.join(' ')})` : ''}. You can follow it on the Edits page.`;
       onDone?.(sent);
     } catch (err) {
       form.querySelector('button[type=submit]').disabled = false;

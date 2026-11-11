@@ -26,7 +26,7 @@ function octopusCard(ctx, show, e, tone, states) {
       strip(e), fact('Today', `${pound(e.today)}${e.todayKwh != null ? ` · ${e.todayKwh.toFixed(1)} kWh` : ''}`), fact('Yesterday', `${pound(e.yesterday)}${e.yesterdayKwh != null ? ` · ${e.yesterdayKwh.toFixed(1)} kWh` : ''}`));
   }
   if (show === 'gas') return toneCard(ctx, tone, h('p', { class: 'sub' }, 'Rate'), h('p', { class: 'big' }, e.gasRate != null ? `${p(e.gasRate, 2)} per kWh` : '—'), fact('Today', pound(e.gasToday)), fact('Yesterday', pound(e.gasYesterday)));
-  if (show === 'octoplus') return toneCard(ctx, tone, h('p', { class: 'sub' }, 'Octoplus points'), h('p', { class: 'big' }, e.points != null ? String(Math.round(e.points)) : '—'));
+  if (show === 'octoplus') return null; // Octoplus points are app only
   if (show === 'week') return weekCard(ctx, tone, states);
   return null;
 }

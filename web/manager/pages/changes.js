@@ -1,6 +1,6 @@
 // Changes sent from the site: what waits for Clive to check, what was applied or declined (with the reason), and the past versions that can be restored.
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const KIND = { palette: 'Palettes', cards: 'Card picks', icons: 'Icons', layouts: 'Layouts' };
+const KIND = { palette: 'Colour palettes', cards: 'Card colours', icons: 'Section icons', layouts: 'Section order' };
 const when = (s) => (s ? new Date(s * 1000).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '');
 
 export function describe(change, kind = 'palette') {
@@ -29,15 +29,18 @@ export async function renderChanges(el, ctx, { glowStyle }) {
     ${i.status === 'declined' && i.reason ? `<p class="sub">Why: ${esc(i.reason)}</p>` : ''}
     ${i.status === 'applied' ? `<p class="sub">Applied ${esc(when(i.resolved_at))} by ${esc(i.resolved_by)}</p>` : ''}</article>`;
   el.innerHTML = `<div class="stack">
-    <section class="stack" style="gap:10px"><div class="head"><h2>Waiting to be checked</h2><span class="count">${waiting.length}</span></div>
-      ${waiting.length ? `<div class="grid tight">${waiting.map(line).join('')}</div>` : '<p class="note">Nothing is waiting. A change you send from the Colours page waits here until Clive checks it and applies it or says why not.</p>'}</section>
-    <section class="stack" style="gap:10px"><div class="head"><h2>Done</h2><span class="count">${done.length}</span></div>
+    <div class="steps"><div class="step"><b>1</b><p class="title">You change something</p><p class="sub">On the Colours or Customise pages, then press Send.</p></div>
+      <div class="step"><b>2</b><p class="title">Clive checks it</p><p class="sub">That it reads well and nothing breaks. It waits below until then.</p></div>
+      <div class="step"><b>3</b><p class="title">It goes live</p><p class="sub">In the apps and dashboards. Every change keeps what it replaced, so you can put it back.</p></div></div>
+    <section class="stack" style="gap:10px"><div class="head"><h2>Waiting for Clive</h2><span class="count">${waiting.length}</span></div>
+      ${waiting.length ? `<div class="grid tight">${waiting.map(line).join('')}</div>` : '<p class="note">Nothing is waiting.</p>'}</section>
+    <section class="stack" style="gap:10px"><div class="head"><h2>Recently done</h2><span class="count">${done.length}</span></div>
       ${done.length ? `<div class="grid tight">${done.slice(0, 30).map(line).join('')}</div>` : '<p class="note">Nothing yet.</p>'}</section>
-    <section class="stack" style="gap:10px"><div class="head"><h2>Past versions</h2><span class="count">${versions.length}</span></div>
+    <section class="stack" style="gap:10px"><div class="head"><h2>Put something back</h2><span class="count">${versions.length}</span></div>
       ${versions.length ? `<div class="grid tight">${versions.map((v) => `<article class="card plain compact"><div class="row"><div style="flex:1"><p class="row-title">${esc(KIND[v.kind])} · version ${esc(v.revision)}</p>
-        <p class="sub">Replaced by ${esc(v.by)} · ${esc(when(v.at))}${v.kind === 'palette' ? ` · ${Object.keys(v.overrides || {}).length} changed from shipped` : ''}</p></div>
+        <p class="sub">Was live until ${esc(v.by)} · ${esc(when(v.at))}${v.kind === 'palette' ? ` · ${Object.keys(v.overrides || {}).length} changed from shipped` : ''}</p></div>
         <button class="btn quiet" type="button" data-restore="${esc(v.revision)}" data-kind="${esc(v.kind)}">Restore</button></div></article>`).join('')}</div>
-      <label class="sub"><input type="checkbox" id="urgent"> Urgent: apply a restore straight away instead of sending it for checking</label>` : '<p class="note">A version is kept each time a change is applied.</p>'}
+      <label class="sub"><input type="checkbox" id="urgent"> Urgent: apply a restore straight away instead of sending it for checking</label>` : '<p class="note">Nothing to put back yet: an earlier version is kept each time a change goes live.</p>'}
       <p class="note" id="msg" role="status"></p></section></div>`;
   el.querySelectorAll('[data-restore]').forEach((b) => b.addEventListener('click', async () => {
     const msg = el.querySelector('#msg'); b.disabled = true;

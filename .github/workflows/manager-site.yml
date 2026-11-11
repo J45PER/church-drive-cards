@@ -26,10 +26,10 @@ jobs:
         run: |
           mkdir -p web/manager/clive
           cp custom_components/church_drive/frontend/clive/icons.json custom_components/church_drive/frontend/clive/cards.json web/manager/clive/
-      - name: Copy the idea boards into the site
+      - name: Copy the reference boards into the site
         run: |
           mkdir -p web/manager/boards
-          cp satellite/design/*.html design/clive/icon-morphs.html design/clive/link-pill.html web/manager/boards/
+          cp satellite/design/splash-final.html satellite/design/flows.html satellite/design/device-codes.html design/clive/icon-morphs.html design/clive/link-pill.html web/manager/boards/
       - name: The site's checks
         run: node --test test/manager-web.test.mjs
       - name: Publish to Firebase

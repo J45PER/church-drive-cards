@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.144.0
+
+- No change you will notice (the Manager website was reworked).
+
 ## 0.143.0
 
 - No change you will notice (notification defaults in the Home Assistant integration).

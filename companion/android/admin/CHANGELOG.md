@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.144.0
+
+- No change you will notice (the Manager website was reworked).
+
 ## 0.143.0
 
 - No change you will notice (notification defaults in the Home Assistant integration).

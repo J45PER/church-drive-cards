@@ -24,9 +24,9 @@ class MirrorLogic(unittest.TestCase):
         versions = {"palette": [{"revision": 3, "overrides": {}}], "icons": [{"revision": 1, "data": {"x": 1}}, {"no_revision": True}]}
         docs = m.build_documents(config, {"ok": {}}, {"c1": {"palette": "ok"}}, versions, "0.140.0", 100.0)
         ids = [(c, i) for c, i, _ in docs]
-        self.assertEqual(ids, [("palettes", "current"), ("cards", "picks"), ("history", "icons-1"), ("history", "palette-3"), ("meta", "revision")])
+        self.assertEqual(ids, [("palettes", "current"), ("palettes", "groups"), ("cards", "picks"), ("history", "icons-1"), ("history", "palette-3"), ("meta", "revision")])
         self.assertEqual(docs[0][2]["revision"], 4)
-        self.assertEqual(docs[2][2]["kind"], "icons")
+        self.assertEqual(docs[3][2]["kind"], "icons")
         self.assertEqual(docs[-1][2]["version"], "0.140.0")
 
     def test_a_quiet_house_sends_nothing(self):

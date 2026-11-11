@@ -15,13 +15,15 @@ import { readVersions, summary as versionSummary } from './pages/versions.js';
 import { openPaletteEditor } from './pages/palette-editor.js';
 import { renderCards, renderIcons, renderLayouts } from './pages/design.js';
 import { renderDevices } from './pages/devices.js';
+import { renderHealth } from './pages/health.js';
 import { renderManager, renderManagerSection } from './pages/manager.js';
 import { LOGO_PATH, LOGO_VIEWBOX } from './logo.js';
 import { cleanup } from './kit.js';
 import { h } from './pages/dom.js';
 import { renderEnergyPage } from './pages/energy.js';
 import { renderIconLibrary } from './pages/icon-library.js';
-import { renderBoards } from './pages/boards.js';
+import { renderReference } from './pages/reference.js';
+import { readPeopleVersions } from './pages/versions.js';
 import { PALETTE_PARTS, paletteWarnings, slugOk, ACTIONS, BAD, DAYS, OK, TIMES, WARN, activityNote, activityProblem, activityQuery, activityWho, actionLabel, ago, buildRegistry, clock, dayLabel, deviceHealthList, healthSummary, parseActivity } from './pages/logic.js';
 
 const root = document.getElementById('root');
@@ -60,20 +62,20 @@ const PAGES = [
   { id: 'health', title: 'Device health', label: 'Health', icon: 'cd:device-health', group: 'The house', render: renderHealth, live: true },
   { id: 'activity', title: 'Activity log', label: 'Activity', icon: 'cd:history', group: 'The house', render: renderActivity },
   { id: 'colours', title: 'Colour palettes', label: 'Colours', icon: 'cd:palette', group: 'Design', render: renderColours },
-  { id: 'design', title: 'Design', label: 'Cards, icons and layouts', icon: 'cd:view-dashboard', group: 'Design', render: renderDesign },
+  { id: 'design', title: 'Customise the dashboards', label: 'Customise', icon: 'cd:view-dashboard', group: 'Design', render: renderDesign },
   { id: 'iconlib', title: 'Icon library', label: 'Icon library', icon: 'cd:bulb-group', group: 'Design', render: (el, c) => renderIconLibrary(el, c) },
-  { id: 'boards', title: 'Idea boards', label: 'Idea boards', icon: 'cd:image-text', group: 'Design', render: (el, c, arg) => renderBoards(el, c, arg) },
-  { id: 'manager', title: 'Manager', label: 'Settings', icon: 'cd:sliders', group: 'Manage', render: (el, c, arg) => (arg ? renderManagerSection(el, c, { glowStyle, go }, decodeURIComponent(arg)) : renderManager(el, c, { glowStyle, go })) },
-  { id: 'changes', title: 'Changes', label: 'Changes', icon: 'cd:checklist', group: 'Manage', render: (el, c) => renderChanges(el, c, { glowStyle }) },
+  { id: 'reference', title: 'Reference', label: 'Reference', icon: 'cd:image-text', group: 'Design', render: (el, c, arg) => renderReference(el, c, arg) },
+  { id: 'manager', title: 'Settings', label: 'Settings', icon: 'cd:sliders', group: 'Manage', render: (el, c, arg) => renderManager(el, c, { glowStyle, go }, arg ? decodeURIComponent(arg) : '') },
+  { id: 'changes', title: 'Edits and history', label: 'Edits', icon: 'cd:checklist', group: 'Manage', render: (el, c) => renderChanges(el, c, { glowStyle }) },
 ];
 const GROUPS = ['The house', 'Design', 'Manage'];
 
 const HOME_CARDS = {
   energy: ['energy', 'Octopus rates, cheap times, the week, the car charger'], devices: ['media', 'TVs, speakers, and how the house\'s systems are'],
   health: ['ok', 'Batteries, filters and devices that stop responding'], activity: ['people', 'What people and the assistant did, and when'],
-  colours: ['tasks', 'Every palette as the house has it now, with the changes marked'], design: ['people', 'The palette each card uses, dashboard icons, panel order'],
-  iconlib: ['media', 'Every icon the house draws, searchable'], boards: ['gregg', 'The idea boards: logos, icons, splash screens, layouts and names'],
-  manager: ['warn', 'People, notifications, camera links, alarm lights and more'], changes: ['tasks', 'What is waiting for Clive to check, and what was applied'],
+  colours: ['tasks', 'Every palette as the house has it now, with the changes marked'], design: ['people', 'Card colours, section icons and the order of dashboard sections'],
+  iconlib: ['media', 'Every icon the house draws, searchable'], reference: ['gregg', 'Logos, colours, type, shapes, the apps and the boards worth keeping'],
+  manager: ['warn', 'People, notifications, camera links, alarm lights and more'], changes: ['tasks', 'What you sent for Clive to check, what went live, and put things back'],
 };
 const HOME_ICONS = { 'The house': 'cd:home', Design: 'cd:palette', Manage: 'cd:sliders' };
 
@@ -94,36 +96,54 @@ function renderHome(el, ctx) {
     const sum = versionSummary(rows);
     const word = { same: 'Same', behind: 'Behind', ahead: 'Ahead', unknown: 'Unknown' };
     card.innerHTML = `<p class="${sum.tone === 'ok' ? 'sub' : 'warn-line'}">${esc(sum.text)}</p>${rows.map((r) => `<div class="row ver"><div style="flex:1"><p class="row-title">${esc(r.name)}</p><p class="sub">${esc(r.note)}</p></div><code>${esc(r.version || '–')}</code><span class="tag ${r.status}">${word[r.status]}</span></div>`).join('')}
-      <p class="sub">What each phone has installed is kept by the phone and Google Play; the app rows show the newest published test build.</p>`;
+      <p class="sub">The app rows show the newest published test build. Below is what each person's phone last told the house it has installed.</p><div id="who-versions"></div>`;
+    try {
+      const people = await readPeopleVersions(ctx, rows[0].version || rows[1].version);
+      const box = card.querySelector('#who-versions');
+      box.innerHTML = people.length ? people.map((r) => `<div class="row ver"><div style="flex:1"><p class="row-title">${esc(r.person)} <span class="sub">· ${esc(r.phone)}${r.model && r.model !== r.phone ? `, ${esc(r.model)}` : ''}</span></p><p class="sub">${r.seen ? `Last heard ${esc(ago(Date.parse(r.seen)))}` : 'Not heard from yet'}</p></div><code>${esc(r.version || '–')}</code> <span class="tag ${r.status}">${esc(word[r.status])}</span></div>`).join('') : '<p class="sub">No phone with a Church Drive app has registered yet.</p>';
+    } catch { card.querySelector('#who-versions').innerHTML = '<p class="sub">Could not read the people from the house.</p>'; }
   };
   el.querySelector('#versions-refresh').addEventListener('click', drawVersions); drawVersions();
 }
 
 async function renderColours(el, ctx) {
   el.innerHTML = '<p class="note">Reading the palettes from the house…</p>';
-  let data, shipped = {};
+  let data, shipped = {}, mine = {};
   try { data = await ctx.ha.call('church_drive/colours'); } catch (e) { el.innerHTML = `<p class="err" role="alert">Could not read the palettes: ${esc(e.message)}</p>`; return; }
+  try { mine = (await ctx.ha.call('church_drive/manager/design')).groups || {}; } catch { /* groupings are optional: the palettes' own groups are used */ }
   // The shipped colours (a static file Home Assistant serves) tell which palettes have been changed; without them nothing is marked.
   for (const url of ['clive/cards.json', `${houseAddress()}/church_drive/clive/cards.json`]) { try { const r = await fetch(url); if (r.ok) { shipped = (await r.json()).entity_colours?.types || {}; break; } } catch { /* try the next place */ } }
   const palettes = Object.entries(data.palettes || {});
+  const groupOf = ([key, p]) => mine[key] || p.group || 'Other';
   const groups = new Map();
-  palettes.forEach(([key, p]) => { const g = p.group || 'Other'; if (!groups.has(g)) groups.set(g, []); groups.get(g).push([key, p]); });
+  palettes.forEach((e) => { const g = groupOf(e); if (!groups.has(g)) groups.set(g, []); groups.get(g).push(e); });
+  const names = [...groups.keys()];
   const NAMES = ['Colour', 'Dark', 'Accent', 'Light', 'Deep'];
+  const save = async (next) => { try { await ctx.ha.call('church_drive/manager/groups/set', { groups: next }); mine = next; renderColours(el, ctx); } catch (e) { const m = el.querySelector('#group-msg'); if (m) m.textContent = `Could not save the groups: ${e.message}`; } };
   const card = ([key, p]) => {
     const was = shipped[key]?.colours;
-    const changed = !p.custom && was && was.join() .toLowerCase() !== p.colours.join().toLowerCase();
-    return `<article class="card" style="${glowStyle(p.colours[1])}"><div class="row"><h3 class="title" style="margin:0">${esc(p.name)}</h3>
+    const changed = !p.custom && was && was.join().toLowerCase() !== p.colours.join().toLowerCase();
+    return `<article class="card pal" style="${glowStyle(p.colours[1])}"><div class="row"><h3 class="title" style="margin:0">${esc(p.name)}</h3>
       ${changed ? '<span class="tag">Changed</span>' : ''}${p.custom ? '<span class="tag">Yours</span>' : ''}</div>
       <p class="sub"><code>${esc(key)}</code></p>
-      <div class="swatches">${p.colours.map((c, i) => `<div class="sw"><i style="background:${esc(c)}"></i><span>${NAMES[i]}</span><code>${esc(c)}</code></div>`).join('')}</div>
-      <div class="chips"><button class="btn quiet edit" type="button" data-edit="${esc(key)}">Edit</button></div><div class="edit-host"></div></article>`;
+      <div class="swatches">${p.colours.map((c, i) => `<div class="sw" title="${NAMES[i]} ${esc(c)}"><i style="background:${esc(c)}"></i><code>${esc(c)}</code></div>`).join('')}</div>
+      <div class="pal-foot"><select class="grp" data-key="${esc(key)}" aria-label="Group of ${esc(p.name)}">${names.map((g) => `<option${g === groupOf([key, p]) ? ' selected' : ''}>${esc(g)}</option>`).join('')}<option value="__new">New group…</option></select>
+      <button class="btn quiet edit" type="button" data-edit="${esc(key)}">Edit</button></div><div class="edit-host"></div></article>`;
   };
   el.innerHTML = `<div class="stack">
-    <p class="note">${palettes.length} ${palettes.length === 1 ? 'palette' : 'palettes'}, revision ${esc(data.revision)}. Edit a palette and send it: it waits on the Changes page for Clive to check it before it goes live (an urgent change is applied at once).</p>
-    <div class="chips"><input class="field" id="find" type="search" placeholder="Find a palette" aria-label="Find a palette" style="flex:1"><button class="btn" type="button" id="add-palette">New palette</button></div><div id="new-host"></div>
-    <div class="stack" id="groups">${[...groups].map(([g, list]) => `<section class="stack" style="gap:12px" data-group><div class="head"><h2>${esc(g)}</h2><span class="count">${list.length}</span></div><div class="grid">${list.map(card).join('')}</div></section>`).join('')}</div></div>`;
+    <p class="note">${palettes.length} ${palettes.length === 1 ? 'palette' : 'palettes'}, revision ${esc(data.revision)}. Palettes are the colours the apps, dashboards and this site use. Edit one and send it: it waits under Edits for Clive to check before it goes live. Groups are only for finding things: choose a group on any card, or pick New group… to make your own.</p>
+    <div class="chips"><input class="field" id="find" type="search" placeholder="Find a palette" aria-label="Find a palette" style="flex:1"><button class="btn" type="button" id="add-palette">New palette</button></div><p class="err" id="group-msg" role="status"></p><div id="new-host"></div>
+    <div class="stack" id="groups">${[...groups].map(([g, list]) => `<section class="stack" style="gap:12px" data-group><div class="head"><h2>${esc(g)}</h2><span class="count">${list.length}</span><button class="btn quiet rename" type="button" data-rename="${esc(g)}">Rename</button></div><div class="grid4">${list.map(card).join('')}</div></section>`).join('')}</div></div>`;
   const byKey = Object.fromEntries(palettes);
   el.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => openPaletteEditor(b.closest('article').querySelector('.edit-host'), ctx, { key: b.dataset.edit, palette: byKey[b.dataset.edit] })));
+  el.querySelectorAll('select.grp').forEach((s) => s.addEventListener('change', () => {
+    let g = s.value; if (g === '__new') { g = (prompt('Name of the new group') || '').trim(); if (!g) { renderColours(el, ctx); return; } }
+    save({ ...mine, [s.dataset.key]: g });
+  }));
+  el.querySelectorAll('[data-rename]').forEach((b) => b.addEventListener('click', () => {
+    const to = (prompt('New name for the group', b.dataset.rename) || '').trim(); if (!to || to === b.dataset.rename) return;
+    const next = { ...mine }; groups.get(b.dataset.rename).forEach(([key]) => { next[key] = to; }); save(next);
+  }));
   document.getElementById('add-palette').addEventListener('click', () => openPaletteEditor(document.getElementById('new-host'), ctx, { key: null, palette: null }));
   document.getElementById('find').addEventListener('input', (e) => {
     const q = e.target.value.trim().toLowerCase();
@@ -135,36 +155,20 @@ async function renderColours(el, ctx) {
 
 // ---- Design: cards, icons and layouts ----
 
-const DESIGN_TABS = [['cards', 'Cards', renderCards], ['icons', 'Icons', renderIcons], ['layouts', 'Layouts', renderLayouts]];
+const DESIGN_TABS = [
+  ['cards', 'Card colours', 'Which colour theme each card uses, on the dashboards and in the apps.', 'tasks', renderCards],
+  ['icons', 'Section icons', 'The small icon at the top of each dashboard section.', 'media', renderIcons],
+  ['layouts', 'Section order', 'Move a dashboard page\'s sections up or down, or hide them.', 'people', renderLayouts],
+];
 async function renderDesign(el, ctx, arg) {
   const tab = DESIGN_TABS.find((t) => t[0] === arg) || DESIGN_TABS[0];
-  el.innerHTML = `<div class="stack"><nav class="tabs2" aria-label="Design">${DESIGN_TABS.map((t) => `<button type="button" data-tab="${t[0]}" ${t[0] === tab[0] ? 'aria-current="page"' : ''}>${t[1]}</button>`).join('')}</nav><div id="design-body"></div></div>`;
-  el.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => go(`design/${b.dataset.tab}`)));
-  await tab[2](el.querySelector('#design-body'), ctx);
+  const tiles = DESIGN_TABS.map((t) => `<a class="card design-tile${t[0] === tab[0] ? ' on' : ''}" href="#design/${t[0]}" style="${glowStyle(t[3])}"><p class="title">${esc(t[1])}</p><p class="sub">${esc(t[2])}</p></a>`).join('');
+  el.innerHTML = `<div class="stack"><p class="note">Change how the house looks. Whatever you change here is sent to Clive to check first, and you can follow it, or put it back, under <a href="#changes">Edits</a>.</p>
+    <div class="grid3">${tiles}</div><div id="design-body"></div></div>`;
+  await tab[4](el.querySelector('#design-body'), ctx);
 }
 
 // ---- Device health, Energy, Activity ----
-
-const TONE = { [OK]: 'ok', [WARN]: 'warn', [BAD]: 'bad' };
-async function houseRegistry(ha) {
-  const [entityReg, deviceReg, areaReg] = await Promise.all([ha.call('config/entity_registry/list_for_display'), ha.call('config/device_registry/list'), ha.call('config/area_registry/list')]);
-  return buildRegistry(entityReg, deviceReg, areaReg);
-}
-
-async function renderHealth(el, ctx) {
-  el.innerHTML = '<p class="note">Reading the devices from the house…</p>';
-  let items;
-  try {
-    const [list, reg] = await Promise.all([ctx.ha.call('get_states'), houseRegistry(ctx.ha)]);
-    items = deviceHealthList(Object.fromEntries(list.map((e) => [e.entity_id, e])), reg);
-  } catch (e) { el.innerHTML = `<p class="err" role="alert">Could not read the devices: ${esc(e.message)}</p>`; return; }
-  const row = (d) => `<article class="card compact" style="${glowStyle(TONE[d.level])}"><div class="row"><h3 class="title" style="margin:0">${esc(d.name)}</h3>${d.area ? `<span class="tag">${esc(d.area)}</span>` : ''}</div>
-    <p class="sub">${esc(d.summary)}</p>${d.heard ? `<p class="sub">Last heard ${esc(ago(d.heard))}</p>` : ''}</article>`;
-  const worst = items.some((d) => d.level === BAD) ? 'bad' : items.some((d) => d.level === WARN) ? 'warn' : 'ok';
-  const box = panel(ctx, { title: 'Device health', icon: 'cd:device-health', color: worst, summary: healthSummary(items) });
-  box.querySelector('.panel-body').innerHTML = items.length ? `<div class="grid tight">${items.map(row).join('')}</div>` : '<p class="note">Everything is reporting in.</p>';
-  el.replaceChildren(box); fillIcons(el);
-}
 
 const activityState = { day: 'today', time: 'all', action: 'all', who: '' };
 async function renderActivity(el, ctx) {
@@ -266,7 +270,6 @@ function show() {
   document.body.classList.remove('drawer-open');
   document.body.classList.toggle('on-home', page.id === 'home');
   const arg = location.hash.slice(1).split('/').slice(1).join('/');
-  if (arg && page.id === 'manager') document.getElementById('title').textContent = decodeURIComponent(arg);
   cleanup(ctx);
   return page.render(document.getElementById('page'), ctx, arg);
 }

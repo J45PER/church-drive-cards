@@ -124,5 +124,13 @@ class CardsIconsLayouts(unittest.TestCase):
             pl.restore_change("icons", {"dashboard": "d", "view": "v", "panel": "P", "icon": None})
 
 
+class Groups(unittest.TestCase):
+    def test_groups_are_cleaned(self):
+        clean = sys.modules["cd_pkg.proposals_logic"].clean_groups
+        self.assertEqual(clean({" ok ": " Status ", "": "x", "a": "", "b": 3}), {"ok": "Status"})
+        self.assertEqual(clean("nope"), {})
+        self.assertEqual(len(clean({str(i): "g" for i in range(500)})), 200)
+
+
 if __name__ == "__main__":
     unittest.main()

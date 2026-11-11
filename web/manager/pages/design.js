@@ -1,5 +1,5 @@
 // The editors for cards, icons and layouts. Each sends a proposal (nothing changes until Clive has checked it): a card's palette, a dashboard
-// panel's icon, or the order of a dashboard view's panels. Each proposal carries what it replaces, so it can be put back from the Changes page.
+// panel's icon, or the order of a dashboard view's panels. Each proposal carries what it replaces, so it can be put back from the Edits page.
 import { CARDS, CARD_GROUPS } from './cards-data.js';
 import { chips, h } from './manager.js';
 import { icon, iconNames, loadIcons } from '../icons.js';
@@ -10,7 +10,7 @@ const note = (t) => h('p', { class: 'sub' }, t);
 async function propose(ctx, kind, change, noteText) {
   return ctx.ha.call('church_drive/manager/propose', { kind, change, note: noteText || null });
 }
-const sentNote = (sent) => `Sent for checking${sent.checks?.length ? ` (the check noted: ${sent.checks.join(' ')})` : ''}. Follow it on the Changes page.`;
+const sentNote = (sent) => `Sent for checking${sent.checks?.length ? ` (the check noted: ${sent.checks.join(' ')})` : ''}. Follow it under Edits.`;
 const oldHouse = (e) => (e.code === 'unknown_command' ? 'Home Assistant is running an older Church Drive without these editors. Update Church Drive in HACS, then restart Home Assistant.' : e.message);
 
 // ---- Cards: which palette each card uses ----
@@ -21,23 +21,24 @@ export async function renderCards(el, ctx) {
   try { [palettes, design] = await Promise.all([ctx.ha.call('church_drive/colours'), ctx.ha.call('church_drive/manager/design')]); }
   catch (e) { el.replaceChildren(h('p', { class: 'err', role: 'alert' }, `Could not read the picks: ${oldHouse(e)}`)); return; }
   const keys = Object.entries(palettes.palettes || {}).sort((a, b) => a[1].name.localeCompare(b[1].name));
-  const picks = design.cards || {}; const edits = {}; let filter = '';
+  const picks = design.cards || {}; const edits = {}; let filter = ''; const openGroups = new Set([CARD_GROUPS[0]]);
   const list = h('div', { class: 'stack' }); const msg = h('p', { class: 'note', role: 'status' }); const send = h('button', { class: 'btn', type: 'button' }, 'Send changes');
   const count = () => { const n = Object.keys(edits).length; send.disabled = !n; send.textContent = n ? `Send ${n} change${n === 1 ? '' : 's'}` : 'Send changes'; };
   const draw = () => {
     list.replaceChildren(...CARD_GROUPS.map((g) => {
       const cards = CARDS.filter((c) => c.group === g && (!filter || `${c.name} ${c.pages} ${c.ha} ${c.app}`.toLowerCase().includes(filter)));
       if (!cards.length) return null;
-      return h('section', { class: 'stack', style: 'gap:10px' }, h('div', { class: 'head' }, h('h2', {}, g), h('span', { class: 'count' }, cards.length)),
-        h('div', { class: 'grid tight' }, cards.map((c) => {
+      return h('details', { class: 'fold', open: !!filter || openGroups.has(g), ontoggle: (e) => { e.target.open ? openGroups.add(g) : openGroups.delete(g); } }, h('summary', { class: 'head' }, h('h2', {}, g), h('span', { class: 'count' }, `${cards.length} cards`)),
+        h('div', { class: 'grid4 fold-body' }, cards.map((c) => {
           const have = picks[c.id] || {}; const now = edits[c.id] || {};
           const palette = now.palette ?? have.palette ?? ''; const comment = now.comment ?? have.comment ?? '';
           const sel = h('select', { class: 'field', 'aria-label': `Palette for ${c.name}`, onchange: (e) => { setEdit(c.id, 'palette', e.target.value, have.palette); } },
             h('option', { value: '' }, `Not set${c.suggested ? ` (suggested: ${c.suggested})` : ''}`), keys.map(([k, p]) => h('option', { value: k, selected: k === palette }, `${p.name}${k === c.suggested ? ' · suggested' : ''}`)));
-          const inp = h('input', { class: 'field', value: comment, placeholder: 'Comment (optional)', 'aria-label': `Comment on ${c.name}`, oninput: (e) => { setEdit(c.id, 'comment', e.target.value, have.comment || ''); } });
+          const inp = h('input', { class: 'field', value: comment, placeholder: 'A note for Clive (optional)', 'aria-label': `Note on ${c.name}`, hidden: !comment, oninput: (e) => { setEdit(c.id, 'comment', e.target.value, have.comment || ''); } });
+          const addNote = comment ? null : h('button', { class: 'btn quiet', type: 'button', onclick: (e) => { inp.hidden = false; e.currentTarget.remove(); inp.focus(); } }, 'Add a note');
           const sw = (keys.find(([k]) => k === palette)?.[1].colours || []).map((col) => h('i', { style: `background:${col}`, class: 'dot5' }));
           return h('article', { class: 'card plain compact' }, h('div', { class: 'row' }, h('h3', { class: 'title', style: 'margin:0;flex:1' }, c.name), c.status === 'available' ? h('span', { class: 'tag' }, 'Available') : null),
-            note(`${c.pages}${c.app ? ` · ${c.app}` : ''}`), c.issue ? note(c.issue) : null, h('div', { class: 'dots' }, sw), sel, inp);
+            note(c.pages), h('div', { class: 'dots' }, sw), sel, addNote, inp);
         })));
     }).filter(Boolean));
   };
@@ -56,7 +57,7 @@ export async function renderCards(el, ctx) {
     catch (e) { msg.textContent = oldHouse(e); count(); }
   });
   const find = h('input', { class: 'field', type: 'search', placeholder: 'Find a card, page or file', 'aria-label': 'Find a card', oninput: (e) => { filter = e.target.value.trim().toLowerCase(); draw(); } });
-  el.replaceChildren(h('div', { class: 'stack' }, h('p', { class: 'note' }, 'Choose the palette each card uses. A pick waits on the Changes page for Clive to check it and apply it where the card is drawn; the apps and dashboards change when Clive does.'),
+  el.replaceChildren(h('div', { class: 'stack' }, h('p', { class: 'note' }, 'Each card on the dashboards and in the apps has a colour theme. Pick a different one here and send it.'),
     h('div', { class: 'chips' }, find, send), msg, list));
   draw(); count();
 }
@@ -119,7 +120,7 @@ export async function renderIcons(el, ctx) {
     fill();
   };
   const picked = await pickView(ctx, body, draw);
-  el.replaceChildren(h('div', { class: 'stack' }, h('p', { class: 'note' }, "Change the icon of a dashboard panel (the same dashboards the apps read). It uses the house's own icon set; the change waits on the Changes page for Clive to check and apply it."), picked, msg, body));
+  el.replaceChildren(h('div', { class: 'stack' }, h('p', { class: 'note' }, 'Every section of a dashboard has a small icon. Choose a dashboard page, then Change on a section to pick another from the house icon set.'), picked, msg, body));
 }
 
 // ---- Layouts: the order and visibility of a view's panels ----
@@ -144,5 +145,5 @@ export async function renderLayouts(el, ctx) {
     if (!order.length) body.replaceChildren(h('p', { class: 'note' }, 'This view has no panels with titles.')); else redraw();
   };
   const picked = await pickView(ctx, body, draw);
-  el.replaceChildren(h('div', { class: 'stack' }, h('p', { class: 'note' }, "Reorder or hide the panels of a dashboard view. The order is what the apps and dashboards show; the change waits on the Changes page for Clive to check and apply it, and the old order is kept so it can be restored."), picked, msg, body));
+  el.replaceChildren(h('div', { class: 'stack' }, h('p', { class: 'note' }, 'Choose a dashboard page, then move its sections up or down, or hide ones you do not want. The apps follow the same order.'), picked, msg, body));
 }
