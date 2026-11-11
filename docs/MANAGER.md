@@ -163,7 +163,9 @@ Tick these off as they are done.
 - [ ] Integration: the admin calls and the Firestore mirror, with tests (`test/*_logic_test.py` style).
 - [ ] `firestore.rules`, `firebase.json`, Hosting deploy workflow.
 - [ ] Website: HA sign-in, then Colours, then Cards, Icons, Layouts, then the designer pages.
-- [ ] Clive Admin: module, sign-in, Manager and Energy moved across, palettes view, update check.
+- [x] Clive Admin v1 (0.125.0): `admin` module, `com.churchdrive.admin`, Home Assistant sign-in (or the phone app's), administrators-only check, palettes view-only, update check, CI, placeholder logo. Needs a first CI run, then an install on Jamie's phone to prove sign-in.
+- [ ] Clive Admin: Device Health, then Energy, then the Manager sections, one at a time, each native in the admin module (the phone app's card kit is too tangled to move: about 90 files reach it). Nothing leaves the phone app until Clive Admin is proven; then the phone app opens the right Clive Admin page, as it does for To-Do.
+- [ ] Play: create the `com.churchdrive.admin` listing, invite the service account, add its Play signing fingerprint to `TrustedApps.CERTS` (the Play upload step is `continue-on-error` until then).
 - [ ] Remove Manager and Energy from the main app (only after Clive Admin is installable).
 - [ ] Clive Admin logo and animated splash.
 - [ ] Apps and dashboards read Firestore live (optional; HA keeps working without it).

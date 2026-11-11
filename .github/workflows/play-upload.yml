@@ -12,7 +12,7 @@ on:
         description: "Which apps"
         type: choice
         default: all
-        options: [all, phone-and-watch, todo, satellites]
+        options: [all, phone-and-watch, todo, satellites, admin]
 
 permissions:
   contents: read
@@ -28,10 +28,10 @@ jobs:
       - name: Get the bundles and release notes
         run: |
           # Everything for a version is on one release, v<version> (docs/VERSIONING.md).
-          mkdir -p aabs play-notes-main play-notes-todo play-notes-satellites
+          mkdir -p aabs play-notes-main play-notes-todo play-notes-satellites play-notes-admin
           gh release download "v${VERSION}" --pattern '*.aab' --dir aabs
           notes_for() { awk -v v="$VERSION" '$0 ~ "^## "v"( |$)" {on=1; next} /^## / {on=0} on' "$1" | { cat; echo; } ; }
-          for pair in "main:companion/android/CHANGELOG.md" "todo:companion/android/todo/CHANGELOG.md" "satellites:companion/android/satellites/CHANGELOG.md"; do
+          for pair in "main:companion/android/CHANGELOG.md" "todo:companion/android/todo/CHANGELOG.md" "satellites:companion/android/satellites/CHANGELOG.md" "admin:companion/android/admin/CHANGELOG.md"; do
             dir="play-notes-${pair%%:*}"; notes=$(notes_for "${pair#*:}")
             printf '%s' "${notes:-Version ${VERSION}.}" | sed 's/^- //' | head -c 480 > "$dir/whatsnew-en-GB"
           done
@@ -43,6 +43,7 @@ jobs:
           fi
           if want todo; then echo "TODO=$(ls aabs/church-drive-todo-*.aab 2>/dev/null | head -1)" >> "$GITHUB_ENV"; fi
           if want satellites; then echo "SATELLITES=$(ls aabs/church-drive-satellites-*.aab 2>/dev/null | head -1)" >> "$GITHUB_ENV"; fi
+          if want admin; then echo "ADMIN=$(ls aabs/church-drive-admin-*.aab 2>/dev/null | head -1)" >> "$GITHUB_ENV"; fi
       - name: Phone app (internal testing)
         if: ${{ env.PHONE != '' }}
         uses: r0adkll/upload-google-play@v1.1.3
@@ -83,3 +84,13 @@ jobs:
           track: internal
           status: completed
           whatsNewDirectory: play-notes-satellites
+      - name: Clive Admin (internal testing)
+        if: ${{ !cancelled() && env.ADMIN != '' }}
+        uses: r0adkll/upload-google-play@v1.1.3
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.churchdrive.admin
+          releaseFiles: ${{ env.ADMIN }}
+          track: internal
+          status: completed
+          whatsNewDirectory: play-notes-admin

@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **v0.125.0 + apps 0.125.0** (2026-11-11): Clive Admin, a fourth app (`com.churchdrive.admin`) for administrators, with Home Assistant sign-in, an administrators-only check and the colour palettes (view only). Manager, Energy and Device Health stay in the phone app until Clive Admin is proven. The Clive Manager design is in `docs/MANAGER.md`.
 - **v0.124.0 + apps 0.124.0** (2026-11-08): in the app, card fixes: Home thermostat humidity and outside, tighter cars and purifier spacing, who's home closer, the CO pill, multi-coloured room graphs, and folded cards remembered between pages.
 - **v0.123.0 + apps 0.123.0** (2026-11-08): in the app, the camera card on the card grid, Gregg the same card on Home and Cleaning, and taller graphs.
 - **v0.122.0 + apps 0.122.0** (2026-11-08): in the apps, the card layout agreed on the review page (8 column grid, title row with the arrow in column 8, whole and half row heights, buttons and text on the grid, folded versions again) for the Home, Security, Climate, Lights and Cleaning cards; colours and the background animation unchanged.

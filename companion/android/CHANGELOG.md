@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.125.0
+
+- No change to this app: Clive Admin, a new app for administrators, is in the shared version. Manager, Energy and Device Health stay here for now.
+- The phone app lets Clive Admin use its sign-in, as To-Do and Satellites do.
+
 ## 0.124.0
 
 - The thermostat on the Home screen shows the humidity and the outside temperature, as it does on the Climate page.

@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 // One version number for the whole house: the Home Assistant integration and its cards bundle, the phone app (and the watch app that
-// ships with it), Church Drive To-Do and Church Drive Satellites all carry the same x.y.z, bumped together.
+// ships with it), Church Drive To-Do, Church Drive Satellites and Clive Admin all carry the same x.y.z, bumped together.
 //
 //   node tools/versions.mjs                check that every one of them agrees (CI runs this); exits 1 if not
 //   node tools/versions.mjs set 0.80.1     set them all, then rebuild the bundles (npm run build) so the manifest and bundles follow
 //
 // Where each lives: package.json (the integration; build.mjs copies it into custom_components/church_drive/manifest.json and
-// into both bundles) and the four version.properties files below. Build numbers are separate: every CI build has GitHub's run number,
+// into both bundles) and the version.properties files below. Build numbers are separate: every CI build has GitHub's run number,
 // which is what Android and Play compare (versionCode), so a version does not have to be bumped for a new build.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
@@ -15,6 +15,7 @@ const PROPS = [
   ['phone and watch app', 'companion/android/version.properties'],
   ['To-Do app', 'companion/android/todo/version.properties'],
   ['Satellites app', 'companion/android/satellites/version.properties'],
+  ['Clive Admin app', 'companion/android/admin/version.properties'],
 ];
 const MANIFEST = 'custom_components/church_drive/manifest.json';
 const SEMVER = /^\d+\.\d+\.\d+$/;
@@ -39,7 +40,7 @@ if (cmd === 'set') {
     writeFileSync(file, readFileSync(file, 'utf8').replace(/^version=.*$/m, `version=${arg}`));
   }
   execSync('npm run build', { stdio: 'inherit' });
-  console.log(`\nAll set to ${arg}. Add a line to CHANGELOG.md and a "## ${arg}" section to each Android CHANGELOG.md (companion/android, todo, satellites).`);
+  console.log(`\nAll set to ${arg}. Add a line to CHANGELOG.md and a "## ${arg}" section to each Android CHANGELOG.md (companion/android, todo, satellites, admin).`);
 } else {
   const rows = found();
   const versions = new Set(rows.map(([, v]) => v));
