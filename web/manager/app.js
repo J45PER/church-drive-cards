@@ -10,6 +10,8 @@ import { renderCards, renderIcons, renderLayouts } from './pages/design.js';
 import { renderDevices } from './pages/devices.js';
 import { renderManager, renderManagerSection } from './pages/manager.js';
 import { LOGO_PATH, LOGO_VIEWBOX } from './logo.js';
+import { cleanup } from './kit.js';
+import { renderEnergyPage } from './pages/energy.js';
 import { PALETTE_PARTS, paletteWarnings, slugOk, ACTIONS, BAD, DAYS, OK, TIMES, WARN, activityNote, activityProblem, activityQuery, activityWho, actionLabel, ago, buildRegistry, clock, dayLabel, deviceHealthList, energySnapshot, healthSummary, parseActivity } from './pages/logic.js';
 
 const root = document.getElementById('root');
@@ -48,7 +50,7 @@ const PAGES = [
   { id: 'manager', title: 'Manager', label: 'Manager', icon: 'cd:sliders', render: (el, c, arg) => (arg ? renderManagerSection(el, c, { glowStyle, go }, decodeURIComponent(arg)) : renderManager(el, c, { glowStyle, go })) },
   { id: 'health', title: 'Device health', label: 'Health', icon: 'cd:device-health', render: renderHealth },
   { id: 'devices', title: 'Devices', label: 'Devices', icon: 'cd:television-play', render: renderDevices },
-  { id: 'energy', title: 'Energy', label: 'Energy', icon: 'cd:bolt', render: renderEnergy },
+  { id: 'energy', title: 'Energy', label: 'Energy', icon: 'cd:bolt', render: (el, c) => renderEnergyPage(el, c) },
   { id: 'activity', title: 'Activity log', label: 'Activity', icon: 'cd:history', render: renderActivity },
 ];
 
@@ -242,6 +244,7 @@ function show() {
   root.querySelectorAll('[data-page]').forEach((b) => (b.dataset.page === page.id ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current')));
   const arg = location.hash.slice(1).split('/').slice(1).join('/');
   if (arg && page.id === 'manager') document.getElementById('title').textContent = decodeURIComponent(arg);
+  cleanup(ctx);
   page.render(document.getElementById('page'), ctx, arg);
 }
 window.addEventListener('hashchange', () => { if (ctx) show(); });

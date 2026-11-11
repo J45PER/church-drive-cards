@@ -11,8 +11,9 @@ export function loadIcons(fallbackBase = '') {
     for (const url of ['clive/icons.json', fallbackBase && `${fallbackBase}/church_drive/clive/icons.json`].filter(Boolean)) {
       try { const r = await fetch(url); if (r.ok) { set = (await r.json()).icons || {}; break; } } catch { /* try the next place */ }
     }
-    waiting.forEach((fn) => fn()); waiting.clear();
-    return !!set;
+    const ok = !!set; set ||= {};
+    const run = [...waiting]; waiting.clear(); run.forEach((fn) => fn());
+    return ok;
   })();
   return pending;
 }
