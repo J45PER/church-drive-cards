@@ -2,11 +2,7 @@
 
 ## 0.127.0
 
-- No change to this app: the phone app now fits phones on their side and tablets, in the shared version.
-
-## 0.126.0
-
-- No change to this app: Clive Admin, a new app for administrators, is in the shared version.
+- No change to this app: Clive Admin, a new app for administrators, and the phone app fitting phones on their side and tablets are in the shared version.
 
 ## 0.125.0
 

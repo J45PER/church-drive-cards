@@ -6,15 +6,12 @@ with the APK, so there is a record of what shipped. Newest first.
 
 ## 0.127.0
 
+- Clive Admin, a new app for administrators, is in this version. Manager, Energy and Device Health stay here for now.
+- The app lets Clive Admin use its sign-in, as To-Do and Satellites do.
 - The app fits the screen it is on. A phone upright is as before.
 - A phone on its side, or a tablet in either direction (600dp wide or more), has the pages down the left as a rail, which scrolls, instead of the bar along the bottom. While Clive is open his buttons still take the bottom bar's place.
 - A phone on its side has a slim title bar instead of the tall one, so there is room for the cards.
 - The cards go in as many columns as fit, each about a phone's width, instead of one narrow column with empty sides: two on a phone on its side, two or three on a tablet and up to four on a big one. Each card goes under the shortest column. A page's header (the weather, the lines of what is happening) takes the whole width.
-
-## 0.126.0
-
-- No change to this app: Clive Admin, a new app for administrators, is in the shared version. Manager, Energy and Device Health stay here for now.
-- The phone app lets Clive Admin use its sign-in, as To-Do and Satellites do.
 
 ## 0.125.0
 
