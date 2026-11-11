@@ -2,7 +2,7 @@
 // site reads them over its WebSocket and (next) sends changes back for Clive to check and apply.
 import { DEFAULT_HA, HaSocket, cleanAddress, finishSignIn, houseAddress, signOut, signedIn, startSignIn } from './ha.js';
 import { glowStyle, inkOn, setTones } from './glow.js';
-import { loadStyle } from './kit.js';
+import { loadStyle, panel } from './kit.js';
 import { fillIcons, icon, loadIcons } from './icons.js';
 import { renderChanges } from './pages/changes.js';
 import { readVersions, summary as versionSummary } from './pages/versions.js';
@@ -141,7 +141,10 @@ async function renderHealth(el, ctx) {
   } catch (e) { el.innerHTML = `<p class="err" role="alert">Could not read the devices: ${esc(e.message)}</p>`; return; }
   const row = (d) => `<article class="card compact" style="${glowStyle(TONE[d.level])}"><div class="row"><h3 class="title" style="margin:0">${esc(d.name)}</h3>${d.area ? `<span class="tag">${esc(d.area)}</span>` : ''}</div>
     <p class="sub">${esc(d.summary)}</p>${d.heard ? `<p class="sub">Last heard ${esc(ago(d.heard))}</p>` : ''}</article>`;
-  el.innerHTML = `<div class="stack"><p class="note">${esc(healthSummary(items))}.</p>${items.length ? `<div class="grid tight">${items.map(row).join('')}</div>` : ''}</div>`;
+  const worst = items.some((d) => d.level === BAD) ? 'bad' : items.some((d) => d.level === WARN) ? 'warn' : 'ok';
+  const box = panel(ctx, { title: 'Device health', icon: 'cd:device-health', color: worst, summary: healthSummary(items) });
+  box.querySelector('.panel-body').innerHTML = items.length ? `<div class="grid tight">${items.map(row).join('')}</div>` : '<p class="note">Everything is reporting in.</p>';
+  el.replaceChildren(box); fillIcons(el);
 }
 
 const activityState = { day: 'today', time: 'all', action: 'all', who: '' };
@@ -168,7 +171,7 @@ async function renderActivity(el, ctx) {
     r.lines.forEach((l) => { const k = dayLabel(l.ts); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(l); });
     out.querySelector('.more')?.remove();
     if (!r.lines.length && shown === 0) { out.innerHTML = '<p class="note">Nothing matches.</p>'; return; }
-    out.insertAdjacentHTML('beforeend', [...groups].map(([day, lines]) => `<section class="stack" style="gap:8px"><div class="head"><h2>${esc(day)}</h2></div>${lines.map((l) => {
+    out.insertAdjacentHTML('beforeend', [...groups].map(([day, lines]) => `<section class="stack" style="gap:8px"><div class="head"><h2 class="day-head">${esc(day)}</h2></div>${lines.map((l) => {
       const note = activityNote(l, r.assistant);
       return `<article class="card line compact" style="${glowStyle(l.kind === 'overruled' ? 'bad' : l.kind.startsWith('clive') ? 'tasks' : 'neutral')}"><span class="when">${esc(clock(l.ts))}</span><div><p class="title" style="margin:0"><b>${esc(activityWho(l, r.assistant))}</b> ${esc(l.text)}</p>${note ? `<p class="sub">${esc(note)}</p>` : ''}</div></article>`;
     }).join('')}</section>`).join(''));

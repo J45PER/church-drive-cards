@@ -186,3 +186,4 @@ a.btn { display: inline-block; text-decoration: none; margin-top: 8px; }
 .card.tone .chip[aria-pressed="true"] { background: color-mix(in srgb, #fff 24%, transparent); }
 .card.tone .tag { color: #fff; }
 .card.tone .kind { display: grid; gap: 6px; padding: 6px 0; }
+.day-head { color: var(--primary); font-weight: 500; }
