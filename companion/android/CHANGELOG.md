@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.126.0
+
+- On a phone on its side, the page keeps clear of the camera hole or notch, so it no longer sits over buttons and text.
+- Wide screens: the groups of cards are shared between the columns in order so the columns end at about the same height, instead of one long and one short. Cards fill their column again (the 0.125.0 width cap is removed, as the columns already set the width).
+
 ## 0.129.0
 
 - Clive Admin from Google Play can use this app's sign-in: its signing certificate is on the trusted list. Update this app first, then Clive Admin.
