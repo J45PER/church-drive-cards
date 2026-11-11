@@ -273,8 +273,9 @@ class IconLayer {
     this.root.style.transform = '';
     if (f.icon === 'mark') {
       this.markPath.setAttribute('d', markPath(now));
-      // turns with the finger while pulling; half a turn (the mark looks the same upside down) on Release; spins while updating
-      const rot = face === 'pull' ? ctx.pull * 180 : face === 'updating' ? (now % 1100) / 1100 * 360 : ctx.settle;
+      // turns with the finger while pulling and has made half a turn by Release; the mark looks the same upside down, so every other face
+      // draws it upright with no jump, and only its own drift moves (no spinning once the pill is loaded)
+      const rot = face === 'pull' ? ctx.pull * 180 : face === 'release' ? 180 : 0;
       this.root.style.transform = `rotate(${rot}deg)`;
     } else if (f.icon === 'bars') {
       const pulse = 0.35 + 0.65 * FOSE(triangle(now, 900)), w = 22, h = 22, bar = w * 0.16;
@@ -539,7 +540,7 @@ const SPECS = [
   { face: 'pull', pull: 0.6, force: { expanded: false }, name: 'Pull to refresh', d: 'A circle; the mark turns with the finger (here 60% of the way).' },
   { face: 'release', pull: 1.05, force: { expanded: true }, name: 'Release to refresh', d: 'Past the line: it widens.' },
   { face: 'connecting', force: { expanded: true }, name: 'Connecting', d: 'The line is opening. Also what a short outage says.' },
-  { face: 'updating', force: { expanded: true }, name: 'Updating', d: 'The mark spins while states load or a refresh runs.' },
+  { face: 'updating', force: { expanded: true }, name: 'Updating', d: 'Clive\u2019s mark drifts as normal while states load or a refresh runs.' },
   { face: 'done', force: { expanded: true }, name: 'Up to date', d: 'After a pull: the tick draws itself, then it goes.' },
   { face: 'noconn', force: { expanded: true }, name: 'No connection', d: 'Down for six seconds. Red; tap to try again.' },
   { face: 'restart', force: { expanded: true }, name: 'Home Assistant restarting', d: 'Amber; until the items are all back.' },
@@ -579,7 +580,7 @@ $('#specTable').innerHTML = `<tr><th>What</th><th>Value</th><th>Why</th></tr>` +
   ['Widen', 'Waits 380 ms as a circle, then widens 320 ms (standard easing); words fade in 320 ms after an 80 ms delay.', 'A pull skips the wait: stays a circle until "Release".'],
   ['Exit', 'Words shrink 220 ms and fade 120 ms; pill fades 200 ms, scales to 0.6 over 250 ms, slides up on the spring.', ''],
   ['Cloud', 'Clive’s three clouds on a 9 s drift, a 4.5 s breathe (±5%). Orb 32 dp, stretched across the pill (width/40 × 1.25). Opacity 0.95 as a circle, 0.5 once widened (300 ms). Clip to the pill.', 'AssistOrb, idle. Classic palette: #5C6BC0, #AB47BC, #4FD08A; the phone app passes its own.'],
-  ['Mark', 'AssistantGlyph idle: two 76-unit squircles, radius 30, sliding along the diagonal, 4 s cycle, overlap cut out (even-odd). White as a circle, ink once widened (300 ms).', 'Pull: turns 0–180° with the finger. Release: settles 180° over 250 ms. Updating: one turn per 1.1 s.'],
+  ['Mark', 'AssistantGlyph idle: two 76-unit squircles, radius 30, sliding along the diagonal, 4 s cycle, overlap cut out (even-odd). White as a circle, ink once widened (300 ms).', 'Pull: turns 0–180° with the finger (the only time it turns). Release: 180°, which looks the same upright. Every loaded face: the normal drift, no spin.'],
   ['Words', 'Instrument Sans 500, 14 dp, 0.1 dp tracking. Crossfade on change: new in 180 ms, old out 120 ms.', 'Pull to refresh · Release to refresh · Connecting · Updating · Up to date · No connection · Home Assistant restarting'],
   ['Colours', 'Normal: surface 2 with text colour. No connection: the house’s Red, restarting: its Amber (toneColors: light = 38% tint of Light over white with Deep text; dark = Dark with white text). Cloud takes the set’s colour and accent.', 'Same palettes as the cards, so they match the dashboard.'],
   ['No connection icon', 'Three signal bars (22 dp box, bar width 16%) breathing between 35% and 100% over 0.9 s (reverse), with a slash through them.', ''],

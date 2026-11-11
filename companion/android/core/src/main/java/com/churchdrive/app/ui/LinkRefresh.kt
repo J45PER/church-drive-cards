@@ -249,8 +249,8 @@ private fun PillIcon(face: PillFace, ink: Color, pull: Float) {
     val spin = rememberInfiniteTransition(label = "spin")
     val turn by spin.animateFloat(0f, 360f, infiniteRepeatable(tween(1_100, easing = LinearEasing)), label = "turn")
     val pulse by spin.animateFloat(0.35f, 1f, infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "pulse")
-    // The mark turns with the finger while pulling, then settles half a turn over on Release (the mark looks the same upside down).
-    val settle by androidx.compose.animation.core.animateFloatAsState(if (face == PillFace.Release) 180f else 0f, tween(250), label = "settle")
+    // The mark turns with the finger while pulling and has made half a turn by Release. Upside down it looks the same, so every other face
+    // draws it the right way up with no jump, and only its own drifting (see AssistantGlyph) moves: no spinning once the pill is loaded.
     val sweep by spin.animateFloat(0f, 1f, infiniteRepeatable(tween(1_400), RepeatMode.Reverse), label = "sweep")
     when (face) {
         PillFace.Connecting, PillFace.Pull, PillFace.Release, PillFace.Updating ->
@@ -258,8 +258,8 @@ private fun PillIcon(face: PillFace, ink: Color, pull: Float) {
                 Modifier.size(22.dp).graphicsLayer {
                     rotationZ = when (face) {
                         PillFace.Pull -> pull * 180f
-                        PillFace.Updating -> turn
-                        else -> settle
+                        PillFace.Release -> 180f
+                        else -> 0f
                     }
                 },
             ) { AssistantGlyph(AssistantGlyphPose.Idle, ink, 22.dp) }
