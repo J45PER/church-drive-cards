@@ -157,3 +157,6 @@ a.btn { display: inline-block; text-decoration: none; margin-top: 8px; }
 .icon-pick:hover, .icon-pick:focus-visible { background: color-mix(in srgb, var(--primary) 22%, transparent); }
 .ico-box { width: 32px; height: 32px; display: grid; place-items: center; color: var(--primary); }
 @media (max-width: 699px) { .nav { overflow-x: auto; justify-content: flex-start; } .nav button { flex: 0 0 72px; } }
+.dots-inline { display: inline-flex; gap: 3px; vertical-align: middle; }
+.dots-inline i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.num { width: 90px !important; min-width: 0 !important; }

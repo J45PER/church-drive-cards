@@ -139,7 +139,8 @@ test('the Manager dashboard gives its sections with their cards, stacks taken ap
   const s = managerSections(config);
   assert.deepEqual(s.map((x) => x.title), ['Notifications', 'To-do settings', 'Watch']);
   assert.deepEqual(s[1].cards.map((c) => c.type), ['heading', 'entities', 'markdown']);
-  assert.deepEqual(s.map(builtHere), [true, true, false]);
+  assert.deepEqual(s.map(builtHere), [true, true, true]); // the Watch is built on the site too
+  assert.equal(builtHere({ cards: [{ type: 'custom:watch-settings-card' }, { type: 'custom:house-tasks-card' }] }), false);
 });
 
 import { contrast, paletteWarnings, slugOk } from '../web/manager/pages/logic.js';
@@ -189,4 +190,10 @@ test('a view gives its titled panels in order, and card, icon and layout changes
   assert.match(describe({ cards: { fan: {}, gas: {} } }, 'cards'), /^Card picks: fan, gas$/);
   assert.match(describe({ dashboard: 'dashboard-mobile', view: 'energy', panel: 'Octopus Gas', icon: 'cd:bolt', before: 'phu:octopusenergy' }, 'icons'), /Octopus Gas .*phu:octopusenergy → cd:bolt/);
   assert.match(describe({ dashboard: 'd', view: 'v', order: ['A'], hidden: ['B'] }, 'layouts'), /hiding B/);
+});
+
+import { readFileSync } from 'node:fs';
+
+test("the site's copy of the watch rules is the dashboard card's own file", () => {
+  assert.equal(readFileSync(new URL('../web/manager/pages/watch-logic.js', import.meta.url), 'utf8'), readFileSync(new URL('../src/watch-logic.js', import.meta.url), 'utf8'));
 });
