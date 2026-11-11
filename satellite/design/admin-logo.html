@@ -1,0 +1,147 @@
+<title>Clive Admin Logo Ideas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root { --bar-bg:#e9ebef; --bar-fg:#14181f; --bar-soft:#5b6472; --stage-bg:#fff; --stage-fg:#000; --stage-soft:#5f6672; --stage-line:#e0e3e8; --icon-bg:#fff; --ui:"Instrument Sans",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bar-bg:#1a1f27; --bar-fg:#eef1f5; --bar-soft:#9aa4b2; color-scheme:dark; } }
+:root[data-theme="dark"] { --bar-bg:#1a1f27; --bar-fg:#eef1f5; --bar-soft:#9aa4b2; color-scheme:dark; }
+:root[data-page="dark"] { --stage-bg:#0B0F11; --stage-fg:#fff; --stage-soft:#9aa0aa; --stage-line:#262a31; --icon-bg:#0B0F11; }
+* { box-sizing:border-box; }
+body { background:var(--bar-bg); color:var(--bar-fg); font-family:var(--ui); margin:0; line-height:1.4; }
+.top { display:flex; flex-wrap:wrap; gap:10px 20px; align-items:center; justify-content:space-between; padding-block:20px 16px; padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px)); }
+.top h1 { font-size:1.3rem; margin:0; letter-spacing:-.01em; }
+.top p { margin:2px 0 0; color:var(--bar-soft); font-size:.86rem; max-width:72ch; }
+.seg { display:inline-flex; background:color-mix(in srgb,var(--bar-soft) 25%,transparent); border-radius:999px; padding:3px; gap:2px; }
+.seg button { font:inherit; font-size:.88rem; border:0; background:none; color:var(--bar-soft); padding:7px 18px; border-radius:999px; cursor:pointer; }
+.seg button[aria-pressed="true"] { background:var(--bar-fg); color:var(--bar-bg); }
+.stage { background:var(--stage-bg); color:var(--stage-fg); padding-block:28px 56px; }
+.in { max-width:1100px; margin:0 auto; display:grid; gap:44px; padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px)); }
+h2 { font-size:1.05rem; margin:0 0 2px; font-weight:600; }
+.note { color:var(--stage-soft); font-size:.86rem; max-width:72ch; margin:0 0 14px; }
+.row { display:flex; flex-wrap:wrap; gap:16px 22px; align-items:flex-end; }
+.cell { display:grid; gap:8px; justify-items:center; align-content:end; min-width:0; }
+.cl { font-size:.74rem; color:var(--stage-soft); text-align:center; }
+.mark { width:150px; height:150px; border:1px solid var(--stage-line); border-radius:22px; display:grid; place-items:center; padding:14px; }
+.icon { width:104px; height:104px; border:1px solid var(--stage-line); background:var(--icon-bg); border-radius:24px; display:grid; place-items:center; padding:14px; }
+.sm { display:flex; gap:14px; align-items:center; height:104px; }
+svg { display:block; overflow:visible; }
+.mark svg, .icon svg { width:100%; height:100%; }
+.splash { width:260px; height:230px; border:1px solid var(--stage-line); border-radius:22px; display:grid; align-content:center; justify-items:center; gap:10px; background:var(--stage-bg); position:relative; }
+.splash .lg { width:118px; height:118px; }
+.splash .t { font-weight:600; font-size:34px; letter-spacing:-.01em; line-height:1; opacity:0; }
+.splash .s { font-size:15px; color:var(--stage-soft); opacity:0; margin-top:-4px; }
+.splash button { position:absolute; right:10px; bottom:8px; font:inherit; font-size:.72rem; border:1px solid var(--stage-line); background:none; color:var(--stage-soft); border-radius:999px; padding:3px 11px; cursor:pointer; }
+.pick { color:var(--stage-soft); font-size:.86rem; max-width:72ch; }
+</style>
+<div class="top"><div><h1>Clive Admin: logo and splash ideas</h1><p>Four logo ideas for the new admin app, in the same family as the other apps: the assistant's two squares turn into the logo (the same morph the other splashes use), then a small extra animation plays once. The loops here repeat so you can watch; in the app each plays once and stops on the logo. Light and dark icons, as in the apps.</p></div>
+<div class="seg" role="group" aria-label="Page"><button type="button" id="pl" aria-pressed="true">Light icons</button><button type="button" id="pd" aria-pressed="false">Dark icons</button></div></div>
+<div class="stage"><div class="in" id="in"></div></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<radialGradient id="gP" gradientUnits="userSpaceOnUse" cx="150" cy="70" r="88"><stop offset="0" stop-color="#AB47BC"/><stop offset="1" stop-color="#AB47BC" stop-opacity="0"/></radialGradient>
+<radialGradient id="gG" gradientUnits="userSpaceOnUse" cx="70" cy="170" r="110"><stop offset="0" stop-color="#4FD08A"/><stop offset="1" stop-color="#4FD08A" stop-opacity="0"/></radialGradient>
+<radialGradient id="gI" gradientUnits="userSpaceOnUse" cx="40" cy="40" r="130"><stop offset="0" stop-color="#5C6BC0"/><stop offset="1" stop-color="#5C6BC0" stop-opacity="0"/></radialGradient>
+<radialGradient id="gW" gradientUnits="userSpaceOnUse" cx="100" cy="100" r="60"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+</defs></svg>
+<script>
+(function () {
+  var R = {"cA":[[80.7,73.3],[82.3,73.3],[83.9,73.3],[85.4,73.3],[87.0,73.3],[88.6,73.3],[90.2,73.3],[91.7,73.3],[93.3,73.3],[94.9,73.3],[96.5,73.3],[98.1,73.3],[99.6,73.5],[101.2,73.7],[102.7,73.9],[104.3,74.3],[105.8,74.7],[107.3,75.2],[108.7,75.8],[110.2,76.5],[111.6,77.2],[112.9,78.1],[114.2,79.0],[115.5,79.9],[116.7,80.9],[117.8,82.0],[118.9,83.2],[119.9,84.4],[120.9,85.6],[121.8,86.9],[122.6,88.2],[123.4,89.6],[124.1,91.1],[124.7,92.5],[125.2,94.0],[125.7,95.5],[126.0,97.0],[126.3,98.6],[126.5,100.2],[126.6,101.7],[126.7,103.3],[126.7,104.9],[126.7,106.5],[126.7,108.0],[126.7,109.6],[126.7,111.2],[126.7,112.8],[126.7,114.3],[126.7,115.9],[126.7,117.5],[126.7,119.1],[126.7,120.7],[126.5,122.2],[126.3,123.8],[126.1,125.3],[125.7,126.9],[125.3,128.4],[124.8,129.9],[124.2,131.3],[123.5,132.8],[122.8,134.2],[121.9,135.5],[121.0,136.8],[120.1,138.1],[119.1,139.3],[118.0,140.4],[116.8,141.5],[115.6,142.5],[114.4,143.5],[113.1,144.4],[111.8,145.2],[110.4,146.0],[108.9,146.7],[107.5,147.3],[106.0,147.8],[104.5,148.3],[103.0,148.6],[101.4,148.9],[99.8,149.1],[98.3,149.2],[96.7,149.3],[95.1,149.3],[93.5,149.3],[92.0,149.3],[90.4,149.3],[88.8,149.3],[87.2,149.3],[85.7,149.3],[84.1,149.3],[82.5,149.3],[80.9,149.3],[79.3,149.3],[77.8,149.1],[76.2,148.9],[74.7,148.7],[73.1,148.3],[71.6,147.9],[70.1,147.4],[68.7,146.8],[67.2,146.1],[65.8,145.4],[64.5,144.5],[63.2,143.6],[61.9,142.7],[60.7,141.7],[59.6,140.6],[58.5,139.4],[57.5,138.2],[56.5,137.0],[55.6,135.7],[54.8,134.4],[54.0,133.0],[53.3,131.5],[52.7,130.1],[52.2,128.6],[51.7,127.1],[51.4,125.6],[51.1,124.0],[50.9,122.4],[50.8,120.9],[50.7,119.3],[50.7,117.7],[50.7,116.1],[50.7,114.6],[50.7,113.0],[50.7,111.4],[50.7,109.8],[50.7,108.3],[50.7,106.7],[50.7,105.1],[50.7,103.5],[50.7,101.9],[50.9,100.4],[51.1,98.8],[51.3,97.3],[51.7,95.7],[52.1,94.2],[52.6,92.7],[53.2,91.3],[53.9,89.8],[54.6,88.4],[55.5,87.1],[56.4,85.8],[57.3,84.5],[58.3,83.3],[59.4,82.2],[60.6,81.1],[61.8,80.1],[63.0,79.1],[64.3,78.2],[65.6,77.4],[67.0,76.6],[68.5,75.9],[69.9,75.3],[71.4,74.8],[72.9,74.3],[74.4,74.0],[76.0,73.7],[77.6,73.5],[79.1,73.4]],"cB":[[103.3,50.7],[104.9,50.7],[106.5,50.7],[108.0,50.7],[109.6,50.7],[111.2,50.7],[112.8,50.7],[114.3,50.7],[115.9,50.7],[117.5,50.7],[119.1,50.7],[120.7,50.7],[122.2,50.9],[123.8,51.1],[125.3,51.3],[126.9,51.7],[128.4,52.1],[129.9,52.6],[131.3,53.2],[132.8,53.9],[134.2,54.6],[135.5,55.5],[136.8,56.4],[138.1,57.3],[139.3,58.3],[140.4,59.4],[141.5,60.6],[142.5,61.8],[143.5,63.0],[144.4,64.3],[145.2,65.6],[146.0,67.0],[146.7,68.5],[147.3,69.9],[147.8,71.4],[148.3,72.9],[148.6,74.4],[148.9,76.0],[149.1,77.6],[149.2,79.1],[149.3,80.7],[149.3,82.3],[149.3,83.9],[149.3,85.4],[149.3,87.0],[149.3,88.6],[149.3,90.2],[149.3,91.7],[149.3,93.3],[149.3,94.9],[149.3,96.5],[149.3,98.1],[149.1,99.6],[148.9,101.2],[148.7,102.7],[148.3,104.3],[147.9,105.8],[147.4,107.3],[146.8,108.7],[146.1,110.2],[145.4,111.6],[144.5,112.9],[143.6,114.2],[142.7,115.5],[141.7,116.7],[140.6,117.8],[139.4,118.9],[138.2,119.9],[137.0,120.9],[135.7,121.8],[134.4,122.6],[133.0,123.4],[131.5,124.1],[130.1,124.7],[128.6,125.2],[127.1,125.7],[125.6,126.0],[124.0,126.3],[122.4,126.5],[120.9,126.6],[119.3,126.7],[117.7,126.7],[116.1,126.7],[114.6,126.7],[113.0,126.7],[111.4,126.7],[109.8,126.7],[108.3,126.7],[106.7,126.7],[105.1,126.7],[103.5,126.7],[101.9,126.7],[100.4,126.5],[98.8,126.3],[97.3,126.1],[95.7,125.7],[94.2,125.3],[92.7,124.8],[91.3,124.2],[89.8,123.5],[88.4,122.8],[87.1,121.9],[85.8,121.0],[84.5,120.1],[83.3,119.1],[82.2,118.0],[81.1,116.8],[80.1,115.6],[79.1,114.4],[78.2,113.1],[77.4,111.8],[76.6,110.4],[75.9,108.9],[75.3,107.5],[74.8,106.0],[74.3,104.5],[74.0,103.0],[73.7,101.4],[73.5,99.8],[73.4,98.3],[73.3,96.7],[73.3,95.1],[73.3,93.5],[73.3,92.0],[73.3,90.4],[73.3,88.8],[73.3,87.2],[73.3,85.7],[73.3,84.1],[73.3,82.5],[73.3,80.9],[73.3,79.3],[73.5,77.8],[73.7,76.2],[73.9,74.7],[74.3,73.1],[74.7,71.6],[75.2,70.1],[75.8,68.7],[76.5,67.2],[77.2,65.8],[78.1,64.5],[79.0,63.2],[79.9,61.9],[80.9,60.7],[82.0,59.6],[83.2,58.5],[84.4,57.5],[85.6,56.5],[86.9,55.6],[88.2,54.8],[89.6,54.0],[91.1,53.3],[92.5,52.7],[94.0,52.2],[95.5,51.7],[97.0,51.4],[98.6,51.1],[100.2,50.9],[101.7,50.8]]};
+  var NS = 'http://www.w3.org/2000/svg';
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var query = new URLSearchParams(location.search), FREEZE = query.has('t') ? parseFloat(query.get('t')) : null;
+  function f(v) { return (Math.round(v * 100) / 100).toString(); }
+  function clamp(v) { return Math.max(0, Math.min(1, v)); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function inout(t) { return t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+  function out(t) { return 1 - Math.pow(1 - t, 3); }
+  function ring(a, b, t) { var d = ''; for (var i = 0; i < a.length; i++) d += (i ? 'L' : 'M') + f(lerp(a[i][0], b[i][0], t)) + ',' + f(lerp(a[i][1], b[i][1], t)); return d + 'Z'; }
+  // A rounded rectangle path, clockwise, starting on the top edge.
+  function rr(x, y, w, h, r) { r = Math.min(r, w / 2, h / 2); return 'M' + (x + r) + ',' + y + ' H' + (x + w - r) + ' A' + r + ',' + r + ' 0 0 1 ' + (x + w) + ',' + (y + r) + ' V' + (y + h - r) + ' A' + r + ',' + r + ' 0 0 1 ' + (x + w - r) + ',' + (y + h) + ' H' + (x + r) + ' A' + r + ',' + r + ' 0 0 1 ' + x + ',' + (y + h - r) + ' V' + (y + r) + ' A' + r + ',' + r + ' 0 0 1 ' + (x + r) + ',' + y + 'Z'; }
+  function circ(cx, cy, r) { return 'M' + cx + ',' + (cy - r) + ' A' + r + ',' + r + ' 0 1 1 ' + cx + ',' + (cy + r) + ' A' + r + ',' + r + ' 0 1 1 ' + cx + ',' + (cy - r) + 'Z'; }
+  var probe = document.createElementNS(NS, 'svg'); probe.setAttribute('width', 0); probe.setAttribute('height', 0); probe.style.position = 'absolute'; document.body.appendChild(probe);
+  // 160 points round a path, evenly by length, in its own direction from its start (the assistant's squares are 160 points too, so they can turn into it).
+  function sample(d) { var p = document.createElementNS(NS, 'path'); p.setAttribute('d', d); probe.appendChild(p); var L = p.getTotalLength(), a = []; for (var i = 0; i < 160; i++) { var q = p.getPointAtLength(L * i / 160); a.push([q.x, q.y]); } probe.removeChild(p); return a; }
+  function turn(a, cx, cy, deg) { var c = Math.cos(deg * Math.PI / 180), s = Math.sin(deg * Math.PI / 180); return a.map(function (p) { var x = p[0] - cx, y = p[1] - cy; return [cx + x * c - y * s, cy + x * s + y * c]; }); }
+  // A gear outline: n teeth with rounded flats, from angle a0 (degrees, turning clockwise as the page does).
+  function cog(cx, cy, n, r, amp, sharp) { var a = []; for (var i = 0; i < 160; i++) { var th = (-105 + i * 360 / 160) * Math.PI / 180, rad = r + amp * Math.tanh(sharp * Math.cos(n * th)) / Math.tanh(sharp); a.push([cx + rad * Math.cos(th), cy + rad * Math.sin(th)]); } return a; }
+
+  // Every logo sits in the frame the Satellites logo uses (21 17 162 162), so the glow lands the same way.
+  var END = [21, 17, 162, 162], START = [42, 42, 116, 116];
+  var OPTIONS = [
+    { id: 'shield', name: 'A. Shield', note: 'The admin guard: the bottom-left square grows into the shield, the other shrinks into its window, and a tick draws in. Plain and clear at 20px.',
+      A: sample('M56,26 H148 A14,14 0 0 1 162,40 V96 C162,134 134,160 102,174 C70,160 42,134 42,96 V40 A14,14 0 0 1 56,26Z'), B: sample(circ(102, 92, 28)),
+      extras: function () { return [{ kind: 'stroke', d: 'M88,93 L99,104 L118,80', w: 9, pl: true }]; },
+      anim: function (o, x) { o.parts[0].set('stroke-dasharray', '1 1'); o.parts[0].set('stroke-dashoffset', f(1 - out(clamp((x - .15) / .55)))); o.parts[0].set('opacity', x > .15 ? 1 : 0); } },
+    { id: 'cog', name: 'B. Cog', note: 'The manager: a gear with Clive in its hub. After it forms, it turns one tooth. Reads as "settings" straight away; a little busy small.',
+      A: cog(102, 98, 8, 63, 11, 2.6), B: sample(circ(102, 98, 27)), extras: function () { return []; },
+      turnA: function (x) { return 45 * out(clamp((x - .1) / 1.0)); }, turnAround: [102, 98] },
+    { id: 'key', name: 'C. Key', note: 'The admin key: the bow forms first (a ring), then the blade grows out of it to the top right. Closest to "you hold the keys".',
+      A: sample(circ(66, 132, 50)), B: sample(circ(66, 132, 20)),
+      extras: function () { return [{ kind: 'fill', d: rr(98, 121, 108, 22, 11) + ' ' + rr(150, 138, 18, 30, 6) + ' ' + rr(178, 138, 18, 24, 6), tf: function (x) { var s = out(clamp((x - .1) / .6)); return 'rotate(-45 66 132) translate(66 132) scale(' + f(Math.max(.001, s)) + ' 1) translate(-66 -132)'; }, op: function (x) { return clamp((x - .1) * 8); } }]; } },
+    { id: 'sliders', name: 'D. Sliders', note: 'Colours and settings: three tracks with their knobs. The bottom track forms from the squares, the other two slide in. The most "design tool" of the four.',
+      A: sample(rr(31, 128, 140, 36, 18)), B: sample(circ(98, 146, 11)),
+      extras: function () { return [
+        { kind: 'fill', eo: true, d: rr(31, 80, 140, 36, 18) + ' ' + circ(132, 98, 11), tf: function (x) { var s = out(clamp((x - .05) / .55)); return 'translate(31 0) scale(' + f(Math.max(.001, s)) + ' 1) translate(-31 0)'; }, op: function (x) { return clamp((x - .05) * 5); } },
+        { kind: 'fill', eo: true, d: rr(31, 32, 140, 36, 18) + ' ' + circ(66, 50, 11), tf: function (x) { var s = out(clamp((x - .25) / .55)); return 'translate(31 0) scale(' + f(Math.max(.001, s)) + ' 1) translate(-31 0)'; }, op: function (x) { return clamp((x - .25) * 5); } }
+      ]; } }
+  ];
+  var BASE = '#6A5BC2';
+  var LOOP = 5200, T0 = 500, DUR = 1100;
+
+  // A drawing: the logo's main path and its extras, each painted as the logo is (the base colour under four glows in the light page, all white in the dark one).
+  function layers(dark) { return dark ? [{ fill: '#fff' }] : [{ fill: BASE }, { fill: 'url(#gP)' }, { fill: 'url(#gG)' }, { fill: 'url(#gI)' }, { fill: 'url(#gW)' }]; }
+  function part(svg, dark, kind, attrs) {
+    var els = layers(dark).map(function (l) {
+      var e = document.createElementNS(NS, 'path');
+      if (kind === 'stroke') { e.setAttribute('fill', 'none'); e.setAttribute('stroke', l.fill); e.setAttribute('stroke-linecap', 'round'); e.setAttribute('stroke-linejoin', 'round'); if (attrs.pl) e.setAttribute('pathLength', 1); if (attrs.w) e.setAttribute('stroke-width', attrs.w); }
+      else { e.setAttribute('fill', l.fill); if (attrs.eo) e.setAttribute('fill-rule', 'evenodd'); }
+      if (attrs.d) e.setAttribute('d', attrs.d);
+      svg.appendChild(e); return e;
+    });
+    return { els: els, set: function (k, v) { els.forEach(function (e) { e.setAttribute(k, v); }); } };
+  }
+  function make(host, opt, dark, animate) {
+    var svg = document.createElementNS(NS, 'svg'); svg.setAttribute('viewBox', END.join(' ')); svg.setAttribute('aria-hidden', 'true');
+    var main = part(svg, dark, 'fill', { eo: true });
+    var o = { svg: svg, opt: opt, main: main, parts: [], animate: animate };
+    opt.extras().forEach(function (x) { var p = part(svg, dark, x.kind, x); p.x = x; o.parts.push(p); });
+    host.appendChild(svg); return o;
+  }
+  function draw(o, p) {
+    var opt = o.opt, u = clamp((p - T0) / DUR), e = inout(u), x = (p - (T0 + DUR)) / 1000;
+    o.svg.setAttribute('viewBox', [0, 1, 2, 3].map(function (i) { return f(lerp(START[i], END[i], e)); }).join(' '));
+    var A = opt.A; if (opt.turnA) A = turn(A, opt.turnAround[0], opt.turnAround[1], opt.turnA(Math.max(x, 0)));
+    var from = u >= 1 && opt.turnA ? A : null;
+    o.main.set('d', ring(R.cA, A, e) + ' ' + ring(R.cB, opt.B, e));
+    o.parts.forEach(function (pt) {
+      var d = pt.x;
+      if (d.tf) { pt.set('transform', d.tf(Math.max(x, 0))); pt.set('opacity', f(d.op(Math.max(x, 0)))); }
+    });
+    if (opt.anim) opt.anim(o, Math.max(x, 0));
+    if (o.title) { var t = clamp((p - 350) / 900); o.title.style.opacity = f(out(t)); o.title.style.transform = 'translateY(' + f((1 - out(t)) * 8) + 'px)'; var s = clamp((p - 900) / 700); o.sub.style.opacity = f(out(s)); o.sub.style.transform = 'translateY(' + f((1 - out(s)) * 8) + 'px)'; }
+  }
+  var cells = [], raf = null, t0 = performance.now();
+  function build() {
+    var dark = document.documentElement.getAttribute('data-page') === 'dark';
+    var host = document.getElementById('in'); host.innerHTML = ''; cells = [];
+    OPTIONS.forEach(function (opt) {
+      var sec = document.createElement('section'); sec.innerHTML = '<h2>' + opt.name + '</h2><p class="note">' + opt.note + '</p>'; var row = document.createElement('div'); row.className = 'row'; sec.appendChild(row); host.appendChild(sec);
+      function cell(cls, label, animate) { var c = document.createElement('div'); c.className = 'cell'; var b = document.createElement('div'); b.className = cls; c.appendChild(b); var l = document.createElement('div'); l.className = 'cl'; l.textContent = label; c.appendChild(l); row.appendChild(c); return b; }
+      [['mark', 'The mark'], ['icon', 'App icon']].forEach(function (k) { var o = make(cell(k[0], k[1]), opt, dark, false); o.stillAt = 99999; cells.push(o); });
+      var sm = cell('sm', '32 and 20 px'); [32, 20].forEach(function (px) { var h = document.createElement('div'); h.style.width = px + 'px'; h.style.height = px + 'px'; sm.appendChild(h); var o = make(h, opt, dark, false); o.stillAt = 99999; cells.push(o); });
+      var sp = document.createElement('div'); sp.className = 'cell'; sp.innerHTML = '<div class="splash"><div class="lg"></div><div class="t">Clive</div><div class="s">Admin</div><button type="button">Replay</button></div><div class="cl">The splash, playing</div>'; row.appendChild(sp);
+      var o2 = make(sp.querySelector('.lg'), opt, dark, true); o2.title = sp.querySelector('.t'); o2.sub = sp.querySelector('.s'); o2.start = performance.now(); o2.loop = true; cells.push(o2);
+      sp.querySelector('button').addEventListener('click', function () { o2.start = performance.now(); });
+    });
+    cells.forEach(function (o) { if (o.stillAt) draw(o, o.stillAt); });
+  }
+  function tick(ms) {
+    cells.forEach(function (o) { if (o.loop) { var p = FREEZE !== null ? FREEZE : (reduce ? 4200 : (ms - o.start) % LOOP); draw(o, p); } });
+    if (FREEZE === null) requestAnimationFrame(tick);
+  }
+  var pl = document.getElementById('pl'), pd = document.getElementById('pd');
+  function page(dark) { document.documentElement.setAttribute('data-page', dark ? 'dark' : 'light'); pl.setAttribute('aria-pressed', String(!dark)); pd.setAttribute('aria-pressed', String(dark)); build(); }
+  pl.addEventListener('click', function () { page(false); }); pd.addEventListener('click', function () { page(true); });
+  if (query.get('page') === 'dark') document.documentElement.setAttribute('data-page', 'dark');
+  build(); requestAnimationFrame(tick);
+})();
+</script>
