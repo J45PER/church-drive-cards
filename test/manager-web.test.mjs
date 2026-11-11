@@ -101,3 +101,43 @@ test('activity lines are read, and automation and overrule notes say why', () =>
   const r = parseActivity({ entries: [{ ts: 1, kind: 'clive_auto', text: 'turned on the lamp', rule: 'Dusk' }, { ts: 2, text: '' }], total: 1, people: ['Sam'], assistant: 'Clive' });
   assert.equal(r.lines.length, 1); assert.equal(activityNote(r.lines[0], 'Clive'), 'automatic: Dusk'); assert.equal(parseActivity(null), null);
 });
+
+import { canTick, kindGoesTo, kindGroups, linksOf, modeLabel, triggerChoices, validIconName, zoneRows } from '../web/manager/pages/manager-logic.js';
+
+test('notification kinds group in order, and who gets one is read from everyone or the ticked people', () => {
+  const kinds = [{ group: 'Alarm', key: 'a' }, { group: 'Cars', key: 'c' }, { group: 'Alarm', key: 'b', admin_only: true, people: ['person.sam'] }];
+  assert.deepEqual(kindGroups(kinds).map(([g, l]) => [g, l.length]), [['Alarm', 2], ['Cars', 1]]);
+  assert.equal(kindGoesTo(kinds[2], 'person.sam'), true); assert.equal(kindGoesTo(kinds[2], 'person.kim'), false); assert.equal(kindGoesTo({ all: true }, 'x'), true);
+  assert.equal(canTick(kinds[2], { admin: false }), false); assert.equal(canTick(kinds[2], { admin: true }), true);
+});
+
+test('camera links are read per mode, and only movement-like sensors not yet linked are offered', () => {
+  const links = { away: { 'binary_sensor.door': { cams: ['cam1'], secs: 45 } } };
+  assert.deepEqual(linksOf(links, 'away'), [{ trigger: 'binary_sensor.door', cams: ['cam1'], secs: 45 }]); assert.deepEqual(linksOf(links, 'home'), []);
+  const s = (id, dc) => ({ entity_id: id, state: 'off', attributes: { device_class: dc, friendly_name: id } });
+  const states = Object.fromEntries([s('binary_sensor.door', 'door'), s('binary_sensor.hall', 'motion'), s('binary_sensor.leak', 'moisture'), s('sensor.x', 'motion')].map((e) => [e.entity_id, e]));
+  assert.deepEqual(triggerChoices(states, new Set(['binary_sensor.door'])).map((e) => e.entity_id), ['binary_sensor.hall']);
+  assert.equal(modeLabel('away'), 'Away'); assert.equal(modeLabel('armed_night'), 'Armed night');
+});
+
+test('icon names need mdi: and lower-case words; zones list home first with who is in them', () => {
+  assert.equal(validIconName('mdi:fan-speed-1'), true); assert.equal(validIconName('fan'), false); assert.equal(validIconName('mdi:Fan'), false);
+  const z = (id, n, r) => ({ entity_id: id, state: '0', attributes: { friendly_name: n, radius: r } });
+  const p = { entity_id: 'person.sam', state: 'Gym', attributes: { friendly_name: 'Sam' } };
+  const rows = zoneRows(Object.fromEntries([z('zone.gym', 'Gym', 80.4), z('zone.home', 'Home', 100), p].map((e) => [e.entity_id, e])));
+  assert.deepEqual(rows.map((r) => [r.name, r.radius, r.people]), [['Home', 100, []], ['Gym', 80, ['Sam']]]);
+});
+
+import { builtHere, managerSections } from '../web/manager/pages/manager.js';
+
+test('the Manager dashboard gives its sections with their cards, stacks taken apart, and says which the site builds', () => {
+  const config = { views: [{ sections: [{ cards: [{ type: 'custom:auto-layout-card', cards: [
+    { type: 'custom:section-panel-card', title: 'Notifications', icon: 'mdi:bell', color: 'neutral', cards: [{ type: 'custom:notifications-card' }] },
+    { type: 'custom:section-panel-card', title: 'To-do settings', cards: [{ type: 'vertical-stack', cards: [{ type: 'heading' }, { type: 'entities' }, { type: 'markdown' }] }] },
+    { type: 'custom:section-panel-card', title: 'Watch', cards: [{ type: 'custom:watch-settings-card' }] },
+    { type: 'custom:section-panel-card', title: '', cards: [] }] }] }] }] };
+  const s = managerSections(config);
+  assert.deepEqual(s.map((x) => x.title), ['Notifications', 'To-do settings', 'Watch']);
+  assert.deepEqual(s[1].cards.map((c) => c.type), ['heading', 'entities', 'markdown']);
+  assert.deepEqual(s.map(builtHere), [true, true, false]);
+});

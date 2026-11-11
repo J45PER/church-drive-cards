@@ -102,3 +102,22 @@ details summary { cursor: pointer; color: var(--soft); font-size: .9rem; }
 .head h2 { font-size: 1.15rem; }
 .stack { gap: 22px; }
 .menu[hidden] { display: none; }
+
+/* Manager pages: choice chips, rows and small fields inside the plain cards. */
+.card.plain { padding: 16px 18px; }
+.card.plain .title { font-size: 1.05rem; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
+.chip { appearance: none; border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 12px; padding: 8px 14px; font-size: .9rem; cursor: pointer; }
+.chip[aria-pressed="true"] { background: color-mix(in srgb, var(--primary) 30%, transparent); border-color: var(--primary); }
+.chip:disabled { opacity: .5; cursor: default; }
+.kind { display: grid; gap: 4px; padding: 10px 0; border-top: 1px solid var(--line); }
+.kind:first-of-type { border-top: 0; }
+.row-title { margin: 0; font-weight: 500; }
+.label { margin: 12px 0 2px; font-size: .8rem; color: var(--soft); text-transform: uppercase; letter-spacing: .04em; }
+.setting { padding: 8px 0; }
+.setting .field { width: auto; min-width: 140px; }
+.head-sub { margin: 4px 4px 0; font-size: 1rem; font-weight: 500; color: var(--soft); }
+.back { justify-self: start; padding: 8px 16px; }
+.card.plain .row { display: flex; align-items: center; gap: 10px; }
+a.btn { display: inline-block; text-decoration: none; margin-top: 8px; }
+.field[aria-invalid="true"] { border-color: var(--danger); }
