@@ -4,7 +4,7 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
-## 0.127.0
+## 0.128.0
 
 - Clive Admin, a new app for administrators, is in this version. Manager, Energy and Device Health stay here for now.
 - The app lets Clive Admin use its sign-in, as To-Do and Satellites do.

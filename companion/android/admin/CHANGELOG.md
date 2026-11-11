@@ -1,6 +1,6 @@
 # Clive Admin: changelog
 
-## 0.127.0
+## 0.128.0
 
 - The first version of Clive Admin, the app for the house's administrators.
 - Signs in with the Home Assistant login, or uses the Church Drive app's sign-in if it is on the phone and signed in. Anyone who is not an administrator is told so.
