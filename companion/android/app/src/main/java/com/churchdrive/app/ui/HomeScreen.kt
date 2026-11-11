@@ -1,5 +1,10 @@
 package com.churchdrive.app.ui
 
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.background
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.size
@@ -213,7 +218,7 @@ fun HomeScreen(
             }
         },
     ) { padding ->
-        Row(Modifier.fillMaxSize().padding(padding)) {
+        Row(Modifier.fillMaxSize().padding(padding).windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))) {
         if (window.rail) {
             // The pages down the side (a phone on its side, a tablet). It scrolls, so all of them are reachable on a short screen.
             Column(
