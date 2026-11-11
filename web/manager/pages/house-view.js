@@ -29,8 +29,9 @@ export async function renderHouseView(el, ctx, { path, what, kinds }) {
   const panels = (auto.cards || []).filter((c) => c.type === 'custom:section-panel-card').map((c) => {
     const tone = c.color || 'neutral';
     const inner = (c.cards || []).map((k) => kinds[k.type]?.(ctx, k, states, tone)).filter(Boolean);
+    if ((c.cards || []).length && !inner.length) return null; // nothing here that the website draws (such as Octoplus points, which stay in the apps)
     return panel(ctx, { title: c.title, icon: c.icon, color: tone, summaryTemplate: c.summary, colorTemplate: c.color_template }, ...inner);
-  });
-  el.replaceChildren(h('div', { class: 'stack' }, h('div', { class: 'header-lines' }, lines), ...panels));
+  }).filter(Boolean);
+  el.replaceChildren(h('div', { class: 'stack' }, h('div', { class: 'header-lines' }, lines), h('div', { class: 'panel-cols' }, ...panels)));
   fillIcons(el);
 }

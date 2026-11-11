@@ -11,7 +11,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.storage import Store
 
 from .proposals_logic import (
-    KINDS, MAX_VERSIONS, apply_palette_change, check_change, new_proposal, normalise_change, restore_change, trim_items, version_data_for,
+    KINDS, MAX_VERSIONS, apply_palette_change, check_change, clean_groups, new_proposal, normalise_change, restore_change, trim_items, version_data_for,
 )
 
 STORE_KEY = "church_drive.proposals"
@@ -26,6 +26,8 @@ class Proposals:
         self.versions: dict[str, list[dict[str, Any]]] = {}
         # What the integration itself records: each card's chosen palette and note.
         self.cards: dict[str, dict[str, str]] = {}
+        # How the owner groups the palettes on the website (palette key to group name); only how they are shown, so it applies at once.
+        self.groups: dict[str, str] = {}
 
     async def async_load(self) -> None:
         saved = await self._store.async_load() or {}
@@ -33,9 +35,10 @@ class Proposals:
         self.versions = {k: [v for v in vs if isinstance(v, dict)] for k, vs in (saved.get("versions") or {}).items() if k in KINDS}
         cards = saved.get("cards")
         self.cards = {k: dict(v) for k, v in cards.items() if isinstance(v, dict)} if isinstance(cards, dict) else {}
+        self.groups = clean_groups(saved.get("groups"))
 
     async def _save(self) -> None:
-        await self._store.async_save({"items": self.items, "versions": self.versions, "cards": self.cards})
+        await self._store.async_save({"items": self.items, "versions": self.versions, "cards": self.cards, "groups": self.groups})
         async_dispatcher_send(self._hass, SIGNAL_PROPOSALS)
 
     @property
@@ -48,6 +51,11 @@ class Proposals:
     def listing(self, status: str | None = None) -> list[dict[str, Any]]:
         """Newest first."""
         return [i for i in reversed(self.items) if status in (None, "all") or i["status"] == status]
+
+    async def async_set_groups(self, raw: Any) -> dict[str, str]:
+        self.groups = clean_groups(raw)
+        await self._save()
+        return self.groups
 
     def version_list(self, kind: str) -> list[dict[str, Any]]:
         """Past versions of [kind], newest first."""

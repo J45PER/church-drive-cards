@@ -220,3 +220,13 @@ Tick these off as they are done.
 - **Home:** grouped house-style panels with a tone card per page.
 - **Icon library:** every icon in the served set (324 drawn, the 69 still to draw), searchable, by family, with the code to copy. **Idea boards:** the 22 boards in `satellite/design/` and `design/clive/` are copied into the site when it is published and listed by theme (Brand and names, Icons, Screens, Satellites); each opens inside the Manager. They stay as the record of what was tried and chosen; the editor pages that apply a chosen board to the house (card design style A/B/C, splash, app icons) are still to come.
 - **Energy:** now complete against the apps (last 7 days, cars, Zappi charger, Octopus charging plan).
+
+
+### 0.144.0: the website, reworked
+
+- **Versions:** the Home page lists each person's Church Drive app install (from `church_drive/people`: the version each phone last told the house) against the newest version, behind first.
+- **Energy** two across (gas beside electricity, week beside charger), no Octoplus points (app only). **Device health**: icon per kind of trouble, tiles of one size, grid / by room / list.
+- **Colours:** four across; groups are the owner's own (`church_drive/manager/groups/set`, kept in the proposals store and mirrored to `palettes/groups`).
+- **Customise** (Card colours, Section icons, Section order) and **Edits** (what is waiting, what went live, put something back) are described in plain words.
+- **Settings:** sections grouped (People; Alerts and cameras; Places and devices; Tasks; Looks), one at a time; Device Health is its own page. Notifications are a who-gets-what table.
+- **Reference** replaces the idea boards. Kept: the status pill, icon morphs, splash screens, satellite flows and device codes (copied into the site when it is published). The other boards stay in the repository only.

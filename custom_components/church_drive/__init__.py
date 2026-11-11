@@ -97,6 +97,7 @@ from .const import (
     WS_MANAGER_RESOLVE,
     WS_MANAGER_VERSIONS,
     WS_MANAGER_DESIGN,
+    WS_MANAGER_GROUPS_SET,
     WS_COLOURS,
     WS_COLOURS_SET,
     EVENT_COLOURS,
@@ -587,7 +588,17 @@ def ws_manager_design(hass: HomeAssistant, connection: websocket_api.ActiveConne
     """What the Manager has recorded as chosen: each card's palette and note."""
     proposals = _proposals_or_error(hass, connection, msg)
     if proposals is not None:
-        connection.send_result(msg["id"], {"cards": proposals.cards})
+        connection.send_result(msg["id"], {"cards": proposals.cards, "groups": proposals.groups})
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_MANAGER_GROUPS_SET, vol.Required("groups"): dict})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_manager_groups_set(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Keep how the owner groups the palettes on the website (palette key to group name). It only changes how they are listed, so it applies at once."""
+    proposals = _proposals_or_error(hass, connection, msg)
+    if proposals is not None:
+        connection.send_result(msg["id"], {"groups": await proposals.async_set_groups(msg["groups"])})
 
 @websocket_api.websocket_command({vol.Required("type"): WS_ICONS})
 @callback
@@ -1439,7 +1450,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             [StaticPathConfig(URL_BASE, str(FRONTEND_DIR), cache_headers=False)]
         )
         for command in (
-            ws_library, ws_icons, ws_icon_set, ws_watch, ws_watch_set, ws_colours, ws_colours_set, ws_manager_whoami, ws_manager_propose, ws_manager_proposals, ws_manager_resolve, ws_manager_versions, ws_manager_design, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_mine, ws_notices_missed, ws_people_phone,
+            ws_library, ws_icons, ws_icon_set, ws_watch, ws_watch_set, ws_colours, ws_colours_set, ws_manager_whoami, ws_manager_propose, ws_manager_proposals, ws_manager_resolve, ws_manager_versions, ws_manager_design, ws_manager_groups_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_mine, ws_notices_missed, ws_people_phone,
             ws_people_places, ws_people_cars, ws_people_access, ws_people_tracking, ws_people_settings, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_camera_alert_set, ws_maps, ws_maps_search, ws_assist_info,
             ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss, ws_reminders, ws_reminder_set,
             ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_import,
