@@ -145,3 +145,15 @@ a.btn { display: inline-block; text-decoration: none; margin-top: 8px; }
 .tag.unknown { opacity: .7; }
 .warn-line { margin: 0 0 6px; color: #9A5B00; font-weight: 500; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .warn-line { color: #FFD9A0; } }
+
+/* Design editors. */
+.tabs2 { display: flex; gap: 6px; }
+.tabs2 button { appearance: none; border: 1px solid var(--line); background: transparent; color: var(--soft); padding: 8px 18px; border-radius: 999px; cursor: pointer; font: inherit; }
+.tabs2 button[aria-current="page"] { background: color-mix(in srgb, var(--primary) 26%, transparent); color: var(--ink); border-color: var(--primary); }
+.dots { display: flex; gap: 4px; margin: 6px 0; }
+.dot5 { width: 22px; height: 12px; border-radius: 6px; display: block; border: 1px solid rgba(128,128,128,.35); }
+.icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(48px, 1fr)); gap: 6px; margin-top: 8px; max-height: 320px; overflow: auto; }
+.icon-pick { appearance: none; border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 12px; padding: 8px; cursor: pointer; display: grid; place-items: center; }
+.icon-pick:hover, .icon-pick:focus-visible { background: color-mix(in srgb, var(--primary) 22%, transparent); }
+.ico-box { width: 32px; height: 32px; display: grid; place-items: center; color: var(--primary); }
+@media (max-width: 699px) { .nav { overflow-x: auto; justify-content: flex-start; } .nav button { flex: 0 0 72px; } }

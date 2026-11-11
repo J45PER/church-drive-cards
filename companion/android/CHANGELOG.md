@@ -4,9 +4,13 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
-## 0.134.0
+## 0.135.0
 
 - Pull down on any page to refresh the connection. The pill at the top of the page shows it: "Pull to refresh", "Release to refresh", "Updating" and then "Up to date". The pill now also says "No connection" when Home Assistant can't be reached for a few seconds (tap it to try again), and "Home Assistant restarting" while Home Assistant restarts and its items load back in.
+
+## 0.134.0
+
+- No change (this release adds the cards, icons and layouts editors to the Manager website and Home Assistant).
 
 ## 0.133.0
 

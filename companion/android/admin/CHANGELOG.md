@@ -1,9 +1,13 @@
 # Clive Admin: changelog
 
-## 0.134.0
+## 0.135.0
 
 - The "A newer version of Clive Admin is ready" banner (with its Update button) now shows on every page, as in the other apps; it was missing on the Health tab.
 - Clive Admin has the same status pill as the Church Drive app at the top of the page: "Connecting", "Updating", "No connection" (tap to try again) and "Home Assistant restarting". Pull down on any page to refresh the connection. The pill at the top of the page shows it: "Pull to refresh", "Release to refresh", "Updating" and then "Up to date". 
+
+## 0.134.0
+
+- No change (this release adds the cards, icons and layouts editors to the Manager website and Home Assistant).
 
 ## 0.133.0
 
