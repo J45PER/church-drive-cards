@@ -26,27 +26,42 @@ async function loadSections(ctx) {
 }
 async function states(ctx) { return Object.fromEntries((await ctx.ha.call('get_states')).map((e) => [e.entity_id, e])); }
 
-/** The Manager's front page: a card per section. */
-export async function renderManager(el, ctx, helpers) {
-  el.replaceChildren(h('p', { class: 'note' }, 'Reading the Manager from the house…'));
-  let sections;
-  try { sections = await loadSections(ctx); } catch (e) { el.replaceChildren(h('p', { class: 'err', role: 'alert' }, `Could not read the Manager: ${e.message}`)); return; }
-  el.replaceChildren(h('div', { class: 'stack' },
-    h('p', { class: 'note' }, 'The same sections as the Manager in the Church Drive app and in Clive Admin. Changes here are made straight away, as they are there.'),
-    h('div', { class: 'grid' }, sections.map((s) => h('button', { type: 'button', class: 'card', style: helpers.glowStyle(s.color || 'neutral'), onclick: () => helpers.go(`manager/${encodeURIComponent(s.title)}`) },
-      h('p', { class: 'title' }, s.title), h('p', { class: 'sub' }, builtHere(s) ? 'Open' : 'Not on the site yet: use the Church Drive app'))))));
+/** How the Manager's sections are grouped on the site (by title); anything new lands under "More". */
+export const SETTING_GROUPS = [
+  ['People', 'cd:people', ['People', "Who's home"]],
+  ['Alerts and cameras', 'cd:bell', ['Notifications', 'Camera links', 'Alarm lights']],
+  ['Places and devices', 'cd:home', ['Locations', 'Watch']],
+  ['Tasks', 'cd:checklist', ['To-do settings', 'Automatic to-dos']],
+  ['Looks', 'cd:palette', ['Icons']],
+];
+/** The groups with their sections found in [sections] (Device Health is its own page, so it is left out). */
+export function groupSections(sections) {
+  const left = sections.filter((s) => s.title !== 'Device Health');
+  const used = new Set();
+  const groups = SETTING_GROUPS.map(([name, icon, titles]) => ({ name, icon, sections: titles.map((t) => left.find((s) => s.title === t)).filter(Boolean) })).filter((g) => g.sections.length);
+  groups.forEach((g) => g.sections.forEach((s) => used.add(s.title)));
+  const more = left.filter((s) => !used.has(s.title));
+  if (more.length) groups.push({ name: 'More', icon: 'cd:sliders', sections: more });
+  return groups;
 }
 
-/** One section's cards. */
-export async function renderManagerSection(el, ctx, helpers, title) {
-  el.replaceChildren(h('p', { class: 'note' }, 'Reading this section from the house…'));
-  let section;
-  try { section = (await loadSections(ctx)).find((s) => s.title === title); } catch (e) { el.replaceChildren(h('p', { class: 'err', role: 'alert' }, `Could not read the Manager: ${e.message}`)); return; }
-  if (!section) { el.replaceChildren(h('p', { class: 'note' }, 'That section is not in the Manager any more.'), h('button', { class: 'btn quiet', type: 'button', onclick: () => helpers.go('manager') }, 'Back to the Manager')); return; }
-  const out = h('div', { class: 'stack' }, h('button', { class: 'btn quiet back', type: 'button', onclick: () => helpers.go('manager') }, '‹ Manager'));
-  el.replaceChildren(out);
-  for (const card of section.cards) {
-    const slot = h('div', { class: 'stack', style: 'gap:12px' }); out.append(slot);
+/** Settings: a list of groups down the left (a row of choices on a phone) and the chosen section beside it, one at a time. */
+export async function renderManager(el, ctx, helpers, title) {
+  el.replaceChildren(h('p', { class: 'note' }, 'Reading the settings from the house…'));
+  let sections;
+  try { sections = await loadSections(ctx); } catch (e) { el.replaceChildren(h('p', { class: 'err', role: 'alert' }, `Could not read the settings: ${e.message}`)); return; }
+  const groups = groupSections(sections);
+  const all = groups.flatMap((g) => g.sections);
+  const current = all.find((s) => s.title === title) || all[0];
+  const nav = h('nav', { class: 'set-nav', 'aria-label': 'Settings' }, groups.map((g) => h('div', { class: 'set-group' }, h('p', { class: 'set-head' }, g.name),
+    g.sections.map((s) => h('a', { class: 'set-link', href: `#manager/${encodeURIComponent(s.title)}`, 'aria-current': s === current ? 'page' : null }, s.title)))),
+    h('div', { class: 'set-group' }, h('p', { class: 'set-head' }, 'Elsewhere'), h('a', { class: 'set-link', href: '#health' }, 'Device health'), h('a', { class: 'set-link', href: '#iconlib' }, 'Icon library')));
+  const pane = h('div', { class: 'set-pane stack' });
+  el.replaceChildren(h('div', { class: 'settings' }, nav, h('div', { class: 'stack' }, h('p', { class: 'note' }, 'The same settings as the Manager in the Church Drive app and Clive Admin. Changes here are made straight away, as they are there.'), pane)));
+  if (!current) { pane.replaceChildren(h('p', { class: 'note' }, 'There are no settings sections in the Manager yet.')); return; }
+  pane.append(h('h2', { class: 'set-title' }, current.title));
+  for (const card of current.cards) {
+    const slot = h('div', { class: 'stack', style: 'gap:12px' }); pane.append(slot);
     const draw = CARDS[card.type];
     if (!draw) { slot.append(card_(h('p', { class: 'title' }, 'Not on the site yet'), soft('This part is in the Church Drive app and Clive Admin for now.'))); continue; }
     try { await draw(slot, ctx, card, helpers); } catch (e) { slot.replaceChildren(h('p', { class: 'err', role: 'alert' }, `${presetLabel(card.type.split(':').pop())} could not load: ${e.message}`)); }
@@ -68,16 +83,19 @@ async function live(slot, ctx, command, build, extra = {}) {
 const CARDS = {
   'custom:notifications-card': (slot, ctx) => live(slot, ctx, 'church_drive/people', (d, send) => {
     const people = d.people || [];
-    const groups = kindGroups(d.kinds).map(([g, kinds]) => group(g, kinds.map((kind) => {
-      const everyone = !!kind.all;
-      return h('div', { class: 'kind' }, h('p', { class: 'row-title' }, kind.name + (kind.critical ? ' ⚠' : '')), kind.note && soft(kind.note),
-        kind.available === false ? soft('Waiting for its devices to be set up')
-          : [chips([['Everyone', everyone, () => send('church_drive/people/assign', { kind: kind.key, on: !everyone })]]),
-            chips(people.filter((p) => canTick(kind, p)).map((p) => [p.first || p.name, kindGoesTo(kind, p.entity_id), () => send('church_drive/people/assign', { kind: kind.key, person: p.entity_id, on: !kindGoesTo(kind, p.entity_id) }), everyone]))]);
-    })));
-    const phones = group('Phones', soft('Notifications go to the phones that are switched on.'), people.map((p) => h('div', { class: 'kind' },
-      h('p', { class: 'row-title' }, p.name + (p.admin ? ' · Admin' : '')), (p.phones || []).length ? chips(p.phones.map((ph) => [ph.name, ph.on, () => send('church_drive/people/phone', { person: p.entity_id, service: ph.service, on: !ph.on })])) : soft('No phones yet'))));
-    return [...groups, phones];
+    const cell = (on, click, label, disabled) => h('button', { type: 'button', class: 'cell', 'aria-pressed': String(on), 'aria-label': label, disabled, onclick: click }, on ? '✓' : '');
+    const head = h('tr', {}, h('th', { scope: 'col' }, ''), h('th', { scope: 'col' }, 'Everyone'), people.map((p) => h('th', { scope: 'col' }, p.first || p.name)));
+    const tables = kindGroups(d.kinds).map(([g, kinds]) => group(g, h('div', { class: 'matrix-wrap' }, h('table', { class: 'matrix' }, h('thead', {}, head.cloneNode(true)),
+      h('tbody', {}, kinds.map((kind) => {
+        const everyone = !!kind.all;
+        return h('tr', {}, h('th', { scope: 'row' }, h('span', { class: 'row-title' }, kind.name + (kind.critical ? ' ⚠' : '')), kind.note ? h('span', { class: 'sub' }, kind.note) : null),
+          kind.available === false ? h('td', { colspan: people.length + 1, class: 'sub' }, 'Waiting for its devices to be set up')
+            : [h('td', {}, cell(everyone, () => send('church_drive/people/assign', { kind: kind.key, on: !everyone }), `${kind.name} to everyone`)),
+              ...people.map((p) => h('td', {}, canTick(kind, p) ? cell(kindGoesTo(kind, p.entity_id), () => send('church_drive/people/assign', { kind: kind.key, person: p.entity_id, on: !kindGoesTo(kind, p.entity_id) }), `${kind.name} to ${p.first || p.name}`, everyone) : h('span', { class: 'sub' }, '–')))]);
+      }))))));
+    const phones = group('Phones', soft('Notifications go to the phones that are switched on.'), h('div', { class: 'grid' }, people.map((p) => h('div', { class: 'kind' },
+      h('p', { class: 'row-title' }, p.name + (p.admin ? ' · Admin' : '')), (p.phones || []).length ? chips(p.phones.map((ph) => [ph.name, ph.on, () => send('church_drive/people/phone', { person: p.entity_id, service: ph.service, on: !ph.on })])) : soft('No phones yet')))));
+    return [...tables, phones];
   }),
 
   'custom:people-manager-card': async (slot, ctx) => {
@@ -106,13 +124,13 @@ const CARDS = {
               zones.filter((z) => !draft.some(([zz]) => zz === z.entity_id)).length ? [h('p', { class: 'label' }, 'Add a place'), chips(zones.filter((z) => !draft.some(([zz]) => zz === z.entity_id)).map((z) => [name(z), false, () => { draft.push([z.entity_id, name(z)]); reload().then((x) => slot.replaceChildren(...x)); }]))] : null,
               chips([['Save', true, () => { const list = draft.map(([zone, n]) => ({ zone, name: n.trim() })); delete editing[id]; send('church_drive/people/places', { person: id, places: list }); }],
                 ['Cancel', false, () => { delete editing[id]; reload().then((x) => slot.replaceChildren(...x)); }]])],
-          kindGroups(alerts).map(([g, list]) => [h('p', { class: 'label' }, `Alerts · ${g}`), kindChips(list)]),
+          kindGroups(alerts).map(([g, list]) => [h('p', { class: 'label' }, g === 'Alerts' ? 'Alerts' : `Alerts · ${g}`), kindChips(list)]),
           kinds.some((k) => todoGroups.has(k.group)) ? [h('p', { class: 'label' }, 'To-dos'), kindChips(kinds.filter((k) => todoGroups.has(k.group)))] : null,
           arrivals && others.length ? [h('p', { class: 'label' }, `Told when ${p.first} gets home or leaves`),
             chips(others.map((o) => [o.first || o.name, kindGoesTo(arrivals, o.entity_id), () => send('church_drive/people/assign', { kind: `arrivals:${id}`, person: o.entity_id, on: !kindGoesTo(arrivals, o.entity_id) })]))] : null,
           h('p', { class: 'sub' }, 'Cars and pictures are changed in the Church Drive app and in Home Assistant for now.'));
       });
-      return out;
+      return [h('div', { class: 'grid' }, out)];
     });
   },
 
@@ -201,3 +219,5 @@ const CARDS = {
       h('button', { class: 'btn quiet', type: 'button', onclick: () => helpers.go('health') }, 'Open Device health')));
   },
 };
+
+export const renderManagerSection = (el, ctx, helpers, title) => renderManager(el, ctx, helpers, title);

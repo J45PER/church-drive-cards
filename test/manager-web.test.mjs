@@ -244,3 +244,29 @@ test('the charger, the plan and the cars', () => {
     st('sensor.phone_battery', '50', { device_class: 'battery', unit_of_measurement: '%' }), st('sensor.id5_12v_battery', '90', { device_class: 'battery', unit_of_measurement: '%' })]));
   assert.deepEqual(cars.map((c) => [c.name, c.battery, c.range]), [['ID5', 80, 210]]);
 });
+
+import { peopleVersions } from '../web/manager/pages/versions.js';
+import { healthIcon, byRoom, meterOf } from '../web/manager/pages/health.js';
+import { groupSections } from '../web/manager/pages/manager.js';
+test('who is on what: behind first, only the house\'s own app, versions read from "0.98.0 (123)"', () => {
+  const people = { people: [{ first: 'Sam', phones: [{ own_app: true, name: 'A', version: '0.140.0 (12)', seen: null }, { own_app: false, name: 'HA app', version: '2026.1.0' }] },
+    { first: 'Jamie', phones: [{ own_app: true, name: 'B', version: '0.143.0' }, { own_app: true, name: 'C', version: '' }] }] };
+  const rows = peopleVersions(people, '0.143.0');
+  assert.deepEqual(rows.map((r) => [r.person, r.phone, r.status]), [['Sam', 'A', 'behind'], ['Jamie', 'C', 'unknown'], ['Jamie', 'B', 'same']]);
+});
+test('device health: icon says what is wrong, rooms are grouped, meter is the lower of battery and filter', () => {
+  assert.equal(healthIcon({ offline: true }), 'cd:wifi-off');
+  assert.equal(healthIcon({ staleReason: 'quiet', batteryLevel: 0 }), 'cd:clock-alert');
+  assert.equal(healthIcon({ batteryLevel: 2, battery: 10 }), 'cd:battery-0');
+  assert.equal(healthIcon({ batteryLevel: 1, battery: 35 }), 'cd:battery-low');
+  assert.equal(healthIcon({ filterLevel: 2, filter: 5 }), 'cd:air-filter');
+  assert.equal(healthIcon({ battery: 90, batteryLevel: 0 }), 'cd:battery-100');
+  assert.equal(meterOf({ battery: 80, filter: 20 }), 20);
+  assert.equal(meterOf({}), null);
+  assert.deepEqual(byRoom([{ area: 'Hall', n: 1 }, { area: null, n: 2 }, { area: 'Bed', n: 3 }]).map(([r]) => r), ['Bed', 'Hall', 'No room']);
+});
+test('settings are grouped, Device Health left out, new sections land under More', () => {
+  const s = ['People', 'Notifications', 'Device Health', 'Icons', 'Brand new'].map((t) => ({ title: t, cards: [] }));
+  const g = groupSections(s);
+  assert.deepEqual(g.map((x) => [x.name, x.sections.map((y) => y.title)]), [['People', ['People']], ['Alerts and cameras', ['Notifications']], ['Looks', ['Icons']], ['More', ['Brand new']]]);
+});

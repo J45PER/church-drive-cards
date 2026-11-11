@@ -39,10 +39,11 @@ def document_body(data: dict[str, Any]) -> dict[str, Any]:
 
 
 def build_documents(config: dict[str, Any], overrides: dict[str, Any], cards: dict[str, Any], versions: dict[str, list[dict[str, Any]]],
-                    app_version: str, now: float) -> list[tuple[str, str, dict[str, Any]]]:
+                    app_version: str, now: float, groups: dict[str, str] | None = None) -> list[tuple[str, str, dict[str, Any]]]:
     """Every document the mirror keeps, as (collection, id, data): the live palettes, the card picks, the version history, and the revision."""
     docs: list[tuple[str, str, dict[str, Any]]] = [
         ("palettes", "current", {"revision": config.get("revision", 0), "palettes": config.get("palettes", {}), "overrides": overrides, "kind_palettes": config.get("kind_palettes", {})}),
+        ("palettes", "groups", {"groups": groups or {}}),
         ("cards", "picks", {"cards": cards}),
     ]
     for kind, items in sorted(versions.items()):

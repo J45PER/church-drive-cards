@@ -85,7 +85,7 @@ class Mirror:
         colours, proposals = self._data.get("colours"), self._data.get("proposals")
         if colours is None:
             return []
-        return build_documents(colours.config, colours.overrides, proposals.cards if proposals else {}, proposals.versions if proposals else {}, self._version, time.time())
+        return build_documents(colours.config, colours.overrides, proposals.cards if proposals else {}, proposals.versions if proposals else {}, self._version, time.time(), proposals.groups if proposals else {})
 
     async def async_sync(self, force: bool = False) -> int:
         """Writes the documents that changed. Returns how many were written; a failure is logged and the next change tries again."""

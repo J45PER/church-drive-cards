@@ -61,3 +61,20 @@ export async function readVersions(ctx) {
   ]);
   return versionRows({ site, integration, release: parseVersion(latest) ? parseVersion(latest).join('.') : null, builds: testBuilds(releases) });
 }
+
+/** Who is on what: each person's Church Drive app installs (from the phones the house knows) against the newest version there is.
+ *  [people] is the `church_drive/people` answer; [newest] the house's version. Behind first, then by person. */
+export function peopleVersions(people, newest) {
+  const rows = [];
+  for (const p of people?.people || []) {
+    for (const ph of p.phones || []) {
+      if (!ph.own_app) continue;
+      const c = compareVersions(ph.version, newest);
+      rows.push({ person: p.first || p.name, phone: ph.name, model: ph.model || '', version: parseVersion(ph.version) ? parseVersion(ph.version).join('.') : null, seen: ph.seen || null,
+        status: !parseVersion(ph.version) ? 'unknown' : c == null ? 'unknown' : c === 0 ? 'same' : c < 0 ? 'behind' : 'ahead' });
+    }
+  }
+  const order = { behind: 0, unknown: 1, ahead: 2, same: 3 };
+  return rows.sort((a, b) => order[a.status] - order[b.status] || a.person.localeCompare(b.person) || a.phone.localeCompare(b.phone));
+}
+export async function readPeopleVersions(ctx, newest) { return peopleVersions(await ctx.ha.call('church_drive/people'), newest); }

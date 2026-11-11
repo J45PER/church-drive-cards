@@ -234,3 +234,18 @@ def restore_change(kind: str, data: Any) -> dict[str, Any]:
             raise ValueError("That version did not record the previous order")
         return {"dashboard": data["dashboard"], "view": data["view"], "order": data["order"], "hidden": data.get("hidden", [])}
     raise ValueError("Unknown kind of proposal")
+
+
+MAX_GROUPS = 200
+
+
+def clean_groups(raw: Any) -> dict[str, str]:
+    """The palette groupings the owner has chosen: palette key to group name, both trimmed and kept short. Anything else is dropped."""
+    out: dict[str, str] = {}
+    if not isinstance(raw, dict):
+        return out
+    for key, name in raw.items():
+        k, g = str(key).strip()[:60], str(name).strip()[:40] if isinstance(name, str) else ""
+        if k and g and len(out) < MAX_GROUPS:
+            out[k] = g
+    return out

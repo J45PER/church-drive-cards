@@ -37,8 +37,8 @@ export async function renderIconLibrary(el, ctx) {
     }
     const list = codes.filter((c) => fmatch(c) && (!state.q || c.toLowerCase().includes(state.q) || String(icons[c].n || '').toLowerCase().includes(state.q))).sort();
     count$.textContent = `${list.length} of ${count || codes.length} icons.`;
-    grid.style.setProperty('--tile', `${Math.max(86, state.size + 46)}px`);
-    grid.replaceChildren(...list.map((c) => h('button', { type: 'button', class: `icon-tile${state.pick === c ? ' on' : ''}`, title: icons[c].n || c, onclick: () => show(c) }, svgOf(c, state.size), h('span', { class: 'mono' }, c.replace(/^cd:/, '')))));
+    grid.style.setProperty('--tile', `${Math.max(86, state.size + 46)}px`); grid.style.setProperty('--tile-h', `${state.size + 52}px`);
+    grid.replaceChildren(...list.map((c) => h('div', { role: 'button', tabindex: 0, class: `icon-tile${state.pick === c ? ' on' : ''}`, title: icons[c].n || c, onclick: () => show(c), onkeydown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); show(c); } } }, h('span', { class: 'icon-art', style: `height:${state.size}px` }, svgOf(c, state.size)), h('span', { class: 'mono' }, c.replace(/^cd:/, '')))));
   };
   el.replaceChildren(h('div', { class: 'stack' }, h('p', { class: 'note' }, 'Every icon the house draws. Choose one to see its code, copy it, or use it on a dashboard panel (Design, Icons).'),
     h('div', { class: 'row', style: 'gap:12px;flex-wrap:wrap' }, h('div', { style: 'flex:1;min-width:220px' }, search), h('label', { class: 'row', style: 'gap:8px' }, h('span', { class: 'sub' }, 'Size'), size)),
