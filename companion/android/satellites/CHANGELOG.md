@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.133.0
+
+- No change (this release adds proposals and palette editing to the Home Assistant integration and the Manager website).
+
 ## 0.132.0
 
 - No change (shared code gained a tab version of Device health, used by Clive Admin).

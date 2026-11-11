@@ -25,6 +25,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import CONF_ASSISTANT_NAME, DEFAULT_ASSISTANT_NAME, DOMAIN, SIGNAL_HEALTH
 from .colours import SIGNAL_COLOURS
+from .proposals import SIGNAL_PROPOSALS
 from .people import SIGNAL_PEOPLE
 
 
@@ -38,6 +39,8 @@ async def async_setup_entry(
         entities.append(PeopleSensor(hass))
     if hass.data[DOMAIN].get("colours") is not None:
         entities.append(ColoursSensor(hass))
+    if hass.data[DOMAIN].get("proposals") is not None:
+        entities.append(ProposalsSensor(hass))
     async_add_entities(entities)
 
 
@@ -78,6 +81,29 @@ class ColoursSensor(SensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         return {"kind_palettes": self._hass.data[DOMAIN]["colours"].config["kind_palettes"]}
+
+
+class ProposalsSensor(SensorEntity):
+    """How many changes sent from the Manager website wait to be checked, with each as an attribute so they can be read, checked and applied."""
+
+    _attr_should_poll = False
+    _attr_icon = "mdi:clipboard-check-outline"
+    _attr_name = "Church Drive proposals"
+    _attr_unique_id = f"{DOMAIN}_proposals"
+
+    def __init__(self, hass: HomeAssistant) -> None:
+        self._hass = hass
+
+    async def async_added_to_hass(self) -> None:
+        self.async_on_remove(async_dispatcher_connect(self.hass, SIGNAL_PROPOSALS, self.async_write_ha_state))
+
+    @property
+    def native_value(self) -> int:
+        return len(self._hass.data[DOMAIN]["proposals"].pending)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return {"pending": self._hass.data[DOMAIN]["proposals"].pending}
 
 
 class DeviceHealthSensor(SensorEntity):

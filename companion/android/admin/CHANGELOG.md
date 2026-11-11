@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.133.0
+
+- No change (this release adds proposals and palette editing to the Home Assistant integration and the Manager website).
+
 ## 0.132.0
 
 - The bottom bar is now Home, Health, Energy and Activity, so Device health and Energy are one tap away; Home keeps a card for each.

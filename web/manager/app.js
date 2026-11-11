@@ -3,9 +3,11 @@
 import { DEFAULT_HA, HaSocket, cleanAddress, finishSignIn, houseAddress, signOut, signedIn, startSignIn } from './ha.js';
 import { glowStyle, inkOn } from './glow.js';
 import { fillIcons, icon, loadIcons } from './icons.js';
+import { renderChanges } from './pages/changes.js';
+import { openPaletteEditor } from './pages/palette-editor.js';
 import { renderManager, renderManagerSection } from './pages/manager.js';
 import { LOGO_PATH, LOGO_VIEWBOX } from './logo.js';
-import { ACTIONS, BAD, DAYS, OK, TIMES, WARN, activityNote, activityProblem, activityQuery, activityWho, actionLabel, ago, buildRegistry, clock, dayLabel, deviceHealthList, energySnapshot, healthSummary, parseActivity } from './pages/logic.js';
+import { PALETTE_PARTS, paletteWarnings, slugOk, ACTIONS, BAD, DAYS, OK, TIMES, WARN, activityNote, activityProblem, activityQuery, activityWho, actionLabel, ago, buildRegistry, clock, dayLabel, deviceHealthList, energySnapshot, healthSummary, parseActivity } from './pages/logic.js';
 
 const root = document.getElementById('root');
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -38,6 +40,7 @@ function showSignIn(message) {
 const PAGES = [
   { id: 'home', title: 'Clive Manager', label: 'Home', icon: 'cd:home', render: renderHome },
   { id: 'colours', title: 'Colour palettes', label: 'Colours', icon: 'cd:palette', render: renderColours },
+  { id: 'changes', title: 'Changes', label: 'Changes', icon: 'cd:checklist', render: (el, c) => renderChanges(el, c, { glowStyle }) },
   { id: 'manager', title: 'Manager', label: 'Manager', icon: 'cd:sliders', render: (el, c, arg) => (arg ? renderManagerSection(el, c, { glowStyle, go }, decodeURIComponent(arg)) : renderManager(el, c, { glowStyle, go })) },
   { id: 'health', title: 'Device health', label: 'Health', icon: 'cd:device-health', render: renderHealth },
   { id: 'energy', title: 'Energy', label: 'Energy', icon: 'cd:bolt', render: renderEnergy },
@@ -73,12 +76,16 @@ async function renderColours(el, ctx) {
     return `<article class="card" style="${glowStyle(p.colours[1])}"><div class="row"><h3 class="title" style="margin:0">${esc(p.name)}</h3>
       ${changed ? '<span class="tag">Changed</span>' : ''}${p.custom ? '<span class="tag">Yours</span>' : ''}</div>
       <p class="sub"><code>${esc(key)}</code></p>
-      <div class="swatches">${p.colours.map((c, i) => `<div class="sw"><i style="background:${esc(c)}"></i><span>${NAMES[i]}</span><code>${esc(c)}</code></div>`).join('')}</div></article>`;
+      <div class="swatches">${p.colours.map((c, i) => `<div class="sw"><i style="background:${esc(c)}"></i><span>${NAMES[i]}</span><code>${esc(c)}</code></div>`).join('')}</div>
+      <div class="chips"><button class="btn quiet edit" type="button" data-edit="${esc(key)}">Edit</button></div><div class="edit-host"></div></article>`;
   };
   el.innerHTML = `<div class="stack">
-    <p class="note">${palettes.length} palettes, revision ${esc(data.revision)}. View only for now; changing a palette comes next, sent for Clive to check before it goes live.</p>
-    <input class="field" id="find" type="search" placeholder="Find a palette" aria-label="Find a palette">
+    <p class="note">${palettes.length} ${palettes.length === 1 ? 'palette' : 'palettes'}, revision ${esc(data.revision)}. Edit a palette and send it: it waits on the Changes page for Clive to check it before it goes live (an urgent change is applied at once).</p>
+    <div class="chips"><input class="field" id="find" type="search" placeholder="Find a palette" aria-label="Find a palette" style="flex:1"><button class="btn" type="button" id="add-palette">New palette</button></div><div id="new-host"></div>
     <div class="stack" id="groups">${[...groups].map(([g, list]) => `<section class="stack" style="gap:12px" data-group><div class="head"><h2>${esc(g)}</h2><span class="count">${list.length}</span></div><div class="grid">${list.map(card).join('')}</div></section>`).join('')}</div></div>`;
+  const byKey = Object.fromEntries(palettes);
+  el.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => openPaletteEditor(b.closest('article').querySelector('.edit-host'), ctx, { key: b.dataset.edit, palette: byKey[b.dataset.edit] })));
+  document.getElementById('add-palette').addEventListener('click', () => openPaletteEditor(document.getElementById('new-host'), ctx, { key: null, palette: null }));
   document.getElementById('find').addEventListener('input', (e) => {
     const q = e.target.value.trim().toLowerCase();
     el.querySelectorAll('article.card').forEach((c) => { c.hidden = !!q && !c.textContent.toLowerCase().includes(q); });

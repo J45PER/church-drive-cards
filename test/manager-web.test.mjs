@@ -141,3 +141,21 @@ test('the Manager dashboard gives its sections with their cards, stacks taken ap
   assert.deepEqual(s[1].cards.map((c) => c.type), ['heading', 'entities', 'markdown']);
   assert.deepEqual(s.map(builtHere), [true, true, false]);
 });
+
+import { contrast, paletteWarnings, slugOk } from '../web/manager/pages/logic.js';
+import { describe } from '../web/manager/pages/changes.js';
+
+test('palette checks match the house: faint text on Dark and repeated colours are flagged', () => {
+  assert.ok(Math.abs(contrast('#000000', '#FFFFFF') - 21) < 0.1);
+  assert.deepEqual(paletteWarnings(['#FFC857', '#4E4128', '#D5A190', '#FFE4AB', '#6E572D']), []);
+  assert.match(paletteWarnings(['#FFC857', '#EEEEEE', '#D5A190', '#FFE4AB', '#6E572D'])[0], /hard to read/);
+  assert.match(paletteWarnings(['#112233', '#112233', '#112233', '#112233', '#112233']).join(' '), /same/);
+  assert.match(paletteWarnings(['#12', '#112233', '#112233', '#112233', '#112233'])[0], /#rrggbb/);
+  assert.equal(slugOk('my_palette'), true); assert.equal(slugOk('My Palette'), false);
+});
+
+test('a change is described in a line', () => {
+  assert.equal(describe({ mode: 'set', palettes: { lights: {}, gregg: {} } }), 'Change lights, gregg');
+  assert.match(describe({ mode: 'replace', palettes: {} }), /past version/);
+  assert.match(describe({ mode: 'reset', keys: ['a'] }), /Put back a/);
+});

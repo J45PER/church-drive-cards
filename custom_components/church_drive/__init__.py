@@ -88,6 +88,13 @@ from .const import (
     SERVICE_HEALTH_FIX,
     SERVICE_LOG_LOGO_REQUEST,
     SERVICE_SET_PALETTE,
+    SERVICE_APPLY_PROPOSAL,
+    SERVICE_DECLINE_PROPOSAL,
+    WS_MANAGER_WHOAMI,
+    WS_MANAGER_PROPOSE,
+    WS_MANAGER_PROPOSALS,
+    WS_MANAGER_RESOLVE,
+    WS_MANAGER_VERSIONS,
     WS_COLOURS,
     WS_COLOURS_SET,
     EVENT_COLOURS,
@@ -142,6 +149,7 @@ from .hue import async_sync
 from .library import Library, normalise
 from .icons import Icons
 from .colours import ColourSettings
+from .proposals import Proposals
 from .watch import WatchSettings
 from .inbox import Inbox
 from .shopping import Shopping
@@ -450,6 +458,98 @@ async def ws_colours_set(hass: HomeAssistant, connection: websocket_api.ActiveCo
     kept = await colours.async_set(msg["palettes"])
     hass.bus.async_fire(EVENT_COLOURS)
     connection.send_result(msg["id"], kept)
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_MANAGER_WHOAMI})
+@websocket_api.require_admin
+@callback
+def ws_manager_whoami(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Who is signed in to the Manager website (administrators only), and how many proposals wait."""
+    proposals = hass.data.get(DOMAIN, {}).get("proposals")
+    connection.send_result(msg["id"], {"name": connection.user.name, "admin": True, "pending": len(proposals.pending) if proposals else 0, "ready": proposals is not None})
+
+
+def _proposals_or_error(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]):
+    proposals = hass.data.get(DOMAIN, {}).get("proposals")
+    if proposals is None:
+        connection.send_error(msg["id"], "not_ready", "The Manager proposals aren't running")
+    return proposals
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_MANAGER_PROPOSE,
+        vol.Required("kind"): cv.string,
+        vol.Optional("change"): dict,
+        vol.Optional("restore"): int,
+        vol.Optional("note"): vol.Any(None, cv.string),
+        vol.Optional("urgent", default=False): bool,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_manager_propose(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Send a change for checking (administrators only). Nothing changes yet, unless it is marked urgent: then it is applied at once."""
+    proposals = _proposals_or_error(hass, connection, msg)
+    if proposals is None:
+        return
+    try:
+        item = await proposals.async_propose(msg["kind"], msg.get("change"), msg.get("note"), connection.user.name, msg["urgent"], msg.get("restore"))
+        if msg["urgent"] and msg["kind"] == "palette":
+            colours = hass.data.get(DOMAIN, {}).get("colours")
+            if colours is None:
+                raise ValueError("The colours aren't running")
+            item = await proposals.async_apply(item["id"], connection.user.name, colours)
+            hass.bus.async_fire(EVENT_COLOURS)
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid", str(err))
+        return
+    connection.send_result(msg["id"], item)
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_MANAGER_PROPOSALS, vol.Optional("status"): vol.In(["pending", "applied", "declined", "all"])})
+@websocket_api.require_admin
+@callback
+def ws_manager_proposals(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """The proposals, newest first (all of them, or one status)."""
+    proposals = _proposals_or_error(hass, connection, msg)
+    if proposals is not None:
+        connection.send_result(msg["id"], proposals.listing(msg.get("status")))
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): WS_MANAGER_RESOLVE, vol.Required("id"): cv.string, vol.Required("outcome"): vol.In(["applied", "declined"]), vol.Optional("reason"): vol.Any(None, cv.string)}
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_manager_resolve(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Apply or decline a waiting proposal (administrators only; Claude does the same through the services)."""
+    proposals = _proposals_or_error(hass, connection, msg)
+    if proposals is None:
+        return
+    try:
+        if msg["outcome"] == "applied":
+            colours = hass.data.get(DOMAIN, {}).get("colours")
+            if colours is None:
+                raise ValueError("The colours aren't running")
+            item = await proposals.async_apply(msg["id"], connection.user.name, colours)
+            hass.bus.async_fire(EVENT_COLOURS)
+        else:
+            item = await proposals.async_resolve(msg["id"], "declined", msg.get("reason"), connection.user.name)
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid", str(err))
+        return
+    connection.send_result(msg["id"], item)
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_MANAGER_VERSIONS, vol.Required("kind"): cv.string})
+@websocket_api.require_admin
+@callback
+def ws_manager_versions(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """The past versions of one kind of setting (what each applied change replaced), newest first, to compare or restore."""
+    proposals = _proposals_or_error(hass, connection, msg)
+    if proposals is not None:
+        connection.send_result(msg["id"], proposals.version_list(msg["kind"]))
 
 
 @websocket_api.websocket_command({vol.Required("type"): WS_ICONS})
@@ -1302,7 +1402,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             [StaticPathConfig(URL_BASE, str(FRONTEND_DIR), cache_headers=False)]
         )
         for command in (
-            ws_library, ws_icons, ws_icon_set, ws_watch, ws_watch_set, ws_colours, ws_colours_set, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_mine, ws_notices_missed, ws_people_phone,
+            ws_library, ws_icons, ws_icon_set, ws_watch, ws_watch_set, ws_colours, ws_colours_set, ws_manager_whoami, ws_manager_propose, ws_manager_proposals, ws_manager_resolve, ws_manager_versions, ws_scene_save, ws_scene_delete, ws_scene_preview, ws_people, ws_people_assign, ws_people_mine, ws_notices_missed, ws_people_phone,
             ws_people_places, ws_people_cars, ws_people_access, ws_people_tracking, ws_people_settings, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_camera_alert_set, ws_maps, ws_maps_search, ws_assist_info,
             ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss, ws_reminders, ws_reminder_set,
             ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_import,
@@ -1346,6 +1446,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         data["colours"] = colours
     except Exception:  # noqa: BLE001
         _LOGGER.exception("The colour palettes couldn't load; everything uses its shipped colours")
+
+    # The Manager website's proposals: without them the website's editors have nowhere to send changes, and nothing else is affected.
+    proposals = Proposals(hass)
+    try:
+        await proposals.async_load()
+        data["proposals"] = proposals
+    except Exception:  # noqa: BLE001
+        _LOGGER.exception("The Manager proposals couldn't load; the website's editors are off")
 
     # Device health must never stop the cards and scenes from loading.
     health = DeviceHealth(hass, entry.options.get(CONF_HEALTH_ENTITIES, []))
@@ -1619,6 +1727,35 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.services.async_register(DOMAIN, SERVICE_SET_PALETTE, set_palette, schema=SET_PALETTE_SCHEMA)
 
+    # Claude (or an administrator) applies or declines a waiting proposal from the Manager website.
+    async def _admin_only(call: ServiceCall) -> str:
+        from homeassistant.exceptions import Unauthorized
+
+        name = "Claude"
+        if call.context.user_id:
+            user = await hass.auth.async_get_user(call.context.user_id)
+            if user is None or not user.is_admin:
+                raise Unauthorized(context=call.context)
+            name = user.name or name
+        return name
+
+    async def apply_proposal(call: ServiceCall) -> None:
+        by = await _admin_only(call)
+        proposals, colours = hass.data.get(DOMAIN, {}).get("proposals"), hass.data.get(DOMAIN, {}).get("colours")
+        if proposals is None or colours is None:
+            return
+        await proposals.async_apply(call.data["id"], by, colours)
+        hass.bus.async_fire(EVENT_COLOURS)
+
+    async def decline_proposal(call: ServiceCall) -> None:
+        by = await _admin_only(call)
+        proposals = hass.data.get(DOMAIN, {}).get("proposals")
+        if proposals is not None:
+            await proposals.async_resolve(call.data["id"], "declined", call.data.get("reason"), by)
+
+    hass.services.async_register(DOMAIN, SERVICE_APPLY_PROPOSAL, apply_proposal, schema=vol.Schema({vol.Required("id"): cv.string}))
+    hass.services.async_register(DOMAIN, SERVICE_DECLINE_PROPOSAL, decline_proposal, schema=vol.Schema({vol.Required("id"): cv.string, vol.Optional("reason"): cv.string}))
+
     async def sync_scenes(call: ServiceCall | None = None) -> ServiceResponse:
         return await async_sync(hass, entry.options.get(CONF_SCENE_GROUPS, []))
 
@@ -1657,6 +1794,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.services.async_remove(DOMAIN, SERVICE_HEALTH_FIX)
     hass.services.async_remove(DOMAIN, SERVICE_LOG_LOGO_REQUEST)
     hass.services.async_remove(DOMAIN, SERVICE_SET_PALETTE)
+    hass.services.async_remove(DOMAIN, SERVICE_APPLY_PROPOSAL)
+    hass.services.async_remove(DOMAIN, SERVICE_DECLINE_PROPOSAL)
     hass.services.async_remove(DOMAIN, SERVICE_NOTIFY)
     hass.services.async_remove(DOMAIN, SERVICE_ADD_TASKS)
     hass.services.async_remove(DOMAIN, SERVICE_SHOPPING_ADD)
