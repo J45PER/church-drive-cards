@@ -42,12 +42,14 @@ export function panelIcon(name, size = 28) {
 }
 
 /** A section panel as the apps draw it: header row (icon, title in the tone's colour, summary pill), then its cards. */
-export function panel(ctx, { title, icon: iconName, color, summary, summaryTemplate }, ...content) {
+export function panel(ctx, { title, icon: iconName, color, summary, summaryTemplate, colorTemplate }, ...content) {
   const pill = h('span', { class: 'pill-summary', hidden: !summary }, summary || '');
   const ico = h('span', { class: 'panel-ico' }); ico.innerHTML = panelIcon(iconName, 30);
   watch(ctx, summaryTemplate, (raw) => { const text = raw.replace(/<[^>]*>/g, ''); pill.textContent = text.trim(); pill.hidden = !text.trim(); });
-  return h('section', { class: 'house-panel', style: toneStyle(ctx, color) },
+  const box = h('section', { class: 'house-panel', style: toneStyle(ctx, color) },
     h('div', { class: 'panel-head' }, ico, h('h2', {}, title), pill), h('div', { class: 'panel-body' }, ...content));
+  watch(ctx, colorTemplate, (key) => { if (key.trim()) box.setAttribute('style', toneStyle(ctx, key.trim())); });
+  return box;
 }
 
 /** A card inside a panel: the tone's Dark colour as the ground, white text, the glow behind it. */

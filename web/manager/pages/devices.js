@@ -1,5 +1,7 @@
 // The Devices page (ported from the apps' MediaCard.kt and SystemRows in EnergyData.kt): the house's TVs and speakers, and how its systems are.
 import { chips, h, soft } from './dom.js';
+import { renderHouseView } from './house-view.js';
+import { toneCard } from '../kit.js';
 
 const PLAYING = new Set(['playing', 'paused', 'buffering']);
 const OFF = new Set(['off', 'unavailable', 'unknown']);
@@ -39,33 +41,35 @@ export function systemRows(states, now = Date.now()) {
   return rows;
 }
 
-export async function renderDevices(el, ctx) {
-  el.replaceChildren(h('p', { class: 'note' }, 'Reading the devices from the house…'));
-  const load = async () => Object.fromEntries((await ctx.ha.call('get_states')).map((e) => [e.entity_id, e]));
-  const call = async (domain, service, entity_id, data) => { try { await ctx.ha.call('call_service', { domain, service, service_data: data, target: { entity_id } }); } catch (e) { msg.textContent = e.message; } };
-  const msg = h('p', { class: 'err', role: 'status' });
-  const draw = async () => {
-    let st; try { st = await load(); } catch (e) { el.replaceChildren(h('p', { class: 'err', role: 'alert' }, `Could not read the devices: ${e.message}`)); return; }
+/** The TVs and speakers card: every player with its controls; it redraws itself after a command. */
+function mediaCard(ctx, _k, states, tone) {
+  const box = toneCard(ctx, tone), msg = h('p', { class: 'err', role: 'status' });
+  const call = async (id, service, data) => { try { await ctx.ha.call('call_service', { domain: 'media_player', service, service_data: data, target: { entity_id: id } }); } catch (e) { msg.textContent = e.message; } };
+  const draw = (st) => {
     const players = mediaPlayers(st);
     const player = (p) => {
-      const on = !OFF.has(p.state); const playing = PLAYING.has(p.state); const id = p.entity_id;
-      const act = async (domain, service, data) => { await call(domain, service, id, data); setTimeout(draw, 600); };
+      const on = !OFF.has(p.state), playing = PLAYING.has(p.state), id = p.entity_id;
+      const act = async (service, data) => { await call(id, service, data); setTimeout(refresh, 600); };
       return h('div', { class: 'kind' },
         h('div', { class: 'row' }, h('div', { style: 'flex:1' }, h('p', { class: 'row-title' }, name(p)), soft(mediaLine(p))),
           p.state !== 'unavailable' ? chips([
-            supports(p, FEATURE.PREVIOUS) && on ? ['⏮', false, () => act('media_player', 'media_previous_track')] : null,
-            [playing ? (p.state === 'playing' ? 'Pause' : 'Play') : on ? 'Turn off' : 'Turn on', on, () => (playing ? act('media_player', 'media_play_pause') : act('media_player', on ? 'turn_off' : 'turn_on'))],
-            supports(p, FEATURE.NEXT) && on ? ['⏭', false, () => act('media_player', 'media_next_track')] : null,
+            supports(p, FEATURE.PREVIOUS) && on ? ['⏮', false, () => act('media_previous_track')] : null,
+            [playing ? (p.state === 'playing' ? 'Pause' : 'Play') : on ? 'Turn off' : 'Turn on', on, () => (playing ? act('media_play_pause') : act(on ? 'turn_off' : 'turn_on'))],
+            supports(p, FEATURE.NEXT) && on ? ['⏭', false, () => act('media_next_track')] : null,
           ].filter(Boolean)) : null),
         on && supports(p, FEATURE.VOLUME_SET) ? h('label', { class: 'row setting' }, h('span', { style: 'flex:1' }, 'Volume'),
-          h('input', { type: 'range', min: 0, max: 1, step: 0.01, value: Number(p.attributes?.volume_level) || 0, 'aria-label': `Volume of ${name(p)}`, onchange: (e) => act('media_player', 'volume_set', { volume_level: Number(e.target.value) }) })) : null);
+          h('input', { type: 'range', min: 0, max: 1, step: 0.01, value: Number(p.attributes?.volume_level) || 0, 'aria-label': `Volume of ${name(p)}`, onchange: (e) => act('volume_set', { volume_level: Number(e.target.value) }) })) : null);
     };
-    el.replaceChildren(h('div', { class: 'stack' },
-      h('section', { class: 'stack', style: 'gap:10px' }, h('div', { class: 'head' }, h('h2', {}, 'TVs & speakers'), h('span', { class: 'count' }, players.filter((p) => PLAYING.has(p.state)).length ? `${players.filter((p) => p.state === 'playing').length} playing` : 'Nothing playing')),
-        h('article', { class: 'card plain' }, players.length ? players.map(player) : soft('No TVs or speakers found.'))),
-      h('section', { class: 'stack', style: 'gap:10px' }, h('div', { class: 'head' }, h('h2', {}, 'Devices & services')),
-        h('article', { class: 'card plain' }, systemRows(st).map((r) => h('div', { class: 'row setting' }, h('div', { style: 'flex:1' }, h('p', { class: 'row-title' }, r.name), soft(r.sub)), r.pill ? h('span', { class: `tag ${r.bad ? 'behind' : 'same'}` }, r.pill) : null)))),
-      msg));
+    box.replaceChildren(...(players.length ? players.map(player) : [soft('No TVs or speakers found.')]), msg);
   };
-  await draw();
+  const refresh = async () => { try { draw(Object.fromEntries((await ctx.ha.call('get_states')).map((e) => [e.entity_id, e]))); } catch (e) { msg.textContent = e.message; } };
+  draw(states);
+  return box;
 }
+
+/** The devices and services card: internet, remote access, backups, updates. */
+function systemCard(ctx, _k, states, tone) {
+  return toneCard(ctx, tone, ...systemRows(states).map((r) => h('div', { class: 'row setting' }, h('div', { style: 'flex:1' }, h('p', { class: 'row-title' }, r.name), soft(r.sub)), r.pill ? h('span', { class: `tag ${r.bad ? 'behind' : 'same'}` }, r.pill) : null)));
+}
+
+export const renderDevices = (el, ctx) => renderHouseView(el, ctx, { path: 'devices', what: 'devices', kinds: { 'custom:media-card': mediaCard, 'custom:system-card': systemCard } });

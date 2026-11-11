@@ -2,8 +2,8 @@
 // the header lines, then the Octopus Electricity, Gas, Last 7 days, Car charging and Octoplus panels in the house style.
 import { h } from './dom.js';
 import { energySnapshot, clock } from './logic.js';
-import { fillIcons } from '../icons.js';
-import { cleanup, fact, loadStyle, panel, panelIcon, toneCard, watch } from '../kit.js';
+import { renderHouseView } from './house-view.js';
+import { fact, toneCard } from '../kit.js';
 
 const p = (n, d = 1) => (n == null ? '—' : `${n.toFixed(d)}p`);
 const pound = (n) => (n == null ? '—' : `£${n.toFixed(2)}`);
@@ -33,35 +33,8 @@ function octopusCard(ctx, show, e, tone) {
 /** Cars and the charger are drawn in the apps; here the charge mode stands for them. */
 const noted = (ctx, tone, text) => toneCard(ctx, tone, h('p', { class: 'sub' }, text));
 
-export async function renderEnergyPage(el, ctx) {
-  cleanup(ctx);
-  el.innerHTML = '<p class="note">Reading the energy page from the house…</p>';
-  let view, e;
-  try {
-    const [config, states] = await Promise.all([ctx.ha.call('lovelace/config', { url_path: 'dashboard-mobile', force: false }), ctx.ha.call('get_states'), loadStyle(ctx)]);
-    view = (config.views || []).find((v) => v.path === 'energy');
-    e = energySnapshot(Object.fromEntries(states.map((s) => [s.entity_id, s])));
-  } catch (err) { el.innerHTML = ''; el.append(h('p', { class: 'err', role: 'alert' }, `Could not read the energy page: ${err.message}`)); return; }
-  const section = view?.sections?.[0]; const auto = section?.cards?.find((c) => c.type === 'custom:auto-layout-card');
-  if (!auto) { el.innerHTML = ''; el.append(h('p', { class: 'err', role: 'alert' }, 'The energy page is not on the house dashboard yet.')); return; }
-
-  const lines = (auto.header_lines || []).map((l) => {
-    const text = h('span', { class: 'line-text' }); const ico = h('span', { class: 'panel-ico', style: `--accent:${ctx.style.colours(l.color)[0]}` });
-    ico.innerHTML = panelIcon(l.icon, 20);
-    const row = h('div', { class: 'line-row' }, ico, text);
-    watch(ctx, l.text, (t) => { text.innerHTML = t.replace(/<(?!\/?b>)[^>]*>/g, ''); });
-    return row;
-  });
-  const panels = (auto.cards || []).map((c) => {
-    const tone = c.color || 'energy';
-    const inner = (c.cards || []).map((k) => {
-      if (k.type === 'custom:octopus-card') return octopusCard(ctx, k.show, e, tone);
-      if (k.type === 'custom:car-card') return noted(ctx, tone, 'Your cars and their charge are in the Church Drive and Clive Admin apps.');
-      return null;
-    }).filter(Boolean);
-    return panel(ctx, { title: c.title, icon: c.icon, color: tone, summaryTemplate: c.summary }, ...inner);
-  });
-  el.innerHTML = '';
-  el.append(h('div', { class: 'stack' }, h('div', { class: 'header-lines' }, lines), ...panels));
-  fillIcons(el);
-}
+const KINDS = {
+  'custom:octopus-card': (ctx, k, states, tone) => octopusCard(ctx, k.show, energySnapshot(states), tone),
+  'custom:car-card': (ctx, k, states, tone) => noted(ctx, tone, 'Your cars and their charge are in the Church Drive and Clive Admin apps.'),
+};
+export const renderEnergyPage = (el, ctx) => renderHouseView(el, ctx, { path: 'energy', what: 'energy', kinds: KINDS });

@@ -181,3 +181,8 @@ a.btn { display: inline-block; text-decoration: none; margin-top: 8px; }
 .line-row { display: flex; align-items: center; gap: 12px; }
 .line-row .panel-ico { width: 32px; height: 32px; }
 .header-lines { display: grid; gap: 8px; }
+.card.tone .row-title { color: #fff; margin: 0; }
+.card.tone .chip { color: #fff; border-color: color-mix(in srgb, #fff 45%, transparent); background: transparent; }
+.card.tone .chip[aria-pressed="true"] { background: color-mix(in srgb, #fff 24%, transparent); }
+.card.tone .tag { color: #fff; }
+.card.tone .kind { display: grid; gap: 6px; padding: 6px 0; }
