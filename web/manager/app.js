@@ -4,6 +4,7 @@ import { DEFAULT_HA, HaSocket, cleanAddress, finishSignIn, houseAddress, signOut
 import { glowStyle, inkOn } from './glow.js';
 import { fillIcons, icon, loadIcons } from './icons.js';
 import { renderChanges } from './pages/changes.js';
+import { readVersions, summary as versionSummary } from './pages/versions.js';
 import { openPaletteEditor } from './pages/palette-editor.js';
 import { renderManager, renderManagerSection } from './pages/manager.js';
 import { LOGO_PATH, LOGO_VIEWBOX } from './logo.js';
@@ -56,7 +57,18 @@ function renderHome(el, ctx) {
       <button class="card" type="button" data-go="health" style="${glowStyle('#1F5C3A')}"><p class="title">Device health</p><p class="sub">Batteries, filters and devices that stop responding</p></button>
       <button class="card" type="button" data-go="energy" style="${glowStyle('#6A4B12')}"><p class="title">Energy</p><p class="sub">Octopus rates, cheap times, today and yesterday</p></button>
       <button class="card" type="button" data-go="activity" style="${glowStyle('#1E4A6B')}"><p class="title">Activity log</p><p class="sub">What people and the assistant did, and when</p></button></div></section>
+    <section class="stack" style="gap:12px" id="versions"><div class="head"><h2>Versions</h2><button class="btn quiet" type="button" id="versions-refresh">Check again</button></div>
+      <article class="card plain" id="versions-card"><p class="sub">Reading the versions…</p></article></section>
     <p class="note">More pages arrive here as they are built: cards, icons and layouts.</p></div>`;
+  const drawVersions = async () => {
+    const card = el.querySelector('#versions-card'); card.innerHTML = '<p class="sub">Reading the versions…</p>';
+    let rows; try { rows = await readVersions(ctx); } catch (e) { card.innerHTML = `<p class="err">Could not read the versions: ${esc(e.message)}</p>`; return; }
+    const sum = versionSummary(rows);
+    const word = { same: 'Same', behind: 'Behind', ahead: 'Ahead', unknown: 'Unknown' };
+    card.innerHTML = `<p class="${sum.tone === 'ok' ? 'sub' : 'warn-line'}">${esc(sum.text)}</p>${rows.map((r) => `<div class="row ver"><div style="flex:1"><p class="row-title">${esc(r.name)}</p><p class="sub">${esc(r.note)}</p></div><code>${esc(r.version || '–')}</code><span class="tag ${r.status}">${word[r.status]}</span></div>`).join('')}
+      <p class="sub">What each phone has installed is kept by the phone and Google Play; the app rows show the newest published test build.</p>`;
+  };
+  el.querySelector('#versions-refresh').addEventListener('click', drawVersions); drawVersions();
   el.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => go(b.dataset.go)));
 }
 

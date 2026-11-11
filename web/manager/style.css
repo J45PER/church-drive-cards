@@ -136,3 +136,12 @@ a.btn { display: inline-block; text-decoration: none; margin-top: 8px; }
 .warn { margin: 0; color: #FFD9A0; font-size: .85rem; min-height: 1.2em; }
 .editor .note { color: #fff; }
 .editor .btn.quiet { color: #fff; background: rgba(255,255,255,.18); }
+
+.ver { padding: 8px 0; border-top: 1px solid var(--line); }
+.ver:first-of-type { border-top: 0; }
+.ver code { font-family: var(--mono); }
+.tag.same { background: color-mix(in srgb, #4FD08A 30%, transparent); }
+.tag.behind, .tag.ahead { background: color-mix(in srgb, #FFB74D 40%, transparent); }
+.tag.unknown { opacity: .7; }
+.warn-line { margin: 0 0 6px; color: #9A5B00; font-weight: 500; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .warn-line { color: #FFD9A0; } }
