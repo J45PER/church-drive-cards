@@ -30,7 +30,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PullToRefreshBox
@@ -110,20 +109,23 @@ fun LinkRefresh(link: LinkStatus, onRefresh: () -> Unit, modifier: Modifier = Mo
 
     // The pull: Idle, then Refreshing while we wait for the house to answer, then Done for a moment.
     var phase by remember { mutableStateOf(0) } // 0 idle, 1 refreshing, 2 done
+    // One effect per phase: changing the phase restarts the effect, so each phase hands over to the next rather than finishing the job itself.
     LaunchedEffect(phase) {
-        if (phase == 1) {
-            // Long enough to see, short enough not to nag; give up waiting after twelve seconds.
-            delay(900L)
-            var waited = 0L
-            while ((current.refreshing || current.connection != ConnectionState.Connected || !current.statesLoaded) && waited < 12_000L) {
-                delay(100L)
-                waited += 100L
+        when (phase) {
+            1 -> {
+                // Long enough to see, short enough not to nag; give up waiting after twelve seconds.
+                delay(900L)
+                var waited = 0L
+                while ((current.refreshing || current.connection != ConnectionState.Connected || !current.statesLoaded) && waited < 12_000L) {
+                    delay(100L)
+                    waited += 100L
+                }
+                phase = if (current.connection == ConnectionState.Connected) 2 else 0
             }
-            if (current.connection == ConnectionState.Connected) {
-                phase = 2
+            2 -> {
                 delay(1_300L)
+                phase = 0
             }
-            phase = 0
         }
     }
     val state = rememberPullToRefreshState()
@@ -169,15 +171,18 @@ fun StatusPill(face: PillFace, pull: Float = 0f, onTap: (() -> Unit)? = null, pa
     val shownState = remember { mutableStateOf(face) }
     if (visible) shownState.value = face
     val shown = shownState.value
+    // No connection is the house's Red and a restart its Amber (the same palettes as the cards); everything else is the neutral pill.
+    val red = toneColors(Tone.Red)
+    val amber = toneColors(Tone.Amber)
     val (container, ink) = when (shown) {
-        PillFace.NoConnection -> scheme.errorContainer to scheme.onErrorContainer
-        PillFace.Restarting -> scheme.tertiaryContainer to scheme.onTertiaryContainer
+        PillFace.NoConnection -> red.container to red.onContainer
+        PillFace.Restarting -> amber.container to amber.onContainer
         else -> scheme.surfaceContainerHigh to scheme.onSurface
     }
     // The cloud takes the face's colour: red for no connection, amber for a restart, Clive's own otherwise.
     val cloud = when (shown) {
-        PillFace.NoConnection -> AssistPalette(scheme.error, scheme.error, scheme.errorContainer)
-        PillFace.Restarting -> AssistPalette(scheme.tertiary, scheme.tertiary, scheme.secondary)
+        PillFace.NoConnection -> toneSet(Tone.Red)!!.let { AssistPalette(it.colour, it.accent, it.colour) }
+        PillFace.Restarting -> toneSet(Tone.Amber)!!.let { AssistPalette(it.colour, it.accent, it.colour) }
         else -> palette
     }
     // A moment as a circle first, then the words; a pull stays a circle until "Release".
@@ -244,19 +249,31 @@ private fun PillIcon(face: PillFace, ink: Color, pull: Float) {
     val spin = rememberInfiniteTransition(label = "spin")
     val turn by spin.animateFloat(0f, 360f, infiniteRepeatable(tween(1_100, easing = LinearEasing)), label = "turn")
     val pulse by spin.animateFloat(0.35f, 1f, infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "pulse")
+    // The mark turns with the finger while pulling, then settles half a turn over on Release (the mark looks the same upside down).
+    val settle by androidx.compose.animation.core.animateFloatAsState(if (face == PillFace.Release) 180f else 0f, tween(250), label = "settle")
+    val sweep by spin.animateFloat(0f, 1f, infiniteRepeatable(tween(1_400), RepeatMode.Reverse), label = "sweep")
     when (face) {
         PillFace.Connecting, PillFace.Pull, PillFace.Release, PillFace.Updating ->
             Box(
                 Modifier.size(22.dp).graphicsLayer {
                     rotationZ = when (face) {
                         PillFace.Pull -> pull * 180f
-                        PillFace.Release -> 180f
                         PillFace.Updating -> turn
-                        else -> 0f
+                        else -> settle
                     }
                 },
             ) { AssistantGlyph(AssistantGlyphPose.Idle, ink, 22.dp) }
-        PillFace.Restarting -> CircularProgressIndicator(Modifier.size(20.dp), color = ink, strokeWidth = 2.dp)
+        PillFace.Restarting -> Canvas(Modifier.size(20.dp)) {
+            // A ring that turns while its arc grows and shrinks, 2 dp thick.
+            val stroke = 2.dp.toPx()
+            val inset = stroke / 2f
+            val arc = 90f + 190f * sweep
+            drawArc(
+                ink, startAngle = turn * 0.8f - 90f + (190f * sweep) * 0.5f, sweepAngle = arc, useCenter = false,
+                topLeft = Offset(inset, inset), size = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke),
+                style = Stroke(width = stroke, cap = StrokeCap.Round),
+            )
+        }
         PillFace.NoConnection -> Canvas(Modifier.size(22.dp)) {
             // Three signal bars with a line through them, breathing so it reads as "still trying".
             val w = size.width
@@ -269,7 +286,10 @@ private fun PillIcon(face: PillFace, ink: Color, pull: Float) {
             drawLine(ink, Offset(w * 0.08f, h * 0.08f), Offset(w * 0.92f, h * 0.92f), strokeWidth = bar * 0.9f, cap = StrokeCap.Round)
         }
         PillFace.Done -> {
-            val draw by androidx.compose.animation.core.animateFloatAsState(1f, tween(380), label = "tick")
+            // Starts at nothing and draws itself (animateFloatAsState would begin already at 1).
+            val drawn = remember { androidx.compose.animation.core.Animatable(0f) }
+            LaunchedEffect(Unit) { drawn.animateTo(1f, tween(380)) }
+            val draw = drawn.value
             Canvas(Modifier.size(22.dp)) {
                 val w = size.width
                 val h = size.height
