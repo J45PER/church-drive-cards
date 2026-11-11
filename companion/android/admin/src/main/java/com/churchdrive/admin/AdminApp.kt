@@ -51,7 +51,7 @@ import com.churchdrive.app.ha.EntityState
 import com.churchdrive.app.ui.CliveColours
 import com.churchdrive.app.ui.LocalPanelTone
 import com.churchdrive.app.ui.OctopusCard
-import com.churchdrive.app.ui.DeviceHealthOverlay
+import com.churchdrive.app.ui.DeviceHealthTab
 import com.churchdrive.app.ui.LocalHaApi
 import com.churchdrive.app.ui.deviceHealthList
 import com.churchdrive.app.ui.deviceHealthSummary
@@ -81,7 +81,7 @@ fun AdminApp(vm: AdminModel) {
             ) { _, delta -> swiped += delta }
         },
     ) {
-        androidx.compose.runtime.CompositionLocalProvider(LocalHaApi provides vm.api) {
+        androidx.compose.runtime.CompositionLocalProvider(LocalHaApi provides vm.api, com.churchdrive.app.ui.LocalBaseUrl provides vm.baseUrl) {
             AdminPages(vm) { panel = "account" }
         }
         AdminPanel(panel, { panel = it }, vm)
@@ -89,23 +89,22 @@ fun AdminApp(vm: AdminModel) {
 }
 
 private const val HOME = 0
-private const val ACTIVITY = 1
-private const val COLOURS = 2
+private const val HEALTH = 1
+private const val ENERGY = 2
+private const val ACTIVITY = 3
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AdminPages(vm: AdminModel, onPerson: () -> Unit) {
     var tab by rememberSaveable { mutableIntStateOf(HOME) }
-    // A section that fills the screen (Device Health), opened from Home; back returns to Home.
-    var section by rememberSaveable { mutableStateOf<String?>(null) }
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-    BackHandler(enabled = tab != HOME && section == null) { tab = HOME }
+    BackHandler(enabled = tab != HOME) { tab = HOME }
     Box(Modifier.fillMaxSize()) {
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         topBar = {
             MediumTopAppBar(
-                title = { Text(when (tab) { HOME -> "Clive Admin"; ACTIVITY -> "Activity log"; else -> "Colour palettes" }) },
+                title = { Text(when (tab) { HOME -> "Clive Admin"; HEALTH -> "Device health"; ENERGY -> "Energy"; else -> "Activity log" }) },
                 actions = { PersonButton(vm.personName, onPerson) },
                 scrollBehavior = scroll,
             )
@@ -117,17 +116,25 @@ private fun AdminPages(vm: AdminModel, onPerson: () -> Unit) {
                     icon = { Icon(CdVectors.Home, null) }, label = { Text("Home", fontSize = 11.sp) },
                 )
                 NavigationBarItem(
-                    selected = tab == ACTIVITY, onClick = { tab = ACTIVITY },
-                    icon = { Icon(CdVectors.History, null) }, label = { Text("Activity", fontSize = 11.sp) },
+                    selected = tab == HEALTH, onClick = { tab = HEALTH },
+                    icon = { Icon(CdVectors.BatteryCharging, null) }, label = { Text("Health", fontSize = 11.sp) },
                 )
                 NavigationBarItem(
-                    selected = tab == COLOURS, onClick = { tab = COLOURS },
-                    icon = { Icon(painterResource(R.drawable.mdi_palette), null) }, label = { Text("Colours", fontSize = 11.sp) },
+                    selected = tab == ENERGY, onClick = { tab = ENERGY },
+                    icon = { Icon(CdVectors.Bolt, null) }, label = { Text("Energy", fontSize = 11.sp) },
+                )
+                NavigationBarItem(
+                    selected = tab == ACTIVITY, onClick = { tab = ACTIVITY },
+                    icon = { Icon(CdVectors.History, null) }, label = { Text("Activity", fontSize = 11.sp) },
                 )
             }
         },
     ) { padding ->
-        Column(
+        val ready = vm.connected && vm.userKnown && vm.isAdmin
+        // Device health scrolls itself (its devices open pages in place), so it sits in the room under the title bar, not in the scrolling column.
+        if (ready && tab == HEALTH) {
+            Box(Modifier.fillMaxSize().padding(padding)) { DeviceHealthTab(vm.entities, vm.registry, vm.areaNames) }
+        } else Column(
             Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(28.dp),
         ) {
@@ -138,32 +145,12 @@ private fun AdminPages(vm: AdminModel, onPerson: () -> Unit) {
                     Tone.Red, "Administrators only",
                     "${vm.personName ?: "This account"} is not an administrator in Home Assistant, so Clive Admin has nothing to show. Sign in with an administrator's login.",
                 )
-                tab == COLOURS -> ColoursPage()
+                tab == ENERGY -> EnergyPage(vm.entities)
                 tab == ACTIVITY -> ActivityPage()
-                else -> HomePage(vm, open = { tab = it }, openSection = { section = it })
+                else -> HomePage(vm, open = { tab = it })
             }
         }
     }
-    if (section == HEALTH) DeviceHealthOverlay(null, vm.entities, vm.registry, vm.areaNames) { section = null }
-    if (section == ENERGY) AdminSection("Energy", { section = null }) { EnergyPage(vm.entities) }
-    }
-}
-
-/** A page that fills the screen over the tabs, with a back arrow: the same look as the pages of the phone app's account panel. */
-@Composable
-private fun AdminSection(title: String, onBack: () -> Unit, content: @Composable () -> Unit) {
-    BackHandler(onBack = onBack)
-    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(
-            Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-        ) {
-            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) { Icon(CdVectors.Back, contentDescription = "Back") }
-                Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 4.dp))
-            }
-            content()
-        }
     }
 }
 
@@ -198,33 +185,29 @@ private fun Notice(tone: Tone, title: String, body: String) {
     }
 }
 
-private const val HEALTH = "health"
-private const val ENERGY = "energy"
-
 @Composable
-private fun HomePage(vm: AdminModel, open: (Int) -> Unit, openSection: (String) -> Unit) {
+private fun HomePage(vm: AdminModel, open: (Int) -> Unit) {
     val health = remember(vm.entities, vm.registry, vm.areaNames) { deviceHealthList(vm.entities, vm.registry, vm.areaNames) }
     ToneSectionHeader("Device health", CdVectors.BatteryCharging, Tone.Teal, deviceHealthSummary(health))
-    ToneCard(Tone.Teal, onClick = { openSection(HEALTH) }) { ink, soft ->
+    ToneCard(Tone.Teal, onClick = { open(HEALTH) }) { ink, soft ->
         Text("Batteries, filters and devices that stopped answering", style = MaterialTheme.typography.titleMedium, color = ink)
         Text("The ones that need attention come first.", style = MaterialTheme.typography.bodyMedium, color = soft)
     }
     ToneSectionHeader("Energy", CdVectors.Bolt, Tone.Energy)
-    ToneCard(Tone.Energy, onClick = { openSection(ENERGY) }) { ink, soft ->
+    ToneCard(Tone.Energy, onClick = { open(ENERGY) }) { ink, soft ->
         Text("Electricity, gas and the last seven days", style = MaterialTheme.typography.titleMedium, color = ink)
         Text("Rates, what you've used so far and the cheap times.", style = MaterialTheme.typography.bodyMedium, color = soft)
     }
-    val palettes = CliveColours.byKey.size
-    ToneSectionHeader("Colour palettes", painterResource(R.drawable.mdi_palette), Tone.Indigo, "$palettes palettes")
-    ToneCard(Tone.Indigo, onClick = { open(COLOURS) }) { ink, soft ->
-        Text("Every palette as the house has it now", style = MaterialTheme.typography.titleMedium, color = ink)
-        Text("View only. Changing a palette is done on the website.", style = MaterialTheme.typography.bodyMedium, color = soft)
+    ToneSectionHeader("Activity log", CdVectors.History, Tone.Indigo)
+    ToneCard(Tone.Indigo, onClick = { open(ACTIVITY) }) { ink, soft ->
+        Text("What people and the assistant did, and when", style = MaterialTheme.typography.titleMedium, color = ink)
+        Text("Filter by day, time, person and kind.", style = MaterialTheme.typography.bodyMedium, color = soft)
     }
 }
 
 /** The palettes, view only: the built-in ones, each replaced by the one Home Assistant sent if that was changed. */
 @Composable
-private fun ColoursPage() {
+internal fun ColoursPage() {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ToneSectionHeader("Colour palettes", painterResource(R.drawable.mdi_palette), Tone.Indigo, "${CliveColours.byKey.size} palettes")
         Text(

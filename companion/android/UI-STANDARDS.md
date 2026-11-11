@@ -16,7 +16,7 @@ so it takes the whole width above the columns. Look at a change on a phone uprig
 1. **Look at the dashboard first.** Open the matching card's source in `src/*.js` (or the Lovelace config) and copy
    what it shows: the layout, the labels, the icons, which rows there are. The app mirrors the dashboard; any
    difference is deliberate and said so in the commit.
-2. **Use the kit, don't draw your own.** Everything shared is in `ui/UiKit.kt` and `ui/ModeIcons.kt`:
+2. **Use the kit, don't draw your own.** Everything shared is in `ui/UiKit.kt` (now in `core`, same package) and `ui/ModeIcons.kt`:
    - Choices (fan speeds, purifier modes, thermostat shortcuts, charger modes, blind, camera buttons): `TileRow` with
      `TileItem`s. Icon-only controls (vacuum): `IconRow`. A list of plain text options (suction level): `OptionRow`.
    - A card's frame: `EntityCard`. A titled group: `SectionPanel`. Icons: `HaIcon`. Colours: `Tone` and `toneColors`.

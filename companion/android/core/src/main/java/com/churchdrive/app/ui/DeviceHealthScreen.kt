@@ -68,7 +68,7 @@ fun DeviceHealthOverlay(
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         val item = selected?.let { healthOfDevice(it, entities, registry, areaNames) }
         if (item != null) {
-            DevicePage(item) { if (startId == null) selected = null else onClose() }
+            DevicePage(item, onBack = { if (startId == null) selected = null else onClose() })
         } else {
             HealthList(deviceHealthList(entities, registry, areaNames), onClose) { selected = it.deviceId }
         }
@@ -87,12 +87,13 @@ private fun HealthHeader(title: String, subtitle: String?, onBack: () -> Unit) {
 }
 
 @Composable
-private fun HealthList(items: List<DeviceHealthItem>, onClose: () -> Unit, onOpen: (DeviceHealthItem) -> Unit) {
+private fun HealthList(items: List<DeviceHealthItem>, onClose: () -> Unit, embedded: Boolean = false, onOpen: (DeviceHealthItem) -> Unit) {
     Column(
-        Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
+        Modifier.fillMaxSize().let { if (embedded) it else it.safeDrawingPadding() }.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        HealthHeader("Device health", deviceHealthSummary(items), onClose)
+        if (embedded) Text(deviceHealthSummary(items), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        else HealthHeader("Device health", deviceHealthSummary(items), onClose)
         if (items.isEmpty()) Text("No batteries, filters or devices to show yet.", style = MaterialTheme.typography.bodyMedium)
         val (attention, fine) = items.partition { it.needsAttention }
         if (attention.isNotEmpty()) {
@@ -154,9 +155,9 @@ private fun HealthRow(item: DeviceHealthItem, onClick: () -> Unit) {
 
 /** A device's page: just what a person needs, its battery and filter with bars, whether it is answering, and when it was last heard. */
 @Composable
-private fun DevicePage(item: DeviceHealthItem, onBack: () -> Unit) {
+private fun DevicePage(item: DeviceHealthItem, onBack: () -> Unit, embedded: Boolean = false) {
     Column(
-        Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
+        Modifier.fillMaxSize().let { if (embedded) it else it.safeDrawingPadding() }.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         HealthHeader(item.name, item.area, onBack)
@@ -175,4 +176,18 @@ private fun DevicePage(item: DeviceHealthItem, onBack: () -> Unit) {
             Text("Heard ${heardAgo(item.heard)}", style = MaterialTheme.typography.bodySmall)
         }
     }
+}
+
+/**
+ * Device health as a tab of an app (Clive Admin's bottom bar): the same list, without the header and back arrow (the app's own title bar
+ * says what it is). A device opens its own page in place of the list, and back returns to the list. It scrolls itself, so give it room
+ * rather than putting it inside a scrolling column.
+ */
+@Composable
+fun DeviceHealthTab(entities: Map<String, EntityState>, registry: Registry, areaNames: Map<String, String>) {
+    var selected by remember { mutableStateOf<String?>(null) }
+    BackHandler(enabled = selected != null) { selected = null }
+    val item = selected?.let { healthOfDevice(it, entities, registry, areaNames) }
+    if (item != null) DevicePage(item, { selected = null }, embedded = true)
+    else HealthList(deviceHealthList(entities, registry, areaNames), {}, embedded = true) { selected = it.deviceId }
 }

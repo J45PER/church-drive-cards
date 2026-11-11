@@ -29,30 +29,6 @@ import com.churchdrive.app.ha.EntityState
 import com.churchdrive.app.ha.data
 import org.json.JSONObject
 
-/** A to-do list's items, kept up to date: fetched again whenever the list's count changes. Null until they arrive. */
-@Composable
-internal fun rememberTodoItems(listId: String, entities: Map<String, EntityState>): List<TodoItem>? {
-    val api = LocalHaApi.current
-    var items by remember(listId) { mutableStateOf<List<TodoItem>?>(null) }
-    val count = entities[listId]?.state
-    LaunchedEffect(listId, count) {
-        if (api != null && listId.isNotBlank()) {
-            // A failed or slow answer is asked for again (a few times); it is not taken for an empty list.
-            var tries = 0
-            while (tries < 5) {
-                val result = api.ask("todo/item/list", data("entity_id" to listId))
-                if (result != null) {
-                    items = parseTodoItems(result)
-                    break
-                }
-                tries++
-                kotlinx.coroutines.delay(2_000L * tries)
-            }
-        }
-    }
-    return items
-}
-
 /**
  * The dashboard's `custom:task-list-card`: a to-do list to tick off and add to. `entity: mine` is the signed-in
  * person's own list. (Repeats and reminders are set on the dashboard; they show here as the task's note.)
@@ -161,37 +137,6 @@ fun TaskListCard(config: JSONObject, entities: Map<String, EntityState>, call: C
         }
         // A steps list is a checklist that shows in this list as one task; it is made here and worked through on its own page.
         TileRow(listOf(TileItem("mdi:format-list-checks", "New steps list", false) { shopping = NEW_STEPS }), tone, tone.onContainer)
-    }
-}
-
-/**
- * The dashboard's `custom:house-tasks-card`: the jobs the house has spotted (a low battery, a filter due), which clear
- * themselves once sorted. It shows the signed-in person's and everyone's.
- */
-@Composable
-fun HouseTasksCard(config: JSONObject, entities: Map<String, EntityState>) {
-    val me = LocalUserName.current
-    val first = me?.trim()?.substringBefore(' ')
-    val listId = config.optString("entity").ifBlank { "todo.priorities_automatic" }
-    val showAll = config.optString("show") == "all"
-    val tone = toneColors(Tone.TodoHouse)
-    val items = rememberTodoItems(listId, entities)
-    EntityCard(tone.container, tone.onContainer) {
-        val tasks = items.orEmpty().filter { !it.done }.map { it to houseTask(it) }.filter { showAll || houseTaskFor(it.second, first) }
-        when {
-            items == null -> Text("Loading…", style = MaterialTheme.typography.bodyMedium)
-            tasks.isEmpty() -> Text("Nothing from the house right now.", style = MaterialTheme.typography.bodyMedium)
-        }
-        tasks.forEach { (item, task) ->
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                ToneIconName(task.icon, CdVectors.Info, tone)
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(item.summary, style = MaterialTheme.typography.bodyLarge)
-                    val sub = listOf(task.kind, task.detail, if (showAll) task.who else "").filter { it.isNotBlank() }.joinToString(" · ")
-                    if (sub.isNotEmpty()) Text(sub, style = MaterialTheme.typography.bodySmall, color = tone.onContainer.copy(alpha = 0.75f))
-                }
-            }
-        }
     }
 }
 

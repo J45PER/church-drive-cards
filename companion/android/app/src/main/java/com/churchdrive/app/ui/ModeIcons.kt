@@ -97,55 +97,6 @@ object IconMap {
     }
 }
 
-/** One tile: an icon and a label (as on the dashboard's cards), filled when it's the current choice. */
-data class TileItem(val icon: String, val label: String, val selected: Boolean, val showLabel: Boolean = true, val onClick: () -> Unit)
-
-@Composable
-private fun Tile(item: TileItem, tone: ToneColors, content: Color, enabled: Boolean, column: Boolean, modifier: Modifier) {
-    val ink = (if (item.selected) tone.onAccent else content).copy(alpha = if (enabled) 1f else 0.4f)
-    Box(
-        modifier = modifier
-            .height(Ui.TileHeight)
-            .clip(Ui.TileShape)
-            .background(if (item.selected) tone.accent else content.copy(alpha = 0.10f), Ui.TileShape)
-            .clickable(enabled = enabled, onClickLabel = item.label, onClick = item.onClick)
-            .semantics { contentDescription = item.label },
-        contentAlignment = Alignment.Center,
-    ) {
-        if (column) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                HaIcon(item.icon, CdVectors.Info, ink, Ui.TileIcon)
-                if (item.showLabel) CentredText(item.label, ink, Ui.TileTextStacked, Modifier.padding(horizontal = 4.dp))
-            }
-        } else {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                HaIcon(item.icon, CdVectors.Info, ink, Ui.TileIcon)
-                if (item.showLabel) CentredText(item.label, ink, Ui.TileText, Modifier.padding(end = 2.dp))
-            }
-        }
-    }
-}
-
-/**
- * Tiles in rows of up to [perRow], shared out evenly by [tileRowSizes] and, as on the dashboard, going onto more rows
- * rather than scrolling. Every row fills the width: a short last row's tiles are wider, not left with a gap.
- * [column] puts the label under the icon. All tiles are the same height ([Ui.TileHeight]).
- */
-@Composable
-fun TileRow(items: List<TileItem>, tone: ToneColors, content: Color, enabled: Boolean = true, perRow: Int = Ui.TilesPerRow, column: Boolean = false) {
-    if (items.isEmpty()) return
-    var next = 0
-    Column(verticalArrangement = Arrangement.spacedBy(Ui.TileGap)) {
-        tileRowSizes(items.size, perRow).forEach { size ->
-            val row = items.subList(next, next + size)
-            next += size
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Ui.TileGap)) {
-                row.forEach { Tile(it, tone, content, enabled, column, Modifier.weight(1f)) }
-            }
-        }
-    }
-}
-
 private val FAN_PRESET_ICONS = mapOf(
     "natural" to "mdi:weather-windy", "nature" to "mdi:weather-windy", "breeze" to "mdi:weather-windy",
     "sleep" to "mdi:power-sleep", "auto" to "mdi:fan-auto", "smart" to "mdi:fan-auto",

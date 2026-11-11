@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.132.0
+
+- No change (shared code gained a tab version of Device health, used by Clive Admin).
+
 ## 0.131.0
 
 - The launcher icon is moved up and to the right so the phone and its rings sit in the middle of the circle, instead of the ripples looking further out than the bottom-left, and sized to sit evenly beside the other Clive apps.

@@ -6,7 +6,7 @@ name: Clive Manager site
 on:
   push:
     branches: [main]
-    paths: ["web/manager/**", "firebase.json", "firestore.rules", ".github/workflows/manager-site.yml"]
+    paths: ["web/manager/**", "custom_components/church_drive/frontend/clive/**", "firebase.json", "firestore.rules", ".github/workflows/manager-site.yml"]
   workflow_dispatch:
 
 permissions:
@@ -22,6 +22,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Copy the house's icon set and shipped cards into the site
+        run: |
+          mkdir -p web/manager/clive
+          cp custom_components/church_drive/frontend/clive/icons.json custom_components/church_drive/frontend/clive/cards.json web/manager/clive/
       - name: The site's checks
         run: node --test test/manager-web.test.mjs
       - name: Publish to Firebase

@@ -10,11 +10,6 @@ fun EntityState.list(key: String): List<String> {
     return (0 until a.length()).filter { !a.isNull(it) }.map { a.optString(it) }.filter { it.isNotBlank() }
 }
 
-/** "speed_1" as "Speed 1". */
-fun presetLabel(value: String): String = value.replace('_', ' ').trim().replaceFirstChar { it.uppercase() }
-
-/** The comfortable range of a room by its type, in °C, as on the dashboard's Climate panel. */
-
 /** A room type with its comfortable range in °C (the dashboard's Climate Zone card types). */
 data class RoomType(val name: String, val low: Double, val high: Double)
 

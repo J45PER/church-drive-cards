@@ -67,7 +67,7 @@ fun AdminPanel(panel: String?, onPanel: (String?) -> Unit, vm: AdminModel) {
     // The last page shown, so a page keeps its words while it slides away.
     var shown by remember { mutableStateOf("account") }
     if (panel != null) shown = panel
-    BackHandler(enabled = panel != null) { onPanel(if (panel == "account") null else "account") }
+    BackHandler(enabled = panel != null) { onPanel(when { panel == "account" -> null; panel?.startsWith("manager:") == true -> "manager"; else -> "account" }) }
     AnimatedVisibility(
         visible = panel != null,
         enter = slideInHorizontally(initialOffsetX = { it }),
@@ -77,7 +77,7 @@ fun AdminPanel(panel: String?, onPanel: (String?) -> Unit, vm: AdminModel) {
             AnimatedContent(
                 targetState = shown,
                 transitionSpec = {
-                    val deeper = targetState != "account"
+                    val deeper = targetState != "account" && !(targetState == "manager" && initialState.startsWith("manager:"))
                     val move = if (deeper) slideInHorizontally { it } togetherWith slideOutHorizontally { -it / 4 }
                     else slideInHorizontally { -it / 4 } togetherWith slideOutHorizontally { it }
                     move.apply { targetContentZIndex = if (deeper) 1f else -1f }
@@ -87,7 +87,22 @@ fun AdminPanel(panel: String?, onPanel: (String?) -> Unit, vm: AdminModel) {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     when (which) {
                         "about" -> AboutPage { onPanel("account") }
-                        else -> AccountPage(vm, onClose = { onPanel(null) }, onOpen = onPanel)
+                        "manager" -> PageColumn {
+                            PanelTitle("Manager", { onPanel("account") })
+                            ManagerHub(vm.managerSections) { onPanel("manager:$it") }
+                        }
+                        "colours" -> PageColumn {
+                            PanelTitle("Colour palettes", { onPanel("account") })
+                            ColoursPage()
+                        }
+                        else -> if (which.startsWith("manager:")) {
+                            vm.managerSections.firstOrNull { it.title == which.removePrefix("manager:") }?.let { section ->
+                                PageColumn {
+                                    PanelTitle(section.title, { onPanel("manager") })
+                                    ManagerSectionContent(section, vm.entities, vm.call)
+                                }
+                            }
+                        } else AccountPage(vm, onClose = { onPanel(null) }, onOpen = onPanel)
                     }
                 }
             }
@@ -163,11 +178,39 @@ private fun AccountPage(vm: AdminModel, onClose: () -> Unit, onOpen: (String) ->
                 leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_church_drive), contentDescription = null) },
             )
         }
+        if (vm.managerSections.isNotEmpty()) PanelCard {
+            PanelRow(
+                CdVectors.Cog, "Manager", "${vm.managerSections.size} sections: people, cameras, notifications and more",
+                onClick = { onOpen("manager") }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_cog_solid), contentDescription = null) },
+            )
+        }
+        PanelCard {
+            PanelRow(
+                CdVectors.Info, "Colour palettes", "Every palette as the house has it. View only: change them on the website",
+                onClick = { onOpen("colours") }, leading = { Icon(painterResource(R.drawable.mdi_palette), contentDescription = null) },
+            )
+        }
         PanelCard { PanelRow(CdVectors.Info, "About", onClick = { onOpen("about") }) }
         // A sign-in taken from the Church Drive app is that app's to end; signing out there signs this one out too.
         PanelCard {
             if (vm.borrowed) PanelRow(CdVectors.SignOut, "Sign out", "This app uses the Church Drive app's sign-in. Sign out there and it signs out here too.")
             else PanelRow(CdVectors.SignOut, "Sign out", onClick = { onClose(); vm.signOut() })
+        }
+    }
+}
+
+/** The Manager's sections as a page of rows; each opens its own page. A section Clive Admin cannot draw yet says it is still in the Church Drive app. */
+@Composable
+private fun ManagerHub(sections: List<ManagerSection>, onOpen: (String) -> Unit) {
+    PanelCard {
+        sections.forEach { section ->
+            ListItem(
+                headlineContent = { Text(section.title) },
+                supportingContent = if (ManagerSections.builtHere(section)) null else ({ Text("Still in the Church Drive app") }),
+                leadingContent = { com.churchdrive.app.ui.HaIcon(section.icon, CdVectors.Cog, MaterialTheme.colorScheme.onSurfaceVariant, 24.dp) },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                modifier = Modifier.clickable { onOpen(section.title) },
+            )
         }
     }
 }
