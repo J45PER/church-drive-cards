@@ -27,7 +27,7 @@ import org.json.JSONObject
 data class ManagerCard(val type: String, val config: JSONObject)
 
 /** One section of the Manager (People, Locations, Notifications and so on), as the house's Manager dashboard describes it. */
-data class ManagerSection(val title: String, val icon: String?, val color: String?, val cards: List<ManagerCard>)
+data class ManagerSection(val title: String, val icon: String?, val color: String?, val cards: List<ManagerCard>, val summary: String? = null)
 
 object ManagerSections {
     /** Reads the sections of the Manager dashboard: every Section Panel in it, with its cards (a stack's cards taken out of it). */
@@ -43,9 +43,21 @@ object ManagerSections {
         return found.map { p ->
             ManagerSection(
                 title = p.optString("title"), icon = p.optString("icon").takeIf { it.isNotBlank() }, color = p.optString("color").takeIf { it.isNotBlank() },
-                cards = cards(p.opt("cards")),
+                cards = cards(p.opt("cards")), summary = p.optString("summary").takeIf { it.isNotBlank() },
             )
         }.filter { it.title.isNotBlank() }
+    }
+
+    /** The page header of a view (`header_content` set to lines, with its `header_lines`): the object that holds them, or null. */
+    fun header(node: Any?): JSONObject? {
+        when (node) {
+            is JSONObject -> {
+                if (node.optString("header_content") == "lines") return node
+                for (key in node.keys()) header(node.opt(key))?.let { return it }
+            }
+            is JSONArray -> for (i in 0 until node.length()) header(node.opt(i))?.let { return it }
+        }
+        return null
     }
 
     private fun cards(node: Any?): List<ManagerCard> {

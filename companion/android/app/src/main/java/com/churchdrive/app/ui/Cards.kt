@@ -244,26 +244,6 @@ fun CompactBar(fraction: Float, colour: Color, ink: Color) {
     }
 }
 
-/** A status as a pill: the card's strong colour on a faint wash of itself. Every card's status goes in one (the rest of the text is white). */
-@Composable
-fun StatusPill(text: String, tone: ToneColors, modifier: Modifier = Modifier) {
-    androidx.compose.material3.Text(
-        text, color = tone.accent, style = androidx.compose.material3.MaterialTheme.typography.labelMedium, maxLines = 1,
-        modifier = modifier.background(tone.accent.copy(alpha = 0.18f), androidx.compose.foundation.shape.CircleShape).padding(horizontal = 10.dp, vertical = 3.dp),
-    )
-}
-
-/** An icon in a tinted circle, as used at the start of a card or section header. */
-@Composable
-fun ToneIcon(icon: ImageVector, tone: ToneColors, size: Int = 40) {
-    Box(
-        modifier = Modifier.size(size.dp).background(tone.accent.copy(alpha = 0.18f), CircleShape),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(icon, contentDescription = null, tint = tone.accent, modifier = Modifier.size((size * 0.55f).dp))
-    }
-}
-
 /** One of a row of mutually exclusive choices; the current one is filled in the tone's strong colour. */
 @Composable
 fun ChoiceButton(
@@ -458,17 +438,6 @@ fun AlarmCard(alarm: EntityState?, call: CallService, entityId: String = ALARM_E
             }
         }
     }
-}
-
-/** A small icon button on a folded grid card: 0.8 of a cell, the current mode filled in the card's strong colour. */
-@Composable
-fun SmallModeButton(icon: String, selected: Boolean, tone: ToneColors, ink: Color, triggered: Boolean, modifier: Modifier, enabled: Boolean, description: String, onClick: () -> Unit) {
-    val bg = when { selected && triggered -> tone.onAccent; selected -> tone.accent; triggered -> Color.White.copy(alpha = 0.30f); else -> ink.copy(alpha = 0.10f) }
-    val fg = when { selected && triggered -> Color.White; selected -> tone.onAccent; else -> ink }
-    Box(
-        modifier.clip(RoundedCornerShape(12.dp)).background(bg).clickable(enabled = enabled, onClickLabel = description, onClick = onClick).semantics { contentDescription = description },
-        contentAlignment = Alignment.Center,
-    ) { HaIcon(icon, CdVectors.ShieldOutline, fg, 20.dp) }
 }
 
 /** A mode button: the dashboard's icon over the label; the current mode is filled in the state colour. */
@@ -798,132 +767,3 @@ fun VacuumCard(vacuum: EntityState?, battery: EntityState?, call: CallService, e
 
 // ---- Car charger (Zappi) ----
 
-const val ZAPPI_MODE = "select.zappi_charge_mode"
-const val ZAPPI_POWER = "sensor.zappi_charging_power"
-const val ZAPPI_STATUS = "sensor.zappi_status"
-const val ZAPPI_PLUG = "sensor.zappi_plug_status"
-const val ZAPPI_SESSION = "sensor.zappi_charge_added_session"
-const val ZAPPI_LOCKED = "binary_sensor.zappi_locked"
-
-/**
- * The charger's one button, as on the dashboard's charger card: [show] while a car is plugged in (or charging),
- * Start charge until it's [charging]. [locked] is null when the charger doesn't say; it only decides whether Start
- * charge unlocks first (the sensor stays on even mid-charge, so it isn't shown).
- */
-data class ChargerOverrides(val show: Boolean, val locked: Boolean?, val charging: Boolean)
-
-fun chargerOverrides(entities: Map<String, EntityState>): ChargerOverrides {
-    val power = entities[ZAPPI_POWER]?.state?.toDoubleOrNull() ?: 0.0
-    val plug = entities[ZAPPI_PLUG]?.takeIf { it.available }?.state
-    // The Zappi sits at 0 W / "Waiting for EV" between bursts; its plug status still says Charging.
-    val charging = power > 100 || plug?.startsWith("charging", ignoreCase = true) == true
-    val plugged = plug != null && !plug.contains("disconnected", ignoreCase = true)
-    val locked = entities[ZAPPI_LOCKED]?.takeIf { it.available }?.let { it.state == "on" }
-    return ChargerOverrides(plugged || charging, locked, charging)
-}
-
-@Composable
-fun ChargerCard(entities: Map<String, EntityState>, call: CallService) {
-    val mode = entities[ZAPPI_MODE]
-    val power = entities[ZAPPI_POWER]?.state?.toDoubleOrNull() ?: 0.0
-    val charging = power > 0
-    val over = chargerOverrides(entities)
-    // Stop was picked but the charger's readings haven't caught up yet (they refresh about once a minute).
-    val stopping = mode?.state == "Stopped" && over.charging
-    val tone = toneColors(Tone.Car)
-    val session = entities[ZAPPI_SESSION]?.state?.toDoubleOrNull()
-    val status = when {
-        mode == null -> "Loading…"
-        stopping -> "Stopping…"
-        charging -> "Charging · ${"%.1f".format(power / 1000)} kW"
-        else -> entities[ZAPPI_PLUG]?.state ?: entities[ZAPPI_STATUS]?.state ?: "Idle"
-    }
-    // "Starting…" for up to a minute after a tap.
-    var pending by remember { mutableStateOf("") }
-    LaunchedEffect(pending) { if (pending.isNotEmpty()) { delay(60_000); pending = "" } }
-    // Start charge or Fast at the normal rate with the cheap rate coming up: ask first.
-    var ask by remember { mutableStateOf<ChargeAsk?>(null) }
-    var askFor by remember { mutableStateOf("charge") }
-    ask?.let {
-        ChargeAskDialog(
-            it,
-            onLater = { chargeLater(call); ask = null },
-            onNow = {
-                if (askFor == "fast") call("select", "select_option", ZAPPI_MODE, data("option" to "Fast"))
-                else { pending = "charge"; chargeNow(entities, call) }
-                ask = null
-            },
-            onCancel = { ask = null },
-        )
-    }
-    val modeItems = chargerModes(mode?.options().orEmpty()).map { m ->
-        TileItem(m.icon, m.name, mode?.state == m.key) {
-            val q = if (m.key == "Fast") chargeAsk(entities, System.currentTimeMillis()) else null
-            if (q != null) { askFor = "fast"; ask = q } else call("select", "select_option", ZAPPI_MODE, data("option" to m.key))
-        }
-    }
-    val ink = tone.onContainer
-    val fold = rememberFold("grid-fold|charger")
-    val rate = Octopus.current(Octopus.allRates(entities), System.currentTimeMillis())?.let { "${Octopus.pence(it.pence)}p rate now" }
-    if (fold.value) {
-        GridCard(tone.container, ink, 2.5f, "Car Charger", fold = fold) {
-            val first = 8f - modeItems.size
-            Column(Modifier.at(0.5f, 0.9f, first - 0.5f - 0.5f, 1.2f), verticalArrangement = Arrangement.Center) {
-                Text(status, style = MaterialTheme.typography.bodyMedium, color = ink, maxLines = 1)
-                if (rate != null) Text(rate, style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f), maxLines = 1)
-            }
-            modeItems.forEachIndexed { i, m ->
-                SmallModeButton(m.icon, m.selected, tone, ink, false, Modifier.atCentre(first + i, 1.5f, 0.8f, 0.8f), mode?.available == true, m.label, m.onClick)
-            }
-        }
-        return
-    }
-    val teal = toneColors(Tone.Car)
-    val grey = toneColors(Tone.Grey)
-    val sm = if (mode?.available == true) smartCharge(entities) else null
-    val roleChoice = if (mode?.available == true) carRoleChoice(entities) else null
-    // Down the card: the details (to line 3.5), the car choice, the charge buttons, the modes.
-    var y = 3.5f
-    val carsY = if (roleChoice != null) { val v = y; y += 1.5f; v } else 0f
-    val barY = if (mode?.available == true) { val v = y; y += 1.5f; v } else 0f
-    val modesY = y
-    GridCard(tone.container, ink, modesY + 1.5f + 0.5f, "Car Charger", fold = fold) {
-        Column(Modifier.at(0.5f, 1.25f, 5f, 2.25f)) {
-            Text(status, style = MaterialTheme.typography.titleMedium, color = ink)
-            if (session != null) Text("${temp(session)} kWh this session", style = MaterialTheme.typography.bodyMedium, color = ink.copy(alpha = 0.8f))
-            if (rate != null) Text(rate, style = MaterialTheme.typography.bodyMedium, color = ink.copy(alpha = 0.8f))
-            if (sm != null) Text(smartText(sm, Octopus.allRates(entities), System.currentTimeMillis()), style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.8f), maxLines = 1)
-        }
-        if (power > 0) Text("${"%.1f".format(power / 1000)} kW", style = MaterialTheme.typography.headlineMedium, color = ink, modifier = Modifier.at(5.5f, 1.25f, 2f, 1f).wrapContentSize(Alignment.CenterEnd))
-        if (roleChoice != null) {
-            val c = roleChoice
-            GridButton(TileItem("mdi:car-electric", CAR_NAME_PRIMARY, c.role == CAR_ROLE_PRIMARY) { chooseCarRole(call, CAR_ROLE_PRIMARY, c.confirmed) }, teal, ink, true, false, Modifier.at(0.5f, carsY, 3.25f, 1f))
-            GridButton(TileItem("mdi:car", CAR_NAME_ADDITIONAL, c.role == CAR_ROLE_ADDITIONAL) { chooseCarRole(call, CAR_ROLE_ADDITIONAL, c.confirmed) }, teal, ink, true, false, Modifier.at(4.25f, carsY, 3.25f, 1f))
-        }
-        if (mode?.available == true) {
-            // Always shown: a button and a status. Grey with no car, teal while charging, tappable when it can start.
-            val main: Triple<TileItem, ToneColors, Pair<Color, Boolean>> = when {
-                stopping -> Triple(TileItem("mdi:stop-circle-outline", "Stopping…", true) {}, grey, ink to false)
-                over.charging -> Triple(TileItem("mdi:lightning-bolt", "Charging", true) {}, teal, teal.accent to false)
-                over.show -> Triple(
-                    TileItem("mdi:lightning-bolt", if (pending == "charge") "Starting…" else "Start charge", true) {
-                        val q = chargeAsk(entities, System.currentTimeMillis())
-                        if (q != null) { askFor = "charge"; ask = q } else { pending = "charge"; chargeNow(entities, call) }
-                    },
-                    teal, ink to (pending != "charge"),
-                )
-                else -> Triple(TileItem("mdi:ev-plug-type2", "No car connected", false) {}, grey, ink to false)
-            }
-            val barW = if (sm != null) 3.25f else 7f
-            GridButton(main.first, main.second, main.third.first, main.third.second, false, Modifier.at(0.5f, barY, barW, 1f))
-            if (sm != null) {
-                GridButton(TileItem("mdi:clock-fast", "Smart charge", sm.on) { call("input_boolean", if (sm.on) "turn_off" else "turn_on", SMART_ENABLED, data()) }, teal, ink, true, false, Modifier.at(4.25f, barY, 3.25f, 1f))
-            }
-        }
-        modeItems.forEachIndexed { i, m ->
-            val w = 1.5f; val gap = 1f / 3f
-            if (modeItems.size == 4) GridButton(m, teal, ink, mode?.available == true, true, Modifier.at(0.5f + i * (w + gap), modesY, w, 1.5f))
-        }
-        if (modeItems.size != 4) GridTiles(modeItems, modesY, 1.5f, teal, ink, mode?.available == true, stacked = true)
-    }
-}

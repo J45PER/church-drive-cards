@@ -6,7 +6,8 @@ with the APK, so there is a record of what shipped. Newest first.
 
 ## 0.133.0
 
-- No change (this release adds proposals and palette editing to the Home Assistant integration and the Manager website).
+- The Octopus Energy logo shows beside Octopus Electricity and Octopus Gas on the Energy page (it was blank).
+- The Energy page no longer has a separate Cheap rate card: the same information is on the Octopus Electricity card.
 
 ## 0.132.0
 

@@ -5,7 +5,7 @@ Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newe
 
 ## 0.133.0
 
-- No change (this release adds proposals and palette editing to the Home Assistant integration and the Manager website).
+- No change (shared code gained the Energy page's cards and the Octopus logo, used by the phone app and Clive Admin).
 
 ## 0.132.0
 

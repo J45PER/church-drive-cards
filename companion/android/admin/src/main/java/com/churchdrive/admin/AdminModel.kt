@@ -45,6 +45,15 @@ class AdminModel(app: Application) : AndroidViewModel(app) {
     /** Switches, numbers and the like the Manager's settings cards change: a service call to the house. */
     val call: com.churchdrive.app.ha.CallService = { domain, service, entityId, data -> client.callService(domain, service, entityId, data) }
 
+    /** Home Assistant's rendering of the dashboard's templates (panel summaries, the header lines), kept up to date. */
+    val templates = com.churchdrive.app.ha.Templates(client)
+
+    /** The Energy page as the house's dashboard lays it out (the same panels, in the same order, as the Church Drive app); null until read. */
+    var energyPanels by mutableStateOf<List<ManagerSection>?>(null)
+        private set
+    var energyHeader by mutableStateOf<org.json.JSONObject?>(null)
+        private set
+
     /** The house's address, for the cards that load pictures from it. */
     val baseUrl: String get() = session.url.orEmpty()
 
@@ -102,6 +111,7 @@ class AdminModel(app: Application) : AndroidViewModel(app) {
                 connected = state == ConnectionState.Connected
                 if (connected) {
                     failures = 0
+                    templates.restart()
                     loadHouse()
                 }
                 // Not given up on at once: Home Assistant may be restarting. A pasted token that is refused is just wrong.
@@ -130,6 +140,14 @@ class AdminModel(app: Application) : AndroidViewModel(app) {
                 .filter { it.has("area_id") && it.has("name") }
                 .associate { it.getString("area_id") to it.getString("name") }
             viewModelScope.launch(Dispatchers.Main) { areaNames = names }
+        }
+        client.request("lovelace/config", org.json.JSONObject().put("url_path", "dashboard-mobile")) { result ->
+            val config = result as? org.json.JSONObject ?: return@request
+            val views = config.optJSONArray("views") ?: return@request
+            val view = (0 until views.length()).mapNotNull { views.optJSONObject(it) }.firstOrNull { it.optString("path") == "energy" } ?: return@request
+            val panels = ManagerSections.parse(org.json.JSONObject().put("views", org.json.JSONArray().put(view)))
+            val header = ManagerSections.header(view)
+            viewModelScope.launch(Dispatchers.Main) { energyPanels = panels; energyHeader = header }
         }
         client.request("lovelace/config", org.json.JSONObject().put("url_path", "dashboard-manager")) { result ->
             val sections = (result as? org.json.JSONObject)?.let { ManagerSections.parse(it) } ?: return@request
