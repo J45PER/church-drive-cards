@@ -2,7 +2,7 @@
 
 ## 0.131.0
 
-- The launcher icon is centred so the ends of the ripples are as far from the top and right edges as the phone is from the left and bottom (the ripples had looked further out), and sized to sit evenly beside the other Clive apps.
+- The launcher icon is moved up and to the right so the phone and its rings sit in the middle of the circle, instead of the ripples looking further out than the bottom-left, and sized to sit evenly beside the other Clive apps.
 
 ## 0.126.0
 
