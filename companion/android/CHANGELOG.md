@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.149.0
+
+- Clive Admin's Activity list is redrawn like the Manager website: a row per change coloured by what was done (a light shows its own look), what happened on top, the time and who below, and who did it in a pill on the right. A new **Devices not answering** filter lists devices that stopped responding.
+
 ## 0.148.0
 
 - The Activity log's Dates filter has a new **Last 24 hours** option: a rolling window ending now, beside Today and Yesterday. It is in the phone app and on the Manager website.
