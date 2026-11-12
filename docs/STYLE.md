@@ -46,13 +46,13 @@ green `#4CC38A` from 75% up. The figure beside a gauge takes the same colour. Th
 | Component | Rule | App source |
 |---|---|---|
 | Card | Rounded, palette Dark ground with the glow, white text. A header is an icon circle, the title and at most one status pill. | `GridCard`, `ToneCard` |
-| Header icon | A circle of the strong colour at 18%, the icon in the strong colour at about 55% of the circle. | `ToneIcon` |
-| Status pill | Strong colour text on 18% of itself, one per card header. | `StatusPill` |
-| Button (`GridButton`) | **18 px corners.** Selected: the strong colour with the palette's Dark on it. Not selected: the text colour at 10%. Disabled: the label and icon at 40%. Label and icon centred. Never a switch for Smart charge: it is a button that fills when on. | `GridButton` |
+| Header icon | **Website:** a plain white icon beside the title, no circle (the apps use a tinted circle, `ToneIcon`; the site chose white on purpose, see section 7). | `ToneIcon` |
+| Status pill | One per card header. **Website:** white text on a white wash; the apps use the strong colour on 18% of itself (`StatusPill`). | `StatusPill` |
+| Button (`GridButton`) | Selected: filled, with the **palette's Dark on the icon and label** (not white). Not selected: the text colour at 10%. Disabled: icon and label at 40%. **Website:** 12 px corners and the charger's own layout (Smart charge as a switch row, car chooser as a picker); the apps use 18 px corners and plain buttons. | `GridButton` |
 | Choice tiles | One row of up to four, sharing the width. A row of choices (charger modes) is **icon above name**, 24 px icon, 12 px label, about 72 px tall. A button in a row is 48 px tall, 20 px icon, 13 px label, icon left of the name. All selected tiles use the **card's** colour, not a colour per choice. | `TileRow`, `Ui` |
-| Level bar | 6 px (8 px on a single gauge), round ends, track at 25%, fill from `levelFade`/`batteryFade`. | `LevelBar` |
-| Car row | Icon circle, name with its tag under it, the percentage large in the level colour, a bar, then one grey line (`16 mi electric · Fuel range 304 mi`). | `CarsCard` |
-| Charger | Status title, session kWh, the rate now, the Smart charge text, then: car chooser buttons (only while plugged in), Start charge and Smart charge side by side, the four modes. | `ChargerCard` |
+| Level bar | 6 px (8 px on a single gauge), round ends, track at 25%, **fill from `levelFade`/`batteryFade`** (the bar's colour changes with the level). | `LevelBar` |
+| Car row | **Website:** name, an optional *Plugged in* tag, the percentage and range on the right, a thin bar in the level colour. The apps add an icon circle and a large percentage (`CarsCard`). | `CarsCard` |
+| Charger | **Website:** session kWh, the action button, a Smart charge switch row, a *Car plugged in* picker (only while plugged in), then the four modes with an icon beside the name. The apps lay these out as buttons on a grid (`ChargerCard`). | `ChargerCard` |
 
 ## 4. Type and size (website)
 
@@ -97,6 +97,7 @@ A card never invents its own sizes. Spacing between cards is the same gap everyw
 
 ## 7. Open decisions
 
-- The Manager site's Home tiles use a white-tinted icon circle; the apps use the strong colour at 18%. Decide whether to match.
+- **Chosen differences from the apps:** white icons without circles in card headers, white-wash pills, and the car and charger layout above. Everything else on those cards (the level colours, a selected button's dark icon) follows the app.
+- The Manager site's Home tiles use a white-tinted icon circle; decide whether to match the card headers (plain white icon).
 - The charger's Smart charge and mode buttons are not clickable in the example site; the live site will call the same services as the app.
 - Light theme on the website: cards keep the dark ground in both themes today; the apps switch to a soft tint in light.
