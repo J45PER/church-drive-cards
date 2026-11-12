@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -43,8 +44,10 @@ fun ToneSectionHeader(title: String, icon: ImageVector, tone: Tone, summary: Str
         Box(Modifier.size(36.dp).background(colors.accent.copy(alpha = 0.18f), CircleShape), contentAlignment = Alignment.Center) {
             Icon(icon, null, tint = colors.accent, modifier = Modifier.size(20.dp))
         }
-        Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-        if (!summary.isNullOrBlank()) Text(summary, style = MaterialTheme.typography.bodyMedium, color = colors.accent)
+        // The title is measured first and keeps its width; the summary takes what is left and wraps (a long summary used to squeeze the title into a vertical column).
+        Text(title, style = MaterialTheme.typography.titleLarge)
+        if (!summary.isNullOrBlank()) Text(summary, style = MaterialTheme.typography.bodyMedium, color = colors.accent, textAlign = androidx.compose.ui.text.style.TextAlign.End, modifier = Modifier.weight(1f))
+        else Spacer(Modifier.weight(1f))
     }
 }
 
@@ -56,8 +59,10 @@ fun ToneSectionHeader(title: String, icon: Painter, tone: Tone, summary: String?
         Box(Modifier.size(36.dp).background(colors.accent.copy(alpha = 0.18f), CircleShape), contentAlignment = Alignment.Center) {
             Icon(icon, null, tint = colors.accent, modifier = Modifier.size(20.dp))
         }
-        Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-        if (!summary.isNullOrBlank()) Text(summary, style = MaterialTheme.typography.bodyMedium, color = colors.accent)
+        // The title is measured first and keeps its width; the summary takes what is left and wraps (a long summary used to squeeze the title into a vertical column).
+        Text(title, style = MaterialTheme.typography.titleLarge)
+        if (!summary.isNullOrBlank()) Text(summary, style = MaterialTheme.typography.bodyMedium, color = colors.accent, textAlign = androidx.compose.ui.text.style.TextAlign.End, modifier = Modifier.weight(1f))
+        else Spacer(Modifier.weight(1f))
     }
 }
 
