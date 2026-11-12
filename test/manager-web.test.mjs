@@ -95,6 +95,8 @@ test('the activity query is whole local days, the time window, kinds and person'
   assert.equal(q.since, Math.floor(new Date(2026, 10, 10) / 1000)); assert.equal(q.until, Math.floor(new Date(2026, 10, 11) / 1000));
   assert.deepEqual([q.start, q.end, q.kinds, q.who, q.limit, q.offset], ['22:00', '06:00', ['clive', 'clive_auto'], 'Sam', 50, 100]);
   assert.equal('since' in activityQuery({ day: 'all' }, now), false);
+  const r = activityQuery({ day: '24h' }, now);
+  assert.equal(r.since, Math.floor(now / 1000) - 86400); assert.equal('until' in r, false);
 });
 
 test('activity lines are read, and automation and overrule notes say why', () => {

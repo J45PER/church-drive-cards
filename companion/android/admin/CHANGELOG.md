@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.148.0
+
+- No change to this app (version moves with the rest of the house).
+
 ## 0.147.1
 
 - The "Device health" heading on Home no longer turns into one letter per line when its summary text is long; the summary wraps beside it instead.

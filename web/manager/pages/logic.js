@@ -127,7 +127,7 @@ export function energySnapshot(states, now = Date.now()) {
 
 // ---- Activity ----
 
-export const DAYS = [['today', 'Today'], ['yesterday', 'Yesterday'], ['week', 'Last 7 days'], ['month', 'Last 30 days'], ['all', 'All dates']];
+export const DAYS = [['today', 'Today'], ['yesterday', 'Yesterday'], ['24h', 'Last 24 hours'], ['week', 'Last 7 days'], ['month', 'Last 30 days'], ['all', 'All dates']];
 export const TIMES = [['all', 'All day', null, null], ['morning', 'Morning (06:00 to 12:00)', '06:00', '12:00'], ['afternoon', 'Afternoon (12:00 to 18:00)', '12:00', '18:00'],
   ['evening', 'Evening (18:00 to 22:00)', '18:00', '22:00'], ['night', 'Night (22:00 to 06:00)', '22:00', '06:00']];
 export const ACTIONS = [['all', []], ['people', ['user']], ['assistant', ['clive', 'clive_auto']], ['asked', ['clive']], ['automatic', ['clive_auto']], ['presence', ['presence']], ['overruled', ['overruled']]];
@@ -141,7 +141,7 @@ const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 export function activityQuery({ day = 'today', time = 'all', action = 'all', who = null }, now = new Date(), limit = 100, offset = 0) {
   const q = { limit };
   const days = (back, last) => { const t = startOfDay(now); const a = new Date(t); a.setDate(a.getDate() - back); const b = new Date(t); b.setDate(b.getDate() - last + 1); q.since = Math.floor(a / 1000); q.until = Math.floor(b / 1000); };
-  if (day === 'today') days(0, 0); else if (day === 'yesterday') days(1, 1); else if (day === 'week') days(6, 0); else if (day === 'month') days(29, 0);
+  if (day === 'today') days(0, 0); else if (day === 'yesterday') days(1, 1); else if (day === '24h') q.since = Math.floor(now / 1000) - 24 * 3600; else if (day === 'week') days(6, 0); else if (day === 'month') days(29, 0);
   const t = TIMES.find((x) => x[0] === time); if (t?.[2]) { q.start = t[2]; q.end = t[3]; }
   const kinds = ACTIONS.find((x) => x[0] === action)?.[1] || []; if (kinds.length) q.kinds = kinds;
   if (who) q.who = who; if (offset > 0) q.offset = offset;

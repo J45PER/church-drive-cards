@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **v0.148.0 + apps 0.148.0** (2026-11-12): the Activity log's Dates filter has a **Last 24 hours** option (a rolling window ending now) in the phone app and on the Manager website. Home Assistant needed no change.
 - **v0.147.1 + apps 0.147.1** (2026-11-12): Clive Admin: a section heading on the Home page (Device health) no longer breaks into one letter per line when its summary text is long. The same heading is used in the other apps. No Home Assistant change.
 - **v0.147.0 + apps 0.147.0** (2026-11-11): Clive Admin reorganised. Manager is now a bottom-bar page (Home, Manager, Energy, Devices, Activity) with every section on it in a panel that folds away; Device health, Watch, Notifications, Camera links and People each have their own page in the side panel; Alarm lights is only on the Manager website and in Home Assistant. Settings numbers say what they count (30 %, 24 hours, 60 mins), and the house's automatic to-dos are sorted by how urgent they are. The phone app is unchanged apart from these shared bits (units, sorting).
 - **v0.146.0 + apps 0.146.0** (2026-11-11): the Manager website's header shows the Manager shield beside the wordmark as well as in the status capsule.

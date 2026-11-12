@@ -9,7 +9,7 @@ import java.util.Locale
 
 /** The dates the activity log can be asked for: whole local days, everything the house kept, or an exact range ([ActivityFilters.from] to [ActivityFilters.to]). */
 enum class ActivityDay(val label: String) {
-    Today("Today"), Yesterday("Yesterday"), Week("Last 7 days"), Month("Last 30 days"), All("All dates"), Custom("Pick a range"),
+    Today("Today"), Yesterday("Yesterday"), Day("Last 24 hours"), Week("Last 7 days"), Month("Last 30 days"), All("All dates"), Custom("Pick a range"),
 }
 
 /** The parts of the day it can be asked for; Night runs over midnight (22:00 to 06:00). The house applies the window to every day in the range. */
@@ -60,6 +60,8 @@ fun activityQuery(filters: ActivityFilters, nowMs: Long, zone: ZoneId = ZoneId.s
     when (filters.day) {
         ActivityDay.Today -> days(today, today)
         ActivityDay.Yesterday -> days(today.minusDays(1), today.minusDays(1))
+        // A rolling window ending now, not whole local days: the last 24 hours to the second.
+        ActivityDay.Day -> q.put("since", nowMs / 1000 - 24 * 3600)
         ActivityDay.Week -> days(today.minusDays(6), today)
         ActivityDay.Month -> days(today.minusDays(29), today)
         ActivityDay.All -> Unit
