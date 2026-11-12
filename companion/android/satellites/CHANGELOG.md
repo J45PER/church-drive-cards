@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.149.2
+
+- No app change.
+
 ## 0.149.1
 
 - No app change.

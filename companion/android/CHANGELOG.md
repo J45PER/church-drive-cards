@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.149.2
+
+- No app change (the Manager website's Home page).
+
 ## 0.149.1
 
 - No app change (the Manager website's Device health and Activity layout fixes).
