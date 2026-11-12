@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.147.1
+
+- The "Device health" heading on Home no longer turns into one letter per line when its summary text is long; the summary wraps beside it instead.
+
 ## 0.147.0
 
 - Manager is now a page on the bottom bar, in place of Health. It shows every section in a panel that folds away (To-do settings, Who's home, Automatic to-dos, which shows the jobs the house made).
