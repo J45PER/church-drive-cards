@@ -130,10 +130,10 @@ export function energySnapshot(states, now = Date.now()) {
 export const DAYS = [['today', 'Today'], ['yesterday', 'Yesterday'], ['24h', 'Last 24 hours'], ['week', 'Last 7 days'], ['month', 'Last 30 days'], ['all', 'All dates']];
 export const TIMES = [['all', 'All day', null, null], ['morning', 'Morning (06:00 to 12:00)', '06:00', '12:00'], ['afternoon', 'Afternoon (12:00 to 18:00)', '12:00', '18:00'],
   ['evening', 'Evening (18:00 to 22:00)', '18:00', '22:00'], ['night', 'Night (22:00 to 06:00)', '22:00', '06:00']];
-export const ACTIONS = [['all', []], ['people', ['user']], ['assistant', ['clive', 'clive_auto']], ['asked', ['clive']], ['automatic', ['clive_auto']], ['presence', ['presence']], ['overruled', ['overruled']]];
+export const ACTIONS = [['all', []], ['people', ['user']], ['assistant', ['clive', 'clive_auto']], ['asked', ['clive']], ['automatic', ['clive_auto']], ['presence', ['presence']], ['overruled', ['overruled']], ['devices', ['device']]];
 
 export function actionLabel(id, assistant) {
-  return { all: 'All actions', people: 'People', assistant: `${assistant} (all)`, asked: `${assistant}: asked`, automatic: `${assistant}: automatic`, presence: 'Coming and going', overruled: `Overruled ${assistant}` }[id];
+  return { all: 'All actions', people: 'People', assistant: `${assistant} (all)`, asked: `${assistant}: asked`, automatic: `${assistant}: automatic`, presence: 'Coming and going', overruled: `Overruled ${assistant}`, devices: 'Devices not answering' }[id];
 }
 
 const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -151,7 +151,7 @@ export function activityQuery({ day = 'today', time = 'all', action = 'all', who
 export function parseActivity(result) {
   if (!result || !Array.isArray(result.entries)) return null;
   return {
-    lines: result.entries.filter((e) => e && e.text).map((e) => ({ ts: (Number(e.ts) || 0) * 1000, kind: e.kind || 'user', who: e.who || '', text: e.text, by: e.by || null, rule: e.rule || null, clive: e.clive_ts ? e.clive_ts * 1000 : null })),
+    lines: result.entries.filter((e) => e && e.text).map((e) => ({ ts: (Number(e.ts) || 0) * 1000, kind: e.kind || 'user', who: e.who || '', text: e.text, by: e.by || null, rule: e.rule || null, icon: e.icon || null, headline: e.headline || null, look: e.look || null, state: e.state || null, clive: e.clive_ts ? e.clive_ts * 1000 : null })),
     total: result.total ?? result.entries.length, people: (result.people || []).filter(Boolean), assistant: result.assistant || 'Clive',
   };
 }
@@ -190,3 +190,48 @@ export function paletteWarnings(colours) {
   return out;
 }
 export const slugOk = (key) => /^[a-z][a-z0-9_]{0,39}$/.test(key);
+
+// ---- Activity rows: the palette of what was done, and a light's own look (as the Admin app: ActivityData.kt) ----
+
+/** The palette key a row takes: what was done to (read from the row's icon), else coming and going, an override, or a device not answering. */
+export function activityTone(line) {
+  if (line.kind === 'overruled') return 'warn';
+  if (line.kind === 'presence') return 'ok';
+  if (line.kind === 'device') return line.state === 'online' ? 'neutral' : 'unavailable';
+  const i = String(line.icon || '').toLowerCase(); const has = (...p) => p.some((x) => i.includes(x));
+  if (has('alarm', 'shield', 'smoke')) return 'alarm';
+  if (has('lock', 'door', 'garage')) return 'doors';
+  if (has('blind', 'curtain', 'window', 'roller')) return 'blinds';
+  if (has('bulb', 'lamp', 'light')) return 'lights';
+  if (has('thermostat', 'radiator', 'fire', 'heat')) return 'heating';
+  if (has('snowflake', 'air-conditioner', 'cool')) return 'cooling';
+  if (has('fan', 'purifier', 'air-filter')) return 'air';
+  if (has('vac', 'robot')) return 'gregg';
+  if (has('ev-', 'car', 'charger')) return 'car';
+  if (has('television', 'speaker', 'cast', 'music', 'volume', 'radio', 'play', 'pause')) return 'media';
+  if (has('plug', 'power')) return 'plugs';
+  if (has('cart', 'shopping')) return 'shopping';
+  if (has('check', 'clipboard', 'todo', 'format-list')) return 'tasks';
+  if (has('calendar')) return 'calendar';
+  return 'neutral';
+}
+const SCENE_LOOKS = { relax: ['#F0A060', '#E0703A'], bright: ['#FFF3C9', '#FFD36E'], soho: ['#7E3FF2', '#FF4FA3'], movie: ['#2B2F6B', '#E8A33B'], nightlight: ['#3A2B7E', '#7E57C2'] };
+export const SCENE_ICONS = { relax: 'room-living', bright: 'sun', soho: 'palette', movie: 'television-play', nightlight: 'moon' };
+/** A light's own look as two ground colours (brightness, a white, a scene, a chosen colour), or null to use the palette of what was done. */
+export function lookColours(look) {
+  if (!look) return null;
+  if (look.look === 'bright') return ['#FFF3C9', '#FFD36E'];
+  if (look.look === 'cool') return ['#E4F0FF', '#9FC9F2'];
+  if (look.look === 'warm') return ['#FFDDA6', '#F2A24E'];
+  if (look.look === 'scene') return SCENE_LOOKS[String(look.name || '').toLowerCase()] || ['#FFF3C9', '#FFD36E'];
+  if (look.look === 'colour' && HEX.test(look.hex || '')) { const c = look.hex; const k = (x) => Math.round(parseInt(x, 16) * 0.35); return [`#${[1, 3, 5].map((i) => k(c.slice(i, i + 2)).toString(16).padStart(2, '0')).join('')}`, c]; }
+  return null;
+}
+/** The top line of a row: what happened with the thing first when the house says so, else its text with a capital. */
+export const activityHeadline = (line) => line.headline || `${line.text.charAt(0).toUpperCase()}${line.text.slice(1)}`;
+/** The second line: the time, then who asked or which rule ran (the house cannot tell a dial from the app). */
+export function activityDetail(line, assistant = 'the assistant') {
+  if (line.kind === 'device') return `${clock(line.ts)} · ${line.state === 'online' ? 'Answering again' : 'Not answering for ten minutes or more'}`;
+  const note = activityNote(line, assistant) || (line.kind === 'presence' ? 'Home Assistant noticed their phone' : 'Done by hand or in the app');
+  return `${clock(line.ts)} · ${note.charAt(0).toUpperCase()}${note.slice(1)}`;
+}

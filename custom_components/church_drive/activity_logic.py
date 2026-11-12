@@ -10,13 +10,15 @@ from __future__ import annotations
 from datetime import datetime, tzinfo
 from typing import Any, Iterable
 
-KINDS = ("user", "clive", "clive_auto", "presence", "overruled")
+KINDS = ("user", "clive", "clive_auto", "presence", "overruled", "device")
 # `clive`: the assistant did it because someone asked him (a conversation, or a person running his script). `clive_auto`: one of the
 # house's automations ran his script (the heating rules, a welcome home...), with nobody asking.
 CLIVE_KINDS = ("clive", "clive_auto")
+# `device`: a device stopped answering (for good, not a blink) or answered again; `who` is empty and `state` says which.
 # `overruled`: something the assistant set (the heating target, a light on or off) was changed from outside the Church Drive app, with
 # nothing in Home Assistant asking: the thermostat's own dial or app, the light's own app, a wall switch, a remote or a schedule in the
 # device. Home Assistant can't say which of those it was. Only what he set recently counts; general device changes are not listed.
+AVAILABLE_AFTER_S = 600  # a device must stay unavailable this long before it is logged as not responding
 KEEP_DAYS = 30        # older entries are dropped
 KEEP_MAX = 4000       # and never more than this many, newest kept
 COALESCE_S = 8        # the same person doing the same thing to the same thing this soon after replaces it (a slider drag)
@@ -137,6 +139,40 @@ def _join(names: list[str]) -> str:
     return ", ".join(names[:2]) + f" and {len(names) - 2} more"
 
 
+def _light_pct(data: dict[str, Any]) -> Any:
+    pct = data.get("brightness_pct")
+    if pct is None and data.get("brightness") is not None:
+        pct = round(float(data["brightness"]) / 255 * 100)
+    return pct
+
+
+def _tail(domain: str, service: str, data: dict[str, Any]) -> str:
+    """What follows the thing in the verb-first text: " to 21°", " at 40%"..."""
+    text = ""
+    if service == "set_temperature" and data.get("temperature") is not None:
+        text += f" to {_num(data['temperature'])}°"
+    elif service == "set_hvac_mode" and data.get("hvac_mode"):
+        text += f" to {str(data['hvac_mode']).replace('_', ' ')}"
+    elif service in ("set_preset_mode", "set_fan_mode"):
+        mode = data.get("preset_mode") or data.get("fan_mode")
+        mode = "no preset" if str(mode).lower() == "none" else str(mode).replace("_", " ").capitalize() if mode else ""
+        text += f" to {mode}" if mode else ""
+    elif service == "set_cover_position" and data.get("position") is not None:
+        text += f" to {_num(data['position'])}%"
+    elif service == "set_humidity" and data.get("humidity") is not None:
+        text += f" to {_num(data['humidity'])}%"
+    elif service in ("set_value", "select_option"):
+        value = data.get("value") if service == "set_value" else data.get("option")
+        text += f" to {value}" if value is not None else ""
+    elif domain == "light" and service == "turn_on":
+        pct = _light_pct(data)
+        if pct is not None:
+            text += f" at {_num(pct)}%"
+        elif data.get("scene") or data.get("effect"):
+            text += f" ({str(data.get('scene') or data.get('effect')).replace('_', ' ')})"
+    return text
+
+
 def describe(domain: str, service: str, data: dict[str, Any] | None, names: dict[str, str], areas: list[str] | None = None) -> str:
     """What was done, as the end of a sentence ("turned on Kitchen", "set Downstairs to 21°C"). [names] maps entity ids to names."""
     data = data or {}
@@ -155,31 +191,97 @@ def describe(domain: str, service: str, data: dict[str, Any] | None, names: dict
         return f"applied {scene or 'a scene'} to {subject}"
     if domain == "church_drive":
         return verb
-    text = f"{verb} {subject}".strip()
-    if service == "set_temperature" and data.get("temperature") is not None:
-        text += f" to {_num(data['temperature'])}°"
-    elif service == "set_hvac_mode" and data.get("hvac_mode"):
-        text += f" to {str(data['hvac_mode']).replace('_', ' ')}"
-    elif service in ("set_preset_mode", "set_fan_mode"):
-        mode = data.get("preset_mode") or data.get("fan_mode")
-        mode = "no preset" if str(mode).lower() == "none" else str(mode).replace("_", " ").capitalize() if mode else ""
-        text += f" to {mode}" if mode else ""
-    elif service == "set_cover_position" and data.get("position") is not None:
-        text += f" to {_num(data['position'])}%"
-    elif service == "set_humidity" and data.get("humidity") is not None:
-        text += f" to {_num(data['humidity'])}%"
-    elif service in ("set_value", "select_option"):
-        value = data.get("value") if service == "set_value" else data.get("option")
-        text += f" to {value}" if value is not None else ""
-    elif domain == "light" and service == "turn_on":
-        pct = data.get("brightness_pct")
-        if pct is None and data.get("brightness") is not None:
-            pct = round(float(data["brightness"]) / 255 * 100)
-        if pct is not None:
-            text += f" at {_num(pct)}%"
-        elif data.get("scene") or data.get("effect"):
-            text += f" ({str(data.get('scene') or data.get('effect')).replace('_', ' ')})"
-    return text
+    return f"{verb} {subject}".strip() + _tail(domain, service, data)
+
+
+_ALARM_HEADLINES = {
+    "alarm_disarm": "Alarm disarmed", "alarm_arm_home": "Alarm armed: Home", "alarm_arm_away": "Alarm armed: Away",
+    "alarm_arm_night": "Alarm armed: Night", "alarm_arm_vacation": "Alarm armed: Vacation", "alarm_trigger": "Alarm went off",
+}
+# Services whose wording only reads verb-first ("added to Shopping list"): no headline, the apps use the text.
+_NO_HEADLINE = {"add_item", "update_item", "remove_item", "press", "trigger", "clean_spot", "locate", "apply_scene", "shopping_add", "steps_create"}
+_HEADLINE_VERBS = {"media_play": "playing", "media_next_track": "skipped to the next track", "media_previous_track": "went back a track", "set_cover_position": "moved"}
+
+
+def _upper(text: str) -> str:
+    return text[:1].upper() + text[1:]
+
+
+def _colour_name(red: float, green: float, blue: float) -> str:
+    """A plain word for a light's colour."""
+    import colorsys
+
+    h, s, v = colorsys.rgb_to_hsv(red / 255, green / 255, blue / 255)
+    if s < 0.18:
+        return "white"
+    deg = h * 360
+    for limit, word in ((15, "red"), (45, "orange"), (70, "yellow"), (160, "green"), (195, "teal"), (255, "blue"), (290, "purple"), (335, "pink")):
+        if deg < limit:
+            return word
+    return "red"
+
+
+def light_look(service: str, data: dict[str, Any] | None) -> dict[str, Any] | None:
+    """How a light was turned on, for the log's picture of it: {"look": "bright", "pct"} (a brightness), {"look": "scene", "name"}, {"look": "cool"|"warm"}
+    (a white) or {"look": "colour", "name", "hex"}; None for a plain turn on."""
+    data = data or {}
+    if service != "turn_on":
+        return None
+    pct = _light_pct(data)
+    if pct is not None:
+        return {"look": "bright", "pct": int(round(float(pct)))}
+    scene = data.get("scene") or data.get("effect")
+    if scene:
+        return {"look": "scene", "name": str(scene).replace("_", " ").title()}
+    kelvin = _float(data.get("color_temp_kelvin"))
+    if kelvin is None and _float(data.get("color_temp")):
+        kelvin = 1_000_000 / _float(data["color_temp"])
+    if kelvin:
+        return {"look": "cool"} if kelvin >= 4500 else {"look": "warm"} if kelvin <= 3200 else None
+    rgb = data.get("rgb_color")
+    if not (isinstance(rgb, (list, tuple)) and len(rgb) == 3) and isinstance(data.get("hs_color"), (list, tuple)) and len(data["hs_color"]) == 2:
+        import colorsys
+
+        r, g, b = colorsys.hsv_to_rgb(float(data["hs_color"][0]) / 360, float(data["hs_color"][1]) / 100, 1)
+        rgb = [round(r * 255), round(g * 255), round(b * 255)]
+    if isinstance(rgb, (list, tuple)) and len(rgb) == 3:
+        r, g, b = (max(0, min(255, int(float(v)))) for v in rgb)
+        return {"look": "colour", "name": _colour_name(r, g, b), "hex": f"#{r:02X}{g:02X}{b:02X}"}
+    if data.get("color_name"):
+        return {"look": "colour", "name": str(data["color_name"]).replace("_", " ")}
+    return None
+
+
+def headline(domain: str, service: str, data: dict[str, Any] | None, names: dict[str, str], areas: list[str] | None = None) -> str:
+    """What happened with the thing first ("Kitchen turned on", "Downstairs set to 21°", "Alarm armed: Home"); "" when the wording only reads verb-first."""
+    data = data or {}
+    if domain == "alarm_control_panel" and service in _ALARM_HEADLINES:
+        return _ALARM_HEADLINES[service]
+    if domain in ("script", "scene", "church_drive") or service in _NO_HEADLINE or service not in _VERBS:
+        return ""
+    ids = entities_in(data)
+    things = [names.get(e) or e.partition(".")[2].replace("_", " ").title() for e in ids]
+    subject = _join(things) or _join(areas or []) or "the house"
+    verb = _VERBS[service]
+    look = light_look(service, data) if domain == "light" else None
+    if look:
+        if look["look"] == "bright":
+            return _upper(f"{subject} set to {look['pct']}%")
+        if look["look"] == "scene":
+            return _upper(f"{subject} scene set to {look['name']}")
+        if look["look"] in ("cool", "warm"):
+            return _upper(f"{subject} set to {look['look']} white")
+        if look["look"] == "colour":
+            return _upper(f"{subject} changed to {look['name']}")
+    tail = _tail(domain, service, data)
+    if verb == "set":
+        return _upper(f"{subject} set{tail}")
+    verb = _HEADLINE_VERBS.get(service, verb)
+    return _upper(f"{subject} {verb}{tail}")
+
+
+def availability_headline(name: str, online: bool) -> str:
+    return _upper(f"{name} is back online" if online else f"{name} stopped responding")
 
 
 def _num(value: Any) -> str:
@@ -273,7 +375,8 @@ def related(a: str, a_members: Iterable[str], b: str, b_members: Iterable[str]) 
     return a in set(b_members) or b in set(a_members)
 
 
-def make_entry(ts: float, kind: str, who: str, text: str, icon: str, entity: str = "", by: str = "", user_id: str = "", rule: str = "", clive_ts: float = 0) -> dict[str, Any]:
+def make_entry(ts: float, kind: str, who: str, text: str, icon: str, entity: str = "", by: str = "", user_id: str = "", rule: str = "", clive_ts: float = 0,
+               headline: str = "", look: dict[str, Any] | None = None, state: str = "") -> dict[str, Any]:
     """One line of the log. [by] is who the assistant did it for (kind `clive`); [rule] is the automation that ran him (kind `clive_auto`);
     [user_id] is kept so a login with no person can be named later. For kind `overruled`, [who] is the device and [clive_ts] when he set it."""
     entry: dict[str, Any] = {"ts": round(float(ts), 3), "kind": kind, "who": who or "", "text": text, "icon": icon}
@@ -287,6 +390,12 @@ def make_entry(ts: float, kind: str, who: str, text: str, icon: str, entity: str
         entry["clive_ts"] = round(float(clive_ts), 3)
     if user_id:
         entry["user_id"] = user_id
+    if headline:
+        entry["headline"] = headline
+    if look:
+        entry["look"] = look
+    if state:
+        entry["state"] = state
     return entry
 
 
@@ -318,7 +427,8 @@ def clean(raw: Any) -> list[dict[str, Any]]:
             ts = float(e["ts"])
         except (KeyError, TypeError, ValueError):
             continue
-        out.append(make_entry(ts, e["kind"], str(e.get("who") or ""), e["text"], str(e.get("icon") or "mdi:home"), str(e.get("entity") or ""), str(e.get("by") or ""), str(e.get("user_id") or ""), str(e.get("rule") or ""), _float(e.get("clive_ts")) or 0))
+        out.append(make_entry(ts, e["kind"], str(e.get("who") or ""), e["text"], str(e.get("icon") or "mdi:home"), str(e.get("entity") or ""), str(e.get("by") or ""), str(e.get("user_id") or ""), str(e.get("rule") or ""), _float(e.get("clive_ts")) or 0,
+                              str(e.get("headline") or ""), e["look"] if isinstance(e.get("look"), dict) else None, str(e.get("state") or "")))
     out.sort(key=lambda e: e["ts"])
     return out
 

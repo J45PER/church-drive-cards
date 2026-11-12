@@ -1,5 +1,6 @@
 package com.churchdrive.app.ui
 
+import androidx.compose.ui.graphics.Color
 import com.churchdrive.app.ha.text
 import org.json.JSONObject
 import java.time.Instant
@@ -24,11 +25,11 @@ enum class ActivityTime(val label: String, val start: String?, val end: String?)
 /**
  * Which kinds of line: `user` (a person), `clive` (the assistant, because someone asked), `clive_auto` (the assistant, run by an automation),
  * `presence` (arrived or left), `overruled` (something the assistant set was changed from outside the app: the thermostat's own dial or app, a
- * switch or a remote). [kinds] empty is everything.
+ * switch or a remote), `device` (a device stopped answering, or answered again). [kinds] empty is everything.
  */
 enum class ActivityAction(val kinds: List<String>) {
     All(emptyList()), People(listOf("user")), Assistant(listOf("clive", "clive_auto")), Asked(listOf("clive")), Automatic(listOf("clive_auto")), Presence(listOf("presence")),
-    Overruled(listOf("overruled")),
+    Overruled(listOf("overruled")), Devices(listOf("device")),
 }
 
 /** What is being asked for. [who] is a first name (null = everyone). [from] and [to] (milliseconds) are the range for [ActivityDay.Custom]. */
@@ -92,7 +93,15 @@ fun activityStamp(ms: Long, zone: ZoneId = ZoneId.systemDefault()): String =
  * One line of the log. [by] is who he did it for (kind `clive`); [rule] is the automation that ran him (kind `clive_auto`); for kind `overruled`,
  * [who] is the device and [clive] is when he set it (milliseconds).
  */
-data class ActivityLine(val ts: Long, val kind: String, val who: String, val text: String, val icon: String?, val by: String?, val rule: String?, val clive: Long? = null)
+data class ActivityLine(
+    val ts: Long, val kind: String, val who: String, val text: String, val icon: String?, val by: String?, val rule: String?, val clive: Long? = null,
+    /** The same thing with the thing first ("Kitchen turned on"), when the house has one. */
+    val headline: String? = null,
+    /** How a light was turned on: `bright`, `scene` ([lookName]), `cool`, `warm` or `colour` ([lookHex]). */
+    val look: String? = null, val lookName: String? = null, val lookHex: String? = null,
+    /** For kind `device`: `unavailable` or `online`. */
+    val state: String? = null,
+)
 
 /** An answer from the house: the lines (newest first), how many matched in all, who is named in the log, and what the assistant is called. */
 data class ActivityResult(val lines: List<ActivityLine>, val total: Int, val people: List<String>, val assistant: String)
@@ -103,8 +112,10 @@ fun parseActivity(result: Any?): ActivityResult? {
     val lines = (0 until list.length()).mapNotNull { i ->
         val e = list.optJSONObject(i) ?: return@mapNotNull null
         val text = e.text("text") ?: return@mapNotNull null
+        val look = e.optJSONObject("look")
         ActivityLine((e.optDouble("ts", 0.0) * 1000).toLong(), e.text("kind") ?: "user", e.optString("who", ""), text, e.text("icon"), e.text("by"), e.text("rule"),
-            e.optDouble("clive_ts", 0.0).takeIf { it > 0 }?.let { (it * 1000).toLong() })
+            e.optDouble("clive_ts", 0.0).takeIf { it > 0 }?.let { (it * 1000).toLong() },
+            headline = e.text("headline"), look = look?.text("look"), lookName = look?.text("name"), lookHex = look?.text("hex"), state = e.text("state"))
     }
     val people = o.optJSONArray("people")?.let { a -> (0 until a.length()).map { a.optString(it) }.filter { it.isNotBlank() } } ?: emptyList()
     return ActivityResult(lines, o.optInt("total", lines.size), people, o.text("assistant") ?: "Clive")
@@ -113,7 +124,11 @@ fun parseActivity(result: Any?): ActivityResult? {
 fun activityIsAssistant(kind: String): Boolean = kind == "clive" || kind == "clive_auto"
 
 /** Who did it: the person, the assistant by his name, or (for an override) the device that was changed. */
-fun activityWho(line: ActivityLine, assistant: String): String = if (activityIsAssistant(line.kind)) assistant else line.who.ifBlank { "Someone" }
+fun activityWho(line: ActivityLine, assistant: String): String = when {
+    activityIsAssistant(line.kind) -> assistant
+    line.kind == "device" -> "House"
+    else -> line.who.ifBlank { "Someone" }
+}
 
 /** Whether someone asked him or an automation ran him (and who or which), or that a device overruled him; null for people and comings and goings. */
 fun activityNote(line: ActivityLine, assistant: String = "the assistant"): String? = when (line.kind) {
@@ -130,6 +145,7 @@ fun activityActionLabel(action: ActivityAction, assistant: String): String = whe
     ActivityAction.Assistant -> "$assistant (all)"
     ActivityAction.Asked -> "$assistant: asked"
     ActivityAction.Automatic -> "$assistant: automatic"
+    ActivityAction.Devices -> "Devices not answering"
     ActivityAction.Presence -> "Coming and going"
     ActivityAction.Overruled -> "Overruled $assistant"
 }
@@ -151,3 +167,70 @@ fun activityProblem(errorCode: String?): String = when (errorCode) {
     "unauthorized" -> "Only administrators can see the activity log."
     else -> "The activity log couldn't be read from the house. Check the connection, or that Church Drive is running in Home Assistant."
 }
+
+/** The palette an action's row takes: what it was done to, read from its icon (a light, the heating, a lock...); coming and going is green and an override amber. */
+fun activityTone(line: ActivityLine): Tone {
+    if (line.kind == "overruled") return Tone.Amber
+    if (line.kind == "presence") return Tone.Green
+    if (line.kind == "device") return if (line.state == "online") Tone.Grey else Tone.Unavailable
+    val i = (line.icon ?: "").lowercase()
+    fun has(vararg parts: String) = parts.any { i.contains(it) }
+    return when {
+        has("alarm", "shield", "smoke") -> Tone.Alarm
+        has("lock", "door", "garage") -> Tone.Doors
+        has("blind", "curtain", "window", "roller") -> Tone.Blinds
+        has("bulb", "lamp", "light") -> Tone.Lights
+        has("thermostat", "radiator", "fire", "heat") -> Tone.Heating
+        has("snowflake", "air-conditioner", "cool") -> Tone.Cooling
+        has("fan", "purifier", "air-filter") -> Tone.Air
+        has("vac", "robot") -> Tone.Gregg
+        has("ev-", "car", "charger") -> Tone.Car
+        has("television", "speaker", "cast", "music", "volume", "radio", "play", "pause") -> Tone.Media
+        has("plug", "power") -> Tone.Plugs
+        has("cart", "shopping") -> Tone.Shopping
+        has("check", "clipboard", "todo", "format-list") -> Tone.Tasks
+        has("calendar") -> Tone.Calendar
+        else -> Tone.Grey
+    }
+}
+
+/** A person's own palette (their pill in the log), or null for anyone without one. */
+fun activityPersonTone(name: String): Tone? = when (name.trim().lowercase()) {
+    "jamie" -> Tone.PersonJamie
+    "hayley" -> Tone.PersonHayley
+    "ian" -> Tone.PersonIan
+    "diane" -> Tone.PersonDiane
+    else -> null
+}
+
+/** The second line of a row: the time, then who asked, which rule ran, or that it was done by hand (the house cannot tell a dial from the app). */
+fun activityDetail(line: ActivityLine, assistant: String): String {
+    if (line.kind == "device") return eventClock(line.ts) + " · " + if (line.state == "online") "Answering again" else "Not answering for ten minutes or more"
+    val note = activityNote(line, assistant) ?: if (line.kind == "presence") "Home Assistant noticed their phone" else "Done by hand or in the app"
+    return eventClock(line.ts) + " · " + note.replaceFirstChar { it.uppercase() }
+}
+
+/** The top line of a row: what happened with the thing first when the house says so, else its verb-first text with a capital. */
+fun activityHeadline(line: ActivityLine): String = line.headline ?: line.text.replaceFirstChar { it.uppercase() }
+
+private val ScenePair = mapOf(
+    "relax" to (Color(0xFFF0A060) to Color(0xFFE0703A)), "bright" to (Color(0xFFFFF3C9) to Color(0xFFFFD36E)), "soho" to (Color(0xFF7E3FF2) to Color(0xFFFF4FA3)),
+    "movie" to (Color(0xFF2B2F6B) to Color(0xFFE8A33B)), "nightlight" to (Color(0xFF3A2B7E) to Color(0xFF7E57C2)),
+)
+
+/** A light's own look as a row's two ground colours (a brightness, a white, a scene or a chosen colour), or null to use the palette of what was done. */
+fun activityLookColours(line: ActivityLine): Pair<Color, Color>? = when (line.look) {
+    "bright" -> Color(0xFFFFF3C9) to Color(0xFFFFD36E)
+    "cool" -> Color(0xFFE4F0FF) to Color(0xFF9FC9F2)
+    "warm" -> Color(0xFFFFDDA6) to Color(0xFFF2A24E)
+    "scene" -> ScenePair[line.lookName?.lowercase()] ?: (Color(0xFFFFF3C9) to Color(0xFFFFD36E))
+    "colour" -> line.lookHex?.let { hex ->
+        runCatching { Color(android.graphics.Color.parseColor(hex)) }.getOrNull()?.let { c -> androidx.compose.ui.graphics.lerp(Color.Black, c, 0.65f) to c }
+    }
+    else -> null
+}
+
+private val SceneIcon = mapOf("relax" to "cd:room-living", "bright" to "cd:sun", "soho" to "cd:palette", "movie" to "cd:television-play", "nightlight" to "cd:moon")
+
+/** A row's icon: the scene's own when a light was set to one, else the house's. */
+fun activityIcon(line: ActivityLine): String? = if (line.look == "scene") SceneIcon[line.lookName?.lowercase()] ?: line.icon else line.icon

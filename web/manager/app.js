@@ -21,6 +21,9 @@ import { LOGO_PATH, LOGO_VIEWBOX } from './logo.js';
 import { cleanup } from './kit.js';
 import { h } from './pages/dom.js';
 import { renderEnergyPage } from './pages/energy.js';
+import { renderActivity } from './pages/activity.js';
+import { renderColours } from './pages/colours.js';
+import { dockHtml, dockAlerts, bindDock } from './dock.js';
 import { renderIconLibrary } from './pages/icon-library.js';
 import { renderReference } from './pages/reference.js';
 import { readPeopleVersions } from './pages/versions.js';
@@ -57,11 +60,11 @@ function showSignIn(message) {
 
 const PAGES = [
   { id: 'home', title: 'Clive Manager', label: 'Home', icon: 'cd:home', render: renderHome, live: true },
-  { id: 'energy', title: 'Energy', label: 'Energy', icon: 'cd:bolt', group: 'The house', render: (el, c) => renderEnergyPage(el, c) },
-  { id: 'devices', title: 'Devices', label: 'Devices', icon: 'cd:television-play', group: 'The house', render: renderDevices },
-  { id: 'health', title: 'Device health', label: 'Health', icon: 'cd:device-health', group: 'The house', render: renderHealth, live: true },
-  { id: 'activity', title: 'Activity log', label: 'Activity', icon: 'cd:history', group: 'The house', render: renderActivity },
-  { id: 'colours', title: 'Colour palettes', label: 'Colours', icon: 'cd:palette', group: 'Design', render: renderColours },
+  { id: 'energy', title: 'Energy', label: 'Energy', icon: 'cd:bolt', group: 'The house', render: (el, c) => renderEnergyPage(el, c), ms: true },
+  { id: 'devices', title: 'Devices', label: 'Devices', icon: 'cd:television-play', group: 'The house', render: renderDevices, ms: true },
+  { id: 'health', title: 'Device health', label: 'Device health', icon: 'cd:device-health', group: 'The house', render: renderHealth, live: true, ms: true },
+  { id: 'activity', title: 'Activity log', label: 'Activity', icon: 'cd:history', group: 'The house', render: renderActivity, ms: true },
+  { id: 'colours', title: 'Colour palettes', label: 'Colours', icon: 'cd:palette', group: 'Design', render: renderColours, ms: true },
   { id: 'design', title: 'Customise the dashboards', label: 'Customise', icon: 'cd:view-dashboard', group: 'Design', render: renderDesign },
   { id: 'iconlib', title: 'Icon library', label: 'Icon library', icon: 'cd:bulb-group', group: 'Design', render: (el, c) => renderIconLibrary(el, c) },
   { id: 'reference', title: 'Reference', label: 'Reference', icon: 'cd:image-text', group: 'Design', render: (el, c, arg) => renderReference(el, c, arg) },
@@ -95,63 +98,18 @@ function renderHome(el, ctx) {
     let rows; try { rows = await readVersions(ctx); } catch (e) { card.innerHTML = `<p class="err">Could not read the versions: ${esc(e.message)}</p>`; return; }
     const sum = versionSummary(rows);
     const word = { same: 'Same', behind: 'Behind', ahead: 'Ahead', unknown: 'Unknown' };
-    card.innerHTML = `<p class="${sum.tone === 'ok' ? 'sub' : 'warn-line'}">${esc(sum.text)}</p>${rows.map((r) => `<div class="row ver"><div style="flex:1"><p class="row-title">${esc(r.name)}</p><p class="sub">${esc(r.note)}</p></div><code>${esc(r.version || '–')}</code><span class="tag ${r.status}">${word[r.status]}</span></div>`).join('')}
-      <p class="sub">The app rows show the newest published test build. Below is what each person's phone last told the house it has installed.</p><div id="who-versions"></div>`;
+    const line = (name, note, version, status) => `<div class="ver"><span class="ver-name">${esc(name)}${note ? ` <span class="sub">${esc(note)}</span>` : ''}</span><code>${esc(version || '–')}</code><span class="tag ${status}">${esc(word[status])}</span></div>`;
+    card.innerHTML = `<details class="vfold"${sum.tone === 'ok' ? '' : ' open'}><summary class="${sum.tone === 'ok' ? 'sub' : 'warn-line'}">${esc(sum.text)}</summary>
+      <div class="ver-grid">${rows.map((r) => line(r.name, r.note.replace(/^latest test build /, 'build '), r.version, r.status)).join('')}</div>
+      <p class="label">On each phone</p><div class="ver-grid" id="who-versions"></div></details>`;
     try {
       const people = await readPeopleVersions(ctx, rows[0].version || rows[1].version);
       const box = card.querySelector('#who-versions');
-      box.innerHTML = people.length ? people.map((r) => `<div class="row ver"><div style="flex:1"><p class="row-title">${esc(r.person)} <span class="sub">· ${esc(r.phone)}${r.model && r.model !== r.phone ? `, ${esc(r.model)}` : ''}</span></p><p class="sub">${r.seen ? `Last heard ${esc(ago(Date.parse(r.seen)))}` : 'Not heard from yet'}</p></div><code>${esc(r.version || '–')}</code> <span class="tag ${r.status}">${esc(word[r.status])}</span></div>`).join('') : '<p class="sub">No phone with a Church Drive app has registered yet.</p>';
+      box.innerHTML = people.length ? people.map((r) => line(r.person, `${r.phone}${r.model && r.model !== r.phone ? `, ${r.model}` : ''} · ${r.seen ? ago(Date.parse(r.seen)) : 'not heard'}`, r.version, r.status)).join('') : '<p class="sub">No phone with a Church Drive app has registered yet.</p>';
     } catch { card.querySelector('#who-versions').innerHTML = '<p class="sub">Could not read the people from the house.</p>'; }
   };
   el.querySelector('#versions-refresh').addEventListener('click', drawVersions); drawVersions();
 }
-
-async function renderColours(el, ctx) {
-  el.innerHTML = '<p class="note">Reading the palettes from the house…</p>';
-  let data, shipped = {}, mine = {};
-  try { data = await ctx.ha.call('church_drive/colours'); } catch (e) { el.innerHTML = `<p class="err" role="alert">Could not read the palettes: ${esc(e.message)}</p>`; return; }
-  try { mine = (await ctx.ha.call('church_drive/manager/design')).groups || {}; } catch { /* groupings are optional: the palettes' own groups are used */ }
-  // The shipped colours (a static file Home Assistant serves) tell which palettes have been changed; without them nothing is marked.
-  for (const url of ['clive/cards.json', `${houseAddress()}/church_drive/clive/cards.json`]) { try { const r = await fetch(url); if (r.ok) { shipped = (await r.json()).entity_colours?.types || {}; break; } } catch { /* try the next place */ } }
-  const palettes = Object.entries(data.palettes || {});
-  const groupOf = ([key, p]) => mine[key] || p.group || 'Other';
-  const groups = new Map();
-  palettes.forEach((e) => { const g = groupOf(e); if (!groups.has(g)) groups.set(g, []); groups.get(g).push(e); });
-  const names = [...groups.keys()];
-  const NAMES = ['Colour', 'Dark', 'Accent', 'Light', 'Deep'];
-  const save = async (next) => { try { await ctx.ha.call('church_drive/manager/groups/set', { groups: next }); mine = next; renderColours(el, ctx); } catch (e) { const m = el.querySelector('#group-msg'); if (m) m.textContent = `Could not save the groups: ${e.message}`; } };
-  const card = ([key, p]) => {
-    const was = shipped[key]?.colours;
-    const changed = !p.custom && was && was.join().toLowerCase() !== p.colours.join().toLowerCase();
-    return `<article class="card pal" style="${glowStyle(p.colours[1])}"><div class="row"><h3 class="title" style="margin:0">${esc(p.name)}</h3>
-      ${changed ? '<span class="tag">Changed</span>' : ''}${p.custom ? '<span class="tag">Yours</span>' : ''}</div>
-      <p class="sub"><code>${esc(key)}</code></p>
-      <div class="swatches">${p.colours.map((c, i) => `<div class="sw" title="${NAMES[i]} ${esc(c)}"><i style="background:${esc(c)}"></i><code>${esc(c)}</code></div>`).join('')}</div>
-      <div class="pal-foot"><select class="grp" data-key="${esc(key)}" aria-label="Group of ${esc(p.name)}">${names.map((g) => `<option${g === groupOf([key, p]) ? ' selected' : ''}>${esc(g)}</option>`).join('')}<option value="__new">New group…</option></select>
-      <button class="btn quiet edit" type="button" data-edit="${esc(key)}">Edit</button></div><div class="edit-host"></div></article>`;
-  };
-  el.innerHTML = `<div class="stack">
-    <p class="note">${palettes.length} ${palettes.length === 1 ? 'palette' : 'palettes'}, revision ${esc(data.revision)}. Palettes are the colours the apps, dashboards and this site use. Edit one and send it: it waits under Edits for Clive to check before it goes live. Groups are only for finding things: choose a group on any card, or pick New group… to make your own.</p>
-    <div class="chips"><input class="field" id="find" type="search" placeholder="Find a palette" aria-label="Find a palette" style="flex:1"><button class="btn" type="button" id="add-palette">New palette</button></div><p class="err" id="group-msg" role="status"></p><div id="new-host"></div>
-    <div class="stack" id="groups">${[...groups].map(([g, list]) => `<section class="stack" style="gap:12px" data-group><div class="head"><h2>${esc(g)}</h2><span class="count">${list.length}</span><button class="btn quiet rename" type="button" data-rename="${esc(g)}">Rename</button></div><div class="grid4">${list.map(card).join('')}</div></section>`).join('')}</div></div>`;
-  const byKey = Object.fromEntries(palettes);
-  el.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => openPaletteEditor(b.closest('article').querySelector('.edit-host'), ctx, { key: b.dataset.edit, palette: byKey[b.dataset.edit] })));
-  el.querySelectorAll('select.grp').forEach((s) => s.addEventListener('change', () => {
-    let g = s.value; if (g === '__new') { g = (prompt('Name of the new group') || '').trim(); if (!g) { renderColours(el, ctx); return; } }
-    save({ ...mine, [s.dataset.key]: g });
-  }));
-  el.querySelectorAll('[data-rename]').forEach((b) => b.addEventListener('click', () => {
-    const to = (prompt('New name for the group', b.dataset.rename) || '').trim(); if (!to || to === b.dataset.rename) return;
-    const next = { ...mine }; groups.get(b.dataset.rename).forEach(([key]) => { next[key] = to; }); save(next);
-  }));
-  document.getElementById('add-palette').addEventListener('click', () => openPaletteEditor(document.getElementById('new-host'), ctx, { key: null, palette: null }));
-  document.getElementById('find').addEventListener('input', (e) => {
-    const q = e.target.value.trim().toLowerCase();
-    el.querySelectorAll('article.card').forEach((c) => { c.hidden = !!q && !c.textContent.toLowerCase().includes(q); });
-    el.querySelectorAll('[data-group]').forEach((s) => { s.hidden = ![...s.querySelectorAll('article.card')].some((c) => !c.hidden); });
-  });
-}
-
 
 // ---- Design: cards, icons and layouts ----
 
@@ -170,52 +128,6 @@ async function renderDesign(el, ctx, arg) {
 
 // ---- Device health, Energy, Activity ----
 
-const activityState = { day: 'today', time: 'all', action: 'all', who: '' };
-async function renderActivity(el, ctx) {
-  const assistant = (ctx.assistant ||= 'Clive');
-  const load = async (offset, into) => {
-    let r;
-    try { r = parseActivity(await ctx.ha.call('church_drive/activity', activityQuery({ ...activityState, who: activityState.who || null }, new Date(), 100, offset))); }
-    catch (e) { into.innerHTML = `<p class="err" role="alert">${esc(activityProblem(e.code))}</p>`; return null; }
-    if (!r) { into.innerHTML = `<p class="err" role="alert">${esc(activityProblem())}</p>`; return null; }
-    ctx.assistant = r.assistant; return r;
-  };
-  const opts = (list, cur, label) => list.map((x) => `<option value="${x[0]}"${x[0] === cur ? ' selected' : ''}>${esc(label(x))}</option>`).join('');
-  el.innerHTML = '<p class="note">Reading the log from the house…</p>';
-  let people = [], shown = 0;
-  const draw = async () => {
-    const out = el.querySelector('#log'); out.innerHTML = '<p class="note">Reading the log…</p>'; shown = 0;
-    const r = await load(0, out); if (!r) return;
-    if (r.people.length) people = r.people;
-    out.innerHTML = ''; add(r, out);
-  };
-  const add = (r, out) => {
-    shown += r.lines.length; const groups = new Map();
-    r.lines.forEach((l) => { const k = dayLabel(l.ts); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(l); });
-    out.querySelector('.more')?.remove();
-    if (!r.lines.length && shown === 0) { out.innerHTML = '<p class="note">Nothing matches.</p>'; return; }
-    out.insertAdjacentHTML('beforeend', [...groups].map(([day, lines]) => `<section class="stack" style="gap:8px"><div class="head"><h2 class="day-head">${esc(day)}</h2></div>${lines.map((l) => {
-      const note = activityNote(l, r.assistant);
-      return `<article class="card line compact" style="${glowStyle(l.kind === 'overruled' ? 'bad' : l.kind.startsWith('clive') ? 'tasks' : 'neutral')}"><span class="when">${esc(clock(l.ts))}</span><div><p class="title" style="margin:0"><b>${esc(activityWho(l, r.assistant))}</b> ${esc(l.text)}</p>${note ? `<p class="sub">${esc(note)}</p>` : ''}</div></article>`;
-    }).join('')}</section>`).join(''));
-    if (shown < r.total) {
-      out.insertAdjacentHTML('beforeend', `<button class="btn quiet more" type="button">Show more (${shown} of ${r.total})</button>`);
-      out.querySelector('.more').addEventListener('click', async (ev) => { ev.target.disabled = true; const next = await load(shown, out); if (next) add(next, out); });
-    }
-  };
-  // First answer names the people and the assistant, so the pickers can be filled.
-  const first = await load(0, el); if (!first) return;
-  people = first.people;
-  el.innerHTML = `<div class="stack"><div class="filters">
-    <select id="f-day" aria-label="Dates">${opts(DAYS, activityState.day, (x) => x[1])}</select>
-    <select id="f-time" aria-label="Time of day">${opts(TIMES, activityState.time, (x) => x[1])}</select>
-    <select id="f-action" aria-label="Actions">${opts(ACTIONS, activityState.action, (x) => actionLabel(x[0], first.assistant))}</select>
-    <select id="f-who" aria-label="Person"><option value="">Everyone</option>${people.map((n) => `<option${n === activityState.who ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></div>
-    <div class="stack" id="log"></div></div>`;
-  const log = el.querySelector('#log'); add(first, log);
-  [['f-day', 'day'], ['f-time', 'time'], ['f-action', 'action'], ['f-who', 'who']].forEach(([id, key]) => el.querySelector(`#${id}`).addEventListener('change', (ev) => { activityState[key] = ev.target.value; draw(); }));
-}
-
 // ---- The shell ----
 
 let ctx = null;
@@ -224,40 +136,25 @@ function go(id) { location.hash = id === 'home' ? '' : id; }
 function currentPage() { return PAGES.find((p) => p.id === location.hash.slice(1).split('/')[0]) || PAGES[0]; }
 
 function showShell(user) {
-  const link = (p, cls = '') => `<a class="${cls}" href="#${p.id === 'home' ? '' : p.id}" data-page="${p.id}">${icon(p.icon, 20)}<span>${esc(p.label)}</span></a>`;
-  const home = PAGES[0];
-  const top = `${link(home)}${GROUPS.map((g) => `<div class="drop"><button type="button" class="drop-btn" data-group="${esc(g)}" aria-haspopup="true" aria-expanded="false">${esc(g)}<svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><path d="M5 7.5l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-      <div class="drop-list" hidden>${PAGES.filter((p) => p.group === g).map((p) => link(p)).join('')}</div></div>`).join('')}`;
-  const drawer = `${link(home)}${GROUPS.map((g) => `<p class="drawer-head">${esc(g)}</p>${PAGES.filter((p) => p.group === g).map((p) => link(p)).join('')}`).join('')}`;
   root.innerHTML = `<div class="shell"><header class="site"><div class="site-in">
       <a class="brand" href="#" aria-label="Clive Manager, home"><svg class="mark" viewBox="${LOGO_VIEWBOX}" aria-hidden="true"><defs>
         <radialGradient id="bk-p" gradientUnits="userSpaceOnUse" cx="150" cy="70" r="88"><stop offset="0" stop-color="#AB47BC"/><stop offset="1" stop-color="#AB47BC" stop-opacity="0"/></radialGradient>
         <radialGradient id="bk-g" gradientUnits="userSpaceOnUse" cx="70" cy="170" r="110"><stop offset="0" stop-color="#4FD08A"/><stop offset="1" stop-color="#4FD08A" stop-opacity="0"/></radialGradient>
         <radialGradient id="bk-i" gradientUnits="userSpaceOnUse" cx="40" cy="40" r="130"><stop offset="0" stop-color="#5C6BC0"/><stop offset="1" stop-color="#5C6BC0" stop-opacity="0"/></radialGradient></defs>
-        <path class="mark-base" fill-rule="evenodd" d="${LOGO_PATH}"/><path fill="url(#bk-p)" fill-rule="evenodd" d="${LOGO_PATH}"/><path fill="url(#bk-g)" fill-rule="evenodd" d="${LOGO_PATH}"/><path fill="url(#bk-i)" fill-rule="evenodd" d="${LOGO_PATH}"/></svg><span class="brand-text"><b>Clive</b> Manager</span></a>
-      <nav class="topnav" aria-label="Pages">${top}</nav>
+        <path class="mark-base" fill-rule="evenodd" d="${LOGO_PATH}"/><path class="mark-glow" fill="url(#bk-p)" fill-rule="evenodd" d="${LOGO_PATH}"/><path class="mark-glow" fill="url(#bk-g)" fill-rule="evenodd" d="${LOGO_PATH}"/><path class="mark-glow" fill="url(#bk-i)" fill-rule="evenodd" d="${LOGO_PATH}"/></svg><span class="brand-text"><b>Clive</b> Manager</span></a>
       ${capsuleHtml(user.name)}
       <button class="theme-btn" type="button" id="theme"></button>
-      <button class="burger" type="button" id="burger" aria-label="Menu" aria-expanded="false" aria-controls="drawer"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg></button>
-    </div><nav class="drawer" id="drawer" aria-label="Pages" hidden>${drawer}</nav></header>
+    </div></header>
     <main><h1 id="title" class="page-title"></h1><div id="page" tabindex="-1"></div></main>
-    <footer class="foot"><span>Clive Manager</span><span>Church Drive</span></footer></div>`;
-  const who = document.getElementById('who'), menu = document.getElementById('menu'), burger = document.getElementById('burger'), dr = document.getElementById('drawer');
+    <footer class="foot"><span>Clive Manager</span><span>Church Drive</span></footer><div id="dock-host"></div></div>`;
+  const who = document.getElementById('who'), menu = document.getElementById('menu');
   status.mount(new CapsuleView(root.querySelector('.cap'), pressManager));
   mountThemeButton(document.getElementById('theme'));
-  const drops = [...root.querySelectorAll('.drop')];
-  const closeDrops = (except) => drops.forEach((d) => { if (d !== except) { d.querySelector('.drop-list').hidden = true; d.querySelector('.drop-btn').setAttribute('aria-expanded', 'false'); } });
+  document.getElementById('theme').addEventListener('click', () => setTimeout(() => drawDock(), 0));
   const toggle = (open) => { menu.hidden = !open; who.setAttribute('aria-expanded', String(open)); };
-  const toggleDrawer = (open) => { dr.hidden = !open; burger.setAttribute('aria-expanded', String(open)); document.body.classList.toggle('drawer-open', open); };
-  drops.forEach((d) => d.querySelector('.drop-btn').addEventListener('click', (e) => {
-    e.stopPropagation(); const list = d.querySelector('.drop-list'), open = list.hidden; closeDrops(d); toggle(false);
-    list.hidden = !open; e.currentTarget.setAttribute('aria-expanded', String(open));
-  }));
-  who.addEventListener('click', (e) => { e.stopPropagation(); closeDrops(); toggle(menu.hidden); });
-  burger.addEventListener('click', (e) => { e.stopPropagation(); toggle(false); toggleDrawer(dr.hidden); });
-  root.querySelectorAll('a[data-page]').forEach((l) => l.addEventListener('click', () => { closeDrops(); toggleDrawer(false); }));
-  document.addEventListener('click', (e) => { closeDrops(); if (!menu.hidden && !menu.contains(e.target)) toggle(false); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeDrops(); toggle(false); toggleDrawer(false); } });
+  who.addEventListener('click', (e) => { e.stopPropagation(); toggle(menu.hidden); });
+  document.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target)) toggle(false); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') toggle(false); });
   document.getElementById('signout').addEventListener('click', () => { ctx?.ha.close(); ctx = null; status.hide(); signOut(); showSignIn(); });
   fillIcons(root);
   return show();
@@ -269,15 +166,24 @@ function show() {
   loadedAt = Date.now();
   document.getElementById('title').textContent = page.title;
   document.title = page.id === 'home' ? 'Clive Manager' : `${page.title} · Clive Manager`;
-  root.querySelectorAll('a[data-page]').forEach((b) => (b.dataset.page === page.id ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current')));
-  root.querySelectorAll('.drop').forEach((d) => d.classList.toggle('on', !!page.group && d.querySelector('.drop-btn').dataset.group === page.group));
-  document.body.classList.remove('drawer-open');
+  document.getElementById('page').classList.toggle('ms', !!page.ms);
+  document.getElementById('title').hidden = page.id === 'home';
+  drawDock(page);
   document.body.classList.toggle('on-home', page.id === 'home');
   const arg = location.hash.slice(1).split('/').slice(1).join('/');
   cleanup(ctx);
+  ctx.setSub = (html) => { const el = document.getElementById('subdock'); if (el) el.innerHTML = html || ''; };
   return page.render(document.getElementById('page'), ctx, arg);
 }
-window.addEventListener('hashchange', () => { if (ctx) show(); });
+let dockDots = {};
+function drawDock(page = currentPage()) {
+  const host = document.getElementById('dock-host'); if (!host || !ctx) return;
+  const sub = document.getElementById('subdock')?.innerHTML || '';
+  host.innerHTML = dockHtml(ctx, PAGES, page.id, dockDots); const el = document.getElementById('subdock'); if (el) el.innerHTML = sub;
+  fillIcons(host); bindDock(host, () => drawDock());
+}
+const refreshDots = () => dockAlerts(ctx).then((d) => { dockDots = d; drawDock(); });
+window.addEventListener('hashchange', () => { if (!ctx) return; const sub = document.getElementById('subdock'); if (sub) sub.innerHTML = ''; show(); window.scrollTo(0, 0); refreshDots(); });
 
 // ---- Start ----
 
@@ -411,6 +317,6 @@ async function start() {
   online = true;
   status.connected(link.facts);
   status.loading();
-  Promise.resolve(showShell(user)).catch(() => {}).then(() => status.loaded());
+  Promise.resolve(showShell(user)).catch(() => {}).then(() => { status.loaded(); refreshDots(); });
 }
 start();

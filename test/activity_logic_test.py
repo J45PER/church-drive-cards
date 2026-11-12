@@ -367,5 +367,56 @@ class WiringTest(unittest.TestCase):
         self.assertIn('if k != "user_id"', SRC)
 
 
+
+class HeadlineTest(unittest.TestCase):
+    names = {"light.kitchen": "Kitchen", "climate.downstairs": "Downstairs", "cover.lounge": "Lounge blind", "lock.front": "Front door"}
+
+    def test_the_thing_comes_first(self):
+        h = lambda d, s, data, **k: al.headline(d, s, data, self.names, **k)
+        self.assertEqual(h("light", "turn_on", {"entity_id": "light.kitchen"}), "Kitchen turned on")
+        self.assertEqual(h("light", "turn_off", {"entity_id": "light.kitchen"}), "Kitchen turned off")
+        self.assertEqual(h("lock", "lock", {"entity_id": "lock.front"}), "Front door locked")
+        self.assertEqual(h("climate", "set_temperature", {"entity_id": "climate.downstairs", "temperature": 21}), "Downstairs set to 21°")
+        self.assertEqual(h("cover", "set_cover_position", {"entity_id": "cover.lounge", "position": 30}), "Lounge blind moved to 30%")
+        self.assertEqual(h("alarm_control_panel", "alarm_arm_home", {"entity_id": "alarm_control_panel.ring"}), "Alarm armed: Home")
+        self.assertEqual(h("alarm_control_panel", "alarm_disarm", {}), "Alarm disarmed")
+
+    def test_a_lights_look_is_in_the_words(self):
+        h = lambda data: al.headline("light", "turn_on", {"entity_id": "light.kitchen", **data}, self.names)
+        self.assertEqual(h({"brightness_pct": 60}), "Kitchen set to 60%")
+        self.assertEqual(h({"effect": "relax"}), "Kitchen scene set to Relax")
+        self.assertEqual(h({"color_temp_kelvin": 6000}), "Kitchen set to cool white")
+        self.assertEqual(h({"color_temp_kelvin": 2400}), "Kitchen set to warm white")
+        self.assertEqual(h({"rgb_color": [126, 63, 242]}), "Kitchen changed to purple")
+
+    def test_what_only_reads_verb_first_has_no_headline(self):
+        self.assertEqual(al.headline("todo", "add_item", {"entity_id": "todo.shopping"}, {}), "")
+        self.assertEqual(al.headline("script", "turn_on", {"entity_id": "script.x"}, {}), "")
+        self.assertEqual(al.headline("light", "frobnicate", {"entity_id": "light.hall"}, {}), "")
+
+    def test_light_look(self):
+        self.assertIsNone(al.light_look("turn_on", {"entity_id": "light.kitchen"}))
+        self.assertIsNone(al.light_look("turn_off", {"brightness_pct": 50}))
+        self.assertEqual(al.light_look("turn_on", {"brightness": 128}), {"look": "bright", "pct": 50})
+        self.assertEqual(al.light_look("turn_on", {"rgb_color": [79, 208, 138]}), {"look": "colour", "name": "green", "hex": "#4FD08A"})
+        self.assertEqual(al.light_look("turn_on", {"color_temp": 500}), {"look": "warm"})
+
+    def test_the_text_is_unchanged_and_the_new_fields_survive_storage(self):
+        self.assertEqual(al.describe("light", "turn_on", {"entity_id": "light.kitchen", "brightness_pct": 60}, self.names), "turned on Kitchen at 60%")
+        e = al.make_entry(100.0, "user", "Jamie", "turned on Kitchen at 60%", "mdi:lightbulb", headline="Kitchen set to 60%", look={"look": "bright", "pct": 60})
+        kept = al.clean([e])[0]
+        self.assertEqual(kept["headline"], "Kitchen set to 60%")
+        self.assertEqual(kept["look"], {"look": "bright", "pct": 60})
+
+    def test_a_device_not_answering(self):
+        e = al.make_entry(100.0, "device", "", "Garden camera stopped responding", "mdi:camera", "camera.garden", headline=al.availability_headline("Garden camera", False), state="unavailable")
+        self.assertEqual(e["headline"], "Garden camera stopped responding")
+        self.assertEqual(al.availability_headline("Garden camera", True), "Garden camera is back online")
+        self.assertEqual(al.clean([e])[0]["state"], "unavailable")
+        self.assertEqual(al.select([e], kinds=["device"])["total"], 1)
+        self.assertIn("device", al.KINDS)
+        self.assertIn("_on_availability", SRC)
+
+
 if __name__ == "__main__":
     unittest.main()

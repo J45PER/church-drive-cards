@@ -88,17 +88,18 @@ export class CapsuleView {
         <radialGradient id="${id}g" gradientUnits="userSpaceOnUse" cx="70" cy="170" r="110"><stop offset="0" stop-color="#4FD08A"/><stop offset="1" stop-color="#4FD08A" stop-opacity="0"/></radialGradient>
         <radialGradient id="${id}i" gradientUnits="userSpaceOnUse" cx="40" cy="40" r="130"><stop offset="0" stop-color="#5C6BC0"/><stop offset="1" stop-color="#5C6BC0" stop-opacity="0"/></radialGradient></defs>
         ${base('#6A5BC2')}${[`url(#${id}p)`, `url(#${id}g)`, `url(#${id}i)`].map((f) => `<path fill="${f}" fill-rule="evenodd" d="${LOGO_PATH}"/>`).join('')}</svg>
-        <svg class="sh-mono" viewBox="${LOGO_VIEWBOX}" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="${LOGO_PATH}"/></svg></span>
+        <svg class="sh-mono" viewBox="${LOGO_VIEWBOX}" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="${LOGO_PATH}"/></svg>${icon('cd:wifi-off', 30).replace('class="ico"', 'class="ico alt a-noconn"')}${icon('cd:update-arrow', 30).replace('class="ico"', 'class="ico alt a-restart"')}${icon('cd:check', 30).replace('class="ico"', 'class="ico alt a-done"')}</span>
       <svg class="ring" viewBox="0 0 40 40" aria-hidden="true"><path fill="none" stroke-width="2.5" stroke-linecap="round"/></svg><span class="badge"></span>`;
     this.info = document.createElement('div'); this.info.className = 'info'; this.info.setAttribute('aria-live', 'polite');
     this.info.innerHTML = '<div class="in"><div class="t"></div><div class="d"></div></div><div class="pbar"><i></i></div>';
     const wrap = cap.querySelector('.menu-wrap');
     cap.insertBefore(this.cv, cap.firstChild); cap.insertBefore(this.mgr, wrap); cap.insertBefore(this.info, wrap);
     this.mgr.addEventListener('click', () => onPress && onPress());
-    this.A = { infoW: new Anim(0), infoA: new Anim(0), cloudA: new Anim(0.2), txt: new Anim(1), ringA: new Anim(0), badgeA: new Anim(0) };
-    this.bg = new ColorAnim([255, 255, 255]); this.face = 'rest'; this.shown = 'updating'; this.tickT = 0; this.quiet = false; this.textW = 0;
+    this.A = { infoW: new Anim(0), infoA: new Anim(0), cloudA: new Anim(0.2), txt: new Anim(1), ringA: new Anim(0), badgeA: new Anim(0), swap: new Anim(0) }; this.altKey = 'done';
+    this.bg = new ColorAnim(themeNow().normal.bg); this.face = 'rest'; this.shown = 'updating'; this.tickT = 0; this.quiet = false; this.textW = 0;
     const q = (s) => this.mgr.querySelector(s);
     this.ringPath = q('.ring path'); this.badge = q('.badge'); this.shieldCol = q('.sh-col'); this.shieldMono = q('.sh-mono'); this.shieldBase = q('.sh-base');
+    fillIcons(this.mgr);
     this.t = this.info.querySelector('.t'); this.d = this.info.querySelector('.d'); this.in = this.info.querySelector('.in'); this.pbar = this.info.querySelector('.pbar');
   }
 
@@ -121,7 +122,6 @@ export class CapsuleView {
       this.face = face;
       if (exp) {
         this.shown = face; A.txt.jump(0); A.txt.set(1, { dur: 180 }, now);
-        if (BADGE[face]) { this.badge.innerHTML = icon(BADGE[face][0], 11); fillIcons(this.badge); this.badge.style.background = BADGE[face][1]; A.badgeA.jump(0); }
       }
       if (face === 'done') this.tickT = now;
     }
@@ -144,24 +144,28 @@ export class CapsuleView {
     this.info.style.width = iw + 'px'; this.in.style.opacity = String(A.infoA.get(now) * A.txt.get(now));
     const ink = problem ? t.ink : th.normal.ink, cs = this.el.style;
     cs.color = rgb(ink); cs.background = rgb(this.bg.get(now)); cs.borderColor = rgb(th.line);
-    // The Manager icon: in its own colours, a lighter set in the dark theme; in the capsule's ink on a red or amber capsule, so it reads there too.
+    // The Manager icon: single colour, in the capsule's ink (the colour logo is the one beside the wordmark).
     this.shieldBase.setAttribute('fill', th.dark ? '#B3A9F2' : '#6A5BC2');
-    const mono = problem ? 1 : 0;
+    const mono = 1;   // the capsule's icon is the single-colour shield: the capsule's ink (black on light, white on dark)
     this.shieldMono.style.opacity = String(mono); this.shieldCol.style.opacity = String(1 - mono);
     this.mgr.style.opacity = String(this.shown === 'noconn' && exp ? 0.9 : 1);
-    // A ring turns round it while it works and fills when done; a badge says done or what is wrong.
-    const working = exp && (face === 'connecting' || face === 'updating'), done = exp && face === 'done';
-    A.ringA.set(working || done ? 1 : 0, { dur: 200 }, now); A.badgeA.set(exp && BADGE[face] ? 1 : 0, { dur: 260 }, now);
-    const ringA = A.ringA.get(now), bA = A.badgeA.get(now), p = done ? FOSE(clamp((now - this.tickT) / 380, 0, 1)) : 0;
+    // As in the app: the shield is swapped for the face's own picture (a tick wiped in from the left, a crossed signal breathing, a turning arrow); a white ring turns round it while it works.
+    const working = exp && (face === 'connecting' || face === 'updating'), alt = face === 'done' ? 'done' : face === 'noconn' ? 'noconn' : face === 'restart' ? 'restart' : null;
+    if (alt) this.altKey = alt;
+    A.swap.set(exp && alt ? 1 : 0, { dur: alt === 'done' ? 140 : 200 }, now); const sw = A.swap.get(now);
+    this.shieldCol.parentNode.querySelectorAll('.sh-mono').forEach((m) => { m.style.opacity = String(1 - sw); m.style.transform = `scale(${1 - 0.35 * sw})`; });
+    this.mgr.querySelectorAll('.alt').forEach((e) => {
+      const k = e.classList[2].slice(2), on = k === this.altKey;
+      e.style.opacity = on ? String(sw * (k === 'noconn' ? 0.35 + 0.65 * FOSE(triangle(now, 900)) : 1)) : '0';
+      e.style.transform = on && k === 'restart' ? `rotate(${(now % 1100) / 1100 * 360}deg)` : '';
+      e.style.clipPath = on && k === 'done' ? `inset(0 ${(1 - FOSE(clamp((now - this.tickT) / 380, 0, 1))) * 100}% 0 0)` : '';
+    });
+    A.ringA.set(working ? 1 : 0, { dur: 200 }, now); A.badgeA.set(0, { dur: 260 }, now);
+    const ringA = A.ringA.get(now), bA = A.badgeA.get(now);
     let d = '';
-    if (ringA > 0.01) {
-      if (done) d = arc(20, 17, -90, Math.min(359.9, 360 * p));
-      else { const sw = FOSE(triangle(now, 1400)), start = ((now % 1100) / 1100 * 360) * 0.8 - 90 + 95 * sw; d = arc(20, 17, start, 90 + 190 * sw); }
-    }
-    this.ringPath.setAttribute('d', d); this.ringPath.setAttribute('stroke', rgb(mix(th.primary, GREEN, p))); this.ringPath.style.opacity = String(ringA);
-    this.badge.style.opacity = String(bA); this.badge.style.transform = `scale(${0.4 + 0.6 * FOSE(bA)})`;
-    const bi = this.badge.firstChild;
-    if (bi) { bi.style.transform = this.shown === 'restart' ? `rotate(${(now % 1100) / 1100 * 360}deg)` : ''; bi.style.opacity = this.shown === 'noconn' ? String(0.55 + 0.45 * FOSE(triangle(now, 900))) : '1'; }
+    if (ringA > 0.01) { const sw2 = FOSE(triangle(now, 1400)), start = ((now % 1100) / 1100 * 360) * 0.8 - 90 + 95 * sw2; d = arc(20, 17, start, 90 + 190 * sw2); }
+    this.ringPath.setAttribute('d', d); this.ringPath.setAttribute('stroke', rgb(th.normal.ink)); this.ringPath.style.opacity = String(ringA);
+    this.badge.style.opacity = '0';
     this.shieldCol.parentNode.style.transform = working ? `scale(${1 + 0.05 * FOSE(triangle(now, 1000))})` : '';
     // a thin progress line along the bottom while it works
     const showBar = exp && (face === 'updating' || face === 'connecting' || face === 'restart');
