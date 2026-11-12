@@ -11,7 +11,6 @@ import { fillIcons, icon, loadIcons } from './icons.js';
 
 initTheme();   // a light or dark chosen with the button, before anything is drawn
 import { renderChanges } from './pages/changes.js';
-import { readVersions, summary as versionSummary } from './pages/versions.js';
 import { openPaletteEditor } from './pages/palette-editor.js';
 import { renderCards, renderIcons, renderLayouts } from './pages/design.js';
 import { renderDevices } from './pages/devices.js';
@@ -23,10 +22,10 @@ import { h } from './pages/dom.js';
 import { renderEnergyPage } from './pages/energy.js';
 import { renderActivity } from './pages/activity.js';
 import { renderColours } from './pages/colours.js';
+import { renderHome as renderHomePage } from './pages/home.js';
 import { dockHtml, dockAlerts, bindDock } from './dock.js';
 import { renderIconLibrary } from './pages/icon-library.js';
 import { renderReference } from './pages/reference.js';
-import { readPeopleVersions } from './pages/versions.js';
 import { PALETTE_PARTS, paletteWarnings, slugOk, ACTIONS, BAD, DAYS, OK, TIMES, WARN, activityNote, activityProblem, activityQuery, activityWho, actionLabel, ago, buildRegistry, clock, dayLabel, deviceHealthList, healthSummary, parseActivity } from './pages/logic.js';
 
 const root = document.getElementById('root');
@@ -59,7 +58,7 @@ function showSignIn(message) {
 // A page marked `live` only shows things, so it is read again by itself now and then (see freshness.js); the editors are never redrawn under someone.
 
 const PAGES = [
-  { id: 'home', title: 'Clive Manager', label: 'Home', icon: 'cd:home', render: renderHome, live: true },
+  { id: 'home', title: 'Clive Manager', label: 'Home', icon: 'cd:home', render: (el, c) => renderHomePage(el, c, PAGES), live: true, ms: true },
   { id: 'energy', title: 'Energy', label: 'Energy', icon: 'cd:bolt', group: 'The house', render: (el, c) => renderEnergyPage(el, c), ms: true },
   { id: 'devices', title: 'Devices', label: 'Devices', icon: 'cd:television-play', group: 'The house', render: renderDevices, ms: true },
   { id: 'health', title: 'Device health', label: 'Device health', icon: 'cd:device-health', group: 'The house', render: renderHealth, live: true, ms: true },
@@ -72,44 +71,6 @@ const PAGES = [
   { id: 'changes', title: 'Edits and history', label: 'Edits', icon: 'cd:checklist', group: 'Manage', render: (el, c) => renderChanges(el, c, { glowStyle }) },
 ];
 const GROUPS = ['The house', 'Design', 'Manage'];
-
-const HOME_CARDS = {
-  energy: ['energy', 'Octopus rates, cheap times, the week, the car charger'], devices: ['media', 'TVs, speakers, and how the house\'s systems are'],
-  health: ['ok', 'Batteries, filters and devices that stop responding'], activity: ['people', 'What people and the assistant did, and when'],
-  colours: ['tasks', 'Every palette as the house has it now, with the changes marked'], design: ['people', 'Card colours, section icons and the order of dashboard sections'],
-  iconlib: ['media', 'Every icon the house draws, searchable'], reference: ['gregg', 'Logos, colours, type, shapes, the apps and the boards worth keeping'],
-  manager: ['warn', 'People, notifications, camera links, alarm lights and more'], changes: ['tasks', 'What you sent for Clive to check, what went live, and put things back'],
-};
-const HOME_ICONS = { 'The house': 'cd:home', Design: 'cd:palette', Manage: 'cd:sliders' };
-
-function renderHome(el, ctx) {
-  const hello = `${new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'}, ${(ctx.user?.name || '').split(' ')[0] || 'there'}`;
-  const group = (g) => panel(ctx, { title: g, icon: HOME_ICONS[g], color: g === 'Design' ? 'tasks' : g === 'Manage' ? 'warn' : 'ok' },
-    ...PAGES.filter((p) => p.group === g).map((p) => { const [tone, line] = HOME_CARDS[p.id] || ['neutral', '']; const card = h('a', { class: 'card home-card', href: `#${p.id}`, style: glowStyle(tone) }, h('p', { class: 'title' }, p.title === 'Manager' ? 'Settings' : p.title), h('p', { class: 'sub' }, line)); return card; }));
-  el.replaceChildren(h('div', { class: 'stack' }, h('section', { class: 'hero' }, h('p', { class: 'hero-hello' }, hello), h('p', { class: 'sub' }, 'Everything the house shares with its apps, in one place: how it is doing, how it looks, and what to change.')),
-    ...GROUPS.map(group)));
-  const rest = document.createElement('div'); rest.className = 'stack';
-  rest.innerHTML = `<section class="stack" style="gap:12px" id="versions"><div class="head"><h2>Versions</h2><button class="btn quiet" type="button" id="versions-refresh">Check again</button></div>
-      <article class="card plain" id="versions-card"><p class="sub">Reading the versions…</p></article></section>`;
-  el.firstChild.append(rest);
-  fillIcons(el);
-  const drawVersions = async () => {
-    const card = el.querySelector('#versions-card'); card.innerHTML = '<p class="sub">Reading the versions…</p>';
-    let rows; try { rows = await readVersions(ctx); } catch (e) { card.innerHTML = `<p class="err">Could not read the versions: ${esc(e.message)}</p>`; return; }
-    const sum = versionSummary(rows);
-    const word = { same: 'Same', behind: 'Behind', ahead: 'Ahead', unknown: 'Unknown' };
-    const line = (name, note, version, status) => `<div class="ver"><span class="ver-name">${esc(name)}${note ? ` <span class="sub">${esc(note)}</span>` : ''}</span><code>${esc(version || '–')}</code><span class="tag ${status}">${esc(word[status])}</span></div>`;
-    card.innerHTML = `<details class="vfold"${sum.tone === 'ok' ? '' : ' open'}><summary class="${sum.tone === 'ok' ? 'sub' : 'warn-line'}">${esc(sum.text)}</summary>
-      <div class="ver-grid">${rows.map((r) => line(r.name, r.note.replace(/^latest test build /, 'build '), r.version, r.status)).join('')}</div>
-      <p class="label">On each phone</p><div class="ver-grid" id="who-versions"></div></details>`;
-    try {
-      const people = await readPeopleVersions(ctx, rows[0].version || rows[1].version);
-      const box = card.querySelector('#who-versions');
-      box.innerHTML = people.length ? people.map((r) => line(r.person, `${r.phone}${r.model && r.model !== r.phone ? `, ${r.model}` : ''} · ${r.seen ? ago(Date.parse(r.seen)) : 'not heard'}`, r.version, r.status)).join('') : '<p class="sub">No phone with a Church Drive app has registered yet.</p>';
-    } catch { card.querySelector('#who-versions').innerHTML = '<p class="sub">Could not read the people from the house.</p>'; }
-  };
-  el.querySelector('#versions-refresh').addEventListener('click', drawVersions); drawVersions();
-}
 
 // ---- Design: cards, icons and layouts ----
 

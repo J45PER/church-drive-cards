@@ -403,3 +403,40 @@ main { padding-bottom: 150px; }
 .ms .banner .wc-p b{font-weight:700;font-size:var(--t-title)}
 .ms .banner h2{flex:0 0 auto;margin-right:8px}
 .ms .evq.on{background:var(--ac);color:var(--d)}
+/* Home page (signed off on the example site) */
+.ms .hm-hello{margin:0;font-size:calc(var(--t-page) + 4px);font-weight:600;letter-spacing:-.02em;background:linear-gradient(100deg,#6A5BC2,#AB47BC 55%,#4FD08A);-webkit-background-clip:text;background-clip:text;color:transparent;width:fit-content}
+.ms .hm-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:var(--gap)}
+.ms .hm-fact{background:var(--card);border-radius:calc(var(--radius) - 4px);padding:12px 16px;display:grid;gap:1px;color:var(--ink);text-decoration:none;min-width:0}
+.ms .hm-fact small{color:var(--soft);font-size:calc(var(--t-sub) - 1px);letter-spacing:.06em;text-transform:uppercase;font-weight:600;display:flex;align-items:center;gap:6px}
+.ms .hm-fact small i{width:8px;height:8px;border-radius:50%;background:var(--dot,var(--okc))}
+.ms .hm-fact strong{font-size:var(--t-title);font-weight:600;font-variant-numeric:tabular-nums;line-height:1.25}
+.ms .hm-fact.ok strong{color:var(--okc)}.ms .hm-fact.warn strong{color:var(--warn)}.ms .hm-fact.warn{--dot:#FFB74D}.ms .hm-fact.bad strong{color:var(--bad)}.ms .hm-fact.bad{--dot:#EF6168}
+a.fact:hover{background:color-mix(in srgb,var(--primary) 8%,var(--card))}
+.ms .hm-strip.bar{grid-template-columns:1fr;gap:0;background:var(--card);border-radius:calc(var(--radius) - 4px);overflow:hidden}
+.ms .hm-strip.bar .hm-fact{display:flex;align-items:baseline;gap:10px;border-radius:0;padding:9px 16px;border-top:1px solid var(--line);flex-wrap:wrap;background:none}
+.ms .hm-strip.bar .hm-fact:first-child{border-top:0}.ms .hm-strip.bar .hm-fact small{width:130px}
+.ms .hm-groups{display:grid;gap:16px}
+.ms .hm-gh{display:flex;align-items:center;gap:10px;margin:0 0 8px 2px;--gc:var(--c)}
+.ms .hm-gh .hm-gi{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--gc) 22%,transparent);color:var(--gc)}
+.ms .hm-gh .hm-gi svg{width:calc(32px * var(--ico-ratio));height:calc(32px * var(--ico-ratio));fill:currentColor}
+.ms .hm-gh h2{margin:0;font-size:var(--t-panel);font-weight:500;color:var(--gc)}
+.ms .hm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,var(--cols)),1fr));gap:var(--gap)}
+.ms .hm-tile{border-radius:var(--radius);text-decoration:none;display:flex;align-items:center;gap:12px;padding:var(--tile-pad) calc(var(--tile-pad) + 2px);min-width:0}
+.ms .hm-tile:hover{filter:brightness(1.12)}
+.ms .hm-tile .ico{display:grid;place-items:center;width:26px;height:26px;color:#fff;flex:none}
+.ms .hm-tile .ico svg{width:26px;height:26px;fill:currentColor}
+.ms .hm-tile b{font-weight:500;font-size:var(--t-title);line-height:1.2;min-width:0}
+.ms .hm-badge{margin-left:auto;font-size:.74rem;font-weight:600;padding:3px 10px;border-radius:999px;background:#FFB74D;color:#2b1a00;white-space:nowrap}
+.ms .hm-stacked .hm-tile{flex-direction:column;align-items:flex-start;gap:10px;position:relative}
+.ms .hm-stacked .hm-tile .hm-badge{position:absolute;top:var(--tile-pad);right:var(--tile-pad)}
+.ms .hm-fold{background:var(--card);border-radius:calc(var(--radius) - 4px);padding:10px 16px}
+.ms .hm-fold>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:.92rem}
+.ms .hm-fold>summary::-webkit-details-marker{display:none}
+.ms .hm-fold>summary b{font-weight:500}.ms .hm-fold>summary .sub{flex:1;min-width:0}
+.ms .hm-fold>summary::after{content:'▾';color:var(--soft)}.ms .hm-fold[open]>summary::after{content:'▴'}
+.ms .hm-fold[open]>summary{margin-bottom:8px}
+.ms .hm-vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));column-gap:28px}
+.ms .hm-ver{display:flex;align-items:center;gap:10px;padding:5px 0;border-top:1px solid var(--line);font-size:.9rem;min-width:0}
+.ms .hm-vname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.ms .hm-vname .sub{font-weight:400;font-size:.8rem;display:inline}
+.ms .hm-ver code{font-size:.85rem}.ms .hm-ver .tagp{min-width:58px;text-align:center}
