@@ -47,6 +47,13 @@ class ActivityDataTest {
     }
 
     @Test
+    fun lastTwentyFourHoursIsARollingWindowEndingNow() {
+        val q = activityQuery(ActivityFilters(day = ActivityDay.Day), now, london)
+        assertEquals(now / 1000 - 24 * 3600, q.getLong("since"))
+        assertFalse(q.has("until"))
+    }
+
+    @Test
     fun sevenAndThirtyDaysIncludeToday() {
         val week = activityQuery(ActivityFilters(day = ActivityDay.Week), now, london)
         assertEquals(at(2026, 10, 20).toEpochSecond(), week.getLong("since"))
