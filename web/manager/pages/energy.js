@@ -13,6 +13,19 @@ const num = (e) => { const n = parseFloat(e?.state); return Number.isFinite(n) ?
 const dayName = (d, long) => d.toLocaleDateString('en-GB', long ? { weekday: 'short', day: 'numeric', month: 'short' } : { weekday: 'short' });
 
 /** Everything the page shows, from the house's states (and the week's history, read separately). */
+/** The history can lag a day behind (a meter's last day arrives late), while the house already knows yesterday's totals: use those for a missing yesterday. */
+export function withYesterday(result, ids, s, now = Date.now()) {
+  const day = new Date(now - 86400000); day.setHours(0, 0, 0, 0);
+  const key = (ms) => new Date(ms).toLocaleDateString('en-CA'), out = { ...result };
+  const fill = (id, value) => {
+    if (!id || value == null || !Number.isFinite(value)) return;
+    if ((out[id] || []).some((r) => r.start != null && key(r.start) === key(day.getTime()) && r.change != null)) return;
+    out[id] = [...(out[id] || []), { start: day.getTime(), change: value }];
+  };
+  fill(ids.elecCost, s.yesterday); fill(ids.elecKwh, s.yesterdayKwh); fill(ids.gasCost, s.gasYesterday);
+  return out;
+}
+
 export function energyModel(st, weekResult, now = Date.now()) {
   const s = energySnapshot(st, now), rates = s.rates;
   const pounds = (re) => num(find(st, re));
@@ -25,11 +38,11 @@ export function energyModel(st, weekResult, now = Date.now()) {
   return {
     s, rates, now, min: low, max: high, avg, cheap: s.cheapUntil != null || (low != null && s.rate != null && s.rate <= low + 0.01),
     stand: pounds(/^sensor\.octopus_energy_electricity_.*_current_standing_charge$/), gstand: pounds(/^sensor\.octopus_energy_gas_.*_current_standing_charge$/),
-    week: weekResult ? buildWeek(weekResult, weekIds(st)) : null,
+    week: weekResult ? buildWeek(withYesterday(weekResult, weekIds(st), s, now), weekIds(st), now) : null,
     cars: findCars(st), plan: planSlots(st),
     plus: s.points != null ? { pts: s.points, hh: num(find(st, /^sensor\.octopus_energy_a_.*_octoplus_weekend_happy_hours$/)), spins: (spins('electricity') ?? 0) + (spins('gas') ?? 0), hasSpins: spins('electricity') != null || spins('gas') != null } : null,
     zappi: mode ? { status: chargerStatus(st), session: num(zs(ZAPPI.session)), plugged: power > 0 || (plug && !/disconnected/i.test(plug)), charging: power > 100, mode: mode.state, options: mode.attributes?.options || [],
-      role: role?.state ?? null, roles: (role?.attributes?.options || []).filter((o) => o !== 'Unknown'), smart: smartOn ? { on: smartOn.state === 'on', phase: smartPhase?.state || null } : null } : null,
+      locked: zs('binary_sensor.zappi_locked') ? zs('binary_sensor.zappi_locked').state === 'on' : null, role: role?.state ?? null, roles: (role?.attributes?.options || []).filter((o) => o !== 'Unknown'), smart: smartOn ? { on: smartOn.state === 'on', phase: smartPhase?.state || null } : null } : null,
     st,
   };
 }
@@ -81,20 +94,21 @@ export function energyHtml(ctx, m) {
   // Car charging: one card, the cars, the charger as the app draws it, then Octopus's plan
   const z = m.zappi, roleName = { Primary: 'VW ID5', Additional: 'Astra GSe' }, onCharger = z ? roleName[z.role] : null;
   const cars = m.cars.map((c) => {
-    const on = z?.plugged && onCharger && (c.name === onCharger || (onCharger === 'Astra GSe' && /astra/i.test(c.name)));
-    return `<div class="car"><div class="car-t"><b>${esc(c.name)}</b>${on ? '<span class="tag">Plugged in</span>' : ''}<span class="car-v">${Math.round(c.battery)}%${Number.isFinite(c.range) ? ` · ${Math.round(c.range)} ${esc(c.unit)}` : ''}</span></div><div class="batt"><i style="width:${Math.max(2, Math.min(100, c.battery))}%;background:${batteryFade((c.battery || 0) / 100)}"></i></div></div>`;
+    const onZappi = z?.plugged && onCharger && (c.name === onCharger || (onCharger === 'Astra GSe' && /astra/i.test(c.name))), on = c.plugged ?? onZappi;
+    const tag = c.charging ? `Charging${c.chargeEnd ? ` until ${hhmm(c.chargeEnd)}` : ''}` : on ? 'Plugged in' : '';   // a car that reports its own plug and charge says so itself
+    return `<div class="car"><div class="car-t"><b>${esc(c.name)}</b>${tag ? `<span class="tag">${esc(tag)}</span>` : ''}<span class="car-v">${Math.round(c.battery)}%${Number.isFinite(c.range) ? ` · ${Math.round(c.range)} ${esc(c.unit)}` : ''}</span></div><div class="batt"><i style="width:${Math.max(2, Math.min(100, c.battery))}%;background:${batteryFade((c.battery || 0) / 100)}"></i></div></div>`;
   }).join('');
   let charger = '';
   if (z) {
-    const act = !z.plugged ? `<button type="button" class="evb none" disabled>${ic('ev-plug', 18)}No car connected</button>` : z.charging ? `<button type="button" class="evb live" disabled>${ic('bolt', 18)}Charging</button>` : '';
+    const act = !z.plugged ? `<button type="button" class="evb none" disabled>${ic('ev-plug', 18)}No car connected</button>` : z.charging ? `<button type="button" class="evb live" disabled>${ic('bolt', 18)}Charging</button>` : `<button type="button" class="evb go" data-start>${ic('bolt', 18)}Start charge</button>`;
     const smart = z.smart ? `<button type="button" class="evb smart" data-smart role="switch" aria-checked="${z.smart.on}" aria-label="Smart charge">${ic('clock-bolt', 20)}<span class="est"><b>Smart charge</b><small>${esc(smartText(m))}</small></span><span class="esw${z.smart.on ? ' on' : ''}"></span></button>` : '';
     const desc = z.role === 'Primary' ? 'VW ID5: also charges when Octopus schedules it' : z.role === 'Additional' ? 'Astra GSe: charges 23:30 to 05:30 only' : 'Not answered yet, so it will not charge';
     const which = z.plugged && z.roles.length ? `<label class="evb car">${ic('car-ev', 20)}<span class="est"><b>Car plugged in</b><small>${esc(desc)}</small></span><select class="esel" data-role aria-label="Car plugged in">${z.role === 'Unknown' ? '<option value="Unknown">Which car?</option>' : ''}${z.roles.map((r) => `<option value="${esc(r)}"${r === z.role ? ' selected' : ''}>${esc(roleName[r] || r)}</option>`).join('')}</select></label>` : '';
     const ICONS = { Stopped: 'stop', Eco: 'leaf', 'Eco+': 'solar-power', Fast: 'bolt' }, modes = CHARGER_MODES.filter(([k]) => !z.options.length || z.options.includes(k));
-    charger = `<div class="sect"><p class="sub">Charger · ${esc(z.status)}${z.session != null ? ` · ${z.session.toFixed(1)} kWh this session` : ''}</p><div class="evacts">${act}${smart}${which}</div><div class="evrow">${modes.map(([k, l]) => `<button type="button" class="evq${z.mode === k ? ' on' : ''}" data-mode="${esc(k)}" aria-pressed="${z.mode === k}" aria-label="${esc(l)}">${ic(ICONS[k] || 'bolt', 20)}<span>${esc(l)}</span></button>`).join('')}</div></div>`;
+    charger = `<div class="sect"><p class="sub">Charger${z.session != null ? ` · ${z.session.toFixed(1)} kWh this session` : ''}</p><div class="evacts">${act}${smart}${which}</div><div class="evrow">${modes.map(([k, l]) => `<button type="button" class="evq${z.mode === k ? ' on' : ''}" data-mode="${esc(k)}" aria-pressed="${z.mode === k}" aria-label="${esc(l)}">${ic(ICONS[k] || 'bolt', 20)}<span>${esc(l)}</span></button>`).join('')}</div></div>`;
   }
   const plan = m.plan == null ? '' : `<div class="sect"><p class="sub">Octopus charging plan</p>${m.plan.length ? m.plan.slice(0, 6).map((p) => `<p class="${p.start <= m.now ? 'title' : 'sub'}">${p.start <= m.now ? 'Now: ' : ''}${hhmm(p.start)} to ${hhmm(p.end)}${p.kwh > 0 ? ` · ${p.kwh.toFixed(1)} kWh` : ''} · ${p.source === 'BOOST' ? 'Boost' : 'Smart'}</p>`).join('') : '<p class="sub">Nothing planned yet. Octopus plans once the car is plugged in.</p>'}</div>`;
-  const car = cars || charger || plan ? wcard(ctx, 'car', 'ev-solid', 'Car charging', z ? esc(z.mode) : '', cars + charger + plan) : '';
+  const car = cars || charger || plan ? wcard(ctx, 'car', 'ev-solid', 'Car charging', z ? esc(z.status) : '', cars + charger + plan) : '';
   const pl = m.plus, plus = pl ? `<article class="tcard glow wc banner" style="${toneVars(ctx, 'energy')}"><span class="wc-i">${ic('gift', 24)}</span><h2>Octoplus</h2><span class="wc-p"><b>${esc(pl.pts)}</b> points</span>${pl.hh != null ? `<span class="wc-p"><b>${esc(pl.hh)}</b> weekend happy hours</span>` : ''}${pl.hasSpins ? `<span class="wc-p"><b>${pl.spins}</b> Wheel of Fortune spins</span>` : ''}</article>` : '';
   return `<div class="stack"><div class="hls">${pills}</div><div class="egrid"><div class="ecol">${elec}${gas}</div><div class="ecol">${week}</div><div class="ecol">${car}</div></div>${plus}</div>`;
 }
@@ -124,6 +138,11 @@ export async function renderEnergyPage(el, ctx) {
   const call = async (domain, service, data, entity) => { try { await ctx.ha.call('call_service', { domain, service, service_data: data, target: { entity_id: entity } }); setTimeout(refresh, 800); } catch (e) { el.querySelector('.hls')?.insertAdjacentHTML('afterend', `<p class="err" role="alert">${esc(e.message)}</p>`); } };
   function bind() {
     el.querySelectorAll('[data-wk]').forEach((b) => b.addEventListener('click', () => { weekPick = Number(b.dataset.wk); draw(); }));
+    el.querySelector('[data-start]')?.addEventListener('click', async (e) => {   // Start charge, as the app does it: unlock when locked, then Fast
+      e.currentTarget.disabled = true; e.currentTarget.lastChild.textContent = 'Starting…';
+      if (st['binary_sensor.zappi_locked']?.state === 'on') await call('myenergi', 'myenergi_unlock', {}, ZAPPI.mode);
+      call('select', 'select_option', { option: 'Fast' }, ZAPPI.mode);
+    });
     el.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => call('select', 'select_option', { option: b.dataset.mode }, ZAPPI.mode)));
     el.querySelector('[data-smart]')?.addEventListener('click', (e) => call('input_boolean', e.currentTarget.getAttribute('aria-checked') === 'true' ? 'turn_off' : 'turn_on', {}, 'input_boolean.zappi_smart_charge'));
     el.querySelector('[data-role]')?.addEventListener('change', (e) => call('input_select', 'select_option', { option: e.target.value }, ZAPPI.role));
