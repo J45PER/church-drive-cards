@@ -144,9 +144,9 @@ export class CapsuleView {
     this.info.style.width = iw + 'px'; this.in.style.opacity = String(A.infoA.get(now) * A.txt.get(now));
     const ink = problem ? t.ink : th.normal.ink, cs = this.el.style;
     cs.color = rgb(ink); cs.background = rgb(this.bg.get(now)); cs.borderColor = rgb(th.line);
-    // The Manager icon: in its own colours, a lighter set in the dark theme; in the capsule's ink on a red or amber capsule, so it reads there too.
+    // The Manager icon: single colour, in the capsule's ink (the colour logo is the one beside the wordmark).
     this.shieldBase.setAttribute('fill', th.dark ? '#B3A9F2' : '#6A5BC2');
-    const mono = problem ? 1 : 0;
+    const mono = 1;   // the capsule's icon is the single-colour shield: the capsule's ink (black on light, white on dark)
     this.shieldMono.style.opacity = String(mono); this.shieldCol.style.opacity = String(1 - mono);
     this.mgr.style.opacity = String(this.shown === 'noconn' && exp ? 0.9 : 1);
     // A ring turns round it while it works and fills when done; a badge says done or what is wrong.

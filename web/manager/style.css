@@ -380,7 +380,8 @@ details.fold[open] > summary.head::before { content: '▾'; }
 
 /* The Manager shield beside the wordmark (the capsule's icon is the same shield). */
 .brand .mark { flex: none; }
-.brand .mark-base { fill: var(--ink); }   /* black on light, white on dark: follows the theme */
-.brand .mark-glow { display: none; }
+.brand .mark-base { fill: #6A5BC2; }   /* the colour logo beside the wordmark; the capsule's icon is the single-colour one */
+:root[data-theme="dark"] .brand .mark-base { fill: #B3A9F2; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .brand .mark-base { fill: #B3A9F2; } }
 .brand-text { font-weight: 400; }
 .brand-text b { font-weight: 700; }
