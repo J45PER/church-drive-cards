@@ -83,6 +83,8 @@ A card never invents its own sizes. Spacing between cards is the same gap everyw
 - **Header lines** (the dashboard's `header_lines`) are one row of pills, each in its own accent colour.
 - **Read-only preview first.** Controls shown from the house (charger modes, Smart charge) are read-only in the example site and say so.
 - **Android phones** are sent straight to the Clive Admin app (or its Google Play listing). Other phones and computers stay on the site.
+- **Navigation is a bottom dock**, as on the Home Assistant dashboard: a floating round-ended bar of icons, each in its page's colour, the current page filled with the palette's Dark on it, a small dot when something needs a look (Device health, Edits), and a round button to tuck it away. Pages with sections (Settings) get a second, smaller bar above it for their sections. The top bar keeps only the brand, the status capsule and the light/dark button.
+- **Acrylic surfaces**: the header, the dock, tone cards, neutral cards and pills are translucent and blur what is behind them (about 18 px blur, 70% opaque), with a 1 px inner highlight. The page has a soft colour wash behind it (the Clive indigo, purple and green) so the blur has something to show. Acrylic is a setting (blur and opacity), and off means solid.
 - **Panels** sit in columns of 3 on a wide screen, 2 on a tablet, 1 on a phone (as `AdaptiveLayout.kt`).
 
 ## 6. Sources
