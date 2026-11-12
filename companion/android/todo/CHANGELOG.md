@@ -7,6 +7,10 @@ Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newe
 
 - No change to this app (version moves with the rest of the house).
 
+## 0.147.1
+
+- No change you will notice (a shared heading was fixed).
+
 ## 0.147.0
 
 - The house jobs list is sorted by person (Everyone first), then by how urgent they are (safety alarms first, updates last) instead of in the order they were made.
