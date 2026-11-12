@@ -151,9 +151,19 @@ a.btn { display: inline-block; text-decoration: none; margin-top: 8px; }
 .editor .note { color: #fff; }
 .editor .btn.quiet { color: #fff; background: rgba(255,255,255,.18); }
 
-.ver { padding: 8px 0; border-top: 1px solid var(--line); }
-.ver:first-of-type { border-top: 0; }
-.ver code { font-family: var(--mono); }
+/* Versions: one line per item, two columns when there is room, folded under its headline. */
+.vfold > summary { list-style: none; cursor: pointer; margin: 0; }
+.vfold > summary::-webkit-details-marker { display: none; }
+.vfold > summary::after { content: '▾'; margin-left: 8px; color: var(--soft); }
+.vfold[open] > summary::after { content: '▴'; }
+.vfold[open] > summary { margin-bottom: 8px; }
+.ver-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); column-gap: 28px; }
+.ver { display: flex; align-items: center; gap: 10px; padding: 5px 0; border-top: 1px solid var(--line); font-size: .9rem; min-width: 0; }
+.ver-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.ver-name .sub { font-weight: 400; font-size: .8rem; }
+.ver code { font-family: var(--mono); font-size: .85rem; }
+.ver .tag { min-width: 56px; text-align: center; }
+.vfold .label { margin: 12px 0 2px; }
 .tag.same { background: color-mix(in srgb, #4FD08A 30%, transparent); }
 .tag.behind, .tag.ahead { background: color-mix(in srgb, #FFB74D 40%, transparent); }
 .tag.unknown { opacity: .7; }
@@ -370,6 +380,7 @@ details.fold[open] > summary.head::before { content: '▾'; }
 
 /* The Manager shield beside the wordmark (the capsule's icon is the same shield). */
 .brand .mark { flex: none; }
-.brand .mark-base { fill: #6A5BC2; }
-:root[data-theme="dark"] .brand .mark-base { fill: #B3A9F2; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .brand .mark-base { fill: #B3A9F2; } }
+.brand .mark-base { fill: var(--ink); }   /* black on light, white on dark: follows the theme */
+.brand .mark-glow { display: none; }
+.brand-text { font-weight: 400; }
+.brand-text b { font-weight: 700; }

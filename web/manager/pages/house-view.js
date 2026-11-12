@@ -20,7 +20,7 @@ export async function renderHouseView(el, ctx, { path, what, kinds }) {
 
   const lines = (auto.header_lines || []).map((l) => {
     const text = h('span', { class: 'line-text' }), ico = h('span', { class: 'panel-ico' });
-    const paint = (colour, name) => { ico.setAttribute('style', toneStyle(ctx, colour)); ico.innerHTML = panelIcon(name, 20); fillIcons(ico); };
+    const paint = (colour, name) => { ico.setAttribute('style', toneStyle(ctx, colour)); ico.innerHTML = panelIcon(name, 18); fillIcons(ico); };
     paint(l.color, l.icon);
     watch(ctx, l.text, (t) => { text.innerHTML = tags(t); });
     if (l.alert_when) watch(ctx, l.alert_when, (v) => (v.trim().toLowerCase() === 'true' ? paint(l.alert_color || 'warn', l.alert_icon || l.icon) : paint(l.color, l.icon)));

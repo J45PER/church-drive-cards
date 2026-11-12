@@ -95,12 +95,14 @@ function renderHome(el, ctx) {
     let rows; try { rows = await readVersions(ctx); } catch (e) { card.innerHTML = `<p class="err">Could not read the versions: ${esc(e.message)}</p>`; return; }
     const sum = versionSummary(rows);
     const word = { same: 'Same', behind: 'Behind', ahead: 'Ahead', unknown: 'Unknown' };
-    card.innerHTML = `<p class="${sum.tone === 'ok' ? 'sub' : 'warn-line'}">${esc(sum.text)}</p>${rows.map((r) => `<div class="row ver"><div style="flex:1"><p class="row-title">${esc(r.name)}</p><p class="sub">${esc(r.note)}</p></div><code>${esc(r.version || '–')}</code><span class="tag ${r.status}">${word[r.status]}</span></div>`).join('')}
-      <p class="sub">The app rows show the newest published test build. Below is what each person's phone last told the house it has installed.</p><div id="who-versions"></div>`;
+    const line = (name, note, version, status) => `<div class="ver"><span class="ver-name">${esc(name)}${note ? ` <span class="sub">${esc(note)}</span>` : ''}</span><code>${esc(version || '–')}</code><span class="tag ${status}">${esc(word[status])}</span></div>`;
+    card.innerHTML = `<details class="vfold"${sum.tone === 'ok' ? '' : ' open'}><summary class="${sum.tone === 'ok' ? 'sub' : 'warn-line'}">${esc(sum.text)}</summary>
+      <div class="ver-grid">${rows.map((r) => line(r.name, r.note.replace(/^latest test build /, 'build '), r.version, r.status)).join('')}</div>
+      <p class="label">On each phone</p><div class="ver-grid" id="who-versions"></div></details>`;
     try {
       const people = await readPeopleVersions(ctx, rows[0].version || rows[1].version);
       const box = card.querySelector('#who-versions');
-      box.innerHTML = people.length ? people.map((r) => `<div class="row ver"><div style="flex:1"><p class="row-title">${esc(r.person)} <span class="sub">· ${esc(r.phone)}${r.model && r.model !== r.phone ? `, ${esc(r.model)}` : ''}</span></p><p class="sub">${r.seen ? `Last heard ${esc(ago(Date.parse(r.seen)))}` : 'Not heard from yet'}</p></div><code>${esc(r.version || '–')}</code> <span class="tag ${r.status}">${esc(word[r.status])}</span></div>`).join('') : '<p class="sub">No phone with a Church Drive app has registered yet.</p>';
+      box.innerHTML = people.length ? people.map((r) => line(r.person, `${r.phone}${r.model && r.model !== r.phone ? `, ${r.model}` : ''} · ${r.seen ? ago(Date.parse(r.seen)) : 'not heard'}`, r.version, r.status)).join('') : '<p class="sub">No phone with a Church Drive app has registered yet.</p>';
     } catch { card.querySelector('#who-versions').innerHTML = '<p class="sub">Could not read the people from the house.</p>'; }
   };
   el.querySelector('#versions-refresh').addEventListener('click', drawVersions); drawVersions();
@@ -234,7 +236,7 @@ function showShell(user) {
         <radialGradient id="bk-p" gradientUnits="userSpaceOnUse" cx="150" cy="70" r="88"><stop offset="0" stop-color="#AB47BC"/><stop offset="1" stop-color="#AB47BC" stop-opacity="0"/></radialGradient>
         <radialGradient id="bk-g" gradientUnits="userSpaceOnUse" cx="70" cy="170" r="110"><stop offset="0" stop-color="#4FD08A"/><stop offset="1" stop-color="#4FD08A" stop-opacity="0"/></radialGradient>
         <radialGradient id="bk-i" gradientUnits="userSpaceOnUse" cx="40" cy="40" r="130"><stop offset="0" stop-color="#5C6BC0"/><stop offset="1" stop-color="#5C6BC0" stop-opacity="0"/></radialGradient></defs>
-        <path class="mark-base" fill-rule="evenodd" d="${LOGO_PATH}"/><path fill="url(#bk-p)" fill-rule="evenodd" d="${LOGO_PATH}"/><path fill="url(#bk-g)" fill-rule="evenodd" d="${LOGO_PATH}"/><path fill="url(#bk-i)" fill-rule="evenodd" d="${LOGO_PATH}"/></svg><span class="brand-text"><b>Clive</b> Manager</span></a>
+        <path class="mark-base" fill-rule="evenodd" d="${LOGO_PATH}"/><path class="mark-glow" fill="url(#bk-p)" fill-rule="evenodd" d="${LOGO_PATH}"/><path class="mark-glow" fill="url(#bk-g)" fill-rule="evenodd" d="${LOGO_PATH}"/><path class="mark-glow" fill="url(#bk-i)" fill-rule="evenodd" d="${LOGO_PATH}"/></svg><span class="brand-text"><b>Clive</b> Manager</span></a>
       <nav class="topnav" aria-label="Pages">${top}</nav>
       ${capsuleHtml(user.name)}
       <button class="theme-btn" type="button" id="theme"></button>
