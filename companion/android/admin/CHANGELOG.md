@@ -1,5 +1,13 @@
 # Clive Admin: changelog
 
+## 0.149.1
+
+- No app change.
+
+## 0.149.0
+
+- The Activity list is redrawn like the Manager website: a row per change coloured by what was done, what happened on top, the time and context below, and who did it in a pill on the right. A new **Devices not answering** filter lists devices that stopped responding.
+
 ## 0.148.0
 
 - No change to this app (version moves with the rest of the house).

@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **v0.149.1 + apps 0.149.1** (2026-11-12): the Manager website: Device health tiles no longer break their names into one letter per line, and the Activity pill puts the avatar at its left end, as in the Admin app. No Home Assistant or app change.
 - **v0.149.0 + apps 0.149.0** (2026-11-12): the Manager website is redrawn on the apps' own style: a floating bottom dock for navigation, acrylic surfaces and a new Energy, Devices, Device health, Activity and Colours page (Colours edits in a draggable window with old and new colours and a reset). The Activity log shows what each change was with a headline and the light's own look, and the house now records a device that stops answering for ten minutes (and when it is back). Clive Admin's Activity list follows the same rows, with a Devices not answering filter.
 - **v0.148.0 + apps 0.148.0** (2026-11-12): the Activity log's Dates filter has a **Last 24 hours** option (a rolling window ending now) in the phone app and on the Manager website. Home Assistant needed no change.
 - **v0.147.1 + apps 0.147.1** (2026-11-12): Clive Admin: a section heading on the Home page (Device health) no longer breaks into one letter per line when its summary text is long. The same heading is used in the other apps. No Home Assistant change.

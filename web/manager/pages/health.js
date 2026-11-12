@@ -51,7 +51,7 @@ export function healthHtml(ctx, items) {
     const tone = TONE_OF[d.level], p = palette(ctx, tone), ac = readableOn(p[0], p[3], p[1]), mv = meterOf(d);
     const prob = d.offline ? 'Not responding' : d.staleReason || '';
     const meter = mv != null ? `<div class="hdm"><div class="hdm-l"><span>${d.filter != null && (d.battery == null || d.filter <= d.battery) ? 'Filter' : 'Battery'}</span><b>${mv}%</b></div><div class="hdm-b" style="background:color-mix(in srgb,${ac} 22%,transparent)"><i style="width:${Math.max(2, Math.min(100, mv))}%;background:${ac}"></i></div></div>` : '';
-    return `<article class="tcard glow hd" style="${toneVars(ctx, tone)}"><div class="hd-h"><span class="wc-i">${ic(healthIcon(d).replace(/^cd:/, ''), 26)}</span><div class="hd-n"><b>${esc(d.name)}</b>${prob ? `<small>${esc(prob)}</small>` : ''}</div>${d.level === OK ? '' : `<span class="wc-p">${LEVEL_WORD[d.level]}</span>`}</div>${meter}</article>`;
+    return `<article class="tcard glow hcd" style="${toneVars(ctx, tone)}"><div class="hd-h"><span class="wc-i">${ic(healthIcon(d).replace(/^cd:/, ''), 26)}</span><div class="hd-n"><b>${esc(d.name)}</b>${prob ? `<small>${esc(prob)}</small>` : ''}</div>${d.level === OK ? '' : `<span class="wc-p">${LEVEL_WORD[d.level]}</span>`}</div>${meter}</article>`;
   };
   const rooms = byRoom(shown);
   const body = rooms.length ? rooms.map(([room, list]) => `<section class="stack" style="gap:8px"><div class="ph"><h2 class="sh">${esc(room)}</h2><span class="sub">${list.length}</span></div><div class="hdg">${list.map(tile).join('')}</div></section>`).join('')
