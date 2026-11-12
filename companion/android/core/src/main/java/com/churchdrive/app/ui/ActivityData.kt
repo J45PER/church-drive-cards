@@ -149,3 +149,43 @@ fun activityProblem(errorCode: String?): String = when (errorCode) {
     "unauthorized" -> "Only administrators can see the activity log."
     else -> "The activity log couldn't be read from the house. Check the connection, or that Church Drive is running in Home Assistant."
 }
+
+/** The palette an action's row takes: what it was done to, read from its icon (a light, the heating, a lock...); coming and going is green and an override amber. */
+fun activityTone(line: ActivityLine): Tone {
+    if (line.kind == "overruled") return Tone.Amber
+    if (line.kind == "presence") return Tone.Green
+    val i = (line.icon ?: "").lowercase()
+    fun has(vararg parts: String) = parts.any { i.contains(it) }
+    return when {
+        has("alarm", "shield", "smoke") -> Tone.Alarm
+        has("lock", "door", "garage") -> Tone.Doors
+        has("blind", "curtain", "window", "roller") -> Tone.Blinds
+        has("bulb", "lamp", "light") -> Tone.Lights
+        has("thermostat", "radiator", "fire", "heat") -> Tone.Heating
+        has("snowflake", "air-conditioner", "cool") -> Tone.Cooling
+        has("fan", "purifier", "air-filter") -> Tone.Air
+        has("vac", "robot") -> Tone.Gregg
+        has("ev-", "car", "charger") -> Tone.Car
+        has("television", "speaker", "cast", "music", "volume", "radio", "play", "pause") -> Tone.Media
+        has("plug", "power") -> Tone.Plugs
+        has("cart", "shopping") -> Tone.Shopping
+        has("check", "clipboard", "todo", "format-list") -> Tone.Tasks
+        has("calendar") -> Tone.Calendar
+        else -> Tone.Grey
+    }
+}
+
+/** A person's own palette (their pill in the log), or null for anyone without one. */
+fun activityPersonTone(name: String): Tone? = when (name.trim().lowercase()) {
+    "jamie" -> Tone.PersonJamie
+    "hayley" -> Tone.PersonHayley
+    "ian" -> Tone.PersonIan
+    "diane" -> Tone.PersonDiane
+    else -> null
+}
+
+/** The second line of a row: the time, then who asked, which rule ran, or that it was done by hand (the house cannot tell a dial from the app). */
+fun activityDetail(line: ActivityLine, assistant: String): String {
+    val note = activityNote(line, assistant) ?: if (line.kind == "presence") "Home Assistant noticed their phone" else "Done by hand or in the app"
+    return eventClock(line.ts) + " · " + note.replaceFirstChar { it.uppercase() }
+}

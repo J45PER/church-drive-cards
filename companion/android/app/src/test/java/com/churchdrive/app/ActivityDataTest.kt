@@ -6,7 +6,10 @@ import com.churchdrive.app.ui.ActivityFilters
 import com.churchdrive.app.ui.ActivityLine
 import com.churchdrive.app.ui.ActivityTime
 import com.churchdrive.app.ui.activityActionLabel
+import com.churchdrive.app.ui.Tone
 import com.churchdrive.app.ui.activityDays
+import com.churchdrive.app.ui.activityPersonTone
+import com.churchdrive.app.ui.activityTone
 import com.churchdrive.app.ui.activityNote
 import com.churchdrive.app.ui.activityProblem
 import com.churchdrive.app.ui.activityQuery
@@ -209,5 +212,19 @@ class ActivityDataTest {
         assertTrue(activityProblem("unknown_command").contains("0.71.0"))
         assertTrue(activityProblem("unauthorized").contains("administrators"))
         assertTrue(activityProblem(null).contains("couldn't be read"))
+    }
+
+    @Test
+    fun `a row takes the palette of what was done and a pill the colour of who did it`() {
+        fun line(kind: String, icon: String?) = ActivityLine(0L, kind, "Jamie", "did something", icon, null, null)
+        assertEquals(Tone.Lights, activityTone(line("user", "mdi:lightbulb")))
+        assertEquals(Tone.Heating, activityTone(line("clive", "mdi:thermostat")))
+        assertEquals(Tone.Doors, activityTone(line("user", "cd:lock")))
+        assertEquals(Tone.Alarm, activityTone(line("user", "mdi:alarm-light")))
+        assertEquals(Tone.Green, activityTone(line("presence", "mdi:home")))
+        assertEquals(Tone.Amber, activityTone(line("overruled", "mdi:thermostat")))
+        assertEquals(Tone.Grey, activityTone(line("user", null)))
+        assertEquals(Tone.PersonHayley, activityPersonTone(" hayley "))
+        assertEquals(null, activityPersonTone("Visitor"))
     }
 }

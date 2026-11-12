@@ -54,6 +54,7 @@ green `#4CC38A` from 75% up. The figure beside a gauge takes the same colour. Th
 | Car row | **Website:** name, an optional *Plugged in* tag, the percentage and range on the right, a thin bar in the level colour. The apps add an icon circle and a large percentage (`CarsCard`). | `CarsCard` |
 | Charger | **Website:** session kWh, the action button, a Smart charge switch row, a *Car plugged in* picker (only while plugged in), then the four modes with an icon beside the name. The apps lay these out as buttons on a grid (`ChargerCard`). | `ChargerCard` |
 | Device health card | A card per device in its level's tone (Green fine, Amber check soon, Red needs you), the icon, name, then area and any problem; a bar per battery or filter in the level's colour on a 22% track; needing attention first, then fine. The level word shows only when it is not fine. | `DeviceHealthScreen.kt` |
+| Activity row | A 64 dp row (rounded left 20, right 32): the ground is what was done (its palette, Dark into Colour; lights show their own look), a plain icon, what happened on top and the time with its context below, and on the right a pill cut into the row (a sixth of the width, at least 150 dp) with who did it: their own colour and initial, or Clive's three colours and mark. The glow turns behind both. | `ActivityPage.kt` (app), the Activity page (website) |
 | System rows | Icon, name, one grey line, an optional status pill (amber or red). A figure already in a header pill (internet, update count) is not repeated in a row. | `SystemCard` |
 
 ## 4. Type and size (website)

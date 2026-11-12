@@ -11,6 +11,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -36,6 +40,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -43,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -184,27 +193,46 @@ private fun pickDateTime(context: Context, initial: Long, onPicked: (Long) -> Un
     }, at.year, at.monthValue - 1, at.dayOfMonth).show()
 }
 
+private val ActivityRowShape = RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp, topEnd = 32.dp, bottomEnd = 32.dp)
+
+/**
+ * One line of the log, as on the Manager website: a 64 dp row whose ground follows what was done (a light is yellow, the heating orange, a lock purple...),
+ * the action's own icon, what happened on top and the time with its context below, and on the right a pill cut into the row with who did it: their
+ * own colour and initial, or the assistant's three colours and mark. The glow turns slowly behind both.
+ */
 @Composable
 private fun ActivityRow(line: ActivityLine, assistant: String) {
-    val dot = when (line.kind) {
-        "clive" -> MaterialTheme.colorScheme.tertiary
-        "clive_auto" -> MaterialTheme.colorScheme.secondary
-        "presence" -> toneColors(Tone.Green).accent
-        "overruled" -> toneColors(Tone.Amber).accent
-        else -> MaterialTheme.colorScheme.primary
-    }
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
-        Text(eventClock(line.ts), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(40.dp).padding(top = 3.dp))
-        Box(Modifier.size(28.dp).background(dot, CircleShape), contentAlignment = Alignment.Center) {
-            HaIcon(line.icon, CdVectors.History, Color.White, 16.dp)
-        }
-        Column(Modifier.weight(1f)) {
-            Text(buildAnnotatedString {
-                withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(activityWho(line, assistant)) }
-                append(" ")
-                append(line.text)
-            }, style = MaterialTheme.typography.bodyMedium)
-            activityNote(line, assistant)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+    val colours = toneColorsFor(activityTone(line), true)
+    val ground = Brush.horizontalGradient(listOf(lerp(colours.container, colours.accent, 0.3f), colours.accent))
+    val dark = CliveColours.NeutralDark.background
+    val ink = if ((lerp(colours.container, colours.accent, 0.3f).luminance() + colours.accent.luminance()) / 2f > 0.45f) dark else Color.White
+    val clive = activityIsAssistant(line.kind)
+    val person = if (clive) null else activityPersonTone(line.who)?.let { toneColorsFor(it, true) }
+    val pillColour = person?.accent ?: if (clive) AssistClassicPalette.first else colours.container
+    val pillBrush: Brush = if (clive) AssistClassicPalette.across else SolidColor(pillColour)
+    val pillInk = if (clive || pillColour.luminance() < 0.42f) Color.White else dark
+    val headline = line.text.replaceFirstChar { it.uppercase() }
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val pillWidth: Dp = maxOf(150.dp, maxWidth / 6)
+        Row(Modifier.fillMaxWidth().height(Ui.TallTileHeight).clip(ActivityRowShape).background(ground).glowBehind(colours.accent), verticalAlignment = Alignment.CenterVertically) {
+            Spacer(Modifier.width(20.dp))
+            HaIcon(line.icon, CdVectors.History, ink, 24.dp)
+            Column(Modifier.weight(1f).padding(horizontal = 14.dp), verticalArrangement = Arrangement.Center) {
+                Text(headline, style = MaterialTheme.typography.titleMedium, color = ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(activityDetail(line, assistant), style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.75f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Row(
+                Modifier.width(pillWidth).fillMaxHeight().clip(RoundedCornerShape(32.dp)).background(pillBrush).glowBehind(pillColour),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Spacer(Modifier.width(10.dp))
+                Box(Modifier.size(42.dp).background(pillInk.copy(alpha = 0.22f), CircleShape), contentAlignment = Alignment.Center) {
+                    if (clive) AssistantLogo(Color.White, 32.dp)
+                    else Text(activityWho(line, assistant).take(1).uppercase(), color = pillInk, style = MaterialTheme.typography.titleMedium)
+                }
+                Spacer(Modifier.width(10.dp))
+                Text(activityWho(line, assistant), color = pillInk, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(end = 12.dp))
+            }
         }
     }
 }
