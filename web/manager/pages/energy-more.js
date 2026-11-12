@@ -71,7 +71,15 @@ export function findCars(states) {
     const range = Object.keys(states).find((r) => r.startsWith(`sensor.${base}_`) && /(electric_|battery_)?range$/.test(r) && !/fuel|combustion|total/.test(r));
     if (!range) continue;
     const plug = Object.keys(states).find((r) => r.startsWith(`binary_sensor.${base}_`) && /plug/.test(r) && !/lock/.test(r));
-    out.push({ name: (e.attributes?.friendly_name || id).replace(/ battery( level)?$/i, ''), battery: Number(e.state), range: Number(states[range].state), unit: states[range].attributes?.unit_of_measurement || 'mi', plugged: plug ? states[plug].state === 'on' : null });
+    const chg = Object.keys(states).find((r) => r.startsWith(`binary_sensor.${base}_`) && /battery_charging$/.test(r)), end = states[`sensor.${base}_battery_charging_end`];
+    out.push({ name: (e.attributes?.friendly_name || id).replace(/ battery( level)?$/i, ''), battery: Number(e.state), range: Number(states[range].state), unit: states[range].attributes?.unit_of_measurement || 'mi', plugged: plug ? states[plug].state === 'on' : null,
+      charging: chg ? states[chg].state === 'on' : null, chargeEnd: chg && states[chg].state === 'on' && end && Number.isFinite(Date.parse(end.state)) ? Date.parse(end.state) : null });
+  }
+  // A car Octopus Intelligent knows about has a battery level but no range of its own: it comes first (it is the one the charger is for).
+  for (const [id, e] of Object.entries(states)) {
+    if (!/^sensor\.octopus_energy_.*_intelligent_state_of_charge$/.test(id) || !Number.isFinite(parseFloat(e.state))) continue;
+    const raw = String(e.attributes?.friendly_name || '').split(' (')[0].replace(/\s*state of charge$/i, '').trim();
+    out.unshift({ name: /(volkswagen|vw)\W*id\W?5/i.test(raw) ? 'VW ID5' : raw || 'Car', battery: Number(e.state), range: null, unit: 'mi', plugged: null, charging: null, chargeEnd: null });
   }
   return out;
 }

@@ -247,6 +247,18 @@ test('the charger, the plan and the cars', () => {
   assert.deepEqual(cars.map((c) => [c.name, c.battery, c.range]), [['ID5', 80, 210]]);
 });
 
+test('cars: the Octopus Intelligent car comes first with no range, and a car reports its own plug and charge', () => {
+  const b = { device_class: 'battery', unit_of_measurement: '%' }, st = (id, state, attributes = {}) => [id, { entity_id: id, state, attributes }];
+  const states = Object.fromEntries([
+    st('sensor.octopus_energy_0000_intelligent_state_of_charge', '64.0', { friendly_name: 'Volkswagen ID.5 (Electric Vehicle) State of Charge (0000)' }),
+    st('sensor.amz_astra_battery', '32', { ...b, friendly_name: 'Vauxhall Astra Battery' }), st('sensor.amz_astra_range', '6.2', { unit_of_measurement: 'mi' }),
+    st('binary_sensor.amz_astra_battery_plugged', 'on'), st('binary_sensor.amz_astra_battery_charging', 'on'), st('sensor.amz_astra_battery_charging_end', '2026-11-13T03:41:29+00:00')]);
+  const cars = findCars(states);
+  assert.deepEqual(cars.map((c) => [c.name, c.battery, c.range]), [['VW ID5', 64, null], ['Vauxhall Astra', 32, 6.2]]);
+  assert.equal(cars[1].plugged, true); assert.equal(cars[1].charging, true); assert.equal(cars[1].chargeEnd, Date.parse('2026-11-13T03:41:29+00:00'));
+  assert.equal(cars[0].charging, null);
+});
+
 import { peopleVersions } from '../web/manager/pages/versions.js';
 import { healthIcon, byRoom, meterOf } from '../web/manager/pages/health.js';
 import { groupSections } from '../web/manager/pages/manager.js';
@@ -271,4 +283,14 @@ test('settings are grouped, Device Health left out, new sections land under More
   const s = ['People', 'Notifications', 'Device Health', 'Icons', 'Brand new'].map((t) => ({ title: t, cards: [] }));
   const g = groupSections(s);
   assert.deepEqual(g.map((x) => [x.name, x.sections.map((y) => y.title)]), [['People', ['People']], ['Alerts and cameras', ['Notifications']], ['Looks', ['Icons']], ['More', ['Brand new']]]);
+});
+
+import { withYesterday } from '../web/manager/pages/energy.js';
+test('the week: a missing yesterday is filled from the house\'s own previous-day totals', () => {
+  const now = Date.parse('2026-11-12T12:00:00Z'), ids = { elecCost: 'e', elecKwh: 'k', gasCost: 'g' };
+  const day = new Date(now - 86400000); day.setHours(0, 0, 0, 0);
+  const r = withYesterday({ e: [], g: [{ start: day.getTime(), change: 2.91 }] }, ids, { yesterday: 3.79, yesterdayKwh: 22, gasYesterday: 9 }, now);
+  assert.deepEqual(r.e.map((x) => x.change), [3.79]); assert.deepEqual(r.k.map((x) => x.change), [22]);
+  assert.deepEqual(r.g.map((x) => x.change), [2.91]);   // already there: kept
+  const w = buildWeek(r, ids, now); assert.equal(w.latest.elecCost, 3.79); assert.equal(w.latest.gasCost, 2.91);
 });
