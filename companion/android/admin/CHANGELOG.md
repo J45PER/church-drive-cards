@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.148.0
+
+- No change to this app (version moves with the rest of the house).
+
 ## 0.147.0
 
 - Manager is now a page on the bottom bar, in place of Health. It shows every section in a panel that folds away (To-do settings, Who's home, Automatic to-dos, which shows the jobs the house made).
