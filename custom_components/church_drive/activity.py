@@ -27,6 +27,7 @@ from typing import Any, Callable
 from homeassistant.const import EVENT_CALL_SERVICE, EVENT_STATE_CHANGED
 from homeassistant.core import Context, Event, HomeAssistant, callback
 from homeassistant.helpers import area_registry as ar
+from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
@@ -39,7 +40,10 @@ from .activity_logic import (
     add,
     clean,
     clive_is_quiet,
+    availability_headline,
     describe,
+    headline,
+    light_look,
     entities_in,
     expected_from_call,
     first_name,
@@ -47,6 +51,8 @@ from .activity_logic import (
     is_clive,
     make_entry,
     worth_a_line,
+    AVAILABLE_AFTER_S,
+    WATCH_DOMAINS,
     overrule_text,
     presence_text,
     prune,
@@ -60,6 +66,8 @@ from .const import EVENT_ACTIVITY
 STORE_KEY = "church_drive.activity"
 RUN_S = 13 * 3600  # how long a script's context is followed (his timed heating waits up to 12 hours before it puts things back)
 SAVE_S = 30
+# What can be noted as not responding: the devices the log already watches, plus the ones that are simply there or not.
+AVAILABILITY_DOMAINS = WATCH_DOMAINS + ("cover", "lock", "media_player", "camera", "vacuum", "alarm_control_panel")
 
 
 class Activity:
@@ -78,6 +86,8 @@ class Activity:
         self._clive_set: dict[str, tuple[float, dict[str, Any]]] = {}  # entity -> (when he last set it, what he set: state, target)
         self._recent_overrules: list[tuple[float, str, set[str]]] = []
         self._started = time.time()
+        self._offline: dict[str, Any] = {}  # entity -> the timer that logs it as not responding if it is still unavailable
+        self._reported: set[str] = set()  # entities logged as not responding, so that coming back is logged once
 
     # Home Assistant only accepts event filters marked as callbacks.
     @staticmethod
@@ -95,6 +105,11 @@ class Activity:
     def _is_device(data: Any) -> bool:
         return str(data.get("entity_id", "")).partition(".")[0] in WATCH_DOMAINS
 
+    @staticmethod
+    @callback
+    def _is_availability_device(data: Any) -> bool:
+        return str(data.get("entity_id", "")).partition(".")[0] in AVAILABILITY_DOMAINS
+
     async def async_start(self) -> None:
         self.entries = prune(clean(await self._store.async_load()), time.time())
         self._unsubs = [
@@ -103,6 +118,7 @@ class Activity:
             self.hass.bus.async_listen("script_started", self._on_script, event_filter=self._is_script_run),
             self.hass.bus.async_listen(EVENT_STATE_CHANGED, self._on_person, event_filter=self._is_person),
             self.hass.bus.async_listen(EVENT_STATE_CHANGED, self._on_device, event_filter=self._is_device),
+            self.hass.bus.async_listen(EVENT_STATE_CHANGED, self._on_availability, event_filter=self._is_availability_device),
         ]
 
     @callback
@@ -110,6 +126,9 @@ class Activity:
         for unsub in self._unsubs:
             unsub()
         self._unsubs = []
+        for cancel in self._offline.values():
+            cancel()
+        self._offline = {}
         self._store.async_delay_save(lambda: self.entries, 0)
 
     # ---- listening ----------------------------------------------------
@@ -197,7 +216,8 @@ class Activity:
                 if area is not None:
                     areas.append(area.name)
         text = describe(domain, service, data, names, areas)
-        self._add(make_entry(time.time(), kind, who, text, icon_for(domain), ids[0] if len(ids) == 1 else "", by, user_id, rule))
+        self._add(make_entry(time.time(), kind, who, text, icon_for(domain), ids[0] if len(ids) == 1 else "", by, user_id, rule,
+                             headline=headline(domain, service, data, names, areas), look=light_look(service, data) if domain == "light" else None))
 
     @callback
     def _on_person(self, event: Event) -> None:
@@ -245,6 +265,37 @@ class Activity:
         self._recent_overrules.append((now, new.entity_id, members))
         del self._clive_set[new.entity_id]  # one line per override
         self._add(make_entry(now, "overruled", new.name, text, icon_for(new.domain), new.entity_id, clive_ts=touched[0]))
+
+    @callback
+    def _on_availability(self, event: Event) -> None:
+        """A device went unavailable and stayed so (a blink is not worth a line), or answered again after it was listed as not responding."""
+        old, new = event.data.get("old_state"), event.data.get("new_state")
+        if old is None or new is None:
+            return
+        entity_id, now = new.entity_id, time.time()
+        if new.state == "unavailable" and old.state != "unavailable":
+            if entity_id in self._offline or now - self._started < WATCH_SETTLE_S:
+                return
+
+            @callback
+            def still_gone(_now: Any, entity_id: str = entity_id) -> None:
+                self._offline.pop(entity_id, None)
+                state = self.hass.states.get(entity_id)
+                if state is None or state.state != "unavailable":
+                    return
+                self._reported.add(entity_id)
+                self._add(make_entry(time.time(), "device", "", f"{state.name} stopped responding", icon_for(state.domain), entity_id,
+                                     headline=availability_headline(state.name, False), state="unavailable"))
+
+            self._offline[entity_id] = async_call_later(self.hass, AVAILABLE_AFTER_S, still_gone)
+        elif old.state == "unavailable" and new.state != "unavailable":
+            cancel = self._offline.pop(entity_id, None)
+            if cancel:
+                cancel()
+            if entity_id in self._reported:
+                self._reported.discard(entity_id)
+                self._add(make_entry(now, "device", "", f"{new.name} is back online", icon_for(new.domain), entity_id,
+                                     headline=availability_headline(new.name, True), state="online"))
 
     def _add(self, entry: dict[str, Any]) -> None:
         add(self.entries, entry)

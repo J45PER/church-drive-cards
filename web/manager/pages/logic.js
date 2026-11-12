@@ -130,10 +130,10 @@ export function energySnapshot(states, now = Date.now()) {
 export const DAYS = [['today', 'Today'], ['yesterday', 'Yesterday'], ['week', 'Last 7 days'], ['month', 'Last 30 days'], ['all', 'All dates']];
 export const TIMES = [['all', 'All day', null, null], ['morning', 'Morning (06:00 to 12:00)', '06:00', '12:00'], ['afternoon', 'Afternoon (12:00 to 18:00)', '12:00', '18:00'],
   ['evening', 'Evening (18:00 to 22:00)', '18:00', '22:00'], ['night', 'Night (22:00 to 06:00)', '22:00', '06:00']];
-export const ACTIONS = [['all', []], ['people', ['user']], ['assistant', ['clive', 'clive_auto']], ['asked', ['clive']], ['automatic', ['clive_auto']], ['presence', ['presence']], ['overruled', ['overruled']]];
+export const ACTIONS = [['all', []], ['people', ['user']], ['assistant', ['clive', 'clive_auto']], ['asked', ['clive']], ['automatic', ['clive_auto']], ['presence', ['presence']], ['overruled', ['overruled']], ['devices', ['device']]];
 
 export function actionLabel(id, assistant) {
-  return { all: 'All actions', people: 'People', assistant: `${assistant} (all)`, asked: `${assistant}: asked`, automatic: `${assistant}: automatic`, presence: 'Coming and going', overruled: `Overruled ${assistant}` }[id];
+  return { all: 'All actions', people: 'People', assistant: `${assistant} (all)`, asked: `${assistant}: asked`, automatic: `${assistant}: automatic`, presence: 'Coming and going', overruled: `Overruled ${assistant}`, devices: 'Devices not answering' }[id];
 }
 
 const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -151,7 +151,7 @@ export function activityQuery({ day = 'today', time = 'all', action = 'all', who
 export function parseActivity(result) {
   if (!result || !Array.isArray(result.entries)) return null;
   return {
-    lines: result.entries.filter((e) => e && e.text).map((e) => ({ ts: (Number(e.ts) || 0) * 1000, kind: e.kind || 'user', who: e.who || '', text: e.text, by: e.by || null, rule: e.rule || null, clive: e.clive_ts ? e.clive_ts * 1000 : null })),
+    lines: result.entries.filter((e) => e && e.text).map((e) => ({ ts: (Number(e.ts) || 0) * 1000, kind: e.kind || 'user', who: e.who || '', text: e.text, by: e.by || null, rule: e.rule || null, clive: e.clive_ts ? e.clive_ts * 1000 : null, headline: e.headline || null, look: e.look || null, state: e.state || null })),
     total: result.total ?? result.entries.length, people: (result.people || []).filter(Boolean), assistant: result.assistant || 'Clive',
   };
 }

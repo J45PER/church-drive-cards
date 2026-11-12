@@ -8,6 +8,9 @@ import com.churchdrive.app.ui.ActivityTime
 import com.churchdrive.app.ui.activityActionLabel
 import com.churchdrive.app.ui.Tone
 import com.churchdrive.app.ui.activityDays
+import com.churchdrive.app.ui.activityHeadline
+import com.churchdrive.app.ui.activityIcon
+import com.churchdrive.app.ui.activityLookColours
 import com.churchdrive.app.ui.activityPersonTone
 import com.churchdrive.app.ui.activityTone
 import com.churchdrive.app.ui.activityNote
@@ -226,5 +229,26 @@ class ActivityDataTest {
         assertEquals(Tone.Grey, activityTone(line("user", null)))
         assertEquals(Tone.PersonHayley, activityPersonTone(" hayley "))
         assertEquals(null, activityPersonTone("Visitor"))
+    }
+
+    @Test
+    fun `the new fields come through and a headline and a light's look are used`() {
+        val answer = org.json.JSONObject(
+            """{"entries":[
+              {"ts":100,"kind":"user","who":"Jamie","text":"turned on Kitchen at 60%","icon":"mdi:lightbulb","headline":"Kitchen set to 60%","look":{"look":"bright","pct":60}},
+              {"ts":90,"kind":"user","who":"Diane","text":"turned on Living room (relax)","icon":"mdi:lightbulb","look":{"look":"scene","name":"Relax"}},
+              {"ts":80,"kind":"device","who":"","text":"Garden camera stopped responding","icon":"mdi:camera","state":"unavailable","headline":"Garden camera stopped responding"}
+            ],"total":3}""",
+        )
+        val lines = parseActivity(answer)!!.lines
+        assertEquals("Kitchen set to 60%", activityHeadline(lines[0]))
+        assertEquals("bright", lines[0].look)
+        assertTrue(activityLookColours(lines[0]) != null)
+        assertEquals("cd:room-living", activityIcon(lines[1]))
+        assertEquals("Turned on Living room (relax)", activityHeadline(lines[1]))
+        assertEquals("unavailable", lines[2].state)
+        assertEquals("House", activityWho(lines[2], "Clive"))
+        assertEquals(Tone.Unavailable, activityTone(lines[2]))
+        assertNull(activityLookColours(ActivityLine(0L, "user", "Jamie", "x", null, null, null)))
     }
 }

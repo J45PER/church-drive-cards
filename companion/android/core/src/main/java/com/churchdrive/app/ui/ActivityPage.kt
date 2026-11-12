@@ -203,20 +203,25 @@ private val ActivityRowShape = RoundedCornerShape(topStart = 20.dp, bottomStart 
 @Composable
 private fun ActivityRow(line: ActivityLine, assistant: String) {
     val colours = toneColorsFor(activityTone(line), true)
-    val ground = Brush.horizontalGradient(listOf(lerp(colours.container, colours.accent, 0.3f), colours.accent))
+    val look = activityLookColours(line)
+    val start = look?.first ?: lerp(colours.container, colours.accent, 0.3f)
+    val end = look?.second ?: colours.accent
+    val ground = Brush.horizontalGradient(listOf(start, end))
     val dark = CliveColours.NeutralDark.background
-    val ink = if ((lerp(colours.container, colours.accent, 0.3f).luminance() + colours.accent.luminance()) / 2f > 0.45f) dark else Color.White
+    val ink = if ((start.luminance() + end.luminance()) / 2f > 0.45f) dark else Color.White
+    // A device that stopped answering has a red icon; one that came back, a green one.
+    val iconColour = when (line.state) { "unavailable" -> toneColors(Tone.Red).accent; "online" -> toneColors(Tone.Green).accent; else -> ink }
     val clive = activityIsAssistant(line.kind)
     val person = if (clive) null else activityPersonTone(line.who)?.let { toneColorsFor(it, true) }
     val pillColour = person?.accent ?: if (clive) AssistClassicPalette.first else colours.container
     val pillBrush: Brush = if (clive) AssistClassicPalette.across else SolidColor(pillColour)
     val pillInk = if (clive || pillColour.luminance() < 0.42f) Color.White else dark
-    val headline = line.text.replaceFirstChar { it.uppercase() }
+    val headline = activityHeadline(line)
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val pillWidth: Dp = maxOf(150.dp, maxWidth / 6)
-        Row(Modifier.fillMaxWidth().height(Ui.TallTileHeight).clip(ActivityRowShape).background(ground).glowBehind(colours.accent), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().height(Ui.TallTileHeight).clip(ActivityRowShape).background(ground).glowBehind(end), verticalAlignment = Alignment.CenterVertically) {
             Spacer(Modifier.width(20.dp))
-            HaIcon(line.icon, CdVectors.History, ink, 24.dp)
+            HaIcon(activityIcon(line), CdVectors.History, iconColour, 24.dp)
             Column(Modifier.weight(1f).padding(horizontal = 14.dp), verticalArrangement = Arrangement.Center) {
                 Text(headline, style = MaterialTheme.typography.titleMedium, color = ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(activityDetail(line, assistant), style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.75f), maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -228,6 +233,7 @@ private fun ActivityRow(line: ActivityLine, assistant: String) {
                 Spacer(Modifier.width(10.dp))
                 Box(Modifier.size(42.dp).background(pillInk.copy(alpha = 0.22f), CircleShape), contentAlignment = Alignment.Center) {
                     if (clive) AssistantLogo(Color.White, 32.dp)
+                    else if (line.kind == "device") HaIcon("cd:device-health", CdVectors.History, pillInk, 24.dp)
                     else Text(activityWho(line, assistant).take(1).uppercase(), color = pillInk, style = MaterialTheme.typography.titleMedium)
                 }
                 Spacer(Modifier.width(10.dp))
