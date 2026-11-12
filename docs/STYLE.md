@@ -53,6 +53,8 @@ green `#4CC38A` from 75% up. The figure beside a gauge takes the same colour. Th
 | Level bar | 6 px (8 px on a single gauge), round ends, track at 25%, **fill from `levelFade`/`batteryFade`** (the bar's colour changes with the level). | `LevelBar` |
 | Car row | **Website:** name, an optional *Plugged in* tag, the percentage and range on the right, a thin bar in the level colour. The apps add an icon circle and a large percentage (`CarsCard`). | `CarsCard` |
 | Charger | **Website:** session kWh, the action button, a Smart charge switch row, a *Car plugged in* picker (only while plugged in), then the four modes with an icon beside the name. The apps lay these out as buttons on a grid (`ChargerCard`). | `ChargerCard` |
+| Device health card | A card per device in its level's tone (Green fine, Amber check soon, Red needs you), the icon, name, then area and any problem; a bar per battery or filter in the level's colour on a 22% track; needing attention first, then fine. The level word shows only when it is not fine. | `DeviceHealthScreen.kt` |
+| System rows | Icon, name, one grey line, an optional status pill (amber or red). A figure already in a header pill (internet, update count) is not repeated in a row. | `SystemCard` |
 
 ## 4. Type and size (website)
 
