@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.149.6
+
+- No app change (the dashboard's Auto Layout now also holds the order of its panels, and settles on its own a few seconds after loading).
+
 ## 0.149.5
 
 - No app change (the dashboard's Auto Layout now stops a flip-flop at once).
