@@ -544,9 +544,10 @@ export class AutoLayoutCard extends HTMLElement {
     if (force || plan !== this._plan) {
       // Oscillation guard: if the arrangement keeps returning to one it already had within a couple of seconds, stop changing it for a while.
       const now = performance.now();
-      const hist = (this._planHist = (this._planHist || []).filter((h) => now - h.t < 3000));
-      if (!force && hist.length >= 3 && hist.some((h) => h.plan === plan)) {
-        this._freeze = { key, until: now + 30000 };
+      const hist = (this._planHist = (this._planHist || []).filter((h) => now - h.t < 4000));
+      // A, then B, then A again is already a flip-flop: hold on the arrangement being left (the one the page was just showing), at once.
+      if (!force && hist.length >= 2 && hist.some((h) => h.plan === plan)) {
+        this._freeze = { key, until: now + 60000 };
         hist.length = 0;
       }
       hist.push({ t: now, plan });
