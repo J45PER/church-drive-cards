@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.149.4
+
+- No app change (the dashboard's Auto Layout no longer flickers between two arrangements).
+
 ## 0.149.3
 
 - No app change.
