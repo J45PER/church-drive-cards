@@ -510,8 +510,10 @@ export class AutoLayoutCard extends HTMLElement {
       const settled = this._touched && performance.now() > this._settleUntil && cols === this._cols;
       const at = (it, w) => (it.el._heightAt ? it.el._heightAt(w) : this._height(it.el));
       const blank = (it, w) => (it.el._emptyAt ? it.el._emptyAt(w) : 0);
+      // A page that flips between two arrangements (each one's heights make the other look better) is held on one: see the guard below.
+      const frozen = this._freeze && this._freeze.key === key && performance.now() < this._freeze.until;
       arr =
-        settled && prev
+        (settled || frozen) && prev
           ? prev
           : arrange(
               list.map((it) => {
@@ -540,6 +542,14 @@ export class AutoLayoutCard extends HTMLElement {
     this._prevArr = { key, arr };
     const plan = `${key}|${JSON.stringify(arr)}`;
     if (force || plan !== this._plan) {
+      // Oscillation guard: if the arrangement keeps returning to one it already had within a couple of seconds, stop changing it for a while.
+      const now = performance.now();
+      const hist = (this._planHist = (this._planHist || []).filter((h) => now - h.t < 3000));
+      if (!force && hist.length >= 3 && hist.some((h) => h.plan === plan)) {
+        this._freeze = { key, until: now + 30000 };
+        hist.length = 0;
+      }
+      hist.push({ t: now, plan });
       this._plan = plan;
       this._root.innerHTML = '';
       const column = (ids) => {
