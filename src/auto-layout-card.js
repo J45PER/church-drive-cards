@@ -488,6 +488,11 @@ export class AutoLayoutCard extends HTMLElement {
       const rank = (it) => (it.camera ? 1 : it.controls ? 0 : 2);
       list = [0, 1, 2].flatMap((r) => list.filter((it) => rank(it) === r));
     }
+    // While a flip-flop is being held (see the guard below) the order of the panels is held too, since a changing order can be what flips.
+    if (this._freeze && performance.now() < this._freeze.until && this._freeze.cols === cols) {
+      const ord = this._freeze.order.map((i) => this._items[i]).filter((it) => it && items.includes(it));
+      list = [...ord, ...items.filter((it) => !ord.includes(it))];
+    }
     const forced = (it) => it.conf.full_width === true || it.conf.full_width === 'yes';
     // Unplaced cards have no height yet: use this page's last arrangement,
     // or list order, until they can be measured.
@@ -507,11 +512,12 @@ export class AutoLayoutCard extends HTMLElement {
       // closing one only re-levels the bottoms, it never moves panels about.
       // Until then (and while pictures load), it keeps adapting, but only
       // for a clearly better arrangement.
-      const settled = this._touched && performance.now() > this._settleUntil && cols === this._cols;
+      // A page also settles on its own a few seconds after it has loaded (or changed width), touched or not, so it can never keep rearranging.
+      const settled = (this._touched || performance.now() > this._settleUntil + 6000) && performance.now() > this._settleUntil && cols === this._cols;
       const at = (it, w) => (it.el._heightAt ? it.el._heightAt(w) : this._height(it.el));
       const blank = (it, w) => (it.el._emptyAt ? it.el._emptyAt(w) : 0);
       // A page that flips between two arrangements (each one's heights make the other look better) is held on one: see the guard below.
-      const frozen = this._freeze && this._freeze.key === key && performance.now() < this._freeze.until;
+      const frozen = this._freeze && this._freeze.cols === cols && performance.now() < this._freeze.until;
       arr =
         (settled || frozen) && prev
           ? prev
@@ -547,7 +553,7 @@ export class AutoLayoutCard extends HTMLElement {
       const hist = (this._planHist = (this._planHist || []).filter((h) => now - h.t < 4000));
       // A, then B, then A again is already a flip-flop: hold on the arrangement being left (the one the page was just showing), at once.
       if (!force && hist.length >= 2 && hist.some((h) => h.plan === plan)) {
-        this._freeze = { key, until: now + 60000 };
+        this._freeze = { cols, order: list.map((it) => this._items.indexOf(it)), until: now + 60000 };
         hist.length = 0;
       }
       hist.push({ t: now, plan });

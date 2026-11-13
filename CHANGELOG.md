@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **v0.149.6 + apps 0.149.6** (2026-11-13): the dashboard's Auto Layout settles on its own a few seconds after a page loads, and a held flip-flop now also holds the order of the panels (the Manager page was still flickering between two orders).
 - **v0.149.5 + apps 0.149.5** (2026-11-13): the dashboard's Auto Layout stops a flip-flop between two arrangements at the second repeat (not the fourth) and holds for a minute.
 - **v0.149.4 + apps 0.149.4** (2026-11-13): the dashboard's Auto Layout no longer flickers between two arrangements (the Manager page and, less often, others): a page that keeps returning to an arrangement it just had is held on one for 30 seconds.
 - **v0.149.3 + apps 0.149.3** (2026-11-12): the Manager website's Energy page shows both cars (the VW ID5 from Octopus Intelligent as well as the Astra), each car's own plug and charge state, the charger's status in the card header, a Start charge button, and fills in yesterday in Last 7 days from the house's own totals when the history is a day behind. No Home Assistant or app change.
