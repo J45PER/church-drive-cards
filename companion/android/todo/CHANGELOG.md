@@ -3,7 +3,7 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
-## 0.149.7
+## 0.150.0
 
 - No app change (Clive in the phone app: the wake word, a misheard name and moving card icons).
 

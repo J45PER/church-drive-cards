@@ -159,6 +159,8 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
                 main.post {
                     wakeWord = word
                     AssistantBrand.update(context, r.optString("name"), wakePhrase(word))
+                    // With it: the rules for a done card's motion, misheard names and the household's names (a fix to those is made on the house).
+                    AssistantData.update(context, r)
                 }
             } else {
                 api.request("assist_pipeline/pipeline/list", JSONObject()) { list -> main.post { wakeWord = preferredWakeWord(list) } }
@@ -214,7 +216,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
             .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 1_500L)
         // The household's names and his own, as words to expect, so a name is not heard as a better-known word (newer phones only).
         if (android.os.Build.VERSION.SDK_INT >= 33) {
-            intent.putStringArrayListExtra(RecognizerIntent.EXTRA_BIASING_STRINGS, ArrayList(HOUSEHOLD_NAMES + listOfNotNull(name.takeIf { it.isNotBlank() })))
+            intent.putStringArrayListExtra(RecognizerIntent.EXTRA_BIASING_STRINGS, ArrayList(AssistantData.names + listOfNotNull(name.takeIf { it.isNotBlank() })))
         }
         partial = ""
         notice = ""

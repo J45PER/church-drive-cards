@@ -444,9 +444,9 @@ private fun DoneIcon(motion: DoneMotion, tint: Color, size: Dp, play: Boolean) {
         kotlinx.coroutines.delay(300)
         when (motion) {
             is DoneMotion.Swap -> t.animateTo(1f, tween(motion.ms))
-            is DoneMotion.Extend -> t.animateTo(1f, tween(1_200, easing = androidx.compose.animation.core.FastOutSlowInEasing))
-            // Three turns, slowing to a stop.
-            is DoneMotion.Spin -> t.animateTo(3f, tween(motion.ms * 3, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
+            is DoneMotion.Wipe -> t.animateTo(1f, tween(motion.ms, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+            // A few turns, slowing to a stop.
+            is DoneMotion.Spin -> t.animateTo(motion.turns.toFloat(), tween(motion.ms * motion.turns, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
             // Twice through, ending on the last.
             is DoneMotion.Cycle -> (motion.icons.size * 2 - 1).let { steps -> t.animateTo(steps.toFloat(), tween(motion.ms * steps, easing = androidx.compose.animation.core.LinearEasing)) }
         }
@@ -457,15 +457,15 @@ private fun DoneIcon(motion: DoneMotion, tint: Color, size: Dp, play: Boolean) {
                 HaIcon(motion.from, CdVectors.Info, tint, size, Modifier.graphicsLayer { alpha = 1f - t.value })
                 HaIcon(motion.to, CdVectors.Info, tint, size, Modifier.graphicsLayer { alpha = t.value; val k = 0.85f + 0.15f * t.value; scaleX = k; scaleY = k })
             }
-            is DoneMotion.Extend -> {
-                // The closed blind is shown down to a line that moves, and the open one below it: the slab comes down from the rail, or goes back up.
-                HaIcon("cd:blind-open", CdVectors.Info, tint, size, Modifier.drawWithContent {
-                    val line = this.size.height * (if (motion.closing) t.value else 1f - t.value)
-                    clipRect(top = line) { this@drawWithContent.drawContent() }
+            is DoneMotion.Wipe -> {
+                // The new icon is shown on one side of a line that moves and the old one on the other: a blind's slab comes down from its rail, or goes back up.
+                HaIcon(motion.from, CdVectors.Info, tint, size, Modifier.drawWithContent {
+                    val line = this.size.height * (if (motion.down) t.value else 1f - t.value)
+                    if (motion.down) clipRect(top = line) { this@drawWithContent.drawContent() } else clipRect(bottom = line) { this@drawWithContent.drawContent() }
                 })
-                HaIcon("cd:blind-closed", CdVectors.Info, tint, size, Modifier.drawWithContent {
-                    val line = this.size.height * (if (motion.closing) t.value else 1f - t.value)
-                    clipRect(bottom = line) { this@drawWithContent.drawContent() }
+                HaIcon(motion.to, CdVectors.Info, tint, size, Modifier.drawWithContent {
+                    val line = this.size.height * (if (motion.down) t.value else 1f - t.value)
+                    if (motion.down) clipRect(bottom = line) { this@drawWithContent.drawContent() } else clipRect(top = line) { this@drawWithContent.drawContent() }
                 })
             }
             is DoneMotion.Spin -> HaIcon(motion.icon, CdVectors.Info, tint, size, Modifier.graphicsLayer { rotationZ = t.value * 360f })

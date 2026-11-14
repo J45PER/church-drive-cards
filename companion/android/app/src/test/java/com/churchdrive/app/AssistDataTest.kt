@@ -225,11 +225,15 @@ class AssistDataTest {
 
     @Test
     fun aMisheardHouseholdNameIsPutRight() {
-        assertEquals("turn off Hayley's bedroom lights", correctHeard("turn off Hitler's bedroom lights"))
-        assertEquals("Is Hayley home", correctHeard("Is hitler home"))
-        assertEquals("tell Hayley and Diane", correctHeard("tell Hailey and Dianne"))
+        // The app's own copy of the corrections the house serves.
+        val heard = com.churchdrive.app.ui.parseHeard(JSONObject(java.io.File("../core/src/main/assets/clive-assistant.json").readText()).getJSONObject("heard"))
+        assertEquals("turn off Hayley's bedroom lights", correctHeard("turn off Hitler's bedroom lights", heard))
+        assertEquals("Is Hayley home", correctHeard("Is hitler home", heard))
+        assertEquals("tell Hayley and Diane", correctHeard("tell Hailey and Dianne", heard))
         // Other words, and words that only contain one, are left alone.
-        assertEquals("open the blind in the hall", correctHeard("open the blind in the hall"))
-        assertEquals("the Jaimes", correctHeard("the Jaimes"))
+        assertEquals("open the blind in the hall", correctHeard("open the blind in the hall", heard))
+        assertEquals("the Jaimes", correctHeard("the Jaimes", heard))
+        // With no corrections (none served, no copy) nothing changes.
+        assertEquals("Is hitler home", correctHeard("Is hitler home", emptyMap()))
     }
 }

@@ -1,6 +1,6 @@
 # Clive Admin: changelog
 
-## 0.149.7
+## 0.150.0
 
 - No app change (Clive in the phone app: the wake word, a misheard name and moving card icons).
 

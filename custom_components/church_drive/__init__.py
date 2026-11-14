@@ -87,6 +87,7 @@ from .const import (
     SERVICE_APPLY_SCENE,
     SERVICE_HEALTH_FIX,
     SERVICE_LOG_LOGO_REQUEST,
+    SERVICE_SET_ASSISTANT_DATA,
     SERVICE_SET_PALETTE,
     SERVICE_APPLY_PROPOSAL,
     SERVICE_DECLINE_PROPOSAL,
@@ -151,6 +152,7 @@ from .health import DeviceHealth
 from .hue import async_sync
 from .library import Library, normalise
 from .icons import Icons
+from .assistant import AssistantData
 from .colours import ColourSettings
 from .mirror import Mirror
 from .proposals import Proposals
@@ -1426,7 +1428,9 @@ async def ws_assist_info(hass: HomeAssistant, connection: websocket_api.ActiveCo
         wake_word = assist_pipeline.async_get_pipeline(hass).wake_word_id
     except Exception:  # noqa: BLE001 - no Assist, or no preferred pipeline: the assistant just has no wake word
         _LOGGER.debug("Couldn't read the preferred Assist pipeline", exc_info=True)
-    connection.send_result(msg["id"], {"wake_word": wake_word or None, "name": assistant_name(hass)})
+    # With it: how a "done" card's icon moves, misheard names to put right and the household's first names (see assistant.py).
+    extra = hass.data.get(DOMAIN, {}).get("assistant")
+    connection.send_result(msg["id"], {"wake_word": wake_word or None, "name": assistant_name(hass), **(extra.config if extra is not None else {})})
 
 
 def assistant_name(hass: HomeAssistant) -> str:
@@ -1486,6 +1490,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         data["watch"] = watch
     except Exception:  # noqa: BLE001
         _LOGGER.exception("The watch settings couldn't load; the watch shows every page")
+
+    # What the apps are told about the assistant (done-card motions, misheard names): optional, the apps carry their own copy.
+    assistant_data = AssistantData(hass, str(FRONTEND_DIR / "clive" / "cards.json"))
+    try:
+        await assistant_data.async_load()
+        data["assistant"] = assistant_data
+    except Exception:  # noqa: BLE001
+        _LOGGER.exception("The assistant's motions and name corrections couldn't load; the apps use their own copy")
 
     # The colour palettes are optional too: without them everything uses the colours it ships with.
     colours = ColourSettings(hass, str(FRONTEND_DIR / "clive" / "cards.json"))
@@ -1784,6 +1796,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.services.async_register(DOMAIN, SERVICE_SET_PALETTE, set_palette, schema=SET_PALETTE_SCHEMA)
 
+    # Change how a done card's icon moves, or the misheard names (administrators): the apps pick it up the next time they connect.
+    async def set_assistant_data(call: ServiceCall) -> None:
+        from homeassistant.exceptions import Unauthorized
+
+        if call.context.user_id:
+            user = await hass.auth.async_get_user(call.context.user_id)
+            if user is None or not user.is_admin:
+                raise Unauthorized(context=call.context)
+        store = hass.data.get(DOMAIN, {}).get("assistant")
+        if store is None:
+            return
+        await store.async_set(call.data.get("motions"), call.data.get("heard"), bool(call.data.get("reset")))
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SET_ASSISTANT_DATA,
+        set_assistant_data,
+        schema=vol.Schema({vol.Optional("motions"): list, vol.Optional("heard"): dict, vol.Optional("reset"): cv.boolean}),
+    )
+
     # Claude (or an administrator) applies or declines a waiting proposal from the Manager website.
     async def _admin_only(call: ServiceCall) -> str:
         from homeassistant.exceptions import Unauthorized
@@ -1860,6 +1892,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.services.async_remove(DOMAIN, SERVICE_HEALTH_FIX)
     hass.services.async_remove(DOMAIN, SERVICE_LOG_LOGO_REQUEST)
     hass.services.async_remove(DOMAIN, SERVICE_SET_PALETTE)
+    hass.services.async_remove(DOMAIN, SERVICE_SET_ASSISTANT_DATA)
     hass.services.async_remove(DOMAIN, SERVICE_APPLY_PROPOSAL)
     hass.services.async_remove(DOMAIN, SERVICE_DECLINE_PROPOSAL)
     hass.services.async_remove(DOMAIN, SERVICE_SYNC_FIRESTORE)
