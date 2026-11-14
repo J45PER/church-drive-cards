@@ -459,3 +459,9 @@ a.fact:hover{background:color-mix(in srgb,var(--primary) 8%,var(--card))}
 /* Settings: the sections are in the dock's second bar, so the page is the section alone */
 .ms .settings{display:grid;grid-template-columns:1fr;gap:18px}
 .ms .set-pane>.stack{gap:var(--gap)}.ms .set-pane .card{border-radius:var(--card-radius);padding:var(--card-pad);background:color-mix(in srgb,var(--card) calc(var(--opq) * 100%),transparent);-webkit-backdrop-filter:blur(var(--blur)) saturate(1.3);backdrop-filter:blur(var(--blur)) saturate(1.3);border:0;box-shadow:none}
+.ms .tcard .fact,.ms .glow .fact{background:transparent}
+.ms .tcard .chips{--ac:var(--tac,var(--primary));--dk:var(--d,var(--on-primary))}
+
+/* Chats and His devices */
+.ms .chat{gap:4px}.ms .chat-q{margin:8px 0 0;font-weight:500;font-size:var(--t-title)}.ms .chat-a{margin:0 0 4px;color:rgba(255,255,255,.82)}.ms .tagrow{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0}
+.ms .devgrid{grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));align-items:start}

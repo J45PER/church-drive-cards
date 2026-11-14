@@ -309,3 +309,35 @@ test('home: the status tiles say what the house knows and leave the rest out', (
   assert.equal(f.edits.title, '2 waiting'); assert.equal(f.edits.badge, 2); assert.equal(f.versions.title, '0.149.3'); assert.equal(f.behind.tone, 'warn'); assert.ok(f.lastact.title);
   assert.deepEqual(Object.keys(homeFacts({}, null)), []);
 });
+
+import { byDay, chatLine, MARKS } from '../web/manager/pages/chats.js';
+import { deviceRow } from '../web/manager/pages/clive-devices.js';
+import { DEFAULT_SLOTS, SLOT_CATALOG, getSlots, setSlots, resetSlots } from '../web/manager/pages/home-slots.js';
+test('chats: grouped under their day, newest first, with who, where, when and how long', () => {
+  const now = new Date('2026-11-14T12:00:00Z'), t = (s) => Date.parse(s) / 1000;
+  const days = byDay([{ id: 'a', ts: t('2026-11-14T10:00:00Z') }, { id: 'b', ts: t('2026-11-14T09:00:00Z') }, { id: 'c', ts: t('2026-11-13T09:00:00Z') }], now);
+  assert.deepEqual(days.map(([d, l]) => [d, l.map((x) => x.id)]), [['Today', ['a', 'b']], ['Yesterday', ['c']]]);
+  assert.match(chatLine({ who: 'Jamie', device: 'Kitchen satellite', ts: t('2026-11-14T10:02:00Z'), seconds: 3.14 }), /^Jamie · Kitchen satellite · \d\d:\d\d · 3\.1 s$/);
+  assert.match(chatLine({ ts: t('2026-11-14T10:02:00Z'), seconds: null }), /^Someone · \d\d:\d\d$/);
+  assert.deepEqual(MARKS.map((m) => m[0]), ['all', 'unmarked', 'good', 'bad', 'noted']);
+});
+test('his devices: a row says who, where, which version and whether it is answering', () => {
+  const now = Date.parse('2026-11-14T12:00:00Z');
+  const p = deviceRow({ kind: 'phone', who: 'Jamie', name: 'Pixel', model: 'Pixel 10', version: '0.150.3', seen: '2026-11-14T11:50:00Z', answering: true }, now);
+  assert.equal(p.tag, 'Answering'); assert.match(p.detail, /Version 0\.150\.3 · heard 10 min ago/); assert.equal(p.where, 'Jamie · Pixel 10');
+  const s = deviceRow({ kind: 'satellite', name: 'Landing', area: 'Landing', model: 'Round', state: 'Not answering', answering: false, changed: '2026-11-13T12:00:00Z' }, now);
+  assert.equal(s.tag, 'Not answering'); assert.match(s.detail, /Not answering · since 24 h ago/);
+});
+test('home: the four status tiles are chosen from what the house can say, and fall back to the usual four', () => {
+  const mem = new Map(); globalThis.localStorage = { getItem: (k) => (mem.has(k) ? mem.get(k) : null), setItem: (k, v) => mem.set(k, v), removeItem: (k) => mem.delete(k) };
+  assert.deepEqual(getSlots(), DEFAULT_SLOTS); assert.equal(DEFAULT_SLOTS.length, 4);
+  setSlots(['versions', 'behind', 'chats', 'lastact']); assert.deepEqual(getSlots(), ['versions', 'behind', 'chats', 'lastact']);
+  setSlots(['versions', 'nonsense', 'chats', 'lastact']); assert.deepEqual(getSlots(), ['versions', 'behind', 'chats', 'lastact']);   // a bad choice is not kept
+  resetSlots(); assert.deepEqual(getSlots(), DEFAULT_SLOTS);
+  assert.ok(SLOT_CATALOG.every((c) => c.id && c.label && c.group));
+  const f = homeFacts({}, null, { devices: { satellites: [{ name: 'Kitchen', answering: true, state: 'Listening' }, { name: 'Hall', answering: true, state: 'Waiting' }] }, chats: { available: true, counts: { unmarked: 3 } } });
+  assert.deepEqual([f.clive.title, f.chats.title], ['Kitchen: Listening', '3 to review']);
+  assert.equal(homeFacts({}, null, { devices: { satellites: [{ name: 'Hall', answering: false, state: 'Not answering' }] } }).clive.tone, 'warn');
+  assert.equal(homeFacts({}, null, { chats: { available: false } }).chats.title, 'Not recording');
+  assert.equal(homeFacts({}, null, { devices: { satellites: [] } }).clive, undefined);
+});
