@@ -1,5 +1,7 @@
 # Church Drive: Handoff
 
+**Read `CLAUDE.md` first** (working rules for every chat, including how to ask about features).
+
 *Last updated 2026-10-23. Current release: **v0.67.0** (Android app 0.48.1).*
 
 ## Where this stands

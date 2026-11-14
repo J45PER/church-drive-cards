@@ -177,6 +177,16 @@ At the right of the navigation bar the **Manager icon** (the house shield, not C
 - **House style:** everything on the Manager website matches the apps' style (section panels with an icon, a coloured title and a summary pill, tone cards in the palette colours). The website's Energy page therefore follows the dashboard's Energy panels like the apps.
 - **Firestore is wanted:** Home Assistant mirrors the design data (palettes, card picks, icons, layouts) and its history, and the same store holds backups of that history.
 
+## 8c. Where things live, revised (Jamie, 2026-11-14)
+
+The website had become a copy of the Home Assistant dashboards and of Clive Admin. The split is now:
+
+- **Clive Admin:** windows into the house for administrators: Energy, Devices, Device health, Activity, a read-only Manager.
+- **Website:** the control panel for how the apps look and behave, and for Clive: Design (colours, icons, layout), Clive (animations, chats, activity, his devices), Settings, Edits. **Activity stays on both.**
+- **Removed from the website:** Energy, Devices and Device health (the code stays in the repo until it is certain nothing needs it).
+- **Home Assistant** keeps its own dashboards; the website does not copy them.
+- How the Clive group works is being decided one question at a time (see `CLAUDE.md`).
+
 ## 9. Build order
 
 Tick these off as they are done.
