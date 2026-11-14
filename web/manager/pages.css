@@ -440,3 +440,12 @@ a.fact:hover{background:color-mix(in srgb,var(--primary) 8%,var(--card))}
 .ms .hm-vname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
 .ms .hm-vname .sub{font-weight:400;font-size:.8rem;display:inline}
 .ms .hm-ver code{font-size:.85rem}.ms .hm-ver .tagp{min-width:58px;text-align:center}
+
+/* Clive's animations (view only) */
+.ms .cdevs{display:flex;gap:14px;flex-wrap:nowrap;justify-content:space-around;margin-top:8px}.ms .cdevs figure{margin:0;display:grid;justify-items:center;gap:6px}.ms .cdevs figcaption{font-size:var(--t-sub);color:rgba(255,255,255,.7)}
+.ms .cframe{position:relative;display:grid;place-items:center;overflow:hidden;background:radial-gradient(circle at 25% 25%,#5C6BC0,transparent 62%),radial-gradient(circle at 78% 30%,#AB47BC,transparent 58%),radial-gradient(circle at 50% 85%,#4FD08A,transparent 60%),#1d2050;background-size:160% 160%;animation:cglow 14s ease-in-out infinite alternate}
+.ms .cframe svg{width:70%;height:70%}.ms .cframe.phone{width:92px;height:92px;border-radius:28px}.ms .cframe.watch{width:112px;height:112px;border-radius:50%;background:#000;animation:none;box-shadow:0 0 0 4px #2b2f3a}.ms .cframe.watch svg{width:60%;height:60%}.ms .cframe.sat{width:112px;height:112px;border-radius:50%}
+@keyframes cglow{from{background-position:0% 0%}to{background-position:100% 100%}}
+.ms .cframe .m2{position:absolute;inset:0;display:grid;place-items:center;opacity:0}.ms .cframe .m2 svg{width:46%;height:46%;fill:#fff}.ms .cframe .m1{position:absolute;inset:15%;width:70%;height:70%}
+@media(prefers-reduced-motion:reduce){.ms .cframe{animation:none}}
+.ms .anigrid{grid-template-columns:repeat(auto-fill,minmax(min(100%,350px),1fr))}

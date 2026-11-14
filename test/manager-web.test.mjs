@@ -294,3 +294,18 @@ test('the week: a missing yesterday is filled from the house\'s own previous-day
   assert.deepEqual(r.g.map((x) => x.change), [2.91]);   // already there: kept
   const w = buildWeek(r, ids, now); assert.equal(w.latest.elecCost, 3.79); assert.equal(w.latest.gasCost, 2.91);
 });
+
+import { markPath, morphAt, POSES } from '../web/manager/pages/animations.js';
+import { homeFacts } from '../web/manager/pages/home.js';
+test('animations: every pose draws, the squircles cut out where they overlap, and the answer card morph runs mark, symbol, mark', () => {
+  for (const [pose] of POSES) { const d = markPath(pose, 123); assert.match(d, /^M/); assert.ok(!d.includes('NaN'), pose); }
+  assert.equal((markPath('idle', 0).match(/Z/g) || []).length, 2); assert.equal((markPath('listening', 0).match(/Z/g) || []).length, 1); assert.equal((markPath('speaking', 0).match(/Z/g) || []).length, 2);
+  assert.notEqual(markPath('thinking', 0), markPath('thinking', 300));
+  assert.equal(morphAt(0), 0); assert.equal(morphAt(1700), 1); assert.equal(morphAt(3400), 0);
+});
+test('home: the status tiles say what the house knows and leave the rest out', () => {
+  const st = { 'sensor.church_drive_proposals': { state: '2' } };
+  const f = homeFacts(st, { rows: [{ version: '0.149.3' }], tone: 'ok' }, { behind: 1, lastAt: Date.now() - 600000 });
+  assert.equal(f.edits.title, '2 waiting'); assert.equal(f.edits.badge, 2); assert.equal(f.versions.title, '0.149.3'); assert.equal(f.behind.tone, 'warn'); assert.ok(f.lastact.title);
+  assert.deepEqual(Object.keys(homeFacts({}, null)), []);
+});
