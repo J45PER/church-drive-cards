@@ -131,7 +131,7 @@ object ManagerSections {
     /** The card types Clive Admin draws itself. */
     val BUILT = setOf(
         "custom:notifications-card", "custom:zone-map-card", "custom:camera-links-card", "custom:icon-styles-card",
-        "heading", "markdown", "entities", "custom:house-tasks-card",
+        "heading", "markdown", "entities", "custom:house-tasks-card", "custom:auto-entities", "todo-list",
         "custom:people-card", "custom:watch-settings-card", "custom:device-health-card", "custom:people-manager-card",
     )
 }
@@ -177,8 +177,9 @@ internal fun ManagerCardView(card: ManagerCard, entities: Map<String, EntityStat
         "custom:zone-map-card" -> LocationsPage(entities)
         "custom:camera-links-card" -> CameraLinksPage(entities)
         "custom:people-manager-card" -> com.churchdrive.app.ui.PeoplePage(entities, registry)
-        // The people's own to-do lists (ticking tasks off) are in the To-Do app; Clive Admin shows the jobs the house made ("From the house").
-        "custom:auto-entities", "todo-list" -> Unit
+        // The Automatic to-dos panel: a list for each person, the shared list, then the jobs the house made, as in the Church Drive app.
+        "custom:auto-entities" -> com.churchdrive.app.ui.PeopleListsCard(entities, call)
+        "todo-list" -> com.churchdrive.app.ui.TaskListCard(card.config, entities, call)
         "custom:icon-styles-card" -> IconStylesPage()
         "heading" -> HeadingCard(card.config)
         "markdown" -> MarkdownCard(card.config)

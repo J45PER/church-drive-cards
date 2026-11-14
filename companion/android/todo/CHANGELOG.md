@@ -5,7 +5,7 @@ Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newe
 
 ## 0.151.1
 
-- No app change (Clive Admin's side panel pages now load).
+- No change you will notice (shared code gained the to-do lists, task form and shopping page, used by Clive Admin).
 
 ## 0.151.0
 

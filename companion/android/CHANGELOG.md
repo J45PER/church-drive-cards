@@ -6,7 +6,7 @@ with the APK, so there is a record of what shipped. Newest first.
 
 ## 0.151.1
 
-- No app change (Clive Admin's side panel pages now load).
+- No change you will notice (the to-do lists, task form and shopping page moved to the shared module so Clive Admin can show them).
 
 ## 0.151.0
 
