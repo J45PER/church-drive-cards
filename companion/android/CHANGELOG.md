@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.153.1
+
+- Device health no longer lists a PC or TV that is switched off as "Not responding": a device that is only a media player is unavailable whenever it is off, which is not a fault.
+- The Internet line on Devices and Home says "Data not available" when the router's sensor cannot be read, instead of "Down".
+
 ## 0.153.0
 
 - No change you will notice (the to-do highlights moved to the shared module so Clive Admin's Home can show them).

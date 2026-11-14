@@ -107,8 +107,12 @@ object SystemRows {
                 Regex("wan|internet").containsMatchIn(it.entityId)
         }
         if (internet != null) {
-            val up = internet.state == "on"
-            rows += SystemRow("mdi:web", "Internet", if (up) "Connected" else "Down", if (up) "Online" else "Down", !up)
+            // A sensor that cannot be read (the router's UPnP not answering) says nothing about the internet: it is not "Down".
+            if (!internet.available) rows += SystemRow("mdi:web", "Internet", "Data not available")
+            else {
+                val up = internet.state == "on"
+                rows += SystemRow("mdi:web", "Internet", if (up) "Connected" else "Down", if (up) "Online" else "Down", !up)
+            }
         }
         entities["binary_sensor.remote_ui"]?.let {
             val up = it.state == "on"
