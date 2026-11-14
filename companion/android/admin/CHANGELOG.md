@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.154.0
+
+- Clive Admin's TVs and speakers list follows the same rule (administrators see all).
+
 ## 0.153.1
 
 - Device health no longer lists a PC or TV that is switched off as "Not responding": a device that is only a media player is unavailable whenever it is off, which is not a fault.

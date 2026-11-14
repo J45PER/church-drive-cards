@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.154.0
+
+- No app change.
+
 ## 0.153.1
 
 - No change you will notice (shared code: a switched-off PC or TV is not "not responding", and an unreadable router is not "down").

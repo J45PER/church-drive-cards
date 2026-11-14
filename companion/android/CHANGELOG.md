@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.154.0
+
+- The Devices page (TVs and speakers) shows only the ones the signed-in person may use; administrators see all. Which ones are decided on the Manager website under Settings, Devices.
+
 ## 0.153.1
 
 - Opening the app no longer shows a black or empty first screen. The window behind the app was Material's dark default in every mode (it flashed whenever the app had not drawn yet, on opening and coming back); it is now the app's own background. The start-up screen also stays up (at most a second and a half) until the pages kept from last time are on the screen.

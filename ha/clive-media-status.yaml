@@ -1,4 +1,4 @@
-# Script script.clive_media_status: What the TVs and speakers are doing (the PC left out). Shows the `media` card. A copy of the live script (2026-10-23).
+# Script script.clive_media_status: What the TVs and speakers are doing (the PC left out). Shows the `media` card. A copy of the live script (2026-10-23), changed so it only lists the TVs and speakers the asker may see (church_drive.media_status).
 alias: What is on the TVs and speakers
 description: Use this for ANY question about what is on the TV, what is playing, which TVs or speakers are on, or whether the TV was left on. It shows the card on the screen by itself and returns the words
   to say. Your whole reply is exactly the text in "say", nothing before or after it, and do not call the card script as well. If they say yes to the offer, give the details from "more".
@@ -6,10 +6,10 @@ icon: mdi:television-play
 mode: parallel
 max: 5
 sequence:
+- action: church_drive.media_status
+  response_variable: visible
 - variables:
-    rows: '{%- set ns = namespace(l=[]) -%}{%- for s in states.media_player | rejectattr(''entity_id'', ''search'', ''xitol|pc|laptop'') -%}{%- set on = s.state not in [''off'', ''unavailable'', ''unknown'',
-      ''standby''] -%}{%- set what = (s.attributes.get(''app_name'') or s.attributes.get(''media_title'') or '''') -%}{%- set ns.l = ns.l + [{''name'': s.name, ''detail'': (what if on else (''Offline''
-      if s.state == ''unavailable'' else ''Off'')), ''pill'': (''On'' if on else ''Off''), ''tone'': (''green'' if on else ''grey'')}] -%}{%- endfor -%}{{- ns.l -}}'
+    rows: '{%- set ns = namespace(l=[]) -%}{%- for s in visible.players | rejectattr(''entity_id'', ''search'', ''xitol|pc|laptop'') -%}{%- set on = s.state not in [''off'', ''unavailable'', ''unknown'', ''standby''] -%}{%- set what = (s.app or s.title or '''') -%}{%- set ns.l = ns.l + [{''name'': s.name, ''detail'': (what if on else (''Offline'' if s.state == ''unavailable'' else ''Off'')), ''pill'': (''On'' if on else ''Off''), ''tone'': (''green'' if on else ''grey'')}] -%}{%- endfor -%}{{- ns.l -}}'
 - variables:
     on_names: '{{ rows | selectattr(''pill'', ''eq'', ''On'') | map(attribute=''name'') | list }}'
 - variables:

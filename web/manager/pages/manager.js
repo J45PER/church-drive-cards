@@ -54,6 +54,9 @@ export async function renderManager(el, ctx, helpers, title) {
   let sections;
   try { sections = await loadSections(ctx); } catch (e) { el.replaceChildren(h('p', { class: 'err', role: 'alert' }, `Could not read the settings: ${e.message}`)); return; }
   const groups = [...groupSections(sections), { name: 'This website', sections: [{ title: 'Home page', icon: 'cd:home', cards: [{ type: 'church:home-page' }] }] }];
+  // Who can use each TV and speaker sits with Locations and Watch.
+  const places = groups.find((g) => g.name === 'Places and devices'); const devs = { title: 'Devices', icon: 'cd:television-play', cards: [{ type: 'church:device-access' }] };
+  if (places) places.sections.unshift(devs); else groups.splice(groups.length - 1, 0, { name: 'Places and devices', sections: [devs] });
   const all = groups.flatMap((g) => g.sections);
   const current = all.find((s) => s.title === title) || all[0];
   // The sections are the dock's second bar (as on Design and Clive); the page is the chosen section.
@@ -84,6 +87,23 @@ async function live(slot, ctx, command, build, extra = {}) {
 // ---- Notifications, People
 
 const CARDS = {
+  // Who can use each TV and speaker: administrators always, and the people it is given to. A TV or speaker nobody has been given to is for administrators only.
+  'church:device-access': async (slot, ctx) => {
+    const draw = async () => {
+      const st = await states(ctx), sensor = st['sensor.church_drive_people'], people = sensor?.attributes?.people || [], map = sensor?.attributes?.access || {};
+      const admins = people.filter((p) => p.admin), others = people.filter((p) => !p.admin);
+      const players = Object.values(st).filter((e) => e.entity_id.startsWith('media_player.')).sort((a, b) => name(a).localeCompare(name(b)));
+      const give = async (entity, list) => { try { await ctx.ha.call('church_drive/people/access', { key: entity, people: list }); } catch (e) { slot.prepend(h('p', { class: 'err', role: 'alert' }, e.message)); return; } draw(); };
+      slot.replaceChildren(group('TVs and speakers', soft(`Administrators see every TV and speaker${admins.length ? ` (${admins.map((p) => p.first || p.name).join(', ')})` : ''}. Anyone else sees only the ones given to them; one nobody has been given to is for administrators only, in the apps, on the dashboards and when asking Clive.`),
+        players.length ? players.map((e) => {
+          const given = (map[e.entity_id] || []).filter((id) => !admins.some((a) => a.entity_id === id));
+          return h('div', { class: 'kind' }, h('p', { class: 'row-title' }, name(e), h('span', { class: 'sub' }, given.length ? '' : ' · Only administrators')),
+            others.length ? chips(others.map((p) => [p.first || p.name, given.includes(p.entity_id), () => give(e.entity_id, given.includes(p.entity_id) ? given.filter((id) => id !== p.entity_id) : [...given, p.entity_id])])) : soft('There is nobody but administrators yet.'));
+        }) : soft('No TVs or speakers found in the house.')));
+    };
+    await draw();
+  },
+
   // The four status tiles at the top of Home: pick what each shows (kept in this browser).
   'church:home-page': async (slot) => {
     const draw = () => {

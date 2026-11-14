@@ -167,6 +167,7 @@ class HaClient(private val scope: CoroutineScope) {
         _entities.value = emptyMap()
         _userName.value = null
         _isAdmin.value = false
+        com.churchdrive.app.ui.DeviceAccess.userId = null
         _statesLoaded.value = false
         lastSyncAt = 0L
         _restarting.value = false
@@ -210,6 +211,7 @@ class HaClient(private val scope: CoroutineScope) {
             if (me != null) {
                 me.optString("name").takeIf { it.isNotBlank() }?.let { _userName.value = it }
                 _isAdmin.value = me.optBoolean("is_admin", false)
+                com.churchdrive.app.ui.DeviceAccess.userId = me.optString("id").takeIf { it.isNotBlank() }
             }
             onResult(me != null)
         }
@@ -368,6 +370,7 @@ class HaClient(private val scope: CoroutineScope) {
                             val me = msg.optJSONObject("result")
                             me?.optString("name")?.takeIf { it.isNotBlank() }?.let { _userName.value = it }
                             _isAdmin.value = me?.optBoolean("is_admin", false) ?: false
+                            com.churchdrive.app.ui.DeviceAccess.userId = me?.optString("id")?.takeIf { it.isNotBlank() }
                             // Home Assistant lets only administrators subscribe to this event; everyone else would be refused (and it is logged as an error).
                             if (_isAdmin.value) webSocket.send(
                                 JSONObject().put("id", id()).put("type", "subscribe_events")
