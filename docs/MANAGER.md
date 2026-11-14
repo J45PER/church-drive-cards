@@ -196,6 +196,11 @@ The website had become a copy of the Home Assistant dashboards and of Clive Admi
   - **Build order:** the new dock and Home on the example site, then Animations; chat recording in the house after.
 - **Built (0.151.0):** Chats (`chats.py`, `chats_logic.py`: the house subscribes to Home Assistant's own chat log, keeps each turn 30 days, admin-only; `church_drive/chats`, `church_drive/chats/rate`, `church_drive/chats/sent`; notes sent as a `chats` proposal through Edits; the website's Chats page), His devices (`clive_devices_logic.py`, `church_drive/clive/devices`: phones with the app and `assist_satellite` entities; the website's His devices page), Home's four tiles chosen under Settings, Home page (kept in the browser; Clive now and Chats to review join the choices), Edits restyled, Reference in the site style, and a person's card in Settings, People drawn in their own palette. If this Home Assistant has no chat log to listen to, the Chats page says so and nothing else is affected. This was not run against a real Home Assistant when written, so check the Chats page after the first release.
 
+- **The apps after the split (Jamie, 2026-11-14, answered one at a time; built 0.155.0):**
+  - **Clive Admin Home:** titles over its cards: House (Security, Who's home, Energy), Clive (his devices), System (Device health, Updates and backups). Tasks stays at the top, above the titles.
+  - **Clive Admin Manager:** stays editable (it is not read-only). Energy and Devices stay as admin windows; Devices is the devices and services.
+  - **Main app:** no Energy (it is Admin only). The bottom bar is Home, Lights, Security, Climate, Cleaning, **Media** (the page called Devices in the code); To-do is a side-panel button. Media is for everyone and shows only the TVs and speakers they may use (admins all). Home is unchanged (no Media section; Car charger stays).
+
 ## 9. Build order
 
 Tick these off as they are done.

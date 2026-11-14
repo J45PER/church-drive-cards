@@ -57,10 +57,11 @@ class NoticeSoundsLinkTest {
         assertNull(parseNoticeLink(null))
     }
 
-    @Test fun slugsMapToPagesButAdministratorPagesDoNot() {
+    @Test fun slugsMapToPagesAndEnergyIsNotOne() {
         assertEquals("Lighting", pageNameForSlug("Lights"))
         assertEquals("Todo", pageNameForSlug("to-do"))
-        assertNull(pageNameForSlug("devices"))
+        assertEquals("Devices", pageNameForSlug("media"))
+        assertNull(pageNameForSlug("energy"))
         assertNull(pageNameForSlug(""))
     }
 }
