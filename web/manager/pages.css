@@ -449,3 +449,9 @@ a.fact:hover{background:color-mix(in srgb,var(--primary) 8%,var(--card))}
 .ms .cframe .m2{position:absolute;inset:0;display:grid;place-items:center;opacity:0}.ms .cframe .m2 svg{width:46%;height:46%;fill:#fff}.ms .cframe .m1{position:absolute;inset:15%;width:70%;height:70%}
 @media(prefers-reduced-motion:reduce){.ms .cframe{animation:none}}
 .ms .anigrid{grid-template-columns:repeat(auto-fill,minmax(min(100%,350px),1fr))}
+
+/* Design: Look (a tone card per card), Icons (a row per section) and Layout (drag to reorder) */
+.ms .lkgrid{grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));align-items:start}.ms .lk{gap:8px}.ms .lk .use{margin-top:2px}.ms .lkg{display:grid;gap:8px;margin-top:6px}.ms .lkg>summary{list-style:none;cursor:pointer}.ms .lkg>summary::after{content:'▾';color:var(--soft);margin-left:6px}.ms .lkg[open]>summary::after{content:'▴'}
+.ms .irowc{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.ms .irowc .rt2c{flex:1;min-width:0;display:grid}.ms .irowc .rt2c b{font-size:var(--t-title);font-weight:500}.ms .irowc .rt2c small{font-size:var(--t-sub);color:rgba(255,255,255,.66)}.ms .irowc .btnrow{margin:0;gap:8px}
+.ms .rowc.hid{opacity:.55}.ms .rowc.dr{cursor:default;touch-action:pan-y}.ms .rowc.dr.drag{box-shadow:0 12px 30px rgba(0,0,0,.4);opacity:.92}.ms .grip{color:var(--soft);letter-spacing:-3px;font-weight:700;flex:none;width:30px;text-align:center;cursor:grab;touch-action:none;user-select:none;padding:8px 0}
+.ms .icon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(54px,1fr));gap:6px;margin-top:8px}.ms .icon-pick{border:0;border-radius:12px;padding:10px;background:rgba(255,255,255,.12);color:#fff;cursor:pointer}.ms .icon-pick:hover{background:rgba(255,255,255,.22)}.ms .icon-pick svg{fill:currentColor}

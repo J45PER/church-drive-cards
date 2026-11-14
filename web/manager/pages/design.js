@@ -3,6 +3,7 @@
 import { CARDS, CARD_GROUPS } from './cards-data.js';
 import { chips, h } from './manager.js';
 import { icon, iconNames, loadIcons } from '../icons.js';
+import { circ, ic, palette, pill, readableOn, toneVars } from '../ui.js';
 
 const card_ = (...kids) => h('article', { class: 'card plain' }, ...kids);
 const note = (t) => h('p', { class: 'sub' }, t);
@@ -13,52 +14,62 @@ async function propose(ctx, kind, change, noteText) {
 const sentNote = (sent) => `Sent for checking${sent.checks?.length ? ` (the check noted: ${sent.checks.join(' ')})` : ''}. Follow it under Edits.`;
 const oldHouse = (e) => (e.code === 'unknown_command' ? 'Home Assistant is running an older Church Drive without these editors. Update Church Drive in HACS, then restart Home Assistant.' : e.message);
 
-// ---- Cards: which palette each card uses ----
+// ---- Look: which palette each card uses (a tone card per card, in its own colours) ----
+
+const HEX = /^#[0-9a-f]{6}$/i;
+const pillsFor = (ctx, items) => items.map(([icon, html, key]) => pill(ctx, icon, html, key ? circ(ctx, key) : null)).join('');
 
 export async function renderCards(el, ctx) {
   el.replaceChildren(h('p', { class: 'note' }, 'Reading the palettes and picks from the house…'));
   let palettes, design;
   try { [palettes, design] = await Promise.all([ctx.ha.call('church_drive/colours'), ctx.ha.call('church_drive/manager/design')]); }
   catch (e) { el.replaceChildren(h('p', { class: 'err', role: 'alert' }, `Could not read the picks: ${oldHouse(e)}`)); return; }
-  const keys = Object.entries(palettes.palettes || {}).sort((a, b) => a[1].name.localeCompare(b[1].name));
+  const pals = palettes.palettes || {}, keys = Object.entries(pals).sort((a, b) => a[1].name.localeCompare(b[1].name));
   const picks = design.cards || {}; const edits = {}; let filter = ''; const openGroups = new Set([CARD_GROUPS[0]]);
-  const list = h('div', { class: 'stack' }); const msg = h('p', { class: 'note', role: 'status' }); const send = h('button', { class: 'btn', type: 'button' }, 'Send changes');
-  const count = () => { const n = Object.keys(edits).length; send.disabled = !n; send.textContent = n ? `Send ${n} change${n === 1 ? '' : 's'}` : 'Send changes'; };
+  const msg = h('p', { class: 'note', role: 'status' }), send = h('button', { class: 'btn', type: 'button' }, 'Send changes'), hls = h('div', { class: 'hls' });
+  const paletteOf = (c) => edits[c.id]?.palette ?? picks[c.id]?.palette ?? '';
+  const count = () => {
+    const n = Object.keys(edits).length, unset = CARDS.filter((c) => !pals[paletteOf(c)]).length;
+    send.disabled = !n; send.textContent = n ? `Send ${n} change${n === 1 ? '' : 's'}` : 'Send changes';
+    hls.innerHTML = pillsFor(ctx, [['palette', `<b>${CARDS.length}</b> cards in ${CARD_GROUPS.length} groups`, 'tasks'], ['exclamation', unset ? `<b>${unset}</b> without a colour theme` : 'Every card has a theme', unset ? 'warn' : 'ok'], ['pencil', n ? `<b>${n}</b> change${n === 1 ? '' : 's'} to send` : 'Nothing to send', n ? 'warn' : 'ok']]);
+  };
+  const build = (c) => {
+    const have = picks[c.id] || {}, now = edits[c.id] || {}, palette = paletteOf(c), comment = now.comment ?? have.comment ?? '', pal = pals[palette];
+    const ac = pal && HEX.test(pal.colours[0]) ? readableOn(pal.colours[0], pal.colours[3], pal.colours[1]) : '#9AA4B2';
+    const sel = h('select', { class: 'sel2', 'aria-label': `Palette for ${c.name}`, onchange: (e) => { setEdit(c.id, 'palette', e.target.value); art.replaceWith(build(c)); count(); } },
+      h('option', { value: '' }, `Not set${c.suggested ? ` (suggested: ${c.suggested})` : ''}`), keys.map(([k, p]) => h('option', { value: k, selected: k === palette }, `${p.name}${k === c.suggested ? ' · suggested' : ''}`)));
+    const inp = h('input', { class: 'field', value: comment, placeholder: 'A note for Clive (optional)', 'aria-label': `Note on ${c.name}`, hidden: !comment, oninput: (e) => { setEdit(c.id, 'comment', e.target.value); count(); } });
+    const addNote = comment ? null : h('button', { class: 'btn s q on-tone', type: 'button', onclick: (e) => { inp.hidden = false; e.currentTarget.remove(); inp.focus(); } }, 'Add a note');
+    const art = h('article', { class: 'tcard glow lk', style: toneVars(ctx, pal ? palette : 'neutral') },
+      h('div', { class: 'wc-h' }, h('h2', {}, c.name), pal ? h('span', { class: 'wc-p', style: `color:${ac};background:${ac}2e` }, 'Status') : h('span', { class: 'wc-p' }, 'No theme')),
+      h('p', { class: 'sub' }, `${c.pages}${c.status === 'available' ? ' · Available' : ''}`),
+      h('div', { class: 'use' }, h('span', { class: 'use-btn', style: `background:${ac};color:${pal ? pal.colours[1] : '#14181F'}` }, 'Selected'), h('span', { class: 'use-btn off' }, 'Not selected'), h('span', { class: 'use-bar' }, h('i', { style: `background:${ac}` }))),
+      sel, addNote, inp);
+    return art;
+  };
+  const list = h('div', { class: 'stack' });
   const draw = () => {
     list.replaceChildren(...CARD_GROUPS.map((g) => {
       const cards = CARDS.filter((c) => c.group === g && (!filter || `${c.name} ${c.pages} ${c.ha} ${c.app}`.toLowerCase().includes(filter)));
       if (!cards.length) return null;
-      return h('details', { class: 'fold', open: !!filter || openGroups.has(g), ontoggle: (e) => { e.target.open ? openGroups.add(g) : openGroups.delete(g); } }, h('summary', { class: 'head' }, h('h2', {}, g), h('span', { class: 'count' }, `${cards.length} cards`)),
-        h('div', { class: 'grid4 fold-body' }, cards.map((c) => {
-          const have = picks[c.id] || {}; const now = edits[c.id] || {};
-          const palette = now.palette ?? have.palette ?? ''; const comment = now.comment ?? have.comment ?? '';
-          const sel = h('select', { class: 'field', 'aria-label': `Palette for ${c.name}`, onchange: (e) => { setEdit(c.id, 'palette', e.target.value, have.palette); } },
-            h('option', { value: '' }, `Not set${c.suggested ? ` (suggested: ${c.suggested})` : ''}`), keys.map(([k, p]) => h('option', { value: k, selected: k === palette }, `${p.name}${k === c.suggested ? ' · suggested' : ''}`)));
-          const inp = h('input', { class: 'field', value: comment, placeholder: 'A note for Clive (optional)', 'aria-label': `Note on ${c.name}`, hidden: !comment, oninput: (e) => { setEdit(c.id, 'comment', e.target.value, have.comment || ''); } });
-          const addNote = comment ? null : h('button', { class: 'btn quiet', type: 'button', onclick: (e) => { inp.hidden = false; e.currentTarget.remove(); inp.focus(); } }, 'Add a note');
-          const sw = (keys.find(([k]) => k === palette)?.[1].colours || []).map((col) => h('i', { style: `background:${col}`, class: 'dot5' }));
-          return h('article', { class: 'card plain compact' }, h('div', { class: 'row' }, h('h3', { class: 'title', style: 'margin:0;flex:1' }, c.name), c.status === 'available' ? h('span', { class: 'tag' }, 'Available') : null),
-            note(c.pages), h('div', { class: 'dots' }, sw), sel, addNote, inp);
-        })));
+      return h('details', { class: 'cfold lkg', open: !!filter || openGroups.has(g), ontoggle: (e) => { e.target.open ? openGroups.add(g) : openGroups.delete(g); } },
+        h('summary', { class: 'ph', style: 'cursor:pointer' }, h('h2', { class: 'sh' }, g), h('span', { class: 'sub' }, `${cards.length} cards`)), h('div', { class: 'hdg lkgrid' }, cards.map(build)));
     }).filter(Boolean));
   };
-  function setEdit(id, field, value, was) {
-    const e = (edits[id] ||= {}); const base = (picks[id] || {})[field] || '';
-    if (value === base || (field === 'palette' && value === '' && !base)) delete e[field]; else e[field] = value;
-    if (field === 'palette' && value === '' && base) delete e[field]; // clearing a pick is not sent: a pick is changed to another, not removed
+  function setEdit(id, field, value) {
+    const e = (edits[id] ||= {}), base = (picks[id] || {})[field] || '';
+    if (value === base || (field === 'palette' && value === '')) delete e[field]; else e[field] = value;   // clearing a pick is not sent: a pick is changed to another, not removed
     if (!Object.keys(e).length) delete edits[id];
-    count();
   }
   send.addEventListener('click', async () => {
     send.disabled = true; msg.textContent = 'Sending…';
     const cards = Object.fromEntries(Object.entries(edits).map(([id, e]) => [id, { ...(e.palette ? { palette: e.palette } : {}), ...(e.comment?.trim() ? { comment: e.comment.trim() } : {}) }]).filter(([, v]) => Object.keys(v).length));
     if (!Object.keys(cards).length) { msg.textContent = 'Nothing to send.'; count(); return; }
-    try { const sent = await propose(ctx, 'cards', { cards }); Object.keys(edits).forEach((k) => delete edits[k]); msg.textContent = sentNote(sent); count(); }
+    try { const sent = await propose(ctx, 'cards', { cards }); Object.keys(edits).forEach((k) => delete edits[k]); msg.textContent = sentNote(sent); draw(); count(); }
     catch (e) { msg.textContent = oldHouse(e); count(); }
   });
   const find = h('input', { class: 'field', type: 'search', placeholder: 'Find a card, page or file', 'aria-label': 'Find a card', oninput: (e) => { filter = e.target.value.trim().toLowerCase(); draw(); } });
-  el.replaceChildren(h('div', { class: 'stack' }, h('p', { class: 'note' }, 'Each card on the dashboards and in the apps has a colour theme. Pick a different one here and send it.'),
-    h('div', { class: 'chips' }, find, send), msg, list));
+  el.replaceChildren(h('div', { class: 'stack' }, hls, h('p', { class: 'sub' }, 'Each card on the dashboards and in the apps has a colour theme. Pick a different one here and send it.'), h('div', { class: 'filters' }, find, send), msg, list));
   draw(); count();
 }
 
@@ -88,21 +99,22 @@ async function pickView(ctx, box, onView) {
   };
   dsel.addEventListener('change', load);
   load();
-  return h('div', { class: 'chips' }, dsel, vsel);
+  return h('div', { class: 'filters' }, dsel, vsel);
 }
 
-// ---- Icons: each panel's icon ----
+// ---- Icons: each panel's icon, a row per section drawn as a tone card ----
 
 export async function renderIcons(el, ctx) {
   await loadIcons(ctx.house);
-  const body = h('div', { class: 'stack' }); const msg = h('p', { class: 'note', role: 'status' });
+  const body = h('div', { class: 'stack' }), msg = h('p', { class: 'note', role: 'status' });
   const draw = (d, view) => {
     const panels = panelsOf(view);
     body.replaceChildren(...(panels.length ? panels.map((p) => {
-      const slot = h('div', {});
-      const row = h('article', { class: 'card plain compact' }, h('div', { class: 'row' }, h('span', { class: 'ico-box', html: '' }), h('div', { style: 'flex:1' }, h('p', { class: 'row-title' }, p.title), h('p', { class: 'sub' }, p.icon || 'no icon')),
-        h('button', { class: 'btn quiet', type: 'button', onclick: () => picker(slot, p, d, view) }, 'Change')), slot);
-      row.querySelector('.ico-box').innerHTML = icon(p.icon.startsWith('cd:') ? p.icon : 'cd:circle', 28);
+      const slot = h('div', { style: 'flex:1 1 100%' });
+      const shown = (p.icon || '').startsWith('cd:') ? p.icon : 'cd:circle';
+      const row = h('article', { class: 'tcard glow irowc', style: toneVars(ctx, 'tasks') }, h('span', { class: 'wc-i', style: 'width:34px;height:34px' }), h('div', { class: 'rt2c' }, h('b', {}, p.title), h('small', {}, p.icon || 'No icon set')),
+        h('div', { class: 'btnrow' }, h('button', { class: 'btn s q on-tone', type: 'button', onclick: () => picker(slot, p, d, view) }, 'Change')), slot);
+      row.querySelector('.wc-i').innerHTML = icon(shown, 26);
       return row;
     }) : [h('p', { class: 'note' }, 'This view has no panels with titles.')]));
   };
@@ -120,30 +132,45 @@ export async function renderIcons(el, ctx) {
     fill();
   };
   const picked = await pickView(ctx, body, draw);
-  el.replaceChildren(h('div', { class: 'stack' }, h('p', { class: 'note' }, 'Every section of a dashboard has a small icon. Choose a dashboard page, then Change on a section to pick another from the house icon set.'), picked, msg, body));
+  el.replaceChildren(h('div', { class: 'stack' }, h('p', { class: 'sub' }, 'Every section of a dashboard has a small icon. Choose a dashboard page, then Change on a section to pick another from the house icon set.'), picked, msg, body));
 }
 
-// ---- Layouts: the order and visibility of a view's panels ----
+// ---- Layout: drag a view's panels into order, or hide them ----
 
 export async function renderLayouts(el, ctx) {
-  const body = h('div', { class: 'stack' }); const msg = h('p', { class: 'note', role: 'status' });
+  const body = h('div', { class: 'stack' }), msg = h('p', { class: 'note', role: 'status' });
   const draw = (d, view) => {
-    const before = panelsOf(view).map((p) => p.title); let order = before.slice(); let hidden = new Set();
-    const redraw = () => {
-      const changed = order.join('|') !== before.join('|') || hidden.size > 0;
-      body.replaceChildren(...order.map((t, i) => h('article', { class: 'card plain compact' }, h('div', { class: 'row' },
-        h('span', { style: `flex:1;${hidden.has(t) ? 'opacity:.5;text-decoration:line-through' : ''}` }, t),
-        h('button', { class: 'btn quiet', type: 'button', 'aria-label': `Move ${t} up`, disabled: i === 0, onclick: () => { [order[i - 1], order[i]] = [order[i], order[i - 1]]; redraw(); } }, '↑'),
-        h('button', { class: 'btn quiet', type: 'button', 'aria-label': `Move ${t} down`, disabled: i === order.length - 1, onclick: () => { [order[i + 1], order[i]] = [order[i], order[i + 1]]; redraw(); } }, '↓'),
-        h('button', { class: 'chip', type: 'button', 'aria-pressed': String(hidden.has(t)), onclick: () => { hidden.has(t) ? hidden.delete(t) : hidden.add(t); redraw(); } }, 'Hide')))),
-        h('div', { class: 'chips' }, h('button', { class: 'btn', type: 'button', disabled: !changed, onclick: async () => {
-          msg.textContent = 'Sending…';
-          try { const sent = await propose(ctx, 'layouts', { dashboard: d.path === 'lovelace' ? 'lovelace' : d.url, view: view.path, order, hidden: [...hidden], before: { order: before, hidden: [] } }); msg.textContent = sentNote(sent); }
-          catch (e) { msg.textContent = oldHouse(e); }
-        } }, 'Send this layout')));
-    };
-    if (!order.length) body.replaceChildren(h('p', { class: 'note' }, 'This view has no panels with titles.')); else redraw();
+    const before = panelsOf(view).map((p) => p.title); const hidden = new Set(); let order = before.slice();
+    if (!before.length) { body.replaceChildren(h('p', { class: 'note' }, 'This view has no panels with titles.')); return; }
+    const send = h('button', { class: 'btn', type: 'button', onclick: async () => {
+      msg.textContent = 'Sending…';
+      try { const sent = await propose(ctx, 'layouts', { dashboard: d.path === 'lovelace' ? 'lovelace' : d.url, view: view.path, order, hidden: [...hidden], before: { order: before, hidden: [] } }); msg.textContent = sentNote(sent); }
+      catch (e) { msg.textContent = oldHouse(e); }
+    } }, 'Send this layout');
+    const list = h('div', { class: 'stack', style: 'gap:6px' });
+    const changed = () => { send.disabled = order.join('|') === before.join('|') && !hidden.size; };
+    const rows = () => order.map((t) => {
+      const grip = h('span', { class: 'grip', 'aria-hidden': 'true', title: 'Drag to move' }, '⋮⋮');
+      const eye = h('button', { class: 'mv', type: 'button', 'aria-label': `${hidden.has(t) ? 'Show' : 'Hide'} ${t}`, onclick: () => { hidden.has(t) ? hidden.delete(t) : hidden.add(t); fill(); } });
+      eye.innerHTML = ic(hidden.has(t) ? 'eye' : 'eye-off', 18);
+      const row = h('div', { class: `rowc dr${hidden.has(t) ? ' hid' : ''}`, 'data-t': t, style: `--tone:${palette(ctx, 'people')[0]}` }, grip, h('div', { class: 'rt' }, h('b', {}, t)), h('span', { class: `tagp${hidden.has(t) ? '' : ' ok'}` }, hidden.has(t) ? 'Hidden' : 'Shown'), eye);
+      // Dragging by the grip works with a finger as well as a mouse: the row follows the pointer and is moved in the list as it passes the others.
+      grip.addEventListener('pointerdown', (e) => {
+        e.preventDefault(); grip.setPointerCapture(e.pointerId); row.classList.add('drag');
+        const move = (m) => {
+          const others = [...list.children].filter((r) => r !== row);
+          const next = others.find((r) => { const b = r.getBoundingClientRect(); return m.clientY < b.top + b.height / 2; });
+          if (next !== row.nextElementSibling) list.insertBefore(row, next || null);
+        };
+        const stop = () => { grip.removeEventListener('pointermove', move); grip.removeEventListener('pointerup', stop); grip.removeEventListener('pointercancel', stop); row.classList.remove('drag'); order = [...list.children].map((r) => r.dataset.t); changed(); };
+        grip.addEventListener('pointermove', move); grip.addEventListener('pointerup', stop); grip.addEventListener('pointercancel', stop);
+      });
+      return row;
+    });
+    const fill = () => { list.replaceChildren(...rows()); changed(); };
+    body.replaceChildren(list, h('p', { class: 'sub' }, 'Drag a row by its handle to move it.'), h('div', { class: 'btnrow' }, send));
+    fill();
   };
   const picked = await pickView(ctx, body, draw);
-  el.replaceChildren(h('div', { class: 'stack' }, h('p', { class: 'note' }, 'Choose a dashboard page, then move its sections up or down, or hide ones you do not want. The apps follow the same order.'), picked, msg, body));
+  el.replaceChildren(h('div', { class: 'stack' }, h('p', { class: 'sub' }, 'Choose a dashboard page, then drag its sections into order, or hide ones you do not want. The apps follow the same order.'), picked, msg, body));
 }
