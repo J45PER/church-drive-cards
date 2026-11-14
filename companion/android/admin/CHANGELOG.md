@@ -1,5 +1,13 @@
 # Clive Admin: changelog
 
+## 0.152.0
+
+- Fixed: Notifications, People, Camera links and Watch in the side panel were blank and said they couldn't be read from the house. The side panel had no line to the house; it has now, so each page shows the same cards and controls as the Church Drive app.
+- Manager, Automatic to-dos: each person's own list, the shared list and the jobs from the house are now in Clive Admin, with ticking off, adding and editing tasks, as in the Church Drive app. They showed nothing before.
+- Back from a page of the side panel (Settings, About and the rest) goes straight back to the app, not to the panel's list.
+- Pressing a button on the bottom bar (or the side rail) shows that page from its top, also the page that is already open.
+- The bottom bar is acrylic, as on the Manager website: the page scrolls and blurs behind it (Android 12 and later; older phones get a nearly solid bar).
+
 ## 0.151.0
 
 - No app change.

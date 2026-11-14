@@ -1,5 +1,11 @@
 # Church Drive Satellites: changelog
 
+## 0.152.0
+
+- Back from a page of the side panel (Settings, About and the rest) goes straight back to the app, not to the panel's list.
+- Pressing a button on the bottom bar (or the side rail) shows that page from its top, also the page that is already open.
+- The bottom bar is acrylic, as on the Manager website: the page scrolls and blurs behind it (Android 12 and later; older phones get a nearly solid bar).
+
 ## 0.151.0
 
 - No app change.

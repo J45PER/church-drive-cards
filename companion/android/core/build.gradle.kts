@@ -40,4 +40,6 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("com.google.android.play:app-update:2.1.0")
     api("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    // The acrylic page bar (NavKit.kt): the page blurs behind it. Built for Compose 1.7 and Kotlin 2.0, as this project is.
+    api("dev.chrisbanes.haze:haze:1.1.1")
 }

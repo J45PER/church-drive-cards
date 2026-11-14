@@ -99,7 +99,8 @@ fun AccountOverlay(
     // The last page shown, so a page keeps its words while it slides away.
     var shown by remember { mutableStateOf("account") }
     if (panel != null) shown = panel
-    BackHandler(enabled = panel != null) { onPanel(panelParent(panel)) }
+    // Back from any page of the panel goes to the app, not to the panel's list.
+    BackHandler(enabled = panel != null) { onPanel(null) }
     AnimatedVisibility(
         visible = panel != null,
         enter = slideInHorizontally(initialOffsetX = { it }),
@@ -120,16 +121,16 @@ fun AccountOverlay(
                 // Each page has its own solid background, so one never shows through another while they slide.
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                 when (which) {
-                    "settings" -> SettingsPage(settings, isAdmin) { onPanel("account") }
-                    "about" -> AboutPage(settings, updateAvailable, isAdmin) { onPanel("account") }
+                    "settings" -> SettingsPage(settings, isAdmin) { onPanel(null) }
+                    "about" -> AboutPage(settings, updateAvailable, isAdmin) { onPanel(null) }
                     // The administrator's pages open here, as sub-pages of the panel.
-                    "todo" -> AdminPage("To-do", { onPanel("account") }) { pageContent(Page.Todo) }
+                    "todo" -> AdminPage("To-do", { onPanel(null) }) { pageContent(Page.Todo) }
                     "energy", "devices" -> adminPages.firstOrNull { it.name.lowercase() == which }?.let { p ->
-                        AdminPage(p.label, { onPanel("account") }) { pageContent(p) }
+                        AdminPage(p.label, { onPanel(null) }) { pageContent(p) }
                     }
-                    "manager" -> ManagerHub(managerPages, { onPanel("account") }, onPanel)
-                    "experimental" -> AdminPage("Experimental", { onPanel("account") }) { experimentalContent() }
-                    "activity" -> AdminPage("Activity log", { onPanel("account") }) { activityContent() }
+                    "manager" -> ManagerHub(managerPages, { onPanel(null) }, onPanel)
+                    "experimental" -> AdminPage("Experimental", { onPanel(null) }) { experimentalContent() }
+                    "activity" -> AdminPage("Activity log", { onPanel(null) }) { activityContent() }
                     else -> if (which.startsWith("manager:")) {
                         managerPages.firstOrNull { it.title == which.removePrefix("manager:") }?.let { p ->
                             AdminPage(p.title, { onPanel("manager") }) { managerContent(p) }

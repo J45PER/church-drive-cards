@@ -4,6 +4,13 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.152.0
+
+- Back from a page of the side panel (Settings, About and the rest) goes straight back to the app, not to the panel's list.
+- Pressing a button on the bottom bar (or the side rail) shows that page from its top, also the page that is already open.
+- The bottom bar is acrylic, as on the Manager website: the page scrolls and blurs behind it (Android 12 and later; older phones get a nearly solid bar).
+- The to-do lists, task form and shopping page moved to the shared module so Clive Admin can show them.
+
 ## 0.151.0
 
 - No app change (the Manager website's Chats and His devices, and the house recording chats).

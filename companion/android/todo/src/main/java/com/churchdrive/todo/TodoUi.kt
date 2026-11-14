@@ -57,6 +57,11 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.churchdrive.app.ui.AssistantBrand
+import com.churchdrive.app.ui.AcrylicNavigationBar
+import com.churchdrive.app.ui.acrylicBehind
+import com.churchdrive.app.ui.rememberToTop
+import com.churchdrive.app.ui.withoutBottom
+import dev.chrisbanes.haze.HazeState
 import com.churchdrive.app.ui.HouseTask
 import com.churchdrive.app.ui.PersonButton
 import com.churchdrive.app.ui.TodoItem
@@ -96,6 +101,10 @@ private fun TabIcon(tab: TodoTab) {
 @Composable
 fun TodoApp(vm: TodoModel) {
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    // Pressing a page's button shows it from its top; the page scrolls under the acrylic bar.
+    val pageScroll = rememberScrollState()
+    val acrylic = remember { HazeState() }
+    val toTop = rememberToTop(pageScroll, scroll)
     // The account panel (null shut, "account", "settings" or "about"), which slides in from the right.
     var panel by rememberSaveable { mutableStateOf<String?>(null) }
     // Clive To Do: the small add-and-tick-off assistant.
@@ -134,12 +143,12 @@ fun TodoApp(vm: TodoModel) {
         },
         floatingActionButton = { if (vm.connected) AssistantButton { assistantOpen = true } },
         bottomBar = {
-            NavigationBar {
+            AcrylicNavigationBar(acrylic) {
                 TodoTab.entries.forEach { t ->
                     val open = vm.openCount(t)
                     NavigationBarItem(
                         selected = t == tab,
-                        onClick = { vm.openTab(t) },
+                        onClick = { vm.openTab(t); toTop() },
                         icon = {
                             BadgedBox(badge = { if (open > 0) Badge { Text(open.toString()) } }) { TabIcon(t) }
                         },
@@ -149,13 +158,17 @@ fun TodoApp(vm: TodoModel) {
             }
         },
     ) { padding ->
+        // The page scrolls under the acrylic bar, so the bar's height is padding at the foot of the page, not around it.
+        Box(Modifier.fillMaxSize().acrylicBehind(acrylic)) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxSize().padding(padding.withoutBottom()).verticalScroll(pageScroll).padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             com.churchdrive.app.ui.UpdateNotice(BuildConfig.PLAY, vm.updateAvailable, com.churchdrive.app.UpdateCheck.TODO_APK_URL, "Church Drive To-Do")
             TaskCard(vm, tab)
             Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(padding.calculateBottomPadding()))
+        }
         }
     }
     }
