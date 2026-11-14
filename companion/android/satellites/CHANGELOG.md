@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.151.1
+
+- No app change (Clive Admin's side panel pages now load).
+
 ## 0.151.0
 
 - No app change.

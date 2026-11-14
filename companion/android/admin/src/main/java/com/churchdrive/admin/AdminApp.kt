@@ -86,8 +86,10 @@ fun AdminApp(vm: AdminModel) {
             com.churchdrive.app.ui.LocalTemplates provides vm.templates, com.churchdrive.app.ui.LocalUserName provides vm.personName,
             com.churchdrive.app.ui.LocalIsAdmin provides vm.isAdmin, com.churchdrive.app.ui.LocalAreaNames provides vm.areaNames) {
             AdminPages(vm, onPerson = { panel = "account" }, onPanel = { panel = it })
+            // Inside the providers too: the side panel's pages (Notifications, People, Camera links, Watch) ask the house through them, and
+            // outside them they had no line to the house and always said they couldn't be read.
+            AdminPanel(panel, { panel = it }, vm)
         }
-        AdminPanel(panel, { panel = it }, vm)
     }
 }
 

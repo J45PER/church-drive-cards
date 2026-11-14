@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.151.1
+
+- Fixed: Notifications, People, Camera links and Watch in the side panel were blank and said they couldn't be read from the house. The side panel had no line to the house; it has now, so each page shows the same cards and controls as the Church Drive app.
+
 ## 0.151.0
 
 - No app change.
