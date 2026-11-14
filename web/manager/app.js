@@ -57,7 +57,7 @@ const PAGES = [
   { id: 'design', title: (arg) => subOf(DESIGN_SUBS, arg)[1], label: 'Design', icon: 'cd:palette', group: 'Design', render: (el, c, arg) => renderDesignArea(el, c, arg), ms: true },
   { id: 'reference', title: 'Reference', label: 'Reference', icon: 'cd:image-text', group: 'Design', render: (el, c, arg) => renderReference(el, c, arg) },
   { id: 'clive', title: (arg) => subOf(CLIVE_SUBS, arg)[1], label: 'Clive', icon: 'cd:mic', group: 'Clive', render: (el, c, arg) => renderClive(el, c, arg), ms: true },
-  { id: 'manager', title: 'Settings', label: 'Settings', icon: 'cd:sliders', group: 'Manage', render: (el, c, arg) => renderManager(el, c, { glowStyle, go }, arg ? decodeURIComponent(arg) : '') },
+  { id: 'manager', title: (arg) => (arg ? decodeURIComponent(arg) : 'Settings'), label: 'Settings', icon: 'cd:sliders', group: 'Manage', render: (el, c, arg) => renderManager(el, c, { glowStyle, go }, arg ? decodeURIComponent(arg) : ''), ms: true },
   { id: 'changes', title: 'Edits and history', label: 'Edits', icon: 'cd:checklist', group: 'Manage', render: (el, c) => renderChanges(el, c, { glowStyle }) },
 ];
 const titleOf = (page, arg = '') => (typeof page.title === 'function' ? page.title(arg) : page.title);
