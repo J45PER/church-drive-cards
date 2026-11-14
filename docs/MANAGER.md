@@ -194,6 +194,7 @@ The website had become a copy of the Home Assistant dashboards and of Clive Admi
   - **Home:** a control-panel start page: Edits waiting, versions, Clive's live state, shortcuts into Design and Clive.
   - **Design:** one area with three sub-pages: Look (palette per card, real card as preview; Colours and the palette editor sit under it), Icons (section and mode icons; the icon library is the picker), Layout (section order and hiding).
   - **Build order:** the new dock and Home on the example site, then Animations; chat recording in the house after.
+- **Built (0.151.0):** Chats (`chats.py`, `chats_logic.py`: the house subscribes to Home Assistant's own chat log, keeps each turn 30 days, admin-only; `church_drive/chats`, `church_drive/chats/rate`, `church_drive/chats/sent`; notes sent as a `chats` proposal through Edits; the website's Chats page), His devices (`clive_devices_logic.py`, `church_drive/clive/devices`: phones with the app and `assist_satellite` entities; the website's His devices page), Home's four tiles chosen under Settings, Home page (kept in the browser; Clive now and Chats to review join the choices), Edits restyled, Reference in the site style, and a person's card in Settings, People drawn in their own palette. If this Home Assistant has no chat log to listen to, the Chats page says so and nothing else is affected. This was not run against a real Home Assistant when written, so check the Chats page after the first release.
 
 ## 9. Build order
 
