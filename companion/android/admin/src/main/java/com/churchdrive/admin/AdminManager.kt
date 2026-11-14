@@ -101,8 +101,12 @@ object ManagerSections {
     /** Which side-panel page (`health`, `watch`, `notifications`, `cameras` or `people`) a section lives on, or null when it is on the Manager page. */
     fun ownPage(section: ManagerSection): String? = section.cards.firstNotNullOfOrNull { OWN_PAGE[it.type] }
 
-    /** The sections on the Manager page: all of them but those with a page of their own. */
-    fun forManagerPage(sections: List<ManagerSection>): List<ManagerSection> = forAdmin(sections).filter { ownPage(it) == null }
+    /** The sections on the Manager page: all of them but those with a page of their own or a card on Home. */
+    fun forManagerPage(sections: List<ManagerSection>): List<ManagerSection> =
+        forAdmin(sections).filter { ownPage(it) == null && !onHome(it) }
+
+    /** Sections that are a card on the Home page instead (Who's home), so the Manager page does not list them too. */
+    fun onHome(section: ManagerSection): Boolean = section.cards.isNotEmpty() && section.cards.all { it.type == "custom:people-card" }
 
     /** The section a side-panel page ([ownPage]) shows, or null while the dashboard has not been read. */
     fun forPage(sections: List<ManagerSection>, page: String): ManagerSection? = sections.firstOrNull { ownPage(it) == page }

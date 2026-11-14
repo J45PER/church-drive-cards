@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.153.0
+
+- No change you will notice (the to-do highlights moved to the shared module so Clive Admin's Home can show them).
+
 ## 0.152.0
 
 - Back from a page of the side panel (Settings, About and the rest) goes straight back to the app, not to the panel's list.

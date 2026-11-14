@@ -51,7 +51,8 @@ class ManagerSectionsTest {
             section("Watch", "custom:watch-settings-card"), section("Camera links", "custom:camera-links-card"),
             section("Automatic to-dos", "todo-list"),
         )
-        assertEquals(listOf("Who's home", "Automatic to-dos"), ManagerSections.forManagerPage(all).map { it.title })
+        // Who's home is a card on the Home page, not on the Manager page.
+        assertEquals(listOf("Automatic to-dos"), ManagerSections.forManagerPage(all).map { it.title })
         assertEquals("Camera links", ManagerSections.forPage(all, "cameras")?.title)
         assertEquals("Watch", ManagerSections.forPage(all, "watch")?.title)
         assertEquals("Notifications", ManagerSections.forPage(all, "notifications")?.title)
