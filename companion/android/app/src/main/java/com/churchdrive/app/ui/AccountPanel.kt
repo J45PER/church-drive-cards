@@ -28,6 +28,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.unit.Dp
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeChild
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -95,6 +98,10 @@ fun AccountOverlay(
     experimentalContent: @Composable () -> Unit = {},
     /** The Activity log page (administrators): what people and the assistant did, and who came and went. */
     activityContent: @Composable () -> Unit = {},
+    /** The page behind the sidebar, to blur (the bar's acrylic). Null keeps the sidebar solid. */
+    acrylic: HazeState? = null,
+    /** The height of the bottom bar: the sidebar stops above it, so the bar stays in reach. */
+    bottomInset: Dp = 0.dp,
 ) {
     // The last page shown, so a page keeps its words while it slides away.
     var shown by remember { mutableStateOf("account") }
@@ -105,7 +112,12 @@ fun AccountOverlay(
         enter = slideInHorizontally(initialOffsetX = { it }),
         exit = slideOutHorizontally(targetOffsetX = { it }),
     ) {
-        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        // Full width, stopping above the bottom bar. With the page's blur source it is acrylic: the page blurs behind the list.
+        val blur = acrylic?.let { rememberAcrylicStyle() }
+        Surface(
+            Modifier.fillMaxSize().padding(bottom = bottomInset).let { m -> if (acrylic != null && blur != null) m.hazeChild(acrylic, blur) else m },
+            color = if (acrylic != null) Color.Transparent else MaterialTheme.colorScheme.background,
+        ) {
             AnimatedContent(
                 targetState = shown,
                 transitionSpec = {
@@ -118,7 +130,8 @@ fun AccountOverlay(
                 label = "account",
             ) { which ->
                 // Each page has its own solid background, so one never shows through another while they slide.
-                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                // The list itself is see-through when it is acrylic; the pages under it keep a solid background.
+                Surface(Modifier.fillMaxSize(), color = if (acrylic != null && which == "account") Color.Transparent else MaterialTheme.colorScheme.background) {
                 when (which) {
                     "settings" -> SettingsPage(settings, isAdmin) { onPanel("account") }
                     "about" -> AboutPage(settings, updateAvailable, isAdmin) { onPanel("account") }

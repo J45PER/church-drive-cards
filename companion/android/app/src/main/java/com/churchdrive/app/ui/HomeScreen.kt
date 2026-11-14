@@ -25,11 +25,15 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.EvStation
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Thermostat
@@ -226,6 +230,20 @@ fun HomeScreen(
                             label = { Text(p.label, fontSize = 11.sp, maxLines = 1) },
                         )
                     }
+                    // A thin divider, then the sidebar button: a chevron, out to open the sidebar and in to close it. It has no name.
+                    Box(Modifier.align(Alignment.CenterVertically).padding(horizontal = 4.dp).size(width = 1.dp, height = 36.dp).background(MaterialTheme.colorScheme.outlineVariant))
+                    Box(
+                        Modifier.width(28.dp).fillMaxHeight().clickable(onClickLabel = if (panel == null) "Open the sidebar" else "Close the sidebar") {
+                            panel = if (panel == null) "account" else null
+                        },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            if (panel == null) Icons.Default.ChevronLeft else Icons.Default.ChevronRight,
+                            contentDescription = if (panel == null) "Open the sidebar" else "Close the sidebar",
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
             
                         }
                     }
@@ -314,8 +332,12 @@ fun HomeScreen(
     AssistantOverlay(onSettings = { panel = "settings" })
     AssistantFab()
     if (openCamera != null && statesLoaded) CameraViewerFor(openCamera, entities, registry, call, onCameraClosed, answer = openCameraAnswer)
+    // The bar is there unless the rail is down the side (then only while Clive is open): the sidebar stops above it.
+    val barShown = !window.rail || (LocalAssistant.current?.let { it.open && it.model != null } == true)
     AccountOverlay(
         panel, { panel = it }, userName, isAdmin, account, updateAvailable, onSignOut,
+        acrylic = acrylic,
+        bottomInset = if (barShown) 80.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() else 0.dp,
         healthSummary = if (panel != null) deviceHealthSummary(deviceHealthList(entities, registry, areaNames)) else "",
         onDeviceHealth = { panel = null; onDeviceHealth() },
         adminPages = adminPages,
