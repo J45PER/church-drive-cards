@@ -3,7 +3,10 @@ package com.churchdrive.app
 import androidx.compose.ui.graphics.Color
 import com.churchdrive.app.ui.CliveColours
 import com.churchdrive.app.ui.Tone
+import com.churchdrive.app.ui.DoneMotion
 import com.churchdrive.app.ui.cardBrand
+import com.churchdrive.app.ui.doneMotion
+import com.churchdrive.app.ui.AssistantCard
 import com.churchdrive.app.ui.cardIcon
 import com.churchdrive.app.ui.cardRows
 import com.churchdrive.app.ui.carBatteryColour
@@ -135,5 +138,28 @@ class AssistCardsTest {
         for (slug in listOf("championsleague", "europaleague", "conferenceleague", "facup", "eflleague", "carabaocup", "scottishpremiership", "nationsleague", "disneyplus", "cupra", "octopusenergy")) {
             assertEquals(slug, true, own.optString(slug).startsWith("M"))
         }
+    }
+
+    private fun done(json: String) = doneMotion(AssistantCard("done", JSONObject(json)))
+
+    @Test fun somethingDoneToTheHouseShowsItHappening() {
+        // The two cards the house really sent: a blind opening, and lights turned off.
+        assertEquals(DoneMotion.Extend(closing = false), done("""{"name":"Hayley's bedroom blind","detail":"Opening","icon":"mdi:blinds-open"}"""))
+        assertEquals(DoneMotion.Swap("cd:bulb-lit", "mdi:lightbulb-off", 450), done("""{"name":"Hayley's bedroom lights","detail":"Turned off","icon":"mdi:lightbulb-off","percent":0}"""))
+        assertEquals(DoneMotion.Extend(closing = true), done("""{"detail":"Closing","icon":"mdi:blinds-open"}"""))
+        assertEquals(DoneMotion.Extend(closing = true), done("""{"icon":"mdi:blinds"}"""))
+        assertEquals(DoneMotion.Swap("cd:bulb", "cd:bulb-lit", 450), done("""{"detail":"Turned on","icon":"mdi:lightbulb"}"""))
+        assertEquals(DoneMotion.Spin("cd:fan", 1100), done("""{"detail":"On, speed 2","icon":"mdi:fan"}"""))
+        assertEquals(DoneMotion.Swap("cd:lock-open", "cd:lock", 650), done("""{"detail":"Locked","icon":"mdi:lock"}"""))
+    }
+
+    @Test fun aPlainDoneKeepsItsTick() {
+        assertNull(done("""{"name":"Alarm","detail":"Armed away","icon":"mdi:shield-lock"}"""))
+        assertNull(done("""{"name":"Energy","icon":"mdi:lightning-bolt"}"""))
+        assertNull(done("""{"name":"Fan","detail":"Turned off","icon":"mdi:fan"}"""))
+        assertNull(done("""{"name":"Blind","detail":"Stopped","icon":"mdi:blinds"}"""))
+        // A failure shows its cross, never a motion.
+        assertNull(done("""{"ok":false,"detail":"Opening","icon":"mdi:blinds-open"}"""))
+        assertNull(doneMotion(AssistantCard("lights", JSONObject("""{"icon":"mdi:lightbulb"}"""))))
     }
 }

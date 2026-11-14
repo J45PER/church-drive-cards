@@ -4,6 +4,7 @@ import com.churchdrive.app.ui.AssistEvent
 import com.churchdrive.app.ui.AssistTimes
 import com.churchdrive.app.ui.formatTimings
 import com.churchdrive.app.ui.assistAudioUrl
+import com.churchdrive.app.ui.correctHeard
 import com.churchdrive.app.ui.forDisplay
 import com.churchdrive.app.ui.forSpeech
 import com.churchdrive.app.ui.isDismissal
@@ -220,5 +221,15 @@ class AssistDataTest {
         } finally {
             brand.useForTest("")
         }
+    }
+
+    @Test
+    fun aMisheardHouseholdNameIsPutRight() {
+        assertEquals("turn off Hayley's bedroom lights", correctHeard("turn off Hitler's bedroom lights"))
+        assertEquals("Is Hayley home", correctHeard("Is hitler home"))
+        assertEquals("tell Hayley and Diane", correctHeard("tell Hailey and Dianne"))
+        // Other words, and words that only contain one, are left alone.
+        assertEquals("open the blind in the hall", correctHeard("open the blind in the hall"))
+        assertEquals("the Jaimes", correctHeard("the Jaimes"))
     }
 }

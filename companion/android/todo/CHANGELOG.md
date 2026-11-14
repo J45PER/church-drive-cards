@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.149.7
+
+- No app change (Clive in the phone app: the wake word, a misheard name and moving card icons).
+
 ## 0.149.6
 
 - No app change (the dashboard's Auto Layout now also holds the order of its panels, and settles on its own a few seconds after loading).

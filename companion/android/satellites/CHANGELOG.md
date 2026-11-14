@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.149.7
+
+- No app change (Clive in the phone app: the wake word, a misheard name and moving card icons).
+
 ## 0.149.6
 
 - No app change (the dashboard's Auto Layout now also holds the order of its panels, and settles on its own a few seconds after loading).

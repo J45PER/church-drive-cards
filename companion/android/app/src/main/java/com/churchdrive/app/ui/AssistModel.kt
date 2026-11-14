@@ -30,6 +30,15 @@ import org.json.JSONObject
 /** How long the house waits in silence before it decides you have finished speaking (its own default is 0.7 s; every second here is a second added to every answer). */
 private const val SILENCE_SECONDS = 0.9
 
+/**
+ * How long a wake word run may hear nothing before the house ends it (the app then starts the next). The house's own default is 3 seconds, which
+ * meant a new run, with a gap in the listening, every few seconds: a wake word said across a gap was missed.
+ */
+private const val WAKE_QUIET_SECONDS = 600
+
+/** The longest one wake word run (and the question and answer after it) may last before the house ends it. */
+private const val WAKE_RUN_SECONDS = 1_800
+
 class AssistModel(private val context: Context, private val api: HaApi, private val base: String) {
     var state by mutableStateOf(AssistState.Idle)
         private set
@@ -67,6 +76,12 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     private var recogniser: SpeechRecognizer? = null
     private var player: MediaPlayer? = null
     private var subscription = -1
+
+    /** Counts the runs: what a run that has since been closed still sends (already on its way to the main thread) must not touch the run after it. */
+    private var runToken = 0
+
+    /** The phone's own recogniser is listening (between [listen] and its result, error or [stop]); what it sends at any other time is stale. */
+    private var recognising = false
     private var answered = false
     private var said = ""
     private var times = AssistTimes()
@@ -197,10 +212,15 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
             .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1_400L)
             .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1_200L)
             .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 1_500L)
+        // The household's names and his own, as words to expect, so a name is not heard as a better-known word (newer phones only).
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            intent.putStringArrayListExtra(RecognizerIntent.EXTRA_BIASING_STRINGS, ArrayList(HOUSEHOLD_NAMES + listOfNotNull(name.takeIf { it.isNotBlank() })))
+        }
         partial = ""
         notice = ""
         notUnderstood = null
         state = AssistState.Listening
+        recognising = true
         r.startListening(intent)
     }
 
@@ -233,7 +253,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
             .put("input", JSONObject().put("text", sentence))
             .put("timeout", 30)
         conversationId?.let { params.put("conversation_id", it) }
-        subscription = api.subscribe("assist_pipeline/run", params) { event -> main.post { onEvent(event) } }
+        subscription = startRun(params)
         if (subscription < 0) {
             state = AssistState.Idle
             notice = "Can't reach the house right now."
@@ -251,8 +271,14 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
             .put("end_stage", "tts")
             .put("input", JSONObject().put("text", forSpeech(text)))
             .put("timeout", 30)
-        subscription = api.subscribe("assist_pipeline/run", params) { event -> main.post { onEvent(event) } }
+        subscription = startRun(params)
         if (subscription < 0 && attempt < 10) main.postDelayed({ speak(text, attempt + 1) }, 1_000)
+    }
+
+    /** Starts a run of the house's voice pipeline; its events are acted on only while it is still the current run. */
+    private fun startRun(params: JSONObject): Int {
+        val token = ++runToken
+        return api.subscribe("assist_pipeline/run", params) { event -> main.post { if (token == runToken) onEvent(event) } }
     }
 
     // ---- listening for the wake word ----
@@ -292,13 +318,13 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
             .put("start_stage", "wake_word")
             .put("end_stage", "tts")
             // Home Assistant ends your sentence after 0.7 seconds of quiet by default, which cuts people off mid-thought: wait longer.
-            .put("input", JSONObject().put("sample_rate", MicStream.RATE).put("silence_seconds", SILENCE_SECONDS))
-            .put("timeout", 300)
+            .put("input", JSONObject().put("sample_rate", MicStream.RATE).put("silence_seconds", SILENCE_SECONDS).put("timeout", WAKE_QUIET_SECONDS))
+            .put("timeout", WAKE_RUN_SECONDS)
         conversationId?.let { params.put("conversation_id", it) }
         answered = false
         said = ""
         watchShow(fresh = true)
-        subscription = api.subscribe("assist_pipeline/run", params) { event -> main.post { onEvent(event) } }
+        subscription = startRun(params)
         if (subscription < 0) {
             // The house isn't reachable: try again shortly.
             AssistWakeStatus.problem = "Can't reach the house"
@@ -310,6 +336,9 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
 
     private fun startMic() {
         val id = handlerId ?: return
+        // Never two at once: one left running would hold the microphone and send to a run that has gone.
+        mic?.stop()
+        mic = null
         audioEnded = false
         val m = MicStream({ buf, n -> if (!audioEnded) api.sendAudio(id, buf, n) }, { l -> main.post { level = if (state == AssistState.Listening) l else 0f } })
         if (m.start()) {
@@ -370,10 +399,12 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
                 mark { it.copy(heard = SystemClock.elapsedRealtime()) }
                 endAudio()
                 if (e.text.isNotBlank()) {
-                    said = e.text
+                    // (The house has already passed its own words on to him; this puts a misheard name right on the screen.)
+                    val heard = correctHeard(e.text)
+                    said = heard
                     typedRun = false
-                    closing = isDismissal(e.text)
-                    messages += AssistMessage(true, e.text)
+                    closing = isDismissal(heard)
+                    messages += AssistMessage(true, heard)
                     pendingShow = null
                     state = AssistState.Thinking
                 }
@@ -483,15 +514,18 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
     }
 
     fun stop() {
+        recognising = false
         recogniser?.cancel()
         stopSpeaking()
         stopVoiceRun()
-        if (state != AssistState.Thinking) state = AssistState.Idle
+        // (Also when he was thinking: the run has just been closed, so its answer will never come, and the wake word could not start again.)
+        state = AssistState.Idle
         partial = ""
         level = 0f
     }
 
     private fun closeRun() {
+        runToken++
         if (subscription >= 0) api.close(subscription)
         subscription = -1
     }
@@ -512,13 +546,16 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
         override fun onReadyForSpeech(params: Bundle?) = Unit
         override fun onBeginningOfSpeech() = Unit
         override fun onRmsChanged(rmsdB: Float) {
-            level = ((rmsdB + 2f) / 12f).coerceIn(0f, 1f)
+            if (recognising) level = ((rmsdB + 2f) / 12f).coerceIn(0f, 1f)
         }
         override fun onBufferReceived(buffer: ByteArray?) = Unit
         override fun onEndOfSpeech() {
             level = 0f
         }
         override fun onError(error: Int) {
+            // After a cancel some phones still report an error: by then he may be waiting for the wake word again, which this must not disturb.
+            if (!recognising) return
+            recognising = false
             level = 0f
             state = AssistState.Idle
             // The phone's recogniser often gives up before the person has started to answer, or is still busy letting go of the last
@@ -545,8 +582,11 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
             }
         }
         override fun onResults(results: Bundle?) {
+            // A result that was already on its way when he was closed is not a question.
+            if (!recognising) return
+            recognising = false
             level = 0f
-            val heard = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
+            val heard = correctHeard(results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty())
             if (heard.isBlank()) {
                 state = AssistState.Idle
                 notice = "I didn't hear anything. Tap the microphone to try again."
@@ -555,6 +595,7 @@ class AssistModel(private val context: Context, private val api: HaApi, private 
             }
         }
         override fun onPartialResults(partialResults: Bundle?) {
+            if (!recognising) return
             partial = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
         }
         override fun onEvent(eventType: Int, params: Bundle?) = Unit

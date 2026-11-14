@@ -277,6 +277,7 @@ fun introDue(introducedEver: Boolean, told: Set<String>?, log: List<AssistFeatur
  * ever do they get the full introduction. Features also make up that introduction's "what I can do".
  */
 private val RAW_ASSIST_FEATURES = listOf(
+    AssistFeature("mdi:microphone", "Hears you every time", "", id = "wake-steady-names-motion", detail = "A fix: {name} now listens for {wake} without the short gaps that made him miss it, gets the family's names right, and when he opens a blind or switches a light his card shows it happening.", kind = AssistantChange.Fix),
     AssistFeature("mdi:weather-night", "Overnight heating", "", id = "overnight-heating", detail = "Administrators can now choose what the heating does at night: Smart leaves it to {name}, Eco puts it on Eco and Off turns it off, between times you set (midnight to 6am to begin with). It is on the Climate page. In the morning {name} puts the heating back.", kind = AssistantChange.Change),
     AssistFeature("mdi:timer-pause-outline", "A shorter pause", "", id = "pause-after-change", detail = "After somebody changes a thermostat, {name} now leaves it alone for 30 minutes instead of 2 hours. You can change that in a thermostat's settings, under Pause after a change.", kind = AssistantChange.Change),
     AssistFeature("mdi:map-clock", "Time zones and late nights", "", id = "time-zones-late-nights", detail = "Away from home, {name} gives the time where you are as well as the home time. And after midnight, when you say tomorrow, he checks whether you mean today or tomorrow.", kind = AssistantChange.Change),
@@ -422,6 +423,58 @@ fun isDismissal(text: String): Boolean {
     return t in DISMISS_WORDS || DISMISS_PHRASES.any { it in t }
 }
 
+
+/** The household's names, given to the phone's speech recogniser as words to expect. */
+val HOUSEHOLD_NAMES = listOf("Diane", "Hayley", "Ian", "Jamie")
+
+/** What speech recognition writes when it mishears a household name (lower case), and the name that was said. */
+private val MISHEARD_NAMES = mapOf(
+    "hitler" to "Hayley", "hailey" to "Hayley", "haley" to "Hayley", "hayleigh" to "Hayley", "hailee" to "Hayley",
+    "dianne" to "Diane", "jaime" to "Jamie", "jamey" to "Jamie", "iain" to "Ian",
+)
+
+private val MISHEARD_PATTERN = Regex("\\b(" + MISHEARD_NAMES.keys.joinToString("|") + ")\\b", RegexOption.IGNORE_CASE)
+
+/** What was heard, with misheard household names put right ("Hitler's bedroom" is "Hayley's bedroom"). For speech only, never for what is typed. */
+fun correctHeard(text: String): String = MISHEARD_PATTERN.replace(text) { m -> MISHEARD_NAMES[m.value.lowercase()] ?: m.value }
+
+/**
+ * How the icon of a "done" card moves while the card is up: the bulb lights or goes out, the blind's slab comes down or goes up, the fan turns, the
+ * lock shuts or opens, the volume steps up (the table is `icons` in design/clive/cards.json).
+ */
+sealed interface DoneMotion {
+    /** One icon gives way to another. */
+    data class Swap(val from: String, val to: String, val ms: Int) : DoneMotion
+    /** The blind's slab comes down under its rail ([closing]) or goes back up. */
+    data class Extend(val closing: Boolean) : DoneMotion
+    data class Spin(val icon: String, val ms: Int) : DoneMotion
+    /** Each icon in turn, ending on the last. */
+    data class Cycle(val icons: List<String>, val ms: Int) : DoneMotion
+}
+
+/** The motion for a "done" card, from the icon and words the house sent with it, or null for a plain tick (or a cross, when it failed). */
+fun doneMotion(card: AssistantCard): DoneMotion? {
+    val f = card.fields
+    if (card.kind != "done" || (f.has("ok") && !f.optBoolean("ok", true))) return null
+    val icon = f.optString("icon").lowercase()
+    val words = f.optString("detail").lowercase()
+    fun says(vararg starts: String) = starts.any { Regex("\\b$it").containsMatchIn(words) }
+    return when {
+        listOf("blind", "roller-shade", "curtain", "shutter").any { it in icon } -> when {
+            says("stop") -> null
+            says("open", "rais", "up") -> DoneMotion.Extend(closing = false)
+            says("clos", "shut", "lower", "down") -> DoneMotion.Extend(closing = true)
+            else -> DoneMotion.Extend(closing = "closed" in icon || icon == "mdi:blinds")
+        }
+        listOf("bulb", "lamp", "ceiling-light", "track-light", "spotlight", "string-lights", "led-strip", "chandelier", "wall-sconce").any { it in icon } ->
+            if ("off" in icon || says("off", "out")) DoneMotion.Swap("cd:bulb-lit", "mdi:lightbulb-off", 450) else DoneMotion.Swap("cd:bulb", "cd:bulb-lit", 450)
+        "fan" in icon -> if ("off" in icon || says("off", "stop")) null else DoneMotion.Spin("cd:fan", 1100)
+        "lock" in icon && "shield" !in icon ->
+            if ("open" in icon || says("unlock")) DoneMotion.Swap("cd:lock", "cd:lock-open", 650) else DoneMotion.Swap("cd:lock-open", "cd:lock", 650)
+        "volume" in icon && "off" !in icon && "mute" !in icon -> DoneMotion.Cycle(listOf("cd:volume-low", "cd:volume-medium", "cd:volume-high"), 480)
+        else -> null
+    }
+}
 
 /** Names the voice says wrongly, and what to write instead so it says them right ("Die Ann" for Diane). */
 private val NAME_RESPELLINGS = listOf("Diane" to "Die Ann")
