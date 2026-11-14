@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.150.1
+
+- No app change (the Manager website's new layout).
+
 ## 0.150.0
 
 - **Clive hears his wake word every time.** With "listen for the wake word" on, the app was listening in runs of about three seconds with a gap between each, so a wake word said across a gap was missed. It now listens without the gaps.
@@ -23,10 +27,6 @@ with the APK, so there is a record of what shipped. Newest first.
 ## 0.149.4
 
 - No app change (the dashboard's Auto Layout no longer flickers between two arrangements).
-
-## 0.150.0
-
-- No app change (the Manager website's new layout).
 
 ## 0.149.3
 

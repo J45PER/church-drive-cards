@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.150.1
+
+- No app change.
+
 ## 0.150.0
 
 - No app change (Clive in the phone app: the wake word, a misheard name and moving card icons).
@@ -15,10 +19,6 @@
 ## 0.149.4
 
 - No app change (the dashboard's Auto Layout no longer flickers between two arrangements).
-
-## 0.150.0
-
-- No app change.
 
 ## 0.149.3
 
