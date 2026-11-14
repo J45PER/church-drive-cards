@@ -12,19 +12,14 @@ import { fillIcons, icon, loadIcons } from './icons.js';
 initTheme();   // a light or dark chosen with the button, before anything is drawn
 import { renderChanges } from './pages/changes.js';
 import { openPaletteEditor } from './pages/palette-editor.js';
-import { renderCards, renderIcons, renderLayouts } from './pages/design.js';
-import { renderDevices } from './pages/devices.js';
-import { renderHealth } from './pages/health.js';
 import { renderManager, renderManagerSection } from './pages/manager.js';
 import { LOGO_PATH, LOGO_VIEWBOX } from './logo.js';
 import { cleanup } from './kit.js';
 import { h } from './pages/dom.js';
-import { renderEnergyPage } from './pages/energy.js';
-import { renderActivity } from './pages/activity.js';
-import { renderColours } from './pages/colours.js';
 import { renderHome as renderHomePage } from './pages/home.js';
+import { renderClive, CLIVE_SUBS, subOf } from './pages/clive.js';
+import { renderDesignArea, DESIGN_SUBS } from './pages/design-area.js';
 import { dockHtml, dockAlerts, bindDock } from './dock.js';
-import { renderIconLibrary } from './pages/icon-library.js';
 import { renderReference } from './pages/reference.js';
 import { PALETTE_PARTS, paletteWarnings, slugOk, ACTIONS, BAD, DAYS, OK, TIMES, WARN, activityNote, activityProblem, activityQuery, activityWho, actionLabel, ago, buildRegistry, clock, dayLabel, deviceHealthList, healthSummary, parseActivity } from './pages/logic.js';
 
@@ -58,34 +53,15 @@ function showSignIn(message) {
 // A page marked `live` only shows things, so it is read again by itself now and then (see freshness.js); the editors are never redrawn under someone.
 
 const PAGES = [
-  { id: 'home', title: 'Clive Manager', label: 'Home', icon: 'cd:home', render: (el, c) => renderHomePage(el, c, PAGES), live: true, ms: true },
-  { id: 'energy', title: 'Energy', label: 'Energy', icon: 'cd:bolt', group: 'The house', render: (el, c) => renderEnergyPage(el, c), ms: true },
-  { id: 'devices', title: 'Devices', label: 'Devices', icon: 'cd:television-play', group: 'The house', render: renderDevices, ms: true },
-  { id: 'health', title: 'Device health', label: 'Device health', icon: 'cd:device-health', group: 'The house', render: renderHealth, live: true, ms: true },
-  { id: 'activity', title: 'Activity log', label: 'Activity', icon: 'cd:history', group: 'The house', render: renderActivity, ms: true },
-  { id: 'colours', title: 'Colour palettes', label: 'Colours', icon: 'cd:palette', group: 'Design', render: renderColours, ms: true },
-  { id: 'design', title: 'Customise the dashboards', label: 'Customise', icon: 'cd:view-dashboard', group: 'Design', render: renderDesign },
-  { id: 'iconlib', title: 'Icon library', label: 'Icon library', icon: 'cd:bulb-group', group: 'Design', render: (el, c) => renderIconLibrary(el, c) },
+  { id: 'home', title: 'Clive Manager', label: 'Home', icon: 'cd:home', render: (el, c) => renderHomePage(el, c), live: true, ms: true },
+  { id: 'design', title: (arg) => subOf(DESIGN_SUBS, arg)[1], label: 'Design', icon: 'cd:palette', group: 'Design', render: (el, c, arg) => renderDesignArea(el, c, arg), ms: true },
   { id: 'reference', title: 'Reference', label: 'Reference', icon: 'cd:image-text', group: 'Design', render: (el, c, arg) => renderReference(el, c, arg) },
+  { id: 'clive', title: (arg) => subOf(CLIVE_SUBS, arg)[1], label: 'Clive', icon: 'cd:mic', group: 'Clive', render: (el, c, arg) => renderClive(el, c, arg), ms: true },
   { id: 'manager', title: 'Settings', label: 'Settings', icon: 'cd:sliders', group: 'Manage', render: (el, c, arg) => renderManager(el, c, { glowStyle, go }, arg ? decodeURIComponent(arg) : '') },
   { id: 'changes', title: 'Edits and history', label: 'Edits', icon: 'cd:checklist', group: 'Manage', render: (el, c) => renderChanges(el, c, { glowStyle }) },
 ];
-const GROUPS = ['The house', 'Design', 'Manage'];
-
-// ---- Design: cards, icons and layouts ----
-
-const DESIGN_TABS = [
-  ['cards', 'Card colours', 'Which colour theme each card uses, on the dashboards and in the apps.', 'tasks', renderCards],
-  ['icons', 'Section icons', 'The small icon at the top of each dashboard section.', 'media', renderIcons],
-  ['layouts', 'Section order', 'Move a dashboard page\'s sections up or down, or hide them.', 'people', renderLayouts],
-];
-async function renderDesign(el, ctx, arg) {
-  const tab = DESIGN_TABS.find((t) => t[0] === arg) || DESIGN_TABS[0];
-  const tiles = DESIGN_TABS.map((t) => `<a class="card design-tile${t[0] === tab[0] ? ' on' : ''}" href="#design/${t[0]}" style="${glowStyle(t[3])}"><p class="title">${esc(t[1])}</p><p class="sub">${esc(t[2])}</p></a>`).join('');
-  el.innerHTML = `<div class="stack"><p class="note">Change how the house looks. Whatever you change here is sent to Clive to check first, and you can follow it, or put it back, under <a href="#changes">Edits</a>.</p>
-    <div class="grid3">${tiles}</div><div id="design-body"></div></div>`;
-  await tab[4](el.querySelector('#design-body'), ctx);
-}
+const titleOf = (page, arg = '') => (typeof page.title === 'function' ? page.title(arg) : page.title);
+const argOf = () => location.hash.slice(1).split('/').slice(1).join('/');
 
 // ---- Device health, Energy, Activity ----
 
@@ -125,8 +101,9 @@ function showShell(user) {
 function show() {
   const page = currentPage();
   loadedAt = Date.now();
-  document.getElementById('title').textContent = page.title;
-  document.title = page.id === 'home' ? 'Clive Manager' : `${page.title} · Clive Manager`;
+  const pageTitle = titleOf(page, argOf());
+  document.getElementById('title').textContent = pageTitle;
+  document.title = page.id === 'home' ? 'Clive Manager' : `${pageTitle} · Clive Manager`;
   document.getElementById('page').classList.toggle('ms', !!page.ms);
   document.getElementById('title').hidden = page.id === 'home';
   drawDock(page);
@@ -178,7 +155,7 @@ let online = false;
 
 const status = createStatus({
   host: () => { try { return new URL(houseAddress()).hostname; } catch { return 'the house'; } },
-  page: () => currentPage().title,
+  page: () => titleOf(currentPage(), argOf()),
 });
 /** The Manager icon: refresh this page, or try the line again now when it is down. */
 const pressManager = () => { if (!online) retryNow(); else refreshNow(); };

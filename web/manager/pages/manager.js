@@ -55,7 +55,7 @@ export async function renderManager(el, ctx, helpers, title) {
   const current = all.find((s) => s.title === title) || all[0];
   const nav = h('nav', { class: 'set-nav', 'aria-label': 'Settings' }, groups.map((g) => h('div', { class: 'set-group' }, h('p', { class: 'set-head' }, g.name),
     g.sections.map((s) => h('a', { class: 'set-link', href: `#manager/${encodeURIComponent(s.title)}`, 'aria-current': s === current ? 'page' : null }, s.title)))),
-    h('div', { class: 'set-group' }, h('p', { class: 'set-head' }, 'Elsewhere'), h('a', { class: 'set-link', href: '#health' }, 'Device health'), h('a', { class: 'set-link', href: '#iconlib' }, 'Icon library')));
+    h('div', { class: 'set-group' }, h('p', { class: 'set-head' }, 'Elsewhere'), h('a', { class: 'set-link', href: '#design/icons' }, 'Icons and the icon library'), h('a', { class: 'set-link', href: '#clive/activity' }, 'Activity log')));
   const pane = h('div', { class: 'set-pane stack' });
   el.replaceChildren(h('div', { class: 'settings' }, nav, h('div', { class: 'stack' }, h('p', { class: 'note' }, 'The same settings as the Manager in the Church Drive app and Clive Admin. Changes here are made straight away, as they are there.'), pane)));
   if (!current) { pane.replaceChildren(h('p', { class: 'note' }, 'There are no settings sections in the Manager yet.')); return; }
@@ -215,8 +215,7 @@ const CARDS = {
   markdown: async (slot, ctx, card) => { slot.replaceChildren(h('p', { class: 'note' }, String(card.content || '').replace(/\*\*|__|`/g, ''))); },
 
   'custom:device-health-card': async (slot, ctx, card, helpers) => {
-    slot.replaceChildren(card_(h('p', { class: 'title' }, 'Watched devices'), soft('Batteries, filters and devices that stopped answering.'),
-      h('button', { class: 'btn quiet', type: 'button', onclick: () => helpers.go('health') }, 'Open Device health')));
+    slot.replaceChildren(card_(h('p', { class: 'title' }, 'Watched devices'), soft('Batteries, filters and devices that stopped answering.')));
   },
 };
 
