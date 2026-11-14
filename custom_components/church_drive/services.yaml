@@ -23,6 +23,24 @@ apply_scene:
             - Relax
             - Rest
             - Nightlight
+media_control:
+  fields:
+    entity_id:
+      required: true
+      selector:
+        entity:
+          domain: media_player
+    action:
+      required: true
+      example: pause
+      selector:
+        select:
+          options: [play, pause, play_pause, stop, next, previous, turn_on, turn_off, volume_up, volume_down, volume_set, mute, unmute, select_source]
+    value:
+      example: "35"
+      selector:
+        text:
+media_status:
 apply_proposal:
   fields:
     id:

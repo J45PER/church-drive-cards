@@ -1,0 +1,53 @@
+# Script script.clive_media_control: control a TV or speaker for whoever asked, if it is theirs to use (church_drive.media_control checks, and says so if not). Exposed to Assist.
+# The media_player entities themselves are NOT exposed to Assist, so this is his only way to control one: his own tools are not told who is asking.
+alias: Control a TV or speaker
+description: 'Use this to control a TV or speaker: play, pause, stop, next, previous, turn on, turn off, volume up, volume down, set the volume, mute, unmute, or choose a source. Say which TV or speaker by its name (for example Living Room TV).
+  It returns "say": your whole reply is exactly the text in "say", nothing before or after it. If "say" says a TV is not one they can use, do not try another way to control it.'
+fields:
+  name:
+    description: The name of the TV or speaker, as people say it (for example Living Room TV or Kitchen speaker).
+    name: Name
+    required: true
+    selector:
+      text:
+  action:
+    description: play, pause, play_pause, stop, next, previous, turn_on, turn_off, volume_up, volume_down, volume_set, mute, unmute or select_source.
+    name: Action
+    required: true
+    selector:
+      select:
+        custom_value: false
+        options: [play, pause, play_pause, stop, next, previous, turn_on, turn_off, volume_up, volume_down, volume_set, mute, unmute, select_source]
+  value:
+    description: For volume_set, the volume from 0 to 100; for select_source, the source (for example HDMI 1).
+    name: Value
+    required: false
+    selector:
+      text:
+icon: mdi:television-play
+mode: parallel
+max: 5
+sequence:
+- variables:
+    wanted: '{{ name | lower | replace(''the '', '''') | trim }}'
+    match: '{%- set ns = namespace(id='''') -%}{%- for s in states.media_player -%}{%- if ns.id == '''' and (wanted in (s.name | lower) or (s.name | lower) in wanted) -%}{%- set ns.id = s.entity_id -%}{%- endif -%}{%- endfor -%}{{- ns.id -}}'
+- if:
+  - condition: template
+    value_template: '{{ match == '''' }}'
+  then:
+  - variables:
+      result:
+        say: I can't find a TV or speaker called {{ name }}.
+  - response_variable: result
+    stop: Not found
+- action: church_drive.media_control
+  data:
+    entity_id: '{{ match }}'
+    action: '{{ action }}'
+    value: '{{ value | default(none) }}'
+  response_variable: outcome
+- variables:
+    result:
+      say: '{{ outcome.say }}'
+- response_variable: result
+  stop: Done

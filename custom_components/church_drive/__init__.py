@@ -86,6 +86,8 @@ from .const import (
     WS_SHOPPING_ITEM,
     WS_SHOPPING_UPDATE,
     SERVICE_APPLY_SCENE,
+    SERVICE_MEDIA_CONTROL,
+    SERVICE_MEDIA_STATUS,
     SERVICE_HEALTH_FIX,
     SERVICE_LOG_LOGO_REQUEST,
     SERVICE_SET_ASSISTANT_DATA,
@@ -168,6 +170,7 @@ from .shopping_logic import STATUSES
 from .fcm import Fcm
 from .activity import Activity
 from .chats import Chats
+from .access_logic import can_use, media_call, visible_media
 from .clive_devices_logic import shape_phones, shape_satellite
 from .chats_logic import MAX_LIMIT as CHATS_MAX_LIMIT, RATINGS as CHAT_RATINGS
 from .activity_logic import KINDS as ACTIVITY_KINDS, MAX_LIMIT as ACTIVITY_MAX_LIMIT
@@ -275,6 +278,13 @@ STEPS_CREATE_SCHEMA = vol.Schema(
     }
 )
 
+MEDIA_CONTROL_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+        vol.Required("action"): cv.string,
+        vol.Optional("value"): vol.Any(cv.string, vol.Coerce(float)),
+    }
+)
 APPLY_SCENE_SCHEMA = vol.Schema(
     {vol.Required(ATTR_ENTITY_ID): cv.entity_ids, vol.Required("scene"): cv.string}
 )
@@ -789,13 +799,13 @@ async def ws_people_cars(
 async def ws_people_access(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
-    """Set who can use a device (or entity); no people makes it everyone's again."""
+    """Set who can use a device (or entity); no people makes it everyone's again (for a TV or speaker: administrators only). Administrators always see everything."""
     people = _people(hass)
     if people is None:
         connection.send_error(msg["id"], "not_ready", "People and notifications aren't running")
         return
     await people.async_set_access(msg["key"], msg["people"])
-    connection.send_result(msg["id"], {"access": people.access()})
+    connection.send_result(msg["id"], {"access": people.access(), "visible": people.access_entities()})
 
 
 @websocket_api.websocket_command(
@@ -1974,6 +1984,39 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         DOMAIN, SERVICE_SYNC_SCENES, sync_scenes, supports_response=SupportsResponse.OPTIONAL
     )
     hass.services.async_register(DOMAIN, SERVICE_APPLY_SCENE, apply_scene, schema=APPLY_SCENE_SCHEMA)
+
+    async def media_control(call: ServiceCall) -> ServiceResponse:
+        """Control a TV or speaker for whoever asked, if it is theirs to use (the assistant's way in: his own tools are not told who is asking)."""
+        entity = call.data[ATTR_ENTITY_ID]
+        try:
+            service, data = media_call(call.data["action"], call.data.get("value"))
+        except ValueError as err:
+            raise ServiceValidationError(str(err)) from err
+        state = hass.states.get(entity)
+        name = state.name if state else entity
+        people = _people(hass)
+        user = await hass.auth.async_get_user(call.context.user_id) if call.context.user_id else None
+        # A call with nobody behind it (an automation) and an administrator may always; a person only the devices that are theirs.
+        if user is not None and not user.is_admin and people is not None and not can_use(people.access_entities(), entity, people.person_for_user(user.id) or None):
+            return {"done": False, "say": f"{name} isn't one you can use."}
+        await hass.services.async_call("media_player", service, {ATTR_ENTITY_ID: entity, **data}, blocking=True, context=call.context)
+        return {"done": True, "say": f"Done. {name}."}
+
+    hass.services.async_register(DOMAIN, SERVICE_MEDIA_CONTROL, media_control, schema=MEDIA_CONTROL_SCHEMA, supports_response=SupportsResponse.OPTIONAL)
+
+    async def media_status(call: ServiceCall) -> ServiceResponse:
+        """The TVs and speakers the asker may see and what each is doing (an administrator, or a call with nobody behind it, sees all)."""
+        people = _people(hass)
+        user = await hass.auth.async_get_user(call.context.user_id) if call.context.user_id else None
+        players = [
+            {"entity_id": s.entity_id, "name": s.name, "state": s.state, "app": s.attributes.get("app_name") or "", "title": s.attributes.get("media_title") or ""}
+            for s in hass.states.async_all("media_player")
+        ]
+        everyone = user is None or user.is_admin or people is None
+        shown = visible_media({} if everyone else people.access_entities(), players, None if everyone else (people.person_for_user(user.id) or None), everyone)
+        return {"players": shown}
+
+    hass.services.async_register(DOMAIN, SERVICE_MEDIA_STATUS, media_status, supports_response=SupportsResponse.ONLY)
     entry.async_on_unload(entry.add_update_listener(_options_updated))
 
     async def start(_event: Event | None = None) -> None:
@@ -1996,6 +2039,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Stop loading the cards on new pages and remove the scene entities."""
     hass.services.async_remove(DOMAIN, SERVICE_SYNC_SCENES)
     hass.services.async_remove(DOMAIN, SERVICE_APPLY_SCENE)
+    hass.services.async_remove(DOMAIN, SERVICE_MEDIA_CONTROL)
+    hass.services.async_remove(DOMAIN, SERVICE_MEDIA_STATUS)
     hass.services.async_remove(DOMAIN, SERVICE_HEALTH_FIX)
     hass.services.async_remove(DOMAIN, SERVICE_LOG_LOGO_REQUEST)
     hass.services.async_remove(DOMAIN, SERVICE_SET_PALETTE)

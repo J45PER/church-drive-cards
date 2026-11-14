@@ -12,6 +12,8 @@ CONF_SCENE_GROUPS = "scene_groups"
 
 SERVICE_SYNC_SCENES = "sync_scenes"
 SERVICE_APPLY_SCENE = "apply_scene"
+SERVICE_MEDIA_CONTROL = "media_control"
+SERVICE_MEDIA_STATUS = "media_status"
 WS_LIBRARY = "church_drive/library"
 WS_SCENE_SAVE = "church_drive/scene/save"
 WS_SCENE_DELETE = "church_drive/scene/delete"
