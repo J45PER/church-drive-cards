@@ -15,6 +15,10 @@ Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newe
 
 - No app change (the dashboard's Auto Layout no longer flickers between two arrangements).
 
+## 0.150.0
+
+- No app change.
+
 ## 0.149.3
 
 - No app change.

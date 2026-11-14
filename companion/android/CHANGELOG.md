@@ -16,6 +16,10 @@ with the APK, so there is a record of what shipped. Newest first.
 
 - No app change (the dashboard's Auto Layout no longer flickers between two arrangements).
 
+## 0.150.0
+
+- No app change (the Manager website's new layout).
+
 ## 0.149.3
 
 - No app change (the Manager website's Energy page).
