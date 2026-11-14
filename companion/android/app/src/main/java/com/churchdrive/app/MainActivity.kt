@@ -124,7 +124,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // The splash screen (the icon on its dark background) shows until the first screen is ready; this also puts the normal theme back.
-        installSplashScreen()
+        val started = android.os.SystemClock.uptimeMillis()
+        installSplashScreen().setKeepOnScreenCondition { !vm.cachesReady && android.os.SystemClock.uptimeMillis() - started < 1_500L }
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         openPage = intent?.getStringExtra("page")

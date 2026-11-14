@@ -1,5 +1,10 @@
 # Clive Admin: changelog
 
+## 0.153.1
+
+- Device health no longer lists a PC or TV that is switched off as "Not responding": a device that is only a media player is unavailable whenever it is off, which is not a fault.
+- The Internet line on Devices and Home says "Data not available" when the router's sensor cannot be read, instead of "Down".
+
 ## 0.153.0
 
 - The Home page has a new layout, on the Church Drive app's card grid: a Tasks block at the top (the house's jobs for you and the edits waiting on the website), then Security, Device health (its colour follows the worst device), Who's home, Energy, Clive's devices, and Updates and backups. Each card folds to a short strip and opens to its details; tapping a card opens its page.

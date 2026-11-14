@@ -4,6 +4,13 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.153.1
+
+- Opening the app no longer shows a black or empty first screen. The window behind the app was Material's dark default in every mode (it flashed whenever the app had not drawn yet, on opening and coming back); it is now the app's own background. The start-up screen also stays up (at most a second and a half) until the pages kept from last time are on the screen.
+- The cards look the same at once when you open the app, instead of filling in a moment later: each panel's summary, colour and header lines, the device list, the mode icons and the scene looks are now kept on the phone with the rest and shown straight away, then replaced by the live ones.
+- Device health no longer lists a PC or TV that is switched off as "Not responding": a device that is only a media player is unavailable whenever it is off, which is not a fault.
+- The Internet line on Devices and Home says "Data not available" when the router's sensor cannot be read, instead of "Down".
+
 ## 0.153.0
 
 - No change you will notice (the to-do highlights moved to the shared module so Clive Admin's Home can show them).

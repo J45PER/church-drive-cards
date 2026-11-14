@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.153.1
+
+- No change you will notice (shared code: a switched-off PC or TV is not "not responding", and an unreadable router is not "down").
+
 ## 0.153.0
 
 - No change you will notice (the to-do highlights moved to the shared module so Clive Admin's Home can show them).

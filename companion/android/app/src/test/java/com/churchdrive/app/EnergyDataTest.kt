@@ -75,6 +75,15 @@ class EnergyDataTest {
     }
 
     @Test
+    fun aRouterThatCannotBeReadIsNotSaidToBeDown() {
+        val e = listOf(state("binary_sensor.eero_wan_status", "unavailable", "device_class" to "connectivity")).associateBy { it.entityId }
+        val internet = SystemRows.rows(e).first { it.name == "Internet" }
+        assertEquals("Data not available", internet.sub)
+        assertFalse(internet.bad)
+        assertEquals(null, internet.pill)
+    }
+
+    @Test
     fun updateIsOfferedOnlyWhenTheReleaseIsALaterBuild() {
         val body = "Latest test build, version 0.35.0, build 42, from the main branch (commit abc1234). Download it."
         assertEquals(42, UpdateCheck.buildOf(body))
