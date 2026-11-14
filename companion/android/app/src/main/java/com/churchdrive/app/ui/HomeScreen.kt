@@ -43,6 +43,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
+import com.churchdrive.app.ui.acrylicBehind
+import dev.chrisbanes.haze.HazeState
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.TopAppBar
@@ -124,6 +126,11 @@ fun HomeScreen(
     // short screen has the slim title bar (the tall one would fill it). The cards go in as many columns as fit (AdaptiveColumns).
     val window = rememberAdaptiveWindow()
     val scrollBehavior = if (window.short) TopAppBarDefaults.pinnedScrollBehavior() else TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    // Pressing a page's button shows it from its top; the page scrolls under the acrylic bar.
+    val pageScroll = rememberScrollState()
+    val acrylic = remember { HazeState() }
+    val toTop = rememberToTop(pageScroll, scrollBehavior)
+    fun go(to: Page) { page = to; toTop() }
     val title = if (page == Page.Home) "Hello ${userName?.substringBefore(' ') ?: ""}".trim() else page.label
 
     // A task tapped on the Home page: a house job goes to the device (or place) it is about, a shopping or steps list to the in-app
@@ -136,7 +143,7 @@ fun HomeScreen(
         when {
             // A job only Home Assistant itself can do (an update waiting) opens Home Assistant.
             h.house && haPath != null -> if (!com.churchdrive.app.HomeAssistantLink.open(context, houseAddress, haPath)) onDeviceHealth()
-            h.house && inPage != null -> page = inPage
+            h.house && inPage != null -> go(inPage)
             h.house -> deviceForHouseTask(h.text, deviceHealthList(entities, registry, areaNames))?.let { openDeviceFor(it.deviceId) } ?: onDeviceHealth()
             h.shopping || h.steps -> panel = "todo"
             else -> if (!com.churchdrive.app.TodoLink.open(context, h.list, h.uid)) panel = "todo"
@@ -200,7 +207,7 @@ fun HomeScreen(
             val ctl0 = LocalAssistant.current
             val clive0 = ctl0?.open == true && ctl0?.model != null
             // With the rail down the side the bottom bar is only there while Clive is open (his buttons take its place).
-            if (!window.rail || clive0) NavigationBar {
+            if (!window.rail || clive0) AcrylicNavigationBar(acrylic) {
                 // The same bar: while Clive is open its buttons change into his (and back).
                 val assistantCtl = LocalAssistant.current
                 val assistantModel = assistantCtl?.model
@@ -214,7 +221,7 @@ fun HomeScreen(
                         val selected = p == page
                         NavigationBarItem(
                             selected = selected,
-                            onClick = { page = p },
+                            onClick = { go(p) },
                             icon = { navIcon(p, selected) },
                             label = { Text(p.label, fontSize = 11.sp, maxLines = 1) },
                         )
@@ -226,7 +233,9 @@ fun HomeScreen(
             }
         },
     ) { padding ->
-        Row(Modifier.fillMaxSize().padding(padding).windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))) {
+        // The pages scroll under the acrylic bar, so the bar's height is padding at the foot of the page, not around it.
+        Box(Modifier.fillMaxSize().acrylicBehind(acrylic)) {
+        Row(Modifier.fillMaxSize().padding(padding.withoutBottom()).windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))) {
         if (window.rail) {
             // The pages down the side (a phone on its side, a tablet). It scrolls, so all of them are reachable on a short screen.
             Column(
@@ -239,7 +248,7 @@ fun HomeScreen(
                     val selected = p == page
                     NavigationRailItem(
                         selected = selected,
-                        onClick = { page = p },
+                        onClick = { go(p) },
                         icon = { navIcon(p, selected) },
                         label = { Text(p.label, fontSize = 11.sp, maxLines = 1) },
                     )
@@ -250,7 +259,7 @@ fun HomeScreen(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxHeight()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(pageScroll)
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(28.dp),
         ) {
@@ -271,7 +280,7 @@ fun HomeScreen(
             androidx.compose.runtime.CompositionLocalProvider(LocalIsAdmin provides isAdmin) {
             AdaptiveColumns {
             if (page == Page.Home) {
-                HomePage(lights, areaNames, panels["home"].orEmpty(), entities, registry, call, onOpen = { if (it == Page.Todo) openTodo() else page = it }, onOpenTask = openTask)
+                HomePage(lights, areaNames, panels["home"].orEmpty(), entities, registry, call, onOpen = { if (it == Page.Todo) openTodo() else go(it) }, onOpenTask = openTask)
             } else if (page == Page.Lighting) {
                 LightingPage(lights, entities, areaNames, call)
             } else if (page == Page.Security) {
@@ -295,6 +304,8 @@ fun HomeScreen(
             }
             // Room to scroll the last card clear of Clive's button.
             Spacer(Modifier.height(72.dp))
+            Spacer(Modifier.height(padding.calculateBottomPadding()))
+        }
         }
         }
     }

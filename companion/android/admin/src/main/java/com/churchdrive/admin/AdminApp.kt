@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -46,7 +47,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.churchdrive.app.UpdateCheck
+import com.churchdrive.app.ui.AcrylicNavigationBar
 import com.churchdrive.app.ui.CdVectors
+import com.churchdrive.app.ui.acrylicBehind
+import com.churchdrive.app.ui.rememberToTop
+import com.churchdrive.app.ui.withoutBottom
+import dev.chrisbanes.haze.HazeState
 import com.churchdrive.app.ui.ActivityPage
 import com.churchdrive.app.ha.EntityState
 import com.churchdrive.app.ui.CliveColours
@@ -104,7 +110,12 @@ private const val DEVICES = 4
 private fun AdminPages(vm: AdminModel, onPerson: () -> Unit, onPanel: (String) -> Unit) {
     var tab by rememberSaveable { mutableIntStateOf(HOME) }
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-    BackHandler(enabled = tab != HOME) { tab = HOME }
+    val pageScroll = rememberScrollState()
+    val acrylic = remember { HazeState() }
+    val toTop = rememberToTop(pageScroll, scroll)
+    // Every way to a page, a bar button or a card on Home, shows it from its top.
+    fun go(to: Int) { tab = to; toTop() }
+    BackHandler(enabled = tab != HOME) { go(HOME) }
     Box(Modifier.fillMaxSize()) {
     val link by vm.link.collectAsState()
     // The pull is outside the Scaffold so the collapsing title bar hears the drag first and can open before a pull starts.
@@ -119,32 +130,34 @@ private fun AdminPages(vm: AdminModel, onPerson: () -> Unit, onPanel: (String) -
             )
         },
         bottomBar = {
-            NavigationBar {
+            AcrylicNavigationBar(acrylic) {
                 NavigationBarItem(
-                    selected = tab == HOME, onClick = { tab = HOME },
+                    selected = tab == HOME, onClick = { go(HOME) },
                     icon = { Icon(CdVectors.Home, null) }, label = { Text("Home", fontSize = 11.sp) },
                 )
                 NavigationBarItem(
-                    selected = tab == MANAGER, onClick = { tab = MANAGER },
+                    selected = tab == MANAGER, onClick = { go(MANAGER) },
                     icon = { Icon(CdVectors.Cog, null) }, label = { Text("Manager", fontSize = 11.sp) },
                 )
                 NavigationBarItem(
-                    selected = tab == ENERGY, onClick = { tab = ENERGY },
+                    selected = tab == ENERGY, onClick = { go(ENERGY) },
                     icon = { Icon(CdVectors.Bolt, null) }, label = { Text("Energy", fontSize = 11.sp) },
                 )
                 NavigationBarItem(
-                    selected = tab == DEVICES, onClick = { tab = DEVICES },
+                    selected = tab == DEVICES, onClick = { go(DEVICES) },
                     icon = { Icon(CdVectors.DeviceServer, null) }, label = { Text("Devices", fontSize = 11.sp) },
                 )
                 NavigationBarItem(
-                    selected = tab == ACTIVITY, onClick = { tab = ACTIVITY },
+                    selected = tab == ACTIVITY, onClick = { go(ACTIVITY) },
                     icon = { Icon(CdVectors.History, null) }, label = { Text("Activity", fontSize = 11.sp) },
                 )
             }
         },
     ) { padding ->
+        // The page scrolls under the acrylic bar, so the bar's height is padding at the foot of the page, not around it.
+        Box(Modifier.fillMaxSize().acrylicBehind(acrylic)) {
         Column(
-            Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
+            Modifier.fillMaxSize().padding(padding.withoutBottom()).verticalScroll(pageScroll).padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(28.dp),
         ) {
             com.churchdrive.app.ui.UpdateNotice(BuildConfig.PLAY, vm.updateAvailable, UpdateCheck.ADMIN_APK_URL, "Clive Admin")
@@ -159,8 +172,10 @@ private fun AdminPages(vm: AdminModel, onPerson: () -> Unit, onPanel: (String) -
                 tab == ENERGY -> EnergyPage(vm)
                 tab == DEVICES -> DevicesPage(vm)
                 tab == ACTIVITY -> ActivityPage()
-                else -> HomePage(vm, open = { tab = it }, openPanel = onPanel)
+                else -> HomePage(vm, open = { go(it) }, openPanel = onPanel)
             }
+            Spacer(Modifier.height(padding.calculateBottomPadding()))
+        }
         }
     }
     }

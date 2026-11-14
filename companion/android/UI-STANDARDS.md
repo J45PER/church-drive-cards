@@ -11,6 +11,12 @@ sections and cards in as many columns as fit (each 320 to 520dp wide, so a card 
 card or a page: a card fills the column it is given (`GridCard` already stops at 520dp). A page's header goes in a `Modifier.fullSpan()` box
 so it takes the whole width above the columns. Look at a change on a phone upright, on its side and on a tablet before calling it done.
 
+## Navigation, in every app
+
+- **The bar is acrylic** (`AcrylicNavigationBar`, `core/.../ui/NavKit.kt`): a page's body is marked with `acrylicBehind` and fills the whole Scaffold body, bar included, with its bottom padding (`padding.calculateBottomPadding()`) inside the scrolling column, so the page scrolls and blurs behind the bar. Never a plain `NavigationBar` on a page that has a Scaffold.
+- **A bar or rail button shows its page from the top** (`rememberToTop`): call it from every button's click, also for the page already open, and from anything else that takes you to a page (a card on Home).
+- **Back from a page of the side panel goes to the app**, not to the panel's list: system back and the arrow both close the panel. (A section of the phone app's Manager goes to the Manager list with the arrow, and back closes the panel.)
+
 ## Before every change or addition
 
 1. **Look at the dashboard first.** Open the matching card's source in `src/*.js` (or the Lovelace config) and copy

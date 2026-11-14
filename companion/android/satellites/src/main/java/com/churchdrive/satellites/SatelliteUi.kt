@@ -6,6 +6,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import com.churchdrive.app.ui.AcrylicNavigationBar
+import com.churchdrive.app.ui.acrylicBehind
+import com.churchdrive.app.ui.rememberToTop
+import com.churchdrive.app.ui.withoutBottom
+import dev.chrisbanes.haze.HazeState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -117,6 +122,10 @@ fun SatellitesApp(vm: SatelliteModel) {
 private fun ListPage(vm: SatelliteModel, onPerson: () -> Unit) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    // Pressing a page's button shows it from its top; the page scrolls under the acrylic bar.
+    val pageScroll = rememberScrollState()
+    val acrylic = remember { HazeState() }
+    val toTop = rememberToTop(pageScroll, scroll)
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(vm.notice) {
         vm.notice?.let { snackbar.showSnackbar(it); vm.notice = null }
@@ -131,15 +140,19 @@ private fun ListPage(vm: SatelliteModel, onPerson: () -> Unit) {
             MediumTopAppBar(title = { Text(if (tab == 0) "Satellites" else "Add a satellite") }, actions = { PersonButton(vm.personName, onPerson) }, scrollBehavior = scroll)
         },
         bottomBar = {
-            NavigationBar {
-                NavigationBarItem(selected = tab == 0, onClick = { tab = 0 }, icon = { Icon(painterResource(R.drawable.sat_device), null) }, label = { Text("Satellites", fontSize = 11.sp) })
-                NavigationBarItem(selected = tab == 1, onClick = { tab = 1 }, icon = { Icon(painterResource(R.drawable.mdi_plus), null) }, label = { Text("Add", fontSize = 11.sp) })
+            AcrylicNavigationBar(acrylic) {
+                NavigationBarItem(selected = tab == 0, onClick = { tab = 0; toTop() }, icon = { Icon(painterResource(R.drawable.sat_device), null) }, label = { Text("Satellites", fontSize = 11.sp) })
+                NavigationBarItem(selected = tab == 1, onClick = { tab = 1; toTop() }, icon = { Icon(painterResource(R.drawable.mdi_plus), null) }, label = { Text("Add", fontSize = 11.sp) })
             }
         },
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
+        // The page scrolls under the acrylic bar, so the bar's height is padding at the foot of the page, not around it.
+        Box(Modifier.fillMaxSize().acrylicBehind(acrylic)) {
+        Column(Modifier.fillMaxSize().padding(padding.withoutBottom()).verticalScroll(pageScroll).padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
             com.churchdrive.app.ui.UpdateNotice(BuildConfig.PLAY, vm.updateAvailable, com.churchdrive.app.UpdateCheck.SATELLITES_APK_URL, "Church Drive Satellites")
             if (tab == 0) SatelliteList(vm) else AddPage(vm)
+            androidx.compose.foundation.layout.Spacer(Modifier.height(padding.calculateBottomPadding()))
+        }
         }
     }
     }

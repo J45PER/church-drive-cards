@@ -3,9 +3,11 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
-## 0.151.1
+## 0.152.0
 
-- No change you will notice (shared code gained the to-do lists, task form and shopping page, used by Clive Admin).
+- Back from a page of the side panel (Settings, About and the rest) goes straight back to the app, not to the panel's list.
+- Pressing a button on the bottom bar (or the side rail) shows that page from its top, also the page that is already open.
+- The bottom bar is acrylic, as on the Manager website: the page scrolls and blurs behind it (Android 12 and later; older phones get a nearly solid bar).
 
 ## 0.151.0
 

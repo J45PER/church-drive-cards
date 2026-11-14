@@ -69,7 +69,7 @@ fun TodoPanel(panel: String?, onPanel: (String?) -> Unit, vm: TodoModel) {
     // The last page shown, so a page keeps its words while it slides away.
     var shown by remember { mutableStateOf("account") }
     if (panel != null) shown = panel
-    BackHandler(enabled = panel != null) { onPanel(if (panel == "account") null else "account") }
+    BackHandler(enabled = panel != null) { onPanel(null) }
     AnimatedVisibility(
         visible = panel != null,
         enter = slideInHorizontally(initialOffsetX = { it }),
@@ -88,8 +88,8 @@ fun TodoPanel(panel: String?, onPanel: (String?) -> Unit, vm: TodoModel) {
             ) { which ->
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     when (which) {
-                        "settings" -> SettingsPage(vm) { onPanel("account") }
-                        "about" -> AboutPage(vm) { onPanel("account") }
+                        "settings" -> SettingsPage(vm) { onPanel(null) }
+                        "about" -> AboutPage(vm) { onPanel(null) }
                         else -> AccountPage(vm, onClose = { onPanel(null) }, onOpen = onPanel)
                     }
                 }

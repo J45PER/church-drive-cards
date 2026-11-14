@@ -68,7 +68,7 @@ fun AdminPanel(panel: String?, onPanel: (String?) -> Unit, vm: AdminModel) {
     // The last page shown, so a page keeps its words while it slides away.
     var shown by remember { mutableStateOf("account") }
     if (panel != null) shown = panel
-    BackHandler(enabled = panel != null) { onPanel(if (panel == "account") null else "account") }
+    BackHandler(enabled = panel != null) { onPanel(null) }
     AnimatedVisibility(
         visible = panel != null,
         enter = slideInHorizontally(initialOffsetX = { it }),
@@ -87,18 +87,18 @@ fun AdminPanel(panel: String?, onPanel: (String?) -> Unit, vm: AdminModel) {
             ) { which ->
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     when (which) {
-                        "about" -> AboutPage { onPanel("account") }
+                        "about" -> AboutPage { onPanel(null) }
                         "health" -> Column(Modifier.fillMaxSize().safeDrawingPadding()) {
                             // Device health scrolls itself (its devices open pages in place), so it is not put in the scrolling page column.
-                            Box(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) { PanelTitle("Device health", { onPanel("account") }) }
+                            Box(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) { PanelTitle("Device health", { onPanel(null) }) }
                             Box(Modifier.weight(1f).fillMaxWidth()) { DeviceHealthTab(vm.entities, vm.registry, vm.areaNames) }
                         }
                         "colours" -> PageColumn {
-                            PanelTitle("Colour palettes", { onPanel("account") })
+                            PanelTitle("Colour palettes", { onPanel(null) })
                             ColoursPage()
                         }
                         "watch", "notifications", "cameras", "people" -> PageColumn {
-                            PanelTitle(when (which) { "watch" -> "Watch"; "cameras" -> "Camera links"; "people" -> "People"; else -> "Notifications" }, { onPanel("account") })
+                            PanelTitle(when (which) { "watch" -> "Watch"; "cameras" -> "Camera links"; "people" -> "People"; else -> "Notifications" }, { onPanel(null) })
                             val section = ManagerSections.forPage(vm.managerSections, which)
                             if (section == null) com.churchdrive.app.ui.LoadingNote("Loading this page from Home Assistant…")
                             else ManagerSectionContent(section, vm.entities, vm.registry, vm.call)
