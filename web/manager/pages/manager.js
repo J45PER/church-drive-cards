@@ -4,6 +4,7 @@ import { alarmLights, watchSettings } from './alarm-watch.js';
 import { canTick, kindGoesTo, kindGroups, linksOf, modeLabel, name, presenceWord, presetLabel, triggerChoices, validIconName, zoneRows } from './manager-logic.js';
 
 import { chips, h, soft } from './dom.js';
+const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export { chips, h };
 
 export const BUILT = new Set(['custom:alarm-lights-card', 'custom:watch-settings-card', 'custom:notifications-card', 'custom:people-manager-card', 'custom:people-card', 'custom:zone-map-card', 'custom:camera-links-card',
@@ -53,13 +54,11 @@ export async function renderManager(el, ctx, helpers, title) {
   const groups = groupSections(sections);
   const all = groups.flatMap((g) => g.sections);
   const current = all.find((s) => s.title === title) || all[0];
-  const nav = h('nav', { class: 'set-nav', 'aria-label': 'Settings' }, groups.map((g) => h('div', { class: 'set-group' }, h('p', { class: 'set-head' }, g.name),
-    g.sections.map((s) => h('a', { class: 'set-link', href: `#manager/${encodeURIComponent(s.title)}`, 'aria-current': s === current ? 'page' : null }, s.title)))),
-    h('div', { class: 'set-group' }, h('p', { class: 'set-head' }, 'Elsewhere'), h('a', { class: 'set-link', href: '#design/icons' }, 'Icons and the icon library'), h('a', { class: 'set-link', href: '#clive/activity' }, 'Activity log')));
+  // The sections are the dock's second bar (as on Design and Clive); the page is the chosen section.
+  ctx.setSub?.(`<nav class="subdock" aria-label="Settings sections">${all.map((x) => `<a class="si2${x === current ? ' on' : ''}" href="#manager/${encodeURIComponent(x.title)}">${esc(x.title)}</a>`).join('')}</nav>`);
   const pane = h('div', { class: 'set-pane stack' });
-  el.replaceChildren(h('div', { class: 'settings' }, nav, h('div', { class: 'stack' }, h('p', { class: 'note' }, 'The same settings as the Manager in the Church Drive app and Clive Admin. Changes here are made straight away, as they are there.'), pane)));
+  el.replaceChildren(h('div', { class: 'settings' }, h('div', { class: 'stack' }, h('p', { class: 'sub' }, 'The same settings as the Manager in the Church Drive app and Clive Admin. Changes here are made straight away, as they are there.'), pane)));
   if (!current) { pane.replaceChildren(h('p', { class: 'note' }, 'There are no settings sections in the Manager yet.')); return; }
-  pane.append(h('h2', { class: 'set-title' }, current.title));
   for (const card of current.cards) {
     const slot = h('div', { class: 'stack', style: 'gap:12px' }); pane.append(slot);
     const draw = CARDS[card.type];
