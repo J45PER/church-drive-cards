@@ -27,6 +27,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.Canvas
@@ -273,7 +275,8 @@ fun AssistantCardView(card: AssistantCard, modifier: Modifier = Modifier, morph:
                 val live = hexColour(given)
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(Modifier.size(32.dp).clip(CircleShape).background((live ?: t.accent).copy(alpha = 0.25f)), contentAlignment = Alignment.Center) {
-                        HaIcon(f.optString("icon").ifBlank { if (failed) "mdi:close" else "mdi:check" }, CdVectors.Info, live ?: t.accent, 20.dp)
+                        // The thing's own icon, unless it is already moving at the top of the card: then a tick.
+                        HaIcon(f.optString("icon").takeIf { it.isNotBlank() && doneMotion(card) == null } ?: if (failed) "mdi:close" else "mdi:check", CdVectors.Info, live ?: t.accent, 20.dp)
                     }
                     Column(Modifier.weight(1f)) {
                         Text(f.optString("name"), style = MaterialTheme.typography.titleSmall, color = ink)
@@ -398,9 +401,11 @@ val CARD_ICON_SIZE = 72.dp
 
 /** The card's icon, or its logo (a music service, a car's make, a competition) when the app has one. */
 @Composable
-fun CardIcon(card: AssistantCard, tint: Color, size: Dp) {
+fun CardIcon(card: AssistantCard, tint: Color, size: Dp, play: Boolean = true) {
     val context = androidx.compose.ui.platform.LocalContext.current
     androidx.compose.runtime.LaunchedEffect(Unit) { SimpleIcons.load(context); OwnLogos.load(context) }
+    // Something he did to the house (a blind, a light, a fan, a lock, the volume) shows it happening instead of a tick.
+    doneMotion(card)?.let { DoneIcon(it, tint, size, play); return }
     if (card.kind == "gregg") {
         val level = card.fields.optDouble("battery").takeIf { !it.isNaN() }
         GreggIcon(greggStateFor(card.fields.optString("state"), level), tint, size, level)
@@ -426,7 +431,46 @@ fun CardIconZone(card: AssistantCard, tint: Color, morph: Float = 1f) {
         if (morph < 1f) Box(Modifier.graphicsLayer { alpha = 1f - morph; val k = 1f - 0.35f * morph; scaleX = k; scaleY = k; rotationZ = 25f * morph }) {
             AssistantGlyph(AssistantGlyphPose.Thinking, tint, CARD_ICON_SIZE)
         }
-        Box(Modifier.graphicsLayer { alpha = morph; val k = 0.65f + 0.35f * morph; scaleX = k; scaleY = k }) { CardIcon(card, tint, CARD_ICON_SIZE) }
+        Box(Modifier.graphicsLayer { alpha = morph; val k = 0.65f + 0.35f * morph; scaleX = k; scaleY = k }) { CardIcon(card, tint, CARD_ICON_SIZE, play = morph >= 1f) }
+    }
+}
+
+/** The icon of something he just did, moving once (see [DoneMotion]); it starts when [play] is set, which is when the icon has arrived. */
+@Composable
+private fun DoneIcon(motion: DoneMotion, tint: Color, size: Dp, play: Boolean) {
+    val t = androidx.compose.runtime.remember(motion) { androidx.compose.animation.core.Animatable(0f) }
+    androidx.compose.runtime.LaunchedEffect(motion, play) {
+        if (!play) return@LaunchedEffect
+        kotlinx.coroutines.delay(300)
+        when (motion) {
+            is DoneMotion.Swap -> t.animateTo(1f, tween(motion.ms))
+            is DoneMotion.Wipe -> t.animateTo(1f, tween(motion.ms, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+            // A few turns, slowing to a stop.
+            is DoneMotion.Spin -> t.animateTo(motion.turns.toFloat(), tween(motion.ms * motion.turns, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
+            // Twice through, ending on the last.
+            is DoneMotion.Cycle -> (motion.icons.size * 2 - 1).let { steps -> t.animateTo(steps.toFloat(), tween(motion.ms * steps, easing = androidx.compose.animation.core.LinearEasing)) }
+        }
+    }
+    Box(Modifier.size(size), contentAlignment = Alignment.Center) {
+        when (motion) {
+            is DoneMotion.Swap -> {
+                HaIcon(motion.from, CdVectors.Info, tint, size, Modifier.graphicsLayer { alpha = 1f - t.value })
+                HaIcon(motion.to, CdVectors.Info, tint, size, Modifier.graphicsLayer { alpha = t.value; val k = 0.85f + 0.15f * t.value; scaleX = k; scaleY = k })
+            }
+            is DoneMotion.Wipe -> {
+                // The new icon is shown on one side of a line that moves and the old one on the other: a blind's slab comes down from its rail, or goes back up.
+                HaIcon(motion.from, CdVectors.Info, tint, size, Modifier.drawWithContent {
+                    val line = this.size.height * (if (motion.down) t.value else 1f - t.value)
+                    if (motion.down) clipRect(top = line) { this@drawWithContent.drawContent() } else clipRect(bottom = line) { this@drawWithContent.drawContent() }
+                })
+                HaIcon(motion.to, CdVectors.Info, tint, size, Modifier.drawWithContent {
+                    val line = this.size.height * (if (motion.down) t.value else 1f - t.value)
+                    if (motion.down) clipRect(bottom = line) { this@drawWithContent.drawContent() } else clipRect(top = line) { this@drawWithContent.drawContent() }
+                })
+            }
+            is DoneMotion.Spin -> HaIcon(motion.icon, CdVectors.Info, tint, size, Modifier.graphicsLayer { rotationZ = t.value * 360f })
+            is DoneMotion.Cycle -> HaIcon(motion.icons[Math.round(t.value) % motion.icons.size], CdVectors.Info, tint, size)
+        }
     }
 }
 

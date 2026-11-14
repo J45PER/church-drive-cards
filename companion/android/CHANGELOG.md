@@ -4,6 +4,14 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.150.0
+
+- **Clive hears his wake word every time.** With "listen for the wake word" on, the app was listening in runs of about three seconds with a gap between each, so a wake word said across a gap was missed. It now listens without the gaps.
+- Closing Clive while he was still thinking could leave the wake word switched off until the app was restarted, and a late answer from the phone's own speech recogniser could disturb it. Both are fixed.
+- A misheard name is put right in what Clive shows you said and in what he is asked (Hayley was being written as another name entirely), and the phone's recogniser is told the family's names to expect.
+- When Clive opens or closes a blind, switches a light, starts a fan, locks a door or changes the volume, the card shows it happening (the blind comes down or goes up, the bulb lights or goes out) instead of a tick.
+- The list of misheard names and the rules for those card motions now come from the house, so a fix to either no longer needs a new app.
+
 ## 0.149.6
 
 - No app change (the dashboard's Auto Layout now also holds the order of its panels, and settles on its own a few seconds after loading).

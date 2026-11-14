@@ -1,6 +1,8 @@
 // Writes the two files Home Assistant serves for Clive's icons and cards:
 //   custom_components/church_drive/frontend/clive/icons.json   (from design/clive/house-icons.json)
 //   custom_components/church_drive/frontend/clive/cards.json   (from design/clive/cards.json)
+// and the apps' built-in copy of the assistant's data (done-card motions, misheard names):
+//   companion/android/core/src/main/assets/clive-assistant.json
 // Served at /church_drive/clive/icons.json and /church_drive/clive/cards.json (the integration already serves that folder).
 // `node tools/export-clive-assets.mjs --check` fails if the served files are out of date (CI), without writing.
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
@@ -27,10 +29,13 @@ for (const code of Object.keys(icons)) {
 const iconsOut = { version: 1, app: version, grid: house.grid, source: house.source, namespaces, count: Object.keys(icons).length, pending, icons };
 const cardsOut = { version: 1, app: version, ...cards };
 
-const files = { 'icons.json': JSON.stringify(iconsOut), 'cards.json': JSON.stringify(cardsOut, null, 1) };
+// The apps' built-in copy of what the house serves for the assistant (used until the house has answered, and with a house that has no answer).
+const APP_ASSET = 'companion/android/core/src/main/assets/clive-assistant.json';
+const assistantOut = { motions: cards.done_motions.rules, heard: cards.heard.corrections };
+const files = { 'icons.json': JSON.stringify(iconsOut), 'cards.json': JSON.stringify(cardsOut, null, 1), [APP_ASSET]: JSON.stringify(assistantOut, null, 1) };
 let stale = false;
 for (const [name, text] of Object.entries(files)) {
-  const path = `${OUT}/${name}`;
+  const path = name.includes('/') ? name : `${OUT}/${name}`;
   if (check) {
     if (!existsSync(path) || readFileSync(path, 'utf8') !== text + '\n') { console.error(`${path} is out of date: run node tools/export-clive-assets.mjs`); stale = true; }
   } else {

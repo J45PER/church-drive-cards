@@ -26,6 +26,7 @@ CONF_HEALTH_ENTITIES = "health_entities"
 SERVICE_HEALTH_FIX = "health_fix"
 SERVICE_LOG_LOGO_REQUEST = "log_logo_request"
 SERVICE_SET_PALETTE = "set_palette"
+SERVICE_SET_ASSISTANT_DATA = "set_assistant_data"
 SIGNAL_HEALTH = "church_drive_health"
 
 # People and notifications.

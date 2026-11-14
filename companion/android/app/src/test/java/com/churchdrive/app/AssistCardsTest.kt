@@ -3,7 +3,11 @@ package com.churchdrive.app
 import androidx.compose.ui.graphics.Color
 import com.churchdrive.app.ui.CliveColours
 import com.churchdrive.app.ui.Tone
+import com.churchdrive.app.ui.DoneMotion
 import com.churchdrive.app.ui.cardBrand
+import com.churchdrive.app.ui.doneMotion
+import com.churchdrive.app.ui.parseDoneRules
+import com.churchdrive.app.ui.AssistantCard
 import com.churchdrive.app.ui.cardIcon
 import com.churchdrive.app.ui.cardRows
 import com.churchdrive.app.ui.carBatteryColour
@@ -135,5 +139,60 @@ class AssistCardsTest {
         for (slug in listOf("championsleague", "europaleague", "conferenceleague", "facup", "eflleague", "carabaocup", "scottishpremiership", "nationsleague", "disneyplus", "cupra", "octopusenergy")) {
             assertEquals(slug, true, own.optString(slug).startsWith("M"))
         }
+    }
+
+    /** The app's own copy of the rules the house serves. */
+    private val served = JSONObject(File("../core/src/main/assets/clive-assistant.json").readText())
+    private val rules = parseDoneRules(served.getJSONArray("motions"))
+    private fun done(json: String) = doneMotion(AssistantCard("done", JSONObject(json)), rules)
+    private val up = DoneMotion.Wipe("cd:blind-closed", "cd:blind-open", down = false, ms = 1200)
+    private val down = DoneMotion.Wipe("cd:blind-open", "cd:blind-closed", down = true, ms = 1200)
+
+    @Test fun somethingDoneToTheHouseShowsItHappening() {
+        // The two cards the house really sent: a blind opening, and lights turned off.
+        assertEquals(up, done("""{"name":"Hayley's bedroom blind","detail":"Opening","icon":"mdi:blinds-open"}"""))
+        assertEquals(DoneMotion.Swap("cd:bulb-lit", "mdi:lightbulb-off", 450), done("""{"name":"Hayley's bedroom lights","detail":"Turned off","icon":"mdi:lightbulb-off","percent":0}"""))
+        assertEquals(down, done("""{"detail":"Closing","icon":"mdi:blinds-open"}"""))
+        assertEquals(down, done("""{"icon":"mdi:blinds"}"""))
+        assertEquals(up, done("""{"detail":"Upstairs","icon":"mdi:roller-shade"}"""))
+        assertEquals(DoneMotion.Swap("cd:bulb", "cd:bulb-lit", 450), done("""{"detail":"Turned on","icon":"mdi:lightbulb"}"""))
+        assertEquals(DoneMotion.Spin("cd:fan", 1100, 3), done("""{"detail":"On, speed 2","icon":"mdi:fan"}"""))
+        assertEquals(DoneMotion.Swap("cd:lock-open", "cd:lock", 650), done("""{"detail":"Locked","icon":"mdi:lock"}"""))
+        assertEquals(DoneMotion.Swap("cd:lock", "cd:lock-open", 650), done("""{"detail":"Unlocked","icon":"mdi:lock"}"""))
+        assertEquals(DoneMotion.Cycle(listOf("cd:volume-low", "cd:volume-medium", "cd:volume-high"), 480), done("""{"detail":"Volume 40%","icon":"mdi:volume-high"}"""))
+    }
+
+    @Test fun aPlainDoneKeepsItsTick() {
+        assertNull(done("""{"name":"Alarm","detail":"Armed away","icon":"mdi:shield-lock"}"""))
+        assertNull(done("""{"name":"Energy","icon":"mdi:lightning-bolt"}"""))
+        assertNull(done("""{"name":"Fan","detail":"Turned off","icon":"mdi:fan"}"""))
+        assertNull(done("""{"name":"Blind","detail":"Stopped","icon":"mdi:blinds"}"""))
+        assertNull(done("""{"name":"Done"}"""))
+        // A failure shows its cross, never a motion.
+        assertNull(done("""{"ok":false,"detail":"Opening","icon":"mdi:blinds-open"}"""))
+        assertNull(doneMotion(AssistantCard("lights", JSONObject("""{"icon":"mdi:lightbulb"}""")), rules))
+        // With no rules at all (a house that sent none, and no copy), everything is a tick.
+        assertNull(doneMotion(AssistantCard("done", JSONObject("""{"icon":"mdi:blinds-open"}""")), emptyList()))
+    }
+
+    @Test fun everyIconAMotionNamesIsOneTheAppCanDraw() {
+        val all = rules.mapNotNull { it.motion }.flatMap { m ->
+            when (m) {
+                is DoneMotion.Swap -> listOf(m.from, m.to)
+                is DoneMotion.Wipe -> listOf(m.from, m.to)
+                is DoneMotion.Spin -> listOf(m.icon)
+                is DoneMotion.Cycle -> m.icons
+            }
+        }.toSet()
+        val missing = all.filter { com.churchdrive.app.ui.CdIcons.alias(it)?.removePrefix("cd:")?.let { n -> com.churchdrive.app.ui.CdIcons.icons.containsKey(n) } != true }
+        assertEquals("icons a motion names that the app has no drawing for: $missing", emptyList<String>(), missing)
+    }
+
+    @Test fun aRuleTheAppCannotReadIsLeftOut() {
+        val list = org.json.JSONArray("""[{"says":["open"],"motion":{"type":"swap","from":"cd:a","to":"cd:b"}},{"icon":["kettle"],"motion":{"type":"explode"}},{"icon":["door"],"motion":{"type":"swap","from":"cd:door"}}]""")
+        val parsed = parseDoneRules(list)
+        assertEquals(2, parsed.size)
+        assertNull(parsed[0].motion)
+        assertNull(parsed[1].motion)
     }
 }

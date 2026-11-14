@@ -1,6 +1,6 @@
 {
  "version": 1,
- "app": "0.149.6",
+ "app": "0.150.0",
  "$comment": "Clive's card layouts, palettes and animations as data. Edit here, run `node tools/export-clive-assets.mjs`, and Home Assistant serves the result at /church_drive/clive/cards.json. A new KIND of card still needs code in the apps; everything else (icons, palettes, which icon a card shows, its fields, its animation) is data.",
  "palettes": {
   "Base": [
@@ -1559,6 +1559,280 @@
     "#BD8A82",
     "#ECD2A0"
    ]
+  }
+ },
+ "done_motions": {
+  "$comment": "How the icon of a done card (something Clive did to the house) moves, chosen from the card's icon and detail. The first rule that fits wins. icon: the icon name contains any of these; is: the icon name is exactly one of these; also: and contains all of these; not: and none of these; says: and the detail has a word starting with any of these. motion null is a plain tick. Motions: swap (from, to, ms), wipe (from, to, dir up or down, ms: the to icon is uncovered from the top down, or from the bottom up), spin (icon, ms a turn, turns), cycle (icons, ms each, ending on the last). The apps read this from the house (church_drive/assist/info), which can be changed with the church_drive.set_assistant_data service.",
+  "rules": [
+   {
+    "icon": [
+     "blind",
+     "roller-shade",
+     "curtain",
+     "shutter"
+    ],
+    "says": [
+     "stop"
+    ],
+    "motion": null
+   },
+   {
+    "icon": [
+     "blind",
+     "roller-shade",
+     "curtain",
+     "shutter"
+    ],
+    "says": [
+     "open",
+     "rais"
+    ],
+    "motion": {
+     "type": "wipe",
+     "from": "cd:blind-closed",
+     "to": "cd:blind-open",
+     "dir": "up",
+     "ms": 1200
+    }
+   },
+   {
+    "icon": [
+     "blind",
+     "roller-shade",
+     "curtain",
+     "shutter"
+    ],
+    "says": [
+     "clos",
+     "shut",
+     "lower"
+    ],
+    "motion": {
+     "type": "wipe",
+     "from": "cd:blind-open",
+     "to": "cd:blind-closed",
+     "dir": "down",
+     "ms": 1200
+    }
+   },
+   {
+    "icon": [
+     "blind",
+     "roller-shade",
+     "curtain",
+     "shutter"
+    ],
+    "also": [
+     "closed"
+    ],
+    "motion": {
+     "type": "wipe",
+     "from": "cd:blind-open",
+     "to": "cd:blind-closed",
+     "dir": "down",
+     "ms": 1200
+    }
+   },
+   {
+    "is": [
+     "mdi:blinds"
+    ],
+    "motion": {
+     "type": "wipe",
+     "from": "cd:blind-open",
+     "to": "cd:blind-closed",
+     "dir": "down",
+     "ms": 1200
+    }
+   },
+   {
+    "icon": [
+     "blind",
+     "roller-shade",
+     "curtain",
+     "shutter"
+    ],
+    "motion": {
+     "type": "wipe",
+     "from": "cd:blind-closed",
+     "to": "cd:blind-open",
+     "dir": "up",
+     "ms": 1200
+    }
+   },
+   {
+    "icon": [
+     "bulb",
+     "lamp",
+     "ceiling-light",
+     "track-light",
+     "spotlight",
+     "string-lights",
+     "led-strip",
+     "chandelier",
+     "wall-sconce"
+    ],
+    "also": [
+     "off"
+    ],
+    "motion": {
+     "type": "swap",
+     "from": "cd:bulb-lit",
+     "to": "mdi:lightbulb-off",
+     "ms": 450
+    }
+   },
+   {
+    "icon": [
+     "bulb",
+     "lamp",
+     "ceiling-light",
+     "track-light",
+     "spotlight",
+     "string-lights",
+     "led-strip",
+     "chandelier",
+     "wall-sconce"
+    ],
+    "says": [
+     "off"
+    ],
+    "motion": {
+     "type": "swap",
+     "from": "cd:bulb-lit",
+     "to": "mdi:lightbulb-off",
+     "ms": 450
+    }
+   },
+   {
+    "icon": [
+     "bulb",
+     "lamp",
+     "ceiling-light",
+     "track-light",
+     "spotlight",
+     "string-lights",
+     "led-strip",
+     "chandelier",
+     "wall-sconce"
+    ],
+    "motion": {
+     "type": "swap",
+     "from": "cd:bulb",
+     "to": "cd:bulb-lit",
+     "ms": 450
+    }
+   },
+   {
+    "icon": [
+     "fan"
+    ],
+    "also": [
+     "off"
+    ],
+    "motion": null
+   },
+   {
+    "icon": [
+     "fan"
+    ],
+    "says": [
+     "off",
+     "stop"
+    ],
+    "motion": null
+   },
+   {
+    "icon": [
+     "fan"
+    ],
+    "motion": {
+     "type": "spin",
+     "icon": "cd:fan",
+     "ms": 1100,
+     "turns": 3
+    }
+   },
+   {
+    "icon": [
+     "lock"
+    ],
+    "not": [
+     "shield"
+    ],
+    "also": [
+     "open"
+    ],
+    "motion": {
+     "type": "swap",
+     "from": "cd:lock",
+     "to": "cd:lock-open",
+     "ms": 650
+    }
+   },
+   {
+    "icon": [
+     "lock"
+    ],
+    "not": [
+     "shield"
+    ],
+    "says": [
+     "unlock"
+    ],
+    "motion": {
+     "type": "swap",
+     "from": "cd:lock",
+     "to": "cd:lock-open",
+     "ms": 650
+    }
+   },
+   {
+    "icon": [
+     "lock"
+    ],
+    "not": [
+     "shield"
+    ],
+    "motion": {
+     "type": "swap",
+     "from": "cd:lock-open",
+     "to": "cd:lock",
+     "ms": 650
+    }
+   },
+   {
+    "icon": [
+     "volume"
+    ],
+    "not": [
+     "off",
+     "mute"
+    ],
+    "motion": {
+     "type": "cycle",
+     "icons": [
+      "cd:volume-low",
+      "cd:volume-medium",
+      "cd:volume-high"
+     ],
+     "ms": 480
+    }
+   }
+  ]
+ },
+ "heard": {
+  "$comment": "Words speech recognition writes when it mishears a household name (lower case), and the name that was said. Spoken text only. Changed on the house with church_drive.set_assistant_data.",
+  "corrections": {
+   "hitler": "Hayley",
+   "hailey": "Hayley",
+   "haley": "Hayley",
+   "hayleigh": "Hayley",
+   "hailee": "Hayley",
+   "dianne": "Diane",
+   "jaime": "Jamie",
+   "jamey": "Jamie",
+   "iain": "Ian"
   }
  }
 }

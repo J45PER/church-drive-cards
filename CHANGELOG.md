@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **v0.150.0 + apps 0.150.0** (2026-11-14): Clive in the phone app: the wake word is no longer missed (the app listened in three-second runs with gaps; it now listens without them, and closing Clive mid-thought no longer switches it off), a misheard family name is put right, and a card for something he did (a blind, a light, a fan, a lock, the volume) shows it happening instead of a tick. The misheard names and the rules for those motions are served by Home Assistant (`church_drive/assist/info`, shipped in `cards.json`) and can be changed there with the new `church_drive.set_assistant_data` service, so a fix to either needs no app or integration update.
 - **v0.149.6 + apps 0.149.6** (2026-11-13): the dashboard's Auto Layout settles on its own a few seconds after a page loads, and a held flip-flop now also holds the order of the panels (the Manager page was still flickering between two orders).
 - **v0.149.5 + apps 0.149.5** (2026-11-13): the dashboard's Auto Layout stops a flip-flop between two arrangements at the second repeat (not the fourth) and holds for a minute.
 - **v0.149.4 + apps 0.149.4** (2026-11-13): the dashboard's Auto Layout no longer flickers between two arrangements (the Manager page and, less often, others): a page that keeps returning to an arrangement it just had is held on one for 30 seconds.

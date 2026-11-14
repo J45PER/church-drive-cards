@@ -55,6 +55,7 @@ object AssistWakeSetting {
         AssistStartSetting.load(context)
         AssistVoiceSetting.load(context)
         AssistantBrand.load(context)
+        AssistantData.load(context)
     }
 
     fun set(context: Context, on: Boolean) {

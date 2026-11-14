@@ -41,6 +41,21 @@ Icons that are still a dotted placeholder on the icons page are listed under `pe
 
 A new **kind** of card still needs code in the apps. Everything else here is data.
 
+## What the apps read from the house today
+
+* **Colours**: `church_drive/colours` (the palettes, with the owner's changes).
+* **Done-card motions and misheard names**: `church_drive/assist/info` answers `motions` (the rules in `done_motions.rules`: which motion a done card plays, from its icon and detail), `heard` (`heard.corrections`: a misheard word and the name that was said) and `names` (the household's first names). The phone app keeps the last answer, and has a built-in copy (`companion/android/core/src/main/assets/clive-assistant.json`, written by the export tool) for before the house has answered.
+
+To change the motions or the corrections without any release, call the service on Home Assistant; the apps take it the next time they connect:
+
+```yaml
+action: church_drive.set_assistant_data
+data:
+  heard: { hailey: Hayley, dianne: Diane }   # replaces the whole list
+  # motions: [ ...rules... ]                 # replaces the whole list
+  # reset: true                              # back to the shipped ones
+```
+
 ## Next
 
-The phone and watch apps, the dashboard cards and the satellites' tools read these files (cached, with the built-in copy as the fallback) so an icon or palette change reaches them without a release. The loader in the apps is not built yet.
+The icons are not read from the house yet: the apps draw their built-in set. The served `icons.json` differs from it (10 icons redrawn, 13 the apps do not have), so a loader needs a preview of what would change first. A new **kind** of motion or card still needs code in the apps.
