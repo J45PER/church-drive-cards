@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.churchdrive.app.UpdateCheck
 import com.churchdrive.app.ui.AcrylicNavigationBar
+import com.churchdrive.app.ui.AdminHome
 import com.churchdrive.app.ui.CdVectors
 import com.churchdrive.app.ui.acrylicBehind
 import com.churchdrive.app.ui.rememberToTop
@@ -172,7 +173,10 @@ private fun AdminPages(vm: AdminModel, onPerson: () -> Unit, onPanel: (String) -
                 tab == ENERGY -> EnergyPage(vm)
                 tab == DEVICES -> DevicesPage(vm)
                 tab == ACTIVITY -> ActivityPage()
-                else -> HomePage(vm, open = { go(it) }, openPanel = onPanel)
+                else -> AdminHome(
+                    vm.entities, vm.registry, vm.areaNames,
+                    openManager = { go(MANAGER) }, openHealth = { onPanel("health") }, openEnergy = { go(ENERGY) }, openDevices = { go(DEVICES) },
+                )
             }
             Spacer(Modifier.height(padding.calculateBottomPadding()))
         }
@@ -261,36 +265,6 @@ private fun Notice(tone: Tone, title: String, body: String) {
     ToneCard(tone) { ink, soft ->
         Text(title, style = MaterialTheme.typography.titleLarge, color = ink)
         Text(body, style = MaterialTheme.typography.bodyMedium, color = soft)
-    }
-}
-
-@Composable
-private fun HomePage(vm: AdminModel, open: (Int) -> Unit, openPanel: (String) -> Unit) {
-    val health = remember(vm.entities, vm.registry, vm.areaNames) { deviceHealthList(vm.entities, vm.registry, vm.areaNames) }
-    ToneSectionHeader("Device health", CdVectors.BatteryCharging, Tone.Teal, deviceHealthSummary(health))
-    ToneCard(Tone.Teal, onClick = { openPanel("health") }) { ink, soft ->
-        Text("Batteries, filters and devices that stopped answering", style = MaterialTheme.typography.titleMedium, color = ink)
-        Text("The ones that need attention come first.", style = MaterialTheme.typography.bodyMedium, color = soft)
-    }
-    ToneSectionHeader("Manager", CdVectors.Cog, Tone.Grey)
-    ToneCard(Tone.Grey, onClick = { open(MANAGER) }) { ink, soft ->
-        Text("To-do settings, who's home and the automatic to-dos", style = MaterialTheme.typography.titleMedium, color = ink)
-        Text("Notifications, the watch and device health are in the side panel.", style = MaterialTheme.typography.bodyMedium, color = soft)
-    }
-    ToneSectionHeader("Energy", CdVectors.Bolt, Tone.Energy)
-    ToneCard(Tone.Energy, onClick = { open(ENERGY) }) { ink, soft ->
-        Text("Electricity, gas and the last seven days", style = MaterialTheme.typography.titleMedium, color = ink)
-        Text("Rates, what you've used so far and the cheap times.", style = MaterialTheme.typography.bodyMedium, color = soft)
-    }
-    ToneSectionHeader("Devices", CdVectors.DeviceServer, Tone.Media)
-    ToneCard(Tone.Media, onClick = { open(DEVICES) }) { ink, soft ->
-        Text("TVs, speakers, and how the house's systems are", style = MaterialTheme.typography.titleMedium, color = ink)
-        Text("Internet, remote access, backups and updates.", style = MaterialTheme.typography.bodyMedium, color = soft)
-    }
-    ToneSectionHeader("Activity log", CdVectors.History, Tone.Indigo)
-    ToneCard(Tone.Indigo, onClick = { open(ACTIVITY) }) { ink, soft ->
-        Text("What people and the assistant did, and when", style = MaterialTheme.typography.titleMedium, color = ink)
-        Text("Filter by day, time, person and kind.", style = MaterialTheme.typography.bodyMedium, color = soft)
     }
 }
 

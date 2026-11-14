@@ -1,5 +1,11 @@
 # Clive Admin: changelog
 
+## 0.153.0
+
+- The Home page has a new layout, on the Church Drive app's card grid: a Tasks block at the top (the house's jobs for you and the edits waiting on the website), then Security, Device health (its colour follows the worst device), Who's home, Energy, Clive's devices, and Updates and backups. Each card folds to a short strip and opens to its details; tapping a card opens its page.
+- Who's home moved from the Manager page to Home, and no longer folds.
+- Energy on Home shows today's cost, the rate, when the cheap rate runs, yesterday, and the last seven days with a bar for the split between electricity and gas.
+
 ## 0.152.0
 
 - Fixed: Notifications, People, Camera links and Watch in the side panel were blank and said they couldn't be read from the house. The side panel had no line to the house; it has now, so each page shows the same cards and controls as the Church Drive app.
