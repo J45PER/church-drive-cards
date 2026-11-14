@@ -185,7 +185,15 @@ The website had become a copy of the Home Assistant dashboards and of Clive Admi
 - **Website:** the control panel for how the apps look and behave, and for Clive: Design (colours, icons, layout), Clive (animations, chats, activity, his devices), Settings, Edits. **Activity stays on both.**
 - **Removed from the website:** Energy, Devices and Device health (the code stays in the repo until it is certain nothing needs it).
 - **Home Assistant** keeps its own dashboards; the website does not copy them.
-- How the Clive group works is being decided one question at a time (see `CLAUDE.md`).
+- **Decisions on the Clive group (Jamie, 2026-11-14, answered one at a time):**
+  - **Chats are recorded** by the house: who, device, words, answer, ability used, card shown, time taken. Admin-only, kept 30 days.
+  - **Refining a chat:** mark it good or bad and add a note. Notes collect into prompt and rule proposals through Edits, which Claude checks and applies.
+  - **Live strip:** which device he is on and his state (listening, thinking, speaking). Not the ability in use.
+  - **His devices:** paired watches, satellites and phones: version, last heard, answering, wake-word state. No pairing from the site.
+  - **Animations:** a view-only gallery of every animation by state and device. No tweaking or sending changes.
+  - **Home:** a control-panel start page: Edits waiting, versions, Clive's live state, shortcuts into Design and Clive.
+  - **Design:** one area with three sub-pages: Look (palette per card, real card as preview; Colours and the palette editor sit under it), Icons (section and mode icons; the icon library is the picker), Layout (section order and hiding).
+  - **Build order:** the new dock and Home on the example site, then Animations; chat recording in the house after.
 
 ## 9. Build order
 
