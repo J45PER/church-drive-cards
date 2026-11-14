@@ -163,6 +163,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** What was read last time, kept on the phone so pages show at once on opening while the live reading catches up. */
     private val cache = com.churchdrive.app.ha.DiskCache(app)
 
+    /** True once what was kept from last time has been put on the screen (or at once when nobody is signed in), so the splash can hold until the first page has something to show. */
+    @Volatile var cachesReady: Boolean = false
+        private set
+
     /**
      * A command that tries again (a few times, a little slower each time) while the line is up, so a slow or dropped answer
      * does not leave a page empty. Its answer goes to [onResult] once it comes.
@@ -202,13 +206,30 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 val names = DashboardLights.areaNames(areas)
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { if (_areaNames.value.isEmpty()) _areaNames.value = names }
             }
+            val devices = runCatching { cache.read("devices")?.let { org.json.JSONArray(it) } }.getOrNull()
             runCatching { cache.read("registry")?.let { org.json.JSONObject(it) } }.getOrNull()?.let { reg ->
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    if (deviceRegistryResult == null && devices != null) deviceRegistryResult = devices
                     if (entityRegistryResult == null) {
                         entityRegistryResult = reg
                         _registry.value = Registry.parse(entityRegistryResult, deviceRegistryResult)
                     }
                 }
+            }
+            // The mode icons and the scene looks, so the first page is drawn as it will be, not redrawn when they arrive.
+            runCatching { cache.read("icons")?.let { org.json.JSONObject(it) } }.getOrNull()?.let { icons ->
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { com.churchdrive.app.ui.IconMap.load(icons) }
+            }
+            runCatching { cache.read("library")?.let { org.json.JSONObject(it) } }.getOrNull()?.let { library ->
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    if (libraryResult == null) { libraryResult = library; _sceneLooks.value = SceneLooks.parse(libraryResult, stylesDashboard) }
+                }
+            }
+            // What the dashboard's templates said last time (each panel's summary and colour, the header lines).
+            runCatching { cache.read("templates")?.let { org.json.JSONObject(it) } }.getOrNull()?.let { saved ->
+                val map = HashMap<String, String>()
+                saved.keys().forEach { k -> map[k] = saved.optString(k) }
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { templates.seed(map) }
             }
             runCatching {
                 cache.read("states")?.let { text ->
@@ -216,6 +237,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     HaClient.parseStates(a)
                 }
             }.getOrNull()?.let { states -> kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { client.seed(states) } }
+            cachesReady = true
         }
         // The live states, saved now and then so the next opening has something to show.
         viewModelScope.launch {
@@ -225,6 +247,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     while (client.statesLoaded.value) {
                         val snapshot = client.entities.value
                         withContextIO { cache.write("states", statesJson(snapshot)) }
+                        val said = templates.snapshot()
+                        if (said.isNotEmpty()) withContextIO { cache.write("templates", org.json.JSONObject(said).toString()) }
                         kotlinx.coroutines.delay(60_000L)
                     }
                 }
@@ -262,13 +286,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         client.request("config/device_registry/list") {
             deviceRegistryResult = it
             _registry.value = Registry.parse(entityRegistryResult, deviceRegistryResult)
+            (it as? org.json.JSONArray)?.let { a -> viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { cache.write("devices", a.toString()) } }
         }
         // The icons for modes (fan Sleep, thermostat Eco, charger Stop...) set in Home Assistant's Icon Styles card.
-        fetch("church_drive/icons") { com.churchdrive.app.ui.IconMap.load(it) }
+        fetch("church_drive/icons") {
+            com.churchdrive.app.ui.IconMap.load(it)
+            (it as? org.json.JSONObject)?.let { o -> viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { cache.write("icons", o.toString()) } }
+        }
         // Each scene's colours and icon: Church Drive's scene library, and the looks set in the Scene Styles card.
         fetch("church_drive/library") {
             libraryResult = it
             _sceneLooks.value = SceneLooks.parse(libraryResult, stylesDashboard)
+            (it as? org.json.JSONObject)?.let { o -> viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { cache.write("library", o.toString()) } }
         }
         fetch("lovelace/config", data("url_path" to "design-presets")) {
             stylesDashboard = it as? org.json.JSONObject
@@ -278,6 +307,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         checkForUpdate()
+        if (!session.signedIn) cachesReady = true
         if (session.signedIn) {
             loadCaches()
             startSession()

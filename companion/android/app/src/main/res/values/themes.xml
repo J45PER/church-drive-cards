@@ -3,6 +3,8 @@
     <style name="Theme.ChurchDrive" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowActionBar">false</item>
         <item name="android:windowNoTitle">true</item>
+        <!-- Without this the window is Material's dark grey in every mode: a flash of it shows before the first frame and whenever the app is brought back. -->
+        <item name="android:windowBackground">@color/window_background</item>
     </style>
     <!-- The system splash while the app starts: just the background (nothing drawn), then the normal theme; the branded screen (BrandSplash) comes next. -->
     <style name="Theme.ChurchDrive.Starting" parent="Theme.SplashScreen">

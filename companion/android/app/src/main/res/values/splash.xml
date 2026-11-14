@@ -2,4 +2,6 @@
 <resources>
     <!-- The system splash is just this background (white in light mode); the branded screen then fades in over it. -->
     <color name="splash_background">#FFFFFF</color>
+    <!-- The window behind the app (what shows wherever the app has not drawn yet): the app's own background, as in its colour scheme. -->
+    <color name="window_background">#F3F4F6</color>
 </resources>
