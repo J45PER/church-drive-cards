@@ -3,14 +3,14 @@
 import { esc, NA, ic, circ, toneVars } from '../ui.js';
 import { readVersions, summary as versionSummary, readPeopleVersions } from './versions.js';
 import { ago, activityQuery, parseActivity } from './logic.js';
+import { SLOT_CATALOG, getSlots } from './home-slots.js';
 
 // Home's page tiles: [page and sub-page, title, icon, tone]. Clive's live state and the chats to review join the status tiles when the house reports them.
 const GROUPS = [['Design', 'palette', 'tasks', [['design/look', 'Look', 'palette', 'tasks'], ['design/icons', 'Icons', 'bulb-group', 'media'], ['design/layout', 'Layout', 'view-dashboard', 'people'], ['reference', 'Reference', 'image-text', 'gregg']]],
   ['Clive', 'mic', 'people', [['clive/animations', 'Animations', 'animation-play', 'energy'], ['clive/chats', 'Chats', 'mic-message', 'ok'], ['clive/activity', 'Activity log', 'history', 'people'], ['clive/devices', 'His devices', 'watch', 'media']]],
   ['Manage', 'sliders', 'warn', [['manager', 'Settings', 'sliders', 'warn'], ['changes', 'Edits and history', 'checklist', 'tasks']]]];
-const SLOTS = ['edits', 'versions', 'behind', 'lastact'];
-const LABEL = { edits: 'Edits', versions: 'Versions', behind: 'Phones behind', lastact: 'Last activity' };
-const GO = { edits: 'changes', versions: '', behind: '', lastact: 'clive/activity' };
+const LABEL = Object.fromEntries(SLOT_CATALOG.map((c) => [c.id, c.label]));
+const GO = Object.fromEntries(SLOT_CATALOG.map((c) => [c.id, c.go]));
 
 /** What the status tiles say, from the house's own sensors (a tile with nothing to say reads "Data not available"). */
 export function homeFacts(states, versions, extra = {}) {
@@ -21,6 +21,10 @@ export function homeFacts(states, versions, extra = {}) {
   if (versions) out.versions = { title: versions.rows[0]?.version || '–', tone: versions.tone === 'ok' ? 'ok' : 'warn' };
   if (extra.behind != null) out.behind = { title: extra.behind ? String(extra.behind) : 'None', tone: extra.behind ? 'warn' : 'ok' };
   if (extra.lastAt) out.lastact = { title: ago(extra.lastAt), tone: '' };
+  if (extra.devices) { const sats = extra.devices.satellites || [], down = sats.filter((d) => !d.answering), busy = sats.filter((d) => d.answering && d.state !== 'Waiting');
+    out.clive = down.length ? { title: `${down.length} not answering`, tone: 'warn' } : busy.length ? { title: `${busy[0].name}: ${busy[0].state}`, tone: '' } : sats.length ? { title: 'Idle everywhere', tone: 'ok' } : null;
+    if (!out.clive) delete out.clive; }
+  if (extra.chats) out.chats = extra.chats.available === false ? { title: 'Not recording', tone: 'warn' } : { title: extra.chats.counts?.unmarked ? `${extra.chats.counts.unmarked} to review` : 'All reviewed', tone: extra.chats.counts?.unmarked ? '' : 'ok' };
   return out;
 }
 
@@ -40,7 +44,7 @@ export function renderHome(el, ctx) {
   const groups = () => GROUPS.map(([g, icon, key, items]) => `<div><div class="hm-gh" style="--c:${circ(ctx, key)}"><span class="hm-gi">${ic(icon, 18)}</span><h2>${g}</h2></div><div class="hm-grid">${items.map(tile).join('')}</div></div>`).join('');
   const draw = () => {
     const open = el.querySelector('#versions')?.open;
-    el.innerHTML = `<div class="stack"><p class="hm-hello">${hello}</p><div class="hm-strip">${SLOTS.map((id) => factHtml(id, facts[id])).join('')}</div>
+    el.innerHTML = `<div class="stack"><p class="hm-hello">${hello}</p><div class="hm-strip">${getSlots().map((id) => factHtml(id, facts[id])).join('')}</div>
       <details class="hm-fold" id="versions"${open ? ' open' : ''}><summary><b>Versions</b><span class="sub">${versions ? esc(versions.text) : 'Reading the versions…'}</span></summary><div id="ver-body"></div></details>
       <div class="hm-groups">${groups()}</div></div>`;
     if (versions) el.querySelector('#ver-body').innerHTML = versions.html;
@@ -50,6 +54,8 @@ export function renderHome(el, ctx) {
     let states = {}, rows = null, extra = {};
     try { states = Object.fromEntries((await ctx.ha.call('get_states')).map((e) => [e.entity_id, e])); } catch { /* the tiles say so */ }
     facts = homeFacts(states, null); if (!el.isConnected) return; draw();
+    if (getSlots().includes('clive')) ctx.ha.call('church_drive/clive/devices').then((r) => { extra.devices = r; facts = homeFacts(states, versions, extra); if (el.isConnected) draw(); }).catch(() => {});
+    if (getSlots().includes('chats')) ctx.ha.call('church_drive/chats', { limit: 1 }).then((r) => { extra.chats = r; facts = homeFacts(states, versions, extra); if (el.isConnected) draw(); }).catch(() => {});
     ctx.ha.call('church_drive/activity', activityQuery({ day: 'all' }, new Date(), 1, 0)).then((r) => { const a = parseActivity(r); extra.lastAt = a?.lines[0]?.ts || null; facts = homeFacts(states, versions, extra); if (el.isConnected) draw(); }).catch(() => {});   // the tiles do not wait for the versions (those ask GitHub as well)
     try { rows = await readVersions(ctx); } catch (e) { versions = { text: `Could not read the versions: ${e.message}`, tone: 'warn', rows: [], html: '' }; }
     if (rows) {

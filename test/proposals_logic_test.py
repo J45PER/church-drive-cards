@@ -83,6 +83,14 @@ class CardsIconsLayouts(unittest.TestCase):
             with self.assertRaises(ValueError):
                 pl.normalise_change("cards", bad)
 
+    def test_chat_notes_are_a_kind_of_proposal(self):
+        self.assertIn("chats", pl.KINDS)
+        out = pl.normalise_change("chats", {"notes": [{"id": "abc:1", "rating": "bad", "note": " too long ", "asked": "q", "answer": "a"}]})
+        self.assertEqual(out["notes"][0]["note"], "too long")
+        with self.assertRaises(ValueError):
+            pl.normalise_change("chats", {"notes": []})
+        self.assertEqual(pl.check_change("chats", out), [])
+
     def test_a_card_pick_is_checked_against_the_palettes_that_exist(self):
         change = pl.normalise_change("cards", {"cards": {"fan": {"palette": "airr"}}})
         self.assertEqual(len(pl.check_change("cards", change, {"air", "gas"})), 1)

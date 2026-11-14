@@ -120,4 +120,8 @@ WS_PURIFIER_SCHEDULE_SET = "church_drive/purifier_schedule/set"
 
 # Who did what in the house, for administrators (activity.py).
 WS_ACTIVITY = "church_drive/activity"
+WS_CHATS = "church_drive/chats"
+WS_CHATS_RATE = "church_drive/chats/rate"
+WS_CHATS_SENT = "church_drive/chats/sent"
+WS_CLIVE_DEVICES = "church_drive/clive/devices"
 EVENT_ACTIVITY = "church_drive_activity_changed"

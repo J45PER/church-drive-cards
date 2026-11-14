@@ -26,7 +26,7 @@ export function palette(ctx, key) {
   return ctx.style.colours(key);
 }
 /** CSS variables of a tone card: the ground (Dark), the glow colours (Colour, Accent) and the strong colour that reads on the ground. */
-export function toneVars(ctx, key) { const [c, d, a, l] = palette(ctx, key); return `--d:${d};--a:${c};--b:${a};--ac:${readableOn(c, l, d)}`; }
+export function toneVars(ctx, key) { const [c, d, a, l] = palette(ctx, key), ac = readableOn(c, l, d); return `--d:${d};--a:${c};--b:${a};--ac:${ac};--tac:${ac}`; }
 /** The colour of a status circle in a neutral pill: a palette's strong colour. */
 export function circ(ctx, key) { const [c, , , l] = palette(ctx, key); return readableOn(c, l, palette(ctx, 'neutral')[1]); }
 

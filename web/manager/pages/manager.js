@@ -4,6 +4,8 @@ import { alarmLights, watchSettings } from './alarm-watch.js';
 import { canTick, kindGoesTo, kindGroups, linksOf, modeLabel, name, presenceWord, presetLabel, triggerChoices, validIconName, zoneRows } from './manager-logic.js';
 
 import { chips, h, soft } from './dom.js';
+import { toneVars } from '../ui.js';
+import { DEFAULT_SLOTS, SLOT_CATALOG, getSlots, resetSlots, setSlots } from './home-slots.js';
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export { chips, h };
 
@@ -51,7 +53,7 @@ export async function renderManager(el, ctx, helpers, title) {
   el.replaceChildren(h('p', { class: 'note' }, 'Reading the settings from the house…'));
   let sections;
   try { sections = await loadSections(ctx); } catch (e) { el.replaceChildren(h('p', { class: 'err', role: 'alert' }, `Could not read the settings: ${e.message}`)); return; }
-  const groups = groupSections(sections);
+  const groups = [...groupSections(sections), { name: 'This website', sections: [{ title: 'Home page', icon: 'cd:home', cards: [{ type: 'church:home-page' }] }] }];
   const all = groups.flatMap((g) => g.sections);
   const current = all.find((s) => s.title === title) || all[0];
   // The sections are the dock's second bar (as on Design and Clive); the page is the chosen section.
@@ -68,6 +70,8 @@ export async function renderManager(el, ctx, helpers, title) {
 }
 
 const card_ = (...kids) => h('article', { class: 'card plain' }, ...kids);
+/** A person's card in their own palette (person_jamie and so on), as the apps draw them; the neutral palette for anyone without one. */
+const personCard = (ctx, p, ...kids) => h('article', { class: 'tcard glow', style: toneVars(ctx, `person_${String(p.first || p.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '_')}`) }, ...kids);
 const group = (titleText, ...kids) => card_(h('h3', { class: 'title' }, titleText), ...kids);
 
 /** Draws a card from a command's answer, and again after each change it sends. */
@@ -80,6 +84,19 @@ async function live(slot, ctx, command, build, extra = {}) {
 // ---- Notifications, People
 
 const CARDS = {
+  // The four status tiles at the top of Home: pick what each shows (kept in this browser).
+  'church:home-page': async (slot) => {
+    const draw = () => {
+      const now = getSlots();
+      const opts = (cur) => ['Control panel', 'Clive'].map((g) => h('optgroup', { label: g }, SLOT_CATALOG.filter((c) => c.group === g).map((c) => h('option', { value: c.id, selected: c.id === cur }, c.label))));
+      slot.replaceChildren(group('Home page', soft('Choose what the four status tiles at the top of Home show. Each reads from the house. The choice is kept in this browser.'),
+        h('div', { class: 'grid' }, now.map((id, i) => h('label', { class: 'kind' }, h('span', { class: 'row-title' }, `Tile ${i + 1}`),
+          h('select', { class: 'field', 'aria-label': `Tile ${i + 1}`, onchange: (e) => { const next = [...now]; next[i] = e.target.value; setSlots(next); draw(); } }, opts(id))))),
+        h('div', { class: 'chips' }, h('button', { class: 'btn quiet', type: 'button', disabled: now.join() === DEFAULT_SLOTS.join(), onclick: () => { resetSlots(); draw(); } }, 'Back to the usual four'))));
+    };
+    draw();
+  },
+
   'custom:notifications-card': (slot, ctx) => live(slot, ctx, 'church_drive/people', (d, send) => {
     const people = d.people || [];
     const cell = (on, click, label, disabled) => h('button', { type: 'button', class: 'cell', 'aria-pressed': String(on), 'aria-label': label, disabled, onclick: click }, on ? '✓' : '');
@@ -110,7 +127,7 @@ const CARDS = {
         const alerts = kinds.filter((k) => !(k.group === 'People' && String(k.key).startsWith('arrivals:')) && !todoGroups.has(k.group));
         const arrivals = kinds.find((k) => k.key === `arrivals:${id}`); const others = people.filter((o) => o.entity_id !== id);
         const draft = editing[id];
-        return card_(
+        return personCard(ctx, p,
           h('div', { class: 'row' }, h('h3', { class: 'title', style: 'margin:0;flex:1' }, p.name), h('span', { class: 'tag' }, presenceWord(p.home, p.place, p.zone))),
           h('p', { class: 'label' }, 'Phones'),
           (p.phones || []).length ? chips(p.phones.map((ph) => [ph.name, ph.on, () => send('church_drive/people/phone', { person: id, service: ph.service, on: !ph.on })])) : soft(`No phones yet. They join by themselves when the Home Assistant app signs in as ${p.first}.`),

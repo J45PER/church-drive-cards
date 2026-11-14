@@ -31,6 +31,7 @@ import asyncio
 from datetime import timedelta
 import json
 import logging
+import time
 from pathlib import Path
 from typing import Any
 
@@ -121,6 +122,10 @@ from .const import (
     WS_ALARM_LIGHTS_SET,
     WS_ALARM_LIGHTS_STOP,
     WS_ACTIVITY,
+    WS_CHATS,
+    WS_CHATS_RATE,
+    WS_CHATS_SENT,
+    WS_CLIVE_DEVICES,
     WS_ALARM_LIGHTS_TEST,
     WS_PURIFIER_SCHEDULE,
     WS_PURIFIER_SCHEDULE_SET,
@@ -162,6 +167,9 @@ from .shopping import Shopping
 from .shopping_logic import STATUSES
 from .fcm import Fcm
 from .activity import Activity
+from .chats import Chats
+from .clive_devices_logic import shape_phones, shape_satellite
+from .chats_logic import MAX_LIMIT as CHATS_MAX_LIMIT, RATINGS as CHAT_RATINGS
 from .activity_logic import KINDS as ACTIVITY_KINDS, MAX_LIMIT as ACTIVITY_MAX_LIMIT
 from .alarm_actor import AlarmActor
 from .notice_actions import NoticeActions
@@ -1415,6 +1423,91 @@ async def ws_activity(hass: HomeAssistant, connection: websocket_api.ActiveConne
     connection.send_result(msg["id"], await activity.async_query(**filters))
 
 
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_CHATS,
+        vol.Optional("since"): vol.Coerce(float),
+        vol.Optional("until"): vol.Coerce(float),
+        vol.Optional("mark"): vol.In(["all", "unmarked", "good", "bad", "noted", "tosend"]),
+        vol.Optional("limit"): vol.All(vol.Coerce(int), vol.Range(min=1, max=CHATS_MAX_LIMIT)),
+        vol.Optional("offset"): vol.All(vol.Coerce(int), vol.Range(min=0)),
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_chats(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Clive's recorded chats, newest first, with how many are marked (administrators only). `available` says whether Home Assistant's chat log could be listened to."""
+    chats = hass.data.get(DOMAIN, {}).get("chats")
+    if chats is None:
+        connection.send_error(msg["id"], "not_ready", "Chats are not being recorded")
+        return
+    connection.send_result(msg["id"], await chats.async_query(**{k: v for k, v in msg.items() if k not in ("id", "type")}))
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_CHATS_RATE,
+        vol.Required("id"): cv.string,
+        vol.Optional("rating"): vol.Any(None, vol.In(list(CHAT_RATINGS))),
+        vol.Optional("note"): cv.string,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_chats_rate(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Mark a chat good or bad, and leave a note on it (administrators only)."""
+    chats = hass.data.get(DOMAIN, {}).get("chats")
+    if chats is None:
+        connection.send_error(msg["id"], "not_ready", "Chats are not being recorded")
+        return
+    try:
+        entry = await chats.async_rate(msg["id"], msg.get("rating"), msg.get("note"))
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid", str(err))
+        return
+    connection.send_result(msg["id"], entry)
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_CHATS_SENT, vol.Required("ids"): [cv.string]})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_chats_sent(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Remember that these chats' notes were sent for checking (administrators only)."""
+    chats = hass.data.get(DOMAIN, {}).get("chats")
+    if chats is None:
+        connection.send_error(msg["id"], "not_ready", "Chats are not being recorded")
+        return
+    connection.send_result(msg["id"], {"marked": await chats.async_mark_sent(msg["ids"][:200])})
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_CLIVE_DEVICES})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_clive_devices(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """The devices he answers on: phones with the Church Drive app (version, last heard) and voice satellites (state, version), and the wake word (administrators only)."""
+    from homeassistant.helpers import area_registry as ar, device_registry as dr, entity_registry as er  # noqa: PLC0415
+
+    people = _people(hass)
+    phones = shape_phones(people.people() if people else [], float(people.stale_hours()) if people else 24.0, time.time())
+    ent_reg, dev_reg, area_reg = er.async_get(hass), dr.async_get(hass), ar.async_get(hass)
+    satellites = []
+    for state in hass.states.async_all("assist_satellite"):
+        entry = ent_reg.async_get(state.entity_id)
+        device = dev_reg.async_get(entry.device_id) if entry and entry.device_id else None
+        area_id = (entry.area_id if entry else None) or (device.area_id if device else None)
+        area = area_reg.async_get_area(area_id) if area_id else None
+        satellites.append(shape_satellite(state.entity_id, state.state, state.name, state.last_changed.isoformat() if state.last_changed else None,
+                                          area.name if area else None, device.sw_version if device else None, device.model if device else None))
+    wake_word = None
+    try:
+        from homeassistant.components import assist_pipeline  # noqa: PLC0415
+
+        wake_word = assist_pipeline.async_get_pipeline(hass).wake_word_id
+    except Exception:  # noqa: BLE001
+        pass
+    connection.send_result(msg["id"], {"phones": phones, "satellites": sorted(satellites, key=lambda s: (not s["answering"], s["name"])), "wake_word": wake_word})
+
+
 @websocket_api.websocket_command({vol.Required("type"): WS_ASSIST_INFO})
 @websocket_api.async_response
 async def ws_assist_info(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
@@ -1458,7 +1551,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             ws_people_places, ws_people_cars, ws_people_access, ws_people_tracking, ws_people_settings, ws_camera_events, ws_camera_settings, ws_camera_links, ws_camera_link_set, ws_camera_alert_set, ws_maps, ws_maps_search, ws_assist_info,
             ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss, ws_reminders, ws_reminder_set,
             ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_import,
-            ws_alarm_lights, ws_alarm_lights_set, ws_alarm_lights_test, ws_alarm_lights_stop, ws_activity,
+            ws_alarm_lights, ws_alarm_lights_set, ws_alarm_lights_test, ws_alarm_lights_stop, ws_activity, ws_chats, ws_chats_rate, ws_chats_sent, ws_clive_devices,
             ws_purifier_schedule, ws_purifier_schedule_set,
         ):
             websocket_api.async_register_command(hass, command)
@@ -1566,6 +1659,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         except Exception:  # noqa: BLE001
             _LOGGER.exception("The activity log couldn't start; notifications still work")
             data["activity"] = None
+        # Its own guard: recording chats must never stop notifications from starting.
+        try:
+            def who_near(ts: float) -> str | None:
+                log = hass.data.get(DOMAIN, {}).get("activity")
+                near = [e for e in (log.entries if log else []) if e.get("kind") == "clive" and e.get("by") and abs(float(e.get("ts") or 0) - ts) <= 30]
+                return near[-1]["by"] if near else None   # an action he did for someone in that half minute names who asked
+
+            chats = Chats(hass, who_near)
+            await chats.async_start()
+            entry.async_on_unload(chats.async_stop)
+            data["chats"] = chats
+        except Exception:  # noqa: BLE001
+            _LOGGER.exception("Chats couldn't start recording; notifications still work")
+            data["chats"] = None
         # Google push for the Church Drive app (only when its key file is in the config folder).
         fcm = Fcm(hass)
         await fcm.async_start()

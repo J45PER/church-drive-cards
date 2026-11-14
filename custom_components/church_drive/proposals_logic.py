@@ -5,9 +5,10 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from .chats_logic import normalise_notes_change
 from .colours_logic import KEY, MAX_PALETTES, clean_overrides
 
-KINDS = ("palette", "cards", "icons", "layouts")
+KINDS = ("palette", "cards", "icons", "layouts", "chats")
 MAX_NOTE = 400
 MAX_ITEMS = 200
 MAX_VERSIONS = 50
@@ -182,6 +183,8 @@ def normalise_change(kind: str, change: Any) -> dict[str, Any]:
         return normalise_icons_change(change)
     if kind == "layouts":
         return normalise_layouts_change(change)
+    if kind == "chats":
+        return normalise_notes_change(change)
     raise ValueError("Unknown kind of proposal")
 
 
