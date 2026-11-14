@@ -4,6 +4,12 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.154.0
+
+- Back from a page opened from the sidebar (Settings, About, To-do, Energy, Devices, Manager and the rest) goes back to the sidebar list, and back on the list closes it. This undoes the 0.152.0 change for those pages.
+- The bottom bar has a thin divider and, at its right end, a button with a chevron (out to open the sidebar, in to close it). It has no name.
+- The sidebar is full width and stops above the bottom bar, so the bar stays in reach. It is acrylic: the page blurs behind it, as the bar does.
+
 ## 0.153.0
 
 - No change you will notice (the to-do highlights moved to the shared module so Clive Admin's Home can show them).
