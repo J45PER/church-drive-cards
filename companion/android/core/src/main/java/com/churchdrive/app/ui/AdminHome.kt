@@ -74,6 +74,7 @@ fun AdminHome(
         HomeCard("health", "Device health", healthSummary(health), ring = true, onTap = openHealth)
         HomeCard("system", "Updates and backups", systemSummary(entities, now), ring = false, onTap = openDevices)
     }
+}
 
 /** A title over a group of cards: House, Clive or System. */
 @Composable
