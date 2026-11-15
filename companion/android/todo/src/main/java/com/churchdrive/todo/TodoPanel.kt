@@ -2,8 +2,11 @@ package com.churchdrive.todo
 
 import dev.chrisbanes.haze.HazeState
 import androidx.compose.ui.unit.Dp
+import com.churchdrive.app.ui.sidebarParent
 import com.churchdrive.app.ui.SidebarHost
 import com.churchdrive.app.ui.PageColumn
+import com.churchdrive.app.ui.SidebarListPage
+import com.churchdrive.app.ui.SidebarSubPage
 import com.churchdrive.app.ui.PanelTitle
 import com.churchdrive.app.ui.PanelRow
 import com.churchdrive.app.ui.PanelCard
@@ -70,10 +73,10 @@ private fun openChurchDrive(context: Context): Boolean = ChurchDriveLink.open(co
  */
 @Composable
 fun TodoPanel(panel: String?, onPanel: (String?) -> Unit, vm: TodoModel, acrylic: HazeState? = null, bottomInset: Dp = 0.dp) {
-    SidebarHost(panel, onPanel, acrylic, bottomInset, back = { null }) { which ->
+    SidebarHost(panel, onPanel, acrylic, bottomInset) { which ->
         when (which) {
-            "settings" -> SettingsPage(vm) { onPanel(null) }
-            "about" -> AboutPage(vm) { onPanel(null) }
+            "settings" -> SettingsPage(vm) { onPanel(sidebarParent(which)) }
+            "about" -> AboutPage(vm) { onPanel(sidebarParent(which)) }
             else -> AccountPage(vm, onClose = { onPanel(null) }, onOpen = onPanel)
         }
     }
@@ -82,27 +85,7 @@ fun TodoPanel(panel: String?, onPanel: (String?) -> Unit, vm: TodoModel, acrylic
 @Composable
 private fun AccountPage(vm: TodoModel, onClose: () -> Unit, onOpen: (String) -> Unit) {
     val context = LocalContext.current
-    PageColumn(clearBottom = true) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            IconButton(onClick = onClose) { Icon(CdVectors.Close, contentDescription = "Close") }
-        }
-        PanelCard {
-            Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Box(Modifier.size(64.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
-                    Text(
-                        vm.personName?.trim()?.firstOrNull()?.uppercase() ?: "?",
-                        style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                }
-                Column {
-                    Text(vm.personName ?: "Signed in", style = MaterialTheme.typography.titleLarge)
-                    Text(
-                        if (vm.borrowed) "Signed in through Church Drive" else "Church Drive To-Do",
-                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
+    SidebarListPage(vm.personName, if (vm.borrowed) "Signed in through Church Drive" else "Church Drive To-Do", onClose) {
         PanelCard { PanelRow(CdVectors.Home, "Open Church Drive", "The main app: lights, alarm, cameras and the rest", onClick = { openChurchDrive(context) }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_church_drive), contentDescription = null) }) }
         PanelCard {
             PanelRow(CdVectors.Cog, "Settings", onClick = { onOpen("settings") }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_cog_outline), contentDescription = null) })
@@ -119,8 +102,7 @@ private fun AccountPage(vm: TodoModel, onClose: () -> Unit, onOpen: (String) -> 
 @Composable
 private fun SettingsPage(vm: TodoModel, onBack: () -> Unit) {
     val context = LocalContext.current
-    PageColumn(clearBottom = true) {
-        PanelTitle("Settings", onBack)
+    SidebarSubPage("Settings", onBack) {
         PanelCard {
             PanelRow(
                 CdVectors.Chat, "Notifications",
@@ -151,8 +133,7 @@ private fun AboutPage(vm: TodoModel, onBack: () -> Unit) {
     val context = LocalContext.current
     var status by remember { mutableStateOf<String?>(null) }
     val available = vm.updateAvailable || status == "available"
-    PageColumn(clearBottom = true) {
-        PanelTitle("About", onBack)
+    SidebarSubPage("About", onBack) {
         PanelCard {
             PanelRow(CdVectors.Info, "Church Drive To-Do", "Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.BUILD}) · ${BuildConfig.COMMIT}")
             PanelRow(

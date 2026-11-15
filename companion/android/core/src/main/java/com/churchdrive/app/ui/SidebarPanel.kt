@@ -10,6 +10,10 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -94,19 +98,65 @@ fun PanelTitle(title: String, onBack: () -> Unit) {
 }
 
 /**
- * The scrolling column of a sidebar page. It keeps clear of the status bar and the sides. With [clearBottom] it also keeps clear of the
- * phone's bottom edge, which leaves a gap above the bottom bar; without it the list runs right down to the bar.
+ * The scrolling column of a sidebar page. It keeps clear of the status bar and the sides, not the bottom: the sidebar already stops above
+ * the bottom bar, so the list runs right down to it.
  */
 @Composable
-fun PageColumn(clearBottom: Boolean = false, content: @Composable () -> Unit) {
-    val insets = if (clearBottom) WindowInsets.safeDrawing else WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
+fun PageColumn(content: @Composable ColumnScope.() -> Unit) {
     Column(
         Modifier.fillMaxSize()
-            .windowInsetsPadding(insets)
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) { content() }
+}
+
+/** The card at the top of the sidebar's list: the person's initial in a circle, their name, and a line under it. */
+@Composable
+fun SidebarPersonCard(name: String?, subtitle: String) {
+    PanelCard {
+        Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Box(
+                Modifier.size(64.dp).background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    name?.trim()?.firstOrNull()?.uppercase() ?: "?",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+            Column {
+                Text(name ?: "Signed in", style = MaterialTheme.typography.titleLarge)
+                Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+/**
+ * The sidebar's list, the same in every app: a close button, the person's card, then the app's own cards ([content]: each a [PanelCard] of
+ * [PanelRow]s).
+ */
+@Composable
+fun SidebarListPage(name: String?, subtitle: String, onClose: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+    PageColumn {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            IconButton(onClick = onClose) { Icon(CdVectors.Close, contentDescription = "Close") }
+        }
+        SidebarPersonCard(name, subtitle)
+        content()
+    }
+}
+
+/** A page opened from the sidebar's list, the same in every app: the back arrow and title, then the app's content. */
+@Composable
+fun SidebarSubPage(title: String, onBack: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+    PageColumn {
+        PanelTitle(title, onBack)
+        content()
+    }
 }
 
 /** Where Back goes from a sidebar page: the list ("account"); from the list, the sidebar shuts. */
