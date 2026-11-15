@@ -179,7 +179,8 @@ private fun PanelCard(content: @Composable () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = PanelShape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        // A 70% tint, as the bottom bar: the page blurs through each card, so the sidebar reads as acrylic.
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.70f)),
     ) { Column { content() } }
 }
 
