@@ -5,7 +5,7 @@ Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newe
 
 ## 0.156.3
 
-- No change you will notice.
+- Fixed: the bottom bar filled the whole screen since 0.156.2 (the sidebar button was stretching it); it is back to its normal height.
 
 ## 0.156.2
 
