@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.158.2
+
+- No change you will notice.
+
 ## 0.158.1
 
 - The About page shows the app's own logo, drawn like the other rows' icons.
