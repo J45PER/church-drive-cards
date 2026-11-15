@@ -4,6 +4,15 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.156.1
+
+- The sidebar's cards and sub-pages are acrylic: the page blurs through them, as the bottom bar does.
+- The list runs down to the bottom bar, so the last items are no longer cut off early.
+- Pressing a page on the bottom bar closes the sidebar and opens that page.
+- Back from Device health returns to the sidebar list.
+- The sidebar's button on the bottom bar uses the bar's light icon colour.
+- Manager is in Clive Admin only; it has left the phone app's sidebar.
+
 ## 0.156.0
 
 - Back from a page opened from the sidebar (Settings, About, To-do, Manager and the rest) goes back to the sidebar list, and back on the list closes it. This undoes the 0.152.0 change for those pages.
