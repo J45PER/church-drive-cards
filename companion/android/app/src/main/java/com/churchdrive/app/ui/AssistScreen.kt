@@ -343,7 +343,7 @@ fun RowScope.AssistantBarItems(model: AssistModel, ui: AssistantTyping, onClose:
     NavigationBarItem(
         colors = navBarItemColors(),
         selected = keyboardUp, onClick = { ui.showKeyboard() },
-        icon = { HaIcon("mdi:keyboard-outline", CdVectors.Info, if (keyboardUp) scheme.onSecondaryContainer else scheme.onSurfaceVariant, 24.dp) },
+        icon = { HaIcon("mdi:keyboard-outline", CdVectors.Info, if (keyboardUp) NavPillInk else scheme.onSurfaceVariant, 24.dp) },
         label = { Text("Type", fontSize = 11.sp, maxLines = 1) },
     )
     NavigationBarItem(

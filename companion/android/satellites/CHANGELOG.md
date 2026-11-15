@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.156.3
+
+- Fixed: the bottom bar filled the whole screen since 0.156.2 (the sidebar button was stretching it); it is back to its normal height.
+
 ## 0.156.2
 
 - The selected page on the bottom bar (and the tablet side rail) is a white pill with its icon knocked out, in light and dark.

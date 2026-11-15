@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
@@ -42,7 +42,8 @@ fun RowScope.SidebarBarButton(open: Boolean, onClick: () -> Unit) {
     val ink = MaterialTheme.colorScheme.onSurfaceVariant
     val label = if (open) "Close the sidebar" else "Open the sidebar"
     Box(
-        Modifier.width(28.dp).fillMaxHeight().clickable(onClickLabel = label, onClick = onClick),
+        // A fixed height: a bar lays its row out with room to grow, and a button that fills it would fill the whole screen.
+        Modifier.width(28.dp).height(64.dp).clickable(onClickLabel = label, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Canvas(Modifier.size(20.dp).semantics { contentDescription = label }) {
