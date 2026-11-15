@@ -2,7 +2,6 @@ package com.churchdrive.admin
 
 import dev.chrisbanes.haze.HazeState
 import androidx.compose.ui.unit.Dp
-import com.churchdrive.app.ui.sidebarParent
 import com.churchdrive.app.ui.SidebarHost
 import com.churchdrive.app.ui.PageColumn
 import com.churchdrive.app.ui.PanelTitle
@@ -70,22 +69,20 @@ import com.churchdrive.app.ui.DeviceHealthTab
  */
 @Composable
 fun AdminPanel(panel: String?, onPanel: (String?) -> Unit, vm: AdminModel, acrylic: HazeState? = null, bottomInset: Dp = 0.dp) {
-    // Device health opens from Home's card, not from the sidebar's list, so Back from it shuts the panel; every other page goes back to the list.
-    val back: (String?) -> String? = { if (it == "health") null else sidebarParent(it) }
-    SidebarHost(panel, onPanel, acrylic, bottomInset, back = back) { which ->
+    SidebarHost(panel, onPanel, acrylic, bottomInset, back = { null }) { which ->
         when (which) {
-            "about" -> AboutPage { onPanel(back(which)) }
+            "about" -> AboutPage { onPanel(null) }
             "health" -> Column(Modifier.fillMaxSize().safeDrawingPadding()) {
                 // Device health scrolls itself (its devices open pages in place), so it is not put in the scrolling page column.
-                Box(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) { PanelTitle("Device health", { onPanel(back(which)) }) }
+                Box(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) { PanelTitle("Device health", { onPanel(null) }) }
                 Box(Modifier.weight(1f).fillMaxWidth()) { DeviceHealthTab(vm.entities, vm.registry, vm.areaNames) }
             }
-            "colours" -> PageColumn {
-                PanelTitle("Colour palettes", { onPanel(back(which)) })
+            "colours" -> PageColumn(clearBottom = true) {
+                PanelTitle("Colour palettes", { onPanel(null) })
                 ColoursPage()
             }
-            "watch", "notifications", "cameras", "people" -> PageColumn {
-                PanelTitle(when (which) { "watch" -> "Watch"; "cameras" -> "Camera links"; "people" -> "People"; else -> "Notifications" }, { onPanel(back(which)) })
+            "watch", "notifications", "cameras", "people" -> PageColumn(clearBottom = true) {
+                PanelTitle(when (which) { "watch" -> "Watch"; "cameras" -> "Camera links"; "people" -> "People"; else -> "Notifications" }, { onPanel(null) })
                 val section = ManagerSections.forPage(vm.managerSections, which)
                 if (section == null) com.churchdrive.app.ui.LoadingNote("Loading this page from Home Assistant…")
                 else ManagerSectionContent(section, vm.entities, vm.registry, vm.call)
@@ -98,7 +95,7 @@ fun AdminPanel(panel: String?, onPanel: (String?) -> Unit, vm: AdminModel, acryl
 @Composable
 private fun AccountPage(vm: AdminModel, onClose: () -> Unit, onOpen: (String) -> Unit) {
     val context = LocalContext.current
-    PageColumn {
+    PageColumn(clearBottom = true) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             IconButton(onClick = onClose) { Icon(painterResource(R.drawable.mdi_close), contentDescription = "Close") }
         }
@@ -171,7 +168,7 @@ private fun AboutPage(onBack: () -> Unit) {
     // The key this installed copy is signed with. On the Google Play version that is Play's own key, which the Church Drive app has to be told
     // about before it will share its sign-in (TrustedApps.CERTS), so it is shown here to be copied.
     val certs = remember { TrustedApps.ownCerts(context) }
-    PageColumn {
+    PageColumn(clearBottom = true) {
         PanelTitle("About", onBack)
         PanelCard {
             PanelRow(

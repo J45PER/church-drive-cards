@@ -2,7 +2,6 @@ package com.churchdrive.satellites
 
 import dev.chrisbanes.haze.HazeState
 import androidx.compose.ui.unit.Dp
-import com.churchdrive.app.ui.sidebarParent
 import com.churchdrive.app.ui.SidebarHost
 import com.churchdrive.app.ui.PageColumn
 import com.churchdrive.app.ui.PanelTitle
@@ -68,10 +67,10 @@ import com.churchdrive.app.UpdateCheck
  */
 @Composable
 fun SatellitePanel(panel: String?, onPanel: (String?) -> Unit, vm: SatelliteModel, acrylic: HazeState? = null, bottomInset: Dp = 0.dp) {
-    SidebarHost(panel, onPanel, acrylic, bottomInset) { which ->
+    SidebarHost(panel, onPanel, acrylic, bottomInset, back = { null }) { which ->
         when (which) {
-            "settings" -> SettingsPage(vm) { onPanel(sidebarParent(which)) }
-            "about" -> AboutPage { onPanel(sidebarParent(which)) }
+            "settings" -> SettingsPage(vm) { onPanel(null) }
+            "about" -> AboutPage { onPanel(null) }
             else -> AccountPage(vm, onClose = { onPanel(null) }, onOpen = onPanel)
         }
     }
@@ -80,7 +79,7 @@ fun SatellitePanel(panel: String?, onPanel: (String?) -> Unit, vm: SatelliteMode
 @Composable
 private fun AccountPage(vm: SatelliteModel, onClose: () -> Unit, onOpen: (String) -> Unit) {
     val context = LocalContext.current
-    PageColumn {
+    PageColumn(clearBottom = true) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             IconButton(onClick = onClose) { Icon(painterResource(R.drawable.mdi_close), contentDescription = "Close") }
         }
@@ -116,7 +115,7 @@ private fun AccountPage(vm: SatelliteModel, onClose: () -> Unit, onOpen: (String
 
 @Composable
 private fun SettingsPage(vm: SatelliteModel, onBack: () -> Unit) {
-    PageColumn {
+    PageColumn(clearBottom = true) {
         PanelTitle("Settings", onBack)
         PanelCard {
             PanelRow(
@@ -144,7 +143,7 @@ private fun AboutPage(onBack: () -> Unit) {
     // The key this installed copy is signed with. On the Google Play version that is Play's own key, which the Church Drive app has to be told
     // about before it will share its sign-in (TrustedApps.CERTS), so it is shown here to be copied.
     val certs = remember { TrustedApps.ownCerts(context) }
-    PageColumn {
+    PageColumn(clearBottom = true) {
         PanelTitle("About", onBack)
         PanelCard {
             PanelRow(CdVectors.Info, "Church Drive Satellites", "Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.BUILD}) · ${BuildConfig.COMMIT}", leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_satellites), contentDescription = null) })

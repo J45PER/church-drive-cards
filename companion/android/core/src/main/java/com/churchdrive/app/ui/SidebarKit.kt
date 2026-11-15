@@ -89,6 +89,7 @@ fun SidebarSheet(visible: Boolean, acrylic: HazeState?, bottomInset: Dp, content
         Surface(
             Modifier.fillMaxSize().padding(bottom = bottomInset).let { m -> if (acrylic != null && blur != null) m.hazeChild(acrylic, blur) else m },
             color = if (acrylic != null) Color.Transparent else MaterialTheme.colorScheme.background,
+            contentColor = MaterialTheme.colorScheme.onBackground,
             content = content,
         )
     }

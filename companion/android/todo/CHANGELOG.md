@@ -3,6 +3,12 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.157.1
+
+- Moving between the sidebar list and its pages is a quick fade with a short slide, not two see-through pages sliding over each other, so it is less laggy.
+- The sidebar's icons and text use the theme's colour, not white.
+- Back from Settings and About closes the sidebar again, and the list stops where it did, as before 0.157.0.
+
 ## 0.157.0
 
 - The sidebar and the bottom bar are now the same piece as in the phone app. Back from Settings and About returns to the sidebar list (it used to close the sidebar), and the list runs down to the bottom bar.
