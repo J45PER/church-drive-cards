@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.160.0
+
+- An administrator can press and hold a blind's card (the Bedroom Blind) for a menu with Device page and Schedule. Schedule opens an editor like the purifier schedule's: a switch, a block per schedule with its days and a time to open and a time to close (either can be left out), Add schedule, Cancel and Save. The card says when the blind next moves. The house runs the schedules, so they work with the apps closed. Needs Home Assistant 0.160.0 or newer; with an older house the card is as before.
+
 ## 0.159.0
 
 - The sidebar is shut again when you come back to the app from another one, and swiping from left to right closes it (or goes back a page), as swiping the other way opens it.
