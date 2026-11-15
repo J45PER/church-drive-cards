@@ -1,5 +1,9 @@
 package com.churchdrive.satellites
 
+import com.churchdrive.app.ui.PanelSwitchRow
+import com.churchdrive.app.ui.SidebarAboutPage
+import com.churchdrive.app.ui.SignOutCard
+import com.churchdrive.app.ui.OpenChurchDriveCard
 import dev.chrisbanes.haze.HazeState
 import androidx.compose.ui.unit.Dp
 import com.churchdrive.app.ui.sidebarParent
@@ -83,16 +87,12 @@ fun SatellitePanel(panel: String?, onPanel: (String?) -> Unit, vm: SatelliteMode
 private fun AccountPage(vm: SatelliteModel, onClose: () -> Unit, onOpen: (String) -> Unit) {
     val context = LocalContext.current
     SidebarListPage(vm.personName, if (vm.borrowed) "Signed in through Church Drive" else "Church Drive Satellites", onClose) {
-        PanelCard { PanelRow(CdVectors.Home, "Open Church Drive", "The main app: lights, alarm, cameras and the rest", onClick = { ChurchDriveLink.open(context) }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_church_drive), contentDescription = null) }) }
+        OpenChurchDriveCard { ChurchDriveLink.open(context) }
         PanelCard {
             PanelRow(CdVectors.Cog, "Settings", onClick = { onOpen("settings") }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_cog_outline), contentDescription = null) })
             PanelRow(CdVectors.Info, "About", onClick = { onOpen("about") })
         }
-        // A sign-in taken from the Church Drive app is that app's to end; signing out there signs this one out too.
-        PanelCard {
-            if (vm.borrowed) PanelRow(CdVectors.SignOut, "Sign out", "This app uses the Church Drive app's sign-in. Sign out there and it signs out here too.")
-            else PanelRow(CdVectors.SignOut, "Sign out", onClick = { onClose(); vm.signOut() })
-        }
+        SignOutCard(vm.borrowed) { onClose(); vm.signOut() }
     }
 }
 
@@ -100,11 +100,11 @@ private fun AccountPage(vm: SatelliteModel, onClose: () -> Unit, onOpen: (String
 private fun SettingsPage(vm: SatelliteModel, onBack: () -> Unit) {
     SidebarSubPage("Settings", onBack) {
         PanelCard {
-            PanelRow(
+            PanelSwitchRow(
                 CdVectors.Eye, "Open on the satellite I left",
                 "When this is off, the app always opens on the list of satellites.",
+                checked = vm.rememberSatellite, onChange = { vm.changeRememberSatellite(it) },
                 leading = { Icon(painterResource(R.drawable.sat_device_history), contentDescription = null) },
-                trailing = { Switch(checked = vm.rememberSatellite, onCheckedChange = { vm.changeRememberSatellite(it) }) },
             )
         }
         PanelCard {
@@ -119,31 +119,12 @@ private fun SettingsPage(vm: SatelliteModel, onBack: () -> Unit) {
 
 @Composable
 private fun AboutPage(onBack: () -> Unit) {
-    val context = LocalContext.current
-    val clipboard = LocalClipboardManager.current
-    var copied by remember { mutableStateOf(false) }
-    // The key this installed copy is signed with. On the Google Play version that is Play's own key, which the Church Drive app has to be told
-    // about before it will share its sign-in (TrustedApps.CERTS), so it is shown here to be copied.
-    val certs = remember { TrustedApps.ownCerts(context) }
-    SidebarSubPage("About", onBack) {
-        PanelCard {
-            PanelRow(CdVectors.Info, "Church Drive Satellites", "Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.BUILD}) · ${BuildConfig.COMMIT}", leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_satellites), contentDescription = null) })
-            PanelRow(
-                CdVectors.SystemUpdate, "Updates",
-                if (BuildConfig.PLAY) "Google Play keeps this app up to date. Tap to open its Play page" else "A test build: newer ones are on GitHub, under the satellites-latest release",
-                onClick = if (BuildConfig.PLAY) ({ UpdateCheck.openPlayPage(context, context.packageName) }) else null,
-            )
-        }
-        PanelCard {
-            if (certs.isEmpty()) PanelRow(Icons.Outlined.Fingerprint, "Signing certificate (SHA-256)", "Not available", leading = { Icon(painterResource(R.drawable.mdi_shield_key), contentDescription = null) })
-            certs.forEach { c ->
-                PanelRow(
-                    Icons.Outlined.Fingerprint, "Signing certificate (SHA-256)",
-                    if (copied) "Copied" else "$c\nTap to copy. The Church Drive app needs this to share its sign-in with this app.",
-                    onClick = { clipboard.setText(AnnotatedString(c)); copied = true },
-                    leading = { Icon(painterResource(R.drawable.mdi_shield_key), contentDescription = null) }
-                )
-            }
-        }
-    }
+    SidebarAboutPage(
+        appName = "Church Drive Satellites",
+        versionLine = "Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.BUILD}) · ${BuildConfig.COMMIT}",
+        onBack = onBack,
+        play = BuildConfig.PLAY,
+        testBuildNote = "A test build: newer ones are on GitHub, under the satellites-latest release",
+        logo = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_satellites), contentDescription = null) },
+    )
 }

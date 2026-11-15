@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.158.0
+
+- The About page, the sign-out row and the page frames are shared with the other apps and taken from this one. On the About page an administrator can now tap the signing certificate to copy it.
+
 ## 0.157.2
 
 - No app change (Home Assistant: Clive no longer fails follow-up questions after he has used a tool).

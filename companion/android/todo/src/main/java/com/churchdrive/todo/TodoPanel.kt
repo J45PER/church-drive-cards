@@ -1,5 +1,9 @@
 package com.churchdrive.todo
 
+import com.churchdrive.app.ui.PanelSwitchRow
+import com.churchdrive.app.ui.SidebarAboutPage
+import com.churchdrive.app.ui.SignOutCard
+import com.churchdrive.app.ui.OpenChurchDriveCard
 import dev.chrisbanes.haze.HazeState
 import androidx.compose.ui.unit.Dp
 import com.churchdrive.app.ui.sidebarParent
@@ -86,16 +90,12 @@ fun TodoPanel(panel: String?, onPanel: (String?) -> Unit, vm: TodoModel, acrylic
 private fun AccountPage(vm: TodoModel, onClose: () -> Unit, onOpen: (String) -> Unit) {
     val context = LocalContext.current
     SidebarListPage(vm.personName, if (vm.borrowed) "Signed in through Church Drive" else "Church Drive To-Do", onClose) {
-        PanelCard { PanelRow(CdVectors.Home, "Open Church Drive", "The main app: lights, alarm, cameras and the rest", onClick = { openChurchDrive(context) }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_church_drive), contentDescription = null) }) }
+        OpenChurchDriveCard { openChurchDrive(context) }
         PanelCard {
             PanelRow(CdVectors.Cog, "Settings", onClick = { onOpen("settings") }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_cog_outline), contentDescription = null) })
             PanelRow(CdVectors.Info, "About", onClick = { onOpen("about") })
         }
-        // A sign-in taken from the Church Drive app is that app's to end; signing out there signs this one out too.
-        PanelCard {
-            if (vm.borrowed) PanelRow(CdVectors.SignOut, "Sign out", "This app uses the Church Drive app's sign-in. Sign out there and it signs out here too.")
-            else PanelRow(CdVectors.SignOut, "Sign out", onClick = { onClose(); vm.signOut() })
-        }
+        SignOutCard(vm.borrowed) { onClose(); vm.signOut() }
     }
 }
 
@@ -114,15 +114,15 @@ private fun SettingsPage(vm: TodoModel, onBack: () -> Unit) {
             )
         }
         PanelCard {
-            PanelRow(
+            PanelSwitchRow(
                 CdVectors.Todo, "Show finished tasks",
                 "Keep each list's Done section open, instead of folded away until you ask for it.",
-                trailing = { Switch(checked = vm.showDone, onCheckedChange = { vm.changeShowDone(it) }) },
+                checked = vm.showDone, onChange = { vm.changeShowDone(it) },
             )
-            PanelRow(
+            PanelSwitchRow(
                 CdVectors.Eye, "Open on the page I left",
                 "When this is off, the app always opens on My to-do.",
-                trailing = { Switch(checked = vm.rememberPage, onCheckedChange = { vm.changeRememberPage(it) }) },
+                checked = vm.rememberPage, onChange = { vm.changeRememberPage(it) },
             )
         }
     }
@@ -130,35 +130,15 @@ private fun SettingsPage(vm: TodoModel, onBack: () -> Unit) {
 
 @Composable
 private fun AboutPage(vm: TodoModel, onBack: () -> Unit) {
-    val context = LocalContext.current
-    var status by remember { mutableStateOf<String?>(null) }
-    val available = vm.updateAvailable || status == "available"
-    SidebarSubPage("About", onBack) {
-        PanelCard {
-            PanelRow(CdVectors.Info, "Church Drive To-Do", "Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.BUILD}) · ${BuildConfig.COMMIT}")
-            PanelRow(
-                CdVectors.SystemUpdate, "Check for updates",
-                when {
-                    BuildConfig.PLAY -> "Google Play keeps this app up to date. Tap to open its Play page"
-                    status == "checking" -> "Checking…"
-                    available -> "A newer version is ready"
-                    status == "current" -> "You have the newest version"
-                    else -> "Tap to check"
-                },
-                onClick = {
-                    if (BuildConfig.PLAY) UpdateCheck.openPlayPage(context, context.packageName)
-                    else {
-                        status = "checking"
-                        vm.checkForUpdate { newer -> status = if (newer) "available" else "current" }
-                    }
-                },
-            )
-        }
-        if (available) {
-            Button(
-                onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(UpdateCheck.TODO_APK_URL))) },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("Download the update") }
-        }
-    }
+    SidebarAboutPage(
+        appName = "Church Drive To-Do",
+        versionLine = "Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.BUILD}) · ${BuildConfig.COMMIT}",
+        onBack = onBack,
+        play = BuildConfig.PLAY,
+        testBuildNote = "",
+        updateAvailable = vm.updateAvailable,
+        onCheckUpdate = { then -> vm.checkForUpdate(then) },
+        apkUrl = UpdateCheck.TODO_APK_URL,
+        showCertificate = false,
+    )
 }

@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.158.0
+
+- The About page, the sign-out row, the "Open Church Drive" row and the on/off switch rows are now the same pieces as the phone app's, shared by all four apps. They look and work as before.
+
 ## 0.157.2
 
 - No app change (Home Assistant: Clive no longer fails follow-up questions after he has used a tool).

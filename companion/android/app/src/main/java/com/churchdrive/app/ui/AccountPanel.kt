@@ -178,18 +178,14 @@ private fun AccountPage(userName: String?, isAdmin: Boolean, managerPages: List<
             PanelRow(CdVectors.Cog, "Settings", onClick = { onOpen("settings") }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_cog_outline), contentDescription = null) })
             PanelRow(CdVectors.Info, "About", onClick = { onOpen("about") })
         }
-        PanelCard { PanelRow(CdVectors.SignOut, "Sign out", onClick = onSignOut) }
+        SignOutCard(borrowed = false, onSignOut = onSignOut)
     }
 }
 
 /** The Manager's sections as a page of buttons; each opens its own page. */
 @Composable
 private fun ManagerHub(managerPages: List<PanelSpec>, onBack: () -> Unit, onOpen: (String) -> Unit) {
-    Column(
-        Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        PanelTitle("Manager", onBack)
+    SidebarSubPage("Manager", onBack) {
         PanelCard {
             managerPages.forEach { p ->
                 val summary = rememberTemplate(p.summaryTemplate)
@@ -240,11 +236,7 @@ private fun SettingsPage(settings: AccountSettings, isAdmin: Boolean, onBack: ()
         if (granted) settings.onNotify(true) else message = "Notifications are off for this app. Allow them in Android's settings."
     }
 
-    Column(
-        Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        PanelTitle("Settings", onBack)
+    SidebarSubPage("Settings", onBack) {
         // Where there is a Church Drive To-Do app, the person can keep the To-do page in this app instead.
         if (com.churchdrive.app.TodoLink.installed(context)) PanelCard {
             var openApp by remember { mutableStateOf(com.churchdrive.app.TodoLink.preferApp(context)) }
@@ -381,41 +373,16 @@ private val CliveMic: @Composable () -> Unit = { Icon(painterResource(com.church
 
 @Composable
 private fun AboutPage(settings: AccountSettings, updateAvailable: Boolean, isAdmin: Boolean, onBack: () -> Unit) {
-    val context = LocalContext.current
-    var status by remember { mutableStateOf<String?>(null) }
-    val available = updateAvailable || status == "available"
-    Column(
-        Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        PanelTitle("About", onBack)
-        PanelCard {
-            PanelRow(CdVectors.Info, "Church Drive", "Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.BUILD}) · ${BuildConfig.COMMIT}")
-            // For the allowed list in TrustedApps (the other Church Drive apps trust this app by this fingerprint): administrators only.
-            if (isAdmin) PanelRow(CdVectors.Info, "Signing certificate (SHA-256)", com.churchdrive.app.TrustedApps.ownCerts(context).joinToString("\n").ifBlank { "Not available" })
-            PanelRow(
-                CdVectors.SystemUpdate, "Check for updates",
-                when {
-                    BuildConfig.PLAY -> "Google Play keeps this app up to date. Tap to open its Play page"
-                    status == "checking" -> "Checking…"
-                    available -> "A newer version is ready"
-                    status == "current" -> "You have the newest version"
-                    else -> "Tap to check"
-                },
-                onClick = {
-                    if (BuildConfig.PLAY) UpdateCheck.openPlayPage(context, context.packageName)
-                    else {
-                        status = "checking"
-                        settings.onCheckUpdate { newer -> status = if (newer) "available" else "current" }
-                    }
-                },
-            )
-        }
-        if (available) {
-            Button(
-                onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(UpdateCheck.APK_URL))) },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("Download the update") }
-        }
-    }
+    SidebarAboutPage(
+        appName = "Church Drive",
+        versionLine = "Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.BUILD}) · ${BuildConfig.COMMIT}",
+        onBack = onBack,
+        play = BuildConfig.PLAY,
+        testBuildNote = "",
+        updateAvailable = updateAvailable,
+        onCheckUpdate = settings.onCheckUpdate,
+        apkUrl = UpdateCheck.APK_URL,
+        // For the allowed list in TrustedApps (the other Church Drive apps trust this app by this fingerprint): administrators only.
+        showCertificate = isAdmin,
+    )
 }
