@@ -62,6 +62,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 from .alarm_lights import AlarmLights
 from .alarm_lights_logic import KINDS as ALARM_LIGHT_TESTS, METHODS as ALARM_LIGHT_METHODS, RULES as ALARM_LIGHT_RULES, WHEN as ALARM_LIGHT_WHEN
 from .apply import async_apply
+from .blind_schedule import BlindSchedule
 from .purifier_schedule import PurifierSchedule
 from .const import (
     CONF_ASSISTANT_NAME,
@@ -129,6 +130,8 @@ from .const import (
     WS_CHATS_SENT,
     WS_CLIVE_DEVICES,
     WS_ALARM_LIGHTS_TEST,
+    WS_BLIND_SCHEDULE,
+    WS_BLIND_SCHEDULE_SET,
     WS_PURIFIER_SCHEDULE,
     WS_PURIFIER_SCHEDULE_SET,
     WS_REMINDER_SET,
@@ -1152,6 +1155,51 @@ async def ws_purifier_schedule_set(hass: HomeAssistant, connection: websocket_ap
     connection.send_result(msg["id"], await sched.async_set(change))
 
 
+def _blind_schedule(hass: HomeAssistant) -> BlindSchedule | None:
+    return hass.data.get(DOMAIN, {}).get("blind_schedule")
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_BLIND_SCHEDULE, vol.Required("entity"): cv.entity_id})
+@callback
+def ws_blind_schedule(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """One blind's schedules (days, Open and Close times, each with its "Mon-Fri Open 07:30 · Close 20:00" text), whether they run, and what's next."""
+    sched = _blind_schedule(hass)
+    if sched is None:
+        connection.send_error(msg["id"], "not_ready", "The blind schedule isn't running")
+        return
+    connection.send_result(msg["id"], sched.status(msg["entity"]))
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_BLIND_SCHEDULE_SET,
+        vol.Required("entity"): cv.entity_id,
+        vol.Optional("enabled"): bool,
+        vol.Optional("schedules"): [
+            {
+                vol.Optional("id"): cv.string,
+                vol.Required("days"): [vol.All(vol.Coerce(int), vol.Range(min=0, max=6))],
+                vol.Optional("open"): cv.string,
+                vol.Optional("close"): cv.string,
+            }
+        ],
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_blind_schedule_set(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Change one blind's schedules (only what's sent changes; a schedule list replaces the old one)."""
+    sched = _blind_schedule(hass)
+    if sched is None:
+        connection.send_error(msg["id"], "not_ready", "The blind schedule isn't running")
+        return
+    change = {k: v for k, v in msg.items() if k not in ("id", "type", "entity")}
+    try:
+        connection.send_result(msg["id"], await sched.async_set(msg["entity"], change))
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid_format", str(err))
+
+
 def _alarm_lights(hass: HomeAssistant) -> AlarmLights | None:
     return hass.data.get(DOMAIN, {}).get("alarm_lights")
 
@@ -1562,7 +1610,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             ws_inbox, ws_inbox_submit, ws_inbox_confirm, ws_inbox_dismiss, ws_reminders, ws_reminder_set,
             ws_shopping, ws_shopping_create, ws_shopping_update, ws_shopping_add, ws_shopping_item, ws_shopping_delete, ws_shopping_import,
             ws_alarm_lights, ws_alarm_lights_set, ws_alarm_lights_test, ws_alarm_lights_stop, ws_activity, ws_chats, ws_chats_rate, ws_chats_sent, ws_clive_devices,
-            ws_purifier_schedule, ws_purifier_schedule_set,
+            ws_purifier_schedule, ws_purifier_schedule_set, ws_blind_schedule, ws_blind_schedule_set,
         ):
             websocket_api.async_register_command(hass, command)
     # The version in the URL makes browsers fetch the new bundle after an
@@ -1766,6 +1814,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception:  # noqa: BLE001
         _LOGGER.exception("The purifier schedule couldn't start; everything else still works")
         data["purifier_schedule"] = None
+
+    # Nor must the blind schedule.
+    blind_schedule = BlindSchedule(hass)
+    try:
+        await blind_schedule.async_start()
+        entry.async_on_unload(blind_schedule.async_stop)
+        data["blind_schedule"] = blind_schedule
+    except Exception:  # noqa: BLE001
+        _LOGGER.exception("The blind schedule couldn't start; everything else still works")
+        data["blind_schedule"] = None
 
     async def shopping_add(call: ServiceCall) -> ServiceResponse:
         shop = data.get("shopping")

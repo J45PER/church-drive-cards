@@ -311,6 +311,19 @@ fun CoverCard(config: JSONObject, entities: Map<String, EntityState>, call: Call
     }
     val ink = tone.onContainer
     val fold = rememberFold("grid-fold|$id")
+    // Holding the card (an administrator, with a house that has blind schedules) opens a menu: the device page, or the schedule.
+    val schedule = rememberBlindSchedule(id)
+    var menu by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf(false) }
+    val openDevice = LocalOpenDevice.current
+    val canSchedule = LocalIsAdmin.current && schedule.value != null
+    schedule.value?.takeIf { editing }?.let { current ->
+        BlindScheduleEditor(id, name, current) { saved -> if (saved != null) schedule.value = saved; editing = false }
+        return
+    }
+    if (menu) BlindHoldMenu(name, onDevice = { openDevice(id) }, onSchedule = { editing = true }, onDismiss = { menu = false })
+    val hold: (() -> Unit)? = if (canSchedule) ({ menu = true }) else null
+    val hint = listOfNotNull(if (canSchedule) "Hold for options" else null, schedule.value?.next?.let { "Next: $it" }).joinToString(" · ")
     val info = listOf(config.optString("subtitle"), word).filter { it.isNotBlank() }.joinToString(" · ")
     val items = listOf(
         TileItem(IconMap.of("cover", "open", "mdi:arrow-up"), "Open", cover?.state == "open") { last = "open"; call("cover", "open_cover", id, data()) },
@@ -318,12 +331,12 @@ fun CoverCard(config: JSONObject, entities: Map<String, EntityState>, call: Call
         TileItem(IconMap.of("cover", "close", "mdi:arrow-down"), "Close", cover?.state == "closed") { last = "closed"; call("cover", "close_cover", id, data()) },
     )
     if (fold.value) {
-        GridCard(tone.container, ink, 2.5f, name, deviceEntity = id, fold = fold) { FoldBand(0.5f, 5f, ink, word, config.optString("subtitle").ifBlank { null }, items, tone, enabled) }
+        GridCard(tone.container, ink, 2.5f, name, deviceEntity = id, onHold = hold, fold = fold) { FoldBand(0.5f, 5f, ink, word, config.optString("subtitle").ifBlank { null }, items, tone, enabled) }
         return
     }
     val slider = position != null
     val tilesY = if (slider) 3.5f else 2.5f
-    GridCard(tone.container, ink, tilesY + 2f, name, deviceEntity = id, fold = fold) {
+    GridCard(tone.container, ink, tilesY + (if (hint.isNotEmpty()) 2.5f else 2f), name, deviceEntity = id, onHold = hold, fold = fold) {
         Text(info, style = MaterialTheme.typography.bodyMedium, color = ink, modifier = Modifier.at(0.5f, 1f, 7f, 1f).wrapContentHeight(Alignment.CenterVertically))
         if (position != null) {
             Slider(
@@ -336,6 +349,7 @@ fun CoverCard(config: JSONObject, entities: Map<String, EntityState>, call: Call
             )
         }
         GridTiles(items, tilesY, 1.5f, tone, ink, enabled, stacked = true)
+        if (hint.isNotEmpty()) Text(hint, style = MaterialTheme.typography.labelSmall, color = ink.copy(alpha = 0.7f), modifier = Modifier.at(0.5f, tilesY + 1.55f, 7f, 0.5f))
     }
 }
 

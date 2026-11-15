@@ -869,6 +869,8 @@ fun GridCard(
     title: String,
     modifier: Modifier = Modifier,
     deviceEntity: String? = null,
+    /** What pressing and holding the card does, in place of opening the [deviceEntity]'s device page (a blind's menu, with Schedule). */
+    onHold: (() -> Unit)? = null,
     titleColor: Color = content,
     fold: androidx.compose.runtime.MutableState<Boolean>? = null,
     /** Where the fold arrow's cell starts, in cells from the top (0 for the title row). */
@@ -879,10 +881,10 @@ fun GridCard(
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     Card(
         modifier = modifier.fillMaxWidth().then(
-            if (deviceEntity == null) Modifier
+            if (deviceEntity == null && onHold == null) Modifier
             else Modifier.androidxLongPress {
                 haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                openDevice(deviceEntity)
+                if (onHold != null) onHold() else if (deviceEntity != null) openDevice(deviceEntity)
             },
         ),
         shape = RoundedCornerShape(28.dp),
