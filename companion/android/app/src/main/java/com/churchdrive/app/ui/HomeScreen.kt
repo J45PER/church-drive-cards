@@ -222,6 +222,7 @@ fun HomeScreen(
                     pages.forEach { p ->
                         val selected = p == page
                         NavigationBarItem(
+                            colors = navBarItemColors(),
                             selected = selected,
                             onClick = { go(p) },
                             icon = { navIcon(p, selected) },
@@ -264,6 +265,7 @@ fun HomeScreen(
                 pages.forEach { p ->
                     val selected = p == page
                     NavigationRailItem(
+                        colors = navRailItemColors(),
                         selected = selected,
                         onClick = { go(p) },
                         icon = { navIcon(p, selected) },

@@ -48,6 +48,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.churchdrive.app.UpdateCheck
 import com.churchdrive.app.ui.AcrylicNavigationBar
+import com.churchdrive.app.ui.SidebarBarButton
+import com.churchdrive.app.ui.SidebarBarDivider
+import com.churchdrive.app.ui.navBarItemColors
 import com.churchdrive.app.ui.AdminHome
 import com.churchdrive.app.ui.CdVectors
 import com.churchdrive.app.ui.acrylicBehind
@@ -79,6 +82,8 @@ import org.json.JSONObject
 @Composable
 fun AdminApp(vm: AdminModel) {
     var panel by rememberSaveable { mutableStateOf<String?>(null) }
+    // The blur source for the sidebar and the bottom bar: the page behind them.
+    val acrylic = remember { HazeState() }
     // Swiping left anywhere that doesn't scroll sideways opens the account panel, as in the other apps, as well as the person's button.
     Box(
         Modifier.fillMaxSize().pointerInput(panel) {
@@ -92,10 +97,10 @@ fun AdminApp(vm: AdminModel) {
         androidx.compose.runtime.CompositionLocalProvider(LocalHaApi provides vm.api, com.churchdrive.app.ui.LocalBaseUrl provides vm.baseUrl,
             com.churchdrive.app.ui.LocalTemplates provides vm.templates, com.churchdrive.app.ui.LocalUserName provides vm.personName,
             com.churchdrive.app.ui.LocalIsAdmin provides vm.isAdmin, com.churchdrive.app.ui.LocalAreaNames provides vm.areaNames) {
-            AdminPages(vm, onPerson = { panel = "account" }, onPanel = { panel = it })
+            AdminPages(vm, acrylic = acrylic, sidebarOpen = panel != null, onSidebar = { panel = if (panel == null) "account" else null }, onPage = { panel = null }, onPerson = { panel = "account" }, onPanel = { panel = it })
             // Inside the providers too: the side panel's pages (Notifications, People, Camera links, Watch) ask the house through them, and
             // outside them they had no line to the house and always said they couldn't be read.
-            AdminPanel(panel, { panel = it }, vm)
+            AdminPanel(panel, { panel = it }, vm, acrylic = acrylic, bottomInset = com.churchdrive.app.ui.sidebarBottomInset())
         }
     }
 }
@@ -108,14 +113,13 @@ private const val DEVICES = 4
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AdminPages(vm: AdminModel, onPerson: () -> Unit, onPanel: (String) -> Unit) {
+private fun AdminPages(vm: AdminModel, acrylic: HazeState, sidebarOpen: Boolean, onSidebar: () -> Unit, onPage: () -> Unit, onPerson: () -> Unit, onPanel: (String) -> Unit) {
     var tab by rememberSaveable { mutableIntStateOf(HOME) }
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val pageScroll = rememberScrollState()
-    val acrylic = remember { HazeState() }
     val toTop = rememberToTop(pageScroll, scroll)
     // Every way to a page, a bar button or a card on Home, shows it from its top.
-    fun go(to: Int) { tab = to; toTop() }
+    fun go(to: Int) { onPage(); tab = to; toTop() }
     BackHandler(enabled = tab != HOME) { go(HOME) }
     Box(Modifier.fillMaxSize()) {
     val link by vm.link.collectAsState()
@@ -133,25 +137,32 @@ private fun AdminPages(vm: AdminModel, onPerson: () -> Unit, onPanel: (String) -
         bottomBar = {
             AcrylicNavigationBar(acrylic) {
                 NavigationBarItem(
+                    colors = navBarItemColors(),
                     selected = tab == HOME, onClick = { go(HOME) },
                     icon = { Icon(CdVectors.Home, null) }, label = { Text("Home", fontSize = 11.sp) },
                 )
                 NavigationBarItem(
+                    colors = navBarItemColors(),
                     selected = tab == MANAGER, onClick = { go(MANAGER) },
                     icon = { Icon(CdVectors.Cog, null) }, label = { Text("Manager", fontSize = 11.sp) },
                 )
                 NavigationBarItem(
+                    colors = navBarItemColors(),
                     selected = tab == ENERGY, onClick = { go(ENERGY) },
                     icon = { Icon(CdVectors.Bolt, null) }, label = { Text("Energy", fontSize = 11.sp) },
                 )
                 NavigationBarItem(
+                    colors = navBarItemColors(),
                     selected = tab == DEVICES, onClick = { go(DEVICES) },
                     icon = { Icon(CdVectors.DeviceServer, null) }, label = { Text("Devices", fontSize = 11.sp) },
                 )
                 NavigationBarItem(
+                    colors = navBarItemColors(),
                     selected = tab == ACTIVITY, onClick = { go(ACTIVITY) },
                     icon = { Icon(CdVectors.History, null) }, label = { Text("Activity", fontSize = 11.sp) },
                 )
+                SidebarBarDivider()
+                SidebarBarButton(open = sidebarOpen, onClick = onSidebar)
             }
         },
     ) { padding ->

@@ -2,6 +2,7 @@
 
 One line per release from the git history (newest first). Detail: HANDOFF.md and docs/HISTORY.md. Android app releases are in companion/android/CHANGELOG.md.
 
+- **v0.156.2 + apps 0.156.2** (2026-11-15): in every app's bottom bar (and the tablet side rail) the selected page is a white pill with its icon knocked out. Church Drive To-Do, Satellites and Clive Admin gain the sidebar button at the right end of the bar and the acrylic sidebar, as in the phone app. No Home Assistant change.
 - **v0.156.1 + apps 0.156.1** (2026-11-15): the phone app's sidebar: its cards and sub-pages are acrylic (the page blurs behind them), the list runs down to the bottom bar, pressing a bar button closes the sidebar and opens that page, Device health's Back returns to the sidebar list, and Manager is no longer in the phone app's sidebar (it is in Clive Admin). No Home Assistant change.
 - **v0.156.0 + apps 0.156.0**: the phone app's sidebar: back from a sidebar page returns to the sidebar list; the bottom bar has a sidebar button (a chevron at its right end, after a divider); the sidebar is full width, acrylic, and stops above the bar. No Home Assistant change.
 - **v0.155.0 + apps 0.155.0** (2026-11-14): the apps after the split. The phone app has a **Media** tab on its bottom bar for everyone (the TVs and speakers they may use) and no longer has Energy or the administrators' Devices page; Clive Admin's Home groups its cards under House, Clive and System. No Home Assistant change.

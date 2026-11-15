@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -88,3 +90,19 @@ fun AcrylicNavigationBar(state: HazeState, content: @Composable RowScope.() -> U
         content = content,
     )
 }
+
+/** The bottom bar's selected page: a white pill with its icon knocked out (dark on white), in both themes. */
+@Composable
+fun navBarItemColors() = NavigationBarItemDefaults.colors(
+    selectedIconColor = Color(0xFF15171C),
+    selectedTextColor = MaterialTheme.colorScheme.onSurface,
+    indicatorColor = Color.White,
+)
+
+/** The same white pill for a side rail's selected page. */
+@Composable
+fun navRailItemColors() = NavigationRailItemDefaults.colors(
+    selectedIconColor = Color(0xFF15171C),
+    selectedTextColor = MaterialTheme.colorScheme.onSurface,
+    indicatorColor = Color.White,
+)
