@@ -91,10 +91,13 @@ fun AcrylicNavigationBar(state: HazeState, content: @Composable RowScope.() -> U
     )
 }
 
+/** The knocked-out ink on the selected white pill: the icon of the open page uses this, not the page's own colour. */
+val NavPillInk = Color(0xFF15171C)
+
 /** The bottom bar's selected page: a white pill with its icon knocked out (dark on white), in both themes. */
 @Composable
 fun navBarItemColors() = NavigationBarItemDefaults.colors(
-    selectedIconColor = Color(0xFF15171C),
+    selectedIconColor = NavPillInk,
     selectedTextColor = MaterialTheme.colorScheme.onSurface,
     indicatorColor = Color.White,
 )
@@ -102,7 +105,7 @@ fun navBarItemColors() = NavigationBarItemDefaults.colors(
 /** The same white pill for a side rail's selected page. */
 @Composable
 fun navRailItemColors() = NavigationRailItemDefaults.colors(
-    selectedIconColor = Color(0xFF15171C),
+    selectedIconColor = NavPillInk,
     selectedTextColor = MaterialTheme.colorScheme.onSurface,
     indicatorColor = Color.White,
 )

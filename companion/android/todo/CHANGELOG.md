@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.156.3
+
+- No change you will notice.
+
 ## 0.156.2
 
 - The selected page on the bottom bar (and the tablet side rail) is a white pill with its icon knocked out, in light and dark.

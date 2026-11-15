@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.156.3
+
+- Fixed: the open page's icon on the white bottom bar pill is dark, so it can be seen (it was drawn in its light colour). The same for the tablet side rail and for Clive's Type button.
+
 ## 0.156.2
 
 - The selected page on the bottom bar (and the tablet side rail) is a white pill with its icon knocked out, in light and dark.

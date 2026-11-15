@@ -176,7 +176,7 @@ fun HomeScreen(
     val alarmState = entities[ALARM_ENTITY]?.state
     @Composable
     fun navIcon(p: Page, selected: Boolean) {
-        val tint = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+        val tint = if (selected) NavPillInk else MaterialTheme.colorScheme.onSurfaceVariant
         // Cleaning shows Gregg's resting icon, which never changes; the rest are the dashboard's icons.
         if (p == Page.Cleaning) GreggIcon(GreggState.Idle, tint, 28.dp)
         else HaIcon(if (p == Page.Security) alarmIconName(alarmState) else p.mdi, p.fallback, tint = tint, size = 24.dp)
