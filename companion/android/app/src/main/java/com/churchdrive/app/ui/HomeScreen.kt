@@ -220,7 +220,8 @@ fun HomeScreen(
                             AssistantBarItems(assistantModel, assistantCtl.ui, onClose = assistantCtl.close, onSettings = { assistantCtl.close(); panel = "settings" })
                         } else {
                     pages.forEach { p ->
-                        val selected = p == page
+                        // Nothing is selected while the sidebar is open.
+                        val selected = p == page && panel == null
                         NavigationBarItem(
                             colors = navBarItemColors(),
                             selected = selected,
@@ -251,7 +252,8 @@ fun HomeScreen(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 pages.forEach { p ->
-                    val selected = p == page
+                    // Nothing is selected while the sidebar is open.
+                        val selected = p == page && panel == null
                     NavigationRailItem(
                         colors = navRailItemColors(),
                         selected = selected,

@@ -116,6 +116,7 @@ private fun AdminPages(vm: AdminModel, acrylic: HazeState, sidebarOpen: Boolean,
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val pageScroll = rememberScrollState()
     val toTop = rememberToTop(pageScroll, scroll)
+    val context = androidx.compose.ui.platform.LocalContext.current
     // Every way to a page, a bar button or a card on Home, shows it from its top.
     fun go(to: Int) { onPage(); tab = to; toTop() }
     BackHandler(enabled = tab != HOME) { go(HOME) }
@@ -136,27 +137,27 @@ private fun AdminPages(vm: AdminModel, acrylic: HazeState, sidebarOpen: Boolean,
             AppNavigationBar(acrylic, sidebarOpen = sidebarOpen, onSidebar = onSidebar) {
                 NavigationBarItem(
                     colors = navBarItemColors(),
-                    selected = tab == HOME, onClick = { go(HOME) },
+                    selected = tab == HOME && !sidebarOpen, onClick = { go(HOME) },
                     icon = { Icon(CdVectors.Home, null) }, label = { Text("Home", fontSize = 11.sp) },
                 )
                 NavigationBarItem(
                     colors = navBarItemColors(),
-                    selected = tab == MANAGER, onClick = { go(MANAGER) },
+                    selected = tab == MANAGER && !sidebarOpen, onClick = { go(MANAGER) },
                     icon = { Icon(CdVectors.Cog, null) }, label = { Text("Manager", fontSize = 11.sp) },
                 )
                 NavigationBarItem(
                     colors = navBarItemColors(),
-                    selected = tab == ENERGY, onClick = { go(ENERGY) },
+                    selected = tab == ENERGY && !sidebarOpen, onClick = { go(ENERGY) },
                     icon = { Icon(CdVectors.Bolt, null) }, label = { Text("Energy", fontSize = 11.sp) },
                 )
                 NavigationBarItem(
                     colors = navBarItemColors(),
-                    selected = tab == DEVICES, onClick = { go(DEVICES) },
+                    selected = tab == DEVICES && !sidebarOpen, onClick = { go(DEVICES) },
                     icon = { Icon(CdVectors.DeviceServer, null) }, label = { Text("Devices", fontSize = 11.sp) },
                 )
                 NavigationBarItem(
                     colors = navBarItemColors(),
-                    selected = tab == ACTIVITY, onClick = { go(ACTIVITY) },
+                    selected = tab == ACTIVITY && !sidebarOpen, onClick = { go(ACTIVITY) },
                     icon = { Icon(CdVectors.History, null) }, label = { Text("Activity", fontSize = 11.sp) },
                 )
             }
@@ -185,6 +186,7 @@ private fun AdminPages(vm: AdminModel, acrylic: HazeState, sidebarOpen: Boolean,
                 else -> AdminHome(
                     vm.entities, vm.registry, vm.areaNames,
                     openManager = { go(MANAGER) }, openHealth = { onPanel("health") }, openEnergy = { go(ENERGY) }, openDevices = { go(DEVICES) },
+                    openSecurity = { ChurchDriveLink.open(context, "Security") },
                 )
             }
             Spacer(Modifier.height(padding.calculateBottomPadding()))

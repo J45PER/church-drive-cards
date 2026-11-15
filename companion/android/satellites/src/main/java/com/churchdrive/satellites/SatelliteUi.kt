@@ -143,8 +143,8 @@ private fun ListPage(vm: SatelliteModel, acrylic: HazeState, sidebarOpen: Boolea
         },
         bottomBar = {
             AppNavigationBar(acrylic, sidebarOpen = sidebarOpen, onSidebar = onSidebar) {
-                NavigationBarItem(colors = navBarItemColors(), selected = tab == 0, onClick = { onPage(); tab = 0; toTop() }, icon = { Icon(painterResource(R.drawable.sat_device), null) }, label = { Text("Satellites", fontSize = 11.sp) })
-                NavigationBarItem(colors = navBarItemColors(), selected = tab == 1, onClick = { onPage(); tab = 1; toTop() }, icon = { Icon(painterResource(R.drawable.mdi_plus), null) }, label = { Text("Add", fontSize = 11.sp) })
+                NavigationBarItem(colors = navBarItemColors(), selected = tab == 0 && !sidebarOpen, onClick = { onPage(); tab = 0; toTop() }, icon = { Icon(painterResource(R.drawable.sat_device), null) }, label = { Text("Satellites", fontSize = 11.sp) })
+                NavigationBarItem(colors = navBarItemColors(), selected = tab == 1 && !sidebarOpen, onClick = { onPage(); tab = 1; toTop() }, icon = { Icon(painterResource(R.drawable.mdi_plus), null) }, label = { Text("Add", fontSize = 11.sp) })
             }
         },
     ) { padding ->

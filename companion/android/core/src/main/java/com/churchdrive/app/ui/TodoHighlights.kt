@@ -135,9 +135,9 @@ fun TodoHighlights(entities: Map<String, EntityState>, call: CallService, onOpen
 }
 
 @Composable
-internal fun HighlightPill(text: String, icon: String, tone: ToneColors, onTick: (() -> Unit)?, onOpen: () -> Unit) {
+internal fun HighlightPill(text: String, icon: String, tone: ToneColors, onTick: (() -> Unit)?, onOpen: (() -> Unit)?) {
     Row(
-        Modifier.fillMaxWidth().height(26.dp).background(tone.accent.copy(alpha = 0.16f), RoundedCornerShape(13.dp)).clickable { onOpen() }
+        Modifier.fillMaxWidth().height(26.dp).background(tone.accent.copy(alpha = 0.16f), RoundedCornerShape(13.dp)).then(if (onOpen != null) Modifier.clickable { onOpen() } else Modifier)
             .padding(start = 8.dp, end = if (onTick != null) 4.dp else 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),

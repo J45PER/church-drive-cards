@@ -150,7 +150,7 @@ fun TodoApp(vm: TodoModel) {
                     val open = vm.openCount(t)
                     NavigationBarItem(
                         colors = navBarItemColors(),
-                        selected = t == tab,
+                        selected = t == tab && panel == null,
                         onClick = { panel = null; vm.openTab(t); toTop() },
                         icon = {
                             BadgedBox(badge = { if (open > 0) Badge { Text(open.toString()) } }) { TabIcon(t) }

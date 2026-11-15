@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -55,7 +56,7 @@ private val GasGlow = CliveColours.Gas.colour
 @Composable
 fun AdminHome(
     entities: Map<String, EntityState>, registry: Registry, areaNames: Map<String, String>,
-    openManager: () -> Unit, openHealth: () -> Unit, openEnergy: () -> Unit, openDevices: () -> Unit,
+    openManager: () -> Unit, openHealth: () -> Unit, openEnergy: () -> Unit, openDevices: () -> Unit, openSecurity: () -> Unit,
 ) {
     val now = remember(entities) { System.currentTimeMillis() }
     val health = remember(entities, registry, areaNames) { deviceHealthList(entities, registry, areaNames) }
@@ -64,11 +65,14 @@ fun AdminHome(
     // Each group is the phone app's section: its icon, the title in the section's colour, then its cards.
     Column(verticalArrangement = Arrangement.spacedBy(28.dp)) {
         HomeTasks(entities, openManager)
-        SectionPanel("House", icon = CdVectors.Home, tone = Tone.Blue) {
+        // A heading that has a page opens it (the arrow at its end); a card with a page of its own and no such heading has a View details button.
+        SectionPanel("House and Security", icon = CdVectors.Home, tone = Tone.Blue, onClick = openSecurity) {
             HomeCard("security", "Security", securitySummary(entities, registry, now), ring = true)
             HomeCard("people", "Who's home", peopleSummary(entities, registry), ring = false, foldable = false)
+        }
+        SectionPanel("Energy Summary", icon = CdVectors.Bolt, tone = Tone.Energy, onClick = openEnergy) {
             energySummary(entities, now).let { e ->
-                HomeCard("energy", "Energy", e.copy(items = e.items + weekItems(week)), ring = false, onTap = openEnergy)
+                HomeCard("energy", "Energy", e.copy(items = e.items + weekItems(week)), ring = false)
             }
         }
         // Clive's section wears his own mark (the two rounded squares) in his purple, not the notification bubble.
@@ -94,9 +98,10 @@ private fun HomeCard(key: String, title: String, s: HomeSummary, ring: Boolean, 
     val open = !foldable || !fold.value
     // Open: the band over rows 2 and 3 (as the alarm card), or none for a plain card, then a row every three quarters of a cell and half a cell under the last.
     val top = if (ring) 3f else 1f
-    val rows = if (open) Math.ceil(((top + s.items.sumOf { it.height.toDouble() } + 0.5) * 2.0)).toFloat() / 2f else if (ring) 2.5f else 2f
-    val tap = if (onTap != null) Modifier.clip(RoundedCornerShape(28.dp)).clickable(onClick = onTap) else Modifier
-    GridCard(colours.container, colours.onContainer, rows, title, tap, fold = if (foldable) fold else null) {
+    // A card with a page of its own and no heading that opens it has a View details row under its lines.
+    val more = if (onTap != null) 0.75 else 0.0
+    val rows = if (open) Math.ceil(((top + s.items.sumOf { it.height.toDouble() } + more + 0.5) * 2.0)).toFloat() / 2f else if (ring) 2.5f else 2f
+    GridCard(colours.container, colours.onContainer, rows, title, Modifier, fold = if (foldable) fold else null) {
         val ink = colours.onContainer
         if (ring) {
             if (open) {
@@ -141,7 +146,24 @@ private fun HomeCard(key: String, title: String, s: HomeSummary, ring: Boolean, 
                 }
                 y += item.height
             }
+            if (onTap != null) Row(Modifier.at(0.5f, y, 7f, 0.75f), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                ViewDetailsPill(colours, onTap)
+            }
         }
+    }
+}
+
+/** The way to a card's page, now that the whole card opens nothing: a small pill at the foot of the card. */
+@Composable
+private fun ViewDetailsPill(colours: ToneColors, onClick: () -> Unit) {
+    Row(
+        Modifier.clip(RoundedCornerShape(16.dp)).background(colours.accent.copy(alpha = 0.18f))
+            .clickable(onClickLabel = "View details", onClick = onClick)
+            .padding(start = 14.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("View details", style = MaterialTheme.typography.labelLarge, color = colours.accent)
+        Icon(CdVectors.ChevronRight, contentDescription = null, tint = colours.accent, modifier = Modifier.size(18.dp))
     }
 }
 
@@ -198,9 +220,9 @@ private fun HomeTasks(entities: Map<String, EntityState>, openManager: () -> Uni
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (shown.isEmpty()) {
                     val loaded = house != null
-                    HighlightPill(if (loaded) "Nothing waiting on you" else "Loading…", if (loaded) "mdi:check-circle-outline" else "mdi:format-list-checks", if (loaded) green else purple, null, openManager)
+                    HighlightPill(if (loaded) "Nothing waiting on you" else "Loading…", if (loaded) "mdi:check-circle-outline" else "mdi:format-list-checks", if (loaded) green else purple, null, null)
                 }
-                shown.forEach { (text, icon, tone) -> HighlightPill(text, icon, tone, null, openManager) }
+                shown.forEach { (text, icon, tone) -> HighlightPill(text, icon, tone, null, null) }
             }
             Column(
                 Modifier.width(58.dp).fillMaxHeight().background(purple.accent.copy(alpha = 0.22f), RoundedCornerShape(12.dp)).clickable { openManager() },
