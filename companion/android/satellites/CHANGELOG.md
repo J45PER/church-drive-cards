@@ -1,8 +1,20 @@
 # Church Drive Satellites: changelog
 
+## 0.156.0
+
+- No change you will notice (the phone app's sidebar and bar changed; nothing in this app's shared code changed for it).
+
+## 0.155.0
+
+- No app change.
+
 ## 0.154.0
 
-- No change you will notice (the phone app's sidebar and bar changed; this app's shared code was tidied to match).
+- No app change.
+
+## 0.153.1
+
+- No change you will notice (shared code: a switched-off PC or TV is not "not responding", and an unreadable router is not "down").
 
 ## 0.153.0
 

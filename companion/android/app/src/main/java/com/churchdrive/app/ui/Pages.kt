@@ -12,8 +12,6 @@ enum class Page(
     val mdi: String,
     val fallback: ImageVector,
     val sections: List<Section>,
-    /** Only shown to a Home Assistant administrator. */
-    val adminOnly: Boolean = false,
 ) {
     Home(
         "Home", "mdi:home", CdVectors.Home,
@@ -51,8 +49,8 @@ enum class Page(
         "To-do", "mdi:format-list-checks", CdVectors.Todo,
         listOf("From the house", "My to-do", "Shopping", "Shared", "Cleaning").map { Section(it) },
     ),
-    Devices("Devices", "mdi:server-network", CdVectors.DeviceServer, emptyList(), adminOnly = true),
-    Energy("Energy", "mdi:lightning-bolt", CdVectors.Bolt, emptyList(), adminOnly = true),
+    /** The TVs and speakers the signed-in person may use (an administrator, all of them). Energy and the devices and services are in Clive Admin. */
+    Devices("Media", "mdi:television-play", CdVectors.Play, emptyList()),
 }
 
 /** The nav bar's colour for a page, as on the dashboard: the Security page follows the alarm. */
@@ -64,7 +62,6 @@ fun pageTone(page: Page, alarmState: String?): Tone = when (page) {
     Page.Cleaning -> Tone.Gregg
     Page.Todo -> Tone.Tasks
     Page.Devices -> Tone.Media
-    Page.Energy -> Tone.Energy
 }
 
 enum class SectionKind { Alarm, NotBuilt }

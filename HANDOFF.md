@@ -158,6 +158,11 @@ HACS as an integration. It does two jobs:
     `card-kit.js`; a section panel hides a child card whose every entity (from its config,
     templates aside) is someone else's, and hides itself when that leaves nothing (Auto Layout
     then skips it); light cards drop such lights from their rows. Hiding only, not a lock.
+    **Revised (0.154.0):** rules in `access_logic.py`. Administrators are in every list (they see every device); a TV or speaker (media player) nobody was given to
+    is for administrators only; any other device is still everyone's until limited. Assigned on the website under Settings, Devices (`church_drive/people/access`
+    with the entity id). The phone app and Clive Admin hide what the signed-in person may not see (`DeviceAccess.kt`, from `auth/current_user`'s id and the person
+    entity's `user_id`). Clive: the media players are not exposed to Assist; `script.clive_media_control` (`church_drive.media_control`) and `script.clive_media_status`
+    (`church_drive.media_status`) check the asker (`call.context.user_id`) against the same lists.
   - **Phone locations** (v0.38.0): each phone in People manager › Phones has Alerts and
     **Location** switches. Location is the person's own device trackers (Settings › People), set
     with `church_drive/people/tracking` {person, tracker, on}; the phones list is now the

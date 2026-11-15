@@ -1,8 +1,21 @@
 # Clive Admin: changelog
 
+## 0.156.0
+
+- No change you will notice (the phone app's sidebar and bar changed; nothing in this app's shared code changed for it).
+
+## 0.155.0
+
+- Home has three titles over its cards: House (Security, Who's home, Energy), Clive (his devices) and System (Device health, Updates and backups), under Tasks.
+
 ## 0.154.0
 
-- No change you will notice (the phone app's sidebar and bar changed; this app's shared code was tidied to match).
+- Clive Admin's TVs and speakers list follows the same rule (administrators see all).
+
+## 0.153.1
+
+- Device health no longer lists a PC or TV that is switched off as "Not responding": a device that is only a media player is unavailable whenever it is off, which is not a fault.
+- The Internet line on Devices and Home says "Data not available" when the router's sensor cannot be read, instead of "Down".
 
 ## 0.153.0
 

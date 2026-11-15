@@ -16,6 +16,15 @@ class Templates(private val client: HaClient) {
     /** The latest result for [template], or null until HA has sent one. */
     fun value(template: String): String? = results[template]
 
+    /** What is known now, to keep on the phone (only the templates that are being watched). */
+    @Synchronized
+    fun snapshot(): Map<String, String> = wanted.mapNotNull { t -> results[t]?.let { t to it } }.toMap()
+
+    /** What was known last time, shown until the live answer arrives: it never replaces an answer that has come. */
+    fun seed(saved: Map<String, String>) {
+        saved.forEach { (template, text) -> if (results[template] == null) results[template] = text }
+    }
+
     /** Asks to be kept up to date with [template]. Safe to call again and again. */
     @Synchronized
     fun watch(template: String) {

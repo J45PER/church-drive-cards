@@ -86,13 +86,15 @@ fun healthOfDevice(deviceId: String, entities: Map<String, EntityState>, registr
         val at = e.lastChanged?.let { parseMillis(it) }
         if (at != null && (heard == null || at > heard)) { heard = at; heardIso = e.lastChanged }
     }
+    // A device that is only a media player (a PC, a TV, a speaker) is unavailable whenever it is switched off, which is not a fault.
+    val comesAndGoes = present.isNotEmpty() && present.all { it.entityId.startsWith("media_player.") }
     return DeviceHealthItem(
         deviceId = deviceId,
         name = registry.deviceNameById(deviceId) ?: present.firstOrNull()?.friendlyName ?: deviceId,
         area = registry.areaOf(ids.first())?.let { areaNames[it] ?: it },
         entityIds = ids,
         battery = battery, batteryLow = low, filter = filter,
-        offline = present.isNotEmpty() && present.all { it.state == "unavailable" },
+        offline = present.isNotEmpty() && present.all { it.state == "unavailable" } && !comesAndGoes,
         staleReason = stale[deviceId],
         heard = heardIso,
     )

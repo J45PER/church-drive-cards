@@ -45,6 +45,7 @@ from homeassistant.helpers.event import async_call_later, async_track_time_inter
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util, location, slugify
 
+from .access_logic import visible_map
 from .app_nudge_logic import oldest_running, should_nudge
 from .notice_log import NoticeLog
 from .phone_logic import OWN_APP_IDS, leftover_entries, location_trackers
@@ -572,16 +573,18 @@ class People:
         return {k: list(v) for k, v in self._data.get("access", {}).items() if v}
 
     def access_entities(self) -> dict[str, list[str]]:
-        """The same, per entity: a device's entities all take its people."""
+        """Who can see each device that is not everyone's, per entity (rules in access_logic.py): a device's entities all take its people, administrators
+        are in every list, and a TV or speaker nobody was given to is for administrators only."""
         ent_reg = er.async_get(self.hass)
-        out: dict[str, list[str]] = {}
+        assigned: dict[str, list[str]] = {}
         for key, people in self.access().items():
             if "." in key:
-                out[key] = sorted(set(out.get(key, [])) | set(people))
+                assigned[key] = sorted(set(assigned.get(key, [])) | set(people))
                 continue
             for entry in er.async_entries_for_device(ent_reg, key):
-                out[entry.entity_id] = sorted(set(out.get(entry.entity_id, [])) | set(people))
-        return out
+                assigned[entry.entity_id] = sorted(set(assigned.get(entry.entity_id, [])) | set(people))
+        admins = [p["entity_id"] for p in self.people() if p["admin"]]
+        return visible_map(assigned, [s.entity_id for s in self.hass.states.async_all("media_player")], admins)
 
     async def async_set_access(self, key: str, people: list[str]) -> None:
         clean = list(dict.fromkeys(str(p) for p in people if str(p).startswith("person.")))

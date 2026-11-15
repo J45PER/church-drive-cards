@@ -29,9 +29,9 @@ class DeviceHealthDataTest {
             "sensor.hall_battery" to "hall", "binary_sensor.hall_battery_plus_low" to "hall",
             "sensor.purifier_filter_life" to "purifier", "fan.purifier" to "purifier",
             "light.lamp" to "lamp", "sensor.phone_battery" to "phone",
-            "switch.gone" to "gone", "sensor.gone_power" to "gone",
+            "switch.gone" to "gone", "sensor.gone_power" to "gone", "media_player.pc" to "pc",
         ),
-        deviceNames = mapOf("door" to "Front door sensor", "hall" to "Hall dial", "purifier" to "Air purifier", "lamp" to "Lamp", "phone" to "Phone", "gone" to "Smart plug"),
+        deviceNames = mapOf("door" to "Front door sensor", "hall" to "Hall dial", "purifier" to "Air purifier", "lamp" to "Lamp", "phone" to "Phone", "gone" to "Smart plug", "pc" to "Desktop PC"),
         entityArea = emptyMap(), deviceArea = mapOf("door" to "entrance"),
         entityPlatform = mapOf("sensor.phone_battery" to "mobile_app"),
     )
@@ -46,6 +46,7 @@ class DeviceHealthDataTest {
         entity("sensor.phone_battery", "5", "device_class" to "battery"),
         entity("switch.gone", "unavailable"),
         entity("sensor.gone_power", "unavailable"),
+        entity("media_player.pc", "unavailable"),
     ).associateBy { it.entityId }
     private val areas = mapOf("entrance" to "Entrance")
 
@@ -95,6 +96,14 @@ class DeviceHealthDataTest {
         assertTrue(d.offline)
         assertEquals(HealthLevel.Bad, d.level)
         assertEquals("Not responding", d.summary)
+    }
+
+    @Test fun aPCOrTVThatIsSwitchedOffIsNotNotResponding() {
+        // Its only entity is a media player, which is unavailable whenever it is off: not a fault, and not in the list.
+        val d = healthOfDevice("pc", entities, registry, areas)!!
+        assertFalse(d.offline)
+        assertFalse(d.tracked)
+        assertFalse(deviceHealthList(entities, registry, areas).any { it.deviceId == "pc" })
     }
 
     @Test fun theListHasOnlyTrackedDevicesWorstFirstAndNoPhones() {

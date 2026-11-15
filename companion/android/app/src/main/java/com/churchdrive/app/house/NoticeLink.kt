@@ -23,10 +23,10 @@ sealed interface NoticeLink {
 const val DEVICE_LINK = "church-drive-device:"
 const val HEALTH_LINK = "church-drive-health"
 
-/** The app page (a [Page] name) a dashboard slug such as `lights`, `lighting` or `todo` means, or null (also for administrator pages). */
+/** The app page (a [Page] name) a dashboard slug such as `lights`, `lighting` or `todo` means, or null. */
 fun pageNameForSlug(slug: String?): String? {
     val s = slug?.lowercase()?.filter(Char::isLetter)?.takeIf { it.isNotEmpty() } ?: return null
-    return Page.entries.firstOrNull { !it.adminOnly && (it.name.lowercase() == s || it.label.lowercase().filter(Char::isLetter) == s) }?.name
+    return Page.entries.firstOrNull { (it.name.lowercase() == s || it.label.lowercase().filter(Char::isLetter) == s) }?.name
 }
 
 /** What a link means, or null when it isn't one the app can open. */

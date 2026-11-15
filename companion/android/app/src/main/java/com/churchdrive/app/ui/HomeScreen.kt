@@ -115,13 +115,11 @@ fun HomeScreen(
     androidx.compose.runtime.LaunchedEffect(openPage) {
         if (openPage != null) {
             if (openPage == Page.Todo.name) openTodo()
-            else Page.entries.firstOrNull { it.name == openPage && !it.adminOnly }?.let { page = it }
+            else Page.entries.firstOrNull { it.name == openPage }?.let { page = it }
             onOpened()
         }
     }
-    // Administrator-only pages (Devices, Energy) are opened from the account panel, and only while an administrator is signed in.
-    val adminPages = if (isAdmin) Page.entries.filter { it.adminOnly } else emptyList()
-    val pages = Page.entries.filter { !it.adminOnly && it != Page.Todo }
+    val pages = Page.entries.filter { it != Page.Todo }
     if (page !in pages) page = Page.Home
     // The account panel (null shut, "account", "settings", "about" or "todo"), which slides in from the right: declared above.
     // Asked for from outside (Clive alone, or the app opened on its settings).
@@ -305,6 +303,9 @@ fun HomeScreen(
                 androidx.compose.runtime.CompositionLocalProvider(LocalIsAdmin provides isAdmin) {
                     SecurityPage(panels["security"].orEmpty(), entities, registry, call)
                 }
+            } else if (page == Page.Devices) {
+                // The TVs and speakers this person may use (DeviceAccess); the devices and services are in Clive Admin.
+                com.churchdrive.app.ui.MediaCard(org.json.JSONObject(), entities, registry, call)
             } else if (page == Page.Cleaning && entities[VACUUM_ENTITY] != null) {
                 // Gregg's page is drawn by the app from his own entities, so every part of it looks the same.
                 CleaningPage(entities, call)
@@ -312,8 +313,6 @@ fun HomeScreen(
                 val key = when (page) {
                     Page.Climate -> "climate"
                     Page.Cleaning -> "cleaning"
-                    Page.Devices -> "devices"
-                    Page.Energy -> "energy"
                     else -> "todo"
                 }
                 DashboardPage(panels[key].orEmpty().let { list -> if (page == Page.Cleaning) list.map { it.copy(icon = GREGG_IDLE_ICON) } else list }, entities, registry, call)
@@ -340,7 +339,6 @@ fun HomeScreen(
         bottomInset = if (barShown) 80.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() else 0.dp,
         healthSummary = if (panel != null) deviceHealthSummary(deviceHealthList(entities, registry, areaNames)) else "",
         onDeviceHealth = { panel = null; onDeviceHealth() },
-        adminPages = adminPages,
         managerPages = if (isAdmin) managerPanels else emptyList(),
         managerContent = { panel ->
             androidx.compose.runtime.CompositionLocalProvider(LocalPanelTone provides toneFromColour(panel.color)) {
@@ -352,8 +350,7 @@ fun HomeScreen(
         onTodo = openTodo,
         todoOpensApp = com.churchdrive.app.TodoLink.opensApp(context),
         pageContent = { p ->
-            val key = when (p) { Page.Energy -> "energy"; Page.Todo -> "todo"; else -> "devices" }
-            DashboardPage(panels[key].orEmpty(), entities, registry, call)
+            DashboardPage(panels["todo"].orEmpty(), entities, registry, call)
         },
         experimentalContent = { ExperimentalPage(entities, registry, call) },
         activityContent = { ActivityPage() },

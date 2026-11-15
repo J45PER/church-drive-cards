@@ -187,11 +187,12 @@ fun mediaLine(player: EntityState): String = when {
     else -> presetLabel(player.state)
 }
 
-/** The players to show: those the card names, else every one; whatever is playing first, then by name. */
+/** The players to show: those the card names, else every one, leaving out those the signed-in person may not see; whatever is playing first, then by name. */
 fun mediaPlayers(config: JSONObject, entities: Map<String, EntityState>): List<EntityState> {
     val named = config.optJSONArray("entities")?.let { a -> (0 until a.length()).map { i -> a.opt(i).let { (it as? JSONObject)?.optString("entity") ?: it.toString() } } }.orEmpty()
     val all = if (named.isNotEmpty()) named.mapNotNull { entities[it] } else entities.values.filter { it.entityId.startsWith("media_player.") }
-    return all.sortedWith(compareBy({ it.state !in PLAYING }, { it.friendlyName.lowercase() }))
+    val me = DeviceAccess.me(entities)
+    return all.filter { DeviceAccess.canSee(entities, it.entityId, me) }.sortedWith(compareBy({ it.state !in PLAYING }, { it.friendlyName.lowercase() }))
 }
 
 fun padFor(player: EntityState, registry: Registry): Pad? {

@@ -86,7 +86,6 @@ fun AccountOverlay(
     /** One line on the Device Health row, and what the row does (it opens the Device Health page over the app). */
     healthSummary: String = "",
     onDeviceHealth: () -> Unit = {},
-    adminPages: List<Page> = emptyList(),
     /** The To-do row: opens Church Drive To-Do where it is installed, else this app's own To-do page (a sub-page of the panel). */
     onTodo: () -> Unit = {},
     todoOpensApp: Boolean = false,
@@ -137,9 +136,6 @@ fun AccountOverlay(
                     "about" -> AboutPage(settings, updateAvailable, isAdmin) { onPanel("account") }
                     // The administrator's pages open here, as sub-pages of the panel.
                     "todo" -> AdminPage("To-do", { onPanel("account") }) { pageContent(Page.Todo) }
-                    "energy", "devices" -> adminPages.firstOrNull { it.name.lowercase() == which }?.let { p ->
-                        AdminPage(p.label, { onPanel("account") }) { pageContent(p) }
-                    }
                     "manager" -> ManagerHub(managerPages, { onPanel("account") }, onPanel)
                     "experimental" -> AdminPage("Experimental", { onPanel("account") }) { experimentalContent() }
                     "activity" -> AdminPage("Activity log", { onPanel("account") }) { activityContent() }
@@ -147,7 +143,7 @@ fun AccountOverlay(
                         managerPages.firstOrNull { it.title == which.removePrefix("manager:") }?.let { p ->
                             AdminPage(p.title, { onPanel("manager") }) { managerContent(p) }
                         }
-                    } else AccountPage(userName, isAdmin, adminPages, managerPages, healthSummary, onDeviceHealth, todoOpensApp, { onPanel(null); onTodo() }, onClose = { onPanel(null) }, onOpen = onPanel, onSignOut = {
+                    } else AccountPage(userName, isAdmin, managerPages, healthSummary, onDeviceHealth, todoOpensApp, { onPanel(null); onTodo() }, onClose = { onPanel(null) }, onOpen = onPanel, onSignOut = {
                         onPanel(null)
                         onSignOut()
                     })
@@ -205,7 +201,7 @@ private fun PanelTitle(title: String, onBack: () -> Unit) {
 }
 
 @Composable
-private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Page>, managerPages: List<PanelSpec>, healthSummary: String, onDeviceHealth: () -> Unit, todoOpensApp: Boolean, onTodo: () -> Unit, onClose: () -> Unit, onOpen: (String) -> Unit, onSignOut: () -> Unit) {
+private fun AccountPage(userName: String?, isAdmin: Boolean, managerPages: List<PanelSpec>, healthSummary: String, onDeviceHealth: () -> Unit, todoOpensApp: Boolean, onTodo: () -> Unit, onClose: () -> Unit, onOpen: (String) -> Unit, onSignOut: () -> Unit) {
     Column(
         Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -244,13 +240,13 @@ private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Pa
                 leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_todo), contentDescription = null) },
             )
         }
-        // Clive Admin, for administrators: the separate app for Manager, Energy, Device Health and the colours (opens its Play page until it is installed).
+        // Clive Admin, for administrators: the separate app for Manager, Energy, Devices, Device Health and the colours (opens its Play page until it is installed).
         if (isAdmin) {
             val context = androidx.compose.ui.platform.LocalContext.current
             PanelCard {
                 PanelRow(
                     CdVectors.Cog, "Open Clive Admin",
-                    if (com.churchdrive.app.AdminLink.installed(context)) "Manager, energy, device health and the colours" else "Get the app for Manager, energy, device health and the colours",
+                    if (com.churchdrive.app.AdminLink.installed(context)) "Manager, energy, devices, device health and the colours" else "Get the app for Manager, energy, devices, device health and the colours",
                     onClick = { com.churchdrive.app.AdminLink.openOrStore(context) },
                     leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_admin), contentDescription = null) },
                 )
@@ -258,12 +254,6 @@ private fun AccountPage(userName: String?, isAdmin: Boolean, adminPages: List<Pa
         }
         // Device Health, for everyone: batteries, filters and devices that stopped answering.
         PanelCard { PanelRow(CdVectors.BatteryCharging, "Device health", healthSummary.ifBlank { null }, onClick = onDeviceHealth) }
-        // Administrator-only pages (Energy, Devices).
-        if (adminPages.isNotEmpty()) {
-            PanelCard {
-                adminPages.forEach { p -> PanelRow(p.fallback, p.label, onClick = { onOpen(p.name.lowercase()) }) }
-            }
-        }
         // The Manager (administrators): one button here, and a page of its sections.
         if (managerPages.isNotEmpty()) {
             PanelCard { PanelRow(CdVectors.Cog, "Manager", "${managerPages.size} sections: people, cameras, reminders and more", onClick = { onOpen("manager") }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_cog_solid), contentDescription = null) }) }
