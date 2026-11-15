@@ -10,6 +10,8 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.ColumnScope
@@ -185,8 +187,32 @@ fun SidebarHost(
     var shown by remember { mutableStateOf("account") }
     if (panel != null) shown = panel
     BackHandler(enabled = panel != null) { onPanel(back(panel)) }
+    // Coming back to the app from another one finds the sidebar shut again (a dialog or a permission question does not stop the app, so it
+    // does not shut it).
+    val lifecycle = androidx.compose.ui.platform.LocalLifecycleOwner.current.lifecycle
+    val shut by androidx.compose.runtime.rememberUpdatedState { onPanel(null) }
+    androidx.compose.runtime.DisposableEffect(lifecycle) {
+        // Only a start that follows a stop counts: a new observer is told the events it missed, which would shut the sidebar on a rotation.
+        var stopped = false
+        val watch = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) stopped = true
+            else if (event == androidx.lifecycle.Lifecycle.Event.ON_START && stopped) { stopped = false; shut() }
+        }
+        lifecycle.addObserver(watch)
+        onDispose { lifecycle.removeObserver(watch) }
+    }
+    // Swiping from left to right closes the sidebar, or goes back a page, as swiping the other way opens it.
+    var swiped by remember { mutableStateOf(0f) }
     SidebarSheet(visible = panel != null, acrylic = acrylic, bottomInset = bottomInset) {
-        Box(Modifier.fillMaxSize()) {
+        Box(
+            Modifier.fillMaxSize().pointerInput(panel) {
+                detectHorizontalDragGestures(
+                    onDragStart = { swiped = 0f },
+                    onDragEnd = { if (swiped > 120f) onPanel(back(panel)) },
+                    onHorizontalDrag = { _, dx -> swiped += dx },
+                )
+            },
+        ) {
             AnimatedContent(
                 targetState = shown,
                 transitionSpec = {

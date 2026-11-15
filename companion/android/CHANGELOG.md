@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.159.0
+
+- The sidebar is shut again when you come back to the app from another one, and swiping from left to right closes it (or goes back a page), as swiping the other way opens it.
+
 ## 0.158.2
 
 - No change you will notice.

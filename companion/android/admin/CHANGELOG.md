@@ -1,5 +1,10 @@
 # Clive Admin: changelog
 
+## 0.159.0
+
+- The sidebar is shut again when you come back to the app from another one, and swiping from left to right closes it (or goes back a page), as swiping the other way opens it.
+- On Home, a card no longer opens a page when you tap it. A heading with a page is the link: House and Security opens the Church Drive app's Security page, and Energy Summary (Energy now has its own heading) opens Energy. Device health and Updates and backups have a View details button instead. The Tasks block's To-do button is its way in.
+
 ## 0.158.2
 
 - On Home, Clive's section shows his own mark instead of the notification bubble, and the section and his devices card are in his purple.

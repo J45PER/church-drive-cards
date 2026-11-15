@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.159.0
+
+- The sidebar is shut again when you come back to the app from another one, and swiping from left to right closes it (or goes back a page), as swiping the other way opens it.
+
 ## 0.158.2
 
 - No change you will notice.
