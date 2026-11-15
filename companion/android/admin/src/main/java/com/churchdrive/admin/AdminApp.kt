@@ -137,27 +137,27 @@ private fun AdminPages(vm: AdminModel, acrylic: HazeState, sidebarOpen: Boolean,
             AppNavigationBar(acrylic, sidebarOpen = sidebarOpen, onSidebar = onSidebar) {
                 NavigationBarItem(
                     colors = navBarItemColors(),
-                    selected = tab == HOME, onClick = { go(HOME) },
+                    selected = tab == HOME && !sidebarOpen, onClick = { go(HOME) },
                     icon = { Icon(CdVectors.Home, null) }, label = { Text("Home", fontSize = 11.sp) },
                 )
                 NavigationBarItem(
                     colors = navBarItemColors(),
-                    selected = tab == MANAGER, onClick = { go(MANAGER) },
+                    selected = tab == MANAGER && !sidebarOpen, onClick = { go(MANAGER) },
                     icon = { Icon(CdVectors.Cog, null) }, label = { Text("Manager", fontSize = 11.sp) },
                 )
                 NavigationBarItem(
                     colors = navBarItemColors(),
-                    selected = tab == ENERGY, onClick = { go(ENERGY) },
+                    selected = tab == ENERGY && !sidebarOpen, onClick = { go(ENERGY) },
                     icon = { Icon(CdVectors.Bolt, null) }, label = { Text("Energy", fontSize = 11.sp) },
                 )
                 NavigationBarItem(
                     colors = navBarItemColors(),
-                    selected = tab == DEVICES, onClick = { go(DEVICES) },
+                    selected = tab == DEVICES && !sidebarOpen, onClick = { go(DEVICES) },
                     icon = { Icon(CdVectors.DeviceServer, null) }, label = { Text("Devices", fontSize = 11.sp) },
                 )
                 NavigationBarItem(
                     colors = navBarItemColors(),
-                    selected = tab == ACTIVITY, onClick = { go(ACTIVITY) },
+                    selected = tab == ACTIVITY && !sidebarOpen, onClick = { go(ACTIVITY) },
                     icon = { Icon(CdVectors.History, null) }, label = { Text("Activity", fontSize = 11.sp) },
                 )
             }

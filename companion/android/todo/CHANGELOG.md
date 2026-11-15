@@ -6,6 +6,7 @@ Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newe
 ## 0.159.0
 
 - The sidebar is shut again when you come back to the app from another one, and swiping from left to right closes it (or goes back a page), as swiping the other way opens it.
+- While the sidebar is open, no page is shown as selected on the bottom bar.
 
 ## 0.158.2
 
