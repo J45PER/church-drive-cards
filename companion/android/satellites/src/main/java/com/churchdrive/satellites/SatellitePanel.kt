@@ -62,17 +62,13 @@ private val PanelShape = RoundedCornerShape(28.dp)
  */
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
-fun SatellitePanel(panel: String?, onPanel: (String?) -> Unit, vm: SatelliteModel) {
+fun SatellitePanel(panel: String?, onPanel: (String?) -> Unit, vm: SatelliteModel, acrylic: dev.chrisbanes.haze.HazeState? = null, bottomInset: androidx.compose.ui.unit.Dp = 0.dp) {
     // The last page shown, so a page keeps its words while it slides away.
     var shown by remember { mutableStateOf("account") }
     if (panel != null) shown = panel
     BackHandler(enabled = panel != null) { onPanel(null) }
-    AnimatedVisibility(
-        visible = panel != null,
-        enter = slideInHorizontally(initialOffsetX = { it }),
-        exit = slideOutHorizontally(targetOffsetX = { it }),
-    ) {
-        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    com.churchdrive.app.ui.SidebarSheet(visible = panel != null, acrylic = acrylic, bottomInset = bottomInset) {
+        androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
             AnimatedContent(
                 targetState = shown,
                 transitionSpec = {
@@ -83,7 +79,7 @@ fun SatellitePanel(panel: String?, onPanel: (String?) -> Unit, vm: SatelliteMode
                 },
                 label = "panel",
             ) { which ->
-                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                Surface(Modifier.fillMaxSize(), color = if (acrylic != null) androidx.compose.ui.graphics.Color.Transparent else MaterialTheme.colorScheme.background) {
                     when (which) {
                         "settings" -> SettingsPage(vm) { onPanel(null) }
                         "about" -> AboutPage { onPanel(null) }
@@ -100,7 +96,7 @@ private fun PanelCard(content: @Composable () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = PanelShape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.70f)),
     ) { Column { content() } }
 }
 

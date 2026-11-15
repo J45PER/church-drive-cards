@@ -101,6 +101,8 @@ private fun RoundPreview(design: SatDesign, state: PreviewState, size: Int) {
 fun SatellitesApp(vm: SatelliteModel) {
     val open = vm.open
     var panel by rememberSaveable { mutableStateOf<String?>(null) }
+    // The blur source for the sidebar and the bottom bar: the page behind them.
+    val acrylic = remember { HazeState() }
     BackHandler(enabled = vm.openSlug != null && panel == null) { vm.openSlug = null }
     LaunchedEffect(vm.openSlug) { vm.noteOpen(vm.openSlug) }
     // Swiping left anywhere that doesn't scroll sideways opens the account panel, as in the main app, as well as the person's button.
@@ -113,19 +115,18 @@ fun SatellitesApp(vm: SatelliteModel) {
             ) { _, delta -> swiped += delta }
         },
     ) {
-        if (open == null) ListPage(vm) { panel = "account" } else DetailPage(vm, open) { panel = "account" }
-        SatellitePanel(panel, { panel = it }, vm)
+        if (open == null) ListPage(vm, acrylic, sidebarOpen = panel != null, onSidebar = { panel = if (panel == null) "account" else null }, onPage = { panel = null }) { panel = "account" } else DetailPage(vm, open) { panel = "account" }
+        SatellitePanel(panel, { panel = it }, vm, acrylic = acrylic, bottomInset = com.churchdrive.app.ui.sidebarBottomInset())
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ListPage(vm: SatelliteModel, onPerson: () -> Unit) {
+private fun ListPage(vm: SatelliteModel, acrylic: HazeState, sidebarOpen: Boolean, onSidebar: () -> Unit, onPage: () -> Unit, onPerson: () -> Unit) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     // Pressing a page's button shows it from its top; the page scrolls under the acrylic bar.
     val pageScroll = rememberScrollState()
-    val acrylic = remember { HazeState() }
     val toTop = rememberToTop(pageScroll, scroll)
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(vm.notice) {
@@ -142,8 +143,10 @@ private fun ListPage(vm: SatelliteModel, onPerson: () -> Unit) {
         },
         bottomBar = {
             AcrylicNavigationBar(acrylic) {
-                NavigationBarItem(colors = navBarItemColors(), selected = tab == 0, onClick = { tab = 0; toTop() }, icon = { Icon(painterResource(R.drawable.sat_device), null) }, label = { Text("Satellites", fontSize = 11.sp) })
-                NavigationBarItem(colors = navBarItemColors(), selected = tab == 1, onClick = { tab = 1; toTop() }, icon = { Icon(painterResource(R.drawable.mdi_plus), null) }, label = { Text("Add", fontSize = 11.sp) })
+                NavigationBarItem(colors = navBarItemColors(), selected = tab == 0, onClick = { onPage(); tab = 0; toTop() }, icon = { Icon(painterResource(R.drawable.sat_device), null) }, label = { Text("Satellites", fontSize = 11.sp) })
+                NavigationBarItem(colors = navBarItemColors(), selected = tab == 1, onClick = { onPage(); tab = 1; toTop() }, icon = { Icon(painterResource(R.drawable.mdi_plus), null) }, label = { Text("Add", fontSize = 11.sp) })
+                com.churchdrive.app.ui.SidebarBarDivider()
+                com.churchdrive.app.ui.SidebarBarButton(open = sidebarOpen, onClick = onSidebar)
             }
         },
     ) { padding ->

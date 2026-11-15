@@ -1,5 +1,8 @@
 package com.churchdrive.todo
 
+import com.churchdrive.app.ui.sidebarBottomInset
+import com.churchdrive.app.ui.SidebarBarDivider
+import com.churchdrive.app.ui.SidebarBarButton
 import com.churchdrive.app.ui.CdVectors
 
 import androidx.compose.foundation.background
@@ -150,13 +153,16 @@ fun TodoApp(vm: TodoModel) {
                     NavigationBarItem(
                         colors = navBarItemColors(),
                         selected = t == tab,
-                        onClick = { vm.openTab(t); toTop() },
+                        onClick = { panel = null; vm.openTab(t); toTop() },
                         icon = {
                             BadgedBox(badge = { if (open > 0) Badge { Text(open.toString()) } }) { TabIcon(t) }
                         },
                         label = { Text(t.label, fontSize = 11.sp, maxLines = 1) },
                     )
                 }
+                // The sidebar: a thin divider, then the chevron button at the right end.
+                SidebarBarDivider()
+                SidebarBarButton(open = panel != null) { panel = if (panel == null) "account" else null }
             }
         },
     ) { padding ->
@@ -174,7 +180,7 @@ fun TodoApp(vm: TodoModel) {
         }
     }
     }
-    TodoPanel(panel, { panel = it }, vm)
+    TodoPanel(panel, { panel = it }, vm, acrylic = acrylic, bottomInset = sidebarBottomInset())
     if (assistantOpen) AssistantSheet(vm) { assistantOpen = false }
     }
 }
