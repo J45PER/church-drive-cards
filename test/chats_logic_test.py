@@ -35,6 +35,33 @@ class TurnsTest(unittest.TestCase):
         self.assertEqual(c.ability_name("script.clive_arm_alarm"), "Arm alarm")
 
 
+class ToolInput:
+    """Home Assistant's chat log gives tool calls as objects like this one (llm.ToolInput), not as dicts."""
+
+    def __init__(self, tool_name, tool_args):
+        self.tool_name, self.tool_args = tool_name, tool_args
+
+
+class ObjectToolCallsTest(unittest.TestCase):
+    def test_tool_calls_that_are_objects(self):
+        log = {"conversation_id": "abc", "content": [
+            {"role": "user", "content": "Open the blind", "created": "2026-11-15T09:47:50+00:00"},
+            {"role": "assistant", "tool_calls": [ToolInput("clive_show_card", {"kind": "done"}), ToolInput("cover_set_position", None)], "created": "2026-11-15T09:47:52+00:00"},
+            {"role": "assistant", "content": "Opening it.", "created": "2026-11-15T09:47:53+00:00"},
+            {"role": "user", "content": "And the other one", "created": "2026-11-15T09:48:08+00:00"},
+        ]}
+        turns = c.turns_from_chat_log(log)
+        self.assertEqual(len(turns), 2)
+        self.assertEqual((turns[0]["abilities"], turns[0]["card"], turns[0]["answer"]), (["Show card", "Cover set position"], "done", "Opening it."))
+
+    def test_odd_tool_calls_never_raise(self):
+        log = {"conversation_id": "abc", "content": [
+            {"role": "user", "content": "x", "created": "2026-11-15T09:47:50+00:00"},
+            {"role": "assistant", "tool_calls": [None, 3, ToolInput("clive_show_card", "not a dict")], "created": "2026-11-15T09:47:52+00:00"},
+        ]}
+        self.assertEqual(c.turns_from_chat_log(log)[0]["card"], "card")
+
+
 class StoreTest(unittest.TestCase):
     def test_upsert_keeps_marks(self):
         entries = []

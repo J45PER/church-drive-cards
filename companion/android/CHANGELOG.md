@@ -4,6 +4,10 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.157.2
+
+- No app change (Home Assistant: Clive no longer fails follow-up questions after he has used a tool).
+
 ## 0.157.1
 
 - Moving between the sidebar list and its pages is a quick fade with a short slide, not two see-through pages sliding over each other, so it is less laggy.
