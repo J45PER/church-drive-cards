@@ -63,7 +63,8 @@ fun PanelSwitchRow(
 /**
  * The About page, the same in every app: the app's name and version, how it is updated, and (when [showCertificate]) the key this copy is
  * signed with, to be copied. With [onCheckUpdate] the app can check for a newer build itself (then [apkUrl] is where it is downloaded from);
- * without it the row only says how updates arrive. [play] is true for the Google Play build, which Play keeps up to date.
+ * without it the row only says how updates arrive. [play] is true for the Google Play build, which Play keeps up to date. [logo] is the
+ * app's own logo (a core drawable), drawn like the other rows' icons.
  */
 @Composable
 fun SidebarAboutPage(
@@ -72,7 +73,7 @@ fun SidebarAboutPage(
     onBack: () -> Unit,
     play: Boolean,
     testBuildNote: String,
-    logo: (@Composable () -> Unit)? = null,
+    logo: Int,
     updateAvailable: Boolean = false,
     onCheckUpdate: (((Boolean) -> Unit) -> Unit)? = null,
     apkUrl: String? = null,
@@ -88,7 +89,7 @@ fun SidebarAboutPage(
     val certs = remember { TrustedApps.ownCerts(context) }
     SidebarSubPage("About", onBack) {
         PanelCard {
-            PanelRow(CdVectors.Info, appName, versionLine, leading = logo)
+            PanelRow(CdVectors.Info, appName, versionLine, leading = { Icon(painterResource(logo), contentDescription = null) })
             if (onCheckUpdate != null) {
                 PanelRow(
                     CdVectors.SystemUpdate, "Check for updates",

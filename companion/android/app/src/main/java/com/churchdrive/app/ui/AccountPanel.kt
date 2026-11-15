@@ -379,6 +379,7 @@ private fun AboutPage(settings: AccountSettings, updateAvailable: Boolean, isAdm
         onBack = onBack,
         play = BuildConfig.PLAY,
         testBuildNote = "",
+        logo = com.churchdrive.core.R.drawable.cd_logo_church_drive,
         updateAvailable = updateAvailable,
         onCheckUpdate = settings.onCheckUpdate,
         apkUrl = UpdateCheck.APK_URL,

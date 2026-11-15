@@ -60,26 +60,24 @@ fun AdminHome(
     val health = remember(entities, registry, areaNames) { deviceHealthList(entities, registry, areaNames) }
     val week = rememberEnergyWeek(entities)
     val clive = rememberWs("church_drive/clive/devices")
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    // Each group is the phone app's section: its icon, the title in the section's colour, then its cards.
+    Column(verticalArrangement = Arrangement.spacedBy(28.dp)) {
         HomeTasks(entities, openManager)
-        HomeTitle("House")
-        HomeCard("security", "Security", securitySummary(entities, registry, now), ring = true)
-        HomeCard("people", "Who's home", peopleSummary(entities, registry), ring = false, foldable = false)
-        energySummary(entities, now).let { e ->
-            HomeCard("energy", "Energy", e.copy(items = e.items + weekItems(week)), ring = false, onTap = openEnergy)
+        SectionPanel("House", icon = CdVectors.Home, tone = Tone.Blue) {
+            HomeCard("security", "Security", securitySummary(entities, registry, now), ring = true)
+            HomeCard("people", "Who's home", peopleSummary(entities, registry), ring = false, foldable = false)
+            energySummary(entities, now).let { e ->
+                HomeCard("energy", "Energy", e.copy(items = e.items + weekItems(week)), ring = false, onTap = openEnergy)
+            }
         }
-        HomeTitle("Clive")
-        HomeCard("clive", "Clive's devices", cliveDevicesSummary(clive.data, now), ring = false)
-        HomeTitle("System")
-        HomeCard("health", "Device health", healthSummary(health), ring = true, onTap = openHealth)
-        HomeCard("system", "Updates and backups", systemSummary(entities, now), ring = false, onTap = openDevices)
+        SectionPanel("Clive", icon = CdVectors.Chat, tone = Tone.Purple) {
+            HomeCard("clive", "Clive's devices", cliveDevicesSummary(clive.data, now), ring = false)
+        }
+        SectionPanel("System", icon = CdVectors.Cog, tone = Tone.Grey) {
+            HomeCard("health", "Device health", healthSummary(health), ring = true, onTap = openHealth)
+            HomeCard("system", "Updates and backups", systemSummary(entities, now), ring = false, onTap = openDevices)
+        }
     }
-}
-
-/** A title over a group of cards: House, Clive or System. */
-@Composable
-private fun HomeTitle(text: String) {
-    Text(text, Modifier.padding(start = 8.dp, top = 12.dp), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 /** One card of the Home page. [ring] draws the status ring with the headline beside it; otherwise the headline is one line under the title. */

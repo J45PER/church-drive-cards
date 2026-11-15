@@ -1,5 +1,11 @@
 # Clive Admin: changelog
 
+## 0.158.1
+
+- Fixed: the Home page could go blank for a moment while the app reconnected or refreshed. The last page now stays on screen, and a first load says it is loading.
+- The House, Clive and System headings on Home are the phone app's section headings: an icon and a larger title in the section's colour.
+- The About page shows the app's own logo, drawn like the other rows' icons.
+
 ## 0.158.0
 
 - The About page, the sign-out row, the "Open Church Drive" row and the on/off switch rows are now the same pieces as the phone app's, shared by all four apps. They look and work as before.

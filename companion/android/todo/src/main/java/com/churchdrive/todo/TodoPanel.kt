@@ -139,6 +139,7 @@ private fun AboutPage(vm: TodoModel, onBack: () -> Unit) {
         updateAvailable = vm.updateAvailable,
         onCheckUpdate = { then -> vm.checkForUpdate(then) },
         apkUrl = UpdateCheck.TODO_APK_URL,
+        logo = com.churchdrive.core.R.drawable.cd_logo_todo,
         showCertificate = false,
     )
 }

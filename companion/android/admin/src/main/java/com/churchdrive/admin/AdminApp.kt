@@ -170,9 +170,11 @@ private fun AdminPages(vm: AdminModel, acrylic: HazeState, sidebarOpen: Boolean,
         ) {
             com.churchdrive.app.ui.UpdateNotice(BuildConfig.PLAY, vm.updateAvailable, UpdateCheck.ADMIN_APK_URL, "Clive Admin")
             when {
-                // The pill at the top says Connecting, No connection or Restarting; nothing more is needed here.
-                !vm.connected || !vm.userKnown -> Unit
-                !vm.isAdmin -> Notice(
+                // Nothing to show yet: say so rather than leave the page blank. The pill at the top says Connecting, No connection or Restarting.
+                vm.entities.isEmpty() && (!vm.connected || !vm.userKnown) -> com.churchdrive.app.ui.LoadingNote("Loading from Home Assistant…")
+                // While the line reconnects or refreshes, the last page stays on screen: Home Assistant briefly does not say who this is, and
+                // that must not blank the page, so "not an administrator" is only said once it has said so.
+                vm.userKnown && !vm.isAdmin -> Notice(
                     Tone.Red, "Administrators only",
                     "${vm.personName ?: "This account"} is not an administrator in Home Assistant, so Clive Admin has nothing to show. Sign in with an administrator's login.",
                 )

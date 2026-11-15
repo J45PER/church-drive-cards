@@ -3,6 +3,10 @@
 Its own versions and releases (`todo-v<version>`, and `todo-latest` for the newest test build), separate from the phone app's. The version is set in
 `version.properties` here. A change to `core` (shared code) is a change to both apps, so bump both. Newest first.
 
+## 0.158.1
+
+- The About page shows the app's own logo, drawn like the other rows' icons.
+
 ## 0.158.0
 
 - The About page, the sign-out row, the "Open Church Drive" row and the on/off switch rows are now the same pieces as the phone app's, shared by all four apps. They look and work as before.
