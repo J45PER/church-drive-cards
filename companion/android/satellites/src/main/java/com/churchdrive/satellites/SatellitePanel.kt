@@ -125,6 +125,6 @@ private fun AboutPage(onBack: () -> Unit) {
         onBack = onBack,
         play = BuildConfig.PLAY,
         testBuildNote = "A test build: newer ones are on GitHub, under the satellites-latest release",
-        logo = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_satellites), contentDescription = null) },
+        logo = com.churchdrive.core.R.drawable.cd_logo_satellites,
     )
 }

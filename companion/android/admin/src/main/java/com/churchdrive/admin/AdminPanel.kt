@@ -145,6 +145,6 @@ private fun AboutPage(onBack: () -> Unit) {
         onBack = onBack,
         play = BuildConfig.PLAY,
         testBuildNote = "A test build: newer ones are on GitHub, under the admin-latest release",
-        logo = { LogoMorph(LogoKind.Admin, androidx.compose.foundation.isSystemInDarkTheme(), height = 32.dp, animate = false) },
+        logo = com.churchdrive.core.R.drawable.cd_logo_admin,
     )
 }

@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.158.1
+
+- The About page shows the app's own logo, drawn like the other rows' icons.
+
 ## 0.158.0
 
 - The About page, the sign-out row, the "Open Church Drive" row and the on/off switch rows are now the same pieces as the phone app's, shared by all four apps. They look and work as before.
