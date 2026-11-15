@@ -132,7 +132,7 @@ fun HomeScreen(
     val pageScroll = rememberScrollState()
     val acrylic = remember { HazeState() }
     val toTop = rememberToTop(pageScroll, scrollBehavior)
-    fun go(to: Page) { page = to; toTop() }
+    fun go(to: Page) { panel = null; page = to; toTop() }
     val title = if (page == Page.Home) "Hello ${userName?.substringBefore(' ') ?: ""}".trim() else page.label
 
     // A task tapped on the Home page: a house job goes to the device (or place) it is about, a shopping or steps list to the in-app
@@ -240,6 +240,7 @@ fun HomeScreen(
                             if (panel == null) Icons.Default.ChevronLeft else Icons.Default.ChevronRight,
                             contentDescription = if (panel == null) "Open the sidebar" else "Close the sidebar",
                             modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
             
@@ -338,7 +339,7 @@ fun HomeScreen(
         acrylic = acrylic,
         bottomInset = if (barShown) 80.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() else 0.dp,
         healthSummary = if (panel != null) deviceHealthSummary(deviceHealthList(entities, registry, areaNames)) else "",
-        onDeviceHealth = { panel = null; onDeviceHealth() },
+        onDeviceHealth = { onDeviceHealth() },
         managerPages = if (isAdmin) managerPanels else emptyList(),
         managerContent = { panel ->
             androidx.compose.runtime.CompositionLocalProvider(LocalPanelTone provides toneFromColour(panel.color)) {

@@ -23,6 +23,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -130,7 +133,7 @@ fun AccountOverlay(
             ) { which ->
                 // Each page has its own solid background, so one never shows through another while they slide.
                 // The list itself is see-through when it is acrylic; the pages under it keep a solid background.
-                Surface(Modifier.fillMaxSize(), color = if (acrylic != null && which == "account") Color.Transparent else MaterialTheme.colorScheme.background) {
+                Surface(Modifier.fillMaxSize(), color = if (acrylic != null) Color.Transparent else MaterialTheme.colorScheme.background) {
                 when (which) {
                     "settings" -> SettingsPage(settings, isAdmin) { onPanel("account") }
                     "about" -> AboutPage(settings, updateAvailable, isAdmin) { onPanel("account") }
@@ -203,7 +206,7 @@ private fun PanelTitle(title: String, onBack: () -> Unit) {
 @Composable
 private fun AccountPage(userName: String?, isAdmin: Boolean, managerPages: List<PanelSpec>, healthSummary: String, onDeviceHealth: () -> Unit, todoOpensApp: Boolean, onTodo: () -> Unit, onClose: () -> Unit, onOpen: (String) -> Unit, onSignOut: () -> Unit) {
     Column(
-        Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
+        Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
@@ -254,10 +257,6 @@ private fun AccountPage(userName: String?, isAdmin: Boolean, managerPages: List<
         }
         // Device Health, for everyone: batteries, filters and devices that stopped answering.
         PanelCard { PanelRow(CdVectors.BatteryCharging, "Device health", healthSummary.ifBlank { null }, onClick = onDeviceHealth) }
-        // The Manager (administrators): one button here, and a page of its sections.
-        if (managerPages.isNotEmpty()) {
-            PanelCard { PanelRow(CdVectors.Cog, "Manager", "${managerPages.size} sections: people, cameras, reminders and more", onClick = { onOpen("manager") }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_cog_solid), contentDescription = null) }) }
-        }
         // The activity log (administrators): what people and the assistant did, and who came and went.
         if (isAdmin) {
             PanelCard { PanelRow(CdVectors.History, "Activity log", "What people and the assistant did, and who came and went", onClick = { onOpen("activity") }) }
