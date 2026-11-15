@@ -4,6 +4,12 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.156.0
+
+- Back from a page opened from the sidebar (Settings, About, To-do, Manager and the rest) goes back to the sidebar list, and back on the list closes it. This undoes the 0.152.0 change for those pages.
+- The bottom bar has a thin divider and, at its right end, a button with a chevron (out to open the sidebar, in to close it). It has no name.
+- The sidebar is full width and stops above the bottom bar, so the bar stays in reach. It is acrylic: the page blurs behind it, as the bar does.
+
 ## 0.155.0
 
 - A **Media** page on the bottom bar (Home, Lights, Security, Climate, Cleaning, Media) for everyone: the TVs and speakers they may use. It replaces the administrators' Devices page in the side panel.

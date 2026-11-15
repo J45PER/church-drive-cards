@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.156.0
+
+- No change you will notice (the phone app's sidebar and bar changed; nothing in this app's shared code changed for it).
+
 ## 0.155.0
 
 - No app change.

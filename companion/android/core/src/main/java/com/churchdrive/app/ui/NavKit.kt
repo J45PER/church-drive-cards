@@ -62,11 +62,11 @@ fun Modifier.acrylicBehind(state: HazeState): Modifier = haze(state)
  * own colour, with a faint line along its top edge. Phones before Android 12 cannot blur, so there the tint is nearly solid. The body behind
  * it is marked with [acrylicBehind], with its bottom padding given to the page so it scrolls under the bar.
  */
+/** The acrylic look of the bar, also used by the sidebar: the page blurs through a 70% tint of the bar's colour. */
 @Composable
-fun AcrylicNavigationBar(state: HazeState, content: @Composable RowScope.() -> Unit) {
+fun rememberAcrylicStyle(): HazeStyle {
     val base = MaterialTheme.colorScheme.surfaceContainer
-    val line = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)
-    val style = remember(base) {
+    return remember(base) {
         HazeStyle(
             backgroundColor = base,
             tints = listOf(HazeTint(base.copy(alpha = 0.70f))),
@@ -75,6 +75,12 @@ fun AcrylicNavigationBar(state: HazeState, content: @Composable RowScope.() -> U
             fallbackTint = HazeTint(base.copy(alpha = 0.92f)),
         )
     }
+}
+
+@Composable
+fun AcrylicNavigationBar(state: HazeState, content: @Composable RowScope.() -> Unit) {
+    val line = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)
+    val style = rememberAcrylicStyle()
     NavigationBar(
         modifier = Modifier.hazeChild(state, style).drawBehind { drawLine(line, Offset(0f, 0.5f), Offset(size.width, 0.5f), 1.dp.toPx()) },
         containerColor = Color.Transparent,

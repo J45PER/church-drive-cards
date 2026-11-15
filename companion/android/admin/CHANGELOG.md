@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.156.0
+
+- No change you will notice (the phone app's sidebar and bar changed; nothing in this app's shared code changed for it).
+
 ## 0.155.0
 
 - Home has three titles over its cards: House (Security, Who's home, Energy), Clive (his devices) and System (Device health, Updates and backups), under Tasks.
