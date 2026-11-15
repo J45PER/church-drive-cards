@@ -5,6 +5,8 @@ import androidx.compose.ui.unit.Dp
 import com.churchdrive.app.ui.sidebarParent
 import com.churchdrive.app.ui.SidebarHost
 import com.churchdrive.app.ui.PageColumn
+import com.churchdrive.app.ui.SidebarListPage
+import com.churchdrive.app.ui.SidebarSubPage
 import com.churchdrive.app.ui.PanelTitle
 import com.churchdrive.app.ui.PanelRow
 import com.churchdrive.app.ui.PanelCard
@@ -80,27 +82,7 @@ fun SatellitePanel(panel: String?, onPanel: (String?) -> Unit, vm: SatelliteMode
 @Composable
 private fun AccountPage(vm: SatelliteModel, onClose: () -> Unit, onOpen: (String) -> Unit) {
     val context = LocalContext.current
-    PageColumn {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            IconButton(onClick = onClose) { Icon(painterResource(R.drawable.mdi_close), contentDescription = "Close") }
-        }
-        PanelCard {
-            Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Box(Modifier.size(64.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
-                    Text(
-                        vm.personName?.trim()?.firstOrNull()?.uppercase() ?: "?",
-                        style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                }
-                Column {
-                    Text(vm.personName ?: "Signed in", style = MaterialTheme.typography.titleLarge)
-                    Text(
-                        if (vm.borrowed) "Signed in through Church Drive" else "Church Drive Satellites",
-                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
+    SidebarListPage(vm.personName, if (vm.borrowed) "Signed in through Church Drive" else "Church Drive Satellites", onClose) {
         PanelCard { PanelRow(CdVectors.Home, "Open Church Drive", "The main app: lights, alarm, cameras and the rest", onClick = { ChurchDriveLink.open(context) }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_church_drive), contentDescription = null) }) }
         PanelCard {
             PanelRow(CdVectors.Cog, "Settings", onClick = { onOpen("settings") }, leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_cog_outline), contentDescription = null) })
@@ -116,8 +98,7 @@ private fun AccountPage(vm: SatelliteModel, onClose: () -> Unit, onOpen: (String
 
 @Composable
 private fun SettingsPage(vm: SatelliteModel, onBack: () -> Unit) {
-    PageColumn {
-        PanelTitle("Settings", onBack)
+    SidebarSubPage("Settings", onBack) {
         PanelCard {
             PanelRow(
                 CdVectors.Eye, "Open on the satellite I left",
@@ -144,8 +125,7 @@ private fun AboutPage(onBack: () -> Unit) {
     // The key this installed copy is signed with. On the Google Play version that is Play's own key, which the Church Drive app has to be told
     // about before it will share its sign-in (TrustedApps.CERTS), so it is shown here to be copied.
     val certs = remember { TrustedApps.ownCerts(context) }
-    PageColumn {
-        PanelTitle("About", onBack)
+    SidebarSubPage("About", onBack) {
         PanelCard {
             PanelRow(CdVectors.Info, "Church Drive Satellites", "Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.BUILD}) · ${BuildConfig.COMMIT}", leading = { Icon(painterResource(com.churchdrive.core.R.drawable.cd_logo_satellites), contentDescription = null) })
             PanelRow(

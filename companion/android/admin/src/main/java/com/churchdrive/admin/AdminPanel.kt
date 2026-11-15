@@ -5,6 +5,8 @@ import androidx.compose.ui.unit.Dp
 import com.churchdrive.app.ui.sidebarParent
 import com.churchdrive.app.ui.SidebarHost
 import com.churchdrive.app.ui.PageColumn
+import com.churchdrive.app.ui.SidebarListPage
+import com.churchdrive.app.ui.SidebarSubPage
 import com.churchdrive.app.ui.PanelTitle
 import com.churchdrive.app.ui.PanelRow
 import com.churchdrive.app.ui.PanelCard
@@ -80,12 +82,10 @@ fun AdminPanel(panel: String?, onPanel: (String?) -> Unit, vm: AdminModel, acryl
                 Box(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) { PanelTitle("Device health", { onPanel(back(which)) }) }
                 Box(Modifier.weight(1f).fillMaxWidth()) { DeviceHealthTab(vm.entities, vm.registry, vm.areaNames) }
             }
-            "colours" -> PageColumn {
-                PanelTitle("Colour palettes", { onPanel(back(which)) })
+            "colours" -> SidebarSubPage("Colour palettes", { onPanel(back(which)) }) {
                 ColoursPage()
             }
-            "watch", "notifications", "cameras", "people" -> PageColumn {
-                PanelTitle(when (which) { "watch" -> "Watch"; "cameras" -> "Camera links"; "people" -> "People"; else -> "Notifications" }, { onPanel(back(which)) })
+            "watch", "notifications", "cameras", "people" -> SidebarSubPage(when (which) { "watch" -> "Watch"; "cameras" -> "Camera links"; "people" -> "People"; else -> "Notifications" }, { onPanel(back(which)) }) {
                 val section = ManagerSections.forPage(vm.managerSections, which)
                 if (section == null) com.churchdrive.app.ui.LoadingNote("Loading this page from Home Assistant…")
                 else ManagerSectionContent(section, vm.entities, vm.registry, vm.call)
@@ -98,27 +98,7 @@ fun AdminPanel(panel: String?, onPanel: (String?) -> Unit, vm: AdminModel, acryl
 @Composable
 private fun AccountPage(vm: AdminModel, onClose: () -> Unit, onOpen: (String) -> Unit) {
     val context = LocalContext.current
-    PageColumn {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            IconButton(onClick = onClose) { Icon(painterResource(R.drawable.mdi_close), contentDescription = "Close") }
-        }
-        PanelCard {
-            Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Box(Modifier.size(64.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
-                    Text(
-                        vm.personName?.trim()?.firstOrNull()?.uppercase() ?: "?",
-                        style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                }
-                Column {
-                    Text(vm.personName ?: "Signed in", style = MaterialTheme.typography.titleLarge)
-                    Text(
-                        if (vm.borrowed) "Signed in through Church Drive" else "Clive Admin",
-                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
+    SidebarListPage(vm.personName, if (vm.borrowed) "Signed in through Church Drive" else "Clive Admin", onClose) {
         PanelCard {
             PanelRow(
                 CdVectors.Home, "Open Church Drive", "The main app: lights, alarm, cameras and the rest",
@@ -171,8 +151,7 @@ private fun AboutPage(onBack: () -> Unit) {
     // The key this installed copy is signed with. On the Google Play version that is Play's own key, which the Church Drive app has to be told
     // about before it will share its sign-in (TrustedApps.CERTS), so it is shown here to be copied.
     val certs = remember { TrustedApps.ownCerts(context) }
-    PageColumn {
-        PanelTitle("About", onBack)
+    SidebarSubPage("About", onBack) {
         PanelCard {
             PanelRow(
                 CdVectors.Info, "Clive Admin", "Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.BUILD}) · ${BuildConfig.COMMIT}",

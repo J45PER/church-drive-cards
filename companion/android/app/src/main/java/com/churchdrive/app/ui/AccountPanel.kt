@@ -145,35 +145,7 @@ internal fun panelDepth(panel: String?): Int = when {
 
 @Composable
 private fun AccountPage(userName: String?, isAdmin: Boolean, managerPages: List<PanelSpec>, healthSummary: String, onDeviceHealth: () -> Unit, todoOpensApp: Boolean, onTodo: () -> Unit, onClose: () -> Unit, onOpen: (String) -> Unit, onSignOut: () -> Unit) {
-    Column(
-        Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            IconButton(onClick = onClose) { Icon(CdVectors.Close, contentDescription = "Close") }
-        }
-        PanelCard {
-            Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Box(
-                    Modifier.size(64.dp).background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        userName?.trim()?.firstOrNull()?.uppercase() ?: "?",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                }
-                Column {
-                    Text(userName ?: "Signed in", style = MaterialTheme.typography.titleLarge)
-                    Text(
-                        if (isAdmin) "Administrator" else "Church Drive",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
+    SidebarListPage(userName, if (isAdmin) "Administrator" else "Church Drive", onClose) {
         // To-do, for everyone: it moved here from the bar along the bottom. Opens Church Drive To-Do where that is installed.
         PanelCard {
             PanelRow(
