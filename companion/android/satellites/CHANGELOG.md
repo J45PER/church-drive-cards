@@ -1,5 +1,9 @@
 # Church Drive Satellites: changelog
 
+## 0.157.0
+
+- The sidebar and the bottom bar are now the same piece as in the phone app. Back from Settings and About returns to the sidebar list (it used to close the sidebar), and the list runs down to the bottom bar.
+
 ## 0.156.3
 
 - Fixed: the bottom bar filled the whole screen since 0.156.2 (the sidebar button was stretching it); it is back to its normal height.

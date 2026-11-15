@@ -1,5 +1,13 @@
 package com.churchdrive.satellites
 
+import dev.chrisbanes.haze.HazeState
+import androidx.compose.ui.unit.Dp
+import com.churchdrive.app.ui.sidebarParent
+import com.churchdrive.app.ui.SidebarHost
+import com.churchdrive.app.ui.PageColumn
+import com.churchdrive.app.ui.PanelTitle
+import com.churchdrive.app.ui.PanelRow
+import com.churchdrive.app.ui.PanelCard
 import com.churchdrive.app.ui.CdVectors
 
 import androidx.activity.compose.BackHandler
@@ -54,78 +62,19 @@ import androidx.compose.ui.unit.dp
 import com.churchdrive.app.TrustedApps
 import com.churchdrive.app.UpdateCheck
 
-private val PanelShape = RoundedCornerShape(28.dp)
-
 /**
  * The account panel, laid out like the main Church Drive app's and the To-Do app's: it slides in from the right over the app, from the
  * person's initial or a swipe left. It holds Settings, About and Sign out; Settings and About slide in over it. Back goes back one step.
  */
-@OptIn(ExperimentalAnimationApi::class)
 @Composable
-fun SatellitePanel(panel: String?, onPanel: (String?) -> Unit, vm: SatelliteModel, acrylic: dev.chrisbanes.haze.HazeState? = null, bottomInset: androidx.compose.ui.unit.Dp = 0.dp) {
-    // The last page shown, so a page keeps its words while it slides away.
-    var shown by remember { mutableStateOf("account") }
-    if (panel != null) shown = panel
-    BackHandler(enabled = panel != null) { onPanel(null) }
-    com.churchdrive.app.ui.SidebarSheet(visible = panel != null, acrylic = acrylic, bottomInset = bottomInset) {
-        androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
-            AnimatedContent(
-                targetState = shown,
-                transitionSpec = {
-                    val deeper = targetState != "account"
-                    val move = if (deeper) slideInHorizontally { it } togetherWith slideOutHorizontally { -it / 4 }
-                    else slideInHorizontally { -it / 4 } togetherWith slideOutHorizontally { it }
-                    move.apply { targetContentZIndex = if (deeper) 1f else -1f }
-                },
-                label = "panel",
-            ) { which ->
-                Surface(Modifier.fillMaxSize(), color = if (acrylic != null) androidx.compose.ui.graphics.Color.Transparent else MaterialTheme.colorScheme.background) {
-                    when (which) {
-                        "settings" -> SettingsPage(vm) { onPanel(null) }
-                        "about" -> AboutPage { onPanel(null) }
-                        else -> AccountPage(vm, onClose = { onPanel(null) }, onOpen = onPanel)
-                    }
-                }
-            }
+fun SatellitePanel(panel: String?, onPanel: (String?) -> Unit, vm: SatelliteModel, acrylic: HazeState? = null, bottomInset: Dp = 0.dp) {
+    SidebarHost(panel, onPanel, acrylic, bottomInset) { which ->
+        when (which) {
+            "settings" -> SettingsPage(vm) { onPanel(sidebarParent(which)) }
+            "about" -> AboutPage { onPanel(sidebarParent(which)) }
+            else -> AccountPage(vm, onClose = { onPanel(null) }, onOpen = onPanel)
         }
     }
-}
-
-@Composable
-private fun PanelCard(content: @Composable () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = PanelShape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.70f)),
-    ) { Column { content() } }
-}
-
-@Composable
-private fun PanelRow(icon: ImageVector, text: String, supporting: String? = null, onClick: (() -> Unit)? = null, leading: (@Composable () -> Unit)? = null, trailing: (@Composable () -> Unit)? = null) {
-    ListItem(
-        headlineContent = { Text(text) },
-        supportingContent = supporting?.let { { Text(it) } },
-        leadingContent = leading ?: { Icon(icon, contentDescription = null) },
-        trailingContent = trailing,
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        modifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier,
-    )
-}
-
-@Composable
-private fun PanelTitle(title: String, onBack: () -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onBack) { Icon(painterResource(R.drawable.mdi_arrow_left), contentDescription = "Back") }
-        Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 4.dp))
-    }
-}
-
-@Composable
-private fun PageColumn(content: @Composable () -> Unit) {
-    Column(
-        Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) { content() }
 }
 
 @Composable

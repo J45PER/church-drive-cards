@@ -229,21 +229,9 @@ fun HomeScreen(
                             label = { Text(p.label, fontSize = 11.sp, maxLines = 1) },
                         )
                     }
-                    // A thin divider, then the sidebar button: a chevron, out to open the sidebar and in to close it. It has no name.
-                    Box(Modifier.align(Alignment.CenterVertically).padding(horizontal = 4.dp).size(width = 1.dp, height = 36.dp).background(MaterialTheme.colorScheme.outlineVariant))
-                    Box(
-                        Modifier.width(28.dp).fillMaxHeight().clickable(onClickLabel = if (panel == null) "Open the sidebar" else "Close the sidebar") {
-                            panel = if (panel == null) "account" else null
-                        },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            if (panel == null) Icons.Default.ChevronLeft else Icons.Default.ChevronRight,
-                            contentDescription = if (panel == null) "Open the sidebar" else "Close the sidebar",
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                    // The same divider and sidebar button as every other app.
+                    SidebarBarDivider()
+                    SidebarBarButton(open = panel != null) { panel = if (panel == null) "account" else null }
             
                         }
                     }

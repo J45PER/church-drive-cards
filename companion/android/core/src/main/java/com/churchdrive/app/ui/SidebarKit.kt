@@ -43,7 +43,7 @@ fun RowScope.SidebarBarButton(open: Boolean, onClick: () -> Unit) {
     val label = if (open) "Close the sidebar" else "Open the sidebar"
     Box(
         // A fixed height: a bar lays its row out with room to grow, and a button that fills it would fill the whole screen.
-        Modifier.width(28.dp).height(64.dp).clickable(onClickLabel = label, onClick = onClick),
+        Modifier.align(Alignment.CenterVertically).width(28.dp).height(64.dp).clickable(onClickLabel = label, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Canvas(Modifier.size(20.dp).semantics { contentDescription = label }) {
