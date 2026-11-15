@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -70,7 +71,12 @@ fun AdminHome(
                 HomeCard("energy", "Energy", e.copy(items = e.items + weekItems(week)), ring = false, onTap = openEnergy)
             }
         }
-        SectionPanel("Clive", icon = CdVectors.Chat, tone = Tone.Purple) {
+        // Clive's section wears his own mark (the two rounded squares) in his purple, not the notification bubble.
+        SectionPanel("Clive", tone = Tone.Purple, iconSlot = { c ->
+            Box(Modifier.size(36.dp).background(c.accent.copy(alpha = 0.18f), CircleShape), contentAlignment = Alignment.Center) {
+                AssistantGlyph(AssistantGlyphPose.Idle, c.accent, 24.dp)
+            }
+        }) {
             HomeCard("clive", "Clive's devices", cliveDevicesSummary(clive.data, now), ring = false)
         }
         SectionPanel("System", icon = CdVectors.Cog, tone = Tone.Grey) {

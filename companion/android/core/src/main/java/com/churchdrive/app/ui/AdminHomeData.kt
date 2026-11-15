@@ -227,7 +227,7 @@ fun systemSummary(entities: Map<String, EntityState>, now: Long): HomeSummary {
 
 /** Clive's devices, from `church_drive/clive/devices`: phones with the app and voice satellites. */
 fun cliveDevicesSummary(data: JSONObject?, now: Long): HomeSummary {
-    if (data == null) return HomeSummary(Tone.Tasks, "cd:smart-speaker", "Data not available", "", emptyList())
+    if (data == null) return HomeSummary(Tone.Purple, "cd:smart-speaker", "Data not available", "", emptyList())
     val items = mutableListOf<HomeItem>()
     var total = 0
     var silent = 0
@@ -256,7 +256,8 @@ fun cliveDevicesSummary(data: JSONObject?, now: Long): HomeSummary {
     }
     val line1 = when { total == 0 -> "No devices yet"; silent == 0 -> "All $total answering"; else -> "$silent of $total not answering" }
     val wake = data.optString("wake_word").takeIf { it.isNotBlank() && it != "null" }?.let { "Wake word: " + it.replace('_', ' ') }.orEmpty()
-    return HomeSummary(if (silent > 0) Tone.Amber else Tone.Tasks, "cd:smart-speaker", line1, wake, items)
+    // Clive's own purple; amber only when one of his devices is not answering.
+    return HomeSummary(if (silent > 0) Tone.Amber else Tone.Purple, "cd:smart-speaker", line1, wake, items)
 }
 
 /** The kinds of edit sent from the website, in words. */

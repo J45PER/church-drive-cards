@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.158.2
+
+- On Home, Clive's section shows his own mark instead of the notification bubble, and the section and his devices card are in his purple.
+
 ## 0.158.1
 
 - Fixed: the Home page could go blank for a moment while the app reconnected or refreshed. The last page now stays on screen, and a first load says it is loading.
