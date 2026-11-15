@@ -1,5 +1,10 @@
 # Clive Admin: changelog
 
+## 0.156.2
+
+- The selected page on the bottom bar (and the tablet side rail) is a white pill with its icon knocked out, in light and dark.
+- The sidebar has a button at the right end of the bottom bar (a chevron, out to open and in to close) and is acrylic: full width, stopping above the bar, with the page blurring behind it. Choosing a page closes it.
+
 ## 0.156.1
 
 - No change you will notice.
