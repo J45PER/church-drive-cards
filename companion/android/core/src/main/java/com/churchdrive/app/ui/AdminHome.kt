@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -47,7 +48,7 @@ private val ElectricityGlow = CliveColours.Energy.colour
 private val GasGlow = CliveColours.Gas.colour
 
 /**
- * The Home page: Tasks, Security, Device health, Who's home, Energy, Clive's devices, then Updates and backups. A tap on a card (not its
+ * The Home page: Tasks, then House (Security, Who's home, Energy), Clive (his devices) and System (Device health, Updates and backups), each under its title. A tap on a card (not its
  * arrow) opens the page that has more of it: [openHealth], [openEnergy] or [openDevices]; Tasks opens [openManager].
  */
 @Composable
@@ -61,15 +62,24 @@ fun AdminHome(
     val clive = rememberWs("church_drive/clive/devices")
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         HomeTasks(entities, openManager)
+        HomeTitle("House")
         HomeCard("security", "Security", securitySummary(entities, registry, now), ring = true)
-        HomeCard("health", "Device health", healthSummary(health), ring = true, onTap = openHealth)
         HomeCard("people", "Who's home", peopleSummary(entities, registry), ring = false, foldable = false)
         energySummary(entities, now).let { e ->
             HomeCard("energy", "Energy", e.copy(items = e.items + weekItems(week)), ring = false, onTap = openEnergy)
         }
+        HomeTitle("Clive")
         HomeCard("clive", "Clive's devices", cliveDevicesSummary(clive.data, now), ring = false)
+        HomeTitle("System")
+        HomeCard("health", "Device health", healthSummary(health), ring = true, onTap = openHealth)
         HomeCard("system", "Updates and backups", systemSummary(entities, now), ring = false, onTap = openDevices)
     }
+}
+
+/** A title over a group of cards: House, Clive or System. */
+@Composable
+private fun HomeTitle(text: String) {
+    Text(text, Modifier.padding(start = 8.dp, top = 12.dp), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 /** One card of the Home page. [ring] draws the status ring with the headline beside it; otherwise the headline is one line under the title. */

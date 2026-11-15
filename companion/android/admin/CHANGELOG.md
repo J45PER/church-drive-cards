@@ -1,5 +1,9 @@
 # Clive Admin: changelog
 
+## 0.155.0
+
+- Home has three titles over its cards: House (Security, Who's home, Energy), Clive (his devices) and System (Device health, Updates and backups), under Tasks.
+
 ## 0.154.0
 
 - Clive Admin's TVs and speakers list follows the same rule (administrators see all).

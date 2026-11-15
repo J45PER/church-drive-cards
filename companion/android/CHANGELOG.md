@@ -4,6 +4,11 @@ The version is set in `version.properties` and shown in the app (top bar for adm
 also has a build number, shown beside it. The first build of each version is kept as its own release, `android-v<version>`,
 with the APK, so there is a record of what shipped. Newest first.
 
+## 0.155.0
+
+- A **Media** page on the bottom bar (Home, Lights, Security, Climate, Cleaning, Media) for everyone: the TVs and speakers they may use. It replaces the administrators' Devices page in the side panel.
+- Energy is no longer in this app (it is in Clive Admin), and the side panel no longer lists Energy and Devices. The Car charger stays on Home.
+
 ## 0.154.0
 
 - The Devices page (TVs and speakers) shows only the ones the signed-in person may use; administrators see all. Which ones are decided on the Manager website under Settings, Devices.
