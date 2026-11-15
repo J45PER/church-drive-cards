@@ -47,9 +47,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.churchdrive.app.UpdateCheck
-import com.churchdrive.app.ui.AcrylicNavigationBar
-import com.churchdrive.app.ui.SidebarBarButton
-import com.churchdrive.app.ui.SidebarBarDivider
+import com.churchdrive.app.ui.AppNavigationBar
 import com.churchdrive.app.ui.navBarItemColors
 import com.churchdrive.app.ui.AdminHome
 import com.churchdrive.app.ui.CdVectors
@@ -135,7 +133,7 @@ private fun AdminPages(vm: AdminModel, acrylic: HazeState, sidebarOpen: Boolean,
             )
         },
         bottomBar = {
-            AcrylicNavigationBar(acrylic) {
+            AppNavigationBar(acrylic, sidebarOpen = sidebarOpen, onSidebar = onSidebar) {
                 NavigationBarItem(
                     colors = navBarItemColors(),
                     selected = tab == HOME, onClick = { go(HOME) },
@@ -161,8 +159,6 @@ private fun AdminPages(vm: AdminModel, acrylic: HazeState, sidebarOpen: Boolean,
                     selected = tab == ACTIVITY, onClick = { go(ACTIVITY) },
                     icon = { Icon(CdVectors.History, null) }, label = { Text("Activity", fontSize = 11.sp) },
                 )
-                SidebarBarDivider()
-                SidebarBarButton(open = sidebarOpen, onClick = onSidebar)
             }
         },
     ) { padding ->

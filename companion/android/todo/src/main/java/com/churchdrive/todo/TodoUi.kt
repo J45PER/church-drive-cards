@@ -1,8 +1,6 @@
 package com.churchdrive.todo
 
 import com.churchdrive.app.ui.sidebarBottomInset
-import com.churchdrive.app.ui.SidebarBarDivider
-import com.churchdrive.app.ui.SidebarBarButton
 import com.churchdrive.app.ui.CdVectors
 
 import androidx.compose.foundation.background
@@ -60,7 +58,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.churchdrive.app.ui.AssistantBrand
-import com.churchdrive.app.ui.AcrylicNavigationBar
+import com.churchdrive.app.ui.AppNavigationBar
 import com.churchdrive.app.ui.navBarItemColors
 import com.churchdrive.app.ui.acrylicBehind
 import com.churchdrive.app.ui.rememberToTop
@@ -147,7 +145,7 @@ fun TodoApp(vm: TodoModel) {
         },
         floatingActionButton = { if (vm.connected) AssistantButton { assistantOpen = true } },
         bottomBar = {
-            AcrylicNavigationBar(acrylic) {
+            AppNavigationBar(acrylic, sidebarOpen = panel != null, onSidebar = { panel = if (panel == null) "account" else null }) {
                 TodoTab.entries.forEach { t ->
                     val open = vm.openCount(t)
                     NavigationBarItem(
@@ -160,9 +158,6 @@ fun TodoApp(vm: TodoModel) {
                         label = { Text(t.label, fontSize = 11.sp, maxLines = 1) },
                     )
                 }
-                // The sidebar: a thin divider, then the chevron button at the right end.
-                SidebarBarDivider()
-                SidebarBarButton(open = panel != null) { panel = if (panel == null) "account" else null }
             }
         },
     ) { padding ->

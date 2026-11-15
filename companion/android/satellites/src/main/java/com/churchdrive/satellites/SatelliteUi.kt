@@ -6,9 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import com.churchdrive.app.ui.AcrylicNavigationBar
-import com.churchdrive.app.ui.SidebarBarButton
-import com.churchdrive.app.ui.SidebarBarDivider
+import com.churchdrive.app.ui.AppNavigationBar
 import com.churchdrive.app.ui.navBarItemColors
 import com.churchdrive.app.ui.acrylicBehind
 import com.churchdrive.app.ui.rememberToTop
@@ -144,11 +142,9 @@ private fun ListPage(vm: SatelliteModel, acrylic: HazeState, sidebarOpen: Boolea
             MediumTopAppBar(title = { Text(if (tab == 0) "Satellites" else "Add a satellite") }, actions = { PersonButton(vm.personName, onPerson) }, scrollBehavior = scroll)
         },
         bottomBar = {
-            AcrylicNavigationBar(acrylic) {
+            AppNavigationBar(acrylic, sidebarOpen = sidebarOpen, onSidebar = onSidebar) {
                 NavigationBarItem(colors = navBarItemColors(), selected = tab == 0, onClick = { onPage(); tab = 0; toTop() }, icon = { Icon(painterResource(R.drawable.sat_device), null) }, label = { Text("Satellites", fontSize = 11.sp) })
                 NavigationBarItem(colors = navBarItemColors(), selected = tab == 1, onClick = { onPage(); tab = 1; toTop() }, icon = { Icon(painterResource(R.drawable.mdi_plus), null) }, label = { Text("Add", fontSize = 11.sp) })
-                SidebarBarDivider()
-                SidebarBarButton(open = sidebarOpen, onClick = onSidebar)
             }
         },
     ) { padding ->

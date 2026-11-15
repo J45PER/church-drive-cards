@@ -107,54 +107,23 @@ fun AccountOverlay(
     /** The height of the bottom bar: the sidebar stops above it, so the bar stays in reach. */
     bottomInset: Dp = 0.dp,
 ) {
-    // The last page shown, so a page keeps its words while it slides away.
-    var shown by remember { mutableStateOf("account") }
-    if (panel != null) shown = panel
-    BackHandler(enabled = panel != null) { onPanel(panelParent(panel)) }
-    AnimatedVisibility(
-        visible = panel != null,
-        enter = slideInHorizontally(initialOffsetX = { it }),
-        exit = slideOutHorizontally(targetOffsetX = { it }),
-    ) {
-        // Full width, stopping above the bottom bar. With the page's blur source it is acrylic: the page blurs behind the list.
-        val blur = acrylic?.let { rememberAcrylicStyle() }
-        Surface(
-            Modifier.fillMaxSize().padding(bottom = bottomInset).let { m -> if (acrylic != null && blur != null) m.hazeChild(acrylic, blur) else m },
-            color = if (acrylic != null) Color.Transparent else MaterialTheme.colorScheme.background,
-        ) {
-            AnimatedContent(
-                targetState = shown,
-                transitionSpec = {
-                    // Going deeper, the new page slides over the old; going back, the old page slides away off the top of the one below.
-                    val deeper = panelDepth(targetState) > panelDepth(initialState)
-                    val move = if (deeper) slideInHorizontally { it } togetherWith slideOutHorizontally { -it / 4 }
-                    else slideInHorizontally { -it / 4 } togetherWith slideOutHorizontally { it }
-                    move.apply { targetContentZIndex = if (deeper) 1f else -1f }
-                },
-                label = "account",
-            ) { which ->
-                // Each page has its own solid background, so one never shows through another while they slide.
-                // The list itself is see-through when it is acrylic; the pages under it keep a solid background.
-                Surface(Modifier.fillMaxSize(), color = if (acrylic != null) Color.Transparent else MaterialTheme.colorScheme.background) {
-                when (which) {
-                    "settings" -> SettingsPage(settings, isAdmin) { onPanel("account") }
-                    "about" -> AboutPage(settings, updateAvailable, isAdmin) { onPanel("account") }
-                    // The administrator's pages open here, as sub-pages of the panel.
-                    "todo" -> AdminPage("To-do", { onPanel("account") }) { pageContent(Page.Todo) }
-                    "manager" -> ManagerHub(managerPages, { onPanel("account") }, onPanel)
-                    "experimental" -> AdminPage("Experimental", { onPanel("account") }) { experimentalContent() }
-                    "activity" -> AdminPage("Activity log", { onPanel("account") }) { activityContent() }
-                    else -> if (which.startsWith("manager:")) {
-                        managerPages.firstOrNull { it.title == which.removePrefix("manager:") }?.let { p ->
-                            AdminPage(p.title, { onPanel("manager") }) { managerContent(p) }
-                        }
-                    } else AccountPage(userName, isAdmin, managerPages, healthSummary, onDeviceHealth, todoOpensApp, { onPanel(null); onTodo() }, onClose = { onPanel(null) }, onOpen = onPanel, onSignOut = {
-                        onPanel(null)
-                        onSignOut()
-                    })
+    SidebarHost(panel, onPanel, acrylic, bottomInset, back = ::panelParent, depth = ::panelDepth) { which ->
+        when (which) {
+            "settings" -> SettingsPage(settings, isAdmin) { onPanel("account") }
+            "about" -> AboutPage(settings, updateAvailable, isAdmin) { onPanel("account") }
+            // The administrator's pages open here, as sub-pages of the panel.
+            "todo" -> AdminPage("To-do", { onPanel("account") }) { pageContent(Page.Todo) }
+            "manager" -> ManagerHub(managerPages, { onPanel("account") }, onPanel)
+            "experimental" -> AdminPage("Experimental", { onPanel("account") }) { experimentalContent() }
+            "activity" -> AdminPage("Activity log", { onPanel("account") }) { activityContent() }
+            else -> if (which.startsWith("manager:")) {
+                managerPages.firstOrNull { it.title == which.removePrefix("manager:") }?.let { p ->
+                    AdminPage(p.title, { onPanel("manager") }) { managerContent(p) }
                 }
-                }
-            }
+            } else AccountPage(userName, isAdmin, managerPages, healthSummary, onDeviceHealth, todoOpensApp, { onPanel(null); onTodo() }, onClose = { onPanel(null) }, onOpen = onPanel, onSignOut = {
+                onPanel(null)
+                onSignOut()
+            })
         }
     }
 }
@@ -172,38 +141,6 @@ internal fun panelDepth(panel: String?): Int = when {
     panel == null || panel == "account" -> 0
     panel.startsWith("manager:") -> 2
     else -> 1
-}
-
-private val PanelShape = RoundedCornerShape(28.dp)
-
-@Composable
-private fun PanelCard(content: @Composable () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = PanelShape,
-        // A 70% tint, as the bottom bar: the page blurs through each card, so the sidebar reads as acrylic.
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.70f)),
-    ) { Column { content() } }
-}
-
-@Composable
-private fun PanelRow(icon: ImageVector, text: String, supporting: String? = null, onClick: (() -> Unit)? = null, leading: (@Composable () -> Unit)? = null, trailing: (@Composable () -> Unit)? = null) {
-    ListItem(
-        headlineContent = { Text(text) },
-        supportingContent = supporting?.let { { Text(it) } },
-        leadingContent = leading ?: { Icon(icon, contentDescription = null) },
-        trailingContent = trailing,
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        modifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier,
-    )
-}
-
-@Composable
-private fun PanelTitle(title: String, onBack: () -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onBack) { Icon(CdVectors.Back, contentDescription = "Back") }
-        Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 4.dp))
-    }
 }
 
 @Composable
