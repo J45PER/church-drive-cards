@@ -1,8 +1,14 @@
 # Clive Admin: changelog
 
-## 0.157.1
+## 0.157.2
 
 - No app change (Home Assistant: Clive no longer fails follow-up questions after he has used a tool).
+
+## 0.157.1
+
+- Moving between the sidebar list and its pages is a quick fade with a short slide, not two see-through pages sliding over each other, so it is less laggy.
+- The sidebar's icons and text use the theme's colour, not white.
+- The sidebar's list (the close button, your card, then the app's own cards) and its pages (a back arrow and a title) are one shared template based on the phone app's, so every app's sidebar has the same layout and behaviour.
 
 ## 0.157.0
 
